@@ -234,9 +234,24 @@
              style="height: 150px; width: auto; object-fit: contain; max-width: 100%; display: block;">
 
         <div style="display: flex; flex-direction: column; text-align: center;">
-            <h1 style="font-size: 1.9rem; color: #004AAD; font-weight: 800; line-height: 1; margin: 0; text-transform: uppercase; font-family: 'Poppins', sans-serif;">
+            {% comment %}
+              A FAIXA DA MARCA NÃO É O TÍTULO DA PÁGINA.
+
+              Isto era um `<h1>`, e como mora no `base.html` ele aparecia
+              em TODAS as telas do site. Cada página passava a ter dois
+              títulos de primeiro nível -- o seu e este --, e o buscador
+              lia "Fábrica de Brinquedos" como o assunto de "Peças de
+              reposição", de "Brinquedos em Shopping Aurora" e de
+              qualquer outra. Para quem usa leitor de tela é o mesmo
+              problema: a navegação por títulos abria com uma linha que é
+              igual em toda página e não diz onde a pessoa está.
+
+              O desenho não mudou: mesmo tamanho, mesma cor, mesmo peso,
+              e `margin: 0` já estava aqui. Mudou o papel.
+            {% endcomment %}
+            <p style="font-size: 1.9rem; color: #004AAD; font-weight: 800; line-height: 1; margin: 0; text-transform: uppercase; font-family: 'Poppins', sans-serif;">
                 Fábrica de Brinquedos
-            </h1>
+            </p>
             <span style="font-size: 1.2rem; color: #E63946; letter-spacing: 3px; font-weight: 600; margin-top: 2px; font-family: 'Poppins', sans-serif;">
                 QUALIDADE E DIVERSÃO
             </span>

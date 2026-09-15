@@ -1,358 +1,169 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static interno_extras l10n %}
 
-{% block title %}Brinquedos para {{ estabelecimento.nome_estabelecimento }} | Lazer & Sport{% endblock %}
+{% block title %}Brinquedos em {{ estabelecimento.nome_estabelecimento }} | Lazer &amp; Sport{% endblock %}
 
-{% block meta_description %}Brinquedos da Lazer & Sport recomendados para {{ estabelecimento.nome_estabelecimento }}: mecânicos, eletrônicos, esportivos, fliperama e simuladores.{% endblock %}
-
+{% block meta_description %}Brinquedos da Lazer &amp; Sport disponíveis em {{ estabelecimento.nome_estabelecimento }}: mecânicos, eletrônicos, esportivos, fliperama e simuladores.{% endblock %}
 
 {% block content %}
 
-<style>
-/* ================= CARD ATIVO ================= */
-.card-produto.ativo {
-    border: 2px solid #004AAD;
-    box-shadow: 0 12px 26px rgba(0, 74, 173, 0.35);
-    transform: translateY(-6px);
-}
+{% comment %}
+  O CASCO VEM DE FORA, E É DE PROPÓSITO.
 
-.card-produto.ativo h3 {
-    color: #004AAD;
-}
+  Herói, onda, grade, cartão e botão são de `ls-pagina.css`, o mesmo
+  casco das outras telas do site: quem clica em "Ver brinquedos" na
+  página de parceiros continua na mesma casa, e o arquivo já está no
+  cache do navegador. Aqui embaixo só entra o que é desta tela.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-estrelas.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/estabelecimento_info.css' %}">
 
-/* ===== BREADCRUMB ===== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-}
+<div class="ls-pagina">
 
-.breadcrumb a {
-    color: #004AAD;
-    text-decoration: none;
-    font-weight: 600;
-}
+<!-- ================= HERO ================= -->
+<section class="ls-pagina-hero" id="header">
+    <div class="ls-pagina-hero-inner">
 
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">Home</a>
+            <span>›</span>
+            <a href="{% url 'estabelecimentos' %}#header">Nossos Parceiros</a>
+            <span>›</span>
+            <strong>{{ estabelecimento.nome_estabelecimento }}</strong>
+        </nav>
 
-/* ===== HEADER ===== */
-.header-estabelecimento {
-    text-align: center;
-    margin-bottom: 30px;
-}
+        <span class="ls-pagina-selo">
+            <i class="fa-solid fa-store" aria-hidden="true"></i> Parceiro Lazer &amp; Sport
+        </span>
 
-.header-estabelecimento h1 {
-    font-size: 2.4rem;
-    color: #004AAD;
-}
+        <h1 class="ls-pagina-titulo">
+            Brinquedos recomendados para
+            <span>{{ estabelecimento.nome_estabelecimento }}</span>
+        </h1>
 
-/* ===== FILTROS ===== */
-.filtros-horizontal {
-    max-width: 1200px;
-    margin: 0 auto 30px;
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
+        <p class="ls-pagina-sub">
+            Esta é a seleção que trabalha bem neste espaço. Abra um brinquedo para
+            ver fotos, medidas, voltagem e as avaliações de quem já jogou.
+        </p>
 
-.filtro-btn {
-    padding: 8px 14px;
-    border-radius: 20px;
-    background: #eef2ff;
-    color: #004AAD;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: .2s;
-}
+        <div class="ls-pagina-stats">
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span><b>{{ brinquedos|length }}</b> brinquedo{{ brinquedos|length|pluralize }} por aqui</span>
+            </div>
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span>Avaliações reais de quem jogou</span>
+            </div>
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                <span>Preço confirmado com o fornecedor</span>
+            </div>
+        </div>
 
-.filtro-btn:hover,
-.filtro-btn.ativo {
-    background: #004AAD;
-    color: #fff;
-}
+    </div>
+</section>
 
-/* ===== GRID ===== */
-.grid-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 28px;
-}
+<svg class="ls-pagina-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
 
-/* ===== CARD ===== */
-.card-produto {
-    background: #fff;
-    border-radius: 14px;
-    padding: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,.08);
-    transition: .25s ease;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-}
+<!-- ================= LISTAGEM ================= -->
+<section class="ls-pagina-secao">
 
-.card-produto:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 22px rgba(0,0,0,.15);
-}
-
-/* ===== IMAGEM ===== */
-.img-area {
-    height: 180px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #f2f4ff;
-}
-
-.img-area img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* ===== TEXTO ===== */
-.card-produto h3 {
-    margin-top: 14px;
-    font-size: 1.2rem;
-    color: #004AAD;
-}
-
-.descricao {
-    font-size: .95rem;
-    color: #555;
-    margin: 6px 0 10px;
-    flex-grow: 1;
-}
-
-.preco {
-    font-size: 1.15rem;
-    color: #00913f;
-    font-weight: 700;
-}
-
-.star {
-    color: #ccc;
-}
-
-.star.filled {
-    color: #f5b301;
-}
-
-    .avaliacao {
-    display: flex;
-    gap: 3px;
-    margin: 6px 0;
-}
-
-.star {
-    font-size: 1.1rem;
-    color: #ddd;
-    position: relative;
-}
-
-.star.cheia {
-    color: #f5b301;
-}
-
-.star.meia::before {
-    content: "★";
-    position: absolute;
-    left: 0;
-    width: 50%;
-    overflow: hidden;
-    color: #f5b301;
-}
-
-.aviso-preco {
-    font-family: 'Poppins', 'Segoe UI', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    color: #d97706; /* dourado elegante */
-    background: #fff7ed;
-    border-left: 4px solid #f59e0b;
-    padding: 10px 14px;
-    border-radius: 6px;
-    margin-top: 8px;
-}
-
-</style>
-
-<!-- 🔵 BREADCRUMB -->
-<nav class="breadcrumb">
-    <a href="{% url 'home' %}">Home</a>
-    <span>›</span>
-    <a href="{% url 'estabelecimentos' %}#header">Estabelecimentos</a>
-    <span>›</span>
-    <strong> {{ estabelecimento.nome_estabelecimento }}</strong>
-</nav>
-
-<!-- 🔵 HEADER -->
-<div class="header-estabelecimento">
-    <h1>Brinquedos recmendados para {{ estabelecimento.nome_estabelecimento }}</h1>
-    <p>{{ brinquedos|length }} brinquedo(s) disponíveis</p>
-</div>
-
-<!-- 🔵 FILTROS -->
-<div class="filtros-horizontal" id="filter">
-    <button class="filtro-btn ativo" data-filtro="az">A–Z</button>
-    <button class="filtro-btn" data-filtro="za">Z–A</button>
-    <button class="filtro-btn" data-filtro="avaliacao">⭐ Melhores avaliados</button>
-    <button class="filtro-btn" data-filtro="preco">💰 Menor preço</button>
-</div>
-
-<!-- 🔵 LISTAGEM -->
 {% if brinquedos %}
-<div class="grid-cards" id="lista-brinquedos">
+    {% comment %}
+      Os chips são LINKS. Sem JavaScript o servidor ordena e devolve a
+      página pronta; com JavaScript o clique reordena na hora e só
+      reescreve o endereço. Ver `estabelecimento_info.js`.
+    {% endcomment %}
+    <div class="estb-barra" id="filter">
+        <h2 class="estb-barra-titulo">
+            Ordenar a lista
+            <span>{{ brinquedos|length }} brinquedo{{ brinquedos|length|pluralize }} neste parceiro</span>
+        </h2>
 
-{% for item in brinquedos %}
-<div class="card-produto"
-     data-nome="{{ item.nome_brinquedo|lower }}"
-     data-avaliacao="{{ item.avaliacao }}"
-     data-preco="{{ item.valor_brinquedo }}"
-     data-url="{% url 'brinquedo_detalhe' item.id %}#produto-box"
-     id="estabelecimentos"   >
-
-    <div class="img-area">
-        {% if item.imagem_brinquedo %}
-            <img src="{{ item.imagem_brinquedo.url }}">
-        {% else %}
-            <img src="{% static 'images/sem-imagem.svg' %}">
-        {% endif %}
+        <div class="estb-filtros" role="group" aria-label="Ordenar os brinquedos">
+            <a class="estb-chip" data-ordem="az" aria-pressed="{% if order == 'az' %}true{% else %}false{% endif %}"
+               href="?order=az#filter">
+                <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i> A–Z
+            </a>
+            <a class="estb-chip" data-ordem="za" aria-pressed="{% if order == 'za' %}true{% else %}false{% endif %}"
+               href="?order=za#filter">
+                <i class="fa-solid fa-arrow-down-z-a" aria-hidden="true"></i> Z–A
+            </a>
+            <a class="estb-chip" data-ordem="avaliacao" aria-pressed="{% if order == 'avaliacao' %}true{% else %}false{% endif %}"
+               href="?order=avaliacao#filter">
+                <i class="fa-solid fa-star" aria-hidden="true"></i> Melhores avaliados
+            </a>
+            <a class="estb-chip" data-ordem="custo" aria-pressed="{% if order == 'custo' %}true{% else %}false{% endif %}"
+               href="?order=custo#filter">
+                <i class="fa-solid fa-tag" aria-hidden="true"></i> Menor preço
+            </a>
+        </div>
     </div>
 
-    <h3>{{ item.nome_brinquedo }}</h3>
+    <div class="ls-grade" id="estb-lista">
+    {% for item in brinquedos %}
+        <a class="ls-cartao estb-card"
+           href="{% url 'brinquedo_detalhe' item.id %}#bread"
+           data-nome="{{ item.nome_brinquedo }}"
+           data-avaliacao="{{ item.avaliacao|default:0|unlocalize }}"
+           data-custo="{{ item.valor_brinquedo|default_if_none:''|unlocalize }}"
+           data-scroll-reveal>
 
-   <div class="avaliacao" data-avaliacao="{{ item.avaliacao }}"></div>
+            <div class="ls-cartao-media">
+                {% if item.imagem_brinquedo %}
+                    <img src="{{ item.imagem_brinquedo.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ item.imagem_brinquedo.url }}" class="ls-cartao-media-fg"
+                         alt="{{ item.nome_brinquedo }}" loading="lazy" decoding="async">
+                {% else %}
+                    <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
+                         alt="Imagem indisponível para {{ item.nome_brinquedo }}" loading="lazy" decoding="async">
+                {% endif %}
+            </div>
 
+            <div class="ls-cartao-corpo">
+                <h3 class="ls-cartao-titulo">{{ item.nome_brinquedo }}</h3>
 
-    <p class="descricao">{{ item.descricao|truncatechars:90 }}</p>
+                <span class="estb-nota">
+                    <span class="ls-estrelas" data-nota="{{ item.avaliacao|default:0|unlocalize }}"></span>
+                    {{ item.avaliacao|default:"0" }} de 5
+                </span>
 
-    <!--
-    <p class="preco money" data-valor="{{ item.valor_brinquedo }}">R$ 0,00</p>
-    -->
-    <p class="preco aviso-preco">
-        Confira o preço com o fornecedor
-    </p>
-</div>
-{% endfor %}
+                <p class="ls-cartao-desc">{{ item.descricao|truncatechars:110 }}</p>
 
-</div>
+                <p class="estb-preco">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    Confira o preço com o fornecedor
+                </p>
+
+                <span class="ls-botao">
+                    Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </span>
+            </div>
+        </a>
+    {% endfor %}
+    </div>
 {% else %}
-<p style="text-align:center">Nenhum brinquedo disponível.</p>
+    <div class="ls-vazio">
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+        <h2>Nenhum brinquedo cadastrado aqui ainda</h2>
+        <p>
+            Este parceiro ainda não tem brinquedos vinculados. Enquanto isso, veja o
+            catálogo completo da Lazer &amp; Sport.
+        </p>
+        <a href="{% url 'brinquedos' %}#catalogo-brinquedos" class="ls-botao">
+            Ver brinquedos <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </a>
+    </div>
 {% endif %}
 
-<script>
-function formatarMoedaBR(valor) {
-    if (valor === null || valor === undefined || valor === "" || valor === "None") {
-        return "0,00";
-    }
+</section>
+</div>
 
-    const numero = Number(valor.toString().replace(",", "."));
-    if (isNaN(numero)) return "0,00";
-
-    return numero.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-function aplicarMoeda() {
-    document.querySelectorAll(".money").forEach(el => {
-        el.textContent = "R$ " + formatarMoedaBR(el.dataset.valor);
-    });
-}
-
-/* ================= FILTROS ================= */
-function aplicarFiltro(tipo) {
-    const container = document.getElementById("lista-brinquedos");
-    const cards = Array.from(container.children);
-
-    cards.sort((a, b) => {
-        const nomeA = a.dataset.nome;
-        const nomeB = b.dataset.nome;
-
-        const avaliacaoA = parseFloat(a.dataset.avaliacao) || 0;
-        const avaliacaoB = parseFloat(b.dataset.avaliacao) || 0;
-
-        const precoA = parseFloat(a.dataset.preco) || 999999;
-        const precoB = parseFloat(b.dataset.preco) || 999999;
-
-        if (tipo === "az") return nomeA.localeCompare(nomeB);
-        if (tipo === "za") return nomeB.localeCompare(nomeA);
-        if (tipo === "avaliacao") return avaliacaoB - avaliacaoA;
-
-        if (tipo === "preco") {
-            const scoreA = avaliacaoA / precoA;
-            const scoreB = avaliacaoB / precoB;
-            return scoreB - scoreA;
-        }
-    });
-
-    cards.forEach(card => container.appendChild(card));
-
-    // ⭐ SEMPRE renderiza após reordenar
-    renderizarEstrelas();
-}
-
-
-function renderizarEstrelas() {
-    document.querySelectorAll(".avaliacao").forEach(container => {
-        const nota = parseFloat(container.dataset.avaliacao) || 0;
-        container.innerHTML = "";
-
-        const inteiras = Math.floor(nota);
-        const temDecimal = nota % 1 !== 0;
-
-        for (let i = 1; i <= 5; i++) {
-            const star = document.createElement("span");
-            star.classList.add("star");
-            star.textContent = "★";
-
-            // estrela cheia apenas se for inteiro OU 5 exato
-            if (i <= inteiras && (!temDecimal || nota === 5)) {
-                star.classList.add("cheia");
-            }
-            // meia estrela somente na próxima posição
-            else if (i === inteiras + 1 && temDecimal && nota < 5) {
-                star.classList.add("meia");
-            }
-
-            container.appendChild(star);
-        }
-    });
-}
-
-
-/* ================= INIT ================= */
-document.addEventListener("DOMContentLoaded", () => {
-    aplicarMoeda();
-    renderizarEstrelas(); // ⭐ inicial
-
-    // filtros
-    document.querySelectorAll(".filtro-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
-            btn.classList.add("ativo");
-            aplicarFiltro(btn.dataset.filtro);
-        });
-    });
-
-    // card ativo + redirect
-    document.querySelectorAll(".card-produto").forEach(card => {
-        card.addEventListener("click", () => {
-            document.querySelectorAll(".card-produto").forEach(c => c.classList.remove("ativo"));
-            card.classList.add("ativo");
-            window.location.href = card.dataset.url;
-        });
-    });
-
-    // filtro inicial
-    aplicarFiltro("az");
-});
-</script>
+<script src="{% estatico 'site/ls-estrelas.js' %}" defer></script>
+<script src="{% estatico 'site/paginas/estabelecimento_info.js' %}" defer></script>
 
 {% endblock %}

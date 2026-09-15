@@ -10,7 +10,17 @@
 {% block content %}
   <link rel="stylesheet" href="{% estatico 'site/paginas/brinquedos.css' %}">
 
-<main class="catalogo-page" id="catalogo-brinquedos">
+{% comment %}
+  UM ELEMENTO DE CONTEUDO PRINCIPAL POR PAGINA.
+
+  O `base.html` já abre a marca de conteúdo principal em volta deste
+  bloco. Repeti-la aqui dentro não é HTML válido, e o preço é de quem
+  menos pode pagá-lo: o leitor de tela oferece "ir para o conteúdo
+  principal" e passa a encontrar dois destinos, sem saber qual é o
+  certo. A moldura desta tela é uma `div` -- o papel de conteúdo
+  principal já está ocupado, e bem ocupado.
+{% endcomment %}
+<div class="catalogo-page" id="catalogo-brinquedos">
     <div class="catalogo-shell">
         <nav class="catalogo-breadcrumb ls-breadcrumb" id="bread" aria-label="Navegação estrutural">
             <a href="{% url 'home' %}#brinquedos">
@@ -605,7 +615,7 @@
             {% endif %}
         </section>
     </div>
-</main>
+</div>
 
 <div class="catalogo-toast" id="catalogo-toast" role="status" aria-live="polite"></div>
 

@@ -5,58 +5,7 @@
 {% block meta_description %}Os brinquedos e as peças que você guardou na Lazer & Sport.{% endblock %}
 
 {% block content %}
-<style>
-.desejos-wrap{max-width:1180px;margin:38px auto 70px;padding:0 20px}
-.desejos-hero{padding:30px;border-radius:26px;color:#fff;background:linear-gradient(135deg,#004AAD,#0f172a 70%);box-shadow:0 22px 45px rgba(2,32,71,.22)}
-.desejos-hero small{display:block;margin-bottom:9px;color:#93c5fd;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
-.desejos-hero h1{margin:0;font-size:clamp(1.6rem,3.4vw,2.3rem)}
-.desejos-hero p{max-width:660px;margin:10px 0 0;color:#cbd5e1;font-size:.86rem;line-height:1.6}
-.desejos-kpis{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
-.desejos-kpi{padding:11px 15px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.08);font-size:.74rem;font-weight:700}
-.desejos-kpi strong{display:block;font-size:1.35rem}
-.desejos-pontos{margin-top:22px;padding:22px;border:1px solid rgba(15,23,42,.08);border-radius:22px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.06)}
-.desejos-pontos-topo{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
-.desejos-pontos-kicker{display:block;margin-bottom:6px;color:#b45309;font-size:.67rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-.desejos-pontos h2{margin:0;color:#0f172a;font-size:1.25rem}
-.desejos-pontos p{max-width:640px;margin:8px 0 0;color:#64748b;font-size:.82rem;line-height:1.6}
-.desejos-pontos-app{display:inline-flex;align-items:center;gap:11px;padding:12px 16px;border-radius:16px;background:#0f172a;color:#fff;text-decoration:none}
-.desejos-pontos-app i{font-size:1.2rem}
-.desejos-pontos-app strong,.desejos-pontos-app small{display:block}
-.desejos-pontos-app strong{font-size:.85rem}
-.desejos-pontos-app small{margin-top:2px;color:#94a3b8;font-size:.7rem}
-.desejos-metas{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-.desejos-meta{padding:14px;border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#f8fafc}
-.desejos-meta.concluida{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.07)}
-.desejos-meta header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-.desejos-meta header strong{color:#0f172a;font-size:.82rem;line-height:1.35}
-.desejos-meta header span{color:#b45309;font-size:.76rem;font-weight:900;white-space:nowrap}
-.desejos-barra{height:8px;margin:10px 0 7px;border-radius:999px;overflow:hidden;background:rgba(15,23,42,.09)}
-.desejos-barra span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#ef4444)}
-.desejos-meta.concluida .desejos-barra span{background:linear-gradient(90deg,#34d399,#10b981)}
-.desejos-meta small{color:#64748b;font-size:.72rem}
-.desejos-metas-vazio{margin:16px 0 0;color:#64748b;font-size:.82rem}
-.desejos-secao{margin-top:34px}
-.desejos-secao h2{margin:0 0 4px;color:#0f172a;font-size:1.15rem}
-.desejos-secao p.sub{margin:0 0 16px;color:#64748b;font-size:.8rem}
-.desejos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
-.desejo-card{display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(15,23,42,.08);border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(15,23,42,.07)}
-.desejo-foto{aspect-ratio:4/3;display:grid;place-items:center;overflow:hidden;background:#f1f5f9}
-.desejo-foto img{width:100%;height:100%;object-fit:cover}
-.desejo-foto span{color:#94a3b8;font-size:.76rem}
-.desejo-corpo{flex:1;padding:15px;display:flex;flex-direction:column;gap:8px}
-.desejo-corpo h3{margin:0;color:#0f172a;font-size:.95rem;line-height:1.35}
-.desejo-corpo .preco{color:#047857;font-weight:800;font-size:.9rem}
-.desejo-corpo .sem-preco{color:#64748b;font-size:.78rem}
-.desejo-links{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
-.desejo-links a{padding:9px 13px;border-radius:999px;background:#004AAD;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none}
-.desejo-links a.secundario{background:rgba(15,23,42,.06);color:#334155}
-.desejos-vazio{margin-top:30px;padding:46px 24px;border:1px dashed rgba(15,23,42,.16);border-radius:22px;text-align:center;background:#fff}
-.desejos-vazio h2{margin:0 0 8px;color:#0f172a;font-size:1.2rem}
-.desejos-vazio p{max-width:520px;margin:0 auto 18px;color:#64748b;font-size:.84rem;line-height:1.6}
-.desejos-vazio a{display:inline-block;padding:12px 20px;border-radius:999px;background:#004AAD;color:#fff;font-weight:700;font-size:.8rem;text-decoration:none}
-.desejos-aviso{margin-top:20px;padding:14px 16px;border:1px solid rgba(37,99,235,.2);border-radius:14px;background:rgba(37,99,235,.07);color:#1e3a8a;font-size:.78rem;line-height:1.6}
-.desejos-aviso a{color:#1d4ed8;font-weight:800}
-</style>
+<link rel="stylesheet" href="{% estatico 'site/paginas/lista_desejos.css' %}">
 
 <div class="desejos-wrap" id="lista-desejos">
   <section class="desejos-hero">
@@ -149,7 +98,7 @@
               {% endif %}
               {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=b.id fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
               <div class="desejo-links">
-                <a href="{% url 'brinquedo_detalhe' b.id %}#detalhe">Ver brinquedo</a>
+                <a href="{% url 'brinquedo_detalhe' b.id %}#bread">Ver brinquedo</a>
               </div>
             </div>
           </article>
@@ -181,7 +130,7 @@
               {% endif %}
               {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=p.id fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
               <div class="desejo-links">
-                <a href="{% url 'reposicao_detalhe' p.id %}#peca">Ver peça</a>
+                <a href="{% url 'reposicao_detalhe' p.id %}#breadcrumb">Ver peça</a>
               </div>
             </div>
           </article>

@@ -152,81 +152,17 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-function adicionarAoCarrinho(tipo, id, irParaCarrinho = false) {
-    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error('Erro na requisição');
-        return res.json();
-    })
-    .then(data => {
-        if (data.sucesso) {
-            mostrarToast(
-                irParaCarrinho
-                    ? 'Compra adicionada. Abrindo o carrinho...'
-                    : 'Combo adicionado ao carrinho!'
-            );
-            atualizarBadgeCarrinho(data.total_itens);
-            if (irParaCarrinho) {
-                setTimeout(() => {
-                    window.location.href = "{% url 'carrinho' %}#carrinho";
-                }, 650);
-            }
-        } else {
-            mostrarToast(data.erro || 'Erro ao adicionar', true);
-        }
-    })
-    .catch(() => {
-        mostrarToast('Erro de conexão', true);
-    });
-}
+/* CARRINHO E AVISO SÃO DO SITE INTEIRO, E NÃO DESTA TELA.
+
+   Esta página trazia cópias de `adicionarAoCarrinho`, de
+   `atualizarBadgeCarrinho` e de `mostrarToast` que nunca rodaram: o
+   `base.html` declara as três DEPOIS, no fim do documento, e no escopo
+   global a última declaração é a que vale. Código morto que parece vivo
+   é o pior tipo -- alguém vai corrigir um defeito nele e não vai
+   entender por que a tela não mudou. Ficou só o que é desta tela. */
 
 function comprarAgora(tipo, id) {
     adicionarAoCarrinho(tipo, id, true);
-}
-
-function atualizarBadgeCarrinho(total) {
-    const badge =
-        document.getElementById('carrinho-contador') ||
-        document.getElementById('badge-carrinho');
-    const carrinho =
-        document.getElementById('carrinho-float-btn') ||
-        document.getElementById('float-carrinho');
-
-    if (!badge || !carrinho) return;
-
-    badge.innerText = total;
-
-    // efeito pulse
-    badge.classList.remove('pulse');
-    void badge.offsetWidth;
-    badge.classList.add('pulse');
-
-    carrinho.style.display = 'flex';
-}
-
-
-function mostrarToast(msg, erro = false) {
-    const toast = document.getElementById('toast-carrinho');
-    const texto = document.getElementById('toast-msg');
-
-    if (!toast || !texto) return;
-
-    texto.innerText = msg;
-    toast.style.background = erro
-        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
-        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
-
-    toast.classList.add('show');
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
 }
 
 </script>

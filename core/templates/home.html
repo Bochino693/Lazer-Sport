@@ -58,7 +58,7 @@
 
             <div class="ls-home-hero-minis">
                 {% for categoria in categorias_brinquedos %}
-                    <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="ls-home-mini">
+                    <a href="{% url 'categoria_detalhe' categoria.id %}#produtos" class="ls-home-mini">
                         <strong>{{ categoria.nome_categoria }}</strong>
                         <span>{{ categoria.total_produtos }} produto{{ categoria.total_produtos|pluralize }}</span>
                         <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
@@ -258,7 +258,7 @@
 
       <!-- Categorias de brinquedos. -->
       {% for categoria in categorias_brinquedos %}
-        <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
+        <a href="{% url 'categoria_detalhe' categoria.id %}#produtos" class="categoria-link">
           <div class="categoria-card">
             <div class="categoria-media">
               <span class="categoria-card-tag">

@@ -1,236 +1,192 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static interno_extras %}
 
-{% block title %}Eventos e recreações | Lazer & Sport{% endblock %}
+{% block title %}Eventos e recreação | Lazer &amp; Sport{% endblock %}
+
+{% block meta_description %}Veja os eventos e as recreações montados pela Lazer &amp; Sport: fotos de cada montagem e os brinquedos usados em cada uma.{% endblock %}
 
 {% block content %}
 
-<!-- ======== BREADCRUMB ======== -->
-<div class="breadcrumb">
-    <a href="{% url 'home' %}#eventos ">Home</a>
-    <span>›</span>
-    <strong>Todos os Eventos</strong>
-</div>
+{% comment %}
+  ESTA TELA ESTAVA ESCRITA EM BOOTSTRAP -- E O SITE NÃO CARREGA BOOTSTRAP.
 
-<section id="todos-eventos" class="py-5 bg-light">
-    <div class="container">
-        <h2 class="text-primary mb-5 text-center">Todos os Eventos</h2>
+  `row g-4`, `col-md-6 col-lg-4`, `card-body`, `d-flex`, `text-primary`:
+  nenhuma dessas classes existe aqui. O resultado não era um erro, era
+  uma página sem grade nenhuma, com os cartões empilhados em coluna
+  única, ocupando a largura inteira em qualquer tela. E os modais de
+  fotos não abriam: o script que os abria mora em `home.js`, que só é
+  carregado na página inicial.
 
-        <div class="row g-4">
-            {% for evento in eventos %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-sm h-100 evento-card" data-modal="modal-evento-{{ evento.id }}">
-                    <div class="card-img-wrapper position-relative">
-                        {% if evento.imagens_evento.all %}
-                        <!-- Mostra a primeira imagem grande -->
-                        <img src="{{ evento.imagens_evento.first.imagem.url }}" class="card-img-top" alt="{{ evento.titulo }}">
-                        <!-- Miniaturas sobrepostas -->
-                        <div class="card-thumbnails">
-                            {% for img in evento.imagens_evento.all|slice:"1:4" %}
-                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
-                            {% endfor %}
-                            {% if evento.imagens_evento.count > 4 %}
-                            <span class="more-images">+{{ evento.imagens_evento.count|add:"-4" }}</span>
-                            {% endif %}
-                        </div>
-                        {% else %}
-                        <img src="{% static 'images/sem-imagem.svg' %}" class="card-img-top" alt="Sem imagem">
-                        {% endif %}
-                        <div class="card-overlay">
-                            <span>Ver Detalhes</span>
-                        </div>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title text-primary">{{ evento.titulo }}</h5>
-                        <p class="card-text text-muted">{{ evento.descricao|truncatewords:20 }}</p>
-                    </div>
-                </div>
+  Agora a tela usa o casco comum do site (`ls-pagina.css`) e a janela de
+  fotos compartilhada (`ls-galeria.js`), que a página de Projetos também
+  usa -- e que abre pelo teclado, fecha no Esc e devolve o foco.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-galeria.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/eventos.css' %}">
+
+<div class="ls-pagina">
+
+<section class="ls-pagina-hero" id="header">
+    <div class="ls-pagina-hero-inner">
+
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}#eventos">Home</a>
+            <span>›</span>
+            <strong>Eventos e recreação</strong>
+        </nav>
+
+        <span class="ls-pagina-selo">
+            <i class="fa-solid fa-champagne-glasses" aria-hidden="true"></i> Eventos e recreação
+        </span>
+
+        <h1 class="ls-pagina-titulo">
+            Montagens que já <span>aconteceram</span>
+        </h1>
+
+        <p class="ls-pagina-sub">
+            Festas, ações de shopping e recreações montadas pela Lazer &amp; Sport.
+            Abra um evento para ver as fotos da montagem e quais brinquedos entraram nela.
+        </p>
+
+        <div class="ls-pagina-stats">
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                <span><b>{{ eventos|length }}</b> evento{{ eventos|length|pluralize }} no portfólio</span>
             </div>
-
-            <!-- Modal do Evento -->
-            <div id="modal-evento-{{ evento.id }}" class="evento-modal">
-                <div class="modal-content">
-                    <span class="modal-close">&times;</span>
-                    <h2 class="text-primary mb-3">{{ evento.titulo }}</h2>
-                    <p class="text-muted mb-4">{{ evento.descricao }}</p>
-
-                    <div class="event-gallery">
-                        {% for img in evento.imagens_evento.all %}
-                        <div class="gallery-slide">
-                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
-                        </div>
-                        {% empty %}
-                        <p>Sem imagens adicionais.</p>
-                        {% endfor %}
-                    </div>
-                    <div class="gallery-thumbs mt-3 d-flex gap-2 justify-content-center">
-                        {% for img in evento.imagens_evento.all %}
-                        <img src="{{ img.imagem.url }}" class="thumb" alt="{{ img.legenda }}">
-                        {% endfor %}
-                    </div>
-
-                    <hr>
-
-                    <h4 class="mb-3">🎪 Brinquedos Utilizados</h4>
-                    <div class="modal-brinquedos d-flex flex-wrap gap-3 justify-content-center">
-                        {% for b in evento.brinquedos.all %}
-                        <div class="brinquedo-card text-center p-2 border rounded shadow-sm">
-                            <img src="{{ b.imagem_brinquedo.url }}" class="img-fluid rounded mb-2" style="height:120px; object-fit:contain; background:#fff;" alt="{{ b.nome_brinquedo }}">
-                            <h6>{{ b.nome_brinquedo }}</h6>
-                        </div>
-                        {% empty %}
-                        <p>Nenhum brinquedo informado.</p>
-                        {% endfor %}
-                    </div>
-                </div>
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-camera-retro" aria-hidden="true"></i>
+                <span>Fotos reais de cada montagem</span>
             </div>
-
-            {% endfor %}
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Os brinquedos usados em cada evento</span>
+            </div>
         </div>
+
     </div>
 </section>
 
-<style>
-    /* ======== BREADCRUMB ======== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
-}
+<svg class="ls-pagina-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
 
-.breadcrumb a {
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-}
+<section class="ls-pagina-secao" id="todos-eventos">
 
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
+{% if eventos %}
+<div class="ls-grade ls-grade--larga">
+    {% for evento in eventos %}
+    <article class="ls-cartao ev-cartao"
+             data-ls-galeria="galeria-evento-{{ evento.id }}"
+             role="button" tabindex="0" aria-haspopup="dialog"
+             aria-label="Ver as fotos do evento {{ evento.titulo }}"
+             data-scroll-reveal>
 
-.breadcrumb strong {
-    color: #1f2d3d;
-}
+        <div class="ls-cartao-media ls-cartao-media--alta">
+            {% with capa=evento.imagens_evento.all|first %}
+                {% if capa %}
+                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
+                         alt="{{ evento.titulo }}" loading="lazy" decoding="async">
+                {% else %}
+                    <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
+                         alt="Evento {{ evento.titulo }} ainda sem fotos" loading="lazy" decoding="async">
+                {% endif %}
+            {% endwith %}
 
-/* ======== CARDS DE EVENTOS ======== */
-.evento-card {
-    position: relative;
-    cursor: pointer;
-    border-radius: 15px;
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-.evento-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-}
-.card-img-wrapper {
-    position: relative;
-}
-.card-img-top {
-    width: 100%;
-    height: 250px;
-    object-fit: cover;
-    transition: transform 0.3s;
-}
-.evento-card:hover .card-img-top {
-    transform: scale(1.05);
-}
-.card-overlay {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    background: rgba(0, 74, 173, 0.7);
-    text-align: center;
-    color: #fff;
-    padding: 8px;
-    font-weight: bold;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-.evento-card:hover .card-overlay {
-    opacity: 1;
-}
-.card-thumbnails {
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    display: flex;
-    gap: 3px;
-}
-.card-thumbnails img {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border: 2px solid #fff;
-    border-radius: 5px;
-}
-.card-thumbnails .more-images {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    font-size: 0.8rem;
-    border-radius: 5px;
-}
+            {% with total=evento.imagens_evento.all|length %}
+                {% if total > 1 %}
+                <span class="ev-contador">
+                    <i class="fa-solid fa-images" aria-hidden="true"></i> {{ total }} fotos
+                </span>
+                {% endif %}
+            {% endwith %}
+        </div>
 
-/* ======== MODAL ======== */
-.evento-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    overflow-y: auto;
-    z-index: 99999;
-    padding: 40px 20px;
-}
-.modal-content {
-    max-width: 1000px;
-    margin: 20px auto;
-    padding: 30px;
-    border-radius: 20px;
-    background: #fff;
-}
-.modal-close {
-    float: right;
-    font-size: 32px;
-    cursor: pointer;
-    color: #E63946;
-}
+        <div class="ls-cartao-corpo">
+            <h2 class="ls-cartao-titulo">{{ evento.titulo }}</h2>
+            <p class="ls-cartao-desc">{{ evento.descricao|truncatewords:22 }}</p>
 
-/* ======== GALERIA MODAL ======== */
-.event-gallery {
-    width: 100%;
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    scroll-behavior: smooth;
-    margin-bottom: 10px;
-}
-.gallery-slide img {
-    width: 100%;
-    max-height: 400px;
-    object-fit: cover;
-    border-radius: 12px;
-}
-.gallery-thumbs img.thumb {
-    width: 80px;
-    height: 60px;
-    object-fit: cover;
-    border: 2px solid #fff;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-.gallery-thumbs img.thumb:hover {
-    transform: scale(1.05);
-    border-color: #004AAD;
-}
-</style>
+            {% with usados=evento.brinquedos.all|length %}
+                {% if usados %}
+                <span class="ls-cartao-meta">
+                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                    {{ usados }} brinquedo{{ usados|pluralize }} nesta montagem
+                </span>
+                {% endif %}
+            {% endwith %}
+
+            <span class="ls-botao">
+                Ver fotos <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </span>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="ls-vazio">
+    <i class="fa-solid fa-champagne-glasses" aria-hidden="true"></i>
+    <h2>Nenhum evento publicado ainda</h2>
+    <p>
+        Estamos preparando o registro das próximas montagens. Enquanto isso, conheça
+        os brinquedos que entram nelas.
+    </p>
+    <a href="{% url 'brinquedos' %}#catalogo-brinquedos" class="ls-botao">
+        Ver brinquedos <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    </a>
+</div>
+{% endif %}
+
+</section>
+</div>
+
+{% comment %}
+  As janelas ficam FORA da grade, e não dentro de cada cartão: como
+  `position: fixed`, um pai com `overflow: hidden` -- que é o caso do
+  cartão -- as recortaria.
+{% endcomment %}
+{% for evento in eventos %}
+<div class="ls-galeria" id="galeria-evento-{{ evento.id }}" role="dialog" aria-modal="true"
+     aria-labelledby="titulo-evento-{{ evento.id }}" hidden>
+    <div class="ls-galeria-caixa">
+        <button type="button" class="ls-galeria-fechar" data-ls-galeria-fechar
+                aria-label="Fechar as fotos de {{ evento.titulo }}">&times;</button>
+
+        <h2 class="ls-galeria-titulo" id="titulo-evento-{{ evento.id }}">{{ evento.titulo }}</h2>
+        <p class="ls-galeria-texto">{{ evento.descricao }}</p>
+
+        <div class="ls-galeria-fotos">
+            {% for img in evento.imagens_evento.all %}
+            <figure class="ls-galeria-foto">
+                <img src="{{ img.imagem.url }}" alt="{{ img.legenda|default:evento.titulo }}" loading="lazy" decoding="async">
+                {% if img.legenda %}<span>{{ img.legenda }}</span>{% endif %}
+            </figure>
+            {% empty %}
+            <p class="ls-galeria-vazio">Este evento ainda não tem fotos publicadas.</p>
+            {% endfor %}
+        </div>
+
+        <div class="ls-galeria-secao">
+            <h3><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Brinquedos usados</h3>
+            <div class="ls-galeria-itens">
+                {% for b in evento.brinquedos.all %}
+                <div class="ls-galeria-item">
+                    {% if b.imagem_brinquedo %}
+                        <img src="{{ b.imagem_brinquedo.url }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
+                    {% else %}
+                        <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ b.nome_brinquedo }}" loading="lazy">
+                    {% endif %}
+                    <span>{{ b.nome_brinquedo }}</span>
+                </div>
+                {% empty %}
+                <p class="ls-galeria-vazio">Nenhum brinquedo informado para este evento.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script src="{% estatico 'site/ls-galeria.js' %}" defer></script>
 
 {% endblock content %}

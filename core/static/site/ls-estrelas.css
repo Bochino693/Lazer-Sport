@@ -1,0 +1,26 @@
+/* Estrelas de avaliação — ver `ls-estrelas.js`.
+ *
+ * O tamanho acompanha a letra ao redor (`em`), então a mesma marcação
+ * serve tanto no cartão do catálogo quanto num resumo miúdo, sem
+ * variante de classe para cada lugar.
+ */
+.ls-estrelas {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: #f5b301;
+    line-height: 0;
+    vertical-align: middle;
+}
+
+.ls-estrelas svg {
+    display: block;
+    width: 1.05em;
+    height: 1.05em;
+}
+
+/* Sem nota nenhuma o contorno some no fundo claro do cartão. */
+.ls-estrelas[data-nota="0"],
+.ls-estrelas[data-nota=""] {
+    color: #c3ccda;
+}
