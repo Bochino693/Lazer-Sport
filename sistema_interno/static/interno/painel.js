@@ -87,6 +87,11 @@
     });
     cliquesDaTela = [];
     Painel.fecharAcoesFlutuantes(false);
+    /* ANTES DE DESCARTAR AS JANELAS, GUARDAR O QUE ESTÁ DENTRO DELAS.
+       `limparModais(true)` descarta a instância sem disparar `hidden`, e
+       era aí que um orçamento meio montado sumia sem deixar rastro: bastava
+       tocar no menu com a janela aberta. Ver `ls-rascunhos.js`. */
+    if (global.LSRascunhos) global.LSRascunhos.aoSairDaTela();
     Painel.limparModais(true);
     Painel.limparPendurados();
     /* O sino mora na barra do topo, que não é trocada na navegação
@@ -262,9 +267,24 @@
     var filho = Painel.modal(filhoId);
     var pai = Painel.modal(paiId);
 
+    /* A JANELA DE CIMA NÃO FECHOU: ELA SAIU DE CENA POR UM INSTANTE.
+       Sem esta marca, esconder o pai para mostrar o filho parecia um
+       fechamento comum -- e o guardador de rascunhos criava um botão
+       flutuante no meio do cadastro de um cliente que ia voltar sozinho
+       três segundos depois. Ver `ls-rascunhos.js`. */
+    paiEl.dataset.lsPausado = "1";
+    function liberarPai() { delete paiEl.dataset.lsPausado; }
+
     function mostrarFilho() {
       filhoEl.addEventListener("hidden.bs.modal", function restaurarPai() {
-        global.setTimeout(function () { pai.show(); }, 0);
+        global.setTimeout(function () {
+          paiEl.addEventListener("shown.bs.modal", liberarPai, { once: true });
+          pai.show();
+          /* Rede de segurança: se `shown` não chegar -- CSS interrompido,
+             WebView antigo --, a janela pai não pode ficar marcada para
+             sempre, ou deixaria de guardar rascunho ao fechar de verdade. */
+          global.setTimeout(liberarPai, 900);
+        }, 0);
       }, { once: true });
       filho.show();
     }
@@ -902,11 +922,36 @@
       redeUltimoSucesso = Date.now();
     },
 
-    /* POST único: o preflight GET pode repetir; a gravação nunca. */
+    /* POST único: o preflight GET pode repetir; a gravação nunca.
+
+       QUANDO VALE A PENA ESPERAR O AQUECIMENTO. Com o painel na frente e
+       em uso, o processo está de pé e qualquer espera antes do POST é
+       tempo jogado fora -- é por isso que a gravação nunca esperava nada.
+
+       Só que existe um caso em que ela precisa esperar, e é o mais comum
+       no celular: a pessoa deixa a janela aberta, sai do painel por um
+       minuto (a galeria, uma ligação, o WhatsApp) e volta para tocar em
+       "Salvar". Aba escondida não gera pulso, o processo da hospedagem
+       dorme, e o POST que chega primeiro é justamente o que carrega o
+       trabalho de dez minutos -- para receber "não foi possível salvar"
+       de uma instância que estava subindo.
+
+       A regra passou a ser esta: espera só quando há motivo. Ou existe um
+       aquecimento em andamento (foi a volta para a aba que o começou), ou
+       a rede está parada há mais de dois minutos. Nos dois casos quem
+       espera é o GET, que pode repetir à vontade; o POST continua saindo
+       uma vez só -- e agora contra um servidor acordado. O `catch` é de
+       propósito: se o aquecimento falhar, a gravação tenta assim mesmo. */
     post: function (destino, opcoes) {
-      // Uma gravação não espera o GET de aquecimento. O próprio POST
-      // acorda o servidor e nunca é repetido automaticamente.
-      return fetch(destino, opcoes).then(function (resposta) {
+      var precisaAcordar = Boolean(redeAcordando)
+        || Date.now() - redeUltimoSucesso >= REDE_OCIOSA_MS;
+      var antes = precisaAcordar
+        ? acordarServidor(false, true).catch(function () { return false; })
+        : Promise.resolve(true);
+
+      return antes.then(function () {
+        return fetch(destino, opcoes);
+      }).then(function (resposta) {
         if (resposta.ok) redeUltimoSucesso = Date.now();
         return resposta;
       });
@@ -1152,6 +1197,24 @@
           Painel.confirmarGravacao();
           return json;
         });
+    }, function () {
+      /* A REDE CAIU ANTES DE O SERVIDOR RESPONDER.
+
+         Este ramo só pega a falha do próprio `fetch` -- o `throw` do ramo
+         de cima passa longe dele, porque é o segundo argumento do `then`,
+         e não um `catch` depois da cadeia. A diferença importa: aqui não
+         há resposta nenhuma, e o navegador entrega "Failed to fetch", que
+         numa janela de orçamento é uma frase que não diz nem o que houve
+         nem o que fazer -- e assusta exatamente quem acabou de digitar
+         dez minutos de proposta.
+
+         O texto diz as três coisas que faltavam: o que aconteceu, que
+         nada foi perdido, e qual é o próximo passo. */
+      throw new Error(
+        "A conexão caiu antes de o servidor responder. Nada foi perdido: "
+        + "o que está na janela continua aqui e fica guardado como rascunho. "
+        + "Confira a internet e toque em salvar de novo."
+      );
     });
   };
 
@@ -1220,6 +1283,12 @@
 
       Painel.enviar(form, opcoes.action ? { action: opcoes.action } : null)
         .then(function (json) {
+          /* GRAVOU: quem guardava um rascunho deste formulário pode
+             esquecê-lo. O aviso sai daqui, e não de cada tela, porque
+             toda gravação do painel passa por este ponto. */
+          form.dispatchEvent(new CustomEvent("ls:gravado", {
+            bubbles: true, detail: json
+          }));
           if (opcoes.depois) {
             opcoes.depois(json);
             travar(false);

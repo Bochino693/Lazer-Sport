@@ -27,7 +27,7 @@
 {% include "partes/orcamentos_lista.html" %}
 
 <!-- ================= MODAL: montar orçamento ================= -->
-<div class="modal fade" id="modalOrcamento" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalOrcamento" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <form class="modal-content" id="formOrcamento" method="post" action="{% url 'orcamentos_inner' %}">
       {% csrf_token %}
@@ -291,7 +291,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   pessoa desistir e digitar o item à mão -- que é justamente o que este
   modal existe para evitar. O brinquedo nasce fora da loja.
 {% endcomment %}
-<div class="modal fade" id="modalBrinquedoNovo" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalBrinquedoNovo" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formBrinquedoNovo" method="post" enctype="multipart/form-data"
           action="{% url 'orcamentos_inner' %}">
@@ -451,7 +451,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 </div>
 
 <!-- ================= MODAL: peça nova, sem sair daqui ================= -->
-<div class="modal fade" id="modalPecaNova" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalPecaNova" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formPecaNova" method="post" enctype="multipart/form-data"
           action="{% url 'orcamentos_inner' %}">
@@ -584,7 +584,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   Quase todo orçamento nasce de quem ligou pela primeira vez. Obrigar a sair
   para a tela de clientes e voltar perderia a proposta pela metade.
 {% endcomment %}
-<div class="modal fade" id="modalClienteNovo" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalClienteNovo" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formClienteNovo" method="post"
           action="{% url 'orcamentos_inner' %}">
@@ -1110,6 +1110,17 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 {% block scripts %}
 <script>
 LSTela.pronto(function () {
+  /* NO ALTO, E NÃO NO MEIO.
+
+     `"use strict"` só liga o modo estrito quando é a PRIMEIRA coisa da
+     função; escrito depois de qualquer instrução ele é apenas um texto
+     solto que o navegador avalia e joga fora. Era esse o caso aqui, e o
+     efeito era o pior possível: a linha estava escrita, parecia valer, e
+     não valia -- variável esquecida sem `var` continuava virando global
+     em silêncio, que é justamente o que o modo estrito existe para
+     denunciar. */
+  "use strict";
+
   document.querySelectorAll('#formBrinquedoNovo, #formPecaNova').forEach(function(form) {
     form.addEventListener('reset', function() {
       form.querySelectorAll('img[data-preview]').forEach(function(img) { img.remove(); });
@@ -1136,7 +1147,6 @@ LSTela.pronto(function () {
     });
   });
 
-  "use strict";
 
   /* AS LINHAS DA TELA MUDAM SEM A TELA MUDAR.
 
@@ -2833,6 +2843,125 @@ LSTela.pronto(function () {
       copiarLegado();
     }
   });
+
+  /* ------------------------------------------------------------------
+     RASCUNHO: a proposta pela metade não se perde ao fechar a janela
+
+     Fechar deixou de ser perder. O que estava na tela vira um botão
+     flutuante na lateral direita, e tocar nele traz a proposta de volta
+     inteira -- cliente, itens, desconto e observação --, inclusive
+     depois de passar por outras telas do painel. Ver `ls-rascunhos.js`.
+
+     O estado é coletado no formato que `abrir()` já entende, então
+     repor é montar de novo por cima da abertura normal: a base é o
+     orçamento de origem (nulo quando é proposta nova) e o que foi
+     digitado entra em seguida. Assim uma proposta guardada no meio de
+     uma REVISÃO volta como revisão, com o id e a revisão certos.
+     ------------------------------------------------------------------ */
+  var CAMPOS_DO_RASCUNHO = [
+    "orcamentoNome", "orcamentoContato", "orcamentoWhatsapp", "orcamentoEmail",
+    "orcamentoStatus", "orcamentoValidade", "orcamentoFrete", "orcamentoDesconto",
+    "orcamentoPagamento", "orcamentoEnvio", "orcamentoObs"
+  ];
+
+  function coletarRascunhoOrcamento() {
+    var itens = [];
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      itens.push({
+        escolha: linha.buscaItem ? linha.buscaItem.valor() : "",
+        opcao: linha.buscaItem ? linha.buscaItem.opcaoAtual() : null,
+        descricao: linha.querySelector(".ls-item-descricao").value,
+        quantidade: linha.querySelector(".ls-item-quantidade").value,
+        valor_unitario: linha.querySelector(".ls-item-valor").value
+      });
+    });
+
+    var campos = {};
+    CAMPOS_DO_RASCUNHO.forEach(function (id) {
+      var campo = document.getElementById(id);
+      campos[id] = campo ? campo.value : "";
+    });
+
+    return {
+      base: orcamentoEmEdicao || null,
+      id: document.getElementById("orcamentoId").value,
+      revisao: document.getElementById("orcamentoRevisao").value,
+      cliente: buscaCliente.valor(),
+      clienteOpcao: buscaCliente.opcaoAtual(),
+      descontoModo: botaoUnidade.dataset.modo === "porcentagem" ? "porcentagem" : "valor",
+      campos: campos,
+      itens: itens
+    };
+  }
+
+  function aplicarRascunhoOrcamento(dados) {
+    dados = dados || {};
+
+    /* A abertura normal primeiro: ela reconstrói permissões, origem,
+       contexto de negociação e título. Só depois o que foi digitado. */
+    abrir(dados.id ? dados.id : null, dados.base || null);
+
+    Painel.valor("orcamentoId", dados.id || "");
+    Painel.valor("orcamentoRevisao", dados.revisao || "");
+
+    if (dados.clienteOpcao) buscaCliente.adicionarOpcao(dados.clienteOpcao, false);
+    buscaCliente.definirValor(dados.cliente || "", false);
+    aplicarClienteNoOrcamento(dados.clienteOpcao || null, false);
+
+    /* A unidade do desconto entra antes do valor: `trocarUnidade` reescreve
+       o campo quando converte, e converteria o número recém-reposto. */
+    trocarUnidade(dados.descontoModo === "porcentagem" ? "porcentagem" : "valor", false);
+    CAMPOS_DO_RASCUNHO.forEach(function (id) {
+      Painel.valor(id, (dados.campos || {})[id] || "");
+    });
+
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      var indice = buscasDeItem.indexOf(linha.buscaItem);
+      if (indice >= 0) buscasDeItem.splice(indice, 1);
+      if (linha.buscaItem) linha.buscaItem.destruir();
+      linha.remove();
+    });
+
+    (dados.itens && dados.itens.length ? dados.itens : [null]).forEach(function (item) {
+      var linha = novaLinha(null);
+      if (!item) return;
+      if (item.opcao) linha.buscaItem.adicionarOpcao(item.opcao, false);
+      if (item.escolha) linha.buscaItem.definirValor(item.escolha, false);
+      linha.querySelector(".ls-item-descricao").value = item.descricao || "";
+      linha.querySelector(".ls-item-quantidade").value = item.quantidade || 1;
+      linha.querySelector(".ls-item-valor").value = item.valor_unitario || "";
+    });
+
+    recalcular();
+    aplicarPermissoesEdicao(!dados.base || dados.base.pode_editar);
+  }
+
+  function resumoDoRascunhoOrcamento(dados) {
+    var campos = (dados && dados.campos) || {};
+    var itens = ((dados && dados.itens) || []).filter(function (item) {
+      return String(item.descricao || "").trim();
+    });
+    var partes = [];
+    if (campos.orcamentoNome) partes.push(campos.orcamentoNome);
+    partes.push(itens.length === 1 ? "1 item" : itens.length + " itens");
+    if (dados && dados.id) partes.unshift("ID " + dados.id);
+    return partes.join(" · ");
+  }
+
+  if (window.LSRascunhos) {
+    window.LSRascunhos.registrar({
+      tipo: "orcamento",
+      modal: "modalOrcamento",
+      form: "formOrcamento",
+      rotulo: "Orçamento",
+      icone: "bi-file-earmark-text",
+      tela: "{% url 'orcamentos_inner' %}",
+      coletar: coletarRascunhoOrcamento,
+      aplicar: aplicarRascunhoOrcamento,
+      resumo: resumoDoRascunhoOrcamento,
+      alvo: function (dados) { return (dados && dados.id) || "novo"; }
+    });
+  }
 });
 
 // A lista e os contadores são atualizados pelo sincronizador comum.

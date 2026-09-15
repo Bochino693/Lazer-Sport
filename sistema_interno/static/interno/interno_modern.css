@@ -3546,6 +3546,69 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(var
   display:grid;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1);
 }
 body.modal-open .ls-action-fab-menu{display:none!important}
+
+/* ======================================================================
+   RASCUNHOS — o trabalho pela metade fica à vista, na lateral direita.
+
+   Um botão por rascunho: orçamento e O.S. pendurados ao mesmo tempo são
+   dois botões, empilhados. Eles moram no `<body>` e sobrevivem à troca
+   de tela, então precisam sair da frente quando uma janela está aberta
+   -- é para isso que serve a regra de `body.modal-open`, a mesma já
+   usada pelo menu de ações das tabelas logo acima.
+   ====================================================================== */
+.ls-rascunhos{
+  position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:1035;
+  display:flex;flex-direction:column;align-items:flex-end;gap:10px;
+  pointer-events:none;max-width:min(300px,calc(100vw - 24px));
+}
+.ls-rascunhos[hidden]{display:none!important}
+body.modal-open .ls-rascunhos{display:none!important}
+.ls-rascunho{
+  pointer-events:auto;display:flex;align-items:stretch;overflow:hidden;
+  border:1px solid rgba(var(--acento-rgb),.34);border-radius:15px;
+  background:linear-gradient(150deg,rgba(var(--bg-rgb),.985),rgba(var(--sidebar-rgb),.99));
+  box-shadow:0 16px 38px rgba(var(--sombra-rgb),calc(.44 * var(--sombra-forca))),
+             0 0 0 1px rgba(var(--verniz-rgb),.03);
+  animation:lsRascunhoEntra .2s ease both;
+}
+.ls-rascunho-abrir{
+  display:flex;align-items:center;gap:9px;min-height:48px;padding:8px 11px;
+  border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer;
+  transition:background .14s ease;
+}
+.ls-rascunho-abrir:hover,.ls-rascunho-abrir:focus-visible{background:rgba(var(--acento-rgb),.13)}
+.ls-rascunho-abrir>i{flex:0 0 auto;font-size:1.1rem;line-height:1;color:var(--acento-claro)}
+.ls-rascunho-texto{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.ls-rascunho-texto strong{
+  font-size:.76rem;font-weight:900;letter-spacing:.01em;color:var(--acento-claro);
+}
+.ls-rascunho-texto small{
+  font-size:.68rem;font-weight:700;color:var(--muted);
+  max-width:186px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ls-rascunho-descartar{
+  flex:0 0 auto;padding:0 10px;border:0;border-left:1px solid rgba(var(--verniz-rgb),.09);
+  background:transparent;color:var(--muted-2);font-size:.7rem;cursor:pointer;
+  transition:color .14s ease,background .14s ease;
+}
+.ls-rascunho-descartar:hover,.ls-rascunho-descartar:focus-visible{
+  color:var(--red-claro);background:rgba(var(--red-rgb),.13);
+}
+@keyframes lsRascunhoEntra{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .ls-rascunho{animation:none}
+}
+/* No celular o meio da lateral é onde o polegar não chega e onde a lista
+   está sendo lida. O rascunho desce para o canto inferior, acima da
+   faixa do aparelho, e fica só com o ícone -- o resumo abre ao tocar. */
+@media (max-width:600px){
+  .ls-rascunhos{
+    right:10px;top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    transform:none;gap:8px;
+  }
+  .ls-rascunho-texto{display:none}
+  .ls-rascunho-abrir{padding:0 12px;min-width:48px;justify-content:center}
+}
 /* Cards abaixo da dobra só são desenhados quando se aproximam da tela.
    O HTML e os dados continuam presentes, mas tablet e celular não gastam
    renderização com dezenas de imagens que ainda não podem ser vistas. */

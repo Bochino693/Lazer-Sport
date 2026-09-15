@@ -125,14 +125,37 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         self.assertGreaterEqual(max(6000, 50000), 40000)
 
     def test_desistir_de_acordar_nao_barra_a_gravacao(self):
-        """O POST é único e independente do GET de aquecimento."""
+        """O POST é único, e um aquecimento que falha não o impede.
+
+        A REGRA MUDOU DE FORMA, NÃO DE INTENÇÃO. Antes o POST saía
+        sempre direto, e o motivo continua de pé para o caso normal: com
+        o painel em uso o servidor está acordado, e esperar um GET antes
+        de gravar seria pedágio cobrado sobre trabalho que já podia ter
+        ido. É isso que `precisaAcordar` protege -- com a rede fresca,
+        nada é esperado.
+
+        O que mudou é o caso que motivou a mudança, e que o desenho
+        anterior não cobria: a volta do segundo plano. Aba escondida não
+        gera pulso, a instância da hospedagem dorme, e o primeiro POST
+        depois da volta é justamente o que carrega o trabalho inteiro --
+        e levava "não foi possível salvar" de um processo que estava
+        subindo. Nesse caso, e só nele, a gravação espera o GET, que pode
+        repetir à vontade.
+
+        O QUE NÃO PODE MUDAR, e é o que se trava aqui: o POST continua
+        saindo UMA vez só, e desistir do aquecimento não o barra.
+        """
         painel = self.painel()
         post = painel[painel.index("post: function (destino, opcoes)"):]
         post = post[:post.index("/* Mantém a instância pronta")]
 
-        self.assertNotIn("acordarServidor(", post)
         self.assertEqual(post.count("fetch(destino, opcoes)"), 1)
         self.assertNotIn("Nada foi enviado", post)
+        # O aquecimento é condicional: rede fresca não paga nada.
+        self.assertIn("var precisaAcordar", post)
+        self.assertIn("Date.now() - redeUltimoSucesso >= REDE_OCIOSA_MS", post)
+        # E quando ele falha, cai no `catch` e a gravação segue assim mesmo.
+        self.assertIn("acordarServidor(false, true).catch(", post)
 
     def test_a_espera_avisa_em_vez_de_ficar_muda(self):
         """Quarenta segundos de tela parada parecem sistema travado.

@@ -24,5 +24,26 @@ a{height:50px;display:flex;align-items:center;justify-content:center;border:1px 
   <p>Seu acesso à central interna foi finalizado com segurança.</p>
   <a href="{% url 'login_inner' %}">Entrar novamente</a>
 </main>
+{% comment %}
+  QUEM SAI NÃO DEIXA RASCUNHO PARA O PRÓXIMO.
+
+  Os rascunhos das janelas de montagem (ver `ls-rascunhos.js`) moram no
+  `sessionStorage` -- eles somem quando a aba fecha, mas não quando a
+  SESSÃO acaba, e no tablet do galpão a aba é a mesma para todo mundo.
+  Sem esta limpeza, o nome e o telefone do cliente de uma proposta pela
+  metade continuariam num botão flutuante para quem entrasse depois.
+{% endcomment %}
+<script>
+  (function () {
+    try {
+      var chaves = [];
+      for (var i = 0; i < sessionStorage.length; i += 1) {
+        var chave = sessionStorage.key(i);
+        if (chave && chave.indexOf("ls:rascunho:") === 0) chaves.push(chave);
+      }
+      chaves.forEach(function (chave) { sessionStorage.removeItem(chave); });
+    } catch (erro) {}
+  })();
+</script>
 </body>
 </html>
