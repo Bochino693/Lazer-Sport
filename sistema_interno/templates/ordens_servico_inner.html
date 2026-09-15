@@ -137,7 +137,7 @@
 {% include "partes/os_lista.html" %}
 
 <!-- Montagem da O.S. -->
-<div class="modal fade" id="modalOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><form class="modal-content" id="formOS" method="post" action="{% url 'ordens_servico_inner' %}">
+<div class="modal fade" id="modalOS" tabindex="-1" data-bs-backdrop="static" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><form class="modal-content" id="formOS" method="post" action="{% url 'ordens_servico_inner' %}">
   {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="osId"><input type="hidden" name="revisao" id="osRevisao"><input type="hidden" name="itens" id="osItens">
   <div class="modal-header"><div><span class="ls-modal-kicker">Execução operacional</span><h5 class="modal-title" id="osTitulo">Nova Ordem de Serviço</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
   <div class="modal-body ls-compact-form"><div id="osErro" class="alert alert-danger d-none"></div>
@@ -892,9 +892,11 @@ LSTela.pronto(function () {
     camada.querySelectorAll("[data-fechar-filho-os]").forEach(function(botao){
       botao.addEventListener("click",function(){fecharFilhoOS(id,true);});
     });
-    camada.addEventListener("click",function(evento){
-      if(evento.target===camada)fecharFilhoOS(id,true);
-    });
+    /* CLICAR AO LADO NÃO FECHA MAIS.
+       Fechava, e levava junto o cadastro que estava sendo digitado --
+       a mesma perda que o `data-bs-backdrop="static"` acabou de tirar
+       das janelas de montagem. Quem quer sair usa o X ou o Esc, que
+       são gestos deliberados. */
     camada.addEventListener("keydown",function(evento){
       if(evento.key!=="Escape")return;
       evento.preventDefault();
@@ -1261,7 +1263,15 @@ LSTela.pronto(function () {
     corpo.innerHTML="";
     buscasDeItemOS.length = 0;
   }
-  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");valor("osRevisao",o?o.revisao:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
+  /* A O.S. ABERTA NO MOMENTO, e o segundo argumento de `abrir`.
+
+     Os dois existem pelo rascunho. Um rascunho retomado de outra tela
+     pode ser de uma O.S. que não está na lista do filtro atual -- e aí
+     `achar` não acha nada e a janela abriria como se fosse O.S. nova,
+     perdendo a revisão. Guardando a O.S. de origem junto do rascunho, e
+     aceitando-a de volta em `dados`, ela volta como o que é. */
+  var osEmEdicao=null;
+  function abrir(id,dados){var o=dados||(id?achar(id):null);osEmEdicao=o||null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");valor("osRevisao",o?o.revisao:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
 
   /* A corrente de versões desta O.S. Cada uma abre na PRÉVIA: a
      substituída não está na lista da página -- é por isso que ela
@@ -1672,6 +1682,112 @@ LSTela.pronto(function () {
       limpa.searchParams.delete("manutencao");
       history.replaceState(history.state, "", limpa.pathname + limpa.search + limpa.hash);
     } catch (e) {}
+  }
+
+  /* ------------------------------------------------------------------
+     RASCUNHO: a O.S. pela metade não se perde ao fechar a janela
+
+     Mesma história da proposta comercial, e pelo mesmo motivo: montar
+     uma O.S. é defeito relatado, diagnóstico, peças, agenda e técnico --
+     minutos de digitação que um toque fora da janela apagava. Agora
+     fechar guarda, e o botão flutuante da lateral direita traz tudo de
+     volta, de qualquer tela do painel. Ver `ls-rascunhos.js`.
+     ------------------------------------------------------------------ */
+  var CAMPOS_DO_RASCUNHO_OS = [
+    "osManutencao", "osNome", "osContato", "osWhatsapp", "osEmail", "osEndereco",
+    "osTipo", "osStatus", "osPrioridade", "osEquipamento", "osSerie", "osAgenda",
+    "osGarantia", "osTecnico", "osDefeito", "osDiagnostico", "osExecutado",
+    "osFrete", "osDesconto", "osFormaPagamento", "osObservacoes"
+  ];
+
+  function coletarRascunhoOS(){
+    var itens=[];
+    corpo.querySelectorAll("tr").forEach(function(l){
+      itens.push({
+        tipo:l.querySelector("[data-tipo]").value,
+        escolha:l.buscaItem?l.buscaItem.valor():"",
+        opcao:l.buscaItem?l.buscaItem.opcaoAtual():null,
+        descricao:l.querySelector("[data-descricao]").value,
+        quantidade:l.querySelector("[data-qtd]").value,
+        valor_unitario:l.querySelector("[data-valor]").value
+      });
+    });
+
+    var campos={};
+    CAMPOS_DO_RASCUNHO_OS.forEach(function(id){
+      var campo=document.getElementById(id);
+      campos[id]=campo?campo.value:"";
+    });
+
+    return {
+      base:osEmEdicao||null,
+      id:document.getElementById("osId").value,
+      revisao:document.getElementById("osRevisao").value,
+      cliente:buscaClienteOS.valor(),
+      clienteOpcao:buscaClienteOS.opcaoAtual(),
+      campos:campos,
+      itens:itens
+    };
+  }
+
+  function aplicarRascunhoOS(dados){
+    dados=dados||{};
+    abrir(dados.id?dados.id:null, dados.base||null);
+
+    valor("osId",dados.id||"");
+    valor("osRevisao",dados.revisao||"");
+
+    if(dados.clienteOpcao)buscaClienteOS.adicionarOpcao(dados.clienteOpcao,false);
+    buscaClienteOS.definirValor(dados.cliente||"",false);
+    resumoCliente(dados.clienteOpcao||null);
+
+    CAMPOS_DO_RASCUNHO_OS.forEach(function(id){
+      valor(id,(dados.campos||{})[id]||"");
+    });
+
+    limparItens();
+    (dados.itens&&dados.itens.length?dados.itens:[null]).forEach(function(item){
+      if(!item){linha();return;}
+      linha({
+        tipo:item.tipo||"servico",
+        descricao:item.descricao||"",
+        quantidade:item.quantidade||"1",
+        valor_unitario:item.valor_unitario||"",
+        opcao:item.opcao||null,
+        peca:String(item.escolha||"").slice(0,2)==="r:"?String(item.escolha).slice(2):""
+      });
+    });
+
+    recalcular();
+    aplicarEtapas();
+    aplicarSomenteLeitura(dados.base||null);
+  }
+
+  function resumoDoRascunhoOS(dados){
+    var campos=(dados&&dados.campos)||{};
+    var itens=((dados&&dados.itens)||[]).filter(function(item){
+      return String(item.descricao||"").trim();
+    });
+    var partes=[];
+    if(dados&&dados.id)partes.push("OS-"+String(dados.id).padStart(5,"0"));
+    if(campos.osNome)partes.push(campos.osNome);
+    partes.push(itens.length===1?"1 item":itens.length+" itens");
+    return partes.join(" · ");
+  }
+
+  if(window.LSRascunhos){
+    window.LSRascunhos.registrar({
+      tipo:"ordem_servico",
+      modal:"modalOS",
+      form:"formOS",
+      rotulo:"Ordem de serviço",
+      icone:"bi-tools",
+      tela:"{% url 'ordens_servico_inner' %}",
+      coletar:coletarRascunhoOS,
+      aplicar:aplicarRascunhoOS,
+      resumo:resumoDoRascunhoOS,
+      alvo:function(dados){return (dados&&dados.id)||"novo";}
+    });
   }
 });
 </script>

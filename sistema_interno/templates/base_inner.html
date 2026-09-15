@@ -755,6 +755,15 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   aqui porque as três telas de lista usam o mesmo módulo.
 {% endcomment %}
 <script src="{% estatico 'interno/ls-filtro-local.js' %}"></script>
+{% comment %}
+  Rascunhos das janelas de montagem (orçamento, O.S.). Carrega em toda
+  tela, e não só nas duas que os produzem, porque o botão flutuante
+  precisa continuar visível DEPOIS de sair delas -- é justamente quem
+  saiu para conferir outra coisa que precisa lembrar que deixou uma
+  proposta pela metade. Vem depois do `painel.js`, que é quem o chama
+  na troca de tela.
+{% endcomment %}
+<script src="{% estatico 'interno/ls-rascunhos.js' %}"></script>
 <script>
 (function () {
   const sidebar = document.getElementById("sidebarMenu");

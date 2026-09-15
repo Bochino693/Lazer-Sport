@@ -299,8 +299,10 @@ class EsperaDoDespertarTests(SimpleTestCase):
 
         self.assertIn("function acordarServidor(forcar, anunciar)", painel)
         self.assertIn("if (anunciar && anunciar()) avisarEspera", painel)
-        # O POST sai diretamente: nenhum aquecimento segura a gravação.
-        self.assertEqual(painel.count("acordarServidor(false, true)"), 0)
+        # E o único que ANUNCIA é o da gravação -- o único momento com
+        # alguém parado olhando a tela. Ele espera só quando há motivo
+        # (ver `Painel.rede.post`); com a rede fresca, o POST sai direto.
+        self.assertEqual(painel.count("acordarServidor(false, true)"), 1)
         # Os aquecimentos por precaução continuam mudos.
         self.assertEqual(painel.count("acordarServidor(true).catch"), 1)
         self.assertEqual(painel.count("acordarServidor(false).catch"), 3)
