@@ -8,7 +8,17 @@
 
   <link rel="stylesheet" href="{% estatico 'site/paginas/payment.css' %}">
 
-<main class="checkout-shell" id="content">
+{% comment %}
+  UM ELEMENTO DE CONTEUDO PRINCIPAL POR PAGINA.
+
+  O `base.html` já abre a marca de conteúdo principal em volta deste
+  bloco. Repeti-la aqui dentro não é HTML válido, e o preço é de quem
+  menos pode pagá-lo: o leitor de tela oferece "ir para o conteúdo
+  principal" e passa a encontrar dois destinos, sem saber qual é o
+  certo. A moldura desta tela é uma `div` -- o papel de conteúdo
+  principal já está ocupado, e bem ocupado.
+{% endcomment %}
+<div class="checkout-shell" id="content">
     <nav class="checkout-breadcrumb" aria-label="Navegação">
         <a href="{% url 'home' %}">Início</a>
         <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
@@ -172,7 +182,7 @@
             </div>
         </aside>
     </div>
-</main>
+</div>
 
 <div id="success-modal" class="checkout-modal" role="dialog" aria-modal="true">
     <div class="checkout-modal-card">

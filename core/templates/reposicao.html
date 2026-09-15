@@ -1,263 +1,144 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
 
-{% block title %}Peças de Reposição | Lazer Sport{% endblock %}
+{% block title %}Peças de reposição | Lazer &amp; Sport{% endblock %}
+
+{% block meta_description %}Peças de reposição originais Lazer &amp; Sport para brinquedos mecânicos, eletrônicos e simuladores. Veja preço, detalhes e fale com um vendedor.{% endblock %}
 
 {% block content %}
 
-{# Inter vem de vendor/fontes.css, carregada no base.html. #}
+{% comment %}
+  Antes eram 2 KB de `<style>` dentro do HTML, com nomes que o site
+  inteiro compartilha -- `.card-produto`, `.grid-cards`, `.preco`,
+  `.descricao`, `.breadcrumb`. Além de descerem de novo a cada abertura,
+  eles competiam com o estilo geral: quem mexesse numa regra dessas em
+  `ls-base.css` mudava esta tela sem saber.
 
-<style>
-/* ===== GRID ===== */
-.grid-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 40px;
-    max-width: 1200px;
-    margin: 50px auto;
-    padding: 0 20px;
-    align-items: stretch; /* 🔥 garante mesma altura */
-}
+  Agora o desenho vem do casco comum (`ls-pagina.css`) e só o que é
+  desta tela fica em `paginas/reposicao.css`. O detalhe de uma peça
+  (`reposicao_info`) já seguia esse caminho: a lista e o detalhe voltam
+  a parecer a mesma coisa.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/reposicao.css' %}">
 
-/* tablet */
-@media (max-width: 1024px) {
-    .grid-cards {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
+<div class="ls-pagina">
 
-/* mobile */
-@media (max-width: 520px) {
-    .grid-cards {
-        grid-template-columns: 1fr;
-    }
-}
-.card-favoritos {
-    padding: 0 16px 4px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
+<section class="ls-pagina-hero" id="header">
+    <div class="ls-pagina-hero-inner">
 
-.card-link {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-}
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">Home</a>
+            <span>›</span>
+            <strong>Peças de reposição</strong>
+        </nav>
 
-.card-produto {
-    width: 100%; /* 🔥 não usar 300px fixo */
-    height: 100%; /* 🔥 iguala alturas */
-    background: white;
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    transition: all 0.25s ease;
-    display: flex;
-    flex-direction: column;
-    font-family: 'Inter', sans-serif;
-    position: relative;
-}
+        <span class="ls-pagina-selo">
+            <i class="fa-solid fa-gears" aria-hidden="true"></i> Reposição
+        </span>
 
-.card-produto:hover {
-    transform: translateY(-4px) scale(1.03);
-    box-shadow: 0 16px 34px rgba(0,0,0,0.12);
-}
+        <h1 class="ls-pagina-titulo">
+            A peça certa para o seu <span>brinquedo</span>
+        </h1>
 
-/* ===== IMAGEM ===== */
-.card-produto img {
-    width: 100%;
-    height: 200px;
-    object-fit: contain;
-    background: #fff;
-    padding: 12px;
-    transition: transform .4s ease;
-}
+        <p class="ls-pagina-sub">
+            Peças originais de quem fabrica os equipamentos. Abra uma peça para ver
+            as fotos e a aplicação, ou fale direto com um vendedor pelo WhatsApp.
+        </p>
 
-.card-produto:hover img {
-    transform: scale(1.06);
-}
-
-/* ===== CONTEÚDO ===== */
-.conteudo {
-    padding: 16px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    flex: 1; /* 🔥 empurra footer para baixo */
-}
-
-.card-produto h3 {
-    font-size: 1.15rem;
-    color: #1f2d3d;
-    margin-bottom: 6px;
-}
-
-/* descrição */
-.descricao {
-    font-size: 0.9rem;
-    color: #555;
-    margin: 8px 0 14px;
-    min-height: 3.6em; /* 🔥 baseado em linhas */
-}
-
-/* ===== PREÇO ===== */
-.preco {
-    font-size: 1.35rem;
-    color: #0d6efd;
-    font-weight: 800;
-    margin-top: auto;
-}
-
-/* ===== FOOTER ===== */
-.card-footer {
-    padding: 0 16px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* botão whatsapp */
-.btn-whatsapp {
-    background: #25D366;
-    color: #fff;
-    text-decoration: none;
-    padding: 11px 0;
-    border-radius: 10px;
-    font-weight: 600;
-    text-align: center;
-    transition: .25s;
-}
-
-.btn-whatsapp:hover {
-    background: #1ebe5d;
-    transform: scale(1.03);
-}
-
-/* botão detalhes */
-.btn-vermais {
-    background: linear-gradient(135deg,#0d6efd,#4aa3ff);
-    color: #fff;
-    text-decoration: none;
-    padding: 11px 0;
-    border-radius: 10px;
-    font-weight: 600;
-    text-align: center;
-    transition: .25s;
-}
-
-.btn-vermais:hover {
-    background: #e63946;
-}
-
-/* ===== BREADCRUMB ===== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-}
-
-.btn-whatsapp i {
-    margin-right: 6px;
-    font-size: 1.1rem;
-}
-
-.card-footer {
-    margin-top: auto; /* 🔥 cola botões no fundo */
-}
-</style>
-
-{# Font Awesome já vem do base.html, do próprio servidor. #}
-
-<!-- BREADCRUMB -->
-<nav class="breadcrumb ls-breadcrumb" id="breadcrumb" aria-label="Navegação estrutural">
-    <a href="{% url 'home' %}">
-        <i class="fa-solid fa-house" aria-hidden="true"></i>
-        <span>Início</span>
-    </a>
-    <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
-    <span class="ls-breadcrumb-current" aria-current="page">
-        <i class="fa-solid fa-gears" aria-hidden="true"></i>
-        <span>Peças de reposição</span>
-    </span>
-</nav>
-
-<section class="destaques">
-    <h2 style="text-align:center; font-size:2rem; margin-bottom:40px; color:#0d6efd;">
-        Peças de Reposição
-    </h2>
-
-    <!-- GRID -->
-    <div class="grid-cards">
-
-        {% for cartao in cartoes_pecas %}
-        {% with peca=cartao.obj %}
-        <div class="card-produto" data-scroll-reveal>
-
-            <a href="{% url 'reposicao_detalhe' peca.pk %}#container" class="card-link">
-
-                <!-- IMAGEM -->
-                {% with img=peca.imagem_principal %}
-                  {% if img and img.imagem %}
-                    <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}">
-                  {% else %}
-                    <img src="{% static 'images/sem-imagem.svg' %}" alt="Sem imagem">
-                  {% endif %}
-                {% endwith %}
-
-                <!-- CONTEÚDO -->
-                <div class="conteudo">
-                    <h3>{{ peca.nome }}</h3>
-
-                    <p class="descricao">
-                        {{ peca.descricao_peca|truncatechars:120 }}
-                    </p>
-
-                    <div class="preco">
-                        R$ {{ peca.preco_venda|moeda }}
-                    </div>
-                </div>
-            </a>
-
-            <!-- CURTIR E GUARDAR -->
-            <div class="card-favoritos">
-                {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_desejado=cartao.desejado fav_curtidas=cartao.curtidas fav_compacto=True fav_so_icone=True %}
+        <div class="ls-pagina-stats">
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
+                <span><b>{{ cartoes_pecas|length }}</b> peça{{ cartoes_pecas|length|pluralize }} na vitrine</span>
             </div>
-
-            <!-- BOTÕES -->
-            <div class="card-footer">
-
-                <a href="https://wa.me/5511960563135?text=Olá! Quero falar com um vendedor sobre a peça {{ peca.nome }}"
-                   target="_blank"
-                   class="btn-whatsapp">
-                    <i class="fab fa-whatsapp"></i>
-                    Falar com um vendedor
-                </a>
-
-                <a href="{% url 'reposicao_detalhe' peca.pk %}#container" class="btn-vermais">
-                    Ver detalhes
-                </a>
-
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-industry" aria-hidden="true"></i>
+                <span>Saem da nossa própria fábrica</span>
+            </div>
+            <div class="ls-pagina-stat">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                <span>Vendedor no WhatsApp</span>
             </div>
         </div>
-        {% endwith %}
-        {% empty %}
-            <p>Nenhuma peça cadastrada.</p>
-        {% endfor %}
 
     </div>
 </section>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.preco[data-valor]').forEach(el => {
-        const v = parseFloat(el.dataset.valor);
-        if (!isNaN(v)) {
-            el.innerHTML = 'R$ ' + v.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-            });
-        }
-    });
-});
-</script>
+<svg class="ls-pagina-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
+
+<section class="ls-pagina-secao" id="pecas">
+
+{% if cartoes_pecas %}
+<div class="ls-grade">
+    {% for cartao in cartoes_pecas %}
+    {% with peca=cartao.obj %}
+    <article class="ls-cartao rep-cartao" data-scroll-reveal>
+
+        {% comment %}
+          O link envolve capa, nome, descrição e preço -- e PARA antes dos
+          botões. Um `<a>` com outro `<a>` dentro não é HTML válido, e era
+          nisso que dava o cartão inteiro clicável com "Falar com um
+          vendedor" no meio dele.
+        {% endcomment %}
+        <a class="rep-link" href="{% url 'reposicao_detalhe' peca.pk %}#breadcrumb">
+            <div class="ls-cartao-media">
+                {% with img=peca.imagem_principal %}
+                    {% if img and img.imagem %}
+                        <img src="{{ img.imagem.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                        <img src="{{ img.imagem.url }}" class="ls-cartao-media-fg"
+                             alt="{{ peca.nome }}" loading="lazy" decoding="async">
+                    {% else %}
+                        <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
+                             alt="Imagem indisponível para {{ peca.nome }}" loading="lazy" decoding="async">
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="ls-cartao-corpo">
+                <h2 class="ls-cartao-titulo">{{ peca.nome }}</h2>
+                <p class="ls-cartao-desc">{{ peca.descricao_peca|truncatechars:110 }}</p>
+                <span class="rep-preco">R$ {{ peca.preco_venda|moeda }}</span>
+            </div>
+        </a>
+
+        <div class="rep-favoritos">
+            {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_desejado=cartao.desejado fav_curtidas=cartao.curtidas fav_compacto=True fav_so_icone=True %}
+        </div>
+
+        <div class="rep-acoes">
+            <a class="ls-botao rep-whats"
+               href="https://wa.me/5511960563135?text=Olá! Quero falar com um vendedor sobre a peça {{ peca.nome|urlencode }}"
+               target="_blank" rel="noopener">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                Falar com um vendedor
+            </a>
+
+            <a class="ls-botao" href="{% url 'reposicao_detalhe' peca.pk %}#breadcrumb">
+                Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+        </div>
+    </article>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="ls-vazio">
+    <i class="fa-solid fa-gears" aria-hidden="true"></i>
+    <h2>Nenhuma peça na vitrine agora</h2>
+    <p>
+        O catálogo de reposição está em atualização. Fale com a gente pelo WhatsApp
+        que localizamos a peça do seu equipamento.
+    </p>
+    <a class="ls-botao" href="https://wa.me/5511960563135?text=Olá! Preciso de uma peça de reposição."
+       target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar com um vendedor
+    </a>
+</div>
+{% endif %}
+
+</section>
+</div>
 
 {% endblock %}

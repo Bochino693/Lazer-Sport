@@ -1,0 +1,122 @@
+/* Estilo de estabelecimento_info — os brinquedos de um parceiro.
+ *
+ * ESTA FOLHA É CURTA DE PROPÓSITO. O herói, a onda, a grade, o cartão e o
+ * botão vêm de `ls-pagina.css`, que é o casco comum das telas do site.
+ * Aqui fica só o que é desta tela e de mais nenhuma: a barra de
+ * ordenação, a linha da avaliação e o aviso de preço.
+ *
+ * Antes eram 2 KB de `<style>` dentro do HTML, com nomes genéricos --
+ * `.card-produto`, `.grid-cards`, `.preco`, `.breadcrumb` -- que
+ * desciam de novo a cada abertura e disputavam com o estilo do site.
+ */
+
+/* =========================================================
+   BARRA DE ORDENAÇÃO
+========================================================= */
+.estb-barra {
+    max-width: 1200px;
+    margin: 0 auto 26px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    border: 1px solid rgba(0, 74, 173, .10);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, .86);
+    box-shadow: 0 12px 30px rgba(4, 26, 61, .08);
+    scroll-margin-top: 92px;
+}
+
+.estb-barra-titulo {
+    margin: 0;
+    color: #0b2a5b;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.estb-barra-titulo span {
+    display: block;
+    margin-top: 3px;
+    color: #56708f;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.estb-filtros {
+    display: flex;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+/* O chip é um LINK, e não um botão: sem JavaScript ele continua
+   ordenando pelo servidor, e o endereço da ordenação escolhida pode ser
+   copiado e mandado para alguém. Com JavaScript, o clique reordena na
+   hora e só reescreve a URL. Ver `estabelecimento_info.js`. */
+.estb-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 15px;
+    border: 1px solid rgba(0, 74, 173, .18);
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #004AAD;
+    font-size: .84rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+
+.estb-chip i { font-size: .82em; }
+
+.estb-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 74, 173, .16);
+}
+
+.estb-chip[aria-pressed="true"] {
+    border-color: transparent;
+    background: linear-gradient(135deg, #004AAD, #007BFF);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(0, 74, 173, .28);
+}
+
+/* =========================================================
+   DETALHES DO CARTÃO DO BRINQUEDO
+========================================================= */
+.estb-nota {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, .82);
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.estb-nota .ls-estrelas { font-size: .9rem; }
+
+.estb-preco {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 4px 0 0;
+    padding: 10px 13px;
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px;
+    background: rgba(245, 158, 11, .14);
+    color: #ffd79a;
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.estb-preco i { color: #f8c069; }
+
+@media (max-width: 620px) {
+    .estb-barra { flex-direction: column; align-items: flex-start; }
+    .estb-filtros { width: 100%; }
+    .estb-chip { flex: 1 1 auto; justify-content: center; }
+}

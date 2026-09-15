@@ -1,0 +1,55 @@
+/* Estilo de reposição — só o que é desta tela.
+ *
+ * Casco (herói, onda, grade, cartão, botão) em `ls-pagina.css`.
+ */
+
+/* O link cobre capa, nome, descrição e preço; os botões ficam fora dele,
+   porque link dentro de link não é HTML válido -- e era o que acontecia
+   quando o cartão inteiro era clicável com o botão do WhatsApp dentro. */
+.rep-link {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    color: inherit;
+    text-decoration: none;
+}
+
+.rep-link:focus-visible {
+    outline: 3px solid var(--ls-amarelo, #FFD700);
+    outline-offset: 4px;
+    border-radius: 16px;
+}
+
+.rep-preco {
+    margin-top: 4px;
+    color: #8ef0c0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+}
+
+.rep-favoritos {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 4px 0;
+}
+
+.rep-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding-top: 4px;
+}
+
+/* Os dois botões do cartão nascem do mesmo molde; só a cor muda. */
+.rep-acoes .ls-botao { margin-top: 0; }
+
+.rep-whats {
+    background: linear-gradient(135deg, #25D366, #12a54c);
+    box-shadow: 0 12px 26px rgba(18, 165, 76, .30);
+}
+
+.rep-whats:hover { box-shadow: 0 16px 32px rgba(18, 165, 76, .42); }
+.rep-whats i { transition: none; }
+.rep-whats:hover i { transform: none; }

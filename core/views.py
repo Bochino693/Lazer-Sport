@@ -1545,18 +1545,25 @@ class EstabelecimentoInfoView(View):
     def get(self, request, pk):
         estabelecimento = get_object_or_404(Estabelecimentos, pk=pk)
 
+        # A–Z É O PADRÃO, e não "a ordem que o banco devolver".
+        #
+        # A tela sempre MOSTROU o chip A–Z aceso, mas quem ordenava era o
+        # JavaScript, depois da página pronta. Sem ele -- ou antes de ele
+        # rodar -- a lista vinha na ordem de inserção com o chip dizendo
+        # que estava em ordem alfabética. Agora o servidor entrega o que
+        # o chip promete, e o JavaScript só antecipa a troca seguinte.
+        ORDENS = {
+            "az": ("nome_brinquedo",),
+            "za": ("-nome_brinquedo",),
+            "avaliacao": ("-avaliacao", "nome_brinquedo"),
+            "custo": ("valor_brinquedo", "nome_brinquedo"),
+        }
+
         order = request.GET.get("order", "")
+        if order not in ORDENS:
+            order = "az"
 
-        brinquedos = estabelecimento.brinquedos.all()
-
-        if order == "az":
-            brinquedos = brinquedos.order_by("nome_brinquedo")
-        elif order == "za":
-            brinquedos = brinquedos.order_by("-nome_brinquedo")
-        elif order == "avaliacao":
-            brinquedos = brinquedos.order_by("-avaliacao")
-        elif order == "custo":
-            brinquedos = brinquedos.order_by("valor_brinquedo")
+        brinquedos = estabelecimento.brinquedos.all().order_by(*ORDENS[order])
 
         return render(request, "estabelecimento_info.html", {
             "estabelecimento": estabelecimento,
@@ -1575,20 +1582,33 @@ class SobreView(View):
 
 
 class EventosView(View):
+    """UMA CONSULTA POR CONJUNTO, E NÃO DUAS POR EVENTO.
+
+    A tela mostra, de cada evento, as fotos e os brinquedos usados. Sem
+    `prefetch_related` isso era uma ida ao banco para as fotos e outra
+    para os brinquedos EM CADA evento -- com trinta eventos publicados,
+    sessenta e uma consultas para desenhar uma página. Não dava erro:
+    só ficava mais lenta a cada evento cadastrado, que é o jeito mais
+    silencioso de uma tela apodrecer.
+    """
 
     def get(self, request):
-        context = {
-            'eventos': Eventos.objects.all(),
-        }
-        return render(request, "eventos.html", context)
+        eventos = Eventos.objects.prefetch_related(
+            "imagens_evento", "brinquedos",
+        )
+        return render(request, "eventos.html", {"eventos": eventos})
 
 
 class ProjetosView(View):
+    """Mesma história: a galeria de cada projeto vem junto, de uma vez."""
+
     def get(self, request):
-        context = {
-            'projetos': Projetos.objects.all(),
-        }
-        return render(request, 'projetos.html', context)
+        projetos = Projetos.objects.select_related(
+            "brinquedo_projetado",
+        ).prefetch_related(
+            "brinquedo_projetado__imagens_brinquedo_projeto",
+        )
+        return render(request, "projetos.html", {"projetos": projetos})
 
 
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView

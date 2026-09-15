@@ -1,262 +1,150 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static interno_extras %}
+
+{% block title %}Projetos sob medida | Lazer &amp; Sport{% endblock %}
+
+{% block meta_description %}Brinquedos planejados, desenhados e fabricados sob medida pela Lazer &amp; Sport. Veja os projetos entregues e as fotos de cada um.{% endblock %}
 
 {% block content %}
 
-<!-- ======== BREADCRUMB ======== -->
-<div class="breadcrumb">
-    <a href="{% url 'home' %}#projetos ">Home</a>
-    <span>›</span>
-    <strong>Todos os Projetos</strong>
-</div>
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-galeria.css' %}">
 
-<section class="projetos-wrapper">
+<div class="ls-pagina">
 
-    <!-- HEADER -->
-    <div class="proj-header">
-        <h1>Projetos Desenvolvidos</h1>
-        <p>Conheça os brinquedos planejados, desenhados e criados sob medida.</p>
-    </div>
+<section class="ls-pagina-hero" id="header">
+    <div class="ls-pagina-hero-inner">
 
-    <!-- GRID DE PROJETOS -->
-    <div class="projetos-grid">
-        {% for projeto in projetos %}
-        <div class="proj-card" data-modal="modal-projeto-{{ projeto.id }}">
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}#projetos">Home</a>
+            <span>›</span>
+            <strong>Projetos</strong>
+        </nav>
 
-            <!-- IMAGEM PRINCIPAL -->
-            <div class="proj-image">
-                {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
-                {% else %}
-                <img src="{% static 'images/sem-imagem.svg' %}">
-                {% endif %}
+        <span class="ls-pagina-selo">
+            <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i> Fábrica própria
+        </span>
+
+        <h1 class="ls-pagina-titulo">
+            Brinquedos feitos <span>sob medida</span>
+        </h1>
+
+        <p class="ls-pagina-sub">
+            Projetos que nasceram de uma conversa: medida do espaço, público, tema e
+            orçamento. Abra um deles para ver as fotos da execução.
+        </p>
+
+        <div class="ls-pagina-stats">
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-hammer" aria-hidden="true"></i>
+                <span><b>{{ projetos|length }}</b> projeto{{ projetos|length|pluralize }} entregue{{ projetos|length|pluralize }}</span>
             </div>
-
-            <!-- INFO -->
-            <div class="proj-info">
-                <h3>{{ projeto.titulo }}</h3>
-                <p>{{ projeto.descricao|truncatewords:18 }}</p>
-                <span class="proj-btn">Ver projeto</span>
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                <span>Desenhado para o seu espaço</span>
             </div>
-        </div>
-
-        <!-- MODAL -->
-        <div id="modal-projeto-{{ projeto.id }}" class="proj-modal">
-            <div class="proj-modal-box">
-                <span class="modal-close">&times;</span>
-
-                <div class="modal-top">
-                    <h2>{{ projeto.titulo }}</h2>
-                    <p>{{ projeto.descricao }}</p>
-                </div>
-
-                <!-- GALERIA -->
-                <div class="modal-gallery">
-                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                    <div class="modal-img">
-                        <img src="{{ img.imagem.url }}">
-                        {% if img.legenda %}
-                        <span>{{ img.legenda }}</span>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                <span>Fabricação e manutenção nossas</span>
             </div>
         </div>
-        {% endfor %}
-    </div>
 
+    </div>
 </section>
 
-<script>
-document.querySelectorAll('.proj-card').forEach(card=>{
-    card.addEventListener('click',()=>{
-        document.getElementById(card.dataset.modal).style.display='block';
-    });
-});
+<svg class="ls-pagina-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
 
-document.querySelectorAll('.modal-close').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-        btn.closest('.proj-modal').style.display='none';
-    });
-});
+<section class="ls-pagina-secao" id="todos-projetos">
 
-window.addEventListener('click',e=>{
-    if(e.target.classList.contains('proj-modal')){
-        e.target.style.display='none';
-    }
-});
-</script>
+{% if projetos %}
+<div class="ls-grade ls-grade--larga">
+    {% for projeto in projetos %}
+    <article class="ls-cartao"
+             data-ls-galeria="galeria-projeto-{{ projeto.id }}"
+             role="button" tabindex="0" aria-haspopup="dialog"
+             aria-label="Ver as fotos do projeto {{ projeto.titulo }}"
+             style="cursor:pointer" data-scroll-reveal>
 
+        <div class="ls-cartao-media ls-cartao-media--alta">
+            {% with capa=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all|first %}
+                {% if capa %}
+                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
+                         alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                {% else %}
+                    <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
+                         alt="Projeto {{ projeto.titulo }} ainda sem fotos" loading="lazy" decoding="async">
+                {% endif %}
+            {% endwith %}
+        </div>
 
-<style>
-/* ======== CARDS DE PROJETOS ======== */
-.projetos-wrapper{
-    max-width:1300px;
-    margin:auto;
-    padding:40px 20px 80px;
-}
+        <div class="ls-cartao-corpo">
+            <h2 class="ls-cartao-titulo">{{ projeto.titulo }}</h2>
+            <p class="ls-cartao-desc">{{ projeto.descricao|truncatewords:20 }}</p>
 
-/* HEADER */
-.proj-header{
-    text-align:center;
-    margin-bottom:40px;
-}
-.proj-header h1{
-    font-size:38px;
-    font-weight:700;
-    color:#0f172a;
-}
-.proj-header p{
-    color:#64748b;
-}
+            {% with fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all|length %}
+                {% if fotos %}
+                <span class="ls-cartao-meta">
+                    <i class="fa-solid fa-images" aria-hidden="true"></i>
+                    {{ fotos }} foto{{ fotos|pluralize }} do projeto
+                </span>
+                {% endif %}
+            {% endwith %}
 
-/* GRID */
-.projetos-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-    gap:25px;
-}
+            <span class="ls-botao">
+                Ver projeto <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </span>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="ls-vazio">
+    <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+    <h2>Nenhum projeto publicado ainda</h2>
+    <p>
+        Os próximos projetos entram aqui assim que forem entregues. Se você já tem
+        uma ideia, fale com a gente e desenhamos junto.
+    </p>
+    <a href="{% url 'brinquedos' %}#catalogo-brinquedos" class="ls-botao">
+        Ver o catálogo <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    </a>
+</div>
+{% endif %}
 
-/* CARD */
-.proj-card{
-    background:#fff;
-    border-radius:18px;
-    overflow:hidden;
-    cursor:pointer;
-    transition:.3s;
-    box-shadow:0 8px 25px rgba(0,0,0,.08);
-}
-.proj-card:hover{
-    transform:translateY(-6px);
-    box-shadow:0 18px 40px rgba(0,0,0,.15);
-}
+</section>
+</div>
 
-/* IMAGEM */
-.proj-image{
-    height:240px;
-    overflow:hidden;
-}
-.proj-image img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    transition:.4s;
-}
-.proj-card:hover img{
-    transform:scale(1.08);
-}
+{% comment %}
+  As janelas ficam fora da grade: `position: fixed` dentro de um cartão
+  com `overflow: hidden` seria recortada por ele.
+{% endcomment %}
+{% for projeto in projetos %}
+<div class="ls-galeria" id="galeria-projeto-{{ projeto.id }}" role="dialog" aria-modal="true"
+     aria-labelledby="titulo-projeto-{{ projeto.id }}" hidden>
+    <div class="ls-galeria-caixa">
+        <button type="button" class="ls-galeria-fechar" data-ls-galeria-fechar
+                aria-label="Fechar as fotos de {{ projeto.titulo }}">&times;</button>
 
-/* INFO */
-.proj-info{
-    padding:18px;
-}
-.proj-info h3{
-    font-size:18px;
-    margin-bottom:6px;
-    color:#0f172a;
-}
-.proj-info p{
-    font-size:14px;
-    color:#64748b;
-    min-height:45px;
-}
-.proj-btn{
-    display:inline-block;
-    margin-top:10px;
-    font-weight:600;
-    color:#6366f1;
-}
+        <h2 class="ls-galeria-titulo" id="titulo-projeto-{{ projeto.id }}">{{ projeto.titulo }}</h2>
+        <p class="ls-galeria-texto">{{ projeto.descricao }}</p>
 
-/* MODAL */
-.proj-modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.85);
-    z-index:9999;
-    overflow:auto;
-    padding:40px 20px;
-}
+        <div class="ls-galeria-fotos">
+            {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+            <figure class="ls-galeria-foto">
+                <img src="{{ img.imagem.url }}" alt="{{ img.legenda|default:projeto.titulo }}" loading="lazy" decoding="async">
+                {% if img.legenda %}<span>{{ img.legenda }}</span>{% endif %}
+            </figure>
+            {% empty %}
+            <p class="ls-galeria-vazio">Este projeto ainda não tem fotos publicadas.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endfor %}
 
-.proj-modal-box{
-    background:white;
-    max-width:1100px;
-    margin:auto;
-    padding:30px;
-    border-radius:20px;
-    animation:fadeIn .3s ease;
-}
-
-.modal-close{
-    float:right;
-    font-size:32px;
-    cursor:pointer;
-    color:#ef4444;
-}
-
-.modal-top h2{
-    margin-bottom:8px;
-}
-.modal-top p{
-    color:#64748b;
-    margin-bottom:25px;
-}
-
-/* GALERIA */
-.modal-gallery{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:15px;
-}
-.modal-img{
-    position:relative;
-}
-.modal-img img{
-    width:100%;
-    border-radius:14px;
-    object-fit:cover;
-}
-.modal-img span{
-    position:absolute;
-    bottom:8px;
-    left:8px;
-    background:rgba(0,0,0,.6);
-    color:#fff;
-    padding:4px 8px;
-    font-size:12px;
-    border-radius:6px;
-}
-
-/* ANIMA */
-@keyframes fadeIn{
-    from{opacity:0; transform:scale(.95)}
-    to{opacity:1; transform:scale(1)}
-}
-
-    /* ======== BREADCRUMB ======== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
-}
-
-.breadcrumb a {
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
-
-.breadcrumb strong {
-    color: #1f2d3d;
-}
-</style>
+<script src="{% estatico 'site/ls-galeria.js' %}" defer></script>
 
 {% endblock content %}

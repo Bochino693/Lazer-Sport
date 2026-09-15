@@ -62,7 +62,7 @@
               <div class="pedido-pendente-acoes">
                   {% if pedido.carrinho_origem_id %}
                     <a class="pedido-btn pagar"
-                       href="{% url 'pagamento' pedido.carrinho_origem_id %}#pagamento">
+                       href="{% url 'pagamento' pedido.carrinho_origem_id %}#content">
                         <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
                         Retomar pagamento
                     </a>
