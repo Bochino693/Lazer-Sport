@@ -383,6 +383,11 @@
               <label class="form-label">Cliente que receberá o material *</label>
               <div id="movimentoClienteBox"></div>
               <div class="form-text">Digite pelo menos duas letras. Se não existir, use “Cadastrar cliente”.</div>
+              <label class="form-check form-switch mt-3 mb-0">
+                <input class="form-check-input" type="checkbox" id="movimentoClienteAnonimo" name="cliente_anonimo" value="1">
+                <span class="form-check-label"><strong>Cliente anônimo / não identificado</strong></span>
+              </label>
+              <div class="form-text">Use somente quando ainda não for possível identificar quem recebeu o material.</div>
             </section>
           </div>
         </div>
@@ -396,8 +401,8 @@
 </div>
 
 <div class="modal fade" id="modalClienteMovimento" tabindex="-1" data-bs-backdrop="static" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <form class="modal-content" id="formClienteMovimento" method="post" action="{% url 'stock' %}">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="formClienteMovimento" method="post" enctype="multipart/form-data" action="{% url 'stock' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="save_cliente_rapido">
       <input type="hidden" name="latitude" id="clienteMovimentoLatitude">
@@ -414,7 +419,9 @@
           <div class="col-12 col-md-6"><label class="form-label">Uso do número</label><select class="form-select" name="canal_telefone"><option value="nao_confirmado">Ainda não confirmado</option><option value="whatsapp">WhatsApp confirmado</option><option value="telefone">Telefone, sem WhatsApp</option></select></div>
           <div class="col-12 col-md-6"><label class="form-label">CPF / CNPJ</label><input class="form-control" name="documento" maxlength="20" data-mascara="documento"></div>
           <div class="col-12"><label class="form-check ls-inline-check"><input class="form-check-input" type="checkbox" name="confirmar_telefone_sem_whatsapp" value="1"><span class="form-check-label">Salvar mesmo sem confirmar WhatsApp</span></label></div>
-          <div class="col-12"><label class="form-label">Veio por qual buffet?</label><select class="form-select" name="parceiro"><option value="">Nenhum / veio direto</option>{% for buffet in buffets %}<option value="{{ buffet.id }}">{{ buffet.nome_cliente }}</option>{% endfor %}</select></div>
+          <div class="col-12 col-md-6"><label class="form-label">Veio por qual buffet?</label><select class="form-select" name="parceiro"><option value="">Nenhum / veio direto</option>{% for buffet in buffets %}<option value="{{ buffet.id }}">{{ buffet.nome_cliente }}</option>{% endfor %}</select></div>
+          <div class="col-12 col-md-6"><label class="form-label">Nome do estabelecimento</label><input class="form-control" name="nome_estabelecimento" maxlength="150"></div>
+          <div class="col-12 col-md-6"><label class="form-label">CNPJ do estabelecimento</label><input class="form-control" name="cnpj_estabelecimento" maxlength="18" data-mascara="documento"></div>
         </div>
         <hr class="my-4">
         <h6>Endereço principal</h6>
@@ -422,10 +429,29 @@
         <div class="row g-3 mt-1">
           <div class="col-12 col-sm-4"><label class="form-label">CEP</label><input class="form-control" id="clienteMovimentoCep" name="cep" data-mascara="cep"></div>
           <div class="col-12 col-sm-8"><label class="form-label">Rua</label><input class="form-control" id="clienteMovimentoEndereco" name="endereco" maxlength="120"></div>
-          <div class="col-5 col-sm-3"><label class="form-label">Número</label><input class="form-control" name="numero" maxlength="10"></div>
+          <div class="col-5 col-sm-3"><label class="form-label">Número</label><input class="form-control" id="clienteMovimentoNumero" name="numero" maxlength="10"></div>
           <div class="col-7 col-sm-4"><label class="form-label">Bairro</label><input class="form-control" id="clienteMovimentoBairro" name="bairro" maxlength="50"></div>
           <div class="col-8 col-sm-3"><label class="form-label">Cidade</label><input class="form-control" id="clienteMovimentoCidade" name="cidade" maxlength="50"></div>
           <div class="col-4 col-sm-2"><label class="form-label">UF</label><input class="form-control" id="clienteMovimentoEstado" name="estado" maxlength="2"></div>
+          <div class="col-12 col-md-6"><label class="form-label">Complemento</label><input class="form-control" name="complemento" maxlength="60"></div>
+          <div class="col-12 col-md-6"><label class="form-label">País</label><input class="form-control" name="pais" maxlength="60" value="Brasil"></div>
+        </div>
+
+        <section class="ls-movimento-secao mt-3">
+          <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <div><h6 class="mb-1"><i class="bi bi-truck me-1"></i> Estimativa de frete</h6><span class="text-muted small">Usa o CEP, número e a mesma regra por quilômetro da loja.</span></div>
+            <button class="btn btn-outline-primary" type="button" id="calcularFreteCliente"><i class="bi bi-calculator me-1"></i> Calcular frete</button>
+          </div>
+          <div class="alert alert-light border mt-3 mb-0" id="resultadoFreteCliente">Preencha CEP e número para calcular distância, tempo e valor estimado.</div>
+        </section>
+
+        <hr class="my-4">
+        <h6>Informações complementares</h6>
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6"><label class="form-label">Instagram ou site</label><input class="form-control" type="url" name="site_cliente" maxlength="200" placeholder="https://instagram.com/cliente"></div>
+          <div class="col-12 col-md-6"><label class="form-label">Logo do cliente</label><input class="form-control" type="file" name="logo" accept="image/png,image/jpeg,image/webp"></div>
+          <div class="col-12"><input type="hidden" name="publicar_no_mapa" value=""><label class="form-check form-switch"><input class="form-check-input" type="checkbox" name="publicar_no_mapa" value="1"><span class="form-check-label">Mostrar no mapa mesmo sem proposta ativa</span></label></div>
+          <div class="col-12"><label class="form-label">Observações</label><textarea class="form-control" name="observacoes" rows="3" placeholder="Preferências, combinados e informações importantes para a equipe"></textarea></div>
         </div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Salvar e selecionar</button></div>
@@ -746,6 +772,7 @@ LSTela.pronto(function () {
       document.getElementById("movimentoSaldo").textContent = b.dataset.saldo;
       document.getElementById("movimentoQuantidade").dataset.saldo = b.dataset.saldo;
       buscaClienteMovimento.definirValor("", false);
+      document.getElementById("movimentoClienteAnonimo").checked = false;
       document.getElementById("movimentoTipo").dispatchEvent(new Event("change"));
       Painel.abrir("modalMovimento");
     });
@@ -799,10 +826,21 @@ LSTela.pronto(function () {
     rotuloAcessivel: "Cliente destinatário",
     minimoBusca: 2,
     carregar: buscarClientesMovimento,
-    criar: {rotulo: "Cadastrar cliente", aoClicar: abrirClienteMovimento}
+    criar: {rotulo: "Cadastrar cliente", aoClicar: abrirClienteMovimento},
+    aoEscolher: function () {
+      document.getElementById("movimentoClienteAnonimo").checked = false;
+    }
   });
   buscaClienteMovimento.entrada.id = "movimentoClienteBusca";
   document.getElementById("movimentoClienteBox").appendChild(buscaClienteMovimento.elemento);
+
+  document.getElementById("movimentoClienteAnonimo").addEventListener("change", function (e) {
+    if (e.target.checked) buscaClienteMovimento.definirValor("", false);
+    buscaClienteMovimento.entrada.disabled = e.target.checked;
+    buscaClienteMovimento.entrada.placeholder = e.target.checked
+      ? "Saída registrada como cliente anônimo"
+      : "Buscar cliente cadastrado...";
+  });
 
   Painel.ligarCep({
     url: "{% url 'consultar_cep_inner' %}",
@@ -823,6 +861,36 @@ LSTela.pronto(function () {
     }
   });
 
+  document.getElementById("calcularFreteCliente").addEventListener("click", function () {
+    var cep = document.getElementById("clienteMovimentoCep").value;
+    var numero = document.getElementById("clienteMovimentoNumero").value;
+    var resultado = document.getElementById("resultadoFreteCliente");
+    if (cep.replace(/\D/g, "").length !== 8) {
+      resultado.className = "alert alert-warning mt-3 mb-0";
+      resultado.textContent = "Informe um CEP válido com oito dígitos.";
+      return;
+    }
+    resultado.className = "alert alert-info mt-3 mb-0";
+    resultado.textContent = "Calculando rota e frete…";
+    var dados = new FormData();
+    dados.append("action", "calcular_frete_cliente");
+    dados.append("cep", cep);
+    dados.append("numero", numero);
+    dados.append("csrfmiddlewaretoken", document.querySelector('#formClienteMovimento [name="csrfmiddlewaretoken"]').value);
+    fetch("{% url 'stock' %}", {method:"POST", body:dados, credentials:"same-origin", headers:{"X-Requested-With":"XMLHttpRequest"}})
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.msg || "Não foi possível calcular."); return j; }); })
+      .then(function (json) {
+        var valor = Number(json.valor_frete || 0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+        var tempo = json.tempo_estimado_min == null ? "tempo indisponível" : Math.round(json.tempo_estimado_min) + " min";
+        resultado.className = "alert alert-success mt-3 mb-0";
+        resultado.textContent = valor + " · " + Number(json.distancia_km || 0).toLocaleString("pt-BR", {maximumFractionDigits:2}) + " km · " + tempo + (json.estimado ? " · rota estimada" : "");
+      })
+      .catch(function (erro) {
+        resultado.className = "alert alert-danger mt-3 mb-0";
+        resultado.textContent = erro.message;
+      });
+  });
+
   Painel.ligar({
     form: "formMovimento",
     erro: "movimentoErro",
@@ -837,7 +905,7 @@ LSTela.pronto(function () {
       if (tipo === "saida" && quantidade > saldo) {
         return "Saída de " + quantidade + " maior que o saldo atual (" + saldo + ").";
       }
-      if (tipo === "saida" && !form.querySelector('[name="cliente"]').value) {
+      if (tipo === "saida" && !form.querySelector('[name="cliente"]').value && !document.getElementById("movimentoClienteAnonimo").checked) {
         return "Escolha o cliente que receberá o material.";
       }
       return null;

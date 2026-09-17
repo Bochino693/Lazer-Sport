@@ -22,6 +22,7 @@ from django.utils import timezone
 from django.views.generic import View
 
 from core.models import Manutencao, Pedido, Venda
+from core.utils import FreteCalculoError, calcular_frete_detalhado
 
 from . import clientes as svc_clientes
 
@@ -1022,7 +1023,8 @@ class EstoqueInnerView(
             get_object_or_404(Cliente, pk=cliente_id, ativo=True)
             if cliente_id else None
         )
-        if tipo == MovimentoEstoque.Tipo.SAIDA and cliente is None:
+        cliente_anonimo = request.POST.get("cliente_anonimo") == "1"
+        if tipo == MovimentoEstoque.Tipo.SAIDA and cliente is None and not cliente_anonimo:
             raise ErroDeFormulario("Escolha o cliente que receberá o material.")
         movimento = MovimentoEstoque.registrar(
                 estoque,
@@ -1031,6 +1033,7 @@ class EstoqueInnerView(
                 valor_unitario=valor,
                 fornecedor=fornecedor,
                 cliente=cliente,
+                cliente_anonimo=cliente_anonimo,
                 data_compra=data(request.POST.get("data_compra"), "Data da compra") or timezone.localdate(),
                 documento=texto(request, "documento", limite=60),
                 motivo=texto(request, "motivo", limite=150),
@@ -1054,6 +1057,22 @@ class EstoqueInnerView(
             request,
             f"Cliente '{cliente.nome_cliente}' cadastrado e selecionado.",
             cliente=svc_clientes.opcao_de_busca(cliente),
+        )
+
+    def acao_calcular_frete_cliente(self, request):
+        cep = texto(request, "cep", obrigatorio=True, rotulo="o CEP", limite=18)
+        numero = texto(request, "numero", limite=10)
+        try:
+            calculo = calcular_frete_detalhado(cep, numero)
+        except FreteCalculoError as exc:
+            raise ErroDeFormulario(str(exc)) from exc
+        return self.sucesso(
+            request,
+            "Estimativa de frete calculada.",
+            valor_frete=calculo["valor_frete"],
+            distancia_km=calculo["distancia_km"],
+            tempo_estimado_min=calculo["tempo_estimado_min"],
+            estimado=calculo["estimado"],
         )
 
     def acao_delete(self, request):
@@ -1190,7 +1209,8 @@ class MovimentacoesInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, Vie
             Cliente, pk=request.POST.get("cliente"), ativo=True,
         )
         movimento.cliente = cliente
-        movimento.save(update_fields=["cliente", "atualizado"])
+        movimento.cliente_anonimo = False
+        movimento.save(update_fields=["cliente", "cliente_anonimo", "atualizado"])
         return self.sucesso(
             request,
             f"Saída associada ao cliente '{cliente.nome_cliente}'.",

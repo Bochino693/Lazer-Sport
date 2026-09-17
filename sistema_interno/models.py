@@ -694,6 +694,10 @@ class MovimentoEstoque(Prime):
         blank=True,
         help_text="Destinatário do material nas saídas. Registros antigos podem ser completados depois.",
     )
+    cliente_anonimo = models.BooleanField(
+        default=False,
+        help_text="Saída autorizada sem identificar o destinatário.",
+    )
     tipo = models.CharField(max_length=10, choices=Tipo.choices, db_index=True)
     quantidade = models.PositiveIntegerField()
     quantidade_resultante = models.IntegerField(default=0)
@@ -755,6 +759,7 @@ class MovimentoEstoque(Prime):
             # Cliente é o destinatário de uma saída. Entradas e ajustes não
             # podem guardar silenciosamente um cliente deixado no formulário.
             extras.pop("cliente", None)
+            extras.pop("cliente_anonimo", None)
 
         travado = (
             EstoqueMaterial.objects

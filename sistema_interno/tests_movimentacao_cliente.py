@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
+from unittest.mock import patch
 
 from .models import Cliente, EstoqueMaterial, Material, MovimentoEstoque
 
@@ -45,16 +46,51 @@ class MovimentacaoClienteTests(TestCase):
         self.assertEqual(self.estoque.quantidade, 10)
         self.assertFalse(MovimentoEstoque.objects.exists())
 
+    def test_saida_pode_ser_explicitamente_anonima(self):
+        resposta = self.post("/stock/", {
+            "action": "movimento", "id": self.estoque.pk,
+            "tipo": "saida", "quantidade": "2", "cliente_anonimo": "1",
+        })
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        movimento = MovimentoEstoque.objects.get()
+        self.assertTrue(movimento.cliente_anonimo)
+        self.assertIsNone(movimento.cliente)
+        self.estoque.refresh_from_db()
+        self.assertEqual(self.estoque.quantidade, 8)
+
     def test_cadastro_rapido_retorna_cliente_para_o_modal(self):
         resposta = self.post("/stock/", {
             "action": "save_cliente_rapido",
             "nome_cliente": "Kaio",
             "tipo": Cliente.Tipo.COMERCIAL,
             "email": "kaio@example.com",
+            "cep": "01001-000",
+            "endereco": "Praça da Sé",
+            "numero": "100",
+            "bairro": "Sé",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "pais": "Brasil",
+            "observacoes": "Cliente cadastrado dentro da saída",
         })
         self.assertEqual(resposta.status_code, 200, resposta.content)
         dados = resposta.json()
-        self.assertEqual(Cliente.objects.get(pk=dados["cliente"]["valor"]).nome_cliente, "Kaio")
+        cliente = Cliente.objects.get(pk=dados["cliente"]["valor"])
+        self.assertEqual(cliente.nome_cliente, "Kaio")
+        self.assertEqual(cliente.endereco_principal.numero, "100")
+        self.assertEqual(cliente.observacoes, "Cliente cadastrado dentro da saída")
+
+    @patch("sistema_interno.views.calcular_frete_detalhado")
+    def test_calculo_de_frete_no_cadastro(self, calcular):
+        calcular.return_value = {
+            "valor_frete": 84.5, "distancia_km": 13.0,
+            "tempo_estimado_min": 28, "estimado": False,
+        }
+        resposta = self.post("/stock/", {
+            "action": "calcular_frete_cliente", "cep": "01001-000", "numero": "100",
+        })
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertEqual(resposta.json()["valor_frete"], 84.5)
 
     def test_cliente_aparece_somente_quando_tipo_e_saida(self):
         resposta = self.client.get("/stock/", HTTP_HOST="interno.testserver")

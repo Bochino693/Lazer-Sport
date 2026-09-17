@@ -118,6 +118,8 @@
                 {% if m.tipo == "saida" and m.cliente %}
                   <strong>{{ m.cliente.nome_cliente }}</strong>
                   <span class="d-block ls-subtext">{{ m.cliente.contato_curto }}</span>
+                {% elif m.tipo == "saida" and m.cliente_anonimo %}
+                  <span class="ls-status neutral"><i class="bi bi-person-dash me-1"></i>Cliente anônimo</span>
                 {% elif m.tipo == "saida" %}
                   <form method="post" class="d-flex gap-2 align-items-center">
                     {% csrf_token %}<input type="hidden" name="action" value="associar_cliente"><input type="hidden" name="movimento_id" value="{{ m.id }}">
