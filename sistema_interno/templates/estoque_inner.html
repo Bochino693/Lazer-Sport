@@ -167,11 +167,15 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-editar="{{ estoque.id }}">
                   <i class="bi bi-pencil"></i> Editar
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                        data-excluir="{{ estoque.id }}"
-                        data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}">
-                  <i class="bi bi-trash3"></i>
-                </button>
+                {% if superusuario or not estoque.quantidade and not estoque.quantidade_movimentos %}
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-excluir="{{ estoque.id }}"
+                          data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}"
+                          data-protegido="{% if estoque.quantidade or estoque.quantidade_movimentos %}1{% else %}0{% endif %}"
+                          data-protegido-motivo="Este item possui saldo ou movimentações. Ao confirmar, o saldo e todo o histórico financeiro deste item também serão apagados.">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                {% endif %}
               </td>
             </tr>
           {% empty %}
@@ -518,27 +522,8 @@
   </div>
 </div>
 
-<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm">
-    <form class="modal-content" id="formExcluir" method="post" action="{% url 'stock' %}">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="delete">
-      <input type="hidden" name="id" id="excluirId">
-      <div class="modal-header">
-        <h5 class="modal-title">Excluir item?</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
-        <p class="mb-0"><strong id="excluirNome"></strong> sai do estoque junto com todo o histórico de entradas e saídas dele. Não dá para desfazer.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-danger">Excluir</button>
-      </div>
-    </form>
-  </div>
-</div>
+{% url 'stock' as exclusao_estoque_url %}
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_estoque_url exclusao_titulo="Excluir item do estoque" exclusao_aviso="O item será apagado. Se houver saldo ou movimentações, somente o superusuário pode confirmar e todo esse histórico também será removido." %}
 
 {{ estoques_dados|json_script:"estoquesDados" }}
 {% endblock %}
@@ -726,16 +711,7 @@ LSTela.pronto(function () {
     }
   });
 
-  document.querySelectorAll("[data-excluir]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      Painel.erro("excluirErro", "");
-      Painel.valor("excluirId", b.dataset.excluir);
-      document.getElementById("excluirNome").textContent = b.dataset.nome;
-      Painel.abrir("modalExcluir");
-    });
-  });
-
-  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+  Painel.ligarExclusao();
 });
 </script>
 {% endblock %}

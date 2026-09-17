@@ -1,5 +1,5 @@
 <div class="modal fade ls-delete-modal" id="modalExcluir" tabindex="-1" aria-labelledby="excluirTitulo" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <form class="modal-content" id="formExcluir" method="post" action="{{ exclusao_url }}">
       {% csrf_token %}
       <input type="hidden" name="action" value="delete">
@@ -40,7 +40,7 @@
         <div class="ls-delete-forcada" id="excluirForcada" hidden>
           <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
           <div>
-            <strong>Isto não é um rascunho.</strong>
+            <strong>Esta exclusão ignora uma proteção.</strong>
             <span id="excluirForcadaDetalhe">
               As regras normais protegem este registro por ele já fazer
               parte do histórico. Você pode excluir mesmo assim, e a

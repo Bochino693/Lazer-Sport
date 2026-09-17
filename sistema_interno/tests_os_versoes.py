@@ -84,6 +84,9 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
         self.assertEqual(ordem.numero_serie, f"LS-PAT-{ordem.pk:06d}")
+        self.assertEqual(
+            ordem.status, OrdemServico.Status.AGUARDANDO_RESPOSTA,
+        )
 
     def test_numero_real_da_etiqueta_do_fabricante_e_preservado(self):
         resposta = self.post({

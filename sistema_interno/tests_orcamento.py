@@ -382,6 +382,10 @@ class OrcamentoInternoTests(TestCase):
         self.assertEqual(atividade.autor, self.gestor)
         self.assertEqual(atividade.tipo, AtividadeOrcamento.Tipo.CRIADO)
         self.assertEqual(atividade.cliente, "Cliente compartilhado")
+        self.assertEqual(
+            Orcamento.objects.get().status,
+            Orcamento.Status.AGUARDANDO_RESPOSTA,
+        )
 
     def test_tabela_do_pc_agrupa_dados_sem_esmagar_data_e_revisao(self):
         from pathlib import Path
@@ -680,6 +684,7 @@ class OrcamentoInternoTests(TestCase):
         orcamento = Orcamento.objects.create(
             nome_cliente="Rascunho duplicado",
             responsavel=self.gestor,
+            status=Orcamento.Status.RASCUNHO,
         )
 
         sem_confirmar = self.post({"action": "delete", "id": orcamento.id})
@@ -706,10 +711,12 @@ class OrcamentoInternoTests(TestCase):
         proprio = Orcamento.objects.create(
             nome_cliente="Meu rascunho",
             responsavel=vendedor,
+            status=Orcamento.Status.RASCUNHO,
         )
         alheio = Orcamento.objects.create(
             nome_cliente="Rascunho de outra pessoa",
             responsavel=self.gestor,
+            status=Orcamento.Status.RASCUNHO,
         )
         self.client.force_login(vendedor)
 
@@ -832,6 +839,7 @@ class OrcamentoInternoTests(TestCase):
 
         rascunho = Orcamento.objects.create(
             nome_cliente="Rascunho comum", responsavel=self.gestor,
+            status=Orcamento.Status.RASCUNHO,
         )
 
         self.post({
@@ -1083,6 +1091,8 @@ class OrcamentoInternoTests(TestCase):
         painel e abre rascunho. Ela continua no botão.
         """
         rascunho = self._orcamento_com_item()
+        rascunho.status = Orcamento.Status.RASCUNHO
+        rascunho.save(update_fields=["status"])
         self.assertFalse(rascunho.publicado)
 
         html = self.client.get(

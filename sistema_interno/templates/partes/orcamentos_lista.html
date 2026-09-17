@@ -208,9 +208,9 @@
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-editar="{{ orcamento.id }}"
-                        aria-label="{% if orcamento.pode_editar %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
-                        title="{% if orcamento.pode_editar %}Editar rascunho{% else %}Consultar versão preservada{% endif %}">
-                  <i class="bi {% if orcamento.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar %}Editar{% else %}Ver{% endif %}</span>
+                        aria-label="{% if orcamento.pode_editar_formulario %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
+                        title="{% if orcamento.pode_editar_formulario %}Editar proposta ainda não enviada{% else %}Consultar versão preservada{% endif %}">
+                  <i class="bi {% if orcamento.pode_editar_formulario %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar_formulario %}Editar{% else %}Ver{% endif %}</span>
                 </button>
                 {% if pode_editar_comercial and orcamento.pode_enviar %}<button type="button" class="btn btn-sm btn-outline-primary"
                         data-enviar="{{ orcamento.id }}"
@@ -251,7 +251,7 @@
                   cliente é pior do que não mandar nada. Aqui se cria a
                   versão nova, com o preço de hoje.
                 {% endcomment %}
-                {% if pode_editar_comercial and orcamento.pode_refazer %}
+                {% if pode_editar_comercial and orcamento.pode_refazer and not orcamento.pode_editar_formulario %}
                 <button class="btn btn-sm btn-outline-warning" type="button"
                         data-refazer="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"

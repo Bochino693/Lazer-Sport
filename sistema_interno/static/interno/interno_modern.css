@@ -3002,6 +3002,20 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
    uma folha na base nos aparelhos estreitos, pelo contrato geral de modal. */
 .ls-delete-modal .modal-dialog{max-width:520px}
 .ls-delete-modal .modal-header{align-items:flex-start}
+.ls-delete-modal .modal-content{width:100%}
+.ls-delete-modal #excluirEnviar:disabled{
+  color:var(--muted-2)!important;border-color:var(--line-forte)!important;
+  background:var(--panel-2)!important;opacity:.62;
+}
+.ls-delete-modal #excluirEnviar:not(:disabled){
+  color:var(--text)!important;border-color:rgba(var(--red-rgb),.9)!important;
+  background:linear-gradient(135deg,var(--red-brilho),var(--red))!important;
+  box-shadow:0 8px 22px rgba(var(--red-rgb),.28)!important;
+}
+.ls-delete-modal #excluirEnviar:not(:disabled):hover{
+  filter:brightness(1.12);
+  box-shadow:0 10px 26px rgba(var(--red-rgb),.36)!important;
+}
 .ls-delete-warning{
   padding:16px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;
   border:1px solid rgba(var(--red-rgb),.28);border-radius:14px;
@@ -3033,6 +3047,17 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .ls-delete-warning-icon{width:36px;height:36px;border-radius:10px}
   .ls-delete-modal .modal-footer{grid-template-columns:1fr}
   .ls-delete-modal .modal-footer .btn{grid-column:1!important}
+}
+
+@media (min-width:601px){
+  .ls-delete-modal .modal-dialog{
+    width:min(520px,calc(100% - 40px));
+    min-height:calc(var(--ls-vh) - 24px);
+    margin:12px auto!important;
+  }
+  .ls-delete-modal .modal-content{
+    max-height:calc(var(--ls-vh) - 48px)!important;
+  }
 }
 
 /* ======================================================================

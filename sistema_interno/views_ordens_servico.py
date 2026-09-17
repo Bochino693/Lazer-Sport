@@ -527,7 +527,10 @@ class OrdensServicoInnerView(
             "status_opcoes": [
                 (valor, rotulo)
                 for valor, rotulo in OrdemServico.Status.choices
-                if valor != OrdemServico.Status.SUBSTITUIDA
+                if valor not in (
+                    OrdemServico.Status.RASCUNHO,
+                    OrdemServico.Status.SUBSTITUIDA,
+                )
             ],
             "prioridades": OrdemServico.Prioridade.choices,
             "item_tipos": ItemOrdemServico.Tipo.choices,
@@ -823,6 +826,11 @@ class OrdensServicoInnerView(
             raise ErroDeFormulario("Escolha um tipo de serviço válido.")
         if status not in OrdemServico.Status.values:
             raise ErroDeFormulario("Escolha uma situação válida.")
+        # Rascunho é o estado local de uma janela interrompida, tratado
+        # pelo LSRascunhos. Um POST de salvamento sempre representa uma
+        # O.S. concluída o bastante para entrar na fila de atendimento.
+        if status == OrdemServico.Status.RASCUNHO:
+            status = OrdemServico.Status.AGUARDANDO_RESPOSTA
         if status == OrdemServico.Status.SUBSTITUIDA:
             raise ErroDeFormulario(
                 "“Substituída” não se escolhe: ela é o resultado de "

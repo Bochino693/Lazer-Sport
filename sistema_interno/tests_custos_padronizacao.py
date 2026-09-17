@@ -9,7 +9,7 @@ from django.db.models.deletion import ProtectedError
 from django.test import TestCase, override_settings
 
 from .codigos_materiais import padronizar_codigos
-from .models import EstoqueMaterial, Fornecedor, HistoricoCodigoMaterial, Material, MovimentoEstoque, TipoMaterial
+from .models import ExclusaoRegistrada, EstoqueMaterial, Fornecedor, HistoricoCodigoMaterial, Material, MovimentoEstoque, TipoMaterial
 
 
 class PadronizacaoTests(TestCase):
@@ -143,6 +143,26 @@ class FluxoCustosTests(TestCase):
         resposta = self.post("/stock/", {"action": "delete", "id": self.estoque.pk})
         self.assertEqual(resposta.status_code, 400)
         self.assertEqual(self.estoque.movimentos.count(), 1)
+
+    def test_superusuario_exclui_item_com_saldo_e_historico_confirmando(self):
+        MovimentoEstoque.registrar(
+            self.estoque, "entrada", 10, valor_unitario=10,
+        )
+
+        resposta = self.post("/stock/", {
+            "action": "delete",
+            "id": self.estoque.pk,
+            "confirmacao_exclusao": "CONFIRMAR",
+            "motivo_exclusao": "cadastro duplicado",
+        })
+
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertFalse(
+            EstoqueMaterial.objects.filter(pk=self.estoque.pk).exists()
+        )
+        rastro = ExclusaoRegistrada.objects.get(tipo="estoque")
+        self.assertTrue(rastro.forcada)
+        self.assertIn("Movimentos removidos: 1", rastro.resumo)
 
     def test_resumo_usa_todos_os_registros_e_nao_so_400(self):
         MovimentoEstoque.objects.bulk_create([

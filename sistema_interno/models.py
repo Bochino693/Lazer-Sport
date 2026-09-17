@@ -1923,6 +1923,20 @@ class Orcamento(Prime):
         return self.status == self.Status.RASCUNHO
 
     @property
+    def pode_editar_formulario(self):
+        """Permite ajustar a proposta nova até ela ser enviada ao cliente.
+
+        O salvamento normal já a coloca na fila de aguardando resposta, mas
+        o primeiro envio continua sendo o ponto que congela o documento.
+        ``pode_editar`` permanece estrito para preservar a regra histórica
+        de versões/refação.
+        """
+        return self.pode_editar or (
+            self.status == self.Status.AGUARDANDO_RESPOSTA
+            and self.enviado_em is None
+        )
+
+    @property
     def saldo_pagamento(self):
         return max(
             self.total - (self.valor_pago or Decimal("0.00")),

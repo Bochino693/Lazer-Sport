@@ -48,7 +48,16 @@ from .permissoes import (
     faz_parte_da_equipe,
     tem_funcao,
 )
-from .utils import ErroDeFormulario, data, decimal_br, inteiro, pede_json, texto
+from .exclusoes import forcando, pode_excluir, remover
+from .utils import (
+    ErroDeFormulario,
+    data,
+    decimal_br,
+    exigir_confirmacao_exclusao,
+    inteiro,
+    pede_json,
+    texto,
+)
 
 
 ZERO = Value(Decimal("0.00"), output_field=DecimalField(max_digits=14, decimal_places=2))
@@ -843,6 +852,7 @@ class EstoqueInnerView(
         estoques = (
             EstoqueMaterial.objects
             .select_related("material", "material__tipo_material", "fornecedor")
+            .annotate(quantidade_movimentos=Count("movimentos"))
         )
 
         if busca:
@@ -892,6 +902,7 @@ class EstoqueInnerView(
             "estoques_dados": [self.serializar(e) for e in estoques],
             "tipos_movimento": MovimentoEstoque.Tipo.choices,
             "hoje": timezone.localdate(),
+            "superusuario": bool(request.user.is_superuser),
         }
         return render(request, "estoque_inner.html", ctx)
 
@@ -1024,11 +1035,32 @@ class EstoqueInnerView(
 
     def acao_delete(self, request):
         estoque = get_object_or_404(EstoqueMaterial.objects.select_for_update(), pk=request.POST.get("id"))
-        if estoque.quantidade or estoque.movimentos.exists():
-            raise ErroDeFormulario("Este local possui saldo ou histórico. Use os movimentos para ajustar o saldo; o histórico financeiro deve ser preservado.")
+        regra_normal = not estoque.quantidade and not estoque.movimentos.exists()
+        if not pode_excluir(request.user, regra_normal):
+            raise ErroDeFormulario(
+                "Este local possui saldo ou histórico. Use os movimentos para "
+                "ajustar o saldo; somente um superusuário pode remover todo o "
+                "item e seu histórico financeiro."
+            )
+        exigir_confirmacao_exclusao(request)
         nome = str(estoque)
-        estoque.delete()
-        return self.sucesso(request, f"{nome} removido do estoque.")
+        movimentos = estoque.movimentos.count()
+        saldo = estoque.quantidade
+        exclusao_forcada = forcando(request.user, regra_normal)
+        remover(
+            estoque,
+            autor=request.user,
+            tipo="estoque",
+            identificacao=nome,
+            resumo=f"Saldo removido: {saldo}. Movimentos removidos: {movimentos}.",
+            motivo=texto(request, "motivo_exclusao", limite=240),
+            forcada=exclusao_forcada,
+        )
+        complemento = (
+            f" Saldo {saldo} e {movimentos} movimento(s) também foram removidos."
+            if exclusao_forcada else ""
+        )
+        return self.sucesso(request, f"{nome} removido do estoque.{complemento}")
 
 
 # ======================================================================

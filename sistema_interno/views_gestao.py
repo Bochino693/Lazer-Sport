@@ -613,7 +613,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "whatsapp_cliente": orcamento.whatsapp_destinatario,
             "email_cliente": orcamento.email_destinatario,
             "status": orcamento.status,
-            "pode_editar": orcamento.pode_editar,
+            "pode_editar": orcamento.pode_editar_formulario,
             "versao": orcamento.versao,
             "orcamento_anterior": orcamento.orcamento_anterior_id or "",
             # AS VERSÕES ANTERIORES VIAJAM COM A PROPOSTA, E NÃO NA LISTA.
@@ -860,7 +860,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             atual = orcamento.atualizado.isoformat() if orcamento.atualizado else ""
             if request.POST["revisao"] != atual:
                 return self.erro(request, "Este orçamento mudou em outro atendimento. Seus campos continuam aqui; confira a versão atual antes de salvar novamente.", status=409)
-        if orcamento.pk and not orcamento.pode_editar:
+        if orcamento.pk and not orcamento.pode_editar_formulario:
             return self.erro(
                 request,
                 (
@@ -903,9 +903,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     "Escolha um cliente cadastrado ou escreva o nome do destinatário."
                 )
 
-            # Situação não é campo de edição: rascunho vira aguardando
-            # resposta ao enviar; decisão e negociação têm ações próprias.
-            orcamento.status = Orcamento.Status.RASCUNHO
+            # Salvar é concluir a criação da proposta. O rascunho de uma
+            # janela interrompida fica no navegador (LSRascunhos) e só
+            # aparece na lateral; não deve virar um registro incompleto no
+            # banco. Rascunhos antigos também saem dessa condição quando a
+            # equipe termina e salva o formulário.
+            orcamento.status = Orcamento.Status.AGUARDANDO_RESPOSTA
             orcamento.validade = self._validade(request, novo=novo)
             orcamento.forma_envio = texto(request, "forma_envio", limite=120)
             orcamento.observacoes = texto(request, "observacoes")
@@ -1013,7 +1016,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         return (
             orcamento.cliente_id, orcamento.nome_cliente, orcamento.contato,
             orcamento.whatsapp_cliente, orcamento.email_cliente,
-            orcamento.status, orcamento.validade, orcamento.forma_envio,
+            orcamento.validade, orcamento.forma_envio,
             orcamento.observacoes, assinatura_itens,
         )
 

@@ -1877,6 +1877,7 @@ LSTela.pronto(function () {
        aplica o mesmo prazo quando o campo chega vazio numa proposta nova,
        então o valor é o mesmo por qualquer caminho. */
     if (!orcamento) definirValidade(VALIDADE_PADRAO_DIAS);
+    if (!orcamento) Painel.valor("orcamentoStatus", "aguardando_resposta");
 
     recalcular();
     aplicarPermissoesEdicao(!orcamento || orcamento.pode_editar);
