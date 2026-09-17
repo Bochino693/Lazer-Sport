@@ -26,6 +26,7 @@ from core.models import Manutencao, Pedido, Venda
 from .models import (
     CentralPedidos,
     CentralVendas,
+    Cliente,
     EstoqueMaterial,
     Fornecedor,
     Gerente,
@@ -886,6 +887,8 @@ class EstoqueInnerView(
             "materiais": Material.objects.filter(ativo=True),
             "tipos": TipoMaterial.objects.all().order_by("descricao"),
             "fornecedores": Fornecedor.objects.filter(ativo=True),
+            "clientes": Cliente.objects.filter(ativo=True).order_by("nome_cliente"),
+            "tipos_cliente": Cliente.Tipo.choices,
             # A janela de material novo mora aqui dentro (ver
             # `CadastrosDeEstoqueMixin`), e ela precisa da mesma lista de
             # unidades da tela de Materiais -- senão o cadastro rápido
@@ -1012,12 +1015,20 @@ class EstoqueInnerView(
 
         fornecedor_id = request.POST.get("fornecedor")
         fornecedor = get_object_or_404(Fornecedor, pk=fornecedor_id) if fornecedor_id else None
+        cliente_id = (request.POST.get("cliente") or "").strip()
+        cliente = (
+            get_object_or_404(Cliente, pk=cliente_id, ativo=True)
+            if cliente_id else None
+        )
+        if tipo == MovimentoEstoque.Tipo.SAIDA and cliente is None:
+            raise ErroDeFormulario("Escolha o cliente que receberá o material.")
         movimento = MovimentoEstoque.registrar(
                 estoque,
                 tipo,
                 quantidade,
                 valor_unitario=valor,
                 fornecedor=fornecedor,
+                cliente=cliente,
                 data_compra=data(request.POST.get("data_compra"), "Data da compra") or timezone.localdate(),
                 documento=texto(request, "documento", limite=60),
                 motivo=texto(request, "motivo", limite=150),
@@ -1031,6 +1042,31 @@ class EstoqueInnerView(
                 f"Saldo agora: {movimento.quantidade_resultante}."
             ),
             saldo=movimento.quantidade_resultante,
+        )
+
+    def acao_save_cliente_rapido(self, request):
+        """Cadastra o destinatário sem perder a movimentação em edição."""
+        nome = texto(request, "nome_cliente", obrigatorio=True, rotulo="o nome do cliente", limite=90)
+        tipo = (request.POST.get("tipo_cliente") or Cliente.Tipo.COMERCIAL).strip()
+        if tipo not in Cliente.Tipo.values:
+            raise ErroDeFormulario("Escolha um tipo de cliente válido.")
+
+        cliente = Cliente(
+            nome_cliente=nome,
+            tipo=tipo,
+            documento=texto(request, "documento_cliente", limite=20),
+            telefone=texto(request, "telefone_cliente", limite=24),
+            email=texto(request, "email_cliente", limite=150) or None,
+            canal_telefone=Cliente.CanalTelefone.NAO_CONFIRMADO,
+            ativo=True,
+        )
+        cliente.full_clean(exclude=("documento_chave", "documento_valido", "telefone_digitos"))
+        cliente.save()
+        return self.sucesso(
+            request,
+            f"Cliente '{cliente.nome_cliente}' cadastrado e selecionado.",
+            id=cliente.pk,
+            nome=cliente.nome_cliente,
         )
 
     def acao_delete(self, request):
@@ -1153,7 +1189,29 @@ class MateriaisInnerView(
 # ======================================================================
 # MOVIMENTAÇÕES
 # ======================================================================
-class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
+class MovimentacoesInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
+    rota_padrao = "movimentacoes_inner"
+
+    def acao_associar_cliente(self, request):
+        """Setter explícito para completar baixas históricas sem destinatário."""
+        movimento = get_object_or_404(
+            MovimentoEstoque.objects.select_for_update(),
+            pk=request.POST.get("movimento_id"),
+            tipo=MovimentoEstoque.Tipo.SAIDA,
+        )
+        cliente = get_object_or_404(
+            Cliente, pk=request.POST.get("cliente"), ativo=True,
+        )
+        movimento.cliente = cliente
+        movimento.save(update_fields=["cliente", "atualizado"])
+        return self.sucesso(
+            request,
+            f"Saída associada ao cliente '{cliente.nome_cliente}'.",
+            movimento_id=movimento.pk,
+            cliente_id=cliente.pk,
+            cliente_nome=cliente.nome_cliente,
+        )
+
     def get(self, request):
         tipo = (request.GET.get("tipo") or "").strip()
         busca = (request.GET.get("q") or "").strip()
@@ -1167,7 +1225,7 @@ class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
 
         movimentos = (
             MovimentoEstoque.objects
-            .select_related("estoque__material", "estoque__fornecedor", "responsavel")
+            .select_related("estoque__material", "estoque__fornecedor", "responsavel", "cliente")
         )
 
         if tipo in MovimentoEstoque.Tipo.values:
@@ -1180,6 +1238,7 @@ class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
                 | Q(estoque__descricao_local__icontains=busca)
                 | Q(documento__icontains=busca)
                 | Q(motivo__icontains=busca)
+                | Q(cliente__nome_cliente__icontains=busca)
             )
 
         if desde:
@@ -1221,6 +1280,8 @@ class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
             "sem_custo": totais["sem_custo"],
             "sem_preco": totais["sem_preco"],
             "estimados": totais["estimados"],
+            "clientes": Cliente.objects.filter(ativo=True).order_by("nome_cliente"),
+            "saidas_sem_cliente": movimentos and sum(1 for m in movimentos if m.tipo == "saida" and not m.cliente_id) or 0,
         }
         return render(request, "saidas_estoque.html", ctx)
 

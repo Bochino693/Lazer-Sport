@@ -341,6 +341,20 @@
             <input class="form-control" type="date" id="movimentoDataCompra" name="data_compra">
           </div>
 
+          <div class="col-12" id="movimentoClienteGrupo">
+            <label class="form-label" for="movimentoCliente">Cliente que receberá o material *</label>
+            <div class="input-group">
+              <select class="form-select" id="movimentoCliente" name="cliente">
+                <option value="">Selecione o cliente</option>
+                {% for cliente in clientes %}<option value="{{ cliente.id }}">{{ cliente.nome_cliente }} · {{ cliente.contato_curto }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-outline-primary" type="button" id="novoClienteMovimento">
+                <i class="bi bi-person-plus"></i> Novo
+              </button>
+            </div>
+            <div class="form-text">Obrigatório apenas na saída. O cliente ficará gravado no histórico desta baixa.</div>
+          </div>
+
           <div class="col-12 col-md-6">
             <label class="form-label" for="movimentoDocumento">Nota / pedido</label>
             <input class="form-control" id="movimentoDocumento" name="documento" maxlength="60">
@@ -357,6 +371,28 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="submit" class="btn btn-primary">Registrar movimento</button>
       </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="modalClienteMovimento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formClienteMovimento" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_cliente_rapido">
+      <div class="modal-header"><h5 class="modal-title">Cadastrar cliente para a saída</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div id="clienteMovimentoErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="text-muted small">Ao salvar, o cliente já ficará selecionado na movimentação.</p>
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label">Nome *</label><input class="form-control" name="nome_cliente" maxlength="90" required></div>
+          <div class="col-12 col-md-6"><label class="form-label">Tipo *</label><select class="form-select" name="tipo_cliente" required>{% for valor, rotulo in tipos_cliente %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
+          <div class="col-12 col-md-6"><label class="form-label">Telefone / WhatsApp</label><input class="form-control" name="telefone_cliente" maxlength="24" data-mascara="telefone"></div>
+          <div class="col-12 col-md-6"><label class="form-label">E-mail</label><input class="form-control" type="email" name="email_cliente" maxlength="150"></div>
+          <div class="col-12 col-md-6"><label class="form-label">CPF / CNPJ</label><input class="form-control" name="documento_cliente" maxlength="20"></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Salvar e selecionar</button></div>
     </form>
   </div>
 </div>
@@ -680,17 +716,37 @@ LSTela.pronto(function () {
 
   document.getElementById("movimentoTipo").addEventListener("change", function (e) {
     var compra = e.target.value === "entrada";
+    var saida = e.target.value === "saida";
     document.getElementById("movimentoValor").disabled = !compra;
     document.getElementById("movimentoValor").required = compra;
     document.getElementById("movimentoFornecedor").disabled = !compra;
     document.getElementById("movimentoDataCompra").disabled = !compra;
     document.getElementById("movimentoMotivo").required = e.target.value === "ajuste";
+    document.getElementById("movimentoCliente").required = saida;
+    document.getElementById("movimentoClienteGrupo").classList.toggle("d-none", !saida);
     document.getElementById("movimentoAjuda").textContent =
       e.target.value === "ajuste"
         ? "A quantidade informada passa a ser o saldo, sem somar nem descontar."
         : e.target.value === "saida"
           ? "A quantidade é descontada do saldo atual."
           : "A quantidade é somada ao saldo atual.";
+  });
+
+  document.getElementById("novoClienteMovimento").addEventListener("click", function () {
+    document.getElementById("formClienteMovimento").reset();
+    Painel.erro("clienteMovimentoErro", "");
+    Painel.aplicarMascaras(document.getElementById("modalClienteMovimento"));
+    Painel.abrirFilho("modalClienteMovimento", "modalMovimento");
+  });
+
+  Painel.ligar({
+    form: "formClienteMovimento",
+    erro: "clienteMovimentoErro",
+    depois: function (json) {
+      acrescentarOpcao("movimentoCliente", json.id, json.nome);
+      Painel.fechar("modalClienteMovimento");
+      document.getElementById("movimentoQuantidade").focus();
+    }
   });
 
   Painel.ligar({
@@ -706,6 +762,9 @@ LSTela.pronto(function () {
       if (tipo !== "ajuste" && quantidade <= 0) return "A quantidade precisa ser maior que zero.";
       if (tipo === "saida" && quantidade > saldo) {
         return "Saída de " + quantidade + " maior que o saldo atual (" + saldo + ").";
+      }
+      if (tipo === "saida" && !document.getElementById("movimentoCliente").value) {
+        return "Escolha o cliente que receberá o material.";
       }
       return null;
     }

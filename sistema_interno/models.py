@@ -686,6 +686,14 @@ class MovimentoEstoque(Prime):
         on_delete=models.PROTECT,
         related_name="movimentos",
     )
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.PROTECT,
+        related_name="movimentos_estoque",
+        null=True,
+        blank=True,
+        help_text="Destinatário do material nas saídas. Registros antigos podem ser completados depois.",
+    )
     tipo = models.CharField(max_length=10, choices=Tipo.choices, db_index=True)
     quantidade = models.PositiveIntegerField()
     quantidade_resultante = models.IntegerField(default=0)
@@ -742,6 +750,11 @@ class MovimentoEstoque(Prime):
         quantidade = int(quantidade)
         if quantidade < 0 or (quantidade == 0 and tipo != cls.Tipo.AJUSTE):
             raise ValueError("Informe uma quantidade maior que zero.")
+
+        if tipo != cls.Tipo.SAIDA:
+            # Cliente descreve o destino de uma baixa. Não deixe um valor
+            # escondido ser enviado por um formulário reaproveitado.
+            extras.pop("cliente", None)
 
         travado = (
             EstoqueMaterial.objects

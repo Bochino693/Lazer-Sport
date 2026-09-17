@@ -9,7 +9,7 @@ from django.db.models.deletion import ProtectedError
 from django.test import TestCase, override_settings
 
 from .codigos_materiais import padronizar_codigos
-from .models import ExclusaoRegistrada, EstoqueMaterial, Fornecedor, HistoricoCodigoMaterial, Material, MovimentoEstoque, TipoMaterial
+from .models import Cliente, ExclusaoRegistrada, EstoqueMaterial, Fornecedor, HistoricoCodigoMaterial, Material, MovimentoEstoque, TipoMaterial
 
 
 class PadronizacaoTests(TestCase):
@@ -49,6 +49,7 @@ class CustosEstoqueTests(TestCase):
     def setUp(self):
         self.material = Material.objects.create(nome_material="Arduino")
         self.estoque = EstoqueMaterial.objects.create(material=self.material, descricao_local="A", quantidade=0, preco_fornecedor=0)
+        self.cliente = Cliente.objects.create(nome_cliente="Cliente de teste")
 
     def compra(self, quantidade, preco, **extras):
         return MovimentoEstoque.registrar(self.estoque, "entrada", quantidade, valor_unitario=Decimal(preco), **extras)
@@ -60,7 +61,7 @@ class CustosEstoqueTests(TestCase):
         self.estoque.refresh_from_db()
         self.assertEqual(self.estoque.valor_total, Decimal("300"))
         self.assertEqual(self.estoque.preco_fornecedor, Decimal("15"))
-        saida = MovimentoEstoque.registrar(self.estoque, "saida", 4, valor_unitario=999)
+        saida = MovimentoEstoque.registrar(self.estoque, "saida", 4, valor_unitario=999, cliente=self.cliente)
         self.estoque.refresh_from_db()
         self.assertEqual(saida.valor_total, Decimal("60"))
         self.assertEqual(self.estoque.valor_total, Decimal("240"))
@@ -75,7 +76,7 @@ class CustosEstoqueTests(TestCase):
         self.compra(1, "1")
         self.compra(2, "0")
         for _ in range(3):
-            MovimentoEstoque.registrar(self.estoque, "saida", 1)
+            MovimentoEstoque.registrar(self.estoque, "saida", 1, cliente=self.cliente)
         self.estoque.refresh_from_db()
         self.assertEqual(self.estoque.valor_total, Decimal("0"))
         self.assertEqual(sum(-m.variacao_valor for m in self.estoque.movimentos.filter(tipo="saida")), Decimal("1"))
@@ -107,7 +108,7 @@ class CustosEstoqueTests(TestCase):
         migracao.preencher(apps, SimpleNamespace(connection=connection))
         self.estoque.refresh_from_db()
         self.assertTrue(self.estoque.custo_estimado)
-        movimento = MovimentoEstoque.registrar(self.estoque, "saida", 2)
+        movimento = MovimentoEstoque.registrar(self.estoque, "saida", 2, cliente=self.cliente)
         self.assertTrue(movimento.custo_estimado)
         self.estoque.refresh_from_db()
         self.assertFalse(self.estoque.custo_estimado)

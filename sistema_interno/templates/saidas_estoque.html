@@ -9,7 +9,7 @@
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Rastro operacional</span>
     <h1>Entradas e saídas</h1>
-    <p>Acompanhe toda movimentação de material, com quantidade, saldo resultante, valor, documento, motivo e responsável.</p>
+    <p>Acompanhe toda movimentação de material, com data, quantidade, saldo resultante, cliente, valor, documento, motivo e responsável.</p>
   </div>
   <div class="ls-page-hero-actions">
     <a href="{% url 'stock' %}" class="btn btn-outline-secondary">
@@ -50,7 +50,7 @@
     <div class="col-12 col-lg-4">
       <label class="form-label" for="movBusca">Buscar movimentação</label>
       <input id="movBusca" name="q" value="{{ busca }}" class="form-control"
-             placeholder="Material, local, nota ou motivo">
+             placeholder="Material, cliente, local, nota ou motivo">
     </div>
     <div class="col-6 col-lg-2">
       <label class="form-label" for="movTipo">Tipo</label>
@@ -89,7 +89,7 @@
           <tr>
             <th>Quando</th><th>Material</th><th>Tipo</th>
             <th class="text-end">Qtd.</th><th class="text-end">Saldo depois</th>
-            <th class="text-end">Valor</th><th>Documento / motivo</th><th>Responsável</th>
+            <th>Cliente / destino</th><th class="text-end">Valor</th><th>Documento / motivo</th><th>Responsável</th>
           </tr>
         </thead>
         <tbody>
@@ -114,6 +114,18 @@
                 {% if m.tipo == "entrada" %}+{% elif m.tipo == "saida" %}−{% else %}Saldo ajustado: {% endif %}{{ m.quantidade }}
               </td>
               <td class="text-end ls-number">{{ m.quantidade_resultante }}</td>
+              <td>
+                {% if m.tipo == "saida" and m.cliente %}
+                  <strong>{{ m.cliente.nome_cliente }}</strong>
+                  <span class="d-block ls-subtext">{{ m.cliente.contato_curto }}</span>
+                {% elif m.tipo == "saida" %}
+                  <form method="post" class="d-flex gap-2 align-items-center">
+                    {% csrf_token %}<input type="hidden" name="action" value="associar_cliente"><input type="hidden" name="movimento_id" value="{{ m.id }}">
+                    <select class="form-select form-select-sm" name="cliente" required><option value="">Completar cliente…</option>{% for cliente in clientes %}<option value="{{ cliente.id }}">{{ cliente.nome_cliente }}</option>{% endfor %}</select>
+                    <button class="btn btn-sm btn-primary" type="submit">Salvar</button>
+                  </form>
+                {% else %}—{% endif %}
+              </td>
               <td class="text-end">
                 {% if m.valor_total != None %}
                   <span class="ls-money">R$ {{ m.valor_total|moeda }}</span>
@@ -128,7 +140,7 @@
               <td>{{ m.responsavel.get_username|default:"—" }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="8"><div class="ls-empty"><i class="bi bi-clock-history"></i>Nenhuma movimentação encontrada com esses filtros.</div></td></tr>
+            <tr><td colspan="9"><div class="ls-empty"><i class="bi bi-clock-history"></i>Nenhuma movimentação encontrada com esses filtros.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
