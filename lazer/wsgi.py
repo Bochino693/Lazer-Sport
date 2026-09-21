@@ -14,5 +14,8 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lazer.settings')
 
 from core.healthcheck import HealthcheckWSGI
+from core.traffic_shield import TrafficShieldWSGI
 
-application = HealthcheckWSGI(get_wsgi_application())
+# O health check fica por fora para continuar respondendo mesmo quando o
+# catálogo público está no limite. O escudo rejeita lixo antes do Django.
+application = HealthcheckWSGI(TrafficShieldWSGI(get_wsgi_application()))

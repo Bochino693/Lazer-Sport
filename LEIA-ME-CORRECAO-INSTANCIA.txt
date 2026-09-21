@@ -1,0 +1,44 @@
+CORREÇÃO PREVENTIVA — ERRO DE INSTÂNCIA / SATURAÇÃO
+===================================================
+
+CAUSA ENCONTRADA NO LOG
+Em 18/09/2026, crawlers e robôs dispararam muitas URLs antigas com
+filter_cat e sondagens de WordPress/PHP. Ao mesmo tempo, /brinquedos/
+levava aproximadamente 1,8 a 2,6 segundos. O único processo, configurado
+no evento com 1 worker e 4 threads, ficou ocupado. Às 03:04:42 o Gunicorn
+recebeu SIGTERM da plataforma e a instância reiniciou.
+
+O registro não contém traceback de uma exceção Django causando a queda.
+O padrão é saturação seguida de encerramento externo da instância.
+
+PROTEÇÕES DESTA ATUALIZAÇÃO
+1. Bloqueia sondagens .php, wp-admin, wp-content, wp-includes, cgi-bin,
+   .env, .git e phpunit antes de carregar o Django ou abrir o banco.
+2. Responde 410 às URLs antigas filter_cat, sem redirecionar o robô para
+   uma segunda página pesada.
+3. Limita crawlers nas páginas públicas de catálogo.
+4. Permite no máximo quatro requisições públicas pesadas simultâneas,
+   deixando capacidade reservada para interno.lazersport.com.br.
+5. Mantém /healthz/ fora do limitador, para o Render sempre enxergar o
+   processo vivo.
+6. Remove uma consulta COUNT duplicada em /brinquedos/.
+
+COMO APLICAR
+1. Faça backup do projeto.
+2. Extraia este ZIP na raiz e confirme a substituição.
+3. Execute:
+   python manage.py test core.test_traffic_shield core.tests_bandwidth core.test_healthcheck
+4. Faça commit e push; o Render deve usar o Procfile atual:
+   web: gunicorn lazer.wsgi:application -c gunicorn.conf.py
+
+VARIÁVEIS OPCIONAIS NO RENDER
+PUBLIC_CONCURRENCY=4
+BOT_REQUESTS_PER_MINUTE=24
+WEB_THREADS=8
+
+OBSERVAÇÃO HONESTA
+Nenhum software pode prometer que uma hospedagem nunca reiniciará: deploy,
+manutenção da plataforma, falha física e limite do plano continuam fora do
+código. Esta atualização impede que o padrão registrado no log consuma toda
+a capacidade da aplicação e transforma excesso de tráfego em respostas
+curtas e recuperáveis, preservando o painel e o health check.

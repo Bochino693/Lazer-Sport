@@ -1294,9 +1294,11 @@ class BrinquedosView(View):
         else:
             brinquedos_list = brinquedos_list.order_by("-criacao", "-id")
 
-        total_encontrados = brinquedos_list.count()
-
         paginator = Paginator(brinquedos_list, 12)
+        # `Paginator.count` já executa e memoriza o COUNT. Havia outro
+        # `.count()` imediatamente antes, duplicando a viagem ao Supabase
+        # em cada abertura do catálogo.
+        total_encontrados = paginator.count
         page_obj = paginator.get_page(request.GET.get("page"))
 
         # A lista vira list() para o total de curtidas colado em cada item
