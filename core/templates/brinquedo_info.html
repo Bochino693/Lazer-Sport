@@ -307,13 +307,15 @@
             </section>
         </article>
 
+        {% if visor_3d %}
         {% comment %}
           VER EM 3D, COM A COR E O ADESIVO QUE O CLIENTE QUISER.
 
-          O mesmo motor da Arena 3D, com este brinquedo sozinho no palco. O
-          gabinete de boliche usa os 12 adesivos de verdade do Strike Kids
-          (7 temas); as outras máquinas vestem a arte do jogo delas sobre a
-          cor escolhida. Sem WebGL, a seção diz isso e a página segue.
+          O mesmo motor da Arena 3D, com este brinquedo sozinho no palco. Só
+          aparece para máquina com objeto 3D de verdade (hoje o gabinete de
+          boliche: os 12 adesivos do Strike Kids em 7 temas, ou a arte do
+          Dragon Bowling sobre a cor escolhida). Sem WebGL, a seção diz isso
+          e a página segue.
         {% endcomment %}
         <section class="produto-3d" id="ver-em-3d" aria-labelledby="titulo-3d">
             <div class="produto-3d-cabeca">
@@ -349,12 +351,15 @@
             </div>
             {{ visor_3d|json_script:"arena-dados" }}
         </section>
+        {% endif %}
     </div>
 </div>
 
+{% if visor_3d %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
 <script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
+{% endif %}
 
 <div class="produto-toast" id="produto-toast" role="status" aria-live="polite">
     <i class="fas fa-check-circle" aria-hidden="true"></i>

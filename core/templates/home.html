@@ -1056,15 +1056,15 @@
         <span class="ls-arena-chamada-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
         <h2 id="arena-home-titulo">Arena 3D &amp; <span>Lazer &amp; Sport Jogos</span></h2>
         <p>
-            Gire os brinquedos em 3D, troque a cor do gabinete e a adesivagem, e jogue as
-            miniaturas dos jogos das nossas máquinas — direto no celular ou no computador.
+            Jogue a prévia dos jogos das nossas máquinas, direto no celular ou no computador,
+            e monte o Strike Kids e o Dragon Bowling em 3D, com a cor do gabinete e a adesivagem.
         </p>
         <div class="ls-arena-chamada-acoes">
-            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'arena' %}#arena-3d">
-                <i class="fa-solid fa-cube" aria-hidden="true"></i> Entrar na Arena 3D
+            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'arena' %}#jogos">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
             </a>
-            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#jogos">
-                <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Ver os {{ jogos_arena|length }} jogos
+            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D
             </a>
         </div>
         <a class="ls-arena-chamada-parceiros" href="{% url 'estabelecimentos' %}#header">

@@ -4368,12 +4368,21 @@ class Partida {
       ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
     }
     ctx.restore();
-    if (ativo) { ctx.shadowColor = c.cor; ctx.shadowBlur = 18; }
     ctx.strokeStyle = c.cor;
     ctx.lineWidth = ativo ? 3.5 : 1.5;
     ctx.globalAlpha = ativo ? 1 : 0.7;
+    if (ativo) {
+      // o halo do cartão escolhido em traços largos e transparentes: o
+      // shadowBlur a cada quadro pesava demais no celular
+      for (const [extra, forca] of [[16, 0.12], [9, 0.2], [4, 0.32]]) {
+        ctx.globalAlpha = forca;
+        ctx.lineWidth = 3.5 + extra;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 3.5;
+    }
     ctx.stroke();
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     api.texto(ctx, c.nome, -r.w / 2 + 18, r.h / 2 - 42, { tamanho: 23, cor: BRANCO, alinhar: "left", contorno: "rgba(0,0,0,0.75)", peso: 900 });
     api.texto(ctx, c.nivel, -r.w / 2 + 18, r.h / 2 - 17, { tamanho: 13, cor: c.cor, alinhar: "left", peso: 800 });

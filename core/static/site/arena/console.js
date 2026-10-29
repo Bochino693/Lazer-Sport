@@ -440,8 +440,18 @@ class Console {
         ctx.textAlign = alinhar;
         ctx.textBaseline = base;
         if (sombra) {
-          ctx.shadowColor = sombra;
-          ctx.shadowBlur = tamanho * 0.4;
+          // O halo em três traços largos e transparentes, e não com
+          // shadowBlur: o desfoque do canvas custa caro a cada quadro e
+          // derrubava os jogos para 10 fps no celular.
+          const alfa = ctx.globalAlpha;
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = sombra;
+          for (const [largura, forca] of [[0.62, 0.1], [0.4, 0.18], [0.22, 0.3]]) {
+            ctx.globalAlpha = alfa * forca;
+            ctx.lineWidth = tamanho * largura;
+            ctx.strokeText(texto, x, y);
+          }
+          ctx.globalAlpha = alfa;
         }
         if (contorno) {
           ctx.lineJoin = "round";

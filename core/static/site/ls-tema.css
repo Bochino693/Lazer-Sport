@@ -1040,3 +1040,411 @@ html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-seo-lista li {
     background: rgba(255, 255, 255, .05);
     color: #cfe0ff;
 }
+
+/* =========================================================
+   CATÁLOGO (/brinquedos/) E LOJA (/loja/) NO TEMA ESCURO
+
+   As duas páginas nasceram claras, com fundo branco próprio. Aqui elas
+   perdem o fundo (fica o do site), e os painéis viram vidro escuro. A
+   foto do produto continua num fundo claro de estúdio: é como ela foi
+   tirada, e é o que faz o brinquedo aparecer.
+========================================================= */
+html.ls-escuro:not(#_):not(#__) .catalogo-page {
+    --catalog-ink: var(--ls-texto);
+    --catalog-muted: var(--ls-texto-suave);
+    --catalog-line: var(--ls-borda);
+    --catalog-surface: var(--ls-superficie);
+    color: var(--ls-texto);
+    background: transparent;
+}
+
+html.ls-escuro:not(#_):not(#__) .loja-page {
+    --loja-texto: var(--ls-texto);
+    --loja-muted: var(--ls-texto-suave);
+    color: var(--ls-texto);
+    background: transparent;
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-breadcrumb,
+html.ls-escuro:not(#_):not(#__) .catalogo-page-range,
+html.ls-escuro:not(#_):not(#__) .catalogo-select-chevron,
+html.ls-escuro:not(#_):not(#__) .catalogo-choice-chevron { color: var(--ls-texto-suave); }
+
+html.ls-escuro:not(#_):not(#__) .loja-breadcrumb {
+    border-color: var(--ls-borda);
+    background: rgba(8, 18, 44, .72);
+    color: var(--ls-texto-suave);
+    box-shadow: none;
+}
+
+html.ls-escuro:not(#_):not(#__) .loja-breadcrumb a { color: #cfe0ff; }
+
+/* os painéis grandes: filtros do catálogo e a vitrine da loja */
+html.ls-escuro:not(#_):not(#__) .catalogo-filtros,
+html.ls-escuro:not(#_):not(#__) .loja-catalogo {
+    border-color: var(--ls-borda);
+    background:
+        radial-gradient(circle at 100% 0, rgba(47, 139, 255, .16), transparent 22rem),
+        linear-gradient(180deg, rgba(14, 28, 66, .82), rgba(8, 18, 44, .82));
+    box-shadow: var(--ls-sombra);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-filtros h2,
+html.ls-escuro:not(#_):not(#__) .catalogo-filtros h3,
+html.ls-escuro:not(#_):not(#__) .loja-catalogo h2,
+html.ls-escuro:not(#_):not(#__) .loja-catalogo h3,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-title strong,
+html.ls-escuro:not(#_):not(#__) .catalogo-choice-trigger-copy strong { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-filtros p,
+html.ls-escuro:not(#_):not(#__) .loja-catalogo p,
+html.ls-escuro:not(#_):not(#__) .catalogo-field label,
+html.ls-escuro:not(#_):not(#__) .catalogo-field-label,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-title span,
+html.ls-escuro:not(#_):not(#__) .catalogo-range-head,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-field label,
+html.ls-escuro:not(#_):not(#__) .catalogo-market-bound small,
+html.ls-escuro:not(#_):not(#__) .loja-card-condicao { color: var(--ls-texto-suave); }
+
+/* campos */
+html.ls-escuro:not(#_):not(#__) .catalogo-field input,
+html.ls-escuro:not(#_):not(#__) .catalogo-field select,
+html.ls-escuro:not(#_):not(#__) .catalogo-choice > summary,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-input-wrap input {
+    border-color: var(--ls-borda-forte);
+    background: rgba(4, 10, 28, .7);
+    color: var(--ls-texto);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-field input::placeholder,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-input-wrap input::placeholder { color: #7f93b3; }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-field input:focus,
+html.ls-escuro:not(#_):not(#__) .catalogo-field select:focus {
+    border-color: var(--ls-ciano);
+    background: rgba(4, 10, 28, .9);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-field select option { background: #0b1736; color: var(--ls-texto); }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-range-field,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-rule,
+html.ls-escuro:not(#_):not(#__) .catalogo-empty,
+html.ls-escuro:not(#_):not(#__) .loja-vazio {
+    border-color: var(--ls-borda);
+    background: var(--ls-superficie);
+    color: var(--ls-texto-suave);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-market-bound,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-rule.is-active,
+html.ls-escuro:not(#_):not(#__) .catalogo-value-only {
+    border-color: rgba(25, 180, 90, .35);
+    background: rgba(25, 180, 90, .14);
+    color: #7ff0b0;
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-price-rule.is-active i,
+html.ls-escuro:not(#_):not(#__) .catalogo-range-head output,
+html.ls-escuro:not(#_):not(#__) .catalogo-price-input-wrap span { color: #5fe39a; }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-resultado-badge,
+html.ls-escuro:not(#_):not(#__) .loja-resultado,
+html.ls-escuro:not(#_):not(#__) .catalogo-empty i {
+    background: rgba(47, 139, 255, .16);
+    color: #9cc8ff;
+}
+
+/* atalhos (Todos / Disponíveis / Sob consulta) e filtros da loja */
+html.ls-escuro:not(#_):not(#__) .catalogo-availability a,
+html.ls-escuro:not(#_):not(#__) .loja-filtro-btn,
+html.ls-escuro:not(#_):not(#__) .catalogo-page-btn {
+    border-color: var(--ls-borda);
+    background: rgba(255, 255, 255, .06);
+    color: #cfe0ff;
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-availability a:hover,
+html.ls-escuro:not(#_):not(#__) .loja-filtro-btn:hover,
+html.ls-escuro:not(#_):not(#__) .catalogo-page-btn:hover {
+    border-color: rgba(63, 208, 255, .5);
+    background: rgba(63, 208, 255, .12);
+    color: #fff;
+}
+
+html.ls-escuro:not(#_):not(#__) .loja-filtro-btn .contagem { background: rgba(255, 255, 255, .12); color: #fff; }
+
+/* os cartões dos produtos */
+html.ls-escuro:not(#_):not(#__) .catalogo-card,
+html.ls-escuro:not(#_):not(#__) .loja-card {
+    border-color: var(--ls-borda);
+    background: linear-gradient(180deg, rgba(16, 30, 68, .92), rgba(9, 18, 44, .94));
+    color: var(--ls-texto);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .35);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-card:hover,
+html.ls-escuro:not(#_):not(#__) .loja-card:hover { border-color: rgba(63, 208, 255, .45); }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-card-media,
+html.ls-escuro:not(#_):not(#__) .loja-card-img {
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-card-title h3,
+html.ls-escuro:not(#_):not(#__) .loja-card h3 { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-rating-value,
+html.ls-escuro:not(#_):not(#__) .catalogo-description,
+html.ls-escuro:not(#_):not(#__) .loja-card p { color: var(--ls-texto-suave); }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-category {
+    background: rgba(63, 208, 255, .12);
+    color: var(--ls-ciano);
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-spec,
+html.ls-escuro:not(#_):not(#__) .loja-card-vantagens span {
+    border-color: var(--ls-borda);
+    background: rgba(255, 255, 255, .06);
+    color: #cfe0ff;
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-price {
+    border-color: rgba(25, 180, 90, .3);
+    background: linear-gradient(145deg, rgba(25, 180, 90, .16), rgba(25, 180, 90, .08));
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-price strong { color: #5fe39a; }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-quote-panel {
+    border-color: rgba(47, 139, 255, .3);
+    background: linear-gradient(145deg, rgba(47, 139, 255, .16), rgba(47, 139, 255, .07));
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-price span,
+html.ls-escuro:not(#_):not(#__) .catalogo-quote-panel span,
+html.ls-escuro:not(#_):not(#__) .catalogo-price small,
+html.ls-escuro:not(#_):not(#__) .catalogo-quote-panel small { color: var(--ls-texto-suave); }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-quote-panel strong { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-action.details,
+html.ls-escuro:not(#_):not(#__) .loja-btn-detalhes {
+    border-color: var(--ls-borda-forte);
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+}
+
+html.ls-escuro:not(#_):not(#__) .catalogo-action.details:hover,
+html.ls-escuro:not(#_):not(#__) .loja-btn-detalhes:hover { background: rgba(255, 255, 255, .16); }
+
+html.ls-escuro:not(#_):not(#__) .loja-btn-whatsapp {
+    border-color: rgba(37, 211, 102, .4);
+    background: rgba(37, 211, 102, .14);
+    color: #6af0a0;
+}
+
+html.ls-escuro:not(#_):not(#__) .loja-btn-whatsapp:hover { background: rgba(37, 211, 102, .24); }
+
+html.ls-escuro:not(#_):not(#__) .loja-card-kicker,
+html.ls-escuro:not(#_):not(#__) .loja-card-title-link:hover h3,
+html.ls-escuro:not(#_):not(#__) .loja-card-preco { color: #7cc4ff; }
+
+html.ls-escuro:not(#_):not(#__) .loja-card-preco-original,
+html.ls-escuro:not(#_):not(#__) .loja-card-preco-label { color: #8ea2c2; }
+html.ls-escuro:not(#_):not(#__) .loja-card-precos { border-top-color: var(--ls-borda); }
+
+html.ls-escuro:not(#_):not(#__) .catalogo-price-panel {
+    border-color: var(--ls-borda);
+    background: linear-gradient(135deg, rgba(25, 180, 90, .1), rgba(47, 139, 255, .08));
+}
+
+/* =========================================================
+   AS OUTRAS PÁGINAS CLARAS: categoria, parceiros, lista de desejos,
+   manutenções, busca e entrar/criar conta. Mesma regra do catálogo:
+   fundo do site, painéis de vidro escuro e a foto do produto num fundo
+   claro de estúdio.
+========================================================= */
+
+/* ---------- categoria (/categoria/<id>/) ---------- */
+html.ls-escuro:not(#_):not(#__) .arena-categoria {
+    --arena-text: var(--ls-texto);
+    --arena-muted: var(--ls-texto-suave);
+    --arena-border: var(--ls-borda);
+    color: var(--ls-texto);
+    background: transparent;
+}
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-breadcrumb { color: var(--ls-texto-suave); }
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-breadcrumb-current { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-command,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-empty {
+    border-color: var(--ls-borda);
+    background: linear-gradient(180deg, rgba(16, 30, 68, .92), rgba(9, 18, 44, .94));
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .35);
+}
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product:hover { border-color: rgba(63, 208, 255, .45); }
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-visual {
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+}
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-footer {
+    border-color: var(--ls-borda);
+    background: rgba(255, 255, 255, .04);
+}
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-command-copy strong,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-title h3,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-empty h3 { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-command-copy span,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-results-meta,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-description,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-rating-value,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-empty { color: var(--ls-texto-suave); }
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-order a,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-tech,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-pagination a,
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-pagination span {
+    border-color: var(--ls-borda);
+    background: rgba(255, 255, 255, .06);
+    color: #cfe0ff;
+}
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-tag {
+    border-color: rgba(63, 208, 255, .25);
+    background: rgba(63, 208, 255, .12);
+    color: var(--ls-ciano);
+}
+
+html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-price strong { color: #5fe39a; }
+
+/* ---------- parceiros (/estabelecimentos/) ---------- */
+html.ls-escuro:not(#_):not(#__) .est-section { background: transparent; }
+html.ls-escuro:not(#_):not(#__) .est-wave { display: none; }
+
+/* ---------- lista de desejos ---------- */
+html.ls-escuro:not(#_):not(#__) .desejos-pontos,
+html.ls-escuro:not(#_):not(#__) .desejos-vazio,
+html.ls-escuro:not(#_):not(#__) .desejo-card {
+    border-color: var(--ls-borda);
+    background: linear-gradient(180deg, rgba(16, 30, 68, .92), rgba(9, 18, 44, .94));
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .35);
+}
+
+html.ls-escuro:not(#_):not(#__) .desejos-meta {
+    border-color: var(--ls-borda);
+    background: rgba(255, 255, 255, .05);
+}
+
+html.ls-escuro:not(#_):not(#__) .desejos-pontos h2,
+html.ls-escuro:not(#_):not(#__) .desejos-meta header strong,
+html.ls-escuro:not(#_):not(#__) .desejos-secao h2,
+html.ls-escuro:not(#_):not(#__) .desejo-corpo h3,
+html.ls-escuro:not(#_):not(#__) .desejos-vazio h2 { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .desejos-pontos p,
+html.ls-escuro:not(#_):not(#__) .desejos-meta small,
+html.ls-escuro:not(#_):not(#__) .desejos-meta header span,
+html.ls-escuro:not(#_):not(#__) .desejos-metas-vazio,
+html.ls-escuro:not(#_):not(#__) .desejos-secao p.sub,
+html.ls-escuro:not(#_):not(#__) .desejo-corpo .sem-preco,
+html.ls-escuro:not(#_):not(#__) .desejos-vazio p { color: var(--ls-texto-suave); }
+
+html.ls-escuro:not(#_):not(#__) .desejo-corpo .preco { color: #5fe39a; }
+html.ls-escuro:not(#_):not(#__) .desejo-foto { background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%); }
+
+html.ls-escuro:not(#_):not(#__) .desejos-aviso {
+    border-color: rgba(47, 139, 255, .3);
+    background: rgba(47, 139, 255, .12);
+    color: #cfe0ff;
+}
+
+html.ls-escuro:not(#_):not(#__) .desejos-aviso a { color: #9cc8ff; }
+
+/* ---------- manutenções: o fundo e quem ainda não entrou; o formulário
+   de quem entrou fica como cartão claro, que é onde se digita ---------- */
+html.ls-escuro:not(#_):not(#__) .maintenance-page { background: transparent; }
+
+html.ls-escuro:not(#_):not(#__) .maintenance-page .breadcrumb {
+    border-color: var(--ls-borda);
+    background: rgba(8, 18, 44, .72);
+    color: var(--ls-texto-suave);
+    box-shadow: none;
+}
+
+html.ls-escuro:not(#_):not(#__) .maintenance-page .breadcrumb-current { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .manutencao-guest {
+    border-color: var(--ls-borda);
+    background: linear-gradient(180deg, rgba(16, 30, 68, .95), rgba(9, 18, 44, .96));
+    box-shadow: var(--ls-sombra);
+}
+
+html.ls-escuro:not(#_):not(#__) .manutencao-guest .guest-card h2 { color: #fff; }
+
+html.ls-escuro:not(#_):not(#__) .manutencao-guest .guest-text,
+html.ls-escuro:not(#_):not(#__) .manutencao-guest .guest-beneficios li { color: var(--ls-texto-suave); }
+
+html.ls-escuro:not(#_):not(#__) .manutencao-guest .guest-icon { background: rgba(47, 139, 255, .16); color: #9cc8ff; }
+
+html.ls-escuro:not(#_):not(#__) .manutencao-guest .guest-actions .btn-secundario {
+    border-color: var(--ls-borda-forte);
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+/* ---------- busca (/pesquisa/) ---------- */
+html.ls-escuro:not(#_):not(#__) .ls-search-page {
+    background: radial-gradient(circle at 10% 5%, rgba(0, 123, 255, .18), transparent 30%), transparent;
+}
+
+html.ls-escuro:not(#_):not(#__) .ls-search-summary,
+html.ls-escuro:not(#_):not(#__) .ls-result,
+html.ls-escuro:not(#_):not(#__) .ls-empty {
+    border-color: var(--ls-borda);
+    background: linear-gradient(180deg, rgba(16, 30, 68, .92), rgba(9, 18, 44, .94));
+    color: var(--ls-texto-suave);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .35);
+}
+
+html.ls-escuro:not(#_):not(#__) .ls-result:hover { border-color: rgba(63, 208, 255, .45); }
+html.ls-escuro:not(#_):not(#__) .ls-result-media { background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%); }
+html.ls-escuro:not(#_):not(#__) .ls-result h2 { color: #fff; }
+html.ls-escuro:not(#_):not(#__) .ls-result p { color: var(--ls-texto-suave); }
+html.ls-escuro:not(#_):not(#__) .ls-open { color: #7cc4ff; }
+html.ls-escuro:not(#_):not(#__) .ls-type { background: rgba(63, 208, 255, .12); color: var(--ls-ciano); }
+html.ls-escuro:not(#_):not(#__) .ls-search-summary strong,
+html.ls-escuro:not(#_):not(#__) .ls-search-summary b { color: #fff; }
+
+/* ---------- entrar / criar conta ---------- */
+html.ls-escuro:not(#_):not(#__) .ls-auth {
+    --tinta: #f2f7ff;
+    --nevoa: rgba(255, 255, 255, .06);
+    --texto: #cfdcf2;
+    --texto-fraco: var(--ls-texto-suave);
+    --borda: rgba(255, 255, 255, .12);
+    --borda-forte: rgba(255, 255, 255, .22);
+    background:
+        radial-gradient(circle at 85% 12%, rgba(230, 57, 70, .16), transparent 34%),
+        radial-gradient(circle at 8% 88%, rgba(0, 74, 173, .22), transparent 32%),
+        transparent;
+}
+
+html.ls-escuro:not(#_):not(#__) .ls-auth-shell {
+    border: 1px solid var(--ls-borda);
+    background: linear-gradient(180deg, rgba(14, 28, 66, .96), rgba(8, 18, 44, .97));
+    box-shadow: 0 28px 70px rgba(0, 0, 0, .5);
+}
+
+html.ls-escuro:not(#_):not(#__) .ls-auth .ls-social-btn { background: rgba(255, 255, 255, .06); }
+html.ls-escuro:not(#_):not(#__) .ls-auth .ls-social-btn:hover { background: rgba(255, 255, 255, .12); }
+html.ls-escuro:not(#_):not(#__) .ls-auth .ls-entrada input::placeholder { color: #7f93b3; }
+html.ls-escuro:not(#_):not(#__) .ls-auth .ls-entrada input:focus { background: rgba(4, 10, 28, .7); border-color: var(--ls-ciano); box-shadow: 0 0 0 4px rgba(63, 208, 255, .15); }
+html.ls-escuro:not(#_):not(#__) .ls-auth .ls-auth-rodape a { color: #7cc4ff; }

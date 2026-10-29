@@ -1,4 +1,4 @@
-"""Arena 3D e Lazer & Sport Jogos: a vitrine que se gira e os jogos da casa.
+"""Arena 3D e Lazer & Sport Jogos: os jogos da casa e as máquinas em 3D.
 
 A página tem de abrir inteira sem JavaScript: os brinquedos chegam como
 uma lista de links (é o que o buscador lê e o que aparece num aparelho
@@ -66,6 +66,9 @@ class ArenaView(View):
         jogos = jogos_com_maquina(dados)
 
         return render(request, "arena.html", {
+            # Em 3D só as máquinas com objeto de verdade; o catálogo
+            # inteiro vai para a vitrine de fotos logo abaixo.
+            "maquinas_3d": arena.maquinas_3d(dados),
             "brinquedos_arena": dados,
             "categorias_arena": categorias,
             "jogos": jogos,

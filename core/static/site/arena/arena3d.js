@@ -175,16 +175,6 @@ class Arena {
     return this.mat("escuro", () => new this.T.MeshStandardMaterial({ color: "#11182b", roughness: 0.55, metalness: 0.35 }));
   }
 
-  vidro() {
-    return this.mat("vidro", () => new this.T.MeshStandardMaterial({
-      color: "#a8d8ff", roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.16, depthWrite: false,
-    }));
-  }
-
-  rede(cor = "#ffffff") {
-    return this.mat("rede" + cor, () => new this.T.MeshBasicMaterial({ color: cor, wireframe: true, transparent: true, opacity: 0.55 }));
-  }
-
   /* ---------- peças ---------- */
   caixa(pai, w, h, d, material, x = 0, y = 0, z = 0) {
     const g = this.geo("caixa", () => new this.T.BoxGeometry(1, 1, 1));
@@ -219,16 +209,6 @@ class Arena {
     const g = this.geo("toro" + proporcao, () => new this.T.TorusGeometry(1, Number(proporcao), 12, 48));
     const m = new this.T.Mesh(g, material);
     m.scale.setScalar(r);
-    m.position.set(x, y, z);
-    pai.add(m);
-    return m;
-  }
-
-  /** Painel que recebe a foto do brinquedo quando ela chegar. */
-  tela(pai, w, h, x = 0, y = 0, z = 0) {
-    const g = this.geo("plano", () => new this.T.PlaneGeometry(1, 1));
-    const m = new this.T.Mesh(g, this.luz("#2f8bff", 1.2));
-    m.scale.set(w, h, 1);
     m.position.set(x, y, z);
     pai.add(m);
     return m;
@@ -529,7 +509,7 @@ class Arena {
     grupo.add(totem);
     estande.totem = totem;
 
-    const construir = MODELOS[b.desenho] || MODELOS.fliperama;
+    const construir = MODELOS[b.desenho] || MODELOS.boliche;
     construir(this, estande, modelo);
     this.vestir(estande);
 
@@ -945,7 +925,9 @@ class Arena {
       });
     }
 
-    f.querySelector("[data-ficha-detalhe]").href = b.url;
+    const detalhe = f.querySelector("[data-ficha-detalhe]");
+    detalhe.hidden = !b.url;
+    if (b.url) detalhe.href = b.url;
     const texto = `Olá! Vi o ${b.nome} na Arena 3D do site da Lazer & Sport e quero um orçamento.`;
     const whatsapp = f.querySelector("[data-ficha-whatsapp]");
     whatsapp.href = whatsapp.href.split("?")[0] + "?text=" + encodeURIComponent(texto);
@@ -1091,6 +1073,9 @@ class Arena {
   }
 
   quadro(dt) {
+    // Com um jogo aberto por cima, a arena não desenha: o celular precisa
+    // de todo o fôlego para o jogo, e a cena nem aparece atrás do console.
+    if (document.documentElement.classList.contains("ls-console-aberto")) return;
     this.relogio += dt;
     this.ocioso += dt;
     const t = this.relogio;
@@ -1525,177 +1510,14 @@ function pintarAdesivo(face, { cor, arte, logo, resolucao }) {
 }
 
 /* ======================================================================
-   OS DESENHOS — um por tipo de brinquedo
-   Cada um recebe (arena, estande, grupo) e monta o brinquedo com a base
-   em y = 0, a frente virada para +z, ocupando altura × largura × fundo.
-   `estande.telas` recebem a foto do produto; `a.adesivo(...)` registra
-   uma face que veste a cor e o adesivo escolhidos na ficha.
+   O OBJETO 3D DE CADA MÁQUINA
+
+   Só entra aqui máquina com planta de verdade. Hoje é o gabinete de
+   boliche (Strike Kids e Dragon Bowling). As outras ficam com as fotos
+   reais na vitrine da página até os planos de corte delas chegarem --
+   gabinete inventado não vira 3D.
    ====================================================================== */
-const E = 0.004; // o adesivo descola um fio da parede, para não piscar
-
-function perfilGabinete(a, grupo, w, h, d, material) {
-  // As duas laterais com o recorte clássico de fliperama.
-  const T = a.T;
-  const geometria = a.geo(`perfil:${h.toFixed(2)}:${d.toFixed(2)}`, () => {
-    const forma = new T.Shape();
-    const p = [[-0.5, 0], [0.5, 0], [0.5, 0.42], [0.36, 0.5], [0.22, 0.86], [0.38, 0.9], [0.38, 1], [-0.5, 1]];
-    forma.moveTo(-p[0][0] * d, p[0][1] * h);
-    p.slice(1).forEach(([z, y]) => forma.lineTo(-z * d, y * h));
-    const g = new T.ExtrudeGeometry(forma, { depth: 0.05, bevelEnabled: false });
-    g.rotateY(PI / 2);
-    return g;
-  });
-  [-1, 1].forEach((lado) => {
-    const m = new T.Mesh(geometria, material);
-    m.position.x = lado > 0 ? w / 2 - 0.05 : -w / 2;
-    grupo.add(m);
-  });
-}
-
-/** Adesivos nas duas laterais de uma caixa centrada em (0, y, z). */
-function lateraisAdesivadas(a, e, g, largura, altura, fundo, y, z, tipo = "lateral") {
-  a.adesivo(e, g, "lado_esq", tipo, fundo, altura, [-largura / 2 - E, y, z], [-1, 0, 0], [0, 0, 1]);
-  a.adesivo(e, g, "lado_dir", tipo, fundo, altura, [largura / 2 + E, y, z], [1, 0, 0], [0, 0, -1]);
-}
-
 const MODELOS = {
-  fliperama(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    perfilGabinete(a, g, w, h, d, e.matCorpo);
-    const miolo = w - 0.1;
-    a.caixa(g, miolo, h, d * 0.8, a.escuro(), 0, h / 2, -d * 0.1);
-    a.caixa(g, miolo, 0.42 * h, d * 0.2, e.matCorpo, 0, 0.21 * h, 0.4 * d);
-    a.caixa(g, miolo, 0.12 * h, 0.1, a.luz(cor, 2.6), 0, 0.95 * h, 0.36 * d);
-    const tela = a.tela(g, miolo * 0.86, 0.3 * h, 0, 0.7 * h, 0.27 * d);
-    tela.rotation.x = -0.18;
-    const painel = a.caixa(g, miolo, 0.04, 0.22 * d, a.plastico("#1b2440"), 0, 0.47 * h, 0.42 * d);
-    painel.rotation.x = 0.35;
-    a.cilindro(g, 0.02, 0.12, a.metal(), -miolo * 0.25, 0.53 * h, 0.42 * d, 8);
-    a.esfera(g, 0.045, a.plastico("#e63946"), -miolo * 0.25, 0.53 * h + 0.07, 0.42 * d);
-    ["#ffd700", "#2f8bff", "#e63946", "#1fbf5b"].forEach((c, i) => {
-      a.cilindro(g, 0.035, 0.03, a.luz(c, 1.6), miolo * (0.05 + i * 0.1), 0.505 * h, 0.43 * d - (i % 2) * 0.04, 16);
-    });
-    // Laterais, letreiro e a frente de baixo vestem o adesivo.
-    lateraisAdesivadas(a, e, g, w, 0.8 * h, 0.7 * d, 0.43 * h, -0.15 * d);
-    a.adesivo(e, g, "letreiro", "letreiro", miolo, 0.12 * h, [0, 0.95 * h, 0.36 * d + 0.05 + E], [0, 0, 1], [1, 0, 0]);
-    a.adesivo(e, g, "frente", "frente", miolo, 0.4 * h, [0, 0.21 * h, 0.5 * d + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, 0.24, 0.12, 0.02, a.luz("#ffb300", 1.2), 0, 0.12 * h, 0.5 * d + 0.012);
-    e.telas = [tela];
-  },
-
-  tiro(a, e, g) {
-    MODELOS.fliperama(a, e, g);
-    const { w, h, d } = e;
-    // Duas pistolas de luz no painel.
-    [-1, 1].forEach((lado) => {
-      const arma = a.caixa(g, 0.07, 0.1, 0.32, a.plastico(lado > 0 ? "#e63946" : "#2f8bff"), lado * w * 0.25, 0.58 * h, 0.48 * d);
-      arma.rotation.x = -0.2;
-      a.caixa(g, 0.05, 0.14, 0.06, a.escuro(), lado * w * 0.25, 0.53 * h, 0.4 * d);
-    });
-  },
-
-  musica(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    a.caixa(g, w, h * 0.42, d, e.matCorpo, 0, h * 0.21, 0);
-    a.caixa(g, w * 0.92, h * 0.58, d * 0.35, a.plastico("#151a33"), 0, h * 0.71, -d * 0.3);
-    // A tela redonda do Hit Music, com os oito botões em volta.
-    const r = Math.min(w, h * 0.5) * 0.36;
-    const tela = new a.T.Mesh(a.geo("disco", () => new a.T.CircleGeometry(1, 48)), a.luz("#ff3df2", 1.2));
-    tela.scale.setScalar(r);
-    tela.position.set(0, h * 0.72, -d * 0.12 + 0.01);
-    g.add(tela);
-    a.anel(g, r * 1.04, 0.025, a.luz("#ffffff", 3), 0, h * 0.72, -d * 0.11);
-    for (let i = 0; i < 8; i++) {
-      const ang = (i / 8) * PI * 2;
-      a.cilindro(g, 0.06, 0.04, a.luz(CORES[i % CORES.length], 2.4), Math.cos(ang) * r * 1.25, h * 0.72 + Math.sin(ang) * r * 1.25, -d * 0.1, 16).rotation.x = PI / 2;
-    }
-    a.caixa(g, w, 0.06, 0.08, a.luz(cor, 2.4), 0, h * 0.42, d * 0.5);
-    lateraisAdesivadas(a, e, g, w, h * 0.4, d * 0.96, h * 0.21, 0);
-    a.adesivo(e, g, "frente", "frente", w * 0.96, h * 0.36, [0, h * 0.2, d / 2 + E], [0, 0, 1], [1, 0, 0]);
-    e.telas = [tela];
-  },
-
-  simulador(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    a.caixa(g, w, 0.18, d, a.escuro(), 0, 0.09, 0);
-    a.caixa(g, w, 0.04, 0.05, a.luz(cor, 2.4), 0, 0.18, d / 2);
-    // O piloto senta de costas para o público e olha a tela grande do fundo.
-    a.caixa(g, w * 0.5, 0.12, d * 0.3, a.plastico("#1b1f2e"), 0, 0.45, d * 0.2);
-    const encosto = a.caixa(g, w * 0.5, h * 0.42, 0.1, e.matCorpo, 0, 0.72, d * 0.36);
-    encosto.rotation.x = 0.2;
-    a.caixa(g, 0.12, 0.3, 0.12, a.metal(), 0, 0.3, d * 0.2);
-    a.cilindro(g, 0.04, 0.5, a.metal(), 0, 0.55, -d * 0.08, 10).rotation.x = -0.5;
-    const volante = a.anel(g, 0.17, 0.025, a.plastico("#222833"), 0, 0.78, -d * 0.16);
-    volante.rotation.x = 0.6;
-    a.caixa(g, w * 0.95, h * 0.55, 0.12, e.matCorpo, 0, h * 0.62, -d * 0.42);
-    const tela = a.tela(g, w * 0.88, h * 0.46, 0, h * 0.62, -d * 0.42 + 0.065);
-    a.adesivo(e, g, "traseira", "frente", w * 0.95, h * 0.55, [0, h * 0.62, -d * 0.42 - 0.06 - E], [0, 0, -1], [-1, 0, 0]);
-    e.telas = [tela];
-  },
-
-  pinball(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => a.caixa(g, 0.06, 0.62, 0.06, a.metal(), x * w * 0.42, 0.31, z * d * 0.42));
-    const corpo = new a.T.Group();
-    corpo.position.set(0, 0.74, 0);
-    corpo.rotation.x = 0.1;
-    g.add(corpo);
-    a.caixa(corpo, w, 0.26, d * 0.9, e.matCorpo, 0, 0, 0);
-    lateraisAdesivadas(a, e, corpo, w, 0.24, d * 0.88, 0, 0);
-    const mesa = a.tela(corpo, w * 0.86, d * 0.82, 0, 0.135, 0);
-    mesa.rotation.x = -PI / 2;
-    a.caixa(corpo, w * 0.9, 0.01, d * 0.86, a.vidro(), 0, 0.15, 0);
-    a.caixa(g, w, h * 0.42, 0.22, e.matCorpo, 0, h - h * 0.21, -d * 0.4);
-    const placar = a.tela(g, w * 0.86, h * 0.3, 0, h - h * 0.21, -d * 0.4 + 0.115);
-    a.adesivo(e, g, "traseira", "letreiro", w, h * 0.42, [0, h - h * 0.21, -d * 0.4 - 0.11 - E], [0, 0, -1], [-1, 0, 0]);
-    a.caixa(g, w, 0.04, 0.24, a.luz(cor, 2.2), 0, h + 0.02, -d * 0.4);
-    a.cilindro(g, 0.02, 0.12, a.metal(), w * 0.38, 0.7, d * 0.46, 8).rotation.x = PI / 2;
-    e.telas = [mesa, placar];
-  },
-
-  basquete(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    // Rampa inclinada com as bolas.
-    const rampa = a.caixa(g, w, 0.08, d * 0.7, a.plastico("#c96a1a"), 0, 0.55, d * 0.1);
-    rampa.rotation.x = -0.12;
-    a.caixa(g, w, 0.5, d * 0.7, e.matCorpo, 0, 0.25, d * 0.12);
-    lateraisAdesivadas(a, e, g, w, 0.46, d * 0.68, 0.25, d * 0.12);
-    a.adesivo(e, g, "frente", "frente", w * 0.98, 0.44, [0, 0.23, d * 0.47 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w, 0.05, 0.06, a.luz(cor, 2.6), 0, 0.5, d * 0.47);
-    for (let i = 0; i < 5; i++) a.esfera(g, 0.12, a.plastico("#ff7a00"), -w * 0.3 + i * w * 0.15, 0.68, d * 0.38);
-    // Redes laterais e tabela.
-    const lateral = a.geo("redeLateral", () => new a.T.PlaneGeometry(1, 1, 8, 10));
-    [-1, 1].forEach((lado) => {
-      const r = new a.T.Mesh(lateral, a.rede("#cfe4ff"));
-      r.scale.set(d * 0.75, h * 0.7, 1);
-      r.rotation.y = PI / 2;
-      r.position.set(lado * w / 2, h * 0.55, -d * 0.05);
-      g.add(r);
-    });
-    a.caixa(g, w, 0.1, d * 0.75, e.matCorpo, 0, h - 0.05, -d * 0.05);
-    a.caixa(g, w, h * 0.12, 0.08, a.luz(cor, 2.4), 0, h - h * 0.06, d * 0.33);
-    a.adesivo(e, g, "letreiro", "letreiro", w * 0.98, h * 0.115, [0, h - h * 0.06, d * 0.33 + 0.04 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w * 0.74, h * 0.29, 0.05, a.plastico("#ffffff"), 0, h * 0.72, -d * 0.43);
-    const tabela = a.tela(g, w * 0.7, h * 0.26, 0, h * 0.72, -d * 0.4);
-    const aro = a.anel(g, 0.23, 0.02, a.plastico("#ff5a1f"), 0, h * 0.6, -d * 0.4 + 0.3);
-    aro.rotation.x = PI / 2;
-    const redeAro = new a.T.Mesh(a.geo("redeAro", () => new a.T.CylinderGeometry(0.23, 0.15, 0.3, 12, 3, true)), a.rede());
-    redeAro.position.set(0, h * 0.6 - 0.15, -d * 0.4 + 0.3);
-    g.add(redeAro);
-    const bola = a.esfera(g, 0.12, a.plastico("#ff7a00"), 0, h * 0.6, -d * 0.1);
-    e.animar = (t) => {
-      // Uma bola sobe em arco até o aro, sem parar.
-      const ciclo = (t * 0.6) % 1;
-      bola.position.set(Math.sin(t) * 0.05, 0.7 + Math.sin(ciclo * PI) * (h * 0.45), d * 0.35 - ciclo * (d * 0.45));
-    };
-    e.telas = [tabela];
-  },
-
   /**
    * O gabinete de boliche como a planta do Strike Kids o descreve (mm):
    * pista 2600 × 800 com laterais de 520 e piso a 450, torre de 600 de
@@ -1785,252 +1607,4 @@ const MODELOS = {
     e.telas = [tv];
   },
 
-  pebolim(a, e, g) {
-    const { w, h, d } = e;
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => a.caixa(g, 0.08, h * 0.8, 0.08, a.plastico("#1b1f2e"), x * w * 0.4, h * 0.4, z * d * 0.4));
-    a.caixa(g, w, 0.22, d, e.matCorpo, 0, h * 0.85, 0);
-    lateraisAdesivadas(a, e, g, w, 0.2, d * 0.96, h * 0.85, 0);
-    a.adesivo(e, g, "frente", "frente", w * 0.96, 0.2, [0, h * 0.85, d / 2 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w * 0.86, 0.01, d * 0.9, a.plastico("#1f9d4a"), 0, h * 0.96 + 0.005, 0);
-    for (let i = 0; i < 6; i++) {
-      const z = -d * 0.38 + i * (d * 0.76 / 5);
-      a.cilindro(g, 0.015, w * 1.25, a.metal(), 0, h * 1.02, z, 8).rotation.z = PI / 2;
-      a.cilindro(g, 0.04, 0.08, a.plastico("#111111"), w * 0.64, h * 1.02, z, 12).rotation.z = PI / 2;
-      for (let j = -1; j <= 1; j++) a.caixa(g, 0.06, 0.16, 0.05, a.plastico(i % 2 ? "#e63946" : "#2f8bff"), j * w * 0.22, h * 0.99, z);
-    }
-  },
-
-  futebol(a, e, g) {
-    const { w, h, d } = e;
-    // Gol com os anéis de luz do Gol Flash Arena.
-    a.caixa(g, w, 0.04, d, a.plastico("#1f9d4a"), 0, 0.02, 0);
-    [-1, 1].forEach((lado) => a.cilindro(g, 0.05, h, a.plastico("#ffffff"), lado * w * 0.45, h / 2, -d * 0.35, 12));
-    a.cilindro(g, 0.05, w * 0.9, a.plastico("#ffffff"), 0, h, -d * 0.35, 12).rotation.z = PI / 2;
-    const fundoRede = new a.T.Mesh(a.geo("redeGol", () => new a.T.PlaneGeometry(1, 1, 12, 8)), a.rede());
-    fundoRede.scale.set(w * 0.9, h, 1);
-    fundoRede.position.set(0, h / 2, -d * 0.48);
-    g.add(fundoRede);
-    const aneis = ["#ffd700", "#2f8bff", "#1fbf5b", "#e63946", "#ff7a00"].map((c, i) => {
-      const r = Math.min(w, h) * 0.12;
-      return a.anel(g, r, 0.03, a.luz(c, 2), -w * 0.34 + i * (w * 0.68 / 4), h * (i % 2 ? 0.62 : 0.34), -d * 0.34);
-    });
-    // Placa de LED na frente do gol.
-    a.caixa(g, w * 0.9, 0.26, 0.06, e.matCorpo, 0, 0.17, -d * 0.2);
-    a.adesivo(e, g, "placa", "frente", w * 0.88, 0.24, [0, 0.17, -d * 0.2 + 0.03 + E], [0, 0, 1], [1, 0, 0]);
-    a.esfera(g, 0.11, a.plastico("#f5f8ff"), 0, 0.13, d * 0.3);
-    e.animar = (t) => {
-      const aceso = Math.floor(t * 1.5) % aneis.length;
-      aneis.forEach((anel, i) => anel.scale.setScalar(Math.min(w, h) * 0.12 * (i === aceso ? 1.25 : 1)));
-    };
-  },
-
-  hockey(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    a.caixa(g, w * 0.8, h * 0.7, d * 0.8, e.matCorpo, 0, h * 0.35, 0);
-    lateraisAdesivadas(a, e, g, w * 0.8, h * 0.62, d * 0.78, h * 0.36, 0);
-    a.adesivo(e, g, "frente", "frente", w * 0.78, h * 0.62, [0, h * 0.36, d * 0.4 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w, 0.14, d, a.plastico(cor), 0, h * 0.75, 0);
-    a.caixa(g, w * 0.88, 0.01, d * 0.92, a.plastico("#eaf2ff"), 0, h * 0.82 + 0.005, 0);
-    a.caixa(g, w * 0.88, 0.006, 0.02, a.luz("#e63946", 2), 0, h * 0.83, 0);
-    [-1, 1].forEach((lado) => {
-      a.caixa(g, w * 0.3, 0.05, 0.04, a.escuro(), 0, h * 0.83, lado * d * 0.47);
-      a.cilindro(g, 0.07, 0.06, a.plastico(lado > 0 ? "#2f8bff" : "#e63946"), lado * 0.1, h * 0.86, lado * d * 0.3, 20);
-    });
-    const disco = a.cilindro(g, 0.04, 0.015, a.plastico("#111111"), 0, h * 0.835, 0, 20);
-    a.caixa(g, w * 0.6, h * 0.35, 0.1, a.escuro(), 0, h * 1.05, -d * 0.5);
-    const placar = a.tela(g, w * 0.5, h * 0.25, 0, h * 1.05, -d * 0.44);
-    e.animar = (t) => {
-      disco.position.x = Math.sin(t * 2.1) * w * 0.3;
-      disco.position.z = Math.sin(t * 1.3) * d * 0.35;
-    };
-    e.telas = [placar];
-  },
-
-  garra(a, e, g) {
-    const { w, h, d } = e;
-    a.caixa(g, w, h * 0.42, d, e.matCorpo, 0, h * 0.21, 0);
-    lateraisAdesivadas(a, e, g, w, h * 0.38, d * 0.96, h * 0.22, 0);
-    a.adesivo(e, g, "frente", "frente", w * 0.96, h * 0.24, [0, h * 0.3, d / 2 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w * 0.3, h * 0.12, 0.04, a.escuro(), -w * 0.25, h * 0.1, d * 0.5);
-    // Cabine de vidro com os quatro pilares.
-    a.caixa(g, w * 0.96, h * 0.46, d * 0.96, a.vidro(), 0, h * 0.65, 0);
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => a.caixa(g, 0.04, h * 0.46, 0.04, a.metal(), x * w * 0.48, h * 0.65, z * d * 0.48));
-    a.caixa(g, w, h * 0.12, d, e.matCorpo, 0, h * 0.94, 0);
-    const letreiro = a.tela(g, w * 0.9, h * 0.1, 0, h * 0.94, d * 0.5 + 0.005);
-    // Pelúcias (bolinhas coloridas) no fundo da cabine.
-    for (let i = 0; i < 14; i++) {
-      a.esfera(g, 0.08, a.plastico(CORES[i % CORES.length]), (Math.random() - 0.5) * w * 0.7, h * 0.46 + Math.random() * 0.08, (Math.random() - 0.5) * d * 0.7);
-    }
-    const garra = new a.T.Group();
-    a.cilindro(garra, 0.008, 0.5, a.metal(), 0, 0.25, 0, 6);
-    a.cilindro(garra, 0.05, 0.06, a.metal("#c8d3e6"), 0, 0, 0, 12);
-    [0, 1, 2].forEach((i) => {
-      const dedo = a.caixa(garra, 0.015, 0.14, 0.015, a.metal("#c8d3e6"), Math.sin(i * 2.1) * 0.04, -0.07, Math.cos(i * 2.1) * 0.04);
-      dedo.rotation.set(Math.cos(i * 2.1) * 0.4, 0, -Math.sin(i * 2.1) * 0.4);
-    });
-    garra.position.y = h * 0.82;
-    g.add(garra);
-    e.animar = (t) => {
-      garra.position.x = Math.sin(t * 0.7) * w * 0.3;
-      garra.position.z = Math.cos(t * 0.5) * d * 0.25;
-      garra.position.y = h * 0.8 - Math.max(0, Math.sin(t * 0.9)) * h * 0.18;
-    };
-    e.telas = [letreiro];
-  },
-
-  boxe(a, e, g) {
-    const { w, h, d } = e;
-    a.caixa(g, w, 0.12, d, a.escuro(), 0, 0.06, 0);
-    a.caixa(g, w * 0.7, h, d * 0.25, e.matCorpo, 0, h / 2, -d * 0.35);
-    lateraisAdesivadas(a, e, g, w * 0.7, h * 0.96, d * 0.24, h / 2, -d * 0.35);
-    a.adesivo(e, g, "frente", "frente", w * 0.68, h * 0.5, [0, h * 0.34, -d * 0.225 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w * 0.62, h * 0.3, 0.02, a.escuro(), 0, h * 0.8, -d * 0.22);
-    const tela = a.tela(g, w * 0.58, h * 0.26, 0, h * 0.8, -d * 0.205);
-    // O braço com o saco de pancada.
-    a.caixa(g, 0.08, 0.08, d * 0.45, a.metal(), 0, h * 0.62, -d * 0.05);
-    const saco = new a.T.Mesh(a.geo("capsula", () => new a.T.CapsuleGeometry(1, 1.6, 6, 16)), a.plastico("#e63946"));
-    saco.scale.setScalar(0.16);
-    saco.position.set(0, h * 0.5, d * 0.18);
-    g.add(saco);
-    e.animar = (t) => { saco.rotation.x = Math.sin(t * 3) * 0.12; };
-    e.telas = [tela];
-  },
-
-  cama_elastica(a, e, g) {
-    const { w, h, d } = e;
-    const r = Math.min(w, d) / 2;
-    for (let i = 0; i < 6; i++) {
-      const ang = (i / 6) * PI * 2;
-      a.cilindro(g, 0.03, 0.55, a.metal(), Math.cos(ang) * r, 0.27, Math.sin(ang) * r, 8);
-      a.cilindro(g, 0.025, h - 0.55, e.matCorpo, Math.cos(ang) * r, 0.55 + (h - 0.55) / 2, Math.sin(ang) * r, 8);
-    }
-    a.anel(g, r, 0.06, e.matCorpo, 0, 0.55, 0).rotation.x = PI / 2;
-    const lona = new a.T.Mesh(a.geo("disco", () => new a.T.CircleGeometry(1, 48)), a.plastico("#141a2e"));
-    lona.scale.setScalar(r * 0.94);
-    lona.rotation.x = -PI / 2;
-    lona.position.y = 0.53;
-    g.add(lona);
-    const rede = new a.T.Mesh(a.geo("redeCama", () => new a.T.CylinderGeometry(1, 1, 1, 24, 6, true)), a.rede("#9fd0ff"));
-    rede.scale.set(r, h - 0.55, r);
-    rede.position.y = 0.55 + (h - 0.55) / 2;
-    g.add(rede);
-    const bola = a.esfera(g, 0.14, a.plastico("#ffd700"), 0, 0.7, 0);
-    e.animar = (t) => { bola.position.y = 0.7 + Math.abs(Math.sin(t * 2.4)) * (h * 0.4); };
-  },
-
-  escalada(a, e, g) {
-    const { w, h, d } = e;
-    const parede = a.caixa(g, w, h, 0.18, e.matCorpo, 0, h / 2, -d * 0.3);
-    parede.rotation.x = 0.06;
-    a.caixa(g, w * 1.05, 0.25, d, a.plastico("#e63946"), 0, 0.125, d * 0.05);
-    const agarra = a.geo("agarra", () => new a.T.DodecahedronGeometry(1, 0));
-    for (let i = 0; i < 30; i++) {
-      const m = new a.T.Mesh(agarra, a.plastico(CORES[i % CORES.length]));
-      m.scale.setScalar(0.05 + Math.random() * 0.05);
-      const y = 0.4 + Math.random() * (h - 0.6);
-      m.position.set((Math.random() - 0.5) * w * 0.9, y, -d * 0.3 + 0.1 - (y - h / 2) * 0.06);
-      m.rotation.set(Math.random(), Math.random(), Math.random());
-      g.add(m);
-    }
-    a.caixa(g, w, 0.16, 0.3, a.escuro(), 0, h + 0.05, -d * 0.3);
-    a.caixa(g, w, 0.04, 0.04, a.luz(e.brinquedo.cor, 2.4), 0, h + 0.15, -d * 0.16);
-  },
-
-  carrossel(a, e, g) {
-    const { w, h } = e;
-    const r = w / 2;
-    a.cilindro(g, r, 0.2, e.matCorpo, 0, 0.1, 0, 40);
-    a.cilindro(g, 0.06, h * 0.8, a.metal("#ffd700"), 0, h * 0.4 + 0.2, 0, 12);
-    const giro = new a.T.Group();
-    g.add(giro);
-    const teto = new a.T.Mesh(a.geo("cone", () => new a.T.ConeGeometry(1, 1, 16)), e.matCorpo);
-    teto.scale.set(r * 1.05, h * 0.28, r * 1.05);
-    teto.position.y = h * 0.86;
-    giro.add(teto);
-    a.anel(giro, r * 1.02, 0.04, a.luz("#ff3df2", 2.4), 0, h * 0.72, 0).rotation.x = PI / 2;
-    for (let i = 0; i < 6; i++) {
-      const ang = (i / 6) * PI * 2;
-      const x = Math.cos(ang) * r * 0.72;
-      const z = Math.sin(ang) * r * 0.72;
-      a.cilindro(giro, 0.02, h * 0.55, a.metal("#ffd700"), x, h * 0.45, z, 8);
-      a.esfera(giro, 1, a.plastico(CORES[i % CORES.length]), x, h * 0.35, z).scale.set(0.22, 0.14, 0.12);
-    }
-    e.animar = (t) => { giro.rotation.y = t * 0.6; };
-  },
-
-  touro(a, e, g) {
-    const { w, d } = e;
-    a.anel(g, Math.max(w, d) * 0.5, 0.18, e.matCorpo, 0, 0.18, 0).rotation.x = PI / 2;
-    a.cilindro(g, 0.12, 0.6, a.metal(), 0, 0.3, 0, 12);
-    const touro = new a.T.Group();
-    touro.position.y = 0.75;
-    g.add(touro);
-    const corpo = new a.T.Mesh(a.geo("capsula", () => new a.T.CapsuleGeometry(1, 1.6, 6, 16)), a.plastico("#5a3215"));
-    corpo.scale.setScalar(0.24);
-    corpo.rotation.x = PI / 2;
-    touro.add(corpo);
-    a.esfera(touro, 0.2, a.plastico("#4a2810"), 0, 0.1, 0.42);
-    [-1, 1].forEach((lado) => {
-      const chifre = new a.T.Mesh(a.geo("cone", () => new a.T.ConeGeometry(1, 1, 16)), a.plastico("#f3e6c8"));
-      chifre.scale.set(0.04, 0.2, 0.04);
-      chifre.rotation.z = -lado * 1.1;
-      chifre.position.set(lado * 0.2, 0.22, 0.44);
-      touro.add(chifre);
-    });
-    e.animar = (t) => {
-      touro.rotation.x = Math.sin(t * 3.1) * 0.18;
-      touro.rotation.y = Math.sin(t * 1.2) * 0.5;
-    };
-  },
-
-  playground(a, e, g) {
-    const { w, h, d } = e;
-    // Duas torres com telhado, passarela e escorregador.
-    [[-1, e.matCorpo], [1, a.plastico("#2f8bff")]].forEach(([lado, material]) => {
-      const x = lado * w * 0.28;
-      a.caixa(g, w * 0.32, h * 0.55, d * 0.4, material, x, h * 0.275, -d * 0.1);
-      const telhado = new a.T.Mesh(a.geo("piramide", () => new a.T.ConeGeometry(1, 1, 4)), a.plastico("#ffd700"));
-      telhado.scale.set(w * 0.24, h * 0.3, d * 0.3);
-      telhado.rotation.y = PI / 4;
-      telhado.position.set(x, h * 0.7 + 0.05, -d * 0.1);
-      g.add(telhado);
-    });
-    a.adesivo(e, g, "frente", "frente", w * 0.3, h * 0.4, [-w * 0.28, h * 0.3, -d * 0.1 + d * 0.2 + E], [0, 0, 1], [1, 0, 0]);
-    a.caixa(g, w * 0.3, 0.08, d * 0.3, a.plastico("#1fbf5b"), 0, h * 0.5, -d * 0.1);
-    const escorregador = a.caixa(g, w * 0.18, 0.05, d * 0.7, a.plastico("#ff7a00"), w * 0.28, h * 0.28, d * 0.3);
-    escorregador.rotation.x = 0.62;
-    const rede = new a.T.Mesh(a.geo("redePlay", () => new a.T.PlaneGeometry(1, 1, 6, 6)), a.rede("#ffd700"));
-    rede.scale.set(w * 0.3, h * 0.25, 1);
-    rede.position.set(0, h * 0.66, d * 0.05);
-    g.add(rede);
-    for (let i = 0; i < 18; i++) a.esfera(g, 0.07, a.plastico(CORES[i % CORES.length]), -w * 0.35 + Math.random() * w * 0.25, 0.07, d * 0.2 + Math.random() * d * 0.25);
-  },
-
-  montaria(a, e, g) {
-    const { w, h, d } = e;
-    const cor = e.brinquedo.cor;
-    a.caixa(g, w, h * 0.16, d, a.plastico("#1b2440"), 0, h * 0.08, 0);
-    lateraisAdesivadas(a, e, g, w, h * 0.14, d * 0.96, h * 0.08, 0);
-    a.caixa(g, w + 0.02, 0.03, d + 0.02, a.luz(cor, 2.2), 0, h * 0.16, 0);
-    const corpo = new a.T.Group();
-    corpo.position.y = h * 0.16;
-    g.add(corpo);
-    const tronco = new a.T.Mesh(a.geo("capsula", () => new a.T.CapsuleGeometry(1, 1.6, 6, 16)), e.matCorpo);
-    tronco.scale.set(w * 0.3, Math.min(d, 1.2) * 0.22, w * 0.3);
-    tronco.rotation.x = PI / 2;
-    tronco.position.y = h * 0.3;
-    corpo.add(tronco);
-    a.esfera(corpo, w * 0.28, e.matCorpo, 0, h * 0.55, d * 0.32);
-    a.esfera(corpo, w * 0.07, a.plastico("#ffffff"), -w * 0.1, h * 0.6, d * 0.32 + w * 0.24);
-    a.esfera(corpo, w * 0.07, a.plastico("#ffffff"), w * 0.1, h * 0.6, d * 0.32 + w * 0.24);
-    a.caixa(corpo, w * 0.4, 0.06, d * 0.3, a.plastico("#1b1f2e"), 0, h * 0.45, -d * 0.05);
-    const placa = a.tela(g, w * 0.8, h * 0.28, 0, h * 0.86, -d * 0.45);
-    a.caixa(g, 0.05, h * 0.75, 0.05, a.metal(), 0, h * 0.4, -d * 0.48);
-    e.animar = (t) => {
-      corpo.rotation.x = Math.sin(t * 2.2) * 0.08;
-      corpo.position.y = h * 0.16 + Math.abs(Math.sin(t * 2.2)) * 0.03;
-    };
-    e.telas = [placa];
-  },
 };

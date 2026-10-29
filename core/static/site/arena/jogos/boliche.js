@@ -228,6 +228,23 @@ function novaTela(w, h) {
   return c;
 }
 
+/* o contorno de neon do caminho atual, sem shadowBlur: o desfoque do
+   canvas a cada quadro derrubava o jogo para 10 fps; três traços largos e
+   transparentes por baixo dão o mesmo halo por uma fração do custo */
+function tracarComBrilho(ctx, cor, raio) {
+  const largura = ctx.lineWidth;
+  const alfa = ctx.globalAlpha;
+  ctx.strokeStyle = cor;
+  for (const [extra, forca] of [[raio, 0.12], [raio * 0.6, 0.2], [raio * 0.3, 0.32]]) {
+    ctx.globalAlpha = alfa * forca;
+    ctx.lineWidth = largura + extra;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = alfa;
+  ctx.lineWidth = largura;
+  ctx.stroke();
+}
+
 /* uma imagem branca (só alfa) pintada numa cor -- o brilho das canaletas
    do Dragon, as faíscas do Dragon 2 e as estrelinhas do Strike Kids */
 function tingir(img, cor) {
@@ -1816,10 +1833,7 @@ export default {
       ctx.scale(Math.max(0.001, esc * caber), Math.max(0.001, esc * caber));
       // sombra deslocada (5, 5), contorno grosso escuro e o brilho da cor
       api.texto(ctx, a.texto, 6, 6, { tamanho: a.tam, cor: "rgba(0,0,0,.7)", peso: 800 });
-      ctx.shadowColor = a.cor;
-      ctx.shadowBlur = a.strike ? 34 : 22;
-      api.texto(ctx, a.texto, 0, 0, { tamanho: a.tam, cor: a.cor, contorno: "#030306", peso: 800 });
-      ctx.shadowBlur = 0;
+      api.texto(ctx, a.texto, 0, 0, { tamanho: a.tam, cor: a.cor, contorno: "#030306", sombra: a.cor, peso: 800 });
       api.texto(ctx, a.texto, 0, 0, { tamanho: a.tam, cor: a.cor, peso: 800 });
     }
 
@@ -1896,12 +1910,8 @@ export default {
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = e.borda;
-      if (e.brilho) {
-        ctx.shadowColor = e.borda;
-        ctx.shadowBlur = 10;
-      }
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+      if (e.brilho) tracarComBrilho(ctx, e.borda, 10);
+      else ctx.stroke();
       api.texto(ctx, e.titulo, x + w / 2, y + 14, { tamanho: 11, cor: e.corTitulo, peso: 800 });
       const passoX = w / 4.6;
       const passoY = (h - 30) / 3.5;
@@ -2737,12 +2747,8 @@ export default {
       ctx.fillStyle = "rgba(3,5,11,.88)";
       caminhoArredondado(ctx, 6, y0 - 4, 528, 74, 14);
       ctx.fill();
-      ctx.shadowColor = borda;
-      ctx.shadowBlur = 12;
       ctx.lineWidth = 2;
-      ctx.strokeStyle = borda;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+      tracarComBrilho(ctx, borda, 12);
       let x = 10;
       for (let i = 0; i < NQ; i++) {
         const q = quadros[i];

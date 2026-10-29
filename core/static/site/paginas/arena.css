@@ -729,11 +729,23 @@
     overflow: visible;
 }
 
+/* Sem `backdrop-filter` aqui de propósito: desfocar a página por trás
+   do jogo obriga o navegador a recompor a tela inteira a cada quadro, e
+   o jogo caía de 60 para 7 quadros por segundo. Um fundo quase opaco
+   esconde a página do mesmo jeito, de graça. */
 .console::backdrop {
     background:
         radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cor-jogo, #ffd700) 22%, transparent), transparent 60%),
-        rgba(2, 5, 14, .88);
-    backdrop-filter: blur(6px);
+        rgba(2, 5, 14, .94);
+}
+
+html.ls-console-aberto .ls-topo,
+html.ls-console-aberto .ls-barra-app,
+html.ls-console-aberto .arena-filtro,
+html.ls-console-aberto .arena-controles,
+html.ls-console-aberto .arena-ficha {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 html.ls-console-aberto { overflow: hidden; }
@@ -895,7 +907,7 @@ html.ls-console-aberto { overflow: hidden; }
 .console-capa-comandos { margin: 0; max-width: 420px; color: #c7d6f0; font-size: .92rem; line-height: 1.5; }
 .console-jogar { min-width: 200px; font-size: 1.15rem; padding: 15px 28px; }
 
-.console-fim { background: rgba(2, 5, 13, .86); backdrop-filter: blur(4px); }
+.console-fim { background: rgba(2, 5, 13, .9); }
 .console-fim-titulo { margin: 0; color: var(--cor-jogo); font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
 .console-fim-pontos { margin: 0; font-family: "Montserrat", "Poppins", sans-serif; font-size: clamp(3rem, 12vw, 5.5rem); font-weight: 900; line-height: 1; }
 .console-fim-detalhe { margin: 0; color: #c7d6f0; }
@@ -1015,4 +1027,195 @@ html.ls-console-aberto { overflow: hidden; }
         width: auto;
         flex-direction: column;
     }
+}
+
+/* =========================================================
+   TODAS AS MÁQUINAS — fotos reais
+
+   Como na vitrine da 5D: a foto de verdade em primeiro lugar. Passar o
+   mouse (ou o dedo, de lado) troca a foto entre frente, lado e costas;
+   as máquinas com objeto 3D levam o selo.
+========================================================= */
+.arena-fotos-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 26px;
+}
+
+.arena-fotos-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.arena-foto-cartao {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--arena-borda);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1), border-color .3s ease, box-shadow .3s ease;
+}
+
+.arena-foto-cartao:hover,
+.arena-foto-cartao:focus-within {
+    border-color: rgba(63, 208, 255, .5);
+    box-shadow: 0 22px 46px rgba(0, 0, 0, .4), 0 0 0 1px rgba(63, 208, 255, .15);
+    transform: translateY(-4px);
+}
+
+.arena-foto-cartao[hidden] { display: none; }
+
+/* A foto fica num fundo claro de estúdio: é assim que elas foram tiradas. */
+.arena-foto-midia {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+    touch-action: pan-y;
+}
+
+.arena-foto-midia img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 6%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(.97);
+    transition: opacity .35s ease, transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+
+.arena-foto-midia img.ativa { opacity: 1; transform: none; }
+.arena-foto-cartao:hover .arena-foto-midia img.ativa { transform: scale(1.04); }
+
+.arena-foto-pontos {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    display: flex;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .55);
+    transform: translateX(-50%);
+}
+
+.arena-foto-pontos i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .45);
+    transition: width .25s ease, background .25s ease;
+}
+
+.arena-foto-pontos i.ativo { width: 16px; background: #fff; }
+
+.arena-foto-selo {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2f8bff, #3fd0ff);
+    color: #fff;
+    font-size: .74rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    box-shadow: 0 6px 16px rgba(47, 139, 255, .45);
+}
+
+.arena-foto-corpo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px 18px;
+}
+
+.arena-foto-categoria {
+    color: var(--arena-ciano);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.arena-foto-corpo h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.arena-foto-medidas {
+    margin: 0;
+    color: var(--arena-suave);
+    font-size: .84rem;
+}
+
+.arena-foto-medidas i { margin-right: 4px; color: var(--arena-ciano); }
+
+.arena-foto-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.arena-foto-link {
+    color: #fff;
+    font-size: .88rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.arena-foto-link i { margin-left: 4px; transition: transform .2s ease; }
+.arena-foto-link:hover i { transform: translateX(3px); }
+
+.arena-foto-jogar {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #2a1d00;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.arena-foto-jogar:hover { box-shadow: 0 8px 20px rgba(255, 196, 0, .35); transform: translateY(-1px); }
+.arena-foto-jogar:active { transform: scale(.95); }
+
+@media (max-width: 620px) {
+    .arena-fotos-filtros { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+    .arena-fotos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .arena-foto-cartao { border-radius: 18px; }
+    .arena-foto-corpo { padding: 12px; }
+    .arena-foto-corpo h3 { font-size: .95rem; }
+    .arena-foto-acoes { gap: 8px; }
+    .arena-foto-jogar { margin-left: 0; width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .arena-foto-cartao,
+    .arena-foto-midia img { transition: none; }
 }
