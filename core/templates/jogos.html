@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load static interno_extras %}
+
+{% block title %}{% if jogo_escolhido %}{{ atual.titulo }}: jogue a prévia{% else %}Simulador de jogos{% endif %} | Lazer &amp; Sport Jogos{% endblock %}
+
+{% block main_class %} content-section--full{% endblock %}
+
+{% block meta_description %}{% if jogo_escolhido %}Jogue a prévia do {{ atual.titulo }}, o jogo da máquina {{ atual.maquina|lower }} da Lazer &amp; Sport, no celular ou no computador.{% else %}Simulador Lazer &amp; Sport Jogos: escolha um jogo das nossas máquinas e jogue a prévia no celular ou no computador.{% endif %}{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  O SIMULADOR: A ÁREA DEDICADA ÀS PRÉVIAS DOS JOGOS.
+
+  Um jogo de cada vez, em foco: o seletor ao lado (em cima, no celular),
+  a tela da máquina no meio e, embaixo dela, os comandos daquele jogo --
+  só o gesto quando o jogo é de arrasto ou clique, e os botões quando a
+  máquina tem botão de verdade (as setas e o CHUTAR do Gol Flash, o SOCAR
+  do Super Boxing). A ficha conta como se joga aqui e na máquina.
+
+  Sem JavaScript, o seletor é uma lista de links e a ficha diz tudo; o
+  console entra por cima quando o script chega.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/jogos.css' %}">
+
+<div class="sim" style="--cor-jogo: {{ atual.cor }}" data-simulador data-whatsapp="{{ whatsapp }}">
+
+    <div class="sim-topo">
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">Home</a>
+            <span>›</span>
+            <a href="{% url 'jogos' %}">Jogos</a>
+            <span>›</span>
+            <strong data-sim-trilha>{{ atual.titulo }}</strong>
+        </nav>
+        <div class="sim-titulo">
+            <img src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="72" height="72" decoding="async">
+            <div>
+                <span class="sim-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Simulador Lazer &amp; Sport Jogos</span>
+                <h1><span data-sim-h1>{{ atual.titulo }}</span> <small>jogue a prévia</small></h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="sim-corpo">
+
+        <!-- ================= O SELETOR ================= -->
+        <nav class="sim-seletor" aria-label="Escolha o jogo">
+            <p class="sim-seletor-titulo">{{ jogos|length }} jogos</p>
+            <ul>
+                {% for jogo in jogos %}
+                <li>
+                    <a class="sim-opcao" href="{{ jogo.url }}" data-sim-jogo="{{ jogo.slug }}" style="--cor-jogo: {{ jogo.cor }}"{% if jogo.slug == atual.slug %} aria-current="page"{% endif %}>
+                        <img src="{% estatico jogo.capa %}" alt="" width="96" height="96" loading="lazy" decoding="async">
+                        <span class="sim-opcao-texto">
+                            <strong>{{ jogo.titulo }}</strong>
+                            <small><i class="fa-solid {{ jogo.icone_gesto }}" aria-hidden="true"></i> {{ jogo.controle.rotulo }}</small>
+                        </span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <!-- ================= A MÁQUINA EM FOCO ================= -->
+        <section class="sim-maquina console" id="simulador" aria-labelledby="console-titulo" data-console>
+            <div class="console-gabinete">
+                <div class="console-letreiro">
+                    <img class="console-logo" data-console-logo src="{% estatico atual.capa %}" alt="{{ atual.titulo }}" width="64" height="64">
+                    <div class="console-letreiro-texto">
+                        <h2 id="console-titulo" data-console-titulo>{{ atual.titulo }}</h2>
+                        <span data-console-maquina>{{ atual.maquina }}</span>
+                    </div>
+                    <div class="console-botoes">
+                        <button type="button" class="console-botao" data-console-acao="som" data-console-som aria-pressed="true" aria-label="Desligar o som"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
+                        <button type="button" class="console-botao" data-console-acao="reiniciar" aria-label="Recomeçar a partida"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i></button>
+                        <button type="button" class="console-botao console-botao--tela" data-console-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+
+                <div class="console-placar" aria-live="off">
+                    <div class="console-placar-item"><span>Pontos</span><b data-placar="pontos">0</b></div>
+                    <div class="console-placar-item" data-placar-caixa="tempo" hidden><span>Tempo</span><b data-placar="tempo">0</b></div>
+                    <div class="console-placar-item" data-placar-caixa="info" hidden><span>&nbsp;</span><b data-placar="info"></b></div>
+                    <div class="console-placar-item console-placar-item--recorde"><span>Recorde</span><b data-placar="recorde">0</b></div>
+                </div>
+
+                <div class="console-tela">
+                    <div class="console-quadro" data-console-quadro>
+                        <canvas data-console-tela tabindex="-1" aria-label="Tela do jogo"></canvas>
+
+                        <div class="console-capa" data-console-capa>
+                            <img class="console-capa-poster" data-console-poster src="{% estatico atual.poster %}" alt="" decoding="async">
+                            <div class="console-capa-texto">
+                                <p class="console-capa-chamada" data-console-chamada>{{ atual.chamada }}</p>
+                                <p class="console-capa-comandos"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> <span data-console-comandos>{{ atual.comandos }}</span></p>
+                                <button type="button" class="ls-botao console-jogar" data-console-acao="jogar"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar</button>
+                            </div>
+                        </div>
+
+                        <div class="console-fim" data-console-fim hidden>
+                            <p class="console-fim-titulo" data-console-fim-titulo>Fim de jogo</p>
+                            <p class="console-fim-pontos" data-console-fim-pontos>0</p>
+                            <p class="console-fim-detalhe" data-console-fim-detalhe></p>
+                            <p class="console-fim-recorde" data-console-fim-recorde></p>
+                            <div class="console-fim-acoes">
+                                <button type="button" class="ls-botao ls-botao--claro" data-console-acao="jogar"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Jogar de novo</button>
+                                <a class="ls-botao" data-console-maquina-link href="https://wa.me/{{ whatsapp }}"><i class="fa-solid fa-store" aria-hidden="true"></i> <span>Quero essa máquina</span></a>
+                            </div>
+                        </div>
+
+                        <div class="console-carregando" data-console-carregando hidden role="status">Carregando o jogo…</div>
+                    </div>
+                </div>
+
+                <!-- os comandos deste jogo: o gesto e, quando a máquina tem, os botões -->
+                <div class="sim-comandos" data-sim-comandos>
+                    <p class="sim-gesto">
+                        <i class="fa-solid {{ atual.icone_gesto }}" aria-hidden="true" data-sim-gesto-icone></i>
+                        <span data-sim-gesto>{{ atual.controle.rotulo }}</span>
+                    </p>
+                    <div class="sim-botoes" data-sim-botoes>
+                        {% for botao in atual.controle.botoes %}
+                        <button type="button" class="sim-botao{% if botao.grande %} sim-botao--grande{% endif %}" data-console-tecla="{{ botao.tecla }}" aria-label="{{ botao.rotulo }}">
+                            <i class="fa-solid {{ botao.icone }}" aria-hidden="true"></i>{% if not botao.so_icone %} <span>{{ botao.rotulo }}</span>{% endif %}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= A FICHA DO JOGO ================= -->
+        <aside class="sim-ficha" aria-labelledby="sim-ficha-titulo">
+            <span class="sim-ficha-maquina" data-sim-maquina>{{ atual.maquina }}</span>
+            <h2 id="sim-ficha-titulo" data-sim-titulo>{{ atual.titulo }}</h2>
+            <p class="sim-ficha-chamada" data-sim-chamada>{{ atual.chamada }}</p>
+            <p class="sim-ficha-desc" data-sim-descricao>{{ atual.descricao }}</p>
+
+            <h3><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Como jogar aqui</h3>
+            <ol class="sim-passos" data-sim-passos>
+                {% for passo in atual.controle.passos %}<li>{{ passo }}</li>{% endfor %}
+            </ol>
+
+            <h3><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Na máquina de verdade</h3>
+            <p class="sim-ficha-desc" data-sim-na-maquina>{{ atual.controle.na_maquina }}</p>
+
+            <div class="sim-ficha-acoes">
+                <a class="ls-botao" data-sim-whatsapp target="_blank" rel="noopener"
+                   href="https://wa.me/{{ whatsapp }}?text={{ 'Olá! Joguei a prévia no site da Lazer & Sport e quero saber da máquina '|urlencode }}{{ atual.titulo|urlencode }}.">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Quero essa máquina
+                </a>
+                <a class="ls-botao ls-botao--fantasma" data-sim-maquina-link href="{{ atual.maquina_url|default:'#' }}"{% if not atual.maquina_url %} hidden{% endif %}>
+                    <i class="fa-solid fa-store" aria-hidden="true"></i> Ver a máquina
+                </a>
+            </div>
+
+            <a class="sim-ficha-arena" href="{% url 'arena' %}#arena-3d">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Monte o Strike Kids e o Dragon Bowling em 3D
+            </a>
+        </aside>
+    </div>
+</div>
+
+{{ jogos_script|json_script:"sim-jogos" }}
+<script type="module" src="{% estatico 'site/arena/console.js' %}"></script>
+
+{% endblock %}

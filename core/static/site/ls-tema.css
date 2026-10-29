@@ -726,8 +726,6 @@ html.ls-escuro main.content-section.content-section--full {
     }
 
     @keyframes ls-selo-entra { from { transform: scale(0); } }
-
-    html.ls-console-aberto .ls-barra-app { display: none; }
 }
 
 /* ======================================================================

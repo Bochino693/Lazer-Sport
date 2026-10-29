@@ -1,6 +1,7 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
+from . import arena
 from .models import Brinquedos, CategoriasBrinquedos
 
 
@@ -9,10 +10,23 @@ class PaginasEstaticasSitemap(Sitemap):
     changefreq = "weekly"
 
     def items(self):
-        return ["home", "brinquedos", "eventos", "projetos", "pecas_reposicao", "estabelecimentos", "arena"]
+        return ["home", "brinquedos", "eventos", "projetos", "pecas_reposicao", "estabelecimentos", "arena", "jogos"]
 
     def location(self, item):
         return reverse(item)
+
+
+class JogosSitemap(Sitemap):
+    """Cada jogo do simulador tem a sua página."""
+
+    priority = 0.6
+    changefreq = "monthly"
+
+    def items(self):
+        return [jogo["slug"] for jogo in arena.JOGOS]
+
+    def location(self, item):
+        return reverse("jogo", args=[item])
 
 
 class BrinquedosSitemap(Sitemap):

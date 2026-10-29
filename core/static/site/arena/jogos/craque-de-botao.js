@@ -65,7 +65,7 @@ const DIFICULDADE = 1;              // 0 fácil, 1 médio (o padrão da máquina
 const ERRO_MINI = 1.4;
 
 /* ---------- da miniatura ---------- */
-const DURACAO = 4;                // TEMP_PRINT um tempo de 2 minutos
+const DURACAO = 90;               // um tempo só, de 90 s (ou até alguém fazer 3 gols)
 const GOLS_VITORIA = 3;
 const RELOGIO_VEZ = 15;
 const EMBALO_S = 40;

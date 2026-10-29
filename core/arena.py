@@ -23,6 +23,7 @@ import unicodedata
 from decimal import Decimal
 
 from django.templatetags.static import static
+from django.urls import reverse
 
 from .formatos import dinheiro, medida
 
@@ -373,6 +374,156 @@ JOGOS = (
 )
 
 JOGOS_POR_SLUG = {jogo["slug"]: jogo for jogo in JOGOS}
+
+
+#: COMO SE JOGA CADA UM NO SIMULADOR.
+#:
+#: O comando de cada prévia é o gesto mais perto do que a máquina pede:
+#: os boliches e os basquetes são arrasto (a bola vai na direção do
+#: gesto), o tiro é clique, o Hit Music é toque e arrasto na mesa. Os
+#: `botoes` aparecem embaixo da tela, como as setas da vitrine da 5D, só
+#: nos jogos em que a máquina tem botão de verdade (o chute do Gol Flash,
+#: o soco do Super Boxing, o manche do Craque de Botão) -- cada um manda a
+#: mesma tecla que o teclado mandaria.
+_ARRASTO_BOLICHE = {
+    "gesto": "arrasto",
+    "rotulo": "Arraste e solte",
+    "passos": (
+        "Encoste o dedo (ou o mouse) na bola.",
+        "Arraste para cima, na direção dos pinos.",
+        "Solte: a direção e a velocidade do gesto viram a jogada.",
+    ),
+    "botoes": (),
+}
+
+CONTROLES = {
+    "strike-kids": {
+        **_ARRASTO_BOLICHE,
+        "na_maquina": "Na máquina a criança rola a bola de verdade; 5 sensores na pista leem a jogada e a TV mostra o resultado.",
+    },
+    "dragon-bowling": {
+        **_ARRASTO_BOLICHE,
+        "na_maquina": "Na máquina a bola corre pela pista do gabinete e os sensores dizem para onde ela foi.",
+    },
+    "dragon-bowling-2": {
+        **_ARRASTO_BOLICHE,
+        "na_maquina": "Na máquina a bola corre pela pista do gabinete e os sensores dizem para onde ela foi.",
+    },
+    "lazer-shot": {
+        "gesto": "clique",
+        "rotulo": "Mire e clique",
+        "passos": (
+            "Aponte o mouse (ou o dedo) para o alvo.",
+            "Clique ou toque para atirar.",
+            "Acabou a munição? Recarregue.",
+        ),
+        "na_maquina": "Na máquina você atira com a pistola de luz apontada para a tela.",
+        "botoes": ({"tecla": "KeyR", "icone": "fa-rotate", "rotulo": "Recarregar"},),
+    },
+    "super-boxing": {
+        "gesto": "toque",
+        "rotulo": "Toque para socar",
+        "passos": (
+            "Toque no saco de pancada ou no botão SOCAR.",
+            "Acerte quando o medidor estiver no vermelho: é aí que o soco sai mais forte.",
+        ),
+        "na_maquina": "Na máquina o soco é no saco de pancada de verdade, e o sensor mede a força.",
+        "botoes": ({"tecla": "Space", "icone": "fa-hand-fist", "rotulo": "SOCAR!", "grande": True},),
+    },
+    "slam-arena": {
+        "gesto": "arrasto",
+        "rotulo": "Arraste e arremesse",
+        "passos": (
+            "Pegue a bola na rampa.",
+            "Arraste para a cesta e solte: quanto mais rápido, mais forte.",
+        ),
+        "na_maquina": "Na máquina as bolas são de verdade e a cesta tem sensor.",
+        "botoes": (),
+    },
+    "swish-arena": {
+        "gesto": "arrasto",
+        "rotulo": "Arraste e arremesse",
+        "passos": (
+            "Pegue a bola na rampa.",
+            "Arraste em direção à cesta e solte.",
+        ),
+        "na_maquina": "Na máquina as bolas são de verdade e a cesta tem sensor.",
+        "botoes": (),
+    },
+    "gol-flash-arena": {
+        "gesto": "arrasto",
+        "rotulo": "Arraste e chute",
+        "passos": (
+            "Arraste a bola na direção do anel aceso e solte.",
+            "Ou mire com as setas e aperte CHUTAR.",
+        ),
+        "na_maquina": "Na máquina o chute é na bola de verdade, contra os alvos com sensor.",
+        "botoes": (
+            {"tecla": "ArrowLeft", "icone": "fa-arrow-left", "rotulo": "Mirar à esquerda", "so_icone": True},
+            {"tecla": "Space", "icone": "fa-futbol", "rotulo": "CHUTAR", "grande": True},
+            {"tecla": "ArrowRight", "icone": "fa-arrow-right", "rotulo": "Mirar à direita", "so_icone": True},
+        ),
+    },
+    "craque-de-botao": {
+        "gesto": "arrasto",
+        "rotulo": "Puxe e solte",
+        "passos": (
+            "Encoste num botão do seu time.",
+            "Puxe para trás, como um estilingue, e solte para chutar.",
+            "Ou use o manche: troque de botão, gire a mira e chute.",
+        ),
+        "na_maquina": "Na máquina cada jogador tem o seu manche e o botão de chute.",
+        "botoes": (
+            {"tecla": "ArrowUp", "icone": "fa-arrows-rotate", "rotulo": "Trocar botão", "so_icone": True},
+            {"tecla": "ArrowLeft", "icone": "fa-rotate-left", "rotulo": "Girar a mira para a esquerda", "so_icone": True},
+            {"tecla": "Space", "icone": "fa-futbol", "rotulo": "CHUTAR", "grande": True},
+            {"tecla": "ArrowRight", "icone": "fa-rotate-right", "rotulo": "Girar a mira para a direita", "so_icone": True},
+        ),
+    },
+    "hit-music": {
+        "gesto": "clique-arrasto",
+        "rotulo": "Toque, segure e arraste",
+        "passos": (
+            "Toque a faixa quando a nota chegar ao anel.",
+            "Nota longa: segure até ela acabar.",
+            "Trilho com setas: arraste pelo caminho até o fim.",
+        ),
+        "na_maquina": "Na máquina você toca a mesa circular de luz, no ritmo da música.",
+        "botoes": (),
+    },
+    "elemental-beasts": {
+        "gesto": "toque",
+        "rotulo": "Escolha e ataque",
+        "passos": (
+            "Escolha a fera que vai para o combate.",
+            "Toque num golpe para atacar: o elemento certo causa mais dano.",
+        ),
+        "na_maquina": "Na máquina os golpes são os botões do painel.",
+        "botoes": (),
+    },
+}
+
+#: O ícone de cada gesto, no seletor e na faixa de comandos.
+ICONES_DO_GESTO = {
+    "arrasto": "fa-hand-pointer",
+    "clique": "fa-crosshairs",
+    "toque": "fa-hand-point-up",
+    "clique-arrasto": "fa-hand-sparkles",
+}
+
+
+def jogos_do_simulador(jogos):
+    """Os jogos com o comando de cada um e o endereço da página dele."""
+    saida = []
+    for jogo in jogos:
+        controle = CONTROLES.get(jogo["slug"], _ARRASTO_BOLICHE)
+        saida.append({
+            **jogo,
+            "controle": controle,
+            "icone_gesto": ICONES_DO_GESTO.get(controle["gesto"], "fa-hand-pointer"),
+            "url": reverse("jogo", args=[jogo["slug"]]),
+        })
+    return saida
 
 
 def jogo_do_desenho(desenho):

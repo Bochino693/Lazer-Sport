@@ -63,8 +63,8 @@
         <a href="#brinquedos" class="ls-quadro-botao ls-quadro-botao--principal">
           <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Ver brinquedos
         </a>
-        <a href="{% url 'arena' %}#arena-3d" class="ls-quadro-botao ls-quadro-botao--arena">
-          <i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D &amp; Jogos
+        <a href="{% url 'jogos' %}" class="ls-quadro-botao ls-quadro-botao--arena">
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar as prévias
         </a>
         <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20um%20or%C3%A7amento."
            target="_blank" rel="noopener" class="ls-quadro-botao ls-quadro-botao--whats">
@@ -195,7 +195,7 @@
       <div class="ls-painel-item ls-painel-item--jogos">
         <i class="fa-solid fa-cube" aria-hidden="true"></i>
         <b data-contar="{{ jogos_arena|length }}">{{ jogos_arena|length }}</b>
-        <span>jogos para jogar na <a href="{% url 'arena' %}#jogos">Arena</a></span>
+        <span>jogos no <a href="{% url 'jogos' %}">simulador</a></span>
       </div>
       {% endwith %}
     </div>
@@ -205,7 +205,7 @@
         {% for item in painel.novidades %}
           <a class="ls-letreiro-item ls-letreiro-item--{{ item.tipo }}" href="{{ item.url }}">{{ item.texto }}</a>
         {% endfor %}
-        <a class="ls-letreiro-item ls-letreiro-item--arena" href="{% url 'arena' %}#jogos">Novo: jogue Strike Kids, Dragon Bowling, Lazer Shot e mais na Arena</a>
+        <a class="ls-letreiro-item ls-letreiro-item--arena" href="{% url 'jogos' %}">Novo: jogue Strike Kids, Dragon Bowling, Lazer Shot e mais no simulador</a>
         <a class="ls-letreiro-item" href="{% url 'manutencoes' %}#nova">Manutenção com técnico da fábrica: peça pelo site</a>
       </div>
     </div>
@@ -1048,8 +1048,8 @@
   e os jogos da casa no lugar deles -- e a página de parceiros continua
   em /estabelecimentos/, com link logo abaixo dos botões.
 
-  Os cartões dos jogos levam direto ao console: /arena/?jogar=<jogo>
-  abre a página já com o jogo na tela.
+  Os cartões dos jogos levam direto ao simulador: /jogos/<jogo>/ abre
+  a página já com o jogo em foco.
 {% endcomment %}
 <section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
     <div class="ls-arena-chamada-texto">
@@ -1060,7 +1060,7 @@
             e monte o Strike Kids e o Dragon Bowling em 3D, com a cor do gabinete e a adesivagem.
         </p>
         <div class="ls-arena-chamada-acoes">
-            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'arena' %}#jogos">
+            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'jogos' %}">
                 <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
             </a>
             <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
@@ -1074,7 +1074,7 @@
 
     <div class="ls-arena-chamada-jogos" aria-label="Jogos da Lazer &amp; Sport">
         {% for jogo in jogos_arena %}
-            <a class="ls-arena-jogo" href="{% url 'arena' %}?jogar={{ jogo.slug }}#jogos" style="--cor-jogo: {{ jogo.cor }}">
+            <a class="ls-arena-jogo" href="{% url 'jogo' jogo.slug %}" style="--cor-jogo: {{ jogo.cor }}">
                 <img src="{% estatico jogo.capa %}" alt="" width="240" height="240" loading="lazy" decoding="async">
                 <span>{{ jogo.titulo }}</span>
             </a>

@@ -1,10 +1,13 @@
-"""Arena 3D, Lazer & Sport Jogos e o painel ao vivo da home.
+"""Arena 3D, o simulador Lazer & Sport Jogos e o painel ao vivo da home.
 
 O que estes testes protegem:
 
   * a página da arena abre inteira sem JavaScript (jogos, máquinas em 3D,
     fotos de todas as máquinas) e cada jogo aponta para arquivos que
     existem -- capa, pôster, script e cada arte que o script carrega;
+  * cada jogo tem a sua página no simulador (/jogos/<jogo>/), em foco,
+    com o comando dele: arrasto nos boliches, clique no tiro, botões só
+    onde a máquina tem botão;
   * nenhuma arte de terceiros (capas de música, logos de patrocinador)
     entra na pasta dos jogos;
   * só ganha 3D a máquina que tem objeto de verdade (o gabinete de
@@ -55,28 +58,72 @@ class ArenaPaginaTests(TestCase):
         _brinquedo("Dragon Bowling Rosa")
         _brinquedo("Air Game Hockey")
 
-    def test_abre_com_as_tres_secoes_e_o_console(self):
+    def test_abre_com_as_tres_secoes(self):
         resposta = self.client.get(reverse("arena"))
         self.assertEqual(resposta.status_code, 200)
         html = resposta.content.decode()
         self.assertEqual(html.count("<h1"), 1)
-        for ancora in ('id="jogos"', 'id="arena-3d"', 'id="maquinas"', 'id="arena-console"'):
+        for ancora in ('id="jogos"', 'id="arena-3d"', 'id="maquinas"'):
             self.assertIn(ancora, html)
-        # Todos os jogos chegam como cartão, mesmo sem JavaScript.
+        # Todos os jogos chegam como cartão, levando ao simulador.
         for jogo in arena.JOGOS:
-            self.assertIn(f'data-jogo-abrir="{jogo["slug"]}"', html)
+            self.assertIn(f'href="{reverse("jogo", args=[jogo["slug"]])}"', html)
 
     def test_todas_as_maquinas_aparecem_nas_fotos(self):
         html = self.client.get(reverse("arena")).content.decode()
         self.assertEqual(html.count("data-fotos-cartao"), 2)
         self.assertIn("Air Game Hockey", html)
 
-    def test_jogar_pelo_link_e_o_atalho_jogos(self):
-        resposta = self.client.get(reverse("arena") + "?jogar=lazer-shot")
-        self.assertEqual(resposta.status_code, 200)
-        atalho = self.client.get(reverse("jogos"))
-        self.assertEqual(atalho.status_code, 302)
-        self.assertEqual(atalho["Location"], "/arena/#jogos")
+
+
+class SimuladorTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+        _brinquedo("Gol Flash Arena")
+
+    def test_cada_jogo_tem_a_sua_pagina_em_foco(self):
+        for jogo in arena.JOGOS:
+            with self.subTest(jogo=jogo["slug"]):
+                resposta = self.client.get(reverse("jogo", args=[jogo["slug"]]))
+                self.assertEqual(resposta.status_code, 200)
+                html = resposta.content.decode()
+                self.assertEqual(html.count("<h1"), 1)
+                self.assertIn(f"<title>{jogo['titulo']}: jogue a prévia", html)
+                self.assertIn('aria-current="page"', html)
+                self.assertIn('id="sim-jogos"', html)
+
+    def test_pagina_geral_e_jogo_que_nao_existe(self):
+        self.assertEqual(self.client.get(reverse("jogos")).status_code, 200)
+        self.assertEqual(self.client.get("/jogos/nao-existe/").status_code, 404)
+
+    def test_comandos_seguem_o_jogo(self):
+        gol = self.client.get(reverse("jogo", args=["gol-flash-arena"])).content.decode()
+        for tecla in ("ArrowLeft", "Space", "ArrowRight"):
+            self.assertIn(f'data-console-tecla="{tecla}"', gol)
+        # Boliche é arrasto: nenhum botão embaixo da tela.
+        boliche = self.client.get(reverse("jogo", args=["strike-kids"])).content.decode()
+        self.assertNotIn("data-console-tecla=", boliche)
+        self.assertIn("Arraste e solte", boliche)
+
+    def test_jogo_liga_na_maquina_do_catalogo(self):
+        html = self.client.get(reverse("jogo", args=["gol-flash-arena"])).content.decode()
+        maquina = Brinquedos.objects.get(nome_brinquedo="Gol Flash Arena")
+        self.assertIn(reverse("brinquedo_detalhe", args=[maquina.pk]), html)
+
+    def test_todos_os_jogos_tem_comando(self):
+        for jogo in arena.JOGOS:
+            with self.subTest(jogo=jogo["slug"]):
+                controle = arena.CONTROLES[jogo["slug"]]
+                self.assertIn(controle["gesto"], arena.ICONES_DO_GESTO)
+                self.assertTrue(controle["passos"])
+                self.assertTrue(controle["na_maquina"])
+
+    def test_sitemap_tem_os_jogos(self):
+        xml = self.client.get("/sitemap.xml").content.decode()
+        self.assertIn(reverse("jogos"), xml)
+        for jogo in arena.JOGOS:
+            self.assertIn(reverse("jogo", args=[jogo["slug"]]), xml)
 
 
 class ArquivosDosJogosTests(TestCase):
@@ -181,4 +228,5 @@ class HomeComArenaTests(TestCase):
         self.assertIn('id="arena-home"', html)
         self.assertNotIn('id="estabelecimentos"', html)
         self.assertIn(f'href="{reverse("arena")}#', html)
+        self.assertIn(f'href="{reverse("jogos")}"', html)
         self.assertIn("data-painel-url", html)

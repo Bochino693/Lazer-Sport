@@ -1,0 +1,611 @@
+/* ======================================================================
+   SIMULADOR LAZER & SPORT JOGOS (/jogos/ e /jogos/<jogo>/)
+
+   Um jogo de cada vez, em foco. No computador: o seletor à esquerda, a
+   máquina no meio com a altura da tela e a ficha à direita. No celular:
+   o seletor vira uma fita de capas em cima e a máquina ocupa a tela
+   inteira entre o cabeçalho e a barra de baixo.
+   ====================================================================== */
+
+.sim {
+    --cor-jogo: #ffd700;
+    /* a máquina cabe inteira na tela, abaixo do cabeçalho fixo */
+    --sim-alto: clamp(560px, calc(100vh - 112px), 940px);
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 18px clamp(12px, 2.4vw, 32px) 56px;
+    color: var(--ls-texto, #eaf2ff);
+}
+
+/* ---------- topo ---------- */
+.sim-topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px 24px;
+    margin-bottom: 18px;
+}
+
+.sim-topo .ls-pagina-trilha { order: 2; margin: 0; }
+
+.sim-titulo { display: flex; align-items: center; gap: 14px; min-width: 0; }
+
+.sim-titulo img {
+    flex: none;
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .45));
+}
+
+.sim-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border: 1px solid color-mix(in srgb, var(--cor-jogo) 45%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cor-jogo) 14%, transparent);
+    color: var(--cor-jogo);
+    font-size: .72rem;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.sim-titulo h1 {
+    margin: 6px 0 0;
+    color: #fff;
+    font-size: clamp(1.45rem, 2.5vw, 2.2rem);
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.sim-titulo h1 small {
+    color: var(--cor-jogo);
+    font-size: .55em;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* ---------- as três colunas ---------- */
+.sim-corpo {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr) 330px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ---------- seletor ---------- */
+.sim-seletor {
+    position: sticky;
+    top: 88px;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--sim-alto);
+    padding: 12px;
+    border: 1px solid var(--ls-borda, rgba(255, 255, 255, .1));
+    border-radius: 22px;
+    background: rgba(255, 255, 255, .04);
+}
+
+.sim-seletor-titulo {
+    margin: 2px 8px 10px;
+    color: var(--ls-texto-suave, #a9bcd9);
+    font-size: .72rem;
+    font-weight: 900;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.sim-seletor ul {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, .2) transparent;
+}
+
+.sim-opcao {
+    --cor-jogo: #ffd700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: #fff;
+    text-decoration: none;
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.sim-opcao img {
+    flex: none;
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .35);
+}
+
+.sim-opcao-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sim-opcao strong { font-size: .93rem; line-height: 1.2; }
+.sim-opcao small { color: var(--ls-texto-suave, #a9bcd9); font-size: .73rem; font-weight: 700; }
+.sim-opcao small i { width: 14px; }
+
+.sim-opcao:hover { background: rgba(255, 255, 255, .06); }
+
+.sim-opcao[aria-current="page"] {
+    border-color: color-mix(in srgb, var(--cor-jogo) 65%, transparent);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--cor-jogo) 24%, transparent), transparent 85%);
+    box-shadow: inset 3px 0 0 var(--cor-jogo);
+}
+
+.sim-opcao[aria-current="page"] small { color: var(--cor-jogo); }
+
+/* =========================================================
+   A MÁQUINA (o console embutido)
+========================================================= */
+/* A folga do cabeçalho fixo já vem do `scroll-padding-top` do site
+   (ls-ancoras.css); aqui não soma mais nada. */
+.sim-maquina {
+    height: var(--sim-alto);
+    color: #fff;
+}
+
+.console-gabinete {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    border: 2px solid color-mix(in srgb, var(--cor-jogo) 70%, transparent);
+    border-radius: 26px;
+    background: linear-gradient(180deg, #0b1430, #050a1a);
+    box-shadow:
+        0 0 0 6px rgba(255, 255, 255, .03),
+        0 0 60px color-mix(in srgb, var(--cor-jogo) 32%, transparent),
+        0 30px 80px rgba(0, 0, 0, .6);
+    transition: border-color .4s ease, box-shadow .4s ease;
+}
+
+.console-gabinete:fullscreen { border: 0; border-radius: 0; }
+
+.console-letreiro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--cor-jogo) 30%, transparent), transparent 60%),
+        #070e24;
+}
+
+.console-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .35);
+}
+
+.console-letreiro-texto { flex: 1; min-width: 0; }
+.console-letreiro-texto h2 { margin: 0; font-size: 1.2rem; font-weight: 900; line-height: 1.1; }
+.console-letreiro-texto span { color: #9fb3d1; font-size: .8rem; font-weight: 700; }
+
+.console-botoes { display: flex; gap: 6px; }
+
+.console-botao {
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.console-botao:hover { background: rgba(255, 255, 255, .14); }
+
+.console-placar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #040817;
+}
+
+.console-placar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 12px;
+    background: #01040c;
+}
+
+.console-placar-item[hidden] { display: none; }
+
+.console-placar-item span { color: #8aa0c4; font-size: .64rem; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+
+.console-placar-item b {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--cor-jogo);
+    font-family: "Montserrat", "Poppins", monospace;
+    font-size: 1.3rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 0 14px color-mix(in srgb, var(--cor-jogo) 70%, transparent);
+}
+
+.console-placar-item--recorde b { color: #ffd700; text-shadow: 0 0 14px rgba(255, 215, 0, .6); }
+.console-placar-item--alerta b { color: #ff4d5e; animation: console-pisca .5s steps(2) infinite; }
+
+@keyframes console-pisca { 50% { opacity: .35; } }
+
+.console-tela {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: #000;
+}
+
+.console-quadro {
+    position: relative;
+    aspect-ratio: var(--proporcao, 9 / 16);
+    max-width: 100%;
+    max-height: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #02050d;
+}
+
+.console-quadro[data-orientacao="paisagem"] { height: auto; width: 100%; }
+
+.console-quadro canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    outline: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.console-capa,
+.console-fim,
+.console-carregando {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.console-capa[hidden],
+.console-fim[hidden],
+.console-carregando[hidden] { display: none; }
+
+.console-capa { background: linear-gradient(180deg, rgba(2, 5, 13, .25), rgba(2, 5, 13, .92) 70%); }
+
+.console-capa-poster {
+    max-width: min(78%, 420px);
+    max-height: 52%;
+    object-fit: contain;
+    border-radius: 18px;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .6));
+}
+
+.console-capa-chamada { margin: 0; font-size: 1.2rem; font-weight: 900; }
+.console-capa-comandos { margin: 0; max-width: 420px; color: #c7d6f0; font-size: .92rem; line-height: 1.5; }
+.console-jogar { min-width: 200px; margin-top: 0; padding: 15px 28px; font-size: 1.15rem; }
+
+.console-fim { background: rgba(2, 5, 13, .9); }
+.console-fim-titulo { margin: 0; color: var(--cor-jogo); font-size: 1.4rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+.console-fim-pontos { margin: 0; font-family: "Montserrat", "Poppins", sans-serif; font-size: clamp(3rem, 10vw, 5.5rem); font-weight: 900; line-height: 1; }
+.console-fim-detalhe { margin: 0; color: #c7d6f0; }
+.console-fim-recorde { margin: 0; color: #ffd700; font-weight: 800; }
+.console-fim--recorde .console-fim-pontos { color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, .7); }
+.console-fim-acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; }
+.console-fim-acoes .ls-botao { margin-top: 0; padding-inline: 22px; }
+
+.console-carregando { background: rgba(2, 5, 13, .9); color: #c7d6f0; font-weight: 700; }
+
+/* ---------- comandos embaixo da tela ---------- */
+.sim-comandos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px 18px;
+    min-height: 62px;
+    padding: 10px 14px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+    background:
+        linear-gradient(90deg, transparent, color-mix(in srgb, var(--cor-jogo) 10%, transparent), transparent),
+        #060c20;
+}
+
+.sim-comandos--botoes { justify-content: space-between; }
+
+.sim-gesto {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #dbe7ff;
+    font-size: .92rem;
+    font-weight: 800;
+}
+
+.sim-gesto i {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--cor-jogo) 20%, transparent);
+    color: var(--cor-jogo);
+    animation: sim-gesto 1.8s ease-in-out infinite;
+}
+
+@keyframes sim-gesto {
+    0%, 100% { transform: translateY(3px); }
+    50% { transform: translateY(-4px); }
+}
+
+.sim-botoes { display: flex; gap: 10px; }
+.sim-botoes:empty { display: none; }
+
+.sim-botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 58px;
+    height: 54px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 16px;
+    background: linear-gradient(180deg, #1c2856, #0d1533);
+    color: #fff;
+    font: inherit;
+    font-size: 1.15rem;
+    font-weight: 900;
+    letter-spacing: .03em;
+    box-shadow: 0 5px 0 #040918, 0 9px 18px rgba(0, 0, 0, .45);
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .07s ease, box-shadow .07s ease;
+}
+
+.sim-botao span { font-size: .95rem; }
+
+.sim-botao--grande {
+    min-width: 150px;
+    border-color: transparent;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--cor-jogo) 100%, #fff 20%), color-mix(in srgb, var(--cor-jogo) 78%, #000));
+    color: #0f1220;
+    box-shadow: 0 5px 0 color-mix(in srgb, var(--cor-jogo) 45%, #000), 0 10px 24px color-mix(in srgb, var(--cor-jogo) 40%, transparent);
+}
+
+.sim-botao.apertado,
+.sim-botao:active { transform: translateY(4px); box-shadow: 0 1px 0 #040918, 0 3px 8px rgba(0, 0, 0, .4); }
+
+.sim-botao:focus-visible { outline: 3px solid var(--cor-jogo); outline-offset: 3px; }
+
+/* =========================================================
+   A FICHA
+========================================================= */
+.sim-ficha {
+    position: sticky;
+    top: 88px;
+    max-height: var(--sim-alto);
+    overflow-y: auto;
+    padding: 22px;
+    border: 1px solid var(--ls-borda, rgba(255, 255, 255, .1));
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 100% 0, color-mix(in srgb, var(--cor-jogo) 16%, transparent), transparent 55%),
+        linear-gradient(180deg, rgba(16, 30, 68, .9), rgba(9, 18, 44, .92));
+    scrollbar-width: thin;
+}
+
+.sim-ficha-maquina {
+    color: var(--cor-jogo);
+    font-size: .74rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.sim-ficha h2 { margin: 6px 0 4px; color: #fff; font-size: 1.6rem; font-weight: 900; line-height: 1.15; }
+.sim-ficha-chamada { margin: 0 0 8px; color: #fff; font-weight: 700; }
+.sim-ficha-desc { margin: 0; color: var(--ls-texto-suave, #a9bcd9); font-size: .92rem; line-height: 1.6; }
+
+.sim-ficha h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0 10px;
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 900;
+}
+
+.sim-ficha h3 i { color: var(--cor-jogo); }
+
+.sim-passos {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: passo;
+}
+
+.sim-passos li {
+    position: relative;
+    padding-left: 34px;
+    color: #dbe7ff;
+    font-size: .9rem;
+    line-height: 1.5;
+    counter-increment: passo;
+}
+
+.sim-passos li::before {
+    content: counter(passo);
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--cor-jogo) 22%, transparent);
+    color: var(--cor-jogo);
+    font-size: .78rem;
+    font-weight: 900;
+}
+
+.sim-ficha-acoes { display: grid; gap: 8px; margin-top: 20px; }
+.sim-ficha-acoes .ls-botao { margin-top: 0; justify-content: center; }
+.sim-ficha-acoes [hidden] { display: none; }
+
+.sim-ficha-arena {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    color: #9cc8ff;
+    font-size: .86rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.sim-ficha-arena:hover { color: #fff; text-decoration: underline; }
+
+/* =========================================================
+   TELAS MENORES
+========================================================= */
+@media (max-width: 1280px) {
+    .sim-corpo { grid-template-columns: 220px minmax(0, 1fr); }
+
+    .sim-ficha {
+        grid-column: 1 / -1;
+        position: static;
+        max-height: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0 28px;
+    }
+
+    .sim-ficha > :not(h3):not(.sim-passos):not(.sim-ficha-acoes) { grid-column: 1; }
+}
+
+@media (max-width: 900px) {
+    .sim { padding: 8px 0 32px; }
+    .sim-topo { padding: 0 12px; margin-bottom: 8px; }
+    .sim-topo .ls-pagina-trilha { display: none; }
+    .sim-titulo img { display: none; }
+    .sim-titulo h1 { font-size: 1.25rem; }
+
+    .sim-corpo { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+
+    .sim-seletor { position: static; max-height: none; padding: 0; border: 0; border-radius: 0; background: none; }
+    .sim-seletor-titulo { display: none; }
+
+    .sim-seletor ul {
+        flex-direction: row;
+        gap: 6px;
+        padding: 2px 12px 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+    }
+
+    .sim-seletor ul::-webkit-scrollbar { display: none; }
+
+    .sim-opcao {
+        flex-direction: column;
+        width: 86px;
+        padding: 6px 4px 8px;
+        text-align: center;
+        scroll-snap-align: center;
+    }
+
+    .sim-opcao img { width: 60px; height: 60px; }
+    .sim-opcao strong { font-size: .74rem; }
+    .sim-opcao small { display: none; }
+    .sim-opcao[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--cor-jogo); background: color-mix(in srgb, var(--cor-jogo) 18%, transparent); }
+
+    /* a máquina ocupa a tela entre o cabeçalho e a barra de baixo */
+    .sim-maquina {
+        height: calc(100dvh - 136px - env(safe-area-inset-bottom));
+        min-height: 460px;
+        /* no celular o cabeçalho é mais baixo que a folga do site */
+        scroll-margin-top: -30px;
+    }
+
+    .console-gabinete { border-width: 2px 0; border-radius: 0; }
+    .console-logo { width: 38px; height: 38px; }
+    .console-letreiro { padding: 6px 8px 6px 10px; gap: 8px; }
+    .console-letreiro-texto h2 { font-size: 1rem; }
+    .console-letreiro-texto span { font-size: .72rem; }
+    .console-botao { width: 38px; height: 38px; }
+    .console-placar { gap: 5px; padding: 5px 6px; }
+    .console-placar-item { padding: 3px 4px; }
+    .console-placar-item b { font-size: 1.05rem; }
+    .console-tela { padding: 0; }
+    .console-quadro { border-radius: 0; }
+
+    .sim-comandos { min-height: 56px; padding: 8px 10px; }
+    .sim-gesto { font-size: .84rem; }
+    .sim-botao { height: 50px; min-width: 52px; }
+    .sim-botao--grande { min-width: 118px; }
+
+    .sim-ficha { margin: 4px 12px 0; display: block; padding: 18px; }
+}
+
+@media (max-width: 420px) {
+    .sim-comandos--botoes .sim-gesto span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sim-gesto i { animation: none; }
+}
+
+/* No simulador, os botões flutuantes (WhatsApp, Instagram, desejos)
+   cobririam o seletor e a tela do jogo; o "Quero essa máquina" da ficha
+   faz o papel do WhatsApp aqui. */
+body:has([data-simulador]) .float-stack,
+body:has([data-simulador]) .ls-quick-dock { display: none; }

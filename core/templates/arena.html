@@ -18,8 +18,8 @@
 
   ESTA PÁGINA ABRE INTEIRA SEM JAVASCRIPT: os brinquedos chegam como uma
   lista de links (é o que o buscador lê e o que aparece num aparelho sem
-  WebGL) e os jogos como cartões. O 3D e o console entram por cima disso
-  quando o aparelho aguenta.
+  WebGL) e os jogos como cartões que levam ao simulador (/jogos/<jogo>/).
+  O 3D entra por cima disso quando o aparelho aguenta.
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
@@ -64,7 +64,7 @@
             </div>
 
             <div class="arena-hero-acoes">
-                <a class="ls-botao" href="#jogos"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar agora</a>
+                <a class="ls-botao" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar agora</a>
                 <a class="ls-botao ls-botao--claro" href="#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D</a>
             </div>
         </div>
@@ -99,34 +99,20 @@
 
     <div class="arena-jogos-grade">
         {% for jogo in jogos %}
-        <article class="jogo-cartao"
-                 style="--cor-jogo: {{ jogo.cor }}"
-                 data-jogo="{{ jogo.slug }}"
-                 data-jogo-titulo="{{ jogo.titulo }}"
-                 data-jogo-maquina="{{ jogo.maquina }}"
-                 data-jogo-chamada="{{ jogo.chamada }}"
-                 data-jogo-comandos="{{ jogo.comandos }}"
-                 data-jogo-capa="{% estatico jogo.capa %}"
-                 data-jogo-poster="{% estatico jogo.poster %}"
-                 data-jogo-cor="{{ jogo.cor }}"
-                 data-jogo-script="{% estatico jogo.script %}"
-                 data-jogo-variante="{{ jogo.variante }}"
-                 data-jogo-maquina-url="{{ jogo.maquina_url }}"
-                 data-jogo-maquina-nome="{{ jogo.maquina_nome }}"
-                 data-jogo-whatsapp="{{ whatsapp }}">
-            <button type="button" class="jogo-cartao-capa" data-jogo-abrir="{{ jogo.slug }}" aria-label="Jogar {{ jogo.titulo }}">
+        <article class="jogo-cartao" style="--cor-jogo: {{ jogo.cor }}">
+            <a class="jogo-cartao-capa" href="{% url 'jogo' jogo.slug %}" aria-label="Jogar {{ jogo.titulo }}">
                 <img src="{% estatico jogo.capa %}" alt="" width="480" height="480" loading="lazy" decoding="async">
                 <span class="jogo-cartao-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
-            </button>
+            </a>
             <div class="jogo-cartao-corpo">
                 <span class="jogo-cartao-maquina">{{ jogo.maquina }}</span>
                 <h3>{{ jogo.titulo }}</h3>
                 <p class="jogo-cartao-chamada">{{ jogo.chamada }}</p>
                 <p class="jogo-cartao-desc">{{ jogo.descricao }}</p>
                 <div class="jogo-cartao-acoes">
-                    <button type="button" class="ls-botao" data-jogo-abrir="{{ jogo.slug }}">
+                    <a class="ls-botao" href="{% url 'jogo' jogo.slug %}">
                         <i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora
-                    </button>
+                    </a>
                     {% if jogo.maquina_url %}
                     <a class="jogo-cartao-link" href="{{ jogo.maquina_url }}">Ver a máquina <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                     {% endif %}
@@ -208,7 +194,7 @@
                 </dl>
                 <div class="arena-ficha-acoes">
                     <a class="ls-botao" data-ficha-detalhe href="{% url 'brinquedos' %}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-                    <button type="button" class="ls-botao ls-botao--claro" data-ficha-jogar hidden><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</button>
+                    <a class="ls-botao ls-botao--claro" data-ficha-jogar data-base="{% url 'jogos' %}" href="{% url 'jogos' %}" hidden><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>
                     <a class="ls-botao ls-botao--fantasma" data-ficha-whatsapp target="_blank" rel="noopener" href="https://wa.me/{{ whatsapp }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pedir orçamento</a>
                 </div>
             </div>
@@ -286,7 +272,7 @@
                 <div class="arena-foto-acoes">
                     <a class="arena-foto-link" href="{{ brinquedo.url }}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                     {% if brinquedo.jogo %}
-                        <button type="button" class="arena-foto-jogar" data-jogo-abrir="{{ brinquedo.jogo }}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</button>
+                        <a class="arena-foto-jogar" href="{% url 'jogo' brinquedo.jogo %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>
                     {% endif %}
                 </div>
             </div>
@@ -324,60 +310,7 @@
 
 </div>
 
-<!-- ================= O CONSOLE (abre por cima da página) ================= -->
-<dialog class="console" id="arena-console" aria-labelledby="console-titulo">
-    <div class="console-gabinete">
-        <div class="console-letreiro">
-            <img class="console-logo" data-console-logo src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="64" height="64">
-            <div class="console-letreiro-texto">
-                <h2 id="console-titulo" data-console-titulo>Lazer &amp; Sport Jogos</h2>
-                <span data-console-maquina></span>
-            </div>
-            <div class="console-botoes">
-                <button type="button" class="console-botao" data-console-acao="som" data-console-som aria-pressed="true" aria-label="Desligar o som"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
-                <button type="button" class="console-botao console-botao--tela" data-console-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
-                <button type="button" class="console-botao console-botao--fechar" data-console-acao="fechar" aria-label="Fechar o jogo"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-            </div>
-        </div>
 
-        <div class="console-placar" aria-live="off">
-            <div class="console-placar-item"><span>Pontos</span><b data-placar="pontos">0</b></div>
-            <div class="console-placar-item" data-placar-caixa="tempo" hidden><span>Tempo</span><b data-placar="tempo">0</b></div>
-            <div class="console-placar-item" data-placar-caixa="info" hidden><span>&nbsp;</span><b data-placar="info"></b></div>
-            <div class="console-placar-item console-placar-item--recorde"><span>Recorde</span><b data-placar="recorde">0</b></div>
-        </div>
-
-        <div class="console-tela">
-            <div class="console-quadro" data-console-quadro>
-                <canvas data-console-tela tabindex="-1" aria-label="Tela do jogo"></canvas>
-
-                <div class="console-capa" data-console-capa>
-                    <img class="console-capa-poster" data-console-poster src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" decoding="async">
-                    <div class="console-capa-texto">
-                        <p class="console-capa-chamada" data-console-chamada></p>
-                        <p class="console-capa-comandos"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> <span data-console-comandos></span></p>
-                        <button type="button" class="ls-botao console-jogar" data-console-acao="jogar"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar</button>
-                    </div>
-                </div>
-
-                <div class="console-fim" data-console-fim hidden>
-                    <p class="console-fim-titulo" data-console-fim-titulo>Fim de jogo</p>
-                    <p class="console-fim-pontos" data-console-fim-pontos>0</p>
-                    <p class="console-fim-detalhe" data-console-fim-detalhe></p>
-                    <p class="console-fim-recorde" data-console-fim-recorde></p>
-                    <div class="console-fim-acoes">
-                        <button type="button" class="ls-botao ls-botao--claro" data-console-acao="jogar"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Jogar de novo</button>
-                        <a class="ls-botao" data-console-maquina-link href="https://wa.me/{{ whatsapp }}"><i class="fa-solid fa-store" aria-hidden="true"></i> <span>Quero essa máquina</span></a>
-                    </div>
-                </div>
-
-                <div class="console-carregando" data-console-carregando hidden role="status">Carregando o jogo…</div>
-            </div>
-        </div>
-    </div>
-</dialog>
-
-<script type="module" src="{% estatico 'site/arena/console.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/vitrine.js' %}"></script>
 

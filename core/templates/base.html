@@ -159,9 +159,16 @@
         </div>
       </div>
 
-      <a class="ls-topo-link ls-topo-link--arena" href="{% url 'arena' %}#header">
-        <i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D &amp; Jogos <span class="ls-topo-novo">Novo</span>
-      </a>
+      <div class="ls-topo-grupo" data-topo-grupo>
+        <button type="button" class="ls-topo-link ls-topo-link--arena" aria-expanded="false" aria-controls="topo-jogos">
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogos &amp; 3D <span class="ls-topo-novo">Novo</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ls-topo-painel" id="topo-jogos">
+          <a href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span><b>Simulador de jogos</b><small>Jogue a prévia dos jogos das nossas máquinas</small></span></a>
+          <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i><span><b>Máquinas em 3D</b><small>Monte com a cor e a adesivagem</small></span></a>
+          <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera" aria-hidden="true"></i><span><b>Todas as máquinas</b><small>Fotos reais de frente, lado e costas</small></span></a>
+        </div>
+      </div>
 
       <a class="ls-topo-link" href="{% url 'loja' %}#catalogo">Loja Online</a>
 
@@ -308,7 +315,8 @@
 
     <div class="ls-mobile-nav-list">
       <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Início</a>
-      <a class="ls-mobile-nav-arena" href="{% url 'arena' %}#header"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D &amp; Jogos<span class="ls-topo-novo">Novo</span></a>
+      <a class="ls-mobile-nav-arena" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Simulador de jogos<span class="ls-topo-novo">Novo</span></a>
+      <a href="{% url 'arena' %}#header"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D: máquinas em 3D</a>
       <span class="ls-mobile-nav-grupo">Brinquedos</span>
       <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
       <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
@@ -385,7 +393,7 @@
 <nav class="ls-barra-app" aria-label="Atalhos">
   <a href="{% url 'home' %}#"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span></a>
   <a href="{% url 'brinquedos' %}#catalogo-brinquedos"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span>Brinquedos</span></a>
-  <a class="ls-barra-app-centro" href="{% url 'arena' %}#header"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>Arena 3D</span></a>
+  <a class="ls-barra-app-centro" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span>Jogos</span></a>
   {% if usuario_da_equipe %}
     <a href="{{ ls_url_painel|default:'/' }}"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>Painel</span></a>
   {% elif user.is_authenticated and carrinho_total_itens %}

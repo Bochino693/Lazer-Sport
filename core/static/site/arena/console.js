@@ -1,10 +1,11 @@
 /* ======================================================================
-   O CONSOLE DOS JOGOS — o gabinete de fliperama que abre por cima da página.
+   O CONSOLE DOS JOGOS — a máquina em foco no simulador (/jogos/<jogo>/).
 
    Cada jogo é um módulo (site/arena/jogos/<nome>.js) que só sabe jogar:
    desenhar, andar no tempo e responder ao toque. Tudo o que é igual em
-   todos -- abrir e fechar, placar, recorde, som, contagem 3-2-1, tela
-   cheia, pausa quando a aba some -- mora aqui, uma vez só.
+   todos -- trocar de jogo, placar, recorde, som, contagem 3-2-1, tela
+   cheia, os botões de comando embaixo da tela, pausa quando a aba some
+   ou a máquina sai da tela -- mora aqui, uma vez só.
 
    CONTRATO DE UM JOGO (export default):
 
@@ -233,16 +234,16 @@ class Efeitos {
    O CONSOLE
    ---------------------------------------------------------------------- */
 class Console {
-  constructor(dialogo) {
-    this.dialogo = dialogo;
-    this.canvas = dialogo.querySelector("[data-console-tela]");
+  constructor(raiz) {
+    this.raiz = raiz;
+    this.canvas = raiz.querySelector("[data-console-tela]");
     this.ctx = this.canvas.getContext("2d");
     this.transformarNativo = CanvasRenderingContext2D.prototype.setTransform.bind(this.ctx);
-    this.quadro = dialogo.querySelector("[data-console-quadro]");
-    this.capa = dialogo.querySelector("[data-console-capa]");
-    this.fim = dialogo.querySelector("[data-console-fim]");
-    this.carregando = dialogo.querySelector("[data-console-carregando]");
-    this.botaoSom = dialogo.querySelector("[data-console-som]");
+    this.quadro = raiz.querySelector("[data-console-quadro]");
+    this.capa = raiz.querySelector("[data-console-capa]");
+    this.fim = raiz.querySelector("[data-console-fim]");
+    this.carregando = raiz.querySelector("[data-console-carregando]");
+    this.botaoSom = raiz.querySelector("[data-console-som]");
     this.som = new Som();
     this.modulos = new Map();
     this.estado = "fechado";
@@ -259,18 +260,49 @@ class Console {
 
   /* ---------- eventos fixos ---------- */
   ligarEventos() {
-    this.dialogo.addEventListener("click", (evento) => {
+    this.raiz.addEventListener("click", (evento) => {
       const alvo = evento.target.closest("[data-console-acao]");
       if (!alvo) return;
       const acao = alvo.dataset.consoleAcao;
-      if (acao === "fechar") this.fechar();
-      else if (acao === "jogar") this.comecar();
+      if (acao === "jogar") this.comecar();
+      else if (acao === "reiniciar") this.reiniciar();
       else if (acao === "som") this.mostrarSom(this.som.alternar());
       else if (acao === "tela-cheia") this.telaCheia();
     });
 
-    this.dialogo.addEventListener("close", () => this.encerrar());
-    this.dialogo.addEventListener("cancel", () => this.encerrar());
+    // Os botões embaixo da tela (as setas, o CHUTAR, o SOCAR) mandam a
+    // mesma tecla que o teclado mandaria: apertar e soltar, para os jogos
+    // que carregam força enquanto o botão está apertado.
+    const presos = new Map();
+    const largar = (evento) => {
+      const codigo = presos.get(evento.pointerId);
+      if (!codigo) return;
+      presos.delete(evento.pointerId);
+      this.teclaVirtual(codigo, false);
+      const botao = this.raiz.querySelector(`[data-console-tecla="${codigo}"]`);
+      if (botao) botao.classList.remove("apertado");
+    };
+    this.raiz.addEventListener("pointerdown", (evento) => {
+      const botao = evento.target.closest("[data-console-tecla]");
+      if (!botao) return;
+      evento.preventDefault();
+      try { botao.setPointerCapture(evento.pointerId); } catch (erro) { /* sem captura */ }
+      presos.set(evento.pointerId, botao.dataset.consoleTecla);
+      botao.classList.add("apertado");
+      this.som.acordar();
+      this.teclaVirtual(botao.dataset.consoleTecla, true);
+    });
+    this.raiz.addEventListener("pointerup", largar);
+    this.raiz.addEventListener("pointercancel", largar);
+    // Enter/espaço num botão focado pelo teclado: aperta e solta.
+    this.raiz.addEventListener("keydown", (evento) => {
+      const botao = evento.target.closest && evento.target.closest("[data-console-tecla]");
+      if (!botao || (evento.key !== "Enter" && evento.key !== " ")) return;
+      evento.preventDefault();
+      evento.stopPropagation();
+      this.teclaVirtual(botao.dataset.consoleTecla, true);
+      window.setTimeout(() => this.teclaVirtual(botao.dataset.consoleTecla, false), 120);
+    });
 
     const ponto = (evento) => {
       const r = this.canvas.getBoundingClientRect();
@@ -301,9 +333,13 @@ class Console {
     const teclas = (apertada) => (evento) => {
       if (this.estado === "fechado") return;
       if (evento.key === "Escape") return;
+      // Quem está digitando ou navegando pelo seletor não joga sem querer.
+      const alvo = evento.target;
+      if (alvo && alvo !== document.body && alvo !== this.canvas && alvo.closest &&
+          alvo.closest("input, textarea, select, a, button")) return;
       const codigo = evento.code || evento.key;
       if (this.estado !== "jogando") {
-        if (apertada && (codigo === "Enter" || codigo === "Space") && evento.target === document.body) {
+        if (apertada && (codigo === "Enter" || codigo === "Space")) {
           evento.preventDefault();
           this.comecar();
         }
@@ -315,12 +351,32 @@ class Console {
     window.addEventListener("keydown", teclas(true));
     window.addEventListener("keyup", teclas(false));
 
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden && this.estado !== "fechado") this.pausar();
-      else if (!document.hidden && this.estado !== "fechado") this.retomar();
-    });
+    // Pausa quando a aba some e quando a máquina sai da tela (quem rolou
+    // a página para ler a ficha não perde a partida).
+    this.visivel = true;
+    const acertarPausa = () => {
+      if (this.estado === "fechado") return;
+      if (document.hidden || !this.visivel) this.pausar();
+      else this.retomar();
+    };
+    document.addEventListener("visibilitychange", acertarPausa);
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver((entradas) => {
+        this.visivel = entradas[0].isIntersecting;
+        acertarPausa();
+      }, { threshold: 0.25 }).observe(this.raiz);
+    }
 
     window.addEventListener("resize", () => this.ajustarTela());
+    document.addEventListener("fullscreenchange", () => window.setTimeout(() => this.ajustarTela(), 60));
+  }
+
+  teclaVirtual(codigo, apertada) {
+    if (this.estado === "jogando") {
+      if (this.partida && this.partida.tecla) this.partida.tecla(codigo, apertada);
+    } else if (apertada && (this.estado === "capa" || this.estado === "fim")) {
+      this.comecar();
+    }
   }
 
   mostrarSom(ligado = this.som.ligado) {
@@ -332,11 +388,13 @@ class Console {
 
   /* ---------- abrir um jogo ---------- */
   async abrir(dados) {
+    this.pararPartida();
     this.dados = dados;
-    this.dialogo.style.setProperty("--cor-jogo", dados.cor || "#ffd700");
-    this.dialogo.querySelector("[data-console-titulo]").textContent = dados.titulo;
-    this.dialogo.querySelector("[data-console-maquina]").textContent = dados.maquina || "";
-    const logo = this.dialogo.querySelector("[data-console-logo]");
+    this.jogo = null;
+    this.raiz.style.setProperty("--cor-jogo", dados.cor || "#ffd700");
+    this.raiz.querySelector("[data-console-titulo]").textContent = dados.titulo;
+    this.raiz.querySelector("[data-console-maquina]").textContent = dados.maquina || "";
+    const logo = this.raiz.querySelector("[data-console-logo]");
     logo.src = dados.capa;
     logo.alt = dados.titulo;
     this.capa.querySelector("[data-console-chamada]").textContent = dados.chamada || "";
@@ -362,21 +420,17 @@ class Console {
     this.fim.hidden = true;
     this.estado = "capa";
 
-    if (!this.dialogo.open) {
-      if (typeof this.dialogo.showModal === "function") this.dialogo.showModal();
-      else this.dialogo.setAttribute("open", "");
-    }
-    document.documentElement.classList.add("ls-console-aberto");
-    history.replaceState(null, "", "#jogar-" + dados.slug);
-
+    this.carregando.textContent = "Carregando o jogo…";
     this.carregando.hidden = false;
     try {
-      this.jogo = await this.carregar(dados.script);
+      const jogo = await this.carregar(dados.script);
+      // Trocou de jogo enquanto este carregava: fica o último pedido.
+      if (this.dados !== dados) return;
+      this.jogo = jogo;
       this.criarPartida();
       this.carregando.hidden = true;
       this.ajustarTela();
       this.rodar();
-      this.capa.querySelector("[data-console-acao='jogar']").focus();
     } catch (erro) {
       console.error("Console: jogo não carregou", erro);
       this.carregando.textContent = "Não foi possível carregar este jogo agora. Tente de novo em instantes.";
@@ -502,21 +556,21 @@ class Console {
     window.setTimeout(() => {
       if (this.estado !== "fim") return;
       this.fim.hidden = false;
-      this.fim.querySelector("[data-console-acao='jogar']").focus();
+      this.fim.querySelector("[data-console-acao='jogar']").focus({ preventScroll: true });
     }, 650);
   }
 
   atualizarRecorde() {
     const recorde = Number(ler(PREFIXO_RECORDE + (this.dados && this.dados.slug)) || 0);
-    this.dialogo.querySelector("[data-placar='recorde']").textContent = recorde.toLocaleString("pt-BR");
+    this.raiz.querySelector("[data-placar='recorde']").textContent = recorde.toLocaleString("pt-BR");
   }
 
   placar({ pontos, tempo, info } = {}) {
     if (pontos !== undefined) {
-      this.dialogo.querySelector("[data-placar='pontos']").textContent = Number(pontos || 0).toLocaleString("pt-BR");
+      this.raiz.querySelector("[data-placar='pontos']").textContent = Number(pontos || 0).toLocaleString("pt-BR");
     }
     if (tempo !== undefined) {
-      const caixa = this.dialogo.querySelector("[data-placar-caixa='tempo']");
+      const caixa = this.raiz.querySelector("[data-placar-caixa='tempo']");
       caixa.hidden = tempo === null;
       if (tempo !== null) {
         const s = Math.max(0, Math.ceil(tempo));
@@ -526,7 +580,7 @@ class Console {
       }
     }
     if (info !== undefined) {
-      const caixa = this.dialogo.querySelector("[data-placar-caixa='info']");
+      const caixa = this.raiz.querySelector("[data-placar-caixa='info']");
       caixa.hidden = !info;
       caixa.querySelector("[data-placar='info']").textContent = info || "";
     }
@@ -596,7 +650,7 @@ class Console {
       ctx.globalAlpha = Math.min(1, fracao * 2.2);
       api.texto(ctx, String(numero), api.W / 2, api.H / 2, {
         tamanho: Math.min(api.W, api.H) * (0.22 + (1 - fracao) * 0.06),
-        cor: "#fff", contorno: getComputedStyle(this.dialogo).getPropertyValue("--cor-jogo") || "#ffd700", peso: 900,
+        cor: "#fff", contorno: getComputedStyle(this.raiz).getPropertyValue("--cor-jogo") || "#ffd700", peso: 900,
       });
       ctx.restore();
     }
@@ -628,81 +682,142 @@ class Console {
   }
 
   telaCheia() {
-    const alvo = this.dialogo.querySelector(".console-gabinete");
+    const alvo = this.raiz.querySelector(".console-gabinete");
     if (document.fullscreenElement) document.exitFullscreen();
     else if (alvo.requestFullscreen) alvo.requestFullscreen().then(() => this.ajustarTela()).catch(() => {});
   }
 
-  fechar() {
-    if (this.dialogo.open && typeof this.dialogo.close === "function") this.dialogo.close();
-    else this.encerrar();
+  reiniciar() {
+    if (!this.jogo) return;
+    this.estado = "capa";
+    this.comecar();
   }
 
-  encerrar() {
-    if (this.estado === "fechado") return;
-    this.estado = "fechado";
+  /** Para o jogo atual (troca de jogo): laço, partida e tela cheia. */
+  pararPartida() {
     cancelAnimationFrame(this.quadroAnimacao);
     if (this.partida && this.partida.destruir) this.partida.destruir();
     this.partida = null;
-    this.dialogo.removeAttribute("open");
-    document.documentElement.classList.remove("ls-console-aberto");
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    if (location.hash.startsWith("#jogar-") || /[?&]jogar=/.test(location.search)) {
-      history.replaceState(null, "", location.pathname + "#jogos");
-    }
-    if (this.origem && document.contains(this.origem)) this.origem.focus({ preventScroll: true });
+    this.estado = "fechado";
+    this.pausado = false;
   }
 }
 
 /* ----------------------------------------------------------------------
-   LIGAÇÃO COM A PÁGINA
+   LIGAÇÃO COM A PÁGINA DO SIMULADOR
 
-   Qualquer botão com `data-jogo-abrir="<slug>"` abre o jogo, e o
-   endereço `#jogar-<slug>` abre direto -- é o link para mandar a alguém.
+   O seletor troca o jogo sem recarregar: o endereço vira /jogos/<jogo>/
+   (voltar e avançar do navegador funcionam), e a ficha, os comandos e o
+   título acompanham. O endereço de cada jogo é o link para mandar a
+   alguém: a página já abre com ele em foco.
    ---------------------------------------------------------------------- */
-const dialogo = document.getElementById("arena-console");
+const pagina = document.querySelector("[data-simulador]");
+const raiz = pagina && pagina.querySelector("[data-console]");
+const dadosDosJogos = document.getElementById("sim-jogos");
 
-if (dialogo) {
-  const consoleJogos = new Console(dialogo);
-  const catalogo = {};
-  document.querySelectorAll("[data-jogo]").forEach((cartao) => {
-    const d = cartao.dataset;
-    catalogo[d.jogo] = {
-      slug: d.jogo,
-      titulo: d.jogoTitulo,
-      maquina: d.jogoMaquina,
-      chamada: d.jogoChamada,
-      comandos: d.jogoComandos,
-      capa: d.jogoCapa,
-      poster: d.jogoPoster,
-      cor: d.jogoCor,
-      script: d.jogoScript,
-      variante: d.jogoVariante,
-      maquinaUrl: d.jogoMaquinaUrl,
-      maquinaNome: d.jogoMaquinaNome,
-      whatsapp: d.jogoWhatsapp,
-    };
-  });
+if (raiz && dadosDosJogos) {
+  const consoleJogos = new Console(raiz);
+  const jogos = JSON.parse(dadosDosJogos.textContent);
+  const porSlug = Object.fromEntries(jogos.map((jogo) => [jogo.slug, jogo]));
+  const whatsapp = pagina.dataset.whatsapp || "";
+  const campo = (nome) => pagina.querySelector(`[data-sim-${nome}]`);
+  const slugDoEndereco = () => {
+    const achado = location.pathname.match(/\/jogos\/([\w-]+)\/?$/);
+    return achado && porSlug[achado[1]] ? achado[1] : jogos[0].slug;
+  };
 
-  document.addEventListener("click", (evento) => {
-    const botao = evento.target.closest("[data-jogo-abrir]");
-    if (!botao) return;
-    const dados = catalogo[botao.dataset.jogoAbrir];
-    if (!dados) return;
+  const criarBotao = (botao) => {
+    const elemento = document.createElement("button");
+    elemento.type = "button";
+    elemento.className = "sim-botao" + (botao.grande ? " sim-botao--grande" : "");
+    elemento.dataset.consoleTecla = botao.tecla;
+    elemento.setAttribute("aria-label", botao.rotulo);
+    const icone = document.createElement("i");
+    icone.className = `fa-solid ${botao.icone}`;
+    icone.setAttribute("aria-hidden", "true");
+    elemento.append(icone);
+    if (!botao.so_icone) {
+      const texto = document.createElement("span");
+      texto.textContent = botao.rotulo;
+      elemento.append(" ", texto);
+    }
+    return elemento;
+  };
+
+  // A opção escolhida fica à vista no seletor, que rola sozinho (de lado
+  // no celular, para baixo no computador) sem mexer na página.
+  const mostrarOpcao = (opcao) => {
+    const lista = opcao.closest("ul");
+    if (!lista) return;
+    if (lista.scrollWidth > lista.clientWidth) {
+      lista.scrollTo({ left: opcao.offsetLeft - (lista.clientWidth - opcao.offsetWidth) / 2, behavior: "smooth" });
+    } else if (lista.scrollHeight > lista.clientHeight) {
+      lista.scrollTo({ top: opcao.offsetTop - (lista.clientHeight - opcao.offsetHeight) / 2, behavior: "smooth" });
+    }
+  };
+
+  const mostrarFicha = (jogo) => {
+    pagina.style.setProperty("--cor-jogo", jogo.cor);
+    campo("h1").textContent = jogo.titulo;
+    campo("trilha").textContent = jogo.titulo;
+    campo("titulo").textContent = jogo.titulo;
+    campo("maquina").textContent = jogo.maquina;
+    campo("chamada").textContent = jogo.chamada;
+    campo("descricao").textContent = jogo.descricao;
+    campo("na-maquina").textContent = jogo.naMaquina;
+    campo("passos").replaceChildren(...jogo.passos.map((passo) => {
+      const item = document.createElement("li");
+      item.textContent = passo;
+      return item;
+    }));
+    campo("gesto").textContent = jogo.rotulo;
+    campo("gesto-icone").className = `fa-solid ${jogo.icone}`;
+    campo("botoes").replaceChildren(...jogo.botoes.map(criarBotao));
+    campo("comandos").classList.toggle("sim-comandos--botoes", jogo.botoes.length > 0);
+
+    const texto = `Olá! Joguei a prévia do ${jogo.titulo} no site da Lazer & Sport e quero saber da máquina.`;
+    campo("whatsapp").href = `https://wa.me/${whatsapp}?text=${encodeURIComponent(texto)}`;
+    const maquina = campo("maquina-link");
+    maquina.hidden = !jogo.maquinaUrl;
+    if (jogo.maquinaUrl) maquina.href = jogo.maquinaUrl;
+
+    pagina.querySelectorAll("[data-sim-jogo]").forEach((opcao) => {
+      if (opcao.dataset.simJogo === jogo.slug) {
+        opcao.setAttribute("aria-current", "page");
+        mostrarOpcao(opcao);
+      } else {
+        opcao.removeAttribute("aria-current");
+      }
+    });
+    document.title = `${jogo.titulo}: jogue a prévia | Lazer & Sport Jogos`;
+  };
+
+  const escolher = (slug, { empurrar = true, focar = false } = {}) => {
+    const jogo = porSlug[slug];
+    if (!jogo) return;
+    if (empurrar && location.pathname !== jogo.url) history.pushState({ slug }, "", jogo.url);
+    mostrarFicha(jogo);
+    consoleJogos.abrir({ ...jogo, whatsapp });
+    // Escolheu no seletor: a máquina vem para a tela inteira, se não estiver.
+    if (focar) {
+      const caixa = raiz.getBoundingClientRect();
+      if (caixa.top < 0 || caixa.bottom > window.innerHeight) raiz.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  };
+
+  pagina.addEventListener("click", (evento) => {
+    const opcao = evento.target.closest("[data-sim-jogo]");
+    if (!opcao || evento.button !== 0 || evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return;
     evento.preventDefault();
-    consoleJogos.origem = botao;
-    consoleJogos.abrir(dados);
+    escolher(opcao.dataset.simJogo, { focar: true });
   });
 
-  // A arena 3D pede um jogo pelo nome quando a ficha de uma máquina tem
-  // a miniatura dela.
-  window.addEventListener("ls-arena:jogar", (evento) => {
-    const dados = catalogo[evento.detail && evento.detail.slug];
-    if (dados) consoleJogos.abrir(dados);
-  });
+  window.addEventListener("popstate", () => escolher(slugDoEndereco(), { empurrar: false }));
+  escolher(slugDoEndereco(), { empurrar: false });
 
-  // `#jogar-<jogo>` (link para mandar a alguém) ou `?jogar=<jogo>` (os
-  // cartões da home, que precisam do # para descer até a seção de jogos).
-  const pedido = location.hash.match(/^#jogar-([\w-]+)/) || location.search.match(/[?&]jogar=([\w-]+)/);
-  if (pedido && catalogo[pedido[1]]) consoleJogos.abrir(catalogo[pedido[1]]);
+  // Quem chegou pelo link de um jogo (/jogos/<jogo>/) já cai com a
+  // máquina inteira na tela, logo abaixo do cabeçalho.
+  if (/\/jogos\/[\w-]+\/?$/.test(location.pathname) && window.scrollY < 40 && !location.hash) {
+    window.requestAnimationFrame(() => raiz.scrollIntoView({ block: "start" }));
+  }
 }

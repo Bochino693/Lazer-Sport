@@ -931,9 +931,10 @@ class Arena {
     const texto = `Olá! Vi o ${b.nome} na Arena 3D do site da Lazer & Sport e quero um orçamento.`;
     const whatsapp = f.querySelector("[data-ficha-whatsapp]");
     whatsapp.href = whatsapp.href.split("?")[0] + "?text=" + encodeURIComponent(texto);
+    // A prévia do jogo desta máquina, no simulador.
     const jogar = f.querySelector("[data-ficha-jogar]");
-    jogar.hidden = !(b.jogo && document.querySelector(`[data-jogo="${b.jogo}"]`));
-    jogar.dataset.slug = b.jogo || "";
+    jogar.hidden = !b.jogo;
+    if (b.jogo) jogar.href = `${jogar.dataset.base}${b.jogo}/`;
   }
 
   marcarLista() {
@@ -980,10 +981,6 @@ class Arena {
     }
     this.ficha.addEventListener("click", (evento) => {
       if (evento.target.closest("[data-arena-acao='fechar-ficha']")) this.soltarSelecao();
-      const jogar = evento.target.closest("[data-ficha-jogar]");
-      if (jogar && jogar.dataset.slug) {
-        window.dispatchEvent(new CustomEvent("ls-arena:jogar", { detail: { slug: jogar.dataset.slug } }));
-      }
     });
     if (this.filtros) this.filtros.addEventListener("click", (evento) => {
       const botao = evento.target.closest("[data-arena-categoria]");
@@ -1075,7 +1072,6 @@ class Arena {
   quadro(dt) {
     // Com um jogo aberto por cima, a arena não desenha: o celular precisa
     // de todo o fôlego para o jogo, e a cena nem aparece atrás do console.
-    if (document.documentElement.classList.contains("ls-console-aberto")) return;
     this.relogio += dt;
     this.ocioso += dt;
     const t = this.relogio;
