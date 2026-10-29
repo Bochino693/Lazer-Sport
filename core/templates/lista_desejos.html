@@ -91,7 +91,7 @@
             </div>
             <div class="desejo-corpo">
               <h3>{{ b.nome_brinquedo }}</h3>
-              {% if b.valor_brinquedo %}
+              {% if b.disponivel_na_loja %}
                 <span class="preco">R$ {{ b.valor_brinquedo|moeda }}</span>
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>

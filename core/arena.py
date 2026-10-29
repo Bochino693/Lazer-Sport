@@ -729,7 +729,8 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
             if medidas_reais else ""
         ),
         "voltagem": brinquedo.voltz or "",
-        "preco": f"R$ {dinheiro(valor)}" if valor else "",
+        # Preço só de quem está à venda na loja; o resto é orçamento.
+        "preco": f"R$ {dinheiro(valor)}" if brinquedo.disponivel_na_loja else "",
         "avaliacao": float(brinquedo.avaliacao or 0),
         "capa": capa or "",
         "fotos": [

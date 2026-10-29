@@ -24,7 +24,7 @@ def brinquedos_da_arena():
         .filter(ativo=True)
         .only(
             "id", "nome_brinquedo", "imagem_brinquedo", "descricao",
-            "valor_brinquedo", "avaliacao", "voltz",
+            "valor_brinquedo", "exibir_na_loja", "avaliacao", "voltz",
             "altura_m", "largura_m", "profundidade_m",
         )
         .prefetch_related(

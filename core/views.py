@@ -183,7 +183,8 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
             "capa": capa,
             "miniatura": arena.reduzir_imagem(b.imagem_brinquedo.url, 160),
             "categoria": categorias[0] if categorias else "Brinquedo",
-            "preco": f"R$ {dinheiro(b.valor_brinquedo)}" if b.valor_brinquedo else "",
+            # Preço só de quem está à venda na loja; o resto é orçamento.
+            "preco": f"R$ {dinheiro(b.valor_brinquedo)}" if b.disponivel_na_loja else "",
             "avaliacao": float(b.avaliacao or 0),
             "medidas": b.dimensoes_m or "",
         })

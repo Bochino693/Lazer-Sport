@@ -282,6 +282,15 @@ class Brinquedos(Prime):
         return dimensoes(self.altura_m, self.largura_m, self.profundidade_m) or None
 
     @property
+    def disponivel_na_loja(self):
+        """À venda na loja online: marcado para a Loja e com preço.
+
+        É a mesma regra do catálogo e da página do produto. Só o que está
+        à venda mostra preço; o resto é projeto sob orçamento.
+        """
+        return bool(self.exibir_na_loja and self.valor_brinquedo and self.valor_brinquedo > 0)
+
+    @property
     def metros_cubicos(self):
         if self.altura_m and self.largura_m and self.profundidade_m:
             a = float(self.altura_m)
