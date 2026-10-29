@@ -9,7 +9,7 @@ responde -- operadora, DNS, rede corporativa --, o site perde todos os
 | `fontawesome/` | ícones do site | 6.5.1 | npm `@fortawesome/fontawesome-free` |
 | `fontes/` + `fontes.css` | Manrope, Poppins, Montserrat, Inter (recorte latino) | fontsource | npm `@fontsource/*` |
 | `leaflet/` | mapa de clientes da home | 1.9.4 | npm `leaflet` |
-| `three/` | o motor 3D da Arena (`three.module.min.js` + licença MIT) | r169 | npm `three` |
+| `three/` | o motor 3D da Arena (`three.module.min.js` + licença MIT) e o leitor de modelos glTF (`GLTFLoader.js`, `BufferGeometryUtils.js`, de `examples/jsm`, com o `import 'three'` trocado pelo arquivo ao lado) | r169 | npm `three` |
 
 Os arquivos são os oficiais, sem alteração, com uma exceção: do CSS do
 Font Awesome foram removidos os `url(...ttf)`, porque só o `woff2` foi
