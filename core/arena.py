@@ -196,12 +196,12 @@ JOGOS = (
             "Boliche de arcade com a arte do dragão: 1 ou 2 jogadores, mapa "
             "dos pinos, STRIKE, ACERTO e PRA FORA no telão e recorde da casa."
         ),
-        "comandos": "Arraste para mirar e solte para lançar. Mais rápido, mais força.",
+        "comandos": "Arraste a bola para cima e solte: o lado da pista por onde o gesto passa é a jogada.",
         "desenhos": ("boliche",),
         "cor": "#ff6b1a",
         "capa": "site/arena/capas/dragon-bowling.webp",
         "poster": "site/arena/capas/dragon-bowling-poster.webp",
-        "script": "site/arena/jogos/boliche.js",
+        "script": "site/arena/jogos/dragon-bowling.js",
         "variante": "dragon",
     },
     {
@@ -227,8 +227,8 @@ JOGOS = (
         "maquina": "Máquina de força (boxe)",
         "chamada": "Fight! Never give up!",
         "descricao": (
-            "A máquina de soco com sensor de feixe: três socos para cravar a "
-            "maior força da arena e entrar para o ranking."
+            "O adversário 3D no ringue sente cada soco: três socos para cravar "
+            "a maior força da arena, nocautear o boxeador e entrar no ranking."
         ),
         "comandos": "Toque, clique ou aperte espaço quando o medidor estiver no vermelho.",
         "desenhos": ("boxe",),
@@ -355,7 +355,12 @@ CONTROLES = {
     },
     "dragon-bowling": {
         **_ARRASTO_BOLICHE,
-        "na_maquina": "Na máquina a bola corre pela pista do gabinete e os sensores dizem para onde ela foi.",
+        "passos": (
+            "Encoste o dedo (ou o mouse) na bola.",
+            "Arraste para cima e solte: o lado da pista por onde o gesto passa é o sensor da jogada.",
+            "Pelo meio, com os 10 pinos de pé, é strike; pelos cantos, cai um pino só.",
+        ),
+        "na_maquina": "Na máquina a bola corre pela pista do gabinete e cruza um dos 5 sensores: é ele que decide a jogada.",
     },
     "lazer-shot": {
         "gesto": "clique",
@@ -372,10 +377,11 @@ CONTROLES = {
         "gesto": "toque",
         "rotulo": "Toque para socar",
         "passos": (
-            "Toque no saco de pancada ou no botão SOCAR.",
+            "Toque na tela ou no botão SOCAR.",
             "Acerte quando o medidor estiver no vermelho: é aí que o soco sai mais forte.",
+            "Demorou? O boxeador soca a câmera, e cada soco dele tira um quarto da sua vida.",
         ),
-        "na_maquina": "Na máquina o soco é no saco de pancada de verdade, e o sensor mede a força.",
+        "na_maquina": "Na máquina o soco é no saco de pancada de verdade e o sensor mede a força; o boxeador 3D da tela reage a cada golpe.",
         "botoes": ({"tecla": "Space", "icone": "fa-hand-fist", "rotulo": "SOCAR!", "grande": True},),
     },
     "slam-arena": {

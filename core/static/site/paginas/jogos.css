@@ -585,6 +585,9 @@
     .console-placar { gap: 5px; padding: 5px 6px; }
     .console-placar-item { padding: 3px 4px; }
     .console-placar-item b { font-size: 1.05rem; }
+    /* a caixa de informação ("ROUND 2/3 · BOLA 1") é a que tem mais texto */
+    .console-placar-item[data-placar-caixa="info"] { flex: 2; }
+    .console-placar-item[data-placar-caixa="info"] b { font-size: .86rem; letter-spacing: -.01em; }
     .console-tela { padding: 0; }
     .console-quadro { border-radius: 0; }
 
