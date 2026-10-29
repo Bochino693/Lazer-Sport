@@ -1,6 +1,6 @@
 {% load static interno_extras %}
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="ls-escuro">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -99,14 +99,108 @@
 
   <link rel="stylesheet" href="{% estatico 'site/ls-base.css' %}">
 
+  {% comment %}
+    O TEMA ESCURO DO SITE INTEIRO. Vem depois do `ls-base.css` e carrega
+    no <head>, antes da primeira pintura: carregado no fim da página, a
+    tela piscava branca e depois escurecia. As regras dele levam o
+    prefixo `html.ls-escuro`, que vence as folhas de cada tela sem
+    precisar de `!important` -- e, se um dia for preciso voltar ao claro,
+    é tirar a classe da tag <html>.
+  {% endcomment %}
+  <link rel="stylesheet" href="{% estatico 'site/ls-tema.css' %}">
+  <script src="{% estatico 'site/ls-topo.js' %}" defer></script>
+
 </head>
 <body>
 
 <!-- ======= CABEÇALHO ======= -->
-<header>
+<a class="ls-pular" href="#conteudo">Pular para o conteúdo</a>
 
+{% comment %}
+  O CABEÇALHO É UMA LINHA SÓ, COM A MARCA DENTRO.
 
-  <!-- Área do usuário -->
+  Eram catorze botões em duas fileiras, mais uma faixa branca de 180 px
+  com o logotipo e mais a busca: no celular, a primeira tela inteira era
+  cabeçalho. Agora são seis entradas -- os itens parecidos moram em
+  grupos (Brinquedos, Peças e serviços, A fábrica) -- e a marca subiu
+  para dentro dele.
+
+  A FAIXA DA MARCA CONTINUA NÃO SENDO UM TÍTULO. Ela já foi um `<h1>` em
+  todas as telas (ver `tests_telas_do_site`): cada página ficava com dois
+  títulos de primeiro nível. Aqui ela é um link para o início, e o `<h1>`
+  é de cada página.
+
+  "NOSSOS PARCEIROS" DEU LUGAR À ARENA 3D. A página de parceiros continua
+  em /estabelecimentos/, com link a partir da arena e da busca.
+{% endcomment %}
+<header class="ls-topo">
+  <div class="ls-topo-linha">
+    <a class="ls-faixa-marca" href="{% url 'home' %}#" aria-label="Lazer &amp; Sport — página inicial">
+      <img class="ls-marca-logo" src="{% estatico 'images/logoofi.png' %}" alt="Lazer &amp; Sport" width="132" height="88" decoding="async">
+      <span class="ls-marca-texto">
+        <span class="ls-marca-nome">Fábrica de Brinquedos</span>
+        <span class="ls-marca-lema">Qualidade e diversão</span>
+      </span>
+    </a>
+
+    <nav class="ls-topo-nav" aria-label="Menu principal">
+      <a class="ls-topo-link" href="{% url 'home' %}#">Início</a>
+
+      <div class="ls-topo-grupo" data-topo-grupo>
+        <button type="button" class="ls-topo-link" aria-expanded="false" aria-controls="topo-brinquedos">
+          Brinquedos <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ls-topo-painel" id="topo-brinquedos">
+          <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes" aria-hidden="true"></i><span><b>Categorias de Brinquedos</b><small>Mecânicos, eletrônicos, fliperamas e mais</small></span></a>
+          <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-star" aria-hidden="true"></i><span><b>Brinquedos em Destaque</b><small>Os mais procurados da fábrica</small></span></a>
+          <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags" aria-hidden="true"></i><span><b>Promoções Especiais</b><small>Preço de fábrica por tempo limitado</small></span></a>
+          <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span><b>Combos Promocionais</b><small>Monte o espaço com economia</small></span></a>
+          <a href="{% url 'brinquedos' %}#catalogo-brinquedos"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span><b>Catálogo completo</b><small>Todos os brinquedos com filtro</small></span></a>
+        </div>
+      </div>
+
+      <div class="ls-topo-grupo" data-topo-grupo>
+        <button type="button" class="ls-topo-link ls-topo-link--arena" aria-expanded="false" aria-controls="topo-jogos">
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogos &amp; 3D <span class="ls-topo-novo">Novo</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ls-topo-painel" id="topo-jogos">
+          <a href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span><b>Simulador de jogos</b><small>Jogue a prévia dos jogos das nossas máquinas</small></span></a>
+          <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i><span><b>Máquinas em 3D</b><small>Monte com a cor e a adesivagem</small></span></a>
+          <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera" aria-hidden="true"></i><span><b>Todas as máquinas</b><small>Fotos reais de frente, lado e costas</small></span></a>
+        </div>
+      </div>
+
+      <a class="ls-topo-link" href="{% url 'loja' %}#catalogo">Loja Online</a>
+
+      <div class="ls-topo-grupo" data-topo-grupo>
+        <button type="button" class="ls-topo-link" aria-expanded="false" aria-controls="topo-servicos">
+          Peças e serviços <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ls-topo-painel" id="topo-servicos">
+          <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open" aria-hidden="true"></i><span><b>Catálogo de Peças</b><small>Reposição para o seu brinquedo</small></span></a>
+          <a href="{% url 'manutencoes' %}#nova"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i><span><b>Solicitar Manutenção</b><small>Técnico da fábrica no seu espaço</small></span></a>
+          <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span><b>Projetos Sob Medida</b><small>Do desenho à montagem</small></span></a>
+          <a href="{% url 'eventos' %}#todos-eventos"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i><span><b>Eventos Realizados</b><small>Montagens que já aconteceram</small></span></a>
+        </div>
+      </div>
+
+      <div class="ls-topo-grupo" data-topo-grupo>
+        <button type="button" class="ls-topo-link" aria-expanded="false" aria-controls="topo-fabrica">
+          A fábrica <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ls-topo-painel ls-topo-painel--direita" id="topo-fabrica">
+          <a href="{% url 'home' %}#contato"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span><b>Nossa Localização</b><small>Visite a fábrica em São Paulo</small></span></a>
+          <a href="{% url 'home' %}#clientes-section"><i class="fa-solid fa-earth-americas" aria-hidden="true"></i><span><b>Mapa de Clientes</b><small>Onde os nossos brinquedos estão</small></span></a>
+          <a href="{% url 'home' %}#aplicativo"><i class="fa-brands fa-android" aria-hidden="true"></i><span><b>Aplicativo</b><small>Pontos, pedidos e manutenção</small></span></a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="ls-topo-acoes">
+      <a class="ls-topo-icone" href="#busca" data-topo-busca aria-label="Buscar no site" aria-controls="busca">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      </a>
+
   <div class="user-area">
     {% if user.is_authenticated %}
       <div class="user-dropdown" data-user-dropdown>
@@ -154,158 +248,170 @@
     {% endif %}
   </div>
 
-  <!-- Menu (desktop) — uma linha só, espalhado até a ponta direita -->
-  <nav class="nav-desktop" aria-label="Menu principal">
-    <a href="{% url 'home' %}#">Home</a>
-    <a href="{% url 'home' %}#categorias-section">Categorias de Brinquedos</a>
-    <a href="{% url 'home' %}#promocoes-section">Promoções Especiais</a>
-    <a href="{% url 'home' %}#brinquedos">Brinquedos em Destaque</a>
-    <a href="{% url 'manutencoes' %}#nova">Solicitar Manutenção</a>
-    <a href="{% url 'home' %}#pecas">Catálogo de Peças</a>
-    <a href="{% url 'home' %}#combos-section">Combos Promocionais</a>
-    <a href="{% url 'eventos' %}#todos-eventos">Eventos Realizados</a>
-    <a href="{% url 'projetos' %}#todos-projetos">Projetos Sob Medida</a>
-    <a href="{% url 'loja' %}#catalogo">Loja Online</a>
-    <a href="{% url 'estabelecimentos' %}#header">Nossos Parceiros</a>
-    <a href="{% url 'home' %}#contato">Nossa Localização</a>
-    <a href="{% url 'home' %}#clientes-section">Mapa de Clientes</a>
-    <a href="{% url 'home' %}#aplicativo">Aplicativo</a>
-  </nav>
+      <a class="ls-topo-cta" href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20um%20or%C3%A7amento." target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>Orçamento</span>
+      </a>
 
-  <!-- Menu toggle -->
-  <button type="button" class="ls-hamburger" id="ls-hamburger-btn"
-          aria-label="Abrir menu" aria-controls="ls-mobile-nav" aria-expanded="false">
-    <span class="ls-hamburger-lines" aria-hidden="true">
-      <span class="ls-hamburger-line"></span>
-      <span class="ls-hamburger-line"></span>
-      <span class="ls-hamburger-line"></span>
-    </span>
-    <span class="ls-hamburger-label">MENU</span>
-  </button>
-
-  <!-- Navegação (mobile — off-canvas, com TODOS os itens) -->
-<nav id="ls-mobile-nav" aria-label="Menu principal no celular" aria-hidden="true">
-
-  <div class="ls-mobile-nav-header">
-    <div class="ls-mobile-nav-brand">
-      {# A marca de verdade, e não um quadrado amarelo com "LS" escrito. #}
-      <img class="ls-mobile-nav-logo"
-           src="{% static 'images/logoofi.png' %}"
-           alt="Lazer &amp; Sport" width="132" height="44" decoding="async">
+      <button type="button" class="ls-hamburger" id="ls-hamburger-btn"
+              aria-label="Abrir menu" aria-controls="ls-mobile-nav" aria-expanded="false">
+        <span class="ls-hamburger-lines" aria-hidden="true">
+          <span class="ls-hamburger-line"></span>
+          <span class="ls-hamburger-line"></span>
+          <span class="ls-hamburger-line"></span>
+        </span>
+        <span class="ls-hamburger-label">MENU</span>
+      </button>
     </div>
-    <button type="button" class="ls-mobile-nav-close" id="ls-mobile-nav-close" aria-label="Fechar menu">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
   </div>
 
-  <div class="ls-mobile-nav-list">
-    <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Home</a>
-    <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
-    <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>Promoções Especiais</a>
-    <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
-    <a href="{% url 'home' %}#manutencao"><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>Solicitar Manutenção</a>
-    <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open nav-icon" aria-hidden="true"></i>Catálogo de Produtos</a>
-    <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group nav-icon" aria-hidden="true"></i>Combos Promocionais</a>
-    <a href="{% url 'eventos' %}#todos-eventos"><i class="fa-solid fa-calendar-days nav-icon" aria-hidden="true"></i>Eventos Realizados</a>
-    <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb nav-icon" aria-hidden="true"></i>Projetos Sob Medida</a>
-    <a href="/loja/"><i class="fa-solid fa-store nav-icon" aria-hidden="true"></i>Loja Online</a>
-    <a href="{% url 'estabelecimentos' %}#header"><i class="fa-solid fa-building nav-icon" aria-hidden="true"></i>Nossos Parceiros</a>
-    <a href="{% url 'home' %}#contato"><i class="fa-solid fa-location-dot nav-icon" aria-hidden="true"></i>Nossa Localização</a>
-    <a href="{% url 'home' %}#clientes-section"><i class="fa-solid fa-earth-americas nav-icon" aria-hidden="true"></i>Mapa de Clientes</a>
-    <a href="{% url 'home' %}#aplicativo"><i class="fa-brands fa-android nav-icon" aria-hidden="true"></i>Aplicativo</a>
-  </div>
+  <!-- Navegação (celular — painel lateral, com TODOS os itens) -->
+  <nav id="ls-mobile-nav" aria-label="Menu principal no celular" aria-hidden="true">
+    <div class="ls-mobile-nav-header">
+      <div class="ls-mobile-nav-brand">
+        <img class="ls-mobile-nav-logo"
+             src="{% estatico 'images/logoofi.png' %}"
+             alt="Lazer &amp; Sport" width="132" height="44" decoding="async">
+      </div>
+      <button type="button" class="ls-mobile-nav-close" id="ls-mobile-nav-close" aria-label="Fechar menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
 
-  <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
-     target="_blank" rel="noopener" class="ls-mobile-nav-cta">
-    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar no WhatsApp
-  </a>
+    <div class="ls-atalhos" aria-label="Atalhos">
+      <a class="ls-atalho ls-atalho--whats" href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport." target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>WhatsApp</span>
+      </a>
+      <a class="ls-atalho ls-atalho--insta" href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener">
+        <i class="fa-brands fa-instagram" aria-hidden="true"></i><span>Instagram</span>
+      </a>
+      {% if usuario_da_equipe %}
+        <a class="ls-atalho" href="{{ ls_url_painel|default:'/' }}"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>Painel</span></a>
+      {% else %}
+        <a class="ls-atalho" href="{% url 'lista_desejos' %}#lista-desejos">
+          <i class="fa-solid fa-star" aria-hidden="true"></i><span>Desejos</span>
+          <b class="ls-atalho-selo{% if not tem_lista_desejos %} vazio{% endif %}" data-lista-desejos-total>{{ total_lista_desejos|default:0 }}</b>
+        </a>
+        {% if user.is_authenticated %}
+          <a class="ls-atalho" href="{% url 'carrinho' %}#carrinho">
+            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span>Carrinho</span>
+            <b class="ls-atalho-selo{% if not carrinho_total_itens %} vazio{% endif %}" data-carrinho-total>{{ carrinho_total_itens|default:0 }}</b>
+          </a>
+          <a class="ls-atalho" href="{% url 'meus_pedidos' %}#pedidos">
+            <i class="fa-solid fa-box" aria-hidden="true"></i><span>Pedidos</span>
+            {% if total_pedidos_ativos %}<b class="ls-atalho-selo">{{ total_pedidos_ativos }}</b>{% endif %}
+          </a>
+        {% endif %}
+      {% endif %}
+      {% if user.is_authenticated and tem_manutencao %}
+        <a class="ls-atalho" href="{% url 'manutencoes' %}?tab=lista#cab">
+          <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i><span>Manutenções</span>
+          {% if manutencao_abertas %}<b class="ls-atalho-selo">{{ manutencao_abertas }}</b>{% endif %}
+        </a>
+      {% endif %}
+      {% if not user.is_authenticated %}
+        <a class="ls-atalho" href="{% url 'login' %}#login-box"><i class="fa-solid fa-user" aria-hidden="true"></i><span>Entrar</span></a>
+      {% endif %}
+    </div>
 
+    <div class="ls-mobile-nav-list">
+      <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Início</a>
+      <a class="ls-mobile-nav-arena" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Simulador de jogos<span class="ls-topo-novo">Novo</span></a>
+      <a href="{% url 'arena' %}#header"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D: máquinas em 3D</a>
+      <span class="ls-mobile-nav-grupo">Brinquedos</span>
+      <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
+      <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
+      <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>Promoções Especiais</a>
+      <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group nav-icon" aria-hidden="true"></i>Combos Promocionais</a>
+      <a href="{% url 'loja' %}#catalogo"><i class="fa-solid fa-store nav-icon" aria-hidden="true"></i>Loja Online</a>
+      <span class="ls-mobile-nav-grupo">Peças e serviços</span>
+      <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open nav-icon" aria-hidden="true"></i>Catálogo de Peças</a>
+      <a href="{% url 'manutencoes' %}#nova"><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>Solicitar Manutenção</a>
+      <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb nav-icon" aria-hidden="true"></i>Projetos Sob Medida</a>
+      <a href="{% url 'eventos' %}#todos-eventos"><i class="fa-solid fa-calendar-days nav-icon" aria-hidden="true"></i>Eventos Realizados</a>
+      <span class="ls-mobile-nav-grupo">A fábrica</span>
+      <a href="{% url 'home' %}#contato"><i class="fa-solid fa-location-dot nav-icon" aria-hidden="true"></i>Nossa Localização</a>
+      <a href="{% url 'home' %}#clientes-section"><i class="fa-solid fa-earth-americas nav-icon" aria-hidden="true"></i>Mapa de Clientes</a>
+      <a href="{% url 'home' %}#aplicativo"><i class="fa-brands fa-android nav-icon" aria-hidden="true"></i>Aplicativo</a>
+    </div>
+
+    <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
+       target="_blank" rel="noopener" class="ls-mobile-nav-cta">
+      <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar no WhatsApp
+    </a>
   </nav>
 </header>
 
 <div class="ls-mobile-backdrop" id="ls-mobile-backdrop"></div>
 
-
-
-<div class="ls-faixa-marca" style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
-    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
-
-        <img id="image" src="{% static 'images/logoofi.png' %}" alt="Logo Fábrica"
-             style="height: 150px; width: auto; object-fit: contain; max-width: 100%; display: block;">
-
-        <div style="display: flex; flex-direction: column; text-align: center;">
-            {% comment %}
-              A FAIXA DA MARCA NÃO É O TÍTULO DA PÁGINA.
-
-              Isto era um `<h1>`, e como mora no `base.html` ele aparecia
-              em TODAS as telas do site. Cada página passava a ter dois
-              títulos de primeiro nível -- o seu e este --, e o buscador
-              lia "Fábrica de Brinquedos" como o assunto de "Peças de
-              reposição", de "Brinquedos em Shopping Aurora" e de
-              qualquer outra. Para quem usa leitor de tela é o mesmo
-              problema: a navegação por títulos abria com uma linha que é
-              igual em toda página e não diz onde a pessoa está.
-
-              O desenho não mudou: mesmo tamanho, mesma cor, mesmo peso,
-              e `margin: 0` já estava aqui. Mudou o papel.
-            {% endcomment %}
-            <p style="font-size: 1.9rem; color: #004AAD; font-weight: 800; line-height: 1; margin: 0; text-transform: uppercase; font-family: 'Poppins', sans-serif;">
-                Fábrica de Brinquedos
-            </p>
-            <span style="font-size: 1.2rem; color: #E63946; letter-spacing: 3px; font-weight: 600; margin-top: 2px; font-family: 'Poppins', sans-serif;">
-                QUALIDADE E DIVERSÃO
-            </span>
-        </div>
-    </div>
-</div>
-
-<section class="search-section">
+<!-- ======= BUSCA (compacta; o ícone da lupa no topo traz o foco para cá) ======= -->
+<section class="search-section" id="busca" aria-label="Buscar no site">
   <div class="search-container">
-    <h2 class="search-title">O que você está procurando hoje?</h2>
-
-    <!-- Campo de busca (único do site) -->
-    <form class="search-box" action="{% url 'search' %}" method="get">
-      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Digite o nome do brinquedo, categoria ou modelo..." required>
-      <button type="submit"><i class="fas fa-search"></i> Buscar</button>
+    <form class="search-box" action="{% url 'search' %}" method="get" role="search">
+      <i class="fa-solid fa-magnifying-glass search-box-icone" aria-hidden="true"></i>
+      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Busque brinquedo, categoria ou peça…" aria-label="O que você está procurando hoje?" required>
+      <button type="submit">Buscar</button>
     </form>
 
-            <!-- Sugestões de pesquisa -->
-                    <div class="search-suggestions">
-                      <h3>Sugestões de pesquisa 🔍</h3>
-                      <div class="filter-suggestions">
-
-                      <!-- 🔄 CATEGORIAS DINÂMICAS -->
-                     {% for categoria in categorias_header %}
-            <a href="{% url 'categoria_detalhe' categoria.pk %}#header"
-               class="suggestion-tag">
-              {{ categoria.nome_categoria|upper }}
-            </a>
-            {% endfor %}
-
-          {% for est in estabelecimentos_globais|slice:":3" %}
-                <a href="{% url 'estabelecimento_brinquedo' est.id %}#brinquedos" class="suggestion-tag">
-                    BRINQUEDOS PARA {{ est.nome_estabelecimento|upper }}
-                </a>
-            {% endfor %}
-
-
-          <!-- ⭐ SUGESTÕES ESTÁTICAS -->
-          <!-- <a href="{% url 'estabelecimentos' %}#estabelecimentos" class="suggestion-tag">PARA MEU ESTABELECIMENTO</a> -->
-          <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="suggestion-tag">PEÇAS DE REPOSIÇÃO DE BRINQUEDO</a>
-
-
-        </div>
+    <div class="search-suggestions">
+      <div class="filter-suggestions">
+        {% for categoria in categorias_header %}
+          <a href="{% url 'categoria_detalhe' categoria.pk %}#header" class="suggestion-tag">{{ categoria.nome_categoria }}</a>
+        {% endfor %}
+        {% for est in estabelecimentos_globais|slice:":3" %}
+          <a href="{% url 'estabelecimento_brinquedo' est.id %}#brinquedos" class="suggestion-tag">Para {{ est.nome_estabelecimento }}</a>
+        {% endfor %}
+        <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="suggestion-tag">Peças de reposição</a>
+      </div>
     </div>
   </div>
 </section>
 
+
 <!-- ======= CONTEÚDO DINÂMICO ======= -->
-<main class="content-section{% block main_class %}{% endblock %}">
+<main class="content-section{% block main_class %}{% endblock %}" id="conteudo" tabindex="-1">
   {% block content %}
   {% endblock %}
 </main>
 
 
+
+{% comment %}
+  A BARRA DE BAIXO DO CELULAR. No telefone o polegar alcança a base da
+  tela, e não o topo: os quatro destinos mais usados ficam ali, com a
+  Arena no meio, e "Menu" abre o painel com todo o resto.
+{% endcomment %}
+{% comment %}
+  OS BOTÕES FLUTUANTES VIRAM PARTE DA BARRA NO CELULAR.
+
+  No computador eles continuam flutuando nos cantos. No telefone eram
+  até seis bolinhas por cima do conteúdo -- carrinho, desejos, pedidos,
+  manutenção, WhatsApp e Instagram -- tapando justamente o que a pessoa
+  queria ler. Agora a quarta casa da barra é o carrinho quando há algo
+  nele (e a lista de desejos quando não há), e o resto mora nos atalhos
+  do topo do Menu, cada um só quando existe para aquela pessoa.
+{% endcomment %}
+<nav class="ls-barra-app" aria-label="Atalhos">
+  <a href="{% url 'home' %}#"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span></a>
+  <a href="{% url 'brinquedos' %}#catalogo-brinquedos"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span>Brinquedos</span></a>
+  <a class="ls-barra-app-centro" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span>Jogos</span></a>
+  {% if usuario_da_equipe %}
+    <a href="{{ ls_url_painel|default:'/' }}"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>Painel</span></a>
+  {% elif user.is_authenticated and carrinho_total_itens %}
+    <a href="{% url 'carrinho' %}#carrinho" class="ls-barra-app-carrinho">
+      <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span>Carrinho</span>
+      <b class="ls-barra-app-selo" data-carrinho-total>{{ carrinho_total_itens }}</b>
+    </a>
+  {% else %}
+    <a href="{% url 'lista_desejos' %}#lista-desejos">
+      <i class="fa-solid fa-star" aria-hidden="true"></i><span>Desejos</span>
+      <b class="ls-barra-app-selo{% if not tem_lista_desejos %} vazio{% endif %}" data-lista-desejos-total>{{ total_lista_desejos|default:0 }}</b>
+    </a>
+  {% endif %}
+  <button type="button" data-abrir-menu aria-controls="ls-mobile-nav">
+    <i class="fa-solid fa-bars" aria-hidden="true"></i><span>Menu</span>
+    {% if total_pedidos_ativos or manutencao_abertas %}<b class="ls-barra-app-ponto" aria-label="Há novidades no menu"></b>{% endif %}
+  </button>
+</nav>
 
 <div class="float-stack">
 
@@ -698,6 +804,11 @@ if (menuToggle && mobileNav) {
   });
 }
 
+// O "Menu" da barra de baixo do celular abre o mesmo painel.
+document.querySelectorAll('[data-abrir-menu]').forEach((botao) => {
+  botao.addEventListener('click', abrirMenuMobile);
+});
+
 if (navClose) {
   navClose.addEventListener('click', fecharMenuMobile);
 }
@@ -748,9 +859,9 @@ if (lsHeader) {
      3. Rodava a conta inteira em todo evento de scroll. Agora passa por
         requestAnimationFrame, então no máximo uma vez por quadro. */
   document.addEventListener("DOMContentLoaded", () => {
-      const links = document.querySelectorAll("#ls-mobile-nav a, .nav-desktop a");
+      const links = document.querySelectorAll("#ls-mobile-nav a, .ls-topo-nav a, .ls-barra-app a");
       const linkHome = document.querySelector(
-        '#ls-mobile-nav a[href$="#"], .nav-desktop a[href$="#"]'
+        '.ls-topo-nav a[href$="#"]'
       );
 
       /* Só entram as seções que têm item no menu. A home tem seções que
@@ -762,7 +873,7 @@ if (lsHeader) {
         .map(secao => ({
           el: secao,
           link: document.querySelector(
-            `#ls-mobile-nav a[href$="#${secao.id}"], .nav-desktop a[href$="#${secao.id}"]`
+            `.ls-topo-nav a[href$="#${secao.id}"]`
           ),
         }))
         .filter(item => item.link)
@@ -820,6 +931,12 @@ if (lsHeader) {
 function atualizarBadgeCarrinho(total) {
   const carrinhoBtn = document.getElementById('carrinho-float-btn');
   const contador = document.getElementById('carrinho-contador');
+
+  // A barra de baixo do celular e os atalhos do menu contam junto.
+  document.querySelectorAll('[data-carrinho-total]').forEach((selo) => {
+    selo.textContent = Number(total) || 0;
+    selo.classList.toggle('vazio', !(Number(total) > 0));
+  });
 
   if (!carrinhoBtn || !contador) return;
 

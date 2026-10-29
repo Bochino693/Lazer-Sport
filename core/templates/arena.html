@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load static interno_extras %}
+
+{% block title %}Arena 3D e Lazer &amp; Sport Jogos | Lazer &amp; Sport{% endblock %}
+
+{% block main_class %} content-section--full{% endblock %}
+
+{% block meta_description %}Jogue as prévias dos jogos das máquinas da Lazer &amp; Sport, monte o Strike Kids e o Dragon Bowling em 3D com a cor e a adesivagem, e veja as fotos reais de todas as máquinas: Strike Kids, Dragon Bowling, Lazer Shot, Super Boxing, Slam Arena e outros.{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  A ARENA ENTROU NO LUGAR DE "NOSSOS PARCEIROS" NO MENU.
+
+  A página de parceiros continua de pé em /estabelecimentos/ -- a busca
+  ainda leva a ela ("Brinquedos para ...") e o fim desta página tem o
+  link. Só deixou de ocupar um dos lugares do menu principal.
+
+  ESTA PÁGINA ABRE INTEIRA SEM JAVASCRIPT: os brinquedos chegam como uma
+  lista de links (é o que o buscador lê e o que aparece num aparelho sem
+  WebGL) e os jogos como cartões que levam ao simulador (/jogos/<jogo>/).
+  O 3D entra por cima disso quando o aparelho aguenta.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
+
+<div class="ls-pagina arena-pagina">
+
+<section class="ls-pagina-hero arena-hero" id="header">
+    <div class="ls-pagina-hero-inner arena-hero-inner">
+        <div class="arena-hero-texto">
+            <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+                <a href="{% url 'home' %}">Home</a>
+                <span>›</span>
+                <strong>Arena 3D &amp; Jogos</strong>
+            </nav>
+
+            <span class="ls-pagina-selo">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D &amp; Lazer &amp; Sport Jogos
+            </span>
+
+            <h1 class="ls-pagina-titulo">
+                Entre na arena e <span>jogue antes de comprar</span>
+            </h1>
+
+            <p class="ls-pagina-sub">
+                Os jogos das nossas máquinas em prévia, para jogar aqui mesmo com o dedo ou
+                o mouse. E as máquinas em 3D, para escolher a cor do gabinete e a adesivagem.
+            </p>
+
+            <div class="ls-pagina-stats">
+                <div class="ls-pagina-stat">
+                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                    <span><b>{{ total_jogaveis }}</b> jogos para jogar agora</span>
+                </div>
+                <div class="ls-pagina-stat">
+                    <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+                    <span><b>{{ maquinas_3d|length }}</b> máquina{{ maquinas_3d|length|pluralize }} para montar em 3D</span>
+                </div>
+                <div class="ls-pagina-stat">
+                    <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
+                    <span>Gire · aproxime · jogue</span>
+                </div>
+            </div>
+
+            <div class="arena-hero-acoes">
+                <a class="ls-botao" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar agora</a>
+                <a class="ls-botao ls-botao--claro" href="#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D</a>
+            </div>
+        </div>
+
+        <div class="arena-hero-mascotes" aria-hidden="true">
+            <img class="arena-hero-alvo" src="{% estatico 'site/arena/capas/alvo.webp' %}" alt="" width="400" height="252" decoding="async">
+            <img class="arena-hero-bob" src="{% estatico 'site/arena/capas/bob.webp' %}" alt="" width="360" height="360" decoding="async">
+            <img class="arena-hero-mia" src="{% estatico 'site/arena/capas/mia.webp' %}" alt="" width="360" height="360" decoding="async">
+            <img class="arena-hero-games" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="400" height="122" decoding="async">
+        </div>
+    </div>
+</section>
+
+<svg class="ls-pagina-onda arena-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
+
+<!-- ================= LAZER & SPORT JOGOS ================= -->
+<section class="arena-secao arena-secao--jogos" id="jogos" aria-labelledby="titulo-jogos">
+    <div class="arena-secao-head arena-secao-head--jogos">
+        <img class="arena-jogos-bob" src="{% estatico 'site/arena/capas/bob.webp' %}" alt="" width="360" height="360" loading="lazy" decoding="async">
+        <div>
+            <span class="arena-kicker arena-kicker--quente"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Jogos</span>
+            <h2 id="titulo-jogos">Os jogos das nossas máquinas: jogue a prévia</h2>
+            <p>
+                Os mesmos jogos que rodam nas máquinas da Lazer &amp; Sport, numa versão de bolso
+                para jogar agora. Gostou? A máquina de verdade é feita aqui na fábrica.
+            </p>
+        </div>
+        <img class="arena-jogos-mia" src="{% estatico 'site/arena/capas/mia.webp' %}" alt="" width="360" height="360" loading="lazy" decoding="async">
+    </div>
+
+    <div class="arena-jogos-grade">
+        {% for jogo in jogos %}
+        <article class="jogo-cartao" style="--cor-jogo: {{ jogo.cor }}">
+            <a class="jogo-cartao-capa" href="{% url 'jogo' jogo.slug %}" aria-label="Jogar {{ jogo.titulo }}">
+                <img src="{% estatico jogo.capa %}" alt="" width="480" height="480" loading="lazy" decoding="async">
+                <span class="jogo-cartao-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+            </a>
+            <div class="jogo-cartao-corpo">
+                <span class="jogo-cartao-maquina">{{ jogo.maquina }}</span>
+                <h3>{{ jogo.titulo }}</h3>
+                <p class="jogo-cartao-chamada">{{ jogo.chamada }}</p>
+                <p class="jogo-cartao-desc">{{ jogo.descricao }}</p>
+                <div class="jogo-cartao-acoes">
+                    <a class="ls-botao" href="{% url 'jogo' jogo.slug %}">
+                        <i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora
+                    </a>
+                    {% if jogo.maquina_url %}
+                    <a class="jogo-cartao-link" href="{{ jogo.maquina_url }}">Ver a máquina <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- ================= MÁQUINAS EM 3D ================= -->
+{% comment %}
+  SÓ ENTRA AQUI A MÁQUINA QUE TEM OBJETO 3D DE VERDADE.
+
+  Hoje é o gabinete de boliche, com as medidas e os adesivos da planta do
+  Strike Kids (gerados pela ferramenta do próprio jogo), e o Dragon
+  Bowling, que roda no mesmo gabinete. As outras máquinas aparecem logo
+  abaixo, em "Todas as máquinas", com as fotos reais -- e passam para cá
+  quando os planos de corte delas chegarem. Ver `core/arena.py`.
+{% endcomment %}
+<section class="arena-secao arena-secao--palco" id="arena-3d" aria-labelledby="titulo-arena">
+    <div class="arena-secao-head">
+        <span class="arena-kicker"><i class="fa-solid fa-cube" aria-hidden="true"></i> Máquinas em 3D</span>
+        <h2 id="titulo-arena">Monte a sua: cor do gabinete e adesivagem</h2>
+        <p>
+            Gire com o dedo ou o mouse, aproxime e troque a cor e os adesivos. O gabinete está
+            no tamanho de verdade, com os adesivos que vão para a gráfica.
+        </p>
+    </div>
+
+    {% if maquinas_3d %}
+    <div class="arena-palco"
+         data-arena
+         data-three="{% estatico 'vendor/three/three.module.min.js' %}"
+         data-logo="{% estatico 'site/arena/capas/alvo.webp' %}">
+
+        <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
+            <span class="arena-aviso-anel" aria-hidden="true"></span>
+            <strong data-arena-aviso-titulo>Montando as máquinas…</strong>
+            <span data-arena-aviso-texto>Carregando o 3D e os adesivos.</span>
+        </div>
+
+
+        <div class="arena-controles" data-arena-controles hidden>
+            <button type="button" class="arena-controle" data-arena-acao="anterior" aria-label="Máquina anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+            <button type="button" class="arena-controle arena-controle--tour" data-arena-acao="tour" aria-pressed="false">
+                <i class="fa-solid fa-play" aria-hidden="true"></i><span>Tour</span>
+            </button>
+            <button type="button" class="arena-controle" data-arena-acao="proximo" aria-label="Próxima máquina"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+            <button type="button" class="arena-controle" data-arena-acao="visao" aria-label="Voltar à visão geral"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
+            <button type="button" class="arena-controle" data-arena-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
+        </div>
+
+        <aside class="arena-ficha" data-arena-ficha hidden aria-live="polite" aria-labelledby="arena-ficha-nome">
+            <button type="button" class="arena-ficha-fechar" data-arena-acao="fechar-ficha" aria-label="Fechar a ficha"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            <div class="arena-ficha-foto">
+                <img data-ficha-foto src="{% static 'images/sem-imagem.svg' %}" alt="" decoding="async">
+                <div class="arena-ficha-lados" data-ficha-lados role="group" aria-label="Fotos de cada lado"></div>
+            </div>
+            <div class="arena-ficha-corpo">
+                <span class="arena-ficha-categoria" data-ficha-categoria></span>
+                <h3 id="arena-ficha-nome" data-ficha-nome></h3>
+                <p class="arena-ficha-desc" data-ficha-desc></p>
+                <div class="arena-roupa" data-ficha-roupa hidden>
+                    <div class="arena-roupa-grupo" data-ficha-cores-grupo>
+                        <span class="arena-roupa-titulo">Cor do gabinete</span>
+                        <div class="arena-cores" data-ficha-cores role="group" aria-label="Cor do gabinete"></div>
+                    </div>
+                    <div class="arena-roupa-grupo">
+                        <span class="arena-roupa-titulo">Adesivagem</span>
+                        <div class="arena-adesivos" data-ficha-adesivos role="group" aria-label="Tema dos adesivos"></div>
+                    </div>
+                    <p class="arena-roupa-legenda" data-ficha-roupa-legenda></p>
+                </div>
+                <dl class="arena-ficha-dados">
+                    <div data-ficha-linha="medidas"><dt>Medidas (A × L × P)</dt><dd data-ficha-medidas></dd></div>
+                    <div data-ficha-linha="voltagem"><dt>Voltagem</dt><dd data-ficha-voltagem></dd></div>
+                    <div data-ficha-linha="preco"><dt>A partir de</dt><dd data-ficha-preco></dd></div>
+                </dl>
+                <div class="arena-ficha-acoes">
+                    <a class="ls-botao" data-ficha-detalhe href="{% url 'brinquedos' %}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    <a class="ls-botao ls-botao--claro" data-ficha-jogar data-base="{% url 'jogos' %}" href="{% url 'jogos' %}" hidden><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>
+                    <a class="ls-botao ls-botao--fantasma" data-ficha-whatsapp target="_blank" rel="noopener" href="https://wa.me/{{ whatsapp }}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pedir orçamento</a>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <ul class="arena-vitrine arena-vitrine--3d" data-arena-vitrine aria-label="Máquinas em 3D">
+        {% for maquina in maquinas_3d %}
+        <li>
+            <a class="arena-item" href="{{ maquina.url|default:'#jogos' }}" data-arena-indice="{{ forloop.counter0 }}" data-nome="{{ maquina.nome }}">
+                <span class="arena-item-foto">
+                    <img src="{{ maquina.capa }}" alt="" loading="lazy" decoding="async" width="96" height="96">
+                </span>
+                <span class="arena-item-texto">
+                    <strong>{{ maquina.nome }}</strong>
+                    <small>{{ maquina.categorias|join:" · " }} · {{ maquina.variantes.adesivos|length }} opções de adesivo</small>
+                </span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {{ maquinas_3d|json_script:"arena-dados" }}
+    {% else %}
+    <div class="ls-vazio">
+        <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+        <h2>As máquinas em 3D estão a caminho</h2>
+        <p>Enquanto isso, veja todas as máquinas com fotos reais logo abaixo.</p>
+        <a class="ls-botao" href="{% url 'brinquedos' %}#catalogo-brinquedos">Ver o catálogo <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    {% endif %}
+</section>
+
+
+<!-- ================= TODAS AS MÁQUINAS (fotos reais) ================= -->
+<section class="arena-secao arena-secao--fotos" id="maquinas" aria-labelledby="titulo-maquinas">
+    <div class="arena-secao-head">
+        <span class="arena-kicker"><i class="fa-solid fa-camera" aria-hidden="true"></i> Fotos reais</span>
+        <h2 id="titulo-maquinas">Todas as máquinas da fábrica</h2>
+        <p>
+            Passe o dedo ou o mouse na foto para ver a máquina de frente, de lado e de costas.
+            As que têm o selo 3D você monta do seu jeito.
+        </p>
+    </div>
+
+    {% if categorias_arena|length > 1 %}
+    <div class="arena-fotos-filtros" role="group" aria-label="Filtrar por categoria" data-fotos-filtros>
+        <button type="button" class="arena-filtro ativo" data-fotos-categoria="" aria-pressed="true">Todas</button>
+        {% for categoria in categorias_arena %}
+            <button type="button" class="arena-filtro" data-fotos-categoria="{{ categoria }}" aria-pressed="false">{{ categoria }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="arena-fotos-grade" data-fotos-grade>
+        {% for brinquedo in brinquedos_arena %}
+        <article class="arena-foto-cartao" data-fotos-cartao data-categorias="{{ brinquedo.categorias|join:'|' }}">
+            <a class="arena-foto-midia" href="{{ brinquedo.url }}" aria-label="Ver {{ brinquedo.nome }}">
+                {% for foto in brinquedo.fotos %}
+                    <img src="{{ foto.url }}" alt="{% if forloop.first %}{{ brinquedo.nome }}{% endif %}" class="{% if forloop.first %}ativa{% endif %}"
+                         data-foto-lado="{{ foto.tipo }}" loading="lazy" decoding="async" width="600" height="600">
+                {% empty %}
+                    <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ brinquedo.nome }}" class="ativa" loading="lazy" decoding="async">
+                {% endfor %}
+                {% if brinquedo.fotos|length > 1 %}
+                <span class="arena-foto-pontos" aria-hidden="true">
+                    {% for foto in brinquedo.fotos %}<i class="{% if forloop.first %}ativo{% endif %}"></i>{% endfor %}
+                </span>
+                {% endif %}
+                {% if brinquedo.tem_3d %}<span class="arena-foto-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> 3D</span>{% endif %}
+            </a>
+            <div class="arena-foto-corpo">
+                <span class="arena-foto-categoria">{{ brinquedo.categorias|join:" · "|default:"Brinquedo" }}</span>
+                <h3>{{ brinquedo.nome }}</h3>
+                {% if brinquedo.medidas_texto %}<p class="arena-foto-medidas"><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ brinquedo.medidas_texto }}</p>{% endif %}
+                <div class="arena-foto-acoes">
+                    <a class="arena-foto-link" href="{{ brinquedo.url }}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    {% if brinquedo.jogo %}
+                        <a class="arena-foto-jogar" href="{% url 'jogo' brinquedo.jogo %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="ls-vazio">
+            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+            <h2>As fotos chegam com o catálogo</h2>
+            <p>Assim que os brinquedos forem cadastrados, eles aparecem aqui.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- ================= CHAMADA FINAL ================= -->
+<section class="arena-secao arena-secao--chamada" aria-labelledby="titulo-chamada">
+    <div class="arena-chamada">
+        <div>
+            <h2 id="titulo-chamada">Quer essa arena no seu espaço?</h2>
+            <p>
+                Shoppings, buffets, parques e quiosques: a fábrica monta, entrega e dá manutenção.
+                Conheça também quem já trabalha com os nossos brinquedos.
+            </p>
+        </div>
+        <div class="arena-chamada-acoes">
+            <a class="ls-botao" href="https://wa.me/{{ whatsapp }}?text=Ol%C3%A1!%20Vi%20a%20Arena%203D%20no%20site%20e%20quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pedir orçamento
+            </a>
+            <a class="ls-botao ls-botao--fantasma" href="{% url 'estabelecimentos' %}#header">
+                <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i> Nossos parceiros
+            </a>
+        </div>
+    </div>
+</section>
+
+</div>
+
+
+<script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
+<script type="module" src="{% estatico 'site/arena/vitrine.js' %}"></script>
+
+{% endblock %}

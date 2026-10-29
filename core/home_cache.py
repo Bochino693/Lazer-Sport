@@ -12,8 +12,8 @@ from django.core.cache import cache
 from django.core.cache.utils import make_template_fragment_key
 
 
-HOME_CONTEXT_CACHE_KEY = "home:public-context:v2"
-HOME_FRAGMENT_NAME = "home_public_v2"
+HOME_CONTEXT_CACHE_KEY = "home:public-context:v3"
+HOME_FRAGMENT_NAME = "home_public_v3"
 CATALOG_METADATA_CACHE_KEY = "catalog:public-metadata:v1"
 ADMIN_CATALOG_VERSION_KEY = "catalog:admin-version:v1"
 

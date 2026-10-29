@@ -8,105 +8,211 @@
 {% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos mecânicos, eletrônicos e simuladores para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
 
 {% block content %}
-{% cache home_cache_ttl home_public_v2 %}
+{% cache home_cache_ttl home_public_v3 %}
 
   <link rel="stylesheet" href="{% estatico 'site/ls-home.css' %}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 {# Font Awesome já vem do base.html, do próprio servidor. #}
 
-<!-- ======= HERO NOVO (inspirado no site da ArtSkala) — só adiciona, nada abaixo foi removido ======= -->
+{% comment %}
+  O QUADRO INICIAL É UM PAINEL, E NÃO UM CARTAZ.
 
-<section class="ls-home-hero">
-    <div class="ls-home-hero-inner">
+  Era um título, três botões e três números que nunca mudavam. Agora são
+  três coisas vivas:
 
-        <div>
-            <span class="ls-home-badge">Fábrica de Brinquedos</span>
+  1. a VITRINE, que gira os brinquedos mais curtidos -- inclina com o
+     dedo ou o mouse, desliza no celular e para quando a pessoa olha;
+  2. o PAINEL "A fábrica agora", com os números do próprio sistema:
+     linha de produção, atendimentos técnicos, catálogo, mapa de clientes
+     (ver `core/painel_publico.py` -- só totais, nada de cliente);
+  3. o LETREIRO, que passa o que entrou por último no catálogo.
 
-            <h1 class="ls-home-title">
-                Diversão que sai da <span>fábrica</span> pro seu espaço.
-            </h1>
+  Os números já chegam no HTML (quem não tem JavaScript vê tudo) e o
+  `home-quadro.js` os atualiza sozinho a cada minuto pelo endereço
+  /api/painel-ao-vivo/ -- a página pode ficar no cache da home sem que
+  o painel envelheça.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/home-quadro.css' %}">
 
-            <p class="ls-home-subtitle">
-                Brinquedos mecânicos, eletrônicos, esportivos, fliperama e simuladores
-                para shoppings, quiosques e parques — com peças de reposição e
-                orçamento sob medida.
-            </p>
+<section class="ls-quadro" aria-labelledby="quadro-titulo"
+         data-quadro data-painel-url="{% url 'painel_ao_vivo' %}">
+  <div class="ls-quadro-fundo" aria-hidden="true">
+    <span class="ls-quadro-orbe ls-quadro-orbe--a"></span>
+    <span class="ls-quadro-orbe ls-quadro-orbe--b"></span>
+    <span class="ls-quadro-orbe ls-quadro-orbe--c"></span>
+  </div>
 
-            <div class="ls-home-actions">
-                <a href="#brinquedos" class="ls-home-btn ls-home-btn-dark">Ver Brinquedos</a>
-                <a href="#pecas-section" class="ls-home-btn ls-home-btn-outline">Peças de Reposição</a>
-                <a
-                    href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20um%20or%C3%A7amento."
-                    target="_blank" rel="noopener" class="ls-home-btn ls-home-btn-primary"
-                >
-                    <i class="fa-brands fa-whatsapp"></i> Orçamento pelo WhatsApp
-                </a>
-            </div>
-        </div>
+  <div class="ls-quadro-grade">
+    <div class="ls-quadro-texto">
+      <span class="ls-quadro-selo">
+        <span class="ls-ao-vivo" aria-hidden="true"></span>
+        Fábrica de brinquedos · São Paulo
+      </span>
 
-        <div class="ls-home-hero-card">
+      <h1 class="ls-quadro-titulo" id="quadro-titulo">
+        Diversão que sai da <span class="ls-quadro-brilho">fábrica</span> pro seu espaço.
+      </h1>
 
-            {% if imagens_site %}
-                <img src="{{ imagens_site.0.imagem.url }}" alt="Lazer e Sport Brinquedos" class="ls-home-hero-img" fetchpriority="high" decoding="async">
-            {% endif %}
+      <p class="ls-quadro-sub">
+        Brinquedos mecânicos, eletrônicos, esportivos, fliperamas e simuladores para
+        shoppings, quiosques e parques — com peças de reposição, manutenção e projeto sob medida.
+      </p>
 
-            <div class="ls-home-mini-head">
-                <strong>Categorias em destaque</strong>
-                <a href="#categorias-section">Ver todas</a>
-            </div>
+      <div class="ls-quadro-acoes">
+        <a href="#brinquedos" class="ls-quadro-botao ls-quadro-botao--principal">
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Ver brinquedos
+        </a>
+        <a href="{% url 'jogos' %}" class="ls-quadro-botao ls-quadro-botao--arena">
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar as prévias
+        </a>
+        <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20um%20or%C3%A7amento."
+           target="_blank" rel="noopener" class="ls-quadro-botao ls-quadro-botao--whats">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Orçamento
+        </a>
+      </div>
 
-            <div class="ls-home-hero-minis">
-                {% for categoria in categorias_brinquedos %}
-                    <a href="{% url 'categoria_detalhe' categoria.id %}#produtos" class="ls-home-mini">
-                        <strong>{{ categoria.nome_categoria }}</strong>
-                        <span>{{ categoria.total_produtos }} produto{{ categoria.total_produtos|pluralize }}</span>
-                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                    </a>
-                {% endfor %}
-            </div>
-
-        </div>
-
+      {% if categorias_brinquedos %}
+      <div class="ls-quadro-categorias" aria-label="Categorias">
+        {% for categoria in categorias_brinquedos|slice:":7" %}
+          <a href="{% url 'categoria_detalhe' categoria.id %}#header" class="ls-quadro-categoria">
+            {{ categoria.nome_categoria }} <b>{{ categoria.total_produtos }}</b>
+          </a>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
+
+    <div class="ls-quadro-vitrine" data-vitrine aria-roledescription="carrossel" aria-label="Brinquedos em destaque">
+      {% if vitrine_quadro %}
+      <div class="ls-vitrine-palco" data-vitrine-palco>
+        <span class="ls-vitrine-halo" aria-hidden="true"></span>
+        <span class="ls-vitrine-anel" aria-hidden="true"></span>
+        {% for item in vitrine_quadro %}
+        <article class="ls-vitrine-slide{% if forloop.first %} ativo{% endif %}" data-slide
+                 aria-roledescription="slide" aria-label="{{ forloop.counter }} de {{ vitrine_quadro|length }}"
+                 {% if not forloop.first %}aria-hidden="true"{% endif %}>
+          <a class="ls-vitrine-foto" href="{{ item.url }}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">
+            <img src="{{ item.capa }}" alt="{{ item.nome }}" width="900" height="900" decoding="async"
+                 {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+          </a>
+          <div class="ls-vitrine-ficha">
+            <span class="ls-vitrine-categoria">{{ item.categoria }}</span>
+            <p class="ls-vitrine-nome">{{ item.nome }}</p>
+            <div class="ls-vitrine-meta">
+              {% if item.avaliacao %}<span><i class="fa-solid fa-star" aria-hidden="true"></i> {{ item.avaliacao|floatformat:1 }}</span>{% endif %}
+              {% if item.medidas %}<span><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ item.medidas }}</span>{% endif %}
+            </div>
+            <div class="ls-vitrine-rodape">
+              <strong class="ls-vitrine-preco">{{ item.preco|default:"Sob consulta" }}</strong>
+              <a href="{{ item.url }}" class="ls-vitrine-ver" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">Ver <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+
+      {% if vitrine_quadro|length > 1 %}
+      <div class="ls-vitrine-miniaturas" role="group" aria-label="Escolher brinquedo">
+        {% for item in vitrine_quadro %}
+          <button type="button" class="ls-vitrine-mini{% if forloop.first %} ativo{% endif %}" data-ir="{{ forloop.counter0 }}"
+                  aria-label="Mostrar {{ item.nome }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}">
+            <img src="{{ item.miniatura }}" alt="" width="64" height="64" loading="lazy" decoding="async">
+          </button>
+        {% endfor %}
+      </div>
+      <div class="ls-vitrine-progresso" aria-hidden="true"><span data-vitrine-progresso></span></div>
+      {% endif %}
+      {% else %}
+      <a class="ls-vitrine-vazia" href="{% url 'arena' %}#arena-3d">
+        <i class="fa-solid fa-cube" aria-hidden="true"></i>
+        <strong>Conheça os brinquedos em 3D</strong>
+        <span>Entre na Arena e gire cada um.</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ls-painel" aria-labelledby="painel-titulo">
+    <div class="ls-painel-cabeca">
+      <span class="ls-ao-vivo" aria-hidden="true"></span>
+      <strong id="painel-titulo">A fábrica agora</strong>
+      <small data-painel-hora>números do nosso sistema</small>
+    </div>
+
+    <div class="ls-painel-numeros">
+      {% with p=painel %}
+      <div class="ls-painel-item" data-painel="em_producao" data-so-positivo {% if not p.em_producao %}hidden{% endif %}>
+        <i class="fa-solid fa-industry" aria-hidden="true"></i>
+        <b data-contar="{{ p.em_producao|default:0 }}">{{ p.em_producao|default:0 }}</b>
+        <span>brinquedos na linha de produção agora</span>
+      </div>
+      <div class="ls-painel-item" data-painel="fabricados_no_mes" data-so-positivo {% if not p.fabricados_no_mes %}hidden{% endif %}>
+        <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+        <b data-contar="{{ p.fabricados_no_mes|default:0 }}">{{ p.fabricados_no_mes|default:0 }}</b>
+        <span>fabricados neste mês</span>
+      </div>
+      <div class="ls-painel-item" data-painel="servicos_agora" data-so-positivo {% if not p.servicos_agora %}hidden{% endif %}>
+        <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+        <b data-contar="{{ p.servicos_agora|default:0 }}">{{ p.servicos_agora|default:0 }}</b>
+        <span>atendimentos técnicos em andamento</span>
+      </div>
+      <div class="ls-painel-item" data-painel="servicos_no_mes" data-so-positivo {% if not p.servicos_no_mes %}hidden{% endif %}>
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        <b data-contar="{{ p.servicos_no_mes|default:0 }}">{{ p.servicos_no_mes|default:0 }}</b>
+        <span>serviços concluídos no mês</span>
+      </div>
+      <div class="ls-painel-item" data-painel="brinquedos">
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+        <b data-contar="{{ p.brinquedos|default:brinquedos_count }}">{{ p.brinquedos|default:brinquedos_count }}</b>
+        <span>brinquedos no catálogo</span>
+      </div>
+      <div class="ls-painel-item" data-painel="pecas" data-so-positivo {% if not p.pecas %}hidden{% endif %}>
+        <i class="fa-solid fa-gears" aria-hidden="true"></i>
+        <b data-contar="{{ p.pecas|default:0 }}">{{ p.pecas|default:0 }}</b>
+        <span>peças de reposição na loja</span>
+      </div>
+      <div class="ls-painel-item" data-painel="clientes" data-so-positivo {% if not p.clientes %}hidden{% endif %}>
+        <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+        <b data-contar="{{ p.clientes|default:0 }}">{{ p.clientes|default:0 }}</b>
+        <span>clientes no mapa</span>
+      </div>
+      <div class="ls-painel-item" data-painel="cidades" data-so-positivo {% if not p.cidades %}hidden{% endif %}>
+        <i class="fa-solid fa-city" aria-hidden="true"></i>
+        <b data-contar="{{ p.cidades|default:0 }}">{{ p.cidades|default:0 }}</b>
+        <span>cidades atendidas</span>
+      </div>
+      <div class="ls-painel-item" data-painel="eventos" data-so-positivo {% if not p.eventos %}hidden{% endif %}>
+        <i class="fa-solid fa-champagne-glasses" aria-hidden="true"></i>
+        <b data-contar="{{ p.eventos|default:0 }}">{{ p.eventos|default:0 }}</b>
+        <span>eventos realizados</span>
+      </div>
+      <div class="ls-painel-item" data-painel="avaliacao" data-so-positivo {% if not p.avaliacao %}hidden{% endif %}>
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+        <b data-contar="{{ p.avaliacao|default:0|stringformat:'s' }}" data-casas="1">{{ p.avaliacao|default:0|floatformat:1 }}</b>
+        <span>nota média dos brinquedos</span>
+      </div>
+      <div class="ls-painel-item ls-painel-item--jogos">
+        <i class="fa-solid fa-cube" aria-hidden="true"></i>
+        <b data-contar="{{ jogos_arena|length }}">{{ jogos_arena|length }}</b>
+        <span>jogos no <a href="{% url 'jogos' %}">simulador</a></span>
+      </div>
+      {% endwith %}
+    </div>
+
+    <div class="ls-letreiro" aria-label="Novidades">
+      <div class="ls-letreiro-trilho" data-letreiro>
+        {% for item in painel.novidades %}
+          <a class="ls-letreiro-item ls-letreiro-item--{{ item.tipo }}" href="{{ item.url }}">{{ item.texto }}</a>
+        {% endfor %}
+        <a class="ls-letreiro-item ls-letreiro-item--arena" href="{% url 'jogos' %}">Novo: jogue Strike Kids, Dragon Bowling, Lazer Shot e mais no simulador</a>
+        <a class="ls-letreiro-item" href="{% url 'manutencoes' %}#nova">Manutenção com técnico da fábrica: peça pelo site</a>
+      </div>
+    </div>
+  </div>
 </section>
 
-<section class="ls-home-stats">
-    <div class="ls-home-stats-inner">
-
-        <div class="ls-home-stat">
-            <span class="ls-home-stat-icon" aria-hidden="true">
-                <i class="fa-solid fa-gamepad"></i>
-            </span>
-            <div>
-                <h3>{{ brinquedos_count }}</h3>
-                <p>Brinquedos no catálogo</p>
-            </div>
-        </div>
-
-        <div class="ls-home-stat">
-            <span class="ls-home-stat-icon" aria-hidden="true">
-                <i class="fa-solid fa-screwdriver-wrench"></i>
-            </span>
-            <div>
-                <h3>{{ pecas_count }}</h3>
-                <p>Peças de reposição disponíveis</p>
-            </div>
-        </div>
-
-        <div class="ls-home-stat">
-            <span class="ls-home-stat-icon" aria-hidden="true">
-                <i class="fa-solid fa-building"></i>
-            </span>
-            <div>
-                <h3>{{ estabelecimentos|length }}</h3>
-                <p>Tipos de estabelecimento atendidos</p>
-            </div>
-        </div>
-
-    </div>
-</section>
-<!-- ======= FIM DO HERO NOVO ======= -->
+<script src="{% estatico 'site/paginas/home-quadro.js' %}" defer></script>
 
 <!-- ======= POP-UP CELEBRASHOW 2026 =======
 <div id="popup-overlay" class="popup-overlay-celebra">
@@ -934,55 +1040,44 @@
 <div class="espacador"></div>
 
 
-<!-- ======= ESTABELECIMENTOS ======= -->
-<!-- ======= VITRINE: ESTABELECIMENTOS / EVENTOS / PROJETOS (visual reforçado) ======= -->
+<!-- ======= ARENA 3D & LAZER & SPORT JOGOS (no lugar de "Nossos Parceiros") ======= -->
+{% comment %}
+  A VITRINE DE PARCEIROS DEU LUGAR À ARENA.
 
-<section id="estabelecimentos" class="estabelecimentos-section">
+  Aqui ficavam os estabelecimentos parceiros. O pedido foi pôr a Arena 3D
+  e os jogos da casa no lugar deles -- e a página de parceiros continua
+  em /estabelecimentos/, com link logo abaixo dos botões.
 
-    <div class="eventos-header">
-        <div>
-            <span class="ls-showcase-tag">
-              <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
-              Locais ideais
-            </span>
-            <h2 class="titulo-eventos">Onde nossos brinquedos fazem a diferença</h2>
-            <p class="section-subtitle">
-              Descubra os tipos de espaços ideais para instalar nossos brinquedos, atrair mais famílias e transformar cada visita em uma experiência completa de diversão.
-            </p>
+  Os cartões dos jogos levam direto ao simulador: /jogos/<jogo>/ abre
+  a página já com o jogo em foco.
+{% endcomment %}
+<section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
+    <div class="ls-arena-chamada-texto">
+        <span class="ls-arena-chamada-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
+        <h2 id="arena-home-titulo">Arena 3D &amp; <span>Lazer &amp; Sport Jogos</span></h2>
+        <p>
+            Jogue a prévia dos jogos das nossas máquinas, direto no celular ou no computador,
+            e monte o Strike Kids e o Dragon Bowling em 3D, com a cor do gabinete e a adesivagem.
+        </p>
+        <div class="ls-arena-chamada-acoes">
+            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'jogos' %}">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
+            </a>
+            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D
+            </a>
         </div>
-
-        <!-- BOTÃO VER TODOS -->
-        <a href="{% url 'estabelecimentos' %}#estabelecimentos" class="ver-todos-eventos">
-            Ver todos os estabelecimentos →
+        <a class="ls-arena-chamada-parceiros" href="{% url 'estabelecimentos' %}#header">
+            <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i> Conheça também os nossos parceiros
         </a>
     </div>
 
-    <div class="eventos-grid">
-        {% for est in estabelecimentos|slice:":6" %}
-        <div class="evento-card"
-             onclick="window.location.href='{% url 'estabelecimento_brinquedo' est.id %}#estabelecimentos'"
-             style="cursor: pointer;">
-
-            <div class="evento-thumb">
-                {% if est.imagem_estabelecimento %}
-                    <img src="{{ est.imagem_estabelecimento.url }}"
-                         alt="{{ est.nome_estabelecimento }}" loading="lazy" decoding="async">
-                {% else %}
-                    <img src="{% static 'images/sem-imagem.svg' %}"
-                         alt="Sem imagem" loading="lazy" decoding="async">
-                {% endif %}
-                <span class="evento-ver-mais">Ver detalhes <i class="fa-solid fa-arrow-right"></i></span>
-            </div>
-
-            <div class="evento-info">
-                <h3>{{ est.nome_estabelecimento }}</h3>
-                <p>
-                    Clique para conhecer os brinquedos, avaliações e informações
-                    deste estabelecimento.
-                </p>
-            </div>
-
-        </div>
+    <div class="ls-arena-chamada-jogos" aria-label="Jogos da Lazer &amp; Sport">
+        {% for jogo in jogos_arena %}
+            <a class="ls-arena-jogo" href="{% url 'jogo' jogo.slug %}" style="--cor-jogo: {{ jogo.cor }}">
+                <img src="{% estatico jogo.capa %}" alt="" width="240" height="240" loading="lazy" decoding="async">
+                <span>{{ jogo.titulo }}</span>
+            </a>
         {% endfor %}
     </div>
 </section>

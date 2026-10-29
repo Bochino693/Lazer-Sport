@@ -11,6 +11,9 @@ from .views_favoritos import (
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_app_avisos import service_worker_do_site
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
+from .views_arena import ArenaView
+from .views_jogos import SimuladorView
+from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
@@ -19,6 +22,7 @@ from .sitemaps import (
     PaginasEstaticasSitemap,
     BrinquedosSitemap,
     CategoriasSitemap,
+    JogosSitemap,
 )
 from .views import (
     HomeView,
@@ -109,6 +113,7 @@ sitemaps = {
     "estaticas": PaginasEstaticasSitemap,
     "brinquedos": BrinquedosSitemap,
     "categorias": CategoriasSitemap,
+    "jogos": JogosSitemap,
 }
 
 
@@ -225,6 +230,15 @@ urlpatterns = [
         aplicar_cupom,
         name="aplicar_cupom",
     ),
+
+    # Arena 3D e Lazer & Sport Jogos -- no lugar que era de "Nossos
+    # Parceiros" no menu. A página de parceiros continua em
+    # /estabelecimentos/, com link a partir da arena e da busca.
+    path("arena/", ArenaView.as_view(), name="arena"),
+    path("api/painel-ao-vivo/", painel_ao_vivo, name="painel_ao_vivo"),
+    # O simulador: a área dedicada às prévias dos jogos, um endereço por jogo.
+    path("jogos/", SimuladorView.as_view(), name="jogos"),
+    path("jogos/<slug:slug>/", SimuladorView.as_view(), name="jogo"),
 
     path("eventos/", EventosView.as_view(), name="eventos"),
     path("projetos/", ProjetosView.as_view(), name="projetos"),

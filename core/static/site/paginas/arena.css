@@ -1,0 +1,1006 @@
+/* ======================================================================
+   ARENA 3D E LAZER & SPORT JOGOS
+
+   Página escura de propósito: é uma arena, com luz de neon e telão. Usa o
+   casco do site (`ls-pagina.css`) no herói e nos botões; o resto é dela.
+   ====================================================================== */
+
+.arena-pagina,
+.produto-3d {
+    --arena-fundo: #050b1f;
+    --arena-fundo-2: #081433;
+    --arena-vidro: rgba(255, 255, 255, .055);
+    --arena-borda: rgba(255, 255, 255, .11);
+    --arena-texto: #eaf2ff;
+    --arena-suave: #9fb3d1;
+    --arena-azul: #2f8bff;
+    --arena-ciano: #3fd0ff;
+}
+
+.arena-pagina {
+    color: var(--arena-texto);
+    background:
+        radial-gradient(1200px 600px at 85% 8%, rgba(230, 57, 70, .14), transparent 60%),
+        radial-gradient(1000px 700px at 5% 35%, rgba(0, 110, 255, .18), transparent 60%),
+        linear-gradient(180deg, var(--arena-fundo-2) 0%, var(--arena-fundo) 40%, #040915 100%);
+    overflow: hidden;
+}
+
+/* =========================================================
+   HERÓI
+========================================================= */
+.arena-hero {
+    padding-bottom: 96px;
+    background:
+        radial-gradient(circle at 78% 30%, rgba(255, 215, 0, .16), transparent 34%),
+        radial-gradient(circle at 88% 12%, rgba(230, 57, 70, .38), transparent 40%),
+        radial-gradient(circle at 8% 88%, rgba(0, 123, 255, .45), transparent 42%),
+        linear-gradient(135deg, #030d24 0%, #062a6b 50%, #0a3d9c 100%);
+}
+
+.arena-hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: center;
+    max-width: 1400px;
+}
+
+.arena-hero-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+}
+
+.arena-hero-acoes .ls-botao { margin-top: 0; padding-inline: 24px; }
+
+/* Bob e Mia em volta do alvo da marca, flutuando. */
+.arena-hero-mascotes {
+    position: relative;
+    min-height: 380px;
+}
+
+.arena-hero-mascotes img { position: absolute; display: block; height: auto; }
+
+.arena-hero-alvo {
+    top: 6%;
+    left: 50%;
+    width: min(62%, 300px);
+    transform: translateX(-50%);
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .45));
+    animation: arena-flutua 6s ease-in-out infinite;
+}
+
+.arena-hero-bob,
+.arena-hero-mia {
+    bottom: 4%;
+    width: min(46%, 240px);
+    filter: drop-shadow(0 22px 30px rgba(0, 0, 0, .5));
+}
+
+.arena-hero-bob { left: 2%; animation: arena-flutua 5s ease-in-out infinite; }
+.arena-hero-mia { right: 2%; animation: arena-flutua 5.6s ease-in-out .6s infinite; }
+
+.arena-hero-games {
+    left: 50%;
+    bottom: 0;
+    width: min(46%, 230px);
+    transform: translateX(-50%) rotate(-4deg);
+    filter: drop-shadow(0 12px 20px rgba(0, 0, 0, .5));
+}
+
+@keyframes arena-flutua {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -12px; }
+}
+
+.arena-onda path { fill: var(--arena-fundo-2); }
+
+/* =========================================================
+   SEÇÕES
+========================================================= */
+.arena-secao {
+    position: relative;
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 34px clamp(14px, 3vw, 40px) 70px;
+}
+
+.arena-secao-head {
+    max-width: 860px;
+    margin: 0 auto 26px;
+    text-align: center;
+}
+
+.arena-secao-head h2 {
+    margin: 10px 0 8px;
+    color: #fff;
+    font-size: clamp(1.7rem, 3.2vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.12;
+}
+
+.arena-secao-head p {
+    margin: 0 auto;
+    max-width: 680px;
+    color: var(--arena-suave);
+    font-size: 1.02rem;
+    line-height: 1.65;
+}
+
+.arena-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid rgba(63, 208, 255, .35);
+    border-radius: 999px;
+    background: rgba(63, 208, 255, .1);
+    color: var(--arena-ciano);
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.arena-kicker--quente {
+    border-color: rgba(255, 183, 3, .4);
+    background: rgba(255, 183, 3, .12);
+    color: #ffc93c;
+}
+
+/* =========================================================
+   O PALCO 3D
+========================================================= */
+.arena-palco {
+    position: relative;
+    height: clamp(460px, 74vh, 860px);
+    overflow: hidden;
+    border: 1px solid var(--arena-borda);
+    border-radius: 28px;
+    background:
+        radial-gradient(ellipse at 50% 110%, rgba(47, 139, 255, .35), transparent 60%),
+        radial-gradient(ellipse at 50% -20%, rgba(230, 57, 70, .25), transparent 55%),
+        #040a1c;
+    box-shadow:
+        0 40px 90px rgba(0, 0, 0, .55),
+        inset 0 0 0 1px rgba(255, 255, 255, .03);
+    touch-action: none;
+    isolation: isolate;
+}
+
+.arena-palco:fullscreen { border-radius: 0; height: 100vh; }
+
+.arena-palco canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+    cursor: grab;
+}
+
+.arena-palco canvas.arrastando { cursor: grabbing; }
+.arena-palco canvas.sobre-brinquedo { cursor: pointer; }
+
+/* ---------- aviso de carregamento ---------- */
+.arena-aviso {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: var(--arena-suave);
+    text-align: center;
+    transition: opacity .5s ease, visibility .5s;
+}
+
+.arena-aviso strong { color: #fff; font-size: 1.15rem; }
+
+.arena-aviso.sumiu { opacity: 0; visibility: hidden; }
+
+.arena-aviso-anel {
+    width: 54px;
+    height: 54px;
+    border: 4px solid rgba(255, 255, 255, .12);
+    border-top-color: var(--arena-ciano);
+    border-right-color: #e63946;
+    border-radius: 50%;
+    animation: arena-gira 1s linear infinite;
+}
+
+.arena-aviso.erro .arena-aviso-anel { display: none; }
+
+@keyframes arena-gira { to { transform: rotate(360deg); } }
+
+/* ---------- filtros e controles ---------- */
+.arena-filtros {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+
+.arena-filtros::-webkit-scrollbar { display: none; }
+
+.arena-filtro {
+    flex: none;
+    padding: 9px 16px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .66);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #dbe7ff;
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.arena-filtro:hover { border-color: rgba(63, 208, 255, .55); }
+
+.arena-filtro.ativo {
+    border-color: transparent;
+    background: linear-gradient(135deg, #e63946, #ff5c6a);
+    color: #fff;
+}
+
+.arena-controles {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    z-index: 3;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transform: translateX(-50%);
+}
+
+.arena-controle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.arena-controle:hover { background: rgba(255, 255, 255, .16); }
+.arena-controle:active { transform: scale(.94); }
+
+.arena-controle--tour[aria-pressed="true"] {
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #2a1d00;
+}
+
+/* `hidden` tem de vencer o `display` de cada peça: sem isto a ficha, os
+   filtros e os controles apareciam antes de o 3D existir. */
+.arena-ficha[hidden],
+.arena-filtros[hidden],
+.arena-controles[hidden],
+.arena-ficha-dados div[hidden],
+.arena-ficha-acoes [hidden] { display: none; }
+
+/* ---------- ficha do brinquedo ---------- */
+.arena-ficha {
+    position: absolute;
+    top: 70px;
+    right: 16px;
+    bottom: 84px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    width: min(380px, calc(100% - 32px));
+    overflow: hidden;
+    border: 1px solid var(--arena-borda);
+    border-radius: 22px;
+    background: rgba(6, 14, 38, .86);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+    animation: arena-ficha-entra .35s cubic-bezier(.2, .9, .3, 1.2);
+}
+
+@keyframes arena-ficha-entra {
+    from { opacity: 0; transform: translateX(24px); }
+}
+
+.arena-ficha-fechar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    cursor: pointer;
+}
+
+.arena-ficha-foto {
+    position: relative;
+    flex: none;
+    height: 190px;
+    background: radial-gradient(circle at 50% 40%, #ffffff, #dfe9fb);
+}
+
+.arena-ficha-foto img {
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    object-fit: contain;
+}
+
+.arena-ficha-lados {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    display: flex;
+    gap: 6px;
+}
+
+.arena-ficha-lados button {
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    padding: 0;
+    border: 2px solid rgba(4, 10, 28, .2);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.arena-ficha-lados button[aria-pressed="true"] { border-color: #e63946; }
+.arena-ficha-lados img { width: 100%; height: 100%; object-fit: cover; }
+
+.arena-ficha-corpo {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px 18px;
+}
+
+.arena-ficha-categoria {
+    color: var(--arena-ciano);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+}
+
+.arena-ficha h3 {
+    margin: 6px 0 8px;
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.arena-ficha-desc {
+    margin: 0 0 12px;
+    color: var(--arena-suave);
+    font-size: .9rem;
+    line-height: 1.55;
+}
+
+/* ---------- cor e adesivagem ---------- */
+.arena-roupa {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .04);
+}
+
+.arena-roupa[hidden],
+.arena-roupa-grupo[hidden] { display: none; }
+
+.arena-roupa-titulo {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--arena-suave);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.arena-cores { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.arena-cor {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, .25);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .55), transparent 45%), var(--cor);
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.arena-cor:hover { transform: scale(1.12); }
+
+.arena-cor[aria-pressed="true"] {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px var(--cor), 0 0 16px var(--cor);
+}
+
+.arena-adesivos {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+}
+
+.arena-adesivo {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 86px;
+    padding: 6px;
+    border: 2px solid rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .25);
+    color: #dbe7ff;
+    font: inherit;
+    font-size: .66rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+}
+
+.arena-adesivo img {
+    width: 100%;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .06);
+}
+
+.arena-adesivo[aria-pressed="true"] { border-color: #3fd0ff; background: rgba(63, 208, 255, .12); color: #fff; }
+
+.arena-roupa-legenda { margin: 0; color: var(--arena-suave); font-size: .78rem; }
+
+.arena-ficha-dados { margin: 0 0 6px; display: grid; gap: 6px; }
+
+.arena-ficha-dados div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .05);
+}
+
+.arena-ficha-dados dt { color: var(--arena-suave); font-size: .82rem; }
+.arena-ficha-dados dd { margin: 0; color: #fff; font-weight: 800; font-size: .88rem; text-align: right; }
+
+.arena-ficha-acoes { display: grid; gap: 4px; }
+.arena-ficha-acoes .ls-botao { margin-top: 8px; }
+
+/* ---------- vitrine em lista (sem 3D ela é a página) ---------- */
+.arena-vitrine {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(230px, 1fr);
+    gap: 12px;
+    margin: 18px 0 0;
+    padding: 4px 2px 12px;
+    overflow-x: auto;
+    list-style: none;
+    scroll-snap-type: x mandatory;
+    scrollbar-color: rgba(255, 255, 255, .25) transparent;
+}
+
+.arena-vitrine li { scroll-snap-align: start; }
+
+.arena-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 100%;
+    padding: 10px 14px 10px 10px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 18px;
+    background: var(--arena-vidro);
+    color: #fff;
+    text-decoration: none;
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.arena-item:hover,
+.arena-item.ativo {
+    border-color: rgba(63, 208, 255, .6);
+    background: rgba(63, 208, 255, .1);
+    transform: translateY(-2px);
+}
+
+.arena-item-foto {
+    flex: none;
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.arena-item-foto img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+
+.arena-item-texto { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.arena-item-texto strong { font-size: .95rem; line-height: 1.25; }
+.arena-item-texto small { color: var(--arena-suave); font-size: .78rem; }
+
+/* Sem 3D (aparelho sem WebGL, JavaScript bloqueado): a lista vira grade. */
+.arena-palco.sem-3d { height: auto; min-height: 0; border: 0; background: none; box-shadow: none; }
+.arena-palco.sem-3d .arena-aviso { position: static; }
+.arena-palco.sem-3d + .arena-vitrine { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); overflow: visible; }
+
+/* =========================================================
+   LAZER & SPORT JOGOS
+========================================================= */
+.arena-secao-head--jogos {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 120px;
+    align-items: end;
+    gap: 16px;
+    max-width: 1100px;
+}
+
+.arena-secao-head--jogos img { width: 100%; height: auto; filter: drop-shadow(0 14px 22px rgba(0, 0, 0, .5)); }
+
+.arena-jogos-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 22px;
+}
+
+.jogo-cartao {
+    --cor-jogo: #ffd700;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cor-jogo) 30%, transparent), transparent 62%),
+        linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+    transition: transform .3s cubic-bezier(.2, .9, .3, 1), box-shadow .3s ease, border-color .3s ease;
+}
+
+.jogo-cartao:hover {
+    transform: translateY(-6px);
+    border-color: color-mix(in srgb, var(--cor-jogo) 70%, transparent);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, .5), 0 0 40px color-mix(in srgb, var(--cor-jogo) 35%, transparent);
+}
+
+.jogo-cartao-capa {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 11;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    background: #02060f;
+    cursor: pointer;
+}
+
+.jogo-cartao-capa img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 14px;
+    transition: transform .45s cubic-bezier(.2, .9, .3, 1);
+}
+
+.jogo-cartao:hover .jogo-cartao-capa img { transform: scale(1.06); }
+
+.jogo-cartao-play {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: grid;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--cor-jogo);
+    color: #08101f;
+    font-size: 1.2rem;
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--cor-jogo) 60%, transparent);
+    transition: transform .25s ease;
+}
+
+.jogo-cartao:hover .jogo-cartao-play { transform: scale(1.1); }
+
+.jogo-cartao-corpo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px 18px;
+}
+
+.jogo-cartao-maquina {
+    color: var(--cor-jogo);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.jogo-cartao h3 { margin: 0; color: #fff; font-size: 1.32rem; font-weight: 800; }
+.jogo-cartao-chamada { margin: 0; color: #fff; font-weight: 700; font-size: .95rem; }
+.jogo-cartao-desc { flex: 1; margin: 0; color: var(--arena-suave); font-size: .9rem; line-height: 1.55; }
+
+.jogo-cartao-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.jogo-cartao-acoes .ls-botao { margin-top: 0; padding-inline: 22px; }
+
+.jogo-cartao-link {
+    color: #dbe7ff;
+    font-size: .88rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.jogo-cartao-link:hover { color: #fff; text-decoration: underline; }
+
+/* =========================================================
+   CHAMADA FINAL
+========================================================= */
+.arena-chamada {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 22px;
+    padding: clamp(24px, 4vw, 44px);
+    border: 1px solid var(--arena-borda);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(230, 57, 70, .35), transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(47, 139, 255, .35), transparent 50%),
+        rgba(255, 255, 255, .04);
+}
+
+.arena-chamada h2 { margin: 0 0 6px; color: #fff; font-size: clamp(1.5rem, 2.6vw, 2.1rem); }
+.arena-chamada p { margin: 0; max-width: 620px; color: var(--arena-suave); line-height: 1.6; }
+.arena-chamada-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.arena-chamada-acoes .ls-botao { margin-top: 0; padding-inline: 22px; }
+
+/* =========================================================
+   TELAS MÉDIAS E PEQUENAS
+========================================================= */
+@media (max-width: 960px) {
+    .arena-hero-inner { grid-template-columns: 1fr; }
+    .arena-hero-mascotes { min-height: 260px; max-width: 460px; width: 100%; margin: 0 auto; }
+
+    .arena-ficha {
+        top: auto;
+        left: 10px;
+        right: 10px;
+        bottom: 76px;
+        width: auto;
+        max-height: 62%;
+        flex-direction: row;
+    }
+
+    .arena-ficha-foto { width: 38%; height: auto; }
+    .arena-ficha-lados button { width: 34px; height: 34px; }
+}
+
+@media (max-width: 620px) {
+    .arena-hero { padding-bottom: 76px; }
+    .arena-hero-mascotes { min-height: 210px; }
+    .arena-palco { height: 78vh; border-radius: 20px; }
+    .arena-secao { padding-inline: 10px; }
+
+    .arena-ficha {
+        flex-direction: column;
+        max-height: 70%;
+    }
+
+    .arena-ficha-foto { width: 100%; height: 130px; }
+    .arena-ficha h3 { font-size: 1.15rem; }
+    .arena-ficha-desc { display: none; }
+    .arena-controles { bottom: 12px; gap: 4px; padding: 6px; }
+    .arena-controle { min-width: 40px; height: 40px; padding: 0 10px; }
+    .arena-controle--tour span { display: none; }
+
+    .arena-secao-head--jogos { grid-template-columns: 70px minmax(0, 1fr) 70px; gap: 8px; }
+    .arena-jogos-grade { grid-template-columns: 1fr; }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .arena-hero-mascotes img,
+    .arena-aviso-anel,
+    .arena-ficha { animation: none; }
+}
+
+/* =========================================================
+   VER EM 3D (página do produto)
+========================================================= */
+.produto-3d {
+    margin: 34px 0 10px;
+    color: var(--arena-texto);
+}
+
+.produto-3d-cabeca { margin-bottom: 16px; }
+
+.produto-3d-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid rgba(63, 208, 255, .35);
+    border-radius: 999px;
+    background: rgba(63, 208, 255, .1);
+    color: var(--arena-ciano);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+}
+
+.produto-3d-cabeca h2 { margin: 10px 0 6px; color: #fff; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 800; }
+.produto-3d-cabeca p { margin: 0; color: var(--arena-suave); }
+
+.produto-3d-palco { height: clamp(420px, 66vh, 720px); }
+
+.arena-ficha--roupa {
+    top: 16px;
+    bottom: auto;
+    max-height: calc(100% - 32px);
+    width: min(340px, calc(100% - 32px));
+}
+
+.arena-ficha--roupa .arena-ficha-corpo { padding: 14px; }
+.arena-ficha--roupa .arena-roupa { margin-bottom: 10px; }
+.arena-ficha--roupa .ls-botao { margin-top: 0; }
+
+@media (max-width: 960px) {
+    .arena-ficha--roupa {
+        top: auto;
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        flex-direction: column;
+    }
+}
+
+/* =========================================================
+   TODAS AS MÁQUINAS — fotos reais
+
+   Como na vitrine da 5D: a foto de verdade em primeiro lugar. Passar o
+   mouse (ou o dedo, de lado) troca a foto entre frente, lado e costas;
+   as máquinas com objeto 3D levam o selo.
+========================================================= */
+.arena-fotos-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 26px;
+}
+
+.arena-fotos-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.arena-foto-cartao {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--arena-borda);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1), border-color .3s ease, box-shadow .3s ease;
+}
+
+.arena-foto-cartao:hover,
+.arena-foto-cartao:focus-within {
+    border-color: rgba(63, 208, 255, .5);
+    box-shadow: 0 22px 46px rgba(0, 0, 0, .4), 0 0 0 1px rgba(63, 208, 255, .15);
+    transform: translateY(-4px);
+}
+
+.arena-foto-cartao[hidden] { display: none; }
+
+/* A foto fica num fundo claro de estúdio: é assim que elas foram tiradas. */
+.arena-foto-midia {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+    touch-action: pan-y;
+}
+
+.arena-foto-midia img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 6%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(.97);
+    transition: opacity .35s ease, transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+
+.arena-foto-midia img.ativa { opacity: 1; transform: none; }
+.arena-foto-cartao:hover .arena-foto-midia img.ativa { transform: scale(1.04); }
+
+.arena-foto-pontos {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    display: flex;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .55);
+    transform: translateX(-50%);
+}
+
+.arena-foto-pontos i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .45);
+    transition: width .25s ease, background .25s ease;
+}
+
+.arena-foto-pontos i.ativo { width: 16px; background: #fff; }
+
+.arena-foto-selo {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2f8bff, #3fd0ff);
+    color: #fff;
+    font-size: .74rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    box-shadow: 0 6px 16px rgba(47, 139, 255, .45);
+}
+
+.arena-foto-corpo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px 18px;
+}
+
+.arena-foto-categoria {
+    color: var(--arena-ciano);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.arena-foto-corpo h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.arena-foto-medidas {
+    margin: 0;
+    color: var(--arena-suave);
+    font-size: .84rem;
+}
+
+.arena-foto-medidas i { margin-right: 4px; color: var(--arena-ciano); }
+
+.arena-foto-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.arena-foto-link {
+    color: #fff;
+    font-size: .88rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.arena-foto-link i { margin-left: 4px; transition: transform .2s ease; }
+.arena-foto-link:hover i { transform: translateX(3px); }
+
+.arena-foto-jogar {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #2a1d00;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.arena-foto-jogar:hover { box-shadow: 0 8px 20px rgba(255, 196, 0, .35); transform: translateY(-1px); }
+.arena-foto-jogar:active { transform: scale(.95); }
+
+@media (max-width: 620px) {
+    .arena-fotos-filtros { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+    .arena-fotos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .arena-foto-cartao { border-radius: 18px; }
+    .arena-foto-corpo { padding: 12px; }
+    .arena-foto-corpo h3 { font-size: .95rem; }
+    .arena-foto-acoes { gap: 8px; }
+    .arena-foto-jogar { margin-left: 0; width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .arena-foto-cartao,
+    .arena-foto-midia img { transition: none; }
+}
