@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static interno_extras %}
+{% load fotos %}
 {% load favoritos_extras %}
 
 {% block title %}Brinquedos | Catálogo Lazer &amp; Sport{% endblock %}
@@ -450,7 +451,7 @@
 
                             {% if brinquedo.imagem_brinquedo %}
                                 <img
-                                    src="{{ brinquedo.imagem_brinquedo.url }}"
+                                    src="{{ brinquedo.imagem_brinquedo|foto:720 }}"
                                     alt="{{ brinquedo.nome_brinquedo }}"
                                     loading="lazy"
                                     decoding="async"

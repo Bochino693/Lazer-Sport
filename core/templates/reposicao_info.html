@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
+{% load fotos %}
 
 {% block title %}{{ peca.nome }} | Peça de Reposição - Lazer & Sport{% endblock %}
 {% block meta_description %}{{ peca.nome }}: {{ peca.descricao_peca|truncatechars:140 }}{% endblock %}
@@ -53,7 +54,7 @@
                 <div class="peca-imagem">
                     {% if imagens_peca %}
                         {% with principal=imagens_peca.0 %}
-                            <img id="peca-imagem-principal" src="{{ principal.imagem.url }}" alt="{{ peca.nome }} - {{ principal.get_posicao_display }}" width="760" height="760" fetchpriority="high">
+                            <img id="peca-imagem-principal" src="{{ principal.imagem|foto:1400 }}" alt="{{ peca.nome }} - {{ principal.get_posicao_display }}" width="760" height="760" fetchpriority="high">
                         {% endwith %}
                         {% if imagens_peca|length > 1 %}
                             <div class="peca-galeria-nav" aria-label="Navegar pelas fotos">
@@ -70,8 +71,8 @@
                 {% if imagens_peca|length > 1 %}
                     <div class="peca-miniaturas" aria-label="Fotos de {{ peca.nome }}">
                         {% for foto in imagens_peca %}
-                            <button class="peca-miniatura{% if forloop.first %} ativa{% endif %}" type="button" data-foto-indice="{{ forloop.counter0 }}" data-foto-src="{{ foto.imagem.url }}" data-foto-alt="{{ peca.nome }} - {{ foto.get_posicao_display }}" aria-label="Exibir {{ foto.get_posicao_display|lower }}, foto {{ forloop.counter }} de {{ imagens_peca|length }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}">
-                                <img src="{{ foto.imagem.url }}" alt="" loading="lazy" width="78" height="78">
+                            <button class="peca-miniatura{% if forloop.first %} ativa{% endif %}" type="button" data-foto-indice="{{ forloop.counter0 }}" data-foto-src="{{ foto.imagem|foto:1600 }}" data-foto-alt="{{ peca.nome }} - {{ foto.get_posicao_display }}" aria-label="Exibir {{ foto.get_posicao_display|lower }}, foto {{ forloop.counter }} de {{ imagens_peca|length }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}">
+                                <img src="{{ foto.imagem|foto:240 }}" alt="" loading="lazy" width="78" height="78">
                             </button>
                         {% endfor %}
                     </div>

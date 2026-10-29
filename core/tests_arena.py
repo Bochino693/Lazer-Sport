@@ -150,9 +150,11 @@ class ArquivosDosJogosTests(TestCase):
                         self.assertIn(caminho, existentes)
 
     def test_nenhuma_arte_de_terceiros(self):
+        # Só imagens: as músicas do Hit Music (Carmine e Paper Moon) entraram
+        # por decisão do dono; capas e logos de terceiros continuam fora.
         pasta = JOGOS_DIR.parent
         for arquivo in pasta.rglob("*"):
-            if arquivo.is_file():
+            if arquivo.is_file() and arquivo.suffix.lower() in {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif", ".avif"}:
                 with self.subTest(arquivo=str(arquivo.relative_to(pasta))):
                     self.assertIsNone(TERCEIROS.search(arquivo.name))
 

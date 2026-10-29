@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
+{% load fotos %}
 
 {% block title %}Pesquisa{% if termo %}: {{ termo }}{% endif %} | Lazer & Sport{% endblock %}
 {% block meta_description %}Encontre brinquedos, peças de reposição, combos, projetos e eventos da Lazer & Sport.{% endblock %}
@@ -37,7 +38,7 @@
             <a class="ls-result" href="{{ resultado.url }}">
               <div class="ls-result-media">
                 {% if resultado.imagem %}
-                  <img src="{{ resultado.imagem.url }}" alt="{{ resultado.titulo }}" loading="lazy" decoding="async">
+                  <img src="{{ resultado.imagem|foto:480 }}" alt="{{ resultado.titulo }}" loading="lazy" decoding="async">
                 {% else %}
                   <div class="ls-placeholder"><i class="fas fa-shapes"></i></div>
                 {% endif %}

@@ -26,6 +26,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 
 from .formatos import dinheiro, medida
+from .fotos import reduzir_imagem
 
 
 # ======================================================================
@@ -143,21 +144,6 @@ def medidas_para_3d(desenho, altura, largura, profundidade):
     if all(v is not None and Decimal("0.2") <= v <= MAIOR_MEDIDA_PLAUSIVEL for v in valores):
         return [float(v) for v in valores], True
     return list(MEDIDAS_PADRAO.get(desenho, MEDIDAS_PADRAO[PADRAO])), False
-
-
-def reduzir_imagem(url, largura=768):
-    """Foto do Cloudinary no tamanho que a tela usa, e não no original.
-
-    A foto de estúdio chega com 3000 px e alguns MB. Como textura de um
-    gabinete que ocupa um quarto da tela, 768 px sobram -- e o celular
-    agradece. Fora do Cloudinary a URL volta como está.
-    """
-    if not url or "res.cloudinary.com" not in url or "/upload/" not in url:
-        return url
-    antes, depois = url.split("/upload/", 1)
-    if depois.startswith(("c_", "w_", "f_", "q_")):
-        return url
-    return f"{antes}/upload/c_limit,w_{int(largura)},f_auto,q_auto/{depois}"
 
 
 def _url(imagem):

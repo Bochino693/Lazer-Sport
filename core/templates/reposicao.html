@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
+{% load fotos %}
 
 {% block title %}Peças de reposição | Lazer &amp; Sport{% endblock %}
 
@@ -86,8 +87,8 @@
             <div class="ls-cartao-media">
                 {% with img=peca.imagem_principal %}
                     {% if img and img.imagem %}
-                        <img src="{{ img.imagem.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
-                        <img src="{{ img.imagem.url }}" class="ls-cartao-media-fg"
+                        <img src="{{ img.imagem|foto:400 }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                        <img src="{{ img.imagem|foto:720 }}" class="ls-cartao-media-fg"
                              alt="{{ peca.nome }}" loading="lazy" decoding="async">
                     {% else %}
                         <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"

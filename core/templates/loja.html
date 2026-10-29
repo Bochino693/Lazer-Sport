@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
+{% load fotos %}
 
 {% block title %}Loja | Lazer & Sport Brinquedos{% endblock %}
 
@@ -123,7 +124,7 @@
                                     {{ item.tipo_label }}
                                 </span>
                                 {% if item.imagem %}
-                                    <img src="{{ item.imagem }}"
+                                    <img src="{{ item.imagem|foto:720 }}"
                                          alt="{{ item.titulo }}"
                                          loading="lazy"
                                          decoding="async">

@@ -70,7 +70,7 @@
         </div>
 
         <div class="arena-hero-mascotes" aria-hidden="true">
-            <img class="arena-hero-alvo" src="{% estatico 'site/arena/capas/alvo.webp' %}" alt="" width="400" height="252" decoding="async">
+            <img class="arena-hero-alvo" src="{% estatico 'site/arena/capas/alvo.webp' %}" alt="" width="560" height="528" decoding="async">
             <img class="arena-hero-bob" src="{% estatico 'site/arena/capas/bob.webp' %}" alt="" width="360" height="360" decoding="async">
             <img class="arena-hero-mia" src="{% estatico 'site/arena/capas/mia.webp' %}" alt="" width="360" height="360" decoding="async">
             <img class="arena-hero-games" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="400" height="122" decoding="async">
@@ -146,8 +146,7 @@
     {% if maquinas_3d %}
     <div class="arena-palco"
          data-arena
-         data-three="{% estatico 'vendor/three/three.module.min.js' %}"
-         data-logo="{% estatico 'site/arena/capas/alvo.webp' %}">
+         data-three="{% estatico 'vendor/three/three.module.min.js' %}">
 
         <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
             <span class="arena-aviso-anel" aria-hidden="true"></span>

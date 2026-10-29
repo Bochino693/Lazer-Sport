@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
+{% load fotos %}
 {% load humanize %}
 {% load cache %}
 
@@ -334,7 +335,7 @@
               {% for peca in pecas_preview %}
                 {% if peca.imagem_principal %}
                   <img class="peca-slide"
-                       src="{{ peca.imagem_principal.imagem.url }}"
+                       src="{{ peca.imagem_principal.imagem|foto:720 }}"
                        alt="{{ peca.nome }}"
                        loading="lazy"
                        decoding="async">
@@ -373,7 +374,7 @@
               </span>
 
               {% if categoria.imagem_categoria %}
-                <img src="{{ categoria.imagem_categoria.url }}"
+                <img src="{{ categoria.imagem_categoria|foto:720 }}"
                      alt="{{ categoria.nome_categoria }}"
                      loading="lazy"
                      decoding="async">
@@ -455,10 +456,10 @@
             </span>
             {% if promo.brinquedos.imagem_brinquedo %}
               <img class="oferta-card-media-bg"
-                   src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="" aria-hidden="true"
+                   src="{{ promo.brinquedos.imagem_brinquedo|foto:400 }}" alt="" aria-hidden="true"
                    loading="lazy" decoding="async">
               <img class="oferta-card-produto"
-                   src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
+                   src="{{ promo.brinquedos.imagem_brinquedo|foto:720 }}" alt="{{ promo.descricao }}"
                    loading="lazy" decoding="async">
             {% else %}
               <img class="oferta-card-media-bg"
@@ -605,7 +606,7 @@
 
                 {% if brinquedo.imagem_brinquedo %}
                   <img
-                    src="{{ brinquedo.imagem_brinquedo.url }}"
+                    src="{{ brinquedo.imagem_brinquedo|foto:720 }}"
                     alt="{{ brinquedo.nome_brinquedo }}"
                     loading="lazy"
                     decoding="async"
@@ -826,7 +827,7 @@
               Peça original
             </span>
             {% if peca.imagem_principal and peca.imagem_principal.imagem %}
-              <img src="{{ peca.imagem_principal.imagem.url }}"
+              <img src="{{ peca.imagem_principal.imagem|foto:720 }}"
                    alt="{{ peca.nome }}"
                    loading="lazy"
                    decoding="async">
@@ -952,10 +953,10 @@
             </span>
             {% if combo.imagem_combo %}
               <img class="oferta-card-media-bg"
-                   src="{{ combo.imagem_combo.url }}" alt="" aria-hidden="true"
+                   src="{{ combo.imagem_combo|foto:400 }}" alt="" aria-hidden="true"
                    loading="lazy" decoding="async">
               <img class="oferta-card-produto"
-                   src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}"
+                   src="{{ combo.imagem_combo|foto:720 }}" alt="{{ combo.descricao }}"
                    loading="lazy" decoding="async">
             {% else %}
               <img class="oferta-card-media-bg"
@@ -1111,7 +1112,7 @@
         <div class="evento-thumb">
             {% with imagem_evento=evento.imagens_evento.all.0 %}
                 {% if imagem_evento %}
-                    <img src="{{ imagem_evento.imagem.url }}" alt="{{ evento.titulo }}" loading="lazy" decoding="async">
+                    <img src="{{ imagem_evento.imagem|foto:900 }}" alt="{{ evento.titulo }}" loading="lazy" decoding="async">
                 {% else %}
                     <img src="{% static 'images/sem-imagem.svg' %}" alt="Sem imagem" loading="lazy" decoding="async">
                 {% endif %}
@@ -1145,7 +1146,7 @@
 
             <div id="carousel-{{ evento.id }}" class="modal-carousel-track">
                 {% for img in evento.imagens_evento.all %}
-                <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}" loading="lazy" decoding="async">
+                <img src="{{ img.imagem|foto:1400 }}" alt="{{ img.legenda }}" loading="lazy" decoding="async">
                 {% empty %}
                 <p>Sem imagens adicionais.</p>
                 {% endfor %}
@@ -1161,7 +1162,7 @@
         <div class="modal-brinquedos">
             {% for b in evento.brinquedos.all %}
             <div class="brinquedo-card">
-                <img src="{{ b.imagem_brinquedo.url }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
+                <img src="{{ b.imagem_brinquedo|foto:480 }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
                 <h4>{{ b.nome_brinquedo }}</h4>
                 <p>{{ b.descricao|truncatechars:120 }}</p>
                 {% if b.disponivel_na_loja %}
@@ -1219,7 +1220,7 @@
                 {% if projeto.brinquedo_projetado %}
                     {% with imagem_projeto=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all.0 %}
                         {% if imagem_projeto %}
-                            <img src="{{ imagem_projeto.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                            <img src="{{ imagem_projeto.imagem|foto:900 }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                         {% else %}
                             <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                         {% endif %}
@@ -1270,7 +1271,7 @@
 
                 {% if projeto.brinquedo_projetado %}
                     {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                        <img src="{{ img.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                        <img src="{{ img.imagem|foto:1400 }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                     {% endfor %}
                 {% endif %}
 
@@ -1472,10 +1473,47 @@
 </script>
 {{ pontos_mapa|json_script:"dados-clientes-mapa" }}
 {# O mapa de clientes também sai daqui: sem CDN, a seção inteira sumia. #}
-<link rel="stylesheet" href="{% estatico 'vendor/leaflet/leaflet.css' %}">
-<script src="{% estatico 'vendor/leaflet/leaflet.js' %}"></script>
+{% comment %}
+  O MAPA SÓ CARREGA QUANDO CHEGA PERTO DA TELA.
+
+  O Leaflet são ~150 KB de script e o mapa fica lá no fim da home: baixar
+  e montar tudo na abertura atrasava a página inteira para quem nem
+  chega até ele. Agora o CSS, o script e os pinos entram quando a seção
+  está a uns 600 px de aparecer.
+{% endcomment %}
 <script>
 (function () {
+    const caixa = document.getElementById('mapa-clientes');
+    if (!caixa) return;
+    let pedido = false;
+    const carregar = () => {
+        if (pedido) return;
+        pedido = true;
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = "{% estatico 'vendor/leaflet/leaflet.css' %}";
+        css.onload = css.onerror = () => {
+            const js = document.createElement('script');
+            js.src = "{% estatico 'vendor/leaflet/leaflet.js' %}";
+            js.onload = montarMapaDeClientes;
+            document.head.append(js);
+        };
+        document.head.append(css);
+    };
+    if ('IntersectionObserver' in window) {
+        const vigia = new IntersectionObserver((entradas) => {
+            if (entradas.some((e) => e.isIntersecting)) {
+                vigia.disconnect();
+                carregar();
+            }
+        }, { rootMargin: '600px 0px' });
+        vigia.observe(caixa);
+    } else {
+        carregar();
+    }
+})();
+
+function montarMapaDeClientes() {
     const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
     const todosPontos = todosPontosBrutos.filter(p =>
         Number.isFinite(Number(p.lat)) &&
@@ -2096,7 +2134,7 @@
     mapa.on('click', () => {
         fecharPopupsDoMapa();
     });
-})();
+}
 </script>
 {% endif %}
 

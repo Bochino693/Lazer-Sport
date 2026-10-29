@@ -1,4 +1,5 @@
 {% load static interno_extras %}
+{% load fotos %}
 <!DOCTYPE html>
 <html lang="pt-BR" class="ls-escuro">
 <head>
@@ -114,6 +115,7 @@
   {% endcomment %}
   <link rel="stylesheet" href="{% estatico 'site/ls-tema.css' %}">
   <script src="{% estatico 'site/ls-topo.js' %}" defer></script>
+  <script src="{% estatico 'site/ls-fotos.js' %}" defer></script>
 
 </head>
 <body>
@@ -141,7 +143,7 @@
 <header class="ls-topo">
   <div class="ls-topo-linha">
     <a class="ls-faixa-marca" href="{% url 'home' %}#" aria-label="Lazer &amp; Sport — página inicial">
-      <img class="ls-marca-logo" src="{% estatico 'images/logoofi.png' %}" alt="Lazer &amp; Sport" width="132" height="88" decoding="async">
+      <img class="ls-marca-logo" src="{% estatico 'images/logo-site.webp' %}" alt="Lazer &amp; Sport" width="132" height="88" decoding="async">
       <span class="ls-marca-texto">
         <span class="ls-marca-nome">Fábrica de Brinquedos</span>
         <span class="ls-marca-lema">Qualidade e diversão</span>
@@ -274,7 +276,7 @@
     <div class="ls-mobile-nav-header">
       <div class="ls-mobile-nav-brand">
         <img class="ls-mobile-nav-logo"
-             src="{% estatico 'images/logoofi.png' %}"
+             src="{% estatico 'images/logo-site.webp' %}"
              alt="Lazer &amp; Sport" width="132" height="44" decoding="async">
       </div>
       <button type="button" class="ls-mobile-nav-close" id="ls-mobile-nav-close" aria-label="Fechar menu">
@@ -557,7 +559,7 @@
             <div class="ls-app-phone">
                 <span class="ls-app-phone-notch"></span>
                 <div class="ls-app-phone-screen">
-                    <img src="{% static 'images/logoofi.png' %}"
+                    <img src="{% estatico 'images/logo-site.webp' %}"
                          alt=""
                          width="120" height="120"
                          loading="lazy" decoding="async"
@@ -734,7 +736,7 @@
           <div class="ls-clientes-logos">
               {% for cliente in clientes_rodape %}
                 <div class="ls-cliente-logo" title="{{ cliente.nome_cliente }}">
-                    <img src="{{ cliente.logo.url }}"
+                    <img src="{{ cliente.logo|foto:240 }}"
                          alt="Logo {{ cliente.nome_cliente }}"
                          loading="lazy" decoding="async">
                 </div>

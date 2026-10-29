@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load interno_extras static %}
+{% load fotos %}
 
 {% block title %}Combo de brinquedos | Aproveite os melhores preços {% endblock %}
 
@@ -29,9 +30,9 @@
 
             {% if combo.imagem_combo %}
                 <img class="combo-gallery-bg"
-                     src="{{ combo.imagem_combo.url }}" alt="" aria-hidden="true">
+                     src="{{ combo.imagem_combo|foto:400 }}" alt="" aria-hidden="true">
                 <img class="combo-gallery-product"
-                     src="{{ combo.imagem_combo.url }}"
+                     src="{{ combo.imagem_combo|foto:1400 }}"
                      alt="{{ combo.descricao }}"
                      decoding="async">
             {% else %}

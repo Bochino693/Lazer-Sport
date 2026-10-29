@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras l10n %}
+{% load fotos %}
 
 {% block title %}Brinquedos em {{ estabelecimento.nome_estabelecimento }} | Lazer &amp; Sport{% endblock %}
 
@@ -115,8 +116,8 @@
 
             <div class="ls-cartao-media">
                 {% if item.imagem_brinquedo %}
-                    <img src="{{ item.imagem_brinquedo.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
-                    <img src="{{ item.imagem_brinquedo.url }}" class="ls-cartao-media-fg"
+                    <img src="{{ item.imagem_brinquedo|foto:400 }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ item.imagem_brinquedo|foto:720 }}" class="ls-cartao-media-fg"
                          alt="{{ item.nome_brinquedo }}" loading="lazy" decoding="async">
                 {% else %}
                     <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"

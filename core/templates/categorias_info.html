@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
+{% load fotos %}
 
 {% block title %}{{ categoria.nome_categoria }} | Lazer &amp; Sport{% endblock %}
 {% block meta_description %}Explore os brinquedos da categoria {{ categoria.nome_categoria }} da Lazer & Sport, com características técnicas, disponibilidade e acesso aos detalhes de cada produto.{% endblock %}
@@ -186,11 +187,11 @@
 
                                 {% with imagem=item.imagem_catalogo %}
                                     {% if imagem %}
-                                        <img src="{{ imagem.url }}"
+                                        <img src="{{ imagem|foto:720 }}"
                                              alt="{{ item.nome_brinquedo }}"
                                              loading="lazy">
                                     {% elif item.imagem_brinquedo %}
-                                        <img src="{{ item.imagem_brinquedo.url }}"
+                                        <img src="{{ item.imagem_brinquedo|foto:720 }}"
                                              alt="{{ item.nome_brinquedo }}"
                                              loading="lazy">
                                     {% else %}
