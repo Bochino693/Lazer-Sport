@@ -434,9 +434,10 @@ class CatalogImageMigrationTests(TestCase):
 
         self.assertIn("#ffe36b", estilo_da_pagina("brinquedo_info.html"))
         self.assertContains(resposta_brinquedo, 'href="#produto-informacoes"')
+        # o <main> também é o destino do "Pular para o conteúdo" (id/tabindex)
         self.assertContains(
             resposta_brinquedo,
-            '<main class="content-section content-section--full">',
+            '<main class="content-section content-section--full"',
         )
 
         peca = PecasReposicao.objects.create(
@@ -467,7 +468,7 @@ class CatalogImageMigrationTests(TestCase):
         self.assertContains(resposta_peca, 'href="#peca-informacoes"')
         self.assertContains(
             resposta_peca,
-            '<main class="content-section content-section--full">',
+            '<main class="content-section content-section--full"',
         )
 
         resposta_catalogo_pecas = self.client.get(reverse("pecas_reposicao"))
