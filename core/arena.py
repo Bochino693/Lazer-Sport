@@ -219,23 +219,6 @@ JOGOS = (
         "variante": "dragon",
     },
     {
-        "slug": "dragon-bowling-2",
-        "titulo": "Dragon Bowling 2",
-        "maquina": "Boliche de arcade Pro Ultra 4K",
-        "chamada": "Bola azul marmorizada, jogo imprevisível",
-        "descricao": (
-            "A versão 2: bola azul com rastro luminoso, pinos de tabela, "
-            "avisos de SPLIT e QUASE, e jogadas que nem sempre são strike."
-        ),
-        "comandos": "Arraste para mirar e solte para lançar.",
-        "desenhos": ("boliche",),
-        "cor": "#2f7bff",
-        "capa": "site/arena/capas/dragon-bowling-2.webp",
-        "poster": "site/arena/capas/dragon-bowling-2.webp",
-        "script": "site/arena/jogos/boliche.js",
-        "variante": "dragon2",
-    },
-    {
         "slug": "lazer-shot",
         "titulo": "Lazer Shot",
         "maquina": "Tiro ao alvo com pistola de luz",
@@ -354,23 +337,6 @@ JOGOS = (
         "script": "site/arena/jogos/hit-music.js",
         "variante": "",
     },
-    {
-        "slug": "elemental-beasts",
-        "titulo": "Elemental Beasts",
-        "maquina": "Batalha de criaturas para 2 jogadores",
-        "chamada": "Arena elemental, cinco contra cinco",
-        "descricao": (
-            "Trinta criaturas de oito elementos. Escolha a carta certa: "
-            "fogo vence natureza, água apaga fogo -- e a máquina joga contra você."
-        ),
-        "comandos": "Toque na carta da criatura que vai para o combate.",
-        "desenhos": ("fliperama",),
-        "cor": "#3fd0ff",
-        "capa": "site/arena/capas/elemental-beasts.webp",
-        "poster": "site/arena/capas/elemental-beasts.webp",
-        "script": "site/arena/jogos/elemental-beasts.js",
-        "variante": "",
-    },
 )
 
 JOGOS_POR_SLUG = {jogo["slug"]: jogo for jogo in JOGOS}
@@ -402,10 +368,6 @@ CONTROLES = {
         "na_maquina": "Na máquina a criança rola a bola de verdade; 5 sensores na pista leem a jogada e a TV mostra o resultado.",
     },
     "dragon-bowling": {
-        **_ARRASTO_BOLICHE,
-        "na_maquina": "Na máquina a bola corre pela pista do gabinete e os sensores dizem para onde ela foi.",
-    },
-    "dragon-bowling-2": {
         **_ARRASTO_BOLICHE,
         "na_maquina": "Na máquina a bola corre pela pista do gabinete e os sensores dizem para onde ela foi.",
     },
@@ -491,16 +453,6 @@ CONTROLES = {
         "na_maquina": "Na máquina você toca a mesa circular de luz, no ritmo da música.",
         "botoes": (),
     },
-    "elemental-beasts": {
-        "gesto": "toque",
-        "rotulo": "Escolha e ataque",
-        "passos": (
-            "Escolha a fera que vai para o combate.",
-            "Toque num golpe para atacar: o elemento certo causa mais dano.",
-        ),
-        "na_maquina": "Na máquina os golpes são os botões do painel.",
-        "botoes": (),
-    },
 }
 
 #: O ícone de cada gesto, no seletor e na faixa de comandos.
@@ -570,7 +522,6 @@ TEMAS_STRIKE_KIDS = (
 #: amarelo ou preto. (nome, arte grande das laterais, logotipo, cor padrão)
 ARTES_DE_ADESIVO = {
     "dragon": ("Dragon Bowling", "site/arena/capas/dragon-bowling-poster.webp", "site/arena/capas/dragon-bowling.webp", "vermelho"),
-    "dragon2": ("Dragon Bowling 2", "site/arena/capas/dragon-bowling-2.webp", "site/arena/capas/dragon-bowling-2.webp", "azul"),
 }
 
 #: SÓ GANHA 3D A MÁQUINA QUE TEM OBJETO DE VERDADE.
@@ -625,8 +576,7 @@ def _temas_strike():
 
 def _artes_dragon():
     adesivos = []
-    for chave in ("dragon", "dragon2"):
-        rotulo, arte, logo, cor = ARTES_DE_ADESIVO[chave]
+    for chave, (rotulo, arte, logo, cor) in ARTES_DE_ADESIVO.items():
         adesivos.append({
             "id": chave, "nome": rotulo, "tipo": "arte",
             "arte": static(arte), "logo": static(logo), "cor": cor, "miniatura": static(logo),
@@ -644,7 +594,6 @@ def variantes(nome, desenho):
     if desenho not in DESENHOS_COM_3D:
         return None
     familia = _familia_do_boliche(nome)
-    texto = _normalizar(nome)
     if familia == "strike":
         adesivos = _temas_strike()
     elif familia == "dragon":
@@ -655,7 +604,7 @@ def variantes(nome, desenho):
     padrao = adesivos[0]["id"]
     cor_do_nome = _cor_do_nome(nome)
     if familia == "dragon":
-        padrao = "dragon2" if re.search(r"(?:^| )(2|ii|pro ultra)(?:$| )", texto) else "dragon"
+        padrao = "dragon"
     elif cor_do_nome and any(a["id"] == f"strike-{cor_do_nome}" for a in adesivos):
         padrao = f"strike-{cor_do_nome}"
 
@@ -694,8 +643,7 @@ MAQUINAS_3D = (
         ),
         "jogo": "dragon-bowling",
         "capa": "site/arena/capas/dragon-bowling.webp",
-        "fotos": ("site/arena/capas/dragon-bowling-poster.webp", "site/arena/capas/dragon-bowling.webp",
-                  "site/arena/capas/dragon-bowling-2.webp"),
+        "fotos": ("site/arena/capas/dragon-bowling-poster.webp", "site/arena/capas/dragon-bowling.webp"),
     },
 )
 
