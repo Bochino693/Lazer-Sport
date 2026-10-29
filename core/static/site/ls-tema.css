@@ -137,36 +137,84 @@ html.ls-escuro .ls-faixa-marca {
     text-decoration: none;
 }
 
+/* O logotipo inteiro (alvo, dardo e placa), sempre sem corte, numa
+   plaquinha branca com borda fina e um brilho da marca em volta; ao lado,
+   separado por um filete vermelho-azul, o texto de sempre da faixa antiga:
+   FÁBRICA DE BRINQUEDOS / QUALIDADE E DIVERSÃO. */
 .ls-marca-logo {
     display: block;
+    flex: none;
     width: auto;
-    height: 54px;
-    padding: 4px 8px;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
-    transition: height .25s ease, transform .3s ease;
+    height: 56px;
+    padding: 5px 9px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff, #eef3fb);
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 74, 173, .12),
+        0 0 0 2px rgba(255, 255, 255, .1),
+        0 8px 22px rgba(0, 0, 0, .42),
+        0 0 26px rgba(255, 71, 87, .22);
+    transition: height .25s ease, transform .3s ease, box-shadow .3s ease;
 }
 
-.ls-topo--compacto .ls-marca-logo { height: 44px; }
-.ls-faixa-marca:hover .ls-marca-logo { transform: rotate(-2deg) scale(1.03); }
+.ls-topo--compacto .ls-marca-logo { height: 46px; }
 
-.ls-marca-texto { display: flex; flex-direction: column; line-height: 1.05; }
+.ls-faixa-marca:hover .ls-marca-logo {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 74, 173, .12),
+        0 0 0 2px rgba(255, 255, 255, .16),
+        0 10px 26px rgba(0, 0, 0, .45),
+        0 0 32px rgba(47, 139, 255, .32);
+}
+
+.ls-marca-texto {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 13px;
+    line-height: 1.02;
+    white-space: nowrap;
+}
+
+/* o filete entre o símbolo e o texto: vermelho e azul, as cores da marca */
+.ls-marca-texto::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #ff4757, #2f8bff);
+    box-shadow: 0 0 10px rgba(255, 71, 87, .45);
+}
 
 .ls-marca-nome {
     font-family: "Poppins", "Manrope", sans-serif;
-    font-size: .98rem;
+    font-size: 1.02rem;
     font-weight: 800;
-    letter-spacing: .3px;
+    letter-spacing: .4px;
     text-transform: uppercase;
+    /* o degradê só pinta dentro da caixa da linha: a folga em cima é a do
+       acento (o Á de FÁBRICA sumia com a linha justa) */
+    padding-top: .16em;
+    margin-top: -.16em;
+    line-height: 1.1;
+    background: linear-gradient(180deg, #ffffff 30%, #c9dcff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .ls-marca-lema {
-    margin-top: 3px;
+    margin-top: 4px;
     color: #ff6b78;
-    font-size: .66rem;
-    font-weight: 800;
-    letter-spacing: 2.4px;
+    font-family: "Poppins", "Manrope", sans-serif;
+    font-size: .64rem;
+    font-weight: 700;
+    letter-spacing: 2.6px;
     text-transform: uppercase;
 }
 
@@ -734,6 +782,13 @@ html.ls-escuro main.content-section.content-section--full {
 @media (max-width: 1440px) {
     .ls-topo .user-greeting { display: none; }
     html.ls-escuro .ls-topo .user-icon { padding-right: 10px; }
+    .ls-marca-nome { font-size: .9rem; }
+    .ls-marca-lema { font-size: .56rem; letter-spacing: 2px; }
+}
+
+/* Entre 1221 e 1420 px o menu inteiro precisa da linha toda: o texto da
+   marca volta abaixo disso, quando o menu vira o botão de menu. */
+@media (max-width: 1420px) and (min-width: 1221px) {
     .ls-marca-texto { display: none; }
 }
 
@@ -748,9 +803,13 @@ html.ls-escuro main.content-section.content-section--full {
     .ls-topo-linha { height: 62px; gap: 10px; }
     .ls-topo--compacto .ls-topo-linha { height: 56px; }
     .ls-marca-logo,
-    .ls-topo--compacto .ls-marca-logo { height: 40px; }
-    .ls-marca-nome { font-size: .8rem; }
-    .ls-marca-lema { font-size: .56rem; letter-spacing: 1.6px; }
+    .ls-topo--compacto .ls-marca-logo { height: 42px; padding: 4px 7px; border-radius: 12px; }
+    .ls-marca-texto { padding-left: 10px; }
+    .ls-marca-nome { font-size: .72rem; }
+    .ls-marca-lema { margin-top: 3px; font-size: .5rem; letter-spacing: 1.4px; }
+    /* a busca já está logo abaixo do cabeçalho: a lupa sai e o texto da
+       marca cabe ao lado do símbolo */
+    .ls-topo [data-topo-busca] { display: none; }
     .ls-topo-cta span { display: none; }
     .ls-topo-cta { width: 42px; padding: 0; justify-content: center; }
     /* O ls-base.css força o hambúrguer com !important no celular; aqui
@@ -765,7 +824,12 @@ html.ls-escuro main.content-section.content-section--full {
     html.ls-escuro .search-section .search-box button { flex: none; width: auto; padding: 0 16px; }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 380px) {
+    .ls-marca-nome { font-size: .64rem; }
+    .ls-marca-lema { font-size: .44rem; letter-spacing: 1.1px; }
+}
+
+@media (max-width: 330px) {
     .ls-marca-texto { display: none; }
 }
 
@@ -1446,3 +1510,87 @@ html.ls-escuro:not(#_):not(#__) .ls-auth .ls-social-btn:hover { background: rgba
 html.ls-escuro:not(#_):not(#__) .ls-auth .ls-entrada input::placeholder { color: #7f93b3; }
 html.ls-escuro:not(#_):not(#__) .ls-auth .ls-entrada input:focus { background: rgba(4, 10, 28, .7); border-color: var(--ls-ciano); box-shadow: 0 0 0 4px rgba(63, 208, 255, .15); }
 html.ls-escuro:not(#_):not(#__) .ls-auth .ls-auth-rodape a { color: #7cc4ff; }
+
+/* =========================================================
+   FOTO COM FUNDO OCUPA O CARTÃO INTEIRO (ls-fotos.js)
+
+   A foto recortada (transparente) continua inteira no fundo claro de
+   estúdio; a foto que tem fundo próprio preenche a caixa de ponta a
+   ponta, sem a moldura clara em volta.
+========================================================= */
+html.ls-escuro:not(#_):not(#__) .foto-cheia {
+    padding: 0;
+    background: #0b1532;
+}
+
+html.ls-escuro:not(#_):not(#__) .foto-cheia::before,
+html.ls-escuro:not(#_):not(#__) .foto-cheia::after { display: none; }
+
+html.ls-escuro:not(#_):not(#__) .foto-cheia img {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    object-fit: cover;
+    object-position: center;
+    filter: none;
+}
+
+/* =========================================================
+   DESEMPENHO
+
+   O que mais pesa para o celular desenhar: o vidro desfocado
+   (backdrop-filter) do cabeçalho fixo e da barra de baixo, que redesenha
+   tudo o que passa por trás a cada quadro da rolagem; as animações
+   infinitas que pintam (a grade, o brilho do título, a borda que gira);
+   e montar a home inteira de uma vez, até o que está lá embaixo.
+========================================================= */
+
+/* O quadro inicial fora da tela: as animações param (home-quadro.js). */
+.ls-quadro--fora,
+.ls-quadro--fora *,
+.ls-quadro--fora *::before,
+.ls-quadro--fora *::after { animation-play-state: paused !important; }
+
+/* As seções de baixo da home só são desenhadas quando chegam perto da tela.
+   Eventos e projetos ficam de fora: as janelas deles são `position: fixed`,
+   e a contenção prenderia a janela dentro da seção. */
+html.ls-escuro #categorias-section,
+html.ls-escuro #promocoes-section,
+html.ls-escuro #brinquedos,
+html.ls-escuro #pecas-section,
+html.ls-escuro #combos-section,
+html.ls-escuro #arena-home,
+html.ls-escuro #clientes-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+}
+
+@media (max-width: 900px) {
+    /* No celular o vidro vira vidro escuro de verdade: a mesma cara, sem
+       desfoque recalculado a cada quadro. */
+    html.ls-escuro *,
+    html.ls-escuro *::before,
+    html.ls-escuro *::after {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+
+    html.ls-escuro .ls-topo { background: rgba(5, 11, 31, .97); }
+    html.ls-escuro .ls-barra-app { background: rgba(6, 12, 32, .98); }
+
+    /* as animações que repintam uma área grande ficam paradas no celular */
+    .ls-quadro-fundo::before,
+    .ls-quadro-brilho,
+    .ls-quadro-botao--arena { animation: none; }
+}
+
+/* O menu da conta abre para a ESQUERDA: no cabeçalho novo o botão da
+   conta fica na ponta direita, e aberto para a direita o menu saía da tela
+   do celular. */
+html.ls-escuro .ls-topo .dropdown-menu {
+    left: auto;
+    right: 0;
+    transform-origin: top right;
+}

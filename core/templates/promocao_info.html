@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load interno_extras static %}
+{% load fotos %}
 
 {% block title %}{{ promocao.descricao }} | Promoção Lazer & Sport{% endblock %}
 
@@ -25,10 +26,10 @@
 
             {% if promocao.brinquedos.imagem_brinquedo %}
                 <img class="promo-gallery-bg"
-                     src="{{ promocao.brinquedos.imagem_brinquedo.url }}"
+                     src="{{ promocao.brinquedos.imagem_brinquedo|foto:400 }}"
                      alt="" aria-hidden="true">
                 <img class="promo-gallery-product"
-                     src="{{ promocao.brinquedos.imagem_brinquedo.url }}"
+                     src="{{ promocao.brinquedos.imagem_brinquedo|foto:1400 }}"
                      alt="{{ promocao.brinquedos.nome_brinquedo }}"
                      decoding="async">
             {% else %}

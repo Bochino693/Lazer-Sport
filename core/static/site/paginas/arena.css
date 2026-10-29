@@ -55,18 +55,19 @@
 
 .arena-hero-acoes .ls-botao { margin-top: 0; padding-inline: 24px; }
 
-/* Bob e Mia em volta do alvo da marca, flutuando. */
+/* O alvo da marca inteiro em cima (nunca cortado nem coberto) e o Bob e a
+   Mia embaixo, um de cada lado, flutuando. */
 .arena-hero-mascotes {
     position: relative;
-    min-height: 380px;
+    min-height: 450px;
 }
 
 .arena-hero-mascotes img { position: absolute; display: block; height: auto; }
 
 .arena-hero-alvo {
-    top: 6%;
+    top: 0;
     left: 50%;
-    width: min(62%, 300px);
+    width: min(56%, 262px);
     transform: translateX(-50%);
     filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .45));
     animation: arena-flutua 6s ease-in-out infinite;
@@ -74,8 +75,8 @@
 
 .arena-hero-bob,
 .arena-hero-mia {
-    bottom: 4%;
-    width: min(46%, 240px);
+    bottom: 0;
+    width: min(42%, 200px);
     filter: drop-shadow(0 22px 30px rgba(0, 0, 0, .5));
 }
 
@@ -84,8 +85,8 @@
 
 .arena-hero-games {
     left: 50%;
-    bottom: 0;
-    width: min(46%, 230px);
+    bottom: 10px;
+    width: min(40%, 190px);
     transform: translateX(-50%) rotate(-4deg);
     filter: drop-shadow(0 12px 20px rgba(0, 0, 0, .5));
 }
@@ -717,7 +718,7 @@
 ========================================================= */
 @media (max-width: 960px) {
     .arena-hero-inner { grid-template-columns: 1fr; }
-    .arena-hero-mascotes { min-height: 260px; max-width: 460px; width: 100%; margin: 0 auto; }
+    .arena-hero-mascotes { min-height: 440px; max-width: 460px; width: 100%; margin: 0 auto; }
 
     .arena-ficha {
         top: auto;
@@ -735,7 +736,7 @@
 
 @media (max-width: 620px) {
     .arena-hero { padding-bottom: 76px; }
-    .arena-hero-mascotes { min-height: 210px; }
+    .arena-hero-mascotes { min-height: 350px; }
     .arena-palco { height: 78vh; border-radius: 20px; }
     .arena-secao { padding-inline: 10px; }
 

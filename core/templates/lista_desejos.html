@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
+{% load fotos %}
 
 {% block title %}Lista de desejos | Lazer & Sport{% endblock %}
 {% block meta_description %}Os brinquedos e as peças que você guardou na Lazer & Sport.{% endblock %}
@@ -86,12 +87,12 @@
           <article class="desejo-card">
             <div class="desejo-foto">
               {% with capa=b.imagem_catalogo %}
-                {% if capa %}<img src="{{ capa.url }}" alt="{{ b.nome_brinquedo }}" loading="lazy">{% else %}<span>Sem foto cadastrada</span>{% endif %}
+                {% if capa %}<img src="{{ capa|foto:600 }}" alt="{{ b.nome_brinquedo }}" loading="lazy">{% else %}<span>Sem foto cadastrada</span>{% endif %}
               {% endwith %}
             </div>
             <div class="desejo-corpo">
               <h3>{{ b.nome_brinquedo }}</h3>
-              {% if b.valor_brinquedo %}
+              {% if b.disponivel_na_loja %}
                 <span class="preco">R$ {{ b.valor_brinquedo|moeda }}</span>
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
@@ -118,7 +119,7 @@
           <article class="desejo-card">
             <div class="desejo-foto">
               {% with capa=p.imagem_principal %}
-                {% if capa and capa.imagem %}<img src="{{ capa.imagem.url }}" alt="{{ p.nome }}" loading="lazy">{% else %}<span>Sem foto cadastrada</span>{% endif %}
+                {% if capa and capa.imagem %}<img src="{{ capa.imagem|foto:600 }}" alt="{{ p.nome }}" loading="lazy">{% else %}<span>Sem foto cadastrada</span>{% endif %}
               {% endwith %}
             </div>
             <div class="desejo-corpo">

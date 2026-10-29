@@ -23,6 +23,9 @@
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/jogos.css' %}">
+{# o jogo em foco começa a baixar junto com a página, e não depois do console #}
+<link rel="modulepreload" href="{% estatico 'site/arena/console.js' %}">
+<link rel="modulepreload" href="{% estatico atual.script %}">
 
 <div class="sim" style="--cor-jogo: {{ atual.cor }}" data-simulador data-whatsapp="{{ whatsapp }}">
 
@@ -52,7 +55,7 @@
                 {% for jogo in jogos %}
                 <li>
                     <a class="sim-opcao" href="{{ jogo.url }}" data-sim-jogo="{{ jogo.slug }}" style="--cor-jogo: {{ jogo.cor }}"{% if jogo.slug == atual.slug %} aria-current="page"{% endif %}>
-                        <img src="{% estatico jogo.capa %}" alt="" width="96" height="96" loading="lazy" decoding="async">
+                        <img src="{% estatico jogo.miniatura %}" alt="" width="96" height="96" loading="lazy" decoding="async">
                         <span class="sim-opcao-texto">
                             <strong>{{ jogo.titulo }}</strong>
                             <small><i class="fa-solid {{ jogo.icone_gesto }}" aria-hidden="true"></i> {{ jogo.controle.rotulo }}</small>
@@ -67,7 +70,7 @@
         <section class="sim-maquina console" id="simulador" aria-labelledby="console-titulo" data-console>
             <div class="console-gabinete">
                 <div class="console-letreiro">
-                    <img class="console-logo" data-console-logo src="{% estatico atual.capa %}" alt="{{ atual.titulo }}" width="64" height="64">
+                    <img class="console-logo" data-console-logo src="{% estatico atual.miniatura %}" alt="{{ atual.titulo }}" width="64" height="64">
                     <div class="console-letreiro-texto">
                         <h2 id="console-titulo" data-console-titulo>{{ atual.titulo }}</h2>
                         <span data-console-maquina>{{ atual.maquina }}</span>

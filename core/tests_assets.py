@@ -129,3 +129,37 @@ class AncoraNaoEmolduraASecaoTests(TestCase):
 
         self.assertIn('setAttribute("tabindex", "-1")', js)
         self.assertIn("focus({ preventScroll: true })", js)
+
+
+class IconesDoSiteTests(TestCase):
+    """Todo ícone que o site usa está no recorte do Font Awesome.
+
+    O site carrega `vendor/fontawesome-site/` (só os ícones usados) no
+    lugar do Font Awesome inteiro. Ícone novo fora do recorte aparece como
+    um quadradinho vazio: rode `vendor/fontawesome-site/gerar.py`.
+    """
+
+    MODIFICADORES = re.compile(
+        r"fa-(?:solid|regular|brands|classic|sharp|fw|spin|pulse|beat|fade|bounce|shake|flip|"
+        r"xs|sm|lg|xl|2xl|\d+x|border|pull-left|pull-right|stack|stack-1x|stack-2x|inverse|"
+        r"rotate-90|rotate-180|rotate-270|flip-horizontal|flip-vertical|flip-both|ul|li|sr-only|"
+        r"(?:solid|regular|brands)-\d+)"
+    )
+
+    def test_recorte_tem_todos_os_icones_usados(self):
+        core = Path(__file__).resolve().parent
+        css = (core / "static" / "vendor" / "fontawesome-site" / "fontawesome-site.css").read_text(encoding="utf-8")
+        arquivos = [
+            *core.joinpath("templates").rglob("*.html"),
+            *core.joinpath("static", "site").rglob("*.js"),
+            *core.joinpath("static", "site").rglob("*.css"),
+            *core.glob("*.py"),
+        ]
+        faltando = set()
+        for arquivo in arquivos:
+            if arquivo.name.startswith("tests"):
+                continue
+            for nome in re.findall(r"\bfa-[a-z0-9]+(?:-[a-z0-9]+)*", arquivo.read_text(encoding="utf-8", errors="ignore")):
+                if not self.MODIFICADORES.fullmatch(nome) and f".{nome}:" not in css:
+                    faltando.add(f"{nome} ({arquivo.name})")
+        self.assertFalse(faltando, f"Ícones fora do recorte: {sorted(faltando)}")

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
+{% load fotos %}
 
 {% block title %}Eventos e recreação | Lazer &amp; Sport{% endblock %}
 
@@ -85,8 +86,8 @@
         <div class="ls-cartao-media ls-cartao-media--alta">
             {% with capa=evento.imagens_evento.all|first %}
                 {% if capa %}
-                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
-                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
+                    <img src="{{ capa.imagem|foto:400 }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ capa.imagem|foto:900 }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
                          alt="{{ evento.titulo }}" loading="lazy" decoding="async">
                 {% else %}
                     <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
@@ -158,7 +159,7 @@
         <div class="ls-galeria-fotos">
             {% for img in evento.imagens_evento.all %}
             <figure class="ls-galeria-foto">
-                <img src="{{ img.imagem.url }}" alt="{{ img.legenda|default:evento.titulo }}" loading="lazy" decoding="async">
+                <img src="{{ img.imagem|foto:1400 }}" alt="{{ img.legenda|default:evento.titulo }}" loading="lazy" decoding="async">
                 {% if img.legenda %}<span>{{ img.legenda }}</span>{% endif %}
             </figure>
             {% empty %}
@@ -172,7 +173,7 @@
                 {% for b in evento.brinquedos.all %}
                 <div class="ls-galeria-item">
                     {% if b.imagem_brinquedo %}
-                        <img src="{{ b.imagem_brinquedo.url }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
+                        <img src="{{ b.imagem_brinquedo|foto:480 }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
                     {% else %}
                         <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ b.nome_brinquedo }}" loading="lazy">
                     {% endif %}

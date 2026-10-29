@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static interno_extras %}
+{% load fotos %}
 
 {% block title %}Nossos Parceiros | Lazer e Sport{% endblock %}
 
@@ -114,8 +115,8 @@
         <div class="est-media est-carrossel">
             {% for brinquedo in brinquedos_carrossel %}
                 <figure class="est-slide {% if forloop.first %}ativo{% endif %}">
-                    <img src="{{ brinquedo.imagem_brinquedo.url }}" class="est-media-bg" alt="" aria-hidden="true">
-                    <img src="{{ brinquedo.imagem_brinquedo.url }}" class="est-media-fg"
+                    <img src="{{ brinquedo.imagem_brinquedo|foto:400 }}" class="est-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ brinquedo.imagem_brinquedo|foto:720 }}" class="est-media-fg"
                          alt="{{ brinquedo.nome_brinquedo }}" loading="lazy">
                     <figcaption class="est-slide-legenda">{{ brinquedo.nome_brinquedo }}</figcaption>
                 </figure>
@@ -152,8 +153,8 @@
 
         <div class="est-media">
             {% if est.imagem_estabelecimento %}
-                <img src="{{ est.imagem_estabelecimento.url }}" class="est-media-bg" alt="" aria-hidden="true">
-                <img src="{{ est.imagem_estabelecimento.url }}" class="est-media-fg"
+                <img src="{{ est.imagem_estabelecimento|foto:400 }}" class="est-media-bg" alt="" aria-hidden="true">
+                <img src="{{ est.imagem_estabelecimento|foto:900 }}" class="est-media-fg"
                      alt="{{ est.nome_estabelecimento }}" loading="lazy">
             {% else %}
                 <img src="{% static 'images/sem-imagem.svg' %}" class="est-media-fg"

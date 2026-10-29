@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
+{% load fotos %}
 
 {% block title %}Projetos sob medida | Lazer &amp; Sport{% endblock %}
 
@@ -70,8 +71,8 @@
         <div class="ls-cartao-media ls-cartao-media--alta">
             {% with capa=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all|first %}
                 {% if capa %}
-                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
-                    <img src="{{ capa.imagem.url }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
+                    <img src="{{ capa.imagem|foto:400 }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ capa.imagem|foto:900 }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
                          alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% else %}
                     <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
@@ -134,7 +135,7 @@
         <div class="ls-galeria-fotos">
             {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
             <figure class="ls-galeria-foto">
-                <img src="{{ img.imagem.url }}" alt="{{ img.legenda|default:projeto.titulo }}" loading="lazy" decoding="async">
+                <img src="{{ img.imagem|foto:1400 }}" alt="{{ img.legenda|default:projeto.titulo }}" loading="lazy" decoding="async">
                 {% if img.legenda %}<span>{{ img.legenda }}</span>{% endif %}
             </figure>
             {% empty %}

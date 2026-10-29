@@ -129,8 +129,8 @@ class SimuladorTests(TestCase):
 class ArquivosDosJogosTests(TestCase):
 
     def test_capa_poster_e_script_de_cada_jogo_existem(self):
-        for jogo in arena.JOGOS:
-            for campo in ("capa", "poster", "script"):
+        for jogo in arena.jogos_do_simulador(arena.JOGOS):
+            for campo in ("capa", "poster", "script", "miniatura"):
                 with self.subTest(jogo=jogo["slug"], campo=campo):
                     self.assertIsNotNone(finders.find(jogo[campo]), jogo[campo])
 
@@ -150,9 +150,11 @@ class ArquivosDosJogosTests(TestCase):
                         self.assertIn(caminho, existentes)
 
     def test_nenhuma_arte_de_terceiros(self):
+        # Só imagens: as músicas do Hit Music (Carmine e Paper Moon) entraram
+        # por decisão do dono; capas e logos de terceiros continuam fora.
         pasta = JOGOS_DIR.parent
         for arquivo in pasta.rglob("*"):
-            if arquivo.is_file():
+            if arquivo.is_file() and arquivo.suffix.lower() in {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif", ".avif"}:
                 with self.subTest(arquivo=str(arquivo.relative_to(pasta))):
                     self.assertIsNone(TERCEIROS.search(arquivo.name))
 
@@ -230,3 +232,29 @@ class HomeComArenaTests(TestCase):
         self.assertIn(f'href="{reverse("arena")}#', html)
         self.assertIn(f'href="{reverse("jogos")}"', html)
         self.assertIn("data-painel-url", html)
+
+
+class PrecoSoDaLojaTests(TestCase):
+    """Só mostra preço o que está à venda na loja (marcado e com valor)."""
+
+    def setUp(self):
+        cache.clear()
+        self.na_loja = _brinquedo("Air Game Hockey", valor_brinquedo=Decimal("8900.00"), exibir_na_loja=True)
+        self.fora = _brinquedo("Basquete Street", valor_brinquedo=Decimal("12345.00"), exibir_na_loja=False)
+
+    def test_regra_do_modelo(self):
+        self.assertTrue(self.na_loja.disponivel_na_loja)
+        self.assertFalse(self.fora.disponivel_na_loja)
+        self.assertFalse(_brinquedo("Sem preço", exibir_na_loja=True).disponivel_na_loja)
+
+    def test_home_arena_e_vitrine(self):
+        home = self.client.get(reverse("home")).content.decode()
+        self.assertIn("8.900,00", home)
+        self.assertNotIn("12.345,00", home)
+        self.assertNotIn("12.345,00", self.client.get(reverse("arena")).content.decode())
+        dados = {d["nome"]: d for d in (
+            arena.dados_do_brinquedo(b, "/") for b in Brinquedos.objects.prefetch_related(
+                "categorias_brinquedos", "tags", "imagens_brinquedo")
+        )}
+        self.assertEqual(dados["Air Game Hockey"]["preco"], "R$ 8.900,00")
+        self.assertEqual(dados["Basquete Street"]["preco"], "")

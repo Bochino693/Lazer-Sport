@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% load widget_tweaks interno_extras %}
+{% load fotos %}
 
 {% block title %}Lazer & Sport Manutenções{% endblock %}
 
@@ -757,7 +758,7 @@
                         data-id="{{ brinquedo.id }}"
                         data-nome="{{ brinquedo.nome_brinquedo }}">
                     {% if brinquedo.imagem_brinquedo %}
-                        <img src="{{ brinquedo.imagem_brinquedo.url }}"
+                        <img src="{{ brinquedo.imagem_brinquedo|foto:320 }}"
                              alt="{{ brinquedo.nome_brinquedo }}"
                              loading="lazy"
                              decoding="async">

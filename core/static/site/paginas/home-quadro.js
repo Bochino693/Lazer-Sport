@@ -152,6 +152,8 @@
 
     new IntersectionObserver(function (entradas) {
       visivel = entradas.some(function (e) { return e.isIntersecting; });
+      // fora da tela, as animações do quadro param de redesenhar
+      quadro.classList.toggle("ls-quadro--fora", !visivel);
     }).observe(quadro);
   }
 
