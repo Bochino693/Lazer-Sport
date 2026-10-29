@@ -129,8 +129,8 @@ class SimuladorTests(TestCase):
 class ArquivosDosJogosTests(TestCase):
 
     def test_capa_poster_e_script_de_cada_jogo_existem(self):
-        for jogo in arena.JOGOS:
-            for campo in ("capa", "poster", "script"):
+        for jogo in arena.jogos_do_simulador(arena.JOGOS):
+            for campo in ("capa", "poster", "script", "miniatura"):
                 with self.subTest(jogo=jogo["slug"], campo=campo):
                     self.assertIsNotNone(finders.find(jogo[campo]), jogo[campo])
 

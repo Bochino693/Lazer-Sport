@@ -54,6 +54,7 @@ def _para_o_script(jogo):
         "comandos": jogo["comandos"],
         "cor": jogo["cor"],
         "capa": estatico(jogo["capa"]),
+        "miniatura": estatico(jogo["miniatura"]),
         "poster": estatico(jogo["poster"]),
         "script": estatico(jogo["script"]),
         "variante": jogo.get("variante", ""),

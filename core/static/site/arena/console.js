@@ -391,11 +391,12 @@ class Console {
     this.pararPartida();
     this.dados = dados;
     this.jogo = null;
+    this.escalaMaxima = 2;
     this.raiz.style.setProperty("--cor-jogo", dados.cor || "#ffd700");
     this.raiz.querySelector("[data-console-titulo]").textContent = dados.titulo;
     this.raiz.querySelector("[data-console-maquina]").textContent = dados.maquina || "";
     const logo = this.raiz.querySelector("[data-console-logo]");
-    logo.src = dados.capa;
+    logo.src = dados.miniatura || dados.capa;
     logo.alt = dados.titulo;
     this.capa.querySelector("[data-console-chamada]").textContent = dados.chamada || "";
     this.capa.querySelector("[data-console-comandos]").textContent = dados.comandos || "";
@@ -439,7 +440,7 @@ class Console {
 
   async carregar(url) {
     if (!this.modulos.has(url)) {
-      this.modulos.set(url, import(url).then(async (modulo) => {
+      const promessa = import(url).then(async (modulo) => {
         const jogo = modulo.default;
         const imagens = {};
         await Promise.all(Object.entries(jogo.artes || {}).map(([nome, caminho]) => new Promise((resolver) => {
@@ -450,7 +451,10 @@ class Console {
           img.src = new URL(caminho, new URL(url, window.location.href)).href;
         })));
         return { ...jogo, imagens };
-      }));
+      });
+      // falhou (rede): esquece, para a próxima tentativa baixar de novo
+      promessa.catch(() => this.modulos.delete(url));
+      this.modulos.set(url, promessa);
     }
     return this.modulos.get(url);
   }
@@ -599,15 +603,48 @@ class Console {
   rodar() {
     cancelAnimationFrame(this.quadroAnimacao);
     this.ultimoQuadro = performance.now();
+    this.quadrosParados = 0;
+    this.medicao = { soma: 0, n: 0 };
     const passo = (agora) => {
       if (this.estado === "fechado") return;
       this.quadroAnimacao = requestAnimationFrame(passo);
-      const dt = Math.min(0.05, (agora - this.ultimoQuadro) / 1000);
+      const bruto = agora - this.ultimoQuadro;
+      if (this.pausado) {
+        this.ultimoQuadro = agora;
+        return;
+      }
+      // Atrás da capa ou da tela de fim o jogo só enfeita o fundo: um
+      // quadro em cada quatro basta, e a bateria do celular agradece.
+      if (this.estado === "capa" || this.estado === "fim") {
+        this.quadrosParados = (this.quadrosParados + 1) % 4;
+        if (this.quadrosParados) return;
+      }
+      const dt = Math.min(0.05, bruto / 1000);
       this.ultimoQuadro = agora;
-      if (this.pausado) return;
       this.passo(dt);
+      if (this.estado === "jogando") this.medirDesempenho(bruto);
     };
     this.quadroAnimacao = requestAnimationFrame(passo);
+  }
+
+  /* A RESOLUÇÃO SE AJUSTA SOZINHA. Se o aparelho não dá conta de desenhar
+     o jogo na densidade cheia da tela (média acima de ~45 ms por quadro,
+     isto é, abaixo de ~22 quadros por segundo, ao longo de um segundo de
+     partida), o canvas perde um degrau de pixels -- o jogo continua igual,
+     só um pouco menos nítido -- até chegar na resolução lógica. */
+  medirDesempenho(ms) {
+    if (ms > 250) return; // a aba voltou de uma pausa: não conta
+    const m = this.medicao;
+    m.soma += ms;
+    m.n += 1;
+    if (m.n < 60) return;
+    const media = m.soma / m.n;
+    m.soma = 0;
+    m.n = 0;
+    if (media > 45 && (this.escala || 1) > 1) {
+      this.escalaMaxima = Math.max(1, (this.escala || 1) - 0.35);
+      this.ajustarTela();
+    }
   }
 
   passo(dt) {
@@ -663,7 +700,7 @@ class Console {
     const r = this.canvas.getBoundingClientRect();
     if (!r.width) return;
     const densidade = Math.min(2, window.devicePixelRatio || 1);
-    const escala = Math.min(2, Math.max(1, (r.width * densidade) / this.jogo.largura));
+    const escala = Math.min(this.escalaMaxima || 2, Math.max(1, (r.width * densidade) / this.jogo.largura));
     const largura = Math.round(this.jogo.largura * escala);
     const altura = Math.round(this.jogo.altura * escala);
     if (this.canvas.width !== largura) {
@@ -804,6 +841,17 @@ if (raiz && dadosDosJogos) {
       if (caixa.top < 0 || caixa.bottom > window.innerHeight) raiz.scrollIntoView({ block: "start", behavior: "smooth" });
     }
   };
+
+  // O dedo encostou ou o mouse passou por cima de um jogo do seletor: o
+  // script e as artes dele já começam a vir, antes do clique.
+  const preCarregar = (evento) => {
+    const opcao = evento.target.closest && evento.target.closest("[data-sim-jogo]");
+    const jogo = opcao && porSlug[opcao.dataset.simJogo];
+    if (jogo) consoleJogos.carregar(jogo.script).catch(() => {});
+  };
+  pagina.addEventListener("pointerover", preCarregar);
+  pagina.addEventListener("focusin", preCarregar);
+  pagina.addEventListener("touchstart", preCarregar, { passive: true });
 
   pagina.addEventListener("click", (evento) => {
     const opcao = evento.target.closest("[data-sim-jogo]");

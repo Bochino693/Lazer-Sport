@@ -1536,3 +1536,61 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia img {
     object-position: center;
     filter: none;
 }
+
+/* =========================================================
+   DESEMPENHO
+
+   O que mais pesa para o celular desenhar: o vidro desfocado
+   (backdrop-filter) do cabeçalho fixo e da barra de baixo, que redesenha
+   tudo o que passa por trás a cada quadro da rolagem; as animações
+   infinitas que pintam (a grade, o brilho do título, a borda que gira);
+   e montar a home inteira de uma vez, até o que está lá embaixo.
+========================================================= */
+
+/* O quadro inicial fora da tela: as animações param (home-quadro.js). */
+.ls-quadro--fora,
+.ls-quadro--fora *,
+.ls-quadro--fora *::before,
+.ls-quadro--fora *::after { animation-play-state: paused !important; }
+
+/* As seções de baixo da home só são desenhadas quando chegam perto da tela.
+   Eventos e projetos ficam de fora: as janelas deles são `position: fixed`,
+   e a contenção prenderia a janela dentro da seção. */
+html.ls-escuro #categorias-section,
+html.ls-escuro #promocoes-section,
+html.ls-escuro #brinquedos,
+html.ls-escuro #pecas-section,
+html.ls-escuro #combos-section,
+html.ls-escuro #arena-home,
+html.ls-escuro #clientes-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+}
+
+@media (max-width: 900px) {
+    /* No celular o vidro vira vidro escuro de verdade: a mesma cara, sem
+       desfoque recalculado a cada quadro. */
+    html.ls-escuro *,
+    html.ls-escuro *::before,
+    html.ls-escuro *::after {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+
+    html.ls-escuro .ls-topo { background: rgba(5, 11, 31, .97); }
+    html.ls-escuro .ls-barra-app { background: rgba(6, 12, 32, .98); }
+
+    /* as animações que repintam uma área grande ficam paradas no celular */
+    .ls-quadro-fundo::before,
+    .ls-quadro-brilho,
+    .ls-quadro-botao--arena { animation: none; }
+}
+
+/* O menu da conta abre para a ESQUERDA: no cabeçalho novo o botão da
+   conta fica na ponta direita, e aberto para a direita o menu saía da tela
+   do celular. */
+html.ls-escuro .ls-topo .dropdown-menu {
+    left: auto;
+    right: 0;
+    transform-origin: top right;
+}

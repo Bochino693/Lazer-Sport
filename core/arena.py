@@ -459,6 +459,8 @@ def jogos_do_simulador(jogos):
             **jogo,
             "controle": controle,
             "icone_gesto": ICONES_DO_GESTO.get(controle["gesto"], "fa-hand-pointer"),
+            # a capa em 128 px, para o seletor e o letreiro da máquina
+            "miniatura": f"site/arena/capas/mini/{jogo['slug']}.webp",
             "url": reverse("jogo", args=[jogo["slug"]]),
         })
     return saida
