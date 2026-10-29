@@ -312,8 +312,9 @@ JOGOS = (
         "maquina": "Jogo de ritmo com tela circular",
         "chamada": "Toque, segure, arraste: sinta a batida",
         "descricao": (
-            "As notas correm do centro para o anel. Acerte no tempo da "
-            "música para emendar combos e subir de nota."
+            "Carmine e Paper Moon, as músicas da máquina, com a fase que ela "
+            "gera: as notas correm do centro para o anel. Acerte no tempo "
+            "para emendar combos e passar dos 70%."
         ),
         "comandos": "Toque nas faixas quando a nota chegar ao anel (ou teclas A S D F J K L Ç).",
         "desenhos": ("musica",),

@@ -568,9 +568,10 @@
     .sim-opcao small { display: none; }
     .sim-opcao[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--cor-jogo); background: color-mix(in srgb, var(--cor-jogo) 18%, transparent); }
 
-    /* a máquina ocupa a tela entre o cabeçalho e a barra de baixo */
+    /* a máquina ocupa a tela entre o cabeçalho e a barra de baixo (o
+       botão do meio da barra sobe 26 px: os comandos ficam acima dele) */
     .sim-maquina {
-        height: calc(100dvh - 136px - env(safe-area-inset-bottom));
+        height: calc(100dvh - 160px - env(safe-area-inset-bottom));
         min-height: 460px;
         /* no celular o cabeçalho é mais baixo que a folga do site */
         scroll-margin-top: -30px;

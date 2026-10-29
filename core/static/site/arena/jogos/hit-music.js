@@ -15,27 +15,29 @@
      está), mas encaixar no tempo vale mais — igual ao `_timing_quality`
      do stage.gd. Errar é silencioso no campo e ABAIXA o volume da música;
      acertar devolve o volume (a "energia da música" do original).
-   - No fim: CLASSIFICADO com 70% de precisão ou mais.
+   - A nota final é a da máquina (stage_v10.gd): soma da qualidade de cada
+     acerto ÷ total de notas da fase. CLASSIFICADO com 70% ou mais.
 
-   Não há música licenciada aqui: a trilha "Pulso Neon" é composta e
-   tocada pelo próprio jogo (WebAudio), e a fase é gerada a partir do BPM
-   dela com a mesma lógica do chart_factory_v9.gd (frases de 4 compassos,
-   arquétipos, notas presas na grade da batida, gesto longo bloqueia o
-   resto). Assim cada nota cai exatamente em cima da bateria.
+   AS MÚSICAS SÃO AS DA MÁQUINA. Antes de jogar a pessoa escolhe entre
+   CARMINE (a favorita do dono, primeira da lista) e PAPER MOON (o "soul"
+   do catálogo da mesa), e ouve o áudio de verdade de cada uma. A fase
+   não é composta à mão: é o chart_factory_v9.gd portado linha a linha,
+   alimentado com os ajustes da música copiados do hit_music_songs.json e
+   com o mesmo sorteador do Godot (PCG32 + randf do RandomPCG), na mesma
+   ordem de sorteios. As notas saem iguais às que a mesa gera, no nível
+   FÁCIL — o que a máquina deixa marcado ao abrir a música.
+
+   O relógio do jogo é o do áudio: o tempo da música sai do
+   AudioContext.currentTime (a máquina usa a posição do player do mesmo
+   jeito), então nota e batida não descasam quando o quadro da tela
+   engasga, e a pausa da aba congela as duas juntas.
+
+   Sem capa nem vídeo das músicas (arte de terceiros): só os títulos e a
+   interface do próprio jogo.
    ====================================================================== */
 
 const LARGURA = 540;
 const ALTURA = 960;
-
-/* ---------- a música ---------- */
-const BPM = 128;
-const BATIDA = 60 / BPM;
-const COMPASSO = BATIDA * 4;
-const PASSO = BATIDA / 4; // semicolcheia: a menor divisão do sequenciador
-const COMPASSOS = 32;
-const PASSOS = COMPASSOS * 16;
-const DURACAO = COMPASSOS * COMPASSO; // 60 s
-const NOME_MUSICA = "PULSO NEON";
 
 /* ---------- geometria (mesmas proporções do stage.gd em 1080x1920) ---------- */
 const R = 258; // raio do campo: 98,5% da metade da largura útil
@@ -45,16 +47,36 @@ const R_ANEL = R * 0.905; // linha branca onde os tazos encaixam
 const FAIXAS = 8;
 const HUD = { x: 14, y: 12, w: LARGURA - 28, h: 178 };
 
-/* ---------- tempo de jogo (rhythm_profile.gd, fase fácil a 128 BPM) ---------- */
-const APROXIMACAO = 1.4; // segundos do centro até o anel
-const JANELA_PERFEITO = 0.075;
-const JANELA_OTIMO = 0.15;
-const JANELA_ACERTO = 0.26; // batida × 0,58, como o fácil do original
+/* ---------- partida (stage.gd / stage_v9.gd) ---------- */
+const DIFICULDADE = "easy"; // a tela de dificuldade da máquina abre em FÁCIL
+const DURACAO_CONTAGEM = 3.0; // COUNTDOWN_SECONDS: o 3-2-1 corre por cima da introdução
+const CLASSIFICA = 70; // RESULT_PASS_PERCENT
+const FIM_ANTECIPADO = 0.02; // a máquina encerra em song_time >= duração - 0,02
+
+/* ---------- arrasto (constantes do stage.gd) ---------- */
 const ESCALA_JANELA_ARRASTO = 2.1; // achar o começo do arrasto leva mais tempo
 const FOLGA_ARRASTO = 0.45;
 const ARRASTO_COMPLETO = 0.93;
-const CORREDOR = R * 0.2; // folga de um dedo inteiro em volta do trilho
+const CORREDOR = R * 0.2; // folga de um dedo inteiro em volta do trilho (no celular, um pouco mais que os 0,165 da mesa)
 const AVANCO_MAXIMO = 0.22; // o quanto uma amostra pode andar no trilho
+const PASSO_AMOSTRA = 0.045; // SLIDE_SAMPLE_STEP_RATIO
+const FOLGA_SOLTAR_HOLD = 0.12; // soltar o hold até 0,12 s antes do fim ainda vale
+
+/* ---------- música: energia e volume (stage.gd) ---------- */
+const VOLUME_MIN_DB = -16; // MUSIC_VOLUME_MIN_DB: energia vazia
+const VOLUME_MAX_DB = -1; // MUSIC_VOLUME_MAX_DB: energia cheia
+const SUAVIZACAO_VOLUME = 2.4; // MUSIC_VOLUME_SMOOTH_SPEED (por segundo)
+const PENALIDADE_ERRO = 0.16; // MUSIC_ENERGY_MISS_PENALTY
+const RECUPERACAO_ACERTO = 0.1; // MUSIC_ENERGY_HIT_RECOVERY
+const VOLUME_MUSICA = 0.85; // nível da trilha na saída (os sons do console vêm por cima)
+
+/* ---------- relógio do áudio ---------- */
+const ANTECEDENCIA_INICIO = 0.12; // a fonte é agendada um instante à frente: começa exata
+const SALTO_RELOGIO = 0.03; // diferença que denuncia pausa/retomada do áudio
+const DERIVA_RELOGIO = 0.001; // s por segundo: deixa o relógio da tela seguir o do áudio
+const LATENCIA_MAXIMA = 0.25; // teto da compensação da saída de som
+const PAUSA_DO_CONSOLE = 0.35; // sem quadro por esse tempo = o console pausou o jogo
+const VIGIA_MS = 250; // conferência do mudo, da latência e da pausa
 
 const TAP = 0;
 const HOLD = 1;
@@ -67,12 +89,17 @@ const RGB = [[255, 184, 0], [255, 6, 14], [0, 219, 255], [255, 61, 242], [255, 2
 const ROSA = 3;
 const COR_TEMA = "#ff3df2";
 const COR_TEMA2 = "#3ff0ff";
+// Contagem da máquina (COUNTDOWN_COLORS): 3 ciano, 2 vermelho, 1 amarelo.
+const CORES_CONTAGEM = ["#00dbff", "#ff060e", "#ffb800"];
 
+/* Rótulos do acerto. A máquina tem dois degraus dentro da janela (1,0 no
+   perfect_window e 0,72 até o hit_window) e o acerto antecipado, que
+   paga de 0,72 a 0,50. Cada degrau ganha o seu nome na tela. */
 const JULGAMENTOS = [
-  { nome: "PERFECT", pontos: 300, qualidade: 1, cor: "#fff27a" },
-  { nome: "GREAT", pontos: 200, qualidade: 0.85, cor: "#3ff0ff" },
-  { nome: "GOOD", pontos: 100, qualidade: 0.72, cor: "#ff8ae8" },
-  { nome: "MISS", pontos: 0, qualidade: 0, cor: "#ff5468" },
+  { nome: "PERFECT", cor: "#fff27a" },
+  { nome: "GREAT", cor: "#3ff0ff" },
+  { nome: "GOOD", cor: "#ff8ae8" },
+  { nome: "MISS", cor: "#ff5468" },
 ];
 
 /* Teclas: A S D F J K L Ç seguem o anel no sentido do relógio a partir
@@ -85,6 +112,11 @@ const TECLAS = {
 };
 const SETAS = { ArrowUp: 0, ArrowRight: 2, ArrowDown: 4, ArrowLeft: 6 };
 const ROTULOS = ["A", "S", "D", "F", "J", "K", "L", "Ç"];
+// Escolha da música com os botões dos menus da mesa: A sobe, E (lane 4,
+// a tecla J) desce e B (lane 1, a tecla S) confirma.
+const TECLAS_SOBE = { ArrowUp: 1, ArrowLeft: 1, KeyA: 1 };
+const TECLAS_DESCE = { ArrowDown: 1, ArrowRight: 1, KeyJ: 1 };
+const TECLAS_CONFIRMA = { Enter: 1, NumpadEnter: 1, Space: 1, KeyS: 1 };
 
 /* Silhuetas das setas do arrasto (quatro estilos, como no renderer):
    chevron cheio, dardo, duplo e pena. Pontos em múltiplos do tamanho. */
@@ -96,108 +128,449 @@ const FORMAS_SETA = [
 ];
 
 /* ======================================================================
-   A FASE — gerada uma vez, sempre igual (semente fixa)
+   AS MÚSICAS — cópia dos campos de jogo de data/hit_music_songs.json
+   (as chaves ficam em inglês, iguais às do catálogo da máquina, para a
+   conferência ser direta). Ficaram de fora só os caminhos de cena,
+   vídeo e capa, que o site não usa.
+   ====================================================================== */
+const MUSICAS = [
+  {
+    id: "carmine",
+    nome: "CARMINE",
+    arquivo: "hit-music/musicas/carmine.mp3",
+    // O MP3 da mesa tem 3456 quadros de 1152 amostras a 44,1 kHz, sem
+    // etiqueta Xing: é desse total que o AudioStreamMP3 do Godot tira a
+    // duração que a fábrica recebe (e que corta o fim da fase).
+    amostras: 3981312,
+    taxa: 44100,
+    universo: "laminas", // UNIVERSE_BY_SONG: carmine → blade_shards
+    category: "ANIME",
+    bpm: 174.0,
+    chart_start: 4.2,
+    seed: 1101,
+    pattern: "shards",
+    colors: { primary: "#F40730", secondary: "#FFFFFF", accent: "#FFD21A", dark: "#090208" },
+    lane_pattern_easy: [0, 2, 4, 6, 1, 3, 5, 7, 2, 6, 0, 4],
+    lane_pattern_hard: [0, 4, 1, 5, 2, 6, 3, 7, 0, 3, 6, 1, 4, 7, 2, 5],
+    slides_easy: [
+      { path: [7, 3], shape: "straight" },
+      { path: [1, 5], shape: "arc_cw", curve: 0.52 },
+      { path: [0, 4], shape: "cross" },
+    ],
+    slides_hard: [
+      { path: [7, 2, 5], shape: "zigzag" },
+      { path: [1, 6], shape: "cross" },
+      { path: [0, 3], shape: "arc_ccw", curve: 0.72 },
+      { path: [4, 7, 2], shape: "zigzag" },
+    ],
+    easy: {
+      approach: 1.12, hit_window: 0.24, perfect_window: 0.09, step_beats: 2.0,
+      slide_every: 9, hold_every: 13, double_every: 0, slide_beats: 4.0, hold_beats: 4.0,
+      tap_scale: 1.08, star_scale: 1.08, hold_width: 1.1,
+      background_intensity: 0.13, background_speed: 0.13, jitter: 0.02,
+    },
+    hard: {
+      approach: 0.86, hit_window: 0.16, perfect_window: 0.065, step_beats: 1.0,
+      slide_every: 7, hold_every: 11, double_every: 6, double_distance: 4, slide_beats: 3.0, hold_beats: 3.0,
+      tap_scale: 0.98, star_scale: 1.0, hold_width: 0.96,
+      background_intensity: 0.22, background_speed: 0.28, jitter: 0.03,
+    },
+  },
+  {
+    id: "soul",
+    nome: "PAPER MOON",
+    arquivo: "hit-music/musicas/soul.mp3",
+    amostras: 3929472, // 3411 quadros × 1152
+    taxa: 44100,
+    universo: "favo", // UNIVERSE_BY_SONG: soul → moon_hive
+    category: "ANIME",
+    bpm: 152.0,
+    chart_start: 4.0,
+    seed: 7707,
+    pattern: "hex",
+    colors: { primary: "#FF263F", secondary: "#FFFFFF", accent: "#FFE300", dark: "#080204" },
+    lane_pattern_easy: [0, 2, 5, 7, 4, 1, 3, 6, 0, 4, 2, 6],
+    lane_pattern_hard: [0, 4, 2, 6, 1, 5, 3, 7, 0, 5, 2, 7, 4, 1, 6, 3],
+    slides_easy: [
+      { path: [0, 4], shape: "straight" },
+      { path: [2, 6], shape: "v" },
+      { path: [7, 3], shape: "arc_ccw", curve: 0.62 },
+    ],
+    slides_hard: [
+      { path: [0, 4], shape: "cross" },
+      { path: [7, 2, 5], shape: "zigzag" },
+      { path: [1, 6], shape: "hook", curve: 0.8 },
+      { path: [3, 0], shape: "arc_cw", curve: 0.78 },
+    ],
+    easy: {
+      approach: 1.14, hit_window: 0.24, perfect_window: 0.09, step_beats: 2.0,
+      slide_every: 9, hold_every: 12, double_every: 0, slide_beats: 4.0, hold_beats: 4.0,
+      tap_scale: 1.08, star_scale: 1.08, hold_width: 1.1,
+      background_intensity: 0.13, background_speed: 0.14, jitter: 0.015,
+    },
+    hard: {
+      approach: 0.84, hit_window: 0.16, perfect_window: 0.063, step_beats: 0.75,
+      slide_every: 6, hold_every: 9, double_every: 5, double_distance: 4, slide_beats: 3.0, hold_beats: 3.0,
+      tap_scale: 0.96, star_scale: 1.0, hold_width: 0.95,
+      background_intensity: 0.23, background_speed: 0.3, jitter: 0.02,
+    },
+  },
+];
+
+/* Duração que a máquina passa para a fábrica: AudioStreamMP3 calcula
+   amostras ÷ (taxa × canais) em float de 32 bits. A conta é refeita
+   aqui com a mesma precisão porque o fim da fase (duração − 2,2 s) cai
+   a poucos milissegundos de uma batida na Paper Moon. */
+function duracaoNaMaquina(musica) {
+  return Math.fround(Math.fround(musica.amostras * 2) / Math.fround(musica.taxa * 2));
+}
+
+/* ======================================================================
+   O SORTEADOR DO GODOT — RandomNumberGenerator (RandomPCG)
+
+   PCG32 (pcg32_srandom_r / pcg32_random_r) com o incremento padrão do
+   Godot, e o randf() de random_pcg.h: um sorteio dá o expoente (zeros à
+   esquerda), outro a mantissa com o primeiro e o último bit ligados,
+   convertida para float de 32 bits. Mesma semente e mesma ordem de
+   chamadas = mesmos números que a máquina sorteia. BigInt só roda na
+   montagem da fase (umas centenas de sorteios), nunca por quadro.
+   ====================================================================== */
+const PCG_MULT = 6364136223846793005n;
+const PCG_INC = 1442695040888963407n; // PCG_DEFAULT_INC_64
+const MASCARA_64 = (1n << 64n) - 1n;
+
+function sorteadorGodot(sementeInicial) {
+  let estado = 0n;
+  const incremento = ((PCG_INC << 1n) | 1n) & MASCARA_64;
+  function proximo() {
+    const antigo = estado;
+    estado = (antigo * PCG_MULT + incremento) & MASCARA_64;
+    const misturado = Number((((antigo >> 18n) ^ antigo) >> 27n) & 0xffffffffn);
+    const giro = Number(antigo >> 59n);
+    return ((misturado >>> giro) | (misturado << ((32 - giro) & 31))) >>> 0;
+  }
+  proximo();
+  estado = (estado + BigInt(sementeInicial)) & MASCARA_64;
+  proximo();
+  return {
+    randf() {
+      const expoente = proximo();
+      if (expoente === 0) return 0;
+      const mantissa = Math.fround((proximo() | 0x80000001) >>> 0);
+      return mantissa * Math.pow(2, -32 - Math.clz32(expoente));
+    },
+  };
+}
+
+/* ======================================================================
+   O RITMO DA MÚSICA — rhythm_profile.gd
+   ====================================================================== */
+const BATIDAS_POR_COMPASSO = 4;
+
+function limitar(v, a, b) {
+  return Math.min(b, Math.max(a, v));
+}
+
+// Dobra ou parte o BPM até ele cair entre 88 e 178 (musical_bpm).
+function bpmMusical(bruto) {
+  let v = Math.max(bruto, 1);
+  for (let g = 0; v < 88 && g < 6; g++) v *= 2;
+  for (let g = 0; v > 178 && g < 6; g++) v *= 0.5;
+  return v;
+}
+
+/* Perfil da dificuldade: derivado do BPM e, por cima, o que o JSON da
+   música trouxer (o JSON manda, como em RHYTHM.build). */
+function perfilRitmo(musica, dificil) {
+  const bpm = bpmMusical(Math.max(musica.bpm, 1));
+  const batida = 60 / bpm;
+  const janela = limitar(batida * (dificil ? 0.42 : 0.58), 0.15, 0.34);
+  const perfil = {
+    bpm,
+    beat: batida,
+    approach: dificil ? limitar(batida * 2.8, 0.66, 1.24) : limitar(batida * 3.4, 0.78, 1.58),
+    hit_window: janela,
+    perfect_window: limitar(janela * 0.38, 0.05, 0.13),
+    grid_beats: dificil ? 0.5 : 1.0,
+    bars_per_phrase: 4,
+    slide_beats: dificil ? 4.0 : 5.0,
+    hold_beats: dificil ? 3.5 : 4.5,
+    double_distance: 4,
+  };
+  return Object.assign(perfil, dificil ? musica.hard : musica.easy);
+}
+
+/* ======================================================================
+   A FASE — chart_factory_v9.gd, na mesma ordem de sorteios
    ====================================================================== */
 
-/* Passos de faixa do rhythm_profile.gd: o normal é andar um botão por
-   nota, com saltos curtos de vez em quando — a mão passeia pela mesa em
-   vez de atravessá-la a cada nota. */
-const PASSOS_FACIL = [1, 1, -1, 2, 1, -1, -1, 2, 1, 1, -2, 1, 1, -1, 2, -1];
-const PASSOS_DIFICIL = [1, 1, 2, -1, 1, 1, -2, 1, 1, 3, -1, -1, 1, 2, -1, 1, 1, -2, -1, 1, 2, 1, -1, 1];
-
+// Arquétipos de frase (PHRASE_*).
 const CORRIDA = 0;
 const QUEBRA = 1;
 const VIRADA = 2;
 const PAR = 3;
 const MISTO = 4;
-const RESPIRO = 5;
-const FINAL = 6;
 
-/* No original o arquétipo de cada frase é sorteado. Aqui a música é
-   composta junto com a fase, então cada seção recebe o arquétipo que
-   combina com ela: o break (sem bumbo) ganha os gestos longos, o drop
-   ganha contratempo e par de mãos. As notas dentro da frase continuam
-   sorteadas com semente fixa, como lá. Especiais: [tipo, batida da frase]. */
-const FRASES = [
-  { compasso: 2, compassos: 4, tipo: CORRIDA, dificil: false, especiais: [] },
-  { compasso: 6, compassos: 4, tipo: QUEBRA, dificil: false, especiais: [[HOLD, 12]] },
-  { compasso: 10, compassos: 4, tipo: VIRADA, dificil: false, especiais: [[SLIDE, 12]] },
-  { compasso: 14, compassos: 4, tipo: MISTO, dificil: true, especiais: [[HOLD, 14]] },
-  { compasso: 18, compassos: 4, tipo: RESPIRO, dificil: false, especiais: [[SLIDE, 4], [HOLD, 12]] },
-  { compasso: 22, compassos: 4, tipo: CORRIDA, dificil: true, especiais: [] },
-  { compasso: 26, compassos: 4, tipo: PAR, dificil: true, especiais: [[SLIDE, 12]] },
-  { compasso: 30, compassos: 1.25, tipo: FINAL, dificil: false, especiais: [] },
-];
-
-function semente(a) {
-  // mulberry32: pequeno, rápido e igual em todo navegador
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
+// _on_subdivision: testa os dois lados do resto (3,9999 também é batida).
 function naSubdivisao(batida, passo) {
   const resto = ((batida % passo) + passo) % passo;
   return resto < 0.0005 || resto > passo - 0.0005;
 }
 
-/* _slot_is_active do chart_factory_v9.gd. O fácil só pisa nas batidas
-   (1 e 3 sempre); o "difícil" daqui anda em colcheias, mas com o
-   contratempo um pouco mais raro, porque a mesa virou tela de celular. */
-function slotAtivo(aleatorio, frase, batidaNoCompasso) {
-  const naBatida = naSubdivisao(batidaNoCompasso, 1);
-  const forte = naSubdivisao(batidaNoCompasso, 2);
-  if (frase.tipo === RESPIRO) return forte;
-  if (frase.tipo === FINAL) return naBatida;
-  if (!frase.dificil) {
-    if (!naBatida) return false;
-    if (forte || frase.tipo === CORRIDA) return true;
-    return aleatorio() < 0.45;
-  }
-  if (naBatida) return true;
-  if (frase.tipo === CORRIDA) return aleatorio() < 0.62 * 0.7;
-  if (frase.tipo === PAR) return aleatorio() < 0.3 * 0.7;
-  return aleatorio() < 0.42 * 0.7;
+// _density_weight: "um a cada N" do JSON vira peso no sorteio da frase.
+function pesoDensidade(cada, slotsPorFrase, reserva) {
+  const n = Math.trunc(cada || 0);
+  if (n <= 0) return reserva;
+  return limitar(slotsPorFrase / n, 0.35, 1.6);
 }
 
+// _pick_archetype: sorteio ponderado; repetir o anterior paga 0,28.
+function sortearArquetipo(sorteio, dificil, frase, anterior, pesoArrasto, pesoHold, pesoPar) {
+  if (frase === 0) return CORRIDA; // a primeira frase é corrida limpa, sem sorteio
+  const pesos = [1.4, pesoHold, pesoArrasto, pesoPar, dificil ? 0.55 : 0.38];
+  if (anterior >= 0 && anterior < pesos.length) pesos[anterior] *= 0.28;
+  let total = 0;
+  for (let i = 0; i < pesos.length; i++) total += pesos[i];
+  if (total <= 0) return CORRIDA;
+  const rolagem = sorteio.randf() * total;
+  let acumulado = 0;
+  for (let i = 0; i < pesos.length; i++) {
+    acumulado += pesos[i];
+    if (rolagem <= acumulado) return i;
+  }
+  return CORRIDA;
+}
+
+/* _slot_is_active: o fácil só pisa nas batidas (1 e 3 sempre, 2 e 4 na
+   corrida e às vezes nas outras frases); o difícil anda em colcheias. */
+function slotAtivo(sorteio, dificil, arquetipo, batidaNoCompasso) {
+  const naBatida = naSubdivisao(batidaNoCompasso, 1);
+  const forte = naSubdivisao(batidaNoCompasso, 2);
+  if (!dificil) {
+    if (!naBatida) return false;
+    if (forte) return true;
+    if (arquetipo === CORRIDA) return true;
+    return sorteio.randf() < 0.45;
+  }
+  if (naBatida) return true;
+  if (arquetipo === CORRIDA) return sorteio.randf() < 0.62;
+  if (arquetipo === PAR) return sorteio.randf() < 0.3;
+  return sorteio.randf() < 0.42;
+}
+
+// is_equal_approx do Godot (CMP_EPSILON relativo, com piso).
+function quaseIgual(a, b) {
+  if (a === b) return true;
+  const tolerancia = Math.max(0.00001 * Math.abs(a), 0.00001);
+  return Math.abs(a - b) < tolerancia;
+}
+
+function montarFase(musica, dificuldade, duracao) {
+  const dificil = dificuldade === "hard";
+  const perfil = perfilRitmo(musica, dificil);
+  const batida = Math.max(perfil.beat, 0.05);
+  const compasso = batida * BATIDAS_POR_COMPASSO;
+  const grade = Math.max(perfil.grid_beats, 0.25);
+  const compassosPorFrase = Math.max(Math.trunc(perfil.bars_per_phrase), 1);
+  const inicio = Math.max(musica.chart_start, 3.2);
+  const fim = Math.max(inicio + compasso, duracao - 2.2);
+
+  let faixas = dificil ? musica.lane_pattern_hard : musica.lane_pattern_easy;
+  if (!faixas || !faixas.length) faixas = [0, 2, 4, 6, 1, 3, 5, 7];
+  const arrastos = (dificil ? musica.slides_hard : musica.slides_easy) || [];
+
+  // Semente separada por dificuldade, como na máquina.
+  const sorteio = sorteadorGodot(Math.abs(Math.trunc(musica.seed)) * 7919 + (dificil ? 104729 : 15485863));
+
+  const batidasArrasto = Math.max(perfil.slide_beats, 1);
+  const batidasHold = Math.max(perfil.hold_beats, 1);
+  // Par de mãos só com as lanes em lados opostos da mesa (3 a 5 de distância).
+  const distanciaPar = limitar(Math.trunc(perfil.double_distance), 3, 5);
+
+  const slotsPorFraseReal = (BATIDAS_POR_COMPASSO / grade) * compassosPorFrase;
+  const pesoArrasto = pesoDensidade(perfil.slide_every, slotsPorFraseReal, 1.3);
+  const pesoHold = pesoDensidade(perfil.hold_every, slotsPorFraseReal, 1.1);
+  const pesoPar = dificil ? pesoDensidade(perfil.double_every, slotsPorFraseReal, 1.2) : 0;
+  let anterior = -1;
+
+  const notas = [];
+  let indiceNota = 0;
+  let indiceArrasto = 0;
+  let frase = 0;
+
+  // A grade é contada em slots inteiros, nunca somando segundos.
+  const slotsCompasso = Math.max(Math.round(BATIDAS_POR_COMPASSO / grade), 1);
+  const slotsFrase = slotsCompasso * compassosPorFrase;
+  // Gesto longo bloqueia tudo até o fim dele mais um respiro, contado em
+  // slot ABSOLUTO (vale também para a frase seguinte).
+  const slotsRespiro = Math.max(Math.round((dificil ? 0.5 : 1.0) / grade), 1);
+  let ocupadoAte = -1;
+
+  for (;;) {
+    const inicioFrase = inicio + compasso * (compassosPorFrase * frase);
+    if (inicioFrase >= fim) break;
+
+    const arquetipo = sortearArquetipo(sorteio, dificil, frase, anterior, pesoArrasto, pesoHold, pesoPar);
+    anterior = arquetipo;
+
+    // Jogada especial: último compasso da frase, batida 1 ou 3.
+    const slotEspecial = slotsFrase - slotsCompasso + (sorteio.randf() < 0.6 ? 0 : Math.round(2 / grade));
+    let especialFeito = false;
+
+    let slot = 0;
+    while (slot < slotsFrase) {
+      const absoluto = frase * slotsFrase + slot;
+      if (absoluto < ocupadoAte) { slot++; continue; }
+
+      const batidasNaFrase = slot * grade;
+      const t = inicioFrase + batida * batidasNaFrase;
+      if (t >= fim) break;
+      const batidaNoCompasso = ((batidasNaFrase % BATIDAS_POR_COMPASSO) + BATIDAS_POR_COMPASSO) % BATIDAS_POR_COMPASSO;
+
+      if (!slotAtivo(sorteio, dificil, arquetipo, batidaNoCompasso)) { slot++; continue; }
+
+      const faixa = ((Math.trunc(faixas[indiceNota % faixas.length]) % FAIXAS) + FAIXAS) % FAIXAS;
+      const querEspecial = !especialFeito && slot >= slotEspecial;
+
+      if (querEspecial && (arquetipo === VIRADA || arquetipo === MISTO) && arrastos.length) {
+        const molde = arrastos[indiceArrasto % arrastos.length];
+        if (molde.path && molde.path.length >= 2) {
+          const nota = {
+            tipo: SLIDE, t, fim: Math.min(t + batida * batidasArrasto, fim + batida),
+            faixa: molde.path[0], cor: indiceNota % 3,
+            caminho: molde.path.slice(), forma: molde.shape || "straight",
+            curva: molde.curve === undefined ? 0.55 : molde.curve,
+            estiloSeta: indiceArrasto % 4, estiloEstrela: (indiceArrasto * 3 + 1) % 4,
+          };
+          montarCaminho(nota);
+          notas.push(nota);
+          indiceArrasto++;
+          indiceNota++;
+          especialFeito = true;
+          const slotsArrasto = Math.max(Math.ceil(batidasArrasto / grade), 1);
+          ocupadoAte = absoluto + slotsArrasto + slotsRespiro;
+          slot += slotsArrasto;
+          continue;
+        }
+      }
+
+      if (querEspecial && (arquetipo === QUEBRA || arquetipo === MISTO)) {
+        notas.push({ tipo: HOLD, t, fim: Math.min(t + batida * batidasHold, fim + batida), faixa, cor: indiceNota % 3 });
+        indiceNota++;
+        especialFeito = true;
+        const slotsHold = Math.max(Math.ceil(batidasHold / grade), 1);
+        ocupadoAte = absoluto + slotsHold + slotsRespiro;
+        slot += slotsHold;
+        continue;
+      }
+
+      notas.push({ tipo: TAP, t, fim: t, faixa, cor: indiceNota % 3 });
+      // Par de mãos: só na frase de par (só existe no difícil) e na batida forte.
+      if (arquetipo === PAR && naSubdivisao(batidaNoCompasso, 2) && sorteio.randf() < 0.72) {
+        notas.push({ tipo: TAP, t, fim: t, faixa: (faixa + distanciaPar) % FAIXAS, cor: (indiceNota + 1) % 3 });
+      }
+      indiceNota++;
+      slot++;
+    }
+    frase++;
+  }
+
+  // Mesma ordem do sort_custom: tempo, e no mesmo instante a lane menor
+  // (arrasto não tem "lane" no evento e conta como 0).
+  notas.sort((a, b) => {
+    if (quaseIgual(a.t, b.t)) return (a.tipo === SLIDE ? 0 : a.faixa) - (b.tipo === SLIDE ? 0 : b.faixa);
+    return a.t < b.t ? -1 : 1;
+  });
+  return notas;
+}
+
+/* ======================================================================
+   O TRILHO DO ARRASTO — path_builder.gd (formas e número de amostras)
+   ====================================================================== */
 function posicaoFaixa(faixa) {
   const a = -Math.PI / 2 + (Math.PI * 2 * faixa) / FAIXAS;
   return [CX + Math.cos(a) * R_ANEL, CY + Math.sin(a) * R_ANEL];
 }
 
-/* Trilho do arrasto amostrado em pontos (path_builder.gd). */
-function montarCaminho(nota) {
-  const ancoras = nota.caminho.map(posicaoFaixa);
+function polilinha(ancoras, passos) {
   const pts = [];
-  if (nota.forma === "arco") {
-    // curva quadrática que estufa para fora, no mesmo sentido da mesa
-    const a = ancoras[0];
-    const b = ancoras[ancoras.length - 1];
-    const mx = (a[0] + b[0]) / 2;
-    const my = (a[1] + b[1]) / 2;
-    let nx = -(b[1] - a[1]);
-    let ny = b[0] - a[0];
-    const l = Math.hypot(nx, ny) || 1;
-    nx /= l; ny /= l;
-    if (nx * (mx - CX) + ny * (my - CY) < 0) { nx = -nx; ny = -ny; }
-    const cx = mx + nx * R * nota.curva * 0.6;
-    const cy = my + ny * R * nota.curva * 0.6;
-    for (let i = 0; i <= 42; i++) {
-      const t = i / 42;
-      const u = 1 - t;
-      pts.push([u * u * a[0] + 2 * u * t * cx + t * t * b[0], u * u * a[1] + 2 * u * t * cy + t * t * b[1]]);
-    }
-  } else {
-    const n = ancoras.length > 2 ? 14 : 42;
-    for (let k = 0; k < ancoras.length - 1; k++) {
-      const a = ancoras[k];
-      const b = ancoras[k + 1];
-      for (let i = k === 0 ? 0 : 1; i <= n; i++) pts.push([a[0] + (b[0] - a[0]) * (i / n), a[1] + (b[1] - a[1]) * (i / n)]);
-    }
+  for (let s = 0; s < ancoras.length - 1; s++) {
+    const a = ancoras[s];
+    const b = ancoras[s + 1];
+    for (let i = 0; i < passos; i++) pts.push([a[0] + (b[0] - a[0]) * (i / passos), a[1] + (b[1] - a[1]) * (i / passos)]);
   }
+  pts.push(ancoras[ancoras.length - 1]);
+  return pts;
+}
+
+function quadratica(a, b, c, passos) {
+  const pts = [];
+  for (let i = 0; i <= passos; i++) {
+    const t = i / passos;
+    const u = 1 - t;
+    pts.push([a[0] * u * u + b[0] * 2 * u * t + c[0] * t * t, a[1] * u * u + b[1] * 2 * u * t + c[1] * t * t]);
+  }
+  return pts;
+}
+
+function cubica(a, b, c, d, passos) {
+  const pts = [];
+  for (let i = 0; i <= passos; i++) {
+    const t = i / passos;
+    const u = 1 - t;
+    pts.push([
+      a[0] * u * u * u + b[0] * 3 * u * u * t + c[0] * 3 * u * t * t + d[0] * t * t * t,
+      a[1] * u * u * u + b[1] * 3 * u * u * t + c[1] * 3 * u * t * t + d[1] * t * t * t,
+    ]);
+  }
+  return pts;
+}
+
+// _arc_control: o arco estufa para fora do disco (curva negativa: para dentro).
+function controleArco(a, b, curva) {
+  const mx = (a[0] + b[0]) / 2;
+  const my = (a[1] + b[1]) / 2;
+  let nx = -(b[1] - a[1]);
+  let ny = b[0] - a[0];
+  const l = Math.hypot(nx, ny) || 1;
+  nx /= l; ny /= l;
+  if (nx * (mx - CX) + ny * (my - CY) < 0) { nx = -nx; ny = -ny; }
+  return [mx + nx * R * curva * 0.6, my + ny * R * curva * 0.6];
+}
+
+function montarCaminho(nota) {
+  const faixas = nota.caminho;
+  const ancoras = faixas.map(posicaoFaixa);
+  const a = ancoras[0];
+  const b = ancoras[ancoras.length - 1];
+  const curva = limitar(nota.curva, -1, 1);
+  let pts;
+  if (nota.forma === "cross") {
+    pts = polilinha([a, [CX, CY], b], 18);
+  } else if (nota.forma === "v") {
+    // vértice a 0,24 do raio, na direção do meio da corda (ou para cima)
+    let dx = (a[0] + b[0]) / 2 - CX;
+    let dy = (a[1] + b[1]) / 2 - CY;
+    const l = Math.hypot(dx, dy);
+    if (l > 0) { dx /= l; dy /= l; }
+    if (dx * dx + dy * dy < 0.01) { dx = 0; dy = -1; }
+    pts = polilinha([a, [CX + dx * R * 0.24, CY + dy * R * 0.24], b], 18);
+  } else if (nota.forma === "arc_cw" || nota.forma === "arc_ccw") {
+    const c = controleArco(a, b, nota.forma === "arc_cw" ? Math.abs(curva) : -Math.abs(curva));
+    pts = quadratica(a, c, b, 42);
+  } else if (nota.forma === "hook") {
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const px = -(b[1] - a[1]) / l;
+    const py = (b[0] - a[0]) / l;
+    const c1 = [a[0] + (CX - a[0]) * 0.6 + px * R * curva * 0.35, a[1] + (CY - a[1]) * 0.6 + py * R * curva * 0.35];
+    const c2 = [b[0] + (CX - b[0]) * 0.42 - px * R * curva * 0.2, b[1] + (CY - b[1]) * 0.42 - py * R * curva * 0.2];
+    pts = cubica(a, c1, c2, b, 48);
+  } else if (nota.forma === "zigzag" || ancoras.length > 2) {
+    pts = polilinha(ancoras, 14);
+  } else {
+    pts = polilinha([a, b], 42);
+  }
+
   const n = pts.length;
   nota.px = new Float32Array(n);
   nota.py = new Float32Array(n);
@@ -210,7 +583,8 @@ function montarCaminho(nota) {
     nota.acum[i] = total;
   }
   nota.total = total;
-  // fração do trilho em que cada âncora (faixa) fica: o teclado anda por elas
+  // O progresso da mecânica é por índice de amostra (nearest_progress);
+  // cada âncora (faixa) guarda o seu, para o teclado andar por elas.
   nota.ancoras = ancoras.map((p) => {
     let melhor = 0;
     let menor = Infinity;
@@ -218,126 +592,59 @@ function montarCaminho(nota) {
       const d = Math.hypot(nota.px[i] - p[0], nota.py[i] - p[1]);
       if (d < menor) { menor = d; melhor = i; }
     }
-    return nota.acum[melhor] / total;
+    return melhor / Math.max(n - 1, 1);
   });
 }
 
-function montarFase() {
-  const aleatorio = semente(1001 * 7919 + 15485863);
-  const notas = [];
-  const base = 1001 % FAIXAS;
-  // Desenhos de arrasto do rhythm_profile.gd (fácil, fácil, difícil):
-  // todos avançam no mesmo sentido de rotação, nenhum na contramão.
-  const arrastos = [
-    { caminho: [base, (base + 4) % 8], forma: "reta", curva: 0 },
-    { caminho: [(base + 2) % 8, (base + 5) % 8], forma: "arco", curva: 0.38 },
-    { caminho: [base, (base + 2) % 8, (base + 4) % 8], forma: "zigue", curva: 0 },
-  ];
-  let faixa = base;
-  const direcao = 1001 % 2 === 0 ? 1 : -1;
-  let passoFacil = 0;
-  let passoDificil = 0;
-  let indiceNota = 0;
-  let indiceArrasto = 0;
-  let ocupadoAte = -1; // gesto longo em andamento: nada mais é cobrado
-
-  for (const frase of FRASES) {
-    const inicio = frase.compasso * COMPASSO;
-    const grade = frase.dificil ? 0.5 : 1;
-    const slots = Math.round((frase.compassos * 4) / grade);
-    const feitos = frase.especiais.map(() => false);
-    const recuperacao = frase.dificil ? 0.5 : 1;
-
-    for (let slot = 0; slot < slots; slot++) {
-      const batidas = slot * grade;
-      const t = inicio + batidas * BATIDA;
-      if (t >= DURACAO - 1) break;
-      if (t < ocupadoAte - 1e-6) continue;
-
-      // a jogada especial entra na primeira posição livre depois da reservada
-      const k = frase.especiais.findIndex((e, i) => !feitos[i] && batidas >= e[1]);
-      if (k >= 0) {
-        feitos[k] = true;
-        if (frase.especiais[k][0] === HOLD) {
-          const dur = (frase.dificil ? 3.5 : 4.5) * BATIDA;
-          notas.push({ tipo: HOLD, t, fim: t + dur, faixa, cor: indiceNota % 3 });
-          ocupadoAte = t + dur + recuperacao * BATIDA;
-        } else {
-          const molde = arrastos[indiceArrasto % arrastos.length];
-          const dur = (indiceArrasto >= 2 ? 4 : 5) * BATIDA;
-          const nota = {
-            tipo: SLIDE, t, fim: t + dur, faixa: molde.caminho[0], cor: indiceNota % 3,
-            caminho: molde.caminho, forma: molde.forma, curva: molde.curva,
-            estiloSeta: indiceArrasto % 4, estiloEstrela: (indiceArrasto * 3 + 1) % 4,
-          };
-          montarCaminho(nota);
-          notas.push(nota);
-          indiceArrasto++;
-          ocupadoAte = t + dur + recuperacao * BATIDA;
-        }
-        indiceNota++;
-        continue;
-      }
-
-      if (!slotAtivo(aleatorio, frase, batidas % 4)) continue;
-
-      notas.push({ tipo: TAP, t, fim: t, faixa, cor: indiceNota % 3 });
-      // Par de mãos: faixas opostas (distância 4), só na batida forte;
-      // a última nota da música também vem em par, em cima do prato.
-      const ultimo = frase.tipo === FINAL && slot === slots - 1;
-      if ((frase.tipo === PAR && naSubdivisao(batidas % 4, 2) && aleatorio() < 0.72) || ultimo) {
-        notas.push({ tipo: TAP, t, fim: t, faixa: (faixa + 4) % 8, cor: (indiceNota + 1) % 3 });
-      }
-      indiceNota++;
-      const passo = frase.dificil
-        ? PASSOS_DIFICIL[passoDificil++ % PASSOS_DIFICIL.length]
-        : PASSOS_FACIL[passoFacil++ % PASSOS_FACIL.length];
-      faixa = (faixa + passo * direcao + 16) % 8;
-    }
-  }
-  notas.sort((a, b) => a.t - b.t || a.faixa - b.faixa);
-  return notas;
+/* ---------- cores das músicas ---------- */
+function hexParaRgb(hex) {
+  const v = parseInt(hex.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 }
 
-/* ======================================================================
-   A TRILHA — sequenciador de 16 passos por compasso
-   ====================================================================== */
-const INTRO = 0;
-const VERSO = 1;
-const REFRAO = 2;
-const PAUSA = 3;
-const QUEDA = 4;
-
-function secao(c) {
-  if (c < 2) return INTRO;
-  if (c < 10) return VERSO;
-  if (c < 18) return REFRAO;
-  if (c < 22) return PAUSA;
-  if (c < 30) return QUEDA;
-  return 5; // saída
+function misturar(a, b, k) {
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 }
 
-// vi–IV–I–V em lá menor: Am, F, C, G. Cada seção começa no Am.
-const ACORDES = [
-  { baixo: 45, notas: [57, 60, 64] },
-  { baixo: 41, notas: [53, 57, 60] },
-  { baixo: 48, notas: [60, 64, 67] },
-  { baixo: 43, notas: [55, 59, 62] },
-];
-const acordeDo = (c) => ACORDES[(c + 2) & 3];
+function textoRgb(c) {
+  return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+}
 
-// Melodia de 4 compassos: [passo, nota MIDI, duração em passos].
-const MELODIA = new Int8Array(64);
-const DURACAO_MELODIA = new Int8Array(64);
-[
-  [0, 69, 3], [3, 72, 3], [6, 76, 2], [8, 74, 2], [10, 72, 2], [12, 69, 4],
-  [16, 69, 2], [18, 72, 2], [20, 72, 2], [22, 74, 2], [24, 72, 3], [27, 69, 3], [30, 67, 2],
-  [32, 76, 3], [35, 79, 3], [38, 76, 2], [40, 74, 2], [42, 72, 2], [44, 76, 4],
-  [48, 74, 2], [50, 71, 2], [52, 67, 4], [56, 74, 2], [58, 76, 2], [60, 74, 4],
-].forEach(([p, n, d]) => { MELODIA[p] = n; DURACAO_MELODIA[p] = d; });
-const ARPEJO = [0, 1, 2, 1];
+/* Tema de cada tela: a capa e a escolha usam o rosa/ciano da marca Hit
+   Music; durante a música vale a paleta dela (colors do catálogo), como
+   na mesa — borda do HUD, brilho do anel, poeira e cenário. */
+const TEMA_PADRAO = {
+  id: "hit", primaria: COR_TEMA, destaque: COR_TEMA2, meio: "#8a5cff", clara: "#ff8ae8", brilho: ROSA,
+  fundo: ["#0d0326", "#070118", "#020007"], disco: ["#1c0a3d", "#0c0424", "#05010f"],
+};
+const RGB_BRILHOS = RGB.concat(MUSICAS.map((m) => hexParaRgb(m.colors.primary)));
+const TEMAS = MUSICAS.map((m, k) => {
+  const p = hexParaRgb(m.colors.primary);
+  const d = hexParaRgb(m.colors.accent);
+  const e = hexParaRgb(m.colors.dark);
+  const branco = [255, 255, 255];
+  return {
+    id: m.id,
+    primaria: m.colors.primary,
+    destaque: m.colors.accent,
+    meio: textoRgb(misturar(p, d, 0.5)),
+    clara: textoRgb(misturar(p, branco, 0.45)),
+    brilho: RGB.length + k,
+    fundo: [textoRgb(misturar([0, 0, 0], p, 0.1)), textoRgb(misturar([0, 0, 0], p, 0.04)), "#020007"],
+    disco: [textoRgb(misturar(e, p, 0.16)), textoRgb(misturar(e, p, 0.06)), textoRgb(e)],
+    // lâminas do carmine: primária puxando para o destaque (slash % 3 × 0,34)
+    laminas: [0, 0.34, 0.68].map((x) => textoRgb(misturar(p, d, x))),
+    // placas do favo: primária clareando para a secundária (branco)
+    placas: [0.12, 0.3, 0.48].map((x) => textoRgb(misturar(p, branco, x))),
+  };
+});
 
-const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
+// Textos fixos de cada música, montados uma vez (nada de string nova por quadro).
+const TEXTOS_MUSICA = MUSICAS.map((m, k) => ({
+  faixa: `TRACK ${String(k + 1).padStart(2, "0")}`,
+  andamento: `${m.bpm} BPM  •  FÁCIL`,
+  nivel: `FÁCIL • ${m.bpm} BPM`,
+}));
 
 /* ======================================================================
    O JOGO
@@ -355,17 +662,15 @@ export default {
 
   criar(api) {
     const img = api.img;
-    const NOTAS = montarFase();
-    const TOTAL_NOTAS = NOTAS.length;
-    const PRIMEIRA_NOTA = NOTAS[0].t;
     const MARCAS = Array.from({ length: FAIXAS }, (_, i) => posicaoFaixa(i));
     const temMouse = !!(window.matchMedia && window.matchMedia("(hover: hover)").matches);
+    const botaoSom = document.querySelector("[data-console-som]");
 
     /* ---------- brilhos pré-desenhados (um por cor) ----------
        Gradiente radial custa caro se for criado a cada quadro; um
        canvas pequeno pintado uma vez e esticado com drawImage sai de
        graça e dá o mesmo "neon". */
-    const BRILHOS = RGB.map(([r, g, b]) => {
+    const BRILHOS = RGB_BRILHOS.map(([r, g, b]) => {
       const c = document.createElement("canvas");
       c.width = c.height = 64;
       const x = c.getContext("2d");
@@ -383,34 +688,66 @@ export default {
       return `rgb(${Math.round(r + (255 - r) * k)},${Math.round(g + (255 - g) * k)},${Math.round(b + (255 - b) * k)})`;
     }));
 
+    // Gradientes de cada tema, criados uma vez na primeira vez que aparecem.
+    const gradientesPorTema = {};
     let gradientes = null;
-    function prepararGradientes(ctx) {
+    function prepararGradientes(ctx, tema) {
+      gradientes = gradientesPorTema[tema.id];
       if (gradientes) return;
       const fundo = ctx.createLinearGradient(0, 0, 0, ALTURA);
-      fundo.addColorStop(0, "#0d0326");
-      fundo.addColorStop(0.45, "#070118");
-      fundo.addColorStop(1, "#020007");
+      fundo.addColorStop(0, tema.fundo[0]);
+      fundo.addColorStop(0.45, tema.fundo[1]);
+      fundo.addColorStop(1, tema.fundo[2]);
       const disco = ctx.createRadialGradient(CX, CY, R * 0.1, CX, CY, R);
-      disco.addColorStop(0, "#1c0a3d");
-      disco.addColorStop(0.7, "#0c0424");
-      disco.addColorStop(1, "#05010f");
+      disco.addColorStop(0, tema.disco[0]);
+      disco.addColorStop(0.7, tema.disco[1]);
+      disco.addColorStop(1, tema.disco[2]);
       const borda = ctx.createLinearGradient(HUD.x, 0, HUD.x + HUD.w, 0);
-      borda.addColorStop(0, COR_TEMA);
-      borda.addColorStop(0.5, "#8a5cff");
-      borda.addColorStop(1, COR_TEMA2);
+      borda.addColorStop(0, tema.primaria);
+      borda.addColorStop(0.5, tema.meio);
+      borda.addColorStop(1, tema.destaque);
       const barras = ctx.createLinearGradient(HUD.x, 0, HUD.x + HUD.w, 0);
-      barras.addColorStop(0, "#ff3df2");
-      barras.addColorStop(0.5, "#9a6bff");
-      barras.addColorStop(1, "#3ff0ff");
-      gradientes = { fundo, disco, borda, barras };
+      barras.addColorStop(0, tema.primaria);
+      barras.addColorStop(0.5, tema.meio);
+      barras.addColorStop(1, tema.destaque);
+      gradientes = gradientesPorTema[tema.id] = { fundo, disco, borda, barras };
+    }
+
+    /* Favo da Paper Moon (moon_hive): as placas não mudam de lugar, então
+       o centro e a profundidade de cada uma são calculados uma vez só. */
+    const RAIO_UNIVERSO = R * 0.86; // UNIVERSE_INNER_RATIO: nada vaza do disco
+    const CELULA = RAIO_UNIVERSO * 0.185;
+    const FAVO = [];
+    for (let coluna = -4; coluna <= 4; coluna++) {
+      for (let linha = -4; linha <= 4; linha++) {
+        const desvio = ((coluna % 2) + 2) % 2 === 1 ? CELULA * 0.866 : 0;
+        const x = CX + coluna * CELULA * 1.5;
+        const y = CY + linha * CELULA * 1.732 + desvio;
+        const d = Math.hypot(x - CX, y - CY);
+        if (d > RAIO_UNIVERSO - CELULA * 0.55) continue;
+        FAVO.push({ x, y, profundidade: 1 - limitar(d / RAIO_UNIVERSO, 0, 1), fase: coluna * 0.8 + linha * 0.6 });
+      }
     }
 
     /* ======================================================================
-       SOM — trilha própria, num AudioContext só do jogo
+       SOM — a faixa de verdade num AudioContext só do jogo
+
+       fonte → energia (volume que erra/acerta mexe) → analisador (barras
+       do HUD) → saída (mudo do console) → alto-falante. O mudo zera só a
+       saída: o contexto continua rodando porque ele é o relógio do jogo.
        ====================================================================== */
     const Contexto = window.AudioContext || window.webkitAudioContext;
-    const botaoSom = document.querySelector("[data-console-som]");
-    const audio = { ctx: null, mestre: null, bus: null, ruido: null, cursor: 0, ligado: true, checar: 0, deslocamento: null };
+    const audio = {
+      ctx: null, saida: null, energia: null, analisador: null, dados: null,
+      fonte: null, buffer: null, bufferId: null, duracao: 0,
+      inicio: 0, latencia: 0, desvio: null, ligado: true,
+      tocando: false, acabou: false, suspensoPorNos: false, travadoDesde: 0, ultimaRetomada: 0,
+    };
+    // Barras do HUD: 32 faixas de frequência em escala quase logarítmica.
+    const BARRAS = 32;
+    const espectro = new Float32Array(BARRAS);
+    const BORDAS_BARRAS = new Uint8Array(BARRAS + 1);
+    for (let i = 0; i <= BARRAS; i++) BORDAS_BARRAS[i] = Math.round(1 + 95 * Math.pow(i / BARRAS, 1.7)) + i;
 
     /* O console não expõe o mudo para o jogo. O botão dele, porém, diz o
        estado em aria-pressed (e o mesmo valor fica no localStorage); é o
@@ -420,300 +757,206 @@ export default {
       try { return window.localStorage.getItem("ls-jogos-som") !== "0"; } catch (erro) { return true; }
     }
 
+    function retomarContexto() {
+      const p = audio.ctx.resume();
+      if (p && p.catch) p.catch(() => {});
+    }
+
     // Só chamar a partir de um gesto (ou depois que a página já teve um):
     // é a regra dos navegadores para tocar som.
     function acordarAudio() {
-      if (!Contexto || !somLigado()) return;
+      if (!Contexto) return;
       if (!audio.ctx) {
-        try { audio.ctx = new Contexto(); } catch (erro) { return; }
+        try { audio.ctx = new Contexto(); } catch (erro) { audio.ctx = null; return; }
         const c = audio.ctx;
-        const compressor = c.createDynamicsCompressor();
-        compressor.threshold.value = -14;
-        compressor.ratio.value = 4;
-        audio.mestre = c.createGain();
-        audio.mestre.gain.value = 0.3; // trilha baixa: os sons do console vêm por cima
-        audio.mestre.connect(compressor).connect(c.destination);
-        const quadros = Math.floor(c.sampleRate);
-        audio.ruido = c.createBuffer(1, quadros, c.sampleRate);
-        const dados = audio.ruido.getChannelData(0);
-        for (let i = 0; i < quadros; i++) dados[i] = Math.random() * 2 - 1;
-        novoBus();
+        audio.ligado = somLigado();
+        audio.saida = c.createGain();
+        audio.saida.gain.value = audio.ligado ? VOLUME_MUSICA : 0;
+        audio.analisador = c.createAnalyser();
+        audio.analisador.fftSize = 256;
+        audio.analisador.smoothingTimeConstant = 0.72;
+        audio.dados = new Uint8Array(audio.analisador.frequencyBinCount);
+        audio.energia = c.createGain();
+        audio.energia.gain.value = Math.pow(10, VOLUME_MAX_DB / 20);
+        audio.energia.connect(audio.analisador);
+        audio.analisador.connect(audio.saida);
+        audio.saida.connect(c.destination);
+        medirLatencia();
       }
-      if (audio.ctx.state === "suspended") audio.ctx.resume().catch(() => {});
-    }
-
-    // Cada partida toca num "bus" novo: desligar o antigo cala na hora as
-    // notas que já estavam agendadas (o sequenciador agenda um pouco à frente).
-    function novoBus() {
-      if (!audio.ctx) return;
-      if (audio.bus) { try { audio.bus.disconnect(); } catch (erro) { /* já solto */ } }
-      audio.bus = audio.ctx.createGain();
-      audio.bus.gain.value = 1;
-      audio.bus.connect(audio.mestre);
-    }
-
-    function silenciar(segundos) {
-      if (!audio.ctx || !audio.bus) return;
-      const g = audio.bus.gain;
-      const agora = audio.ctx.currentTime;
-      g.cancelScheduledValues(agora);
-      g.setValueAtTime(g.value, agora);
-      g.linearRampToValueAtTime(0, agora + segundos);
-    }
-
-    let soVisual = false; // o mesmo roteiro alimenta o som e as barras do HUD
-    const espectro = new Float32Array(32);
-    function marcar(centro, largura, forca) {
-      const a = Math.max(0, Math.floor(centro - largura));
-      const b = Math.min(31, Math.ceil(centro + largura));
-      for (let i = a; i <= b; i++) {
-        const v = forca * (1 - Math.abs(i - centro) / (largura + 1));
-        if (v > espectro[i]) espectro[i] = v;
+      if (audio.ctx.state !== "running" && !document.hidden) {
+        audio.suspensoPorNos = false;
+        retomarContexto();
       }
     }
 
-    function ruido(quando, dur, volume, tipo, freq, q) {
+    // A máquina desconta a latência de saída da posição do player; aqui é
+    // a mesma conta com o que o navegador informa (base + saída).
+    function medirLatencia() {
       const c = audio.ctx;
-      const fonte = c.createBufferSource();
-      fonte.buffer = audio.ruido;
-      const f = c.createBiquadFilter();
-      f.type = tipo;
-      f.frequency.value = freq;
-      f.Q.value = q;
-      const g = c.createGain();
-      g.gain.setValueAtTime(volume, quando);
-      g.gain.exponentialRampToValueAtTime(0.0001, quando + dur);
-      fonte.connect(f).connect(g).connect(audio.bus);
-      fonte.start(quando, Math.random() * 0.5);
-      fonte.stop(quando + dur + 0.02);
-      return f;
+      if (!c) return;
+      audio.latencia = limitar((c.baseLatency || 0) + (c.outputLatency || 0), 0, LATENCIA_MAXIMA);
     }
 
-    function bumbo(q) {
-      if (soVisual) { marcar(2, 3, 1); return; }
-      const c = audio.ctx;
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.frequency.setValueAtTime(155, q);
-      o.frequency.exponentialRampToValueAtTime(46, q + 0.13);
-      g.gain.setValueAtTime(0.95, q);
-      g.gain.exponentialRampToValueAtTime(0.0001, q + 0.34);
-      o.connect(g).connect(audio.bus);
-      o.start(q);
-      o.stop(q + 0.36);
-    }
-
-    function palma(q, vol = 0.32) {
-      if (soVisual) { marcar(13, 4, 0.75); return; }
-      ruido(q, 0.03, vol, "bandpass", 1400, 0.9);
-      ruido(q + 0.011, 0.03, vol, "bandpass", 1400, 0.9);
-      ruido(q + 0.022, 0.18, vol, "bandpass", 1300, 0.8);
-    }
-
-    function chimbal(q, aberto, vol) {
-      if (soVisual) { marcar(28, 3, aberto ? 0.7 : 0.45 + vol); return; }
-      ruido(q, aberto ? 0.24 : 0.045, vol, "highpass", 7600, 0.7);
-    }
-
-    function baixo(q, midi, dur, vol = 0.3) {
-      if (soVisual) { marcar(5, 3, 0.85); return; }
-      const c = audio.ctx;
-      const f = c.createBiquadFilter();
-      f.type = "lowpass";
-      f.Q.value = 5;
-      f.frequency.setValueAtTime(1500, q);
-      f.frequency.exponentialRampToValueAtTime(260, q + dur);
-      const g = c.createGain();
-      g.gain.setValueAtTime(vol, q);
-      g.gain.exponentialRampToValueAtTime(0.0001, q + dur);
-      f.connect(g).connect(audio.bus);
-      const a = c.createOscillator();
-      a.type = "sawtooth";
-      a.frequency.value = hz(midi);
-      const b = c.createOscillator();
-      b.type = "sine";
-      b.frequency.value = hz(midi - 12);
-      a.connect(f);
-      b.connect(f);
-      a.start(q); b.start(q);
-      a.stop(q + dur + 0.02); b.stop(q + dur + 0.02);
-    }
-
-    function acorde(q, notas, dur, vol, ataque = 0.006, corte = 1900) {
-      if (soVisual) { marcar(12, 6, 0.55 + vol); return; }
-      const c = audio.ctx;
-      const f = c.createBiquadFilter();
-      f.type = "lowpass";
-      f.frequency.value = corte;
-      const g = c.createGain();
-      g.gain.setValueAtTime(0.0001, q);
-      g.gain.exponentialRampToValueAtTime(vol, q + ataque);
-      g.gain.setValueAtTime(vol, q + Math.max(ataque, dur * 0.6));
-      g.gain.exponentialRampToValueAtTime(0.0001, q + dur);
-      f.connect(g).connect(audio.bus);
-      for (let i = 0; i < notas.length; i++) {
-        for (let d = -6; d <= 6; d += 12) {
-          const o = c.createOscillator();
-          o.type = "sawtooth";
-          o.frequency.value = hz(notas[i]);
-          o.detune.value = d;
-          o.connect(f);
-          o.start(q);
-          o.stop(q + dur + 0.03);
-        }
-      }
-    }
-
-    function melodia(q, midi, dur) {
-      if (soVisual) { marcar(12 + (midi - 64) * 0.9, 2, 0.9); return; }
-      const c = audio.ctx;
-      const f = c.createBiquadFilter();
-      f.type = "lowpass";
-      f.frequency.value = 3400;
-      const g = c.createGain();
-      g.gain.setValueAtTime(0.0001, q);
-      g.gain.exponentialRampToValueAtTime(0.13, q + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.07, q + dur * 0.5);
-      g.gain.exponentialRampToValueAtTime(0.0001, q + dur);
-      f.connect(g).connect(audio.bus);
-      const a = c.createOscillator();
-      a.type = "square";
-      a.frequency.value = hz(midi);
-      const b = c.createOscillator();
-      b.type = "triangle";
-      b.frequency.value = hz(midi + 12);
-      a.connect(f); b.connect(f);
-      a.start(q); b.start(q);
-      a.stop(q + dur + 0.03); b.stop(q + dur + 0.03);
-    }
-
-    function arpejo(q, midi, vol) {
-      if (soVisual) { marcar(20 + (midi % 12) * 0.5, 2, 0.5); return; }
-      const c = audio.ctx;
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.type = "triangle";
-      o.frequency.value = hz(midi);
-      g.gain.setValueAtTime(0.0001, q);
-      g.gain.exponentialRampToValueAtTime(vol, q + 0.005);
-      g.gain.exponentialRampToValueAtTime(0.0001, q + 0.11);
-      o.connect(g).connect(audio.bus);
-      o.start(q);
-      o.stop(q + 0.14);
-    }
-
-    function subida(q, dur) {
-      if (soVisual) return;
-      const f = ruido(q, dur, 0.16, "bandpass", 400, 2);
-      f.frequency.setValueAtTime(400, q);
-      f.frequency.exponentialRampToValueAtTime(7000, q + dur);
-    }
-
-    function prato(q) {
-      if (soVisual) { marcar(26, 6, 1); return; }
-      ruido(q, 1.5, 0.2, "highpass", 5200, 0.6);
-    }
-
-    /* Um passo da música. É chamado duas vezes por passo: uma adiantada
-       para agendar o som (soVisual = false) e outra no instante exato
-       para mexer nas barras do HUD — que assim dançam até no mudo. */
-    function passoMusica(i, q) {
-      const c = i >> 4;
-      const s = i & 15;
-      const sec = secao(c);
-      const ac = acordeDo(c);
-      if (c >= 31) {
-        if (c === 31 && s === 0) {
-          bumbo(q);
-          prato(q);
-          acorde(q, ACORDES[0].notas, 2.6, 0.06, 0.01, 2400);
-          baixo(q, ACORDES[0].baixo, 1.6, 0.34);
-        }
-        return;
-      }
-      const virada = c === 21 && s >= 8;
-      if ((sec !== PAUSA || virada) && (s & 3) === 0) bumbo(q);
-      if (sec !== INTRO && sec !== PAUSA && (s === 4 || s === 12)) palma(q);
-      if (virada) palma(q, 0.1 + (s - 8) * 0.035);
-      if (sec !== PAUSA) {
-        if ((s & 3) === 2) chimbal(q, false, 0.15);
-        else if ((sec === REFRAO || sec === QUEDA) && (s & 1) === 1) chimbal(q, false, 0.05);
-        if ((sec === REFRAO || sec === QUEDA) && s === 14) chimbal(q, true, 0.09);
-      }
-      if (c >= 1 && sec !== PAUSA && (s & 3) === 2) baixo(q, ac.baixo, PASSO * 1.7);
-      if (sec === QUEDA && (s & 3) === 3) baixo(q, ac.baixo + 12, PASSO * 0.8, 0.16);
-      if (sec === VERSO && (s === 2 || s === 10)) acorde(q, ac.notas, 0.2, 0.05);
-      if (sec === PAUSA && s === 0) acorde(q, ac.notas, COMPASSO, 0.045, 0.3, 900);
-      if (sec === PAUSA || sec === QUEDA) arpejo(q, ac.notas[ARPEJO[s & 3]] + 12 + (s >= 8 ? 12 : 0), sec === PAUSA ? 0.07 : 0.035);
-      if (sec === REFRAO || sec === QUEDA || c === 30) {
-        const k = ((c + 2) & 3) * 16 + s;
-        if (MELODIA[k]) melodia(q, MELODIA[k], DURACAO_MELODIA[k] * PASSO * 0.95);
-      }
-      if (c === 21 && s === 0) subida(q, COMPASSO);
-      if ((c === 10 || c === 22) && s === 0) prato(q);
-    }
-
-    // Agenda o que cai entre agora e um pouco adiante. O relógio-mestre é
-    // o do jogo (t): a música segue a fase, e não o contrário — assim a
-    // pausa do console (aba escondida) não descasa nota e batida.
-    function agendarMusica() {
-      const c = audio.ctx;
-      if (!c || !audio.bus || c.state !== "running" || !audio.ligado) {
-        // sem som: só acompanha o relógio, para retomar no lugar certo
-        while (audio.cursor < PASSOS && audio.cursor * PASSO < t + 0.02) audio.cursor++;
-        audio.deslocamento = null;
-        return;
-      }
-      // Diferença entre o relógio do áudio e o do jogo, suavizada: o quadro
-      // da tela oscila alguns milissegundos e a batida não pode oscilar junto.
-      const alvo = c.currentTime - t;
-      if (audio.deslocamento === null || Math.abs(alvo - audio.deslocamento) > 0.05) audio.deslocamento = alvo;
-      else audio.deslocamento += (alvo - audio.deslocamento) * 0.05;
-      // e o atraso da saída de som entra adiantando o agendamento
-      const atraso = Math.min(0.08, (c.baseLatency || 0) + (c.outputLatency || 0));
-      soVisual = false;
-      while (audio.cursor < PASSOS && audio.cursor * PASSO < t + 0.12 + atraso) {
-        const quando = audio.cursor * PASSO + audio.deslocamento - atraso;
-        if (quando >= c.currentTime - 0.03) passoMusica(audio.cursor, Math.max(c.currentTime, quando));
-        audio.cursor++;
-      }
+    function aplicarMudo() {
+      const ligado = somLigado();
+      if (ligado === audio.ligado) return;
+      audio.ligado = ligado;
+      if (audio.saida) audio.saida.gain.setTargetAtTime(ligado ? VOLUME_MUSICA : 0, audio.ctx.currentTime, 0.03);
     }
 
     function atualizarVolume() {
-      if (!audio.ctx || !audio.bus || fase !== "tocando") return;
-      // energia cheia ≈ -1 dB, vazia ≈ -14 dB (MUSIC_VOLUME_MIN/MAX_DB)
-      const db = -14 + 13 * energiaMusica;
-      audio.bus.gain.setTargetAtTime(Math.pow(10, db / 20), audio.ctx.currentTime, 0.12);
+      if (!audio.energia || !audio.tocando) return;
+      // energia cheia = -1 dB, vazia = -16 dB, deslizando como o lerp por quadro do stage.gd
+      const db = VOLUME_MIN_DB + (VOLUME_MAX_DB - VOLUME_MIN_DB) * energiaMusica;
+      audio.energia.gain.setTargetAtTime(Math.pow(10, db / 20), audio.ctx.currentTime, 1 / SUAVIZACAO_VOLUME);
+    }
+
+    function pararFonte() {
+      const f = audio.fonte;
+      audio.fonte = null;
+      audio.tocando = false;
+      if (!f) return;
+      f.onended = null;
+      try { f.stop(); } catch (erro) { /* já parou */ }
+      try { f.disconnect(); } catch (erro) { /* já solta */ }
+    }
+
+    function pausarAudio() {
+      if (!audio.ctx || audio.ctx.state !== "running") return;
+      audio.suspensoPorNos = true;
+      const p = audio.ctx.suspend();
+      if (p && p.catch) p.catch(() => {});
+    }
+
+    /* O RELÓGIO. O tempo da música é o currentTime do contexto menos o
+       instante em que a fonte começou e menos a latência de saída. O
+       currentTime anda aos saltos (um bloco de áudio por vez), então a
+       diferença entre ele e o relógio da página é guardada pelo MAIOR
+       valor visto — a leitura mais fresca de cada bloco — e o tempo de
+       cada quadro (e de cada toque) sai dessa diferença, sem degraus.
+       Contexto suspenso = tempo parado: a pausa congela música e fase. */
+    function tempoMusica() {
+      const c = audio.ctx;
+      if (!audio.tocando || !c) return t;
+      if (c.state !== "running") { audio.desvio = null; return t; }
+      const agora = performance.now() / 1000;
+      const d = c.currentTime - agora;
+      if (audio.desvio === null || d > audio.desvio || d < audio.desvio - SALTO_RELOGIO) audio.desvio = d;
+      const valor = agora + audio.desvio - audio.inicio - audio.latencia;
+      return Math.min(audio.duracao, Math.max(t, valor));
+    }
+
+    /* ---------- carregar a música escolhida ---------- */
+    const carga = { ficha: 0, indice: -1, estado: "", progresso: 0 };
+
+    async function baixar(url, ficha) {
+      const resposta = await fetch(url);
+      if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+      const total = Number(resposta.headers.get("Content-Length")) || 0;
+      if (!total || !resposta.body || !resposta.body.getReader) return resposta.arrayBuffer();
+      const leitor = resposta.body.getReader();
+      const pedacos = [];
+      let recebido = 0;
+      for (;;) {
+        const { done, value } = await leitor.read();
+        if (done) break;
+        if (ficha !== carga.ficha) { leitor.cancel().catch(() => {}); return null; }
+        pedacos.push(value);
+        recebido += value.length;
+        carga.progresso = Math.min(1, recebido / total);
+      }
+      const bytes = new Uint8Array(recebido);
+      let pos = 0;
+      for (const p of pedacos) { bytes.set(p, pos); pos += p.length; }
+      return bytes.buffer;
+    }
+
+    function decodificar(bytes) {
+      return new Promise((ok, falha) => {
+        const p = audio.ctx.decodeAudioData(bytes, ok, falha);
+        if (p && p.catch) p.catch(falha);
+      });
+    }
+
+    // Baixa (só quando escolhida), decodifica e começa. Fica guardada só
+    // a última música decodificada: 90 s de áudio aberto pesam ~35 MB.
+    async function carregarMusica(indice) {
+      const musica = MUSICAS[indice];
+      const ficha = ++carga.ficha;
+      carga.indice = indice;
+      carga.estado = "baixando";
+      carga.progresso = 0;
+      fase = "carregando";
+      try {
+        if (audio.bufferId !== musica.id) {
+          audio.buffer = null;
+          audio.bufferId = null;
+          const bytes = await baixar(new URL(musica.arquivo, import.meta.url), ficha);
+          if (ficha !== carga.ficha || !bytes) return;
+          carga.estado = "preparando";
+          if (!audio.ctx) throw new Error("navegador sem Web Audio");
+          const buffer = await decodificar(bytes);
+          if (ficha !== carga.ficha) return;
+          audio.buffer = buffer;
+          audio.bufferId = musica.id;
+        }
+        if (ficha !== carga.ficha || fase !== "carregando") return;
+        comecarMusica(indice);
+      } catch (erro) {
+        if (ficha !== carga.ficha) return;
+        console.warn("Hit Music: a música não carregou", erro);
+        carga.estado = "erro";
+      }
+    }
+
+    function escolher(indice) {
+      cursor = indice;
+      acordarAudio(); // o toque na música é o gesto que libera o som
+      if (fase === "carregando" && carga.indice === indice && carga.estado !== "erro") return;
+      carregarMusica(indice);
     }
 
     /* ======================================================================
        ESTADO DA PARTIDA
        ====================================================================== */
     let chamadasIniciar = 0;
-    let fase = "capa"; // capa → pronto (contagem) → tocando → fim
-    let t = 0;
+    let fase = "capa"; // capa → escolha → carregando → contagem → tocando → fim
+    let cursor = 0; // a Carmine vem marcada
+    let indiceMusica = -1;
+    let musica = null;
+    let tema = TEMA_PADRAO;
+    const fases = []; // fase de cada música, montada na primeira vez que ela toca
+    let NOTAS = [];
+    let TOTAL_NOTAS = 0;
+    let PRIMEIRA_NOTA = 0;
+    let aproximacao = 1.12;
+    let janelaAcerto = 0.24;
+    let janelaPerfeito = 0.09;
+    let batida = 60 / 174;
+    let inicioFase = 4.2;
+    let intensidadeUniverso = 0.3;
+    let velocidadeUniverso = 0.13;
+
+    let t = 0; // tempo da música (s), do relógio do áudio
     let relogio = 0; // relógio visual (anda até atrás da capa)
-    let quadroPerf = 0;
-    let pontos = 0;
+    let ultimoQuadro = 0;
     let combo = 0;
     let comboMax = 0;
-    let multiplicador = 1;
     let somaQualidade = 0;
-    let julgados = 0;
+    let acertos = 0;
     let erros = 0;
-    const contagem = [0, 0, 0, 0];
-    let vida = 100;
+    let precisaoMostrada = 0;
     let energiaMusica = 1;
     let energiaAcerto = 0;
     let proxNascer = 0;
     let primeiraViva = 0;
-    let passoVisual = 0;
     let ultimoJulgamento = -1;
     let tempoJulgamento = -9;
     let comboPulo = 0;
     let tempoMostrado = -1;
-    let infoMostrada = null;
+    let pontosMostrados = -1;
     let classificado = false;
+    let terminou = false;
     const flash = new Float32Array(FAIXAS);
     const corFlash = new Uint8Array(FAIXAS);
     const toque = new Float32Array(FAIXAS);
@@ -721,6 +964,22 @@ export default {
     const teclasPresas = new Set();
     const setaFaixa = {};
     let setaPendente = null;
+
+    // Textos do HUD só são remontados quando o valor muda.
+    let textoPrecisao = "0,00%";
+    let centesimosPrecisao = 0;
+    let textoTempo = "0:00 / 0:00";
+    let segundoTempo = -1;
+    let textoCombo = "COMBO 0";
+    let textoComboNumero = "0";
+    let comboTexto = 0;
+
+    /* Recorde de cada música neste aparelho (a mesa mostra o recorde por
+       música no seletor). Conveniência local: sem armazenamento, fica 0. */
+    const recordes = MUSICAS.map((m) => {
+      try { return Number(window.localStorage.getItem("ls-hit-music-recorde:" + m.id)) || 0; } catch (erro) { return 0; }
+    });
+    const textosRecorde = recordes.map((v) => "RECORDE " + formatarPct(v));
 
     // Pools fixos: nada de criar objeto novo a cada estouro.
     const efeitos = Array.from({ length: 24 }, () => ({ vivo: false, tipo: 0, x: 0, y: 0, cor: 0, ini: 0, dur: 0.5, rot: 0, estilo: 0 }));
@@ -742,21 +1001,140 @@ export default {
       p.dur = 0.85 * (0.55 + Math.min(intensidade, 1.4) * 0.5);
     }
 
+    // _score_percent do stage_v10: sobre o total de notas da fase, então
+    // começa em 0% e sobe a cada acerto.
     function precisao() {
-      return julgados ? (100 * somaQualidade) / julgados : 100;
+      return TOTAL_NOTAS ? limitar((100 * somaQualidade) / TOTAL_NOTAS, 0, 100) : 0;
     }
 
     function formatarPct(v) {
       return v.toFixed(2).replace(".", ",") + "%";
     }
 
-    function atualizarPlacar() {
-      api.placar({ pontos });
-      // a caixa do console é estreita no celular: só o multiplicador cabe
-      // inteiro (o combo e a precisão já estão no HUD do próprio jogo)
-      const info = multiplicador > 1 ? `x${multiplicador}` : "";
-      if (info !== infoMostrada) { infoMostrada = info; api.placar({ info }); }
+    function formatarTempo(s) {
+      const v = Math.max(0, Math.round(s));
+      return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`;
     }
+
+    // Os pontos do console são a nota da máquina em centésimos de ponto
+    // percentual: 87,45% = 8.745. O recorde do console fica sendo a
+    // melhor precisão, comparável entre as duas músicas.
+    function atualizarPlacar() {
+      const pontos = Math.round(precisao() * 100);
+      if (pontos !== pontosMostrados) { pontosMostrados = pontos; api.placar({ pontos }); }
+    }
+
+    function zerarPartida() {
+      t = 0;
+      combo = 0; comboMax = 0; somaQualidade = 0; acertos = 0; erros = 0;
+      precisaoMostrada = 0; energiaMusica = 1; energiaAcerto = 0;
+      proxNascer = 0; primeiraViva = 0;
+      ultimoJulgamento = -1; tempoJulgamento = -9; comboPulo = 0;
+      tempoMostrado = -1; pontosMostrados = -1; classificado = false; terminou = false;
+      centesimosPrecisao = -1; segundoTempo = -1; comboTexto = -1;
+      flash.fill(0); toque.fill(0); espectro.fill(0);
+      ponteiros.clear(); teclasPresas.clear(); setaPendente = null;
+      for (const k of Object.keys(setaFaixa)) delete setaFaixa[k];
+      for (const e of efeitos) e.vivo = false;
+      for (const p of pulsosAnel) p.vivo = false;
+      for (const n of NOTAS) {
+        n.resolvida = false; n.segurando = false; n.ativa = false;
+        n.iniciada = false; n.finalizando = false; n.aguardandoEstrela = false;
+        n.progresso = 0; n.desenho = 0; n.fonte = null; n.proximaAncora = 1;
+      }
+    }
+
+    /* Prepara a música escolhida: a fase (gerada uma vez e guardada), o
+       tempo de jogo do perfil dela e as cores. */
+    function prepararMusica(indice) {
+      indiceMusica = indice;
+      musica = MUSICAS[indice];
+      tema = TEMAS[indice];
+      const perfil = perfilRitmo(musica, DIFICULDADE === "hard");
+      aproximacao = Math.max(perfil.approach, 0.001);
+      janelaAcerto = perfil.hit_window;
+      janelaPerfeito = perfil.perfect_window;
+      batida = perfil.beat;
+      inicioFase = Math.max(musica.chart_start, 3.2);
+      // _draw_universe reescala a intensidade do fundo para ter presença
+      intensidadeUniverso = limitar(limitar(perfil.background_intensity, 0.06, 0.3) * 1.9 + 0.06, 0.14, 0.52);
+      velocidadeUniverso = perfil.background_speed;
+      if (!fases[indice]) fases[indice] = montarFase(musica, DIFICULDADE, duracaoNaMaquina(musica));
+      NOTAS = fases[indice];
+      TOTAL_NOTAS = NOTAS.length;
+      PRIMEIRA_NOTA = TOTAL_NOTAS ? NOTAS[0].t : inicioFase;
+      zerarPartida();
+    }
+
+    // A fonte começa no zero da faixa junto com a contagem, como o
+    // _start_countdown da máquina; a primeira nota vem no chart_start.
+    function comecarMusica(indice) {
+      prepararMusica(indice);
+      pararFonte();
+      const c = audio.ctx;
+      medirLatencia();
+      const fonte = c.createBufferSource();
+      fonte.buffer = audio.buffer;
+      fonte.connect(audio.energia);
+      const g = audio.energia.gain;
+      g.cancelScheduledValues(c.currentTime);
+      g.setValueAtTime(Math.pow(10, VOLUME_MAX_DB / 20), c.currentTime);
+      audio.inicio = c.currentTime + ANTECEDENCIA_INICIO;
+      audio.duracao = audio.buffer.duration;
+      audio.desvio = null;
+      audio.acabou = false;
+      audio.travadoDesde = 0;
+      fonte.onended = () => { if (audio.fonte === fonte) audio.acabou = true; };
+      fonte.start(audio.inicio);
+      audio.fonte = fonte;
+      audio.tocando = true;
+      fase = "contagem";
+      api.placar({ pontos: 0, tempo: audio.duracao, info: "" });
+      pontosMostrados = 0;
+    }
+
+    function terminarPartida() {
+      if (terminou) return;
+      terminou = true;
+      fase = "fim";
+      pararFonte();
+      window.setTimeout(() => { if (fase === "fim" && audio.ctx) pausarAudio(); }, 700);
+      const pct = precisao();
+      precisaoMostrada = pct;
+      classificado = pct >= CLASSIFICA;
+      if (pct > recordes[indiceMusica]) {
+        recordes[indiceMusica] = pct;
+        textosRecorde[indiceMusica] = "RECORDE " + formatarPct(pct);
+        try { window.localStorage.setItem("ls-hit-music-recorde:" + musica.id, String(pct)); } catch (erro) { /* aba anônima */ }
+      }
+      api.placar({ tempo: 0 });
+      api.terminar({
+        pontos: Math.round(pct * 100),
+        titulo: classificado ? "CLASSIFICADO!" : "NÃO CLASSIFICADO",
+        detalhe: `${musica.nome} · precisão ${formatarPct(pct)} · ${acertos} ${acertos === 1 ? "acerto" : "acertos"}`
+          + ` · ${erros} ${erros === 1 ? "erro" : "erros"} · combo máx. ${comboMax}`
+          + (classificado ? "" : " · mínimo 70%"),
+      });
+    }
+
+    /* ---------- vigia: mudo, latência e pausa ----------
+       O console só para de chamar atualizar() quando a aba some ou a
+       máquina sai da tela; não avisa o jogo. Sem quadro por um instante
+       com a música tocando = pausa: o contexto é suspenso e o relógio da
+       música congela junto com a fase. A volta é no próximo atualizar(). */
+    function vigiar() {
+      aplicarMudo();
+      if (!audio.ctx) return;
+      medirLatencia();
+      const parado = performance.now() - ultimoQuadro > PAUSA_DO_CONSOLE * 1000;
+      if (audio.tocando && (document.hidden || parado)) pausarAudio();
+    }
+    const vigia = window.setInterval(vigiar, VIGIA_MS);
+
+    function aoMudarVisibilidade() {
+      if (document.hidden && audio.tocando) pausarAudio();
+    }
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
 
     /* ---------- posição das coisas no tempo (sem alocar: px/py/pang) ---------- */
     let px = 0;
@@ -764,7 +1142,7 @@ export default {
     let pang = 0;
 
     function chegada(nota, tempo) {
-      return Math.min(1, Math.max(0, (tempo - (nota.t - APROXIMACAO)) / APROXIMACAO));
+      return Math.min(1, Math.max(0, (tempo - (nota.t - aproximacao)) / aproximacao));
     }
     // Sai rápido do centro e desacelera perto do anel (no original a curva
     // é mais fechada; aqui um pouco mais aberta para ler no celular).
@@ -772,13 +1150,15 @@ export default {
 
     function posicaoTap(nota, tempo) {
       const m = MARCAS[nota.faixa];
-      const p = (tempo - (nota.t - APROXIMACAO)) / APROXIMACAO;
+      const p = (tempo - (nota.t - aproximacao)) / aproximacao;
       // atrasado: o tazo passa do anel e some — é o MISS chegando
       const k = p <= 1 ? suavizar(Math.max(0, p)) : 1 + (p - 1) * 0.55;
       px = CX + (m[0] - CX) * k;
       py = CY + (m[1] - CY) * k;
     }
 
+    // Ponto do trilho por fração do comprimento (point_at_cached): é onde
+    // a estrela é desenhada.
     function pontoDoCaminho(nota, prog) {
       const alvo = Math.max(0, Math.min(1, prog)) * nota.total;
       const a = nota.acum;
@@ -792,38 +1172,35 @@ export default {
     }
 
     /* ======================================================================
-       JULGAMENTO
+       JULGAMENTO (stage.gd)
        ====================================================================== */
-    function julgar(dif) {
+    // _timing_quality: 1,0 no perfect_window, 0,72 no hit_window e, antes
+    // disso (a nota pode ser tocada assim que aparece), de 0,72 a 0,50.
+    function qualidadeTempo(dif) {
       const a = Math.abs(dif);
-      if (a <= JANELA_PERFEITO) return 0;
-      if (a <= JANELA_OTIMO) return 1;
-      return 2;
-    }
-    // Antecipar muito ainda vale (a nota pode ser tocada assim que aparece),
-    // mas paga menos: de 0,72 caindo até 0,50, como no stage.gd.
-    function qualidade(dif, j) {
-      const a = Math.abs(dif);
-      if (a <= JANELA_ACERTO) return JULGAMENTOS[j].qualidade;
-      return 0.72 - 0.22 * Math.min(1, (a - JANELA_ACERTO) / APROXIMACAO);
+      if (a <= janelaPerfeito) return 1;
+      if (a <= janelaAcerto) return 0.72;
+      return 0.72 + (0.5 - 0.72) * limitar((a - janelaAcerto) / aproximacao, 0, 1);
     }
 
-    function acertar(nota, j, q, x, y, bonus) {
+    function rotuloTempo(dif) {
+      const a = Math.abs(dif);
+      if (a <= janelaPerfeito) return 0;
+      if (a <= janelaAcerto) return 1;
+      return 2;
+    }
+
+    function acertar(nota, q, rotulo, x, y) {
       nota.resolvida = true;
       nota.segurando = false;
       nota.ativa = false;
       combo++;
       comboMax = Math.max(comboMax, combo);
-      const multAntes = multiplicador;
-      multiplicador = Math.min(4, 1 + Math.floor(combo / 10));
-      pontos += (JULGAMENTOS[j].pontos + bonus) * multiplicador;
       somaQualidade += q;
-      julgados++;
-      contagem[j]++;
-      vida = Math.min(100, vida + (q >= 0.99 ? 1.15 : 0.55));
-      energiaMusica = Math.min(1, energiaMusica + 0.1);
+      acertos++;
+      energiaMusica = Math.min(1, energiaMusica + RECUPERACAO_ACERTO);
       energiaAcerto = Math.min(1, energiaAcerto + 0.3 + q * 0.3);
-      ultimoJulgamento = j;
+      ultimoJulgamento = rotulo;
       tempoJulgamento = t;
       comboPulo = 1;
 
@@ -839,12 +1216,8 @@ export default {
       if (nota.tipo !== TAP) { api.tremer(4); api.vibrar(18); }
 
       if (combo % 25 === 0) {
-        api.efeitos.texto(`COMBO ${combo}!`, CX, 392, { cor: COR_TEMA2, tamanho: 34, vida: 1 });
-        api.som("combo");
+        api.efeitos.texto(`COMBO ${combo}!`, CX, 392, { cor: tema.destaque, tamanho: 34, vida: 1 });
         api.tremer(5);
-      } else if (multiplicador > multAntes) {
-        api.efeitos.texto(`x${multiplicador}`, CX + 120, 336, { cor: "#fff27a", tamanho: 40, vida: 0.9 });
-        api.som("ponto");
       }
       atualizarVolume();
       atualizarPlacar();
@@ -857,30 +1230,20 @@ export default {
       nota.segurando = false;
       nota.ativa = false;
       combo = 0;
-      multiplicador = 1;
-      julgados++;
       erros++;
-      contagem[3]++;
-      vida = Math.max(0, vida - 6);
-      energiaMusica = Math.max(0, energiaMusica - 0.16);
+      energiaMusica = Math.max(0, energiaMusica - PENALIDADE_ERRO);
       ultimoJulgamento = 3;
       tempoJulgamento = t;
       atualizarVolume();
-      atualizarPlacar();
     }
 
     function concluirArrasto(nota) {
       pontoDoCaminho(nota, nota.desenho);
-      acertar(nota, 0, 1, px, py, 200);
+      acertar(nota, 1, 0, px, py);
       nota.finalizando = true;
     }
 
     /* ---------- entrada ---------- */
-    function tempoAgora() {
-      // o toque cai entre dois quadros: soma o pedaço que já passou
-      return t + Math.min(0.05, Math.max(0, (performance.now() - quadroPerf) / 1000));
-    }
-
     function faixaDoPonto(x, y) {
       const dx = x - CX;
       const dy = y - CY;
@@ -917,10 +1280,10 @@ export default {
         if (n.resolvida) continue;
         if (n.tipo === SLIDE) {
           if (n.iniciada || n.caminho[0] !== faixa) continue;
-          if (tp > n.t + JANELA_ACERTO * ESCALA_JANELA_ARRASTO) continue;
+          if (tp > n.t + janelaAcerto * ESCALA_JANELA_ARRASTO) continue;
         } else {
           if (n.faixa !== faixa || n.segurando) continue;
-          if (tp > n.t + JANELA_ACERTO) continue;
+          if (tp > n.t + janelaAcerto) continue;
         }
         const d = Math.abs(tp - n.t);
         if (d < menor) { menor = d; melhor = n; }
@@ -928,15 +1291,12 @@ export default {
       if (!melhor) return;
 
       const dif = tp - melhor.t;
-      const j = julgar(dif);
       if (melhor.tipo === TAP) {
         posicaoTap(melhor, tp);
-        acertar(melhor, j, qualidade(dif, j), px, py, Math.abs(dif) > JANELA_ACERTO ? -50 : 0);
+        acertar(melhor, qualidadeTempo(dif), rotuloTempo(dif), px, py);
       } else if (melhor.tipo === HOLD) {
         melhor.segurando = true;
         melhor.fonte = fonte;
-        melhor.julgamento = j;
-        melhor.qualidade = qualidade(dif, j);
         pulsarAnel(melhor.faixa, melhor.cor, 0.6);
       } else {
         melhor.iniciada = true;
@@ -954,7 +1314,8 @@ export default {
         const n = NOTAS[i];
         if (n.resolvida || n.fonte !== fonte) continue;
         if (n.tipo === HOLD && n.segurando) {
-          if (tp >= n.fim - 0.12) acertar(n, n.julgamento, n.qualidade, MARCAS[n.faixa][0], MARCAS[n.faixa][1], 200);
+          // hold completo vale 1,0, como no stage.gd
+          if (tp >= n.fim - FOLGA_SOLTAR_HOLD) acertar(n, 1, 0, MARCAS[n.faixa][0], MARCAS[n.faixa][1]);
           else errar(n);
         } else if (n.tipo === SLIDE && n.ativa) {
           // Soltar no meio não é erro na hora: o trecho feito fica guardado
@@ -964,30 +1325,38 @@ export default {
       }
     }
 
+    // nearest_progress do path_builder.gd: procura a amostra mais perto só
+    // numa janela curta à frente do progresso atual (índice de amostra).
+    let achadoProgresso = 0;
+    let achadoDistancia = 0;
+    function maisPerto(n, x, y, minimo) {
+      const ultimo = n.px.length - 1;
+      const de = limitar(Math.floor(limitar(minimo, 0, 1) * ultimo) - 2, 0, ultimo);
+      const ate = limitar(de + Math.ceil(AVANCO_MAXIMO * ultimo) + 2, de, ultimo);
+      let melhor = de;
+      let menor = Infinity;
+      for (let i = de; i <= ate; i++) {
+        const dx = n.px[i] - x;
+        const dy = n.py[i] - y;
+        const d = dx * dx + dy * dy;
+        if (d < menor) { menor = d; melhor = i; }
+      }
+      achadoProgresso = melhor / Math.max(ultimo, 1);
+      achadoDistancia = Math.sqrt(menor);
+    }
+
     // O trilho avança só pelo que o dedo realmente varreu: cada amostra
     // entre a posição anterior e a atual precisa cair dentro do corredor.
     function avancarArrasto(n, x, y) {
-      const passo = R * 0.045;
+      const passo = Math.max(R * PASSO_AMOSTRA, 1);
       const dx = x - n.ux;
       const dy = y - n.uy;
       const k = Math.min(96, Math.max(1, Math.ceil(Math.hypot(dx, dy) / passo)));
       let prog = n.progresso;
-      const ultimo = n.acum.length - 1;
       for (let s = 1; s <= k; s++) {
-        const sx = n.ux + (dx * s) / k;
-        const sy = n.uy + (dy * s) / k;
-        const de = prog * n.total;
-        const ate = Math.min(1, prog + AVANCO_MAXIMO) * n.total;
-        let menor = Infinity;
-        let melhor = prog;
-        for (let i = 0; i <= ultimo; i++) {
-          if (n.acum[i] < de - 1) continue;
-          if (n.acum[i] > ate) break;
-          const d = (n.px[i] - sx) * (n.px[i] - sx) + (n.py[i] - sy) * (n.py[i] - sy);
-          if (d < menor) { menor = d; melhor = n.acum[i] / n.total; }
-        }
-        if (Math.sqrt(menor) > CORREDOR) break;
-        if (melhor > prog) prog = melhor;
+        maisPerto(n, n.ux + (dx * s) / k, n.uy + (dy * s) / k, prog);
+        if (achadoDistancia > CORREDOR) break;
+        if (achadoProgresso > prog) prog = achadoProgresso;
       }
       n.progresso = prog;
       n.ux = x;
@@ -1017,6 +1386,20 @@ export default {
       setaPendente = null;
       setaFaixa[s.codigo] = s.faixa;
       pressionarFaixa(s.faixa, "t" + s.faixa, s.tempo, 0, 0, false);
+    }
+
+    /* ---------- a escolha da música ---------- */
+    const CARTOES = [
+      { x: 30, y: 214, w: 480, h: 150 },
+      { x: 30, y: 382, w: 480, h: 150 },
+    ];
+
+    function cartaoEm(x, y) {
+      for (let k = 0; k < CARTOES.length; k++) {
+        const c = CARTOES[k];
+        if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) return k;
+      }
+      return -1;
     }
 
     /* ======================================================================
@@ -1049,13 +1432,19 @@ export default {
       ctx.closePath();
     }
 
-    function poligono(ctx, x, y, raio, lados, rot) {
-      ctx.beginPath();
+    // Acrescenta um polígono regular ao caminho atual (sem beginPath, para
+    // vários saírem num traço só).
+    function subPoligono(ctx, x, y, raio, lados, rot) {
       for (let i = 0; i <= lados; i++) {
         const a = rot + (Math.PI * 2 * i) / lados;
         if (i === 0) ctx.moveTo(x + Math.cos(a) * raio, y + Math.sin(a) * raio);
         else ctx.lineTo(x + Math.cos(a) * raio, y + Math.sin(a) * raio);
       }
+    }
+
+    function poligono(ctx, x, y, raio, lados, rot) {
+      ctx.beginPath();
+      subPoligono(ctx, x, y, raio, lados, rot);
     }
 
     // 5 pontas clássica, 6 de cristal, 4 de brilho e 8 de explosão.
@@ -1132,7 +1521,7 @@ export default {
         const y = CY - 60 + Math.sin(a + fasei * giro) * dist * 0.92;
         const tam = 0.6 + fasei * 2.4;
         ctx.globalAlpha = Math.sin(Math.PI * fasei) * 0.75;
-        ctx.fillStyle = i % 3 === 0 ? COR_TEMA : i % 3 === 1 ? COR_TEMA2 : "#ffffff";
+        ctx.fillStyle = i % 3 === 0 ? tema.primaria : i % 3 === 1 ? tema.destaque : "#ffffff";
         ctx.fillRect(x - tam / 2, y - tam / 2, tam, tam);
       }
       // dois cometas cruzando devagar
@@ -1143,7 +1532,7 @@ export default {
         const sentido = k ? -1 : 1;
         const x = (k ? LARGURA + 40 : -40) + sentido * p * (LARGURA + 80);
         const y = 230 + k * 120 + p * 140;
-        ctx.fillStyle = k ? COR_TEMA : COR_TEMA2;
+        ctx.fillStyle = k ? tema.primaria : tema.destaque;
         for (let j = 0; j < 7; j++) {
           ctx.globalAlpha = (1 - j / 7) * 0.5 * Math.sin(Math.PI * p);
           ctx.fillRect(x - sentido * j * 6, y - j * 1.6, 2.4 - j * 0.25, 2.4 - j * 0.25);
@@ -1153,8 +1542,101 @@ export default {
       ctx.globalCompositeOperation = "source-over";
     }
 
+    // Pulso da batida preso na grade da fase: as notas caem em
+    // chart_start + k batidas, e o pulso bate junto com elas.
     function batidaPulso() {
-      return Math.pow(1 - ((t / BATIDA) % 1), 3);
+      const fasei = (((t - inicioFase) / batida) % 1 + 1) % 1;
+      return Math.pow(1 - fasei, 3);
+    }
+
+    function comMusica() {
+      return fase === "contagem" || fase === "tocando" || fase === "fim";
+    }
+
+    /* CARMINE — lâminas (blade_shards do playfield_renderer.gd): cortes
+       diagonais atravessam o disco e deixam estilhaços para trás. */
+    function desenharLaminas(ctx, tempo, pulso, reacao) {
+      const forca = intensidadeUniverso;
+      for (let s = 0; s < 5; s++) {
+        const ang = -Math.PI * 0.3 + s * 0.38 + Math.sin(tempo * 0.14 + s * 1.3) * 0.05;
+        const dx = Math.cos(ang);
+        const dy = Math.sin(ang);
+        const nx = -dy;
+        const ny = dx;
+        const fasei = (tempo * 0.055 + s * 0.21) % 1;
+        const desloc = (fasei - 0.5) * RAIO_UNIVERSO * 1.72;
+        const vao = Math.sqrt(Math.max(RAIO_UNIVERSO * RAIO_UNIVERSO - desloc * desloc, 0));
+        if (vao <= 1) continue;
+        const mx = CX + nx * desloc;
+        const my = CY + ny * desloc;
+        const esp = R * (0.016 + 0.009 * (s % 3)) * (1 + reacao * 0.85 + pulso * 0.25);
+        const some = Math.sin(Math.PI * fasei);
+        ctx.globalAlpha = forca * (0.46 + pulso * 0.16 + reacao * 0.34) * some;
+        ctx.fillStyle = tema.laminas[s % 3];
+        ctx.beginPath();
+        ctx.moveTo(mx - dx * vao, my - dy * vao);
+        ctx.lineTo(mx + nx * esp, my + ny * esp);
+        ctx.lineTo(mx + dx * vao, my + dy * vao);
+        ctx.lineTo(mx - nx * esp, my - ny * esp);
+        ctx.closePath();
+        ctx.fill();
+        // fio de luz no meio da lâmina
+        ctx.globalAlpha = forca * 0.28 * some;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(mx - dx * vao * 0.86, my - dy * vao * 0.86);
+        ctx.lineTo(mx + dx * vao * 0.86, my + dy * vao * 0.86);
+        ctx.stroke();
+        // estilhaços saltando do corte
+        ctx.globalAlpha = forca * (0.62 + reacao * 0.35) * some;
+        ctx.strokeStyle = tema.destaque;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let k = 0; k < 3; k++) {
+          const ao = -0.52 + k * 0.52;
+          const lado = k % 2 === 0 ? 1 : -1;
+          const sx = mx + dx * vao * ao + nx * R * (0.03 + 0.012 * k) * lado;
+          const sy = my + dy * vao * ao + ny * R * (0.03 + 0.012 * k) * lado;
+          if (Math.hypot(sx - CX, sy - CY) > RAIO_UNIVERSO) continue;
+          subPoligono(ctx, sx, sy, R * (0.026 + 0.009 * k), 3, ang + Math.PI * 0.5 + tempo * 0.55 * lado);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    /* PAPER MOON — favo e lua (moon_hive): placas hexagonais enchem o
+       disco e uma lua crescente balança no alto. */
+    function desenharFavo(ctx, tempo, pulso, reacao) {
+      const forca = intensidadeUniverso;
+      const respira = 0.9 + 0.08 * Math.sin(tempo * 1.25) + pulso * 0.05;
+      const giro = Math.PI / 6 + tempo * velocidadeUniverso * 0.05;
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < FAVO.length; i++) {
+        const c = FAVO[i];
+        const onda = Math.sin(tempo * 1.05 + c.fase);
+        ctx.globalAlpha = forca * (0.28 + c.profundidade * 0.42 + reacao * 0.24);
+        ctx.strokeStyle = tema.placas[onda < -0.33 ? 0 : onda < 0.33 ? 1 : 2];
+        poligono(ctx, c.x, c.y, CELULA * 0.52 * respira, 6, giro);
+        ctx.stroke();
+      }
+      const lx = CX - RAIO_UNIVERSO * 0.24;
+      const ly = CY - RAIO_UNIVERSO * 0.2;
+      const raio = RAIO_UNIVERSO * 0.3;
+      const balanco = Math.sin(tempo * 0.28) * 0.16;
+      ctx.strokeStyle = tema.destaque;
+      ctx.globalAlpha = forca * (0.62 + pulso * 0.14);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(lx, ly, raio, -Math.PI * 0.62 + balanco, Math.PI * 0.62 + balanco);
+      ctx.stroke();
+      ctx.globalAlpha = forca * 0.4;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(lx + raio * 0.42, ly, raio * 0.92, -Math.PI * 0.52 + balanco, Math.PI * 0.52 + balanco);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
 
     function desenharDisco(ctx) {
@@ -1167,24 +1649,30 @@ export default {
       ctx.arc(CX, CY, R * 0.995, 0, Math.PI * 2);
       ctx.fill();
 
-      // A arte da roda (abertura do jogo) bem apagada dentro do disco: um
-      // único fundo, sem camadas brigando com as notas.
-      if (img.roda) {
+      const tocando = fase === "tocando";
+      const pulso = tocando ? batidaPulso() : 0;
+      if (comMusica() && musica) {
+        // O universo da música (um único fundo, como na mesa).
+        const reacao = energiaAcerto + Math.min(1, combo / 40) * 0.32;
+        if (musica.universo === "laminas") desenharLaminas(ctx, relogio, pulso, reacao);
+        else desenharFavo(ctx, relogio, pulso, reacao);
+      } else if (img.roda) {
+        // Na escolha, a arte da roda (abertura do jogo) bem apagada.
         ctx.save();
         ctx.beginPath();
         ctx.arc(CX, CY, R * 0.985, 0, Math.PI * 2);
         ctx.clip();
-        ctx.globalAlpha = 0.13 + energiaAcerto * 0.08 + batidaPulso() * 0.04;
+        ctx.globalAlpha = 0.13 + 0.03 * Math.sin(relogio * 2);
         const lado = R * 2.12;
         ctx.drawImage(img.roda, CX - lado / 2, CY - lado / 2, lado, lado);
         ctx.restore();
       }
 
       // onda da batida saindo do centro
-      if (fase === "tocando" && secao(Math.floor(t / COMPASSO)) !== PAUSA) {
-        const fasei = (t / BATIDA) % 1;
+      if (tocando && t >= inicioFase - batida) {
+        const fasei = 1 - Math.cbrt(pulso);
         ctx.globalAlpha = (1 - fasei) * 0.22;
-        ctx.strokeStyle = COR_TEMA;
+        ctx.strokeStyle = tema.primaria;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(CX, CY, R * 0.18 + fasei * (R_ANEL - R * 0.18), 0, Math.PI * 2);
@@ -1205,7 +1693,7 @@ export default {
 
       // brilho da borda do disco na cor da música
       ctx.globalAlpha = 0.16;
-      ctx.strokeStyle = COR_TEMA;
+      ctx.strokeStyle = tema.primaria;
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.arc(CX, CY, R * 1.002, 0, Math.PI * 2);
@@ -1217,7 +1705,7 @@ export default {
       const largura = 4;
       const reacao = energiaAcerto + Math.min(1, combo / 40) * 0.26;
       const pulso = fase === "tocando" ? batidaPulso() : 0;
-      ctx.strokeStyle = COR_TEMA;
+      ctx.strokeStyle = tema.primaria;
       ctx.globalAlpha = 0.1 + pulso * 0.05 + reacao * 0.12;
       ctx.lineWidth = largura * (3.4 + reacao * 1.6);
       ctx.beginPath();
@@ -1268,7 +1756,7 @@ export default {
         const corF = corFlash[f];
         const pulsoF = reacao * (0.5 + 0.5 * Math.sin(relogio * 7 + f));
         ctx.globalCompositeOperation = "lighter";
-        brilho(ctx, mix > 0.05 ? corF : ROSA, mx, my, rm * (2.6 + pulsoF * 0.8 + fl * 1.6), 0.18 + pulsoF * 0.2 + mix * 0.6 + toque[f] * 0.35);
+        brilho(ctx, mix > 0.05 ? corF : tema.brilho, mx, my, rm * (2.6 + pulsoF * 0.8 + fl * 1.6), 0.18 + pulsoF * 0.2 + mix * 0.6 + toque[f] * 0.35);
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = 1;
         const tam = rm * (1 + pulsoF * 0.16 + fl * 0.32);
@@ -1322,12 +1810,12 @@ export default {
     function desenharSelo(ctx) {
       if (!img.selo) return;
       const tocando = fase === "tocando";
-      const batida = Math.floor((tocando ? t : relogio) / BATIDA);
-      const quadro = ((batida % 8) + 8) % 8;
+      const n = tocando ? Math.floor((t - inicioFase) / batida) : Math.floor(relogio / 0.4);
+      const quadro = ((n % 8) + 8) % 8;
       const pulso = tocando ? batidaPulso() : 0.5 + 0.5 * Math.sin(relogio * 3);
       const tam = R * 0.36 * (1 + pulso * 0.06);
       ctx.globalCompositeOperation = "lighter";
-      brilho(ctx, ROSA, CX, CY, tam * 1.1, 0.35 + pulso * 0.3);
+      brilho(ctx, tema.brilho, CX, CY, tam * 1.1, 0.35 + pulso * 0.3);
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
       ctx.drawImage(img.selo, (quadro % 4) * 100, Math.floor(quadro / 4) * 100, 100, 100, CX - tam / 2, CY - tam / 2, tam, tam);
@@ -1348,7 +1836,7 @@ export default {
     }
 
     function desenharTap(ctx, nota) {
-      const p = (t - (nota.t - APROXIMACAO)) / APROXIMACAO;
+      const p = (t - (nota.t - aproximacao)) / aproximacao;
       if (p < 0) return;
       posicaoTap(nota, t);
       const x = px;
@@ -1373,7 +1861,7 @@ export default {
     }
 
     function desenharHold(ctx, nota) {
-      if (t < nota.t - APROXIMACAO || t > nota.fim + 0.25) return;
+      if (t < nota.t - aproximacao || t > nota.fim + 0.25) return;
       if (nota.resolvida) return;
       const m = MARCAS[nota.faixa];
       const dirx = (m[0] - CX) / R_ANEL;
@@ -1442,7 +1930,7 @@ export default {
       ctx.globalAlpha = 1;
       ctx.lineCap = "butt";
       // dica para quem nunca jogou
-      if (!ativa && t > nota.t - APROXIMACAO * 0.7) {
+      if (!ativa && t > nota.t - aproximacao * 0.7) {
         api.texto(ctx, "SEGURE", CX + (m[0] - CX) * 0.7, CY + (m[1] - CY) * 0.7 - 22, {
           tamanho: 15, peso: 900, cor: COR_CLARA[nota.cor], contorno: "rgba(0,0,0,.75)",
         });
@@ -1450,11 +1938,11 @@ export default {
     }
 
     function desenharSlide(ctx, nota) {
-      if (t < nota.t - APROXIMACAO) return;
+      if (t < nota.t - aproximacao) return;
       if (nota.resolvida && !nota.finalizando) return;
       let aparece = 1;
       if (t < nota.t) {
-        aparece = Math.min(1, Math.max(0, (t - (nota.t - APROXIMACAO)) / (APROXIMACAO * 0.55)));
+        aparece = Math.min(1, Math.max(0, (t - (nota.t - aproximacao)) / (aproximacao * 0.55)));
         aparece = aparece * aparece * (3 - 2 * aparece);
       }
       const n = nota.px.length;
@@ -1510,7 +1998,7 @@ export default {
         ctx.globalCompositeOperation = "source-over";
       }
       estrela(ctx, sx, sy, ang + relogio * 1.5, R * 0.1, nota.cor, nota.estiloEstrela, Math.max(0.35, aparece));
-      if (!nota.iniciada && t > nota.t - APROXIMACAO * 0.7) {
+      if (!nota.iniciada && t > nota.t - aproximacao * 0.7) {
         api.texto(ctx, "ARRASTE", nota.px[0] + (CX - nota.px[0]) * 0.28, nota.py[0] + (CY - nota.py[0]) * 0.28 - 26, {
           tamanho: 15, peso: 900, cor: COR_CLARA[nota.cor], contorno: "rgba(0,0,0,.75)",
         });
@@ -1605,7 +2093,37 @@ export default {
       ctx.globalCompositeOperation = "source-over";
     }
 
-    function desenharHud(ctx) {
+    // Barras do HUD: o analisador ouve a música de verdade (antes do mudo,
+    // então elas dançam até sem som). Fora da música, um ondular ocioso.
+    function lerEspectro() {
+      if (!audio.analisador || !audio.tocando) { espectro.fill(0); return; }
+      audio.analisador.getByteFrequencyData(audio.dados);
+      const dados = audio.dados;
+      for (let i = 0; i < BARRAS; i++) {
+        let maior = 0;
+        const fim = Math.min(dados.length, Math.max(BORDAS_BARRAS[i] + 1, BORDAS_BARRAS[i + 1]));
+        for (let k = BORDAS_BARRAS[i]; k < fim; k++) if (dados[k] > maior) maior = dados[k];
+        espectro[i] = Math.pow(maior / 255, 1.6);
+      }
+    }
+
+    function desenharEspectro(ctx, x, y, w, h) {
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      ctx.fillRect(x, y, w, h);
+      const passo = w / BARRAS;
+      ctx.fillStyle = gradientes.barras;
+      const energia = 0.45 + energiaMusica * 0.55;
+      for (let i = 0; i < BARRAS; i++) {
+        const ocioso = 0.06 + 0.04 * Math.sin(relogio * 2.2 + i * 0.7);
+        const v = Math.min(1, Math.max(ocioso, espectro[i] * energia));
+        const bh = Math.max(3, v * (h - 6));
+        ctx.globalAlpha = 0.45 + v * 0.55;
+        ctx.fillRect(x + i * passo + 1.5, y + h - bh - 3, passo - 3, bh);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function desenharPainelHud(ctx) {
       const { x, y, w, h } = HUD;
       ctx.fillStyle = "rgba(10,4,30,0.9)";
       retanguloRedondo(ctx, x, y, w, h, 18);
@@ -1613,61 +2131,56 @@ export default {
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = gradientes.borda;
       ctx.stroke();
+    }
 
-      api.texto(ctx, NOME_MUSICA, x + 20, y + 30, { tamanho: 25, peso: 900, alinhar: "left", cor: "#ffffff" });
-      api.texto(ctx, `NORMAL • ${BPM} BPM`, x + 20, y + 56, { tamanho: 14, peso: 800, alinhar: "left", cor: "#ff8ae8" });
-      api.texto(ctx, formatarPct(precisao()), x + w - 20, y + 31, { tamanho: 30, peso: 900, alinhar: "right", cor: COR_TEMA2 });
-      api.texto(ctx, `COMBO ${combo}`, x + w - 20, y + 57, { tamanho: 15, peso: 800, alinhar: "right", cor: "#ffffff" });
+    function desenharHud(ctx) {
+      const { x, y, w, h } = HUD;
+      desenharPainelHud(ctx);
+
+      if (fase === "contagem") {
+        // Como na mesa: na contagem o painel de cima mostra só o número,
+        // na cor da vez (3 ciano, 2 vermelho, 1 amarelo).
+        const numero = Math.max(1, Math.ceil(DURACAO_CONTAGEM - t));
+        const fracao = DURACAO_CONTAGEM - t - (numero - 1);
+        const escala = 1 + Math.max(0, fracao - 0.75) * 0.6;
+        api.texto(ctx, String(numero), x + w / 2, y + h / 2 + 4, {
+          tamanho: 104 * escala, peso: 900, cor: CORES_CONTAGEM[3 - numero], contorno: "rgba(0,0,0,.7)",
+        });
+        api.texto(ctx, musica.nome, x + 20, y + 26, { tamanho: 15, peso: 900, alinhar: "left", cor: tema.clara });
+        return;
+      }
+
+      api.texto(ctx, musica.nome, x + 20, y + 30, { tamanho: 25, peso: 900, alinhar: "left", cor: "#ffffff" });
+      api.texto(ctx, TEXTOS_MUSICA[indiceMusica].nivel, x + 20, y + 56, { tamanho: 14, peso: 800, alinhar: "left", cor: tema.clara });
+      const centesimos = Math.round(precisaoMostrada * 100);
+      if (centesimos !== centesimosPrecisao) { centesimosPrecisao = centesimos; textoPrecisao = formatarPct(centesimos / 100); }
+      api.texto(ctx, textoPrecisao, x + w - 20, y + 31, { tamanho: 30, peso: 900, alinhar: "right", cor: tema.destaque });
+      if (combo !== comboTexto) { comboTexto = combo; textoCombo = `COMBO ${combo}`; textoComboNumero = String(combo); }
+      api.texto(ctx, textoCombo, x + w - 20, y + 57, { tamanho: 15, peso: 800, alinhar: "right", cor: "#ffffff" });
 
       // Espectro no lugar do vídeo da música (o retângulo central do HUD)
-      const ex = x + 20;
-      const ew = w - 40;
-      const ey = y + 72;
-      const eh = 62;
-      ctx.fillStyle = "rgba(255,255,255,0.04)";
-      ctx.fillRect(ex, ey, ew, eh);
-      const passo = ew / 32;
-      ctx.fillStyle = gradientes.barras;
-      const energia = 0.45 + energiaMusica * 0.55;
-      for (let i = 0; i < 32; i++) {
-        const ocioso = 0.06 + 0.04 * Math.sin(relogio * 2.2 + i * 0.7);
-        const v = Math.min(1, Math.max(ocioso, espectro[i]) * energia);
-        const bh = Math.max(3, v * (eh - 6));
-        ctx.globalAlpha = 0.45 + v * 0.55;
-        ctx.fillRect(ex + i * passo + 1.5, ey + eh - bh - 3, passo - 3, bh);
-      }
-      ctx.globalAlpha = 1;
+      desenharEspectro(ctx, x + 20, y + 72, w - 40, 62);
 
-      // vida, multiplicador e andamento da música
-      const by = y + 150;
-      api.texto(ctx, "LIFE", x + 20, by, { tamanho: 13, peso: 900, alinhar: "left", cor: "#ffffff" });
+      // andamento da música, como a barra e o "0:42 / 1:30" da mesa
+      const by = y + 152;
+      const segundo = Math.round(t);
+      if (segundo !== segundoTempo) { segundoTempo = segundo; textoTempo = `${formatarTempo(t)} / ${formatarTempo(audio.duracao)}`; }
+      api.texto(ctx, textoTempo, x + w - 20, by, { tamanho: 13, peso: 800, alinhar: "right", cor: "rgba(255,255,255,0.75)" });
+      const bw = w - 40 - 104;
       ctx.fillStyle = "rgba(255,255,255,0.12)";
-      ctx.fillRect(x + 58, by - 5, 150, 10);
-      ctx.fillStyle = vida > 35 ? "#3dff9a" : "#ff5468";
-      ctx.fillRect(x + 58, by - 5, 150 * (vida / 100), 10);
-      api.texto(ctx, `${Math.round(vida)}%`, x + 216, by, { tamanho: 13, peso: 800, alinhar: "left", cor: "#ffffff" });
-      const mx = x + 272;
-      api.texto(ctx, `x${multiplicador}`, mx, by, { tamanho: 18, peso: 900, alinhar: "left", cor: multiplicador > 1 ? "#fff27a" : "rgba(255,255,255,0.45)" });
-      const bx = mx + 40;
-      const bw = x + w - 72 - bx;
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
-      ctx.fillRect(bx, by - 3, bw, 6);
-      ctx.fillStyle = COR_TEMA;
-      ctx.fillRect(bx, by - 3, bw * Math.min(1, t / DURACAO), 6);
-      const restante = Math.max(0, Math.ceil(DURACAO - t));
-      api.texto(ctx, `${Math.floor(restante / 60)}:${String(restante % 60).padStart(2, "0")}`, x + w - 20, by, {
-        tamanho: 13, peso: 800, alinhar: "right", cor: "rgba(255,255,255,0.75)",
-      });
+      ctx.fillRect(x + 20, by - 3, bw, 6);
+      ctx.fillStyle = tema.primaria;
+      ctx.fillRect(x + 20, by - 3, bw * limitar(t / (audio.duracao || 1), 0, 1), 6);
     }
 
     function desenharMeio(ctx) {
       // faixa entre o HUD e o círculo: dica inicial, julgamento e combo
-      if (fase === "pronto" || (fase === "tocando" && t < PRIMEIRA_NOTA - 0.9)) {
-        ctx.globalAlpha = fase === "pronto" ? 1 : Math.min(1, (PRIMEIRA_NOTA - 0.9 - t) * 2);
+      if (fase === "contagem" || (fase === "tocando" && t < PRIMEIRA_NOTA - 0.9)) {
+        ctx.globalAlpha = fase === "contagem" ? 1 : Math.min(1, (PRIMEIRA_NOTA - 0.9 - t) * 2);
         api.texto(ctx, "TOQUE NA FAIXA QUANDO", CX, 268, { tamanho: 24, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
         api.texto(ctx, "O TAZO ENCAIXAR NO ANEL", CX, 300, { tamanho: 24, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
         api.texto(ctx, temMouse ? "Teclas A S D F J K L Ç • segure as fitas • arraste as estrelas" : "Segure as fitas • arraste as estrelas", CX, 340, {
-          tamanho: 15, peso: 700, cor: "#ff8ae8",
+          tamanho: 15, peso: 700, cor: tema.clara,
         });
         ctx.globalAlpha = 1;
       }
@@ -1680,9 +2193,148 @@ export default {
         api.texto(ctx, j.nome, CX, 262, { tamanho: 50 * escala, peso: 900, cor: j.cor, contorno: "rgba(0,0,0,.65)" });
         ctx.globalAlpha = 1;
       }
-      if (combo >= 3) {
-        api.texto(ctx, String(combo), CX, 336, { tamanho: 56 + comboPulo * 10, peso: 900, cor: "#ffffff", contorno: COR_TEMA });
-        api.texto(ctx, "COMBO", CX, 378, { tamanho: 15, peso: 900, cor: "#ff8ae8" });
+      // a mesa mostra o combo a partir de 2 acertos seguidos
+      if (combo >= 2) {
+        api.texto(ctx, textoComboNumero, CX, 336, { tamanho: 56 + comboPulo * 10, peso: 900, cor: "#ffffff", contorno: tema.primaria });
+        api.texto(ctx, "COMBO", CX, 378, { tamanho: 15, peso: 900, cor: tema.clara });
+      }
+    }
+
+    /* Emblema de cada música no cartão, com o desenho do universo dela
+       na mesa: lâminas para a Carmine, lua e favo para a Paper Moon. */
+    function desenharEmblema(ctx, k, x, y, aceso) {
+      const tm = TEMAS[k];
+      ctx.globalAlpha = aceso ? 1 : 0.45;
+      ctx.lineJoin = "round";
+      if (MUSICAS[k].universo === "laminas") {
+        for (let s = 0; s < 3; s++) {
+          const ang = -0.75 + s * 0.38;
+          const dx = Math.cos(ang);
+          const dy = Math.sin(ang);
+          const ox = x - dy * (s - 1) * 20;
+          const oy = y + dx * (s - 1) * 20;
+          ctx.fillStyle = tm.laminas[s];
+          ctx.beginPath();
+          ctx.moveTo(ox - dx * 34, oy - dy * 34);
+          ctx.lineTo(ox - dy * 5, oy + dx * 5);
+          ctx.lineTo(ox + dx * 34, oy + dy * 34);
+          ctx.lineTo(ox + dy * 5, oy - dx * 5);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.strokeStyle = tm.destaque;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        subPoligono(ctx, x + 30, y - 26, 8, 3, relogio * 0.8);
+        subPoligono(ctx, x - 32, y + 28, 6, 3, -relogio * 0.8);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = tm.placas[1];
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        subPoligono(ctx, x + 16, y + 18, 13, 6, Math.PI / 6);
+        subPoligono(ctx, x + 36, y + 6, 13, 6, Math.PI / 6);
+        subPoligono(ctx, x + 36, y + 30, 13, 6, Math.PI / 6);
+        ctx.stroke();
+        ctx.strokeStyle = tm.destaque;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(x - 8, y - 6, 30, -Math.PI * 0.62, Math.PI * 0.62);
+        ctx.stroke();
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x + 5, y - 6, 27, -Math.PI * 0.52, Math.PI * 0.52);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Cartão no estilo do seletor da mesa (selector_final.gd): fundo
+    // escuro, barra de destaque grossa à esquerda quando marcado,
+    // "TRACK 01", categoria, título grande, BPM, nível e recorde.
+    function desenharCartao(ctx, k) {
+      const c = CARTOES[k];
+      const m = MUSICAS[k];
+      const tm = TEMAS[k];
+      const marcado = k === cursor;
+      const carregando = fase === "carregando" && carga.indice === k;
+      const pulso = 0.5 + 0.5 * Math.sin(relogio * 4);
+      if (marcado) {
+        // halo em traços largos e transparentes (sem shadowBlur)
+        ctx.strokeStyle = tm.primaria;
+        for (let i = 0; i < 3; i++) {
+          ctx.globalAlpha = (0.08 + i * 0.06) * (0.75 + pulso * 0.25);
+          ctx.lineWidth = 16 - i * 5;
+          retanguloRedondo(ctx, c.x, c.y, c.w, c.h, 24);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = marcado ? "rgba(4,7,14,0.97)" : "rgba(1,3,6,0.86)";
+      retanguloRedondo(ctx, c.x, c.y, c.w, c.h, 24);
+      ctx.fill();
+      ctx.lineWidth = marcado ? 3 : 1.5;
+      ctx.strokeStyle = marcado ? tm.destaque : "rgba(244,7,48,0.28)";
+      ctx.stroke();
+      if (marcado) {
+        ctx.fillStyle = tm.destaque;
+        retanguloRedondo(ctx, c.x + 4, c.y + 18, 7, c.h - 36, 3.5);
+        ctx.fill();
+      }
+
+      api.texto(ctx, TEXTOS_MUSICA[k].faixa, c.x + 30, c.y + 26, { tamanho: 13, peso: 800, alinhar: "left", cor: "#a3b8d6" });
+      api.texto(ctx, m.category, c.x + c.w - 24, c.y + 26, { tamanho: 13, peso: 900, alinhar: "right", cor: tm.destaque });
+      api.texto(ctx, m.nome, c.x + 30, c.y + 76, { tamanho: 46, peso: 900, alinhar: "left", cor: marcado ? "#ffffff" : "#94a6c2" });
+      desenharEmblema(ctx, k, c.x + c.w - 76, c.y + 70, marcado);
+
+      const by = c.y + c.h - 26;
+      api.texto(ctx, TEXTOS_MUSICA[k].andamento, c.x + 30, by, { tamanho: 15, peso: 800, alinhar: "left", cor: tm.clara });
+      if (carregando && carga.estado === "erro") {
+        api.texto(ctx, "NÃO CARREGOU • TOQUE DE NOVO", c.x + c.w - 24, by, { tamanho: 14, peso: 900, alinhar: "right", cor: "#ff5468" });
+      } else if (carregando) {
+        const texto = carga.estado === "preparando" ? "PREPARANDO…" : `CARREGANDO ${Math.round(carga.progresso * 100)}%`;
+        api.texto(ctx, texto, c.x + c.w - 52, by, { tamanho: 14, peso: 900, alinhar: "right", cor: "#ffffff" });
+        // anel girando ao lado do texto
+        ctx.strokeStyle = tm.destaque;
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(c.x + c.w - 34, by, 9, relogio * 7, relogio * 7 + Math.PI * 1.4);
+        ctx.stroke();
+        ctx.lineCap = "butt";
+        // barra do download no pé do cartão
+        const largura = c.w - 60;
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        ctx.fillRect(c.x + 30, c.y + c.h - 9, largura, 3);
+        ctx.fillStyle = tm.destaque;
+        ctx.fillRect(c.x + 30, c.y + c.h - 9, largura * (carga.estado === "preparando" ? 1 : carga.progresso), 3);
+      } else {
+        api.texto(ctx, textosRecorde[k], c.x + c.w - 24, by, { tamanho: 14, peso: 800, alinhar: "right", cor: "rgba(255,255,255,0.72)" });
+      }
+    }
+
+    function desenharEscolha(ctx) {
+      // o disco fica de cenário, apagado por baixo dos cartões
+      ctx.fillStyle = "rgba(2,0,8,0.5)";
+      ctx.fillRect(0, 0, LARGURA, ALTURA);
+
+      desenharPainelHud(ctx);
+      const { x, y, w } = HUD;
+      api.texto(ctx, "ESCOLHA A MÚSICA", x + 20, y + 30, { tamanho: 25, peso: 900, alinhar: "left", cor: "#ffffff" });
+      api.texto(ctx, "AS MÚSICAS DA MÁQUINA • NÍVEL FÁCIL", x + 20, y + 56, { tamanho: 14, peso: 800, alinhar: "left", cor: TEMA_PADRAO.clara });
+      api.texto(ctx, `${MUSICAS.length} MÚSICAS`, x + w - 20, y + 31, { tamanho: 18, peso: 900, alinhar: "right", cor: COR_TEMA2 });
+      desenharEspectro(ctx, x + 20, y + 72, w - 40, 62);
+      api.texto(ctx, "HIT MUSIC", x + w / 2, y + 152, { tamanho: 14, peso: 900, cor: "rgba(255,255,255,0.6)" });
+
+      for (let k = 0; k < CARTOES.length; k++) desenharCartao(ctx, k);
+
+      const esperando = fase === "carregando" && carga.estado !== "erro";
+      const aviso = esperando ? "A MÚSICA JÁ VAI COMEÇAR" : "TOQUE NA MÚSICA PARA JOGAR";
+      ctx.globalAlpha = esperando ? 1 : 0.75 + 0.25 * Math.sin(relogio * 3.2);
+      api.texto(ctx, aviso, CX, 572, { tamanho: 22, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
+      ctx.globalAlpha = 1;
+      if (temMouse) {
+        api.texto(ctx, "A / J ou setas escolhem • S ou ENTER confirma", CX, 604, { tamanho: 14, peso: 700, cor: TEMA_PADRAO.clara });
       }
     }
 
@@ -1704,100 +2356,86 @@ export default {
     return {
       iniciar() {
         chamadasIniciar++;
+        pararFonte();
+        carga.ficha++; // um download pela metade não começa mais nada
+        carga.indice = -1;
+        carga.estado = "";
         // a primeira chamada é a do console montando o jogo (atrás da capa);
         // as próximas são "Jogar" — e aí já houve um gesto da pessoa.
-        fase = chamadasIniciar === 1 ? "capa" : "pronto";
-        t = 0;
-        pontos = 0; combo = 0; comboMax = 0; multiplicador = 1;
-        somaQualidade = 0; julgados = 0; erros = 0;
-        contagem.fill(0);
-        vida = 100; energiaMusica = 1; energiaAcerto = 0;
-        proxNascer = 0; primeiraViva = 0; passoVisual = 0;
-        ultimoJulgamento = -1; tempoJulgamento = -9; comboPulo = 0;
-        tempoMostrado = -1; classificado = false;
-        flash.fill(0); toque.fill(0); espectro.fill(0);
-        ponteiros.clear(); teclasPresas.clear(); setaPendente = null;
-        for (const k of Object.keys(setaFaixa)) delete setaFaixa[k];
-        for (const e of efeitos) e.vivo = false;
-        for (const p of pulsosAnel) p.vivo = false;
-        for (const n of NOTAS) {
-          n.resolvida = false; n.segurando = false; n.ativa = false;
-          n.iniciada = false; n.finalizando = false; n.aguardandoEstrela = false;
-          n.progresso = 0; n.desenho = 0; n.fonte = null; n.proximaAncora = 1;
-        }
-        audio.cursor = 0;
-        audio.deslocamento = null;
-        if (fase === "pronto") {
+        fase = chamadasIniciar === 1 ? "capa" : "escolha";
+        tema = TEMA_PADRAO;
+        zerarPartida();
+        if (fase === "escolha") {
           const ativacao = navigator.userActivation;
           if (!ativacao || ativacao.isActive || ativacao.hasBeenActive) acordarAudio();
-          novoBus();
         }
-        api.placar({ pontos: 0, tempo: DURACAO, info: "" });
-        infoMostrada = "";
+        api.placar({ pontos: 0, tempo: null, info: "" });
+        pontosMostrados = 0;
       },
 
       atualizar(dt) {
-        quadroPerf = performance.now();
-        if (fase === "pronto") {
-          fase = "tocando";
-          audio.ligado = somLigado();
-          if (audio.ligado) acordarAudio();
-          atualizarVolume();
-        }
-        if (fase !== "tocando") return;
-        t += dt;
+        ultimoQuadro = performance.now();
+        if (fase !== "contagem" && fase !== "tocando") return;
 
-        // mudo do console: confere algumas vezes por segundo
-        audio.checar -= dt;
-        if (audio.checar <= 0) {
-          audio.checar = 0.25;
-          const ligado = somLigado();
-          if (ligado !== audio.ligado) {
-            audio.ligado = ligado;
-            if (ligado) { acordarAudio(); atualizarVolume(); }
-            else if (audio.ctx) audio.ctx.suspend().catch(() => {});
+        const c = audio.ctx;
+        if (c && c.state !== "running") {
+          // Pausado por nós (aba/rolagem): o console voltou a rodar, então
+          // a música volta. Travado por política de som: tenta de novo a
+          // cada segundo e pede um toque na tela.
+          if (audio.suspensoPorNos) {
+            if (!document.hidden) { audio.suspensoPorNos = false; retomarContexto(); }
+          } else {
+            if (!audio.travadoDesde) audio.travadoDesde = ultimoQuadro;
+            if (ultimoQuadro - audio.ultimaRetomada > 1000) { audio.ultimaRetomada = ultimoQuadro; retomarContexto(); }
           }
+          return;
         }
-        agendarMusica();
+        audio.travadoDesde = 0;
+        if (audio.desvio !== null) audio.desvio -= dt * DERIVA_RELOGIO;
+        t = tempoMusica();
+        if (fase === "contagem" && t >= DURACAO_CONTAGEM) fase = "tocando";
 
-        // barras do HUD batem no instante exato de cada passo
-        soVisual = true;
-        while (passoVisual < PASSOS && passoVisual * PASSO <= t) passoMusica(passoVisual++, 0);
-        soVisual = false;
-        const queda = Math.exp(-dt * 7);
-        for (let i = 0; i < 32; i++) espectro[i] *= queda;
+        lerEspectro();
+        if (precisaoMostrada !== precisao()) {
+          // _display_score do stage_v10: a porcentagem desliza até o valor
+          const alvo = precisao();
+          precisaoMostrada += (alvo - precisaoMostrada) * 0.18;
+          if (Math.abs(precisaoMostrada - alvo) < 0.005) precisaoMostrada = alvo;
+        }
 
-        if (setaPendente && tempoAgora() - setaPendente.tempo > 0.05) descarregarSeta();
+        if (fase === "tocando") {
+          if (setaPendente && t - setaPendente.tempo > 0.05) descarregarSeta();
 
-        while (proxNascer < TOTAL_NOTAS && NOTAS[proxNascer].t - APROXIMACAO <= t) proxNascer++;
+          while (proxNascer < TOTAL_NOTAS && NOTAS[proxNascer].t - aproximacao <= t) proxNascer++;
 
-        for (let i = primeiraViva; i < proxNascer; i++) {
-          const n = NOTAS[i];
-          if (n.tipo === SLIDE && (n.iniciada || n.finalizando)) {
-            // a estrela desenhada persegue o progresso real a velocidade
-            // limitada: o gesto sempre aparece percorrendo o trilho
-            const alvo = n.finalizando ? 1 : n.progresso;
-            const vel = n.finalizando || n.aguardandoEstrela ? 5.2 : 2.6;
-            n.desenho = Math.min(alvo, n.desenho + dt * vel);
-            if (n.aguardandoEstrela && !n.resolvida && n.desenho >= n.progresso - 0.001) concluirArrasto(n);
-            if (n.finalizando && n.desenho >= 0.999) {
-              n.finalizando = false;
-              const ultima = MARCAS[n.caminho[n.caminho.length - 1]];
-              novoEfeito(SLIDE, ultima[0], ultima[1], n.cor, 0.6, n.estiloEstrela);
+          for (let i = primeiraViva; i < proxNascer; i++) {
+            const n = NOTAS[i];
+            if (n.tipo === SLIDE && (n.iniciada || n.finalizando)) {
+              // a estrela desenhada persegue o progresso real a velocidade
+              // limitada: o gesto sempre aparece percorrendo o trilho
+              const alvo = n.finalizando ? 1 : n.progresso;
+              const vel = n.finalizando || n.aguardandoEstrela ? 5.2 : 2.6;
+              n.desenho = Math.min(alvo, n.desenho + dt * vel);
+              if (n.aguardandoEstrela && !n.resolvida && n.desenho >= n.progresso - 0.001) concluirArrasto(n);
+              if (n.finalizando && n.desenho >= 0.999) {
+                n.finalizando = false;
+                const ultima = MARCAS[n.caminho[n.caminho.length - 1]];
+                novoEfeito(SLIDE, ultima[0], ultima[1], n.cor, 0.6, n.estiloEstrela);
+              }
             }
+            if (n.resolvida) continue;
+            if (n.tipo === TAP) {
+              if (t > n.t + janelaAcerto) errar(n);
+            } else if (n.tipo === HOLD) {
+              if (n.segurando) {
+                if (t >= n.fim) acertar(n, 1, 0, MARCAS[n.faixa][0], MARCAS[n.faixa][1]);
+              } else if (t > n.t + janelaAcerto) errar(n);
+            } else if (n.iniciada) {
+              if (t > n.fim + FOLGA_ARRASTO) errar(n);
+            } else if (t > n.t + janelaAcerto * ESCALA_JANELA_ARRASTO) errar(n);
           }
-          if (n.resolvida) continue;
-          if (n.tipo === TAP) {
-            if (t > n.t + JANELA_ACERTO) errar(n);
-          } else if (n.tipo === HOLD) {
-            if (n.segurando) {
-              if (t >= n.fim) acertar(n, n.julgamento, n.qualidade, MARCAS[n.faixa][0], MARCAS[n.faixa][1], 200);
-            } else if (t > n.t + JANELA_ACERTO) errar(n);
-          } else if (n.iniciada) {
-            if (t > n.fim + FOLGA_ARRASTO) errar(n);
-          } else if (t > n.t + JANELA_ACERTO * ESCALA_JANELA_ARRASTO) errar(n);
+          while (primeiraViva < proxNascer && NOTAS[primeiraViva].resolvida && !NOTAS[primeiraViva].finalizando) primeiraViva++;
         }
-        while (primeiraViva < proxNascer && NOTAS[primeiraViva].resolvida && !NOTAS[primeiraViva].finalizando) primeiraViva++;
 
         for (let f = 0; f < FAIXAS; f++) {
           flash[f] = Math.max(0, flash[f] - dt * 3.1);
@@ -1806,32 +2444,24 @@ export default {
         energiaAcerto = Math.max(0, energiaAcerto - dt * 1.6);
         comboPulo = Math.max(0, comboPulo - dt * 6);
 
-        const restante = Math.max(0, Math.ceil(DURACAO - t));
+        const restante = Math.max(0, Math.ceil(audio.duracao - t));
         if (restante !== tempoMostrado) { tempoMostrado = restante; api.placar({ tempo: restante }); }
 
-        if (t >= DURACAO + 0.8 && primeiraViva >= TOTAL_NOTAS) {
-          fase = "fim";
-          silenciar(0.5);
-          window.setTimeout(() => { if (fase === "fim" && audio.ctx) audio.ctx.suspend().catch(() => {}); }, 700);
-          const pct = precisao();
-          classificado = pct >= 70;
-          api.terminar({
-            pontos,
-            titulo: classificado ? "CLASSIFICADO!" : "NÃO CLASSIFICADO",
-            detalhe: `Precisão ${formatarPct(pct)} · ${contagem[0]} PERFECT · ${erros} MISS · combo máx. ${comboMax}`
-              + (classificado ? "" : " · mínimo 70%"),
-          });
-        }
+        // A partida acaba quando a música acaba (stage.gd: song_time >=
+        // duração - 0,02, ou o "finished" do player).
+        if (fase === "tocando" && (audio.acabou || t >= audio.duracao - FIM_ANTECIPADO)) terminarPartida();
       },
 
       desenhar(ctx) {
         relogio = performance.now() / 1000;
-        prepararGradientes(ctx);
         if (fase === "capa") { desenharCapa(ctx); return; }
+        prepararGradientes(ctx, tema);
         desenharFundo(ctx);
         desenharDisco(ctx);
         desenharAnel(ctx);
         desenharSelo(ctx);
+        if (fase === "escolha" || fase === "carregando") { desenharEscolha(ctx); return; }
+
         for (let i = primeiraViva; i < proxNascer; i++) {
           const n = NOTAS[i];
           if (!n.resolvida && (n.tipo === TAP || (n.tipo === HOLD && !n.segurando))) desenharArcoAproximacao(ctx, n);
@@ -1867,14 +2497,26 @@ export default {
           api.texto(ctx, classificado ? "CLASSIFICADO" : "NÃO CLASSIFICADO", CX, CY, {
             tamanho: 40, peso: 900, cor: classificado ? "#3dff9e" : "#ff5468", contorno: "rgba(0,0,0,.7)",
           });
-          api.texto(ctx, formatarPct(precisao()), CX, CY + 48, { tamanho: 30, peso: 900, cor: "#ffffff" });
+          api.texto(ctx, formatarPct(precisaoMostrada), CX, CY + 48, { tamanho: 30, peso: 900, cor: "#ffffff" });
+        } else if (audio.travadoDesde && performance.now() - audio.travadoDesde > 600) {
+          // o navegador segurou o som: um toque na tela libera
+          ctx.fillStyle = "rgba(3,1,12,0.6)";
+          ctx.fillRect(0, 0, LARGURA, ALTURA);
+          api.texto(ctx, "TOQUE NA TELA", CX, CY - 16, { tamanho: 34, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.7)" });
+          api.texto(ctx, "PARA LIGAR A MÚSICA", CX, CY + 22, { tamanho: 20, peso: 800, cor: tema.clara });
         }
       },
 
       apertar(x, y, id) {
-        if (fase !== "tocando") return;
+        if (fase === "escolha" || fase === "carregando") {
+          const k = cartaoEm(x, y);
+          if (k >= 0) escolher(k);
+          return;
+        }
+        if (fase !== "contagem" && fase !== "tocando") return;
         acordarAudio();
-        const tp = tempoAgora();
+        if (fase !== "tocando") return;
+        const tp = tempoMusica();
         ponteiros.set(id, { x, y });
         const retomar = arrastoParaRetomar(x, y);
         if (retomar) {
@@ -1904,12 +2546,19 @@ export default {
         if (!ponteiros.has(id)) return;
         ponteiros.delete(id);
         if (fase !== "tocando") return;
-        soltarFonte(id, tempoAgora());
+        soltarFonte(id, tempoMusica());
       },
 
       tecla(codigo, apertada) {
+        if (fase === "escolha" || fase === "carregando") {
+          if (!apertada) return;
+          if (codigo in TECLAS_SOBE) cursor = (cursor + MUSICAS.length - 1) % MUSICAS.length;
+          else if (codigo in TECLAS_DESCE) cursor = (cursor + 1) % MUSICAS.length;
+          else if (codigo in TECLAS_CONFIRMA) escolher(cursor);
+          return;
+        }
         if (fase !== "tocando") return;
-        const tp = tempoAgora();
+        const tp = tempoMusica();
         if (codigo in SETAS) {
           if (apertada) {
             if (teclasPresas.has(codigo)) return;
@@ -1955,11 +2604,19 @@ export default {
 
       destruir() {
         fase = "fim";
+        carga.ficha++;
+        window.clearInterval(vigia);
+        document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+        pararFonte();
         if (audio.ctx) {
           try { audio.ctx.close(); } catch (erro) { /* já fechado */ }
         }
         audio.ctx = null;
-        audio.bus = null;
+        audio.saida = null;
+        audio.energia = null;
+        audio.analisador = null;
+        audio.buffer = null;
+        audio.bufferId = null;
       },
     };
   },
