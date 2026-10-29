@@ -9,7 +9,7 @@ class PaginasEstaticasSitemap(Sitemap):
     changefreq = "weekly"
 
     def items(self):
-        return ["home", "brinquedos", "eventos", "projetos", "pecas_reposicao", "estabelecimentos"]
+        return ["home", "brinquedos", "eventos", "projetos", "pecas_reposicao", "estabelecimentos", "arena"]
 
     def location(self, item):
         return reverse(item)

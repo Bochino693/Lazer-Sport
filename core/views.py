@@ -33,6 +33,7 @@ from django.templatetags.static import static
 
 # Ciclo carrinho -> pedido reservado -> pedido pago.
 from . import checkout
+from . import arena, painel_publico
 from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
 from .home_cache import (
     admin_catalog_etag,
@@ -155,6 +156,38 @@ def pronto(request):
         banco = False
 
     return JsonResponse({"ok": True, "banco": banco})
+
+
+def vitrine_do_quadro(brinquedos, quantidade=8):
+    """Os brinquedos que giram no quadro inicial: os mais curtidos com foto.
+
+    Usa o campo `imagem_brinquedo` (que o cadastro mantém igual à foto de
+    frente) e não `imagem_catalogo`: aqui a lista não traz a galeria, e
+    perguntar a capa a cada brinquedo seria uma consulta por item na
+    página mais visitada do site.
+    """
+    from .formatos import dinheiro
+
+    com_foto = [b for b in brinquedos if b.imagem_brinquedo]
+    com_foto.sort(key=lambda b: (-getattr(b, "total_curtidas", 0), -(b.avaliacao or 0), b.nome_brinquedo))
+    vitrine = []
+    for b in com_foto[:quantidade]:
+        try:
+            capa = arena.reduzir_imagem(b.imagem_brinquedo.url, 900)
+        except Exception:
+            continue
+        categorias = [c.nome_categoria for c in b.categorias_brinquedos.all() if c.nome_categoria]
+        vitrine.append({
+            "nome": b.nome_brinquedo,
+            "url": reverse("brinquedo_detalhe", args=[b.pk]) + "#bread",
+            "capa": capa,
+            "miniatura": arena.reduzir_imagem(b.imagem_brinquedo.url, 160),
+            "categoria": categorias[0] if categorias else "Brinquedo",
+            "preco": f"R$ {dinheiro(b.valor_brinquedo)}" if b.valor_brinquedo else "",
+            "avaliacao": float(b.avaliacao or 0),
+            "medidas": b.dimensoes_m or "",
+        })
+    return vitrine
 
 
 class HomeView(View):
@@ -451,6 +484,10 @@ class HomeView(View):
             "clientes_mapa": clientes_mapa,
             "pontos_mapa": pontos_mapa,
             "cidades_atendidas": cidades_atendidas,
+            # O quadro inicial: a vitrine que gira e o painel ao vivo.
+            "vitrine_quadro": vitrine_do_quadro(brinquedos_todos),
+            "painel": painel_publico.numeros(),
+            "jogos_arena": arena.JOGOS,
         }
 
         return context
@@ -920,6 +957,10 @@ class BrinquedoInfoView(View):
                 brinquedo,
             ),
         }
+
+        # O mesmo brinquedo da Arena 3D, sozinho no palco, com as cores e
+        # os adesivos para escolher. Usa o que já veio no prefetch acima.
+        context["visor_3d"] = [arena.dados_do_brinquedo(brinquedo, request.path + "#bread")]
 
         resposta = render(request, "brinquedo_info.html", context)
         return servico_favoritos.aplicar_cookie(request, resposta)
