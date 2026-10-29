@@ -166,8 +166,9 @@ def _url(imagem):
 #: miniatura", e quem termina a partida vê "Quero essa máquina".
 #:
 #: Jogos da mesma família dividem o mesmo arquivo (`script`) e mudam só a
-#: `variante`: os três boliches são um motor com três pistas, e os dois
-#: basquetes, um motor com duas quadras.
+#: `variante`: os dois basquetes são um motor com duas quadras. Cada
+#: boliche tem o seu: o Strike Kids é 3D, como o jogo, e o Dragon Bowling
+#: é o porte do game.gd dele.
 JOGOS = (
     {
         "slug": "strike-kids",
@@ -179,12 +180,12 @@ JOGOS = (
             "jogada, a pista muda de cenário e os pinos caem com física de "
             "verdade."
         ),
-        "comandos": "Arraste a bola e solte na direção dos pinos.",
+        "comandos": "Arraste a bola e solte: o ponto da pista por onde o gesto passa é o sensor da jogada.",
         "desenhos": ("boliche",),
         "cor": "#ffb703",
         "capa": "site/arena/capas/strike-kids-logo.webp",
         "poster": "site/arena/capas/strike-kids-fundo.webp",
-        "script": "site/arena/jogos/boliche.js",
+        "script": "site/arena/jogos/strike-kids.js",
         "variante": "strike-kids",
     },
     {
@@ -343,8 +344,8 @@ _ARRASTO_BOLICHE = {
     "rotulo": "Arraste e solte",
     "passos": (
         "Encoste o dedo (ou o mouse) na bola.",
-        "Arraste para cima, na direção dos pinos.",
-        "Solte: a direção e a velocidade do gesto viram a jogada.",
+        "Arraste para cima, na direção dos pinos, e solte.",
+        "O ponto da pista por onde o gesto passa é o sensor da jogada -- a força não muda nada, como na máquina.",
     ),
     "botoes": (),
 }
