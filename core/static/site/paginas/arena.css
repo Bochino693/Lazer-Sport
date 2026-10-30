@@ -847,8 +847,16 @@
     pointer-events: none;
 }
 
-.arena3d-rotulo { will-change: transform; }
 .arena3d-rotulo[hidden] { display: none; }
+
+/* o nome do escolhido: parado, no meio, logo acima dos controles */
+.arena3d-rotulo--fixo {
+    top: auto;
+    bottom: 74px;
+    left: 50%;
+    max-width: calc(100% - 40px);
+    transform: translateX(-50%);
+}
 
 /* a ficha: ao lado do palco, inteira, sem rolagem */
 .arena3d-ficha {

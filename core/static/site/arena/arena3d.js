@@ -3295,7 +3295,7 @@ class Arena {
     } else {
       this.camera3d.atualizar(dt);
       this.liberarVista();
-      this.posicionarRotulo(dt);
+      this.posicionarRotulo();
       this.atualizarMapa();
     }
     this.renderer.render(this.cena, this.camera);
@@ -3650,37 +3650,28 @@ class Arena {
   }
 
   /** O nome da máquina em cima dela: a do mouse, ou a escolhida. */
-  posicionarRotulo(dt = 0.016) {
-    const m = this.sobre || this.selecionada;
+  posicionarRotulo() {
+    // o nome do escolhido fica PARADO embaixo do palco: preso ao objeto, ele
+    // ia junto com a câmera girando e tremia; o da máquina sob o mouse
+    // acompanha o ponteiro, como uma dica
+    const sobre = this.sobre && this.sobre !== this.selecionada ? this.sobre : null;
+    const m = sobre || this.selecionada;
     if (!m || !m.grupo.visible) {
       this.rotulo.hidden = true;
-      this.rotuloDe = null;
       return;
     }
-    const v = m.centro(this.ajuda);
-    v.y += m.H / 2 + 0.35;
-    v.project(this.camera);
-    if (v.z > 1) {
-      this.rotulo.hidden = true;
-      return;
-    }
-    const w = this.palco.clientWidth;
-    const h = this.palco.clientHeight;
     if (this.rotulo.textContent !== m.dados.nome) this.rotulo.textContent = m.dados.nome;
     this.rotulo.hidden = false;
-    const x = limitar(((v.x + 1) / 2) * w, 80, w - 80);
-    const y = limitar(((1 - v.y) / 2) * h, 48, h - 70);
-    // O nome desliza até o lugar, sem arredondar pixel a pixel: de longe,
-    // com a câmera passeando devagar, o arredondamento fazia ele tremer.
-    if (this.rotuloDe !== m) {
-      this.rotuloDe = m;
-      this.rotuloX = x;
-      this.rotuloY = y;
+    this.rotulo.classList.toggle("arena3d-rotulo--fixo", !sobre);
+    let posicao = "";
+    if (sobre) {
+      const w = this.palco.clientWidth;
+      const h = this.palco.clientHeight;
+      const x = Math.round(limitar(this.mouseX || 0, 80, w - 80));
+      const y = Math.round(limitar((this.mouseY || 0) - 18, 40, h - 70));
+      posicao = `translate3d(${x}px, ${y}px, 0) translate(-50%, -100%)`;
     }
-    const k = 1 - Math.exp(-dt * 12);
-    this.rotuloX += (x - this.rotuloX) * k;
-    this.rotuloY += (y - this.rotuloY) * k;
-    this.rotulo.style.transform = `translate3d(${this.rotuloX.toFixed(2)}px, ${this.rotuloY.toFixed(2)}px, 0) translate(-50%, -100%)`;
+    if (this.rotulo.style.transform !== posicao) this.rotulo.style.transform = posicao;
   }
 
   /** A máquina sob o ponteiro (coordenadas de tela). */
@@ -4442,6 +4433,9 @@ class Camera {
       if (!anterior) {
         // só passando por cima: o cursor avisa que dá para tocar
         if (evento.pointerType === "mouse" && !arena.passeio) {
+          const r = arena.palco.getBoundingClientRect();
+          arena.mouseX = evento.clientX - r.left;
+          arena.mouseY = evento.clientY - r.top;
           arena.sobre = arena.escolher(evento.clientX, evento.clientY);
           canvas.classList.toggle("sobre-maquina", Boolean(arena.sobre) || Boolean(arena.zonaSob(evento.clientX, evento.clientY)));
         }
