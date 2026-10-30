@@ -308,7 +308,11 @@ function clarear(hex, quanto) { return misturar(hex, "#ffffff", quanto); }
 function escurecer(hex, quanto) { return misturar(hex, "#000000", quanto); }
 
 /* As peças brancas do original (aro, giros, luva) são MÁSCARAS: o Godot
-   as tinge na hora. Aqui a tinta é feita uma vez por cor e guardada. */
+   as tinge na hora. Aqui a tinta é feita uma vez por cor e guardada --
+   no máximo TINTAS_GUARDADAS delas, as menos usadas saem primeiro. Sem o
+   limite, a cor que desliza (o aro na contagem) criava um canvas de
+   ~0,5 MB por quadro, e o celular afundava no lixo de memória. */
+const TINTAS_GUARDADAS = 32;
 function criarTingidor() {
   const guardadas = new Map();
   /* `multiplicar` é o "modulate" do Godot de verdade: o branco vira a cor
@@ -318,7 +322,11 @@ function criarTingidor() {
     if (!img) return null;
     const chave = img.src + "|" + cor + (multiplicar ? "|x" : "");
     let pronta = guardadas.get(chave);
-    if (!pronta) {
+    if (pronta) {
+      // a recém-usada vai para o fim da fila
+      guardadas.delete(chave);
+      guardadas.set(chave, pronta);
+    } else {
       pronta = document.createElement("canvas");
       pronta.width = img.naturalWidth || img.width;
       pronta.height = img.naturalHeight || img.height;
@@ -332,6 +340,7 @@ function criarTingidor() {
         g.drawImage(img, 0, 0);
       }
       guardadas.set(chave, pronta);
+      if (guardadas.size > TINTAS_GUARDADAS) guardadas.delete(guardadas.keys().next().value);
     }
     return pronta;
   };
@@ -2864,7 +2873,7 @@ class Arena3D {
       t.generateMipmaps = false;
       t.minFilter = THREE.LinearFilter;
     } else {
-      t.anisotropy = 4;
+      t.anisotropy = ANISOTROPIA;
     }
     t.needsUpdate = true;
     this.texturas.push(t);
@@ -3602,15 +3611,28 @@ const URL_GLTF = "../../../vendor/three/GLTFLoader.js";
 /* A nitidez da arena: até 1,5 pixel do 3D por ponto da tela lógica (o
    celular médio não aguenta desenhar o ginásio inteiro no dobro). */
 const NITIDEZ_3D_MAXIMA = 1.5;
+/* E o mínimo: o 3D nunca fica abaixo de meio pixel por ponto lógico. */
+const NITIDEZ_3D_MINIMA = 0.5;
 /* OS DEGRAUS DO GRÁFICO (Arena3D.DEGRAUS): cada degrau tira UMA coisa, a
-   que menos se vê primeiro — 0 tudo; 1 sem os fachos e os flashes; 2 e 3
+   que menos se vê primeiro — 0 tudo; 1 sem os fachos e os flashes; 2 a 4
    o 3D com menos pixels. O vigia mede o quadro de verdade e só desce
    (subir de novo faria a imagem piscar entre dois tamanhos). */
-const ESCALA_DO_DEGRAU = [1.0, 1.0, 0.85, 0.7];
-/* Quantos quadros o vigia mede de cada vez, e a média que já é lenta
-   demais: abaixo de 40 quadros por segundo. */
-const QUADROS_DO_VIGIA = 120;
+const ESCALA_DO_DEGRAU = [1.0, 1.0, 0.85, 0.72, 0.6];
+/* O vigia mede por TEMPO, não por quadros: em 120 quadros o celular que
+   faz 15 por segundo passava 8 s travado antes de cada degrau. Mede
+   janelas de um segundo de partida (a primeira, com a compilação dos
+   shaders, não conta) e desce quando a média fica abaixo de 40 por
+   segundo. */
+const JANELA_DO_VIGIA = 1.0;
 const QUADRO_LENTO = 1 / 40;
+/* CELULAR (o dedo é o ponteiro principal): o 3D sai sem MSAA -- em tela
+   de 2 ou 3 pixels por ponto o serrilhado não aparece, e o MSAA dobrava
+   o custo de cada pixel --, o filtro anisotrópico desce para 2 e a pele
+   do boxeador sobe para a placa de vídeo em 1024 (16 MB a menos de
+   memória de vídeo; no tamanho em que ele aparece no celular, igual). */
+const CELULAR = typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+const ANISOTROPIA = CELULAR ? 2 : 4;
+const PELE_NO_CELULAR = 1024;
 const MODELO_DO_BOXEADOR = "super-boxing/boxeador.glb";
 /* As pinturas do corpo (lutador_boxeador.gd, TEXTURAS), em WebP. */
 const TEXTURAS_DO_BOXEADOR = {
@@ -3694,7 +3716,7 @@ export default {
        ------------------------------------------------------------------ */
     const mundo = {
       estado: "carregando", arena: null, renderizador: null, tela: null, largura: 0, altura: 0, relogio: 0, avancou: false,
-      degrau: 0, quadros: 0, somaDosQuadros: 0,
+      degrau: 0, quadros: 0, somaDosQuadros: 0, tempoDoVigia: 0, janelas: 0, pontosNaTela: 0, observador: null,
     };
     let destruido = false;
     const pontoNaTela = { x: 0, y: 0 };
@@ -3715,18 +3737,29 @@ export default {
         if (destruido) return;
         THREE = tres;
         const tela = document.createElement("canvas");
-        renderizador = new THREE.WebGLRenderer({ canvas: tela, antialias: true, alpha: false, stencil: false, powerPreference: "high-performance" });
+        renderizador = new THREE.WebGLRenderer({ canvas: tela, antialias: !CELULAR, alpha: false, stencil: false, powerPreference: "high-performance" });
         // ver O ESPAÇO DE COR É O DA TV BOX, no começo do mundo 3D
         renderizador.outputColorSpace = THREE.LinearSRGBColorSpace;
         renderizador.setPixelRatio(1);
         renderizador.setSize(LARGURA, ALTURA, false);
         tela.addEventListener("webglcontextlost", () => { if (!destruido) perderMundo3D(); });
         const endereco = (arquivo) => new URL(arquivo, import.meta.url).href;
-        const anisotropia = Math.min(4, renderizador.capabilities.getMaxAnisotropy());
+        const anisotropia = Math.min(ANISOTROPIA, renderizador.capabilities.getMaxAnisotropy());
         const carregarTextura = (arquivo) => new THREE.TextureLoader().loadAsync(endereco(arquivo)).then((t) => {
           t.flipY = false; // as UVs do glTF
           t.colorSpace = THREE.NoColorSpace;
           t.anisotropy = anisotropia;
+          if (CELULAR && t.image && t.image.width > PELE_NO_CELULAR) {
+            const k = PELE_NO_CELULAR / t.image.width;
+            const menor = document.createElement("canvas");
+            menor.width = PELE_NO_CELULAR;
+            menor.height = Math.max(1, Math.round(t.image.height * k));
+            const g = menor.getContext("2d");
+            g.imageSmoothingQuality = "high";
+            g.drawImage(t.image, 0, 0, menor.width, menor.height);
+            t.image = menor;
+            t.needsUpdate = true;
+          }
           return t;
         }).catch(() => null);
         const nomes = Object.keys(TEXTURAS_DO_BOXEADOR);
@@ -4746,11 +4779,13 @@ export default {
       const r = mundo.renderizador;
       const agora = performance.now();
       // fora da partida (capa, contagem, fim) o lutador continua vivo
-      if (!mundo.avancou && mundo.relogio > 0) a.avancar(Math.min(0.1, Math.max(0, (agora - mundo.relogio) / 1000)));
+      const jogando = mundo.avancou;
+      if (!jogando && mundo.relogio > 0) a.avancar(Math.min(0.1, Math.max(0, (agora - mundo.relogio) / 1000)));
       mundo.avancou = false;
-      vigiar((agora - mundo.relogio) / 1000);
+      // só a partida conta: na capa e no fim o console desenha 1 quadro em 4
+      if (jogando) vigiar((agora - mundo.relogio) / 1000);
       mundo.relogio = agora;
-      const razao = limitar(ctx.canvas.width / LARGURA, 1, NITIDEZ_3D_MAXIMA) * ESCALA_DO_DEGRAU[mundo.degrau];
+      const razao = limitar(pixelsPorPonto(ctx.canvas), NITIDEZ_3D_MINIMA, NITIDEZ_3D_MAXIMA) * ESCALA_DO_DEGRAU[mundo.degrau];
       const w = Math.round(LARGURA * razao);
       const h = Math.round(ALTURA * razao);
       if (w !== mundo.largura || h !== mundo.altura) {
@@ -4778,6 +4813,26 @@ export default {
       ctx.drawImage(mundo.tela, ix, iy, fw, fh, 0, 0, LARGURA, ALTURA);
     }
 
+    /* Quantos pixels da tela de verdade cada ponto lógico ocupa (com a
+       mesma densidade máxima 2 do console). O canvas do console tem no
+       mínimo 540 de largura mesmo quando aparece com 250 no computador: o
+       3D seguia esse canvas e desenhava quatro vezes mais pixels do que
+       se via. O tamanho vem do ResizeObserver -- ler o layout a cada
+       quadro forçaria o navegador a recalcular a página. */
+    function pixelsPorPonto(canvas) {
+      if (!mundo.observador && typeof ResizeObserver !== "undefined") {
+        mundo.observador = new ResizeObserver((entradas) => {
+          const caixa = entradas[0].contentRect;
+          if (caixa.width > 0) mundo.pontosNaTela = caixa.width;
+        });
+        mundo.observador.observe(canvas);
+        mundo.pontosNaTela = canvas.getBoundingClientRect().width;
+      }
+      if (!(mundo.pontosNaTela > 0)) return canvas.width / LARGURA;
+      const densidade = Math.min(2, window.devicePixelRatio || 1);
+      return (mundo.pontosNaTela * densidade) / LARGURA;
+    }
+
     /* O VIGIA DE DESEMPENHO: a média do quadro de verdade, de tempos em
        tempos; lenta, a arena desce um degrau. Um quadro de mais de um
        quarto de segundo é a aba que voltou, não lentidão — não conta. */
@@ -4785,10 +4840,11 @@ export default {
       if (!(passoReal > 0) || passoReal > 0.25) return;
       mundo.quadros++;
       mundo.somaDosQuadros += passoReal;
-      if (mundo.quadros < QUADROS_DO_VIGIA) return;
+      if (mundo.somaDosQuadros < JANELA_DO_VIGIA) return;
       const media = mundo.somaDosQuadros / mundo.quadros;
       mundo.quadros = 0;
       mundo.somaDosQuadros = 0;
+      if (mundo.janelas++ === 0) return; // a primeira janela tem a compilação
       if (media > QUADRO_LENTO && mundo.degrau < ESCALA_DO_DEGRAU.length - 1) {
         mundo.degrau++;
         if (mundo.degrau >= 1) mundo.arena.enfeites(false);
@@ -5299,7 +5355,7 @@ export default {
       if (caiu) cor = socos.length ? COR_FAIXA[faixaDe(melhor)] : VERMELHO;
       else if (armado || lendo) cor = corDaZona(fracao);
       else if (vereditoT >= 0) cor = COR_FAIXA[faixaDe(notaAtual)];
-      else cor = misturar(AMBAR, COR_FAIXA[faixaDe(notaAtual)], limitar(tEstado / CONTAGEM_DURACAO, 0, 1) * 0.82);
+      else cor = misturar(AMBAR, COR_FAIXA[faixaDe(notaAtual)], Math.round(limitar(tEstado / CONTAGEM_DURACAO, 0, 1) * 12) / 12 * 0.82);
       const naZonaVermelha = estado === "armado" && forca >= ZONA_FORTE;
       const pop = !caiu && vereditoT >= 0 && vereditoT < MEDIDOR_POP_S ? Math.sin(Math.PI * vereditoT / MEDIDOR_POP_S) : 0;
 
@@ -5651,6 +5707,7 @@ export default {
             mundo.renderizador.forceContextLoss();
           }
         } catch (erro) { /* o contexto já tinha ido embora */ }
+        if (mundo.observador) mundo.observador.disconnect();
         mundo.arena = null;
         mundo.renderizador = null;
         mundo.tela = null;
