@@ -2,9 +2,10 @@
 
     python manage.py cadastrar_brinquedao_modelo_2
 
-Normalmente nem é preciso: a migração 0113 cadastra no deploy. Este
-comando é para quando ela não conseguiu (ver `core/cadastro_modelos.py`).
-Rodar de novo não duplica; `--fotos` refaz a galeria.
+O mesmo que `cadastrar_modelo_3d brinquedao-modelo-2`. Normalmente nem
+é preciso: a migração 0113 cadastra no deploy (ver
+`core/cadastro_modelos.py`). Rodar de novo não duplica; `--fotos` refaz a
+galeria.
 """
 
 from django.core.management.base import BaseCommand

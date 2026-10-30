@@ -530,6 +530,25 @@ MODELOS_3D = (
             "andar de cima com rede de escalada, rolo e tubo de passagem, escorregador duplo e tobogã em espiral."
         ),
     },
+    {
+        # Grande demais para a roda: fica no seu próprio "reino", ao lado.
+        "id": "espaco-esportivo-modelo-1",
+        "titulo": "Espaço Esportivo Modelo 1",
+        "nomes": ("Espaço Esportivo Modelo 1",),
+        "arquivo": "site/arena/modelos/espaco-esportivo-modelo-1.glb",
+        "medidas": (3.9, 39.0, 23.0),
+        "grupo": "esportivos",
+        "reino": True,
+        "pasta": "site/arena/modelos/espaco-esportivo-modelo-1/",
+        "fotos": (("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"), ("lado_esquerdo", "lado_esquerdo.webp")),
+        "medidas_texto": "Área de 39 m × 23 m · parque de trampolins de 18 m × 16,5 m",
+        "categorias": ("Espaço esportivo",),
+        "descricao": (
+            "Espaço esportivo completo: parque de trampolins com piscinas de espuma, enterradas, parede de "
+            "escalada e varredor; quadras de campo e basquete enjauladas, duas arenas de panna, pista de 14 m "
+            "e o circuito kids com tobogã e piscina de bolinhas."
+        ),
+    },
 )
 
 
@@ -561,7 +580,8 @@ def modelos_fora_do_catalogo(catalogo):
             "desenho": "playground",
             "jogo": "",
             "modelo_id": modelo["id"],
-            "grupo": "brinquedoes",
+            "grupo": modelo.get("grupo", "brinquedoes"),
+            "reino": modelo.get("reino", False),
             "categorias": list(modelo["categorias"]),
             "medidas": list(modelo["medidas"]),
             "medidas_reais": True,
@@ -604,6 +624,14 @@ GRUPOS_DA_ARENA = (
         "titulo": "Trampolins e brinquedões",
         "kicker": "Espaços kids",
         "texto": "Camas elásticas, playgrounds e brinquedões para o espaço kids.",
+    },
+    {
+        # Os espaços inteiros (parque de trampolins, quadras...): na Arena 3D
+        # ficam fora da roda das máquinas, cada um no seu "reino".
+        "id": "esportivos",
+        "titulo": "Espaços esportivos",
+        "kicker": "Parques completos",
+        "texto": "Parques de trampolins, quadras e circuitos: o espaço inteiro, montado pela fábrica.",
     },
 )
 
@@ -664,7 +692,8 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "url": url_detalhe,
         "desenho": desenho,
         "jogo": jogo,
-        "grupo": grupo_da_arena(desenho, jogo),
+        "grupo": (modelo or {}).get("grupo") or grupo_da_arena(desenho, jogo),
+        "reino": bool((modelo or {}).get("reino")),
         "categorias": categorias,
         "medidas": medidas,
         "medidas_reais": medidas_reais,
@@ -674,7 +703,7 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "medidas_modelo": list(modelo["medidas"]) if modelo else [],
         "medidas_texto": (
             " × ".join(medida(v) for v in (brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m))
-            if medidas_reais else ""
+            if medidas_reais else (modelo or {}).get("medidas_texto", "")
         ),
         "voltagem": brinquedo.voltz or "",
         # Preço só de quem está à venda na loja; o resto é orçamento.

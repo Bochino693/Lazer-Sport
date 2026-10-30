@@ -28,6 +28,7 @@ from . import arena
 from .models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo
 
 migracao = importlib.import_module("core.migrations.0113_brinquedao_modelo_2")
+migracao_espaco = importlib.import_module("core.migrations.0114_espaco_esportivo_modelo_1")
 
 
 def _disco(pasta):
@@ -113,3 +114,53 @@ class CadastroTests(TestCase):
             with a, b, override_settings(IS_RENDER=True), mock.patch("builtins.print"):
                 migracao.cadastrar(apps_reais, None)
         self.assertEqual(Brinquedos.objects.get(nome_brinquedo="Brinquedão Modelo 2").imagens_brinquedo.count(), 4)
+
+
+class EspacoEsportivoTests(TestCase):
+    """O Espaço Esportivo Modelo 1: grande demais para a roda, vai para o seu reino."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_exposto_na_area_dos_espacos_esportivos(self):
+        resposta = self.client.get(reverse("arena"))
+        dados = {m["nome"]: m for m in resposta.context["arena_dados"]["maquinas"]}
+        espaco = dados["Espaço Esportivo Modelo 1"]
+        self.assertEqual(espaco["grupo"], "esportivos")
+        self.assertTrue(espaco["reino"])
+        self.assertIn("espaco-esportivo-modelo-1.glb", espaco["modelo"])
+        self.assertFalse(dados["Brinquedão Modelo 2"]["reino"])
+        self.assertContains(resposta, 'data-arena-zona="esportivos"')
+
+    def test_no_catalogo_tambem_vai_para_o_reino(self):
+        Brinquedos.objects.create(
+            nome_brinquedo="Espaço Esportivo Modelo 1", descricao="x", avaliacao=5, voltz="",
+            altura_m=3.65, largura_m=39, profundidade_m=23,
+        )
+        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        mesmos = [m for m in maquinas if m["nome"] == "Espaço Esportivo Modelo 1"]
+        self.assertEqual(len(mesmos), 1)
+        self.assertEqual((mesmos[0]["grupo"], mesmos[0]["reino"]), ("esportivos", True))
+        # medida grande demais para o desenho padrão: a ficha usa a do objeto
+        self.assertIn("39 m", mesmos[0]["medidas_texto"])
+
+    def test_comando_cadastra_na_categoria_de_espaco_esportivo(self):
+        CategoriasBrinquedos.objects.create(nome_categoria="Espaço Esportivo Kids", imagem_categoria="categorias/kids.png")
+        CategoriasBrinquedos.objects.create(nome_categoria="Espaço Esportivo", imagem_categoria="categorias/esportivo.png")
+        with tempfile.TemporaryDirectory() as pasta:
+            a, b = _disco(pasta)
+            with a, b:
+                call_command("cadastrar_modelo_3d", "espaco-esportivo-modelo-1", stdout=StringIO())
+        espaco = Brinquedos.objects.get(nome_brinquedo="Espaço Esportivo Modelo 1")
+        self.assertEqual([c.nome_categoria for c in espaco.categorias_brinquedos.all()], ["Espaço Esportivo"])
+        self.assertEqual(espaco.imagens_brinquedo.count(), 4)
+        self.assertTrue(espaco.imagem_brinquedo.name)
+
+    def test_migracao_so_no_render(self):
+        migracao_espaco.Migration.operations[0].code(apps_reais, None)
+        self.assertFalse(Brinquedos.objects.filter(nome_brinquedo="Espaço Esportivo Modelo 1").exists())
+        with tempfile.TemporaryDirectory() as pasta:
+            a, b = _disco(pasta)
+            with a, b, override_settings(IS_RENDER=True), mock.patch("builtins.print"):
+                migracao_espaco.Migration.operations[0].code(apps_reais, None)
+        self.assertTrue(Brinquedos.objects.filter(nome_brinquedo="Espaço Esportivo Modelo 1").exists())
