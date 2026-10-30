@@ -602,8 +602,8 @@
 .arena3d-passeio-dica {
     position: absolute;
     top: 12px;
-    left: 50%;
-    max-width: calc(100% - 200px);
+    left: calc(50% - 90px);
+    max-width: calc(100% - 220px);
     margin: 0;
     padding: 7px 14px;
     border-radius: 999px;
@@ -615,16 +615,94 @@
     transform: translateX(-50%);
 }
 
-.arena3d-passeio-pad {
+/* o mapa visto de cima: a bolinha é você, o leque é para onde olha */
+.arena3d-passeio-mapa {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 168px;
+    height: 168px;
+    border: 2px solid rgba(255, 255, 255, .25);
+    border-radius: 18px;
+    background: rgba(4, 10, 28, .85);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+    pointer-events: none;
+}
+
+/* o caminho: pausar (no fim, "de novo"), a etapa e a barra do quanto andou */
+.arena3d-passeio-fluxo {
     position: absolute;
     left: 14px;
     bottom: 14px;
-    display: grid;
-    gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100% - 220px);
+    padding: 6px 16px 6px 6px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .85);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
     pointer-events: auto;
 }
 
-.arena3d-passeio-pad button,
+.arena3d-passeio-pausa {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2ee57f, #3fd0ff);
+    cursor: pointer;
+}
+
+.arena3d-passeio-pausa:hover { filter: brightness(1.08); }
+
+/* ❚❚ andando, ▶ pausado, ↺ no fim -- desenhados em CSS, sem fonte de ícone */
+.arena3d-passeio-pausa-icone { position: relative; width: 14px; height: 16px; }
+.arena3d-passeio-pausa[data-estado="andando"] .arena3d-passeio-pausa-icone {
+    border-left: 5px solid #03140a;
+    border-right: 5px solid #03140a;
+}
+.arena3d-passeio-pausa[data-estado="pausado"] .arena3d-passeio-pausa-icone {
+    width: 0;
+    height: 0;
+    margin-left: 4px;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-left: 14px solid #03140a;
+}
+.arena3d-passeio-pausa[data-estado="fim"] .arena3d-passeio-pausa-icone {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #03140a;
+    border-top-color: transparent;
+    border-radius: 50%;
+}
+
+.arena3d-passeio-etapa { display: grid; gap: 6px; min-width: 150px; }
+.arena3d-passeio-etapa strong { color: #fff; font-size: .9rem; font-weight: 900; white-space: nowrap; }
+
+.arena3d-passeio-barra {
+    position: relative;
+    display: block;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .14);
+}
+
+.arena3d-passeio-barra span {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2ee57f, #3fd0ff);
+    transform: scaleX(0);
+    transform-origin: left;
+}
+
 .arena3d-passeio-sair {
     display: inline-flex;
     align-items: center;
@@ -641,8 +719,6 @@
     -webkit-user-select: none;
 }
 
-.arena3d-passeio-pad button { width: 54px; height: 54px; border-radius: 16px; font-size: 1.2rem; }
-.arena3d-passeio-pad button:active { background: linear-gradient(135deg, #16a34a, #22e07a); color: #04150a; }
 
 .arena3d-passeio-sair {
     position: absolute;
@@ -655,7 +731,7 @@
     pointer-events: auto;
 }
 
-.arena3d-palco.em-passeio .arena3d-tela { cursor: crosshair; }
+.arena3d-palco.em-passeio .arena3d-tela { cursor: grab; }
 
 /* com a máquina escolhida, a dica sai de cima das vistas */
 .arena3d-vistas:not([hidden]) ~ .arena3d-dica { top: 56px; }
@@ -681,6 +757,7 @@
     pointer-events: none;
 }
 
+.arena3d-rotulo { will-change: transform; }
 .arena3d-rotulo[hidden] { display: none; }
 
 /* a ficha: ao lado do palco, inteira, sem rolagem */
@@ -763,6 +840,20 @@
 .arena3d-ficha-dados dt { color: var(--arena-suave); font-size: .8rem; }
 .arena3d-ficha-dados dd { margin: 0; color: #fff; font-size: .84rem; font-weight: 800; text-align: right; }
 
+/* os jogos da casa que rodam no espaço (Swish, Gol Flash) */
+.arena3d-ficha-jogos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.arena3d-ficha-jogos[hidden] { display: none; }
+.arena3d-ficha-jogos span { color: var(--arena-suave); font-size: .76rem; font-weight: 700; }
+.arena3d-ficha-jogos a {
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, #ffb703, #ffd84a);
+    color: #261a00;
+    font-size: .76rem;
+    font-weight: 900;
+    text-decoration: none;
+}
+
 .arena3d-ficha-acoes { display: grid; gap: 6px; margin-top: auto; }
 .arena3d-ficha-acoes .ls-botao { justify-content: center; margin-top: 0; padding: 10px 14px; font-size: .9rem; }
 .arena3d-ficha-acoes .ls-botao[hidden] { display: none; }
@@ -809,7 +900,12 @@
     .arena-controle--tour span { display: none; }
     .arena3d-vistas { justify-content: flex-start; left: 8px; right: 8px; top: 8px; }
     .arena3d-vistas button { min-height: 32px; padding: 0 11px; }
-    .arena3d-passeio-dica { top: 8px; max-width: calc(100% - 24px); font-size: .74rem; border-radius: 14px; }
+    .arena3d-passeio-dica { top: 8px; left: 8px; max-width: calc(100% - 132px); font-size: .72rem; border-radius: 14px; transform: none; text-align: left; }
+    .arena3d-passeio-mapa { top: 8px; right: 8px; width: 112px; height: 112px; border-radius: 14px; }
+    .arena3d-passeio-fluxo { left: 8px; bottom: 8px; max-width: calc(100% - 150px); padding-right: 12px; }
+    .arena3d-passeio-pausa { width: 38px; height: 38px; }
+    .arena3d-passeio-etapa { min-width: 0; }
+    .arena3d-passeio-etapa strong { font-size: .78rem; }
 }
 
 /* =========================================================
