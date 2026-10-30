@@ -2577,7 +2577,26 @@ class Arena {
       this.vistas.querySelectorAll("[data-arena-vista]").forEach((botao) => {
         botao.setAttribute("aria-pressed", botao.dataset.arenaVista === nome ? "true" : "false");
       });
+      // o botão dos lados mostra o lado de agora
+      const lado = this.vistas.querySelector(`[data-arena-lados-menu] [data-arena-vista="${nome}"]`);
+      this.vistas.querySelector("[data-arena-lados-nome]").textContent = lado ? lado.textContent : "Lados";
+      this.vistas.querySelector("[data-arena-lados]").setAttribute("aria-pressed", lado ? "true" : "false");
+      this.abrirLados(false);
     }
+  }
+
+  abrirLados(abrir) {
+    const menu = this.vistas && this.vistas.querySelector("[data-arena-lados-menu]");
+    if (!menu) return;
+    menu.hidden = !abrir;
+    this.vistas.querySelector("[data-arena-lados]").setAttribute("aria-expanded", abrir ? "true" : "false");
+  }
+
+  /** "Ver tudo": a arena inteira, de qualquer lugar (o botão, o mapa, Esc). */
+  verTudo() {
+    if (this.passeio) this.sairPasseio({ voar: false });
+    if (this.tour) this.acao("tour", this.controles.querySelector('[data-arena-acao="tour"]'));
+    this.escolherZona("");
   }
 
   /** O passeio por dentro do brinquedo escolhido (só nos objetos 3D de verdade). */
@@ -2642,16 +2661,32 @@ class Arena {
     } else if (voar) this.camera3d.visaoGeral();
   }
 
-  proxima(passo) {
-    const total = this.lista.length;
+  /**
+   * As setas: o brinquedo que está daquele lado NA TELA (lado = 1, direita;
+   * -1, esquerda), qualquer que seja o lado de onde a câmera olha. Sem
+   * nenhum escolhido, começa pelo que está mais no meio da tela.
+   */
+  vizinha(lado) {
+    const lista = this.lista.filter((m) => m.grupo.visible);
+    const total = lista.length;
     if (!total) return;
-    let atual = this.selecionada ? this.lista.indexOf(this.selecionada) : -1;
-    if (atual < 0) {
-      // nada escolhido: começa pela área onde a câmera está
-      const primeira = this.lista.findIndex((m) => m.dados.grupo === this.zona);
-      atual = primeira >= 0 ? primeira - (passo > 0 ? 1 : 0) : (passo > 0 ? -1 : 0);
+    const T = this.T;
+    const frente = this.camera.getWorldDirection(new T.Vector3()).setY(0).normalize();
+    const direita = new T.Vector3(-frente.z, 0, frente.x);
+    const atual = this.selecionada;
+    if (!atual || !lista.includes(atual)) {
+      const c = this.camera.position;
+      const noMeio = (m) => {
+        const d = this.ajuda.subVectors(m.grupo.position, c).setY(0);
+        return d.dot(frente) / (d.length() || 1);
+      };
+      this.selecionar(lista.reduce((a, b) => (noMeio(b) > noMeio(a) ? b : a)));
+      return;
     }
-    this.selecionar(this.lista[(atual + passo + total) % total]);
+    const i = lista.indexOf(atual);
+    const vizinhas = [lista[(i + 1) % total], lista[(i - 1 + total) % total]];
+    const deLado = (m) => lado * this.ajuda.subVectors(m.grupo.position, atual.grupo.position).dot(direita);
+    this.selecionar(deLado(vizinhas[0]) >= deLado(vizinhas[1]) ? vizinhas[0] : vizinhas[1]);
   }
 
   /**
@@ -2797,6 +2832,8 @@ class Arena {
 
     if (this.controles) {
       this.controles.hidden = false;
+      // sem tela cheia (o iPhone não deixa), o botão nem aparece
+      if (!this.palco.requestFullscreen) this.controles.querySelector('[data-arena-acao="tela-cheia"]').hidden = true;
       this.controles.addEventListener("click", (evento) => {
         const botao = evento.target.closest("[data-arena-acao]");
         if (botao) this.acao(botao.dataset.arenaAcao, botao);
@@ -2804,10 +2841,15 @@ class Arena {
     }
     if (this.vistas) {
       this.vistas.addEventListener("click", (evento) => {
+        if (evento.target.closest("[data-arena-lados]")) {
+          this.abrirLados(this.vistas.querySelector("[data-arena-lados-menu]").hidden);
+          return;
+        }
         const botao = evento.target.closest("[data-arena-vista]");
         if (botao) this.vista(botao.dataset.arenaVista);
       });
     }
+    this.ligarMapa();
     this.painelPasseio = this.palco.querySelector("[data-arena-passeio]");
     if (this.painelPasseio) this.ligarPainelDoPasseio(this.painelPasseio);
 
@@ -2841,10 +2883,10 @@ class Arena {
     });
 
     this.palco.addEventListener("keydown", (evento) => {
-      if (this.passeio) return; // no passeio, as teclas andam
-      if (evento.key === "ArrowRight") { this.proxima(1); evento.preventDefault(); }
-      else if (evento.key === "ArrowLeft") { this.proxima(-1); evento.preventDefault(); }
-      else if (evento.key === "Escape" && this.selecionada) this.soltarSelecao();
+      if (this.passeio || evento.target.closest("select, input")) return;
+      if (evento.key === "ArrowRight") { this.vizinha(1); evento.preventDefault(); }
+      else if (evento.key === "ArrowLeft") { this.vizinha(-1); evento.preventDefault(); }
+      else if (evento.key === "Escape") { this.verTudo(); evento.preventDefault(); }
     });
     this.canvas.tabIndex = 0;
 
@@ -2862,15 +2904,16 @@ class Arena {
 
   acao(nome, botao) {
     this.ocioso = 0;
-    if (nome === "proximo") this.proxima(1);
-    else if (nome === "anterior") this.proxima(-1);
-    else if (nome === "visao") this.escolherZona("");
+    if (nome === "direita") this.vizinha(1);
+    else if (nome === "esquerda") this.vizinha(-1);
+    else if (nome === "visao") this.verTudo();
+    else if (nome === "mapa") this.abrirMapa(this.mapa ? this.mapa.hidden : false);
     else if (nome === "tour") {
       this.tour = !this.tour;
       this.tourTempo = 0;
       botao.setAttribute("aria-pressed", this.tour ? "true" : "false");
       botao.querySelector("i").className = this.tour ? "fa-solid fa-pause" : "fa-solid fa-play";
-      if (this.tour) this.proxima(1);
+      if (this.tour) this.vizinha(1);
     } else if (nome === "tela-cheia") {
       if (document.fullscreenElement) document.exitFullscreen();
       else if (this.palco.requestFullscreen) this.palco.requestFullscreen().catch(() => {});
@@ -2915,7 +2958,7 @@ class Arena {
       this.tourTempo += dt;
       if (this.tourTempo > 6) {
         this.tourTempo = 0;
-        this.proxima(1);
+        this.vizinha(1);
       }
     }
 
@@ -2935,6 +2978,7 @@ class Arena {
       this.camera3d.atualizar(dt);
       this.liberarVista();
       this.posicionarRotulo(dt);
+      this.atualizarMapa();
     }
     this.renderer.render(this.cena, this.camera);
   }
@@ -3003,6 +3047,288 @@ class Arena {
     if (Math.abs(camera.near - perto) < 0.02) return;
     camera.near = perto;
     camera.updateProjectionMatrix();
+  }
+
+  /* ---------- o mapa: a arena vista de cima, como um mapa comum ---------- */
+  ligarMapa() {
+    this.mapa = this.palco.querySelector("[data-arena-mapa]");
+    if (!this.mapa) return;
+    this.telaDoMapa = this.mapa.querySelector("[data-arena-mapa-tela]");
+    this.nomeNoMapa = this.mapa.querySelector("[data-arena-mapa-nome]");
+    this.mapa.querySelector("[data-arena-mapa-fechar]").addEventListener("click", () => this.abrirMapa(false));
+    const tela = this.telaDoMapa;
+    let inicio = null;
+    tela.addEventListener("pointerdown", (evento) => { inicio = { x: evento.clientX, y: evento.clientY }; });
+    tela.addEventListener("pointerup", (evento) => {
+      if (!inicio || Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y) > 10) return;
+      inicio = null;
+      this.tocarNoMapa(evento.clientX, evento.clientY);
+    });
+    tela.addEventListener("pointermove", (evento) => {
+      if (evento.pointerType !== "mouse") return;
+      const m = this.pinoNoMapa(evento.clientX, evento.clientY);
+      if (m !== this.sobreNoMapa) {
+        this.sobreNoMapa = m;
+        tela.style.cursor = m ? "pointer" : "default";
+      }
+    });
+    tela.addEventListener("pointerleave", () => { this.sobreNoMapa = null; });
+    // no computador, o mapa já fica no canto; no celular e no tablet abre no botão
+    this.abrirMapa(window.matchMedia("(min-width: 961px)").matches);
+  }
+
+  abrirMapa(abrir) {
+    if (!this.mapa) return;
+    this.mapa.hidden = !abrir;
+    const botao = this.controles && this.controles.querySelector('[data-arena-acao="mapa"]');
+    if (botao) botao.setAttribute("aria-pressed", abrir ? "true" : "false");
+    this.marcaDoMapa = "";
+  }
+
+  /**
+   * Mundo (x, z) <-> mapa: a planta cabe inteira, com a entrada embaixo.
+   * O caminho até os reinos (a passarela) fica curto no desenho -- como num
+   * mapa de parque --, e a roda não vira um pontinho.
+   */
+  medidasDoMapa() {
+    const tela = this.telaDoMapa;
+    const w = tela.clientWidth;
+    const h = tela.clientHeight;
+    const R = (this.raio || 8) + (this.folga || 1) + 4.5;
+    const reinos = (this.trechos || []).filter((t) => t.tipo === "reino");
+    const frente = reinos.length ? Math.max(...reinos.map((t) => t.z1)) : -R;
+    const vao = Math.max(0, -R - frente); // a passarela de verdade
+    const curto = Math.min(vao, 3);
+    // z do mundo -> z do desenho (e a volta), por trechos retos
+    const zm = (z) => (z >= -R ? z : z >= frente ? -R - ((-R - z) * curto) / (vao || 1) : z + vao - curto);
+    const zw = (z) => (z >= -R ? z : z >= -R - curto ? -R - ((-R - z) * vao) / (curto || 1) : z - vao + curto);
+    let [x0, x1, z0, z1] = [-R - 1, R + 1, -R - 1, R + 1];
+    reinos.forEach((t) => {
+      x0 = Math.min(x0, t.x0 - 2);
+      x1 = Math.max(x1, t.x1 + 2);
+      z0 = Math.min(z0, zm(t.z0) - 2);
+    });
+    const grande = w >= 300;
+    // de cada lado, o espaço dos nomes (no mapa grande)
+    const folga = grande ? Math.min(118, w * 0.27) : 10;
+    const s = Math.max(0.1, Math.min((w - folga * 2) / (x1 - x0), (h - 26) / (z1 - z0)));
+    const ox = (w - (x1 - x0) * s) / 2 - x0 * s;
+    const oy = (h - (z1 - z0) * s) / 2 - z0 * s;
+    return { w, h, s, ox, oy, R, grande, folga, zm, zw, X: (x) => ox + x * s, Y: (z) => oy + zm(z) * s };
+  }
+
+  pinoNoMapa(cx, cy) {
+    if (!this.medidaDoMapa) return null;
+    const r = this.telaDoMapa.getBoundingClientRect();
+    const { X, Y } = this.medidaDoMapa;
+    let melhor = null;
+    let perto = 18;
+    this.roda.forEach((m) => {
+      if (!m.grupo.visible) return;
+      const d = Math.hypot(X(m.grupo.position.x) - (cx - r.left), Y(m.grupo.position.z) - (cy - r.top));
+      if (d < perto) { perto = d; melhor = m; }
+    });
+    return melhor;
+  }
+
+  tocarNoMapa(cx, cy) {
+    const m = this.pinoNoMapa(cx, cy);
+    const pequeno = !window.matchMedia("(min-width: 961px)").matches;
+    if (m) {
+      this.selecionar(m);
+      if (pequeno) this.abrirMapa(false); // no celular, o mapa sai da frente do brinquedo
+      return;
+    }
+    // fora dos pinos: a área tocada (a faixa da roda ou o reino)
+    const r = this.telaDoMapa.getBoundingClientRect();
+    const { ox, oy, s, zw } = this.medidaDoMapa;
+    const x = (cx - r.left - ox) / s;
+    const z = zw((cy - r.top - oy) / s);
+    const reino = (this.trechos || []).find((t) => t.tipo === "reino" && x >= t.x0 - 5 && x <= t.x1 + 5 && z >= t.z0 - 5 && z <= t.z1 + 5);
+    if (reino) { this.escolherZona(reino.id); return; }
+    const d = Math.hypot(x, z);
+    if (d < (this.raio || 8) * 0.45) { this.verTudo(); return; }
+    const a = (Math.atan2(x, z) + PI * 2) % (PI * 2);
+    const trecho = (this.trechos || []).find((t) => t.tipo !== "reino" && a >= t.a0 && a <= t.a1);
+    if (trecho && d < (this.raio || 8) + (this.folga || 1) + 5) this.escolherZona(trecho.id);
+  }
+
+  /** Redesenha o mapa só quando algo nele muda (a câmera, a escolha, o tamanho). */
+  atualizarMapa() {
+    if (!this.mapa || this.mapa.hidden || this.passeio) return;
+    const tela = this.telaDoMapa;
+    const c = this.camera.position;
+    const d = this.camera.getWorldDirection(this.ajuda);
+    const sel = this.selecionada;
+    const marca = `${tela.clientWidth}x${tela.clientHeight}|${c.x.toFixed(1)},${c.z.toFixed(1)},${Math.atan2(d.x, d.z).toFixed(2)}|${sel ? sel.indice : ""}|${this.sobreNoMapa ? this.sobreNoMapa.indice : ""}|${this.zona}|${this.roda.length}`;
+    if (marca === this.marcaDoMapa) return;
+    this.marcaDoMapa = marca;
+    this.desenharMapaDaArena();
+  }
+
+  desenharMapaDaArena() {
+    const tela = this.telaDoMapa;
+    const med = this.medidasDoMapa();
+    this.medidaDoMapa = med;
+    const { w, h, s, X, Y, R, grande } = med;
+    if (!w || !h) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (tela.width !== Math.round(w * dpr) || tela.height !== Math.round(h * dpr)) {
+      tela.width = Math.round(w * dpr);
+      tela.height = Math.round(h * dpr);
+    }
+    const g = tela.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const cx = X(0);
+    const cy = Y(0);
+    const raio = this.raio || 8;
+    const folga = this.folga || 1;
+    const fonte = (px, peso = 800) => `${peso} ${px}px Poppins, Manrope, system-ui, sans-serif`;
+
+    // o piso da roda, a cerca de pilares e o alvo do meio
+    g.fillStyle = "#10224f";
+    g.beginPath(); g.arc(cx, cy, (raio + folga + 1.5) * s, 0, PI * 2); g.fill();
+    g.strokeStyle = "rgba(63, 208, 255, .55)";
+    g.lineWidth = 1.5;
+    g.beginPath(); g.arc(cx, cy, R * s, 0, PI * 2); g.stroke();
+    g.fillStyle = "#e63946";
+    g.beginPath(); g.arc(cx, cy, Math.max(3, 1.2 * s), 0, PI * 2); g.fill();
+    g.fillStyle = "#ffffff";
+    g.beginPath(); g.arc(cx, cy, Math.max(1.5, 0.6 * s), 0, PI * 2); g.fill();
+
+    // as áreas: a faixa colorida de cada uma na roda; o reino, ao lado
+    (this.trechos || []).forEach((t) => {
+      const cor = COR_DA_ZONA[t.id] || "#2f8bff";
+      const ativa = this.zona === t.id;
+      g.globalAlpha = ativa ? 0.62 : this.zona ? 0.2 : 0.38;
+      g.fillStyle = cor;
+      if (t.tipo === "reino") {
+        // a passarela de luz e o espaço inteiro
+        g.fillRect(X((t.x0 + t.x1) / 2) - 1.6 * s, Y(t.z1), 3.2 * s, Y(-R) - Y(t.z1));
+        g.fillRect(X(t.x0), Y(t.z0), (t.x1 - t.x0) * s, Y(t.z1) - Y(t.z0));
+        g.globalAlpha = 1;
+        g.strokeStyle = cor;
+        g.lineWidth = 1.5;
+        g.strokeRect(X(t.x0), Y(t.z0), (t.x1 - t.x0) * s, Y(t.z1) - Y(t.z0));
+        const zona = this.zonas.find((z) => z.id === t.id);
+        if (zona && (t.x1 - t.x0) * s > 70) {
+          g.fillStyle = "#ffffff";
+          g.font = fonte(grande ? 12 : 9);
+          g.textAlign = "center";
+          g.textBaseline = "top";
+          g.fillText(zona.titulo, X((t.x0 + t.x1) / 2), Y(t.z0) + 4);
+        }
+        return;
+      }
+      g.beginPath();
+      g.arc(cx, cy, (raio + folga + 0.6) * s, PI / 2 - t.a0, PI / 2 - t.a1, true);
+      g.arc(cx, cy, Math.max(0, raio - folga - 0.9) * s, PI / 2 - t.a1, PI / 2 - t.a0, false);
+      g.closePath();
+      g.fill();
+    });
+    g.globalAlpha = 1;
+
+    // a entrada (o portal), embaixo
+    const aP = 0.5;
+    const ex = cx + Math.sin(aP) * R * s;
+    const ey = cy + Math.cos(aP) * R * s;
+    g.fillStyle = "#ffd700";
+    g.beginPath(); g.arc(ex, ey, 4, 0, PI * 2); g.fill();
+    g.font = fonte(grande ? 11 : 9, 900);
+    g.textAlign = "center";
+    g.textBaseline = "top";
+    g.fillText("ENTRADA", Math.min(w - 30, ex), Math.min(h - 12, ey + 6));
+
+    // os brinquedos: um pino na cor da área; o escolhido maior, com o nome
+    const sel = this.selecionada;
+    const sobre = this.sobreNoMapa;
+    const nomes = [];
+    this.roda.forEach((m) => {
+      if (!m.grupo.visible) return;
+      const px = X(m.grupo.position.x);
+      const py = Y(m.grupo.position.z);
+      const cor = COR_DA_ZONA[m.dados.grupo] || m.cor;
+      const destaque = m === sel || m === sobre;
+      if (m === sel) {
+        g.fillStyle = "rgba(255, 255, 255, .25)";
+        g.beginPath(); g.arc(px, py, 13, 0, PI * 2); g.fill();
+      }
+      g.fillStyle = cor;
+      g.strokeStyle = "#ffffff";
+      g.lineWidth = destaque ? 2.5 : 1.5;
+      g.beginPath(); g.arc(px, py, destaque ? 8 : 5.5, 0, PI * 2); g.fill(); g.stroke();
+      if (grande && !m.reino) nomes.push({ m, px, py, destaque });
+    });
+
+    // os nomes por fora da roda, na direção de cada brinquedo: de cada lado,
+    // um embaixo do outro (sem encavalar), com um fio até o pino se precisou descer
+    const ALTURA = 12;
+    [1, -1].forEach((lado) => {
+      const doLado = nomes
+        .map((n) => {
+          const a = Math.atan2(n.py - cy, n.px - cx);
+          return { ...n, a, lx: cx + Math.cos(a) * (R * s + 8), ly: cy + Math.sin(a) * (R * s + 8) };
+        })
+        .filter((n) => (Math.cos(n.a) >= 0 ? 1 : -1) === lado)
+        .sort((p, q) => p.ly - q.ly);
+      for (let i = 1; i < doLado.length; i++) doLado[i].ly = Math.max(doLado[i].ly, doLado[i - 1].ly + ALTURA);
+      // o que passou de baixo do mapa sobe de volta, empurrando os de cima
+      for (let i = doLado.length - 1; i >= 0; i--) {
+        const teto = i === doLado.length - 1 ? h - 8 : doLado[i + 1].ly - ALTURA;
+        doLado[i].ly = Math.min(doLado[i].ly, teto);
+      }
+      doLado.forEach((n) => {
+        const longe = Math.abs(n.ly - (cy + Math.sin(n.a) * (R * s + 8))) > 3;
+        if (longe) {
+          g.strokeStyle = "rgba(219, 231, 255, .35)";
+          g.lineWidth = 1;
+          g.beginPath();
+          g.moveTo(n.px, n.py);
+          g.lineTo(n.lx - lado * 2, n.ly);
+          g.stroke();
+        }
+        g.font = fonte(10.5, n.destaque ? 900 : 700);
+        const cabe = lado > 0 ? w - n.lx - 4 : n.lx - 4;
+        let nome = n.m.dados.nome;
+        while (nome.length > 3 && g.measureText(nome).width > cabe) nome = `${nome.slice(0, -2)}…`;
+        g.textAlign = lado > 0 ? "left" : "right";
+        g.textBaseline = "middle";
+        g.fillStyle = n.destaque ? "#ffd84a" : "rgba(219, 231, 255, .92)";
+        g.fillText(nome, n.lx, n.ly);
+      });
+    });
+
+    // você está aqui: o ponto azul e o leque do que a câmera vê
+    const c = this.camera.position;
+    const d = this.camera.getWorldDirection(this.ajuda);
+    const vx = limitar(X(c.x), 8, w - 8);
+    const vy = limitar(Y(c.z), 8, h - 8);
+    const ang = Math.atan2(d.z, d.x);
+    const meia = Math.min(1.2, (this.camera.fov * PI) / 360 * Math.max(1, this.camera.aspect));
+    const leque = g.createRadialGradient(vx, vy, 2, vx, vy, grande ? 70 : 46);
+    leque.addColorStop(0, "rgba(63, 160, 255, .55)");
+    leque.addColorStop(1, "rgba(63, 160, 255, 0)");
+    g.fillStyle = leque;
+    g.beginPath();
+    g.moveTo(vx, vy);
+    g.arc(vx, vy, grande ? 70 : 46, ang - meia, ang + meia);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#2f8bff";
+    g.strokeStyle = "#ffffff";
+    g.lineWidth = 2.5;
+    g.beginPath(); g.arc(vx, vy, 6.5, 0, PI * 2); g.fill(); g.stroke();
+
+    // embaixo do mapa: o nome do brinquedo apontado (ou escolhido)
+    if (this.nomeNoMapa) {
+      const alvo = sobre || sel;
+      const texto = alvo ? alvo.dados.nome : "Você está aqui · toque num brinquedo";
+      if (this.nomeNoMapa.dataset.texto !== texto) {
+        this.nomeNoMapa.dataset.texto = texto;
+        this.nomeNoMapa.lastChild.textContent = ` ${texto}`;
+      }
+    }
   }
 
   /** O nome da máquina em cima dela: a do mouse, ou a escolhida. */

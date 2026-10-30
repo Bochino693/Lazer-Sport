@@ -176,14 +176,29 @@
                     <strong data-arena-aviso-titulo>Montando a arena…</strong>
                     <span data-arena-aviso-texto>Levantando as máquinas a partir das fotos.</span>
                 </div>
+                {% comment %}
+                  OS CONTROLES, iguais no celular, no tablet e no computador: as
+                  setas vão para o brinquedo que está daquele lado NA TELA; "Ver
+                  tudo" volta para a arena inteira; "Mapa" abre a planta vista de
+                  cima (no computador ela já fica no canto).
+                {% endcomment %}
                 <div class="arena-controles" data-arena-controles hidden>
-                    <button type="button" class="arena-controle" data-arena-acao="anterior" aria-label="Máquina anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-                    <button type="button" class="arena-controle arena-controle--tour" data-arena-acao="tour" aria-pressed="false">
+                    <button type="button" class="arena-controle" data-arena-acao="esquerda" aria-label="Brinquedo da esquerda"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                    <button type="button" class="arena-controle arena-controle--tour" data-arena-acao="tour" aria-pressed="false" aria-label="Tour automático">
                         <i class="fa-solid fa-play" aria-hidden="true"></i><span>Tour</span>
                     </button>
-                    <button type="button" class="arena-controle" data-arena-acao="proximo" aria-label="Próxima máquina"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-                    <button type="button" class="arena-controle" data-arena-acao="visao" aria-label="Ver a arena inteira"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
-                    <button type="button" class="arena-controle" data-arena-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
+                    <button type="button" class="arena-controle" data-arena-acao="direita" aria-label="Brinquedo da direita"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                    <button type="button" class="arena-controle arena-controle--texto" data-arena-acao="visao"><i class="fa-solid fa-expand" aria-hidden="true"></i><span>Ver tudo</span></button>
+                    <button type="button" class="arena-controle arena-controle--texto" data-arena-acao="mapa" aria-pressed="false" aria-controls="arena-mapa"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Mapa</span></button>
+                    <button type="button" class="arena-controle arena-controle--cheia" data-arena-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
+                </div>
+                <div class="arena3d-mapa" id="arena-mapa" data-arena-mapa hidden>
+                    <div class="arena3d-mapa-topo">
+                        <strong><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Mapa da arena</strong>
+                        <button type="button" class="arena3d-mapa-fechar" data-arena-mapa-fechar aria-label="Fechar o mapa"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    </div>
+                    <canvas class="arena3d-mapa-tela" data-arena-mapa-tela role="img" aria-label="A arena vista de cima: cada ponto é um brinquedo; toque num ponto para ir até ele"></canvas>
+                    <p class="arena3d-mapa-nome" data-arena-mapa-nome><span class="arena3d-mapa-voce" aria-hidden="true"></span> Você está aqui · toque num brinquedo</p>
                 </div>
                 <div class="arena3d-vistas" data-arena-vistas role="group" aria-label="Ver a máquina escolhida" hidden>
                     <button type="button" class="arena3d-vista-passeio" data-arena-vista="passeio" aria-pressed="false" hidden>
@@ -191,16 +206,23 @@
                             <g class="pe-esquerdo"><ellipse cx="7.4" cy="15.6" rx="2.5" ry="3.9" transform="rotate(-10 7.4 15.6)"/><circle cx="5.4" cy="10.2" r="1.05"/><circle cx="7.3" cy="9.5" r="1.05"/><circle cx="9.1" cy="9.9" r=".9"/></g>
                             <g class="pe-direito"><ellipse cx="16.6" cy="9.4" rx="2.5" ry="3.9" transform="rotate(10 16.6 9.4)"/><circle cx="14.9" cy="3.9" r=".9"/><circle cx="16.7" cy="3.3" r="1.05"/><circle cx="18.6" cy="3.9" r="1.05"/></g>
                         </svg>
-                        <span>Passeio por dentro</span>
+                        <span>Passeio<span class="arena3d-so-grande"> por dentro</span></span>
                         <b class="arena3d-passeio-novo">Novo</b>
                     </button>
                     <button type="button" data-arena-vista="girar" aria-pressed="true"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Girar</button>
-                    <button type="button" data-arena-vista="frente" aria-pressed="false">Frente</button>
-                    <button type="button" data-arena-vista="direita" aria-pressed="false">Direita</button>
-                    <button type="button" data-arena-vista="costas" aria-pressed="false">Costas</button>
-                    <button type="button" data-arena-vista="esquerda" aria-pressed="false">Esquerda</button>
-                    <button type="button" data-arena-vista="cima" aria-pressed="false">Cima</button>
-                    <button type="button" data-arena-vista="baixo" aria-pressed="false">Baixo</button>
+                    <div class="arena3d-lados">
+                        <button type="button" class="arena3d-lados-botao" data-arena-lados aria-expanded="false" aria-controls="arena-lados" aria-pressed="false">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i> <span data-arena-lados-nome>Lados</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="arena3d-lados-menu" id="arena-lados" data-arena-lados-menu hidden>
+                            <button type="button" data-arena-vista="frente" aria-pressed="false">Frente</button>
+                            <button type="button" data-arena-vista="cima" aria-pressed="false">Cima</button>
+                            <button type="button" data-arena-vista="costas" aria-pressed="false">Costas</button>
+                            <button type="button" data-arena-vista="esquerda" aria-pressed="false">Esquerda</button>
+                            <button type="button" data-arena-vista="baixo" aria-pressed="false">Baixo</button>
+                            <button type="button" data-arena-vista="direita" aria-pressed="false">Direita</button>
+                        </div>
+                    </div>
                 </div>
                 {% comment %}
                   O PASSEIO por dentro do brinquedo (só nos objetos 3D de verdade):
