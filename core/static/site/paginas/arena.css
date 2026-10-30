@@ -642,3 +642,198 @@
     .arena-controle--tour span { display: none; }
 }
 
+/* =========================================================
+   TODAS AS MÁQUINAS — fotos reais
+
+   Como na vitrine da 5D: a foto de verdade em primeiro lugar. Passar o
+   mouse (ou o dedo, de lado) troca a foto entre frente, lado e costas;
+   as máquinas com objeto 3D levam o selo.
+========================================================= */
+.arena-fotos-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto 26px;
+}
+
+.arena-fotos-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.arena-foto-cartao {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--arena-borda);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1), border-color .3s ease, box-shadow .3s ease;
+}
+
+.arena-foto-cartao:hover,
+.arena-foto-cartao:focus-within {
+    border-color: rgba(63, 208, 255, .5);
+    box-shadow: 0 22px 46px rgba(0, 0, 0, .4), 0 0 0 1px rgba(63, 208, 255, .15);
+    transform: translateY(-4px);
+}
+
+.arena-foto-cartao[hidden] { display: none; }
+
+/* A foto fica num fundo claro de estúdio: é assim que elas foram tiradas. */
+.arena-foto-midia {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+    touch-action: pan-y;
+}
+
+.arena-foto-midia img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 6%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(.97);
+    transition: opacity .35s ease, transform .5s cubic-bezier(.2, .8, .2, 1);
+}
+
+.arena-foto-midia img.ativa { opacity: 1; transform: none; }
+.arena-foto-cartao:hover .arena-foto-midia img.ativa { transform: translateY(-3px); }
+
+.arena-foto-pontos {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    display: flex;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .55);
+    transform: translateX(-50%);
+}
+
+.arena-foto-pontos i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .45);
+    transition: width .25s ease, background .25s ease;
+}
+
+.arena-foto-pontos i.ativo { width: 16px; background: #fff; }
+
+.arena-foto-corpo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px 18px;
+}
+
+.arena-foto-categoria {
+    color: var(--arena-ciano);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.arena-foto-corpo h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.arena-foto-medidas {
+    margin: 0;
+    color: var(--arena-suave);
+    font-size: .84rem;
+}
+
+.arena-foto-medidas i { margin-right: 4px; color: var(--arena-ciano); }
+
+.arena-foto-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.arena-foto-link {
+    color: #fff;
+    font-size: .88rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.arena-foto-link i { margin-left: 4px; transition: transform .2s ease; }
+.arena-foto-link:hover i { transform: translateX(3px); }
+
+.arena-foto-jogar {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #2a1d00;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.arena-foto-jogar:hover { box-shadow: 0 8px 20px rgba(255, 196, 0, .35); transform: translateY(-1px); }
+.arena-foto-jogar:active { transform: scale(.95); }
+
+@media (max-width: 620px) {
+    .arena-fotos-filtros { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+    .arena-fotos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .arena-foto-cartao { border-radius: 18px; }
+    .arena-foto-corpo { padding: 12px; }
+    .arena-foto-corpo h3 { font-size: .95rem; }
+    .arena-foto-acoes { gap: 8px; }
+    .arena-foto-jogar { margin-left: 0; width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .arena-foto-cartao,
+    .arena-foto-midia img { transition: none; }
+}
+
+.arena-filtro {
+    flex: none;
+    padding: 9px 16px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .66);
+    color: #dbe7ff;
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.arena-filtro:hover { border-color: rgba(63, 208, 255, .55); }
+
+.arena-filtro.ativo {
+    border-color: transparent;
+    background: linear-gradient(135deg, #e63946, #ff5c6a);
+    color: #fff;
+}

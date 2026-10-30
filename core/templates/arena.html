@@ -245,6 +245,64 @@
     {% endif %}
 </section>
 
+<!-- ================= TODAS AS MÁQUINAS (fotos reais) ================= -->
+<section class="arena-secao arena-secao--fotos" id="maquinas" aria-labelledby="titulo-maquinas">
+    <div class="arena-secao-head">
+        <span class="arena-kicker"><i class="fa-solid fa-camera" aria-hidden="true"></i> Fotos reais</span>
+        <h2 id="titulo-maquinas">Todas as máquinas da fábrica</h2>
+        <p>
+            Passe o dedo ou o mouse na foto para ver a máquina de frente, de lado e de costas.
+            Para girar cada uma, entre na Arena 3D logo acima.
+        </p>
+    </div>
+
+    {% if categorias_arena|length > 1 %}
+    <div class="arena-fotos-filtros" role="group" aria-label="Filtrar por categoria" data-fotos-filtros>
+        <button type="button" class="arena-filtro ativo" data-fotos-categoria="" aria-pressed="true">Todas</button>
+        {% for categoria in categorias_arena %}
+            <button type="button" class="arena-filtro" data-fotos-categoria="{{ categoria }}" aria-pressed="false">{{ categoria }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="arena-fotos-grade" data-fotos-grade>
+        {% for brinquedo in brinquedos_arena %}
+        <article class="arena-foto-cartao" data-fotos-cartao data-categorias="{{ brinquedo.categorias|join:'|' }}">
+            <a class="arena-foto-midia" href="{{ brinquedo.url }}" aria-label="Ver {{ brinquedo.nome }}">
+                {% for foto in brinquedo.fotos %}
+                    <img src="{{ foto.url }}" alt="{% if forloop.first %}{{ brinquedo.nome }}{% endif %}" class="{% if forloop.first %}ativa{% endif %}"
+                         data-foto-lado="{{ foto.tipo }}" loading="lazy" decoding="async" width="600" height="600">
+                {% empty %}
+                    <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ brinquedo.nome }}" class="ativa" loading="lazy" decoding="async">
+                {% endfor %}
+                {% if brinquedo.fotos|length > 1 %}
+                <span class="arena-foto-pontos" aria-hidden="true">
+                    {% for foto in brinquedo.fotos %}<i class="{% if forloop.first %}ativo{% endif %}"></i>{% endfor %}
+                </span>
+                {% endif %}
+            </a>
+            <div class="arena-foto-corpo">
+                <span class="arena-foto-categoria">{{ brinquedo.categorias|join:" · "|default:"Brinquedo" }}</span>
+                <h3>{{ brinquedo.nome }}</h3>
+                {% if brinquedo.medidas_texto %}<p class="arena-foto-medidas"><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ brinquedo.medidas_texto }}</p>{% endif %}
+                <div class="arena-foto-acoes">
+                    <a class="arena-foto-link" href="{{ brinquedo.url }}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    {% if brinquedo.jogo %}
+                        <a class="arena-foto-jogar" href="{% url 'jogo' brinquedo.jogo %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="ls-vazio">
+            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+            <h2>As fotos chegam com o catálogo</h2>
+            <p>Assim que os brinquedos forem cadastrados, eles aparecem aqui.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
 <!-- ================= CHAMADA FINAL ================= -->
 <section class="arena-secao arena-secao--chamada" aria-labelledby="titulo-chamada">
     <div class="arena-chamada">
@@ -270,5 +328,6 @@
 
 
 <script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
+<script type="module" src="{% estatico 'site/arena/vitrine.js' %}"></script>
 
 {% endblock %}
