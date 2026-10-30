@@ -186,6 +186,7 @@
                     <button type="button" class="arena-controle" data-arena-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
                 </div>
                 <div class="arena3d-vistas" data-arena-vistas role="group" aria-label="Ver a máquina escolhida" hidden>
+                    <button type="button" class="arena3d-vista-passeio" data-arena-vista="passeio" aria-pressed="false" hidden><i class="fa-solid fa-person-walking" aria-hidden="true"></i> Passeio por dentro</button>
                     <button type="button" data-arena-vista="girar" aria-pressed="true"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Girar</button>
                     <button type="button" data-arena-vista="frente" aria-pressed="false">Frente</button>
                     <button type="button" data-arena-vista="direita" aria-pressed="false">Direita</button>
@@ -193,6 +194,18 @@
                     <button type="button" data-arena-vista="esquerda" aria-pressed="false">Esquerda</button>
                     <button type="button" data-arena-vista="cima" aria-pressed="false">Cima</button>
                     <button type="button" data-arena-vista="baixo" aria-pressed="false">Baixo</button>
+                </div>
+                {% comment %}
+                  O PASSEIO por dentro do brinquedo (só nos objetos 3D de verdade):
+                  a dica de como andar, os botões ▲ ▼ para o celular e a saída.
+                {% endcomment %}
+                <div class="arena3d-passeio" data-arena-passeio hidden>
+                    <p class="arena3d-passeio-dica" data-passeio-dica></p>
+                    <div class="arena3d-passeio-pad" role="group" aria-label="Andar">
+                        <button type="button" data-passeio-andar="frente" aria-label="Andar para a frente"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
+                        <button type="button" data-passeio-andar="tras" aria-label="Andar para trás"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                    </div>
+                    <button type="button" class="arena3d-passeio-sair" data-passeio-sair><i class="fa-solid fa-xmark" aria-hidden="true"></i> Sair do passeio</button>
                 </div>
                 <p class="arena3d-dica" data-arena-dica hidden><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Arraste para girar · toque numa máquina</p>
             </div>

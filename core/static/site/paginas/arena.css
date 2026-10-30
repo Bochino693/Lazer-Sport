@@ -534,6 +534,71 @@
 .arena3d-vistas button:hover { background: rgba(30, 50, 100, .9); color: #fff; }
 .arena3d-vistas button[aria-pressed="true"] { border-color: transparent; background: linear-gradient(135deg, #e63946, #ff5c6a); color: #fff; }
 
+.arena3d-vistas .arena3d-vista-passeio { border-color: transparent; background: linear-gradient(135deg, #16a34a, #22e07a); color: #04150a; }
+.arena3d-vistas .arena3d-vista-passeio[hidden] { display: none; }
+
+/* o passeio por dentro do brinquedo */
+.arena3d-passeio { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.arena3d-passeio[hidden] { display: none; }
+
+.arena3d-passeio-dica {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    max-width: calc(100% - 200px);
+    margin: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .82);
+    color: #dbe7ff;
+    font-size: .8rem;
+    font-weight: 700;
+    text-align: center;
+    transform: translateX(-50%);
+}
+
+.arena3d-passeio-pad {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    display: grid;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+.arena3d-passeio-pad button,
+.arena3d-passeio-sair {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    background: rgba(4, 10, 28, .85);
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.arena3d-passeio-pad button { width: 54px; height: 54px; border-radius: 16px; font-size: 1.2rem; }
+.arena3d-passeio-pad button:active { background: linear-gradient(135deg, #16a34a, #22e07a); color: #04150a; }
+
+.arena3d-passeio-sair {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: .88rem;
+    pointer-events: auto;
+}
+
+.arena3d-palco.em-passeio .arena3d-tela { cursor: crosshair; }
+
 /* com a máquina escolhida, a dica sai de cima das vistas */
 .arena3d-vistas:not([hidden]) ~ .arena3d-dica { top: 56px; }
 
@@ -686,6 +751,7 @@
     .arena-controle--tour span { display: none; }
     .arena3d-vistas { justify-content: flex-start; left: 8px; right: 8px; top: 8px; }
     .arena3d-vistas button { min-height: 32px; padding: 0 11px; }
+    .arena3d-passeio-dica { top: 8px; max-width: calc(100% - 24px); font-size: .74rem; border-radius: 14px; }
 }
 
 /* =========================================================
