@@ -349,15 +349,9 @@
 
             <div class="img-area">
               {% if brinquedo.exibir_na_loja %}
-                <span class="produto-status is-sale">
-                  <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-                  <span class="rotulo-longo">Disponível para compra</span><span class="rotulo-curto">À venda</span>
-                </span>
+                <span class="produto-status is-sale" title="Disponível para compra">À venda</span>
               {% else %}
-                <span class="produto-status">
-                  <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-                  <span class="rotulo-longo">Projeto sob consulta</span><span class="rotulo-curto">Sob consulta</span>
-                </span>
+                <span class="produto-status" title="Projeto sob consulta">Sob consulta</span>
               {% endif %}
 
               <button type="button"

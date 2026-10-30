@@ -1099,16 +1099,19 @@ html.ls-escuro:not(#_):not(#__) .ls-fav-selo {
 }
 
 /* ======================================================================
-   BRINQUEDOS DA HOME — o card curto
+   BRINQUEDOS DA HOME — o card em linha
 
-   Foto, nome, nota e curtidas; o resto está na página do brinquedo, e o
-   card inteiro leva até ela (o ::after do link do nome cobre o card).
-   12 por página: 2 colunas no celular, 3 no tablet, 4 no computador e 6
+   Uma linha por brinquedo: a foto pequena à esquerda, o nome no meio e,
+   no canto direito, a nota e as curtidas. Gasta pouca altura (doze cabem
+   numa tela de computador) e o card inteiro leva à página do brinquedo
+   (o ::after do link do nome cobre o card). O fio colorido à esquerda diz
+   o estado: verde à venda, âmbar sob consulta.
+   12 por página: 1 coluna no celular, 2 no tablet, 3 no computador e 4
    em tela Full HD -- sempre linhas completas.
    ====================================================================== */
 html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
     width: 100%;
     min-height: 0;
     margin: 0 auto;
@@ -1117,92 +1120,116 @@ html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini {
 }
 
 @media (min-width: 700px) {
-    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
 
 @media (min-width: 1100px) {
-    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 }
 
 @media (min-width: 1680px) {
-    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
     width: 100%;
     max-width: none;
     height: 100%;
-    margin: 0;
-    border-radius: 20px;
-}
-
-html.ls-escuro:not(#_):not(#__) .card-mini .img-area {
-    height: auto;
-    aspect-ratio: 4 / 3;
-    padding: 12px;
-    border-bottom: 0;
-}
-
-/* a sombra da foto em desfoque custava caro para desenhar no celular */
-html.ls-escuro:not(#_):not(#__) .card-mini .img-area::after { display: none; }
-html.ls-escuro:not(#_):not(#__) .card-mini .img-area img,
-html.ls-escuro:not(#_):not(#__) .card-link:hover .card-mini .img-area img { filter: none; }
-
-html.ls-escuro:not(#_):not(#__) .card-mini .produto-status {
-    top: 10px;
-    left: 10px;
-    gap: 6px;
-    max-width: calc(100% - 64px);
     min-height: 0;
-    padding: 6px 10px;
-    font-size: .64rem;
-    line-height: 1.1;
-    backdrop-filter: none;
+    margin: 0;
+    padding: 8px 14px 8px 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-left: 3px solid #ffb020;
+    border-radius: 16px;
+    background: linear-gradient(90deg, #0e1a3d, #091129);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .22);
+    transition: transform .2s ease, border-color .2s ease, background .2s ease;
 }
 
-.card-mini .rotulo-curto { display: none; }
+html.ls-escuro:not(#_):not(#__) .card-mini.is-sale { border-left-color: #22e07a; }
+
+html.ls-escuro:not(#_):not(#__) .card-link:hover .card-mini {
+    transform: translateY(-2px);
+    border-color: rgba(63, 208, 255, .3);
+    background: linear-gradient(90deg, #12214b, #0b1532);
+}
+
+/* a foto: um quadrado pequeno, a máquina inteira num fundo de estúdio
+   (a foto com fundo próprio ocupa o quadrado todo -- ls-fotos.js) */
+html.ls-escuro:not(#_):not(#__) .card-mini .img-area {
+    flex: none;
+    width: 92px;
+    height: 92px;
+    aspect-ratio: 1;
+    padding: 6px;
+    border: 0;
+    border-radius: 12px;
+    background: radial-gradient(circle at 50% 42%, #ffffff 0%, #eef3fc 60%, #dbe6f7 100%);
+}
+
+html.ls-escuro:not(#_):not(#__) .card-mini .img-area.foto-cheia { padding: 0; background: #0b1532; }
+html.ls-escuro:not(#_):not(#__) .card-mini .img-area::after,
+html.ls-escuro:not(#_):not(#__) .card-mini::before,
+html.ls-escuro:not(#_):not(#__) .card-mini::after { display: none; }
+html.ls-escuro:not(#_):not(#__) .card-mini .img-area img,
+html.ls-escuro:not(#_):not(#__) .card-link:hover .card-mini .img-area img { filter: none; transform: none; }
+
+/* o estado vira o fio da esquerda; o texto fica só para leitor de tela */
+html.ls-escuro:not(#_):not(#__) .card-mini .produto-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
 
 /* lista de desejos no canto da foto */
 .card-mini-desejo {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 4px;
+    left: 4px;
     z-index: 4;
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 26px;
+    height: 26px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, .2);
+    border: 0;
     border-radius: 50%;
-    background: rgba(5, 11, 31, .78);
+    background: rgba(5, 11, 31, .72);
     color: #ffd23f;
-    font-size: .95rem;
+    font-size: .72rem;
     cursor: pointer;
-    transition: transform .2s ease, background .2s ease;
+    transition: background .2s ease;
 }
 
-.card-mini-desejo:hover { transform: scale(1.08); }
-.card-mini-desejo.is-on { border-color: transparent; background: linear-gradient(135deg, #ffd23f, #ff9f1c); color: #3a2400; }
+.card-mini-desejo:hover { background: rgba(5, 11, 31, .92); }
+.card-mini-desejo.is-on { background: linear-gradient(135deg, #ffd23f, #ff9f1c); color: #3a2400; }
 
+/* o nome no meio; nota e curtidas no canto direito */
 .card-mini-info {
     display: flex;
     flex: 1;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px 10px;
-    padding: 12px 14px 14px;
+    gap: 12px;
+    min-width: 0;
+    padding: 0;
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini-nome {
     flex: 1 1 0;
     min-width: 0;
     margin: 0;
-    font-size: 1rem;
+    font-size: .95rem;
     font-weight: 800;
+    letter-spacing: -.01em;
     line-height: 1.25;
     text-align: left;
 }
@@ -1227,7 +1254,6 @@ html.ls-escuro:not(#_):not(#__) .card-mini-nome {
 .card-mini-nome a:focus-visible { outline: none; }
 .card-mini:has(.card-mini-nome a:focus-visible) { outline: 3px solid #3fd0ff; outline-offset: 2px; }
 
-/* nota e curtidas no canto direito, uma em cima da outra */
 .card-mini-meta {
     position: relative;
     z-index: 3;
@@ -1236,53 +1262,44 @@ html.ls-escuro:not(#_):not(#__) .card-mini-nome {
     flex-direction: column;
     align-items: flex-end;
     gap: 6px;
-    margin-left: auto;
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     margin: 0;
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini .stars { display: flex; gap: 1px; color: #ffd23f; }
-html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 13px; height: 13px; }
-html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao .nota { color: #dbe7ff; font-size: .78rem; font-weight: 800; }
+html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 11px; height: 11px; }
+html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao .nota { color: #fff; font-size: .78rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
+/* curtidas: o mesmo tamanho da nota, sem caixa em volta */
 html.ls-escuro:not(#_):not(#__) .card-mini-curtidas {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    height: 28px;
-    padding: 0 10px;
-    border: 1px solid rgba(255, 61, 113, .38);
-    border-radius: 999px;
-    background: rgba(255, 61, 113, .12);
-    color: #ff8fab;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    color: #ffb3c6;
     font-size: .78rem;
     font-weight: 800;
+    font-variant-numeric: tabular-nums;
     cursor: pointer;
 }
 
-html.ls-escuro:not(#_):not(#__) .card-mini-curtidas i { color: #ff3d71; font-size: .8rem; }
+html.ls-escuro:not(#_):not(#__) .card-mini-curtidas i { color: #ff3d71; font-size: .76rem; }
+html.ls-escuro:not(#_):not(#__) .card-mini-curtidas:hover { color: #fff; }
 
-@media (max-width: 560px) {
-    html.ls-escuro:not(#_):not(#__) .card-mini { border-radius: 16px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini .img-area { padding: 8px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini .produto-status { top: 7px; left: 7px; padding: 5px 8px; font-size: .58rem; }
-    .card-mini .rotulo-longo { display: none; }
-    .card-mini .rotulo-curto { display: inline; }
-    .card-mini-desejo { top: 6px; right: 6px; width: 32px; height: 32px; font-size: .85rem; }
-    /* card estreito: o nome ganha a linha toda e nota e curtidas vão
-       lado a lado logo abaixo, à direita */
-    .card-mini-info { flex-wrap: wrap; gap: 6px; padding: 10px 10px 12px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini-nome { flex-basis: 100%; font-size: .9rem; }
-    .card-mini-meta { flex-direction: row; align-items: center; gap: 6px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini .produto-status { max-width: calc(100% - 46px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    html.ls-escuro:not(#_):not(#__) .card-mini .produto-status i { display: none; }
-    html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 11px; height: 11px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini-curtidas { height: 26px; padding: 0 8px; font-size: .74rem; }
+@media (max-width: 420px) {
+    html.ls-escuro:not(#_):not(#__) .card-mini { gap: 10px; padding: 7px 10px 7px 7px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini .img-area { width: 76px; height: 76px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini-nome { font-size: .88rem; }
+    html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 10px; height: 10px; }
 }
 
 /* Os filtros dos brinquedos numa fila só, que desliza com o dedo: no
