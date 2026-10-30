@@ -281,11 +281,28 @@
        6. Início
        --------------------------------------------------------------------- */
 
+    /* O que já está na tela quando a página abre aparece NA HORA, sem a
+       entrada: a animação era para o que chega rolando. Antes, a cada
+       troca de tela o topo da página nova nascia apagado e levava meio
+       segundo para surgir -- parecia que a página ainda estava
+       carregando quando já tinha chegado. As duas classes entram juntas,
+       antes da primeira pintura: sem transição, nada pisca. */
+    function mostrarOQueJaEstaNaTela() {
+        var altura = window.innerHeight || document.documentElement.clientHeight;
+        elementos(document.querySelectorAll("[data-ls-reveal]:not(.is-settled)"))
+            .forEach(function (el) {
+                if (el.getBoundingClientRect().top < altura) {
+                    el.classList.add("is-visible", "is-settled");
+                }
+            });
+    }
+
     function iniciar() {
         prepararImagens(document);
 
         if (temObserver && !semMovimento) {
             prepararBlocos();
+            mostrarOQueJaEstaNaTela();
             observarTudo();
         } else {
             root.classList.remove("ls-reveal-on");

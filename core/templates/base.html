@@ -42,6 +42,29 @@
        Citar {{ csrf_token }} aqui também garante o cookie na resposta. -->
   <meta name="csrf-token" content="{{ csrf_token }}">
 
+  {% comment %}
+    TROCA DE TELA NA HORA. Quando o dedo encosta num link (ou o mouse
+    para em cima dele), o navegador já busca a página seguinte; no toque,
+    ela está pronta. Só as páginas públicas de vitrine, que não mudam nada
+    no servidor ao abrir -- carrinho, conta, sair, painel e APIs ficam de
+    fora. Navegador sem suporte ignora este bloco.
+  {% endcomment %}
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "source": "document",
+      "where": {"and": [
+        {"href_matches": ["/", "/loja/", "/brinquedos/", "/brinquedo/*", "/combo/*", "/promocao/*",
+                          "/pecas-reposicao/", "/pecas/*", "/manutencoes/", "/arena/", "/jogos/", "/jogos/:jogo/",
+                          "/eventos/", "/projetos/", "/categoria/*", "/estabelecimentos/", "/estabelecimentos/*"]},
+        {"not": {"href_matches": ["/jogos/partida/", "/jogos/ranking/*"]}},
+        {"not": {"selector_matches": "[data-no-prefetch], [download], [target=_blank]"}}
+      ]},
+      "eagerness": "moderate"
+    }]
+  }
+  </script>
+
   <!-- Curtir e guardar na lista de desejos, com ou sem conta. -->
   <link rel="stylesheet" href="{% estatico 'site/ls-favoritos.css' %}">
   <script src="{% estatico 'site/ls-favoritos.js' %}" defer></script>

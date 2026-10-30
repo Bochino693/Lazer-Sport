@@ -1379,3 +1379,22 @@
 #image:hover {
     transform: scale(1.05) rotate(-1.5deg);
 }
+
+
+/* =========================================================
+   TROCA DE TELA
+   O navegador passa de uma página para a outra com um esmaecer curto, e o
+   topo fica parado no lugar -- sem a tela branca no meio. Navegador sem
+   suporte troca de tela como sempre.
+   ========================================================= */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: .16s; }
+
+header.ls-topo { view-transition-name: ls-topo; }
+::view-transition-group(ls-topo) { animation-duration: 0s; }
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+}
