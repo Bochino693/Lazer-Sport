@@ -537,16 +537,6 @@
 /* com a máquina escolhida, a dica sai de cima das vistas */
 .arena3d-vistas:not([hidden]) ~ .arena3d-dica { top: 56px; }
 
-.arena-rodada {
-    display: inline-flex;
-    align-items: center;
-    padding: 0 10px;
-    color: var(--arena-suave);
-    font-size: .8rem;
-    font-weight: 800;
-}
-
-.arena-rodada[hidden] { display: none; }
 
 /* o nome em cima da máquina escolhida (ou da que está sob o mouse) */
 .arena3d-rotulo {
