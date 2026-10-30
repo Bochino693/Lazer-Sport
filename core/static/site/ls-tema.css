@@ -826,10 +826,24 @@ html.ls-escuro:not(#_):not(#__) .catalogo-shell { width: calc(100% - 40px); }
     .ls-marca-lema { font-size: .56rem; letter-spacing: 2px; }
 }
 
-/* Entre 1221 e 1420 px o menu inteiro precisa da linha toda: o texto da
-   marca volta abaixo disso, quando o menu vira o botão de menu. */
-@media (max-width: 1420px) and (min-width: 1221px) {
-    .ls-marca-texto { display: none; }
+/* O NOME DA FÁBRICA FICA SEMPRE. Entre 1221 e 1480 px o menu inteiro e a
+   marca dividem a linha: o menu aperta (menos folga entre os itens) e a
+   lupa sai -- a busca está logo abaixo do cabeçalho em todas as páginas. */
+@media (max-width: 1600px) and (min-width: 1221px) {
+    .ls-topo-linha { gap: 10px; }
+    .ls-topo-link { padding: 9px 10px; gap: 5px; font-size: .88rem; }
+    .ls-topo-link .fa-chevron-down { font-size: .6rem; }
+    .ls-topo [data-topo-busca] { display: none; }
+    .ls-marca-logo { height: 50px; padding: 4px 8px; }
+    .ls-marca-texto { padding-left: 11px; }
+    .ls-marca-nome { font-size: .8rem; }
+    .ls-marca-lema { margin-top: 3px; font-size: .5rem; letter-spacing: 1.6px; }
+}
+
+@media (max-width: 1320px) and (min-width: 1221px) {
+    .ls-topo-link { padding: 8px 7px; font-size: .84rem; }
+    .ls-topo-link .ls-topo-novo { display: none; }
+    .ls-topo-cta { padding-inline: 14px; }
 }
 
 @media (max-width: 1220px) {

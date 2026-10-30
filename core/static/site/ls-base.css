@@ -639,8 +639,10 @@
   border-radius: 3px;
 }
 
+    /* Sem rolagem suave global: ela animava também o salto do navegador
+       ao voltar uma página. Quem quer suave pede no próprio scrollTo. */
     html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
 }
 
     .nav-desktop a.active-link {
