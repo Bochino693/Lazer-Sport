@@ -514,6 +514,8 @@ def avisos_da_maquina(nome):
 #: Enquanto o brinquedo não está no catálogo, a arena mostra o objeto assim
 #: mesmo, com a ficha daqui (`titulo`, `fotos` da `pasta`...): ver
 #: `modelos_fora_do_catalogo`. Como cada um foi feito: `ferramentas/modelos3d/`.
+#: O caminho do passeio por dentro de cada um fica no JavaScript
+#: (`CAMINHOS`, em arena3d.js): é desenho do objeto, como as animações.
 MODELOS_3D = (
     {
         "id": "brinquedao-modelo-2",
@@ -539,6 +541,9 @@ MODELOS_3D = (
         "medidas": (3.9, 39.0, 23.0),
         "grupo": "esportivos",
         "reino": True,
+        # os jogos da casa que rodam neste espaço: nas cestas, o Swish; nos
+        # círculos de panna, o Gol Flash redondo (na Arena 3D, os dois mexem)
+        "jogos": ("swish-arena", "gol-flash-arena"),
         "pasta": "site/arena/modelos/espaco-esportivo-modelo-1/",
         "fotos": (("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"), ("lado_esquerdo", "lado_esquerdo.webp")),
         "medidas_texto": "Área de 39 m × 23 m · parque de trampolins de 18 m × 16,5 m",
@@ -594,8 +599,20 @@ def modelos_fora_do_catalogo(catalogo):
             "descricao": modelo["descricao"],
             "modelo": estatico(modelo["arquivo"]),
             "medidas_modelo": list(modelo["medidas"]),
+            "jogos_no_espaco": jogos_do_modelo(modelo),
         })
     return saida
+
+
+def jogos_do_modelo(modelo):
+    """Os jogos da casa que rodam no espaço: [{"slug", "titulo", "poster"}].
+
+    O pôster vai nos telões do espaço, na Arena 3D.
+    """
+    return [
+        {"slug": slug, "titulo": JOGOS_POR_SLUG[slug]["titulo"], "poster": estatico(JOGOS_POR_SLUG[slug]["poster"])}
+        for slug in (modelo or {}).get("jogos", ()) if slug in JOGOS_POR_SLUG
+    ]
 
 
 # ======================================================================
@@ -701,6 +718,7 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "modelo_id": modelo["id"] if modelo else "",
         "modelo": estatico(modelo["arquivo"]) if modelo else "",
         "medidas_modelo": list(modelo["medidas"]) if modelo else [],
+        "jogos_no_espaco": jogos_do_modelo(modelo),
         "medidas_texto": (
             " × ".join(medida(v) for v in (brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m))
             if medidas_reais else (modelo or {}).get("medidas_texto", "")

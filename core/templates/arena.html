@@ -204,13 +204,21 @@
                 </div>
                 {% comment %}
                   O PASSEIO por dentro do brinquedo (só nos objetos 3D de verdade):
-                  a dica de como andar, os botões ▲ ▼ para o celular e a saída.
+                  um só caminho que passa por tudo (escadinha, rede, tobogã, camas),
+                  andando sozinho. Aqui: a dica, o mapa visto de cima (onde a pessoa
+                  está), a etapa com a barra do quanto andou, pausar e sair.
                 {% endcomment %}
                 <div class="arena3d-passeio" data-arena-passeio hidden>
                     <p class="arena3d-passeio-dica" data-passeio-dica></p>
-                    <div class="arena3d-passeio-pad" role="group" aria-label="Andar">
-                        <button type="button" data-passeio-andar="frente" aria-label="Andar para a frente"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
-                        <button type="button" data-passeio-andar="tras" aria-label="Andar para trás"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                    <canvas class="arena3d-passeio-mapa" data-passeio-mapa width="320" height="320" role="img" aria-label="Mapa do brinquedo visto de cima: a bolinha é você"></canvas>
+                    <div class="arena3d-passeio-fluxo">
+                        <button type="button" class="arena3d-passeio-pausa" data-passeio-pausa data-estado="andando" aria-label="Pausar o passeio" title="Pausar o passeio">
+                            <span class="arena3d-passeio-pausa-icone" aria-hidden="true"></span>
+                        </button>
+                        <div class="arena3d-passeio-etapa">
+                            <strong data-passeio-etapa aria-live="polite">Passeando</strong>
+                            <span class="arena3d-passeio-barra"><span data-passeio-progresso></span></span>
+                        </div>
                     </div>
                     <button type="button" class="arena3d-passeio-sair" data-passeio-sair><i class="fa-solid fa-xmark" aria-hidden="true"></i> Sair do passeio</button>
                 </div>
@@ -240,6 +248,7 @@
                         <div data-ficha-linha="voltagem"><dt>Voltagem</dt><dd data-ficha-voltagem></dd></div>
                         <div data-ficha-linha="preco"><dt>Preço</dt><dd data-ficha-preco></dd></div>
                     </dl>
+                    <div class="arena3d-ficha-jogos" data-ficha-jogos hidden></div>
                     <div class="arena3d-ficha-acoes">
                         <a class="ls-botao" data-ficha-detalhe href="{% url 'brinquedos' %}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                         <a class="ls-botao ls-botao--claro" data-ficha-jogar data-base="{% url 'jogos' %}" href="{% url 'jogos' %}" hidden><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>

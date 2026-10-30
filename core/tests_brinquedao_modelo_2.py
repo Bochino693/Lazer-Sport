@@ -131,6 +131,11 @@ class EspacoEsportivoTests(TestCase):
         self.assertIn("espaco-esportivo-modelo-1.glb", espaco["modelo"])
         self.assertFalse(dados["Brinquedão Modelo 2"]["reino"])
         self.assertContains(resposta, 'data-arena-zona="esportivos"')
+        # os jogos do espaço, com o pôster que vai nos telões
+        jogos = {j["slug"]: j for j in espaco["jogos_no_espaco"]}
+        self.assertEqual(set(jogos), {"swish-arena", "gol-flash-arena"})
+        self.assertIn("swish-arena-poster.webp", jogos["swish-arena"]["poster"])
+        self.assertIn("gol-flash-arena-poster.webp", jogos["gol-flash-arena"]["poster"])
 
     def test_no_catalogo_tambem_vai_para_o_reino(self):
         Brinquedos.objects.create(
