@@ -16,6 +16,7 @@ estiver no recorte. O painel interno continua com o Font Awesome inteiro
 (`vendor/fontawesome/`), que não é tocado.
 """
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -96,8 +97,15 @@ def main():
         recorte.subset(fonte)
         subset.save_font(fonte, str(AQUI / "webfonts" / f"{nome}.woff2"), opcoes)
 
-    # o CSS do recorte aponta para as fontes do recorte, e só para o woff2
+    # o CSS do recorte aponta para as fontes do recorte, e só para o woff2 --
+    # COM A VERSÃO no endereço (o mesmo `?v=` do `{% estatico %}`, que é o
+    # do preload no base.html). Sem ela, a fonte velha ficava no cache do
+    # navegador (os arquivos de /vendor/ são servidos como imutáveis) e todo
+    # ícone novo aparecia como um quadrado quebrado.
     recortado = recortado.replace("../webfonts/", "webfonts/")
+    for nome in ("fa-solid-900", "fa-regular-400", "fa-brands-400"):
+        versao = hashlib.sha256((AQUI / "webfonts" / f"{nome}.woff2").read_bytes()).hexdigest()[:10]
+        recortado = recortado.replace(f"webfonts/{nome}.woff2)", f"webfonts/{nome}.woff2?v={versao})")
     (AQUI / "fontawesome-site.css").write_text(
         (licenca.group(0) if licenca else "")
         + "\n/* Recorte do site: gerado por gerar.py -- não edite à mão. */\n"

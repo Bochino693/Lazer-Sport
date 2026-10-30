@@ -120,7 +120,6 @@ fa-pause
 fa-pen
 fa-pen-ruler
 fa-pen-to-square
-fa-person-walking
 fa-phone
 fa-piggy-bank
 fa-pix
