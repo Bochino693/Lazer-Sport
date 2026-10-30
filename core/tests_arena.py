@@ -22,6 +22,8 @@ import re
 from decimal import Decimal
 from pathlib import Path
 
+from unittest import mock
+
 from django.contrib.staticfiles import finders
 from django.core.cache import cache
 from django.test import TestCase
@@ -74,11 +76,15 @@ class ArenaPaginaTests(TestCase):
     def test_todas_as_maquinas_vao_para_o_3d_e_para_a_lista(self):
         resposta = self.client.get(reverse("arena"))
         html = resposta.content.decode()
-        # a lista (a página sem 3D) tem as duas, e o 3D recebe as duas com as fotos
-        self.assertEqual(html.count("data-arena-id="), 2)
+        # a lista (a página sem 3D) tem as duas, e o 3D recebe as duas com as
+        # fotos -- mais o objeto 3D que ainda não está no catálogo
+        self.assertEqual(html.count("data-arena-id="), 2 + len(arena.MODELOS_3D))
         self.assertIn("Air Game Hockey", html)
         maquinas = resposta.context["arena_dados"]["maquinas"]
-        self.assertEqual(sorted(m["nome"] for m in maquinas), ["Air Game Hockey", "Dragon Bowling Rosa"])
+        self.assertEqual(
+            sorted(m["nome"] for m in maquinas),
+            sorted(["Air Game Hockey", "Dragon Bowling Rosa", *(m["titulo"] for m in arena.MODELOS_3D)]),
+        )
 
     def test_da_para_ver_a_maquina_de_todos_os_lados(self):
         html = self.client.get(reverse("arena")).content.decode()
@@ -182,6 +188,8 @@ class ArquivosDosJogosTests(TestCase):
                 self.assertIn(capa, script)
                 self.assertTrue((JOGOS_DIR / capa).is_file())
 
+# as seções vêm do catálogo; os objetos 3D em exposição ficam de fora aqui
+@mock.patch.object(arena, "MODELOS_3D", ())
 class SecoesDaArenaTests(TestCase):
 
     def setUp(self):

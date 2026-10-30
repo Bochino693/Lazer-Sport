@@ -148,7 +148,7 @@
         <div class="arena3d-barra">
             <div class="arena3d-zonas" role="group" aria-label="Áreas da arena" data-arena-zonas>
                 <button type="button" class="arena3d-zona ativo" data-arena-zona="" aria-pressed="true">
-                    <i class="fa-solid fa-border-all" aria-hidden="true"></i> Todas <b>{{ brinquedos_arena|length }}</b>
+                    <i class="fa-solid fa-border-all" aria-hidden="true"></i> Todas <b>{{ arena_dados.maquinas|length }}</b>
                 </button>
                 {% for zona in grupos_arena %}
                 <button type="button" class="arena3d-zona arena3d-zona--{{ zona.id }}" data-arena-zona="{{ zona.id }}" aria-pressed="false">
@@ -240,7 +240,7 @@
                 <strong>{{ zona.titulo }}</strong>
                 <ul>
                     {% for brinquedo in zona.brinquedos %}
-                    <li><a href="{{ brinquedo.url }}" data-arena-id="{{ brinquedo.id }}">{{ brinquedo.nome }}</a></li>
+                    <li><a href="{{ brinquedo.url|default:'#arena-3d' }}" data-arena-id="{{ brinquedo.id }}">{{ brinquedo.nome }}</a></li>
                     {% endfor %}
                 </ul>
             </div>

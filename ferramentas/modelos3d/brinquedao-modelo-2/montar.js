@@ -1,4 +1,4 @@
-// Monta o Brinquedão Selva 11 m em three.js e exporta um .glb.
+// Monta o Brinquedão Modelo 2 (selva, 11 m) em three.js e exporta um .glb.
 // Estrutura (colunas, barras, rede) = a do .3ds do cliente, em mm.
 // Peças que o .3ds não tem (caixas, escorregadores, bolas, painéis, pisos)
 // = modeladas a partir das imagens e da planta (11 m x 2 m x 3,5 m).
@@ -319,7 +319,7 @@ painel(VIDRO, V(XS[0] - 20, (FUNDO + FRENTE) / 2, (Z2 + ZTETO) / 2), FRENTE - FU
 // ---------- montagem final: metros, Y para cima, frente em +Z ----------
 const cena = new THREE.Scene();
 const raiz = new THREE.Group();
-raiz.name = "brinquedao-selva-11m";
+raiz.name = "brinquedao-modelo-2";
 cena.add(raiz);
 // (x, y, z) do .3ds -> (-x, z, y) em metros: rotação própria (sem espelhar)
 const virar = new THREE.Matrix4().set(-1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1).premultiply(new THREE.Matrix4().makeScale(0.001, 0.001, 0.001));

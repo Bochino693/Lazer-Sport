@@ -821,7 +821,10 @@ class Maquina {
       // o objeto da fábrica (ou a forma montada aqui) vem inteiro, uma vez só
       if (this.pedido) return;
       this.pedido = Infinity;
-      this.arena.fila.push(() => (this.modelo ? this.vestirModelo() : this.vestirForma()));
+      // o objeto da fábrica fura a fila: é o que mais se quer ver
+      const tarefa = () => (this.modelo ? this.vestirModelo() : this.vestirForma());
+      if (this.modelo) this.arena.fila.unshift(tarefa);
+      else this.arena.fila.push(tarefa);
       return;
     }
     if (this.pedido >= tamanho || !this.temFoto) return;

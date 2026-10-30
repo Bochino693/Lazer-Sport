@@ -511,13 +511,24 @@ def avisos_da_maquina(nome):
 #: renomear o brinquedo no cadastro precisa manter o trecho de `nomes`.
 #: `medidas` = altura, largura e profundidade do objeto, em metros, já com
 #: escorregadores e colchões (é o espaço que ele ocupa na roda).
-#: Como cada um foi feito: `ferramentas/modelos3d/<id>/`.
+#: Enquanto o brinquedo não está no catálogo, a arena mostra o objeto assim
+#: mesmo, com a ficha daqui (`titulo`, `fotos` da `pasta`...): ver
+#: `modelos_fora_do_catalogo`. Como cada um foi feito: `ferramentas/modelos3d/`.
 MODELOS_3D = (
     {
-        "id": "brinquedao-selva-11m",
-        "nomes": ("Brinquedão Selva",),
-        "arquivo": "site/arena/modelos/brinquedao-selva-11m.glb",
+        "id": "brinquedao-modelo-2",
+        "titulo": "Brinquedão Modelo 2",
+        "nomes": ("Brinquedão Modelo 2",),
+        "arquivo": "site/arena/modelos/brinquedao-modelo-2.glb",
         "medidas": (3.65, 11.4, 3.62),
+        "pasta": "site/arena/modelos/brinquedao-modelo-2/",
+        "fotos": (("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"), ("lado_direito", "lado_direito.webp")),
+        "medidas_texto": "3,5 m × 11 m × 2 m",
+        "categorias": ("Brinquedões",),
+        "descricao": (
+            "Brinquedão temático de selva: torre com rede e bolas suspensas, três casinhas com arco, "
+            "andar de cima com rede de escalada, rolo e tubo de passagem, escorregador duplo e tobogã em espiral."
+        ),
     },
 )
 
@@ -529,6 +540,42 @@ def modelo_da_maquina(nome):
         if any(_contem(texto, trecho) for trecho in modelo["nomes"]):
             return modelo
     return None
+
+
+def modelos_fora_do_catalogo(catalogo):
+    """Os objetos 3D cujo brinquedo ainda não está no catálogo, como máquinas da arena.
+
+    Assim o objeto aparece na Arena 3D logo que chega ao site; quando o
+    brinquedo é cadastrado (com o nome), o do catálogo toma o lugar.
+    """
+    no_catalogo = {b.get("modelo_id") for b in catalogo}
+    saida = []
+    for modelo in MODELOS_3D:
+        if modelo["id"] in no_catalogo:
+            continue
+        fotos = [{"tipo": tipo, "url": estatico(modelo["pasta"] + arquivo)} for tipo, arquivo in modelo["fotos"]]
+        saida.append({
+            "id": "modelo-" + modelo["id"],
+            "nome": modelo["titulo"],
+            "url": "",
+            "desenho": "playground",
+            "jogo": "",
+            "modelo_id": modelo["id"],
+            "grupo": "brinquedoes",
+            "categorias": list(modelo["categorias"]),
+            "medidas": list(modelo["medidas"]),
+            "medidas_reais": True,
+            "medidas_texto": modelo["medidas_texto"],
+            "voltagem": "",
+            "preco": "",
+            "avaliacao": 0.0,
+            "capa": fotos[0]["url"] if fotos else "",
+            "fotos": fotos,
+            "descricao": modelo["descricao"],
+            "modelo": estatico(modelo["arquivo"]),
+            "medidas_modelo": list(modelo["medidas"]),
+        })
+    return saida
 
 
 # ======================================================================
@@ -622,6 +669,7 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "medidas": medidas,
         "medidas_reais": medidas_reais,
         # o objeto 3D feito com os arquivos da fábrica (vence o das fotos)
+        "modelo_id": modelo["id"] if modelo else "",
         "modelo": estatico(modelo["arquivo"]) if modelo else "",
         "medidas_modelo": list(modelo["medidas"]) if modelo else [],
         "medidas_texto": (
