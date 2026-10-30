@@ -308,59 +308,9 @@
             </section>
         </article>
 
-        {% if visor_3d %}
-        {% comment %}
-          VER EM 3D, COM A COR E O ADESIVO QUE O CLIENTE QUISER.
-
-          O mesmo motor da Arena 3D, com este brinquedo sozinho no palco. Só
-          aparece para máquina com objeto 3D de verdade (hoje o gabinete de
-          boliche: os 12 adesivos do Strike Kids em 7 temas, ou a arte do
-          Dragon Bowling sobre a cor escolhida). Sem WebGL, a seção diz isso
-          e a página segue.
-        {% endcomment %}
-        <section class="produto-3d" id="ver-em-3d" aria-labelledby="titulo-3d">
-            <div class="produto-3d-cabeca">
-                <span class="produto-3d-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> Novo · visualização 3D</span>
-                <h2 id="titulo-3d">Veja em 3D e monte do seu jeito</h2>
-                <p>Gire, aproxime e troque a cor do gabinete e a adesivagem. É assim que ele fica no seu espaço.</p>
-            </div>
-            <div class="arena-palco produto-3d-palco" data-arena data-unico
-                 data-three="{% estatico 'vendor/three/three.module.min.js' %}">
-                <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
-                    <span class="arena-aviso-anel" aria-hidden="true"></span>
-                    <strong data-arena-aviso-titulo>Montando o 3D…</strong>
-                    <span data-arena-aviso-texto>Preparando o brinquedo com as cores e os adesivos.</span>
-                </div>
-                <aside class="arena-ficha arena-ficha--roupa" data-arena-ficha hidden>
-                    <div class="arena-ficha-corpo">
-                        <div class="arena-roupa" data-ficha-roupa hidden>
-                            <div class="arena-roupa-grupo" data-ficha-cores-grupo>
-                                <span class="arena-roupa-titulo">Cor do gabinete</span>
-                                <div class="arena-cores" data-ficha-cores role="group" aria-label="Cor do gabinete"></div>
-                            </div>
-                            <div class="arena-roupa-grupo">
-                                <span class="arena-roupa-titulo">Adesivagem</span>
-                                <div class="arena-adesivos" data-ficha-adesivos role="group" aria-label="Tema dos adesivos"></div>
-                            </div>
-                            <p class="arena-roupa-legenda" data-ficha-roupa-legenda></p>
-                        </div>
-                        <a class="ls-botao" href="{{ whatsapp_url }}" target="_blank" rel="noopener" data-ficha-whatsapp-roupa>
-                            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Quero assim
-                        </a>
-                    </div>
-                </aside>
-            </div>
-            {{ visor_3d|json_script:"arena-dados" }}
-        </section>
-        {% endif %}
     </div>
 </div>
 
-{% if visor_3d %}
-<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
-<link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
-<script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
-{% endif %}
 
 <div class="produto-toast" id="produto-toast" role="status" aria-live="polite">
     <i class="fas fa-check-circle" aria-hidden="true"></i>

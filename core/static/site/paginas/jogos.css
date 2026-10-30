@@ -325,6 +325,8 @@
     overflow: hidden;
     border-radius: 14px;
     background: #02050d;
+    /* o convite de cadastro mede a própria tela para caber sem rolagem */
+    container: quadro / size;
 }
 
 .console-quadro[data-orientacao="paisagem"] { height: auto; width: 100%; }
@@ -382,7 +384,10 @@
 
 .console-carregando { background: rgba(2, 5, 13, .9); color: #c7d6f0; font-weight: 700; }
 
-/* ---------- o convite de cadastro: a partida grátis acabou ---------- */
+/* ---------- o convite de cadastro: a partida grátis acabou ----------
+   Cabe inteiro na tela do jogo, sem rolagem: as medidas saem da altura
+   da própria tela (cqh); em tela deitada vira duas colunas, e o que é
+   detalhe (os passos) sai quando falta altura. */
 .console-cadastro {
     position: absolute;
     inset: 0;
@@ -391,52 +396,42 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 22px;
+    gap: clamp(6px, 1.8cqh, 12px);
+    overflow: hidden;
+    padding: clamp(10px, 3cqh, 22px) clamp(10px, 5cqw, 22px);
     text-align: center;
     background:
-        radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--cor-jogo) 30%, transparent), transparent 60%),
-        rgba(2, 5, 13, .95);
+        radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--cor-jogo) 32%, transparent), transparent 62%),
+        #02050d;
 }
 
 .console-cadastro[hidden] { display: none; }
 
-/* tela baixa (celular): o convite rola por dentro, nada fica cortado */
-.console-cadastro { overflow-y: auto; justify-content: safe center; }
-.console-cadastro:has(.console-cadastro-selo:not([hidden])) .console-cadastro-icone { display: none; }
-
-.console-cadastro-acoes .ls-botao--claro {
-    border: 1px solid rgba(255, 255, 255, .28);
-    background: rgba(255, 255, 255, .1);
-    color: #fff;
-}
-
 .console-cadastro-icone {
     display: grid;
     place-items: center;
-    width: 64px;
-    height: 64px;
+    width: clamp(40px, 11cqh, 64px);
+    aspect-ratio: 1;
     border-radius: 50%;
     background: linear-gradient(135deg, #ffd700, #ff8a00);
     color: #1a1000;
-    font-size: 1.7rem;
+    font-size: clamp(1.1rem, 5cqh, 1.7rem);
     box-shadow: 0 0 30px rgba(255, 215, 0, .45);
 }
 
+.console-cadastro:has(.console-cadastro-selo:not([hidden])) .console-cadastro-icone { display: none; }
+
 .console-cadastro-selo {
     margin: 0;
-    padding: 6px 14px;
+    padding: .45em 1.1em;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--cor-jogo) 22%, rgba(0, 0, 0, .4));
+    background: color-mix(in srgb, var(--cor-jogo) 24%, rgba(0, 0, 0, .4));
     color: #fff;
-    font-size: .8rem;
+    font-size: clamp(.62rem, 2.3cqh, .8rem);
     font-weight: 900;
-    letter-spacing: .6px;
+    letter-spacing: .5px;
     text-transform: uppercase;
 }
-
-.console-cadastro-selo[hidden],
-.console-cadastro-passos[hidden] { display: none; }
 
 .console-cadastro--recorde .console-cadastro-selo {
     background: linear-gradient(90deg, #ffd700, #ff8a00);
@@ -444,38 +439,91 @@
     box-shadow: 0 0 24px rgba(255, 215, 0, .5);
 }
 
+.console-cadastro-titulo { margin: 0; color: #fff; font-size: clamp(.95rem, 4.6cqh, 1.6rem); font-weight: 900; line-height: 1.15; }
+.console-cadastro-texto { margin: 0; max-width: 34ch; color: #c7d6f0; font-size: clamp(.72rem, 2.7cqh, .95rem); line-height: 1.4; }
+
+/* os três passos numa faixa só, ícone em cima e legenda curta embaixo */
 .console-cadastro-passos {
     display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    width: min(100%, 300px);
+    width: min(100%, 320px);
     margin: 0;
-    padding: 10px 12px;
+    padding: 8px 6px;
     border: 1px solid rgba(255, 255, 255, .1);
     border-radius: 14px;
-    background: rgba(0, 0, 0, .3);
+    background: rgba(255, 255, 255, .05);
     list-style: none;
-    text-align: left;
 }
 
-.console-cadastro-passos li { display: flex; align-items: center; gap: 10px; color: #dbe7ff; font-size: .82rem; font-weight: 700; }
-.console-cadastro-passos i { width: 18px; color: var(--cor-jogo); text-align: center; }
+.console-cadastro-passos li { display: grid; justify-items: center; gap: 4px; color: #dbe7ff; font-size: clamp(.6rem, 2.1cqh, .74rem); font-weight: 700; line-height: 1.25; }
+.console-cadastro-passos i { color: var(--cor-jogo); font-size: clamp(.85rem, 3.2cqh, 1.05rem); }
 
-.console-cadastro-titulo { margin: 0; color: #fff; font-size: clamp(1.2rem, 3.4vw, 1.6rem); font-weight: 900; line-height: 1.2; }
-.console-cadastro-texto { margin: 0; max-width: 340px; color: #c7d6f0; font-size: .95rem; line-height: 1.5; }
-.console-cadastro-acoes { display: flex; flex-direction: column; gap: 10px; width: min(100%, 300px); margin-top: 4px; }
-.console-cadastro-acoes .ls-botao { justify-content: center; margin-top: 0; }
-.console-cadastro-contagem { margin: 0; color: #ffd700; font-size: .85rem; font-weight: 800; }
+.console-cadastro-selo[hidden],
+.console-cadastro-passos[hidden] { display: none; }
+
+.console-cadastro-acoes { display: flex; flex-direction: column; gap: clamp(6px, 1.4cqh, 10px); width: min(100%, 300px); }
+
+.console-cadastro-acoes .ls-botao {
+    justify-content: center;
+    margin-top: 0;
+    padding: clamp(8px, 2.2cqh, 14px) 16px;
+    font-size: clamp(.8rem, 2.8cqh, 1rem);
+}
+
+.console-cadastro-acoes .ls-botao:not(.ls-botao--claro) {
+    border: 0;
+    background: linear-gradient(135deg, #ffd700, #ff8a00);
+    color: #1a1000;
+    box-shadow: 0 10px 26px rgba(255, 170, 0, .35);
+}
+
+.console-cadastro-acoes .ls-botao--claro {
+    border: 1px solid rgba(255, 255, 255, .28);
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+}
+
+.console-cadastro-rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 12px; }
+.console-cadastro-contagem { margin: 0; color: #ffd700; font-size: clamp(.66rem, 2.2cqh, .82rem); font-weight: 800; }
 
 .console-cadastro-fechar {
-    padding: 6px 12px;
+    padding: 2px 4px;
     border: 0;
     background: none;
     color: #8aa0c4;
     font: inherit;
-    font-size: .85rem;
+    font-size: clamp(.66rem, 2.2cqh, .82rem);
     font-weight: 700;
     text-decoration: underline;
     cursor: pointer;
+}
+
+/* pouca altura: sai o detalhe */
+@container quadro (max-height: 470px) {
+    .console-cadastro-passos { display: none; }
+}
+
+@container quadro (max-height: 380px) {
+    .console-cadastro-icone { display: none; }
+}
+
+/* tela deitada (jogos em paisagem): texto à esquerda, botões à direita */
+@container quadro (min-aspect-ratio: 4 / 3) {
+    .console-cadastro {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+        grid-auto-flow: dense;
+        align-content: center;
+        column-gap: clamp(12px, 4cqw, 32px);
+        text-align: left;
+    }
+    .console-cadastro > * { grid-column: 1; justify-self: start; }
+    .console-cadastro-acoes,
+    .console-cadastro-rodape { grid-column: 2; grid-row: span 2; justify-self: stretch; width: auto; }
+    .console-cadastro-rodape { justify-content: center; }
+    .console-cadastro-passos { display: none; }
+    .console-cadastro-icone { display: none; }
 }
 
 /* ---------- voltou do cadastro: o resultado já está no nome da pessoa ---------- */

@@ -152,426 +152,6 @@
 }
 
 /* =========================================================
-   O PALCO 3D
-========================================================= */
-.arena-palco {
-    position: relative;
-    height: clamp(460px, 74vh, 860px);
-    overflow: hidden;
-    border: 1px solid var(--arena-borda);
-    border-radius: 28px;
-    background:
-        radial-gradient(ellipse at 50% 110%, rgba(47, 139, 255, .35), transparent 60%),
-        radial-gradient(ellipse at 50% -20%, rgba(230, 57, 70, .25), transparent 55%),
-        #040a1c;
-    box-shadow:
-        0 40px 90px rgba(0, 0, 0, .55),
-        inset 0 0 0 1px rgba(255, 255, 255, .03);
-    touch-action: none;
-    isolation: isolate;
-}
-
-.arena-palco:fullscreen { border-radius: 0; height: 100vh; }
-
-.arena-palco canvas {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    outline: none;
-    cursor: grab;
-}
-
-.arena-palco canvas.arrastando { cursor: grabbing; }
-.arena-palco canvas.sobre-brinquedo { cursor: pointer; }
-
-/* ---------- aviso de carregamento ---------- */
-.arena-aviso {
-    position: absolute;
-    inset: 0;
-    z-index: 4;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 20px;
-    color: var(--arena-suave);
-    text-align: center;
-    transition: opacity .5s ease, visibility .5s;
-}
-
-.arena-aviso strong { color: #fff; font-size: 1.15rem; }
-
-.arena-aviso.sumiu { opacity: 0; visibility: hidden; }
-
-.arena-aviso-anel {
-    width: 54px;
-    height: 54px;
-    border: 4px solid rgba(255, 255, 255, .12);
-    border-top-color: var(--arena-ciano);
-    border-right-color: #e63946;
-    border-radius: 50%;
-    animation: arena-gira 1s linear infinite;
-}
-
-.arena-aviso.erro .arena-aviso-anel { display: none; }
-
-@keyframes arena-gira { to { transform: rotate(360deg); } }
-
-/* ---------- filtros e controles ---------- */
-.arena-filtros {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    right: 16px;
-    z-index: 3;
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 4px;
-}
-
-.arena-filtros::-webkit-scrollbar { display: none; }
-
-.arena-filtro {
-    flex: none;
-    padding: 9px 16px;
-    border: 1px solid var(--arena-borda);
-    border-radius: 999px;
-    background: rgba(4, 10, 28, .66);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: #dbe7ff;
-    font: inherit;
-    font-size: .86rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background .2s ease, border-color .2s ease, color .2s ease;
-}
-
-.arena-filtro:hover { border-color: rgba(63, 208, 255, .55); }
-
-.arena-filtro.ativo {
-    border-color: transparent;
-    background: linear-gradient(135deg, #e63946, #ff5c6a);
-    color: #fff;
-}
-
-.arena-controles {
-    position: absolute;
-    left: 50%;
-    bottom: 18px;
-    z-index: 3;
-    display: flex;
-    gap: 8px;
-    padding: 8px;
-    border: 1px solid var(--arena-borda);
-    border-radius: 999px;
-    background: rgba(4, 10, 28, .72);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    transform: translateX(-50%);
-}
-
-.arena-controle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 44px;
-    height: 44px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, .08);
-    color: #fff;
-    font: inherit;
-    font-weight: 800;
-    cursor: pointer;
-    transition: background .2s ease, transform .2s ease;
-}
-
-.arena-controle:hover { background: rgba(255, 255, 255, .16); }
-.arena-controle:active { transform: scale(.94); }
-
-.arena-controle--tour[aria-pressed="true"] {
-    background: linear-gradient(135deg, #ffd700, #ffb300);
-    color: #2a1d00;
-}
-
-/* `hidden` tem de vencer o `display` de cada peça: sem isto a ficha, os
-   filtros e os controles apareciam antes de o 3D existir. */
-.arena-ficha[hidden],
-.arena-filtros[hidden],
-.arena-controles[hidden],
-.arena-ficha-dados div[hidden],
-.arena-ficha-acoes [hidden] { display: none; }
-
-/* ---------- ficha do brinquedo ---------- */
-.arena-ficha {
-    position: absolute;
-    top: 70px;
-    right: 16px;
-    bottom: 84px;
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
-    width: min(380px, calc(100% - 32px));
-    overflow: hidden;
-    border: 1px solid var(--arena-borda);
-    border-radius: 22px;
-    background: rgba(6, 14, 38, .86);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
-    animation: arena-ficha-entra .35s cubic-bezier(.2, .9, .3, 1.2);
-}
-
-@keyframes arena-ficha-entra {
-    from { opacity: 0; transform: translateX(24px); }
-}
-
-.arena-ficha-fechar {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 2;
-    width: 38px;
-    height: 38px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .55);
-    color: #fff;
-    cursor: pointer;
-}
-
-.arena-ficha-foto {
-    position: relative;
-    flex: none;
-    height: 190px;
-    background: radial-gradient(circle at 50% 40%, #ffffff, #dfe9fb);
-}
-
-.arena-ficha-foto img {
-    width: 100%;
-    height: 100%;
-    padding: 10px;
-    object-fit: contain;
-}
-
-.arena-ficha-lados {
-    position: absolute;
-    left: 10px;
-    bottom: 10px;
-    display: flex;
-    gap: 6px;
-}
-
-.arena-ficha-lados button {
-    width: 44px;
-    height: 44px;
-    overflow: hidden;
-    padding: 0;
-    border: 2px solid rgba(4, 10, 28, .2);
-    border-radius: 10px;
-    background: #fff;
-    cursor: pointer;
-}
-
-.arena-ficha-lados button[aria-pressed="true"] { border-color: #e63946; }
-.arena-ficha-lados img { width: 100%; height: 100%; object-fit: contain; }
-
-.arena-ficha-corpo {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 18px 18px;
-}
-
-.arena-ficha-categoria {
-    color: var(--arena-ciano);
-    font-size: .74rem;
-    font-weight: 800;
-    letter-spacing: .7px;
-    text-transform: uppercase;
-}
-
-.arena-ficha h3 {
-    margin: 6px 0 8px;
-    color: #fff;
-    font-size: 1.35rem;
-    font-weight: 800;
-    line-height: 1.2;
-}
-
-.arena-ficha-desc {
-    margin: 0 0 12px;
-    color: var(--arena-suave);
-    font-size: .9rem;
-    line-height: 1.55;
-}
-
-/* ---------- cor e adesivagem ---------- */
-.arena-roupa {
-    display: grid;
-    gap: 10px;
-    margin: 0 0 12px;
-    padding: 12px;
-    border: 1px solid rgba(255, 255, 255, .08);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, .04);
-}
-
-.arena-roupa[hidden],
-.arena-roupa-grupo[hidden] { display: none; }
-
-.arena-roupa-titulo {
-    display: block;
-    margin-bottom: 6px;
-    color: var(--arena-suave);
-    font-size: .7rem;
-    font-weight: 800;
-    letter-spacing: .8px;
-    text-transform: uppercase;
-}
-
-.arena-cores { display: flex; flex-wrap: wrap; gap: 7px; }
-
-.arena-cor {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: 2px solid rgba(255, 255, 255, .25);
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .55), transparent 45%), var(--cor);
-    cursor: pointer;
-    transition: transform .18s ease, box-shadow .18s ease;
-}
-
-.arena-cor:hover { transform: scale(1.12); }
-
-.arena-cor[aria-pressed="true"] {
-    border-color: #fff;
-    box-shadow: 0 0 0 3px var(--cor), 0 0 16px var(--cor);
-}
-
-.arena-adesivos {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
-}
-
-.arena-adesivo {
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    width: 86px;
-    padding: 6px;
-    border: 2px solid rgba(255, 255, 255, .1);
-    border-radius: 12px;
-    background: rgba(0, 0, 0, .25);
-    color: #dbe7ff;
-    font: inherit;
-    font-size: .66rem;
-    font-weight: 700;
-    line-height: 1.2;
-    text-align: center;
-    cursor: pointer;
-}
-
-.arena-adesivo img {
-    width: 100%;
-    height: 40px;
-    object-fit: contain;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, .06);
-}
-
-.arena-adesivo[aria-pressed="true"] { border-color: #3fd0ff; background: rgba(63, 208, 255, .12); color: #fff; }
-
-.arena-roupa-legenda { margin: 0; color: var(--arena-suave); font-size: .78rem; }
-
-.arena-ficha-dados { margin: 0 0 6px; display: grid; gap: 6px; }
-
-.arena-ficha-dados div {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, .05);
-}
-
-.arena-ficha-dados dt { color: var(--arena-suave); font-size: .82rem; }
-.arena-ficha-dados dd { margin: 0; color: #fff; font-weight: 800; font-size: .88rem; text-align: right; }
-
-.arena-ficha-acoes { display: grid; gap: 4px; }
-.arena-ficha-acoes .ls-botao { margin-top: 8px; }
-
-/* ---------- vitrine em lista (sem 3D ela é a página) ---------- */
-.arena-vitrine {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(230px, 1fr);
-    gap: 12px;
-    margin: 18px 0 0;
-    padding: 4px 2px 12px;
-    overflow-x: auto;
-    list-style: none;
-    scroll-snap-type: x mandatory;
-    scrollbar-color: rgba(255, 255, 255, .25) transparent;
-}
-
-.arena-vitrine li { scroll-snap-align: start; }
-
-.arena-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    height: 100%;
-    padding: 10px 14px 10px 10px;
-    border: 1px solid var(--arena-borda);
-    border-radius: 18px;
-    background: var(--arena-vidro);
-    color: #fff;
-    text-decoration: none;
-    transition: border-color .2s ease, background .2s ease, transform .2s ease;
-}
-
-.arena-item:hover,
-.arena-item.ativo {
-    border-color: rgba(63, 208, 255, .6);
-    background: rgba(63, 208, 255, .1);
-    transform: translateY(-2px);
-}
-
-.arena-item-foto {
-    flex: none;
-    width: 60px;
-    height: 60px;
-    overflow: hidden;
-    border-radius: 12px;
-    background: #fff;
-}
-
-.arena-item-foto img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
-
-.arena-item-texto { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.arena-item-texto strong { font-size: .95rem; line-height: 1.25; }
-.arena-item-texto small { color: var(--arena-suave); font-size: .78rem; }
-
-/* Sem 3D (aparelho sem WebGL, JavaScript bloqueado): a lista vira grade. */
-.arena-palco.sem-3d { height: auto; min-height: 0; border: 0; background: none; box-shadow: none; }
-.arena-palco.sem-3d .arena-aviso { position: static; }
-.arena-palco.sem-3d + .arena-vitrine { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); overflow: visible; }
-
-/* =========================================================
    LAZER & SPORT JOGOS
 ========================================================= */
 .arena-secao-head--jogos {
@@ -719,38 +299,12 @@
 @media (max-width: 960px) {
     .arena-hero-inner { grid-template-columns: 1fr; }
     .arena-hero-mascotes { min-height: 440px; max-width: 460px; width: 100%; margin: 0 auto; }
-
-    .arena-ficha {
-        top: auto;
-        left: 10px;
-        right: 10px;
-        bottom: 76px;
-        width: auto;
-        max-height: 62%;
-        flex-direction: row;
-    }
-
-    .arena-ficha-foto { width: 38%; height: auto; }
-    .arena-ficha-lados button { width: 34px; height: 34px; }
 }
 
 @media (max-width: 620px) {
     .arena-hero { padding-bottom: 76px; }
     .arena-hero-mascotes { min-height: 350px; }
-    .arena-palco { height: 78vh; border-radius: 20px; }
     .arena-secao { padding-inline: 10px; }
-
-    .arena-ficha {
-        flex-direction: column;
-        max-height: 70%;
-    }
-
-    .arena-ficha-foto { width: 100%; height: 130px; }
-    .arena-ficha h3 { font-size: 1.15rem; }
-    .arena-ficha-desc { display: none; }
-    .arena-controles { bottom: 12px; gap: 4px; padding: 6px; }
-    .arena-controle { min-width: 40px; height: 40px; padding: 0 10px; }
-    .arena-controle--tour span { display: none; }
 
     .arena-secao-head--jogos { grid-template-columns: 70px minmax(0, 1fr) 70px; gap: 8px; }
     .arena-jogos-grade { grid-template-columns: 1fr; }
@@ -758,62 +312,64 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .arena-hero-mascotes img,
-    .arena-aviso-anel,
-    .arena-ficha { animation: none; }
+    .arena-hero-mascotes img { animation: none; }
 }
 
 /* =========================================================
-   VER EM 3D (página do produto)
+   AS SEÇÕES DAS MÁQUINAS
 ========================================================= */
-.produto-3d {
-    margin: 34px 0 10px;
-    color: var(--arena-texto);
+.arena-grupos-atalhos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
 }
 
-.produto-3d-cabeca { margin-bottom: 16px; }
-
-.produto-3d-selo {
+.arena-grupos-atalhos a {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 14px;
-    border: 1px solid rgba(63, 208, 255, .35);
+    padding: 9px 16px;
+    border: 1px solid var(--arena-borda);
     border-radius: 999px;
-    background: rgba(63, 208, 255, .1);
-    color: var(--arena-ciano);
-    font-size: .74rem;
+    background: rgba(255, 255, 255, .04);
+    color: #fff;
+    font-size: .9rem;
     font-weight: 800;
-    letter-spacing: .7px;
-    text-transform: uppercase;
+    text-decoration: none;
 }
 
-.produto-3d-cabeca h2 { margin: 10px 0 6px; color: #fff; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 800; }
-.produto-3d-cabeca p { margin: 0; color: var(--arena-suave); }
-
-.produto-3d-palco { height: clamp(420px, 66vh, 720px); }
-
-.arena-ficha--roupa {
-    top: 16px;
-    bottom: auto;
-    max-height: calc(100% - 32px);
-    width: min(340px, calc(100% - 32px));
+.arena-grupos-atalhos a b {
+    min-width: 24px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #e63946;
+    font-size: .78rem;
+    text-align: center;
 }
 
-.arena-ficha--roupa .arena-ficha-corpo { padding: 14px; }
-.arena-ficha--roupa .arena-roupa { margin-bottom: 10px; }
-.arena-ficha--roupa .ls-botao { margin-top: 0; }
+.arena-grupos-atalhos a[hidden] { display: none; }
 
-@media (max-width: 960px) {
-    .arena-ficha--roupa {
-        top: auto;
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-        width: auto;
-        flex-direction: column;
-    }
+.arena-grupo { margin-top: 34px; scroll-margin-top: 96px; }
+.arena-grupo[hidden] { display: none; }
+
+.arena-grupo-head {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding-left: 14px;
+    border-left: 4px solid #e63946;
 }
+
+.arena-grupo--maquinas .arena-grupo-head { border-left-color: #2f8bff; }
+.arena-grupo--brinquedoes .arena-grupo-head { border-left-color: #22c55e; }
+
+.arena-grupo-kicker { color: #ff8a95; font-size: .74rem; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+.arena-grupo--maquinas .arena-grupo-kicker { color: #8cc2ff; }
+.arena-grupo--brinquedoes .arena-grupo-kicker { color: #7ee2a8; }
+.arena-grupo-head h3 { margin: 0; color: #fff; font-size: clamp(1.3rem, 2.4vw, 1.8rem); font-weight: 900; }
+.arena-grupo-head p { margin: 0; color: var(--arena-texto-suave, #9fb3d1); }
 
 /* =========================================================
    TODAS AS MÁQUINAS — fotos reais
@@ -828,6 +384,28 @@
     justify-content: center;
     gap: 8px;
     margin: 0 auto 26px;
+}
+
+.arena-filtro {
+    flex: none;
+    padding: 9px 16px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .66);
+    color: #dbe7ff;
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.arena-filtro:hover { border-color: rgba(63, 208, 255, .55); }
+
+.arena-filtro.ativo {
+    border-color: transparent;
+    background: linear-gradient(135deg, #e63946, #ff5c6a);
+    color: #fff;
 }
 
 .arena-fotos-grade {
@@ -903,23 +481,6 @@
 
 .arena-foto-pontos i.ativo { width: 16px; background: #fff; }
 
-.arena-foto-selo {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 11px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #2f8bff, #3fd0ff);
-    color: #fff;
-    font-size: .74rem;
-    font-weight: 900;
-    letter-spacing: .04em;
-    box-shadow: 0 6px 16px rgba(47, 139, 255, .45);
-}
-
 .arena-foto-corpo {
     display: flex;
     flex: 1;
@@ -936,7 +497,7 @@
     text-transform: uppercase;
 }
 
-.arena-foto-corpo h3 {
+.arena-foto-corpo h4 {
     margin: 0;
     color: #fff;
     font-size: 1.08rem;
@@ -996,7 +557,7 @@
     .arena-fotos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .arena-foto-cartao { border-radius: 18px; }
     .arena-foto-corpo { padding: 12px; }
-    .arena-foto-corpo h3 { font-size: .95rem; }
+    .arena-foto-corpo h4 { font-size: .95rem; }
     .arena-foto-acoes { gap: 8px; }
     .arena-foto-jogar { margin-left: 0; width: 100%; justify-content: center; }
 }

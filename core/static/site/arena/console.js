@@ -904,7 +904,10 @@ if (raiz && dadosDosJogos) {
 
   // Quem chegou pelo link de um jogo (/jogos/<jogo>/) já cai com a
   // máquina inteira na tela, logo abaixo do cabeçalho.
-  if (/\/jogos\/[\w-]+\/?$/.test(location.pathname) && window.scrollY < 40 && !location.hash) {
+  const voltou = (() => {
+    try { return performance.getEntriesByType("navigation")[0].type !== "navigate"; } catch (erro) { return false; }
+  })();
+  if (/\/jogos\/[\w-]+\/?$/.test(location.pathname) && window.scrollY < 40 && !location.hash && !voltou) {
     window.requestAnimationFrame(() => raiz.scrollIntoView({ block: "start" }));
   }
 }

@@ -151,27 +151,27 @@ if (raiz && dadosDoJogador) {
     passos.hidden = !temResultado;
     if (!temResultado) {
       titulo.textContent = "Você já jogou a sua partida grátis";
-      texto.textContent = "Crie a sua conta grátis (ou entre) para jogar de novo quantas vezes quiser e disputar o ranking.";
+      texto.textContent = "Crie a conta grátis ou entre para jogar à vontade e disputar o ranking.";
     } else if (lugar === 1) {
       // bateu o recorde do jogo: o primeiro lugar espera só o cadastro
       selo.textContent = "Novo recorde do jogo!";
       titulo.textContent = `${numero(pontos)} pontos: ninguém fez mais`;
-      texto.textContent = "Esse é o 1º lugar do ranking. Crie a sua conta ou entre e o recorde fica salvo no seu nome.";
+      texto.textContent = "Crie a conta ou entre e o 1º lugar fica no seu nome.";
     } else if (lugar) {
       selo.textContent = `Dá ${lugar}º lugar no ranking!`;
       titulo.textContent = `Você fez ${numero(pontos)} pontos`;
-      texto.textContent = "Crie a sua conta ou entre para salvar esse resultado no ranking e jogar de novo.";
+      texto.textContent = "Crie a conta ou entre para salvar no ranking e jogar de novo.";
     } else {
       selo.textContent = "Boa partida!";
       titulo.textContent = `Você fez ${numero(pontos)} pontos`;
-      texto.textContent = "Crie a sua conta ou entre para salvar esse resultado e continuar jogando.";
+      texto.textContent = "Crie a conta ou entre para salvar e continuar jogando.";
     }
     portao.classList.toggle("console-cadastro--recorde", lugar === 1);
     portao.hidden = false;
     let falta = temResultado ? SEGUNDOS_PARA_IR + 4 : SEGUNDOS_PARA_IR;
     const criar = portao.querySelector("[data-cadastro-criar]");
     const passo = () => {
-      contagem.textContent = `Indo para o cadastro em ${falta} s…`;
+      contagem.textContent = `Cadastro em ${falta} s…`;
       if (falta <= 0) {
         window.clearInterval(relogio);
         window.location.href = criar.href;

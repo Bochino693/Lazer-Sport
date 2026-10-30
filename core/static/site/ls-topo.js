@@ -65,17 +65,8 @@
     if (destino !== "/" && caminho.indexOf(destino) === 0) link.setAttribute("aria-current", "page");
   });
 
-  // O topo encolhe um pouco depois de rolar: mais tela para o conteúdo.
-  var topo = document.querySelector(".ls-topo");
-  if (topo) {
-    var agendado = false;
-    window.addEventListener("scroll", function () {
-      if (agendado) return;
-      agendado = true;
-      window.requestAnimationFrame(function () {
-        agendado = false;
-        topo.classList.toggle("ls-topo--compacto", window.scrollY > 60);
-      });
-    }, { passive: true });
-  }
+  // O topo é fixo: não encolhe ao rolar. Ele fica no fluxo da página
+  // (sticky), e mudar a altura dele empurrava a página -- perto do limite
+  // a rolagem cruzava o limite de volta e o topo tremia, e abrir um jogo
+  // (que rola a página até a máquina) fazia o mesmo.
 })();

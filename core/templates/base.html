@@ -168,12 +168,11 @@
 
       <div class="ls-topo-grupo" data-topo-grupo>
         <button type="button" class="ls-topo-link ls-topo-link--arena" aria-expanded="false" aria-controls="topo-jogos">
-          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogos &amp; 3D <span class="ls-topo-novo">Novo</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogos <span class="ls-topo-novo">Novo</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
         </button>
         <div class="ls-topo-painel" id="topo-jogos">
           <a href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span><b>Simulador de jogos</b><small>Jogue a prévia dos jogos das nossas máquinas</small></span></a>
-          <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i><span><b>Máquinas em 3D</b><small>Monte com a cor e a adesivagem</small></span></a>
-          <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera" aria-hidden="true"></i><span><b>Todas as máquinas</b><small>Fotos reais de frente, lado e costas</small></span></a>
+          <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera" aria-hidden="true"></i><span><b>Arena: as máquinas</b><small>Os jogos da casa e as máquinas da fábrica</small></span></a>
         </div>
       </div>
 
@@ -335,7 +334,7 @@
     <div class="ls-mobile-nav-list">
       <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Início</a>
       <a class="ls-mobile-nav-arena" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Simulador de jogos<span class="ls-topo-novo">Novo</span></a>
-      <a href="{% url 'arena' %}#header"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D: máquinas em 3D</a>
+      <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera nav-icon" aria-hidden="true"></i>Arena: as máquinas da fábrica</a>
       <span class="ls-mobile-nav-grupo">Brinquedos</span>
       <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
       <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
@@ -772,28 +771,7 @@ window.addEventListener('resize', () => {
   }
 });
 
-/* ================== HEADER AO ROLAR ================== */
-const lsHeader = document.querySelector('header');
-if (lsHeader) {
-  // Uma leitura por quadro (no máximo) e a classe só muda quando o
-  // estado muda: ler a posição a cada evento de rolagem podia obrigar o
-  // navegador a refazer a diagramação no meio da rolagem do celular.
-  let rolado = null;
-  let agendado = false;
-  const atualizarHeaderScroll = () => {
-    agendado = false;
-    const agora = window.scrollY > 12;
-    if (agora === rolado) return;
-    rolado = agora;
-    lsHeader.classList.toggle('ls-scrolled', agora);
-  };
-  window.addEventListener('scroll', () => {
-    if (agendado) return;
-    agendado = true;
-    window.requestAnimationFrame(atualizarHeaderScroll);
-  }, { passive: true });
-  atualizarHeaderScroll();
-}
+/* O cabeçalho não muda ao rolar: fica parado, sempre igual. */
 
   /* Controle de link ativo no scroll.
 

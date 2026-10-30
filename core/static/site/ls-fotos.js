@@ -28,6 +28,7 @@
     ".arena-foto-midia",
     ".ls-result-media",
     ".desejo-foto",
+    ".ls-vitrine-foto",
   ].join(",");
 
   const SEM_TRANSPARENCIA = /\.(jpe?g|jfif)$/i;
@@ -74,8 +75,20 @@
     img.src = miniatura(url);
   });
 
+  // A cópia desfocada que preenche as sobras da vitrine do quadro inicial
+  // (a foto fica inteira; o resto do quadro é ela mesma, sem foco).
+  const desfocada = (url) => {
+    const partes = url.match(/^(.*\/upload\/)(?:[a-z]_[^/]*\/)?(.*)$/);
+    return url.includes("res.cloudinary.com") && partes ? `${partes[1]}c_scale,w_96,e_blur:400,q_auto,f_auto/${partes[2]}` : url;
+  };
+
   const marcar = (caixa, cheia) => {
-    if (cheia) caixa.classList.add("foto-cheia");
+    if (!cheia) return;
+    caixa.classList.add("foto-cheia");
+    if (caixa.matches(".ls-vitrine-foto")) {
+      const foto = caixa.querySelector("img");
+      caixa.style.setProperty("--foto-fundo", `url("${desfocada(foto.getAttribute("src") || "")}")`);
+    }
   };
 
   const decidir = (caixa) => {

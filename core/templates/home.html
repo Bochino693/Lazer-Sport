@@ -125,10 +125,10 @@
       <div class="ls-vitrine-progresso" aria-hidden="true"><span data-vitrine-progresso></span></div>
       {% endif %}
       {% else %}
-      <a class="ls-vitrine-vazia" href="{% url 'arena' %}#arena-3d">
-        <i class="fa-solid fa-cube" aria-hidden="true"></i>
-        <strong>Conheça os brinquedos em 3D</strong>
-        <span>Entre na Arena e gire cada um.</span>
+      <a class="ls-vitrine-vazia" href="{% url 'arena' %}#maquinas">
+        <i class="fa-solid fa-camera" aria-hidden="true"></i>
+        <strong>Conheça as máquinas da fábrica</strong>
+        <span>Entre na Arena e veja cada uma de perto.</span>
       </a>
       {% endif %}
     </div>
@@ -349,15 +349,9 @@
 
             <div class="img-area">
               {% if brinquedo.exibir_na_loja %}
-                <span class="produto-status is-sale">
-                  <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-                  <span class="rotulo-longo">Disponível para compra</span><span class="rotulo-curto">À venda</span>
-                </span>
+                <span class="produto-status is-sale" title="Disponível para compra">À venda</span>
               {% else %}
-                <span class="produto-status">
-                  <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-                  <span class="rotulo-longo">Projeto sob consulta</span><span class="rotulo-curto">Sob consulta</span>
-                </span>
+                <span class="produto-status" title="Projeto sob consulta">Sob consulta</span>
               {% endif %}
 
               <button type="button"
@@ -436,7 +430,7 @@
 {% comment %}
   A VITRINE DE PARCEIROS DEU LUGAR À ARENA.
 
-  Aqui ficavam os estabelecimentos parceiros. O pedido foi pôr a Arena 3D
+  Aqui ficavam os estabelecimentos parceiros. O pedido foi pôr a Arena
   e os jogos da casa no lugar deles -- e a página de parceiros continua
   em /estabelecimentos/, com link logo abaixo dos botões.
 
@@ -445,18 +439,18 @@
 {% endcomment %}
 <section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
     <div class="ls-arena-chamada-texto">
-        <span class="ls-arena-chamada-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
-        <h2 id="arena-home-titulo">Arena 3D &amp; <span>Lazer &amp; Sport Jogos</span></h2>
+        <span class="ls-arena-chamada-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
+        <h2 id="arena-home-titulo">Arena &amp; <span>Lazer &amp; Sport Jogos</span></h2>
         <p>
             Jogue a prévia dos jogos das nossas máquinas, direto no celular ou no computador,
-            e monte o Strike Kids e o Dragon Bowling em 3D, com a cor do gabinete e a adesivagem.
+            entre no ranking e veja de perto todas as máquinas que saem da fábrica.
         </p>
         <div class="ls-arena-chamada-acoes">
             <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'jogos' %}">
                 <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
             </a>
-            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
-                <i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D
+            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#maquinas">
+                <i class="fa-solid fa-camera" aria-hidden="true"></i> Ver as máquinas
             </a>
         </div>
         <a class="ls-arena-chamada-parceiros" href="{% url 'estabelecimentos' %}#header">

@@ -961,11 +961,6 @@ class BrinquedoInfoView(View):
             ),
         }
 
-        # O mesmo brinquedo da Arena 3D, sozinho no palco, com as cores e
-        # os adesivos para escolher -- só para máquina com objeto 3D de
-        # verdade. Usa o que já veio no prefetch acima.
-        dados_3d = arena.dados_do_brinquedo(brinquedo, request.path + "#bread")
-        context["visor_3d"] = [dados_3d] if dados_3d["tem_3d"] else []
 
         resposta = render(request, "brinquedo_info.html", context)
         return servico_favoritos.aplicar_cookie(request, resposta)

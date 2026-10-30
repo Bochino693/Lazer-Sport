@@ -131,7 +131,20 @@
     /* ---------------------------------------------------------------------
        Chegada com # na URL
        --------------------------------------------------------------------- */
+    /* Voltar e avançar (o botão do celular) e recarregar: o navegador já
+       devolve a página na posição em que a pessoa estava. Rolar de novo até
+       o # aqui fazia a página ir e voltar -- o "pulo" ao voltar. */
+    function voltouPeloHistorico() {
+        try {
+            var navegacao = window.performance.getEntriesByType("navigation")[0];
+            return !!navegacao && (navegacao.type === "back_forward" || navegacao.type === "reload");
+        } catch (erro) {
+            return false;
+        }
+    }
+
     function tratarHashInicial() {
+        if (voltouPeloHistorico()) return;
         var alvo = alvoDoHash(window.location.hash);
         if (!alvo) return;
 
@@ -141,10 +154,9 @@
         window.setTimeout(function () { irPara(alvo, false); }, 320);
     }
 
-    window.addEventListener("hashchange", function () {
-        var alvo = alvoDoHash(window.location.hash);
-        if (alvo) irPara(alvo, true);
-    });
+    /* hashchange só chega quando a pessoa anda pelo histórico (os cliques
+       acima usam pushState, que não dispara o evento): aí quem decide a
+       posição é o navegador, que volta para onde ela estava. */
 
     window.addEventListener("resize", medir, { passive: true });
 
