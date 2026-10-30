@@ -29,22 +29,19 @@ from .views_arena import WHATSAPP
 
 
 def maquinas_dos_jogos():
-    """Para cada tipo de máquina, o primeiro brinquedo do catálogo que é dele."""
+    """Para cada jogo, a máquina do catálogo que é ele (pelo nome)."""
     maquinas = {}
     brinquedos = (
         Brinquedos.objects
         .filter(ativo=True)
         .only("id", "nome_brinquedo")
-        .prefetch_related("categorias_brinquedos", "tags")
         .order_by("nome_brinquedo")
     )
     for brinquedo in brinquedos:
-        desenho = arena.modelo_3d(
-            brinquedo.nome_brinquedo,
-            [c.nome_categoria for c in brinquedo.categorias_brinquedos.all() if c.nome_categoria],
-            [t.nome_tags for t in brinquedo.tags.all() if t.nome_tags],
-        )
-        maquinas.setdefault(desenho, {
+        slug = arena.jogo_da_maquina(brinquedo.nome_brinquedo)
+        if not slug:
+            continue
+        maquinas.setdefault(slug, {
             "url": reverse("brinquedo_detalhe", args=[brinquedo.pk]) + "#bread",
             "nome": brinquedo.nome_brinquedo,
         })
@@ -89,7 +86,7 @@ class SimuladorView(View):
         maquinas = maquinas_dos_jogos()
         jogos = []
         for jogo in arena.jogos_do_simulador(arena.JOGOS):
-            maquina = next((maquinas[d] for d in jogo["desenhos"] if d in maquinas), None)
+            maquina = maquinas.get(jogo["slug"])
             jogos.append({
                 **jogo,
                 "maquina_url": maquina["url"] if maquina else "",

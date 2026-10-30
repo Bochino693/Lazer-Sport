@@ -44,7 +44,7 @@ def jogos_com_maquina(dados):
     """Cada jogo com o link da máquina de verdade, quando ela está no catálogo."""
     jogos = []
     for jogo in arena.JOGOS:
-        maquina = next((b for b in dados if b["desenho"] in jogo["desenhos"]), None)
+        maquina = next((b for b in dados if b["jogo"] == jogo["slug"]), None)
         jogos.append({
             **jogo,
             "maquina_url": maquina["url"] if maquina else "",
@@ -64,11 +64,17 @@ class ArenaView(View):
         ]
 
         categorias = sorted({c for b in dados for c in b["categorias"]})
+        grupos = arena.grupos_da_arena(dados)
         jogos = jogos_com_maquina(dados)
 
         return render(request, "arena.html", {
-            "grupos_arena": arena.grupos_da_arena(dados),
+            "grupos_arena": grupos,
             "brinquedos_arena": dados,
+            # o que o arena3d.js monta: as áreas e as máquinas com as fotos
+            "arena_dados": {
+                "zonas": [{k: g[k] for k in ("id", "titulo", "kicker")} for g in grupos],
+                "maquinas": dados,
+            },
             "categorias_arena": categorias,
             "jogos": jogos,
             "total_jogaveis": len(jogos),
