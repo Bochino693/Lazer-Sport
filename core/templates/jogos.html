@@ -141,16 +141,18 @@
                             <p class="console-cadastro-titulo" id="console-cadastro-titulo" data-cadastro-titulo>Você já jogou a sua partida grátis</p>
                             <p class="console-cadastro-texto" data-cadastro-texto>Crie a sua conta grátis para jogar quantas vezes quiser e disputar o ranking.</p>
                             <ol class="console-cadastro-passos" data-cadastro-passos hidden>
-                                <li><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> O resultado fica guardado neste aparelho</li>
-                                <li><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Crie a conta ou entre (1 minuto)</li>
-                                <li><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ele vai para o ranking no seu nome</li>
+                                <li><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Fica guardado aqui</li>
+                                <li><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Crie a conta ou entre</li>
+                                <li><i class="fa-solid fa-trophy" aria-hidden="true"></i> Vai pro ranking no seu nome</li>
                             </ol>
                             <div class="console-cadastro-acoes">
                                 <a class="ls-botao" data-cadastro-criar href="{% url 'registrar' %}?next={{ atual.url|urlencode }}"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
                                 <a class="ls-botao ls-botao--claro" data-cadastro-entrar href="{% url 'login' %}?next={{ atual.url|urlencode }}"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Já tenho conta</a>
                             </div>
-                            <p class="console-cadastro-contagem" data-cadastro-contagem aria-live="polite"></p>
-                            <button type="button" class="console-cadastro-fechar" data-cadastro-fechar>Agora não</button>
+                            <div class="console-cadastro-rodape">
+                                <p class="console-cadastro-contagem" data-cadastro-contagem aria-live="polite"></p>
+                                <button type="button" class="console-cadastro-fechar" data-cadastro-fechar>Agora não</button>
+                            </div>
                         </div>
                     </div>
                 </div>

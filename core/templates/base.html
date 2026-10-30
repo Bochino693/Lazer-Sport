@@ -772,28 +772,7 @@ window.addEventListener('resize', () => {
   }
 });
 
-/* ================== HEADER AO ROLAR ================== */
-const lsHeader = document.querySelector('header');
-if (lsHeader) {
-  // Uma leitura por quadro (no máximo) e a classe só muda quando o
-  // estado muda: ler a posição a cada evento de rolagem podia obrigar o
-  // navegador a refazer a diagramação no meio da rolagem do celular.
-  let rolado = null;
-  let agendado = false;
-  const atualizarHeaderScroll = () => {
-    agendado = false;
-    const agora = window.scrollY > 12;
-    if (agora === rolado) return;
-    rolado = agora;
-    lsHeader.classList.toggle('ls-scrolled', agora);
-  };
-  window.addEventListener('scroll', () => {
-    if (agendado) return;
-    agendado = true;
-    window.requestAnimationFrame(atualizarHeaderScroll);
-  }, { passive: true });
-  atualizarHeaderScroll();
-}
+/* O cabeçalho não muda ao rolar: fica parado, sempre igual. */
 
   /* Controle de link ativo no scroll.
 
