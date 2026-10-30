@@ -645,6 +645,7 @@ function montarCamaElastica(T, { diametro, cores }) {
   );
   lona.rotation.x = -PI / 2;
   lona.position.y = hM - 0.03;
+  lona.userData.lona = true; // no passeio, quem pisa aqui quica
   g.add(lona);
 
   // o acolchoado sobre as molas
@@ -1715,6 +1716,7 @@ class Arena {
   selecionar(maquina, { voar = true } = {}) {
     if (!maquina) return;
     if (!this.roda.includes(maquina)) return;
+    if (this.passeio) this.sairPasseio({ voar: false });
     if (this.selecionada && this.selecionada !== maquina) this.largar(this.selecionada);
     this.selecionada = maquina;
     this.roda.forEach((m) => { m.aro.material = this.luz(m.cor, m === maquina ? 5 : 2.2); });
@@ -1724,7 +1726,11 @@ class Arena {
     this.foco.position.set(alvo.x * 0.55, maquina.H + 6, alvo.z * 0.55);
     this.foco.target.position.set(alvo.x, 0, alvo.z);
     this.foco.intensity = 2.2;
-    if (this.vistas) this.vistas.hidden = false;
+    if (this.vistas) {
+      this.vistas.hidden = false;
+      const passeio = this.vistas.querySelector('[data-arena-vista="passeio"]');
+      if (passeio) passeio.hidden = !(maquina.modelo || maquina.forma);
+    }
     this.mostrarFicha(maquina);
     this.marcarLista();
   }
@@ -1737,6 +1743,7 @@ class Arena {
   }
 
   soltarSelecao({ voar = true } = {}) {
+    if (this.passeio) this.sairPasseio({ voar: false });
     if (this.selecionada) this.largar(this.selecionada);
     this.selecionada = null;
     this.roda.forEach((m) => { m.aro.material = this.luz(m.cor, 2.2); });
@@ -1758,6 +1765,10 @@ class Arena {
   vista(nome, { voar = true } = {}) {
     const m = this.selecionada;
     if (!m) return;
+    if (nome === "passeio") {
+      this.entrarPasseio();
+      return;
+    }
     this.ocioso = 0;
     this.vistaAtual = nome;
     m.girando = nome === "girar" && !m.grande;
@@ -1769,6 +1780,44 @@ class Arena {
         botao.setAttribute("aria-pressed", botao.dataset.arenaVista === nome ? "true" : "false");
       });
     }
+  }
+
+  /** O passeio por dentro do brinquedo escolhido (só nos objetos 3D de verdade). */
+  entrarPasseio() {
+    const m = this.selecionada;
+    if (!m || !(m.modelo || m.forma) || !m.montada) return;
+    this.largar(m);
+    m.prato.rotation.y = giroMaisPerto(m.prato.rotation.y, 0);
+    this.tour = false;
+    this.passeio = new Passeio(this, m);
+    this.passeio.entrar();
+    if (this.vistas) this.vistas.hidden = true;
+    if (this.controles) this.controles.hidden = true;
+    this.rotulo.hidden = true;
+    if (this.painelPasseio) {
+      this.painelPasseio.hidden = false;
+      const dica = this.painelPasseio.querySelector("[data-passeio-dica]");
+      if (dica) {
+        dica.textContent = this.celular
+          ? "Arraste para olhar · ▲ ▼ para andar · toque num lugar para ir até ele"
+          : "Arraste para olhar · W A S D ou setas para andar · clique num lugar para ir até ele · Esc para sair";
+      }
+    }
+    this.palco.classList.add("em-passeio");
+  }
+
+  sairPasseio({ voar = true } = {}) {
+    if (!this.passeio) return;
+    this.passeio.sair();
+    this.passeio = null;
+    this.redimensionar();
+    if (this.painelPasseio) this.painelPasseio.hidden = true;
+    if (this.controles) this.controles.hidden = false;
+    this.palco.classList.remove("em-passeio");
+    if (this.selecionada) {
+      if (this.vistas) this.vistas.hidden = false;
+      if (voar) this.vista("frente");
+    } else if (voar) this.camera3d.visaoGeral();
   }
 
   proxima(passo) {
@@ -1923,6 +1972,21 @@ class Arena {
         if (botao) this.vista(botao.dataset.arenaVista);
       });
     }
+    this.painelPasseio = this.palco.querySelector("[data-arena-passeio]");
+    if (this.painelPasseio) {
+      this.painelPasseio.querySelector("[data-passeio-sair]").addEventListener("click", () => this.sairPasseio());
+      this.painelPasseio.querySelectorAll("[data-passeio-andar]").forEach((botao) => {
+        const tecla = "pad-" + botao.dataset.passeioAndar;
+        const parar = () => { if (this.passeio) this.passeio.teclas.delete(tecla); };
+        botao.addEventListener("pointerdown", (evento) => {
+          evento.preventDefault();
+          if (!this.passeio) return;
+          this.passeio.destino = null;
+          this.passeio.teclas.add(tecla);
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach((tipo) => botao.addEventListener(tipo, parar));
+      });
+    }
 
     const zonas = raiz.querySelector("[data-arena-zonas]");
     if (zonas) {
@@ -1954,6 +2018,7 @@ class Arena {
     });
 
     this.palco.addEventListener("keydown", (evento) => {
+      if (this.passeio) return; // no passeio, as teclas andam
       if (evento.key === "ArrowRight") { this.proxima(1); evento.preventDefault(); }
       else if (evento.key === "ArrowLeft") { this.proxima(-1); evento.preventDefault(); }
       else if (evento.key === "Escape" && this.selecionada) this.soltarSelecao();
@@ -2023,7 +2088,7 @@ class Arena {
     const t = this.relogio;
     this.andarFila();
 
-    if (this.tour) {
+    if (this.tour && !this.passeio) {
       this.tourTempo += dt;
       if (this.tourTempo > 6) {
         this.tourTempo = 0;
@@ -2043,9 +2108,13 @@ class Arena {
     }
 
     this.roda.forEach((m) => m.atualizar(dt, this.reduzido));
-    this.camera3d.atualizar(dt);
-    this.liberarVista();
-    this.posicionarRotulo();
+    if (this.passeio) {
+      this.passeio.quadro(dt);
+    } else {
+      this.camera3d.atualizar(dt);
+      this.liberarVista();
+      this.posicionarRotulo();
+    }
     this.renderer.render(this.cena, this.camera);
   }
 
@@ -2097,6 +2166,204 @@ class Arena {
     this.raycaster.setFromCamera(this.ponteiro, this.camera);
     const acerto = this.raycaster.intersectObjects(this.roda.map((m) => m.grupo), true)[0];
     return acerto ? acerto.object.userData.maquina || null : null;
+  }
+}
+
+/* ======================================================================
+   PASSEIO — andar por dentro do brinquedo, na altura de uma criança
+
+   Só nos objetos 3D de verdade (o da fábrica e os montados peça por
+   peça): por dentro de um volume feito de fotos não há o que ver.
+
+   - olhar: arrastar (dedo ou mouse);
+   - andar: W A S D ou setas (← → viram), os botões ▲ ▼ da tela, a roda
+     do mouse -- ou tocar num ponto: a pessoa vai até lá. Tocar numa
+     plataforma de cima leva até ela (andando, só se sobe um degrau);
+   - os pés seguem o piso que estiver embaixo (descer de uma plataforma é
+     cair até a de baixo), e na lona da cama elástica a pessoa quica;
+   - Esc ou "Sair do passeio": a câmera sai voando até a vista de fora.
+   ====================================================================== */
+const OLHOS = 0.85; // altura dos olhos acima do piso: uma criança
+const DEGRAU = 0.45; // o que se sobe andando
+const PASSO = 1.5; // metros por segundo
+
+class Passeio {
+  constructor(arena, maquina) {
+    const T = arena.T;
+    this.arena = arena;
+    this.maquina = maquina;
+    this.pes = new T.Vector3();
+    this.alvoY = 0;
+    this.destino = null;
+    this.yaw = 0;
+    this.pitch = -0.08;
+    this.teclas = new Set();
+    this.raio = new T.Raycaster();
+    this.baixo = new T.Vector3(0, -1, 0);
+    this.normal = new T.Vector3();
+    this.origem = new T.Vector3();
+    this.frente = new T.Vector3();
+    this.lado = new T.Vector3();
+    this.ultimoPiso = new T.Vector3(Infinity, 0, 0);
+    this.pulo = 0;
+    this.altura = 0;
+    this.limites = new T.Box3().setFromObject(maquina.grupo).expandByScalar(1.2);
+    this.aoApertar = (evento) => this.tecla(evento, true);
+    this.aoSoltar = (evento) => this.tecla(evento, false);
+  }
+
+  entrar() {
+    const T = this.arena.T;
+    const m = this.maquina;
+    m.grupo.updateMatrixWorld(true);
+    // começa na frente do brinquedo, olhando para dentro dele
+    const D = m.D || m.fundo;
+    this.pes.set(0, 0, D / 2 + 0.9).applyMatrix4(m.grupo.matrixWorld);
+    this.pes.y = this.piso(this.pes.x, this.pes.z, 1);
+    this.alvoY = this.pes.y;
+    const centro = new T.Vector3().setFromMatrixPosition(m.grupo.matrixWorld);
+    this.yaw = Math.atan2(-(centro.x - this.pes.x), -(centro.z - this.pes.z));
+    window.addEventListener("keydown", this.aoApertar);
+    window.addEventListener("keyup", this.aoSoltar);
+    const camera = this.arena.camera;
+    camera.rotation.order = "YXZ";
+    camera.fov = 72;
+    camera.updateProjectionMatrix();
+    this.quadro(0);
+  }
+
+  sair() {
+    window.removeEventListener("keydown", this.aoApertar);
+    window.removeEventListener("keyup", this.aoSoltar);
+    this.teclas.clear();
+    // a órbita parte de onde o passeio parou: a saída é um voo, não um salto
+    const camera = this.arena.camera;
+    const c3 = this.arena.camera3d;
+    const olhar = new this.arena.T.Vector3();
+    camera.getWorldDirection(olhar);
+    c3.alvo.copy(camera.position).addScaledVector(olhar, 2);
+    c3.raio = 2;
+    c3.phi = Math.acos(limitar(-olhar.y, -1, 1));
+    c3.theta = Math.atan2(-olhar.x, -olhar.z);
+    c3.thetaDesejado = c3.theta;
+  }
+
+  tecla(evento, apertou) {
+    const k = evento.key.length === 1 ? evento.key.toLowerCase() : evento.key;
+    if (!["w", "a", "s", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Escape"].includes(k)) return;
+    evento.preventDefault();
+    if (k === "Escape") {
+      if (apertou) this.arena.sairPasseio();
+      return;
+    }
+    if (apertou) this.teclas.add(k);
+    else this.teclas.delete(k);
+    this.destino = null;
+  }
+
+  olhar(dx, dy) {
+    this.yaw -= dx * 0.005;
+    this.pitch = limitar(this.pitch - dy * 0.004, -1.25, 1.25);
+  }
+
+  /** Um passo para a frente (+) ou para trás (-), em metros (a roda do mouse). */
+  andar(metros) {
+    this.destino = null;
+    this.mover(-Math.sin(this.yaw) * metros, -Math.cos(this.yaw) * metros);
+  }
+
+  /**
+   * O piso mais alto embaixo de (x, z), até `folga` acima dos pés -- o teto
+   * e as plataformas de cima não contam. Cinco raios num pequeno "+" para
+   * não cair pelos vãos de uma rede ou de uma grade.
+   */
+  piso(x, z, folga = DEGRAU) {
+    let melhor = 0;
+    this.sobreLona = false;
+    for (const [ox, oz] of [[0, 0], [0.1, 0], [-0.1, 0], [0, 0.1], [0, -0.1]]) {
+      this.origem.set(x + ox, this.pes.y + folga, z + oz);
+      this.raio.set(this.origem, this.baixo);
+      this.raio.far = folga + 8;
+      for (const acerto of this.raio.intersectObject(this.maquina.grupo, true)) {
+        if (!acerto.face) continue;
+        this.normal.copy(acerto.face.normal).transformDirection(acerto.object.matrixWorld);
+        if (this.normal.y < 0.55) continue;
+        if (acerto.point.y > melhor) {
+          melhor = acerto.point.y;
+          this.sobreLona = Boolean(acerto.object.userData.lona);
+        }
+        break;
+      }
+    }
+    return melhor;
+  }
+
+  mover(dx, dz) {
+    const x = limitar(this.pes.x + dx, this.limites.min.x, this.limites.max.x);
+    const z = limitar(this.pes.z + dz, this.limites.min.z, this.limites.max.z);
+    const y = this.piso(x, z);
+    this.pes.x = x;
+    this.pes.z = z;
+    this.alvoY = y;
+  }
+
+  /** Tocar num ponto: vai até ele (numa plataforma de cima, sobe até ela). */
+  irPara(x, y) {
+    const a = this.arena;
+    const r = a.canvas.getBoundingClientRect();
+    a.ponteiro.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this.raio.setFromCamera(a.ponteiro, a.camera);
+    this.raio.far = 40;
+    const acerto = this.raio.intersectObject(this.maquina.grupo, true).find((h) => h.face);
+    if (!acerto) return;
+    this.normal.copy(acerto.face.normal).transformDirection(acerto.object.matrixWorld);
+    if (this.normal.y >= 0.55) {
+      this.destino = { x: acerto.point.x, z: acerto.point.z, y: acerto.point.y };
+    } else {
+      // uma parede: para um pouco antes dela, no piso de onde está
+      const p = acerto.point.clone().addScaledVector(this.raio.ray.direction, -0.35);
+      this.destino = { x: p.x, z: p.z, y: null };
+    }
+  }
+
+  quadro(dt) {
+    const camera = this.arena.camera;
+    const t = this.teclas;
+    if (t.has("ArrowLeft")) this.yaw += dt * 1.7;
+    if (t.has("ArrowRight")) this.yaw -= dt * 1.7;
+    const frente = (t.has("w") || t.has("ArrowUp") || t.has("pad-frente") ? 1 : 0) - (t.has("s") || t.has("ArrowDown") || t.has("pad-tras") ? 1 : 0);
+    const lado = (t.has("d") ? 1 : 0) - (t.has("a") ? 1 : 0);
+    if (frente || lado) {
+      this.frente.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      this.lado.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+      const d = PASSO * dt;
+      this.mover((this.frente.x * frente + this.lado.x * lado) * d, (this.frente.z * frente + this.lado.z * lado) * d);
+    } else if (this.destino) {
+      const dx = this.destino.x - this.pes.x;
+      const dz = this.destino.z - this.pes.z;
+      const falta = Math.hypot(dx, dz);
+      const passo = Math.min(falta, PASSO * 1.6 * dt);
+      if (falta > 0.01) {
+        this.pes.x += (dx / falta) * passo;
+        this.pes.z += (dz / falta) * passo;
+      }
+      this.alvoY = this.destino.y !== null ? this.destino.y : this.piso(this.pes.x, this.pes.z);
+      if (falta - passo < 0.02) {
+        this.destino = null;
+        this.alvoY = this.piso(this.pes.x, this.pes.z, 0.3);
+      }
+    }
+    // os pés acompanham o piso: sobem depressa, descem como quem cai
+    this.pes.y += (this.alvoY - this.pes.y) * (1 - Math.exp(-dt * (this.alvoY > this.pes.y ? 12 : 7)));
+    // na lona da cama elástica, quica
+    if (this.sobreLona && !this.arena.reduzido) {
+      this.pulo += dt * 3.4;
+      this.altura = Math.abs(Math.sin(this.pulo)) * 0.6;
+    } else {
+      this.altura *= Math.max(0, 1 - dt * 6);
+    }
+    camera.position.set(this.pes.x, this.pes.y + OLHOS + this.altura, this.pes.z);
+    camera.rotation.set(this.pitch, this.yaw, 0, "YXZ");
   }
 }
 
@@ -2224,7 +2491,7 @@ class Camera {
       const anterior = this.ponteiros.get(evento.pointerId);
       if (!anterior) {
         // só passando por cima: o cursor avisa que dá para tocar
-        if (evento.pointerType === "mouse") {
+        if (evento.pointerType === "mouse" && !arena.passeio) {
           arena.sobre = arena.escolher(evento.clientX, evento.clientY);
           canvas.classList.toggle("sobre-maquina", Boolean(arena.sobre) || Boolean(arena.zonaSob(evento.clientX, evento.clientY)));
         }
@@ -2234,6 +2501,10 @@ class Camera {
       const dy = evento.clientY - anterior.y;
       this.ponteiros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
       arena.ocioso = 0;
+      if (arena.passeio) {
+        arena.passeio.olhar(dx, dy);
+        return;
+      }
       if (this.ponteiros.size === 2) {
         const [a, b] = [...this.ponteiros.values()];
         const distancia = Math.hypot(a.x - b.x, a.y - b.y);
@@ -2258,6 +2529,10 @@ class Camera {
       const rapido = performance.now() - inicio.t < 450;
       inicio = null;
       if (andou < 8 && rapido && evento.type === "pointerup") {
+        if (arena.passeio) {
+          arena.passeio.irPara(evento.clientX, evento.clientY);
+          return;
+        }
         const maquina = arena.escolher(evento.clientX, evento.clientY);
         if (maquina) arena.selecionar(maquina);
         else {
@@ -2272,6 +2547,10 @@ class Camera {
     canvas.addEventListener("wheel", (evento) => {
       evento.preventDefault();
       arena.ocioso = 0;
+      if (arena.passeio) {
+        arena.passeio.andar(-evento.deltaY * 0.004);
+        return;
+      }
       this.raioDesejado *= Math.exp(evento.deltaY * 0.0012);
       this.limitar();
     }, { passive: false });

@@ -43,6 +43,7 @@ fa-check-circle
 fa-chevron-down
 fa-chevron-left
 fa-chevron-right
+fa-chevron-up
 fa-circle-check
 fa-circle-exclamation
 fa-circle-info
@@ -119,6 +120,7 @@ fa-pause
 fa-pen
 fa-pen-ruler
 fa-pen-to-square
+fa-person-walking
 fa-phone
 fa-piggy-bank
 fa-pix
