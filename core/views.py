@@ -1436,20 +1436,32 @@ class LojaView(View):
     def get(self, request):
         itens = []
 
-        pecas = (
-            PecasReposicao.da_vitrine()
-            .prefetch_related('imagem_peca_reposicao', 'categoria_peca')
+        # As máquinas vêm na frente; depois combos, promoções e peças.
+        brinquedos_na_loja = (
+            Brinquedos.objects
+            .filter(ativo=True, exibir_na_loja=True)
         )
-        for peca in pecas:
-            imagem_obj = peca.imagem_principal
+        for brinquedo in brinquedos_na_loja:
             itens.append({
-                'id': peca.id,
-                'tipo': 'peca',
-                'tipo_label': 'Peça de Reposição',
-                'titulo': peca.nome,
-                'imagem': imagem_obj.imagem.url if imagem_obj and imagem_obj.imagem else None,
-                'preco': peca.preco_venda,
-                'url': reverse('reposicao_detalhe', args=[peca.id]),
+                'id': brinquedo.id,
+                'tipo': 'brinquedo',
+                'tipo_label': 'Brinquedo',
+                'titulo': brinquedo.nome_brinquedo,
+                'imagem': brinquedo.imagem_brinquedo.url if brinquedo.imagem_brinquedo else None,
+                'preco': brinquedo.valor_brinquedo,
+                'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
+            })
+
+        combos = Combos.objects.filter(ativo=True).prefetch_related('brinquedos')
+        for combo in combos:
+            itens.append({
+                'id': combo.id,
+                'tipo': 'combo',
+                'tipo_label': 'Combo',
+                'titulo': combo.descricao,
+                'imagem': combo.imagem_combo.url if combo.imagem_combo else None,
+                'preco': combo.valor_combo,
+                'url': reverse('combo', args=[combo.id]),
             })
 
         promocoes = (
@@ -1472,31 +1484,20 @@ class LojaView(View):
                 'url': reverse('promocao', args=[promo.id]),
             })
 
-        combos = Combos.objects.filter(ativo=True).prefetch_related('brinquedos')
-        for combo in combos:
-            itens.append({
-                'id': combo.id,
-                'tipo': 'combo',
-                'tipo_label': 'Combo',
-                'titulo': combo.descricao,
-                'imagem': combo.imagem_combo.url if combo.imagem_combo else None,
-                'preco': combo.valor_combo,
-                'url': reverse('combo', args=[combo.id]),
-            })
-
-        brinquedos_na_loja = (
-            Brinquedos.objects
-            .filter(ativo=True, exibir_na_loja=True)
+        pecas = (
+            PecasReposicao.da_vitrine()
+            .prefetch_related('imagem_peca_reposicao', 'categoria_peca')
         )
-        for brinquedo in brinquedos_na_loja:
+        for peca in pecas:
+            imagem_obj = peca.imagem_principal
             itens.append({
-                'id': brinquedo.id,
-                'tipo': 'brinquedo',
-                'tipo_label': 'Brinquedo',
-                'titulo': brinquedo.nome_brinquedo,
-                'imagem': brinquedo.imagem_brinquedo.url if brinquedo.imagem_brinquedo else None,
-                'preco': brinquedo.valor_brinquedo,
-                'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
+                'id': peca.id,
+                'tipo': 'peca',
+                'tipo_label': 'Peça de Reposição',
+                'titulo': peca.nome,
+                'imagem': imagem_obj.imagem.url if imagem_obj and imagem_obj.imagem else None,
+                'preco': peca.preco_venda,
+                'url': reverse('reposicao_detalhe', args=[peca.id]),
             })
 
         # Curtidas e lista de desejos nos cards da vitrine.

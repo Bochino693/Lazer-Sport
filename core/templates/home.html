@@ -125,10 +125,10 @@
       <div class="ls-vitrine-progresso" aria-hidden="true"><span data-vitrine-progresso></span></div>
       {% endif %}
       {% else %}
-      <a class="ls-vitrine-vazia" href="{% url 'arena' %}#maquinas">
-        <i class="fa-solid fa-camera" aria-hidden="true"></i>
-        <strong>Conheça as máquinas da fábrica</strong>
-        <span>Entre na Arena e veja cada uma de perto.</span>
+      <a class="ls-vitrine-vazia" href="{% url 'arena' %}#arena-3d">
+        <i class="fa-solid fa-cube" aria-hidden="true"></i>
+        <strong>Conheça as máquinas em 3D</strong>
+        <span>Entre na Arena e gire cada uma.</span>
       </a>
       {% endif %}
     </div>
@@ -440,17 +440,17 @@
 <section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
     <div class="ls-arena-chamada-texto">
         <span class="ls-arena-chamada-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
-        <h2 id="arena-home-titulo">Arena &amp; <span>Lazer &amp; Sport Jogos</span></h2>
+        <h2 id="arena-home-titulo">Arena 3D &amp; <span>Lazer &amp; Sport Jogos</span></h2>
         <p>
             Jogue a prévia dos jogos das nossas máquinas, direto no celular ou no computador,
-            entre no ranking e veja de perto todas as máquinas que saem da fábrica.
+            entre no ranking e veja em 3D todas as máquinas que saem da fábrica.
         </p>
         <div class="ls-arena-chamada-acoes">
             <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'jogos' %}">
                 <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
             </a>
-            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#maquinas">
-                <i class="fa-solid fa-camera" aria-hidden="true"></i> Ver as máquinas
+            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Ver em 3D
             </a>
         </div>
         <a class="ls-arena-chamada-parceiros" href="{% url 'estabelecimentos' %}#header">
@@ -721,21 +721,77 @@
 
 
 <!-- ======= MANUTENÇÃO ======= -->
-<section id="manutencao" class="manutencao-section">
+{% comment %}
+  MANUTENÇÃO: o pedido é feito em /manutencoes/ (com fotos do defeito) e
+  acompanhado na conta do cliente. O número do mês sai do mesmo painel ao
+  vivo do quadro inicial (`core/painel_publico.py`) e só aparece se houver.
+{% endcomment %}
+<section id="manutencao" class="manutencao-section ls-manut" aria-labelledby="manutencao-titulo">
+  <div class="ls-manut-caixa">
+    <div class="ls-manut-texto">
+      <span class="ls-section-kicker">
+        <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+        Assistência técnica da fábrica
+      </span>
+      <h2 class="ls-manut-titulo" id="manutencao-titulo">Brinquedo parado é diversão perdida. <span>A gente coloca para rodar de novo.</span></h2>
+      <p class="ls-manut-sub">
+        Reparo e revisão feitos pela equipe técnica de quem fabrica, com as peças de reposição
+        da própria fábrica. Peça pelo site e acompanhe cada etapa na sua conta.
+      </p>
 
-    <div class="manutencao-container">
+      <ul class="ls-manut-vantagens">
+        <li>
+          <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+          <span><b>Técnicos da fábrica</b> quem fabrica, conserta</span>
+        </li>
+        <li>
+          <i class="fa-solid fa-gears" aria-hidden="true"></i>
+          <span><b>Peças originais</b> do nosso estoque de reposição</span>
+        </li>
+        <li>
+          <i class="fa-solid fa-camera" aria-hidden="true"></i>
+          <span><b>Mande fotos</b> do defeito já no pedido</span>
+        </li>
+        <li>
+          <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+          <span><b>Acompanhe online</b> o andamento do serviço</span>
+        </li>
+      </ul>
 
-        <!-- BOTÃO PRINCIPAL -->
-        <a href="{% url 'manutencoes' %}#tab" class="btn-manutencao">
-            <span class="icon">🛠</span>
-            <span class="texto">
-                Solicitar Manutenção
-                <small>Reparo ou revisão do brinquedo</small>
-            </span>
+      <div class="ls-manut-acoes">
+        <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'manutencoes' %}#tab">
+          <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Solicitar manutenção
         </a>
-
-
+        <a class="ls-quadro-botao ls-manut-botao-zap" href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Preciso%20de%20manuten%C3%A7%C3%A3o%20num%20brinquedo%20da%20Lazer%20%26%20Sport." target="_blank" rel="noopener">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar com a assistência
+        </a>
+      </div>
     </div>
+
+    <div class="ls-manut-lado">
+      {% if painel.servicos_no_mes %}
+      <p class="ls-manut-numero"><b>{{ painel.servicos_no_mes }}</b> atendimento{{ painel.servicos_no_mes|pluralize }} técnico{{ painel.servicos_no_mes|pluralize }} neste mês</p>
+      {% endif %}
+      <ol class="ls-manut-etapas" aria-label="Como funciona">
+        <li>
+          <span class="ls-manut-passo">1</span>
+          <div><b>Solicite pelo site</b><span>Conte o que aconteceu e mande as fotos.</span></div>
+        </li>
+        <li>
+          <span class="ls-manut-passo">2</span>
+          <div><b>Avaliação técnica</b><span>A equipe analisa e responde com o orçamento.</span></div>
+        </li>
+        <li>
+          <span class="ls-manut-passo">3</span>
+          <div><b>Reparo</b><span>Com as peças de reposição da fábrica.</span></div>
+        </li>
+        <li>
+          <span class="ls-manut-passo">4</span>
+          <div><b>Pronto para a diversão</b><span>Cada etapa fica registrada na sua conta.</span></div>
+        </li>
+      </ol>
+    </div>
+  </div>
 </section>
 
 

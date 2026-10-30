@@ -65,18 +65,20 @@ class ArenaPaginaTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         html = resposta.content.decode()
         self.assertEqual(html.count("<h1"), 1)
-        for ancora in ('id="jogos"', 'id="maquinas"', 'id="maquinas-jogos"', 'id="maquinas-maquinas"'):
+        for ancora in ('id="jogos"', 'id="arena-3d"', 'id="arena-dados"', "arena3d.js"):
             self.assertIn(ancora, html)
-        self.assertNotIn('id="arena-3d"', html)
-        self.assertNotIn("arena3d.js", html)
         # Todos os jogos chegam como cartão, levando ao simulador.
         for jogo in arena.JOGOS:
             self.assertIn(f'href="{reverse("jogo", args=[jogo["slug"]])}"', html)
 
-    def test_todas_as_maquinas_aparecem_nas_fotos(self):
-        html = self.client.get(reverse("arena")).content.decode()
-        self.assertEqual(html.count("data-fotos-cartao"), 2)
+    def test_todas_as_maquinas_vao_para_o_3d_e_para_a_lista(self):
+        resposta = self.client.get(reverse("arena"))
+        html = resposta.content.decode()
+        # a lista (a página sem 3D) tem as duas, e o 3D recebe as duas com as fotos
+        self.assertEqual(html.count("data-arena-id="), 2)
         self.assertIn("Air Game Hockey", html)
+        maquinas = resposta.context["arena_dados"]["maquinas"]
+        self.assertEqual(sorted(m["nome"] for m in maquinas), ["Air Game Hockey", "Dragon Bowling Rosa"])
 
 
 
@@ -190,12 +192,20 @@ class SecoesDaArenaTests(TestCase):
         self.assertEqual(grupos["maquinas"], ["Air Game Hockey"])
         self.assertEqual(grupos["brinquedoes"], ["Cama Elástica 3m"])
 
-    def test_secao_vazia_nao_aparece(self):
+    def test_area_vazia_nao_aparece(self):
         _brinquedo("Air Game Hockey")
         html = self.client.get(reverse("arena")).content.decode()
-        self.assertIn('id="maquinas-maquinas"', html)
-        self.assertNotIn('id="maquinas-jogos"', html)
-        self.assertNotIn('id="maquinas-brinquedoes"', html)
+        self.assertIn('data-arena-zona="maquinas"', html)
+        self.assertNotIn('data-arena-zona="jogos"', html)
+        self.assertNotIn('data-arena-zona="brinquedoes"', html)
+
+    def test_jogo_so_pelo_nome_da_maquina(self):
+        # basquete e boxe do catálogo são outras máquinas, com outros jogos
+        self.assertEqual(arena.jogo_da_maquina("Lazer Shot Arena"), "lazer-shot")
+        self.assertEqual(arena.jogo_da_maquina("Dragon Bowling Rosa"), "dragon-bowling")
+        self.assertEqual(arena.jogo_da_maquina("Basquete Street"), "")
+        self.assertEqual(arena.jogo_da_maquina("Boxe Força Máxima"), "")
+        self.assertEqual(arena.jogo_da_maquina("Mundo Zumbi"), "")
 
     def test_pagina_do_produto_sem_3d(self):
         boliche = _brinquedo("Dragon Bowling Rosa")

@@ -316,253 +316,329 @@
 }
 
 /* =========================================================
-   AS SEÇÕES DAS MÁQUINAS
+   ARENA 3D — as máquinas montadas com as fotos reais
+
+   Em cima: as áreas (botões) e a categoria. No meio: o palco 3D e a
+   ficha -- ao lado no computador (a ficha cabe inteira, sem rolagem),
+   embaixo no celular. A ficha nunca cobre o 3D.
 ========================================================= */
-.arena-grupos-atalhos {
+.arena3d { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.arena3d > * { min-width: 0; }
+
+.arena3d-barra {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 16px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
 }
 
-.arena-grupos-atalhos a {
+.arena3d-zonas { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.arena3d-zona {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 16px;
-    border: 1px solid var(--arena-borda);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, .04);
-    color: #fff;
-    font-size: .9rem;
-    font-weight: 800;
-    text-decoration: none;
-}
-
-.arena-grupos-atalhos a b {
-    min-width: 24px;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: #e63946;
-    font-size: .78rem;
-    text-align: center;
-}
-
-.arena-grupos-atalhos a[hidden] { display: none; }
-
-.arena-grupo { margin-top: 34px; scroll-margin-top: 96px; }
-.arena-grupo[hidden] { display: none; }
-
-.arena-grupo-head {
-    display: grid;
-    gap: 4px;
-    margin-bottom: 16px;
-    padding-left: 14px;
-    border-left: 4px solid #e63946;
-}
-
-.arena-grupo--maquinas .arena-grupo-head { border-left-color: #2f8bff; }
-.arena-grupo--brinquedoes .arena-grupo-head { border-left-color: #22c55e; }
-
-.arena-grupo-kicker { color: #ff8a95; font-size: .74rem; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
-.arena-grupo--maquinas .arena-grupo-kicker { color: #8cc2ff; }
-.arena-grupo--brinquedoes .arena-grupo-kicker { color: #7ee2a8; }
-.arena-grupo-head h3 { margin: 0; color: #fff; font-size: clamp(1.3rem, 2.4vw, 1.8rem); font-weight: 900; }
-.arena-grupo-head p { margin: 0; color: var(--arena-texto-suave, #9fb3d1); }
-
-/* =========================================================
-   TODAS AS MÁQUINAS — fotos reais
-
-   Como na vitrine da 5D: a foto de verdade em primeiro lugar. Passar o
-   mouse (ou o dedo, de lado) troca a foto entre frente, lado e costas;
-   as máquinas com objeto 3D levam o selo.
-========================================================= */
-.arena-fotos-filtros {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    margin: 0 auto 26px;
-}
-
-.arena-filtro {
-    flex: none;
-    padding: 9px 16px;
+    padding: 9px 14px;
     border: 1px solid var(--arena-borda);
     border-radius: 999px;
     background: rgba(4, 10, 28, .66);
     color: #dbe7ff;
     font: inherit;
-    font-size: .86rem;
-    font-weight: 700;
+    font-size: .88rem;
+    font-weight: 800;
     cursor: pointer;
-    transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
-.arena-filtro:hover { border-color: rgba(63, 208, 255, .55); }
-
-.arena-filtro.ativo {
-    border-color: transparent;
-    background: linear-gradient(135deg, #e63946, #ff5c6a);
-    color: #fff;
+.arena3d-zona b {
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    font-size: .76rem;
+    text-align: center;
 }
 
-.arena-fotos-grade {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-}
+.arena3d-zona[hidden] { display: none; }
+.arena3d-zona--jogos { border-color: rgba(230, 57, 70, .5); }
+.arena3d-zona--maquinas { border-color: rgba(47, 139, 255, .5); }
+.arena3d-zona--brinquedoes { border-color: rgba(34, 197, 94, .5); }
+.arena3d-zona.ativo { border-color: transparent; background: linear-gradient(135deg, #e63946, #ff5c6a); color: #fff; }
+.arena3d-zona--maquinas.ativo { background: linear-gradient(135deg, #1f6fff, #3fd0ff); }
+.arena3d-zona--brinquedoes.ativo { background: linear-gradient(135deg, #16a34a, #22e07a); }
 
-.arena-foto-cartao {
-    display: flex;
-    flex-direction: column;
+.arena3d-categoria { display: inline-flex; align-items: center; gap: 8px; color: var(--arena-suave); font-size: .85rem; font-weight: 700; }
+
+.arena3d-categoria select {
     min-width: 0;
+    max-width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 12px;
+    background: #081433;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+}
+
+.arena3d-corpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 14px;
+    height: clamp(460px, calc(100vh - 230px), 720px);
+}
+
+.arena3d-palco {
+    position: relative;
+    min-height: 0;
     overflow: hidden;
     border: 1px solid var(--arena-borda);
-    border-radius: 22px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
-    transition: transform .3s cubic-bezier(.2, .8, .2, 1), border-color .3s ease, box-shadow .3s ease;
+    border-radius: 24px;
+    background: radial-gradient(circle at 50% 30%, #0d1d48, #040a1c 70%);
+    touch-action: none;
 }
 
-.arena-foto-cartao:hover,
-.arena-foto-cartao:focus-within {
-    border-color: rgba(63, 208, 255, .5);
-    box-shadow: 0 22px 46px rgba(0, 0, 0, .4), 0 0 0 1px rgba(63, 208, 255, .15);
-    transform: translateY(-4px);
-}
+.arena3d-palco:fullscreen { border-radius: 0; }
 
-.arena-foto-cartao[hidden] { display: none; }
+.arena3d-tela { display: block; width: 100%; height: 100%; cursor: grab; outline: none; }
+.arena3d-tela.arrastando { cursor: grabbing; }
+.arena3d-tela.sobre-maquina { cursor: pointer; }
 
-/* A foto fica num fundo claro de estúdio: é assim que elas foram tiradas. */
-.arena-foto-midia {
-    position: relative;
-    display: block;
-    aspect-ratio: 1;
-    overflow: hidden;
-    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
-    touch-action: pan-y;
-}
-
-.arena-foto-midia img {
+/* aviso de carregamento */
+.arena-aviso {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    padding: 6%;
-    object-fit: contain;
-    opacity: 0;
-    transform: scale(.97);
-    transition: opacity .35s ease, transform .5s cubic-bezier(.2, .8, .2, 1);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    background: rgba(4, 10, 28, .7);
+    color: var(--arena-suave);
+    text-align: center;
+    transition: opacity .5s ease, visibility .5s;
 }
 
-.arena-foto-midia img.ativa { opacity: 1; transform: none; }
-.arena-foto-cartao:hover .arena-foto-midia img.ativa { transform: translateY(-3px); }
+.arena-aviso strong { color: #fff; font-size: 1.15rem; }
+.arena-aviso.sumiu { opacity: 0; visibility: hidden; }
 
-.arena-foto-pontos {
+.arena-aviso-anel {
+    width: 54px;
+    height: 54px;
+    border: 4px solid rgba(255, 255, 255, .12);
+    border-top-color: var(--arena-ciano);
+    border-right-color: #e63946;
+    border-radius: 50%;
+    animation: arena-gira 1s linear infinite;
+}
+
+.arena-aviso.erro .arena-aviso-anel { display: none; }
+
+@keyframes arena-gira { to { transform: rotate(360deg); } }
+
+/* controles no pé do palco */
+.arena-controles {
     position: absolute;
     left: 50%;
-    bottom: 10px;
+    bottom: 14px;
+    z-index: 3;
     display: flex;
-    gap: 5px;
-    padding: 5px 8px;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--arena-borda);
     border-radius: 999px;
-    background: rgba(4, 10, 28, .55);
+    background: rgba(4, 10, 28, .82);
     transform: translateX(-50%);
 }
 
-.arena-foto-pontos i {
-    width: 6px;
-    height: 6px;
+.arena-controles[hidden] { display: none; }
+
+.arena-controle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 42px;
+    height: 42px;
+    padding: 0 12px;
+    border: 0;
     border-radius: 999px;
-    background: rgba(255, 255, 255, .45);
-    transition: width .25s ease, background .25s ease;
-}
-
-.arena-foto-pontos i.ativo { width: 16px; background: #fff; }
-
-.arena-foto-corpo {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 6px;
-    padding: 16px 18px 18px;
-}
-
-.arena-foto-categoria {
-    color: var(--arena-ciano);
-    font-size: .74rem;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font: inherit;
     font-weight: 800;
-    letter-spacing: .06em;
+    cursor: pointer;
+}
+
+.arena-controle:hover { background: rgba(255, 255, 255, .16); }
+.arena-controle--tour[aria-pressed="true"] { background: linear-gradient(135deg, #ffd700, #ffb300); color: #2a1d00; }
+
+.arena3d-dica {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    z-index: 3;
+    margin: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .8);
+    color: #dbe7ff;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.arena3d-dica[hidden] { display: none; }
+
+/* o nome em cima da máquina escolhida (ou da que está sob o mouse) */
+.arena3d-rotulo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    max-width: 240px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .86);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.arena3d-rotulo[hidden] { display: none; }
+
+/* a ficha: ao lado do palco, inteira, sem rolagem */
+.arena3d-ficha {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    padding: 16px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(16, 30, 68, .92), rgba(8, 18, 44, .95));
+}
+
+.arena3d-ficha-vazia {
+    display: grid;
+    flex: 1;
+    place-content: center;
+    justify-items: center;
+    gap: 8px;
+    color: var(--arena-suave);
+    text-align: center;
+}
+
+.arena3d-ficha-vazia[hidden],
+.arena3d-ficha-cheia[hidden] { display: none; }
+
+.arena3d-ficha-vazia i { color: var(--arena-ciano); font-size: 2rem; }
+.arena3d-ficha-vazia strong { color: #fff; font-size: 1.05rem; }
+
+.arena3d-ficha-cheia { display: flex; flex: 1; flex-direction: column; gap: 8px; min-height: 0; }
+
+.arena3d-ficha-foto {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 110px;
+    max-height: 240px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: radial-gradient(circle at 50% 42%, #ffffff 0%, #eef3fc 58%, #dbe6f7 100%);
+}
+
+.arena3d-ficha-foto img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+
+.arena3d-ficha-lados { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.arena3d-ficha-lados[hidden] { display: none; }
+
+.arena3d-ficha-lados button {
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(5, 11, 31, .78);
+    color: #dbe7ff;
+    font: inherit;
+    font-size: .7rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.arena3d-ficha-lados button[aria-pressed="true"] { background: #e63946; color: #fff; }
+
+.arena3d-ficha-zona {
+    align-self: flex-start;
+    padding: 3px 10px;
+    border: 1px solid var(--cor-zona, #2f8bff);
+    border-radius: 999px;
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .5px;
     text-transform: uppercase;
 }
 
-.arena-foto-corpo h4 {
-    margin: 0;
-    color: #fff;
-    font-size: 1.08rem;
-    font-weight: 800;
-    line-height: 1.25;
+.arena3d-ficha h3 { margin: 0; color: #fff; font-size: 1.2rem; font-weight: 900; line-height: 1.2; }
+.arena3d-ficha-categoria { color: var(--arena-ciano); font-size: .8rem; font-weight: 700; }
+
+.arena3d-ficha-dados { display: grid; gap: 4px; margin: 0; }
+.arena3d-ficha-dados > div { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.arena3d-ficha-dados > div[hidden] { display: none; }
+.arena3d-ficha-dados dt { color: var(--arena-suave); font-size: .8rem; }
+.arena3d-ficha-dados dd { margin: 0; color: #fff; font-size: .84rem; font-weight: 800; text-align: right; }
+
+.arena3d-ficha-acoes { display: grid; gap: 6px; margin-top: auto; }
+.arena3d-ficha-acoes .ls-botao { justify-content: center; margin-top: 0; padding: 10px 14px; font-size: .9rem; }
+.arena3d-ficha-acoes .ls-botao[hidden] { display: none; }
+
+/* a lista: índice da arena e a página para quem não tem 3D */
+.arena3d-lista {
+    padding: 12px 16px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .03);
 }
 
-.arena-foto-medidas {
-    margin: 0;
-    color: var(--arena-suave);
-    font-size: .84rem;
+.arena3d-lista summary { color: #dbe7ff; font-weight: 800; cursor: pointer; }
+.arena3d-lista-zona { margin-top: 12px; }
+.arena3d-lista-zona strong { color: #fff; }
+.arena3d-lista ul { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 0; padding: 0; list-style: none; }
+.arena3d-lista a { color: var(--arena-suave); font-size: .88rem; text-decoration: none; }
+.arena3d-lista a:hover,
+.arena3d-lista a.ativo { color: #fff; text-decoration: underline; }
+
+@media (max-width: 960px) {
+    /* celular e tablet: o palco em cima, a ficha embaixo (nunca por cima) */
+    .arena3d-corpo { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .arena3d-palco { height: min(62vh, 560px); min-height: 360px; }
+    .arena3d-ficha { overflow: visible; }
+    .arena3d-ficha-cheia { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: start; gap: 8px 12px; }
+    .arena3d-ficha-cheia[hidden] { display: none; }
+    .arena3d-ficha-foto { grid-row: span 4; height: 150px; min-height: 0; }
+    .arena3d-ficha-lados { position: static; margin-top: 6px; }
+    .arena3d-ficha-dados,
+    .arena3d-ficha-acoes { grid-column: 1 / -1; }
+    .arena3d-ficha-acoes { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .arena3d-ficha-vazia { padding: 6px 0; grid-auto-flow: column; justify-content: start; align-items: center; text-align: left; }
+    .arena3d-ficha-vazia span { display: none; }
+    .arena3d-categoria { width: 100%; }
+    .arena3d-categoria select { flex: 1; }
 }
-
-.arena-foto-medidas i { margin-right: 4px; color: var(--arena-ciano); }
-
-.arena-foto-acoes {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 14px;
-    margin-top: auto;
-    padding-top: 10px;
-}
-
-.arena-foto-link {
-    color: #fff;
-    font-size: .88rem;
-    font-weight: 800;
-    text-decoration: none;
-}
-
-.arena-foto-link i { margin-left: 4px; transition: transform .2s ease; }
-.arena-foto-link:hover i { transform: translateX(3px); }
-
-.arena-foto-jogar {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-left: auto;
-    padding: 8px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #ffd700, #ffb300);
-    color: #2a1d00;
-    font: inherit;
-    font-size: .82rem;
-    font-weight: 900;
-    cursor: pointer;
-    transition: transform .2s ease, box-shadow .2s ease;
-}
-
-.arena-foto-jogar:hover { box-shadow: 0 8px 20px rgba(255, 196, 0, .35); transform: translateY(-1px); }
-.arena-foto-jogar:active { transform: scale(.95); }
 
 @media (max-width: 620px) {
-    .arena-fotos-filtros { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
-    .arena-fotos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .arena-foto-cartao { border-radius: 18px; }
-    .arena-foto-corpo { padding: 12px; }
-    .arena-foto-corpo h4 { font-size: .95rem; }
-    .arena-foto-acoes { gap: 8px; }
-    .arena-foto-jogar { margin-left: 0; width: 100%; justify-content: center; }
+    .arena3d-zonas { flex-wrap: nowrap; overflow-x: auto; margin-inline: -10px; padding: 0 10px 4px; scrollbar-width: none; }
+    .arena3d-zona { flex: none; }
+    .arena3d-palco { border-radius: 18px; }
+    .arena-controle { min-width: 38px; height: 38px; padding: 0 9px; }
+    .arena-controle--tour span { display: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .arena-foto-cartao,
-    .arena-foto-midia img { transition: none; }
-}

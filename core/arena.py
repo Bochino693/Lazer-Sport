@@ -158,11 +158,12 @@ def _url(imagem):
 # LAZER & SPORT JOGOS — os jogos da casa, em miniatura no navegador
 # ======================================================================
 
-#: Cada jogo é uma máquina de verdade da Lazer & Sport -- os mesmos que
-#: rodam nas TV Box das máquinas, com a arte de cada um -- e a sua versão
-#: de bolso para jogar no site. `desenhos` liga o jogo aos brinquedos da
-#: arena: quem abre a ficha de uma máquina de basquete vê "Jogar a
-#: miniatura", e quem termina a partida vê "Quero essa máquina".
+#: Os jogos desenvolvidos pela Lazer & Sport -- os mesmos que rodam nas TV
+#: Box das máquinas, com a arte de cada um -- e a sua versão de bolso para
+#: jogar no site. Um jogo só se liga a uma máquina do catálogo PELO NOME
+#: (`jogo_da_maquina`): a máquina que é o próprio jogo ("Lazer Shot",
+#: "Dragon Bowling"). Um basquete ou um boxe do catálogo é outra máquina,
+#: com outro jogo, e não tem nada a ver com os jogos feitos aqui.
 #:
 #: Jogos da mesma família dividem o mesmo arquivo (`script`) e mudam só a
 #: `variante`: os dois basquetes são um motor com duas quadras. Cada
@@ -180,7 +181,6 @@ JOGOS = (
             "verdade."
         ),
         "comandos": "Arraste a bola e solte: o ponto da pista por onde o gesto passa é o sensor da jogada.",
-        "desenhos": ("boliche",),
         "cor": "#ffb703",
         "capa": "site/arena/capas/strike-kids-logo.webp",
         "poster": "site/arena/capas/strike-kids-fundo.webp",
@@ -197,7 +197,6 @@ JOGOS = (
             "dos pinos, STRIKE, ACERTO e PRA FORA no telão e recorde da casa."
         ),
         "comandos": "Arraste a bola para cima e solte: o lado da pista por onde o gesto passa é a jogada.",
-        "desenhos": ("boliche",),
         "cor": "#ff6b1a",
         "capa": "site/arena/capas/dragon-bowling.webp",
         "poster": "site/arena/capas/dragon-bowling-poster.webp",
@@ -214,7 +213,6 @@ JOGOS = (
             "e do deserto. Acerte o máximo antes de o tempo acabar."
         ),
         "comandos": "Toque ou clique nos alvos para atirar.",
-        "desenhos": ("tiro",),
         "cor": "#ff2d3d",
         "capa": "site/arena/capas/lazer-shot.webp",
         "poster": "site/arena/capas/lazer-shot-poster.webp",
@@ -231,7 +229,6 @@ JOGOS = (
             "a maior força da arena, nocautear o boxeador e entrar no ranking."
         ),
         "comandos": "Toque, clique ou aperte espaço quando o medidor estiver no vermelho.",
-        "desenhos": ("boxe",),
         "cor": "#8a5cff",
         "capa": "site/arena/capas/super-boxing.webp",
         "poster": "site/arena/capas/super-boxing.webp",
@@ -248,7 +245,6 @@ JOGOS = (
             "jogo, e cada fase tem uma meta para passar."
         ),
         "comandos": "Arraste a bola para cima e solte, como um arremesso.",
-        "desenhos": ("basquete",),
         "cor": "#ff8a00",
         "capa": "site/arena/capas/slam-arena.webp",
         "poster": "site/arena/capas/slam-arena-poster.webp",
@@ -265,7 +261,6 @@ JOGOS = (
             "EM CHAMAS: quatro cestas seguidas dobram os pontos."
         ),
         "comandos": "Arraste a bola em direção à cesta e solte.",
-        "desenhos": ("basquete",),
         "cor": "#ff5a1f",
         "capa": "site/arena/capas/swish-arena.webp",
         "poster": "site/arena/capas/swish-arena-poster.webp",
@@ -275,6 +270,7 @@ JOGOS = (
     {
         "slug": "gol-flash-arena",
         "titulo": "Gol Flash Arena",
+        "nomes": ("Gol Flash",),
         "maquina": "Chute ao gol com alvos de luz",
         "chamada": "Acerte, marque e seja o craque",
         "descricao": (
@@ -282,7 +278,6 @@ JOGOS = (
             "que ele apague. Quanto mais rápido, mais pontos."
         ),
         "comandos": "Arraste a bola na direção do anel aceso e solte.",
-        "desenhos": ("futebol",),
         "cor": "#a6e22e",
         "capa": "site/arena/capas/gol-flash-arena.webp",
         "poster": "site/arena/capas/gol-flash-arena-poster.webp",
@@ -299,7 +294,6 @@ JOGOS = (
             "jogadores com manche; aqui você enfrenta a máquina."
         ),
         "comandos": "Arraste um botão seu para trás e solte para chutar.",
-        "desenhos": ("pebolim",),
         "cor": "#1fbf5b",
         "capa": "site/arena/capas/craque-de-botao.webp",
         "poster": "site/arena/capas/craque-de-botao-poster.webp",
@@ -317,7 +311,6 @@ JOGOS = (
             "para emendar combos e passar dos 70%."
         ),
         "comandos": "Toque nas faixas quando a nota chegar ao anel (ou teclas A S D F J K L Ç).",
-        "desenhos": ("musica",),
         "cor": "#ff3df2",
         "capa": "site/arena/capas/hit-music.webp",
         "poster": "site/arena/capas/hit-music-poster.webp",
@@ -475,10 +468,15 @@ def jogos_do_simulador(jogos):
     return saida
 
 
-def jogo_do_desenho(desenho):
-    """O primeiro jogo que tem a miniatura deste tipo de máquina."""
+def jogo_da_maquina(nome):
+    """O jogo da casa que roda NESTA máquina, pelo nome dela; "" se nenhum.
+
+    Nunca pelo tipo: "Basquete Street" e "Boxe Força Máxima" são máquinas
+    de outros jogos, e só o "Lazer Shot" do catálogo é o Lazer Shot.
+    """
+    texto = _normalizar(nome)
     for jogo in JOGOS:
-        if desenho in jogo["desenhos"]:
+        if any(_contem(texto, nome_do_jogo) for nome_do_jogo in jogo.get("nomes", (jogo["titulo"],))):
             return jogo["slug"]
     return ""
 
@@ -553,7 +551,7 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
     medidas, medidas_reais = medidas_para_3d(
         desenho, brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m,
     )
-    jogo = jogo_do_desenho(desenho)
+    jogo = jogo_da_maquina(brinquedo.nome_brinquedo)
 
     fotos = {}
     for foto in brinquedo.imagens_brinquedo.all():
