@@ -24,6 +24,8 @@ from decimal import Decimal
 
 from django.urls import reverse
 
+from sistema_interno.templatetags.interno_extras import estatico
+
 from .formatos import dinheiro, medida
 from .fotos import reduzir_imagem
 
@@ -499,6 +501,37 @@ def avisos_da_maquina(nome):
 
 
 # ======================================================================
+# OBJETOS 3D FEITOS A PARTIR DOS ARQUIVOS DA FÁBRICA
+# ======================================================================
+
+#: Os objetos 3D montados aqui com os arquivos da fábrica (o .3ds, os
+#: planos de corte, as imagens do projeto), em `static/site/arena/modelos/`.
+#: Na arena, a máquina que tem um destes aparece com ele, e não com o volume
+#: deduzido das fotos. Liga-se pelo NOME da máquina, como os jogos: quem
+#: renomear o brinquedo no cadastro precisa manter o trecho de `nomes`.
+#: `medidas` = altura, largura e profundidade do objeto, em metros, já com
+#: escorregadores e colchões (é o espaço que ele ocupa na roda).
+#: Como cada um foi feito: `ferramentas/modelos3d/<id>/`.
+MODELOS_3D = (
+    {
+        "id": "brinquedao-selva-11m",
+        "nomes": ("Brinquedão Selva",),
+        "arquivo": "site/arena/modelos/brinquedao-selva-11m.glb",
+        "medidas": (3.65, 11.4, 3.62),
+    },
+)
+
+
+def modelo_da_maquina(nome):
+    """O objeto 3D feito para esta máquina, pelo nome; None se não há."""
+    texto = _normalizar(nome)
+    for modelo in MODELOS_3D:
+        if any(_contem(texto, trecho) for trecho in modelo["nomes"]):
+            return modelo
+    return None
+
+
+# ======================================================================
 # AS SEÇÕES DA ARENA
 # ======================================================================
 
@@ -569,6 +602,7 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         desenho, brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m,
     )
     jogo = jogo_da_maquina(brinquedo.nome_brinquedo)
+    modelo = modelo_da_maquina(brinquedo.nome_brinquedo)
 
     fotos = {}
     for foto in brinquedo.imagens_brinquedo.all():
@@ -587,6 +621,9 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "categorias": categorias,
         "medidas": medidas,
         "medidas_reais": medidas_reais,
+        # o objeto 3D feito com os arquivos da fábrica (vence o das fotos)
+        "modelo": estatico(modelo["arquivo"]) if modelo else "",
+        "medidas_modelo": list(modelo["medidas"]) if modelo else [],
         "medidas_texto": (
             " × ".join(medida(v) for v in (brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m))
             if medidas_reais else ""
