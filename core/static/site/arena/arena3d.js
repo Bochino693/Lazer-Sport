@@ -714,15 +714,92 @@ function montarCamaElastica(T, { diametro, cores }) {
 /** O desenho do cadastro (core/arena.py) -> a forma montada aqui. */
 const FORMAS = { cama_elastica: montarCamaElastica };
 
+/* As crianças que brincam no espaço: um corpo simples -- short, camiseta,
+   cabeça e cabelo numa peça só (as cores ficam nos vértices: uma chamada de
+   desenho) -- e braços e pernas que mexem (arremessar, chutar, pular). */
+const PELES = ["#f1c27d", "#e0ac69", "#c68642", "#8d5524"];
+const CABELOS = ["#2b1b10", "#4a2c17", "#141414", "#8a4b23"];
+const CAMISAS = ["#e63946", "#2f8bff", "#ffd700", "#22c55e", "#ff3df2", "#ff9f1c", "#ffffff"];
+const SHORTS = ["#1d2b53", "#222222", "#3a4b6b", "#5b2a86"];
+
+/** Uma peça com a cor nos vértices (para juntar com as outras). */
+function pecaColorida(T, geometria, cor, x = 0, y = 0, z = 0) {
+  const g = geometria.index ? geometria.toNonIndexed() : geometria;
+  if (g !== geometria) geometria.dispose();
+  g.translate(x, y, z);
+  const c = new T.Color(cor);
+  const cores = new Float32Array(g.attributes.position.count * 3);
+  for (let i = 0; i < cores.length; i += 3) cores.set([c.r, c.g, c.b], i);
+  g.setAttribute("color", new T.BufferAttribute(cores, 3));
+  return g;
+}
+
+/** Junta as peças numa geometria só. */
+function juntarPecas(T, partes) {
+  const total = partes.reduce((n, g) => n + g.attributes.position.count, 0);
+  const pos = new Float32Array(total * 3);
+  const nor = new Float32Array(total * 3);
+  const cor = new Float32Array(total * 3);
+  let k = 0;
+  partes.forEach((g) => {
+    pos.set(g.attributes.position.array, k * 3);
+    nor.set(g.attributes.normal.array, k * 3);
+    cor.set(g.attributes.color.array, k * 3);
+    k += g.attributes.position.count;
+    g.dispose();
+  });
+  const g = new T.BufferGeometry();
+  g.setAttribute("position", new T.BufferAttribute(pos, 3));
+  g.setAttribute("normal", new T.BufferAttribute(nor, 3));
+  g.setAttribute("color", new T.BufferAttribute(cor, 3));
+  return g;
+}
+
+/** Uma criança de 1,2 m, de frente para +z, com os pés na origem. */
+function montarCrianca(T, material, i) {
+  const pele = PELES[i % PELES.length];
+  const grupo = new T.Group();
+  grupo.add(new T.Mesh(juntarPecas(T, [
+    pecaColorida(T, new T.CylinderGeometry(0.115, 0.125, 0.15, 10), SHORTS[(i * 3) % SHORTS.length], 0, 0.6, 0),
+    pecaColorida(T, new T.CylinderGeometry(0.105, 0.12, 0.34, 10), CAMISAS[(i * 5) % CAMISAS.length], 0, 0.84, 0),
+    pecaColorida(T, new T.SphereGeometry(0.105, 12, 10), pele, 0, 1.1, 0),
+    pecaColorida(T, new T.SphereGeometry(0.112, 12, 8, 0, PI * 2, 0, PI * 0.55), CABELOS[(i * 7) % CABELOS.length], 0, 1.115, -0.01),
+  ]), material));
+  const membro = (x, y, raio, comprimento, cor, sapato) => {
+    const pivo = new T.Group();
+    pivo.position.set(x, y, 0);
+    const partes = [pecaColorida(T, new T.CylinderGeometry(raio, raio * 0.88, comprimento, 8), cor, 0, -comprimento / 2, 0)];
+    if (sapato) partes.push(pecaColorida(T, new T.BoxGeometry(0.09, 0.06, 0.15), sapato, 0, -comprimento - 0.01, 0.03));
+    pivo.add(new T.Mesh(juntarPecas(T, partes), material));
+    grupo.add(pivo);
+    return pivo;
+  };
+  return {
+    grupo,
+    pernaE: membro(-0.06, 0.55, 0.048, 0.5, pele, "#f4f6ff"),
+    pernaD: membro(0.06, 0.55, 0.048, 0.5, pele, "#f4f6ff"),
+    bracoE: membro(-0.15, 0.98, 0.034, 0.4, pele),
+    bracoD: membro(0.15, 0.98, 0.034, 0.4, pele),
+  };
+}
+
 /* ======================================================================
-   O MOVIMENTO NOS OBJETOS DA FÁBRICA -- o que o espaço tem de jogo mexe:
-   nas cestas, o SWISH (a bola sobe em arco, entra, a redinha balança e
-   o "SWISH!" aparece); nos círculos de panna, o GOL FLASH redondo (a bola
-   corre, os LEDs da borda giram, o alvo fica verde e, no gol, uma onda
-   dourada corre o anel); e os TELÕES dos dois jogos, com o pôster e o
-   placar do que acontece ali. Coordenadas no objeto (metros, frente em
-   +z). Só anda com o espaço perto da câmera: de longe não se vê, e o
-   celular agradece.
+   O MOVIMENTO NOS OBJETOS DA FÁBRICA -- o que o espaço tem de jogo mexe,
+   com crianças jogando:
+   - SWISH: uma tela em cima de cada uma das cinco cestas das enterradas,
+     com o jogo daquela cesta (pontos, tempo, "SWISH!", EM CHAMAS). Em
+     quatro, uma criança arremessa: a bola sobe em arco, entra (a redinha
+     balança) ou bate no aro, cai na cama inclinada e rola de volta para
+     ela. A do meio fica livre: é a da enterrada do passeio ("SUA VEZ!").
+   - GOL FLASH redondo, como a máquina de verdade: 7 LEDs na parede de
+     dentro de cada círculo, de 1 a 3 acesos por vez (amarelo, vermelho,
+     verde, azul), cada um apaga sozinho se ninguém acerta. A criança vira
+     para um aceso e chuta: no aceso é GOOOL (o LED brilha e outro acende);
+     no apagado, o LED pisca vermelho. Uma tela atrás de cada círculo, com
+     os 7 anéis do jogo, os gols e o tempo.
+   - E crianças pulando nas camas elásticas.
+   Coordenadas no objeto (metros, frente em +z). Só anda com o espaço
+   perto da câmera: de longe não se vê, e o celular agradece.
    ====================================================================== */
 const ANIMACOES = {
   "espaco-esportivo-modelo-1": (arena, maquina) => {
@@ -730,7 +807,7 @@ const ANIMACOES = {
     const g = new T.Group();
     maquina.corpo.add(g);
     const V = (x, y, z) => new T.Vector3(x, y, z);
-    const tela = (w, h, pintar) => {
+    const textura = (w, h, pintar) => {
       const c = document.createElement("canvas");
       c.width = w;
       c.height = h;
@@ -739,23 +816,120 @@ const ANIMACOES = {
       t.colorSpace = T.SRGBColorSpace;
       return t;
     };
-
-    // --- SWISH: as cestas das enterradas e das quadras ---
-    const tiros = [15.6, 13.6, 11.6, 9.6, 7.6].map((x) => ({ aro: V(x, 2.8, -10.88), de: V(x, 1.9, -8.3), chao: 0.98 }))
-      .concat([
-        { aro: V(-16.55, 2.4, -5), de: V(-13.6, 1.3, -4.4), chao: 0.18 },
-        { aro: V(-9.45, 2.4, -5), de: V(-12.4, 1.3, -5.6), chao: 0.18 },
-        { aro: V(-8.55, 2.4, -5), de: V(-5.7, 1.3, -4.5), chao: 0.18 },
-        { aro: V(-2.45, 2.4, -5), de: V(-5.2, 1.3, -5.5), chao: 0.18 },
-      ]);
-    const texBola = tela(64, 32, (c) => {
-      c.fillStyle = "#ff7a1a"; c.fillRect(0, 0, 64, 32);
-      c.strokeStyle = "#3a1600"; c.lineWidth = 2;
+    const pele = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.65 });
+    let nCrianca = 0;
+    const crianca = () => montarCrianca(T, pele, nCrianca++);
+    const texBola = (fundo, linhas) => textura(64, 32, (c) => {
+      c.fillStyle = fundo; c.fillRect(0, 0, 64, 32);
+      c.strokeStyle = linhas; c.lineWidth = 2;
       c.beginPath(); c.moveTo(0, 16); c.lineTo(64, 16); c.moveTo(16, 0); c.lineTo(16, 32); c.moveTo(48, 0); c.lineTo(48, 32); c.stroke();
     });
-    const bola = new T.Mesh(new T.SphereGeometry(0.12, 16, 12), new T.MeshStandardMaterial({ map: texBola, roughness: 0.6 }));
-    g.add(bola);
-    const texRede = tela(64, 64, (c) => {
+    const geoBola = new T.SphereGeometry(0.12, 16, 12);
+    const matBasquete = new T.MeshStandardMaterial({ map: texBola("#ff7a1a", "#3a1600"), roughness: 0.6 });
+    const matFutebol = new T.MeshStandardMaterial({ map: texBola("#f4f6fa", "#1b1d22"), roughness: 0.45 });
+
+    /* --- as telas: o pôster do jogo de fundo e o placar por cima --- */
+    const posters = {};
+    const telas = [];
+    const fonte = (peso, px) => `${peso} ${px}px Poppins, Manrope, system-ui, sans-serif`;
+    const relogio = (s) => `0:${String(Math.max(0, Math.ceil(s))).padStart(2, "0")}`;
+    const LW = 320;
+    const LH = 180;
+    const fundo = (ctx, img, escurecer = 0.35) => {
+      ctx.fillStyle = "#070b1c";
+      ctx.fillRect(0, 0, LW, LH);
+      if (img && img.complete && img.naturalWidth) {
+        const k = Math.max(LW / img.naturalWidth, LH / img.naturalHeight);
+        ctx.drawImage(img, (LW - img.naturalWidth * k) / 2, (LH - img.naturalHeight * k) / 2 - 10, img.naturalWidth * k, img.naturalHeight * k);
+      }
+      ctx.fillStyle = `rgba(3, 6, 18, ${escurecer})`;
+      ctx.fillRect(0, 0, LW, LH);
+    };
+    const barra = (ctx, corDoJogo, itens) => {
+      ctx.fillStyle = "rgba(3, 6, 18, .9)";
+      ctx.fillRect(0, 136, LW, 44);
+      ctx.fillStyle = corDoJogo;
+      ctx.fillRect(0, 134, LW, 3);
+      const passo = LW / itens.length;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      itens.forEach(([rotulo, valor], i) => {
+        const x = passo * i + passo / 2;
+        ctx.fillStyle = "rgba(255, 255, 255, .7)";
+        ctx.font = fonte(800, 10);
+        ctx.fillText(rotulo, x, 150);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = fonte(900, 21);
+        ctx.fillText(valor, x, 174);
+      });
+    };
+    const grito = (ctx, texto, sub, cor, vida) => {
+      if (vida <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, vida * 2.5);
+      ctx.fillStyle = "rgba(3, 6, 18, .5)";
+      ctx.fillRect(0, 0, LW, 134);
+      ctx.translate(LW / 2, 62);
+      const s = 0.8 + 0.2 * Math.min(1, (1.4 - vida) * 6);
+      ctx.scale(s, s);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.font = fonte("italic 900", 52);
+      ctx.lineWidth = 9;
+      ctx.strokeStyle = "#120600";
+      ctx.strokeText(texto, 0, 0);
+      ctx.fillStyle = cor;
+      ctx.fillText(texto, 0, 0);
+      if (sub) {
+        ctx.font = fonte(900, 20);
+        ctx.lineWidth = 5;
+        ctx.strokeText(sub, 0, 42);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(sub, 0, 42);
+      }
+      ctx.restore();
+    };
+    const final = (ctx, titulo, linha) => {
+      ctx.fillStyle = "rgba(3, 6, 18, .78)";
+      ctx.fillRect(0, 0, LW, 134);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffd84a";
+      ctx.font = fonte(900, 24);
+      ctx.fillText(titulo, LW / 2, 52);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = fonte(800, 16);
+      ctx.fillText(linha, LW / 2, 88);
+    };
+    /** Uma tela de 16:9 virada para +z, com a moldura; `pes`: até o chão ou um suporte curto. */
+    const tela = (x, y, z, largura, pes, pintar) => {
+      const c = document.createElement("canvas");
+      c.width = LW;
+      c.height = LH;
+      const tex = new T.CanvasTexture(c);
+      tex.colorSpace = T.SRGBColorSpace;
+      tex.anisotropy = arena.anisotropia;
+      const altura = (largura * LH) / LW;
+      const suporte = new T.Group();
+      suporte.position.set(x, y, z);
+      arena.caixa(suporte, largura + 0.12, altura + 0.12, 0.08, arena.escuro(), 0, 0, -0.05);
+      const baixo = y - altura / 2;
+      if (pes === "chao") [-1, 1].forEach((s) => arena.caixa(suporte, 0.07, baixo, 0.07, arena.escuro(), s * largura * 0.33, -altura / 2 - baixo / 2, -0.05));
+      else arena.caixa(suporte, largura * 0.5, pes, 0.1, arena.escuro(), 0, -altura / 2 - pes / 2, -0.06);
+      const painel = new T.Mesh(new T.PlaneGeometry(largura, altura), new T.MeshBasicMaterial({ map: tex, toneMapped: false }));
+      painel.position.z = 0.01;
+      suporte.add(painel);
+      g.add(suporte);
+      const item = { ctx: c.getContext("2d"), tex, suporte, pintar, ultimo: -1 };
+      telas.push(item);
+      return item;
+    };
+
+    /* --- SWISH: as cinco cestas das enterradas --- */
+    const LIVRE = 2; // a cesta do meio é a da enterrada do passeio
+    const camaY = (z) => 0.982 + limitar((-9.0 - z) / 2.2, 0, 1) * 1.6; // a cama inclinada até a parede
+    const texRede = textura(64, 64, (c) => {
       c.strokeStyle = "rgba(255,255,255,.95)"; c.lineWidth = 3;
       for (let i = -64; i < 128; i += 12) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + 40, 64); c.moveTo(i + 40, 0); c.lineTo(i, 64); c.stroke(); }
     });
@@ -763,14 +937,59 @@ const ANIMACOES = {
     texRede.repeat.set(3, 1);
     const matRede = new T.MeshBasicMaterial({ map: texRede, transparent: true, alphaTest: 0.3, side: T.DoubleSide, toneMapped: false });
     const geoRede = new T.CylinderGeometry(0.2, 0.12, 0.34, 18, 1, true);
-    const redes = tiros.map((tiro) => {
-      const rede = new T.Mesh(geoRede, matRede);
-      rede.position.copy(tiro.aro).y -= 0.18;
-      g.add(rede);
-      return rede;
+    const cestas = [15.6, 13.6, 11.6, 9.6, 7.6].map((x, i) => {
+      const cesta = {
+        i, x,
+        aro: V(x, 2.8, -10.88),
+        mao: V(x, 2.12, -9.0),
+        placar: { pontos: 0, tempo: 45 + i * 7, seguidas: 0, cestas: 0, arremessos: 0, grito: 0, ganho: 0, fim: 0, texto: "SWISH!" },
+        fase: "segura", tempo: -i * 0.7, balanco: 0, erra: false, de: V(), fora: V(),
+      };
+      cesta.rede = new T.Mesh(geoRede, matRede);
+      cesta.rede.position.set(x, 2.62, -10.88);
+      g.add(cesta.rede);
+      if (i !== LIVRE) {
+        cesta.crianca = crianca();
+        cesta.crianca.grupo.position.set(x, 0.97, -8.75);
+        cesta.crianca.grupo.rotation.y = PI; // de frente para a cesta
+        g.add(cesta.crianca.grupo);
+        cesta.bola = new T.Mesh(geoBola, matBasquete);
+        g.add(cesta.bola);
+      }
+      cesta.tela = tela(x, 3.93, -11.05, 1.6, 0.1, (ctx) => {
+        const p = cesta.placar;
+        fundo(ctx, posters["swish-arena"], 0.25);
+        if (i === LIVRE && p.grito <= 0) {
+          // a cesta livre chama quem chega
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = fonte("italic 900", 40);
+          ctx.lineWidth = 7;
+          ctx.strokeStyle = "#120600";
+          ctx.strokeText("SUA VEZ!", LW / 2, 60);
+          ctx.fillStyle = "#ffd84a";
+          ctx.fillText("SUA VEZ!", LW / 2, 60);
+          ctx.font = fonte(800, 14);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillText("pule na cama e enterre", LW / 2, 100);
+        }
+        if (p.fim > 0) final(ctx, "TEMPO ESGOTADO", `${p.pontos} PONTOS · ${p.cestas} CESTAS`);
+        if (p.seguidas >= 4 && p.fim <= 0) {
+          ctx.fillStyle = "#ff5a1f";
+          ctx.fillRect(8, 8, 118, 24);
+          ctx.fillStyle = "#ffffff";
+          ctx.font = fonte("italic 900", 13);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("EM CHAMAS ×2", 67, 21);
+        }
+        grito(ctx, p.texto, `+${p.ganho}`, "#ffd84a", p.grito);
+        barra(ctx, "#ff5a1f", [["PONTOS", String(p.pontos)], ["CESTAS", `${p.cestas}/${p.arremessos}`], ["TEMPO", relogio(p.tempo)]]);
+      });
+      return cesta;
     });
     const swish = new T.Sprite(new T.SpriteMaterial({
-      map: tela(512, 160, (c) => {
+      map: textura(512, 160, (c) => {
         c.font = "italic 900 112px Poppins, Manrope, sans-serif";
         c.textAlign = "center"; c.textBaseline = "middle";
         c.lineWidth = 16; c.strokeStyle = "#7a1d00"; c.strokeText("SWISH!", 256, 84);
@@ -780,372 +999,336 @@ const ANIMACOES = {
     }));
     swish.visible = false;
     g.add(swish);
-    // o placar do Swish Arena (o mesmo do jogo: 45 s, os últimos 10 valem
-    // três, quatro cestas seguidas e é EM CHAMAS, pontos em dobro)
-    const placar = { pontos: 0, tempo: 45, seguidas: 0, cestas: 0, arremessos: 0, grito: 0, ganho: 0, fim: 0 };
-    let tiro = tiros[0];
-    let fase = "voo";
-    let tempo = 0;
-    let balanco = 0;
-    let redeAtual = 0;
-    let erra = false;
-    let pedida = null; // a cesta que o passeio pediu (a enterrada de quem está lá)
-    const fora = new T.Vector3();
-    const proximo = () => {
-      const i = pedida !== null ? pedida : Math.floor(Math.random() * tiros.length);
-      erra = pedida === null && Math.random() < 0.22;
-      pedida = null;
-      tiro = tiros[i];
-      redeAtual = i;
-      fase = "voo";
-      tempo = 0;
-    };
-    proximo();
+    let swishDe = null;
+    let swishVida = 0;
 
-    // --- GOL FLASH redondo: os dois círculos de panna ---
-    const circulos = [V(-12.5, 0, 2.4), V(-6.5, 0, 2.4)];
-    const porCirculo = 48;
-    const leds = new T.InstancedMesh(new T.SphereGeometry(0.05, 8, 6), new T.MeshBasicMaterial({ toneMapped: false }), porCirculo * circulos.length);
-    const ajuda = new T.Object3D();
-    circulos.forEach((c, k) => {
-      for (let i = 0; i < porCirculo; i++) {
-        const a = (i / porCirculo) * PI * 2;
-        ajuda.position.set(c.x + Math.cos(a) * 2.55, 0.68, c.z + Math.sin(a) * 2.55);
-        ajuda.updateMatrix();
-        leds.setMatrixAt(k * porCirculo + i, ajuda.matrix);
-        leds.setColorAt(k * porCirculo + i, new T.Color("#1b2a5a"));
+    const pontuar = (p, base) => {
+      if (p.fim > 0) return;
+      p.seguidas++;
+      p.cestas++;
+      p.ganho = (p.tempo <= 10 ? base + 1 : base) * (p.seguidas > 4 ? 2 : 1);
+      p.pontos += p.ganho;
+      p.grito = 1.4;
+    };
+    const andarPlacar = (p, dt) => {
+      p.grito = Math.max(0, p.grito - dt);
+      if (p.fim > 0) {
+        p.fim -= dt;
+        if (p.fim <= 0) Object.assign(p, { pontos: 0, tempo: 45, seguidas: 0, cestas: 0, arremessos: 0 });
+      } else {
+        p.tempo -= dt;
+        if (p.tempo <= 0) { p.tempo = 0; p.fim = 4; }
       }
+    };
+
+    const andarCesta = (c, dt, t) => {
+      andarPlacar(c.placar, dt);
+      c.balanco = Math.max(0, c.balanco - dt * 1.6);
+      c.rede.scale.y = 1 + Math.sin(t * 24) * 0.18 * c.balanco;
+      if (!c.crianca) return;
+      const k = c.crianca;
+      const b = c.bola.position;
+      c.tempo += dt;
+      if (c.fase === "segura") {
+        // mira com a bola no peito; no fim, os braços sobem e ela salta
+        const f = limitar(c.tempo / 1.0, 0, 1);
+        const sobe = f > 0.7 ? (f - 0.7) / 0.3 : 0;
+        k.bracoE.rotation.x = k.bracoD.rotation.x = -1.25 - sobe * 1.5;
+        k.grupo.position.y = 0.97 + Math.sin(sobe * PI) * 0.14;
+        b.set(c.x, k.grupo.position.y + 1.02 + sobe * 0.35, -8.95 + sobe * 0.05);
+        if (c.tempo >= 1.0) {
+          c.fase = "voo";
+          c.tempo = 0;
+          c.de.copy(b);
+          c.erra = Math.random() < 0.22;
+          c.placar.arremessos += c.placar.fim > 0 ? 0 : 1;
+        }
+      } else if (c.fase === "voo") {
+        const f = Math.min(1, c.tempo / 0.9);
+        b.lerpVectors(c.de, c.aro, f);
+        b.y += Math.sin(f * PI) * 0.75 + 0.06;
+        c.bola.rotation.x -= dt * 9;
+        k.bracoE.rotation.x = k.bracoD.rotation.x = -2.75 + f * 2.2; // os braços descem
+        k.grupo.position.y = 0.97;
+        if (f >= 1) {
+          c.tempo = 0;
+          if (c.erra) {
+            c.fase = "fora";
+            c.balanco = 0.3;
+            c.placar.seguidas = 0;
+            c.fora.set((Math.random() - 0.5) * 0.6, 0, 0.35);
+          } else {
+            c.fase = "queda";
+            c.balanco = 1;
+            pontuar(c.placar, 2);
+            c.placar.texto = "SWISH!";
+            swishDe = c;
+            swishVida = 1;
+            swish.visible = true;
+          }
+        }
+      } else if (c.fase === "queda" || c.fase === "fora") {
+        // pela redinha, ou espirrando do aro, até a cama inclinada
+        const dur = c.fase === "queda" ? 0.3 : 0.55;
+        const f = Math.min(1, c.tempo / dur);
+        const zFim = c.fase === "queda" ? -10.88 : -10.88 + c.fora.z;
+        b.set(c.x + c.fora.x * f * (c.fase === "fora" ? 1 : 0), 0, c.aro.z + (zFim - c.aro.z) * f);
+        b.y = c.aro.y + (c.fase === "fora" ? Math.sin(f * PI) * 0.35 : 0) - (c.aro.y - camaY(b.z) - 0.12) * f * f;
+        if (f >= 1) { c.fase = "rola"; c.tempo = 0; c.de.copy(b); }
+      } else if (c.fase === "rola") {
+        // desce rolando a cama até a criança
+        const f = Math.min(1, c.tempo / 1.0);
+        const z = c.de.z + (-9.1 - c.de.z) * (1 - (1 - f) * (1 - f));
+        b.set(c.de.x + (c.x - c.de.x) * f, camaY(z) + 0.12, z);
+        c.bola.rotation.x += dt * 10;
+        k.bracoE.rotation.x = k.bracoD.rotation.x = -0.55;
+        if (f >= 1) { c.fase = "pega"; c.tempo = 0; c.de.copy(b); }
+      } else if (c.fase === "pega") {
+        const f = Math.min(1, c.tempo / 0.4);
+        b.lerpVectors(c.de, V(c.x, 0.97 + 1.02, -8.95), f);
+        k.bracoE.rotation.x = k.bracoD.rotation.x = -0.55 - f * 0.7;
+        if (f >= 1) { c.fase = "segura"; c.tempo = 0; }
+      }
+    };
+
+    /* --- GOL FLASH: os dois círculos, 7 LEDs cada --- */
+    const CORES_LED = ["#ffe600", "#ff2626", "#22ff4a", "#3d8bff"].map((c) => new T.Color(c));
+    const LEDS = 7;
+    const apagado = new T.Color("#262a33");
+    const lenteApagada = new T.Color("#171a21");
+    const branco = new T.Color("#ffffff");
+    const vermelho = new T.Color("#ff2626");
+    const aros = new T.InstancedMesh(new T.TorusGeometry(0.12, 0.03, 8, 28), new T.MeshBasicMaterial({ toneMapped: false }), LEDS * 2);
+    const lentes = new T.InstancedMesh(new T.CircleGeometry(0.095, 24), new T.MeshBasicMaterial({ toneMapped: false }), LEDS * 2);
+    const ajuda = new T.Object3D();
+    const circulos = [-12.5, -6.5].map((x, k) => {
+      const centro = V(x, 0, 2.4);
+      const leds = [];
+      for (let i = 0; i < LEDS; i++) {
+        const a = ((i + 0.5) / LEDS) * PI * 2;
+        const p = V(x + Math.sin(a) * 2.47, 0.42, 2.4 + Math.cos(a) * 2.47);
+        ajuda.position.copy(p);
+        ajuda.lookAt(centro.x, 0.42, centro.z); // de frente para o meio
+        ajuda.updateMatrix();
+        aros.setMatrixAt(k * LEDS + i, ajuda.matrix);
+        lentes.setMatrixAt(k * LEDS + i, ajuda.matrix);
+        leds.push({ p, dir: V(Math.sin(a), 0, Math.cos(a)), aceso: null, vida: 0, gol: 0, erro: 0 });
+      }
+      const jogo = {
+        k, centro, leds,
+        crianca: crianca(),
+        bola: new T.Mesh(geoBola, matFutebol),
+        fase: "mira", tempo: -k * 0.8, alvo: 0, de: V(), ate: V(), olhar: 0,
+        gols: 0, pontos: 0, ganho: 0, grito: 0, acender: 0.3,
+      };
+      jogo.crianca.grupo.position.set(x, 0.07, 2.4);
+      g.add(jogo.crianca.grupo, jogo.bola);
+      jogo.tela = tela(x, 1.62, -0.78, 1.7, "chao", (ctx) => {
+        fundo(ctx, posters["gol-flash-arena"], 0.55);
+        // os 7 anéis do jogo, como a parede do círculo agora
+        for (let i = 0; i < LEDS; i++) {
+          const led = leds[i];
+          const cx = 34 + i * 42;
+          const cy = 62;
+          let cor = led.aceso ? `#${led.aceso.getHexString()}` : "#2b303b";
+          if (led.gol > 0) cor = "#ffffff";
+          if (led.erro > 0 && Math.sin(led.erro * 25) > 0) cor = "#ff2626";
+          ctx.lineWidth = 6;
+          ctx.strokeStyle = cor;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 15, 0, PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(255, 255, 255, .8)";
+          ctx.font = fonte(900, 11);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("ABCDEFG"[i], cx, cy + 28);
+        }
+        if (fimGol > 0) final(ctx, "TEMPO ESGOTADO", `PLAYER ${k + 1} FINALIZOU COM ${jogo.gols} GOLS`);
+        grito(ctx, "GOOOL!", `+${jogo.ganho}`, "#a6e22e", jogo.grito);
+        barra(ctx, "#a6e22e", [["GOL", String(jogo.gols)], ["TEMPO", relogio(tempoGol)], ["PONTOS", String(jogo.pontos)]]);
+      });
+      return jogo;
     });
-    g.add(leds);
-    const cores = { apagado: new T.Color("#16224d"), cometa: new T.Color("#ff3d6e"), alvo: new T.Color("#38ff7a"), flash: new T.Color("#fff6b0"), flash2: new T.Color("#ffb703") };
-    const jogos = circulos.map((c) => ({
-      centro: c,
-      bola: (() => {
-        const b = new T.Mesh(new T.SphereGeometry(0.11, 14, 10), new T.MeshStandardMaterial({ color: "#ffffff", roughness: 0.4 }));
-        b.position.set(c.x, 0.18, c.z);
-        g.add(b);
-        return b;
-      })(),
-      vel: V((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3).setLength(2.4),
-      alvo: Math.floor(Math.random() * porCirculo),
-      idade: 0, // há quanto tempo o alvo está aceso (apaga sozinho, como no jogo)
-      gol: 0,
-      gols: 0,
-      ganho: 0,
-    }));
+    g.add(aros, lentes);
     let tempoGol = 45;
     let fimGol = 0;
     const cor = new T.Color();
+    const acesos = (j) => j.leds.filter((l) => l.aceso);
 
-    // --- OS TELÕES: o Swish Arena (em cima da parede das enterradas) e o
-    // Gol Flash Arena (atrás dos dois círculos), com o pôster do jogo e o
-    // placar do que acontece ali mesmo, no 3D ---
-    const posters = {};
-    const telas = [];
-    const fonte = (peso, px) => `${peso} ${px}px Poppins, Manrope, system-ui, sans-serif`;
-    const relogio = (s) => `0:${String(Math.max(0, Math.ceil(s))).padStart(2, "0")}`;
-    const fundo = (ctx, img) => {
-      ctx.fillStyle = "#070b1c";
-      ctx.fillRect(0, 0, 512, 288);
-      if (img && img.complete && img.naturalWidth) {
-        const k = Math.max(512 / img.naturalWidth, 288 / img.naturalHeight);
-        const w = img.naturalWidth * k;
-        const h = img.naturalHeight * k;
-        ctx.drawImage(img, (512 - w) / 2, (288 - h) / 2 - 14, w, h);
+    const andarCirculo = (j, dt, t) => {
+      const kid = j.crianca;
+      const b = j.bola.position;
+      // os alvos: de 1 a 3 acesos, cada um com vida curta (como no jogo)
+      j.leds.forEach((l) => {
+        l.gol = Math.max(0, l.gol - dt);
+        l.erro = Math.max(0, l.erro - dt);
+        if (l.aceso) {
+          l.vida -= dt;
+          if (l.vida <= 0) l.aceso = null;
+        }
+      });
+      j.acender -= dt;
+      if (j.acender <= 0 && acesos(j).length < 1 + (Math.floor(t / 7 + j.k) % 3)) {
+        const livres = j.leds.filter((l) => !l.aceso && l.gol <= 0);
+        const l = livres[Math.floor(Math.random() * livres.length)];
+        if (l) { l.aceso = CORES_LED[Math.floor(Math.random() * CORES_LED.length)]; l.vida = 3.6 - (1 - tempoGol / 45) * 1.3; }
+        j.acender = 0.5;
       }
-    };
-    const barra = (ctx, corDoJogo, itens) => {
-      ctx.fillStyle = "rgba(3, 6, 18, .88)";
-      ctx.fillRect(0, 224, 512, 64);
-      ctx.fillStyle = corDoJogo;
-      ctx.fillRect(0, 221, 512, 3);
-      const passo = 512 / itens.length;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "alphabetic";
-      itens.forEach(([rotulo, valor], i) => {
-        const x = passo * i + passo / 2;
-        ctx.fillStyle = "rgba(255, 255, 255, .72)";
-        ctx.font = fonte(800, 13);
-        ctx.fillText(rotulo, x, 243);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = fonte(900, 30);
-        ctx.fillText(valor, x, 277);
+      j.grito = Math.max(0, j.grito - dt);
+      j.tempo += dt;
+      const alvo = j.leds[j.alvo];
+      if (j.fase === "mira") {
+        // escolhe um aceso (às vezes erra o tempo e chuta num apagado) e vira para ele
+        if (j.tempo <= dt + 1e-6 || j.tempo < 0) {
+          const ok = acesos(j);
+          j.alvo = ok.length && Math.random() < 0.78 ? j.leds.indexOf(ok[Math.floor(Math.random() * ok.length)]) : Math.floor(Math.random() * LEDS);
+        }
+        const d = j.leds[j.alvo].dir;
+        const quer = Math.atan2(d.x, d.z);
+        let delta = quer - kid.grupo.rotation.y;
+        delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+        kid.grupo.rotation.y += delta * (1 - Math.exp(-dt * 8));
+        kid.grupo.position.set(j.centro.x - d.x * 0.45, 0.07, j.centro.z - d.z * 0.45);
+        const frente = kid.grupo.rotation.y;
+        b.set(kid.grupo.position.x + Math.sin(frente) * 0.28, 0.19, kid.grupo.position.z + Math.cos(frente) * 0.28);
+        kid.pernaD.rotation.x = Math.min(0.7, Math.max(0, j.tempo - 0.45) * 3); // a perna vai para trás
+        if (j.tempo > 0.7) { j.fase = "chuta"; j.tempo = 0; j.de.copy(b); j.ate.copy(j.leds[j.alvo].p).setY(0.19).addScaledVector(j.leds[j.alvo].dir, -0.14); }
+      } else if (j.fase === "chuta") {
+        kid.pernaD.rotation.x = 0.7 - Math.min(1, j.tempo / 0.12) * 1.7;
+        const f = Math.min(1, j.tempo / 0.32);
+        b.lerpVectors(j.de, j.ate, f);
+        j.bola.rotation.x += dt * 20;
+        if (f >= 1) {
+          // bateu na parede: no LED aceso é gol
+          if (alvo.aceso && fimGol <= 0) {
+            j.ganho = 100 + Math.round(Math.max(0, alvo.vida / 3.6) * 100);
+            j.pontos += j.ganho;
+            j.gols++;
+            j.grito = 1.4;
+            alvo.gol = 0.9;
+            alvo.aceso = null;
+            j.acender = 0.08; // o grupo se completa logo depois
+          } else if (!alvo.aceso) {
+            alvo.erro = 0.5;
+          }
+          j.fase = "volta";
+          j.tempo = 0;
+          j.de.copy(b);
+        }
+      } else if (j.fase === "volta") {
+        // a bola volta da parede e para no pé da criança
+        kid.pernaD.rotation.x *= Math.max(0, 1 - dt * 8);
+        const f = Math.min(1, j.tempo / 0.9);
+        const frente = kid.grupo.rotation.y;
+        const pe = V(kid.grupo.position.x + Math.sin(frente) * 0.28, 0.19, kid.grupo.position.z + Math.cos(frente) * 0.28);
+        b.lerpVectors(j.de, pe, 1 - (1 - f) * (1 - f));
+        j.bola.rotation.x -= dt * 8 * (1 - f);
+        if (f >= 1) { j.fase = "mira"; j.tempo = 0; }
+      }
+      // os braços balançam para o equilíbrio
+      kid.bracoE.rotation.z = -0.25 - Math.max(0, kid.pernaD.rotation.x) * 0.3;
+      kid.bracoD.rotation.z = 0.25;
+      kid.bracoE.rotation.x = 0.3 * Math.sin(kid.pernaD.rotation.x);
+      // a cor de cada LED
+      j.leds.forEach((l, i) => {
+        if (l.gol > 0) cor.copy(l.aceso || branco).lerp(branco, 0.5 + 0.5 * Math.sin(t * 12));
+        else if (l.erro > 0) cor.copy(Math.sin(l.erro * 25) > 0 ? vermelho : apagado);
+        else if (l.aceso) cor.copy(l.aceso);
+        else cor.copy(apagado);
+        aros.setColorAt(j.k * LEDS + i, cor);
+        if (!l.aceso && l.gol <= 0 && l.erro <= 0) cor.copy(lenteApagada);
+        else cor.lerp(branco, 0.35);
+        lentes.setColorAt(j.k * LEDS + i, cor);
       });
     };
-    const grito = (ctx, texto, sub, corDoTexto, vida) => {
-      if (vida <= 0) return;
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, vida * 2.5);
-      ctx.fillStyle = "rgba(3, 6, 18, .5)";
-      ctx.fillRect(0, 0, 512, 221);
-      ctx.translate(256, 104);
-      const s = 0.8 + 0.2 * Math.min(1, (1.4 - vida) * 6);
-      ctx.scale(s, s);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.lineJoin = "round";
-      ctx.font = fonte("italic 900", 86);
-      ctx.lineWidth = 12;
-      ctx.strokeStyle = "#120600";
-      ctx.strokeText(texto, 0, 0);
-      ctx.fillStyle = corDoTexto;
-      ctx.fillText(texto, 0, 0);
-      if (sub) {
-        ctx.font = fonte(900, 30);
-        ctx.lineWidth = 7;
-        ctx.strokeText(sub, 0, 64);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(sub, 0, 64);
-      }
-      ctx.restore();
-    };
-    const final = (ctx, titulo, linha) => {
-      ctx.fillStyle = "rgba(3, 6, 18, .78)";
-      ctx.fillRect(0, 0, 512, 221);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffd84a";
-      ctx.font = fonte(900, 40);
-      ctx.fillText(titulo, 256, 90);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = fonte(800, 26);
-      ctx.fillText(linha, 256, 146);
-    };
-    const telao = (slug, x, y, z, largura, noChao, pintar) => {
-      const c = document.createElement("canvas");
-      c.width = 512;
-      c.height = 288;
-      const textura = new T.CanvasTexture(c);
-      textura.colorSpace = T.SRGBColorSpace;
-      textura.anisotropy = arena.anisotropia;
-      const altura = (largura * 288) / 512;
-      const suporte = new T.Group();
-      suporte.position.set(x, y, z);
-      // a moldura preta com as costas e, no chão, os dois pés
-      arena.caixa(suporte, largura + 0.2, altura + 0.2, 0.1, arena.escuro(), 0, 0, -0.06);
-      const baixo = y - altura / 2;
-      if (noChao) [-1, 1].forEach((s) => arena.caixa(suporte, 0.1, baixo, 0.1, arena.escuro(), s * largura * 0.33, -altura / 2 - baixo / 2, -0.06));
-      else arena.caixa(suporte, largura * 0.8, 0.12, 0.12, arena.escuro(), 0, -altura / 2 - 0.08, -0.06);
-      const painel = new T.Mesh(new T.PlaneGeometry(largura, altura), new T.MeshBasicMaterial({ map: textura, toneMapped: false }));
-      painel.position.z = 0.012;
-      suporte.add(painel);
-      g.add(suporte);
-      const item = { slug, ctx: c.getContext("2d"), textura, suporte, pintar, ultimo: -1 };
-      telas.push(item);
-      return item;
-    };
-    const pintarTodas = () => telas.forEach((item) => { item.pintar(item.ctx); item.textura.needsUpdate = true; });
 
-    telao("swish-arena", 11.6, 4.62, -11.02, 4, false, (ctx) => {
-      fundo(ctx, posters["swish-arena"]);
-      if (placar.fim > 0) final(ctx, "TEMPO ESGOTADO", `${placar.pontos} PONTOS · ${placar.cestas} CESTAS`);
-      if (placar.seguidas >= 4 && placar.fim <= 0) {
-        ctx.fillStyle = "#ff5a1f";
-        ctx.fillRect(14, 14, 168, 34);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = fonte("italic 900", 20);
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("EM CHAMAS ×2", 98, 32);
-      }
-      grito(ctx, "SWISH!", `+${placar.ganho}`, "#ffd84a", placar.grito);
-      barra(ctx, "#ff5a1f", [["PONTOS", String(placar.pontos)], ["CESTAS", `${placar.cestas}/${placar.arremessos}`], ["TEMPO", relogio(placar.tempo)]]);
+    /* --- e crianças pulando nas camas elásticas --- */
+    const pulando = [[15.6, -5.7], [13.6, -7.7], [5.6, -2.7]].map(([x, z], i) => {
+      const c = crianca();
+      c.grupo.position.set(x, 0.982, z);
+      c.grupo.rotation.y = i * 2.1;
+      c.fase = i * 1.3;
+      g.add(c.grupo);
+      return c;
     });
-    const anelNaTela = (ctx, k, cx, cy, r) => {
-      // o círculo de LED do 3D, visto de cima, com a bola
-      const arr = leds.instanceColor.array;
-      for (let i = 0; i < porCirculo; i++) {
-        const a = (i / porCirculo) * PI * 2;
-        const j = (k * porCirculo + i) * 3;
-        cor.setRGB(arr[j], arr[j + 1], arr[j + 2], T.LinearSRGBColorSpace);
-        ctx.fillStyle = cor.getStyle();
-        ctx.beginPath();
-        ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 3.4, 0, PI * 2);
-        ctx.fill();
-      }
-      const b = jogos[k].bola.position;
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(cx + ((b.x - circulos[k].x) / 2.55) * r, cy + ((b.z - circulos[k].z) / 2.55) * r, 4, 0, PI * 2);
-      ctx.fill();
-    };
-    telao("gol-flash-arena", -9.5, 2.16, -0.55, 3.6, true, (ctx) => {
-      fundo(ctx, posters["gol-flash-arena"]);
-      ctx.fillStyle = "rgba(3, 6, 18, .7)";
-      ctx.beginPath();
-      ctx.arc(46, 46, 38, 0, PI * 2);
-      ctx.arc(466, 46, 38, 0, PI * 2);
-      ctx.fill();
-      anelNaTela(ctx, 0, 46, 46, 30);
-      anelNaTela(ctx, 1, 466, 46, 30);
-      if (fimGol > 0) {
-        const [a, b] = jogos.map((j) => j.gols);
-        final(ctx, "TEMPO ESGOTADO", a === b ? `EMPATE · ${a} A ${b}` : `PLAYER ${a > b ? 1 : 2} VENCEU · ${Math.max(a, b)} GOLS`);
-      }
-      const quem = jogos[0].gol >= jogos[1].gol ? jogos[0] : jogos[1];
-      grito(ctx, "GOOOL!", `+${quem.ganho}`, "#a6e22e", quem.gol);
-      barra(ctx, "#a6e22e", [["P1 · GOL", String(jogos[0].gols)], ["TEMPO", relogio(tempoGol)], ["P2 · GOL", String(jogos[1].gols)]]);
-    });
+
     (maquina.dados.jogos_no_espaco || []).forEach((j) => {
       if (!j.poster) return;
       const img = new Image();
       img.decoding = "async";
-      img.addEventListener("load", pintarTodas);
+      img.addEventListener("load", () => telas.forEach((item) => { item.pintar(item.ctx); item.tex.needsUpdate = true; }));
       img.src = j.poster;
       posters[j.slug] = img;
     });
-    pintarTodas(); // com menos movimento (nada anda), fica o pôster parado
-    const onde = new T.Vector3();
+    // as primeiras cores e telas (com menos movimento, ficam assim, paradas)
+    circulos.forEach((j) => andarCirculo(j, 0, 0));
+    aros.instanceColor.needsUpdate = true;
+    lentes.instanceColor.needsUpdate = true;
+    telas.forEach((item) => { item.pintar(item.ctx); item.tex.needsUpdate = true; });
     // o que mexe não é chão nem parede: fica fora dos raios (o toque na
     // máquina, o piso do passeio) -- e o "SWISH!" é um sprite, que nem pode
     g.traverse((o) => { o.raycast = () => {}; });
 
+    const onde = new T.Vector3();
+    const olhar = new T.Vector3();
+    let vez = 0;
     const quadro = (dt, t, camera) => {
       // de longe não mexe (não se vê, e poupa o celular)
       maquina.grupo.getWorldPosition(onde);
       if (camera.position.distanceTo(onde) > 95) return;
-
-      // swish: voo em arco até o aro; cesta (a queda pela redinha) ou aro
-      // (a bola espirra para fora); uma pausa e o próximo arremesso
-      tempo += dt;
-      if (fase === "voo") {
-        const k = Math.min(1, tempo / 1.1);
-        bola.position.lerpVectors(tiro.de, tiro.aro, k);
-        bola.position.y += Math.sin(k * PI) * 1.3 + 0.05;
-        bola.rotation.x -= dt * 9;
-        if (k >= 1) {
-          tempo = 0;
-          if (placar.fim <= 0) placar.arremessos++;
-          if (erra) {
-            fase = "fora";
-            balanco = 0.3;
-            placar.seguidas = 0;
-            fora.subVectors(tiro.de, tiro.aro).setY(0).normalize().applyAxisAngle(V(0, 1, 0), (Math.random() - 0.5) * 1.4);
-          } else {
-            fase = "queda";
-            balanco = 1;
-            swish.visible = true;
-            if (placar.fim <= 0) {
-              placar.seguidas++;
-              placar.cestas++;
-              placar.ganho = (placar.tempo <= 10 ? 3 : 2) * (placar.seguidas > 4 ? 2 : 1);
-              placar.pontos += placar.ganho;
-              placar.grito = 1.4;
-            }
-          }
-        }
-      } else if (fase === "queda") {
-        const k = Math.min(1, tempo / 0.5);
-        bola.position.set(tiro.aro.x, tiro.aro.y - (tiro.aro.y - tiro.chao) * k * k, tiro.aro.z);
-        if (k >= 1) { fase = "pausa"; tempo = 0; }
-      } else if (fase === "fora") {
-        const k = Math.min(1, tempo / 0.8);
-        bola.position.copy(tiro.aro).addScaledVector(fora, k * 1.2);
-        bola.position.y = tiro.aro.y + 0.05 + Math.sin(k * PI) * 0.4 - (tiro.aro.y - tiro.chao) * k * k;
-        bola.rotation.z += dt * 8;
-        if (k >= 1) { fase = "pausa"; tempo = 0; }
-      } else if (tempo > 0.6) {
-        proximo();
-      }
-      balanco = Math.max(0, balanco - dt * 1.6);
-      redes.forEach((rede, i) => {
-        rede.scale.set(1, i === redeAtual ? 1 + Math.sin(t * 24) * 0.18 * balanco : 1, 1);
-      });
+      cestas.forEach((c) => andarCesta(c, dt, t));
       if (swish.visible) {
-        const vida = 1 - balanco;
-        swish.position.set(tiro.aro.x, tiro.aro.y + 0.6 + vida * 0.5, tiro.aro.z + 0.2);
-        const tamanho = 1.2 + Math.min(1, vida * 4) * 0.4;
+        swishVida = Math.max(0, swishVida - dt * 0.8);
+        const a = swishDe.aro;
+        swish.position.set(a.x, a.y + 0.35 + (1 - swishVida) * 0.35, a.z + 0.3);
+        const tamanho = 0.55 + Math.min(1, (1 - swishVida) * 4) * 0.15;
         swish.scale.set(tamanho * 3.2, tamanho, 1);
-        swish.material.opacity = Math.min(1, balanco * 1.6);
-        if (balanco <= 0) swish.visible = false;
+        swish.material.opacity = Math.min(1, swishVida * 1.6);
+        if (swishVida <= 0) swish.visible = false;
       }
-      // a partida do placar: 45 s, o resultado na tela e outra partida
-      placar.grito = Math.max(0, placar.grito - dt);
-      if (placar.fim > 0) {
-        placar.fim -= dt;
-        if (placar.fim <= 0) Object.assign(placar, { pontos: 0, tempo: 45, seguidas: 0, cestas: 0, arremessos: 0 });
-      } else {
-        placar.tempo -= dt;
-        if (placar.tempo <= 0) { placar.tempo = 0; placar.fim = 4; }
-      }
-
-      // gol flash: a bola corre e bate na borda; no alvo verde é gol
       if (fimGol > 0) {
         fimGol -= dt;
-        if (fimGol <= 0) { tempoGol = 45; jogos.forEach((j) => { j.gols = 0; }); }
+        if (fimGol <= 0) { tempoGol = 45; circulos.forEach((j) => { j.gols = 0; j.pontos = 0; }); }
       } else {
         tempoGol -= dt;
         if (tempoGol <= 0) { tempoGol = 0; fimGol = 4; }
       }
-      jogos.forEach((jogo, k) => {
-        const b = jogo.bola.position;
-        b.x += jogo.vel.x * dt;
-        b.z += jogo.vel.z * dt;
-        const dx = b.x - jogo.centro.x;
-        const dz = b.z - jogo.centro.z;
-        const d = Math.hypot(dx, dz);
-        jogo.idade += dt;
-        if (jogo.idade > 3.6) {
-          // ninguém acertou: o alvo apaga e acende em outro lugar
-          jogo.alvo = Math.floor(Math.random() * porCirculo);
-          jogo.idade = 0;
-        }
-        if (d > 2.35) {
-          // bateu na borda: volta para dentro, refletida, com um desvio
-          const nx = dx / d;
-          const nz = dz / d;
-          const pv = jogo.vel.x * nx + jogo.vel.z * nz;
-          jogo.vel.x -= 2 * pv * nx;
-          jogo.vel.z -= 2 * pv * nz;
-          jogo.vel.applyAxisAngle(V(0, 1, 0), (Math.random() - 0.5) * 0.6);
-          b.x = jogo.centro.x + nx * 2.34;
-          b.z = jogo.centro.z + nz * 2.34;
-          const onde = Math.round(((Math.atan2(dz, dx) + PI * 2) % (PI * 2)) / (PI * 2) * porCirculo) % porCirculo;
-          const perto = Math.min(Math.abs(onde - jogo.alvo), porCirculo - Math.abs(onde - jogo.alvo));
-          if (perto <= 3) {
-            jogo.gol = 1.4;
-            if (fimGol <= 0) {
-              // vale mais quanto mais rápido sai depois de o alvo acender
-              jogo.ganho = 100 + Math.round(Math.max(0, 1 - jogo.idade / 3.6) * 100);
-              jogo.gols++;
-            }
-            jogo.alvo = Math.floor(Math.random() * porCirculo);
-            jogo.idade = 0;
-          }
-        }
-        jogo.bola.rotation.x += dt * 6;
-        jogo.gol = Math.max(0, jogo.gol - dt);
-        const cabeca = (t * 22) % porCirculo;
-        for (let i = 0; i < porCirculo; i++) {
-          if (jogo.gol > 0) {
-            // o gol: uma onda dourada correndo o anel (sem pisca-pisca)
-            cor.copy(cores.flash2).lerp(cores.flash, 0.5 + 0.5 * Math.sin(t * 9 - i * 0.5));
-          } else {
-            const atras = (cabeca - i + porCirculo) % porCirculo;
-            cor.copy(cores.apagado);
-            if (atras < 6) cor.lerp(cores.cometa, 1 - atras / 6);
-            const ate = Math.min(Math.abs(i - jogo.alvo), porCirculo - Math.abs(i - jogo.alvo));
-            if (ate <= 3) cor.copy(cores.alvo).multiplyScalar(0.75 + 0.25 * Math.sin(t * 5));
-          }
-          leds.setColorAt(k * porCirculo + i, cor);
-        }
+      circulos.forEach((j) => andarCirculo(j, dt, t));
+      aros.instanceColor.needsUpdate = true;
+      lentes.instanceColor.needsUpdate = true;
+      pulando.forEach((c) => {
+        const f = Math.abs(Math.sin(t * 3.4 + c.fase));
+        c.grupo.position.y = 0.982 + f * 0.75;
+        c.bracoE.rotation.x = c.bracoD.rotation.x = -1.2 - f * 1.6;
+        c.bracoE.rotation.z = -0.3 * f;
+        c.bracoD.rotation.z = 0.3 * f;
+        c.pernaE.rotation.x = c.pernaD.rotation.x = -0.35 * (1 - f);
       });
-      leds.instanceColor.needsUpdate = true;
-
-      // os telões: 12 quadros por segundo, e só de perto
-      telas.forEach((item) => {
-        if (t - item.ultimo < 1 / 12) return;
-        if (camera.position.distanceTo(item.suporte.getWorldPosition(onde)) > 60) return;
+      // as telas: no máximo duas por quadro, 8 vezes por segundo cada,
+      // só as de perto e de frente para a câmera
+      camera.getWorldDirection(olhar);
+      for (let n = 0; n < telas.length && n < 4; n++) {
+        const item = telas[(vez + n) % telas.length];
+        if (t - item.ultimo < 1 / 8) continue;
+        item.suporte.getWorldPosition(onde);
+        if (camera.position.distanceTo(onde) > 40 || onde.sub(camera.position).dot(olhar) < 0) continue;
         item.ultimo = t;
         item.pintar(item.ctx);
-        item.textura.needsUpdate = true;
-      });
+        item.tex.needsUpdate = true;
+        if (n > 0) break;
+      }
+      vez = (vez + 1) % telas.length;
     };
-    // o passeio avisa: "swish:2" -- o próximo arremesso vai na cesta 2 (a
-    // enterrada de quem está passando por lá)
+    // o passeio avisa: "swish:2" -- a enterrada de quem passa pela cesta 2
     quadro.evento = (nome) => {
       const [tipo, valor] = nome.split(":");
-      if (tipo === "swish") pedida = Number(valor);
+      const c = cestas[Number(valor)];
+      if (tipo === "swish" && c) {
+        c.placar.texto = "ENTERRADA!";
+        pontuar(c.placar, 3);
+        c.balanco = 1;
+      }
     };
     return quadro;
   },
@@ -2577,7 +2760,26 @@ class Arena {
       this.vistas.querySelectorAll("[data-arena-vista]").forEach((botao) => {
         botao.setAttribute("aria-pressed", botao.dataset.arenaVista === nome ? "true" : "false");
       });
+      // o botão dos lados mostra o lado de agora
+      const lado = this.vistas.querySelector(`[data-arena-lados-menu] [data-arena-vista="${nome}"]`);
+      this.vistas.querySelector("[data-arena-lados-nome]").textContent = lado ? lado.textContent : "Lados";
+      this.vistas.querySelector("[data-arena-lados]").setAttribute("aria-pressed", lado ? "true" : "false");
+      this.abrirLados(false);
     }
+  }
+
+  abrirLados(abrir) {
+    const menu = this.vistas && this.vistas.querySelector("[data-arena-lados-menu]");
+    if (!menu) return;
+    menu.hidden = !abrir;
+    this.vistas.querySelector("[data-arena-lados]").setAttribute("aria-expanded", abrir ? "true" : "false");
+  }
+
+  /** "Ver tudo": a arena inteira, de qualquer lugar (o botão, o mapa, Esc). */
+  verTudo() {
+    if (this.passeio) this.sairPasseio({ voar: false });
+    if (this.tour) this.acao("tour", this.controles.querySelector('[data-arena-acao="tour"]'));
+    this.escolherZona("");
   }
 
   /** O passeio por dentro do brinquedo escolhido (só nos objetos 3D de verdade). */
@@ -2642,16 +2844,32 @@ class Arena {
     } else if (voar) this.camera3d.visaoGeral();
   }
 
-  proxima(passo) {
-    const total = this.lista.length;
+  /**
+   * As setas: o brinquedo que está daquele lado NA TELA (lado = 1, direita;
+   * -1, esquerda), qualquer que seja o lado de onde a câmera olha. Sem
+   * nenhum escolhido, começa pelo que está mais no meio da tela.
+   */
+  vizinha(lado) {
+    const lista = this.lista.filter((m) => m.grupo.visible);
+    const total = lista.length;
     if (!total) return;
-    let atual = this.selecionada ? this.lista.indexOf(this.selecionada) : -1;
-    if (atual < 0) {
-      // nada escolhido: começa pela área onde a câmera está
-      const primeira = this.lista.findIndex((m) => m.dados.grupo === this.zona);
-      atual = primeira >= 0 ? primeira - (passo > 0 ? 1 : 0) : (passo > 0 ? -1 : 0);
+    const T = this.T;
+    const frente = this.camera.getWorldDirection(new T.Vector3()).setY(0).normalize();
+    const direita = new T.Vector3(-frente.z, 0, frente.x);
+    const atual = this.selecionada;
+    if (!atual || !lista.includes(atual)) {
+      const c = this.camera.position;
+      const noMeio = (m) => {
+        const d = this.ajuda.subVectors(m.grupo.position, c).setY(0);
+        return d.dot(frente) / (d.length() || 1);
+      };
+      this.selecionar(lista.reduce((a, b) => (noMeio(b) > noMeio(a) ? b : a)));
+      return;
     }
-    this.selecionar(this.lista[(atual + passo + total) % total]);
+    const i = lista.indexOf(atual);
+    const vizinhas = [lista[(i + 1) % total], lista[(i - 1 + total) % total]];
+    const deLado = (m) => lado * this.ajuda.subVectors(m.grupo.position, atual.grupo.position).dot(direita);
+    this.selecionar(deLado(vizinhas[0]) >= deLado(vizinhas[1]) ? vizinhas[0] : vizinhas[1]);
   }
 
   /**
@@ -2797,6 +3015,8 @@ class Arena {
 
     if (this.controles) {
       this.controles.hidden = false;
+      // sem tela cheia (o iPhone não deixa), o botão nem aparece
+      if (!this.palco.requestFullscreen) this.controles.querySelector('[data-arena-acao="tela-cheia"]').hidden = true;
       this.controles.addEventListener("click", (evento) => {
         const botao = evento.target.closest("[data-arena-acao]");
         if (botao) this.acao(botao.dataset.arenaAcao, botao);
@@ -2804,10 +3024,15 @@ class Arena {
     }
     if (this.vistas) {
       this.vistas.addEventListener("click", (evento) => {
+        if (evento.target.closest("[data-arena-lados]")) {
+          this.abrirLados(this.vistas.querySelector("[data-arena-lados-menu]").hidden);
+          return;
+        }
         const botao = evento.target.closest("[data-arena-vista]");
         if (botao) this.vista(botao.dataset.arenaVista);
       });
     }
+    this.ligarMapa();
     this.painelPasseio = this.palco.querySelector("[data-arena-passeio]");
     if (this.painelPasseio) this.ligarPainelDoPasseio(this.painelPasseio);
 
@@ -2841,10 +3066,10 @@ class Arena {
     });
 
     this.palco.addEventListener("keydown", (evento) => {
-      if (this.passeio) return; // no passeio, as teclas andam
-      if (evento.key === "ArrowRight") { this.proxima(1); evento.preventDefault(); }
-      else if (evento.key === "ArrowLeft") { this.proxima(-1); evento.preventDefault(); }
-      else if (evento.key === "Escape" && this.selecionada) this.soltarSelecao();
+      if (this.passeio || evento.target.closest("select, input")) return;
+      if (evento.key === "ArrowRight") { this.vizinha(1); evento.preventDefault(); }
+      else if (evento.key === "ArrowLeft") { this.vizinha(-1); evento.preventDefault(); }
+      else if (evento.key === "Escape") { this.verTudo(); evento.preventDefault(); }
     });
     this.canvas.tabIndex = 0;
 
@@ -2862,15 +3087,16 @@ class Arena {
 
   acao(nome, botao) {
     this.ocioso = 0;
-    if (nome === "proximo") this.proxima(1);
-    else if (nome === "anterior") this.proxima(-1);
-    else if (nome === "visao") this.escolherZona("");
+    if (nome === "direita") this.vizinha(1);
+    else if (nome === "esquerda") this.vizinha(-1);
+    else if (nome === "visao") this.verTudo();
+    else if (nome === "mapa") this.abrirMapa(this.mapa ? this.mapa.hidden : false);
     else if (nome === "tour") {
       this.tour = !this.tour;
       this.tourTempo = 0;
       botao.setAttribute("aria-pressed", this.tour ? "true" : "false");
       botao.querySelector("i").className = this.tour ? "fa-solid fa-pause" : "fa-solid fa-play";
-      if (this.tour) this.proxima(1);
+      if (this.tour) this.vizinha(1);
     } else if (nome === "tela-cheia") {
       if (document.fullscreenElement) document.exitFullscreen();
       else if (this.palco.requestFullscreen) this.palco.requestFullscreen().catch(() => {});
@@ -2915,7 +3141,7 @@ class Arena {
       this.tourTempo += dt;
       if (this.tourTempo > 6) {
         this.tourTempo = 0;
-        this.proxima(1);
+        this.vizinha(1);
       }
     }
 
@@ -2935,6 +3161,7 @@ class Arena {
       this.camera3d.atualizar(dt);
       this.liberarVista();
       this.posicionarRotulo(dt);
+      this.atualizarMapa();
     }
     this.renderer.render(this.cena, this.camera);
   }
@@ -3005,6 +3232,288 @@ class Arena {
     camera.updateProjectionMatrix();
   }
 
+  /* ---------- o mapa: a arena vista de cima, como um mapa comum ---------- */
+  ligarMapa() {
+    this.mapa = this.palco.querySelector("[data-arena-mapa]");
+    if (!this.mapa) return;
+    this.telaDoMapa = this.mapa.querySelector("[data-arena-mapa-tela]");
+    this.nomeNoMapa = this.mapa.querySelector("[data-arena-mapa-nome]");
+    this.mapa.querySelector("[data-arena-mapa-fechar]").addEventListener("click", () => this.abrirMapa(false));
+    const tela = this.telaDoMapa;
+    let inicio = null;
+    tela.addEventListener("pointerdown", (evento) => { inicio = { x: evento.clientX, y: evento.clientY }; });
+    tela.addEventListener("pointerup", (evento) => {
+      if (!inicio || Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y) > 10) return;
+      inicio = null;
+      this.tocarNoMapa(evento.clientX, evento.clientY);
+    });
+    tela.addEventListener("pointermove", (evento) => {
+      if (evento.pointerType !== "mouse") return;
+      const m = this.pinoNoMapa(evento.clientX, evento.clientY);
+      if (m !== this.sobreNoMapa) {
+        this.sobreNoMapa = m;
+        tela.style.cursor = m ? "pointer" : "default";
+      }
+    });
+    tela.addEventListener("pointerleave", () => { this.sobreNoMapa = null; });
+    // no computador, o mapa já fica no canto; no celular e no tablet abre no botão
+    this.abrirMapa(window.matchMedia("(min-width: 961px)").matches);
+  }
+
+  abrirMapa(abrir) {
+    if (!this.mapa) return;
+    this.mapa.hidden = !abrir;
+    const botao = this.controles && this.controles.querySelector('[data-arena-acao="mapa"]');
+    if (botao) botao.setAttribute("aria-pressed", abrir ? "true" : "false");
+    this.marcaDoMapa = "";
+  }
+
+  /**
+   * Mundo (x, z) <-> mapa: a planta cabe inteira, com a entrada embaixo.
+   * O caminho até os reinos (a passarela) fica curto no desenho -- como num
+   * mapa de parque --, e a roda não vira um pontinho.
+   */
+  medidasDoMapa() {
+    const tela = this.telaDoMapa;
+    const w = tela.clientWidth;
+    const h = tela.clientHeight;
+    const R = (this.raio || 8) + (this.folga || 1) + 4.5;
+    const reinos = (this.trechos || []).filter((t) => t.tipo === "reino");
+    const frente = reinos.length ? Math.max(...reinos.map((t) => t.z1)) : -R;
+    const vao = Math.max(0, -R - frente); // a passarela de verdade
+    const curto = Math.min(vao, 3);
+    // z do mundo -> z do desenho (e a volta), por trechos retos
+    const zm = (z) => (z >= -R ? z : z >= frente ? -R - ((-R - z) * curto) / (vao || 1) : z + vao - curto);
+    const zw = (z) => (z >= -R ? z : z >= -R - curto ? -R - ((-R - z) * vao) / (curto || 1) : z - vao + curto);
+    let [x0, x1, z0, z1] = [-R - 1, R + 1, -R - 1, R + 1];
+    reinos.forEach((t) => {
+      x0 = Math.min(x0, t.x0 - 2);
+      x1 = Math.max(x1, t.x1 + 2);
+      z0 = Math.min(z0, zm(t.z0) - 2);
+    });
+    const grande = w >= 300;
+    // de cada lado, o espaço dos nomes (no mapa grande)
+    const folga = grande ? Math.min(118, w * 0.27) : 10;
+    const s = Math.max(0.1, Math.min((w - folga * 2) / (x1 - x0), (h - 26) / (z1 - z0)));
+    const ox = (w - (x1 - x0) * s) / 2 - x0 * s;
+    const oy = (h - (z1 - z0) * s) / 2 - z0 * s;
+    return { w, h, s, ox, oy, R, grande, folga, zm, zw, X: (x) => ox + x * s, Y: (z) => oy + zm(z) * s };
+  }
+
+  pinoNoMapa(cx, cy) {
+    if (!this.medidaDoMapa) return null;
+    const r = this.telaDoMapa.getBoundingClientRect();
+    const { X, Y } = this.medidaDoMapa;
+    let melhor = null;
+    let perto = 18;
+    this.roda.forEach((m) => {
+      if (!m.grupo.visible) return;
+      const d = Math.hypot(X(m.grupo.position.x) - (cx - r.left), Y(m.grupo.position.z) - (cy - r.top));
+      if (d < perto) { perto = d; melhor = m; }
+    });
+    return melhor;
+  }
+
+  tocarNoMapa(cx, cy) {
+    const m = this.pinoNoMapa(cx, cy);
+    const pequeno = !window.matchMedia("(min-width: 961px)").matches;
+    if (m) {
+      this.selecionar(m);
+      if (pequeno) this.abrirMapa(false); // no celular, o mapa sai da frente do brinquedo
+      return;
+    }
+    // fora dos pinos: a área tocada (a faixa da roda ou o reino)
+    const r = this.telaDoMapa.getBoundingClientRect();
+    const { ox, oy, s, zw } = this.medidaDoMapa;
+    const x = (cx - r.left - ox) / s;
+    const z = zw((cy - r.top - oy) / s);
+    const reino = (this.trechos || []).find((t) => t.tipo === "reino" && x >= t.x0 - 5 && x <= t.x1 + 5 && z >= t.z0 - 5 && z <= t.z1 + 5);
+    if (reino) { this.escolherZona(reino.id); return; }
+    const d = Math.hypot(x, z);
+    if (d < (this.raio || 8) * 0.45) { this.verTudo(); return; }
+    const a = (Math.atan2(x, z) + PI * 2) % (PI * 2);
+    const trecho = (this.trechos || []).find((t) => t.tipo !== "reino" && a >= t.a0 && a <= t.a1);
+    if (trecho && d < (this.raio || 8) + (this.folga || 1) + 5) this.escolherZona(trecho.id);
+  }
+
+  /** Redesenha o mapa só quando algo nele muda (a câmera, a escolha, o tamanho). */
+  atualizarMapa() {
+    if (!this.mapa || this.mapa.hidden || this.passeio) return;
+    const tela = this.telaDoMapa;
+    const c = this.camera.position;
+    const d = this.camera.getWorldDirection(this.ajuda);
+    const sel = this.selecionada;
+    const marca = `${tela.clientWidth}x${tela.clientHeight}|${c.x.toFixed(1)},${c.z.toFixed(1)},${Math.atan2(d.x, d.z).toFixed(2)}|${sel ? sel.indice : ""}|${this.sobreNoMapa ? this.sobreNoMapa.indice : ""}|${this.zona}|${this.roda.length}`;
+    if (marca === this.marcaDoMapa) return;
+    this.marcaDoMapa = marca;
+    this.desenharMapaDaArena();
+  }
+
+  desenharMapaDaArena() {
+    const tela = this.telaDoMapa;
+    const med = this.medidasDoMapa();
+    this.medidaDoMapa = med;
+    const { w, h, s, X, Y, R, grande } = med;
+    if (!w || !h) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (tela.width !== Math.round(w * dpr) || tela.height !== Math.round(h * dpr)) {
+      tela.width = Math.round(w * dpr);
+      tela.height = Math.round(h * dpr);
+    }
+    const g = tela.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const cx = X(0);
+    const cy = Y(0);
+    const raio = this.raio || 8;
+    const folga = this.folga || 1;
+    const fonte = (px, peso = 800) => `${peso} ${px}px Poppins, Manrope, system-ui, sans-serif`;
+
+    // o piso da roda, a cerca de pilares e o alvo do meio
+    g.fillStyle = "#10224f";
+    g.beginPath(); g.arc(cx, cy, (raio + folga + 1.5) * s, 0, PI * 2); g.fill();
+    g.strokeStyle = "rgba(63, 208, 255, .55)";
+    g.lineWidth = 1.5;
+    g.beginPath(); g.arc(cx, cy, R * s, 0, PI * 2); g.stroke();
+    g.fillStyle = "#e63946";
+    g.beginPath(); g.arc(cx, cy, Math.max(3, 1.2 * s), 0, PI * 2); g.fill();
+    g.fillStyle = "#ffffff";
+    g.beginPath(); g.arc(cx, cy, Math.max(1.5, 0.6 * s), 0, PI * 2); g.fill();
+
+    // as áreas: a faixa colorida de cada uma na roda; o reino, ao lado
+    (this.trechos || []).forEach((t) => {
+      const cor = COR_DA_ZONA[t.id] || "#2f8bff";
+      const ativa = this.zona === t.id;
+      g.globalAlpha = ativa ? 0.62 : this.zona ? 0.2 : 0.38;
+      g.fillStyle = cor;
+      if (t.tipo === "reino") {
+        // a passarela de luz e o espaço inteiro
+        g.fillRect(X((t.x0 + t.x1) / 2) - 1.6 * s, Y(t.z1), 3.2 * s, Y(-R) - Y(t.z1));
+        g.fillRect(X(t.x0), Y(t.z0), (t.x1 - t.x0) * s, Y(t.z1) - Y(t.z0));
+        g.globalAlpha = 1;
+        g.strokeStyle = cor;
+        g.lineWidth = 1.5;
+        g.strokeRect(X(t.x0), Y(t.z0), (t.x1 - t.x0) * s, Y(t.z1) - Y(t.z0));
+        const zona = this.zonas.find((z) => z.id === t.id);
+        if (zona && (t.x1 - t.x0) * s > 70) {
+          g.fillStyle = "#ffffff";
+          g.font = fonte(grande ? 12 : 9);
+          g.textAlign = "center";
+          g.textBaseline = "top";
+          g.fillText(zona.titulo, X((t.x0 + t.x1) / 2), Y(t.z0) + 4);
+        }
+        return;
+      }
+      g.beginPath();
+      g.arc(cx, cy, (raio + folga + 0.6) * s, PI / 2 - t.a0, PI / 2 - t.a1, true);
+      g.arc(cx, cy, Math.max(0, raio - folga - 0.9) * s, PI / 2 - t.a1, PI / 2 - t.a0, false);
+      g.closePath();
+      g.fill();
+    });
+    g.globalAlpha = 1;
+
+    // a entrada (o portal), embaixo
+    const aP = 0.5;
+    const ex = cx + Math.sin(aP) * R * s;
+    const ey = cy + Math.cos(aP) * R * s;
+    g.fillStyle = "#ffd700";
+    g.beginPath(); g.arc(ex, ey, 4, 0, PI * 2); g.fill();
+    g.font = fonte(grande ? 11 : 9, 900);
+    g.textAlign = "center";
+    g.textBaseline = "top";
+    g.fillText("ENTRADA", Math.min(w - 30, ex), Math.min(h - 12, ey + 6));
+
+    // os brinquedos: um pino na cor da área; o escolhido maior, com o nome
+    const sel = this.selecionada;
+    const sobre = this.sobreNoMapa;
+    const nomes = [];
+    this.roda.forEach((m) => {
+      if (!m.grupo.visible) return;
+      const px = X(m.grupo.position.x);
+      const py = Y(m.grupo.position.z);
+      const cor = COR_DA_ZONA[m.dados.grupo] || m.cor;
+      const destaque = m === sel || m === sobre;
+      if (m === sel) {
+        g.fillStyle = "rgba(255, 255, 255, .25)";
+        g.beginPath(); g.arc(px, py, 13, 0, PI * 2); g.fill();
+      }
+      g.fillStyle = cor;
+      g.strokeStyle = "#ffffff";
+      g.lineWidth = destaque ? 2.5 : 1.5;
+      g.beginPath(); g.arc(px, py, destaque ? 8 : 5.5, 0, PI * 2); g.fill(); g.stroke();
+      if (grande && !m.reino) nomes.push({ m, px, py, destaque });
+    });
+
+    // os nomes por fora da roda, na direção de cada brinquedo: de cada lado,
+    // um embaixo do outro (sem encavalar), com um fio até o pino se precisou descer
+    const ALTURA = 12;
+    [1, -1].forEach((lado) => {
+      const doLado = nomes
+        .map((n) => {
+          const a = Math.atan2(n.py - cy, n.px - cx);
+          return { ...n, a, lx: cx + Math.cos(a) * (R * s + 8), ly: cy + Math.sin(a) * (R * s + 8) };
+        })
+        .filter((n) => (Math.cos(n.a) >= 0 ? 1 : -1) === lado)
+        .sort((p, q) => p.ly - q.ly);
+      for (let i = 1; i < doLado.length; i++) doLado[i].ly = Math.max(doLado[i].ly, doLado[i - 1].ly + ALTURA);
+      // o que passou de baixo do mapa sobe de volta, empurrando os de cima
+      for (let i = doLado.length - 1; i >= 0; i--) {
+        const teto = i === doLado.length - 1 ? h - 8 : doLado[i + 1].ly - ALTURA;
+        doLado[i].ly = Math.min(doLado[i].ly, teto);
+      }
+      doLado.forEach((n) => {
+        const longe = Math.abs(n.ly - (cy + Math.sin(n.a) * (R * s + 8))) > 3;
+        if (longe) {
+          g.strokeStyle = "rgba(219, 231, 255, .35)";
+          g.lineWidth = 1;
+          g.beginPath();
+          g.moveTo(n.px, n.py);
+          g.lineTo(n.lx - lado * 2, n.ly);
+          g.stroke();
+        }
+        g.font = fonte(10.5, n.destaque ? 900 : 700);
+        const cabe = lado > 0 ? w - n.lx - 4 : n.lx - 4;
+        let nome = n.m.dados.nome;
+        while (nome.length > 3 && g.measureText(nome).width > cabe) nome = `${nome.slice(0, -2)}…`;
+        g.textAlign = lado > 0 ? "left" : "right";
+        g.textBaseline = "middle";
+        g.fillStyle = n.destaque ? "#ffd84a" : "rgba(219, 231, 255, .92)";
+        g.fillText(nome, n.lx, n.ly);
+      });
+    });
+
+    // você está aqui: o ponto azul e o leque do que a câmera vê
+    const c = this.camera.position;
+    const d = this.camera.getWorldDirection(this.ajuda);
+    const vx = limitar(X(c.x), 8, w - 8);
+    const vy = limitar(Y(c.z), 8, h - 8);
+    const ang = Math.atan2(d.z, d.x);
+    const meia = Math.min(1.2, (this.camera.fov * PI) / 360 * Math.max(1, this.camera.aspect));
+    const leque = g.createRadialGradient(vx, vy, 2, vx, vy, grande ? 70 : 46);
+    leque.addColorStop(0, "rgba(63, 160, 255, .55)");
+    leque.addColorStop(1, "rgba(63, 160, 255, 0)");
+    g.fillStyle = leque;
+    g.beginPath();
+    g.moveTo(vx, vy);
+    g.arc(vx, vy, grande ? 70 : 46, ang - meia, ang + meia);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#2f8bff";
+    g.strokeStyle = "#ffffff";
+    g.lineWidth = 2.5;
+    g.beginPath(); g.arc(vx, vy, 6.5, 0, PI * 2); g.fill(); g.stroke();
+
+    // embaixo do mapa: o nome do brinquedo apontado (ou escolhido)
+    if (this.nomeNoMapa) {
+      const alvo = sobre || sel;
+      const texto = alvo ? alvo.dados.nome : "Você está aqui · toque num brinquedo";
+      if (this.nomeNoMapa.dataset.texto !== texto) {
+        this.nomeNoMapa.dataset.texto = texto;
+        this.nomeNoMapa.lastChild.textContent = ` ${texto}`;
+      }
+    }
+  }
+
   /** O nome da máquina em cima dela: a do mouse, ou a escolhida. */
   posicionarRotulo(dt = 0.016) {
     const m = this.sobre || this.selecionada;
@@ -3068,6 +3577,7 @@ const OLHOS = 0.85; // altura dos olhos acima do piso: uma criança
    em +z, y = a altura dos PÉS ali) e o modo é o jeito de chegar nele:
      ir          desliza da entrada até o começo
      andar       passo normal (a cabeça balança de leve)
+     agachado    andar abaixado (teto baixo: o andar de cima do brinquedão)
      subir       escada e escadinha: devagar, olhando para cima
      rede        engatinhando na rede: balança para os lados
      tubo        agachado, dentro do tubo
@@ -3134,34 +3644,48 @@ const CAMINHOS = {
   "brinquedao-modelo-2": () => [
     [...BQ(-3323, -1900, 0), "ir"],
     [...BQ(-3323, -2450, 0), "andar"],
-    [...BQ(-3323, -2560, 135), "subir"],
-    [...BQ(-3323, -2880, 643), "subir"],
-    [...BQ(-3323, -3420, 1109), "subir"],
+    // os degraus: 0,64 m na frente e 1,11 m atrás
+    [...BQ(-3323, -2700, 643), "subir"],
+    [...BQ(-3323, -3050, 643), "subir"],
+    [...BQ(-3323, -3250, 1109), "subir"],
+    [...BQ(-3323, -3420, 1109), "agachado"],
+    // sai de baixo do andar de cima antes de subir para a rede da torre
+    [...BQ(-2860, -3420, 1109), "agachado"],
     [...BQ(-2450, -3300, 1833), "subir"],
     [...BQ(-1700, -2700, 1833), "rede", { pausa: 1.4, olhar: BQ(-1318, -3085, 2380) }],
     [...BQ(-2550, -3150, 1833), "rede"],
-    [...BQ(-3300, -3150, 2074), "subir"],
-    [...BQ(-3850, -3150, 2074), "andar"],
-    [...BQ(-4200, -3150, 2480), "rede"],
-    [...BQ(-5150, -3150, 2480), "rede"],
-    [...BQ(-5500, -3350, 2074), "andar"],
-    [...BQ(-6420, -3350, 2074), "andar"],
-    [...BQ(-6460, -3150, 2084), "andar"],
+    // da rede para a beira do andar de cima (sobe antes de passar por baixo dele)
+    [...BQ(-2720, -3150, 2074), "subir"],
+    // o andar de cima tem o teto baixo: anda-se abaixado
+    [...BQ(-3300, -3150, 2074), "agachado"],
+    [...BQ(-3870, -3150, 2074), "agachado"],
+    // a rede de escalada: sobe pela beira dela e engatinha por cima
+    [...BQ(-3950, -3150, 2490), "subir"],
+    [...BQ(-5300, -3150, 2490), "rede"],
+    [...BQ(-5420, -3250, 2074), "subir"],
+    [...BQ(-5600, -3350, 2074), "agachado"],
+    [...BQ(-6420, -3350, 2074), "agachado"],
+    [...BQ(-6460, -3150, 2084), "agachado"],
     [...BQ(-7460, -3150, 2084), "tubo"],
-    [...BQ(-7750, -2850, 2074), "andar"],
-    [...BQ(-8300, -2850, 2074), "andar", { pausa: 0.8, olhar: BQ(-7990, -3150, 2450) }],
-    [...BQ(-9300, -2900, 2074), "andar"],
-    [...BQ(-10150, -2420, 2074), "andar", { pausa: 0.9, olhar: BQ(-10172, -1998, 2150) }],
-    [...BQ(-10494, -2268, 2104), "andar"],
+    [...BQ(-7750, -2850, 2074), "agachado"],
+    [...BQ(-8300, -2850, 2074), "agachado", { pausa: 0.8, olhar: BQ(-7990, -3150, 2450) }],
+    [...BQ(-9300, -2900, 2074), "agachado"],
+    [...BQ(-10150, -2600, 2074), "agachado"],
+    // atrás da boca do tobogã, de frente para ela
+    [...BQ(-10530, -2360, 2074), "agachado", { pausa: 0.9, olhar: BQ(-10172, -1998, 2250) }],
+    [...BQ(-10264, -2075, 2104), "agachado"],
     ...toboganDoBrinquedao(),
     [...BQ(-9940, -450, 120), "cair"],
     [...BQ(-9940, 250, 0), "andar"],
+    // a volta pela ponta do tobogã até a escada de marinheiro de trás
     [...BQ(-11950, 100, 0), "andar"],
     [...BQ(-11950, -2000, 0), "andar"],
     [...BQ(-11300, -3950, 0), "andar"],
-    [...BQ(-8763, -3950, 0), "andar"],
-    [...BQ(-8763, -3550, 1104), "subir"],
-    [...BQ(-8763, -2700, 1104), "andar", { pausa: 0.8, olhar: BQ(-8763, -870, 300) }],
+    [...BQ(-9023, -3950, 0), "andar"],
+    [...BQ(-9023, -3880, 560), "subir"],
+    [...BQ(-9023, -3800, 1104), "subir"],
+    [...BQ(-9023, -3450, 1104), "agachado"],
+    [...BQ(-8763, -2700, 1104), "agachado", { pausa: 0.8, olhar: BQ(-8763, -870, 300) }],
     ...escorregadorDuplo(),
     [...BQ(-8763, -650, 120), "cair"],
     [...BQ(-8763, 250, 0), "andar"],
@@ -3172,10 +3696,10 @@ const CAMINHOS = {
   // na cesta (o Swish arremessa nela), a beirada das piscinas do percurso,
   // o circuito kids com a rede e o tobogã, e o espaço inteiro no fim
   "espaco-esportivo-modelo-1": () => [
-    [0, 0.05, 10.6, "ir"],
-    [-9.5, 0.05, 7.2, "andar", { pausa: 2.5, olhar: [-9.5, 2.0, -0.55] }],
-    [-12.5, 0.05, 5.6, "andar", { pausa: 2, olhar: [-12.5, 0.2, 2.4] }],
-    [-6.5, 0.05, 5.6, "andar", { pausa: 2, olhar: [-6.5, 0.2, 2.4] }],
+    [0, 0.05, 10.4, "ir"],
+    // o Gol Flash: cada círculo com a criança chutando, os LEDs e a tela
+    [-12.5, 0.05, 6.6, "andar", { pausa: 2.5, olhar: [-12.5, 0.6, 1.4] }],
+    [-6.5, 0.05, 6.6, "andar", { pausa: 2.5, olhar: [-6.5, 0.6, 1.4] }],
     [-1.2, 0.05, 2.0, "andar"],
     [-1.2, 0.05, -2.6, "andar", { pausa: 2, olhar: [-5.5, 2.0, -5] }],
     [-1.3, 0.05, -4.0, "andar"],
@@ -3191,34 +3715,47 @@ const CAMINHOS = {
     [7.6, 0.98, 2.3, "pular"],
     [9.6, 0.98, 0.3, "pular"],
     [7.6, 0.98, -1.7, "pular"],
+    // por cima dos braços do varredor (o poste do meio fica de lado)
+    [9.6, 0.98, -1.7, "pular"],
     [9.6, 0.98, -3.7, "pular"],
     [11.6, 0.98, -5.7, "pular"],
-    [11.6, 0.98, -7.7, "pular", { evento: "swish:2" }],
+    // as cestas do Swish: as crianças arremessando e as telas; a do meio é a sua
+    [11.6, 0.98, -7.7, "pular", { pausa: 2.2, olhar: [11.6, 3.0, -11.0], evento: "swish:2" }],
     [11.6, 0.97, -8.85, "andar"],
     [11.6, 1.9, -10.25, "enterrada", { pausa: 0.7, olhar: [11.6, 2.8, -10.88] }],
     [11.6, 0.97, -8.4, "cair"],
     [12.75, 0.97, -6.0, "andar"],
+    // na beirada entre as piscinas do percurso, e o pulo na espuma
     [12.75, 0.97, -0.9, "viga"],
-    [14.4, 0.97, -0.7, "viga"],
-    [15.6, 0.7, 1.3, "cair", { pausa: 1.6, olhar: [15.1, 2.0, 0.1] }],
-    [15.6, 0.97, 3.1, "subir"],
-    [15.6, 0.05, 4.2, "cair"],
+    [13.6, 0.97, -0.7, "viga"],
+    [13.6, 0.7, 1.3, "cair", { pausa: 1.6, olhar: [13.1, 2.0, 0.1] }],
+    [13.6, 0.97, 3.15, "subir"],
+    // pela beirada até a escada da frente, e desce degrau por degrau
+    [12.9, 0.97, 3.15, "viga"],
+    [11.65, 0.97, 3.15, "andar"],
+    [11.65, 0.85, 3.45, "subir"],
+    [11.65, 0.64, 3.75, "subir"],
+    [11.65, 0.43, 4.05, "subir"],
+    [11.65, 0.21, 4.35, "subir"],
+    [11.65, 0.05, 4.85, "subir"],
+    // entre o parque e o circuito kids, até a frente do circuito
     [10.0, 0.05, 5.8, "andar"],
-    [2.0, 0.05, 5.8, "andar"],
-    [2.0, 0.65, 6.7, "subir"],
-    [3.4, 0.65, 8.15, "andar"],
-    [4.4, 0.65, 8.15, "andar"],
-    [5.7, 0.65, 8.85, "andar"],
+    [0.4, 0.05, 5.8, "andar"],
+    [-0.1, 0.05, 7.4, "andar"],
+    [0.6, 0.05, 9.3, "andar"],
+    [5.7, 0.05, 9.45, "andar"],
+    // a rede amarela: sobe pela frente até o deck de cima
+    [5.7, 0.65, 8.95, "subir"],
     [5.7, 1.8, 8.12, "rede"],
     [5.7, 1.85, 7.82, "subir"],
-    [8.6, 1.85, 7.84, "andar"],
-    [12.0, 1.85, 7.84, "andar"],
-    [15.7, 1.85, 7.6, "andar", { pausa: 0.8, olhar: [17.8, 1.0, 9.4] }],
+    [8.6, 1.85, 7.84, "agachado"],
+    [12.0, 1.85, 7.84, "agachado"],
+    [15.7, 1.85, 7.6, "agachado", { pausa: 0.8, olhar: [17.8, 1.0, 9.4] }],
     ...toboganKids(),
     [17.8, 0.3, 10.45, "cair", { pausa: 1.6, olhar: [16.5, 0.6, 10.4] }],
-    [17.3, 0.6, 10.95, "subir"],
-    [16.8, 0.05, 11.3, "andar"],
-    [8.0, 0.05, 11.1, "andar", { pausa: 2, olhar: [0, 1.5, 0] }],
+    [16.4, 0.62, 10.8, "subir"],
+    [15.9, 0.05, 10.8, "andar"],
+    [14.6, 0.05, 10.8, "andar", { pausa: 2, olhar: [0, 1.5, 0] }],
   ],
   // a cama elástica: a medida sai do cadastro, como a forma dela
   cama_elastica: (m) => {
@@ -3257,13 +3794,14 @@ function voltaEmVolta(m) {
 const MODOS_DO_PASSEIO = {
   ir: { v: 6, olhos: OLHOS, nome: "Chegando" },
   andar: { v: 1.4, olhos: OLHOS, nome: "Passeando" },
-  subir: { v: 0.55, olhos: OLHOS, olhar: 0.22, nome: "Subindo" },
+  agachado: { v: 0.9, olhos: 0.58, nome: "Andando abaixado" },
+  subir: { v: 0.55, olhos: 0.65, olhar: 0.22, nome: "Subindo" },
   rede: { v: 0.6, olhos: 0.6, nome: "Na rede" },
   tubo: { v: 0.7, olhos: 0.45, nome: "No túnel" },
   viga: { v: 0.75, olhos: OLHOS, nome: "Na beirada" },
   pular: { v: 1.5, olhos: OLHOS, quique: 0.8, nome: "Pulando" },
   enterrada: { v: 1.2, olhos: OLHOS, quique: 1.2, nome: "Enterrada!" },
-  escorregar: { v: 4.6, olhos: 0.55, nome: "Escorregando!" },
+  escorregar: { v: 4.6, olhos: 0.45, nome: "Escorregando!" },
   cair: { v: 2.4, olhos: 0.45, olhar: -0.3, nome: "Tchibum!" },
 };
 
@@ -3377,8 +3915,13 @@ class Passeio {
     let s = 0;
     for (let k = 0; k < n; k++) {
       const passos = Math.max(2, Math.ceil(pontos[k].w.distanceTo(pontos[k + 1].w) / 0.06));
+      const y0 = Math.min(pontos[k].w.y, pontos[k + 1].w.y);
+      const y1 = Math.max(pontos[k].w.y, pontos[k + 1].w.y);
+      const solto = ["escorregar", "pular", "enterrada", "cair"].includes(pontos[k + 1].modo);
       for (let j = k ? 1 : 0; j <= passos; j++) {
         const p = curva.getPoint((k + j / passos) / n);
+        // a curva suave não afunda no piso nem sobe além do degrau
+        if (!solto) p.y = limitar(p.y, y0, y1);
         if (amostras.length) s += p.distanceTo(amostras[amostras.length - 1].p);
         amostras.push({ p, s, modo: pontos[k + 1].modo });
       }

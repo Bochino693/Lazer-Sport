@@ -474,6 +474,64 @@
 
 .arena-controle:hover { background: rgba(255, 255, 255, .16); }
 .arena-controle--tour[aria-pressed="true"] { background: linear-gradient(135deg, #ffd700, #ffb300); color: #2a1d00; }
+.arena-controle--texto { font-size: .84rem; white-space: nowrap; }
+.arena-controle[aria-pressed="true"]:not(.arena-controle--tour) { background: linear-gradient(135deg, #1f6fff, #3fd0ff); color: #031024; }
+
+/* o mapa: a arena vista de cima. No computador fica no canto do palco;
+   no celular e no tablet abre por cima do 3D (o botão "Mapa"), sem cobrir
+   os controles de baixo. */
+.arena3d-mapa {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    width: 250px;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 18px;
+    background: rgba(4, 10, 28, .9);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .4);
+    backdrop-filter: blur(6px);
+}
+
+.arena3d-mapa[hidden] { display: none; }
+.arena3d-palco.em-passeio .arena3d-mapa { display: none; }
+
+.arena3d-mapa-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 6px; }
+.arena3d-mapa-topo strong { display: inline-flex; align-items: center; gap: 7px; color: #fff; font-size: .82rem; font-weight: 900; }
+.arena3d-mapa-topo strong i { color: #3fd0ff; }
+
+.arena3d-mapa-fechar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+    cursor: pointer;
+}
+
+.arena3d-mapa-tela { display: block; width: 100%; height: 250px; border-radius: 12px; background: #071433; touch-action: manipulation; }
+
+.arena3d-mapa-nome {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 20px;
+    margin: 7px 2px 0;
+    overflow: hidden;
+    color: #dbe7ff;
+    font-size: .76rem;
+    font-weight: 800;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.arena3d-mapa-voce { flex: none; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: #2f8bff; }
 
 .arena3d-dica {
     position: absolute;
@@ -499,18 +557,36 @@
     position: absolute;
     top: 12px;
     left: 12px;
-    right: 12px;
-    z-index: 3;
+    z-index: 4;
     display: flex;
-    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    max-width: calc(100% - 290px);
     pointer-events: none;
 }
 
-.arena3d-vistas::-webkit-scrollbar { display: none; }
 .arena3d-vistas[hidden] { display: none; }
+
+.arena3d-lados { position: relative; pointer-events: auto; }
+.arena3d-lados-botao .fa-chevron-down { font-size: .7em; opacity: .8; }
+
+.arena3d-lados-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 16px;
+    background: rgba(4, 10, 28, .94);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, .4);
+}
+
+.arena3d-lados-menu[hidden] { display: none; }
+.arena3d-lados-menu button { justify-content: center; }
 
 .arena3d-vistas button {
     flex: none;
@@ -733,8 +809,8 @@
 
 .arena3d-palco.em-passeio .arena3d-tela { cursor: grab; }
 
-/* com a máquina escolhida, a dica sai de cima das vistas */
-.arena3d-vistas:not([hidden]) ~ .arena3d-dica { top: 56px; }
+/* com a máquina escolhida, a dica sai (as vistas ocupam o alto) */
+.arena3d-vistas:not([hidden]) ~ .arena3d-dica { display: none; }
 
 
 /* o nome em cima da máquina escolhida (ou da que está sob o mouse) */
@@ -877,7 +953,11 @@
 @media (max-width: 960px) {
     /* celular e tablet: o palco em cima, a ficha embaixo (nunca por cima) */
     .arena3d-corpo { grid-template-columns: minmax(0, 1fr); height: auto; }
-    .arena3d-palco { height: min(62vh, 560px); min-height: 360px; }
+    /* o palco cabe inteiro entre o topo do site e a barra de baixo do celular */
+    .arena3d-palco { height: clamp(340px, calc(100svh - 170px), 640px); scroll-margin-top: 76px; }
+    .arena3d-vistas { max-width: calc(100% - 24px); }
+    .arena3d-mapa { top: 10px; right: 10px; left: 10px; bottom: 70px; z-index: 5; width: auto; }
+    .arena3d-mapa-tela { flex: 1; height: auto; min-height: 0; }
     .arena3d-ficha { overflow: visible; }
     .arena3d-ficha-cheia { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: start; gap: 8px 12px; }
     .arena3d-ficha-cheia[hidden] { display: none; }
@@ -893,13 +973,21 @@
 }
 
 @media (max-width: 620px) {
-    .arena3d-zonas { flex-wrap: nowrap; overflow-x: auto; margin-inline: -10px; padding: 0 10px 4px; scrollbar-width: none; }
-    .arena3d-zona { flex: none; }
+    /* as áreas quebram a linha (nada escondido para o lado) */
+    .arena3d-zonas { gap: 6px; }
+    .arena3d-zona { padding: 7px 11px; font-size: .78rem; gap: 6px; }
+    .arena3d-zona b { min-width: 18px; padding: 0 5px; font-size: .7rem; }
     .arena3d-palco { border-radius: 18px; }
+    .arena-controles { bottom: 10px; gap: 4px; padding: 5px; max-width: calc(100% - 16px); }
     .arena-controle { min-width: 38px; height: 38px; padding: 0 9px; }
+    .arena-controle--texto { padding: 0 10px; font-size: .76rem; gap: 6px; }
     .arena-controle--tour span { display: none; }
-    .arena3d-vistas { justify-content: flex-start; left: 8px; right: 8px; top: 8px; }
-    .arena3d-vistas button { min-height: 32px; padding: 0 11px; }
+    .arena3d-vistas { left: 8px; top: 8px; max-width: calc(100% - 16px); }
+    .arena3d-vistas button { min-height: 34px; padding: 0 11px; }
+    .arena3d-so-grande,
+    .arena3d-passeio-novo { display: none; }
+    .arena3d-mapa { top: 8px; right: 8px; left: 8px; bottom: 60px; }
+    .arena3d-dica { font-size: .74rem; }
     .arena3d-passeio-dica { top: 8px; left: 8px; max-width: calc(100% - 132px); font-size: .72rem; border-radius: 14px; transform: none; text-align: left; }
     .arena3d-passeio-mapa { top: 8px; right: 8px; width: 112px; height: 112px; border-radius: 14px; }
     .arena3d-passeio-fluxo { left: 8px; bottom: 8px; max-width: calc(100% - 150px); padding-right: 12px; }

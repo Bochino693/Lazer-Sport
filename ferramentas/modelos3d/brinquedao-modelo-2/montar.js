@@ -16,6 +16,9 @@ const E = await (await fetch("estrutura.json")).json();
 const XS = [-10575, -9540, -8507, -7474, -6441, -5410, -3840, -2807, -237];
 const FUNDO = -3690, FRENTE = -2620, FRENTE2 = -1566;
 const Z1 = 1104, Z2 = 2074, ZTETO = 3044, TORRE = 3560, REDE = 1833;
+// a beira do piso da saída do tobogã: o tubo começa nela e desce por fora
+// (com o piso até FRENTE2, o tubo atravessava o piso no começo da descida)
+const SAIDA = -2000;
 const perto = (lista, v) => lista.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
 
 // ---------- materiais ----------
@@ -134,7 +137,13 @@ for (const [k, [z0, z1]] of colunas) {
   cilindro(BEGE, V(x, y, z0), V(x, y, z1), 55, 14);
   esfera(VERDE, V(x, y, z1 + 10), 66); // a tampa verde de cada coluna
 }
-for (const [xa, ya, za, xb, yb, zb] of E.barras) {
+for (let [xa, ya, za, xb, yb, zb] of E.barras) {
+  // o quadro do piso da saída do tobogã acaba com o piso (em SAIDA): a
+  // barra da frente não cruza mais o tubo
+  if (Math.abs(za - Z2) < 60 && Math.abs(zb - Z2) < 60 && Math.min(xa, xb) > XS[0] - 100 && Math.max(xa, xb) < XS[1] + 100) {
+    ya = Math.min(ya, SAIDA);
+    yb = Math.min(yb, SAIDA);
+  }
   cilindro(VERDE, V(xa, ya, za), V(xb, yb, zb), 46, 10);
 }
 // a rede do andar das bolas (a grade verde do .3ds)
@@ -147,11 +156,20 @@ for (const [xa, ya, za, xb, yb, zb] of E.barras) {
 // ---------- 2. PISOS ----------
 const ESP = 45;
 caixa(PISO, XS[0], XS[7], FUNDO, FRENTE, Z2 - ESP, Z2); // andar de cima, de ponta a ponta
-caixa(PISO, XS[0], XS[1], FRENTE, FRENTE2, Z2 - ESP, Z2); // a saída do tobogã
+caixa(PISO, XS[0], XS[1], FRENTE, SAIDA, Z2 - ESP, Z2); // a saída do tobogã
 caixa(PISO, XS[0], XS[2], FUNDO, FRENTE, Z1 - ESP, Z1); // o andar do meio dos escorregadores
 caixa(AMARELO, XS[6], XS[7], FUNDO, -3150, 1109 - ESP, 1109); // degraus de subida
 caixa(AMARELO, XS[6], XS[7], -3150, FRENTE, 643 - ESP, 643);
 caixa(AMARELO, XS[6], XS[7], FUNDO, FRENTE, 0, 135);
+
+// a escada de marinheiro de trás, até o andar do meio (onde começa o
+// escorregador duplo): em pé, rente ao fundo, entre duas colunas
+{
+  const x = (XS[1] + XS[2]) / 2;
+  const y = FUNDO - 40; // sem passar da caixa do objeto (o centro dele não muda)
+  for (const dx of [-220, 220]) cilindro(VERDE, V(x + dx, y, 0), V(x + dx, y, Z1 + 260), 26, 10);
+  for (let z = 270; z < Z1; z += 270) cilindro(AMARELO, V(x - 220, y, z), V(x + 220, y, z), 22, 10);
+}
 
 // ---------- 3. AS TRÊS CAIXAS COLORIDAS COM ARCO ----------
 function caixaComArco(x0, x1, cor) {
@@ -240,7 +258,8 @@ function faixa(nome, caminho, perfil, passos = 48) {
   const a0 = -50 * grau, a1 = 360 * grau, passos = 48;
   const p0 = V(cx + raio * Math.cos(a0), cy + raio * Math.sin(a0), Z2 + 330);
   const tangente = V(-Math.sin(a0), Math.cos(a0), 0);
-  const pontos = [p0.clone().addScaledVector(tangente, -420)];
+  // a boca do tubo fica no piso da saída, virada para quem vem pelo andar de cima
+  const pontos = [p0.clone().addScaledVector(tangente, -120)];
   for (let i = 0; i <= passos; i++) {
     const t = i / passos;
     const a = a0 + (a1 - a0) * t;
@@ -258,8 +277,8 @@ function faixa(nome, caminho, perfil, passos = 48) {
   const saida = curva.getPoint(1);
   caixa(LARANJA, saida.x - 430, saida.x + 430, saida.y + 60, saida.y + 660, 0, 120); // colchão da chegada
   // a cabine laranja de onde sai o tobogã
-  painel(LARANJA, V(XS[0] - 25, (FRENTE + FRENTE2) / 2, (Z2 + ZTETO) / 2), FRENTE2 - FRENTE - 60, ZTETO - Z2 - 60, V(-1, 0, 0), V(0, -1, 0));
-  painel(LARANJA, V((XS[0] + XS[1]) / 2, FRENTE2 + 25, (Z2 + ZTETO) / 2 + 150), XS[1] - XS[0] - 60, ZTETO - Z2 - 360, V(0, 1, 0), V(-1, 0, 0));
+  // (a frente da cabine fica aberta: é a boca do tobogã)
+  painel(LARANJA, V(XS[0] - 25, (FRENTE + SAIDA) / 2, (Z2 + ZTETO) / 2), SAIDA - FRENTE - 60, ZTETO - Z2 - 60, V(-1, 0, 0), V(0, -1, 0));
 }
 
 // ---------- 6. O ANDAR DE CIMA: rede de escalada, rolos, saco e painéis ----------
@@ -300,7 +319,7 @@ const DIREITA = V(-1, 0, 0); // a direita de quem olha de frente
 painel(PAINEL, V((XS[6] + XS[7]) / 2, FRENTE + 30, (Z2 + ZTETO) / 2), XS[7] - XS[6] - 90, ZTETO - Z2 - 90, X_FRENTE, DIREITA);
 painel(PAINEL, V((XS[6] + XS[7]) / 2, FRENTE + 30, (1109 + Z2) / 2), XS[7] - XS[6] - 90, Z2 - 1109 - 90, X_FRENTE, DIREITA);
 painel(PAINEL, V((XS[1] + XS[2]) / 2, FRENTE + 30, (Z2 + ZTETO) / 2), XS[2] - XS[1] - 90, ZTETO - Z2 - 90, X_FRENTE, DIREITA);
-painel(PAINEL, V(XS[1], (FRENTE + FRENTE2) / 2, (Z2 + ZTETO) / 2), FRENTE2 - FRENTE - 90, ZTETO - Z2 - 90, V(1, 0, 0), V(0, 1, 0));
+painel(PAINEL, V(XS[1], (FRENTE + SAIDA) / 2, (Z2 + ZTETO) / 2), SAIDA - FRENTE - 90, ZTETO - Z2 - 90, V(1, 0, 0), V(0, 1, 0));
 painel(PAINEL, V((XS[0] + XS[1]) / 2, FUNDO + 30, (Z1 + Z2) / 2), XS[1] - XS[0] - 90, Z2 - Z1 - 90, X_FRENTE, DIREITA);
 
 // ---------- 7. A TORRE DAS BOLAS ----------

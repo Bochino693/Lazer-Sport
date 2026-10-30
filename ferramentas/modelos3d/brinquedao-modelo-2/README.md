@@ -14,6 +14,12 @@ sai daqui. Ele junta duas fontes:
    de passagem, o saco, os painéis com o X e as telas de proteção
    (`montar.js`, peça por peça, encaixadas na grade das colunas).
 
+Ajustes para o passeio por dentro (a Arena anda por um caminho fixo, que
+passa pelo tobogã e pelo escorregador): o piso da saída do tobogã termina
+onde o tubo começa (`SAIDA`; antes o tubo atravessava o piso e a barra da
+frente dele), a boca do tubo fica sobre esse piso, e atrás há uma escada de
+marinheiro até o andar do meio, de onde sai o escorregador duplo.
+
 Medidas finais do objeto (com escorregadores e colchões): 11,4 m × 3,62 m,
 altura 3,65 m; ~35 mil triângulos; ~580 KB depois do `gltfpack`.
 
