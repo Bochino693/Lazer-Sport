@@ -481,6 +481,23 @@ def jogo_da_maquina(nome):
     return ""
 
 
+#: Os avisos que a foto da máquina leva em faixa diagonal, no canto: o que
+#: ela tem de especial e o cliente precisa saber antes de pedir. Vão pelo
+#: jogo da máquina (`jogo_da_maquina`), e por enquanto só o Lazer Shot tem.
+AVISOS = {
+    "camera": {"texto": "Contém câmera", "curto": "Câmera"},
+    "arma": {"texto": "Arma personalizada", "curto": "Arma própria"},
+}
+AVISOS_DO_JOGO = {
+    "lazer-shot": ("camera", "arma"),
+}
+
+
+def avisos_da_maquina(nome):
+    """As faixas da foto desta máquina: [{"id", "texto", "curto"}], ou []."""
+    return [{"id": aviso, **AVISOS[aviso]} for aviso in AVISOS_DO_JOGO.get(jogo_da_maquina(nome), ())]
+
+
 # ======================================================================
 # AS SEÇÕES DA ARENA
 # ======================================================================

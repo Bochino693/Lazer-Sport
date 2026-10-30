@@ -42,6 +42,29 @@
        Citar {{ csrf_token }} aqui também garante o cookie na resposta. -->
   <meta name="csrf-token" content="{{ csrf_token }}">
 
+  {% comment %}
+    TROCA DE TELA NA HORA. Quando o dedo encosta num link (ou o mouse
+    para em cima dele), o navegador já busca a página seguinte; no toque,
+    ela está pronta. Só as páginas públicas de vitrine, que não mudam nada
+    no servidor ao abrir -- carrinho, conta, sair, painel e APIs ficam de
+    fora. Navegador sem suporte ignora este bloco.
+  {% endcomment %}
+  <script type="speculationrules">
+  {
+    "prefetch": [{
+      "source": "document",
+      "where": {"and": [
+        {"href_matches": ["/", "/loja/", "/brinquedos/", "/brinquedo/*", "/combo/*", "/promocao/*",
+                          "/pecas-reposicao/", "/pecas/*", "/manutencoes/", "/arena/", "/jogos/", "/jogos/:jogo/",
+                          "/eventos/", "/projetos/", "/categoria/*", "/estabelecimentos/", "/estabelecimentos/*"]},
+        {"not": {"href_matches": ["/jogos/partida/", "/jogos/ranking/*"]}},
+        {"not": {"selector_matches": "[data-no-prefetch], [download], [target=_blank]"}}
+      ]},
+      "eagerness": "moderate"
+    }]
+  }
+  </script>
+
   <!-- Curtir e guardar na lista de desejos, com ou sem conta. -->
   <link rel="stylesheet" href="{% estatico 'site/ls-favoritos.css' %}">
   <script src="{% estatico 'site/ls-favoritos.js' %}" defer></script>
@@ -173,6 +196,7 @@
         <div class="ls-topo-painel" id="topo-jogos">
           <a href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span><b>Simulador de jogos</b><small>Jogue a prévia dos jogos das nossas máquinas</small></span></a>
           <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i><span><b>Arena 3D</b><small>As máquinas da fábrica em 3D, com as fotos reais</small></span></a>
+          <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera" aria-hidden="true"></i><span><b>Todas as máquinas</b><small>Fotos reais de frente, lado e costas</small></span></a>
         </div>
       </div>
 
@@ -334,7 +358,8 @@
     <div class="ls-mobile-nav-list">
       <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Início</a>
       <a class="ls-mobile-nav-arena" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Simulador de jogos<span class="ls-topo-novo">Novo</span></a>
-      <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D: as máquinas da fábrica</a>
+      <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D</a>
+      <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera nav-icon" aria-hidden="true"></i>Todas as máquinas</a>
       <span class="ls-mobile-nav-grupo">Brinquedos</span>
       <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
       <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>

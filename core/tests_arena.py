@@ -80,6 +80,11 @@ class ArenaPaginaTests(TestCase):
         maquinas = resposta.context["arena_dados"]["maquinas"]
         self.assertEqual(sorted(m["nome"] for m in maquinas), ["Air Game Hockey", "Dragon Bowling Rosa"])
 
+    def test_da_para_ver_a_maquina_de_todos_os_lados(self):
+        html = self.client.get(reverse("arena")).content.decode()
+        for vista in ("girar", "frente", "direita", "costas", "esquerda", "cima", "baixo"):
+            self.assertIn(f'data-arena-vista="{vista}"', html)
+
 
 
 class SimuladorTests(TestCase):
@@ -206,6 +211,21 @@ class SecoesDaArenaTests(TestCase):
         self.assertEqual(arena.jogo_da_maquina("Basquete Street"), "")
         self.assertEqual(arena.jogo_da_maquina("Boxe Força Máxima"), "")
         self.assertEqual(arena.jogo_da_maquina("Mundo Zumbi"), "")
+
+    def test_faixas_de_aviso_so_no_lazer_shot(self):
+        self.assertEqual([a["id"] for a in arena.avisos_da_maquina("Lazer Shot")], ["camera", "arma"])
+        self.assertEqual(arena.avisos_da_maquina("Dragon Bowling Rosa"), [])
+        self.assertEqual(arena.avisos_da_maquina("Basquete Street"), [])
+        lazer = _brinquedo("Lazer Shot")
+        _brinquedo("Air Game Hockey")
+        pagina = self.client.get(reverse("brinquedo_detalhe", args=[lazer.pk])).content.decode()
+        self.assertIn('aria-label="Contém câmera e Arma personalizada"', pagina)
+        catalogo = self.client.get(reverse("brinquedos")).content.decode()
+        self.assertEqual(catalogo.count('class="ls-faixas"'), 1)
+        # na galeria de fotos da arena tem; na ficha da Arena 3D, não
+        html = self.client.get(reverse("arena")).content.decode()
+        self.assertEqual(html.count('class="ls-faixas"'), 1)
+        self.assertNotIn("ls-faixas", html.split('id="arena-3d"')[1].split('id="maquinas"')[0])
 
     def test_pagina_do_produto_sem_3d(self):
         boliche = _brinquedo("Dragon Bowling Rosa")

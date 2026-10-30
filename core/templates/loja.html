@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load interno_extras static %}
+{% load interno_extras static avisos %}
 {% load fotos %}
 
 {% block title %}Loja | Lazer & Sport Brinquedos{% endblock %}
@@ -131,6 +131,7 @@
                                 {% else %}
                                     <i class="fa-solid fa-image sem-imagem" aria-hidden="true"></i>
                                 {% endif %}
+                                {% if item.tipo == 'brinquedo' %}{% faixas item.titulo %}{% endif %}
                             </div>
                         </a>
 

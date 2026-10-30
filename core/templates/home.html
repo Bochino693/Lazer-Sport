@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load interno_extras static %}
+{% load interno_extras static avisos %}
 {% load fotos %}
 {% load humanize %}
 {% load cache %}
@@ -96,6 +96,7 @@
           <a class="ls-vitrine-foto" href="{{ item.url }}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">
             <img src="{{ item.capa }}" alt="{{ item.nome }}" width="900" height="900" decoding="async"
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+            {% faixas item.nome %}
           </a>
           <div class="ls-vitrine-ficha">
             <span class="ls-vitrine-categoria">{{ item.categoria }}</span>
@@ -365,6 +366,7 @@
                       title="Guardar na lista de desejos">
                 <i class="fa-regular fa-star" data-favorito-icone aria-hidden="true"></i>
               </button>
+              {% faixas brinquedo.nome_brinquedo %}
 
               {% if brinquedo.imagem_brinquedo %}
                 <img
