@@ -2,8 +2,14 @@
    QUADRO INICIAL DA HOME — vitrine que gira, painel que se atualiza.
 
    A vitrine troca de brinquedo sozinha a cada poucos segundos, mas para
-   quando alguém está olhando (mouse em cima, foco do teclado, aba
-   escondida). Inclina com o mouse e com o dedo, e desliza no celular.
+   quando alguém está olhando (mouse em cima, foco do teclado, quadro fora
+   da tela). Inclina com o mouse e desliza com o dedo no celular.
+
+   NADA AQUI RODA A CADA QUADRO. O relógio da vitrine é a animação CSS da
+   barrinha de progresso (o compositor anda com ela sozinho) e a troca de
+   brinquedo vem no fim dela. Antes um laço de requestAnimationFrame
+   reescrevia a barrinha em todo quadro -- e no celular cada quadro gasto
+   ali era um quadro a menos para a rolagem.
 
    O painel chega pronto no HTML; aqui ele só (1) conta do zero até o
    número quando aparece na tela e (2) pergunta ao servidor a cada minuto
@@ -26,10 +32,20 @@
   var minis = vitrine ? Array.prototype.slice.call(vitrine.querySelectorAll("[data-ir]")) : [];
   var barra = vitrine && vitrine.querySelector("[data-vitrine-progresso]");
   var atual = 0;
-  var DURACAO = 5200;
-  var decorrido = 0;
-  var parado = false;
-  var ultimo = 0;
+  var volta = 0;
+
+  // Reinicia a barrinha trocando o nome da animação (a / b): o navegador
+  // recomeça sozinho, sem precisar medir a página para isso.
+  function correr() {
+    if (!barra || reduzido || slides.length < 2) return;
+    volta = 1 - volta;
+    barra.classList.toggle("correndo-a", volta === 0);
+    barra.classList.toggle("correndo-b", volta === 1);
+  }
+
+  function parar(sim) {
+    if (vitrine) vitrine.classList.toggle("ls-vitrine--parada", sim);
+  }
 
   function mostrar(indice) {
     if (!slides.length) return;
@@ -55,7 +71,7 @@
       botao.classList.toggle("ativo", i === atual);
       botao.setAttribute("aria-pressed", i === atual ? "true" : "false");
     });
-    decorrido = 0;
+    correr();
   }
 
   if (slides.length > 1) {
@@ -63,10 +79,10 @@
       botao.addEventListener("click", function () { mostrar(Number(botao.dataset.ir)); });
     });
 
-    vitrine.addEventListener("mouseenter", function () { parado = true; });
-    vitrine.addEventListener("mouseleave", function () { parado = false; });
-    vitrine.addEventListener("focusin", function () { parado = true; });
-    vitrine.addEventListener("focusout", function () { parado = false; });
+    vitrine.addEventListener("mouseenter", function () { parar(true); });
+    vitrine.addEventListener("mouseleave", function () { parar(false); });
+    vitrine.addEventListener("focusin", function () { parar(true); });
+    vitrine.addEventListener("focusout", function () { parar(false); });
 
     // Deslizar com o dedo troca de brinquedo.
     var inicioX = null;
@@ -78,22 +94,15 @@
       if (Math.abs(dx) > 40) mostrar(atual + (dx < 0 ? 1 : -1));
     });
 
-    if (!reduzido) {
-      var passo = function (agora) {
-        window.requestAnimationFrame(passo);
-        var dt = ultimo ? Math.min(100, agora - ultimo) : 0;
-        ultimo = agora;
-        if (parado || document.hidden || !visivel) return;
-        decorrido += dt;
-        if (barra) barra.style.setProperty("--progresso", Math.min(1, decorrido / DURACAO).toFixed(3));
-        if (decorrido >= DURACAO) mostrar(atual + 1);
-      };
-      window.requestAnimationFrame(passo);
-    }
+    if (barra) barra.addEventListener("animationend", function () { mostrar(atual + 1); });
+    correr();
   }
 
-  // Inclinação 3D seguindo o mouse ou o dedo.
-  if (palco && !reduzido) {
+  // Inclinação 3D seguindo o mouse. Só com mouse: no celular o dedo que
+  // passa pela vitrine está rolando a página, e cada movimento obrigava o
+  // navegador a medir e redesenhar a vitrine no meio da rolagem.
+  var temMouse = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (palco && !reduzido && temMouse) {
     palco.addEventListener("pointermove", function (e) {
       var r = palco.getBoundingClientRect();
       var x = (e.clientX - r.left) / r.width - 0.5;
@@ -114,8 +123,13 @@
      --------------------------------------------------------------- */
   var visivel = true;
   var numeros = Array.prototype.slice.call(quadro.querySelectorAll("[data-contar]"));
+  // Um formatador por número de casas, criado uma vez: toLocaleString com
+  // opções monta um formatador novo a cada chamada, e a contagem chama
+  // dezenas de vezes por segundo.
+  var formatadores = {};
   var formatar = function (valor, casas) {
-    return Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+    var f = formatadores[casas] || (formatadores[casas] = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas }));
+    return f.format(Number(valor));
   };
 
   function contar(el, ate) {

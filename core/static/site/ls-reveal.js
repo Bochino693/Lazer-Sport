@@ -154,9 +154,17 @@
        o rodapé inteiro sumindo.
 
        Esta varredura revela qualquer bloco que já esteja de fato na tela.
-       Ela custa quase nada: percorre só o que ainda não entrou, e se
-       desliga sozinha quando não sobra nenhum. */
+       Ela percorre só o que ainda não entrou, e se desliga sozinha quando
+       não sobra nenhum. Roda quando a rolagem PARA, e não a cada quadro:
+       medir os blocos no meio da rolagem do celular era trabalho em todo
+       quadro para um caso que só importa com a página parada no fim. */
     var redeAgendada = false;
+    var temporizadorRede = 0;
+
+    function redeQuandoParar() {
+        window.clearTimeout(temporizadorRede);
+        temporizadorRede = window.setTimeout(rede, 140);
+    }
 
     function rede() {
         if (redeAgendada) return;
@@ -170,8 +178,8 @@
             );
 
             if (!pendentes.length) {
-                window.removeEventListener("scroll", rede);
-                window.removeEventListener("resize", rede);
+                window.removeEventListener("scroll", redeQuandoParar);
+                window.removeEventListener("resize", redeQuandoParar);
                 return;
             }
 
@@ -186,8 +194,8 @@
         });
     }
 
-    window.addEventListener("scroll", rede, { passive: true });
-    window.addEventListener("resize", rede, { passive: true });
+    window.addEventListener("scroll", redeQuandoParar, { passive: true });
+    window.addEventListener("resize", redeQuandoParar, { passive: true });
 
     /* ---------------------------------------------------------------------
        3. Skeleton das imagens
@@ -198,7 +206,7 @@
         img.classList.add(falhou ? "is-failed" : "is-loaded");
     }
 
-    var FORA_DO_SKELETON = "header, .ls-quick-dock, .ls-cart-loader, .ls-page-loader";
+    var FORA_DO_SKELETON = "header, .ls-cart-loader, .ls-page-loader";
 
     function prepararImagem(img) {
         if (img.hasAttribute("data-ls-img")) return;

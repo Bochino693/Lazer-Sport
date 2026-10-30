@@ -471,10 +471,10 @@
     }
 
     function atualizarBadgeCarrinho(total) {
-        const badge = document.getElementById('badge-carrinho');
-        const botaoCarrinho = document.getElementById('float-carrinho');
-        if (badge) badge.textContent = total;
-        if (botaoCarrinho) botaoCarrinho.style.display = 'flex';
+        document.querySelectorAll('[data-carrinho-total]').forEach((selo) => {
+            selo.textContent = Number(total) || 0;
+            selo.classList.toggle('vazio', !(Number(total) > 0));
+        });
     }
 
     const formCarrinho = document.getElementById('form-adicionar-carrinho');

@@ -169,66 +169,27 @@ function igualarAlturaGridPecas() {
     cards.forEach(card => { card.style.height = maiorAltura + 'px'; });
 }
 
-function igualarAlturaCards() {
-    const cards = Array.from(document.querySelectorAll('.card-produto')).filter(
-        card => card.closest('.card-link').offsetParent !== null
-    );
-    if (!cards.length) return;
+/* Os cards de brinquedo têm a mesma altura pelo CSS (grade esticada e
+   card curto, sem texto de tamanho variável). A conta em JavaScript que
+   igualava as alturas saiu: ela media a página inteira a cada foto que
+   chegava, bem no meio da rolagem do celular. */
 
-    const imagensPendentes = [];
-
-    cards.forEach(card => {
-        card.style.height = 'auto';
-        const img = card.querySelector('img');
-        if (img && !img.complete) imagensPendentes.push(img);
-    });
-
-    function aplicar() {
-        let maior = 0;
-
-        cards.forEach(card => {
-            card.style.height = 'auto';
-        });
-
-        cards.forEach(card => {
-            maior = Math.max(maior, card.offsetHeight);
-        });
-
-        cards.forEach(card => {
-            card.style.height = maior + 'px';
-        });
-    }
-
-    if (!imagensPendentes.length) {
-        aplicar();
-        return;
-    }
-
-    let carregadas = 0;
-
-    imagensPendentes.forEach(img => {
-        img.addEventListener('load', () => {
-            carregadas++;
-            if (carregadas === imagensPendentes.length) aplicar();
-        }, { once: true });
-
-        img.addEventListener('error', () => {
-            carregadas++;
-            if (carregadas === imagensPendentes.length) aplicar();
-        }, { once: true });
-    });
+/* No celular a barra de endereço some e volta enquanto a pessoa rola, e
+   cada vez o navegador dispara "resize" -- só com a ALTURA diferente.
+   Quem depende só da largura (colunas, carrosséis) escuta isto aqui e
+   não refaz conta à toa no meio da rolagem. */
+function aoMudarLargura(callback) {
+    let largura = window.innerWidth;
+    let temporizador;
+    window.addEventListener('resize', () => {
+        if (window.innerWidth === largura) return;
+        largura = window.innerWidth;
+        clearTimeout(temporizador);
+        temporizador = setTimeout(callback, 200);
+    }, { passive: true });
 }
 
-// Recalcula sempre que a tela muda de tamanho (o grid muda de colunas
-// e a altura ideal dos cards muda junto)
-let _resizeTimer;
-window.addEventListener('resize', () => {
-    clearTimeout(_resizeTimer);
-    _resizeTimer = setTimeout(() => {
-        igualarAlturaCards();
-        igualarAlturaGridPecas();
-    }, 200);
-});
+aoMudarLargura(igualarAlturaGridPecas);
 
 
 /* ======================================================
@@ -310,12 +271,17 @@ function paraNumeroBR(valor) {
     return normalizarNumeroMoeda(valor);
 }
 
-function reanimarCard(card, atraso) {
-    const alvo = card.querySelector('.card-produto, .pecas-card') || card;
-    alvo.style.animation = 'none';
-    void alvo.offsetHeight; // força reflow pra poder reiniciar a animação
-    alvo.style.animationDelay = atraso + 's';
-    alvo.style.animation = '';
+/* Reinicia a entrada dos cards da página nova. Uma medição só para a
+   lista inteira: antes era uma por card -- doze reflows da página toda
+   em seguida, já na abertura da home. */
+function reanimarCards(cards) {
+    const alvos = cards.map(card => card.querySelector('.card-produto, .pecas-card') || card);
+    alvos.forEach(alvo => { alvo.style.animation = 'none'; });
+    if (alvos.length) void alvos[0].offsetHeight; // força reflow pra poder reiniciar a animação
+    alvos.forEach((alvo, i) => {
+        alvo.style.animationDelay = (i * 0.035) + 's';
+        alvo.style.animation = '';
+    });
 }
 
 function inicializarProdutosClientSide() {
@@ -325,7 +291,7 @@ function inicializarProdutosClientSide() {
     const cards = Array.from(grid.querySelectorAll('.card-link'));
     if (!cards.length) return;
 
-    const porPagina = 9;
+    const porPagina = 12;
     let pagina = 1;
     let ordem = 'az';
 
@@ -363,17 +329,17 @@ function inicializarProdutosClientSide() {
         const inicio = (pagina - 1) * porPagina;
         const visiveis = new Set(ordenados.slice(inicio, inicio + porPagina));
 
-        let atraso = 0;
+        const mostrados = [];
         ordenados.forEach(card => {
             if (visiveis.has(card)) {
                 card.style.display = '';
                 grid.appendChild(card);
-                reanimarCard(card, atraso);
-                atraso += 0.035;
+                mostrados.push(card);
             } else {
                 card.style.display = 'none';
             }
         });
+        reanimarCards(mostrados);
 
         document.getElementById('prod-page-info').textContent =
             `Página ${pagina} de ${totalPaginas}`;
@@ -381,8 +347,6 @@ function inicializarProdutosClientSide() {
         document.getElementById('prod-next').disabled = pagina >= totalPaginas;
 
         renderizarTodasEstrelas(grid);
-        renderizarMoedas(grid);
-        requestAnimationFrame(() => requestAnimationFrame(igualarAlturaCards));
     }
 
     document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
@@ -450,17 +414,17 @@ function inicializarPecasClientSide() {
         const inicio = (pagina - 1) * porPagina;
         const visiveis = new Set(lista.slice(inicio, inicio + porPagina));
 
-        let atraso = 0;
+        const mostrados = [];
         cards.forEach(card => {
             if (visiveis.has(card)) {
                 card.style.display = '';
                 grid.appendChild(card);
-                reanimarCard(card, atraso);
-                atraso += 0.035;
+                mostrados.push(card);
             } else {
                 card.style.display = 'none';
             }
         });
+        reanimarCards(mostrados);
 
         document.getElementById('pecas-page-info').textContent =
             `Página ${pagina} de ${totalPaginas}`;
@@ -529,16 +493,16 @@ function inicializarGridPaginado({ gridId, cardSelector, porPagina, prevId, next
         const inicio = (pagina - 1) * porPagina;
         const fim = inicio + porPagina;
 
-        let atraso = 0;
+        const mostrados = [];
         cards.forEach((card, i) => {
             if (i >= inicio && i < fim) {
                 card.style.display = '';
-                reanimarCard(card, atraso);
-                atraso += 0.035;
+                mostrados.push(card);
             } else {
                 card.style.display = 'none';
             }
         });
+        reanimarCards(mostrados);
 
         const infoEl = document.getElementById(infoId);
         if (infoEl) infoEl.textContent = `Página ${pagina} de ${totalPaginas}`;
@@ -662,7 +626,7 @@ function inicializarCarrosselCombos() {
         bloquearClique = false;
     }, true);
 
-    window.addEventListener('resize', solicitarAtualizacao);
+    aoMudarLargura(solicitarAtualizacao);
     atualizarBotoes();
 }
 
@@ -673,7 +637,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarTodasEstrelas();
     renderizarMoedas();
 
-    igualarAlturaCards();
     igualarAlturaGridPecas();
     inicializarCarrosselCombos();
 
@@ -843,7 +806,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else iniciarAutoScroll();
         });
 
-        window.addEventListener("resize", () => {
+        aoMudarLargura(() => {
             if (mediaMobile.matches) scrollContainer.scrollLeft = 0;
             solicitarAtualizacao();
             reiniciarAutoScroll();

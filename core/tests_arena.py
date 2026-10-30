@@ -249,7 +249,8 @@ class PrecoSoDaLojaTests(TestCase):
 
     def test_home_arena_e_vitrine(self):
         home = self.client.get(reverse("home")).content.decode()
-        self.assertIn("8.900,00", home)
+        # o card curto da home não traz preço: só marca o que está à venda
+        self.assertIn("Disponível para compra", home)
         self.assertNotIn("12.345,00", home)
         self.assertNotIn("12.345,00", self.client.get(reverse("arena")).content.decode())
         dados = {d["nome"]: d for d in (

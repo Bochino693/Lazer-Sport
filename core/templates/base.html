@@ -230,6 +230,18 @@
             {# Conta de acesso interno não tem lista de desejos: ela tem painel. #}
             <a href="{{ ls_url_painel|default:'/' }}" role="menuitem">👑 Painel da fábrica</a>
           {% else %}
+            {% comment %}
+              Carrinho, pedidos e manutenções moravam nos botões flutuantes,
+              que saíram para a página ter a largura toda. No celular eles
+              estão na barra de baixo e no Menu; no computador, aqui.
+            {% endcomment %}
+            <a href="{% url 'carrinho' %}#carrinho" role="menuitem" class="ls-menu-conta-carrinho">🛒 Carrinho
+              <b class="ls-menu-conta-selo{% if not carrinho_total_itens %} vazio{% endif %}" data-carrinho-total>{{ carrinho_total_itens|default:0 }}</b>
+            </a>
+            <a href="{% url 'meus_pedidos' %}#pedidos" role="menuitem">📦 Meus pedidos</a>
+            {% if tem_manutencao %}
+              <a href="{% url 'manutencoes' %}?tab=lista#cab" role="menuitem">🔧 Manutenções</a>
+            {% endif %}
             <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
           {% endif %}
           <a href="{% url 'logout' %}#logout-box" role="menuitem">🚪 Sair</a>
@@ -420,91 +432,8 @@
   </button>
 </nav>
 
-<div class="float-stack">
-
-    {% comment %}
-      A EQUIPE VÊ O PAINEL; O CLIENTE VÊ A COMPRA.
-
-      Carrinho, lista de desejos e pedidos são do perfil de cliente. Quem
-      entra com conta de acesso interno não compra na própria loja (quem
-      barra de verdade é `LojaSomenteDeClienteMiddleware`), então mostrar
-      os botões seria oferecer três portas que respondem "isto não é seu".
-
-      No lugar deles, a porta que a pessoa realmente quer: o painel. Ela
-      aparece para toda conta interna -- por função, por staff ou por
-      superusuário --, e não só para `is_staff`, que deixava de fora
-      justamente quem tem função de equipe sem acesso ao admin do Django.
-    {% endcomment %}
-    {% if usuario_da_equipe %}
-    <a href="{{ ls_url_painel|default:'/' }}"
-       id="float-painel-interno"
-       class="float-btn float-admin-panel"
-       title="Painel da fábrica"
-       data-tooltip="Painel da fábrica">
-        <i class="fa-solid fa-crown"></i>
-    </a>
-    {% else %}
-
-    <a href="{% url 'lista_desejos' %}#lista-desejos"
-       class="float-btn float-desejos"
-       title="Lista de desejos"
-       data-tooltip="Lista de desejos">
-        <i class="fa-solid fa-star"></i>
-        <span class="badge{% if not tem_lista_desejos %} vazio{% endif %}"
-              data-lista-desejos-total>{{ total_lista_desejos|default:0 }}</span>
-    </a>
-
-    {% if user.is_authenticated %}
-    <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos" data-tooltip="Meus pedidos">
-        <i class="fa-solid fa-box"></i>
-        <span class="badge">{{ total_pedidos_ativos }}</span>
-    </a>
-    {% endif %}
-
-    {% if user.is_authenticated %}
-    <a href="{% url 'carrinho' %}#carrinho"
-       id="carrinho-float-btn"
-       class="float-btn float-carrinho {% if carrinho_total_itens == 0 %}hidden{% endif %}"
-       title="Carrinho"
-       data-tooltip="Carrinho">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <span id="carrinho-contador" class="badge">
-            {{ carrinho_total_itens|default:"0" }}
-        </span>
-    </a>
-    {% endif %}
-    {% endif %}
-
-    {% if user.is_authenticated and tem_manutencao %}
-    <a href="{% url 'manutencoes' %}?tab=lista#cab"
-       class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}"
-        title="Manutenções"
-        data-tooltip="Manutenções">
-        <i class="fa-solid fa-screwdriver-wrench"></i>
-        <span class="badge">{{ manutencao_abertas }}</span>
-    </a>
-    {% endif %}
-
-</div>
-
-<!-- ======= RODAPÉ E CONTATO RÁPIDO (adicionado — não mexe no CSS/JS acima) ======= -->
+<!-- ======= RODAPÉ ======= -->
   <link rel="stylesheet" href="{% estatico 'site/ls-base-fim.css' %}">
-
-<nav class="ls-quick-dock" aria-label="Contato rápido">
-    <a
-        href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
-        target="_blank" rel="noopener noreferrer"
-        class="ls-dock-whatsapp"
-        aria-label="Falar com a Lazer e Sport pelo WhatsApp">
-        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-    </a>
-    <a href="https://www.instagram.com/lazersportbrinquedos"
-       target="_blank" rel="noopener noreferrer"
-       class="ls-dock-instagram"
-       aria-label="Abrir o Instagram da Lazer e Sport">
-        <i class="fa-brands fa-instagram" aria-hidden="true"></i>
-    </a>
-</nav>
 
 <footer class="ls-footer">
 
@@ -846,10 +775,23 @@ window.addEventListener('resize', () => {
 /* ================== HEADER AO ROLAR ================== */
 const lsHeader = document.querySelector('header');
 if (lsHeader) {
+  // Uma leitura por quadro (no máximo) e a classe só muda quando o
+  // estado muda: ler a posição a cada evento de rolagem podia obrigar o
+  // navegador a refazer a diagramação no meio da rolagem do celular.
+  let rolado = null;
+  let agendado = false;
   const atualizarHeaderScroll = () => {
-    lsHeader.classList.toggle('ls-scrolled', window.scrollY > 12);
+    agendado = false;
+    const agora = window.scrollY > 12;
+    if (agora === rolado) return;
+    rolado = agora;
+    lsHeader.classList.toggle('ls-scrolled', agora);
   };
-  window.addEventListener('scroll', atualizarHeaderScroll, { passive: true });
+  window.addEventListener('scroll', () => {
+    if (agendado) return;
+    agendado = true;
+    window.requestAnimationFrame(atualizarHeaderScroll);
+  }, { passive: true });
   atualizarHeaderScroll();
 }
 
@@ -897,17 +839,33 @@ if (lsHeader) {
         links.forEach(link => link.classList.toggle("active-link", link === alvo));
       }
 
+      /* As posições das seções e a altura do cabeçalho são medidas uma
+         vez e guardadas -- medir a cada quadro da rolagem obrigava o
+         navegador a refazer a diagramação no meio dela. Medem de novo
+         quando a largura muda e quando a página termina de carregar
+         (fotos que chegam mudam as alturas). */
+      let posicoes = [];
+      let alturaTopo = 0;
+      function medir() {
+        alturaTopo = folga();
+        posicoes = secoes.map(item => item.el.offsetTop);
+      }
+
+      let aceso;
       function atualizar() {
-        const linha = window.pageYOffset + folga();
+        const linha = window.pageYOffset + alturaTopo;
 
         let atual = null;
-        for (const item of secoes) {
-          if (item.el.offsetTop <= linha) atual = item;
+        for (let i = 0; i < secoes.length; i++) {
+          if (posicoes[i] <= linha) atual = secoes[i];
           else break;
         }
 
         /* Sem nenhuma seção acima da linha, estamos no começo da página. */
-        acender(atual ? atual.link : linkHome);
+        const alvo = atual ? atual.link : linkHome;
+        if (alvo === aceso) return;
+        aceso = alvo;
+        acender(alvo);
       }
 
       let agendado = false;
@@ -920,7 +878,15 @@ if (lsHeader) {
         });
       }, { passive: true });
 
-      window.addEventListener("resize", atualizar, { passive: true });
+      let largura = window.innerWidth;
+      window.addEventListener("resize", () => {
+        if (window.innerWidth === largura) return;
+        largura = window.innerWidth;
+        medir();
+        atualizar();
+      }, { passive: true });
+      window.addEventListener("load", () => { medir(); atualizar(); });
+      medir();
       atualizar();
   });
 
@@ -936,31 +902,11 @@ if (lsHeader) {
 
 /* ================== CARRINHO ================== */
 function atualizarBadgeCarrinho(total) {
-  const carrinhoBtn = document.getElementById('carrinho-float-btn');
-  const contador = document.getElementById('carrinho-contador');
-
-  // A barra de baixo do celular e os atalhos do menu contam junto.
+  // A barra de baixo do celular, os atalhos do Menu e o menu da conta.
   document.querySelectorAll('[data-carrinho-total]').forEach((selo) => {
     selo.textContent = Number(total) || 0;
     selo.classList.toggle('vazio', !(Number(total) > 0));
   });
-
-  if (!carrinhoBtn || !contador) return;
-
-  const totalInt = Number(total) || 0;
-  contador.textContent = totalInt;
-
-  if (totalInt > 0) {
-    carrinhoBtn.classList.remove('hidden');
-
-    // força repaint (garante visibilidade)
-    carrinhoBtn.offsetHeight;
-
-    contador.classList.add('update-bump');
-    setTimeout(() => contador.classList.remove('update-bump'), 350);
-  } else {
-    carrinhoBtn.classList.add('hidden');
-  }
 }
 
 /* ================== ADICIONAR AO CARRINHO ================== */
