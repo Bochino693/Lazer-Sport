@@ -945,6 +945,7 @@ const ANIMACOES = {
         i, x,
         aro: V(x, 2.8, -10.88),
         mao: V(x, 2.12, -9.0),
+        naMao: V(x, 0.97 + 1.02, -8.95),
         fase: "segura", tempo: -i * 0.7, balanco: 0, erra: false, de: V(), fora: V(),
       };
       // a tabela da cesta é uma tela: o Swish Arena de verdade (o mesmo
@@ -1050,6 +1051,7 @@ const ANIMACOES = {
         cestas.forEach((c, i) => {
           c.jogo = jogosSwish[i % 2];
           c.tabela.material = c.jogo.mat;
+          if (i === 1 || i === 2) c.jogo.tabela = c.tabela; // a cesta do meio de cada jogo diz se ele está à vista
         });
       } catch (erro) {
         console.error("Arena 3D: o Swish das tabelas não carregou", erro);
@@ -1064,6 +1066,16 @@ const ANIMACOES = {
       p.arremessar(p.mao, potencia, angulo);
       item.parado = 0;
     };
+    /** A tela está na frente da câmera (e perto)? Senão, pintar é à toa. */
+    const praTela = new T.Vector3();
+    const aVista = (malha) => {
+      malha.getWorldPosition(praTela);
+      const camera = arena.camera;
+      if (camera.position.distanceTo(praTela) > 45) return false;
+      camera.getWorldDirection(olharAux);
+      return praTela.sub(camera.position).dot(olharAux) > 0;
+    };
+    const olharAux = new T.Vector3();
     const andarSwish = (dt, t, camera, perto) => {
       jogosSwish.forEach((item) => {
         if (!perto) return; // de longe, o jogo espera
@@ -1077,7 +1089,7 @@ const ANIMACOES = {
           item.parado += dt;
           if (item.parado > 2.4) arremessarNoJogo(item, Math.random() < 0.25);
         }
-        if (t - item.ultimo < 1 / 12) return;
+        if (t - item.ultimo < 1 / 10 || !aVista(item.tabela) || !arena.podePintar()) return;
         item.ultimo = t;
         item.ctx.setTransform(1, 0, 0, 1, 0, 0);
         item.ctx.clearRect(0, 0, 480, 270);
@@ -1146,7 +1158,7 @@ const ANIMACOES = {
         if (f >= 1) { c.fase = "pega"; c.tempo = 0; c.de.copy(b); }
       } else if (c.fase === "pega") {
         const f = Math.min(1, c.tempo / 0.4);
-        b.lerpVectors(c.de, V(c.x, 0.97 + 1.02, -8.95), f);
+        b.lerpVectors(c.de, c.naMao, f);
         k.bracoE.rotation.x = k.bracoD.rotation.x = -0.55 - f * 0.7;
         if (f >= 1) { c.fase = "segura"; c.tempo = 0; }
       }
@@ -1216,6 +1228,8 @@ const ANIMACOES = {
     let fimGol = 0;
     const cor = new T.Color();
     const acesos = (j) => j.leds.filter((l) => l.aceso);
+    const quantosAcesos = (j) => { let n = 0; for (const l of j.leds) if (l.aceso) n++; return n; };
+    const peAux = new T.Vector3();
 
     const andarCirculo = (j, dt, t) => {
       const kid = j.crianca;
@@ -1230,7 +1244,7 @@ const ANIMACOES = {
         }
       });
       j.acender -= dt;
-      if (j.acender <= 0 && acesos(j).length < 1 + (Math.floor(t / 7 + j.k) % 3)) {
+      if (j.acender <= 0 && quantosAcesos(j) < 1 + (Math.floor(t / 7 + j.k) % 3)) {
         const livres = j.leds.filter((l) => !l.aceso && l.gol <= 0);
         const l = livres[Math.floor(Math.random() * livres.length)];
         if (l) { l.aceso = CORES_LED[Math.floor(Math.random() * CORES_LED.length)]; l.vida = 3.6 - (1 - tempoGol / 45) * 1.3; }
@@ -1282,7 +1296,7 @@ const ANIMACOES = {
         kid.pernaD.rotation.x *= Math.max(0, 1 - dt * 8);
         const f = Math.min(1, j.tempo / 0.9);
         const frente = kid.grupo.rotation.y;
-        const pe = V(kid.grupo.position.x + Math.sin(frente) * 0.28, 0.19, kid.grupo.position.z + Math.cos(frente) * 0.28);
+        const pe = peAux.set(kid.grupo.position.x + Math.sin(frente) * 0.28, 0.19, kid.grupo.position.z + Math.cos(frente) * 0.28);
         b.lerpVectors(j.de, pe, 1 - (1 - f) * (1 - f));
         j.bola.rotation.x -= dt * 8 * (1 - f);
         if (f >= 1) { j.fase = "mira"; j.tempo = 0; }
@@ -1381,15 +1395,14 @@ const ANIMACOES = {
       // as telas: no máximo duas por quadro, 8 vezes por segundo cada,
       // só as de perto e de frente para a câmera
       camera.getWorldDirection(olhar);
-      for (let n = 0; n < telas.length && n < 4; n++) {
+      for (let n = 0; n < telas.length; n++) {
         const item = telas[(vez + n) % telas.length];
-        if (t - item.ultimo < 1 / 8) continue;
-        item.suporte.getWorldPosition(onde);
-        if (camera.position.distanceTo(onde) > 40 || onde.sub(camera.position).dot(olhar) < 0) continue;
+        if (t - item.ultimo < 1 / 8 || !aVista(item.suporte)) continue;
+        if (!arena.podePintar()) break;
         item.ultimo = t;
         item.pintar(item.ctx);
         item.tex.needsUpdate = true;
-        if (n > 0) break;
+        break;
       }
       vez = (vez + 1) % telas.length;
     };
@@ -1867,6 +1880,8 @@ class Arena {
     palco.prepend(this.canvas);
 
     const densidade = Math.min(window.devicePixelRatio || 1, this.celular ? 1.5 : 1.75);
+    this.densidadeMaxima = densidade;
+    this.densidadeMinima = Math.min(densidade, this.celular ? 0.75 : 1);
     this.renderer = new T.WebGLRenderer({ canvas: this.canvas, antialias: densidade < 2, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(densidade);
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
@@ -2839,6 +2854,7 @@ class Arena {
       if (passeio) passeio.hidden = !(maquina.modelo || maquina.forma);
     }
     this.mostrarFicha(maquina);
+    this.corpo.classList.add("tem-ficha");
     this.marcarLista();
   }
 
@@ -2856,6 +2872,7 @@ class Arena {
     this.roda.forEach((m) => { m.aro.material = this.luz(m.cor, 2.2); });
     this.foco.intensity = 0;
     if (this.vistas) this.vistas.hidden = true;
+    if (this.corpo) this.corpo.classList.remove("tem-ficha");
     if (this.ficha) {
       this.ficha.querySelector("[data-ficha-cheia]").hidden = true;
       this.ficha.querySelector("[data-ficha-vazia]").hidden = false;
@@ -2953,7 +2970,7 @@ class Arena {
     this.passeio.entrar();
     this.palco.classList.add("em-passeio");
     // no celular, o palco no meio da tela: a barra do site não cobre os botões
-    this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
+    if (!this.expandida) this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
   }
 
   sairPasseio({ voar = true } = {}) {
@@ -3123,6 +3140,7 @@ class Arena {
   ligar() {
     const raiz = this.raiz;
     this.ficha = raiz.querySelector("[data-arena-ficha]");
+    this.corpo = this.palco.closest(".arena3d-corpo") || this.palco.parentElement;
     this.controles = this.palco.querySelector("[data-arena-controles]");
     this.vistas = this.palco.querySelector("[data-arena-vistas]");
     this.rotulo = document.createElement("div");
@@ -3141,8 +3159,6 @@ class Arena {
 
     if (this.controles) {
       this.controles.hidden = false;
-      // sem tela cheia (o iPhone não deixa), o botão nem aparece
-      if (!this.palco.requestFullscreen) this.controles.querySelector('[data-arena-acao="tela-cheia"]').hidden = true;
       this.controles.addEventListener("click", (evento) => {
         const botao = evento.target.closest("[data-arena-acao]");
         if (botao) this.acao(botao.dataset.arenaAcao, botao);
@@ -3191,7 +3207,7 @@ class Arena {
           this.filtrar("");
         }
         this.selecionar(maquina);
-        this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
+        if (!this.expandida) this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
       });
     });
 
@@ -3200,8 +3216,9 @@ class Arena {
       if (evento.key === "ArrowRight") { this.vizinha(1); evento.preventDefault(); }
       else if (evento.key === "ArrowLeft") { this.vizinha(-1); evento.preventDefault(); }
       else if (evento.key === "Escape") {
-        // Esc solta a máquina; sem nenhuma, volta para a arena inteira
+        // Esc solta a máquina; sem nenhuma, sai da tela cheia ou volta para a arena inteira
         if (this.selecionada) this.fecharSelecao();
+        else if (this.expandida) this.telaCheia(false);
         else this.verTudo();
         evento.preventDefault();
       }
@@ -3210,11 +3227,12 @@ class Arena {
 
     // fora da tela ou com a aba escondida: não desenha nada
     new IntersectionObserver((entradas) => {
-      this.visivel = entradas.some((e) => e.isIntersecting);
+      this.visivel = this.expandida || entradas.some((e) => e.isIntersecting);
       this.acordar();
     }).observe(this.palco);
     document.addEventListener("visibilitychange", () => this.acordar());
-    document.addEventListener("fullscreenchange", () => window.setTimeout(() => this.redimensionar(), 60));
+    // a tela cheia do navegador abriu ou fechou: a da arena segue como está
+    ["fullscreenchange", "webkitfullscreenchange"].forEach((nome) => document.addEventListener(nome, () => window.setTimeout(() => this.redimensionar(), 60)));
 
     this.visivel = true;
     this.acordar();
@@ -3233,9 +3251,53 @@ class Arena {
       botao.querySelector("i").className = this.tour ? "fa-solid fa-pause" : "fa-solid fa-play";
       if (this.tour) this.vizinha(1);
     } else if (nome === "tela-cheia") {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else if (this.palco.requestFullscreen) this.palco.requestFullscreen().catch(() => {});
+      this.telaCheia(!this.expandida);
     }
+  }
+
+  /**
+   * A TELA CHEIA: a arena (o 3D e a ficha) cobre a tela por conta própria e,
+   * onde o navegador deixa, entra também na tela cheia dele. Se o navegador
+   * fechar a dele (Esc, girar o celular, o iPhone que nem tem), a arena
+   * continua cheia: sai só pelo botão "Sair" (ou Esc sem máquina escolhida).
+   */
+  telaCheia(ligar) {
+    this.expandida = ligar;
+    // a seção da arena tem a animação de entrada (transform): dentro dela, o
+    // "fixed" não cobre a tela. Cheia, a arena vai para o nível da página;
+    // ao sair, volta para o lugar dela.
+    if (ligar && !this.lugarDoCorpo) {
+      this.lugarDoCorpo = document.createComment("arena 3d");
+      this.corpo.before(this.lugarDoCorpo);
+      document.body.append(this.corpo);
+    } else if (!ligar && this.lugarDoCorpo) {
+      this.lugarDoCorpo.replaceWith(this.corpo);
+      this.lugarDoCorpo = null;
+    }
+    this.corpo.classList.toggle("arena3d--cheia", ligar);
+    document.documentElement.classList.toggle("arena-tela-cheia", ligar);
+    const botao = this.controles.querySelector('[data-arena-acao="tela-cheia"]');
+    botao.setAttribute("aria-pressed", ligar ? "true" : "false");
+    botao.setAttribute("aria-label", ligar ? "Sair da tela cheia" : "Tela cheia");
+    botao.querySelector("i").className = ligar ? "fa-solid fa-xmark" : "fa-solid fa-up-right-and-down-left-from-center";
+    botao.querySelector("[data-tela-cheia-rotulo]").textContent = ligar ? "Sair" : "";
+    const dele = document.fullscreenElement || document.webkitFullscreenElement;
+    if (ligar && !dele) {
+      const pedir = this.corpo.requestFullscreen || this.corpo.webkitRequestFullscreen;
+      try {
+        const pedido = pedir && pedir.call(this.corpo, { navigationUI: "hide" });
+        if (pedido && pedido.catch) pedido.catch(() => {});
+      } catch (erro) { /* sem a do navegador: a da arena basta */ }
+    } else if (!ligar && dele) {
+      const sair = document.exitFullscreen || document.webkitExitFullscreen;
+      try {
+        const pedido = sair && sair.call(document);
+        if (pedido && pedido.catch) pedido.catch(() => {});
+      } catch (erro) { /* já saiu */ }
+    }
+    this.visivel = true;
+    this.acordar();
+    window.setTimeout(() => this.redimensionar(), 60);
   }
 
   redimensionar() {
@@ -3259,6 +3321,7 @@ class Arena {
         return;
       }
       requestAnimationFrame(passo);
+      this.medirQuadro(agora - this.relogioAnterior);
       const dt = Math.min(0.05, (agora - this.relogioAnterior) / 1000);
       this.relogioAnterior = agora;
       this.quadro(dt);
@@ -3266,7 +3329,49 @@ class Arena {
     requestAnimationFrame(passo);
   }
 
+  /**
+   * A resolução acompanha o aparelho: com os quadros lentos (abaixo de ~45
+   * por segundo), a densidade de pixels desce um degrau; com folga por um
+   * tempo, volta a subir. No celular mais fraco a imagem fica um pouco mais
+   * macia, mas tudo anda liso.
+   */
+  medirQuadro(ms) {
+    if (ms > 250) return; // a aba voltando: não conta
+    this.somaDosQuadros = (this.somaDosQuadros || 0) + ms;
+    this.quadrosMedidos = (this.quadrosMedidos || 0) + 1;
+    if (this.somaDosQuadros < 2000) return;
+    const media = this.somaDosQuadros / this.quadrosMedidos;
+    this.somaDosQuadros = 0;
+    this.quadrosMedidos = 0;
+    const atual = this.renderer.getPixelRatio();
+    let nova = atual;
+    if (media > 22) {
+      nova = Math.max(this.densidadeMinima, atual - 0.25);
+      this.folga = 0;
+    } else if (media < 15 && atual < this.densidadeMaxima) {
+      this.folga = (this.folga || 0) + 1;
+      if (this.folga >= 3) {
+        nova = Math.min(this.densidadeMaxima, atual + 0.25);
+        this.folga = 0;
+      }
+    } else {
+      this.folga = 0;
+    }
+    if (nova !== atual) {
+      this.renderer.setPixelRatio(nova);
+      this.redimensionar();
+    }
+  }
+
+  /** As telas (jogos, placares) pintam uma por quadro: nenhum quadro pesa mais que os outros. */
+  podePintar() {
+    if (this.pinturasNoQuadro >= 1) return false;
+    this.pinturasNoQuadro++;
+    return true;
+  }
+
   quadro(dt) {
+    this.pinturasNoQuadro = 0;
     this.relogio += dt;
     this.ocioso += dt;
     const t = this.relogio;
@@ -3474,6 +3579,8 @@ class Arena {
   /** Redesenha o mapa só quando algo nele muda (a câmera, a escolha, o tamanho). */
   atualizarMapa() {
     if (!this.mapa || this.mapa.hidden || this.passeio) return;
+    if (this.relogio - (this.mapaConferido || 0) < 0.1) return;
+    this.mapaConferido = this.relogio;
     const tela = this.telaDoMapa;
     const c = this.camera.position;
     const d = this.camera.getWorldDirection(this.ajuda);
@@ -4197,11 +4304,14 @@ class Passeio {
     }
   }
 
-  /** O mapa só se redesenha quando a pessoa se mexe (sem conta à toa). */
+  /** O mapa só se redesenha quando a pessoa se mexe (sem conta à toa), até 15 vezes por segundo. */
   atualizarMapa() {
+    const agora = performance.now();
+    if (agora - (this.mapaPintado || 0) < 66) return;
     const marca = `${this.pes.x.toFixed(2)},${this.pes.z.toFixed(2)},${(this.yaw + this.extra.yaw).toFixed(2)}`;
     if (marca !== this.ultimaMarca) {
       this.ultimaMarca = marca;
+      this.mapaPintado = agora;
       this.desenharMapa();
     }
   }
