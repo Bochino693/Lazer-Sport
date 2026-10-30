@@ -136,6 +136,9 @@ class EspacoEsportivoTests(TestCase):
         self.assertEqual(set(jogos), {"swish-arena", "gol-flash-arena"})
         self.assertIn("swish-arena-poster.webp", jogos["swish-arena"]["poster"])
         self.assertIn("gol-flash-arena-poster.webp", jogos["gol-flash-arena"]["poster"])
+        # o Swish das telas das cestas é o jogo do simulador, rodando
+        self.assertIn("jogos/basquete.js", jogos["swish-arena"]["script"])
+        self.assertEqual(jogos["swish-arena"]["variante"], "swish")
 
     def test_no_catalogo_tambem_vai_para_o_reino(self):
         Brinquedos.objects.create(

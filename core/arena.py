@@ -606,12 +606,20 @@ def modelos_fora_do_catalogo(catalogo):
 
 
 def jogos_do_modelo(modelo):
-    """Os jogos da casa que rodam no espaço: [{"slug", "titulo", "poster"}].
+    """Os jogos da casa que rodam no espaço, para as telas dele na Arena 3D.
 
-    O pôster vai nos telões do espaço, na Arena 3D.
+    [{"slug", "titulo", "poster", "script", "variante"}]: o pôster vai nas
+    telas que mostram o jogo parado; o script (o mesmo do simulador) roda o
+    jogo de verdade nas telas das cestas.
     """
     return [
-        {"slug": slug, "titulo": JOGOS_POR_SLUG[slug]["titulo"], "poster": estatico(JOGOS_POR_SLUG[slug]["poster"])}
+        {
+            "slug": slug,
+            "titulo": JOGOS_POR_SLUG[slug]["titulo"],
+            "poster": estatico(JOGOS_POR_SLUG[slug]["poster"]),
+            "script": estatico(JOGOS_POR_SLUG[slug]["script"]),
+            "variante": JOGOS_POR_SLUG[slug].get("variante", ""),
+        }
         for slug in (modelo or {}).get("jogos", ()) if slug in JOGOS_POR_SLUG
     ]
 

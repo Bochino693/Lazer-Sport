@@ -786,11 +786,12 @@ function montarCrianca(T, material, i) {
 /* ======================================================================
    O MOVIMENTO NOS OBJETOS DA FÁBRICA -- o que o espaço tem de jogo mexe,
    com crianças jogando:
-   - SWISH: uma tela em cima de cada uma das cinco cestas das enterradas,
-     com o jogo daquela cesta (pontos, tempo, "SWISH!", EM CHAMAS). Em
-     quatro, uma criança arremessa: a bola sobe em arco, entra (a redinha
-     balança) ou bate no aro, cai na cama inclinada e rola de volta para
-     ela. A do meio fica livre: é a da enterrada do passeio ("SUA VEZ!").
+   - SWISH: a tabela de cada uma das cinco cestas das enterradas é uma
+     tela com o Swish Arena DE VERDADE rodando (o jogo do simulador). Em
+     quatro, uma criança arremessa -- e o arremesso vale no jogo da tabela:
+     a bola sobe em arco, entra (a redinha balança) ou bate no aro, cai na
+     cama inclinada e rola de volta para ela. A do meio fica livre: é a da
+     enterrada do passeio.
    - GOL FLASH redondo, como a máquina de verdade: 7 LEDs na parede de
      dentro de cada círculo, de 1 a 3 acesos por vez (amarelo, vermelho,
      verde, azul), cada um apaga sozinho se ninguém acerta. A criança vira
@@ -937,14 +938,20 @@ const ANIMACOES = {
     texRede.repeat.set(3, 1);
     const matRede = new T.MeshBasicMaterial({ map: texRede, transparent: true, alphaTest: 0.3, side: T.DoubleSide, toneMapped: false });
     const geoRede = new T.CylinderGeometry(0.2, 0.12, 0.34, 18, 1, true);
+    const geoTabela = new T.PlaneGeometry(1.2, 0.675);
+    const matTabelaEspera = new T.MeshBasicMaterial({ color: "#0b1030", toneMapped: false });
     const cestas = [15.6, 13.6, 11.6, 9.6, 7.6].map((x, i) => {
       const cesta = {
         i, x,
         aro: V(x, 2.8, -10.88),
         mao: V(x, 2.12, -9.0),
-        placar: { pontos: 0, tempo: 45 + i * 7, seguidas: 0, cestas: 0, arremessos: 0, grito: 0, ganho: 0, fim: 0, texto: "SWISH!" },
         fase: "segura", tempo: -i * 0.7, balanco: 0, erra: false, de: V(), fora: V(),
       };
+      // a tabela da cesta é uma tela: o Swish Arena de verdade (o mesmo
+      // jogo do simulador) roda nela -- até ele chegar, o pôster
+      cesta.tabela = new T.Mesh(geoTabela, matTabelaEspera);
+      cesta.tabela.position.set(x, 3.05, -11.09);
+      g.add(cesta.tabela);
       cesta.rede = new T.Mesh(geoRede, matRede);
       cesta.rede.position.set(x, 2.62, -10.88);
       g.add(cesta.rede);
@@ -956,36 +963,6 @@ const ANIMACOES = {
         cesta.bola = new T.Mesh(geoBola, matBasquete);
         g.add(cesta.bola);
       }
-      cesta.tela = tela(x, 3.93, -11.05, 1.6, 0.1, (ctx) => {
-        const p = cesta.placar;
-        fundo(ctx, posters["swish-arena"], 0.25);
-        if (i === LIVRE && p.grito <= 0) {
-          // a cesta livre chama quem chega
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.font = fonte("italic 900", 40);
-          ctx.lineWidth = 7;
-          ctx.strokeStyle = "#120600";
-          ctx.strokeText("SUA VEZ!", LW / 2, 60);
-          ctx.fillStyle = "#ffd84a";
-          ctx.fillText("SUA VEZ!", LW / 2, 60);
-          ctx.font = fonte(800, 14);
-          ctx.fillStyle = "#ffffff";
-          ctx.fillText("pule na cama e enterre", LW / 2, 100);
-        }
-        if (p.fim > 0) final(ctx, "TEMPO ESGOTADO", `${p.pontos} PONTOS · ${p.cestas} CESTAS`);
-        if (p.seguidas >= 4 && p.fim <= 0) {
-          ctx.fillStyle = "#ff5a1f";
-          ctx.fillRect(8, 8, 118, 24);
-          ctx.fillStyle = "#ffffff";
-          ctx.font = fonte("italic 900", 13);
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("EM CHAMAS ×2", 67, 21);
-        }
-        grito(ctx, p.texto, `+${p.ganho}`, "#ffd84a", p.grito);
-        barra(ctx, "#ff5a1f", [["PONTOS", String(p.pontos)], ["CESTAS", `${p.cestas}/${p.arremessos}`], ["TEMPO", relogio(p.tempo)]]);
-      });
       return cesta;
     });
     const swish = new T.Sprite(new T.SpriteMaterial({
@@ -1002,27 +979,114 @@ const ANIMACOES = {
     let swishDe = null;
     let swishVida = 0;
 
-    const pontuar = (p, base) => {
-      if (p.fim > 0) return;
-      p.seguidas++;
-      p.cestas++;
-      p.ganho = (p.tempo <= 10 ? base + 1 : base) * (p.seguidas > 4 ? 2 : 1);
-      p.pontos += p.ganho;
-      p.grito = 1.4;
-    };
-    const andarPlacar = (p, dt) => {
-      p.grito = Math.max(0, p.grito - dt);
-      if (p.fim > 0) {
-        p.fim -= dt;
-        if (p.fim <= 0) Object.assign(p, { pontos: 0, tempo: 45, seguidas: 0, cestas: 0, arremessos: 0 });
-      } else {
-        p.tempo -= dt;
-        if (p.tempo <= 0) { p.tempo = 0; p.fim = 4; }
+    /* O SWISH ARENA DE VERDADE nas tabelas: o mesmo jogo do simulador
+       (basquete.js, variante swish), dois rodando -- um nas cestas 1, 3 e
+       5, outro nas 2 e 4 --, e as crianças arremessando nele: cada
+       arremesso no 3D é um arremesso no jogo da tabela. Carrega só quando
+       o espaço chega perto da câmera; de longe, o jogo fica parado. */
+    const infoSwish = (maquina.dados.jogos_no_espaco || []).find((j) => j.slug === "swish-arena" && j.script);
+    const jogosSwish = [];
+    let pediuSwish = false;
+    const textoDoJogo = (ctx, texto, x, y, opcoes = {}) => {
+      const {
+        tamanho = 32, cor = "#fff", alinhar = "center", peso = 800,
+        contorno = null, sombra = null, base = "middle", fonte: familia = "Poppins, Manrope, system-ui, sans-serif",
+      } = opcoes;
+      ctx.save();
+      ctx.font = `${peso} ${Math.round(tamanho)}px ${familia}`;
+      ctx.textAlign = alinhar;
+      ctx.textBaseline = base;
+      ctx.lineJoin = "round";
+      if (sombra) {
+        const alfa = ctx.globalAlpha;
+        ctx.strokeStyle = sombra;
+        for (const [largura, forca] of [[0.62, 0.1], [0.4, 0.18], [0.22, 0.3]]) {
+          ctx.globalAlpha = alfa * forca;
+          ctx.lineWidth = tamanho * largura;
+          ctx.strokeText(texto, x, y);
+        }
+        ctx.globalAlpha = alfa;
       }
+      if (contorno) {
+        ctx.lineWidth = Math.max(2, tamanho * 0.14);
+        ctx.strokeStyle = contorno;
+        ctx.strokeText(texto, x, y);
+      }
+      ctx.fillStyle = cor;
+      ctx.fillText(texto, x, y);
+      ctx.restore();
+    };
+    const carregarSwish = async () => {
+      pediuSwish = true;
+      try {
+        const jogo = (await import(infoSwish.script)).default;
+        const base = new URL(infoSwish.script, window.location.href);
+        const imagens = {};
+        await Promise.all(Object.entries(jogo.artes || {}).map(([nome, caminho]) => new Promise((pronto) => {
+          const img = new Image();
+          img.decoding = "async";
+          img.onload = () => { imagens[nome] = img; pronto(); };
+          img.onerror = () => pronto();
+          img.src = new URL(caminho, base).href;
+        })));
+        for (let n = 0; n < 2; n++) {
+          const c = document.createElement("canvas");
+          c.width = 480;
+          c.height = 270;
+          const item = { ctx: c.getContext("2d"), ultimo: -1, parado: 1 + n, fim: 0 };
+          item.partida = jogo.criar({
+            W: c.width, H: c.height, variante: infoSwish.variante || "swish", img: imagens, reduzido: arena.reduzido,
+            som() {}, placar() {}, vibrar() {},
+            terminar: () => { item.fim = 4; }, // o fim da partida fica na tela e outra começa
+            texto: textoDoJogo,
+          });
+          item.partida.iniciar();
+          item.tex = new T.CanvasTexture(c);
+          item.tex.colorSpace = T.SRGBColorSpace;
+          item.tex.anisotropy = arena.anisotropia;
+          item.mat = new T.MeshBasicMaterial({ map: item.tex, toneMapped: false });
+          jogosSwish.push(item);
+        }
+        cestas.forEach((c, i) => {
+          c.jogo = jogosSwish[i % 2];
+          c.tabela.material = c.jogo.mat;
+        });
+      } catch (erro) {
+        console.error("Arena 3D: o Swish das tabelas não carregou", erro);
+      }
+    };
+    /** Um arremesso no jogo da tabela (certeiro, ou torto quando a criança erra). */
+    const arremessarNoJogo = (item, erra) => {
+      const p = item && item.partida;
+      if (!p || item.fim > 0 || !p.mao || !p.podeArremessar() || p.mao.chega < 0.6) return;
+      const potencia = erra ? 1 + (Math.random() < 0.5 ? -0.38 : 0.42) : 1 + (Math.random() - 0.5) * 0.1;
+      const angulo = erra ? (Math.random() - 0.5) * 0.6 : (Math.random() - 0.5) * 0.05;
+      p.arremessar(p.mao, potencia, angulo);
+      item.parado = 0;
+    };
+    const andarSwish = (dt, t, camera, perto) => {
+      jogosSwish.forEach((item) => {
+        if (!perto) return; // de longe, o jogo espera
+        const p = item.partida;
+        if (item.fim > 0) {
+          item.fim -= dt;
+          if (item.fim <= 0) p.iniciar();
+        } else {
+          p.atualizar(Math.min(dt, 0.05));
+          // sem arremesso por um tempo (a cesta livre), a tabela joga sozinha
+          item.parado += dt;
+          if (item.parado > 2.4) arremessarNoJogo(item, Math.random() < 0.25);
+        }
+        if (t - item.ultimo < 1 / 12) return;
+        item.ultimo = t;
+        item.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        item.ctx.clearRect(0, 0, 480, 270);
+        p.desenhar(item.ctx);
+        item.tex.needsUpdate = true;
+      });
     };
 
     const andarCesta = (c, dt, t) => {
-      andarPlacar(c.placar, dt);
       c.balanco = Math.max(0, c.balanco - dt * 1.6);
       c.rede.scale.y = 1 + Math.sin(t * 24) * 0.18 * c.balanco;
       if (!c.crianca) return;
@@ -1041,7 +1105,7 @@ const ANIMACOES = {
           c.tempo = 0;
           c.de.copy(b);
           c.erra = Math.random() < 0.22;
-          c.placar.arremessos += c.placar.fim > 0 ? 0 : 1;
+          arremessarNoJogo(c.jogo, c.erra); // o mesmo arremesso no jogo da tabela
         }
       } else if (c.fase === "voo") {
         const f = Math.min(1, c.tempo / 0.9);
@@ -1055,13 +1119,10 @@ const ANIMACOES = {
           if (c.erra) {
             c.fase = "fora";
             c.balanco = 0.3;
-            c.placar.seguidas = 0;
             c.fora.set((Math.random() - 0.5) * 0.6, 0, 0.35);
           } else {
             c.fase = "queda";
             c.balanco = 1;
-            pontuar(c.placar, 2);
-            c.placar.texto = "SWISH!";
             swishDe = c;
             swishVida = 1;
             swish.visible = true;
@@ -1257,7 +1318,17 @@ const ANIMACOES = {
       if (!j.poster) return;
       const img = new Image();
       img.decoding = "async";
-      img.addEventListener("load", () => telas.forEach((item) => { item.pintar(item.ctx); item.tex.needsUpdate = true; }));
+      img.addEventListener("load", () => {
+        telas.forEach((item) => { item.pintar(item.ctx); item.tex.needsUpdate = true; });
+        if (j.slug === "swish-arena") {
+          const tex = new T.Texture(img);
+          tex.colorSpace = T.SRGBColorSpace;
+          tex.needsUpdate = true;
+          matTabelaEspera.map = tex;
+          matTabelaEspera.color.set("#ffffff");
+          matTabelaEspera.needsUpdate = true;
+        }
+      });
       img.src = j.poster;
       posters[j.slug] = img;
     });
@@ -1277,7 +1348,9 @@ const ANIMACOES = {
       // de longe não mexe (não se vê, e poupa o celular)
       maquina.grupo.getWorldPosition(onde);
       if (camera.position.distanceTo(onde) > 95) return;
+      if (infoSwish && !pediuSwish) carregarSwish();
       cestas.forEach((c) => andarCesta(c, dt, t));
+      andarSwish(dt, t, camera, camera.position.distanceTo(cestas[2].tabela.getWorldPosition(olhar)) < 45);
       if (swish.visible) {
         swishVida = Math.max(0, swishVida - dt * 0.8);
         const a = swishDe.aro;
@@ -1325,8 +1398,7 @@ const ANIMACOES = {
       const [tipo, valor] = nome.split(":");
       const c = cestas[Number(valor)];
       if (tipo === "swish" && c) {
-        c.placar.texto = "ENTERRADA!";
-        pontuar(c.placar, 3);
+        arremessarNoJogo(c.jogo, false); // a enterrada conta no jogo da tabela
         c.balanco = 1;
       }
     };
@@ -2567,6 +2639,7 @@ class Arena {
       );
       passarela.rotation.x = -PI / 2;
       passarela.userData.zona = id;
+      passarela.userData.piso = true;
       suporte.add(passarela);
       [-1.7, 1.7].forEach((lado) => {
         const filete = new T.Mesh(this.geo("plano", () => new T.PlaneGeometry(1, 1)), this.noChao(new T.MeshBasicMaterial({ color: cor, toneMapped: false })));
@@ -2588,6 +2661,7 @@ class Arena {
       chao.rotation.x = -PI / 2;
       chao.position.set((area.x0 + area.x1) / 2, -0.04, (area.z0 + area.z1) / 2);
       chao.userData.zona = area.id;
+      chao.userData.piso = true;
       this.decoracao.add(chao);
       const zona = this.zonas.find((z) => z.id === area.id);
       if (zona) {
@@ -2616,6 +2690,7 @@ class Arena {
       malha.rotation.x = -PI / 2;
       malha.position.y = 0.015;
       malha.userData.zona = trecho.id;
+      malha.userData.piso = true;
       this.decoracao.add(malha);
       return malha;
     };
@@ -2656,13 +2731,61 @@ class Arena {
     });
   }
 
-  /** A área sob o ponteiro (o piso colorido ou a placa dela), ou "". */
+  /** A área sob o ponteiro (a placa ou o letreiro dela -- o chão não), ou "". */
   zonaSob(x, y) {
     const r = this.canvas.getBoundingClientRect();
     this.ponteiro.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ponteiro, this.camera);
-    const acerto = this.raycaster.intersectObjects(this.decoracao.children, true).find((a) => a.object.userData.zona);
+    const acerto = this.raycaster.intersectObjects(this.decoracao.children, true).find((a) => a.object.userData.zona && !a.object.userData.piso);
     return acerto ? acerto.object.userData.zona : "";
+  }
+
+  /** O ponto do chão (y = 0) sob a tela, ou null (olhando para o céu). */
+  pontoNoChao(x, y) {
+    const r = this.canvas.getBoundingClientRect();
+    this.ponteiro.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(this.ponteiro, this.camera);
+    const raio = this.raycaster.ray;
+    if (raio.direction.y > -0.02) return null;
+    const t = -raio.origin.y / raio.direction.y;
+    return t < 300 ? raio.origin.clone().addScaledVector(raio.direction, t) : null;
+  }
+
+  /**
+   * Um toque no 3D: na máquina, escolhe a máquina; na placa de uma área, vai
+   * até a área; no chão vazio, solta a máquina escolhida.
+   */
+  tocar(x, y) {
+    const maquina = this.escolher(x, y);
+    if (maquina) {
+      this.selecionar(maquina);
+      return;
+    }
+    const zona = this.zonaSob(x, y);
+    if (zona && zona !== this.zona) this.escolherZona(zona);
+    else if (this.selecionada) this.fecharSelecao();
+  }
+
+  /** A pessoa mexeu na câmera: ela fica livre (o grande para de dar a volta, o tour para). */
+  soltarCamera() {
+    if (this.tour) this.acao("tour", this.controles.querySelector('[data-arena-acao="tour"]'));
+    if (this.vistaAtual === "livre") return;
+    this.vistaAtual = "livre";
+    if (this.vistas) {
+      this.vistas.querySelectorAll("[data-arena-vista]").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      this.vistas.querySelector("[data-arena-lados-nome]").textContent = "Lados";
+      this.vistas.querySelector("[data-arena-lados]").setAttribute("aria-pressed", "false");
+    }
+  }
+
+  /** Solta a máquina escolhida e recua um pouco: a arena em volta aparece. */
+  fecharSelecao() {
+    if (!this.selecionada) return;
+    this.soltarSelecao({ voar: false });
+    const c = this.camera3d;
+    c.raioDesejado = Math.max(c.raioDesejado, Math.min(c.raio * 1.8 + 4, 32));
+    c.phiDesejado = Math.min(c.phiDesejado, 1.05);
+    c.limitar();
   }
 
   /* ---------- fila de fotos: duas máquinas por vez, sem travar a página ---------- */
@@ -2688,8 +2811,11 @@ class Arena {
     this.palco.querySelector("[data-arena-aviso]").classList.add("sumiu");
     const dica = this.palco.querySelector("[data-arena-dica]");
     if (dica) {
+      dica.lastChild.textContent = this.celular
+        ? " 1 dedo gira · 2 dedos andam e aproximam · toque duplo vai até lá"
+        : " Arraste para girar · botão direito anda · roda aproxima · duplo clique vai até lá";
       dica.hidden = false;
-      window.setTimeout(() => { dica.hidden = true; }, 6000);
+      window.setTimeout(() => { dica.hidden = true; }, 9000);
     }
   }
 
@@ -3024,6 +3150,10 @@ class Arena {
     }
     if (this.vistas) {
       this.vistas.addEventListener("click", (evento) => {
+        if (evento.target.closest("[data-arena-fechar]")) {
+          this.fecharSelecao();
+          return;
+        }
         if (evento.target.closest("[data-arena-lados]")) {
           this.abrirLados(this.vistas.querySelector("[data-arena-lados-menu]").hidden);
           return;
@@ -3069,7 +3199,12 @@ class Arena {
       if (this.passeio || evento.target.closest("select, input")) return;
       if (evento.key === "ArrowRight") { this.vizinha(1); evento.preventDefault(); }
       else if (evento.key === "ArrowLeft") { this.vizinha(-1); evento.preventDefault(); }
-      else if (evento.key === "Escape") { this.verTudo(); evento.preventDefault(); }
+      else if (evento.key === "Escape") {
+        // Esc solta a máquina; sem nenhuma, volta para a arena inteira
+        if (this.selecionada) this.fecharSelecao();
+        else this.verTudo();
+        evento.preventDefault();
+      }
     });
     this.canvas.tabIndex = 0;
 
@@ -4271,20 +4406,34 @@ class Camera {
     this.thetaDesejado += delta;
   }
 
+  /**
+   * Os gestos, como num mapa: um dedo (ou o botão esquerdo) gira; dois dedos
+   * (ou o botão direito, ou Shift + arrastar) andam pela arena e a pinça
+   * aproxima; a roda aproxima na direção do mouse; toque duplo (duplo
+   * clique) vai até o ponto; tocar no chão vazio solta a máquina escolhida.
+   * Qualquer movimento da pessoa solta a câmera da máquina: ela anda livre.
+   */
   ligarEventos(canvas) {
     const arena = this.arena;
     let inicio = null;
     let distanciaPinca = 0;
+    let meio = null;
+    let modo = "girar";
+    let ultimoToque = null;
+
+    canvas.addEventListener("contextmenu", (evento) => evento.preventDefault());
 
     canvas.addEventListener("pointerdown", (evento) => {
       try { canvas.setPointerCapture(evento.pointerId); } catch (erro) { /* sem captura */ }
       this.ponteiros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
       inicio = { x: evento.clientX, y: evento.clientY, t: performance.now() };
+      modo = evento.pointerType === "mouse" && (evento.button !== 0 || evento.shiftKey || evento.ctrlKey) ? "andar" : "girar";
       arena.ocioso = 0;
       canvas.classList.add("arrastando");
       if (this.ponteiros.size === 2) {
         const [a, b] = [...this.ponteiros.values()];
         distanciaPinca = Math.hypot(a.x - b.x, a.y - b.y);
+        meio = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       }
     });
 
@@ -4307,13 +4456,21 @@ class Camera {
         return;
       }
       if (this.ponteiros.size === 2) {
+        // dois dedos: o meio deles anda pela arena; a pinça aproxima
         const [a, b] = [...this.ponteiros.values()];
+        const agora = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        if (meio) this.andarNaTela(agora.x - meio.x, agora.y - meio.y);
+        meio = agora;
         const distancia = Math.hypot(a.x - b.x, a.y - b.y);
-        if (distanciaPinca > 0) this.raioDesejado *= distanciaPinca / Math.max(1, distancia);
+        if (distanciaPinca > 0) this.aproximar(distanciaPinca / Math.max(1, distancia), agora.x, agora.y);
         distanciaPinca = distancia;
-        this.limitar();
         return;
       }
+      if (modo === "andar") {
+        this.andarNaTela(dx, dy);
+        return;
+      }
+      if (Math.abs(dx) + Math.abs(dy) > 0) arena.soltarCamera();
       this.thetaDesejado -= dx * 0.006;
       this.phiDesejado -= dy * 0.005;
       this.limitar();
@@ -4324,43 +4481,114 @@ class Camera {
     const soltar = (evento) => {
       this.ponteiros.delete(evento.pointerId);
       canvas.classList.remove("arrastando");
-      if (this.ponteiros.size < 2) distanciaPinca = 0;
+      if (this.ponteiros.size < 2) { distanciaPinca = 0; meio = null; }
       if (!inicio) return;
       const andou = Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y);
       const rapido = performance.now() - inicio.t < 450;
       inicio = null;
-      if (andou < 8 && rapido && evento.type === "pointerup") {
-        if (arena.passeio) return; // no passeio, tocar é só olhar
-        const maquina = arena.escolher(evento.clientX, evento.clientY);
-        if (maquina) arena.selecionar(maquina);
-        else {
-          const zona = arena.zonaSob(evento.clientX, evento.clientY);
-          if (zona && zona !== arena.zona) arena.escolherZona(zona);
-        }
+      if (andou >= 8 || !rapido || evento.type !== "pointerup" || modo !== "girar") return;
+      if (arena.passeio) return; // no passeio, tocar é só olhar
+      // toque duplo: vai até o ponto tocado (no mouse, o dblclick cuida)
+      const agora = performance.now();
+      const duplo = evento.pointerType !== "mouse" && ultimoToque && agora - ultimoToque.t < 330 && Math.hypot(evento.clientX - ultimoToque.x, evento.clientY - ultimoToque.y) < 30;
+      ultimoToque = duplo ? null : { x: evento.clientX, y: evento.clientY, t: agora };
+      if (duplo) {
+        this.irAoPonto(evento.clientX, evento.clientY);
+        return;
       }
+      arena.tocar(evento.clientX, evento.clientY);
     };
     canvas.addEventListener("pointerup", soltar);
     canvas.addEventListener("pointercancel", soltar);
+    canvas.addEventListener("dblclick", (evento) => {
+      if (!arena.passeio) this.irAoPonto(evento.clientX, evento.clientY);
+    });
 
     canvas.addEventListener("wheel", (evento) => {
       evento.preventDefault();
       arena.ocioso = 0;
       if (arena.passeio) return; // o passeio anda sozinho
-      this.raioDesejado *= Math.exp(evento.deltaY * 0.0012);
-      this.limitar();
+      this.aproximar(Math.exp(evento.deltaY * 0.0012), evento.clientX, evento.clientY);
     }, { passive: false });
+  }
+
+  /** Arrastar a arena pela tela (como um mapa): o ponto do chão vai com o dedo. */
+  andarNaTela(dx, dy) {
+    const arena = this.arena;
+    const altura = arena.canvas.clientHeight || 600;
+    const porPixel = (2 * this.raio * Math.tan((arena.camera.fov * PI) / 360)) / altura;
+    const fundo = porPixel / Math.max(0.45, Math.cos(this.phi)); // o chão deitado, visto de lado
+    const s = Math.sin(this.theta);
+    const c = Math.cos(this.theta);
+    // a direita (c, -s) e a frente (-s, -c) da câmera, no chão
+    const x = -c * dx * porPixel - s * dy * fundo;
+    const z = s * dx * porPixel - c * dy * fundo;
+    this.alvo.x += x;
+    this.alvo.z += z;
+    this.alvoDesejado.x = this.alvo.x;
+    this.alvoDesejado.z = this.alvo.z;
+    this.alvoDesejado.y = this.alvo.y = Math.min(this.alvo.y, 1.6);
+    arena.soltarCamera();
+    this.limitar();
+  }
+
+  /** Aproxima (fator < 1) ou afasta, na direção do ponto da tela. */
+  aproximar(fator, x, y) {
+    const antes = this.raioDesejado;
+    this.raioDesejado *= fator;
+    this.limitar();
+    const real = this.raioDesejado / antes;
+    const p = this.arena.pontoNoChao(x, y);
+    if (p && real < 1) {
+      // o ponto sob o mouse fica sob o mouse: o alvo anda na direção dele
+      const k = 1 - real;
+      this.alvoDesejado.x += (p.x - this.alvoDesejado.x) * k;
+      this.alvoDesejado.z += (p.z - this.alvoDesejado.z) * k;
+      if (Math.hypot(p.x - this.alvo.x, p.z - this.alvo.z) > 1.5) this.arena.soltarCamera();
+      this.limitar();
+    }
+  }
+
+  /**
+   * Toque duplo: voa até o ponto. Numa máquina, escolhe a máquina; num
+   * espaço grande (o parque inteiro), vai até aquele canto dele.
+   */
+  irAoPonto(x, y) {
+    const arena = this.arena;
+    const maquina = arena.escolher(x, y);
+    if (maquina && !maquina.grande) {
+      arena.selecionar(maquina);
+      return;
+    }
+    const p = arena.pontoNoChao(x, y);
+    if (!p) return;
+    if (maquina && maquina !== arena.selecionada) arena.selecionar(maquina, { voar: false });
+    arena.soltarCamera();
+    this.alvoDesejado.set(p.x, 1.2, p.z);
+    this.raioDesejado = Math.min(this.raioDesejado, 14);
+    this.limitar();
   }
 
   limitar() {
     this.phiDesejado = Math.min(1.45, Math.max(0.22, this.phiDesejado));
     const maximo = Math.max((this.arena.raio || 8) * 3.6 + 14, this.arena.longeDosReinos ? 140 : 0);
     this.raioDesejado = Math.min(maximo, Math.max(2.4, this.raioDesejado));
+    // andando pela arena, o alvo não sai dela (a roda e os reinos)
+    const borda = (this.arena.raio || 8) + (this.arena.folga || 1) + 12;
+    const reinos = (this.arena.trechos || []).filter((t) => t.tipo === "reino");
+    const fundo = Math.min(-borda, ...reinos.map((t) => t.z0 - 4));
+    const lado = Math.max(borda, ...reinos.map((t) => Math.max(-t.x0, t.x1) + 4));
+    for (const alvo of [this.alvo, this.alvoDesejado]) {
+      alvo.x = limitar(alvo.x, -lado, lado);
+      alvo.z = limitar(alvo.z, fundo, borda);
+    }
   }
 
   atualizar(dt) {
     const arena = this.arena;
-    // ninguém mexendo há um tempo e nada escolhido: a câmera passeia sozinha
-    if (!arena.reduzido && !arena.selecionada && arena.ocioso > 3.5 && this.ponteiros.size === 0) {
+    // ninguém mexendo há um tempo, nada escolhido e a câmera no meio da
+    // arena: ela passeia sozinha (andando livre, fica onde a pessoa deixou)
+    if (!arena.reduzido && !arena.selecionada && arena.ocioso > 3.5 && this.ponteiros.size === 0 && Math.hypot(this.alvo.x, this.alvo.z) < 3) {
       this.thetaDesejado += dt * 0.1;
     }
     // o grande escolhido em "Girar": a câmera dá a volta nele

@@ -374,9 +374,10 @@ BLOCOS.forEach(bloco);
       V(1, 1, 1),
     );
     por(M.camaVerde, g, m);
-    // a cesta: tabela branca e o aro laranja
+    // a cesta: a tabela é uma TELA (a moldura preta aqui; a tela, com o
+    // Swish Arena rodando, é da Arena 3D) e o aro laranja, preso embaixo dela
     const xc = (x0 + x1) / 2;
-    caixa(M.branco, xc - 0.45, xc + 0.45, 2.75, 3.3, zFundo + 0.06, zFundo + 0.1);
+    caixa(M.preto, xc - 0.64, xc + 0.64, 2.69, 3.41, zFundo + 0.06, zFundo + 0.1);
     const aro = new THREE.TorusGeometry(0.2, 0.018, 8, 24);
     aro.rotateX(PI / 2);
     por(M.aro, aro, new THREE.Matrix4().makeTranslation(xc, 2.8, zFundo + 0.32));
