@@ -212,6 +212,19 @@ class SecoesDaArenaTests(TestCase):
         self.assertEqual(arena.jogo_da_maquina("Boxe Força Máxima"), "")
         self.assertEqual(arena.jogo_da_maquina("Mundo Zumbi"), "")
 
+    def test_faixas_de_aviso_so_no_lazer_shot(self):
+        self.assertEqual([a["id"] for a in arena.avisos_da_maquina("Lazer Shot")], ["camera", "arma"])
+        self.assertEqual(arena.avisos_da_maquina("Dragon Bowling Rosa"), [])
+        self.assertEqual(arena.avisos_da_maquina("Basquete Street"), [])
+        lazer = _brinquedo("Lazer Shot")
+        _brinquedo("Air Game Hockey")
+        pagina = self.client.get(reverse("brinquedo_detalhe", args=[lazer.pk])).content.decode()
+        self.assertIn('aria-label="Contém câmera e Arma personalizada"', pagina)
+        catalogo = self.client.get(reverse("brinquedos")).content.decode()
+        self.assertEqual(catalogo.count('class="ls-faixas"'), 1)
+        dados = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        self.assertEqual({m["nome"]: m["avisos"] for m in dados}, {"Lazer Shot": ["camera", "arma"], "Air Game Hockey": []})
+
     def test_pagina_do_produto_sem_3d(self):
         boliche = _brinquedo("Dragon Bowling Rosa")
         html = self.client.get(reverse("brinquedo_detalhe", args=[boliche.pk])).content.decode()

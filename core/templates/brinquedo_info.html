@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static interno_extras %}
+{% load static interno_extras avisos %}
 {% load fotos %}
 
 {% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
@@ -101,6 +101,7 @@
                             Imagem em atualização
                         </div>
                     {% endif %}
+                    {% faixas brinquedo.nome_brinquedo %}
                 </div>
 
                 {% if imagens_brinquedo|length > 1 %}

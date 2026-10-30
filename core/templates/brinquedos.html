@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static interno_extras %}
+{% load static interno_extras avisos %}
 {% load fotos %}
 {% load favoritos_extras %}
 
@@ -464,6 +464,7 @@
                                     decoding="async"
                                 >
                             {% endif %}
+                            {% faixas brinquedo.nome_brinquedo %}
                         </a>
 
                         <div class="catalogo-card-body">
