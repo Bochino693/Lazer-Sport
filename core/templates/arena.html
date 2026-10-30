@@ -169,7 +169,8 @@
 
         <div class="arena3d-corpo">
             <div class="arena3d-palco" data-arena-palco
-                 data-three="{% estatico 'vendor/three/three.module.min.js' %}">
+                 data-three="{% static 'vendor/three/three.module.min.js' %}"
+                 data-gltf="{% static 'vendor/three/GLTFLoader.js' %}">
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
                     <strong data-arena-aviso-titulo>Montando a arena…</strong>

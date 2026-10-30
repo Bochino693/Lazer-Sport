@@ -535,12 +535,21 @@ class Maquina {
     this.indice = indice;
     this.cor = COR_DA_ZONA[dados.grupo] || CORES[indice % CORES.length];
     this.fotos = fotosDe(dados);
+    // o objeto feito com os arquivos da fábrica (.glb) vence o das fotos
+    this.modelo = dados.modelo || "";
 
-    const [altura, largura, fundo] = (dados.medidas || []).map(Number);
-    this.altura = limitar(altura || 1.8, 0.6, 4.5);
-    this.largura = limitar(largura || 1, 0.4, 4.5);
-    this.fundo = limitar(fundo || 1, 0.3, 4.5);
-    this.raioP = Math.max(this.largura, this.fundo) * 0.62 + 0.45;
+    const medidas = this.modelo && (dados.medidas_modelo || []).length === 3 ? dados.medidas_modelo : dados.medidas;
+    const [altura, largura, fundo] = (medidas || []).map(Number);
+    const teto = this.modelo ? 14 : 4.5;
+    this.altura = limitar(altura || 1.8, 0.6, this.modelo ? 6 : 4.5);
+    this.largura = limitar(largura || 1, 0.4, teto);
+    this.fundo = limitar(fundo || 1, 0.3, teto);
+    // Grande (um brinquedão de 11 m) não gira no prato -- varreria os
+    // vizinhos da roda --: nas vistas, quem dá a volta é a câmera. E fica
+    // numa plataforma do seu formato, e não num pedestal redondo.
+    this.grande = Math.max(this.largura, this.fundo) > 4.5;
+    this.retangular = this.grande && Math.max(this.largura, this.fundo) > 1.6 * Math.min(this.largura, this.fundo);
+    this.raioP = this.retangular ? this.fundo / 2 + 0.55 : Math.max(this.largura, this.fundo) * 0.62 + 0.45;
     this.alturaP = 0.3;
     // o objeto montado (até a foto chegar, o tamanho do cadastro)
     this.H = this.altura;
@@ -555,9 +564,13 @@ class Maquina {
 
     const grupo = new T.Group();
     this.grupo = grupo;
-    arena.cilindro(grupo, this.raioP, this.alturaP, arena.escuro(), 0, this.alturaP / 2, 0, 48);
-    this.aro = arena.anel(grupo, this.raioP + 0.02, 0.045, arena.luz(this.cor, 2.2), 0, this.alturaP, 0);
-    this.aro.rotation.x = PI / 2;
+    if (this.retangular) {
+      this.aro = arena.plataforma(grupo, this.largura + 0.9, this.fundo + 0.9, this.alturaP, this.cor);
+    } else {
+      arena.cilindro(grupo, this.raioP, this.alturaP, arena.escuro(), 0, this.alturaP / 2, 0, 48);
+      this.aro = arena.anel(grupo, this.raioP + 0.02, 0.045, arena.luz(this.cor, 2.2), 0, this.alturaP, 0);
+      this.aro.rotation.x = PI / 2;
+    }
     this.sombra = new T.Mesh(arena.geo("disco", () => new T.CircleGeometry(1, 32)), arena.matSombra());
     this.sombra.rotation.x = -PI / 2;
     this.sombra.position.y = this.alturaP + 0.006;
@@ -587,7 +600,7 @@ class Maquina {
   }
 
   get temFoto() {
-    return Object.keys(this.fotos).length > 0;
+    return Object.keys(this.fotos).length > 0 || Boolean(this.modelo);
   }
 
   /** Tudo do estande responde ao toque como a máquina. */
@@ -602,9 +615,43 @@ class Maquina {
 
   /** Baixa e recorta as fotos no tamanho pedido (uma vez por tamanho). */
   pedir(tamanho) {
+    if (this.modelo) {
+      // o objeto da fábrica vem inteiro, uma vez só
+      if (this.pedido) return;
+      this.pedido = Infinity;
+      this.arena.fila.push(() => this.vestirModelo());
+      return;
+    }
     if (this.pedido >= tamanho || !this.temFoto) return;
     this.pedido = tamanho;
     this.arena.fila.push(() => this.carregar(tamanho));
+  }
+
+  /** O objeto 3D feito com os arquivos da fábrica (.glb), no tamanho real. */
+  async vestirModelo() {
+    const T = this.arena.T;
+    try {
+      const objeto = await this.arena.carregarModelo(this.modelo);
+      this.limpar();
+      const caixa = new T.Box3().setFromObject(objeto);
+      const tamanho = caixa.getSize(new T.Vector3());
+      objeto.position.y -= caixa.min.y;
+      this.corpo.add(objeto);
+      this.H = tamanho.y;
+      this.W = tamanho.x;
+      this.D = tamanho.z;
+      this.montada = 1;
+      this.sombra.scale.set(this.W * 0.62, this.D * 0.7, 1);
+      this.ajustarPivo();
+      this.marcar();
+    } catch (erro) {
+      // sem o objeto, a máquina volta para o volume feito das fotos
+      console.error("Arena 3D: o objeto 3D não carregou", erro);
+      this.modelo = "";
+      this.pedido = 0;
+      if (this.temFoto) this.pedir(this.arena.fotoLonge);
+      else this.semFoto = true;
+    }
   }
 
   async carregar(tamanho) {
@@ -834,6 +881,7 @@ class Maquina {
   }
 
   atualizar(dt, reduzido) {
+    if (this.grande) return; // o grande fica parado; a câmera é que anda
     const k = 1 - Math.exp(-dt * (reduzido ? 30 : 5));
     if (this.girando && !reduzido) this.prato.rotation.y += dt * 0.5;
     else this.prato.rotation.y += (this.giroAlvo - this.prato.rotation.y) * k;
@@ -909,7 +957,7 @@ class Arena {
 
     // sem foto não há de onde montar o objeto: a máquina fica só na lista
     this.maquinas = (dados.maquinas || [])
-      .map((d, i) => (Object.keys(fotosDe(d)).length ? new Maquina(this, d, i) : null))
+      .map((d, i) => (Object.keys(fotosDe(d)).length || d.modelo ? new Maquina(this, d, i) : null))
       .filter(Boolean);
     this.camera3d = new Camera(this);
   }
@@ -945,6 +993,50 @@ class Arena {
 
   borracha() {
     return this.mat("borracha", () => new this.T.MeshStandardMaterial({ color: "#05070c", roughness: 0.9 }));
+  }
+
+  /**
+   * O objeto 3D de uma máquina (.glb). O GLTFLoader vem na primeira vez
+   * que precisa, do mesmo endereço do three.js (sem ?v=): os dois falam
+   * com a mesma cópia do motor.
+   */
+  async carregarModelo(url) {
+    if (!this.carregadorGLB) {
+      this.carregadorGLB = import(this.palco.dataset.gltf).then((modulo) => new modulo.GLTFLoader());
+    }
+    const gltf = await (await this.carregadorGLB).loadAsync(url);
+    return gltf.scene;
+  }
+
+  /** A plataforma do brinquedão comprido: retângulo de cantos redondos, com a faixa de luz. */
+  plataforma(grupo, w, d, altura, cor) {
+    const T = this.T;
+    const forma = (lw, ld, r) => {
+      const s = new T.Shape();
+      const x = -lw / 2;
+      const y = -ld / 2;
+      s.moveTo(x + r, y);
+      s.lineTo(x + lw - r, y);
+      s.quadraticCurveTo(x + lw, y, x + lw, y + r);
+      s.lineTo(x + lw, y + ld - r);
+      s.quadraticCurveTo(x + lw, y + ld, x + lw - r, y + ld);
+      s.lineTo(x + r, y + ld);
+      s.quadraticCurveTo(x, y + ld, x, y + ld - r);
+      s.lineTo(x, y + r);
+      s.quadraticCurveTo(x, y, x + r, y);
+      return s;
+    };
+    const r = Math.min(0.8, d / 2 - 0.05);
+    const base = new T.Mesh(new T.ExtrudeGeometry(forma(w, d, r), { depth: altura, bevelEnabled: false, curveSegments: 10 }), this.escuro());
+    base.rotation.x = -PI / 2; // a extrusão (Z) vira a altura (Y)
+    grupo.add(base);
+    const faixa = forma(w + 0.09, d + 0.09, r + 0.045);
+    faixa.holes.push(forma(w - 0.01, d - 0.01, r - 0.005));
+    const aro = new T.Mesh(new T.ExtrudeGeometry(faixa, { depth: 0.06, bevelEnabled: false, curveSegments: 10 }), this.luz(cor, 2.2));
+    aro.rotation.x = -PI / 2;
+    aro.position.y = altura - 0.04;
+    grupo.add(aro);
+    return aro;
   }
 
   /** A base de baixo das máquinas: chapa escura, como a de um gabinete. */
@@ -1426,9 +1518,9 @@ class Arena {
     if (!m) return;
     this.ocioso = 0;
     this.vistaAtual = nome;
-    m.girando = nome === "girar";
-    if (nome !== "girar") m.giroAlvo = giroMaisPerto(m.prato.rotation.y, GIRO_DA_VISTA[nome]);
-    m.tomboAlvo = nome === "baixo" ? TOMBO : 0;
+    m.girando = nome === "girar" && !m.grande;
+    if (nome !== "girar" && !m.grande) m.giroAlvo = giroMaisPerto(m.prato.rotation.y, GIRO_DA_VISTA[nome]);
+    m.tomboAlvo = nome === "baixo" && !m.grande ? TOMBO : 0;
     if (voar) this.camera3d.olharPara(m, nome);
     if (this.vistas) {
       this.vistas.querySelectorAll("[data-arena-vista]").forEach((botao) => {
@@ -1801,6 +1893,10 @@ class Camera {
   olharPara(maquina, vista = "girar") {
     const centro = maquina.centro(new this.arena.T.Vector3());
     this.alvoDesejado.copy(centro);
+    if (maquina.grande) {
+      this.olharGrande(maquina, vista, centro);
+      return;
+    }
     const tamanho = Math.max(maquina.H, maquina.W || 0, maquina.D, 1.6);
     const folga = this.arena.camera.aspect < 0.8 ? 1.5 : 1;
     this.raioDesejado = Math.min(16, Math.max(3.2, tamanho * 1.7 + 0.8) * folga);
@@ -1814,6 +1910,33 @@ class Camera {
     // a câmera fica do lado do centro, de frente para o estande
     const thetaFrente = Math.atan2(-centro.x, -centro.z);
     let delta = thetaFrente - this.thetaDesejado;
+    delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+    this.thetaDesejado += delta;
+  }
+
+  /**
+   * O grande (um brinquedão de 11 m) fica parado: cada vista leva a câmera
+   * para aquele lado dele, longe o bastante para caber inteiro na tela.
+   */
+  olharGrande(maquina, vista, centro) {
+    const T = this.arena.T;
+    const camera = this.arena.camera;
+    const LADO = { direita: [1, 0], esquerda: [-1, 0], costas: [0, -1] };
+    const [lx, lz] = LADO[vista] || [0, 1];
+    const direcao = new T.Vector3(lx, 0, lz).applyQuaternion(maquina.grupo.quaternion);
+    const tv = Math.tan((camera.fov * PI) / 360);
+    const th = tv * camera.aspect;
+    const W = maquina.W || maquina.largura;
+    const D = maquina.D || maquina.fundo;
+    const deLado = vista === "direita" || vista === "esquerda";
+    const largo = deLado ? D : W;
+    const fundo = deLado ? W : D;
+    let raio = Math.max(largo / 2 / th, maquina.H / 2 / tv) * 1.15 + fundo / 2;
+    if (vista === "cima") raio = Math.max(W / 2 / th, D / 2 / tv) * 1.1 + maquina.H;
+    this.raioDesejado = Math.min(30, raio);
+    this.alvoDesejado.y = maquina.alturaP + maquina.H * (vista === "baixo" ? 0.6 : 0.45);
+    this.phiDesejado = vista === "cima" ? 0.3 : vista === "baixo" ? 1.42 : 1.22;
+    let delta = Math.atan2(direcao.x, direcao.z) - this.thetaDesejado;
     delta = Math.atan2(Math.sin(delta), Math.cos(delta));
     this.thetaDesejado += delta;
   }
@@ -1899,6 +2022,11 @@ class Camera {
     // ninguém mexendo há um tempo e nada escolhido: a câmera passeia sozinha
     if (!arena.reduzido && !arena.selecionada && arena.ocioso > 3.5 && this.ponteiros.size === 0) {
       this.thetaDesejado += dt * 0.1;
+    }
+    // o grande escolhido em "Girar": a câmera dá a volta nele
+    const m = arena.selecionada;
+    if (!arena.reduzido && m && m.grande && arena.vistaAtual === "girar" && this.ponteiros.size === 0) {
+      this.thetaDesejado += dt * 0.16;
     }
     const k = 1 - Math.exp(-dt * (arena.reduzido ? 20 : 4.2));
     this.alvo.lerp(this.alvoDesejado, k);
