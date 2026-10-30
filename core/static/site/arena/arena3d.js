@@ -50,7 +50,7 @@ if (raiz) iniciar(raiz);
 
 const PI = Math.PI;
 const CORES = ["#e63946", "#2f8bff", "#ffd700", "#3fd0ff", "#8a5cff", "#ff7a00", "#1fbf5b", "#ff3df2"];
-const COR_DA_ZONA = { jogos: "#e63946", maquinas: "#2f8bff", brinquedoes: "#22c55e" };
+const COR_DA_ZONA = { jogos: "#e63946", maquinas: "#2f8bff", brinquedoes: "#22c55e", esportivos: "#ff9f1c" };
 const LADOS = ["perfil", "lado_direito", "verso", "lado_esquerdo"];
 const NOME_DO_LADO = { perfil: "Frente", lado_direito: "Lado direito", verso: "Costas", lado_esquerdo: "Lado esquerdo" };
 const VISTA_DO_LADO = { perfil: "frente", lado_direito: "direita", verso: "costas", lado_esquerdo: "esquerda" };
@@ -740,10 +740,13 @@ class Maquina {
     // e o que a arena sabe montar peça por peça (a cama elástica) também
     this.modelo = dados.modelo || "";
     this.forma = !this.modelo && FORMAS[dados.desenho] ? dados.desenho : "";
+    // um espaço inteiro (o parque de trampolins com as quadras) não cabe na
+    // roda: fica no seu próprio "reino", ao lado, ligado por uma passarela
+    this.reino = Boolean(dados.reino && this.modelo);
 
     const medidas = this.modelo && (dados.medidas_modelo || []).length === 3 ? dados.medidas_modelo : dados.medidas;
     const [altura, largura, fundo] = (medidas || []).map(Number);
-    const teto = this.modelo ? 14 : 4.5;
+    const teto = this.modelo ? (dados.reino ? 60 : 14) : 4.5;
     this.altura = limitar(altura || 1.8, 0.6, this.modelo ? 6 : 4.5);
     this.largura = limitar(largura || 1, 0.4, teto);
     this.fundo = limitar(fundo || 1, 0.3, teto);
@@ -1584,8 +1587,10 @@ class Arena {
     // A roda tem TODAS as máquinas (só a categoria tira alguma): a visão é
     // ampla, e as áreas são lugares da roda aonde a câmera vai.
     this.lista = this.filtradas();
-    const roda = this.lista;
-    this.roda = roda;
+    // `this.roda` são todas as que estão à vista (a roda e os reinos)
+    this.roda = this.lista;
+    const roda = this.lista.filter((m) => !m.reino);
+    const reinos = this.lista.filter((m) => m.reino);
     this.maquinas.forEach((m) => { m.grupo.visible = false; });
     this.limparDecoracao();
 
@@ -1621,15 +1626,97 @@ class Arena {
     this.fundosDasAreas = {};
     trechos.forEach((trecho) => this.marcarArea(trecho, raio, folga));
     this.montarPilares(raio + folga + 4.5);
+    this.montarReinos(reinos, raio + folga + 4.5);
     this.cena.fog.near = raio * 2.2;
-    this.cena.fog.far = raio * 5 + 30;
-    if (this.selecionada && !roda.includes(this.selecionada)) this.soltarSelecao({ voar: false });
+    this.cena.fog.far = Math.max(raio * 5 + 30, this.longeDosReinos || 0);
+    if (this.selecionada && !this.roda.includes(this.selecionada)) this.soltarSelecao({ voar: false });
     const zona = this.trechos.find((t) => t.id === this.zona);
     this.realcarArea(zona ? this.zona : "");
     if (zona && !entrada) this.camera3d.olharZona(zona);
     else this.camera3d.visaoGeral(entrada);
-    roda.forEach((m) => m.pedir(this.fotoLonge));
+    this.roda.forEach((m) => m.pedir(this.fotoLonge));
     this.marcarLista();
+  }
+
+  /**
+   * Os reinos: os espaços grandes demais para a roda (um parque de
+   * trampolins com quadras, 39 m x 23 m) ficam atrás dela, lado a lado,
+   * de frente para a roda, sobre o chão escuro, cada um ligado à roda por
+   * uma passarela de luz e com a placa da área na entrada. A área deles
+   * vira um "trecho" do tipo reino: o botão e a placa levam a câmera lá.
+   */
+  montarReinos(reinos, beira) {
+    const T = this.T;
+    this.longeDosReinos = 0;
+    if (!reinos.length) return;
+    const vao = 8;
+    const larguras = reinos.map((m) => m.largura + 2);
+    const total = larguras.reduce((a, b) => a + b, 0) + vao * (reinos.length - 1);
+    const fundoMaior = Math.max(...reinos.map((m) => m.fundo));
+    const zFrente = -(beira + 10);
+    let x = -total / 2;
+    const porArea = {};
+    reinos.forEach((m, i) => {
+      const cx = x + larguras[i] / 2;
+      x += larguras[i] + vao;
+      const cz = zFrente - m.fundo / 2 - 0.6;
+      m.grupo.position.set(cx, 0, cz);
+      m.grupo.rotation.y = 0; // de frente para a roda
+      m.grupo.visible = true;
+      const id = m.dados.grupo;
+      const area = porArea[id] || (porArea[id] = { id, tipo: "reino", x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity });
+      area.x0 = Math.min(area.x0, cx - m.largura / 2);
+      area.x1 = Math.max(area.x1, cx + m.largura / 2);
+      area.z0 = Math.min(area.z0, cz - m.fundo / 2);
+      area.z1 = Math.max(area.z1, cz + m.fundo / 2);
+      // a passarela de luz, da beira da roda até a entrada do reino
+      const cor = COR_DA_ZONA[id] || "#ff9f1c";
+      const fim = new T.Vector3(cx, 0, zFrente + 1);
+      const inicio = fim.clone().setLength(beira - 1.5);
+      const caminho = new T.Vector3().subVectors(fim, inicio);
+      const suporte = new T.Group();
+      suporte.position.copy(inicio).add(fim).multiplyScalar(0.5);
+      suporte.position.y = 0.012;
+      suporte.rotation.y = Math.atan2(caminho.x, caminho.z);
+      const passarela = new T.Mesh(
+        new T.PlaneGeometry(3.2, caminho.length()),
+        new T.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0.18, depthWrite: false, toneMapped: false }),
+      );
+      passarela.rotation.x = -PI / 2;
+      passarela.userData.zona = id;
+      suporte.add(passarela);
+      [-1.7, 1.7].forEach((lado) => {
+        const filete = new T.Mesh(this.geo("plano", () => new T.PlaneGeometry(1, 1)), new T.MeshBasicMaterial({ color: cor, toneMapped: false }));
+        filete.scale.set(0.08, caminho.length(), 1);
+        filete.rotation.x = -PI / 2;
+        filete.position.set(lado, 0.004, 0);
+        suporte.add(filete);
+      });
+      this.decoracao.add(suporte);
+    });
+    // o chão escuro sob os reinos e a placa da área na entrada
+    Object.values(porArea).forEach((area) => {
+      const cor = COR_DA_ZONA[area.id] || "#ff9f1c";
+      const chao = new T.Mesh(
+        new T.PlaneGeometry(area.x1 - area.x0 + 10, area.z1 - area.z0 + 10),
+        new T.MeshStandardMaterial({ color: "#081430", roughness: 0.9 }),
+      );
+      chao.rotation.x = -PI / 2;
+      chao.position.set((area.x0 + area.x1) / 2, -0.01, (area.z0 + area.z1) / 2);
+      chao.userData.zona = area.id;
+      this.decoracao.add(chao);
+      const zona = this.zonas.find((z) => z.id === area.id);
+      if (zona) {
+        const placa = new T.Mesh(this.geo("plano", () => new T.PlaneGeometry(1, 1)), this.materialDeTexto([zona.kicker || "", zona.titulo], cor));
+        placa.scale.set(7, 1.75, 1);
+        placa.position.set((area.x0 + area.x1) / 2, 0.5, area.z1 + 3.2);
+        placa.rotation.x = -1.05;
+        placa.userData.zona = area.id;
+        this.decoracao.add(placa);
+      }
+      this.trechos.push(area);
+      this.longeDosReinos = Math.max(this.longeDosReinos, -area.z0 + 120);
+    });
   }
 
   /** O trecho de uma área no piso da roda, na cor dela, com a placa. */
@@ -1804,6 +1891,8 @@ class Arena {
       }
     }
     this.palco.classList.add("em-passeio");
+    // no celular, o palco no meio da tela: a barra do site não cobre os botões
+    this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
   }
 
   sairPasseio({ voar = true } = {}) {
@@ -2208,6 +2297,8 @@ class Passeio {
     this.pulo = 0;
     this.altura = 0;
     this.limites = new T.Box3().setFromObject(maquina.grupo).expandByScalar(1.2);
+    // num espaço grande (o parque de trampolins), o passo é mais largo
+    this.velocidade = PASSO * (Math.max(maquina.largura, maquina.fundo) > 15 ? 2.2 : 1);
     this.aoApertar = (evento) => this.tecla(evento, true);
     this.aoSoltar = (evento) => this.tecla(evento, false);
   }
@@ -2336,13 +2427,13 @@ class Passeio {
     if (frente || lado) {
       this.frente.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
       this.lado.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
-      const d = PASSO * dt;
+      const d = this.velocidade * dt;
       this.mover((this.frente.x * frente + this.lado.x * lado) * d, (this.frente.z * frente + this.lado.z * lado) * d);
     } else if (this.destino) {
       const dx = this.destino.x - this.pes.x;
       const dz = this.destino.z - this.pes.z;
       const falta = Math.hypot(dx, dz);
-      const passo = Math.min(falta, PASSO * 1.6 * dt);
+      const passo = Math.min(falta, this.velocidade * 1.6 * dt);
       if (falta > 0.01) {
         this.pes.x += (dx / falta) * passo;
         this.pes.z += (dz / falta) * passo;
@@ -2429,6 +2520,19 @@ class Camera {
   olharZona(trecho) {
     const arena = this.arena;
     const camera = arena.camera;
+    if (trecho.tipo === "reino") {
+      // o reino inteiro, visto de cima e da frente (do lado da roda)
+      const th = Math.tan((camera.fov * PI) / 360) * camera.aspect;
+      const largura = trecho.x1 - trecho.x0 + 4;
+      const fundo = trecho.z1 - trecho.z0;
+      this.alvoDesejado.set((trecho.x0 + trecho.x1) / 2, 1.5, (trecho.z0 + trecho.z1) / 2);
+      this.raioDesejado = Math.min(140, (largura / 2 / th) * 1.05 + fundo / 2);
+      this.phiDesejado = 0.85;
+      let delta = 0 - this.thetaDesejado;
+      delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+      this.thetaDesejado += delta;
+      return;
+    }
     const raio = arena.raio || 8;
     const meio = (trecho.a0 + trecho.a1) / 2;
     const arco = Math.max(0.3, trecho.a1 - trecho.a0);
@@ -2460,7 +2564,7 @@ class Camera {
     const deLado = vista === "direita" || vista === "esquerda";
     const largo = deLado ? D : W;
     const fundo = deLado ? W : D;
-    let raio = Math.max(largo / 2 / th, maquina.H / 2 / tv) * 1.15 + fundo / 2;
+    let raio = Math.max(largo / 2 / th, maquina.H / 2 / tv) * (largo > 15 ? 1.3 : 1.15) + fundo / 2;
     if (vista === "cima") raio = Math.max(W / 2 / th, D / 2 / tv) * 1.1 + maquina.H;
     this.raioDesejado = Math.min(30, raio);
     this.alvoDesejado.y = maquina.alturaP + maquina.H * (vista === "baixo" ? 0.6 : 0.45);
@@ -2558,7 +2662,7 @@ class Camera {
 
   limitar() {
     this.phiDesejado = Math.min(1.45, Math.max(0.22, this.phiDesejado));
-    const maximo = (this.arena.raio || 8) * 3.6 + 14;
+    const maximo = Math.max((this.arena.raio || 8) * 3.6 + 14, this.arena.longeDosReinos ? 140 : 0);
     this.raioDesejado = Math.min(maximo, Math.max(2.4, this.raioDesejado));
   }
 
