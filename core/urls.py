@@ -231,7 +231,7 @@ urlpatterns = [
         name="aplicar_cupom",
     ),
 
-    # Arena 3D e Lazer & Sport Jogos -- no lugar que era de "Nossos
+    # Arena e Lazer & Sport Jogos -- no lugar que era de "Nossos
     # Parceiros" no menu. A página de parceiros continua em
     # /estabelecimentos/, com link a partir da arena e da busca.
     path("arena/", ArenaView.as_view(), name="arena"),

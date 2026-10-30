@@ -1,10 +1,10 @@
-"""Arena 3D e Lazer & Sport Jogos — o que cada brinquedo vira na vitrine.
+"""Arena e Lazer & Sport Jogos — o que cada brinquedo vira na vitrine.
 
-A ARENA NÃO PEDE CADASTRO NOVO. Ela monta a vitrine em 3D com o que o
+A ARENA NÃO PEDE CADASTRO NOVO. Ela monta a vitrine com o que o
 brinquedo já tem: nome, categoria, tags, medidas e as quatro fotos da
-galeria (frente, lados e verso). O desenho 3D que cada um ganha -- um
-gabinete de fliperama, uma máquina de basquete, uma cama elástica -- é
-deduzido daqui, pelas palavras do cadastro.
+galeria (frente, lados e verso). O desenho de cada um -- um gabinete de
+fliperama, uma máquina de basquete, uma cama elástica -- é deduzido
+daqui, pelas palavras do cadastro, e decide a seção e o jogo da casa.
 
 Isso é de propósito. Um campo novo no `Brinquedos` pediria migração, e a
 migração deste projeto é aplicada à mão (ver `publicar-seguro.ps1`): uma
@@ -22,7 +22,6 @@ import re
 import unicodedata
 from decimal import Decimal
 
-from django.templatetags.static import static
 from django.urls import reverse
 
 from .formatos import dinheiro, medida
@@ -485,202 +484,54 @@ def jogo_do_desenho(desenho):
 
 
 # ======================================================================
-# CORES E ADESIVOS — o mesmo gabinete em várias roupas
+# AS SEÇÕES DA ARENA
 # ======================================================================
 
-#: As cores em que a fábrica entrega os gabinetes. A ordem é a dos botões
-#: na ficha 3D.
-CORES_GABINETE = (
-    ("vermelho", "Vermelho", "#e3192d"),
-    ("rosa", "Rosa", "#ff3fa4"),
-    ("amarelo", "Amarelo", "#ffc21a"),
-    ("preto", "Preto", "#17171f"),
-    ("azul", "Azul", "#1f6fff"),
-    ("roxo", "Roxo", "#7b3fe4"),
-    ("verde", "Verde", "#19b45a"),
-    ("laranja", "Laranja", "#ff7a00"),
-    ("branco", "Branco", "#eef2f8"),
+#: A arena separa as máquinas em três seções, nesta ordem. O 3D montado à
+#: mão (o gabinete de boliche) saiu: não era a máquina de verdade. Os
+#: objetos 3D voltam feitos a partir das fotos reais de cada máquina
+#: (frente, lados e costas), e até lá cada seção mostra as fotos.
+GRUPOS_DA_ARENA = (
+    {
+        "id": "jogos",
+        "titulo": "Com jogos da Lazer & Sport",
+        "kicker": "Desenvolvidos aqui",
+        "texto": "As máquinas que rodam os jogos feitos na nossa fábrica. Cada uma tem a prévia para jogar.",
+    },
+    {
+        "id": "maquinas",
+        "titulo": "As máquinas que já fazíamos",
+        "kicker": "Catálogo da fábrica",
+        "texto": "Fliperamas, mesas, simuladores, garras e as outras máquinas de sempre.",
+    },
+    {
+        "id": "brinquedoes",
+        "titulo": "Trampolins e brinquedões",
+        "kicker": "Espaços kids",
+        "texto": "Camas elásticas, playgrounds e brinquedões para o espaço kids.",
+    },
 )
 
-#: Os 7 temas de adesivagem do Strike Kids, com os 12 adesivos de cada um
-#: gerados pela própria ferramenta do jogo (`divulgacao/ferramentas/
-#: gerar_gabinete.py --maquete`, no repositório do Strike Kids).
-TEMAS_STRIKE_KIDS = (
-    ("vermelho", "Vermelho"),
-    ("azul", "Azul"),
-    ("branco", "Branco"),
-    ("espaco", "Espaço"),
-    ("mar", "Fundo do Mar"),
-    ("dinos", "Selva dos Dinos"),
-    ("parque", "Parque de Diversões"),
-)
-
-#: Adesivos montados na hora, no navegador: a arte do jogo sobre a cor
-#: escolhida -- é assim que o Dragon Bowling aparece rosa, vermelho,
-#: amarelo ou preto. (nome, arte grande das laterais, logotipo, cor padrão)
-ARTES_DE_ADESIVO = {
-    "dragon": ("Dragon Bowling", "site/arena/capas/dragon-bowling-poster.webp", "site/arena/capas/dragon-bowling.webp", "vermelho"),
-}
-
-#: SÓ GANHA 3D A MÁQUINA QUE TEM OBJETO DE VERDADE.
-#:
-#: Hoje é o gabinete de boliche: as medidas e a posição de cada adesivo
-#: vêm da planta do Strike Kids (`divulgacao/ferramentas/gerar_gabinete.py`
-#: e a maquete `gabinete_render.gd`, no repositório do jogo), e o Dragon
-#: Bowling roda no mesmo gabinete. As outras máquinas aparecem com as fotos
-#: reais até chegarem os planos de corte -- gabinete inventado, não.
-DESENHOS_COM_3D = {"boliche"}
-
-#: Medidas do gabinete de boliche na planta (altura, largura, fundo em m).
-GABINETE_BOLICHE = (2.38, 0.8, 3.2)
-
-_COR_NO_NOME = {"rosa": "rosa", "pink": "rosa", "vermelh": "vermelho", "amarel": "amarelo",
-                "pret": "preto", "black": "preto", "azul": "azul", "roxo": "roxo", "lilas": "roxo",
-                "verde": "verde", "laranja": "laranja", "branc": "branco"}
+#: Os desenhos que vão para "Trampolins e brinquedões".
+DESENHOS_DE_BRINQUEDAO = {"cama_elastica", "playground"}
 
 
-def _cor_do_nome(nome):
-    texto = _normalizar(nome)
-    for trecho, cor in _COR_NO_NOME.items():
-        if re.search(r"(?:^| )" + trecho, texto):
-            return cor
-    return None
+def grupo_da_arena(desenho, jogo):
+    """A seção da máquina: a do jogo da casa vem antes de tudo."""
+    if jogo:
+        return "jogos"
+    if desenho in DESENHOS_DE_BRINQUEDAO:
+        return "brinquedoes"
+    return "maquinas"
 
 
-def _familia_do_boliche(nome):
-    """Qual boliche é: o infantil (Strike Kids), o do dragão, ou não se sabe."""
-    texto = _normalizar(nome)
-    if "dragon" in texto or "dragao" in texto:
-        return "dragon"
-    if any(_contem(texto, p) for p in ("strike", "kids", "infantil", "bob", "mia")):
-        return "strike"
-    return None
-
-
-def _temas_strike():
-    pasta = static("site/arena/adesivos/strike-kids/vermelho/01_letreiro_frente.webp").rsplit("/vermelho/", 1)[0]
+def grupos_da_arena(catalogo):
+    """As seções com as máquinas de cada uma; seção vazia não aparece."""
     return [
-        {
-            "id": "strike-" + chave,
-            "nome": "Strike Kids · " + rotulo,
-            "tipo": "pronto",
-            "pasta": f"{pasta}/{chave}/",
-            "tela": static("site/arena/adesivos/strike-kids/tela.webp"),
-            "miniatura": f"{pasta}/{chave}/01_letreiro_frente.webp",
-        }
-        for chave, rotulo in TEMAS_STRIKE_KIDS
+        {**grupo, "brinquedos": [b for b in catalogo if b["grupo"] == grupo["id"]]}
+        for grupo in GRUPOS_DA_ARENA
+        if any(b["grupo"] == grupo["id"] for b in catalogo)
     ]
-
-
-def _artes_dragon():
-    adesivos = []
-    for chave, (rotulo, arte, logo, cor) in ARTES_DE_ADESIVO.items():
-        adesivos.append({
-            "id": chave, "nome": rotulo, "tipo": "arte",
-            "arte": static(arte), "logo": static(logo), "cor": cor, "miniatura": static(logo),
-        })
-    return adesivos
-
-
-def variantes(nome, desenho):
-    """As roupas de uma máquina que tem 3D; `None` para as que não têm.
-
-    O Strike Kids veste os 12 adesivos de verdade de um dos 7 temas; o
-    Dragon Bowling, a arte do jogo sobre a cor escolhida. Um boliche que
-    o nome não diz qual é recebe as duas famílias.
-    """
-    if desenho not in DESENHOS_COM_3D:
-        return None
-    familia = _familia_do_boliche(nome)
-    if familia == "strike":
-        adesivos = _temas_strike()
-    elif familia == "dragon":
-        adesivos = _artes_dragon()
-    else:
-        adesivos = _temas_strike() + _artes_dragon()
-
-    padrao = adesivos[0]["id"]
-    cor_do_nome = _cor_do_nome(nome)
-    if familia == "dragon":
-        padrao = "dragon"
-    elif cor_do_nome and any(a["id"] == f"strike-{cor_do_nome}" for a in adesivos):
-        padrao = f"strike-{cor_do_nome}"
-
-    escolhida = next(a for a in adesivos if a["id"] == padrao)
-    return {
-        "adesivos": adesivos,
-        "adesivo": padrao,
-        "cores": [{"id": c, "nome": n, "hex": h} for c, n, h in CORES_GABINETE],
-        "cor": cor_do_nome or escolhida.get("cor") or "vermelho",
-    }
-
-
-#: As máquinas da vitrine 3D. Aparecem mesmo que o catálogo ainda não
-#: tenha um produto com esse nome; quando tem, a ficha usa as fotos, o
-#: preço e o link do produto.
-MAQUINAS_3D = (
-    {
-        "id": "strike-kids",
-        "nome": "Strike Kids",
-        "categoria": "Boliche infantil",
-        "descricao": (
-            "O boliche do Bob e da Mia, com 5 sensores, câmera para a foto dos "
-            "jogadores e o gabinete em 7 temas de adesivagem."
-        ),
-        "jogo": "strike-kids",
-        "capa": "site/arena/capas/strike-kids-logo.webp",
-        "fotos": ("site/arena/capas/strike-kids-fundo.webp", "site/arena/capas/strike-kids-logo.webp"),
-    },
-    {
-        "id": "dragon-bowling",
-        "nome": "Dragon Bowling",
-        "categoria": "Boliche de arcade",
-        "descricao": (
-            "O boliche de arcade com a arte do dragão, para 1 ou 2 jogadores. "
-            "Escolha a cor do gabinete: rosa, vermelho, amarelo, preto e mais."
-        ),
-        "jogo": "dragon-bowling",
-        "capa": "site/arena/capas/dragon-bowling.webp",
-        "fotos": ("site/arena/capas/dragon-bowling-poster.webp", "site/arena/capas/dragon-bowling.webp"),
-    },
-)
-
-
-def maquinas_3d(catalogo):
-    """A vitrine 3D: as máquinas com objeto real, ligadas ao produto do catálogo."""
-    from .formatos import medida
-
-    altura, largura, fundo = GABINETE_BOLICHE
-    maquinas = []
-    for indice, base in enumerate(MAQUINAS_3D):
-        familia = "dragon" if base["id"].startswith("dragon") else "strike"
-        produto = next(
-            (b for b in catalogo if b.get("tem_3d") and _familia_do_boliche(b["nome"]) == familia),
-            None,
-        )
-        fotos = (produto or {}).get("fotos") or [
-            {"tipo": "arte", "url": static(caminho)} for caminho in base["fotos"]
-        ]
-        maquinas.append({
-            "id": base["id"],
-            "nome": produto["nome"] if produto else base["nome"],
-            "url": produto["url"] if produto else "",
-            "desenho": "boliche",
-            "jogo": base["jogo"],
-            "categorias": [base["categoria"]],
-            "medidas": [altura, largura, fundo],
-            "medidas_reais": True,
-            "medidas_texto": " × ".join(medida(v) for v in (altura, largura, fundo)),
-            "voltagem": (produto or {}).get("voltagem", ""),
-            "preco": (produto or {}).get("preco", ""),
-            "avaliacao": (produto or {}).get("avaliacao", 0),
-            "capa": (produto or {}).get("capa") or static(base["capa"]),
-            "fotos": fotos,
-            "descricao": base["descricao"],
-            "variantes": variantes(produto["nome"] if produto else base["nome"], "boliche"),
-            "indice": indice,
-        })
-    return maquinas
 
 
 # ======================================================================
@@ -702,9 +553,7 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
     medidas, medidas_reais = medidas_para_3d(
         desenho, brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m,
     )
-    tem_3d = desenho in DESENHOS_COM_3D
-    # O objeto 3D é o da planta; a medida do cadastro só aparece na ficha.
-    medidas_do_objeto = list(GABINETE_BOLICHE) if tem_3d else medidas
+    jogo = jogo_do_desenho(desenho)
 
     fotos = {}
     for foto in brinquedo.imagens_brinquedo.all():
@@ -718,9 +567,10 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "nome": brinquedo.nome_brinquedo,
         "url": url_detalhe,
         "desenho": desenho,
-        "jogo": jogo_do_desenho(desenho),
+        "jogo": jogo,
+        "grupo": grupo_da_arena(desenho, jogo),
         "categorias": categorias,
-        "medidas": medidas_do_objeto,
+        "medidas": medidas,
         "medidas_reais": medidas_reais,
         "medidas_texto": (
             " × ".join(medida(v) for v in (brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m))
@@ -736,6 +586,4 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
             for tipo in TIPOS_DE_FOTO if fotos.get(tipo)
         ] or ([{"tipo": "perfil", "url": capa}] if capa else []),
         "descricao": (brinquedo.descricao or "")[:240],
-        "tem_3d": tem_3d,
-        "variantes": variantes(brinquedo.nome_brinquedo, desenho),
     }

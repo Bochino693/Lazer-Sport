@@ -11,8 +11,9 @@ O que estes testes protegem:
   * nenhuma arte de terceiros (logos de patrocinador, capas de outras
     músicas) entra na pasta dos jogos -- só as duas capas que o dono
     pediu para o Hit Music (Carmine e Paper Moon, as da própria mesa);
-  * só ganha 3D a máquina que tem objeto de verdade (o gabinete de
-    boliche); as outras ficam com as fotos reais, sem gabinete inventado;
+  * as máquinas vêm em seções: as dos jogos da casa primeiro, depois as
+    que já fazíamos e os trampolins e brinquedões; nada de 3D montado à
+    mão (nem na arena, nem na página do produto);
   * o painel ao vivo responde com totais e pode ser guardado em cache;
   * a home troca "Nossos Parceiros" pela chamada da arena.
 """
@@ -64,8 +65,10 @@ class ArenaPaginaTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         html = resposta.content.decode()
         self.assertEqual(html.count("<h1"), 1)
-        for ancora in ('id="jogos"', 'id="arena-3d"', 'id="maquinas"'):
+        for ancora in ('id="jogos"', 'id="maquinas"', 'id="maquinas-jogos"', 'id="maquinas-maquinas"'):
             self.assertIn(ancora, html)
+        self.assertNotIn('id="arena-3d"', html)
+        self.assertNotIn("arena3d.js", html)
         # Todos os jogos chegam como cartão, levando ao simulador.
         for jogo in arena.JOGOS:
             self.assertIn(f'href="{reverse("jogo", args=[jogo["slug"]])}"', html)
@@ -172,50 +175,33 @@ class ArquivosDosJogosTests(TestCase):
                 self.assertIn(capa, script)
                 self.assertTrue((JOGOS_DIR / capa).is_file())
 
-    def test_adesivos_do_strike_kids_completos(self):
-        for tema in arena.TEMAS_STRIKE_KIDS:
-            chave = tema[0] if isinstance(tema, (tuple, list)) else tema
-            for face in (
-                "01_letreiro_frente", "02_letreiro_lateral_esquerda", "02_letreiro_lateral_direita",
-                "02_letreiro_traseira", "03_torre_frente", "04_torre_lateral_esquerda",
-                "04_torre_lateral_direita", "05_torre_traseira", "06_pista_lateral_esquerda",
-                "06_pista_lateral_direita", "07_pista_frente", "08_pista_piso",
-            ):
-                with self.subTest(tema=chave, face=face):
-                    self.assertIsNotNone(
-                        finders.find(f"site/arena/adesivos/strike-kids/{chave}/{face}.webp")
-                    )
-        # A tela da TV é a mesma em todos os temas.
-        self.assertIsNotNone(finders.find("site/arena/adesivos/strike-kids/tela.webp"))
+class SecoesDaArenaTests(TestCase):
 
+    def setUp(self):
+        cache.clear()
 
-class SoMaquinaDeVerdadeGanha3DTests(TestCase):
+    def test_cada_maquina_na_sua_secao(self):
+        for nome in ("Air Game Hockey", "Dragon Bowling Rosa", "Cama Elástica 3m", "Lazer Shot Arena"):
+            _brinquedo(nome)
+        resposta = self.client.get(reverse("arena"))
+        grupos = {g["id"]: [b["nome"] for b in g["brinquedos"]] for g in resposta.context["grupos_arena"]}
+        self.assertEqual(list(grupos), ["jogos", "maquinas", "brinquedoes"])
+        self.assertEqual(sorted(grupos["jogos"]), ["Dragon Bowling Rosa", "Lazer Shot Arena"])
+        self.assertEqual(grupos["maquinas"], ["Air Game Hockey"])
+        self.assertEqual(grupos["brinquedoes"], ["Cama Elástica 3m"])
 
-    def test_variantes_so_para_o_boliche(self):
-        self.assertIsNone(arena.variantes("Air Game Hockey", "fliperama"))
-        dragon = arena.variantes("Dragon Bowling Rosa", "boliche")
-        self.assertEqual(dragon["adesivo"], "dragon")
-        self.assertEqual(dragon["cor"], "rosa")
-        strike = arena.variantes("Strike Kids Boliche", "boliche")
-        self.assertTrue(strike["adesivo"].startswith("strike-"))
+    def test_secao_vazia_nao_aparece(self):
+        _brinquedo("Air Game Hockey")
+        html = self.client.get(reverse("arena")).content.decode()
+        self.assertIn('id="maquinas-maquinas"', html)
+        self.assertNotIn('id="maquinas-jogos"', html)
+        self.assertNotIn('id="maquinas-brinquedoes"', html)
 
-    def test_vitrine_3d_tem_strike_kids_e_dragon_bowling(self):
-        maquinas = arena.maquinas_3d([])
-        self.assertEqual([m["id"] for m in maquinas], ["strike-kids", "dragon-bowling"])
-        for maquina in maquinas:
-            self.assertEqual(maquina["desenho"], "boliche")
-            self.assertEqual(maquina["medidas"], list(arena.GABINETE_BOLICHE))
-            self.assertTrue(maquina["fotos"])
-            self.assertTrue(maquina["variantes"]["adesivos"])
-
-    def test_pagina_do_produto_so_mostra_3d_no_boliche(self):
+    def test_pagina_do_produto_sem_3d(self):
         boliche = _brinquedo("Dragon Bowling Rosa")
-        hockey = _brinquedo("Air Game Hockey")
-        com_3d = self.client.get(reverse("brinquedo_detalhe", args=[boliche.pk])).content.decode()
-        sem_3d = self.client.get(reverse("brinquedo_detalhe", args=[hockey.pk])).content.decode()
-        self.assertIn('id="ver-em-3d"', com_3d)
-        self.assertNotIn('id="ver-em-3d"', sem_3d)
-        self.assertNotIn("arena3d.js", sem_3d)
+        html = self.client.get(reverse("brinquedo_detalhe", args=[boliche.pk])).content.decode()
+        self.assertNotIn('id="ver-em-3d"', html)
+        self.assertNotIn("arena3d.js", html)
 
 
 class PainelAoVivoTests(TestCase):

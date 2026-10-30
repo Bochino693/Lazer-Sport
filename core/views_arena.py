@@ -1,9 +1,10 @@
-"""Arena 3D e Lazer & Sport Jogos: os jogos da casa e as máquinas em 3D.
+"""Arena e Lazer & Sport Jogos: os jogos da casa e as máquinas da fábrica.
 
 A página tem de abrir inteira sem JavaScript: os brinquedos chegam como
 uma lista de links (é o que o buscador lê e o que aparece num aparelho
-sem WebGL), e os jogos como cartões com a arte e a descrição. O 3D e as
-miniaturas jogáveis entram por cima disso, quando o aparelho aguenta.
+sem JavaScript), e os jogos como cartões com a arte e a descrição. As
+máquinas vêm em seções: as dos jogos da casa, as que já fazíamos e os
+trampolins e brinquedões.
 """
 
 from django.db.models import Prefetch
@@ -66,9 +67,7 @@ class ArenaView(View):
         jogos = jogos_com_maquina(dados)
 
         return render(request, "arena.html", {
-            # Em 3D só as máquinas com objeto de verdade; o catálogo
-            # inteiro vai para a vitrine de fotos logo abaixo.
-            "maquinas_3d": arena.maquinas_3d(dados),
+            "grupos_arena": arena.grupos_da_arena(dados),
             "brinquedos_arena": dados,
             "categorias_arena": categorias,
             "jogos": jogos,

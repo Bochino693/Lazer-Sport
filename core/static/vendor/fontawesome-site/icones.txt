@@ -114,7 +114,6 @@ fa-map-marked-alt
 fa-mobile-screen
 fa-mobile-screen-button
 fa-paper-plane
-fa-pause
 fa-pen
 fa-pen-ruler
 fa-pen-to-square
@@ -154,7 +153,6 @@ fa-triangle-exclamation
 fa-trophy
 fa-truck
 fa-truck-fast
-fa-up-right-and-down-left-from-center
 fa-user
 fa-user-check
 fa-user-lock

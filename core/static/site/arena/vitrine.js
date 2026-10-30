@@ -1,13 +1,18 @@
 /* A vitrine de fotos da arena: filtro por categoria e troca de foto.
 
+   As máquinas vêm em seções (jogos da casa, as que já fazíamos,
+   brinquedões); o filtro vale para todas e a seção que fica sem nenhuma
+   máquina some, junto com o atalho dela.
+
    Mouse: a posição em cima da foto escolhe o lado (esquerda = primeira
    foto, direita = última), como nas lojas grandes. Dedo: arrastar de lado
    passa a foto, e o arrasto não vira clique no link. */
 
-const grade = document.querySelector("[data-fotos-grade]");
+const vitrine = document.querySelector("#maquinas");
 
-if (grade) {
-  const cartoes = Array.from(grade.querySelectorAll("[data-fotos-cartao]"));
+if (vitrine) {
+  const cartoes = Array.from(vitrine.querySelectorAll("[data-fotos-cartao]"));
+  const grupos = Array.from(vitrine.querySelectorAll("[data-fotos-grupo]"));
 
   const mostrar = (midia, indice) => {
     const fotos = midia.querySelectorAll("img");
@@ -73,6 +78,12 @@ if (grade) {
       cartoes.forEach((cartao) => {
         const lista = (cartao.dataset.categorias || "").split("|");
         cartao.hidden = Boolean(categoria) && !lista.includes(categoria);
+      });
+      grupos.forEach((grupo) => {
+        const vazio = !grupo.querySelector("[data-fotos-cartao]:not([hidden])");
+        grupo.hidden = vazio;
+        const atalho = vitrine.querySelector(`.arena-grupos-atalhos a[href="#${grupo.id}"]`);
+        if (atalho) atalho.hidden = vazio;
       });
     });
   }
