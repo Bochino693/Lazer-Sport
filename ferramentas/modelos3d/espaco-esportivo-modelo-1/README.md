@@ -16,13 +16,18 @@ e as fotos do cadastro (`.../espaco-esportivo-modelo-1/*.webp`) saem daqui.
   piscina grande com a parede de escalada, as cinco enterradas com cesta,
   o varredor e as escadas.
 - **A planta das quadras (altura 2,90 m)**: campo e quadra de basquete
-  enjaulados (8 m + 7 m, por 4 + 4 m), as duas arenas de panna de 5 m e a
+  enjaulados (8 m + 7 m, por 4 + 4 m), os dois círculos de 5 m e a
   pista de 2 m × 14 m.
+- **A máquina de verdade do Gol Flash redondo** (vídeo da fábrica): os dois
+  círculos têm grama sintética, parede preta acolchoada de 0,6 m com a borda
+  arredondada e a marca por dentro. Os 7 LEDs de cada círculo, a tela de
+  cada um, as telas do Swish em cima das cinco cestas e as crianças jogando
+  são da Arena (`ANIMACOES` em `core/static/site/arena/arena3d.js`): mexem.
 - **As imagens do espaço completo**: o piso azul de EVA, os blocos de
   proteção, o circuito kids na frente do parque (pórticos, decks, obstáculos,
   redes) e o tobogã com a piscina de bolinhas.
 
-Tudo junto: 39 m × 23 m, altura de 3,9 m; ~33 mil triângulos; ~720 KB.
+Tudo junto: 39 m × 23 m, altura de 3,9 m; ~34 mil triângulos; ~760 KB.
 As camas levam a marca `lona` (no passeio da Arena, quem pisa nelas quica).
 
 ## Refazer

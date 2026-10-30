@@ -8,7 +8,8 @@
 //  - da planta do parque (18 m x 16,5 m): a divisão das camas, as cores
 //    dos acolchoados, as piscinas de espuma, as enterradas e a parede;
 //  - da planta das quadras (altura 2,90 m): campo e quadra de basquete
-//    (8 m + 7 m, por 4 + 4 m), as duas arenas de panna (5 m) e a pista
+//    (8 m + 7 m, por 4 + 4 m), os dois círculos de 5 m (o Gol Flash
+//    redondo, como a máquina de verdade: grama, parede preta acolchoada) e a pista
 //    de 2 m x 14 m;
 //  - das imagens do espaço completo: o piso azul, o circuito kids na
 //    frente do parque, o tobogã com a piscina de bolinhas e os blocos.
@@ -64,9 +65,8 @@ const M = {
   pisoAzul: material("piso-eva", { color: COR.pisoAzul, roughness: 0.95 }),
   branco: material("branco", { color: "#f4f6fa", roughness: 0.5 }),
   aro: material("aro-laranja", { color: "#ff6a00", roughness: 0.4, metalness: 0.5 }),
-  terra: material("piso-panna", { color: COR.terra, roughness: 0.95 }),
-  bordaPanna: material("parede-panna", { color: "#2b2e33", roughness: 0.6 }),
-  verdeBorda: material("borda-verde", { color: "#5fd36a", roughness: 0.5 }),
+  paredeGol: material("parede-gol-flash", { color: "#14161b", roughness: 0.55 }),
+  acolchoado: material("acolchoado-gol-flash", { color: "#1c1f26", roughness: 0.45 }),
   vidro: material("tela-quadras", { color: "#20242c", transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }),
   cubos: material("cubos-de-espuma", { vertexColors: true, roughness: 0.85 }),
   bolinhas: material("bolinhas", { vertexColors: true, roughness: 0.35 }),
@@ -101,6 +101,36 @@ M.quadra = material("quadra-basquete", {
     g.beginPath(); g.arc(w / 2, h / 2, 30, 0, PI * 2); g.stroke();
     g.beginPath(); g.arc(6, h / 2, 110, -PI / 2, PI / 2); g.stroke();
     g.beginPath(); g.arc(w - 6, h / 2, 110, PI / 2, PI * 1.5); g.stroke();
+  }),
+});
+M.gramaGol = material("grama-gol-flash", {
+  roughness: 1,
+  map: tela(256, 256, (g, w, h) => {
+    g.fillStyle = "#2f7d33"; g.fillRect(0, 0, w, h);
+    // as fibras da grama sintética (soltas, sem desenho nem linhas de campo)
+    let n = 12345;
+    const acaso = () => ((n = (n * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 2600; i++) {
+      g.fillStyle = i % 2 ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.08)";
+      g.fillRect(acaso() * w, acaso() * h, 2, 2);
+    }
+  }),
+});
+// a marca por dentro da parede, duas vezes na volta (a textura dá uma volta inteira)
+M.marcaGol = material("marca-gol-flash", {
+  roughness: 0.55,
+  map: tela(2048, 128, (g, w, h) => {
+    g.fillStyle = "#14161b"; g.fillRect(0, 0, w, h);
+    [0.18, 0.68].forEach((u) => {
+      const x = u * w;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.font = "italic 900 54px Arial Black, Arial, sans-serif";
+      g.fillStyle = "#ffffff"; g.fillText("GOL", x - 90, 52);
+      g.fillStyle = "#a6e22e"; g.fillText("FLASH", x + 70, 52);
+      g.font = "800 20px Arial, sans-serif";
+      g.fillStyle = "#e9f5ff"; g.fillText("ACERTE, MARQUE E SEJA O CRAQUE!", x, 98);
+    });
   }),
 });
 M.pista = material("pista", {
@@ -486,7 +516,7 @@ escada(P.X(18) - 1.2, P.X(18), ...D(8.6, 10), "+x"); // a do lado das quadras
 
 /* ======================================================================
    4. A ÁREA DAS QUADRAS (altura 2,90 m): campo e basquete enjaulados,
-   as duas arenas de panna e a pista de 14 m
+   os dois círculos do Gol Flash e a pista de 14 m
    ====================================================================== */
 {
   const alto = 2.9;
@@ -540,18 +570,26 @@ escada(P.X(18) - 1.2, P.X(18), ...D(8.6, 10), "+x"); // a do lado das quadras
   placa(M.vidro, V(x1, alto / 2, (zFundo + zFrente) / 2), zFrente - zFundo, alto, V(1, 0, 0), V(0, 0, -1));
   placa(M.vidro, V((x0 + x1) / 2, alto / 2, zMeio), x1 - x0, alto, V(0, 0, 1), V(1, 0, 0));
 
-  // as duas arenas de panna (5 m), com a bola
+  // os dois círculos do GOL FLASH redondo, como a máquina de verdade: grama
+  // sintética, parede preta acolchoada de 0,6 m com a borda arredondada e a
+  // marca por dentro. Os 7 LEDs (que acendem) e a tela de cada círculo são
+  // da Arena 3D (core/static/site/arena/arena3d.js), que os anima.
   [-12.5, -6.5].forEach((xc) => {
     const zc = 2.4;
     const chao = new THREE.CircleGeometry(2.5, 48);
     chao.rotateX(-PI / 2);
-    por(M.terra, chao, new THREE.Matrix4().makeTranslation(xc, 0.07, zc));
-    const parede = new THREE.CylinderGeometry(2.55, 2.55, 0.55, 64, 1, true);
-    por(M.bordaPanna, parede, new THREE.Matrix4().makeTranslation(xc, 0.33, zc));
-    const borda = new THREE.TorusGeometry(2.55, 0.05, 8, 64);
+    por(M.gramaGol, chao, new THREE.Matrix4().makeTranslation(xc, 0.07, zc));
+    // a parede: lado de fora, lado de dentro (com a marca) e a borda de cima
+    const fora = new THREE.CylinderGeometry(2.62, 2.62, 0.57, 64, 1, true);
+    por(M.paredeGol, fora, new THREE.Matrix4().makeTranslation(xc, 0.335, zc));
+    const dentro = new THREE.CylinderGeometry(2.5, 2.5, 0.55, 64, 1, true);
+    dentro.scale(-1, 1, 1); // as faces para dentro (a marca se lê de dentro)
+    const normal = dentro.attributes.normal;
+    for (let i = 0; i < normal.count; i++) normal.setXYZ(i, -normal.getX(i), -normal.getY(i), -normal.getZ(i));
+    por(M.marcaGol, dentro, new THREE.Matrix4().makeTranslation(xc, 0.345, zc));
+    const borda = new THREE.TorusGeometry(2.56, 0.075, 10, 72);
     borda.rotateX(PI / 2);
-    por(M.verdeBorda, borda, new THREE.Matrix4().makeTranslation(xc, 0.6, zc));
-    esfera(M.branco, V(xc + 0.4, 0.18, zc - 0.3), 0.11, 14);
+    por(M.acolchoado, borda, new THREE.Matrix4().makeTranslation(xc, 0.63, zc));
   });
 
   // a pista de 2 m x 14 m, com a chegada quadriculada

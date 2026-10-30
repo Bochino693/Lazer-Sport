@@ -61,8 +61,8 @@ CADASTROS = {
             "Espaço esportivo completo numa área de 39 m × 23 m. Parque de trampolins de 18 m × 16,5 m "
             "(plataforma a 0,85 m e estrutura de 3,65 m): camas em blocos coloridos, seis piscinas de espuma "
             "com percurso suspenso, piscina de espuma grande com parede de escalada, cinco enterradas com "
-            "cesta e o varredor. Ao lado, quadras de campo e de basquete enjauladas (altura de 2,9 m), duas "
-            "arenas de panna de 5 m e pista de 14 m; na frente, o circuito kids com tobogã e piscina de "
+            "cesta e o varredor. Ao lado, quadras de campo e de basquete enjauladas (altura de 2,9 m), dois "
+            "círculos de 5 m do Gol Flash redondo e pista de 14 m; na frente, o circuito kids com tobogã e piscina de "
             "bolinhas, sobre piso de EVA. Projeto ilustrativo: a divisão e os itens se ajustam ao espaço."
         ),
         "medidas": ("3.65", "39.00", "23.00"),

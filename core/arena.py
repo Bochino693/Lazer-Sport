@@ -542,7 +542,8 @@ MODELOS_3D = (
         "grupo": "esportivos",
         "reino": True,
         # os jogos da casa que rodam neste espaço: nas cestas, o Swish; nos
-        # círculos de panna, o Gol Flash redondo (na Arena 3D, os dois mexem)
+        # dois círculos, o Gol Flash redondo (na Arena 3D, os dois rodam, com
+        # crianças jogando e as telas de cada cesta e de cada círculo)
         "jogos": ("swish-arena", "gol-flash-arena"),
         "pasta": "site/arena/modelos/espaco-esportivo-modelo-1/",
         "fotos": (("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"), ("lado_esquerdo", "lado_esquerdo.webp")),
@@ -550,7 +551,7 @@ MODELOS_3D = (
         "categorias": ("Espaço esportivo",),
         "descricao": (
             "Espaço esportivo completo: parque de trampolins com piscinas de espuma, enterradas, parede de "
-            "escalada e varredor; quadras de campo e basquete enjauladas, duas arenas de panna, pista de 14 m "
+            "escalada e varredor; quadras de campo e basquete enjauladas, dois círculos do Gol Flash, pista de 14 m "
             "e o circuito kids com tobogã e piscina de bolinhas."
         ),
     },
