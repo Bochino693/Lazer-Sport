@@ -1324,6 +1324,188 @@ html.ls-escuro:not(#_):not(#__) .card-mini-curtidas:hover { color: #fff; }
     html.ls-escuro:not(#_):not(#__) .card-mini-curtidas { font-size: .74rem; }
 }
 
+/* ======================================================================
+   MANUTENÇÃO DA HOME — a assistência técnica em destaque
+
+   Texto, vantagens e os botões à esquerda; à direita o passo a passo e,
+   quando há, o número de atendimentos do mês (do painel ao vivo).
+   ====================================================================== */
+html.ls-escuro:not(#_):not(#__) .ls-manut {
+    display: block;
+    margin: 0;
+    padding: clamp(28px, 4vw, 56px) 0;
+    background: none;
+}
+
+.ls-manut-caixa {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: clamp(22px, 4vw, 56px);
+    align-items: center;
+    overflow: hidden;
+    padding: clamp(24px, 4vw, 52px);
+    border: 1px solid rgba(255, 176, 32, .25);
+    border-radius: 32px;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(255, 176, 32, .18), transparent 45%),
+        radial-gradient(circle at 100% 100%, rgba(47, 139, 255, .2), transparent 50%),
+        linear-gradient(135deg, #0f1c44, #070f29);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+
+/* as engrenagens de fundo, paradas (nada de animar no celular) */
+.ls-manut-caixa::after {
+    content: "\f085";
+    position: absolute;
+    right: -40px;
+    top: -60px;
+    color: rgba(255, 255, 255, .035);
+    font-family: "Font Awesome 6 Free";
+    font-size: 300px;
+    font-weight: 900;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.ls-manut-texto,
+.ls-manut-lado { position: relative; z-index: 1; min-width: 0; }
+
+html.ls-escuro:not(#_):not(#__) .ls-manut-titulo {
+    margin: 14px 0 12px;
+    color: #fff;
+    font-size: clamp(1.6rem, 3.2vw, 2.5rem);
+    font-weight: 900;
+    line-height: 1.12;
+    letter-spacing: -.02em;
+    text-align: left;
+}
+
+.ls-manut-titulo span {
+    display: block;
+    background: linear-gradient(90deg, #ffd23f, #ff8a00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+html.ls-escuro:not(#_):not(#__) .ls-manut-sub { margin: 0 0 20px; color: #c7d6f0; font-size: 1.02rem; line-height: 1.6; text-align: left; }
+
+.ls-manut-vantagens {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 24px;
+    padding: 0;
+    list-style: none;
+}
+
+.ls-manut-vantagens li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .04);
+}
+
+.ls-manut-vantagens i {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 176, 32, .25), rgba(255, 138, 0, .12));
+    color: #ffc04d;
+    font-size: 1.05rem;
+}
+
+.ls-manut-vantagens span { color: #9fb3d1; font-size: .84rem; line-height: 1.35; }
+.ls-manut-vantagens b { display: block; color: #fff; font-size: .95rem; }
+
+.ls-manut-acoes { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.ls-manut-acoes .ls-quadro-botao--principal {
+    background: linear-gradient(135deg, #ffb020, #ff7a00);
+    color: #1d1200;
+    box-shadow: 0 14px 30px rgba(255, 138, 0, .35);
+}
+
+.ls-manut-botao-zap {
+    border: 1px solid rgba(37, 211, 102, .45);
+    background: rgba(37, 211, 102, .12);
+    color: #7cf0a8;
+}
+
+.ls-manut-numero {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 16px;
+    color: #c7d6f0;
+    font-weight: 700;
+}
+
+.ls-manut-numero b { color: #ffd23f; font-size: 2.4rem; font-weight: 900; line-height: 1; }
+
+.ls-manut-etapas {
+    position: relative;
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* o fio que liga os passos */
+.ls-manut-etapas::before {
+    content: "";
+    position: absolute;
+    top: 24px;
+    bottom: 24px;
+    left: 23px;
+    width: 2px;
+    background: linear-gradient(180deg, #ffb020, #2f8bff);
+    opacity: .5;
+}
+
+.ls-manut-etapas li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px 12px 0;
+}
+
+.ls-manut-passo {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 2px solid rgba(255, 176, 32, .7);
+    border-radius: 50%;
+    background: #0b1532;
+    color: #ffd23f;
+    font-size: 1.15rem;
+    font-weight: 900;
+}
+
+.ls-manut-etapas li:last-child .ls-manut-passo { border-color: #22e07a; color: #22e07a; }
+.ls-manut-etapas b { display: block; color: #fff; font-size: 1rem; }
+.ls-manut-etapas span:not(.ls-manut-passo) { color: #9fb3d1; font-size: .88rem; }
+
+@media (max-width: 900px) {
+    .ls-manut-caixa { grid-template-columns: minmax(0, 1fr); border-radius: 24px; }
+}
+
+@media (max-width: 560px) {
+    .ls-manut-vantagens { grid-template-columns: minmax(0, 1fr); }
+    .ls-manut-acoes .ls-quadro-botao { flex: 1 1 100%; justify-content: center; }
+}
+
 /* Os filtros dos brinquedos numa fila só, que desliza com o dedo: no
    celular eles ocupavam quase uma tela antes do primeiro brinquedo. */
 @media (max-width: 700px) {

@@ -102,6 +102,7 @@ fa-keyboard
 fa-layer-group
 fa-lightbulb
 fa-linkedin
+fa-list
 fa-list-check
 fa-list-ul
 fa-location-crosshairs
@@ -114,6 +115,7 @@ fa-map-marked-alt
 fa-mobile-screen
 fa-mobile-screen-button
 fa-paper-plane
+fa-pause
 fa-pen
 fa-pen-ruler
 fa-pen-to-square
@@ -153,8 +155,10 @@ fa-triangle-exclamation
 fa-trophy
 fa-truck
 fa-truck-fast
+fa-up-right-and-down-left-from-center
 fa-user
 fa-user-check
+fa-user-gear
 fa-user-lock
 fa-user-pen
 fa-user-plus
