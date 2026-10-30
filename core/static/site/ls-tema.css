@@ -2233,10 +2233,15 @@ html.ls-escuro .ls-topo .dropdown-menu {
    FAIXAS DE AVISO NA FOTO DA MÁQUINA (partials/faixas.html)
 
    Duas faixas diagonais no canto de cima, à direita, paralelas como
-   bandeiras: a de dentro (vermelha) e a de fora (amarela). As medidas
-   são em cqi -- a faixa cresce com a foto -- e foto pequena (o card da
-   home, a ficha da arena) mostra o texto curto. Quem decide quais
-   máquinas levam quais avisos é o core/arena.py (AVISOS_DO_JOGO).
+   bandeiras: a de dentro (vermelha) e a de fora (amarela). As pontas são
+   cortadas a 45°, rentes à borda da foto, e o ícone vai num selo branco.
+   Medidas em cqi: a faixa cresce com a foto, e foto pequena (o card da
+   home) mostra o texto curto. Só nas fotos comuns -- a Arena 3D não leva.
+   Quem leva quais avisos é o core/arena.py (AVISOS_DO_JOGO).
+
+   A conta do canto: o meio da faixa passa no ponto (c, c) a partir do
+   canto. Com altura h, o lado de fora da faixa mede 2·√2·c + h e o de
+   dentro, 2h a menos -- é o trapézio que encosta nas duas bordas.
    ========================================================= */
 .ls-faixas {
     position: absolute;
@@ -2246,58 +2251,100 @@ html.ls-escuro .ls-topo .dropdown-menu {
     border-radius: inherit;
     pointer-events: none;
     container-type: inline-size;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .38));
 }
 
 .ls-faixa {
-    --c: clamp(30px, 14cqi, 86px);
-    --h: clamp(17px, 7cqi, 34px);
-    --l: calc(var(--c) * 3);
+    --c: clamp(34px, 14cqi, 88px);
+    --h: clamp(18px, 7.2cqi, 36px);
+    --l: calc(var(--c) * 2.8285 + var(--h));
     position: absolute;
     top: calc(var(--c) - var(--h) / 2);
     right: calc(var(--c) - var(--l) / 2);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: .45em;
+    gap: .42em;
     width: var(--l);
     height: var(--h);
+    overflow: hidden;
     color: #fff;
-    background: linear-gradient(90deg, #b5121f, #ff3b4e 50%, #b5121f);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(0, 0, 0, .3);
-    outline: 1px dashed rgba(255, 255, 255, .45);
-    outline-offset: -3px;
+    background: linear-gradient(180deg, #ff5a68 0%, #e3172b 48%, #b10f1f 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -2px 0 rgba(0, 0, 0, .22);
+    clip-path: polygon(var(--h) 0, calc(100% - var(--h)) 0, 100% 100%, 0 100%);
     font-family: Poppins, Manrope, sans-serif;
-    font-size: clamp(8.5px, 3cqi, 14px);
+    font-size: clamp(9px, 3.2cqi, 15px);
     font-weight: 900;
-    letter-spacing: .05em;
+    letter-spacing: .06em;
     line-height: 1;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .3);
     text-transform: uppercase;
     white-space: nowrap;
     transform: rotate(45deg);
 }
 
+/* a costura das bordas, como numa faixa de tecido */
+.ls-faixa::before {
+    content: "";
+    position: absolute;
+    inset: 2px 0;
+    border-block: 1px dashed rgba(255, 255, 255, .5);
+}
+
+/* um brilho que passa de vez em quando */
+.ls-faixa::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 -40%;
+    width: 30%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent);
+    animation: ls-faixa-brilho 5.5s ease-in-out infinite;
+}
+
 .ls-faixa + .ls-faixa {
     /* a de fora: paralela à de dentro, logo depois dela */
-    --c: calc(clamp(30px, 14cqi, 86px) + (clamp(17px, 7cqi, 34px) + 3px) * .7071);
-    color: #1d1400;
-    background: linear-gradient(90deg, #d79c00, #ffd84a 50%, #d79c00);
-    outline-color: rgba(60, 40, 0, .4);
+    --c: calc(clamp(34px, 14cqi, 88px) + (clamp(18px, 7.2cqi, 36px) + 3px) * .7071);
+    color: #241900;
+    background: linear-gradient(180deg, #ffe680 0%, #ffcc1a 50%, #d99a00 100%);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
 }
 
-.ls-faixa-icone {
+.ls-faixa + .ls-faixa::before { border-color: rgba(60, 40, 0, .4); }
+.ls-faixa + .ls-faixa::after { animation-delay: .35s; }
+
+.ls-faixa-selo {
+    position: relative;
+    z-index: 1;
+    display: grid;
     flex: none;
-    width: 1.55em;
-    height: 1.55em;
-    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25));
+    place-items: center;
+    width: 1.75em;
+    height: 1.75em;
+    border-radius: 50%;
+    color: #e3172b;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
 }
+
+.ls-faixa + .ls-faixa .ls-faixa-selo { color: #241900; }
+.ls-faixa-icone { width: 1.3em; height: 1.3em; }
 
 .ls-faixa-texto,
-.ls-faixa-curto { font-weight: inherit; }
+.ls-faixa-curto { position: relative; z-index: 1; font-weight: inherit; }
 .ls-faixa-curto { display: none; }
 
 @container (max-width: 300px) {
     .ls-faixa-texto { display: none; }
     .ls-faixa-curto { display: inline; }
+}
+
+@keyframes ls-faixa-brilho {
+    0%, 62% { transform: translateX(0); }
+    100% { transform: translateX(560%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-faixa::after { animation: none; display: none; }
 }
 
 .produto-imagem-box:has(> .ls-faixas) { position: relative; }

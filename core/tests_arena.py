@@ -222,8 +222,10 @@ class SecoesDaArenaTests(TestCase):
         self.assertIn('aria-label="Contém câmera e Arma personalizada"', pagina)
         catalogo = self.client.get(reverse("brinquedos")).content.decode()
         self.assertEqual(catalogo.count('class="ls-faixas"'), 1)
-        dados = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
-        self.assertEqual({m["nome"]: m["avisos"] for m in dados}, {"Lazer Shot": ["camera", "arma"], "Air Game Hockey": []})
+        # na galeria de fotos da arena tem; na ficha da Arena 3D, não
+        html = self.client.get(reverse("arena")).content.decode()
+        self.assertEqual(html.count('class="ls-faixas"'), 1)
+        self.assertNotIn("ls-faixas", html.split('id="arena-3d"')[1].split('id="maquinas"')[0])
 
     def test_pagina_do_produto_sem_3d(self):
         boliche = _brinquedo("Dragon Bowling Rosa")

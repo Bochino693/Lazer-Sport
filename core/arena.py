@@ -583,7 +583,6 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "url": url_detalhe,
         "desenho": desenho,
         "jogo": jogo,
-        "avisos": [aviso["id"] for aviso in avisos_da_maquina(brinquedo.nome_brinquedo)],
         "grupo": grupo_da_arena(desenho, jogo),
         "categorias": categorias,
         "medidas": medidas,

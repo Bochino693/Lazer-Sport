@@ -1535,19 +1535,6 @@ class Arena {
     lados.hidden = ordem.length < 2;
     if (ordem.length) trocar(ordem[0], lados.querySelector("button"));
 
-    // as faixas de aviso da máquina (câmera, arma personalizada...)
-    const moldura = f.querySelector("[data-ficha-moldura]");
-    const modelo = f.querySelector("[data-faixas-modelo]");
-    if (moldura && modelo) {
-      moldura.querySelectorAll(":scope > .ls-faixas").forEach((velha) => velha.remove());
-      const avisos = b.avisos || [];
-      if (avisos.length) {
-        const faixas = modelo.content.firstElementChild.cloneNode(true);
-        faixas.querySelectorAll("[data-aviso]").forEach((faixa) => { if (!avisos.includes(faixa.dataset.aviso)) faixa.remove(); });
-        faixas.setAttribute("aria-label", [...faixas.querySelectorAll(".ls-faixa-texto")].map((t) => t.textContent).join(" e "));
-        moldura.append(faixas);
-      }
-    }
 
     const detalhe = f.querySelector("[data-ficha-detalhe]");
     detalhe.hidden = !b.url;
