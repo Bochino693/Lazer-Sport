@@ -63,17 +63,20 @@ class ArenaView(View):
             for brinquedo in brinquedos_da_arena()
         ]
 
-        categorias = sorted({c for b in dados for c in b["categorias"]})
-        grupos = arena.grupos_da_arena(dados)
+        # os objetos 3D que chegaram antes do cadastro: na arena, já aparecem
+        na_arena = dados + arena.modelos_fora_do_catalogo(dados)
+        categorias = sorted({c for b in na_arena for c in b["categorias"]})
+        grupos = arena.grupos_da_arena(na_arena)
         jogos = jogos_com_maquina(dados)
 
         return render(request, "arena.html", {
             "grupos_arena": grupos,
+            # a galeria de fotos é do catálogo (cada uma tem a sua página)
             "brinquedos_arena": dados,
             # o que o arena3d.js monta: as áreas e as máquinas com as fotos
             "arena_dados": {
                 "zonas": [{k: g[k] for k in ("id", "titulo", "kicker")} for g in grupos],
-                "maquinas": dados,
+                "maquinas": na_arena,
             },
             "categorias_arena": categorias,
             "jogos": jogos,

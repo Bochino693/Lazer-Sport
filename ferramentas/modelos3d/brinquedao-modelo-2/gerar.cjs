@@ -1,9 +1,9 @@
 // Gera o .glb: abre o index.html (que roda o montar.js) num Chromium sem tela,
-// salva vistas de conferência (v-*.jpg) e o brinquedao-selva-11m.glb.
+// salva vistas de conferência (v-*.jpg) e o brinquedao-modelo-2.glb.
 //   npm install three@0.169.0 playwright gltfpack
 //   python3 -m http.server 8790 --bind 127.0.0.1   (nesta pasta, com o node_modules)
 //   node gerar.cjs glb
-//   npx gltfpack -i brinquedao-selva-11m.glb -o ../../../core/static/site/arena/modelos/brinquedao-selva-11m.glb -kn -km
+//   npx gltfpack -i brinquedao-modelo-2.glb -o ../../../core/static/site/arena/modelos/brinquedao-modelo-2.glb -kn -km
 const { chromium } = require("playwright");
 const fs = require("fs");
 (async () => {
@@ -20,8 +20,8 @@ const fs = require("fs");
   }
   if (process.argv[2] === "glb") {
     const b64 = await page.evaluate(() => window.exportar());
-    fs.writeFileSync("brinquedao-selva-11m.glb", Buffer.from(b64, "base64"));
-    console.log("glb:", fs.statSync("brinquedao-selva-11m.glb").size, "bytes");
+    fs.writeFileSync("brinquedao-modelo-2.glb", Buffer.from(b64, "base64"));
+    console.log("glb:", fs.statSync("brinquedao-modelo-2.glb").size, "bytes");
   }
   await browser.close();
 })();
