@@ -20,12 +20,15 @@
   lista de links (é o que o buscador lê e o que aparece num aparelho sem
   WebGL) e os jogos como cartões que levam ao simulador (/jogos/<jogo>/).
 
-  A ARENA 3D É FEITA COM AS FOTOS REAIS. Cada máquina vira um objeto 3D
-  no navegador de quem visita: o arena3d.js recorta a máquina do fundo de
-  cada foto (frente, lados e costas) e monta o objeto, que mostra o lado
-  certo conforme a pessoa gira. Dentro do 3D ficam as áreas (máquinas com
-  jogos da casa, as que já fazíamos, trampolins e brinquedões) e o filtro
-  por categoria. Sem WebGL, a lista de máquinas abaixo do palco é a página.
+  A ARENA 3D É A RODA DE SEMPRE, COM AS MÁQUINAS FEITAS DAS FOTOS REAIS.
+  Os estandes ficam em roda, de frente para o alvo da marca no centro. No
+  navegador de quem visita, o arena3d.js recorta a máquina do fundo de
+  cada foto (frente, lados e costas) e levanta um objeto com volume: a
+  largura vem da foto da frente, a profundidade da foto do lado, e cada
+  face veste a sua foto. Dá para ver de frente, dos lados, de costas, de
+  cima e por baixo. Dentro do 3D ficam as áreas (máquinas com jogos da
+  casa, as que já fazíamos, trampolins e brinquedões), como trechos da
+  roda, e o filtro por categoria. Sem WebGL, a lista abaixo é a página.
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
@@ -135,8 +138,8 @@
         <span class="arena-kicker"><i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D</span>
         <h2 id="titulo-arena">As máquinas da fábrica em 3D</h2>
         <p>
-            Cada máquina montada com as fotos reais dela: gire com o dedo ou o mouse para ver
-            de frente, de lado e de costas, aproxime e toque numa máquina para ver a ficha.
+            Cada máquina montada com as fotos reais dela, em volume: toque numa máquina e veja
+            de frente, dos lados, de costas, de cima e por baixo. Gire com o dedo ou o mouse e aproxime.
         </p>
     </div>
 
@@ -170,7 +173,7 @@
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
                     <strong data-arena-aviso-titulo>Montando a arena…</strong>
-                    <span data-arena-aviso-texto>Recortando as máquinas das fotos.</span>
+                    <span data-arena-aviso-texto>Levantando as máquinas a partir das fotos.</span>
                 </div>
                 <div class="arena-controles" data-arena-controles hidden>
                     <button type="button" class="arena-controle" data-arena-acao="anterior" aria-label="Máquina anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
@@ -180,6 +183,16 @@
                     <button type="button" class="arena-controle" data-arena-acao="proximo" aria-label="Próxima máquina"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
                     <button type="button" class="arena-controle" data-arena-acao="visao" aria-label="Ver a arena inteira"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
                     <button type="button" class="arena-controle" data-arena-acao="tela-cheia" aria-label="Tela cheia"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
+                    <span class="arena-rodada" data-arena-rodada hidden></span>
+                </div>
+                <div class="arena3d-vistas" data-arena-vistas role="group" aria-label="Ver a máquina escolhida" hidden>
+                    <button type="button" data-arena-vista="girar" aria-pressed="true"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Girar</button>
+                    <button type="button" data-arena-vista="frente" aria-pressed="false">Frente</button>
+                    <button type="button" data-arena-vista="direita" aria-pressed="false">Direita</button>
+                    <button type="button" data-arena-vista="costas" aria-pressed="false">Costas</button>
+                    <button type="button" data-arena-vista="esquerda" aria-pressed="false">Esquerda</button>
+                    <button type="button" data-arena-vista="cima" aria-pressed="false">Cima</button>
+                    <button type="button" data-arena-vista="baixo" aria-pressed="false">Baixo</button>
                 </div>
                 <p class="arena3d-dica" data-arena-dica hidden><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Arraste para girar · toque numa máquina</p>
             </div>

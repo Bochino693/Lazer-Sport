@@ -80,6 +80,11 @@ class ArenaPaginaTests(TestCase):
         maquinas = resposta.context["arena_dados"]["maquinas"]
         self.assertEqual(sorted(m["nome"] for m in maquinas), ["Air Game Hockey", "Dragon Bowling Rosa"])
 
+    def test_da_para_ver_a_maquina_de_todos_os_lados(self):
+        html = self.client.get(reverse("arena")).content.decode()
+        for vista in ("girar", "frente", "direita", "costas", "esquerda", "cima", "baixo"):
+            self.assertIn(f'data-arena-vista="{vista}"', html)
+
 
 
 class SimuladorTests(TestCase):
