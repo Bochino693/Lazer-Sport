@@ -155,6 +155,17 @@ def adotar_favoritos_do_dispositivo(sender, request, user, **kwargs):
     migrar_dispositivo_para_conta(user, chave_dispositivo(request))
 
 
+@receiver(user_logged_in)
+def adotar_partidas_dos_jogos(sender, request, user, **kwargs):
+    """A partida grátis jogada antes de entrar vai para o ranking."""
+    if request is None or not hasattr(request, "session"):
+        return
+
+    from .ranking import adotar_partidas_da_sessao
+
+    adotar_partidas_da_sessao(request, user)
+
+
 # O mapa é parte do contexto público cacheado: refletir cadastro, local e proposta.
 from sistema_interno.models import EnderecoCliente as _EnderecoDoCliente, Orcamento as _PropostaDoCliente
 for _modelo in (_ClienteDoPainel, _EnderecoDoCliente, _PropostaDoCliente):

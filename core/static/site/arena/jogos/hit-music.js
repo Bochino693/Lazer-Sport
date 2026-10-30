@@ -18,9 +18,10 @@
    - A nota final é a da máquina (stage_v10.gd): soma da qualidade de cada
      acerto ÷ total de notas da fase. CLASSIFICADO com 70% ou mais.
 
-   AS MÚSICAS SÃO AS DA MÁQUINA. Antes de jogar a pessoa escolhe entre
-   CARMINE (a favorita do dono, primeira da lista) e PAPER MOON (o "soul"
-   do catálogo da mesa), e ouve o áudio de verdade de cada uma. A fase
+   AS MÚSICAS SÃO AS DA MÁQUINA. A CARMINE é a música principal: o
+   primeiro "Jogar" já começa nela, sem escolha no caminho. Da segunda
+   partida em diante aparece o seletor da mesa, com a Carmine marcada e
+   a PAPER MOON (o "soul" do catálogo) ao lado. O áudio é o de verdade. A fase
    não é composta à mão: é o chart_factory_v9.gd portado linha a linha,
    alimentado com os ajustes da música copiados do hit_music_songs.json e
    com o mesmo sorteador do Godot (PCG32 + randf do RandomPCG), na mesma
@@ -32,8 +33,17 @@
    jeito), então nota e batida não descasam quando o quadro da tela
    engasga, e a pausa da aba congela as duas juntas.
 
-   Sem capa nem vídeo das músicas (arte de terceiros): só os títulos e a
-   interface do próprio jogo.
+   O VÍDEO DA MÚSICA RODA NO PAINEL DE CIMA, como o VideoBackground do
+   stage.gd: o mesmo clipe da mesa (medias/*.ogv, Theora 1080p de 100 MB,
+   que o navegador não toca), convertido para MP4 H.264 de 512x288 sem
+   som. Ele estica no painel inteiro (expand = true, como na mesa), fica
+   embaixo do véu de 40% do painel e anda preso ao relógio da música.
+
+   AS CAPAS SÃO AS DA MESA (images/carmine.jpg e soul.jpg, em WebP),
+   sempre inteiras, sem zoom e sem corte: no cartão do seletor (como no
+   selector_final.gd) e no painel de cima enquanto o vídeo não chega. No
+   meio do disco, enquanto a música carrega, a capa cobre o retângulo
+   como a "PresentationCover" do stage.gd, que some na contagem.
    ====================================================================== */
 
 const LARGURA = 540;
@@ -130,14 +140,16 @@ const FORMAS_SETA = [
 /* ======================================================================
    AS MÚSICAS — cópia dos campos de jogo de data/hit_music_songs.json
    (as chaves ficam em inglês, iguais às do catálogo da máquina, para a
-   conferência ser direta). Ficaram de fora só os caminhos de cena,
-   vídeo e capa, que o site não usa.
+   conferência ser direta). Ficaram de fora os caminhos de cena e de
+   vídeo; a capa aponta para a arte do console (artes, lá embaixo).
    ====================================================================== */
 const MUSICAS = [
   {
     id: "carmine",
     nome: "CARMINE",
     arquivo: "hit-music/musicas/carmine.mp3",
+    capa: "capaCarmine",
+    video: "hit-music/videos/carmine.mp4",
     // O MP3 da mesa tem 3456 quadros de 1152 amostras a 44,1 kHz, sem
     // etiqueta Xing: é desse total que o AudioStreamMP3 do Godot tira a
     // duração que a fábrica recebe (e que corta o fim da fase).
@@ -180,6 +192,8 @@ const MUSICAS = [
     id: "soul",
     nome: "PAPER MOON",
     arquivo: "hit-music/musicas/soul.mp3",
+    capa: "capaSoul",
+    video: "hit-music/videos/soul.mp4",
     amostras: 3929472, // 3411 quadros × 1152
     taxa: 44100,
     universo: "favo", // UNIVERSE_BY_SONG: soul → moon_hive
@@ -644,6 +658,8 @@ const TEXTOS_MUSICA = MUSICAS.map((m, k) => ({
   faixa: `TRACK ${String(k + 1).padStart(2, "0")}`,
   andamento: `${m.bpm} BPM  •  FÁCIL`,
   nivel: `FÁCIL • ${m.bpm} BPM`,
+  // o nome encolhe para caber ao lado da capa (TEXT_FIT da mesa)
+  tamanhoNome: Math.min(40, Math.floor(290 / (m.nome.length * 0.68))),
 }));
 
 /* ======================================================================
@@ -652,12 +668,15 @@ const TEXTOS_MUSICA = MUSICAS.map((m, k) => ({
 export default {
   largura: LARGURA,
   altura: ALTURA,
+  contagem: false, // o 3-2-1 é o da máquina, em cima da introdução da música
   artes: {
     abertura: "hit-music/abertura.webp",
     roda: "hit-music/roda.webp",
     tazos: "hit-music/tazos.webp",
     selo: "hit-music/selo.webp",
     logo: "hit-music/logo.webp",
+    capaCarmine: "hit-music/capas/carmine.webp",
+    capaSoul: "hit-music/capas/soul.webp",
   },
 
   criar(api) {
@@ -710,7 +729,13 @@ export default {
       barras.addColorStop(0, tema.primaria);
       barras.addColorStop(0.5, tema.meio);
       barras.addColorStop(1, tema.destaque);
-      gradientes = gradientesPorTema[tema.id] = { fundo, disco, borda, barras };
+      // véu sobre a capa no painel de cima: mais escuro onde ficam os textos
+      const veuHud = ctx.createLinearGradient(HUD.x, 0, HUD.x + HUD.w, 0);
+      veuHud.addColorStop(0, "rgba(1,3,6,0.7)");
+      veuHud.addColorStop(0.35, "rgba(1,3,6,0.4)");
+      veuHud.addColorStop(0.65, "rgba(1,3,6,0.4)");
+      veuHud.addColorStop(1, "rgba(1,3,6,0.7)");
+      gradientes = gradientesPorTema[tema.id] = { fundo, disco, borda, barras, veuHud };
     }
 
     /* Favo da Paper Moon (moon_hive): as placas não mudam de lugar, então
@@ -811,7 +836,61 @@ export default {
       audio.energia.gain.setTargetAtTime(Math.pow(10, db / 20), audio.ctx.currentTime, 1 / SUAVIZACAO_VOLUME);
     }
 
+    /* ---------- o vídeo da música (VideoBackground do stage.gd) ----------
+       Mudo e só imagem: o relógio é o da música. Começa a baixar junto
+       com o áudio, mas a partida não espera por ele -- até o primeiro
+       quadro chegar, o painel mostra a capa. */
+    const video = { el: null, id: null, tocando: false };
+
+    function prepararVideo(indice) {
+      const m = MUSICAS[indice];
+      if (!m.video || typeof document === "undefined") return;
+      if (!video.el) {
+        const el = document.createElement("video");
+        el.muted = true;
+        el.defaultMuted = true;
+        el.playsInline = true;
+        el.setAttribute("playsinline", "");
+        el.setAttribute("muted", "");
+        el.preload = "auto";
+        el.disablePictureInPicture = true;
+        video.el = el;
+      }
+      if (video.id !== m.id) {
+        pausarVideo();
+        video.id = m.id;
+        video.el.src = new URL(m.video, import.meta.url).href;
+        video.el.load();
+      }
+    }
+
+    function pausarVideo() {
+      if (!video.el || !video.tocando) return;
+      video.tocando = false;
+      video.el.pause();
+    }
+
+    // Segue a música: corrige o vídeo só quando ele se afasta de verdade
+    // (pular o vídeo toda hora engasga a imagem).
+    function sincronizarVideo() {
+      const el = video.el;
+      if (!el || !musica || video.id !== musica.id || el.readyState < 1) return;
+      const alvo = Math.max(0, t);
+      if (alvo >= (el.duration || Infinity) - 0.05) { pausarVideo(); return; }
+      if (!el.seeking && Math.abs(el.currentTime - alvo) > 0.25) el.currentTime = alvo;
+      if (!video.tocando) {
+        video.tocando = true;
+        const p = el.play();
+        if (p && p.catch) p.catch(() => { video.tocando = false; });
+      }
+    }
+
+    function videoPronto() {
+      return !!(video.el && musica && video.id === musica.id && video.el.readyState >= 2);
+    }
+
     function pararFonte() {
+      pausarVideo();
       const f = audio.fonte;
       audio.fonte = null;
       audio.tocando = false;
@@ -822,6 +901,7 @@ export default {
     }
 
     function pausarAudio() {
+      pausarVideo();
       if (!audio.ctx || audio.ctx.state !== "running") return;
       audio.suspensoPorNos = true;
       const p = audio.ctx.suspend();
@@ -887,6 +967,8 @@ export default {
       carga.estado = "baixando";
       carga.progresso = 0;
       fase = "carregando";
+      tema = TEMAS[indice];
+      prepararVideo(indice);
       try {
         if (audio.bufferId !== musica.id) {
           audio.buffer = null;
@@ -1411,6 +1493,26 @@ export default {
       ctx.drawImage(BRILHOS[cor], x - raio, y - raio, raio * 2, raio * 2);
     }
 
+    // A capa inteira dentro da caixa, centrada (STRETCH_KEEP_ASPECT_CENTERED).
+    function imagemContida(ctx, im, x, y, w, h) {
+      const k = Math.min(w / im.width, h / im.height);
+      const iw = im.width * k;
+      const ih = im.height * k;
+      ctx.drawImage(im, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+    }
+
+    // A capa cobrindo a caixa, cortada no meio (STRETCH_KEEP_ASPECT_COVERED).
+    function imagemCobrindo(ctx, im, x, y, w, h) {
+      const k = Math.max(w / im.width, h / im.height);
+      const sw = w / k;
+      const sh = h / k;
+      ctx.drawImage(im, (im.width - sw) / 2, (im.height - sh) / 2, sw, sh, x, y, w, h);
+    }
+
+    function capaDa(k) {
+      return k >= 0 && MUSICAS[k] ? img[MUSICAS[k].capa] : null;
+    }
+
     function retanguloRedondo(ctx, x, y, w, h, r) {
       ctx.beginPath();
       ctx.moveTo(x + r, y);
@@ -1790,20 +1892,24 @@ export default {
       ctx.lineCap = "butt";
     }
 
+    // No computador, a tecla de cada faixa fica escrita do lado de fora
+    // do anel e acende quando é apertada (no PC a tela do jogo sai menor
+    // que no celular: a letra precisa ser grande para ser lida).
     function desenharRotulosTeclas(ctx) {
       if (!temMouse) return;
       for (let f = 0; f < FAIXAS; f++) {
         const a = -Math.PI / 2 + (Math.PI * 2 * f) / FAIXAS;
-        const x = CX + Math.cos(a) * (R_ANEL + 24);
-        const y = CY + Math.sin(a) * (R_ANEL + 24);
-        ctx.fillStyle = "rgba(8,3,24,0.85)";
+        const x = CX + Math.cos(a) * (R_ANEL + 21);
+        const y = CY + Math.sin(a) * (R_ANEL + 21);
+        const aceso = toque[f] > 0.05;
+        ctx.fillStyle = aceso ? tema.primaria : "rgba(8,3,24,0.9)";
         ctx.beginPath();
-        ctx.arc(x, y, 11, 0, Math.PI * 2);
+        ctx.arc(x, y, 14, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.35)";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = aceso ? "#ffffff" : "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 2;
         ctx.stroke();
-        api.texto(ctx, ROTULOS[f], x, y + 1, { tamanho: 13, peso: 800, cor: "rgba(255,255,255,0.85)" });
+        api.texto(ctx, ROTULOS[f], x, y + 1, { tamanho: 18, peso: 900, cor: "#ffffff" });
       }
     }
 
@@ -2123,11 +2229,26 @@ export default {
       ctx.globalAlpha = 1;
     }
 
-    function desenharPainelHud(ctx) {
+    // O painel de cima (o _top_panel do stage.gd). Na partida, o vídeo da
+    // música esticado no painel inteiro, como na mesa; sem vídeo, a capa
+    // inteira, centrada, sem zoom e sem corte. Por cima, o véu escuro
+    // que deixa o placar legível.
+    function desenharPainelHud(ctx, capa = null, comVideo = false) {
       const { x, y, w, h } = HUD;
-      ctx.fillStyle = "rgba(10,4,30,0.9)";
+      const temVideo = comVideo && videoPronto();
+      ctx.fillStyle = temVideo || capa ? "#02030a" : "rgba(10,4,30,0.9)";
       retanguloRedondo(ctx, x, y, w, h, 18);
       ctx.fill();
+      if (temVideo || capa) {
+        ctx.save();
+        ctx.clip();
+        if (temVideo) ctx.drawImage(video.el, x, y, w, h);
+        else imagemContida(ctx, capa, x, y, w, h);
+        ctx.fillStyle = gradientes.veuHud;
+        ctx.fillRect(x, y, w, h);
+        ctx.restore();
+        retanguloRedondo(ctx, x, y, w, h, 18);
+      }
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = gradientes.borda;
       ctx.stroke();
@@ -2135,7 +2256,7 @@ export default {
 
     function desenharHud(ctx) {
       const { x, y, w, h } = HUD;
-      desenharPainelHud(ctx);
+      desenharPainelHud(ctx, capaDa(indiceMusica), true);
 
       if (fase === "contagem") {
         // Como na mesa: na contagem o painel de cima mostra só o número,
@@ -2158,8 +2279,8 @@ export default {
       if (combo !== comboTexto) { comboTexto = combo; textoCombo = `COMBO ${combo}`; textoComboNumero = String(combo); }
       api.texto(ctx, textoCombo, x + w - 20, y + 57, { tamanho: 15, peso: 800, alinhar: "right", cor: "#ffffff" });
 
-      // Espectro no lugar do vídeo da música (o retângulo central do HUD)
-      desenharEspectro(ctx, x + 20, y + 72, w - 40, 62);
+      // o espectro só enquanto o vídeo não chega
+      if (!videoPronto()) desenharEspectro(ctx, x + 20, y + 72, w - 40, 62);
 
       // andamento da música, como a barra e o "0:42 / 1:30" da mesa
       const by = y + 152;
@@ -2179,8 +2300,8 @@ export default {
         ctx.globalAlpha = fase === "contagem" ? 1 : Math.min(1, (PRIMEIRA_NOTA - 0.9 - t) * 2);
         api.texto(ctx, "TOQUE NA FAIXA QUANDO", CX, 268, { tamanho: 24, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
         api.texto(ctx, "O TAZO ENCAIXAR NO ANEL", CX, 300, { tamanho: 24, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
-        api.texto(ctx, temMouse ? "Teclas A S D F J K L Ç • segure as fitas • arraste as estrelas" : "Segure as fitas • arraste as estrelas", CX, 340, {
-          tamanho: 15, peso: 700, cor: tema.clara,
+        api.texto(ctx, temMouse ? "TECLAS A S D F J K L Ç • SEGURE NAS FITAS" : "Segure as fitas • arraste as estrelas", CX, 340, {
+          tamanho: temMouse ? 19 : 15, peso: temMouse ? 900 : 700, cor: tema.clara,
         });
         ctx.globalAlpha = 1;
       }
@@ -2250,14 +2371,14 @@ export default {
     }
 
     // Cartão no estilo do seletor da mesa (selector_final.gd): fundo
-    // escuro, barra de destaque grossa à esquerda quando marcado,
-    // "TRACK 01", categoria, título grande, BPM, nível e recorde.
+    // escuro, barra de destaque grossa à esquerda quando marcado, a capa
+    // inteira num quadrado à esquerda e, ao lado dela, "TRACK 01",
+    // categoria, título grande, BPM, nível e recorde.
     function desenharCartao(ctx, k) {
       const c = CARTOES[k];
       const m = MUSICAS[k];
       const tm = TEMAS[k];
       const marcado = k === cursor;
-      const carregando = fase === "carregando" && carga.indice === k;
       const pulso = 0.5 + 0.5 * Math.sin(relogio * 4);
       if (marcado) {
         // halo em traços largos e transparentes (sem shadowBlur)
@@ -2282,34 +2403,95 @@ export default {
         ctx.fill();
       }
 
-      api.texto(ctx, TEXTOS_MUSICA[k].faixa, c.x + 30, c.y + 26, { tamanho: 13, peso: 800, alinhar: "left", cor: "#a3b8d6" });
-      api.texto(ctx, m.category, c.x + c.w - 24, c.y + 26, { tamanho: 13, peso: 900, alinhar: "right", cor: tm.destaque });
-      api.texto(ctx, m.nome, c.x + 30, c.y + 76, { tamanho: 46, peso: 900, alinhar: "left", cor: marcado ? "#ffffff" : "#94a6c2" });
-      desenharEmblema(ctx, k, c.x + c.w - 76, c.y + 70, marcado);
+      // a capa: quadrado de 82% da altura, a arte inteira, sem zoom e sem corte
+      const lado = c.h * 0.82;
+      const cx0 = c.x + 20;
+      const cy0 = c.y + (c.h - lado) / 2;
+      ctx.fillStyle = "#000000";
+      retanguloRedondo(ctx, cx0, cy0, lado, lado, 14);
+      ctx.fill();
+      const capa = capaDa(k);
+      if (capa) {
+        ctx.save();
+        ctx.clip();
+        ctx.globalAlpha = marcado ? 1 : 0.55;
+        imagemContida(ctx, capa, cx0, cy0, lado, lado);
+        ctx.restore();
+        retanguloRedondo(ctx, cx0, cy0, lado, lado, 14);
+      } else {
+        desenharEmblema(ctx, k, cx0 + lado / 2, cy0 + lado / 2, marcado);
+      }
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = marcado ? tm.destaque : "rgba(255,255,255,0.14)";
+      ctx.stroke();
+
+      const tx = cx0 + lado + 20;
+      api.texto(ctx, TEXTOS_MUSICA[k].faixa, tx, c.y + 26, { tamanho: 13, peso: 800, alinhar: "left", cor: "#a3b8d6" });
+      api.texto(ctx, m.category, c.x + c.w - 22, c.y + 26, { tamanho: 13, peso: 900, alinhar: "right", cor: tm.destaque });
+      api.texto(ctx, m.nome, tx, c.y + 76, { tamanho: TEXTOS_MUSICA[k].tamanhoNome, peso: 900, alinhar: "left", cor: marcado ? "#ffffff" : "#94a6c2" });
 
       const by = c.y + c.h - 26;
-      api.texto(ctx, TEXTOS_MUSICA[k].andamento, c.x + 30, by, { tamanho: 15, peso: 800, alinhar: "left", cor: tm.clara });
-      if (carregando && carga.estado === "erro") {
-        api.texto(ctx, "NÃO CARREGOU • TOQUE DE NOVO", c.x + c.w - 24, by, { tamanho: 14, peso: 900, alinhar: "right", cor: "#ff5468" });
-      } else if (carregando) {
-        const texto = carga.estado === "preparando" ? "PREPARANDO…" : `CARREGANDO ${Math.round(carga.progresso * 100)}%`;
-        api.texto(ctx, texto, c.x + c.w - 52, by, { tamanho: 14, peso: 900, alinhar: "right", cor: "#ffffff" });
-        // anel girando ao lado do texto
-        ctx.strokeStyle = tm.destaque;
-        ctx.lineWidth = 3;
+      api.texto(ctx, TEXTOS_MUSICA[k].andamento, tx, by, { tamanho: 14, peso: 800, alinhar: "left", cor: tm.clara });
+      api.texto(ctx, textosRecorde[k], c.x + c.w - 22, by, { tamanho: 12, peso: 800, alinhar: "right", cor: "rgba(255,255,255,0.72)" });
+    }
+
+    /* Escolhida a música, a mesa já abre o palco dela: a capa no meio do
+       disco (PresentationCover do stage.gd) enquanto o áudio carrega, e
+       o painel de cima com o nome e o andamento do download. */
+    function desenharCarregando(ctx) {
+      const k = carga.indice;
+      const m = MUSICAS[k];
+      const tm = TEMAS[k];
+      const { x, y, w, h } = HUD;
+      desenharPainelHud(ctx, capaDa(k));
+      api.texto(ctx, m.nome, x + 20, y + 30, { tamanho: 25, peso: 900, alinhar: "left", cor: "#ffffff" });
+      api.texto(ctx, TEXTOS_MUSICA[k].nivel, x + 20, y + 56, { tamanho: 14, peso: 800, alinhar: "left", cor: tm.clara });
+      api.texto(ctx, m.category, x + w - 20, y + 31, { tamanho: 16, peso: 900, alinhar: "right", cor: tm.destaque });
+
+      const erro = carga.estado === "erro";
+      const by = y + h - 26;
+      const texto = erro ? "A MÚSICA NÃO CARREGOU"
+        : carga.estado === "preparando" ? "PREPARANDO A MÚSICA…" : `CARREGANDO ${Math.round(carga.progresso * 100)}%`;
+      api.texto(ctx, texto, x + 20, by - 18, { tamanho: 14, peso: 900, alinhar: "left", cor: erro ? "#ff5468" : "#ffffff" });
+      if (!erro) {
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        ctx.fillRect(x + 20, by - 3, w - 40, 6);
+        ctx.fillStyle = tm.destaque;
+        ctx.fillRect(x + 20, by - 3, (w - 40) * (carga.estado === "preparando" ? 1 : carga.progresso), 6);
+      }
+
+      // a capa no disco: retângulo de 1,44 x 1,16 do raio, cobrindo
+      const cw = R * 1.44;
+      const ch = R * 1.16;
+      const capa = capaDa(k);
+      ctx.fillStyle = "#000000";
+      retanguloRedondo(ctx, CX - cw / 2, CY - ch / 2, cw, ch, 18);
+      ctx.fill();
+      if (capa) {
+        ctx.save();
+        ctx.clip();
+        imagemCobrindo(ctx, capa, CX - cw / 2, CY - ch / 2, cw, ch);
+        ctx.restore();
+        retanguloRedondo(ctx, CX - cw / 2, CY - ch / 2, cw, ch, 18);
+      }
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = tm.destaque;
+      ctx.stroke();
+
+      if (erro) {
+        ctx.fillStyle = "rgba(3,1,12,0.72)";
+        ctx.fillRect(CX - cw / 2, CY - ch / 2, cw, ch);
+        api.texto(ctx, "TOQUE PARA", CX, CY - 14, { tamanho: 26, peso: 900, cor: "#ffffff" });
+        api.texto(ctx, "TENTAR DE NOVO", CX, CY + 20, { tamanho: 26, peso: 900, cor: "#ffffff" });
+      } else {
+        // anel girando no pé da capa
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.arc(c.x + c.w - 34, by, 9, relogio * 7, relogio * 7 + Math.PI * 1.4);
+        ctx.arc(CX, CY + ch / 2 + 34, 13, relogio * 7, relogio * 7 + Math.PI * 1.4);
         ctx.stroke();
         ctx.lineCap = "butt";
-        // barra do download no pé do cartão
-        const largura = c.w - 60;
-        ctx.fillStyle = "rgba(255,255,255,0.12)";
-        ctx.fillRect(c.x + 30, c.y + c.h - 9, largura, 3);
-        ctx.fillStyle = tm.destaque;
-        ctx.fillRect(c.x + 30, c.y + c.h - 9, largura * (carga.estado === "preparando" ? 1 : carga.progresso), 3);
-      } else {
-        api.texto(ctx, textosRecorde[k], c.x + c.w - 24, by, { tamanho: 14, peso: 800, alinhar: "right", cor: "rgba(255,255,255,0.72)" });
       }
     }
 
@@ -2318,23 +2500,19 @@ export default {
       ctx.fillStyle = "rgba(2,0,8,0.5)";
       ctx.fillRect(0, 0, LARGURA, ALTURA);
 
-      desenharPainelHud(ctx);
+      desenharPainelHud(ctx, capaDa(cursor));
       const { x, y, w } = HUD;
       api.texto(ctx, "ESCOLHA A MÚSICA", x + 20, y + 30, { tamanho: 25, peso: 900, alinhar: "left", cor: "#ffffff" });
       api.texto(ctx, "AS MÚSICAS DA MÁQUINA • NÍVEL FÁCIL", x + 20, y + 56, { tamanho: 14, peso: 800, alinhar: "left", cor: TEMA_PADRAO.clara });
       api.texto(ctx, `${MUSICAS.length} MÚSICAS`, x + w - 20, y + 31, { tamanho: 18, peso: 900, alinhar: "right", cor: COR_TEMA2 });
-      desenharEspectro(ctx, x + 20, y + 72, w - 40, 62);
-      api.texto(ctx, "HIT MUSIC", x + w / 2, y + 152, { tamanho: 14, peso: 900, cor: "rgba(255,255,255,0.6)" });
 
       for (let k = 0; k < CARTOES.length; k++) desenharCartao(ctx, k);
 
-      const esperando = fase === "carregando" && carga.estado !== "erro";
-      const aviso = esperando ? "A MÚSICA JÁ VAI COMEÇAR" : "TOQUE NA MÚSICA PARA JOGAR";
-      ctx.globalAlpha = esperando ? 1 : 0.75 + 0.25 * Math.sin(relogio * 3.2);
-      api.texto(ctx, aviso, CX, 572, { tamanho: 22, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
+      ctx.globalAlpha = 0.75 + 0.25 * Math.sin(relogio * 3.2);
+      api.texto(ctx, "TOQUE NA MÚSICA PARA JOGAR", CX, 572, { tamanho: 22, peso: 900, cor: "#ffffff", contorno: "rgba(0,0,0,.6)" });
       ctx.globalAlpha = 1;
       if (temMouse) {
-        api.texto(ctx, "A / J ou setas escolhem • S ou ENTER confirma", CX, 604, { tamanho: 14, peso: 700, cor: TEMA_PADRAO.clara });
+        api.texto(ctx, "SETAS ESCOLHEM • ENTER CONFIRMA", CX, 606, { tamanho: 18, peso: 900, cor: TEMA_PADRAO.clara });
       }
     }
 
@@ -2365,12 +2543,14 @@ export default {
         fase = chamadasIniciar === 1 ? "capa" : "escolha";
         tema = TEMA_PADRAO;
         zerarPartida();
+        api.placar({ pontos: 0, tempo: null, info: "" });
+        pontosMostrados = 0;
         if (fase === "escolha") {
           const ativacao = navigator.userActivation;
           if (!ativacao || ativacao.isActive || ativacao.hasBeenActive) acordarAudio();
+          // A Carmine é a principal: a primeira partida já começa nela.
+          if (chamadasIniciar === 2) escolher(0);
         }
-        api.placar({ pontos: 0, tempo: null, info: "" });
-        pontosMostrados = 0;
       },
 
       atualizar(dt) {
@@ -2379,6 +2559,7 @@ export default {
 
         const c = audio.ctx;
         if (c && c.state !== "running") {
+          pausarVideo();
           // Pausado por nós (aba/rolagem): o console voltou a rodar, então
           // a música volta. Travado por política de som: tenta de novo a
           // cada segundo e pede um toque na tela.
@@ -2394,6 +2575,7 @@ export default {
         if (audio.desvio !== null) audio.desvio -= dt * DERIVA_RELOGIO;
         t = tempoMusica();
         if (fase === "contagem" && t >= DURACAO_CONTAGEM) fase = "tocando";
+        sincronizarVideo();
 
         lerEspectro();
         if (precisaoMostrada !== precisao()) {
@@ -2460,7 +2642,8 @@ export default {
         desenharDisco(ctx);
         desenharAnel(ctx);
         desenharSelo(ctx);
-        if (fase === "escolha" || fase === "carregando") { desenharEscolha(ctx); return; }
+        if (fase === "escolha") { desenharEscolha(ctx); return; }
+        if (fase === "carregando") { desenharCarregando(ctx); return; }
 
         for (let i = primeiraViva; i < proxNascer; i++) {
           const n = NOTAS[i];
@@ -2508,7 +2691,11 @@ export default {
       },
 
       apertar(x, y, id) {
-        if (fase === "escolha" || fase === "carregando") {
+        if (fase === "carregando") {
+          if (carga.estado === "erro") escolher(carga.indice);
+          return;
+        }
+        if (fase === "escolha") {
           const k = cartaoEm(x, y);
           if (k >= 0) escolher(k);
           return;
@@ -2550,7 +2737,11 @@ export default {
       },
 
       tecla(codigo, apertada) {
-        if (fase === "escolha" || fase === "carregando") {
+        if (fase === "carregando") {
+          if (apertada && codigo in TECLAS_CONFIRMA && carga.estado === "erro") escolher(carga.indice);
+          return;
+        }
+        if (fase === "escolha") {
           if (!apertada) return;
           if (codigo in TECLAS_SOBE) cursor = (cursor + MUSICAS.length - 1) % MUSICAS.length;
           else if (codigo in TECLAS_DESCE) cursor = (cursor + 1) % MUSICAS.length;
@@ -2617,6 +2808,11 @@ export default {
         audio.analisador = null;
         audio.buffer = null;
         audio.bufferId = null;
+        if (video.el) {
+          video.el.removeAttribute("src");
+          video.el.load();
+          video.el = null;
+        }
       },
     };
   },

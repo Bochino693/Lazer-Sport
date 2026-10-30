@@ -445,6 +445,8 @@ CONTROLES = {
             "Trilho com setas: arraste pelo caminho até o fim.",
         ),
         "na_maquina": "Na máquina você toca a mesa circular de luz, no ritmo da música.",
+        # no computador o jogo inteiro vai no teclado
+        "teclado": "Teclado: A S D F J K L Ç são as 8 faixas · segure na nota longa · no trilho, as teclas do caminho",
         "botoes": (),
     },
 }

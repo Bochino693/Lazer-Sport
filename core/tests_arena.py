@@ -8,8 +8,9 @@ O que estes testes protegem:
   * cada jogo tem a sua página no simulador (/jogos/<jogo>/), em foco,
     com o comando dele: arrasto nos boliches, clique no tiro, botões só
     onde a máquina tem botão;
-  * nenhuma arte de terceiros (capas de música, logos de patrocinador)
-    entra na pasta dos jogos;
+  * nenhuma arte de terceiros (logos de patrocinador, capas de outras
+    músicas) entra na pasta dos jogos -- só as duas capas que o dono
+    pediu para o Hit Music (Carmine e Paper Moon, as da própria mesa);
   * só ganha 3D a máquina que tem objeto de verdade (o gabinete de
     boliche); as outras ficam com as fotos reais, sem gabinete inventado;
   * o painel ao vivo responde com totais e pode ser guardado em cache;
@@ -150,13 +151,26 @@ class ArquivosDosJogosTests(TestCase):
                         self.assertIn(caminho, existentes)
 
     def test_nenhuma_arte_de_terceiros(self):
-        # Só imagens: as músicas do Hit Music (Carmine e Paper Moon) entraram
-        # por decisão do dono; capas e logos de terceiros continuam fora.
+        # Só imagens. As músicas do Hit Music (Carmine e Paper Moon) e as
+        # capas delas, tiradas da própria mesa, entraram por decisão do
+        # dono; o resto das capas e os logos de terceiros continuam fora.
         pasta = JOGOS_DIR.parent
+        liberadas = {JOGOS_DIR / "hit-music" / "capas" / "carmine.webp", JOGOS_DIR / "hit-music" / "capas" / "soul.webp"}
         for arquivo in pasta.rglob("*"):
+            if arquivo in liberadas:
+                continue
             if arquivo.is_file() and arquivo.suffix.lower() in {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif", ".avif"}:
                 with self.subTest(arquivo=str(arquivo.relative_to(pasta))):
                     self.assertIsNone(TERCEIROS.search(arquivo.name))
+
+    def test_hit_music_tem_as_capas_e_os_videos_da_mesa(self):
+        # a capa no seletor e o vídeo da música no painel de cima, como no Godot
+        script = (JOGOS_DIR / "hit-music.js").read_text(encoding="utf-8")
+        for capa in ("hit-music/capas/carmine.webp", "hit-music/capas/soul.webp",
+                     "hit-music/videos/carmine.mp4", "hit-music/videos/soul.mp4"):
+            with self.subTest(capa=capa):
+                self.assertIn(capa, script)
+                self.assertTrue((JOGOS_DIR / capa).is_file())
 
     def test_adesivos_do_strike_kids_completos(self):
         for tema in arena.TEMAS_STRIKE_KIDS:

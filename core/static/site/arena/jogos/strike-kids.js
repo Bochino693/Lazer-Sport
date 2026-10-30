@@ -6482,6 +6482,7 @@ async function carregarTudo(THREE, progresso) {
 export default {
   largura: LARGURA,
   altura: ALTURA,
+  contagem: false, // o 3-2-1 vem depois da escolha do amigo (api.contagem)
   artes: {},
   criar(api) {
     return new Partida(api);
@@ -6875,8 +6876,8 @@ class Partida {
 
   // ---------------------------------------------------------------- contrato do console
   iniciar() {
-    // o console chama ao abrir (capa) e ao apertar JOGAR: a partida começa
-    // no primeiro quadro andando (depois da contagem 3-2-1)
+    // o console chama ao abrir (capa) e ao apertar JOGAR: a escolha do
+    // amigo começa no primeiro quadro andando; o 3-2-1 vem depois dela
     this.comecarNoProximo = true;
     if (this.pronto) {
       this.novoSeq();
@@ -7291,7 +7292,9 @@ class Partida {
     if (!(await this.esperar(1.5, s))) return;
     this.personagens.bob.destaque(0);
     this.personagens.mia.destaque(0);
-    this._comecar(escolhido);
+    // o 3-2-1 do console vem agora, com o amigo escolhido: logo antes da
+    // primeira jogada, e não em cima da escolha
+    this.api.contagem(() => { if (this.seq === s) this._comecar(escolhido); });
   }
 
   // ---------------------------------------------------------------- partida
