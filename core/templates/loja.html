@@ -73,18 +73,11 @@
                     Todos
                     <span class="contagem">{{ total_itens }}</span>
                 </button>
-                {% if contagem_por_tipo.peca %}
-                <button type="button" class="loja-filtro-btn" data-tipo="peca">
-                    <i class="fa-solid fa-gears" aria-hidden="true"></i>
-                    Peças de reposição
-                    <span class="contagem">{{ contagem_por_tipo.peca }}</span>
-                </button>
-                {% endif %}
-                {% if contagem_por_tipo.promocao %}
-                <button type="button" class="loja-filtro-btn" data-tipo="promocao">
-                    <i class="fa-solid fa-tag" aria-hidden="true"></i>
-                    Promoções
-                    <span class="contagem">{{ contagem_por_tipo.promocao }}</span>
+                {% if contagem_por_tipo.brinquedo %}
+                <button type="button" class="loja-filtro-btn" data-tipo="brinquedo">
+                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                    Máquinas
+                    <span class="contagem">{{ contagem_por_tipo.brinquedo }}</span>
                 </button>
                 {% endif %}
                 {% if contagem_por_tipo.combo %}
@@ -94,11 +87,18 @@
                     <span class="contagem">{{ contagem_por_tipo.combo }}</span>
                 </button>
                 {% endif %}
-                {% if contagem_por_tipo.brinquedo %}
-                <button type="button" class="loja-filtro-btn" data-tipo="brinquedo">
-                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
-                    Brinquedos
-                    <span class="contagem">{{ contagem_por_tipo.brinquedo }}</span>
+                {% if contagem_por_tipo.promocao %}
+                <button type="button" class="loja-filtro-btn" data-tipo="promocao">
+                    <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                    Promoções
+                    <span class="contagem">{{ contagem_por_tipo.promocao }}</span>
+                </button>
+                {% endif %}
+                {% if contagem_por_tipo.peca %}
+                <button type="button" class="loja-filtro-btn" data-tipo="peca">
+                    <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                    Peças de reposição
+                    <span class="contagem">{{ contagem_por_tipo.peca }}</span>
                 </button>
                 {% endif %}
             </div>

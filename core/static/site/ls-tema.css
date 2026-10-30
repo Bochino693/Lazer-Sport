@@ -66,6 +66,13 @@ html.ls-escuro :focus-visible {
     outline-offset: 3px;
 }
 
+/* O anel amarelo é de quem se navega de Tab (link, botão, campo). Seção
+   que só recebe o foco por script (a âncora que a página rola até, o
+   <main> do "pular para o conteúdo") tem tabindex="-1": sem anel -- ele
+   ficava solto em volta da seção inteira, até o primeiro clique. */
+html.ls-escuro [tabindex="-1"]:focus,
+html.ls-escuro [tabindex="-1"]:focus-visible { outline: none; }
+
 .ls-pular {
     position: absolute;
     left: 12px;
