@@ -6,8 +6,10 @@
    pilares de luz em volta, estrelas no céu e a câmera que voa até a
    máquina escolhida. As áreas da arena (jogos da Lazer & Sport, as
    máquinas que já fazíamos, trampolins e brinquedões) são trechos da
-   roda, cada um com a sua cor no piso e a sua placa; os botões de área e
-   o filtro de categoria refazem a roda só com aquelas máquinas.
+   roda, cada um com a sua cor no piso e a sua placa. A roda tem SEMPRE
+   todas as máquinas: os botões de área -- e o próprio piso ou a placa da
+   área, tocados no 3D -- levam a câmera até aquele trecho, que acende. O
+   filtro de categoria é o único que tira máquinas da roda.
 
    CADA MÁQUINA É UM OBJETO 3D FEITO DAS FOTOS DELA. O catálogo tem até
    quatro fotos (frente, lado direito, costas, lado esquerdo):
@@ -28,8 +30,13 @@
    tomba para mostrar a base (Baixo). Arrastar gira a câmera em volta.
 
    Foto que não dá para recortar (fundo complicado) vira um painel em pé
-   com a foto inteira. Foto vazada (a rede de uma cama elástica) vira duas
-   placas cruzadas, para continuar vazada.
+   com a foto inteira. Foto vazada (rede, grade) vira duas placas
+   cruzadas, para continuar vazada.
+
+   O QUE NÃO SAI DAS FOTOS: a máquina com objeto feito a partir dos
+   arquivos da fábrica (.glb; core/arena.py, MODELOS_3D) aparece com ele,
+   e a cama elástica é montada peça por peça (FORMAS, abaixo) -- da foto
+   ela só tira as cores.
 
    A FICHA FICA FORA DO PALCO: ao lado no computador, embaixo no celular.
 
@@ -514,6 +521,199 @@ function montarCasco(T, { y, x0, x1, zf, zb, uv }) {
 }
 
 /* ======================================================================
+   FORMAS — o que a arena monta peça por peça, em 3D de verdade.
+   Por enquanto a cama elástica: aro de aço, pernas em W, molas, lona,
+   acolchoado, postes com espuma, rede com a entrada e a escadinha. O
+   tamanho é o do cadastro; a foto só dá as cores (acolchoado e espumas).
+   ====================================================================== */
+
+/** As duas cores mais fortes da foto: [principal, segunda] (ou null). */
+function coresDaFoto(tela) {
+  const mini = document.createElement("canvas");
+  mini.width = mini.height = 48;
+  const g = mini.getContext("2d", { willReadFrequently: true });
+  g.drawImage(tela, 0, 0, 48, 48);
+  const p = g.getImageData(0, 0, 48, 48).data;
+  // doze faixas de matiz; cinza, preto e branco não contam (são a lona,
+  // a rede, o aço e o fundo -- não a cor do brinquedo)
+  const faixas = Array.from({ length: 12 }, (_, k) => ({ k, peso: 0, r: 0, g: 0, b: 0 }));
+  for (let i = 0; i < p.length; i += 4) {
+    if (p[i + 3] < 128) continue;
+    const r = p[i] / 255;
+    const v = p[i + 1] / 255;
+    const b = p[i + 2] / 255;
+    const max = Math.max(r, v, b);
+    const min = Math.min(r, v, b);
+    const c = max - min;
+    const l = (max + min) / 2;
+    if (c < 0.22 || l < 0.16 || l > 0.88) continue;
+    let h = max === r ? ((v - b) / c) % 6 : max === v ? (b - r) / c + 2 : (r - v) / c + 4;
+    h = (h * 60 + 360) % 360;
+    const faixa = faixas[Math.floor(h / 30) % 12];
+    faixa.peso += c;
+    faixa.r += p[i] * c;
+    faixa.g += p[i + 1] * c;
+    faixa.b += p[i + 2] * c;
+  }
+  const ordem = faixas.filter((f) => f.peso > 0).sort((a, b) => b.peso - a.peso);
+  if (!ordem.length || ordem[0].peso < 3) return null;
+  const hex = (f) => "#" + [f.r, f.g, f.b].map((x) => Math.round(x / f.peso).toString(16).padStart(2, "0")).join("");
+  const primeira = ordem[0];
+  const segunda = ordem.find((f) => Math.min(Math.abs(f.k - primeira.k), 12 - Math.abs(f.k - primeira.k)) >= 2 && f.peso > primeira.peso * 0.1);
+  return [hex(primeira), segunda ? hex(segunda) : null];
+}
+
+/** A cama elástica, em metros, com o chão em y = 0 e a entrada na frente (+Z). */
+function montarCamaElastica(T, { diametro, cores }) {
+  const g = new T.Group();
+  const R = diametro / 2;
+  const hM = diametro >= 2.4 ? 0.82 : 0.62; // altura da lona
+  const hN = diametro >= 2.4 ? 1.8 : 1.5; // altura da rede, acima da lona
+  const topo = hM + hN;
+  const V = (x, y, z) => new T.Vector3(x, y, z);
+  const noAro = (a, raio, y) => V(Math.sin(a) * raio, y, Math.cos(a) * raio);
+  const aco = new T.MeshStandardMaterial({ color: "#b9c2cf", roughness: 0.35, metalness: 0.8 });
+  const acolchoado = new T.MeshStandardMaterial({ color: (cores && cores[0]) || "#1f6fff", roughness: 0.55, side: T.DoubleSide });
+  const espuma = new T.MeshStandardMaterial({ color: (cores && (cores[1] || cores[0])) || "#e63946", roughness: 0.6 });
+  const borracha = new T.MeshStandardMaterial({ color: "#14161b", roughness: 0.9 });
+  const tubo = (curva, r, material, lados = 8, passos = 16) => {
+    const m = new T.Mesh(new T.TubeGeometry(curva, passos, r, lados, false), material);
+    g.add(m);
+    return m;
+  };
+  const reta = (a, b, r, material) => tubo(new T.LineCurve3(a, b), r, material, 8, 1);
+  const textura = (w, h, pintar) => {
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    pintar(c.getContext("2d"));
+    const t = new T.CanvasTexture(c);
+    t.colorSpace = T.SRGBColorSpace;
+    return t;
+  };
+
+  // o aro de aço
+  const aro = new T.Mesh(new T.TorusGeometry(R, 0.028, 8, 72), aco);
+  aro.rotation.x = PI / 2;
+  aro.position.y = hM - 0.04;
+  g.add(aro);
+
+  // pernas em W: dois tubos descem do aro abrindo e pisam num tubo no chão
+  const pernas = diametro >= 3 ? 6 : 4;
+  for (let i = 0; i < pernas; i++) {
+    const a = (i / pernas) * PI * 2 + PI / pernas;
+    const abre = 0.34 / R;
+    const pe1 = noAro(a - abre, R + 0.06, 0.03);
+    const pe2 = noAro(a + abre, R + 0.06, 0.03);
+    reta(noAro(a - abre * 0.55, R, hM - 0.04), pe1, 0.024, aco);
+    reta(noAro(a + abre * 0.55, R, hM - 0.04), pe2, 0.024, aco);
+    reta(pe1, pe2, 0.026, aco);
+    [pe1, pe2].forEach((ponto) => {
+      const pe = new T.Mesh(new T.CylinderGeometry(0.045, 0.05, 0.04, 10), borracha);
+      pe.position.set(ponto.x, 0.02, ponto.z);
+      g.add(pe);
+    });
+  }
+
+  // as molas, do aro até a lona (aparecem por baixo)
+  const molas = Math.round((R * 2 * PI) / 0.11);
+  const instancias = new T.InstancedMesh(new T.CylinderGeometry(0.009, 0.009, 0.17, 6), aco, molas);
+  const matriz = new T.Matrix4();
+  const giro = new T.Quaternion();
+  for (let i = 0; i < molas; i++) {
+    const a = (i / molas) * PI * 2;
+    giro.setFromUnitVectors(V(0, 1, 0), V(Math.sin(a), 0, Math.cos(a)));
+    matriz.compose(noAro(a, R - 0.11, hM - 0.035), giro, V(1, 1, 1));
+    instancias.setMatrixAt(i, matriz);
+  }
+  g.add(instancias);
+
+  // a lona de pular: preta, com as costuras em círculo
+  const lona = new T.Mesh(
+    new T.CircleGeometry(R - 0.2, 64),
+    new T.MeshStandardMaterial({
+      roughness: 0.85,
+      side: T.DoubleSide,
+      map: textura(256, 256, (c) => {
+        c.fillStyle = "#17191f";
+        c.fillRect(0, 0, 256, 256);
+        c.strokeStyle = "rgba(255, 255, 255, .13)";
+        c.lineWidth = 2;
+        for (let r = 22; r < 128; r += 21) { c.beginPath(); c.arc(128, 128, r, 0, PI * 2); c.stroke(); }
+      }),
+    }),
+  );
+  lona.rotation.x = -PI / 2;
+  lona.position.y = hM - 0.03;
+  g.add(lona);
+
+  // o acolchoado sobre as molas
+  const perfil = [[R - 0.27, -0.01], [R - 0.28, 0.03], [R - 0.25, 0.065], [R + 0.08, 0.065], [R + 0.11, 0.03], [R + 0.11, -0.06], [R + 0.07, -0.09]];
+  const almofada = new T.Mesh(new T.LatheGeometry(perfil.map(([x, y]) => new T.Vector2(x, y)), 72), acolchoado);
+  almofada.position.y = hM - 0.02;
+  g.add(almofada);
+
+  // a rede de proteção, aberta na frente (a entrada)
+  const vao = Math.min(1.1, 0.62 / R);
+  const rede = new T.Mesh(
+    new T.CylinderGeometry(R - 0.04, R - 0.22, hN - 0.06, 72, 1, true, vao / 2, PI * 2 - vao),
+    new T.MeshStandardMaterial({
+      transparent: true,
+      alphaTest: 0.3,
+      side: T.DoubleSide,
+      roughness: 0.9,
+      map: (() => {
+        const t = textura(64, 64, (c) => {
+          c.clearRect(0, 0, 64, 64);
+          c.strokeStyle = "rgba(24, 27, 35, .95)";
+          c.lineWidth = 3;
+          c.beginPath();
+          for (let k = 0; k <= 64; k += 16) { c.moveTo(k, 0); c.lineTo(k, 64); c.moveTo(0, k); c.lineTo(64, k); }
+          c.stroke();
+        });
+        t.wrapS = t.wrapT = T.RepeatWrapping;
+        t.repeat.set(Math.round(((PI * 2 - vao) * R) / 0.4), Math.round(hN / 0.4));
+        return t;
+      })(),
+    }),
+  );
+  rede.position.y = hM + (hN - 0.06) / 2;
+  g.add(rede);
+  // as bordas do zíper, de cada lado da entrada
+  [vao / 2, -vao / 2].forEach((a) => reta(noAro(a, R - 0.22, hM + 0.02), noAro(a, R - 0.04, topo - 0.06), 0.016, espuma));
+
+  // os postes da rede, curvos, com a espuma
+  const postes = diametro >= 3 ? 8 : 6;
+  for (let i = 0; i < postes; i++) {
+    const a = (i / postes) * PI * 2 + PI / postes; // nenhum poste no meio da entrada
+    const curva = new T.CatmullRomCurve3([noAro(a, R + 0.03, hM - 0.3), noAro(a, R + 0.09, hM + hN * 0.5), noAro(a, R - 0.02, topo)]);
+    tubo(curva, 0.022, aco);
+    tubo(new T.CatmullRomCurve3(Array.from({ length: 12 }, (_, k) => curva.getPoint(0.18 + (0.8 * k) / 11))), 0.05, espuma, 10);
+    const tampa = new T.Mesh(new T.SphereGeometry(0.055, 12, 8), espuma);
+    tampa.position.copy(curva.getPoint(1));
+    g.add(tampa);
+  }
+  const aroDeCima = new T.Mesh(new T.TorusGeometry(R - 0.03, 0.026, 8, 72), espuma);
+  aroDeCima.rotation.x = PI / 2;
+  aroDeCima.position.y = topo - 0.03;
+  g.add(aroDeCima);
+
+  // a escadinha da entrada
+  const z0 = R + 0.55;
+  const z1 = R + 0.06;
+  [-0.22, 0.22].forEach((x) => reta(V(x, 0.02, z0), V(x, hM - 0.06, z1), 0.02, aco));
+  [0.36, 0.68].forEach((t) => {
+    const degrau = new T.Mesh(new T.BoxGeometry(0.46, 0.035, 0.14), borracha);
+    degrau.position.set(0, (hM - 0.06) * t, z0 + (z1 - z0) * t);
+    g.add(degrau);
+  });
+  return g;
+}
+
+/** O desenho do cadastro (core/arena.py) -> a forma montada aqui. */
+const FORMAS = { cama_elastica: montarCamaElastica };
+
+/* ======================================================================
    UMA MÁQUINA — o estande e o objeto feito das fotos
    ====================================================================== */
 
@@ -535,8 +735,10 @@ class Maquina {
     this.indice = indice;
     this.cor = COR_DA_ZONA[dados.grupo] || CORES[indice % CORES.length];
     this.fotos = fotosDe(dados);
-    // o objeto feito com os arquivos da fábrica (.glb) vence o das fotos
+    // o objeto feito com os arquivos da fábrica (.glb) vence o das fotos;
+    // e o que a arena sabe montar peça por peça (a cama elástica) também
     this.modelo = dados.modelo || "";
+    this.forma = !this.modelo && FORMAS[dados.desenho] ? dados.desenho : "";
 
     const medidas = this.modelo && (dados.medidas_modelo || []).length === 3 ? dados.medidas_modelo : dados.medidas;
     const [altura, largura, fundo] = (medidas || []).map(Number);
@@ -600,7 +802,7 @@ class Maquina {
   }
 
   get temFoto() {
-    return Object.keys(this.fotos).length > 0 || Boolean(this.modelo);
+    return Object.keys(this.fotos).length > 0 || Boolean(this.modelo || this.forma);
   }
 
   /** Tudo do estande responde ao toque como a máquina. */
@@ -615,16 +817,46 @@ class Maquina {
 
   /** Baixa e recorta as fotos no tamanho pedido (uma vez por tamanho). */
   pedir(tamanho) {
-    if (this.modelo) {
-      // o objeto da fábrica vem inteiro, uma vez só
+    if (this.modelo || this.forma) {
+      // o objeto da fábrica (ou a forma montada aqui) vem inteiro, uma vez só
       if (this.pedido) return;
       this.pedido = Infinity;
-      this.arena.fila.push(() => this.vestirModelo());
+      this.arena.fila.push(() => (this.modelo ? this.vestirModelo() : this.vestirForma()));
       return;
     }
     if (this.pedido >= tamanho || !this.temFoto) return;
     this.pedido = tamanho;
     this.arena.fila.push(() => this.carregar(tamanho));
+  }
+
+  /** A forma montada peça por peça, no tamanho do cadastro, com as cores da foto. */
+  async vestirForma() {
+    const T = this.arena.T;
+    let cores = null;
+    const url = this.fotos.perfil || Object.values(this.fotos)[0];
+    if (url) {
+      try {
+        const recorte = recortar(await carregarImagem(fotoNaLargura(url, 320)), 320);
+        if (recorte) cores = coresDaFoto(recorte.tela);
+      } catch (erro) {
+        // sem a foto, as cores da casa
+      }
+    }
+    this.limpar();
+    const objeto = FORMAS[this.forma](T, { diametro: limitar(Math.min(this.largura, this.fundo), 1.4, 4.6), cores });
+    objeto.traverse((o) => {
+      if (o.geometry) this.descartaveis.push(o.geometry);
+      if (o.material) this.descartaveis.push(o.material, ...(o.material.map ? [o.material.map] : []));
+    });
+    this.corpo.add(objeto);
+    const tamanho = new T.Box3().setFromObject(objeto).getSize(new T.Vector3());
+    this.H = tamanho.y;
+    this.W = tamanho.x;
+    this.D = tamanho.z;
+    this.montada = 1;
+    this.sombra.scale.set(this.W * 0.6, this.D * 0.6, 1);
+    this.ajustarPivo();
+    this.marcar();
   }
 
   /** O objeto 3D feito com os arquivos da fábrica (.glb), no tamanho real. */
@@ -684,7 +916,7 @@ class Maquina {
 
   limpar() {
     this.corpo.children.slice().forEach((filho) => this.corpo.remove(filho));
-    this.descartaveis.forEach((item) => item.dispose());
+    new Set(this.descartaveis).forEach((item) => item.dispose());
     this.descartaveis = [];
   }
 
@@ -907,10 +1139,8 @@ class Arena {
     this.zonas = dados.zonas || [];
     this.reduzido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.celular = window.matchMedia && window.matchMedia("(max-width: 700px)").matches;
-    this.limite = this.celular ? 10 : 16; // máquinas por "rodada" da roda
     this.fotoLonge = 384;
     this.fotoPerto = this.celular ? 768 : 1024;
-    this.pagina = 0;
     this.zona = "";
     this.categoria = "";
     this.roda = [];
@@ -957,7 +1187,7 @@ class Arena {
 
     // sem foto não há de onde montar o objeto: a máquina fica só na lista
     this.maquinas = (dados.maquinas || [])
-      .map((d, i) => (Object.keys(fotosDe(d)).length || d.modelo ? new Maquina(this, d, i) : null))
+      .map((d, i) => (Object.keys(fotosDe(d)).length || d.modelo || FORMAS[d.desenho] ? new Maquina(this, d, i) : null))
       .filter(Boolean);
     this.camera3d = new Camera(this);
   }
@@ -1331,8 +1561,7 @@ class Arena {
       return i < 0 ? 99 : i;
     };
     return this.maquinas
-      .filter((m) => (!this.zona || m.dados.grupo === this.zona)
-        && (!this.categoria || (m.dados.categorias || []).includes(this.categoria)))
+      .filter((m) => !this.categoria || (m.dados.categorias || []).includes(this.categoria))
       .sort((a, b) => ordem(a.dados.grupo) - ordem(b.dados.grupo) || a.indice - b.indice);
   }
 
@@ -1348,11 +1577,10 @@ class Arena {
   }
 
   montar({ entrada = false } = {}) {
+    // A roda tem TODAS as máquinas (só a categoria tira alguma): a visão é
+    // ampla, e as áreas são lugares da roda aonde a câmera vai.
     this.lista = this.filtradas();
-    const paginas = Math.max(1, Math.ceil(this.lista.length / this.limite));
-    this.pagina = Math.min(this.pagina, paginas - 1);
-    const inicio = this.pagina * this.limite;
-    const roda = this.lista.slice(inicio, inicio + this.limite);
+    const roda = this.lista;
     this.roda = roda;
     this.maquinas.forEach((m) => { m.grupo.visible = false; });
     this.limparDecoracao();
@@ -1384,15 +1612,20 @@ class Arena {
     });
 
     const folga = roda.length ? Math.max(...roda.map((m) => m.raioP)) : 1;
+    this.folga = folga;
+    this.trechos = trechos;
+    this.fundosDasAreas = {};
     trechos.forEach((trecho) => this.marcarArea(trecho, raio, folga));
     this.montarPilares(raio + folga + 4.5);
     this.cena.fog.near = raio * 2.2;
     this.cena.fog.far = raio * 5 + 30;
     if (this.selecionada && !roda.includes(this.selecionada)) this.soltarSelecao({ voar: false });
-    this.camera3d.visaoGeral(entrada);
+    const zona = this.trechos.find((t) => t.id === this.zona);
+    this.realcarArea(zona ? this.zona : "");
+    if (zona && !entrada) this.camera3d.olharZona(zona);
+    else this.camera3d.visaoGeral(entrada);
     roda.forEach((m) => m.pedir(this.fotoLonge));
     this.marcarLista();
-    this.mostrarRodada(paginas);
   }
 
   /** O trecho de uma área no piso da roda, na cor dela, com a placa. */
@@ -1406,9 +1639,11 @@ class Arena {
       );
       malha.rotation.x = -PI / 2;
       malha.position.y = 0.015;
+      malha.userData.zona = trecho.id;
       this.decoracao.add(malha);
+      return malha;
     };
-    arco(raio - folga - 0.9, raio + folga + 0.6, 0.14);
+    this.fundosDasAreas[trecho.id] = arco(raio - folga - 0.9, raio + folga + 0.6, 0.14);
     arco(raio - folga - 0.9, raio - folga - 0.8, 0.9);
     arco(raio + folga + 0.5, raio + folga + 0.6, 0.9);
 
@@ -1424,16 +1659,25 @@ class Arena {
     placa.scale.set(largura, largura / 4, 1);
     placa.position.y = 0.32;
     placa.rotation.x = -1.05;
+    placa.userData.zona = trecho.id;
     suporte.add(placa);
     this.decoracao.add(suporte);
   }
 
-  mostrarRodada(paginas) {
-    const rotulo = this.palco.querySelector("[data-arena-rodada]");
-    if (!rotulo) return;
-    rotulo.hidden = paginas < 2;
-    rotulo.textContent = `${this.pagina + 1}/${paginas}`;
-    rotulo.title = `Rodada ${this.pagina + 1} de ${paginas}: as setas passam para as outras máquinas`;
+  /** A área escolhida acende no piso; as outras apagam um pouco. */
+  realcarArea(id) {
+    Object.entries(this.fundosDasAreas || {}).forEach(([zona, malha]) => {
+      malha.material.opacity = !id ? 0.14 : zona === id ? 0.34 : 0.06;
+    });
+  }
+
+  /** A área sob o ponteiro (o piso colorido ou a placa dela), ou "". */
+  zonaSob(x, y) {
+    const r = this.canvas.getBoundingClientRect();
+    this.ponteiro.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(this.ponteiro, this.camera);
+    const acerto = this.raycaster.intersectObjects(this.decoracao.children, true).find((a) => a.object.userData.zona);
+    return acerto ? acerto.object.userData.zona : "";
   }
 
   /* ---------- fila de fotos: duas máquinas por vez, sem travar a página ---------- */
@@ -1467,12 +1711,7 @@ class Arena {
   /* ---------- escolher uma máquina ---------- */
   selecionar(maquina, { voar = true } = {}) {
     if (!maquina) return;
-    if (!this.roda.includes(maquina)) {
-      // está em outra rodada da roda: vai até ela primeiro
-      const posicao = this.lista.indexOf(maquina);
-      if (posicao >= 0 && Math.floor(posicao / this.limite) !== this.pagina) this.irPara(posicao);
-      return;
-    }
+    if (!this.roda.includes(maquina)) return;
     if (this.selecionada && this.selecionada !== maquina) this.largar(this.selecionada);
     this.selecionada = maquina;
     this.roda.forEach((m) => { m.aro.material = this.luz(m.cor, m === maquina ? 5 : 2.2); });
@@ -1532,36 +1771,37 @@ class Arena {
   proxima(passo) {
     const total = this.lista.length;
     if (!total) return;
-    const atual = this.selecionada ? this.lista.indexOf(this.selecionada)
-      : (passo > 0 ? this.pagina * this.limite - 1 : this.pagina * this.limite);
-    this.irPara((atual + passo + total) % total);
-  }
-
-  /** Vai a uma máquina pela posição na lista filtrada, trocando de rodada se preciso. */
-  irPara(posicao) {
-    const pagina = Math.floor(posicao / this.limite);
-    if (pagina !== this.pagina) {
-      this.pagina = pagina;
-      this.montar();
+    let atual = this.selecionada ? this.lista.indexOf(this.selecionada) : -1;
+    if (atual < 0) {
+      // nada escolhido: começa pela área onde a câmera está
+      const primeira = this.lista.findIndex((m) => m.dados.grupo === this.zona);
+      atual = primeira >= 0 ? primeira - (passo > 0 ? 1 : 0) : (passo > 0 ? -1 : 0);
     }
-    this.selecionar(this.lista[posicao]);
+    this.selecionar(this.lista[(atual + passo + total) % total]);
   }
 
+  /**
+   * Vai até uma área da arena -- a câmera passeia pela roda até o trecho
+   * dela, que acende no piso. A roda continua inteira: as outras áreas
+   * seguem ali do lado. "" volta para a arena inteira.
+   */
   escolherZona(id) {
     this.zona = id;
-    this.pagina = 0;
+    this.ocioso = 0;
     this.raiz.querySelectorAll("[data-arena-zona]").forEach((b) => {
       const ativo = b.dataset.arenaZona === id;
       b.classList.toggle("ativo", ativo);
       b.setAttribute("aria-pressed", ativo ? "true" : "false");
     });
     this.soltarSelecao({ voar: false });
-    this.montar();
+    this.realcarArea(id);
+    const trecho = (this.trechos || []).find((t) => t.id === id);
+    if (trecho) this.camera3d.olharZona(trecho);
+    else this.camera3d.visaoGeral();
   }
 
   filtrar(categoria) {
     this.categoria = categoria;
-    this.pagina = 0;
     this.soltarSelecao({ voar: false });
     this.montar();
     this.atualizarContagem();
@@ -1701,13 +1941,11 @@ class Arena {
         if (!maquina) return;
         evento.preventDefault();
         if (!this.lista.includes(maquina)) {
-          // fora do filtro de agora: volta para a arena inteira
+          // fora da categoria de agora: volta para todas
           if (categoria) categoria.value = "";
-          this.categoria = "";
-          this.atualizarContagem();
-          this.escolherZona("");
+          this.filtrar("");
         }
-        this.irPara(this.lista.indexOf(maquina));
+        this.selecionar(maquina);
         this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
       });
     });
@@ -1735,7 +1973,7 @@ class Arena {
     this.ocioso = 0;
     if (nome === "proximo") this.proxima(1);
     else if (nome === "anterior") this.proxima(-1);
-    else if (nome === "visao") this.soltarSelecao();
+    else if (nome === "visao") this.escolherZona("");
     else if (nome === "tour") {
       this.tour = !this.tour;
       this.tourTempo = 0;
@@ -1813,13 +2051,13 @@ class Arena {
    * câmera passando do meio da roda (máquina grande, roda pequena), ele some.
    */
   liberarVista() {
-    const m = this.selecionada;
-    if (!m) {
+    const p = this.camera3d.alvo;
+    if (Math.hypot(p.x, p.z) < 2) {
+      // olhando para o centro (a arena inteira): o alvo é o destaque
       this.centroDaArena.visible = true;
       return;
     }
     const c = this.camera.position;
-    const p = m.grupo.position;
     const dx = p.x - c.x;
     const dz = p.z - c.z;
     const s = limitar(-(c.x * dx + c.z * dz) / (dx * dx + dz * dz || 1), 0, 1);
@@ -1915,6 +2153,27 @@ class Camera {
   }
 
   /**
+   * Uma área da roda: a câmera fica do lado do centro, de frente para o
+   * trecho, longe o bastante para caber o trecho inteiro na tela.
+   */
+  olharZona(trecho) {
+    const arena = this.arena;
+    const camera = arena.camera;
+    const raio = arena.raio || 8;
+    const meio = (trecho.a0 + trecho.a1) / 2;
+    const arco = Math.max(0.3, trecho.a1 - trecho.a0);
+    const corda = 2 * raio * Math.sin(Math.min(PI, arco) / 2) + 2 * (arena.folga || 1.5);
+    const th = Math.tan((camera.fov * PI) / 360) * camera.aspect;
+    const r = arco > PI ? raio * 0.35 : raio * 0.9;
+    this.alvoDesejado.set(Math.sin(meio) * r, 1.3, Math.cos(meio) * r);
+    this.raioDesejado = Math.min(raio * 3.4 + 12, Math.max(7, (corda / 2 / th) * 1.08 + 1.5));
+    this.phiDesejado = 0.98;
+    let delta = Math.atan2(-Math.sin(meio), -Math.cos(meio)) - this.thetaDesejado;
+    delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+    this.thetaDesejado += delta;
+  }
+
+  /**
    * O grande (um brinquedão de 11 m) fica parado: cada vista leva a câmera
    * para aquele lado dele, longe o bastante para caber inteiro na tela.
    */
@@ -1964,7 +2223,7 @@ class Camera {
         // só passando por cima: o cursor avisa que dá para tocar
         if (evento.pointerType === "mouse") {
           arena.sobre = arena.escolher(evento.clientX, evento.clientY);
-          canvas.classList.toggle("sobre-maquina", Boolean(arena.sobre));
+          canvas.classList.toggle("sobre-maquina", Boolean(arena.sobre) || Boolean(arena.zonaSob(evento.clientX, evento.clientY)));
         }
         return;
       }
@@ -1998,6 +2257,10 @@ class Camera {
       if (andou < 8 && rapido && evento.type === "pointerup") {
         const maquina = arena.escolher(evento.clientX, evento.clientY);
         if (maquina) arena.selecionar(maquina);
+        else {
+          const zona = arena.zonaSob(evento.clientX, evento.clientY);
+          if (zona && zona !== arena.zona) arena.escolherZona(zona);
+        }
       }
     };
     canvas.addEventListener("pointerup", soltar);
