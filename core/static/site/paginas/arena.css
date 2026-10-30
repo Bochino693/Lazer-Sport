@@ -568,6 +568,20 @@
 
 .arena3d-vistas[hidden] { display: none; }
 
+/* o x: solta a máquina e deixa andar pela arena */
+.arena3d-vistas .arena3d-vista-fechar {
+    justify-content: center;
+    width: 38px;
+    min-height: 38px;
+    padding: 0;
+    border-color: rgba(255, 255, 255, .3);
+    background: rgba(255, 255, 255, .94);
+    color: #071433;
+    font-size: 1rem;
+}
+
+.arena3d-vistas .arena3d-vista-fechar:hover { background: #fff; color: #e63946; }
+
 .arena3d-lados { position: relative; pointer-events: auto; }
 .arena3d-lados-botao .fa-chevron-down { font-size: .7em; opacity: .8; }
 
@@ -987,7 +1001,7 @@
     .arena3d-so-grande,
     .arena3d-passeio-novo { display: none; }
     .arena3d-mapa { top: 8px; right: 8px; left: 8px; bottom: 60px; }
-    .arena3d-dica { font-size: .74rem; }
+    .arena3d-dica { max-width: calc(100% - 24px); font-size: .74rem; white-space: normal; text-align: center; border-radius: 14px; }
     .arena3d-passeio-dica { top: 8px; left: 8px; max-width: calc(100% - 132px); font-size: .72rem; border-radius: 14px; transform: none; text-align: left; }
     .arena3d-passeio-mapa { top: 8px; right: 8px; width: 112px; height: 112px; border-radius: 14px; }
     .arena3d-passeio-fluxo { left: 8px; bottom: 8px; max-width: calc(100% - 150px); padding-right: 12px; }
