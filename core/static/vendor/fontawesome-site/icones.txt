@@ -122,7 +122,6 @@ fa-phone
 fa-piggy-bank
 fa-pix
 fa-play
-fa-plug-circle-bolt
 fa-plug-circle-check
 fa-plus
 fa-qrcode
@@ -152,6 +151,7 @@ fa-timeline
 fa-tools
 fa-trash-can
 fa-triangle-exclamation
+fa-trophy
 fa-truck
 fa-truck-fast
 fa-up-right-and-down-left-from-center

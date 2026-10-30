@@ -284,6 +284,200 @@
 
 -->
 
+<!-- ======= PRODUTOS ======= -->
+<section id="brinquedos" class="destaques">
+  <div class="ls-section-intro">
+    <div class="ls-section-intro-copy">
+      <span class="ls-section-kicker">
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+        Catálogo profissional
+      </span>
+      <h2 class="titulo-sec">Brinquedos em Destaque</h2>
+      <p class="section-subtitle">
+        Brinquedos que fazem a diferença e encantam qualquer festa.
+      </p>
+    </div>
+
+    <a href="{% url 'brinquedos' %}#bread" class="btn-vertodos">
+      Ver todos os brinquedos
+      <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    </a>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filtros-horizontal" id="filtros-bar" role="group" aria-label="Ordenar brinquedos">
+    <button type="button" data-order="az" class="filtro-btn ativo" aria-pressed="true">
+      <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
+      <span>A → Z</span>
+    </button>
+    <button type="button" data-order="za" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-arrow-up-z-a" aria-hidden="true"></i>
+      <span>Z → A</span>
+    </button>
+    <button type="button" data-order="melhor-avaliados" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-star" aria-hidden="true"></i>
+      <span>Melhores avaliados</span>
+    </button>
+    <button type="button" data-order="custo-beneficio" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+      <span>Custo-benefício</span>
+    </button>
+    <button type="button" data-order="novidades" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+      <span>Novidades</span>
+    </button>
+  </div>
+
+  <!-- CONTAINER PRODUTOS -->
+  <div id="produtos-container">
+
+    {% comment %}
+      O CARD DA HOME É CURTO DE PROPÓSITO: foto, nome, nota e curtidas.
+      Categorias, descrição, medidas, preço e botões estão na página do
+      brinquedo -- o card inteiro leva até ela. Mais curto, cabem 12 por
+      página (eram 9). O nome é o link; o ::after dele cobre o card, e as
+      curtidas e a lista de desejos ficam por cima, clicáveis.
+    {% endcomment %}
+    <div class="grid-cards grid-cards--mini" id="grid-cards">
+      {% for brinquedo in brinquedos_todos %}
+        <article class="card-link"
+                 data-id="{{ brinquedo.id }}"
+                 data-nome="{{ brinquedo.nome_brinquedo|lower }}"
+                 data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
+                 data-preco="{{ brinquedo.valor_brinquedo|default:0 }}">
+          <div class="card-produto card-mini{% if brinquedo.exibir_na_loja %} is-sale{% endif %}">
+
+            <div class="img-area">
+              {% if brinquedo.exibir_na_loja %}
+                <span class="produto-status is-sale">
+                  <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                  <span class="rotulo-longo">Disponível para compra</span><span class="rotulo-curto">À venda</span>
+                </span>
+              {% else %}
+                <span class="produto-status">
+                  <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+                  <span class="rotulo-longo">Projeto sob consulta</span><span class="rotulo-curto">Sob consulta</span>
+                </span>
+              {% endif %}
+
+              <button type="button"
+                      class="card-mini-desejo"
+                      data-favorito="desejo"
+                      data-produto="brinquedo"
+                      data-id="{{ brinquedo.id }}"
+                      data-chave="brinquedo-{{ brinquedo.id }}"
+                      aria-pressed="false"
+                      aria-label="Guardar {{ brinquedo.nome_brinquedo }} na lista de desejos"
+                      title="Guardar na lista de desejos">
+                <i class="fa-regular fa-star" data-favorito-icone aria-hidden="true"></i>
+              </button>
+
+              {% if brinquedo.imagem_brinquedo %}
+                <img
+                  src="{{ brinquedo.imagem_brinquedo|foto:480 }}"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                >
+              {% else %}
+                <img
+                  src="{% static 'images/sem-imagem.svg' %}"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                >
+              {% endif %}
+            </div>
+
+            <div class="card-mini-info">
+              <h3 class="card-mini-nome">
+                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="produto-title-link">{{ brinquedo.nome_brinquedo }}</a>
+              </h3>
+
+              <div class="card-mini-meta">
+                <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}"
+                     aria-label="Nota {{ brinquedo.avaliacao|floatformat:1 }} de 5">
+                  <div class="stars" aria-hidden="true"></div>
+                  <span class="nota">{{ brinquedo.avaliacao|floatformat:1 }}</span>
+                </div>
+                <button type="button"
+                        class="ls-fav-selo card-mini-curtidas"
+                        data-favorito-app="brinquedo-{{ brinquedo.id }}"
+                        aria-label="Curtidas no aplicativo">
+                  <i class="fa-solid fa-heart" aria-hidden="true"></i>
+                  <span class="ls-fav-total" data-favorito-total="brinquedo-{{ brinquedo.id }}">{{ brinquedo.total_curtidas|default:0 }}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </article>
+      {% empty %}
+        <p class="nenhum-produto">Nenhum produto encontrado.</p>
+      {% endfor %}
+    </div>
+
+    <div id="paginacao-wrapper">
+      <div class="paginacao">
+        <button type="button" class="page-btn-produtos" id="prod-prev">« Anterior</button>
+        <span class="page-atual" id="prod-page-info">Página 1</span>
+        <button type="button" class="page-btn-produtos" id="prod-next">Próxima »</button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<div class="espacador"></div>
+
+
+<!-- ======= ARENA 3D & LAZER & SPORT JOGOS (logo depois dos brinquedos) ======= -->
+{% comment %}
+  A VITRINE DE PARCEIROS DEU LUGAR À ARENA.
+
+  Aqui ficavam os estabelecimentos parceiros. O pedido foi pôr a Arena 3D
+  e os jogos da casa no lugar deles -- e a página de parceiros continua
+  em /estabelecimentos/, com link logo abaixo dos botões.
+
+  Os cartões dos jogos levam direto ao simulador: /jogos/<jogo>/ abre
+  a página já com o jogo em foco.
+{% endcomment %}
+<section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
+    <div class="ls-arena-chamada-texto">
+        <span class="ls-arena-chamada-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
+        <h2 id="arena-home-titulo">Arena 3D &amp; <span>Lazer &amp; Sport Jogos</span></h2>
+        <p>
+            Jogue a prévia dos jogos das nossas máquinas, direto no celular ou no computador,
+            e monte o Strike Kids e o Dragon Bowling em 3D, com a cor do gabinete e a adesivagem.
+        </p>
+        <div class="ls-arena-chamada-acoes">
+            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'jogos' %}">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
+            </a>
+            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D
+            </a>
+        </div>
+        <a class="ls-arena-chamada-parceiros" href="{% url 'estabelecimentos' %}#header">
+            <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i> Conheça também os nossos parceiros
+        </a>
+    </div>
+
+    <div class="ls-arena-chamada-jogos" aria-label="Jogos da Lazer &amp; Sport">
+        {% for jogo in jogos_arena %}
+            <a class="ls-arena-jogo" href="{% url 'jogo' jogo.slug %}" style="--cor-jogo: {{ jogo.cor }}">
+                <img src="{% estatico jogo.capa %}" alt="" width="240" height="240" loading="lazy" decoding="async">
+                <span>{{ jogo.titulo }}</span>
+            </a>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
 <!-- ======= CATEGORIAS ======= -->
 <section id="categorias-section" class="categorias-section">
   <div class="categorias-head">
@@ -532,225 +726,6 @@
 <div class="espacador"></div>
 
 
-<!-- ======= PRODUTOS ======= -->
-<section id="brinquedos" class="destaques">
-  <div class="ls-section-intro">
-    <div class="ls-section-intro-copy">
-      <span class="ls-section-kicker">
-        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
-        Catálogo profissional
-      </span>
-      <h2 class="titulo-sec">Brinquedos em Destaque</h2>
-      <p class="section-subtitle">
-        Brinquedos que fazem a diferença e encantam qualquer festa.
-      </p>
-    </div>
-
-    <a href="{% url 'brinquedos' %}#bread" class="btn-vertodos">
-      Ver todos os brinquedos
-      <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-    </a>
-  </div>
-
-  <!-- FILTROS -->
-  <div class="filtros-horizontal" id="filtros-bar" role="group" aria-label="Ordenar brinquedos">
-    <button type="button" data-order="az" class="filtro-btn ativo" aria-pressed="true">
-      <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
-      <span>A → Z</span>
-    </button>
-    <button type="button" data-order="za" class="filtro-btn" aria-pressed="false">
-      <i class="fa-solid fa-arrow-up-z-a" aria-hidden="true"></i>
-      <span>Z → A</span>
-    </button>
-    <button type="button" data-order="melhor-avaliados" class="filtro-btn" aria-pressed="false">
-      <i class="fa-solid fa-star" aria-hidden="true"></i>
-      <span>Melhores avaliados</span>
-    </button>
-    <button type="button" data-order="custo-beneficio" class="filtro-btn" aria-pressed="false">
-      <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-      <span>Custo-benefício</span>
-    </button>
-    <button type="button" data-order="novidades" class="filtro-btn" aria-pressed="false">
-      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-      <span>Novidades</span>
-    </button>
-  </div>
-
-  <!-- CONTAINER PRODUTOS -->
-  <div id="produtos-container">
-
-    <div class="grid-cards" id="grid-cards">
-      {% for brinquedo in brinquedos_todos %}
-        <article class="card-link"
-                 data-id="{{ brinquedo.id }}"
-                 data-nome="{{ brinquedo.nome_brinquedo|lower }}"
-                 data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
-                 data-preco="{{ brinquedo.valor_brinquedo|default:0 }}">
-          <div class="card-produto{% if brinquedo.exibir_na_loja %} is-sale{% endif %}">
-
-            <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
-               class="produto-media-link"
-               aria-label="Ver detalhes de {{ brinquedo.nome_brinquedo }}">
-              <div class="img-area">
-                {% if brinquedo.exibir_na_loja %}
-                  <span class="produto-status is-sale">
-                    <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-                    Disponível para compra
-                  </span>
-                {% else %}
-                  <span class="produto-status">
-                    <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-                    Projeto sob consulta
-                  </span>
-                {% endif %}
-
-                {% if brinquedo.imagem_brinquedo %}
-                  <img
-                    src="{{ brinquedo.imagem_brinquedo|foto:720 }}"
-                    alt="{{ brinquedo.nome_brinquedo }}"
-                    loading="lazy"
-                    decoding="async"
-                  >
-                {% else %}
-                  <img
-                    src="{% static 'images/sem-imagem.svg' %}"
-                    alt="{{ brinquedo.nome_brinquedo }}"
-                    loading="lazy"
-                    decoding="async"
-                  >
-                {% endif %}
-              </div>
-            </a>
-
-            <div class="conteudo">
-              <div class="categorias">
-                {% for cat in brinquedo.categorias_brinquedos.all|slice:":3" %}
-                  <span class="categoria-pill">{{ cat.nome_categoria }}</span>
-                {% empty %}
-                  <span class="categoria-pill">Lazer &amp; Sport</span>
-                {% endfor %}
-              </div>
-
-              <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
-                 class="produto-title-link">
-                <h3>{{ brinquedo.nome_brinquedo }}</h3>
-              </a>
-
-              <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
-                <div class="stars" aria-hidden="true"></div>
-                <span class="nota">
-                  {{ brinquedo.avaliacao|floatformat:1 }} de 5
-                </span>
-              </div>
-
-              <p class="descricao">
-                {{ brinquedo.descricao|truncatewords:20 }}
-              </p>
-
-              <div class="produto-specs" aria-label="Especificações do brinquedo">
-                <div class="produto-spec" title="Voltagem: {{ brinquedo.voltz|default:'Não informada' }}">
-                  <i class="fa-solid fa-plug-circle-bolt" aria-hidden="true"></i>
-                  <span>{{ brinquedo.voltz|default:"Voltagem não informada" }}</span>
-                </div>
-
-                <div class="produto-spec" title="Dimensões: {{ brinquedo.dimensoes_m|default:'Não informadas' }}">
-                  <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-                  <span>{{ brinquedo.dimensoes_m|default:"Dimensões não informadas" }}</span>
-                </div>
-
-                <div class="produto-spec" title="Volume: {{ brinquedo.volume_formatado|default:'Não informado' }}">
-                  <i class="fa-solid fa-box-open" aria-hidden="true"></i>
-                  <span>{{ brinquedo.volume_formatado|default:"Volume não informado" }}</span>
-                </div>
-              </div>
-
-              <div class="tags">
-                {% for tag in brinquedo.tags.all|slice:":3" %}
-                  <span class="tag">#{{ tag.nome_tags }}</span>
-                {% endfor %}
-              </div>
-
-              <div class="produto-comercial">
-                <div class="produto-preco-wrap">
-                  {% if brinquedo.disponivel_na_loja %}
-                    <span class="produto-preco-label">Preço para compra</span>
-                    <strong class="produto-preco">
-                      R$ {{ brinquedo.valor_brinquedo|moeda }}
-                    </strong>
-                  {% else %}
-                    <span class="produto-preco-label">Projeto personalizado</span>
-                    <strong class="produto-consulta">
-                      <i class="fa-solid fa-comments" aria-hidden="true"></i>
-                      Solicite um orçamento
-                    </strong>
-                  {% endif %}
-                </div>
-              </div>
-
-              {% comment %}
-                Curtidas (número, feito no aplicativo) e lista de desejos
-                (ação, funciona aqui mesmo, sem cadastro). O card sai do
-                cache neutro; o que ESTE visitante já guardou é marcado
-                pelo ls-favoritos.js, com uma chamada por página.
-              {% endcomment %}
-              <div class="produto-favoritos">
-                {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=brinquedo.id fav_desejado=False fav_curtidas=brinquedo.total_curtidas fav_compacto=True fav_so_icone=True %}
-              </div>
-
-              <div class="acoes-fixas">
-                {% if brinquedo.exibir_na_loja %}
-                  <button
-                    type="button"
-                    class="produto-acao btn-cart-brinquedo"
-                    onclick="adicionarBrinquedoAoCarrinho(event, {{ brinquedo.id }}, this)"
-                    aria-label="Adicionar {{ brinquedo.nome_brinquedo }} ao carrinho"
-                  >
-                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                    <span>Adicionar ao carrinho</span>
-                  </button>
-                {% else %}
-                  <button
-                    type="button"
-                    class="produto-acao btn-orcamento-brinquedo"
-                    onclick="abrirWhatsApp(event, '{{ brinquedo.nome_brinquedo|escapejs }}')"
-                    aria-label="Pedir orçamento de {{ brinquedo.nome_brinquedo }} pelo WhatsApp"
-                  >
-                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                    <span>Pedir orçamento</span>
-                  </button>
-                {% endif %}
-
-                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
-                   class="produto-acao btn-detalhes-brinquedo"
-                   aria-label="Ver detalhes de {{ brinquedo.nome_brinquedo }}">
-                  <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                  <span>Ver detalhes</span>
-                </a>
-              </div>
-            </div>
-
-          </div>
-        </article>
-      {% empty %}
-        <p class="nenhum-produto">Nenhum produto encontrado.</p>
-      {% endfor %}
-    </div>
-
-    <div id="paginacao-wrapper">
-      <div class="paginacao">
-        <button type="button" class="page-btn-produtos" id="prod-prev">« Anterior</button>
-        <span class="page-atual" id="prod-page-info">Página 1</span>
-        <button type="button" class="page-btn-produtos" id="prod-next">Próxima »</button>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-
-<div class="espacador"></div>
-
-
 <!-- ======= MANUTENÇÃO ======= -->
 <section id="manutencao" class="manutencao-section">
 
@@ -983,25 +958,32 @@
               {% endif %}
             </div>
 
-            <div class="oferta-precos">
+            {% comment %}
+              O quadro de preço do combo é o chamariz do card: fundo forte,
+              o preço do combo grande e amarelo, a economia num selo verde.
+              O valor dos brinquedos só sai riscado quando o combo de fato
+              sai mais barato que os itens avulsos.
+            {% endcomment %}
+            <div class="oferta-precos combo-precos{% if combo.economia > 0 %} com-economia{% endif %}">
               <p class="combo-total">
-                Valor dos brinquedos:
+                <span class="combo-precos-rotulo">Valor dos brinquedos</span>
                 <span class="total-riscado money"
                       data-valor="{{ combo.total_original }}"></span>
               </p>
 
               <p class="combo-preco">
-                Preço do combo:
+                <span class="combo-precos-rotulo">Preço do combo</span>
                 <strong class="preco-promo money"
                         data-valor="{{ combo.valor_combo }}"></strong>
               </p>
 
               {% if combo.economia > 0 %}
                 <p class="combo-economia">
-                  Economia de
+                  <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                  Economize
                   <strong class="economia-verde money"
                           data-valor="{{ combo.economia }}"></strong>
-                  · {{ combo.porcentagem|floatformat:0 }}% OFF
+                  <b class="combo-economia-pct">{{ combo.porcentagem|floatformat:0 }}% OFF</b>
                 </p>
               {% else %}
                 <p class="combo-economia combo-economia-neutra">
@@ -1036,52 +1018,6 @@
   </div>
 </section>
 
-
-<!-- Div invisível para espaçamento -->
-<div class="espacador"></div>
-
-
-<!-- ======= ARENA 3D & LAZER & SPORT JOGOS (no lugar de "Nossos Parceiros") ======= -->
-{% comment %}
-  A VITRINE DE PARCEIROS DEU LUGAR À ARENA.
-
-  Aqui ficavam os estabelecimentos parceiros. O pedido foi pôr a Arena 3D
-  e os jogos da casa no lugar deles -- e a página de parceiros continua
-  em /estabelecimentos/, com link logo abaixo dos botões.
-
-  Os cartões dos jogos levam direto ao simulador: /jogos/<jogo>/ abre
-  a página já com o jogo em foco.
-{% endcomment %}
-<section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
-    <div class="ls-arena-chamada-texto">
-        <span class="ls-arena-chamada-selo"><i class="fa-solid fa-cube" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
-        <h2 id="arena-home-titulo">Arena 3D &amp; <span>Lazer &amp; Sport Jogos</span></h2>
-        <p>
-            Jogue a prévia dos jogos das nossas máquinas, direto no celular ou no computador,
-            e monte o Strike Kids e o Dragon Bowling em 3D, com a cor do gabinete e a adesivagem.
-        </p>
-        <div class="ls-arena-chamada-acoes">
-            <a class="ls-quadro-botao ls-quadro-botao--principal" href="{% url 'jogos' %}">
-                <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar os {{ jogos_arena|length }} jogos
-            </a>
-            <a class="ls-quadro-botao ls-quadro-botao--arena" href="{% url 'arena' %}#arena-3d">
-                <i class="fa-solid fa-cube" aria-hidden="true"></i> Montar em 3D
-            </a>
-        </div>
-        <a class="ls-arena-chamada-parceiros" href="{% url 'estabelecimentos' %}#header">
-            <i class="fa-solid fa-handshake-angle" aria-hidden="true"></i> Conheça também os nossos parceiros
-        </a>
-    </div>
-
-    <div class="ls-arena-chamada-jogos" aria-label="Jogos da Lazer &amp; Sport">
-        {% for jogo in jogos_arena %}
-            <a class="ls-arena-jogo" href="{% url 'jogo' jogo.slug %}" style="--cor-jogo: {{ jogo.cor }}">
-                <img src="{% estatico jogo.capa %}" alt="" width="240" height="240" loading="lazy" decoding="async">
-                <span>{{ jogo.titulo }}</span>
-            </a>
-        {% endfor %}
-    </div>
-</section>
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>

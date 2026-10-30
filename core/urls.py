@@ -12,7 +12,7 @@ from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_app_avisos import service_worker_do_site
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_arena import ArenaView
-from .views_jogos import SimuladorView
+from .views_jogos import PartidaJogoView, RankingJogosView, SimuladorView
 from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
@@ -238,6 +238,9 @@ urlpatterns = [
     path("api/painel-ao-vivo/", painel_ao_vivo, name="painel_ao_vivo"),
     # O simulador: a área dedicada às prévias dos jogos, um endereço por jogo.
     path("jogos/", SimuladorView.as_view(), name="jogos"),
+    # antes de jogos/<slug>/: "partida" e "ranking" não são jogos
+    path("jogos/partida/", PartidaJogoView.as_view(), name="jogos_partida"),
+    path("jogos/ranking/", RankingJogosView.as_view(), name="jogos_ranking"),
     path("jogos/<slug:slug>/", SimuladorView.as_view(), name="jogo"),
 
     path("eventos/", EventosView.as_view(), name="eventos"),

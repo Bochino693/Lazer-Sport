@@ -8,7 +8,9 @@
 
      ESCOLHA   os quatro cartões, como em cenarios.gd: toque num cenário,
                ALEATÓRIO sorteia na hora e, parado, a roleta escolhe.
-     MISSÃO    o objetivo do cenário (missao.gd) por um instante.
+     MISSÃO    o objetivo do cenário (missao.gd) por um instante; depois
+               dela, o 3-2-1 do console, já com o cenário na tela -- a
+               contagem só vem quando a partida está para começar.
      PARTIDA   60 s (o original deixa 120 na máquina), 30 balas com recarga
                de 1,1 s (fase.gd), combo com anunciador (anuncio_combo.gd)
                e o tiro de cada cenário (trajetoria.gd).
@@ -176,6 +178,23 @@ const FEIXES = {
 const IMPACTO = 0.35;
 const BALA_VOO = 0.07;
 
+// As tintas que todo tiro de cada estilo usa (impacto, brilho, anel): são
+// criadas durante a missão, para o 1º tiro ser tão liso quanto o 10º.
+const TINTAS_DO_TIRO = {
+  laser: [["fx_ponto", "#fff2b3"], ["fx_brilho", "#ff9973"], ["fx_anel", "#ff4d40"], ["fx_brilho", "#ffe6d9"]],
+  sol: [["fx_ponto", "#ffd973"], ["fx_ponto", "#ffd966"], ["fx_estrela", "#ffe68c"], ["fx_brilho", "#ffcc59"]],
+  lua: [["fx_ponto", "#ebf5ff"], ["fx_ponto", "#e0f0ff"], ["fx_anel", "#d9ebff"], ["fx_brilho", "#f2f7ff"]],
+  mar: [["mar_bolha", "#d9f7ff"], ["fx_anel", "#80ebff"], ["fx_brilho", "#99f2ff"]],
+  bar: [["fx_brilho", "#ffb34d"], ["fx_brilho", "#fff2cc"], ["fx_brilho", "#ffd98c"], ["fx_brilho", "#ffb852"],
+    ["fx_ponto", "#ffbf59"], ["fx_fumaca", "#bfb8ad"]],
+};
+for (const [estilo, [, , cores]] of Object.entries(FEIXES)) {
+  TINTAS_DO_TIRO[estilo].push(["fx_brilho", cores[0][0]], ["fx_brilho", cores[2][0]]);
+}
+// O que cada cenário criou na última partida neste aparelho (alvos,
+// estouros, os "+20"): é esquentado também, na missão seguinte.
+const MEMORIA_ESQUENTAR = "ls-lazer-shot-esquentar:";
+
 /* ----------------------------------------------------------------------
    AJUDANTES
    ---------------------------------------------------------------------- */
@@ -278,6 +297,67 @@ function paraQuadro(x, y, cx, cy, rot, escX, escY, saida) {
   return saida;
 }
 const LOCAL = [0, 0];
+
+/* ----------------------------------------------------------------------
+   LETREIROS: o texto com contorno vira figurinha. Ele é desenhado UMA vez
+   num canvas pequeno e, dali em diante, só colado com drawImage -- com a
+   escala e a transparência da animação. Desenhar strokeText a cada quadro,
+   num tamanho que muda a cada quadro (o "+20" que salta, o anúncio que
+   entra grande), fazia o celular rasterizar as letras de novo a cada
+   quadro: era a travadinha de cada tiro. Poucos textos se repetem (os
+   valores, ERROU!, os níveis de combo), então a figurinha é reaproveitada.
+   ---------------------------------------------------------------------- */
+const FONTE_TEXTO = "Poppins, Manrope, system-ui, sans-serif";
+
+class Letreiros {
+  constructor(max = 64) {
+    this.max = max;
+    this.mapa = new Map();
+    // a fonte do site chegou depois: as figurinhas antigas saíram na reserva
+    if (document.fonts && document.fonts.addEventListener) {
+      document.fonts.addEventListener("loadingdone", () => this.mapa.clear());
+    }
+  }
+
+  // tamanho em pontos da tela lógica; resolucao = pixels por ponto
+  pegar(texto, tamanho, cor, contorno, peso, resolucao) {
+    const chave = texto + "|" + tamanho + "|" + cor + "|" + contorno + "|" + peso + "|" + resolucao;
+    let f = this.mapa.get(chave);
+    if (f) return f;
+    const px = Math.max(4, Math.round(tamanho * resolucao));
+    const borda = contorno ? Math.max(2, px * 0.14) : 0;
+    const medidor = document.createElement("canvas").getContext("2d");
+    medidor.font = `${peso} ${px}px ${FONTE_TEXTO}`;
+    const largura = medidor.measureText(texto).width;
+    const c = document.createElement("canvas");
+    c.width = Math.ceil(largura + borda * 2 + 6);
+    c.height = Math.ceil(px * 1.4 + borda * 2 + 6);
+    const g = c.getContext("2d");
+    g.font = medidor.font;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    if (contorno) {
+      g.lineJoin = "round";
+      g.lineWidth = borda;
+      g.strokeStyle = contorno;
+      g.strokeText(texto, c.width / 2, c.height / 2);
+    }
+    g.fillStyle = cor;
+    g.fillText(texto, c.width / 2, c.height / 2);
+    f = { c, w: c.width / resolucao, h: c.height / resolucao, tamanho, nova: true };
+    if (this.mapa.size >= this.max) this.mapa.delete(this.mapa.keys().next().value);
+    this.mapa.set(chave, f);
+    return f;
+  }
+}
+
+// Cola a figurinha centrada em (x, y), no tamanho pedido.
+function colarLetreiro(ctx, f, x, y, tamanho) {
+  const k = tamanho / f.tamanho;
+  const w = f.w * k;
+  const h = f.h * k;
+  ctx.drawImage(f.c, x - w / 2, y - h / 2, w, h);
+}
 
 /* ----------------------------------------------------------------------
    PARTÍCULAS (particulas.gd): um vetor fixo reaproveitado — tiro atrás de
@@ -3298,7 +3378,11 @@ class Partida {
   constructor(api) {
     this.api = api;
     this.fator = api.reduzido ? 0.45 : 1;
-    this.tintas = new Map();
+    this.tintas = new Map(); // nome -> (cor -> canvas): sem string nova por quadro
+    this.letreiros = new Letreiros();
+    this.resolucao = 2;
+    this.esquentar = []; // tintas a criar antes do 1º tiro, aos poucos
+    this.gravando = null;
     this.medidas = new Map();
     this.medidor = document.createElement("canvas").getContext("2d");
     this.part = new Particulas(this, 240, false);
@@ -3374,8 +3458,9 @@ class Partida {
     if (this.mira.pulso > 0) this.mira.pulso = Math.max(0, this.mira.pulso - dt * 6);
     if (this.estado === "escolha") this.atualizarEscolha(dt);
     else if (this.estado === "missao") {
+      this.esquentarAlgumas(3);
       this.missaoT -= dt;
-      if (this.missaoT <= 0) this.comecarPartida();
+      if (this.missaoT <= 0) this.contarParaComecar();
     } else if (this.estado === "jogo") this.atualizarJogo(dt);
     else if (this.estado === "fim") {
       this.fimT += dt;
@@ -3387,6 +3472,10 @@ class Partida {
   }
 
   desenhar(ctx) {
+    // pixels por ponto da tela lógica, em meios: a resolução das figurinhas
+    this.resolucao = Math.max(1, Math.round((ctx.canvas.width / W) * 2) / 2);
+    // na contagem o console não chama atualizar(): o esquenta segue aqui
+    if (this.estado === "pronto") this.esquentarAlgumas(3);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
     if (this.estado === "escolha" || !this.cenario) {
@@ -3418,7 +3507,7 @@ class Partida {
     this.mira.x = x;
     this.mira.y = y;
     if (this.estado === "escolha") { this.tocarEscolha(x, y); return; }
-    if (this.estado === "missao") { this.comecarPartida(); return; }
+    if (this.estado === "missao") { this.contarParaComecar(); return; }
     if (this.estado !== "jogo") return;
     if (y >= HUD_Y) { this.recarregar(); return; }
     this.atirar(x, y);
@@ -3446,7 +3535,7 @@ class Partida {
       return;
     }
     if (this.estado === "missao") {
-      if (codigo === "Enter" || codigo === "Space") this.comecarPartida();
+      if (codigo === "Enter" || codigo === "Space") this.contarParaComecar();
       return;
     }
     if (this.estado !== "jogo") return;
@@ -3461,12 +3550,13 @@ class Partida {
   /* ---------------------------------------------------------- utilidades */
   // A imagem do atlas multiplicada pela cor (o modulate do Godot), guardada.
   tinta(nome, cor = BRANCO) {
-    const chave = nome + cor;
-    let c = this.tintas.get(chave);
+    let porCor = this.tintas.get(nome);
+    if (!porCor) { porCor = new Map(); this.tintas.set(nome, porCor); }
+    let c = porCor.get(cor);
     if (c !== undefined) return c;
     const img = this.api.img.fx;
     const r = ATLAS[nome];
-    if (!img || !r) { this.tintas.set(chave, null); return null; }
+    if (!img || !r) { porCor.set(cor, null); return null; }
     c = document.createElement("canvas");
     c.width = r[2];
     c.height = r[3];
@@ -3479,8 +3569,60 @@ class Partida {
       g.globalCompositeOperation = "destination-in";
       g.drawImage(img, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3]);
     }
-    this.tintas.set(chave, c);
+    porCor.set(cor, c);
+    if (this.gravando) this.gravando.t.add(nome + "\n" + cor);
     return c;
+  }
+
+  // Figurinha de texto na resolução atual da tela (o console pode baixar a
+  // resolução no meio do jogo; a figurinha acompanha).
+  letreiro(texto, tamanho, cor, contorno, peso) {
+    const f = this.letreiros.pegar(texto, tamanho, cor, contorno, peso, this.resolucao);
+    if (f.nova) {
+      f.nova = false;
+      if (this.gravando) this.gravando.l.add(JSON.stringify([texto, tamanho, cor, contorno, peso]));
+    }
+    return f;
+  }
+
+  /* Monta a lista do que criar antes do 1º tiro: as tintas do tiro do
+     cenário, a mira dele e o que ele usou da última vez neste aparelho. */
+  prepararEsquenta(cen) {
+    const lista = [["ui_mira", this.corMira]];
+    for (const estilo of cen.id === "deserto" ? ["sol", "lua"] : [this.estiloTiro()]) {
+      for (const par of TINTAS_DO_TIRO[estilo] || []) lista.push(par);
+    }
+    try {
+      const salvo = JSON.parse(window.localStorage.getItem(MEMORIA_ESQUENTAR + cen.id) || "null");
+      if (salvo) {
+        for (const t of salvo.t || []) { const [nome, cor] = t.split("\n"); lista.push([nome, cor]); }
+        for (const l of salvo.l || []) lista.push(["letreiro", JSON.parse(l)]);
+      }
+    } catch (erro) { /* sem memória: só o tiro */ }
+    this.esquentar = lista;
+    this.gravando = { t: new Set(), l: new Set() };
+  }
+
+  // Cria algumas por quadro (todas, se a partida já vai começar).
+  esquentarAlgumas(n) {
+    while (this.esquentar.length && n-- > 0) {
+      const [nome, valor] = this.esquentar.pop();
+      if (nome === "letreiro") this.letreiros.pegar(...valor, this.resolucao).nova = false;
+      else this.tinta(nome, valor);
+    }
+  }
+
+  lembrarEsquenta() {
+    const g = this.gravando;
+    if (!g || !this.cen) return;
+    this.gravando = null;
+    try {
+      const chave = MEMORIA_ESQUENTAR + this.cen.id;
+      const antes = JSON.parse(window.localStorage.getItem(chave) || "null") || {};
+      const t = [...new Set([...(antes.t || []), ...g.t])].slice(-60);
+      const l = [...new Set([...(antes.l || []), ...g.l])].slice(-40);
+      window.localStorage.setItem(chave, JSON.stringify({ t, l }));
+    } catch (erro) { /* aba anônima */ }
   }
 
   // A folha das lanternas em vermelho (todas piscam vermelho na ordem errada).
@@ -3584,14 +3726,23 @@ class Partida {
     this.janelaCombo = cen.janela;
     this.tempoRecarga = cen.recarga;
     this.corMira = clarear(cen.tema, 0.12);
+    this.prepararEsquenta(cen);
     this.part.limpar();
     this.luz.limpar();
     this.api.placar({ info: cen.curto });
     this.api.som("whoosh");
   }
 
-  comecarPartida() {
+  // Lido o objetivo, o 3-2-1 sobre o cenário e só então a partida.
+  contarParaComecar() {
     if (this.estado !== "missao") return;
+    this.estado = "pronto";
+    this.api.contagem(() => this.comecarPartida());
+  }
+
+  comecarPartida() {
+    if (this.estado !== "pronto") return;
+    this.esquentarAlgumas(Infinity);
     this.estado = "jogo";
     this.instrucao("COMEÇOU!", clarear(this.cen.tema, 0.4));
     this.api.som("nota");
@@ -3722,6 +3873,7 @@ class Partida {
 
   terminar() {
     this.terminou = true;
+    this.lembrarEsquenta();
     const precisao = this.disparos ? Math.round((this.acertos / this.disparos) * 100) : 0;
     const combo = this.melhorCombo >= 2 ? ` · melhor combo x${this.melhorCombo}` : "";
     this.api.terminar({
@@ -3834,12 +3986,12 @@ class Partida {
     const esc = f.t < 0.3 ? misturar(1.6, 1, saidaVolta(f.t / 0.3)) : 1;
     const alfa = f.t > f.dur - 0.3 ? Math.max(0, (f.dur - f.t) / 0.3) : 1;
     const larg = this.largura(f.texto, 50, 900);
-    const tam = 50 * esc * Math.min(1, (W - 40) / larg);
+    const base = 50 * Math.min(1, (W - 40) / larg);
     ctx.globalAlpha = alfa * 0.55;
     ctx.fillStyle = "#03060f";
     ctx.fillRect(0, H / 2 - 48, W, 96);
     ctx.globalAlpha = alfa;
-    this.api.texto(ctx, f.texto, W / 2, H / 2, { tamanho: tam, cor: f.cor, contorno: "rgba(0,0,0,0.75)", peso: 900 });
+    colarLetreiro(ctx, this.letreiro(f.texto, base, f.cor, "rgba(0,0,0,0.75)", 900), W / 2, H / 2, base * esc);
     ctx.globalAlpha = 1;
   }
 
@@ -3867,13 +4019,15 @@ class Partida {
     for (const a of this.avisos) {
       const k = a.t / 0.8;
       ctx.globalAlpha = limitar((1 - k) * 2.5, 0, 1) * limitar(a.t * 12, 0, 1);
-      api.texto(ctx, a.texto, a.x, a.y - 41 - 21 * k, { tamanho: 19, cor: a.cor, contorno: "rgba(0,0,0,0.7)", peso: 900 });
+      colarLetreiro(ctx, this.letreiro(a.texto, 19, a.cor, "rgba(0,0,0,0.7)", 900), a.x, a.y - 41 - 21 * k, 19);
     }
     for (const p of this.pops) {
       const k = p.t;
       const s = p.esc * (1 + 0.6 * Math.max(0, 1 - p.t * 7));
       ctx.globalAlpha = limitar((1 - k) * 2.2, 0, 1);
-      api.texto(ctx, p.texto, p.x, p.y - 21 - 47 * k, { tamanho: 27 * s, cor: p.cor, contorno: "rgba(0,0,0,0.72)", peso: 900 });
+      // a figurinha sai no tamanho do salto (1,6x): encolhe sem borrar
+      const base = 27 * p.esc * 1.6;
+      colarLetreiro(ctx, this.letreiro(p.texto, base, p.cor, "rgba(0,0,0,0.72)", 900), p.x, p.y - 21 - 47 * k, 27 * s);
     }
     const ins = this.instr;
     if (ins) {
@@ -3951,28 +4105,14 @@ class Partida {
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = alfa * (a.forte ? misturar(1, 0.25, Math.min(1, a.t / 0.5)) : 0.25);
     if (clarao) ctx.drawImage(clarao, x - 253 * esc, y - 81 * esc, 506 * esc, 162 * esc);
-    if (!tema.grad) {
-      const g = ctx.createRadialGradient(0, 0, 10, 0, 0, 210);
-      g.addColorStop(0, tema.clarao);
-      g.addColorStop(1, "rgba(0,0,0,0)");
-      tema.grad = g;
-    }
+    // os 14 raios com o degradê são desenhados uma vez por tema e só giram
+    if (!tema.raios) tema.raios = this.desenharRaios(tema.clarao);
     ctx.globalAlpha = alfa * 0.45;
-    ctx.fillStyle = tema.grad;
     const giro = this.relogio * 0.8;
+    const r = 210 * esc;
     ctx.translate(x, y);
     ctx.rotate(giro);
-    ctx.scale(esc, esc);
-    ctx.beginPath();
-    for (let i = 0; i < 14; i++) {
-      const b = (i / 14) * VOLTA;
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(b - 0.05) * 210, Math.sin(b - 0.05) * 210);
-      ctx.lineTo(Math.cos(b + 0.05) * 210, Math.sin(b + 0.05) * 210);
-      ctx.closePath();
-    }
-    ctx.fill();
-    ctx.scale(1 / esc, 1 / esc);
+    ctx.drawImage(tema.raios, -r, -r, r * 2, r * 2);
     ctx.rotate(-giro);
     ctx.translate(-x, -y);
     ctx.globalCompositeOperation = "source-over";
@@ -3998,9 +4138,34 @@ class Partida {
       ctx.translate(-x, -y);
     }
     ctx.globalAlpha = alfa;
-    this.api.texto(ctx, a.texto, x, y - (a.numero ? 6 : 0) * esc, { tamanho: 50 * esc, cor: tema.texto, contorno: tema.contorno, peso: 900 });
-    if (a.numero) this.api.texto(ctx, a.numero, x, y + 30 * esc, { tamanho: 28 * esc, cor: BRANCO, contorno: tema.contorno, peso: 900 });
+    // figurinha no tamanho maior da entrada (forte: 1,9x); só encolhe
+    const pico = (a.forte ? 1.9 : 1.12) * a.forca;
+    colarLetreiro(ctx, this.letreiro(a.texto, 50 * pico, tema.texto, tema.contorno, 900), x, y - (a.numero ? 6 : 0) * esc, 50 * esc);
+    if (a.numero) colarLetreiro(ctx, this.letreiro(a.numero, 28 * pico, BRANCO, tema.contorno, 900), x, y + 30 * esc, 28 * esc);
     ctx.globalAlpha = 1;
+  }
+
+  desenharRaios(cor) {
+    const lado = 420;
+    const c = document.createElement("canvas");
+    c.width = lado;
+    c.height = lado;
+    const g = c.getContext("2d");
+    const grad = g.createRadialGradient(0, 0, 10, 0, 0, 210);
+    grad.addColorStop(0, cor);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    g.translate(lado / 2, lado / 2);
+    g.fillStyle = grad;
+    g.beginPath();
+    for (let i = 0; i < 14; i++) {
+      const b = (i / 14) * VOLTA;
+      g.moveTo(0, 0);
+      g.lineTo(Math.cos(b - 0.05) * 210, Math.sin(b - 0.05) * 210);
+      g.lineTo(Math.cos(b + 0.05) * 210, Math.sin(b + 0.05) * 210);
+      g.closePath();
+    }
+    g.fill();
+    return c;
   }
 
   /* ---------------------------------------------------------- o tiro */
@@ -4431,6 +4596,7 @@ class Partida {
 export default {
   largura: W,
   altura: H,
+  contagem: false, // o 3-2-1 vem depois da escolha do cenário (api.contagem)
   artes: ARTES,
   criar(api) {
     return new Partida(api);

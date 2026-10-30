@@ -166,8 +166,9 @@ def _url(imagem):
 #: miniatura", e quem termina a partida vê "Quero essa máquina".
 #:
 #: Jogos da mesma família dividem o mesmo arquivo (`script`) e mudam só a
-#: `variante`: os três boliches são um motor com três pistas, e os dois
-#: basquetes, um motor com duas quadras.
+#: `variante`: os dois basquetes são um motor com duas quadras. Cada
+#: boliche tem o seu: o Strike Kids é 3D, como o jogo, e o Dragon Bowling
+#: é o porte do game.gd dele.
 JOGOS = (
     {
         "slug": "strike-kids",
@@ -179,12 +180,12 @@ JOGOS = (
             "jogada, a pista muda de cenário e os pinos caem com física de "
             "verdade."
         ),
-        "comandos": "Arraste a bola e solte na direção dos pinos.",
+        "comandos": "Arraste a bola e solte: o ponto da pista por onde o gesto passa é o sensor da jogada.",
         "desenhos": ("boliche",),
         "cor": "#ffb703",
         "capa": "site/arena/capas/strike-kids-logo.webp",
         "poster": "site/arena/capas/strike-kids-fundo.webp",
-        "script": "site/arena/jogos/boliche.js",
+        "script": "site/arena/jogos/strike-kids.js",
         "variante": "strike-kids",
     },
     {
@@ -196,12 +197,12 @@ JOGOS = (
             "Boliche de arcade com a arte do dragão: 1 ou 2 jogadores, mapa "
             "dos pinos, STRIKE, ACERTO e PRA FORA no telão e recorde da casa."
         ),
-        "comandos": "Arraste para mirar e solte para lançar. Mais rápido, mais força.",
+        "comandos": "Arraste a bola para cima e solte: o lado da pista por onde o gesto passa é a jogada.",
         "desenhos": ("boliche",),
         "cor": "#ff6b1a",
         "capa": "site/arena/capas/dragon-bowling.webp",
         "poster": "site/arena/capas/dragon-bowling-poster.webp",
-        "script": "site/arena/jogos/boliche.js",
+        "script": "site/arena/jogos/dragon-bowling.js",
         "variante": "dragon",
     },
     {
@@ -227,8 +228,8 @@ JOGOS = (
         "maquina": "Máquina de força (boxe)",
         "chamada": "Fight! Never give up!",
         "descricao": (
-            "A máquina de soco com sensor de feixe: três socos para cravar a "
-            "maior força da arena e entrar para o ranking."
+            "O adversário 3D no ringue sente cada soco: três socos para cravar "
+            "a maior força da arena, nocautear o boxeador e entrar no ranking."
         ),
         "comandos": "Toque, clique ou aperte espaço quando o medidor estiver no vermelho.",
         "desenhos": ("boxe",),
@@ -312,8 +313,9 @@ JOGOS = (
         "maquina": "Jogo de ritmo com tela circular",
         "chamada": "Toque, segure, arraste: sinta a batida",
         "descricao": (
-            "As notas correm do centro para o anel. Acerte no tempo da "
-            "música para emendar combos e subir de nota."
+            "Carmine e Paper Moon, as músicas da máquina, com a fase que ela "
+            "gera: as notas correm do centro para o anel. Acerte no tempo "
+            "para emendar combos e passar dos 70%."
         ),
         "comandos": "Toque nas faixas quando a nota chegar ao anel (ou teclas A S D F J K L Ç).",
         "desenhos": ("musica",),
@@ -342,8 +344,8 @@ _ARRASTO_BOLICHE = {
     "rotulo": "Arraste e solte",
     "passos": (
         "Encoste o dedo (ou o mouse) na bola.",
-        "Arraste para cima, na direção dos pinos.",
-        "Solte: a direção e a velocidade do gesto viram a jogada.",
+        "Arraste para cima, na direção dos pinos, e solte.",
+        "O ponto da pista por onde o gesto passa é o sensor da jogada -- a força não muda nada, como na máquina.",
     ),
     "botoes": (),
 }
@@ -355,7 +357,12 @@ CONTROLES = {
     },
     "dragon-bowling": {
         **_ARRASTO_BOLICHE,
-        "na_maquina": "Na máquina a bola corre pela pista do gabinete e os sensores dizem para onde ela foi.",
+        "passos": (
+            "Encoste o dedo (ou o mouse) na bola.",
+            "Arraste para cima e solte: o lado da pista por onde o gesto passa é o sensor da jogada.",
+            "Pelo meio, com os 10 pinos de pé, é strike; pelos cantos, cai um pino só.",
+        ),
+        "na_maquina": "Na máquina a bola corre pela pista do gabinete e cruza um dos 5 sensores: é ele que decide a jogada.",
     },
     "lazer-shot": {
         "gesto": "clique",
@@ -372,10 +379,11 @@ CONTROLES = {
         "gesto": "toque",
         "rotulo": "Toque para socar",
         "passos": (
-            "Toque no saco de pancada ou no botão SOCAR.",
+            "Toque na tela ou no botão SOCAR.",
             "Acerte quando o medidor estiver no vermelho: é aí que o soco sai mais forte.",
+            "Demorou? O boxeador soca a câmera, e cada soco dele tira um quarto da sua vida.",
         ),
-        "na_maquina": "Na máquina o soco é no saco de pancada de verdade, e o sensor mede a força.",
+        "na_maquina": "Na máquina o soco é no saco de pancada de verdade e o sensor mede a força; o boxeador 3D da tela reage a cada golpe.",
         "botoes": ({"tecla": "Space", "icone": "fa-hand-fist", "rotulo": "SOCAR!", "grande": True},),
     },
     "slam-arena": {
@@ -437,6 +445,8 @@ CONTROLES = {
             "Trilho com setas: arraste pelo caminho até o fim.",
         ),
         "na_maquina": "Na máquina você toca a mesa circular de luz, no ritmo da música.",
+        # no computador o jogo inteiro vai no teclado
+        "teclado": "Teclado: A S D F J K L Ç são as 8 faixas · segure na nota longa · no trilho, as teclas do caminho",
         "botoes": (),
     },
 }

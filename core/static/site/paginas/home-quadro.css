@@ -438,9 +438,18 @@
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, #3fd0ff, #ff3d71);
-    transform: scaleX(var(--progresso, 0));
+    transform: scaleX(0);
     transform-origin: left;
 }
+
+/* O tempo de cada brinquedo na vitrine (home-quadro.js troca a e b para
+   recomeçar; no fim da animação entra o próximo). */
+.ls-vitrine-progresso span.correndo-a { animation: ls-vitrine-tempo-a 5.2s linear forwards; }
+.ls-vitrine-progresso span.correndo-b { animation: ls-vitrine-tempo-b 5.2s linear forwards; }
+.ls-vitrine--parada .ls-vitrine-progresso span { animation-play-state: paused; }
+
+@keyframes ls-vitrine-tempo-a { to { transform: scaleX(1); } }
+@keyframes ls-vitrine-tempo-b { to { transform: scaleX(1); } }
 
 .ls-vitrine-vazia {
     display: grid;
@@ -610,7 +619,30 @@
     .ls-painel-item b { font-size: 1.5rem; }
 }
 
+/* ---------- celular e tablet: nada que repinte a cada quadro ----------
+   A rolagem do celular engasga quando algo grande precisa ser redesenhado
+   a cada quadro. Era o caso da grade que andava (background-position num
+   quadro de 1.500 px de altura), do brilho correndo no título, da borda
+   que gira e das bolhas e do halo com desfoque animado. No toque eles
+   ficam parados: a cara é a mesma, e o quadro é desenhado uma vez só.
+   (Havia uma regra assim no ls-tema.css, mas esta folha vem depois na
+   página e ganhava dela -- as animações nunca pararam.) */
+@media (max-width: 900px), (hover: none) {
+    .ls-quadro-fundo::before,
+    .ls-quadro-brilho,
+    .ls-quadro-botao--arena,
+    .ls-vitrine-halo { animation: none; }
+    .ls-quadro-orbe { display: none; }
+    .ls-vitrine-halo,
+    .ls-vitrine-anel,
+    .ls-vitrine-foto img { filter: none; }
+    .ls-vitrine-foto img { transform: none; }
+    .ls-vitrine-foto::after { display: none; }
+    .ls-vitrine-slide.ativo { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .ls-vitrine-progresso span,
     .ls-quadro-fundo::before,
     .ls-quadro-orbe,
     .ls-quadro-brilho,
@@ -688,11 +720,16 @@
 
 .ls-arena-chamada-parceiros:hover { color: #fff; text-decoration: underline; }
 
-/* As capas dos jogos em grade inclinada, como um painel de fliperama. */
+/* As capas dos jogos em grade inclinada, como um painel de fliperama.
+   Fileiras de 5 e a de baixo centralizada: com 9 jogos, 5 + 4 fica
+   equilibrado (numa grade de 4 sobrava um jogo sozinho embaixo). */
 .ls-arena-chamada-jogos {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    --colunas: 5;
+    --vao: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--vao);
     transform: perspective(1200px) rotateY(-10deg) rotateX(6deg);
     transition: transform .6s cubic-bezier(.2, .9, .3, 1);
 }
@@ -702,6 +739,7 @@
 .ls-arena-jogo {
     position: relative;
     display: block;
+    flex: 0 0 calc((100% - (var(--colunas) - 1) * var(--vao)) / var(--colunas));
     aspect-ratio: 1;
     overflow: hidden;
     border: 2px solid rgba(255, 255, 255, .1);
@@ -711,7 +749,10 @@
     transition: transform .3s cubic-bezier(.2, .9, .3, 1.3), border-color .3s ease, box-shadow .3s ease;
 }
 
-.ls-arena-jogo img { width: 100%; height: 100%; object-fit: cover; }
+/* A arte do jogo aparece sempre inteira: o símbolo do Strike Kids é
+   largo e, cortado no quadrado, perdia as pontas. Nada de zoom aqui. */
+.ls-arena-jogo { background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cor-jogo, #1d4ed8) 30%, #0b1430), #02060f 75%); }
+.ls-arena-jogo img { width: 100%; height: 100%; object-fit: contain; }
 
 .ls-arena-jogo span {
     position: absolute;
@@ -732,7 +773,7 @@
 .ls-arena-jogo:hover,
 .ls-arena-jogo:focus-visible {
     z-index: 2;
-    transform: translateY(-6px) scale(1.08);
+    transform: translateY(-6px);
     border-color: var(--cor-jogo);
     box-shadow: 0 20px 40px rgba(0, 0, 0, .5), 0 0 30px var(--cor-jogo);
 }
@@ -749,7 +790,7 @@
 
 @media (max-width: 620px) {
     .ls-arena-chamada { border-radius: 26px; padding: 22px 14px; }
-    .ls-arena-chamada-jogos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .ls-arena-chamada-jogos { --colunas: 3; --vao: 8px; }
     .ls-arena-jogo { border-radius: 14px; }
     .ls-arena-jogo span { opacity: 1; transform: none; font-size: .62rem; }
 }

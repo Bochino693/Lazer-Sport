@@ -224,6 +224,12 @@ class RegistrarView(View):
                 return _redirecionar_para_telefone()
             return redirect("home")
 
+        # Quem chega de um jogo (a partida grátis acabou) volta para ele
+        # depois do cadastro: a tela de transição usa este destino.
+        destino = request.GET.get("next")
+        if destino:
+            request.session["conta_fluxo_destino"] = _destino_seguro(request, destino)
+
         return render(
             request,
             self.template_name,

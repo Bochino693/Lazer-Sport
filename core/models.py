@@ -1842,3 +1842,35 @@ class ResgateCupom(Prime):
 
     def __str__(self):
         return f"{self.usuario} · {self.cupom.codigo}"
+
+
+class RecordeJogo(models.Model):
+    """O melhor resultado de cada cadastrado em cada jogo do simulador.
+
+    Uma linha por pessoa e jogo (o slug de `core/arena.py`): o ranking de
+    um jogo é esta tabela ordenada por pontos; o ranking geral soma o
+    desempenho de cada um em todos os jogos (ver `core/ranking.py`).
+    `partidas` conta quantas vezes a pessoa jogou aquele jogo.
+    """
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="recordes_jogos",
+    )
+    jogo = models.CharField(max_length=40, db_index=True)
+    pontos = models.PositiveIntegerField(default=0)
+    partidas = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Recorde de jogo"
+        verbose_name_plural = "Recordes de jogos"
+        constraints = [
+            models.UniqueConstraint(fields=("usuario", "jogo"), name="recorde_jogo_unico_por_pessoa"),
+        ]
+        indexes = [models.Index(fields=("jogo", "-pontos"), name="recorde_jogo_ranking")]
+
+    def __str__(self):
+        return f"{self.usuario} · {self.jogo} · {self.pontos}"

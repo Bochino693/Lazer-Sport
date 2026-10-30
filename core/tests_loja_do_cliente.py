@@ -133,10 +133,7 @@ class CaminhoEntreLojaEPainelTests(TestCase):
         html = self.client.get("/").content.decode()
 
         self.assertIn("Painel da fábrica", html)
-        self.assertNotIn('id="carrinho-float-btn"', html)
-        # A folha de estilo cita as classes dos botões de qualquer jeito;
-        # o que não pode existir é o LINK.
-        self.assertNotIn('class="float-btn float-desejos"', html)
+        self.assertNotIn('href="/carrinho/#carrinho"', html)
         self.assertNotIn('href="/meus-pedidos/#pedidos"', html)
 
     def test_o_cliente_ve_o_carrinho_e_nao_ve_o_painel(self):
@@ -148,5 +145,6 @@ class CaminhoEntreLojaEPainelTests(TestCase):
 
         html = self.client.get("/").content.decode()
 
-        self.assertIn('id="carrinho-float-btn"', html)
+        # sem botões flutuantes: o carrinho está no menu da conta
+        self.assertIn('class="ls-menu-conta-carrinho"', html)
         self.assertNotIn("Painel da fábrica", html)

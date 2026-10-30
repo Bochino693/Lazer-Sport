@@ -54,14 +54,14 @@
        era o carrinho "tendo e não tendo produtos".
        --------------------------------------------------------------------- */
     function ajustarCarrinho(quantidade) {
-        var botao = document.getElementById("carrinho-float-btn");
-        var contador = document.getElementById("carrinho-contador");
         var total = Number(quantidade);
 
         if (isNaN(total) || total < 0) return;
 
-        if (contador) contador.textContent = String(total);
-        if (botao) botao.classList.toggle("hidden", total === 0);
+        document.querySelectorAll("[data-carrinho-total]").forEach(function (selo) {
+            selo.textContent = String(total);
+            selo.classList.toggle("vazio", total === 0);
+        });
     }
 
     function baixarAviso(pedidoId) {

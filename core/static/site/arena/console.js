@@ -11,6 +11,7 @@
 
      {
        largura: 540, altura: 960,          // tela lógica, em pontos
+       contagem: false,                     // opcional: sem o 3-2-1 do console
        artes: { bola: "boliche/bola.webp" }, // relativo ao arquivo do jogo
        criar(api) {                         // devolve a partida
          return {
@@ -33,6 +34,9 @@
                              combo, whoosh, nota
      api.placar({pontos, tempo, info})   o painel de cima
      api.terminar({pontos, titulo, detalhe})   fim de partida
+     api.contagem(depois)    o 3-2-1 do console no meio da partida (jogo
+                             com `contagem: false` que escolhe algo antes
+                             de começar: a contagem vem depois da escolha)
      api.efeitos.explosao(x, y, {cor, n, velocidade, tamanho, gravidade})
      api.efeitos.texto(texto, x, y, {cor, tamanho})
      api.tremer(forca)       sacode a tela
@@ -390,6 +394,7 @@ class Console {
   async abrir(dados) {
     this.pararPartida();
     this.dados = dados;
+    this.raiz.dispatchEvent(new CustomEvent("console:abrir", { detail: { slug: dados.slug } }));
     this.jogo = null;
     this.escalaMaxima = 2;
     this.raiz.style.setProperty("--cor-jogo", dados.cor || "#ffd700");
@@ -484,6 +489,7 @@ class Console {
       som: (nome) => this.som.tocar(nome),
       placar: (dados) => this.placar(dados),
       terminar: (resultado) => this.terminar(resultado),
+      contagem: (depois) => this.contar(depois),
       tremer: (forca = 8) => { if (!this.reduzido) this.tremor = Math.max(this.tremor, forca); },
       vibrar: (ms = 30) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (erro) { /* sem vibração */ } },
       aleatorio: (a, b) => a + Math.random() * (b - a),
@@ -528,8 +534,18 @@ class Console {
   }
 
   /* ---------- partida ---------- */
-  comecar() {
+  /* A página pode segurar a partida: o visitante sem conta joga uma vez
+     cada jogo (ranking.js cancela o evento e mostra o cadastro). */
+  liberar() {
+    return this.raiz.dispatchEvent(new CustomEvent("console:jogar", {
+      cancelable: true,
+      detail: { slug: this.dados && this.dados.slug },
+    }));
+  }
+
+  comecar(liberado = false) {
     if (!this.jogo || this.estado === "jogando" || this.estado === "contagem") return;
+    if (!liberado && !this.liberar()) return;
     this.som.acordar();
     this.som.tocar("moeda");
     this.capa.hidden = true;
@@ -537,10 +553,25 @@ class Console {
     this.api.efeitos.limpar();
     if (this.partida.iniciar) this.partida.iniciar();
     this.relogio = 0;
-    this.contagem = this.reduzido ? 0.01 : 2.4;
+    // o jogo que tem a própria contagem (o Hit Music conta em cima da
+    // introdução da música) dispensa o 3-2-1 do console
+    this.semContagem = this.reduzido || this.jogo.contagem === false;
+    this.contagem = this.semContagem ? 0.01 : 2.4;
     this.ultimaContagem = 4;
+    this.depoisDaContagem = null;
     this.estado = "contagem";
     this.canvas.focus({ preventScroll: true });
+  }
+
+  /* A contagem pedida pelo jogo (api.contagem): a partida congela, a tela
+     continua desenhada por baixo do número e, no "VAI!", o jogo segue. */
+  contar(depois) {
+    if (this.estado !== "jogando") return;
+    this.semContagem = this.reduzido;
+    this.contagem = this.reduzido ? 0.01 : 2.4;
+    this.ultimaContagem = 4;
+    this.depoisDaContagem = depois || null;
+    this.estado = "contagem";
   }
 
   terminar({ pontos = 0, titulo = "Fim de jogo", detalhe = "" } = {}) {
@@ -557,6 +588,7 @@ class Console {
       novo && pontos > 0 ? "Você bateu o seu recorde neste aparelho." : `Seu recorde: ${Math.max(recorde, pontos).toLocaleString("pt-BR")}`;
     this.fim.classList.toggle("console-fim--recorde", novo && pontos > 0);
     this.atualizarRecorde();
+    this.raiz.dispatchEvent(new CustomEvent("console:fim", { detail: { slug: this.dados.slug, pontos } }));
     window.setTimeout(() => {
       if (this.estado !== "fim") return;
       this.fim.hidden = false;
@@ -654,14 +686,19 @@ class Console {
     if (this.estado === "contagem") {
       this.contagem -= dt;
       const numero = Math.ceil(this.contagem / 0.8);
-      if (numero !== this.ultimaContagem && numero > 0) {
+      if (numero !== this.ultimaContagem && numero > 0 && !this.semContagem) {
         this.ultimaContagem = numero;
         this.som.tocar("contagem");
       }
       if (this.contagem <= 0) {
         this.estado = "jogando";
-        this.som.tocar("vai");
-        if (!this.reduzido) api.efeitos.texto("VAI!", api.W / 2, api.H / 2, { cor: "#ffd700", tamanho: Math.min(api.W, api.H) * 0.2, vida: 0.8 });
+        if (!this.semContagem) {
+          this.som.tocar("vai");
+          api.efeitos.texto("VAI!", api.W / 2, api.H / 2, { cor: "#ffd700", tamanho: Math.min(api.W, api.H) * 0.2, vida: 0.8 });
+        }
+        const depois = this.depoisDaContagem;
+        this.depoisDaContagem = null;
+        if (depois) depois();
       }
     } else if (this.estado === "jogando") {
       this.relogio = (this.relogio || 0) + dt;
@@ -725,9 +762,9 @@ class Console {
   }
 
   reiniciar() {
-    if (!this.jogo) return;
+    if (!this.jogo || !this.liberar()) return;
     this.estado = "capa";
-    this.comecar();
+    this.comecar(true);
   }
 
   /** Para o jogo atual (troca de jogo): laço, partida e tela cheia. */
@@ -808,6 +845,8 @@ if (raiz && dadosDosJogos) {
       return item;
     }));
     campo("gesto").textContent = jogo.rotulo;
+    campo("teclado").hidden = !jogo.teclado;
+    campo("teclado-texto").textContent = jogo.teclado || "";
     campo("gesto-icone").className = `fa-solid ${jogo.icone}`;
     campo("botoes").replaceChildren(...jogo.botoes.map(criarBotao));
     campo("comandos").classList.toggle("sim-comandos--botoes", jogo.botoes.length > 0);

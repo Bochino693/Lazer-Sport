@@ -160,6 +160,53 @@
 .sim-maquina {
     height: var(--sim-alto);
     color: #fff;
+    container: maquina / size;
+}
+
+/* COMPUTADOR, JOGO EM PÉ. A tela do jogo é estreita e o gabinete é largo:
+   embaixo dela, placar e comandos roubavam altura e a tela encolhia (no
+   1366x768, 236 px de largura). Quando sobra espaço dos lados, o placar
+   vai para a esquerda e os comandos para a direita, e a tela ganha a
+   altura inteira do gabinete. */
+@container maquina (min-aspect-ratio: 1 / 1) {
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) { position: relative; }
+
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .console-placar {
+        position: absolute;
+        z-index: 2;
+        left: 14px;
+        top: calc(50% + 34px);
+        width: min(150px, calc((100% - 56cqh) / 2 - 24px));
+        flex-direction: column;
+        padding: 0;
+        background: none;
+        transform: translateY(-50%);
+    }
+
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .console-placar-item { padding: 10px 8px; }
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .console-placar-item b { font-size: 1.5rem; }
+
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .sim-comandos {
+        position: absolute;
+        z-index: 2;
+        right: 14px;
+        top: calc(50% + 34px);
+        width: min(190px, calc((100% - 56cqh) / 2 - 24px));
+        min-height: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 0;
+        border: 0;
+        background: none;
+        text-align: center;
+        transform: translateY(-50%);
+    }
+
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .sim-gesto { flex-direction: column; }
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .sim-teclado { flex-direction: column; font-size: .82rem; }
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .sim-botoes { flex-wrap: wrap; justify-content: center; }
+    .console-gabinete:has(.console-quadro[data-orientacao="retrato"]) .sim-comandos--botoes .sim-gesto span { display: inline; }
 }
 
 .console-gabinete {
@@ -335,6 +382,203 @@
 
 .console-carregando { background: rgba(2, 5, 13, .9); color: #c7d6f0; font-weight: 700; }
 
+/* ---------- o convite de cadastro: a partida grátis acabou ---------- */
+.console-cadastro {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 22px;
+    text-align: center;
+    background:
+        radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--cor-jogo) 30%, transparent), transparent 60%),
+        rgba(2, 5, 13, .95);
+}
+
+.console-cadastro[hidden] { display: none; }
+
+/* tela baixa (celular): o convite rola por dentro, nada fica cortado */
+.console-cadastro { overflow-y: auto; justify-content: safe center; }
+.console-cadastro:has(.console-cadastro-selo:not([hidden])) .console-cadastro-icone { display: none; }
+
+.console-cadastro-acoes .ls-botao--claro {
+    border: 1px solid rgba(255, 255, 255, .28);
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+}
+
+.console-cadastro-icone {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd700, #ff8a00);
+    color: #1a1000;
+    font-size: 1.7rem;
+    box-shadow: 0 0 30px rgba(255, 215, 0, .45);
+}
+
+.console-cadastro-selo {
+    margin: 0;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cor-jogo) 22%, rgba(0, 0, 0, .4));
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 900;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.console-cadastro-selo[hidden],
+.console-cadastro-passos[hidden] { display: none; }
+
+.console-cadastro--recorde .console-cadastro-selo {
+    background: linear-gradient(90deg, #ffd700, #ff8a00);
+    color: #1a1000;
+    box-shadow: 0 0 24px rgba(255, 215, 0, .5);
+}
+
+.console-cadastro-passos {
+    display: grid;
+    gap: 6px;
+    width: min(100%, 300px);
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 14px;
+    background: rgba(0, 0, 0, .3);
+    list-style: none;
+    text-align: left;
+}
+
+.console-cadastro-passos li { display: flex; align-items: center; gap: 10px; color: #dbe7ff; font-size: .82rem; font-weight: 700; }
+.console-cadastro-passos i { width: 18px; color: var(--cor-jogo); text-align: center; }
+
+.console-cadastro-titulo { margin: 0; color: #fff; font-size: clamp(1.2rem, 3.4vw, 1.6rem); font-weight: 900; line-height: 1.2; }
+.console-cadastro-texto { margin: 0; max-width: 340px; color: #c7d6f0; font-size: .95rem; line-height: 1.5; }
+.console-cadastro-acoes { display: flex; flex-direction: column; gap: 10px; width: min(100%, 300px); margin-top: 4px; }
+.console-cadastro-acoes .ls-botao { justify-content: center; margin-top: 0; }
+.console-cadastro-contagem { margin: 0; color: #ffd700; font-size: .85rem; font-weight: 800; }
+
+.console-cadastro-fechar {
+    padding: 6px 12px;
+    border: 0;
+    background: none;
+    color: #8aa0c4;
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ---------- voltou do cadastro: o resultado já está no nome da pessoa ---------- */
+.sim-salvo {
+    position: fixed;
+    z-index: 60;
+    top: 84px;
+    left: 50%;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: min(calc(100% - 24px), 460px);
+    padding: 14px 14px 14px 16px;
+    border: 1px solid rgba(61, 255, 158, .45);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(8, 40, 30, .97), rgba(6, 14, 34, .97));
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .5), 0 0 30px rgba(61, 255, 158, .2);
+    color: #fff;
+    transform: translateX(-50%);
+    animation: sim-salvo-entra .5s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+
+.sim-salvo--saindo { opacity: 0; transform: translate(-50%, -12px); transition: opacity .35s ease, transform .35s ease; }
+
+@keyframes sim-salvo-entra { from { opacity: 0; transform: translate(-50%, -18px) scale(.96); } }
+
+.sim-salvo-icone { flex: none; color: #3dff9e; font-size: 1.7rem; line-height: 1; }
+.sim-salvo-texto { display: grid; flex: 1; gap: 3px; min-width: 0; font-size: .9rem; line-height: 1.4; }
+.sim-salvo-texto strong { font-size: 1.02rem; font-weight: 900; }
+.sim-salvo-texto b { color: #ffd700; }
+.sim-salvo-texto small { color: #9fb3d1; font-size: .78rem; }
+
+.sim-salvo-fechar {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+    color: #c7d6f0;
+    cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sim-salvo { animation: none; }
+}
+
+/* ---------- ranking na ficha ---------- */
+.sim-ranking {
+    margin: 18px 0 4px;
+    padding: 14px;
+    border: 1px solid rgba(255, 215, 0, .25);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255, 215, 0, .08), rgba(0, 0, 0, .18));
+}
+
+.sim-ranking-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sim-ranking-topo h3 { margin: 0; }
+.sim-ranking-topo h3 i { color: #ffd700; }
+
+.sim-ranking-abas { display: flex; padding: 3px; border-radius: 999px; background: rgba(0, 0, 0, .35); }
+
+.sim-ranking-abas button {
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: #9fb3d1;
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.sim-ranking-abas button[aria-selected="true"] { background: #ffd700; color: #1a1000; }
+
+.sim-ranking-lista { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.sim-ranking-lista[hidden] { display: none; }
+
+.sim-ranking-lista li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .28);
+    font-size: .88rem;
+}
+
+.sim-ranking-lista li b { color: #9fb3d1; font-weight: 900; }
+.sim-ranking-lista li span { overflow: hidden; color: #fff; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.sim-ranking-lista li strong { color: var(--cor-jogo); font-variant-numeric: tabular-nums; font-weight: 900; }
+.sim-ranking-lista li:nth-child(1) b { color: #ffd700; }
+.sim-ranking-lista li:nth-child(2) b { color: #d9e2f2; }
+.sim-ranking-lista li:nth-child(3) b { color: #e39b5b; }
+
+.sim-ranking-lista .sim-ranking-vazio { display: block; color: #9fb3d1; font-size: .85rem; line-height: 1.45; }
+
+.sim-ranking-nota { margin: 10px 0 0; color: #8aa0c4; font-size: .76rem; line-height: 1.45; }
+.sim-ranking-eu { margin: 10px 0 0; color: #dbe7ff; font-size: .85rem; font-weight: 700; line-height: 1.45; }
+.sim-ranking-eu a { color: #ffd700; }
+
 /* ---------- comandos embaixo da tela ---------- */
 .sim-comandos {
     display: flex;
@@ -350,6 +594,28 @@
 }
 
 .sim-comandos--botoes { justify-content: space-between; }
+
+/* A legenda do teclado: só em computador (mouse e teclado), onde o toque
+   da faixa ao lado não serve. */
+.sim-comandos:has(.sim-teclado:not([hidden])) { flex-wrap: wrap; }
+
+.sim-teclado {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #fff;
+    font-size: .86rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.sim-teclado i { color: var(--cor-jogo); font-size: 1.15rem; }
+.sim-teclado[hidden] { display: none; }
+
+@media not ((hover: hover) and (pointer: fine)) {
+    .sim-teclado { display: none; }
+}
 
 .sim-gesto {
     display: flex;
@@ -568,9 +834,10 @@
     .sim-opcao small { display: none; }
     .sim-opcao[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--cor-jogo); background: color-mix(in srgb, var(--cor-jogo) 18%, transparent); }
 
-    /* a máquina ocupa a tela entre o cabeçalho e a barra de baixo */
+    /* a máquina ocupa a tela entre o cabeçalho e a barra de baixo (o
+       botão do meio da barra sobe 26 px: os comandos ficam acima dele) */
     .sim-maquina {
-        height: calc(100dvh - 136px - env(safe-area-inset-bottom));
+        height: calc(100dvh - 160px - env(safe-area-inset-bottom));
         min-height: 460px;
         /* no celular o cabeçalho é mais baixo que a folga do site */
         scroll-margin-top: -30px;
@@ -585,6 +852,9 @@
     .console-placar { gap: 5px; padding: 5px 6px; }
     .console-placar-item { padding: 3px 4px; }
     .console-placar-item b { font-size: 1.05rem; }
+    /* a caixa de informação ("ROUND 2/3 · BOLA 1") é a que tem mais texto */
+    .console-placar-item[data-placar-caixa="info"] { flex: 2; }
+    .console-placar-item[data-placar-caixa="info"] b { font-size: .86rem; letter-spacing: -.01em; }
     .console-tela { padding: 0; }
     .console-quadro { border-radius: 0; }
 
@@ -603,9 +873,3 @@
 @media (prefers-reduced-motion: reduce) {
     .sim-gesto i { animation: none; }
 }
-
-/* No simulador, os botões flutuantes (WhatsApp, Instagram, desejos)
-   cobririam o seletor e a tela do jogo; o "Quero essa máquina" da ficha
-   faz o papel do WhatsApp aqui. */
-body:has([data-simulador]) .float-stack,
-body:has([data-simulador]) .ls-quick-dock { display: none; }

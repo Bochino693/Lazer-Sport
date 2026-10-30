@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static interno_extras %}
+{% load static interno_extras humanize %}
 
 {% block title %}{% if jogo_escolhido %}{{ atual.titulo }}: jogue a prévia{% else %}Simulador de jogos{% endif %} | Lazer &amp; Sport Jogos{% endblock %}
 
@@ -28,6 +28,21 @@
 <link rel="modulepreload" href="{% estatico atual.script %}">
 
 <div class="sim" style="--cor-jogo: {{ atual.cor }}" data-simulador data-whatsapp="{{ whatsapp }}">
+
+    {% if salvos %}
+    {# voltou do cadastro ou do login: a partida grátis já está no nome da pessoa #}
+    <div class="sim-salvo" role="status" data-sim-salvo>
+        <span class="sim-salvo-icone" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+        <div class="sim-salvo-texto">
+            <strong>Resultado salvo no seu nome!</strong>
+            {% for item in salvos %}
+            <span>{{ item.titulo }}: <b>{{ item.pontos|intcomma }} pontos</b>{% if item.posicao %} · <b>{{ item.posicao }}º lugar</b> no ranking{% endif %}</span>
+            {% endfor %}
+            <small>Agora é só jogar: cada recorde novo entra no ranking na hora.</small>
+        </div>
+        <button type="button" class="sim-salvo-fechar" data-sim-salvo-fechar aria-label="Fechar aviso"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    {% endif %}
 
     <div class="sim-topo">
         <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
@@ -114,6 +129,29 @@
                         </div>
 
                         <div class="console-carregando" data-console-carregando hidden role="status">Carregando o jogo…</div>
+
+                        {% comment %}
+                          A partida grátis acabou: quem não entrou na conta joga uma vez
+                          cada jogo. Cadastro ou login e a pessoa volta para este jogo, com
+                          o placar dela já no ranking (ranking.js e core/ranking.py).
+                        {% endcomment %}
+                        <div class="console-cadastro" data-console-cadastro hidden role="dialog" aria-modal="false" aria-labelledby="console-cadastro-titulo">
+                            <span class="console-cadastro-icone" aria-hidden="true"><i class="fa-solid fa-trophy"></i></span>
+                            <p class="console-cadastro-selo" data-cadastro-selo hidden></p>
+                            <p class="console-cadastro-titulo" id="console-cadastro-titulo" data-cadastro-titulo>Você já jogou a sua partida grátis</p>
+                            <p class="console-cadastro-texto" data-cadastro-texto>Crie a sua conta grátis para jogar quantas vezes quiser e disputar o ranking.</p>
+                            <ol class="console-cadastro-passos" data-cadastro-passos hidden>
+                                <li><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> O resultado fica guardado neste aparelho</li>
+                                <li><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Crie a conta ou entre (1 minuto)</li>
+                                <li><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ele vai para o ranking no seu nome</li>
+                            </ol>
+                            <div class="console-cadastro-acoes">
+                                <a class="ls-botao" data-cadastro-criar href="{% url 'registrar' %}?next={{ atual.url|urlencode }}"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
+                                <a class="ls-botao ls-botao--claro" data-cadastro-entrar href="{% url 'login' %}?next={{ atual.url|urlencode }}"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Já tenho conta</a>
+                            </div>
+                            <p class="console-cadastro-contagem" data-cadastro-contagem aria-live="polite"></p>
+                            <button type="button" class="console-cadastro-fechar" data-cadastro-fechar>Agora não</button>
+                        </div>
                     </div>
                 </div>
 
@@ -122,6 +160,10 @@
                     <p class="sim-gesto">
                         <i class="fa-solid {{ atual.icone_gesto }}" aria-hidden="true" data-sim-gesto-icone></i>
                         <span data-sim-gesto>{{ atual.controle.rotulo }}</span>
+                    </p>
+                    <p class="sim-teclado" data-sim-teclado{% if not atual.controle.teclado %} hidden{% endif %}>
+                        <i class="fa-solid fa-keyboard" aria-hidden="true"></i>
+                        <span data-sim-teclado-texto>{{ atual.controle.teclado }}</span>
                     </p>
                     <div class="sim-botoes" data-sim-botoes>
                         {% for botao in atual.controle.botoes %}
@@ -140,6 +182,39 @@
             <h2 id="sim-ficha-titulo" data-sim-titulo>{{ atual.titulo }}</h2>
             <p class="sim-ficha-chamada" data-sim-chamada>{{ atual.chamada }}</p>
             <p class="sim-ficha-desc" data-sim-descricao>{{ atual.descricao }}</p>
+
+            <!-- ================= RANKING: deste jogo e geral ================= -->
+            <section class="sim-ranking" data-sim-ranking aria-labelledby="sim-ranking-titulo">
+                <div class="sim-ranking-topo">
+                    <h3 id="sim-ranking-titulo"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ranking</h3>
+                    <div class="sim-ranking-abas" role="tablist" aria-label="Qual ranking">
+                        <button type="button" role="tab" id="ranking-aba-jogo" aria-controls="ranking-jogo" aria-selected="true" data-ranking-aba="jogo">Este jogo</button>
+                        <button type="button" role="tab" id="ranking-aba-geral" aria-controls="ranking-geral" aria-selected="false" tabindex="-1" data-ranking-aba="geral">Geral</button>
+                    </div>
+                </div>
+                <ol class="sim-ranking-lista" id="ranking-jogo" role="tabpanel" aria-labelledby="ranking-aba-jogo" data-ranking-lista="jogo">
+                    {% for linha in ranking.rankingJogo %}
+                    <li><b>{{ linha.posicao }}º</b><span>{{ linha.nome }}</span><strong>{{ linha.pontos|intcomma }}</strong></li>
+                    {% empty %}
+                    <li class="sim-ranking-vazio">Ninguém no ranking deste jogo ainda. Seja o primeiro!</li>
+                    {% endfor %}
+                </ol>
+                <ol class="sim-ranking-lista" id="ranking-geral" role="tabpanel" aria-labelledby="ranking-aba-geral" data-ranking-lista="geral" hidden>
+                    {% for linha in ranking.rankingGeral %}
+                    <li><b>{{ linha.posicao }}º</b><span>{{ linha.nome }}</span><strong>{{ linha.pontos|intcomma }}</strong></li>
+                    {% empty %}
+                    <li class="sim-ranking-vazio">O ranking geral começa com a primeira partida de um cadastrado.</li>
+                    {% endfor %}
+                </ol>
+                <p class="sim-ranking-nota" data-ranking-nota hidden>No geral, cada jogo vale até 1.000 pontos: o recorde do jogo leva 1.000 e os outros, a proporção do próprio recorde.</p>
+                <p class="sim-ranking-eu" data-ranking-eu>
+                    {% if ranking.logado %}
+                        {% if ranking.eu.jogo %}Você: {{ ranking.eu.jogo.posicao }}º neste jogo, com {{ ranking.eu.jogo.pontos|intcomma }} pontos.{% else %}Jogue uma partida para entrar no ranking deste jogo.{% endif %}
+                    {% else %}
+                        <a href="{% url 'registrar' %}?next={{ atual.url|urlencode }}" data-cadastro-criar>Crie sua conta</a> ou <a href="{% url 'login' %}?next={{ atual.url|urlencode }}" data-cadastro-entrar>entre</a> para jogar à vontade e aparecer no ranking. Sem conta, é uma partida por jogo.
+                    {% endif %}
+                </p>
+            </section>
 
             <h3><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Como jogar aqui</h3>
             <ol class="sim-passos" data-sim-passos>
@@ -167,6 +242,8 @@
 </div>
 
 {{ jogos_script|json_script:"sim-jogos" }}
+{{ jogador|json_script:"sim-jogador" }}
 <script type="module" src="{% estatico 'site/arena/console.js' %}"></script>
+<script type="module" src="{% estatico 'site/arena/ranking.js' %}"></script>
 
 {% endblock %}
