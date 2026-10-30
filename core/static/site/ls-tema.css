@@ -1099,19 +1099,19 @@ html.ls-escuro:not(#_):not(#__) .ls-fav-selo {
 }
 
 /* ======================================================================
-   BRINQUEDOS DA HOME — o card em linha
+   BRINQUEDOS DA HOME — o card curto, de foto grande
 
-   Uma linha por brinquedo: a foto pequena à esquerda, o nome no meio e,
-   no canto direito, a nota e as curtidas. Gasta pouca altura (doze cabem
-   numa tela de computador) e o card inteiro leva à página do brinquedo
-   (o ::after do link do nome cobre o card). O fio colorido à esquerda diz
-   o estado: verde à venda, âmbar sob consulta.
-   12 por página: 1 coluna no celular, 2 no tablet, 3 no computador e 4
-   em tela Full HD -- sempre linhas completas.
+   A foto é o card: grande, a máquina inteira num fundo de estúdio (a foto
+   com fundo próprio ocupa o quadro todo -- ls-fotos.js). Embaixo, só o
+   nome e, no canto direito, a nota e as curtidas. Todos os cards têm a
+   mesma altura e as linhas ficam alinhadas. O card inteiro leva à página
+   do brinquedo (o ::after do link do nome cobre o card).
+   12 por página: 2 colunas no celular, 3 no tablet e 4 no computador --
+   sempre linhas completas.
    ====================================================================== */
 html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     width: 100%;
     min-height: 0;
     margin: 0 auto;
@@ -1120,57 +1120,44 @@ html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini {
 }
 
 @media (min-width: 700px) {
-    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 }
 
 @media (min-width: 1100px) {
-    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-}
-
-@media (min-width: 1680px) {
-    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    html.ls-escuro:not(#_):not(#__) #grid-cards.grid-cards--mini { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini {
     position: relative;
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
     width: 100%;
     max-width: none;
     height: 100%;
-    min-height: 0;
     margin: 0;
-    padding: 8px 14px 8px 8px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, .08);
-    border-left: 3px solid #ffb020;
-    border-radius: 16px;
-    background: linear-gradient(90deg, #0e1a3d, #091129);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .22);
-    transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #0d1838, #091129);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, .28);
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
 }
-
-html.ls-escuro:not(#_):not(#__) .card-mini.is-sale { border-left-color: #22e07a; }
 
 html.ls-escuro:not(#_):not(#__) .card-link:hover .card-mini {
-    transform: translateY(-2px);
-    border-color: rgba(63, 208, 255, .3);
-    background: linear-gradient(90deg, #12214b, #0b1532);
+    transform: translateY(-4px);
+    border-color: rgba(63, 208, 255, .35);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, .38);
 }
 
-/* a foto: um quadrado pequeno, a máquina inteira num fundo de estúdio
-   (a foto com fundo próprio ocupa o quadrado todo -- ls-fotos.js) */
+/* a foto grande: quadrada, a máquina inteira */
 html.ls-escuro:not(#_):not(#__) .card-mini .img-area {
     flex: none;
-    width: 92px;
-    height: 92px;
+    width: 100%;
+    height: auto;
     aspect-ratio: 1;
-    padding: 6px;
-    border: 0;
-    border-radius: 12px;
-    background: radial-gradient(circle at 50% 42%, #ffffff 0%, #eef3fc 60%, #dbe6f7 100%);
+    padding: 12px;
+    border-bottom: 0;
+    background: radial-gradient(circle at 50% 42%, #ffffff 0%, #eef3fc 58%, #dbe6f7 100%);
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini .img-area.foto-cheia { padding: 0; background: #0b1532; }
@@ -1180,32 +1167,57 @@ html.ls-escuro:not(#_):not(#__) .card-mini::after { display: none; }
 html.ls-escuro:not(#_):not(#__) .card-mini .img-area img,
 html.ls-escuro:not(#_):not(#__) .card-link:hover .card-mini .img-area img { filter: none; transform: none; }
 
-/* o estado vira o fio da esquerda; o texto fica só para leitor de tela */
+/* o estado: discreto, no pé da foto, com o ponto da cor dele */
 html.ls-escuro:not(#_):not(#__) .card-mini .produto-status {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+    top: auto;
+    bottom: 10px;
+    left: 10px;
+    gap: 6px;
+    max-width: calc(100% - 20px);
+    min-height: 0;
+    padding: 4px 10px 4px 8px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(5, 11, 31, .78);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.3;
+    text-transform: none;
+    box-shadow: none;
+    backdrop-filter: none;
 }
+
+html.ls-escuro:not(#_):not(#__) .card-mini .produto-status::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffb020;
+    box-shadow: 0 0 8px #ffb020;
+}
+
+html.ls-escuro:not(#_):not(#__) .card-mini .produto-status.is-sale { background: rgba(5, 11, 31, .78); }
+html.ls-escuro:not(#_):not(#__) .card-mini .produto-status.is-sale::before { background: #22e07a; box-shadow: 0 0 8px #22e07a; }
 
 /* lista de desejos no canto da foto */
 .card-mini-desejo {
     position: absolute;
-    top: 4px;
-    left: 4px;
+    top: 10px;
+    right: 10px;
     z-index: 4;
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border: 0;
     border-radius: 50%;
     background: rgba(5, 11, 31, .72);
     color: #ffd23f;
-    font-size: .72rem;
+    font-size: .9rem;
     cursor: pointer;
     transition: background .2s ease;
 }
@@ -1213,21 +1225,23 @@ html.ls-escuro:not(#_):not(#__) .card-mini .produto-status {
 .card-mini-desejo:hover { background: rgba(5, 11, 31, .92); }
 .card-mini-desejo.is-on { background: linear-gradient(135deg, #ffd23f, #ff9f1c); color: #3a2400; }
 
-/* o nome no meio; nota e curtidas no canto direito */
+/* embaixo da foto: o nome à esquerda; nota e curtidas no canto direito.
+   Altura fixa de duas linhas de nome: os cards ficam todos alinhados. */
 .card-mini-info {
     display: flex;
     flex: 1;
     align-items: center;
-    gap: 12px;
-    min-width: 0;
-    padding: 0;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 74px;
+    padding: 12px 14px;
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini-nome {
     flex: 1 1 0;
     min-width: 0;
     margin: 0;
-    font-size: .95rem;
+    font-size: 1rem;
     font-weight: 800;
     letter-spacing: -.01em;
     line-height: 1.25;
@@ -1272,8 +1286,8 @@ html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao {
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini .stars { display: flex; gap: 1px; color: #ffd23f; }
-html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 11px; height: 11px; }
-html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao .nota { color: #fff; font-size: .78rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 12px; height: 12px; }
+html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao .nota { color: #fff; font-size: .8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* curtidas: o mesmo tamanho da nota, sem caixa em volta */
 html.ls-escuro:not(#_):not(#__) .card-mini-curtidas {
@@ -1286,20 +1300,28 @@ html.ls-escuro:not(#_):not(#__) .card-mini-curtidas {
     background: none;
     box-shadow: none;
     color: #ffb3c6;
-    font-size: .78rem;
+    font-size: .8rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     cursor: pointer;
 }
 
-html.ls-escuro:not(#_):not(#__) .card-mini-curtidas i { color: #ff3d71; font-size: .76rem; }
+html.ls-escuro:not(#_):not(#__) .card-mini-curtidas i { color: #ff3d71; font-size: .78rem; }
 html.ls-escuro:not(#_):not(#__) .card-mini-curtidas:hover { color: #fff; }
 
-@media (max-width: 420px) {
-    html.ls-escuro:not(#_):not(#__) .card-mini { gap: 10px; padding: 7px 10px 7px 7px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini .img-area { width: 76px; height: 76px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini-nome { font-size: .88rem; }
+@media (max-width: 560px) {
+    html.ls-escuro:not(#_):not(#__) .card-mini { border-radius: 16px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini .img-area { padding: 8px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini .produto-status { bottom: 6px; left: 6px; padding: 3px 8px 3px 7px; font-size: .62rem; }
+    .card-mini-desejo { top: 6px; right: 6px; width: 30px; height: 30px; font-size: .8rem; }
+    /* card estreito: o nome em cima (duas linhas) e nota e curtidas numa
+       linha só embaixo, a nota à esquerda e as curtidas à direita */
+    .card-mini-info { flex-direction: column; align-items: stretch; justify-content: space-between; gap: 6px; min-height: 84px; padding: 10px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini-nome { flex: none; min-height: 2.5em; font-size: .88rem; }
+    .card-mini-meta { flex-direction: row; align-items: center; justify-content: space-between; }
     html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 10px; height: 10px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao .nota,
+    html.ls-escuro:not(#_):not(#__) .card-mini-curtidas { font-size: .74rem; }
 }
 
 /* Os filtros dos brinquedos numa fila só, que desliza com o dedo: no
