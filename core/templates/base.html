@@ -243,31 +243,66 @@
           <span class="user-greeting">Olá, {{ user.first_name|default:user.username }}</span>
           <i class="fa-solid fa-chevron-down user-caret" aria-hidden="true"></i>
         </button>
-        <div class="dropdown-menu" id="ls-user-menu" role="menu">
-          <div class="dropdown-user-info">
-            <strong>{{ user.get_full_name|default:user.username }}</strong>
-            <span>{{ user.email }}</span>
+        {% comment %}
+          O MENU DA CONTA, com cara de app: quem é (nome e e-mail), os
+          atalhos do dia a dia em ícones (carrinho com o número de itens,
+          pedidos, desejos) e o resto em lista. Sem emojis: os ícones são os
+          do site, iguais em todo aparelho.
+        {% endcomment %}
+        <div class="dropdown-menu ls-mc" id="ls-user-menu" role="menu">
+          <div class="ls-mc-topo">
+            <span class="ls-mc-avatar" aria-hidden="true">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+            <div class="ls-mc-quem">
+              <strong>{{ user.get_full_name|default:user.username }}</strong>
+              <span>{{ user.email }}</span>
+            </div>
           </div>
-          <a href="{% url 'perfil' %}#perfil-box" role="menuitem">🎯 Meu Perfil</a>
-          {% if usuario_da_equipe %}
-            {# Conta de acesso interno não tem lista de desejos: ela tem painel. #}
-            <a href="{{ ls_url_painel|default:'/' }}" role="menuitem">👑 Painel da fábrica</a>
-          {% else %}
+          {% if not usuario_da_equipe %}
             {% comment %}
               Carrinho, pedidos e manutenções moravam nos botões flutuantes,
               que saíram para a página ter a largura toda. No celular eles
               estão na barra de baixo e no Menu; no computador, aqui.
             {% endcomment %}
-            <a href="{% url 'carrinho' %}#carrinho" role="menuitem" class="ls-menu-conta-carrinho">🛒 Carrinho
-              <b class="ls-menu-conta-selo{% if not carrinho_total_itens %} vazio{% endif %}" data-carrinho-total>{{ carrinho_total_itens|default:0 }}</b>
-            </a>
-            <a href="{% url 'meus_pedidos' %}#pedidos" role="menuitem">📦 Meus pedidos</a>
-            {% if tem_manutencao %}
-              <a href="{% url 'manutencoes' %}?tab=lista#cab" role="menuitem">🔧 Manutenções</a>
-            {% endif %}
-            <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
+            <div class="ls-mc-atalhos">
+              <a href="{% url 'carrinho' %}#carrinho" role="menuitem" class="ls-menu-conta-carrinho">
+                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                <span>Carrinho</span>
+                <b class="ls-menu-conta-selo{% if not carrinho_total_itens %} vazio{% endif %}" data-carrinho-total>{{ carrinho_total_itens|default:0 }}</b>
+              </a>
+              <a href="{% url 'meus_pedidos' %}#pedidos" role="menuitem">
+                <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                <span>Pedidos</span>
+              </a>
+              <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">
+                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                <span>Desejos</span>
+              </a>
+            </div>
           {% endif %}
-          <a href="{% url 'logout' %}#logout-box" role="menuitem">🚪 Sair</a>
+          <div class="ls-mc-lista">
+            <a href="{% url 'perfil' %}#perfil-box" role="menuitem">
+              <i class="ls-mc-ico fa-solid fa-user-gear" aria-hidden="true"></i>
+              <span>Meu perfil<small>Seus dados de cadastro</small></span>
+              <i class="ls-mc-seta fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </a>
+            {% if usuario_da_equipe %}
+              {# Conta de acesso interno não tem lista de desejos: ela tem painel. #}
+              <a href="{{ ls_url_painel|default:'/' }}" role="menuitem" class="ls-mc-equipe">
+                <i class="ls-mc-ico fa-solid fa-crown" aria-hidden="true"></i>
+                <span>Painel da fábrica<small>A gestão da Lazer &amp; Sport</small></span>
+                <i class="ls-mc-seta fa-solid fa-chevron-right" aria-hidden="true"></i>
+              </a>
+            {% elif tem_manutencao %}
+              <a href="{% url 'manutencoes' %}?tab=lista#cab" role="menuitem">
+                <i class="ls-mc-ico ls-mc-ico--laranja fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                <span>Manutenções<small>Acompanhe seus chamados</small></span>
+                <i class="ls-mc-seta fa-solid fa-chevron-right" aria-hidden="true"></i>
+              </a>
+            {% endif %}
+          </div>
+          <a href="{% url 'logout' %}#logout-box" role="menuitem" class="ls-mc-sair">
+            <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Sair da conta
+          </a>
         </div>
       </div>
     {% else %}
@@ -281,10 +316,29 @@
           <span class="user-greeting">Entrar / Cadastro</span>
           <i class="fa-solid fa-chevron-down user-caret" aria-hidden="true"></i>
         </button>
-        <div class="dropdown-menu" id="ls-user-menu" role="menu">
-          <a href="{% url 'login' %}#login-box" role="menuitem">🔐 Fazer Login</a>
-          <a href="{% url 'registrar' %}#register-box" role="menuitem">📝 Criar Conta</a>
-          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
+        <div class="dropdown-menu ls-mc" id="ls-user-menu" role="menu">
+          <div class="ls-mc-topo">
+            <span class="ls-mc-avatar ls-mc-avatar--visitante" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+            <div class="ls-mc-quem">
+              <strong>Bem-vindo!</strong>
+              <span>Entre para acompanhar pedidos e manutenções.</span>
+            </div>
+          </div>
+          <div class="ls-mc-botoes">
+            <a href="{% url 'login' %}#login-box" role="menuitem" class="ls-mc-entrar">
+              <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Entrar
+            </a>
+            <a href="{% url 'registrar' %}#register-box" role="menuitem" class="ls-mc-criar">
+              <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta
+            </a>
+          </div>
+          <div class="ls-mc-lista">
+            <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">
+              <i class="ls-mc-ico ls-mc-ico--ouro fa-solid fa-star" aria-hidden="true"></i>
+              <span>Lista de desejos<small>Funciona mesmo sem cadastro</small></span>
+              <i class="ls-mc-seta fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </a>
+          </div>
         </div>
       </div>
     {% endif %}
