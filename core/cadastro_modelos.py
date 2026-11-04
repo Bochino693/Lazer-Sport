@@ -222,7 +222,7 @@ def migracao(chave):
     return cadastrar_no_deploy
 
 
-def migracao_objetos_3d(*chaves):
+def migracao_objetos_3d(*chaves, cadastrar_no_banco_real=False):
     """A migração que liga os objetos 3D do site aos brinquedos `chaves`.
 
     A ligação roda em todo lugar (não mexe em arquivo nenhum). O cadastro
@@ -234,9 +234,14 @@ def migracao_objetos_3d(*chaves):
         from django.conf import settings
 
         Brinquedos = apps.get_model("core", "Brinquedos")
+        # o banco de verdade do site é o PostgreSQL (o Supabase), no Render
+        # ou no computador; o SQLite é o dos testes e o de rascunho
+        pode_cadastrar = getattr(settings, "IS_RENDER", False) or (
+            cadastrar_no_banco_real and schema_editor.connection.vendor == "postgresql"
+        )
         for chave in chaves:
             brinquedo = achar_no_catalogo(chave, Brinquedos)
-            if brinquedo is None and getattr(settings, "IS_RENDER", False):
+            if brinquedo is None and pode_cadastrar:
                 try:
                     with transaction.atomic():
                         brinquedo, _criado = cadastrar(

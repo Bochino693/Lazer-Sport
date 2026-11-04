@@ -853,8 +853,17 @@ class BrinquedoInfoView(View):
             id=id,
             ativo=True,
         )
-        # o objeto 3D do cadastro (o .glb): o visor da página, além das fotos
-        objeto_3d = objeto_do_brinquedo(brinquedo)
+        # o objeto 3D (o .glb): o visor da página, além das fotos. O do
+        # cadastro vence; sem cadastro, o que o site fez para esta máquina
+        # (ligado pelo nome, como na Arena). Tirado no painel, não aparece.
+        registro_3d = objeto_do_brinquedo(brinquedo, so_ativo=False)
+        if registro_3d is not None:
+            objeto_3d = registro_3d if (registro_3d.ativo and registro_3d.url) else None
+        else:
+            from sistema_interno.templatetags.interno_extras import estatico
+
+            modelo_3d = arena.modelo_da_maquina(brinquedo.nome_brinquedo)
+            objeto_3d = {"url": estatico(modelo_3d["arquivo"])} if modelo_3d else None
 
         obj, created = BrinquedoClick.objects.get_or_create(
             brinquedo_clicado=brinquedo,

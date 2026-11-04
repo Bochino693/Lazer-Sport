@@ -518,6 +518,29 @@ def avisos_da_maquina(nome):
 #: (`CAMINHOS`, em arena3d.js): é desenho do objeto, como as animações.
 MODELOS_3D = (
     {
+        # o boliche kids: o .glb da máquina com a adesivagem de verdade (as
+        # cores são a arte em outros tons, ver cores3d.js); é o primeiro
+        # objeto 3D ligado também pelo cadastro (ObjetoTresD)
+        "id": "strike-kids",
+        "titulo": "Strike Kids Boliche",
+        "nomes": ("Strike Kids", "Boliche Kids"),
+        "arquivo": "site/arena/modelos/strike-kids.glb",
+        "medidas": (2.07, 0.74, 1.91),
+        "grupo": "jogos",
+        "jogo": "strike-kids",
+        "pasta": "site/arena/modelos/strike-kids/",
+        "fotos": (
+            ("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"),
+            ("lado_esquerdo", "lado_esquerdo.webp"), ("verso", "verso.webp"),
+        ),
+        "medidas_texto": "2,07 m × 0,74 m × 1,91 m",
+        "categorias": ("Eletrônicos",),
+        "descricao": (
+            "Strike Kids, o boliche infantil da Lazer & Sport: pista com bolsão para as bolas, tela "
+            "vertical com o jogo Strike Kids, testeira e laterais adesivadas com os pinos sorridentes."
+        ),
+    },
+    {
         "id": "brinquedao-modelo-2",
         "titulo": "Brinquedão Modelo 2",
         "nomes": ("Brinquedão Modelo 2",),
@@ -568,15 +591,22 @@ def modelo_da_maquina(nome):
 
 
 def objeto_3d_do_cadastro(brinquedo):
-    """O objeto 3D que o brinquedo tem no cadastro (o .glb do painel), ou None.
+    """O objeto 3D do cadastro do brinquedo para a arena: (objeto, desligado).
 
-    Espera `objeto_3d` trazido com `prefetch_related` (sem objeto, o acesso
-    levanta a exceção da relação vazia -- daí o getattr).
+    `objeto` é o .glb do cadastro, ou None. `desligado` diz que o cadastro
+    TEM um objeto, mas tirado do brinquedo ou fora da arena: aí nem o
+    objeto ligado pelo nome entra (tirar no painel tem de tirar mesmo).
+    Espera `objeto_3d` trazido com `prefetch_related` (ver
+    `objetos_3d.objeto_do_brinquedo`: sem ele, nada é consultado).
     """
     from .objetos_3d import objeto_do_brinquedo
 
-    objeto = objeto_do_brinquedo(brinquedo)
-    return objeto if objeto is not None and objeto.exibir_na_arena else None
+    registro = objeto_do_brinquedo(brinquedo, so_ativo=False)
+    if registro is None:
+        return None, False
+    if registro.ativo and registro.url and registro.exibir_na_arena:
+        return registro, False
+    return None, True
 
 
 def modelos_fora_do_catalogo(catalogo):
@@ -596,7 +626,7 @@ def modelos_fora_do_catalogo(catalogo):
             "nome": modelo["titulo"],
             "url": "",
             "desenho": "playground",
-            "jogo": "",
+            "jogo": modelo.get("jogo", ""),
             "modelo_id": modelo["id"],
             "grupo": modelo.get("grupo", "brinquedoes"),
             "reino": modelo.get("reino", False),
@@ -717,8 +747,8 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
     jogo = jogo_da_maquina(brinquedo.nome_brinquedo)
     # O objeto 3D do CADASTRO (o .glb do painel) vence o ligado pelo nome no
     # código; o código dele liga as animações e o passeio do MODELOS_3D.
-    cadastro = objeto_3d_do_cadastro(brinquedo)
-    modelo = (
+    cadastro, desligado = objeto_3d_do_cadastro(brinquedo)
+    modelo = None if desligado else (
         next((m for m in MODELOS_3D if cadastro and cadastro.codigo and m["id"] == cadastro.codigo), None)
         or modelo_da_maquina(brinquedo.nome_brinquedo)
     )
