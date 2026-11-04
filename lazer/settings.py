@@ -172,6 +172,9 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "core.middleware.SubdomainURLMiddleware",
+    # Guarda a requisição em curso para o registro de cadastro (o
+    # post_save do User não a recebe): ver core/registro_cadastro.py.
+    "core.registro_cadastro.RequisicaoAtualMiddleware",
     "core.middleware.InternalResponseRecoveryMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -307,7 +310,16 @@ SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
 # ACCOUNT_USERNAME_REQUIRED e ACCOUNT_AUTHENTICATION_METHOD).
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
-ACCOUNT_EMAIL_VERIFICATION = "none"
+# "optional": quem cria conta recebe o e-mail para confirmar o endereço,
+# mas entra e compra sem esperar por isso. "mandatory" trancaria quem já
+# tem conta (ninguém confirmou e-mail até hoje) e o aplicativo. Os dois
+# caminhos próprios de cadastro (/registrar/ e a API) mandam o mesmo
+# e-mail (ver core/views_conta.py e core/api/auth_views.py).
+ACCOUNT_EMAIL_VERIFICATION = "optional"
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "/"
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = "/login/"
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "[Lazer & Sport] "
 ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_UNIQUE_EMAIL = True
 
@@ -501,7 +513,11 @@ STORAGES = {
         )
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        # O JS da casa (os jogos do simulador, sobretudo) sai do
+        # collectstatic minificado e sem mapa de fonte; o porquê e o que
+        # isso protege (e não protege) estão em core/estaticos.py. Por
+        # baixo é o storage do WhiteNoise: o .gz/.br continua igual.
+        "BACKEND": "core.estaticos.EstaticosProtegidosStorage",
     },
 }
 
@@ -874,3 +890,41 @@ try:
     CATALOG_CACHE_TTL = max(60, int(os.getenv("CATALOG_CACHE_TTL", "1800")))
 except ValueError:
     CATALOG_CACHE_TTL = 1800
+
+
+# ============================================================
+# REGISTRO DE CADASTRO E FREIO DE CONTAS FALSAS
+# (core/registro_cadastro.py, core/captcha.py)
+# ============================================================
+def _ligado(nome, padrao):
+    valor = os.getenv(nome, "").strip().lower()
+    if not valor:
+        return padrao
+    return valor in ("1", "true", "sim", "on")
+
+
+# A região aproximada (cidade/estado/país) é consultada pelo IP, depois do
+# cadastro, numa thread. Só em produção por padrão: no computador e nos
+# testes não há por que bater num serviço externo.
+GEOIP_ATIVO = _ligado("GEOIP_ATIVO", ENVIRONMENT == "production")
+# {ip} é trocado pelo endereço. O padrão responde JSON com city/region/
+# country_name; ip-api.com (http://ip-api.com/json/{ip}) também é entendido.
+GEOIP_URL = os.getenv("GEOIP_URL", "https://ipapi.co/{ip}/json/").strip()
+GEOIP_TIMEOUT = 3
+# Força o cabeçalho que traz o IP real atrás do proxy (ex.: HTTP_CF_CONNECTING_IP
+# com o Cloudflare na frente). Vazio: CF-Connecting-IP, True-Client-IP,
+# X-Real-IP, X-Forwarded-For (o primeiro) e REMOTE_ADDR, nessa ordem.
+IP_REAL_CABECALHO = os.getenv("IP_REAL_CABECALHO", "").strip()
+
+# Quantas contas o mesmo IP pode criar na janela (site, aplicativo e
+# Google/Apple). 0 desliga o freio.
+CADASTRO_LIMITE_POR_IP = int(os.getenv("CADASTRO_LIMITE_POR_IP", "5"))
+CADASTRO_JANELA_HORAS = int(os.getenv("CADASTRO_JANELA_HORAS", "24"))
+# Menos que isso entre abrir o formulário e enviar é robô (segundos).
+CADASTRO_TEMPO_MINIMO = int(os.getenv("CADASTRO_TEMPO_MINIMO", "4"))
+
+# O desafio do cadastro manual: com as duas chaves do Cloudflare Turnstile
+# (dash.cloudflare.com > Turnstile, grátis), o site usa o Turnstile; sem
+# elas, uma pergunta simples feita aqui mesmo. Ver core/captcha.py.
+TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "").strip()
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "").strip()

@@ -1,3 +1,6 @@
 .venv/
 __pycache__/
 *.py[cod]
+
+# Resultados brutos do teste de carga (gerados por ferramentas/carga/rodar.sh)
+ferramentas/carga/resultados/

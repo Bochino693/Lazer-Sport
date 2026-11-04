@@ -422,17 +422,44 @@ class EngajamentoAdminView(AdminOnlyMixin, View):
                         distinct=True,
                     )
                 )
-                .filter(total__gt=0)
-                .order_by("-total", campo)[:10]
             )
+            # O ajuste do painel entra no número geral das curtidas (é o que o
+            # site mostra); nos recortes por período fica de fora, porque ele
+            # não tem data.
+            soma_ajuste = tipo == Favorito.Tipo.CURTIDA and not dias
+            itens = []
+            for item in marcados:
+                total = max(0, item.total + item.ajuste_curtidas) if soma_ajuste else item.total
+                if total > 0:
+                    itens.append((item, total))
+            itens.sort(key=lambda par: (-par[1], getattr(par[0], campo) or ""))
             return [
                 {
                     "nome": getattr(item, campo),
-                    "total": item.total,
+                    "total": total,
                     "rotulo": rotulo,
                     "id": item.id,
                 }
-                for item in marcados
+                for item, total in itens[:10]
+            ]
+
+        def _ajustes(modelo, campo, tipo):
+            """Todos os produtos ativos com as curtidas de verdade, o ajuste e o total público."""
+            linhas = (
+                modelo.objects.filter(ativo=True)
+                .annotate(reais=Count("favoritos", filter=Q(favoritos__tipo=Favorito.Tipo.CURTIDA), distinct=True))
+                .order_by(campo)
+            )
+            return [
+                {
+                    "tipo": tipo,
+                    "id": item.id,
+                    "nome": getattr(item, campo),
+                    "reais": item.reais,
+                    "ajuste": item.ajuste_curtidas,
+                    "total": max(0, item.reais + item.ajuste_curtidas),
+                }
+                for item in linhas
             ]
 
         contexto = {
@@ -489,6 +516,43 @@ class EngajamentoAdminView(AdminOnlyMixin, View):
                 .select_related("brinquedo", "peca", "usuario")
                 .order_by("-criacao", "-id")[:25]
             ),
+            # O ajuste das curtidas (só o superadministrador mexe): ver post().
+            "pode_ajustar": request.user.is_superuser,
+            "ajustes_brinquedos": _ajustes(Brinquedos, "nome_brinquedo", "brinquedo"),
+            "ajustes_pecas": _ajustes(PecasReposicao, "nome", "peca"),
         }
 
         return render(request, self.template_name, contexto)
+
+    MODELOS_AJUSTE = {"brinquedo": (Brinquedos, "nome_brinquedo"), "peca": (PecasReposicao, "nome")}
+    AJUSTE_MAXIMO = 100_000
+
+    def post(self, request):
+        """Define o ajuste de curtidas de um produto (adicionar ou remover curtidas).
+
+        O ajuste é somado às curtidas de verdade no número que o site e o
+        aplicativo mostram (core/favoritos.py, core/api/views.py); as
+        curtidas das pessoas continuam intactas. Só o superadministrador.
+        """
+        if not request.user.is_superuser:
+            messages.error(request, "Só o superadministrador pode ajustar as curtidas.")
+            return redirect("engajamento_admin")
+        escolha = self.MODELOS_AJUSTE.get(request.POST.get("produto", ""))
+        if escolha is None:
+            messages.error(request, "Produto desconhecido.")
+            return redirect("engajamento_admin")
+        modelo, campo = escolha
+        item = get_object_or_404(modelo, pk=request.POST.get("id"))
+        try:
+            ajuste = int(request.POST.get("ajuste", "0"))
+        except (TypeError, ValueError):
+            messages.error(request, "Informe um número inteiro (pode ser negativo).")
+            return redirect("engajamento_admin")
+        ajuste = max(-self.AJUSTE_MAXIMO, min(self.AJUSTE_MAXIMO, ajuste))
+        item.ajuste_curtidas = ajuste
+        item.save(update_fields=["ajuste_curtidas"])
+        logging.getLogger(__name__).info(
+            "ajuste de curtidas de %s #%s = %s por %s", request.POST.get("produto"), item.pk, ajuste, request.user.username,
+        )
+        messages.success(request, f"Curtidas de \"{getattr(item, campo)}\" ajustadas em {ajuste:+d}.")
+        return redirect("engajamento_admin")

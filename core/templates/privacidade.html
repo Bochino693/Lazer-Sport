@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load interno_extras %}
+
+{% block title %}Política de privacidade — Lazer & Sport{% endblock %}
+{% block meta_description %}Como a Lazer & Sport Brinquedos usa os seus dados no site e no aplicativo: conta, pedidos, curtidas, cookies, IP e região aproximada para segurança.{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/privacidade.css' %}">
+<div class="ls-privacidade">
+    <nav class="ls-breadcrumb" id="bread" aria-label="Navegação estrutural">
+        <a href="{% url 'home' %}"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span></a>
+        <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+        <span class="ls-breadcrumb-current" aria-current="page"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Política de privacidade</span></span>
+    </nav>
+
+    <header class="ls-privacidade-topo">
+        <span class="ls-privacidade-selo"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Seus dados, com clareza</span>
+        <h1>Política de privacidade</h1>
+        <p>O que a Lazer &amp; Sport Brinquedos guarda sobre você no site e no aplicativo, para quê, e o que você pode pedir. Vale a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
+        <small>Atualizada em novembro de 2026.</small>
+    </header>
+
+    <section class="ls-privacidade-secao">
+        <h2><i class="fa-solid fa-user" aria-hidden="true"></i> O que guardamos</h2>
+        <ul>
+            <li><strong>Conta:</strong> nome, e-mail, telefone, usuário e senha (a senha fica guardada de forma embaralhada; ninguém da equipe a vê). Quem entra com Google ou Apple nos manda nome e e-mail.</li>
+            <li><strong>Pedidos e orçamentos:</strong> o que você pediu, o endereço de entrega, o CPF/CNPJ quando a nota exige e o histórico de pagamento (o pagamento em si é feito pelo Mercado Pago; não guardamos dados de cartão).</li>
+            <li><strong>Curtidas e lista de desejos:</strong> os produtos que você marcou. Sem conta, ficam ligados a uma chave do seu aparelho; com conta, à sua conta.</li>
+            <li><strong>Segurança e prevenção de fraude:</strong> ao criar uma conta, registramos o endereço IP, a região aproximada tirada do IP (cidade, estado e país — nunca a sua localização precisa), o navegador usado e a data/hora. Isso serve para barrar cadastros automáticos e contas falsas e para investigar abusos. Não pedimos a localização do seu aparelho.</li>
+            <li><strong>Jogos do simulador:</strong> a sua melhor pontuação em cada jogo e o seu primeiro nome com a inicial do sobrenome no ranking.</li>
+            <li><strong>Cookies:</strong> os necessários para a sessão (saber que você está logado), a proteção contra envio falso de formulários e a chave do aparelho das curtidas. Não usamos cookies de publicidade.</li>
+        </ul>
+    </section>
+
+    <section class="ls-privacidade-secao">
+        <h2><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Para que usamos</h2>
+        <ul>
+            <li>Atender pedidos, orçamentos e chamados de manutenção, e falar com você sobre eles (e-mail, WhatsApp).</li>
+            <li>Manter a sua conta e a sua lista de desejos em qualquer aparelho.</li>
+            <li>Proteger o site: evitar contas falsas, cadastros em massa e uso indevido.</li>
+            <li>Melhorar o catálogo com o que o público mais curte — em números, sem identificar ninguém.</li>
+        </ul>
+        <p>Não vendemos nem cedemos os seus dados para publicidade. Compartilhamos apenas com quem presta serviço para nós (hospedagem, envio de e-mail, pagamento, transporte) e só o necessário para cada um.</p>
+    </section>
+
+    <section class="ls-privacidade-secao">
+        <h2><i class="fa-solid fa-clock" aria-hidden="true"></i> Por quanto tempo</h2>
+        <p>Dados da conta ficam enquanto a conta existir. Pedidos e notas ficam pelo prazo que a lei fiscal exige. Os registros de segurança do cadastro (IP, região aproximada, navegador) ficam por até 12 meses, ou mais se forem necessários para apurar um abuso.</p>
+    </section>
+
+    <section class="ls-privacidade-secao">
+        <h2><i class="fa-solid fa-hand" aria-hidden="true"></i> O que você pode pedir</h2>
+        <p>Ver os seus dados, corrigir, pedir a exclusão da conta, retirar o consentimento ou saber com quem compartilhamos. É só escrever para <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a> ou falar no <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">WhatsApp</a>. Respondemos em até 15 dias.</p>
+    </section>
+
+    <section class="ls-privacidade-secao">
+        <h2><i class="fa-solid fa-building" aria-hidden="true"></i> Quem somos</h2>
+        <p>Lazer &amp; Sport Brinquedos — Rua São Roque de Minas, 104, Jardim Peri, São Paulo — SP, CEP 02679-110. Encarregado pelos dados: comercial@lazersport.com.br.</p>
+    </section>
+</div>
+{% endblock %}

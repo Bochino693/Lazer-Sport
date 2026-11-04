@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load account %}
+
+{% block title %}Confirmar e-mail — Lazer & Sport{% endblock %}
+
+{% block content %}
+{% include "partials/auth_estilo.html" %}
+<section class="ls-auth">
+    <div class="ls-auth-shell ls-auth-shell--simples">
+        <div class="ls-auth-main">
+            <span class="ls-auth-badge"><i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> Confirmação de e-mail</span>
+            {% if confirmation %}
+                {% user_display confirmation.email_address.user as nome %}
+                <h1>Confirme o seu e-mail</h1>
+                <p class="ls-auth-sub">
+                    Confirme que <strong>{{ confirmation.email_address.email }}</strong> é o e-mail
+                    da conta de <strong>{{ nome }}</strong>. É só tocar no botão.
+                </p>
+                <form method="post" action="{% url 'account_confirm_email' confirmation.key %}" class="ls-form">
+                    {% csrf_token %}
+                    <button type="submit" class="ls-btn-principal">Confirmar e-mail</button>
+                </form>
+            {% else %}
+                <h1>Este link não vale mais</h1>
+                <p class="ls-auth-sub">
+                    O link de confirmação expirou ou já foi usado.
+                    {% if user.is_authenticated %}
+                        Peça um novo em <a href="{% url 'account_email' %}">Meus e-mails</a>.
+                    {% else %}
+                        <a href="{% url 'login' %}#login-box">Entre na sua conta</a> para pedir um novo.
+                    {% endif %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

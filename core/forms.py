@@ -108,6 +108,16 @@ class CadastroForm(forms.Form):
     password2 = forms.CharField(
         widget=forms.PasswordInput, label="Confirmar senha"
     )
+    # O freio de robôs (core/captcha.py): o campo-isca, o selo com a hora
+    # em que o formulário abriu (e a resposta da pergunta, assinada) e a
+    # resposta da pessoa. Conferidos em clean(); a pessoa só vê a pergunta.
+    site_web = forms.CharField(required=False, widget=forms.HiddenInput)
+    selo_cadastro = forms.CharField(required=False, widget=forms.HiddenInput)
+    resposta_humana = forms.CharField(required=False, max_length=20, label="Confirme que você é uma pessoa")
+
+    def __init__(self, *args, request=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request = request
 
     def clean_username(self):
         username = self.cleaned_data["username"].strip()
@@ -158,6 +168,19 @@ class CadastroForm(forms.Form):
 
         if senha and len(senha) < 8:
             self.add_error("password", "Use pelo menos 8 caracteres.")
+
+        # Só com a requisição (a view a passa): o teste do formulário puro
+        # e o painel não passam pelo desafio.
+        if self.request is not None:
+            from . import captcha
+            from .registro_cadastro import ip_da_requisicao, limite_de_cadastros_estourado, MENSAGEM_LIMITE
+
+            if limite_de_cadastros_estourado(self.request):
+                raise forms.ValidationError(MENSAGEM_LIMITE, code="limite_ip")
+            ip, _ = ip_da_requisicao(self.request)
+            erro = captcha.conferir(self.request.POST, ip)
+            if erro:
+                raise forms.ValidationError(erro, code="robo")
 
         return dados
 

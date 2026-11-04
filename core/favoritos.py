@@ -175,7 +175,12 @@ def ids_marcados(request, tipo: str) -> dict[str, set[int]]:
     return marcados
 
 
-def total_curtidas(produto) -> int:
+def com_ajuste(reais: int, produto) -> int:
+    """O número que o site mostra: as curtidas de verdade mais o ajuste do painel, nunca abaixo de zero."""
+    return max(0, int(reais or 0) + int(getattr(produto, "ajuste_curtidas", 0) or 0))
+
+
+def curtidas_reais(produto) -> int:
     campo = _campo_do_produto(produto)
     return Favorito.objects.filter(
         tipo=Favorito.Tipo.CURTIDA,
@@ -183,8 +188,12 @@ def total_curtidas(produto) -> int:
     ).count()
 
 
+def total_curtidas(produto) -> int:
+    return com_ajuste(curtidas_reais(produto), produto)
+
+
 def contagem_curtidas(produtos) -> dict[int, int]:
-    """Curtidas por id, em uma consulta só, para listagens."""
+    """Curtidas por id (já com o ajuste do painel), em uma consulta só, para listagens."""
     produtos = list(produtos)
     if not produtos:
         return {}
@@ -199,7 +208,8 @@ def contagem_curtidas(produtos) -> dict[int, int]:
         .values(f"{campo}_id")
         .annotate(total=Count("id"))
     )
-    return {linha[f"{campo}_id"]: linha["total"] for linha in linhas}
+    reais = {linha[f"{campo}_id"]: linha["total"] for linha in linhas}
+    return {produto.pk: com_ajuste(reais.get(produto.pk, 0), produto) for produto in produtos}
 
 
 def estado_do_produto(request, produto) -> dict:

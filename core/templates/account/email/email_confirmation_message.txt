@@ -1,0 +1,13 @@
+{% load account %}{% autoescape off %}{% user_display user as nome %}Olá, {{ nome }}!
+
+Você (ou alguém usando o seu e-mail) criou uma conta na Lazer & Sport Brinquedos.
+Para confirmar que este endereço é seu, abra o link abaixo:
+
+{{ activate_url }}
+
+O link vale por alguns dias. Se não foi você, é só ignorar esta mensagem: a conta
+não ganha nada sem a confirmação.
+
+Lazer & Sport Brinquedos
+Fábrica de brinquedos — qualidade e diversão
+{% endautoescape %}

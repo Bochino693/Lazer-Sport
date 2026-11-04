@@ -233,6 +233,17 @@ class Brinquedos(Prime):
         ),
     )
 
+    # O AJUSTE DAS CURTIDAS. O número que o site mostra é o de curtidas de
+    # verdade (Favorito) MAIS este ajuste, que o superadministrador define
+    # na tela Curtidas e desejos do painel -- para dar o empurrão inicial
+    # num lançamento ou corrigir um número inflado. Pode ser negativo; o
+    # total nunca fica abaixo de zero (core/favoritos.py).
+    ajuste_curtidas = models.IntegerField(
+        default=0,
+        verbose_name="Ajuste de curtidas",
+        help_text="Somado às curtidas de verdade no número que o site mostra. Pode ser negativo.",
+    )
+
     categorias_brinquedos = models.ManyToManyField(
         CategoriasBrinquedos,
         related_name="brinquedos",
@@ -839,6 +850,12 @@ class PecasReposicao(Prime):
     preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     descricao_peca = models.CharField(max_length=999)
+    # O mesmo ajuste de curtidas dos brinquedos (ver Brinquedos.ajuste_curtidas).
+    ajuste_curtidas = models.IntegerField(
+        default=0,
+        verbose_name="Ajuste de curtidas",
+        help_text="Somado às curtidas de verdade no número que o site mostra. Pode ser negativo.",
+    )
 
     # ⭐ novo campo
     ganho_potencial = models.DecimalField(
@@ -2146,3 +2163,52 @@ class RecordeJogo(models.Model):
 
     def __str__(self):
         return f"{self.usuario} · {self.jogo} · {self.pontos}"
+
+
+class RegistroCadastro(models.Model):
+    """De onde veio cada conta: IP, região aproximada, navegador, caminho e hora.
+
+    Gravado pelo `post_save` do User (core/signals.py -> core/registro_cadastro.py)
+    para os três caminhos que criam conta (site, aplicativo, Google/Apple)
+    e para quem é criado pelo painel. Só leitura no admin: é prova, não
+    cadastro. A região vem do IP, depois, e é só cidade/estado/país -- nunca
+    localização precisa. Serve ao freio de contas falsas (cadastros por IP
+    numa janela) e à investigação quando algo parece errado.
+    """
+
+    class Origem(models.TextChoices):
+        SITE = "site", "Site (formulário)"
+        APP = "app", "Aplicativo"
+        GOOGLE = "google", "Google"
+        APPLE = "apple", "Apple"
+        PAINEL = "painel", "Painel interno"
+        OUTRO = "outro", "Outro"
+
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="registros_de_cadastro", verbose_name="Usuário",
+    )
+    username = models.CharField(max_length=150, blank=True, verbose_name="Usuário (na hora)")
+    email = models.CharField(max_length=254, blank=True, db_index=True, verbose_name="E-mail (na hora)")
+    ip = models.GenericIPAddressField(null=True, blank=True, db_index=True, verbose_name="IP")
+    cabecalhos_ip = models.TextField(blank=True, verbose_name="Cabeçalhos de IP (crus)")
+    cidade = models.CharField(max_length=100, blank=True)
+    estado = models.CharField(max_length=100, blank=True)
+    pais = models.CharField(max_length=100, blank=True, verbose_name="País")
+    navegador = models.CharField(max_length=512, blank=True, verbose_name="Navegador (user-agent)")
+    origem = models.CharField(max_length=10, choices=Origem.choices, default=Origem.OUTRO, db_index=True)
+    regiao_conferida = models.BooleanField(default=False, verbose_name="Região consultada")
+    criacao = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name="Quando")
+
+    class Meta:
+        verbose_name = "Registro de cadastro"
+        verbose_name_plural = "Registros de cadastro"
+        ordering = ("-criacao", "-id")
+        indexes = [models.Index(fields=("ip", "criacao"), name="registro_cadastro_ip_quando")]
+
+    def __str__(self):
+        return f"{self.username or self.email or '?'} · {self.ip or 'sem IP'} · {self.criacao:%d/%m/%Y %H:%M}"
+
+    @property
+    def regiao(self):
+        return ", ".join(parte for parte in (self.cidade, self.estado, self.pais) if parte)

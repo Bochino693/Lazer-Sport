@@ -1,0 +1,386 @@
+{% extends "base_inner.html" %}
+{% load static interno_extras %}
+
+{% block title %}Objetos 3D | Lazer & Sport{% endblock %}
+{% block top_title %}Objetos 3D{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/objetos3d.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ls-page-head">
+  <div>
+    <span class="ls-eyebrow">SÓ O SUPERADMINISTRADOR</span>
+    <h1>Objetos 3D dos brinquedos</h1>
+    <p>Cada máquina com o seu .glb: as cores e as medidas saem de dentro do arquivo. Ligado, o objeto aparece na página do brinquedo e na Arena 3D — e, se a máquina tem jogo, a prévia abre daqui.</p>
+  </div>
+  {% if not tabela_ausente %}
+  <button class="btn btn-success" id="novoObjeto" type="button">
+    <i class="bi bi-cloud-arrow-up me-1"></i> Enviar objeto 3D
+  </button>
+  {% endif %}
+</div>
+
+{% if tabela_ausente %}
+<section class="ls-card p-4">
+  <h2 class="h5 mb-2"><i class="bi bi-hourglass-split me-1"></i> O banco ainda não tem a tabela dos objetos 3D</h2>
+  <p class="mb-0 text-muted">O site subiu antes da migração. Ela roda sozinha na próxima subida (ou com <code>python manage.py migrate</code>). Volte aqui depois.</p>
+</section>
+{% else %}
+
+<section class="ls-metrics mb-3">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Brinquedos ativos</span><span class="ls-metric-icon"><i class="bi bi-controller"></i></span></div>
+    <strong class="ls-metric-value">{{ total }}</strong>
+    <span class="ls-metric-note">No catálogo do site</span>
+  </article>
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Com objeto 3D</span><span class="ls-metric-icon"><i class="bi bi-box"></i></span></div>
+    <strong class="ls-metric-value">{{ total_com_objeto }}</strong>
+    <span class="ls-metric-note">{{ total_na_arena }} na Arena 3D</span>
+  </article>
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Com jogo no simulador</span><span class="ls-metric-icon"><i class="bi bi-joystick"></i></span></div>
+    <strong class="ls-metric-value">{{ total_com_jogo }}</strong>
+    <span class="ls-metric-note">A prévia abre pelo botão Jogar</span>
+  </article>
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head"><span class="ls-metric-label">Como funciona</span><span class="ls-metric-icon"><i class="bi bi-info-circle"></i></span></div>
+    <span class="ls-metric-note">.glb de até 10 MB, com as cores como variações de material (KHR_materials_variants). Tudo é conferido antes de gravar; gravou, está no ar.</span>
+  </article>
+</section>
+
+<section class="ls-card overflow-hidden mb-3">
+  <div class="table-responsive">
+    <table class="ls-table mb-0">
+      <thead><tr><th>Brinquedo</th><th>Objeto 3D</th><th>Arena</th><th>Jogo</th><th class="text-end">Ações</th></tr></thead>
+      <tbody>
+      {% for linha in linhas %}
+        <tr>
+          <td data-rotulo="Brinquedo">
+            <div class="d-flex align-items-center gap-3">
+              {% if linha.capa %}<img src="{{ linha.capa }}" alt="" width="52" height="52" class="ls-3d-capa flex-shrink-0">{% else %}<span class="ls-3d-sem-capa flex-shrink-0"><i class="bi bi-image"></i></span>{% endif %}
+              <div class="min-w-0"><strong class="d-block">{{ linha.nome }}</strong><span class="material-sub d-block">#{{ linha.id }}</span></div>
+            </div>
+          </td>
+          <td data-rotulo="Objeto 3D">
+            {% if linha.objeto %}
+              <span class="badge rounded-pill {% if linha.objeto.no_ar %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+                {% if linha.objeto.origem == 'enviado' %}<i class="bi bi-cloud-check"></i> Enviado{% else %}<i class="bi bi-box-seam"></i> Do site{% endif %}{% if not linha.objeto.no_ar %} · desligado{% endif %}
+              </span>
+              <span class="material-sub d-block">{{ linha.objeto.arquivo }}{% if linha.objeto.medidas %} · {{ linha.objeto.medidas }}{% endif %}</span>
+              {% if linha.objeto.cores %}<div class="ls-3d-cores">{% for cor in linha.objeto.cores %}<span class="ls-3d-cor"><i></i>{{ cor }}</span>{% endfor %}</div>{% endif %}
+            {% elif linha.sugestao %}
+              <span class="badge rounded-pill text-bg-warning"><i class="bi bi-lightbulb"></i> Sem objeto</span>
+              <span class="material-sub d-block">O site tem "{{ linha.sugestao.titulo }}" pronto: <button class="btn btn-link btn-sm p-0 align-baseline" type="button" data-ligar="{{ linha.id }}" data-arquivo="{{ linha.sugestao.arquivo }}">ligar a este brinquedo</button></span>
+            {% else %}
+              <span class="badge rounded-pill text-bg-dark">Sem objeto</span>
+            {% endif %}
+          </td>
+          <td data-rotulo="Arena">
+            {% if linha.objeto and linha.objeto.no_ar %}
+              <span class="badge {% if linha.objeto.exibir_na_arena %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if linha.objeto.exibir_na_arena %}Na Arena 3D{% else %}Fora da Arena{% endif %}</span>
+            {% else %}<span class="text-muted small">—</span>{% endif %}
+          </td>
+          <td data-rotulo="Jogo">
+            {% if linha.jogo %}
+              <a class="btn btn-sm btn-outline-warning" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill"></i> Jogar {{ linha.jogo.titulo }}</a>
+            {% else %}<span class="text-muted small">Sem jogo</span>{% endif %}
+          </td>
+          <td data-rotulo="Ações" class="text-end text-nowrap">
+            {% if linha.objeto and linha.objeto.no_ar %}
+              <button class="btn btn-sm btn-outline-info" type="button" data-ver3d="{{ linha.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-arena="{{ linha.id }}">{% if linha.objeto.exibir_na_arena %}Tirar da Arena{% else %}Pôr na Arena{% endif %}</button>
+            {% elif linha.objeto %}
+              <button class="btn btn-sm btn-outline-success" type="button" data-religar="{{ linha.id }}"><i class="bi bi-arrow-counterclockwise"></i> Religar</button>
+            {% endif %}
+            <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> {% if linha.objeto %}Trocar{% else %}Enviar{% endif %}</button>
+            {% if linha.objeto %}
+              <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ linha.id }}" data-nome="Objeto 3D de {{ linha.nome }}" title="Tirar o objeto"><i class="bi bi-trash3"></i></button>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center py-5 text-muted">Nenhum brinquedo ativo no catálogo.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="ls-card p-3">
+  <h2 class="h6 mb-1"><i class="bi bi-box-seam me-1"></i> Objetos que vêm com o site</h2>
+  <p class="text-muted small mb-2">Feitos a partir dos arquivos da fábrica. Enquanto não estão ligados a um brinquedo, a Arena mostra cada um como "fora do catálogo".</p>
+  <div class="table-responsive">
+    <table class="ls-table mb-0">
+      <thead><tr><th>Objeto</th><th>Medidas</th><th>Jogo</th><th>Ligado a</th><th class="text-end">Ação</th></tr></thead>
+      <tbody>
+      {% for modelo in modelos_do_site %}
+        <tr>
+          <td data-rotulo="Objeto"><strong>{{ modelo.titulo }}</strong><span class="material-sub d-block">{{ modelo.arquivo }}</span></td>
+          <td data-rotulo="Medidas">{{ modelo.medidas }}</td>
+          <td data-rotulo="Jogo">{% if modelo.jogo %}<a href="{{ site }}/jogos/{{ modelo.jogo }}/" target="_blank" rel="noopener" data-no-soft-nav="true">{{ modelo.jogo }}</a>{% else %}—{% endif %}</td>
+          <td data-rotulo="Ligado a">{% if modelo.usado_por %}<span class="badge text-bg-success">{{ modelo.usado_por }}</span>{% else %}<span class="text-muted small">nenhum brinquedo</span>{% endif %}</td>
+          <td data-rotulo="Ação" class="text-end"><button class="btn btn-sm btn-outline-primary" type="button" data-ligar="" data-arquivo="{{ modelo.arquivo }}"><i class="bi bi-link-45deg"></i> Ligar a um brinquedo</button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="modalObjeto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formObjeto" method="post" action="{% url 'objetos_3d_inner' %}" enctype="multipart/form-data">
+      {% csrf_token %}<input type="hidden" name="action" value="salvar">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Objeto 3D</span><h5 class="modal-title" id="objetoTitulo">Enviar objeto 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="objetoErro"></div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="objetoBrinquedo">Brinquedo</label>
+            <select class="form-select" id="objetoBrinquedo" name="brinquedo" required data-rotulo="brinquedo">
+              <option value="">Escolha o brinquedo…</option>
+              {% for linha in linhas %}<option value="{{ linha.id }}">{{ linha.nome }}{% if linha.objeto %} (já tem objeto — vai trocar){% endif %}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="d-flex flex-wrap gap-3">
+              <label class="form-check"><input class="form-check-input" type="radio" name="fonte" value="arquivo" id="fonteArquivo" checked><span class="form-check-label">Enviar um .glb</span></label>
+              <label class="form-check"><input class="form-check-input" type="radio" name="fonte" value="site" id="fonteSite"><span class="form-check-label">Usar um objeto que vem com o site</span></label>
+            </div>
+          </div>
+          <div class="col-12" id="caixaArquivo">
+            <label class="form-label" for="objetoArquivo">Arquivo .glb <span class="text-muted fw-normal">(até 10 MB)</span></label>
+            <input type="file" class="form-control" id="objetoArquivo" name="arquivo" accept=".glb,model/gltf-binary" data-rotulo="arquivo .glb">
+            <span class="form-text">As cores vêm das variações de material do arquivo; as medidas, do tamanho dele. Os dois são lidos antes de gravar.</span>
+          </div>
+          <div class="col-12 d-none" id="caixaSite">
+            <label class="form-label" for="objetoEstatico">Objeto do site</label>
+            <select class="form-select" id="objetoEstatico" name="arquivo_estatico_escolha">
+              <option value="">Escolha…</option>
+              {% for modelo in modelos_do_site %}<option value="{{ modelo.arquivo }}">{{ modelo.titulo }} — {{ modelo.medidas }}</option>{% endfor %}
+            </select>
+            <input type="hidden" name="arquivo_estatico" id="objetoEstaticoValor">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="objetoCodigo">Código na Arena <span class="text-muted fw-normal">(opcional)</span></label>
+            <input class="form-control" id="objetoCodigo" name="codigo" maxlength="60" pattern="[a-z0-9\-]*" placeholder="ex.: espaco-esportivo-modelo-1">
+            <span class="form-text">Liga o objeto às animações e ao passeio da Arena.</span>
+          </div>
+          <div class="col-12 col-md-6 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="objetoArena" type="checkbox" name="exibir_na_arena" checked><span class="form-check-label">Mostrar na Arena 3D</span></label></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Gravar objeto</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal fade" id="modalVisor3d" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Ver em 3D</span><h5 class="modal-title" id="visorTitulo">Objeto 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="ls-visor3d" id="visor3d" data-three="{% static 'vendor/three/three.module.min.js' %}" data-gltf="{% static 'vendor/three/GLTFLoader.js' %}" data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
+          <canvas id="visor3dTela" tabindex="0" aria-label="Objeto 3D: arraste para girar, role ou pince para aproximar"></canvas>
+          <span class="ls-visor3d-dica" aria-hidden="true"><i class="bi bi-hand-index"></i> Arraste para girar · role para aproximar · toque duplo volta</span>
+          <p class="ls-visor3d-aviso" id="visor3dAviso">Carregando o 3D…</p>
+        </div>
+        <div class="ls-visor3d-cores" id="visor3dCores" role="group" aria-label="Cores do objeto 3D"></div>
+        <p class="text-muted small mt-2 mb-0" id="visorMedidas"></p>
+        <div class="ls-visor3d-acoes">
+          <a class="btn btn-sm btn-warning d-none" id="visorJogar" href="#" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill"></i> Jogar a prévia</a>
+          <a class="btn btn-sm btn-outline-light" id="visorSite" href="#" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-box-arrow-up-right"></i> Ver na página do brinquedo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form id="formArena" method="post" action="{% url 'objetos_3d_inner' %}" hidden>{% csrf_token %}<input name="action" value="alternar_arena"><input name="brinquedo" id="arenaId"></form>
+<form id="formReligar" method="post" action="{% url 'objetos_3d_inner' %}" hidden>{% csrf_token %}<input name="action" value="religar"><input name="brinquedo" id="religarId"></form>
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=request.path exclusao_titulo="Tirar o objeto 3D" exclusao_aviso="O objeto sai da página do brinquedo e da Arena na hora. Um .glb enviado é apagado; um objeto que vem com o site só é desligado e pode ser religado depois." %}
+{{ linhas_dados|json_script:"objetosDados" }}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not tabela_ausente %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+  var linhas = JSON.parse(document.getElementById("objetosDados").textContent || "[]");
+  var form = document.getElementById("formObjeto");
+  function achar(id) { return linhas.find(function (l) { return Number(l.id) === Number(id); }); }
+
+  /* ---- a janela de envio ---- */
+  function fonte(valor) {
+    document.getElementById("fonteArquivo").checked = valor === "arquivo";
+    document.getElementById("fonteSite").checked = valor === "site";
+    document.getElementById("caixaArquivo").classList.toggle("d-none", valor !== "arquivo");
+    document.getElementById("caixaSite").classList.toggle("d-none", valor !== "site");
+    document.getElementById("objetoArquivo").required = valor === "arquivo";
+    if (valor !== "site") { Painel.valor("objetoEstatico", ""); Painel.valor("objetoEstaticoValor", ""); }
+  }
+  function abrir(brinquedoId, arquivoDoSite) {
+    form.reset(); Painel.erro("objetoErro", "");
+    Painel.valor("objetoBrinquedo", brinquedoId || "");
+    fonte(arquivoDoSite ? "site" : "arquivo");
+    if (arquivoDoSite) { Painel.valor("objetoEstatico", arquivoDoSite); Painel.valor("objetoEstaticoValor", arquivoDoSite); }
+    var linha = brinquedoId ? achar(brinquedoId) : null;
+    Painel.valor("objetoCodigo", linha && linha.objeto ? linha.objeto.codigo : "");
+    document.getElementById("objetoArena").checked = linha && linha.objeto ? linha.objeto.exibir_na_arena : true;
+    document.getElementById("objetoTitulo").textContent = linha ? (linha.objeto ? "Trocar o objeto 3D de " : "Objeto 3D de ") + linha.nome : "Enviar objeto 3D";
+    Painel.abrir("modalObjeto");
+  }
+  document.querySelectorAll('[name="fonte"]').forEach(function (r) { r.addEventListener("change", function () { fonte(this.value); }); });
+  document.getElementById("objetoEstatico").addEventListener("change", function () { Painel.valor("objetoEstaticoValor", this.value); });
+  document.getElementById("novoObjeto").addEventListener("click", function () { abrir("", ""); });
+  document.querySelectorAll("[data-enviar]").forEach(function (b) { b.addEventListener("click", function () { abrir(b.dataset.enviar, ""); }); });
+  document.querySelectorAll("[data-ligar]").forEach(function (b) { b.addEventListener("click", function () { abrir(b.dataset.ligar, b.dataset.arquivo); }); });
+  document.querySelectorAll("[data-arena]").forEach(function (b) { b.addEventListener("click", function () { Painel.valor("arenaId", b.dataset.arena); document.getElementById("formArena").requestSubmit(); }); });
+  document.querySelectorAll("[data-religar]").forEach(function (b) { b.addEventListener("click", function () { Painel.valor("religarId", b.dataset.religar); document.getElementById("formReligar").requestSubmit(); }); });
+  Painel.ligar({
+    form: "formObjeto", erro: "objetoErro", rotuloCarregando: "Conferindo e gravando…",
+    antes: function (f) {
+      var usaArquivo = document.getElementById("fonteArquivo").checked;
+      if (usaArquivo && !f.querySelector("#objetoArquivo").files.length) return "Escolha o arquivo .glb.";
+      if (!usaArquivo && !document.getElementById("objetoEstaticoValor").value) return "Escolha o objeto do site.";
+      if (!usaArquivo) f.querySelector("#objetoArquivo").value = "";
+      return null;
+    }
+  });
+  Painel.ligar({ form: "formArena" });
+  Painel.ligar({ form: "formReligar" });
+  Painel.ligarExclusao();
+
+  /* ---- o visor: o mesmo desenho da página do brinquedo, dentro da janela ---- */
+  var visor = document.getElementById("visor3d");
+  var tela = document.getElementById("visor3dTela");
+  var aviso = document.getElementById("visor3dAviso");
+  var coresCaixa = document.getElementById("visor3dCores");
+  var motor = null;   // { parar() } do objeto aberto agora
+  var modulos = null; // three, leitor e cores, baixados uma vez
+
+  function limitar(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  async function carregar(url) {
+    if (motor) { motor.parar(); motor = null; }
+    coresCaixa.replaceChildren();
+    aviso.hidden = false; aviso.textContent = "Carregando o 3D…";
+    if (!modulos) {
+      var m = await Promise.all([import(visor.dataset.three), import(visor.dataset.gltf), import(visor.dataset.cores3d)]);
+      modulos = { T: m[0], leitor: m[1], cores3d: m[2] };
+    }
+    var T = modulos.T;
+    var renderer = new T.WebGLRenderer({ canvas: tela, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+    var cena = new T.Scene();
+    cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
+    var sol = new T.DirectionalLight("#ffffff", 2.2); sol.position.set(4, 9, 7); cena.add(sol);
+    var contra = new T.DirectionalLight("#cfe0ff", 0.9); contra.position.set(-6, 4, -8); cena.add(contra);
+    var camera = new T.PerspectiveCamera(32, 1, 0.01, 100);
+    var gltf = await new modulos.leitor.GLTFLoader().loadAsync(url);
+    var objeto = gltf.scene;
+    var caixa = new T.Box3().setFromObject(objeto);
+    var tamanho = caixa.getSize(new T.Vector3());
+    objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
+    objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
+    objeto.position.y -= caixa.min.y;
+    cena.add(objeto);
+    var raio = Math.max(tamanho.length() / 2, 0.01);
+    var alvo = new T.Vector3(0, tamanho.y / 2, 0);
+    camera.near = raio / 100; camera.far = raio * 30;
+    var vista = { giro: 0.55, inclinacao: 0.22, perto: 1 }, meta = { giro: 0.55, inclinacao: 0.22, perto: 1 };
+    var distanciaBase = (raio / Math.sin(((camera.fov / 2) * Math.PI) / 180)) * 0.88;
+    var vivo = true, sozinho = true, parado = 0, sujo = true, anterior = 0;
+    function posicionar() {
+      var d = distanciaBase * vista.perto * (camera.aspect < 1 ? 1.25 : 1);
+      camera.position.set(alvo.x + Math.sin(vista.giro) * Math.cos(vista.inclinacao) * d, alvo.y + Math.sin(vista.inclinacao) * d, alvo.z + Math.cos(vista.giro) * Math.cos(vista.inclinacao) * d);
+      camera.lookAt(alvo);
+    }
+    function medir() {
+      var r = tela.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      renderer.setSize(r.width, r.height, false);
+      camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); sujo = true;
+    }
+    function passo(agora) {
+      if (!vivo) return;
+      requestAnimationFrame(passo);
+      var dt = Math.min(0.05, (agora - (anterior || agora)) / 1000); anterior = agora;
+      if (!sozinho && (parado += dt) > 5) sozinho = true;
+      if (sozinho) meta.giro += dt * 0.25;
+      var k = 1 - Math.exp(-dt * 12);
+      var antes = vista.giro + vista.inclinacao + vista.perto;
+      vista.giro += (meta.giro - vista.giro) * k; vista.inclinacao += (meta.inclinacao - vista.inclinacao) * k; vista.perto += (meta.perto - vista.perto) * k;
+      if (Math.abs(vista.giro + vista.inclinacao + vista.perto - antes) > 1e-5) sujo = true;
+      if (!sujo) return;
+      sujo = false; posicionar(); renderer.render(cena, camera);
+    }
+    var dedos = new Map(), pinca = 0;
+    function mexeu() { sozinho = false; parado = 0; }
+    var ouvintes = {
+      pointerdown: function (e) { tela.setPointerCapture(e.pointerId); dedos.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (dedos.size === 2) { var p = Array.from(dedos.values()); pinca = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); } mexeu(); },
+      pointermove: function (e) {
+        var a = dedos.get(e.pointerId); if (!a) return;
+        var b = { x: e.clientX, y: e.clientY }; dedos.set(e.pointerId, b);
+        if (dedos.size === 1) { var largura = tela.clientWidth || 1; meta.giro -= ((b.x - a.x) / largura) * Math.PI * 1.6; meta.inclinacao = limitar(meta.inclinacao + ((b.y - a.y) / largura) * Math.PI, -0.05, 1.25); }
+        else if (dedos.size === 2) { var p = Array.from(dedos.values()); var d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); if (pinca) meta.perto = limitar(meta.perto * (pinca / d), 0.45, 2.2); pinca = d; }
+        mexeu();
+      },
+      pointerup: function (e) { dedos.delete(e.pointerId); pinca = 0; },
+      pointercancel: function (e) { dedos.delete(e.pointerId); pinca = 0; },
+      wheel: function (e) { e.preventDefault(); meta.perto = limitar(meta.perto * Math.exp(e.deltaY * 0.0012), 0.45, 2.2); mexeu(); },
+      dblclick: function () { meta.giro = Math.round(meta.giro / (Math.PI * 2)) * Math.PI * 2 + 0.55; meta.inclinacao = 0.22; meta.perto = 1; mexeu(); }
+    };
+    Object.keys(ouvintes).forEach(function (n) { tela.addEventListener(n, ouvintes[n], n === "wheel" ? { passive: false } : undefined); });
+    var observador = new ResizeObserver(medir); observador.observe(tela);
+    var cores = modulos.cores3d.coresDoObjeto(gltf);
+    if (cores.length > 1) {
+      var rotulo = document.createElement("span"); rotulo.textContent = "Cores:";
+      var botoes = cores.map(function (cor, i) {
+        var botao = document.createElement("button"); botao.type = "button"; botao.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+        var amostra = modulos.cores3d.amostraDaCor(gltf, cor); if (amostra) botao.style.setProperty("--amostra", amostra);
+        var bolinha = document.createElement("i"); bolinha.setAttribute("aria-hidden", "true");
+        botao.append(bolinha, document.createTextNode(cor.nome));
+        botao.addEventListener("click", async function () { botoes.forEach(function (x) { x.setAttribute("aria-pressed", x === botao ? "true" : "false"); }); await modulos.cores3d.aplicarCor(gltf, cor); sujo = true; });
+        return botao;
+      });
+      coresCaixa.replaceChildren.apply(coresCaixa, [rotulo].concat(botoes));
+    }
+    aviso.hidden = true;
+    medir(); requestAnimationFrame(passo);
+    motor = { parar: function () {
+      vivo = false; observador.disconnect();
+      Object.keys(ouvintes).forEach(function (n) { tela.removeEventListener(n, ouvintes[n]); });
+      renderer.dispose();
+    } };
+  }
+
+  document.querySelectorAll("[data-ver3d]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var linha = achar(b.dataset.ver3d);
+      if (!linha || !linha.objeto) return;
+      document.getElementById("visorTitulo").textContent = linha.nome;
+      document.getElementById("visorMedidas").textContent = (linha.objeto.medidas ? "Medidas lidas do arquivo: " + linha.objeto.medidas + ". " : "") + "Arquivo: " + linha.objeto.arquivo;
+      var jogar = document.getElementById("visorJogar");
+      jogar.classList.toggle("d-none", !linha.jogo);
+      if (linha.jogo) { jogar.href = linha.jogo.url; jogar.lastChild.textContent = " Jogar a prévia do " + linha.jogo.titulo; }
+      document.getElementById("visorSite").href = linha.url_site;
+      Painel.abrir("modalVisor3d");
+      carregar(linha.objeto.url).catch(function (erro) {
+        console.error("Visor 3D:", erro);
+        aviso.hidden = false; aviso.textContent = "Não deu para abrir o 3D aqui: " + (erro && erro.message ? erro.message : erro);
+      });
+    });
+  });
+  document.getElementById("modalVisor3d").addEventListener("hidden.bs.modal", function () { if (motor) { motor.parar(); motor = null; } });
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -984,6 +984,135 @@ class BrinquedoInfoView(View):
 
 class CategoriasInfoView(View):
 
+    # ------------------------------------------------------------------
+    # A VITRINE DE CADA CATEGORIA.
+    #
+    # No cadastro a categoria é só um nome e uma foto. O texto do topo da
+    # página e os três argumentos de venda saem daqui, escolhidos por uma
+    # palavra do nome ("brinquedão", "esportiv"...). É deduzido, e não um
+    # campo novo, pelo mesmo motivo da arena (core/arena.py): migração
+    # neste projeto é aplicada à mão, e uma categoria sem texto cai no
+    # padrão em vez de quebrar a página. A PRIMEIRA regra que casar vence.
+    # Os ícones são do recorte do Font Awesome do site (tests_assets).
+    # ------------------------------------------------------------------
+    VITRINES = (
+        (("brinquedao", "brinquedoes"), {
+            "icone": "fa-layer-group",
+            "descricao": (
+                "Estruturas gigantes de vários andares, com escorregadores, "
+                "piscina de bolinhas e redes de proteção, projetadas sob "
+                "medida para buffets, shoppings e áreas kids."
+            ),
+            "beneficios": (
+                ("fa-layer-group", "Vários andares",
+                 "Estruturas de 2 a 4 níveis, que aproveitam a altura do espaço."),
+                ("fa-shield-halved", "Redes de proteção",
+                 "Cercamento em rede e acolchoado em toda a estrutura."),
+                ("fa-compass-drafting", "Projeto sob medida",
+                 "Desenhado para o seu espaço, nas cores da sua marca."),
+            ),
+            "zap": "Olá! Quero um orçamento de brinquedão para o meu espaço.",
+        }),
+        (("esportiv",), {
+            "icone": "fa-futbol",
+            "descricao": (
+                "Mini quadras e arenas infantis com traves, tabelas de "
+                "basquete e cercado, para a criançada jogar com segurança "
+                "em buffets, condomínios e escolas."
+            ),
+            "beneficios": (
+                ("fa-futbol", "Mini quadras",
+                 "Quadras em miniatura, com piso e demarcação."),
+                ("fa-trophy", "Traves e tabelas",
+                 "Gol, tabela de basquete e cesta no tamanho das crianças."),
+                ("fa-shield-halved", "Cercado",
+                 "Fechamento em rede: a bola não sai e ninguém se machuca."),
+            ),
+            "zap": "Olá! Quero um orçamento de espaço esportivo kids.",
+        }),
+        (("kid play", "kidplay"), {
+            "icone": "fa-shapes",
+            "descricao": (
+                "Playgrounds compactos para os pequenos, com escorregador, "
+                "túneis e piscina de bolinhas, pensados para espaços menores."
+            ),
+            "beneficios": (
+                ("fa-ruler-combined", "Compactos",
+                 "Cabem em cantos de buffet, loja ou condomínio."),
+                ("fa-shield-halved", "Seguros",
+                 "Redes, acolchoados e cantos arredondados."),
+                ("fa-wand-magic-sparkles", "Temáticos",
+                 "Castelo, selva, oceano: o tema que o seu espaço pedir."),
+            ),
+            "zap": "Olá! Quero um orçamento de kid play para o meu espaço.",
+        }),
+        (("eletronic", "fliperama"), {
+            "icone": "fa-gamepad",
+            "descricao": (
+                "Máquinas eletrônicas e fliperamas de fábrica: ligou, "
+                "funcionou. Com assistência técnica própria e peças de "
+                "reposição."
+            ),
+            "beneficios": (
+                ("fa-plug-circle-check", "Ligou, funcionou",
+                 "Chega pronta para operar, em 110 V ou 220 V."),
+                ("fa-coins", "Ficha ou cartão",
+                 "Operação por ficha, moeda ou sistema de cartão."),
+                ("fa-screwdriver-wrench", "Assistência própria",
+                 "Manutenção e peças de reposição da própria fábrica."),
+            ),
+            "zap": "Olá! Quero um orçamento de máquina eletrônica.",
+        }),
+    )
+
+    VITRINE_PADRAO = {
+        "icone": "fa-layer-group",
+        "descricao": (
+            "Uma seleção de equipamentos Lazer & Sport, fabricados aqui e "
+            "entregues prontos para operar. Abra cada produto para ver "
+            "fotos, medidas e disponibilidade."
+        ),
+        "beneficios": (
+            ("fa-industry", "Fabricação própria",
+             "Projetado e produzido na nossa fábrica, em São Paulo."),
+            ("fa-screwdriver-wrench", "Assistência técnica",
+             "Manutenção e peças de reposição de quem fabrica."),
+            ("fa-compass-drafting", "Projeto sob medida",
+             "Adaptado ao seu espaço e às cores da sua marca."),
+        ),
+        "zap": None,  # usa o nome da categoria
+    }
+
+    #: As ordens que a página oferece: (chave, rótulo, ícone). O que não
+    #: estiver aqui vira "az" -- a URL é digitável.
+    ORDENS = (
+        ("az", "A → Z", "fa-arrow-down-a-z"),
+        ("za", "Z → A", "fa-arrow-down-z-a"),
+        ("melhor-avaliados", "Melhor avaliados", "fa-star"),
+        ("custo-beneficio", "Custo-benefício", "fa-scale-balanced"),
+        ("novidades", "Novidades", "fa-clock-rotate-left"),
+    )
+
+    def vitrine_da_categoria(self, categoria):
+        """O texto e os argumentos de venda desta categoria (ver VITRINES)."""
+        import unicodedata
+
+        nome = unicodedata.normalize("NFKD", categoria.nome_categoria or "")
+        nome = "".join(c for c in nome if not unicodedata.combining(c)).lower()
+
+        vitrine = dict(self.VITRINE_PADRAO)
+        for palavras, dados in self.VITRINES:
+            if any(palavra in nome for palavra in palavras):
+                vitrine = dict(dados)
+                break
+
+        if not vitrine["zap"]:
+            vitrine["zap"] = (
+                f"Olá! Vim pela categoria {categoria.nome_categoria} do site "
+                "da Lazer & Sport e quero um orçamento."
+            )
+        return vitrine
+
     def get(self, request, pk):
 
         categoria = get_object_or_404(
@@ -1006,26 +1135,46 @@ class CategoriasInfoView(View):
                 quantidade_click=F('quantidade_click') + 1
             )
 
-        brinquedos = (
-            categoria.brinquedos
-            .filter(ativo=True)
-            .prefetch_related(
-                "categorias_brinquedos",
-                "tags",
-                "imagens_brinquedo",
-            )
+        ativos = categoria.brinquedos.filter(ativo=True)
+
+        # Os números do topo e das fichas de filtro são da categoria
+        # INTEIRA, e não da página: "À venda (3)" continua dizendo três
+        # mesmo com o filtro de orçamento ligado.
+        total_categoria = ativos.count()
+        total_loja = ativos.filter(exibir_na_loja=True).count()
+
+        # Filtro de disponibilidade: só os dois valores que a página
+        # oferece; qualquer outra coisa digitada na URL mostra tudo.
+        disponibilidade = request.GET.get("disp", "")
+        if disponibilidade == "loja":
+            ativos = ativos.filter(exibir_na_loja=True)
+        elif disponibilidade == "consulta":
+            ativos = ativos.filter(exibir_na_loja=False)
+        else:
+            disponibilidade = ""
+
+        brinquedos = ativos.prefetch_related(
+            "categorias_brinquedos",
+            "tags",
+            "imagens_brinquedo",
         )
 
         ordenar = request.GET.get("ordenar", "az")
+        if ordenar not in {chave for chave, _, _ in self.ORDENS}:
+            ordenar = "az"
 
+        # O nome desempata sempre: sem ele, duas notas iguais trocariam de
+        # lugar entre uma página e a outra.
         if ordenar == "az":
             brinquedos = brinquedos.order_by("nome_brinquedo")
         elif ordenar == "za":
             brinquedos = brinquedos.order_by("-nome_brinquedo")
         elif ordenar == "melhor-avaliados":
-            brinquedos = brinquedos.order_by("-avaliacao")
+            brinquedos = brinquedos.order_by("-avaliacao", "nome_brinquedo")
         elif ordenar == "custo-beneficio":
-            brinquedos = brinquedos.order_by("-avaliacao", "valor_brinquedo")
+            brinquedos = brinquedos.order_by("-avaliacao", "valor_brinquedo", "nome_brinquedo")
+        elif ordenar == "novidades":
+            brinquedos = brinquedos.order_by("-criacao", "-id")
 
         paginator = Paginator(brinquedos, 12)
         page_number = request.GET.get("page")
@@ -1038,10 +1187,24 @@ class CategoriasInfoView(View):
         for item in page_obj.object_list:
             item.total_curtidas = totais.get(item.pk, 0)
 
+        # O que a paginação precisa repetir para não perder a ordem e o
+        # filtro escolhidos. Os dois valores já passaram pela lista
+        # branca acima, então entram na URL como estão.
+        consulta = f"ordenar={ordenar}"
+        if disponibilidade:
+            consulta += f"&disp={disponibilidade}"
+
         ctx = {
             "categoria": categoria,
             "page_obj": page_obj,
             "ordenar": ordenar,
+            "ordens": self.ORDENS,
+            "disponibilidade": disponibilidade,
+            "consulta": consulta,
+            "vitrine": self.vitrine_da_categoria(categoria),
+            "total_categoria": total_categoria,
+            "total_loja": total_loja,
+            "total_consulta": total_categoria - total_loja,
         }
 
         resposta = render(request, "categorias_info.html", ctx)

@@ -1,0 +1,231 @@
+{% extends "base_inner.html" %}
+
+{% block title %}Jogos do simulador | Lazer & Sport{% endblock %}
+{% block top_title %}Jogos do simulador{% endblock %}
+
+{% block content %}
+<div class="ls-page-head">
+  <div>
+    <span class="ls-eyebrow">SÓ O SUPERADMINISTRADOR</span>
+    <h1>Jogos do simulador</h1>
+    <p>Suba um jogo da casa com a capa e os dados. Ligado, ele aparece em <strong>/jogos/</strong> e ganha a própria página — sem deploy e sem mexer no código.</p>
+  </div>
+  {% if not tabela_ausente %}
+  <button class="btn btn-success" id="novoJogo" type="button">
+    <i class="bi bi-plus-lg me-1"></i> Novo jogo
+  </button>
+  {% endif %}
+</div>
+
+{% if tabela_ausente %}
+<section class="ls-card p-4">
+  <h2 class="h5 mb-2"><i class="bi bi-hourglass-split me-1"></i> O banco ainda não tem a tabela dos jogos</h2>
+  <p class="mb-0 text-muted">O site subiu antes da migração. Ela roda sozinha na próxima subida (ou com <code>python manage.py migrate</code>). Volte aqui depois.</p>
+</section>
+{% else %}
+
+<section class="ls-metrics mb-3">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Cadastrados</span><span class="ls-metric-icon"><i class="bi bi-joystick"></i></span></div>
+    <strong class="ls-metric-value">{{ total }}</strong>
+    <span class="ls-metric-note">Jogos subidos pelo painel</span>
+  </article>
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">No ar</span><span class="ls-metric-icon"><i class="bi bi-broadcast"></i></span></div>
+    <strong class="ls-metric-value">{{ total_ativos }}</strong>
+    <span class="ls-metric-note">Aparecem em /jogos/ agora</span>
+  </article>
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Com APK guardado</span><span class="ls-metric-icon"><i class="bi bi-android2"></i></span></div>
+    <strong class="ls-metric-value">{{ total_com_apk }}</strong>
+    <span class="ls-metric-note">{{ total_apk_liberado }} liberado{{ total_apk_liberado|pluralize }} para baixar</span>
+  </article>
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head"><span class="ls-metric-label">Proteção</span><span class="ls-metric-icon"><i class="bi bi-shield-lock-fill"></i></span></div>
+    <span class="ls-metric-note">O jogo roda num quadro isolado da página; o APK só sai se você liberar; só esta conta cadastra.</span>
+  </article>
+</section>
+
+<section class="ls-card p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-12 col-md">
+      <label class="form-label" for="buscaJogo">Buscar jogo</label>
+      <input class="form-control" id="buscaJogo" name="q" value="{{ busca }}" placeholder="Nome, endereço (slug) ou chamada">
+    </div>
+    <div class="col-12 col-md-auto">
+      <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Buscar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-card overflow-hidden">
+  <div class="table-responsive">
+    <table class="ls-table mb-0">
+      <thead><tr><th>Jogo</th><th>Como roda</th><th>APK</th><th>Ordem</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
+      <tbody>
+      {% for jogo in jogos %}
+        <tr>
+          <td data-rotulo="Jogo">
+            <div class="d-flex align-items-center gap-3">
+              {% if jogo.capa_url %}
+                <img src="{{ jogo.capa_url }}" alt="" width="52" height="52" class="rounded-3 flex-shrink-0" style="object-fit:cover;background:#0b1730;border:1px solid rgba(255,255,255,.08)">
+              {% else %}
+                <span class="rounded-3 d-grid flex-shrink-0" style="width:52px;height:52px;place-items:center;background:#0b1730"><i class="bi bi-image text-muted"></i></span>
+              {% endif %}
+              <div class="min-w-0">
+                <strong class="d-block text-truncate" style="max-width:280px">{{ jogo.nome }}</strong>
+                <span class="material-sub d-block">/jogos/{{ jogo.slug }}/{% if jogo.chamada %} · {{ jogo.chamada|truncatechars:48 }}{% endif %}</span>
+              </div>
+            </div>
+          </td>
+          <td data-rotulo="Como roda">
+            <span class="badge rounded-pill {% if jogo.endereco %}text-bg-primary{% elif jogo.arquivo_html %}text-bg-info{% else %}text-bg-danger{% endif %}">
+              {% if jogo.endereco %}<i class="bi bi-link-45deg"></i>{% elif jogo.arquivo_html %}<i class="bi bi-file-earmark-code"></i>{% else %}<i class="bi bi-exclamation-triangle"></i>{% endif %}
+              {{ jogo.como_roda }}
+            </span>
+            <span class="material-sub d-block">{{ jogo.get_proporcao_display }}</span>
+          </td>
+          <td data-rotulo="APK">
+            {% if jogo.apk %}
+              <span class="badge {% if jogo.liberar_download %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if jogo.liberar_download %}Liberado para baixar{% else %}Guardado, sem download{% endif %}</span>
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td data-rotulo="Ordem">{{ jogo.ordem }}</td>
+          <td data-rotulo="Situação"><span class="badge {% if jogo.ativo %}text-bg-success{% else %}text-bg-danger{% endif %}">{% if jogo.ativo %}No ar{% else %}Desligado{% endif %}</span></td>
+          <td data-rotulo="Ações" class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-light" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-box-arrow-up-right"></i></a>
+            <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil"></i> Editar</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ jogo.id }}">{% if jogo.ativo %}Desligar{% else %}Ligar{% endif %}</button>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ jogo.id }}" data-nome="{{ jogo.nome }}" title="Excluir"><i class="bi bi-trash3"></i></button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center py-5 text-muted">{% if busca %}Nenhum jogo com "{{ busca }}".{% else %}Nenhum jogo cadastrado ainda. Toque em <strong>Novo jogo</strong>.{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="modalJogo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <form class="modal-content" id="formJogo" method="post" action="{% url 'jogos_inner' %}" enctype="multipart/form-data">
+      {% csrf_token %}<input type="hidden" name="action" value="salvar"><input type="hidden" name="id" id="jogoId">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Simulador</span><h5 class="modal-title" id="jogoTitulo">Novo jogo</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="jogoErro"></div>
+
+        <h6 class="mb-2">O jogo</h6>
+        <div class="row g-3">
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoNome">Nome</label><input class="form-control" id="jogoNome" name="nome" maxlength="80" required data-rotulo="nome"></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoSlug">Endereço (slug)</label><input class="form-control" id="jogoSlug" name="slug" maxlength="80" pattern="[a-z0-9\-]+" required data-rotulo="endereço (slug)" placeholder="corrida-maluca"><span class="form-text">Vira /jogos/<em>slug</em>/. Só letras minúsculas, números e hífen.</span></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoChamada">Frase de chamada</label><input class="form-control" id="jogoChamada" name="chamada" maxlength="120" placeholder="Desvie de tudo!"></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoComandos">Como jogar</label><input class="form-control" id="jogoComandos" name="comandos" maxlength="200" placeholder="Arraste para desviar e toque para pular."></div>
+          <div class="col-12"><label class="form-label" for="jogoDescricao">Descrição</label><textarea class="form-control" id="jogoDescricao" name="descricao" rows="3"></textarea></div>
+          <div class="col-6 col-md-3"><label class="form-label" for="jogoCor">Cor do jogo</label><input type="color" class="form-control form-control-color w-100" id="jogoCor" name="cor" value="#ff3df2" title="Cor de destaque do card"></div>
+          <div class="col-6 col-md-3"><label class="form-label" for="jogoOrdem">Ordem na lista</label><input type="number" class="form-control" id="jogoOrdem" name="ordem" min="0" max="65000" value="100"></div>
+          <div class="col-12 col-md-6 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="jogoAtivo" type="checkbox" name="ativo" checked><span class="form-check-label">No ar (aparece em /jogos/)</span></label></div>
+        </div>
+
+        <hr class="my-4">
+        <h6 class="mb-1">Os arquivos do jogo <span class="text-muted fw-normal">(um dos dois)</span></h6>
+        <p class="text-muted small">Jogo de vários arquivos (Godot HTML5, Unity WebGL…): hospede a pasta do export e cole o endereço <strong>https</strong>. Jogo de um arquivo só: envie o .html (até 15 MB).</p>
+        <div class="row g-3">
+          <div class="col-12 col-md-7"><label class="form-label" for="jogoEndereco">Endereço do jogo (hospedado)</label><input type="url" class="form-control" id="jogoEndereco" name="endereco" maxlength="200" placeholder="https://jogos.lazersport.com.br/corrida/index.html" data-rotulo="endereço do jogo"></div>
+          <div class="col-12 col-md-5"><label class="form-label" for="jogoProporcao">Formato da tela</label><select class="form-select" id="jogoProporcao" name="proporcao">{% for valor, rotulo in proporcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
+          <div class="col-12"><label class="form-label" for="jogoHtml">Arquivo do jogo (.html único)</label><input type="file" class="form-control" id="jogoHtml" name="arquivo_html" accept=".html,.htm,text/html"><span class="form-text" id="jogoHtmlAtual"></span><label class="form-check mt-1 d-none" id="jogoHtmlLimparCaixa"><input class="form-check-input" type="checkbox" name="arquivo_html-clear" id="jogoHtmlLimpar"><span class="form-check-label">Remover o .html guardado</span></label></div>
+        </div>
+
+        <hr class="my-4">
+        <h6 class="mb-2">Capa e imagem grande</h6>
+        <div class="row g-3">
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoCapa">Foto de capa <span class="text-muted fw-normal">(quadrada, até 4 MB)</span></label><input type="file" class="form-control" id="jogoCapa" name="capa" accept="image/*" data-rotulo="capa"><div class="mt-2 d-none" id="jogoCapaAtualCaixa"><img id="jogoCapaAtual" alt="" width="72" height="72" class="rounded-3" style="object-fit:cover;background:#0b1730"> <span class="form-text">Capa atual — envie outra para trocar.</span></div></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoPoster">Imagem grande <span class="text-muted fw-normal">(opcional, até 6 MB)</span></label><input type="file" class="form-control" id="jogoPoster" name="poster" accept="image/*"><span class="form-text" id="jogoPosterAtual"></span><label class="form-check mt-1 d-none" id="jogoPosterLimparCaixa"><input class="form-check-input" type="checkbox" name="poster-clear" id="jogoPosterLimpar"><span class="form-check-label">Remover a imagem grande</span></label></div>
+        </div>
+
+        <hr class="my-4">
+        <h6 class="mb-1">Aplicativo Android <span class="text-muted fw-normal">(opcional)</span></h6>
+        <p class="text-muted small">O APK fica guardado. Só aparece para baixar no site se "Deixar baixar" estiver marcado — por padrão, não, para não espalhar o jogo de vocês.</p>
+        <div class="row g-3">
+          <div class="col-12 col-md-7"><label class="form-label" for="jogoApk">APK</label><input type="file" class="form-control" id="jogoApk" name="apk" accept=".apk,application/vnd.android.package-archive"><span class="form-text" id="jogoApkAtual"></span><label class="form-check mt-1 d-none" id="jogoApkLimparCaixa"><input class="form-check-input" type="checkbox" name="apk-clear" id="jogoApkLimpar"><span class="form-check-label">Remover o APK guardado</span></label></div>
+          <div class="col-12 col-md-5 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="jogoLiberar" type="checkbox" name="liberar_download"><span class="form-check-label">Deixar baixar o APK pelo site</span></label></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar jogo</button></div>
+    </form>
+  </div>
+</div>
+
+<form id="formAlternar" method="post" action="{% url 'jogos_inner' %}" hidden>{% csrf_token %}<input name="action" value="alternar"><input name="id" id="alternarId"></form>
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=request.path exclusao_titulo="Excluir jogo" exclusao_aviso="O jogo sai do site na hora e os arquivos guardados (capa, .html e APK) são apagados. Não dá para desfazer." %}
+{{ jogos_dados|json_script:"jogosDados" }}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not tabela_ausente %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+  var jogos = JSON.parse(document.getElementById("jogosDados").textContent || "[]");
+  var form = document.getElementById("formJogo");
+  function achar(id) { return jogos.find(function (j) { return Number(j.id) === Number(id); }); }
+  function slugDe(texto) {
+    return String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+  }
+  function arquivoAtual(idTexto, idCaixa, nome, rotulo) {
+    document.getElementById(idTexto).textContent = nome ? rotulo + " guardado: " + nome + " — envie outro para trocar." : "";
+    document.getElementById(idCaixa).classList.toggle("d-none", !nome);
+  }
+  function abrir(jogo) {
+    form.reset(); Painel.erro("jogoErro", "");
+    Painel.valor("jogoId", jogo ? jogo.id : "");
+    Painel.valor("jogoNome", jogo ? jogo.nome : "");
+    Painel.valor("jogoSlug", jogo ? jogo.slug : "");
+    Painel.valor("jogoChamada", jogo ? jogo.chamada : "");
+    Painel.valor("jogoComandos", jogo ? jogo.comandos : "");
+    Painel.valor("jogoDescricao", jogo ? jogo.descricao : "");
+    Painel.valor("jogoCor", jogo ? jogo.cor.slice(0, 7) : "#ff3df2");
+    Painel.valor("jogoOrdem", jogo ? jogo.ordem : 100);
+    Painel.valor("jogoEndereco", jogo ? jogo.endereco : "");
+    Painel.valor("jogoProporcao", jogo ? jogo.proporcao : "paisagem");
+    document.getElementById("jogoAtivo").checked = jogo ? jogo.ativo : true;
+    document.getElementById("jogoLiberar").checked = jogo ? jogo.liberar_download : false;
+    document.getElementById("jogoCapa").required = !jogo;
+    var capa = document.getElementById("jogoCapaAtual");
+    capa.src = jogo && jogo.capa ? jogo.capa : "";
+    document.getElementById("jogoCapaAtualCaixa").classList.toggle("d-none", !(jogo && jogo.capa));
+    arquivoAtual("jogoPosterAtual", "jogoPosterLimparCaixa", jogo ? jogo.poster : "", "Imagem grande");
+    arquivoAtual("jogoHtmlAtual", "jogoHtmlLimparCaixa", jogo ? jogo.arquivo_html : "", ".html");
+    arquivoAtual("jogoApkAtual", "jogoApkLimparCaixa", jogo ? jogo.apk : "", "APK");
+    document.getElementById("jogoTitulo").textContent = jogo ? "Editar jogo" : "Novo jogo";
+    form.dataset.slugAutomatico = jogo ? "0" : "1";
+    Painel.abrir("modalJogo");
+  }
+  document.getElementById("jogoNome").addEventListener("input", function () {
+    if (form.dataset.slugAutomatico === "1") Painel.valor("jogoSlug", slugDe(this.value));
+  });
+  document.getElementById("jogoSlug").addEventListener("input", function () { form.dataset.slugAutomatico = "0"; });
+  document.getElementById("novoJogo").addEventListener("click", function () { abrir(null); });
+  document.querySelectorAll("[data-editar]").forEach(function (botao) { botao.addEventListener("click", function () { abrir(achar(botao.dataset.editar)); }); });
+  document.querySelectorAll("[data-alternar]").forEach(function (botao) { botao.addEventListener("click", function () { Painel.valor("alternarId", botao.dataset.alternar); document.getElementById("formAlternar").requestSubmit(); }); });
+  Painel.ligar({
+    form: "formJogo", erro: "jogoErro", rotuloCarregando: "Enviando os arquivos…",
+    antes: function (f) {
+      var endereco = f.querySelector("#jogoEndereco").value.trim();
+      var html = f.querySelector("#jogoHtml").files.length > 0;
+      var htmlGuardado = !document.getElementById("jogoHtmlLimparCaixa").classList.contains("d-none") && !document.getElementById("jogoHtmlLimpar").checked;
+      if (!endereco && !html && !htmlGuardado) return "Informe o endereço do jogo hospedado OU envie o arquivo .html.";
+      if (endereco && !/^https:\/\//i.test(endereco)) return "O endereço do jogo precisa começar com https://.";
+      return null;
+    }
+  });
+  Painel.ligar({ form: "formAlternar" });
+  Painel.ligarExclusao();
+});
+</script>
+{% endif %}
+{% endblock %}

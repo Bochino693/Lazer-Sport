@@ -585,3 +585,69 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ======= O FREIO DE ROBÔS NO CADASTRO (core/captcha.py) =======
+   O campo-isca fica fora da tela: a pessoa não vê nem alcança (nem pelo
+   Tab); o robô que preenche tudo cai nele. A pergunta é um campo comum,
+   curto, e o Turnstile ocupa o mesmo lugar quando está ligado. */
+.ls-isca {
+    position: absolute !important;
+    left: -10000px !important;
+    top: auto !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.ls-humano {
+    display: grid;
+    gap: 6px;
+    margin-top: 2px;
+    padding: 12px 14px;
+    border: 1px dashed rgba(63, 208, 255, .35);
+    border-radius: 14px;
+    background: rgba(63, 208, 255, .06);
+}
+
+.ls-humano label {
+    margin: 0;
+    font-size: .8rem;
+    font-weight: 800;
+    color: #cfe4ff;
+}
+
+.ls-humano .ls-entrada {
+    max-width: 220px;
+}
+
+.ls-humano small {
+    color: #9fb5cc;
+    font-size: .72rem;
+}
+
+.ls-humano .cf-turnstile {
+    min-height: 65px;
+}
+
+.ls-auth-shell--simples {
+    grid-template-columns: 1fr;
+    max-width: 620px;
+}
+
+.ls-auth-shell--simples .ls-auth-main h1 {
+    margin-top: 14px;
+}
+
+.ls-auth-legal {
+    margin: 12px 0 0;
+    color: #9fb5cc;
+    font-size: .74rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.ls-auth-legal a {
+    color: #74c7ff;
+}

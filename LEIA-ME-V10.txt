@@ -1,0 +1,117 @@
+LAZER & SPORT — ATUALIZAÇÃO V10
+Jogos e objetos 3D pelo painel, antifraude no cadastro, site com cara de app,
+scripts dos jogos protegidos e teste de carga.
+================================================================================
+
+O QUE ENTROU
+------------
+
+1) JOGOS DO SIMULADOR PELO PAINEL INTERNO (só o superadministrador)
+   interno.lazersport.com.br > Administração > Jogos do simulador  (/site/jogos/)
+   - Cadastra, edita, liga/desliga e exclui os jogos da casa sem deploy.
+   - O jogo entra por endereço https já hospedado (export do Godot/Unity)
+     ou por um .html único (até 15 MB). Capa (até 4 MB), imagem grande,
+     frase, "como jogar", cor, formato da tela, ordem.
+   - APK opcional (até 200 MB): fica guardado e só aparece para baixar no
+     site se "Deixar baixar" estiver marcado.
+   - Proteções: o .html é lido antes de guardar (tem de ser texto com cara
+     de página, sem byte nulo); o .apk tem de ser um ZIP de verdade; as
+     imagens passam pelo Pillow; excluir exige digitar CONFIRMAR e apaga os
+     arquivos; tudo fica no log com quem fez. No site o jogo roda num quadro
+     isolado (iframe com sandbox): não lê cookie, sessão nem a página.
+   - O /system/ (admin do Django) continua com a mesma tela, para emergência.
+
+2) OBJETOS 3D PELO PAINEL (só o superadministrador)
+   Administração > Objetos 3D  (/site/objetos-3d/)
+   - Lista cada brinquedo ativo com o seu .glb: enviado ou "do site", as
+     cores lidas de dentro do arquivo, as medidas, se está na Arena 3D, e o
+     jogo da máquina (botão "Jogar a prévia").
+   - Enviar um .glb (até 10 MB) para um brinquedo, ou ligar um dos objetos
+     que vêm com o site (Strike Kids, Brinquedão Modelo 2, Espaço Esportivo
+     Modelo 1). Trocar, pôr/tirar da Arena, religar, remover (com CONFIRMAR).
+   - "Ver em 3D" abre o objeto ali mesmo, com as cores para trocar.
+   - Tudo-ou-nada: o arquivo só é guardado depois de conferido e, se o banco
+     falhar, o arquivo recém-subido é apagado.
+
+3) REGISTRO DE CADASTRO (antifraude)
+   /system/ > Core > Registros de cadastro (só leitura)
+   - Toda conta nova (formulário, aplicativo, Google/Apple, painel) deixa um
+     registro: IP, cabeçalhos de IP crus, cidade/estado/país aproximados
+     (pelo IP, depois do cadastro, numa thread), navegador, origem e hora.
+     Coluna "cadastros neste IP" mostra quem chega em lote.
+   - Nada de localização precisa: só a região do IP.
+   - Variáveis (Render > Environment):
+       GEOIP_ATIVO=1            liga a consulta de região (já ligada em produção)
+       GEOIP_URL                padrão https://ipapi.co/{ip}/json/ (ip-api.com também serve)
+       IP_REAL_CABECALHO        só se precisar forçar (ex.: HTTP_CF_CONNECTING_IP com Cloudflare)
+   - python manage.py preencher_regioes   completa a região do que ficou vazio.
+   - Qual cabeçalho traz o IP real: no Render é o X-Forwarded-For (primeiro
+     da lista); com Cloudflare na frente, CF-Connecting-IP. O site tenta na
+     ordem CF-Connecting-IP > True-Client-IP > X-Real-IP > X-Forwarded-For >
+     REMOTE_ADDR e guarda a cadeia inteira para conferência.
+
+4) FREIO DE CONTAS FALSAS
+   - Limite de cadastros por IP numa janela, nos três caminhos (site, app,
+     Google/Apple): CADASTRO_LIMITE_POR_IP=5, CADASTRO_JANELA_HORAS=24.
+     Estourou: o formulário avisa, a API devolve 429 e o allauth mostra a
+     página "Cadastro pausado".
+   - No formulário /registrar/: campo-isca escondido, tempo mínimo de
+     preenchimento (CADASTRO_TEMPO_MINIMO=4 s) e o desafio:
+       * com TURNSTILE_SITE_KEY e TURNSTILE_SECRET_KEY (Cloudflare Turnstile,
+         grátis em dash.cloudflare.com > Turnstile; domínio lazersport.com.br):
+         a caixa "Sou humano" do Cloudflare, conferida no servidor;
+       * sem as chaves: uma pergunta simples ("quanto é 3 + 4?") assinada.
+         Barra os robôs comuns; o Turnstile é o caminho para os espertos.
+   - Confirmação de e-mail: quem cria conta recebe um e-mail para confirmar
+     o endereço (link vale 7 dias). Não trava nada: entra e compra sem
+     confirmar (ACCOUNT_EMAIL_VERIFICATION = "optional"), e as contas antigas
+     e o aplicativo seguem iguais. Precisa do e-mail configurado (ver
+     docs/CONFIGURAR_EMAIL.md); sem SMTP, o cadastro passa e o envio vai pro log.
+   - Política de privacidade nova em /privacidade/ (link no rodapé e no
+     cadastro), com a linha sobre IP e região aproximada.
+
+5) SITE COM CARA DE APP
+   - Página do brinquedo: breadcrumb em barra de vidro com chips, foto num
+     vidro escuro (acabou o fundo branco), botões de curtida/lista de desejos
+     escuros, ícones de câmera/arma/sensores redesenhados e fortes, áreas
+     de informação em cartões com selos coloridos.
+   - Páginas de categoria (brinquedões, espaços esportivos kids...): herói
+     com argumentos de venda, filtros em fichas, os mesmos cards da home,
+     chamada de orçamento e estado vazio.
+   - Home: o cartão da vitrine deixou de ser claro.
+
+6) CURTIDAS AJUSTÁVEIS
+   Painel > Site e aplicativo > Curtidas e desejos > "Adicionar ou remover
+   curtidas" (só o superadministrador). O número do site = curtidas de
+   verdade + ajuste (nunca abaixo de zero); as curtidas das pessoas ficam.
+
+7) SCRIPTS DOS JOGOS PROTEGIDOS
+   No collectstatic de produção, todo JS da casa (site/, app/, interno/) sai
+   minificado e sem mapa de fonte (core/estaticos.py, rjsmin). Em
+   desenvolvimento continua legível. Honestidade: isso tira as explicações e
+   os nomes, não esconde a lógica — quem quiser baixa e "embeleza". O que
+   fica em sigilo é o que não sai do servidor (ranking) e o jogo de verdade
+   das máquinas (o APK, que só sai se vocês liberarem).
+
+8) TESTE DE CARGA  (docs/TESTE_DE_CARGA.md, ferramentas/carga/)
+   Medido com gunicorn + escudo local: ~37 páginas/s por núcleo; traduzido
+   ao Render Starter (0,5 CPU) com Supabase: ~40-60 visitantes reais ao
+   mesmo tempo no catálogo antes de recusas, a fábrica inteira no painel
+   cabe. Maiores alavancas: cache das páginas de catálogo e estáticos fora
+   do escudo. A nuvem de jogos em tempo real precisa de serviço separado
+   (websocket), nunca no gunicorn atual. Detalhes e premissas no documento.
+
+9) SENHA DO ADMIN
+   python manage.py trocar_senha_admin --usuario SEU_USUARIO
+   Gera uma senha forte, mostra UMA vez no terminal (Render > Shell) e
+   encerra as outras sessões. Anote num gerenciador de senhas.
+
+VERIFICAÇÃO
+-----------
+python manage.py test --settings=lazer.settings_test
+  Só as 3 falhas antigas (galerias nas telas de detalhe, /stock/ e variáveis
+  de cor) continuam; o resto passa, inclusive os testes novos de jogos,
+  objetos 3D, antifraude, curtidas e estáticos protegidos.
+Migrações novas: 0123 (registro de cadastro) e 0124 (ajuste de curtidas) —
+o gunicorn aplica ao subir no Render.
+Dependência nova: rjsmin (requirements.txt).

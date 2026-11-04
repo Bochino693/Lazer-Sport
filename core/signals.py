@@ -36,6 +36,19 @@ def criar_perfil_cliente(sender, instance, created, **kwargs):
         ClientePerfil.objects.get_or_create(user=instance, defaults={'telefone': ''})
 
 
+@receiver(post_save, sender=User, dispatch_uid="core.user.registrar_cadastro")
+def registrar_cadastro_do_usuario(sender, instance, created, raw=False, **kwargs):
+    """De onde veio a conta (IP, navegador, caminho): ver core/registro_cadastro.py.
+
+    Um só gancho para os três caminhos que criam conta. Nunca levanta:
+    um defeito no registro não pode impedir ninguém de se cadastrar.
+    """
+    if created and not raw:
+        from .registro_cadastro import registrar
+
+        registrar(instance)
+
+
 @receiver(post_save, sender=Pedido, dispatch_uid="core.pedido.avisar_superusuarios")
 def avisar_superusuarios_de_novo_pedido(sender, instance, created, **kwargs):
     """O pedido só dispara depois do commit; rollback nunca gera alarme falso."""

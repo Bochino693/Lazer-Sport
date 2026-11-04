@@ -29,6 +29,8 @@ fa-box-open
 fa-boxes-packing
 fa-boxes-stacked
 fa-building
+fa-bullseye
+fa-calculator
 fa-calendar
 fa-calendar-check
 fa-calendar-days
@@ -70,6 +72,7 @@ fa-download
 fa-earth-americas
 fa-ellipsis
 fa-envelope
+fa-envelope-circle-check
 fa-expand
 fa-eye
 fa-eye-slash
@@ -85,6 +88,7 @@ fa-gears
 fa-globe
 fa-google-play
 fa-hammer
+fa-hand
 fa-hand-fist
 fa-hand-point-up
 fa-hand-pointer

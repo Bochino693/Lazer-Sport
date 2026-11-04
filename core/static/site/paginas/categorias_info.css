@@ -1,983 +1,877 @@
-/* Estilo de categorias_info.
+/* Estilo de categorias_info (/categoria/<id>/).
  *
- * NASCEU DE DENTRO DO HTML. Eram 21 KB dentro de um <style> no
- * template -- peso que viajava de novo a cada abertura da página, por
- * cada visitante e por cada robô de busca, e que o navegador não tinha
- * como guardar: estilo dentro do HTML não tem endereço para cachear.
+ * A PÁGINA DE UMA CATEGORIA COM A CARA DE UM APLICATIVO: herói escuro
+ * com o nome, a contagem e os argumentos de venda da categoria; fichas
+ * de filtro e de ordem que rolam de lado no celular; a grade com O
+ * MESMO CARD DA HOME; e a chamada de orçamento no WhatsApp fechando a
+ * página.
  *
- * Aqui tem. Baixado uma vez e guardado por um ano; o endereço leva a
- * impressão digital do conteúdo, então mudar o arquivo muda o endereço e
- * o navegador busca a versão nova sozinho.
+ * O QUE NÃO MORA AQUI. O card de produto (`.card-mini`) é desenhado em
+ * site/ls-tema.css, para ser o mesmo objeto na home e aqui. Esta folha
+ * só repõe, para a grade, as poucas regras de base que a home herda de
+ * ls-home.css (posição da foto, do selo e da estrela) -- aquele arquivo
+ * é da home e não é carregado nas outras telas. O breadcrumb
+ * (`.ls-breadcrumb`) também é global, em ls-base.css.
+ *
+ * Os tokens `--cat-*` nascem dos `--ls-*` do tema (ls-tema.css), com um
+ * valor de reserva igual, para a página não ficar sem cor se a folha do
+ * tema mudar de nome.
  */
 
 /* ==========================================================
-   ARENA DE CATEGORIA
-   Estrutura própria: breadcrumb do site + hero com quadro
-   visual + cards horizontais, sem imagem da categoria no topo.
+   PÁGINA
    ========================================================== */
-.arena-categoria {
-    --arena-blue: #0878f9;
-    --arena-blue-deep: #004aad;
-    --arena-navy: #071426;
-    --arena-navy-soft: #0b2444;
-    --arena-red: #e63946;
-    --arena-green: #07914a;
-    --arena-text: #102b4c;
-    --arena-muted: #607995;
-    --arena-border: rgba(0, 74, 173, .13);
+.cat-pagina {
+    --cat-azul: var(--ls-azul-neon, #2f8bff);
+    --cat-azul-fundo: #004aad;
+    --cat-ciano: var(--ls-ciano, #3fd0ff);
+    --cat-vermelho: var(--ls-vermelho-neon, #ff4757);
+    --cat-verde: #22e07a;
+    --cat-texto: var(--ls-texto, #eaf2ff);
+    --cat-suave: var(--ls-texto-suave, #a9bcd9);
+    --cat-borda: var(--ls-borda, rgba(255, 255, 255, .1));
+    --cat-vidro: linear-gradient(180deg, rgba(16, 30, 68, .92), rgba(9, 18, 44, .94));
+    --cat-sombra: var(--ls-sombra, 0 18px 44px rgba(0, 0, 0, .42));
+    --cat-raio: 24px;
 
-    min-height: 100vh;
-    padding: 18px 0 72px;
-    color: var(--arena-text);
-    background:
-        radial-gradient(circle at 8% 9%, rgba(8, 120, 249, .08), transparent 26rem),
-        radial-gradient(circle at 96% 42%, rgba(230, 57, 70, .055), transparent 23rem),
-        linear-gradient(180deg, #f8fbff 0%, #edf4fb 100%);
-    font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 6px 0 40px;
+    color: var(--cat-texto);
 }
 
-.arena-categoria *,
-.arena-categoria *::before,
-.arena-categoria *::after {
+.cat-pagina *,
+.cat-pagina *::before,
+.cat-pagina *::after {
     box-sizing: border-box;
 }
 
-.arena-container {
-    width: min(1240px, calc(100% - 40px));
+.cat-shell {
+    width: min(1240px, 100%);
     margin: 0 auto;
 }
 
 /* ==========================================================
-   BREADCRUMB — segue a linguagem das outras páginas modernas
+   HERÓI — nome, texto e o painel com a contagem e os três
+   argumentos de venda da categoria
    ========================================================== */
-.arena-breadcrumb {
-    min-height: 44px;
-    margin: 0 0 15px;
-    padding: 0 2px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 9px;
-    color: #6f8398;
-    font-size: .80rem;
-    font-weight: 700;
-}
-
-.arena-breadcrumb a,
-.arena-breadcrumb-current {
-    min-height: 32px;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.arena-breadcrumb a {
-    color: var(--arena-blue-deep);
-    text-decoration: none;
-}
-
-.arena-breadcrumb a:hover {
-    color: var(--arena-red);
-}
-
-.arena-breadcrumb-separator {
-    color: #9badbf;
-    font-size: .62rem;
-}
-
-.arena-breadcrumb-current {
-    max-width: min(54vw, 520px);
-    overflow: hidden;
-    color: #344e68;
-    font-weight: 850;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* ==========================================================
-   HERO
-   ========================================================== */
-.arena-hero {
+.cat-hero {
     position: relative;
-    min-height: 330px;
-    padding: clamp(28px, 5vw, 56px);
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,.11);
-    border-radius: 31px;
     display: grid;
-    grid-template-columns: minmax(0, 1.30fr) minmax(310px, .70fr);
+    grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr);
     align-items: center;
-    gap: clamp(30px, 5vw, 66px);
+    gap: clamp(24px, 4vw, 56px);
+    margin-top: 6px;
+    padding: clamp(26px, 4.4vw, 50px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .11);
+    border-radius: 30px;
     color: #fff;
     background:
-        radial-gradient(circle at 82% 16%, rgba(8,120,249,.43), transparent 21rem),
-        radial-gradient(circle at 4% 118%, rgba(230,57,70,.20), transparent 25rem),
-        linear-gradient(135deg, #061222 0%, #0a2447 58%, #063d83 100%);
-    box-shadow: 0 25px 58px rgba(4,20,44,.24);
+        radial-gradient(circle at 84% 12%, rgba(47, 139, 255, .42), transparent 21rem),
+        radial-gradient(circle at 2% 112%, rgba(255, 71, 87, .22), transparent 24rem),
+        linear-gradient(135deg, #071226 0%, #0a2043 56%, #0a3b7d 100%);
+    box-shadow: var(--cat-sombra);
     isolation: isolate;
 }
 
-.arena-hero::before {
+/* a grade fina do fundo, só do lado do texto */
+.cat-hero::before {
     content: "";
     position: absolute;
     inset: 0;
     z-index: -2;
-    opacity: .30;
+    opacity: .3;
     background-image:
-        linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px);
+        linear-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .055) 1px, transparent 1px);
     background-size: 34px 34px;
-    mask-image: linear-gradient(to right, #000 35%, transparent 96%);
+    mask-image: linear-gradient(to right, #000 30%, transparent 92%);
+    -webkit-mask-image: linear-gradient(to right, #000 30%, transparent 92%);
 }
 
-.arena-hero::after {
+/* o anel de luz no canto */
+.cat-hero::after {
     content: "";
     position: absolute;
-    right: -90px;
-    bottom: -170px;
-    width: 390px;
-    height: 390px;
+    right: -110px;
+    bottom: -190px;
     z-index: -1;
-    border: 60px solid rgba(255,255,255,.035);
+    width: 420px;
+    height: 420px;
+    border: 60px solid rgba(255, 255, 255, .035);
     border-radius: 50%;
 }
 
-.arena-kicker {
-    width: fit-content;
-    margin-bottom: 16px;
-    padding: 8px 12px 8px 8px;
-    border: 1px solid rgba(111,180,255,.34);
-    border-radius: 12px;
+.cat-hero-copy {
+    min-width: 0;
+}
+
+.cat-kicker {
     display: inline-flex;
     align-items: center;
     gap: 9px;
+    width: fit-content;
+    max-width: 100%;
+    margin-bottom: 16px;
+    padding: 6px 13px 6px 6px;
+    border: 1px solid rgba(111, 180, 255, .34);
+    border-radius: 999px;
     color: #fff;
-    background: rgba(8,120,249,.17);
-    font-size: .68rem;
+    background: rgba(8, 120, 249, .17);
+    font-size: .66rem;
     font-weight: 900;
     letter-spacing: .09em;
     text-transform: uppercase;
 }
 
-.arena-kicker-icon {
-    width: 27px;
-    height: 27px;
-    border-radius: 8px;
+.cat-kicker-icone {
     display: grid;
+    flex: none;
     place-items: center;
-    background: linear-gradient(135deg, #ef4352, #c91f31);
-    box-shadow: 0 6px 15px rgba(166,17,35,.28);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff4757, #c91f31);
+    box-shadow: 0 6px 15px rgba(166, 17, 35, .3);
+    font-size: .72rem;
 }
 
-.arena-hero h1 {
-    max-width: 750px;
+.cat-hero h1 {
+    max-width: 14ch;
     margin: 0;
     color: #fff;
-    font-size: clamp(2.3rem, 5.8vw, 4.7rem);
-    font-weight: 950;
+    font-size: clamp(2.3rem, 5.4vw, 4.4rem);
+    font-weight: 900;
     line-height: .98;
-    letter-spacing: -.062em;
+    letter-spacing: -.05em;
+    overflow-wrap: anywhere;
 }
 
-.arena-hero-copy > p {
-    max-width: 710px;
-    margin: 20px 0 0;
+.cat-hero-copy > p {
+    max-width: 640px;
+    margin: 18px 0 0;
     padding-left: 16px;
-    border-left: 3px solid var(--arena-blue);
+    border-left: 3px solid var(--cat-azul);
     color: #d2deed;
-    font-size: .96rem;
-    font-weight: 520;
-    line-height: 1.72;
+    font-size: clamp(.94rem, 1.1vw, 1.04rem);
+    font-weight: 500;
+    line-height: 1.7;
 }
 
-.arena-hero-actions {
-    margin-top: 22px;
+.cat-hero-acoes {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    margin-top: 24px;
 }
 
-.arena-hero-link {
-    min-height: 44px;
-    padding: 0 15px;
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: 12px;
+/* ---------- botões da página ---------- */
+.cat-botao {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 9px;
+    min-height: 46px;
+    padding: 0 19px;
+    border: 1px solid transparent;
+    border-radius: 999px;
     color: #fff;
-    background: rgba(4,20,42,.48);
-    font-size: .72rem;
-    font-weight: 850;
+    background: linear-gradient(135deg, var(--cat-azul), var(--cat-azul-fundo));
+    box-shadow: 0 10px 24px rgba(47, 139, 255, .26);
+    font-size: .85rem;
+    font-weight: 800;
+    line-height: 1.2;
     text-decoration: none;
+    white-space: nowrap;
+    transition: transform .2s ease, filter .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.cat-botao:hover {
+    color: #fff;
+    transform: translateY(-1px);
+    filter: brightness(1.07);
+}
+
+.cat-botao i {
+    font-size: 1rem;
+}
+
+.cat-botao--zap {
+    background: linear-gradient(135deg, #1fd66f, #12a454);
+    box-shadow: 0 10px 24px rgba(31, 214, 111, .28);
+}
+
+.cat-botao--fantasma {
+    border-color: rgba(255, 255, 255, .16);
+    background: rgba(255, 255, 255, .07);
+    box-shadow: none;
     backdrop-filter: blur(8px);
 }
 
-.arena-hero-link:hover {
-    color: #fff;
-    border-color: rgba(114,182,255,.48);
-    background: rgba(8,120,249,.20);
+.cat-botao--fantasma:hover {
+    border-color: rgba(114, 182, 255, .48);
+    background: rgba(47, 139, 255, .18);
+    filter: none;
 }
 
-/* ==========================================================
-   QUADRO VISUAL — substitui COMPLETAMENTE a imagem da categoria
-   ========================================================== */
-.arena-visual-board {
+/* ---------- o painel de vidro ---------- */
+.cat-painel {
     position: relative;
-    padding: 16px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,.14);
-    border-radius: 23px;
-    background:
-        linear-gradient(145deg, rgba(255,255,255,.105), rgba(255,255,255,.045));
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, .105), rgba(255, 255, 255, .04));
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.09),
-        0 20px 45px rgba(0,0,0,.17);
+        inset 0 1px 0 rgba(255, 255, 255, .09),
+        0 20px 45px rgba(0, 0, 0, .2);
     backdrop-filter: blur(12px);
 }
 
-.arena-board-head {
-    padding: 3px 3px 13px;
+.cat-painel-topo {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+    padding: 2px 2px 14px;
 }
 
-.arena-board-head strong {
+.cat-contagem strong,
+.cat-contagem span {
+    display: block;
+}
+
+.cat-contagem strong {
     color: #fff;
-    font-size: .82rem;
+    font-size: 2.5rem;
     font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.04em;
+    font-variant-numeric: tabular-nums;
 }
 
-.arena-board-live {
-    min-height: 25px;
-    padding: 0 8px;
-    border: 1px solid rgba(110,231,183,.25);
-    border-radius: 999px;
+.cat-contagem span {
+    margin-top: 5px;
+    color: #aebfd4;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.cat-painel-vivo {
     display: inline-flex;
+    flex: none;
     align-items: center;
     gap: 6px;
+    min-height: 26px;
+    padding: 0 9px;
+    border: 1px solid rgba(110, 231, 183, .25);
+    border-radius: 999px;
     color: #b8f7d8;
-    background: rgba(7,145,74,.15);
-    font-size: .57rem;
+    background: rgba(7, 145, 74, .15);
+    font-size: .58rem;
     font-weight: 900;
-    letter-spacing: .05em;
+    letter-spacing: .06em;
     text-transform: uppercase;
 }
 
-.arena-board-live::before {
+.cat-painel-vivo::before {
     content: "";
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: #43dc91;
-    box-shadow: 0 0 0 4px rgba(67,220,145,.12);
+    box-shadow: 0 0 0 4px rgba(67, 220, 145, .14);
 }
 
-.arena-board-grid {
+/* os três argumentos de venda: ícone em degradê, título e uma linha */
+.cat-beneficios {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 9px;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-.arena-board-card {
-    min-height: 101px;
-    padding: 13px;
-    border: 1px solid rgba(255,255,255,.11);
-    border-radius: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    background: rgba(4,20,42,.43);
+.cat-beneficio {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    background: rgba(4, 20, 42, .42);
 }
 
-.arena-board-icon {
-    width: 33px;
-    height: 33px;
-    border-radius: 10px;
+.cat-beneficio-icone {
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(135deg, #0758c9, #0878f9);
-}
-
-.arena-board-card:nth-child(2) .arena-board-icon {
-    background: linear-gradient(135deg, #ca2434, #ef4352);
-}
-
-.arena-board-card:nth-child(3) .arena-board-icon {
-    background: linear-gradient(135deg, #087443, #12ab63);
-}
-
-.arena-board-card:nth-child(4) .arena-board-icon {
-    background: linear-gradient(135deg, #7755c7, #9b78ee);
-}
-
-.arena-board-card strong,
-.arena-board-card span {
-    display: block;
-}
-
-.arena-board-card strong {
-    margin-top: 10px;
-    color: #fff;
-    font-size: 1.18rem;
-    font-weight: 950;
-    line-height: 1;
-}
-
-.arena-board-card span {
-    margin-top: 4px;
-    color: #aebfd4;
-    font-size: .60rem;
-    font-weight: 700;
-    line-height: 1.35;
-}
-
-.arena-board-footer {
-    margin-top: 9px;
-    padding: 11px 12px;
-    border: 1px solid rgba(255,255,255,.10);
+    width: 40px;
+    height: 40px;
     border-radius: 13px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    color: #c5d3e3;
-    background: rgba(4,20,42,.38);
-    font-size: .63rem;
-    font-weight: 700;
-    line-height: 1.45;
+    color: #fff;
+    background: linear-gradient(135deg, #0758c9, var(--cat-azul));
+    box-shadow: 0 8px 18px rgba(47, 139, 255, .28);
+    font-size: .98rem;
 }
 
-.arena-board-footer i {
-    color: #72b6ff;
+.cat-beneficio:nth-child(2) .cat-beneficio-icone {
+    background: linear-gradient(135deg, #c91f31, var(--cat-vermelho));
+    box-shadow: 0 8px 18px rgba(255, 71, 87, .26);
+}
+
+.cat-beneficio:nth-child(3) .cat-beneficio-icone {
+    background: linear-gradient(135deg, #0b9e52, var(--cat-verde));
+    box-shadow: 0 8px 18px rgba(34, 224, 122, .26);
+}
+
+.cat-beneficio-texto {
+    display: grid;
+    min-width: 0;
+}
+
+.cat-beneficio-texto b {
+    color: #fff;
+    font-size: .86rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.cat-beneficio-texto small {
+    margin-top: 2px;
+    color: #aebfd4;
+    font-size: .7rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 /* ==========================================================
-   BARRA DA ARENA
+   FICHAS — filtro de disponibilidade e ordem, em links.
+   No celular cada fileira rola de lado, como num aplicativo.
    ========================================================== */
-.arena-command {
-    margin-top: 25px;
-    padding: 18px 20px;
-    border: 1px solid var(--arena-border);
-    border-radius: 21px;
-    display: grid;
-    grid-template-columns: minmax(210px, .8fr) minmax(0, 1.2fr);
-    align-items: center;
-    gap: 20px;
-    background:
-        radial-gradient(circle at 100% 0, rgba(8,120,249,.08), transparent 16rem),
-        linear-gradient(145deg, #fff, #eef5fc);
-    box-shadow: 0 16px 38px rgba(15,47,83,.10);
-}
-
-.arena-command-copy strong,
-.arena-command-copy span {
-    display: block;
-}
-
-.arena-command-copy strong {
-    color: #173a58;
-    font-size: .93rem;
-    font-weight: 900;
-}
-
-.arena-command-copy span {
-    margin-top: 4px;
-    color: #6a8198;
-    font-size: .68rem;
-    font-weight: 650;
-}
-
-.arena-order {
+.cat-barra {
     display: flex;
-    justify-content: flex-end;
     flex-wrap: wrap;
-    gap: 7px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 24px;
+    margin-top: 18px;
+    padding: 12px 14px;
+    border: 1px solid var(--cat-borda);
+    border-radius: 22px;
+    background: var(--cat-vidro);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
 }
 
-.arena-order a {
-    min-height: 40px;
-    padding: 0 12px;
-    border: 1px solid rgba(0,74,173,.12);
-    border-radius: 11px;
+.cat-barra-grupo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.cat-barra-rotulo {
     display: inline-flex;
+    flex: none;
     align-items: center;
     gap: 7px;
-    color: #4d6985;
-    background: rgba(255,255,255,.88);
+    color: var(--cat-suave);
     font-size: .66rem;
-    font-weight: 850;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.cat-barra-rotulo i {
+    color: var(--cat-ciano);
+}
+
+.cat-fichas {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    padding: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.cat-fichas::-webkit-scrollbar {
+    display: none;
+}
+
+.cat-ficha {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 999px;
+    color: #cfe0ff;
+    background: rgba(255, 255, 255, .06);
+    font-size: .76rem;
+    font-weight: 800;
     text-decoration: none;
-    transition: .2s ease;
+    white-space: nowrap;
+    transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
 }
 
-.arena-order a:hover {
+.cat-ficha i {
+    color: var(--cat-ciano);
+    font-size: .74rem;
+}
+
+/* a contagem dentro da ficha de disponibilidade */
+.cat-ficha b {
+    min-width: 22px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .1);
+    font-size: .64rem;
+    font-weight: 900;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.cat-ficha:hover {
+    color: #fff;
+    border-color: rgba(63, 208, 255, .4);
+    background: rgba(63, 208, 255, .1);
     transform: translateY(-1px);
-    color: var(--arena-blue-deep);
-    border-color: rgba(8,120,249,.30);
 }
 
-.arena-order a.is-active {
+.cat-ficha.is-ativa {
     color: #fff;
     border-color: transparent;
-    background: linear-gradient(135deg, var(--arena-blue-deep), var(--arena-blue));
-    box-shadow: 0 8px 18px rgba(0,74,173,.19);
+    background: linear-gradient(135deg, var(--cat-azul-fundo), var(--cat-azul));
+    box-shadow: 0 8px 18px rgba(47, 139, 255, .28);
+}
+
+.cat-ficha.is-ativa i {
+    color: #fff;
+}
+
+.cat-ficha.is-ativa b {
+    background: rgba(255, 255, 255, .22);
 }
 
 /* ==========================================================
-   RESULTADOS
+   PRODUTOS — cabeçalho da seção e a grade da home
    ========================================================== */
-.arena-results {
-    padding-top: 39px;
-    scroll-margin-top: 90px;
+.cat-produtos {
+    margin-top: 30px;
+    scroll-margin-top: 92px;
 }
 
-.arena-results-head {
-    margin-bottom: 20px;
+.cat-produtos-cabeca {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 18px;
+    gap: 16px;
+    margin-bottom: 18px;
 }
 
-.arena-results-head small {
+.cat-produtos-cabeca small {
     display: block;
-    color: var(--arena-blue-deep);
-    font-size: .66rem;
+    color: var(--cat-ciano);
+    font-size: .64rem;
     font-weight: 900;
     letter-spacing: .09em;
     text-transform: uppercase;
 }
 
-.arena-results-head h2 {
+.cat-produtos-cabeca h2 {
     margin: 4px 0 0;
-    color: var(--arena-text);
-    font-size: clamp(1.55rem, 3.4vw, 2.35rem);
-    font-weight: 950;
-    letter-spacing: -.044em;
+    color: #fff;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -.04em;
 }
 
-.arena-results-meta {
-    color: #607995;
-    font-size: .72rem;
+.cat-produtos-meta {
+    flex: none;
+    color: var(--cat-suave);
+    font-size: .74rem;
     font-weight: 750;
+    white-space: nowrap;
 }
 
-/* ==========================================================
-   CARDS NOVOS
-   Diferentes dos cards 3-colunas do catálogo geral.
-   ========================================================== */
-.arena-products {
+/* A grade: as mesmas colunas da home (2 no celular, 3 no tablet, 4 no
+   computador), para o card ter o mesmo tamanho nas duas telas. */
+.cat-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-}
-
-.arena-product {
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid rgba(0,74,173,.13);
-    border-radius: 24px;
-    display: grid;
-    grid-template-columns: minmax(175px, .42fr) minmax(0, .58fr);
-    background: #fff;
-    box-shadow: 0 14px 35px rgba(14,48,85,.10);
-    transition:
-        transform .28s cubic-bezier(.22,1,.36,1),
-        border-color .28s ease,
-        box-shadow .28s ease;
-}
-
-.arena-product:hover {
-    transform: translateY(-5px);
-    border-color: rgba(8,120,249,.30);
-    box-shadow: 0 22px 46px rgba(10,45,84,.15);
-}
-
-.arena-product-visual {
-    position: relative;
-    min-height: 100%;
-    padding: 16px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background:
-        radial-gradient(circle at 25% 18%, rgba(8,120,249,.17), transparent 38%),
-        radial-gradient(circle at 92% 90%, rgba(230,57,70,.08), transparent 32%),
-        linear-gradient(145deg, #eaf3fc, #dceaf8);
-    text-decoration: none;
-}
-
-.arena-product-visual::after {
-    content: "";
-    position: absolute;
-    inset: auto 13% 16px;
-    height: 18px;
-    border-radius: 50%;
-    background: rgba(8,38,73,.14);
-    filter: blur(11px);
-}
-
-.arena-product-visual img {
-    position: relative;
-    z-index: 1;
+    align-items: stretch;
+    gap: 12px;
     width: 100%;
-    height: 210px;
+    margin: 0;
+}
+
+/* ---------- O CARD DA HOME, FORA DA HOME ----------
+   O desenho é de ls-tema.css (`.card-mini`). O que a home herda de
+   ls-home.css e aqui precisa ser reposto: a posição da foto, do selo de
+   estado e da estrela, e o tamanho da imagem dentro da caixa. */
+.cat-grid .card-link {
     display: block;
-    object-fit: contain;
-    filter: drop-shadow(0 13px 13px rgba(9,31,62,.19));
-    transition: transform .38s cubic-bezier(.22,1,.36,1);
-}
-
-.arena-product:hover .arena-product-visual img {
-    transform: scale(1.045) translateY(-2px);
-}
-
-.arena-product-index {
-    position: absolute;
-    top: 13px;
-    left: 13px;
-    z-index: 3;
-    min-width: 36px;
-    height: 30px;
-    padding: 0 8px;
-    border: 1px solid rgba(255,255,255,.65);
-    border-radius: 9px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    background: rgba(7,20,38,.76);
-    font-size: .61rem;
-    font-weight: 900;
-    backdrop-filter: blur(7px);
-}
-
-.arena-product-status {
-    position: absolute;
-    right: 13px;
-    bottom: 13px;
-    z-index: 3;
-    min-height: 30px;
-    padding: 0 9px;
-    border: 1px solid rgba(255,255,255,.56);
-    border-radius: 9px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #fff;
-    font-size: .57rem;
-    font-weight: 900;
-    letter-spacing: .035em;
-    text-transform: uppercase;
-    backdrop-filter: blur(7px);
-}
-
-.arena-product-status.store {
-    background: rgba(7,145,74,.90);
-}
-
-.arena-product-status.quote {
-    background: rgba(0,74,173,.90);
-}
-
-.arena-product-no-image {
-    position: relative;
-    z-index: 1;
-    color: #6886a5;
-    font-size: .72rem;
-    font-weight: 850;
-    text-align: center;
-}
-
-.arena-product-content {
     min-width: 0;
-    padding: 20px 20px 17px;
-    display: flex;
-    flex-direction: column;
-}
-
-.arena-product-eyebrow {
-    margin-bottom: 7px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--arena-blue-deep);
-    font-size: .58rem;
-    font-weight: 900;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-}
-
-.arena-product-eyebrow::before {
-    content: "";
-    width: 17px;
-    height: 3px;
-    border-radius: 999px;
-    background: var(--arena-red);
-}
-
-.arena-product-title {
+    height: 100%;
     color: inherit;
     text-decoration: none;
 }
 
-.arena-product-title h3 {
-    margin: 0;
-    color: #112d4d;
-    font-size: 1.13rem;
-    font-weight: 950;
-    line-height: 1.22;
-    letter-spacing: -.028em;
-}
-
-.arena-product-title:hover h3 {
-    color: var(--arena-blue-deep);
-}
-
-.arena-product-description {
-    min-height: 3.9em;
-    margin: 9px 0 0;
+.cat-grid .card-produto {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
     overflow: hidden;
-    display: -webkit-box;
-    color: #60758d;
-    font-size: .72rem;
-    font-weight: 520;
-    line-height: 1.52;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    isolation: isolate;
 }
 
-.arena-product-tags {
-    margin-top: 11px;
+.cat-grid .img-area {
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.arena-product-tag {
-    max-width: 100%;
-    min-height: 24px;
-    padding: 0 8px;
-    border: 1px solid rgba(0,74,173,.10);
-    border-radius: 999px;
-    display: inline-flex;
     align-items: center;
+    justify-content: center;
+    width: 100%;
     overflow: hidden;
-    color: #356ba2;
-    background: #edf5fd;
-    font-size: .56rem;
-    font-weight: 800;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.arena-product-tech {
-    margin-top: 13px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(0,74,173,.09);
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-}
-
-.arena-tech {
-    min-height: 36px;
-    padding: 7px 8px;
-    border: 1px solid rgba(0,74,173,.08);
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: #526d88;
-    background: #f6f9fc;
-    font-size: .59rem;
-    font-weight: 750;
-    line-height: 1.35;
-}
-
-.arena-tech i {
-    width: 15px;
-    flex: 0 0 15px;
-    color: var(--arena-blue);
-    text-align: center;
-}
-
-.arena-product-rating {
-    margin-top: 12px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.arena-stars {
-    color: #f5b301;
-    font-size: .88rem;
-    letter-spacing: 1px;
-    white-space: nowrap;
-}
-
-.arena-rating-value {
-    color: #647b93;
-    font-size: .62rem;
-    font-weight: 850;
-}
-
-.arena-product-favoritos {
-    padding: 0 20px 4px;
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-}
-
-.arena-product-footer {
-    grid-column: 1 / -1;
-    padding: 13px 16px;
-    border-top: 1px solid rgba(0,74,173,.09);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    background: linear-gradient(180deg, #fbfdff, #f2f7fc);
-}
-
-.arena-product-price small,
-.arena-product-price strong {
+.cat-grid .img-area img {
+    position: relative;
+    z-index: 1;
     display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
 }
 
-.arena-product-price small {
-    color: #70859b;
-    font-size: .56rem;
-    font-weight: 850;
-    letter-spacing: .035em;
-    text-transform: uppercase;
-}
-
-.arena-product-price strong {
-    margin-top: 2px;
-    color: #08743e;
-    font-size: 1.02rem;
-    font-weight: 950;
-}
-
-.arena-product-price.is-quote strong {
-    color: var(--arena-blue-deep);
-    font-size: .79rem;
-}
-
-.arena-product-cta {
-    min-height: 40px;
-    padding: 0 13px;
-    border-radius: 11px;
+.cat-grid .produto-status {
+    position: absolute;
+    z-index: 3;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    color: #fff;
-    background: linear-gradient(135deg, #082a5e, var(--arena-blue));
-    box-shadow: 0 8px 18px rgba(0,74,173,.18);
-    font-size: .66rem;
-    font-weight: 900;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.cat-grid .produto-title-link {
+    color: inherit;
     text-decoration: none;
 }
 
-.arena-product-cta:hover {
-    color: #fff;
-    transform: translateY(-1px);
+.cat-grid .avaliacao {
+    display: flex;
+    align-items: center;
+}
+
+.cat-grid .stars {
+    display: inline-flex;
+    line-height: 0;
 }
 
 /* ==========================================================
-   VAZIO / PAGINAÇÃO
+   VAZIO
    ========================================================== */
-.arena-empty {
-    padding: 65px 25px;
-    border: 1px dashed rgba(0,74,173,.22);
-    border-radius: 24px;
-    color: #607995;
-    background: rgba(255,255,255,.72);
+.cat-vazio {
+    padding: clamp(36px, 6vw, 64px) 24px;
+    border: 1px dashed rgba(63, 208, 255, .35);
+    border-radius: var(--cat-raio);
+    background: linear-gradient(180deg, rgba(16, 30, 68, .7), rgba(9, 18, 44, .8));
     text-align: center;
 }
 
-.arena-empty-icon {
-    width: 54px;
-    height: 54px;
-    margin: 0 auto 13px;
-    border-radius: 16px;
+.cat-vazio-icone {
     display: grid;
     place-items: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    border-radius: 20px;
     color: #fff;
-    background: linear-gradient(135deg, var(--arena-blue-deep), var(--arena-blue));
+    background: linear-gradient(135deg, var(--cat-azul-fundo), var(--cat-azul));
+    box-shadow: 0 14px 30px rgba(47, 139, 255, .3);
+    font-size: 1.5rem;
 }
 
-.arena-empty h3 {
+.cat-vazio h3 {
     margin: 0;
-    color: #173a58;
-    font-size: 1.15rem;
+    color: #fff;
+    font-size: 1.3rem;
     font-weight: 900;
+    letter-spacing: -.02em;
 }
 
-.arena-empty p {
+.cat-vazio p {
     max-width: 520px;
-    margin: 8px auto 0;
-    font-size: .76rem;
+    margin: 10px auto 0;
+    color: var(--cat-suave);
+    font-size: .86rem;
+    line-height: 1.65;
+}
+
+.cat-vazio-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ==========================================================
+   PAGINAÇÃO
+   ========================================================== */
+.cat-paginacao {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 28px;
+}
+
+.cat-paginacao a,
+.cat-paginacao span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--cat-borda);
+    border-radius: 999px;
+    color: #cfe0ff;
+    background: rgba(255, 255, 255, .06);
+    font-size: .74rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.cat-paginacao a:hover {
+    color: #fff;
+    border-color: rgba(63, 208, 255, .4);
+    background: rgba(63, 208, 255, .1);
+}
+
+.cat-paginacao .is-atual {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cat-azul-fundo), var(--cat-azul));
+    box-shadow: 0 8px 18px rgba(47, 139, 255, .28);
+}
+
+/* ==========================================================
+   CHAMADA DE ORÇAMENTO — fecha a página
+   ========================================================== */
+.cat-cta {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(16px, 2.5vw, 28px);
+    margin-top: 34px;
+    padding: clamp(22px, 3.5vw, 36px);
+    overflow: hidden;
+    border: 1px solid rgba(34, 224, 122, .28);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 0 0, rgba(34, 224, 122, .22), transparent 22rem),
+        radial-gradient(circle at 100% 100%, rgba(47, 139, 255, .24), transparent 24rem),
+        linear-gradient(135deg, #071a2b, #0a1f3f);
+    box-shadow: var(--cat-sombra);
+    isolation: isolate;
+}
+
+.cat-cta-icone {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    color: #fff;
+    background: linear-gradient(135deg, #1fd66f, #12a454);
+    box-shadow: 0 14px 30px rgba(31, 214, 111, .32);
+    font-size: 2rem;
+}
+
+.cat-cta-texto {
+    min-width: 0;
+}
+
+.cat-cta-texto h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -.03em;
+}
+
+.cat-cta-texto p {
+    max-width: 620px;
+    margin: 6px 0 0;
+    color: #c8d6ea;
+    font-size: .86rem;
     line-height: 1.6;
 }
 
-.arena-empty a {
-    margin-top: 17px;
-    min-height: 41px;
-    padding: 0 13px;
-    border-radius: 11px;
-    display: inline-flex;
-    align-items: center;
-    color: #fff;
-    background: var(--arena-blue-deep);
-    font-size: .68rem;
-    font-weight: 850;
-    text-decoration: none;
-}
-
-.arena-pagination {
-    margin-top: 32px;
+.cat-cta-acoes {
     display: flex;
-    align-items: center;
-    justify-content: center;
     flex-wrap: wrap;
-    gap: 6px;
-}
-
-.arena-pagination a,
-.arena-pagination span {
-    min-width: 39px;
-    height: 39px;
-    padding: 0 10px;
-    border: 1px solid rgba(0,74,173,.13);
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #516d89;
-    background: #fff;
-    font-size: .68rem;
-    font-weight: 850;
-    text-decoration: none;
-}
-
-.arena-pagination .current {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--arena-blue-deep), var(--arena-blue));
-    box-shadow: 0 8px 18px rgba(0,74,173,.18);
+    justify-content: flex-end;
+    gap: 10px;
 }
 
 /* ==========================================================
    RESPONSIVO
    ========================================================== */
-@media (max-width: 1050px) {
-    .arena-hero {
-        grid-template-columns: minmax(0, 1fr) minmax(280px, .82fr);
-    }
-
-    .arena-products {
-        grid-template-columns: 1fr;
-    }
-
-    .arena-product {
-        grid-template-columns: minmax(210px, .34fr) minmax(0, .66fr);
+@media (min-width: 700px) {
+    .cat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
     }
 }
 
-@media (max-width: 820px) {
-    .arena-hero {
+@media (min-width: 1100px) {
+    .cat-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 22px;
+    }
+}
+
+@media (max-width: 1000px) {
+    .cat-hero {
         grid-template-columns: 1fr;
     }
 
-    .arena-visual-board {
+    .cat-painel {
         max-width: 620px;
     }
 
-    .arena-command {
-        grid-template-columns: 1fr;
+    .cat-cta {
+        grid-template-columns: auto minmax(0, 1fr);
     }
 
-    .arena-order {
+    .cat-cta-acoes {
+        grid-column: 1 / -1;
         justify-content: flex-start;
     }
 }
 
-@media (max-width: 650px) {
-    .arena-categoria {
-        padding-top: 10px;
-    }
-
-    .arena-container {
-        width: min(100% - 24px, 1240px);
-    }
-
-    .arena-hero {
-        min-height: 0;
-        padding: 27px 21px;
-        border-radius: 23px;
-    }
-
-    .arena-hero h1 {
-        font-size: clamp(2.05rem, 11vw, 3.25rem);
-    }
-
-    .arena-board-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .arena-results-head {
-        align-items: flex-start;
+@media (max-width: 760px) {
+    .cat-barra {
         flex-direction: column;
+        align-items: stretch;
+        padding: 10px 12px;
     }
 
-    .arena-product {
-        grid-template-columns: 1fr;
+    .cat-barra-grupo {
+        width: 100%;
     }
 
-    .arena-product-visual {
-        min-height: 245px;
+    /* A fileira rola de lado: o esmaecido na ponta avisa que há mais
+       fichas. O respiro à direita é do tamanho do esmaecido, para a
+       última ficha aparecer inteira no fim da rolagem. */
+    .cat-fichas {
+        padding-right: 28px;
+        mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
     }
 
-    .arena-product-visual img {
-        height: 220px;
-    }
-
-    .arena-product-footer {
-        grid-column: auto;
+    .cat-produtos-cabeca {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
     }
 }
 
-@media (max-width: 430px) {
-    .arena-board-grid {
+@media (max-width: 640px) {
+    .cat-pagina {
+        padding-top: 0;
+    }
+
+    .cat-hero {
+        gap: 20px;
+        padding: 24px 18px;
+        border-radius: 24px;
+    }
+
+    .cat-hero h1 {
+        max-width: none;
+        font-size: clamp(2rem, 10vw, 2.9rem);
+    }
+
+    .cat-hero-copy > p {
+        padding-left: 13px;
+        font-size: .92rem;
+    }
+
+    /* botões com largura de toque, lado a lado quando couberem */
+    .cat-hero-acoes .cat-botao,
+    .cat-vazio-acoes .cat-botao,
+    .cat-cta-acoes .cat-botao {
+        flex: 1 1 auto;
+    }
+
+    .cat-painel {
+        max-width: none;
+        padding: 14px;
+        border-radius: 20px;
+    }
+
+    .cat-contagem strong {
+        font-size: 2.1rem;
+    }
+
+    .cat-beneficio {
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px 11px;
+    }
+
+    .cat-beneficio-icone {
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        font-size: .9rem;
+    }
+
+    .cat-produtos {
+        margin-top: 24px;
+        scroll-margin-top: 76px;
+    }
+
+    .cat-cta {
         grid-template-columns: 1fr;
+        gap: 14px;
+        padding: 22px 18px;
+        border-radius: 24px;
     }
 
-    .arena-order {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+    .cat-cta-icone {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        font-size: 1.6rem;
+    }
+}
+
+/* Quem pediu menos movimento não ganha nada subindo ao passar o mouse. */
+@media (prefers-reduced-motion: reduce) {
+    .cat-botao,
+    .cat-ficha {
+        transition: none;
     }
 
-    .arena-order a {
-        justify-content: center;
-        text-align: center;
-    }
-
-    .arena-product-tech {
-        grid-template-columns: 1fr;
-    }
-
-    .arena-product-footer {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .arena-product-cta {
-        justify-content: center;
+    .cat-botao:hover,
+    .cat-ficha:hover {
+        transform: none;
     }
 }

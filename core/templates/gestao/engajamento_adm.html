@@ -38,6 +38,13 @@
 .selo.desejo{color:#F5C070;background:rgba(242, 169, 59, .12)}
 .selo.app{color:#C4B6A0;background:rgba(242, 169, 59, .12)}
 .selo.site{color:#C4B6A0;background:rgba(52, 43, 32, .12)}
+.eng-ajuste-topo{padding:15px 17px;border-bottom:1px solid rgba(44, 37, 27, .1);background:#1A1610}
+.eng-ajuste-topo h3{margin:0;color:#FCF8F1;font-size:.86rem}
+.eng-ajuste-topo p{margin:5px 0 0;max-width:760px;color:#A2917A;font-size:.74rem;line-height:1.5}
+.eng-ajuste-form{margin:0}
+.eng-ajuste-campo{width:110px;padding:6px 8px;border:1px solid rgba(242, 169, 59, .35);border-radius:10px;color:#FCF8F1;background:#13100B;font-size:.78rem;font-weight:800}
+.eng-ajuste-botao{padding:7px 12px;border:1px solid rgba(242, 169, 59, .5);border-radius:999px;color:#1A1610;background:#F2A93B;font-size:.72rem;font-weight:900;cursor:pointer}
+.eng-ajuste-botao:hover{background:#FFC46B}
 @media(max-width:1000px){.eng-kpis{grid-template-columns:repeat(2,1fr)}.eng-colunas{grid-template-columns:1fr}}
 </style>
 
@@ -162,5 +169,60 @@
       </table>
     </div>
   </section>
+
+  {% if pode_ajustar %}
+  <section class="eng-tabela eng-ajuste" id="ajustar-curtidas">
+    <header class="eng-ajuste-topo">
+      <div>
+        <h3>Adicionar ou remover curtidas</h3>
+        <p>O número que o site e o aplicativo mostram é o de curtidas de verdade mais o ajuste daqui. Para tirar, use um número negativo; o total nunca fica abaixo de zero. As curtidas das pessoas não são apagadas.</p>
+      </div>
+    </header>
+    <div class="rolagem">
+      <table>
+        <thead>
+          <tr><th>Produto</th><th>Curtidas de verdade</th><th>Ajuste</th><th>Total no site</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for linha in ajustes_brinquedos %}
+            <tr>
+              <td><span class="selo app">Brinquedo</span> {{ linha.nome }}</td>
+              <td>{{ linha.reais }}</td>
+              <td>
+                <form method="post" class="eng-ajuste-form" id="ajuste-{{ linha.tipo }}-{{ linha.id }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="produto" value="{{ linha.tipo }}">
+                  <input type="hidden" name="id" value="{{ linha.id }}">
+                  <input class="eng-ajuste-campo" type="number" name="ajuste" value="{{ linha.ajuste }}" min="-100000" max="100000" step="1" aria-label="Ajuste de curtidas de {{ linha.nome }}">
+                </form>
+              </td>
+              <td><strong class="eng-total">{{ linha.total }}</strong></td>
+              <td><button class="eng-ajuste-botao" type="submit" form="ajuste-{{ linha.tipo }}-{{ linha.id }}">Salvar</button></td>
+            </tr>
+          {% endfor %}
+          {% for linha in ajustes_pecas %}
+            <tr>
+              <td><span class="selo site">Peça</span> {{ linha.nome }}</td>
+              <td>{{ linha.reais }}</td>
+              <td>
+                <form method="post" class="eng-ajuste-form" id="ajuste-{{ linha.tipo }}-{{ linha.id }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="produto" value="{{ linha.tipo }}">
+                  <input type="hidden" name="id" value="{{ linha.id }}">
+                  <input class="eng-ajuste-campo" type="number" name="ajuste" value="{{ linha.ajuste }}" min="-100000" max="100000" step="1" aria-label="Ajuste de curtidas de {{ linha.nome }}">
+                </form>
+              </td>
+              <td><strong class="eng-total">{{ linha.total }}</strong></td>
+              <td><button class="eng-ajuste-botao" type="submit" form="ajuste-{{ linha.tipo }}-{{ linha.id }}">Salvar</button></td>
+            </tr>
+          {% endfor %}
+          {% if not ajustes_brinquedos and not ajustes_pecas %}
+            <tr><td colspan="5" class="eng-vazio">Nenhum produto ativo para ajustar.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
 </div>
 {% endblock %}

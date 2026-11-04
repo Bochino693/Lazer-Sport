@@ -96,6 +96,40 @@ def _guardar_fluxo(
         )
 
 
+def enviar_confirmacao_de_email(request, usuario) -> bool:
+    """Manda o e-mail de confirmação do endereço (allauth), sem travar o cadastro.
+
+    A conta entra e compra sem confirmar (ACCOUNT_EMAIL_VERIFICATION =
+    "optional"); confirmar só diz que o e-mail é da pessoa. Falha de SMTP
+    não pode derrubar o cadastro: vira log e a pessoa pede de novo depois.
+    """
+    if not (usuario.email or "").strip():
+        return False
+    # Na API o visitante chega com request.user = None (UNAUTHENTICATED_USER
+    # = None): os context processors do e-mail esperam um usuário.
+    if getattr(request, "user", None) is None:
+        from django.contrib.auth.models import AnonymousUser
+
+        request.user = AnonymousUser()
+    try:
+        from allauth.account.models import EmailAddress
+
+        endereco, _ = EmailAddress.objects.get_or_create(
+            user=usuario,
+            email__iexact=usuario.email,
+            defaults={"email": usuario.email, "primary": True, "verified": False},
+        )
+        if endereco.verified:
+            return False
+        endereco.send_confirmation(request, signup=True)
+        return True
+    except Exception:  # noqa: BLE001
+        import logging
+
+        logging.getLogger(__name__).exception("E-mail de confirmação não enviado para %s", usuario.email)
+        return False
+
+
 def _redirecionar_para_telefone():
     """O fragmento faz o navegador chegar e rolar até o campo."""
     return redirect(f"{reverse('completar_perfil')}#telefone-box")
@@ -233,22 +267,40 @@ class RegistrarView(View):
         return render(
             request,
             self.template_name,
-            {"form": CadastroForm()},
+            self._contexto(CadastroForm()),
         )
+
+    @staticmethod
+    def _contexto(form):
+        """O formulário mais o desafio de robô (selo e pergunta): ver core/captcha.py."""
+        from django.conf import settings
+
+        from . import captcha
+
+        desafio = captcha.novo_desafio()
+        return {
+            "form": form,
+            "selo_cadastro": desafio["selo"],
+            "pergunta_humana": desafio["pergunta"],
+            "turnstile_site_key": settings.TURNSTILE_SITE_KEY if captcha.turnstile_ativo() else "",
+        }
 
     @transaction.atomic
     def post(self, request):
-        form = CadastroForm(request.POST)
+        form = CadastroForm(request.POST, request=request)
 
         if not form.is_valid():
-            messages.error(
-                request,
-                "Confira os campos destacados e tente novamente.",
-            )
+            # o erro do freio (robô, limite por IP) é de formulário inteiro:
+            # a mensagem vai no topo, não em "confira os campos"
+            if not form.non_field_errors():
+                messages.error(
+                    request,
+                    "Confira os campos destacados e tente novamente.",
+                )
             return render(
                 request,
                 self.template_name,
-                {"form": form},
+                self._contexto(form),
             )
 
         usuario = form.salvar()
@@ -266,6 +318,7 @@ class RegistrarView(View):
         )
 
         _guardar_fluxo(request, tipo="cadastro")
+        enviar_confirmacao_de_email(request, usuario)
 
         return redirect(
             f"{reverse('conta_transicao')}#conta-criada"

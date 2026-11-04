@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro pausado — Lazer & Sport{% endblock %}
+
+{% block content %}
+{% include "partials/auth_estilo.html" %}
+<section class="ls-auth">
+    <div class="ls-auth-shell ls-auth-shell--simples">
+        <div class="ls-auth-main">
+            <span class="ls-auth-badge"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Segurança</span>
+            <h1>Cadastro pausado por um tempo</h1>
+            <p class="ls-auth-sub">
+                Já foram criadas várias contas a partir da sua conexão nas últimas horas.
+                Para proteger o site de cadastros automáticos, novas contas desse endereço
+                ficam pausadas por um tempo.
+            </p>
+            <p class="ls-auth-sub">
+                Se já tem conta, <a href="{% url 'login' %}#login-box">entre por aqui</a>.
+                Se precisa de ajuda, fale com a gente pelo
+                <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">WhatsApp</a>.
+            </p>
+            <a class="ls-btn-principal" href="{% url 'home' %}">Voltar ao início</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
