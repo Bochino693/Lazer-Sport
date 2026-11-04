@@ -105,14 +105,40 @@
     padding: 18px;
     position: relative;
 }
+/* A foto fica parada e INTEIRA: `contain` nunca recorta, e não há zoom
+   no passar do mouse -- a ampliação é a galeria em tela cheia, ao clicar. */
 .peca-imagem > img {
+    -webkit-user-drag: none;
+    cursor: zoom-in;
     display: block;
     height: 100%;
     object-fit: contain;
-    transition: transform .35s ease;
+    object-position: center;
+    user-select: none;
     width: 100%;
 }
-.peca-imagem:hover > img { transform: scale(1.025); }
+/* o botão de ampliar, no canto de cima da vitrine */
+.peca-ampliar {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid #d8e2ef;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(16, 43, 77, .14);
+    color: var(--ls-navy);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: .95rem;
+    height: 40px;
+    justify-content: center;
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    transition: background .2s ease;
+    width: 40px;
+    z-index: 3;
+}
+.peca-ampliar:hover { background: #fff; }
 .peca-sem-imagem { color: #98a2b3; font-weight: 700; text-align: center; }
 .peca-sem-imagem i { display: block; font-size: 3rem; margin-bottom: 10px; }
 .peca-galeria-nav {
@@ -170,14 +196,14 @@
     cursor: pointer;
     overflow: hidden;
     padding: 4px;
-    transition: border-color .2s, box-shadow .2s, transform .2s;
+    transition: border-color .2s, box-shadow .2s;
 }
 .peca-miniatura:hover, .peca-miniatura.ativa {
     border-color: var(--ls-blue);
     box-shadow: 0 5px 15px rgba(7, 88, 201, .16);
-    transform: translateY(-1px);
 }
-.peca-miniatura img { height: 100%; object-fit: cover; width: 100%; }
+/* a miniatura também mostra a peça inteira (era `cover`, que recortava) */
+.peca-miniatura img { height: 100%; object-fit: contain; width: 100%; }
 .peca-beneficios {
     display: grid;
     gap: 10px;
@@ -321,30 +347,33 @@
     .peca-btn.voltar { grid-column: auto; }
 }
 
-/* Sistema visual do catálogo: fundo claro e painéis informativos coloridos. */
+/* Sistema visual do site à noite: a página NÃO tem fundo próprio -- fica
+   o azul-marinho do site (`html.ls-escuro body`, com as luzes fixas de
+   `ls-tema.css`), o mesmo que está atrás do cabeçalho e do catálogo.
+   Sobra só uma malha fina, clara, que se apaga para baixo. */
 .peca-page {
     --ls-blue: #0878f9;
     --ls-navy: #004aad;
     --ls-red: #e63946;
-    --ls-text: #102b4c;
-    --ls-muted: #647d98;
-    --ls-line: rgba(0, 74, 173, .14);
-    background:
-        radial-gradient(circle at 7% 5%, rgba(8, 120, 249, .10), transparent 25rem),
-        radial-gradient(circle at 96% 16%, rgba(230, 57, 70, .07), transparent 23rem),
-        linear-gradient(180deg, #fbfdff, #f2f7fc);
+    --ls-text: #eaf2ff;
+    --ls-muted: #a9bcd9;
+    --ls-line: rgba(255, 255, 255, .1);
+    background: transparent;
+    color: var(--ls-text);
     isolation: isolate;
     overflow: hidden;
     position: relative;
 }
 .peca-page::before {
     background-image:
-        linear-gradient(rgba(0,74,173,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,74,173,.025) 1px, transparent 1px);
-    background-size: 42px 42px;
+        radial-gradient(circle at 12% 0, rgba(8, 120, 249, .14), transparent 26rem),
+        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
     content: "";
     inset: 0;
     mask-image: linear-gradient(to bottom, #000, transparent 72%);
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent 72%);
     pointer-events: none;
     position: absolute;
     z-index: 0;
@@ -389,17 +418,79 @@
         radial-gradient(circle at 0 100%, rgba(230,57,70,.14), transparent 20rem),
         linear-gradient(145deg, #0b2342, #071426 75%);
 }
+/* ---- a vitrine da foto: vidro azul-marinho (não mais a caixa branca),
+   malha fina, foco de luz atrás da peça -- o mesmo desenho da página do
+   produto. Mais alta que larga, com faixas em cima e embaixo para o
+   selo, o botão de ampliar e o contador não cobrirem a foto ---- */
 .peca-imagem {
-    border-color: rgba(126, 190, 255, .52);
-    background: radial-gradient(circle at 50% 38%, #fbfdff 0%, #eaf4ff 58%, #d9e9fa 100%);
-    box-shadow: 0 20px 45px rgba(0, 8, 24, .34), 0 0 0 6px rgba(85, 177, 255, .08);
+    aspect-ratio: 4 / 5;
+    padding: 58px 26px;
+    border-color: rgba(126, 190, 255, .30);
+    background:
+        radial-gradient(circle at 50% 34%, rgba(63, 170, 255, .32), transparent 46%),
+        radial-gradient(circle at 90% 100%, rgba(230, 57, 70, .18), transparent 38%),
+        linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px),
+        linear-gradient(160deg, #12376b 0%, #0a1f42 52%, #060f24 100%);
+    background-size: auto, auto, 26px 26px, 26px 26px, auto;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .14),
+        0 22px 50px rgba(0, 8, 24, .45),
+        0 0 0 6px rgba(85, 177, 255, .06);
 }
+.peca-imagem::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 9%;
+    width: 72%;
+    aspect-ratio: 4 / 1;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(63, 208, 255, .26), transparent 68%);
+    filter: blur(18px);
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+.peca-imagem > img {
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 24px 28px rgba(0, 0, 0, .55));
+}
+.peca-sem-imagem { position: relative; z-index: 1; color: #8fa9c9; }
+/* com mais de uma foto, as setas ganham faixas laterais só delas: no
+   desktop nenhuma seta cobre a foto */
+@media (min-width: 601px) {
+    .peca-imagem:has(.peca-galeria-nav) { padding-left: 62px; padding-right: 62px; }
+}
+/* o selo "Disponível" no mesmo vidro escuro do selo da página do produto */
+.peca-selo {
+    border-color: rgba(60, 220, 140, .5);
+    color: #8df5bd;
+    background: rgba(3, 32, 20, .78);
+    box-shadow: 0 10px 24px rgba(0, 6, 20, .4), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.peca-selo::before {
+    background: #2ee88a;
+    box-shadow: 0 0 0 4px rgba(46, 232, 138, .22), 0 0 12px rgba(46, 232, 138, .8);
+}
+.peca-ampliar {
+    border-color: rgba(255,255,255,.54);
+    color: #fff;
+    background: linear-gradient(145deg, #0878f9, #004aad);
+    box-shadow: 0 8px 20px rgba(0, 8, 24, .4);
+}
+.peca-ampliar:hover { background: linear-gradient(145deg, #ef4352, #b91e30); }
 .peca-galeria-nav button { border-color: rgba(255,255,255,.54); color: #fff; background: linear-gradient(145deg, #0878f9, #004aad); }
 .peca-galeria-nav button:hover { background: linear-gradient(145deg, #ef4352, #b91e30); }
 .peca-contador { border: 1px solid rgba(255,255,255,.18); background: rgba(5,20,39,.90); }
-.peca-miniatura { border-color: rgba(119,184,255,.25); background: #eaf4ff; }
+.peca-miniatura {
+    border-color: rgba(119,184,255,.22);
+    background: linear-gradient(160deg, #11315f, #081a38);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
 .peca-miniatura:hover,
-.peca-miniatura.ativa { border-color: #4eb5ff; box-shadow: 0 0 0 2px rgba(22,135,255,.18), 0 9px 24px rgba(0,0,0,.32); }
+.peca-miniatura.ativa { border-color: #4eb5ff; box-shadow: 0 0 0 2px rgba(22,135,255,.22), 0 9px 24px rgba(0,0,0,.35); }
+.peca-miniatura img { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); }
 
 .peca-beneficio {
     min-height: 64px;
@@ -529,11 +620,16 @@
 @media (max-width: 920px) {
     .peca-shell { gap: 15px; }
     .peca-visual { border-bottom: 1px solid rgba(100,166,239,.20); }
+    .peca-imagem { aspect-ratio: 1 / 1; padding: 54px 24px; }
 }
 @media (max-width: 600px) {
     .peca-visual,
     .peca-info { border-radius: 21px; }
     .peca-info { padding: 25px 18px 22px; }
+    /* no celular a vitrine fica um pouco mais alta que larga, e as
+       faixas de cima e de baixo encolhem */
+    .peca-imagem { aspect-ratio: 3 / 4; padding: 46px 12px; }
+    .peca-ampliar { right: 10px; top: 10px; width: 36px; height: 36px; font-size: .85rem; }
     .peca-beneficio { min-height: 58px; }
     .peca-beneficio i { flex-basis: 31px; width: 31px; height: 31px; }
     .peca-beneficio small { display: none; }
@@ -541,5 +637,5 @@
     .peca-compra { padding: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .peca-imagem > img, .peca-miniatura, .peca-btn { transition: none; }
+    .peca-miniatura, .peca-ampliar, .peca-btn { transition: none; }
 }
