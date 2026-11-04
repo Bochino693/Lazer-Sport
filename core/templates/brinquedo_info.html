@@ -213,24 +213,28 @@
                         <div class="produto-especificacoes">
                             {% if brinquedo.voltz %}
                                 <div class="produto-especificacao">
+                                    <i class="fas fa-bolt" aria-hidden="true"></i>
                                     <span>Voltagem</span>
                                     <strong>{{ brinquedo.voltz }}</strong>
                                 </div>
                             {% endif %}
                             {% if brinquedo.altura_m %}
                                 <div class="produto-especificacao">
+                                    <i class="fas fa-ruler-combined" aria-hidden="true"></i>
                                     <span>Altura</span>
                                     <strong>{{ brinquedo.altura_m|medida }}</strong>
                                 </div>
                             {% endif %}
                             {% if brinquedo.largura_m %}
                                 <div class="produto-especificacao">
+                                    <i class="fas fa-expand" aria-hidden="true"></i>
                                     <span>Largura</span>
                                     <strong>{{ brinquedo.largura_m|medida }}</strong>
                                 </div>
                             {% endif %}
                             {% if brinquedo.profundidade_m %}
                                 <div class="produto-especificacao">
+                                    <i class="fas fa-cube" aria-hidden="true"></i>
                                     <span>Comprimento</span>
                                     <strong>{{ brinquedo.profundidade_m|medida }}</strong>
                                 </div>

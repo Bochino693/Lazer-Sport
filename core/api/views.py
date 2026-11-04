@@ -42,14 +42,16 @@ from core.api.serializer import (
     PromocaoSerializer,
 )
 
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q, Value
+from django.db.models.functions import Greatest
 
 # Curtidas na mesma consulta do catálogo: sem isto, cada item da lista
-# faria a sua própria contagem.
-ANOTACAO_CURTIDAS = Count(
-    "favoritos",
-    filter=Q(favoritos__tipo="curtida"),
-    distinct=True,
+# faria a sua própria contagem. Já com o ajuste do painel somado (ver
+# Brinquedos.ajuste_curtidas), nunca abaixo de zero -- o mesmo número que
+# o site mostra (core/favoritos.py).
+ANOTACAO_CURTIDAS = Greatest(
+    Count("favoritos", filter=Q(favoritos__tipo="curtida"), distinct=True) + F("ajuste_curtidas"),
+    Value(0),
 )
 
 CACHE_CATALOGO = 60 * 10

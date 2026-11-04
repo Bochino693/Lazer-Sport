@@ -76,3 +76,8 @@ cloudinary.config(
 for _host_de_teste in ("testserver", "interno.testserver", ".testserver"):
     if _host_de_teste not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_host_de_teste)
+
+# Nada de rede nem de freio por IP ou desafio nos testes que não são deles.
+GEOIP_ATIVO = False
+TURNSTILE_SITE_KEY = ""
+TURNSTILE_SECRET_KEY = ""

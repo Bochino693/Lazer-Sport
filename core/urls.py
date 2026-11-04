@@ -1,5 +1,5 @@
 from django.contrib.staticfiles.storage import staticfiles_storage
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 
@@ -117,12 +117,19 @@ sitemaps = {
 }
 
 
+class PrivacidadeView(TemplateView):
+    """A política de privacidade (/privacidade/): o que o site guarda e por quê."""
+
+    template_name = "privacidade.html"
+
+
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
     # O painel chama este para acordar processo E banco antes de agir.
     # Ver `core.views.pronto`.
     path("pronto/", pronto, name="pronto"),
     path("robots.txt", robots_txt, name="robots_txt"),
+    path("privacidade/", PrivacidadeView.as_view(), name="privacidade"),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
 
     # ---------------- avisos no celular do cliente ----------------

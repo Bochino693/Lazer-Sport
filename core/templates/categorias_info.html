@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
-{% load interno_extras static %}
+{% load interno_extras static avisos l10n %}
 {% load fotos %}
 
 {% block title %}{{ categoria.nome_categoria }} | Lazer &amp; Sport{% endblock %}
-{% block meta_description %}Explore os brinquedos da categoria {{ categoria.nome_categoria }} da Lazer & Sport, com características técnicas, disponibilidade e acesso aos detalhes de cada produto.{% endblock %}
+{% block meta_description %}{{ categoria.nome_categoria }} da Lazer & Sport: {{ vitrine.descricao }} Veja os produtos, as fotos e peça um orçamento.{% endblock %}
 
 {% block content %}
+  <link rel="stylesheet" href="{% estatico 'site/ls-estrelas.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/paginas/categorias_info.css' %}">
 
 {% comment %}
@@ -17,11 +18,18 @@
   principal" e passa a encontrar dois destinos, sem saber qual é o
   certo. A moldura desta tela é uma `div` -- o papel de conteúdo
   principal já está ocupado, e bem ocupado.
-{% endcomment %}
-<div class="arena-categoria">
-    <div class="arena-container">
 
-        <!-- Breadcrumb no padrão visual das páginas modernas -->
+  A PÁGINA TEM A CARA DE UM APLICATIVO, E OS CARDS SÃO OS DA HOME.
+  O card de produto daqui é o mesmo da home (`.card-mini`, em
+  ls-tema.css): a mesma marcação, as mesmas classes, para o brinquedo
+  ser o mesmo objeto em qualquer tela. O que é só desta página (herói,
+  fichas de filtro, chamada de orçamento) mora em
+  site/paginas/categorias_info.css.
+{% endcomment %}
+<div class="arena-categoria cat-pagina">
+    <div class="cat-shell">
+
+        <!-- Breadcrumb: as classes `ls-breadcrumb` e `arena-breadcrumb-*` são do estilo global -->
         <nav class="arena-breadcrumb ls-breadcrumb" aria-label="Navegação estrutural">
             <a href="{% url 'home' %}">
                 <i class="fa-solid fa-house" aria-hidden="true"></i>
@@ -38,322 +46,317 @@
             <i class="fa-solid fa-chevron-right arena-breadcrumb-separator" aria-hidden="true"></i>
 
             <span class="arena-breadcrumb-current" aria-current="page">
-                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                <i class="fa-solid {{ vitrine.icone }}" aria-hidden="true"></i>
                 {{ categoria.nome_categoria }}
             </span>
         </nav>
 
-        <!-- Hero sem imagem de categoria -->
-        <section class="arena-hero">
-            <div class="arena-hero-copy">
-                <span class="arena-kicker">
-                    <span class="arena-kicker-icon">
-                        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+        {% comment %}
+          HERÓI: o nome da categoria, o texto dela e, no painel ao lado, a
+          contagem e os três argumentos de venda. Sem a foto da categoria,
+          de propósito: a foto boa é a de cada produto, logo abaixo.
+        {% endcomment %}
+        <section class="cat-hero" aria-labelledby="cat-titulo">
+            <div class="cat-hero-copy">
+                <span class="cat-kicker">
+                    <span class="cat-kicker-icone" aria-hidden="true">
+                        <i class="fa-solid {{ vitrine.icone }}"></i>
                     </span>
-                    Categoria de brinquedos
+                    Categoria · Lazer &amp; Sport
                 </span>
 
-                <h1>{{ categoria.nome_categoria }}</h1>
+                <h1 id="cat-titulo">{{ categoria.nome_categoria }}</h1>
 
-                <p>
-                    Uma seleção organizada de equipamentos Lazer &amp; Sport.
-                    Compare características, veja a disponibilidade comercial
-                    e abra o produto para acessar fotos, medidas e informações completas.
-                </p>
+                <p>{{ vitrine.descricao }}</p>
 
-                <div class="arena-hero-actions">
-                    <a class="arena-hero-link" href="#produtos">
-                        <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
-                        Ver produtos desta categoria
+                <div class="cat-hero-acoes">
+                    <a class="cat-botao cat-botao--zap"
+                       href="https://wa.me/5511960563135?text={{ vitrine.zap|urlencode }}"
+                       target="_blank" rel="noopener">
+                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                        Orçamento no WhatsApp
                     </a>
-                    <a class="arena-hero-link" href="{% url 'brinquedos' %}">
-                        <i class="fa-solid fa-border-all" aria-hidden="true"></i>
-                        Catálogo completo
+                    <a class="cat-botao cat-botao--fantasma" href="#produtos">
+                        <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                        Ver os produtos
                     </a>
                 </div>
             </div>
 
-            <!-- QUADRO VISUAL: não renderiza categoria.imagem_categoria -->
-            <aside class="arena-visual-board" aria-label="Resumo da categoria">
-                <div class="arena-board-head">
-                    <strong>Quadro da arena</strong>
-                    <span class="arena-board-live">Catálogo ativo</span>
-                </div>
-
-                <div class="arena-board-grid">
-                    <div class="arena-board-card">
-                        <span class="arena-board-icon">
-                            <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
-                        </span>
-                        <span>
-                            <strong>{{ page_obj.paginator.count }}</strong>
-                            <span>produto(s) ativo(s)</span>
-                        </span>
-                    </div>
-
-                    <div class="arena-board-card">
-                        <span class="arena-board-icon">
-                            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
-                        </span>
-                        <span>
-                            <strong>12</strong>
-                            <span>itens por página</span>
-                        </span>
-                    </div>
-
-                    <div class="arena-board-card">
-                        <span class="arena-board-icon">
-                            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-                        </span>
-                        <span>
-                            <strong>Loja</strong>
-                            <span>quando disponível</span>
-                        </span>
-                    </div>
-
-                    <div class="arena-board-card">
-                        <span class="arena-board-icon">
-                            <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-                        </span>
-                        <span>
-                            <strong>Projeto</strong>
-                            <span>opções sob orçamento</span>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="arena-board-footer">
-                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                    <span>
-                        Cada produto possui uma página própria com galeria,
-                        especificações e atendimento comercial.
+            <aside class="cat-painel" aria-label="Resumo da categoria">
+                <div class="cat-painel-topo">
+                    <span class="cat-contagem">
+                        <strong>{{ total_categoria }}</strong>
+                        <span>{% if total_categoria == 1 %}produto nesta categoria{% else %}produtos nesta categoria{% endif %}</span>
                     </span>
+                    <span class="cat-painel-vivo">Catálogo ativo</span>
                 </div>
+
+                <ul class="cat-beneficios">
+                    {% for icone, titulo, texto in vitrine.beneficios %}
+                        <li class="cat-beneficio">
+                            <span class="cat-beneficio-icone" aria-hidden="true">
+                                <i class="fa-solid {{ icone }}"></i>
+                            </span>
+                            <span class="cat-beneficio-texto">
+                                <b>{{ titulo }}</b>
+                                <small>{{ texto }}</small>
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
             </aside>
         </section>
 
-        <!-- Ordenação em botões, sem select genérico -->
-        <section class="arena-command" aria-label="Organização da categoria">
-            <div class="arena-command-copy">
-                <strong>Organizar esta arena</strong>
-                <span>Troque a ordem dos produtos sem sair da categoria.</span>
+        {% comment %}
+          FICHAS DE FILTRO E ORDEM. Tudo por link, sem script: a página
+          volta do servidor já na ordem certa, e a âncora #produtos
+          deixa a lista na mesma altura. No celular cada fileira rola
+          de lado, como num aplicativo.
+        {% endcomment %}
+        <section class="cat-barra" aria-label="Filtro e ordem dos produtos">
+            <div class="cat-barra-grupo">
+                <span class="cat-barra-rotulo">
+                    <i class="fa-solid fa-filter" aria-hidden="true"></i>
+                    Mostrar
+                </span>
+                <nav class="cat-fichas" aria-label="Disponibilidade">
+                    <a href="?ordenar={{ ordenar }}#produtos"
+                       class="cat-ficha{% if not disponibilidade %} is-ativa{% endif %}"
+                       {% if not disponibilidade %}aria-current="true"{% endif %}>
+                        <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+                        Todos
+                        <b>{{ total_categoria }}</b>
+                    </a>
+                    <a href="?ordenar={{ ordenar }}&disp=loja#produtos"
+                       class="cat-ficha{% if disponibilidade == 'loja' %} is-ativa{% endif %}"
+                       {% if disponibilidade == 'loja' %}aria-current="true"{% endif %}>
+                        <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+                        À venda
+                        <b>{{ total_loja }}</b>
+                    </a>
+                    <a href="?ordenar={{ ordenar }}&disp=consulta#produtos"
+                       class="cat-ficha{% if disponibilidade == 'consulta' %} is-ativa{% endif %}"
+                       {% if disponibilidade == 'consulta' %}aria-current="true"{% endif %}>
+                        <i class="fa-solid fa-comments" aria-hidden="true"></i>
+                        Sob consulta
+                        <b>{{ total_consulta }}</b>
+                    </a>
+                </nav>
             </div>
 
-            <nav class="arena-order" aria-label="Ordenação dos brinquedos">
-                <a href="?ordenar=az#produtos" class="{% if ordenar == 'az' %}is-active{% endif %}">
-                    <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
-                    A → Z
-                </a>
-                <a href="?ordenar=za#produtos" class="{% if ordenar == 'za' %}is-active{% endif %}">
-                    <i class="fa-solid fa-arrow-down-z-a" aria-hidden="true"></i>
-                    Z → A
-                </a>
-                <a href="?ordenar=melhor-avaliados#produtos" class="{% if ordenar == 'melhor-avaliados' %}is-active{% endif %}">
-                    <i class="fa-solid fa-star" aria-hidden="true"></i>
-                    Melhor avaliados
-                </a>
-                <a href="?ordenar=custo-beneficio#produtos" class="{% if ordenar == 'custo-beneficio' %}is-active{% endif %}">
-                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
-                    Custo-benefício
-                </a>
-            </nav>
+            <div class="cat-barra-grupo">
+                <span class="cat-barra-rotulo">
+                    <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+                    Ordenar
+                </span>
+                <nav class="cat-fichas" aria-label="Ordem dos produtos">
+                    {% for chave, rotulo, icone in ordens %}
+                        <a href="?ordenar={{ chave }}{% if disponibilidade %}&disp={{ disponibilidade }}{% endif %}#produtos"
+                           class="cat-ficha{% if ordenar == chave %} is-ativa{% endif %}"
+                           {% if ordenar == chave %}aria-current="true"{% endif %}>
+                            <i class="fa-solid {{ icone }}" aria-hidden="true"></i>
+                            {{ rotulo }}
+                        </a>
+                    {% endfor %}
+                </nav>
+            </div>
         </section>
 
-        <section class="arena-results" id="produtos">
-            <div class="arena-results-head">
+        <section class="cat-produtos" id="produtos" aria-labelledby="cat-produtos-titulo">
+            <div class="cat-produtos-cabeca">
                 <div>
                     <small>{{ categoria.nome_categoria }}</small>
-                    <h2>Produtos desta categoria</h2>
+                    <h2 id="cat-produtos-titulo">
+                        {% if disponibilidade == 'loja' %}Disponíveis para compra{% elif disponibilidade == 'consulta' %}Projetos sob consulta{% else %}Produtos desta categoria{% endif %}
+                    </h2>
                 </div>
 
-                <span class="arena-results-meta">
-                    {{ page_obj.paginator.count }} produto(s)
-                    · página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                <span class="cat-produtos-meta">
+                    {{ page_obj.paginator.count }} produto{{ page_obj.paginator.count|pluralize }}
+                    {% if page_obj.paginator.num_pages > 1 %}· página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}{% endif %}
                 </span>
             </div>
 
             {% if page_obj.object_list %}
-                <div class="arena-products">
+                {% comment %}
+                  O MESMO CARD DA HOME (home.html, `.card-mini`): foto grande,
+                  nome, nota e curtidas. O nome é o link e cobre o card
+                  inteiro; a estrela da lista de desejos e as curtidas ficam
+                  por cima, clicáveis. As estrelas são desenhadas por
+                  ls-estrelas.js, o módulo do site.
+                {% endcomment %}
+                <div class="grid-cards grid-cards--mini cat-grid">
                     {% for item in page_obj %}
-                        <article class="arena-product">
+                        <article class="card-link" data-id="{{ item.id }}">
+                            <div class="card-produto card-mini{% if item.exibir_na_loja %} is-sale{% endif %}">
 
-                            <a class="arena-product-visual"
-                               href="{% url 'brinquedo_detalhe' item.id %}#bread"
-                               aria-label="Abrir {{ item.nome_brinquedo }}">
-
-                                <span class="arena-product-index">
-                                    #{{ forloop.counter|stringformat:"02d" }}
-                                </span>
-
-                                {% with imagem=item.imagem_catalogo %}
-                                    {% if imagem %}
-                                        <img src="{{ imagem|foto:720 }}"
-                                             alt="{{ item.nome_brinquedo }}"
-                                             loading="lazy">
-                                    {% elif item.imagem_brinquedo %}
-                                        <img src="{{ item.imagem_brinquedo|foto:720 }}"
-                                             alt="{{ item.nome_brinquedo }}"
-                                             loading="lazy">
+                                <div class="img-area">
+                                    {% if item.exibir_na_loja %}
+                                        <span class="produto-status is-sale" title="Disponível para compra">À venda</span>
                                     {% else %}
-                                        <span class="arena-product-no-image">
-                                            <i class="fa-regular fa-image" aria-hidden="true"></i><br>
-                                            Imagem em atualização
-                                        </span>
+                                        <span class="produto-status" title="Projeto sob consulta">Sob consulta</span>
                                     {% endif %}
-                                {% endwith %}
 
-                                {% if item.exibir_na_loja and item.valor_brinquedo %}
-                                    <span class="arena-product-status store">
-                                        <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
-                                        Loja
-                                    </span>
-                                {% else %}
-                                    <span class="arena-product-status quote">
-                                        <i class="fa-solid fa-comments" aria-hidden="true"></i>
-                                        Orçamento
-                                    </span>
-                                {% endif %}
-                            </a>
+                                    <button type="button"
+                                            class="card-mini-desejo"
+                                            data-favorito="desejo"
+                                            data-produto="brinquedo"
+                                            data-id="{{ item.id }}"
+                                            data-chave="brinquedo-{{ item.id }}"
+                                            aria-pressed="false"
+                                            aria-label="Guardar {{ item.nome_brinquedo }} na lista de desejos"
+                                            title="Guardar na lista de desejos">
+                                        <i class="fa-regular fa-star" data-favorito-icone aria-hidden="true"></i>
+                                    </button>
 
-                            <div class="arena-product-content">
-                                <span class="arena-product-eyebrow">
-                                    Lazer &amp; Sport
-                                </span>
-
-                                <a class="arena-product-title"
-                                   href="{% url 'brinquedo_detalhe' item.id %}#bread">
-                                    <h3>{{ item.nome_brinquedo }}</h3>
-                                </a>
-
-                                <p class="arena-product-description">
-                                    {{ item.descricao|default:"Consulte as características e especificações deste brinquedo."|truncatechars:150 }}
-                                </p>
-
-                                <div class="arena-product-tags">
-                                    {% for cat in item.categorias_brinquedos.all|slice:":3" %}
-                                        <span class="arena-product-tag">
-                                            {{ cat.nome_categoria }}
-                                        </span>
-                                    {% empty %}
-                                        <span class="arena-product-tag">
-                                            Brinquedo Lazer &amp; Sport
-                                        </span>
-                                    {% endfor %}
+                                    {% if item.imagem_brinquedo %}
+                                        <img src="{{ item.imagem_brinquedo|foto:480 }}"
+                                             alt=""
+                                             loading="lazy"
+                                             decoding="async">
+                                    {% else %}
+                                        <img src="{% estatico 'images/sem-imagem.svg' %}"
+                                             alt=""
+                                             loading="lazy"
+                                             decoding="async">
+                                    {% endif %}
                                 </div>
 
-                                <div class="arena-product-rating"
-                                     aria-label="Avaliação {{ item.avaliacao }} de 5">
-                                    <span class="arena-stars" aria-hidden="true">
-                                        {% for i in "12345" %}
-                                            {% if forloop.counter <= item.avaliacao %}★{% else %}☆{% endif %}
-                                        {% endfor %}
-                                    </span>
-                                    <span class="arena-rating-value">
-                                        {{ item.avaliacao }}/5
-                                    </span>
+                                <div class="card-mini-info">
+                                    <h3 class="card-mini-nome">
+                                        <a href="{% url 'brinquedo_detalhe' item.id %}#bread" class="produto-title-link">{{ item.nome_brinquedo }}</a>
+                                    </h3>
+                                    {% faixas item.nome_brinquedo %}
+
+                                    <div class="card-mini-meta">
+                                        <div class="avaliacao" data-rating="{{ item.avaliacao|default:0|unlocalize }}"
+                                             aria-label="Nota {{ item.avaliacao|default:0|floatformat:1 }} de 5">
+                                            <div class="stars ls-estrelas" data-nota="{{ item.avaliacao|default:0|unlocalize }}" aria-hidden="true"></div>
+                                            <span class="nota">{{ item.avaliacao|default:0|floatformat:1 }}</span>
+                                        </div>
+                                        <button type="button"
+                                                class="ls-fav-selo card-mini-curtidas"
+                                                data-favorito-app="brinquedo-{{ item.id }}"
+                                                aria-label="Curtidas no aplicativo">
+                                            <i class="fa-solid fa-heart" aria-hidden="true"></i>
+                                            <span class="ls-fav-total" data-favorito-total="brinquedo-{{ item.id }}">{{ item.total_curtidas|default:0 }}</span>
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div class="arena-product-tech">
-                                    {% if item.voltz %}
-                                        <span class="arena-tech">
-                                            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                                            {{ item.voltz }}
-                                        </span>
-                                    {% endif %}
-
-                                    {% if item.dimensoes_m %}
-                                        <span class="arena-tech">
-                                            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
-                                            {{ item.dimensoes_m }}
-                                        </span>
-                                    {% endif %}
-
-                                    {% if item.volume_formatado %}
-                                        <span class="arena-tech">
-                                            <i class="fa-solid fa-cube" aria-hidden="true"></i>
-                                            {{ item.volume_formatado }}
-                                        </span>
-                                    {% endif %}
-
-                                    <span class="arena-tech">
-                                        <i class="fa-solid fa-images" aria-hidden="true"></i>
-                                        Galeria no detalhe
-                                    </span>
-                                </div>
                             </div>
-
-                            <div class="arena-product-favoritos">
-                                {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=item.id fav_desejado=False fav_curtidas=item.total_curtidas fav_compacto=True fav_so_icone=True %}
-                            </div>
-
-                            <footer class="arena-product-footer">
-                                {% if item.exibir_na_loja and item.valor_brinquedo %}
-                                    <span class="arena-product-price">
-                                        <small>Disponível na loja</small>
-                                        <strong>R$ {{ item.valor_brinquedo|moeda }}</strong>
-                                    </span>
-                                {% else %}
-                                    <span class="arena-product-price is-quote">
-                                        <small>Atendimento comercial</small>
-                                        <strong>Preço sob consulta</strong>
-                                    </span>
-                                {% endif %}
-
-                                <a class="arena-product-cta"
-                                   href="{% url 'brinquedo_detalhe' item.id %}#bread">
-                                    Ver produto
-                                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                                </a>
-                            </footer>
-
                         </article>
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="arena-empty">
-                    <span class="arena-empty-icon">
-                        <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                <div class="cat-vazio">
+                    <span class="cat-vazio-icone" aria-hidden="true">
+                        <i class="fa-solid fa-box-open"></i>
                     </span>
-                    <h3>Nenhum produto ativo nesta categoria</h3>
-                    <p>
-                        Esta categoria ainda não possui brinquedos disponíveis
-                        para exibição. Você pode continuar pelo catálogo completo.
-                    </p>
-                    <a href="{% url 'brinquedos' %}">
-                        Ver catálogo de brinquedos
-                    </a>
+                    {% if disponibilidade %}
+                        <h3>Nenhum produto com este filtro</h3>
+                        <p>
+                            {% if disponibilidade == 'loja' %}
+                                Nenhum brinquedo de {{ categoria.nome_categoria }} está à venda na loja agora,
+                                mas todos podem ser orçados: tire o filtro para ver a categoria inteira.
+                            {% else %}
+                                Todos os brinquedos de {{ categoria.nome_categoria }} estão à venda na loja.
+                                Tire o filtro para ver a categoria inteira.
+                            {% endif %}
+                        </p>
+                        <div class="cat-vazio-acoes">
+                            <a class="cat-botao" href="?ordenar={{ ordenar }}#produtos">
+                                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                                Limpar filtro
+                            </a>
+                            <a class="cat-botao cat-botao--fantasma" href="{% url 'brinquedos' %}">
+                                <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+                                Catálogo completo
+                            </a>
+                        </div>
+                    {% else %}
+                        <h3>Esta categoria está sendo montada</h3>
+                        <p>
+                            Ainda não há brinquedos de {{ categoria.nome_categoria }} publicados.
+                            Enquanto isso, veja o catálogo completo ou conte pelo WhatsApp o que
+                            você procura: a fábrica projeta sob medida.
+                        </p>
+                        <div class="cat-vazio-acoes">
+                            <a class="cat-botao cat-botao--zap"
+                               href="https://wa.me/5511960563135?text={{ vitrine.zap|urlencode }}"
+                               target="_blank" rel="noopener">
+                                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                                Falar no WhatsApp
+                            </a>
+                            <a class="cat-botao cat-botao--fantasma" href="{% url 'brinquedos' %}">
+                                <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+                                Catálogo completo
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
             {% endif %}
 
             {% if page_obj.paginator.num_pages > 1 %}
-                <nav class="arena-pagination" aria-label="Paginação da categoria">
+                <nav class="cat-paginacao" aria-label="Paginação da categoria">
                     {% if page_obj.has_previous %}
-                        <a href="?ordenar={{ ordenar }}&page=1#produtos" aria-label="Primeira página">«</a>
-                        <a href="?ordenar={{ ordenar }}&page={{ page_obj.previous_page_number }}#produtos">
+                        <a href="?{{ consulta }}&page=1#produtos" aria-label="Primeira página">«</a>
+                        <a href="?{{ consulta }}&page={{ page_obj.previous_page_number }}#produtos">
                             Anterior
                         </a>
                     {% endif %}
 
                     {% for numero in page_obj.paginator.page_range %}
                         {% if numero == page_obj.number %}
-                            <span class="current" aria-current="page">{{ numero }}</span>
+                            <span class="is-atual" aria-current="page">{{ numero }}</span>
                         {% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}
-                            <a href="?ordenar={{ ordenar }}&page={{ numero }}#produtos">
-                                {{ numero }}
-                            </a>
+                            <a href="?{{ consulta }}&page={{ numero }}#produtos">{{ numero }}</a>
                         {% endif %}
                     {% endfor %}
 
                     {% if page_obj.has_next %}
-                        <a href="?ordenar={{ ordenar }}&page={{ page_obj.next_page_number }}#produtos">
+                        <a href="?{{ consulta }}&page={{ page_obj.next_page_number }}#produtos">
                             Próxima
                         </a>
-                        <a href="?ordenar={{ ordenar }}&page={{ page_obj.paginator.num_pages }}#produtos"
+                        <a href="?{{ consulta }}&page={{ page_obj.paginator.num_pages }}#produtos"
                            aria-label="Última página">»</a>
                     {% endif %}
                 </nav>
             {% endif %}
         </section>
+
+        {% comment %}
+          A CHAMADA DE ORÇAMENTO fecha a página: quem chegou até aqui viu
+          os produtos e tem uma pergunta. O WhatsApp abre com a mensagem
+          da categoria já escrita.
+        {% endcomment %}
+        <section class="cat-cta" aria-labelledby="cat-cta-titulo">
+            <span class="cat-cta-icone" aria-hidden="true">
+                <i class="fa-brands fa-whatsapp"></i>
+            </span>
+            <div class="cat-cta-texto">
+                <h2 id="cat-cta-titulo">Quer {{ categoria.nome_categoria|lower }} no seu espaço?</h2>
+                <p>
+                    Mande as medidas do lugar e o que você imagina. A fábrica responde
+                    pelo WhatsApp com projeto, prazo e orçamento, sem compromisso.
+                </p>
+            </div>
+            <div class="cat-cta-acoes">
+                <a class="cat-botao cat-botao--zap"
+                   href="https://wa.me/5511960563135?text={{ vitrine.zap|urlencode }}"
+                   target="_blank" rel="noopener">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    Pedir orçamento
+                </a>
+                <a class="cat-botao cat-botao--fantasma" href="{% url 'brinquedos' %}">
+                    <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+                    Catálogo completo
+                </a>
+            </div>
+        </section>
     </div>
 </div>
+
+<script src="{% estatico 'site/ls-estrelas.js' %}" defer></script>
 {% endblock %}

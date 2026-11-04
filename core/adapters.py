@@ -47,7 +47,17 @@ def sincronizar_perfil(user, nome_completo: str = "") -> ClientePerfil:
     return perfil
 
 
+def _cadastro_aberto(request) -> bool:
+    """O freio de contas falsas: contas demais do mesmo IP fecham o cadastro por um tempo."""
+    from .registro_cadastro import limite_de_cadastros_estourado
+
+    return not limite_de_cadastros_estourado(request)
+
+
 class AccountAdapter(DefaultAccountAdapter):
+    def is_open_for_signup(self, request):
+        return super().is_open_for_signup(request) and _cadastro_aberto(request)
+
     def validate_unique_email(self, email):
         from django.core.exceptions import ValidationError
         from .identidade_email import validar_email_de_usuario
@@ -96,6 +106,10 @@ class AccountAdapter(DefaultAccountAdapter):
 
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
+    def is_open_for_signup(self, request, sociallogin):
+        # Google/Apple criam conta sem formulário: o limite por IP é o único freio
+        return super().is_open_for_signup(request, sociallogin) and _cadastro_aberto(request)
+
     def populate_user(self, request, sociallogin, data):
         user = super().populate_user(request, sociallogin, data)
         _, primeiro, ultimo = _nome_do_social(sociallogin, user)

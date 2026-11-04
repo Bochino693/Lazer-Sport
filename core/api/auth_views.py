@@ -169,9 +169,21 @@ class RegistroAPI(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        # O freio de contas falsas vale para o aplicativo também: contas
+        # demais do mesmo IP na janela (core/registro_cadastro.py).
+        from core.registro_cadastro import MENSAGEM_LIMITE, limite_de_cadastros_estourado
+
+        if limite_de_cadastros_estourado(request):
+            return Response({"detail": MENSAGEM_LIMITE}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = RegistroSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        # O mesmo e-mail de confirmação do site; nunca trava o cadastro.
+        from core.views_conta import enviar_confirmacao_de_email
+
+        enviar_confirmacao_de_email(request._request, user)
 
         return Response(
             _resposta_com_token(user),

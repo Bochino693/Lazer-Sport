@@ -46,6 +46,8 @@ TELAS_DE_GESTOR = [
     "/site/indicadores/",
     "/site/clientes-mapa/",
     "/site/contas-clientes/",
+    "/site/jogos/",
+    "/site/objetos-3d/",
     "/equipe/",
     "/minha-conta/",
 ]

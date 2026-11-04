@@ -1117,3 +1117,45 @@ class CarteiraPontosAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+# ======================================================================
+# REGISTROS DE CADASTRO (antifraude): só leitura
+# ======================================================================
+from .models import RegistroCadastro  # noqa: E402
+
+
+@admin.register(RegistroCadastro)
+class RegistroCadastroAdmin(admin.ModelAdmin):
+    """De onde veio cada conta. É prova, não cadastro: ninguém edita nem apaga daqui.
+
+    A coluna "cadastros neste IP" conta todos os registros do mesmo IP, de
+    qualquer data: contas falsas costumam chegar em lote do mesmo lugar.
+    """
+
+    list_display = ("criacao", "username", "email", "ip", "cidade", "estado", "pais", "origem", "cadastros_neste_ip", "usuario_ativo")
+    list_filter = ("origem", "pais", "estado", "regiao_conferida", "criacao")
+    search_fields = ("username", "email", "ip", "navegador", "cabecalhos_ip")
+    date_hierarchy = "criacao"
+    list_select_related = ("usuario",)
+    readonly_fields = tuple(campo.name for campo in RegistroCadastro._meta.fields) + ("cadastros_neste_ip",)
+    ordering = ("-criacao",)
+
+    @admin.display(description="Cadastros neste IP")
+    def cadastros_neste_ip(self, obj):
+        if not obj.ip:
+            return "—"
+        return RegistroCadastro.objects.filter(ip=obj.ip).count()
+
+    @admin.display(description="Conta ativa", boolean=True)
+    def usuario_ativo(self, obj):
+        return bool(obj.usuario and obj.usuario.is_active)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

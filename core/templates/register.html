@@ -205,7 +205,36 @@
                     {% endfor %}
                 </div>
 
+                {# O freio de robôs (core/captcha.py): o campo-isca que a pessoa não vê, o selo com a hora e o desafio. #}
+                <div class="ls-isca" aria-hidden="true">
+                    <label for="site_web">Site</label>
+                    <input type="text" name="site_web" id="site_web" value="" tabindex="-1" autocomplete="off">
+                </div>
+                <input type="hidden" name="selo_cadastro" value="{{ selo_cadastro }}">
+
+                <div class="ls-humano">
+                    {% if turnstile_site_key %}
+                        <label>Confirme que você é uma pessoa</label>
+                        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" data-language="pt-br"></div>
+                        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                    {% else %}
+                        <label for="resposta_humana">Confirme que você é uma pessoa: quanto é {{ pergunta_humana }}?</label>
+                        <div class="ls-entrada {% if form.non_field_errors %}erro{% endif %}">
+                            <i class="fa-solid fa-calculator" aria-hidden="true"></i>
+                            <input type="text" name="resposta_humana" id="resposta_humana" inputmode="numeric"
+                                   placeholder="Só o número" autocomplete="off" required maxlength="4">
+                        </div>
+                        <small>É uma conta simples, para barrar cadastros automáticos.</small>
+                    {% endif %}
+                </div>
+
                 <button type="submit" class="ls-btn-principal">Criar conta</button>
+
+                <p class="ls-auth-legal">
+                    Ao criar a conta você concorda com a nossa
+                    <a href="{% url 'privacidade' %}">política de privacidade</a>. Para segurança,
+                    registramos o IP e a região aproximada de cada cadastro.
+                </p>
             </form>
 
             <p class="ls-auth-rodape">

@@ -1,0 +1,115 @@
+/* A página da política de privacidade: texto limpo, no tema escuro do site. */
+.ls-privacidade {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 24px 18px 72px;
+    color: #d6e2f2;
+}
+
+.ls-privacidade-topo {
+    margin: 10px 0 22px;
+    padding: 26px 26px 22px;
+    border: 1px solid rgba(100, 166, 239, .2);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(8, 120, 249, .28), transparent 21rem),
+        linear-gradient(145deg, #0b2342, #071426 75%);
+}
+
+.ls-privacidade-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(63, 208, 255, .14);
+    color: #7fdcff;
+    font-size: .74rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.ls-privacidade-topo h1 {
+    margin: 12px 0 8px;
+    color: #fff;
+    font-size: clamp(1.7rem, 4vw, 2.4rem);
+    font-weight: 900;
+}
+
+.ls-privacidade-topo p {
+    margin: 0;
+    color: #c9def3;
+    line-height: 1.6;
+}
+
+.ls-privacidade-topo small {
+    display: block;
+    margin-top: 10px;
+    color: #9fb5cc;
+    font-size: .74rem;
+}
+
+.ls-privacidade-secao {
+    margin-top: 14px;
+    padding: 20px 22px;
+    border: 1px solid rgba(139, 187, 239, .16);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .045);
+}
+
+.ls-privacidade-secao h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 10px;
+    color: #75c6ff;
+    font-size: 1.05rem;
+    font-weight: 900;
+}
+
+.ls-privacidade-secao h2 i {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    color: #fff;
+    background: linear-gradient(135deg, #0878f9, #0054bb);
+    font-size: .78rem;
+}
+
+.ls-privacidade-secao:nth-of-type(even) h2 i {
+    background: linear-gradient(135deg, #e63946, #b91e30);
+}
+
+.ls-privacidade-secao ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 8px;
+}
+
+.ls-privacidade-secao li,
+.ls-privacidade-secao p {
+    line-height: 1.65;
+    font-size: .93rem;
+}
+
+.ls-privacidade-secao p {
+    margin: 8px 0 0;
+}
+
+.ls-privacidade-secao strong {
+    color: #fff;
+}
+
+.ls-privacidade-secao a {
+    color: #74c7ff;
+}
+
+@media (max-width: 640px) {
+    .ls-privacidade { padding: 16px 14px 56px; }
+    .ls-privacidade-topo { padding: 20px 18px; border-radius: 18px; }
+    .ls-privacidade-secao { padding: 16px; }
+}

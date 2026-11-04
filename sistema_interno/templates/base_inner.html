@@ -480,6 +480,12 @@
         <a data-titulo="Equipe e acessos" aria-label="Equipe e acessos" class="ls-nav-item {% if request.resolver_match.url_name == 'usuarios_equipe' %}active{% endif %}" href="{% url 'usuarios_equipe' %}">
           <span class="ls-nav-icon"><i class="bi bi-shield-lock-fill"></i></span><span>Equipe e acessos</span>
         </a>
+        <a data-titulo="Jogos do simulador" aria-label="Jogos do simulador" class="ls-nav-item {% if request.resolver_match.url_name == 'jogos_inner' %}active{% endif %}" href="{% url 'jogos_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-joystick"></i></span><span>Jogos do simulador</span>
+        </a>
+        <a data-titulo="Objetos 3D" aria-label="Objetos 3D" class="ls-nav-item {% if request.resolver_match.url_name == 'objetos_3d_inner' %}active{% endif %}" href="{% url 'objetos_3d_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-box"></i></span><span>Objetos 3D</span>
+        </a>
         <a data-titulo="Avaliação dos setores" aria-label="Avaliação dos setores" class="ls-nav-item {% if request.resolver_match.url_name == 'avaliacao_setores' %}active{% endif %}" href="{% url 'avaliacao_setores' %}">
           <span class="ls-nav-icon"><i class="bi bi-clipboard-data-fill"></i></span><span>Avaliação dos setores</span>
         </a>
