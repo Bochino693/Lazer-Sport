@@ -83,6 +83,51 @@ CADASTROS = {
         # "Espaço esportivo" é o certo; "kids" fica para os menores, se houver as duas
         "evitar": ("kids",),
     },
+    # Os dois jogos da casa que já estão no catálogo: o objeto 3D só é LIGADO
+    # ao brinquedo de lá (pelo nome); a migração não cria outro (`so_ligar`).
+    # O comando `cadastrar_modelo_3d` cadastra, se um dia faltar no catálogo.
+    "lazer-shot": {
+        "nome": "Lazer Shot",
+        "nomes": ("lazer shot",),
+        "so_ligar": True,
+        "pasta": MODELOS / "lazer-shot",
+        "objeto_3d": "site/arena/modelos/lazer-shot.glb",
+        "descricao": (
+            "Lazer Shot, o tiro ao alvo com pistola de luz da Lazer & Sport: TV em pé com os cenários do "
+            "bar, do deserto, do mar e da arena, pistola personalizada e câmera para a foto do jogador. "
+            "Medidas aproximadas: 2,32 m de altura, 1,10 m de largura e 0,95 m de profundidade."
+        ),
+        "medidas": ("2.32", "1.10", "0.95"),
+        "fotos": (
+            ("frente.webp", "perfil", "Lazer Shot visto de frente, com o letreiro, a tela e a pistola"),
+            ("lado_direito.webp", "lado_direito", "Lazer Shot pelo lado direito"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Lazer Shot pelo lado esquerdo"),
+            ("verso.webp", "verso", "Lazer Shot visto por trás"),
+        ),
+        "categorias": ("eletronic", "jogos"),
+        "evitar": (),
+    },
+    "boliche-virtual": {
+        "nome": "Boliche Virtual",
+        "nomes": ("boliche virtual", "dragon bowling"),
+        "so_ligar": True,
+        "pasta": MODELOS / "boliche-virtual",
+        "objeto_3d": "site/arena/modelos/boliche-virtual.glb",
+        "descricao": (
+            "Boliche Virtual da Lazer & Sport, com o jogo Dragon Bowling: a bola rola pela pista com os "
+            "trilhos de LED e a partida aparece na TV da torre. Medidas aproximadas: 2,38 m de altura, "
+            "0,84 m de largura e 3,21 m de comprimento."
+        ),
+        "medidas": ("2.38", "0.84", "3.21"),
+        "fotos": (
+            ("frente.webp", "perfil", "Boliche Virtual visto de frente, com a pista e a torre do Dragon Bowling"),
+            ("lado_direito.webp", "lado_direito", "Boliche Virtual pelo lado direito"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Boliche Virtual pelo lado esquerdo"),
+            ("verso.webp", "verso", "Boliche Virtual visto por trás"),
+        ),
+        "categorias": ("boliche", "eletronic"),
+        "evitar": (),
+    },
     "strike-kids": {
         "nome": "Strike Kids Boliche",
         # o brinquedo do catálogo que é esta máquina (qualquer um destes no nome)
@@ -241,7 +286,7 @@ def migracao_objetos_3d(*chaves, cadastrar_no_banco_real=False):
         )
         for chave in chaves:
             brinquedo = achar_no_catalogo(chave, Brinquedos)
-            if brinquedo is None and pode_cadastrar:
+            if brinquedo is None and pode_cadastrar and not CADASTROS[chave].get("so_ligar"):
                 try:
                     with transaction.atomic():
                         brinquedo, _criado = cadastrar(

@@ -1132,6 +1132,46 @@ html.arena-tela-cheia body { overflow: hidden; }
 }
 
 .arena-foto-midia img.ativa { opacity: 1; transform: none; }
+
+/* o cartão com objeto 3D: o objeto no lugar das fotos (vitrine3d.js) */
+.arena-foto-midia--3d { cursor: grab; }
+/* o palco claro de estúdio, como o das fotos recortadas (a foto do 3D tem
+   fundo, e o ls-fotos.js a marcaria como "foto cheia", de fundo escuro) */
+html.ls-escuro:not(#_):not(#__) .arena-foto-midia--3d {
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+}
+.arena-foto-midia--3d:active { cursor: grabbing; }
+.arena-foto-3d {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity .5s ease;
+}
+.arena-foto-midia--pronta .arena-foto-3d { opacity: 1; }
+.arena-foto-midia--pronta .arena-foto-poster { opacity: 0 !important; }
+.arena-foto-selo3d {
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: rgba(4, 10, 28, .72);
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+.arena-foto-selo3d i { color: #6fe0ff; }
 .arena-foto-cartao:hover .arena-foto-midia img.ativa { transform: translateY(-3px); }
 
 .arena-foto-pontos {

@@ -74,8 +74,9 @@ class ArenaView(View):
 
         return render(request, "arena.html", {
             "grupos_arena": grupos,
-            # a galeria de fotos é do catálogo (cada uma tem a sua página)
-            "brinquedos_arena": dados,
+            # "Todas as máquinas da fábrica": o catálogo e os objetos 3D que
+            # ainda não estão nele (o Strike Kids antes do cadastro), por nome
+            "brinquedos_arena": sorted(na_arena, key=lambda b: arena._normalizar(b["nome"])),
             # o que o arena3d.js monta: as áreas e as máquinas com as fotos
             "arena_dados": {
                 "zonas": [{k: g[k] for k in ("id", "titulo", "kicker")} for g in grupos],

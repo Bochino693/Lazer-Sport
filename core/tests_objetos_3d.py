@@ -160,6 +160,23 @@ class CadastroDoStrikeKidsTests(TestCase):
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
         self.assertEqual(strike.objeto_3d.medidas, [2.07, 0.74, 1.91])
 
+    def test_jogos_da_casa_so_ligam_nunca_criam(self):
+        lazer = Brinquedos.objects.create(nome_brinquedo="Lazer Shot Arena", descricao="x", avaliacao=5)
+        boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Virtual", descricao="x", avaliacao=5)
+        from django.apps import apps
+
+        editor = mock.Mock()
+        editor.connection.vendor = "postgresql"
+        jogos = importlib.import_module("core.migrations.0118_objetos_3d_dos_jogos_da_casa")
+        jogos.Migration.operations[0].code(apps, editor)
+        self.assertEqual(lazer.objeto_3d.codigo, "lazer-shot")
+        self.assertEqual(boliche.objeto_3d.codigo, "boliche-virtual")
+        self.assertEqual(boliche.objeto_3d.medidas, [2.38, 0.84, 3.21])
+        # sem o brinquedo no catálogo, não cria nenhum
+        boliche.delete()
+        jogos.Migration.operations[0].code(apps, editor)
+        self.assertEqual(Brinquedos.objects.count(), 1)
+
     def test_ja_no_catalogo_so_liga(self):
         boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Kids", descricao="x", avaliacao=5)
         self.rodar("postgresql")
