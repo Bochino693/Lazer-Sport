@@ -84,23 +84,26 @@ CADASTROS = {
         "evitar": ("kids",),
     },
     "strike-kids": {
-        "nome": "Strike Kids Boliche",
-        # o brinquedo do catálogo que é esta máquina (qualquer um destes no nome)
-        "nomes": ("strike kids", "boliche kids"),
+        "nome": "Strike Kids",
+        # o brinquedo do catálogo que é esta máquina
+        "nomes": ("strike kids",),
         "pasta": MODELOS / "strike-kids",
         "objeto_3d": "site/arena/modelos/strike-kids.glb",
         "descricao": (
             "Strike Kids, o boliche infantil da Lazer & Sport: pista de 1,4 m com bolsão para as bolas, "
-            "tela vertical com o jogo Strike Kids, testeira e laterais adesivadas com os pinos sorridentes "
-            "e LEDs nas laterais. Medidas aproximadas: 2,07 m de altura, 0,74 m de largura e 1,91 m de "
-            "comprimento. Cores e adesivagem podem ser ajustadas no pedido."
+            "tela vertical com o jogo Strike Kids, câmera que tira a foto do jogador para o ranking e 5 "
+            "sensores de precisão que leem cada jogada. Testeira e laterais adesivadas com os pinos "
+            "sorridentes e LEDs nas laterais. Medidas aproximadas: 2,07 m de altura, 0,74 m de largura e "
+            "1,91 m de comprimento. Cores e adesivagem podem ser ajustadas no pedido."
         ),
         "medidas": ("2.07", "0.74", "1.91"),
+        # a foto principal: a máquina inteira, de 3/4 e sem fundo (do .glb da
+        # própria máquina); as outras, os lados e as costas
         "fotos": (
-            ("frente.webp", "perfil", "Strike Kids Boliche visto de frente, com a tela e a pista"),
-            ("lado_direito.webp", "lado_direito", "Strike Kids Boliche pelo lado direito, com a arte dos pinos"),
-            ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids Boliche pelo lado esquerdo, com a arte dos pinos"),
-            ("verso.webp", "verso", "Strike Kids Boliche visto por trás"),
+            ("foto.webp", "perfil", "Strike Kids, o boliche infantil, com a tela, a pista e a arte dos pinos"),
+            ("lado_direito.webp", "lado_direito", "Strike Kids pelo lado direito, com a arte dos pinos"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids pelo lado esquerdo, com a arte dos pinos"),
+            ("verso.webp", "verso", "Strike Kids visto por trás"),
         ),
         "categorias": ("boliche", "jogos", "eletronic"),
         "evitar": (),
@@ -220,6 +223,54 @@ def migracao(chave):
                   f"Rode: python manage.py cadastrar_modelo_3d {chave}")
 
     return cadastrar_no_deploy
+
+
+def strike_kids_no_catalogo(apps, schema_editor, avisar=print):
+    """O Strike Kids como brinquedo do catálogo, com a foto 2D e o objeto 3D (a 0120).
+
+    * Não há brinquedo com "Strike Kids" no nome: cadastra o "Strike Kids",
+      com as quatro fotos (a principal sem fundo) e o objeto 3D ligado.
+    * Há um que o próprio site cadastrou antes (a 0117, como "Strike Kids
+      Boliche", com fotos tiradas do 3D): passa a se chamar "Strike Kids" e
+      ganha as fotos novas.
+    * Há um que alguém cadastrou no painel: fica como está, só ganha o 3D.
+
+    Só no banco de verdade (o PostgreSQL, no Render ou no computador): o
+    SQLite é o dos testes. Se a subida das fotos falhar, o resto segue e o
+    `cadastrar_modelo_3d strike-kids` refaz.
+    """
+    from django.conf import settings
+
+    real = getattr(settings, "IS_RENDER", False) or schema_editor.connection.vendor == "postgresql"
+    if not real:
+        return None
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    dados = CADASTROS["strike-kids"]
+    existente = achar_no_catalogo("strike-kids", Brinquedos)
+    try:
+        with transaction.atomic():
+            if existente is not None and "strike-kids-" in (existente.imagem_brinquedo.name or ""):
+                # o que o próprio site cadastrou: o nome e as fotos novas
+                if existente.nome_brinquedo != dados["nome"]:
+                    existente.nome_brinquedo = dados["nome"]
+                    existente.descricao = dados["descricao"]
+                    existente.save(update_fields=["nome_brinquedo", "descricao"])
+                brinquedo, _ = cadastrar(
+                    "strike-kids", Brinquedos, apps.get_model("core", "CategoriasBrinquedos"),
+                    apps.get_model("core", "ImagemBrinquedo"), refazer_fotos=True, avisar=avisar,
+                )
+            elif existente is not None:
+                brinquedo = existente
+            else:
+                brinquedo, _ = cadastrar(
+                    "strike-kids", Brinquedos, apps.get_model("core", "CategoriasBrinquedos"),
+                    apps.get_model("core", "ImagemBrinquedo"), avisar=avisar,
+                )
+            ligar_objeto_3d("strike-kids", brinquedo, apps.get_model("core", "ObjetoTresD"))
+    except Exception as erro:  # o deploy segue; o comando refaz depois
+        avisar(f"O Strike Kids não foi cadastrado agora ({erro}). Rode: python manage.py cadastrar_modelo_3d strike-kids")
+        return None
+    return brinquedo
 
 
 def migracao_objetos_3d(*chaves, cadastrar_no_banco_real=False):

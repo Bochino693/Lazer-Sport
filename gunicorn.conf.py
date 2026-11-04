@@ -86,3 +86,49 @@ loglevel = os.getenv("WEB_LOG_LEVEL", "info")
 access_log_format = (
     '%(h)s "%(r)s" %(s)s %(b)s %(M)sms "%(a)s"'
 )
+
+
+# ----------------------------------------------------------------------
+# AS MIGRAÇÕES QUE FALTAREM, APLICADAS AO SUBIR
+#
+# O código novo chegava ao ar antes de o banco ter as tabelas e os dados
+# dele: a Arena 3D dava erro 500 até alguém rodar o `migrate` à mão (a
+# tabela dos objetos 3D não existia), e o Strike Kids, cadastrado por uma
+# migração, não aparecia no catálogo. Agora o servidor aplica, ao subir e
+# antes de abrir a porta, as migrações que faltarem. Se alguma falhar, o
+# site sobe assim mesmo (as telas aguentam o banco sem a tabela nova) e o
+# motivo fica no log do deploy.
+#
+# Liga sozinho no Render (variável RENDER=true); AUTO_MIGRATE=0 desliga,
+# AUTO_MIGRATE=1 liga em qualquer lugar. Roda no processo principal, uma
+# vez por instância, e fecha as conexões antes de os workers nascerem.
+# ----------------------------------------------------------------------
+def _migrar_ao_subir():
+    escolha = os.getenv("AUTO_MIGRATE", "").strip().lower()
+    if escolha in ("0", "false", "nao", "não", "off"):
+        return False
+    if escolha not in ("1", "true", "sim", "on") and os.getenv("RENDER", "").strip().lower() != "true":
+        return False
+    return True
+
+
+def on_starting(server):
+    if not _migrar_ao_subir():
+        return
+    try:
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lazer.settings")
+        import django
+
+        django.setup()
+        from django.core.management import call_command
+        from django.db import connections
+
+        try:
+            server.log.info("Aplicando as migrações que faltarem...")
+            call_command("migrate", interactive=False, verbosity=1)
+            server.log.info("Migrações em dia.")
+        finally:
+            # nada de conexão aberta herdada pelos workers
+            connections.close_all()
+    except Exception as erro:  # o site sobe mesmo assim
+        server.log.error(f"As migrações não foram aplicadas ao subir: {erro!r}")
