@@ -220,7 +220,8 @@
   /* ---------------------------------------------------------------
      LETREIRO — a fila é duplicada para o laço não ter emenda
      --------------------------------------------------------------- */
-  var trilho = quadro.querySelector("[data-letreiro]");
+  // o letreiro mora na "ponte" entre o quadro e o catálogo, fora do quadro
+  var trilho = document.querySelector("[data-letreiro]");
   if (trilho && !reduzido && trilho.children.length) {
     Array.prototype.slice.call(trilho.children).forEach(function (item) {
       var copia = item.cloneNode(true);

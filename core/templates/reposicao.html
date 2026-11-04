@@ -22,6 +22,8 @@
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/reposicao.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-peca-card.css' %}">
+<script src="{% estatico 'site/ls-peca-card.js' %}" defer></script>
 
 <div class="ls-pagina">
 
@@ -72,56 +74,11 @@
 <section class="ls-pagina-secao" id="pecas">
 
 {% if cartoes_pecas %}
-<div class="ls-grade">
+<div class="pc-grade rep-grade">
     {% for cartao in cartoes_pecas %}
-    {% with peca=cartao.obj %}
-    <article class="ls-cartao rep-cartao" data-scroll-reveal>
-
-        {% comment %}
-          O link envolve capa, nome, descrição e preço -- e PARA antes dos
-          botões. Um `<a>` com outro `<a>` dentro não é HTML válido, e era
-          nisso que dava o cartão inteiro clicável com "Falar com um
-          vendedor" no meio dele.
-        {% endcomment %}
-        <a class="rep-link" href="{% url 'reposicao_detalhe' peca.pk %}#breadcrumb">
-            <div class="ls-cartao-media">
-                {% with img=peca.imagem_principal %}
-                    {% if img and img.imagem %}
-                        <img src="{{ img.imagem|foto:400 }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
-                        <img src="{{ img.imagem|foto:720 }}" class="ls-cartao-media-fg"
-                             alt="{{ peca.nome }}" loading="lazy" decoding="async">
-                    {% else %}
-                        <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
-                             alt="Imagem indisponível para {{ peca.nome }}" loading="lazy" decoding="async">
-                    {% endif %}
-                {% endwith %}
-            </div>
-
-            <div class="ls-cartao-corpo">
-                <h2 class="ls-cartao-titulo">{{ peca.nome }}</h2>
-                <p class="ls-cartao-desc">{{ peca.descricao_peca|truncatechars:110 }}</p>
-                <span class="rep-preco">R$ {{ peca.preco_venda|moeda }}</span>
-            </div>
-        </a>
-
-        <div class="rep-favoritos">
-            {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_desejado=cartao.desejado fav_curtidas=cartao.curtidas fav_compacto=True fav_so_icone=True %}
-        </div>
-
-        <div class="rep-acoes">
-            <a class="ls-botao rep-whats"
-               href="https://wa.me/5511960563135?text=Olá! Quero falar com um vendedor sobre a peça {{ peca.nome|urlencode }}"
-               target="_blank" rel="noopener">
-                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                Falar com um vendedor
-            </a>
-
-            <a class="ls-botao" href="{% url 'reposicao_detalhe' peca.pk %}#breadcrumb">
-                Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
-        </div>
+    <article class="rep-item" data-scroll-reveal>
+        {% include "partials/peca_card.html" with peca=cartao.obj favoritos=cartao %}
     </article>
-    {% endwith %}
     {% endfor %}
 </div>
 {% else %}

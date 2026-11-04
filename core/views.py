@@ -513,7 +513,8 @@ class ReposicaoView(View):
         # `da_vitrine` -- ativa, e da loja.
         pecas = list(
             PecasReposicao.da_vitrine()
-            .prefetch_related("imagem_peca_reposicao")
+            .prefetch_related("imagem_peca_reposicao", "categoria_peca")
+            .order_by("nome")
         )
 
         # Estado dos corações resolvido em três consultas, não uma por

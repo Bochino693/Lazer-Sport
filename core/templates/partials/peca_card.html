@@ -1,0 +1,88 @@
+{% load static fotos interno_extras %}
+{% comment %}
+  O CARTÃO DA PEÇA DE REPOSIÇÃO -- o mesmo na home e na página de peças.
+
+  A foto fica num "palco" claro de estúdio (a peça preta, como a maneta do
+  air game, some num fundo escuro), com a sombra no chão; o resto do
+  cartão é do tema escuro do site. A foto com fundo próprio ocupa o palco
+  inteiro (ls-fotos.js marca `foto-cheia`).
+
+  Recebe:
+    peca        a peça (com `imagem_peca_reposicao` e `categoria_peca`
+                trazidos por prefetch);
+    favoritos   (opcional) o dicionário do cartão com `desejado` e
+                `curtidas`: mostra a curtida e a lista de desejos;
+    objeto_3d   (opcional) o objeto 3D da peça: o selo "3D" na foto.
+{% endcomment %}
+<div class="pc-card{% if not peca.preco_venda %} pc-card--consulta{% endif %}">
+  <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pc-media" aria-label="Ver detalhes de {{ peca.nome }}">
+    {% with img=peca.imagem_principal %}
+      {% if img and img.imagem %}
+        <img class="pc-foto" src="{{ img.imagem|foto:720 }}" alt="{{ peca.nome }}" loading="lazy" decoding="async" width="720" height="720">
+      {% else %}
+        <img class="pc-foto pc-foto--vazia" src="{% static 'images/sem-imagem.svg' %}" alt="Imagem indisponível para {{ peca.nome }}" loading="lazy" decoding="async">
+      {% endif %}
+    {% endwith %}
+    <span class="pc-selo" title="Peça original de fábrica"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> <span class="pc-longo">Original de fábrica</span></span>
+    {% if objeto_3d %}
+      <span class="pc-3d" title="Esta peça tem objeto 3D"><i class="fa-solid fa-cube" aria-hidden="true"></i> 3D</span>
+    {% endif %}
+    <span class="pc-espiar" aria-hidden="true"><i class="fa-solid fa-eye"></i> Ver detalhes</span>
+  </a>
+  {% if favoritos %}
+    {# por cima da foto, fora do link (botão dentro de link não vale) #}
+    <div class="pc-favoritos">
+      {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_desejado=favoritos.desejado fav_curtidas=favoritos.curtidas fav_compacto=True fav_so_icone=True %}
+    </div>
+  {% endif %}
+
+  <div class="pc-corpo">
+    <div class="pc-categorias">
+      {% for cat in peca.categoria_peca.all %}
+        <span class="pc-categoria">{{ cat.nome_categoria_peca }}</span>
+      {% empty %}
+        <span class="pc-categoria">Peça de reposição</span>
+      {% endfor %}
+    </div>
+
+    <h3 class="pc-nome">
+      <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb">{{ peca.nome }}</a>
+    </h3>
+
+    <p class="pc-desc">{{ peca.descricao_peca|truncatewords:18 }}</p>
+
+    <div class="pc-rodape">
+      <div class="pc-preco">
+        {% if peca.preco_venda %}
+          <small>Preço da peça</small>
+          <strong class="money" data-valor="{{ peca.preco_venda }}">R$ {{ peca.preco_venda|moeda }}</strong>
+        {% else %}
+          <small>Valor</small>
+          <strong class="pc-consulta">Sob consulta</strong>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="pc-acoes">
+      {% if peca.preco_venda %}
+        <button type="button" class="pc-botao pc-carrinho"
+                onclick="adicionarPecaAoCarrinho(event, {{ peca.id }}, this)"
+                aria-label="Adicionar {{ peca.nome }} ao carrinho">
+          <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+          <span class="pc-longo">Adicionar ao carrinho</span><span class="pc-curto">Adicionar</span>
+        </button>
+      {% else %}
+        <a class="pc-botao pc-zap"
+           href="https://wa.me/5511960563135?text={{ 'Olá! Quero saber da peça '|urlencode }}{{ peca.nome|urlencode }}"
+           target="_blank" rel="noopener">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+          <span class="pc-longo">Consultar com a fábrica</span><span class="pc-curto">Consultar</span>
+        </a>
+      {% endif %}
+      <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pc-botao pc-detalhes"
+         title="Ver detalhes" aria-label="Ver detalhes de {{ peca.nome }}">
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
+</div>
