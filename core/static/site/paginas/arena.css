@@ -956,6 +956,34 @@ html.arena-tela-cheia body { overflow: hidden; }
 .arena3d-ficha-dados dt { color: var(--arena-suave); font-size: .8rem; }
 .arena3d-ficha-dados dd { margin: 0; color: #fff; font-size: .84rem; font-weight: 800; text-align: right; }
 
+/* as cores do objeto 3D: tocar numa veste a máquina naquela cor */
+.arena3d-ficha-cores { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.arena3d-ficha-cores[hidden] { display: none; }
+.arena3d-ficha-cores span { color: var(--arena-suave); font-size: .76rem; font-weight: 700; }
+.arena3d-cor {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 5px;
+    border: 1px solid var(--arena-borda);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .05);
+    color: #dbe7ff;
+    font: inherit;
+    font-size: .76rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+.arena3d-cor i {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--amostra, conic-gradient(#e63946, #ffb703, #2a9d8f, #3a86ff, #e63946));
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .35);
+}
+.arena3d-cor[aria-pressed="true"] { border-color: #fff; background: rgba(255, 255, 255, .16); color: #fff; }
+.arena3d-cor:focus-visible { outline: 2px solid #ffb703; outline-offset: 2px; }
+
 /* os jogos da casa que rodam no espaço (Swish, Gol Flash) */
 .arena3d-ficha-jogos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .arena3d-ficha-jogos[hidden] { display: none; }

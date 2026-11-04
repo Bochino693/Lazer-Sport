@@ -102,7 +102,30 @@
                         </div>
                     {% endif %}
                     {% faixas brinquedo.nome_brinquedo %}
+                    {% if objeto_3d %}
+                        {% comment %}
+                          O objeto 3D do cadastro: gira com o dedo ou o mouse, aproxima e
+                          troca de cor. O 3D só baixa quando a pessoa toca em "Ver em 3D".
+                        {% endcomment %}
+                        <div class="produto-visor3d" data-visor3d hidden
+                             data-modelo="{{ objeto_3d.url }}"
+                             data-three="{% static 'vendor/three/three.module.min.js' %}"
+                             data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+                             data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
+                            <canvas data-visor3d-tela tabindex="0" aria-label="{{ brinquedo.nome_brinquedo }} em 3D: arraste para girar, role ou pince para aproximar"></canvas>
+                            <p class="produto-visor3d-aviso" data-visor3d-aviso hidden></p>
+                            <span class="produto-visor3d-dica" aria-hidden="true"><i class="fa-solid fa-hand-pointer"></i> Arraste para girar · pince ou role para aproximar</span>
+                            <button class="produto-visor3d-fechar" type="button" data-visor3d-fechar><i class="fa-regular fa-image" aria-hidden="true"></i> Fotos</button>
+                        </div>
+                        <button class="produto-ver-3d" type="button" data-visor3d-abrir aria-pressed="false">
+                            <i class="fa-solid fa-cube" aria-hidden="true"></i> Ver em 3D
+                        </button>
+                    {% endif %}
                 </div>
+
+                {% if objeto_3d %}
+                    <div class="produto-cores3d" data-visor3d-cores role="group" aria-label="Cores do objeto 3D" hidden></div>
+                {% endif %}
 
                 {% if imagens_brinquedo|length > 1 %}
                     <div class="produto-miniaturas" aria-label="Fotos de {{ brinquedo.nome_brinquedo }}">
@@ -547,5 +570,8 @@
     }
 })();
 </script>
+{% if objeto_3d %}
+<script type="module" src="{% estatico 'site/arena/visor3d.js' %}"></script>
+{% endif %}
 
 {% endblock %}

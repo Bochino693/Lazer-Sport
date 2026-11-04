@@ -567,6 +567,18 @@ def modelo_da_maquina(nome):
     return None
 
 
+def objeto_3d_do_cadastro(brinquedo):
+    """O objeto 3D que o brinquedo tem no cadastro (o .glb do painel), ou None.
+
+    Espera `objeto_3d` trazido com `prefetch_related` (sem objeto, o acesso
+    levanta a exceção da relação vazia -- daí o getattr).
+    """
+    objeto = getattr(brinquedo, "objeto_3d", None)
+    if objeto is None or not objeto.ativo or not objeto.exibir_na_arena:
+        return None
+    return objeto if objeto.url else None
+
+
 def modelos_fora_do_catalogo(catalogo):
     """Os objetos 3D cujo brinquedo ainda não está no catálogo, como máquinas da arena.
 
@@ -703,7 +715,31 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         desenho, brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m,
     )
     jogo = jogo_da_maquina(brinquedo.nome_brinquedo)
-    modelo = modelo_da_maquina(brinquedo.nome_brinquedo)
+    # O objeto 3D do CADASTRO (o .glb do painel) vence o ligado pelo nome no
+    # código; o código dele liga as animações e o passeio do MODELOS_3D.
+    cadastro = objeto_3d_do_cadastro(brinquedo)
+    modelo = (
+        next((m for m in MODELOS_3D if cadastro and cadastro.codigo and m["id"] == cadastro.codigo), None)
+        or modelo_da_maquina(brinquedo.nome_brinquedo)
+    )
+    if cadastro:
+        modelo_id = cadastro.codigo or f"objeto-{cadastro.pk}"
+        url_modelo = cadastro.url
+        # o tamanho: o do código, o lido de dentro do .glb ou, sem os dois, o do cadastro
+        if modelo:
+            medidas_modelo = list(modelo["medidas"])
+        elif len(cadastro.medidas or []) == 3:
+            medidas_modelo = [float(v) for v in cadastro.medidas]
+        elif all((brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m)):
+            medidas_modelo = [float(v) for v in (brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m)]
+        else:
+            medidas_modelo = []
+        cores_modelo = list(cadastro.cores or [])
+    else:
+        modelo_id = modelo["id"] if modelo else ""
+        url_modelo = estatico(modelo["arquivo"]) if modelo else ""
+        medidas_modelo = list(modelo["medidas"]) if modelo else []
+        cores_modelo = []
 
     fotos = {}
     for foto in brinquedo.imagens_brinquedo.all():
@@ -723,10 +759,12 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "categorias": categorias,
         "medidas": medidas,
         "medidas_reais": medidas_reais,
-        # o objeto 3D feito com os arquivos da fábrica (vence o das fotos)
-        "modelo_id": modelo["id"] if modelo else "",
-        "modelo": estatico(modelo["arquivo"]) if modelo else "",
-        "medidas_modelo": list(modelo["medidas"]) if modelo else [],
+        # o objeto 3D feito com os arquivos da fábrica (vence o das fotos),
+        # com as cores que o arquivo traz
+        "modelo_id": modelo_id,
+        "modelo": url_modelo,
+        "medidas_modelo": medidas_modelo,
+        "cores_modelo": cores_modelo,
         "jogos_no_espaco": jogos_do_modelo(modelo),
         "medidas_texto": (
             " × ".join(medida(v) for v in (brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m))

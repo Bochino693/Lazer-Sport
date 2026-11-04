@@ -170,7 +170,8 @@
         <div class="arena3d-corpo">
             <div class="arena3d-palco" data-arena-palco
                  data-three="{% static 'vendor/three/three.module.min.js' %}"
-                 data-gltf="{% static 'vendor/three/GLTFLoader.js' %}">
+                 data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+                 data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
                     <strong data-arena-aviso-titulo>Montando a arena…</strong>
@@ -271,6 +272,7 @@
                         <div data-ficha-linha="voltagem"><dt>Voltagem</dt><dd data-ficha-voltagem></dd></div>
                         <div data-ficha-linha="preco"><dt>Preço</dt><dd data-ficha-preco></dd></div>
                     </dl>
+                    <div class="arena3d-ficha-cores" data-ficha-cores role="group" aria-label="Cores do objeto 3D" hidden></div>
                     <div class="arena3d-ficha-jogos" data-ficha-jogos hidden></div>
                     <div class="arena3d-ficha-acoes">
                         <a class="ls-botao" data-ficha-detalhe href="{% url 'brinquedos' %}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>

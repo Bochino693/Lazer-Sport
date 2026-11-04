@@ -845,10 +845,15 @@ class BrinquedoInfoView(View):
                 "categorias_brinquedos",
                 "tags",
                 "imagens_brinquedo",
+                "objeto_3d",
             ),
             id=id,
             ativo=True,
         )
+        # o objeto 3D do cadastro (o .glb): o visor da página, além das fotos
+        objeto_3d = getattr(brinquedo, "objeto_3d", None)
+        if objeto_3d is not None and not (objeto_3d.ativo and objeto_3d.url):
+            objeto_3d = None
 
         obj, created = BrinquedoClick.objects.get_or_create(
             brinquedo_clicado=brinquedo,
@@ -953,6 +958,7 @@ class BrinquedoInfoView(View):
             "imagens_brinquedo": imagens_brinquedo,
             "whatsapp_url": whatsapp_url,
             "permite_sob_medida": permite_sob_medida,
+            "objeto_3d": objeto_3d,
             # Curtida e lista de desejos: valem sem login, presos ao
             # aparelho enquanto o visitante não entra na conta.
             "favorito": servico_favoritos.estado_do_produto(
@@ -2582,6 +2588,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "categorias_brinquedos",
                 "tags",
                 "imagens_brinquedo",
+                "objeto_3d",
             )
             .order_by("nome_brinquedo", "id")
         )
@@ -2674,6 +2681,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "exibir_na_loja": brinquedo.exibir_na_loja,
                 "imagem_url": capa.url if capa else "",
                 "imagens": fotos,
+                "objeto_3d": self._dados_do_objeto_3d(brinquedo),
                 "categorias_ids": list(
                     brinquedo.categorias_brinquedos.values_list(
                         "id",
@@ -2709,6 +2717,20 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             context,
         )
         return aplicar_cache_condicional(response, etag)
+
+    @staticmethod
+    def _dados_do_objeto_3d(brinquedo):
+        """O objeto 3D do brinquedo para o modal (nome do arquivo e cores), ou None."""
+        objeto = getattr(brinquedo, "objeto_3d", None)
+        if not objeto or not objeto.ativo or not objeto.url:
+            return None
+        nome = (objeto.arquivo.name if objeto.arquivo else objeto.arquivo_estatico).rsplit("/", 1)[-1]
+        return {
+            "arquivo": nome,
+            "url": objeto.url,
+            "cores": list(objeto.cores or []),
+            "medidas": list(objeto.medidas or []),
+        }
 
     # ------------------------------------------------------------------
     # Respostas do formulário
@@ -2852,6 +2874,48 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             rounding=ROUND_HALF_UP,
         )
 
+    def _ler_objeto_3d(self, request):
+        """O .glb enviado (já conferido, com as cores e as medidas dele) e se é para tirar o atual."""
+        from django.core.exceptions import ValidationError
+
+        from .objetos_3d import validar_glb
+
+        arquivo = request.FILES.get("objeto_3d")
+        remover = request.POST.get("remover_objeto_3d") == "on" and not arquivo
+        lido = {"cores": [], "medidas": []}
+        if arquivo:
+            try:
+                lido = validar_glb(arquivo)
+            except ValidationError as exc:
+                raise ErroDeFormulario(f"Objeto 3D: {' '.join(exc.messages)}") from exc
+        return arquivo, lido, remover
+
+    def _gravar_objeto_3d(self, brinquedo, arquivo, lido, remover):
+        """O objeto 3D do brinquedo: troca o arquivo (as cores vêm junto) ou tira."""
+        from .models import ObjetoTresD
+
+        atual = ObjetoTresD.objects.filter(brinquedo=brinquedo).first()
+        if remover and atual:
+            if atual.arquivo:
+                atual.arquivo.delete(save=False)
+            if atual.arquivo_estatico:
+                # o objeto que veio com o site não se apaga: só sai do brinquedo
+                atual.ativo = False
+                atual.save(update_fields=["ativo", "atualizado"])
+            else:
+                atual.delete()
+            return
+        if not arquivo:
+            return
+        objeto = atual or ObjetoTresD(brinquedo=brinquedo)
+        if objeto.arquivo:
+            objeto.arquivo.delete(save=False)
+        objeto.arquivo.save(arquivo.name, arquivo, save=False)
+        objeto.cores = lido["cores"]
+        objeto.medidas = lido["medidas"]
+        objeto.ativo = True
+        objeto.save()
+
     def _ler_imagens(self, request, brinquedo):
         """Lê os quatro slots e decide quais tipos o brinquedo vai ter."""
         arquivos = {
@@ -2965,6 +3029,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             request,
             brinquedo,
         )
+        objeto_3d = self._ler_objeto_3d(request)
 
         preco = self._parse_decimal(
             request.POST.get("valor_brinquedo"),
@@ -3012,6 +3077,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         brinquedo.save()
 
         self._gravar_imagens(brinquedo, arquivos, remover, tipos_finais)
+        self._gravar_objeto_3d(brinquedo, *objeto_3d)
 
         brinquedo.categorias_brinquedos.set(
             request.POST.getlist("categorias_brinquedos")

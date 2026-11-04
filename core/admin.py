@@ -25,7 +25,8 @@ from .models import (
     PecasReposicao,
     ImagemPeca,
     CategoriaPeca,
-    Frete
+    Frete,
+    ObjetoTresD,
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -483,6 +484,32 @@ class ImagemBrinquedoAdmin(GaleriaAdminBase):
             )
 
 
+class ObjetoTresDInline(admin.StackedInline):
+    """O objeto 3D (.glb) dentro do cadastro do brinquedo: as cores saem do arquivo."""
+
+    model = ObjetoTresD
+    extra = 0
+    max_num = 1
+    fields = ("arquivo", "arquivo_estatico", "codigo", "cores", "medidas", "exibir_na_arena", "ativo")
+    readonly_fields = ("cores", "medidas")
+    verbose_name = "Objeto 3D"
+    verbose_name_plural = "Objeto 3D (.glb, com as cores dele)"
+
+
+@admin.register(ObjetoTresD)
+class ObjetoTresDAdmin(admin.ModelAdmin):
+    list_display = ("brinquedo", "codigo", "lista_de_cores", "exibir_na_arena", "ativo", "atualizado")
+    list_filter = ("ativo", "exibir_na_arena")
+    search_fields = ("brinquedo__nome_brinquedo", "codigo")
+    list_select_related = ("brinquedo",)
+    autocomplete_fields = ("brinquedo",)
+    readonly_fields = ("cores", "medidas", "criacao", "atualizado")
+
+    @admin.display(description="Cores")
+    def lista_de_cores(self, obj):
+        return ", ".join(obj.cores or []) or "—"
+
+
 @admin.register(Brinquedos)
 class BrinquedosAdmin(admin.ModelAdmin):
     list_display = ('nome_brinquedo', 'avaliacao', 'voltz', 'exibir_na_loja', 'ativo', 'criacao')
@@ -491,7 +518,7 @@ class BrinquedosAdmin(admin.ModelAdmin):
     readonly_fields = ('criacao', 'atualizado')
     filter_horizontal = ('categorias_brinquedos', 'tags', 'estabelecimentos')
     ordering = ('-criacao',)
-    inlines = [ImagemBrinquedoInline]
+    inlines = [ImagemBrinquedoInline, ObjetoTresDInline]
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)

@@ -19,7 +19,7 @@ WHATSAPP = "5511960563135"
 
 
 def brinquedos_da_arena():
-    """Os brinquedos ativos com tudo o que a arena desenha, em quatro consultas."""
+    """Os brinquedos ativos com tudo o que a arena desenha, em cinco consultas."""
     return (
         Brinquedos.objects
         .filter(ativo=True)
@@ -31,6 +31,7 @@ def brinquedos_da_arena():
         .prefetch_related(
             "categorias_brinquedos",
             "tags",
+            "objeto_3d",
             Prefetch(
                 "imagens_brinquedo",
                 queryset=ImagemBrinquedo.objects.order_by("ordem", "id"),

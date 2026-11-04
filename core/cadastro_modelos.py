@@ -6,6 +6,11 @@
     plantas do parque e das quadras e as imagens do espaço completo (ver
     `ferramentas/modelos3d/espaco-esportivo-modelo-1/`). As fotos dele são
     vistas do próprio objeto 3D, com o fundo claro do catálogo.
+  * STRIKE KIDS (o boliche kids): o .glb da máquina com a adesivagem de
+    verdade (laterais, testeira, tela, pista e frente), feito para a
+    fábrica. É o PRIMEIRO objeto 3D ligado pelo cadastro (`ObjetoTresD`):
+    se o brinquedo já está no catálogo (com as fotos reais), só ganha o
+    objeto; se não está, entra com as fotos tiradas do próprio 3D.
 
 Quem cadastra:
   * as migrações de dados (`0113_brinquedao_modelo_2`,
@@ -36,6 +41,7 @@ CADASTROS = {
     "brinquedao-modelo-2": {
         "nome": "Brinquedão Modelo 2",
         "pasta": MODELOS / "brinquedao-modelo-2",
+        "objeto_3d": "site/arena/modelos/brinquedao-modelo-2.glb",
         "descricao": (
             "Brinquedão temático de selva com 11 m de comprimento, 2 m de profundidade e 3,5 m de altura. "
             "Torre com piso de rede e bolas suspensas, três casinhas com arco (azul, laranja e amarela), "
@@ -57,6 +63,7 @@ CADASTROS = {
     "espaco-esportivo-modelo-1": {
         "nome": "Espaço Esportivo Modelo 1",
         "pasta": MODELOS / "espaco-esportivo-modelo-1",
+        "objeto_3d": "site/arena/modelos/espaco-esportivo-modelo-1.glb",
         "descricao": (
             "Espaço esportivo completo numa área de 39 m × 23 m. Parque de trampolins de 18 m × 16,5 m "
             "(plataforma a 0,85 m e estrutura de 3,65 m): camas em blocos coloridos, seis piscinas de espuma "
@@ -75,6 +82,28 @@ CADASTROS = {
         "categorias": ("esportiv",),
         # "Espaço esportivo" é o certo; "kids" fica para os menores, se houver as duas
         "evitar": ("kids",),
+    },
+    "strike-kids": {
+        "nome": "Strike Kids Boliche",
+        # o brinquedo do catálogo que é esta máquina (qualquer um destes no nome)
+        "nomes": ("strike kids", "boliche kids"),
+        "pasta": MODELOS / "strike-kids",
+        "objeto_3d": "site/arena/modelos/strike-kids.glb",
+        "descricao": (
+            "Strike Kids, o boliche infantil da Lazer & Sport: pista de 1,4 m com bolsão para as bolas, "
+            "tela vertical com o jogo Strike Kids, testeira e laterais adesivadas com os pinos sorridentes "
+            "e LEDs nas laterais. Medidas aproximadas: 2,07 m de altura, 0,74 m de largura e 1,91 m de "
+            "comprimento. Cores e adesivagem podem ser ajustadas no pedido."
+        ),
+        "medidas": ("2.07", "0.74", "1.91"),
+        "fotos": (
+            ("frente.webp", "perfil", "Strike Kids Boliche visto de frente, com a tela e a pista"),
+            ("lado_direito.webp", "lado_direito", "Strike Kids Boliche pelo lado direito, com a arte dos pinos"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids Boliche pelo lado esquerdo, com a arte dos pinos"),
+            ("verso.webp", "verso", "Strike Kids Boliche visto por trás"),
+        ),
+        "categorias": ("boliche", "jogos", "eletronic"),
+        "evitar": (),
     },
 }
 
@@ -130,6 +159,37 @@ def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_
     return brinquedo, criado
 
 
+def achar_no_catalogo(chave, Brinquedos):
+    """O brinquedo do catálogo que é esta máquina (pelo nome), ou None."""
+    dados = CADASTROS[chave]
+    trechos = [_normalizar(t) for t in dados.get("nomes", ()) or (dados["nome"],)]
+    for brinquedo in Brinquedos.objects.order_by("id"):
+        nome = _normalizar(brinquedo.nome_brinquedo or "")
+        if any(trecho in nome for trecho in trechos):
+            return brinquedo
+    return None
+
+
+def ligar_objeto_3d(chave, brinquedo, ObjetoTresD):
+    """Liga o objeto 3D do site ao brinquedo (cria ou atualiza; não duplica)."""
+    from .objetos_3d import ler_glb_do_site
+
+    caminho = CADASTROS[chave]["objeto_3d"]
+    lido = ler_glb_do_site(caminho)
+    objeto, _criado = ObjetoTresD.objects.update_or_create(
+        brinquedo=brinquedo,
+        defaults={
+            "arquivo_estatico": caminho,
+            "codigo": chave,
+            "cores": lido["cores"],
+            "medidas": lido["medidas"],
+            "ativo": True,
+            "exibir_na_arena": True,
+        },
+    )
+    return objeto
+
+
 def cadastrar_brinquedao_modelo_2(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos=False, avisar=print):
     """O cadastro do Brinquedão Modelo 2 (a migração 0113 chama por este nome)."""
     return cadastrar("brinquedao-modelo-2", Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos, avisar)
@@ -160,3 +220,36 @@ def migracao(chave):
                   f"Rode: python manage.py cadastrar_modelo_3d {chave}")
 
     return cadastrar_no_deploy
+
+
+def migracao_objetos_3d(*chaves):
+    """A migração que liga os objetos 3D do site aos brinquedos `chaves`.
+
+    A ligação roda em todo lugar (não mexe em arquivo nenhum). O cadastro
+    do brinquedo, quando ele ainda não está no catálogo, só no Render (as
+    fotos sobem para o Cloudinary); se falhar, o deploy segue e o comando
+    `cadastrar_modelo_3d` refaz.
+    """
+    def ligar_no_deploy(apps, schema_editor):
+        from django.conf import settings
+
+        Brinquedos = apps.get_model("core", "Brinquedos")
+        for chave in chaves:
+            brinquedo = achar_no_catalogo(chave, Brinquedos)
+            if brinquedo is None and getattr(settings, "IS_RENDER", False):
+                try:
+                    with transaction.atomic():
+                        brinquedo, _criado = cadastrar(
+                            chave,
+                            Brinquedos,
+                            apps.get_model("core", "CategoriasBrinquedos"),
+                            apps.get_model("core", "ImagemBrinquedo"),
+                        )
+                except Exception as erro:  # o deploy segue; o comando refaz depois
+                    print(f"{CADASTROS[chave]['nome']} não foi cadastrado agora ({erro}). "
+                          f"Rode: python manage.py cadastrar_modelo_3d {chave}")
+                    continue
+            if brinquedo is not None:
+                ligar_objeto_3d(chave, brinquedo, apps.get_model("core", "ObjetoTresD"))
+
+    return ligar_no_deploy
