@@ -13,6 +13,14 @@
        largura: 540, altura: 960,          // tela lógica, em pontos
        contagem: false,                     // opcional: sem o 3-2-1 do console
        artes: { bola: "boliche/bola.webp" }, // relativo ao arquivo do jogo
+       sons: {                              // opcional: os sons da máquina
+         strike: "boliche/sons/strike.mp3",            // relativo, como as artes
+         pino: { arquivo: ["p1.mp3", "p2.mp3"],        // sorteia um a cada vez
+                 volume: 0.7, tom: [0.9, 1.1],         // tom: fixo ou faixa
+                 intervalo: 0.04, vozes: 4,            // repetição e sobreposição
+                 senao: "batida", laco: false },       // receita se faltar
+       },                                   // (ou sons(variante) { ... })
+       musica: { arquivo: "x/sons/musica.mp3", volume: 0.4 },  // opcional, em laço
        criar(api) {                         // devolve a partida
          return {
            iniciar(),          // começa (ou recomeça) uma partida
@@ -29,11 +37,22 @@
      api.W, api.H            tamanho lógico
      api.variante            "dragon", "slam"... (o mesmo arquivo serve a família)
      api.img.<nome>          as artes, já carregadas (Image)
-     api.som(nome)           clique, ponto, acerto, erro, quica, batida, strike,
-                             tiro, vidro, soco, apito, moeda, fim, vitoria,
-                             combo, whoosh, nota
+     api.som(nome, {volume, tom, laco})
+                             o som do jogo com esse nome (`sons`) ou a receita
+                             sintetizada: clique, ponto, acerto, erro, quica,
+                             batida, strike, tiro, vidro, soco, apito, moeda,
+                             fim, vitoria, combo, whoosh, nota, contagem, vai.
+                             Devolve {parar(), ajustar({volume, tom})} quando
+                             toca um arquivo (o laço da bola rolando), senão
+                             nada. O console toca "moeda" no START, "contagem"
+                             e "vai" no 3-2-1 e "fim"/"vitoria" no fim: um jogo
+                             com esses nomes em `sons` usa os da máquina.
+     api.musica(ligar)       liga/desliga a `musica` do jogo (o console já liga
+                             no START e desliga no fim; o jogo que troca de
+                             trilha antes do fim desliga aqui)
      api.placar({pontos, tempo, info})   o painel de cima
-     api.terminar({pontos, titulo, detalhe})   fim de partida
+     api.terminar({pontos, titulo, detalhe, som})   fim de partida (som: false
+                             quando o jogo já tocou o próprio som de fim)
      api.contagem(depois)    o 3-2-1 do console no meio da partida (jogo
                              com `contagem: false` que escolhe algo antes
                              de começar: a contagem vem depois da escolha)
@@ -58,37 +77,298 @@ function gravar(chave, valor) {
 }
 
 /* ----------------------------------------------------------------------
-   SOM SINTETIZADO
+   OS SONS DA MÁQUINA (o `sons` de cada jogo)
 
-   Nenhum arquivo de áudio a baixar: cada efeito é uma receita de
-   osciladores e ruído, tocada pelo WebAudio. O contexto só nasce depois
-   de um toque da pessoa -- é a regra dos navegadores, e é também o certo.
+   Os arquivos do jogo de verdade, convertidos para MP3, baixam quando o
+   jogo abre e nunca seguram a partida: enquanto um arquivo não chega (ou
+   se ele não chegar), aquele efeito sai da receita sintetizada. Quem
+   deixou o som desligado não baixa nada até ligar.
+
+   Desembrulhar o MP3 não espera o toque da pessoa: um contexto OFFLINE
+   (que não toca nada e por isso não precisa de licença do navegador)
+   decodifica cada arquivo assim que ele chega, e o buffer serve depois
+   ao contexto de verdade -- assim a primeira ficha já é a da máquina.
+   ---------------------------------------------------------------------- */
+const MAX_VOZES = 24;          // amostras tocando juntas, no máximo
+const INTERVALO_PADRAO = 0.04; // o mesmo som disparado de novo antes disso vira um só
+const VOZES_PADRAO = 4;        // do mesmo som juntas; a mais velha cede o lugar
+
+function sortear(valor) {
+  return Array.isArray(valor) ? valor[0] + Math.random() * (valor[1] - valor[0]) : valor;
+}
+
+class BancoDeSons {
+  constructor(base, sons, musica) {
+    this.base = base;
+    this.arquivos = new Map();   // endereço -> { bruto, buffer, decodificando }
+    this.entradas = {};
+    for (const [nome, valor] of Object.entries(sons || {})) this.entradas[nome] = this.entrada(valor);
+    this.musica = musica ? this.entrada(musica) : null;
+    this.aoFicarPronto = null;
+  }
+
+  entrada(valor) {
+    const e = (valor && typeof valor === "object" && !Array.isArray(valor)) ? valor : { arquivo: valor };
+    const lista = [].concat(e.arquivo || e.arquivos || []);
+    const enderecos = lista.map((caminho) => {
+      const endereco = new URL(caminho, this.base).href;
+      if (!this.arquivos.has(endereco)) this.arquivos.set(endereco, { bruto: null, buffer: null, decodificando: false });
+      return endereco;
+    });
+    return {
+      enderecos,
+      volume: typeof e.volume === "number" ? e.volume : 1,
+      tom: e.tom || 1,
+      intervalo: typeof e.intervalo === "number" ? e.intervalo : INTERVALO_PADRAO,
+      vozes: e.vozes || VOZES_PADRAO,
+      laco: Boolean(e.laco),
+      // `senao: null` = sem arquivo, silêncio (a torcida não vira um bipe)
+      senao: "senao" in e ? e.senao : undefined,
+      ultimo: -1,
+    };
+  }
+
+  baixar() {
+    if (this.baixou) return;
+    this.baixou = true;
+    for (const [endereco, arquivo] of this.arquivos) {
+      arquivo.bruto = fetch(endereco, { credentials: "same-origin" })
+        .then((resposta) => (resposta.ok ? resposta.arrayBuffer() : Promise.reject(new Error(`HTTP ${resposta.status}`))))
+        .catch((erro) => {
+          console.warn("Console: som não carregou", endereco, erro);
+          return null;
+        });
+    }
+  }
+
+  decodificar(decodificador) {
+    if (!decodificador || !this.baixou) return;
+    for (const [endereco, arquivo] of this.arquivos) {
+      if (arquivo.buffer || arquivo.decodificando || !arquivo.bruto) continue;
+      arquivo.decodificando = true;
+      arquivo.bruto.then((bytes) => {
+        if (!bytes) return;
+        let feito = false;
+        const pronto = (buffer) => {
+          if (feito) return;
+          feito = true;
+          arquivo.buffer = buffer;
+          arquivo.bruto = null;  // os bytes já viraram som: a memória volta
+          if (this.aoFicarPronto) this.aoFicarPronto(this);
+        };
+        const falhou = (erro) => {
+          if (feito) return;
+          feito = true;
+          console.warn("Console: som não decodificou", endereco, erro);
+        };
+        try {
+          const promessa = decodificador.decodeAudioData(bytes, pronto, falhou);
+          if (promessa && promessa.catch) promessa.catch(falhou);
+        } catch (erro) {
+          falhou(erro);
+        }
+      });
+    }
+  }
+
+  /** Um dos arquivos da entrada, já decodificado (sorteado, sem repetir o
+   *  último quando há mais de um). */
+  buffer(entrada) {
+    const prontos = entrada.enderecos.map((e) => this.arquivos.get(e).buffer).filter(Boolean);
+    if (!prontos.length) return null;
+    if (prontos.length === 1) return prontos[0];
+    let i = Math.floor(Math.random() * prontos.length);
+    if (prontos[i] === entrada.anterior) i = (i + 1) % prontos.length;
+    entrada.anterior = prontos[i];
+    return prontos[i];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   O SOM
+
+   Os jogos sem arquivo (e os efeitos que ainda não chegaram) tocam
+   receitas de osciladores e ruído pelo WebAudio. O contexto só nasce
+   depois de um toque da pessoa -- é a regra dos navegadores, e é também
+   o certo.
    ---------------------------------------------------------------------- */
 class Som {
   constructor() {
     this.ligado = ler(CHAVE_SOM) !== "0";
     this.ctx = null;
+    this.banco = null;
+    this.vozes = [];
+    this.faixa = null;
+    this.querMusica = false;
+    this.pausado = false;
+    // a pessoa pediu para economizar dados: os arquivos só vêm com o primeiro toque
+    try { this.economia = Boolean(navigator.connection && navigator.connection.saveData); } catch (erro) { this.economia = false; }
   }
 
   acordar() {
     if (this.ctx || !this.ligado) {
-      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      if (this.ctx && this.ligado && !this.pausado && this.ctx.state === "suspended") this.ctx.resume();
+      if (this.ligado && this.banco && !this.banco.baixou) this.prepararBanco();
       return;
     }
     const Contexto = window.AudioContext || window.webkitAudioContext;
     if (!Contexto) return;
-    this.ctx = new Contexto();
-    this.mestre = this.ctx.createGain();
+    try { this.ctx = new Contexto(); } catch (erro) { return; }
+    const c = this.ctx;
+    // Um limitador na saída: pinos, torcida e "STRIKE!" juntos não estouram
+    // o alto-falante do celular.
+    this.limitador = c.createDynamicsCompressor();
+    this.limitador.threshold.value = -6;
+    this.limitador.knee.value = 6;
+    this.limitador.ratio.value = 12;
+    this.limitador.attack.value = 0.003;
+    this.limitador.release.value = 0.2;
+    this.limitador.connect(c.destination);
+    this.mestre = c.createGain();
     this.mestre.gain.value = 0.55;
-    this.mestre.connect(this.ctx.destination);
+    this.mestre.connect(this.limitador);
+    this.efeitos = c.createGain();
+    this.efeitos.gain.value = 1;
+    this.efeitos.connect(this.mestre);
+    this.trilha = c.createGain();
+    this.trilha.connect(this.mestre);
+    if (this.banco) this.prepararBanco();
   }
 
   alternar() {
     this.ligado = !this.ligado;
     gravar(CHAVE_SOM, this.ligado ? "1" : "0");
-    if (this.ligado) this.acordar();
-    else if (this.ctx) this.ctx.suspend();
+    if (this.ligado) {
+      this.acordar();
+      this.iniciarMusica();
+    } else if (this.ctx) this.ctx.suspend();
     return this.ligado;
+  }
+
+  /* Partida parada (aba escondida, máquina fora da tela): o som para junto,
+     a música inclusive, e volta de onde estava. */
+  pausar() {
+    this.pausado = true;
+    if (this.ctx && this.ctx.state === "running") this.ctx.suspend();
+  }
+
+  retomar() {
+    this.pausado = false;
+    if (this.ctx && this.ligado && this.ctx.state === "suspended") this.ctx.resume();
+  }
+
+  /* ---------- os arquivos do jogo aberto ---------- */
+  usar(banco) {
+    if (banco === this.banco) return;
+    this.pararTudo();
+    this.banco = banco;
+    if (banco) this.prepararBanco();
+  }
+
+  prepararBanco() {
+    const banco = this.banco;
+    banco.aoFicarPronto = (b) => { if (b === this.banco) this.iniciarMusica(); };
+    if (this.ligado && (!this.economia || this.ctx)) banco.baixar();
+    banco.decodificar(this.ctx || this.decodificadorOffline());
+  }
+
+  decodificadorOffline() {
+    if (this.offline === undefined) {
+      const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      try { this.offline = Offline ? new Offline(1, 1, 44100) : null; } catch (erro) { this.offline = null; }
+    }
+    return this.offline;
+  }
+
+  tocarAmostra(nome, entrada, buffer, opcoes) {
+    const c = this.ctx;
+    const agora = c.currentTime;
+    const laco = Boolean(opcoes.laco || entrada.laco);
+    // O mesmo som disparado de novo em cima dele (dez pinos batendo no
+    // mesmo quadro) vira um só: o ouvido não separa, e o volume não soma.
+    if (!laco && entrada.ultimo >= 0 && agora - entrada.ultimo < entrada.intervalo) return null;
+    entrada.ultimo = agora;
+    const iguais = this.vozes.filter((v) => v.nome === nome);
+    if (iguais.length >= entrada.vozes) iguais[0].parar(0.03);
+    if (this.vozes.length >= MAX_VOZES) this.vozes[0].parar(0.03);
+
+    const fonte = c.createBufferSource();
+    fonte.buffer = buffer;
+    fonte.loop = laco;
+    fonte.playbackRate.value = typeof opcoes.tom === "number" ? opcoes.tom : sortear(entrada.tom);
+    const ganho = c.createGain();
+    ganho.gain.value = entrada.volume * (typeof opcoes.volume === "number" ? opcoes.volume : 1);
+    fonte.connect(ganho).connect(this.efeitos);
+    const voz = {
+      nome,
+      parar: (tempo = 0.06) => {
+        const i = this.vozes.indexOf(voz);
+        if (i >= 0) this.vozes.splice(i, 1);
+        try {
+          const t = c.currentTime;
+          ganho.gain.cancelScheduledValues(t);
+          ganho.gain.setValueAtTime(ganho.gain.value, t);
+          ganho.gain.linearRampToValueAtTime(0, t + tempo);
+          fonte.stop(t + tempo + 0.01);
+        } catch (erro) { /* já parou */ }
+      },
+      ajustar: ({ volume, tom } = {}) => {
+        const t = c.currentTime;
+        if (typeof volume === "number") ganho.gain.setTargetAtTime(entrada.volume * volume, t, 0.03);
+        if (typeof tom === "number") fonte.playbackRate.setTargetAtTime(tom, t, 0.03);
+      },
+    };
+    fonte.onended = () => {
+      const i = this.vozes.indexOf(voz);
+      if (i >= 0) this.vozes.splice(i, 1);
+    };
+    fonte.start(agora);
+    this.vozes.push(voz);
+    return { parar: voz.parar, ajustar: voz.ajustar };
+  }
+
+  /* ---------- a música de fundo (o `musica` do jogo) ---------- */
+  tocarMusica() {
+    this.querMusica = true;
+    this.iniciarMusica();
+  }
+
+  iniciarMusica() {
+    const m = this.banco && this.banco.musica;
+    if (!m || !this.querMusica || this.faixa || !this.ctx || !this.ligado) return;
+    const buffer = this.banco.buffer(m);
+    if (!buffer) return; // começa sozinha quando o arquivo chegar (aoFicarPronto)
+    const c = this.ctx;
+    const fonte = c.createBufferSource();
+    fonte.buffer = buffer;
+    fonte.loop = true;
+    const ganho = c.createGain();
+    ganho.gain.setValueAtTime(0, c.currentTime);
+    ganho.gain.linearRampToValueAtTime(m.volume, c.currentTime + 0.6);
+    fonte.connect(ganho).connect(this.trilha);
+    fonte.start();
+    this.faixa = { fonte, ganho };
+  }
+
+  pararMusica(tempo = 0.6) {
+    this.querMusica = false;
+    const f = this.faixa;
+    this.faixa = null;
+    if (!f) return;
+    try {
+      const t = this.ctx.currentTime;
+      f.ganho.gain.cancelScheduledValues(t);
+      f.ganho.gain.setValueAtTime(f.ganho.gain.value, t);
+      f.ganho.gain.linearRampToValueAtTime(0, t + tempo);
+      f.fonte.stop(t + tempo + 0.02);
+    } catch (erro) { /* já parou */ }
+  }
+
+  /** Troca de jogo: nada do anterior continua tocando. */
+  pararTudo() {
+    this.pararMusica(0.15);
+    for (const voz of this.vozes.slice()) voz.parar(0.05);
+    this.vozes.length = 0;
   }
 
   tom(freq, dur, { tipo = "square", volume = 0.25, ate = null, atraso = 0 } = {}) {
@@ -125,11 +405,27 @@ class Som {
     fonte.start(t);
   }
 
-  tocar(nome) {
-    if (!this.ligado) return;
+  /** O arquivo da máquina, se o jogo tem um com esse nome e ele já chegou;
+   *  senão a receita (a do `senao` da entrada, a do nome ou o clique). */
+  tocar(nome, opcoes = {}) {
+    if (!this.ligado) return null;
     this.acordar();
-    if (!this.ctx) return;
-    const receitas = {
+    if (!this.ctx) return null;
+    const entrada = this.banco && this.banco.entradas[nome];
+    let receita = nome;
+    if (entrada) {
+      const buffer = this.banco.buffer(entrada);
+      if (buffer) return this.tocarAmostra(nome, entrada, buffer, opcoes);
+      if (entrada.senao === null) return null;
+      if (entrada.senao) receita = entrada.senao;
+    }
+    const receitas = this.receitas || (this.receitas = this.criarReceitas());
+    (receitas[receita] || receitas.clique)();
+    return null;
+  }
+
+  criarReceitas() {
+    return {
       clique: () => this.tom(880, 0.06, { tipo: "triangle", volume: 0.18 }),
       ponto: () => { this.tom(660, 0.08, { volume: 0.16 }); this.tom(990, 0.12, { volume: 0.16, atraso: 0.07 }); },
       acerto: () => this.tom(520, 0.14, { tipo: "triangle", volume: 0.3, ate: 1040 }),
@@ -153,7 +449,6 @@ class Som {
       contagem: () => this.tom(440, 0.12, { tipo: "square", volume: 0.14 }),
       vai: () => this.tom(880, 0.3, { tipo: "square", volume: 0.16 }),
     };
-    (receitas[nome] || receitas.clique)();
   }
 }
 
@@ -250,6 +545,7 @@ class Console {
     this.botaoSom = raiz.querySelector("[data-console-som]");
     this.som = new Som();
     this.modulos = new Map();
+    this.bancos = new Map();
     this.estado = "fechado";
     this.jogo = null;
     this.partida = null;
@@ -396,6 +692,7 @@ class Console {
     this.dados = dados;
     this.raiz.dispatchEvent(new CustomEvent("console:abrir", { detail: { slug: dados.slug } }));
     this.jogo = null;
+    this.som.usar(null);
     this.escalaMaxima = 2;
     this.raiz.style.setProperty("--cor-jogo", dados.cor || "#ffd700");
     this.raiz.querySelector("[data-console-titulo]").textContent = dados.titulo;
@@ -433,6 +730,7 @@ class Console {
       // Trocou de jogo enquanto este carregava: fica o último pedido.
       if (this.dados !== dados) return;
       this.jogo = jogo;
+      this.som.usar(this.bancoDe(jogo, dados));
       this.criarPartida();
       this.carregando.hidden = true;
       this.ajustarTela();
@@ -455,13 +753,34 @@ class Console {
           img.onerror = () => { console.warn("Console: arte não carregou", caminho); resolver(); };
           img.src = new URL(caminho, new URL(url, window.location.href)).href;
         })));
-        return { ...jogo, imagens };
+        return { ...jogo, imagens, endereco: new URL(url, window.location.href).href };
       });
       // falhou (rede): esquece, para a próxima tentativa baixar de novo
       promessa.catch(() => this.modulos.delete(url));
       this.modulos.set(url, promessa);
     }
     return this.modulos.get(url);
+  }
+
+  /* Os sons da máquina de cada jogo (por variante: os dois basquetes são
+     um arquivo só com duas máquinas), guardados para a volta ao jogo não
+     baixar tudo de novo. */
+  bancoDe(jogo, dados) {
+    const variante = dados.variante || "";
+    const chave = `${jogo.endereco}#${variante}`;
+    if (!this.bancos.has(chave)) {
+      const escolher = (campo) => (typeof campo === "function" ? campo(variante) : campo);
+      let banco = null;
+      try {
+        const sons = escolher(jogo.sons);
+        const musica = escolher(jogo.musica);
+        if (sons || musica) banco = new BancoDeSons(jogo.endereco, sons, musica);
+      } catch (erro) {
+        console.warn("Console: sons do jogo ignorados", erro);
+      }
+      this.bancos.set(chave, banco);
+    }
+    return this.bancos.get(chave);
   }
 
   criarPartida() {
@@ -486,7 +805,8 @@ class Console {
       variante: this.dados.variante || "",
       img: jogo.imagens,
       reduzido: this.reduzido,
-      som: (nome) => this.som.tocar(nome),
+      som: (nome, opcoes) => this.som.tocar(nome, opcoes),
+      musica: (ligar = true) => (ligar ? this.som.tocarMusica() : this.som.pararMusica()),
       placar: (dados) => this.placar(dados),
       terminar: (resultado) => this.terminar(resultado),
       contagem: (depois) => this.contar(depois),
@@ -547,7 +867,10 @@ class Console {
     if (!this.jogo || this.estado === "jogando" || this.estado === "contagem") return;
     if (!liberado && !this.liberar()) return;
     this.som.acordar();
+    // a partida nova não herda a torcida nem o jingle do fim da anterior
+    this.som.pararTudo();
     this.som.tocar("moeda");
+    this.som.tocarMusica();
     this.capa.hidden = true;
     this.fim.hidden = true;
     this.api.efeitos.limpar();
@@ -574,13 +897,16 @@ class Console {
     this.estado = "contagem";
   }
 
-  terminar({ pontos = 0, titulo = "Fim de jogo", detalhe = "" } = {}) {
+  terminar({ pontos = 0, titulo = "Fim de jogo", detalhe = "", som = true } = {}) {
     if (this.estado !== "jogando") return;
     this.estado = "fim";
     const recorde = Number(ler(PREFIXO_RECORDE + this.dados.slug) || 0);
     const novo = pontos > recorde;
     if (novo) gravar(PREFIXO_RECORDE + this.dados.slug, String(pontos));
-    this.som.tocar(novo ? "vitoria" : "fim");
+    this.som.pararMusica(0.8);
+    // o jogo que já tocou o fim da máquina (o "fim" do Strike Kids, o
+    // end-game do Dragon) não ganha um segundo por cima
+    if (som) this.som.tocar(novo ? "vitoria" : "fim");
     this.fim.querySelector("[data-console-fim-titulo]").textContent = novo && pontos > 0 ? "Novo recorde!" : titulo;
     this.fim.querySelector("[data-console-fim-pontos]").textContent = pontos.toLocaleString("pt-BR");
     this.fim.querySelector("[data-console-fim-detalhe]").textContent = detalhe;
@@ -624,10 +950,12 @@ class Console {
 
   pausar() {
     this.pausado = true;
+    this.som.pausar();
   }
 
   retomar() {
     this.pausado = false;
+    this.som.retomar();
     this.ultimoQuadro = performance.now();
   }
 
@@ -688,7 +1016,8 @@ class Console {
       const numero = Math.ceil(this.contagem / 0.8);
       if (numero !== this.ultimaContagem && numero > 0 && !this.semContagem) {
         this.ultimaContagem = numero;
-        this.som.tocar("contagem");
+        // o bip do arquivo sobe de tom a cada número, como nas máquinas
+        this.som.tocar("contagem", { tom: 1 + 0.12 * (3 - numero) });
       }
       if (this.contagem <= 0) {
         this.estado = "jogando";
@@ -774,6 +1103,8 @@ class Console {
     this.partida = null;
     this.estado = "fechado";
     this.pausado = false;
+    this.som.retomar();
+    this.som.pararTudo();
   }
 }
 

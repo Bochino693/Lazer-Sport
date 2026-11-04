@@ -40,6 +40,7 @@ from . import objetos_3d
 from .objetos_3d import ler_glb, ler_glb_do_site, validar_glb
 
 migracao = importlib.import_module("core.migrations.0116_objetos_3d_do_site")
+migracao_strike = importlib.import_module("core.migrations.0117_strike_kids_no_catalogo")
 
 
 def glb(dados):
@@ -126,6 +127,46 @@ class LigacaoTests(TestCase):
         self.assertEqual(ObjetoTresD.objects.count(), 1)
 
 
+class CadastroDoStrikeKidsTests(TestCase):
+    """A 0117 cadastra o Strike Kids no banco de verdade (PostgreSQL), fora do Render também."""
+
+    def rodar(self, vendor):
+        from django.apps import apps
+
+        editor = mock.Mock()
+        editor.connection.vendor = vendor
+        migracao_strike.Migration.operations[0].code(apps, editor)
+
+    def test_no_sqlite_dos_testes_nao_cadastra(self):
+        self.rodar("sqlite")
+        self.assertFalse(Brinquedos.objects.exists())
+
+    def test_no_postgresql_cadastra_com_fotos_e_objeto(self):
+        from .models import CategoriasBrinquedos
+
+        CategoriasBrinquedos.objects.create(nome_categoria="Eletrônicos", imagem_categoria="categorias/e.png")
+        with tempfile.TemporaryDirectory() as pasta:
+            disco = FileSystemStorage(location=pasta)
+            from .models import ImagemBrinquedo
+
+            with mock.patch.object(ImagemBrinquedo._meta.get_field("imagem"), "storage", disco), \
+                    mock.patch.object(Brinquedos._meta.get_field("imagem_brinquedo"), "storage", disco), \
+                    mock.patch("builtins.print"):
+                self.rodar("postgresql")
+                self.rodar("postgresql")  # de novo: não duplica
+        strike = Brinquedos.objects.get()
+        self.assertEqual(strike.nome_brinquedo, "Strike Kids Boliche")
+        self.assertEqual(strike.imagens_brinquedo.count(), 4)
+        self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
+        self.assertEqual(strike.objeto_3d.medidas, [2.07, 0.74, 1.91])
+
+    def test_ja_no_catalogo_so_liga(self):
+        boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Kids", descricao="x", avaliacao=5)
+        self.rodar("postgresql")
+        self.assertEqual(Brinquedos.objects.count(), 1)
+        self.assertEqual(boliche.objeto_3d.codigo, "strike-kids")
+
+
 class NaArenaTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -138,7 +179,29 @@ class NaArenaTests(TestCase):
         maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
         return next(m for m in maquinas if m["nome"] == "Strike Kids Boliche")
 
-    def test_sem_objeto_e_volume_das_fotos(self):
+    def test_sem_cadastro_vale_o_objeto_do_site_pelo_nome(self):
+        # o Strike Kids do catálogo tem o .glb do site mesmo antes da ligação
+        dados = self.maquina()
+        self.assertIn("site/arena/modelos/strike-kids.glb", dados["modelo"])
+        self.assertEqual((dados["grupo"], dados["jogo"]), ("jogos", "strike-kids"))
+        # e um brinquedo sem objeto nenhum continua com o volume das fotos
+        Brinquedos.objects.create(nome_brinquedo="Air Game Hockey", descricao="x", avaliacao=5)
+        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        self.assertEqual(next(m for m in maquinas if m["nome"] == "Air Game Hockey")["modelo"], "")
+
+    def test_aparece_na_arena_antes_do_catalogo(self):
+        self.strike.delete()
+        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        dados = next(m for m in maquinas if m["nome"] == "Strike Kids Boliche")
+        self.assertEqual(dados["id"], "modelo-strike-kids")
+        self.assertIn("strike-kids.glb", dados["modelo"])
+        self.assertEqual((dados["grupo"], dados["jogo"]), ("jogos", "strike-kids"))
+        self.assertIn("strike-kids/frente.webp", dados["capa"])
+
+    def test_tirado_no_painel_nao_volta_pelo_nome(self):
+        objeto = ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
+        objeto.ativo = False
+        objeto.save()
         self.assertEqual(self.maquina()["modelo"], "")
 
     def test_com_objeto_vai_o_glb_nas_medidas_dele(self):
@@ -170,7 +233,8 @@ class PaginaDoBrinquedoTests(TestCase):
         self.url = reverse("brinquedo_detalhe", args=[self.strike.pk])
 
     def test_visor_so_com_objeto(self):
-        resposta = self.client.get(self.url)
+        outro = Brinquedos.objects.create(nome_brinquedo="Air Game Hockey", descricao="x", avaliacao=5)
+        resposta = self.client.get(reverse("brinquedo_detalhe", args=[outro.pk]))
         self.assertNotContains(resposta, "data-visor3d")
         self.assertNotContains(resposta, "visor3d.js")
         ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
@@ -178,6 +242,9 @@ class PaginaDoBrinquedoTests(TestCase):
         self.assertContains(resposta, "data-visor3d-abrir")
         self.assertContains(resposta, "site/arena/visor3d.js")
         self.assertContains(resposta, "site/arena/modelos/strike-kids.glb")
+
+    def test_visor_pelo_nome_antes_da_ligacao(self):
+        self.assertContains(self.client.get(self.url), "site/arena/modelos/strike-kids.glb")
 
     def test_objeto_desligado_nao_aparece(self):
         objeto = ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
@@ -256,11 +323,16 @@ class AntesDaMigracaoTests(TestCase):
         self.assertFalse([q["sql"] for q in consultas if tabela in q["sql"]])
         return resposta
 
-    def test_arena_e_pagina_abrem_sem_o_3d(self):
+    def test_arena_e_pagina_abrem_sem_o_cadastro_do_3d(self):
+        # sem a tabela, o Strike Kids ainda tem o .glb do site, ligado pelo nome
         resposta = self.sem_consultar_a_tabela(reverse("arena"))
         dados = next(m for m in resposta.context["arena_dados"]["maquinas"] if m["nome"] == "Strike Kids Boliche")
-        self.assertEqual(dados["modelo"], "")
+        self.assertIn("strike-kids.glb", dados["modelo"])
         resposta = self.sem_consultar_a_tabela(reverse("brinquedo_detalhe", args=[self.strike.pk]))
+        self.assertContains(resposta, "strike-kids.glb")
+        # e uma máquina sem objeto nenhum segue sem o visor
+        outro = Brinquedos.objects.create(nome_brinquedo="Air Game Hockey", descricao="x", avaliacao=5)
+        resposta = self.sem_consultar_a_tabela(reverse("brinquedo_detalhe", args=[outro.pk]))
         self.assertNotContains(resposta, "data-visor3d")
 
     def test_painel_abre_e_salva_sem_o_3d(self):

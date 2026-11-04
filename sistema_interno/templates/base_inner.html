@@ -10,8 +10,7 @@
   {% comment %} 5 KB no lugar de 150 KB. O ícone da aba tem 16 pixels de lado; o
      arquivo de 500x500 era baixado inteiro, duas vezes, em toda aba
      nova do painel. {% endcomment %}
-  <link rel="icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
-  <link rel="shortcut icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
+  {% include "partials/icones_da_aba.html" with sem_app=True %}
 
   {% comment %}
     APLICATIVO DE VERDADE NO TABLET.

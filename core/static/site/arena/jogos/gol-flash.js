@@ -108,9 +108,30 @@ function retanguloRedondo(g, x, y, w, h, r) {
   g.closePath();
 }
 
+/* ----------------------------------------------------------------------
+   OS SONS DA MÁQUINA (beta7/songs, os de play.gd): o GOL, os apitos de
+   início e de fim, a torcida que canta e o grito de campeão. Na máquina
+   o chute é a bola de verdade: o toque na bola e o erro no anel apagado
+   da miniatura não têm arquivo e saem da receita do console.
+   ---------------------------------------------------------------------- */
+const SOM = "gol-flash/sons/";
+const SONS = {
+  gol: { arquivo: SOM + "gol.mp3", vozes: 1, senao: "acerto" },          // goal.mp3 (sfx_ponto)
+  apito: { arquivo: SOM + "apito.mp3", volume: 0.55 },                    // apito_init
+  apito_fim: { arquivo: SOM + "apito_fim.mp3", volume: 0.55, senao: "apito" },
+  // a torcida canta (SONS_TURNO_BOM / SUPEROU): um canal só, como o
+  // sfx_reativo, que não atropela o canto que já está tocando
+  torcida: { arquivo: [SOM + "torcida1.mp3", SOM + "torcida2.mp3"], volume: 0.6, vozes: 1, senao: null },
+  canto: { arquivo: SOM + "canto.mp3", volume: 0.8, vozes: 1, senao: null },          // leleo
+  campeao: { arquivo: SOM + "campeao.mp3", volume: 0.7, vozes: 1, senao: "vitoria" },
+  nao_superou: { arquivo: SOM + "nao_superou.mp3", volume: 0.6, senao: "erro" },
+  moeda: { arquivo: SOM + "inicio.mp3", volume: 0.9 },                    // game_start
+};
+
 export default {
   largura: LARGURA,
   altura: ALTURA,
+  sons: SONS,
   artes: {
     estadio: "gol-flash/estadio.webp",
     amarelo: "gol-flash/amarelo.webp",
@@ -368,6 +389,8 @@ export default {
        ------------------------------------------------------------------ */
     let tempo = TEMPO_DE_JOGO;
     let relogio = 0;
+    let somTorcida = null;         // o canal da torcida (tocarTorcida)
+    let torcidaAte = -1;
     let pontos = 0;
     let gols = 0;
     let chutes = 0;
@@ -403,6 +426,7 @@ export default {
     function iniciar() {
       tempo = TEMPO_DE_JOGO;
       relogio = 0;
+      torcidaAte = -1;
       pontos = 0;
       gols = 0;
       chutes = 0;
@@ -595,8 +619,7 @@ export default {
       popups.push({ texto: "GOOOL!", sub: `+${valor}${multiplicador > 1 ? "  x2" : ""}`, cor: cor.cor, luz: cor.luz, x: a.x, y: a.y - 44, t: 0, giro: sorteio(-0.12, 0.12) });
       api.tremer(5);
       api.vibrar(25);
-      api.som("acerto");
-      api.som("ponto");
+      api.som("gol");
       if (comboAtivo && !eraCombo) {
         aviso("COMBO!", "GOLS VALEM EM DOBRO", OURO, 46);
         api.som("combo");
@@ -607,7 +630,7 @@ export default {
         acertosTorcida = 0;
         aviso(`${gols} GOLS!`, "A TORCIDA CANTA!", "#ffffff", 50);
         for (let k = 0; k < (api.reduzido ? 12 : 40); k++) confetes.push(novoConfete());
-        api.som("strike");
+        tocarTorcida("torcida");
       }
     }
 
@@ -624,15 +647,27 @@ export default {
       avisos.push({ texto, sub, cor, t: 0, dur: 1.15, tamanho, x, y });
     }
 
+    // O CANAL DA TORCIDA (o sfx_reativo de play.gd): um canto por vez. O
+    // canto a cada 10 gols não atropela o que está tocando; o do início,
+    // a reação do fim e o campeão cortam o anterior.
+    function tocarTorcida(nome) {
+      if (nome === "torcida" && relogio < torcidaAte) return;
+      if (somTorcida) somTorcida.parar(0.3);
+      somTorcida = api.som(nome) || null;
+      torcidaAte = relogio + 5;
+    }
+
     function encerrar() {
       if (terminou) return;
       terminou = true;
       fimT = 0;
       for (const a of aneis) if (a.aceso && !a.reservado) apagar(a, true);
-      api.som("apito");
+      api.som("apito_fim");
       api.placar({ tempo: 0, info: `${gols} ${gols === 1 ? "GOL" : "GOLS"}` });
       infoMostrada = "fim";
-      if (gols < GOLS_MINIMOS_SEM_VAIA) api.som("erro");
+      // a vaia da máquina (vaia_1/2.mp3) não está no projeto: quem fica
+      // abaixo de 15 gols ouve a reação de quem não superou
+      if (gols < GOLS_MINIMOS_SEM_VAIA) tocarTorcida("nao_superou");
     }
 
     /* ------------------------------------------------------------------
@@ -640,7 +675,11 @@ export default {
        ------------------------------------------------------------------ */
     function atualizar(dt) {
       relogio += dt;
-      if (relogio - dt <= 0) api.som("apito");
+      if (relogio - dt <= 0) {
+        // o apito do início e a torcida que sempre recebe quem começa
+        api.som("apito");
+        tocarTorcida("canto");
+      }
 
       if (!terminou) {
         tempo -= dt;
@@ -652,7 +691,10 @@ export default {
           fimT = 99;
           const precisao = chutes ? Math.round((gols / chutes) * 100) : 0;
           const torcida = gols >= GOLS_MINIMOS_SEM_VAIA ? "A torcida aplaudiu de pé!" : `Abaixo de ${GOLS_MINIMOS_SEM_VAIA} gols a torcida vaia.`;
+          // o modal final da máquina: o grito de campeão para quem fez a meta
+          if (gols >= GOLS_MINIMOS_SEM_VAIA) tocarTorcida("campeao");
           api.terminar({
+            som: false, // o apito do fim e a torcida já disseram como foi
             pontos,
             titulo: gols >= GOLS_MINIMOS_SEM_VAIA ? `CAMPEÃO • ${gols} GOLS` : "TEMPO ESGOTADO",
             detalhe: `${gols} ${gols === 1 ? "gol" : "gols"} em ${chutes} ${chutes === 1 ? "chute" : "chutes"} (${precisao}% de acerto). ${torcida}`,

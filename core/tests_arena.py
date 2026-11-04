@@ -8,6 +8,8 @@ O que estes testes protegem:
   * cada jogo tem a sua página no simulador (/jogos/<jogo>/), em foco,
     com o comando dele: arrasto nos boliches, clique no tiro, botões só
     onde a máquina tem botão;
+  * os sons de verdade de cada máquina (o `sons` dos jogos, tirados dos
+    projetos originais) existem, são MP3 e cabem no peso por jogo;
   * nenhuma arte de terceiros (logos de patrocinador, capas de outras
     músicas) entra na pasta dos jogos -- só as duas capas que o dono
     pediu para o Hit Music (Carmine e Paper Moon, as da própria mesa);
@@ -187,6 +189,57 @@ class ArquivosDosJogosTests(TestCase):
             with self.subTest(capa=capa):
                 self.assertIn(capa, script)
                 self.assertTrue((JOGOS_DIR / capa).is_file())
+
+
+#: O peso dos sons de cada máquina (a pasta `sons/` do jogo, baixada quando
+#: ele abre). Os efeitos são MP3 mono curtos; o que passar disto é trilha
+#: longa ou WAV esquecido, e quem paga é o celular de quem abriu o jogo.
+PESO_DOS_SONS = 720 * 1024
+PESO_DE_UM_SOM = 400 * 1024
+
+
+class SonsDosJogosTests(TestCase):
+    """Os sons de verdade das máquinas (o `sons` de cada jogo)."""
+
+    def _sons(self):
+        return [p for p in JOGOS_DIR.rglob("*") if p.is_file() and "sons" in p.relative_to(JOGOS_DIR).parts]
+
+    def test_cada_som_que_o_script_pede_existe(self):
+        existentes = {p.name for p in self._sons()}
+        for script in JOGOS_DIR.glob("*.js"):
+            texto = script.read_text(encoding="utf-8")
+            for caminho in set(re.findall(r'"([\w./-]+\.mp3)"', texto)):
+                if "/sons/" not in caminho and "/" in caminho:
+                    continue  # as músicas do Hit Music, que ele mesmo toca
+                with self.subTest(script=script.name, som=caminho):
+                    if "/" in caminho:
+                        self.assertTrue((JOGOS_DIR / caminho).is_file(), caminho)
+                    else:
+                        # montado com o prefixo da pasta (SOM + "strike.mp3")
+                        self.assertIn(caminho, existentes)
+
+    def test_sons_sao_mp3_e_cabem_no_peso(self):
+        pastas = {}
+        for arquivo in self._sons():
+            with self.subTest(arquivo=str(arquivo.relative_to(JOGOS_DIR))):
+                self.assertEqual(arquivo.suffix, ".mp3")
+                self.assertLessEqual(arquivo.stat().st_size, PESO_DE_UM_SOM)
+            pasta = arquivo.relative_to(JOGOS_DIR).parts[0]
+            pastas[pasta] = pastas.get(pasta, 0) + arquivo.stat().st_size
+        self.assertTrue(pastas, "nenhum som de máquina encontrado")
+        for pasta, peso in pastas.items():
+            with self.subTest(pasta=pasta):
+                self.assertLessEqual(peso, PESO_DOS_SONS, f"{pasta}: {peso // 1024} KB de sons")
+
+    def test_cada_maquina_com_projeto_tem_os_seus_sons(self):
+        # os jogos que têm o projeto original na casa usam os sons dele
+        for script, pasta in (("strike-kids.js", "strike-kids/sons/"), ("dragon-bowling.js", "boliche/dragon/sons/"),
+                              ("lazer-shot.js", "lazer-shot/sons/"), ("super-boxing.js", "super-boxing/sons/"),
+                              ("basquete.js", "basquete/sons/"), ("gol-flash.js", "gol-flash/sons/")):
+            with self.subTest(script=script):
+                texto = (JOGOS_DIR / script).read_text(encoding="utf-8")
+                self.assertIn(pasta, texto)
+                self.assertRegex(texto, r"\bsons: ")
 
 # as seções vêm do catálogo; os objetos 3D em exposição ficam de fora aqui
 @mock.patch.object(arena, "MODELOS_3D", ())

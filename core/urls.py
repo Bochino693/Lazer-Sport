@@ -409,7 +409,8 @@ urlpatterns = [
     # com o painel e o site abertos ao mesmo tempo acha a aba pelo ícone.
     path(
         "favicon.ico",
-        RedirectView.as_view(url=staticfiles_storage.url("images/logoofi.png")),
+        # o .ico com o 16, o 32 e o 48 desenhados um a um (partials/icones_da_aba.html)
+        RedirectView.as_view(url=staticfiles_storage.url("images/icone/favicon.ico")),
         name="favicon",
     ),
 

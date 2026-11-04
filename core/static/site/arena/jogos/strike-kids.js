@@ -3502,7 +3502,12 @@ class Fisica {
       const dx = c.x - bx;
       const dy = c.y - 0.1;
       const d = Math.hypot(dx, dy) || 1e-6;
-      if (d < r + 0.075) this.novoContato(corpo, null, tmp.set(bx + dx / d * 0.075, 0.1 + dy / d * 0.075, c.z), n.set(dx / d, dy / d, 0), r + 0.075 - d, 0.1);
+      if (d < r + 0.075) {
+        // a bola batendo no para-choque faz "boing" (só quando chega nele)
+        const chegando = ehBola ? -(corpo.v.x * dx + corpo.v.y * dy) / d : 0;
+        if (chegando > 0.8 && this.aoBumper) this.aoBumper(chegando);
+        this.novoContato(corpo, null, tmp.set(bx + dx / d * 0.075, 0.1 + dy / d * 0.075, c.z), n.set(dx / d, dy / d, 0), r + 0.075 - d, 0.1);
+      }
     }
     // a barra varredora da máquina (quando desce)
     const b = this.barra;
@@ -6479,11 +6484,51 @@ async function carregarTudo(THREE, progresso) {
   return { texturas, artes, modelos, tabela: artes._tabela };
 }
 
+/* ----------------------------------------------------------------------
+   OS SONS DA MÁQUINA (autoload/Sons.gd e sons/ do jogo): os mesmos
+   arquivos, com o volume e o tom de cada Sons.tocar() do principal.gd.
+   Os do Strike Kids já saem masterizados a -1 dB, então o volume daqui é
+   o do jogo, sem correção.
+   ---------------------------------------------------------------------- */
+const SOM = "strike-kids/sons/";
+const SONS = {
+  strike: { arquivo: SOM + "strike.mp3", senao: "strike" },
+  spare: { arquivo: SOM + "spare.mp3", senao: "acerto" },
+  ops: { arquivo: SOM + "ops.mp3", volume: 0.75, senao: "erro" },
+  boa: { arquivo: SOM + "boa.mp3", senao: "ponto" },
+  torcida: { arquivo: SOM + "torcida.mp3", senao: null },
+  pinos_queda: { arquivo: SOM + "pinos.mp3", senao: "batida" },
+  // VARIACOES = {"pino_batida": 3}: um dos três a cada batida
+  pino_batida: { arquivo: [SOM + "pino1.mp3", SOM + "pino2.mp3", SOM + "pino3.mp3"], intervalo: 0.035, vozes: 6, senao: null },
+  rolando: { arquivo: SOM + "rolando.mp3", laco: true, senao: null },
+  whoosh: { arquivo: SOM + "whoosh.mp3", vozes: 3 },
+  boing: { arquivo: SOM + "boing.mp3", intervalo: 0.12, senao: "quica" },
+  start: { arquivo: SOM + "start.mp3", senao: "vai" },
+  moeda: { arquivo: SOM + "moeda.mp3", volume: 0.65 },
+  escolha: { arquivo: SOM + "escolha.mp3", senao: "moeda" },
+  selecao: { arquivo: SOM + "selecao.mp3", senao: "clique" },
+  vez: { arquivo: SOM + "vez.mp3", senao: "nota" },
+  tique: { arquivo: SOM + "tique.mp3", intervalo: 0.02, senao: "clique" },
+  brilho: { arquivo: SOM + "brilho.mp3", senao: "combo" },
+  pop: { arquivo: SOM + "pop.mp3", intervalo: 0.02, senao: "clique" },
+  plim: { arquivo: SOM + "plim.mp3", intervalo: 0.02, vozes: 6, senao: "nota" },
+  fiu: { arquivo: SOM + "fiu.mp3", intervalo: 0.02, senao: null },
+  fim: { arquivo: SOM + "fim.mp3" },
+  recorde: { arquivo: SOM + "recorde.mp3", senao: "vitoria" },
+  // o 3-2-1 do console (a máquina conta a foto com o tique subindo de tom)
+  contagem: { arquivo: SOM + "tique.mp3", volume: 0.9 },
+  vai: { arquivo: SOM + "start.mp3" },
+};
+
 export default {
   largura: LARGURA,
   altura: ALTURA,
   contagem: false, // o 3-2-1 vem depois da escolha do amigo (api.contagem)
   artes: {},
+  sons: SONS,
+  // Sons.musica("musica_jogo"): a trilha da partida, em laço (0,75 do
+  // volume de música de fábrica, 0,8: 0,6 do volume dos efeitos)
+  musica: { arquivo: SOM + "musica.mp3", volume: 0.6 },
   criar(api) {
     return new Partida(api);
   },
@@ -6818,13 +6863,14 @@ class Partida {
       this.cena.add(this.particulas.raiz);
       this.cenarios = new Cenarios(THREE, this.mats, this.mundo, this.particulas);
       this.fisica = new Fisica(THREE);
+      this.fisica.aoBumper = (v) => this.api.som("boing", { volume: Math.min(1, Math.max(0.4, v / 6)) });
       this.pinos = new Pinos(THREE, this.mats, r.texturas, r.modelos, this.particulas, this.mundo.raiz);
       this.pinos.aoBater = (c, v) => this._batidaPino(v);
       this.bola = new Bola(THREE, this.mats, r.texturas, this.particulas, this.mundo.raiz);
       this.corpoBola = { p: this.bola.pos, v: this.bola.vel, w: new THREE.Vector3(), q: new THREE.Quaternion(), dinamico: false,
         invM: 1 / MASSA_BOLA, ehBola: true, curva: 0, removido: false, preso: false };
       this.maquina = new Maquina(THREE, this.mats, this.pinos, this.fisica, this.relogio, this.mundo.raiz);
-      this.maquina.aoSom = (n) => { if (n === "pousar") this.api.som("quica"); };
+      this.maquina.aoSom = (n) => this._somMaquina(n);
       this.personagens = {};
       for (const nome of ["bob", "mia"]) {
         const p = new Personagem(THREE, this.mats, r.texturas, nome, r.modelos, this.particulas, this.mundo.raiz);
@@ -6915,6 +6961,7 @@ class Partida {
     }
     if (this.estado === "rolando") this._rolando();
     if (this.estado === "replay") this._rodarReplay(dt);
+    this._somDaBola(dtReal);
     if (this.estado === "escolha") this._escolhaTempo(dtReal);
     if (this.estado === "fim") this._fimTempo(dtReal);
     for (const nome of ["bob", "mia"]) {
@@ -7165,16 +7212,55 @@ class Partida {
     return s === this.seq;
   }
 
-  _somPersonagem(nome) {
-    if (nome === "palma") this.api.som("clique");
-    else if (nome === "jato") this.api.som("combo");
+  // _som_maquina: a barra, a mesa e a varredura têm o barulho delas
+  _somMaquina(nome) {
+    const som = (n, volume, tom) => this.api.som(n, { volume, tom });
+    if (nome === "varrer") som("whoosh", 0.45, 0.7);
+    else if (nome === "mesa") som("whoosh", 0.25, 1.3);
+    else if (nome === "pousar") {
+      som("pinos_queda", 0.3, 1.25);
+      som("pop", 0.4, 0.9);
+    } else if (nome === "barra") som("tique", 0.35, 0.7);
+    else if (nome === "alcapao") {
+      som("tique", 0.4, 0.5);
+      som("boing", 0.18, 0.8);
+    }
   }
 
+  // _som_personagem: os passos, as palmas e os jatinhos do Bob e da Mia
+  _somPersonagem(nome) {
+    if (nome === "passo") this.api.som("tique", { volume: 0.25, tom: aleat(0.8, 1.0) });
+    else if (nome === "palma") this.api.som("pop", { volume: 0.6, tom: aleat(1.1, 1.3) });
+    else if (nome === "jato") this.api.som("start", { volume: 0.7, tom: 0.9 });
+  }
+
+  // _batida_pino: o volume vem da força da batida e o tom varia um pouco
   _batidaPino(v) {
     if (v < 0.35 || this.estado === "replay") return;
-    if (this.tempoReal - this.ultimoSomPino < 0.09) return;
+    if (this.tempoReal - this.ultimoSomPino < 0.035) return;
     this.ultimoSomPino = this.tempoReal;
-    this.api.som("batida");
+    this.api.som("pino_batida", { volume: Math.min(1, Math.max(0.25, v / 4)), tom: aleat(0.9, 1.15) });
+  }
+
+  /** Sons.rolando: o laço da bola rolando acompanha a velocidade (mais alto
+   *  e mais agudo quanto mais rápida) até ela chegar nos pinos. No replay
+   *  a câmera lenta deixa o barulho mais grave, como no jogo. */
+  _somDaBola(dtReal) {
+    const b = this.bola.pos;
+    const naPista = (this.estado === "rolando" || this.estado === "replay") && this.bola.visivel && b.z > Z_PINO1 - 0.5;
+    let vel = 0;
+    if (naPista && this.posSomBola && dtReal > 0) vel = b.distanceTo(this.posSomBola) / (dtReal * VELOCIDADE);
+    if (!this.posSomBola) this.posSomBola = b.clone();
+    this.posSomBola.copy(b);
+    if (!naPista || vel < 0.05) {
+      if (this.somRolando) this.somRolando.parar(0.12);
+      this.somRolando = null;
+      return;
+    }
+    const f = Math.min(1.2, vel / 7);
+    const ajuste = { volume: f * 0.9, tom: 0.75 + 0.35 * f };
+    if (this.somRolando) this.somRolando.ajustar(ajuste);
+    else this.somRolando = this.api.som("rolando", { laco: true, ...ajuste }) || null;
   }
 
   // ---------------------------------------------------------------- atração (a capa do console)
@@ -7237,7 +7323,7 @@ class Partida {
     r.tocar("parado", 0.3, true);
     this.cam.ir([0, 1.05, 6.1], [0, 0.78, 2.5], 32, 52, 3.0);
     this._marcarDestaque(0);
-    this.api.som("whoosh");
+    this.api.som("start");
     // as fases já são sorteadas aqui: a roupinha da 1ª rodada vai baixando
     // enquanto a criança escolhe
     this._sortearTemas(RODADAS);
@@ -7247,7 +7333,7 @@ class Partida {
 
   _marcarDestaque(i) {
     if (this.estado !== "escolha") return;
-    if (i !== this.destaqueSel) this.api.som("clique");
+    if (i !== this.destaqueSel) this.api.som("selecao");
     this.destaqueSel = i;
     this.hud.selecao.destaque = i;
     const t = this.personagens.bob;
@@ -7283,7 +7369,7 @@ class Partida {
     const escolhido = this.destaqueSel === 1 ? "mia" : "bob";
     const outro = escolhido === "bob" ? "mia" : "bob";
     this.hud.selecao = null;
-    this.api.som("moeda");
+    this.api.som("escolha");
     this.personagens[escolhido].tocar("escolhido", 0.15, true);
     this.personagens[outro].tocar("feliz", 0.2, true);
     this.hud.flash("#FFFFFF", 0.4);
@@ -7404,8 +7490,8 @@ class Partida {
         this.cenarios.pedir(prox);
         this._pedirRoupa(prox);
       }
-      this.api.som("combo");
-      this.api.som("whoosh");
+      this.api.som("brilho");
+      this.api.som("whoosh", { volume: 0.6 });
       this.hud.anunciarCenario(tema, 1.7);
       // passeio que termina na PISTA DE FRENTE (a vista da espera)
       this.cam.trilho([
@@ -7420,7 +7506,7 @@ class Partida {
     if (novaRodada) {
       const artigo = ativo === "bob" ? "DO" : "DA";
       this.hud.faixa(ativo, `VEZ ${artigo} ${ativo.toUpperCase()}!`, `RODADA ${this.placar.rodadaAtual + 1}`);
-      this.api.som("nota");
+      this.api.som("vez");
       if (!(await this.esperar(1.6, s, false))) return;
     }
     this._pronto();
@@ -7470,7 +7556,7 @@ class Partida {
     const ap = a.raiz.position;
     this.cam.corte([ap.x + 1.15, 2.05, ap.z + 3.3], [ap.x - 0.35, 0.05, ap.z - 7.0], 50, 40);
     this.cam.seguir(() => a.raiz.position, [1.15, 2.05, 3.3], [-0.35, 0.05, -7.0], 50, 40, 3.0);
-    this.api.som("whoosh");
+    this.api.som("whoosh", { volume: 0.5 });
   }
 
   _soltouBola(pos) {
@@ -7507,7 +7593,7 @@ class Partida {
       if (s !== this.seq) return;
       a.tocar("assistindo", 0.25);
       this.personagens[this.plateia].tocar("torcida", 0.2);
-      this.api.som("quica");
+      this.api.som("start", { volume: 0.35, tom: 1.4 });
     });
   }
 
@@ -7632,7 +7718,7 @@ class Partida {
     this.cam.tremer(0.03 + forte * 0.005, 0.4);
     this.cam.soco(cheio ? 3.5 : 1.8);
     this.particulas.poeira([b.x, 0.05, b.z], 1.0 + forte * 0.08);
-    if (cheio) this.api.som("batida");
+    if (cheio) this.api.som("pinos_queda", { volume: 0.9 });
     if (this.plano.cair && this.plano.cair.length === 10) {
       this.mundo.lampadas(1);
       this._cameraLenta(0.4, 0.5);
@@ -7683,6 +7769,7 @@ class Partida {
       this.hud.flash(CREME, 0.75);
       this.hud.letreiro("strike", "", 1.9);
       this.api.som("strike");
+      this.api.som("torcida", { volume: 0.8 });
       this.api.vibrar(60);
       this.mundo.lampadas(1);
       this.particulas.estrelas(zp, 40, 1.3);
@@ -7690,18 +7777,19 @@ class Partida {
     } else if (tipo === "spare") {
       this.hud.flash("#C9F7FF", 0.55);
       this.hud.letreiro("spare", "", 1.7);
-      this.api.som("acerto");
+      this.api.som("spare");
+      this.api.som("torcida", { volume: 0.6 });
       this.mundo.lampadas(2);
       this.particulas.estrelas(zp, 28);
     } else if (tipo === "zero") {
       this.hud.letreiro("ops", "", 1.5);
-      this.api.som("erro");
+      this.api.som("ops");
     } else {
       let nome = "boa";
       if (n >= 7) nome = Math.random() < 0.5 ? "super" : "uau";
       else if (sobrou === 1) nome = "quase";
       this.hud.letreiro(nome, `${n} ${n === 1 ? "PINO" : "PINOS"}!`, 1.5);
-      this.api.som("ponto");
+      this.api.som("boa");
       if (n >= 5) this.particulas.estrelas([0, 0.5, Z_PINO1 - 0.3], 16, 0.8);
     }
     if (res.pontos > 0) this.hud.pontosVoando(res.pontos);
@@ -7712,7 +7800,7 @@ class Partida {
         this.relogio.esperar(1.0).then(() => {
           if (s === this.seq || this.estado === "replay") {
             this.hud.letreiro("pegando_fogo", `${seguidos} STRIKES SEGUIDOS!`, 1.6, 0.55);
-            this.api.som("combo");
+            this.api.som("brilho");
           }
         });
       }
@@ -7733,7 +7821,6 @@ class Partida {
       a.tocar("comemora_strike", 0.15, true);
       p.tocar("feliz", 0.2, true);
       this.particulas.confete([pa.x, 2.0, pa.z - 0.6], 1.2, 70);
-      this.api.som("vitoria");
     } else if (tipo === "spare") {
       a.tocar("feliz", 0.15, true);
       p.tocar("feliz", 0.2, true);
@@ -7801,7 +7888,8 @@ class Partida {
       if (!(await this.relogio.esperar(0.001, () => s !== this.seq))) return;
     }
     this.cam.tremer(0.02, 0.5);
-    this.api.som("batida");
+    // a batida em câmera lenta sai mais grave
+    this.api.som("pinos_queda", { volume: 0.8, tom: 0.85 });
     while (this.estado === "replay" && this.replayT < this.tImpacto + 0.65) {
       if (!(await this.relogio.esperar(0.001, () => s !== this.seq))) return;
     }
@@ -7876,6 +7964,8 @@ class Partida {
     this.fimT = 0;
     this.hud.mostrarPlacar(false);
     this.hud.conviteLigado(false);
+    // Sons.musica("musica_fim") + Sons.tocar("fim"): a trilha da partida sai
+    if (this.api.musica) this.api.musica(false);
     this.api.som("fim");
     const j = this.placar.jogadores[0];
     const estrelas = this.placar.estrelas(0);
@@ -7887,7 +7977,7 @@ class Partida {
       this.relogio.esperar(3.4, () => s !== this.seq).then((ok) => {
         if (!ok || this.estado !== "fim") return;
         this.hud.letreiro("novo_recorde", `${j.pontos} PONTOS`, 3.0, 0.42);
-        this.api.som("vitoria");
+        this.api.som("recorde");
       });
     }
     // os bichinhos no "pódio", com festa
@@ -7929,6 +8019,7 @@ class Partida {
       const j = this.placar.jogadores[0];
       const e = this.placar.estrelas(0);
       this.api.terminar({
+        som: false, // o "fim" (e o "recorde") da máquina já tocaram
         pontos: j.pontos,
         titulo: e >= 3 ? "Parabéns!" : "Fim de jogo",
         detalhe: `${j.strikes} strike${j.strikes === 1 ? "" : "s"} · ${j.spares} spare${j.spares === 1 ? "" : "s"} · ${"★".repeat(e)}${"☆".repeat(3 - e)}`,
