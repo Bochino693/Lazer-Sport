@@ -464,7 +464,6 @@
                                     decoding="async"
                                 >
                             {% endif %}
-                            {% faixas brinquedo.nome_brinquedo %}
                         </a>
 
                         <div class="catalogo-card-body">
@@ -479,6 +478,7 @@
                             <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="catalogo-card-title">
                                 <h3>{{ brinquedo.nome_brinquedo }}</h3>
                             </a>
+                            {% faixas brinquedo.nome_brinquedo %}
 
                             <div class="catalogo-rating-row">
                                 <div class="catalogo-stars" data-rating="{{ brinquedo.avaliacao|default:0 }}" aria-hidden="true"></div>

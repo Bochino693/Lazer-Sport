@@ -131,7 +131,6 @@
                                 {% else %}
                                     <i class="fa-solid fa-image sem-imagem" aria-hidden="true"></i>
                                 {% endif %}
-                                {% if item.tipo == 'brinquedo' %}{% faixas item.titulo %}{% endif %}
                             </div>
                         </a>
 
@@ -155,6 +154,7 @@
                             <a href="{{ item.url }}" class="loja-card-title-link">
                                 <h3>{{ item.titulo }}</h3>
                             </a>
+                            {% if item.tipo == 'brinquedo' %}{% faixas item.titulo %}{% endif %}
 
                             <p class="loja-card-descricao">
                                 {% if item.tipo == 'peca' %}

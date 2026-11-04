@@ -1,0 +1,210 @@
+/* ======================================================================
+   A PÁGINA DE UM JOGO CADASTRADO (jogo_cadastrado.html)
+
+   O jogo num quadro grande e isolado, com a capa e o botão por cima até a
+   pessoa tocar em "Jogar"; embaixo, a descrição e os outros jogos. Tema
+   escuro, do celular ao monitor grande.
+   ====================================================================== */
+.jc {
+    --cor-jogo: #ff3df2;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 16px 60px;
+    color: #e8f0ff;
+}
+
+.jc-topo { margin-bottom: 16px; }
+.jc-topo .ls-pagina-trilha { margin-bottom: 14px; }
+
+.jc-titulo { display: flex; align-items: center; gap: 14px; }
+.jc-titulo img { flex: none; }
+
+.jc-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cor-jogo) 22%, transparent);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.jc-titulo h1 {
+    margin: 6px 0 0;
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    font-weight: 850;
+    letter-spacing: -.02em;
+}
+
+/* ---------- o palco do jogo ---------- */
+.jc-palco {
+    position: relative;
+    width: 100%;
+    margin: 4px auto 0;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--cor-jogo) 35%, rgba(120, 170, 255, .2));
+    border-radius: 22px;
+    background:
+        radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--cor-jogo) 20%, transparent), transparent 60%),
+        #060d22;
+    box-shadow: 0 26px 60px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .04) inset;
+}
+
+/* o formato da tela: a proporção que a equipe escolheu */
+.jc-palco--paisagem { aspect-ratio: 16 / 9; }
+.jc-palco--quadrado { aspect-ratio: 1 / 1; max-width: 760px; }
+.jc-palco--retrato { aspect-ratio: 9 / 16; max-width: 460px; }
+.jc-palco--largo { aspect-ratio: 21 / 9; }
+
+.jc-quadro {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
+    display: block;
+}
+
+/* a capa, por cima, até tocar em Jogar */
+.jc-capa {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+.jc-capa-fundo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(.55) saturate(1.1);
+}
+
+.jc-capa-texto {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    max-width: 90%;
+    padding: 20px;
+}
+
+.jc-chamada {
+    margin: 0;
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(1.1rem, 3vw, 1.7rem);
+    font-weight: 850;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, .6);
+}
+
+.jc-comandos {
+    margin: 0;
+    color: #dbe7ff;
+    font-size: .86rem;
+    font-weight: 600;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+}
+
+.jc-capa-acoes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 4px; }
+
+.jc-jogar {
+    gap: 9px;
+    padding: 13px 28px;
+    font-size: 1.02rem;
+    background: linear-gradient(120deg, var(--cor-jogo), color-mix(in srgb, var(--cor-jogo) 55%, #ff6b3d));
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--cor-jogo) 45%, transparent);
+}
+
+.jc-tela-cheia {
+    position: absolute;
+    z-index: 3;
+    top: 12px;
+    right: 12px;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 12px;
+    background: rgba(6, 13, 34, .7);
+    color: #fff;
+    cursor: pointer;
+}
+
+.jc-tela-cheia:hover { background: rgba(6, 13, 34, .95); }
+.jc-palco:fullscreen { border: 0; border-radius: 0; }
+.jc-palco:fullscreen .jc-quadro { height: 100%; }
+
+/* ---------- a descrição e as ações ---------- */
+.jc-info { max-width: 820px; margin: 22px auto 0; }
+
+.jc-bloco {
+    padding: 16px 18px;
+    border: 1px solid rgba(120, 170, 255, .16);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .04);
+}
+
+.jc-bloco h2 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.jc-bloco h2 i { color: var(--cor-jogo); }
+.jc-bloco p { margin: 0; color: #c2d2ec; font-size: .92rem; line-height: 1.6; }
+
+.jc-acoes-extra { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+/* ---------- os outros jogos ---------- */
+.jc-outros { max-width: 1000px; margin: 34px auto 0; }
+.jc-outros h2 { margin: 0 0 14px; color: #fff; font-size: 1.05rem; }
+
+.jc-outros-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 10px;
+}
+
+.jc-mini {
+    display: grid;
+    justify-items: center;
+    gap: 7px;
+    padding: 12px 8px;
+    border: 1px solid rgba(120, 170, 255, .16);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .04);
+    color: #dbe7ff;
+    font-size: .76rem;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.jc-mini img { width: 54px; height: 54px; object-fit: contain; }
+.jc-mini span { line-height: 1.2; }
+.jc-mini:hover { transform: translateY(-3px); border-color: var(--cor-jogo); background: rgba(255, 255, 255, .07); }
+
+@media (max-width: 560px) {
+    .jc-palco--retrato { max-width: 100%; }
+    /* no celular, a capa precisa de altura para a chamada e os dois botões;
+       ao jogar, o quadro volta à proporção do jogo */
+    .jc-palco:not(.jc-palco--jogando) { min-height: 320px; }
+    .jc-capa-texto { gap: 9px; padding: 14px; }
+    .jc-jogar { padding: 12px 24px; }
+}

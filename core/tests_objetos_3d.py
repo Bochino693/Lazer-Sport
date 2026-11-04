@@ -17,6 +17,7 @@ O que estes testes protegem:
 """
 
 import importlib
+from io import StringIO
 import json
 import struct
 import tempfile
@@ -28,13 +29,14 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from . import arena
-from .cadastro_modelos import achar_no_catalogo, ligar_objeto_3d
+from .cadastro_modelos import CADASTROS, achar_no_catalogo, ligar_objeto_3d
 from .models import Brinquedos, ObjetoTresD
 from . import objetos_3d
 from .objetos_3d import ler_glb, ler_glb_do_site, validar_glb
@@ -156,7 +158,7 @@ class CadastroDoStrikeKidsTests(TestCase):
                 self.rodar("postgresql")  # de novo: não duplica
         strike = Brinquedos.objects.get()
         self.assertEqual(strike.nome_brinquedo, "Strike Kids")
-        self.assertEqual(strike.imagens_brinquedo.count(), 4)
+        self.assertEqual(strike.imagens_brinquedo.count(), len(CADASTROS["strike-kids"]["fotos"]))
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
         self.assertEqual(strike.objeto_3d.medidas, [2.07, 0.74, 1.91])
 
@@ -209,7 +211,10 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         strike = Brinquedos.objects.get()
         self.assertEqual(strike.nome_brinquedo, "Strike Kids")
         fotos = list(strike.imagens_brinquedo.order_by("ordem"))
-        self.assertEqual([f.tipo for f in fotos], ["perfil", "lado_direito", "lado_esquerdo", "verso"])
+        # os lados que a Arena usa primeiro; depois mais ângulos e as cores
+        self.assertEqual([f.tipo for f in fotos[:4]], ["perfil", "lado_direito", "lado_esquerdo", "verso"])
+        self.assertEqual(len(fotos), 12)
+        self.assertEqual(sum(1 for f in fotos if "cor_" in f.imagem.name), 5)
         self.assertIn("strike-kids-foto", fotos[0].imagem.name)
         self.assertIn("strike-kids-foto", strike.imagem_brinquedo.name)
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
@@ -226,7 +231,7 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         self.assertEqual(Brinquedos.objects.count(), 1)
         self.assertEqual(antigo.nome_brinquedo, "Strike Kids")
         self.assertIn("strike-kids-foto", antigo.imagem_brinquedo.name)
-        self.assertEqual(antigo.imagens_brinquedo.count(), 4)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 12)
 
     def test_o_do_painel_fica_como_esta_e_ganha_o_3d(self):
         meu = Brinquedos.objects.create(
@@ -241,6 +246,48 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
     def test_nos_testes_sqlite_nao_faz_nada(self):
         self.assertIsNone(self.rodar("sqlite"))
         self.assertFalse(Brinquedos.objects.exists())
+
+    def test_desativado_nao_conta(self):
+        # o do painel, desativado: fica escondido, e o novo é cadastrado
+        escondido = Brinquedos.objects.create(nome_brinquedo="Strike Kids Turbo", descricao="x", avaliacao=5, ativo=False)
+        self.rodar()
+        novo = Brinquedos.objects.get(ativo=True)
+        self.assertEqual(novo.nome_brinquedo, "Strike Kids")
+        self.assertEqual(novo.objeto_3d.codigo, "strike-kids")
+        escondido.refresh_from_db()
+        self.assertFalse(escondido.ativo)
+
+    def test_o_strike_kids_desativado_volta(self):
+        antigo = Brinquedos.objects.create(nome_brinquedo="Strike Kids", descricao="x", avaliacao=5, ativo=False)
+        self.rodar()
+        antigo.refresh_from_db()
+        self.assertTrue(antigo.ativo)
+        self.assertEqual(Brinquedos.objects.count(), 1)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 12)
+        self.assertEqual(antigo.objeto_3d.codigo, "strike-kids")
+
+    def test_o_que_subiu_com_4_fotos_ganha_as_novas(self):
+        # o Strike Kids que o site cadastrou com as 4 fotos de antes
+        self.rodar()
+        strike = Brinquedos.objects.get()
+        for foto in strike.imagens_brinquedo.order_by("ordem")[4:]:
+            foto.delete()
+        self.assertEqual(strike.imagens_brinquedo.count(), 4)
+        self.rodar()
+        self.assertEqual(strike.imagens_brinquedo.count(), 12)
+        self.assertEqual(Brinquedos.objects.count(), 1)
+
+    def test_o_comando_conta_o_que_fez(self):
+        saida = StringIO()
+        call_command("cadastrar_modelo_3d", "strike-kids", stdout=saida)
+        texto = saida.getvalue()
+        self.assertIn("Strike Kids no banco: nenhum", texto)
+        self.assertIn("Criado: Strike Kids", texto)
+        self.assertIn("Strike Kids pronto", texto)
+        saida = StringIO()
+        call_command("cadastrar_modelo_3d", "strike-kids", stdout=saida)  # de novo: só confere
+        self.assertIn("(id", saida.getvalue())
+        self.assertEqual(Brinquedos.objects.count(), 1)
 
     def test_a_foto_principal_tem_fundo_transparente(self):
         from PIL import Image
@@ -276,6 +323,21 @@ class MigrarAoSubirTests(TestCase):
             with mock.patch.dict("os.environ", {"RENDER": "", "AUTO_MIGRATE": ""}):
                 conf.on_starting(servidor)
             migrar.assert_not_called()
+
+    def test_depois_de_migrar_confere_o_strike_kids(self):
+        conf = self.carregar()
+        servidor = mock.Mock()
+        with mock.patch("django.core.management.call_command"), \
+                mock.patch("core.cadastro_modelos.garantir_strike_kids") as garantir, \
+                mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": ""}):
+            conf.on_starting(servidor)
+        garantir.assert_called_once()
+        # e uma falha nele também não derruba o site
+        with mock.patch("django.core.management.call_command"), \
+                mock.patch("core.cadastro_modelos.garantir_strike_kids", side_effect=OSError("cloudinary fora")), \
+                mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": ""}):
+            conf.on_starting(servidor)
+        self.assertIn("cloudinary fora", servidor.log.error.call_args[0][0])
 
     def test_falha_na_migracao_nao_derruba_o_site(self):
         conf = self.carregar()
@@ -470,6 +532,6 @@ class AntesDaMigracaoTests(TestCase):
 
 class TabelaProntaTests(TestCase):
     def test_acha_a_tabela_criada_pela_migracao(self):
-        objetos_3d._tabela.update(pronta=False, conferida=0.0)
+        objetos_3d._tabelas.clear()
         self.assertTrue(objetos_3d.tabela_pronta())
         self.assertEqual(objetos_3d.prefetch_do_objeto(), ("objeto_3d",))

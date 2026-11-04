@@ -101,7 +101,6 @@
                             Imagem em atualização
                         </div>
                     {% endif %}
-                    {% faixas brinquedo.nome_brinquedo %}
                     {% if objeto_3d %}
                         {% comment %}
                           O objeto 3D do cadastro: gira com o dedo ou o mouse, aproxima e
@@ -181,6 +180,9 @@
                         <span class="produto-nota">{{ brinquedo.avaliacao|floatformat:1 }} de 5</span>
                     </div>
                 {% endif %}
+
+                {# os recursos da máquina, com a explicação de cada um #}
+                {% faixas brinquedo.nome_brinquedo "lista" %}
 
                 {% if disponivel_loja %}
                     <div class="produto-compra">

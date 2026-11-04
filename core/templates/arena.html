@@ -347,7 +347,6 @@
             <div class="arena-foto-midia arena-foto-midia--3d" data-vitrine3d data-modelo="{{ brinquedo.modelo }}">
                 <img src="{% if brinquedo.capa %}{{ brinquedo.capa }}{% else %}{% static 'images/sem-imagem.svg' %}{% endif %}" alt="{{ brinquedo.nome }}" class="ativa arena-foto-poster" loading="lazy" decoding="async" width="600" height="600">
                 <span class="arena-foto-selo3d" aria-hidden="true"><i class="fa-solid fa-cube"></i> 3D · arraste para girar</span>
-                {% faixas brinquedo.nome %}
             </div>
             {% else %}
             <a class="arena-foto-midia" href="{{ brinquedo.url|default:'#arena-3d' }}" aria-label="Ver {{ brinquedo.nome }}">
@@ -362,12 +361,12 @@
                     {% for foto in brinquedo.fotos %}<i class="{% if forloop.first %}ativo{% endif %}"></i>{% endfor %}
                 </span>
                 {% endif %}
-                {% faixas brinquedo.nome %}
             </a>
             {% endif %}
             <div class="arena-foto-corpo">
                 <span class="arena-foto-categoria">{{ brinquedo.categorias|join:" · "|default:"Brinquedo" }}</span>
                 <h3>{{ brinquedo.nome }}</h3>
+                {% faixas brinquedo.nome %}
                 {% if brinquedo.medidas_texto %}<p class="arena-foto-medidas"><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ brinquedo.medidas_texto }}</p>{% endif %}
                 <div class="arena-foto-acoes">
                     {% if brinquedo.url %}

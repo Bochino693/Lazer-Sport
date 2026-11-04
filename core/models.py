@@ -48,6 +48,7 @@ class EnderecoEmpresa(Prime):
 
 import re
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
@@ -610,6 +611,174 @@ class ObjetoTresD(Prime):
     class Meta:
         verbose_name = "Objeto 3D do brinquedo"
         verbose_name_plural = "Objetos 3D dos brinquedos"
+
+
+def _armazenamento_jogo():
+    # arquivos que não são imagem (o .html do jogo, o .apk): no Cloudinary
+    # vão como "raw"; fora da produção, o disco. (Mesma escolha do .glb.)
+    from .objetos_3d import armazenamento
+
+    return armazenamento()
+
+
+class JogoCadastrado(Prime):
+    """Um jogo da casa que a equipe sobe pelo painel, sem mexer no código.
+
+    POR QUE EXISTE. Os jogos do simulador (Strike Kids, Dragon Bowling...)
+    são motores feitos à mão, listados no código (`core/arena.JOGOS`). Para
+    pôr um jogo NOVO no site -- um export HTML5 do Godot, por exemplo -- a
+    equipe cadastra aqui: o jogo, a foto de capa e os dados. Ele ganha a
+    sua página (/jogos/<slug>/) e entra na lista do simulador, sem deploy.
+
+    COMO O JOGO CHEGA. Um jogo de navegador tem muitos arquivos com
+    caminhos relativos (index.html, .wasm, .pck...), e o disco do Render é
+    apagado a cada deploy -- não dá para servir uma pasta dessas por aqui.
+    Então o jogo entra de um destes dois jeitos:
+
+      * `endereco` -- o endereço do jogo já hospedado (o CDN de vocês, o
+        itch.io, o GitHub Pages...). É o jeito recomendado para o Godot e
+        qualquer build de vários arquivos. O site mostra num quadro
+        isolado (iframe com sandbox), que não enxerga o resto da página.
+      * `arquivo_html` -- um .html único, que se basta (tudo embutido).
+        Vai para o Cloudinary e é mostrado no mesmo quadro isolado.
+
+    O `apk` é opcional, para baixar o jogo da máquina (Android); só aparece
+    se `liberar_download` estiver marcado -- por padrão, não, para não
+    espalhar o jogo de vocês.
+    """
+
+    PAISAGEM = "paisagem"
+    RETRATO = "retrato"
+    QUADRADO = "quadrado"
+    LARGO = "largo"
+    PROPORCOES = (
+        (PAISAGEM, "Deitado (16:9)"),
+        (RETRATO, "Em pé (9:16)"),
+        (QUADRADO, "Quadrado (1:1)"),
+        (LARGO, "Largura toda"),
+    )
+
+    nome = models.CharField(max_length=80, verbose_name="Nome do jogo")
+    slug = models.SlugField(
+        max_length=80,
+        unique=True,
+        verbose_name="Endereço (slug)",
+        help_text="Vira /jogos/<slug>/. Só letras, números e hífen. Ex.: corrida-maluca.",
+    )
+    chamada = models.CharField(max_length=120, blank=True, verbose_name="Frase de chamada")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    comandos = models.CharField(
+        max_length=200, blank=True, verbose_name="Como jogar",
+        help_text="Uma linha dizendo os controles. Ex.: Arraste para desviar e toque para pular.",
+    )
+    cor = models.CharField(
+        max_length=9, default="#ff3df2", verbose_name="Cor do jogo",
+        help_text="A cor de destaque do card (hexadecimal, ex.: #ff3df2).",
+        # a cor entra num atributo style da página: só hexadecimal passa
+        validators=[RegexValidator(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", "Use uma cor hexadecimal, como #ff3df2.")],
+    )
+    capa = models.ImageField(
+        upload_to="jogos/capas/", storage=MediaCloudinaryStorage(),
+        verbose_name="Foto de capa", help_text="A imagem do card, de preferência quadrada.",
+    )
+    poster = models.ImageField(
+        upload_to="jogos/posters/", storage=MediaCloudinaryStorage(), blank=True,
+        verbose_name="Imagem grande (opcional)", help_text="A arte grande da tela do jogo. Sem ela, usa a capa.",
+    )
+    endereco = models.URLField(
+        blank=True, verbose_name="Endereço do jogo (hospedado)",
+        help_text="O link do jogo já no ar (Godot HTML5, itch.io...). Recomendado para jogos de vários arquivos.",
+    )
+    arquivo_html = models.FileField(
+        upload_to="jogos/arquivos/", storage=_armazenamento_jogo, blank=True,
+        verbose_name="Arquivo do jogo (.html único)",
+        help_text="Um .html que se basta (tudo embutido). Para jogos de vários arquivos, use o endereço acima.",
+    )
+    proporcao = models.CharField(
+        max_length=12, choices=PROPORCOES, default=PAISAGEM, verbose_name="Formato da tela",
+    )
+    apk = models.FileField(
+        upload_to="jogos/apks/", storage=_armazenamento_jogo, blank=True,
+        verbose_name="APK (opcional)", help_text="O APK para baixar na máquina Android. Guardado, só aparece se liberado abaixo.",
+    )
+    liberar_download = models.BooleanField(
+        default=False, verbose_name="Deixar baixar o APK",
+        help_text="Desmarcado, o APK fica guardado mas ninguém baixa pelo site.",
+    )
+    ordem = models.PositiveSmallIntegerField(default=100, verbose_name="Ordem na lista")
+
+    class Meta:
+        verbose_name = "Jogo cadastrado"
+        verbose_name_plural = "Jogos cadastrados"
+        ordering = ["ordem", "nome"]
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def url(self):
+        """O endereço da página do jogo no site."""
+        from django.urls import reverse
+
+        return reverse("jogo", args=[self.slug])
+
+    @property
+    def url_para_jogar(self):
+        """Onde o jogo mora: o endereço hospedado ou o .html enviado; "" se nenhum."""
+        if self.endereco:
+            return self.endereco
+        if self.arquivo_html:
+            try:
+                return self.arquivo_html.url
+            except Exception:
+                return ""
+        return ""
+
+    @property
+    def capa_url(self):
+        try:
+            return self.capa.url if self.capa else ""
+        except Exception:
+            return ""
+
+    @property
+    def poster_url(self):
+        try:
+            if self.poster:
+                return self.poster.url
+        except Exception:
+            pass
+        return self.capa_url
+
+    @property
+    def apk_url(self):
+        if not (self.liberar_download and self.apk):
+            return ""
+        try:
+            return self.apk.url
+        except Exception:
+            return ""
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        from . import arena
+
+        if self.slug in arena.JOGOS_POR_SLUG:
+            raise ValidationError({"slug": "Este endereço já é de um jogo do simulador. Escolha outro."})
+        if not self.endereco and not self.arquivo_html:
+            raise ValidationError("Informe o endereço do jogo hospedado OU envie o arquivo .html.")
+        if self.endereco and not self.endereco.lower().startswith("https://"):
+            # o site é https: um jogo em http seria bloqueado pelo navegador
+            raise ValidationError({"endereco": "Use um endereço https:// (o navegador bloqueia jogo em http dentro do site)."})
+        if self.arquivo_html and not getattr(self.arquivo_html, "_committed", True):
+            if not self.arquivo_html.name.lower().endswith((".html", ".htm")):
+                raise ValidationError({"arquivo_html": "Envie um arquivo .html."})
+            if self.arquivo_html.size > 15 * 1024 * 1024:
+                raise ValidationError({"arquivo_html": "Use um .html de até 15 MB (ou hospede o jogo e informe o endereço)."})
+        if self.apk and not getattr(self.apk, "_committed", True):
+            if not self.apk.name.lower().endswith(".apk"):
+                raise ValidationError({"apk": "O arquivo de download precisa ser um .apk."})
 
 
 class CategoriaPeca(Prime):

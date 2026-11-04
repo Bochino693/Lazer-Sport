@@ -2230,132 +2230,96 @@ html.ls-escuro .ls-topo .dropdown-menu {
 }
 
 /* =========================================================
-   OS RECURSOS DA MÁQUINA NA FOTO (partials/faixas.html)
+   OS RECURSOS DA MÁQUINA (partials/faixas.html)
 
-   Selos com ícone no canto de cima, à direita, um embaixo do outro: o
-   ícone num círculo colorido e o nome curto ("Câmera", "5 sensores"). Ao
-   apontar a foto, cada selo abre e mostra a explicação. Em foto pequena
-   (o card do celular), fica só o ícone. Era uma faixa diagonal só com o
-   texto. Quem leva quais: core/arena.py (AVISOS_DO_JOGO). A Arena 3D
-   não leva.
+   Selos com ícone JUNTO DOS TEXTOS do card, logo embaixo do nome: o
+   ícone num círculo colorido e o nome do recurso ("Contém câmera", "5
+   sensores de precisão"); apontando, a explicação. Card estreito mostra o
+   nome curto. Na página do brinquedo (`ls-recursos--lista`), cada recurso
+   vem com a explicação ao lado. Não vão mais por cima da foto.
+   Quem leva quais: core/arena.py (AVISOS_DO_JOGO).
    ========================================================= */
 .ls-recursos {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    pointer-events: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 4px;
+    padding: 0;
+    list-style: none;
     container-type: inline-size;
 }
 
-.ls-recursos-pilha {
-    position: absolute;
-    top: clamp(8px, 3cqi, 14px);
-    right: clamp(8px, 3cqi, 14px);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-}
-
 .ls-recurso {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    max-width: 100%;
-    padding: 4px 11px 4px 4px;
-    border: 1px solid rgba(255, 255, 255, .16);
+    gap: 6px;
+    min-width: 0;
+    padding: 3px 10px 3px 3px;
+    border: 1px solid rgba(120, 170, 255, .22);
     border-radius: 999px;
-    background: rgba(6, 14, 38, .84);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, .3);
-    color: #fff;
+    background: rgba(255, 255, 255, .05);
+    color: #e8f0ff;
     font-family: Poppins, Manrope, sans-serif;
-    line-height: 1.1;
-    pointer-events: auto;
-    animation: ls-recurso-entra .5s cubic-bezier(.22, 1, .36, 1) both;
+    line-height: 1.15;
 }
-
-.ls-recurso + .ls-recurso { animation-delay: .08s; }
 
 .ls-recurso-icone {
     display: grid;
     flex: none;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ff5a68, #c8102e);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 0 0 2px rgba(255, 90, 104, .2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
     color: #fff;
 }
 
-.ls-recurso--arma .ls-recurso-icone {
-    background: linear-gradient(135deg, #ffd23f, #e09a00);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 0 0 2px rgba(255, 210, 63, .22);
-    color: #241900;
-}
+.ls-recurso--arma .ls-recurso-icone { background: linear-gradient(135deg, #ffd23f, #e09a00); color: #241900; }
+.ls-recurso--sensores .ls-recurso-icone { background: linear-gradient(135deg, #22e07a, #0b9e52); color: #eafff3; }
+.ls-recurso-icone svg { width: 14px; height: 14px; }
 
-.ls-recurso--sensores .ls-recurso-icone {
-    background: linear-gradient(135deg, #22e07a, #0b9e52);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 0 0 2px rgba(34, 224, 122, .2);
-    color: #eafff3;
-}
-
-.ls-recurso-icone svg { width: 18px; height: 18px; }
-
-.ls-recurso-texto { display: grid; min-width: 0; max-width: 150px; }
-.ls-recurso-texto b {
-    font-size: .72rem;
-    font-weight: 850;
-    letter-spacing: .02em;
+.ls-recurso-texto { display: grid; min-width: 0; }
+.ls-recurso-nome,
+.ls-recurso-curto {
+    overflow: hidden;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
+.ls-recurso-curto { display: none; }
 
-/* a explicação: fechada; abre ao apontar a foto (ou o selo) */
-.ls-recurso-texto small {
-    max-height: 0;
-    max-width: 0;
-    overflow: hidden;
-    color: #b9c9e4;
-    font-size: .62rem;
-    font-weight: 600;
-    line-height: 1.25;
-    opacity: 0;
-    transition: max-height .3s ease, max-width .35s ease, opacity .25s ease, margin .3s ease;
+/* card estreito (a home no celular): o nome curto */
+@container (max-width: 250px) {
+    .ls-recursos { gap: 4px; }
+    .ls-recurso { gap: 4px; padding-right: 8px; }
+    .ls-recurso-icone { width: 18px; height: 18px; }
+    .ls-recurso-icone svg { width: 12px; height: 12px; }
+    .ls-recurso-nome { display: none; }
+    .ls-recurso-curto { display: block; font-size: .64rem; }
 }
 
-@media (hover: hover) {
-    :is(a, div, article):hover > .ls-recursos .ls-recurso-texto small,
-    .ls-recurso:hover .ls-recurso-texto small {
-        max-height: 3em;
-        max-width: 150px;
-        margin-top: 2px;
-        opacity: 1;
-    }
+/* na página do brinquedo: cada recurso com a explicação ao lado */
+.ls-recursos--lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin: 14px 0 18px;
 }
 
-/* foto pequena (o card do celular): só o ícone, um pouco menor */
-@container (max-width: 230px) {
-    .ls-recursos-pilha { gap: 5px; }
-    .ls-recurso { padding: 3px; gap: 0; }
-    .ls-recurso-icone { width: 24px; height: 24px; }
-    .ls-recurso-icone svg { width: 15px; height: 15px; }
-    .ls-recurso-texto { display: none; }
+.ls-recursos--lista .ls-recurso {
+    gap: 12px;
+    padding: 10px 14px 10px 10px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .06);
 }
 
-@keyframes ls-recurso-entra {
-    from { opacity: 0; transform: translateX(10px); }
-    to { opacity: 1; transform: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .ls-recurso { animation: none; }
-    .ls-recurso-texto small { transition: none; }
-}
-
-.produto-imagem-box:has(> .ls-recursos) { position: relative; }
-
-/* no card da home, a estrela de desejo desce para o canto de baixo */
-.img-area:has(> .ls-recursos) > .card-mini-desejo { top: auto; bottom: 10px; }
+.ls-recursos--lista .ls-recurso-icone { width: 40px; height: 40px; border-radius: 13px; }
+.ls-recursos--lista .ls-recurso-icone svg { width: 24px; height: 24px; }
+.ls-recursos--lista .ls-recurso-nome { font-size: .86rem; white-space: normal; }
+.ls-recursos--lista .ls-recurso-texto small { margin-top: 2px; color: #a9bbd9; font-size: .76rem; font-weight: 600; }
 
 /* ======================================================================
    O MENU DA CONTA (o avatar do topo), com cara de app

@@ -97,11 +97,11 @@
           <a class="ls-vitrine-foto" href="{{ item.url }}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">
             <img src="{{ item.capa }}" alt="{{ item.nome }}" width="900" height="900" decoding="async"
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
-            {% faixas item.nome %}
           </a>
           <div class="ls-vitrine-ficha">
             <span class="ls-vitrine-categoria">{{ item.categoria }}</span>
             <p class="ls-vitrine-nome">{{ item.nome }}</p>
+            {% faixas item.nome %}
             <div class="ls-vitrine-meta">
               {% if item.avaliacao %}<span><i class="fa-solid fa-star" aria-hidden="true"></i> {{ item.avaliacao|floatformat:1 }}</span>{% endif %}
               {% if item.medidas %}<span><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ item.medidas }}</span>{% endif %}
@@ -379,8 +379,6 @@
                       title="Guardar na lista de desejos">
                 <i class="fa-regular fa-star" data-favorito-icone aria-hidden="true"></i>
               </button>
-              {% faixas brinquedo.nome_brinquedo %}
-
               {% if brinquedo.imagem_brinquedo %}
                 <img
                   src="{{ brinquedo.imagem_brinquedo|foto:480 }}"
@@ -402,6 +400,7 @@
               <h3 class="card-mini-nome">
                 <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="produto-title-link">{{ brinquedo.nome_brinquedo }}</a>
               </h3>
+              {% faixas brinquedo.nome_brinquedo %}
 
               <div class="card-mini-meta">
                 <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}"

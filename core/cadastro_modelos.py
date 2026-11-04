@@ -97,13 +97,22 @@ CADASTROS = {
             "1,91 m de comprimento. Cores e adesivagem podem ser ajustadas no pedido."
         ),
         "medidas": ("2.07", "0.74", "1.91"),
-        # a foto principal: a máquina inteira, de 3/4 e sem fundo (do .glb da
-        # própria máquina); as outras, os lados e as costas
+        # as fotos, todas sem fundo e tiradas do .glb da própria máquina: a
+        # principal de 3/4; os lados e as costas (os tipos que a Arena usa);
+        # mais ângulos; e a adesivagem nas outras cores que o site oferece
         "fotos": (
             ("foto.webp", "perfil", "Strike Kids, o boliche infantil, com a tela, a pista e a arte dos pinos"),
             ("lado_direito.webp", "lado_direito", "Strike Kids pelo lado direito, com a arte dos pinos"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids pelo lado esquerdo, com a arte dos pinos"),
             ("verso.webp", "verso", "Strike Kids visto por trás"),
+            ("frente.webp", None, "Strike Kids visto de frente: a pista, as bolas e a tela do jogo"),
+            ("tres_quartos_esquerda.webp", None, "Strike Kids de 3/4, pelo lado esquerdo"),
+            ("de_cima.webp", None, "Strike Kids visto de cima, com a pista inteira"),
+            ("cor_azul.webp", None, "Strike Kids com a adesivagem em tons de azul"),
+            ("cor_roxo.webp", None, "Strike Kids com a adesivagem em tons de roxo"),
+            ("cor_rosa.webp", None, "Strike Kids com a adesivagem em tons de rosa"),
+            ("cor_vermelho.webp", None, "Strike Kids com a adesivagem em tons de vermelho"),
+            ("cor_laranja.webp", None, "Strike Kids com a adesivagem em tons de laranja"),
         ),
         "categorias": ("boliche", "jogos", "eletronic"),
         "evitar": (),
@@ -163,10 +172,14 @@ def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_
 
 
 def achar_no_catalogo(chave, Brinquedos):
-    """O brinquedo do catálogo que é esta máquina (pelo nome), ou None."""
+    """O brinquedo ATIVO do catálogo que é esta máquina (pelo nome), ou None.
+
+    Desativado não conta: ele não aparece no site, e contar com ele fazia o
+    cadastro só ligar o 3D num brinquedo escondido em vez de criar o novo.
+    """
     dados = CADASTROS[chave]
     trechos = [_normalizar(t) for t in dados.get("nomes", ()) or (dados["nome"],)]
-    for brinquedo in Brinquedos.objects.order_by("id"):
+    for brinquedo in Brinquedos.objects.filter(ativo=True).order_by("id"):
         nome = _normalizar(brinquedo.nome_brinquedo or "")
         if any(trecho in nome for trecho in trechos):
             return brinquedo
@@ -225,52 +238,79 @@ def migracao(chave):
     return cadastrar_no_deploy
 
 
+def garantir_strike_kids(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD, avisar=print):
+    """Garante o Strike Kids no catálogo: ATIVO, com as fotos e o objeto 3D.
+
+    Pode rodar quantas vezes for (no comando, ao subir o servidor, numa
+    migração): quando já está tudo certo, só confere. Conta o que achou e
+    o que fez, e deixa o erro subir -- quem chama decide se engole.
+
+    * Um "Strike Kids" ativo cadastrado pelo site (as fotos são as daqui):
+      fica com o nome "Strike Kids" e, se faltar foto, ganha as fotos.
+    * Um ativo cadastrado no painel (as fotos são de alguém): fica como
+      está, só ganha o 3D.
+    * Nenhum ativo: o "Strike Kids" desativado volta (com as fotos daqui), ou
+      um novo é cadastrado.
+    """
+    dados = CADASTROS["strike-kids"]
+    parecidos = [
+        b for b in Brinquedos.objects.order_by("id")
+        if "strike kids" in _normalizar(b.nome_brinquedo or "")
+    ]
+    avisar("Strike Kids no banco: " + (", ".join(
+        f"{b.nome_brinquedo} (id {b.pk}, {'ativo' if b.ativo else 'desativado'})" for b in parecidos
+    ) or "nenhum"))
+    brinquedo = next((b for b in parecidos if b.ativo), None)
+    do_site = brinquedo is not None and "strike-kids-" in (brinquedo.imagem_brinquedo.name or "")
+    if brinquedo is None:
+        desativado = next((b for b in parecidos if b.nome_brinquedo == dados["nome"]), None)
+        if desativado is not None:
+            desativado.ativo = True
+            desativado.save(update_fields=["ativo"])
+            brinquedo, do_site = desativado, True
+            avisar(f"Reativado: {brinquedo.nome_brinquedo} (id {brinquedo.pk}).")
+    with transaction.atomic():
+        if brinquedo is None:
+            brinquedo, _criado = cadastrar("strike-kids", Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, avisar=avisar)
+        elif do_site:
+            if brinquedo.nome_brinquedo != dados["nome"]:
+                brinquedo.nome_brinquedo = dados["nome"]
+                brinquedo.descricao = dados["descricao"]
+                brinquedo.save(update_fields=["nome_brinquedo", "descricao"])
+            fotos_daqui = "strike-kids-foto" in (brinquedo.imagem_brinquedo.name or "")
+            if not fotos_daqui or brinquedo.imagens_brinquedo.count() < len(dados["fotos"]):
+                brinquedo, _ = cadastrar(
+                    "strike-kids", Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos=True, avisar=avisar,
+                )
+        ligar_objeto_3d("strike-kids", brinquedo, ObjetoTresD)
+    avisar(f"Strike Kids pronto: {brinquedo.nome_brinquedo} (id {brinquedo.pk}), ativo, com "
+           f"{brinquedo.imagens_brinquedo.count()} fotos e o objeto 3D.")
+    return brinquedo
+
+
 def strike_kids_no_catalogo(apps, schema_editor, avisar=print):
-    """O Strike Kids como brinquedo do catálogo, com a foto 2D e o objeto 3D (a 0120).
+    """A migração do Strike Kids (a 0120 e a 0121): a garantia acima, no banco de verdade.
 
-    * Não há brinquedo com "Strike Kids" no nome: cadastra o "Strike Kids",
-      com as quatro fotos (a principal sem fundo) e o objeto 3D ligado.
-    * Há um que o próprio site cadastrou antes (a 0117, como "Strike Kids
-      Boliche", com fotos tiradas do 3D): passa a se chamar "Strike Kids" e
-      ganha as fotos novas.
-    * Há um que alguém cadastrou no painel: fica como está, só ganha o 3D.
-
-    Só no banco de verdade (o PostgreSQL, no Render ou no computador): o
-    SQLite é o dos testes. Se a subida das fotos falhar, o resto segue e o
-    `cadastrar_modelo_3d strike-kids` refaz.
+    Só no PostgreSQL (o banco do site, no Render ou no computador): o SQLite
+    é o dos testes. Se falhar (a subida das fotos, por exemplo), o deploy
+    segue -- e o servidor tenta de novo ao subir (gunicorn.conf.py).
     """
     from django.conf import settings
 
     real = getattr(settings, "IS_RENDER", False) or schema_editor.connection.vendor == "postgresql"
     if not real:
         return None
-    Brinquedos = apps.get_model("core", "Brinquedos")
-    dados = CADASTROS["strike-kids"]
-    existente = achar_no_catalogo("strike-kids", Brinquedos)
     try:
-        with transaction.atomic():
-            if existente is not None and "strike-kids-" in (existente.imagem_brinquedo.name or ""):
-                # o que o próprio site cadastrou: o nome e as fotos novas
-                if existente.nome_brinquedo != dados["nome"]:
-                    existente.nome_brinquedo = dados["nome"]
-                    existente.descricao = dados["descricao"]
-                    existente.save(update_fields=["nome_brinquedo", "descricao"])
-                brinquedo, _ = cadastrar(
-                    "strike-kids", Brinquedos, apps.get_model("core", "CategoriasBrinquedos"),
-                    apps.get_model("core", "ImagemBrinquedo"), refazer_fotos=True, avisar=avisar,
-                )
-            elif existente is not None:
-                brinquedo = existente
-            else:
-                brinquedo, _ = cadastrar(
-                    "strike-kids", Brinquedos, apps.get_model("core", "CategoriasBrinquedos"),
-                    apps.get_model("core", "ImagemBrinquedo"), avisar=avisar,
-                )
-            ligar_objeto_3d("strike-kids", brinquedo, apps.get_model("core", "ObjetoTresD"))
-    except Exception as erro:  # o deploy segue; o comando refaz depois
-        avisar(f"O Strike Kids não foi cadastrado agora ({erro}). Rode: python manage.py cadastrar_modelo_3d strike-kids")
+        return garantir_strike_kids(
+            apps.get_model("core", "Brinquedos"),
+            apps.get_model("core", "CategoriasBrinquedos"),
+            apps.get_model("core", "ImagemBrinquedo"),
+            apps.get_model("core", "ObjetoTresD"),
+            avisar=avisar,
+        )
+    except Exception as erro:  # o deploy segue; o servidor tenta de novo ao subir
+        avisar(f"O Strike Kids não foi cadastrado agora ({erro!r}). Rode: python manage.py cadastrar_modelo_3d strike-kids")
         return None
-    return brinquedo
 
 
 def migracao_objetos_3d(*chaves, cadastrar_no_banco_real=False):
