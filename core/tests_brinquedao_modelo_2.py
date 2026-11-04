@@ -47,12 +47,11 @@ class ObjetoNaArenaTests(TestCase):
     def test_liga_pelo_nome_e_os_arquivos_existem(self):
         self.assertEqual(arena.modelo_da_maquina("Brinquedão Modelo 2")["id"], "brinquedao-modelo-2")
         self.assertIsNone(arena.modelo_da_maquina("Brinquedão Castelo Kids"))
-        # os jogos da casa também têm o seu (o Boliche Virtual roda o Dragon Bowling)
-        self.assertEqual(arena.modelo_da_maquina("Lazer Shot")["id"], "lazer-shot")
-        self.assertEqual(arena.modelo_da_maquina("Boliche Virtual Dragon")["id"], "boliche-virtual")
-        self.assertEqual(arena.modelo_da_maquina("Dragon Bowling Rosa")["id"], "boliche-virtual")
+        # o Lazer Shot e o Dragon Bowling ficam com o 3D das fotos de cada um
+        # (o Boliche Virtual é a máquina do Dragon Bowling: roda o jogo dele)
+        self.assertIsNone(arena.modelo_da_maquina("Lazer Shot"))
+        self.assertIsNone(arena.modelo_da_maquina("Dragon Bowling Rosa"))
         self.assertEqual(arena.jogo_da_maquina("Boliche Virtual"), "dragon-bowling")
-        self.assertIsNone(arena.modelo_da_maquina("Air Game Hockey"))
         for modelo in arena.MODELOS_3D:
             self.assertTrue(finders.find(modelo["arquivo"]), modelo["arquivo"])
             for _, arquivo in modelo["fotos"]:

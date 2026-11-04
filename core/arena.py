@@ -543,53 +543,6 @@ MODELOS_3D = (
         ),
     },
     {
-        # o tiro com pistola de luz: gabinete em pé com a TV em pé (a
-        # partida do jogo na tela), o letreiro aceso, a pistola
-        # personalizada no apoio e a câmera da foto do jogador em cima.
-        # Feito com a arte do jogo (ferramentas/modelos3d/jogos-da-casa/).
-        "id": "lazer-shot",
-        "titulo": "Lazer Shot",
-        "nomes": ("Lazer Shot",),
-        "arquivo": "site/arena/modelos/lazer-shot.glb",
-        "medidas": (2.32, 1.1, 0.95),
-        "grupo": "jogos",
-        "jogo": "lazer-shot",
-        "pasta": "site/arena/modelos/lazer-shot/",
-        "fotos": (
-            ("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"),
-            ("lado_esquerdo", "lado_esquerdo.webp"), ("verso", "verso.webp"),
-        ),
-        "medidas_texto": "2,32 m × 1,10 m × 0,95 m",
-        "categorias": ("Eletrônicos",),
-        "descricao": (
-            "Lazer Shot, o tiro ao alvo com pistola de luz da Lazer & Sport: TV em pé com os cenários "
-            "do bar, do deserto, do mar e da arena, pistola personalizada e câmera para a foto do jogador."
-        ),
-    },
-    {
-        # o boliche virtual da fábrica, que roda o Dragon Bowling: a pista
-        # com os trilhos de LED, as bolas com START e CRÉDITO na frente, e a
-        # torre com a TV em pé e o letreiro do dragão
-        "id": "boliche-virtual",
-        "titulo": "Boliche Virtual",
-        "nomes": ("Boliche Virtual", "Dragon Bowling"),
-        "arquivo": "site/arena/modelos/boliche-virtual.glb",
-        "medidas": (2.38, 0.84, 3.21),
-        "grupo": "jogos",
-        "jogo": "dragon-bowling",
-        "pasta": "site/arena/modelos/boliche-virtual/",
-        "fotos": (
-            ("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"),
-            ("lado_esquerdo", "lado_esquerdo.webp"), ("verso", "verso.webp"),
-        ),
-        "medidas_texto": "2,38 m × 0,84 m × 3,21 m",
-        "categorias": ("Eletrônicos",),
-        "descricao": (
-            "Boliche Virtual da Lazer & Sport, com o jogo Dragon Bowling: a bola rola de verdade pela "
-            "pista com os trilhos de LED e a partida aparece na TV da torre, com o mapa dos pinos e o recorde."
-        ),
-    },
-    {
         "id": "brinquedao-modelo-2",
         "titulo": "Brinquedão Modelo 2",
         "nomes": ("Brinquedão Modelo 2",),
