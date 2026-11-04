@@ -532,6 +532,6 @@ class AntesDaMigracaoTests(TestCase):
 
 class TabelaProntaTests(TestCase):
     def test_acha_a_tabela_criada_pela_migracao(self):
-        objetos_3d._tabela.update(pronta=False, conferida=0.0)
+        objetos_3d._tabelas.clear()
         self.assertTrue(objetos_3d.tabela_pronta())
         self.assertEqual(objetos_3d.prefetch_do_objeto(), ("objeto_3d",))

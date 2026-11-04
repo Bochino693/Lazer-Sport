@@ -27,6 +27,7 @@ from .models import (
     CategoriaPeca,
     Frete,
     ObjetoTresD,
+    JogoCadastrado,
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -508,6 +509,76 @@ class ObjetoTresDAdmin(admin.ModelAdmin):
     @admin.display(description="Cores")
     def lista_de_cores(self, obj):
         return ", ".join(obj.cores or []) or "—"
+
+
+@admin.register(JogoCadastrado)
+class JogoCadastradoAdmin(admin.ModelAdmin):
+    """Subir um jogo novo no site: o jogo, a foto de capa e os dados.
+
+    Salvou com "Ativo" marcado, o jogo já aparece em /jogos/ e ganha a sua
+    página em /jogos/<slug>/ -- sem deploy e sem mexer no código.
+    """
+
+    list_display = ("miniatura", "nome", "slug", "como_roda", "proporcao", "download", "ordem", "ativo")
+    list_display_links = ("miniatura", "nome")
+    list_editable = ("ordem", "ativo")
+    list_filter = ("ativo", "proporcao", "liberar_download")
+    search_fields = ("nome", "slug", "chamada", "descricao")
+    prepopulated_fields = {"slug": ("nome",)}
+    readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado")
+    fieldsets = (
+        ("O jogo", {
+            "fields": ("nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo"),
+        }),
+        ("Foto de capa", {
+            "fields": ("capa", "previa_da_capa", "poster"),
+        }),
+        ("Os arquivos do jogo (um dos dois)", {
+            "description": (
+                "Jogo de vários arquivos (Godot HTML5, Unity WebGL...): hospede a pasta "
+                "do export (itch.io, GitHub Pages, o CDN de vocês) e cole o endereço https. "
+                "Jogo de um arquivo só: envie o .html."
+            ),
+            "fields": ("endereco", "arquivo_html", "proporcao"),
+        }),
+        ("Aplicativo Android (opcional)", {
+            "description": "O APK fica guardado. Só aparece para baixar no site se \"Deixar baixar\" estiver marcado.",
+            "fields": ("apk", "liberar_download"),
+        }),
+        ("No site", {
+            "fields": ("ver_no_site", "criacao", "atualizado"),
+        }),
+    )
+
+    @admin.display(description="Capa")
+    def miniatura(self, obj):
+        if not obj.capa_url:
+            return "—"
+        return format_html('<img src="{}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px">', obj.capa_url)
+
+    @admin.display(description="Prévia")
+    def previa_da_capa(self, obj):
+        if not obj.capa_url:
+            return "Envie a foto de capa e salve para ver a prévia."
+        return format_html('<img src="{}" alt="" style="max-width:220px;border-radius:12px">', obj.capa_url)
+
+    @admin.display(description="Roda por")
+    def como_roda(self, obj):
+        if obj.endereco:
+            return "Endereço hospedado"
+        if obj.arquivo_html:
+            return "Arquivo .html"
+        return "—"
+
+    @admin.display(description="APK", boolean=True)
+    def download(self, obj):
+        return bool(obj.apk_url)
+
+    @admin.display(description="Página do jogo")
+    def ver_no_site(self, obj):
+        if not obj.pk or not obj.slug:
+            return "Salve o jogo para ganhar a página."
+        return format_html('<a href="{0}" target="_blank" rel="noopener">{0}</a>', obj.url)
 
 
 @admin.register(Brinquedos)

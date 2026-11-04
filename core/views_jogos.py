@@ -24,8 +24,36 @@ from django.views.generic import View
 from sistema_interno.templatetags.interno_extras import estatico
 
 from . import arena, ranking
-from .models import Brinquedos
+from .models import Brinquedos, JogoCadastrado
 from .views_arena import WHATSAPP
+
+
+def jogos_cadastrados():
+    """Os jogos que a equipe subiu pelo painel (ativos, com onde jogar), em ordem."""
+    from .objetos_3d import tabela_pronta
+
+    jogos = []
+    if not tabela_pronta(JogoCadastrado):  # antes da migração, a lista sai sem eles
+        return jogos
+    for jogo in JogoCadastrado.objects.filter(ativo=True).order_by("ordem", "nome"):
+        if not jogo.url_para_jogar:
+            continue
+        jogos.append({
+            "slug": jogo.slug,
+            "titulo": jogo.nome,
+            "chamada": jogo.chamada,
+            "descricao": jogo.descricao,
+            "comandos": jogo.comandos,
+            "cor": jogo.cor,
+            "capa": jogo.capa_url,
+            "poster": jogo.poster_url,
+            "jogar": jogo.url_para_jogar,
+            "proporcao": jogo.proporcao,
+            "apk": jogo.apk_url,
+            "url": jogo.url,
+            "externo": True,
+        })
+    return jogos
 
 
 def maquinas_dos_jogos():
@@ -80,8 +108,13 @@ def _para_o_script(jogo):
 @method_decorator(ensure_csrf_cookie, name="get")
 class SimuladorView(View):
     def get(self, request, slug=None):
+        externos = jogos_cadastrados()
         if slug is not None and slug not in arena.JOGOS_POR_SLUG:
-            raise Http404("Jogo não encontrado")
+            # um jogo que a equipe subiu pelo painel: a sua própria página
+            cadastrado = next((j for j in externos if j["slug"] == slug), None)
+            if cadastrado is None:
+                raise Http404("Jogo não encontrado")
+            return self.pagina_do_jogo_cadastrado(request, cadastrado, externos)
 
         maquinas = maquinas_dos_jogos()
         jogos = []
@@ -99,6 +132,7 @@ class SimuladorView(View):
 
         return render(request, "jogos.html", {
             "jogos": jogos,
+            "jogos_externos": externos,
             "atual": atual,
             "jogo_escolhido": slug is not None,
             "jogos_script": [_para_o_script(j) for j in jogos],
@@ -113,6 +147,15 @@ class SimuladorView(View):
                 "entrarUrl": reverse("login"),
                 "voltar": voltar,
             },
+        })
+
+    def pagina_do_jogo_cadastrado(self, request, jogo, externos):
+        """A página de um jogo que a equipe subiu: o jogo num quadro isolado."""
+        return render(request, "jogo_cadastrado.html", {
+            "jogo": jogo,
+            "jogos": arena.jogos_do_simulador(arena.JOGOS),
+            "jogos_externos": externos,
+            "whatsapp": WHATSAPP,
         })
 
 

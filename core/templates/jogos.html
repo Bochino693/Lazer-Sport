@@ -78,6 +78,18 @@
                     </a>
                 </li>
                 {% endfor %}
+                {% for jogo in jogos_externos %}
+                {# jogo que a equipe subiu: link normal para a página dele (sem data-sim-jogo) #}
+                <li>
+                    <a class="sim-opcao sim-opcao--externo" href="{{ jogo.url }}" style="--cor-jogo: {{ jogo.cor }}">
+                        <img src="{{ jogo.capa }}" alt="" width="96" height="96" loading="lazy" decoding="async">
+                        <span class="sim-opcao-texto">
+                            <strong>{{ jogo.titulo }}</strong>
+                            <small><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar no site</small>
+                        </span>
+                    </a>
+                </li>
+                {% endfor %}
             </ul>
         </nav>
 

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static interno_extras %}
+
+{% block title %}{{ jogo.titulo }}: jogue no site | Lazer &amp; Sport Jogos{% endblock %}
+{% block main_class %} content-section--full{% endblock %}
+{% block meta_description %}Jogue {{ jogo.titulo }}, um jogo da Lazer &amp; Sport, direto no navegador — no celular ou no computador.{% endblock %}
+
+{% block content %}
+{% comment %}
+  A PÁGINA DE UM JOGO QUE A EQUIPE SUBIU PELO PAINEL (JogoCadastrado).
+
+  O jogo roda num quadro isolado (iframe com sandbox): ele não enxerga o
+  resto do site, não lê os cookies nem o conteúdo da página. O jogo só
+  começa a baixar quando a pessoa toca em "Jogar" -- a página abre leve, e
+  o jogo não fica exposto a quem só passa os olhos. Sem JavaScript, o botão
+  "Jogar" abre o jogo numa aba.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/jogo-cadastrado.css' %}">
+
+<div class="jc" style="--cor-jogo: {{ jogo.cor }}">
+    <div class="jc-topo">
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">Home</a><span>›</span>
+            <a href="{% url 'jogos' %}">Jogos</a><span>›</span>
+            <strong>{{ jogo.titulo }}</strong>
+        </nav>
+        <div class="jc-titulo">
+            <img src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="64" height="64" decoding="async">
+            <div>
+                <span class="jc-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Jogos</span>
+                <h1>{{ jogo.titulo }}</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="jc-palco jc-palco--{{ jogo.proporcao }}" data-jogo
+         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}">
+        {# a capa com o botão: o jogo só baixa ao tocar em Jogar #}
+        <div class="jc-capa" data-jogo-capa>
+            {% if jogo.poster %}<img src="{{ jogo.poster }}" alt="" class="jc-capa-fundo" decoding="async">{% endif %}
+            <div class="jc-capa-texto">
+                {% if jogo.chamada %}<p class="jc-chamada">{{ jogo.chamada }}</p>{% endif %}
+                {% if jogo.comandos %}<p class="jc-comandos"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> {{ jogo.comandos }}</p>{% endif %}
+                <div class="jc-capa-acoes">
+                    <button type="button" class="ls-botao jc-jogar" data-jogo-jogar>
+                        <i class="fa-solid fa-play" aria-hidden="true"></i> Jogar
+                    </button>
+                    <a class="ls-botao ls-botao--fantasma jc-abrir" href="{{ jogo.jogar }}" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir numa aba
+                    </a>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="jc-tela-cheia" data-jogo-tela-cheia hidden aria-label="Tela cheia">
+            <i class="fa-solid fa-expand" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="jc-info">
+        {% if jogo.descricao %}
+        <section class="jc-bloco">
+            <h2><i class="fa-solid fa-align-left" aria-hidden="true"></i> Sobre o jogo</h2>
+            <p>{{ jogo.descricao|linebreaksbr }}</p>
+        </section>
+        {% endif %}
+
+        <div class="jc-acoes-extra">
+            {% if jogo.apk %}
+            <a class="ls-botao ls-botao--claro" href="{{ jogo.apk }}" download>
+                <i class="fa-brands fa-android" aria-hidden="true"></i> Baixar o aplicativo
+            </a>
+            {% endif %}
+            <a class="ls-botao ls-botao--fantasma" href="https://wa.me/{{ whatsapp }}?text={{ 'Olá! Quero este jogo numa máquina da Lazer & Sport: '|urlencode }}{{ jogo.titulo|urlencode }}" target="_blank" rel="noopener">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Quero numa máquina
+            </a>
+        </div>
+    </div>
+
+    {# o caminho de volta para os outros jogos #}
+    <section class="jc-outros" aria-label="Outros jogos">
+        <h2>Mais jogos da casa</h2>
+        <div class="jc-outros-grade">
+            {% for outro in jogos %}
+            <a class="jc-mini" href="{% url 'jogo' outro.slug %}" style="--cor-jogo: {{ outro.cor }}">
+                <img src="{% estatico outro.miniatura %}" alt="" width="72" height="72" loading="lazy" decoding="async">
+                <span>{{ outro.titulo }}</span>
+            </a>
+            {% endfor %}
+            {% for outro in jogos_externos %}{% if outro.slug != jogo.slug %}
+            <a class="jc-mini" href="{{ outro.url }}" style="--cor-jogo: {{ outro.cor }}">
+                <img src="{{ outro.capa }}" alt="" width="72" height="72" loading="lazy" decoding="async">
+                <span>{{ outro.titulo }}</span>
+            </a>
+            {% endif %}{% endfor %}
+        </div>
+    </section>
+</div>
+
+<script src="{% estatico 'site/paginas/jogo-cadastrado.js' %}" defer></script>
+{% endblock %}

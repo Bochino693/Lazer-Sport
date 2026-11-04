@@ -36,30 +36,34 @@ TAMANHO_MAXIMO = 10 * 1024 * 1024
 # cadastro (as fotos e o resto da página de pé) até a migração rodar.
 # ----------------------------------------------------------------------
 
-_tabela = {"pronta": False, "conferida": 0.0}
+_tabelas = {}  # db_table -> {"pronta": bool, "conferida": monotonic}
 
 
-def tabela_pronta():
-    """A tabela dos objetos 3D já existe no banco?
+def tabela_pronta(modelo=None):
+    """A tabela do modelo (por padrão, a dos objetos 3D) já existe no banco?
 
     Uma vez achada, não se confere mais. Enquanto não existe, confere de
     novo a cada 30 s (a migração pode rodar com o site no ar).
     """
-    if _tabela["pronta"]:
+    if modelo is None:
+        from .models import ObjetoTresD
+
+        modelo = ObjetoTresD
+    nome = modelo._meta.db_table
+    estado = _tabelas.setdefault(nome, {"pronta": False, "conferida": 0.0})
+    if estado["pronta"]:
         return True
     agora = time.monotonic()
-    if _tabela["conferida"] and agora - _tabela["conferida"] < 30:
+    if estado["conferida"] and agora - estado["conferida"] < 30:
         return False
-    _tabela["conferida"] = agora
-    from .models import ObjetoTresD
-
+    estado["conferida"] = agora
     try:
         with connection.cursor() as cursor:
             tabelas = connection.introspection.table_names(cursor)
     except DatabaseError:
         return False
-    _tabela["pronta"] = ObjetoTresD._meta.db_table in tabelas
-    return _tabela["pronta"]
+    estado["pronta"] = nome in tabelas
+    return estado["pronta"]
 
 
 def prefetch_do_objeto():
