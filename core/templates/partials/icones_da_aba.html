@@ -1,0 +1,14 @@
+{% load interno_extras %}{% comment %}
+  OS ÍCONES DA ABA E DO APARELHO, desenhados para cada tamanho: o símbolo
+  da marca (o alvo com o dardo), sem o texto do logotipo -- que em 16 px
+  virava um borrão. O de 16 px é desenhado no grid de pixels; o de 32,
+  com o dardo inteiro; o do iPhone e o do Android, no fundo azul-escuro do
+  site. Os desenhos (SVG) ficam em `ferramentas/icone/`.
+
+  `sem_app=True` deixa de fora o do aparelho (o painel interno tem o seu).
+{% endcomment %}
+<link rel="icon" href="{% estatico 'images/icone/favicon.ico' %}" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="{% estatico 'images/icone/favicon-32.png' %}">
+<link rel="icon" type="image/png" sizes="16x16" href="{% estatico 'images/icone/favicon-16.png' %}">
+{% if not sem_app %}<link rel="icon" type="image/png" sizes="192x192" href="{% estatico 'images/icone/icone-192.png' %}">
+<link rel="apple-touch-icon" sizes="180x180" href="{% estatico 'images/icone/apple-touch-icon.png' %}">{% endif %}

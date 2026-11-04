@@ -8,11 +8,9 @@
   <title>{% block title %} Lazer & Sports {% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
   <link rel="canonical" href="https://www.lazersport.com.br{% block canonical_path %}{{ request.path }}{% endblock %}">
-  {% comment %} 64x64 (5 KB) no lugar do logotipo de 1280px (155 KB): o navegador
-     desenha o ícone com 16 pixels de lado e baixava o arquivo inteiro
-     em toda visita nova. O logotipo grande continua onde é grande. {% endcomment %}
-  <link rel="icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
-  <meta name="theme-color" content="#004AAD">
+  {% include "partials/icones_da_aba.html" %}
+  {# a barra do navegador do celular na cor do topo do site (o tema escuro) #}
+  <meta name="theme-color" content="#050b1f">
 
   {% comment %}
     FONTES E ÍCONES SAEM DO PRÓPRIO SERVIDOR.
