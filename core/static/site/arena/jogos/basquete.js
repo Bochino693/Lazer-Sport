@@ -922,8 +922,17 @@ class Partida {
     }
   }
 
-  som(nome) {
-    this.api.som(nome);
+  som(nome, opcoes) {
+    return this.api.som(nome, opcoes);
+  }
+
+  /** A cesta do Slam (_tocar_combo): o sino do combo sobe a cada cesta
+   *  seguida; da 13ª em diante o 12 continua subindo meio tom por cesta
+   *  (até uma oitava) e o ALÉM DO LIMITE volta a cada 6. */
+  somDaCestaSlam(n) {
+    if (n >= 13 && (n - 13) % 6 === 0) this.som("combo_alem");
+    else if (n >= 13) this.som("combo_12", { tom: Math.pow(2, Math.min(n - 12, 12) / 12) });
+    else this.som(`combo_${Math.max(n, 1)}`);
   }
 
   mandarPlacar() {
@@ -993,6 +1002,10 @@ class Partida {
 
   jogando(dt) {
     const R = this.regras;
+    // A 1ª fase do Swish começa logo depois do 3-2-1 do console: o apito
+    // que na máquina sai junto do "VAI!" toca aqui (as outras fases têm a
+    // contagem do jogo, que apita em comecarTempo)
+    if (!this.ehSlam && this.fase === 0 && this.decorrido === 0) this.som("apito");
     this.decorrido += dt;
     this.tempo = Math.max(0, this.total - this.decorrido);
     const seg = Math.ceil(this.tempo);
@@ -1005,17 +1018,17 @@ class Partida {
             if (this.fase < 2 && !this.passou[this.fase]) this.aviso(`ÚLTIMOS 10 s! FALTAM ${this.alvo - this.pontos}`, SL.vermelho, 1.2, 2);
             else this.aviso("ÚLTIMOS 10 SEGUNDOS!", SL.vermelho, 1.2, 2);
           }
-          this.som(seg <= 5 ? "batida" : "nota");
+          this.som("tique", { volume: db(-2) });
+          if (seg <= 5) this.som("batida", { volume: db(-3) });
         }
       } else {
-        if (seg <= 5 && seg > 0) this.som("nota");
+        if (seg <= 5 && seg > 0) this.som("tique");
         if (!this.sprint && this.tempo <= R.segSprint) {
-          // ÚLTIMOS SEGUNDOS: a cesta vale 3
+          // ÚLTIMOS SEGUNDOS: a cesta vale 3 (na máquina só o aviso e o clarão)
           this.sprint = true;
           this.chips.sprint = 0.001;
           this.aviso(`ÚLTIMOS ${R.segSprint} s!`, SW.amarelo, 1.4);
           this.flash(SW.amarelo, 0.35);
-          this.som("apito");
         }
       }
     }
@@ -1024,7 +1037,7 @@ class Partida {
       this.combo = 0;
       if (this.ehSlam) {
         const base = this.multBase();
-        if (this.mult > base) this.som("clique");
+        if (this.mult > base) this.som("quebra");
         this.mult = base;
         this.sairEnterrada();
         this.barras = 0.2;
@@ -1080,7 +1093,9 @@ class Partida {
     this.tEstado = 0;
     this.liga = 0.001;
     this.apagadoAlvo = 0;
-    this.som("strike");
+    if (comCesta) this.som("swish");
+    this.som("liga");
+    this.som("neon");
     this.tremer(7);
     if (comCesta) this.comboTexto("VALENDO!", "#ffffff", SL.laranja);
     else this.comboTexto("VAMOS LÁ!", "#ffffff", SL.laranja);
@@ -1114,10 +1129,11 @@ class Partida {
     this.tEstado = 0;
     if (this.ehSlam) {
       this.mapa = { t: 0, sai: 0 };
-      this.som("whoosh");
       this.agendar(0.36, () => {
         if (this.estado !== "mapa") return;
-        this.som("batida");
+        // o nome da fase bate (impacto); na FINAL, o trovão junto
+        this.som("mapa");
+        if (i === 2) this.som("trovao", { volume: db(-3) });
         this.tremer(7);
         this.dispararPiso(270, 580, 6, CORES_FASE[i]);
         if (i === 2) {
@@ -1193,7 +1209,7 @@ class Partida {
     this.estado = "fimFase";
     this.tEstado = 0;
     this.tempo = 0;
-    this.som("apito");
+    this.som("fimFase");
     this.combo = 0;
     this.chips.combo = 0;
     if (this.ehSlam) {
@@ -1222,15 +1238,17 @@ class Partida {
       return;
     }
     if (!this.passou[f]) {
-      // NÃO PASSOU: a arena apaga e é o fim
-      this.som("erro");
+      // NÃO PASSOU: a arena apaga e é o fim; a torcida vaia (na fase 1
+      // de verdade, depois só um "uuuh")
+      this.som("naoPassou");
+      this.som(f === 0 ? "vaia" : "vaia_curta");
       this.aviso(`NÃO PASSOU!  FALTARAM ${this.alvo - this.pontos}`, SL.vermelho, 2.0, 9);
       this.apagadoAlvo = 0.6;
       this.tremer(8);
       this.agendar(2.2, () => this.encerrar(false));
       return;
     }
-    this.som("strike");
+    this.som("fase");
     this.aviso(`${this.regras.nomes[f]} CONCLUÍDA!`, SL.verde, 1.3, 9);
     this.dispararPiso(270, 930, 9, SL.verde);
     this.agendar(1.7, () => {
@@ -1241,7 +1259,7 @@ class Partida {
         return;
       }
       this.aviso(`BÔNUS DE SEQUÊNCIA +${bonus}`, SL.ouro, 1.6, 9);
-      this.som("moeda");
+      this.som("ouro", { volume: db(-4) });
       const passos = Math.min(bonus, 20);
       let resto = bonus;
       for (let k = 0; k < passos; k++) {
@@ -1250,7 +1268,7 @@ class Partida {
         this.agendar(0.06 * k, () => {
           this.somar(n);
           this.popPontos = 1;
-          this.som("nota");
+          this.som("tique", { volume: db(-6), tom: 1 + 0.04 * k });
         });
       }
       this.agendar(0.06 * passos + 0.1, () => {
@@ -1266,12 +1284,11 @@ class Partida {
     const ultima = f === 2;
     if (this.metaBatida && !ultima) {
       this.mostrarFaixa("FASE CONCLUÍDA!", `${this.pontosFase[f]} PONTOS NESTA FASE`, SW.verde, 1.6);
-      this.som("strike");
       this.agendar(1.9, () => this.iniciarFase(f + 1));
       return;
     }
     if (!this.metaBatida) {
-      this.som("erro");
+      this.som("naoBateu");
       this.mostrarFaixa("NÃO BATEU A META", `FALTARAM ${this.regras.metas[f] - this.pontosFase[f]} PONTOS`, SW.vermelho, 1.8);
       this.agendar(2.0, () => this.encerrar(false));
       return;
@@ -1294,21 +1311,27 @@ class Partida {
       if (campeao) {
         this.aviso("CAMPEÃO DA ARENA!", SL.ouro, 1.6, 10);
         this.confete(70);
-        this.som("strike");
+      }
+      // o resultado em festa (campeão ou recorde): aplausos e a coroa
+      if (campeao || this.festa) {
+        this.som("aplausos");
+        this.som("recorde", { volume: db(-2) });
       }
     } else {
       titulo = campeao ? "Campeão!" : "Não bateu a meta";
       detalhe = `${this.cestas} ${plural} · maior combo x${this.maiorCombo} · ` +
         (campeao ? "venceu a FINAL" : `parou na ${fase}`);
+      // o RESULTADO: a música sai e entra o "fim"
+      this.som("fim");
       if (campeao) {
         this.mostrarFaixa("CAMPEÃO!", `${this.pontos} PONTOS`, SW.amarelo, 1.4);
         this.fogos(5, [SW.amarelo, SW.rosa, SW.ciano, SW.laranja, "#ffffff"]);
-        this.som("strike");
       }
     }
     this.gravarHoje(this.pontos);
     this.agendar(campeao ? 1.5 : 0.4, () => {
-      this.api.terminar({ pontos: this.pontos, titulo, detalhe });
+      // os sons do fim são os da máquina, tocados aqui
+      this.api.terminar({ pontos: this.pontos, titulo, detalhe, som: false });
     });
   }
 
@@ -1336,7 +1359,7 @@ class Partida {
     }
     if (this.estado !== "jogando") {
       this.faiscasAro(x, y, this.ehSlam ? SL.laranja : SW.laranja, 12);
-      this.som("ponto");
+      this.som("swish");
       return;
     }
     if (this.ehSlam) this.cestaSlam(limpa, x, y);
@@ -1381,7 +1404,7 @@ class Partida {
     if (n >= 6) this.flashesTorcida(2 + Math.floor(Math.min(n, 14) / 4));
     this.faiscasAro(x, y, n >= 3 ? cor : "#ffa64d", 30 + Math.min(n, 10) * 3);
     if (n >= 13 && (n - 13) % 6 === 0) this.alemDoLimite(x, y);
-    this.som(n >= 2 ? "combo" : limpa ? "acerto" : "ponto");
+    this.somDaCestaSlam(n);
     this.mostrarComboSlam(n, limpa);
     this.flutuar(`+${ganho}`, x + mix(-75, 75, Math.random()), 537, ouro ? SL.ouro : n >= 3 ? cor : SL.laranja, 46);
     this.tremer(2 + Math.min(n, 12) * 0.45);
@@ -1415,6 +1438,7 @@ class Partida {
   }
 
   subiuMult() {
+    this.som("sobe", { tom: 0.9 + this.mult * 0.12 });
     if (this.mult >= 4 && !this.enterrada) this.entrarEnterrada();
     else if (this.mult < 4) this.aviso(`PONTOS x${this.mult}!`, corDoCombo(this.mult === 2 ? 3 : 6), 0.9);
     this.popMult = 1;
@@ -1424,7 +1448,7 @@ class Partida {
     const f = this.fase;
     if (f >= 2 || this.passou[f] || this.pontos < this.alvo) return;
     this.passou[f] = true;
-    this.som("strike");
+    this.som("passou");
     this.aviso(`PASSOU!  RUMO À ${this.regras.nomes[f + 1]}`, SL.verde, 1.5, 3);
     this.dispararPiso(108, 270, 9, SL.verde, false, 0.05);
     this.anel(108, 270, 90, 50, SL.verde, 0.8, 1.6);
@@ -1436,7 +1460,7 @@ class Partida {
   conferirRecorde() {
     if (this.festa || this.pontos <= this.recordeAntigo || this.recordeAntigo < 3) return;
     this.festa = true;
-    this.som("vitoria");
+    this.som("recorde");
     this.aviso("RECORDE BATIDO!", SL.ouro, 1.6, 4);
     this.borda = 1;
     this.flashesTorcida(8);
@@ -1457,7 +1481,7 @@ class Partida {
     this.enterrada = true;
     this.proximoRaio = 0;
     this.proximaBolaFogo = 0.3;
-    this.som("strike");
+    this.som("trovao");
     this.aviso("MODO ENTERRADA!  PONTOS x4", SL.ciano, 1.4, 3);
     this.tremer(9);
     this.flashesTorcida(6);
@@ -1477,14 +1501,14 @@ class Partida {
     this.ouro.resta = 6;
     this.ouro.some = 0;
     this.ouro.entra = 0;
-    this.som("moeda");
+    this.som("ouro");
     this.aviso("BOLA DE OURO!  VALE +5", SL.ouro, 1.0, 2);
   }
 
   pegarOuro() {
     this.ouro.ativo = false;
     this.ouro.some = 0.001;
-    this.som("moeda");
+    this.som("ouro", { tom: 1.25 });
     const x = 84;
     const y = 640;
     this.faiscasAro(x, y, SL.ouro, 40);
@@ -1534,19 +1558,21 @@ class Partida {
     const lado = this.flutuaLado * mix(30, 75, Math.random()) * 0.75;
     this.flutuar(`+${valor}`, x + lado, y - 30, misturaCor(cor, "#ffffff", 0.3), 46, 50, 0, true);
     this.conferirRecordeSwish();
+    // _no_swish (a bola passou pelo aro) e o sino do combo, ou o "ponto"
+    this.som("swish");
     if (this.combo >= 2) {
-      this.som("combo");
+      this.som(`combo_${Math.min(this.combo - 1, 12)}`);
       this.chips.combo = this.chips.combo > 0 ? Math.max(this.chips.combo, 0.25) : 0.001;
       this.popChipCombo = 1;
       const frases = { 3: "EM SEQUÊNCIA!", 5: "IMPARÁVEL!", 8: "MÃO QUENTE!", 10: "LENDÁRIO!" };
       if ([3, 5, 8, 10, 15, 20].includes(this.combo)) this.aviso(frases[this.combo] || `COMBO x${this.combo}!`, SW.ciano, 1.1);
     } else {
-      this.som(limpa ? "acerto" : "ponto");
+      this.som("ponto");
     }
     if (entrouFogo) this.entrarFogo();
     if (!this.metaBatida && this.pontosFase[this.fase] >= R.metas[this.fase]) {
       this.metaBatida = true;
-      this.som("strike");
+      this.som("fase");
       this.aviso("META BATIDA!", SW.verde, 1.6);
       this.flash(SW.verde, 0.45);
       this.fogos(3, [SW.verde, SW.ciano, "#ffffff"]);
@@ -1557,13 +1583,13 @@ class Partida {
   conferirRecordeSwish() {
     if (this.recordeVivo || this.recordeAntigo <= 0 || this.pontos <= this.recordeAntigo) return;
     this.recordeVivo = true;
-    this.som("vitoria");
+    this.som("recorde");
     this.aviso("NOVO RECORDE!", SW.amarelo, 1.6, 1, true);
     this.fogos(5, [SW.amarelo, SW.rosa, SW.ciano, SW.laranja, "#ffffff"]);
   }
 
   entrarFogo() {
-    this.som("strike");
+    this.som("fogo");
     this.chips.fogo = 0.001;
     this.aviso("EM CHAMAS!", "#ff8c1a", 1.5, 1, true);
     this.fogos(2, [SW.laranja, SW.vermelho]);
@@ -1742,7 +1768,7 @@ class Partida {
     this.mao = null;
     this.rearme = 0.16;
     this.arremessos++;
-    this.som("whoosh");
+    this.som("arremesso");
   }
 
   aroXEm(t) {
@@ -1846,7 +1872,7 @@ class Partida {
       b.tocouAro = true;
       if (-vn > 0.5 && this.tv - b.somAro > 0.12) {
         b.somAro = this.tv;
-        this.som("quica");
+        this.som("aro");
         const p = this.projetar(qx, 0, qz);
         this.faiscasAro(p.x, p.y, this.ehSlam ? "#ffa64d" : "#ffb070", 6, 0.5);
         b.vgiro = -b.vgiro * 0.7;
@@ -1855,7 +1881,7 @@ class Partida {
   }
 
   batidaTabela(b) {
-    this.som("batida");
+    this.som("tabela");
     if (!this.ehSlam) {
       this.tabelaBrilho = Math.max(this.tabelaBrilho, 0.35);
       this.tabelaCor = "#bfe6ff";
@@ -2128,7 +2154,10 @@ class Partida {
         const chaoY = 44 + 453 * k.s;
         const cor = k.tipo === "fogo" ? "#59ccff" : k.tipo === "ouro" ? SL.ouro : k.cor;
         this.anel(chaoX, chaoY, k.raio0 * k.s * 1.5, k.raio0 * k.s * 0.57, cor, 0.45, 1.3, limitar(forca / 350, 0.25, 0.9));
-        if (k.quiques <= 2 && forca > 120) this.som("quica");
+        // bolas_caindo.gd: mais baixo a cada quique, mais grave a bola maior
+        if (k.quiques <= 2 && forca > 120) {
+          this.som("quique", { volume: db(-6 - k.quiques * 5 + limitar(forca / 120, 0, 4)), tom: mix(0.92, 1.08, Math.random()) / Math.sqrt(Math.max(0.3, k.s)) });
+        }
       }
       const y = 44 + 453 * k.s - k.h * k.s;
       if (y - k.raio0 * k.s > 980 || Math.abs(k.x * k.s) > 420) k.viva = false;
@@ -2162,6 +2191,7 @@ class Partida {
   }
 
   mostrarFaixa(titulo, sub, cor, dur) {
+    this.som("faixa");
     this.av = null;
     this.faixa = { titulo, sub, cor, t: 0, dur };
   }
@@ -2242,7 +2272,7 @@ class Partida {
         const c = this.fx.novo(x, y, 0, 0, 0.35, 50, tingir(this.img.swishBrilho, cor));
         c.t1 = 180;
         c.alfa = 0.6;
-        if (k === 0) this.som("tiro");
+        if (k === 0) this.som("fogos");
       });
     }
   }
@@ -2351,7 +2381,7 @@ class Partida {
     const origens = [[20, 30], [520, 30], [15, 450], [525, 450], [270, 10]];
     const o = origens[Math.floor(Math.random() * origens.length)];
     this.dispararRaio(o[0], o[1], this.aroTelaX() + mix(-30, 30, Math.random()), this.aroY + mix(-15, 15, Math.random()), "#59ccff", 1.3, 0.3);
-    if (Math.random() < 0.35) this.som("batida");
+    if (Math.random() < 0.35) this.som("trovao", { volume: db(-12), tom: mix(0.9, 1.2, Math.random()) });
   }
 
   dispararRaio(x0, y0, x1, y1, cor, esp, dur) {
@@ -3931,10 +3961,80 @@ function ensinarTamanho(copia) {
   } catch (erro) { /* objeto travado: o encaixe da partida resolve */ }
 }
 
+/* ----------------------------------------------------------------------
+   OS SONS DAS DUAS MÁQUINAS. O motor é um só, mas cada basquete tem os
+   seus (basquete-vertical/sons e basquete-horizontal-android/sons): o
+   jogo chama o som pelo papel ("cesta", "aro", "fimFase"...) e a tabela
+   da variante diz qual arquivo toca, com o volume do Sons.tocar() /
+   Jogo.tocar() do original. Os sons iguais nas duas (o sino dos combos,
+   o apito, a seleção, o fim) moram em basquete/sons/. Papel sem arquivo
+   na variante cai na receita do console (`senao`).
+   ---------------------------------------------------------------------- */
+const SOM = "basquete/sons/";
+const db = (v) => Math.min(1, Math.pow(10, v / 20));
+const COMBOS = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`combo_${i + 1}`, { arquivo: `${SOM}combo_${i + 1}.mp3`, senao: "combo" }]));
+const SONS_SLAM = {
+  ...COMBOS,
+  combo_alem: { arquivo: SOM + "slam/combo_alem.mp3", senao: "strike" },
+  moeda: { arquivo: SOM + "slam/moeda.mp3", volume: db(-4) },
+  liga: { arquivo: SOM + "selecao.mp3", volume: db(-2), senao: "strike" },   // a cesta que liga a arena
+  neon: { arquivo: SOM + "slam/neon.mp3", volume: db(-2), senao: null },
+  swish: { arquivo: SOM + "slam/swish.mp3", senao: "ponto" },
+  mapa: { arquivo: SOM + "slam/impacto.mp3", volume: db(-2), senao: "batida" },
+  trovao: { arquivo: SOM + "slam/trovao.mp3", senao: "strike" },
+  contagem: { arquivo: SOM + "slam/bip.mp3", senao: "contagem" },
+  vai: { arquivo: SOM + "slam/bip_vai.mp3", volume: db(-4), senao: "vai" },
+  apito: SOM + "apito.mp3",
+  tique: { arquivo: SOM + "slam/tique.mp3", intervalo: 0.02, senao: "nota" },
+  batida: { arquivo: SOM + "slam/batida.mp3", senao: "batida" },
+  quebra: { arquivo: SOM + "slam/quebra.mp3", volume: db(-3), senao: "clique" },
+  sobe: { arquivo: SOM + "slam/sobe.mp3", volume: db(-2), senao: null },
+  passou: { arquivo: SOM + "slam/passou.mp3", senao: "strike" },
+  recorde: { arquivo: SOM + "slam/recorde.mp3", senao: "vitoria" },
+  ouro: { arquivo: SOM + "slam/ouro.mp3", senao: "moeda" },
+  fimFase: { arquivo: SOM + "fim.mp3", senao: "apito" },               // fim_turno
+  fase: { arquivo: SOM + "slam/fase.mp3", senao: "strike" },
+  naoPassou: { arquivo: SOM + "slam/fim_jogo.mp3", senao: "erro" },
+  vaia: { arquivo: SOM + "slam/vaia.mp3", volume: db(-1), senao: null },
+  vaia_curta: { arquivo: SOM + "slam/vaia_curta.mp3", volume: db(-1), senao: null },
+  aplausos: { arquivo: SOM + "slam/aplausos.mp3", volume: db(-1), senao: "vitoria" },
+  quique: { arquivo: SOM + "slam/quique.mp3", intervalo: 0.03, senao: "quica" },
+  aro: { arquivo: SOM + "slam/quique.mp3", volume: db(-3), senao: "quica" },
+  // a bola da máquina é de verdade: o arremesso e a tabela da miniatura
+  // não têm arquivo, saem da receita
+  arremesso: { senao: "whoosh" },
+  tabela: { senao: "batida" },
+  fogos: { senao: "tiro" },
+  faixa: { senao: null },
+};
+const SONS_SWISH = {
+  ...COMBOS,
+  moeda: { arquivo: SOM + "selecao.mp3", senao: "moeda" },
+  swish: { arquivo: SOM + "swish/swish.mp3", tom: [0.95, 1.05], senao: "acerto" },
+  ponto: { arquivo: SOM + "swish/ponto.mp3", volume: db(-4) },
+  faixa: { arquivo: SOM + "selecao.mp3", volume: db(-3), senao: null },  // o _banner
+  contagem: { arquivo: SOM + "swish/bip.mp3", senao: "contagem" },
+  vai: { arquivo: SOM + "swish/vai.mp3", senao: "vai" },
+  apito: SOM + "apito.mp3",
+  tique: { arquivo: SOM + "swish/tique.mp3", intervalo: 0.02, senao: "nota" },
+  fimFase: { arquivo: SOM + "swish/buzina.mp3", senao: "apito" },
+  fase: { arquivo: SOM + "swish/fase.mp3", senao: "strike" },          // META BATIDA!
+  naoBateu: { arquivo: SOM + "swish/alerta.mp3", senao: "erro" },
+  fogo: { arquivo: SOM + "swish/fogo.mp3", senao: "strike" },          // EM CHAMAS
+  recorde: { arquivo: SOM + "swish/recorde.mp3", volume: db(-2), senao: "vitoria" },
+  fim: { arquivo: SOM + "fim.mp3", senao: "fim" },
+  fogos: { arquivo: SOM + "swish/fogos.mp3", volume: db(-5), tom: [0.9, 1.15], senao: "tiro" },
+  arremesso: { arquivo: SOM + "swish/arremesso.mp3", volume: db(-6), tom: [0.95, 1.08], senao: "whoosh" },
+  aro: { senao: "quica" },
+  tabela: { senao: "batida" },
+  quique: { senao: "quica" },
+};
+
 export default {
   get largura() { return tamanhoDaPagina(0); },
   get altura() { return tamanhoDaPagina(1); },
   artes: ARTES,
+  sons: (variante) => (variante === "swish" ? SONS_SWISH : SONS_SLAM),
   criar(api) {
     ensinarTamanho(this);
     return new Partida(api);

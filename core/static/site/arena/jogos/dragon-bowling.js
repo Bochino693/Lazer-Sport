@@ -840,9 +840,33 @@ function carregarFontes() {
 /* ======================================================================
    O JOGO
    ====================================================================== */
+/* ----------------------------------------------------------------------
+   OS SONS DA MÁQUINA (songs/ do jogo, os caminhos de game.gd e bola.gd).
+   Os arquivos saíram normalizados (no jogo quase tudo toca acima de 0 dB:
+   o rolar a +18, o pino único a +10, a ficha a +3); o volume daqui é o
+   de cada um em relação aos outros, como na máquina.
+   ---------------------------------------------------------------------- */
+const SOM = "boliche/dragon/sons/";
+const SONS = {
+  rolando: { arquivo: SOM + "rolando.mp3", senao: "whoosh" },          // bola-roll_.wav
+  pinos: { arquivo: SOM + "pinos.mp3", senao: "batida" },              // pinos_queda.wav
+  // o strike é progressivo: um para o 1º da partida, outro para o 2º e o
+  // terceiro do 3º em diante
+  strike1: { arquivo: SOM + "strike1.mp3", senao: "strike" },
+  strike2: { arquivo: SOM + "strike2.mp3", senao: "strike" },
+  strike3: { arquivo: SOM + "strike3.mp3", senao: "strike" },
+  spare: { arquivo: SOM + "spare.mp3", senao: "combo" },
+  um_pino: { arquivo: SOM + "um_pino.mp3", senao: "acerto" },          // song_ini.wav
+  erro: { arquivo: SOM + "erro.mp3", volume: 0.55 },                   // erro.wav (PRA FORA!)
+  fim: { arquivo: SOM + "fim.mp3", volume: 0.8 },                      // end-game.wav
+  moeda: { arquivo: SOM + "moeda.mp3" },                               // coin.wav (o crédito)
+  final: { arquivo: SOM + "final.mp3", volume: 0.5, senao: null },     // song-1.ogg, a tela final
+};
+
 export default {
   largura: LARGURA,
   altura: ALTURA,
+  sons: SONS,
   artes: {
     pista: "boliche/dragon/pista_hd.webp",
     mascara: "boliche/dragon/pista_mascara.webp",
@@ -856,7 +880,18 @@ export default {
     const img = api.img;
     emojisImg = img.emojis || null;
     const motor = new Motor();
-    const som = (nome) => api.som(nome);
+    const som = (nome, opcoes) => api.som(nome, opcoes);
+    // o rolar da bola e a música da tela final: o jogo corta os dois
+    let somRolando = null;
+    let somFinal = null;
+    const pararRolar = (tempo) => {
+      if (somRolando) somRolando.parar(tempo);
+      somRolando = null;
+    };
+    const pararFinal = () => {
+      if (somFinal) somFinal.parar(0.3);
+      somFinal = null;
+    };
     let destruido = false;
 
     /* ------------------------------------------------------------------
@@ -2413,7 +2448,8 @@ export default {
       else if (tecla === "V") { dirX = 0.48; forca = 1.08; spin = 0.04; }
       else if (tecla === "C") { dirX = 0; forca = 1.06; spin = 0; }
       lancarBola(dirX, forca, spin);
-      som("whoosh");                   // o rolar da bola (bola-roll_.wav)
+      pararRolar(0.05);                // uma jogada nova corta o rolar da anterior
+      somRolando = som("rolando") || null;   // bola-roll_.wav
       aplicarZoomJogada();
       animarRastroBolaAoLancar();
     }
@@ -2485,26 +2521,30 @@ export default {
 
       if (derrubados > 0) {
         if (foiStrike) {
-          if (ultimaTeclaJogada !== "Z" && ultimaTeclaJogada !== "B") som("batida");
+          pararRolar(0.22);             // fade_out_roll_antes_resultado
+          if (ultimaTeclaJogada !== "Z" && ultimaTeclaJogada !== "B") som("pinos");
           yield 0.03;
-          som("strike");                // strike-1/2/3.wav
+          som("strike" + Math.min(3, contadorStrikesNoJogo + 1));   // strike-1/2/3.wav
           contadorStrikesNoJogo++;
           mostrarBanner("STRIKE!", COR_STRIKE);
           yield* efeitoStrikeTotal();
         } else if (foiSpare) {
-          som("batida");
+          pararRolar(0.22);
+          som("pinos");
           yield 0.03;
-          som("combo");                 // spare.wav
+          som("spare");                 // spare.wav
           mostrarBanner("SPARE!", COR_SPARE);
           yield* efeitoSpareTotal();
         } else if (derrubados === 1) {
-          som("acerto");                // song_ini.wav: um pino só
+          pararRolar(0.03);             // _parar_roll_imediatamente_para_um_pino
+          som("um_pino");               // song_ini.wav: um pino só
           mostrarBanner("ACERTO!", COR_ACERTO);
         } else {
-          if (ultimaTeclaJogada !== "Z" && ultimaTeclaJogada !== "B") som("batida");
+          if (ultimaTeclaJogada !== "Z" && ultimaTeclaJogada !== "B") som("pinos");
           mostrarBanner("ACERTO!", COR_ACERTO);
         }
       } else {
+        pararRolar(0.22);
         som("erro");                    // erro.wav
         mostrarBanner("PRA FORA!", COR_MISS);
         efeitoMissTotal();
@@ -2523,6 +2563,7 @@ export default {
     function* tratarJogadaSemAlvoNaFaixa() {
       processandoImpacto = false;
       yield* passagemReta();
+      pararRolar(0.22);
       som("erro");
       mostrarBanner("PRA FORA!", COR_MISS);
       efeitoMissTotal();
@@ -2747,13 +2788,18 @@ export default {
       tempoRestanteTelaFinal = TEMPO_TELA_FINAL;
       animTelaFinalT = 0;
       yield* efeitoFimDeJogoVisual();
+      pararRolar(0.1);
       som("fim");                       // end-game.wav
       yield ESPERA_SOM_FIM_DE_JOGO;
+      // _tocar_musica_tela_final: a música da tela final (song-1.ogg)
+      pararFinal();
+      somFinal = som("final") || null;
       yield* mostrarTelaFinal(total, strikes, recorde);
       finalIntroEmAndamento = false;
       yield ESPERA_ENTREGAR_RESULTADO;
       const rounds = Math.max(historicoRounds.length, 1);
       api.terminar({
+        som: false,                     // o end-game.wav já tocou
         pontos: total,
         titulo: "Fim de jogo",
         detalhe: `${strikes} strike${strikes === 1 ? "" : "s"} · média ${(total / rounds).toFixed(1).replace(".", ",")} por round · eficiência ${Math.round((total / (rounds * 10)) * 100)}%`,
@@ -2856,6 +2902,8 @@ export default {
        ------------------------------------------------------------------ */
     function iniciarJogo() {
       motor.limpar();
+      pararRolar(0.05);
+      pararFinal();                     // a ficha nova corta a música da tela final
       roundAtual = 1;
       tentativaAtual = 1;
       pinosDerrubadosNoRound = 0;

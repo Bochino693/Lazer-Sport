@@ -841,8 +841,7 @@ class CenarioBar {
     if (g.tipo === "falsa") {
       this.errosSeguidos++;
       j.perder(500 + 20 * this.errosSeguidos, g.x, g.pe - 90 * K, "GARRAFA IMPOSTORA");
-      this.api.som("erro");
-      this.api.som("batida");
+      this.api.som("falsa");
       j.clarao("#e61a0d", 0.22, 0.3);
       j.tremer(8);
       j.part.explosao(g.x, g.pe - 70 * K, { n: 6, tex: "fx_fumaca", vel: [30, 110], ang: [200, 340], vida: [0.9, 1.5],
@@ -855,7 +854,7 @@ class CenarioBar {
     this.errosSeguidos = 0;
     j.registrarCombo();
     j.ganhar(g.pontos, g.x, g.pe - g.f.h * g.esc * 0.62, OURO, 1 + (g.pontos - 20) / 400);
-    this.api.som("vidro");
+    this.api.som("garrafa");
     this.estourar(g, x, y);
     this.garrafas.splice(this.garrafas.indexOf(g), 1);
   }
@@ -885,7 +884,7 @@ class CenarioBar {
     this.lascar(x, y, cartaz);
     this.j.bonus(40, x, y, "#ff7385", 1.1);
     this.jatos.push({ x, y, t: 0, lado: x < t46x(900) ? -1 : 0 });
-    this.api.som("quica");
+    this.api.som("vinho");
     if (this.barrilFuros === 1) this.j.instrucao("VINHO VAZANDO! +40 POR FURO", "#ffb8c2");
     else if (this.barrilFuros === 6) this.j.instrucao("BARRIL ESGOTADO", "#ffb8c2");
   }
@@ -925,7 +924,7 @@ class CenarioBar {
     j.part.explosao(x, y, { n: 10, tex: "fx_caco", vel: [60, 260], ang: [20, 160], vida: [0.6, 1.2], tam: [8, 16],
       cor: "#dff3ff", alfa: 0.85, grav: 1200, giro: [-12, 12] });
     j.brilho(x, y, 160, "#fff0c7", 0.7, 0.3);
-    if (comSom) this.api.som("vidro");
+    if (comSom) this.api.som("janela", { volume: db(-2) });
   }
 
   // Os 5 primeiros tiros na janela valem +50 (bônus, sem combo); no 5º o
@@ -939,6 +938,8 @@ class CenarioBar {
       for (const v of this.janela) if (!v.quebrada) this.quebrarVidraca(v, (v.x0 + v.x1) / 2, (v.y0 + v.y1) / 2, false);
       this.solForca = 2.2;
       j.tremer(5);
+      // a janela inteira desaba: o vidro mais grave (bar_janela.gd, desabar)
+      this.api.som("janela", { tom: 0.82 });
       j.instrucao("JANELA DESTRUÍDA!", "#d1f0ff");
     }
   }
@@ -959,7 +960,7 @@ class CenarioBar {
       j.part.explosao(x, y, { n: 2, tex: "fx_nuvem", vel: [10, 30], vida: [0.5, 0.9], tam: [28, 40], fim: 1.6,
         cor: "#8c6640", alfa: 0.45 });
     }
-    this.api.som("quica");
+    this.api.som(papel ? "papel" : "madeira");
   }
 
   // O furo da bala: na frente das tábuas de cima ele fica por cima das
@@ -1583,9 +1584,10 @@ class CenarioDeserto {
     this.reagir("atento", 1);
     for (const o of DES.ouro) {
       if (dentro(x, y, o)) {
-        // o ouro das pirâmides solta faíscas
+        // o ouro das pirâmides solta faíscas (e o "ping" do ouro)
         this.j.luz.explosao(x, y, { n: 10, tex: "fx_faisca", vel: [80, 240], vida: [0.3, 0.6], tam: [10, 16], cor: "#ffd966",
           grav: 600, estica: 0.04 });
+        this.api.som("ouro", { volume: db(-5) });
         return;
       }
     }
@@ -1602,18 +1604,17 @@ class CenarioDeserto {
     const a = this.alvos[i];
     this.alvos.splice(i, 1);
     const lua = a.tipo === "lua";
+    this.api.som(lua ? "lua" : "sol");
     if (a.tipo === this.modo) {
       j.registrarCombo(a.tipo);
       const bonusCombo = j.combo >= 3 ? j.combo * 5 : 0;
       j.ganhar(a.valor + bonusCombo, a.x, a.y, lua ? "#e0f0ff" : "#ffd64d", 1 + (bonusCombo > 0 ? 0.2 : 0));
-      this.api.som("acerto");
       this.explodirBrasao(a, x, y, true);
       this.carregarCristal();
       this.reagir(j.combo < 6 ? "feliz" : "radiante", 1.2);
     } else {
       this.carga = Math.max(0, this.carga - 0.25);
       j.perder(a.penal, a.x, a.y, a.tipo.toUpperCase() + " -" + a.penal);
-      this.api.som("erro");
       this.explodirBrasao(a, x, y, false);
       j.clarao("#ff1a0d", 0.16, 0.25);
       this.reagir("bravo", 1.6);
@@ -1717,7 +1718,7 @@ class CenarioDeserto {
     j.brilho(x, y, 150, c, 1, 0.35);
     if (cr.danos >= 9) this.quebrarCristal(x, y);
     else {
-      this.api.som("nota");
+      this.api.som("trinca", { volume: db(-4) });
       j.mostrar(x, y, "CRISTAL " + cr.danos + "/9", clarear(c, 0.4));
     }
   }
@@ -1743,7 +1744,7 @@ class CenarioDeserto {
     j.brilho(cx, cy, 700, c, 1, 0.6);
     j.clarao("#ffffff", 0.35, 0.45);
     j.tremer(12);
-    this.api.som("strike");
+    this.api.som("cristal", { volume: db(-1) });
     j.bonus(300, x, y, this.modo === "sol" ? "#ffcc3d" : "#e6f2ff", 1.5);
     j.instrucao("CRISTAL QUEBRADO! +300", "#ffd980");
   }
@@ -1768,10 +1769,10 @@ class CenarioDeserto {
       j.luz.explosao(cx, cy, { n: 16, vel: [150, 420], vida: [0.3, 0.7], tam: [8, 16], cor: c, grav: 600, estica: 0.03 });
       j.part.explosao(cx, cy, { n: 4, tex: "fx_fumaca", vel: [10, 50], ang: [240, 300], vida: [1, 1.8], tam: [30, 50], fim: 2,
         cor: "#40332e", alfa: 0.6, grav: -30 });
-      this.api.som("vidro");
+      this.api.som("cristal", { volume: db(-6), tom: 1.3 });
       j.bonus(150, x, y, this.modo === "sol" ? "#ffcc3d" : "#e6f2ff", 1.3);
       j.instrucao("CRISTAL DO OBELISCO! +150", "#ffd980");
-    } else this.api.som("nota");
+    } else this.api.som("trinca", { volume: db(-6), tom: 1.1 + Math.random() * 0.2 });
   }
 
   lascarPedra(x, y, furo) {
@@ -1780,10 +1781,12 @@ class CenarioDeserto {
       cor: "#9c7a52", grav: 900, giro: [-12, 12] });
     j.part.explosao(x, y, { n: 2, tex: "fx_nuvem", vel: [10, 30], vida: [0.6, 1.0], tam: [30, 44], fim: 1.7, cor: "#b39470", alfa: 0.4 });
     if (furo) this.furo(x, y, "fx_furo_pedra", 26);
+    this.api.som("pedra");
   }
 
   furarAreia(x, y) {
     const j = this.j;
+    this.api.som("areia");
     this.furo(x, y, "fx_furo_areia", 52);
     j.part.explosao(x, y, { n: 3, tex: "fx_nuvem", vel: [20, 60], ang: [220, 320], vida: [0.8, 1.3], tam: [44, 64], fim: 2,
       cor: "#d9b880", alfa: 0.5, grav: -20 });
@@ -1848,12 +1851,20 @@ class CenarioDeserto {
       if (cr.volta <= 0) {
         cr.quebrado = false;
         cr.danos = 0;
+        this.api.som("volta", { volume: db(-3) });
         j.instrucao("O CRISTAL SE REFEZ", "#ffb3f0");
         j.brilho(DES.centroCristal[0], DES.centroCristal[1], 500, "#ff99f2", 0.8, 0.6);
       }
     }
     for (const pt of this.pontas) {
-      if (pt.quebrada) { pt.volta -= dt; if (pt.volta <= 0) { pt.quebrada = false; pt.danos = 0; } }
+      if (pt.quebrada) {
+        pt.volta -= dt;
+        if (pt.volta <= 0) {
+          pt.quebrada = false;
+          pt.danos = 0;
+          this.api.som("volta", { volume: db(-8), tom: 1.2 });
+        }
+      }
     }
     for (let i = this.raios.length - 1; i >= 0; i--) {
       this.raios[i].t += dt;
@@ -2375,7 +2386,7 @@ class CenarioMar {
     j.registrarCombo();
     j.ganhar(pts, o.x, o.y, OURO, 1 + (pts >= 80 ? 0.15 : 0));
     if (o.tipo === "aguaviva") {
-      this.api.som("nota");
+      this.api.som("aguaviva");
       j.clarao("#5ce0ff", 0.14, 0.2);
       j.tremer(2);
       const c = o.variante === "aguaviva" ? "#d980ff" : "#ff73a6";
@@ -2383,7 +2394,7 @@ class CenarioMar {
       j.part.explosao(o.x, o.y, { n: 8, tex: "mar_bolha", vel: [40, 160], ang: [200, 340], vida: [0.6, 1.2], tam: [8, 18], fim: 1,
         cor: "#e6f7ff", alfa: 0.8, grav: -260, arrasto: 1.2 });
     } else if (o.tipo === "vaso") {
-      this.api.som("vidro");
+      this.api.som("vaso");
       j.clarao("#fff2b3", 0.12, 0.2);
       j.tremer(3.5);
       if (o.img) {
@@ -2391,7 +2402,7 @@ class CenarioMar {
         j.cacos.estourar(o.img, 0, 0, cw, o.img.height, o.f.w, o.f.h, o.x, o.y, o.esc, o.rot, x, y, { n: 12, forca: 1, vida: 1 });
       }
     } else {
-      this.api.som("moeda");
+      this.api.som("bau", { volume: db(-0.2) });
       j.clarao("#fff2b3", 0.12, 0.2);
       j.tremer(3.5);
       j.luz.explosao(o.x, o.y, { n: 24, vel: [180, 460], ang: [200, 340], vida: [0.5, 0.9], tam: [8, 14], cor: "#ffd14d",
@@ -2406,8 +2417,7 @@ class CenarioMar {
     this.bombas++;
     j.quebrarCombo();
     j.acertos++;
-    this.api.som("soco");
-    this.api.som("batida");
+    this.api.som("bomba");
     j.clarao("#ff7333", 0.22, 0.35);
     j.tremer(13);
     j.vibrar(80);
@@ -2437,6 +2447,7 @@ class CenarioMar {
     this.furos.push(f);
     this.j.part.explosao(x, y, { n: 3, tex: "fx_nuvem", vel: [10, 40], ang: [220, 320], vida: [0.9, 1.5], tam: [44, 64], fim: 2,
       cor: "#9ec7d1", alfa: 0.5, grav: -20 });
+    this.api.som("pedra");
   }
 
   // O cardume dourado atravessa de tempos em tempos: cada peixe +40, o
@@ -2487,6 +2498,8 @@ class CenarioMar {
     c.pressa = 1;
     for (const p of c.peixes) { p.pego = -1; p.vivo = true; p.a = 1; p.rot = 0; p.x = -999; p.y = -999; }
     c.visivel = true;
+    // o cardume chega com um brilho de ouro lá no fundo
+    this.api.som("ouro", { volume: db(-14), tom: 1.6 });
   }
 
   acertarCardume(x, y) {
@@ -2505,7 +2518,9 @@ class CenarioMar {
       const todos = c.pegos >= c.peixes.length;
       j.registrarCombo();
       j.bonus(40 + (todos ? 200 : 0), p.x, p.y, "#ffdb73", todos ? 1.25 : 1);
-      this.api.som("moeda");
+      // cada peixe sobe o tom do ouro; o cardume inteiro abre o baú
+      this.api.som("ouro", { volume: db(-3), tom: 1 + 0.06 * c.pegos });
+      if (todos) this.api.som("bau", { volume: db(-6), tom: 1.25 });
       j.luz.explosao(p.x, p.y, { n: 14, vel: [100, 300], vida: [0.3, 0.6], tam: [8, 14], cor: "#ffd959", estica: 0.03, arrasto: 2 });
       if (c.pegos === 1) j.instrucao("PEIXES DOURADOS! +40 CADA", "#ffdb73");
       if (todos) {
@@ -2805,7 +2820,7 @@ class CenarioArena {
     if (completa) j.especial("PERFECT SEQUENCE!");
     else j.anunciarCombo(j.combo);
     if (this.modoFixo) l.quebrando = true;
-    this.api.som("vidro");
+    this.api.som("lanterna");
     this.quebrarVidro(l, c, x, y, this.modoFixo ? Infinity : 0.22);
     this.depois(0.22, () => {
       if (this.modoFixo) this.tirar(l.slot);
@@ -2832,7 +2847,9 @@ class CenarioArena {
     j.perder(100, fx, fy - 63, "ORDEM ERRADA!");
     this.bloqueado = true;
     this.rodada++;
-    this.api.som("erro");
+    // a lanterna errada estala grave e o painel buzina
+    this.api.som("lanterna", { volume: db(-1), tom: 0.9 });
+    this.api.som("bip_erro");
     j.instrucao("ORDEM ERRADA! -100 · RECOMEÇANDO...", VERMELHO);
     // a lanterna quebra na cor em que estava, com cacos vermelhos, e volta
     this.quebrarVidro(l, "#ff140d", fx, fy, 0.24);
@@ -2858,6 +2875,7 @@ class CenarioArena {
     this.sequencia = [];
     this.semJogada = 0;
     this.repetindo = false;
+    this.api.som("troca", { tom: 0.86 });   // _modo_arte: rodada de memória
     const nasceram = this.preencher();
     this.apagarTodas();
     this.depois(nasceram ? 0.55 : 0.35, () => {
@@ -2891,7 +2909,7 @@ class CenarioArena {
         const cor = CORES_SEQ[i];
         this.trocarCor(slot, cor);
         this.brilhoSequencia(slot, CORES_FX[cor]);
-        this.bip();
+        this.bip(i);
         this.depois(this.tempoMostrar(), () => {
           this.trocarCor(slot, "apagada");
           this.depois(0.2, () => passo(i + 1));
@@ -2937,6 +2955,7 @@ class CenarioArena {
     this.sequencia = [];
     this.semJogada = 0;
     this.j.instrucao("SEQUÊNCIA FIXA! ACERTE NA ORDEM DAS CORES", "#ffd94d");
+    this.api.som("troca");                   // _modo_arte: rodada fixa
     const algum = this.recolher();
     this.depois(algum ? 0.75 : 0.45, () => {
       const furos = embaralhar([0, 1, 2, 3, 4, 5, 6, 7, 8]);
@@ -2947,7 +2966,7 @@ class CenarioArena {
       const nasce = (i) => {
         this.nascer(this.sequencia[i], CORES_SEQ[i], true);
         this.fixaNasceu.push(this.j.relogio);
-        this.bip();
+        this.bip(i);
         this.pisca = 1;
         this.piscaCor = CORES_FX[CORES_SEQ[i]];
         if (i < 4) this.depois(aleatorio(1, 1.5), () => nasce(i + 1));
@@ -2975,6 +2994,7 @@ class CenarioArena {
 
   nascer(slot, cor, animar) {
     if (this.lanternas[slot]) return;
+    if (animar) this.api.som("sobe", { volume: db(cor === "apagada" ? -13 : -8) });
     this.lanternas[slot] = { slot, cor, sobe: animar ? 0 : -1, desce: null, quebrando: false, quebraT: 0,
       flash: 0, pulo: -1, puloForca: 0, vermelho: -1 };
     if (animar && cor !== "apagada") this.j.brilho(FUROS_ARENA[slot][0], FUROS_ARENA[slot][1], 260, CORES_FX[cor], 0.7, 0.4);
@@ -2999,6 +3019,7 @@ class CenarioArena {
       this.descer(l, 70, 0.26);
       this.lanternas[i] = null;
     }
+    if (algum) this.api.som("desce", { volume: db(-6) });
     return algum;
   }
 
@@ -3006,6 +3027,7 @@ class CenarioArena {
     const l = this.lanternas[slot];
     if (!l) return;
     this.lanternas[slot] = null;
+    this.api.som("desce", { volume: db(-11), tom: 1 + Math.random() * 0.15 });
     this.descer(l, 50, 0.22);
   }
 
@@ -3074,14 +3096,16 @@ class CenarioArena {
     this.piscaCor = c;
   }
 
-  bip() {
-    this.api.som("nota");
+  // o bip de cada cor da sequência sobe de tom (TONS_BIP)
+  bip(ordem) {
+    this.api.som("bip", { tom: TONS_BIP[ordem] || 1 });
   }
 
   // O laser que erra queima a parede: marca escura com a borda em brasa
   // que esfria, fumaça subindo e lascas de metal.
   marcaLaser(x, y) {
     const j = this.j;
+    this.api.som("parede");
     this.marcas.push({ x, y, r: aleatorio(7, 10) * K * 1.4, t: 0 });
     while (this.marcas.length > 40) this.marcas.shift();
     j.part.explosao(x, y, { n: 5, tex: "fx_fumaca", vel: [20, 70], ang: [230, 310], vida: [0.7, 1.3], tam: [26, 40], fim: 2.2,
@@ -3110,7 +3134,7 @@ class CenarioArena {
     }
     j.part.explosao(gx, gy, { n: 14, tex: "fx_caco", vel: [60, 200], ang: [200, 340], vida: [0.8, 1.4], tam: [5, 10], cor: "#ff402e",
       grav: 900, giro: [-14, 14] });
-    this.api.som("vidro");
+    this.api.som("led");
     j.tremer(4);
     return true;
   }
@@ -3671,6 +3695,7 @@ class Partida {
     const i = this.cartaoEm(x, y);
     if (i >= 0) {
       this.disparar(x, y, "menu");
+      this.api.som("tiro_menu");
       this.escolher(i);
     }
   }
@@ -3710,7 +3735,7 @@ class Partida {
     this.escolhido = i;
     this.realce = i;
     this.escolhaT = 0;
-    this.api.som("moeda");
+    this.api.som("escolha");
     const r = this.cartoes[i];
     this.luz.explosao(r.x + r.w / 2, r.y + r.h / 2, { n: 26, vel: [200, 600], vida: [0.3, 0.7], tam: [8, 14],
       cor: CENARIOS[i].cor, estica: 0.03, arrasto: 1.5, espalha: 200 });
@@ -3730,7 +3755,7 @@ class Partida {
     this.part.limpar();
     this.luz.limpar();
     this.api.placar({ info: cen.curto });
-    this.api.som("whoosh");
+    this.api.som("missao");   // o alvo da missão estoura: "VAMOS!"
   }
 
   // Lido o objetivo, o 3-2-1 sobre o cenário e só então a partida.
@@ -3745,7 +3770,6 @@ class Partida {
     this.esquentarAlgumas(Infinity);
     this.estado = "jogo";
     this.instrucao("COMEÇOU!", clarear(this.cen.tema, 0.4));
-    this.api.som("nota");
     this.cenario.comecar();
   }
 
@@ -3757,7 +3781,6 @@ class Partida {
       if (this.recargaFalta <= 0) {
         this.recarregando = false;
         this.balas = MUNICAO;
-        this.api.som("clique");
       }
     }
     if (this.comboT > 0 && this.comboT !== Infinity) {
@@ -3798,14 +3821,14 @@ class Partida {
     if (this.balas <= 0) {
       // sem bala: o gatilho estala e a arma já recarrega (no celular não
       // há o botão do lado da arma)
-      this.api.som("clique");
+      this.api.som("sem_bala");
       this.recarregar();
       return;
     }
     this.balas--;
     this.disparos++;
     this.mira.pulso = 1;
-    this.api.som("tiro");
+    this.api.som(this.somDoTiro());
     this.disparar(x, y, this.estiloTiro());
     this.cenario.tiro(x, y);
     if (this.balas === 0 && this.estado === "jogo") this.instrucao("SEM BALA! TOQUE PARA RECARREGAR", "#ff7359");
@@ -3815,7 +3838,14 @@ class Partida {
     if (this.estado !== "jogo" || this.recarregando || this.balas >= MUNICAO) return;
     this.recarregando = true;
     this.recargaFalta = this.tempoRecarga;
-    this.api.som("whoosh");
+    this.api.som(this.cen.id === "arena" ? "recarga_arena" : "recarga");
+  }
+
+  // o tiro de cada cenário; no Egito, o do sol de dia e o da lua de noite
+  somDoTiro() {
+    const id = this.cen.id;
+    if (id === "deserto") return this.cenario.modo === "lua" ? "tiro_lua" : "tiro_sol";
+    return "tiro_" + id;
   }
 
   ganhar(valor, x, y, cor = OURO, esc = 1) {
@@ -3867,8 +3897,8 @@ class Partida {
     this.motivo = texto;
     this.recarregando = false;
     this.cenario.encerrou();
+    // fase.gd: "a música da fase segue tocando no resultado (sem som de fim)"
     this.faixa(texto, clarear(this.cen.tema, 0.3), 1.4);
-    this.api.som("apito");
   }
 
   terminar() {
@@ -4059,13 +4089,19 @@ class Partida {
     if (!novo && nivel === NIVEIS_COMBO.length - 1 && (n - NIVEIS_COMBO[nivel][0]) % 4 === 0) novo = true;
     this.nivelAnuncio = nivel;
     this.mostrarAnuncio(NIVEIS_COMBO[nivel][1], n > 2 ? "x" + n : "", novo, 1 + 0.06 * nivel);
-    if (novo) this.api.som("combo");
+    if (novo) this.falar(FALAS_COMBO[nivel]);
   }
 
   // Anúncio especial (POWER OF RA!, PERFECT SEQUENCE!, POSEIDON'S TREASURE!).
   especial(texto) {
     this.mostrarAnuncio(texto, "", true, 1.25);
-    this.api.som("strike");
+    this.falar("especial");
+  }
+
+  // A voz da tela anuncia; uma fala nova corta a anterior (um _voz só).
+  falar(fala) {
+    if (this.somVoz) this.somVoz.parar(0.05);
+    this.somVoz = this.api.som(`${this.cen.id}_${fala}`) || null;
   }
 
   mostrarAnuncio(texto, numero, forte, forca) {
@@ -4593,7 +4629,77 @@ class Partida {
   }
 }
 
+/* ----------------------------------------------------------------------
+   OS SONS DA MÁQUINA (songs/ do jogo). Cada nome é o do arquivo que o
+   script do cenário carrega, e o volume/tom é o do Maquina.efeito() que
+   toca: o ganho dos arquivos é o original, e as caudas longas (o eco do
+   tiro, o vinho escorrendo) foram encurtadas.
+   ---------------------------------------------------------------------- */
+const SOM = "lazer-shot/sons/";
+const db = (v) => Math.min(1, Math.pow(10, v / 20));
+const TONS_BIP = [0.84, 0.94, 1.06, 1.19, 1.34];   // arena.gd: o bip de cada cor
+const FALAS_COMBO = ["double", "triple", "quadra", "penta", "mega", "super", "insano", "imparavel", "lendario"];
+const SONS = {
+  moeda: SOM + "inicio.mp3",                                                          // init.wav: o START
+  contagem: { arquivo: SOM + "bip.mp3", volume: db(-4) },                             // contagem.gd
+  vai: { senao: null },                                                               // lá a contagem acaba no 1
+  escolha: { arquivo: SOM + "escolha.mp3", volume: db(-3), senao: "moeda" },          // choice.wav
+  tiro_menu: { arquivo: SOM + "tiro_menu.mp3", volume: db(-4), tom: [0.96, 1.04], senao: "tiro" },
+  missao: { arquivo: SOM + "missao.mp3", volume: db(-4), tom: 1.1, senao: "whoosh" }, // alvo_crash.wav
+  recarga: { arquivo: SOM + "recarga.mp3", volume: db(-2), senao: "whoosh" },
+  recarga_arena: { arquivo: SOM + "recarga_arena.mp3", volume: db(-2), senao: "whoosh" },  // lazer-charge.wav
+  sem_bala: { arquivo: SOM + "sem_bala.mp3", volume: db(-2), senao: "clique" },
+  // o tiro de cada cenário (fase.gd: som_tiro_path e vol_tiro)
+  tiro_bar: { arquivo: SOM + "tiro_bar.mp3", volume: db(-2), tom: [0.96, 1.04], intervalo: 0.03, senao: "tiro" },
+  tiro_sol: { arquivo: SOM + "tiro_sol.mp3", volume: db(-4), tom: [0.96, 1.04], intervalo: 0.03, senao: "tiro" },
+  tiro_lua: { arquivo: SOM + "tiro_lua.mp3", volume: db(-4), tom: [0.96, 1.04], intervalo: 0.03, senao: "tiro" },
+  tiro_mar: { arquivo: SOM + "tiro_mar.mp3", volume: db(-3), tom: [0.96, 1.04], intervalo: 0.03, senao: "tiro" },
+  tiro_arena: { arquivo: SOM + "tiro_arena.mp3", volume: db(-4), tom: [0.96, 1.04], intervalo: 0.03, senao: "tiro" },
+  // bar.gd e bar_janela.gd
+  garrafa: { arquivo: SOM + "garrafa.mp3", volume: db(-1), tom: [0.94, 1.08], senao: "vidro" },   // smash.wav
+  falsa: { arquivo: SOM + "falsa.mp3", volume: db(-1), senao: "erro" },               // fail.wav
+  vinho: { arquivo: SOM + "vinho.mp3", volume: db(-4), tom: [0.95, 1.05], senao: "quica" },
+  papel: { arquivo: SOM + "papel.mp3", volume: db(-5), tom: [0.9, 1.1], senao: "quica" },
+  madeira: { arquivo: SOM + "madeira.mp3", volume: db(-5), tom: [0.9, 1.1], senao: "quica" },
+  janela: { arquivo: SOM + "janela.mp3", tom: [0.95, 1.06], senao: "vidro" },          // janela_quebra.wav
+  // deserto.gd
+  sol: { arquivo: SOM + "sol.mp3", volume: db(-3), tom: [0.96, 1.05], senao: "acerto" },          // hit-sun.wav
+  lua: { arquivo: SOM + "lua.mp3", volume: db(-3), tom: [0.96, 1.05], senao: "acerto" },          // hit-moon.wav
+  // (os que tocam com volumes diferentes levam o volume em cada chamada)
+  trinca: { arquivo: SOM + "trinca.mp3", tom: [0.92, 1.12], senao: "nota" },         // cristal_trinca.wav
+  cristal: { arquivo: SOM + "cristal.mp3", senao: "strike" },                       // cristal_quebra.wav
+  volta: { arquivo: SOM + "volta.mp3", senao: null },                                // cristal_volta.wav
+  areia: { arquivo: SOM + "areia.mp3", volume: db(-6), tom: [0.9, 1.1], senao: null },
+  pedra: { arquivo: SOM + "pedra.mp3", volume: db(-7), tom: [0.9, 1.15], senao: null },
+  ouro: { arquivo: SOM + "ouro.mp3", tom: [0.94, 1.08], senao: "moeda" },           // ouro_ping.wav
+  // mar.gd
+  aguaviva: { arquivo: SOM + "aguaviva.mp3", volume: db(-1), tom: [0.98, 1.05], senao: "nota" },   // buble_hit.wav
+  vaso: { arquivo: SOM + "vaso.mp3", volume: db(-0.8), tom: [0.99, 1.02], senao: "vidro" },
+  bau: { arquivo: SOM + "bau.mp3", tom: [1, 1.02], senao: "moeda" },                // bau_hit_corte.wav
+  bomba: { arquivo: SOM + "bomba.mp3", volume: db(-0.1), tom: [0.97, 1], senao: "soco" },          // xploit.wav
+  // arena.gd
+  troca: { arquivo: SOM + "troca.mp3", volume: db(-4), senao: "whoosh" },            // arena_troca.wav
+  lanterna: { arquivo: SOM + "lanterna.mp3", volume: db(-3), tom: [0.95, 1.08], senao: "vidro" },  // hit-lamp.wav (o erro: -4 dB)
+  bip_erro: { arquivo: SOM + "bip_erro.mp3", volume: db(-2), senao: "erro" },
+  bip: { arquivo: SOM + "bip.mp3", intervalo: 0.02, senao: "nota" },
+  sobe: { arquivo: SOM + "sobe.mp3", tom: [0.92, 1.08], intervalo: 0.02, senao: null },           // lanterna_sobe.wav
+  desce: { arquivo: SOM + "desce.mp3", senao: null },                                // lanterna_desce.wav
+  parede: { arquivo: SOM + "parede.mp3", volume: db(-6), tom: [0.9, 1.1], senao: null },          // laser_parede.wav
+  led: { arquivo: SOM + "led.mp3", volume: db(-4), tom: [0.95, 1.05], senao: "vidro" },           // led_estoura.wav
+};
+// O ANUNCIADOR (anuncio_combo.gd): cada tela tem a sua voz -- Poseidon no
+// mar, o deus do templo no Egito, o locutor do saloon, a locutora da arena.
+for (const tela of ["bar", "deserto", "mar", "arena"]) {
+  for (const fala of [...FALAS_COMBO, "especial"]) {
+    // o saloon não tem fala para o anúncio especial
+    SONS[`${tela}_${fala}`] = tela === "bar" && fala === "especial"
+      ? { senao: "strike" }
+      : { arquivo: `${SOM}voz/${tela}_${fala}.mp3`, vozes: 1, senao: fala === "especial" ? "strike" : "combo" };
+  }
+}
+
 export default {
+  sons: SONS,
   largura: W,
   altura: H,
   contagem: false, // o 3-2-1 vem depois da escolha do cenário (api.contagem)
