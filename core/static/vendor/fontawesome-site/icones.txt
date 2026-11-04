@@ -30,7 +30,6 @@ fa-boxes-packing
 fa-boxes-stacked
 fa-building
 fa-bullseye
-fa-calculator
 fa-calendar
 fa-calendar-check
 fa-calendar-days

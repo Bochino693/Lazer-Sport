@@ -96,6 +96,7 @@ from .views_conta import (
     LoginUsuarioView,
     LogoutUsuarioView,
     RegistrarView,
+    DesafioHumanoView,
     CompletarPerfilView,
 )
 
@@ -334,6 +335,7 @@ urlpatterns = [
     path("login/", LoginUsuarioView.as_view(), name="login"),
     path("logout/", LogoutUsuarioView.as_view(), name="logout"),
     path("registrar/", RegistrarView.as_view(), name="registrar"),
+    path("registrar/desafio/", DesafioHumanoView.as_view(), name="registrar_desafio"),
     path(
         "completar-perfil/",
         CompletarPerfilView.as_view(),

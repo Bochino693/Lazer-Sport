@@ -203,3 +203,24 @@ class CadastroTests(BaseTela):
     def test_acao_desconhecida_nao_faz_nada(self):
         resposta = self.enviar({"action": "apagar_tudo"})
         self.assertEqual(resposta.status_code, 400)
+
+
+class JogosOficiaisNaTelaTests(BaseTela):
+    def test_os_jogos_do_simulador_aparecem_com_o_material_e_sem_apk(self):
+        from core import arena
+
+        self.client.force_login(self.super)
+        pagina = self.client.get("/site/jogos/", HTTP_HOST=HOST)
+        for jogo in arena.JOGOS:
+            self.assertContains(pagina, jogo["titulo"])
+            self.assertContains(pagina, f"/jogos/{jogo['slug']}/")
+        self.assertContains(pagina, "Jogos oficiais do simulador")
+        self.assertContains(pagina, "Sem APK")
+        self.assertContains(pagina, "Lazer &amp; Sport Games")   # o bloco do menu
+        self.assertContains(pagina, 'style="--cor: %s"' % arena.JOGOS[0]["cor"])
+
+    def test_a_busca_filtra_os_oficiais_tambem(self):
+        self.client.force_login(self.super)
+        pagina = self.client.get("/site/jogos/?q=strike", HTTP_HOST=HOST)
+        self.assertContains(pagina, "Strike Kids")
+        self.assertNotContains(pagina, "Dragon Bowling")

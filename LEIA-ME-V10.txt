@@ -115,3 +115,26 @@ python manage.py test --settings=lazer.settings_test
 Migrações novas: 0123 (registro de cadastro) e 0124 (ajuste de curtidas) —
 o gunicorn aplica ao subir no Render.
 Dependência nova: rjsmin (requirements.txt).
+
+11) ÁREA GAMES NO PAINEL, LABORATÓRIO 3D E CAPTCHA POR IMAGEM
+   - Menu lateral: bloco "Lazer & Sport Games" com destaque (Jogos do
+     simulador · Objetos 3D & Laboratório), só para o superadministrador.
+   - Jogos do simulador: os 9 jogos oficiais aparecem em cards com a arte,
+     a máquina e o botão "Jogar a prévia". Eles vêm com o site: capa,
+     pôster e textos já prontos, e NÃO têm APK no site (o jogo de verdade
+     fica na máquina). O APK só é pedido ao cadastrar um jogo novo pelo
+     painel, é opcional e fica guardado sem download, a não ser que você
+     libere.
+   - Objetos 3D & Laboratório: além dos objetos de cada brinquedo, a
+     seção "Laboratório: montar brinquedões" guarda as peças em 3D (.glb
+     de até 10 MB: torre, escorregador, rede, túnel, piscina, escada,
+     cercado, decoração...). Cada peça chega com medidas e cores lidas do
+     arquivo e abre no visor. Próximo passo (quando houver peças): a
+     montagem — encaixar as peças numa planta e ver o brinquedão inteiro.
+   - Captcha sem chave: sem o Turnstile, o cadastro mostra uma imagem com
+     5 letras/números torcidos desenhada pelo próprio site (botão "Outra
+     imagem"). Não depende de ninguém de fora. Robô com leitura de imagem
+     (OCR) passa; para esses, as chaves do Turnstile:
+       dash.cloudflare.com > Turnstile > Add widget > domínio
+       lazersport.com.br (e www) > copie "Site Key" e "Secret Key" >
+       Render > Environment > TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY.

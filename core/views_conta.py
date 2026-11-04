@@ -281,7 +281,7 @@ class RegistrarView(View):
         return {
             "form": form,
             "selo_cadastro": desafio["selo"],
-            "pergunta_humana": desafio["pergunta"],
+            "imagem_humana": desafio["imagem"],
             "turnstile_site_key": settings.TURNSTILE_SITE_KEY if captcha.turnstile_ativo() else "",
         }
 
@@ -323,6 +323,20 @@ class RegistrarView(View):
         return redirect(
             f"{reverse('conta_transicao')}#conta-criada"
         )
+
+
+class DesafioHumanoView(View):
+    """Uma imagem nova para o cadastro (o botão "Outra imagem"), em JSON: {"selo", "imagem"}."""
+
+    def get(self, request):
+        from django.http import JsonResponse
+
+        from . import captcha
+
+        desafio = captcha.novo_desafio()
+        resposta = JsonResponse({"selo": desafio["selo"], "imagem": desafio["imagem"]})
+        resposta["Cache-Control"] = "no-store"
+        return resposta
 
 
 class CompletarPerfilView(LoginRequiredMixin, View):

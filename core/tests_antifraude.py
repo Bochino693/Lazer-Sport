@@ -25,8 +25,8 @@ from .models import RegistroCadastro
 IP = "45.170.20.9"
 
 
-def selo(segundos_atras=30, resposta=7):
-    return signing.dumps({"t": int(time.time()) - segundos_atras, "r": resposta}, salt=captcha.SAL)
+def selo(segundos_atras=30, codigo="ABC23"):
+    return signing.dumps({"t": int(time.time()) - segundos_atras, "h": captcha._assinatura(codigo)}, salt=captcha.SAL)
 
 
 def dados_do_cadastro(**extra):
@@ -39,7 +39,7 @@ def dados_do_cadastro(**extra):
         "password": "senha-forte-123",
         "password2": "senha-forte-123",
         "selo_cadastro": selo(),
-        "resposta_humana": "7",
+        "resposta_humana": "abc23",
         "site_web": "",
     }
     base.update(extra)
@@ -76,20 +76,30 @@ class CadastroPeloSiteTests(TestCase):
 
     def test_rapido_demais_pergunta_errada_e_selo_invalido(self):
         self.assertContains(self.cadastrar(selo_cadastro=selo(segundos_atras=1)), captcha.MENSAGEM_RAPIDO)
-        self.assertContains(self.cadastrar(resposta_humana="8"), captcha.MENSAGEM_PERGUNTA)
+        self.assertContains(self.cadastrar(resposta_humana="zzz99"), "código da imagem")
         self.assertContains(self.cadastrar(selo_cadastro="lixo"), captcha.MENSAGEM_ROBO)
         self.assertContains(self.cadastrar(selo_cadastro=""), captcha.MENSAGEM_ROBO)
         self.assertFalse(User.objects.filter(username="maria.souza").exists())
 
-    def test_resposta_por_extenso_vale(self):
-        resposta = self.cadastrar(resposta_humana="sete")
-        self.assertEqual(resposta.status_code, 302)
+    def test_maiusculas_ou_minusculas_tanto_faz_e_o_selo_antigo_de_conta_ainda_vale(self):
+        self.assertEqual(self.cadastrar(resposta_humana="AbC 23").status_code, 302)
+        antigo = signing.dumps({"t": int(time.time()) - 30, "r": 7}, salt=captcha.SAL)
+        self.assertEqual(self.client.post(reverse("registrar"), dados_do_cadastro(username="outra", email="outra@example.com", selo_cadastro=antigo, resposta_humana="sete"), HTTP_X_FORWARDED_FOR="45.170.20.11").status_code, 302)
+
+    def test_outra_imagem_vem_por_json(self):
+        resposta = self.client.get(reverse("registrar_desafio"))
+        self.assertEqual(resposta.status_code, 200)
+        dados = resposta.json()
+        self.assertTrue(dados["imagem"].startswith("data:image/png;base64,"))
+        self.assertIn("h", signing.loads(dados["selo"], salt=captcha.SAL))
+        self.assertEqual(resposta["Cache-Control"], "no-store")
 
     def test_a_pagina_traz_o_desafio_a_isca_e_a_privacidade(self):
         pagina = self.client.get(reverse("registrar"))
         self.assertContains(pagina, 'name="selo_cadastro"')
         self.assertContains(pagina, 'name="site_web"')
-        self.assertContains(pagina, "quanto é")
+        self.assertContains(pagina, "data:image/png;base64")
+        self.assertContains(pagina, reverse("registrar_desafio"))
         self.assertContains(pagina, reverse("privacidade"))
         self.assertNotContains(pagina, "cf-turnstile")
 
@@ -97,7 +107,7 @@ class CadastroPeloSiteTests(TestCase):
     def test_com_as_chaves_o_turnstile_entra_no_lugar_da_pergunta(self):
         pagina = self.client.get(reverse("registrar"))
         self.assertContains(pagina, 'data-sitekey="chave-site"')
-        self.assertNotContains(pagina, "quanto é")
+        self.assertNotContains(pagina, "data:image/png;base64")
         # sem o token (ou sem resposta do Cloudflare), não passa
         with mock.patch.object(captcha, "verificar_turnstile", return_value=False) as conferiu:
             resposta = self.cadastrar(selo_cadastro=signing.dumps({"t": int(time.time()) - 30}, salt=captcha.SAL))

@@ -39,3 +39,12 @@
 .ls-visor3d-cores button i { width: 18px; height: 18px; border-radius: 50%; background: var(--amostra, linear-gradient(135deg, #3fd0ff, #ff3d71)); border: 1px solid rgba(255, 255, 255, .3); }
 .ls-visor3d-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 @media (max-width: 640px) { .ls-visor3d { min-height: 240px; aspect-ratio: 1; } }
+
+/* o laboratório (montar brinquedões) */
+.ls-lab-topo{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;padding:16px 18px;border-radius:18px;border:1px solid rgba(255,61,113,.28);background:linear-gradient(135deg,rgba(255,61,113,.12),rgba(255,210,63,.08));color:#e7ddcb;font-size:.82rem;line-height:1.55}
+.ls-lab-texto{flex:1 1 420px}
+.ls-lab-texto strong{color:#fff}
+.ls-lab-passos{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;color:#ffd9a8;font-size:.74rem;font-weight:800}
+.ls-lab-passos i{color:#ffd23f}
+.ls-game-arte--peca{aspect-ratio:16/8;font-size:2.4rem;color:#ffd23f;background:radial-gradient(circle at 50% 45%,rgba(255,61,113,.35),transparent 60%),#1a1026}
+.ls-game--peca{--cor:#ff3d71}

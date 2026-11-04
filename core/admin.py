@@ -1159,3 +1159,16 @@ class RegistroCadastroAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+from .models import ModuloTresD  # noqa: E402
+
+
+@admin.register(ModuloTresD)
+class ModuloTresDAdmin(admin.ModelAdmin):
+    """A biblioteca de peças 3D para montar brinquedões (a tela de verdade é a do painel)."""
+
+    list_display = ("nome", "categoria", "medidas", "ordem", "ativo", "atualizado")
+    list_filter = ("categoria", "ativo")
+    search_fields = ("nome", "descricao")
+    readonly_fields = ("cores", "medidas", "criacao", "atualizado")

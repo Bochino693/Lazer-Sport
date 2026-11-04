@@ -5,22 +5,20 @@
 {% block top_title %}Objetos 3D{% endblock %}
 
 {% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/games.css' %}">
   <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/objetos3d.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="ls-page-head">
-  <div>
-    <span class="ls-eyebrow">SÓ O SUPERADMINISTRADOR</span>
-    <h1>Objetos 3D dos brinquedos</h1>
-    <p>Cada máquina com o seu .glb: as cores e as medidas saem de dentro do arquivo. Ligado, o objeto aparece na página do brinquedo e na Arena 3D — e, se a máquina tem jogo, a prévia abre daqui.</p>
-  </div>
+<section class="ls-games-hero">
+  <img class="ls-games-hero-marca" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="68" height="68">
+  <span class="ls-eyebrow">LAZER &amp; SPORT GAMES · 3D · SÓ O SUPERADMINISTRADOR</span>
+  <h1>Objetos 3D &amp; Laboratório</h1>
+  <p>Cada máquina com o seu .glb: as cores e as medidas saem de dentro do arquivo. Ligado, o objeto aparece na página do brinquedo e na Arena 3D — e, se a máquina tem jogo, a prévia abre daqui. Mais abaixo, o <strong>Laboratório</strong>: a biblioteca de peças para montar brinquedões.</p>
   {% if not tabela_ausente %}
-  <button class="btn btn-success" id="novoObjeto" type="button">
-    <i class="bi bi-cloud-arrow-up me-1"></i> Enviar objeto 3D
-  </button>
+  <button class="btn btn-success" id="novoObjeto" type="button"><i class="bi bi-cloud-arrow-up me-1"></i> Enviar objeto 3D</button>
   {% endif %}
-</div>
+</section>
 
 {% if tabela_ausente %}
 <section class="ls-card p-4">
@@ -130,6 +128,62 @@
   </div>
 </section>
 
+<section id="laboratorio" class="mt-4">
+  <h2 class="ls-games-titulo rosa"><i class="bi bi-bricks"></i> Laboratório: montar brinquedões <small>{{ modulos|length }} peça{{ modulos|length|pluralize }} na biblioteca</small></h2>
+  <div class="ls-lab-topo">
+    <div class="ls-lab-texto">
+      <strong>A ideia:</strong> os brinquedões são feitos de peças que se repetem — torre, plataforma, escorregador, rede, túnel, piscina de bolinhas. Aqui vocês vão guardando essas peças em 3D (.glb), com o tempo. Cada peça chega com as medidas e as cores lidas do arquivo, e abre no visor.
+      <span class="ls-lab-passos"><i class="bi bi-1-circle-fill"></i> Guardar as peças (já funciona) <i class="bi bi-arrow-right"></i> <i class="bi bi-2-circle-fill"></i> Montar: encaixar as peças numa planta e ver o brinquedão inteiro (próximo passo) <i class="bi bi-arrow-right"></i> <i class="bi bi-3-circle-fill"></i> Orçar pela montagem e mostrar ao cliente na Arena</span>
+    </div>
+    {% if tabela_modulos %}<button class="btn btn-warning" id="novoModulo" type="button"><i class="bi bi-plus-lg me-1"></i> Guardar peça 3D</button>{% endif %}
+  </div>
+  {% if not tabela_modulos %}
+    <div class="ls-game-vazio"><i class="bi bi-hourglass-split"></i>A tabela das peças ainda não existe no banco: a migração roda na próxima subida.</div>
+  {% else %}
+  <div class="ls-games-grade">
+    {% for modulo in modulos %}
+      <article class="ls-game ls-game--peca">
+        <div class="ls-game-arte ls-game-arte--peca">
+          <i class="bi {% if modulo.categoria == 'torre' %}bi-building{% elif modulo.categoria == 'escorregador' %}bi-tsunami{% elif modulo.categoria == 'rede' %}bi-grid-3x3{% elif modulo.categoria == 'tunel' %}bi-circle{% elif modulo.categoria == 'piscina' %}bi-droplet-fill{% elif modulo.categoria == 'escada' %}bi-ladder{% elif modulo.categoria == 'cercado' %}bi-shield{% elif modulo.categoria == 'decoracao' %}bi-palette{% else %}bi-box{% endif %}"></i>
+          <span class="ls-game-selo">{{ modulo.categoria_nome }}</span>
+        </div>
+        <div class="ls-game-corpo">
+          <strong>{{ modulo.nome }}</strong>
+          <span>{{ modulo.arquivo }}{% if modulo.medidas %} · {{ modulo.medidas }}{% endif %}</span>
+          {% if modulo.descricao %}<em>{{ modulo.descricao|truncatechars:80 }}</em>{% endif %}
+          {% if modulo.cores %}<div class="ls-3d-cores">{% for cor in modulo.cores %}<span class="ls-3d-cor"><i></i>{{ cor }}</span>{% endfor %}</div>{% endif %}
+        </div>
+        <div class="ls-game-acoes">
+          <button class="btn btn-sm btn-outline-info" type="button" data-ver3d-modulo="{{ modulo.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
+          <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="modulo-{{ modulo.id }}" data-nome="Peça {{ modulo.nome }}" title="Apagar a peça"><i class="bi bi-trash3"></i></button>
+        </div>
+      </article>
+    {% empty %}
+      <div class="ls-game-vazio"><i class="bi bi-bricks"></i>Nenhuma peça guardada ainda. Toque em <strong>Guardar peça 3D</strong> e suba a primeira torre, escorregador ou rede (.glb de até 10 MB).</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<div class="modal fade" id="modalModulo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <form class="modal-content" id="formModulo" method="post" action="{% url 'objetos_3d_inner' %}" enctype="multipart/form-data">
+      {% csrf_token %}<input type="hidden" name="action" value="modulo_salvar">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Laboratório</span><h5 class="modal-title">Guardar peça 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="moduloErro"></div>
+        <div class="row g-3">
+          <div class="col-12 col-md-7"><label class="form-label" for="moduloNome">Nome da peça</label><input class="form-control" id="moduloNome" name="nome" maxlength="80" required data-rotulo="nome" placeholder="Ex.: Torre 2 andares"></div>
+          <div class="col-12 col-md-5"><label class="form-label" for="moduloCategoria">Categoria</label><select class="form-select" id="moduloCategoria" name="categoria" required data-rotulo="categoria">{% for valor, rotulo in categorias_modulo %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
+          <div class="col-12"><label class="form-label" for="moduloArquivo">Arquivo .glb <span class="text-muted fw-normal">(até 10 MB)</span></label><input type="file" class="form-control" id="moduloArquivo" name="arquivo" accept=".glb,model/gltf-binary" required data-rotulo="arquivo .glb"><span class="form-text">As cores e as medidas são lidas do arquivo antes de gravar.</span></div>
+          <div class="col-12"><label class="form-label" for="moduloDescricao">Descrição <span class="text-muted fw-normal">(opcional)</span></label><textarea class="form-control" id="moduloDescricao" name="descricao" rows="2" placeholder="Material, capacidade, onde encaixa…"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning" type="submit">Guardar peça</button></div>
+    </form>
+  </div>
+</div>
+
 <div class="modal fade" id="modalObjeto" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formObjeto" method="post" action="{% url 'objetos_3d_inner' %}" enctype="multipart/form-data">
@@ -202,6 +256,7 @@
 <form id="formReligar" method="post" action="{% url 'objetos_3d_inner' %}" hidden>{% csrf_token %}<input name="action" value="religar"><input name="brinquedo" id="religarId"></form>
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=request.path exclusao_titulo="Tirar o objeto 3D" exclusao_aviso="O objeto sai da página do brinquedo e da Arena na hora. Um .glb enviado é apagado; um objeto que vem com o site só é desligado e pode ser religado depois." %}
 {{ linhas_dados|json_script:"objetosDados" }}
+{{ modulos_dados|json_script:"modulosDados" }}
 {% endif %}
 {% endblock %}
 
@@ -254,6 +309,16 @@ LSTela.pronto(function () {
   Painel.ligar({ form: "formArena" });
   Painel.ligar({ form: "formReligar" });
   Painel.ligarExclusao();
+
+  /* ---- o laboratório: guardar peças ---- */
+  var botaoModulo = document.getElementById("novoModulo");
+  if (botaoModulo) {
+    botaoModulo.addEventListener("click", function () {
+      document.getElementById("formModulo").reset(); Painel.erro("moduloErro", "");
+      Painel.abrir("modalModulo");
+    });
+    Painel.ligar({ form: "formModulo", erro: "moduloErro", rotuloCarregando: "Conferindo e guardando…" });
+  }
 
   /* ---- o visor: o mesmo desenho da página do brinquedo, dentro da janela ---- */
   var visor = document.getElementById("visor3d");
@@ -379,6 +444,24 @@ LSTela.pronto(function () {
       });
     });
   });
+  // `modulos` já é o nome dos módulos do three.js aqui dentro: as peças são `pecas`
+  var pecas = JSON.parse((document.getElementById("modulosDados") || { textContent: "[]" }).textContent || "[]");
+  document.querySelectorAll("[data-ver3d-modulo]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var peca = pecas.find(function (m) { return Number(m.id) === Number(b.dataset.ver3dModulo); });
+      if (!peca) return;
+      document.getElementById("visorTitulo").textContent = peca.nome + " · " + peca.categoria_nome;
+      document.getElementById("visorMedidas").textContent = (peca.medidas ? "Medidas lidas do arquivo: " + peca.medidas + ". " : "") + "Arquivo: " + peca.arquivo;
+      document.getElementById("visorJogar").classList.add("d-none");
+      document.getElementById("visorSite").classList.add("d-none");
+      Painel.abrir("modalVisor3d");
+      carregar(peca.url).catch(function (erro) {
+        console.error("Visor 3D:", erro);
+        aviso.hidden = false; aviso.textContent = "Não deu para abrir a peça aqui: " + (erro && erro.message ? erro.message : erro);
+      });
+    });
+  });
+  document.querySelectorAll("[data-ver3d]").forEach(function (b) { b.addEventListener("click", function () { document.getElementById("visorSite").classList.remove("d-none"); }); });
   document.getElementById("modalVisor3d").addEventListener("hidden.bs.modal", function () { if (motor) { motor.parar(); motor = null; } });
 });
 </script>
