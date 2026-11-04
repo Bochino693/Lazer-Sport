@@ -428,7 +428,7 @@
     if (caixaFoto && miniaturas.length > 1) {
         let inicio = null;
         caixaFoto.addEventListener('pointerdown', (evento) => {
-            if (evento.pointerType === 'mouse' || evento.target.closest('button, [data-visor3d]')) return;
+            if (evento.pointerType === 'mouse' || evento.target.closest('button, .produto-visor3d')) return;
             inicio = { x: evento.clientX, y: evento.clientY };
         });
         caixaFoto.addEventListener('pointerup', (evento) => {
