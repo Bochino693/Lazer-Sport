@@ -106,7 +106,7 @@ class LeituraDoGlbTests(TestCase):
 class LigacaoTests(TestCase):
     def test_acha_pelo_nome_e_liga_sem_duplicar(self):
         Brinquedos.objects.create(nome_brinquedo="Air Game", descricao="x", avaliacao=5)
-        boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Kids (Strike)", descricao="x", avaliacao=5)
+        boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Strike Kids Premium", descricao="x", avaliacao=5)
         self.assertEqual(achar_no_catalogo("strike-kids", Brinquedos), boliche)
         ligar_objeto_3d("strike-kids", boliche, ObjetoTresD)
         ligar_objeto_3d("strike-kids", boliche, ObjetoTresD)
@@ -155,7 +155,7 @@ class CadastroDoStrikeKidsTests(TestCase):
                 self.rodar("postgresql")
                 self.rodar("postgresql")  # de novo: não duplica
         strike = Brinquedos.objects.get()
-        self.assertEqual(strike.nome_brinquedo, "Strike Kids Boliche")
+        self.assertEqual(strike.nome_brinquedo, "Strike Kids")
         self.assertEqual(strike.imagens_brinquedo.count(), 4)
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
         self.assertEqual(strike.objeto_3d.medidas, [2.07, 0.74, 1.91])
@@ -171,10 +171,119 @@ class CadastroDoStrikeKidsTests(TestCase):
         self.assertEqual(list(ObjetoTresD.objects.all()), [enviado])
 
     def test_ja_no_catalogo_so_liga(self):
-        boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Kids", descricao="x", avaliacao=5)
+        boliche = Brinquedos.objects.create(nome_brinquedo="Strike Kids Premium", descricao="x", avaliacao=5)
         self.rodar("postgresql")
         self.assertEqual(Brinquedos.objects.count(), 1)
         self.assertEqual(boliche.objeto_3d.codigo, "strike-kids")
+
+
+class StrikeKidsBrinquedoNovoTests(TestCase):
+    """A 0120: o Strike Kids no catálogo, com a foto 2D sem fundo e o objeto 3D."""
+
+    def setUp(self):
+        from .models import CategoriasBrinquedos, ImagemBrinquedo
+
+        CategoriasBrinquedos.objects.create(nome_categoria="Eletrônicos", imagem_categoria="categorias/e.png")
+        self.pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(self.pasta.cleanup)
+        disco = FileSystemStorage(location=self.pasta.name)
+        for patch in (
+            mock.patch.object(ImagemBrinquedo._meta.get_field("imagem"), "storage", disco),
+            mock.patch.object(Brinquedos._meta.get_field("imagem_brinquedo"), "storage", disco),
+        ):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def rodar(self, vendor="postgresql"):
+        from django.apps import apps
+
+        from .cadastro_modelos import strike_kids_no_catalogo
+
+        editor = mock.Mock()
+        editor.connection.vendor = vendor
+        return strike_kids_no_catalogo(apps, editor, avisar=lambda *a: None)
+
+    def test_cadastra_com_a_foto_sem_fundo_e_o_3d(self):
+        self.rodar()
+        self.rodar()  # de novo: não duplica
+        strike = Brinquedos.objects.get()
+        self.assertEqual(strike.nome_brinquedo, "Strike Kids")
+        fotos = list(strike.imagens_brinquedo.order_by("ordem"))
+        self.assertEqual([f.tipo for f in fotos], ["perfil", "lado_direito", "lado_esquerdo", "verso"])
+        self.assertIn("strike-kids-foto", fotos[0].imagem.name)
+        self.assertIn("strike-kids-foto", strike.imagem_brinquedo.name)
+        self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
+        self.assertIn("câmera", strike.descricao)
+        self.assertIn("5 sensores", strike.descricao)
+
+    def test_o_que_o_site_cadastrou_antes_vira_strike_kids_com_as_fotos_novas(self):
+        antigo = Brinquedos.objects.create(
+            nome_brinquedo="Strike Kids Boliche", descricao="x", avaliacao=5,
+            imagem_brinquedo="imagens_brinquedos/strike-kids-frente.webp",
+        )
+        self.rodar()
+        antigo.refresh_from_db()
+        self.assertEqual(Brinquedos.objects.count(), 1)
+        self.assertEqual(antigo.nome_brinquedo, "Strike Kids")
+        self.assertIn("strike-kids-foto", antigo.imagem_brinquedo.name)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 4)
+
+    def test_o_do_painel_fica_como_esta_e_ganha_o_3d(self):
+        meu = Brinquedos.objects.create(
+            nome_brinquedo="Strike Kids Turbo", descricao="minha", avaliacao=5, imagem_brinquedo="imagens_brinquedos/minha.webp",
+        )
+        self.rodar()
+        meu.refresh_from_db()
+        self.assertEqual((meu.nome_brinquedo, meu.descricao, meu.imagem_brinquedo.name), ("Strike Kids Turbo", "minha", "imagens_brinquedos/minha.webp"))
+        self.assertEqual(meu.objeto_3d.codigo, "strike-kids")
+        self.assertEqual(Brinquedos.objects.count(), 1)
+
+    def test_nos_testes_sqlite_nao_faz_nada(self):
+        self.assertIsNone(self.rodar("sqlite"))
+        self.assertFalse(Brinquedos.objects.exists())
+
+    def test_a_foto_principal_tem_fundo_transparente(self):
+        from PIL import Image
+
+        foto = Image.open(finders.find("site/arena/modelos/strike-kids/foto.webp"))
+        self.assertEqual(foto.mode, "RGBA")
+        self.assertEqual(foto.getpixel((2, 2))[3], 0)  # o canto: sem fundo
+
+
+class MigrarAoSubirTests(TestCase):
+    """O gunicorn aplica as migrações que faltarem ao subir (no Render)."""
+
+    def carregar(self):
+        import importlib.util
+        from pathlib import Path
+
+        caminho = Path(__file__).resolve().parent.parent / "gunicorn.conf.py"
+        spec = importlib.util.spec_from_file_location("gunicorn_conf_teste", caminho)
+        modulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modulo)
+        return modulo
+
+    def test_no_render_migra_e_fora_dele_nao(self):
+        conf = self.carregar()
+        servidor = mock.Mock()
+        with mock.patch("django.core.management.call_command") as migrar:
+            with mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": ""}):
+                conf.on_starting(servidor)
+            migrar.assert_called_once_with("migrate", interactive=False, verbosity=1)
+            migrar.reset_mock()
+            with mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": "0"}):
+                conf.on_starting(servidor)
+            with mock.patch.dict("os.environ", {"RENDER": "", "AUTO_MIGRATE": ""}):
+                conf.on_starting(servidor)
+            migrar.assert_not_called()
+
+    def test_falha_na_migracao_nao_derruba_o_site(self):
+        conf = self.carregar()
+        servidor = mock.Mock()
+        with mock.patch("django.core.management.call_command", side_effect=RuntimeError("banco fora")), \
+                mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": ""}):
+            conf.on_starting(servidor)  # não levanta
+        self.assertIn("banco fora", servidor.log.error.call_args[0][0])
 
 
 class NaArenaTests(TestCase):
@@ -202,11 +311,11 @@ class NaArenaTests(TestCase):
     def test_aparece_na_arena_antes_do_catalogo(self):
         self.strike.delete()
         maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
-        dados = next(m for m in maquinas if m["nome"] == "Strike Kids Boliche")
+        dados = next(m for m in maquinas if m["nome"] == "Strike Kids")
         self.assertEqual(dados["id"], "modelo-strike-kids")
         self.assertIn("strike-kids.glb", dados["modelo"])
         self.assertEqual((dados["grupo"], dados["jogo"]), ("jogos", "strike-kids"))
-        self.assertIn("strike-kids/frente.webp", dados["capa"])
+        self.assertIn("strike-kids/foto.webp", dados["capa"])
 
     def test_tirado_no_painel_nao_volta_pelo_nome(self):
         objeto = ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)

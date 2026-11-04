@@ -526,7 +526,7 @@ MODELOS_3D = (
         # cores são a arte em outros tons, ver cores3d.js); é o primeiro
         # objeto 3D ligado também pelo cadastro (ObjetoTresD)
         "id": "strike-kids",
-        "titulo": "Strike Kids Boliche",
+        "titulo": "Strike Kids",
         "nomes": ("Strike Kids", "Boliche Kids"),
         "arquivo": "site/arena/modelos/strike-kids.glb",
         "medidas": (2.07, 0.74, 1.91),
@@ -534,7 +534,7 @@ MODELOS_3D = (
         "jogo": "strike-kids",
         "pasta": "site/arena/modelos/strike-kids/",
         "fotos": (
-            ("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"),
+            ("perfil", "foto.webp"), ("lado_direito", "lado_direito.webp"),
             ("lado_esquerdo", "lado_esquerdo.webp"), ("verso", "verso.webp"),
         ),
         "medidas_texto": "2,07 m × 0,74 m × 1,91 m",

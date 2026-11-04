@@ -72,7 +72,7 @@ class ObjetoNaArenaTests(TestCase):
         nomes = [b["nome"] for b in resposta.context["brinquedos_arena"]]
         self.assertEqual(nomes[0], "Air Game Hockey")
         self.assertIn("Brinquedão Modelo 2", nomes)
-        self.assertIn("Strike Kids Boliche", nomes)
+        self.assertIn("Strike Kids", nomes)
         self.assertContains(resposta, 'data-vitrine3d data-modelo="/static/site/arena/modelos/brinquedao-modelo-2.glb')
 
     def test_cadastrado_toma_o_lugar_sem_duplicar(self):
