@@ -47,7 +47,12 @@ class ObjetoNaArenaTests(TestCase):
     def test_liga_pelo_nome_e_os_arquivos_existem(self):
         self.assertEqual(arena.modelo_da_maquina("Brinquedão Modelo 2")["id"], "brinquedao-modelo-2")
         self.assertIsNone(arena.modelo_da_maquina("Brinquedão Castelo Kids"))
-        self.assertIsNone(arena.modelo_da_maquina("Lazer Shot"))
+        # os jogos da casa também têm o seu (o Boliche Virtual roda o Dragon Bowling)
+        self.assertEqual(arena.modelo_da_maquina("Lazer Shot")["id"], "lazer-shot")
+        self.assertEqual(arena.modelo_da_maquina("Boliche Virtual Dragon")["id"], "boliche-virtual")
+        self.assertEqual(arena.modelo_da_maquina("Dragon Bowling Rosa")["id"], "boliche-virtual")
+        self.assertEqual(arena.jogo_da_maquina("Boliche Virtual"), "dragon-bowling")
+        self.assertIsNone(arena.modelo_da_maquina("Air Game Hockey"))
         for modelo in arena.MODELOS_3D:
             self.assertTrue(finders.find(modelo["arquivo"]), modelo["arquivo"])
             for _, arquivo in modelo["fotos"]:
@@ -63,8 +68,13 @@ class ObjetoNaArenaTests(TestCase):
         self.assertEqual(exposto["medidas_modelo"], [3.65, 11.4, 3.62])
         self.assertIn("brinquedao-modelo-2/frente.webp", exposto["capa"])
         self.assertContains(resposta, 'data-arena-zona="brinquedoes"')
-        # a galeria de fotos é só do catálogo
-        self.assertEqual([b["nome"] for b in resposta.context["brinquedos_arena"]], ["Air Game Hockey"])
+        # "Todas as máquinas" tem o catálogo e os objetos 3D que ainda não
+        # estão nele (estes em 3D no cartão), por nome
+        nomes = [b["nome"] for b in resposta.context["brinquedos_arena"]]
+        self.assertEqual(nomes[0], "Air Game Hockey")
+        self.assertIn("Brinquedão Modelo 2", nomes)
+        self.assertIn("Strike Kids Boliche", nomes)
+        self.assertContains(resposta, 'data-vitrine3d data-modelo="/static/site/arena/modelos/brinquedao-modelo-2.glb')
 
     def test_cadastrado_toma_o_lugar_sem_duplicar(self):
         Brinquedos.objects.create(nome_brinquedo="Brinquedão Modelo 2", descricao="x", avaliacao=5, voltz="")

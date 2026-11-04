@@ -332,10 +332,25 @@
     </div>
     {% endif %}
 
-    <div class="arena-fotos-grade" data-fotos-grade>
+    {% comment %}
+      Quem tem objeto 3D aparece EM 3D no cartão (arrastar gira; no celular,
+      arrastar de lado gira e de cima para baixo rola a página), no lugar das
+      fotos -- o vitrine3d.js monta cada um quando o cartão chega perto da
+      tela. Sem JavaScript, fica a foto.
+    {% endcomment %}
+    <div class="arena-fotos-grade" data-fotos-grade
+         data-three="{% static 'vendor/three/three.module.min.js' %}"
+         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}">
         {% for brinquedo in brinquedos_arena %}
         <article class="arena-foto-cartao" data-fotos-cartao data-categorias="{{ brinquedo.categorias|join:'|' }}">
-            <a class="arena-foto-midia" href="{{ brinquedo.url }}" aria-label="Ver {{ brinquedo.nome }}">
+            {% if brinquedo.modelo %}
+            <div class="arena-foto-midia arena-foto-midia--3d" data-vitrine3d data-modelo="{{ brinquedo.modelo }}">
+                <img src="{% if brinquedo.capa %}{{ brinquedo.capa }}{% else %}{% static 'images/sem-imagem.svg' %}{% endif %}" alt="{{ brinquedo.nome }}" class="ativa arena-foto-poster" loading="lazy" decoding="async" width="600" height="600">
+                <span class="arena-foto-selo3d" aria-hidden="true"><i class="fa-solid fa-cube"></i> 3D · arraste para girar</span>
+                {% faixas brinquedo.nome %}
+            </div>
+            {% else %}
+            <a class="arena-foto-midia" href="{{ brinquedo.url|default:'#arena-3d' }}" aria-label="Ver {{ brinquedo.nome }}">
                 {% for foto in brinquedo.fotos %}
                     <img src="{{ foto.url }}" alt="{% if forloop.first %}{{ brinquedo.nome }}{% endif %}" class="{% if forloop.first %}ativa{% endif %}"
                          data-foto-lado="{{ foto.tipo }}" loading="lazy" decoding="async" width="600" height="600">
@@ -349,12 +364,17 @@
                 {% endif %}
                 {% faixas brinquedo.nome %}
             </a>
+            {% endif %}
             <div class="arena-foto-corpo">
                 <span class="arena-foto-categoria">{{ brinquedo.categorias|join:" · "|default:"Brinquedo" }}</span>
                 <h3>{{ brinquedo.nome }}</h3>
                 {% if brinquedo.medidas_texto %}<p class="arena-foto-medidas"><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ brinquedo.medidas_texto }}</p>{% endif %}
                 <div class="arena-foto-acoes">
+                    {% if brinquedo.url %}
                     <a class="arena-foto-link" href="{{ brinquedo.url }}">Ver detalhes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    {% else %}
+                    <a class="arena-foto-link" href="#arena-3d">Ver na Arena 3D <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    {% endif %}
                     {% if brinquedo.jogo %}
                         <a class="arena-foto-jogar" href="{% url 'jogo' brinquedo.jogo %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia</a>
                     {% endif %}
@@ -397,5 +417,6 @@
 
 <script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/vitrine.js' %}"></script>
+<script type="module" src="{% estatico 'site/arena/vitrine3d.js' %}"></script>
 
 {% endblock %}
