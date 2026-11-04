@@ -1232,21 +1232,38 @@ html.ls-escuro:not(#_):not(#__) .card-mini .produto-status.is-sale::before { bac
 .card-mini-desejo:hover { background: rgba(5, 11, 31, .92); }
 .card-mini-desejo.is-on { background: linear-gradient(135deg, #ffd23f, #ff9f1c); color: #3a2400; }
 
-/* embaixo da foto: o nome à esquerda; nota e curtidas no canto direito.
-   Altura fixa de duas linhas de nome: os cards ficam todos alinhados. */
+/* embaixo da foto, em três linhas, tudo alinhado à esquerda:
+     1. o nome (até duas linhas);
+     2. as estrelas com a nota, e as curtidas no canto direito;
+     3. os recursos da máquina ("Contém câmera", "5 sensores"), lado a lado.
+   O cartão sem recursos fica só com as duas primeiras linhas. O nome tem
+   sempre a altura de duas linhas, então as estrelas (e os recursos) ficam na
+   mesma altura em todos os cards da fileira; o que sobra de altura fica no
+   pé do card. */
 .card-mini-info {
-    display: flex;
+    display: grid;
     flex: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "nome nome"
+        "nota curtidas";
+    align-content: start;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    min-height: 74px;
-    padding: 12px 14px;
+    gap: 7px 12px;
+    padding: 12px 14px 14px;
+}
+
+.card-mini-info:has(.ls-recursos) {
+    grid-template-areas:
+        "nome nome"
+        "nota curtidas"
+        "recursos recursos";
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini-nome {
-    flex: 1 1 0;
+    grid-area: nome;
     min-width: 0;
+    min-height: 2.5em;
     margin: 0;
     font-size: 1rem;
     font-weight: 800;
@@ -1275,14 +1292,38 @@ html.ls-escuro:not(#_):not(#__) .card-mini-nome {
 .card-mini-nome a:focus-visible { outline: none; }
 .card-mini:has(.card-mini-nome a:focus-visible) { outline: 3px solid #3fd0ff; outline-offset: 2px; }
 
-.card-mini-meta {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
+/* a caixa da nota + curtidas some do desenho: cada um vai para o seu lugar
+   na grade do card (o z-index põe os dois por cima do link que cobre o card) */
+.card-mini-meta { display: contents; }
+
+html.ls-escuro:not(#_):not(#__) .card-mini-meta .avaliacao { grid-area: nota; justify-self: start; position: relative; z-index: 3; }
+html.ls-escuro:not(#_):not(#__) .card-mini-meta .card-mini-curtidas { grid-area: curtidas; justify-self: end; position: relative; z-index: 3; }
+
+/* os recursos: uma fileira só, lado a lado, ocupando a largura do card.
+   Largura sobrando: o nome inteiro; mais justo: o nome curto; bem estreito:
+   só o ícone (o texto aparece apontando). */
+.card-mini-info .ls-recursos {
+    grid-area: recursos;
+    flex-wrap: nowrap;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+.card-mini-info .ls-recurso { flex: 0 1 auto; padding: 4px 11px 4px 4px; }
+.card-mini-info .ls-recurso-icone { width: 24px; height: 24px; }
+.card-mini-info .ls-recurso-icone svg { width: 15px; height: 15px; }
+.card-mini-info .ls-recurso-nome,
+.card-mini-info .ls-recurso-curto { font-size: .74rem; }
+
+@container (max-width: 335px) {
+    .card-mini-info .ls-recurso-nome { display: none; }
+    .card-mini-info .ls-recurso-curto { display: block; }
+}
+
+@container (max-width: 195px) {
+    .card-mini-info .ls-recurso-texto { display: none; }
+    .card-mini-info .ls-recurso { padding: 4px; }
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao {
@@ -1321,11 +1362,14 @@ html.ls-escuro:not(#_):not(#__) .card-mini-curtidas:hover { color: #fff; }
     html.ls-escuro:not(#_):not(#__) .card-mini .img-area { padding: 8px; }
     html.ls-escuro:not(#_):not(#__) .card-mini .produto-status { bottom: 6px; left: 6px; padding: 3px 8px 3px 7px; font-size: .62rem; }
     .card-mini-desejo { top: 6px; right: 6px; width: 30px; height: 30px; font-size: .8rem; }
-    /* card estreito: o nome em cima (duas linhas) e nota e curtidas numa
-       linha só embaixo, a nota à esquerda e as curtidas à direita */
-    .card-mini-info { flex-direction: column; align-items: stretch; justify-content: space-between; gap: 6px; min-height: 84px; padding: 10px; }
-    html.ls-escuro:not(#_):not(#__) .card-mini-nome { flex: none; min-height: 2.5em; font-size: .88rem; }
-    .card-mini-meta { flex-direction: row; align-items: center; justify-content: space-between; }
+    /* card estreito: as mesmas três linhas, um pouco mais justas */
+    .card-mini-info { gap: 6px 8px; padding: 10px 10px 12px; }
+    html.ls-escuro:not(#_):not(#__) .card-mini-nome { font-size: .88rem; }
+    .card-mini-info .ls-recurso { padding: 3px 8px 3px 3px; }
+    .card-mini-info .ls-recurso-icone { width: 20px; height: 20px; }
+    .card-mini-info .ls-recurso-icone svg { width: 13px; height: 13px; }
+    .card-mini-info .ls-recurso-nome,
+    .card-mini-info .ls-recurso-curto { font-size: .66rem; }
     html.ls-escuro:not(#_):not(#__) .card-mini .stars svg { width: 10px; height: 10px; }
     html.ls-escuro:not(#_):not(#__) .card-mini .avaliacao .nota,
     html.ls-escuro:not(#_):not(#__) .card-mini-curtidas { font-size: .74rem; }
