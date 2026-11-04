@@ -138,3 +138,37 @@ Dependência nova: rjsmin (requirements.txt).
        dash.cloudflare.com > Turnstile > Add widget > domínio
        lazersport.com.br (e www) > copie "Site Key" e "Secret Key" >
        Render > Environment > TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY.
+
+10) VELOCIDADE: O CATÁLOGO AGUENTA MUITO MAIS GENTE  (docs/TESTE_DE_CARGA.md, §10)
+   - O que mudou no código: as telas do catálogo (/brinquedos/ com filtros,
+     /categoria/, /brinquedo/, peças e /jogos/) agora saem do cache para
+     todo visitante, como a home já saía. Cada uma fazia de 8 a 12 idas ao
+     banco por abertura; agora faz 0 ou 1. Mudou o cadastro (produto, foto,
+     categoria, peça, jogo, objeto 3D), a próxima abertura já mostra -- não
+     precisa esperar nem limpar nada. O que é de cada pessoa (lista de
+     desejos, curtida, conta, carrinho) continua separado e certo.
+   - CSS, JS, imagens e manifesto não disputam mais as 4 vagas públicas do
+     escudo de tráfego: uma página nunca mais abre sem estilo por causa de
+     um "busy".
+   - Medido (mesma máquina, banco imitando o Supabase a 40 ms por consulta):
+     com 50 visitantes agressivos o site recusava 37 % dos cliques; agora
+     recusa 2 %. Com 100, recusava 57 %; agora 3 %. O teto de páginas
+     entregues por segundo foi de ~15-20 para ~60 por worker.
+   - O que isso vale no Render de hoje (Starter, 0,5 CPU): o catálogo passa
+     de "algumas dezenas" para "algumas centenas" de visitantes ao mesmo
+     tempo (300-700, lendo uma página a cada 15-30 s). Não são milhares:
+     meia CPU é o teto.
+   - Para milhares, nesta ordem, nada precisa de código novo:
+       1. Plano Standard (1 CPU, 2 GB) ≈ 1.000 visitantes ativos; Pro
+          (2 CPU, 4 GB) ≈ 2.000-3.000.
+       2. Variáveis no Render: WEB_WORKERS=2 (Standard) ou 4 (Pro). ANTES
+          disso, um Redis (Render > Key Value, o menor plano) e a URL dele
+          no CACHES do settings -- sem isso, com dois workers, uma edição
+          do catálogo pode demorar até 30 min para aparecer no outro.
+       3. Cloudflare na frente do domínio com cache de /static/ e /media/
+          (os cabeçalhos já estão certos); opcionalmente, cache do HTML
+          para quem não está logado por 30-60 s, para rajadas de campanha.
+       4. Fotos do catálogo com f_auto,q_auto no Cloudinary (tamanho de
+          imagem é o que faz a página parecer lenta no celular).
+   - Para conferir se bateu: a contagem de "503 busy" no log do Render e
+     o Server-Timing de cada resposta (aba Rede do navegador).
