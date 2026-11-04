@@ -17,6 +17,7 @@ O que estes testes protegem:
 """
 
 import importlib
+from io import StringIO
 import json
 import struct
 import tempfile
@@ -28,6 +29,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
@@ -242,6 +244,37 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         self.assertIsNone(self.rodar("sqlite"))
         self.assertFalse(Brinquedos.objects.exists())
 
+    def test_desativado_nao_conta(self):
+        # o do painel, desativado: fica escondido, e o novo é cadastrado
+        escondido = Brinquedos.objects.create(nome_brinquedo="Strike Kids Turbo", descricao="x", avaliacao=5, ativo=False)
+        self.rodar()
+        novo = Brinquedos.objects.get(ativo=True)
+        self.assertEqual(novo.nome_brinquedo, "Strike Kids")
+        self.assertEqual(novo.objeto_3d.codigo, "strike-kids")
+        escondido.refresh_from_db()
+        self.assertFalse(escondido.ativo)
+
+    def test_o_strike_kids_desativado_volta(self):
+        antigo = Brinquedos.objects.create(nome_brinquedo="Strike Kids", descricao="x", avaliacao=5, ativo=False)
+        self.rodar()
+        antigo.refresh_from_db()
+        self.assertTrue(antigo.ativo)
+        self.assertEqual(Brinquedos.objects.count(), 1)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 4)
+        self.assertEqual(antigo.objeto_3d.codigo, "strike-kids")
+
+    def test_o_comando_conta_o_que_fez(self):
+        saida = StringIO()
+        call_command("cadastrar_modelo_3d", "strike-kids", stdout=saida)
+        texto = saida.getvalue()
+        self.assertIn("Strike Kids no banco: nenhum", texto)
+        self.assertIn("Criado: Strike Kids", texto)
+        self.assertIn("Strike Kids pronto", texto)
+        saida = StringIO()
+        call_command("cadastrar_modelo_3d", "strike-kids", stdout=saida)  # de novo: só confere
+        self.assertIn("(id", saida.getvalue())
+        self.assertEqual(Brinquedos.objects.count(), 1)
+
     def test_a_foto_principal_tem_fundo_transparente(self):
         from PIL import Image
 
@@ -276,6 +309,21 @@ class MigrarAoSubirTests(TestCase):
             with mock.patch.dict("os.environ", {"RENDER": "", "AUTO_MIGRATE": ""}):
                 conf.on_starting(servidor)
             migrar.assert_not_called()
+
+    def test_depois_de_migrar_confere_o_strike_kids(self):
+        conf = self.carregar()
+        servidor = mock.Mock()
+        with mock.patch("django.core.management.call_command"), \
+                mock.patch("core.cadastro_modelos.garantir_strike_kids") as garantir, \
+                mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": ""}):
+            conf.on_starting(servidor)
+        garantir.assert_called_once()
+        # e uma falha nele também não derruba o site
+        with mock.patch("django.core.management.call_command"), \
+                mock.patch("core.cadastro_modelos.garantir_strike_kids", side_effect=OSError("cloudinary fora")), \
+                mock.patch.dict("os.environ", {"RENDER": "true", "AUTO_MIGRATE": ""}):
+            conf.on_starting(servidor)
+        self.assertIn("cloudinary fora", servidor.log.error.call_args[0][0])
 
     def test_falha_na_migracao_nao_derruba_o_site(self):
         conf = self.carregar()

@@ -112,6 +112,22 @@ def _migrar_ao_subir():
     return True
 
 
+def _garantir_cadastros(server):
+    """Os brinquedos que o site cadastra sozinho (o Strike Kids), conferidos a cada subida.
+
+    A migração roda uma vez só: se a subida das fotos falhou naquela hora,
+    o brinquedo ficava sem cadastro para sempre. Aqui a conferência se
+    repete a cada deploy até dar certo (e, depois, só confere).
+    """
+    try:
+        from core.cadastro_modelos import garantir_strike_kids
+        from core.models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD
+
+        garantir_strike_kids(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD, avisar=server.log.info)
+    except Exception as erro:
+        server.log.error(f"O Strike Kids não foi cadastrado ao subir: {erro!r}")
+
+
 def on_starting(server):
     if not _migrar_ao_subir():
         return
@@ -127,6 +143,7 @@ def on_starting(server):
             server.log.info("Aplicando as migrações que faltarem...")
             call_command("migrate", interactive=False, verbosity=1)
             server.log.info("Migrações em dia.")
+            _garantir_cadastros(server)
         finally:
             # nada de conexão aberta herdada pelos workers
             connections.close_all()

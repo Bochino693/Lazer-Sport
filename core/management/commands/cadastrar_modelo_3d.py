@@ -14,7 +14,7 @@ reais dele ficam.
 
 from django.core.management.base import BaseCommand
 
-from core.cadastro_modelos import CADASTROS, achar_no_catalogo, cadastrar, ligar_objeto_3d
+from core.cadastro_modelos import CADASTROS, achar_no_catalogo, cadastrar, garantir_strike_kids, ligar_objeto_3d
 from core.models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD
 
 
@@ -27,6 +27,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, modelo, fotos=False, **opcoes):
         dados = CADASTROS[modelo]
+        if modelo == "strike-kids" and not fotos:
+            # conta o que achou no banco e deixa ativo, com as fotos e o 3D;
+            # um erro (a subida das fotos, por exemplo) aparece aqui na tela
+            garantir_strike_kids(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD, avisar=self.stdout.write)
+            return
         brinquedo = achar_no_catalogo(modelo, Brinquedos) if "objeto_3d" in dados else None
         if brinquedo is None or fotos:
             brinquedo, _criado = cadastrar(
