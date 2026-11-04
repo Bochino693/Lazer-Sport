@@ -36,7 +36,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from . import arena
-from .cadastro_modelos import achar_no_catalogo, ligar_objeto_3d
+from .cadastro_modelos import CADASTROS, achar_no_catalogo, ligar_objeto_3d
 from .models import Brinquedos, ObjetoTresD
 from . import objetos_3d
 from .objetos_3d import ler_glb, ler_glb_do_site, validar_glb
@@ -158,7 +158,7 @@ class CadastroDoStrikeKidsTests(TestCase):
                 self.rodar("postgresql")  # de novo: não duplica
         strike = Brinquedos.objects.get()
         self.assertEqual(strike.nome_brinquedo, "Strike Kids")
-        self.assertEqual(strike.imagens_brinquedo.count(), 4)
+        self.assertEqual(strike.imagens_brinquedo.count(), len(CADASTROS["strike-kids"]["fotos"]))
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
         self.assertEqual(strike.objeto_3d.medidas, [2.07, 0.74, 1.91])
 
@@ -211,7 +211,10 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         strike = Brinquedos.objects.get()
         self.assertEqual(strike.nome_brinquedo, "Strike Kids")
         fotos = list(strike.imagens_brinquedo.order_by("ordem"))
-        self.assertEqual([f.tipo for f in fotos], ["perfil", "lado_direito", "lado_esquerdo", "verso"])
+        # os lados que a Arena usa primeiro; depois mais ângulos e as cores
+        self.assertEqual([f.tipo for f in fotos[:4]], ["perfil", "lado_direito", "lado_esquerdo", "verso"])
+        self.assertEqual(len(fotos), 12)
+        self.assertEqual(sum(1 for f in fotos if "cor_" in f.imagem.name), 5)
         self.assertIn("strike-kids-foto", fotos[0].imagem.name)
         self.assertIn("strike-kids-foto", strike.imagem_brinquedo.name)
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
@@ -228,7 +231,7 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         self.assertEqual(Brinquedos.objects.count(), 1)
         self.assertEqual(antigo.nome_brinquedo, "Strike Kids")
         self.assertIn("strike-kids-foto", antigo.imagem_brinquedo.name)
-        self.assertEqual(antigo.imagens_brinquedo.count(), 4)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 12)
 
     def test_o_do_painel_fica_como_esta_e_ganha_o_3d(self):
         meu = Brinquedos.objects.create(
@@ -260,8 +263,19 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         antigo.refresh_from_db()
         self.assertTrue(antigo.ativo)
         self.assertEqual(Brinquedos.objects.count(), 1)
-        self.assertEqual(antigo.imagens_brinquedo.count(), 4)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 12)
         self.assertEqual(antigo.objeto_3d.codigo, "strike-kids")
+
+    def test_o_que_subiu_com_4_fotos_ganha_as_novas(self):
+        # o Strike Kids que o site cadastrou com as 4 fotos de antes
+        self.rodar()
+        strike = Brinquedos.objects.get()
+        for foto in strike.imagens_brinquedo.order_by("ordem")[4:]:
+            foto.delete()
+        self.assertEqual(strike.imagens_brinquedo.count(), 4)
+        self.rodar()
+        self.assertEqual(strike.imagens_brinquedo.count(), 12)
+        self.assertEqual(Brinquedos.objects.count(), 1)
 
     def test_o_comando_conta_o_que_fez(self):
         saida = StringIO()

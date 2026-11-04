@@ -97,13 +97,22 @@ CADASTROS = {
             "1,91 m de comprimento. Cores e adesivagem podem ser ajustadas no pedido."
         ),
         "medidas": ("2.07", "0.74", "1.91"),
-        # a foto principal: a máquina inteira, de 3/4 e sem fundo (do .glb da
-        # própria máquina); as outras, os lados e as costas
+        # as fotos, todas sem fundo e tiradas do .glb da própria máquina: a
+        # principal de 3/4; os lados e as costas (os tipos que a Arena usa);
+        # mais ângulos; e a adesivagem nas outras cores que o site oferece
         "fotos": (
             ("foto.webp", "perfil", "Strike Kids, o boliche infantil, com a tela, a pista e a arte dos pinos"),
             ("lado_direito.webp", "lado_direito", "Strike Kids pelo lado direito, com a arte dos pinos"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids pelo lado esquerdo, com a arte dos pinos"),
             ("verso.webp", "verso", "Strike Kids visto por trás"),
+            ("frente.webp", None, "Strike Kids visto de frente: a pista, as bolas e a tela do jogo"),
+            ("tres_quartos_esquerda.webp", None, "Strike Kids de 3/4, pelo lado esquerdo"),
+            ("de_cima.webp", None, "Strike Kids visto de cima, com a pista inteira"),
+            ("cor_azul.webp", None, "Strike Kids com a adesivagem em tons de azul"),
+            ("cor_roxo.webp", None, "Strike Kids com a adesivagem em tons de roxo"),
+            ("cor_rosa.webp", None, "Strike Kids com a adesivagem em tons de rosa"),
+            ("cor_vermelho.webp", None, "Strike Kids com a adesivagem em tons de vermelho"),
+            ("cor_laranja.webp", None, "Strike Kids com a adesivagem em tons de laranja"),
         ),
         "categorias": ("boliche", "jogos", "eletronic"),
         "evitar": (),
