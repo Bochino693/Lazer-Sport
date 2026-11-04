@@ -3677,9 +3677,53 @@ function descartarCena(raiz) {
 /* ======================================================================
    O JOGO
    ====================================================================== */
+/* ----------------------------------------------------------------------
+   OS SONS DA MÁQUINA (assets/audio/arcade/, o catálogo do AudioBank). Os
+   arquivos guardam o ganho original e o volume daqui é o dB de cada
+   sons.play() do main.gd (o crédito, a contagem e o GO! entram no lugar
+   dos do console; o "fim" é a vinheta do ranking).
+   ---------------------------------------------------------------------- */
+const SOM = "super-boxing/sons/";
+const db = (v) => Math.min(1, Math.pow(10, v / 20));
+const SONS = {
+  moeda: SOM + "moeda.mp3",                                   // credit
+  contagem: SOM + "contagem.mp3",                             // count
+  vai: SOM + "vai.mp3",                                       // go
+  sino: { arquivo: SOM + "sino.mp3", volume: db(-2), senao: "apito" },        // round_bell
+  soco: { arquivo: SOM + "soco.mp3", senao: "soco" },         // hit
+  subgrave: { arquivo: SOM + "subgrave.mp3", senao: null },
+  corpo: { arquivo: SOM + "corpo.mp3", senao: null },         // arena_corpo
+  queda: { arquivo: SOM + "queda.mp3", senao: "batida" },     // arena_queda
+  publico: { arquivo: SOM + "publico.mp3", vozes: 2, senao: null },          // arena_publico
+  couro: { arquivo: SOM + "couro.mp3", volume: db(-8), senao: "batida" },
+  erro: { arquivo: SOM + "erro.mp3", volume: db(-4) },        // aviso.wav
+  contando: { arquivo: SOM + "contando.mp3", laco: true, volume: db(-12), senao: null },  // score_loop
+  nivel_leve: { arquivo: SOM + "nivel_leve.mp3", senao: "nota" },
+  nivel_bom: { arquivo: SOM + "nivel_bom.mp3", senao: "acerto" },
+  nivel_forte: { arquivo: SOM + "nivel_forte.mp3", senao: "acerto" },
+  nivel_explosivo: { arquivo: SOM + "nivel_explosivo.mp3", senao: "combo" },
+  nivel_nocaute: { arquivo: SOM + "nivel_nocaute.mp3", senao: "strike" },
+  nivel_peso: { arquivo: SOM + "nivel_peso.mp3", senao: "strike" },
+  nivel_lendario: { arquivo: SOM + "nivel_lendario.mp3", senao: "strike" },
+  nivel_perfeito: { arquivo: SOM + "nivel_perfeito.mp3", senao: "strike" },
+  fraco: { arquivo: SOM + "fraco.mp3", volume: db(-2), senao: "nota" },       // not_supress
+  bom_jogador: { arquivo: SOM + "bom_jogador.mp3", volume: db(-2), senao: "combo" },  // good_player
+  win: { arquivo: SOM + "win.mp3", volume: db(-9), senao: null },
+  incentivo: { arquivo: SOM + "incentivo.mp3", vozes: 1, senao: null },      // torcida_incentivo
+  festa: { arquivo: SOM + "festa.mp3", volume: db(-3), vozes: 1, senao: null },  // torcida_festa
+  vaia: { arquivo: SOM + "vaia.mp3", vozes: 1, senao: null },                // torcida_vaia
+  // o fim do console: a vinheta da tabela (ranking_neutral) ou a do recorde
+  fim: { arquivo: SOM + "ranking.mp3", volume: db(-3) },
+  vitoria: { arquivo: SOM + "recorde.mp3", volume: db(-2) },
+};
+
 export default {
   largura: LARGURA,
   altura: ALTURA,
+  sons: SONS,
+  // a trilha (music.wav, em laço): na luta ela fica baixinha, por baixo
+  // da torcida (sons.music(-24) + o reforço de 6 dB da TV Box)
+  musica: { arquivo: SOM + "musica.mp3", volume: 0.2 },
   artes: {
     fundo: "super-boxing/fundo.webp",
     lona: "super-boxing/lona.webp",
@@ -4109,6 +4153,22 @@ export default {
     let cambaleioT = -1, cambaleioDur = 1.6;
     let rachaduraTela = [], rachaduraTelaT = -1;
 
+    // a torcida do meio da luta e o laço da contagem: o jogo corta os dois
+    let somIncentivo = null;
+    let somContando = null;
+    function tocarIncentivo(volume) {
+      pararIncentivo();
+      somIncentivo = api.som("incentivo", { volume }) || null;
+    }
+    function pararIncentivo() {
+      if (somIncentivo) somIncentivo.parar(0.4);
+      somIncentivo = null;
+    }
+    function pararContando() {
+      if (somContando) somContando.parar(0.05);
+      somContando = null;
+    }
+
     function iniciar() {
       estado = "armado";
       tEstado = 0;
@@ -4147,9 +4207,11 @@ export default {
       if (a) a.preparar();
       // A entrada da luta, como no gabinete: FIGHT! bate, NEVER GIVE UP! desliza.
       // (Depois do "VAI!" do console, que ocupa o meio da tela no começo.)
-      faixas.push({ img: img.fight, x: 270, y: 318, largura: 400, t: 0, dur: 1.6, tipo: "bate", atraso: 0.55 });
+      faixas.push({ img: img.fight, x: 270, y: 318, largura: 400, t: 0, dur: 1.6, tipo: "bate", atraso: 0.55, sino: true });
       faixas.push({ img: img.never, x: 270, y: 404, largura: 330, t: 0, dur: 1.3, tipo: "desliza", atraso: 0.9 });
       api.placar({ pontos: 0, tempo: null, info: `SOCO 1/${SOCOS}` });
+      pararContando();
+      pararIncentivo();
     }
 
     /* ------------------------------------------------------------------
@@ -4198,7 +4260,7 @@ export default {
         tEstado = 0;
         velRecuo += 1.2;
         velAngulo += mao * 0.12;
-        api.som("batida");
+        api.som("couro");
         api.som("erro");
         if (!a) api.tremer(3);
         api.efeitos.explosao(luvaPara.x, luvaPara.y, { cor: ["#8697b4", "#ffffff"], n: 8, velocidade: 160, tamanho: 3 });
@@ -4217,6 +4279,7 @@ export default {
       nivelAtual = NIVEIS[indice];
       golpe(alvo, nivelAtual, indice);
       fraseAtual = GOLPES[nivelAtual.id][(semente + socos.length + 1) % 4];
+      let derrubou = false;
       if (a) {
         // O SOCO ATRAVESSA A TELA E ACERTA ALGUÉM (main.gd, _registrar_impacto).
         // A arena recebe a posição do ponteiro — o papel da velocidade real
@@ -4228,15 +4291,30 @@ export default {
         const reacao = a.golpe(forcaTravada, derruba, notaAtual, ultimo);
         ultimaReacao = reacao.nocaute ? "knockout" : reacao.reacao;
         if (reacao.nocaute) nocauteNaRodada = true;
-        if (reacao.reacao === "cordas") fraseAtual = FRASES_CORDAS[(socos.length + 1) % 3];
+        derrubou = reacao.nocaute;
+        if (reacao.reacao === "cordas") {
+          fraseAtual = FRASES_CORDAS[(socos.length + 1) % 3];
+          api.som("publico", { volume: db(-5) });
+        }
         if (reacao.desdenhou) {
           // no meio da luta a torcida está do lado de quem bate
           fraseAtual = "ELE NEM SENTIU • TENTE MAIS FORTE";
-          if (!ultimo) a.agitar(0.4, 2.5);
+          if (!ultimo) {
+            a.agitar(0.4, 2.5);
+            tocarIncentivo(db(-3));
+          }
         }
         if (ultimo) fecharDesfecho();
-        if (reacao.nocaute) fraseAtual = FRASES_NOCAUTE[(socos.length + 1) % 3];
+        if (reacao.nocaute) {
+          fraseAtual = FRASES_NOCAUTE[(socos.length + 1) % 3];
+          api.som("queda");
+          api.som("publico", { volume: db(-2) });
+        }
       }
+      // O BAQUE TEM DUAS CAMADAS: o couro do impacto e o corpo que leva
+      // (mais forte o golpe, mais alto); a plateia reage aos bons golpes.
+      api.som("corpo", { volume: db(-1 + forcaTravada * 4) });
+      if (notaAtual >= 4000 && forcaTravada >= 0.36 && !derrubou) api.som("publico", { volume: db(-11 + forcaTravada * 8) });
       estado = "medindo";
       tEstado = 0;
       mostrado = 0;
@@ -4294,8 +4372,7 @@ export default {
       else api.tremer(nivel.tremor * 0.55);
       api.vibrar(18 + indice * 14);
       api.som("soco");
-      if (indice >= 2) api.som("batida");
-      if (indice >= 4) api.som("strike");
+      api.som("subgrave", { volume: db(-4) });
     }
 
     function novoRaio(centro, alcance) {
@@ -4357,7 +4434,16 @@ export default {
       proximaFesta = 0.35;
       const melhor = Math.max(...socos);
       api.placar({ pontos: melhor, info: socos.length < SOCOS ? `SOCO ${socos.length + 1}/${SOCOS}` : "MELHOR SOCO" });
-      api.som(indice >= 2 ? "combo" : indice >= 1 ? "acerto" : "nota");
+      // _disparar_veredito: o soco fraco ganha a reação curta; a fala longa
+      // é de quem fechou a rodada só com bons golpes; o resto, o som do nível
+      pararContando();
+      const nivel = NIVEIS[indice];
+      if (nivel.id === "LEVE") api.som("fraco");
+      else if (socos.length >= SOCOS && socos.every((n) => NIVEIS[indiceDoNivel(n)].id !== "LEVE")) api.som("bom_jogador");
+      else {
+        api.som("nivel_" + nivel.id.toLowerCase());
+        if (socos.length === 1) api.som("win");
+      }
       // NEVER GIVE UP! quando o soco foi fraco e ainda há chance
       if (indice === 0 && socos.length < SOCOS) {
         faixas.push({ img: img.never, x: 270, y: 300, largura: 330, t: 0, dur: 1.5, tipo: "bate", atraso: 0.3 });
@@ -4412,14 +4498,17 @@ export default {
       a.fimDeRodada(desfecho);
       if (desfecho === "nocaute" || desfecho === "vitoria") {
         a.agitar(1.0, 7.5);
+        api.som("festa");             // o ginásio pega fogo
         return;
       }
-      // O SOCO FINAL
+      // O SOCO FINAL (a vaia só vem depois do "K.O.")
+      pararIncentivo();
       koEm = 0.9;
       koPaciencia = 0;
       if (desfecho === "empate") {
         fraseAtual = "ELE AGUENTOU… E AGORA VEM PRA CIMA!";
         a.agitar(0.45, 4.0);
+        api.som("publico", { volume: db(-4) });
       } else {
         fraseAtual = "ELE NÃO CAIU… E AGORA VEM PRA CIMA!";
       }
@@ -4483,8 +4572,8 @@ export default {
       if (koT >= 0) return;
       levarSocoNaTela();
       vidaJogador = 0;
-      api.som("strike");
-      api.som("erro");
+      api.som("nivel_nocaute", { volume: db(-2) });
+      api.som("vaia", { volume: db(-1) });
       tremorTela = Math.max(tremorTela, 40);
       clarao = Math.max(clarao, 0.30);
       koT = 0;
@@ -4505,7 +4594,8 @@ export default {
         if (vidaJogador <= 0) nocauteDoJogador();
       }
       api.som("soco");
-      api.som("batida");
+      api.som("subgrave", { volume: db(-2) });
+      api.som("corpo");
       api.vibrar(80);
       tremorTela = Math.max(tremorTela, sorteio(24, 36));
       clarao = Math.max(clarao, 0.14);
@@ -4652,14 +4742,24 @@ export default {
           if (estado === "maisForte" && tEstado >= MAIS_FORTE_S) { estado = "armado"; tEstado = 0; fase = 0; }
           break;
         case "medindo":
-          if (tEstado >= IMPACTO_DURACAO) { estado = "contando"; tEstado = 0; tique = 0; }
+          if (tEstado >= IMPACTO_DURACAO) {
+            estado = "contando";
+            tEstado = 0;
+            tique = 0;
+            pararContando();
+            somContando = api.som("contando", { tom: 0.85 }) || null;
+          }
           break;
         case "contando": {
           const p = limitar(tEstado / CONTAGEM_DURACAO, 0, 1);
           mostrado = Math.round(notaAtual * (1 - Math.pow(1 - p, 2.2)));
-          // os tiques da contagem, cada vez mais juntos
-          const marca = Math.floor(Math.pow(p, 0.7) * 9);
-          if (marca > tique) { tique = marca; api.som("clique"); }
+          // a contagem sobe de tom com o número (lerp 0,85 -> 1,8); sem o
+          // arquivo, os tiques cada vez mais juntos
+          if (somContando) somContando.ajustar({ tom: 0.85 + (1.8 - 0.85) * p });
+          else {
+            const marca = Math.floor(Math.pow(p, 0.7) * 9);
+            if (marca > tique) { tique = marca; api.som("clique"); }
+          }
           if (tEstado >= CONTAGEM_DURACAO) abrirVeredito();
           break;
         }
@@ -4719,7 +4819,6 @@ export default {
       ondas.push({ x, y, r0: 3, r1: sorteio(100, 160), cor: CREME, alfa: 0.55, largura: 3.5, t: 0, dur: 0.85 });
       ondas.push({ x, y, r0: 2, r1: sorteio(75, 130), cor: nivelAtual.cor, alfa: 0.45, largura: 2.5, t: 0, dur: 1.05 });
       api.efeitos.explosao(x, y, { cor: FESTA, n: 12 + Math.round(nivelAtual.raios / 3), velocidade: 220, tamanho: 2.6, gravidade: 160, vida: 1.3 });
-      api.som("tiro");
     }
 
     /* As barras de vida: a real cai na hora; o rastro branco desce devagar
@@ -5309,11 +5408,19 @@ export default {
           const e = limitar(t / 0.24, 0, 1);
           escala = 2.1 - 1.1 * passarDoPonto(e, 2.4);
           alfa = Math.min(1, t / 0.08);
-          if (e >= 0.5 && !f.tocou) { f.tocou = true; api.som("batida"); api.tremer(6); }
+          if (e >= 0.5 && !f.tocou) {
+            f.tocou = true;
+            // o round começa: o sino e a torcida chamando o golpe
+            if (f.sino) {
+              api.som("sino");
+              tocarIncentivo(db(-7));
+            }
+            api.tremer(6);
+          }
         } else {
           dx = (1 - passarDoPonto(limitar(t / 0.32, 0, 1), 1.6)) * 420;
           alfa = Math.min(1, t / 0.1);
-          if (!f.tocou) { f.tocou = true; api.som("whoosh"); }
+          if (!f.tocou) { f.tocou = true; api.som("whoosh", { volume: 0.5 }); }
         }
         const resta = f.dur - t;
         if (resta < 0.3) alfa *= Math.max(0, resta / 0.3);
