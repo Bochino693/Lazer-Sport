@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d4fd8"/>
+      <stop offset=".45" stop-color="#0b2470"/>
+      <stop offset="1" stop-color="#050b1f"/>
+    </linearGradient>
+    <radialGradient id="brilhoFundo" cx="28%" cy="18%" r="70%">
+      <stop offset="0" stop-color="#6fb6ff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#6fb6ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vermelho" cx="38%" cy="32%" r="75%">
+      <stop offset="0" stop-color="#ff7482"/>
+      <stop offset=".45" stop-color="#ec2f45"/>
+      <stop offset="1" stop-color="#a50f26"/>
+    </radialGradient>
+    <radialGradient id="branco" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe6f3"/>
+    </radialGradient>
+    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+      <stop offset=".55" stop-color="#ff3d55" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ff3d55" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="haste" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#c9d3e6"/>
+      <stop offset=".5" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#aebbd3"/>
+    </linearGradient>
+    <linearGradient id="pena" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1f6fff"/>
+      <stop offset="1" stop-color="#6fe0ff"/>
+    </linearGradient>
+    <linearGradient id="pena2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1550d6"/>
+      <stop offset="1" stop-color="#3fb8ff"/>
+    </linearGradient>
+    <clipPath id="alvo"><circle cx="46" cy="54" r="29"/></clipPath>
+  </defs>
+  <rect width="100" height="100" fill="url(#fundo)"/>
+  <rect width="100" height="100" fill="url(#brilhoFundo)"/>
+  
+  <!-- o alvo -->
+  <circle cx="46" cy="54" r="36" fill="url(#aura)"/>
+  <circle cx="47" cy="56.5" r="29" fill="#050b1f" opacity=".45"/>
+  <circle cx="46" cy="54" r="29" fill="url(#vermelho)"/>
+  <circle cx="46" cy="54" r="21" fill="url(#branco)"/>
+  <circle cx="46" cy="54" r="13.4" fill="url(#vermelho)"/>
+  <circle cx="46" cy="54" r="6.4" fill="url(#branco)"/>
+  <circle cx="46" cy="54" r="2.6" fill="#e8243b"/>
+  <!-- o reflexo de cima, como um alvo de verdade sob a luz -->
+  <g clip-path="url(#alvo)">
+    <ellipse cx="36" cy="36" rx="26" ry="13" transform="rotate(-28 36 36)" fill="#ffffff" opacity=".22"/>
+  </g>
+  <!-- o dardo: a sombra no alvo, a haste metálica e as penas -->
+  <path d="M48.5 55.5 L72 32" stroke="#050b1f" stroke-opacity=".35" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M46.6 53.4 L71 29" stroke="url(#haste)" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M68.5 29.5 L66 17 Q75 10.5 85 11.5 Q79 16 74.5 23.5 Z" fill="url(#pena)" stroke="#0a1f5c" stroke-opacity=".55" stroke-width=".8" stroke-linejoin="round"/>
+  <path d="M70.5 31.5 L83 34 Q89.5 25 88.5 15 Q84 21 76.5 25.5 Z" fill="url(#pena2)" stroke="#0a1f5c" stroke-opacity=".55" stroke-width=".8" stroke-linejoin="round"/>
+  <path d="M68.5 19 Q74.5 14.2 81.5 13.4" stroke="#ffffff" stroke-opacity=".7" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  <circle cx="46.6" cy="53.4" r="3" fill="#ffffff"/>
+  <circle cx="46.6" cy="53.4" r="1.5" fill="#1f6fff"/>
+</svg>
