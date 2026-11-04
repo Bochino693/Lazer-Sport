@@ -143,6 +143,7 @@
 .produto-imagem-box {
     align-items: center;
     aspect-ratio: 1 / 1;
+    touch-action: pan-y pinch-zoom;
     background: #fff;
     border: 1px solid #e1e9f4;
     border-radius: 24px;
@@ -154,7 +155,9 @@
 }
 
 .produto-imagem-box img {
+    -webkit-user-drag: none;
     display: block;
+    user-select: none;
     height: 100%;
     object-fit: contain;
     transition: transform .35s ease;

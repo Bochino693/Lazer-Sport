@@ -422,6 +422,41 @@
         () => exibirFoto(indiceGaleria + 1)
     );
 
+    // No celular, arrastar a foto de lado passa para a próxima (ou volta),
+    // como nas lojas grandes; arrastar para cima ou para baixo rola a página.
+    const caixaFoto = imagemPrincipal && imagemPrincipal.closest('.produto-imagem-box');
+    if (caixaFoto && miniaturas.length > 1) {
+        let inicio = null;
+        caixaFoto.addEventListener('pointerdown', (evento) => {
+            if (evento.pointerType === 'mouse' || evento.target.closest('button, [data-visor3d]')) return;
+            inicio = { x: evento.clientX, y: evento.clientY };
+        });
+        caixaFoto.addEventListener('pointerup', (evento) => {
+            if (!inicio) return;
+            const dx = evento.clientX - inicio.x;
+            const dy = evento.clientY - inicio.y;
+            inicio = null;
+            if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+                exibirFoto(indiceGaleria + (dx < 0 ? 1 : -1));
+            }
+        });
+        caixaFoto.addEventListener('pointercancel', () => { inicio = null; });
+
+        // as fotos vizinhas já baixadas: a troca é na hora, sem branco
+        let preparadas = false;
+        const prepararFotos = () => {
+            if (preparadas) return;
+            preparadas = true;
+            miniaturas.forEach((miniatura) => {
+                const foto = new Image();
+                foto.decoding = 'async';
+                foto.src = miniatura.dataset.galeriaSrc;
+            });
+        };
+        caixaFoto.addEventListener('pointerenter', prepararFotos, { once: true });
+        caixaFoto.addEventListener('touchstart', prepararFotos, { once: true, passive: true });
+    }
+
     const estrelas = document.getElementById('produto-estrelas');
     if (estrelas) {
         const nota = Number(String(estrelas.dataset.avaliacao || '0').replace(',', '.')) || 0;
