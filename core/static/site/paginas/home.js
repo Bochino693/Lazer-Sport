@@ -395,7 +395,8 @@ function inicializarPecasClientSide() {
     const cards = Array.from(grid.querySelectorAll('.pecas-card-link'));
     if (!cards.length) return;
 
-    const porPagina = 9;
+    // quatro por linha no computador: duas linhas por página
+    const porPagina = 8;
     let pagina = 1;
     let categoriaAtiva = '';
 

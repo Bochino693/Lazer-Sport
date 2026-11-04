@@ -22,6 +22,7 @@
   const CARTOES = [
     ".card-produto .img-area",
     ".pecas-card .img-area",
+    ".pc-media",
     ".catalogo-card-media",
     ".loja-card-img",
     ".arena-product-visual",

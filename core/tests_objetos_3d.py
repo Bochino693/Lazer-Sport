@@ -11,7 +11,9 @@ O que estes testes protegem:
   * a Arena 3D usa o objeto do cadastro (endereço, medidas e código), e o
     "não mostrar na arena" tira;
   * a página do brinquedo ganha o visor 3D só quando há objeto;
-  * o painel aceita o .glb, guarda cores e medidas e tira o objeto.
+  * o painel aceita o .glb, guarda cores e medidas e tira o objeto;
+  * antes da migração da tabela (o código novo no ar, o banco ainda não),
+    a Arena, a página do brinquedo e o painel abrem sem o 3D, sem erro 500.
 """
 
 import importlib
@@ -26,12 +28,15 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from . import arena
 from .cadastro_modelos import achar_no_catalogo, ligar_objeto_3d
 from .models import Brinquedos, ObjetoTresD
+from . import objetos_3d
 from .objetos_3d import ler_glb, ler_glb_do_site, validar_glb
 
 migracao = importlib.import_module("core.migrations.0116_objetos_3d_do_site")
@@ -226,3 +231,54 @@ class PainelTests(TestCase):
         self.salvar(remover_objeto_3d="on")
         objeto = ObjetoTresD.objects.get(brinquedo=self.brinquedo)
         self.assertFalse(objeto.ativo)
+
+
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class AntesDaMigracaoTests(TestCase):
+    """Sem a tabela dos objetos 3D, nenhuma tela a consulta (e nada cai)."""
+
+    def setUp(self):
+        cache.clear()
+        self.strike = Brinquedos.objects.create(
+            nome_brinquedo="Strike Kids Boliche", descricao="x", avaliacao=5,
+            imagem_brinquedo="brinquedos/capa.webp",
+        )
+        ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
+        sem_tabela = mock.patch.object(objetos_3d, "tabela_pronta", return_value=False)
+        sem_tabela.start()
+        self.addCleanup(sem_tabela.stop)
+
+    def sem_consultar_a_tabela(self, *args, **kwargs):
+        with CaptureQueriesContext(connection) as consultas:
+            resposta = self.client.get(*args, **kwargs)
+        self.assertEqual(resposta.status_code, 200)
+        tabela = ObjetoTresD._meta.db_table
+        self.assertFalse([q["sql"] for q in consultas if tabela in q["sql"]])
+        return resposta
+
+    def test_arena_e_pagina_abrem_sem_o_3d(self):
+        resposta = self.sem_consultar_a_tabela(reverse("arena"))
+        dados = next(m for m in resposta.context["arena_dados"]["maquinas"] if m["nome"] == "Strike Kids Boliche")
+        self.assertEqual(dados["modelo"], "")
+        resposta = self.sem_consultar_a_tabela(reverse("brinquedo_detalhe", args=[self.strike.pk]))
+        self.assertNotContains(resposta, "data-visor3d")
+
+    def test_painel_abre_e_salva_sem_o_3d(self):
+        admin = User.objects.create_superuser(username="gestor", email="gestor@exemplo.com", password="senha-forte-123")
+        self.client.force_login(admin)
+        url = reverse("brinquedos_admin", urlconf="sistema_interno.urls")
+        self.sem_consultar_a_tabela(url, HTTP_HOST="interno.testserver")
+        dados = {"action": "save", "id": self.strike.pk, "nome_brinquedo": "Strike Kids Boliche", "descricao": "y"}
+        resposta = self.client.post(url, dados, HTTP_HOST="interno.testserver", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertIn("sucesso", resposta.content.decode())
+        # enviar um .glb antes da migração avisa o que fazer (e não cai)
+        dados["objeto_3d"] = SimpleUploadedFile("m.glb", glb(caixa([0, 0, 0], [1, 1, 1])))
+        resposta = self.client.post(url, dados, HTTP_HOST="interno.testserver", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertIn("migrate", resposta.content.decode())
+
+
+class TabelaProntaTests(TestCase):
+    def test_acha_a_tabela_criada_pela_migracao(self):
+        objetos_3d._tabela.update(pronta=False, conferida=0.0)
+        self.assertTrue(objetos_3d.tabela_pronta())
+        self.assertEqual(objetos_3d.prefetch_do_objeto(), ("objeto_3d",))

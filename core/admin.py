@@ -520,6 +520,12 @@ class BrinquedosAdmin(admin.ModelAdmin):
     ordering = ('-criacao',)
     inlines = [ImagemBrinquedoInline, ObjetoTresDInline]
 
+    def get_inlines(self, request, obj):
+        # antes da migração dos objetos 3D, o cadastro abre sem o bloco do 3D
+        from .objetos_3d import tabela_pronta
+
+        return self.inlines if tabela_pronta() else [ImagemBrinquedoInline]
+
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         brinquedo = form.instance

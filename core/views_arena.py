@@ -14,6 +14,7 @@ from django.views.generic import View
 
 from . import arena
 from .models import Brinquedos, ImagemBrinquedo
+from .objetos_3d import prefetch_do_objeto
 
 WHATSAPP = "5511960563135"
 
@@ -31,7 +32,8 @@ def brinquedos_da_arena():
         .prefetch_related(
             "categorias_brinquedos",
             "tags",
-            "objeto_3d",
+            # o 3D do cadastro (sem a tabela ainda, a arena segue sem ele)
+            *prefetch_do_objeto(),
             Prefetch(
                 "imagens_brinquedo",
                 queryset=ImagemBrinquedo.objects.order_by("ordem", "id"),

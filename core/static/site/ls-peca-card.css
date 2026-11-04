@@ -1,0 +1,433 @@
+/* ======================================================================
+   O CARTÃO DA PEÇA DE REPOSIÇÃO (partials/peca_card.html)
+
+   O mesmo na home e na página de peças. A foto num palco claro de estúdio
+   -- peça preta some em fundo escuro --, com a sombra no chão e um brilho
+   que passa ao apontar; o cartão é do tema escuro do site, com o anel
+   colorido da marca acendendo em volta. Os nomes começam com `pc-` para
+   não herdar nada das regras antigas (`.img-area`, `.pecas-card`).
+   ====================================================================== */
+
+@property --pc-giro {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+.pc-card {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(120, 170, 255, .16);
+    border-radius: 24px;
+    background:
+        radial-gradient(120% 60% at 100% 0%, rgba(47, 139, 255, .16), transparent 55%),
+        linear-gradient(165deg, rgba(21, 42, 98, .96), rgba(8, 17, 44, .98));
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .07);
+    color: #e8f0ff;
+    text-align: left;
+    transition: transform .4s cubic-bezier(.22, 1, .36, 1), box-shadow .4s ease, border-color .4s ease;
+}
+
+/* o anel colorido da marca, que acende e gira ao apontar */
+.pc-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -1px;
+    padding: 1.5px;
+    border-radius: inherit;
+    background: conic-gradient(from var(--pc-giro), #2f8bff, #e63946, #ffd23f, #22e07a, #2f8bff);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity .4s ease;
+    pointer-events: none;
+}
+
+@media (hover: hover) {
+    .pc-card:hover {
+        border-color: transparent;
+        transform: translateY(-6px);
+        box-shadow: 0 26px 60px rgba(0, 0, 0, .45), 0 0 0 1px rgba(47, 139, 255, .1), 0 18px 50px rgba(47, 139, 255, .18);
+    }
+
+    .pc-card:hover::before {
+        opacity: 1;
+        animation: pc-anel 4s linear infinite;
+    }
+}
+
+.pc-card:focus-within::before { opacity: 1; }
+
+@keyframes pc-anel { to { --pc-giro: 360deg; } }
+
+/* ---------- o palco da foto ---------- */
+.pc-media {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    border-radius: 17px;
+    background:
+        radial-gradient(70% 55% at 50% 38%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
+        linear-gradient(180deg, #f4f7fc 0%, #e4ebf6 62%, #cfdaeb 100%);
+    color: inherit;
+    text-decoration: none;
+}
+
+/* a sombra no chão, embaixo da peça */
+.pc-media::before {
+    content: "";
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 9%;
+    height: 9%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(12, 32, 72, .34), transparent);
+    transition: transform .5s cubic-bezier(.22, 1, .36, 1), opacity .5s ease;
+}
+
+/* o brilho que atravessa a vitrine ao apontar */
+.pc-media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .55) 50%, transparent 62%);
+    transform: translateX(-120%);
+    pointer-events: none;
+}
+
+.pc-foto {
+    position: absolute;
+    z-index: 1;
+    left: 10%;
+    top: 8%;
+    width: 80%;
+    height: 78%;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 14px rgba(15, 35, 70, .24));
+    transition: transform .55s cubic-bezier(.22, 1, .36, 1);
+}
+
+.pc-foto--vazia { opacity: .5; filter: none; }
+
+@media (hover: hover) {
+    .pc-card:hover .pc-foto { transform: translateY(-7px) scale(1.05) rotate(-2deg); }
+    .pc-card:hover .pc-media::before { transform: scale(.82); opacity: .7; }
+    .pc-card:hover .pc-media::after { transform: translateX(120%); transition: transform .9s ease; }
+}
+
+/* a foto com fundo próprio (marcada pelo ls-fotos.js) ocupa o palco todo */
+.pc-media.foto-cheia { background: #0b1532; }
+.pc-media.foto-cheia::before { display: none; }
+.pc-media.foto-cheia .pc-foto { inset: 0; width: 100%; height: 100%; object-fit: cover; filter: none; }
+
+.pc-selo,
+.pc-3d,
+.pc-espiar {
+    position: absolute;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    font-size: .64rem;
+    font-weight: 850;
+    letter-spacing: .05em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pc-selo {
+    top: 10px;
+    left: 10px;
+    padding: 6px 10px 6px 8px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(6, 16, 42, .82);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(6, 16, 42, .25);
+}
+
+.pc-selo i { color: #ffd23f; }
+
+.pc-3d {
+    bottom: 10px;
+    left: 10px;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, #e63946, #ff7a45);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(230, 57, 70, .35);
+}
+
+.pc-espiar {
+    left: 50%;
+    bottom: 12px;
+    padding: 8px 13px;
+    background: rgba(6, 16, 42, .86);
+    color: #fff;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity .3s ease, transform .3s ease;
+}
+
+@media (hover: hover) {
+    .pc-card:hover .pc-espiar { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---------- o texto ---------- */
+.pc-corpo {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 6px 4px;
+}
+
+.pc-categorias {
+    display: flex;
+    gap: 6px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+
+.pc-categoria {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border: 1px solid rgba(47, 139, 255, .26);
+    border-radius: 999px;
+    background: rgba(47, 139, 255, .12);
+    color: #a9d4ff;
+    font-size: .64rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.pc-categoria::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3fd0ff;
+}
+
+.pc-categoria:nth-child(2)::before { background: #ff6b8a; }
+.pc-categoria:nth-child(3)::before { background: #ffd23f; }
+
+.pc-nome {
+    display: -webkit-box;
+    min-height: 2.5em;
+    margin: 0;
+    overflow: hidden;
+    font-family: "Poppins", sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -.005em;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.pc-nome a { color: #fff; text-decoration: none; }
+.pc-nome a:hover { color: #9fe6ff; }
+
+.pc-desc {
+    display: -webkit-box;
+    min-height: 3em;
+    margin: 0;
+    overflow: hidden;
+    color: #9fb2cf;
+    font-size: .8rem;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.pc-rodape {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(120, 170, 255, .2);
+}
+
+.pc-preco small {
+    display: block;
+    margin-bottom: 3px;
+    color: #7f93b5;
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.pc-preco strong {
+    display: block;
+    background: linear-gradient(90deg, #ffffff, #8fe3ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: "Poppins", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -.03em;
+    white-space: nowrap;
+}
+
+.pc-preco strong.pc-consulta {
+    background: none;
+    color: #ffd23f;
+    font-size: 1.1rem;
+}
+
+/* a curtida e a lista de desejos, no canto da foto */
+.pc-favoritos {
+    position: absolute;
+    z-index: 4;
+    top: 18px;
+    right: 18px;
+}
+
+/* ---------- os botões ---------- */
+.pc-acoes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 46px;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.pc-botao {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 14px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 850;
+    text-decoration: none;
+    transition: transform .22s ease, box-shadow .22s ease, background .22s ease;
+}
+
+.pc-carrinho {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #1f6fff, #3fa2ff);
+    box-shadow: 0 10px 24px rgba(31, 111, 255, .34), inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+
+.pc-carrinho:hover {
+    background: linear-gradient(135deg, #e63946, #ff6b3d);
+    box-shadow: 0 14px 30px rgba(230, 57, 70, .38);
+    transform: translateY(-2px);
+}
+
+.pc-carrinho.is-loading { opacity: .75; cursor: wait; pointer-events: none; }
+
+.pc-carrinho.is-added {
+    background: linear-gradient(135deg, #079452, #22e07a);
+    box-shadow: 0 10px 24px rgba(7, 148, 82, .32);
+}
+
+.pc-zap {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #128c4a, #25d366);
+    box-shadow: 0 10px 24px rgba(18, 140, 74, .3);
+}
+
+.pc-zap:hover { color: #fff; box-shadow: 0 14px 30px rgba(18, 140, 74, .4); transform: translateY(-2px); }
+
+.pc-detalhes {
+    border: 1px solid rgba(120, 170, 255, .24);
+    background: rgba(255, 255, 255, .06);
+    color: #cfe3ff;
+}
+
+.pc-detalhes i { transition: transform .25s ease; }
+
+.pc-detalhes:hover {
+    border-color: transparent;
+    background: #fff;
+    color: #0a2a73;
+    transform: translateY(-2px);
+}
+
+.pc-detalhes:hover i { transform: translateX(3px) rotate(-30deg); }
+
+.pc-curto { display: none; }
+
+.pc-media:focus-visible,
+.pc-nome a:focus-visible,
+.pc-botao:focus-visible {
+    outline: 3px solid #ffd23f;
+    outline-offset: 3px;
+}
+
+/* ---------- a grade ---------- */
+.pecas-grid.pc-grade,
+.pc-grade {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+}
+
+@media (max-width: 1280px) {
+    .pecas-grid.pc-grade, .pc-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+    .pecas-grid.pc-grade, .pc-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+}
+
+/* celular: duas por linha, mais enxutas (sem a descrição) */
+@media (max-width: 560px) {
+    .pecas-grid.pc-grade, .pc-grade { gap: 10px; }
+    .pc-card { padding: 6px; border-radius: 18px; }
+    .pc-media { border-radius: 13px; }
+    /* o selo vira só o escudo: o canto de cima é dividido com a curtida */
+    .pc-selo { top: 6px; left: 6px; width: 26px; height: 26px; justify-content: center; padding: 0; font-size: .62rem; }
+    .pc-selo .pc-longo,
+    .pc-selo .pc-curto { display: none; }
+    .pc-3d { bottom: 6px; left: 6px; padding: 5px 7px; font-size: .55rem; }
+    .pc-favoritos { top: 11px; right: 11px; transform: scale(.82); transform-origin: top right; }
+    .pc-corpo { gap: 6px; padding: 10px 4px 2px; }
+    .pc-categoria { padding: 3px 7px; font-size: .58rem; }
+    .pc-nome { font-size: .84rem; }
+    .pc-desc { display: none; }
+    .pc-rodape { padding-top: 8px; }
+    .pc-preco strong { font-size: 1.12rem; }
+    .pc-preco strong.pc-consulta { font-size: .9rem; }
+    .pc-acoes { grid-template-columns: minmax(0, 1fr) 38px; gap: 6px; }
+    .pc-botao { min-height: 38px; border-radius: 11px; font-size: .72rem; }
+    .pc-carrinho, .pc-zap { padding: 8px 8px; gap: 6px; }
+    .pc-longo { display: none; }
+    .pc-curto { display: inline; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pc-card, .pc-foto, .pc-media::before, .pc-media::after, .pc-espiar { transition: none; }
+    .pc-card:hover::before { animation: none; }
+}

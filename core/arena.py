@@ -573,10 +573,10 @@ def objeto_3d_do_cadastro(brinquedo):
     Espera `objeto_3d` trazido com `prefetch_related` (sem objeto, o acesso
     levanta a exceção da relação vazia -- daí o getattr).
     """
-    objeto = getattr(brinquedo, "objeto_3d", None)
-    if objeto is None or not objeto.ativo or not objeto.exibir_na_arena:
-        return None
-    return objeto if objeto.url else None
+    from .objetos_3d import objeto_do_brinquedo
+
+    objeto = objeto_do_brinquedo(brinquedo)
+    return objeto if objeto is not None and objeto.exibir_na_arena else None
 
 
 def modelos_fora_do_catalogo(catalogo):

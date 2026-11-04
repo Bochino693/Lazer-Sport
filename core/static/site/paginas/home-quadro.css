@@ -794,3 +794,125 @@
     .ls-arena-jogo { border-radius: 14px; }
     .ls-arena-jogo span { opacity: 1; transform: none; font-size: .62rem; }
 }
+
+/* ======================================================================
+   A PONTE ENTRE O QUADRO E O CATÁLOGO
+
+   O quadro inicial e "Brinquedos em Destaque" eram dois cartões
+   encostados, canto redondo com canto redondo -- a emenda parecia erro.
+   Agora há um respiro entre os dois, e nele passa o letreiro das
+   novidades, numa faixa de vidro com o rótulo aceso e um botão que desce
+   para o catálogo.
+   ====================================================================== */
+.ls-ponte {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0;
+    padding: 7px 7px 7px 8px;
+    border: 1px solid rgba(120, 170, 255, .16);
+    border-radius: 999px;
+    background:
+        linear-gradient(90deg, rgba(47, 139, 255, .14), rgba(230, 57, 70, .08) 55%, rgba(255, 210, 63, .08)),
+        rgb(7, 15, 40);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+/* a linha de luz que passa por baixo da faixa e liga os dois blocos */
+.ls-ponte::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: -19px;
+    bottom: -19px;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, rgba(63, 208, 255, .7), transparent);
+    transform: translateX(-50%);
+}
+
+.ls-ponte-rotulo {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e63946, #ff6b3d);
+    box-shadow: 0 8px 20px rgba(230, 57, 70, .35);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 900;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.ls-ponte-rotulo i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, .8);
+    animation: ls-ponte-ponto 1.6s ease-out infinite;
+}
+
+@keyframes ls-ponte-ponto {
+    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .8); }
+    100% { box-shadow: 0 0 0 9px rgba(255, 255, 255, 0); }
+}
+
+.ls-ponte .ls-letreiro {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+}
+
+.ls-ponte .ls-letreiro-trilho { padding: 8px 6px; }
+
+.ls-ponte-descer {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(120, 170, 255, .25);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .06);
+    color: #cfe3ff;
+    text-decoration: none;
+    transition: background .25s ease, color .25s ease, transform .25s ease;
+}
+
+.ls-ponte-descer:hover { background: #fff; color: #0a2a73; transform: translateY(2px); }
+.ls-ponte-descer i { animation: ls-ponte-seta 2s ease-in-out infinite; }
+
+@keyframes ls-ponte-seta {
+    0%, 100% { transform: translateY(-2px); }
+    50% { transform: translateY(3px); }
+}
+
+/* o título das seções com a parte que brilha nas cores da marca */
+.ls-titulo-brilho {
+    background: linear-gradient(90deg, #4fb3ff 0%, #a98bff 45%, #ff6b8a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 640px) {
+    .ls-ponte { gap: 8px; margin: 12px 0; padding: 5px; }
+    .ls-ponte::before { top: -13px; bottom: -13px; }
+    .ls-ponte-rotulo { padding: 7px 10px; font-size: .62rem; letter-spacing: .06em; }
+    .ls-ponte .ls-letreiro-item { font-size: .78rem; }
+    .ls-ponte-descer { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-ponte-rotulo i,
+    .ls-ponte-descer i { animation: none; }
+}

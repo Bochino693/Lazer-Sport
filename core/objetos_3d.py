@@ -12,15 +12,73 @@ sem abrir o 3D: só o cabeçalho e o JSON do .glb.
 
 import json
 import struct
+import time
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
+from django.db import DatabaseError, connection
 
 #: O maior .glb aceito no cadastro (o Cloudinary recusa arquivos "raw"
 #: maiores que 10 MB no plano de entrada; acima disso, o upload falharia
 #: no meio, depois da validação).
 TAMANHO_MAXIMO = 10 * 1024 * 1024
+
+
+# ----------------------------------------------------------------------
+# ANTES DA MIGRAÇÃO
+#
+# O código novo pode chegar ao servidor antes de a migração que cria a
+# tabela dos objetos 3D (0115) rodar no banco -- num deploy, ou num
+# computador que puxou o código e ainda não rodou `migrate`. Sem a tabela,
+# a consulta do 3D derrubava a Arena e a página do brinquedo com erro 500.
+# Agora as telas conferem primeiro: sem a tabela, seguem sem o 3D do
+# cadastro (as fotos e o resto da página de pé) até a migração rodar.
+# ----------------------------------------------------------------------
+
+_tabela = {"pronta": False, "conferida": 0.0}
+
+
+def tabela_pronta():
+    """A tabela dos objetos 3D já existe no banco?
+
+    Uma vez achada, não se confere mais. Enquanto não existe, confere de
+    novo a cada 30 s (a migração pode rodar com o site no ar).
+    """
+    if _tabela["pronta"]:
+        return True
+    agora = time.monotonic()
+    if _tabela["conferida"] and agora - _tabela["conferida"] < 30:
+        return False
+    _tabela["conferida"] = agora
+    from .models import ObjetoTresD
+
+    try:
+        with connection.cursor() as cursor:
+            tabelas = connection.introspection.table_names(cursor)
+    except DatabaseError:
+        return False
+    _tabela["pronta"] = ObjetoTresD._meta.db_table in tabelas
+    return _tabela["pronta"]
+
+
+def prefetch_do_objeto():
+    """O `prefetch_related` do objeto 3D, só quando a tabela existe."""
+    return ("objeto_3d",) if tabela_pronta() else ()
+
+
+def objeto_do_brinquedo(brinquedo, so_ativo=True):
+    """O objeto 3D já trazido com o brinquedo (prefetch), ou None.
+
+    Nunca consulta o banco: sem o `prefetch_do_objeto()` (ou sem a tabela),
+    é None -- e a tela segue sem o 3D, em vez de cair.
+    """
+    if not type(brinquedo).objeto_3d.is_cached(brinquedo):
+        return None
+    objeto = getattr(brinquedo, "objeto_3d", None)
+    if objeto is None or (so_ativo and not (objeto.ativo and objeto.url)):
+        return None
+    return objeto
 
 
 def armazenamento():

@@ -34,6 +34,8 @@ from django.templatetags.static import static
 # Ciclo carrinho -> pedido reservado -> pedido pago.
 from . import checkout
 from . import arena, painel_publico
+from . import objetos_3d
+from .objetos_3d import objeto_do_brinquedo, prefetch_do_objeto
 from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
 from .home_cache import (
     admin_catalog_etag,
@@ -511,7 +513,8 @@ class ReposicaoView(View):
         # `da_vitrine` -- ativa, e da loja.
         pecas = list(
             PecasReposicao.da_vitrine()
-            .prefetch_related("imagem_peca_reposicao")
+            .prefetch_related("imagem_peca_reposicao", "categoria_peca")
+            .order_by("nome")
         )
 
         # Estado dos corações resolvido em três consultas, não uma por
@@ -845,15 +848,13 @@ class BrinquedoInfoView(View):
                 "categorias_brinquedos",
                 "tags",
                 "imagens_brinquedo",
-                "objeto_3d",
+                *prefetch_do_objeto(),
             ),
             id=id,
             ativo=True,
         )
         # o objeto 3D do cadastro (o .glb): o visor da página, além das fotos
-        objeto_3d = getattr(brinquedo, "objeto_3d", None)
-        if objeto_3d is not None and not (objeto_3d.ativo and objeto_3d.url):
-            objeto_3d = None
+        objeto_3d = objeto_do_brinquedo(brinquedo)
 
         obj, created = BrinquedoClick.objects.get_or_create(
             brinquedo_clicado=brinquedo,
@@ -2588,7 +2589,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "categorias_brinquedos",
                 "tags",
                 "imagens_brinquedo",
-                "objeto_3d",
+                *prefetch_do_objeto(),
             )
             .order_by("nome_brinquedo", "id")
         )
@@ -2721,8 +2722,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
     @staticmethod
     def _dados_do_objeto_3d(brinquedo):
         """O objeto 3D do brinquedo para o modal (nome do arquivo e cores), ou None."""
-        objeto = getattr(brinquedo, "objeto_3d", None)
-        if not objeto or not objeto.ativo or not objeto.url:
+        objeto = objeto_do_brinquedo(brinquedo)
+        if objeto is None:
             return None
         nome = (objeto.arquivo.name if objeto.arquivo else objeto.arquivo_estatico).rsplit("/", 1)[-1]
         return {
@@ -2883,6 +2884,13 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         arquivo = request.FILES.get("objeto_3d")
         remover = request.POST.get("remover_objeto_3d") == "on" and not arquivo
         lido = {"cores": [], "medidas": []}
+        if (arquivo or remover) and not objetos_3d.tabela_pronta():
+            if remover:
+                return None, lido, False
+            raise ErroDeFormulario(
+                "Objeto 3D: o banco ainda não tem a tabela dos objetos 3D. "
+                "Rode `python manage.py migrate` e envie de novo."
+            )
         if arquivo:
             try:
                 lido = validar_glb(arquivo)
@@ -2894,6 +2902,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         """O objeto 3D do brinquedo: troca o arquivo (as cores vêm junto) ou tira."""
         from .models import ObjetoTresD
 
+        if not arquivo and not remover:
+            return
         atual = ObjetoTresD.objects.filter(brinquedo=brinquedo).first()
         if remover and atual:
             if atual.arquivo:
