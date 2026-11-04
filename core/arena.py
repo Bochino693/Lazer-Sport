@@ -485,20 +485,22 @@ def jogo_da_maquina(nome):
     return ""
 
 
-#: Os avisos que a foto da máquina leva em faixa diagonal, no canto: o que
-#: ela tem de especial e o cliente precisa saber antes de pedir. Vão pelo
-#: jogo da máquina (`jogo_da_maquina`), e por enquanto só o Lazer Shot tem.
+#: Os recursos que a foto da máquina mostra em selos com ícone, no canto: o
+#: que ela tem de especial e o cliente precisa saber antes de pedir, com a
+#: explicação de cada um. Vão pelo jogo da máquina (`jogo_da_maquina`).
 AVISOS = {
-    "camera": {"texto": "Contém câmera", "curto": "Câmera"},
-    "arma": {"texto": "Arma personalizada", "curto": "Arma própria"},
+    "camera": {"texto": "Contém câmera", "curto": "Câmera", "explica": "Tira a foto do jogador para o ranking"},
+    "arma": {"texto": "Arma personalizada", "curto": "Arma própria", "explica": "Pistola de luz feita para a máquina"},
+    "sensores": {"texto": "5 sensores de precisão", "curto": "5 sensores", "explica": "Leem cada jogada da bola na pista"},
 }
 AVISOS_DO_JOGO = {
     "lazer-shot": ("camera", "arma"),
+    "strike-kids": ("camera", "sensores"),
 }
 
 
 def avisos_da_maquina(nome):
-    """As faixas da foto desta máquina: [{"id", "texto", "curto"}], ou []."""
+    """Os selos da foto desta máquina: [{"id", "texto", "curto", "explica"}], ou []."""
     return [{"id": aviso, **AVISOS[aviso]} for aviso in AVISOS_DO_JOGO.get(jogo_da_maquina(nome), ())]
 
 

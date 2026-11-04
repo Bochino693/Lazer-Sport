@@ -276,20 +276,27 @@ class SecoesDaArenaTests(TestCase):
         self.assertEqual(arena.jogo_da_maquina("Boxe Força Máxima"), "")
         self.assertEqual(arena.jogo_da_maquina("Mundo Zumbi"), "")
 
-    def test_faixas_de_aviso_so_no_lazer_shot(self):
+    def test_selos_de_recursos_do_lazer_shot_e_do_strike_kids(self):
         self.assertEqual([a["id"] for a in arena.avisos_da_maquina("Lazer Shot")], ["camera", "arma"])
+        self.assertEqual([a["id"] for a in arena.avisos_da_maquina("Strike Kids Boliche")], ["camera", "sensores"])
         self.assertEqual(arena.avisos_da_maquina("Dragon Bowling Rosa"), [])
         self.assertEqual(arena.avisos_da_maquina("Basquete Street"), [])
         lazer = _brinquedo("Lazer Shot")
         _brinquedo("Air Game Hockey")
+        _brinquedo("Strike Kids Boliche")
         pagina = self.client.get(reverse("brinquedo_detalhe", args=[lazer.pk])).content.decode()
-        self.assertIn('aria-label="Contém câmera e Arma personalizada"', pagina)
+        self.assertIn('aria-label="Recursos: Contém câmera e Arma personalizada"', pagina)
+        # cada selo com o ícone, o nome curto e a explicação
+        self.assertIn('data-aviso="camera"', pagina)
+        self.assertIn("Tira a foto do jogador para o ranking", pagina)
         catalogo = self.client.get(reverse("brinquedos")).content.decode()
-        self.assertEqual(catalogo.count('class="ls-faixas"'), 1)
-        # na galeria de fotos da arena tem; na ficha da Arena 3D, não
+        self.assertEqual(catalogo.count('class="ls-recursos"'), 2)
+        # na galeria de fotos da arena tem (o Lazer Shot e o Strike Kids);
+        # na ficha da Arena 3D, não
         html = self.client.get(reverse("arena")).content.decode()
-        self.assertEqual(html.count('class="ls-faixas"'), 1)
-        self.assertNotIn("ls-faixas", html.split('id="arena-3d"')[1].split('id="maquinas"')[0])
+        self.assertEqual(html.count('class="ls-recursos"'), 2)
+        self.assertIn("5 sensores de precisão", html)
+        self.assertNotIn("ls-recursos", html.split('id="arena-3d"')[1].split('id="maquinas"')[0])
 
     def test_pagina_do_produto_sem_3d(self):
         boliche = _brinquedo("Dragon Bowling Rosa")
