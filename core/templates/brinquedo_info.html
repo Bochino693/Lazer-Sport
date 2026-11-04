@@ -102,7 +102,30 @@
                         </div>
                     {% endif %}
                     {% faixas brinquedo.nome_brinquedo %}
+                    {% if objeto_3d %}
+                        {% comment %}
+                          O objeto 3D do cadastro: gira com o dedo ou o mouse, aproxima e
+                          troca de cor. O 3D só baixa quando a pessoa toca em "Ver em 3D".
+                        {% endcomment %}
+                        <div class="produto-visor3d" data-visor3d hidden
+                             data-modelo="{{ objeto_3d.url }}"
+                             data-three="{% static 'vendor/three/three.module.min.js' %}"
+                             data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+                             data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
+                            <canvas data-visor3d-tela tabindex="0" aria-label="{{ brinquedo.nome_brinquedo }} em 3D: arraste para girar, role ou pince para aproximar"></canvas>
+                            <p class="produto-visor3d-aviso" data-visor3d-aviso hidden></p>
+                            <span class="produto-visor3d-dica" aria-hidden="true"><i class="fa-solid fa-hand-pointer"></i> Arraste para girar · pince ou role para aproximar</span>
+                            <button class="produto-visor3d-fechar" type="button" data-visor3d-fechar><i class="fa-regular fa-image" aria-hidden="true"></i> Fotos</button>
+                        </div>
+                        <button class="produto-ver-3d" type="button" data-visor3d-abrir aria-pressed="false">
+                            <i class="fa-solid fa-cube" aria-hidden="true"></i> Ver em 3D
+                        </button>
+                    {% endif %}
                 </div>
+
+                {% if objeto_3d %}
+                    <div class="produto-cores3d" data-visor3d-cores role="group" aria-label="Cores do objeto 3D" hidden></div>
+                {% endif %}
 
                 {% if imagens_brinquedo|length > 1 %}
                     <div class="produto-miniaturas" aria-label="Fotos de {{ brinquedo.nome_brinquedo }}">
@@ -399,6 +422,41 @@
         () => exibirFoto(indiceGaleria + 1)
     );
 
+    // No celular, arrastar a foto de lado passa para a próxima (ou volta),
+    // como nas lojas grandes; arrastar para cima ou para baixo rola a página.
+    const caixaFoto = imagemPrincipal && imagemPrincipal.closest('.produto-imagem-box');
+    if (caixaFoto && miniaturas.length > 1) {
+        let inicio = null;
+        caixaFoto.addEventListener('pointerdown', (evento) => {
+            if (evento.pointerType === 'mouse' || evento.target.closest('button, .produto-visor3d')) return;
+            inicio = { x: evento.clientX, y: evento.clientY };
+        });
+        caixaFoto.addEventListener('pointerup', (evento) => {
+            if (!inicio) return;
+            const dx = evento.clientX - inicio.x;
+            const dy = evento.clientY - inicio.y;
+            inicio = null;
+            if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+                exibirFoto(indiceGaleria + (dx < 0 ? 1 : -1));
+            }
+        });
+        caixaFoto.addEventListener('pointercancel', () => { inicio = null; });
+
+        // as fotos vizinhas já baixadas: a troca é na hora, sem branco
+        let preparadas = false;
+        const prepararFotos = () => {
+            if (preparadas) return;
+            preparadas = true;
+            miniaturas.forEach((miniatura) => {
+                const foto = new Image();
+                foto.decoding = 'async';
+                foto.src = miniatura.dataset.galeriaSrc;
+            });
+        };
+        caixaFoto.addEventListener('pointerenter', prepararFotos, { once: true });
+        caixaFoto.addEventListener('touchstart', prepararFotos, { once: true, passive: true });
+    }
+
     const estrelas = document.getElementById('produto-estrelas');
     if (estrelas) {
         const nota = Number(String(estrelas.dataset.avaliacao || '0').replace(',', '.')) || 0;
@@ -547,5 +605,8 @@
     }
 })();
 </script>
+{% if objeto_3d %}
+<script type="module" src="{% estatico 'site/arena/visor3d.js' %}"></script>
+{% endif %}
 
 {% endblock %}

@@ -509,6 +509,109 @@ class ImagemBrinquedo(Prime):
 
 
 
+def _armazenamento_3d():
+    # chamado pelo campo (e não na hora do import): a escolha acompanha o
+    # settings de cada ambiente, inclusive o dos testes
+    from .objetos_3d import armazenamento
+
+    return armazenamento()
+
+
+class ObjetoTresD(Prime):
+    """O OBJETO 3D de um brinquedo: o .glb da máquina, com as cores dele.
+
+    POR QUE UM CADASTRO. Até aqui o 3D da Arena se ligava ao brinquedo
+    pelo nome, no código (core/arena.py, MODELOS_3D). Toda máquina vai ter
+    o seu: o objeto entra no cadastro do brinquedo e a ligação é do banco
+    -- a Arena 3D e a página do brinquedo mostram o objeto e um botão por
+    cor. As CORES são as variações de material de dentro do próprio .glb,
+    e as MEDIDAS, o tamanho dele -- as duas lidas ao gravar (ver
+    core/objetos_3d.py).
+
+    `arquivo` é o .glb enviado pelo painel; `arquivo_estatico`, o caminho
+    de um objeto que vem com o site (static/...), para os feitos aqui.
+    `codigo` liga o objeto ao que a Arena sabe fazer com ele (animações e
+    passeio: `ANIMACOES` e `CAMINHOS` do arena3d.js, `MODELOS_3D`).
+    """
+
+    brinquedo = models.OneToOneField(
+        Brinquedos,
+        on_delete=models.CASCADE,
+        related_name="objeto_3d",
+        verbose_name="Brinquedo",
+    )
+    arquivo = models.FileField(
+        upload_to="objetos_3d/",
+        storage=_armazenamento_3d,
+        blank=True,
+        verbose_name="Arquivo 3D (.glb)",
+    )
+    arquivo_estatico = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Objeto do site",
+        help_text="Caminho em static (ex.: site/arena/modelos/strike-kids.glb). Usado quando não há arquivo enviado.",
+    )
+    codigo = models.SlugField(
+        max_length=60,
+        blank=True,
+        verbose_name="Código na Arena",
+        help_text="Liga o objeto às animações e ao passeio da Arena (ex.: espaco-esportivo-modelo-1).",
+    )
+    cores = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Cores",
+        help_text="As cores de dentro do .glb (lidas sozinhas ao gravar o arquivo).",
+    )
+    medidas = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Medidas do objeto",
+        help_text="Altura, largura e profundidade do .glb, em metros (lidas sozinhas ao gravar o arquivo).",
+    )
+    exibir_na_arena = models.BooleanField(default=True, verbose_name="Mostrar na Arena 3D")
+
+    def __str__(self):
+        return f"Objeto 3D — {self.brinquedo}"
+
+    @property
+    def url(self):
+        """O endereço do .glb (o enviado vence o do site); "" sem nenhum."""
+        if self.arquivo:
+            try:
+                return self.arquivo.url
+            except Exception:
+                return ""
+        if self.arquivo_estatico:
+            from sistema_interno.templatetags.interno_extras import estatico
+
+            return estatico(self.arquivo_estatico)
+        return ""
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        from .objetos_3d import ler_glb_do_site, validar_glb
+
+        if not self.arquivo and not self.arquivo_estatico:
+            raise ValidationError("Envie o arquivo .glb do objeto 3D.")
+        if self.arquivo and not getattr(self.arquivo, "_committed", True):
+            lido = validar_glb(self.arquivo)
+        elif not self.arquivo:
+            lido = ler_glb_do_site(self.arquivo_estatico)
+            if not lido["medidas"]:
+                raise ValidationError({"arquivo_estatico": "Não há um .glb neste caminho do site."})
+        else:
+            return
+        self.cores = lido["cores"]
+        self.medidas = lido["medidas"]
+
+    class Meta:
+        verbose_name = "Objeto 3D do brinquedo"
+        verbose_name_plural = "Objetos 3D dos brinquedos"
+
+
 class CategoriaPeca(Prime):
     nome_categoria_peca = models.CharField(max_length=90)
 

@@ -1576,7 +1576,10 @@ class Maquina {
   async vestirModelo() {
     const T = this.arena.T;
     try {
-      const objeto = await this.arena.carregarModelo(this.modelo);
+      const gltf = await this.arena.carregarModelo(this.modelo);
+      const objeto = gltf.scene;
+      // o arquivo inteiro fica guardado: as cores trocam os materiais dele
+      this.gltf = gltf;
       this.limpar();
       const caixa = new T.Box3().setFromObject(objeto);
       const tamanho = caixa.getSize(new T.Vector3());
@@ -1594,6 +1597,8 @@ class Maquina {
       if (animacao && !this.animar) this.animar = animacao(this.arena, this);
       this.ajustarPivo();
       this.marcar();
+      // escolhida antes de o objeto chegar: as cores aparecem agora na ficha
+      if (this.arena.selecionada === this) this.arena.mostrarCores(this);
     } catch (erro) {
       // sem o objeto, a máquina volta para o volume feito das fotos
       console.error("Arena 3D: o objeto 3D não carregou", erro);
@@ -1975,8 +1980,57 @@ class Arena {
     if (!this.carregadorGLB) {
       this.carregadorGLB = import(this.palco.dataset.gltf).then((modulo) => new modulo.GLTFLoader());
     }
-    const gltf = await (await this.carregadorGLB).loadAsync(url);
-    return gltf.scene;
+    return (await this.carregadorGLB).loadAsync(url);
+  }
+
+  /** O módulo das cores dos objetos 3D (cores3d.js), na primeira vez que precisa. */
+  modulosDeCor() {
+    if (!this.cores3d) this.cores3d = import(this.palco.dataset.cores3d);
+    return this.cores3d;
+  }
+
+  /**
+   * As cores do objeto 3D na ficha: as variações que o arquivo traz ou os
+   * tons da adesivagem. Tocar numa veste a máquina naquela cor.
+   */
+  async mostrarCores(m) {
+    const caixa = this.ficha && this.ficha.querySelector("[data-ficha-cores]");
+    if (!caixa) return;
+    // a ficha pode pedir de novo antes de a primeira chegar: vale a última
+    const vez = (this.vezDasCores = (this.vezDasCores || 0) + 1);
+    caixa.hidden = true;
+    caixa.replaceChildren();
+    if (!m.gltf || !this.palco.dataset.cores3d) return;
+    let modulo;
+    try {
+      modulo = await this.modulosDeCor();
+    } catch (erro) {
+      return;
+    }
+    if (vez !== this.vezDasCores || this.selecionada !== m) return;
+    const cores = modulo.coresDoObjeto(m.gltf);
+    if (cores.length < 2) return;
+    const rotulo = document.createElement("span");
+    rotulo.textContent = "Cores:";
+    const botoes = cores.map((cor, i) => {
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = "arena3d-cor";
+      botao.setAttribute("aria-pressed", i === (m.corEscolhida || 0) ? "true" : "false");
+      const amostra = modulo.amostraDaCor(m.gltf, cor);
+      if (amostra) botao.style.setProperty("--amostra", amostra);
+      const bolinha = document.createElement("i");
+      bolinha.setAttribute("aria-hidden", "true");
+      botao.append(bolinha, document.createTextNode(cor.nome));
+      botao.addEventListener("click", async () => {
+        m.corEscolhida = i;
+        botoes.forEach((x) => x.setAttribute("aria-pressed", x === botao ? "true" : "false"));
+        await modulo.aplicarCor(m.gltf, cor);
+      });
+      return botao;
+    });
+    caixa.replaceChildren(rotulo, ...botoes);
+    caixa.hidden = false;
   }
 
   /** A plataforma do brinquedão comprido: retângulo de cantos redondos, com a faixa de luz. */
@@ -2185,18 +2239,39 @@ class Arena {
     neon(300, "#e63946", 5);
     neon(860, "#2f8bff", 8);
 
+    // O nome da casa em volta do centro, para ser LIDO por quem olha de fora
+    // da roda (a vista de sempre): o pé das letras para fora, o topo para o
+    // meio, e a frase correndo da esquerda para a direita de quem está ali.
+    // Cada letra ocupa a largura dela (um "I" não fica com o espaço de um
+    // "W"), e a frase fecha a volta certinha.
+    const texto = "LAZER & SPORT  •  ARENA 3D  •  FÁBRICA DE BRINQUEDOS  •  ";
+    const raioTexto = 250 * k;
+    let alturaLetra = 46 * k;
+    g.font = `800 ${alturaLetra}px Poppins, Manrope, sans-serif`;
+    const espaco = 0.06; // o respiro entre as letras, em fração da altura
+    const larguraDe = (letra) => g.measureText(letra).width + alturaLetra * espaco;
+    let volta = [...texto].reduce((soma, letra) => soma + larguraDe(letra), 0);
+    // a altura de letra que faz a frase dar a volta inteira
+    alturaLetra *= (PI * 2 * raioTexto) / volta;
+    g.font = `800 ${alturaLetra}px Poppins, Manrope, sans-serif`;
+    volta = [...texto].reduce((soma, letra) => soma + larguraDe(letra), 0);
     g.save();
     g.translate(meio, meio);
-    g.fillStyle = "rgba(255, 255, 255, .55)";
-    g.font = `800 ${46 * k}px Poppins, Manrope, sans-serif`;
     g.textAlign = "center";
     g.textBaseline = "middle";
-    const frase = "LAZER & SPORT  ·  ARENA 3D  ·  FÁBRICA DE BRINQUEDOS  ·  ";
-    const letras = (frase + frase).split("");
-    letras.forEach((letra, i) => {
+    g.shadowColor = "rgba(63, 208, 255, .55)";
+    g.shadowBlur = 12 * k;
+    g.fillStyle = "rgba(255, 255, 255, .78)";
+    let andado = 0;
+    const comeco = PI / 2; // a primeira letra embaixo, de frente para a entrada
+    [...texto].forEach((letra) => {
+      const largura = larguraDe(letra);
+      const a = comeco - ((andado + largura / 2) / volta) * PI * 2;
+      andado += largura;
+      if (letra === " ") return;
       g.save();
-      g.rotate((i / letras.length) * PI * 2);
-      g.translate(0, -250 * k);
+      g.translate(Math.cos(a) * raioTexto, Math.sin(a) * raioTexto);
+      g.rotate(a - PI / 2);
       g.fillText(letra, 0, 0);
       g.restore();
     });
@@ -3113,6 +3188,8 @@ class Arena {
     const jogar = f.querySelector("[data-ficha-jogar]");
     jogar.hidden = !b.jogo;
     if (b.jogo) jogar.href = `${jogar.dataset.base}${b.jogo}/`;
+    // as cores do objeto 3D (quando a máquina tem um)
+    this.mostrarCores(m);
     // num espaço inteiro, os jogos da casa que rodam nele (Swish, Gol Flash)
     const jogos = f.querySelector("[data-ficha-jogos]");
     if (jogos) {

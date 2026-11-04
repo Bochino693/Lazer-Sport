@@ -170,6 +170,30 @@
           <div id="imgCounter" class="counter"><span>PERFIL é a capa obrigatória.</span><strong><span id="imgCount">0</span>/3 imagens</strong></div>
         </section>
 
+        {% comment %}
+          O OBJETO 3D da máquina (.glb): aparece na Arena 3D e na página do
+          brinquedo, além das fotos. As cores do botão "cores" saem de dentro
+          do próprio arquivo (as variações de material que o 3D já traz); sem
+          elas, o site oferece a adesivagem em outros tons.
+        {% endcomment %}
+        <section class="section">
+          <div class="section-title"><strong>Objeto 3D</strong><span>Arquivo .glb da máquina, com as cores dele.</span></div>
+          <div class="objeto3d" data-objeto3d>
+            <div class="objeto3d-atual" data-objeto3d-atual hidden>
+              <strong data-objeto3d-nome></strong>
+              <span data-objeto3d-cores></span>
+            </div>
+            <p class="objeto3d-vazio" data-objeto3d-vazio>Sem objeto 3D. Envie o .glb (até 10 MB): ele vai para a Arena 3D e para a página do brinquedo.</p>
+            <div class="slot-actions">
+              <label class="pick">
+                <span data-objeto3d-rotulo>Escolher .glb</span>
+                <input id="toyModel" name="objeto_3d" type="file" accept=".glb,model/gltf-binary">
+              </label>
+              <label class="remove hidden" data-objeto3d-remover><input name="remover_objeto_3d" type="checkbox"> Tirar o objeto 3D</label>
+            </div>
+          </div>
+        </section>
+
         <section class="section">
           <div class="section-title"><strong>Organização</strong><span>Categorias e tags.</span></div>
           <div class="form-grid">
@@ -602,8 +626,33 @@
     }
 
     zerarImagens(brinquedo);
+    mostrarObjeto3d(brinquedo);
     abrir(toyDialog);
   }
+
+  // o objeto 3D do brinquedo: o arquivo atual e as cores de dentro dele
+  var caixa3d = document.querySelector("[data-objeto3d]");
+  var entrada3d = document.getElementById("toyModel");
+  function mostrarObjeto3d(brinquedo) {
+    var objeto = brinquedo && brinquedo.objeto_3d;
+    caixa3d.querySelector("[data-objeto3d-atual]").hidden = !objeto;
+    caixa3d.querySelector("[data-objeto3d-vazio]").hidden = !!objeto;
+    caixa3d.querySelector("[data-objeto3d-remover]").classList.toggle("hidden", !objeto);
+    caixa3d.querySelector("[data-objeto3d-rotulo]").textContent = objeto ? "Trocar .glb" : "Escolher .glb";
+    if (objeto) {
+      caixa3d.querySelector("[data-objeto3d-nome]").textContent = objeto.arquivo;
+      var medidas = (objeto.medidas || []).length === 3
+        ? "Tamanho: " + objeto.medidas.map(function (v) { return String(v).replace(".", ","); }).join(" × ") + " m (A × L × P) · "
+        : "";
+      caixa3d.querySelector("[data-objeto3d-cores]").textContent = medidas + (objeto.cores.length
+        ? "Cores: " + objeto.cores.join(", ")
+        : "Cores: os tons da adesivagem (o arquivo não traz variações)");
+    }
+  }
+  entrada3d.addEventListener("change", function () {
+    var arquivo = entrada3d.files && entrada3d.files[0];
+    if (arquivo) caixa3d.querySelector("[data-objeto3d-rotulo]").textContent = arquivo.name;
+  });
 
   function fecharBrinquedo() {
     TIPOS.forEach(descartarPrevia);

@@ -143,6 +143,7 @@
 .produto-imagem-box {
     align-items: center;
     aspect-ratio: 1 / 1;
+    touch-action: pan-y pinch-zoom;
     background: #fff;
     border: 1px solid #e1e9f4;
     border-radius: 24px;
@@ -154,7 +155,9 @@
 }
 
 .produto-imagem-box img {
+    -webkit-user-drag: none;
     display: block;
+    user-select: none;
     height: 100%;
     object-fit: contain;
     transition: transform .35s ease;
@@ -164,6 +167,144 @@
 .produto-imagem-box:hover img {
     transform: none;
 }
+
+/* ---- o visor 3D (o objeto do cadastro, por cima das fotos) ---- */
+.produto-visor3d {
+    background: radial-gradient(120% 90% at 50% 30%, #ffffff 0%, #eef3fa 62%, #dfe7f2 100%);
+    inset: 0;
+    position: absolute;
+    z-index: 4;
+}
+
+.produto-visor3d[hidden] { display: none; }
+
+.produto-visor3d canvas {
+    cursor: grab;
+    display: block;
+    height: 100%;
+    outline: none;
+    touch-action: none;
+    width: 100%;
+}
+
+.produto-visor3d canvas:active { cursor: grabbing; }
+.produto-visor3d canvas:focus-visible { box-shadow: inset 0 0 0 3px #ffb703; }
+
+.produto-visor3d-aviso {
+    color: #23406b;
+    font-size: .92rem;
+    font-weight: 800;
+    inset: 50% 18px auto;
+    margin: 0;
+    position: absolute;
+    text-align: center;
+    transform: translateY(-50%);
+}
+
+.produto-visor3d-aviso[hidden] { display: none; }
+
+.produto-visor3d-dica {
+    background: rgba(8, 42, 94, .78);
+    border-radius: 999px;
+    bottom: 14px;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 750;
+    left: 50%;
+    opacity: 0;
+    padding: 6px 12px;
+    pointer-events: none;
+    position: absolute;
+    transform: translateX(-50%);
+    transition: opacity .4s ease;
+    white-space: nowrap;
+}
+
+.produto-visor3d--pronto .produto-visor3d-dica { animation: produto-dica3d 4.5s ease forwards; }
+
+@keyframes produto-dica3d {
+    0%, 100% { opacity: 0; }
+    10%, 75% { opacity: 1; }
+}
+
+.produto-visor3d-fechar,
+.produto-ver-3d {
+    align-items: center;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 850;
+    gap: 7px;
+    padding: 8px 13px;
+    position: absolute;
+}
+
+.produto-visor3d-fechar {
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(8, 42, 94, .18);
+    color: #0b2a5e;
+    right: 14px;
+    top: 14px;
+}
+
+.produto-ver-3d {
+    background: linear-gradient(120deg, #e63946, #ff7a45);
+    bottom: 14px;
+    box-shadow: 0 6px 18px rgba(230, 57, 70, .35);
+    color: #fff;
+    left: 14px;
+    z-index: 3;
+}
+
+.produto-visual--3d .produto-selo { opacity: 0; pointer-events: none; }
+
+.produto-imagem-box--3d .produto-ver-3d,
+.produto-imagem-box--3d .produto-galeria-controles,
+.produto-imagem-box--3d .produto-galeria-contador { display: none; }
+
+.produto-visor3d-fechar:focus-visible,
+.produto-ver-3d:focus-visible,
+.produto-cor3d:focus-visible { outline: 3px solid #ffb703; outline-offset: 2px; }
+
+/* as cores do objeto 3D, embaixo do visor */
+.produto-cores3d {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.produto-cores3d[hidden] { display: none; }
+.produto-cores3d > span { color: #c9d8ec; font-size: .8rem; font-weight: 800; }
+
+.produto-cor3d {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d5deeb;
+    border-radius: 999px;
+    color: #0b2a5e;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 800;
+    gap: 7px;
+    padding: 5px 12px 5px 6px;
+}
+
+.produto-cor3d i {
+    background: var(--amostra, conic-gradient(#e63946, #ffb703, #2a9d8f, #3a86ff, #e63946));
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5);
+    height: 18px;
+    width: 18px;
+}
+
+.produto-cor3d[aria-pressed="true"] { border-color: #e63946; box-shadow: 0 0 0 2px rgba(230, 57, 70, .25); }
 
 .produto-galeria-controles {
     align-items: center;
