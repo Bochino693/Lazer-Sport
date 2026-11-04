@@ -79,15 +79,17 @@ class ArenaPaginaTests(TestCase):
         resposta = self.client.get(reverse("arena"))
         html = resposta.content.decode()
         # a lista (a página sem 3D) tem as duas, e o 3D recebe as duas com as
-        # fotos -- mais os objetos 3D que ainda não estão no catálogo (o
-        # Dragon Bowling Rosa É o Boliche Virtual: leva o objeto dele)
-        fora = [m["titulo"] for m in arena.MODELOS_3D if m["id"] != "boliche-virtual"]
-        self.assertEqual(html.count("data-arena-id="), 2 + len(fora))
+        # fotos -- mais os objetos 3D que ainda não estão no catálogo
+        self.assertEqual(html.count("data-arena-id="), 2 + len(arena.MODELOS_3D))
         self.assertIn("Air Game Hockey", html)
         maquinas = resposta.context["arena_dados"]["maquinas"]
-        self.assertEqual(sorted(m["nome"] for m in maquinas), sorted(["Air Game Hockey", "Dragon Bowling Rosa", *fora]))
+        self.assertEqual(
+            sorted(m["nome"] for m in maquinas),
+            sorted(["Air Game Hockey", "Dragon Bowling Rosa", *(m["titulo"] for m in arena.MODELOS_3D)]),
+        )
+        # o Dragon Bowling Rosa vai com o volume das fotos dele, e roda o jogo
         rosa = next(m for m in maquinas if m["nome"] == "Dragon Bowling Rosa")
-        self.assertEqual((rosa["modelo_id"], rosa["jogo"]), ("boliche-virtual", "dragon-bowling"))
+        self.assertEqual((rosa["modelo"], rosa["jogo"]), ("", "dragon-bowling"))
 
     def test_da_para_ver_a_maquina_de_todos_os_lados(self):
         html = self.client.get(reverse("arena")).content.decode()
