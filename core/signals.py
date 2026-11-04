@@ -22,6 +22,8 @@ from .models import (
     ImagemPeca,
     ImagemProjetoBrinquedo,
     ImagensSite,
+    JogoCadastrado,
+    ObjetoTresD,
     Pedido,
     PecasReposicao,
     Projetos,
@@ -65,11 +67,20 @@ def avisar_superusuarios_de_novo_pedido(sender, instance, created, **kwargs):
 
 
 def _invalidar_home(sender, **kwargs):
+    # NA HORA e DEPOIS DO COMMIT, de propósito. Na hora: dentro da mesma
+    # transação (o painel grava o brinquedo e as fotos em um bloco só), a
+    # próxima leitura já não encontra a cópia velha -- e os testes, que
+    # nunca fazem commit, também não. No commit: uma requisição concorrente
+    # pode ter reconstruído o cache no meio da gravação, com o dado ainda
+    # não gravado; a segunda invalidação apaga essa cópia. Apagar duas vezes
+    # custa nada; servir o cadastro velho custa uma venda.
+    invalidate_public_catalog_caches()
     transaction.on_commit(invalidate_public_catalog_caches)
 
 
 def _invalidar_home_m2m(sender, action, **kwargs):
     if action in {"post_add", "post_remove", "post_clear"}:
+        invalidate_public_catalog_caches()
         transaction.on_commit(invalidate_public_catalog_caches)
 
 
@@ -91,6 +102,10 @@ _MODELOS_DA_HOME = (
     ImagemProjetoBrinquedo,
     ImagensSite,
     EnderecoEmpresa,
+    # As telas do catálogo em cache (core/home_cache.py) também mostram o
+    # objeto 3D da ficha do brinquedo e os jogos cadastrados do simulador.
+    ObjetoTresD,
+    JogoCadastrado,
 )
 
 for _modelo in _MODELOS_DA_HOME:
