@@ -286,3 +286,33 @@ Dependência nova: rjsmin (requirements.txt).
 
    Migração nova: 0129 (jogos por emulador). Dependência nova: boto3
    (requirements.txt), para o armazenamento de jogos grandes.
+
+15) JOGOS: UMA JANELA SÓ, E DISCO DE PS1 SEM CONTA NOVA  (corrige a 13)
+   O QUE ESTAVA ERRADO. O lugar de anexar o .cue/.bin ficava escondido (uma
+   segunda janela, depois de salvar) e o /system/ nem tinha — só .exe e .apk.
+   E o disco de PS1 era barrado pelo tamanho ("o armazenamento aceita até
+   200 MB"; no Cloudinary gratuito, 10 MB).
+   AGORA. Painel > Lazer & Sport Games > Cadastrar jogo novo — quatro passos:
+     1. nome  2. capa (a cor do jogo sai dela)  3. OS ARQUIVOS DO JOGO — uma
+     área só, arraste tudo: o .cue com os .bin, a ROM, a BIOS, o .html, o
+     .apk, o .exe; o painel diz o que é cada um e COMO O JOGO VAI RODAR
+     (emulador de PS1, quadro HTML5, só para computador, APK para baixar)
+     4. a tela (sugerida pelo sistema: 4:3 para console, 3:2 para GBA).
+   À direita, o card como vai sair no site. Em "Mais detalhes": chamada,
+   como jogar (sugerido com os controles do emulador), cor, ordem, no ar.
+   Na hora de jogar o site monta o jogo sozinho — ninguém configura nada.
+   No /system/, a tela do jogo tem a seção "Jogo de console" com os arquivos
+   guardados e o botão "Anexar os arquivos do jogo", que abre o jogo no painel.
+   O DISCO EM PEDAÇOS. Cada arquivo grande é cortado pelo navegador em
+   pedaços de 9 MB (JOGOS_PEDACO_MB) e cada pedaço vai DIRETO para o
+   Cloudinary que vocês já têm, assinado pelo site — o disco não passa pelo
+   Render. O site confere cada resposta (assinada pelo Cloudinary) e relê o
+   começo do disco antes de guardar. Na hora de jogar, o quadro junta os
+   pedaços na ordem: testado com uma faixa de 120 MB, o emulador recebeu o
+   arquivo idêntico ao original (mesma impressão digital SHA-256).
+   Teto por arquivo: JOGOS_PEDACOS_MAX_MB (padrão 1000).
+   CUSTO. O Cloudinary gratuito tem 25 créditos/mês (1 crédito = 1 GB guardado
+   ou baixado): um disco de 500 MB ocupa meio crédito, e cada partida baixa
+   mais meio. Para muitos discos ou muitas partidas, o R2 da seção 13 (com as
+   5 variáveis JOGOS_S3_*) não cobra download — ligado, ele passa a valer.
+   Migração nova: 0130 (pedaços + formatos 4:3 e 3:2).

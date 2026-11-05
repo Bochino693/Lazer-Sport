@@ -202,3 +202,21 @@ class NoPainel(BaseJogos):
         self.assertEqual(jogo.proporcao, JogoCadastrado.RETRATO)
         pagina = self.client.get(reverse("jogo", args=["pula-pula"]))
         self.assertContains(pagina, "jc-palco--retrato")
+
+
+@override_settings(ALLOWED_HOSTS=["*"], SITE_URL="https://www.lazersport.com.br")
+class ConsoleNoSystemTests(BaseJogos):
+    """No /system/ a tela do jogo mostra a seção do console e leva ao envio, no painel."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(User.objects.create_superuser("chefe", "chefe@exemplo.com", "senha-forte-123"))
+
+    def test_a_tela_do_jogo_tem_a_secao_do_console_e_o_botao_para_anexar(self):
+        jogo = self.salvo()
+        pagina = self.client.get(reverse("admin:core_jogocadastrado_change", args=[jogo.pk]))
+        self.assertContains(pagina, "Jogo de console ou fliperama")
+        self.assertContains(pagina, "Anexar os arquivos do jogo")
+        self.assertContains(pagina, f"https://interno.lazersport.com.br/site/jogos/?editar={jogo.pk}")
+        novo = self.client.get(reverse("admin:core_jogocadastrado_add"))
+        self.assertContains(novo, "https://interno.lazersport.com.br/site/jogos/?novo=1")

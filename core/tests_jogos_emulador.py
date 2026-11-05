@@ -27,6 +27,7 @@ from django.urls import reverse
 
 from . import jogos_emulador as emu
 from .models import ArquivoEmulador, JogoCadastrado
+from .views_jogos import config_do_emulador
 
 LIGADOS = ["psx", "nes", "gb", "gba", "n64", "pce"]
 SYNC = b"\x00" + b"\xff" * 10 + b"\x00"
@@ -310,13 +311,28 @@ class EmuladorNoSiteTests(TestCase):
         self.assertEqual(resposta["X-Frame-Options"], "SAMEORIGIN")
         config = self.config(resposta)
         self.assertEqual(config["core"], "psx")
-        self.assertEqual(config["jogo"], reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"]))
-        externos = {e["caminho"]: e for e in config["externos"]}
-        self.assertEqual(sorted(externos), ["/Track 01.bin", "/Track 02.bin"])
-        self.assertIn("guardado_Track", externos["/Track 01.bin"]["url"])
-        self.assertEqual(externos["/Track 01.bin"]["tamanho"], len(FAIXA_PSX))
+        arquivos = {a["caminho"]: a for a in config["arquivos"]}
+        self.assertEqual(sorted(arquivos), ["/Jogo (Disc 1).cue", "/Track 01.bin", "/Track 02.bin"])
+        principal = arquivos["/Jogo (Disc 1).cue"]
+        self.assertTrue(principal["principal"])
+        self.assertEqual(principal["partes"], [reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"])])
+        self.assertIn("guardado_Track", arquivos["/Track 01.bin"]["partes"][0])
+        self.assertEqual(arquivos["/Track 01.bin"]["tamanho"], len(FAIXA_PSX))
+        # o jogo salvo leva o nome do jogo no site (único), com a extensão do que o emulador abre
+        self.assertEqual(config["nome"], "disco-teste.cue")
         self.assertTrue(config["dados"].endswith("vendor/emulatorjs/data/"))
         self.assertContains(resposta, "jogo-emulador.js")
+
+    def test_arquivo_em_pedacos_vai_com_as_partes_na_ordem(self):
+        faixa = self.jogo.arquivos_emulador.get(nome="Track 01.bin")
+        faixa.arquivo = ""
+        faixa.pedacos = [{"url": "https://res.cloudinary.com/x/a", "tamanho": 50000, "id": "a"},
+                         {"url": "https://res.cloudinary.com/x/b", "tamanho": len(FAIXA_PSX) - 50000, "id": "b"}]
+        faixa.save()
+        config = config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))
+        item = next(a for a in config["arquivos"] if a["nome"] == "Track 01.bin")
+        self.assertEqual(item["partes"], ["https://res.cloudinary.com/x/a", "https://res.cloudinary.com/x/b"])
+        self.assertEqual(item["tamanho"], len(FAIXA_PSX))
 
     def test_o_indice_sai_do_site_e_o_resto_nao(self):
         url = reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"])

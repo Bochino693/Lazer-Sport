@@ -972,3 +972,11 @@ JOGOS_S3_MAX_MB = int(os.getenv("JOGOS_S3_MAX_MB", "2000"))
 # segaMS, segaGG, segaCD, arcade): só liste aqui com a permissão escrita dos
 # autores do núcleo. Ex.: "snes,segaMD".
 JOGOS_EMULADORES_NAO_COMERCIAIS = os.getenv("JOGOS_EMULADORES_NAO_COMERCIAIS", "").strip()
+# Arquivo grande de jogo em PEDAÇOS no Cloudinary de sempre (core/armazenamento_pedacos.py):
+# o navegador corta cada .bin em pedaços e manda direto para o Cloudinary. O
+# gratuito aceita até 10 MB por arquivo que não é imagem: 9 MB por pedaço.
+JOGOS_PEDACO_MB = os.getenv("JOGOS_PEDACO_MB", "9").strip() or "9"
+JOGOS_PEDACOS_MAX_MB = os.getenv("JOGOS_PEDACOS_MAX_MB", "1000").strip() or "1000"
+# "" = automático (Cloudinary quando ele é o armazenamento; senão, o próprio site)
+JOGOS_PEDACOS_DESTINO = os.getenv("JOGOS_PEDACOS_DESTINO", "").strip()
+JOGOS_CLOUDINARY_API = os.getenv("JOGOS_CLOUDINARY_API", "https://api.cloudinary.com").strip()

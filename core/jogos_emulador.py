@@ -76,6 +76,11 @@ class Sistema:
     bios: tuple = ()
     bios_obrigatoria: str = ""  # "" | "sempre" | "cd" (só quando é disco)
     nota: str = ""
+    #: o formato da tela que o painel sugere (JogoCadastrado.PROPORCOES)
+    formato: str = "classico"
+    #: o "como jogar" que o painel sugere: os controles padrão do EmulatorJS
+    #: (setas; Z, X, A, S = os botões; Q/E = L/R; Enter = Start; V = Select)
+    comandos: str = ""
 
 
 def _ext(*nomes):
@@ -89,19 +94,31 @@ SISTEMAS = {
         bios=("scph5500.bin", "scph5501.bin", "scph5502.bin", "scph1001.bin", "scph7001.bin", "scph101.bin"),
         nota="Roda sem BIOS (o núcleo imita a do console); alguns jogos pedem a BIOS original. "
              "Não abre .chd nem .iso: use .cue/.bin, .pbp (um arquivo só) ou .m3u para vários discos.",
+        comandos="Setas movem · X = ✕ · Z = ○ · S = □ · A = △ · Q/E = L1/R1 · Enter = Start. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
     ),
     "nes": Sistema(
         "nes", "NES / Famicom", "fceumm", "GPL-2.0", True, _ext("nes", "fds", "unf", "unif"),
         bios=("disksys.rom",), nota="O Famicom Disk System (.fds) precisa da BIOS disksys.rom.",
+        comandos="Setas movem · Z = A · X = B · Enter = Start · V = Select. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
     ),
-    "gb": Sistema("gb", "Game Boy / Game Boy Color", "gambatte", "GPL-2.0", True, _ext("gb", "gbc", "dmg")),
-    "gba": Sistema("gba", "Game Boy Advance", "mgba", "MPL-2.0", True, _ext("gba"), bios=("gba_bios.bin",)),
-    "n64": Sistema("n64", "Nintendo 64", "mupen64plus_next", "GPL-2.0", True, _ext("n64", "z64", "v64")),
+    "gb": Sistema(
+        "gb", "Game Boy / Game Boy Color", "gambatte", "GPL-2.0", True, _ext("gb", "gbc", "dmg"), formato="quadrado",
+        comandos="Setas movem · Z = A · X = B · Enter = Start · V = Select. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
+    ),
+    "gba": Sistema(
+        "gba", "Game Boy Advance", "mgba", "MPL-2.0", True, _ext("gba"), bios=("gba_bios.bin",), formato="portatil",
+        comandos="Setas movem · Z = A · X = B · Q/E = L/R · Enter = Start. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
+    ),
+    "n64": Sistema(
+        "n64", "Nintendo 64", "mupen64plus_next", "GPL-2.0", True, _ext("n64", "z64", "v64"),
+        comandos="Setas = direcional · Z e X são os botões principais · Q/E = L/R · Enter = Start. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
+    ),
     "pce": Sistema(
         "pce", "PC Engine / TurboGrafx-16 (e o CD)", "mednafen_pce", "GPL-2.0", True,
         _ext("pce", "cue", "bin", "img", "ccd", "sub", "iso", "chd"), disco=True,
         bios=("syscard3.pce", "syscard2.pce", "syscard1.pce"), bios_obrigatoria="cd",
         nota="O cartucho (.pce) roda sozinho; o CD precisa da BIOS syscard3.pce.",
+        comandos="Setas movem · Z = I · X = II · Enter = Run · V = Select. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
     ),
     # --- reconhecidos, mas com núcleo de licença não comercial ---------------
     "snes": Sistema(

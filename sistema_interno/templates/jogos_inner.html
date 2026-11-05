@@ -113,7 +113,7 @@
       {% if jogo.so_versao_pc %}<p class="ls-game-nota"><strong>Ainda não joga no site:</strong> o navegador não roda .exe. {{ jogo.caminho_para_o_site }}</p>{% endif %}
       {% if jogo.apk_caminho and not jogo.endereco and not jogo.arquivo_html and not jogo.sistema %}<p class="ls-game-nota"><strong>Sobre o APK:</strong> o navegador não roda APK. {{ jogo.apk_caminho }}</p>{% endif %}
       <div class="ls-game-acoes">
-        {% if jogo.sistema %}<button class="btn btn-sm btn-outline-success" type="button" data-emulador="{{ jogo.id }}"><i class="bi bi-hdd-stack"></i> Arquivos do jogo</button>{% endif %}
+        <button class="btn btn-sm btn-outline-success" type="button" data-editar="{{ jogo.id }}" data-ir-arquivos="1"><i class="bi bi-hdd-stack"></i> Arquivos do jogo</button>
         {% if not jogo.so_versao_pc and not jogo.aguardando_arquivos %}<a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-play-fill"></i> Abrir</a>{% endif %}
         <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil"></i> Editar</button>
         <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ jogo.id }}">{% if jogo.ativo %}Desligar{% else %}Ligar{% endif %}</button>
@@ -125,93 +125,108 @@
   {% endfor %}
 </div>
 
-<div class="ls-games-aviso"><i class="bi bi-controller"></i><div><strong>Jogo de console ou de fliperama (emulador).</strong> Escolha o sistema no cadastro e envie os arquivos em “Arquivos do jogo”: <strong>todos de uma vez</strong> — o .cue com todos os .bin (Track 01, Track 02…), os de cada disco num jogo de vários discos, a BIOS se o console pedir. O painel lê o .cue, diz o nome de cada arquivo que faltar e reconhece o sistema pelo conteúdo. Rodam no site: {% for s in emulador.sistemas %}{% if s.ligado %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}. {% if emulador.modo == "grande" %}Os arquivos vão direto do seu navegador para o armazenamento de jogos grandes (até {{ emulador.limite_mb }} MB cada).{% else %}<strong>Disco de PS1 é grande</strong> (300–700 MB): o armazenamento de hoje aceita até {{ emulador.limite_mb }} MB por arquivo. Para disco, ligue o armazenamento de jogos grandes (Cloudflare R2) — passo a passo no LEIA-ME.{% endif %}</div></div>
+<div class="ls-games-aviso"><i class="bi bi-controller"></i><div><strong>Jogo de console ou de fliperama.</strong> Em “Cadastrar jogo novo”, arraste <strong>todos os arquivos do jogo de uma vez</strong> — o .cue com todos os .bin (Track 01, Track 02…), os discos de um jogo de vários discos, a BIOS se o console pedir. O painel lê o .cue, diz o nome de cada arquivo que faltar, reconhece o sistema pelo conteúdo e sugere o formato da tela e os controles. Rodam no site: {% for s in emulador.sistemas %}{% if s.ligado %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}. {% if emulador.modo == "grande" %}Os arquivos vão direto do seu navegador para o armazenamento de jogos grandes (até {{ emulador.limite_mb }} MB cada).{% else %}Disco grande (PS1 tem 300–700 MB) vai em pedaços de {{ emulador.pedaco_mb }} MB, direto do seu navegador para o armazenamento; o jogo junta os pedaços na hora de jogar.{% endif %}</div></div>
 <div class="ls-games-aviso"><i class="bi bi-windows"></i><div><strong>Jogo que só tem versão para computador.</strong> Cadastre o jogo e guarde o .exe (ou um .zip com a pasta do jogo) em "Versão para computador". O navegador não roda .exe, então o jogo fica guardado, sem aparecer no site, até ganhar a versão de navegador: o painel reconhece o motor (Godot, Unity...) e diz o caminho mais curto; a partir desse arquivo dá para portar o jogo para o site, como os oficiais. Nada disso vai para o público, e o arquivo não tem download para visitantes.</div></div>
 <div class="ls-games-aviso"><i class="bi bi-shield-lock-fill"></i><div><strong>Sobre o APK.</strong> Ele só é pedido ao cadastrar um jogo pelo painel, é opcional, e fica guardado sem link para ninguém — a não ser que "Deixar baixar" esteja marcado. Os jogos oficiais não têm APK no site: o material deles (capa, pôster, textos) é o do simulador, e o jogo de verdade fica na máquina.</div></div>
 
 <div class="modal fade" id="modalJogo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <form class="modal-content" id="formJogo" method="post" action="{% url 'jogos_inner' %}" enctype="multipart/form-data">
+    <form class="modal-content ls-jf" id="formJogo" method="post" action="{% url 'jogos_inner' %}" enctype="multipart/form-data" novalidate>
       {% csrf_token %}<input type="hidden" name="action" value="salvar"><input type="hidden" name="id" id="jogoId">
-      <div class="modal-header"><div><span class="ls-modal-kicker">Simulador</span><h5 class="modal-title" id="jogoTitulo">Novo jogo</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-header"><div><span class="ls-modal-kicker">Lazer &amp; Sport Games</span><h5 class="modal-title" id="jogoTitulo">Novo jogo</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="jogoErro"></div>
+        <div class="ls-jf-grade">
+          <div class="ls-jf-passos">
 
-        <h6 class="mb-2">O jogo</h6>
-        <div class="row g-3">
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoNome">Nome</label><input class="form-control" id="jogoNome" name="nome" maxlength="80" required data-rotulo="nome"></div>
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoSlug">Endereço (slug)</label><input class="form-control" id="jogoSlug" name="slug" maxlength="80" pattern="[a-z0-9\-]+" required data-rotulo="endereço (slug)" placeholder="corrida-maluca"><span class="form-text">Vira /jogos/<em>slug</em>/. Só letras minúsculas, números e hífen.</span></div>
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoChamada">Frase de chamada</label><input class="form-control" id="jogoChamada" name="chamada" maxlength="120" placeholder="Desvie de tudo!"></div>
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoComandos">Como jogar</label><input class="form-control" id="jogoComandos" name="comandos" maxlength="200" placeholder="Arraste para desviar e toque para pular."></div>
-          <div class="col-12"><label class="form-label" for="jogoDescricao">Descrição</label><textarea class="form-control" id="jogoDescricao" name="descricao" rows="3"></textarea></div>
-          <div class="col-6 col-md-3"><label class="form-label" for="jogoCor">Cor do jogo</label><input type="color" class="form-control form-control-color w-100" id="jogoCor" name="cor" value="#ff3df2" title="Cor de destaque do card"></div>
-          <div class="col-6 col-md-3"><label class="form-label" for="jogoOrdem">Ordem na lista</label><input type="number" class="form-control" id="jogoOrdem" name="ordem" min="0" max="65000" value="100"></div>
-          <div class="col-12 col-md-6 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="jogoAtivo" type="checkbox" name="ativo" checked><span class="form-check-label">No ar (aparece em /jogos/)</span></label></div>
-        </div>
+            <section class="ls-jf-passo">
+              <h6><span class="ls-jf-num">1</span> O jogo</h6>
+              <label class="form-label" for="jogoNome">Nome</label>
+              <input class="form-control form-control-lg" id="jogoNome" name="nome" maxlength="80" required data-rotulo="nome" placeholder="Ex.: Corrida Maluca" autocomplete="off">
+              <div class="ls-jf-slug">No site: <code>/jogos/<span id="jogoSlugVer">…</span>/</code> <button class="btn btn-link btn-sm p-0" type="button" id="jogoSlugMudar">mudar</button>
+                <input class="form-control form-control-sm d-none mt-1" id="jogoSlug" name="slug" maxlength="80" pattern="[a-z0-9\-]+" required data-rotulo="endereço (slug)"></div>
+            </section>
 
-        <hr class="my-4">
-        <h6 class="mb-1">Para jogar no site <span class="text-muted fw-normal">(um dos dois)</span></h6>
-        <p class="text-muted small">Jogo de vários arquivos (Godot HTML5, Unity WebGL…): hospede a pasta do export e cole o endereço <strong>https</strong>. Jogo de um arquivo só: envie o .html (até 15 MB).</p>
-        <div class="row g-3">
-          <div class="col-12 col-md-7"><label class="form-label" for="jogoEndereco">Endereço do jogo (hospedado)</label><input type="url" class="form-control" id="jogoEndereco" name="endereco" maxlength="200" placeholder="https://jogos.lazersport.com.br/corrida/index.html" data-rotulo="endereço do jogo"></div>
-          <div class="col-12 col-md-5"><label class="form-label" for="jogoProporcao">Formato da tela</label><select class="form-select" id="jogoProporcao" name="proporcao">{% for valor, rotulo in proporcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
-          <div class="col-12"><label class="form-label" for="jogoHtml">Arquivo do jogo (.html único)</label><input type="file" class="form-control" id="jogoHtml" name="arquivo_html" accept=".html,.htm,text/html"><span class="form-text" id="jogoHtmlAtual"></span><label class="form-check mt-1 d-none" id="jogoHtmlLimparCaixa"><input class="form-check-input" type="checkbox" name="arquivo_html-clear" id="jogoHtmlLimpar"><span class="form-check-label">Remover o .html guardado</span></label></div>
-        </div>
+            <section class="ls-jf-passo">
+              <h6><span class="ls-jf-num">2</span> A capa</h6>
+              <label class="ls-jf-solta ls-jf-solta--capa" id="jogoCapaSolta" for="jogoCapa">
+                <img id="jogoCapaVer" alt="" hidden>
+                <span class="ls-jf-solta-texto"><i class="bi bi-image"></i><strong>Arraste a foto de capa</strong> ou toque para escolher<small>quadrada, até 4 MB · a cor do jogo sai dela</small></span>
+              </label>
+              <input type="file" class="ls-jf-escondido" id="jogoCapa" name="capa" accept="image/*" data-rotulo="capa">
+              <details class="ls-jf-mais"><summary>Imagem grande da tela do jogo <span class="text-muted">(opcional)</span></summary>
+                <input type="file" class="form-control mt-2" id="jogoPoster" name="poster" accept="image/*"><span class="form-text" id="jogoPosterAtual"></span>
+                <label class="form-check mt-1 d-none" id="jogoPosterLimparCaixa"><input class="form-check-input" type="checkbox" name="poster-clear" id="jogoPosterLimpar"><span class="form-check-label">Remover a imagem grande</span></label>
+              </details>
+            </section>
 
-        <div class="row g-3 mt-1">
-          <div class="col-12 col-md-7"><label class="form-label" for="jogoSistema">Ou: jogo de console / fliperama <span class="text-muted fw-normal">(pelo emulador)</span></label><select class="form-select" id="jogoSistema" name="sistema"><option value="">Não é jogo de console</option><option value="auto">Reconhecer pelos arquivos</option>{% for s in emulador.sistemas %}<option value="{{ s.codigo }}"{% if not s.ligado %} disabled{% endif %}>{{ s.nome }}{% if not s.ligado %} — núcleo de licença não comercial{% endif %}</option>{% endfor %}</select><span class="form-text">Os arquivos (o .cue e os .bin, a ROM, a BIOS) vão depois de salvar, na janela “Arquivos do jogo”.</span></div>
-        </div>
+            <section class="ls-jf-passo">
+              <h6><span class="ls-jf-num">3</span> Os arquivos do jogo</h6>
+              <label class="ls-jf-solta" id="jogoArquivosSolta" for="jogoArquivos">
+                <span class="ls-jf-solta-texto"><i class="bi bi-cloud-arrow-up"></i><strong>Arraste aqui todos os arquivos do jogo</strong> ou toque para escolher<small>Vale tudo: o <b>.cue com os .bin</b> do PS1, a ROM (.nes, .gba, .n64…), a BIOS, o <b>.html</b>, o <b>.apk</b>, o <b>.exe</b>. O painel descobre o que é cada um.</small></span>
+              </label>
+              <input type="file" class="ls-jf-escondido" id="jogoArquivos" multiple>
+              {# os campos de verdade do formulário: o painel põe aqui o que cada arquivo é #}
+              <input type="file" class="d-none" id="jogoHtml" name="arquivo_html">
+              <input type="file" class="d-none" id="jogoApk" name="apk">
+              <input type="file" class="d-none" id="jogoPc" name="versao_pc">
+              <div class="ls-jf-como d-none" id="jfComo" aria-live="polite"></div>
+              <div class="ls-jf-console d-none" id="jcResultado">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2"><strong id="jcResumo"></strong><span class="badge text-bg-secondary" id="jcComo"></span></div>
+                <ul class="list-unstyled small mb-2" id="jcLista"></ul>
+                <ul class="small text-danger mb-2 ps-3" id="jcErros"></ul>
+                <ul class="small ls-jf-avisos mb-0 ps-3" id="jcAvisos"></ul>
+              </div>
+              <div class="mt-3 d-none" id="jcProgressoCaixa"><div class="progress" role="progressbar" aria-label="Envio dos arquivos do jogo"><div class="progress-bar progress-bar-striped progress-bar-animated" id="jcProgresso" style="width:0%"></div></div><span class="form-text" id="jcProgressoTexto"></span></div>
+              <div class="ls-jf-guardados d-none" id="jfGuardados">
+                <strong>Já guardado neste jogo</strong>
+                <label class="form-check d-none" id="jogoHtmlLimparCaixa"><input class="form-check-input" type="checkbox" name="arquivo_html-clear" id="jogoHtmlLimpar"><span class="form-check-label"><i class="bi bi-filetype-html"></i> <span id="jogoHtmlAtual"></span> — tirar</span></label>
+                <label class="form-check d-none" id="jogoApkLimparCaixa"><input class="form-check-input" type="checkbox" name="apk-clear" id="jogoApkLimpar"><span class="form-check-label"><i class="bi bi-android2"></i> <span id="jogoApkAtual"></span> — tirar</span></label>
+                <label class="form-check d-none" id="jogoPcLimparCaixa"><input class="form-check-input" type="checkbox" name="versao_pc-clear" id="jogoPcLimpar"><span class="form-check-label"><i class="bi bi-windows"></i> <span id="jogoPcAtual"></span> — tirar</span></label>
+                <div class="d-none" id="jogoConsoleCaixa"><i class="bi bi-controller"></i> <span id="jogoConsoleAtual"></span> <button class="btn btn-link btn-sm p-0" type="button" id="jogoConsoleTirar">tirar</button></div>
+              </div>
+              <details class="ls-jf-mais"><summary>Ou o link de um jogo já hospedado <span class="text-muted">(Godot/Unity para Web, itch.io…)</span></summary>
+                <input type="url" class="form-control mt-2" id="jogoEndereco" name="endereco" maxlength="200" placeholder="https://…/index.html" data-rotulo="endereço do jogo">
+              </details>
+            </section>
 
-        <hr class="my-4">
-        <h6 class="mb-2">Capa e imagem grande</h6>
-        <div class="row g-3">
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoCapa">Foto de capa <span class="text-muted fw-normal">(quadrada, até 4 MB)</span></label><input type="file" class="form-control" id="jogoCapa" name="capa" accept="image/*" data-rotulo="capa"><div class="mt-2 d-none" id="jogoCapaAtualCaixa"><img id="jogoCapaAtual" alt="" width="72" height="72" class="rounded-3" style="object-fit:cover;background:#0b1730"> <span class="form-text">Capa atual — envie outra para trocar.</span></div></div>
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoPoster">Imagem grande <span class="text-muted fw-normal">(opcional, até 6 MB)</span></label><input type="file" class="form-control" id="jogoPoster" name="poster" accept="image/*"><span class="form-text" id="jogoPosterAtual"></span><label class="form-check mt-1 d-none" id="jogoPosterLimparCaixa"><input class="form-check-input" type="checkbox" name="poster-clear" id="jogoPosterLimpar"><span class="form-check-label">Remover a imagem grande</span></label></div>
-        </div>
+            <section class="ls-jf-passo">
+              <h6><span class="ls-jf-num">4</span> A tela <small id="jfFormatoDica"></small></h6>
+              <div class="ls-jf-formatos" role="radiogroup" aria-label="Formato da tela">
+                {% for valor, rotulo in proporcoes %}
+                <label class="ls-jf-formato" data-formato="{{ valor }}"><input type="radio" name="proporcao" value="{{ valor }}"{% if forloop.first %} checked{% endif %}><span class="ls-jf-formato-tela"></span><span>{{ rotulo }}</span></label>
+                {% endfor %}
+              </div>
+            </section>
 
-        <hr class="my-4">
-        <h6 class="mb-1"><i class="bi bi-windows me-1"></i> Versão para computador (Windows) <span class="text-muted fw-normal">(só a equipe vê)</span></h6>
-        <p class="text-muted small">Para jogo que só tem a versão de PC: o navegador não roda .exe, então este arquivo é a fonte para fazer a versão do site (o motor do jogo é reconhecido ao enviar). Envie o .exe ou, melhor, um .zip com a pasta inteira do jogo (o .exe e os arquivos ao lado). Build grande? Use o link. Não aparece no site e não tem download para visitante.</p>
-        <div class="row g-3">
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoPc">Arquivo (.exe ou .zip)</label><input type="file" class="form-control" id="jogoPc" name="versao_pc" accept=".exe,.zip,application/zip,application/vnd.microsoft.portable-executable" data-rotulo="versão para computador"><span class="form-text" id="jogoPcAtual"></span><label class="form-check mt-1 d-none" id="jogoPcLimparCaixa"><input class="form-check-input" type="checkbox" name="versao_pc-clear" id="jogoPcLimpar"><span class="form-check-label">Remover o arquivo guardado</span></label></div>
-          <div class="col-12 col-md-6"><label class="form-label" for="jogoPcLink">Ou o link do build <span class="text-muted fw-normal">(Drive, Dropbox, WeTransfer)</span></label><input type="url" class="form-control" id="jogoPcLink" name="versao_pc_link" maxlength="500" placeholder="https://drive.google.com/..." data-rotulo="link da versão para computador"></div>
-        </div>
+            <details class="ls-jf-passo ls-jf-detalhes">
+              <summary><span class="ls-jf-num">+</span> Mais detalhes <span class="text-muted">(opcional: chamada, como jogar, cor…)</span></summary>
+              <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6"><label class="form-label" for="jogoChamada">Frase de chamada</label><input class="form-control" id="jogoChamada" name="chamada" maxlength="120" placeholder="Desvie de tudo!"></div>
+                <div class="col-12 col-md-6"><label class="form-label" for="jogoComandos">Como jogar <span class="text-muted fw-normal" id="jogoComandosDica"></span></label><input class="form-control" id="jogoComandos" name="comandos" maxlength="200" placeholder="Arraste para desviar e toque para pular."></div>
+                <div class="col-12"><label class="form-label" for="jogoDescricao">Descrição</label><textarea class="form-control" id="jogoDescricao" name="descricao" rows="3"></textarea></div>
+                <div class="col-6 col-md-3"><label class="form-label" for="jogoCor">Cor do jogo</label><input type="color" class="form-control form-control-color w-100" id="jogoCor" name="cor" value="#ff3df2" title="Sai da capa; troque se quiser"></div>
+                <div class="col-6 col-md-3"><label class="form-label" for="jogoOrdem">Ordem na lista</label><input type="number" class="form-control" id="jogoOrdem" name="ordem" min="0" max="65000" value="100"></div>
+                <div class="col-12 col-md-6"><label class="form-label" for="jogoSistema">Sistema do console</label><select class="form-select" id="jogoSistema" name="sistema"><option value="">Não é jogo de console</option><option value="auto">Reconhecer pelos arquivos</option>{% for s in emulador.sistemas %}<option value="{{ s.codigo }}"{% if not s.ligado %} disabled{% endif %}>{{ s.nome }}{% if not s.ligado %} — núcleo de licença não comercial{% endif %}</option>{% endfor %}</select><span class="form-text">O painel reconhece sozinho; escolha só se ele errar.</span></div>
+                <div class="col-12 col-md-6"><label class="form-label" for="jogoPcLink">Link da versão para computador <span class="text-muted fw-normal">(build grande: Drive, Dropbox)</span></label><input type="url" class="form-control" id="jogoPcLink" name="versao_pc_link" maxlength="500" placeholder="https://drive.google.com/..." data-rotulo="link da versão para computador"></div>
+                <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoAtivo" type="checkbox" name="ativo" checked><span class="form-check-label">No ar (aparece em /jogos/)</span></label></div>
+                <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoLiberar" type="checkbox" name="liberar_download"><span class="form-check-label">Deixar baixar o APK pelo site</span></label></div>
+              </div>
+            </details>
+          </div>
 
-        <hr class="my-4">
-        <h6 class="mb-1">Aplicativo Android <span class="text-muted fw-normal">(opcional)</span></h6>
-        <p class="text-muted small">O APK fica guardado. Só aparece para baixar no site se "Deixar baixar" estiver marcado — por padrão, não, para não espalhar o jogo de vocês.</p>
-        <div class="row g-3">
-          <div class="col-12 col-md-7"><label class="form-label" for="jogoApk">APK</label><input type="file" class="form-control" id="jogoApk" name="apk" accept=".apk,application/vnd.android.package-archive"><span class="form-text" id="jogoApkAtual"></span><label class="form-check mt-1 d-none" id="jogoApkLimparCaixa"><input class="form-check-input" type="checkbox" name="apk-clear" id="jogoApkLimpar"><span class="form-check-label">Remover o APK guardado</span></label></div>
-          <div class="col-12 col-md-5 d-flex align-items-end"><label class="form-check"><input class="form-check-input" id="jogoLiberar" type="checkbox" name="liberar_download"><span class="form-check-label">Deixar baixar o APK pelo site</span></label></div>
+          <aside class="ls-jf-previa" aria-label="Como o card vai ficar">
+            <span class="ls-jf-previa-rotulo">Como fica no site</span>
+            <article class="ls-game ls-jf-card" id="jfCard">
+              <div class="ls-game-arte"><img class="capa" id="jfCardCapa" alt="" hidden><i class="bi bi-image" id="jfCardSemCapa"></i><span class="ls-game-selo">No ar</span><span class="ls-game-selo direita d-none" id="jfCardSelo"></span></div>
+              <div class="ls-game-corpo"><strong id="jfCardNome">Nome do jogo</strong><span id="jfCardComo">Escolha os arquivos do jogo</span><em id="jfCardChamada"></em></div>
+            </article>
+            <div class="ls-jf-tela" id="jfTela"><span>tela</span></div>
+            <p class="ls-jf-previa-nota">Na hora de jogar, o site monta o jogo sozinho: o emulador certo para console, o quadro isolado para HTML5. Ninguém precisa configurar nada.</p>
+          </aside>
         </div>
       </div>
-      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar jogo</button></div>
-    </form>
-  </div>
-</div>
-
-<div class="modal fade" id="modalEmulador" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <form class="modal-content" id="formEmulador" method="post" action="{% url 'jogos_inner' %}" enctype="multipart/form-data" novalidate>
-      {% csrf_token %}<input type="hidden" name="id" id="emuJogoId">
-      <div class="modal-header"><div><span class="ls-modal-kicker">Emulador</span><h5 class="modal-title" id="emuTitulo">Arquivos do jogo</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
-      <div class="modal-body">
-        <div class="alert alert-danger d-none" id="emuErro"></div>
-        <p class="small text-muted mb-2" id="emuAtual"></p>
-        <div class="row g-3">
-          <div class="col-12 col-md-5"><label class="form-label" for="emuSistema">Sistema</label><select class="form-select" id="emuSistema" name="sistema"><option value="auto">Reconhecer pelos arquivos</option>{% for s in emulador.sistemas %}<option value="{{ s.codigo }}"{% if not s.ligado %} disabled{% endif %}>{{ s.nome }}{% if not s.ligado %} — licença não comercial{% endif %}</option>{% endfor %}</select></div>
-          <div class="col-12 col-md-7"><label class="form-label" for="emuArquivos">Arquivos do jogo <span class="text-muted fw-normal">(todos de uma vez)</span></label><input type="file" class="form-control" id="emuArquivos" multiple><span class="form-text">Segure Ctrl (ou ⌘) para marcar vários: o .cue <strong>e todos os .bin</strong>; num jogo de vários discos, os de todos os discos; a BIOS, se o console pedir.</span></div>
-        </div>
-        <div class="mt-3 d-none" id="emuResultado">
-          <div class="d-flex align-items-center gap-2 mb-2"><strong id="emuResumo"></strong><span class="badge text-bg-secondary" id="emuComo"></span></div>
-          <ul class="list-unstyled small mb-2" id="emuLista"></ul>
-          <ul class="small text-danger mb-2 ps-3" id="emuErros"></ul>
-          <ul class="small text-warning-emphasis mb-0 ps-3" id="emuAvisos"></ul>
-        </div>
-        <div class="mt-3 d-none" id="emuProgressoCaixa"><div class="progress" role="progressbar" aria-label="Envio dos arquivos"><div class="progress-bar progress-bar-striped progress-bar-animated" id="emuProgresso" style="width:0%"></div></div><span class="form-text" id="emuProgressoTexto"></span></div>
-        <p class="small text-muted mt-3 mb-0">{% if emulador.modo == "grande" %}Os arquivos vão direto do seu navegador para o armazenamento de jogos grandes (até {{ emulador.limite_mb }} MB cada); o site só confere no fim.{% else %}Os arquivos passam pelo site até o armazenamento de sempre, que aceita até {{ emulador.limite_mb }} MB por arquivo.{% endif %} Não feche esta janela durante o envio.</p>
-      </div>
-      <div class="modal-footer"><button class="btn btn-outline-danger me-auto d-none" type="button" id="emuRemover"><i class="bi bi-trash3"></i> Tirar os arquivos</button><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button><button class="btn btn-success" type="submit" id="emuEnviar" disabled>Enviar e publicar</button></div>
+      <div class="modal-footer ls-jf-rodape"><span class="ls-jf-rodape-barra" aria-hidden="true"><span id="jfRodapeBarra"></span></span><span class="me-auto small" id="jfRodape"></span><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit" id="jogoSalvar"><i class="bi bi-check2-circle me-1"></i>Salvar jogo</button></div>
     </form>
   </div>
 </div>
@@ -225,114 +240,340 @@
 
 {% block scripts %}
 {% if not tabela_ausente %}
+<script src="{% estatico 'interno/emulador-envio.js' %}" data-emulador-envio="1"></script>
 <script>
 LSTela.pronto(function () {
   "use strict";
-  var jogos = JSON.parse(document.getElementById("jogosDados").textContent || "[]");
-  var EMU = JSON.parse(document.getElementById("emuladorDados").textContent || "{}");
-  var form = document.getElementById("formJogo");
+  function el(id) { return document.getElementById(id); }
+  var jogos = JSON.parse(el("jogosDados").textContent || "[]");
+  var EMU = JSON.parse(el("emuladorDados").textContent || "{}");
+  var SISTEMAS = {};
+  (EMU.sistemas || []).forEach(function (s) { SISTEMAS[s.codigo] = s; });
+  var form = el("formJogo");
+  var CSRF = form.querySelector("[name=csrfmiddlewaretoken]").value;
+  var URL_DO_PAINEL = form.getAttribute("action");
+  var LIMITE = (EMU.limite_arquivo_mb || 200) * 1048576;
+  var jogoAberto = null;
+  var estado = {};
+  var envio = null;
+  var enviando = false;
+
   function achar(id) { return jogos.find(function (j) { return Number(j.id) === Number(id); }); }
+  function ext(nome) { var i = nome.lastIndexOf("."); return i < 0 ? "" : nome.slice(i + 1).toLowerCase(); }
+  function mb(bytes) { return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1).replace(".", ",") + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB"; }
   function slugDe(texto) {
     return String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
   }
-  function arquivoAtual(idTexto, idCaixa, nome, rotulo) {
-    document.getElementById(idTexto).textContent = nome ? rotulo + " guardado: " + nome + " — envie outro para trocar." : "";
-    document.getElementById(idCaixa).classList.toggle("d-none", !nome);
+  function porNoCampo(campo, arquivo) {
+    var dt = new DataTransfer();
+    if (arquivo) dt.items.add(arquivo);
+    campo.files = dt.files;
   }
-  function abrir(jogo) {
+
+  /* O envio dos arquivos de console (interno/emulador-envio.js). Na troca de
+     tela sem recarregar, o script externo pode chegar depois deste. */
+  function quandoPronto(fn) {
+    if (window.LSEmuladorEnvio) return fn();
+    var tag = document.querySelector("script[data-emulador-envio]");
+    if (tag) tag.addEventListener("load", fn, { once: true });
+    window.setTimeout(function () { if (window.LSEmuladorEnvio && !envio) fn(); }, 400);
+  }
+  quandoPronto(function () {
+    if (envio) return;
+    envio = window.LSEmuladorEnvio.criar({
+      prefixo: "jc", campo: { files: [] }, sistema: el("jogoSistema"), url: URL_DO_PAINEL, csrf: CSRF, config: EMU,
+      aoMudar: function (ok, json) {
+        if (ok && json) sugerir(json.analise.sistema);
+        pintarComo();
+      },
+      // o progresso também no rodapé, que fica sempre à vista
+      aoProgresso: function (texto, pct) {
+        el("jfRodape").textContent = texto;
+        el("jfRodapeBarra").style.width = pct + "%";
+      },
+    });
+  });
+
+  /* ---------------- o que cada arquivo é ---------------- */
+
+  /* A lista de dentro de um .zip, lida do fim dele (sem abrir o arquivo inteiro). */
+  function nomesNoZip(arquivo) {
+    var n = Math.min(arquivo.size, 131072);
+    var base = arquivo.size - n;
+    function ler(visao, pos, total) {
+      var nomes = [], dec = new TextDecoder();
+      for (var k = 0; k < total && pos + 46 <= visao.byteLength; k++) {
+        if (visao.getUint32(pos, true) !== 0x02014b50) break;
+        var ln = visao.getUint16(pos + 28, true), le = visao.getUint16(pos + 30, true), lc = visao.getUint16(pos + 32, true);
+        nomes.push(dec.decode(new Uint8Array(visao.buffer, visao.byteOffset + pos + 46, ln)));
+        pos += 46 + ln + le + lc;
+      }
+      return nomes;
+    }
+    return arquivo.slice(base).arrayBuffer().then(function (buf) {
+      var v = new DataView(buf), i;
+      for (i = buf.byteLength - 22; i >= 0; i--) if (v.getUint32(i, true) === 0x06054b50) break;
+      if (i < 0) return null;
+      var total = v.getUint16(i + 10, true), tamanho = v.getUint32(i + 12, true), inicio = v.getUint32(i + 16, true);
+      if (inicio >= base) return ler(v, inicio - base, total);
+      return arquivo.slice(inicio, inicio + tamanho).arrayBuffer().then(function (cd) { return ler(new DataView(cd), 0, total); });
+    }).catch(function () { return null; });
+  }
+
+  /* Separa o que veio: o .html, o .apk e o .exe vão para os campos deles; o
+     resto (o .cue, os .bin, a ROM, a BIOS, o .zip de ROM) é jogo de console. */
+  function classificar(lista) {
+    var r = { console: [], html: null, apk: null, pc: null, web: [], sobra: [] };
+    return Promise.all(lista.map(function (arq) {
+      var e = ext(arq.name);
+      if (e === "html" || e === "htm") { if (r.html) r.sobra.push(arq); else r.html = arq; return null; }
+      if (e === "apk") { if (r.apk) r.sobra.push(arq); else r.apk = arq; return null; }
+      if (e === "exe") { if (r.pc) r.sobra.push(arq); else r.pc = arq; return null; }
+      if (e !== "zip") { r.console.push(arq); return null; }
+      return nomesNoZip(arq).then(function (nomes) {
+        var baixos = (nomes || []).map(function (n) { return n.toLowerCase(); });
+        if (baixos.some(function (n) { return /\.exe$/.test(n); })) { if (r.pc) r.sobra.push(arq); else r.pc = arq; }
+        else if (baixos.some(function (n) { return /(^|\/)index\.html?$/.test(n); })) r.web.push(arq);
+        else r.console.push(arq);
+      });
+    })).then(function () { return r; });
+  }
+
+  function arquivosEscolhidos(lista) {
+    Painel.erro("jogoErro", "");
+    return classificar(lista).then(function (r) {
+      estado.html = r.html; estado.apk = r.apk; estado.pc = r.pc; estado.web = r.web; estado.sobra = r.sobra;
+      estado.console = r.console;
+      porNoCampo(el("jogoHtml"), r.html);
+      porNoCampo(el("jogoApk"), r.apk);
+      porNoCampo(el("jogoPc"), r.pc);
+      if (envio) envio.o.campo = { files: r.console };
+      if (r.console.length) {
+        if (!el("jogoSistema").value) Painel.valor("jogoSistema", "auto");
+        if (envio) envio.conferir().catch(function (erro) { Painel.erro("jogoErro", erro.message); });
+      } else if (envio) {
+        envio.limpar();
+      }
+      pintarComo();
+    });
+  }
+
+  /* "Como vai rodar": o painel diz, em português, o que vai acontecer. */
+  function linha(caixa, icone, texto, classe) {
+    var p = document.createElement("p");
+    if (classe) p.className = classe;
+    var i = document.createElement("i"); i.className = "bi " + icone; p.appendChild(i);
+    p.appendChild(document.createTextNode(" " + texto));
+    caixa.appendChild(p);
+  }
+  function pintarComo() {
+    var caixa = el("jfComo"); caixa.innerHTML = "";
+    var endereco = el("jogoEndereco").value.trim();
+    var htmlGuardado = jogoAberto && jogoAberto.arquivo_html && !el("jogoHtmlLimpar").checked;
+    var conf = envio && envio.conferencia;
+    var curto = "";
+    if (endereco) { linha(caixa, "bi-globe2", "Roda no site pelo endereço hospedado, num quadro isolado da página."); curto = "Endereço hospedado"; }
+    if (estado.html || htmlGuardado) {
+      linha(caixa, "bi-filetype-html", "Roda no site como página HTML5" + (estado.html ? " (" + estado.html.name + ")" : "") + ", num quadro isolado.");
+      curto = curto || "HTML5";
+    }
+    if ((estado.console || []).length) {
+      if (conf && conf.analise.ok) {
+        var s = SISTEMAS[conf.analise.sistema];
+        linha(caixa, "bi-controller", "Roda no site pelo emulador de " + (s ? s.nome : conf.analise.sistema) + ": " + conf.analise.resumo + ". Na hora de jogar, o site abre o emulador sozinho.", "ok");
+        curto = curto || "Emulador · " + (s ? s.nome : "");
+      } else if (conf) {
+        linha(caixa, "bi-exclamation-triangle", "Os arquivos de console ainda não fecham: veja o que falta logo abaixo.", "erro");
+      } else {
+        linha(caixa, "bi-hourglass-split", "Conferindo os arquivos de console…");
+      }
+      if (endereco || estado.html || htmlGuardado) linha(caixa, "bi-info-circle", "Com endereço ou .html, o site abre esse primeiro, e não o emulador. Deixe só um.", "aviso");
+    } else if (jogoAberto && jogoAberto.emulador_arquivos && jogoAberto.emulador_arquivos.length && el("jogoSistema").value) {
+      linha(caixa, "bi-controller", "Emulador: " + jogoAberto.emulador_resumo + " (já guardado).", "ok");
+      var guardado = SISTEMAS[jogoAberto.sistema];
+      curto = curto || "Emulador · " + (guardado ? guardado.nome : "");
+    }
+    if (estado.pc) linha(caixa, "bi-windows", estado.pc.name + ": versão para computador. Fica guardada para a equipe; o navegador não roda .exe (o motor é reconhecido ao salvar).");
+    if (estado.apk) linha(caixa, "bi-android2", estado.apk.name + ": APK guardado para a máquina Android. Aparece para baixar só com “Deixar baixar”.");
+    (estado.web || []).forEach(function (a) { linha(caixa, "bi-exclamation-triangle", a.name + " é um jogo HTML5 de vários arquivos: hospede a pasta e cole o link (logo abaixo).", "erro"); });
+    (estado.sobra || []).forEach(function (a) { linha(caixa, "bi-dash-circle", a.name + ": veio mais de um do mesmo tipo; este fica de fora.", "aviso"); });
+    if (!curto && (estado.pc || (jogoAberto && (jogoAberto.versao_pc || jogoAberto.versao_pc_link)))) curto = "Só versão para computador";
+    caixa.classList.toggle("d-none", !caixa.childNodes.length);
+    el("jfCardComo").textContent = curto || "Escolha os arquivos do jogo";
+    var sel = el("jfCardSelo");
+    var nomeSistema = conf && conf.analise.ok && SISTEMAS[conf.analise.sistema] ? SISTEMAS[conf.analise.sistema].nome : "";
+    sel.textContent = nomeSistema || (estado.apk ? "APK" : "");
+    sel.classList.toggle("d-none", !sel.textContent);
+  }
+
+  /* O sistema reconhecido sugere o formato da tela e o "como jogar". */
+  function sugerir(codigo) {
+    var s = SISTEMAS[codigo];
+    if (!s) return;
+    if (!estado.formatoTocado) marcarFormato(s.formato);
+    el("jfFormatoDica").textContent = "sugerido para " + s.nome;
+    var comandos = el("jogoComandos");
+    if (s.comandos && (!comandos.value.trim() || comandos.value === estado.comandosSugeridos)) {
+      comandos.value = s.comandos; estado.comandosSugeridos = s.comandos;
+      el("jogoComandosDica").textContent = "(sugerido para " + s.nome + ")";
+    }
+  }
+  function marcarFormato(valor) {
+    var radio = form.querySelector('input[name="proporcao"][value="' + valor + '"]');
+    if (radio) radio.checked = true;
+    pintarTela();
+  }
+  var TELAS = { paisagem: "16 / 9", classico: "4 / 3", portatil: "3 / 2", retrato: "9 / 16", quadrado: "1 / 1", largo: "21 / 9" };
+  function pintarTela() {
+    var marcado = form.querySelector('input[name="proporcao"]:checked');
+    el("jfTela").style.aspectRatio = TELAS[marcado ? marcado.value : "paisagem"] || "16 / 9";
+    form.querySelectorAll(".ls-jf-formato").forEach(function (f) { f.classList.toggle("is-marcado", !!f.querySelector("input:checked")); });
+  }
+
+  /* A cor do jogo sai da capa: a média das cores mais vivas, puxada para ficar luminosa. */
+  function corDaCapa(img) {
+    try {
+      var c = document.createElement("canvas"); c.width = c.height = 24;
+      var g = c.getContext("2d"); g.drawImage(img, 0, 0, 24, 24);
+      var d = g.getImageData(0, 0, 24, 24).data, r = 0, gg = 0, b = 0, w = 0;
+      for (var i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 128) continue;
+        var max = Math.max(d[i], d[i + 1], d[i + 2]), min = Math.min(d[i], d[i + 1], d[i + 2]);
+        var peso = 0.02 + Math.pow(max ? (max - min) / max : 0, 2) * (max / 255);
+        r += d[i] * peso; gg += d[i + 1] * peso; b += d[i + 2] * peso; w += peso;
+      }
+      if (!w) return null;
+      r /= w; gg /= w; b /= w;
+      var mx = Math.max(r, gg, b, 1), escala = 235 / mx;  // luminosa, sem estourar
+      return "#" + [r, gg, b].map(function (v) { return Math.round(Math.min(255, v * escala)).toString(16).padStart(2, "0"); }).join("");
+    } catch (e) { return null; }
+  }
+  function capaEscolhida(arquivo) {
+    if (!arquivo) return;
+    var img = el("jogoCapaVer"), card = el("jfCardCapa");
+    var url = URL.createObjectURL(arquivo);
+    img.onload = function () {
+      var cor = corDaCapa(img);
+      if (cor && !estado.corTocada) { el("jogoCor").value = cor; pintarCor(); }
+    };
+    img.src = url; img.hidden = false; card.src = url; card.hidden = false;
+    el("jfCardSemCapa").hidden = true;
+    el("jogoCapaSolta").classList.add("tem-imagem");
+    el("jogoCapaSolta").querySelector("strong").textContent = "Trocar a capa";
+  }
+  function pintarCor() { el("jfCard").style.setProperty("--cor", el("jogoCor").value); form.style.setProperty("--cor-jogo", el("jogoCor").value); }
+
+  /* Arrastar e soltar nas duas áreas. */
+  function ligarSolta(area, campo, receber) {
+    ["dragenter", "dragover"].forEach(function (evento) { area.addEventListener(evento, function (e) { e.preventDefault(); area.classList.add("is-sobre"); }); });
+    ["dragleave", "drop"].forEach(function (evento) { area.addEventListener(evento, function () { area.classList.remove("is-sobre"); }); });
+    area.addEventListener("drop", function (e) {
+      e.preventDefault();
+      if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+      campo.files = e.dataTransfer.files;
+      receber(Array.prototype.slice.call(campo.files));
+    });
+    campo.addEventListener("change", function () { receber(Array.prototype.slice.call(campo.files)); });
+  }
+  ligarSolta(el("jogoCapaSolta"), el("jogoCapa"), function (lista) { capaEscolhida(lista[0]); });
+  ligarSolta(el("jogoArquivosSolta"), el("jogoArquivos"), function (lista) {
+    el("jogoArquivosSolta").classList.toggle("tem-arquivos", lista.length > 0);
+    el("jogoArquivosSolta").querySelector("strong").textContent = lista.length
+      ? lista.length + " arquivo" + (lista.length > 1 ? "s" : "") + " · " + mb(lista.reduce(function (t, a) { return t + a.size; }, 0)) + " — toque para trocar"
+      : "Arraste aqui todos os arquivos do jogo";
+    arquivosEscolhidos(lista);
+  });
+
+  /* ---------------- abrir a janela ---------------- */
+
+  function guardado(idTexto, idCaixa, nome) {
+    el(idTexto).textContent = nome || "";
+    el(idCaixa).classList.toggle("d-none", !nome);
+    return !!nome;
+  }
+  function abrir(jogo, irArquivos) {
     form.reset(); Painel.erro("jogoErro", "");
+    jogoAberto = jogo || null;
+    estado = { console: [], html: null, apk: null, pc: null, web: [], sobra: [], formatoTocado: !!jogo, corTocada: !!jogo, comandosSugeridos: "" };
+    if (envio) { envio.o.campo = { files: [] }; envio.limpar(); }
+    ["jogoHtml", "jogoApk", "jogoPc"].forEach(function (id) { porNoCampo(el(id), null); });
     Painel.valor("jogoId", jogo ? jogo.id : "");
     Painel.valor("jogoNome", jogo ? jogo.nome : "");
     Painel.valor("jogoSlug", jogo ? jogo.slug : "");
+    el("jogoSlug").classList.add("d-none");
     Painel.valor("jogoChamada", jogo ? jogo.chamada : "");
     Painel.valor("jogoComandos", jogo ? jogo.comandos : "");
     Painel.valor("jogoDescricao", jogo ? jogo.descricao : "");
     Painel.valor("jogoCor", jogo ? jogo.cor.slice(0, 7) : "#ff3df2");
     Painel.valor("jogoOrdem", jogo ? jogo.ordem : 100);
     Painel.valor("jogoEndereco", jogo ? jogo.endereco : "");
-    Painel.valor("jogoProporcao", jogo ? jogo.proporcao : "paisagem");
-    document.getElementById("jogoAtivo").checked = jogo ? jogo.ativo : true;
-    document.getElementById("jogoLiberar").checked = jogo ? jogo.liberar_download : false;
-    document.getElementById("jogoCapa").required = !jogo;
-    var capa = document.getElementById("jogoCapaAtual");
-    capa.src = jogo && jogo.capa ? jogo.capa : "";
-    document.getElementById("jogoCapaAtualCaixa").classList.toggle("d-none", !(jogo && jogo.capa));
-    arquivoAtual("jogoPosterAtual", "jogoPosterLimparCaixa", jogo ? jogo.poster : "", "Imagem grande");
-    arquivoAtual("jogoHtmlAtual", "jogoHtmlLimparCaixa", jogo ? jogo.arquivo_html : "", ".html");
-    arquivoAtual("jogoApkAtual", "jogoApkLimparCaixa", jogo ? jogo.apk : "", "APK");
-    arquivoAtual("jogoPcAtual", "jogoPcLimparCaixa", jogo ? jogo.versao_pc : "", "Versão para computador");
     Painel.valor("jogoPcLink", jogo ? (jogo.versao_pc_link || "") : "");
     Painel.valor("jogoSistema", jogo ? (jogo.sistema || "") : "");
-    document.getElementById("jogoTitulo").textContent = jogo ? "Editar jogo" : "Novo jogo";
+    marcarFormato(jogo ? jogo.proporcao : "paisagem");
+    el("jfFormatoDica").textContent = ""; el("jogoComandosDica").textContent = "";
+    el("jogoAtivo").checked = jogo ? jogo.ativo : true;
+    el("jogoLiberar").checked = jogo ? jogo.liberar_download : false;
+    // a capa
+    var temCapa = !!(jogo && jogo.capa);
+    el("jogoCapaVer").hidden = !temCapa; el("jogoCapaVer").src = temCapa ? jogo.capa : "";
+    el("jfCardCapa").hidden = !temCapa; el("jfCardCapa").src = temCapa ? jogo.capa : "";
+    el("jfCardSemCapa").hidden = temCapa;
+    el("jogoCapaSolta").classList.toggle("tem-imagem", temCapa);
+    el("jogoCapaSolta").querySelector("strong").textContent = temCapa ? "Trocar a capa" : "Arraste a foto de capa";
+    guardado("jogoPosterAtual", "jogoPosterLimparCaixa", jogo ? jogo.poster : "");
+    // o que já está guardado
+    var algum = [
+      guardado("jogoHtmlAtual", "jogoHtmlLimparCaixa", jogo ? jogo.arquivo_html : ""),
+      guardado("jogoApkAtual", "jogoApkLimparCaixa", jogo ? jogo.apk : ""),
+      guardado("jogoPcAtual", "jogoPcLimparCaixa", jogo ? jogo.versao_pc : ""),
+      guardado("jogoConsoleAtual", "jogoConsoleCaixa", jogo && jogo.emulador_arquivos && jogo.emulador_arquivos.length ? jogo.emulador_resumo : ""),
+    ].some(Boolean);
+    el("jfGuardados").classList.toggle("d-none", !algum);
+    el("jogoArquivosSolta").classList.remove("tem-arquivos");
+    el("jogoArquivosSolta").querySelector("strong").textContent = algum ? "Arraste arquivos novos para trocar" : "Arraste aqui todos os arquivos do jogo";
+    el("jfCardNome").textContent = jogo ? jogo.nome : "Nome do jogo";
+    el("jfCardChamada").textContent = jogo ? (jogo.chamada || "") : "";
+    el("jogoSlugVer").textContent = jogo ? jogo.slug : "…";
+    el("jogoTitulo").textContent = jogo ? "Editar " + jogo.nome : "Novo jogo";
+    el("jfRodape").textContent = "";
     form.dataset.slugAutomatico = jogo ? "0" : "1";
+    pintarCor(); pintarComo();
     Painel.abrir("modalJogo");
+    if (irArquivos) window.setTimeout(function () { el("jogoArquivosSolta").scrollIntoView({ block: "center", behavior: "smooth" }); }, 350);
   }
-  document.getElementById("jogoNome").addEventListener("input", function () {
-    if (form.dataset.slugAutomatico === "1") Painel.valor("jogoSlug", slugDe(this.value));
+
+  el("jogoNome").addEventListener("input", function () {
+    if (form.dataset.slugAutomatico === "1") { Painel.valor("jogoSlug", slugDe(this.value)); el("jogoSlugVer").textContent = el("jogoSlug").value || "…"; }
+    el("jfCardNome").textContent = this.value || "Nome do jogo";
   });
-  document.getElementById("jogoSlug").addEventListener("input", function () { form.dataset.slugAutomatico = "0"; });
-  document.getElementById("novoJogo").addEventListener("click", function () { abrir(null); });
-  document.querySelectorAll("[data-editar]").forEach(function (botao) { botao.addEventListener("click", function () { abrir(achar(botao.dataset.editar)); }); });
-  document.querySelectorAll("[data-alternar]").forEach(function (botao) { botao.addEventListener("click", function () { Painel.valor("alternarId", botao.dataset.alternar); document.getElementById("formAlternar").requestSubmit(); }); });
-  Painel.ligar({
-    form: "formJogo", erro: "jogoErro", rotuloCarregando: "Enviando os arquivos…",
-    antes: function (f) {
-      var endereco = f.querySelector("#jogoEndereco").value.trim();
-      var html = f.querySelector("#jogoHtml").files.length > 0;
-      var htmlGuardado = !document.getElementById("jogoHtmlLimparCaixa").classList.contains("d-none") && !document.getElementById("jogoHtmlLimpar").checked;
-      var pc = f.querySelector("#jogoPc").files.length > 0 || f.querySelector("#jogoPcLink").value.trim() !== "";
-      var pcGuardado = !document.getElementById("jogoPcLimparCaixa").classList.contains("d-none") && !document.getElementById("jogoPcLimpar").checked;
-      var console_ = f.querySelector("#jogoSistema").value !== "";
-      if (!endereco && !html && !htmlGuardado && !pc && !pcGuardado && !console_) return "Informe o endereço do jogo hospedado, envie o .html, escolha o sistema (jogo de console) ou guarde a versão para computador.";
-      if (endereco && !/^https:\/\//i.test(endereco)) return "O endereço do jogo precisa começar com https://.";
-      // o tamanho, ANTES de enviar: sem isto, um build de 300 MB subia inteiro para ser recusado no fim
-      var limite = (EMU.limite_arquivo_mb || 200) * 1048576;
-      var grandes = [["#jogoApk", "O APK"], ["#jogoPc", "A versão para computador"]];
-      for (var i = 0; i < grandes.length; i++) {
-        var campo = f.querySelector(grandes[i][0]);
-        if (campo.files.length && campo.files[0].size > limite) {
-          return grandes[i][1] + " tem " + Math.round(campo.files[0].size / 1048576) + " MB; o armazenamento aceita até " + EMU.limite_arquivo_mb + " MB por arquivo." + (grandes[i][0] === "#jogoPc" ? " Use o campo do link (Drive, Dropbox…)." : "");
-        }
-      }
-      return null;
-    },
-    depois: function (json) {
-      if (json.abrir_emulador && json.jogo) {
-        Painel.fechar("modalJogo");
-        jogos = jogos.filter(function (j) { return Number(j.id) !== Number(json.jogo.id); }).concat([json.jogo]);
-        abrirEmulador(json.jogo);
-      } else {
-        fecharEAtualizar("modalJogo");
-      }
-    }
+  el("jogoSlugMudar").addEventListener("click", function () { el("jogoSlug").classList.remove("d-none"); el("jogoSlug").focus(); });
+  el("jogoSlug").addEventListener("input", function () { form.dataset.slugAutomatico = "0"; el("jogoSlugVer").textContent = this.value || "…"; });
+  el("jogoChamada").addEventListener("input", function () { el("jfCardChamada").textContent = this.value; });
+  el("jogoCor").addEventListener("input", function () { estado.corTocada = true; pintarCor(); });
+  el("jogoEndereco").addEventListener("input", pintarComo);
+  el("jogoHtmlLimpar").addEventListener("change", pintarComo);
+  el("jogoSistema").addEventListener("change", function () {
+    if ((estado.console || []).length && envio) envio.conferir().catch(function (erro) { Painel.erro("jogoErro", erro.message); });
   });
-  Painel.ligar({ form: "formAlternar" });
-  Painel.ligarExclusao();
+  form.querySelectorAll('input[name="proporcao"]').forEach(function (r) { r.addEventListener("change", function () { estado.formatoTocado = true; pintarTela(); }); });
+  el("jogoConsoleTirar").addEventListener("click", function () {
+    if (!jogoAberto || !window.confirm("Tirar os arquivos de console deste jogo? Ele sai do site até receber outros.")) return;
+    envio.postarAcao("emulador_remover", { id: jogoAberto.id }).then(function (json) {
+      jogoAberto.emulador_arquivos = []; jogoAberto.emulador_resumo = "";
+      el("jogoConsoleCaixa").classList.add("d-none");
+      Painel.aviso(json.msg, "ok"); pintarComo();
+    }, function (erro) { Painel.erro("jogoErro", erro.message); });
+  });
 
-  /* ----------------------------------------------------------------
-     OS ARQUIVOS DO EMULADOR (jogo de console ou de fliperama).
+  el("novoJogo").addEventListener("click", function () { abrir(null); });
+  document.querySelectorAll("[data-editar]").forEach(function (botao) {
+    botao.addEventListener("click", function () { abrir(achar(botao.dataset.editar), botao.dataset.irArquivos === "1"); });
+  });
+  document.querySelectorAll("[data-alternar]").forEach(function (botao) { botao.addEventListener("click", function () { Painel.valor("alternarId", botao.dataset.alternar); el("formAlternar").requestSubmit(); }); });
 
-     1. Ao escolher os arquivos, o navegador manda ao site só o nome, o
-        tamanho e o COMEÇO de cada um (e o fim dos .zip) -- o bastante
-        para ler o .cue, ver se falta alguma faixa e reconhecer o
-        sistema --, sem subir o disco inteiro. A resposta diz o que falta.
-     2. Ao enviar: pelo armazenamento de sempre, os arquivos vão numa
-        requisição só; pelo de jogos grandes, cada um vai DIRETO do
-        navegador para o balde (link assinado) e o site confere no fim.
-     ---------------------------------------------------------------- */
-  var formEmu = document.getElementById("formEmulador");
-  var campoArquivos = document.getElementById("emuArquivos");
-  var campoSistema = document.getElementById("emuSistema");
-  var botaoEnviar = document.getElementById("emuEnviar");
-  var conferencia = null;
-  var vez = 0;
-  var INDICES = ["cue", "ccd", "toc", "m3u"];
-  var PAPEIS = { jogo: "abre o jogo", disco: "disco", faixa: "faixa", bios: "BIOS" };
+  /* ---------------- salvar ---------------- */
 
-  function ext(nome) { var i = nome.lastIndexOf("."); return i < 0 ? "" : nome.slice(i + 1).toLowerCase(); }
-  function mb(bytes) { return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1).replace(".", ",") + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB"; }
-  function ordemNatural(a, b) { return a.name.localeCompare(b.name, "pt-BR", { numeric: true, sensitivity: "base" }); }
   function atualizarLista() {
     if (typeof window.LSAtualizarTela === "function") window.LSAtualizarTela({}); else window.location.reload();
   }
@@ -340,189 +581,79 @@ LSTela.pronto(function () {
      animação tirava a janela da página e o Bootstrap quebrava ao terminar
      de escondê-la ("reading 'style'"). */
   function fecharEAtualizar(idModal) {
-    var janela = document.getElementById(idModal), feito = false;
+    var janela = el(idModal), feito = false;
     function seguir() { if (!feito) { feito = true; atualizarLista(); } }
     if (janela) janela.addEventListener("hidden.bs.modal", seguir, { once: true });
     Painel.fechar(idModal);
     window.setTimeout(seguir, 900);
   }
-  function texto(el, valor) { el.textContent = valor; return el; }
-  function item(lista, conteudo, classe) { var li = document.createElement("li"); if (classe) li.className = classe; li.textContent = conteudo; lista.appendChild(li); }
-
-  function abrirEmulador(jogo) {
-    formEmu.reset(); Painel.erro("emuErro", ""); conferencia = null; vez += 1;
-    Painel.valor("emuJogoId", jogo.id);
-    texto(document.getElementById("emuTitulo"), "Arquivos do jogo · " + jogo.nome);
-    var atuais = jogo.emulador_arquivos || [];
-    texto(document.getElementById("emuAtual"), atuais.length
-      ? "Guardados agora: " + jogo.emulador_resumo + ". Enviar de novo troca o conjunto inteiro."
-      : "Nenhum arquivo guardado ainda: o jogo só aparece no site depois do envio.");
-    document.getElementById("emuRemover").classList.toggle("d-none", !atuais.length);
-    Painel.valor("emuSistema", jogo.sistema && jogo.sistema !== "auto" ? jogo.sistema : "auto");
-    document.getElementById("emuResultado").classList.add("d-none");
-    document.getElementById("emuProgressoCaixa").classList.add("d-none");
-    botaoEnviar.disabled = true;
-    Painel.abrir("modalEmulador");
+  function travarEnvio(on) {
+    enviando = on;
+    el("jogoSalvar").disabled = on;
+    el("jogoArquivos").disabled = on;
+    el("jfRodape").textContent = on ? "Enviando os arquivos do jogo — não feche esta janela." : "";
+    form.classList.toggle("is-enviando", on);
+    if (!on) el("jfRodapeBarra").style.width = "0%";
   }
 
-  function dadosDoForm(acao) {
-    var dados = new FormData();
-    dados.set("csrfmiddlewaretoken", formEmu.querySelector("[name=csrfmiddlewaretoken]").value);
-    dados.set("action", acao);
-    dados.set("id", document.getElementById("emuJogoId").value);
-    dados.set("sistema", campoSistema.value);
-    return dados;
-  }
-
-  function postar(dados, aoProgresso) {
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", formEmu.getAttribute("action"));
-      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-      if (aoProgresso) xhr.upload.addEventListener("progress", function (e) { if (e.lengthComputable) aoProgresso(e.loaded, e.total); });
-      xhr.onload = function () {
-        var json = null;
-        try { json = JSON.parse(xhr.responseText); } catch (e) { json = null; }
-        if (xhr.status >= 200 && xhr.status < 300 && json && json.status === "sucesso") resolve(json);
-        else reject(new Error((json && json.msg) || "O servidor não aceitou (erro " + xhr.status + "). Tente de novo."));
-      };
-      xhr.onerror = function () { reject(new Error("A conexão caiu durante o envio. Confira a internet e envie de novo.")); };
-      xhr.send(dados);
-    });
-  }
-
-  function enviarAoBalde(envio, arquivo, aoProgresso) {
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.open("PUT", envio.url);
-      xhr.setRequestHeader("Content-Type", "application/octet-stream");
-      xhr.upload.addEventListener("progress", function (e) { aoProgresso(e.loaded); });
-      xhr.onload = function () { if (xhr.status >= 200 && xhr.status < 300) resolve(); else reject(new Error("O armazenamento recusou “" + envio.nome + "” (erro " + xhr.status + ").")); };
-      xhr.onerror = function () { reject(new Error("O envio de “" + envio.nome + "” não passou: confira a internet e a configuração do balde (CORS, no LEIA-ME).")); };
-      xhr.send(arquivo);
-    });
-  }
-
-  function mostrarConferencia(analise) {
-    document.getElementById("emuResultado").classList.remove("d-none");
-    texto(document.getElementById("emuResumo"), analise.ok ? "✓ " + analise.resumo : "Ainda não dá para publicar");
-    texto(document.getElementById("emuComo"), analise.como === "cabeçalho" ? "reconhecido pelo conteúdo" : analise.como === "extensão" ? "reconhecido pela extensão" : analise.como === "escolhido" ? "sistema escolhido" : "");
-    var lista = document.getElementById("emuLista"); lista.innerHTML = "";
-    (analise.arquivos || []).forEach(function (a) {
-      item(lista, "• " + a.nome + " — " + (PAPEIS[a.papel] || a.papel) + (a.disco ? " do disco " + a.disco : "") + " · " + mb(a.tamanho));
-    });
-    (analise.ignorados || []).forEach(function (nome) { item(lista, "– " + nome + " — fica de fora", "text-muted"); });
-    var erros = document.getElementById("emuErros"); erros.innerHTML = "";
-    (analise.erros || []).forEach(function (e) { item(erros, e); });
-    var avisos = document.getElementById("emuAvisos"); avisos.innerHTML = "";
-    (analise.avisos || []).forEach(function (a) { item(avisos, a); });
-  }
-
-  function conferir() {
-    Painel.erro("emuErro", ""); conferencia = null; botaoEnviar.disabled = true;
-    var arquivos = Array.prototype.slice.call(campoArquivos.files);
-    if (!arquivos.length) { document.getElementById("emuResultado").classList.add("d-none"); return; }
-    if (arquivos.length > EMU.max_arquivos + 20) { Painel.erro("emuErro", "São arquivos demais: o limite é " + EMU.max_arquivos + " por jogo."); return; }
-    // o começo de cada arquivo (índices e o que não é faixa primeiro), até uns 8 MB
-    var ordem = arquivos.slice().sort(function (a, b) {
-      var pa = INDICES.indexOf(ext(a.name)) >= 0 ? 0 : (ext(a.name) === "bin" || ext(a.name) === "img") ? 2 : 1;
-      var pb = INDICES.indexOf(ext(b.name)) >= 0 ? 0 : (ext(b.name) === "bin" || ext(b.name) === "img") ? 2 : 1;
-      return pa - pb || ordemNatural(a, b);
-    });
-    var partes = [], pos = 0, orcamento = 8 * 1048576, trechoDe = new Map();
-    ordem.forEach(function (arq) {
-      var t = {};
-      var cabeca = Math.min(arq.size, EMU.cabeca);
-      if (cabeca && pos + cabeca <= orcamento) { partes.push(arq.slice(0, cabeca)); t.cabeca = [pos, cabeca]; pos += cabeca; }
-      if ((ext(arq.name) === "zip" || ext(arq.name) === "7z") && arq.size > EMU.cabeca && pos + EMU.cauda <= orcamento) {
-        partes.push(arq.slice(arq.size - EMU.cauda)); t.cauda = [pos, EMU.cauda]; pos += EMU.cauda;
+  Painel.ligar({
+    form: "formJogo", erro: "jogoErro", rotuloCarregando: "Salvando o jogo…",
+    antes: function (f) {
+      if (enviando) return "Espere o envio dos arquivos terminar.";
+      if (!el("jogoNome").value.trim()) return "Dê um nome ao jogo (passo 1).";
+      if (!/^[a-z0-9-]+$/.test(el("jogoSlug").value)) { el("jogoSlug").classList.remove("d-none"); return "O endereço do jogo (slug) só pode ter letras minúsculas, números e hífen."; }
+      if (!jogoAberto && !el("jogoCapa").files.length) return "Escolha a foto de capa (passo 2).";
+      var endereco = el("jogoEndereco").value.trim();
+      if (endereco && !/^https:\/\//i.test(endereco)) return "O link do jogo hospedado precisa começar com https://.";
+      if ((estado.web || []).length) return estado.web[0].name + " é um jogo HTML5 de vários arquivos: hospede a pasta e cole o link (passo 3).";
+      var consoleNovo = (estado.console || []).length > 0;
+      if (consoleNovo) {
+        if (!envio || !envio.conferencia) return "Espere o painel terminar de conferir os arquivos do jogo.";
+        if (!envio.conferencia.analise.ok) return "Os arquivos do jogo ainda não fecham: " + (envio.conferencia.analise.erros[0] || "confira a lista do passo 3.");
       }
-      trechoDe.set(arq, t);
-    });
-    var manifesto = arquivos.map(function (arq) {
-      var t = trechoDe.get(arq) || {};
-      return { nome: arq.name, tamanho: arq.size, cabeca: t.cabeca || null, cauda: t.cauda || null };
-    });
-    var dados = dadosDoForm("emulador_conferir");
-    dados.set("manifesto", JSON.stringify(manifesto));
-    dados.set("trechos", new Blob(partes, { type: "application/octet-stream" }), "trechos.bin");
-    var minhaVez = ++vez;
-    texto(document.getElementById("emuResumo"), "Conferindo os arquivos…");
-    document.getElementById("emuResultado").classList.remove("d-none");
-    postar(dados).then(function (json) {
-      if (minhaVez !== vez) return;  // outra seleção chegou depois
-      conferencia = json;
-      mostrarConferencia(json.analise);
-      botaoEnviar.disabled = !json.analise.ok;
-      botaoEnviar.textContent = json.modo === "grande" ? "Enviar " + mb(arquivos.reduce(function (t, a) { return t + a.size; }, 0)) + " e publicar" : "Enviar e publicar";
-    }, function (erro) {
-      if (minhaVez !== vez) return;
-      document.getElementById("emuResultado").classList.add("d-none");
-      Painel.erro("emuErro", erro.message);
-    });
-  }
-
-  function progresso(feito, total, rotulo) {
-    var caixa = document.getElementById("emuProgressoCaixa"); caixa.classList.remove("d-none");
-    var pct = total ? Math.min(100, Math.round(feito / total * 100)) : 0;
-    document.getElementById("emuProgresso").style.width = pct + "%";
-    texto(document.getElementById("emuProgressoTexto"), rotulo + " · " + mb(feito) + " de " + mb(total) + " (" + pct + "%)");
-  }
-
-  function enviar() {
-    if (!conferencia || !conferencia.analise.ok) return;
-    var arquivos = Array.prototype.slice.call(campoArquivos.files);
-    var porNome = new Map(arquivos.map(function (a) { return [a.name.normalize("NFC"), a]; }));
-    var usados = conferencia.analise.arquivos.map(function (a) { return a.enviado; });
-    botaoEnviar.disabled = true; campoArquivos.disabled = true; campoSistema.disabled = true;
-    Painel.erro("emuErro", "");
-    var caminho;
-    if (conferencia.modo === "grande") {
-      var envios = conferencia.envios || [];
-      var total = envios.reduce(function (t, e) { return t + e.tamanho; }, 0), antes = 0;
-      caminho = envios.reduce(function (promessa, envio) {
-        return promessa.then(function () {
-          var arquivo = porNome.get(envio.enviado.normalize("NFC"));
-          if (!arquivo) throw new Error("“" + envio.enviado + "” saiu da seleção: escolha os arquivos de novo.");
-          return enviarAoBalde(envio, arquivo, function (feito) { progresso(antes + feito, total, "Enviando “" + envio.nome + "”"); })
-            .then(function () { antes += envio.tamanho; });
+      var a = jogoAberto || {};
+      var tem = endereco || estado.html || (a.arquivo_html && !el("jogoHtmlLimpar").checked) || consoleNovo
+        || (a.emulador_arquivos && a.emulador_arquivos.length) || estado.pc || (a.versao_pc && !el("jogoPcLimpar").checked)
+        || el("jogoPcLink").value.trim();
+      if (!tem) return "Faltam os arquivos do jogo (passo 3): arraste o .cue com os .bin, a ROM, o .html… ou cole o link de um jogo hospedado.";
+      var grandes = [[estado.apk, "O APK"], [estado.pc, "A versão para computador"]];
+      for (var i = 0; i < grandes.length; i++) {
+        if (grandes[i][0] && grandes[i][0].size > LIMITE) {
+          return grandes[i][1] + " tem " + mb(grandes[i][0].size) + "; o armazenamento aceita até " + EMU.limite_arquivo_mb + " MB por arquivo." + (grandes[i][0] === estado.pc ? " Use o link da versão para computador (em Mais detalhes)." : "");
+        }
+      }
+      return null;
+    },
+    depois: function (json) {
+      if (json.jogo && (estado.console || []).length && envio) {
+        // o jogo foi salvo: agora os arquivos do console, com o progresso nesta mesma janela
+        Painel.valor("jogoId", json.jogo.id);  // se o envio falhar, salvar de novo edita este jogo
+        jogoAberto = json.jogo;
+        window.setTimeout(function () { travarEnvio(true); }, 0);
+        envio.enviar(json.jogo.id).then(function (resposta) {
+          travarEnvio(false);
+          if (resposta.problemas_do_balde && resposta.problemas_do_balde.length) {
+            Painel.erro("jogoErro", "Jogo salvo e arquivos guardados, mas: " + resposta.problemas_do_balde.join(" "));
+            return;
+          }
+          Painel.aviso(resposta.msg, "ok");
+          fecharEAtualizar("modalJogo");
+        }, function (erro) {
+          travarEnvio(false);
+          Painel.erro("jogoErro", "O jogo foi salvo, mas os arquivos não subiram: " + erro.message + " Toque em Salvar para tentar de novo.");
         });
-      }, Promise.resolve()).then(function () {
-        progresso(total, total, "Conferindo no site");
-        var dados = dadosDoForm("emulador_confirmar");
-        dados.set("plano", conferencia.plano);
-        arquivos.forEach(function (a) { if (INDICES.indexOf(ext(a.name)) >= 0 && usados.indexOf(a.name.normalize("NFC")) >= 0) dados.append("indices", a, a.name); });
-        return postar(dados);
-      });
-    } else {
-      var dados = dadosDoForm("emulador_enviar");
-      arquivos.forEach(function (a) { if (usados.indexOf(a.name.normalize("NFC")) >= 0) dados.append("arquivos", a, a.name); });
-      caminho = postar(dados, function (feito, total) { progresso(feito, total, feito < total ? "Enviando os arquivos" : "Guardando no armazenamento"); });
-    }
-    caminho.then(function (json) {
-      if (json.problemas_do_balde && json.problemas_do_balde.length) {
-        // guardou, mas o visitante não vai conseguir baixar: a janela fica aberta dizendo o que ligar
-        Painel.erro("emuErro", "Os arquivos foram guardados, mas: " + json.problemas_do_balde.join(" "));
-        campoArquivos.disabled = false; campoSistema.disabled = false;
         return;
       }
-      Painel.aviso(json.msg, "ok");
-      fecharEAtualizar("modalEmulador");
-    }, function (erro) {
-      Painel.erro("emuErro", erro.message);
-      botaoEnviar.disabled = false; campoArquivos.disabled = false; campoSistema.disabled = false;
-    });
-  }
-
-  campoArquivos.addEventListener("change", conferir);
-  campoSistema.addEventListener("change", function () { if (campoArquivos.files.length) conferir(); });
-  formEmu.addEventListener("submit", function (e) { e.preventDefault(); enviar(); });
-  document.querySelectorAll("[data-emulador]").forEach(function (botao) { botao.addEventListener("click", function () { var j = achar(botao.dataset.emulador); if (j) abrirEmulador(j); }); });
-  document.getElementById("emuRemover").addEventListener("click", function () {
-    if (!window.confirm("Tirar os arquivos do emulador deste jogo? Ele sai do site até receber outros.")) return;
-    postar(dadosDoForm("emulador_remover")).then(function (json) { Painel.aviso(json.msg, "ok"); fecharEAtualizar("modalEmulador"); },
-      function (erro) { Painel.erro("emuErro", erro.message); });
+      fecharEAtualizar("modalJogo");
+    }
   });
+  Painel.ligar({ form: "formAlternar" });
+  Painel.ligarExclusao();
+
+  /* Vindo do /system/ ("Anexar os arquivos do jogo") ou de um link: ?editar=<id> ou ?novo=1. */
+  var pedido = new URLSearchParams(window.location.search);
+  if (pedido.get("editar") && achar(pedido.get("editar"))) abrir(achar(pedido.get("editar")), true);
+  else if (pedido.get("novo")) abrir(null);
 });
 </script>
 {% endif %}

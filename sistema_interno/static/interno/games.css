@@ -78,3 +78,120 @@
 .ls-games-aviso i{color:var(--yellow-texto,#ffd23f);font-size:1rem;margin-top:2px}
 @media (max-width:640px){.ls-games-hero{padding:20px 18px;border-radius:18px}.ls-games-hero-marca{display:none}.ls-games-grade{grid-template-columns:1fr 1fr;gap:10px}.ls-game-corpo{padding:10px 10px 4px}.ls-game-acoes{padding:8px 10px 10px}}
 @media (max-width:420px){.ls-games-grade{grid-template-columns:1fr}}
+
+/* ---------------------------------------------------------------
+   A JANELA DO JOGO (Cadastrar / Editar): quatro passos à esquerda --
+   nome, capa, arquivos, tela -- e, à direita, o card como vai sair no
+   site, mudando enquanto se preenche. Cores do tema do painel (sol e
+   lua) e a cor do jogo (--cor-jogo, tirada da capa) como luz.
+   --------------------------------------------------------------- */
+.ls-jf{--cor-jogo:#ff3df2}
+.ls-jf-grade{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+.ls-jf-passos{display:grid;gap:14px;min-width:0}
+.ls-jf-passo{
+  padding:16px 18px;border-radius:18px;border:1px solid var(--line,rgba(255,255,255,.12));
+  background:color-mix(in srgb,var(--panel,#1b1712) 92%,var(--cor-jogo) 8%);
+}
+.ls-jf-passo>h6,.ls-jf-detalhes>summary{display:flex;align-items:center;gap:10px;margin:0 0 12px;color:var(--text,#fcf8f1);font-size:.95rem;font-weight:900}
+.ls-jf-passo>h6 small{margin-left:auto;color:var(--apoio-texto,#3dd9c0);font-size:.72rem;font-weight:800}
+.ls-jf-num{
+  display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:10px;font-size:.8rem;font-weight:900;color:#fff;
+  background:linear-gradient(135deg,var(--cor-jogo),color-mix(in srgb,var(--cor-jogo) 40%,#ffb703));
+  box-shadow:0 6px 14px color-mix(in srgb,var(--cor-jogo) 35%,transparent);
+}
+.ls-jf-slug{margin-top:6px;color:var(--muted,#b3a38c);font-size:.78rem}
+.ls-jf-slug code{color:var(--acento-texto,#f2a93b)}
+.ls-jf-escondido{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* as áreas de soltar arquivo */
+.ls-jf-solta{
+  position:relative;display:grid;place-items:center;min-height:132px;padding:18px;margin:0;overflow:hidden;cursor:pointer;text-align:center;
+  border:2px dashed color-mix(in srgb,var(--cor-jogo) 45%,var(--line,#3f3527));border-radius:16px;
+  background:
+    radial-gradient(circle at 50% 0,color-mix(in srgb,var(--cor-jogo) 16%,transparent),transparent 70%),
+    color-mix(in srgb,var(--panel,#1b1712) 85%,transparent);
+  transition:border-color .2s ease,transform .2s ease,background .2s ease;
+}
+.ls-jf-solta:hover,.ls-jf-solta.is-sobre{border-color:var(--cor-jogo);transform:translateY(-1px)}
+.ls-jf-solta.is-sobre{background:color-mix(in srgb,var(--cor-jogo) 14%,var(--panel,#1b1712))}
+.ls-jf-solta-texto{display:grid;gap:4px;justify-items:center;color:var(--text-2,#e7ddcb);font-size:.86rem;z-index:1}
+.ls-jf-solta-texto i{font-size:1.7rem;color:var(--cor-jogo)}
+.ls-jf-solta-texto strong{color:var(--text,#fcf8f1);font-size:.95rem}
+.ls-jf-solta-texto small{max-width:520px;color:var(--muted,#b3a38c);font-size:.75rem;line-height:1.45}
+.ls-jf-solta.tem-arquivos{border-style:solid}
+.ls-jf-solta--capa{min-height:150px}
+.ls-jf-solta--capa img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+.ls-jf-solta--capa.tem-imagem .ls-jf-solta-texto{
+  align-self:end;padding:6px 12px;border-radius:999px;background:rgba(6,10,20,.72);color:#fff;font-size:.74rem;
+}
+.ls-jf-solta--capa.tem-imagem .ls-jf-solta-texto i,.ls-jf-solta--capa.tem-imagem .ls-jf-solta-texto small{display:none}
+.ls-jf-solta--capa.tem-imagem .ls-jf-solta-texto strong{color:#fff;font-size:.74rem}
+
+/* como vai rodar */
+.ls-jf-como{display:grid;gap:6px;margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--cor-jogo) 9%,transparent);border:1px solid color-mix(in srgb,var(--cor-jogo) 30%,transparent)}
+.ls-jf-como p{display:flex;gap:8px;margin:0;color:var(--text-2,#e7ddcb);font-size:.82rem;line-height:1.45}
+.ls-jf-como p i{flex:none;margin-top:2px;color:var(--cor-jogo)}
+.ls-jf-como p.ok i{color:var(--apoio-texto,#3dd9c0)}
+.ls-jf-como p.erro{color:var(--red-claro,#ff9aaa)}
+.ls-jf-como p.erro i{color:var(--red-claro,#ff9aaa)}
+.ls-jf-como p.aviso i{color:var(--acento-texto,#f2a93b)}
+.ls-jf-console{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line,rgba(255,255,255,.12))}
+.ls-jf-console #jcLista li{color:var(--text-2,#e7ddcb)}
+.ls-jf-avisos{color:var(--acento-texto,#f2a93b)}
+.ls-jf-guardados{display:grid;gap:6px;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px dashed var(--line,rgba(255,255,255,.18));font-size:.8rem;color:var(--text-2,#e7ddcb)}
+.ls-jf-guardados strong{color:var(--text,#fcf8f1);font-size:.78rem}
+.ls-jf-mais{margin-top:10px}
+.ls-jf-mais>summary,.ls-jf-detalhes>summary{cursor:pointer;color:var(--text-2,#e7ddcb);font-size:.82rem;font-weight:800;list-style:none}
+.ls-jf-mais>summary::-webkit-details-marker,.ls-jf-detalhes>summary::-webkit-details-marker{display:none}
+.ls-jf-mais>summary::before{content:"+ ";color:var(--cor-jogo);font-weight:900}
+.ls-jf-mais[open]>summary::before{content:"– "}
+.ls-jf-detalhes>summary{margin:0}
+.ls-jf-detalhes[open]>summary{margin-bottom:6px}
+
+/* os formatos da tela, desenhados */
+.ls-jf-formatos{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.ls-jf-formato{
+  position:relative;display:grid;justify-items:center;gap:8px;padding:12px 8px 10px;border-radius:14px;cursor:pointer;text-align:center;
+  border:1px solid var(--line,rgba(255,255,255,.14));color:var(--text-2,#e7ddcb);font-size:.72rem;font-weight:800;line-height:1.2;
+  transition:border-color .2s ease,background .2s ease,transform .2s ease;
+}
+.ls-jf-formato input{position:absolute;opacity:0;pointer-events:none}
+.ls-jf-formato:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--cor-jogo) 50%,transparent)}
+.ls-jf-formato.is-marcado{border-color:var(--cor-jogo);background:color-mix(in srgb,var(--cor-jogo) 14%,transparent);color:var(--text,#fcf8f1)}
+.ls-jf-formato:has(input:focus-visible){outline:2px solid var(--cor-jogo);outline-offset:2px}
+.ls-jf-formato-tela{display:block;height:34px;border-radius:5px;border:2px solid currentColor;opacity:.85}
+.ls-jf-formato[data-formato="paisagem"] .ls-jf-formato-tela{aspect-ratio:16/9}
+.ls-jf-formato[data-formato="classico"] .ls-jf-formato-tela{aspect-ratio:4/3}
+.ls-jf-formato[data-formato="portatil"] .ls-jf-formato-tela{aspect-ratio:3/2}
+.ls-jf-formato[data-formato="retrato"] .ls-jf-formato-tela{aspect-ratio:9/16}
+.ls-jf-formato[data-formato="quadrado"] .ls-jf-formato-tela{aspect-ratio:1/1}
+.ls-jf-formato[data-formato="largo"] .ls-jf-formato-tela{aspect-ratio:21/9;height:26px}
+.ls-jf-formato.is-marcado .ls-jf-formato-tela{color:var(--cor-jogo);background:color-mix(in srgb,var(--cor-jogo) 22%,transparent)}
+
+/* a prévia do card, ao lado */
+.ls-jf-previa{position:sticky;top:0;display:grid;gap:12px}
+.ls-jf-previa-rotulo{color:var(--muted,#b3a38c);font-size:.7rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.ls-jf-card{--cor:var(--cor-jogo)}
+.ls-jf-card .ls-game-arte i{font-size:2rem;color:color-mix(in srgb,var(--cor) 70%,#fff)}
+.ls-jf-tela{
+  display:grid;place-items:center;width:100%;max-height:260px;margin:0 auto;border-radius:12px;
+  border:2px solid color-mix(in srgb,var(--cor-jogo) 60%,transparent);
+  background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--cor-jogo) 30%,transparent),#060b18 75%);
+  color:rgba(255,255,255,.55);font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  transition:aspect-ratio .25s ease;
+}
+.ls-jf-previa-nota{margin:0;color:var(--muted,#b3a38c);font-size:.74rem;line-height:1.5}
+@media (max-width:991px){
+  .ls-jf-grade{grid-template-columns:1fr}
+  .ls-jf-previa{position:static;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .ls-jf-previa-rotulo,.ls-jf-previa-nota{grid-column:1/-1}
+}
+@media (max-width:560px){.ls-jf-previa{grid-template-columns:1fr}.ls-jf-passo{padding:14px}}
+
+.ls-jf .btn-link{color:var(--acento-texto,#f2a93b);font-weight:800;text-decoration:none}
+.ls-jf .btn-link:hover{text-decoration:underline}
+/* o progresso do envio no rodapé: sempre à vista, mesmo com a janela rolada */
+.ls-jf-rodape{position:relative}
+.ls-jf-rodape-barra{position:absolute;inset:0 0 auto 0;height:3px;overflow:hidden;background:transparent}
+.ls-jf-rodape-barra span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--cor-jogo),var(--apoio-texto,#3dd9c0));transition:width .25s ease}
+.ls-jf.is-enviando #jfRodape{color:var(--text,#fcf8f1);font-weight:800}

@@ -664,8 +664,12 @@ class JogoCadastrado(Prime):
     RETRATO = "retrato"
     QUADRADO = "quadrado"
     LARGO = "largo"
+    CLASSICO = "classico"
+    PORTATIL = "portatil"
     PROPORCOES = (
         (PAISAGEM, "Deitado (16:9)"),
+        (CLASSICO, "Console clássico (4:3)"),
+        (PORTATIL, "Portátil (3:2)"),
         (RETRATO, "Em pé (9:16)"),
         (QUADRADO, "Quadrado (1:1)"),
         (LARGO, "Largura toda"),
@@ -898,6 +902,10 @@ class ArquivoEmulador(models.Model):
         upload_to=_caminho_do_arquivo_emulador, storage=_armazenamento_jogo, blank=True, max_length=400,
     )
     chave = models.CharField(max_length=400, blank=True, verbose_name="Chave no armazenamento de jogos grandes")
+    # arquivo grande guardado em pedaços no armazenamento de sempre (o Cloudinary):
+    # [{"url", "tamanho", "id"}] na ordem; o quadro do emulador junta na hora de
+    # jogar. Ver core/armazenamento_pedacos.py.
+    pedacos = models.JSONField(default=list, blank=True, verbose_name="Pedaços")
     conteudo = models.TextField(blank=True, verbose_name="Índice (texto)")
     ordem = models.PositiveSmallIntegerField(default=0)
     criacao = models.DateTimeField(auto_now_add=True)
@@ -913,11 +921,11 @@ class ArquivoEmulador(models.Model):
 
     @property
     def e_indice(self):
-        return not self.arquivo and not self.chave
+        return not self.arquivo and not self.chave and not self.pedacos
 
     @property
     def url(self):
-        """De onde o emulador baixa este arquivo ("" para o índice, que o site serve)."""
+        """De onde o emulador baixa este arquivo inteiro ("" para o índice, que o site serve, e para o em pedaços)."""
         if self.chave:
             from .armazenamento_grande import url_publica
 
@@ -929,14 +937,11 @@ class ArquivoEmulador(models.Model):
                 return ""
         return ""
 
-    def apagar_do_armazenamento(self):
-        """Apaga o conteúdo guardado fora do banco (melhor esforço; quem chama registra a falha)."""
-        if self.chave:
-            from .armazenamento_grande import apagar
-
-            apagar([self.chave])
-        elif self.arquivo:
-            self.arquivo.storage.delete(self.arquivo.name)
+    def partes(self):
+        """[(url, tamanho)] na ordem: um item para o arquivo inteiro, vários para o guardado em pedaços."""
+        if self.pedacos:
+            return [(p["url"], int(p["tamanho"])) for p in self.pedacos]
+        return [(self.url, self.tamanho)] if self.url else []
 
 class CategoriaPeca(Prime):
     nome_categoria_peca = models.CharField(max_length=90)
