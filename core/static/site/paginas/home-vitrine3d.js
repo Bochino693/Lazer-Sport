@@ -23,7 +23,8 @@
    - Fica a foto (e nada é baixado) com "menos movimento" ligado, com
      economia de dados ou rede 2G, com menos de 4 GB de memória
      (`navigator.deviceMemory`), sem WebGL ou com WebGL por software (o
-     `failIfMajorPerformanceCaveat`: o desenho cairia no processador) e em
+     `failIfMajorPerformanceCaveat`: o desenho cairia no processador; a
+     placa é sondada uma vez, logo depois de a página carregar) e em
      tela de celular (menos de 768 px). No celular o cartão tem uns 360 px:
      o 3D acrescenta pouco à foto e custaria ~1 MB de download (o three.js
      e o .glb), quase sempre no plano de dados, mais a bateria de desenhar
