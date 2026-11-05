@@ -195,16 +195,28 @@ if (raiz && dadosDoJogador) {
     atualizar(slug);
   });
 
+  // o "Mais jogados" do portal (/jogos/): o servidor conta no máximo uma vez
+  // a cada meia hora por visitante e jogo; falhar aqui nunca segura o jogo
+  const contar = (slug) => {
+    if (!jogador.abriuUrl) return;
+    fetch(jogador.abriuUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+      body: JSON.stringify({ jogo: slug }),
+    }).catch(() => {});
+  };
+
   raiz.addEventListener("console:jogar", (evento) => {
-    if (logado) return;
     const slug = evento.detail.slug;
-    if (jaJogou(slug)) {
+    if (!logado && jaJogou(slug)) {
       evento.preventDefault();
       abrirPortao();
       return;
     }
+    contar(slug);
     // a partida grátis começou: recomeçar no meio também conta
-    marcar(slug);
+    if (!logado) marcar(slug);
   });
 
   raiz.addEventListener("console:fim", (evento) => {

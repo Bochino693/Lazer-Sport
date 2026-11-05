@@ -757,6 +757,33 @@ class JogoCadastrado(Prime):
     emulador_resumo = models.CharField(max_length=200, blank=True, verbose_name="Arquivos do emulador")
     ordem = models.PositiveSmallIntegerField(default=100, verbose_name="Ordem na lista")
 
+    # ---- o portal (/jogos/): onde o jogo aparece e como é encontrado na busca
+    CATEGORIAS = (
+        ("", "Sem categoria"),
+        ("acao", "Ação"),
+        ("aventura", "Aventura"),
+        ("corrida", "Corrida"),
+        ("esporte", "Esporte"),
+        ("luta", "Luta"),
+        ("plataforma", "Plataforma"),
+        ("puzzle", "Quebra-cabeça"),
+        ("rpg", "RPG"),
+        ("tiro", "Tiro"),
+        ("musica", "Música"),
+        ("infantil", "Infantil"),
+        ("outros", "Outros"),
+    )
+    categoria = models.CharField(max_length=12, choices=CATEGORIAS, blank=True, default="",
+                                 verbose_name="Categoria")
+    feito_pela_lazer = models.BooleanField(
+        default=False, verbose_name="Feito pela Lazer & Sport",
+        help_text="Aparece junto dos jogos da casa, na faixa “Feitos pela Lazer & Sport”.",
+    )
+    destaque = models.BooleanField(
+        default=False, verbose_name="Destaque no topo do portal",
+        help_text="Entra no carrossel grande do topo de /jogos/.",
+    )
+
     class Meta:
         verbose_name = "Jogo cadastrado"
         verbose_name_plural = "Jogos cadastrados"
@@ -2310,6 +2337,70 @@ class ResgateCupom(Prime):
 
     def __str__(self):
         return f"{self.usuario} · {self.cupom.codigo}"
+
+
+class PartidasDoJogo(models.Model):
+    """Quantas vezes cada jogo foi aberto (o "Mais jogados" do portal).
+
+    Uma linha por jogo, pelo slug -- vale para os jogos da casa (core/arena.py)
+    e para os cadastrados. Conta o toque em Jogar, no máximo uma vez a cada
+    30 minutos por visitante e jogo (core/views_jogos.AbriuJogoView).
+    """
+
+    slug = models.SlugField(max_length=80, unique=True)
+    partidas = models.PositiveIntegerField(default=0)
+    atualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Partidas de um jogo"
+        verbose_name_plural = "Partidas dos jogos"
+
+    def __str__(self):
+        return f"{self.slug}: {self.partidas}"
+
+
+class AnuncioJogos(Prime):
+    """Um anúncio que a equipe põe no portal de jogos (/jogos/).
+
+    Três lugares: a faixa larga do topo, entre as seções do portal e na
+    página de cada jogo. O clique passa pelo site (/jogos/anuncio/<id>/) e é
+    contado -- é o número que se mostra a quem anuncia.
+    """
+
+    TOPO = "topo"
+    MEIO = "meio"
+    JOGO = "jogo"
+    LOCAIS = (
+        (TOPO, "Faixa larga no topo do portal"),
+        (MEIO, "Entre as seções do portal"),
+        (JOGO, "Na página de cada jogo"),
+    )
+    titulo = models.CharField(max_length=80, verbose_name="Título")
+    texto = models.CharField(max_length=160, blank=True, verbose_name="Texto curto")
+    imagem = models.ImageField(upload_to="anuncios_jogos/", verbose_name="Imagem",
+                               help_text="Topo: 1600×400. Entre seções: 1200×300. Página do jogo: 600×600.")
+    link = models.URLField(blank=True, verbose_name="Para onde o clique leva")
+    botao = models.CharField(max_length=30, default="Saiba mais", verbose_name="Texto do botão")
+    local = models.CharField(max_length=8, choices=LOCAIS, default=MEIO, verbose_name="Onde aparece")
+    ordem = models.PositiveSmallIntegerField(default=100, verbose_name="Ordem")
+    inicio = models.DateField(null=True, blank=True, verbose_name="Começa em")
+    fim = models.DateField(null=True, blank=True, verbose_name="Termina em")
+    cliques = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        verbose_name = "Anúncio do portal de jogos"
+        verbose_name_plural = "Anúncios do portal de jogos"
+        ordering = ["local", "ordem", "-id"]
+
+    def __str__(self):
+        return f"{self.titulo} ({self.get_local_display()})"
+
+    @property
+    def imagem_url(self):
+        try:
+            return self.imagem.url if self.imagem else ""
+        except Exception:
+            return ""
 
 
 class RecordeJogo(models.Model):

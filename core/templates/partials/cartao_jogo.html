@@ -1,0 +1,15 @@
+{# Um jogo no portal (core/portal_jogos.py): capa, selos, nome e plataforma. #}
+<a class="pg-cartao" href="{{ jogo.url }}" style="--cor: {{ jogo.cor }}" data-portal-cartao="{{ jogo.slug }}">
+    <span class="pg-cartao-arte">
+        {% if jogo.capa %}<img src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" width="320" height="320">{% else %}<i class="fa-solid fa-gamepad" aria-hidden="true"></i>{% endif %}
+        <span class="pg-cartao-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+    </span>
+    <span class="pg-selos">
+        {% if jogo.tipo == "nosso" %}<span class="pg-selo pg-selo--nosso">Lazer &amp; Sport</span>{% endif %}
+        {% if jogo.ranking %}<span class="pg-selo pg-selo--ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ranking</span>{% endif %}
+    </span>
+    <span class="pg-cartao-texto">
+        <strong>{{ jogo.titulo }}</strong>
+        <small>{{ jogo.plataforma }}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}{% if jogo.partidas %} · {{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}{% endif %}</small>
+    </span>
+</a>

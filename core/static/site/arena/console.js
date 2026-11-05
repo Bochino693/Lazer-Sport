@@ -1201,6 +1201,10 @@ if (raiz && dadosDosJogos) {
       item.textContent = passo;
       return item;
     }));
+    const noPc = campo("no-pc");
+    if (noPc) noPc.textContent = jogo.noPc || "";
+    const noCelular = campo("no-celular");
+    if (noCelular) noCelular.textContent = jogo.noCelular || "";
     campo("gesto").textContent = jogo.rotulo;
     campo("teclado").hidden = !jogo.teclado;
     campo("teclado-texto").textContent = jogo.teclado || "";

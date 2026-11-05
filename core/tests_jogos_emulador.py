@@ -370,6 +370,40 @@ class EmuladorNoSiteTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 404)
         self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")
 
+    def test_a_pagina_ensina_os_comandos_no_computador_e_no_celular(self):
+        pagina = self.client.get(reverse("jogo", args=["disco-teste"]))
+        html = pagina.content.decode()
+        self.assertIn("No computador", html)
+        self.assertIn("No celular", html)
+        # o ✕ do PlayStation é a tecla X; o △, a tecla A (o mapa do próprio emulador)
+        self.assertIn("<tr><th scope=\"row\">✕</th><td><kbd>X</kbd></td></tr>", html)
+        self.assertIn("<tr><th scope=\"row\">△</th><td><kbd>A</kbd></td></tr>", html)
+        self.assertIn("Botão do PlayStation (PS1)", html)
+        self.assertIn("um controle Bluetooth", html)
+        self.assertNotIn("{#", html)  # comentário de template de várias linhas vaza como texto
+
+    def test_no_portal_o_jogo_vai_para_os_consoles_e_o_filtro_playstation(self):
+        portal = self.client.get(reverse("jogos"))
+        faixa = next(f for f in portal.context["faixas"] if f["id"] == "consoles")
+        self.assertEqual([j["slug"] for j in faixa["jogos"]], ["disco-teste"])
+        self.assertIn(("playstation", "PlayStation"), portal.context["filtros"])
+        nossos = next(f for f in portal.context["faixas"] if f["id"] == "nossos")
+        self.assertNotIn("disco-teste", [j["slug"] for j in nossos["jogos"]])
+
+    def test_so_o_n64_troca_as_teclas_do_emulador(self):
+        self.assertIsNone(config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["controles"])
+        JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="n64")
+        controles = config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["controles"]
+        jogador = controles["0"]
+        # o analógico nas setas, a cruz em T/F/G/H
+        self.assertEqual(jogador["16"], {"value": "right arrow", "value2": "LEFT_STICK_X:+1"})
+        self.assertEqual(jogador["19"]["value"], "up arrow")
+        self.assertEqual(jogador["4"]["value"], "t")
+        self.assertEqual(jogador["0"]["value"], "x")  # o A do N64
+        # o que a página ensina bate com o que o emulador recebe
+        n64 = {c["acao"]: c["teclas"] for c in emu.controles_do_sistema("n64")}
+        self.assertEqual(n64["Analógico"], ["←", "↑", "→", "↓"])
+        self.assertEqual(n64["Direcional (cruz)"], ["T", "F", "G", "H"])
 
 
 class ConsolesDeLicencaLivreTests(TestCase):

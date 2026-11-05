@@ -203,3 +203,22 @@ for _modelo in (_ClienteDoPainel, _EnderecoDoCliente, _PropostaDoCliente):
     for _sinal, _evento in ((post_save, "save"), (post_delete, "delete")):
         _sinal.connect(_invalidar_home, sender=_modelo, weak=False,
                        dispatch_uid=f"core.mapa.{_evento}.{_modelo._meta.label_lower}")
+
+
+
+# O portal de jogos guarda os anúncios no ar num cache curto (core/portal_jogos.py):
+# anúncio salvo ou apagado no /system/ aparece (ou some) na hora.
+def _anuncio_mudou(sender, **kwargs):
+    from .portal_jogos import esquecer_vivo
+
+    esquecer_vivo()
+
+
+def _ligar_anuncios():
+    from .models import AnuncioJogos
+
+    post_save.connect(_anuncio_mudou, sender=AnuncioJogos, dispatch_uid="core.anuncio_jogos.save")
+    post_delete.connect(_anuncio_mudou, sender=AnuncioJogos, dispatch_uid="core.anuncio_jogos.delete")
+
+
+_ligar_anuncios()

@@ -114,7 +114,7 @@ class NoSite(BaseJogos):
         self.salvo()
         resposta = self.client.get(reverse("jogos"))
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, "sim-opcao--externo")
+        self.assertContains(resposta, "pg-cartao")
         self.assertContains(resposta, reverse("jogo", args=["corrida-maluca"]))
         self.assertContains(resposta, "Corrida Maluca")
 

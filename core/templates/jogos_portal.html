@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load static interno_extras %}
+
+{% block title %}Lazer & Sport Games: jogos online grátis — boliche, boxe, basquete e clássicos de console{% endblock %}
+{% block meta_description %}Lazer & Sport Games: jogue grátis no navegador ou no celular, sem baixar. Os jogos das máquinas da Lazer & Sport (boliche virtual, boxe, basquete, tiro ao alvo) com ranking, e clássicos de console.{% endblock %}
+{% block og_title %}Lazer & Sport Games — jogos online grátis{% endblock %}
+{% block main_class %} content-section--full{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ dados_estruturados|safe }}</script>{% endblock %}
+
+{% block content %}
+{% comment %}
+  LAZER & SPORT GAMES -- o portal (core/portal_jogos.py).
+
+  A vitrine de todos os jogos do site num lugar só: a busca no topo, os
+  destaques grandes, as faixas (feitos por nós, mais jogados, novidades,
+  consoles, HTML5), o ranking e os anúncios que a equipe põe pelo /system/.
+  Sem JavaScript tudo continua funcionando: a busca vira um ?q= que o
+  servidor responde, e as faixas rolam de lado com o dedo.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/portal-jogos.css' %}">
+
+<div class="pg" data-portal>
+
+    <!-- ================= TOPO: marca, busca e a conta ================= -->
+    <div class="pg-topo">
+        <a class="pg-marca" href="{% url 'jogos' %}">
+            <span class="pg-marca-logo"><img src="{% static 'images/logoofi.png' %}" alt="" width="56" height="56"></span>
+            <span class="pg-marca-texto">
+                <strong>LAZER &amp; SPORT <b>GAMES</b></strong>
+                <small>{{ total }} jogo{{ total|pluralize }} · grátis no navegador e no celular</small>
+            </span>
+        </a>
+        <form class="pg-busca" action="{% url 'jogos' %}" method="get" role="search" data-portal-form>
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" name="q" value="{{ busca }}" placeholder="Buscar jogo, console ou categoria…"
+                   aria-label="Buscar jogo" autocomplete="off" data-portal-busca>
+            <button type="submit">Buscar</button>
+        </form>
+        <div class="pg-conta">
+            {% if eu %}
+                <span class="pg-conta-ola"><i class="fa-solid fa-crown" aria-hidden="true"></i> Olá, {{ eu.nome }}</span>
+                <small>{% if eu.geral %}Você é o {{ eu.geral.posicao }}º no ranking geral{% else %}Jogue um jogo da casa para entrar no ranking{% endif %}</small>
+            {% else %}
+                <a class="pg-botao pg-botao--forte" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
+                <a class="pg-botao" href="{% url 'login' %}?next={% url 'jogos' %}#login-box"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Entrar</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if anuncio_topo %}
+    <aside class="pg-anuncio pg-anuncio--topo" aria-label="Anúncio">
+        {% include "partials/anuncio_jogos.html" with anuncio=anuncio_topo %}
+    </aside>
+    {% endif %}
+
+    <!-- ================= FILTROS ================= -->
+    <nav class="pg-filtros" aria-label="Filtrar jogos" data-portal-filtros>
+        <button type="button" class="pg-filtro" aria-pressed="true" data-filtro="">Todos</button>
+        {% for chave, nome in filtros %}<button type="button" class="pg-filtro" aria-pressed="false" data-filtro="familia:{{ chave }}">{{ nome }}</button>{% endfor %}
+        {% for categoria in categorias %}<button type="button" class="pg-filtro pg-filtro--categoria" aria-pressed="false" data-filtro="categoria:{{ categoria }}">{{ categoria }}</button>{% endfor %}
+    </nav>
+
+    <!-- ================= RESULTADOS (busca e filtros) ================= -->
+    <section class="pg-resultados" data-portal-resultados aria-live="polite"{% if not busca %} hidden{% endif %}>
+        <div class="pg-faixa-topo">
+            <h2 data-portal-resultados-titulo>{% if busca %}Resultados para “{{ busca }}”{% else %}Jogos{% endif %}</h2>
+            <button type="button" class="pg-limpar" data-portal-limpar><i class="fa-solid fa-xmark" aria-hidden="true"></i> Limpar</button>
+        </div>
+        <div class="pg-grade" data-portal-grade>
+            {% for jogo in resultados %}{% include "partials/cartao_jogo.html" %}{% endfor %}
+        </div>
+        <p class="pg-vazio" data-portal-vazio{% if resultados or not busca %} hidden{% endif %}>
+            Nenhum jogo com esse nome ainda. Tente outra palavra, ou veja todos os jogos.
+        </p>
+    </section>
+
+    <div class="pg-vitrine" data-portal-vitrine{% if busca %} hidden{% endif %}>
+
+        <!-- ================= DESTAQUES ================= -->
+        {% if destaques %}
+        <section class="pg-hero" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero>
+            {% for jogo in destaques %}
+            <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
+                     aria-label="{{ forloop.counter }} de {{ destaques|length }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
+                {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+                <div class="pg-slide-texto">
+                    <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
+                    <h2>{{ jogo.titulo }}</h2>
+                    {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
+                    <div class="pg-slide-acoes">
+                        <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
+                        {% if jogo.ranking %}<span class="pg-slide-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</span>{% endif %}
+                    </div>
+                </div>
+                {% if jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+            </article>
+            {% endfor %}
+            {% if destaques|length > 1 %}
+            <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+            <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+            <div class="pg-hero-pontos" data-portal-pontos>
+                {% for jogo in destaques %}<button type="button" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}></button>{% endfor %}
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        <!-- ================= AS FAIXAS ================= -->
+        {% for faixa in faixas %}
+        <section class="pg-faixa" id="{{ faixa.id }}" aria-labelledby="titulo-{{ faixa.id }}">
+            <div class="pg-faixa-topo">
+                <div>
+                    <h2 id="titulo-{{ faixa.id }}">{{ faixa.titulo }}</h2>
+                    <p>{{ faixa.sub }}</p>
+                </div>
+                <div class="pg-faixa-setas">
+                    <button type="button" aria-label="Voltar" data-portal-rolar="-1"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                    <button type="button" aria-label="Avançar" data-portal-rolar="1"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                </div>
+            </div>
+            <div class="pg-trilho" data-portal-trilho>
+                {% for jogo in faixa.jogos %}{% include "partials/cartao_jogo.html" %}{% endfor %}
+            </div>
+        </section>
+        {% if forloop.first and anuncios_meio %}
+        <aside class="pg-anuncio pg-anuncio--meio" aria-label="Anúncio">
+            {% include "partials/anuncio_jogos.html" with anuncio=anuncios_meio.0 %}
+        </aside>
+        {% endif %}
+        {% if forloop.counter == 3 and anuncios_meio|length > 1 %}
+        <aside class="pg-anuncio pg-anuncio--meio" aria-label="Anúncio">
+            {% include "partials/anuncio_jogos.html" with anuncio=anuncios_meio.1 %}
+        </aside>
+        {% endif %}
+        {% endfor %}
+
+        <!-- ================= RANKING ================= -->
+        <section class="pg-ranking" id="ranking" aria-labelledby="titulo-ranking">
+            <div class="pg-faixa-topo">
+                <div>
+                    <h2 id="titulo-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ranking Lazer &amp; Sport Games</h2>
+                    <p>Cada jogo da casa vale até 1.000 pontos: quem joga bem tudo sobe.</p>
+                </div>
+            </div>
+            <div class="pg-ranking-colunas">
+                <div class="pg-ranking-caixa">
+                    <h3>Ranking geral</h3>
+                    <ol class="pg-ranking-lista">
+                        {% for linha in ranking_portal.geral %}
+                        <li{% if linha.posicao <= 3 %} class="pg-podio pg-podio--{{ linha.posicao }}"{% endif %}><b>{{ linha.posicao }}º</b><span>{{ linha.nome }}</span><strong>{{ linha.pontos }}</strong></li>
+                        {% empty %}
+                        <li class="pg-ranking-vazio">O ranking começa com a primeira partida de um cadastrado. Seja o primeiro!</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                <div class="pg-ranking-caixa">
+                    <h3>Campeões de cada jogo</h3>
+                    <ul class="pg-campeoes">
+                        {% for c in ranking_portal.campeoes %}
+                        <li style="--cor: {{ c.cor }}"><a href="{{ c.url }}"><span>{{ c.jogo }}</span><strong><i class="fa-solid fa-crown" aria-hidden="true"></i> {{ c.nome }}</strong><small>{{ c.pontos }} pts</small></a></li>
+                        {% empty %}
+                        <li class="pg-ranking-vazio">Nenhum recorde ainda: o primeiro a jogar vira campeão.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        {% if not eu %}
+        <!-- ================= CONVITE ================= -->
+        <section class="pg-convite">
+            <div>
+                <h2>Crie sua conta grátis e jogue à vontade</h2>
+                <p>Sem conta, cada jogo dá uma partida. Com a conta, você joga quanto quiser, entra no ranking e guarda os seus recordes.</p>
+            </div>
+            <div class="pg-convite-acoes">
+                <a class="pg-botao pg-botao--forte" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
+                <a class="pg-botao" href="{% url 'login' %}?next={% url 'jogos' %}#login-box">Já tenho conta</a>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
+
+{{ indice_busca|json_script:"portal-jogos" }}
+<script src="{% estatico 'site/paginas/portal-jogos.js' %}" defer></script>
+{% endblock %}

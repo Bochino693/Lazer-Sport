@@ -349,10 +349,14 @@ _ARRASTO_BOLICHE = {
 CONTROLES = {
     "strike-kids": {
         **_ARRASTO_BOLICHE,
+        "pc": "Mouse: clique na bola, arraste para os pinos e solte. Teclado: Z X C V B jogam a bola numa das 5 faixas da pista, da esquerda para a direita; Espaço ou Enter começa a partida.",
+        "celular": "Encoste o dedo na bola, arraste para cima, na direção dos pinos, e solte. Deite o celular para a pista ficar maior.",
         "na_maquina": "Na máquina a criança rola a bola de verdade; 5 sensores na pista leem a jogada e a TV mostra o resultado.",
     },
     "dragon-bowling": {
         **_ARRASTO_BOLICHE,
+        "pc": "Mouse: arraste a bola e solte. Teclado: Z X C V B (ou A S D F G) jogam a bola numa das 5 faixas, da esquerda para a direita; Espaço ou Enter joga pelo meio.",
+        "celular": "Encoste o dedo na bola, arraste para cima e solte: o lado da pista por onde o dedo passa é a jogada.",
         "passos": (
             "Encoste o dedo (ou o mouse) na bola.",
             "Arraste para cima e solte: o lado da pista por onde o gesto passa é o sensor da jogada.",
@@ -362,6 +366,8 @@ CONTROLES = {
     },
     "lazer-shot": {
         "gesto": "clique",
+        "pc": "Mouse: mire e clique para atirar; R recarrega. Só no teclado: as setas movem a mira, Espaço, Enter ou F atiram e R recarrega. Na escolha do cenário, ↑ ↓ e Enter (ou 1 a 4).",
+        "celular": "Toque no alvo para atirar. O botão Recarregar fica embaixo da tela.",
         "rotulo": "Mire e clique",
         "passos": (
             "Aponte o mouse (ou o dedo) para o alvo.",
@@ -373,6 +379,8 @@ CONTROLES = {
     },
     "super-boxing": {
         "gesto": "toque",
+        "pc": "Clique na tela ou aperte Espaço (também Enter, ↑ ou F) para socar.",
+        "celular": "Toque na tela ou no botão SOCAR!, embaixo dela.",
         "rotulo": "Toque para socar",
         "passos": (
             "Toque na tela ou no botão SOCAR.",
@@ -384,6 +392,8 @@ CONTROLES = {
     },
     "slam-arena": {
         "gesto": "arrasto",
+        "pc": "Mouse: pegue a bola, arraste para a cesta e solte. Teclado: ← → (ou A D) miram; segure Espaço (ou ↑, W, Enter) para carregar a força e solte para arremessar.",
+        "celular": "Encoste na bola, arraste em direção à cesta e solte: quanto mais rápido o gesto, mais forte o arremesso.",
         "rotulo": "Arraste e arremesse",
         "passos": (
             "Pegue a bola na rampa.",
@@ -394,6 +404,8 @@ CONTROLES = {
     },
     "swish-arena": {
         "gesto": "arrasto",
+        "pc": "Mouse: pegue a bola, arraste para a cesta e solte. Teclado: ← → (ou A D) miram; segure Espaço (ou ↑, W, Enter) para carregar a força e solte para arremessar.",
+        "celular": "Encoste na bola, arraste em direção à cesta e solte: quanto mais rápido o gesto, mais forte o arremesso.",
         "rotulo": "Arraste e arremesse",
         "passos": (
             "Pegue a bola na rampa.",
@@ -404,6 +416,8 @@ CONTROLES = {
     },
     "gol-flash-arena": {
         "gesto": "arrasto",
+        "pc": "Mouse: arraste a bola na direção do anel aceso e solte. Teclado: ← → miram e Espaço, Enter ou ↑ chutam; as letras A a G (ou 1 a 7) chutam direto num anel.",
+        "celular": "Arraste a bola na direção do anel aceso e solte, ou mire com as setas embaixo da tela e toque em CHUTAR.",
         "rotulo": "Arraste e chute",
         "passos": (
             "Arraste a bola na direção do anel aceso e solte.",
@@ -418,6 +432,8 @@ CONTROLES = {
     },
     "craque-de-botao": {
         "gesto": "arrasto",
+        "pc": "Mouse: encoste num botão do seu time, puxe para trás e solte. Teclado: ↑ ↓ (ou W S) trocam de botão, ← → (ou A D) giram a mira; segure Espaço ou Enter para carregar o chute e solte.",
+        "celular": "Encoste num botão do seu time, puxe para trás, como um estilingue, e solte. Ou use os botões embaixo da tela: trocar, girar a mira e CHUTAR.",
         "rotulo": "Puxe e solte",
         "passos": (
             "Encoste num botão do seu time.",
@@ -434,6 +450,8 @@ CONTROLES = {
     },
     "hit-music": {
         "gesto": "clique-arrasto",
+        "pc": "Teclado: A S D F J K L Ç são as 8 faixas, no sentido do relógio a partir do topo (as setas dão as 4 retas). Segure a tecla na nota longa. Com o mouse, clique e arraste na mesa.",
+        "celular": "Toque a faixa quando a nota chegar ao anel, segure na nota longa e, no trilho com setas, arraste o dedo pelo caminho.",
         "rotulo": "Toque, segure e arraste",
         "passos": (
             "Toque a faixa quando a nota chegar ao anel.",

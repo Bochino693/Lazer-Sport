@@ -134,7 +134,68 @@
     }
   }
 
-  botao.addEventListener("click", jogar);
+  /* A PARTIDA GRÁTIS. O toque em Jogar avisa o site (/jogos/abriu/): ele conta
+     a partida para o "Mais jogados" do portal e diz se o visitante sem conta
+     ainda tem a sua partida grátis deste jogo. Da segunda vez vem o convite
+     de cadastro. Se o site não responder logo (rede ruim, servidor fora),
+     o jogo abre do mesmo jeito: o convite nunca trava quem quer jogar. */
+  const abriuUrl = palco.dataset.jogoAbriu;
+  const slug = palco.dataset.jogoSlug;
+  const portao = document.querySelector("[data-jogo-portao]");
+  const avisoGratis = document.querySelector("[data-jogo-gratis]");
+  const ESPERA_MAXIMA = 2500;
+
+  function csrf() {
+    const achado = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+    return achado ? decodeURIComponent(achado[1]) : "";
+  }
+  function perguntar() {
+    const livre = { liberado: true };
+    if (!abriuUrl || !slug || !window.fetch) return Promise.resolve(livre);
+    const pedido = fetch(abriuUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+      body: JSON.stringify({ jogo: slug }),
+    }).then(function (r) { return r.ok ? r.json() : livre; }).catch(function () { return livre; });
+    const espera = new Promise(function (pronto) { setTimeout(function () { pronto(livre); }, ESPERA_MAXIMA); });
+    return Promise.race([pedido, espera]);
+  }
+
+  function fecharPortao() {
+    if (!portao || portao.hidden) return;
+    portao.hidden = true;
+    document.removeEventListener("keydown", teclaDoPortao);
+    botao.focus();
+  }
+  function teclaDoPortao(evento) {
+    if (evento.key === "Escape") fecharPortao();
+  }
+  function abrirPortao() {
+    if (!portao) return;
+    portao.hidden = false;
+    const primeiro = portao.querySelector("a, button:not([data-jogo-portao-fechar])");
+    if (primeiro) primeiro.focus();
+    document.addEventListener("keydown", teclaDoPortao);
+  }
+  if (portao) {
+    portao.querySelector("[data-jogo-portao-fechar]").addEventListener("click", fecharPortao);
+    portao.addEventListener("click", function (evento) { if (evento.target === portao) fecharPortao(); });
+  }
+
+  let pedindo = false;
+  botao.addEventListener("click", function () {
+    if (pedindo) return;
+    pedindo = true;
+    botao.setAttribute("aria-busy", "true");
+    perguntar().then(function (resposta) {
+      pedindo = false;
+      botao.removeAttribute("aria-busy");
+      if (resposta && resposta.liberado === false) { abrirPortao(); return; }
+      if (resposta && resposta.ultima_gratis && avisoGratis) avisoGratis.hidden = false;
+      jogar();
+    });
+  });
 
   // em tela cheia no celular, deita (ou levanta) a tela conforme o jogo
   function girarTela() {
@@ -159,4 +220,44 @@
       if (icone) icone.className = document.fullscreenElement ? "fa-solid fa-compress" : "fa-solid fa-expand";
     });
   }
+})();
+
+/* ----------------------------------------------------------------------
+   COMO JOGAR: "No computador" (tecla por tecla) e "No celular" (onde fica
+   cada botão no controle da tela). Abre na aba do aparelho de quem está
+   vendo; sem JavaScript, as duas listas aparecem uma embaixo da outra.
+   ---------------------------------------------------------------------- */
+(function () {
+  "use strict";
+  const caixa = document.querySelector("[data-controles]");
+  const abas = caixa && caixa.querySelector("[data-controles-abas]");
+  if (!abas) return;
+  const botoes = Array.prototype.slice.call(abas.querySelectorAll("[data-aba]"));
+  const paineis = Array.prototype.slice.call(caixa.querySelectorAll("[data-painel]"));
+
+  function escolher(qual, focar) {
+    botoes.forEach(function (b) {
+      const ativo = b.dataset.aba === qual;
+      b.setAttribute("aria-selected", ativo ? "true" : "false");
+      b.tabIndex = ativo ? 0 : -1;
+      if (ativo && focar) b.focus();
+    });
+    paineis.forEach(function (p) { p.hidden = p.dataset.painel !== qual; });
+  }
+
+  botoes.forEach(function (b, i) {
+    b.addEventListener("click", function () { escolher(b.dataset.aba); });
+    b.addEventListener("keydown", function (evento) {
+      if (evento.key !== "ArrowRight" && evento.key !== "ArrowLeft") return;
+      evento.preventDefault();
+      const proximo = botoes[(i + (evento.key === "ArrowRight" ? 1 : botoes.length - 1)) % botoes.length];
+      escolher(proximo.dataset.aba, true);
+    });
+  });
+
+  let toque = false;
+  try { toque = window.matchMedia("(pointer: coarse)").matches; } catch (e) { toque = false; }
+  abas.hidden = false;
+  caixa.classList.add("jc-controles--abas");
+  escolher(toque ? "celular" : "pc");
 })();

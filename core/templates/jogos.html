@@ -239,6 +239,10 @@
             <ol class="sim-passos" data-sim-passos>
                 {% for passo in atual.controle.passos %}<li>{{ passo }}</li>{% endfor %}
             </ol>
+            <div class="sim-onde">
+                <p class="sim-onde-item"><i class="fa-solid fa-keyboard" aria-hidden="true"></i><span><strong>No computador</strong><span data-sim-no-pc>{{ atual.controle.pc }}</span></span></p>
+                <p class="sim-onde-item"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i><span><strong>No celular</strong><span data-sim-no-celular>{{ atual.controle.celular }}</span></span></p>
+            </div>
 
             <h3><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Na máquina de verdade</h3>
             <p class="sim-ficha-desc" data-sim-na-maquina>{{ atual.controle.na_maquina }}</p>

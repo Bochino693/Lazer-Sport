@@ -936,3 +936,81 @@ def _nome_oficial_da_bios(sistema, nome):
         if oficial.lower() == chave_de_nome(nome):
             return oficial
     return nome
+
+
+# ---------------------------------------------------------------- comandos de cada console
+#
+# O MAPA DE TECLAS É O DO PRÓPRIO EMULADOR (EmulatorJS 4.2.3, defaultControllers):
+# Z = A, X = B, A = X, S = Y, Q/E = L/R, Tab/R = L2/R2, Enter = Start, V = Select,
+# setas = direcional. Cada console dá um nome próprio a cada botão (o ✕ do
+# PlayStation é o "B" do emulador); a lista abaixo é o que a página mostra em
+# "No computador", tecla por tecla. No celular o emulador desenha o controle por
+# cima do jogo, com os mesmos nomes. Mudar uma tecla aqui sem mudar no emulador
+# ensina errado: as duas coisas andam juntas.
+#
+# (ação, teclas no computador, onde fica no controle da tela do celular)
+_DIRECIONAL = ("Mover", ("←", "↑", "→", "↓"), "o direcional, à esquerda")
+_START = ("Start", ("Enter",), "START, embaixo")
+_SELECT = ("Select", ("V",), "SELECT, embaixo")
+CONTROLES = {
+    "psx": (_DIRECIONAL, ("✕", ("X",), "✕, à direita"), ("○", ("Z",), "○, à direita"), ("□", ("S",), "□, à direita"),
+            ("△", ("A",), "△, à direita"), ("L1 / R1", ("Q", "E"), "L1 e R1, em cima"), ("L2 / R2", ("Tab", "R"), "L2 e R2, em cima"),
+            _START, _SELECT),
+    "nes": (_DIRECIONAL, ("A", ("Z",), "A, à direita"), ("B", ("X",), "B, à direita"), _START, _SELECT),
+    "gb": (_DIRECIONAL, ("A", ("Z",), "A, à direita"), ("B", ("X",), "B, à direita"), _START, _SELECT),
+    "gba": (_DIRECIONAL, ("A", ("Z",), "A, à direita"), ("B", ("X",), "B, à direita"), ("L / R", ("Q", "E"), "L e R, em cima"), _START, _SELECT),
+    "n64": (("Analógico", ("←", "↑", "→", "↓"), "o analógico, à esquerda"), ("A", ("X",), "A, à direita"), ("B", ("S",), "B, à direita"),
+            ("Z (gatilho)", ("Tab",), "Z"), ("L / R", ("Q", "E"), "L e R, em cima"), ("Botões C", ("I", "J", "K", "L"), "os botões C"),
+            ("Direcional (cruz)", ("T", "F", "G", "H"), "a cruz"), _START),
+    "pce": (_DIRECIONAL, ("I", ("Z",), "I, à direita"), ("II", ("X",), "II, à direita"), ("Run", ("Enter",), "RUN, embaixo"), _SELECT),
+    "nds": (_DIRECIONAL, ("A", ("Z",), "A"), ("B", ("X",), "B"), ("X", ("A",), "X"), ("Y", ("S",), "Y"), ("L / R", ("Q", "E"), "L e R, em cima"),
+            ("Tela de baixo", ("Clique do mouse",), "toque direto na tela de baixo"), _START, _SELECT),
+    "atari2600": (_DIRECIONAL, ("Disparo", ("X",), "o botão de disparo"), ("Reset (começar)", ("Enter",), "RESET"), ("Select", ("V",), "SELECT")),
+    "atari7800": (_DIRECIONAL, ("Botão 1", ("X",), "botão 1"), ("Botão 2", ("Z",), "botão 2"), ("Pause", ("Enter",), "PAUSE"),
+                  ("Reset", ("A",), "RESET"), ("Select", ("V",), "SELECT")),
+    "c64": (("Teclado do C64", ("Teclado do computador",), "o teclado aparece no botão de teclado da barra"),
+            ("Joystick", ("←", "↑", "→", "↓"), "o direcional, à esquerda"), ("Disparo", ("X",), "o botão de disparo")),
+    "snes": (_DIRECIONAL, ("A", ("Z",), "A"), ("B", ("X",), "B"), ("X", ("A",), "X"), ("Y", ("S",), "Y"), ("L / R", ("Q", "E"), "L e R"), _START, _SELECT),
+    "segaMD": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), _START),
+    "arcade": (_DIRECIONAL, ("Botões 1 a 4", ("Z", "X", "A", "S"), "os botões, à direita"), ("Ficha (moeda)", ("V",), "COIN"), ("Começar", ("Enter",), "START")),
+}
+
+#: Vale para todo console: o que não muda de um para o outro.
+DICAS_DE_CONTROLE = {
+    "pc": "Um controle de videogame USB ou Bluetooth funciona na hora: é só ligar e apertar um botão. "
+          "O menu do emulador (salvar e carregar o jogo, tela cheia, volume) fica na barra de baixo.",
+    "celular": "O controle aparece por cima do jogo. Deite o celular para ver maior; um controle Bluetooth "
+               "pareado também funciona. Salvar e carregar ficam na barra de baixo.",
+}
+
+
+def controles_do_sistema(codigo):
+    """[{acao, teclas, celular}] para a página do jogo ("No computador" / "No celular")."""
+    return [{"acao": a, "teclas": list(t), "celular": c} for a, t, c in CONTROLES.get(codigo, ())]
+
+
+def controles_do_emulador(codigo):
+    """Os ajustes de teclado que o site faz no emulador (hoje só o N64: o analógico nas setas).
+
+    No padrão do EmulatorJS as setas são a CRUZ do Nintendo 64 e o analógico
+    fica em T/F/G/H -- e quase todo jogo de N64 anda pelo analógico. Aqui os
+    dois trocam de lugar, e CONTROLES["n64"] mostra assim.
+    """
+    if codigo != "n64":
+        return None
+    padrao = {
+        0: "x", 1: "s", 2: "v", 3: "enter", 8: "z", 9: "a", 10: "q", 11: "e", 12: "tab", 13: "r",
+        20: "l", 21: "j", 22: "k", 23: "i", 24: "1", 25: "2", 26: "3",
+        # a cruz em T/F/G/H, o analógico nas setas
+        4: "t", 5: "g", 6: "f", 7: "h",
+        16: "right arrow", 17: "left arrow", 18: "down arrow", 19: "up arrow",
+    }
+    nomes = {0: "BUTTON_2", 1: "BUTTON_4", 2: "SELECT", 3: "START", 4: "DPAD_UP", 5: "DPAD_DOWN", 6: "DPAD_LEFT",
+             7: "DPAD_RIGHT", 8: "BUTTON_1", 9: "BUTTON_3", 10: "LEFT_TOP_SHOULDER", 11: "RIGHT_TOP_SHOULDER",
+             12: "LEFT_BOTTOM_SHOULDER", 13: "RIGHT_BOTTOM_SHOULDER", 16: "LEFT_STICK_X:+1", 17: "LEFT_STICK_X:-1",
+             18: "LEFT_STICK_Y:+1", 19: "LEFT_STICK_Y:-1", 20: "RIGHT_STICK_X:+1", 21: "RIGHT_STICK_X:-1",
+             22: "RIGHT_STICK_Y:+1", 23: "RIGHT_STICK_Y:-1"}
+    jogador = {str(i): ({"value": v, "value2": nomes[i]} if i in nomes else {"value": v}) for i, v in padrao.items()}
+    jogador.update({"14": {"value": "", "value2": "LEFT_STICK"}, "15": {"value": "", "value2": "RIGHT_STICK"},
+                    "27": {}, "28": {}, "29": {}})
+    return {"0": jogador, "1": {}, "2": {}, "3": {}}

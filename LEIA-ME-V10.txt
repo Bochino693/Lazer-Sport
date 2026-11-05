@@ -476,3 +476,43 @@ Dependência nova: rjsmin (requirements.txt).
    dentro da memória do jogo, num lugar diferente em cada jogo, e o
    emulador do site não dá acesso a essa memória. O que funciona na ROM:
    salvar e continuar a partida (fica guardado no aparelho de quem joga).
+
+21) LAZER & SPORT GAMES: O PORTAL DE JOGOS (/jogos/)
+   O QUE MUDOU. /jogos/ virou um portal, com todos os jogos do site num
+   lugar só: a busca no topo (filtra a cada letra, sem acento, e funciona
+   sem JavaScript pelo ?q=), os filtros (Feitos pela Lazer & Sport,
+   PlayStation, Nintendo, Sega, Atari/C64, HTML5 e as categorias), o
+   carrossel de destaques, as faixas (Feitos pela Lazer & Sport, Mais
+   jogados, Novidades dos últimos 45 dias, Clássicos de console, HTML5), o
+   ranking geral com o campeão de cada jogo e o convite para criar a conta.
+   Cada jogo da casa continua na sua página, em /jogos/<jogo>/.
+   CADASTRAR UM JOGO (Site e aplicativo > Jogos > Novo jogo). Em "Mais
+   detalhes", no fim: Categoria (entra na busca e vira filtro), "Feito pela
+   Lazer & Sport" (o jogo vai para a faixa dos jogos da casa, separado dos
+   de console) e "Destaque no topo do portal" (entra no carrossel grande).
+   O console é reconhecido sozinho pelos arquivos e cai no filtro certo.
+   Os mesmos campos estão no /system/ (Jogos cadastrados).
+   ANÚNCIOS (/system/ > Anúncios do portal de jogos > Adicionar). Título,
+   texto curto, imagem, o link e o texto do botão; "Onde aparece": faixa
+   larga no topo (imagem 1600x400), entre as seções (1200x300, aparecem até
+   dois) ou na página de cada jogo (600x600, quadrada). As datas "Começa
+   em" / "Termina em" são opcionais. Salvou ativo, entra no ar na hora. O
+   clique passa pelo site e soma em "Cliques" -- é o número para mostrar a
+   quem anuncia. O link abre em outra aba e vai marcado como patrocinado
+   (o Google exige isso para link pago).
+   MAIS JOGADOS. Cada toque em Jogar conta uma partida (no máximo uma a
+   cada meia hora por visitante e jogo, para recarregar a página não
+   inflar). A lista está em /system/ > Partidas dos jogos, só para ver.
+   CADASTRO E LOGIN. Sem conta, cada jogo dá uma partida -- a regra dos
+   jogos da casa agora vale também para os cadastrados. Na segunda vez
+   aparece o convite: "Crie sua conta grátis e jogue à vontade", com o
+   botão de criar a conta e o de entrar, e a pessoa volta para o mesmo jogo
+   depois. Se o site demorar a responder, o jogo abre assim mesmo: o
+   convite nunca trava quem quer jogar.
+   COMO JOGAR. A página de cada jogo de console tem o quadro "Como jogar"
+   com duas abas: "No computador" (tecla por tecla, ex.: no PlayStation
+   X = ✕, Z = ○, S = □, A = △) e "No celular" (onde fica cada botão no
+   controle que aparece na tela). Abre sozinha na aba do aparelho de quem
+   está vendo. No Nintendo 64 as setas viraram o analógico (quase todo jogo
+   de N64 anda pelo analógico) e a cruz foi para T/F/G/H. Os jogos da casa
+   ganharam as mesmas duas explicações na ficha, ao lado do jogo.
