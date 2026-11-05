@@ -18,6 +18,7 @@ entra aqui, como na tela dos jogos.
 from __future__ import annotations
 
 import logging
+import unicodedata
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -25,9 +26,11 @@ from django.shortcuts import get_object_or_404, render
 from django.views import View
 
 from core import arena
+from core.fotos import reduzir_imagem
 from core.models import Brinquedos, ModuloTresD, ObjetoTresD
 from core.objetos_3d import ler_glb_do_site, tabela_pronta, validar_glb
 
+from .templatetags.interno_extras import estatico
 from .utils import ErroDeFormulario, endereco_do_site, exigir_confirmacao_exclusao
 from .views import RespostaJSONMixin, SuperusuarioInternoRequiredMixin
 
@@ -44,6 +47,37 @@ def _medidas_texto(medidas):
     except (TypeError, ValueError):
         return ""
     return f"{altura:.2f} m × {largura:.2f} m × {profundidade:.2f} m".replace(".", ",")
+
+
+def _texto_de_busca(*partes):
+    """O que a busca da tela compara: tudo junto, minúsculo e sem acento.
+
+    A busca roda no navegador, sem ir ao servidor (ver o script da tela),
+    e tira o acento do que se digita do mesmo jeito: "pião" acha "Pião".
+    """
+    texto = " ".join(str(parte) for parte in partes if parte)
+    sem_acento = "".join(c for c in unicodedata.normalize("NFD", texto) if not unicodedata.combining(c))
+    return " ".join(sem_acento.lower().split())
+
+
+def _jogos_do_modelo_do_site(modelo, site):
+    """Os jogos da casa ligados a um objeto do site: o da máquina e os do espaço."""
+    slugs = ([modelo["jogo"]] if modelo.get("jogo") else []) + list(modelo.get("jogos", ()))
+    vistos, saida = set(), []
+    for slug in slugs:
+        jogo = arena.JOGOS_POR_SLUG.get(slug)
+        if jogo and slug not in vistos:
+            vistos.add(slug)
+            saida.append({"slug": slug, "titulo": jogo["titulo"], "url": f"{site}/jogos/{slug}/"})
+    return saida
+
+
+def _foto_do_modelo_do_site(modelo):
+    """A primeira foto da fábrica (o perfil), para o cartão; "" se não há."""
+    fotos = modelo.get("fotos") or ()
+    if not fotos or not modelo.get("pasta"):
+        return ""
+    return estatico(modelo["pasta"] + fotos[0][1])
 
 
 class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
@@ -64,6 +98,7 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
         )
         linhas = []
         usados = {}
+        usados_ligados = set()
         for brinquedo in brinquedos:
             objeto = getattr(brinquedo, "objeto_3d", None) if Brinquedos.objeto_3d.is_cached(brinquedo) else None
             slug_jogo = arena.jogo_da_maquina(brinquedo.nome_brinquedo)
@@ -82,6 +117,8 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
                 origem = "enviado" if objeto.arquivo else "do site"
                 if objeto.arquivo_estatico:
                     usados[objeto.arquivo_estatico] = brinquedo.nome_brinquedo
+                    if objeto.ativo:
+                        usados_ligados.add(objeto.arquivo_estatico)
                 linha["objeto"] = {
                     "id": objeto.pk,
                     "origem": origem,
@@ -94,23 +131,52 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
                     "ativo": objeto.ativo,
                     "no_ar": bool(objeto.ativo and objeto.url),
                 }
+            objeto_linha = linha["objeto"] or {}
+            linha["busca"] = _texto_de_busca(
+                linha["nome"], objeto_linha.get("arquivo"), objeto_linha.get("origem"),
+                " ".join(objeto_linha.get("cores") or []), jogo["titulo"] if jogo else "",
+                linha["sugestao"]["titulo"] if linha["sugestao"] else "",
+            )
             linhas.append(linha)
 
-        modelos_do_site = [
-            {
+        modelos_do_site = []
+        for modelo in arena.MODELOS_3D:
+            jogos = _jogos_do_modelo_do_site(modelo, site)
+            usado_por = usados.get(modelo["arquivo"], "")
+            modelos_do_site.append({
+                "id": modelo["id"],
                 "arquivo": modelo["arquivo"],
+                "arquivo_nome": modelo["arquivo"].rsplit("/", 1)[-1],
                 "titulo": modelo["titulo"],
                 "medidas": _medidas_texto(modelo["medidas"]),
                 "jogo": modelo.get("jogo", ""),
-                "usado_por": usados.get(modelo["arquivo"], ""),
-            }
-            for modelo in arena.MODELOS_3D
-        ]
+                "jogos": jogos,
+                "usado_por": usado_por,
+                "usado_ligado": modelo["arquivo"] in usados_ligados,
+                # o cartão mostra a foto da fábrica e tira a prévia do próprio .glb
+                "foto": _foto_do_modelo_do_site(modelo),
+                "url": estatico(modelo["arquivo"]),
+                "busca": _texto_de_busca(
+                    modelo["titulo"], modelo["arquivo"], usado_por, "do site",
+                    " ".join(j["titulo"] for j in jogos),
+                ),
+            })
+
+        # Os três grupos da tela: no ar, desligados (voltam com "Religar") e
+        # sem objeto -- estes com os que o site já tem pronto na frente.
         com_objeto = [l for l in linhas if l["objeto"] and l["objeto"]["no_ar"]]
+        desligados = [l for l in linhas if l["objeto"] and not l["objeto"]["no_ar"]]
+        sem_objeto_sugeridos = [l for l in linhas if not l["objeto"] and l["sugestao"]]
+        sem_objeto_outros = [l for l in linhas if not l["objeto"] and not l["sugestao"]]
         modulos = [self._serializar_modulo(modulo) for modulo in ModuloTresD.objects.all()] if tabela_pronta(ModuloTresD) else []
         return render(request, self.template_name, {
             "linhas": linhas,
             "linhas_dados": linhas,
+            "com_objeto": com_objeto,
+            "desligados": desligados,
+            "sem_objeto_sugeridos": sem_objeto_sugeridos,
+            "sem_objeto_outros": sem_objeto_outros,
+            "total_sem_objeto": len(sem_objeto_sugeridos) + len(sem_objeto_outros),
             "modelos_do_site": modelos_do_site,
             "modulos": modulos,
             "modulos_dados": modulos,
@@ -137,12 +203,15 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             "cores": list(modulo.cores or []),
             "medidas": _medidas_texto(modulo.medidas or []),
             "ativo": modulo.ativo,
+            "busca": _texto_de_busca(modulo.nome, modulo.get_categoria_display(), modulo.descricao,
+                                     " ".join(modulo.cores or [])),
         }
 
     @staticmethod
     def _capa(brinquedo):
         try:
-            return brinquedo.imagem_brinquedo.url if brinquedo.imagem_brinquedo else ""
+            # a foto vai num cartão: a do Cloudinary vem reduzida
+            return reduzir_imagem(brinquedo.imagem_brinquedo.url, 640) if brinquedo.imagem_brinquedo else ""
         except Exception:
             return ""
 

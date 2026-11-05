@@ -27,7 +27,7 @@
 </section>
 {% else %}
 
-<section class="ls-metrics mb-3">
+<section class="ls-metrics">
   <article class="ls-metric-card blue">
     <div class="ls-metric-head"><span class="ls-metric-label">Brinquedos ativos</span><span class="ls-metric-icon"><i class="bi bi-controller"></i></span></div>
     <strong class="ls-metric-value">{{ total }}</strong>
@@ -49,113 +49,204 @@
   </article>
 </section>
 
-<section class="ls-card overflow-hidden mb-3">
-  <div class="table-responsive">
-    <table class="ls-table mb-0">
-      <thead><tr><th>Brinquedo</th><th>Objeto 3D</th><th>Arena</th><th>Jogo</th><th class="text-end">Ações</th></tr></thead>
-      <tbody>
-      {% for linha in linhas %}
-        <tr>
-          <td data-rotulo="Brinquedo">
-            <div class="d-flex align-items-center gap-3">
-              {% if linha.capa %}<img src="{{ linha.capa }}" alt="" width="52" height="52" class="ls-3d-capa flex-shrink-0">{% else %}<span class="ls-3d-sem-capa flex-shrink-0"><i class="bi bi-image"></i></span>{% endif %}
-              <div class="min-w-0"><strong class="d-block">{{ linha.nome }}</strong><span class="material-sub d-block">#{{ linha.id }}</span></div>
-            </div>
-          </td>
-          <td data-rotulo="Objeto 3D">
-            {% if linha.objeto %}
-              <span class="badge rounded-pill {% if linha.objeto.no_ar %}text-bg-success{% else %}text-bg-secondary{% endif %}">
-                {% if linha.objeto.origem == 'enviado' %}<i class="bi bi-cloud-check"></i> Enviado{% else %}<i class="bi bi-box-seam"></i> Do site{% endif %}{% if not linha.objeto.no_ar %} · desligado{% endif %}
-              </span>
-              <span class="material-sub d-block">{{ linha.objeto.arquivo }}{% if linha.objeto.medidas %} · {{ linha.objeto.medidas }}{% endif %}</span>
-              {% if linha.objeto.cores %}<div class="ls-3d-cores">{% for cor in linha.objeto.cores %}<span class="ls-3d-cor"><i></i>{{ cor }}</span>{% endfor %}</div>{% endif %}
-            {% elif linha.sugestao %}
-              <span class="badge rounded-pill text-bg-warning"><i class="bi bi-lightbulb"></i> Sem objeto</span>
-              <span class="material-sub d-block">O site tem "{{ linha.sugestao.titulo }}" pronto: <button class="btn btn-link btn-sm p-0 align-baseline" type="button" data-ligar="{{ linha.id }}" data-arquivo="{{ linha.sugestao.arquivo }}">ligar a este brinquedo</button></span>
+{# A barra de cima: o que mostrar e a busca, tudo no navegador (ver `data-busca3d` no script). #}
+<div class="ls-3d-barra" id="barra3d">
+  <div class="ls-3d-abas" role="group" aria-label="Mostrar">
+    <button class="ls-3d-aba" type="button" data-filtro3d="todos" aria-pressed="true">Todos</button>
+    <button class="ls-3d-aba" type="button" data-filtro3d="com" aria-pressed="false"><i class="bi bi-badge-3d" aria-hidden="true"></i> Com objeto <span>{{ com_objeto|length }}</span></button>
+    <button class="ls-3d-aba" type="button" data-filtro3d="sem" aria-pressed="false"><i class="bi bi-dash-circle" aria-hidden="true"></i> Sem objeto <span>{{ total_sem_objeto }}</span></button>
+    <button class="ls-3d-aba" type="button" data-filtro3d="site" aria-pressed="false"><i class="bi bi-box-seam" aria-hidden="true"></i> Do site <span>{{ modelos_do_site|length }}</span></button>
+    <button class="ls-3d-aba" type="button" data-filtro3d="lab" aria-pressed="false"><i class="bi bi-bricks" aria-hidden="true"></i> Laboratório <span>{{ modulos|length }}</span></button>
+  </div>
+  <label class="ls-3d-busca">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" id="busca3d" placeholder="Nome, arquivo, cor ou jogo" aria-label="Buscar nos objetos 3D" autocomplete="off" enterkeyhint="search">
+  </label>
+</div>
+<div class="ls-game-vazio ls-3d-sem-resultado" id="buscaVazia3d" hidden><i class="bi bi-search"></i><span id="buscaVaziaTexto">Nada encontrado.</span></div>
+
+{# ---- COM OBJETO 3D: os que estão no ar ---- #}
+<section class="ls-3d-secao" data-grupo3d="com" id="comObjeto">
+  <h2 class="ls-games-titulo"><i class="bi bi-badge-3d"></i> Com objeto 3D <small>{{ total_com_objeto }} no ar · {{ total_na_arena }} na Arena 3D</small></h2>
+  <div class="ls-games-grade ls-3d-grade">
+    {% for linha in com_objeto %}
+      <article class="ls-game ls-3d-card{% if linha.objeto.origem == 'enviado' %} ls-3d-card--enviado{% endif %}" data-busca3d="{{ linha.busca }}">
+        <div class="ls-game-arte ls-3d-arte" data-abrir3d="{{ linha.id }}">
+          {% if linha.capa %}<img class="ls-3d-foto" src="{{ linha.capa }}" alt="" loading="lazy" decoding="async">{% endif %}
+          <span class="ls-3d-previa{% if not linha.capa %} cheia{% endif %}" data-previa3d="{{ linha.objeto.url }}" aria-hidden="true"><b>3D</b><i class="bi bi-box"></i></span>
+          <span class="ls-game-selo">{% if linha.objeto.origem == 'enviado' %}<i class="bi bi-cloud-check"></i> Enviado{% else %}<i class="bi bi-box-seam"></i> Do site{% endif %}</span>
+          <span class="ls-game-selo direita{% if not linha.objeto.exibir_na_arena %} cinza{% endif %}">{% if linha.objeto.exibir_na_arena %}Na Arena{% else %}Fora da Arena{% endif %}</span>
+        </div>
+        <div class="ls-game-corpo ls-3d-corpo">
+          <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
+          <div class="ls-3d-fatos">
+            <span class="ls-3d-fato" title="{{ linha.objeto.arquivo }}"><i class="bi bi-file-earmark-binary" aria-hidden="true"></i><span>{{ linha.objeto.arquivo }}</span></span>
+            <span class="ls-3d-fato"><i class="bi bi-rulers" aria-hidden="true"></i><span>{{ linha.objeto.medidas|default:"Medidas não lidas" }}</span></span>
+          </div>
+          <div class="ls-3d-cores">
+            {% for cor in linha.objeto.cores|slice:":5" %}<span class="ls-3d-cor" data-cor="{{ cor|lower }}"><i></i>{{ cor }}</span>{% empty %}<span class="ls-3d-cor tons" title="O arquivo não traz variações de cor: o visor oferece os tons da adesivagem"><i></i>Tons da adesivagem</span>{% endfor %}
+            {% if linha.objeto.cores|length > 5 %}<span class="ls-3d-cor mais" title="{{ linha.objeto.cores|join:', ' }}">+{{ linha.objeto.cores|length|add:"-5" }}</span>{% endif %}
+          </div>
+          {% if linha.jogo %}<span class="ls-3d-jogo"><i class="bi bi-joystick" aria-hidden="true"></i> Jogo: {{ linha.jogo.titulo }}</span>{% endif %}
+        </div>
+        <div class="ls-3d-acoes">
+          <div class="ls-3d-acoes-linha">
+            <button class="btn btn-sm ls-3d-ver" type="button" data-ver3d="{{ linha.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
+            {% if linha.jogo %}<a class="ls-game-jogar" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Jogar a prévia do {{ linha.jogo.titulo }}"><i class="bi bi-play-fill"></i> Jogar a prévia</a>{% endif %}
+          </div>
+          <div class="ls-3d-acoes-ajuste">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-arena="{{ linha.id }}">{% if linha.objeto.exibir_na_arena %}<i class="bi bi-eye-slash"></i> Tirar da Arena{% else %}<i class="bi bi-eye"></i> Pôr na Arena{% endif %}</button>
+            <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Trocar</button>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ linha.id }}" data-nome="Objeto 3D de {{ linha.nome }}" title="Tirar o objeto" aria-label="Tirar o objeto 3D de {{ linha.nome }}"><i class="bi bi-trash3"></i></button>
+          </div>
+        </div>
+      </article>
+    {% empty %}
+      <div class="ls-game-vazio"><i class="bi bi-box"></i>Nenhum brinquedo com objeto 3D no ar. Toque em <strong>Enviar objeto 3D</strong> ou ligue um dos objetos que vêm com o site.</div>
+    {% endfor %}
+  </div>
+</section>
+
+{# ---- DESLIGADOS: tirados do brinquedo, voltam com "Religar" ---- #}
+{% if desligados %}
+<section class="ls-3d-secao" data-grupo3d="desligados" id="desligados3d">
+  <h2 class="ls-games-titulo cinza"><i class="bi bi-power"></i> Desligados <small>{{ desligados|length }} · fora do site até religar</small></h2>
+  <div class="ls-3d-lista ls-3d-lista--largo">
+    {% for linha in desligados %}
+      <article class="ls-3d-mini empilhado desligado" data-busca3d="{{ linha.busca }}">
+        <span class="ls-3d-mini-foto">{% if linha.capa %}<img src="{{ linha.capa }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-box"></i>{% endif %}</span>
+        <div class="ls-3d-mini-texto">
+          <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
+          <span><em class="ls-3d-etiqueta">{% if linha.objeto.origem == 'enviado' %}Enviado{% else %}Do site{% endif %} · {% if linha.objeto.ativo %}sem arquivo{% else %}desligado{% endif %}</em></span>
+          <span title="{{ linha.objeto.arquivo }}">{{ linha.objeto.arquivo }}{% if linha.objeto.medidas %} · {{ linha.objeto.medidas }}{% endif %}</span>
+        </div>
+        <div class="ls-3d-mini-acoes ls-3d-acoes-ajuste">
+          <button class="btn btn-sm btn-outline-success" type="button" data-religar="{{ linha.id }}"><i class="bi bi-arrow-counterclockwise"></i> Religar</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Trocar</button>
+          <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ linha.id }}" data-nome="Objeto 3D de {{ linha.nome }}" title="Tirar o objeto" aria-label="Tirar o objeto 3D de {{ linha.nome }}"><i class="bi bi-trash3"></i></button>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---- SEM OBJETO: primeiro os que o site já tem pronto ---- #}
+<section class="ls-3d-secao" data-grupo3d="sem" id="semObjeto">
+  <h2 class="ls-games-titulo amarelo"><i class="bi bi-dash-circle"></i> Sem objeto 3D <small>{{ total_sem_objeto }} brinquedo{{ total_sem_objeto|pluralize }}{% if sem_objeto_sugeridos %} · {{ sem_objeto_sugeridos|length }} com objeto pronto no site{% endif %}</small></h2>
+  {% if sem_objeto_sugeridos %}
+  <div class="ls-3d-lista ls-3d-lista--largo">
+    {% for linha in sem_objeto_sugeridos %}
+      <article class="ls-3d-mini empilhado sugerido" data-busca3d="{{ linha.busca }}">
+        <span class="ls-3d-mini-foto">{% if linha.capa %}<img src="{{ linha.capa }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-image"></i>{% endif %}</span>
+        <div class="ls-3d-mini-texto">
+          <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
+          <span><em class="ls-3d-etiqueta dica"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i> O site já tem o objeto</em></span>
+          {% if linha.jogo %}<span><a class="ls-3d-jogo" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill" aria-hidden="true"></i> Jogar {{ linha.jogo.titulo }}</a></span>{% endif %}
+        </div>
+        <div class="ls-3d-mini-acoes">
+          <button class="btn btn-sm btn-warning ls-3d-ligar" type="button" data-ligar="{{ linha.id }}" data-arquivo="{{ linha.sugestao.arquivo }}"><i class="bi bi-link-45deg"></i> Ligar o objeto do site ({{ linha.sugestao.titulo }})</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Enviar</button>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if sem_objeto_outros %}
+  <div class="ls-3d-lista">
+    {% for linha in sem_objeto_outros %}
+      <article class="ls-3d-mini" data-busca3d="{{ linha.busca }}">
+        <span class="ls-3d-mini-foto">{% if linha.capa %}<img src="{{ linha.capa }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-image"></i>{% endif %}</span>
+        <div class="ls-3d-mini-texto">
+          <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
+          {% if linha.jogo %}<span><a class="ls-3d-jogo" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill" aria-hidden="true"></i> Jogar {{ linha.jogo.titulo }}</a></span>{% else %}<span>#{{ linha.id }} · sem jogo</span>{% endif %}
+        </div>
+        <div class="ls-3d-mini-acoes">
+          <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Enviar</button>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if not sem_objeto_sugeridos and not sem_objeto_outros %}
+    <div class="ls-game-vazio"><i class="bi bi-check2-circle"></i>{% if linhas %}Todo brinquedo ativo já tem o seu objeto 3D.{% else %}Nenhum brinquedo ativo no catálogo.{% endif %}</div>
+  {% endif %}
+</section>
+
+{# ---- OS OBJETOS QUE VÊM COM O SITE ---- #}
+<section class="ls-3d-secao" data-grupo3d="site" id="doSite">
+  <h2 class="ls-games-titulo"><i class="bi bi-box-seam"></i> Objetos que vêm com o site <small>{{ modelos_do_site|length }} objeto{{ modelos_do_site|length|pluralize }} · arquivos da fábrica</small></h2>
+  <p class="ls-3d-nota">Feitos a partir dos arquivos da fábrica. Enquanto não estão ligados a um brinquedo, a Arena mostra cada um como "fora do catálogo".</p>
+  <div class="ls-games-grade ls-3d-grade">
+    {% for modelo in modelos_do_site %}
+      <article class="ls-game ls-3d-card ls-3d-card--site" data-busca3d="{{ modelo.busca }}">
+        <div class="ls-game-arte ls-3d-arte" data-abrir3d-site="{{ modelo.id }}">
+          {% if modelo.foto %}<img class="ls-3d-foto" src="{{ modelo.foto }}" alt="" loading="lazy" decoding="async">{% endif %}
+          <span class="ls-3d-previa{% if not modelo.foto %} cheia{% endif %}" data-previa3d="{{ modelo.url }}" aria-hidden="true"><b>3D</b><i class="bi bi-box"></i></span>
+          <span class="ls-game-selo"><i class="bi bi-box-seam"></i> Do site</span>
+          <span class="ls-game-selo direita{% if not modelo.usado_ligado %} cinza{% endif %}">{% if modelo.usado_ligado %}Ligado{% elif modelo.usado_por %}Desligado{% else %}Livre{% endif %}</span>
+        </div>
+        <div class="ls-game-corpo ls-3d-corpo">
+          <strong title="{{ modelo.titulo }}">{{ modelo.titulo }}</strong>
+          <div class="ls-3d-fatos">
+            <span class="ls-3d-fato" title="{{ modelo.arquivo }}"><i class="bi bi-file-earmark-binary" aria-hidden="true"></i><span>{{ modelo.arquivo_nome }}</span></span>
+            <span class="ls-3d-fato"><i class="bi bi-rulers" aria-hidden="true"></i><span>{{ modelo.medidas }}</span></span>
+            {% if modelo.usado_por %}
+              <span class="ls-3d-fato{% if modelo.usado_ligado %} ligado{% endif %}" title="{{ modelo.usado_por }}"><i class="bi bi-link-45deg" aria-hidden="true"></i><span>{% if modelo.usado_ligado %}Ligado a{% else %}Desligado de{% endif %} <b>{{ modelo.usado_por }}</b></span></span>
             {% else %}
-              <span class="badge rounded-pill text-bg-dark">Sem objeto</span>
+              <span class="ls-3d-fato"><i class="bi bi-link-45deg" aria-hidden="true"></i><span>Nenhum brinquedo · na Arena, fora do catálogo</span></span>
             {% endif %}
-          </td>
-          <td data-rotulo="Arena">
-            {% if linha.objeto and linha.objeto.no_ar %}
-              <span class="badge {% if linha.objeto.exibir_na_arena %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if linha.objeto.exibir_na_arena %}Na Arena 3D{% else %}Fora da Arena{% endif %}</span>
-            {% else %}<span class="text-muted small">—</span>{% endif %}
-          </td>
-          <td data-rotulo="Jogo">
-            {% if linha.jogo %}
-              <a class="btn btn-sm btn-outline-warning" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill"></i> Jogar {{ linha.jogo.titulo }}</a>
-            {% else %}<span class="text-muted small">Sem jogo</span>{% endif %}
-          </td>
-          <td data-rotulo="Ações" class="text-end text-nowrap">
-            {% if linha.objeto and linha.objeto.no_ar %}
-              <button class="btn btn-sm btn-outline-info" type="button" data-ver3d="{{ linha.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
-              <button class="btn btn-sm btn-outline-secondary" type="button" data-arena="{{ linha.id }}">{% if linha.objeto.exibir_na_arena %}Tirar da Arena{% else %}Pôr na Arena{% endif %}</button>
-            {% elif linha.objeto %}
-              <button class="btn btn-sm btn-outline-success" type="button" data-religar="{{ linha.id }}"><i class="bi bi-arrow-counterclockwise"></i> Religar</button>
-            {% endif %}
-            <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> {% if linha.objeto %}Trocar{% else %}Enviar{% endif %}</button>
-            {% if linha.objeto %}
-              <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ linha.id }}" data-nome="Objeto 3D de {{ linha.nome }}" title="Tirar o objeto"><i class="bi bi-trash3"></i></button>
-            {% endif %}
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="5" class="text-center py-5 text-muted">Nenhum brinquedo ativo no catálogo.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+          </div>
+          {% if modelo.jogos %}<div class="ls-3d-jogos">{% for jogo in modelo.jogos %}<a class="ls-3d-jogo" href="{{ jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-joystick" aria-hidden="true"></i> {{ jogo.titulo }}</a>{% endfor %}</div>{% endif %}
+        </div>
+        <div class="ls-3d-acoes">
+          <div class="ls-3d-acoes-linha">
+            <button class="btn btn-sm ls-3d-ver" type="button" data-ver3d-site="{{ modelo.id }}" data-url="{{ modelo.url }}" data-titulo="{{ modelo.titulo }}" data-medidas="{{ modelo.medidas }}" data-arquivo-nome="{{ modelo.arquivo_nome }}"{% if modelo.jogos %} data-jogo-url="{{ modelo.jogos.0.url }}" data-jogo-titulo="{{ modelo.jogos.0.titulo }}"{% endif %}><i class="bi bi-badge-3d"></i> Ver em 3D</button>
+            <button class="btn btn-sm btn-outline-primary" type="button" data-ligar="" data-arquivo="{{ modelo.arquivo }}"><i class="bi bi-link-45deg"></i> Ligar a um brinquedo</button>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
   </div>
 </section>
 
-<section class="ls-card p-3">
-  <h2 class="h6 mb-1"><i class="bi bi-box-seam me-1"></i> Objetos que vêm com o site</h2>
-  <p class="text-muted small mb-2">Feitos a partir dos arquivos da fábrica. Enquanto não estão ligados a um brinquedo, a Arena mostra cada um como "fora do catálogo".</p>
-  <div class="table-responsive">
-    <table class="ls-table mb-0">
-      <thead><tr><th>Objeto</th><th>Medidas</th><th>Jogo</th><th>Ligado a</th><th class="text-end">Ação</th></tr></thead>
-      <tbody>
-      {% for modelo in modelos_do_site %}
-        <tr>
-          <td data-rotulo="Objeto"><strong>{{ modelo.titulo }}</strong><span class="material-sub d-block">{{ modelo.arquivo }}</span></td>
-          <td data-rotulo="Medidas">{{ modelo.medidas }}</td>
-          <td data-rotulo="Jogo">{% if modelo.jogo %}<a href="{{ site }}/jogos/{{ modelo.jogo }}/" target="_blank" rel="noopener" data-no-soft-nav="true">{{ modelo.jogo }}</a>{% else %}—{% endif %}</td>
-          <td data-rotulo="Ligado a">{% if modelo.usado_por %}<span class="badge text-bg-success">{{ modelo.usado_por }}</span>{% else %}<span class="text-muted small">nenhum brinquedo</span>{% endif %}</td>
-          <td data-rotulo="Ação" class="text-end"><button class="btn btn-sm btn-outline-primary" type="button" data-ligar="" data-arquivo="{{ modelo.arquivo }}"><i class="bi bi-link-45deg"></i> Ligar a um brinquedo</button></td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section id="laboratorio" class="mt-4">
+<section id="laboratorio" class="ls-3d-secao ls-3d-secao--lab" data-grupo3d="lab">
   <h2 class="ls-games-titulo rosa"><i class="bi bi-bricks"></i> Laboratório: montar brinquedões <small>{{ modulos|length }} peça{{ modulos|length|pluralize }} na biblioteca</small></h2>
   <div class="ls-lab-topo">
     <div class="ls-lab-texto">
       <strong>A ideia:</strong> os brinquedões são feitos de peças que se repetem — torre, plataforma, escorregador, rede, túnel, piscina de bolinhas. Aqui vocês vão guardando essas peças em 3D (.glb), com o tempo. Cada peça chega com as medidas e as cores lidas do arquivo, e abre no visor.
-      <span class="ls-lab-passos"><i class="bi bi-1-circle-fill"></i> Guardar as peças (já funciona) <i class="bi bi-arrow-right"></i> <i class="bi bi-2-circle-fill"></i> Montar: encaixar as peças numa planta e ver o brinquedão inteiro (próximo passo) <i class="bi bi-arrow-right"></i> <i class="bi bi-3-circle-fill"></i> Orçar pela montagem e mostrar ao cliente na Arena</span>
+      <ol class="ls-lab-passos">
+        <li><i class="bi bi-1-circle-fill" aria-hidden="true"></i> Guardar as peças (já funciona)</li>
+        <li><i class="bi bi-2-circle-fill" aria-hidden="true"></i> Montar: encaixar as peças numa planta e ver o brinquedão inteiro (próximo passo)</li>
+        <li><i class="bi bi-3-circle-fill" aria-hidden="true"></i> Orçar pela montagem e mostrar ao cliente na Arena</li>
+      </ol>
     </div>
     {% if tabela_modulos %}<button class="btn btn-warning" id="novoModulo" type="button"><i class="bi bi-plus-lg me-1"></i> Guardar peça 3D</button>{% endif %}
   </div>
   {% if not tabela_modulos %}
     <div class="ls-game-vazio"><i class="bi bi-hourglass-split"></i>A tabela das peças ainda não existe no banco: a migração roda na próxima subida.</div>
   {% else %}
-  <div class="ls-games-grade">
+  <div class="ls-games-grade ls-3d-grade">
     {% for modulo in modulos %}
-      <article class="ls-game ls-game--peca">
+      <article class="ls-game ls-game--peca" data-busca3d="{{ modulo.busca }}">
         <div class="ls-game-arte ls-game-arte--peca">
           <i class="bi {% if modulo.categoria == 'torre' %}bi-building{% elif modulo.categoria == 'escorregador' %}bi-tsunami{% elif modulo.categoria == 'rede' %}bi-grid-3x3{% elif modulo.categoria == 'tunel' %}bi-circle{% elif modulo.categoria == 'piscina' %}bi-droplet-fill{% elif modulo.categoria == 'escada' %}bi-ladder{% elif modulo.categoria == 'cercado' %}bi-shield{% elif modulo.categoria == 'decoracao' %}bi-palette{% else %}bi-box{% endif %}"></i>
           <span class="ls-game-selo">{{ modulo.categoria_nome }}</span>
         </div>
-        <div class="ls-game-corpo">
-          <strong>{{ modulo.nome }}</strong>
-          <span>{{ modulo.arquivo }}{% if modulo.medidas %} · {{ modulo.medidas }}{% endif %}</span>
+        <div class="ls-game-corpo ls-3d-corpo">
+          <strong title="{{ modulo.nome }}">{{ modulo.nome }}</strong>
+          <div class="ls-3d-fatos">
+            <span class="ls-3d-fato" title="{{ modulo.arquivo }}"><i class="bi bi-file-earmark-binary" aria-hidden="true"></i><span>{{ modulo.arquivo }}</span></span>
+            {% if modulo.medidas %}<span class="ls-3d-fato"><i class="bi bi-rulers" aria-hidden="true"></i><span>{{ modulo.medidas }}</span></span>{% endif %}
+          </div>
           {% if modulo.descricao %}<em>{{ modulo.descricao|truncatechars:80 }}</em>{% endif %}
-          {% if modulo.cores %}<div class="ls-3d-cores">{% for cor in modulo.cores %}<span class="ls-3d-cor"><i></i>{{ cor }}</span>{% endfor %}</div>{% endif %}
+          {% if modulo.cores %}<div class="ls-3d-cores">{% for cor in modulo.cores %}<span class="ls-3d-cor" data-cor="{{ cor|lower }}"><i></i>{{ cor }}</span>{% endfor %}</div>{% endif %}
         </div>
-        <div class="ls-game-acoes">
-          <button class="btn btn-sm btn-outline-info" type="button" data-ver3d-modulo="{{ modulo.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
-          <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="modulo-{{ modulo.id }}" data-nome="Peça {{ modulo.nome }}" title="Apagar a peça"><i class="bi bi-trash3"></i></button>
+        <div class="ls-3d-acoes">
+          <div class="ls-3d-acoes-linha">
+            <button class="btn btn-sm ls-3d-ver" type="button" data-ver3d-modulo="{{ modulo.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
+            <button class="btn btn-sm btn-outline-danger ls-3d-icone" type="button" data-excluir="modulo-{{ modulo.id }}" data-nome="Peça {{ modulo.nome }}" title="Apagar a peça" aria-label="Apagar a peça {{ modulo.nome }}"><i class="bi bi-trash3"></i></button>
+          </div>
         </div>
       </article>
     {% empty %}
@@ -320,6 +411,58 @@ LSTela.pronto(function () {
     Painel.ligar({ form: "formModulo", erro: "moduloErro", rotuloCarregando: "Conferindo e guardando…" });
   }
 
+  /* ---- o que mostrar e a busca: no navegador, sem recarregar ----
+     As abas escolhem os grupos; a busca compara com o `data-busca3d` de cada
+     cartão (minúsculo e sem acento, feito no servidor). A escolha fica na aba
+     do navegador por meia hora: depois de gravar, a lista volta do servidor
+     e a tela continua mostrando o que se estava vendo. */
+  var barra = document.getElementById("barra3d");
+  if (barra) {
+    var CHAVE_FILTRO = "ls-objetos3d-filtro";
+    var GRUPOS = { todos: null, com: ["com", "desligados"], sem: ["sem"], site: ["site"], lab: ["lab"] };
+    var campoBusca = document.getElementById("busca3d");
+    var abas = barra.querySelectorAll("[data-filtro3d]");
+    var secoes = document.querySelectorAll("[data-grupo3d]");
+    var semResultado = document.getElementById("buscaVazia3d");
+    var estado = { filtro: "todos", termo: "" };
+    try {
+      var salvo = JSON.parse(sessionStorage.getItem(CHAVE_FILTRO) || "null");
+      if (salvo && Object.prototype.hasOwnProperty.call(GRUPOS, salvo.filtro) && Date.now() - (salvo.quando || 0) < 30 * 60 * 1000) {
+        estado = { filtro: salvo.filtro, termo: String(salvo.termo || "") };
+      }
+    } catch (erro) { /* armazenamento bloqueado: começa do "Todos" */ }
+    campoBusca.value = estado.termo;
+
+    var semAcento = function (texto) {
+      return String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    };
+    var filtrar = function () {
+      var termo = semAcento(estado.termo), grupos = GRUPOS[estado.filtro], achados = 0;
+      abas.forEach(function (aba) { aba.setAttribute("aria-pressed", aba.dataset.filtro3d === estado.filtro ? "true" : "false"); });
+      secoes.forEach(function (secao) {
+        var noFiltro = !grupos || grupos.indexOf(secao.dataset.grupo3d) !== -1, visiveis = 0;
+        secao.querySelectorAll("[data-busca3d]").forEach(function (item) {
+          var cabe = !termo || (item.dataset.busca3d || "").indexOf(termo) !== -1;
+          item.hidden = !cabe;
+          if (cabe) visiveis += 1;
+        });
+        // as sublistas (os sugeridos, o resto) somem quando a busca as esvazia
+        secao.querySelectorAll(".ls-3d-lista").forEach(function (lista) {
+          lista.hidden = !!termo && !lista.querySelector("[data-busca3d]:not([hidden])");
+        });
+        secao.hidden = !noFiltro || (!!termo && visiveis === 0);
+        if (noFiltro) achados += visiveis;
+      });
+      semResultado.hidden = !(termo && achados === 0);
+      if (!semResultado.hidden) document.getElementById("buscaVaziaTexto").textContent = "Nada com “" + estado.termo.trim() + "”" + (grupos ? " nesta aba." : " nos objetos 3D.");
+      try { sessionStorage.setItem(CHAVE_FILTRO, JSON.stringify({ filtro: estado.filtro, termo: estado.termo, quando: Date.now() })); } catch (erro) { /* só não lembra */ }
+    };
+    abas.forEach(function (aba) { aba.addEventListener("click", function () { estado.filtro = aba.dataset.filtro3d; filtrar(); }); });
+    campoBusca.addEventListener("input", function () { estado.termo = campoBusca.value; filtrar(); });
+    campoBusca.addEventListener("search", function () { estado.termo = campoBusca.value; filtrar(); });
+    filtrar();
+  }
+
   /* ---- o visor: o mesmo desenho da página do brinquedo, dentro da janela ---- */
   var visor = document.getElementById("visor3d");
   var tela = document.getElementById("visor3dTela");
@@ -327,46 +470,65 @@ LSTela.pronto(function () {
   var coresCaixa = document.getElementById("visor3dCores");
   var motor = null;   // { parar() } do objeto aberto agora
   var modulos = null; // three, leitor e cores, baixados uma vez
+  var VISTA_INICIAL = { giro: 0.55, inclinacao: 0.22, perto: 1 };
 
   function limitar(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  /* O que o visor e as prévias dos cartões têm em comum: os módulos, a luz
+     da cena, o objeto de pé no centro e a câmera olhando para ele. */
+  async function carregarModulos() {
+    if (!modulos) {
+      var m = await Promise.all([import(visor.dataset.three), import(visor.dataset.gltf), import(visor.dataset.cores3d)]);
+      modulos = { T: m[0], leitor: m[1], cores3d: m[2] };
+    }
+    return modulos;
+  }
+  function montarCena(T) {
+    var cena = new T.Scene();
+    cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
+    var sol = new T.DirectionalLight("#ffffff", 2.2); sol.position.set(4, 9, 7); cena.add(sol);
+    var contra = new T.DirectionalLight("#cfe0ff", 0.9); contra.position.set(-6, 4, -8); cena.add(contra);
+    return cena;
+  }
+  function centrar(T, objeto) {
+    var caixa = new T.Box3().setFromObject(objeto);
+    var tamanho = caixa.getSize(new T.Vector3());
+    objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
+    objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
+    objeto.position.y -= caixa.min.y;
+    return { raio: Math.max(tamanho.length() / 2, 0.01), alvo: new T.Vector3(0, tamanho.y / 2, 0) };
+  }
+  function distanciaDaCamera(camera, raio) { return (raio / Math.sin(((camera.fov / 2) * Math.PI) / 180)) * 0.88; }
+  function apontarCamera(camera, alvo, vista, d) {
+    camera.position.set(alvo.x + Math.sin(vista.giro) * Math.cos(vista.inclinacao) * d, alvo.y + Math.sin(vista.inclinacao) * d, alvo.z + Math.cos(vista.giro) * Math.cos(vista.inclinacao) * d);
+    camera.lookAt(alvo);
+  }
 
   async function carregar(url) {
     if (motor) { motor.parar(); motor = null; }
     coresCaixa.replaceChildren();
     aviso.hidden = false; aviso.textContent = "Carregando o 3D…";
-    if (!modulos) {
-      var m = await Promise.all([import(visor.dataset.three), import(visor.dataset.gltf), import(visor.dataset.cores3d)]);
-      modulos = { T: m[0], leitor: m[1], cores3d: m[2] };
-    }
+    await carregarModulos();
     var T = modulos.T;
     var renderer = new T.WebGLRenderer({ canvas: tela, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.setClearColor(0x000000, 0);
-    var cena = new T.Scene();
-    cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
-    var sol = new T.DirectionalLight("#ffffff", 2.2); sol.position.set(4, 9, 7); cena.add(sol);
-    var contra = new T.DirectionalLight("#cfe0ff", 0.9); contra.position.set(-6, 4, -8); cena.add(contra);
+    var cena = montarCena(T);
     var camera = new T.PerspectiveCamera(32, 1, 0.01, 100);
     var gltf = await new modulos.leitor.GLTFLoader().loadAsync(url);
     var objeto = gltf.scene;
-    var caixa = new T.Box3().setFromObject(objeto);
-    var tamanho = caixa.getSize(new T.Vector3());
-    objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
-    objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
-    objeto.position.y -= caixa.min.y;
+    var quadro = centrar(T, objeto);
     cena.add(objeto);
-    var raio = Math.max(tamanho.length() / 2, 0.01);
-    var alvo = new T.Vector3(0, tamanho.y / 2, 0);
+    var raio = quadro.raio;
+    var alvo = quadro.alvo;
     camera.near = raio / 100; camera.far = raio * 30;
-    var vista = { giro: 0.55, inclinacao: 0.22, perto: 1 }, meta = { giro: 0.55, inclinacao: 0.22, perto: 1 };
-    var distanciaBase = (raio / Math.sin(((camera.fov / 2) * Math.PI) / 180)) * 0.88;
-    var vivo = true, sozinho = true, parado = 0, sujo = true, anterior = 0;
+    var vista = Object.assign({}, VISTA_INICIAL), meta = Object.assign({}, VISTA_INICIAL);
+    var distanciaBase = distanciaDaCamera(camera, raio);
+    var vivo = true, sozinho = true, parado = 0, sujo = true, anterior = 0, fotografado = false;
     function posicionar() {
-      var d = distanciaBase * vista.perto * (camera.aspect < 1 ? 1.25 : 1);
-      camera.position.set(alvo.x + Math.sin(vista.giro) * Math.cos(vista.inclinacao) * d, alvo.y + Math.sin(vista.inclinacao) * d, alvo.z + Math.cos(vista.giro) * Math.cos(vista.inclinacao) * d);
-      camera.lookAt(alvo);
+      apontarCamera(camera, alvo, vista, distanciaBase * vista.perto * (camera.aspect < 1 ? 1.25 : 1));
     }
     function medir() {
       var r = tela.getBoundingClientRect();
@@ -386,6 +548,7 @@ LSTela.pronto(function () {
       if (Math.abs(vista.giro + vista.inclinacao + vista.perto - antes) > 1e-5) sujo = true;
       if (!sujo) return;
       sujo = false; posicionar(); renderer.render(cena, camera);
+      if (!fotografado) { fotografado = true; fotoDoVisor(url, tela); }
     }
     var dedos = new Map(), pinca = 0;
     function mexeu() { sozinho = false; parado = 0; }
@@ -461,8 +624,217 @@ LSTela.pronto(function () {
       });
     });
   });
+  // os objetos que vêm com o site: abrem no mesmo visor (não têm página de brinquedo)
+  document.querySelectorAll("[data-ver3d-site]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.getElementById("visorTitulo").textContent = b.dataset.titulo + " · objeto do site";
+      document.getElementById("visorMedidas").textContent = (b.dataset.medidas ? "Medidas: " + b.dataset.medidas + ". " : "") + "Arquivo: " + b.dataset.arquivoNome;
+      var jogar = document.getElementById("visorJogar");
+      jogar.classList.toggle("d-none", !b.dataset.jogoUrl);
+      if (b.dataset.jogoUrl) { jogar.href = b.dataset.jogoUrl; jogar.lastChild.textContent = " Jogar a prévia do " + b.dataset.jogoTitulo; }
+      document.getElementById("visorSite").classList.add("d-none");
+      Painel.abrir("modalVisor3d");
+      carregar(b.dataset.url).catch(function (erro) {
+        console.error("Visor 3D:", erro);
+        aviso.hidden = false; aviso.textContent = "Não deu para abrir o 3D aqui: " + (erro && erro.message ? erro.message : erro);
+      });
+    });
+  });
   document.querySelectorAll("[data-ver3d]").forEach(function (b) { b.addEventListener("click", function () { document.getElementById("visorSite").classList.remove("d-none"); }); });
   document.getElementById("modalVisor3d").addEventListener("hidden.bs.modal", function () { if (motor) { motor.parar(); motor = null; } });
+  // foto do brinquedo que não carregou (arquivo sumido): sai, e a prévia 3D ocupa a arte toda
+  function semFoto(img) {
+    var arte = img.closest(".ls-3d-arte"), miniatura = img.closest(".ls-3d-mini-foto");
+    img.remove();
+    var caixa = arte && arte.querySelector(".ls-3d-previa");
+    if (caixa) caixa.classList.add("cheia");
+    if (miniatura && !miniatura.querySelector("i")) { var icone = document.createElement("i"); icone.className = "bi bi-image"; miniatura.appendChild(icone); }
+  }
+  document.querySelectorAll(".ls-3d-foto, .ls-3d-mini-foto img").forEach(function (img) {
+    if (img.complete && !img.naturalWidth) semFoto(img);
+    else img.addEventListener("error", function () { semFoto(img); });
+  });
+  // tocar na arte do cartão é o mesmo que "Ver em 3D"
+  document.querySelectorAll("[data-abrir3d], [data-abrir3d-site]").forEach(function (arte) {
+    arte.addEventListener("click", function () {
+      var botao = arte.closest(".ls-3d-card").querySelector("[data-ver3d], [data-ver3d-site]");
+      if (botao) botao.click();
+    });
+  });
+
+  /* ---- a prévia 3D dos cartões ----
+     Uma foto do objeto, tirada UMA vez por aparelho e guardada no navegador
+     (localStorage, pelo endereço do arquivo -- trocou o .glb, o endereço muda).
+     Sai de dois jeitos, e nenhum deles baixa nada duas vezes:
+       * ao abrir "Ver em 3D": o primeiro quadro do visor vira a foto, sem
+         baixar mais nada (o objeto já está carregado);
+       * sozinha, quando o cartão chega perto da tela: um desenhista só (um
+         WebGLRenderer fora da página), um objeto por vez, e o .glb baixado
+         com limite -- 4 MB, ou 1 MB com a economia de dados da hospedagem
+         ligada (`data-ls-economia`). Passou do limite, o download para no
+         meio e o cartão fica com o cubo. Com "economizar dados" no aparelho,
+         nada é baixado sozinho.
+     Tudo o que falha aqui só deixa o cubo no lugar: a tela não depende disso. */
+  var PREFIXO_DA_PREVIA = "ls-previa3d:";
+  var LARGURA_DA_PREVIA = 480, ALTURA_DA_PREVIA = 300;
+  var economiaDaHospedagem = !!document.body && document.body.getAttribute("data-ls-economia") === "1";
+  var LIMITE_DA_PREVIA = (economiaDaHospedagem ? 1 : 4) * 1024 * 1024;
+  var conexao = navigator.connection || {};
+  var pouparDados = !!conexao.saveData || /2g/.test(conexao.effectiveType || "");
+  var previas = window.LSPrevias3D || (window.LSPrevias3D = { fotos: {}, pedidos: {}, fila: Promise.resolve(), pendentes: 0, desenhista: null });
+
+  function caixasDoArquivo(url) {
+    return Array.prototype.filter.call(document.querySelectorAll("[data-previa3d]"), function (caixa) { return caixa.dataset.previa3d === url; });
+  }
+  function fotoGuardada(url) {
+    if (previas.fotos[url]) return previas.fotos[url];
+    try { return localStorage.getItem(PREFIXO_DA_PREVIA + url) || ""; } catch (erro) { return ""; }
+  }
+  function mostrarPrevia(caixa, foto) {
+    if (caixa.querySelector("img")) return;
+    var img = new Image();
+    img.alt = ""; img.decoding = "async";
+    img.onload = function () { caixa.classList.remove("carregando", "sem-previa"); caixa.classList.add("pronta"); caixa.removeAttribute("title"); };
+    img.onerror = function () { caixa.classList.remove("carregando"); img.remove(); };
+    img.src = foto;
+    caixa.appendChild(img);
+  }
+  function guardarFoto(url, foto) {
+    if (!foto) return;
+    previas.fotos[url] = foto;
+    try { localStorage.setItem(PREFIXO_DA_PREVIA + url, foto); } catch (erro) {
+      // cheio: as prévias antigas saem (as de arquivos trocados ficariam para sempre)
+      try {
+        Object.keys(localStorage).forEach(function (chave) { if (chave.indexOf(PREFIXO_DA_PREVIA) === 0) localStorage.removeItem(chave); });
+        localStorage.setItem(PREFIXO_DA_PREVIA + url, foto);
+      } catch (erro2) { /* bloqueado: fica só na memória desta aba */ }
+    }
+    caixasDoArquivo(url).forEach(function (caixa) { mostrarPrevia(caixa, foto); });
+  }
+  // o primeiro quadro do visor, reduzido para o cartão (chamado logo depois de desenhar)
+  function fotoDoVisor(url, origem) {
+    if (fotoGuardada(url) || !caixasDoArquivo(url).length || !origem.width || !origem.height) return;
+    try {
+      var quadro = document.createElement("canvas");
+      quadro.width = LARGURA_DA_PREVIA; quadro.height = ALTURA_DA_PREVIA;
+      var escala = Math.min(LARGURA_DA_PREVIA / origem.width, ALTURA_DA_PREVIA / origem.height);
+      var w = origem.width * escala, h = origem.height * escala;
+      quadro.getContext("2d").drawImage(origem, (LARGURA_DA_PREVIA - w) / 2, (ALTURA_DA_PREVIA - h) / 2, w, h);
+      guardarFoto(url, quadro.toDataURL("image/webp", 0.82));
+    } catch (erro) { /* sem foto: o cartão fica com o cubo */ }
+  }
+  function grande() { var erro = new Error("arquivo grande para a prévia"); erro.grande = true; return erro; }
+  async function baixarComLimite(url, limite) {
+    var controle = new AbortController();
+    var resposta = await fetch(url, { signal: controle.signal });
+    if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+    if (Number(resposta.headers.get("content-length") || 0) > limite) { controle.abort(); throw grande(); }
+    if (!resposta.body || !resposta.body.getReader) {
+      var inteiro = await resposta.arrayBuffer();
+      if (inteiro.byteLength > limite) throw grande();
+      return inteiro;
+    }
+    var leitor = resposta.body.getReader(), partes = [], lidos = 0;
+    for (;;) {
+      var pedaco = await leitor.read();
+      if (pedaco.done) break;
+      lidos += pedaco.value.byteLength;
+      if (lidos > limite) { controle.abort(); throw grande(); }
+      partes.push(pedaco.value);
+    }
+    var junto = new Uint8Array(lidos), posicao = 0;
+    partes.forEach(function (parte) { junto.set(parte, posicao); posicao += parte.byteLength; });
+    return junto.buffer;
+  }
+  function descartar(raiz) {
+    raiz.traverse(function (no) {
+      if (no.geometry) no.geometry.dispose();
+      (Array.isArray(no.material) ? no.material : (no.material ? [no.material] : [])).forEach(function (material) {
+        Object.keys(material).forEach(function (chave) { if (material[chave] && material[chave].isTexture) material[chave].dispose(); });
+        material.dispose();
+      });
+    });
+  }
+  async function fotografar(url) {
+    if (fotoGuardada(url)) return fotoGuardada(url); // o visor pode ter chegado antes
+    await carregarModulos();
+    var T = modulos.T;
+    var dados = await baixarComLimite(url, LIMITE_DA_PREVIA);
+    var base = url.split(/[?#]/)[0].replace(/[^/]*$/, "");
+    var gltf = await new Promise(function (ok, falha) { new modulos.leitor.GLTFLoader().parse(dados, base, ok, falha); });
+    if (!previas.desenhista) {
+      var desenhista = new T.WebGLRenderer({ canvas: document.createElement("canvas"), antialias: true, alpha: true, preserveDrawingBuffer: true });
+      desenhista.setPixelRatio(1);
+      desenhista.setSize(LARGURA_DA_PREVIA, ALTURA_DA_PREVIA, false);
+      desenhista.toneMapping = T.ACESFilmicToneMapping;
+      desenhista.outputColorSpace = T.SRGBColorSpace;
+      desenhista.setClearColor(0x000000, 0);
+      previas.desenhista = desenhista;
+    }
+    var objeto = gltf.scene;
+    try {
+      var cena = montarCena(T);
+      var quadro = centrar(T, objeto);
+      cena.add(objeto);
+      var camera = new T.PerspectiveCamera(32, LARGURA_DA_PREVIA / ALTURA_DA_PREVIA, quadro.raio / 100, quadro.raio * 30);
+      // um pouco mais perto que o visor: na janelinha o objeto precisa encher o quadro
+      apontarCamera(camera, quadro.alvo, VISTA_INICIAL, distanciaDaCamera(camera, quadro.raio) * 0.8);
+      previas.desenhista.render(cena, camera);
+      return previas.desenhista.domElement.toDataURL("image/webp", 0.82);
+    } finally {
+      descartar(objeto);
+    }
+  }
+  function soltarDesenhista() {
+    // a fila esvaziou: devolve o contexto WebGL (o visor tem o dele)
+    setTimeout(function () {
+      if (previas.pendentes || !previas.desenhista) return;
+      previas.desenhista.dispose(); previas.desenhista.forceContextLoss(); previas.desenhista = null;
+    }, 1500);
+  }
+  function pedirFoto(url) {
+    if (!previas.pedidos[url]) {
+      previas.pendentes += 1;
+      var pedido = previas.fila.then(function () { return fotografar(url); });
+      previas.pedidos[url] = pedido.then(function (foto) { guardarFoto(url, foto); return foto; }, function (erro) {
+        if (!erro || !erro.grande) delete previas.pedidos[url]; // falha de rede: tenta de novo na próxima vez
+        throw erro;
+      });
+      previas.fila = pedido.catch(function () {}).then(function () { previas.pendentes -= 1; if (!previas.pendentes) soltarDesenhista(); });
+    }
+    return previas.pedidos[url];
+  }
+  function tirarPrevia(caixa) {
+    if (caixa.querySelector("img")) return; // outro cartão do mesmo arquivo já trouxe a foto
+    caixa.classList.add("carregando");
+    pedirFoto(caixa.dataset.previa3d).then(function () { caixa.classList.remove("carregando"); }, function (erro) {
+      caixa.classList.remove("carregando");
+      if (caixa.querySelector("img")) return;
+      caixa.classList.add("sem-previa");
+      caixa.title = erro && erro.grande ? "Arquivo grande para a prévia: abra em Ver em 3D e ela fica pronta" : "Sem prévia aqui: abra em Ver em 3D";
+      if (!(erro && erro.grande)) console.warn("Prévia 3D:", caixa.dataset.previa3d, erro);
+    });
+  }
+  if (window.LSPrevias3DObservador) { window.LSPrevias3DObservador.disconnect(); window.LSPrevias3DObservador = null; }
+  var faltam = [];
+  document.querySelectorAll("[data-previa3d]").forEach(function (caixa) {
+    if (!caixa.dataset.previa3d) return;
+    var guardada = fotoGuardada(caixa.dataset.previa3d);
+    if (guardada) mostrarPrevia(caixa, guardada);
+    else if (pouparDados) caixa.title = "Economia de dados no aparelho: abra em Ver em 3D e a prévia fica pronta";
+    else faltam.push(caixa);
+  });
+  if (faltam.length && "IntersectionObserver" in window) {
+    var observadorDePrevias = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        if (!entrada.isIntersecting) return;
+        observadorDePrevias.unobserve(entrada.target);
+        tirarPrevia(entrada.target);
+      });
+    }, { rootMargin: "240px 0px" });
+    faltam.forEach(function (caixa) { observadorDePrevias.observe(caixa); });
+    window.LSPrevias3DObservador = observadorDePrevias;
+  }
 });
 </script>
 {% endif %}

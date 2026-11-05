@@ -6235,3 +6235,82 @@ main.content-section {
             background-clip: padding-box;
         }
     }
+
+/* =========================================================
+   OS BLOCOS DA HOME COM A MESMA MOLDURA
+
+   Dois blocos destoavam dos outros cartões da página:
+   - "Encontre pela categoria" tinha os cantos de cima retos: herdou o
+     `0 0 30px 30px` de quando vinha colado embaixo do quadro antigo
+     (`.ls-home-hero`); agora vem depois de um respiro, como os outros;
+   - "Venha até a Lazer & Sport" (#contato) era uma faixa de cantos retos,
+     sem borda nem sombra, encostada no mapa de clientes logo abaixo.
+   Os dois ganham a moldura dos demais (a mesma borda, o mesmo raio e a
+   mesma sombra das seções do ls-tema.css).
+========================================================= */
+html.ls-escuro #contato.ls-loc-section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--ls-borda, rgba(255, 255, 255, .1));
+  box-shadow: var(--ls-sombra, 0 18px 44px rgba(0, 0, 0, .42)), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+@media (min-width: 769px) {
+  html.ls-escuro #categorias-section,
+  html.ls-escuro #contato.ls-loc-section {
+    border-radius: 30px;
+  }
+}
+
+/* O número do contador ("2 clientes no mapa") e o "Lazer & Sport" da
+   lista de cidades ficaram no azul-escuro do tema claro (#004aad): no
+   fundo escuro, quase sumiam. */
+html.ls-escuro #clientes-section .clientes-contador strong,
+html.ls-escuro #clientes-section .clientes-seo-lista strong {
+  color: #7fdcff;
+}
+
+/* =========================================================
+   PROMOÇÕES NO TEMA ESCURO
+
+   O cartão da promoção ganhou o fundo escuro, mas o miolo ficou no tema
+   claro: o título em azul-marinho (#10233f) sobre o azul-marinho do
+   cartão -- quase invisível --, os selos e a caixa de preço brancos no
+   meio do escuro. Agora ele segue o cartão do combo, ao lado: título
+   branco, selos de vidro e o preço num quadro escuro com o verde da
+   oferta em destaque.
+========================================================= */
+html.ls-escuro #promocoes-section .oferta-card-info h3 { color: #fff; }
+html.ls-escuro #promocoes-section .oferta-card-title-link:hover h3 { color: #7fdcff; }
+html.ls-escuro #promocoes-section .oferta-card-info .nome-brinquedo { color: #a9bcd9; }
+
+html.ls-escuro #promocoes-section .oferta-card-benefits span {
+  border-color: rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .08);
+  color: #dbe7ff;
+}
+
+html.ls-escuro #promocoes-section .oferta-card-benefits i { color: #3fd0ff; }
+
+html.ls-escuro #promocoes-section .oferta-precos {
+  border: 1px solid rgba(63, 224, 127, .28);
+  background:
+    radial-gradient(220px 120px at 100% 0%, rgba(63, 224, 127, .18), transparent 70%),
+    linear-gradient(145deg, rgba(8, 40, 44, .9), rgba(6, 18, 42, .95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+html.ls-escuro #promocoes-section .oferta-precos .preco-original { color: #a9bcd9; }
+html.ls-escuro #promocoes-section .oferta-precos .preco-original span { color: rgba(255, 255, 255, .7); text-decoration-color: #ff6b8a; }
+html.ls-escuro #promocoes-section .oferta-precos .preco-promocao { color: #dbe7ff; }
+
+html.ls-escuro #promocoes-section .oferta-precos .preco-promocao strong {
+  color: #3ee07f;
+  text-shadow: 0 0 18px rgba(62, 224, 127, .25);
+}
+
+/* A manutenção tinha um respiro próprio (até 56 px em cima e embaixo do
+   cartão) somado ao `.espacador`: ~80 px de vão, contra os 24 px entre
+   todos os outros blocos. O respiro agora é só o do `.espacador`. (O
+   `:not(#_):not(#__)` é o mesmo peso da regra do ls-tema.css, mais o id.) */
+html.ls-escuro:not(#_):not(#__) #manutencao.ls-manut { padding-block: 0; }

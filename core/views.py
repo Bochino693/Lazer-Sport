@@ -163,6 +163,29 @@ def pronto(request):
     return JsonResponse({"ok": True, "banco": banco})
 
 
+def modelo_3d_da_vitrine(brinquedo):
+    """O endereço do .glb que a vitrine do quadro inicial pode mostrar; "" sem.
+
+    A MESMA regra da página do brinquedo (`BrinquedoInfoView._montar`): o
+    objeto do cadastro vence; tirado no painel (desativado ou sem arquivo),
+    não aparece -- nem pelo nome. Sem cadastro, vale o objeto que o site fez
+    para esta máquina (`arena.modelo_da_maquina`, pelo nome).
+
+    Nunca consulta o banco: espera o `objeto_3d` trazido com
+    `prefetch_do_objeto()` (ver `objetos_3d.objeto_do_brinquedo`). É só um
+    endereço -- igual para todo visitante, então cabe no cache da home.
+    """
+    registro = objeto_do_brinquedo(brinquedo, so_ativo=False)
+    if registro is not None:
+        return registro.url if (registro.ativo and registro.url) else ""
+    modelo = arena.modelo_da_maquina(brinquedo.nome_brinquedo)
+    if not modelo:
+        return ""
+    from sistema_interno.templatetags.interno_extras import estatico
+
+    return estatico(modelo["arquivo"])
+
+
 def vitrine_do_quadro(brinquedos, quantidade=8):
     """Os brinquedos que giram no quadro inicial: os mais curtidos com foto.
 
@@ -170,6 +193,10 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
     frente) e não `imagem_catalogo`: aqui a lista não traz a galeria, e
     perguntar a capa a cada brinquedo seria uma consulta por item na
     página mais visitada do site.
+
+    `modelo_3d` é o .glb da máquina ("" se ela não tem): com ele, a vitrine
+    troca a foto pelo objeto girando enquanto o brinquedo está na vez
+    (site/paginas/home-vitrine3d.js). Nada do 3D é baixado antes disso.
     """
     from .formatos import dinheiro
 
@@ -192,6 +219,7 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
             "preco": f"R$ {dinheiro(b.valor_brinquedo)}" if b.disponivel_na_loja else "",
             "avaliacao": float(b.avaliacao or 0),
             "medidas": b.dimensoes_m or "",
+            "modelo_3d": modelo_3d_da_vitrine(b),
         })
     return vitrine
 
@@ -240,6 +268,9 @@ class HomeView(View):
                 "categorias_brinquedos",
                 "tags",
                 "estabelecimentos",
+                # o objeto 3D da vitrine do quadro inicial: uma consulta
+                # só (e só ao montar o cache), nenhuma por brinquedo
+                *prefetch_do_objeto(),
             )
             .order_by("nome_brinquedo")
         )
@@ -261,6 +292,9 @@ class HomeView(View):
                     distinct=True,
                 )
             )
+            # categoria sem brinquedo não vira chip nem cartão na home:
+            # levaria a uma página vazia
+            .filter(total_produtos__gt=0)
             .order_by(
                 "-total_produtos",
                 "nome_categoria",
@@ -268,14 +302,18 @@ class HomeView(View):
             )
         )
 
+        # Só o que está ativo no painel, como na loja (`LojaView`): o combo
+        # ou a promoção desligada saía na home mesmo assim -- e, com tudo
+        # desligado, a seção vinha cheia do que não estava mais à venda.
         combos = list(
             Combos.objects
-            .all()
+            .filter(ativo=True)
             .prefetch_related("brinquedos")
         )
 
         promocoes = list(
             Promocoes.objects
+            .filter(ativo=True)
             .select_related("brinquedos")
         )
 
@@ -372,6 +410,12 @@ class HomeView(View):
             )
             .order_by("nome")
         )
+
+        # O filtro das peças só oferece a categoria que tem peça na vitrine:
+        # o botão de uma categoria vazia abria uma grade em branco. (Sai das
+        # peças já trazidas, sem consulta a mais.)
+        ids_com_peca = {c.pk for peca in pecas_todas for c in peca.categoria_peca.all()}
+        categorias_peca = [c for c in categorias_peca if c.pk in ids_com_peca]
 
         # Alfinetes da seção "Clientes". Saem do cadastro do painel: o
         # endereço que aparece aqui é o MESMO que vai na proposta e na
@@ -473,6 +517,8 @@ class HomeView(View):
             c["cidade"] for c in clientes_mapa if c["cidade"]
         })
 
+        vitrine_quadro = vitrine_do_quadro(brinquedos_todos)
+
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
@@ -491,7 +537,9 @@ class HomeView(View):
             "pontos_mapa": pontos_mapa,
             "cidades_atendidas": cidades_atendidas,
             # O quadro inicial: a vitrine que gira e o painel ao vivo.
-            "vitrine_quadro": vitrine_do_quadro(brinquedos_todos),
+            "vitrine_quadro": vitrine_quadro,
+            # Só com algum objeto 3D na vitrine a página leva o script do 3D.
+            "vitrine_tem_3d": any(item["modelo_3d"] for item in vitrine_quadro),
             "painel": painel_publico.numeros(),
             "jogos_arena": arena.JOGOS,
         }
