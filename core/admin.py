@@ -28,6 +28,7 @@ from .models import (
     Frete,
     ObjetoTresD,
     JogoCadastrado,
+    ArquivoEmulador,
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -525,10 +526,18 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
     list_filter = ("ativo", "proporcao", "liberar_download")
     search_fields = ("nome", "slug", "chamada", "descricao")
     prepopulated_fields = {"slug": ("nome",)}
-    readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado", "motor")
+    readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado", "motor", "arquivos_do_console")
     fieldsets = (
         ("O jogo", {
             "fields": ("nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo"),
+        }),
+        ("Jogo de console ou fliperama (.cue + .bin, ROM, BIOS) — pelo emulador", {
+            "description": (
+                "Disco de PS1 em .cue + .bin, .pbp, ROM de cartucho (.nes, .gba, .n64…) e BIOS rodam no site pelo "
+                "emulador. Os arquivos são vários e grandes (um disco tem centenas de MB): eles vão pelo painel, "
+                "que confere o .cue, diz o que falta e manda em pedaços direto do seu navegador para o armazenamento."
+            ),
+            "fields": ("arquivos_do_console", "sistema"),
         }),
         ("Foto de capa", {
             "fields": ("capa", "previa_da_capa", "poster"),
@@ -553,6 +562,64 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
             "fields": ("ver_no_site", "criacao", "atualizado"),
         }),
     )
+
+    @admin.display(description="Arquivos do jogo")
+    def arquivos_do_console(self, obj):
+        """O que já está guardado e o botão que leva ao envio, no painel (mesma conta)."""
+        from django.utils.html import format_html_join
+
+        from .objetos_3d import tabela_pronta
+
+        endereco = self._no_painel(obj)
+        botao = format_html(
+            '<a class="button default" style="display:inline-block;padding:10px 16px;font-weight:700" href="{}" '
+            'target="_blank" rel="noopener">{}</a>',
+            endereco, "Anexar os arquivos do jogo (.cue, .bin, ROM…) no painel" if obj and obj.pk else "Cadastrar pelo painel",
+        )
+        if not obj or not obj.pk:
+            return format_html(
+                '{}<p style="margin-top:8px">No painel, a janela do jogo recebe todos os arquivos de uma vez (o .cue com '
+                'os .bin, a ROM, o .html, o .apk, o .exe) e diz como o jogo vai rodar.</p>', botao,
+            )
+        arquivos = list(obj.arquivos_emulador.all()) if tabela_pronta(ArquivoEmulador) else []
+        if not arquivos:
+            return format_html('<p style="margin:0 0 8px">Nenhum arquivo de console guardado.</p>{}', botao)
+        lista = format_html_join(
+            "", "<li><code>{}</code> — {} · {}</li>",
+            ((a.nome, a.get_papel_display(), f"{a.tamanho / 1048576:.1f} MB" if a.tamanho >= 1048576 else f"{max(1, a.tamanho // 1024)} KB")
+             for a in arquivos),
+        )
+        return format_html('<p style="margin:0 0 6px"><strong>{}</strong></p><ul style="margin:0 0 10px">{}</ul>{}',
+                           obj.emulador_resumo, lista, botao)
+
+    @staticmethod
+    def _no_painel(obj):
+        """O endereço da tela de jogos no painel (interno.<domínio>), já abrindo este jogo."""
+        from django.conf import settings
+
+        destino = f"/site/jogos/?editar={obj.pk}" if obj and obj.pk else "/site/jogos/?novo=1"
+        site = (getattr(settings, "SITE_URL", "") or "").strip().rstrip("/")
+        if not site:
+            return destino
+        if not site.startswith(("http://", "https://")):
+            site = "https://" + site
+        esquema, _, resto = site.partition("://")
+        host = resto.split("/", 1)[0]
+        if host.startswith("www."):
+            host = host[4:]
+        if not host.startswith("interno."):
+            host = "interno." + host
+        return f"{esquema}://{host}{destino}"
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.sistema and not obj.emulador_pronto and not (obj.endereco or obj.arquivo_html):
+            from django.contrib import messages
+
+            messages.info(request, format_html(
+                'Jogo de console salvo. Agora anexe os arquivos: <a href="{}" target="_blank" rel="noopener">{}</a>.',
+                self._no_painel(obj), "abrir no painel",
+            ))
 
     @admin.display(description="Capa")
     def miniatura(self, obj):

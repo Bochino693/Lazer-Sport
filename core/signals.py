@@ -14,6 +14,7 @@ from .models import (
     CategoriasBrinquedos,
     ClientePerfil,
     Combos,
+    ComponenteBrinquedo,
     EnderecoEmpresa,
     Estabelecimentos,
     Eventos,
@@ -106,6 +107,8 @@ _MODELOS_DA_HOME = (
     # objeto 3D da ficha do brinquedo e os jogos cadastrados do simulador.
     ObjetoTresD,
     JogoCadastrado,
+    # a página do brinquedo mostra o que vem dentro dele e de que conjunto faz parte
+    ComponenteBrinquedo,
 )
 
 for _modelo in _MODELOS_DA_HOME:

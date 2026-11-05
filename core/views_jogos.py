@@ -233,37 +233,40 @@ def _jogo_no_emulador(slug):
 
 
 def config_do_emulador(jogo):
-    """O que o EmulatorJS recebe: o núcleo, o arquivo que ele abre e os que vão ao lado.
+    """O que o quadro do emulador recebe: o núcleo e TODOS os arquivos, cada um com o nome exato.
 
-    Cada arquivo entra na pasta virtual com o `nome` guardado (o que o .cue
-    pede), pela lista de arquivos externos -- o endereço no armazenamento
-    pode ter outro nome. O índice (.cue/.m3u) sai do próprio site, já
-    reescrito; o resto, do armazenamento.
+    O quadro baixa cada arquivo (juntando os pedaços, quando ele foi
+    guardado em pedaços) e entrega os bytes ao EmulatorJS: o principal (o
+    .cue, o .m3u, a ROM) como o jogo, os outros na pasta virtual, com o
+    nome que o índice pede. O índice sai do próprio site, já reescrito.
     """
-    arquivos = list(jogo.arquivos_emulador.all())
-    principal = next(a for a in arquivos if a.papel == ArquivoEmulador.JOGO)
-    if principal.e_indice:
-        url_do_jogo = reverse("jogo_emulador_arquivo", args=[jogo.slug, principal.nome])
-    else:
-        # o "#/nome" não vai ao servidor: é para o emulador gravar com o nome certo
-        url_do_jogo = f"{principal.url}#/{principal.nome}"
-    externos = []
-    for arquivo in arquivos:
-        if arquivo is principal:
-            continue
-        externos.append({
+    arquivos = []
+    principal = None
+    for arquivo in jogo.arquivos_emulador.all():
+        if arquivo.e_indice:
+            partes = [(reverse("jogo_emulador_arquivo", args=[jogo.slug, arquivo.nome]), len(arquivo.conteudo.encode("utf-8")))]
+        else:
+            partes = arquivo.partes()
+        item = {
             "caminho": "/" + arquivo.nome,
-            "url": reverse("jogo_emulador_arquivo", args=[jogo.slug, arquivo.nome]) if arquivo.e_indice else arquivo.url,
-            "tamanho": len(arquivo.conteudo.encode("utf-8")) if arquivo.e_indice else arquivo.tamanho,
             "nome": arquivo.nome,
-        })
+            "partes": [url for url, _ in partes],
+            "tamanhos": [tamanho for _, tamanho in partes],
+            "tamanho": sum(tamanho for _, tamanho in partes),
+            "principal": arquivo.papel == ArquivoEmulador.JOGO,
+        }
+        if item["principal"]:
+            principal = item
+        arquivos.append(item)
+    extensao = principal["nome"].rsplit(".", 1)[-1].lower() if principal and "." in principal["nome"] else ""
+    # o jogo salvo é guardado pelo nome do jogo no emulador: o do site (único);
+    # no fliperama, o nome do .zip é o do jogo e precisa ficar como está
+    nome = principal["nome"] if jogo.sistema == "arcade" and principal else f"{jogo.slug}.{extensao}" if extensao else jogo.slug
     return {
         "core": jogo.sistema,
-        "jogo": url_do_jogo,
-        # o quadro baixa estes antes (com progresso) e entrega os bytes ao emulador
-        "externos": externos,
+        "arquivos": arquivos,
+        "nome": nome,
         "dados": static("vendor/emulatorjs/data/"),
-        "nome": jogo.slug,
         "cor": jogo.cor[:7],
         "titulo": jogo.nome,
     }

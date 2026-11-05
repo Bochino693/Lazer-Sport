@@ -25,9 +25,11 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
-from core import arena
+import json
+
+from core import arena, composicao
 from core.fotos import reduzir_imagem
-from core.models import Brinquedos, ModuloTresD, ObjetoTresD
+from core.models import Brinquedos, ComponenteBrinquedo, ModuloTresD, ObjetoTresD
 from core.objetos_3d import ler_glb_do_site, tabela_pronta, validar_glb
 
 from .templatetags.interno_extras import estatico
@@ -91,11 +93,19 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             return render(request, self.template_name, {"tabela_ausente": True, "linhas": []})
 
         site = endereco_do_site(request).rstrip("/")
-        brinquedos = (
+        brinquedos = list(
             Brinquedos.objects.filter(ativo=True)
-            .prefetch_related("objeto_3d")
+            .prefetch_related("objeto_3d", "categorias_brinquedos")
             .order_by("nome_brinquedo")
         )
+        # o que vem dentro de cada conjunto (brinquedão, espaço esportivo) e o inverso
+        nomes = {b.pk: b.nome_brinquedo for b in brinquedos}
+        dentro, fora = {}, {}
+        if tabela_pronta(ComponenteBrinquedo):
+            for c in ComponenteBrinquedo.objects.filter(conjunto__ativo=True, item__ativo=True).order_by("ordem", "id"):
+                dentro.setdefault(c.conjunto_id, []).append({"id": c.item_id, "nome": nomes.get(c.item_id, ""), "quantidade": c.quantidade})
+                fora.setdefault(c.item_id, []).append({"id": c.conjunto_id, "nome": nomes.get(c.conjunto_id, "")})
+        catalogo = list(nomes.items())
         linhas = []
         usados = {}
         usados_ligados = set()
@@ -112,7 +122,14 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
                 "jogo": {"slug": slug_jogo, "titulo": jogo["titulo"], "url": f"{site}/jogos/{slug_jogo}/"} if jogo else None,
                 "objeto": None,
                 "sugestao": {"arquivo": sugestao["arquivo"], "titulo": sugestao["titulo"]} if sugestao else None,
+                "componentes": dentro.get(brinquedo.pk, []),
+                "faz_parte_de": fora.get(brinquedo.pk, []),
+                "pode_conter": composicao.pode_conter(brinquedo, [c.nome_categoria for c in brinquedo.categorias_brinquedos.all()]),
             }
+            linha["pode_conter"] = linha["pode_conter"] or bool(linha["componentes"])
+            linha["sugestoes_conjunto"] = (
+                composicao.sugestoes(brinquedo, catalogo, [c["id"] for c in linha["componentes"]]) if linha["pode_conter"] else []
+            )
             if objeto is not None:
                 origem = "enviado" if objeto.arquivo else "do site"
                 if objeto.arquivo_estatico:
@@ -289,6 +306,24 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             request,
             f"Objeto 3D de \"{brinquedo.nome_brinquedo}\" gravado: {cores}; {_medidas_texto(lido['medidas']) or 'medidas não lidas'}.",
         )
+
+    def acao_conjunto_salvar(self, request):
+        """O que vem dentro deste brinquedo (o espaço, o brinquedão): troca a lista inteira."""
+        if not tabela_pronta(ComponenteBrinquedo):
+            raise ErroDeFormulario("O banco ainda não tem a tabela da composição: rode a migração.")
+        conjunto = self._brinquedo_do_pedido(request)
+        try:
+            itens = [(int(i["id"]), int(i.get("quantidade") or 1)) for i in json.loads(request.POST.get("itens") or "[]")]
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ErroDeFormulario("A lista veio quebrada.") from exc
+        try:
+            limpos = composicao.salvar(conjunto, itens)
+        except ValueError as exc:
+            raise ErroDeFormulario(str(exc)) from exc
+        log.info("o que vem em %s trocado por %s: %d brinquedo(s)", conjunto.nome_brinquedo, request.user.username, len(limpos))
+        if not limpos:
+            return self.sucesso(request, f"“{conjunto.nome_brinquedo}” não traz mais nenhum brinquedo dentro.")
+        return self.sucesso(request, f"Pronto: “{conjunto.nome_brinquedo}” traz {len(limpos)} brinquedo{'s' if len(limpos) > 1 else ''} dentro.")
 
     def acao_alternar_arena(self, request):
         brinquedo = self._brinquedo_do_pedido(request)

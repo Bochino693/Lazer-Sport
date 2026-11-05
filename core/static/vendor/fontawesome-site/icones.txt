@@ -129,6 +129,7 @@ fa-pix
 fa-play
 fa-plug-circle-check
 fa-plus
+fa-puzzle-piece
 fa-qrcode
 fa-right-to-bracket
 fa-rotate

@@ -23,7 +23,11 @@ from .sitemaps import (
     BrinquedosSitemap,
     CategoriasSitemap,
     JogosSitemap,
+    PecasSitemap,
+    TemasSitemap,
 )
+from .paginas_tema import TEMAS
+from .views_tema import pagina_tema
 from .views import (
     HomeView,
     BrinquedoInfoView,
@@ -75,6 +79,7 @@ from .views import (
     RelatorioVendasView,
     PedidoAdminView,
     redirecionar_loja,
+    redirecionar_endereco_antigo,
     redirecionar_categoria_brinquedos,
     redirecionar_categoria_aventura,
     redirecionar_lancamentos,
@@ -112,6 +117,8 @@ from .api.views import (
 
 sitemaps = {
     "estaticas": PaginasEstaticasSitemap,
+    "temas": TemasSitemap,
+    "pecas": PecasSitemap,
     "brinquedos": BrinquedosSitemap,
     "categorias": CategoriasSitemap,
     "jogos": JogosSitemap,
@@ -156,11 +163,13 @@ urlpatterns = [
     path("categoria-produto/aventura/", redirecionar_categoria_aventura),
 
     # URLs antigas do WordPress/WooCommerce.
-    path("categoria-produto/<path:resto>", redirecionar_loja),
-    path("loja/<path:resto>", redirecionar_loja),
-    path("fabricante-de-brinquedo/<path:resto>", redirecionar_loja),
+    path("categoria-produto/<path:resto>", redirecionar_endereco_antigo),
+    path("loja/<path:resto>", redirecionar_endereco_antigo),
+    path("fabricante-de-brinquedo/<path:resto>", redirecionar_endereco_antigo),
 
     path("brinquedos/", BrinquedosView.as_view(), name="brinquedos"),
+    # Páginas por tema de busca (core/paginas_tema.py): /boliche/, /fliperama/...
+    re_path(r"^(?P<tema>%s)/$" % "|".join(TEMAS), pagina_tema, name="pagina_tema"),
     path(
         "brinquedo/<int:id>/",
         BrinquedoInfoView.as_view(),
@@ -378,7 +387,7 @@ urlpatterns = [
 
 
 
-    path("produto-tag/<path:resto>", redirecionar_loja),
+    path("produto-tag/<path:resto>", redirecionar_endereco_antigo),
 
     # ---- Curtidas e lista de desejos ----
     # Funciona sem login: quem não entrou fica preso ao próprio aparelho.

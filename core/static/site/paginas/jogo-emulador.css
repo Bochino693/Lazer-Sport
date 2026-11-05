@@ -57,3 +57,5 @@ html, body {
     background: linear-gradient(90deg, #22d3ee, #ff3df2);
     transition: width .2s ease;
 }
+.emu-aviso p { margin: 0; }
+.emu-barra[hidden] { display: none; }

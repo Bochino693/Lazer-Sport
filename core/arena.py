@@ -572,6 +572,10 @@ MODELOS_3D = (
         # dois círculos, o Gol Flash redondo (na Arena 3D, os dois rodam, com
         # crianças jogando e as telas de cada cesta e de cada círculo)
         "jogos": ("swish-arena", "gol-flash-arena"),
+        # as máquinas da casa que vêm DENTRO deste espaço, com quantas (o que
+        # está desenhado no .glb): o painel sugere ligar no cadastro
+        # (core/composicao.py) -- dois círculos do Gol Flash, duas cestas do Swish
+        "componentes": (("gol-flash-arena", 2), ("swish-arena", 2)),
         "pasta": "site/arena/modelos/espaco-esportivo-modelo-1/",
         "fotos": (("perfil", "frente.webp"), ("lado_direito", "lado_direito.webp"), ("lado_esquerdo", "lado_esquerdo.webp")),
         "medidas_texto": "Área de 39 m × 23 m · parque de trampolins de 18 m × 16,5 m",

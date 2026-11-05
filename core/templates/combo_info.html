@@ -2,7 +2,8 @@
 {% load interno_extras static %}
 {% load fotos %}
 
-{% block title %}Combo de brinquedos | Aproveite os melhores preços {% endblock %}
+{% block title %}{{ combo.descricao|truncatechars:60 }} | Combo Lazer & Sport{% endblock %}
+{% block meta_description %}Combo de brinquedos Lazer & Sport: {{ combo.descricao|striptags|truncatechars:120 }}. Fábrica em São Paulo, peças de reposição e orçamento pelo WhatsApp.{% endblock %}
 
 {% block content %}
 

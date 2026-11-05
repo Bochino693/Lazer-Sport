@@ -209,6 +209,7 @@ TEMPLATES = [
                 "sistema_interno.context_processors.fab_counts",
                 "core.context_processors.clientes_rodape",
                 "core.context_processors.app_android",
+                "core.context_processors.seo_context",
                 "core.context_processors.confirmacao_pagamento",
                 "core.context_processors.favoritos_context",
                 "core.context_processors.equipe_context",
@@ -421,6 +422,12 @@ EMPRESA_EMAIL = os.getenv("EMPRESA_EMAIL", "contato@lazersport.com").strip()
 EMPRESA_INSTAGRAM = os.getenv(
     "EMPRESA_INSTAGRAM", "@lazersportbrinquedos",
 ).strip()
+
+# BUSCADORES. O código que o Google Search Console (e o Bing Webmaster)
+# dá para provar que o site é seu -- só o valor do content="...", sem a
+# tag. Vazio, nenhuma tag sai. Ver LEIA-ME-V10.txt, seção 18.
+GOOGLE_SITE_VERIFICATION = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
+BING_SITE_VERIFICATION = os.getenv("BING_SITE_VERIFICATION", "").strip()
 
 # Identidade exibida na proposta comercial. Nasce do contato da empresa
 # acima; as variáveis ORCAMENTO_* continuam existindo para quem já as
@@ -972,3 +979,11 @@ JOGOS_S3_MAX_MB = int(os.getenv("JOGOS_S3_MAX_MB", "2000"))
 # segaMS, segaGG, segaCD, arcade): só liste aqui com a permissão escrita dos
 # autores do núcleo. Ex.: "snes,segaMD".
 JOGOS_EMULADORES_NAO_COMERCIAIS = os.getenv("JOGOS_EMULADORES_NAO_COMERCIAIS", "").strip()
+# Arquivo grande de jogo em PEDAÇOS no Cloudinary de sempre (core/armazenamento_pedacos.py):
+# o navegador corta cada .bin em pedaços e manda direto para o Cloudinary. O
+# gratuito aceita até 10 MB por arquivo que não é imagem: 9 MB por pedaço.
+JOGOS_PEDACO_MB = os.getenv("JOGOS_PEDACO_MB", "9").strip() or "9"
+JOGOS_PEDACOS_MAX_MB = os.getenv("JOGOS_PEDACOS_MAX_MB", "1000").strip() or "1000"
+# "" = automático (Cloudinary quando ele é o armazenamento; senão, o próprio site)
+JOGOS_PEDACOS_DESTINO = os.getenv("JOGOS_PEDACOS_DESTINO", "").strip()
+JOGOS_CLOUDINARY_API = os.getenv("JOGOS_CLOUDINARY_API", "https://api.cloudinary.com").strip()

@@ -24,19 +24,16 @@ sandbox): mesmo um .html malicioso não lê cookie, sessão nem a página.
 
 from __future__ import annotations
 
-import json
 import logging
-import secrets
 
 from django import forms
-from django.core import signing
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
-from core import arena, armazenamento_grande, jogos_apk
+from core import arena, emulador_envio as envio, jogos_apk
 from core import jogos_emulador as emu
 from core.jogos_pc import CAMINHO_PARA_O_SITE, MOTORES
 from core.models import ArquivoEmulador, JogoCadastrado
@@ -260,21 +257,7 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
     @staticmethod
     def _emulador_contexto():
         """O que a janela dos arquivos do emulador precisa saber: os sistemas e onde os arquivos vão."""
-        ligados = emu.sistemas_ligados()
-        grande = armazenamento_grande.configurado()
-        return {
-            "modo": "grande" if grande else "direto",
-            "limite_mb": round((armazenamento_grande.limite_por_arquivo() if grande else _limite_direto()) / MB),
-            "faltando": armazenamento_grande.faltando(),
-            "sistemas": [
-                {"codigo": codigo, "nome": s.nome, "ligado": codigo in ligados, "licenca": s.licenca, "nucleo": s.nucleo}
-                for codigo, s in emu.SISTEMAS.items()
-            ],
-            "limite_arquivo_mb": round(_limite_de_arquivo_grande() / MB),
-            "cabeca": emu.CABECA,
-            "cauda": emu.CAUDA,
-            "max_arquivos": emu.MAX_ARQUIVOS,
-        }
+        return {**envio.contexto(), "limite_arquivo_mb": round(_limite_de_arquivo_grande() / MB)}
 
     @staticmethod
     def _oficiais(site, busca=""):
@@ -429,13 +412,15 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
                     arquivo.storage.delete(arquivo.name)
                 except Exception as erro:  # noqa: BLE001
                     log.warning("arquivo do jogo %s não apagado: %r", slug, erro)
-            _apagar_do_armazenamento(do_emulador, slug)
+            envio.apagar_do_armazenamento(do_emulador, slug)
 
         transaction.on_commit(apagar_depois)
         log.warning("jogo %s EXCLUÍDO por %s", slug, request.user.username)
         return self.sucesso(request, f"\"{nome}\" foi excluído, com os arquivos.")
 
     # ------------------------------------------------- arquivos do emulador
+    # O caminho inteiro (conferir, pedaços, confirmar) mora em
+    # core/emulador_envio.py: o /system/ usa o mesmo. Aqui é só a casca.
 
     def _jogo_para_emulador(self, request):
         jogo = self._jogo_do_pedido(request)
@@ -445,247 +430,32 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             raise ErroDeFormulario("O banco ainda não tem a tabela dos arquivos do emulador: rode a migração.")
         return jogo
 
-    @staticmethod
-    def _sistema_pedido(request):
-        sistema = (request.POST.get("sistema") or "").strip()
-        if sistema in ("", JogoCadastrado.AUTOMATICO):
-            return ""
-        if sistema not in emu.SISTEMAS:
-            raise ErroDeFormulario("Sistema desconhecido.")
-        return sistema
-
     def acao_emulador_conferir(self, request):
-        """Confere o conjunto ANTES de enviar: o navegador manda só os nomes, os tamanhos e o começo de cada arquivo.
-
-        Com o armazenamento de jogos grandes ligado, devolve também um link
-        assinado por arquivo, para o navegador mandar direto para lá.
-        """
-        jogo = self._jogo_para_emulador(request)
-        try:
-            manifesto = json.loads(request.POST.get("manifesto") or "[]")
-        except ValueError as exc:
-            raise ErroDeFormulario("A lista de arquivos veio quebrada.") from exc
-        if not isinstance(manifesto, list) or not manifesto:
-            raise ErroDeFormulario("Selecione os arquivos do jogo.")
-        if len(manifesto) > emu.MAX_ARQUIVOS + 20:
-            raise ErroDeFormulario(f"São arquivos demais (o limite é {emu.MAX_ARQUIVOS} por jogo).")
-        # os trechos (o começo de cada arquivo, o fim dos .zip) vêm colados num
-        # arquivo só, com o lugar de cada um no manifesto: um por arquivo
-        # estouraria o teto de arquivos por requisição do Django (100)
-        trechos_enviados = request.FILES.get("trechos")
-        if trechos_enviados is not None and trechos_enviados.size > MAX_TRECHOS:
-            raise ErroDeFormulario("Os trechos para conferir vieram grandes demais.")
-        trechos = trechos_enviados.read() if trechos_enviados is not None else b""
-
-        def trecho(item, campo, teto):
-            par = item.get(campo)
-            if not par:
-                return b""
-            inicio, quantos = int(par[0]), int(par[1])
-            if inicio < 0 or quantos < 0 or quantos > teto or inicio + quantos > len(trechos):
-                raise ErroDeFormulario("Os trechos para conferir vieram quebrados.")
-            return trechos[inicio:inicio + quantos]
-
-        entradas = []
-        for item in manifesto:
-            try:
-                nome, tamanho = str(item["nome"]), int(item["tamanho"])
-                entradas.append(emu.entrada_de_trechos(
-                    nome, tamanho, trecho(item, "cabeca", emu.CABECA), trecho(item, "cauda", emu.CAUDA),
-                ))
-            except (KeyError, TypeError, ValueError, AttributeError) as exc:
-                raise ErroDeFormulario("A lista de arquivos veio quebrada.") from exc
-        grande = armazenamento_grande.configurado()
-        limite = armazenamento_grande.limite_por_arquivo() if grande else _limite_direto()
-        analise = emu.analisar(entradas, self._sistema_pedido(request), limite_por_arquivo=limite)
-        resposta = {"analise": analise.para_json(), "modo": "grande" if grande else "direto"}
-        if grande and analise.ok:
-            lote = secrets.token_hex(6)
-            envios = []
-            for peca in analise.pecas:
-                if peca.conteudo is not None:
-                    continue  # índice: o site guarda e serve; não vai para o balde
-                chave = f"jogos/emulador/{jogo.slug}/{lote}/{peca.nome}"
-                envios.append({
-                    "enviado": peca.entrada.nome, "nome": peca.nome, "tamanho": peca.entrada.tamanho,
-                    "chave": chave, "url": armazenamento_grande.url_para_enviar(chave),
-                })
-            resposta["envios"] = envios
-            resposta["plano"] = signing.dumps(
-                {"jogo": jogo.pk, "lote": lote, "arquivos": [{k: e[k] for k in ("nome", "tamanho", "chave")} for e in envios]},
-                salt=SAL_DO_PLANO,
-            )
+        """Confere antes de enviar (sem `id`: só confere; com `id`: volta o plano de envio)."""
+        jogo = self._jogo_do_pedido(request)
+        if jogo is not None and not tabela_pronta(ArquivoEmulador):
+            raise ErroDeFormulario("O banco ainda não tem a tabela dos arquivos do emulador: rode a migração.")
+        analise, resposta = envio.conferir(jogo, request.POST, request.FILES, request.path)
         return self.sucesso(request, analise.resumo() if analise.ok else "Confira os arquivos.", **resposta)
 
-    def acao_emulador_enviar(self, request):
-        """O envio pelo armazenamento de sempre: os arquivos vêm nesta requisição, inteiros."""
-        jogo = self._jogo_para_emulador(request)
-        arquivos = request.FILES.getlist("arquivos")
-        if not arquivos:
-            raise ErroDeFormulario("Selecione os arquivos do jogo.")
-        entradas = [emu.entrada_de_arquivo(arquivo) for arquivo in arquivos]
-        analise = emu.analisar(entradas, self._sistema_pedido(request), limite_por_arquivo=_limite_direto())
-        _exigir_ok(analise)
-        lote = secrets.token_hex(6)
-        guardados = []
-        try:
-            novos = []
-            for ordem, peca in enumerate(analise.pecas):
-                registro = ArquivoEmulador(
-                    jogo=jogo, nome=peca.nome, papel=peca.papel, disco=peca.disco,
-                    tamanho=peca.entrada.tamanho, lote=lote, ordem=ordem,
-                )
-                if peca.conteudo is not None:
-                    registro.conteudo = peca.conteudo
-                else:
-                    registro.arquivo.save(peca.nome, peca.entrada.origem, save=False)
-                    guardados.append(registro)
-                novos.append(registro)
-            antigos = self._trocar_conjunto(jogo, novos, analise)
-        except Exception as erro:  # noqa: BLE001 -- desfaz o que já subiu
-            _apagar_do_armazenamento(guardados, jogo.slug)
-            if isinstance(erro, ErroDeFormulario):
-                raise
-            if erro.__class__.__module__.split(".")[0] in ("cloudinary", "urllib3", "requests"):
-                log.warning("armazenamento recusou arquivo do emulador de %s: %r", jogo.slug, erro)
-                raise ErroDeFormulario(
-                    "O armazenamento recusou um dos arquivos (o plano tem um limite por arquivo, ou a conexão caiu). "
-                    "Disco de PS1 e jogo grande precisam do armazenamento de jogos grandes: veja o LEIA-ME."
-                ) from erro
-            raise
-        transaction.on_commit(lambda: _apagar_do_armazenamento(antigos, jogo.slug))
-        return self._pronto(request, jogo, analise)
+    def acao_emulador_pedaco(self, request):
+        """Um pedaço que veio para o próprio site (sem o Cloudinary: no computador, nos testes)."""
+        return self.sucesso(request, "Pedaço guardado.", **envio.guardar_pedaco(request.POST, request.FILES))
 
     def acao_emulador_confirmar(self, request):
-        """Depois do envio direto ao armazenamento de jogos grandes: confere o que chegou e guarda."""
         jogo = self._jogo_para_emulador(request)
-        if not armazenamento_grande.configurado():
-            raise ErroDeFormulario("O armazenamento de jogos grandes não está ligado.")
-        try:
-            plano = signing.loads(request.POST.get("plano") or "", salt=SAL_DO_PLANO, max_age=VALIDADE_DO_PLANO)
-        except signing.BadSignature as exc:
-            raise ErroDeFormulario("O envio expirou ou não é deste painel: confira os arquivos de novo.") from exc
-        if plano.get("jogo") != jogo.pk:
-            raise ErroDeFormulario("Esse envio é de outro jogo.")
-        entradas = []
-        chaves = [a["chave"] for a in plano["arquivos"]]
-        for item in plano["arquivos"]:
-            tamanho = armazenamento_grande.tamanho(item["chave"])
-            if tamanho is None:
-                raise ErroDeFormulario(f"“{item['nome']}” não chegou ao armazenamento. Envie de novo.")
-            if tamanho != item["tamanho"]:
-                armazenamento_grande.apagar(chaves)
-                raise ErroDeFormulario(f"“{item['nome']}” chegou com outro tamanho. Envie de novo.")
-            entradas.append(armazenamento_grande.entrada_remota(item["nome"], item["chave"], tamanho))
-        # os índices (.cue, .m3u...) não vão para o balde: vêm de novo aqui, pequenos
-        for arquivo in request.FILES.getlist("indices"):
-            if emu.extensao(arquivo.name) not in emu.INDICES or arquivo.size > emu.MAX_INDICE:
-                raise ErroDeFormulario(f"“{arquivo.name}” não é um índice (.cue, .ccd, .toc, .m3u).")
-            entradas.append(emu.entrada_de_arquivo(arquivo))
-        analise = emu.analisar(entradas, self._sistema_pedido(request), limite_por_arquivo=armazenamento_grande.limite_por_arquivo())
-        if not analise.ok:
-            armazenamento_grande.apagar(chaves)
-            _exigir_ok(analise)
-        no_balde = {e.nome: e.origem for e in entradas if isinstance(e.origem, str)}
-        novos = []
-        for ordem, peca in enumerate(analise.pecas):
-            registro = ArquivoEmulador(
-                jogo=jogo, nome=peca.nome, papel=peca.papel, disco=peca.disco,
-                tamanho=peca.entrada.tamanho, lote=plano["lote"], ordem=ordem,
-            )
-            if peca.conteudo is not None:
-                registro.conteudo = peca.conteudo
-            else:
-                registro.chave = no_balde[peca.entrada.nome]
-            novos.append(registro)
-        usadas = {r.chave for r in novos if r.chave}
-        sobras = [c for c in chaves if c not in usadas]  # enviado, mas a análise final deixou de fora
-        antigos = self._trocar_conjunto(jogo, novos, analise)
-
-        def limpar():
-            _apagar_do_armazenamento(antigos, jogo.slug)
-            if sobras:
-                armazenamento_grande.apagar(sobras)
-
-        transaction.on_commit(limpar)
-        # o balde mal configurado deixa o jogo abrir sem as faixas: conferir como o visitante confere
-        problemas = []
-        if usadas:
-            origem = endereco_do_site(request).rstrip("/")
-            principal = next((r.chave for r in novos if r.papel == ArquivoEmulador.JOGO and r.chave), None)
-            problemas = armazenamento_grande.diagnosticar(principal or sorted(usadas)[0], origem, principal)
-            for problema in problemas:
-                log.warning("balde dos jogos grandes (%s): %s", jogo.slug, problema)
-        return self._pronto(request, jogo, analise, problemas)
-
-    def acao_emulador_remover(self, request):
-        jogo = self._jogo_para_emulador(request)
-        antigos = list(jogo.arquivos_emulador.all())
-        jogo.arquivos_emulador.all().delete()
-        jogo.emulador_resumo = ""
-        jogo.save(update_fields=["emulador_resumo", "atualizado"])
-        transaction.on_commit(lambda: _apagar_do_armazenamento(antigos, jogo.slug))
-        log.info("arquivos do emulador de %s removidos por %s", jogo.slug, request.user.username)
-        return self.sucesso(request, f"Os arquivos de \"{jogo.nome}\" saíram. O jogo sai do site até receber outros.")
-
-    def _trocar_conjunto(self, jogo, novos, analise):
-        """Troca o conjunto inteiro de uma vez; devolve os antigos (para apagar depois do commit)."""
-        antigos = list(jogo.arquivos_emulador.all())
-        jogo.arquivos_emulador.all().delete()
-        ArquivoEmulador.objects.bulk_create(novos)
-        jogo.sistema = analise.sistema
-        jogo.emulador_resumo = analise.resumo()[:200]
-        jogo.save(update_fields=["sistema", "emulador_resumo", "atualizado"])
-        return antigos
-
-    def _pronto(self, request, jogo, analise, problemas=()):
+        analise, problemas = envio.confirmar(jogo, request.POST, request.FILES, endereco_do_site(request).rstrip("/"))
         log.info(
             "arquivos do emulador de %s guardados por %s: %s (%d arquivos)",
             jogo.slug, request.user.username, analise.resumo(), len(analise.pecas),
         )
-        if problemas:
-            situacao = " ATENÇÃO: " + " ".join(problemas)
-        elif jogo.ativo and not (jogo.endereco or jogo.arquivo_html):
-            situacao = " Já está no ar."
-        else:
-            situacao = ""
         return self.sucesso(
-            request, f"Arquivos guardados: {analise.resumo()}.{situacao}",
+            request, envio.mensagem_de_pronto(jogo, analise, problemas),
             analise=analise.para_json(), problemas_do_balde=list(problemas),
         )
 
-
-SAL_DO_PLANO = "sistema_interno.jogos.emulador.plano"
-#: Os trechos de uma conferência: o navegador manda no máximo uns 8 MB.
-MAX_TRECHOS = 12 * MB
-#: O link de envio vale 6 h; o plano assinado, um pouco mais.
-VALIDADE_DO_PLANO = armazenamento_grande.VALIDADE_DO_ENVIO + 3600
-
-
-def _limite_direto():
-    """O teto de cada arquivo no armazenamento de sempre (o mesmo do APK e da versão para computador)."""
-    return _limite_de_arquivo_grande()
-
-
-def _exigir_ok(analise):
-    if analise.ok:
-        return
-    erros = analise.erros or ["Não deu para montar o jogo com esses arquivos."]
-    extra = f" (e mais {len(erros) - 1} problema{'s' if len(erros) > 2 else ''})" if len(erros) > 1 else ""
-    raise ErroDeFormulario(erros[0] + extra)
-
-
-def _apagar_do_armazenamento(registros, slug):
-    """Apaga do armazenamento os arquivos de um conjunto que saiu (melhor esforço)."""
-    chaves = [r.chave for r in registros if r.chave]
-    if chaves:
-        try:
-            armazenamento_grande.apagar(chaves)
-        except Exception as erro:  # noqa: BLE001
-            log.warning("arquivos do emulador de %s não apagados do balde: %r", slug, erro)
-    for registro in registros:
-        if registro.arquivo:
-            try:
-                registro.arquivo.storage.delete(registro.arquivo.name)
-            except Exception as erro:  # noqa: BLE001
-                log.warning("arquivo do emulador de %s não apagado: %r", slug, erro)
+    def acao_emulador_remover(self, request):
+        jogo = self._jogo_para_emulador(request)
+        envio.remover(jogo)
+        log.info("arquivos do emulador de %s removidos por %s", jogo.slug, request.user.username)
+        return self.sucesso(request, f"Os arquivos de \"{jogo.nome}\" saíram. O jogo sai do site até receber outros.")

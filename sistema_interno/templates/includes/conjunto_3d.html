@@ -1,0 +1,17 @@
+{% comment %}
+  A faixa do conjunto num cartão da tela de objetos 3D: o que este brinquedo
+  traz dentro (brinquedão, espaço esportivo) e de que conjuntos ele faz
+  parte. Ver core/composicao.py.
+{% endcomment %}
+{% if linha.pode_conter or linha.faz_parte_de %}
+<div class="ls-3d-conjunto">
+  {% if linha.componentes %}
+    <span class="ls-3d-conjunto-rotulo"><i class="bi bi-diagram-3" aria-hidden="true"></i> Traz dentro</span>
+    <span class="ls-3d-conjunto-itens">{% for c in linha.componentes %}<span class="ls-3d-chip">{% if c.quantidade > 1 %}<b>{{ c.quantidade }}×</b> {% endif %}{{ c.nome }}</span>{% endfor %}</span>
+  {% elif linha.pode_conter %}
+    <span class="ls-3d-conjunto-rotulo{% if linha.sugestoes_conjunto %} dica{% endif %}">{% if linha.sugestoes_conjunto %}<i class="bi bi-stars" aria-hidden="true"></i> {{ linha.sugestoes_conjunto|length }} sugest{{ linha.sugestoes_conjunto|length|pluralize:"ão,ões" }} do que vem dentro{% else %}<i class="bi bi-diagram-3" aria-hidden="true"></i> Conjunto: nenhum brinquedo ligado{% endif %}</span>
+  {% endif %}
+  {% if linha.faz_parte_de %}<span class="ls-3d-conjunto-rotulo"><i class="bi bi-puzzle" aria-hidden="true"></i> Vem em: {% for c in linha.faz_parte_de %}{{ c.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+  {% if linha.pode_conter %}<button class="btn btn-sm btn-outline-success ls-3d-conjunto-botao" type="button" data-conjunto="{{ linha.id }}"><i class="bi bi-diagram-3" aria-hidden="true"></i> O que vem junto</button>{% endif %}
+</div>
+{% endif %}

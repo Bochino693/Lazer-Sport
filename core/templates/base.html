@@ -5,9 +5,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %} Lazer & Sports {% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
+  <title>{% block title %}Lazer & Sport Brinquedos | Fábrica de brinquedos, fliperama e boliche em São Paulo{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos, fliperama, boliche, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
   <link rel="canonical" href="https://www.lazersport.com.br{% block canonical_path %}{{ request.path }}{% endblock %}">
+  {% comment %}
+    BUSCADORES E COMPARTILHAMENTO.
+
+    `max-image-preview:large` deixa o Google usar a foto grande no
+    resultado e no Discover -- em catálogo de brinquedo, a foto é o que
+    faz clicar. O cartão (Open Graph) é o que o WhatsApp, o Instagram e o
+    Facebook mostram quando alguém manda o link: sem ele, o link do site
+    chegava como texto puro. Cada página pode trocar o título, o texto e a
+    imagem pelos blocos og_*.
+  {% endcomment %}
+  <meta name="robots" content="{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}">
+  {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
+  {% if bing_site_verification %}<meta name="msvalidate.01" content="{{ bing_site_verification }}">{% endif %}
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:site_name" content="Lazer & Sport Brinquedos">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:url" content="https://www.lazersport.com.br{{ request.path }}">
+  <meta property="og:title" content="{% block og_title %}Lazer & Sport Brinquedos — fábrica de brinquedos, fliperama e boliche{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Fábrica de brinquedos em São Paulo: fliperamas, boliche, brinquedões e espaço esportivo kids para shoppings, quiosques e parques.{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{{ site_publico }}{% static 'images/compartilhar/lazer-sport-1200x630.jpg' %}{% endblock %}">
+  <meta property="og:image:alt" content="Lazer & Sport Brinquedos">
+  <meta name="twitter:card" content="summary_large_image">
+  {% comment %}
+    A EMPRESA, PARA O GOOGLE: quem é, onde fica, como fala com ela e quais
+    são os perfis oficiais. É o que liga o site ao painel da empresa no
+    Google e ao Instagram -- o nome, o endereço e o telefone têm de ser
+    iguais aos do Perfil da Empresa no Google, letra por letra.
+  {% endcomment %}
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@graph":[
+    {"@type":"Organization","@id":"https://www.lazersport.com.br/#empresa","name":"Lazer & Sport Brinquedos",
+     "legalName":"Fábrica de brinquedos Lazer Sport","url":"https://www.lazersport.com.br/",
+     "logo":"{{ site_publico }}{% static 'images/logoofi.png' %}","telephone":"+55-11-96056-3135","email":"comercial@lazersport.com.br",
+     "address":{"@type":"PostalAddress","streetAddress":"Rua São Roque de Minas, 104","addressLocality":"São Paulo","addressRegion":"SP","postalCode":"02679-110","addressCountry":"BR"},
+     "sameAs":["https://www.instagram.com/lazersportbrinquedos","https://www.facebook.com/LazerSportBrinquedos1","https://www.linkedin.com/company/brinquedos-lazer-sport"]},
+    {"@type":"WebSite","@id":"https://www.lazersport.com.br/#site","name":"Lazer & Sport Brinquedos","url":"https://www.lazersport.com.br/","inLanguage":"pt-BR",
+     "publisher":{"@id":"https://www.lazersport.com.br/#empresa"},
+     "potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://www.lazersport.com.br/pesquisa/?q={search_term_string}"},"query-input":"required name=search_term_string"}}
+  ]}
+  </script>
   {% include "partials/icones_da_aba.html" %}
   {# a barra do navegador do celular na cor do topo do site (o tema escuro) #}
   <meta name="theme-color" content="#050b1f">
@@ -137,7 +177,7 @@
   <link rel="stylesheet" href="{% estatico 'site/ls-tema.css' %}">
   <script src="{% estatico 'site/ls-topo.js' %}" defer></script>
   <script src="{% estatico 'site/ls-fotos.js' %}" defer></script>
-
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
 
@@ -456,6 +496,9 @@
           <a href="{% url 'estabelecimento_brinquedo' est.id %}#brinquedos" class="suggestion-tag">Para {{ est.nome_estabelecimento }}</a>
         {% endfor %}
         <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="suggestion-tag">Peças de reposição</a>
+        {% for slug, rotulo in temas_de_busca %}
+          <a href="{% url 'pagina_tema' slug %}" class="suggestion-tag">{{ rotulo }}</a>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -518,8 +561,8 @@
         <div>
             <h3>Lazer &amp; Sport Brinquedos</h3>
             <p>
-                Fábrica e loja de brinquedos: mecânicos, eletrônicos, esportivos, fliperama
-                e simuladores para shoppings, quiosques e parques. Peças de reposição e
+                Fábrica e loja de brinquedos: mecânicos, eletrônicos, esportivos, fliperama,
+                boliche e simuladores para shoppings, quiosques e parques. Peças de reposição e
                 orçamento sob medida.
             </p>
             <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" class="ls-footer-btn">
@@ -538,6 +581,14 @@
                 <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
                 <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
             </div>
+        </div>
+
+        <div>
+            <h5>Máquinas e brinquedos</h5>
+            {% for slug, rotulo in temas_de_busca %}
+            <p><a href="{% url 'pagina_tema' slug %}">{% if slug == "boliche" %}Máquinas de boliche{% elif slug == "fliperama" %}Fliperamas e arcade{% else %}Brinquedos para shopping{% endif %}</a></p>
+            {% endfor %}
+            <p><a href="{% url 'arena' %}">Arena 3D</a> · <a href="{% url 'jogos' %}">Jogos</a></p>
         </div>
 
         <div>

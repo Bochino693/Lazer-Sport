@@ -5,6 +5,10 @@
 {% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
 
 {% block meta_description %}{{ brinquedo.nome_brinquedo }}: {{ brinquedo.descricao|striptags|truncatechars:140 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
+{% block og_description %}{{ brinquedo.descricao|striptags|truncatechars:180 }}{% endblock %}
+{% block og_image %}{% if brinquedo.imagem_brinquedo %}{% with u=brinquedo.imagem_brinquedo.url %}{% if u|slice:":4" == "http" %}{{ u }}{% else %}{{ site_publico }}{{ u }}{% endif %}{% endwith %}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% block main_class %} content-section--full{% endblock %}
 
 {% block content %}
@@ -218,6 +222,30 @@
                     <h2><i class="fas fa-align-left" aria-hidden="true"></i>Descrição</h2>
                     <p class="produto-descricao">{{ brinquedo.descricao|linebreaksbr }}</p>
                 </section>
+
+                {% if componentes %}
+                    {# o que vem DENTRO deste conjunto (o espaço, o brinquedão): cada um é vendido também sozinho #}
+                    <section class="produto-secao produto-conjunto" data-scroll-reveal>
+                        <h2><i class="fas fa-layer-group" aria-hidden="true"></i>O que vem neste {% if "espa" in brinquedo.nome_brinquedo|lower %}espaço{% else %}conjunto{% endif %}</h2>
+                        <ul class="produto-conjunto-lista">
+                            {% for item in componentes %}
+                                <li><a href="{{ item.url }}">
+                                    <span class="produto-conjunto-foto">{% if item.foto %}<img src="{{ item.foto }}" alt="" loading="lazy" decoding="async" width="72" height="72">{% else %}<i class="fas fa-gamepad" aria-hidden="true"></i>{% endif %}</span>
+                                    <span class="produto-conjunto-nome">{% if item.quantidade > 1 %}<b>{{ item.quantidade }}×</b> {% endif %}{{ item.nome }}</span>
+                                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                </a></li>
+                            {% endfor %}
+                        </ul>
+                    </section>
+                {% endif %}
+                {% if faz_parte_de %}
+                    <section class="produto-secao produto-conjunto" data-scroll-reveal>
+                        <h2><i class="fas fa-puzzle-piece" aria-hidden="true"></i>Também vem em</h2>
+                        <div class="produto-chips">
+                            {% for conjunto in faz_parte_de %}<a class="produto-chip" href="{{ conjunto.url }}">{{ conjunto.nome }}</a>{% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
 
                 {% if brinquedo.voltz or brinquedo.altura_m or brinquedo.largura_m or brinquedo.profundidade_m %}
                     <section class="produto-secao" data-scroll-reveal>

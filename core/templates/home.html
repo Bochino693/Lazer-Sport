@@ -4,12 +4,12 @@
 {% load humanize %}
 {% load cache %}
 
-{% block title %}Lazer & Sport Brinquedos | Fábrica de Brinquedos para Fliperama, Parques e Shoppings{% endblock %}
+{% block title %}Lazer & Sport Brinquedos | Fábrica de brinquedos, fliperama e boliche em SP{% endblock %}
 
-{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos mecânicos, eletrônicos e simuladores para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
+{% block meta_description %}Fábrica de brinquedos em São Paulo: fliperamas, boliche virtual e infantil, brinquedões e espaço esportivo kids para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
 
 {% block content %}
-{% cache home_cache_ttl home_public_v3 %}
+{% cache home_cache_ttl home_public_v4 %}
 
   <link rel="stylesheet" href="{% estatico 'site/ls-home.css' %}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -57,7 +57,7 @@
       </h1>
 
       <p class="ls-quadro-sub">
-        Brinquedos mecânicos, eletrônicos, esportivos, fliperamas e simuladores para
+        Brinquedos mecânicos, eletrônicos, esportivos, fliperamas, boliches e simuladores para
         shoppings, quiosques e parques — com peças de reposição, manutenção e projeto sob medida.
       </p>
 
@@ -1364,6 +1364,48 @@
 
 <!-- Correções finais: faixa do hero integrada e carrossel de combos completo. -->
 
+{% comment %}
+  A FÁBRICA COMO NEGÓCIO LOCAL: endereço, mapa, telefone e as cidades onde
+  há cliente. É o que o Google cruza com o Perfil da Empresa para mostrar a
+  Lazer & Sport no mapa de quem procura perto -- e os dados precisam ser
+  idênticos aos do perfil (ver LEIA-ME-V10.txt, seção 18).
+{% endcomment %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": ["LocalBusiness", "ToyStore"],
+    "@id": "https://www.lazersport.com.br/#fabrica",
+    "name": "Lazer & Sport Brinquedos",
+    "description": "Fábrica de brinquedos em São Paulo: fliperamas, boliche virtual e infantil, brinquedões e espaço esportivo kids para shoppings, quiosques e parques.",
+    "url": "https://www.lazersport.com.br{% url 'home' %}",
+    "image": "{{ site_publico }}{% static 'images/compartilhar/lazer-sport-1200x630.jpg' %}",
+    "logo": "{{ site_publico }}{% static 'images/logoofi.png' %}",
+    "telephone": "+55-11-96056-3135",
+    "email": "comercial@lazersport.com.br",
+    "parentOrganization": {"@id": "https://www.lazersport.com.br/#empresa"},
+    "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Rua São Roque de Minas, 104",
+        "addressLocality": "São Paulo",
+        "addressRegion": "SP",
+        "postalCode": "02679-110",
+        "addressCountry": "BR"
+    },
+    {% with fabrica=pontos_mapa.0 %}{% if fabrica.lat and fabrica.lng %}"geo": {"@type": "GeoCoordinates", "latitude": {{ fabrica.lat|stringformat:".7f" }}, "longitude": {{ fabrica.lng|stringformat:".7f" }}},
+    "hasMap": "https://www.google.com/maps/search/?api=1&query={{ fabrica.lat|stringformat:'.7f' }},{{ fabrica.lng|stringformat:'.7f' }}",{% endif %}{% endwith %}
+    "sameAs": [
+        "https://www.instagram.com/lazersportbrinquedos",
+        "https://www.facebook.com/LazerSportBrinquedos1",
+        "https://www.linkedin.com/company/brinquedos-lazer-sport"
+    ],
+    "areaServed": [
+        {% for cidade in cidades_atendidas %}
+        {"@type": "City", "name": "{{ cidade|escapejs }}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+}
+</script>
+
 {# O mapa conta onde os CLIENTES estão: sem cliente publicado, não vem (a fábrica já está no "Venha até a Lazer & Sport", logo acima). #}
 {% if clientes_mapa %}
 <div class="espacador"></div>
@@ -1420,19 +1462,6 @@
 
 </section>
 
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": "Lazer & Sport Brinquedos",
-    "url": "https://www.lazersport.com.br{% url 'home' %}",
-    "areaServed": [
-        {% for cidade in cidades_atendidas %}
-        {"@type": "City", "name": "{{ cidade|escapejs }}"}{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ]
-}
-</script>
 {{ pontos_mapa|json_script:"dados-clientes-mapa" }}
 {# O mapa de clientes também sai daqui: sem CDN, a seção inteira sumia. #}
 {% comment %}
