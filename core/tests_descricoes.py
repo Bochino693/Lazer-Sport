@@ -61,3 +61,32 @@ class DescricoesNovasTests(TestCase):
                 self.assertLessEqual(len(dados["nova"]), limite)
                 self.assertGreater(len(dados["nova"]), 300)
                 self.assertNotEqual(dados["nova"].strip(), dados["antiga"].strip())
+
+
+renomes = importlib.import_module("core.migrations.0127_nomes_dos_brinquedos")
+
+
+class NomesCorrigidosTests(TestCase):
+    def test_corrige_o_flappy_e_separa_os_dois_pinballs(self):
+        brinquedo(24, "FLAPYY BIRD", "jogo do passarinho")
+        brinquedo(18, "PIMBAL", DESCRICOES[18]["nova"])
+        brinquedo(19, "PIMBAL", DESCRICOES[19]["nova"])
+        renomes.aplicar(apps, None)
+        self.assertEqual(Brinquedos.objects.get(pk=24).nome_brinquedo, "FLAPPY BIRD")
+        self.assertEqual(Brinquedos.objects.get(pk=18).nome_brinquedo, "PINBALL 32 POLEGADAS")
+        self.assertEqual(Brinquedos.objects.get(pk=19).nome_brinquedo, "PINBALL 40 POLEGADAS")
+        renomes.desfazer(apps, None)
+        self.assertEqual(Brinquedos.objects.get(pk=18).nome_brinquedo, "PIMBAL")
+
+    def test_nao_mexe_em_nome_ja_trocado_nem_em_outro_brinquedo(self):
+        brinquedo(24, "Flappy Bird Deluxe", "outro")
+        brinquedo(18, "PIMBAL", "um pinball sem a tela na descrição")
+        renomes.aplicar(apps, None)
+        self.assertEqual(Brinquedos.objects.get(pk=24).nome_brinquedo, "Flappy Bird Deluxe")
+        self.assertEqual(Brinquedos.objects.get(pk=18).nome_brinquedo, "PIMBAL")
+
+    def test_a_arena_continua_reconhecendo_o_pinball(self):
+        from . import arena
+
+        self.assertEqual(arena.modelo_3d("PINBALL 40 POLEGADAS"), arena.modelo_3d("PIMBAL"))
+        self.assertEqual(arena.modelo_3d("FLAPPY BIRD"), arena.modelo_3d("FLAPYY BIRD"))
