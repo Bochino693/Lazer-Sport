@@ -444,3 +444,35 @@ Dependência nova: rjsmin (requirements.txt).
    quem decide é o Google, e leva semanas. Ajuda muito: link para
    /jogos-de-boliche/ no Instagram, no YouTube (na descrição dos vídeos) e no
    Perfil da Empresa no Google.
+
+20) EMULADOR: MAIS CONSOLES E O JOGO NA HORA
+   UM PLAYER SÓ. Você sobe os arquivos e o site descobre o console sozinho.
+   Rodam agora: PlayStation, NES, Game Boy / Color, Game Boy Advance,
+   Nintendo 64, PC Engine e, novos, Nintendo DS (.nds), Atari 2600 (.a26),
+   Atari 7800 (.a78) e Commodore 64 (.d64, .t64, .tap, .prg, .crt). Os
+   núcleos moram no próprio site (nada vem de site de terceiros).
+   JOGO NA HORA. Os arquivos do jogo ficam guardados no aparelho de quem
+   joga. A página do jogo já começa a preparar enquanto a pessoa lê (jogos
+   até 120 MB); ao tocar em Jogar, abre do aparelho. Da segunda vez em
+   diante não baixa nada -- nem o jogo, nem o emulador. Disco grande (PS1)
+   baixa no primeiro toque e fica guardado. Faltando espaço no aparelho,
+   saem primeiro os jogos abertos há mais tempo. Se a equipe troca os
+   arquivos no painel, o aparelho baixa a versão nova sozinho.
+   SUPER NINTENDO, MEGA DRIVE E FLIPERAMA. Não é falta de código: os únicos
+   emuladores desses consoles para navegador (Snes9x, Genesis Plus GX,
+   PicoDrive, FinalBurn Neo, MAME 2003) têm licença que proíbe uso comercial
+   -- a do Snes9x cita expressamente "usar como ferramenta promocional ou
+   parte de uma operação comercial", que é o caso do site de uma empresa.
+   Com a permissão por escrito dos autores (Snes9x: snes9x.com), crie no
+   Render a variável JOGOS_EMULADORES_NAO_COMERCIAIS com os consoles
+   liberados, separados por vírgula: snes, segaMD, segaMS, segaGG, segaCD,
+   arcade. A partir daí o painel aceita esses jogos.
+   AS ROMS. Jogo comercial (Mario, Sonic, Street Fighter...) tem dono: só
+   publiquem jogos que a empresa fez, comprou o direito ou que o autor
+   liberou (há muitos jogos "homebrew" gratuitos e liberados).
+   RECORDE E PONTUAÇÃO. Os jogos da casa (Dragon Bowling, Strike Kids,
+   Super Boxing...) entram no ranking porque foram feitos para mandar os
+   pontos ao site. Uma ROM de console não manda nada: a pontuação fica
+   dentro da memória do jogo, num lugar diferente em cada jogo, e o
+   emulador do site não dá acesso a essa memória. O que funciona na ROM:
+   salvar e continuar a partida (fica guardado no aparelho de quem joga).

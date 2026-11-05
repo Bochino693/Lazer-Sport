@@ -9,6 +9,11 @@ DE ONDE VEIO. Pacotes do npm, versão 4.2.3 (julho de 2025):
   @emulatorjs/core-mgba            Game Boy Advance    MPL-2.0
   @emulatorjs/core-mupen64plus_next Nintendo 64        GPL-2.0
   @emulatorjs/core-mednafen_pce    PC Engine (e CD)    GPL-2.0
+  @emulatorjs/core-melonds         Nintendo DS         GPL-3.0
+  @emulatorjs/core-stella2014      Atari 2600          GPL-2.0 (o pacote não traz o texto:
+                                   vai em licencas/stella2014-GPL-2.0.txt)
+  @emulatorjs/core-prosystem       Atari 7800          GPL-2.0
+  @emulatorjs/core-vice_x64sc      Commodore 64        GPL-2.0
 Código-fonte: https://github.com/EmulatorJS/EmulatorJS e, de cada núcleo,
 https://github.com/EmulatorJS/<núcleo> (ex.: EmulatorJS/pcsx_rearmed). A
 licença do EmulatorJS está em LICENSE-EmulatorJS.txt; a de cada núcleo vai
@@ -39,3 +44,12 @@ EmulatorJS, confira se o defeito continua antes de mudar isso.
 PARA ATUALIZAR. Baixe os pacotes da nova versão do npm, repita a junção dos
 fontes de data/src/ na ordem do loader.js e troque os núcleos; rode os
 testes (core/tests_jogos_emulador.py) e abra um jogo de cada sistema.
+
+LICENÇA NÃO COMERCIAL. Super Nintendo (snes9x), Mega Drive / Master System /
+Game Gear / Sega CD (genesis_plus_gx e picodrive) e fliperama (fbneo, mame2003)
+só existem para navegador com licença que proíbe uso comercial -- a do Snes9x
+cita "usar como ferramenta promocional ou parte de uma operação comercial".
+Ficam reconhecidos e desligados; com a permissão dos autores, liga-se com
+JOGOS_EMULADORES_NAO_COMERCIAIS (ver LEIA-ME-V10.txt, seção 20). Ficaram de
+fora, por enquanto, os núcleos cujo pacote não diz a licença (Saturn, Lynx,
+Jaguar, 3DO, SMS Plus).

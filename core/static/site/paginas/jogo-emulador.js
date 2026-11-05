@@ -16,6 +16,7 @@
       Uint8Array): o arquivo fica criado e VAZIO, sem erro na tela.
       Entregando os bytes prontos, ele grava certo.
    3. Quem joga vê o progresso: um disco de PS1 tem centenas de MB.
+   4. Da segunda vez, o jogo sai do aparelho (jogo-guardado.js), na hora.
    ====================================================================== */
 (function () {
   "use strict";
@@ -121,9 +122,21 @@
     document.body.appendChild(loader);
   }
 
+  /* Do aparelho quando o jogo já está guardado (jogo-guardado.js); senão baixa e guarda. */
+  function pegar(itens) {
+    var guardado = window.LSJogoGuardado;
+    if (!guardado || !guardado.disponivel) return baixarTudo(itens);
+    var grande = "";
+    return guardado.pegarTudo(config.jogo || config.nome, itens, function (feito, total, doAparelho) {
+      grande = !doAparelho && total > 300 * 1048576 ? " — jogo grande: no celular pode não abrir" : "";
+      mostrar((doAparelho ? "Abrindo o jogo guardado no aparelho" : "Baixando o jogo (fica guardado para a próxima)") +
+        ": " + mb(feito) + " de " + mb(total) + grande, total ? feito / total * 100 : 0);
+    }).then(function (r) { return r.bytes; }, function () { return baixarTudo(itens); });
+  }
+
   document.body.appendChild(aviso);
-  mostrar("Baixando o jogo…", 0);
-  baixarTudo(config.arquivos).then(function (bytes) {
+  mostrar("Abrindo o jogo…", 0);
+  pegar(config.arquivos).then(function (bytes) {
     var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
     var jogo = bytes[principal.caminho];
     delete bytes[principal.caminho];
