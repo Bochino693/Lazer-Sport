@@ -118,3 +118,71 @@ class EnderecosAntigosTests(TestCase):
                 self.assertEqual(self.client.get(antigo).status_code, 301)
         # o curinga (endereço que nunca existiu) continua temporário
         self.assertEqual(self.client.get("/qualquer-coisa-que-nao-existe/").status_code, 302)
+
+
+class JogosNaBuscaTests(TestCase):
+    """Quem busca "boliche virtual" quer jogar: a página do jogo responde isso."""
+
+    def test_o_dragon_bowling_e_boliche_virtual_online_gratis(self):
+        html = self.client.get(reverse("jogo", args=["dragon-bowling"])).content.decode()
+        self.assertIn("<title>Boliche virtual online grátis: jogue o Dragon Bowling | Lazer &amp; Sport</title>", html)
+        self.assertIn("Boliche virtual online grátis: jogue no navegador ou no celular", html)
+        self.assertIn(f'href="{reverse("pagina_tema", args=["jogos-de-boliche"])}"', html)
+        jogo = [b for b in json_ld(html) if b.get("@type") == "VideoGame"][0]
+        self.assertEqual(jogo["name"], "Dragon Bowling")
+        self.assertTrue(jogo["isAccessibleForFree"])
+        self.assertEqual(jogo["url"], "https://www.lazersport.com.br/jogos/dragon-bowling/")
+
+    def test_todo_jogo_tem_texto_de_busca_e_tema_que_existe(self):
+        from . import arena
+        for jogo in arena.JOGOS:
+            with self.subTest(jogo=jogo["slug"]):
+                busca = paginas_tema.busca_do_jogo(jogo["slug"])
+                self.assertTrue(busca.get("titulo") and busca.get("descricao") and busca.get("frase"))
+                self.assertIn(busca["tema"], paginas_tema.TEMAS)
+
+    def test_jogos_de_boliche_poe_o_jogo_na_frente(self):
+        html = self.client.get(reverse("pagina_tema", args=["jogos-de-boliche"])).content.decode()
+        self.assertIn("Jogar Dragon Bowling", html)
+        self.assertIn("Jogar Strike Kids", html)
+        self.assertIn("Quer essa máquina de verdade no seu espaço?", html)
+
+    def test_o_topo_mostra_so_os_destaques_e_o_rodape_todos(self):
+        html = self.client.get(reverse("brinquedos")).content.decode()
+        topo = html[html.index('class="search-suggestions"'):html.index("CONTEÚDO DINÂMICO")]
+        self.assertIn(reverse("pagina_tema", args=["jogos-de-boliche"]), topo)
+        self.assertNotIn(reverse("pagina_tema", args=["maquina-de-boxe"]), topo)
+        rodape = html[html.index('<footer class="ls-footer">'):]
+        for slug in paginas_tema.TEMAS:
+            self.assertIn(reverse("pagina_tema", args=[slug]), rodape)
+
+
+class IndexNowTests(TestCase):
+    def test_a_chave_so_aparece_configurada(self):
+        self.assertEqual(self.client.get("/abcdef1234567890.txt").status_code, 404)
+        with override_settings(INDEXNOW_KEY="abcdef1234567890"):
+            resposta = self.client.get("/abcdef1234567890.txt")
+            self.assertEqual(resposta.status_code, 200)
+            self.assertEqual(resposta.content.decode(), "abcdef1234567890")
+            self.assertEqual(self.client.get("/outrachave12345.txt").status_code, 404)
+
+    def test_o_aviso_leva_as_paginas_do_sitemap(self):
+        from . import indexnow
+        enviados = {}
+
+        def enviar(url, corpo):
+            enviados.update(url=url, corpo=corpo)
+            return 202
+
+        with override_settings(INDEXNOW_KEY="abcdef1234567890"):
+            resultado = indexnow.avisar(indexnow.enderecos_do_sitemap(), enviar=enviar)
+        self.assertEqual(resultado["status"], 202)
+        self.assertEqual(enviados["corpo"]["host"], "www.lazersport.com.br")
+        self.assertEqual(enviados["corpo"]["keyLocation"], "https://www.lazersport.com.br/abcdef1234567890.txt")
+        self.assertIn("https://www.lazersport.com.br/jogos-de-boliche/", enviados["corpo"]["urlList"])
+        self.assertIn("https://www.lazersport.com.br/jogos/dragon-bowling/", enviados["corpo"]["urlList"])
+
+    def test_sem_chave_o_comando_explica(self):
+        from django.core.management import CommandError, call_command
+        with self.assertRaisesMessage(CommandError, "INDEXNOW_KEY"):
+            call_command("avisar_buscadores")

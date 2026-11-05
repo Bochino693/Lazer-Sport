@@ -585,8 +585,8 @@
 
         <div>
             <h5>Máquinas e brinquedos</h5>
-            {% for slug, rotulo in temas_de_busca %}
-            <p><a href="{% url 'pagina_tema' slug %}">{% if slug == "boliche" %}Máquinas de boliche{% elif slug == "fliperama" %}Fliperamas e arcade{% else %}Brinquedos para shopping{% endif %}</a></p>
+            {% for slug, rotulo in temas_do_rodape %}
+            <p><a href="{% url 'pagina_tema' slug %}">{{ rotulo }}</a></p>
             {% endfor %}
             <p><a href="{% url 'arena' %}">Arena 3D</a> · <a href="{% url 'jogos' %}">Jogos</a></p>
         </div>

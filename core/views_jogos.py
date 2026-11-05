@@ -13,6 +13,7 @@ partida chega em /jogos/partida/ e o ranking (do jogo e geral) sai de
 
 import json
 
+from django.conf import settings
 from django.db.models import Prefetch
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -26,7 +27,7 @@ from django.views.generic import View
 
 from sistema_interno.templatetags.interno_extras import estatico
 
-from . import arena, ranking
+from . import arena, paginas_tema, ranking
 from .home_cache import get_cached_catalog_page
 from .jogos_emulador import SISTEMAS, sistemas_ligados
 from .models import ArquivoEmulador, Brinquedos, JogoCadastrado
@@ -93,10 +94,45 @@ def maquinas_dos_jogos():
     return maquinas
 
 
+def _tema_do_jogo(slug):
+    """A página da máquina daquele jogo (boliche, basquete...), para o link da ficha."""
+    tema = paginas_tema.busca_do_jogo(slug).get("tema")
+    if tema not in paginas_tema.TEMAS:
+        return None
+    return {"url": reverse("pagina_tema", args=[tema]), "h1": paginas_tema.TEMAS[tema]["h1"]}
+
+
+def _dados_do_jogo(jogo, busca):
+    """O jogo para o Google: um VideoGame gratuito, que roda no navegador."""
+    site = str(getattr(settings, "SITE_URL", "") or "https://www.lazersport.com.br").rstrip("/")
+    dados = {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": jogo["titulo"],
+        "url": site + jogo["url"],
+        "description": busca.get("descricao") or jogo["descricao"],
+        "image": site + estatico(jogo["capa"]),
+        "genre": jogo["maquina"],
+        "inLanguage": "pt-BR",
+        "gamePlatform": ["Navegador", "Celular", "Computador"],
+        "playMode": "SinglePlayer",
+        "isAccessibleForFree": True,
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "BRL"},
+        "publisher": {"@id": "https://www.lazersport.com.br/#empresa"},
+    }
+    return json.dumps(dados, ensure_ascii=False).replace("</", "<\\/")
+
+
 def _para_o_script(jogo):
     """O que o simulador precisa de um jogo, com os endereços já versionados."""
     controle = jogo["controle"]
+    busca = paginas_tema.busca_do_jogo(jogo["slug"])
+    tema = _tema_do_jogo(jogo["slug"])
     return {
+        "tituloBusca": busca.get("titulo", ""),
+        "fraseBusca": busca.get("frase", ""),
+        "temaUrl": tema["url"] if tema else "",
+        "temaNome": tema["h1"] if tema else "",
         "slug": jogo["slug"],
         "titulo": jogo["titulo"],
         "maquina": jogo["maquina"],
@@ -160,10 +196,14 @@ class SimuladorView(View):
         voltar = atual["url"]
         salvos = ranking.salvos_agora(request)
 
+        busca = paginas_tema.busca_do_jogo(atual["slug"])
         return render(request, "jogos.html", {
             "jogos": jogos,
             "jogos_externos": externos,
             "atual": atual,
+            "busca": busca,
+            "tema_do_jogo": _tema_do_jogo(atual["slug"]),
+            "dados_do_jogo_ld": _dados_do_jogo(atual, busca),
             "jogo_escolhido": slug is not None,
             "jogos_script": [_para_o_script(j) for j in jogos],
             "whatsapp": WHATSAPP,

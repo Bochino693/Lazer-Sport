@@ -111,7 +111,10 @@ class SimuladorTests(TestCase):
                 self.assertEqual(resposta.status_code, 200)
                 html = resposta.content.decode()
                 self.assertEqual(html.count("<h1"), 1)
-                self.assertIn(f"<title>{jogo['titulo']}: jogue a prévia", html)
+                # o título é o de quem busca para jogar ("Boliche virtual online grátis...")
+                from core.paginas_tema import busca_do_jogo
+                titulo = busca_do_jogo(jogo["slug"]).get("titulo") or f"{jogo['titulo']}: jogue a prévia"
+                self.assertIn(f"<title>{titulo.replace('&', '&amp;')}", html)
                 self.assertIn('aria-current="page"', html)
                 self.assertIn('id="sim-jogos"', html)
 

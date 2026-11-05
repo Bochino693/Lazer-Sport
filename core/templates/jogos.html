@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 {% load static interno_extras humanize %}
 
-{% block title %}{% if jogo_escolhido %}{{ atual.titulo }}: jogue a prévia{% else %}Simulador de jogos{% endif %} | Lazer &amp; Sport Jogos{% endblock %}
+{% block title %}{% if jogo_escolhido and busca.titulo %}{{ busca.titulo }}{% elif jogo_escolhido %}{{ atual.titulo }}: jogue a prévia | Lazer &amp; Sport Jogos{% else %}Jogos online grátis: boliche, boxe, basquete e mais | Lazer &amp; Sport{% endif %}{% endblock %}
 
 {% block main_class %} content-section--full{% endblock %}
 
-{% block meta_description %}{% if jogo_escolhido %}Jogue a prévia do {{ atual.titulo }}, o jogo da máquina {{ atual.maquina|lower }} da Lazer &amp; Sport, no celular ou no computador.{% else %}Simulador Lazer &amp; Sport Jogos: escolha um jogo das nossas máquinas e jogue a prévia no celular ou no computador.{% endif %}{% endblock %}
+{% block meta_description %}{% if jogo_escolhido and busca.descricao %}{{ busca.descricao }}{% elif jogo_escolhido %}Jogue a prévia do {{ atual.titulo }}, o jogo da máquina {{ atual.maquina|lower }} da Lazer &amp; Sport, no celular ou no computador.{% else %}Jogos online grátis das máquinas Lazer &amp; Sport: boliche virtual, boliche infantil, boxe, basquete, tiro ao alvo, chute ao gol e ritmo. Jogue no navegador ou no celular, sem baixar.{% endif %}{% endblock %}
+{% block og_title %}{% if jogo_escolhido and busca.titulo %}{{ busca.titulo }}{% else %}Jogos online grátis | Lazer & Sport{% endif %}{% endblock %}
+{% block og_image %}{{ site_publico }}{% static atual.capa %}{% endblock %}
+{% block extra_head %}{% if jogo_escolhido %}
+<script type="application/ld+json">{{ dados_do_jogo_ld|safe }}</script>{% endif %}{% endblock %}
 
 {% block content %}
 
@@ -195,6 +199,7 @@
             <span class="sim-ficha-maquina" data-sim-maquina>{{ atual.maquina }}</span>
             <h2 id="sim-ficha-titulo" data-sim-titulo>{{ atual.titulo }}</h2>
             <p class="sim-ficha-chamada" data-sim-chamada>{{ atual.chamada }}</p>
+            <p class="sim-ficha-busca" data-sim-busca{% if not busca.frase %} hidden{% endif %}>{{ busca.frase }}</p>
             <p class="sim-ficha-desc" data-sim-descricao>{{ atual.descricao }}</p>
 
             <!-- ================= RANKING: deste jogo e geral ================= -->
@@ -248,6 +253,9 @@
                 </a>
             </div>
 
+            <a class="sim-ficha-arena" data-sim-tema href="{{ tema_do_jogo.url|default:'#' }}"{% if not tema_do_jogo %} hidden{% endif %}>
+                <i class="fa-solid fa-store" aria-hidden="true"></i> <span data-sim-tema-nome>{{ tema_do_jogo.h1 }}</span>
+            </a>
             <a class="sim-ficha-arena" href="{% url 'arena' %}#arena-3d">
                 <i class="fa-solid fa-cube" aria-hidden="true"></i> Veja as máquinas em 3D na Arena
             </a>
