@@ -123,7 +123,15 @@
     palco.insertBefore(quadro, telaCheia || null);
     palco.classList.add("jc-palco--jogando");
     if (telaCheia) telaCheia.hidden = false;
-    quadro.focus();
+    // "LAZER & SPORT GAMES apresenta": por cima do quadro, que já está
+    // carregando o jogo por baixo -- a espera do carregamento vira abertura
+    const intro = window.LSIntroJogos;
+    if (intro) {
+      intro.mostrar(palco, { titulo: palco.dataset.jogoTitulo || "", cor: palco.dataset.jogoCor || "", chave: "cadastrado:" + src })
+        .then(function () { quadro.focus(); });
+    } else {
+      quadro.focus();
+    }
   }
 
   botao.addEventListener("click", jogar);

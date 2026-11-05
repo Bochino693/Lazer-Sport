@@ -265,6 +265,8 @@
 
 {{ jogos_script|json_script:"sim-jogos" }}
 {{ jogador|json_script:"sim-jogador" }}
+<link rel="stylesheet" href="{% estatico 'site/paginas/intro-jogos.css' %}">
+<script src="{% estatico 'site/paginas/intro-jogos.js' %}" data-logo="{% static 'images/logoofi.png' %}"></script>
 <script type="module" src="{% estatico 'site/arena/console.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/ranking.js' %}"></script>
 
