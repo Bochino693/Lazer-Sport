@@ -762,6 +762,9 @@
 
 .sim-ficha h2 { margin: 6px 0 4px; color: #fff; font-size: 1.6rem; font-weight: 900; line-height: 1.15; }
 .sim-ficha-chamada { margin: 0 0 8px; color: #fff; font-weight: 700; }
+/* a frase de busca do jogo ("boliche virtual online grátis..."): à vista, e não escondida */
+.sim-ficha-busca { margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; color: #dff4ff; font-size: .9rem; font-weight: 600; background: rgba(63, 208, 255, .10); border: 1px solid rgba(63, 208, 255, .28); }
+.sim-ficha-busca[hidden] { display: none; }
 .sim-ficha-desc { margin: 0; color: var(--ls-texto-suave, #a9bcd9); font-size: .92rem; line-height: 1.6; }
 
 .sim-ficha h3 {
@@ -826,6 +829,7 @@
 }
 
 .sim-ficha-arena:hover { color: #fff; text-decoration: underline; }
+.sim-ficha-arena[hidden] { display: none; }
 
 /* =========================================================
    TELAS MENORES

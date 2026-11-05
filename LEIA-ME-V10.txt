@@ -415,3 +415,32 @@ Dependência nova: rjsmin (requirements.txt).
    "fliperama para shopping", "fábrica de brinquedos SP": é nessas que as
    páginas novas devem aparecer primeiro, em algumas semanas depois de
    indexadas. Nada de banco mudou.
+
+19) BUSCAS DE QUEM QUER JOGAR (boliche virtual, jogo de boliche...) E MAIS TEMAS
+   POR QUE O SITE NÃO APARECIA EM "BOLICHE VIRTUAL". Primeiro: as páginas das
+   seções 18 e 19 só existem para o Google depois que a branch for para a main
+   e o Render publicar. Segundo: quem busca "boliche virtual" quer JOGAR -- por
+   isso aparecem Poki e FunnyGames. As prévias das máquinas são jogos de
+   verdade, então agora cada jogo responde essa busca:
+   - /jogos/dragon-bowling/ tem o título "Boliche virtual online grátis: jogue o
+     Dragon Bowling"; o Strike Kids é "jogo de boliche infantil online grátis";
+     o Super Boxing, "jogo de boxe online grátis"; e assim os nove jogos.
+     Cada um ganhou dados de jogo gratuito para o Google e o link para a página
+     da máquina.
+   - Página nova /jogos-de-boliche/ ("Jogos de boliche online grátis"), com o
+     jogo na frente e a máquina depois.
+   - Temas novos: /maquina-de-basquete/, /maquina-de-boxe/, /espaco-kids/. Todos
+     no rodapé; os quatro principais também no topo.
+   AVISO AO BING (IndexNow). Crie a variável INDEXNOW_KEY no Render (uma
+   sequência de 8 a 128 letras/números inventada por vocês, ex.: um UUID sem
+   traços). Depois de cada publicação, no Shell do Render:
+       python manage.py avisar_buscadores
+   O Bing recebe todas as páginas do sitemap na hora (ele alimenta Copilot,
+   DuckDuckGo e outros). O Google não usa IndexNow: para ele, Search Console
+   (seção 18) e "Solicitar indexação" de /jogos/dragon-bowling/, /jogos-de-boliche/
+   e /boliche/.
+   EXPECTATIVA. Em "boliche virtual" a disputa é com portais de jogos enormes;
+   com a página certa e o Search Console, o site entra na briga, mas a posição
+   quem decide é o Google, e leva semanas. Ajuda muito: link para
+   /jogos-de-boliche/ no Instagram, no YouTube (na descrição dos vídeos) e no
+   Perfil da Empresa no Google.

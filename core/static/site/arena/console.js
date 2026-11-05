@@ -1196,7 +1196,15 @@ if (raiz && dadosDosJogos) {
         opcao.removeAttribute("aria-current");
       }
     });
-    document.title = `${jogo.titulo}: jogue a prévia | Lazer & Sport Jogos`;
+    // o título de busca do jogo ("Boliche virtual online grátis..."), o mesmo que o servidor põe
+    document.title = jogo.tituloBusca || `${jogo.titulo}: jogue a prévia | Lazer & Sport Jogos`;
+    const busca = campo("busca");
+    if (busca) { busca.textContent = jogo.fraseBusca || ""; busca.hidden = !jogo.fraseBusca; }
+    const tema = campo("tema");
+    if (tema) {
+      tema.hidden = !jogo.temaUrl;
+      if (jogo.temaUrl) { tema.href = jogo.temaUrl; campo("tema-nome").textContent = jogo.temaNome; }
+    }
   };
 
   const escolher = (slug, { empurrar = true, focar = false } = {}) => {

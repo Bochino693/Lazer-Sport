@@ -26,6 +26,7 @@ from .sitemaps import (
     PecasSitemap,
     TemasSitemap,
 )
+from . import indexnow
 from .paginas_tema import TEMAS
 from .views_tema import pagina_tema
 from .views import (
@@ -139,6 +140,8 @@ urlpatterns = [
     path("robots.txt", robots_txt, name="robots_txt"),
     path("privacidade/", PrivacidadeView.as_view(), name="privacidade"),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
+    # A chave do IndexNow (core/indexnow.py): /<chave>.txt, só a configurada.
+    re_path(r"^(?P<nome>[A-Za-z0-9-]{8,128})\.txt$", indexnow.arquivo_da_chave, name="indexnow_chave"),
 
     # ---------------- avisos no celular do cliente ----------------
     # O aparelho de quem baixou o aplicativo pede (ou desiste de) receber

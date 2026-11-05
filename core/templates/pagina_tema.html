@@ -33,6 +33,14 @@
     <h1>{{ tema.h1 }}</h1>
     <p class="tema-intro">{{ tema.intro }}</p>
     <div class="tema-acoes">
+      {% if tema.jogar %}
+        {# quem chegou aqui quer jogar: o jogo vem primeiro, a máquina depois #}
+        {% for jogo in jogos %}
+        <a class="tema-botao tema-botao--jogar" href="{{ jogo.url }}">
+          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar {{ jogo.titulo }}
+        </a>
+        {% endfor %}
+      {% else %}
       <a class="tema-botao tema-botao--zap" href="{{ tema.whatsapp }}" target="_blank" rel="noopener">
         <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pedir orçamento
       </a>
@@ -40,6 +48,7 @@
       <a class="tema-botao tema-botao--jogar" href="{{ jogos.0.url }}">
         <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia
       </a>
+      {% endif %}
       {% endif %}
     </div>
   </div>
@@ -56,7 +65,7 @@
             <small>{{ jogo.maquina }}</small>
             <strong>{{ jogo.titulo }}</strong>
             <span>{{ jogo.descricao }}</span>
-            <em>Jogar a prévia <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></em>
+            <em>{% if tema.jogar %}Jogar agora{% else %}Jogar a prévia{% endif %} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></em>
           </span>
         </a>
       </li>
@@ -102,7 +111,7 @@
 
   <section class="tema-fim">
     <div>
-      <h2>Vamos montar o seu espaço?</h2>
+      <h2>{% if tema.jogar %}Quer essa máquina de verdade no seu espaço?{% else %}Vamos montar o seu espaço?{% endif %}</h2>
       <p>Fábrica em São Paulo · Rua São Roque de Minas, 104, Jardim Peri · (11) 96056-3135</p>
     </div>
     <div class="tema-acoes">

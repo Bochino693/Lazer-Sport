@@ -406,4 +406,5 @@ def seo_context(request):
         "bing_site_verification": getattr(settings, "BING_SITE_VERIFICATION", ""),
         "site_publico": site,
         "temas_de_busca": paginas_tema.menu(),
+        "temas_do_rodape": paginas_tema.rodape(),
     }

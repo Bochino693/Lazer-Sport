@@ -428,6 +428,8 @@ EMPRESA_INSTAGRAM = os.getenv(
 # tag. Vazio, nenhuma tag sai. Ver LEIA-ME-V10.txt, seção 18.
 GOOGLE_SITE_VERIFICATION = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
 BING_SITE_VERIFICATION = os.getenv("BING_SITE_VERIFICATION", "").strip()
+# IndexNow (Bing e outros): uma chave inventada por vocês. Ver core/indexnow.py.
+INDEXNOW_KEY = os.getenv("INDEXNOW_KEY", "").strip()
 
 # Identidade exibida na proposta comercial. Nasce do contato da empresa
 # acima; as variáveis ORCAMENTO_* continuam existindo para quem já as
