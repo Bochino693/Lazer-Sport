@@ -29,7 +29,7 @@ from . import jogos_emulador as emu
 from .models import ArquivoEmulador, JogoCadastrado
 from .views_jogos import config_do_emulador
 
-LIGADOS = ["psx", "nes", "gb", "gba", "n64", "pce"]
+LIGADOS = ["psx", "nes", "gb", "gba", "n64", "pce", "nds", "atari2600", "atari7800", "c64"]
 SYNC = b"\x00" + b"\xff" * 10 + b"\x00"
 
 
@@ -315,13 +315,16 @@ class EmuladorNoSiteTests(TestCase):
         self.assertEqual(sorted(arquivos), ["/Jogo (Disc 1).cue", "/Track 01.bin", "/Track 02.bin"])
         principal = arquivos["/Jogo (Disc 1).cue"]
         self.assertTrue(principal["principal"])
-        self.assertEqual(principal["partes"], [reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"])])
+        # o índice leva a versão: o jogo guardado no aparelho nunca abre o índice velho
+        self.assertTrue(principal["partes"][0].startswith(reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"]) + "?v="))
+        self.assertEqual(config["jogo"], "disco-teste")
         self.assertIn("guardado_Track", arquivos["/Track 01.bin"]["partes"][0])
         self.assertEqual(arquivos["/Track 01.bin"]["tamanho"], len(FAIXA_PSX))
         # o jogo salvo leva o nome do jogo no site (único), com a extensão do que o emulador abre
         self.assertEqual(config["nome"], "disco-teste.cue")
         self.assertTrue(config["dados"].endswith("vendor/emulatorjs/data/"))
         self.assertContains(resposta, "jogo-emulador.js")
+        self.assertContains(resposta, "jogo-guardado.js")
 
     def test_arquivo_em_pedacos_vai_com_as_partes_na_ordem(self):
         faixa = self.jogo.arquivos_emulador.get(nome="Track 01.bin")
@@ -349,6 +352,11 @@ class EmuladorNoSiteTests(TestCase):
         self.assertContains(pagina, 'data-jogo-src="/jogos/disco-teste/emulador/"')
         self.assertContains(pagina, 'data-jogo-emulador="1"')
         self.assertContains(pagina, "PlayStation (PS1)")
+        # jogo na hora: a página já traz o que guardar no aparelho e pré-carrega o núcleo
+        self.assertContains(pagina, 'id="jogoArquivos"')
+        self.assertContains(pagina, "jogo-guardado.js")
+        self.assertContains(pagina, '"nucleo": "pcsx_rearmed"')
+        self.assertContains(pagina, "data-jogo-preparo")
 
     def test_desligado_sem_arquivos_ou_sistema_sem_licenca_fica_fora(self):
         url = reverse("jogo_emulador", args=["disco-teste"])
@@ -361,3 +369,27 @@ class EmuladorNoSiteTests(TestCase):
         self.jogo.arquivos_emulador.all().delete()
         self.assertEqual(self.client.get(url).status_code, 404)
         self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")
+
+
+
+class ConsolesDeLicencaLivreTests(TestCase):
+    """DS, Atari 2600, Atari 7800 e Commodore 64: núcleos GPL, que moram no site."""
+
+    def test_cada_um_e_reconhecido_pela_extensao_e_tem_o_nucleo_aqui(self):
+        from django.contrib.staticfiles import finders
+        for nome, sistema in (("jogo.nds", "nds"), ("jogo.a26", "atari2600"), ("jogo.a78", "atari7800"),
+                              ("jogo.d64", "c64"), ("jogo.prg", "c64")):
+            with self.subTest(arquivo=nome):
+                an = analisar(E(nome, bytes(4096)))
+                self.assertEqual(an.sistema, sistema, an.erros)
+                self.assertTrue(an.ok, an.erros)
+                nucleo = emu.SISTEMAS[sistema].nucleo
+                self.assertTrue(finders.find(f"vendor/emulatorjs/data/cores/{nucleo}-wasm.data"))
+                self.assertTrue(finders.find(f"vendor/emulatorjs/data/cores/{nucleo}-legacy-wasm.data"))
+
+    def test_super_nintendo_explica_o_motivo_e_o_que_fazer(self):
+        an = analisar(E("jogo.sfc", bytes(4096)))
+        self.assertFalse(an.ok)
+        erro = " ".join(an.erros)
+        self.assertIn("permissão dos autores", erro)
+        self.assertIn("JOGOS_EMULADORES_NAO_COMERCIAIS=snes", erro)

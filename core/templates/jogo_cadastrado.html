@@ -42,6 +42,7 @@
             <div class="jc-capa-texto">
                 {% if jogo.chamada %}<p class="jc-chamada">{{ jogo.chamada }}</p>{% endif %}
                 {% if jogo.comandos %}<p class="jc-comandos"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> {{ jogo.comandos }}</p>{% endif %}
+                {% if preparo %}<p class="jc-preparo" data-jogo-preparo role="status" hidden></p>{% endif %}
                 <div class="jc-capa-acoes">
                     <button type="button" class="ls-botao jc-jogar" data-jogo-jogar>
                         <i class="fa-solid fa-play" aria-hidden="true"></i> Jogar
@@ -97,5 +98,11 @@
     </section>
 </div>
 
+{% if preparo %}
+{# JOGO NA HORA: o emulador e o núcleo do console já vêm junto com a página, e os
+   arquivos do jogo começam a ser guardados no aparelho antes do toque em Jogar #}
+{{ preparo|json_script:"jogoArquivos" }}
+<script src="{% estatico 'site/paginas/jogo-guardado.js' %}" defer></script>
+{% endif %}
 <script src="{% estatico 'site/paginas/jogo-cadastrado.js' %}" defer></script>
 {% endblock %}

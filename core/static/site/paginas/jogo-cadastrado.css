@@ -119,6 +119,9 @@
 }
 
 .jc-capa-acoes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 4px; }
+/* o jogo sendo guardado no aparelho (jogo-guardado.js): "Preparando o jogo: 40%" -> "Pronto: abre na hora." */
+.jc-preparo { margin: 0 0 10px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: .85rem; font-weight: 700; color: #dff4ff; background: rgba(5, 11, 31, .72); border: 1px solid rgba(63, 208, 255, .35); }
+.jc-preparo[hidden] { display: none; }
 
 .jc-jogar {
     gap: 9px;

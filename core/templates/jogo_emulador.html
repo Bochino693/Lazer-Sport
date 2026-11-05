@@ -17,6 +17,7 @@
 <div id="jogo" class="emu-jogo"></div>
 <p class="emu-sem-js">Este jogo precisa de JavaScript ligado no navegador.</p>
 {{ config|json_script:"emuladorConfig" }}
+<script src="{% estatico 'site/paginas/jogo-guardado.js' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-emulador.js' %}"></script>
 </body>
 </html>

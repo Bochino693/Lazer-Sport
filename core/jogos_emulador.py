@@ -120,6 +120,27 @@ SISTEMAS = {
         nota="O cartucho (.pce) roda sozinho; o CD precisa da BIOS syscard3.pce.",
         comandos="Setas movem · Z = I · X = II · Enter = Run · V = Select. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
     ),
+    "nds": Sistema(
+        "nds", "Nintendo DS", "melonds", "GPL-3.0", True, _ext("nds"),
+        bios=("bios7.bin", "bios9.bin", "firmware.bin"), formato="retrato",
+        nota="Roda sem BIOS na maior parte dos jogos; se algum pedir, junte bios7.bin, bios9.bin e firmware.bin.",
+        comandos="Setas movem · Z = A · X = B · A = Y · S = X · Q/E = L/R · Enter = Start · V = Select. A tela de baixo responde ao toque (ou ao mouse). No celular, o controle aparece na tela.",
+    ),
+    "atari2600": Sistema(
+        "atari2600", "Atari 2600", "stella2014", "GPL-2.0", True, _ext("a26"),
+        comandos="Setas movem · Z = botão · Enter = Reset · V = Select. No celular, o controle aparece na tela; um controle USB ou Bluetooth também serve.",
+    ),
+    "atari7800": Sistema(
+        "atari7800", "Atari 7800", "prosystem", "GPL-2.0", True, _ext("a78"),
+        bios=("7800 BIOS (U).rom", "7800 BIOS (E).rom"),
+        nota="A BIOS é opcional: sem ela, o jogo abre direto.",
+        comandos="Setas movem · Z e X = os dois botões · Enter = Pause · V = Select. No celular, o controle aparece na tela.",
+    ),
+    "c64": Sistema(
+        "c64", "Commodore 64", "vice_x64sc", "GPL-2.0", True, _ext("d64", "d71", "d81", "g64", "t64", "tap", "prg", "p00", "crt"),
+        nota="Disquete (.d64), fita (.t64/.tap), programa (.prg) ou cartucho (.crt): o emulador carrega e roda sozinho.",
+        comandos="Setas e Z = joystick · o teclado do computador é o teclado do C64. No celular, o controle aparece na tela.",
+    ),
     # --- reconhecidos, mas com núcleo de licença não comercial ---------------
     "snes": Sistema(
         "snes", "Super Nintendo", "snes9x", "não comercial (Snes9x)", False, _ext("sfc", "smc", "swc", "fig", "bs"),
@@ -804,8 +825,10 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
     if sistema is not None:
         if an.sistema not in ligados:
             an.erros.append(
-                f"{sistema.nome}: o emulador disponível ({sistema.nucleo}) tem licença {sistema.licenca}, "
-                "que não permite uso no site de uma empresa sem a permissão dos autores. Veja o LEIA-ME."
+                f"{sistema.nome} ainda não roda no site: o único emulador de {sistema.nome} para navegador "
+                f"({sistema.nucleo}) tem licença {sistema.licenca} e só pode ser usado no site de uma empresa "
+                "com a permissão dos autores dele. Com a permissão, o dono do site liga no Render a variável "
+                f"JOGOS_EMULADORES_NAO_COMERCIAIS={sistema.codigo} (LEIA-ME-V10.txt, seção 20)."
             )
         _conferir_extensoes(an, sistema)
         _conferir_bios(an, sistema, bios)

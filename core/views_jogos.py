@@ -11,6 +11,7 @@ partida chega em /jogos/partida/ e o ranking (do jogo e geral) sai de
 /jogos/ranking/. As regras moram em `core/ranking.py`.
 """
 
+import hashlib
 import json
 
 from django.conf import settings
@@ -221,7 +222,23 @@ class SimuladorView(View):
 
     def pagina_do_jogo_cadastrado(self, request, jogo, externos):
         """A página de um jogo que a equipe subiu: o jogo num quadro isolado."""
+        preparo = None
+        if jogo.get("emulador"):
+            try:
+                modelo = _jogo_no_emulador(jogo["slug"])
+            except Http404:
+                modelo = None
+            if modelo is not None:
+                config = config_do_emulador(modelo)
+                sistema = SISTEMAS.get(modelo.sistema)
+                preparo = {
+                    "config": {"jogo": config["jogo"], "arquivos": config["arquivos"]},
+                    "dados": config["dados"],
+                    # só o núcleo que mora no site (os de licença livre); os outros vêm do CDN do emulador
+                    "nucleo": sistema.nucleo if sistema and sistema.uso_comercial else "",
+                }
         return render(request, "jogo_cadastrado.html", {
+            "preparo": preparo,
             "jogo": jogo,
             "jogos": arena.jogos_do_simulador(arena.JOGOS),
             "jogos_externos": externos,
@@ -284,7 +301,11 @@ def config_do_emulador(jogo):
     principal = None
     for arquivo in jogo.arquivos_emulador.all():
         if arquivo.e_indice:
-            partes = [(reverse("jogo_emulador_arquivo", args=[jogo.slug, arquivo.nome]), len(arquivo.conteudo.encode("utf-8")))]
+            # a versão no endereço: o índice sai sempre do mesmo lugar, e o jogo
+            # guardado no aparelho (jogo-guardado.js) não pode abrir o índice velho
+            texto = arquivo.conteudo.encode("utf-8")
+            versao = hashlib.sha1(texto).hexdigest()[:12]
+            partes = [(reverse("jogo_emulador_arquivo", args=[jogo.slug, arquivo.nome]) + f"?v={versao}", len(texto))]
         else:
             partes = arquivo.partes()
         item = {
@@ -304,6 +325,8 @@ def config_do_emulador(jogo):
     nome = principal["nome"] if jogo.sistema == "arcade" and principal else f"{jogo.slug}.{extensao}" if extensao else jogo.slug
     return {
         "core": jogo.sistema,
+        # o jogo guardado no aparelho é separado por jogo (para liberar espaço do mais antigo)
+        "jogo": jogo.slug,
         "arquivos": arquivos,
         "nome": nome,
         "dados": static("vendor/emulatorjs/data/"),
