@@ -716,6 +716,25 @@ class JogoCadastrado(Prime):
         default=False, verbose_name="Deixar baixar o APK",
         help_text="Desmarcado, o APK fica guardado mas ninguém baixa pelo site.",
     )
+    # A VERSÃO PARA COMPUTADOR (Windows). O navegador não roda .exe: este
+    # arquivo é a FONTE do jogo -- de onde a equipe (ou quem porta o jogo
+    # para o site, como os do simulador) tira as artes, os sons e a lógica
+    # para fazer a versão que roda no navegador. Nunca vai para a página
+    # pública e não tem download para visitante. Build grande demais para
+    # subir (o armazenamento tem limite por arquivo) vai pelo link.
+    versao_pc = models.FileField(
+        upload_to="jogos/pc/", storage=_armazenamento_jogo, blank=True,
+        verbose_name="Versão para computador (Windows)",
+        help_text="O .exe ou um .zip com a pasta do jogo (o .exe e os arquivos ao lado). Só a equipe vê.",
+    )
+    versao_pc_link = models.URLField(
+        blank=True, max_length=500, verbose_name="Link da versão para computador",
+        help_text="Para build grande: o link do Google Drive, Dropbox ou WeTransfer. Só a equipe vê.",
+    )
+    motor = models.CharField(
+        max_length=20, blank=True, verbose_name="Feito em",
+        help_text="O motor do jogo, reconhecido no arquivo enviado (Godot, Unity...).",
+    )
     ordem = models.PositiveSmallIntegerField(default=100, verbose_name="Ordem na lista")
 
     class Meta:
@@ -762,6 +781,11 @@ class JogoCadastrado(Prime):
         return self.capa_url
 
     @property
+    def so_versao_pc(self):
+        """Tem só a versão para computador: ainda não joga no navegador (não aparece no site)."""
+        return bool((self.versao_pc or self.versao_pc_link) and not (self.endereco or self.arquivo_html))
+
+    @property
     def apk_url(self):
         if not (self.liberar_download and self.apk):
             return ""
@@ -777,8 +801,13 @@ class JogoCadastrado(Prime):
 
         if self.slug in arena.JOGOS_POR_SLUG:
             raise ValidationError({"slug": "Este endereço já é de um jogo do simulador. Escolha outro."})
-        if not self.endereco and not self.arquivo_html:
-            raise ValidationError("Informe o endereço do jogo hospedado OU envie o arquivo .html.")
+        if not (self.endereco or self.arquivo_html or self.versao_pc or self.versao_pc_link):
+            raise ValidationError(
+                "Informe o endereço do jogo hospedado, envie o arquivo .html, "
+                "ou guarde a versão para computador (o arquivo ou o link)."
+            )
+        if self.versao_pc_link and not self.versao_pc_link.lower().startswith(("https://", "http://")):
+            raise ValidationError({"versao_pc_link": "Use um link completo (https://...)."})
         if self.endereco and not self.endereco.lower().startswith("https://"):
             # o site é https: um jogo em http seria bloqueado pelo navegador
             raise ValidationError({"endereco": "Use um endereço https:// (o navegador bloqueia jogo em http dentro do site)."})

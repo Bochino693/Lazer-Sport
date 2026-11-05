@@ -91,15 +91,22 @@
       <div class="ls-game-arte">
         {% if jogo.poster_url %}<img src="{{ jogo.poster_url }}" alt="" loading="lazy">{% elif jogo.capa_url %}<img class="capa" src="{{ jogo.capa_url }}" alt="" loading="lazy">{% else %}<i class="bi bi-image text-muted"></i>{% endif %}
         <span class="ls-game-selo {% if not jogo.ativo %}cinza{% endif %}">{% if jogo.ativo %}No ar{% else %}Desligado{% endif %}</span>
-        {% if jogo.apk %}<span class="ls-game-selo direita {% if not jogo.liberar_download %}cinza{% endif %}">{% if jogo.liberar_download %}APK liberado{% else %}APK guardado{% endif %}</span>{% endif %}
+        {% if jogo.so_versao_pc %}<span class="ls-game-selo direita">Só para computador</span>{% elif jogo.apk %}<span class="ls-game-selo direita {% if not jogo.liberar_download %}cinza{% endif %}">{% if jogo.liberar_download %}APK liberado{% else %}APK guardado{% endif %}</span>{% endif %}
       </div>
       <div class="ls-game-corpo">
         <strong>{{ jogo.nome }}</strong>
         <span>/jogos/{{ jogo.slug }}/ · {{ jogo.como_roda }} · {{ jogo.get_proporcao_display }} · ordem {{ jogo.ordem }}</span>
         {% if jogo.chamada %}<em>{{ jogo.chamada|truncatechars:70 }}</em>{% endif %}
+        {% if jogo.versao_pc or jogo.versao_pc_link %}
+          <span><i class="bi bi-windows"></i> Versão para computador guardada{% if jogo.motor_nome %} · feito em <strong>{{ jogo.motor_nome }}</strong>{% endif %}
+            {% if jogo.versao_pc_url %} · <a href="{{ jogo.versao_pc_url }}" target="_blank" rel="noopener" data-no-soft-nav="true">baixar o arquivo</a>{% endif %}
+            {% if jogo.versao_pc_link %} · <a href="{{ jogo.versao_pc_link }}" target="_blank" rel="noopener noreferrer" data-no-soft-nav="true">abrir o link</a>{% endif %}
+          </span>
+        {% endif %}
       </div>
+      {% if jogo.so_versao_pc %}<p class="ls-game-nota"><strong>Ainda não joga no site:</strong> o navegador não roda .exe. {{ jogo.caminho_para_o_site }}</p>{% endif %}
       <div class="ls-game-acoes">
-        <a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-play-fill"></i> Abrir</a>
+        {% if not jogo.so_versao_pc %}<a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-play-fill"></i> Abrir</a>{% endif %}
         <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil"></i> Editar</button>
         <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ jogo.id }}">{% if jogo.ativo %}Desligar{% else %}Ligar{% endif %}</button>
         <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ jogo.id }}" data-nome="{{ jogo.nome }}" title="Excluir"><i class="bi bi-trash3"></i></button>
@@ -110,6 +117,7 @@
   {% endfor %}
 </div>
 
+<div class="ls-games-aviso"><i class="bi bi-windows"></i><div><strong>Jogo que só tem versão para computador.</strong> Cadastre o jogo e guarde o .exe (ou um .zip com a pasta do jogo) em "Versão para computador". O navegador não roda .exe, então o jogo fica guardado, sem aparecer no site, até ganhar a versão de navegador: o painel reconhece o motor (Godot, Unity...) e diz o caminho mais curto; a partir desse arquivo dá para portar o jogo para o site, como os oficiais. Nada disso vai para o público, e o arquivo não tem download para visitantes.</div></div>
 <div class="ls-games-aviso"><i class="bi bi-shield-lock-fill"></i><div><strong>Sobre o APK.</strong> Ele só é pedido ao cadastrar um jogo pelo painel, é opcional, e fica guardado sem link para ninguém — a não ser que "Deixar baixar" esteja marcado. Os jogos oficiais não têm APK no site: o material deles (capa, pôster, textos) é o do simulador, e o jogo de verdade fica na máquina.</div></div>
 
 <div class="modal fade" id="modalJogo" tabindex="-1" aria-hidden="true">
@@ -133,7 +141,7 @@
         </div>
 
         <hr class="my-4">
-        <h6 class="mb-1">Os arquivos do jogo <span class="text-muted fw-normal">(um dos dois)</span></h6>
+        <h6 class="mb-1">Para jogar no site <span class="text-muted fw-normal">(um dos dois)</span></h6>
         <p class="text-muted small">Jogo de vários arquivos (Godot HTML5, Unity WebGL…): hospede a pasta do export e cole o endereço <strong>https</strong>. Jogo de um arquivo só: envie o .html (até 15 MB).</p>
         <div class="row g-3">
           <div class="col-12 col-md-7"><label class="form-label" for="jogoEndereco">Endereço do jogo (hospedado)</label><input type="url" class="form-control" id="jogoEndereco" name="endereco" maxlength="200" placeholder="https://jogos.lazersport.com.br/corrida/index.html" data-rotulo="endereço do jogo"></div>
@@ -146,6 +154,14 @@
         <div class="row g-3">
           <div class="col-12 col-md-6"><label class="form-label" for="jogoCapa">Foto de capa <span class="text-muted fw-normal">(quadrada, até 4 MB)</span></label><input type="file" class="form-control" id="jogoCapa" name="capa" accept="image/*" data-rotulo="capa"><div class="mt-2 d-none" id="jogoCapaAtualCaixa"><img id="jogoCapaAtual" alt="" width="72" height="72" class="rounded-3" style="object-fit:cover;background:#0b1730"> <span class="form-text">Capa atual — envie outra para trocar.</span></div></div>
           <div class="col-12 col-md-6"><label class="form-label" for="jogoPoster">Imagem grande <span class="text-muted fw-normal">(opcional, até 6 MB)</span></label><input type="file" class="form-control" id="jogoPoster" name="poster" accept="image/*"><span class="form-text" id="jogoPosterAtual"></span><label class="form-check mt-1 d-none" id="jogoPosterLimparCaixa"><input class="form-check-input" type="checkbox" name="poster-clear" id="jogoPosterLimpar"><span class="form-check-label">Remover a imagem grande</span></label></div>
+        </div>
+
+        <hr class="my-4">
+        <h6 class="mb-1"><i class="bi bi-windows me-1"></i> Versão para computador (Windows) <span class="text-muted fw-normal">(só a equipe vê)</span></h6>
+        <p class="text-muted small">Para jogo que só tem a versão de PC: o navegador não roda .exe, então este arquivo é a fonte para fazer a versão do site (o motor do jogo é reconhecido ao enviar). Envie o .exe ou, melhor, um .zip com a pasta inteira do jogo (o .exe e os arquivos ao lado). Build grande? Use o link. Não aparece no site e não tem download para visitante.</p>
+        <div class="row g-3">
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoPc">Arquivo (.exe ou .zip)</label><input type="file" class="form-control" id="jogoPc" name="versao_pc" accept=".exe,.zip,application/zip,application/vnd.microsoft.portable-executable" data-rotulo="versão para computador"><span class="form-text" id="jogoPcAtual"></span><label class="form-check mt-1 d-none" id="jogoPcLimparCaixa"><input class="form-check-input" type="checkbox" name="versao_pc-clear" id="jogoPcLimpar"><span class="form-check-label">Remover o arquivo guardado</span></label></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="jogoPcLink">Ou o link do build <span class="text-muted fw-normal">(Drive, Dropbox, WeTransfer)</span></label><input type="url" class="form-control" id="jogoPcLink" name="versao_pc_link" maxlength="500" placeholder="https://drive.google.com/..." data-rotulo="link da versão para computador"></div>
         </div>
 
         <hr class="my-4">
@@ -204,6 +220,8 @@ LSTela.pronto(function () {
     arquivoAtual("jogoPosterAtual", "jogoPosterLimparCaixa", jogo ? jogo.poster : "", "Imagem grande");
     arquivoAtual("jogoHtmlAtual", "jogoHtmlLimparCaixa", jogo ? jogo.arquivo_html : "", ".html");
     arquivoAtual("jogoApkAtual", "jogoApkLimparCaixa", jogo ? jogo.apk : "", "APK");
+    arquivoAtual("jogoPcAtual", "jogoPcLimparCaixa", jogo ? jogo.versao_pc : "", "Versão para computador");
+    Painel.valor("jogoPcLink", jogo ? (jogo.versao_pc_link || "") : "");
     document.getElementById("jogoTitulo").textContent = jogo ? "Editar jogo" : "Novo jogo";
     form.dataset.slugAutomatico = jogo ? "0" : "1";
     Painel.abrir("modalJogo");
@@ -221,7 +239,9 @@ LSTela.pronto(function () {
       var endereco = f.querySelector("#jogoEndereco").value.trim();
       var html = f.querySelector("#jogoHtml").files.length > 0;
       var htmlGuardado = !document.getElementById("jogoHtmlLimparCaixa").classList.contains("d-none") && !document.getElementById("jogoHtmlLimpar").checked;
-      if (!endereco && !html && !htmlGuardado) return "Informe o endereço do jogo hospedado OU envie o arquivo .html.";
+      var pc = f.querySelector("#jogoPc").files.length > 0 || f.querySelector("#jogoPcLink").value.trim() !== "";
+      var pcGuardado = !document.getElementById("jogoPcLimparCaixa").classList.contains("d-none") && !document.getElementById("jogoPcLimpar").checked;
+      if (!endereco && !html && !htmlGuardado && !pc && !pcGuardado) return "Informe o endereço do jogo hospedado, envie o .html, ou guarde a versão para computador.";
       if (endereco && !/^https:\/\//i.test(endereco)) return "O endereço do jogo precisa começar com https://.";
       return null;
     }

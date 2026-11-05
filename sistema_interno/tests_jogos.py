@@ -41,7 +41,7 @@ class BaseTela(TestCase):
         pasta = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, pasta, ignore_errors=True)
         self.disco = FileSystemStorage(location=pasta, base_url="/media/")
-        for campo in ("capa", "poster", "arquivo_html", "apk"):
+        for campo in ("capa", "poster", "arquivo_html", "apk", "versao_pc"):
             trocar = mock.patch.object(JogoCadastrado._meta.get_field(campo), "storage", self.disco)
             trocar.start()
             self.addCleanup(trocar.stop)
@@ -224,3 +224,92 @@ class JogosOficiaisNaTelaTests(BaseTela):
         pagina = self.client.get("/site/jogos/?q=strike", HTTP_HOST=HOST)
         self.assertContains(pagina, "Strike Kids")
         self.assertNotContains(pagina, "Dragon Bowling")
+
+
+def _zip(nomes):
+    import zipfile
+
+    saida = BytesIO()
+    with zipfile.ZipFile(saida, "w") as pacote:
+        for nome in nomes:
+            pacote.writestr(nome, b"x")
+    return saida.getvalue()
+
+
+EXE_GODOT = b"MZ\x90\x00" + b"\x00" * 200 + b"\x10\x00\x00\x00\x00\x00\x00\x00GDPC"
+
+
+class VersaoParaComputadorTests(BaseTela):
+    """O jogo que só tem a versão de PC: guardado, reconhecido, fora do site."""
+
+    def test_exe_de_verdade_e_aceito_e_o_godot_reconhecido(self):
+        exe = SimpleUploadedFile("corrida.exe", EXE_GODOT, content_type="application/octet-stream")
+        resposta = self.enviar(self.dados(endereco="", versao_pc=exe))
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertIn("versão para computador", resposta.json()["msg"])
+        jogo = JogoCadastrado.objects.get()
+        self.assertTrue(jogo.versao_pc.name.endswith(".exe"))
+        self.assertEqual(jogo.motor, "godot")
+        self.assertTrue(jogo.so_versao_pc)
+
+        lista = self.client.get("/site/jogos/", HTTP_HOST=HOST)
+        self.assertContains(lista, "Só para computador")
+        self.assertContains(lista, "Godot")
+        self.assertContains(lista, "Ainda não joga no site")
+
+    def test_o_jogo_so_de_pc_nao_aparece_no_site(self):
+        self.enviar(self.dados(endereco="", versao_pc_link="https://drive.google.com/file/d/abc/view"))
+        jogo = JogoCadastrado.objects.get()
+        self.assertTrue(jogo.so_versao_pc)
+        self.assertEqual(self.client.get("/jogos/corrida-maluca/", HTTP_HOST="testserver").status_code, 404)
+        self.assertNotContains(self.client.get("/jogos/", HTTP_HOST="testserver"), "Corrida Maluca")
+        # o arquivo de PC nunca vai para a página pública, nem quando o jogo ganha a versão de navegador
+        self.enviar({**self.dados(), "id": jogo.pk, "capa": "", "versao_pc_link": jogo.versao_pc_link})
+        pagina = self.client.get("/jogos/corrida-maluca/", HTTP_HOST="testserver")
+        self.assertEqual(pagina.status_code, 200)
+        self.assertNotContains(pagina, "drive.google.com")
+
+    def test_zip_com_a_pasta_do_unity_e_aceito_e_reconhecido(self):
+        pacote = SimpleUploadedFile("jogo.zip", _zip(["Jogo/Jogo.exe", "Jogo/UnityPlayer.dll", "Jogo/Jogo_Data/globalgamemanagers"]))
+        resposta = self.enviar(self.dados(versao_pc=pacote))
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertEqual(JogoCadastrado.objects.get().motor, "unity")
+
+    def test_recusa_exe_falso_zip_sem_exe_e_outros_tipos(self):
+        casos = [
+            SimpleUploadedFile("virus.exe", b"isto nao e um executavel"),
+            SimpleUploadedFile("jogo.zip", _zip(["leia-me.txt", "imagem.png"])),
+            SimpleUploadedFile("jogo.zip", b"PK\x03\x04 corrompido"),
+            SimpleUploadedFile("jogo.rar", b"Rar!\x1a\x07"),
+        ]
+        for arquivo in casos:
+            with self.subTest(arquivo=arquivo.name):
+                resposta = self.enviar(self.dados(versao_pc=arquivo))
+                self.assertEqual(resposta.status_code, 400, resposta.content)
+                self.assertIn("Versão para computador", resposta.json()["msg"])
+        self.assertFalse(JogoCadastrado.objects.exists())
+
+    def test_build_grande_pede_o_link(self):
+        exe = SimpleUploadedFile("grande.exe", EXE_GODOT)
+        with override_settings(JOGOS_ARQUIVO_MAX_MB=0):
+            from . import views_jogos
+
+            with mock.patch.object(views_jogos, "_limite_de_arquivo_grande", return_value=10):
+                resposta = self.enviar(self.dados(versao_pc=exe))
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("link", resposta.json()["msg"])
+
+    def test_armazenamento_que_recusa_vira_aviso_e_nao_erro_500(self):
+        from cloudinary.exceptions import Error as ErroDoCloudinary
+
+        exe = SimpleUploadedFile("corrida.exe", EXE_GODOT)
+        with mock.patch.object(self.disco, "save", side_effect=ErroDoCloudinary("File size too large")):
+            resposta = self.enviar(self.dados(endereco="", versao_pc=exe))
+        self.assertEqual(resposta.status_code, 400, resposta.content)
+        self.assertIn("link", resposta.json()["msg"])
+        self.assertFalse(JogoCadastrado.objects.exists())
+
+    def test_sem_nada_para_jogar_nem_versao_pc_continua_recusado(self):
+        resposta = self.enviar(self.dados(endereco=""))
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("versão para computador", resposta.json()["msg"])

@@ -172,3 +172,20 @@ Dependência nova: rjsmin (requirements.txt).
           imagem é o que faz a página parecer lenta no celular).
    - Para conferir se bateu: a contagem de "503 busy" no log do Render e
      o Server-Timing de cada resposta (aba Rede do navegador).
+
+12) JOGO QUE SÓ TEM VERSÃO PARA COMPUTADOR (WINDOWS)
+   Painel > Lazer & Sport Games > Jogos do simulador > Cadastrar jogo novo >
+   "Versão para computador (Windows)":
+   - Envie o .exe ou, melhor, um .zip com a pasta inteira do jogo (o .exe e
+     os arquivos ao lado: o .pck do Godot, a pasta _Data do Unity, as DLLs).
+     Build grande demais para subir: cole o link do Google Drive/Dropbox.
+   - O navegador NÃO roda .exe. Por isso o arquivo fica guardado como fonte
+     do jogo: não aparece no site e não tem download para visitante. O jogo
+     só entra em /jogos/ quando ganha a versão de navegador (endereço https
+     ou .html) -- feita a partir desse arquivo, como os jogos oficiais.
+   - O painel reconhece o motor (Godot, Unity, Unreal, GameMaker, RPG Maker,
+     Electron) e mostra o caminho mais curto até o site. Godot e Unity
+     exportam para Web direto do editor, se vocês tiverem o projeto.
+   - Teto por arquivo: JOGOS_ARQUIVO_MAX_MB (padrão 200). O Cloudinary tem o
+     limite do plano (no gratuito, 10 MB por arquivo que não é imagem): se
+     ele recusar, o painel avisa para usar o link, sem erro.

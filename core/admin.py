@@ -525,7 +525,7 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
     list_filter = ("ativo", "proporcao", "liberar_download")
     search_fields = ("nome", "slug", "chamada", "descricao")
     prepopulated_fields = {"slug": ("nome",)}
-    readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado")
+    readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado", "motor")
     fieldsets = (
         ("O jogo", {
             "fields": ("nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo"),
@@ -544,6 +544,10 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
         ("Aplicativo Android (opcional)", {
             "description": "O APK fica guardado. Só aparece para baixar no site se \"Deixar baixar\" estiver marcado.",
             "fields": ("apk", "liberar_download"),
+        }),
+        ("Versão para computador (Windows) — só a equipe", {
+            "description": "O navegador não roda .exe: é a fonte para fazer a versão do site. O .exe ou um .zip com a pasta do jogo; build grande, pelo link.",
+            "fields": ("versao_pc", "versao_pc_link", "motor"),
         }),
         ("No site", {
             "fields": ("ver_no_site", "criacao", "atualizado"),
