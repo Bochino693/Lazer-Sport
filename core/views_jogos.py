@@ -452,17 +452,42 @@ class PortalJogosView(View):
         from . import portal_jogos
 
         dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
-        busca = (request.GET.get("q") or "")[:80]
-        contexto = portal_jogos.montar(dados, busca)
+        pedido = request.GET
+        contexto = portal_jogos.montar(
+            dados,
+            busca=(pedido.get("q") or "")[:80],
+            estante=(pedido.get("estante") or "")[:20],
+            genero=(pedido.get("genero") or "")[:40],
+            ordem=(pedido.get("ordem") or "")[:12],
+        )
         contexto["ranking_portal"] = portal_jogos.ranking_do_portal()
         contexto["eu"] = None
         if request.user.is_authenticated:
             contexto["eu"] = {"nome": ranking.nome_publico(request.user), "geral": ranking.posicao_geral(request.user)}
+        # o campeão de cada jogo da casa vai na ficha do jogo, na biblioteca
+        campeoes = {c["slug"]: {"nome": c["nome"], "pontos": c["pontos"]} for c in contexto["ranking_portal"]["campeoes"]}
         contexto["indice_busca"] = [
-            {chave: c[chave] for chave in ("slug", "titulo", "url", "capa", "cor", "plataforma", "categoria",
-                                           "tipo", "familias", "busca", "ranking")}
+            {
+                **{chave: c[chave] for chave in ("slug", "titulo", "url", "capa", "poster", "cor", "plataforma", "sigla",
+                                                 "categoria", "tipo", "familias", "estante", "tema", "busca", "ranking",
+                                                 "destaque", "partidas", "novidade", "chamada", "como", "sistema", "dicas")},
+                "descricao": c["descricao"][:420],
+                "criado": c["criado"][:10],
+                "ordem": c["_ordem"],
+                "campeao": campeoes.get(c["slug"]),
+            }
             for c in contexto["todos"]
         ]
+        # o que o JavaScript precisa para montar as estantes e as coleções sem o servidor
+        contexto["dados_da_biblioteca"] = {
+            "estantes": [dict(portal_jogos.TEMA[chave]) for chave, *_ in portal_jogos.ESTANTES],
+            "colecoes": [{k: v for k, v in c.items() if k != "total"} for c in contexto["colecoes"]],
+            "porEstante": portal_jogos.POR_ESTANTE,
+            "novidadeDias": portal_jogos.NOVIDADE_DIAS,
+            # o como jogar de cada console que está na biblioteca: tecla por tecla e botão por botão
+            "controles": {codigo: controles_do_sistema(codigo) for codigo in sorted({c["sistema"] for c in contexto["todos"] if c["sistema"]})},
+            "dicas": DICAS_DE_CONTROLE,
+        }
         site = str(getattr(settings, "SITE_URL", "") or "https://www.lazersport.com.br").rstrip("/")
         contexto["dados_estruturados"] = json.dumps({
             "@context": "https://schema.org",

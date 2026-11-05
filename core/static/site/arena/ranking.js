@@ -208,8 +208,20 @@ if (raiz && dadosDoJogador) {
     }).catch(() => {});
   };
 
+  // "Jogados recentemente", na biblioteca (/jogos/): o aparelho anota quando cada jogo abriu
+  const lembrarNaBiblioteca = (slug) => {
+    try {
+      const lista = JSON.parse(window.localStorage.getItem("ls-biblioteca-recentes") || "{}") || {};
+      lista[slug] = Date.now();
+      const curta = {};
+      Object.keys(lista).sort((a, b) => lista[b] - lista[a]).slice(0, 30).forEach((s) => { curta[s] = lista[s]; });
+      window.localStorage.setItem("ls-biblioteca-recentes", JSON.stringify(curta));
+    } catch (erro) { /* sem armazenamento: a biblioteca só não mostra */ }
+  };
+
   raiz.addEventListener("console:jogar", (evento) => {
     const slug = evento.detail.slug;
+    lembrarNaBiblioteca(slug);
     if (!logado && jaJogou(slug)) {
       evento.preventDefault();
       abrirPortao();

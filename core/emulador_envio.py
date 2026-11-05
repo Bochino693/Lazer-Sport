@@ -77,6 +77,8 @@ def contexto():
         ],
         # o que o painel sabe o que é: o resto, solto numa pasta, vira o .zip do fliperama
         "extensoes": sorted(emu.CONHECIDAS),
+        # a capa que o painel desenha ("Criar capa"): a cor, a estante e o selo de cada console
+        "temas": _temas_das_capas(),
         "cabeca": emu.CABECA,
         "cauda": emu.CAUDA,
         "max_arquivos": emu.MAX_ARQUIVOS,
@@ -87,6 +89,20 @@ def particular_pedido(jogo, post):
     """O jogo é (ou vai ser salvo como) particular: aí qualquer console reconhecido roda."""
     marcado = str(post.get("particular") or "").strip().lower() in ("on", "true", "1")
     return marcado or bool(jogo is not None and getattr(jogo, "particular", False))
+
+
+def _temas_das_capas():
+    from . import portal_jogos
+
+    temas = {
+        codigo: {"estante": estante, "cor": portal_jogos.TEMA[estante]["cor"], "nome": portal_jogos.TEMA[estante]["nome"],
+                 "sigla": portal_jogos.SIGLAS.get(codigo, "")}
+        for codigo, estante in portal_jogos.FAMILIAS.items()
+    }
+    for chave in ("nosso", "html"):
+        tema = portal_jogos.TEMA[chave]
+        temas[chave] = {"estante": chave, "cor": tema["cor"], "nome": tema["nome"], "sigla": "L&S" if chave == "nosso" else "HTML5"}
+    return temas
 
 
 def sistema_pedido(post):

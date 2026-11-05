@@ -9,13 +9,15 @@
 
 {% block content %}
 {% comment %}
-  LAZER & SPORT GAMES -- o portal (core/portal_jogos.py).
+  LAZER & SPORT GAMES -- a biblioteca de jogos (core/portal_jogos.py).
 
-  A vitrine de todos os jogos do site num lugar só: a busca no topo, os
-  destaques grandes, as faixas (feitos por nós, mais jogados, novidades,
-  consoles, HTML5), o ranking e os anúncios que a equipe põe pelo /system/.
-  Sem JavaScript tudo continua funcionando: a busca vira um ?q= que o
-  servidor responde, e as faixas rolam de lado com o dedo.
+  O topo (busca e conta), os destaques grandes e a BIBLIOTECA: as estantes
+  de cada plataforma, cada uma com o seu tema, à esquerda as coleções (as
+  do aparelho de quem joga -- jogados recentemente, já guardados -- o
+  JavaScript preenche) e os gêneros; ao tocar num jogo, a ficha dele, com
+  o como jogar. Sem JavaScript tudo continua: cada estante, gênero, ordem e
+  busca é um endereço (?estante=, ?genero=, ?ordem=, ?q=) que o servidor
+  responde, e cada capa leva direto à página do jogo.
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/paginas/portal-jogos.css' %}">
 
@@ -27,12 +29,12 @@
             <span class="pg-marca-logo"><img src="{% static 'images/logoofi.png' %}" alt="" width="56" height="56"></span>
             <span class="pg-marca-texto">
                 <strong>LAZER &amp; SPORT <b>GAMES</b></strong>
-                <small>{{ total }} jogo{{ total|pluralize }} · grátis no navegador e no celular</small>
+                <small>{{ total }} jogo{{ total|pluralize }} na biblioteca · grátis no navegador e no celular</small>
             </span>
         </a>
-        <form class="pg-busca" action="{% url 'jogos' %}" method="get" role="search" data-portal-form>
+        <form class="pg-busca" action="{% url 'jogos' %}#biblioteca" method="get" role="search" data-portal-form>
             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-            <input type="search" name="q" value="{{ busca }}" placeholder="Buscar jogo, console ou categoria…"
+            <input type="search" name="q" value="{{ busca }}" placeholder="Buscar jogo, console ou gênero…"
                    aria-label="Buscar jogo" autocomplete="off" data-portal-busca>
             <button type="submit">Buscar</button>
         </form>
@@ -53,135 +55,212 @@
     </aside>
     {% endif %}
 
-    <!-- ================= FILTROS ================= -->
-    <nav class="pg-filtros" aria-label="Filtrar jogos" data-portal-filtros>
-        <button type="button" class="pg-filtro" aria-pressed="true" data-filtro="">Todos</button>
-        {% for chave, nome in filtros %}<button type="button" class="pg-filtro" aria-pressed="false" data-filtro="familia:{{ chave }}">{{ nome }}</button>{% endfor %}
-        {% for categoria in categorias %}<button type="button" class="pg-filtro pg-filtro--categoria" aria-pressed="false" data-filtro="categoria:{{ categoria }}">{{ categoria }}</button>{% endfor %}
-    </nav>
+    <!-- ================= DESTAQUES ================= -->
+    {% if destaques %}
+    <section class="pg-hero" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero{% if lista is not None %} hidden{% endif %}>
+        {% for jogo in destaques %}
+        <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
+                 aria-label="{{ forloop.counter }} de {{ destaques|length }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
+            {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+            <div class="pg-slide-texto">
+                <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
+                <h2>{{ jogo.titulo }}</h2>
+                {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
+                <div class="pg-slide-acoes">
+                    <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
+                    {% if jogo.ranking %}<span class="pg-slide-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</span>{% endif %}
+                </div>
+            </div>
+            {% if jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+        </article>
+        {% endfor %}
+        {% if destaques|length > 1 %}
+        <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+        <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+        <div class="pg-hero-pontos" data-portal-pontos>
+            {% for jogo in destaques %}<button type="button" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}></button>{% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
 
-    <!-- ================= RESULTADOS (busca e filtros) ================= -->
-    <section class="pg-resultados" data-portal-resultados aria-live="polite"{% if not busca %} hidden{% endif %}>
-        <div class="pg-faixa-topo">
-            <h2 data-portal-resultados-titulo>{% if busca %}Resultados para “{{ busca }}”{% else %}Jogos{% endif %}</h2>
-            <button type="button" class="pg-limpar" data-portal-limpar><i class="fa-solid fa-xmark" aria-hidden="true"></i> Limpar</button>
+    <!-- ================= A BIBLIOTECA ================= -->
+    <section class="bj" id="biblioteca" aria-labelledby="bj-titulo" data-bj>
+        <div class="bj-cabeca">
+            <span class="bj-cabeca-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+            <div>
+                <h2 id="bj-titulo">Biblioteca de jogos</h2>
+                <p>{{ total }} jogo{{ total|pluralize }} em {{ estantes|length }} estante{{ estantes|length|pluralize }}. Toque num jogo para ver a ficha e o como jogar.</p>
+            </div>
         </div>
-        <div class="pg-grade" data-portal-grade>
-            {% for jogo in resultados %}{% include "partials/cartao_jogo.html" %}{% endfor %}
+
+        <div class="bj-corpo">
+            <!-- as coleções, as estantes e os gêneros -->
+            <nav class="bj-lado" aria-label="Organizar a biblioteca" data-bj-lado>
+                <div class="bj-lado-grupo">
+                    <h3>Minha biblioteca</h3>
+                    {% for c in colecoes %}
+                    <a class="bj-item" href="{% if c.chave == 'todos' %}{% url 'jogos' %}{% else %}?estante={{ c.chave }}{% endif %}#biblioteca"
+                       data-bj-filtro="{{ c.chave }}"{% if c.do_aparelho %} data-bj-do-aparelho hidden{% endif %}{% if c.chave == 'todos' and lista is None %} aria-current="true"{% elif c.chave == estante %} aria-current="true"{% endif %}>
+                        <i class="fa-solid {{ c.icone }}" aria-hidden="true"></i><span>{{ c.nome }}</span><b data-bj-conta>{% if c.total is not None %}{{ c.total }}{% endif %}</b>
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="bj-lado-grupo">
+                    <h3>Estantes</h3>
+                    {% for e in estantes %}
+                    <a class="bj-item bj-item--estante" href="?estante={{ e.chave }}#biblioteca" style="--tema: {{ e.cor }}" data-bj-filtro="{{ e.chave }}"{% if e.chave == estante %} aria-current="true"{% endif %}>
+                        <i class="fa-{% if e.icone == 'fa-html5' %}brands{% else %}solid{% endif %} {{ e.icone }}" aria-hidden="true"></i><span>{{ e.nome }}</span><b>{{ e.total }}</b>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% if generos %}
+                <div class="bj-lado-grupo bj-lado-generos">
+                    <h3>Gêneros</h3>
+                    {% for g in generos %}
+                    <a class="bj-item bj-item--genero" href="?genero={{ g.nome|urlencode }}#biblioteca" data-bj-genero="{{ g.nome }}"{% if g.nome == genero %} aria-current="true"{% endif %}>
+                        <span>{{ g.nome }}</span><b>{{ g.total }}</b>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </nav>
+
+            <div class="bj-principal">
+                <!-- o título do que está à vista, a ordem e o jeito de ver -->
+                <form class="bj-barra" method="get" action="{% url 'jogos' %}#biblioteca" data-bj-barra>
+                    <div class="bj-barra-titulo" data-bj-barra-titulo{% if lista_tema %} style="--tema: {{ lista_tema }}"{% endif %}>
+                        <h3 data-bj-lista-titulo>{% if lista is not None %}{{ lista_titulo }}{% else %}Todas as estantes{% endif %}</h3>
+                        <p data-bj-lista-sub>{% if lista is not None %}{{ lista|length }} jogo{{ lista|length|pluralize }}{% if lista_sub %} · {{ lista_sub }}{% endif %}{% else %}Organizadas por plataforma{% endif %}</p>
+                    </div>
+                    <div class="bj-barra-acoes">
+                        {% if estante %}<input type="hidden" name="estante" value="{{ estante }}">{% endif %}
+                        {% if genero %}<input type="hidden" name="genero" value="{{ genero }}">{% endif %}
+                        {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
+                        <label class="bj-ordem"><i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
+                            <select name="ordem" data-bj-ordem aria-label="Ordenar por">
+                                {% for valor, nome in ordens %}<option value="{{ valor }}"{% if valor == ordem %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <noscript><button type="submit" class="pg-botao">Ordenar</button></noscript>
+                        <div class="bj-vista" role="group" aria-label="Como ver a biblioteca" data-bj-vistas hidden>
+                            <button type="button" data-bj-vista="capas" aria-pressed="true" title="Capas"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></button>
+                            <button type="button" data-bj-vista="lista" aria-pressed="false" title="Lista"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
+                        </div>
+                        <a class="bj-limpar" href="{% url 'jogos' %}#biblioteca" data-bj-limpar{% if lista is None %} hidden{% endif %}><i class="fa-solid fa-xmark" aria-hidden="true"></i> Ver tudo</a>
+                    </div>
+                </form>
+
+                <div class="bj-conteudo" data-bj-conteudo aria-live="polite">
+                    {% if lista is not None %}
+                        {% if lista %}
+                        <div class="bj-grade">{% for jogo in lista %}{% include "partials/cartao_jogo.html" %}{% endfor %}</div>
+                        {% else %}
+                        <p class="bj-vazio">Nenhum jogo encontrado aqui ainda. Tente outra palavra ou <a href="{% url 'jogos' %}#biblioteca">veja a biblioteca inteira</a>.</p>
+                        {% endif %}
+                    {% else %}
+                        {% for e in estantes %}
+                        <section class="bj-estante" data-estante="{{ e.chave }}" style="--tema: {{ e.cor }}" aria-labelledby="estante-{{ e.chave }}">
+                            <div class="bj-estante-faixa">
+                                <span class="bj-estante-icone" aria-hidden="true"><i class="fa-{% if e.icone == 'fa-html5' %}brands{% else %}solid{% endif %} {{ e.icone }}"></i></span>
+                                <div class="bj-estante-nome">
+                                    <h3 id="estante-{{ e.chave }}">{{ e.nome }}</h3>
+                                    <p>{{ e.sub }}</p>
+                                </div>
+                                <span class="bj-estante-total">{{ e.total }} jogo{{ e.total|pluralize }}</span>
+                                {% if e.mais %}<a class="bj-estante-todos" href="?estante={{ e.chave }}#biblioteca" data-bj-filtro="{{ e.chave }}">Ver todos <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>{% endif %}
+                            </div>
+                            <div class="bj-grade">{% for jogo in e.jogos %}{% include "partials/cartao_jogo.html" %}{% endfor %}</div>
+                        </section>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        <p class="pg-vazio" data-portal-vazio{% if resultados or not busca %} hidden{% endif %}>
-            Nenhum jogo com esse nome ainda. Tente outra palavra, ou veja todos os jogos.
-        </p>
     </section>
 
-    <div class="pg-vitrine" data-portal-vitrine{% if busca %} hidden{% endif %}>
+    {% for anuncio in anuncios_meio|slice:":2" %}
+    <aside class="pg-anuncio pg-anuncio--meio" aria-label="Anúncio">
+        {% include "partials/anuncio_jogos.html" %}
+    </aside>
+    {% endfor %}
 
-        <!-- ================= DESTAQUES ================= -->
-        {% if destaques %}
-        <section class="pg-hero" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero>
-            {% for jogo in destaques %}
-            <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
-                     aria-label="{{ forloop.counter }} de {{ destaques|length }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
-                {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
-                <div class="pg-slide-texto">
-                    <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
-                    <h2>{{ jogo.titulo }}</h2>
-                    {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
-                    <div class="pg-slide-acoes">
-                        <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
-                        {% if jogo.ranking %}<span class="pg-slide-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</span>{% endif %}
-                    </div>
-                </div>
-                {% if jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
-            </article>
-            {% endfor %}
-            {% if destaques|length > 1 %}
-            <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-            <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-            <div class="pg-hero-pontos" data-portal-pontos>
-                {% for jogo in destaques %}<button type="button" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}></button>{% endfor %}
-            </div>
-            {% endif %}
-        </section>
-        {% endif %}
-
-        <!-- ================= AS FAIXAS ================= -->
-        {% for faixa in faixas %}
-        <section class="pg-faixa" id="{{ faixa.id }}" aria-labelledby="titulo-{{ faixa.id }}">
-            <div class="pg-faixa-topo">
-                <div>
-                    <h2 id="titulo-{{ faixa.id }}">{{ faixa.titulo }}</h2>
-                    <p>{{ faixa.sub }}</p>
-                </div>
-                <div class="pg-faixa-setas">
-                    <button type="button" aria-label="Voltar" data-portal-rolar="-1"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-                    <button type="button" aria-label="Avançar" data-portal-rolar="1"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-                </div>
-            </div>
-            <div class="pg-trilho" data-portal-trilho>
-                {% for jogo in faixa.jogos %}{% include "partials/cartao_jogo.html" %}{% endfor %}
-            </div>
-        </section>
-        {% if forloop.first and anuncios_meio %}
-        <aside class="pg-anuncio pg-anuncio--meio" aria-label="Anúncio">
-            {% include "partials/anuncio_jogos.html" with anuncio=anuncios_meio.0 %}
-        </aside>
-        {% endif %}
-        {% if forloop.counter == 3 and anuncios_meio|length > 1 %}
-        <aside class="pg-anuncio pg-anuncio--meio" aria-label="Anúncio">
-            {% include "partials/anuncio_jogos.html" with anuncio=anuncios_meio.1 %}
-        </aside>
-        {% endif %}
-        {% endfor %}
-
-        <!-- ================= RANKING ================= -->
-        <section class="pg-ranking" id="ranking" aria-labelledby="titulo-ranking">
-            <div class="pg-faixa-topo">
-                <div>
-                    <h2 id="titulo-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ranking Lazer &amp; Sport Games</h2>
-                    <p>Cada jogo da casa vale até 1.000 pontos: quem joga bem tudo sobe.</p>
-                </div>
-            </div>
-            <div class="pg-ranking-colunas">
-                <div class="pg-ranking-caixa">
-                    <h3>Ranking geral</h3>
-                    <ol class="pg-ranking-lista">
-                        {% for linha in ranking_portal.geral %}
-                        <li{% if linha.posicao <= 3 %} class="pg-podio pg-podio--{{ linha.posicao }}"{% endif %}><b>{{ linha.posicao }}º</b><span>{{ linha.nome }}</span><strong>{{ linha.pontos }}</strong></li>
-                        {% empty %}
-                        <li class="pg-ranking-vazio">O ranking começa com a primeira partida de um cadastrado. Seja o primeiro!</li>
-                        {% endfor %}
-                    </ol>
-                </div>
-                <div class="pg-ranking-caixa">
-                    <h3>Campeões de cada jogo</h3>
-                    <ul class="pg-campeoes">
-                        {% for c in ranking_portal.campeoes %}
-                        <li style="--cor: {{ c.cor }}"><a href="{{ c.url }}"><span>{{ c.jogo }}</span><strong><i class="fa-solid fa-crown" aria-hidden="true"></i> {{ c.nome }}</strong><small>{{ c.pontos }} pts</small></a></li>
-                        {% empty %}
-                        <li class="pg-ranking-vazio">Nenhum recorde ainda: o primeiro a jogar vira campeão.</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        {% if not eu %}
-        <!-- ================= CONVITE ================= -->
-        <section class="pg-convite">
+    <!-- ================= RANKING ================= -->
+    <section class="pg-ranking" id="ranking" aria-labelledby="titulo-ranking">
+        <div class="pg-faixa-topo">
             <div>
-                <h2>Crie sua conta grátis e jogue à vontade</h2>
-                <p>Sem conta, cada jogo dá uma partida. Com a conta, você joga quanto quiser, entra no ranking e guarda os seus recordes.</p>
+                <h2 id="titulo-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ranking Lazer &amp; Sport Games</h2>
+                <p>Cada jogo da casa vale até 1.000 pontos: quem joga bem tudo sobe.</p>
             </div>
-            <div class="pg-convite-acoes">
-                <a class="pg-botao pg-botao--forte" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
-                <a class="pg-botao" href="{% url 'login' %}?next={% url 'jogos' %}#login-box">Já tenho conta</a>
+        </div>
+        <div class="pg-ranking-colunas">
+            <div class="pg-ranking-caixa">
+                <h3>Ranking geral</h3>
+                <ol class="pg-ranking-lista">
+                    {% for linha in ranking_portal.geral %}
+                    <li{% if linha.posicao <= 3 %} class="pg-podio pg-podio--{{ linha.posicao }}"{% endif %}><b>{{ linha.posicao }}º</b><span>{{ linha.nome }}</span><strong>{{ linha.pontos }}</strong></li>
+                    {% empty %}
+                    <li class="pg-ranking-vazio">O ranking começa com a primeira partida de um cadastrado. Seja o primeiro!</li>
+                    {% endfor %}
+                </ol>
             </div>
-        </section>
-        {% endif %}
-    </div>
+            <div class="pg-ranking-caixa">
+                <h3>Campeões de cada jogo</h3>
+                <ul class="pg-campeoes">
+                    {% for c in ranking_portal.campeoes %}
+                    <li style="--cor: {{ c.cor }}"><a href="{{ c.url }}"><span>{{ c.jogo }}</span><strong><i class="fa-solid fa-crown" aria-hidden="true"></i> {{ c.nome }}</strong><small>{{ c.pontos }} pts</small></a></li>
+                    {% empty %}
+                    <li class="pg-ranking-vazio">Nenhum recorde ainda: o primeiro a jogar vira campeão.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    {% if not eu %}
+    <!-- ================= CONVITE ================= -->
+    <section class="pg-convite">
+        <div>
+            <h2>Crie sua conta grátis e jogue à vontade</h2>
+            <p>Sem conta, cada jogo dá uma partida. Com a conta, você joga quanto quiser, entra no ranking e guarda os seus recordes.</p>
+        </div>
+        <div class="pg-convite-acoes">
+            <a class="pg-botao pg-botao--forte" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
+            <a class="pg-botao" href="{% url 'login' %}?next={% url 'jogos' %}#login-box">Já tenho conta</a>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<!-- ================= A FICHA DO JOGO (abre ao tocar numa capa) ================= -->
+<div class="bj-ficha" data-bj-ficha role="dialog" aria-modal="true" aria-labelledby="bj-ficha-titulo" hidden>
+    <div class="bj-ficha-fundo" data-bj-fechar></div>
+    <article class="bj-ficha-caixa">
+        <button type="button" class="bj-ficha-fechar" data-bj-fechar aria-label="Fechar a ficha"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <div class="bj-ficha-arte">
+            <img class="bj-ficha-poster" alt="" data-bj-ficha-poster>
+            <img class="bj-ficha-capa" alt="" data-bj-ficha-capa>
+            <span class="bj-sigla bj-ficha-sigla" data-bj-ficha-sigla></span>
+        </div>
+        <div class="bj-ficha-corpo">
+            <span class="bj-ficha-estante" data-bj-ficha-estante></span>
+            <h2 id="bj-ficha-titulo" data-bj-ficha-titulo></h2>
+            <p class="bj-ficha-chamada" data-bj-ficha-chamada></p>
+            <ul class="bj-ficha-dados" data-bj-ficha-dados></ul>
+            <p class="bj-ficha-desc" data-bj-ficha-desc></p>
+            <div class="bj-ficha-como" data-bj-ficha-como hidden>
+                <h3><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Como jogar</h3>
+                <div class="bj-ficha-teclas" data-bj-ficha-teclas></div>
+            </div>
+            <div class="bj-ficha-acoes">
+                <a class="pg-botao pg-botao--jogar" data-bj-ficha-jogar href="#"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
+                <button type="button" class="pg-botao" data-bj-ficha-mais><i class="fa-solid fa-layer-group" aria-hidden="true"></i> <span>Mais da estante</span></button>
+            </div>
+        </div>
+    </article>
 </div>
 
 {{ indice_busca|json_script:"portal-jogos" }}
+{{ dados_da_biblioteca|json_script:"portal-biblioteca" }}
 <script src="{% estatico 'site/paginas/portal-jogos.js' %}" defer></script>
 {% endblock %}

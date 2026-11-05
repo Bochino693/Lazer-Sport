@@ -2,9 +2,11 @@
    LAZER & SPORT GAMES -- o portal (/jogos/).
    O neon do site: noite azul, vermelho, azul, ciano e amarelo da marca.
    ====================================================================== */
-.pg { --pg-fundo: #050b1f; --pg-cartao: rgba(255, 255, 255, .055); --pg-borda: rgba(255, 255, 255, .1);
-      --pg-texto: #eaf2ff; --pg-suave: #a9bcd9; --pg-ciano: #3fd0ff; --pg-azul: #2f8bff; --pg-vermelho: #ff4757; --pg-amarelo: #ffd23f;
-      max-width: 1440px; margin: 0 auto; padding: 14px clamp(14px, 3vw, 36px) 56px; color: var(--pg-texto); }
+/* as cores do portal valem também na ficha do jogo, que abre por cima da página (fora do .pg) */
+.pg, .bj-ficha { --pg-fundo: #050b1f; --pg-cartao: rgba(255, 255, 255, .055); --pg-borda: rgba(255, 255, 255, .1);
+                 --pg-texto: #eaf2ff; --pg-suave: #a9bcd9; --pg-ciano: #3fd0ff; --pg-azul: #2f8bff; --pg-vermelho: #ff4757; --pg-amarelo: #ffd23f; }
+.pg { max-width: 1440px; margin: 0 auto; padding: 14px clamp(14px, 3vw, 36px) 56px; color: var(--pg-texto); }
+.bj-ficha h2, .bj-ficha h3 { font-family: "Poppins", sans-serif; }
 .pg h2, .pg h3 { font-family: "Poppins", sans-serif; }
 
 /* ---------- topo ---------- */
@@ -39,15 +41,6 @@
 .pg-botao--jogar { min-height: 52px; padding: 0 26px; font-size: 1.05rem; color: #04210f; border: 0; background: #22c55e; box-shadow: 0 10px 26px rgba(34, 197, 94, .35); }
 .pg-botao--jogar:hover { color: #04210f; }
 
-/* ---------- filtros ---------- */
-.pg-filtros { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 14px; scrollbar-width: none; }
-.pg-filtros::-webkit-scrollbar { display: none; }
-.pg-filtro { flex: 0 0 auto; min-height: 40px; padding: 0 16px; border-radius: 999px; cursor: pointer; white-space: nowrap;
-             font: 700 .86rem "Poppins", sans-serif; color: var(--pg-suave); background: var(--pg-cartao); border: 1px solid var(--pg-borda); }
-.pg-filtro:hover { color: #fff; border-color: rgba(63, 208, 255, .45); }
-.pg-filtro[aria-pressed="true"] { color: #04121f; background: var(--pg-ciano); border-color: var(--pg-ciano); box-shadow: 0 0 18px rgba(63, 208, 255, .45); }
-.pg-filtro--categoria { font-weight: 600; }
-
 /* ---------- destaques ---------- */
 .pg-hero { position: relative; height: clamp(340px, 46vw, 520px); border-radius: 28px; overflow: hidden; margin-bottom: 30px;
            background: #0c1c44; border: 1px solid var(--pg-borda); box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
@@ -76,37 +69,209 @@
 .pg-hero-pontos button { width: 10px; height: 10px; padding: 0; border-radius: 999px; border: 0; background: rgba(255, 255, 255, .35); cursor: pointer; transition: width .3s; }
 .pg-hero-pontos button[aria-current="true"] { width: 28px; background: var(--pg-ciano); box-shadow: 0 0 12px var(--pg-ciano); }
 
-/* ---------- faixas e cartões ---------- */
-.pg-faixa, .pg-resultados, .pg-ranking { margin-bottom: 34px; }
+/* ---------- cabeçalho das seções (ranking) ---------- */
+.pg-ranking { margin-bottom: 34px; }
 .pg-faixa-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
 .pg-faixa-topo h2 { margin: 0; font-size: clamp(1.25rem, 2.4vw, 1.75rem); font-weight: 800; }
 .pg-faixa-topo p { margin: 4px 0 0; color: var(--pg-suave); font-size: .92rem; }
-.pg-faixa-setas { display: flex; gap: 8px; }
-.pg-faixa-setas button, .pg-limpar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--pg-borda); background: var(--pg-cartao); color: #fff; cursor: pointer; }
-.pg-limpar { width: auto; padding: 0 16px; border-radius: 999px; font: 700 .86rem "Poppins", sans-serif; }
-.pg-trilho { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(150px, 17vw, 220px); gap: 14px; overflow-x: auto; scroll-snap-type: x proximity;
-             padding: 4px 2px 12px; scrollbar-width: thin; }
-.pg-trilho > * { scroll-snap-align: start; }
-.pg-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(46%, 180px), 1fr)); gap: 14px; }
-.pg-cartao { position: relative; display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; text-decoration: none; color: inherit;
-             background: var(--pg-cartao); border: 1px solid var(--pg-borda); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
-.pg-cartao:hover, .pg-cartao:focus-visible { transform: translateY(-4px); border-color: var(--cor); box-shadow: 0 14px 30px rgba(0, 0, 0, .4), 0 0 24px color-mix(in srgb, var(--cor) 35%, transparent); }
-.pg-cartao-arte { position: relative; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden;
-                  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--cor) 50%, transparent), #050b1f 75%); }
-.pg-cartao-arte img { width: 82%; height: 82%; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)); transition: transform .25s ease; }
-.pg-cartao-arte > i { font-size: 2.6rem; color: rgba(255, 255, 255, .6); }
-.pg-cartao:hover .pg-cartao-arte img { transform: scale(1.06); }
-.pg-cartao-play { position: absolute; right: 10px; bottom: 10px; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
-                  color: #04210f; background: #22c55e; box-shadow: 0 6px 16px rgba(34, 197, 94, .45); opacity: 0; transform: scale(.8); transition: .18s ease; }
-.pg-cartao:hover .pg-cartao-play, .pg-cartao:focus-visible .pg-cartao-play { opacity: 1; transform: none; }
-.pg-selos { position: absolute; left: 8px; top: 8px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
-.pg-selo { padding: 3px 8px; border-radius: 999px; font: 800 .64rem "Poppins", sans-serif; letter-spacing: .04em; background: rgba(5, 11, 31, .8); }
-.pg-selo--nosso { color: var(--pg-amarelo); border: 1px solid rgba(255, 210, 63, .5); }
-.pg-selo--ranking { color: #dff4ff; border: 1px solid rgba(63, 208, 255, .5); }
-.pg-cartao-texto { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 12px; }
-.pg-cartao-texto strong { font: 800 .98rem/1.2 "Poppins", sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pg-cartao-texto small { color: var(--pg-suave); font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pg-vazio { padding: 26px; border-radius: 18px; text-align: center; color: var(--pg-suave); background: var(--pg-cartao); border: 1px dashed var(--pg-borda); }
+.pg-hero[hidden] { display: none; }
+
+/* ======================================================================
+   A BIBLIOTECA
+   Estantes por plataforma, cada uma com a sua cor (--tema) e o seu
+   desenho de fundo; a capa é uma "caixinha": a lombada na cor da
+   estante, a arte do jogo sobre o fundo desfocado dela mesma e o selo
+   do console. A cor do jogo (--cor) só tinge o fundo da arte.
+   ====================================================================== */
+.bj { margin: 6px 0 36px; scroll-margin-top: 80px; }
+.bj-cabeca { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.bj-cabeca-icone { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; font-size: 1.4rem; color: #04121f;
+                   background: linear-gradient(135deg, var(--pg-ciano), #8a5cff); box-shadow: 0 0 26px rgba(63, 208, 255, .35); }
+.bj-cabeca h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.3rem); font-weight: 800; letter-spacing: -.02em; }
+.bj-cabeca p { margin: 4px 0 0; color: var(--pg-suave); }
+.bj-corpo { display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 24px; align-items: start; }
+
+/* ---------- a lateral: coleções, estantes, gêneros ---------- */
+.bj-lado { position: sticky; top: 88px; display: grid; gap: 18px; padding: 16px 12px; border-radius: 22px; max-height: calc(100vh - 108px); overflow: auto;
+           background: linear-gradient(180deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .02)); border: 1px solid var(--pg-borda); scrollbar-width: thin; }
+.bj-lado-grupo { display: grid; gap: 3px; }
+.bj-lado h3 { margin: 0 0 6px 10px; font: 800 .68rem "Poppins", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #7f93b5; }
+.bj-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border-radius: 12px;
+           text-decoration: none; color: #cfdcf2; font: 700 .9rem "Manrope", sans-serif; transition: background .15s ease, color .15s ease; }
+.bj-item[hidden] { display: none; }
+.bj-item i { color: var(--tema, var(--pg-ciano)); text-align: center; }
+.bj-item span { line-height: 1.2; }
+.bj-item b { min-width: 26px; padding: 2px 8px; border-radius: 999px; text-align: center; font: 800 .7rem "Poppins", sans-serif; color: #8ea3c4; background: rgba(255, 255, 255, .06); }
+.bj-item b:empty { display: none; }
+.bj-item:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+.bj-item[aria-current="true"] { color: #fff; background: color-mix(in srgb, var(--tema, var(--pg-ciano)) 18%, transparent);
+                                box-shadow: inset 3px 0 0 var(--tema, var(--pg-ciano)); }
+.bj-item[aria-current="true"] b { color: #fff; background: color-mix(in srgb, var(--tema, var(--pg-ciano)) 35%, transparent); }
+.bj-item--genero { grid-template-columns: minmax(0, 1fr) auto; padding-left: 14px; font-weight: 600; }
+
+/* ---------- a barra: título, ordem, capas ou lista ---------- */
+.bj-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; padding: 12px 14px 12px 16px;
+            border-radius: 18px; background: rgba(255, 255, 255, .04); border: 1px solid var(--pg-borda); }
+.bj-barra-titulo { padding-left: 12px; border-left: 4px solid var(--tema, var(--pg-ciano)); }
+.bj-barra-titulo h3 { margin: 0; font-size: 1.15rem; font-weight: 800; }
+.bj-barra-titulo p { margin: 2px 0 0; color: var(--pg-suave); font-size: .84rem; }
+.bj-barra-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bj-ordem { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 999px; color: var(--pg-ciano);
+            background: rgba(255, 255, 255, .06); border: 1px solid var(--pg-borda); }
+.bj-ordem select { max-width: 160px; border: 0; outline: 0; background: transparent; color: #fff; font: 700 .86rem "Manrope", sans-serif; cursor: pointer; }
+.bj-ordem select option { color: #0a1430; }
+.bj-vista { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid var(--pg-borda); }
+.bj-vista[hidden] { display: none; }
+.bj-vista button { width: 38px; height: 34px; border: 0; border-radius: 999px; background: transparent; color: var(--pg-suave); cursor: pointer; }
+.bj-vista button[aria-pressed="true"] { color: #04121f; background: var(--pg-ciano); }
+.bj-limpar { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; text-decoration: none;
+             font: 700 .84rem "Poppins", sans-serif; color: #fff; background: rgba(255, 71, 87, .16); border: 1px solid rgba(255, 71, 87, .4); }
+.bj-limpar[hidden] { display: none; }
+.bj-vazio { padding: 28px; border-radius: 18px; text-align: center; color: var(--pg-suave); background: var(--pg-cartao); border: 1px dashed var(--pg-borda); }
+.bj-vazio a { color: var(--pg-ciano); }
+
+/* ---------- as estantes: a faixa de abertura de cada plataforma ---------- */
+.bj-estante { margin-bottom: 34px; }
+.bj-estante-faixa { position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px;
+                    margin-bottom: 16px; padding: 16px 18px; border-radius: 20px; isolation: isolate;
+                    border: 1px solid color-mix(in srgb, var(--tema) 42%, transparent);
+                    background: linear-gradient(100deg, color-mix(in srgb, var(--tema) 34%, #0a1430) 0%, #0a1430 72%); }
+.bj-estante-faixa::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.bj-estante-icone { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; font-size: 1.4rem; color: #071022;
+                    background: var(--tema); box-shadow: 0 0 24px color-mix(in srgb, var(--tema) 55%, transparent); }
+.bj-estante-nome h3 { margin: 0; font-size: clamp(1.1rem, 2vw, 1.35rem); font-weight: 800; }
+.bj-estante-nome p { margin: 2px 0 0; color: #c9d6ee; font-size: .86rem; }
+.bj-estante-total { padding: 5px 12px; border-radius: 999px; font: 800 .76rem "Poppins", sans-serif; color: var(--tema); white-space: nowrap;
+                    background: rgba(5, 11, 31, .6); border: 1px solid color-mix(in srgb, var(--tema) 45%, transparent); }
+.bj-estante-todos { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px; text-decoration: none; white-space: nowrap;
+                    font: 700 .84rem "Poppins", sans-serif; color: #071022; background: var(--tema); }
+/* o desenho de cada estante */
+.bj-estante[data-estante="nosso"] .bj-estante-faixa::after {
+    background: radial-gradient(circle at 88% 30%, rgba(255, 210, 63, .38), transparent 38%),
+                repeating-linear-gradient(115deg, rgba(255, 210, 63, .09) 0 2px, transparent 2px 15px); }
+.bj-estante[data-estante="playstation"] .bj-estante-faixa::after {
+    content: "△ ○ ✕ □"; display: flex; align-items: center; justify-content: flex-end; padding-right: 170px;
+    font: 900 clamp(2rem, 4vw, 3.4rem) "Poppins", sans-serif; letter-spacing: .35em; color: rgba(255, 255, 255, .07); }
+.bj-estante[data-estante="nintendo"] .bj-estante-faixa::after {
+    background-image: linear-gradient(rgba(255, 255, 255, .075) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .075) 1px, transparent 1px);
+    background-size: 10px 10px; -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000); mask-image: linear-gradient(90deg, transparent 25%, #000); }
+.bj-estante[data-estante="sega"] .bj-estante-faixa::after {
+    background: repeating-linear-gradient(-12deg, rgba(34, 211, 238, .2) 0 3px, transparent 3px 22px);
+    -webkit-mask-image: linear-gradient(90deg, transparent 20%, #000); mask-image: linear-gradient(90deg, transparent 20%, #000); }
+.bj-estante[data-estante="fliperama"] .bj-estante-faixa::after {
+    background: linear-gradient(transparent 55%, rgba(196, 92, 255, .35)),
+                repeating-linear-gradient(90deg, rgba(196, 92, 255, .25) 0 1px, transparent 1px 28px),
+                repeating-linear-gradient(0deg, rgba(196, 92, 255, .22) 0 1px, transparent 1px 14px);
+    -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000); mask-image: linear-gradient(90deg, transparent 25%, #000); }
+.bj-estante[data-estante="classicos"] .bj-estante-faixa::after {
+    background: linear-gradient(90deg, transparent 60%, #ff3b30 60% 62.5%, #ff8a1f 62.5% 65%, #ffd23f 65% 67.5%, #4ade80 67.5% 70%, transparent 70%);
+    opacity: .5; transform: skewX(-22deg); }
+.bj-estante[data-estante="pc"] .bj-estante-faixa::after {
+    content: "C:\\> RUN_"; display: flex; align-items: center; justify-content: flex-end; padding-right: 170px;
+    font: 700 clamp(1.4rem, 3vw, 2.4rem) "Courier New", monospace; color: rgba(52, 211, 153, .16);
+    background: repeating-linear-gradient(0deg, rgba(52, 211, 153, .07) 0 1px, transparent 1px 4px); }
+.bj-estante[data-estante="html"] .bj-estante-faixa::after {
+    content: "</>"; display: flex; align-items: center; justify-content: flex-end; padding-right: 170px;
+    font: 900 clamp(2rem, 4vw, 3.4rem) "Poppins", sans-serif; color: rgba(255, 106, 61, .16); }
+.bj-estante[data-estante="recentes"] .bj-estante-faixa::after {
+    background: radial-gradient(circle at 90% 50%, rgba(63, 208, 255, .3), transparent 45%); }
+
+/* ---------- as capas ---------- */
+.bj-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(46%, 170px), 1fr)); gap: 16px; }
+.bj-capa { position: relative; display: block; border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; isolation: isolate;
+           background: #0b1530; border: 1px solid rgba(255, 255, 255, .09);
+           box-shadow: 0 10px 24px rgba(0, 0, 0, .35); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+/* a lombada da caixinha, na cor da estante */
+.bj-capa::before { content: ""; position: absolute; z-index: 4; left: 0; top: 0; bottom: 0; width: 6px; background: var(--tema);
+                   box-shadow: 0 0 14px var(--tema); }
+/* o brilho que passa na capa */
+.bj-capa::after { content: ""; position: absolute; z-index: 4; inset: 0; pointer-events: none; opacity: 0; transition: opacity .2s ease;
+                  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .16) 48%, transparent 60%); }
+.bj-capa:hover, .bj-capa:focus-visible { transform: translateY(-6px); border-color: color-mix(in srgb, var(--tema) 65%, transparent);
+                                         box-shadow: 0 20px 38px rgba(0, 0, 0, .5), 0 0 30px color-mix(in srgb, var(--tema) 35%, transparent); outline: none; }
+.bj-capa:hover::after, .bj-capa:focus-visible::after { opacity: 1; }
+.bj-capa-arte { position: relative; display: grid; place-items: center; aspect-ratio: 3 / 4; overflow: hidden;
+                background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--cor) 60%, transparent), #060d24 74%); }
+.bj-capa-fundo { position: absolute; inset: -12%; width: 124%; height: 124%; object-fit: cover; filter: blur(16px) saturate(1.5) brightness(.62); opacity: .8; }
+.bj-capa-img { position: relative; z-index: 1; width: 86%; height: 62%; margin-top: -18%; object-fit: contain;
+               filter: drop-shadow(0 14px 22px rgba(0, 0, 0, .6)); transition: transform .3s ease; }
+.bj-capa:hover .bj-capa-img { transform: scale(1.07); }
+.bj-capa-sem { position: relative; z-index: 1; margin-top: -18%; font-size: 3.2rem; color: color-mix(in srgb, var(--tema) 70%, #fff); }
+.bj-sigla { position: absolute; z-index: 3; top: 10px; left: 14px; padding: 3px 9px; border-radius: 7px; font: 900 .64rem/1.25 "Poppins", sans-serif;
+            letter-spacing: .08em; color: #071022; background: var(--tema); box-shadow: 0 3px 10px rgba(0, 0, 0, .35); }
+.bj-marcas { position: absolute; z-index: 3; top: 9px; right: 9px; display: flex; gap: 5px; }
+.bj-marca { display: grid; place-items: center; min-width: 25px; height: 25px; padding: 0 7px; border-radius: 999px; font: 800 .62rem "Poppins", sans-serif;
+            background: rgba(5, 11, 31, .78); border: 1px solid rgba(255, 255, 255, .18); }
+.bj-marca[hidden] { display: none; }
+.bj-marca--ranking { color: var(--pg-amarelo); }
+.bj-marca--nova { color: #04121f; background: var(--pg-ciano); border: 0; }
+.bj-marca--aparelho { color: #34d399; border-color: rgba(52, 211, 153, .5); }
+.bj-capa-play { position: absolute; z-index: 3; right: 10px; bottom: 66px; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
+                color: #04210f; background: #22c55e; box-shadow: 0 6px 18px rgba(34, 197, 94, .5); opacity: 0; transform: scale(.75); transition: .2s ease; }
+.bj-capa:hover .bj-capa-play, .bj-capa:focus-visible .bj-capa-play { opacity: 1; transform: none; }
+.bj-capa-texto { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 3px; padding: 36px 12px 12px 18px;
+                 background: linear-gradient(transparent, rgba(4, 9, 26, .94) 46%); }
+.bj-capa-texto strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                        font: 800 .98rem/1.2 "Poppins", sans-serif; text-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
+.bj-capa-texto small { overflow: hidden; color: #b9c8e2; font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ---------- a lista (o outro jeito de ver) ---------- */
+.bj-conteudo--lista .bj-grade { grid-template-columns: 1fr; gap: 8px; }
+.bj-conteudo--lista .bj-capa:hover { transform: translateX(4px); }
+.bj-conteudo--lista .bj-capa-arte { display: flex; align-items: center; gap: 14px; aspect-ratio: auto; padding: 8px 14px 8px 18px; background: rgba(255, 255, 255, .03); }
+.bj-conteudo--lista .bj-capa-fundo { display: none; }
+.bj-conteudo--lista .bj-capa-img, .bj-conteudo--lista .bj-capa-sem { flex: none; width: 58px; height: 58px; margin: 0; border-radius: 12px; font-size: 1.6rem;
+                                                                    display: grid; place-items: center; background: color-mix(in srgb, var(--cor) 25%, #060d24); }
+.bj-conteudo--lista .bj-capa-texto { position: static; order: 2; flex: 1; min-width: 0; padding: 0; background: none; }
+.bj-conteudo--lista .bj-sigla { position: static; order: 3; }
+.bj-conteudo--lista .bj-marcas { position: static; order: 4; }
+.bj-conteudo--lista .bj-capa-play { position: static; order: 5; flex: none; opacity: 1; transform: none; }
+.bj-conteudo--lista .bj-estante-faixa { margin-bottom: 10px; }
+
+/* ---------- a ficha do jogo ---------- */
+.bj-ficha { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; padding: 16px; }
+.bj-ficha[hidden] { display: none; }
+.bj-ficha-fundo { position: absolute; inset: 0; background: rgba(2, 6, 20, .8); backdrop-filter: blur(6px); }
+.bj-ficha-caixa { position: relative; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); width: min(960px, 100%); max-height: min(92vh, 780px);
+                  overflow: auto; border-radius: 26px; color: var(--pg-texto); background: #0a1430;
+                  border: 1px solid color-mix(in srgb, var(--tema) 45%, transparent);
+                  box-shadow: 0 30px 80px rgba(0, 0, 0, .6), 0 0 44px color-mix(in srgb, var(--tema) 25%, transparent); animation: bj-entra .28s ease; }
+.bj-ficha-fechar { position: absolute; z-index: 5; top: 12px; right: 12px; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%;
+                   color: #fff; background: rgba(5, 11, 31, .7); cursor: pointer; }
+.bj-ficha-fechar:hover { background: rgba(255, 71, 87, .45); }
+.bj-ficha-arte { position: relative; display: grid; place-items: center; min-height: 360px; overflow: hidden;
+                 background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cor) 60%, transparent), #060d24 75%); }
+.bj-ficha-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(8px) brightness(.5) saturate(1.3); transform: scale(1.12); }
+.bj-ficha-capa { position: relative; width: 74%; max-height: 82%; object-fit: contain; filter: drop-shadow(0 20px 34px rgba(0, 0, 0, .6)); animation: pg-flutua 5s ease-in-out infinite; }
+.bj-ficha-sigla { top: 16px; left: 16px; font-size: .74rem; }
+.bj-ficha-corpo { display: flex; flex-direction: column; gap: 12px; padding: 28px 26px 24px; }
+.bj-ficha-estante { align-self: flex-start; padding: 4px 12px; border-radius: 999px; font: 800 .7rem "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase;
+                    color: var(--tema); background: color-mix(in srgb, var(--tema) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tema) 40%, transparent); }
+.bj-ficha-corpo h2 { margin: 0; padding-right: 36px; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 800; line-height: 1.08; letter-spacing: -.02em; }
+.bj-ficha-chamada { margin: 0; color: #fff; font-weight: 700; }
+.bj-ficha-chamada:empty, .bj-ficha-desc:empty { display: none; }
+.bj-ficha-dados { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.bj-ficha-dados li { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 10px; font-size: .8rem; color: #d6e2f6; background: rgba(255, 255, 255, .06); }
+.bj-ficha-dados i { color: var(--tema); }
+.bj-ficha-desc { margin: 0; color: var(--pg-suave); font-size: .92rem; line-height: 1.6; }
+.bj-ficha-como { padding: 14px; border-radius: 18px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .09); }
+.bj-ficha-como[hidden] { display: none; }
+.bj-ficha-como h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: .95rem; }
+.bj-ficha-como h3 i { color: var(--tema); }
+.bj-ficha-acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 4px; }
+
+/* o como jogar desenhado: teclas e botões (também na página de cada jogo) */
+.bj-teclas { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 8px; }
+.bj-tecla { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border-radius: 12px; background: rgba(5, 11, 31, .6); border: 1px solid rgba(255, 255, 255, .06); }
+.bj-tecla > span { color: var(--pg-suave); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.bj-tecla > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.bj-tecla kbd, .bj-dica kbd { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 8px;
+                              font: 800 .8rem "Poppins", sans-serif; color: #fff; background: linear-gradient(#1c2f5c, #101d40);
+                              border: 1px solid rgba(255, 255, 255, .22); border-bottom-width: 3px; }
+.bj-dica { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; margin-top: 8px; font-size: .84rem; line-height: 1.5; color: #d6e2f6; }
+.bj-dica > i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: var(--tema); background: color-mix(in srgb, var(--tema) 16%, transparent); }
+.bj-dica strong { display: block; color: #fff; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; }
+@keyframes bj-entra { from { opacity: 0; transform: translateY(16px) scale(.98); } }
 
 /* ---------- anúncios ---------- */
 .pg-anuncio { margin: 0 0 30px; }
@@ -152,7 +317,28 @@
 @keyframes pg-flutua { 50% { transform: translateY(-10px); } }
 
 /* ---------- celular ---------- */
+@media (max-width: 1100px) {
+    .bj-corpo { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    /* a lateral vira uma fila de botões que rola de lado */
+    .bj-lado { position: static; display: flex; gap: 6px; max-height: none; overflow-x: auto; padding: 8px; border-radius: 18px; scrollbar-width: none; }
+    .bj-lado::-webkit-scrollbar { display: none; }
+    .bj-lado-grupo { display: flex; flex: none; gap: 6px; }
+    .bj-lado-grupo + .bj-lado-grupo { padding-left: 8px; border-left: 1px solid var(--pg-borda); }
+    .bj-lado h3 { display: none; }
+    .bj-item { flex: none; grid-template-columns: auto auto auto; min-height: 38px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .05); }
+    .bj-item span { white-space: nowrap; }
+    .bj-item--genero { grid-template-columns: auto auto; }
+    .bj-item[aria-current="true"] { box-shadow: inset 0 0 0 1px var(--tema, var(--pg-ciano)); }
+}
 @media (max-width: 900px) {
+    .bj-estante-faixa { grid-template-columns: auto minmax(0, 1fr); padding: 14px; }
+    .bj-estante-total { grid-column: 2; justify-self: start; }
+    .bj-estante-todos { grid-column: 1 / -1; justify-self: start; }
+    .bj-estante-faixa::after { padding-right: 16px !important; }
+    .bj-ficha { place-items: end center; padding: 0; }
+    .bj-ficha-caixa { grid-template-columns: minmax(0, 1fr); max-height: 94vh; border-radius: 24px 24px 0 0; animation-name: bj-sobe; }
+    .bj-ficha-arte { min-height: 230px; }
+    .bj-ficha-capa { width: 46%; }
     .pg-topo { grid-template-columns: 1fr; gap: 12px; }
     .pg-conta { justify-content: flex-start; }
     .pg-conta small { text-align: left; }
@@ -161,16 +347,19 @@
     .pg-slide-texto { margin-top: auto; }
     .pg-hero { height: clamp(380px, 110vw, 520px); }
     .pg-hero-seta { display: none; }
-    .pg-faixa-setas { display: none; }
     .pg-anuncio-corpo img { aspect-ratio: 2 / 1; }
 }
 @media (max-width: 560px) {
     .pg-botao { min-height: 42px; padding: 0 14px; }
-    .pg-trilho { grid-auto-columns: 44%; }
+    .bj-grade { gap: 10px; }
+    .bj-capa-texto strong { font-size: .9rem; }
     .pg-busca button { padding: 0 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .pg-slide { transition: none; }
     .pg-slide-arte { animation: none; }
-    .pg-cartao, .pg-cartao-arte img, .pg-botao { transition: none; }
+    .pg-botao, .bj-capa, .bj-capa-img, .bj-item { transition: none; }
+    .bj-capa:hover, .bj-capa:focus-visible { transform: none; }
+    .bj-ficha-caixa, .bj-ficha-capa { animation: none; }
 }
+@keyframes bj-sobe { from { transform: translateY(40px); opacity: 0; } }

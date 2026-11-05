@@ -154,6 +154,10 @@
                 <span class="ls-jf-solta-texto"><i class="bi bi-image"></i><strong>Arraste a foto de capa</strong> ou toque para escolher<small>quadrada, até 4 MB · a cor do jogo sai dela</small></span>
               </label>
               <input type="file" class="ls-jf-escondido" id="jogoCapa" name="capa" accept="image/*" data-rotulo="capa">
+              <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="jogoCapaGerar"><i class="bi bi-magic me-1"></i>Criar capa</button>
+                <span class="form-text mt-0">Uma capa no tema do console, com o nome do jogo. A foto que estiver escolhida (do cartucho, da caixa ou uma tela do jogo) entra no meio.</span>
+              </div>
               <details class="ls-jf-mais"><summary>Imagem grande da tela do jogo <span class="text-muted">(opcional)</span></summary>
                 <input type="file" class="form-control mt-2" id="jogoPoster" name="poster" accept="image/*"><span class="form-text" id="jogoPosterAtual"></span>
                 <label class="form-check mt-1 d-none" id="jogoPosterLimparCaixa"><input class="form-check-input" type="checkbox" name="poster-clear" id="jogoPosterLimpar"><span class="form-check-label">Remover a imagem grande</span></label>
@@ -473,8 +477,108 @@ LSTela.pronto(function () {
       return "#" + [r, gg, b].map(function (v) { return Math.round(Math.min(255, v * escala)).toString(16).padStart(2, "0"); }).join("");
     } catch (e) { return null; }
   }
+  /* ---------------- "Criar capa": uma capa original no tema do console ----------------
+     O fundo e o desenho da estante da biblioteca (core/portal_jogos.ESTANTES), a
+     lombada com o selo do console, o nome do jogo e a marca. A foto escolhida
+     (do cartucho, da caixa, uma tela do jogo) entra emoldurada no meio. */
+  var fotoDaCapa = null;
+  function temaDaCapa() {
+    var temas = EMU.temas || {};
+    if (el("jogoFeitoPelaLazer") && el("jogoFeitoPelaLazer").checked) return temas.nosso;
+    var codigo = el("jogoSistema").value;
+    if ((!codigo || codigo === "auto") && envio && envio.conferencia && envio.conferencia.analise) codigo = envio.conferencia.analise.sistema;
+    return temas[codigo] || (estado.html || el("jogoEndereco").value ? temas.html : null) || { estante: "html", cor: "#3fd0ff", nome: "Lazer & Sport Games", sigla: "GAME" };
+  }
+  function linhasDoTitulo(ctx, texto, largura) {
+    var palavras = texto.split(/\s+/), linhas = [], atual = "";
+    palavras.forEach(function (p) {
+      var teste = atual ? atual + " " + p : p;
+      if (ctx.measureText(teste).width > largura && atual) { linhas.push(atual); atual = p; } else atual = teste;
+    });
+    if (atual) linhas.push(atual);
+    return linhas;
+  }
+  function desenharFundo(ctx, tema, L) {
+    var g = ctx.createRadialGradient(L * .6, L * .35, 20, L * .5, L * .5, L * .85);
+    g.addColorStop(0, tema.cor); g.addColorStop(.55, "#0b1736"); g.addColorStop(1, "#050b1f");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, L, L);
+    ctx.save(); ctx.globalAlpha = .14; ctx.strokeStyle = "#fff"; ctx.fillStyle = "#fff"; ctx.lineWidth = 2;
+    var e = tema.estante, i;
+    if (e === "nintendo") { for (i = 0; i < L; i += 16) { ctx.fillRect(i, 0, 1, L); ctx.fillRect(0, i, L, 1); } }
+    else if (e === "sega") { ctx.globalAlpha = .18; ctx.strokeStyle = tema.cor; ctx.lineWidth = 6; for (i = -L; i < L * 2; i += 46) { ctx.beginPath(); ctx.moveTo(i, L); ctx.lineTo(i + L * .25, 0); ctx.stroke(); } }
+    else if (e === "fliperama") { ctx.strokeStyle = tema.cor; ctx.globalAlpha = .35; for (i = 0; i <= L; i += 40) { ctx.beginPath(); ctx.moveTo(L / 2, L * .55); ctx.lineTo(i * 2 - L / 2, L); ctx.stroke(); } for (i = L * .6; i < L; i += 28) { ctx.fillRect(0, i, L, 2); } }
+    else if (e === "classicos") { ctx.globalAlpha = .45; ["#ff3b30", "#ff8a1f", "#ffd23f", "#4ade80"].forEach(function (c, k) { ctx.fillStyle = c; ctx.fillRect(0, L * .3 + k * 22, L, 14); }); }
+    else if (e === "pc") { ctx.fillStyle = tema.cor; for (i = 0; i < L; i += 6) ctx.fillRect(0, i, L, 1); ctx.globalAlpha = .2; ctx.font = "700 72px 'Courier New', monospace"; ctx.fillText("C:\\> RUN_", 70, L * .3); }
+    else if (e === "playstation") { ctx.font = "900 150px sans-serif"; ctx.globalAlpha = .1; ctx.fillText("△ ○ ✕ □", 60, L * .32); }
+    else if (e === "html") { ctx.font = "900 220px sans-serif"; ctx.globalAlpha = .1; ctx.fillText("</>", L * .32, L * .36); }
+    else { ctx.globalAlpha = .1; ctx.strokeStyle = tema.cor; for (i = -L; i < L * 2; i += 26) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + L * .5, L); ctx.stroke(); } }
+    ctx.restore();
+  }
+  function caixaArredondada(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function criarCapa() {
+    var nome = (el("jogoNome").value || "").trim();
+    if (!nome) { Painel.erro("jogoErro", "Dê um nome ao jogo (passo 1) para criar a capa."); return; }
+    var tema = temaDaCapa(), L = 800;
+    var tela = document.createElement("canvas"); tela.width = L; tela.height = L;
+    var ctx = tela.getContext("2d");
+    var foto = fotoDaCapa ? new Image() : null;
+    var desenhar = function () {
+      desenharFundo(ctx, tema, L);
+      // o nome do jogo ocupa de 1 a 3 linhas embaixo: a foto cabe sempre acima dele
+      var tamanho = nome.length > 28 ? 58 : nome.length > 16 ? 70 : 86;
+      ctx.font = "900 " + tamanho + "px Poppins, 'Segoe UI', sans-serif";
+      var linhas = linhasDoTitulo(ctx, nome.toUpperCase(), L - 150).slice(0, 3);
+      var base = L - 70 - (linhas.length - 1) * (tamanho * 1.05);
+      var topoDoTitulo = base - tamanho - 34;
+      // a foto, emoldurada
+      if (foto && foto.naturalWidth) {
+        var mw = 560, mh = Math.max(180, Math.min(400, topoDoTitulo - 130 - 26)), esc = Math.min(mw / foto.naturalWidth, mh / foto.naturalHeight);
+        var w = foto.naturalWidth * esc, h = foto.naturalHeight * esc, x = (L - w) / 2 + 20, y = 130 + (mh - h) / 2;
+        ctx.save(); ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 40; ctx.fillStyle = "#000";
+        caixaArredondada(ctx, x - 8, y - 8, w + 16, h + 16, 22); ctx.fill(); ctx.restore();
+        ctx.save(); caixaArredondada(ctx, x, y, w, h, 16); ctx.clip(); ctx.drawImage(foto, x, y, w, h); ctx.restore();
+        ctx.save(); ctx.strokeStyle = tema.cor; ctx.lineWidth = 6; caixaArredondada(ctx, x - 8, y - 8, w + 16, h + 16, 22); ctx.stroke(); ctx.restore();
+      }
+      // a lombada, com o selo do console em pé
+      ctx.fillStyle = tema.cor; ctx.fillRect(0, 0, 46, L);
+      ctx.save(); ctx.translate(31, L - 40); ctx.rotate(-Math.PI / 2); ctx.fillStyle = "#071022";
+      ctx.font = "900 26px Poppins, 'Segoe UI', sans-serif"; ctx.fillText((tema.sigla || "") + "  ·  LAZER & SPORT GAMES", 0, 0); ctx.restore();
+      // o selo no canto e a marca
+      ctx.font = "900 30px Poppins, 'Segoe UI', sans-serif";
+      var sigla = tema.sigla || "GAME", ls = ctx.measureText(sigla).width + 36;
+      ctx.fillStyle = tema.cor; caixaArredondada(ctx, 76, 40, ls, 50, 12); ctx.fill();
+      ctx.fillStyle = "#071022"; ctx.fillText(sigla, 94, 76);
+      ctx.font = "800 22px Poppins, 'Segoe UI', sans-serif"; ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.textAlign = "right";
+      ctx.fillText("LAZER & SPORT GAMES", L - 40, 74); ctx.textAlign = "left";
+      // o nome do jogo, embaixo, grande
+      var g = ctx.createLinearGradient(0, L * .55, 0, L); g.addColorStop(0, "rgba(5,11,31,0)"); g.addColorStop(.5, "rgba(5,11,31,.85)"); g.addColorStop(1, "rgba(5,11,31,.95)");
+      ctx.fillStyle = g; ctx.fillRect(46, L * .55, L, L * .45);
+      ctx.font = "900 " + tamanho + "px Poppins, 'Segoe UI', sans-serif";
+      ctx.save(); ctx.shadowColor = tema.cor; ctx.shadowBlur = 26; ctx.fillStyle = "#fff";
+      linhas.forEach(function (linha, k) { ctx.fillText(linha, 80, base + k * tamanho * 1.05); });
+      ctx.restore();
+      ctx.font = "800 24px Poppins, 'Segoe UI', sans-serif"; ctx.fillStyle = tema.cor;
+      ctx.fillText((tema.nome || "").toUpperCase(), 82, base - tamanho - 6);
+      tela.toBlob(function (blob) {
+        if (!blob) return;
+        var arquivo = new File([blob], "capa-gerada.png", { type: "image/png" });
+        var dt = new DataTransfer(); dt.items.add(arquivo);
+        el("jogoCapa").files = dt.files;
+        el("jogoCapa").dispatchEvent(new Event("change"));
+      }, "image/png");
+    };
+    if (foto) { foto.onload = desenhar; foto.onerror = function () { foto = null; desenhar(); }; foto.src = URL.createObjectURL(fotoDaCapa); }
+    else desenhar();
+  }
+  el("jogoCapaGerar").addEventListener("click", criarCapa);
+
   function capaEscolhida(arquivo) {
     if (!arquivo) return;
+    // a foto escolhida (não a capa que o painel criou) é a que entra no meio da capa criada
+    if (arquivo.name !== "capa-gerada.png") fotoDaCapa = arquivo;
     var img = el("jogoCapaVer"), card = el("jfCardCapa");
     var url = URL.createObjectURL(arquivo);
     img.onload = function () {
@@ -638,6 +742,7 @@ LSTela.pronto(function () {
 
   function abrir(jogo, irArquivos) {
     form.reset(); Painel.erro("jogoErro", "");
+    fotoDaCapa = null;
     jogoAberto = jogo || null;
     estado = { console: [], html: null, apk: null, pc: null, web: [], sobra: [], formatoTocado: !!jogo, corTocada: !!jogo, comandosSugeridos: "" };
     if (envio) { envio.o.campo = { files: [] }; envio.limpar(); }

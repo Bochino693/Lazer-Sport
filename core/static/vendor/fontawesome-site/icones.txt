@@ -56,6 +56,7 @@ fa-clock
 fa-clock-rotate-left
 fa-coins
 fa-comments
+fa-compact-disc
 fa-compass-drafting
 fa-compress
 fa-computer-mouse
@@ -79,11 +80,13 @@ fa-facebook
 fa-file-lines
 fa-filter
 fa-fingerprint
+fa-fire
 fa-flag
 fa-floppy-disk
 fa-futbol
 fa-gamepad
 fa-gears
+fa-ghost
 fa-globe
 fa-google-play
 fa-hammer
@@ -96,6 +99,7 @@ fa-handshake-angle
 fa-headset
 fa-heart
 fa-house
+fa-html5
 fa-id-card
 fa-image
 fa-images
@@ -160,6 +164,7 @@ fa-triangle-exclamation
 fa-trophy
 fa-truck
 fa-truck-fast
+fa-tv
 fa-up-right-and-down-left-from-center
 fa-user
 fa-user-check
