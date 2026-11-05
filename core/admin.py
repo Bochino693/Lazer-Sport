@@ -525,7 +525,7 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
     list_display = ("miniatura", "nome", "slug", "como_roda", "proporcao", "download", "ordem", "ativo")
     list_display_links = ("miniatura", "nome")
     list_editable = ("ordem", "ativo")
-    list_filter = ("ativo", "feito_pela_lazer", "destaque", "categoria", "proporcao", "liberar_download")
+    list_filter = ("ativo", "particular", "feito_pela_lazer", "destaque", "categoria", "proporcao", "liberar_download")
     search_fields = ("nome", "slug", "chamada", "descricao")
     prepopulated_fields = {"slug": ("nome",)}
     readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado", "motor", "arquivos_do_console")
@@ -538,7 +538,7 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
                 "A categoria entra na busca e nos filtros do portal. “Feito pela Lazer & Sport” põe o jogo "
                 "junto dos jogos da casa, separado dos de console; “Destaque” leva o jogo ao carrossel do topo."
             ),
-            "fields": ("categoria", "feito_pela_lazer", "destaque"),
+            "fields": ("categoria", "feito_pela_lazer", "destaque", "particular"),
         }),
         ("Jogo de console ou fliperama (.cue + .bin, ROM, BIOS) — pelo emulador", {
             "description": (

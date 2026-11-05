@@ -95,7 +95,7 @@ class JogoForm(forms.ModelForm):
         fields = [
             "nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo",
             "capa", "poster", "endereco", "arquivo_html", "proporcao", "apk", "liberar_download",
-            "versao_pc", "versao_pc_link", "sistema", "categoria", "feito_pela_lazer", "destaque",
+            "versao_pc", "versao_pc_link", "sistema", "categoria", "feito_pela_lazer", "destaque", "particular",
         ]
 
     def _conferir_tamanho(self, campo):
@@ -110,11 +110,14 @@ class JogoForm(forms.ModelForm):
 
     def clean_sistema(self):
         sistema = self.cleaned_data.get("sistema") or ""
-        if sistema not in ("", JogoCadastrado.AUTOMATICO) and sistema not in emu.sistemas_ligados():
+        # o jogo particular (só a equipe vê) usa qualquer console reconhecido
+        particular = str(self.data.get("particular", "")).strip().lower() in ("on", "true", "1")
+        if sistema not in ("", JogoCadastrado.AUTOMATICO) and sistema not in emu.sistemas_para(particular):
             nucleo = emu.SISTEMAS[sistema]
             raise forms.ValidationError(
-                f"{nucleo.nome}: o emulador ({nucleo.nucleo}) tem licença {nucleo.licenca}; "
-                "só liga com a permissão dos autores (veja o LEIA-ME)."
+                f"{nucleo.nome}: o emulador ({nucleo.nucleo}) tem licença {nucleo.licenca}; no site aberto, "
+                "só liga com a permissão dos autores (veja o LEIA-ME). Para jogar sem publicar, marque "
+                "\"Particular (só a equipe)\"."
             )
         return sistema
 
@@ -318,6 +321,7 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "categoria": jogo.categoria,
             "feito_pela_lazer": jogo.feito_pela_lazer,
             "destaque": jogo.destaque,
+            "particular": jogo.particular,
             "capa": jogo.capa_url,
             "poster": self._nome_do_arquivo(jogo.poster),
             "arquivo_html": self._nome_do_arquivo(jogo.arquivo_html),

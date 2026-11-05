@@ -111,6 +111,8 @@
     window.EJS_startOnLoaded = true;
     // o teclado que a página do jogo ensina (core/jogos_emulador.CONTROLES): no N64, o analógico nas setas
     if (config.controles) window.EJS_defaultControls = config.controles;
+    // PSP e DOS: o núcleo de várias linhas (a página veio isolada pelo servidor)
+    if (config.threads) window.EJS_threads = true;
     // fora da barra: trapaça, jogo em rede (não há servidor), "sair do jogo"
     // (deixaria o quadro preto) e o gerenciador de cache
     window.EJS_Buttons = { cheat: false, netplay: false, exitEmulation: false, cacheManager: false };
@@ -134,6 +136,16 @@
       mostrar((doAparelho ? "Abrindo o jogo guardado no aparelho" : "Baixando o jogo (fica guardado para a próxima)") +
         ": " + mb(feito) + " de " + mb(total) + grande, total ? feito / total * 100 : 0);
     }).then(function (r) { return r.bytes; }, function () { return baixarTudo(itens); });
+  }
+
+  // aberta na tela inteira (PSP, DOS, ou "Abrir numa aba"): o caminho de volta para a página do jogo
+  var voltar = document.querySelector("[data-emu-voltar]");
+  if (voltar && window.self === window.top) voltar.hidden = false;
+  if (config.threads && typeof window.SharedArrayBuffer !== "function") {
+    mostrar("Este navegador não libera o modo que o " + (config.core === "psp" ? "PSP" : "DOS") +
+      " precisa. Abra no Chrome, no Edge, no Firefox ou no Safari atualizados.");
+    document.body.appendChild(aviso);
+    return;
   }
 
   document.body.appendChild(aviso);

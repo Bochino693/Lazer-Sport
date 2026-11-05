@@ -14,6 +14,21 @@ DE ONDE VEIO. Pacotes do npm, versão 4.2.3 (julho de 2025):
                                    vai em licencas/stella2014-GPL-2.0.txt)
   @emulatorjs/core-prosystem       Atari 7800          GPL-2.0
   @emulatorjs/core-vice_x64sc      Commodore 64        GPL-2.0
+  @emulatorjs/core-ppsspp          PSP                 GPL-2.0+ (só a versão "thread" + ppsspp-assets.zip)
+  @emulatorjs/core-dosbox_pure     PC antigo (MS-DOS)  GPL-2.0 (só a versão "thread")
+  @emulatorjs/core-yabause         Sega Saturn         GPL-2.0 (o pacote não traz o texto:
+                                   vai em licencas/yabause-GPL-2.0.txt)
+  @emulatorjs/core-beetle_vb       Virtual Boy         GPL-2.0
+  @emulatorjs/core-mednafen_ngp    Neo Geo Pocket      GPL-2.0
+  @emulatorjs/core-mednafen_wswan  WonderSwan          GPL-2.0
+  @emulatorjs/core-a5200           Atari 5200          GPL-2.0
+  @emulatorjs/core-virtualjaguar   Atari Jaguar        GPL-3.0 (o pacote não traz o texto:
+                                   vai em licencas/virtualjaguar-GPL-3.0.txt)
+  @emulatorjs/core-gearcoleco      ColecoVision        GPL-3.0
+  @emulatorjs/core-mednafen_pcfx   PC-FX               GPL-2.0
+  @emulatorjs/core-puae            Amiga               GPL-2.0
+  @emulatorjs/core-vice_x128, vice_xvic, vice_xplus4, vice_xpet
+                                   Commodore 128, VIC-20, Plus/4, PET   GPL-2.0
 Código-fonte: https://github.com/EmulatorJS/EmulatorJS e, de cada núcleo,
 https://github.com/EmulatorJS/<núcleo> (ex.: EmulatorJS/pcsx_rearmed). A
 licença do EmulatorJS está em LICENSE-EmulatorJS.txt; a de cada núcleo vai
@@ -30,7 +45,10 @@ O QUE ESTÁ AQUI. Só o que o site usa:
   data/compression/ — o que abre os núcleos (.7z) e os jogos zipados;
   data/localization/ — pt-BR e en-US;
   data/cores/ — os núcleos de licença livre (as versões "wasm" e
-    "legacy-wasm"; a "thread" exigiria isolamento de origem no servidor).
+    "legacy-wasm"). PSP e DOS só existem na versão "thread" (várias linhas
+    de execução): a página do emulador deles sai com os cabeçalhos de
+    isolamento de origem (COOP/COEP, core/views_jogos.JogoEmuladorView) e
+    abre na tela inteira, fora do quadro da página do jogo.
 Núcleo que não está aqui (os de licença não comercial, só com
 JOGOS_EMULADORES_NAO_COMERCIAIS) o próprio emulador baixa do CDN dele.
 
@@ -50,6 +68,7 @@ Game Gear / Sega CD (genesis_plus_gx e picodrive) e fliperama (fbneo, mame2003)
 só existem para navegador com licença que proíbe uso comercial -- a do Snes9x
 cita "usar como ferramenta promocional ou parte de uma operação comercial".
 Ficam reconhecidos e desligados; com a permissão dos autores, liga-se com
-JOGOS_EMULADORES_NAO_COMERCIAIS (ver LEIA-ME-V10.txt, seção 20). Ficaram de
-fora, por enquanto, os núcleos cujo pacote não diz a licença (Saturn, Lynx,
-Jaguar, 3DO, SMS Plus).
+JOGOS_EMULADORES_NAO_COMERCIAIS (ver LEIA-ME-V10.txt, seção 20). Lynx (handy) e 3DO (opera): o pacote não diz a licença; ficam como os não
+comerciais (desligados no site aberto). Todos esses rodam no jogo
+PARTICULAR (só a equipe vê), baixados do CDN do próprio EmulatorJS.
+Pokémon Mini: o EmulatorJS não tem núcleo; o painel reconhece o .min e explica.

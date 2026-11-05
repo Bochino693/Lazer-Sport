@@ -32,21 +32,27 @@ from sistema_interno.templatetags.interno_extras import estatico
 
 from . import arena, paginas_tema, ranking
 from .home_cache import get_cached_catalog_page
-from .jogos_emulador import SISTEMAS, controles_do_emulador, controles_do_sistema, DICAS_DE_CONTROLE, sistemas_ligados
+from .jogos_emulador import SISTEMAS, controles_do_emulador, controles_do_sistema, DICAS_DE_CONTROLE, sistemas_para
 from .models import ArquivoEmulador, Brinquedos, JogoCadastrado
 from .views_arena import WHATSAPP
 
 log_jogos = logging.getLogger(__name__)
 
 
-def jogos_cadastrados():
-    """Os jogos que a equipe subiu pelo painel (ativos, com onde jogar), em ordem."""
+def jogos_cadastrados(particulares=False, slug=None):
+    """Os jogos que a equipe subiu pelo painel (ativos, com onde jogar), em ordem.
+
+    Por padrão, só os públicos (o catálogo, que vai para o cache de todo mundo).
+    `particulares=True` traz os particulares -- só para a equipe, por requisição.
+    """
     from .objetos_3d import tabela_pronta
 
     jogos = []
     if not tabela_pronta(JogoCadastrado):  # antes da migração, a lista sai sem eles
         return jogos
-    lista = JogoCadastrado.objects.filter(ativo=True).order_by("ordem", "nome")
+    lista = JogoCadastrado.objects.filter(ativo=True, particular=particulares).order_by("ordem", "nome")
+    if slug is not None:
+        lista = lista.filter(slug=slug)
     if tabela_pronta(ArquivoEmulador):
         lista = lista.prefetch_related(Prefetch("arquivos_emulador", queryset=ArquivoEmulador.objects.only("id", "jogo_id", "papel")))
     else:
@@ -76,6 +82,10 @@ def jogos_cadastrados():
             "emulador": emulador,
             "sistema": SISTEMAS[jogo.sistema].nome if emulador and jogo.sistema in SISTEMAS else "",
             "codigo_sistema": jogo.sistema if emulador else "",
+            # PSP e DOS: o núcleo precisa de várias linhas de execução, e o navegador
+            # só libera isso numa página isolada -- o jogo abre na tela inteira, fora do quadro
+            "tela_propria": bool(emulador and jogo.sistema in SISTEMAS and SISTEMAS[jogo.sistema].threads),
+            "particular": jogo.particular,
             "categoria": jogo.get_categoria_display() if jogo.categoria else "",
             "feito_pela_lazer": jogo.feito_pela_lazer,
             "destaque": jogo.destaque,
@@ -198,9 +208,16 @@ class SimuladorView(View):
         if slug is not None and slug not in arena.JOGOS_POR_SLUG:
             # um jogo que a equipe subiu pelo painel: a sua própria página
             cadastrado = next((j for j in externos if j["slug"] == slug), None)
+            if cadastrado is None and request.user.is_staff:
+                # o particular: fora do catálogo (e do cache de todo mundo); só a equipe abre
+                cadastrado = next(iter(jogos_cadastrados(particulares=True, slug=slug)), None)
             if cadastrado is None:
                 raise Http404("Jogo não encontrado")
-            return self.pagina_do_jogo_cadastrado(request, cadastrado, dados)
+            resposta = self.pagina_do_jogo_cadastrado(request, cadastrado, dados)
+            if cadastrado.get("particular"):
+                resposta["X-Robots-Tag"] = "noindex, nofollow"
+                resposta["Cache-Control"] = "private, no-store"
+            return resposta
 
         jogos = dados["jogos"]
         atual = next((j for j in jogos if j["slug"] == slug), jogos[0])
@@ -239,7 +256,7 @@ class SimuladorView(View):
         preparo = None
         if jogo.get("emulador"):
             try:
-                modelo = _jogo_no_emulador(jogo["slug"])
+                modelo = _jogo_no_emulador(jogo["slug"], equipe=request.user.is_staff)
             except Http404:
                 modelo = None
             if modelo is not None:
@@ -250,6 +267,10 @@ class SimuladorView(View):
                     "dados": config["dados"],
                     # só o núcleo que mora no site (os de licença livre); os outros vêm do CDN do emulador
                     "nucleo": sistema.nucleo if sistema and sistema.uso_comercial else "",
+                    # o núcleo de várias linhas tem outro nome de arquivo (ppsspp-thread-wasm.data)
+                    "threads": bool(sistema and sistema.threads),
+                    # o PSP abre também os arquivos de apoio do PPSSPP (fontes, tabelas)
+                    "extras": ["cores/ppsspp-assets.zip"] if sistema and sistema.nucleo == "ppsspp" else [],
                 }
         codigo = jogo.get("codigo_sistema") or ""
         return render(request, "jogo_cadastrado.html", {
@@ -292,8 +313,8 @@ class RankingJogosView(View):
         return JsonResponse(ranking.painel(request, jogo))
 
 
-def _jogo_no_emulador(slug):
-    """O jogo ativo que roda pelo emulador, com os arquivos, ou 404."""
+def _jogo_no_emulador(slug, equipe=False):
+    """O jogo ativo que roda pelo emulador, com os arquivos, ou 404 (o particular, só para a equipe)."""
     from .objetos_3d import tabela_pronta
 
     if not (tabela_pronta(JogoCadastrado) and tabela_pronta(ArquivoEmulador)):
@@ -304,9 +325,21 @@ def _jogo_no_emulador(slug):
         ),
         slug=slug, ativo=True,
     )
-    if not jogo.emulador_pronto or jogo.sistema not in sistemas_ligados():
+    if jogo.particular and not equipe:
+        raise Http404("Jogo não encontrado.")
+    if not jogo.emulador_pronto or jogo.sistema not in sistemas_para(jogo.particular):
         raise Http404("Jogo não encontrado.")
     return jogo
+
+
+def _nome_do_dos(nome):
+    """O nome no padrão do MS-DOS (8 letras, ponto, 3 letras): "Meu Jogo 2.exe" -> "MEUJOGO2.EXE"."""
+    import re
+
+    base, _, ext = nome.rpartition(".") if "." in nome else (nome, "", "")
+    base = re.sub(r"[^A-Za-z0-9_]", "", base).upper()[:8] or "JOGO"
+    ext = re.sub(r"[^A-Za-z0-9]", "", ext).upper()[:3]
+    return f"{base}.{ext}" if ext else base
 
 
 def config_do_emulador(jogo):
@@ -343,6 +376,9 @@ def config_do_emulador(jogo):
     # o jogo salvo é guardado pelo nome do jogo no emulador: o do site (único);
     # no fliperama, o nome do .zip é o do jogo e precisa ficar como está
     nome = principal["nome"] if jogo.sistema == "arcade" and principal else f"{jogo.slug}.{extensao}" if extensao else jogo.slug
+    if jogo.sistema == "dos" and principal:
+        # o MS-DOS só abre nome 8.3 (JOGO.EXE): "dos-teste.com" seria "Illegal command"
+        nome = _nome_do_dos(principal["nome"])
     return {
         "core": jogo.sistema,
         # o jogo guardado no aparelho é separado por jogo (para liberar espaço do mais antigo)
@@ -352,8 +388,12 @@ def config_do_emulador(jogo):
         "dados": static("vendor/emulatorjs/data/"),
         "cor": jogo.cor[:7],
         "titulo": jogo.nome,
-        # ajustes de teclado do site (o N64 com o analógico nas setas); None = o padrão do emulador
+        # ajustes de teclado do site (N64 e PSP com o analógico nas setas); None = o padrão do emulador
         "controles": controles_do_emulador(jogo.sistema),
+        # PSP e DOS: o núcleo de várias linhas (EJS_threads), na página isolada
+        "threads": bool(jogo.sistema in SISTEMAS and SISTEMAS[jogo.sistema].threads),
+        # aberta na tela inteira (sem o quadro), a página do emulador mostra o caminho de volta
+        "voltar": reverse("jogo", args=[jogo.slug]),
     }
 
 
@@ -367,9 +407,17 @@ class JogoEmuladorView(View):
     """
 
     def get(self, request, slug):
-        jogo = _jogo_no_emulador(slug)
-        resposta = render(request, "jogo_emulador.html", {"jogo": jogo, "config": config_do_emulador(jogo)})
+        jogo = _jogo_no_emulador(slug, equipe=request.user.is_staff)
+        config = config_do_emulador(jogo)
+        resposta = render(request, "jogo_emulador.html", {"jogo": jogo, "config": config})
         resposta["X-Robots-Tag"] = "noindex"
+        if config["threads"]:
+            # ISOLAMENTO DE ORIGEM: sem estes dois cabeçalhos o navegador não libera
+            # a memória compartilhada (SharedArrayBuffer) que o PSP e o DOS usam.
+            # A página só carrega coisas do próprio site e os arquivos do jogo, que
+            # vêm por CORS (Cloudinary/balde) -- nada aqui quebra com eles.
+            resposta["Cross-Origin-Opener-Policy"] = "same-origin"
+            resposta["Cross-Origin-Embedder-Policy"] = "require-corp"
         return resposta
 
 
@@ -377,12 +425,12 @@ class ArquivoDoEmuladorView(View):
     """O índice (.cue, .m3u...) de um jogo do emulador, já com os nomes certos."""
 
     def get(self, request, slug, nome):
-        jogo = _jogo_no_emulador(slug)
+        jogo = _jogo_no_emulador(slug, equipe=request.user.is_staff)
         arquivo = next((a for a in jogo.arquivos_emulador.all() if a.nome == nome and a.e_indice), None)
         if arquivo is None:
             raise Http404("Arquivo não encontrado.")
         resposta = HttpResponse(arquivo.conteudo.encode("utf-8"), content_type="text/plain; charset=utf-8")
-        resposta["Cache-Control"] = "public, max-age=300"
+        resposta["Cache-Control"] = "private, max-age=300" if jogo.particular else "public, max-age=300"
         resposta["X-Robots-Tag"] = "noindex"
         return resposta
 

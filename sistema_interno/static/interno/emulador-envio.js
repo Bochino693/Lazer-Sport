@@ -126,7 +126,9 @@
       var t = trechoDe.get(arq) || {};
       return { nome: arq.name, tamanho: arq.size, cabeca: t.cabeca || null, cauda: t.cauda || null };
     });
-    var dados = this.dados("emulador_conferir", { sistema: this.o.sistema.value || "auto", manifesto: JSON.stringify(manifesto), id: jogoId || null });
+    // o jogo particular (só a equipe vê) usa qualquer console reconhecido
+    var particular = this.o.particular && this.o.particular.checked ? "1" : "";
+    var dados = this.dados("emulador_conferir", { sistema: this.o.sistema.value || "auto", particular: particular, manifesto: JSON.stringify(manifesto), id: jogoId || null });
     dados.set("trechos", new Blob(partes, { type: "application/octet-stream" }), "trechos.bin");
     var minhaVez = ++this.vez;
     if (!jogoId) {
@@ -207,6 +209,7 @@
         self.progresso(total, total, "Conferindo no site");
         var dados = self.dados("emulador_confirmar", {
           id: jogoId, sistema: self.o.sistema.value || "auto", plano: json.plano, respostas: JSON.stringify(respostas),
+          particular: self.o.particular && self.o.particular.checked ? "1" : "",
         });
         arquivos.forEach(function (a) {
           if (INDICES.indexOf(ext(a.name)) >= 0 && usados.indexOf(a.name.normalize("NFC")) >= 0) dados.append("indices", a, a.name);

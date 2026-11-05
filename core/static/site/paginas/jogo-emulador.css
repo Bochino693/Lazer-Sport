@@ -23,7 +23,7 @@ html, body {
     text-align: center;
 }
 
-.emu-jogo:not(:empty) + .emu-sem-js,
+.emu-jogo:not(:empty) ~ .emu-sem-js,
 .js .emu-sem-js { display: none; }
 
 /* o aviso enquanto as faixas do disco baixam */
@@ -59,3 +59,22 @@ html, body {
 }
 .emu-aviso p { margin: 0; }
 .emu-barra[hidden] { display: none; }
+
+/* aberta na tela inteira (PSP, DOS, "Abrir numa aba"): o caminho de volta, discreto no canto */
+.emu-voltar {
+    position: fixed;
+    z-index: 20;
+    top: max(10px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(6, 13, 34, .78);
+    border: 1px solid rgba(255, 255, 255, .2);
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    text-decoration: none;
+    opacity: .75;
+}
+.emu-voltar:hover, .emu-voltar:focus-visible { opacity: 1; }
+.emu-voltar[hidden] { display: none; }
