@@ -651,3 +651,40 @@
 .ls-auth-legal a {
     color: #74c7ff;
 }
+
+/* a imagem do desafio e o botão de trocar */
+.ls-humano-imagem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ls-humano-imagem img {
+    width: 210px;
+    height: 70px;
+    border: 1px solid rgba(63, 208, 255, .35);
+    border-radius: 12px;
+    background: #0b1730;
+    image-rendering: auto;
+}
+
+.ls-humano-trocar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .06);
+    color: #cfe4ff;
+    font: inherit;
+    font-size: .76rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ls-humano-trocar:hover {
+    background: rgba(63, 208, 255, .16);
+    color: #fff;
+}

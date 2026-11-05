@@ -1,21 +1,23 @@
 {% extends "base_inner.html" %}
+{% load static interno_extras %}
 
 {% block title %}Jogos do simulador | Lazer & Sport{% endblock %}
-{% block top_title %}Jogos do simulador{% endblock %}
+{% block top_title %}Lazer & Sport Games{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/games.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="ls-page-head">
-  <div>
-    <span class="ls-eyebrow">SÓ O SUPERADMINISTRADOR</span>
-    <h1>Jogos do simulador</h1>
-    <p>Suba um jogo da casa com a capa e os dados. Ligado, ele aparece em <strong>/jogos/</strong> e ganha a própria página — sem deploy e sem mexer no código.</p>
-  </div>
+<section class="ls-games-hero">
+  <img class="ls-games-hero-marca" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="68" height="68">
+  <span class="ls-eyebrow">LAZER &amp; SPORT GAMES · SÓ O SUPERADMINISTRADOR</span>
+  <h1>Jogos do simulador</h1>
+  <p>Os jogos oficiais das máquinas já vêm com o site, com capa, pôster e textos. Jogo novo da casa entra por aqui: com endereço hospedado ou um .html único, ele ganha a própria página em <strong>/jogos/</strong> — sem deploy e sem mexer no código.</p>
   {% if not tabela_ausente %}
-  <button class="btn btn-success" id="novoJogo" type="button">
-    <i class="bi bi-plus-lg me-1"></i> Novo jogo
-  </button>
+  <button class="btn btn-success" id="novoJogo" type="button"><i class="bi bi-plus-lg me-1"></i> Cadastrar jogo novo</button>
   {% endif %}
-</div>
+</section>
 
 {% if tabela_ausente %}
 <section class="ls-card p-4">
@@ -26,14 +28,14 @@
 
 <section class="ls-metrics mb-3">
   <article class="ls-metric-card blue">
-    <div class="ls-metric-head"><span class="ls-metric-label">Cadastrados</span><span class="ls-metric-icon"><i class="bi bi-joystick"></i></span></div>
-    <strong class="ls-metric-value">{{ total }}</strong>
-    <span class="ls-metric-note">Jogos subidos pelo painel</span>
+    <div class="ls-metric-head"><span class="ls-metric-label">Oficiais</span><span class="ls-metric-icon"><i class="bi bi-stars"></i></span></div>
+    <strong class="ls-metric-value">{{ total_oficiais }}</strong>
+    <span class="ls-metric-note">Vêm com o site, sem APK</span>
   </article>
   <article class="ls-metric-card green">
-    <div class="ls-metric-head"><span class="ls-metric-label">No ar</span><span class="ls-metric-icon"><i class="bi bi-broadcast"></i></span></div>
-    <strong class="ls-metric-value">{{ total_ativos }}</strong>
-    <span class="ls-metric-note">Aparecem em /jogos/ agora</span>
+    <div class="ls-metric-head"><span class="ls-metric-label">Cadastrados</span><span class="ls-metric-icon"><i class="bi bi-joystick"></i></span></div>
+    <strong class="ls-metric-value">{{ total }}</strong>
+    <span class="ls-metric-note">{{ total_ativos }} no ar agora</span>
   </article>
   <article class="ls-metric-card violet">
     <div class="ls-metric-head"><span class="ls-metric-label">Com APK guardado</span><span class="ls-metric-icon"><i class="bi bi-android2"></i></span></div>
@@ -42,15 +44,15 @@
   </article>
   <article class="ls-metric-card yellow">
     <div class="ls-metric-head"><span class="ls-metric-label">Proteção</span><span class="ls-metric-icon"><i class="bi bi-shield-lock-fill"></i></span></div>
-    <span class="ls-metric-note">O jogo roda num quadro isolado da página; o APK só sai se você liberar; só esta conta cadastra.</span>
+    <span class="ls-metric-note">O jogo roda num quadro isolado da página; o APK nunca sai do site a não ser que você libere; só esta conta cadastra.</span>
   </article>
 </section>
 
-<section class="ls-card p-3 mb-3">
+<section class="ls-card p-3 mb-2">
   <form method="get" class="row g-2 align-items-end">
     <div class="col-12 col-md">
       <label class="form-label" for="buscaJogo">Buscar jogo</label>
-      <input class="form-control" id="buscaJogo" name="q" value="{{ busca }}" placeholder="Nome, endereço (slug) ou chamada">
+      <input class="form-control" id="buscaJogo" name="q" value="{{ busca }}" placeholder="Nome, máquina, endereço (slug) ou chamada">
     </div>
     <div class="col-12 col-md-auto">
       <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Buscar</button>
@@ -58,56 +60,57 @@
   </form>
 </section>
 
-<section class="ls-card overflow-hidden">
-  <div class="table-responsive">
-    <table class="ls-table mb-0">
-      <thead><tr><th>Jogo</th><th>Como roda</th><th>APK</th><th>Ordem</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
-      <tbody>
-      {% for jogo in jogos %}
-        <tr>
-          <td data-rotulo="Jogo">
-            <div class="d-flex align-items-center gap-3">
-              {% if jogo.capa_url %}
-                <img src="{{ jogo.capa_url }}" alt="" width="52" height="52" class="rounded-3 flex-shrink-0" style="object-fit:cover;background:#0b1730;border:1px solid rgba(255,255,255,.08)">
-              {% else %}
-                <span class="rounded-3 d-grid flex-shrink-0" style="width:52px;height:52px;place-items:center;background:#0b1730"><i class="bi bi-image text-muted"></i></span>
-              {% endif %}
-              <div class="min-w-0">
-                <strong class="d-block text-truncate" style="max-width:280px">{{ jogo.nome }}</strong>
-                <span class="material-sub d-block">/jogos/{{ jogo.slug }}/{% if jogo.chamada %} · {{ jogo.chamada|truncatechars:48 }}{% endif %}</span>
-              </div>
-            </div>
-          </td>
-          <td data-rotulo="Como roda">
-            <span class="badge rounded-pill {% if jogo.endereco %}text-bg-primary{% elif jogo.arquivo_html %}text-bg-info{% else %}text-bg-danger{% endif %}">
-              {% if jogo.endereco %}<i class="bi bi-link-45deg"></i>{% elif jogo.arquivo_html %}<i class="bi bi-file-earmark-code"></i>{% else %}<i class="bi bi-exclamation-triangle"></i>{% endif %}
-              {{ jogo.como_roda }}
-            </span>
-            <span class="material-sub d-block">{{ jogo.get_proporcao_display }}</span>
-          </td>
-          <td data-rotulo="APK">
-            {% if jogo.apk %}
-              <span class="badge {% if jogo.liberar_download %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if jogo.liberar_download %}Liberado para baixar{% else %}Guardado, sem download{% endif %}</span>
-            {% else %}
-              <span class="text-muted small">—</span>
-            {% endif %}
-          </td>
-          <td data-rotulo="Ordem">{{ jogo.ordem }}</td>
-          <td data-rotulo="Situação"><span class="badge {% if jogo.ativo %}text-bg-success{% else %}text-bg-danger{% endif %}">{% if jogo.ativo %}No ar{% else %}Desligado{% endif %}</span></td>
-          <td data-rotulo="Ações" class="text-end text-nowrap">
-            <a class="btn btn-sm btn-outline-light" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-box-arrow-up-right"></i></a>
-            <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil"></i> Editar</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ jogo.id }}">{% if jogo.ativo %}Desligar{% else %}Ligar{% endif %}</button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ jogo.id }}" data-nome="{{ jogo.nome }}" title="Excluir"><i class="bi bi-trash3"></i></button>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="6" class="text-center py-5 text-muted">{% if busca %}Nenhum jogo com "{{ busca }}".{% else %}Nenhum jogo cadastrado ainda. Toque em <strong>Novo jogo</strong>.{% endif %}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
+<h2 class="ls-games-titulo"><i class="bi bi-stars"></i> Jogos oficiais do simulador <small>{{ oficiais|length }} de {{ total_oficiais }} · vêm com o site</small></h2>
+<div class="ls-games-grade">
+  {% for jogo in oficiais %}
+    <article class="ls-game" style="--cor: {{ jogo.cor }}">
+      <div class="ls-game-arte">
+        {% if jogo.poster %}<img src="{{ jogo.poster }}" alt="" loading="lazy">{% else %}<img class="capa" src="{{ jogo.capa }}" alt="" loading="lazy">{% endif %}
+        <span class="ls-game-selo">No ar</span>
+        <span class="ls-game-selo cinza direita">Sem APK</span>
+      </div>
+      <div class="ls-game-corpo">
+        <strong>{{ jogo.titulo }}</strong>
+        <span>{{ jogo.maquina }}</span>
+        <em>{{ jogo.chamada }}</em>
+      </div>
+      <div class="ls-game-acoes">
+        <a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill"></i> Jogar a prévia</a>
+      </div>
+      <p class="ls-game-nota">Motor feito à mão, no código do site: capa, pôster e textos já prontos. O jogo de verdade fica na máquina — nada para baixar.</p>
+    </article>
+  {% empty %}
+    <div class="ls-game-vazio"><i class="bi bi-search"></i>Nenhum jogo oficial com "{{ busca }}".</div>
+  {% endfor %}
+</div>
+
+<h2 class="ls-games-titulo rosa"><i class="bi bi-cloud-arrow-up"></i> Cadastrados pelo painel <small>{{ jogos|length }} jogo{{ jogos|length|pluralize }}</small></h2>
+<div class="ls-games-grade">
+  {% for jogo in jogos %}
+    <article class="ls-game" style="--cor: {{ jogo.cor }}">
+      <div class="ls-game-arte">
+        {% if jogo.poster_url %}<img src="{{ jogo.poster_url }}" alt="" loading="lazy">{% elif jogo.capa_url %}<img class="capa" src="{{ jogo.capa_url }}" alt="" loading="lazy">{% else %}<i class="bi bi-image text-muted"></i>{% endif %}
+        <span class="ls-game-selo {% if not jogo.ativo %}cinza{% endif %}">{% if jogo.ativo %}No ar{% else %}Desligado{% endif %}</span>
+        {% if jogo.apk %}<span class="ls-game-selo direita {% if not jogo.liberar_download %}cinza{% endif %}">{% if jogo.liberar_download %}APK liberado{% else %}APK guardado{% endif %}</span>{% endif %}
+      </div>
+      <div class="ls-game-corpo">
+        <strong>{{ jogo.nome }}</strong>
+        <span>/jogos/{{ jogo.slug }}/ · {{ jogo.como_roda }} · {{ jogo.get_proporcao_display }} · ordem {{ jogo.ordem }}</span>
+        {% if jogo.chamada %}<em>{{ jogo.chamada|truncatechars:70 }}</em>{% endif %}
+      </div>
+      <div class="ls-game-acoes">
+        <a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-play-fill"></i> Abrir</a>
+        <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil"></i> Editar</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ jogo.id }}">{% if jogo.ativo %}Desligar{% else %}Ligar{% endif %}</button>
+        <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ jogo.id }}" data-nome="{{ jogo.nome }}" title="Excluir"><i class="bi bi-trash3"></i></button>
+      </div>
+    </article>
+  {% empty %}
+    <div class="ls-game-vazio"><i class="bi bi-controller"></i>{% if busca %}Nenhum jogo cadastrado com "{{ busca }}".{% else %}Nenhum jogo cadastrado pelo painel ainda. Toque em <strong>Cadastrar jogo novo</strong>: o APK só é pedido aqui, e fica guardado sem download.{% endif %}</div>
+  {% endfor %}
+</div>
+
+<div class="ls-games-aviso"><i class="bi bi-shield-lock-fill"></i><div><strong>Sobre o APK.</strong> Ele só é pedido ao cadastrar um jogo pelo painel, é opcional, e fica guardado sem link para ninguém — a não ser que "Deixar baixar" esteja marcado. Os jogos oficiais não têm APK no site: o material deles (capa, pôster, textos) é o do simulador, e o jogo de verdade fica na máquina.</div></div>
 
 <div class="modal fade" id="modalJogo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">

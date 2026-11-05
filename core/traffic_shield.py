@@ -26,6 +26,16 @@ _BOT_MARKERS = (
 )
 _PUBLIC_EXPENSIVE = ("/brinquedos/", "/loja/", "/produto-tag/")
 
+# O que o WhiteNoise (ou o `media_serve`) responde em ~1 ms, sem banco,
+# sem sessão e sem template, não ocupa vaga pública. Um navegador pede de
+# 10 a 20 estáticos por página; no teste de carga (docs/TESTE_DE_CARGA.md)
+# 13 % dos cortes do escudo eram em CSS, e cada CSS cortado é uma página
+# que abre sem estilo. As sondas (`_PROBE_RE`) continuam barradas antes.
+_LIGHT_PREFIXES = ("/static/", "/media/")
+_LIGHT_PATHS = frozenset({
+    "/favicon.ico", "/robots.txt", "/manifest.webmanifest", "/sw.js",
+})
+
 
 def _integer(name: str, default: int, minimum: int) -> int:
     try:
@@ -83,9 +93,10 @@ class TrafficShieldWSGI:
                 (("Retry-After", "60"), ("X-Robots-Tag", "noindex")),
             )
 
-        # O painel não disputa esta reserva com o catálogo público.
-        acquired = internal or self.public_slots.acquire(blocking=False)
-        if not acquired:
+        # O painel não disputa esta reserva com o catálogo público, e os
+        # estáticos passam direto: a vaga existe para quem espera o banco.
+        needs_slot = not internal and not self._is_light(path)
+        if needs_slot and not self.public_slots.acquire(blocking=False):
             return self._plain(
                 start_response,
                 "503 Service Unavailable",
@@ -95,8 +106,13 @@ class TrafficShieldWSGI:
         try:
             return self.application(environ, start_response)
         finally:
-            if not internal:
+            if needs_slot:
                 self.public_slots.release()
+
+    @staticmethod
+    def _is_light(path: str) -> bool:
+        """Arquivo estático ou de manifesto: resposta de custo constante."""
+        return path.startswith(_LIGHT_PREFIXES) or path in _LIGHT_PATHS
 
     def _bot_allowed(self, environ, user_agent: str) -> bool:
         forwarded = (environ.get("HTTP_X_FORWARDED_FOR") or "").split(",", 1)[0].strip()

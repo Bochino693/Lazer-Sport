@@ -157,3 +157,57 @@ class CadastroTests(BaseTela):
         self.assertContains(self.abrir(), "Religar")
         self.enviar({"action": "religar", "brinquedo": self.strike.pk})
         self.assertTrue(ObjetoTresD.objects.get(brinquedo=self.strike).ativo)
+
+
+class LaboratorioTests(BaseTela):
+    """A biblioteca de peças para montar brinquedões (ModuloTresD)."""
+
+    def setUp(self):
+        super().setUp()
+        from core.models import ModuloTresD
+
+        trocar = mock.patch.object(ModuloTresD._meta.get_field("arquivo"), "storage", self.disco)
+        trocar.start()
+        self.addCleanup(trocar.stop)
+
+    def test_guarda_uma_peca_com_cores_e_medidas_e_mostra_na_tela(self):
+        from core.models import ModuloTresD
+
+        resposta = self.enviar({"action": "modulo_salvar", "nome": "Torre 2 andares", "categoria": "torre", "descricao": "Aço e tela", "arquivo": glb_colorido()})
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertIn("Torre 2 andares", resposta.json()["msg"])
+        peca = ModuloTresD.objects.get()
+        self.assertEqual((peca.categoria, peca.cores, peca.medidas), ("torre", ["Azul", "Rosa"], [2.0, 1.0, 2.0]))
+        self.assertTrue(self.disco.exists(peca.arquivo.name))
+        pagina = self.abrir()
+        self.assertContains(pagina, "Torre 2 andares")
+        self.assertContains(pagina, "Laboratório")
+        self.assertContains(pagina, 'data-ver3d-modulo="%d"' % peca.pk)
+
+    def test_recusa_sem_nome_categoria_errada_ou_arquivo_ruim(self):
+        from core.models import ModuloTresD
+
+        self.assertEqual(self.enviar({"action": "modulo_salvar", "nome": "", "categoria": "torre", "arquivo": glb_colorido()}).status_code, 400)
+        self.assertEqual(self.enviar({"action": "modulo_salvar", "nome": "X", "categoria": "nave", "arquivo": glb_colorido()}).status_code, 400)
+        self.assertEqual(self.enviar({"action": "modulo_salvar", "nome": "X", "categoria": "torre", "arquivo": SimpleUploadedFile("x.txt", b"nada")}).status_code, 400)
+        self.assertEqual(self.enviar({"action": "modulo_salvar", "nome": "X", "categoria": "torre"}).status_code, 400)
+        self.assertFalse(ModuloTresD.objects.exists())
+
+    def test_apagar_exige_a_palavra_e_tira_o_arquivo(self):
+        from core.models import ModuloTresD
+
+        self.enviar({"action": "modulo_salvar", "nome": "Rede", "categoria": "rede", "arquivo": glb_colorido()})
+        peca = ModuloTresD.objects.get()
+        nome = peca.arquivo.name
+        self.assertEqual(self.enviar({"action": "delete", "id": f"modulo-{peca.pk}", "confirmacao_exclusao": "nao"}).status_code, 400)
+        self.assertTrue(ModuloTresD.objects.filter(pk=peca.pk).exists())
+        resposta = self.enviar({"action": "delete", "id": f"modulo-{peca.pk}", "confirmacao_exclusao": "confirmar"})
+        self.assertEqual(resposta.json()["status"], "sucesso")
+        self.assertFalse(ModuloTresD.objects.exists())
+        self.assertFalse(self.disco.exists(nome))
+
+    def test_so_o_superadministrador(self):
+        from core.models import ModuloTresD
+
+        self.assertEqual(self.enviar({"action": "modulo_salvar", "nome": "X", "categoria": "torre", "arquivo": glb_colorido()}, user=self.criador).status_code, 302)
+        self.assertFalse(ModuloTresD.objects.exists())

@@ -25,7 +25,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views import View
 
 from core import arena
-from core.models import Brinquedos, ObjetoTresD
+from core.models import Brinquedos, ModuloTresD, ObjetoTresD
 from core.objetos_3d import ler_glb_do_site, tabela_pronta, validar_glb
 
 from .utils import ErroDeFormulario, endereco_do_site, exigir_confirmacao_exclusao
@@ -107,10 +107,15 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             for modelo in arena.MODELOS_3D
         ]
         com_objeto = [l for l in linhas if l["objeto"] and l["objeto"]["no_ar"]]
+        modulos = [self._serializar_modulo(modulo) for modulo in ModuloTresD.objects.all()] if tabela_pronta(ModuloTresD) else []
         return render(request, self.template_name, {
             "linhas": linhas,
             "linhas_dados": linhas,
             "modelos_do_site": modelos_do_site,
+            "modulos": modulos,
+            "modulos_dados": modulos,
+            "categorias_modulo": ModuloTresD.Categoria.choices,
+            "tabela_modulos": tabela_pronta(ModuloTresD),
             "total": len(linhas),
             "total_com_objeto": len(com_objeto),
             "total_na_arena": sum(1 for l in com_objeto if l["objeto"]["exibir_na_arena"]),
@@ -118,6 +123,21 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             "three": "vendor/three/three.module.min.js",
             "site": site,
         })
+
+    @staticmethod
+    def _serializar_modulo(modulo):
+        return {
+            "id": modulo.pk,
+            "nome": modulo.nome,
+            "categoria": modulo.categoria,
+            "categoria_nome": modulo.get_categoria_display(),
+            "descricao": modulo.descricao,
+            "arquivo": (modulo.arquivo.name or "").rsplit("/", 1)[-1],
+            "url": modulo.url,
+            "cores": list(modulo.cores or []),
+            "medidas": _medidas_texto(modulo.medidas or []),
+            "ativo": modulo.ativo,
+        }
 
     @staticmethod
     def _capa(brinquedo):
@@ -221,8 +241,62 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
         objeto.save(update_fields=["ativo", "atualizado"])
         return self.sucesso(request, f"O objeto 3D de \"{brinquedo.nome_brinquedo}\" voltou.")
 
+    # ------------------------------------------------- o laboratório (módulos)
+
+    def acao_modulo_salvar(self, request):
+        """Uma peça nova da biblioteca de montagem (.glb conferido antes de gravar)."""
+        nome = (request.POST.get("nome") or "").strip()[:80]
+        categoria = (request.POST.get("categoria") or "").strip()
+        descricao = (request.POST.get("descricao") or "").strip()[:2000]
+        arquivo = request.FILES.get("arquivo")
+        if not nome:
+            raise ErroDeFormulario("Dê um nome à peça (ex.: Torre 2 andares).")
+        if categoria not in ModuloTresD.Categoria.values:
+            raise ErroDeFormulario("Escolha a categoria da peça.")
+        if not arquivo:
+            raise ErroDeFormulario("Envie o arquivo .glb da peça.")
+        try:
+            lido = validar_glb(arquivo)
+        except ValidationError as exc:
+            raise ErroDeFormulario(" ".join(exc.messages)) from exc
+
+        modulo = ModuloTresD(nome=nome, categoria=categoria, descricao=descricao, cores=lido["cores"], medidas=lido["medidas"])
+        nome_novo = ""
+        try:
+            with transaction.atomic():
+                modulo.arquivo.save(arquivo.name, arquivo, save=False)
+                nome_novo = modulo.arquivo.name
+                modulo.save()
+        except Exception:
+            if nome_novo:
+                try:
+                    modulo.arquivo.storage.delete(nome_novo)
+                except Exception as erro:  # noqa: BLE001
+                    log.warning("módulo 3D órfão não apagado (%s): %r", nome_novo, erro)
+            raise
+        log.info("módulo 3D %s (%s) gravado por %s", modulo.nome, modulo.categoria, request.user.username)
+        return self.sucesso(
+            request,
+            f"Peça \"{modulo.nome}\" guardada no laboratório: {_medidas_texto(lido['medidas']) or 'medidas não lidas'}.",
+        )
+
+    def _apagar_modulo(self, request, modulo_id):
+        modulo = get_object_or_404(ModuloTresD, pk=modulo_id)
+        exigir_confirmacao_exclusao(request)
+        nome, arquivo = modulo.nome, modulo.arquivo.name
+        modulo.delete()
+        try:
+            modulo.arquivo.storage.delete(arquivo)
+        except Exception as erro:  # noqa: BLE001
+            log.warning("arquivo do módulo %s não apagado: %r", arquivo, erro)
+        log.warning("módulo 3D %s removido por %s", nome, request.user.username)
+        return self.sucesso(request, f"A peça \"{nome}\" foi apagada do laboratório, com o arquivo.")
+
     def acao_delete(self, request):
-        """Tira o objeto do brinquedo: o enviado é apagado; o do site só sai."""
+        """Tira o objeto do brinquedo (o enviado é apagado; o do site só sai) -- ou apaga uma peça do laboratório."""
+        bruto = (request.POST.get("id") or "").strip()
+        if bruto.startswith("modulo-") and bruto[7:].isdigit():
+            return self._apagar_modulo(request, int(bruto[7:]))
         brinquedo = self._brinquedo_do_pedido(request)
         objeto = get_object_or_404(ObjetoTresD, brinquedo=brinquedo)
         exigir_confirmacao_exclusao(request)

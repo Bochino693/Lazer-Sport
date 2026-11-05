@@ -2,6 +2,8 @@
 
 Medido em 04/11/2026 com `ferramentas/carga/rodar.sh` (locust + o gunicorn de produção). Os CSVs brutos ficam em `ferramentas/carga/resultados/` e o resumo gerado pela ferramenta em `ferramentas/carga/resultados/resumo.md`.
 
+> **Atualização (mesmo dia, à noite):** as recomendações 1 e 2 da §7 foram feitas -- cache público das telas do catálogo e estáticos fora do escudo -- e tudo foi medido de novo, inclusive com latência artificial de 40 ms por consulta para imitar o Supabase. Os números novos, a conta refeita para o Render e o que ainda falta para "milhares" estão na **§10, "Depois do cache"**. As seções 1-8 descrevem o estado ANTES e continuam valendo como referência.
+
 ## Resumo em uma tela
 
 | Pergunta | Resposta medida (esta máquina, sqlite local) | Estimativa para o Render Starter (0,5 CPU, 512 MB, Supabase pela rede) |
@@ -222,11 +224,13 @@ ferramentas/carga/
 ├── rodar.sh                 # sobe gunicorn (gunicorn.conf.py, lazer.wsgi) em :8790, roda 10/25/50/100/200 usuários × 60 s, com WEB_WORKERS=1 e =2
 ├── cpu_amostra.py           # CPU/RSS do gunicorn a cada 5 s (lido de /proc)
 ├── resumir.py               # tabelas Markdown a partir dos CSVs
-├── consultas_por_tela.py    # consultas ao banco por tela (tabela da §5)
+├── consultas_por_tela.py    # consultas ao banco por tela (tabelas da §5 e da §10)
+├── latencia_db.py           # latência artificial por consulta (CARGA_LATENCIA_MS): o sqlite local "vira" o Supabase pela rede
 └── resultados/              # CSVs do locust, logs do gunicorn, amostras de CPU, resumo.md
 ```
 
 * `rodar.sh` usa `ls_carga_settings` (fora do repositório, na pasta de demonstração): herda `ls_demo_settings`, troca o banco por `carga.sqlite3` (cópia de `demo.sqlite3`, para não travar o servidor de demonstração) e liga `DEBUG=False`. Caminhos ajustáveis por `CARGA_SCRATCH`, `CARGA_VENV`, `CARGA_PYTHONPATH`; estágios por `CARGA_ESTAGIOS`, `CARGA_DURACAO`, `CARGA_SPAWN`, `CARGA_WORKERS`.
+* `CARGA_LATENCIA_MS=40` faz cada consulta ao banco dormir 40 ms antes de executar (`latencia_db.py`, ligado pelo `ls_carga_settings`): é a forma de medir aqui o que o Supabase custa pela rede. `CARGA_ROTULO=antes_` / `depois_` dá um prefixo aos arquivos de resultado, para guardar duas medições lado a lado; a etiqueta ganha `_l40` quando a latência está ligada. A comparação da §10 foi: `CARGA_ROTULO=antes_ CARGA_WORKERS=1 CARGA_ESTAGIOS="50 100 200 400" CARGA_DURACAO=60s CARGA_SPAWN=20 ferramentas/carga/rodar.sh`, com `CARGA_LATENCIA_MS=0` e `=40`, antes e depois da mudança.
 * Para testar outra configuração do escudo: `PUBLIC_CONCURRENCY=6 WEB_THREADS=12 CARGA_WORKERS=1 ferramentas/carga/rodar.sh`.
 * Para apontar o locust à produção (**só fora do horário da fábrica e com poucos usuários**): `locust -f ferramentas/carga/locustfile.py --headless --host https://<dominio> -u 10 -r 2 -t 60s --csv x`, com `CARGA_HOST_INTERNO=interno.<dominio>` e credenciais de uma conta de teste em `CARGA_USUARIO`/`CARGA_SENHA`. Lembre que o teste pede páginas de catálogo sem se identificar como bot; o limitador de 24/min por família de bot não entra.
 
@@ -237,3 +241,105 @@ ferramentas/carga/
 * 60 s por estágio: suficiente para ver a curva, curto para ver vazamento de memória ou efeito de `max_requests` (que está desligado).
 * 8 brinquedos no banco: páginas de catálogo em produção, com dezenas de produtos e fotos no Cloudinary, custam mais CPU de template do que as daqui.
 * A árvore do projeto estava sendo editada por outras pessoas durante a medição (`core/views.py`, templates e CSS do catálogo, entre 17:39 e 17:58). Cada gunicorn carrega o código ao subir: `w1` rodou com a árvore de 17:42:39 e `w2` com a de 17:48:11. Os estágios de carga baixa deram o mesmo resultado nas duas (p50 de 26-33 ms), então a comparação vale, mas a confirmação limpa é repetir `rodar.sh` com a árvore parada (um commit).
+
+## 10. Depois do cache
+
+Medido em 04/11/2026 à noite, na mesma máquina e com a mesma ferramenta, depois de duas mudanças na aplicação:
+
+1. **Cache público das telas do catálogo** (`core/home_cache.py`, `core/views.py`, `core/views_jogos.py`): `/brinquedos/` com os seus filtros e páginas, `/categoria/<id>/` (com `?ordenar=` e `?disp=`), `/brinquedo/<id>/`, `/pecas-reposicao/`, `/pecas/<id>/` e `/jogos/` passam a montar os dados uma vez e a servi-los do cache para todo visitante. Entra no cache só o que é igual para todo mundo (produtos com fotos, categorias e tags já trazidos, totais, textos); o que é de quem está olhando (lista de desejos, curtida, conta, carrinho, ranking pessoal) continua sendo resolvido a cada requisição -- e para o visitante novo, sem conta e sem o cookie do aparelho, sem consulta nenhuma. Toda chave leva a **versão do catálogo**, que os signals apagam no instante em que qualquer produto, foto, categoria, tag, peça, objeto 3D ou jogo cadastrado é salvo ou apagado (`core/signals.py`): a edição aparece na visita seguinte; o TTL (`CATALOG_CACHE_TTL`, 30 min) é só rede de segurança. Busca livre (`?q=`), faixa de preço e valores de categoria/voltagem que não existem não entram no cache (entradas sem limite esgotariam as 300 chaves do `LocMemCache`); são montados na hora, como antes. O contador de cliques de produto e de categoria continua por visita, mas virou um `UPDATE` só (era `get_or_create` + `update`).
+2. **Estáticos fora do escudo** (`core/traffic_shield.py`): `/static/`, `/media/`, `/favicon.ico`, `/robots.txt`, `/manifest.webmanifest` e `/sw.js` não disputam mais as 4 vagas públicas. Sondas (`.php`, `.env`, `wp-admin`...) continuam barradas antes, e o limite de bots nas páginas caras continua igual.
+
+O que **não** foi feito, de propósito: cache HTTP público (`Cache-Control: public` / ETag) do HTML das telas. Toda resposta do site carrega `Set-Cookie: csrftoken=...` (o `base.html` cita `{{ csrf_token }}` para o JS) e `Vary: Cookie`; um cache compartilhado que respeitasse o `Vary` não acertaria nunca (o cookie é único por visitante) e um que o ignorasse entregaria o token CSRF e o cookie do aparelho de uma pessoa para as outras. Os estáticos já saem com `Cache-Control: public, max-age=315360000, immutable` (CSS/JS versionados) ou 30 dias (imagens), como antes.
+
+### 10.1 Consultas por tela, antes e depois
+
+`ferramentas/carga/consultas_por_tela.py`, segunda visita de um visitante novo (sem cookie, sem conta). A coluna "com 40 ms" é a mesma medição com `CARGA_LATENCIA_MS=40`: o que a tela custaria no Render só de espera do banco.
+
+| Tela | Consultas antes | Consultas depois | Tempo aqui (sqlite) depois | Tempo com 40 ms por consulta: antes → depois |
+|---|---:|---:|---:|---:|
+| `/` (home) | 0 | 0 | 5 ms | 5 → 5 ms |
+| `/brinquedos/` | 8 | **0** | 9 ms | 341 → 11 ms |
+| `/brinquedos/?disponibilidade=loja&ordenar=az` | 8 | **0** | 5 ms | ~340 → 6 ms |
+| `/brinquedo/<id>/` | 11 | **1** (contador de cliques) | 10 ms | 460 → 54 ms |
+| `/categoria/<id>/` | 12 | **1** (contador de cliques) | 10 ms | 506 → 48 ms |
+| `/pecas-reposicao/` | 7 (contadas no código) | **0** | 8 ms | ~280 → 6 ms |
+| `/pecas/<id>/` | 5 (contadas no código) | **0** | 6 ms | ~200 → 5 ms |
+| `/jogos/` | 3 | **0** (ranking já tinha cache de 60 s) | 10 ms | 131 → 7 ms |
+| `/static/site/ls-base.css` | 0 | 0 | 0,2 ms | 0,2 → 0,2 ms |
+
+Quem já marcou algo (cookie do aparelho) paga **+1 consulta** nas listas e nas fichas (as marcações dele, numa consulta só; antes eram duas). Quem está logado paga as consultas da própria conta -- sessão, usuário, perfil, carrinho, selos do cabeçalho, marcações: 8-9 ao todo -- e **nenhuma do catálogo** (`core/tests_cache_catalogo.py` garante). O painel não mudou: `painel /` continua com 19 consultas (0,8 s com 40 ms cada) e `/orcamentos/` com 16 (0,7 s) -- é o próximo alvo (§7, item 4).
+
+### 10.2 Carga com 1 worker × 8 threads, banco rápido (sqlite): o custo de CPU
+
+Estágios de 50, 100, 200 e 400 usuários agressivos (uma página a cada 1-3 s), 60 s cada, criação de 20 usuários/s. "Entregues" = requisições menos os 503 do escudo.
+
+| Usuários | Antes: req/s · 503 · p50/p95 | Depois: req/s · 503 · p50/p95 | Páginas entregues/s: antes → depois | CPU média: antes → depois |
+|---:|---|---|---:|---:|
+| 50 | 22,6/s · 2,3 % · 26/94 ms | 23,4/s · **1,6 %** · 17/66 ms | 22 → 23 | 42 % → 31 % |
+| 100 | 44,3/s · 12,9 % · 43/170 ms | 45,0/s · **3,6 %** · 23/110 ms | 39 → 43 | 98 % → 68 % |
+| 200 | 82,7/s · 51,2 % · 78/340 ms | 80,9/s · **23,1 %** · 100/650 ms | 40 → **62** | 133 % → 119 % |
+| 400 | 99,7/s · 59,8 % · 1,3/2,3 s | 102,8/s · **42,4 %** · 1,1/2,5 s | 40 → **59** | 149 % → 148 % |
+
+O teto de um worker nesta máquina subiu de **~40 para ~60 páginas entregues por segundo** (1,5×): cada página custa menos CPU sem o ORM montar e hidratar 8-12 consultas, e os estáticos deixaram de ser cortados (0 % de 503 em `/static/site/ls-base.css` em todos os estágios; antes acompanhavam as páginas, 15-68 %). Com 100 usuários agressivos (~500 visitantes reais) a CPU foi de 98 % para 68 % e a recusa de 12,9 % para 3,6 %. (Os p50 acima de 1 s a 400 usuários são o locust saturando a própria máquina, como na §1; esse estágio é pessimista nos dois lados.)
+
+### 10.3 Carga com 40 ms por consulta: o cenário do Render
+
+A mesma sequência com `CARGA_LATENCIA_MS=40` -- cada consulta espera 40 ms antes de executar, soltando o GIL como o psycopg2 faz esperando a rede. É a medição mais próxima do Render Starter com Supabase que esta máquina consegue dar.
+
+| Usuários | Antes: req/s · 503 · p50/p95 | Depois: req/s · 503 · p50/p95 | Páginas entregues/s: antes → depois |
+|---:|---|---|---:|
+| 50 | 21,2/s · **37,0 %** · 60/700 ms | 22,5/s · **2,0 %** · 35/700 ms | 13 → 22 |
+| 100 | 41,4/s · **57,4 %** · 64/750 ms | 43,9/s · **3,4 %** · 54/740 ms | 18 → 42 |
+| 200 | 57,0/s · 62,8 % · 1,1/2,0 s | 71,0/s · **10,1 %** · 0,44/1,2 s | 21 → **64** |
+| 400 | 52,1/s · 57,3 % · 4,9/6,1 s | 64,1/s · **9,6 %** · 3,7/4,4 s | 22 → **58** |
+
+Por tela pública, com 100 usuários (p50 / p95 · recusa):
+
+| Tela | Antes (40 ms/consulta) | Depois (40 ms/consulta) |
+|---|---:|---:|
+| `/` | 35 / 370 ms · 66 % | 18 / 120 ms · 5 % |
+| `/brinquedos/` | 45 / 590 ms · 67 % | 24 / 96 ms · 5 % |
+| `/brinquedo/<id>/` | 74 / 700 ms · 67 % | 68 / 140 ms · 5 % |
+| `/categoria/<id>/` | 66 / 660 ms · 66 % | 65 / 150 ms · 3 % |
+| `/jogos/` | 57 / 400 ms · 62 % | 21 / 86 ms · 5 % |
+| `/static/site/ls-base.css` | 6 / 360 ms · 66 % | 4 / 73 ms · **0 %** |
+
+Antes, com o banco "pela rede", as 4 vagas do escudo saturavam em ~13-22 páginas/s e recusavam 37 % dos cliques já com 50 usuários; depois, o escudo só volta a aparecer a partir de ~60 páginas/s (10 % a 200-400 usuários), quando a CPU do único worker já está em 107-121 %. **O gargalo mudou de lugar: deixou de ser a espera do banco nas vagas do escudo e passou a ser a CPU** -- que é o gargalo "bom", porque escala com o plano. Os p95 de 700 ms dos estágios de 50 e 100 usuários são as telas do painel (16-19 consultas × 40 ms) e o `POST` de login (PBKDF2), não o site público.
+
+### 10.4 Com 2 workers × 8 threads e 40 ms por consulta
+
+| Usuários | Req/s | 503 escudo | p50 / p95 | Páginas entregues/s | CPU média / máx | RSS |
+|---:|---:|---:|---:|---:|---:|---:|
+| 50 | 22,7 | 1,4 % | 25 / 690 ms | 22 | 32 % / 73 % | 258 MB |
+| 100 | 44,1 | 1,7 % | 35 / 690 ms | 43 | 63 % / 138 % | 259 MB |
+| 200 | 84,1 | 3,8 % | 52 / 700 ms | 81 | 120 % / 200 % | 260 MB |
+| 400 | 127,3 | 8,8 % | 420 / 1 400 ms | **116** | 181 % / 247 % | 261 MB |
+
+Com um segundo núcleo, 200 usuários agressivos (~1 000 visitantes reais) passam com 3,8 % de recusa e p50 de 52 ms; a 400 o teto foi ~116 páginas/s com 8,8 % (e o locust já consumindo a máquina). É o cenário do **Standard** (1 vCPU inteira), não do Starter.
+
+### 10.5 Estimativa refeita para o Render
+
+Premissas: as mesmas da §6 (Starter = 0,5 vCPU compartilhada e 512 MB; Supabase a ~40 ms por consulta; `WEB_WORKERS=1`, `WEB_THREADS=8`, `PUBLIC_CONCURRENCY=4`). **Conversão de "visitantes simultâneos" em pedidos por segundo**: um visitante ativo lê uma página por 15-30 s antes da próxima -- **1 visitante ativo ≈ 0,033-0,067 páginas/s**, ou seja, **1 000 visitantes ≈ 33-67 páginas/s** (mais os estáticos, que o navegador só baixa na primeira página e guarda por 30 dias / um ano). O teste usa usuários agressivos (0,45 req/s): 100 usuários do teste ≈ 700-1 400 visitantes reais nessa conversão.
+
+* **CPU por requisição depois do cache**: 15-16 ms de CPU nesta máquina (68-70 % de um núcleo para 44-45 req/s), contra 22-25 ms antes. Em meia vCPU: ~30-32 ms → teto ~31-33 req/s; a 70 % de uso, **~20-25 páginas/s**.
+* **Escudo**: uma página pública no Render passa a custar ~15-20 ms de CPU + 0-1 consulta (40 ms) = 20-60 ms de tempo de serviço, em vez de 300-500 ms. A 20 páginas/s há em média 0,8 pedidos em andamento; a chance de as 4 vagas estarem ocupadas cai para **< 1 %** (Erlang). O escudo deixa de ser o limite; a CPU é.
+* **Starter, depois**: **~20-25 páginas/s ≈ 300-700 visitantes ativos** (1 página a cada 15-30 s) **ou 150-250 visitantes "lendo rápido"** (1 página a cada 10 s), com recusa abaixo de 2 %, contra 40-60 antes. Se a vCPU compartilhada render 30 % menos que o Xeon daqui, multiplique por 0,7. **Sem CDN, cada visitante novo também pede 10-20 estáticos** (~1 ms de CPU cada): no primeiro acesso de uma campanha isso dobra o custo de CPU por pessoa -- é o que o Cloudflare na frente de `/static/` resolve.
+* **Standard (1 vCPU, 2 GB), `WEB_WORKERS=2` + Redis**: o cenário da §10.4 em uma vCPU inteira → **~50-60 páginas/s** (teto; 40-45 confortável) ≈ **600-1 300 visitantes ativos**, p50 abaixo de 100 ms, painel com folga. Memória: 2 workers = ~260 MB aqui, 350-450 MB em produção, cabe com sobra em 2 GB.
+* **Pro (2 vCPU, 4 GB), `WEB_WORKERS=4` + Redis**: ~100-120 páginas/s ≈ **1 500-3 000 visitantes ativos**.
+
+Em uma frase: **o Starter passa de "algumas dezenas" para "algumas centenas" de visitantes simultâneos no catálogo; "milhares" é Standard ou Pro com 2-4 workers, Redis e Cloudflare na frente.**
+
+### 10.6 O que falta para milhares (em ordem)
+
+1. **Plano do Render**: Standard (1 vCPU, 2 GB) para ~1 000 visitantes ativos; Pro (2 vCPU, 4 GB) para 2 000-3 000. No Starter, meia vCPU é o teto, e nenhum cache muda isso.
+2. **`WEB_WORKERS=2` (Standard) ou `4` (Pro) + Redis.** O cache é `LocMemCache`, memória de cada processo: com dois workers, a edição feita por um invalida só o cache dele e o outro mostra o catálogo velho por até `CATALOG_CACHE_TTL` (30 min). Antes de subir os workers, criar um Redis (Render Key Value, o plano menor basta) e apontar `CACHES["default"]` para `django.core.cache.backends.redis.RedisCache` com a URL dele -- isso vale para a home, o catálogo, o sino do painel e o ranking dos jogos de uma vez. (O limitador de bots do escudo também é por processo; com 2 workers a cota de um bot dobra -- aceitável.)
+3. **Cloudflare na frente do domínio público**, com cache de `/static/` e `/media/` (os cabeçalhos já são os certos: `immutable` para CSS/JS versionados, 30 dias para imagens). Tira da instância os 10-20 arquivos por primeira visita e a banda das fotos. Opcional, para campanhas: regra de cache do HTML anônimo (sem cookie de sessão) por 30-60 s, com `Bypass Cache on Cookie` para `sessionid` -- aí o Render só vê uma fração dos cliques de uma rajada. `docs/CLOUDFLARE_INTERNO.md` já descreve o DNS.
+4. **Tamanho das imagens.** Cada card do catálogo pede a foto do Cloudinary já reduzida (`arena.reduzir_imagem`, filtro `foto:720`); confira no painel do Cloudinary que as transformações estão com `f_auto,q_auto` e que nenhuma foto original acima de 300 KB está sendo entregue inteira. É banda e tempo de tela do visitante, não CPU do servidor -- mas é o que "página rápida" significa para quem está no celular.
+5. **Painel**: `painel /` (19 consultas) e `/orcamentos/` (16) continuam em 0,7-0,8 s com o banco pela rede (§7, item 4); o pulso do sino (§7, item 5) continua sendo a maior carga contínua no Supabase.
+6. **Medir em produção** (§7, item 7): a contagem de `503 busy` por hora no log do Render e o `Server-Timing` por rota dizem se a conta acima bateu.
+
+### Limites desta medição (além dos da §9)
+
+* A latência de 40 ms é uniforme e artificial; o Supabase varia (20-60 ms) e tem o pooler no meio. O que ela mede bem é a **forma** do ganho (espera do banco saindo das vagas do escudo), não o número exato.
+* 8 brinquedos e 5 categorias no banco: o cache guarda poucas combinações. Em produção, com dezenas de produtos e as combinações de filtro que as pessoas usam de fato, o `LocMemCache` guarda até 300 chaves e descarta um terço quando enche; se isso aparecer no log como reconstruções frequentes, suba `OPTIONS["MAX_ENTRIES"]` em `CACHES` (cada tela do catálogo pesa 20-100 KB serializada) ou vá para o Redis.
+* A árvore do projeto continuou sendo editada por outras pessoas durante a medição (templates e CSS do catálogo). Os estágios "antes" e "depois" rodaram com 25 min de diferença, na mesma máquina ociosa; a diferença entre eles é a das duas mudanças acima, mas a confirmação limpa continua sendo repetir `rodar.sh` com a árvore parada.

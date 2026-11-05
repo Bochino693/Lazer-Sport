@@ -124,19 +124,42 @@
     position: relative;
 }
 
+/* A foto fica parada e INTEIRA: `contain` nunca recorta (as máquinas
+   altas de fliperama cabem de pé), e não há zoom nem deslize no passar
+   do mouse -- a ampliação é a galeria em tela cheia, ao clicar. */
 .produto-imagem-box img {
     -webkit-user-drag: none;
+    cursor: zoom-in;
     display: block;
     user-select: none;
     height: 100%;
     object-fit: contain;
-    transition: transform .35s ease;
+    object-position: center;
     width: 100%;
 }
 
-.produto-imagem-box:hover img {
-    transform: none;
+/* o botão de ampliar, no canto de cima da vitrine */
+.produto-ampliar {
+    align-items: center;
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid #d8e2ef;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(16, 43, 77, .14);
+    color: var(--ls-azul-escuro);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: .95rem;
+    height: 40px;
+    justify-content: center;
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    transition: background .2s ease;
+    width: 40px;
+    z-index: 3;
 }
+
+.produto-ampliar:hover { background: #fff; }
 
 /* ---- o visor 3D (o objeto do cadastro, por cima das fotos) ---- */
 .produto-visor3d {
@@ -232,6 +255,7 @@
 .produto-visual--3d .produto-selo { opacity: 0; pointer-events: none; }
 
 .produto-imagem-box--3d .produto-ver-3d,
+.produto-imagem-box--3d .produto-ampliar,
 .produto-imagem-box--3d .produto-galeria-controles,
 .produto-imagem-box--3d .produto-galeria-contador { display: none; }
 
@@ -301,13 +325,12 @@
     height: 42px;
     justify-content: center;
     pointer-events: auto;
-    transition: transform .2s ease, background .2s ease;
+    transition: background .2s ease;
     width: 42px;
 }
 
 .produto-galeria-seta:hover {
     background: #fff;
-    transform: scale(1.06);
 }
 
 .produto-galeria-contador {
@@ -342,14 +365,13 @@
     cursor: pointer;
     overflow: hidden;
     padding: 4px;
-    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    transition: border-color .2s ease, box-shadow .2s ease;
 }
 
 .produto-miniatura:hover,
 .produto-miniatura.ativa {
     border-color: var(--ls-azul);
     box-shadow: 0 5px 15px rgba(7, 88, 201, .16);
-    transform: translateY(-1px);
 }
 
 .produto-miniatura img {
@@ -954,19 +976,21 @@
     }
 }
 
-/* Sistema visual do catálogo: fundo claro e painéis informativos coloridos. */
+/* Sistema visual do site à noite: a página NÃO tem fundo próprio -- fica
+   o azul-marinho do site (`html.ls-escuro body`, com as luzes fixas de
+   `ls-tema.css`), o mesmo que está atrás do cabeçalho e do catálogo. O
+   branco que aparecia atrás dos dois cartões era um degradê claro daqui;
+   sobra só uma malha fina, clara, que se apaga para baixo. */
 .produto-detalhe-page {
     --ls-azul: #0878f9;
     --ls-azul-escuro: #004aad;
     --ls-azul-claro: rgba(8, 120, 249, .13);
     --ls-vermelho: #e63946;
-    --ls-texto: #102b4c;
-    --ls-cinza: #647d98;
-    --ls-borda: rgba(0, 74, 173, .14);
-    background:
-        radial-gradient(circle at 7% 5%, rgba(8, 120, 249, .10), transparent 25rem),
-        radial-gradient(circle at 96% 16%, rgba(230, 57, 70, .07), transparent 23rem),
-        linear-gradient(180deg, #fbfdff, #f2f7fc);
+    --ls-texto: #eaf2ff;
+    --ls-cinza: #a9bcd9;
+    --ls-borda: rgba(255, 255, 255, .1);
+    background: transparent;
+    color: var(--ls-texto);
     isolation: isolate;
     overflow: hidden;
     position: relative;
@@ -974,12 +998,14 @@
 
 .produto-detalhe-page::before {
     background-image:
-        linear-gradient(rgba(0,74,173,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,74,173,.025) 1px, transparent 1px);
-    background-size: 42px 42px;
+        radial-gradient(circle at 12% 0, rgba(8, 120, 249, .14), transparent 26rem),
+        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
     content: "";
     inset: 0;
     mask-image: linear-gradient(to bottom, #000, transparent 72%);
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent 72%);
     pointer-events: none;
     position: absolute;
     z-index: 0;
@@ -1059,7 +1085,12 @@
    malha fina, foco de luz atrás do produto e a foto flutuando com
    sombra -- o mesmo desenho da vitrine da home ---- */
 .produto-imagem-box {
-    padding: 26px;
+    /* mais alta que larga: a maioria dos brinquedos é uma máquina de pé,
+       e a coluna da foto tem altura sobrando ao lado das informações. As
+       faixas de cima e de baixo guardam lugar para o selo, o botão de
+       ampliar, o "Ver em 3D" e o contador -- nenhum deles cobre a foto */
+    aspect-ratio: 4 / 5;
+    padding: 58px 26px;
     border-color: rgba(126, 190, 255, .30);
     background:
         radial-gradient(circle at 50% 34%, rgba(63, 170, 255, .32), transparent 46%),
@@ -1096,7 +1127,23 @@
     filter: drop-shadow(0 24px 28px rgba(0, 0, 0, .55));
 }
 
-.produto-sem-imagem { color: #8fa9c9; }
+.produto-sem-imagem { position: relative; z-index: 1; color: #8fa9c9; }
+
+/* com mais de uma foto, as setas ganham faixas laterais só delas: no
+   desktop nenhuma seta cobre a foto (no celular a foto é larga demais
+   para abrir mão da largura -- lá o dedo passa de foto e a galeria em
+   tela cheia mostra tudo) */
+@media (min-width: 641px) {
+    .produto-imagem-box:has(.produto-galeria-controles) { padding-left: 62px; padding-right: 62px; }
+}
+
+.produto-ampliar {
+    border-color: rgba(255,255,255,.54);
+    color: #fff;
+    background: linear-gradient(145deg, #0878f9, #004aad);
+    box-shadow: 0 8px 20px rgba(0, 8, 24, .4);
+}
+.produto-ampliar:hover { background: linear-gradient(145deg, #ef4352, #b91e30); }
 
 /* o visor 3D e os seus botões, no mesmo vidro escuro */
 .produto-visor3d {
@@ -1378,16 +1425,54 @@
 .produto-ajuda { color: #9fb2c8; }
 .produto-ajuda a { color: #74c7ff; }
 
+/* ---- o aviso de "adicionado ao carrinho" e a janela do projeto sob
+   medida, no mesmo vidro escuro da página (eram brancos) ---- */
+.produto-toast {
+    border: 1px solid rgba(255, 255, 255, .16);
+    background: linear-gradient(135deg, #0f6b3f, #0a3f26);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, .5);
+}
+.produto-toast.erro { background: linear-gradient(135deg, #b4232d, #6b1118); }
+
+.produto-modal { background: rgba(2, 8, 22, .82); }
+.produto-modal-card {
+    border-color: rgba(120, 180, 255, .28);
+    color: #eaf2ff;
+    background: linear-gradient(160deg, #0d2a55, #071426 70%);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+.produto-modal-aviso {
+    border-color: rgba(103, 179, 255, .3);
+    color: #cfe2f6;
+    background: rgba(8, 120, 249, .14);
+}
+.produto-medida label { color: #9fd3ff; }
+.produto-medida input {
+    border-color: rgba(120, 180, 255, .32);
+    color: #fff;
+    background: rgba(255, 255, 255, .07);
+}
+.produto-medida input::placeholder { color: #7f96b3; }
+.produto-medida input:focus {
+    border-color: #3fd0ff;
+    background: rgba(255, 255, 255, .1);
+    box-shadow: 0 0 0 3px rgba(63, 208, 255, .22);
+}
+
 @media (max-width: 960px) {
     .produto-shell { gap: 15px; }
     .produto-visual { border-bottom: 1px solid rgba(100, 166, 239, .20); }
+    .produto-imagem-box { aspect-ratio: 1 / 1; padding: 54px 24px; }
 }
 
 @media (max-width: 640px) {
     .produto-visual,
     .produto-conteudo { border-radius: 21px; }
     .produto-conteudo { padding: 24px 16px 22px; }
-    .produto-imagem-box { padding: 16px; }
+    /* no celular a vitrine fica um pouco mais alta que larga: a máquina de
+       pé aparece maior, e as faixas de cima e de baixo encolhem */
+    .produto-imagem-box { aspect-ratio: 3 / 4; padding: 46px 12px; }
+    .produto-ampliar { right: 10px; top: 10px; width: 36px; height: 36px; font-size: .85rem; }
     .produto-selo { left: 24px; top: 24px; padding: 7px 10px 7px 9px; font-size: .62rem; }
     .produto-garantia { min-height: 60px; gap: 5px; justify-content: center; text-align: center; }
     .produto-garantia i { flex-basis: 30px; width: 30px; height: 30px; border-radius: 10px; font-size: .8rem; }
@@ -1401,7 +1486,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .produto-imagem-box img,
+    .produto-miniatura,
+    .produto-galeria-seta,
+    .produto-ampliar,
     .produto-btn,
     .produto-toast {
         transition: none;

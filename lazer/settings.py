@@ -790,6 +790,18 @@ LOGGING = {
     },
 }
 
+# MEMÓRIA DO PROCESSO, E ISSO IMPORTA. O `LocMemCache` vive dentro do
+# worker do gunicorn: cada worker tem o seu, e o que um invalida o outro
+# não vê. Hoje é `WEB_WORKERS=1`, então tudo o que depende de invalidação
+# na hora -- a vitrine da home, as telas do catálogo (core/home_cache.py,
+# versão do catálogo apagada pelos signals), o sino do painel -- funciona.
+# Com `WEB_WORKERS=2` ou mais, a edição feita pelo worker A invalida só o
+# cache de A; B segue com a cópia velha até o TTL (até 30 min no catálogo).
+# Antes de subir os workers, troque este backend por um compartilhado
+# (Redis: `django.core.cache.backends.redis.RedisCache`, `LOCATION` com a
+# URL do serviço) -- ver docs/TESTE_DE_CARGA.md, "Depois do cache".
+# Guarda até 300 chaves (padrão); por isso a busca livre e a faixa de
+# preço do catálogo não entram no cache (core/views.py, BrinquedosView).
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -886,6 +898,12 @@ try:
 except ValueError:
     HOME_CACHE_TTL = 1800
 
+# O mesmo prazo vale para os filtros do catálogo E para os dados de cada
+# tela pública do catálogo (/brinquedos/ e seus filtros, /categoria/<id>/,
+# /brinquedo/<id>/, peças e /jogos/): ver core/home_cache.py. É só a rede
+# de segurança -- qualquer edição no cadastro invalida na hora, pela
+# versão do catálogo. Com `WEB_WORKERS>1` sem Redis, é o atraso máximo
+# com que o outro worker vê a edição.
 try:
     CATALOG_CACHE_TTL = max(60, int(os.getenv("CATALOG_CACHE_TTL", "1800")))
 except ValueError:

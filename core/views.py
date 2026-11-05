@@ -40,9 +40,12 @@ from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
 from .home_cache import (
     admin_catalog_etag,
     aplicar_cache_condicional,
+    dados_da_pagina,
     get_cached_catalog_metadata,
+    get_cached_catalog_page,
     get_cached_home_context,
     home_cache_timeout,
+    pagina_de_cache,
 )
 
 import mimetypes
@@ -498,13 +501,97 @@ class HomeView(View):
 
 from django.template.loader import render_to_string
 
-from .models import PecasReposicao
+from .models import Favorito, PecasReposicao
+
+
+# ------------------------------------------------------------------
+# AS TELAS PÚBLICAS DO CATÁLOGO E O CACHE DELAS
+#
+# O que é igual para todo visitante (produtos, fotos, totais, textos) sai
+# de `get_cached_catalog_page` (core/home_cache.py), construído uma vez
+# por versão do catálogo -- a versão muda no instante em que a equipe
+# edita qualquer coisa do cadastro (core/signals.py). O que é de QUEM
+# está olhando (curtiu, guardou na lista) é resolvido aqui, a cada
+# requisição; e para quem nunca marcou nada (sem conta e sem o cookie do
+# aparelho) não custa consulta nenhuma. Medido em docs/TESTE_DE_CARGA.md.
+# ------------------------------------------------------------------
+
+def _visitante_identificado(request):
+    """Quem pode ter marcado algo: conta logada ou aparelho já conhecido.
+
+    O visitante novo não tem nada marcado: devolver vazio sem consultar o
+    banco é a resposta certa, e ainda evita criar a chave do aparelho (e
+    o cookie) só para descobrir isso -- a chave nasce na primeira marcação.
+    """
+    usuario = getattr(request, "user", None)
+    if usuario is not None and usuario.is_authenticated:
+        return True
+    return bool(
+        request.COOKIES.get(servico_favoritos.COOKIE_DISPOSITIVO)
+        or request.META.get(servico_favoritos.CABECALHO_DISPOSITIVO)
+    )
+
+
+def _marcas_do_visitante(request, campo):
+    """Curtidas e desejos deste visitante em UMA consulta (nenhuma para o visitante novo).
+
+    `campo` é "brinquedo" ou "peca". Devolve ``{"curtida": {ids}, "desejo": {ids}}``.
+    """
+    marcas = {"curtida": set(), "desejo": set()}
+    if not _visitante_identificado(request):
+        return marcas
+    linhas = servico_favoritos.meus_favoritos(request).values_list("tipo", f"{campo}_id")
+    for tipo, produto_id in linhas:
+        if produto_id and tipo in marcas:
+            marcas[tipo].add(produto_id)
+    return marcas
+
+
+def _estado_do_visitante(request, produto, curtidas):
+    """O dicionário `favorito` da ficha: as marcas do visitante + o total em cache.
+
+    Mesmo formato de `favoritos.estado_do_produto`, com duas diferenças:
+    o total de curtidas vem dos dados públicos da tela (é prova social,
+    não precisa ser tempo real -- a home faz igual) e a consulta das
+    marcações só acontece para quem pode ter alguma.
+    """
+    campo = "brinquedo" if isinstance(produto, Brinquedos) else "peca"
+    meus = set()
+    if _visitante_identificado(request):
+        meus = set(
+            servico_favoritos.meus_favoritos(request)
+            .filter(**{campo: produto})
+            .values_list("tipo", flat=True)
+        )
+    return {
+        "produto": campo,
+        "produto_id": produto.pk,
+        "curtido": Favorito.Tipo.CURTIDA in meus,
+        "desejado": Favorito.Tipo.DESEJO in meus,
+        "curtidas": curtidas,
+    }
+
+
+def _registrar_clique(modelo, filtro, **dados_da_primeira):
+    """Soma um clique com um UPDATE só; a linha nasce na primeira visita.
+
+    Era `get_or_create` + `update`: duas idas ao banco em toda abertura de
+    produto e de categoria. O contador continua por visita e fora do cache
+    -- é exatamente o que deve mudar a cada abertura.
+    """
+    atualizadas = modelo.objects.filter(**filtro).update(
+        quantidade_click=F("quantidade_click") + 1,
+    )
+    if not atualizadas:
+        modelo.objects.create(**filtro, quantidade_click=1, **dados_da_primeira)
 
 
 class ReposicaoView(View):
 
-    def get(self, request):
-        categorias_peca = CategoriaPeca.objects.all()
+    @staticmethod
+    def _montar():
+        """A vitrine de peças como todo visitante a vê (vai para o cache)."""
+        categorias_peca = list(CategoriaPeca.objects.all())
         # A LISTA DA VITRINE NÃO MOSTRAVA SÓ O QUE ESTÁ NA VITRINE.
         #
         # Era `.all()`: peça desativada aparecia para o visitante junto
@@ -516,21 +603,30 @@ class ReposicaoView(View):
             .prefetch_related("imagem_peca_reposicao", "categoria_peca")
             .order_by("nome")
         )
+        return {
+            "categorias_peca": categorias_peca,
+            "pecas": pecas,
+            # O total de curtidas de cada peça, em uma consulta para a lista.
+            "curtidas": servico_favoritos.contagem_curtidas(pecas),
+        }
 
-        # Estado dos corações resolvido em três consultas, não uma por
-        # peça: marcados pelo visitante e total geral de curtidas.
-        curtidos = servico_favoritos.ids_marcados(request, "curtida")["peca"]
-        desejados = servico_favoritos.ids_marcados(request, "desejo")["peca"]
-        totais = servico_favoritos.contagem_curtidas(pecas)
+    def get(self, request):
+        dados = get_cached_catalog_page("pecas", (), self._montar)
+        pecas = dados["pecas"]
+        totais = dados["curtidas"]
+
+        # O que ESTE visitante marcou: uma consulta, e nenhuma para quem
+        # nunca marcou nada.
+        marcas = _marcas_do_visitante(request, "peca")
 
         ctx = {
-            'categorias_peca': categorias_peca,
+            'categorias_peca': dados["categorias_peca"],
             'pecas': pecas,
             'cartoes_pecas': [
                 {
                     'obj': peca,
-                    'curtido': peca.pk in curtidos,
-                    'desejado': peca.pk in desejados,
+                    'curtido': peca.pk in marcas["curtida"],
+                    'desejado': peca.pk in marcas["desejo"],
                     'curtidas': totais.get(peca.pk, 0),
                 }
                 for peca in pecas
@@ -542,7 +638,10 @@ class ReposicaoView(View):
 
 
 class ReposicaoDetalheView(View):
-    def get(self, request, pk):
+
+    @staticmethod
+    def _montar(pk):
+        """A ficha da peça como todo visitante a vê (vai para o cache)."""
         # Item de manutenção não tem página de produto: ele não foi
         # cadastrado para ser vendido, e a página anunciaria um preço de
         # custo interno como se fosse oferta ao público.
@@ -553,13 +652,22 @@ class ReposicaoDetalheView(View):
             ),
             pk=pk,
         )
-        imagens = list(peca.imagens_ordenadas)
+        return {
+            'peca': peca,
+            'imagens_peca': list(peca.imagens_ordenadas),
+            'categorias_peca': list(peca.categoria_peca.all()),
+            'curtidas': servico_favoritos.contagem_curtidas([peca]).get(peca.pk, 0),
+        }
+
+    def get(self, request, pk):
+        dados = get_cached_catalog_page("peca", (pk,), lambda: self._montar(pk))
+        peca = dados["peca"]
 
         resposta = render(request, 'reposicao_info.html', {
             'peca': peca,
-            'imagens_peca': imagens,
-            'categorias_peca': list(peca.categoria_peca.all()),
-            'favorito': servico_favoritos.estado_do_produto(request, peca),
+            'imagens_peca': dados["imagens_peca"],
+            'categorias_peca': dados["categorias_peca"],
+            'favorito': _estado_do_visitante(request, peca, dados["curtidas"]),
         })
         return servico_favoritos.aplicar_cookie(request, resposta)
 
@@ -839,8 +947,13 @@ class ClientePerfilView(LoginRequiredMixin, View):
 
 class BrinquedoInfoView(View):
 
-    def get(self, request, id):
-        from urllib.parse import quote
+    @staticmethod
+    def _montar(id):
+        """A ficha do brinquedo como todo visitante a vê (vai para o cache).
+
+        Fica de fora só o que depende da requisição: o endereço absoluto
+        (host), o contador de cliques e o que o visitante marcou.
+        """
         from unicodedata import normalize
 
         brinquedo = get_object_or_404(
@@ -865,16 +978,6 @@ class BrinquedoInfoView(View):
             modelo_3d = arena.modelo_da_maquina(brinquedo.nome_brinquedo)
             objeto_3d = {"url": estatico(modelo_3d["arquivo"])} if modelo_3d else None
 
-        obj, created = BrinquedoClick.objects.get_or_create(
-            brinquedo_clicado=brinquedo,
-            defaults={'quantidade_click': 1}
-        )
-
-        if not created:
-            BrinquedoClick.objects.filter(id=obj.id).update(
-                quantidade_click=F('quantidade_click') + 1
-            )
-
         valor = brinquedo.valor_brinquedo
         disponivel_loja = bool(
             brinquedo.exibir_na_loja
@@ -896,8 +999,6 @@ class BrinquedoInfoView(View):
                 .replace("X", ".")
             )
             preco_schema = f"{valor_decimal:.2f}"
-
-        produto_url = request.build_absolute_uri()
 
         def formatar_medida(valor_medida):
             if valor_medida is None:
@@ -928,12 +1029,6 @@ class BrinquedoInfoView(View):
         if medidas_validas:
             mensagem.extend(["", "Medidas:", *medidas_validas])
 
-        mensagem.extend(["", f"Página do produto: {produto_url}"])
-        whatsapp_url = (
-            "https://wa.me/5511960563135?text="
-            f"{quote(chr(10).join(mensagem))}"
-        )
-
         categorias = list(brinquedo.categorias_brinquedos.all())
 
         def normalizar_texto(texto):
@@ -951,32 +1046,53 @@ class BrinquedoInfoView(View):
 
         imagens_brinquedo = list(brinquedo.imagens_ordenadas)
         imagem_catalogo = brinquedo.imagem_catalogo
-        imagem_url = ""
-        if imagem_catalogo:
-            imagem_url = request.build_absolute_uri(
-                imagem_catalogo.url
-            )
 
-        context = {
-            "brinquedo": brinquedo,
-            "categorias_produto": categorias,
-            "disponivel_loja": disponivel_loja,
-            "preco_formatado": preco_formatado,
-            "preco_schema": preco_schema,
-            "produto_url": produto_url,
-            "imagem_url": imagem_url,
-            "imagens_brinquedo": imagens_brinquedo,
-            "whatsapp_url": whatsapp_url,
-            "permite_sob_medida": permite_sob_medida,
-            "objeto_3d": objeto_3d,
-            # Curtida e lista de desejos: valem sem login, presos ao
-            # aparelho enquanto o visitante não entra na conta.
-            "favorito": servico_favoritos.estado_do_produto(
-                request,
-                brinquedo,
-            ),
+        return {
+            "contexto": {
+                "brinquedo": brinquedo,
+                "categorias_produto": categorias,
+                "disponivel_loja": disponivel_loja,
+                "preco_formatado": preco_formatado,
+                "preco_schema": preco_schema,
+                "imagens_brinquedo": imagens_brinquedo,
+                "permite_sob_medida": permite_sob_medida,
+                "objeto_3d": objeto_3d,
+            },
+            # As linhas da mensagem do WhatsApp, sem a última (o endereço
+            # da página, que depende do host da requisição).
+            "mensagem": mensagem,
+            "imagem_catalogo_url": imagem_catalogo.url if imagem_catalogo else "",
+            "curtidas": servico_favoritos.contagem_curtidas([brinquedo]).get(brinquedo.pk, 0),
         }
 
+    def get(self, request, id):
+        from urllib.parse import quote
+
+        dados = get_cached_catalog_page("brinquedo", (id,), lambda: self._montar(id))
+        brinquedo = dados["contexto"]["brinquedo"]
+
+        # O contador de cliques é por visita: um UPDATE, fora do cache.
+        _registrar_clique(BrinquedoClick, {"brinquedo_clicado": brinquedo})
+
+        # O endereço absoluto depende do host da requisição.
+        produto_url = request.build_absolute_uri()
+        whatsapp_url = (
+            "https://wa.me/5511960563135?text="
+            f"{quote(chr(10).join([*dados['mensagem'], '', f'Página do produto: {produto_url}']))}"
+        )
+        imagem_url = ""
+        if dados["imagem_catalogo_url"]:
+            imagem_url = request.build_absolute_uri(dados["imagem_catalogo_url"])
+
+        context = {
+            **dados["contexto"],
+            "produto_url": produto_url,
+            "imagem_url": imagem_url,
+            "whatsapp_url": whatsapp_url,
+            # Curtida e lista de desejos: valem sem login, presos ao
+            # aparelho enquanto o visitante não entra na conta.
+            "favorito": _estado_do_visitante(request, brinquedo, dados["curtidas"]),
+        }
 
         resposta = render(request, "brinquedo_info.html", context)
         return servico_favoritos.aplicar_cookie(request, resposta)
@@ -1113,27 +1229,21 @@ class CategoriasInfoView(View):
             )
         return vitrine
 
-    def get(self, request, pk):
+    #: Os dois valores do filtro de disponibilidade que a página oferece;
+    #: qualquer outra coisa digitada na URL mostra tudo.
+    DISPONIBILIDADES = ("loja", "consulta")
 
+    def _montar(self, pk, ordenar, disponibilidade, pagina):
+        """A página da categoria como todo visitante a vê (vai para o cache).
+
+        `ordenar`, `disponibilidade` e `pagina` já passaram pela lista
+        branca de `get`: aqui só se monta.
+        """
         categoria = get_object_or_404(
             CategoriasBrinquedos,
             id=pk,
             ativo=True,
         )
-
-        # REGISTRA CLICK
-        obj, created = CategoriaClick.objects.get_or_create(
-            categoria=categoria,
-            defaults={
-                'nome_categoria': categoria.nome_categoria,
-                'quantidade_click': 1
-            }
-        )
-
-        if not created:
-            CategoriaClick.objects.filter(id=obj.id).update(
-                quantidade_click=F('quantidade_click') + 1
-            )
 
         ativos = categoria.brinquedos.filter(ativo=True)
 
@@ -1143,25 +1253,16 @@ class CategoriasInfoView(View):
         total_categoria = ativos.count()
         total_loja = ativos.filter(exibir_na_loja=True).count()
 
-        # Filtro de disponibilidade: só os dois valores que a página
-        # oferece; qualquer outra coisa digitada na URL mostra tudo.
-        disponibilidade = request.GET.get("disp", "")
         if disponibilidade == "loja":
             ativos = ativos.filter(exibir_na_loja=True)
         elif disponibilidade == "consulta":
             ativos = ativos.filter(exibir_na_loja=False)
-        else:
-            disponibilidade = ""
 
         brinquedos = ativos.prefetch_related(
             "categorias_brinquedos",
             "tags",
             "imagens_brinquedo",
         )
-
-        ordenar = request.GET.get("ordenar", "az")
-        if ordenar not in {chave for chave, _, _ in self.ORDENS}:
-            ordenar = "az"
 
         # O nome desempata sempre: sem ele, duas notas iguais trocariam de
         # lugar entre uma página e a outra.
@@ -1177,8 +1278,7 @@ class CategoriasInfoView(View):
             brinquedos = brinquedos.order_by("-criacao", "-id")
 
         paginator = Paginator(brinquedos, 12)
-        page_number = request.GET.get("page")
-        page_obj = paginator.get_page(page_number)
+        page_obj = paginator.get_page(pagina)
 
         # O coração do card abre com o número certo; o que ESTE visitante
         # guardou é marcado pelo JS, com uma chamada só para a página.
@@ -1187,6 +1287,47 @@ class CategoriasInfoView(View):
         for item in page_obj.object_list:
             item.total_curtidas = totais.get(item.pk, 0)
 
+        return {
+            "categoria": categoria,
+            "pagina": dados_da_pagina(page_obj),
+            "vitrine": self.vitrine_da_categoria(categoria),
+            "total_categoria": total_categoria,
+            "total_loja": total_loja,
+            # Página que não é número ou está fora do intervalo cai na
+            # primeira ou na última: serve, mas não ganha uma vaga no cache
+            # para cada número que um robô inventar.
+            "_descartavel": str(page_obj.number) != pagina,
+        }
+
+    def get(self, request, pk):
+        # Filtro de disponibilidade, ordem e página: só o que a página
+        # oferece entra na chave do cache; o resto vira o padrão.
+        disponibilidade = request.GET.get("disp", "")
+        if disponibilidade not in self.DISPONIBILIDADES:
+            disponibilidade = ""
+
+        ordenar = request.GET.get("ordenar", "az")
+        if ordenar not in {chave for chave, _, _ in self.ORDENS}:
+            ordenar = "az"
+
+        pagina = (request.GET.get("page") or "1").strip()[:12]
+
+        dados = get_cached_catalog_page(
+            "categoria",
+            (pk, ordenar, disponibilidade, pagina),
+            lambda: self._montar(pk, ordenar, disponibilidade, pagina),
+        )
+        categoria = dados["categoria"]
+
+        # REGISTRA CLICK: por visita, fora do cache, um UPDATE só.
+        _registrar_clique(
+            CategoriaClick,
+            {"categoria": categoria},
+            nome_categoria=categoria.nome_categoria,
+        )
+
+        page_obj = pagina_de_cache(dados["pagina"])
+
         # O que a paginação precisa repetir para não perder a ordem e o
         # filtro escolhidos. Os dois valores já passaram pela lista
         # branca acima, então entram na URL como estão.
@@ -1194,6 +1335,8 @@ class CategoriasInfoView(View):
         if disponibilidade:
             consulta += f"&disp={disponibilidade}"
 
+        total_categoria = dados["total_categoria"]
+        total_loja = dados["total_loja"]
         ctx = {
             "categoria": categoria,
             "page_obj": page_obj,
@@ -1201,7 +1344,7 @@ class CategoriasInfoView(View):
             "ordens": self.ORDENS,
             "disponibilidade": disponibilidade,
             "consulta": consulta,
-            "vitrine": self.vitrine_da_categoria(categoria),
+            "vitrine": dados["vitrine"],
             "total_categoria": total_categoria,
             "total_loja": total_loja,
             "total_consulta": total_categoria - total_loja,
@@ -1408,32 +1551,8 @@ class BrinquedosView(View):
         if disponibilidade not in disponibilidades_validas:
             disponibilidade = "todos"
 
-        catalogo_ativo = Brinquedos.objects.filter(ativo=True)
-        metadata = get_cached_catalog_metadata(self._build_catalog_metadata)
-        categorias = metadata["categorias"]
-        voltagens = metadata["voltagens"]
-
-        brinquedos_list = (
-            catalogo_ativo
-            .prefetch_related("categorias_brinquedos", "tags")
-        )
-
-        if busca:
-            brinquedos_list = brinquedos_list.filter(
-                Q(nome_brinquedo__icontains=busca)
-                | Q(descricao__icontains=busca)
-                | Q(categorias_brinquedos__nome_categoria__icontains=busca)
-            ).distinct()
-
-        if categoria.isdigit():
-            brinquedos_list = brinquedos_list.filter(
-                categorias_brinquedos__id=int(categoria)
-            ).distinct()
-        else:
+        if not categoria.isdigit():
             categoria = ""
-
-        if voltagem:
-            brinquedos_list = brinquedos_list.filter(voltz__iexact=voltagem)
 
         ordens_por_valor = {"menor-preco", "maior-preco", "custo-beneficio"}
         filtro_por_valor = (
@@ -1447,6 +1566,128 @@ class BrinquedosView(View):
         # é aplicada automaticamente e refletida de volta na interface.
         if filtro_por_valor:
             disponibilidade = "loja"
+
+        metadata = get_cached_catalog_metadata(self._build_catalog_metadata)
+        categorias = metadata["categorias"]
+        voltagens = metadata["voltagens"]
+
+        pagina = (request.GET.get("page") or "1").strip()[:12]
+        filtros = {
+            "busca": busca,
+            "categoria": categoria,
+            "voltagem": voltagem,
+            "disponibilidade": disponibilidade,
+            "ordenar": ordenar,
+            "preco_min": preco_min,
+            "preco_max": preco_max,
+            "filtro_por_valor": filtro_por_valor,
+            "pagina": pagina,
+        }
+
+        # A busca livre, a faixa de preço e um valor de categoria ou
+        # voltagem que não existe são entradas sem limite: cada valor novo
+        # ocuparia uma vaga do cache (o LocMemCache guarda 300 chaves e
+        # descarta um terço quando enche -- a home junto). Essas
+        # combinações continuam sendo montadas na hora; todas as outras
+        # (categoria e voltagem conhecidas, disponibilidade, ordem, página)
+        # saem do cache, iguais para todo visitante.
+        valor_livre = (
+            busca
+            or preco_min is not None
+            or preco_max is not None
+            or (categoria and categoria not in {str(c["id"]) for c in categorias})
+            or (voltagem and voltagem.lower() not in {str(v).lower() for v in voltagens})
+        )
+        if valor_livre:
+            dados = self._montar_pagina(**filtros)
+        else:
+            dados = get_cached_catalog_page(
+                "brinquedos",
+                (categoria, voltagem, disponibilidade, ordenar, pagina),
+                lambda: self._montar_pagina(**filtros),
+            )
+        page_obj = pagina_de_cache(dados["pagina"])
+        total_encontrados = dados["pagina"]["total"]
+
+        # O que ESTE visitante marcou: uma consulta, e nenhuma para quem
+        # nunca marcou nada (sem conta e sem o cookie do aparelho).
+        marcas = _marcas_do_visitante(request, "brinquedo")
+        marcados_curtida = marcas["curtida"]
+        marcados_desejo = marcas["desejo"]
+
+        query_params = request.GET.copy()
+        query_params.pop("page", None)
+
+        menor_preco_loja = metadata.get("menor_preco_loja")
+        maior_preco_loja = metadata.get("maior_preco_loja")
+        faixa_preco_disponivel = (
+            menor_preco_loja is not None and maior_preco_loja is not None
+        )
+        preco_min_range = preco_min if preco_min is not None else menor_preco_loja
+        preco_max_range = preco_max if preco_max is not None else maior_preco_loja
+
+        context = {
+            "brinquedos": page_obj,
+            "page_obj": page_obj,
+            "ordenar": ordenar,
+            "busca": busca,
+            "categorias": categorias,
+            "categoria_ativa": categoria,
+            "voltagens": voltagens,
+            "voltagem_ativa": voltagem,
+            "disponibilidade": disponibilidade,
+            "preco_min": preco_min_input,
+            "preco_max": preco_max_input,
+            "faixa_preco_disponivel": faixa_preco_disponivel,
+            "menor_preco_loja": self._decimal_html(menor_preco_loja),
+            "maior_preco_loja": self._decimal_html(maior_preco_loja),
+            "menor_preco_loja_br": self._formatar_decimal_br(menor_preco_loja),
+            "maior_preco_loja_br": self._formatar_decimal_br(maior_preco_loja),
+            "preco_min_range": self._decimal_html(preco_min_range),
+            "preco_max_range": self._decimal_html(preco_max_range),
+            "preco_min_range_br": self._formatar_decimal_br(preco_min_range),
+            "preco_max_range_br": self._formatar_decimal_br(preco_max_range),
+            "filtro_valor_ativo": filtro_por_valor,
+            "total_encontrados": total_encontrados,
+            "total_catalogo": metadata["total_catalogo"],
+            "total_loja": metadata["total_loja"],
+            "total_categorias": metadata["total_categorias"],
+            "querystring": query_params.urlencode(),
+            "fav_curtidos": marcados_curtida,
+            "fav_desejados": marcados_desejo,
+        }
+
+        resposta = render(request, "brinquedos.html", context)
+        return servico_favoritos.aplicar_cookie(request, resposta)
+
+    @staticmethod
+    def _montar_pagina(busca, categoria, voltagem, disponibilidade, ordenar,
+                       preco_min, preco_max, filtro_por_valor, pagina):
+        """Uma página da lista, como todo visitante a vê (vai para o cache).
+
+        Os parâmetros já passaram pela lista branca de `get`.
+        """
+        brinquedos_list = (
+            Brinquedos.objects.filter(ativo=True)
+            .prefetch_related("categorias_brinquedos", "tags")
+        )
+
+        if busca:
+            brinquedos_list = brinquedos_list.filter(
+                Q(nome_brinquedo__icontains=busca)
+                | Q(descricao__icontains=busca)
+                | Q(categorias_brinquedos__nome_categoria__icontains=busca)
+            ).distinct()
+
+        if categoria:
+            brinquedos_list = brinquedos_list.filter(
+                categorias_brinquedos__id=int(categoria)
+            ).distinct()
+
+        if voltagem:
+            brinquedos_list = brinquedos_list.filter(voltz__iexact=voltagem)
+
+        if filtro_por_valor:
             brinquedos_list = brinquedos_list.filter(
                 exibir_na_loja=True,
                 valor_brinquedo__isnull=False,
@@ -1518,8 +1759,7 @@ class BrinquedosView(View):
         # `Paginator.count` já executa e memoriza o COUNT. Havia outro
         # `.count()` imediatamente antes, duplicando a viagem ao Supabase
         # em cada abertura do catálogo.
-        total_encontrados = paginator.count
-        page_obj = paginator.get_page(request.GET.get("page"))
+        page_obj = paginator.get_page(pagina)
 
         # A lista vira list() para o total de curtidas colado em cada item
         # sobreviver: o queryset da página seria consultado de novo no
@@ -1531,59 +1771,13 @@ class BrinquedosView(View):
         for item in page_obj.object_list:
             item.total_curtidas = totais_curtidas.get(item.pk, 0)
 
-        marcados_curtida = servico_favoritos.ids_marcados(
-            request,
-            "curtida",
-        )["brinquedo"]
-        marcados_desejo = servico_favoritos.ids_marcados(
-            request,
-            "desejo",
-        )["brinquedo"]
-
-        query_params = request.GET.copy()
-        query_params.pop("page", None)
-
-        menor_preco_loja = metadata.get("menor_preco_loja")
-        maior_preco_loja = metadata.get("maior_preco_loja")
-        faixa_preco_disponivel = (
-            menor_preco_loja is not None and maior_preco_loja is not None
-        )
-        preco_min_range = preco_min if preco_min is not None else menor_preco_loja
-        preco_max_range = preco_max if preco_max is not None else maior_preco_loja
-
-        context = {
-            "brinquedos": page_obj,
-            "page_obj": page_obj,
-            "ordenar": ordenar,
-            "busca": busca,
-            "categorias": categorias,
-            "categoria_ativa": categoria,
-            "voltagens": voltagens,
-            "voltagem_ativa": voltagem,
-            "disponibilidade": disponibilidade,
-            "preco_min": preco_min_input,
-            "preco_max": preco_max_input,
-            "faixa_preco_disponivel": faixa_preco_disponivel,
-            "menor_preco_loja": self._decimal_html(menor_preco_loja),
-            "maior_preco_loja": self._decimal_html(maior_preco_loja),
-            "menor_preco_loja_br": self._formatar_decimal_br(menor_preco_loja),
-            "maior_preco_loja_br": self._formatar_decimal_br(maior_preco_loja),
-            "preco_min_range": self._decimal_html(preco_min_range),
-            "preco_max_range": self._decimal_html(preco_max_range),
-            "preco_min_range_br": self._formatar_decimal_br(preco_min_range),
-            "preco_max_range_br": self._formatar_decimal_br(preco_max_range),
-            "filtro_valor_ativo": filtro_por_valor,
-            "total_encontrados": total_encontrados,
-            "total_catalogo": metadata["total_catalogo"],
-            "total_loja": metadata["total_loja"],
-            "total_categorias": metadata["total_categorias"],
-            "querystring": query_params.urlencode(),
-            "fav_curtidos": marcados_curtida,
-            "fav_desejados": marcados_desejo,
+        return {
+            "pagina": dados_da_pagina(page_obj),
+            # Página que não é número ou está fora do intervalo cai na
+            # primeira ou na última: serve, mas não ganha uma vaga no cache
+            # para cada número que um robô inventar.
+            "_descartavel": str(page_obj.number) != pagina,
         }
-
-        resposta = render(request, "brinquedos.html", context)
-        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 class LojaView(View):

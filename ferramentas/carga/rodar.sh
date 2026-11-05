@@ -18,6 +18,12 @@
 #   CARGA_DURACAO    duração de cada estágio (60s)
 #   CARGA_SPAWN      usuários criados por segundo (10)
 #   CARGA_WORKERS    variantes de WEB_WORKERS a testar ("1 2")
+#   CARGA_LATENCIA_MS latência artificial por consulta ao banco, em ms (0 =
+#                    desligado). Com 40, o sqlite local passa a custar o que
+#                    o Supabase custa pela rede (ver latencia_db.py); a
+#                    etiqueta dos arquivos ganha o sufixo "_l40".
+#   CARGA_ROTULO     prefixo da etiqueta dos arquivos ("antes_", "depois_"),
+#                    para guardar duas medições lado a lado em resultados/.
 set -euo pipefail
 
 AQUI=$(cd "$(dirname "$0")" && pwd)
@@ -31,6 +37,10 @@ export PYTHONDONTWRITEBYTECODE=1
 # gthread com 8 threads, como no Render; o escudo reserva 4 vagas públicas.
 export WEB_THREADS=${WEB_THREADS:-8}
 export PUBLIC_CONCURRENCY=${PUBLIC_CONCURRENCY:-4}
+# Latência artificial por consulta (ferramentas/carga/latencia_db.py, ligada
+# pelo ls_carga_settings quando a variável está definida).
+export CARGA_LATENCIA_MS=${CARGA_LATENCIA_MS:-0}
+ROTULO=${CARGA_ROTULO:-}
 
 HOST_URL="http://127.0.0.1:$PORT"
 RES="$AQUI/resultados"
@@ -66,7 +76,7 @@ trap parar_servidor EXIT
 
 subir_servidor() {
     local etiqueta=$1 workers=$2
-    log "subindo gunicorn: WEB_WORKERS=$workers WEB_THREADS=$WEB_THREADS PUBLIC_CONCURRENCY=$PUBLIC_CONCURRENCY porta $PORT"
+    log "subindo gunicorn: WEB_WORKERS=$workers WEB_THREADS=$WEB_THREADS PUBLIC_CONCURRENCY=$PUBLIC_CONCURRENCY CARGA_LATENCIA_MS=$CARGA_LATENCIA_MS porta $PORT"
     WEB_WORKERS=$workers nohup "$VENV/bin/gunicorn" -c gunicorn.conf.py lazer.wsgi:application \
         > "$RES/${etiqueta}_gunicorn.log" 2>&1 &
     PID=$!
@@ -114,7 +124,8 @@ estagio() {
 }
 
 for workers in $VARIANTES; do
-    etiqueta="w${workers}"
+    etiqueta="${ROTULO}w${workers}"
+    if [ "$CARGA_LATENCIA_MS" != "0" ]; then etiqueta="${etiqueta}_l${CARGA_LATENCIA_MS}"; fi
     subir_servidor "$etiqueta" "$workers"
     for usuarios in $ESTAGIOS; do
         estagio "$etiqueta" "$workers" "$usuarios"

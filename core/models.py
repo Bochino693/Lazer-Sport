@@ -2212,3 +2212,51 @@ class RegistroCadastro(models.Model):
     @property
     def regiao(self):
         return ", ".join(parte for parte in (self.cidade, self.estado, self.pais) if parte)
+
+
+class ModuloTresD(Prime):
+    """Uma peça 3D (.glb) da biblioteca para MONTAR brinquedões: torre, escorregador, rede...
+
+    POR QUE EXISTE. Os brinquedões são montados de módulos que se repetem
+    -- a torre, a plataforma, o escorregador, a rede de escalada, o túnel,
+    a piscina de bolinhas. Aqui fica a biblioteca dessas peças em 3D,
+    enviada pelo painel aos poucos (Objetos 3D > Laboratório). É o
+    primeiro passo do montador de brinquedões: com as peças guardadas e
+    medidas, o próximo passo é encaixá-las numa montagem e ver o
+    brinquedão inteiro. As cores e as medidas são lidas de dentro do .glb
+    ao gravar, como no objeto 3D do brinquedo (core/objetos_3d.py).
+    """
+
+    class Categoria(models.TextChoices):
+        TORRE = "torre", "Torre / plataforma"
+        ESCORREGADOR = "escorregador", "Escorregador / tobogã"
+        REDE = "rede", "Rede / escalada"
+        TUNEL = "tunel", "Túnel / passagem"
+        PISCINA = "piscina", "Piscina de bolinhas"
+        ESCADA = "escada", "Escada / rampa"
+        CERCADO = "cercado", "Cercado / proteção"
+        DECORACAO = "decoracao", "Decoração / tema"
+        OUTRO = "outro", "Outro"
+
+    nome = models.CharField(max_length=80, verbose_name="Nome da peça")
+    categoria = models.CharField(max_length=16, choices=Categoria.choices, default=Categoria.OUTRO, db_index=True)
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    arquivo = models.FileField(upload_to="objetos_3d/modulos/", storage=_armazenamento_3d, verbose_name="Arquivo 3D (.glb)")
+    cores = models.JSONField(default=list, blank=True, verbose_name="Cores")
+    medidas = models.JSONField(default=list, blank=True, verbose_name="Medidas (altura, largura, profundidade)")
+    ordem = models.PositiveSmallIntegerField(default=100)
+
+    class Meta:
+        verbose_name = "Módulo 3D (montagem)"
+        verbose_name_plural = "Módulos 3D (montagem)"
+        ordering = ["categoria", "ordem", "nome"]
+
+    def __str__(self):
+        return f"{self.get_categoria_display()} — {self.nome}"
+
+    @property
+    def url(self):
+        try:
+            return self.arquivo.url if self.arquivo else ""
+        except Exception:
+            return ""

@@ -210,7 +210,7 @@
                     <label for="site_web">Site</label>
                     <input type="text" name="site_web" id="site_web" value="" tabindex="-1" autocomplete="off">
                 </div>
-                <input type="hidden" name="selo_cadastro" value="{{ selo_cadastro }}">
+                <input type="hidden" name="selo_cadastro" id="selo-cadastro" value="{{ selo_cadastro }}">
 
                 <div class="ls-humano">
                     {% if turnstile_site_key %}
@@ -218,13 +218,20 @@
                         <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" data-language="pt-br"></div>
                         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
                     {% else %}
-                        <label for="resposta_humana">Confirme que você é uma pessoa: quanto é {{ pergunta_humana }}?</label>
-                        <div class="ls-entrada {% if form.non_field_errors %}erro{% endif %}">
-                            <i class="fa-solid fa-calculator" aria-hidden="true"></i>
-                            <input type="text" name="resposta_humana" id="resposta_humana" inputmode="numeric"
-                                   placeholder="Só o número" autocomplete="off" required maxlength="4">
+                        <label for="resposta_humana">Confirme que você é uma pessoa: digite o código da imagem</label>
+                        <div class="ls-humano-imagem">
+                            <img id="imagem-humana" src="{{ imagem_humana }}" alt="Código de verificação: 5 letras e números" width="210" height="70" decoding="async">
+                            <button type="button" class="ls-humano-trocar" id="trocar-imagem" data-url="{% url 'registrar_desafio' %}">
+                                <i class="fa-solid fa-rotate" aria-hidden="true"></i> Outra imagem
+                            </button>
                         </div>
-                        <small>É uma conta simples, para barrar cadastros automáticos.</small>
+                        <div class="ls-entrada {% if form.non_field_errors %}erro{% endif %}">
+                            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                            <input type="text" name="resposta_humana" id="resposta_humana"
+                                   placeholder="5 letras e números" autocomplete="off" autocapitalize="characters"
+                                   spellcheck="false" required maxlength="8">
+                        </div>
+                        <small>Maiúsculas ou minúsculas, tanto faz. Serve para barrar cadastros automáticos.</small>
                     {% endif %}
                 </div>
 
@@ -259,6 +266,29 @@ document.querySelectorAll(".ls-olho").forEach(botao => {
         this.setAttribute("aria-label", escondida ? "Ocultar senha" : "Mostrar senha");
     });
 });
+
+/* ===== Outra imagem do desafio =====
+   Pede um selo e uma imagem novos sem recarregar a página (o que a pessoa
+   já digitou fica). */
+const botaoTrocar = document.getElementById("trocar-imagem");
+if (botaoTrocar) {
+    botaoTrocar.addEventListener("click", async function () {
+        botaoTrocar.disabled = true;
+        try {
+            const resposta = await fetch(botaoTrocar.dataset.url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+            const dados = await resposta.json();
+            document.getElementById("imagem-humana").src = dados.imagem;
+            document.getElementById("selo-cadastro").value = dados.selo;
+            const campo = document.getElementById("resposta_humana");
+            campo.value = "";
+            campo.focus();
+        } catch (erro) {
+            window.location.reload();
+        } finally {
+            botaoTrocar.disabled = false;
+        }
+    });
+}
 
 /* ===== Máscara de telefone =====
    Só cosmética: o servidor normaliza de novo em normalizar_telefone(),

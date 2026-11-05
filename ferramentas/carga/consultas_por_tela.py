@@ -29,7 +29,10 @@ from django.db import connection  # noqa: E402
 from django.test import Client  # noqa: E402
 from django.test.utils import CaptureQueriesContext  # noqa: E402
 
-PUBLICAS = ["/", "/brinquedos/", "/brinquedo/1/", "/jogos/", "/categoria/1/", "/static/site/ls-base.css"]
+PUBLICAS = [
+    "/", "/brinquedos/", "/brinquedos/?disponibilidade=loja&ordenar=az", "/brinquedo/1/",
+    "/jogos/", "/categoria/1/", "/pecas-reposicao/", "/pecas/1/", "/static/site/ls-base.css",
+]
 PAINEL = ["/", "/orcamentos/", "/clientes/", "/producao/", "/estoque/", "/avisos/estado/"]
 
 
@@ -45,18 +48,18 @@ def medir(cliente, caminho, **extra):
 
 
 def main():
-    print(f"{'tela':34} {'status':>6} {'consultas':>9} {'ms total':>9} {'ms em SQL':>9}")
+    print(f"{'tela':44} {'status':>6} {'consultas':>9} {'ms total':>9} {'ms em SQL':>9}")
     publico = Client(HTTP_HOST="127.0.0.1")
     for caminho in PUBLICAS:
         status, n, ms, sql = medir(publico, caminho)
-        print(f"{caminho:34} {status:>6} {n:>9} {ms:>9.1f} {sql:>9.1f}")
+        print(f"{caminho:44} {status:>6} {n:>9} {ms:>9.1f} {sql:>9.1f}")
 
     usuario = get_user_model().objects.get(username=os.getenv("CARGA_USUARIO", "demo"))
     painel = Client(HTTP_HOST="interno.localhost")
     painel.force_login(usuario)
     for caminho in PAINEL:
         status, n, ms, sql = medir(painel, caminho)
-        print(f"{'painel ' + caminho:34} {status:>6} {n:>9} {ms:>9.1f} {sql:>9.1f}")
+        print(f"{'painel ' + caminho:44} {status:>6} {n:>9} {ms:>9.1f} {sql:>9.1f}")
 
 
 if __name__ == "__main__":

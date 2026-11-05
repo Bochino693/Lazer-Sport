@@ -158,3 +158,210 @@ body.ls-galeria-travada { overflow: hidden; }
     .ls-galeria-caixa { padding: 22px 18px; border-radius: 18px; }
     .ls-galeria-fotos { grid-template-columns: 1fr; }
 }
+
+/* ======================================================================
+   A JANELA DE UMA FOTO POR VEZ (`.ls-galeria--fotos`): a página do
+   produto e a da peça. Tela inteira, fundo escuro, a foto INTEIRA no
+   meio (`object-fit: contain` -- nada recortado, nada ampliado no
+   passar do mouse), as setas, o contador e a tira de miniaturas.
+   ====================================================================== */
+.ls-galeria--fotos {
+    padding: 0;
+    overflow: hidden;
+    background: rgba(2, 8, 22, .96);
+}
+
+.ls-galeria--fotos .ls-galeria-caixa {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #eaf2ff;
+    transform: none;
+}
+
+.ls-galeria-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, .45), transparent);
+}
+
+.ls-galeria--fotos .ls-galeria-titulo {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: #fff;
+    font-size: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ls-galeria-contador {
+    flex: 0 0 auto;
+    padding: 6px 11px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    font-size: .78rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+}
+
+.ls-galeria--fotos .ls-galeria-fechar {
+    position: static;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.ls-galeria--fotos .ls-galeria-fechar:hover {
+    background: rgba(230, 57, 70, .85);
+    transform: none;
+}
+
+/* O palco: a foto no centro, as setas nas beiradas. Arrastar de lado
+   passa a foto; `pan-y` deixa o navegador com a rolagem vertical, e
+   `pinch-zoom` com o pinçar -- a foto, em si, não mexe. */
+.ls-galeria-palco {
+    position: relative;
+    min-height: 0;
+    cursor: zoom-out;
+    touch-action: pan-y pinch-zoom;
+}
+
+/* O slide é posicionado com `inset`, e não com altura em porcentagem:
+   numa linha de grade `auto` a porcentagem não resolve, e a foto alta
+   vazava a tela. Com as quatro bordas presas ao palco a caixa tem
+   tamanho certo, e `max-height: 100%` da foto vale de verdade. */
+.ls-galeria-slide {
+    position: absolute;
+    inset: 6px 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.ls-galeria-slide[hidden] { display: none; }
+
+.ls-galeria-slide img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    cursor: default;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .6));
+}
+
+.ls-galeria-seta {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 50%;
+    background: rgba(8, 18, 40, .78);
+    color: #fff;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: background .2s ease;
+}
+
+.ls-galeria-seta:hover { background: #0878f9; }
+.ls-galeria-seta--anterior { left: 12px; }
+.ls-galeria-seta--proxima { right: 12px; }
+
+.ls-galeria-rodape {
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+    min-width: 0;
+    padding: 8px 16px 14px;
+    background: linear-gradient(0deg, rgba(0, 0, 0, .45), transparent);
+}
+
+.ls-galeria-legenda {
+    max-width: 70ch;
+    margin: 0;
+    color: #c9d8ec;
+    font-size: .86rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.ls-galeria-legenda[hidden] { display: none; }
+
+.ls-galeria-tira {
+    display: flex;
+    gap: 8px;
+    max-width: 100%;
+    padding: 3px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.ls-galeria-tira button {
+    flex: 0 0 auto;
+    width: 58px;
+    height: 58px;
+    padding: 4px;
+    border: 2px solid rgba(255, 255, 255, .14);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .06);
+    cursor: pointer;
+}
+
+.ls-galeria-tira button img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.ls-galeria-tira button[aria-current="true"] {
+    border-color: #3fd0ff;
+    box-shadow: 0 0 0 3px rgba(63, 208, 255, .25);
+}
+
+.ls-galeria--fotos :focus-visible {
+    outline: 3px solid #ffd23f;
+    outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+    .ls-galeria--fotos { padding: 0; }
+    .ls-galeria--fotos .ls-galeria-caixa { padding: 0; border-radius: 0; }
+    .ls-galeria-topo { padding: 10px 12px; }
+    .ls-galeria-slide { inset: 4px 8px; }
+    .ls-galeria-seta { width: 42px; height: 42px; font-size: .95rem; }
+    .ls-galeria-seta--anterior { left: 6px; }
+    .ls-galeria-seta--proxima { right: 6px; }
+    .ls-galeria-tira button { width: 50px; height: 50px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-galeria, .ls-galeria-caixa, .ls-galeria-seta { transition: none; }
+}

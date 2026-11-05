@@ -27,6 +27,8 @@
 }
 </script>
 
+  {# a janela de fotos em tela cheia é a mesma de Eventos, Projetos e do produto (`ls-galeria.js`) #}
+  <link rel="stylesheet" href="{% estatico 'site/ls-galeria.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/paginas/reposicao_info.css' %}">
 
 <div class="peca-page">
@@ -54,8 +56,12 @@
                 <div class="peca-imagem">
                     {% if imagens_peca %}
                         {% with principal=imagens_peca.0 %}
-                            <img id="peca-imagem-principal" src="{{ principal.imagem|foto:1400 }}" alt="{{ peca.nome }} - {{ principal.get_posicao_display }}" width="760" height="760" fetchpriority="high">
+                            {# clicar na foto abre a galeria em tela cheia, na foto que está na vitrine #}
+                            <img id="peca-imagem-principal" src="{{ principal.imagem|foto:1400 }}" alt="{{ peca.nome }} - {{ principal.get_posicao_display }}" width="760" height="760" fetchpriority="high" data-ls-galeria="galeria-peca" data-ls-galeria-indice="0">
                         {% endwith %}
+                        <button class="peca-ampliar" type="button" data-ls-galeria="galeria-peca" data-ls-galeria-indice="0" aria-haspopup="dialog" aria-label="Ampliar foto">
+                            <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                        </button>
                         {% if imagens_peca|length > 1 %}
                             <div class="peca-galeria-nav" aria-label="Navegar pelas fotos">
                                 <button type="button" data-foto-anterior aria-label="Foto anterior">‹</button>
@@ -150,12 +156,67 @@
     </div>
 </div>
 
+{% comment %}
+  A galeria em tela cheia: a foto INTEIRA sobre fundo escuro, setas,
+  contador, teclado (← → Esc) e o dedo no celular -- tudo do módulo
+  compartilhado `ls-galeria.js`. Fica fora de `.peca-page` porque aquele
+  bloco recorta o que sai dele (`overflow: hidden`).
+{% endcomment %}
+{% if imagens_peca %}
+<div class="ls-galeria ls-galeria--fotos" id="galeria-peca" role="dialog" aria-modal="true"
+     aria-label="Fotos de {{ peca.nome }}" hidden>
+    <div class="ls-galeria-caixa">
+        <div class="ls-galeria-topo">
+            <h2 class="ls-galeria-titulo">{{ peca.nome }}</h2>
+            <span class="ls-galeria-contador" data-ls-galeria-contador>1 / {{ imagens_peca|length }}</span>
+            <button type="button" class="ls-galeria-fechar" data-ls-galeria-fechar aria-label="Fechar as fotos">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="ls-galeria-palco" data-ls-galeria-fundo>
+            {% for foto in imagens_peca %}
+                <figure class="ls-galeria-slide" data-ls-galeria-fundo data-legenda="{{ foto.get_posicao_display }}"{% if not forloop.first %} hidden{% endif %}>
+                    <img src="{{ foto.imagem|foto:1600 }}" alt="{{ peca.nome }} - {{ foto.get_posicao_display }}" loading="lazy" decoding="async">
+                </figure>
+            {% endfor %}
+            {% if imagens_peca|length > 1 %}
+                <button type="button" class="ls-galeria-seta ls-galeria-seta--anterior" data-ls-galeria-anterior aria-label="Foto anterior">
+                    <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="ls-galeria-seta ls-galeria-seta--proxima" data-ls-galeria-proxima aria-label="Próxima foto">
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </button>
+            {% endif %}
+        </div>
+
+        <div class="ls-galeria-rodape">
+            <p class="ls-galeria-legenda" data-ls-galeria-legenda></p>
+            {% if imagens_peca|length > 1 %}
+                <div class="ls-galeria-tira" aria-label="Escolher a foto">
+                    {% for foto in imagens_peca %}
+                        <button type="button" data-ls-galeria-ir="{{ forloop.counter0 }}"
+                                aria-label="{{ foto.get_posicao_display }}, foto {{ forloop.counter }} de {{ imagens_peca|length }}"
+                                aria-current="{% if forloop.first %}true{% else %}false{% endif %}">
+                            <img src="{{ foto.imagem|foto:240 }}" alt="" loading="lazy" decoding="async">
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 (function () {
     'use strict';
     const principal = document.getElementById('peca-imagem-principal');
     const miniaturas = Array.from(document.querySelectorAll('[data-foto-indice]'));
     const contador = document.getElementById('peca-contador');
+    // quem abre a galeria em tela cheia (a foto e o botão de ampliar) abre
+    // na foto que está na vitrine
+    const gatilhosAmpliar = Array.from(document.querySelectorAll('[data-ls-galeria="galeria-peca"]'));
     let indiceAtual = 0;
 
     function exibirFoto(indice) {
@@ -171,7 +232,14 @@
         });
         miniatura.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
         if (contador) contador.textContent = `${indiceAtual + 1} / ${miniaturas.length}`;
+        gatilhosAmpliar.forEach((gatilho) => { gatilho.dataset.lsGaleriaIndice = String(indiceAtual); });
     }
+
+    // quem passa de foto na galeria em tela cheia volta e encontra a
+    // vitrine na mesma foto
+    document.getElementById('galeria-peca')?.addEventListener('ls-galeria:mudou', (evento) => {
+        if (evento.detail && evento.detail.indice !== indiceAtual) exibirFoto(evento.detail.indice);
+    });
 
     miniaturas.forEach((item, indice) => item.addEventListener('click', () => exibirFoto(indice)));
     document.querySelector('[data-foto-anterior]')?.addEventListener('click', () => exibirFoto(indiceAtual - 1));
@@ -218,4 +286,5 @@
     });
 })();
 </script>
+<script src="{% estatico 'site/ls-galeria.js' %}" defer></script>
 {% endblock %}

@@ -4981,3 +4981,31 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 .ls-action-fab-menu .btn:hover,.ls-action-fab-menu .btn:focus-visible{
   background:rgba(var(--acento-rgb),.12)!important;transform:none;
 }
+
+/* ======================================================================
+   LAZER & SPORT GAMES — o bloco do simulador e do 3D no menu lateral.
+   Um painel com a cara da arena (azul elétrico, rosa e amarelo) para a
+   parte da casa que mais aparece. Os rótulos seguem `--ls-rotulo`, como
+   o resto do menu: somem no trilho e voltam com a lateral aberta.
+   ====================================================================== */
+.ls-nav-section--games{
+  padding:10px;border:1px solid rgba(63,208,255,.24);border-radius:18px;
+  background:linear-gradient(145deg,rgba(63,208,255,.12),rgba(255,61,113,.09) 58%,rgba(255,210,63,.10));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 10px 26px rgba(8,120,249,.12);
+}
+.ls-nav-section--games .ls-nav-caption{color:#7fdcff;padding-bottom:7px}
+.ls-nav-section--games .ls-nav-caption i{margin-right:5px;color:#ffd23f}
+.ls-nav-section--games .ls-nav-item{margin:2px 0}
+.ls-nav-section--games .ls-nav-icon{color:#fff;background:linear-gradient(135deg,#0878f9,#3fd0ff);box-shadow:0 6px 14px rgba(8,120,249,.3)}
+.ls-nav-section--games .ls-nav-item:nth-of-type(2) .ls-nav-icon{background:linear-gradient(135deg,#ff3d71,#ffd23f);box-shadow:0 6px 14px rgba(255,61,113,.28)}
+.ls-nav-section--games .ls-nav-item:hover{border-color:rgba(63,208,255,.35);background:rgba(63,208,255,.10)}
+.ls-nav-section--games .ls-nav-item.active{
+  border-color:rgba(63,208,255,.6);
+  background:linear-gradient(135deg,rgba(8,120,249,.95),rgba(63,208,255,.9));
+  box-shadow:0 12px 30px rgba(63,208,255,.28);
+}
+.ls-nav-tag{
+  margin-left:auto;padding:3px 8px;border-radius:999px;flex:0 0 auto;
+  background:rgba(255,210,63,.18);color:#ffd23f;font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+}
+.ls-nav-item.active .ls-nav-tag{background:rgba(255,255,255,.22);color:#fff}

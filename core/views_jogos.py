@@ -24,6 +24,7 @@ from django.views.generic import View
 from sistema_interno.templatetags.interno_extras import estatico
 
 from . import arena, ranking
+from .home_cache import get_cached_catalog_page
 from .models import Brinquedos, JogoCadastrado
 from .views_arena import WHATSAPP
 
@@ -105,10 +106,31 @@ def _para_o_script(jogo):
     }
 
 
+def dados_do_simulador():
+    """Os jogos da casa (com a máquina de cada um) e os cadastrados pelo painel.
+
+    É igual para todo visitante, por isso vai para o cache público do
+    catálogo (core/home_cache.py): muda quando um brinquedo ou um jogo
+    cadastrado muda, pela versão do catálogo. O ranking e a posição de
+    quem está olhando ficam de fora, resolvidos por requisição.
+    """
+    maquinas = maquinas_dos_jogos()
+    jogos = []
+    for jogo in arena.jogos_do_simulador(arena.JOGOS):
+        maquina = maquinas.get(jogo["slug"])
+        jogos.append({
+            **jogo,
+            "maquina_url": maquina["url"] if maquina else "",
+            "maquina_nome": maquina["nome"] if maquina else "",
+        })
+    return {"jogos": jogos, "externos": jogos_cadastrados()}
+
+
 @method_decorator(ensure_csrf_cookie, name="get")
 class SimuladorView(View):
     def get(self, request, slug=None):
-        externos = jogos_cadastrados()
+        dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
+        externos = dados["externos"]
         if slug is not None and slug not in arena.JOGOS_POR_SLUG:
             # um jogo que a equipe subiu pelo painel: a sua própria página
             cadastrado = next((j for j in externos if j["slug"] == slug), None)
@@ -116,15 +138,7 @@ class SimuladorView(View):
                 raise Http404("Jogo não encontrado")
             return self.pagina_do_jogo_cadastrado(request, cadastrado, externos)
 
-        maquinas = maquinas_dos_jogos()
-        jogos = []
-        for jogo in arena.jogos_do_simulador(arena.JOGOS):
-            maquina = maquinas.get(jogo["slug"])
-            jogos.append({
-                **jogo,
-                "maquina_url": maquina["url"] if maquina else "",
-                "maquina_nome": maquina["nome"] if maquina else "",
-            })
+        jogos = dados["jogos"]
         atual = next((j for j in jogos if j["slug"] == slug), jogos[0])
         painel = ranking.painel(request, atual["slug"])
         voltar = atual["url"]

@@ -32,8 +32,10 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
+from core import arena
 from core.models import JogoCadastrado
 from core.objetos_3d import tabela_pronta
+from sistema_interno.templatetags.interno_extras import estatico
 
 from .utils import ErroDeFormulario, endereco_do_site, exigir_confirmacao_exclusao
 from .views import RespostaJSONMixin, SuperusuarioInternoRequiredMixin
@@ -148,9 +150,12 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             jogo.como_roda = "Endereço hospedado" if jogo.endereco else ("Arquivo .html" if jogo.arquivo_html else "Sem onde jogar")
 
         todos = JogoCadastrado.objects.all()
+        oficiais = self._oficiais(site, busca)
         return render(request, self.template_name, {
             "jogos": jogos,
             "jogos_dados": [self._serializar(jogo) for jogo in jogos],
+            "oficiais": oficiais,
+            "total_oficiais": len(arena.JOGOS),
             "busca": busca,
             "total": todos.count(),
             "total_ativos": todos.filter(ativo=True).count(),
@@ -159,6 +164,33 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "proporcoes": JogoCadastrado.PROPORCOES,
             "site": site,
         })
+
+    @staticmethod
+    def _oficiais(site, busca=""):
+        """Os jogos que vêm com o site (core/arena.JOGOS), com o material deles.
+
+        São motores feitos à mão, listados no código: não se editam por
+        aqui e NÃO têm APK no site -- o jogo de verdade fica na máquina. A
+        capa, o pôster e os textos são os mesmos do simulador.
+        """
+        texto = busca.lower()
+        lista = []
+        for jogo in arena.JOGOS:
+            if texto and texto not in f"{jogo['titulo']} {jogo['slug']} {jogo['maquina']} {jogo['chamada']}".lower():
+                continue
+            lista.append({
+                "slug": jogo["slug"],
+                "titulo": jogo["titulo"],
+                "maquina": jogo["maquina"],
+                "chamada": jogo["chamada"],
+                "descricao": jogo["descricao"],
+                "comandos": jogo["comandos"],
+                "cor": jogo["cor"],
+                "capa": estatico(jogo["capa"]),
+                "poster": estatico(jogo["poster"]) if jogo.get("poster") else "",
+                "url_publica": f"{site}/jogos/{jogo['slug']}/",
+            })
+        return lista
 
     @staticmethod
     def _nome_do_arquivo(campo):
