@@ -1494,3 +1494,45 @@
         transition: none;
     }
 }
+
+/* O que vem dentro do conjunto (o espaço, o brinquedão): cada item é um card que leva à página dele */
+.produto-conjunto-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.produto-conjunto-lista a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(120, 170, 255, .18);
+    background: linear-gradient(135deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    color: inherit;
+    text-decoration: none;
+    transition: transform .2s ease, border-color .2s ease;
+}
+
+.produto-conjunto-lista a:hover { transform: translateY(-2px); border-color: rgba(255, 210, 63, .55); }
+.produto-conjunto-lista a > i { margin-left: auto; opacity: .6; }
+
+.produto-conjunto-foto {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+}
+
+.produto-conjunto-foto img { width: 100%; height: 100%; object-fit: contain; }
+.produto-conjunto-nome { font-weight: 800; line-height: 1.25; }
+.produto-conjunto-nome b { color: #ffd23f; }
+.produto-conjunto .produto-chips a { text-decoration: none; }

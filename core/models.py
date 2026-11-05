@@ -860,6 +860,34 @@ class JogoCadastrado(Prime):
 
 
 
+
+class ComponenteBrinquedo(models.Model):
+    """Um brinquedo que VEM DENTRO de outro: o Gol Flash e o Swish no Espaço Esportivo, a piscina de bolinhas no brinquedão.
+
+    POR QUE EXISTE. Brinquedão e espaço esportivo são conjuntos: o Espaço
+    Esportivo Modelo 1 tem dois círculos do Gol Flash e as cestas do Swish,
+    que também são vendidos sozinhos, cada um com a sua página, fotos e
+    objeto 3D. A composição liga as páginas (o espaço diz o que traz; o Gol
+    Flash diz de que espaços faz parte) e a arena. Ver core/composicao.py.
+    """
+
+    conjunto = models.ForeignKey(Brinquedos, on_delete=models.CASCADE, related_name="componentes")
+    item = models.ForeignKey(Brinquedos, on_delete=models.CASCADE, related_name="faz_parte_de")
+    quantidade = models.PositiveSmallIntegerField(default=1)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Brinquedo que vem junto"
+        verbose_name_plural = "Brinquedos que vêm junto"
+        ordering = ["ordem", "id"]
+        constraints = [
+            UniqueConstraint(fields=["conjunto", "item"], name="componente_uma_vez_por_conjunto"),
+            models.CheckConstraint(condition=~models.Q(conjunto=models.F("item")), name="componente_nao_e_o_proprio_conjunto"),
+        ]
+
+    def __str__(self):
+        return f"{self.conjunto} · {self.quantidade}× {self.item}"
+
 def _caminho_do_arquivo_emulador(instance, filename):
     """Uma pasta por envio (o `lote`): o nome do arquivo nunca colide com o de outro envio."""
     return f"jogos/emulador/{instance.jogo.slug}/{instance.lote}/{filename}"

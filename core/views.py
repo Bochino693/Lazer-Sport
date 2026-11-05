@@ -1094,10 +1094,13 @@ class BrinquedoInfoView(View):
 
         imagens_brinquedo = list(brinquedo.imagens_ordenadas)
         imagem_catalogo = brinquedo.imagem_catalogo
+        componentes, faz_parte_de = _composicao_do_brinquedo(brinquedo)
 
         return {
             "contexto": {
                 "brinquedo": brinquedo,
+                "componentes": componentes,
+                "faz_parte_de": faz_parte_de,
                 "categorias_produto": categorias,
                 "disponivel_loja": disponivel_loja,
                 "preco_formatado": preco_formatado,
@@ -7227,3 +7230,34 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
+
+
+
+def _composicao_do_brinquedo(brinquedo):
+    """O que vem dentro do brinquedo (o espaço, o brinquedão) e de que conjuntos ele faz parte.
+
+    Volta listas de dicionários prontos para o cache da página: nome, foto,
+    endereço e a quantidade. Antes da migração, as duas listas saem vazias.
+    """
+    from django.urls import reverse
+
+    from .fotos import reduzir_imagem
+    from .models import ComponenteBrinquedo
+    from .objetos_3d import tabela_pronta
+
+    if not tabela_pronta(ComponenteBrinquedo):
+        return [], []
+
+    def ficha(outro, quantidade=1):
+        try:
+            foto = reduzir_imagem(outro.imagem_brinquedo.url, 320) if outro.imagem_brinquedo else ""
+        except Exception:
+            foto = ""
+        return {"nome": outro.nome_brinquedo, "foto": foto, "quantidade": quantidade,
+                "url": reverse("brinquedo_detalhe", args=[outro.pk])}
+
+    dentro = (ComponenteBrinquedo.objects.filter(conjunto=brinquedo, item__ativo=True)
+              .select_related("item").order_by("ordem", "id"))
+    fora = (ComponenteBrinquedo.objects.filter(item=brinquedo, conjunto__ativo=True)
+            .select_related("conjunto").order_by("conjunto__nome_brinquedo"))
+    return [ficha(c.item, c.quantidade) for c in dentro], [ficha(c.conjunto) for c in fora]

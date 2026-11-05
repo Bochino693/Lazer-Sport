@@ -1299,14 +1299,8 @@
                que o clique pareça concluído e atualiza só o conteúdo;
                recarregar o documento inteiro repetia CSS, scripts e menu. */
             var modal = form.closest(".modal");
-            if (modal && modal.id) Painel.fechar(modal.id);
             textoOcupado = "Atualizando a lista…";
             pintarOcupado("");
-
-            var atualizacao =
-              typeof global.LSAtualizarTela === "function"
-                ? global.LSAtualizarTela({ partes: opcoes.partes === true })
-                : null;
 
             function encerrar() {
               travar(false);
@@ -1314,14 +1308,35 @@
               Painel.aviso(opcoes.mensagemPronta || "Salvo.", "ok");
             }
 
-            if (atualizacao && typeof atualizacao.then === "function") {
-              atualizacao.then(encerrar, encerrar);
-            } else if (typeof global.LSAtualizarTela === "function") {
-              /* Versão antiga do módulo de navegação, que não devolve
-                 promessa: a tarja sai por tempo, e não por evento. */
-              global.setTimeout(encerrar, 1200);
+            function atualizar() {
+              var atualizacao =
+                typeof global.LSAtualizarTela === "function"
+                  ? global.LSAtualizarTela({ partes: opcoes.partes === true })
+                  : null;
+              if (atualizacao && typeof atualizacao.then === "function") {
+                atualizacao.then(encerrar, encerrar);
+              } else if (typeof global.LSAtualizarTela === "function") {
+                /* Versão antiga do módulo de navegação, que não devolve
+                   promessa: a tarja sai por tempo, e não por evento. */
+                global.setTimeout(encerrar, 1200);
+              } else {
+                global.location.reload();
+              }
+            }
+
+            /* A lista só é trocada DEPOIS de a janela terminar de fechar.
+               Trocar no meio da animação tirava a janela da página e o
+               Bootstrap quebrava ao terminar de escondê-la ("Cannot read
+               properties of null (reading 'style')"). */
+            if (modal && modal.id && modal.classList.contains("show")) {
+              var feito = false;
+              var seguir = function () { if (!feito) { feito = true; atualizar(); } };
+              modal.addEventListener("hidden.bs.modal", seguir, { once: true });
+              Painel.fechar(modal.id);
+              global.setTimeout(seguir, 900);
             } else {
-              global.location.reload();
+              if (modal && modal.id) Painel.fechar(modal.id);
+              atualizar();
             }
           }
         })

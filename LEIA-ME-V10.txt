@@ -316,3 +316,22 @@ Dependência nova: rjsmin (requirements.txt).
    mais meio. Para muitos discos ou muitas partidas, o R2 da seção 13 (com as
    5 variáveis JOGOS_S3_*) não cobra download — ligado, ele passa a valer.
    Migração nova: 0130 (pedaços + formatos 4:3 e 3:2).
+
+16) OBJETOS 3D E BRINQUEDOS QUE VÊM JUNTO (brinquedão, espaço esportivo)
+   Painel > Objetos 3D: cada objeto 3D continua de UM brinquedo. Novo: o
+   brinquedo que é CONJUNTO (brinquedão, espaço esportivo, parque, circuito —
+   pela categoria ou pelo nome) tem o botão "O que vem junto":
+   - SUGESTÕES de um toque: o que o objeto 3D do conjunto tem desenhado (o
+     Espaço Esportivo Modelo 1: dois círculos do Gol Flash, duas cestas do
+     Swish) e o que a descrição cita pelo nome; "Ligar todas".
+   - a lista com a quantidade de cada um e a busca no catálogo.
+   - COERÊNCIA: nada vem dentro de si mesmo nem fecha volta (o espaço que tem
+     o circuito não pode estar dentro do circuito); a mesma máquina pode vir
+     em vários conjuntos.
+   No site: a página do conjunto mostra "O que vem neste espaço" (foto,
+   quantidade, link de cada um) e a de cada máquina, "Também vem em".
+   A migração 0132 já liga o Espaço Esportivo Modelo 1 ao Gol Flash (2×) e
+   ao Swish (2×), se eles estiverem no catálogo e a lista ainda estiver vazia.
+   CORRIGIDO no painel inteiro: salvar numa janela atualizava a lista no meio
+   da animação de fechar e dava erro no console ("reading 'style'").
+   Migrações novas: 0131 (esquema) e 0132 (dados).

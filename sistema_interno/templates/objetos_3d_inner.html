@@ -88,6 +88,7 @@
             {% if linha.objeto.cores|length > 5 %}<span class="ls-3d-cor mais" title="{{ linha.objeto.cores|join:', ' }}">+{{ linha.objeto.cores|length|add:"-5" }}</span>{% endif %}
           </div>
           {% if linha.jogo %}<span class="ls-3d-jogo"><i class="bi bi-joystick" aria-hidden="true"></i> Jogo: {{ linha.jogo.titulo }}</span>{% endif %}
+          {% include "includes/conjunto_3d.html" %}
         </div>
         <div class="ls-3d-acoes">
           <div class="ls-3d-acoes-linha">
@@ -119,7 +120,7 @@
           <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
           <span><em class="ls-3d-etiqueta">{% if linha.objeto.origem == 'enviado' %}Enviado{% else %}Do site{% endif %} · {% if linha.objeto.ativo %}sem arquivo{% else %}desligado{% endif %}</em></span>
           <span title="{{ linha.objeto.arquivo }}">{{ linha.objeto.arquivo }}{% if linha.objeto.medidas %} · {{ linha.objeto.medidas }}{% endif %}</span>
-        </div>
+        {% include "includes/conjunto_3d.html" %}</div>
         <div class="ls-3d-mini-acoes ls-3d-acoes-ajuste">
           <button class="btn btn-sm btn-outline-success" type="button" data-religar="{{ linha.id }}"><i class="bi bi-arrow-counterclockwise"></i> Religar</button>
           <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Trocar</button>
@@ -143,7 +144,7 @@
           <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
           <span><em class="ls-3d-etiqueta dica"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i> O site já tem o objeto</em></span>
           {% if linha.jogo %}<span><a class="ls-3d-jogo" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill" aria-hidden="true"></i> Jogar {{ linha.jogo.titulo }}</a></span>{% endif %}
-        </div>
+        {% include "includes/conjunto_3d.html" %}</div>
         <div class="ls-3d-mini-acoes">
           <button class="btn btn-sm btn-warning ls-3d-ligar" type="button" data-ligar="{{ linha.id }}" data-arquivo="{{ linha.sugestao.arquivo }}"><i class="bi bi-link-45deg"></i> Ligar o objeto do site ({{ linha.sugestao.titulo }})</button>
           <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Enviar</button>
@@ -160,7 +161,7 @@
         <div class="ls-3d-mini-texto">
           <strong title="{{ linha.nome }}">{{ linha.nome }}</strong>
           {% if linha.jogo %}<span><a class="ls-3d-jogo" href="{{ linha.jogo.url }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill" aria-hidden="true"></i> Jogar {{ linha.jogo.titulo }}</a></span>{% else %}<span>#{{ linha.id }} · sem jogo</span>{% endif %}
-        </div>
+        {% include "includes/conjunto_3d.html" %}</div>
         <div class="ls-3d-mini-acoes">
           <button class="btn btn-sm btn-outline-primary" type="button" data-enviar="{{ linha.id }}"><i class="bi bi-cloud-arrow-up"></i> Enviar</button>
         </div>
@@ -346,6 +347,30 @@
 <form id="formArena" method="post" action="{% url 'objetos_3d_inner' %}" hidden>{% csrf_token %}<input name="action" value="alternar_arena"><input name="brinquedo" id="arenaId"></form>
 <form id="formReligar" method="post" action="{% url 'objetos_3d_inner' %}" hidden>{% csrf_token %}<input name="action" value="religar"><input name="brinquedo" id="religarId"></form>
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=request.path exclusao_titulo="Tirar o objeto 3D" exclusao_aviso="O objeto sai da página do brinquedo e da Arena na hora. Um .glb enviado é apagado; um objeto que vem com o site só é desligado e pode ser religado depois." %}
+<div class="modal fade" id="modalConjunto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formConjunto" method="post" action="{% url 'objetos_3d_inner' %}">
+      {% csrf_token %}<input type="hidden" name="action" value="conjunto_salvar"><input type="hidden" name="brinquedo" id="conjuntoId"><input type="hidden" name="itens" id="conjuntoItens">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Conjunto</span><h5 class="modal-title" id="conjuntoTitulo">O que vem junto</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="conjuntoErro"></div>
+        <p class="small text-muted">Os brinquedos do catálogo que vêm <strong>dentro</strong> deste conjunto — como os círculos do Gol Flash e as cestas do Swish no espaço esportivo. Cada um continua com a sua página; a deste conjunto passa a mostrar o que ele traz, e a de cada brinquedo diz em que conjunto ele também vem.</p>
+        <div class="ls-3d-sugestoes d-none" id="conjuntoSugestoesCaixa">
+          <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><strong><i class="bi bi-stars"></i> Sugestões</strong><button class="btn btn-sm btn-success" type="button" id="conjuntoLigarTodas">Ligar todas</button></div>
+          <ul class="list-unstyled mb-0" id="conjuntoSugestoes"></ul>
+        </div>
+        <h6 class="mt-3 mb-2">Vem dentro <span class="text-muted fw-normal" id="conjuntoContagem"></span></h6>
+        <ul class="list-unstyled ls-3d-componentes" id="conjuntoLista"></ul>
+        <div class="input-group mt-2">
+          <input class="form-control" id="conjuntoBusca" list="conjuntoCatalogo" placeholder="Buscar outro brinquedo do catálogo e adicionar…" autocomplete="off">
+          <button class="btn btn-outline-primary" type="button" id="conjuntoAdicionar"><i class="bi bi-plus-lg"></i> Adicionar</button>
+        </div>
+        <datalist id="conjuntoCatalogo">{% for linha in linhas %}<option value="{{ linha.nome }}"></option>{% endfor %}</datalist>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar o conjunto</button></div>
+    </form>
+  </div>
+</div>
 {{ linhas_dados|json_script:"objetosDados" }}
 {{ modulos_dados|json_script:"modulosDados" }}
 {% endif %}
@@ -397,6 +422,78 @@ LSTela.pronto(function () {
       return null;
     }
   });
+  /* ---------------- o que vem junto (core/composicao.py) ---------------- */
+  var conjunto = { linha: null, itens: [] };
+  var porNome = {};
+  linhas.forEach(function (l) { porNome[l.nome.toLowerCase()] = l; });
+  function linhaDe(id) { return linhas.find(function (l) { return Number(l.id) === Number(id); }); }
+  function pintarConjunto() {
+    var lista = document.getElementById("conjuntoLista"); lista.innerHTML = "";
+    conjunto.itens.forEach(function (item, i) {
+      var l = linhaDe(item.id) || {};
+      var li = document.createElement("li"); li.className = "ls-3d-componente";
+      var foto = document.createElement("span"); foto.className = "ls-3d-componente-foto";
+      if (l.capa) { var img = document.createElement("img"); img.src = l.capa; img.alt = ""; foto.appendChild(img); } else { foto.innerHTML = '<i class="bi bi-image"></i>'; }
+      var nome = document.createElement("span"); nome.className = "ls-3d-componente-nome"; nome.textContent = item.nome || l.nome || "";
+      var qtd = document.createElement("input"); qtd.type = "number"; qtd.min = "1"; qtd.max = "99"; qtd.value = item.quantidade; qtd.className = "form-control form-control-sm"; qtd.setAttribute("aria-label", "Quantidade de " + nome.textContent);
+      qtd.addEventListener("input", function () { item.quantidade = Math.max(1, Math.min(99, parseInt(qtd.value, 10) || 1)); });
+      var tirar = document.createElement("button"); tirar.type = "button"; tirar.className = "btn btn-sm btn-outline-danger"; tirar.innerHTML = '<i class="bi bi-x-lg"></i>'; tirar.setAttribute("aria-label", "Tirar " + nome.textContent);
+      tirar.addEventListener("click", function () { conjunto.itens.splice(i, 1); pintarConjunto(); });
+      li.appendChild(foto); li.appendChild(nome); li.appendChild(qtd); li.appendChild(tirar);
+      lista.appendChild(li);
+    });
+    if (!conjunto.itens.length) lista.innerHTML = '<li class="text-muted small">Nenhum brinquedo ligado ainda. Use as sugestões ou busque no catálogo.</li>';
+    document.getElementById("conjuntoContagem").textContent = conjunto.itens.length ? "(" + conjunto.itens.length + ")" : "";
+    var dentro = conjunto.itens.map(function (i) { return Number(i.id); });
+    var sugestoes = (conjunto.linha.sugestoes_conjunto || []).filter(function (s) { return dentro.indexOf(Number(s.id)) < 0; });
+    var caixa = document.getElementById("conjuntoSugestoes"); caixa.innerHTML = "";
+    sugestoes.forEach(function (s) {
+      var li = document.createElement("li"); li.className = "ls-3d-sugestao";
+      var texto = document.createElement("span"); texto.innerHTML = "<strong></strong> <small></small>";
+      texto.firstChild.textContent = (s.quantidade > 1 ? s.quantidade + "× " : "") + s.nome; texto.lastChild.textContent = "— " + s.motivo;
+      var ligar = document.createElement("button"); ligar.type = "button"; ligar.className = "btn btn-sm btn-outline-success"; ligar.textContent = "Ligar";
+      ligar.addEventListener("click", function () { conjunto.itens.push({ id: s.id, nome: s.nome, quantidade: s.quantidade }); pintarConjunto(); });
+      li.appendChild(texto); li.appendChild(ligar); caixa.appendChild(li);
+    });
+    document.getElementById("conjuntoSugestoesCaixa").classList.toggle("d-none", !sugestoes.length);
+    document.getElementById("conjuntoLigarTodas").onclick = function () {
+      sugestoes.forEach(function (s) { conjunto.itens.push({ id: s.id, nome: s.nome, quantidade: s.quantidade }); }); pintarConjunto();
+    };
+  }
+  function abrirConjunto(linha) {
+    Painel.erro("conjuntoErro", "");
+    conjunto.linha = linha;
+    conjunto.itens = (linha.componentes || []).map(function (c) { return { id: c.id, nome: c.nome, quantidade: c.quantidade }; });
+    Painel.valor("conjuntoId", linha.id);
+    document.getElementById("conjuntoTitulo").textContent = "O que vem junto · " + linha.nome;
+    document.getElementById("conjuntoBusca").value = "";
+    pintarConjunto();
+    Painel.abrir("modalConjunto");
+  }
+  function adicionarDaBusca() {
+    var texto = document.getElementById("conjuntoBusca").value.trim().toLowerCase();
+    var achado = porNome[texto] || linhas.find(function (l) { return l.nome.toLowerCase().indexOf(texto) >= 0; });
+    if (!texto || !achado) { Painel.erro("conjuntoErro", "Não achei esse brinquedo no catálogo."); return; }
+    if (Number(achado.id) === Number(conjunto.linha.id)) { Painel.erro("conjuntoErro", "Um conjunto não vem dentro dele mesmo."); return; }
+    if (conjunto.itens.some(function (i) { return Number(i.id) === Number(achado.id); })) { Painel.erro("conjuntoErro", "“" + achado.nome + "” já está na lista."); return; }
+    Painel.erro("conjuntoErro", "");
+    conjunto.itens.push({ id: achado.id, nome: achado.nome, quantidade: 1 });
+    document.getElementById("conjuntoBusca").value = "";
+    pintarConjunto();
+  }
+  document.getElementById("conjuntoAdicionar").addEventListener("click", adicionarDaBusca);
+  document.getElementById("conjuntoBusca").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); adicionarDaBusca(); } });
+  document.querySelectorAll("[data-conjunto]").forEach(function (botao) {
+    botao.addEventListener("click", function () { var l = linhaDe(botao.dataset.conjunto); if (l) abrirConjunto(l); });
+  });
+  Painel.ligar({
+    form: "formConjunto", erro: "conjuntoErro", rotuloCarregando: "Salvando o conjunto…",
+    antes: function () {
+      Painel.valor("conjuntoItens", JSON.stringify(conjunto.itens.map(function (i) { return { id: i.id, quantidade: i.quantidade }; })));
+      return null;
+    }
+  });
+
   Painel.ligar({ form: "formArena" });
   Painel.ligar({ form: "formReligar" });
   Painel.ligarExclusao();
