@@ -211,6 +211,10 @@
                 <div class="col-12 col-md-6"><label class="form-label" for="jogoPcLink">Link da versão para computador <span class="text-muted fw-normal">(build grande: Drive, Dropbox)</span></label><input type="url" class="form-control" id="jogoPcLink" name="versao_pc_link" maxlength="500" placeholder="https://drive.google.com/..." data-rotulo="link da versão para computador"></div>
                 <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoAtivo" type="checkbox" name="ativo" checked><span class="form-check-label">No ar (aparece em /jogos/)</span></label></div>
                 <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoLiberar" type="checkbox" name="liberar_download"><span class="form-check-label">Deixar baixar o APK pelo site</span></label></div>
+                <div class="col-12"><hr class="my-1"><strong class="d-block mb-1">No portal Lazer &amp; Sport Games</strong><span class="form-text mt-0">A categoria entra na busca e nos filtros de /jogos/.</span></div>
+                <div class="col-12 col-md-4"><label class="form-label" for="jogoCategoria">Categoria</label><select class="form-select" id="jogoCategoria" name="categoria">{% for valor, rotulo in categorias %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
+                <div class="col-12 col-md-4"><label class="form-check form-switch mt-md-4"><input class="form-check-input" id="jogoFeitoPelaLazer" type="checkbox" name="feito_pela_lazer"><span class="form-check-label">Feito pela Lazer &amp; Sport <span class="text-muted">(fica junto dos jogos da casa)</span></span></label></div>
+                <div class="col-12 col-md-4"><label class="form-check form-switch mt-md-4"><input class="form-check-input" id="jogoDestaque" type="checkbox" name="destaque"><span class="form-check-label">Destaque no topo do portal</span></label></div>
               </div>
             </details>
           </div>
@@ -514,6 +518,9 @@ LSTela.pronto(function () {
     el("jfFormatoDica").textContent = ""; el("jogoComandosDica").textContent = "";
     el("jogoAtivo").checked = jogo ? jogo.ativo : true;
     el("jogoLiberar").checked = jogo ? jogo.liberar_download : false;
+    Painel.valor("jogoCategoria", jogo ? (jogo.categoria || "") : "");
+    el("jogoFeitoPelaLazer").checked = jogo ? !!jogo.feito_pela_lazer : false;
+    el("jogoDestaque").checked = jogo ? !!jogo.destaque : false;
     // a capa
     var temCapa = !!(jogo && jogo.capa);
     el("jogoCapaVer").hidden = !temCapa; el("jogoCapaVer").src = temCapa ? jogo.capa : "";

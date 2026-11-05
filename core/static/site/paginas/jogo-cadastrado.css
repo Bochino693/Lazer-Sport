@@ -213,3 +213,87 @@
     .jc-capa-texto { gap: 9px; padding: 14px; }
     .jc-jogar { padding: 12px 24px; }
 }
+
+/* ---------- como jogar: no computador (teclas) e no celular (toques) ---------- */
+.jc-controles { display: grid; gap: 12px; }
+.jc-controles h2 { margin-bottom: 0; }
+.jc-controles-resumo { font-weight: 600; color: #e8f0ff !important; }
+.jc-abas { display: flex; flex-wrap: wrap; gap: 8px; }
+.jc-abas[hidden] { display: none; }
+.jc-abas button {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 16px;
+    border: 1px solid rgba(120, 170, 255, .22); border-radius: 999px; background: rgba(255, 255, 255, .04);
+    color: #c2d2ec; font: inherit; font-weight: 800; font-size: .88rem; cursor: pointer;
+}
+.jc-abas button[aria-selected="true"] {
+    color: #fff; border-color: var(--cor-jogo);
+    background: color-mix(in srgb, var(--cor-jogo) 24%, transparent);
+}
+.jc-abas button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.jc-aba { display: grid; gap: 10px; }
+.jc-aba[hidden] { display: none; }
+.jc-aba-titulo { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; color: #fff; font-size: .92rem; }
+.jc-aba-titulo i { color: var(--cor-jogo); }
+/* com as abas ligadas (JavaScript), o título repetido sai */
+.jc-controles--abas .jc-aba-titulo { display: none; }
+
+.jc-teclas { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: .92rem; }
+.jc-teclas thead th { padding: 0 12px; color: #8ea3c7; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; text-align: left; }
+.jc-teclas tbody th, .jc-teclas tbody td { padding: 8px 12px; background: rgba(255, 255, 255, .035); }
+.jc-teclas tbody th { width: 45%; border-radius: 12px 0 0 12px; color: #fff; font-weight: 800; text-align: left; }
+.jc-teclas tbody td { border-radius: 0 12px 12px 0; }
+.jc-teclas kbd {
+    display: inline-grid; place-items: center; min-width: 34px; height: 34px; margin: 2px 6px 2px 0; padding: 0 9px;
+    border: 1px solid rgba(255, 255, 255, .22); border-bottom-width: 3px; border-radius: 9px;
+    background: linear-gradient(#1a2b55, #101d40); color: #fff;
+    font: 800 .86rem "Poppins", system-ui, sans-serif; box-shadow: 0 2px 0 rgba(0, 0, 0, .35);
+}
+.jc-toques { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.jc-toques li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .035); border-left: 3px solid var(--cor-jogo); }
+.jc-toques strong { color: #fff; font-size: .92rem; }
+.jc-toques span { color: #c2d2ec; font-size: .84rem; }
+.jc-dica { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: rgba(63, 208, 255, .07); font-size: .86rem !important; }
+.jc-dica i { margin-top: 3px; color: #3fd0ff; }
+.jc-info > .jc-bloco + .jc-bloco { margin-top: 14px; }
+
+/* a partida grátis de visitante (aparece ao tocar em Jogar) */
+.jc-gratis { display: flex; align-items: flex-start; gap: 10px; max-width: 820px; margin: 14px auto 0; padding: 12px 16px; border-radius: 14px;
+             background: rgba(255, 210, 63, .1); border: 1px solid rgba(255, 210, 63, .35); color: #fff3c4; font-size: .9rem; }
+.jc-gratis[hidden] { display: none; }
+.jc-gratis i { margin-top: 3px; color: #ffd23f; }
+.jc-gratis a { color: #ffd23f; font-weight: 800; }
+
+/* ---------- o anúncio da página do jogo ---------- */
+.jc-anuncio { max-width: 820px; margin: 26px auto 0; }
+.jc-anuncio .pg-anuncio-corpo { position: relative; display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; gap: 16px; padding: 12px;
+                                border-radius: 18px; border: 1px solid rgba(120, 170, 255, .18); background: rgba(255, 255, 255, .04); color: #fff; text-decoration: none; }
+.jc-anuncio img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; display: block; }
+.jc-anuncio .pg-anuncio-texto { display: grid; gap: 4px; }
+.jc-anuncio .pg-anuncio-texto small { font-size: .64rem; letter-spacing: .16em; text-transform: uppercase; color: #8ea3c7; }
+.jc-anuncio .pg-anuncio-texto strong { font: 800 1.1rem "Poppins", sans-serif; }
+.jc-anuncio .pg-anuncio-texto span { color: #c2d2ec; font-size: .9rem; }
+.jc-anuncio .pg-anuncio-texto em { font-style: normal; font-weight: 800; color: #ffd23f; }
+@media (max-width: 480px) { .jc-anuncio .pg-anuncio-corpo { grid-template-columns: 96px minmax(0, 1fr); } }
+
+/* ---------- os outros jogos: parecidos e os da casa ---------- */
+.jc-outros h2 small { margin-left: 6px; color: #ffd23f; font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.jc-mini > i { display: grid; place-items: center; width: 54px; height: 54px; color: var(--cor-jogo); font-size: 1.6rem; }
+.jc-mini small { color: #8ea3c7; font-size: .68rem; font-weight: 700; }
+.jc-todos { margin: 16px 0 0; text-align: center; }
+
+/* ---------- o convite de cadastro (segunda partida de quem não tem conta) ---------- */
+.jc-portao { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 16px;
+             background: rgba(3, 8, 24, .78); backdrop-filter: blur(6px); }
+.jc-portao[hidden] { display: none; }
+.jc-portao-caixa { position: relative; width: min(460px, 100%); display: grid; justify-items: center; gap: 12px; padding: 28px 22px 22px; text-align: center;
+                   border-radius: 24px; border: 1px solid color-mix(in srgb, var(--cor-jogo) 45%, transparent);
+                   background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--cor-jogo) 26%, transparent), transparent 65%), #0a1534;
+                   color: #e8f0ff; box-shadow: 0 30px 80px rgba(0, 0, 0, .6); }
+.jc-portao-caixa h2 { margin: 0; font: 850 clamp(1.2rem, 4vw, 1.5rem) "Poppins", sans-serif; color: #fff; }
+.jc-portao-caixa p { margin: 0; color: #c2d2ec; font-size: .94rem; line-height: 1.55; }
+.jc-portao-caixa small { color: #8ea3c7; }
+.jc-portao-icone { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: rgba(255, 210, 63, .16); color: #ffd23f; font-size: 1.6rem; }
+.jc-portao-acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 4px; }
+.jc-portao-fechar { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 50%;
+                    background: rgba(255, 255, 255, .08); color: #fff; cursor: pointer; }
+.jc-portao-fechar:hover { background: rgba(255, 255, 255, .16); }

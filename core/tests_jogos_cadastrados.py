@@ -114,7 +114,7 @@ class NoSite(BaseJogos):
         self.salvo()
         resposta = self.client.get(reverse("jogos"))
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, "sim-opcao--externo")
+        self.assertContains(resposta, "pg-cartao")
         self.assertContains(resposta, reverse("jogo", args=["corrida-maluca"]))
         self.assertContains(resposta, "Corrida Maluca")
 
@@ -136,6 +136,9 @@ class NoSite(BaseJogos):
         # o jogo não baixa antes do toque: nada de iframe já na página
         self.assertNotIn("<iframe", html)
         self.assertIn("jogo-cadastrado.js", html)
+        # a abertura "LAZER & SPORT GAMES apresenta", com a cor do jogo
+        self.assertIn("intro-jogos.js", html)
+        self.assertIn('data-jogo-cor="#22d3ee"', html)
 
     def test_um_slug_desconhecido_continua_404(self):
         self.assertEqual(self.client.get(reverse("jogo", args=["nao-existe"])).status_code, 404)

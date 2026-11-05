@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
 
-{% block title %}{{ jogo.titulo }}: jogue no site | Lazer &amp; Sport Jogos{% endblock %}
+{% block title %}{{ jogo.titulo }}: jogue grátis no site | Lazer &amp; Sport Games{% endblock %}
 {% block main_class %} content-section--full{% endblock %}
 {% block meta_description %}Jogue {{ jogo.titulo }}, um jogo da Lazer &amp; Sport, direto no navegador — no celular ou no computador.{% endblock %}
 
@@ -22,20 +22,21 @@
     <div class="jc-topo">
         <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
             <a href="{% url 'home' %}">Home</a><span>›</span>
-            <a href="{% url 'jogos' %}">Jogos</a><span>›</span>
+            <a href="{% url 'jogos' %}">Lazer &amp; Sport Games</a><span>›</span>
             <strong>{{ jogo.titulo }}</strong>
         </nav>
         <div class="jc-titulo">
             <img src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="64" height="64" decoding="async">
             <div>
-                <span class="jc-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Jogos{% if jogo.sistema %} · {{ jogo.sistema }}{% endif %}</span>
+                <span class="jc-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Games{% if jogo.sistema %} · {{ jogo.sistema }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
                 <h1>{{ jogo.titulo }}</h1>
             </div>
         </div>
     </div>
 
     <div class="jc-palco jc-palco--{{ jogo.proporcao }}" data-jogo
-         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}"{% if jogo.emulador %} data-jogo-emulador="1"{% endif %}>
+         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}" data-jogo-cor="{{ jogo.cor }}"{% if jogo.emulador %} data-jogo-emulador="1"{% endif %}
+         data-jogo-slug="{{ jogo.slug }}" data-jogo-abriu="{{ abriu_url }}">
         {# a capa com o botão: o jogo só baixa ao tocar em Jogar #}
         <div class="jc-capa" data-jogo-capa>
             {% if jogo.poster %}<img src="{{ jogo.poster }}" alt="" class="jc-capa-fundo" decoding="async">{% endif %}
@@ -58,7 +59,53 @@
         </button>
     </div>
 
+    {% if not user.is_authenticated %}
+    <p class="jc-gratis" data-jogo-gratis hidden role="status">
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+        <span>Esta é a sua partida grátis de visitante. Para jogar de novo, guardar o progresso e entrar no ranking,
+        <a href="{% url 'registrar' %}?next={{ request.path|urlencode }}#register-box">crie sua conta grátis</a>.</span>
+    </p>
+    {% endif %}
+
     <div class="jc-info">
+        {% if controles or jogo.comandos %}
+        <section class="jc-bloco jc-controles" aria-labelledby="titulo-controles" data-controles>
+            <h2 id="titulo-controles"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Como jogar</h2>
+            {% if jogo.comandos %}<p class="jc-controles-resumo">{{ jogo.comandos }}</p>{% endif %}
+            {% if controles %}
+            <div class="jc-abas" role="tablist" aria-label="Onde você vai jogar" data-controles-abas hidden>
+                <button type="button" role="tab" id="aba-pc" aria-controls="painel-pc" aria-selected="true" data-aba="pc">
+                    <i class="fa-solid fa-keyboard" aria-hidden="true"></i> No computador
+                </button>
+                <button type="button" role="tab" id="aba-celular" aria-controls="painel-celular" aria-selected="false" data-aba="celular" tabindex="-1">
+                    <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> No celular
+                </button>
+            </div>
+            <div class="jc-aba" role="tabpanel" id="painel-pc" aria-labelledby="aba-pc" data-painel="pc">
+                <h3 class="jc-aba-titulo"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> No computador: o teclado vira o controle</h3>
+                <table class="jc-teclas">
+                    <thead><tr><th scope="col">Botão do {{ jogo.sistema }}</th><th scope="col">Tecla</th></tr></thead>
+                    <tbody>
+                        {% for c in controles %}
+                        <tr><th scope="row">{{ c.acao }}</th><td>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="jc-dica"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ dicas_de_controle.pc }}</p>
+            </div>
+            <div class="jc-aba" role="tabpanel" id="painel-celular" aria-labelledby="aba-celular" data-painel="celular">
+                <h3 class="jc-aba-titulo"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> No celular: o controle aparece na tela</h3>
+                <ul class="jc-toques">
+                    {% for c in controles %}
+                    <li><strong>{{ c.acao }}</strong><span>{{ c.celular|capfirst }}</span></li>
+                    {% endfor %}
+                </ul>
+                <p class="jc-dica"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> {{ dicas_de_controle.celular }}</p>
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
         {% if jogo.descricao %}
         <section class="jc-bloco">
             <h2><i class="fa-solid fa-align-left" aria-hidden="true"></i> Sobre o jogo</h2>
@@ -78,9 +125,29 @@
         </div>
     </div>
 
+    {% if anuncio %}
+    <aside class="jc-anuncio" aria-label="Anúncio">
+        {% include "partials/anuncio_jogos.html" %}
+    </aside>
+    {% endif %}
+
     {# o caminho de volta para os outros jogos #}
-    <section class="jc-outros" aria-label="Outros jogos">
-        <h2>Mais jogos da casa</h2>
+    {% if parecidos %}
+    <section class="jc-outros" aria-labelledby="titulo-parecidos">
+        <h2 id="titulo-parecidos">Quem joga {{ jogo.titulo }} também joga</h2>
+        <div class="jc-outros-grade">
+            {% for outro in parecidos %}
+            <a class="jc-mini" href="{{ outro.url }}" style="--cor-jogo: {{ outro.cor }}">
+                {% if outro.capa %}<img src="{{ outro.capa }}" alt="" width="72" height="72" loading="lazy" decoding="async">{% else %}<i class="fa-solid fa-gamepad" aria-hidden="true"></i>{% endif %}
+                <span>{{ outro.titulo }}</span>
+                <small>{{ outro.plataforma }}</small>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    <section class="jc-outros" aria-labelledby="titulo-da-casa">
+        <h2 id="titulo-da-casa">Feitos pela Lazer &amp; Sport <small>com ranking</small></h2>
         <div class="jc-outros-grade">
             {% for outro in jogos %}
             <a class="jc-mini" href="{% url 'jogo' outro.slug %}" style="--cor-jogo: {{ outro.cor }}">
@@ -88,21 +155,37 @@
                 <span>{{ outro.titulo }}</span>
             </a>
             {% endfor %}
-            {% for outro in jogos_externos %}{% if outro.slug != jogo.slug %}
-            <a class="jc-mini" href="{{ outro.url }}" style="--cor-jogo: {{ outro.cor }}">
-                <img src="{{ outro.capa }}" alt="" width="72" height="72" loading="lazy" decoding="async">
-                <span>{{ outro.titulo }}</span>
-            </a>
-            {% endif %}{% endfor %}
         </div>
+        <p class="jc-todos"><a class="ls-botao ls-botao--fantasma" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Ver todos os jogos</a></p>
     </section>
 </div>
 
+{% if not user.is_authenticated %}
+{# a segunda partida de quem não tem conta: o convite (jogo-cadastrado.js abre) #}
+<div class="jc-portao" data-jogo-portao role="dialog" aria-modal="true" aria-labelledby="jc-portao-titulo" hidden>
+    <div class="jc-portao-caixa" style="--cor-jogo: {{ jogo.cor }}">
+        <button type="button" class="jc-portao-fechar" data-jogo-portao-fechar aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <span class="jc-portao-icone" aria-hidden="true"><i class="fa-solid fa-crown"></i></span>
+        <h2 id="jc-portao-titulo">Gostou? Crie sua conta grátis e jogue à vontade</h2>
+        <p>Sem conta, cada jogo dá uma partida. Com a conta, você joga {{ jogo.titulo }} quanto quiser, guarda os seus recordes e entra no ranking da Lazer &amp; Sport Games.</p>
+        <div class="jc-portao-acoes">
+            <a class="ls-botao jc-jogar" href="{% url 'registrar' %}?next={{ request.path|urlencode }}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
+            <a class="ls-botao ls-botao--fantasma" href="{% url 'login' %}?next={{ request.path|urlencode }}#login-box"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Já tenho conta</a>
+        </div>
+        <small>Com a conta do Google é um toque só.</small>
+    </div>
+</div>
+{% endif %}
+
 {% if preparo %}
-{# JOGO NA HORA: o emulador e o núcleo do console já vêm junto com a página, e os
-   arquivos do jogo começam a ser guardados no aparelho antes do toque em Jogar #}
+{% comment %}
+  JOGO NA HORA: o emulador e o núcleo do console já vêm junto com a página, e os
+  arquivos do jogo começam a ser guardados no aparelho antes do toque em Jogar.
+{% endcomment %}
 {{ preparo|json_script:"jogoArquivos" }}
 <script src="{% estatico 'site/paginas/jogo-guardado.js' %}" defer></script>
 {% endif %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/intro-jogos.css' %}">
+<script src="{% estatico 'site/paginas/intro-jogos.js' %}" data-logo="{% static 'images/logoofi.png' %}" defer></script>
 <script src="{% estatico 'site/paginas/jogo-cadastrado.js' %}" defer></script>
 {% endblock %}

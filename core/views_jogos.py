@@ -13,6 +13,8 @@ partida chega em /jogos/partida/ e o ranking (do jogo e geral) sai de
 
 import hashlib
 import json
+import logging
+import time
 
 from django.conf import settings
 from django.db.models import Prefetch
@@ -30,9 +32,11 @@ from sistema_interno.templatetags.interno_extras import estatico
 
 from . import arena, paginas_tema, ranking
 from .home_cache import get_cached_catalog_page
-from .jogos_emulador import SISTEMAS, sistemas_ligados
+from .jogos_emulador import SISTEMAS, controles_do_emulador, controles_do_sistema, DICAS_DE_CONTROLE, sistemas_ligados
 from .models import ArquivoEmulador, Brinquedos, JogoCadastrado
 from .views_arena import WHATSAPP
+
+log_jogos = logging.getLogger(__name__)
 
 
 def jogos_cadastrados():
@@ -71,6 +75,11 @@ def jogos_cadastrados():
             # enviado): o quadro pode ter a mesma origem, para guardar o jogo salvo
             "emulador": emulador,
             "sistema": SISTEMAS[jogo.sistema].nome if emulador and jogo.sistema in SISTEMAS else "",
+            "codigo_sistema": jogo.sistema if emulador else "",
+            "categoria": jogo.get_categoria_display() if jogo.categoria else "",
+            "feito_pela_lazer": jogo.feito_pela_lazer,
+            "destaque": jogo.destaque,
+            "criado": jogo.criacao.isoformat() if jogo.criacao else "",
         })
     return jogos
 
@@ -155,6 +164,8 @@ def _para_o_script(jogo):
         "passos": list(controle["passos"]),
         "naMaquina": controle["na_maquina"],
         "teclado": controle.get("teclado", ""),
+        "noPc": controle.get("pc", ""),
+        "noCelular": controle.get("celular", ""),
         "botoes": [dict(b) for b in controle["botoes"]],
     }
 
@@ -189,7 +200,7 @@ class SimuladorView(View):
             cadastrado = next((j for j in externos if j["slug"] == slug), None)
             if cadastrado is None:
                 raise Http404("Jogo não encontrado")
-            return self.pagina_do_jogo_cadastrado(request, cadastrado, externos)
+            return self.pagina_do_jogo_cadastrado(request, cadastrado, dados)
 
         jogos = dados["jogos"]
         atual = next((j for j in jogos if j["slug"] == slug), jogos[0])
@@ -213,6 +224,7 @@ class SimuladorView(View):
             "jogador": {
                 **painel,
                 "partidaUrl": reverse("jogos_partida"),
+                "abriuUrl": reverse("jogos_abriu"),
                 "rankingUrl": reverse("jogos_ranking"),
                 "cadastroUrl": reverse("registrar"),
                 "entrarUrl": reverse("login"),
@@ -220,8 +232,10 @@ class SimuladorView(View):
             },
         })
 
-    def pagina_do_jogo_cadastrado(self, request, jogo, externos):
+    def pagina_do_jogo_cadastrado(self, request, jogo, dados):
         """A página de um jogo que a equipe subiu: o jogo num quadro isolado."""
+        from . import portal_jogos
+
         preparo = None
         if jogo.get("emulador"):
             try:
@@ -237,11 +251,17 @@ class SimuladorView(View):
                     # só o núcleo que mora no site (os de licença livre); os outros vêm do CDN do emulador
                     "nucleo": sistema.nucleo if sistema and sistema.uso_comercial else "",
                 }
+        codigo = jogo.get("codigo_sistema") or ""
         return render(request, "jogo_cadastrado.html", {
             "preparo": preparo,
             "jogo": jogo,
             "jogos": arena.jogos_do_simulador(arena.JOGOS),
-            "jogos_externos": externos,
+            "parecidos": portal_jogos.parecidos(dados, jogo["slug"]),
+            # "Como jogar": tecla por tecla no computador, botão por botão no celular
+            "controles": controles_do_sistema(codigo) if codigo else [],
+            "dicas_de_controle": DICAS_DE_CONTROLE,
+            "anuncio": portal_jogos.anuncio_da_pagina_do_jogo(),
+            "abriu_url": reverse("jogos_abriu"),
             "whatsapp": WHATSAPP,
         })
 
@@ -332,6 +352,8 @@ def config_do_emulador(jogo):
         "dados": static("vendor/emulatorjs/data/"),
         "cor": jogo.cor[:7],
         "titulo": jogo.nome,
+        # ajustes de teclado do site (o N64 com o analógico nas setas); None = o padrão do emulador
+        "controles": controles_do_emulador(jogo.sistema),
     }
 
 
@@ -365,3 +387,114 @@ class ArquivoDoEmuladorView(View):
         return resposta
 
     head = get
+
+
+# ---------------------------------------------------------------- o portal (/jogos/)
+
+SESSAO_ABERTOS = "jogos_abertos"
+SESSAO_GRATIS = "jogos_gratis_usados"
+#: Uma partida contada por visitante e jogo a cada meia hora (recarregar não infla o "Mais jogados").
+INTERVALO_DE_CONTAGEM = 30 * 60
+
+
+class PortalJogosView(View):
+    """Lazer & Sport Games: a vitrine com busca, destaques, faixas, ranking e anúncios."""
+
+    def get(self, request):
+        from . import portal_jogos
+
+        dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
+        busca = (request.GET.get("q") or "")[:80]
+        contexto = portal_jogos.montar(dados, busca)
+        contexto["ranking_portal"] = portal_jogos.ranking_do_portal()
+        contexto["eu"] = None
+        if request.user.is_authenticated:
+            contexto["eu"] = {"nome": ranking.nome_publico(request.user), "geral": ranking.posicao_geral(request.user)}
+        contexto["indice_busca"] = [
+            {chave: c[chave] for chave in ("slug", "titulo", "url", "capa", "cor", "plataforma", "categoria",
+                                           "tipo", "familias", "busca", "ranking")}
+            for c in contexto["todos"]
+        ]
+        site = str(getattr(settings, "SITE_URL", "") or "https://www.lazersport.com.br").rstrip("/")
+        contexto["dados_estruturados"] = json.dumps({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": "Lazer & Sport Games",
+            "url": site + reverse("jogos"),
+            "mainEntity": {"@type": "ItemList", "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": c["titulo"], "url": site + c["url"]}
+                for i, c in enumerate(contexto["todos"][:50])
+            ]},
+        }, ensure_ascii=False).replace("</", "<\\/")
+        return render(request, "jogos_portal.html", contexto)
+
+
+def _contar_partida(slug):
+    from django.db import DatabaseError
+    from django.db.models import F
+
+    from .models import PartidasDoJogo
+
+    try:
+        linha, criada = PartidasDoJogo.objects.get_or_create(slug=slug, defaults={"partidas": 1})
+        if not criada:
+            PartidasDoJogo.objects.filter(pk=linha.pk).update(partidas=F("partidas") + 1)
+    except DatabaseError:
+        log_jogos.warning("Portal: não deu para contar a partida de %s", slug)
+
+
+class AbriuJogoView(View):
+    """O toque em Jogar: conta a partida e diz se o visitante pode jogar.
+
+    Quem não entrou na conta joga UMA vez cada jogo cadastrado (a mesma regra
+    dos jogos da casa, que o ranking.js já aplica); da segunda vez, a página
+    convida a criar a conta. Falha de rede ou de banco nunca trava o jogo.
+    """
+
+    def post(self, request):
+        try:
+            slug = str(json.loads(request.body or b"{}").get("jogo") or "")[:80]
+        except ValueError:
+            return JsonResponse({"erro": "corpo inválido"}, status=400)
+        da_casa = slug in arena.JOGOS_POR_SLUG
+        cadastrado = None
+        if not da_casa:
+            dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
+            cadastrado = next((j for j in dados["externos"] if j["slug"] == slug), None)
+            if cadastrado is None:
+                return JsonResponse({"erro": "jogo desconhecido"}, status=404)
+        visitante = not request.user.is_authenticated
+        gratis = list(request.session.get(SESSAO_GRATIS, []))
+        if cadastrado is not None and visitante and slug in gratis:
+            url = cadastrado["url"]
+            return JsonResponse({
+                "liberado": False,
+                "cadastro": reverse("registrar") + "?next=" + url,
+                "entrar": reverse("login") + "?next=" + url,
+            })
+        agora = time.time()
+        abertos = dict(request.session.get(SESSAO_ABERTOS, {}))
+        if agora - float(abertos.get(slug, 0)) > INTERVALO_DE_CONTAGEM:
+            _contar_partida(slug)
+            abertos[slug] = agora
+            request.session[SESSAO_ABERTOS] = abertos
+        if cadastrado is not None and visitante:
+            gratis.append(slug)
+            request.session[SESSAO_GRATIS] = gratis
+        return JsonResponse({"liberado": True, "ultima_gratis": cadastrado is not None and visitante})
+
+
+class AnuncioJogosView(View):
+    """O clique num anúncio do portal: conta e leva ao destino."""
+
+    def get(self, request, pk):
+        from django.db.models import F
+        from django.shortcuts import redirect
+
+        from .models import AnuncioJogos
+
+        anuncio = get_object_or_404(AnuncioJogos, pk=pk, ativo=True)
+        if not anuncio.link:
+            raise Http404
+        AnuncioJogos.objects.filter(pk=pk).update(cliques=F("cliques") + 1)
+        return redirect(anuncio.link)

@@ -95,7 +95,7 @@ class JogoForm(forms.ModelForm):
         fields = [
             "nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo",
             "capa", "poster", "endereco", "arquivo_html", "proporcao", "apk", "liberar_download",
-            "versao_pc", "versao_pc_link", "sistema",
+            "versao_pc", "versao_pc_link", "sistema", "categoria", "feito_pela_lazer", "destaque",
         ]
 
     def _conferir_tamanho(self, campo):
@@ -250,6 +250,7 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "total_so_pc": sum(1 for jogo in todos.only("endereco", "arquivo_html", "versao_pc", "versao_pc_link") if jogo.so_versao_pc),
             "total_apk_liberado": todos.exclude(apk="").filter(liberar_download=True).count(),
             "proporcoes": JogoCadastrado.PROPORCOES,
+            "categorias": JogoCadastrado.CATEGORIAS,
             "site": site,
             "emulador": self._emulador_contexto(),
         })
@@ -314,6 +315,9 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "endereco": jogo.endereco,
             "proporcao": jogo.proporcao,
             "liberar_download": jogo.liberar_download,
+            "categoria": jogo.categoria,
+            "feito_pela_lazer": jogo.feito_pela_lazer,
+            "destaque": jogo.destaque,
             "capa": jogo.capa_url,
             "poster": self._nome_do_arquivo(jogo.poster),
             "arquivo_html": self._nome_do_arquivo(jogo.arquivo_html),

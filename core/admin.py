@@ -29,6 +29,8 @@ from .models import (
     ObjetoTresD,
     JogoCadastrado,
     ArquivoEmulador,
+    AnuncioJogos,
+    PartidasDoJogo,
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -523,13 +525,20 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
     list_display = ("miniatura", "nome", "slug", "como_roda", "proporcao", "download", "ordem", "ativo")
     list_display_links = ("miniatura", "nome")
     list_editable = ("ordem", "ativo")
-    list_filter = ("ativo", "proporcao", "liberar_download")
+    list_filter = ("ativo", "feito_pela_lazer", "destaque", "categoria", "proporcao", "liberar_download")
     search_fields = ("nome", "slug", "chamada", "descricao")
     prepopulated_fields = {"slug": ("nome",)}
     readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado", "motor", "arquivos_do_console")
     fieldsets = (
         ("O jogo", {
             "fields": ("nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo"),
+        }),
+        ("No portal Lazer & Sport Games (/jogos/)", {
+            "description": (
+                "A categoria entra na busca e nos filtros do portal. “Feito pela Lazer & Sport” põe o jogo "
+                "junto dos jogos da casa, separado dos de console; “Destaque” leva o jogo ao carrossel do topo."
+            ),
+            "fields": ("categoria", "feito_pela_lazer", "destaque"),
         }),
         ("Jogo de console ou fliperama (.cue + .bin, ROM, BIOS) — pelo emulador", {
             "description": (
@@ -1243,3 +1252,57 @@ class ModuloTresDAdmin(admin.ModelAdmin):
     list_filter = ("categoria", "ativo")
     search_fields = ("nome", "descricao")
     readonly_fields = ("cores", "medidas", "criacao", "atualizado")
+
+
+
+@admin.register(AnuncioJogos)
+class AnuncioJogosAdmin(admin.ModelAdmin):
+    """Os anúncios do portal Lazer & Sport Games (/jogos/).
+
+    Salvou com "Ativo" marcado, o anúncio entra no ar na hora (dentro das datas,
+    se houver). O clique passa pelo site e é contado em "Cliques".
+    """
+
+    list_display = ("miniatura", "titulo", "local", "inicio", "fim", "cliques", "ordem", "ativo")
+    list_display_links = ("miniatura", "titulo")
+    list_editable = ("ordem", "ativo")
+    list_filter = ("ativo", "local")
+    search_fields = ("titulo", "texto", "link")
+    readonly_fields = ("cliques", "previa", "criacao", "atualizado")
+    fieldsets = (
+        ("O anúncio", {"fields": ("titulo", "texto", "botao", "link", "ativo")}),
+        ("A imagem", {"fields": ("imagem", "previa")}),
+        ("Onde e quando", {
+            "description": "Sem datas, fica no ar enquanto estiver ativo.",
+            "fields": ("local", "ordem", "inicio", "fim"),
+        }),
+        ("Resultado", {"fields": ("cliques", "criacao", "atualizado")}),
+    )
+
+    @admin.display(description="Imagem")
+    def miniatura(self, obj):
+        if not obj or not obj.imagem_url:
+            return "Sem imagem"
+        return format_html('<img src="{}" alt="" style="width:96px;height:40px;object-fit:cover;border-radius:6px">',
+                           obj.imagem_url)
+
+    @admin.display(description="Prévia")
+    def previa(self, obj):
+        if not obj or not obj.imagem_url:
+            return "Envie a imagem e salve para ver a prévia."
+        return format_html('<img src="{}" alt="" style="max-width:480px;width:100%;border-radius:10px">', obj.imagem_url)
+
+
+@admin.register(PartidasDoJogo)
+class PartidasDoJogoAdmin(admin.ModelAdmin):
+    """Quantas vezes cada jogo foi aberto: é o que monta o "Mais jogados" do portal. Só leitura."""
+
+    list_display = ("slug", "partidas", "atualizado")
+    ordering = ("-partidas",)
+    search_fields = ("slug",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

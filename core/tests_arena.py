@@ -117,6 +117,7 @@ class SimuladorTests(TestCase):
                 self.assertIn(f"<title>{titulo.replace('&', '&amp;')}", html)
                 self.assertIn('aria-current="page"', html)
                 self.assertIn('id="sim-jogos"', html)
+                self.assertIn("intro-jogos.js", html)  # a abertura antes do 3-2-1
 
     def test_pagina_geral_e_jogo_que_nao_existe(self):
         self.assertEqual(self.client.get(reverse("jogos")).status_code, 200)

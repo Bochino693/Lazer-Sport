@@ -109,6 +109,8 @@
     window.EJS_color = config.cor || "#ff3df2";
     // quem abriu o quadro já tocou em "Jogar": o jogo começa sem outro toque
     window.EJS_startOnLoaded = true;
+    // o teclado que a página do jogo ensina (core/jogos_emulador.CONTROLES): no N64, o analógico nas setas
+    if (config.controles) window.EJS_defaultControls = config.controles;
     // fora da barra: trapaça, jogo em rede (não há servidor), "sair do jogo"
     // (deixaria o quadro preto) e o gerenciador de cache
     window.EJS_Buttons = { cheat: false, netplay: false, exitEmulation: false, cacheManager: false };

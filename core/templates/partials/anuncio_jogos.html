@@ -1,0 +1,10 @@
+{# Um anúncio do portal de jogos (AnuncioJogos): o clique passa por /jogos/anuncio/<id>/, que conta. #}
+{% if anuncio.url %}<a class="pg-anuncio-corpo" href="{{ anuncio.url }}" target="_blank" rel="sponsored noopener">{% else %}<div class="pg-anuncio-corpo">{% endif %}
+    <img src="{{ anuncio.imagem }}" alt="{{ anuncio.titulo }}" loading="lazy" decoding="async">
+    <span class="pg-anuncio-texto">
+        <small>Anúncio</small>
+        <strong>{{ anuncio.titulo }}</strong>
+        {% if anuncio.texto %}<span>{{ anuncio.texto }}</span>{% endif %}
+        {% if anuncio.url %}<em>{{ anuncio.botao }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></em>{% endif %}
+    </span>
+{% if anuncio.url %}</a>{% else %}</div>{% endif %}

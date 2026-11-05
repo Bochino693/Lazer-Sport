@@ -553,6 +553,8 @@ class Console {
     this.contagem = 0;
     this.quadroAnimacao = 0;
     this.reduzido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.vistosNaAbertura = new Set();
+    this.aberturaVez = 0;
 
     this.ligarEventos();
     this.mostrarSom();
@@ -688,6 +690,9 @@ class Console {
 
   /* ---------- abrir um jogo ---------- */
   async abrir(dados) {
+    this.aberturaVez++;  // a abertura do jogo anterior, se estava passando, não começa mais nada
+    const aberta = this.quadro && this.quadro.querySelector(".ls-intro");
+    if (aberta) aberta.remove();
     this.pararPartida();
     this.dados = dados;
     this.raiz.dispatchEvent(new CustomEvent("console:abrir", { detail: { slug: dados.slug } }));
@@ -864,8 +869,29 @@ class Console {
   }
 
   comecar(liberado = false) {
-    if (!this.jogo || this.estado === "jogando" || this.estado === "contagem") return;
+    if (!this.jogo || this.estado === "jogando" || this.estado === "contagem" || this.estado === "abertura") return;
     if (!liberado && !this.liberar()) return;
+    // "LAZER & SPORT GAMES apresenta" (intro-jogos.js): só na primeira partida
+    // de cada jogo nesta visita; trocar de jogo no meio da abertura a cancela
+    const intro = window.LSIntroJogos;
+    const slug = this.dados && this.dados.slug;
+    if (intro && slug && !this.vistosNaAbertura.has(slug)) {
+      this.vistosNaAbertura.add(slug);
+      const vez = ++this.aberturaVez;
+      this.estado = "abertura";
+      this.capa.hidden = true;
+      this.fim.hidden = true;
+      intro.mostrar(this.quadro, { titulo: this.dados.titulo, cor: this.dados.cor, chave: "casa:" + slug }).then(() => {
+        if (vez !== this.aberturaVez || this.estado !== "abertura") return;
+        this.estado = "pronto";
+        this.comecarDeVez();
+      });
+      return;
+    }
+    this.comecarDeVez();
+  }
+
+  comecarDeVez() {
     this.som.acordar();
     // a partida nova não herda a torcida nem o jingle do fim da anterior
     this.som.pararTudo();
@@ -1175,6 +1201,10 @@ if (raiz && dadosDosJogos) {
       item.textContent = passo;
       return item;
     }));
+    const noPc = campo("no-pc");
+    if (noPc) noPc.textContent = jogo.noPc || "";
+    const noCelular = campo("no-celular");
+    if (noCelular) noCelular.textContent = jogo.noCelular || "";
     campo("gesto").textContent = jogo.rotulo;
     campo("teclado").hidden = !jogo.teclado;
     campo("teclado-texto").textContent = jogo.teclado || "";

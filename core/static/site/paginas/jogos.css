@@ -813,6 +813,14 @@
     font-weight: 900;
 }
 
+/* "No computador" e "No celular": o mesmo jogo, dito para cada aparelho */
+.sim-onde { display: grid; gap: 8px; margin-top: 12px; }
+.sim-onde-item { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; margin: 0; padding: 10px 12px;
+                 border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(120, 170, 255, .14); color: #dbe7ff; font-size: .86rem; line-height: 1.5; }
+.sim-onde-item > i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: var(--cor-jogo);
+                     background: color-mix(in srgb, var(--cor-jogo) 16%, transparent); }
+.sim-onde-item strong { display: block; color: #fff; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+
 .sim-ficha-acoes { display: grid; gap: 8px; margin-top: 20px; }
 .sim-ficha-acoes .ls-botao { margin-top: 0; justify-content: center; }
 .sim-ficha-acoes [hidden] { display: none; }
@@ -846,7 +854,7 @@
         gap: 0 28px;
     }
 
-    .sim-ficha > :not(h3):not(.sim-passos):not(.sim-ficha-acoes) { grid-column: 1; }
+    .sim-ficha > :not(h3):not(.sim-passos):not(.sim-onde):not(.sim-ficha-acoes) { grid-column: 1; }
 }
 
 @media (max-width: 900px) {

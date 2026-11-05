@@ -1,0 +1,176 @@
+/* ======================================================================
+   LAZER & SPORT GAMES -- o portal (/jogos/).
+   O neon do site: noite azul, vermelho, azul, ciano e amarelo da marca.
+   ====================================================================== */
+.pg { --pg-fundo: #050b1f; --pg-cartao: rgba(255, 255, 255, .055); --pg-borda: rgba(255, 255, 255, .1);
+      --pg-texto: #eaf2ff; --pg-suave: #a9bcd9; --pg-ciano: #3fd0ff; --pg-azul: #2f8bff; --pg-vermelho: #ff4757; --pg-amarelo: #ffd23f;
+      max-width: 1440px; margin: 0 auto; padding: 14px clamp(14px, 3vw, 36px) 56px; color: var(--pg-texto); }
+.pg h2, .pg h3 { font-family: "Poppins", sans-serif; }
+
+/* ---------- topo ---------- */
+.pg-topo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 16px 0 18px; }
+.pg-marca { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
+.pg-marca-logo { width: 56px; height: 56px; border-radius: 16px; background: #fff; display: grid; place-items: center;
+                 box-shadow: 0 0 0 2px rgba(63, 208, 255, .3), 0 0 26px rgba(63, 208, 255, .35); }
+.pg-marca-logo img { width: 86%; height: 86%; object-fit: contain; }
+.pg-marca-texto strong { display: block; font: 800 1.35rem/1.05 "Poppins", sans-serif; letter-spacing: .02em;
+                         background: linear-gradient(90deg, var(--pg-vermelho), var(--pg-azul) 45%, var(--pg-ciano) 75%);
+                         -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pg-marca-texto strong b { color: var(--pg-amarelo); -webkit-text-fill-color: var(--pg-amarelo); text-shadow: 0 0 16px rgba(255, 210, 63, .55); }
+.pg-marca-texto small { color: var(--pg-suave); font-size: .82rem; }
+.pg-busca { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 6px 4px 18px; border-radius: 999px;
+            background: rgba(255, 255, 255, .07); border: 1px solid rgba(63, 208, 255, .35); box-shadow: 0 0 0 4px rgba(63, 208, 255, .06); }
+.pg-busca:focus-within { border-color: var(--pg-ciano); box-shadow: 0 0 0 4px rgba(63, 208, 255, .18), 0 0 30px rgba(63, 208, 255, .2); }
+.pg-busca i { color: var(--pg-ciano); }
+.pg-busca input { flex: 1; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: var(--pg-texto); font: 500 1rem "Manrope", sans-serif; }
+.pg-busca input::placeholder { color: #8ea3c4; }
+.pg-busca button { min-height: 42px; padding: 0 20px; border: 0; border-radius: 999px; font: 700 .95rem "Poppins", sans-serif; color: #fff; cursor: pointer;
+                   background: linear-gradient(120deg, var(--pg-azul), #8a5cff); }
+.pg-conta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.pg-conta-ola { font-weight: 800; }
+.pg-conta-ola i { color: var(--pg-amarelo); }
+.pg-conta small { color: var(--pg-suave); width: 100%; text-align: right; }
+.pg-botao { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; text-decoration: none;
+            font: 700 .92rem "Poppins", sans-serif; color: var(--pg-texto); background: var(--pg-cartao); border: 1px solid var(--pg-borda);
+            transition: transform .15s ease, box-shadow .15s ease; white-space: nowrap; }
+.pg-botao:hover { transform: translateY(-1px); color: #fff; }
+.pg-botao--forte { color: #2a1404; border: 0; background: linear-gradient(118deg, #ffd23f, #ff9238 45%, #ff4757); box-shadow: 0 8px 22px rgba(255, 71, 87, .28); }
+.pg-botao--forte:hover { color: #2a1404; box-shadow: 0 12px 30px rgba(255, 71, 87, .4); }
+.pg-botao--jogar { min-height: 52px; padding: 0 26px; font-size: 1.05rem; color: #04210f; border: 0; background: #22c55e; box-shadow: 0 10px 26px rgba(34, 197, 94, .35); }
+.pg-botao--jogar:hover { color: #04210f; }
+
+/* ---------- filtros ---------- */
+.pg-filtros { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 14px; scrollbar-width: none; }
+.pg-filtros::-webkit-scrollbar { display: none; }
+.pg-filtro { flex: 0 0 auto; min-height: 40px; padding: 0 16px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+             font: 700 .86rem "Poppins", sans-serif; color: var(--pg-suave); background: var(--pg-cartao); border: 1px solid var(--pg-borda); }
+.pg-filtro:hover { color: #fff; border-color: rgba(63, 208, 255, .45); }
+.pg-filtro[aria-pressed="true"] { color: #04121f; background: var(--pg-ciano); border-color: var(--pg-ciano); box-shadow: 0 0 18px rgba(63, 208, 255, .45); }
+.pg-filtro--categoria { font-weight: 600; }
+
+/* ---------- destaques ---------- */
+.pg-hero { position: relative; height: clamp(340px, 46vw, 520px); border-radius: 28px; overflow: hidden; margin-bottom: 30px;
+           background: #0c1c44; border: 1px solid var(--pg-borda); box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
+.pg-slide { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: center; gap: 24px;
+            padding: clamp(22px, 4vw, 56px); opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s;
+            background: radial-gradient(70% 90% at 80% 50%, color-mix(in srgb, var(--cor) 45%, transparent), transparent 70%), linear-gradient(110deg, #050b1f 30%, rgba(5, 11, 31, .4)); }
+.pg-slide--ativo { opacity: 1; visibility: visible; }
+.pg-slide-fundo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(22px) saturate(1.3); opacity: .35; transform: scale(1.15); z-index: -1; }
+.pg-slide-texto { position: relative; z-index: 1; }
+.pg-slide-kicker { display: inline-block; margin-bottom: 10px; padding: 6px 12px; border-radius: 999px; font: 800 .74rem "Poppins", sans-serif;
+                   letter-spacing: .12em; text-transform: uppercase; color: var(--pg-amarelo); background: rgba(5, 11, 31, .6); border: 1px solid rgba(255, 210, 63, .35); }
+.pg-slide h2 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); font-weight: 800; line-height: 1; letter-spacing: -.03em;
+               text-shadow: 0 0 30px color-mix(in srgb, var(--cor) 70%, transparent); }
+.pg-slide p { max-width: 46ch; margin: 14px 0 0; color: #d3def2; font-size: clamp(1rem, 1.6vw, 1.2rem); line-height: 1.55; }
+.pg-slide-acoes { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 22px; }
+.pg-slide-ranking { color: var(--pg-amarelo); font-weight: 700; }
+.pg-slide-arte { position: relative; z-index: 1; justify-self: center; width: min(100%, 380px); max-height: 100%; aspect-ratio: 1; object-fit: contain;
+                 filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .55)) drop-shadow(0 0 30px color-mix(in srgb, var(--cor) 50%, transparent));
+                 animation: pg-flutua 5s ease-in-out infinite; }
+.pg-hero-seta { position: absolute; top: 50%; translate: 0 -50%; z-index: 3; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--pg-borda);
+                color: #fff; background: rgba(5, 11, 31, .6); cursor: pointer; display: grid; place-items: center; }
+.pg-hero-seta:hover { background: rgba(63, 208, 255, .25); }
+.pg-hero-seta--antes { left: 12px; }
+.pg-hero-seta--depois { right: 12px; }
+.pg-hero-pontos { position: absolute; left: 0; right: 0; bottom: 14px; z-index: 3; display: flex; justify-content: center; gap: 8px; }
+.pg-hero-pontos button { width: 10px; height: 10px; padding: 0; border-radius: 999px; border: 0; background: rgba(255, 255, 255, .35); cursor: pointer; transition: width .3s; }
+.pg-hero-pontos button[aria-current="true"] { width: 28px; background: var(--pg-ciano); box-shadow: 0 0 12px var(--pg-ciano); }
+
+/* ---------- faixas e cartões ---------- */
+.pg-faixa, .pg-resultados, .pg-ranking { margin-bottom: 34px; }
+.pg-faixa-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.pg-faixa-topo h2 { margin: 0; font-size: clamp(1.25rem, 2.4vw, 1.75rem); font-weight: 800; }
+.pg-faixa-topo p { margin: 4px 0 0; color: var(--pg-suave); font-size: .92rem; }
+.pg-faixa-setas { display: flex; gap: 8px; }
+.pg-faixa-setas button, .pg-limpar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--pg-borda); background: var(--pg-cartao); color: #fff; cursor: pointer; }
+.pg-limpar { width: auto; padding: 0 16px; border-radius: 999px; font: 700 .86rem "Poppins", sans-serif; }
+.pg-trilho { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(150px, 17vw, 220px); gap: 14px; overflow-x: auto; scroll-snap-type: x proximity;
+             padding: 4px 2px 12px; scrollbar-width: thin; }
+.pg-trilho > * { scroll-snap-align: start; }
+.pg-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(46%, 180px), 1fr)); gap: 14px; }
+.pg-cartao { position: relative; display: flex; flex-direction: column; border-radius: 20px; overflow: hidden; text-decoration: none; color: inherit;
+             background: var(--pg-cartao); border: 1px solid var(--pg-borda); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.pg-cartao:hover, .pg-cartao:focus-visible { transform: translateY(-4px); border-color: var(--cor); box-shadow: 0 14px 30px rgba(0, 0, 0, .4), 0 0 24px color-mix(in srgb, var(--cor) 35%, transparent); }
+.pg-cartao-arte { position: relative; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden;
+                  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--cor) 50%, transparent), #050b1f 75%); }
+.pg-cartao-arte img { width: 82%; height: 82%; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)); transition: transform .25s ease; }
+.pg-cartao-arte > i { font-size: 2.6rem; color: rgba(255, 255, 255, .6); }
+.pg-cartao:hover .pg-cartao-arte img { transform: scale(1.06); }
+.pg-cartao-play { position: absolute; right: 10px; bottom: 10px; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+                  color: #04210f; background: #22c55e; box-shadow: 0 6px 16px rgba(34, 197, 94, .45); opacity: 0; transform: scale(.8); transition: .18s ease; }
+.pg-cartao:hover .pg-cartao-play, .pg-cartao:focus-visible .pg-cartao-play { opacity: 1; transform: none; }
+.pg-selos { position: absolute; left: 8px; top: 8px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.pg-selo { padding: 3px 8px; border-radius: 999px; font: 800 .64rem "Poppins", sans-serif; letter-spacing: .04em; background: rgba(5, 11, 31, .8); }
+.pg-selo--nosso { color: var(--pg-amarelo); border: 1px solid rgba(255, 210, 63, .5); }
+.pg-selo--ranking { color: #dff4ff; border: 1px solid rgba(63, 208, 255, .5); }
+.pg-cartao-texto { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 12px; }
+.pg-cartao-texto strong { font: 800 .98rem/1.2 "Poppins", sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-cartao-texto small { color: var(--pg-suave); font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-vazio { padding: 26px; border-radius: 18px; text-align: center; color: var(--pg-suave); background: var(--pg-cartao); border: 1px dashed var(--pg-borda); }
+
+/* ---------- anúncios ---------- */
+.pg-anuncio { margin: 0 0 30px; }
+.pg-anuncio-corpo { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); border-radius: 22px; overflow: hidden; text-decoration: none; color: #fff;
+                    border: 1px solid var(--pg-borda); background: #0c1c44; }
+.pg-anuncio-corpo img { width: 100%; aspect-ratio: 4 / 1; object-fit: cover; display: block; }
+.pg-anuncio--meio .pg-anuncio-corpo img { aspect-ratio: 4 / 1; }
+.pg-anuncio-texto { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 18px clamp(16px, 4vw, 40px);
+                    background: linear-gradient(90deg, rgba(5, 11, 31, .85), rgba(5, 11, 31, .2) 60%, transparent); }
+.pg-anuncio-texto small { font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--pg-suave); }
+.pg-anuncio-texto strong { font: 800 clamp(1.05rem, 2.6vw, 1.8rem) "Poppins", sans-serif; max-width: 22ch; }
+.pg-anuncio-texto span { max-width: 40ch; color: #d3def2; font-size: .92rem; }
+.pg-anuncio-texto em { font-style: normal; font-weight: 800; color: var(--pg-amarelo); }
+
+/* ---------- ranking ---------- */
+.pg-ranking-colunas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.pg-ranking-caixa { padding: 18px; border-radius: 22px; background: var(--pg-cartao); border: 1px solid var(--pg-borda); }
+.pg-ranking-caixa h3 { margin: 0 0 12px; font-size: 1.05rem; }
+.pg-ranking-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pg-ranking-lista li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px;
+                       border-radius: 12px; background: rgba(255, 255, 255, .035); }
+.pg-ranking-lista b { color: var(--pg-suave); }
+.pg-ranking-lista strong { font-variant-numeric: tabular-nums; }
+.pg-podio--1 { background: linear-gradient(90deg, rgba(255, 210, 63, .22), transparent) !important; }
+.pg-podio--1 b { color: var(--pg-amarelo) !important; }
+.pg-podio--2 b { color: #dbe4f3 !important; }
+.pg-podio--3 b { color: #f0a46a !important; }
+.pg-ranking-vazio { display: block !important; padding: 14px !important; color: var(--pg-suave); }
+.pg-campeoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pg-campeoes a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; text-decoration: none; color: inherit;
+                 background: rgba(255, 255, 255, .035); border-left: 3px solid var(--cor); }
+.pg-campeoes span { font-weight: 700; }
+.pg-campeoes strong { color: var(--pg-amarelo); font-size: .9rem; }
+.pg-campeoes small { grid-column: 2; text-align: right; color: var(--pg-suave); }
+
+/* ---------- convite ---------- */
+.pg-convite { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 26px; border-radius: 26px;
+              background: linear-gradient(120deg, rgba(47, 139, 255, .22), rgba(255, 71, 87, .18)); border: 1px solid rgba(255, 255, 255, .16); }
+.pg-convite h2 { margin: 0 0 6px; font-size: clamp(1.2rem, 2.4vw, 1.6rem); }
+.pg-convite p { margin: 0; color: #d3def2; max-width: 60ch; }
+.pg-convite-acoes { display: flex; gap: 10px; flex-wrap: wrap; }
+
+@keyframes pg-flutua { 50% { transform: translateY(-10px); } }
+
+/* ---------- celular ---------- */
+@media (max-width: 900px) {
+    .pg-topo { grid-template-columns: 1fr; gap: 12px; }
+    .pg-conta { justify-content: flex-start; }
+    .pg-conta small { text-align: left; }
+    .pg-slide { grid-template-columns: 1fr; align-content: end; padding-bottom: 46px; }
+    .pg-slide-arte { position: absolute; top: 14px; right: 4%; width: 46%; opacity: .95; }
+    .pg-slide-texto { margin-top: auto; }
+    .pg-hero { height: clamp(380px, 110vw, 520px); }
+    .pg-hero-seta { display: none; }
+    .pg-faixa-setas { display: none; }
+    .pg-anuncio-corpo img { aspect-ratio: 2 / 1; }
+}
+@media (max-width: 560px) {
+    .pg-botao { min-height: 42px; padding: 0 14px; }
+    .pg-trilho { grid-auto-columns: 44%; }
+    .pg-busca button { padding: 0 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pg-slide { transition: none; }
+    .pg-slide-arte { animation: none; }
+    .pg-cartao, .pg-cartao-arte img, .pg-botao { transition: none; }
+}
