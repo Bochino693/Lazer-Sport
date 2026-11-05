@@ -565,3 +565,22 @@ Dependência nova: rjsmin (requirements.txt).
    armazenamento em pedaços aceita até JOGOS_PEDACOS_MAX_MB (padrão 1000)
    por arquivo; dá para subir até 2000 no Render, mas cada partida baixa o
    jogo inteiro na primeira vez (o Cloudinary gratuito tem 25 GB por mês).
+
+23) RANKING: O RECORDE VAI NA HORA
+   O DEFEITO. Os jogos da casa mandavam os pontos ao site só no fim da
+   animação de encerramento da máquina (no Dragon Bowling, uns 25 s de
+   tela final). Quem rolava a página para ver o ranking pausava o jogo (o
+   console pausa quando sai da tela) e os pontos nunca chegavam -- no
+   celular, sempre, porque o ranking fica embaixo do jogo. Também se
+   perdia o recorde ao apertar "jogar de novo" durante a tela final.
+   AGORA. O placar final vai para o ranking no instante em que o jogo fecha
+   a conta (antes da animação), uma vez por partida, e o envio continua
+   mesmo se a pessoa sair da página. O cartão de fim mostra o lugar no
+   ranking ("Ranking: 1º lugar neste jogo").
+   Jogo de console (ROM) continua sem ranking: a pontuação fica dentro da
+   memória do jogo, e o emulador não a entrega ao site (seção 20).
+   FLIPERAMA QUE NÃO ABRE. O .zip precisa do nome exato e da versão do
+   set que o núcleo conhece: FinalBurn Neo atual, ou MAME 0.78 para o
+   "Fliperama (MAME 2003-Plus)". Fliperama com mais de 400 MB (ex.:
+   pacmanbr, o Pac-Man Battle Royale) é baseado em PC, como os do
+   TeknoParrot, e não roda em navegador: o painel avisa.

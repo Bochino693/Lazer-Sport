@@ -244,13 +244,15 @@ SISTEMAS = {
     ),
     "arcade": Sistema(
         "arcade", "Fliperama (FinalBurn Neo)", "fbneo", "não comercial (FinalBurn Neo)", False, _ext("zip", "7z"),
-        nota="O .zip precisa ter o nome exato do jogo no FinalBurn Neo (ex.: sf2.zip).",
+        nota="O .zip precisa ter o nome exato do jogo no FinalBurn Neo (ex.: sf2.zip) e ser da versão atual do FinalBurn "
+             "Neo: um set de outra versão (feito para outro MAME) costuma não abrir, mesmo com o nome certo.",
         comandos="Setas movem · Z, X, A, S = botões 1 a 4 · V = ficha (moeda) · Enter = Start.",
     ),
     "mame": Sistema(
         "mame", "Fliperama (MAME 2003-Plus)", "mame2003_plus", "não comercial (MAME)", False, _ext("zip", "7z"),
         so_pela_lista=True,
-        nota="Para o jogo que o FinalBurn Neo não tem: o .zip com o nome exato do jogo no MAME 2003-Plus (ex.: pacman.zip).",
+        nota="Para o jogo que o FinalBurn Neo não tem: o .zip com o nome exato do jogo no MAME 2003-Plus (ex.: pacman.zip), "
+             "no formato do MAME 0.78 -- set de MAME novo costuma não abrir.",
         comandos="Setas movem · Z, X, A, S = botões 1 a 4 · V = ficha (moeda) · Enter = Start.",
     ),
     "sega32x": Sistema(
@@ -310,6 +312,10 @@ EXTENSOES_NAO_SUPORTADAS = {
 MAX_NO_NAVEGADOR = 2048 * MB
 #: Daqui para cima, o celular costuma não ter memória para o jogo.
 GRANDE_PARA_CELULAR = 700 * MB
+#: Fliperama de placa (o que o FinalBurn e o MAME rodam) cabe em bem menos que isto;
+#: um .zip maior é de fliperama baseado em PC (Pac-Man Battle Royale, Taito Type X,
+#: Sega Lindbergh -- os do TeknoParrot), que precisa de Windows.
+MAX_FLIPERAMA = 400 * MB
 
 INDICES = _ext("cue", "ccd", "toc", "m3u")
 #: O que pode ser a faixa ou a imagem de um disco.
@@ -1080,6 +1086,12 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
             an.erros.append("Não deu para reconhecer o sistema pelos arquivos: escolha na lista “Sistema”.")
 
     sistema = SISTEMAS.get(an.sistema)
+    if an.sistema in ("arcade", "mame") and an.principal is not None and an.principal.entrada.tamanho > MAX_FLIPERAMA:
+        an.erros.append(
+            f"“{an.principal.nome}” tem {_mb(an.principal.entrada.tamanho)}: fliperama desse tamanho não é de placa (os que o "
+            "FinalBurn Neo e o MAME rodam ficam bem abaixo de 400 MB). É fliperama baseado em PC -- como o Pac-Man Battle "
+            "Royale (pacmanbr), Taito Type X e Sega Lindbergh, os do TeknoParrot --, que roda num Windows de verdade, não no navegador."
+        )
     if sistema is not None and not sistema.disco:
         an.discos = 0
     if sistema is not None:

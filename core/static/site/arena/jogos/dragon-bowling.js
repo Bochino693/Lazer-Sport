@@ -2783,6 +2783,8 @@ export default {
     }
 
     function* sequenciaFimDeJogo(total, strikes, recorde) {
+      // o placar já é final: vai para o ranking agora, não no fim dos ~25 s da tela final
+      api.resultado({ pontos: total });
       finalIntroEmAndamento = true;
       telaFinalAtiva = true;
       tempoRestanteTelaFinal = TEMPO_TELA_FINAL;
