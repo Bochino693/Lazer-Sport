@@ -548,6 +548,8 @@ WHITENOISE_SKIP_COMPRESS_EXTENSIONS = (
     *Compressor.SKIP_COMPRESS_EXTENSIONS,
     "apk",
     "aab",
+    # os núcleos do emulador (.data) já são 7z: comprimir de novo só atrasa o deploy
+    "data",
 )
 try:
     # Imagens, logotipos e ícones do site mudam pouco. Um dia fazia cada

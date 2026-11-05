@@ -42,17 +42,21 @@ CATEGORIA_DA_CASA = {
 
 #: Os filtros de console do portal: cada sistema do emulador cai em uma família.
 FAMILIAS = {
-    "psx": "playstation",
+    "psx": "playstation", "psp": "playstation",
     "nes": "nintendo", "gb": "nintendo", "gba": "nintendo", "n64": "nintendo", "nds": "nintendo", "snes": "nintendo",
-    "segaMD": "sega", "segaMS": "sega", "segaGG": "sega", "segaCD": "sega",
-    "pce": "classicos", "atari2600": "classicos", "atari7800": "classicos", "c64": "classicos", "arcade": "classicos",
+    "vb": "nintendo",
+    "segaMD": "sega", "segaMS": "sega", "segaGG": "sega", "segaCD": "sega", "segaSaturn": "sega",
+    "pce": "classicos", "atari2600": "classicos", "atari5200": "classicos", "atari7800": "classicos", "jaguar": "classicos",
+    "arcade": "classicos", "ngp": "classicos", "ws": "classicos", "coleco": "classicos", "pcfx": "classicos",
+    "dos": "pc", "amiga": "pc", "c64": "pc", "c128": "pc", "vic20": "pc", "plus4": "pc", "pet": "pc",
 }
 NOMES_DAS_FAMILIAS = (
     ("nosso", "Feitos pela Lazer & Sport"),
-    ("playstation", "PlayStation"),
+    ("playstation", "PlayStation e PSP"),
     ("nintendo", "Nintendo"),
     ("sega", "Sega"),
-    ("classicos", "Atari, C64 e clássicos"),
+    ("classicos", "Atari, Neo Geo e clássicos"),
+    ("pc", "PC antigo, Amiga e Commodore"),
     ("html", "Jogos HTML5"),
 )
 

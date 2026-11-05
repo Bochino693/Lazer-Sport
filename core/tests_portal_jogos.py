@@ -297,6 +297,23 @@ class PainelTests(BasePortal):
         self.assertContains(pagina, 'name="destaque"')
         self.assertContains(pagina, 'name="categoria"')
 
+    def test_o_formulario_aceita_console_nao_comercial_so_no_particular(self):
+        from sistema_interno.views_jogos import JogoForm
+
+        jogo = self.salvo()
+        dados = {campo: getattr(jogo, campo) for campo in ("nome", "slug", "chamada", "descricao", "comandos", "cor",
+                                                            "ordem", "endereco", "proporcao")}
+        dados.update({"ativo": "on", "sistema": "snes"})
+        publico = JogoForm(dados, instance=jogo)
+        self.assertFalse(publico.is_valid())
+        self.assertIn("Particular", " ".join(publico.errors["sistema"]))
+        dados["particular"] = "on"
+        particular = JogoForm(dados, instance=jogo)
+        self.assertTrue(particular.is_valid(), particular.errors)
+        particular.save()
+        jogo.refresh_from_db()
+        self.assertTrue(jogo.particular)
+
     def test_o_formulario_do_painel_grava_as_marcas_do_portal(self):
         from sistema_interno.views_jogos import JogoForm
 

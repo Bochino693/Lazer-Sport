@@ -516,3 +516,52 @@ Dependência nova: rjsmin (requirements.txt).
    está vendo. No Nintendo 64 as setas viraram o analógico (quase todo jogo
    de N64 anda pelo analógico) e a cruz foi para T/F/G/H. Os jogos da casa
    ganharam as mesmas duas explicações na ficha, ao lado do jogo.
+
+22) MAIS CONSOLES, JOGO PARTICULAR E O LIMITE DO NAVEGADOR
+   CONSOLES NOVOS NO SITE ABERTO (núcleos de licença livre, no próprio site):
+   PSP (.iso, .cso, .pbp), PC antigo / MS-DOS (.zip com a pasta do jogo,
+   .exe, .com, .bat), Sega Saturn (.cue/.bin, .iso, .chd), Virtual Boy
+   (.vb), Neo Geo Pocket (.ngp/.ngc), WonderSwan (.ws/.wsc), Atari 5200
+   (.a52), Atari Jaguar (.j64/.jag), ColecoVision (.col, com a BIOS
+   colecovision.rom), PC-FX (disco, com a BIOS pcfx.rom), Amiga (.adf,
+   .ipf, .hdf, .lha) e Commodore 128, VIC-20, Plus/4 e PET (escolha na
+   lista "Sistema": usam os mesmos arquivos do C64). O painel reconhece
+   sozinho e ensina os comandos de cada um (No computador / No celular).
+   PSP E DOS abrem na tela inteira (com "Voltar ao jogo" no canto): o núcleo
+   deles usa várias linhas de execução, e o navegador só libera isso numa
+   página isolada. Precisam de Chrome, Edge, Firefox ou Safari atualizados.
+   JOGO PARTICULAR (Site e aplicativo > Jogos > Mais detalhes > "Particular
+   (só a equipe)"). Só quem entra com conta de administrador vê e joga: o
+   jogo fica fora do portal, da busca, do sitemap e do Google, e a página
+   avisa "Jogo particular". No particular rodam TODOS os consoles
+   reconhecidos, sem a variável do Render: Super Nintendo, Mega Drive,
+   Master System, Game Gear, Sega CD, 32X, fliperama (FinalBurn Neo e MAME
+   2003-Plus), Atari Lynx e 3DO (esses dois com a BIOS). Os núcleos desses vêm do CDN do
+   próprio EmulatorJS na primeira vez. Use para jogar e testar as cópias dos
+   jogos que a empresa comprou (a Lei 9.609/98 permite uma cópia de
+   segurança do que foi adquirido), sem publicar.
+   FLIPERAMA EM PEÇAS (pm1.ic2, pacman.6e, u1...): no painel, "Escolher a
+   pasta do jogo" (ou arraste a pasta). O painel monta o .zip com o nome da
+   pasta -- o nome da pasta precisa ser o nome do jogo no MAME/FinalBurn
+   (pacman, sf2...). Sem pasta, ele pergunta o nome. Fliperama roda pelo
+   FinalBurn Neo; para o jogo que só o MAME tem, escolha "Fliperama (MAME
+   2003-Plus)" na lista Sistema. Os dois são de licença não comercial: no
+   site aberto só com a variável do Render (seção 20); no particular, direto.
+   O .EXE: o painel lê o começo do arquivo. De MS-DOS vai para o emulador
+   (DOSBox); de Windows (ou o .zip com .dll, .pck, pasta _Data) vai para
+   "Versão para computador", que guarda o arquivo para a equipe.
+   O QUE NÃO RODA EM SITE (o painel recusa e diz o motivo):
+   - PS2, GameCube, Wii, Switch, 3DS, Dreamcast: não existe emulador desses
+     para navegador. PS2 no celular só em aplicativo instalado (Android com
+     processador forte), nunca num site.
+   - Pokémon Mini (.min): o EmulatorJS ainda não tem núcleo.
+   - Programa de Windows (.exe com .dll, launchers como o TeknoParrot): o
+     navegador não roda programa de Windows. Roda programa de MS-DOS.
+   - Arquivo acima de 2 GB: o jogo inteiro precisa caber na memória da aba
+     (e o emulador faz mais uma cópia); no celular, o limite real é bem
+     menor. Acima de 700 MB o painel avisa que no celular pode não abrir.
+   JOGO GRANDE DE PSP: comprima o .iso para .cso (no próprio PPSSPP do
+   computador ou no UMDGen): fica com cerca de metade do tamanho. O
+   armazenamento em pedaços aceita até JOGOS_PEDACOS_MAX_MB (padrão 1000)
+   por arquivo; dá para subir até 2000 no Render, mas cada partida baixa o
+   jogo inteiro na primeira vez (o Cloudinary gratuito tem 25 GB por mês).

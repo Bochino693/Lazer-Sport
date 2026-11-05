@@ -90,7 +90,7 @@
     <article class="ls-game" style="--cor: {{ jogo.cor }}">
       <div class="ls-game-arte">
         {% if jogo.poster_url %}<img src="{{ jogo.poster_url }}" alt="" loading="lazy">{% elif jogo.capa_url %}<img class="capa" src="{{ jogo.capa_url }}" alt="" loading="lazy">{% else %}<i class="bi bi-image text-muted"></i>{% endif %}
-        <span class="ls-game-selo {% if not jogo.ativo %}cinza{% endif %}">{% if jogo.ativo %}No ar{% else %}Desligado{% endif %}</span>
+        <span class="ls-game-selo {% if not jogo.ativo %}cinza{% endif %}">{% if not jogo.ativo %}Desligado{% elif jogo.particular %}<i class="bi bi-lock-fill"></i> Particular{% else %}No ar{% endif %}</span>
         {% if jogo.sistema %}<span class="ls-game-selo direita {% if jogo.aguardando_arquivos %}cinza{% endif %}">{% if jogo.aguardando_arquivos %}Faltam os arquivos{% else %}Emulador{% endif %}</span>{% elif jogo.so_versao_pc %}<span class="ls-game-selo direita">Só para computador</span>{% elif jogo.apk %}<span class="ls-game-selo direita {% if not jogo.liberar_download %}cinza{% endif %}">{% if jogo.liberar_download %}APK liberado{% else %}APK guardado{% endif %}</span>{% endif %}
       </div>
       <div class="ls-game-corpo">
@@ -163,9 +163,11 @@
             <section class="ls-jf-passo">
               <h6><span class="ls-jf-num">3</span> Os arquivos do jogo</h6>
               <label class="ls-jf-solta" id="jogoArquivosSolta" for="jogoArquivos">
-                <span class="ls-jf-solta-texto"><i class="bi bi-cloud-arrow-up"></i><strong>Arraste aqui todos os arquivos do jogo</strong> ou toque para escolher<small>Vale tudo: o <b>.cue com os .bin</b> do PS1, a ROM (.nes, .gba, .n64…), a BIOS, o <b>.html</b>, o <b>.apk</b>, o <b>.exe</b>. O painel descobre o que é cada um.</small></span>
+                <span class="ls-jf-solta-texto"><i class="bi bi-cloud-arrow-up"></i><strong>Arraste aqui todos os arquivos do jogo</strong> ou toque para escolher<small>Vale tudo: o <b>.cue com os .bin</b> do PS1, o .iso/.cso do PSP, a ROM (.nes, .sfc, .gba, .n64…), a pasta do fliperama, a BIOS, o <b>.html</b>, o <b>.apk</b>, o <b>.exe</b> (de MS-DOS vai para o emulador; de Windows, para "Versão para computador"). O painel descobre o que é cada um.</small></span>
               </label>
               <input type="file" class="ls-jf-escondido" id="jogoArquivos" multiple>
+              <input type="file" class="ls-jf-escondido" id="jogoPasta" webkitdirectory multiple>
+              <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="jogoPastaBotao"><i class="bi bi-folder2-open me-1"></i>Escolher a pasta do jogo <span class="text-muted">(fliperama em peças: .ic2, .6e, .u1…)</span></button>
               {# os campos de verdade do formulário: o painel põe aqui o que cada arquivo é #}
               <input type="file" class="d-none" id="jogoHtml" name="arquivo_html">
               <input type="file" class="d-none" id="jogoApk" name="apk">
@@ -207,7 +209,7 @@
                 <div class="col-12"><label class="form-label" for="jogoDescricao">Descrição</label><textarea class="form-control" id="jogoDescricao" name="descricao" rows="3"></textarea></div>
                 <div class="col-6 col-md-3"><label class="form-label" for="jogoCor">Cor do jogo</label><input type="color" class="form-control form-control-color w-100" id="jogoCor" name="cor" value="#ff3df2" title="Sai da capa; troque se quiser"></div>
                 <div class="col-6 col-md-3"><label class="form-label" for="jogoOrdem">Ordem na lista</label><input type="number" class="form-control" id="jogoOrdem" name="ordem" min="0" max="65000" value="100"></div>
-                <div class="col-12 col-md-6"><label class="form-label" for="jogoSistema">Sistema do console</label><select class="form-select" id="jogoSistema" name="sistema"><option value="">Não é jogo de console</option><option value="auto">Reconhecer pelos arquivos</option>{% for s in emulador.sistemas %}<option value="{{ s.codigo }}"{% if not s.ligado %} disabled{% endif %}>{{ s.nome }}{% if not s.ligado %} — núcleo de licença não comercial{% endif %}</option>{% endfor %}</select><span class="form-text">O painel reconhece sozinho; escolha só se ele errar.</span></div>
+                <div class="col-12 col-md-6"><label class="form-label" for="jogoSistema">Sistema do console</label><select class="form-select" id="jogoSistema" name="sistema"><option value="">Não é jogo de console</option><option value="auto">Reconhecer pelos arquivos</option>{% for s in emulador.sistemas %}<option value="{{ s.codigo }}"{% if not s.ligado %} disabled data-so-particular="1"{% endif %}>{{ s.nome }}{% if not s.ligado %} — só no jogo particular{% endif %}</option>{% endfor %}</select><span class="form-text">O painel reconhece sozinho; escolha só se ele errar.</span></div>
                 <div class="col-12 col-md-6"><label class="form-label" for="jogoPcLink">Link da versão para computador <span class="text-muted fw-normal">(build grande: Drive, Dropbox)</span></label><input type="url" class="form-control" id="jogoPcLink" name="versao_pc_link" maxlength="500" placeholder="https://drive.google.com/..." data-rotulo="link da versão para computador"></div>
                 <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoAtivo" type="checkbox" name="ativo" checked><span class="form-check-label">No ar (aparece em /jogos/)</span></label></div>
                 <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoLiberar" type="checkbox" name="liberar_download"><span class="form-check-label">Deixar baixar o APK pelo site</span></label></div>
@@ -215,6 +217,7 @@
                 <div class="col-12 col-md-4"><label class="form-label" for="jogoCategoria">Categoria</label><select class="form-select" id="jogoCategoria" name="categoria">{% for valor, rotulo in categorias %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
                 <div class="col-12 col-md-4"><label class="form-check form-switch mt-md-4"><input class="form-check-input" id="jogoFeitoPelaLazer" type="checkbox" name="feito_pela_lazer"><span class="form-check-label">Feito pela Lazer &amp; Sport <span class="text-muted">(fica junto dos jogos da casa)</span></span></label></div>
                 <div class="col-12 col-md-4"><label class="form-check form-switch mt-md-4"><input class="form-check-input" id="jogoDestaque" type="checkbox" name="destaque"><span class="form-check-label">Destaque no topo do portal</span></label></div>
+                <div class="col-12"><label class="form-check form-switch"><input class="form-check-input" id="jogoParticular" type="checkbox" name="particular"><span class="form-check-label"><strong>Particular (só a equipe)</strong> <span class="text-muted">— só quem entra com conta de administrador vê e joga; fica fora do portal, da busca e do Google. No particular rodam todos os consoles, inclusive Super Nintendo, Mega Drive e fliperama.</span></span></label></div>
               </div>
             </details>
           </div>
@@ -286,7 +289,7 @@ LSTela.pronto(function () {
   quandoPronto(function () {
     if (envio) return;
     envio = window.LSEmuladorEnvio.criar({
-      prefixo: "jc", campo: { files: [] }, sistema: el("jogoSistema"), url: URL_DO_PAINEL, csrf: CSRF, config: EMU,
+      prefixo: "jc", campo: { files: [] }, sistema: el("jogoSistema"), particular: el("jogoParticular"), url: URL_DO_PAINEL, csrf: CSRF, config: EMU,
       aoMudar: function (ok, json) {
         if (ok && json) sugerir(json.analise.sistema);
         pintarComo();
@@ -325,19 +328,36 @@ LSTela.pronto(function () {
     }).catch(function () { return null; });
   }
 
-  /* Separa o que veio: o .html, o .apk e o .exe vão para os campos deles; o
-     resto (o .cue, os .bin, a ROM, a BIOS, o .zip de ROM) é jogo de console. */
+  /* O .exe é de Windows (PE/NE) ou de MS-DOS (MZ puro, ou LE do DOS/4GW)? O de
+     DOS vai para o emulador (DOSBox); o de Windows, para "Versão para computador". */
+  function exeDeWindows(b) {
+    if (b.length < 0x40 || b[0] !== 0x4D || b[1] !== 0x5A) return false;
+    var novo = (b[0x3C] | (b[0x3D] << 8) | (b[0x3E] << 16) | (b[0x3F] << 24)) >>> 0;
+    if (novo < 0x40 || novo + 4 > b.length) return false;
+    return (b[novo] === 0x50 && b[novo + 1] === 0x45 && b[novo + 2] === 0 && b[novo + 3] === 0) || (b[novo] === 0x4E && b[novo + 1] === 0x45);
+  }
+
+  /* Separa o que veio: o .html, o .apk e o .exe de Windows vão para os campos deles; o
+     resto (o .cue, os .bin, a ROM, a BIOS, o .zip de ROM, o programa de MS-DOS) é jogo de console. */
   function classificar(lista) {
     var r = { console: [], html: null, apk: null, pc: null, web: [], sobra: [] };
     return Promise.all(lista.map(function (arq) {
       var e = ext(arq.name);
       if (e === "html" || e === "htm") { if (r.html) r.sobra.push(arq); else r.html = arq; return null; }
       if (e === "apk") { if (r.apk) r.sobra.push(arq); else r.apk = arq; return null; }
-      if (e === "exe") { if (r.pc) r.sobra.push(arq); else r.pc = arq; return null; }
+      if (e === "exe") {
+        return arq.slice(0, 65536).arrayBuffer().then(function (buf) {
+          if (exeDeWindows(new Uint8Array(buf))) { if (r.pc) r.sobra.push(arq); else r.pc = arq; }
+          else r.console.push(arq);
+        });
+      }
       if (e !== "zip") { r.console.push(arq); return null; }
       return nomesNoZip(arq).then(function (nomes) {
         var baixos = (nomes || []).map(function (n) { return n.toLowerCase(); });
-        if (baixos.some(function (n) { return /\.exe$/.test(n); })) { if (r.pc) r.sobra.push(arq); else r.pc = arq; }
+        // .exe com .dll, .pck (Godot) ou a pasta _Data (Unity) é de Windows; o .exe sozinho é de MS-DOS
+        var windows = baixos.some(function (n) { return /\.(dll|pck)$/.test(n) || /_data\//.test(n); });
+        if (baixos.some(function (n) { return /\.exe$/.test(n); }) && windows) { if (r.pc) r.sobra.push(arq); else r.pc = arq; }
+        else if (baixos.some(function (n) { return /\.(exe|com|bat)$/.test(n); })) r.console.push(arq);
         else if (baixos.some(function (n) { return /(^|\/)index\.html?$/.test(n); })) r.web.push(arq);
         else r.console.push(arq);
       });
@@ -468,6 +488,95 @@ LSTela.pronto(function () {
   }
   function pintarCor() { el("jfCard").style.setProperty("--cor", el("jogoCor").value); form.style.setProperty("--cor-jogo", el("jogoCor").value); }
 
+  /* ---------------- a pasta do fliperama ----------------
+     O MAME e o FinalBurn guardam cada jogo como uma pasta de peças (pm1.ic2,
+     pacman.6e, u1...) que o emulador abre como um .zip com o nome EXATO do
+     jogo (pacman.zip). Arrastou a pasta solta: o painel monta o .zip aqui
+     mesmo, com o nome dela, sem compressão (as peças são pequenas). */
+  var CONHECIDAS = EMU.extensoes || [];
+  var TABELA_CRC = null;
+  function crc32(bytes) {
+    if (!TABELA_CRC) {
+      TABELA_CRC = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; TABELA_CRC[n] = c >>> 0; }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = TABELA_CRC[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function montarZip(nomeDoZip, arquivos) {
+    return Promise.all(arquivos.map(function (a) { return a.arrayBuffer(); })).then(function (dados) {
+      var enc = new TextEncoder(), partes = [], central = [], pos = 0;
+      dados.forEach(function (buf, i) {
+        var bytes = new Uint8Array(buf), nome = enc.encode(arquivos[i].name), crc = crc32(bytes);
+        var local = new DataView(new ArrayBuffer(30));
+        local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);
+        local.setUint16(12, 0x21, true); local.setUint32(14, crc, true);
+        local.setUint32(18, bytes.length, true); local.setUint32(22, bytes.length, true); local.setUint16(26, nome.length, true);
+        var cd = new DataView(new ArrayBuffer(46));
+        cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true);
+        cd.setUint16(14, 0x21, true); cd.setUint32(16, crc, true); cd.setUint32(20, bytes.length, true); cd.setUint32(24, bytes.length, true);
+        cd.setUint16(28, nome.length, true); cd.setUint32(42, pos, true);
+        partes.push(local.buffer, nome, bytes);
+        central.push(cd.buffer, nome);
+        pos += 30 + nome.length + bytes.length;
+      });
+      var tamanhoCentral = central.reduce(function (t, p) { return t + p.byteLength; }, 0);
+      var fim = new DataView(new ArrayBuffer(22));
+      fim.setUint32(0, 0x06054b50, true); fim.setUint16(8, dados.length, true); fim.setUint16(10, dados.length, true);
+      fim.setUint32(12, tamanhoCentral, true); fim.setUint32(16, pos, true);
+      return new File(partes.concat(central, [fim.buffer]), nomeDoZip, { type: "application/zip" });
+    });
+  }
+  function pastaDe(arquivo) {
+    var partes = (arquivo.caminho || arquivo.webkitRelativePath || "").split("/");
+    return partes.length > 1 ? partes[partes.length - 2] : "";
+  }
+  function prepararLista(lista) {
+    lista = lista.filter(function (a) { return a.name.charAt(0) !== "." && a.name !== "Thumbs.db"; });
+    var estranhos = lista.filter(function (a) { return CONHECIDAS.indexOf(ext(a.name)) < 0; });
+    if (estranhos.length < 2 || estranhos.length * 2 < lista.length) return Promise.resolve(lista);
+    var pasta = pastaDe(lista[0]);
+    if (!pasta) {
+      pasta = window.prompt("Esses arquivos parecem as peças de um jogo de fliperama (" + estranhos.slice(0, 3).map(function (a) { return a.name; }).join(", ") +
+        "…). Qual é o nome do jogo no MAME / FinalBurn — o nome do .zip, ex.: pacman?") || "";
+    }
+    pasta = pasta.trim().replace(/\.zip$/i, "").replace(/[^A-Za-z0-9_-]/g, "").toLowerCase();
+    if (!pasta) return Promise.resolve(lista);
+    return montarZip(pasta + ".zip", lista).then(function (zip) {
+      el("jfFormatoDica").textContent = "As " + lista.length + " peças do fliperama viraram " + zip.name + ".";
+      return [zip];
+    });
+  }
+  /* A pasta arrastada: todos os arquivos de dentro, com o caminho (para saber o nome dela). */
+  function lerArrastados(dt) {
+    var itens = dt.items ? Array.prototype.slice.call(dt.items) : [];
+    var entradas = itens.map(function (i) { return i.webkitGetAsEntry ? i.webkitGetAsEntry() : null; }).filter(Boolean);
+    if (!entradas.some(function (e) { return e.isDirectory; })) return Promise.resolve(Array.prototype.slice.call(dt.files));
+    var achados = [];
+    function andar(entrada, caminho) {
+      if (entrada.isFile) {
+        return new Promise(function (ok) {
+          entrada.file(function (f) { f.caminho = caminho + f.name; achados.push(f); ok(); }, function () { ok(); });
+        });
+      }
+      var leitor = entrada.createReader(), todos = [];
+      return new Promise(function (ok) {
+        (function lote() {
+          leitor.readEntries(function (parte) {
+            if (!parte.length) {
+              Promise.all(todos.map(function (e) { return andar(e, caminho + entrada.name + "/"); })).then(ok);
+              return;
+            }
+            todos = todos.concat(Array.prototype.slice.call(parte));
+            lote();
+          }, function () { ok(); });
+        })();
+      });
+    }
+    return Promise.all(entradas.map(function (e) { return andar(e, ""); })).then(function () { return achados; });
+  }
+
   /* Arrastar e soltar nas duas áreas. */
   function ligarSolta(area, campo, receber) {
     ["dragenter", "dragover"].forEach(function (evento) { area.addEventListener(evento, function (e) { e.preventDefault(); area.classList.add("is-sobre"); }); });
@@ -481,13 +590,29 @@ LSTela.pronto(function () {
     campo.addEventListener("change", function () { receber(Array.prototype.slice.call(campo.files)); });
   }
   ligarSolta(el("jogoCapaSolta"), el("jogoCapa"), function (lista) { capaEscolhida(lista[0]); });
-  ligarSolta(el("jogoArquivosSolta"), el("jogoArquivos"), function (lista) {
-    el("jogoArquivosSolta").classList.toggle("tem-arquivos", lista.length > 0);
-    el("jogoArquivosSolta").querySelector("strong").textContent = lista.length
-      ? lista.length + " arquivo" + (lista.length > 1 ? "s" : "") + " · " + mb(lista.reduce(function (t, a) { return t + a.size; }, 0)) + " — toque para trocar"
-      : "Arraste aqui todos os arquivos do jogo";
-    arquivosEscolhidos(lista);
-  });
+  function arquivosDoJogo(lista) {
+    prepararLista(lista).then(function (pronta) {
+      el("jogoArquivosSolta").classList.toggle("tem-arquivos", pronta.length > 0);
+      el("jogoArquivosSolta").querySelector("strong").textContent = pronta.length
+        ? pronta.length + " arquivo" + (pronta.length > 1 ? "s" : "") + " · " + mb(pronta.reduce(function (t, a) { return t + a.size; }, 0)) + " — toque para trocar"
+        : "Arraste aqui todos os arquivos do jogo";
+      arquivosEscolhidos(pronta);
+    }, function (erro) { Painel.erro("jogoErro", "Não deu para ler os arquivos: " + erro.message); });
+  }
+  (function () {
+    var area = el("jogoArquivosSolta"), campo = el("jogoArquivos");
+    ["dragenter", "dragover"].forEach(function (evento) { area.addEventListener(evento, function (e) { e.preventDefault(); area.classList.add("is-sobre"); }); });
+    ["dragleave", "drop"].forEach(function (evento) { area.addEventListener(evento, function () { area.classList.remove("is-sobre"); }); });
+    area.addEventListener("drop", function (e) {
+      e.preventDefault();
+      if (!e.dataTransfer) return;
+      lerArrastados(e.dataTransfer).then(function (lista) { if (lista.length) arquivosDoJogo(lista); });
+    });
+    campo.addEventListener("change", function () { arquivosDoJogo(Array.prototype.slice.call(campo.files)); });
+    var pasta = el("jogoPasta");
+    el("jogoPastaBotao").addEventListener("click", function () { pasta.click(); });
+    pasta.addEventListener("change", function () { if (pasta.files.length) arquivosDoJogo(Array.prototype.slice.call(pasta.files)); });
+  })();
 
   /* ---------------- abrir a janela ---------------- */
 
@@ -496,6 +621,21 @@ LSTela.pronto(function () {
     el(idCaixa).classList.toggle("d-none", !nome);
     return !!nome;
   }
+  // "Particular": a lista de consoles inteira fica liberada (os de licença não comercial também)
+  function liberarConsoles() {
+    var particular = el("jogoParticular").checked;
+    Array.prototype.forEach.call(el("jogoSistema").querySelectorAll("[data-so-particular]"), function (opcao) {
+      opcao.disabled = !particular;
+    });
+    var escolhida = el("jogoSistema").selectedOptions[0];
+    if (escolhida && escolhida.disabled) el("jogoSistema").value = "auto";
+  }
+  el("jogoParticular").addEventListener("change", function () {
+    liberarConsoles();
+    // os arquivos já escolhidos são conferidos de novo, agora com a regra certa
+    if (envio && envio.temArquivos()) envio.conferir().catch(function (erro) { Painel.erro("jogoErro", erro.message); });
+  });
+
   function abrir(jogo, irArquivos) {
     form.reset(); Painel.erro("jogoErro", "");
     jogoAberto = jogo || null;
@@ -521,6 +661,8 @@ LSTela.pronto(function () {
     Painel.valor("jogoCategoria", jogo ? (jogo.categoria || "") : "");
     el("jogoFeitoPelaLazer").checked = jogo ? !!jogo.feito_pela_lazer : false;
     el("jogoDestaque").checked = jogo ? !!jogo.destaque : false;
+    el("jogoParticular").checked = jogo ? !!jogo.particular : false;
+    liberarConsoles();
     // a capa
     var temCapa = !!(jogo && jogo.capa);
     el("jogoCapaVer").hidden = !temCapa; el("jogoCapaVer").src = temCapa ? jogo.capa : "";

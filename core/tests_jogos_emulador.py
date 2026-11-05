@@ -29,7 +29,9 @@ from . import jogos_emulador as emu
 from .models import ArquivoEmulador, JogoCadastrado
 from .views_jogos import config_do_emulador
 
-LIGADOS = ["psx", "nes", "gb", "gba", "n64", "pce", "nds", "atari2600", "atari7800", "c64"]
+LIGADOS = ["psx", "nes", "gb", "gba", "n64", "pce", "nds", "atari2600", "atari7800", "c64",
+           "psp", "segaSaturn", "vb", "ngp", "ws", "atari5200", "jaguar", "coleco", "pcfx", "amiga", "dos",
+           "c128", "vic20", "plus4", "pet"]
 SYNC = b"\x00" + b"\xff" * 10 + b"\x00"
 
 
@@ -386,9 +388,53 @@ class EmuladorNoSiteTests(TestCase):
         portal = self.client.get(reverse("jogos"))
         faixa = next(f for f in portal.context["faixas"] if f["id"] == "consoles")
         self.assertEqual([j["slug"] for j in faixa["jogos"]], ["disco-teste"])
-        self.assertIn(("playstation", "PlayStation"), portal.context["filtros"])
+        self.assertIn(("playstation", "PlayStation e PSP"), portal.context["filtros"])
         nossos = next(f for f in portal.context["faixas"] if f["id"] == "nossos")
         self.assertNotIn("disco-teste", [j["slug"] for j in nossos["jogos"]])
+
+    def test_psp_e_dos_abrem_na_pagina_isolada_e_os_outros_no_quadro(self):
+        url = reverse("jogo_emulador", args=["disco-teste"])
+        normal = self.client.get(url)
+        self.assertNotIn("Cross-Origin-Embedder-Policy", normal)
+        self.assertFalse(self.config(normal)["threads"])
+        JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="psp")
+        isolada = self.client.get(url)
+        self.assertEqual(isolada["Cross-Origin-Opener-Policy"], "same-origin")
+        self.assertEqual(isolada["Cross-Origin-Embedder-Policy"], "require-corp")
+        config = self.config(isolada)
+        self.assertTrue(config["threads"])
+        self.assertEqual(config["voltar"], reverse("jogo", args=["disco-teste"]))
+        self.assertContains(isolada, "data-emu-voltar")
+        pagina = self.client.get(reverse("jogo", args=["disco-teste"]))
+        self.assertContains(pagina, 'data-jogo-tela-propria="1"')
+        # o adiantamento do núcleo pede o de várias linhas e os arquivos de apoio do PPSSPP
+        self.assertContains(pagina, '"threads": true')
+        self.assertContains(pagina, "cores/ppsspp-assets.zip")
+        self.assertContains(pagina, "PlayStation Portable (PSP)")
+
+    def test_o_jogo_particular_so_a_equipe_ve_e_roda_qualquer_console(self):
+        from django.contrib.auth.models import User
+
+        from .tests_ranking import _cliente
+
+        # Super Nintendo: no site aberto não liga; no particular, roda -- só para a equipe
+        JogoCadastrado.objects.filter(pk=self.jogo.pk).update(particular=True, sistema="snes")
+        emulador = reverse("jogo_emulador", args=["disco-teste"])
+        pagina = reverse("jogo", args=["disco-teste"])
+        self.assertEqual(self.client.get(emulador).status_code, 404)
+        self.assertEqual(self.client.get(pagina).status_code, 404)
+        self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")
+        self.client.force_login(_cliente("cliente", "cliente@exemplo.com"))
+        self.assertEqual(self.client.get(emulador).status_code, 404)  # conta de cliente não basta
+        equipe = User.objects.create_superuser("chefe", "chefe@exemplo.com", "x")
+        self.client.force_login(equipe)
+        resposta = self.client.get(pagina)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "Jogo particular")
+        self.assertEqual(resposta["X-Robots-Tag"], "noindex, nofollow")
+        self.assertIn("no-store", resposta["Cache-Control"])
+        self.assertEqual(self.config(self.client.get(emulador))["core"], "snes")
+        self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")  # nem para a equipe, no portal
 
     def test_so_o_n64_troca_as_teclas_do_emulador(self):
         self.assertIsNone(config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["controles"])
@@ -427,3 +473,183 @@ class ConsolesDeLicencaLivreTests(TestCase):
         erro = " ".join(an.erros)
         self.assertIn("permissão dos autores", erro)
         self.assertIn("JOGOS_EMULADORES_NAO_COMERCIAIS=snes", erro)
+
+
+def _iso_de_psp(tamanho_real=None, com_id=True):
+    """Um .iso de PSP: o descritor do volume ("PSP GAME") e a pasta PSP_GAME na raiz."""
+    dados = bytearray(2048 * 24)
+    pvd = bytearray(2048)
+    pvd[0:8] = b"\x01CD001\x01\x00"
+    if com_id:
+        pvd[8:16] = b"PSP GAME"
+    pvd[158:162] = (22).to_bytes(4, "little")
+    dados[16 * 2048: 17 * 2048] = pvd
+    dados[22 * 2048 + 33: 22 * 2048 + 41] = b"PSP_GAME"
+    if tamanho_real:
+        return emu.entrada_de_trechos("Jogo.iso", tamanho_real, bytes(dados))
+    return E("Jogo.iso", bytes(dados))
+
+
+def _pbp(categoria):
+    """Um EBOOT.PBP com o PARAM.SFO dizendo a categoria (ME = PS1; MG = PSP)."""
+    chave = b"CATEGORY\x00\x00\x00\x00"
+    valor = categoria.encode() + b"\x00\x00"
+    sfo = bytearray(b"\x00PSF" + (0x101).to_bytes(4, "little"))
+    sfo += (20 + 16).to_bytes(4, "little") + (20 + 16 + len(chave)).to_bytes(4, "little") + (1).to_bytes(4, "little")
+    sfo += (0).to_bytes(2, "little") + (0x0204).to_bytes(2, "little") + len(valor).to_bytes(4, "little")
+    sfo += len(valor).to_bytes(4, "little") + (0).to_bytes(4, "little")
+    sfo += chave + valor
+    deslocs = [40, 40 + len(sfo)] + [40 + len(sfo)] * 6
+    return b"\x00PBP" + (0x10000).to_bytes(4, "little") + b"".join(d.to_bytes(4, "little") for d in deslocs) + bytes(sfo) + bytes(256)
+
+
+def _exe(windows):
+    """O começo de um .exe: MZ puro (MS-DOS) ou MZ + PE (Windows)."""
+    dados = bytearray(1024)
+    dados[0:2] = b"MZ"
+    if windows:
+        dados[0x3C:0x40] = (0x80).to_bytes(4, "little")
+        dados[0x80:0x84] = b"PE\x00\x00"
+    return bytes(dados)
+
+
+class MaisConsolesTests(SimpleTestCase):
+    """PSP, Saturn, Virtual Boy, Neo Geo Pocket, WonderSwan, Atari 5200/Jaguar, ColecoVision, PC-FX, Amiga, DOS e Commodore."""
+
+    def test_cada_um_e_reconhecido_e_o_nucleo_mora_no_site(self):
+        from django.contrib.staticfiles import finders
+        for nome, sistema in (("jogo.cso", "psp"), ("jogo.vb", "vb"), ("jogo.ngc", "ngp"), ("jogo.wsc", "ws"),
+                              ("jogo.a52", "atari5200"), ("jogo.j64", "jaguar"), ("jogo.adf", "amiga"), ("jogo.com", "dos")):
+            with self.subTest(arquivo=nome):
+                dados = b"CISO" + bytes(4096) if nome.endswith(".cso") else bytes(4096)
+                an = analisar(E(nome, dados))
+                self.assertEqual(an.sistema, sistema, an.erros)
+                self.assertTrue(an.ok, an.erros)
+        for codigo, sistema in emu.SISTEMAS.items():
+            if not sistema.uso_comercial:
+                continue
+            with self.subTest(nucleo=sistema.nucleo):
+                variante = "-thread" if sistema.threads else ""
+                self.assertTrue(finders.find(f"vendor/emulatorjs/data/cores/{sistema.nucleo}{variante}-wasm.data"), codigo)
+                self.assertTrue(finders.find(f"vendor/emulatorjs/data/cores/reports/{sistema.nucleo}.json"), codigo)
+        self.assertTrue(finders.find("vendor/emulatorjs/data/cores/ppsspp-assets.zip"))
+
+    def test_o_iso_de_psp_pelo_disco_inclusive_o_grande(self):
+        an = analisar(_iso_de_psp())
+        self.assertEqual(an.sistema, "psp", an.erros)
+        self.assertTrue(an.ok, an.erros)
+        # 1,5 GB: maior que um CD -- não é PS2, é UMD de PSP (só a cabeça foi lida)
+        an = analisar(_iso_de_psp(1500 * 1024 * 1024))
+        self.assertEqual(an.sistema, "psp", an.erros)
+        self.assertTrue(any("Jogo grande" in a for a in an.avisos), an.avisos)
+        # sem o "PSP GAME" no descritor, a pasta PSP_GAME basta
+        self.assertEqual(analisar(_iso_de_psp(com_id=False)).sistema, "psp")
+
+    def test_o_eboot_pbp_do_ps1_e_o_do_psp(self):
+        self.assertEqual(analisar(E("EBOOT.PBP", _pbp("ME"))).sistema, "psx")
+        self.assertEqual(analisar(E("EBOOT.PBP", _pbp("MG"))).sistema, "psp")
+        self.assertEqual(analisar(E("EBOOT.PBP", _pbp("UG"))).sistema, "psp")
+
+    def test_o_saturn_pelo_disco(self):
+        faixa = setor(0, b"SEGA SEGASATURN ", modo=1) + b"".join(setor(i, modo=1) for i in range(1, 20))
+        cue = CUE.split(b"FILE \"Track 02")[0].replace(b"MODE2", b"MODE1")
+        an = analisar(E("Jogo.cue", cue), E("Track 01.bin", faixa))
+        self.assertEqual(an.sistema, "segaSaturn")
+        self.assertTrue(an.ok, an.erros)
+
+    def test_dos_zipado_ou_solto_e_windows_recusado_com_o_motivo(self):
+        an = analisar(E("jogo.zip", zipar(JOGO__EXE=_exe(False), DADOS__DAT=b"x")))
+        self.assertEqual(an.sistema, "dos", an.erros)
+        self.assertTrue(an.ok, an.erros)
+        self.assertTrue(analisar(E("JOGO.EXE", _exe(False))).ok)
+        for an in (analisar(E("jogo.exe", _exe(True))), analisar(E("jogo.zip", zipar(JOGO__EXE=_exe(True)))),
+                   analisar(E("jogo.zip", zipar(JOGO__EXE=_exe(False), SDL__DLL=b"x")))):
+            self.assertFalse(an.ok)
+            erro = " ".join(an.erros)
+            self.assertIn("programa de Windows", erro)
+            self.assertIn("TeknoParrot", erro)
+
+    def test_o_arcade_zipado_continua_arcade(self):
+        an = analisar(E("sf2.zip", zipar(sf2_1__bin=b"x", sf2_2__bin=b"y")))
+        self.assertEqual(an.detectado, "arcade")
+
+    def test_o_que_nao_roda_no_navegador_diz_o_motivo(self):
+        for nome, console in (("jogo.wbfs", "Wii"), ("jogo.nsp", "Switch"), ("jogo.3ds", "3DS"), ("jogo.rvz", "GameCube")):
+            with self.subTest(arquivo=nome):
+                an = analisar(E(nome, bytes(64)))
+                self.assertFalse(an.ok)
+                self.assertTrue(any(console in e and "navegador" in e for e in an.erros), an.erros)
+        gamecube = bytearray(4096)
+        gamecube[0x1C:0x20] = bytes.fromhex("C2339F3D")
+        an = analisar(emu.entrada_de_trechos("Jogo.iso", 1400 * 1024 * 1024, bytes(gamecube)))
+        self.assertTrue(any("GameCube" in e for e in an.erros), an.erros)
+
+    def test_acima_de_2_gb_nenhum_navegador_abre(self):
+        an = analisar(emu.entrada_de_trechos("Jogo.cso", 5 * 1024 ** 3, b"CISO" + bytes(1024)))
+        self.assertFalse(an.ok)
+        self.assertTrue(any("nenhum navegador" in e for e in an.erros), an.erros)
+
+    def test_os_commodore_irmaos_do_c64_so_pela_lista(self):
+        self.assertEqual(analisar(E("jogo.d64", bytes(4096))).sistema, "c64")
+        an = analisar(E("jogo.d64", bytes(4096)), sistema="c128")
+        self.assertTrue(an.ok, an.erros)
+        self.assertEqual(an.sistema, "c128")
+
+    def test_colecovision_pede_a_bios(self):
+        self.assertTrue(any("colecovision.rom" in e for e in analisar(E("jogo.col", bytes(4096))).erros))
+        self.assertTrue(analisar(E("jogo.col", bytes(4096)), E("colecovision.rom", bytes(8192))).ok)
+
+    def test_cada_console_ligado_ensina_os_comandos_e_o_psp_tem_o_analogico_nas_setas(self):
+        for codigo in emu.sistemas_ligados():
+            with self.subTest(sistema=codigo):
+                self.assertTrue(emu.controles_do_sistema(codigo), codigo)
+        psp = emu.controles_do_emulador("psp")["0"]
+        self.assertEqual(psp["16"]["value"], "right arrow")
+        self.assertEqual(psp["4"]["value"], "t")
+        teclas = {c["acao"]: c["teclas"] for c in emu.controles_do_sistema("psp")}
+        self.assertEqual(teclas["✕"], ["X"])
+        self.assertEqual(teclas["Analógico"], ["←", "↑", "→", "↓"])
+
+
+class ParticularTests(SimpleTestCase):
+    def test_no_particular_rodam_todos_os_reconhecidos(self):
+        self.assertEqual(sorted(emu.sistemas_para(True)), sorted(emu.SISTEMAS))
+        an = emu.analisar([E("jogo.sfc", bytes(4096))], "", ligados=emu.sistemas_para(True))
+        self.assertTrue(an.ok, an.erros)
+        self.assertEqual(an.sistema, "snes")
+        fora = analisar(E("jogo.sfc", bytes(4096)), ligados=emu.sistemas_ligados())
+        self.assertTrue(any("Particular" in e for e in fora.erros), fora.erros)
+
+    def test_o_envio_sabe_quando_e_particular(self):
+        from .emulador_envio import particular_pedido
+
+        self.assertTrue(particular_pedido(None, {"particular": "1"}))
+        self.assertFalse(particular_pedido(None, {}))
+        self.assertTrue(particular_pedido(JogoCadastrado(particular=True), {}))
+
+    def test_o_dos_recebe_o_nome_no_padrao_8_3(self):
+        from .views_jogos import _nome_do_dos
+
+        self.assertEqual(_nome_do_dos("LAZER.COM"), "LAZER.COM")
+        self.assertEqual(_nome_do_dos("Meu Jogo 2025.exe"), "MEUJOGO2.EXE")
+        self.assertEqual(_nome_do_dos("pasta-do-jogo.zip"), "PASTADOJ.ZIP")
+        self.assertEqual(_nome_do_dos("çãé.bat"), "JOGO.BAT")
+
+    def test_pecas_soltas_de_fliperama_pedem_a_pasta_ou_o_zip(self):
+        an = analisar(E("pm1.ic2", b"x" * 64), E("pm2.ic3", b"y" * 64), E("pacman.6e", b"z" * 64))
+        self.assertFalse(an.ok)
+        erro = " ".join(an.erros)
+        self.assertIn("peças (chips) de um jogo de fliperama", erro)
+        self.assertIn("pacman.zip", erro)
+        # o .zip que o painel monta com a pasta: fliperama (e roda no particular)
+        zipado = E("pacman.zip", zipar(pm1__ic2=b"x" * 64, pm2__ic3=b"y" * 64, pacman__6e=b"z" * 64))
+        an = emu.analisar([zipado], "", ligados=emu.sistemas_para(True))
+        self.assertEqual(an.sistema, "arcade")
+        self.assertTrue(an.ok, an.erros)
+        an = emu.analisar([E("pacman.zip", zipar(pm1__ic2=b"x"))], "mame", ligados=emu.sistemas_para(True))
+        self.assertTrue(an.ok, an.erros)
+
+    def test_pokemon_mini_diz_por_que_nao_roda(self):
+        an = analisar(E("jogo.min", bytes(512)))
+        self.assertFalse(an.ok)
+        self.assertTrue(any("Pokémon Mini" in e for e in an.erros), an.erros)

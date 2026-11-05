@@ -81,6 +81,12 @@ class Sistema:
     #: o "como jogar" que o painel sugere: os controles padrão do EmulatorJS
     #: (setas; Z, X, A, S = os botões; Q/E = L/R; Enter = Start; V = Select)
     comandos: str = ""
+    #: o núcleo só roda com várias linhas de execução (PSP, DOS): a página do
+    #: emulador abre sozinha (fora do quadro) e com o isolamento de origem
+    threads: bool = False
+    #: as mesmas extensões de outro sistema (C128, VIC-20... usam as do C64):
+    #: só quando a equipe escolhe na lista "Sistema" do painel
+    so_pela_lista: bool = False
 
 
 def _ext(*nomes):
@@ -141,6 +147,86 @@ SISTEMAS = {
         nota="Disquete (.d64), fita (.t64/.tap), programa (.prg) ou cartucho (.crt): o emulador carrega e roda sozinho.",
         comandos="Setas e Z = joystick · o teclado do computador é o teclado do C64. No celular, o controle aparece na tela.",
     ),
+    "psp": Sistema(
+        "psp", "PlayStation Portable (PSP)", "ppsspp", "GPL-2.0", True, _ext("iso", "cso", "pbp"), disco=True,
+        threads=True, formato="paisagem",
+        nota="Jogo de PSP grande? Envie em .cso (o .iso comprimido): fica com cerca de metade do tamanho e abre igual. "
+             "O PSP é o console mais pesado do site: no computador roda bem; no celular, os jogos mais leves.",
+        comandos="Setas = analógico · T F G H = direcional · X = ✕ · Z = ○ · S = □ · A = △ · Q/E = L/R · Enter = Start · V = Select. No celular, o controle aparece na tela.",
+    ),
+    "segaSaturn": Sistema(
+        "segaSaturn", "Sega Saturn", "yabause", "GPL-2.0", True,
+        _ext("cue", "bin", "img", "ccd", "sub", "iso", "mds", "chd", "m3u"), disco=True,
+        bios=("saturn_bios.bin",),
+        nota="Roda sem BIOS na maior parte dos jogos (o núcleo imita a do console); se algum pedir, junte saturn_bios.bin. "
+             "É um console pesado: abre melhor no computador.",
+        comandos="Setas movem · S = A · X = B · Z = C · A = X · Q = Y · E = Z · Tab/R = L/R · Enter = Start. No celular, o controle aparece na tela.",
+    ),
+    "vb": Sistema(
+        "vb", "Virtual Boy (Nintendo)", "beetle_vb", "GPL-2.0", True, _ext("vb", "vboy"), formato="paisagem",
+        comandos="Setas = direcional esquerdo · T F G H = direcional direito · Z = A · X = B · Q/E = L/R · Enter = Start · V = Select.",
+    ),
+    "ngp": Sistema(
+        "ngp", "Neo Geo Pocket / Color", "mednafen_ngp", "GPL-2.0", True, _ext("ngp", "ngc"), formato="quadrado",
+        comandos="Setas movem · X = A · Z = B · Enter = Option. No celular, o controle aparece na tela.",
+    ),
+    "ws": Sistema(
+        "ws", "WonderSwan / Color", "mednafen_wswan", "GPL-2.0", True, _ext("ws", "wsc", "pc2"), formato="portatil",
+        comandos="Setas = cruz X · R, Tab, Q, E = cruz Y (cima, baixo, esquerda, direita) · Z = A · X = B · Enter = Start.",
+    ),
+    "atari5200": Sistema(
+        "atari5200", "Atari 5200", "a5200", "GPL-2.0", True, _ext("a52"), bios=("5200.rom",),
+        nota="Se o jogo não abrir, junte a BIOS 5200.rom.",
+        comandos="Setas movem · Z e X = os botões de disparo · Enter = Start. No celular, o controle aparece na tela.",
+    ),
+    "jaguar": Sistema(
+        "jaguar", "Atari Jaguar", "virtualjaguar", "GPL-3.0", True, _ext("j64", "jag", "abs", "cof"),
+        nota="O Jaguar é pesado para o navegador: alguns jogos ficam lentos, principalmente no celular.",
+        comandos="Setas movem · Z = A · X = B · S = C · V = Pause · Enter = Option. No celular, o controle aparece na tela.",
+    ),
+    "coleco": Sistema(
+        "coleco", "ColecoVision", "gearcoleco", "GPL-3.0", True, _ext("col", "cv"),
+        bios=("colecovision.rom",), bios_obrigatoria="sempre",
+        comandos="Setas movem · Z = botão esquerdo · X = botão direito · A, S, E, Q, R, Tab = teclas 1 a 6 · V = * · Enter = #.",
+    ),
+    "pcfx": Sistema(
+        "pcfx", "PC-FX (NEC)", "mednafen_pcfx", "GPL-2.0", True, _ext("cue", "bin", "img", "ccd", "toc", "chd"), disco=True,
+        bios=("pcfx.rom",), bios_obrigatoria="sempre", so_pela_lista=True,
+        comandos="Setas movem · Z = I · X = II · A = III · S = IV · Q = V · E = VI · Enter = Run · V = Select.",
+    ),
+    "amiga": Sistema(
+        "amiga", "Commodore Amiga", "puae", "GPL-2.0", True, _ext("adf", "adz", "dms", "fdi", "ipf", "hdf", "hdz", "lha"),
+        bios=("kick34005.A500", "kick40063.A600", "kick40068.A1200"),
+        nota="Roda sem a Kickstart original (o núcleo usa uma livre, a AROS); jogo que não abrir pede a Kickstart (kick34005.A500).",
+        comandos="Setas e X = joystick e botão · o teclado e o mouse do computador são os do Amiga. No celular, o controle aparece na tela.",
+    ),
+    "dos": Sistema(
+        "dos", "PC antigo (MS-DOS)", "dosbox_pure", "GPL-2.0", True, _ext("zip", "dosz", "exe", "com", "bat"),
+        threads=True, formato="classico",
+        nota="Envie a pasta do jogo zipada (.zip, com o .exe dentro) ou o .exe/.com sozinho; o DOSBox abre o programa. "
+             "Só programas de MS-DOS: programa de Windows não roda no navegador.",
+        comandos="O teclado e o mouse do computador são os do PC antigo. No celular, o controle da tela vira as setas e os botões; jogo que pede digitação precisa de um teclado Bluetooth.",
+    ),
+    "c128": Sistema(
+        "c128", "Commodore 128", "vice_x128", "GPL-2.0", True, _ext("d64", "d71", "d81", "g64", "t64", "tap", "prg", "p00", "crt"),
+        so_pela_lista=True,
+        comandos="Setas e Z = joystick · o teclado do computador é o teclado do C128.",
+    ),
+    "vic20": Sistema(
+        "vic20", "Commodore VIC-20", "vice_xvic", "GPL-2.0", True, _ext("d64", "t64", "tap", "prg", "p00", "crt", "20", "40", "60", "a0", "b0"),
+        so_pela_lista=True,
+        comandos="Setas e Z = joystick · o teclado do computador é o teclado do VIC-20.",
+    ),
+    "plus4": Sistema(
+        "plus4", "Commodore Plus/4 e 16", "vice_xplus4", "GPL-2.0", True, _ext("d64", "t64", "tap", "prg", "p00", "crt"),
+        so_pela_lista=True,
+        comandos="Setas e Z = joystick · o teclado do computador é o teclado do Plus/4.",
+    ),
+    "pet": Sistema(
+        "pet", "Commodore PET", "vice_xpet", "GPL-2.0", True, _ext("d64", "t64", "tap", "prg", "p00"),
+        so_pela_lista=True,
+        comandos="O teclado do computador é o teclado do PET.",
+    ),
     # --- reconhecidos, mas com núcleo de licença não comercial ---------------
     "snes": Sistema(
         "snes", "Super Nintendo", "snes9x", "não comercial (Snes9x)", False, _ext("sfc", "smc", "swc", "fig", "bs"),
@@ -159,29 +245,86 @@ SISTEMAS = {
     "arcade": Sistema(
         "arcade", "Fliperama (FinalBurn Neo)", "fbneo", "não comercial (FinalBurn Neo)", False, _ext("zip", "7z"),
         nota="O .zip precisa ter o nome exato do jogo no FinalBurn Neo (ex.: sf2.zip).",
+        comandos="Setas movem · Z, X, A, S = botões 1 a 4 · V = ficha (moeda) · Enter = Start.",
+    ),
+    "mame": Sistema(
+        "mame", "Fliperama (MAME 2003-Plus)", "mame2003_plus", "não comercial (MAME)", False, _ext("zip", "7z"),
+        so_pela_lista=True,
+        nota="Para o jogo que o FinalBurn Neo não tem: o .zip com o nome exato do jogo no MAME 2003-Plus (ex.: pacman.zip).",
+        comandos="Setas movem · Z, X, A, S = botões 1 a 4 · V = ficha (moeda) · Enter = Start.",
+    ),
+    "sega32x": Sistema(
+        "sega32x", "Sega 32X", "picodrive", "não comercial (PicoDrive)", False, _ext("32x"),
+        comandos="Setas movem · S = A · X = B · Z = C · Q = X · A = Y · E = Z · Enter = Start · V = Mode.",
+    ),
+    "lynx": Sistema(
+        "lynx", "Atari Lynx", "handy", "não confirmada (o pacote do Handy não traz a licença)", False, _ext("lnx"),
+        bios=("lynxboot.img",), bios_obrigatoria="sempre", formato="paisagem",
+        comandos="Setas movem · Z = A · X = B · Q/E = Option 1 e 2 · Enter = Pause.",
+    ),
+    "3do": Sistema(
+        "3do", "3DO", "opera", "não confirmada (o pacote do Opera não traz a licença)", False,
+        _ext("cue", "bin", "iso", "chd", "img"), disco=True,
+        bios=("panafz10.bin", "panafz1.bin", "goldstar.bin", "sanyotry.bin", "panafz10-norsa.bin"), bios_obrigatoria="sempre",
+        comandos="Setas movem · S = A · X = B · Z = C · Q/E = L/R · Enter = Play (P) · V = Stop (X).",
     ),
 }
 
-#: Reconhecidos só para avisar que não rodam no navegador (por enquanto).
+#: Reconhecidos só para avisar que não rodam no navegador.
 NAO_SUPORTADOS = {
-    "segaSaturn": "Sega Saturn",
-    "3do": "3DO",
+    "pokemini": "Pokémon Mini",
     "ps2": "PlayStation 2",
     "dreamcast": "Dreamcast",
+    "gamecube": "GameCube",
+    "wii": "Wii",
+    "switch": "Nintendo Switch",
+    "3ds": "Nintendo 3DS",
+    "windows": "Windows",
 }
+
+#: Por que não roda -- o painel mostra isto, para ninguém ficar tentando.
+MOTIVO_NAO_SUPORTADO = {
+    "pokemini": "o emulador do site (EmulatorJS) ainda não tem núcleo de Pokémon Mini; o PokeMini existe para "
+                "computador e Android, mas não foi preparado para navegador.",
+    "ps2": "não existe emulador de PlayStation 2 que rode no navegador, e um DVD (4 a 8 GB) não cabe na memória de uma aba. "
+           "No celular, PS2 só roda em aplicativo instalado (Android com processador forte), nunca num site.",
+    "dreamcast": "não existe emulador de Dreamcast que rode no navegador.",
+    "gamecube": "não existe emulador de GameCube que rode no navegador (o Dolphin só roda instalado no computador ou no Android).",
+    "wii": "não existe emulador de Wii que rode no navegador (o Dolphin só roda instalado no computador ou no Android).",
+    "switch": "não existe emulador de Switch que rode no navegador, e os de computador exigem as chaves do console.",
+    "3ds": "não existe emulador de 3DS que rode no navegador.",
+    "windows": "é um programa de Windows (.exe) -- o navegador não roda programas de Windows, nem launchers como o TeknoParrot. "
+               "Roda programa de MS-DOS (PC antigo). Jogo de Windows feito por vocês: exporte a versão Web no Godot ou no Unity "
+               "e cadastre o link; o .exe pode ficar guardado em \"Versão para computador\".",
+}
+
+#: Extensões que já dizem o console que não roda (não precisam nem ser lidas).
+EXTENSOES_NAO_SUPORTADAS = {
+    "gcm": "gamecube", "gcz": "gamecube", "rvz": "gamecube", "wbfs": "wii", "wad": "wii",
+    "nsp": "switch", "xci": "switch", "nsz": "switch", "3ds": "3ds", "cia": "3ds", "cci": "3ds", "cdi": "dreamcast",
+    "gdi": "dreamcast", "dll": "windows", "msi": "windows", "lnk": "windows", "min": "pokemini",
+}
+
+#: O maior arquivo que um navegador consegue abrir: o jogo inteiro precisa caber
+#: na memória da aba (e o emulador ainda faz uma cópia). Acima disso, nem no computador.
+MAX_NO_NAVEGADOR = 2048 * MB
+#: Daqui para cima, o celular costuma não ter memória para o jogo.
+GRANDE_PARA_CELULAR = 700 * MB
 
 INDICES = _ext("cue", "ccd", "toc", "m3u")
 #: O que pode ser a faixa ou a imagem de um disco.
-DE_DISCO = _ext("bin", "img", "iso", "sub", "mdf", "mds", "cbn", "chd", "pbp")
+DE_DISCO = _ext("bin", "img", "iso", "sub", "mdf", "mds", "cbn", "chd", "pbp", "cso")
 #: Cartucho, inclusive o de console que também tem CD (o .pce do PC Engine).
 DE_CARTUCHO = (frozenset().union(*(s.extensoes for s in SISTEMAS.values() if not s.disco)) | _ext("pce")) - _ext("bin", "zip", "7z")
 #: Imagem de disco que nunca é cartucho.
-SO_DE_DISCO = _ext("iso", "chd", "pbp", "img", "cbn", "mdf")
+SO_DE_DISCO = _ext("iso", "chd", "pbp", "img", "cbn", "mdf", "cso")
 PACOTES = _ext("zip", "7z")
 #: Vem junto quando se seleciona a pasta inteira; fica de fora, com aviso.
 IGNORADOS = _ext("txt", "nfo", "sfv", "md5", "sha1", "dat", "jpg", "jpeg", "png", "gif", "pdf", "url", "ini", "db", "htm", "html", "xml", "log")
 
 BIOS_CONHECIDAS = {nome.lower(): codigo for codigo, sistema in SISTEMAS.items() for nome in sistema.bios}
+#: Todas as extensões que o painel sabe o que são (o resto, solto, costuma ser peça de fliperama).
+CONHECIDAS = DE_CARTUCHO | DE_DISCO | INDICES | PACOTES | IGNORADOS
 
 
 def sistemas_ligados(settings=None):
@@ -195,6 +338,19 @@ def sistemas_ligados(settings=None):
         from django.conf import settings
     extras = {c.strip() for c in str(getattr(settings, "JOGOS_EMULADORES_NAO_COMERCIAIS", "") or "").split(",") if c.strip()}
     return [codigo for codigo, s in SISTEMAS.items() if s.uso_comercial or codigo in extras]
+
+
+def sistemas_para(particular=False, settings=None):
+    """Os sistemas que um jogo pode usar.
+
+    O jogo PARTICULAR (só a equipe vê e joga; fora do portal e do Google) usa
+    todos os reconhecidos -- inclusive os de licença não comercial, que
+    permitem o uso que não é comercial. O jogo público segue
+    `sistemas_ligados()`.
+    """
+    if particular:
+        return list(SISTEMAS)
+    return sistemas_ligados(settings)
 
 
 def escolhas_de_sistema():
@@ -440,13 +596,41 @@ def _setor_de_dados(entrada, n):
     return entrada.pedaco(n * 2048, 2048)
 
 
+_GAMECUBE = bytes.fromhex("C2339F3D")  # no byte 0x1C do disco
+_WII = bytes.fromhex("5D1C9EA3")       # no byte 0x18
+
+
+def _e_umd_de_psp(entrada, pvd):
+    """O disco (UMD) de PSP: "PSP GAME" no descritor do volume, ou a pasta PSP_GAME na raiz."""
+    if pvd[1:6] != b"CD001":
+        return False
+    if pvd[8:16] == b"PSP GAME":
+        return True
+    raiz = int.from_bytes(pvd[158:162], "little") if len(pvd) >= 162 else 0
+    if 0 < raiz < 4096:
+        try:
+            return b"PSP_GAME" in entrada.pedaco(raiz * 2048, 2048)
+        except ForaDoTrecho:
+            return False
+    return False
+
+
 def sistema_do_cd(entrada):
     """O sistema de uma faixa de dados de CD, ou None. Pode levantar ForaDoTrecho."""
+    comeco = entrada.pedaco(0, 32)
+    if comeco[0x1C:0x20] == _GAMECUBE:
+        return "gamecube"
+    if comeco[0x18:0x1C] == _WII:
+        return "wii"
     if entrada.tamanho > MAX_CD:
         pvd = _setor_de_dados(entrada, 16)
+        if _e_umd_de_psp(entrada, pvd):
+            return "psp"
         if pvd[1:6] == b"CD001" and pvd[8:19] == b"PLAYSTATION":
             return "ps2"
         return None
+    if comeco[:12] != SYNC and _e_umd_de_psp(entrada, _setor_de_dados(entrada, 16)):
+        return "psp"
     zero = _setor_de_dados(entrada, 0)
     if zero.startswith(b"SEGADISCSYSTEM"):
         return "segaCD"
@@ -481,6 +665,53 @@ def _snes(entrada):
     return False
 
 
+def _categoria_do_pbp(entrada):
+    """A CATEGORY do PARAM.SFO de um EBOOT.PBP ("ME" = PS1; "MG", "UG"... = PSP), ou ""."""
+    cabeca = entrada.pedaco(0, 40)
+    if cabeca[:4] != b"\x00PBP" or len(cabeca) < 40:
+        return ""
+    inicio = int.from_bytes(cabeca[8:12], "little")
+    fim = int.from_bytes(cabeca[12:16], "little")
+    if not (40 <= inicio < fim) or fim - inicio > 65536:
+        return ""
+    sfo = entrada.pedaco(inicio, fim - inicio)
+    if sfo[:4] != b"\x00PSF" or len(sfo) < 20:
+        return ""
+    chaves = int.from_bytes(sfo[8:12], "little")
+    valores = int.from_bytes(sfo[12:16], "little")
+    for i in range(min(int.from_bytes(sfo[16:20], "little"), 64)):
+        item = sfo[20 + i * 16: 36 + i * 16]
+        if len(item) < 16:
+            break
+        desloc_chave = chaves + int.from_bytes(item[0:2], "little")
+        chave = sfo[desloc_chave: sfo.find(b"\x00", desloc_chave)]
+        if chave == b"CATEGORY":
+            desloc = valores + int.from_bytes(item[12:16], "little")
+            tamanho = int.from_bytes(item[4:8], "little")
+            return sfo[desloc: desloc + tamanho].rstrip(b"\x00").decode("ascii", "replace")
+    return ""
+
+
+def sistema_do_pbp(entrada):
+    """O EBOOT.PBP é do PS1 (PSone Classic, a categoria "ME") ou um jogo de PSP."""
+    try:
+        categoria = _categoria_do_pbp(entrada)
+    except ForaDoTrecho:
+        categoria = ""
+    return "psp" if categoria and categoria != "ME" else "psx"
+
+
+def exe_de_windows(dados):
+    """O começo de um .exe é de Windows (PE) -- e não de MS-DOS (MZ puro)?"""
+    if dados[:2] != b"MZ" or len(dados) < 0x40:
+        return False
+    novo = int.from_bytes(dados[0x3C:0x40], "little")
+    if not 0x40 <= novo <= len(dados) - 4:
+        return False
+    # PE = Windows; NE = Windows 3.x. LE/LX são os extensores de DOS (DOS/4GW): rodam no DOSBox
+    return dados[novo:novo + 4] == b"PE\x00\x00" or dados[novo:novo + 2] == b"NE"
+
+
 def sistema_do_cartucho(entrada):
     """O sistema de um cartucho pelo cabeçalho, ou None. Pode levantar ForaDoTrecho."""
     comeco = entrada.pedaco(0, 16)
@@ -513,7 +744,7 @@ def sistema_pela_extensao(ext):
     """O sistema quando a extensão só existe num deles (.nes, .gba, .pce...); senão None."""
     if not ext or ext in AMBIGUAS:
         return None
-    candidatos = [c for c, s in SISTEMAS.items() if ext in s.extensoes]
+    candidatos = [c for c, s in SISTEMAS.items() if ext in s.extensoes and not s.so_pela_lista]
     return candidatos[0] if len(candidatos) == 1 else None
 
 
@@ -626,6 +857,7 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
     # 1. nomes: só o nome, sem repetir, sem caractere que quebra a pasta virtual
     vistos = {}
     uteis = []
+    desconhecidos = []
     for entrada in entradas:
         entrada.nome = normalizar_nome(entrada.nome)
         problema = problema_no_nome(entrada.nome)
@@ -642,16 +874,41 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
             uteis.append(entrada)
         elif ext in IGNORADOS:
             an.ignorados.append(entrada.nome)
+        elif ext in EXTENSOES_NAO_SUPORTADAS:
+            console = EXTENSOES_NAO_SUPORTADAS[ext]
+            an.erros.append(f"“{entrada.nome}” é de {NAO_SUPORTADOS[console]}: {MOTIVO_NAO_SUPORTADO[console]}")
         else:
-            an.erros.append(f"“{entrada.nome}”: formato .{ext or '?'} não é de jogo que o emulador abre.")
+            desconhecidos.append(entrada.nome)
+    if len(desconhecidos) >= 2 and not uteis:
+        # pm1.ic2, pm2.6e, u1... soltos: são as peças (chips) de um jogo de fliperama
+        an.erros.append(
+            f"Vieram {len(desconhecidos)} arquivos soltos ({', '.join(desconhecidos[:4])}{'…' if len(desconhecidos) > 4 else ''}): "
+            "parecem as peças (chips) de um jogo de fliperama. Arraste a PASTA do jogo -- o painel monta o .zip com o "
+            "nome dela -- ou envie o .zip pronto com o nome exato do jogo (ex.: pacman.zip)."
+        )
+    else:
+        for nome in desconhecidos:
+            an.erros.append(f"“{nome}”: formato .{extensao(nome) or '?'} não é de jogo que o emulador abre.")
     if len(uteis) > MAX_ARQUIVOS:
         an.erros.append(f"São {len(uteis)} arquivos; o limite é {MAX_ARQUIVOS} por jogo.")
         return an
     por_chave = {chave_de_nome(e.nome): e for e in uteis}
 
+    for entrada in uteis:
+        if entrada.tamanho > MAX_NO_NAVEGADOR:
+            an.erros.append(
+                f"“{entrada.nome}” tem {_mb(entrada.tamanho)}: nenhum navegador abre um arquivo desse tamanho (o jogo "
+                f"inteiro precisa caber na memória da aba; o teto é {_mb(MAX_NO_NAVEGADOR)}, e no celular bem menos). "
+                "Jogo de DVD (PS2, GameCube, Wii) não roda em site."
+            )
+    if sum(e.tamanho for e in uteis) > GRANDE_PARA_CELULAR and not an.erros:
+        an.avisos.append(
+            f"Jogo grande ({_mb(sum(e.tamanho for e in uteis))}): no computador abre; no celular, só nos aparelhos com "
+            "bastante memória. Jogo de PSP fica com cerca de metade do tamanho em .cso."
+        )
     if limite_por_arquivo:
         for entrada in uteis:
-            if entrada.tamanho > limite_por_arquivo:
+            if entrada.tamanho > limite_por_arquivo and entrada.tamanho <= MAX_NO_NAVEGADOR:
                 an.erros.append(
                     f"“{entrada.nome}” tem {_mb(entrada.tamanho)}; o armazenamento aceita até "
                     f"{_mb(limite_por_arquivo)} por arquivo."
@@ -713,7 +970,7 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
 
     m3us = [(e, i) for e, i in indices.values() if i.tipo == "m3u"]
     discos_idx = [(e, i) for e, i in indices.values() if i.tipo != "m3u"]
-    imagens_unicas = [e for e in resto if e.ext in ("chd", "pbp", "iso", "mdf", "cbn")]
+    imagens_unicas = [e for e in resto if e.ext in ("chd", "pbp", "iso", "mdf", "cbn", "cso")]
 
     if len(m3us) > 1:
         an.erros.append("Veio mais de um .m3u: envie um jogo por vez (um .m3u só).")
@@ -815,7 +1072,10 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
         an.sistema = detectado if detectado in SISTEMAS else None
         an.como = como if an.sistema else ""
         if detectado in NAO_SUPORTADOS:
-            an.erros.append(f"É um jogo de {NAO_SUPORTADOS[detectado]}, que ainda não roda no navegador.")
+            an.erros.append(
+                f"É {'um programa' if detectado == 'windows' else 'um jogo'} de {NAO_SUPORTADOS[detectado]}, "
+                f"que não roda no navegador: {MOTIVO_NAO_SUPORTADO.get(detectado, '')}".rstrip(": ")
+            )
         elif not an.sistema and an.principal and not an.erros:
             an.erros.append("Não deu para reconhecer o sistema pelos arquivos: escolha na lista “Sistema”.")
 
@@ -828,7 +1088,8 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
                 f"{sistema.nome} ainda não roda no site: o único emulador de {sistema.nome} para navegador "
                 f"({sistema.nucleo}) tem licença {sistema.licenca} e só pode ser usado no site de uma empresa "
                 "com a permissão dos autores dele. Com a permissão, o dono do site liga no Render a variável "
-                f"JOGOS_EMULADORES_NAO_COMERCIAIS={sistema.codigo} (LEIA-ME-V10.txt, seção 20)."
+                f"JOGOS_EMULADORES_NAO_COMERCIAIS={sistema.codigo} (LEIA-ME-V10.txt, seção 20). Para jogar sem "
+                "publicar, marque o jogo como Particular (só a equipe vê): aí ele roda."
             )
         _conferir_extensoes(an, sistema)
         _conferir_bios(an, sistema, bios)
@@ -868,9 +1129,13 @@ def _reconhecer(an, candidatos):
         vistos.append(entrada)
         try:
             if entrada.ext == "pbp" and entrada.pedaco(0, 4) == b"\x00PBP":
-                return "psx", "cabeçalho"
+                return sistema_do_pbp(entrada), "cabeçalho"
+            if entrada.ext == "cso" and entrada.pedaco(0, 4) in (b"CISO", b"ZISO"):
+                return "psp", "cabeçalho"
             if entrada.ext == "chd":
                 continue  # comprimido: o conteúdo não se lê sem descomprimir
+            if entrada.ext == "exe":
+                return ("windows" if exe_de_windows(entrada.pedaco(0, 4096)) else "dos"), "cabeçalho"
             if entrada.ext in ("bin", "img", "iso", "mdf"):
                 achado = sistema_do_cd(entrada)
                 if achado:
@@ -885,6 +1150,9 @@ def _reconhecer(an, candidatos):
                     exts = {extensao(n) for n in nomes}
                     if exts & (INDICES | SO_DE_DISCO):
                         continue  # um disco zipado: o sistema não se lê pela lista
+                    if exts & {"exe", "com", "bat"}:
+                        # a pasta de um programa de PC zipada: de MS-DOS ou de Windows?
+                        return ("windows" if _zip_de_windows(entrada, nomes) else "dos"), "extensão"
                     dentro = {sistema_pela_extensao(e) for e in exts} - {None}
                     if len(dentro) == 1:
                         return dentro.pop(), "extensão"
@@ -898,6 +1166,21 @@ def _reconhecer(an, candidatos):
         if por_ext:
             return por_ext, "extensão"
     return None, ""
+
+
+def _zip_de_windows(entrada, nomes):
+    """Um .zip de programa de PC é de Windows: traz .dll, ou o .exe principal é de Windows."""
+    if any(extensao(n) == "dll" for n in nomes):
+        return True
+    executaveis = sorted((n for n in nomes if extensao(n) == "exe"), key=lambda n: (n.count("/"), len(n)))
+    if not executaveis:
+        return False
+    try:
+        with zipfile.ZipFile(_ArquivoPorTrechos(entrada)) as pacote:
+            with pacote.open(executaveis[0]) as arquivo:
+                return exe_de_windows(arquivo.read(4096))
+    except (zipfile.BadZipFile, ForaDoTrecho, OSError, ValueError, EOFError, RuntimeError, NotImplementedError):
+        return False  # não deu para ler o .exe de dentro: fica como DOS (o DOSBox diz se não for)
 
 
 def _conferir_extensoes(an, sistema):
@@ -970,6 +1253,41 @@ CONTROLES = {
                   ("Reset", ("A",), "RESET"), ("Select", ("V",), "SELECT")),
     "c64": (("Teclado do C64", ("Teclado do computador",), "o teclado aparece no botão de teclado da barra"),
             ("Joystick", ("←", "↑", "→", "↓"), "o direcional, à esquerda"), ("Disparo", ("X",), "o botão de disparo")),
+    "psp": (("Analógico", ("←", "↑", "→", "↓"), "o analógico, à esquerda"), ("✕", ("X",), "✕, à direita"), ("○", ("Z",), "○, à direita"),
+            ("□", ("S",), "□, à direita"), ("△", ("A",), "△, à direita"), ("L / R", ("Q", "E"), "L e R, em cima"),
+            ("Direcional (cruz)", ("T", "F", "G", "H"), "a cruz, à esquerda"), _START, _SELECT),
+    "segaSaturn": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), ("X", ("A",), "X"), ("Y", ("Q",), "Y"),
+                   ("Z", ("E",), "Z"), ("L / R", ("Tab", "R"), "L e R, em cima"), _START),
+    "vb": (("Direcional esquerdo", ("←", "↑", "→", "↓"), "o direcional da esquerda"), ("Direcional direito", ("T", "F", "G", "H"), "o direcional da direita"),
+           ("A", ("Z",), "A"), ("B", ("X",), "B"), ("L / R", ("Q", "E"), "L e R, em cima"), _START, _SELECT),
+    "ngp": (_DIRECIONAL, ("A", ("X",), "A"), ("B", ("Z",), "B"), ("Option", ("Enter",), "OPTION")),
+    "ws": (("Cruz X", ("←", "↑", "→", "↓"), "a cruz da esquerda"), ("Cruz Y", ("R", "Tab", "Q", "E"), "a segunda cruz (cima, baixo, esquerda, direita)"),
+           ("A", ("Z",), "A"), ("B", ("X",), "B"), _START),
+    "atari5200": (_DIRECIONAL, ("Disparo", ("Z", "X"), "os botões de disparo"), _START),
+    "jaguar": (_DIRECIONAL, ("A", ("Z",), "A"), ("B", ("X",), "B"), ("C", ("S",), "C"), ("Pause", ("V",), "PAUSE"), ("Option", ("Enter",), "OPTION")),
+    "coleco": (_DIRECIONAL, ("Botão esquerdo", ("Z",), "botão esquerdo"), ("Botão direito", ("X",), "botão direito"),
+               ("Teclas 1 a 6", ("A", "S", "E", "Q", "R", "Tab"), "o teclado numérico do controle"), ("* e #", ("V", "Enter"), "* e #")),
+    "pcfx": (_DIRECIONAL, ("I e II", ("Z", "X"), "I e II"), ("III e IV", ("A", "S"), "III e IV"), ("V e VI", ("Q", "E"), "V e VI"),
+             ("Run", ("Enter",), "RUN"), ("Select", ("V",), "SELECT")),
+    "amiga": (("Joystick", ("←", "↑", "→", "↓"), "o direcional"), ("Botão do joystick", ("X",), "o botão"),
+              ("Teclado e mouse do Amiga", ("Teclado do computador", "Mouse"), "o teclado aparece no botão de teclado da barra")),
+    "dos": (("Teclado do PC antigo", ("Teclado do computador",), "o controle da tela manda as setas e os botões"),
+            ("Mouse", ("Mouse",), "toque na tela"), ("Joystick", ("Controle USB ou Bluetooth",), "o controle da tela")),
+    "c128": (("Teclado do C128", ("Teclado do computador",), "o teclado aparece no botão de teclado da barra"),
+             ("Joystick", ("←", "↑", "→", "↓"), "o direcional"), ("Disparo", ("X",), "o botão de disparo")),
+    "vic20": (("Teclado do VIC-20", ("Teclado do computador",), "o teclado aparece no botão de teclado da barra"),
+              ("Joystick", ("←", "↑", "→", "↓"), "o direcional"), ("Disparo", ("X",), "o botão de disparo")),
+    "plus4": (("Teclado do Plus/4", ("Teclado do computador",), "o teclado aparece no botão de teclado da barra"),
+              ("Joystick", ("←", "↑", "→", "↓"), "o direcional"), ("Disparo", ("X",), "o botão de disparo")),
+    "pet": (("Teclado do PET", ("Teclado do computador",), "o teclado aparece no botão de teclado da barra"),),
+    "sega32x": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), ("X", ("Q",), "X"), ("Y", ("A",), "Y"),
+                ("Z", ("E",), "Z"), _START, ("Mode", ("V",), "MODE")),
+    "lynx": (_DIRECIONAL, ("A", ("Z",), "A"), ("B", ("X",), "B"), ("Option 1 / 2", ("Q", "E"), "OPTION 1 e 2"), ("Pause", ("Enter",), "PAUSE")),
+    "3do": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), ("L / R", ("Q", "E"), "L e R, em cima"),
+            ("Play (P)", ("Enter",), "P"), ("Stop (X)", ("V",), "X")),
+    "segaMS": (_DIRECIONAL, ("Botão 1 (e Start)", ("X",), "botão 1"), ("Botão 2", ("Z",), "botão 2")),
+    "segaGG": (_DIRECIONAL, ("Botão 1", ("X",), "botão 1"), ("Botão 2", ("Z",), "botão 2"), _START),
+    "segaCD": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), _START),
     "snes": (_DIRECIONAL, ("A", ("Z",), "A"), ("B", ("X",), "B"), ("X", ("A",), "X"), ("Y", ("S",), "Y"), ("L / R", ("Q", "E"), "L e R"), _START, _SELECT),
     "segaMD": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), _START),
     "arcade": (_DIRECIONAL, ("Botões 1 a 4", ("Z", "X", "A", "S"), "os botões, à direita"), ("Ficha (moeda)", ("V",), "COIN"), ("Começar", ("Enter",), "START")),
@@ -989,14 +1307,18 @@ def controles_do_sistema(codigo):
     return [{"acao": a, "teclas": list(t), "celular": c} for a, t, c in CONTROLES.get(codigo, ())]
 
 
-def controles_do_emulador(codigo):
-    """Os ajustes de teclado que o site faz no emulador (hoje só o N64: o analógico nas setas).
+#: Os consoles em que o analógico vai para as setas (e a cruz para T/F/G/H).
+ANALOGICO_NAS_SETAS = ("n64", "psp")
 
-    No padrão do EmulatorJS as setas são a CRUZ do Nintendo 64 e o analógico
-    fica em T/F/G/H -- e quase todo jogo de N64 anda pelo analógico. Aqui os
-    dois trocam de lugar, e CONTROLES["n64"] mostra assim.
+
+def controles_do_emulador(codigo):
+    """Os ajustes de teclado que o site faz no emulador (N64 e PSP: o analógico nas setas).
+
+    No padrão do EmulatorJS as setas são a CRUZ e o analógico fica em
+    T/F/G/H -- e quase todo jogo de N64 e de PSP anda pelo analógico. Aqui
+    os dois trocam de lugar, e CONTROLES mostra assim.
     """
-    if codigo != "n64":
+    if codigo not in ANALOGICO_NAS_SETAS:
         return None
     padrao = {
         0: "x", 1: "s", 2: "v", 3: "enter", 8: "z", 9: "a", 10: "q", 11: "e", 12: "tab", 13: "r",

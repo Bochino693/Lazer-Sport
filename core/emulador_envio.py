@@ -75,10 +75,18 @@ def contexto():
              "formato": s.formato, "comandos": s.comandos}
             for codigo, s in emu.SISTEMAS.items()
         ],
+        # o que o painel sabe o que é: o resto, solto numa pasta, vira o .zip do fliperama
+        "extensoes": sorted(emu.CONHECIDAS),
         "cabeca": emu.CABECA,
         "cauda": emu.CAUDA,
         "max_arquivos": emu.MAX_ARQUIVOS,
     }
+
+
+def particular_pedido(jogo, post):
+    """O jogo é (ou vai ser salvo como) particular: aí qualquer console reconhecido roda."""
+    marcado = str(post.get("particular") or "").strip().lower() in ("on", "true", "1")
+    return marcado or bool(jogo is not None and getattr(jogo, "particular", False))
 
 
 def sistema_pedido(post):
@@ -140,7 +148,8 @@ def conferir(jogo, post, files, url_da_acao):
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             raise ErroDeEnvio("A lista de arquivos veio quebrada.") from exc
     modo = modo_de_envio()
-    analise = emu.analisar(entradas, sistema_pedido(post), limite_por_arquivo=limite_do_modo(modo))
+    analise = emu.analisar(entradas, sistema_pedido(post), ligados=emu.sistemas_para(particular_pedido(jogo, post)),
+                           limite_por_arquivo=limite_do_modo(modo))
     resposta = {"analise": analise.para_json(), "modo": modo}
     if jogo is not None and analise.ok:
         resposta.update(_plano_de_envio(jogo, analise, modo, url_da_acao))
@@ -228,7 +237,8 @@ def confirmar(jogo, post, files, origem_do_site):
             if emu.extensao(arquivo.name) not in emu.INDICES or arquivo.size > emu.MAX_INDICE:
                 raise ErroDeEnvio(f"“{arquivo.name}” não é um índice (.cue, .ccd, .toc, .m3u).")
             entradas.append(emu.entrada_de_arquivo(arquivo))
-        analise = emu.analisar(entradas, sistema_pedido(post), limite_por_arquivo=limite_do_modo(modo))
+        analise = emu.analisar(entradas, sistema_pedido(post), ligados=emu.sistemas_para(particular_pedido(jogo, post)),
+                           limite_por_arquivo=limite_do_modo(modo))
         exigir_ok(analise)
     except ErroDeEnvio:
         _desfazer_envio(plano, modo, enviados)

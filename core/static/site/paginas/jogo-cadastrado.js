@@ -46,7 +46,9 @@
     let webgl2 = false;
     try { webgl2 = !!document.createElement("canvas").getContext("webgl2"); } catch (e) { webgl2 = false; }
     const lista = ["loader.js", "emulator.min.js", "emulator.min.css"];
-    if (info.nucleo) lista.push("cores/" + info.nucleo + (webgl2 ? "" : "-legacy") + "-wasm.data");
+    // o nome do núcleo segue o do emulador: "-thread" (PSP, DOS) e "-legacy" (sem WebGL 2)
+    if (info.nucleo) lista.push("cores/" + info.nucleo + (info.threads ? "-thread" : "") + (webgl2 ? "" : "-legacy") + "-wasm.data");
+    (info.extras || []).forEach(function (extra) { lista.push(extra); });
     lista.forEach(function (arquivo) {
       const link = document.createElement("link");
       link.rel = "prefetch";
@@ -95,6 +97,9 @@
   function jogar() {
     // o toque manda: o preparo para, e o quadro continua do que já foi guardado
     if (preparo) { preparo.abort(); preparo = null; }
+    // PSP e DOS: o núcleo de várias linhas só roda numa página isolada, que não
+    // pode estar num quadro -- o jogo abre na tela inteira (com "Voltar ao jogo")
+    if (palco.dataset.jogoTelaPropria === "1") { location.assign(src); return; }
     const quadro = document.createElement("iframe");
     quadro.className = "jc-quadro";
     quadro.src = src;

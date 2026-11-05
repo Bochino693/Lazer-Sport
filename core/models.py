@@ -783,6 +783,11 @@ class JogoCadastrado(Prime):
         default=False, verbose_name="Destaque no topo do portal",
         help_text="Entra no carrossel grande do topo de /jogos/.",
     )
+    particular = models.BooleanField(
+        default=False, verbose_name="Particular (só a equipe)",
+        help_text="Só quem entra com conta de administrador vê e joga: fica fora do portal, da busca e do Google. "
+                  "No particular rodam todos os consoles reconhecidos, inclusive os de licença não comercial.",
+    )
 
     class Meta:
         verbose_name = "Jogo cadastrado"
@@ -818,10 +823,10 @@ class JogoCadastrado(Prime):
     @property
     def emulador_pronto(self):
         """Jogo de console com o sistema certo e o arquivo que o emulador abre já guardado."""
-        from .jogos_emulador import sistemas_ligados
+        from .jogos_emulador import sistemas_para
 
-        if not self.pk or not self.sistema or self.sistema not in sistemas_ligados():
-            return False  # "auto" (ainda sem arquivos) e o de licença não comercial também ficam fora
+        if not self.pk or not self.sistema or self.sistema not in sistemas_para(self.particular):
+            return False  # "auto" (ainda sem arquivos) e o de licença não comercial (fora do particular) ficam fora
         return any(a.papel == ArquivoEmulador.JOGO for a in self.arquivos_emulador.all())
 
     @property
