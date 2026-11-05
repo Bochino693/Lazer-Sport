@@ -209,6 +209,7 @@ TEMPLATES = [
                 "sistema_interno.context_processors.fab_counts",
                 "core.context_processors.clientes_rodape",
                 "core.context_processors.app_android",
+                "core.context_processors.seo_context",
                 "core.context_processors.confirmacao_pagamento",
                 "core.context_processors.favoritos_context",
                 "core.context_processors.equipe_context",
@@ -421,6 +422,12 @@ EMPRESA_EMAIL = os.getenv("EMPRESA_EMAIL", "contato@lazersport.com").strip()
 EMPRESA_INSTAGRAM = os.getenv(
     "EMPRESA_INSTAGRAM", "@lazersportbrinquedos",
 ).strip()
+
+# BUSCADORES. O código que o Google Search Console (e o Bing Webmaster)
+# dá para provar que o site é seu -- só o valor do content="...", sem a
+# tag. Vazio, nenhuma tag sai. Ver LEIA-ME-V10.txt, seção 18.
+GOOGLE_SITE_VERIFICATION = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
+BING_SITE_VERIFICATION = os.getenv("BING_SITE_VERIFICATION", "").strip()
 
 # Identidade exibida na proposta comercial. Nasce do contato da empresa
 # acima; as variáveis ORCAMENTO_* continuam existindo para quem já as

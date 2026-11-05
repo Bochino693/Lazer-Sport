@@ -356,3 +356,62 @@ Dependência nova: rjsmin (requirements.txt).
    painel usa). Login e saída ganharam o mesmo visual. Nada de banco mudou.
    CORRIGIDO: o rodapé da janela de movimentação do estoque usava cores que
    não existiam (ficava transparente ao rolar).
+
+18) SITE MAIS FORTE NAS BUSCAS (boliche, fliperama, brinquedos para shopping)
+   O QUE MUDOU NO SITE
+   - Páginas novas, feitas para responder a busca: /boliche/, /fliperama/ e
+     /brinquedos-para-shopping/. Cada uma tem título e descrição próprios, as
+     máquinas daquele tema com a prévia jogável, os brinquedos do catálogo que
+     falam do tema, perguntas frequentes e o botão de orçamento no WhatsApp.
+     Os textos ficam em core/paginas_tema.py (dá para editar ou criar tema novo
+     ali; a rota, o mapa do site e o rodapé leem a mesma lista).
+   - Links para elas no topo (junto das sugestões da busca) e numa coluna nova
+     do rodapé, em todas as páginas.
+   - Dados para o Google em todas as páginas: a empresa (nome, endereço, CEP,
+     telefone, Instagram, Facebook, LinkedIn) e o site com a busca interna. Na
+     home, a fábrica como negócio local (com o ponto no mapa); nas páginas de
+     tema, trilha, perguntas frequentes e lista das máquinas.
+   - Cartão de compartilhamento: quem manda o link no WhatsApp/Instagram vê a
+     imagem da Lazer & Sport (ou a foto do brinquedo, na página do produto).
+   - Título padrão corrigido (estava "Lazer & Sports"); "boliche" entrou no
+     título e na descrição da home; combos, promoções e manutenção ganharam
+     descrição própria.
+   - Mapa do site (/sitemap.xml): agora sempre com www.lazersport.com.br (ele
+     podia sair com "example.com", e o Google ignorava o mapa), só com o que
+     abre (brinquedo inativo saiu), e com a loja, as peças e as páginas novas.
+   - Endereços do site antigo (WordPress) agora redirecionam de vez (301):
+     a relevância que eles tinham passa para as páginas novas.
+
+   O QUE SÓ VOCÊS PODEM FAZER (é o que mais pesa no "boliche")
+   1. Google Search Console (search.google.com/search-console): adicione a
+      propriedade https://www.lazersport.com.br, escolha "Tag HTML", copie só
+      o código do content="..." e coloque na variável GOOGLE_SITE_VERIFICATION
+      do Render. Depois do deploy, clique em Verificar. Em "Sitemaps", envie
+      sitemap.xml; em "Inspeção de URL", peça a indexação de /boliche/,
+      /fliperama/, /brinquedos-para-shopping/ e da home.
+   2. Bing Webmaster Tools: dá para importar do Search Console (ou usar a
+      variável BING_SITE_VERIFICATION).
+   3. Perfil da Empresa no Google (business.google.com): é ele que coloca a
+      empresa no mapa da busca. Nome, endereço e telefone IGUAIS aos do site
+      (Rua São Roque de Minas, 104 · (11) 96056-3135); categoria principal de
+      fabricante de brinquedos; o link do site; fotos da fábrica e das
+      máquinas; uma postagem por semana (os vídeos servem); e peça avaliação a
+      clientes de verdade. Nunca compre nem invente avaliação: o Google apaga
+      e pune o perfil.
+   4. Um e-mail só: o site mostra comercial@lazersport.com.br no rodapé e
+      contato@lazersport.com nos e-mails automáticos (EMPRESA_EMAIL). Escolham
+      um e usem o mesmo no perfil do Google.
+   5. Vídeos: o horizontal no YouTube (título com "Lazer & Sport", link do site
+      na descrição e o .srt como legenda); o vertical no Reels, TikTok e
+      Shorts, com o link na bio e hashtags como #boliche #fliperama
+      #fabricadebrinquedos #brinquedosparashopping #saopaulo.
+   6. Links de fora contam muito: peça aos clientes do mapa (shoppings,
+      buffets, parques) um link para o site; perfis em feiras e associações do
+      setor de diversão também ajudam.
+   EXPECTATIVA HONESTA. "Boliche" sozinho é a busca de quem quer jogar boliche
+   perto de casa, e quem aparece primeiro é a casa de boliche com Perfil da
+   Empresa bem cuidado. Onde a Lazer & Sport disputa de verdade é em
+   "máquina de boliche", "boliche infantil", "boliche virtual para shopping",
+   "fliperama para shopping", "fábrica de brinquedos SP": é nessas que as
+   páginas novas devem aparecer primeiro, em algumas semanas depois de
+   indexadas. Nada de banco mudou.

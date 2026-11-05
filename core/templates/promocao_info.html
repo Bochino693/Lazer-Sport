@@ -3,6 +3,7 @@
 {% load fotos %}
 
 {% block title %}{{ promocao.descricao }} | Promoção Lazer & Sport{% endblock %}
+{% block meta_description %}Promoção Lazer & Sport: {{ promocao.descricao|striptags|truncatechars:120 }}. Brinquedos, fliperamas e boliche direto da fábrica em São Paulo.{% endblock %}
 
 {% block content %}
 

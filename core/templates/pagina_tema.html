@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static interno_extras %}
+
+{% block title %}{{ tema.titulo_seo }}{% endblock %}
+{% block meta_description %}{{ tema.descricao_seo }}{% endblock %}
+{% block og_title %}{{ tema.h1 }} | Lazer & Sport{% endblock %}
+{% block og_description %}{{ tema.descricao_seo }}{% endblock %}
+{% block og_image %}{{ imagem_compartilhar }}{% endblock %}
+{% block main_class %} content-section--full{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">{{ dados_estruturados|safe }}</script>
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  PÁGINA POR TEMA DE BUSCA (core/paginas_tema.py).
+
+  Uma página que responde a busca: o H1 diz o que é, a primeira frase diz
+  quem faz e onde, as máquinas vêm com a prévia jogável e as perguntas são
+  as que o cliente faz no WhatsApp. O texto mora em paginas_tema.py, e não
+  aqui, para o mesmo teste conferir as três.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/tema.css' %}">
+
+<article class="tema">
+  <nav class="tema-trilha" aria-label="Você está em">
+    <a href="{% url 'home' %}">Início</a><span aria-hidden="true">›</span><span aria-current="page">{{ tema.menu }}</span>
+  </nav>
+
+  <div class="tema-topo">
+    <p class="tema-kicker">{{ tema.kicker }}</p>
+    <h1>{{ tema.h1 }}</h1>
+    <p class="tema-intro">{{ tema.intro }}</p>
+    <div class="tema-acoes">
+      <a class="tema-botao tema-botao--zap" href="{{ tema.whatsapp }}" target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pedir orçamento
+      </a>
+      {% if jogos %}
+      <a class="tema-botao tema-botao--jogar" href="{{ jogos.0.url }}">
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar a prévia
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if jogos %}
+  <section class="tema-bloco" aria-labelledby="tema-maquinas">
+    <h2 id="tema-maquinas">As máquinas</h2>
+    <ul class="tema-jogos">
+      {% for jogo in jogos %}
+      <li class="tema-jogo">
+        <a href="{{ jogo.url }}">
+          <span class="tema-jogo-capa" style="--cor: {{ jogo.cor }}"><img src="{{ jogo.capa }}" alt="{{ jogo.titulo }} — {{ jogo.maquina }}" loading="lazy" decoding="async" width="480" height="480"></span>
+          <span class="tema-jogo-texto">
+            <small>{{ jogo.maquina }}</small>
+            <strong>{{ jogo.titulo }}</strong>
+            <span>{{ jogo.descricao }}</span>
+            <em>Jogar a prévia <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></em>
+          </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if brinquedos_tema %}
+  <section class="tema-bloco" aria-labelledby="tema-catalogo">
+    <h2 id="tema-catalogo">No catálogo</h2>
+    <ul class="tema-catalogo">
+      {% for b in brinquedos_tema %}
+      <li><a href="{{ b.url }}">
+        {% if b.foto %}<img src="{{ b.foto }}" alt="{{ b.nome }}" loading="lazy" decoding="async">{% else %}<span class="tema-sem-foto" aria-hidden="true"><i class="fa-solid fa-puzzle-piece"></i></span>{% endif %}
+        <strong>{{ b.nome }}</strong>
+      </a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section class="tema-bloco tema-secoes">
+    {% for secao in tema.secoes %}
+    <div class="tema-secao">
+      <h2>{{ secao.titulo }}</h2>
+      <p>{{ secao.texto }}</p>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="tema-bloco" aria-labelledby="tema-perguntas">
+    <h2 id="tema-perguntas">Perguntas frequentes</h2>
+    <div class="tema-faq">
+      {% for pergunta, resposta in tema.perguntas %}
+      <details{% if forloop.first %} open{% endif %}>
+        <summary>{{ pergunta }}</summary>
+        <p>{{ resposta }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="tema-fim">
+    <div>
+      <h2>Vamos montar o seu espaço?</h2>
+      <p>Fábrica em São Paulo · Rua São Roque de Minas, 104, Jardim Peri · (11) 96056-3135</p>
+    </div>
+    <div class="tema-acoes">
+      <a class="tema-botao tema-botao--zap" href="{{ tema.whatsapp }}" target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar no WhatsApp
+      </a>
+      <a class="tema-botao tema-botao--conta" href="{% url 'registrar' %}#register-box">
+        <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta
+      </a>
+    </div>
+  </section>
+
+  {% if relacionados %}
+  <nav class="tema-relacionados" aria-label="Veja também">
+    <span>Veja também:</span>
+    {% for r in relacionados %}<a href="{{ r.url }}">{{ r.h1 }}</a>{% endfor %}
+    <a href="{% url 'arena' %}">Arena 3D</a>
+    <a href="{% url 'pecas_reposicao' %}">Peças de reposição</a>
+  </nav>
+  {% endif %}
+</article>
+{% endblock %}

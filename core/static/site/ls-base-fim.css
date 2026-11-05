@@ -28,7 +28,7 @@
         max-width: 1180px;
         margin: 0 auto;
         display: grid;
-        grid-template-columns: 1.3fr 1fr 1fr;
+        grid-template-columns: 1.3fr 1fr 1fr 1fr;
         gap: 36px;
     }
 
@@ -461,6 +461,10 @@
         filter: none;
         opacity: 1;
         transform: scale(1.04);
+    }
+
+    @media (max-width: 1100px) and (min-width: 861px) {
+        .ls-footer-grid { grid-template-columns: 1fr 1fr; }
     }
 
     @media (max-width: 860px) {

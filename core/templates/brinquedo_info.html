@@ -5,6 +5,10 @@
 {% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
 
 {% block meta_description %}{{ brinquedo.nome_brinquedo }}: {{ brinquedo.descricao|striptags|truncatechars:140 }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
+{% block og_description %}{{ brinquedo.descricao|striptags|truncatechars:180 }}{% endblock %}
+{% block og_image %}{% if brinquedo.imagem_brinquedo %}{% with u=brinquedo.imagem_brinquedo.url %}{% if u|slice:":4" == "http" %}{{ u }}{% else %}{{ site_publico }}{{ u }}{% endif %}{% endwith %}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% block main_class %} content-section--full{% endblock %}
 
 {% block content %}

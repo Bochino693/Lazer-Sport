@@ -6603,24 +6603,34 @@ def redirecionar_loja(request, *args, **kwargs):
     return redirect(reverse('brinquedos') + '#grid-cards')
 
 
+# OS ENDEREÇOS DO SITE ANTIGO (WordPress) MUDARAM DE VEZ: redirecionamento
+# PERMANENTE (301). Com o 302, o Google guardava o endereço velho como o
+# certo e não passava para o novo a relevância que o velho tinha juntado --
+# anos de links apontando para /categoria-produto/... ficavam pelo
+# caminho. O curinga do fim (qualquer endereço desconhecido) continua
+# temporário: aquele não é uma mudança de endereço, é um palpite.
+def redirecionar_endereco_antigo(request, *args, **kwargs):
+    return redirect(reverse('brinquedos') + '#grid-cards', permanent=True)
+
+
 def redirecionar_lancamentos(request):
-    return redirect(reverse('brinquedos') + '#grid-cards')
+    return redirect(reverse('brinquedos') + '#grid-cards', permanent=True)
 
 
 def redirecionar_showroom(request):
-    return redirect(reverse('eventos') + '#todos-eventos')
+    return redirect(reverse('eventos') + '#todos-eventos', permanent=True)
 
 
 def redirecionar_contato(request):
-    return redirect(reverse('home') + '#contato')
+    return redirect(reverse('home') + '#contato', permanent=True)
 
 
 def redirecionar_categoria_brinquedos(request):
-    return redirect(reverse('brinquedo_detalhe', args=[12]))
+    return redirect(reverse('brinquedo_detalhe', args=[12]), permanent=True)
 
 
 def redirecionar_categoria_aventura(request):
-    return redirect(reverse('categoria_detalhe', args=[12]))
+    return redirect(reverse('categoria_detalhe', args=[12]), permanent=True)
 
 
 # views.py

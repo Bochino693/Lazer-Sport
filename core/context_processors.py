@@ -386,3 +386,24 @@ def favoritos_context(request):
         "total_lista_desejos": total,
         "tem_lista_desejos": SimpleLazyObject(lambda: total > 0),
     }
+
+
+# ============================================================
+# BUSCADORES E COMPARTILHAMENTO -- só configuração, sem banco
+# ============================================================
+def seo_context(request):
+    """O que o <head> de toda página pública precisa para os buscadores.
+
+    A verificação do Search Console, o endereço público do site (para o
+    cartão de compartilhamento ter URL absoluta) e os temas de busca do
+    rodapé (core/paginas_tema.py).
+    """
+    from . import paginas_tema
+
+    site = str(getattr(settings, "SITE_URL", "") or "https://www.lazersport.com.br").rstrip("/")
+    return {
+        "google_site_verification": getattr(settings, "GOOGLE_SITE_VERIFICATION", ""),
+        "bing_site_verification": getattr(settings, "BING_SITE_VERIFICATION", ""),
+        "site_publico": site,
+        "temas_de_busca": paginas_tema.menu(),
+    }

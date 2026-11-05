@@ -1,0 +1,82 @@
+/* Páginas por tema de busca (/boliche/, /fliperama/, /brinquedos-para-shopping/).
+   O mesmo neon do site: fundo noite, azul, ciano, vermelho e amarelo da marca. */
+.tema{max-width:1180px;margin:0 auto;padding:18px clamp(16px,3vw,32px) 48px;color:var(--ls-texto,#eaf2ff)}
+.tema-trilha{display:flex;gap:8px;align-items:center;font-size:.82rem;color:var(--ls-texto-suave,#a9bcd9);margin-bottom:14px}
+.tema-trilha a{color:var(--ls-texto-suave,#a9bcd9);text-decoration:none}
+.tema-trilha a:hover{color:var(--ls-ciano,#3fd0ff)}
+
+.tema-topo{display:block;position:relative;overflow:hidden;padding:clamp(24px,4vw,48px);border-radius:28px;
+  border:1px solid var(--ls-borda,rgba(255,255,255,.1));
+  background:radial-gradient(40rem 22rem at 0 0,rgba(47,139,255,.28),transparent 60%),
+    radial-gradient(34rem 20rem at 100% 100%,rgba(255,71,87,.22),transparent 60%),
+    linear-gradient(150deg,#0c1c44,#081433);
+  box-shadow:var(--ls-sombra,0 18px 44px rgba(0,0,0,.42))}
+.tema-topo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:linear-gradient(90deg,var(--ls-vermelho-neon,#ff4757),var(--ls-azul-neon,#2f8bff),var(--ls-ciano,#3fd0ff),var(--ls-amarelo-neon,#ffd23f))}
+.tema-kicker{margin:0 0 8px;font:800 .78rem/1.2 Poppins,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ls-amarelo-neon,#ffd23f)}
+.tema-topo h1{margin:0;max-width:20ch;font:800 clamp(2rem,5vw,3.4rem)/1.05 Poppins,sans-serif;letter-spacing:-.03em}
+.tema-intro{max-width:62ch;margin:16px 0 0;font-size:clamp(1rem,1.6vw,1.12rem);line-height:1.7;color:#cfdcf2}
+.tema-acoes{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.tema-botao{display:inline-flex;align-items:center;gap:10px;min-height:50px;padding:0 22px;border-radius:999px;
+  font:700 1rem Poppins,sans-serif;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+.tema-botao:hover{transform:translateY(-2px)}
+.tema-botao--zap{background:#22c55e;color:#04210f;box-shadow:0 10px 26px rgba(34,197,94,.3)}
+.tema-botao--jogar{background:linear-gradient(120deg,var(--ls-azul-neon,#2f8bff),#8a5cff);color:#fff;box-shadow:0 10px 26px rgba(47,139,255,.32)}
+.tema-botao--conta{background:var(--ls-superficie-2,rgba(255,255,255,.09));color:var(--ls-texto,#eaf2ff);border:1px solid var(--ls-borda-forte,rgba(255,255,255,.18))}
+
+.tema-bloco{margin-top:40px}
+.tema-bloco h2,.tema-fim h2{margin:0 0 16px;font:800 clamp(1.35rem,2.6vw,1.9rem)/1.2 Poppins,sans-serif}
+.tema-jogos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.tema-jogo a{display:flex;flex-direction:column;height:100%;overflow:hidden;border-radius:22px;text-decoration:none;color:inherit;
+  background:var(--ls-superficie,rgba(255,255,255,.055));border:1px solid var(--ls-borda,rgba(255,255,255,.1));transition:transform .18s ease,border-color .18s ease}
+.tema-jogo a:hover{transform:translateY(-3px);border-color:var(--ls-ciano,#3fd0ff)}
+.tema-jogo-capa{display:grid;place-items:center;aspect-ratio:4/3;overflow:hidden;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--cor) 55%,transparent),#050b1f 72%)}
+.tema-jogo-capa img{width:72%;height:auto;max-height:86%;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));transition:transform .25s ease}
+.tema-jogo a:hover .tema-jogo-capa img{transform:scale(1.05)}
+.tema-jogo-texto{display:flex;flex-direction:column;gap:6px;padding:16px 18px 18px;flex:1}
+.tema-jogo-texto small{color:var(--ls-ciano,#3fd0ff);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}
+.tema-jogo-texto strong{font:800 1.2rem Poppins,sans-serif}
+.tema-jogo-texto span{color:#c3d2ea;line-height:1.55;font-size:.95rem}
+.tema-jogo-texto em{margin-top:auto;padding-top:8px;font-style:normal;font-weight:700;color:var(--ls-amarelo-neon,#ffd23f)}
+
+.tema-catalogo{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.tema-catalogo a{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:18px;text-decoration:none;color:inherit;
+  background:var(--ls-superficie,rgba(255,255,255,.055));border:1px solid var(--ls-borda,rgba(255,255,255,.1))}
+.tema-catalogo a:hover{border-color:var(--ls-amarelo-neon,#ffd23f)}
+.tema-catalogo img,.tema-sem-foto{width:100%;aspect-ratio:1;object-fit:contain;border-radius:12px;background:#fff}
+.tema-sem-foto{display:grid;place-items:center;background:var(--ls-fundo-3,#0c1c44);font-size:2rem;color:var(--ls-texto-suave,#a9bcd9)}
+.tema-catalogo strong{font-size:.92rem;line-height:1.3}
+
+.tema-secoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.tema-secao{padding:22px;border-radius:22px;background:var(--ls-superficie,rgba(255,255,255,.055));border:1px solid var(--ls-borda,rgba(255,255,255,.1))}
+.tema-secao h2{font-size:1.2rem;margin-bottom:8px}
+.tema-secao p{margin:0;line-height:1.7;color:#c3d2ea}
+
+.tema-faq{display:grid;gap:10px}
+.tema-faq details{border-radius:18px;background:var(--ls-superficie,rgba(255,255,255,.055));border:1px solid var(--ls-borda,rgba(255,255,255,.1))}
+.tema-faq summary{cursor:pointer;list-style:none;padding:16px 20px;font-weight:700;display:flex;justify-content:space-between;gap:12px}
+.tema-faq summary::-webkit-details-marker{display:none}
+.tema-faq summary::after{content:"+";color:var(--ls-ciano,#3fd0ff);font-size:1.3rem;line-height:1}
+.tema-faq details[open] summary::after{content:"–"}
+.tema-faq p{margin:0;padding:0 20px 18px;line-height:1.7;color:#c3d2ea}
+
+.tema-fim{margin-top:40px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:26px;border-radius:24px;
+  background:linear-gradient(120deg,rgba(47,139,255,.18),rgba(255,71,87,.14));border:1px solid var(--ls-borda-forte,rgba(255,255,255,.18))}
+.tema-fim h2{margin-bottom:6px}
+.tema-fim p{margin:0;color:#c3d2ea}
+.tema-fim .tema-acoes{margin-top:0}
+.tema-relacionados{margin-top:28px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--ls-texto-suave,#a9bcd9)}
+.tema-relacionados a{padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--ls-texto,#eaf2ff);
+  background:var(--ls-superficie,rgba(255,255,255,.055));border:1px solid var(--ls-borda,rgba(255,255,255,.1))}
+.tema-relacionados a:hover{border-color:var(--ls-ciano,#3fd0ff)}
+@media (max-width:560px){
+  .tema-botao{width:100%;justify-content:center}
+  /* no celular, duas máquinas por linha: a página de fliperama tinha sete telas de rolagem só de cards */
+  .tema-jogos{grid-template-columns:1fr 1fr;gap:10px}
+  .tema-jogo-texto{padding:10px 12px 12px;gap:4px}
+  .tema-jogo-texto small{font-size:.66rem;letter-spacing:.04em}
+  .tema-jogo-texto strong{font-size:1rem}
+  .tema-jogo-texto span{font-size:.8rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .tema-jogo-texto em{font-size:.82rem}
+}
+@media (prefers-reduced-motion:reduce){.tema-botao,.tema-jogo a,.tema-jogo-capa img{transition:none}}
