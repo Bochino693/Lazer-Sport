@@ -1,0 +1,41 @@
+EmulatorJS 4.2.3 — o emulador dos jogos de console do site
+==========================================================
+
+DE ONDE VEIO. Pacotes do npm, versão 4.2.3 (julho de 2025):
+  @emulatorjs/emulatorjs           (o carregador e o emulador; GPL-3.0)
+  @emulatorjs/core-pcsx_rearmed    PlayStation         GPL-2.0
+  @emulatorjs/core-fceumm          NES / Famicom       GPL-2.0
+  @emulatorjs/core-gambatte        Game Boy / Color    GPL-2.0
+  @emulatorjs/core-mgba            Game Boy Advance    MPL-2.0
+  @emulatorjs/core-mupen64plus_next Nintendo 64        GPL-2.0
+  @emulatorjs/core-mednafen_pce    PC Engine (e CD)    GPL-2.0
+Código-fonte: https://github.com/EmulatorJS/EmulatorJS e, de cada núcleo,
+https://github.com/EmulatorJS/<núcleo> (ex.: EmulatorJS/pcsx_rearmed). A
+licença do EmulatorJS está em LICENSE-EmulatorJS.txt; a de cada núcleo vai
+dentro do próprio arquivo .data (license.txt).
+
+O QUE ESTÁ AQUI. Só o que o site usa:
+  data/loader.js, data/version.json — como vieram;
+  data/emulator.min.js — os fontes de data/src/ JUNTADOS na ordem do
+    loader.js (emulator, nipplejs, shaders, storage, gamepad, GameManager,
+    socket.io, compression), sem nenhuma mudança no código: o loader procura
+    "emulator.min.js", e o modo que lê os fontes soltos (EJS_DEBUG_XX) também
+    desliga o cache dos núcleos e consulta o CDN deles a cada página;
+  data/emulator.min.css — o emulator.css, como veio;
+  data/compression/ — o que abre os núcleos (.7z) e os jogos zipados;
+  data/localization/ — pt-BR e en-US;
+  data/cores/ — os núcleos de licença livre (as versões "wasm" e
+    "legacy-wasm"; a "thread" exigiria isolamento de origem no servidor).
+Núcleo que não está aqui (os de licença não comercial, só com
+JOGOS_EMULADORES_NAO_COMERCIAIS) o próprio emulador baixa do CDN dele.
+
+UM DEFEITO DO 4.2.3, CONTORNADO FORA DAQUI. Os "arquivos externos"
+(EJS_externalFiles) baixados por ele são gravados como ArrayBuffer, que a
+pasta virtual recusa: o arquivo fica criado e VAZIO, sem erro. O site não
+usa esse download: core/static/site/paginas/jogo-emulador.js baixa as faixas
+(com progresso) e entrega os bytes prontos (Uint8Array). Ao atualizar o
+EmulatorJS, confira se o defeito continua antes de mudar isso.
+
+PARA ATUALIZAR. Baixe os pacotes da nova versão do npm, repita a junção dos
+fontes de data/src/ na ordem do loader.js e troque os núcleos; rode os
+testes (core/tests_jogos_emulador.py) e abra um jogo de cada sistema.

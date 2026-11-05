@@ -951,3 +951,24 @@ TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "").strip()
 # pelo painel, em MB. O armazenamento também tem o seu (o Cloudinary, conforme
 # o plano): build maior vai pelo link (sistema_interno/views_jogos.py).
 JOGOS_ARQUIVO_MAX_MB = int(os.getenv("JOGOS_ARQUIVO_MAX_MB", "200"))
+
+# JOGOS DE CONSOLE PELO EMULADOR (core/jogos_emulador.py).
+# Teto de cada arquivo no armazenamento de sempre (o Cloudinary). No plano
+# gratuito ele aceita 10 MB por arquivo que não é imagem: com o valor certo
+# aqui, o painel avisa ANTES de enviar, em vez de o envio cair no fim.
+# Vazio = usa JOGOS_ARQUIVO_MAX_MB.
+JOGOS_ARMAZENAMENTO_LIMITE_MB = os.getenv("JOGOS_ARMAZENAMENTO_LIMITE_MB", "").strip()
+# O armazenamento de jogos grandes (discos de PS1...): um balde compatível com
+# S3 (Cloudflare R2, Backblaze B2, AWS). O navegador envia direto para ele.
+# Ver core/armazenamento_grande.py e o LEIA-ME.
+JOGOS_S3_ENDPOINT = os.getenv("JOGOS_S3_ENDPOINT", "").strip()
+JOGOS_S3_BUCKET = os.getenv("JOGOS_S3_BUCKET", "").strip()
+JOGOS_S3_ACCESS_KEY = os.getenv("JOGOS_S3_ACCESS_KEY", "").strip()
+JOGOS_S3_SECRET_KEY = os.getenv("JOGOS_S3_SECRET_KEY", "").strip()
+JOGOS_S3_URL_PUBLICA = os.getenv("JOGOS_S3_URL_PUBLICA", "").strip()
+JOGOS_S3_REGIAO = os.getenv("JOGOS_S3_REGIAO", "auto").strip() or "auto"
+JOGOS_S3_MAX_MB = int(os.getenv("JOGOS_S3_MAX_MB", "2000"))
+# Sistemas cujo núcleo do emulador tem licença NÃO comercial (snes, segaMD,
+# segaMS, segaGG, segaCD, arcade): só liste aqui com a permissão escrita dos
+# autores do núcleo. Ex.: "snes,segaMD".
+JOGOS_EMULADORES_NAO_COMERCIAIS = os.getenv("JOGOS_EMULADORES_NAO_COMERCIAIS", "").strip()

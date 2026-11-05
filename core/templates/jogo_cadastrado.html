@@ -28,14 +28,14 @@
         <div class="jc-titulo">
             <img src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="64" height="64" decoding="async">
             <div>
-                <span class="jc-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Jogos</span>
+                <span class="jc-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Jogos{% if jogo.sistema %} · {{ jogo.sistema }}{% endif %}</span>
                 <h1>{{ jogo.titulo }}</h1>
             </div>
         </div>
     </div>
 
     <div class="jc-palco jc-palco--{{ jogo.proporcao }}" data-jogo
-         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}">
+         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}"{% if jogo.emulador %} data-jogo-emulador="1"{% endif %}>
         {# a capa com o botão: o jogo só baixa ao tocar em Jogar #}
         <div class="jc-capa" data-jogo-capa>
             {% if jogo.poster %}<img src="{{ jogo.poster }}" alt="" class="jc-capa-fundo" decoding="async">{% endif %}

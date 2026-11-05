@@ -53,6 +53,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 
+from .jogos_emulador import escolhas_de_sistema as _escolhas_de_sistema
+
 
 def validar_telefone(value):
     padrao = r'^\(\d{2}\)\d{4,5}-\d{4}$'
@@ -716,6 +718,10 @@ class JogoCadastrado(Prime):
         default=False, verbose_name="Deixar baixar o APK",
         help_text="Desmarcado, o APK fica guardado mas ninguém baixa pelo site.",
     )
+    apk_motor = models.CharField(
+        max_length=20, blank=True, verbose_name="APK feito em",
+        help_text="Reconhecido no APK enviado (Unity, Godot, HTML5 empacotado...). Ver core/jogos_apk.py.",
+    )
     # A VERSÃO PARA COMPUTADOR (Windows). O navegador não roda .exe: este
     # arquivo é a FONTE do jogo -- de onde a equipe (ou quem porta o jogo
     # para o site, como os do simulador) tira as artes, os sons e a lógica
@@ -735,6 +741,16 @@ class JogoCadastrado(Prime):
         max_length=20, blank=True, verbose_name="Feito em",
         help_text="O motor do jogo, reconhecido no arquivo enviado (Godot, Unity...).",
     )
+    # JOGO DE CONSOLE OU FLIPERAMA, QUE RODA NO SITE POR EMULADOR. Os arquivos
+    # (o .cue e os .bin de um disco, a ROM de um cartucho, a BIOS...) moram em
+    # `ArquivoEmulador`, um por linha; ver `core/jogos_emulador.py`.
+    AUTOMATICO = "auto"
+    sistema = models.CharField(
+        max_length=12, blank=True, verbose_name="Sistema (emulador)",
+        choices=[("", "Não é jogo de console"), (AUTOMATICO, "Reconhecer pelos arquivos")] + _escolhas_de_sistema(),
+        help_text="Para jogo de console ou fliperama: os arquivos vão em \"Arquivos do jogo\".",
+    )
+    emulador_resumo = models.CharField(max_length=200, blank=True, verbose_name="Arquivos do emulador")
     ordem = models.PositiveSmallIntegerField(default=100, verbose_name="Ordem na lista")
 
     class Meta:
@@ -754,7 +770,7 @@ class JogoCadastrado(Prime):
 
     @property
     def url_para_jogar(self):
-        """Onde o jogo mora: o endereço hospedado ou o .html enviado; "" se nenhum."""
+        """Onde o jogo mora: o endereço hospedado, o .html enviado ou o emulador; "" se nenhum."""
         if self.endereco:
             return self.endereco
         if self.arquivo_html:
@@ -762,7 +778,25 @@ class JogoCadastrado(Prime):
                 return self.arquivo_html.url
             except Exception:
                 return ""
+        if self.emulador_pronto:
+            from django.urls import reverse
+
+            return reverse("jogo_emulador", args=[self.slug])
         return ""
+
+    @property
+    def emulador_pronto(self):
+        """Jogo de console com o sistema certo e o arquivo que o emulador abre já guardado."""
+        from .jogos_emulador import sistemas_ligados
+
+        if not self.pk or not self.sistema or self.sistema not in sistemas_ligados():
+            return False  # "auto" (ainda sem arquivos) e o de licença não comercial também ficam fora
+        return any(a.papel == ArquivoEmulador.JOGO for a in self.arquivos_emulador.all())
+
+    @property
+    def roda_no_emulador(self):
+        """Vai rodar (ou já roda) por emulador -- e não por endereço ou .html."""
+        return bool(self.sistema) and not (self.endereco or self.arquivo_html)
 
     @property
     def capa_url(self):
@@ -783,7 +817,7 @@ class JogoCadastrado(Prime):
     @property
     def so_versao_pc(self):
         """Tem só a versão para computador: ainda não joga no navegador (não aparece no site)."""
-        return bool((self.versao_pc or self.versao_pc_link) and not (self.endereco or self.arquivo_html))
+        return bool((self.versao_pc or self.versao_pc_link) and not (self.endereco or self.arquivo_html or self.sistema))
 
     @property
     def apk_url(self):
@@ -801,10 +835,10 @@ class JogoCadastrado(Prime):
 
         if self.slug in arena.JOGOS_POR_SLUG:
             raise ValidationError({"slug": "Este endereço já é de um jogo do simulador. Escolha outro."})
-        if not (self.endereco or self.arquivo_html or self.versao_pc or self.versao_pc_link):
+        if not (self.endereco or self.arquivo_html or self.versao_pc or self.versao_pc_link or self.sistema):
             raise ValidationError(
-                "Informe o endereço do jogo hospedado, envie o arquivo .html, "
-                "ou guarde a versão para computador (o arquivo ou o link)."
+                "Informe o endereço do jogo hospedado, envie o arquivo .html, escolha o sistema "
+                "(jogo de console, pelo emulador) ou guarde a versão para computador (o arquivo ou o link)."
             )
         if self.versao_pc_link and not self.versao_pc_link.lower().startswith(("https://", "http://")):
             raise ValidationError({"versao_pc_link": "Use um link completo (https://...)."})
@@ -820,6 +854,89 @@ class JogoCadastrado(Prime):
             if not self.apk.name.lower().endswith(".apk"):
                 raise ValidationError({"apk": "O arquivo de download precisa ser um .apk."})
 
+
+
+def _caminho_do_arquivo_emulador(instance, filename):
+    """Uma pasta por envio (o `lote`): o nome do arquivo nunca colide com o de outro envio."""
+    return f"jogos/emulador/{instance.jogo.slug}/{instance.lote}/{filename}"
+
+
+class ArquivoEmulador(models.Model):
+    """Um arquivo de um jogo de console: a faixa de um disco, a ROM, a BIOS, o índice.
+
+    `nome` é o nome com que o arquivo entra na pasta virtual do emulador --
+    o que o .cue pede, escrito como veio do computador de quem enviou. O
+    armazenamento pode guardar com outro nome (o Cloudinary põe letras no
+    fim); o emulador recebe pelo `nome`, então tanto faz.
+
+    Onde mora o conteúdo, um de três:
+      * `conteudo` -- o índice (.cue, .ccd, .toc, .m3u), texto pequeno, já
+        reescrito com os nomes certos; servido pelo próprio site;
+      * `arquivo` -- no armazenamento de sempre (o Cloudinary), no limite dele;
+      * `chave` -- no armazenamento de jogos grandes (S3/R2), enviado direto
+        pelo navegador; ver `core/armazenamento_grande.py`.
+    """
+
+    JOGO = "jogo"
+    DISCO = "disco"
+    FAIXA = "faixa"
+    BIOS = "bios"
+    PAPEIS = (
+        (JOGO, "O arquivo que o emulador abre"),
+        (DISCO, "Disco (jogo de vários discos)"),
+        (FAIXA, "Faixa do disco"),
+        (BIOS, "BIOS"),
+    )
+
+    jogo = models.ForeignKey(JogoCadastrado, on_delete=models.CASCADE, related_name="arquivos_emulador")
+    nome = models.CharField(max_length=180, verbose_name="Nome no emulador")
+    papel = models.CharField(max_length=8, choices=PAPEIS)
+    disco = models.PositiveSmallIntegerField(null=True, blank=True)
+    tamanho = models.BigIntegerField(default=0)
+    lote = models.CharField(max_length=24, verbose_name="Envio")
+    arquivo = models.FileField(
+        upload_to=_caminho_do_arquivo_emulador, storage=_armazenamento_jogo, blank=True, max_length=400,
+    )
+    chave = models.CharField(max_length=400, blank=True, verbose_name="Chave no armazenamento de jogos grandes")
+    conteudo = models.TextField(blank=True, verbose_name="Índice (texto)")
+    ordem = models.PositiveSmallIntegerField(default=0)
+    criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Arquivo do emulador"
+        verbose_name_plural = "Arquivos do emulador"
+        ordering = ["ordem", "id"]
+        constraints = [UniqueConstraint(fields=["jogo", "nome"], name="arquivo_emulador_nome_unico_no_jogo")]
+
+    def __str__(self):
+        return f"{self.jogo} · {self.nome}"
+
+    @property
+    def e_indice(self):
+        return not self.arquivo and not self.chave
+
+    @property
+    def url(self):
+        """De onde o emulador baixa este arquivo ("" para o índice, que o site serve)."""
+        if self.chave:
+            from .armazenamento_grande import url_publica
+
+            return url_publica(self.chave)
+        if self.arquivo:
+            try:
+                return self.arquivo.url
+            except Exception:
+                return ""
+        return ""
+
+    def apagar_do_armazenamento(self):
+        """Apaga o conteúdo guardado fora do banco (melhor esforço; quem chama registra a falha)."""
+        if self.chave:
+            from .armazenamento_grande import apagar
+
+            apagar([self.chave])
+        elif self.arquivo:
+            self.arquivo.storage.delete(self.arquivo.name)
 
 class CategoriaPeca(Prime):
     nome_categoria_peca = models.CharField(max_length=90)

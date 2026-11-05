@@ -26,9 +26,17 @@
     // ele guarda o progresso no próprio domínio. Um arquivo servido pelo
     // domínio do site, com scripts e mesma origem juntos, sairia da caixa.
     let deFora = false;
-    try { deFora = new URL(src, location.href).origin !== location.origin; } catch (e) { deFora = false; }
+    let doEmulador = false;
+    try {
+      const alvo = new URL(src, location.href);
+      deFora = alvo.origin !== location.origin;
+      // o quadro do emulador é uma página do próprio site, só com o código
+      // do emulador (nenhum .html enviado roda nela): pode ter a mesma
+      // origem, para o jogo salvo ficar guardado no navegador
+      doEmulador = palco.dataset.jogoEmulador === "1" && !deFora && /^\/jogos\/[a-z0-9-]+\/emulador\/$/.test(alvo.pathname);
+    } catch (e) { deFora = false; }
     const permissoes = ["allow-scripts", "allow-pointer-lock", "allow-orientation-lock", "allow-fullscreen"];
-    if (deFora) permissoes.push("allow-same-origin");
+    if (deFora || doEmulador) permissoes.push("allow-same-origin");
     quadro.setAttribute("sandbox", permissoes.join(" "));
     quadro.setAttribute("allow", "autoplay; fullscreen; gamepad; accelerometer; gyroscope; clipboard-write");
     quadro.setAttribute("referrerpolicy", "no-referrer");

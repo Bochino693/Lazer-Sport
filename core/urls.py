@@ -12,7 +12,7 @@ from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_app_avisos import service_worker_do_site
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_arena import ArenaView
-from .views_jogos import PartidaJogoView, RankingJogosView, SimuladorView
+from .views_jogos import ArquivoDoEmuladorView, JogoEmuladorView, PartidaJogoView, RankingJogosView, SimuladorView
 from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
@@ -250,6 +250,9 @@ urlpatterns = [
     path("jogos/partida/", PartidaJogoView.as_view(), name="jogos_partida"),
     path("jogos/ranking/", RankingJogosView.as_view(), name="jogos_ranking"),
     path("jogos/<slug:slug>/", SimuladorView.as_view(), name="jogo"),
+    # jogos de console pelo emulador: a página do quadro e o índice (.cue/.m3u)
+    path("jogos/<slug:slug>/emulador/", JogoEmuladorView.as_view(), name="jogo_emulador"),
+    path("jogos/<slug:slug>/emulador/<path:nome>", ArquivoDoEmuladorView.as_view(), name="jogo_emulador_arquivo"),
 
     path("eventos/", EventosView.as_view(), name="eventos"),
     path("projetos/", ProjetosView.as_view(), name="projetos"),
