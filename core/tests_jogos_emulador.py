@@ -378,19 +378,23 @@ class EmuladorNoSiteTests(TestCase):
         self.assertIn("No computador", html)
         self.assertIn("No celular", html)
         # o ✕ do PlayStation é a tecla X; o △, a tecla A (o mapa do próprio emulador)
-        self.assertIn("<tr><th scope=\"row\">✕</th><td><kbd>X</kbd></td></tr>", html)
-        self.assertIn("<tr><th scope=\"row\">△</th><td><kbd>A</kbd></td></tr>", html)
-        self.assertIn("Botão do PlayStation (PS1)", html)
+        self.assertIn('<li class="jc-tecla"><span>✕</span><div><kbd>X</kbd></div></li>', html)
+        self.assertIn('<li class="jc-tecla"><span>△</span><div><kbd>A</kbd></div></li>', html)
+        self.assertIn("o controle do PlayStation (PS1)", html)
+        # e o botão "Comandos" sobre o jogo, que vale em tela cheia
+        self.assertIn("data-jogo-comandos-botao", html)
         self.assertIn("um controle Bluetooth", html)
         self.assertNotIn("{#", html)  # comentário de template de várias linhas vaza como texto
 
     def test_no_portal_o_jogo_vai_para_os_consoles_e_o_filtro_playstation(self):
         portal = self.client.get(reverse("jogos"))
-        faixa = next(f for f in portal.context["faixas"] if f["id"] == "consoles")
-        self.assertEqual([j["slug"] for j in faixa["jogos"]], ["disco-teste"])
-        self.assertIn(("playstation", "PlayStation e PSP"), portal.context["filtros"])
-        nossos = next(f for f in portal.context["faixas"] if f["id"] == "nossos")
-        self.assertNotIn("disco-teste", [j["slug"] for j in nossos["jogos"]])
+        estantes = {e["chave"]: [j["slug"] for j in e["jogos"]] for e in portal.context["estantes"]}
+        self.assertEqual(estantes["playstation"], ["disco-teste"])
+        self.assertNotIn("disco-teste", estantes["nosso"])
+        self.assertContains(portal, '<span class="bj-sigla">PS1</span>')
+        # a ficha da biblioteca ensina os comandos do PS1, tecla por tecla
+        controles = portal.context["dados_da_biblioteca"]["controles"]["psx"]
+        self.assertIn({"acao": "✕", "teclas": ["X"], "celular": "✕, à direita"}, controles)
 
     def test_psp_e_dos_abrem_na_pagina_isolada_e_os_outros_no_quadro(self):
         url = reverse("jogo_emulador", args=["disco-teste"])

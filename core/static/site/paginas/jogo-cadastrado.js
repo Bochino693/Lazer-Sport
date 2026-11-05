@@ -94,9 +94,39 @@
     if (document.readyState === "complete") comecar(); else window.addEventListener("load", comecar, { once: true });
   }
 
+  /* "Jogados recentemente", na biblioteca (/jogos/): o aparelho anota quando cada jogo abriu. */
+  function lembrarNaBiblioteca() {
+    try {
+      const chave = "ls-biblioteca-recentes";
+      const lista = JSON.parse(localStorage.getItem(chave) || "{}") || {};
+      lista[palco.dataset.jogoSlug] = Date.now();
+      const ordem = Object.keys(lista).sort(function (a, b) { return lista[b] - lista[a]; }).slice(0, 30);
+      const curta = {};
+      ordem.forEach(function (s) { curta[s] = lista[s]; });
+      localStorage.setItem(chave, JSON.stringify(curta));
+    } catch (e) { /* sem armazenamento: a biblioteca só não mostra */ }
+  }
+
+  /* OS COMANDOS SOBRE O JOGO: o botão fica no canto do palco enquanto se joga
+     (também em tela cheia) e abre o como jogar por cima, sem sair do jogo. */
+  const botaoComandos = palco.querySelector("[data-jogo-comandos-botao]");
+  const painelComandos = palco.querySelector("[data-jogo-comandos-painel]");
+  function mostrarComandos(abrir) {
+    if (!painelComandos) return;
+    painelComandos.hidden = !abrir;
+    botaoComandos.setAttribute("aria-expanded", abrir ? "true" : "false");
+    if (!abrir) { const q = palco.querySelector(".jc-quadro"); if (q) q.focus(); }
+  }
+  if (botaoComandos && painelComandos) {
+    botaoComandos.addEventListener("click", function () { mostrarComandos(painelComandos.hidden); });
+    painelComandos.querySelector("[data-jogo-comandos-fechar]").addEventListener("click", function () { mostrarComandos(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !painelComandos.hidden) mostrarComandos(false); });
+  }
+
   function jogar() {
     // o toque manda: o preparo para, e o quadro continua do que já foi guardado
     if (preparo) { preparo.abort(); preparo = null; }
+    lembrarNaBiblioteca();
     // PSP e DOS: o núcleo de várias linhas só roda numa página isolada, que não
     // pode estar num quadro -- o jogo abre na tela inteira (com "Voltar ao jogo")
     if (palco.dataset.jogoTelaPropria === "1") { location.assign(src); return; }
@@ -128,6 +158,7 @@
     palco.insertBefore(quadro, telaCheia || null);
     palco.classList.add("jc-palco--jogando");
     if (telaCheia) telaCheia.hidden = false;
+    if (botaoComandos) botaoComandos.hidden = false;
     // "LAZER & SPORT GAMES apresenta": por cima do quadro, que já está
     // carregando o jogo por baixo -- a espera do carregamento vira abertura
     const intro = window.LSIntroJogos;

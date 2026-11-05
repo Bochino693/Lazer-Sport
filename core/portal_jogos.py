@@ -40,25 +40,63 @@ CATEGORIA_DA_CASA = {
     "hit-music": "Música",
 }
 
-#: Os filtros de console do portal: cada sistema do emulador cai em uma família.
+#: As estantes da biblioteca: cada sistema do emulador cai em uma.
 FAMILIAS = {
     "psx": "playstation", "psp": "playstation",
-    "nes": "nintendo", "gb": "nintendo", "gba": "nintendo", "n64": "nintendo", "nds": "nintendo", "snes": "nintendo",
+    "nes": "nintendo", "snes": "nintendo", "n64": "nintendo", "gb": "nintendo", "gba": "nintendo", "nds": "nintendo",
     "vb": "nintendo",
-    "segaMD": "sega", "segaMS": "sega", "segaGG": "sega", "segaCD": "sega", "segaSaturn": "sega",
-    "pce": "classicos", "atari2600": "classicos", "atari5200": "classicos", "atari7800": "classicos", "jaguar": "classicos",
-    "arcade": "classicos", "ngp": "classicos", "ws": "classicos", "coleco": "classicos", "pcfx": "classicos",
+    "segaMD": "sega", "segaMS": "sega", "segaGG": "sega", "segaCD": "sega", "sega32x": "sega", "segaSaturn": "sega",
+    "arcade": "fliperama", "mame": "fliperama",
+    "atari2600": "classicos", "atari5200": "classicos", "atari7800": "classicos", "jaguar": "classicos", "lynx": "classicos",
+    "pce": "classicos", "pcfx": "classicos", "ngp": "classicos", "ws": "classicos", "coleco": "classicos", "3do": "classicos",
     "dos": "pc", "amiga": "pc", "c64": "pc", "c128": "pc", "vic20": "pc", "plus4": "pc", "pet": "pc",
 }
-NOMES_DAS_FAMILIAS = (
-    ("nosso", "Feitos pela Lazer & Sport"),
-    ("playstation", "PlayStation e PSP"),
-    ("nintendo", "Nintendo"),
-    ("sega", "Sega"),
-    ("classicos", "Atari, Neo Geo e clássicos"),
-    ("pc", "PC antigo, Amiga e Commodore"),
-    ("html", "Jogos HTML5"),
+
+#: (chave, nome, frase, ícone, cor): a ordem é a das estantes na página.
+ESTANTES = (
+    ("nosso", "Feitos pela Lazer & Sport", "Os jogos das nossas máquinas, com ranking e recorde da casa", "fa-crown", "#ffd23f"),
+    ("playstation", "PlayStation e PSP", "Os discos do PS1 e os jogos do portátil da Sony", "fa-compact-disc", "#4f7cff"),
+    ("nintendo", "Nintendo", "Do NES ao DS: cartuchos, portáteis e o Virtual Boy", "fa-gamepad", "#ff3b47"),
+    ("sega", "Sega", "Mega Drive, Master System, Game Gear, Saturn e companhia", "fa-bolt", "#22d3ee"),
+    ("fliperama", "Fliperama", "Os clássicos dos arcades, ficha por ficha", "fa-ghost", "#c45cff"),
+    ("classicos", "Atari e clássicos", "Atari, PC Engine, Neo Geo Pocket, WonderSwan e outros", "fa-tv", "#ff8a1f"),
+    ("pc", "PC antigo e computadores", "MS-DOS, Amiga e a família Commodore", "fa-floppy-disk", "#34d399"),
+    ("html", "Jogos HTML5", "Abrem na hora, no celular ou no computador", "fa-html5", "#ff6a3d"),
 )
+TEMA = {chave: {"chave": chave, "nome": nome, "sub": sub, "icone": icone, "cor": cor} for chave, nome, sub, icone, cor in ESTANTES}
+#: Compatibilidade: (chave, nome) das estantes.
+NOMES_DAS_FAMILIAS = tuple((chave, nome) for chave, nome, *_ in ESTANTES)
+
+#: As coleções de "Minha biblioteca". "recentes" e "aparelho" são do aparelho de
+#: quem está vendo (o navegador sabe; o servidor não): o JavaScript preenche.
+COLECOES = (
+    ("todos", "Todos os jogos", "fa-layer-group"),
+    ("recentes", "Jogados recentemente", "fa-clock-rotate-left"),
+    ("aparelho", "Já no aparelho", "fa-download"),
+    ("ranking", "Com ranking", "fa-trophy"),
+    ("mais-jogados", "Mais jogados", "fa-fire"),
+    ("novidades", "Novidades", "fa-star"),
+)
+COLECOES_DO_APARELHO = ("recentes", "aparelho")
+
+#: O selo do console na capa.
+SIGLAS = {
+    "psx": "PS1", "psp": "PSP", "nes": "NES", "snes": "SNES", "n64": "N64", "gb": "GB", "gba": "GBA", "nds": "DS",
+    "vb": "VB", "segaMD": "MEGA", "segaMS": "SMS", "segaGG": "GG", "segaCD": "SEGA CD", "sega32x": "32X",
+    "segaSaturn": "SATURN", "arcade": "ARCADE", "mame": "ARCADE", "atari2600": "2600", "atari5200": "5200",
+    "atari7800": "7800", "jaguar": "JAGUAR", "lynx": "LYNX", "pce": "PCE", "pcfx": "PC-FX", "ngp": "NGP", "ws": "WS",
+    "coleco": "COLECO", "3do": "3DO", "dos": "DOS", "amiga": "AMIGA", "c64": "C64", "c128": "C128",
+    "vic20": "VIC-20", "plus4": "PLUS/4", "pet": "PET",
+}
+ORDENS = (
+    ("destaque", "Em destaque"),
+    ("az", "Nome (A a Z)"),
+    ("jogados", "Mais jogados"),
+    ("novos", "Mais novos"),
+)
+#: Na vista das estantes, quantos jogos cada uma mostra antes do "Ver todos".
+POR_ESTANTE = 12
+NOVIDADE_DIAS = 45
 
 
 def sem_acento(texto: str) -> str:
@@ -78,11 +116,16 @@ def _cartao_da_casa(jogo):
         "tipo": "nosso",
         "familias": ["nosso"],
         "plataforma": "Lazer & Sport",
+        "sigla": "L&S",
         "maquina": jogo.get("maquina", ""),
         "categoria": CATEGORIA_DA_CASA.get(jogo["slug"], ""),
         "ranking": True,
         "destaque": True,
         "criado": "",
+        "como": ((jogo.get("controle") or {}).get("rotulo") or ""),
+        "sistema": "",
+        # o como jogar dos jogos da casa: dito para o computador e para o celular (core/arena.CONTROLES)
+        "dicas": {"pc": (jogo.get("controle") or {}).get("pc", ""), "celular": (jogo.get("controle") or {}).get("celular", "")},
     }
 
 
@@ -107,11 +150,15 @@ def _cartao_cadastrado(jogo):
         "tipo": tipo,
         "familias": familias,
         "plataforma": jogo.get("sistema") or ("Lazer & Sport" if tipo == "nosso" else "HTML5"),
+        "sigla": SIGLAS.get(jogo.get("codigo_sistema", ""), "L&S" if tipo == "nosso" else "HTML5"),
         "maquina": "",
         "categoria": jogo.get("categoria", ""),
         "ranking": False,
         "destaque": bool(jogo.get("destaque")),
         "criado": jogo.get("criado", ""),
+        "como": jogo.get("comandos", ""),
+        "sistema": jogo.get("codigo_sistema", ""),
+        "dicas": None,
     }
 
 
@@ -181,61 +228,123 @@ def esquecer_vivo():
     cache.delete(CHAVE_VIVO)
 
 
-def montar(dados_do_catalogo, busca=""):
-    """O contexto do portal (igual para todo visitante)."""
+def _criado(cartao):
+    if not cartao["criado"]:
+        return None
+    try:
+        criado = dt.datetime.fromisoformat(cartao["criado"])
+    except ValueError:
+        return None
+    return timezone.make_aware(criado) if timezone.is_naive(criado) else criado
+
+
+def _ordenar(jogos, ordem):
+    if ordem == "az":
+        return sorted(jogos, key=lambda c: sem_acento(c["titulo"]))
+    if ordem == "jogados":
+        return sorted(jogos, key=lambda c: (-c["partidas"], sem_acento(c["titulo"])))
+    if ordem == "novos":
+        antigo = dt.datetime.min.replace(tzinfo=dt.timezone.utc)
+        return sorted(jogos, key=lambda c: (c["_criado"] or antigo, c["titulo"]), reverse=True)
+    # em destaque: os da casa, os destacados, os mais jogados; o resto na ordem do painel
+    return sorted(jogos, key=lambda c: (c["tipo"] != "nosso", not c["destaque"], -c["partidas"], c["_ordem"]))
+
+
+def montar(dados_do_catalogo, busca="", estante="", genero="", ordem=""):
+    """A biblioteca (igual para todo visitante): as estantes, as coleções, os gêneros e a lista pedida.
+
+    Sem filtro, a página mostra as ESTANTES, uma por plataforma, cada uma
+    com o seu tema. Com estante, coleção, gênero ou busca (?estante=,
+    ?genero=, ?q=, como o JavaScript faz na hora), mostra uma lista só.
+    """
     todos = cartoes(dados_do_catalogo)
     estado = vivo()
     partidas = estado["partidas"]
-    for cartao in todos:
+    agora = timezone.now()
+    for i, cartao in enumerate(todos):
         cartao["partidas"] = partidas.get(cartao["slug"], 0)
-        cartao["busca"] = sem_acento(" ".join([cartao["titulo"], cartao["plataforma"], cartao["categoria"],
+        cartao["estante"] = next((f for f in cartao["familias"] if f in TEMA), "html")
+        cartao["tema"] = TEMA[cartao["estante"]]["cor"]
+        cartao["busca"] = sem_acento(" ".join([cartao["titulo"], cartao["plataforma"], cartao["sigla"], cartao["categoria"],
                                                cartao["maquina"], cartao["chamada"], cartao["descricao"][:200]]))
+        cartao["_ordem"] = i
+        cartao["_criado"] = _criado(cartao)
+        cartao["novidade"] = bool(cartao["_criado"] and agora - cartao["_criado"] <= dt.timedelta(days=NOVIDADE_DIAS))
 
     destaques = [c for c in todos if c["tipo"] != "nosso" and c["destaque"]]
     destaques += [c for c in todos if c["tipo"] == "nosso"]
     destaques = destaques[:6]
 
-    nossos = [c for c in todos if c["tipo"] == "nosso"]
-    consoles = [c for c in todos if c["tipo"] == "console"]
-    html = [c for c in todos if c["tipo"] == "html"]
-    mais_jogados = sorted([c for c in todos if c["partidas"]], key=lambda c: -c["partidas"])[:10]
-    agora = timezone.now()
-    novidades = []
+    ordem = ordem if ordem in dict(ORDENS) else "destaque"
+    estantes = []
+    for chave, *_ in ESTANTES:
+        jogos = _ordenar([c for c in todos if chave in c["familias"]], ordem)
+        if jogos:
+            estantes.append({**TEMA[chave], "jogos": jogos[:POR_ESTANTE], "total": len(jogos), "mais": len(jogos) > POR_ESTANTE})
+
+    colecoes = {
+        "todos": todos,
+        "ranking": [c for c in todos if c["ranking"]],
+        "mais-jogados": [c for c in todos if c["partidas"]],
+        "novidades": [c for c in todos if c["novidade"]],
+    }
+    lista_de_colecoes = [
+        {"chave": chave, "nome": nome, "icone": icone,
+         "total": len(colecoes[chave]) if chave in colecoes else None, "do_aparelho": chave in COLECOES_DO_APARELHO}
+        for chave, nome, icone in COLECOES
+    ]
+    generos = {}
     for c in todos:
-        if not c["criado"]:
-            continue
-        try:
-            criado = dt.datetime.fromisoformat(c["criado"])
-        except ValueError:
-            continue
-        if timezone.is_naive(criado):
-            criado = timezone.make_aware(criado)
-        if agora - criado <= dt.timedelta(days=45):
-            novidades.append((criado, c))
-    novidades = [c for _, c in sorted(novidades, key=lambda par: par[0], reverse=True)][:10]
+        if c["categoria"]:
+            generos[c["categoria"]] = generos.get(c["categoria"], 0) + 1
 
-    familias_presentes = {f for c in todos for f in c["familias"]}
-    filtros = [(chave, nome) for chave, nome in NOMES_DAS_FAMILIAS if chave in familias_presentes]
-    categorias = sorted({c["categoria"] for c in todos if c["categoria"]})
-
-    termo = sem_acento(busca.strip())
-    resultados = [c for c in todos if all(p in c["busca"] for p in termo.split())] if termo else []
+    # o que a pessoa pediu
+    busca = busca.strip()
+    termo = sem_acento(busca)
+    lista, titulo, sub, tema = None, "", "", ""
+    if estante in TEMA:
+        lista = [c for c in todos if estante in c["familias"]]
+        titulo, sub, tema = TEMA[estante]["nome"], TEMA[estante]["sub"], TEMA[estante]["cor"]
+    elif estante in colecoes and estante != "todos":
+        lista = colecoes[estante]
+        titulo = dict((k, n) for k, n, _ in COLECOES)[estante]
+        if estante == "mais-jogados" and ordem == "destaque":
+            ordem = "jogados"
+        if estante == "novidades" and ordem == "destaque":
+            ordem = "novos"
+    else:
+        estante = ""
+    if genero in generos:
+        lista = [c for c in (lista if lista is not None else todos) if c["categoria"] == genero]
+        titulo = f"{titulo} · {genero}" if titulo else genero
+    else:
+        genero = ""
+    if termo:
+        lista = [c for c in (lista if lista is not None else todos) if all(p in c["busca"] for p in termo.split())]
+        titulo = f"Resultados para “{busca}”"
+    if lista is not None:
+        lista = _ordenar(lista, ordem)
 
     anuncios = estado["anuncios"]
     return {
         "todos": todos,
         "destaques": destaques,
-        "faixas": [f for f in (
-            {"id": "nossos", "titulo": "Feitos pela Lazer & Sport", "sub": "Os jogos das nossas máquinas, com ranking e recorde da casa", "jogos": nossos},
-            {"id": "mais-jogados", "titulo": "Mais jogados", "sub": "O que a galera mais está jogando agora", "jogos": mais_jogados},
-            {"id": "novidades", "titulo": "Novidades", "sub": "Chegaram por agora", "jogos": novidades},
-            {"id": "consoles", "titulo": "Clássicos de console", "sub": "PlayStation, Nintendo, Atari e outros, direto no navegador", "jogos": consoles},
-            {"id": "html", "titulo": "Jogos HTML5", "sub": "Abrem na hora, no celular ou no computador", "jogos": html},
-        ) if f["jogos"]],
-        "filtros": filtros,
-        "categorias": categorias,
-        "busca": busca.strip(),
-        "resultados": resultados,
+        "estantes": estantes,
+        "colecoes": lista_de_colecoes,
+        "generos": sorted(({"nome": n, "total": t} for n, t in generos.items()), key=lambda g: sem_acento(g["nome"])),
+        "ordens": ORDENS,
+        "ordem": ordem,
+        "estante": estante,
+        "genero": genero,
+        "busca": busca,
+        "lista": lista,
+        "lista_titulo": titulo,
+        "lista_sub": sub,
+        "lista_tema": tema,
+        # compatibilidade (e o que os testes antigos olham)
+        "resultados": lista if termo else [],
+        "filtros": [(e["chave"], e["nome"]) for e in estantes],
+        "categorias": sorted(generos, key=sem_acento),
         "anuncio_topo": next((a for a in anuncios if a["local"] == "topo"), None),
         "anuncios_meio": [a for a in anuncios if a["local"] == "meio"],
         "total": len(todos),

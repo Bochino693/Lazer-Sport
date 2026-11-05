@@ -60,6 +60,22 @@
         <button type="button" class="jc-tela-cheia" data-jogo-tela-cheia hidden aria-label="Tela cheia">
             <i class="fa-solid fa-expand" aria-hidden="true"></i>
         </button>
+        {% if controles or jogo.comandos %}
+        {# o como jogar, sempre à mão durante o jogo -- também em tela cheia (fica dentro do palco) #}
+        <button type="button" class="jc-comandos-botao" data-jogo-comandos-botao hidden aria-expanded="false" aria-controls="jc-comandos-painel">
+            <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Comandos
+        </button>
+        <div class="jc-comandos-painel" id="jc-comandos-painel" data-jogo-comandos-painel hidden>
+            <div class="jc-comandos-topo"><strong><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Como jogar {{ jogo.titulo }}</strong>
+                <button type="button" data-jogo-comandos-fechar aria-label="Fechar os comandos"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+            {% if controles %}
+            <ul class="jc-teclas jc-teclas--compacto">
+                {% for c in controles %}<li class="jc-tecla"><span>{{ c.acao }}</span><div>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</div><small>{{ c.celular|capfirst }}</small></li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if jogo.comandos %}<p class="jc-comandos-texto">{{ jogo.comandos }}</p>{% endif %}
+        </div>
+        {% endif %}
     </div>
 
     {% if not user.is_authenticated %}
@@ -85,15 +101,12 @@
                 </button>
             </div>
             <div class="jc-aba" role="tabpanel" id="painel-pc" aria-labelledby="aba-pc" data-painel="pc">
-                <h3 class="jc-aba-titulo"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> No computador: o teclado vira o controle</h3>
-                <table class="jc-teclas">
-                    <thead><tr><th scope="col">Botão do {{ jogo.sistema }}</th><th scope="col">Tecla</th></tr></thead>
-                    <tbody>
-                        {% for c in controles %}
-                        <tr><th scope="row">{{ c.acao }}</th><td>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <h3 class="jc-aba-titulo"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> No computador: o teclado vira o controle do {{ jogo.sistema }}</h3>
+                <ul class="jc-teclas">
+                    {% for c in controles %}
+                    <li class="jc-tecla"><span>{{ c.acao }}</span><div>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</div></li>
+                    {% endfor %}
+                </ul>
                 <p class="jc-dica"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ dicas_de_controle.pc }}</p>
             </div>
             <div class="jc-aba" role="tabpanel" id="painel-celular" aria-labelledby="aba-celular" data-painel="celular">

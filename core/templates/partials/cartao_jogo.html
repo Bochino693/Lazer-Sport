@@ -1,15 +1,20 @@
-{# Um jogo no portal (core/portal_jogos.py): capa, selos, nome e plataforma. #}
-<a class="pg-cartao" href="{{ jogo.url }}" style="--cor: {{ jogo.cor }}" data-portal-cartao="{{ jogo.slug }}">
-    <span class="pg-cartao-arte">
-        {% if jogo.capa %}<img src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" width="320" height="320">{% else %}<i class="fa-solid fa-gamepad" aria-hidden="true"></i>{% endif %}
-        <span class="pg-cartao-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+{% comment %}
+  Uma capa da biblioteca (core/portal_jogos.py): a arte sobre o fundo desfocado dela mesma, o selo do console e o nome.
+  O JavaScript da biblioteca (portal-jogos.js, função "capa") monta a mesma coisa: mudou aqui, muda lá.
+{% endcomment %}
+<a class="bj-capa" href="{{ jogo.url }}" style="--cor: {{ jogo.cor }}; --tema: {{ jogo.tema }}" data-bj-jogo="{{ jogo.slug }}" data-portal-cartao="{{ jogo.slug }}">
+    <span class="bj-capa-arte">
+        {% if jogo.capa %}<img class="bj-capa-fundo" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" aria-hidden="true"><img class="bj-capa-img" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" width="320" height="320">{% else %}<i class="fa-solid fa-gamepad bj-capa-sem" aria-hidden="true"></i>{% endif %}
+        <span class="bj-sigla">{{ jogo.sigla }}</span>
+        <span class="bj-marcas">
+            {% if jogo.ranking %}<span class="bj-marca bj-marca--ranking" title="Com ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i></span>{% endif %}
+            {% if jogo.novidade %}<span class="bj-marca bj-marca--nova">Novo</span>{% endif %}
+            <span class="bj-marca bj-marca--aparelho" data-bj-aparelho hidden title="Já no aparelho: abre na hora"><i class="fa-solid fa-download" aria-hidden="true"></i></span>
+        </span>
+        <span class="bj-capa-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
     </span>
-    <span class="pg-selos">
-        {% if jogo.tipo == "nosso" %}<span class="pg-selo pg-selo--nosso">Lazer &amp; Sport</span>{% endif %}
-        {% if jogo.ranking %}<span class="pg-selo pg-selo--ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Ranking</span>{% endif %}
-    </span>
-    <span class="pg-cartao-texto">
+    <span class="bj-capa-texto">
         <strong>{{ jogo.titulo }}</strong>
-        <small>{{ jogo.plataforma }}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}{% if jogo.partidas %} · {{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}{% endif %}</small>
+        <small>{% if jogo.tipo == "nosso" %}Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}{% if jogo.partidas %} · {{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}{% endif %}</small>
     </span>
 </a>

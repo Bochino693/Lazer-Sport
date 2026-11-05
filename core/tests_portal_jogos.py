@@ -56,23 +56,30 @@ class BasePortal(BaseJogos):
         return resposta
 
     @staticmethod
-    def faixa(resposta, qual):
-        return [j["slug"] for f in resposta.context["faixas"] if f["id"] == qual for j in f["jogos"]]
+    def estante(resposta, chave):
+        """Os jogos de uma estante, na vista das estantes (a página sem filtro)."""
+        return [j["slug"] for e in resposta.context["estantes"] if e["chave"] == chave for j in e["jogos"]]
+
+    def lista(self, **parametros):
+        """Os jogos da lista pedida (?estante=, ?genero=, ?ordem=, ?q=)."""
+        return [j["slug"] for j in self.portal(**parametros).context["lista"]]
 
 
 class VitrineTests(BasePortal):
-    def test_os_da_casa_e_os_feitos_por_nos_ficam_separados_dos_outros(self):
+    def test_os_da_casa_e_os_feitos_por_nos_ficam_numa_estante_separada(self):
         self.salvo()  # Corrida Maluca: um HTML5 de fora
         self.salvo(nome="Pinball da Lazer", slug="pinball-da-lazer", feito_pela_lazer=True)
         resposta = self.portal()
-        nossos = self.faixa(resposta, "nossos")
+        nossos = self.estante(resposta, "nosso")
         for jogo in arena.JOGOS:
             self.assertIn(jogo["slug"], nossos)
         self.assertIn("pinball-da-lazer", nossos)
         self.assertNotIn("corrida-maluca", nossos)
-        self.assertEqual(self.faixa(resposta, "html"), ["corrida-maluca"])
+        self.assertEqual(self.estante(resposta, "html"), ["corrida-maluca"])
+        self.assertContains(resposta, 'data-estante="nosso"')
         self.assertContains(resposta, "Feitos pela Lazer &amp; Sport")
-        self.assertContains(resposta, "pg-selo--nosso")
+        self.assertContains(resposta, '<span class="bj-sigla">L&amp;S</span>')
+        self.assertContains(resposta, '<span class="bj-sigla">HTML5</span>')
 
     def test_o_destaque_vai_para_o_carrossel_do_topo(self):
         self.salvo(destaque=True)
@@ -80,29 +87,59 @@ class VitrineTests(BasePortal):
         self.assertEqual(resposta.context["destaques"][0]["slug"], "corrida-maluca")
         self.assertContains(resposta, "data-portal-hero")
 
-    def test_novidades_e_mais_jogados(self):
+    def test_colecoes_novidades_e_mais_jogados(self):
         self.salvo()
-        resposta = self.portal()
-        self.assertIn("corrida-maluca", self.faixa(resposta, "novidades"))
-        self.assertEqual(self.faixa(resposta, "mais-jogados"), [])  # ninguém jogou ainda: a faixa nem aparece
+        self.assertIn("corrida-maluca", self.lista(estante="novidades"))
+        self.assertEqual(self.lista(estante="mais-jogados"), [])  # ninguém jogou ainda
         PartidasDoJogo.objects.create(slug="corrida-maluca", partidas=7)
         PartidasDoJogo.objects.create(slug=arena.JOGOS[0]["slug"], partidas=3)
         portal_jogos.esquecer_vivo()
-        resposta = self.portal()
-        self.assertEqual(self.faixa(resposta, "mais-jogados"), ["corrida-maluca", arena.JOGOS[0]["slug"]])
-        self.assertContains(resposta, "7 partidas")
+        self.assertEqual(self.lista(estante="mais-jogados"), ["corrida-maluca", arena.JOGOS[0]["slug"]])
+        self.assertContains(self.portal(), "7 partidas")
+        com_ranking = self.lista(estante="ranking")
+        self.assertEqual(sorted(com_ranking), sorted(j["slug"] for j in arena.JOGOS))
 
-    def test_a_categoria_vira_filtro_e_o_indice_da_busca_vem_na_pagina(self):
+    def test_estante_genero_e_ordem_pelo_endereco(self):
+        self.salvo(categoria="corrida")
+        self.salvo(nome="Abelha Veloz", slug="abelha-veloz", categoria="corrida")
+        self.salvo(nome="Xadrez Rápido", slug="xadrez-rapido", categoria="puzzle")
+        self.assertEqual(self.lista(estante="html", ordem="az"), ["abelha-veloz", "corrida-maluca", "xadrez-rapido"])
+        self.assertEqual(self.lista(genero="Corrida", ordem="az"), ["abelha-veloz", "corrida-maluca"])
+        self.assertEqual(self.lista(estante="html", genero="Quebra-cabeça"), ["xadrez-rapido"])
+        resposta = self.portal(estante="html")
+        self.assertContains(resposta, "Jogos HTML5")
+        self.assertContains(resposta, "3 jogos")
+        self.assertContains(resposta, "data-portal-hero hidden")  # com filtro, a biblioteca sobe
+        self.assertIsNone(self.portal(estante="nao-existe").context["lista"])  # estante errada: a biblioteca inteira
+
+    def test_estante_grande_mostra_ver_todos(self):
+        for i in range(portal_jogos.POR_ESTANTE + 1):
+            self.salvo(nome=f"Jogo {i:02d}", slug=f"jogo-{i:02d}")
+        resposta = self.portal()
+        html = next(e for e in resposta.context["estantes"] if e["chave"] == "html")
+        self.assertEqual(len(html["jogos"]), portal_jogos.POR_ESTANTE)
+        self.assertEqual(html["total"], portal_jogos.POR_ESTANTE + 1)
+        self.assertContains(resposta, 'class="bj-estante-todos" href="?estante=html#biblioteca"')
+        self.assertEqual(len(self.lista(estante="html")), portal_jogos.POR_ESTANTE + 1)
+
+    def test_os_generos_e_o_indice_da_biblioteca_vem_na_pagina(self):
         self.salvo(categoria="corrida")
         resposta = self.portal()
-        self.assertIn("Corrida", resposta.context["categorias"])
-        self.assertContains(resposta, 'data-filtro="categoria:Corrida"')
-        self.assertContains(resposta, 'data-filtro="familia:html"')
+        self.assertIn({"nome": "Corrida", "total": 1}, resposta.context["generos"])
+        self.assertContains(resposta, 'data-bj-genero="Corrida"')
+        self.assertContains(resposta, 'href="?estante=html#biblioteca"')
         indice = resposta.context["indice_busca"]
         corrida = next(j for j in indice if j["slug"] == "corrida-maluca")
         self.assertEqual(corrida["tipo"], "html")
+        self.assertEqual(corrida["estante"], "html")
+        self.assertEqual(corrida["sigla"], "HTML5")
+        self.assertEqual(corrida["como"], "Arraste para desviar.")
         self.assertIn("corrida maluca", corrida["busca"])
+        casa = next(j for j in indice if j["slug"] == "super-boxing")
+        self.assertIn("Espaço", casa["dicas"]["pc"])
         self.assertContains(resposta, 'id="portal-jogos"')
+        self.assertContains(resposta, 'id="portal-biblioteca"')
+        self.assertContains(resposta, "data-bj-ficha")
         self.assertContains(resposta, "portal-jogos.js")
 
     def test_visitante_ve_o_convite_e_quem_entrou_ve_o_proprio_nome(self):
@@ -126,8 +163,8 @@ class BuscaTests(BasePortal):
         resposta = self.portal(q="corrida")
         self.assertEqual([j["slug"] for j in resposta.context["resultados"]], ["corrida-maluca"])
         self.assertContains(resposta, "Resultados para “corrida”")
-        # a vitrine fica escondida enquanto há busca
-        self.assertContains(resposta, "data-portal-vitrine hidden")
+        # os destaques saem do caminho enquanto há busca
+        self.assertContains(resposta, "data-portal-hero hidden")
         musica = self.portal(q="MÚSICA")
         self.assertIn("hit-music", [j["slug"] for j in musica.context["resultados"]])
 
@@ -138,8 +175,7 @@ class BuscaTests(BasePortal):
 
     def test_nada_achado_avisa(self):
         resposta = self.portal(q="zzzz")
-        self.assertContains(resposta, "Nenhum jogo com esse nome ainda")
-        self.assertNotContains(resposta, "data-portal-vazio hidden")
+        self.assertContains(resposta, "Nenhum jogo encontrado aqui ainda")
 
 
 class AnunciosTests(BasePortal):

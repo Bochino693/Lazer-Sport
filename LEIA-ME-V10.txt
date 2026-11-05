@@ -584,3 +584,42 @@ Dependência nova: rjsmin (requirements.txt).
    "Fliperama (MAME 2003-Plus)". Fliperama com mais de 400 MB (ex.:
    pacmanbr, o Pac-Man Battle Royale) é baseado em PC, como os do
    TeknoParrot, e não roda em navegador: o painel avisa.
+
+24) A BIBLIOTECA DE JOGOS (/jogos/)
+   COMO ESTÁ ORGANIZADA. Depois dos destaques vem a Biblioteca: as ESTANTES,
+   uma por plataforma, cada uma com a sua cor, ícone e desenho -- Feitos
+   pela Lazer & Sport (dourado), PlayStation e PSP (azul, △○✕□), Nintendo
+   (vermelho, quadriculado), Sega (ciano, linhas de velocidade), Fliperama
+   (neon roxo, o fantasminha), Atari e clássicos (as listras do Atari), PC
+   antigo e computadores (verde, "C:\> RUN_") e Jogos HTML5. Cada estante
+   mostra até 12 jogos e o "Ver todos".
+   A LATERAL. "Minha biblioteca": Todos, Jogados recentemente e Já no
+   aparelho (esses dois são do aparelho de quem joga: aparecem sozinhos
+   depois que a pessoa joga), Com ranking, Mais jogados e Novidades (os
+   cadastrados nos últimos 45 dias). Embaixo, as estantes e os gêneros (a
+   categoria de cada jogo no painel). No celular, vira uma fila de botões.
+   Ordenar: em destaque, A a Z, mais jogados, mais novos. Ver em capas ou
+   em lista. A busca do topo filtra a biblioteca a cada letra.
+   A CAPA DE CADA JOGO. É uma "caixinha": a lombada na cor da estante, o
+   selo do console (PS1, SNES, N64, DOS...), a arte sobre o fundo desfocado
+   dela mesma e o nome. Marcas: troféu (tem ranking), Novo, e o ícone de
+   download quando o jogo já está guardado no aparelho.
+   A FICHA. Tocar numa capa abre a ficha do jogo: a arte grande, a estante,
+   os dados (console, gênero, partidas, o campeão do ranking, se já está no
+   aparelho, quando a pessoa jogou), a descrição e o COMO JOGAR desenhado --
+   no computador, a tecla de cada botão; no celular, onde fica cada um.
+   "Jogar agora" leva à página do jogo.
+   CRIAR CAPA (painel, Jogos > Novo jogo > passo 2). O botão "Criar capa"
+   desenha uma capa original no tema do console: o fundo e o desenho da
+   estante, a lombada com o selo, o nome do jogo e a marca Lazer & Sport
+   Games. Se já houver uma foto escolhida (do cartucho ou da caixa de vocês,
+   ou uma tela tirada jogando -- o emulador tem o botão de captura), ela
+   entra emoldurada no meio. Não usamos a capa oficial dos jogos (Mario,
+   Sonic...): a arte é das empresas donas.
+   OS COMANDOS FIXOS EM CADA JOGO. Na página de cada jogo de console, "Como
+   jogar" mostra as teclas desenhadas (No computador / No celular). Durante
+   o jogo, o botão "Comandos" fica no canto da tela do jogo -- também em
+   tela cheia -- e abre o mapa por cima, sem sair do jogo.
+   SEM JAVASCRIPT tudo continua: cada estante, gênero, ordem e busca é um
+   endereço (/jogos/?estante=playstation, ?genero=Corrida, ?ordem=az,
+   ?q=mario) que o servidor responde, e a capa leva direto ao jogo.
