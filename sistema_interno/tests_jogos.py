@@ -31,7 +31,19 @@ def _png():
 
 PNG = _png()
 HTML = b"<!doctype html><html><body><canvas></canvas><script>console.log('oi')</script></body></html>"
-APK = b"PK\x03\x04" + b"\x00" * 60
+def _apk(**arquivos):
+    """Um APK mínimo de verdade: um ZIP com o AndroidManifest.xml (e o que mais pedirem)."""
+    import zipfile
+
+    saida = BytesIO()
+    with zipfile.ZipFile(saida, "w") as pacote:
+        pacote.writestr("AndroidManifest.xml", b"\x03\x00\x08\x00manifesto")
+        for nome, dados in arquivos.items():
+            pacote.writestr(nome, dados)
+    return saida.getvalue()
+
+
+APK = _apk()
 HOST = "interno.testserver"
 
 
@@ -195,7 +207,9 @@ class CadastroTests(BaseTela):
         self.assertEqual(resposta.status_code, 400)
         self.assertTrue(JogoCadastrado.objects.filter(pk=jogo.pk).exists())
 
-        resposta = self.enviar({"action": "delete", "id": jogo.pk, "confirmacao_exclusao": "confirmar"})
+        # os arquivos saem depois de a exclusão ficar gravada (on_commit)
+        with self.captureOnCommitCallbacks(execute=True):
+            resposta = self.enviar({"action": "delete", "id": jogo.pk, "confirmacao_exclusao": "confirmar"})
         self.assertEqual(resposta.json()["status"], "sucesso")
         self.assertFalse(JogoCadastrado.objects.filter(pk=jogo.pk).exists())
         self.assertFalse(self.disco.exists(nome_da_capa))
@@ -313,3 +327,60 @@ class VersaoParaComputadorTests(BaseTela):
         resposta = self.enviar(self.dados(endereco=""))
         self.assertEqual(resposta.status_code, 400)
         self.assertIn("versão para computador", resposta.json()["msg"])
+
+
+class ApkEExeRevisadosTests(BaseTela):
+    """O APK conferido por dentro e o motor reconhecido; o .exe de DOS reconhecido."""
+
+    def apk(self, dados, nome="jogo.apk"):
+        return SimpleUploadedFile(nome, dados, content_type="application/vnd.android.package-archive")
+
+    def test_zip_renomeado_para_apk_e_recusado(self):
+        import zipfile
+
+        saida = BytesIO()
+        with zipfile.ZipFile(saida, "w") as pacote:
+            pacote.writestr("fotos/praia.jpg", b"jpg")
+        resposta = self.enviar(self.dados(apk=self.apk(saida.getvalue())))
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("AndroidManifest.xml", resposta.json()["msg"])
+
+    def test_o_motor_do_apk_e_o_html5_de_dentro_sao_reconhecidos(self):
+        for arquivos, esperado in (
+            ({"assets/www/index.html": b"<html>"}, "html5"),
+            ({"assets/bin/Data/data.unity3d": b"x", "lib/arm64-v8a/libunity.so": b"x"}, "unity"),
+            ({"assets/jogo.pck": b"GDPC"}, "godot"),
+            ({"classes.dex": b"dex"}, "desconhecido"),
+        ):
+            with self.subTest(esperado=esperado):
+                JogoCadastrado.objects.all().delete()
+                resposta = self.enviar(self.dados(apk=self.apk(_apk(**arquivos))))
+                self.assertEqual(resposta.status_code, 200, resposta.content)
+                self.assertEqual(JogoCadastrado.objects.get().apk_motor, esperado)
+        JogoCadastrado.objects.all().delete()
+        self.enviar(self.dados(endereco="", versao_pc_link="https://drive.google.com/x", apk=self.apk(_apk(**{"assets/www/index.html": b"<html>"}))))
+        pagina = self.client.get("/site/jogos/", HTTP_HOST=HOST)
+        self.assertContains(pagina, "HTML5 empacotado")
+        self.assertContains(pagina, "o jogo de navegador pronto")
+
+    def test_exe_de_dos_e_reconhecido_e_o_de_windows_nao_vira_dos(self):
+        dos = b"MZ" + bytes(0x3A) + (0x40).to_bytes(4, "little") + bytes(200)  # sem o "PE" no deslocamento
+        windows = b"MZ" + bytes(0x3A) + (0x40).to_bytes(4, "little") + b"PE\x00\x00" + bytes(200)
+        resposta = self.enviar(self.dados(endereco="", versao_pc=SimpleUploadedFile("jogo.exe", dos)))
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertEqual(JogoCadastrado.objects.get().motor, "dos")
+        JogoCadastrado.objects.all().delete()
+        self.enviar(self.dados(endereco="", versao_pc=SimpleUploadedFile("jogo.exe", windows)))
+        self.assertEqual(JogoCadastrado.objects.get().motor, "desconhecido")
+
+    @override_settings(JOGOS_ARMAZENAMENTO_LIMITE_MB="1", JOGOS_ARQUIVO_MAX_MB=200)
+    def test_o_limite_do_armazenamento_vale_para_o_apk(self):
+        import zipfile
+
+        saida = BytesIO()
+        with zipfile.ZipFile(saida, "w", compression=zipfile.ZIP_STORED) as pacote:
+            pacote.writestr("AndroidManifest.xml", b"m")
+            pacote.writestr("assets/grande.bin", bytes(2 * 1024 * 1024))
+        resposta = self.enviar(self.dados(apk=self.apk(saida.getvalue())))
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("o limite é 1 MB", resposta.json()["msg"])

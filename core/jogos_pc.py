@@ -30,6 +30,7 @@ MOTORES = {
     "gamemaker": "GameMaker",
     "rpgmaker": "RPG Maker",
     "electron": "Electron / NW.js",
+    "dos": "DOS (MS-DOS)",
     "desconhecido": "Não reconhecido",
 }
 
@@ -41,6 +42,8 @@ CAMINHO_PARA_O_SITE = {
     "gamemaker": "GameMaker exporta para HTML5 (ou GX.games) a partir do projeto; só com o build, ele serve de referência para portar.",
     "rpgmaker": "RPG Maker MV/MZ já é feito em HTML: a pasta www do jogo roda no navegador quase sem mudanças.",
     "electron": "Jogo em Electron/NW.js já é HTML por dentro: dá para tirar a versão de navegador da pasta do app.",
+    "dos": "É um programa de DOS (não de Windows): esse tipo roda no navegador pelo DOSBox, um emulador. O site "
+           "ainda não liga o DOSBox — ele pede uma configuração a mais no servidor (isolamento de origem, para threads).",
     "desconhecido": "O motor não foi reconhecido: o build serve de referência para portar o jogo para o site.",
 }
 
@@ -63,6 +66,14 @@ def _motor_pelos_nomes(nomes):
     return "desconhecido"
 
 
+def e_programa_de_dos(cabeca):
+    """Um .exe de DOS não tem o cabeçalho "PE" que todo programa do Windows tem."""
+    if cabeca[:2] != b"MZ" or len(cabeca) < 0x40:
+        return False
+    deslocamento = int.from_bytes(cabeca[0x3C:0x40], "little")
+    return not (0 < deslocamento <= len(cabeca) - 4 and cabeca[deslocamento:deslocamento + 4] == b"PE\x00\x00")
+
+
 def _motor_pelo_exe(arquivo):
     """Marcas conhecidas no começo e no fim do .exe (sem ler o arquivo inteiro)."""
     arquivo.seek(0)
@@ -82,6 +93,9 @@ def _motor_pelo_exe(arquivo):
         return "unreal"
     if b"YoYo Games" in inicio or b"GameMaker" in inicio:
         return "gamemaker"
+    # nenhuma marca de motor e sem o cabeçalho "PE" do Windows: é um programa de DOS
+    if e_programa_de_dos(inicio[:4096]):
+        return "dos"
     return "desconhecido"
 
 
@@ -105,11 +119,19 @@ def conferir(arquivo):
         try:
             with zipfile.ZipFile(arquivo) as pacote:
                 nomes = pacote.namelist()
+                executaveis = [n for n in nomes if n.lower().endswith(".exe")]
+                cabeca_do_exe = b""
+                if executaveis:
+                    with pacote.open(executaveis[0]) as exe:
+                        cabeca_do_exe = exe.read(4096)
         except zipfile.BadZipFile as exc:
             raise ArquivoInvalido("O .zip está corrompido ou incompleto.") from exc
         finally:
             arquivo.seek(0)
-        if not any(n.lower().endswith(".exe") for n in nomes):
+        if not executaveis:
             raise ArquivoInvalido("O .zip não tem nenhum .exe dentro: zipe a pasta inteira do jogo, com o executável.")
-        return _motor_pelos_nomes(nomes)
+        motor = _motor_pelos_nomes(nomes)
+        if motor == "desconhecido" and e_programa_de_dos(cabeca_do_exe):
+            return "dos"
+        return motor
     raise ArquivoInvalido("Envie o .exe do jogo ou um .zip com a pasta do jogo.")

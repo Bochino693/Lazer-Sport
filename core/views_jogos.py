@@ -13,11 +13,14 @@ partida chega em /jogos/partida/ e o ranking (do jogo e geral) sai de
 
 import json
 
-from django.http import Http404, JsonResponse
-from django.shortcuts import render
+from django.db.models import Prefetch
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import View
 
@@ -25,7 +28,8 @@ from sistema_interno.templatetags.interno_extras import estatico
 
 from . import arena, ranking
 from .home_cache import get_cached_catalog_page
-from .models import Brinquedos, JogoCadastrado
+from .jogos_emulador import SISTEMAS, sistemas_ligados
+from .models import ArquivoEmulador, Brinquedos, JogoCadastrado
 from .views_arena import WHATSAPP
 
 
@@ -36,9 +40,17 @@ def jogos_cadastrados():
     jogos = []
     if not tabela_pronta(JogoCadastrado):  # antes da migração, a lista sai sem eles
         return jogos
-    for jogo in JogoCadastrado.objects.filter(ativo=True).order_by("ordem", "nome"):
+    lista = JogoCadastrado.objects.filter(ativo=True).order_by("ordem", "nome")
+    if tabela_pronta(ArquivoEmulador):
+        lista = lista.prefetch_related(Prefetch("arquivos_emulador", queryset=ArquivoEmulador.objects.only("id", "jogo_id", "papel")))
+    else:
+        # antes da migração dos jogos de console: só os que têm endereço ou .html,
+        # sem tocar nas colunas novas
+        lista = lista.exclude(endereco="", arquivo_html="").defer("sistema", "emulador_resumo")
+    for jogo in lista:
         if not jogo.url_para_jogar:
             continue
+        emulador = not (jogo.endereco or jogo.arquivo_html)
         jogos.append({
             "slug": jogo.slug,
             "titulo": jogo.nome,
@@ -53,6 +65,10 @@ def jogos_cadastrados():
             "apk": jogo.apk_url,
             "url": jogo.url,
             "externo": True,
+            # a página do emulador é do próprio site (código nosso, sem .html
+            # enviado): o quadro pode ter a mesma origem, para guardar o jogo salvo
+            "emulador": emulador,
+            "sistema": SISTEMAS[jogo.sistema].nome if emulador and jogo.sistema in SISTEMAS else "",
         })
     return jogos
 
@@ -197,3 +213,89 @@ class RankingJogosView(View):
         if jogo not in arena.JOGOS_POR_SLUG:
             return JsonResponse({"erro": "jogo desconhecido"}, status=404)
         return JsonResponse(ranking.painel(request, jogo))
+
+
+def _jogo_no_emulador(slug):
+    """O jogo ativo que roda pelo emulador, com os arquivos, ou 404."""
+    from .objetos_3d import tabela_pronta
+
+    if not (tabela_pronta(JogoCadastrado) and tabela_pronta(ArquivoEmulador)):
+        raise Http404("Jogo não encontrado.")
+    jogo = get_object_or_404(
+        JogoCadastrado.objects.prefetch_related(
+            Prefetch("arquivos_emulador", queryset=ArquivoEmulador.objects.order_by("ordem", "id"))
+        ),
+        slug=slug, ativo=True,
+    )
+    if not jogo.emulador_pronto or jogo.sistema not in sistemas_ligados():
+        raise Http404("Jogo não encontrado.")
+    return jogo
+
+
+def config_do_emulador(jogo):
+    """O que o EmulatorJS recebe: o núcleo, o arquivo que ele abre e os que vão ao lado.
+
+    Cada arquivo entra na pasta virtual com o `nome` guardado (o que o .cue
+    pede), pela lista de arquivos externos -- o endereço no armazenamento
+    pode ter outro nome. O índice (.cue/.m3u) sai do próprio site, já
+    reescrito; o resto, do armazenamento.
+    """
+    arquivos = list(jogo.arquivos_emulador.all())
+    principal = next(a for a in arquivos if a.papel == ArquivoEmulador.JOGO)
+    if principal.e_indice:
+        url_do_jogo = reverse("jogo_emulador_arquivo", args=[jogo.slug, principal.nome])
+    else:
+        # o "#/nome" não vai ao servidor: é para o emulador gravar com o nome certo
+        url_do_jogo = f"{principal.url}#/{principal.nome}"
+    externos = []
+    for arquivo in arquivos:
+        if arquivo is principal:
+            continue
+        externos.append({
+            "caminho": "/" + arquivo.nome,
+            "url": reverse("jogo_emulador_arquivo", args=[jogo.slug, arquivo.nome]) if arquivo.e_indice else arquivo.url,
+            "tamanho": len(arquivo.conteudo.encode("utf-8")) if arquivo.e_indice else arquivo.tamanho,
+            "nome": arquivo.nome,
+        })
+    return {
+        "core": jogo.sistema,
+        "jogo": url_do_jogo,
+        # o quadro baixa estes antes (com progresso) e entrega os bytes ao emulador
+        "externos": externos,
+        "dados": static("vendor/emulatorjs/data/"),
+        "nome": jogo.slug,
+        "cor": jogo.cor[:7],
+        "titulo": jogo.nome,
+    }
+
+
+@method_decorator(xframe_options_sameorigin, name="dispatch")
+class JogoEmuladorView(View):
+    """A página do emulador: o que o quadro da página do jogo abre.
+
+    Página do próprio site, com o código do EmulatorJS e mais nada: nenhum
+    .html enviado roda aqui (os arquivos são dados que o emulador lê). Abre
+    só dentro do próprio site (o padrão do site é não deixar enquadrar).
+    """
+
+    def get(self, request, slug):
+        jogo = _jogo_no_emulador(slug)
+        resposta = render(request, "jogo_emulador.html", {"jogo": jogo, "config": config_do_emulador(jogo)})
+        resposta["X-Robots-Tag"] = "noindex"
+        return resposta
+
+
+class ArquivoDoEmuladorView(View):
+    """O índice (.cue, .m3u...) de um jogo do emulador, já com os nomes certos."""
+
+    def get(self, request, slug, nome):
+        jogo = _jogo_no_emulador(slug)
+        arquivo = next((a for a in jogo.arquivos_emulador.all() if a.nome == nome and a.e_indice), None)
+        if arquivo is None:
+            raise Http404("Arquivo não encontrado.")
+        resposta = HttpResponse(arquivo.conteudo.encode("utf-8"), content_type="text/plain; charset=utf-8")
+        resposta["Cache-Control"] = "public, max-age=300"
+        resposta["X-Robots-Tag"] = "noindex"
+        return resposta
+
+    head = get

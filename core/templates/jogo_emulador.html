@@ -1,0 +1,22 @@
+{% load interno_extras %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>{{ jogo.nome }} · Lazer &amp; Sport Jogos</title>
+<link rel="stylesheet" href="{% estatico 'site/paginas/jogo-emulador.css' %}">
+</head>
+<body>
+{% comment %}
+  O QUADRO DO EMULADOR (o que a página do jogo abre no iframe).
+  Só o EmulatorJS do próprio site (core/static/vendor/emulatorjs/) e a
+  configuração deste jogo: o núcleo, o arquivo que ele abre e os que vão ao
+  lado, cada um com o nome exato. Ver core/views_jogos.config_do_emulador.
+{% endcomment %}
+<div id="jogo" class="emu-jogo"></div>
+<p class="emu-sem-js">Este jogo precisa de JavaScript ligado no navegador.</p>
+{{ config|json_script:"emuladorConfig" }}
+<script src="{% estatico 'site/paginas/jogo-emulador.js' %}"></script>
+</body>
+</html>

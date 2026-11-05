@@ -189,3 +189,100 @@ Dependência nova: rjsmin (requirements.txt).
    - Teto por arquivo: JOGOS_ARQUIVO_MAX_MB (padrão 200). O Cloudinary tem o
      limite do plano (no gratuito, 10 MB por arquivo que não é imagem): se
      ele recusar, o painel avisa para usar o link, sem erro.
+
+13) JOGOS DE CONSOLE E FLIPERAMA PELO EMULADOR (.cue/.bin, ROMs, BIOS)
+   Painel > Lazer & Sport Games > Jogos do simulador > Cadastrar jogo novo:
+   preencha nome e capa, escolha "Ou: jogo de console" (ou "Reconhecer pelos
+   arquivos") e salve. A janela "Arquivos do jogo" abre sozinha.
+
+   COMO ENVIAR. Selecione TODOS os arquivos de uma vez (Ctrl/⌘ para marcar
+   vários; dá para marcar a pasta inteira, o que não é de jogo fica de fora):
+   - Disco .cue/.bin: o .cue E todos os .bin ("Track 01.bin", "Track 02.bin"…).
+     O .cue é só o índice: ele diz quais faixas o disco tem.
+   - Vários discos: os .cue e .bin de todos os discos (e o .m3u, se tiver; se
+     não tiver, o painel monta a lista dos discos na ordem dos nomes).
+   - CloneCD: .ccd + .img (+ .sub). Um arquivo só: .pbp (PS1), ROM do cartucho.
+   - A BIOS, quando o console pede (o painel diz qual nome).
+   Ao escolher os arquivos, o painel lê o .cue SEM subir o disco e mostra, na
+   hora: o sistema reconhecido pelo conteúdo (a assinatura do PlayStation no
+   disco, o cabeçalho do cartucho), cada arquivo e o papel dele, e — em
+   vermelho — cada arquivo que o índice pede e não veio, pelo nome. Só dá para
+   enviar com o conjunto completo. Maiúscula/minúscula e acento entre o .cue e
+   os arquivos não atrapalham (o .cue é reescrito com os nomes que vieram).
+
+   ONDE RODA. Em /jogos/<slug>/, no mesmo quadro isolado dos outros jogos,
+   pelo EmulatorJS 4.2.3 hospedado no próprio site (core/static/vendor/
+   emulatorjs/ — nenhum arquivo vem de fora). Cada arquivo entra na pasta
+   virtual do emulador com o nome exato que o .cue pede; o jogo salvo fica no
+   navegador de quem joga.
+
+   SISTEMAS QUE RODAM: PlayStation (PS1), NES/Famicom, Game Boy e Color, Game
+   Boy Advance, Nintendo 64, PC Engine/TurboGrafx (e o CD, com a BIOS
+   syscard3.pce). O PS1 deste emulador abre .cue/.bin, .img/.ccd, .pbp e .m3u
+   — NÃO abre .chd nem .iso (o painel avisa).
+   RECONHECIDOS MAS DESLIGADOS — Super Nintendo, Mega Drive/Master System/
+   Game Gear/Sega CD e fliperama (FinalBurn Neo): os emuladores deles têm
+   licença que PROÍBE uso comercial por escrito (o do SNES cita até "usar
+   como promoção do seu produto comercial"). Só ligue com a permissão escrita
+   dos autores: JOGOS_EMULADORES_NAO_COMERCIAIS=snes,segaMD,... (o núcleo
+   desses vem do CDN do EmulatorJS, não do site).
+   NÃO RODAM NO NAVEGADOR: PS2, Saturn, Dreamcast, 3DO (o painel diz).
+   Só publique jogo que a empresa tem direito de publicar.
+
+   O TAMANHO — DISCO DE PS1 PRECISA DO ARMAZENAMENTO DE JOGOS GRANDES.
+   Um disco de PS1 tem 300–700 MB. O Cloudinary gratuito aceita 10 MB por
+   arquivo que não é imagem, e um arquivo desses passando pelo Render
+   seguraria o site por minutos. Cartucho (NES, GB, GBA...) cabe no de sempre.
+   Para disco, ligue um balde S3 — o navegador de quem cadastra manda cada
+   arquivo DIRETO para ele, com barra de progresso, e o site só confere no
+   fim (o tamanho e o começo de cada arquivo, sem baixar o disco).
+   Cloudflare R2 (10 GB grátis, sem custo de download):
+     1. dash.cloudflare.com > R2 > Create bucket (ex.: jogos-lazer).
+     2. Bucket > Settings > Public access: ligue o r2.dev (ou um domínio de
+        vocês, ex.: jogos.lazersport.com.br). Esse endereço é a URL pública.
+     3. Bucket > Settings > CORS policy, cole:
+        [{"AllowedOrigins": ["https://www.lazersport.com.br",
+          "https://lazersport.com.br", "https://interno.lazersport.com.br",
+          "https://www.lazersport.com", "https://lazersport.com",
+          "https://interno.lazersport.com", "https://lazerandsport.onrender.com"],
+          "AllowedMethods": ["PUT", "GET", "HEAD"],
+          "AllowedHeaders": ["content-type", "range"],
+          "ExposeHeaders": ["content-length", "etag"], "MaxAgeSeconds": 3600}]
+     4. R2 > Manage API tokens > Create token: "Object Read & Write" só neste
+        balde. Guarde a Access Key e o Secret.
+     5. No Render, as variáveis:
+        JOGOS_S3_ENDPOINT     https://<ID-da-conta>.r2.cloudflarestorage.com
+        JOGOS_S3_BUCKET       jogos-lazer
+        JOGOS_S3_ACCESS_KEY   (do passo 4)
+        JOGOS_S3_SECRET_KEY   (do passo 4)
+        JOGOS_S3_URL_PUBLICA  https://pub-xxxx.r2.dev  (ou o domínio do passo 2)
+        (JOGOS_S3_MAX_MB, padrão 2000: o teto por arquivo.)
+   No fim de cada envio o painel pergunta ao balde como o navegador do
+   visitante vai perguntar: sem acesso público ou sem a regra de CORS, ele
+   avisa o que ligar (sem isso o jogo abriria sem as faixas, calado).
+   JOGOS_ARMAZENAMENTO_LIMITE_MB=10: diga ao painel o limite do Cloudinary do
+   plano de vocês — ele passa a avisar ANTES de enviar (APK, versão para
+   computador e arquivos do emulador), em vez de o envio cair no fim.
+   No celular, disco de PS1 pode não abrir (o jogo inteiro vai para a memória
+   do aparelho); no computador roda.
+
+14) A REVISÃO DO APK E DO EXE — O QUE ELES FAZEM DE VERDADE
+   - Nenhum dos dois "vira" o jogo do site sozinho: o navegador não roda APK
+     (não existe emulador de Android numa página) nem programa do Windows.
+   - APK: guardado; vira o botão "Baixar o aplicativo" só com "Deixar baixar"
+     marcado. AGORA é conferido por dentro (antes, qualquer .zip renomeado
+     passava: bastava começar com "PK"): tem de ter o AndroidManifest.xml. O
+     painel reconhece o motor (Unity, Godot, GameMaker, Cocos, Defold,
+     Flutter...) e avisa quando o APK tem o jogo em HTML5 dentro (pasta
+     assets/www/ ou assets/public/, de Cordova/Capacitor/Construct): essa
+     pasta hospedada É a versão de navegador.
+   - EXE: guardado como fonte, nunca público. AGORA o painel também reconhece
+     programa de DOS (sem o cabeçalho "PE" do Windows): esse tipo roda no
+     navegador pelo DOSBox — ainda não ligado no site (pede isolamento de
+     origem no servidor, para threads).
+   - CORRIGIDO: excluir um jogo deixava a versão para computador (o .exe/.zip)
+     no armazenamento; agora sai junto, com os arquivos do emulador — e só
+     depois de a exclusão ficar gravada no banco.
+
+   Migração nova: 0129 (jogos por emulador). Dependência nova: boto3
+   (requirements.txt), para o armazenamento de jogos grandes.
