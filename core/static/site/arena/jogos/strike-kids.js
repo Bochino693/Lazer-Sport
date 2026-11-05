@@ -7959,6 +7959,8 @@ class Partida {
 
   // ---------------------------------------------------------------- fim de jogo
   _fimDeJogo() {
+    // o placar já é final: vai para o ranking agora, não depois da festa de 6,5 s
+    if (this.placar && this.placar.jogadores && this.placar.jogadores[0]) this.api.resultado({ pontos: this.placar.jogadores[0].pontos });
     this.estado = "fim";
     this.novoSeq();
     this.fimT = 0;

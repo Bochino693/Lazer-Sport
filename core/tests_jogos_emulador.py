@@ -649,6 +649,12 @@ class ParticularTests(SimpleTestCase):
         an = emu.analisar([E("pacman.zip", zipar(pm1__ic2=b"x"))], "mame", ligados=emu.sistemas_para(True))
         self.assertTrue(an.ok, an.erros)
 
+    def test_fliperama_de_pc_explica_que_e_do_teknoparrot(self):
+        grande = emu.entrada_de_trechos("pacmanbr.zip", 1060 * 1024 * 1024, zipar(a__bin=b"x", b__bin=b"y"))
+        an = emu.analisar([grande], "arcade", ligados=emu.sistemas_para(True))
+        self.assertFalse(an.ok)
+        self.assertTrue(any("TeknoParrot" in e and "baseado em PC" in e for e in an.erros), an.erros)
+
     def test_pokemon_mini_diz_por_que_nao_roda(self):
         an = analisar(E("jogo.min", bytes(512)))
         self.assertFalse(an.ok)

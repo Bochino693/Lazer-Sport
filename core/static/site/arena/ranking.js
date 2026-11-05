@@ -2,7 +2,8 @@
    RANKING E PARTIDA GRÁTIS — a parte do simulador que conhece a pessoa.
 
    O console (console.js) só avisa: "console:abrir" (trocou de jogo),
-   "console:jogar" (vai começar, dá para segurar) e "console:fim" (acabou,
+   "console:jogar" (vai começar, dá para segurar), "console:resultado" (o
+   placar final, que vai na hora para o ranking) e "console:fim" (acabou,
    com os pontos). Aqui mora o resto:
 
    - VISITANTE SEM CONTA joga uma vez cada jogo. A marca fica no aparelho
@@ -219,24 +220,48 @@ if (raiz && dadosDoJogador) {
     if (!logado) marcar(slug);
   });
 
+  /* O RESULTADO vai para o ranking assim que o jogo sabe o placar final
+     ("console:resultado", uma vez por partida) -- não no fim da animação da
+     máquina. Antes, quem rolava a página para ver o ranking pausava o jogo
+     na tela final e o recorde nunca chegava. `keepalive`: sair da página
+     logo depois não corta o envio. Sem resposta, tenta de novo uma vez. */
+  let lugarDaPartida = null;
+  const enviarResultado = (slug, pontos, tentativa = 0) => fetch(jogador.partidaUrl, {
+    method: "POST",
+    credentials: "same-origin",
+    keepalive: true,
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+    body: JSON.stringify({ jogo: slug, pontos }),
+  })
+    .then((resposta) => (resposta.ok ? resposta.json() : null))
+    .catch(() => {
+      if (tentativa < 1) return new Promise((pronto) => window.setTimeout(pronto, 2500)).then(() => enviarResultado(slug, pontos, 1));
+      return null;
+    });
+
+  raiz.addEventListener("console:resultado", (evento) => {
+    const { slug, pontos } = evento.detail;
+    lugarDaPartida = null;
+    enviarResultado(slug, pontos).then((dados) => {
+      if (!dados || !logado || slug !== jogoAtual) return;
+      atualizar(slug).then((painel) => {
+        lugarDaPartida = painel && painel.eu && painel.eu.jogo;
+        mostrarLugar();
+      });
+    });
+  });
+
+  // o lugar no ranking, no cartão de fim da partida (que pode abrir antes ou depois da resposta)
+  const mostrarLugar = () => {
+    const caixaRecorde = raiz.querySelector("[data-console-fim-recorde]");
+    if (lugarDaPartida && caixaRecorde) {
+      caixaRecorde.textContent = `Ranking: ${lugarDaPartida.posicao}º lugar neste jogo, com ${numero(lugarDaPartida.pontos)} pontos.`;
+    }
+  };
+
   raiz.addEventListener("console:fim", (evento) => {
     const { slug, pontos } = evento.detail;
-    fetch(jogador.partidaUrl, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-      body: JSON.stringify({ jogo: slug, pontos }),
-    })
-      .then((resposta) => (resposta.ok ? resposta.json() : null))
-      .then((dados) => {
-        if (!dados || !logado || slug !== jogoAtual) return;
-        atualizar(slug).then((painel) => {
-          const lugar = painel && painel.eu && painel.eu.jogo;
-          const caixaRecorde = raiz.querySelector("[data-console-fim-recorde]");
-          if (lugar && caixaRecorde) caixaRecorde.textContent = `Ranking: ${lugar.posicao}º lugar neste jogo, com ${numero(lugar.pontos)} pontos.`;
-        });
-      })
-      .catch(() => {});
+    mostrarLugar();
     if (!logado) {
       marcar(slug);
       // um instante para ver o placar, e o convite vem por cima

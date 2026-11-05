@@ -53,6 +53,12 @@
      api.placar({pontos, tempo, info})   o painel de cima
      api.terminar({pontos, titulo, detalhe, som})   fim de partida (som: false
                              quando o jogo já tocou o próprio som de fim)
+     api.resultado({pontos})  o placar FINAL, assim que o jogo sabe -- antes da
+                             tela de fim da máquina. Vai na hora para o ranking:
+                             quem rola a página para ver o ranking pausa o jogo,
+                             e a animação do fim (o Dragon Bowling tem ~25 s)
+                             não pode segurar o recorde. Uma vez por partida; o
+                             terminar() entrega sozinho se o jogo não chamou.
      api.contagem(depois)    o 3-2-1 do console no meio da partida (jogo
                              com `contagem: false` que escolhe algo antes
                              de começar: a contagem vem depois da escolha)
@@ -814,6 +820,7 @@ class Console {
       musica: (ligar = true) => (ligar ? this.som.tocarMusica() : this.som.pararMusica()),
       placar: (dados) => this.placar(dados),
       terminar: (resultado) => this.terminar(resultado),
+      resultado: (resultado) => this.entregarResultado(resultado && typeof resultado === "object" ? resultado.pontos : resultado),
       contagem: (depois) => this.contar(depois),
       tremer: (forca = 8) => { if (!this.reduzido) this.tremor = Math.max(this.tremor, forca); },
       vibrar: (ms = 30) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (erro) { /* sem vibração */ } },
@@ -901,6 +908,9 @@ class Console {
     this.fim.hidden = true;
     this.api.efeitos.limpar();
     if (this.partida.iniciar) this.partida.iniciar();
+    // cada partida entrega um resultado só (api.resultado ou o terminar)
+    this.vezDaPartida = (this.vezDaPartida || 0) + 1;
+    this.resultadoEntregue = false;
     this.relogio = 0;
     // o jogo que tem a própria contagem (o Hit Music conta em cima da
     // introdução da música) dispensa o 3-2-1 do console
@@ -923,8 +933,19 @@ class Console {
     this.estado = "contagem";
   }
 
+  /* O placar final vai para o ranking AGORA (ranking.js ouve "console:resultado"),
+     sem esperar a tela de fim -- nem o jogo voltar de uma pausa. */
+  entregarResultado(pontos) {
+    if (this.resultadoEntregue || !this.dados || (this.estado !== "jogando" && this.estado !== "fim")) return;
+    this.resultadoEntregue = true;
+    this.raiz.dispatchEvent(new CustomEvent("console:resultado", {
+      detail: { slug: this.dados.slug, pontos: Math.max(0, Math.round(Number(pontos) || 0)), partida: this.vezDaPartida },
+    }));
+  }
+
   terminar({ pontos = 0, titulo = "Fim de jogo", detalhe = "", som = true } = {}) {
     if (this.estado !== "jogando") return;
+    this.entregarResultado(pontos);
     this.estado = "fim";
     const recorde = Number(ler(PREFIXO_RECORDE + this.dados.slug) || 0);
     const novo = pontos > recorde;
