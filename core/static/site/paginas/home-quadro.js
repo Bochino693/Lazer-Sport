@@ -3,7 +3,12 @@
 
    A vitrine troca de brinquedo sozinha a cada poucos segundos, mas para
    quando alguém está olhando (mouse em cima, foco do teclado, quadro fora
-   da tela). Inclina com o mouse e desliza com o dedo no celular.
+   da tela). No mouse, a luz do cartão segue o ponteiro; no celular, o
+   dedo desliza de um brinquedo para o outro.
+
+   O brinquedo que tem objeto 3D (`data-modelo3d`) fica mais tempo na vez,
+   e cada troca avisa a vitrine com o evento "vitrine:troca" -- é por ele
+   que o home-vitrine3d.js sabe quando mostrar e quando guardar o 3D.
 
    NADA AQUI RODA A CADA QUADRO. O relógio da vitrine é a animação CSS da
    barrinha de progresso (o compositor anda com ela sozinho) e a troca de
@@ -35,9 +40,12 @@
   var volta = 0;
 
   // Reinicia a barrinha trocando o nome da animação (a / b): o navegador
-  // recomeça sozinho, sem precisar medir a página para isso.
+  // recomeça sozinho, sem precisar medir a página para isso. A vez do
+  // brinquedo com 3D é mais longa (`longo`, home-quadro.css), mas só onde
+  // o 3D vai aparecer mesmo (a folha só alonga com `ls-vitrine--com-3d`).
   function correr() {
     if (!barra || reduzido || slides.length < 2) return;
+    barra.classList.toggle("longo", slides[atual].hasAttribute("data-modelo3d"));
     volta = 1 - volta;
     barra.classList.toggle("correndo-a", volta === 0);
     barra.classList.toggle("correndo-b", volta === 1);
@@ -71,7 +79,20 @@
       botao.classList.toggle("ativo", i === atual);
       botao.setAttribute("aria-pressed", i === atual ? "true" : "false");
     });
+    mostrarMiniatura(minis[atual]);
     correr();
+    vitrine.dispatchEvent(new CustomEvent("vitrine:troca", { detail: { indice: atual, slide: novo } }));
+  }
+
+  // No celular a fileira de miniaturas rola de lado: a do brinquedo da vez
+  // fica à vista. Só a fileira rola (scrollTo nela), nunca a página -- o
+  // scrollIntoView puxaria a página de volta para o quadro no meio da
+  // leitura lá embaixo.
+  function mostrarMiniatura(botao) {
+    var fileira = botao && botao.parentElement;
+    if (!fileira || fileira.scrollWidth <= fileira.clientWidth + 1) return;
+    var esquerda = botao.offsetLeft - (fileira.clientWidth - botao.offsetWidth) / 2;
+    fileira.scrollTo({ left: Math.max(0, esquerda), behavior: reduzido ? "auto" : "smooth" });
   }
 
   if (slides.length > 1) {
@@ -98,24 +119,47 @@
     correr();
   }
 
-  // Inclinação 3D seguindo o mouse. Só com mouse: no celular o dedo que
-  // passa pela vitrine está rolando a página, e cada movimento obrigava o
-  // navegador a medir e redesenhar a vitrine no meio da rolagem.
+  // A luz do cartão segue o mouse (home-quadro.css, `--mx`/`--my`) e a
+  // foto desliza um pouco para o lado oposto (`--px`/`--py`). Era uma
+  // inclinação 3D do cartão inteiro, que deformava foto e texto. Só com
+  // mouse: no celular o dedo que passa pela vitrine está rolando a página.
+  // Um pedido de quadro por vez: o mouse dispara dezenas de eventos por
+  // quadro, e cada um reescrevia o estilo do cartão.
   var temMouse = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   if (palco && !reduzido && temMouse) {
+    var caixa = null;
+    var ponteiro = null;
+    var pedido = 0;
+    var aplicarPonteiro = function () {
+      pedido = 0;
+      if (!ponteiro || !caixa) return;
+      var x = Math.min(Math.max(ponteiro.x - caixa.left, 0), caixa.width);
+      var y = Math.min(Math.max(ponteiro.y - caixa.top, 0), caixa.height);
+      palco.style.setProperty("--mx", x.toFixed(0) + "px");
+      palco.style.setProperty("--my", y.toFixed(0) + "px");
+      palco.style.setProperty("--px", (x / caixa.width - 0.5).toFixed(3));
+      palco.style.setProperty("--py", (y / caixa.height - 0.5).toFixed(3));
+    };
+    palco.addEventListener("pointerenter", function (e) {
+      if (e.pointerType !== "mouse") return;
+      // mede uma vez na entrada (e não a cada movimento)
+      caixa = palco.getBoundingClientRect();
+      ponteiro = { x: e.clientX, y: e.clientY };
+      aplicarPonteiro();
+    });
     palco.addEventListener("pointermove", function (e) {
-      var r = palco.getBoundingClientRect();
-      var x = (e.clientX - r.left) / r.width - 0.5;
-      var y = (e.clientY - r.top) / r.height - 0.5;
-      palco.style.setProperty("--inc-y", (x * 14).toFixed(2) + "deg");
-      palco.style.setProperty("--inc-x", (-y * 10).toFixed(2) + "deg");
-      palco.style.setProperty("--reflexo", (x * 160).toFixed(0) + "%");
+      if (e.pointerType !== "mouse") return;
+      if (!caixa) caixa = palco.getBoundingClientRect();
+      ponteiro = { x: e.clientX, y: e.clientY };
+      if (!pedido) pedido = window.requestAnimationFrame(aplicarPonteiro);
     });
+    // Ao sair, a luz apaga onde está (home-quadro.css) e a foto volta ao
+    // centro sozinha; nada de a luz atravessar o cartão de volta.
     palco.addEventListener("pointerleave", function () {
-      palco.style.setProperty("--inc-y", "0deg");
-      palco.style.setProperty("--inc-x", "0deg");
-      palco.style.setProperty("--reflexo", "-60%");
+      caixa = null;
+      ponteiro = null;
     });
+    window.addEventListener("scroll", function () { caixa = null; }, { passive: true });
   }
 
   /* ---------------------------------------------------------------

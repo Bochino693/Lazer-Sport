@@ -946,3 +946,8 @@ CADASTRO_TEMPO_MINIMO = int(os.getenv("CADASTRO_TEMPO_MINIMO", "4"))
 # elas, uma pergunta simples feita aqui mesmo. Ver core/captcha.py.
 TURNSTILE_SITE_KEY = os.getenv("TURNSTILE_SITE_KEY", "").strip()
 TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "").strip()
+
+# Teto do APK e da versão para computador (Windows) dos jogos cadastrados
+# pelo painel, em MB. O armazenamento também tem o seu (o Cloudinary, conforme
+# o plano): build maior vai pelo link (sistema_interno/views_jogos.py).
+JOGOS_ARQUIVO_MAX_MB = int(os.getenv("JOGOS_ARQUIVO_MAX_MB", "200"))

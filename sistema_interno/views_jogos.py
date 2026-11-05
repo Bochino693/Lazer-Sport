@@ -33,6 +33,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views import View
 
 from core import arena
+from core.jogos_pc import CAMINHO_PARA_O_SITE, MOTORES
 from core.models import JogoCadastrado
 from core.objetos_3d import tabela_pronta
 from sistema_interno.templatetags.interno_extras import estatico
@@ -44,13 +45,29 @@ log = logging.getLogger("sistema_interno.jogos")
 
 MB = 1024 * 1024
 
+
+def _limite_de_arquivo_grande():
+    """Teto do APK e da versão para computador, em bytes (JOGOS_ARQUIVO_MAX_MB, padrão 200).
+
+    O armazenamento também tem o seu teto por arquivo (o Cloudinary, conforme
+    o plano): o que passar daqui mas não de lá volta com aviso para usar o link.
+    """
+    from django.conf import settings
+
+    try:
+        return max(1, int(getattr(settings, "JOGOS_ARQUIVO_MAX_MB", 200))) * MB
+    except (TypeError, ValueError):
+        return 200 * MB
+
+
 #: Teto de cada arquivo. O .html de 15 MB repete a regra do modelo; o APK
-#: é maior porque leva o jogo inteiro da máquina.
+#: e a versão para computador são maiores porque levam o jogo inteiro.
 LIMITES = {
     "capa": 4 * MB,
     "poster": 6 * MB,
     "arquivo_html": 15 * MB,
-    "apk": 200 * MB,
+    "apk": None,        # _limite_de_arquivo_grande()
+    "versao_pc": None,  # _limite_de_arquivo_grande()
 }
 
 #: O que um .html de jogo precisa ter em algum lugar dos primeiros bytes.
@@ -69,13 +86,16 @@ class JogoForm(forms.ModelForm):
         fields = [
             "nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo",
             "capa", "poster", "endereco", "arquivo_html", "proporcao", "apk", "liberar_download",
+            "versao_pc", "versao_pc_link",
         ]
 
     def _conferir_tamanho(self, campo):
         arquivo = self.cleaned_data.get(campo)
-        if isinstance(arquivo, UploadedFile) and arquivo.size > LIMITES[campo]:
+        limite = LIMITES[campo] or _limite_de_arquivo_grande()
+        if isinstance(arquivo, UploadedFile) and arquivo.size > limite:
             raise forms.ValidationError(
-                f"Esse arquivo tem {_tamanho_legivel(arquivo.size)}; o limite é {_tamanho_legivel(LIMITES[campo])}."
+                f"Esse arquivo tem {_tamanho_legivel(arquivo.size)}; o limite é {_tamanho_legivel(limite)}."
+                + (" Para um build maior, use o campo do link." if campo == "versao_pc" else "")
             )
         return arquivo
 
@@ -119,6 +139,30 @@ class JogoForm(forms.ModelForm):
             raise forms.ValidationError("Esse arquivo não é um APK de verdade (um APK é um pacote ZIP).")
         return arquivo
 
+    def clean_versao_pc(self):
+        """O .exe ou o .zip do jogo: conferido por dentro, e o motor reconhecido."""
+        from core import jogos_pc
+
+        arquivo = self._conferir_tamanho("versao_pc")
+        if not isinstance(arquivo, UploadedFile):
+            return arquivo
+        try:
+            self.motor_reconhecido = jogos_pc.conferir(arquivo)
+        except jogos_pc.ArquivoInvalido as exc:
+            raise forms.ValidationError(str(exc)) from exc
+        return arquivo
+
+    def save(self, commit=True):
+        jogo = super().save(commit=False)
+        motor = getattr(self, "motor_reconhecido", None)
+        if motor:
+            jogo.motor = motor
+        elif not jogo.versao_pc:
+            jogo.motor = ""
+        if commit:
+            jogo.save()
+        return jogo
+
     def primeiro_erro(self):
         """Uma frase só para a tarja do modal: o campo e o motivo."""
         for campo, erros in self.errors.items():
@@ -147,7 +191,15 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
         site = endereco_do_site(request).rstrip("/")
         for jogo in jogos:
             jogo.url_publica = f"{site}/jogos/{jogo.slug}/"
-            jogo.como_roda = "Endereço hospedado" if jogo.endereco else ("Arquivo .html" if jogo.arquivo_html else "Sem onde jogar")
+            jogo.como_roda = (
+                "Endereço hospedado" if jogo.endereco
+                else "Arquivo .html" if jogo.arquivo_html
+                else "Só versão para computador" if jogo.so_versao_pc
+                else "Sem onde jogar"
+            )
+            jogo.motor_nome = MOTORES.get(jogo.motor, "") if jogo.motor else ""
+            jogo.caminho_para_o_site = CAMINHO_PARA_O_SITE.get(jogo.motor or "desconhecido", "")
+            jogo.versao_pc_url = self._url_do_arquivo(jogo.versao_pc)
 
         todos = JogoCadastrado.objects.all()
         oficiais = self._oficiais(site, busca)
@@ -160,6 +212,7 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "total": todos.count(),
             "total_ativos": todos.filter(ativo=True).count(),
             "total_com_apk": todos.exclude(apk="").count(),
+            "total_so_pc": sum(1 for jogo in todos.only("endereco", "arquivo_html", "versao_pc", "versao_pc_link") if jogo.so_versao_pc),
             "total_apk_liberado": todos.exclude(apk="").filter(liberar_download=True).count(),
             "proporcoes": JogoCadastrado.PROPORCOES,
             "site": site,
@@ -193,6 +246,13 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
         return lista
 
     @staticmethod
+    def _url_do_arquivo(campo):
+        try:
+            return campo.url if campo else ""
+        except Exception:
+            return ""
+
+    @staticmethod
     def _nome_do_arquivo(campo):
         try:
             return campo.name.rsplit("/", 1)[-1] if campo else ""
@@ -217,6 +277,9 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "poster": self._nome_do_arquivo(jogo.poster),
             "arquivo_html": self._nome_do_arquivo(jogo.arquivo_html),
             "apk": self._nome_do_arquivo(jogo.apk),
+            "versao_pc": self._nome_do_arquivo(jogo.versao_pc),
+            "versao_pc_link": jogo.versao_pc_link,
+            "motor": jogo.motor,
         }
 
     # ------------------------------------------------------------ ações
@@ -232,16 +295,35 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
         form = JogoForm(request.POST, request.FILES, instance=jogo)
         if not form.is_valid():
             raise ErroDeFormulario(form.primeiro_erro())
-        salvo = form.save()
+        try:
+            salvo = form.save()
+        except Exception as erro:  # noqa: BLE001 -- o armazenamento recusou (tamanho, tipo, rede)
+            if erro.__class__.__module__.split(".")[0] not in ("cloudinary", "urllib3", "requests", "botocore"):
+                raise
+            log.warning("armazenamento recusou um arquivo do jogo %s: %r", form.cleaned_data.get("slug"), erro)
+            raise ErroDeFormulario(
+                "O armazenamento de arquivos recusou o envio (o plano tem um limite por arquivo, ou a conexão "
+                "caiu). Para a versão para computador, use o campo do link (Google Drive, Dropbox...)."
+            ) from erro
         log.info(
-            "jogo %s %s por %s (ativo=%s, endereco=%s, html=%s, apk=%s)",
+            "jogo %s %s por %s (ativo=%s, endereco=%s, html=%s, apk=%s, pc=%s %s)",
             "editado" if jogo else "criado", salvo.slug, request.user.username,
             salvo.ativo, bool(salvo.endereco), bool(salvo.arquivo_html), bool(salvo.apk),
+            bool(salvo.versao_pc or salvo.versao_pc_link), salvo.motor,
         )
+        if salvo.so_versao_pc:
+            situacao = (
+                "Ficou guardada a versão para computador: o jogo ainda não aparece no site, "
+                "porque o navegador não roda .exe. Quando a versão para navegador ficar pronta, é só "
+                "informar o endereço ou enviar o .html."
+            )
+        elif salvo.ativo:
+            situacao = "Já está no ar em /jogos/%s/." % salvo.slug
+        else:
+            situacao = "Está desligado: ligue quando quiser publicar."
         return self.sucesso(
             request,
-            f"Jogo \"{salvo.nome}\" {'salvo' if jogo else 'cadastrado'}. "
-            + ("Já está no ar em /jogos/%s/." % salvo.slug if salvo.ativo else "Está desligado: ligue quando quiser publicar."),
+            f"Jogo \"{salvo.nome}\" {'salvo' if jogo else 'cadastrado'}. " + situacao,
             jogo=self._serializar(salvo),
         )
 

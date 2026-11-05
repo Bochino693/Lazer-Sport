@@ -242,28 +242,59 @@
     transform: translateY(-2px);
 }
 
-/* ---------- vitrine ---------- */
+/* ---------- vitrine ----------
+   O CARTÃO É UMA PEÇA SÓ, E PLANO.
+
+   Antes o slide inteiro (foto + ficha) inclinava até 14° atrás do mouse,
+   com perspectiva, a foto "saltando" em translateZ e um reflexo em
+   mix-blend-mode só sobre a foto. Na tela isso virava: foto e texto
+   deformados em trapézio e sem nitidez enquanto inclinavam, o reflexo
+   cortado na emenda entre a foto e a ficha, a ficha translúcida deixando
+   ver por baixo a sombra da foto (uma faixa escura) e o vidro desfocado
+   recalculado a cada quadro. Na troca, o cartão ainda girava de lado.
+
+   Agora é um cartão só -- borda, raio e sombra no slide, e o
+   `overflow: hidden` dele recorta tudo no mesmo raio, inclusive a luz e o
+   3D. Nada inclina. No mouse, a luz acompanha o ponteiro (um brilho macio
+   por cima e um fio de luz na borda) e a foto aproxima e desliza uns
+   poucos pixels, sempre em 2D: nada deforma. Ao sair, tudo volta devagar.
+   No toque e com "menos movimento", o cartão fica parado.
+
+   `--mx`/`--my` (onde está o ponteiro, em px) e `--px`/`--py` (de -0,5 a
+   0,5) vêm do home-quadro.js, uma vez por quadro no máximo.
+*/
 .ls-quadro-vitrine {
+    --ls-vitrine-vidro:
+        radial-gradient(circle at 50% 30%, rgba(63, 170, 255, .3), transparent 46%),
+        radial-gradient(circle at 92% 100%, rgba(230, 57, 70, .2), transparent 38%),
+        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px),
+        linear-gradient(160deg, #12376b 0%, #0a1f42 52%, #060f24 100%);
+    --ls-vitrine-vidro-tam: auto, auto, 26px 26px, 26px 26px, auto;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
 }
 
 .ls-vitrine-palco {
+    --mx: 50%;
+    --my: 0%;
+    --px: 0;
+    --py: 0;
     position: relative;
     width: min(100%, 540px);
     aspect-ratio: 1 / 1.08;
-    perspective: 1200px;
     touch-action: pan-y;
 }
 
+/* o halo passa um pouco das bordas do cartão: o brilho em volta é dele */
 .ls-vitrine-halo {
     position: absolute;
-    inset: 8% 6% 18%;
+    inset: 6% -5% 16%;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(63, 208, 255, .45), rgba(47, 139, 255, .2) 45%, transparent 70%);
+    background: radial-gradient(circle, rgba(63, 208, 255, .4), rgba(47, 139, 255, .18) 45%, transparent 70%);
     filter: blur(30px);
     animation: ls-halo 5s ease-in-out infinite alternate;
 }
@@ -273,36 +304,85 @@
 .ls-vitrine-anel {
     position: absolute;
     left: 50%;
-    bottom: 5%;
+    bottom: -3%;
     width: 82%;
     aspect-ratio: 4 / 1;
     border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(63, 208, 255, .45), transparent 70%);
+    background: radial-gradient(ellipse, rgba(63, 208, 255, .35), transparent 70%);
     transform: translateX(-50%);
-    filter: blur(8px);
+    filter: blur(10px);
 }
 
 .ls-vitrine-slide {
     position: absolute;
     inset: 0;
+    z-index: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 28px;
+    background: #071330;
+    box-shadow: 0 34px 64px -20px rgba(0, 0, 0, .65), 0 12px 24px -12px rgba(0, 0, 0, .4);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transform: translateX(40px) scale(.92) rotateY(-8deg);
-    transition: opacity .6s ease, transform .7s cubic-bezier(.2, .9, .3, 1);
+    transform: translateX(28px);
+    transition:
+        opacity .55s ease,
+        transform .65s cubic-bezier(.2, .8, .2, 1),
+        border-color .45s ease,
+        visibility 0s linear .65s;
 }
 
 .ls-vitrine-slide.ativo {
+    z-index: 2;
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
-    transform: rotateX(var(--inc-x, 0deg)) rotateY(var(--inc-y, 0deg));
-    transition: opacity .6s ease, transform .25s ease-out;
+    transform: none;
+    transition-delay: 0s;
 }
 
-.ls-vitrine-slide.saindo {
+.ls-vitrine-slide.saindo { transform: translateX(-28px); }
+
+/* A luz que acompanha o mouse: um brilho macio por cima do cartão
+   inteiro (foto e ficha juntas, sem emenda)... */
+.ls-vitrine-slide::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border-radius: inherit;
+    background: radial-gradient(560px circle at var(--mx) var(--my),
+        rgba(255, 255, 255, .11) 0%,
+        rgba(255, 255, 255, .065) 16%,
+        rgba(255, 255, 255, .03) 36%,
+        rgba(255, 255, 255, .01) 55%,
+        transparent 70%);
     opacity: 0;
-    transform: translateX(-40px) scale(.92) rotateY(8deg);
+    transition: opacity .5s ease;
+    pointer-events: none;
+}
+
+/* ...e um fio de luz na borda, mais forte perto do ponteiro. */
+.ls-vitrine-slide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    padding: 1px;
+    border-radius: inherit;
+    background: radial-gradient(380px circle at var(--mx) var(--my),
+        rgba(160, 228, 255, .85), rgba(160, 228, 255, .2) 40%, transparent 72%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity .5s ease;
+    pointer-events: none;
 }
 
 /* A vitrine da foto: vidro azul-marinho (nada de fundo branco no meio do
@@ -310,19 +390,13 @@
    mesmo desenho da vitrine da página do brinquedo. */
 .ls-vitrine-foto {
     position: relative;
+    z-index: 1;
     display: block;
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    border-radius: 28px 28px 0 0;
-    background:
-        radial-gradient(circle at 50% 30%, rgba(63, 170, 255, .34), transparent 46%),
-        radial-gradient(circle at 92% 100%, rgba(230, 57, 70, .22), transparent 38%),
-        linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px),
-        linear-gradient(160deg, #12376b 0%, #0a1f42 52%, #060f24 100%);
-    background-size: auto, auto, 26px 26px, 26px 26px, auto;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 30px 60px rgba(0, 0, 0, .45);
+    background: var(--ls-vitrine-vidro);
+    background-size: var(--ls-vitrine-vidro-tam);
 }
 
 /* o foco de luz no chão, embaixo do produto */
@@ -334,43 +408,84 @@
     width: 68%;
     aspect-ratio: 5 / 1;
     border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(63, 208, 255, .4), transparent 70%);
+    background: radial-gradient(ellipse, rgba(63, 208, 255, .36), transparent 70%);
     filter: blur(10px);
     transform: translateX(-50%);
     pointer-events: none;
 }
 
-/* Reflexo que corre pelo vidro quando a vitrine inclina (discreto: sobre
-   o vidro escuro, um clarão forte viraria um borrão). */
-.ls-vitrine-foto::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .2) 48%, transparent 60%);
-    transform: translateX(var(--reflexo, -60%));
-    transition: transform .25s ease-out;
-    pointer-events: none;
-    mix-blend-mode: screen;
-}
-
 .ls-vitrine-foto img {
     position: relative;
+    display: block;
     width: 100%;
     height: 100%;
     padding: 6% 8% 4%;
     object-fit: contain;
-    filter: drop-shadow(0 22px 28px rgba(0, 0, 0, .55));
-    transform: translateZ(40px);
+    filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .5));
+    /* `scale`/`translate`, e não `transform`: a foto com fundo próprio
+       (ls-tema.css, `.foto-cheia img`) zera o `transform`. */
+    transition: scale .8s cubic-bezier(.2, .8, .2, 1), translate .8s cubic-bezier(.2, .8, .2, 1);
+}
+
+/* O selo "3D" do brinquedo que tem objeto: só aparece quando este aparelho
+   vai mesmo mostrar o 3D (home-vitrine3d.js põe `ls-vitrine--com-3d`). */
+.ls-vitrine-chip3d {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 3;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px 6px 9px;
+    border: 1px solid rgba(127, 220, 255, .32);
+    border-radius: 999px;
+    background: rgba(5, 14, 36, .78);
+    color: #bfeaff;
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    line-height: 1;
+    pointer-events: none;
+    transition: border-color .4s ease, color .4s ease, box-shadow .4s ease;
+}
+
+.ls-vitrine-chip3d i { font-size: .74rem; color: #3fd0ff; }
+.ls-vitrine--com-3d .ls-vitrine-chip3d { display: inline-flex; }
+.ls-vitrine-slide--3d .ls-vitrine-chip3d { border-color: rgba(63, 208, 255, .8); color: #fff; box-shadow: 0 0 18px rgba(63, 208, 255, .3); }
+
+/* O visor 3D (um só, que passa de um slide para o outro). Tem o próprio
+   vidro de fundo: entra por cima da foto e a cobre por inteiro -- a troca
+   é um só desvanecer, sem o meio-termo das duas transparentes. */
+.ls-vitrine-3d {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse 36% 8% at 50% 86%, rgba(63, 208, 255, .26), transparent 100%),
+        var(--ls-vitrine-vidro);
+    background-size: auto, var(--ls-vitrine-vidro-tam);
+    opacity: 0;
+    transition: opacity .8s ease;
+    touch-action: pan-y;
+}
+
+.ls-vitrine-slide--3d .ls-vitrine-3d { opacity: 1; }
+
+@media (hover: hover) and (pointer: fine) {
+    .ls-vitrine-3d { cursor: grab; }
+    .ls-vitrine-3d:active { cursor: grabbing; }
 }
 
 .ls-vitrine-ficha {
+    position: relative;
+    z-index: 1;
     padding: 16px 20px 18px;
-    border: 1px solid rgba(255, 255, 255, .12);
-    border-top: 0;
-    border-radius: 0 0 28px 28px;
-    background: rgba(8, 20, 52, .88);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, .07);
+    background: linear-gradient(180deg, #0a1a3f 0%, #071330 100%);
 }
 
 .ls-vitrine-categoria {
@@ -388,12 +503,13 @@
     font-size: clamp(1.1rem, 1.6vw, 1.4rem);
     font-weight: 800;
     line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 .ls-vitrine-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 6px 14px;
     color: #a9bcd9;
     font-size: .82rem;
 }
@@ -411,6 +527,7 @@
 .ls-vitrine-preco { color: #ffd23f; font-size: 1.1rem; font-weight: 900; }
 
 .ls-vitrine-ver {
+    flex: none;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -421,35 +538,75 @@
     font-weight: 800;
     font-size: .88rem;
     text-decoration: none;
-    transition: transform .2s ease;
+    transition: transform .2s ease, box-shadow .2s ease;
 }
 
-.ls-vitrine-ver:hover { transform: translateX(3px); }
+.ls-vitrine-ver:hover { transform: translateX(3px); box-shadow: 0 8px 20px rgba(63, 208, 255, .25); }
 
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .ls-vitrine-palco:hover .ls-vitrine-slide.ativo { border-color: rgba(127, 220, 255, .26); }
+
+    .ls-vitrine-palco:hover .ls-vitrine-slide.ativo::before,
+    .ls-vitrine-palco:hover .ls-vitrine-slide.ativo::after { opacity: 1; }
+
+    .ls-vitrine-palco:hover .ls-vitrine-slide.ativo .ls-vitrine-foto img {
+        scale: 1.035;
+        translate: calc(var(--px) * -10px) calc(var(--py) * -6px);
+    }
+}
+
+/* As miniaturas: vidro escuro como o cartão (eram quadrados claros, que
+   no quadro escuro pareciam botões apagados). */
 .ls-vitrine-miniaturas {
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
     gap: 8px;
-    max-width: 540px;
+    width: min(100%, 540px);
+    padding: 3px 2px;
 }
 
+/* centralizadas quando cabem; quando não cabem, rolam de lado sem cortar a primeira */
+.ls-vitrine-mini:first-child { margin-left: auto; }
+.ls-vitrine-mini:last-child { margin-right: auto; }
+
 .ls-vitrine-mini {
+    position: relative;
+    flex: none;
     width: 52px;
     height: 52px;
     overflow: hidden;
     padding: 0;
-    border: 2px solid transparent;
+    border: 1px solid rgba(255, 255, 255, .12);
     border-radius: 14px;
-    background: #eef4ff;
-    opacity: .55;
+    background: linear-gradient(160deg, #12376b 0%, #0a1f42 60%, #060f24 100%);
+    opacity: .62;
     cursor: pointer;
-    transition: opacity .2s ease, transform .2s ease, border-color .2s ease;
+    transition: opacity .25s ease, transform .25s ease, border-color .25s ease, box-shadow .25s ease;
 }
 
-.ls-vitrine-mini img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
-.ls-vitrine-mini:hover { opacity: .9; transform: translateY(-2px); }
-.ls-vitrine-mini.ativo { opacity: 1; border-color: #3fd0ff; box-shadow: 0 0 18px rgba(63, 208, 255, .5); }
+.ls-vitrine-mini img { display: block; width: 100%; height: 100%; padding: 4px; object-fit: contain; }
+.ls-vitrine-mini:hover { opacity: .92; transform: translateY(-2px); }
+.ls-vitrine-mini:focus-visible { outline: 2px solid #3fd0ff; outline-offset: 2px; }
+
+.ls-vitrine-mini.ativo {
+    opacity: 1;
+    border-color: #3fd0ff;
+    box-shadow: 0 0 0 1px #3fd0ff, 0 0 18px rgba(63, 208, 255, .45);
+}
+
+/* o selo 3D também na miniatura */
+.ls-vitrine--com-3d .ls-vitrine-mini--3d::after {
+    content: "3D";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    padding: 2px 4px;
+    border-radius: 6px;
+    background: #3fd0ff;
+    color: #04122c;
+    font-size: .52rem;
+    font-weight: 900;
+    line-height: 1;
+}
 
 .ls-vitrine-progresso {
     width: min(100%, 540px);
@@ -463,15 +620,19 @@
     display: block;
     width: 100%;
     height: 100%;
+    border-radius: inherit;
     background: linear-gradient(90deg, #3fd0ff, #ff3d71);
     transform: scaleX(0);
     transform-origin: left;
 }
 
 /* O tempo de cada brinquedo na vitrine (home-quadro.js troca a e b para
-   recomeçar; no fim da animação entra o próximo). */
+   recomeçar; no fim da animação entra o próximo). O que mostra o 3D fica
+   mais tempo: o objeto entra depois de 1,5 s e precisa de tempo para girar. */
 .ls-vitrine-progresso span.correndo-a { animation: ls-vitrine-tempo-a 5.2s linear forwards; }
 .ls-vitrine-progresso span.correndo-b { animation: ls-vitrine-tempo-b 5.2s linear forwards; }
+.ls-vitrine--com-3d .ls-vitrine-progresso span.longo.correndo-a,
+.ls-vitrine--com-3d .ls-vitrine-progresso span.longo.correndo-b { animation-duration: 10s; }
 .ls-vitrine--parada .ls-vitrine-progresso span { animation-play-state: paused; }
 
 @keyframes ls-vitrine-tempo-a { to { transform: scaleX(1); } }
@@ -638,7 +799,21 @@
     .ls-quadro-categorias::-webkit-scrollbar { display: none; }
     .ls-quadro-categoria { flex: none; }
     .ls-vitrine-palco { aspect-ratio: 1 / 1.18; }
-    .ls-vitrine-mini { width: 44px; height: 44px; border-radius: 12px; }
+    .ls-vitrine-slide { border-radius: 24px; }
+    .ls-vitrine-ficha { padding: 14px 16px 16px; }
+    /* Uma fileira só: com 8 brinquedos as miniaturas quebravam em 6 + 2.
+       A 40 px cabem as 8 num celular de 390 px; num menor, a fileira rola. */
+    .ls-vitrine-miniaturas {
+        gap: 6px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+    }
+    .ls-vitrine-miniaturas::-webkit-scrollbar { display: none; }
+    .ls-vitrine-mini { width: 40px; height: 40px; border-radius: 11px; scroll-snap-align: center; }
+    .ls-vitrine-mini img { padding: 3px; }
+    .ls-vitrine-chip3d { top: 12px; left: 12px; }
     .ls-painel-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .ls-painel-item { grid-template-columns: 1fr; padding: 12px; }
     .ls-painel-item i { grid-row: auto; width: 34px; height: 34px; margin-bottom: 8px; font-size: .9rem; }
@@ -662,12 +837,12 @@
     .ls-vitrine-halo,
     .ls-vitrine-anel,
     .ls-vitrine-foto img { filter: none; }
-    .ls-vitrine-foto img { transform: none; }
-    .ls-vitrine-foto::after { display: none; }
-    .ls-vitrine-slide.ativo { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+    /* a troca de brinquedo vira só um desvanecer, sem o cartão deslizar */
+    .ls-vitrine-slide,
+    .ls-vitrine-slide.saindo { transform: none; }
     .ls-vitrine-progresso span,
     .ls-quadro-fundo::before,
     .ls-quadro-orbe,

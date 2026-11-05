@@ -62,9 +62,12 @@
       </p>
 
       <div class="ls-quadro-acoes">
+        {# Leva à vitrine "Brinquedos em Destaque", que só existe com brinquedo cadastrado. #}
+        {% if brinquedos_todos %}
         <a href="#brinquedos" class="ls-quadro-botao ls-quadro-botao--principal">
           <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Ver brinquedos
         </a>
+        {% endif %}
         <a href="{% url 'jogos' %}" class="ls-quadro-botao ls-quadro-botao--arena">
           <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar as prévias
         </a>
@@ -85,18 +88,30 @@
       {% endif %}
     </div>
 
-    <div class="ls-quadro-vitrine" data-vitrine aria-roledescription="carrossel" aria-label="Brinquedos em destaque">
+    {% comment %}
+      O 3D NA VITRINE. O brinquedo que tem objeto 3D (`item.modelo_3d`, o
+      .glb) troca a foto pelo objeto girando um pouco depois de entrar na
+      vez -- um único visor 3D para a vitrine inteira, montado só quando o
+      primeiro objeto vai aparecer (site/paginas/home-vitrine3d.js). O
+      three.js vem pelo `static` simples, e não pelo `estatico`: o leitor
+      do .glb importa "./three.module.min.js", e os dois endereços precisam
+      ser o mesmo para o navegador não baixar o three.js duas vezes.
+    {% endcomment %}
+    <div class="ls-quadro-vitrine" data-vitrine aria-roledescription="carrossel" aria-label="Brinquedos em destaque"
+         {% if vitrine_tem_3d %}data-three="{% static 'vendor/three/three.module.min.js' %}" data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"{% endif %}>
       {% if vitrine_quadro %}
       <div class="ls-vitrine-palco" data-vitrine-palco>
         <span class="ls-vitrine-halo" aria-hidden="true"></span>
         <span class="ls-vitrine-anel" aria-hidden="true"></span>
         {% for item in vitrine_quadro %}
         <article class="ls-vitrine-slide{% if forloop.first %} ativo{% endif %}" data-slide
+                 {% if item.modelo_3d %}data-modelo3d="{{ item.modelo_3d }}"{% endif %}
                  aria-roledescription="slide" aria-label="{{ forloop.counter }} de {{ vitrine_quadro|length }}"
                  {% if not forloop.first %}aria-hidden="true"{% endif %}>
           <a class="ls-vitrine-foto" href="{{ item.url }}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">
             <img src="{{ item.capa }}" alt="{{ item.nome }}" width="900" height="900" decoding="async"
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+            {% if item.modelo_3d %}<span class="ls-vitrine-chip3d" aria-hidden="true"><i class="fa-solid fa-cube"></i> 3D</span>{% endif %}
           </a>
           <div class="ls-vitrine-ficha">
             <span class="ls-vitrine-categoria">{{ item.categoria }}</span>
@@ -118,7 +133,7 @@
       {% if vitrine_quadro|length > 1 %}
       <div class="ls-vitrine-miniaturas" role="group" aria-label="Escolher brinquedo">
         {% for item in vitrine_quadro %}
-          <button type="button" class="ls-vitrine-mini{% if forloop.first %} ativo{% endif %}" data-ir="{{ forloop.counter0 }}"
+          <button type="button" class="ls-vitrine-mini{% if forloop.first %} ativo{% endif %}{% if item.modelo_3d %} ls-vitrine-mini--3d{% endif %}" data-ir="{{ forloop.counter0 }}"
                   aria-label="Mostrar {{ item.nome }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}">
             <img src="{{ item.miniatura }}" alt="" width="64" height="64" loading="lazy" decoding="async">
           </button>
@@ -165,7 +180,7 @@
         <b data-contar="{{ p.servicos_no_mes|default:0 }}">{{ p.servicos_no_mes|default:0 }}</b>
         <span>serviços concluídos no mês</span>
       </div>
-      <div class="ls-painel-item" data-painel="brinquedos">
+      <div class="ls-painel-item" data-painel="brinquedos" data-so-positivo {% if not p.brinquedos|default:brinquedos_count %}hidden{% endif %}>
         <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
         <b data-contar="{{ p.brinquedos|default:brinquedos_count }}">{{ p.brinquedos|default:brinquedos_count }}</b>
         <span>brinquedos no catálogo</span>
@@ -195,11 +210,13 @@
         <b data-contar="{{ p.avaliacao|default:0|stringformat:'s' }}" data-casas="1">{{ p.avaliacao|default:0|floatformat:1 }}</b>
         <span>nota média dos brinquedos</span>
       </div>
+      {% if jogos_arena %}
       <div class="ls-painel-item ls-painel-item--jogos">
         <i class="fa-solid fa-cube" aria-hidden="true"></i>
         <b data-contar="{{ jogos_arena|length }}">{{ jogos_arena|length }}</b>
         <span>jogos no <a href="{% url 'jogos' %}">simulador</a></span>
       </div>
+      {% endif %}
       {% endwith %}
     </div>
 
@@ -222,12 +239,18 @@
         <a class="ls-letreiro-item" href="{% url 'manutencoes' %}#nova">Manutenção com técnico da fábrica: peça pelo site</a>
       </div>
   </div>
+  {% if brinquedos_todos %}
   <a class="ls-ponte-descer" href="#brinquedos" aria-label="Ir para os brinquedos em destaque">
     <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
   </a>
+  {% endif %}
 </div>
 
 <script src="{% estatico 'site/paginas/home-quadro.js' %}" defer></script>
+{% if vitrine_tem_3d %}
+{# Depois do home-quadro.js (os dois esperam a página): ele troca os brinquedos, este mostra o 3D. #}
+<script type="module" src="{% estatico 'site/paginas/home-vitrine3d.js' %}"></script>
+{% endif %}
 
 <!-- ======= POP-UP CELEBRASHOW 2026 =======
 <div id="popup-overlay" class="popup-overlay-celebra">
@@ -298,7 +321,20 @@
 
 -->
 
+{% comment %}
+  SEÇÃO VAZIA NÃO APARECE.
+
+  Cada vitrine da home só existe quando tem o que mostrar: sem promoção,
+  sem combo, sem evento... nada da seção vai para a página -- nem o
+  título, nem a caixa "Nenhum ... disponível", nem o respiro
+  (`.espacador`) que a separava da próxima. Por isso o respiro mora
+  DENTRO do `{% if %}` de cada seção, logo depois dela: some junto.
+  O menu do topo (base.html) leva a algumas destas âncoras; na home, o
+  home.js esconde o item que aponta para uma seção que não veio.
+{% endcomment %}
+
 <!-- ======= PRODUTOS ======= -->
+{% if brinquedos_todos %}
 <section id="brinquedos" class="destaques">
   <div class="ls-section-intro">
     <div class="ls-section-intro-copy">
@@ -420,8 +456,6 @@
 
           </div>
         </article>
-      {% empty %}
-        <p class="nenhum-produto">Nenhum produto encontrado.</p>
       {% endfor %}
     </div>
 
@@ -436,8 +470,8 @@
   </div>
 </section>
 
-
 <div class="espacador"></div>
+{% endif %}
 
 
 <!-- ======= ARENA 3D & LAZER & SPORT JOGOS (logo depois dos brinquedos) ======= -->
@@ -451,6 +485,7 @@
   Os cartões dos jogos levam direto ao simulador: /jogos/<jogo>/ abre
   a página já com o jogo em foco.
 {% endcomment %}
+{% if jogos_arena %}
 <section id="arena-home" class="ls-arena-chamada" aria-labelledby="arena-home-titulo">
     <div class="ls-arena-chamada-texto">
         <span class="ls-arena-chamada-selo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Novo na Lazer &amp; Sport</span>
@@ -484,9 +519,12 @@
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
+{% endif %}
 
 
 <!-- ======= CATEGORIAS ======= -->
+{# As categorias de brinquedo e o cartão fixo das peças: sem nenhum dos dois, a seção não vem. #}
+{% if categorias_brinquedos or pecas_count %}
 <section id="categorias-section" class="categorias-section">
   <div class="categorias-head">
     <div class="categorias-head-copy">
@@ -503,7 +541,7 @@
 
     <div class="categorias-head-actions">
       <span class="categorias-counter" id="categorias-counter" aria-live="polite">
-        {{ categorias_brinquedos|length|add:"1" }} opções disponíveis
+        {% if pecas_count %}{{ categorias_brinquedos|length|add:"1" }}{% else %}{{ categorias_brinquedos|length }}{% endif %} opções disponíveis
       </span>
       <a href="{% url 'brinquedos' %}" class="categorias-all-link">
         Ver catálogo completo
@@ -523,7 +561,8 @@
 
     <div class="scroll-container" id="scroll-container">
 
-      <!-- Categoria fixa: peças e produtos em geral. -->
+      <!-- Categoria fixa: peças e produtos em geral (só com peça na loja). -->
+      {% if pecas_count %}
       <a href="{% url 'pecas_reposicao' %}#breadcrumb"
          class="categoria-link categoria-link-featured">
         <div class="categoria-card">
@@ -564,6 +603,7 @@
           </div>
         </div>
       </a>
+      {% endif %}
 
       <!-- Categorias de brinquedos. -->
       {% for categoria in categorias_brinquedos %}
@@ -614,6 +654,7 @@
     </button>
   </div>
 </section>
+{% endif %}
 
 
 
@@ -621,7 +662,7 @@
 <div class="section-divider" id="propaganda">
   <div class="rotating-messages">
     <span class="message active">Use o Cupom: newuser10 para ganhar 10% de desconto em qualquer produto!</span>
-    <span class="message">Veja e aproveite os combos para comércios novos!</span>
+    {% if combos %}<span class="message">Veja e aproveite os combos para comércios novos!</span>{% endif %}
     <span class="message">Vendemos brinquedos e jogos eletrônicos para todas as idades!</span>
   </div>
 </div>
@@ -629,6 +670,7 @@
 
 
 <!-- ======= PROMOÇÕES ======= -->
+{% if promocoes %}
 <section id="promocoes-section" class="promocoes-section">
   <div class="ls-section-intro">
     <div class="ls-section-intro-copy">
@@ -644,7 +686,7 @@
   </div>
 
   <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
+    <button type="button" class="scroll-btn left" id="scroll-left-promocoes" aria-label="Ver promoções anteriores" aria-controls="scroll-container-promocoes">&#10094;</button>
 
     <div class="scroll-container" id="scroll-container-promocoes">
       {% for promo in promocoes %}
@@ -691,19 +733,24 @@
 
              <!-- PREÇOS PROMO -->
             <div class="preco-box oferta-precos">
+                {# Sem o preço do brinquedo, o "De:" saía como "R$ 0,00". #}
+                {% if promo.brinquedos.valor_brinquedo %}
                 <p class="preco-original">
                     De:
                     <span class="money"
                           data-valor="{{ promo.brinquedos.valor_brinquedo }}">
                     </span>
                 </p>
+                {% endif %}
 
+                {% if promo.preco_promocao %}
                 <p class="preco-promocao">
                     Por:
                     <strong class="money"
                             data-valor="{{ promo.preco_promocao }}">
                     </strong>
                 </p>
+                {% endif %}
             </div>
 
             <div class="oferta-card-acoes">
@@ -722,16 +769,15 @@
           </div>
         </article>
       </div>
-      {% empty %}
-        <div class="empty-message">Nenhuma promoção disponível.</div>
       {% endfor %}
     </div>
 
-    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
+    <button type="button" class="scroll-btn right" id="scroll-right-promocoes" aria-label="Ver próximas promoções" aria-controls="scroll-container-promocoes">&#10095;</button>
   </div>
 </section>
 
 <div class="espacador"></div>
+{% endif %}
 
 
 <!-- ======= MANUTENÇÃO ======= -->
@@ -813,6 +859,7 @@
 <div class="espacador"></div>
 
 
+{% if pecas_todas %}
 <section id="pecas-section" class="destaques">
     <div class="ls-section-intro">
       <div class="ls-section-intro-copy">
@@ -832,22 +879,24 @@
       </a>
     </div>
 
-    <!-- BARRA HORIZONTAL DE FILTROS -->
+    <!-- BARRA HORIZONTAL DE FILTROS (só com categoria para filtrar: sozinho, o "Peças em Destaque" era uma barra com um botão que não filtrava nada) -->
+{% if categorias_peca %}
 <div class="filtros-horizontal" id="filtros-peca">
 
   <!-- Todos -->
-  <button class="filtro-btn ativo" data-categoria="">
+  <button type="button" class="filtro-btn ativo" data-categoria="">
       Peças em Destaque
   </button>
 
   <!-- Categorias -->
   {% for cat in categorias_peca %}
-      <button class="filtro-btn" data-categoria="{{ cat.id }}">
+      <button type="button" class="filtro-btn" data-categoria="{{ cat.id }}">
           {{ cat.nome_categoria_peca }}
       </button>
   {% endfor %}
 
 </div>
+{% endif %}
 
 <!-- CONTAINER -->
 <div id="pecas-container">
@@ -857,8 +906,6 @@
              data-categorias="{% for cat in peca.categoria_peca.all %}{{ cat.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
       {% include "partials/peca_card.html" with peca=peca %}
     </article>
-    {% empty %}
-      <p class="nenhum-produto">Nenhuma peça encontrada.</p>
     {% endfor %}
   </div>
 </div>
@@ -873,12 +920,13 @@
 
 </section>
 
+{# Peças e combos encostavam canto com canto: faltava este respiro. #}
+<div class="espacador"></div>
+{% endif %}
 
-<!--
 
- bilhares mercedes
-
- ======= COMBOS ======= -->
+<!-- ======= COMBOS ======= -->
+{% if combos %}
 <section id="combos-section" class="combos-section">
   <div class="ls-section-intro">
     <div class="ls-section-intro-copy">
@@ -894,7 +942,7 @@
   </div>
 
   <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-combos">&#10094;</button>
+    <button type="button" class="scroll-btn left" id="scroll-left-combos" aria-label="Ver combos anteriores" aria-controls="scroll-container-combos">&#10094;</button>
 
     <div class="scroll-container" id="scroll-container-combos">
       {% for combo in combos %}
@@ -945,11 +993,14 @@
               sai mais barato que os itens avulsos.
             {% endcomment %}
             <div class="oferta-precos combo-precos{% if combo.economia > 0 %} com-economia{% endif %}">
+              {# Brinquedo sob consulta não tem preço: a soma saía "R$ 0,00". #}
+              {% if combo.total_original > 0 %}
               <p class="combo-total">
                 <span class="combo-precos-rotulo">Valor dos brinquedos</span>
                 <span class="total-riscado money"
                       data-valor="{{ combo.total_original }}"></span>
               </p>
+              {% endif %}
 
               <p class="combo-preco">
                 <span class="combo-precos-rotulo">Preço do combo</span>
@@ -989,21 +1040,21 @@
           </div>
         </article>
       </div>
-      {% empty %}
-        <div class="empty-message">Nenhum combo disponível.</div>
       {% endfor %}
     </div>
 
-    <button class="scroll-btn right" id="scroll-right-combos">&#10095;</button>
+    <button type="button" class="scroll-btn right" id="scroll-right-combos" aria-label="Ver próximos combos" aria-controls="scroll-container-combos">&#10095;</button>
   </div>
 </section>
 
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
+{% endif %}
 
 
 <!-- ======= EVENTOS ======= -->
+{% if eventos %}
 <section id="eventos" class="eventos-section">
     <div class="eventos-header">
         <div>
@@ -1093,8 +1144,6 @@
     </div>
 </div>
 
-        {% empty %}
-            <p class="nenhum-produto">Nenhum evento cadastrado.</p>
         {% endfor %}
     </div>
 
@@ -1110,8 +1159,10 @@
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
+{% endif %}
 
 <!-- ======= PROJETOS ======= -->
+{% if projetos %}
 <section id="projetos" class="eventos-section">
 
     <div class="projetos-header">
@@ -1153,8 +1204,6 @@
             </div>
 
         </div>
-        {% empty %}
-            <p class="nenhum-produto">Não há projetos realizados.</p>
         {% endfor %}
     </div>
 
@@ -1200,6 +1249,7 @@
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
+{% endif %}
 
 
 <!-- ======= IDENTIDADE VISUAL UNIFICADA DAS VITRINES ======= -->
@@ -1314,6 +1364,9 @@
 
 <!-- Correções finais: faixa do hero integrada e carrossel de combos completo. -->
 
+{# O mapa conta onde os CLIENTES estão: sem cliente publicado, não vem (a fábrica já está no "Venha até a Lazer & Sport", logo acima). #}
+{% if clientes_mapa %}
+<div class="espacador"></div>
 <section id="clientes-section" class="clientes-section">
 
     <div class="clientes-header">
@@ -1331,7 +1384,6 @@
         </div>
     </div>
 
-    {% if pontos_mapa %}
     <div class="clientes-controls-panel">
         <div class="clientes-toolbar">
             <div class="clientes-filtro">
@@ -1365,15 +1417,9 @@
         </li>
         {% endfor %}
     </ul>
-    {% else %}
-    <p class="clientes-vazio">
-        Em breve, o mapa com todos os clientes atendidos pela Lazer &amp; Sport.
-    </p>
-    {% endif %}
 
 </section>
 
-{% if pontos_mapa %}
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",

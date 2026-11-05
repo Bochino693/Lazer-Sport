@@ -73,6 +73,75 @@ class PermissaoTests(BaseTela):
         self.assertContains(resposta, 'href="/site/objetos-3d/"')
 
 
+class CartoesTests(BaseTela):
+    """A tela em cartões: no ar, desligados e sem objeto (com a sugestão do site na frente)."""
+
+    def test_agrupa_no_ar_desligado_e_sem_objeto_com_a_sugestao_na_frente(self):
+        boliche = Brinquedos.objects.create(nome_brinquedo="Boliche Kids Duplo", descricao="boliche", avaliacao=5, voltz="220V")
+        aquario = Brinquedos.objects.create(nome_brinquedo="Aquário", descricao="peixes", avaliacao=4, voltz="110V")
+        self.enviar({"action": "salvar", "brinquedo": self.pembolim.pk, "arquivo": glb_colorido(), "exibir_na_arena": "on"})
+        self.enviar({"action": "salvar", "brinquedo": self.strike.pk, "arquivo_estatico": "site/arena/modelos/strike-kids.glb"})
+        self.enviar({"action": "delete", "id": self.strike.pk, "confirmacao_exclusao": "confirmar"})
+
+        resposta = self.abrir()
+        ids = lambda chave: [linha["id"] for linha in resposta.context[chave]]  # noqa: E731
+        self.assertEqual(ids("com_objeto"), [self.pembolim.pk])
+        self.assertEqual(ids("desligados"), [self.strike.pk])
+        # o que o site já tem pronto vem antes, mesmo fora da ordem alfabética
+        self.assertEqual(ids("sem_objeto_sugeridos"), [boliche.pk])
+        self.assertEqual(ids("sem_objeto_outros"), [aquario.pk])
+        self.assertEqual(resposta.context["total_sem_objeto"], 2)
+
+        # cada grupo é uma seção com os botões de sempre
+        self.assertContains(resposta, 'data-grupo3d="com"')
+        self.assertContains(resposta, 'data-grupo3d="desligados"')
+        self.assertContains(resposta, 'data-grupo3d="sem"')
+        self.assertContains(resposta, 'data-grupo3d="site"')
+        self.assertContains(resposta, 'data-ver3d="%d"' % self.pembolim.pk)
+        self.assertContains(resposta, 'data-arena="%d"' % self.pembolim.pk)
+        self.assertContains(resposta, 'data-religar="%d"' % self.strike.pk)
+        self.assertContains(resposta, 'data-ligar="%d" data-arquivo="site/arena/modelos/strike-kids.glb"' % boliche.pk)
+        self.assertContains(resposta, "Ligar o objeto do site (Strike Kids)")
+        self.assertContains(resposta, 'data-enviar="%d"' % aquario.pk)
+        # o objeto no ar ganha a janelinha da prévia 3D, pelo endereço do arquivo
+        objeto = ObjetoTresD.objects.get(brinquedo=self.pembolim)
+        self.assertContains(resposta, 'data-previa3d="%s"' % objeto.url)
+
+    def test_a_busca_compara_sem_acento_nome_arquivo_cores_e_jogo(self):
+        self.enviar({"action": "salvar", "brinquedo": self.pembolim.pk, "arquivo": glb_colorido()})
+        Brinquedos.objects.create(nome_brinquedo="Pião Mágico", descricao="gira", avaliacao=4, voltz="110V")
+        linhas = {linha["nome"]: linha for linha in self.abrir().context["linhas"]}
+
+        self.assertIn("piao magico", linhas["Pião Mágico"]["busca"])
+        pembolim = linhas["Pembolim"]["busca"]
+        for termo in ("pembolim", "maquina", "azul", "rosa", "enviado"):
+            self.assertIn(termo, pembolim)
+        self.assertIn("strike kids", linhas["Strike Kids"]["busca"])  # nome e jogo da máquina
+        self.assertEqual(linhas["Strike Kids"]["busca"], linhas["Strike Kids"]["busca"].lower())
+
+    def test_objetos_do_site_trazem_foto_endereco_jogos_e_quem_usa(self):
+        self.enviar({"action": "salvar", "brinquedo": self.strike.pk, "arquivo_estatico": "site/arena/modelos/strike-kids.glb"})
+        modelos = {m["arquivo"]: m for m in self.abrir().context["modelos_do_site"]}
+        strike = modelos["site/arena/modelos/strike-kids.glb"]
+        self.assertEqual((strike["usado_por"], strike["usado_ligado"]), ("Strike Kids", True))
+        self.assertIn("site/arena/modelos/strike-kids/foto.webp", strike["foto"])
+        self.assertIn("site/arena/modelos/strike-kids.glb", strike["url"])
+        self.assertEqual([j["slug"] for j in strike["jogos"]], ["strike-kids"])
+        self.assertTrue(strike["jogos"][0]["url"].endswith("/jogos/strike-kids/"))
+        # o espaço esportivo traz os jogos das telas dele
+        espaco = modelos["site/arena/modelos/espaco-esportivo-modelo-1.glb"]
+        self.assertEqual([j["slug"] for j in espaco["jogos"]], ["swish-arena", "gol-flash-arena"])
+        self.assertEqual((espaco["usado_por"], espaco["usado_ligado"]), ("", False))
+
+        # tirado do brinquedo, o objeto do site continua "dele", mas desligado
+        self.enviar({"action": "delete", "id": self.strike.pk, "confirmacao_exclusao": "confirmar"})
+        pagina = self.abrir()
+        strike = {m["arquivo"]: m for m in pagina.context["modelos_do_site"]}["site/arena/modelos/strike-kids.glb"]
+        self.assertEqual((strike["usado_por"], strike["usado_ligado"]), ("Strike Kids", False))
+        self.assertContains(pagina, "Desligado de <b>Strike Kids</b>", html=False)
+        self.assertContains(pagina, 'data-ver3d-site="strike-kids"')
+
+
 class CadastroTests(BaseTela):
     def test_sobe_o_glb_le_cores_e_medidas_e_fica_no_ar(self):
         resposta = self.enviar({"action": "salvar", "brinquedo": self.pembolim.pk, "arquivo": glb_colorido(), "exibir_na_arena": "on"})

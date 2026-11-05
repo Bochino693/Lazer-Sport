@@ -533,12 +533,15 @@ function inicializarGridPaginado({ gridId, cardSelector, porPagina, prevId, next
 }
 
 /* ======================================================
-   COMBOS — 3 cards inteiros, setas e arraste horizontal
+   COMBOS E PROMOÇÕES — cards inteiros, setas e arraste horizontal
+
+   Era só dos combos: as setas da faixa de promoções existiam no HTML
+   mas nenhum script as ligava -- clicar não fazia nada.
 ====================================================== */
-function inicializarCarrosselCombos() {
-    const trilho = document.getElementById('scroll-container-combos');
-    const anterior = document.getElementById('scroll-left-combos');
-    const proximo = document.getElementById('scroll-right-combos');
+function inicializarCarrosselOfertas(trilhoId, anteriorId, proximoId) {
+    const trilho = document.getElementById(trilhoId);
+    const anterior = document.getElementById(anteriorId);
+    const proximo = document.getElementById(proximoId);
 
     if (!trilho || !anterior || !proximo) return;
 
@@ -632,14 +635,44 @@ function inicializarCarrosselCombos() {
 }
 
 /* ======================================================
+   MENU x SEÇÕES QUE NÃO VIERAM
+
+   A seção da home sem conteúdo não vai para a página (home.html): sem
+   promoção, não há #promocoes-section. Só que o menu do site (base.html)
+   continua oferecendo "Promoções Especiais", "Combos Promocionais",
+   "Mapa de Clientes"... e, aqui na própria home, clicar e não sair do
+   lugar parece defeito. Então, nesta página, o atalho do menu que leva a
+   uma seção que não veio sai do menu. (Vindo de outra página, o link só
+   abre a home no topo.)
+====================================================== */
+function esconderAtalhosSemSecao() {
+    document.querySelectorAll('.ls-topo-painel a[href*="#"], .ls-mobile-nav-list a[href*="#"]').forEach(link => {
+        let destino;
+        try {
+            destino = new URL(link.getAttribute('href'), window.location.href);
+        } catch (erro) {
+            return;
+        }
+        if (destino.pathname !== window.location.pathname || destino.hash.length < 2) return;
+        const alvo = decodeURIComponent(destino.hash.slice(1));
+        if (!document.getElementById(alvo)) {
+            // `hidden` não basta: a folha do menu dá `display` aos links
+            link.style.display = 'none';
+        }
+    });
+}
+
+/* ======================================================
    🚀 INIT GLOBAL
 ====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
+    esconderAtalhosSemSecao();
     renderizarTodasEstrelas();
     renderizarMoedas();
 
     igualarAlturaGridPecas();
-    inicializarCarrosselCombos();
+    inicializarCarrosselOfertas('scroll-container-combos', 'scroll-left-combos', 'scroll-right-combos');
+    inicializarCarrosselOfertas('scroll-container-promocoes', 'scroll-left-promocoes', 'scroll-right-promocoes');
 
     inicializarProdutosClientSide();
     inicializarPecasClientSide();
