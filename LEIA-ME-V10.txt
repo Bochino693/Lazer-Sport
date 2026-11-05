@@ -335,3 +335,24 @@ Dependência nova: rjsmin (requirements.txt).
    CORRIGIDO no painel inteiro: salvar numa janela atualizava a lista no meio
    da animação de fechar e dava erro no console ("reading 'style'").
    Migrações novas: 0131 (esquema) e 0132 (dados).
+
+17) ÁREA INTERNA REPAGINADA (Sol, Lua e Eclipse combinando)
+   A identidade agora é PÔR DO SOL DE FLIPERAMA, da mesma família de neon do
+   site, mas sem o azul (o azul continua sendo do /adm, para ninguém
+   confundir os dois painéis):
+   - LUA (escuro): fundo ameixa quase preto, ação em tangerina que desmancha
+     em magenta, teal para confirmar.
+   - SOL (claro): papel pêssego, o MESMO laranja e magenta, tinta ameixa —
+     é o par exato da lua, de dia.
+   - ECLIPSE (suave): lilás de crepúsculo, no meio dos dois.
+   O que acende: botão principal e "Novo orçamento" em degradê laranja →
+   magenta, item ativo do menu (agora com o nome em tinta escura — antes era
+   creme sobre âmbar e mal se lia), fio colorido embaixo do topo e do título
+   de cada tela, faixa colorida e brilho nos cards de número, ícones do menu
+   com uma cor por seção (dá para achar a seção no menu recolhido pela cor),
+   janelas com fio de neon no topo. Tabela, formulário e texto continuam
+   em superfície calma, para o que acende chamar atenção.
+   Contraste conferido nos três temas (texto ≥ 4,5:1 em todos os pares que o
+   painel usa). Login e saída ganharam o mesmo visual. Nada de banco mudou.
+   CORRIGIDO: o rodapé da janela de movimentação do estoque usava cores que
+   não existiam (ficava transparente ao rolar).

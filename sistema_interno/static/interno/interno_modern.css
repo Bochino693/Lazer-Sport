@@ -7,9 +7,18 @@
    achando que estava na produção. Cor é o jeito mais rápido de o olho
    saber onde está, antes de ler qualquer título.
 
-   Então o /adm fica com o azul do site, e aqui é grafite quente com
-   âmbar — leitura de console de chão de fábrica, que é onde este painel
-   é usado. Não é enfeite: é o que separa dois lugares parecidos.
+   Então o /adm fica com o azul do site, e aqui é PÔR DO SOL DE
+   FLIPERAMA: fundo ameixa (roxo bem escuro, longe do azul-marinho do
+   /adm), ação em laranja-tangerina que desmancha em magenta, e o teal
+   como cor fria de confirmação. É a mesma família de neon do site --
+   para a equipe sentir que está na casa da Lazer & Sport -- mas noutra
+   temperatura, para o olho saber onde está antes de ler qualquer título.
+
+   A primeira versão era grafite com âmbar: separava bem, mas apagava. O
+   painel é usado o dia inteiro, e uma tela sem vida cansa tanto quanto
+   uma tela berrante. Os acentos agora ACENDEM (o degradê da marca, o fio
+   colorido do topo, o item ativo do menu) e as superfícies ficam calmas,
+   para o que acende chamar atenção de verdade.
 
    OS NOMES DAS VARIÁVEIS SÃO HISTÓRICOS. --blue virou o âmbar e --cyan
    virou o teal. Ficaram assim porque são citados em umas duzentas linhas
@@ -36,8 +45,8 @@
      TINTA       text, text-2, muted, muted-2 -- do título ao rodapé de
                  apoio; e `--tinta`, que é o preto que se escreve EM CIMA
                  de um acento aceso e por isso não muda com o tema.
-     ACENTO      cada família (acento/âmbar, apoio/teal, green, red,
-                 yellow, violet, info) tem quatro papéis:
+     ACENTO      cada família (acento/tangerina, apoio/teal, green, red,
+                 yellow, violet, info, magenta) tem quatro papéis:
                    --x         a cor cheia, para preencher botão e selo
                    --x-claro   a cor como TEXTO -- a que precisa contraste
                    --x-linha   a cor como borda
@@ -52,96 +61,103 @@
    ====================================================================== */
 
 /* ----------------------------------------------------------------------
-   LUA — o painel escuro, que é como ele sempre foi.
+   LUA — noite de fliperama.
 
-   Grafite quente com âmbar, leitura de console de chão de fábrica. É o
-   padrão porque é onde este painel é usado: galpão, à noite, com a tela
-   no braço. Os valores aqui são exatamente os de antes.
+   Fundo ameixa quase preto, tangerina acesa e magenta. É o padrão porque
+   é onde este painel é usado: galpão, à noite, com a tela no braço. O
+   roxo é baixo de propósito (5% de luz): tinge sem virar "tela roxa", e
+   é ele que faz o laranja e o teal parecerem neon.
    ---------------------------------------------------------------------- */
 :root,
 :root[data-tema="lua"]{
   --astro:173,193,255;--astro-bg:#141b2f;--astro-text:#d5e0ff;--astro-esq:#adc1ff;--astro-dir:#adc1ff;
   color-scheme:dark;
 
-  /* superfícies: grafite quente, e não azul-noite */
-  --bg-0:#13100B;
-  --bg-1:#181410;
-  --bg-2:#1E1913;
-  --panel:#231D16;
-  --panel-2:#2B241B;
-  --panel-3:#342B20;
-  --panel-soft:#1A1610;
-  --sidebar:#0D0B08;
-  --sidebar-2:#17120B;
-  --bg-rgb:24,20,14;
-  --panel-rgb:43,36,27;
-  --sidebar-rgb:13,11,8;
+  /* superfícies: ameixa da noite, e não azul-marinho (o azul é do /adm) */
+  --bg-0:#110C1A;
+  --bg-1:#160F21;
+  --bg-2:#1B1328;
+  --panel:#20172E;
+  --panel-2:#291E3A;
+  --panel-3:#332645;
+  --panel-soft:#191223;
+  --sidebar:#0B0712;
+  --sidebar-2:#150D20;
+  --bg-rgb:22,15,33;
+  --panel-rgb:41,30,58;
+  --sidebar-rgb:11,7,18;
   /* Quanto da sombra sobra. Sombra de papel é curta e leve; a do
      escuro, transposta, deixa cada card com uma poça embaixo. */
   --sombra-forca:1;
 
   /* linhas */
-  --line-soft:#2C251B;
-  --line:#3F3527;
-  --line-forte:#7A6540;
+  --line-soft:#2B2040;
+  --line:#3E3055;
+  --line-forte:#7B5FA3;
 
   /* tinta */
-  --text:#FCF8F1;
-  --text-2:#E7DDCB;
-  --muted:#B3A38C;
-  --muted-2:#998972;
-  --muted-rgb:179,163,140;
+  --text:#FBF8FF;
+  --text-2:#E7DEF6;
+  --muted:#B7AACB;
+  --muted-2:#A396B9;
+  --muted-rgb:183,170,203;
   /* O preto que se escreve sobre um acento aceso. Não muda com o tema:
      o botão âmbar continua âmbar no claro, e a letra dele continua
      preta. Trocá-la seria escrever creme sobre âmbar. */
-  --tinta:#2A1B05;
+  --tinta:#2B1004;
 
-  /* âmbar: a cor de ação do painel */
-  --acento:#F2A93B;
-  --acento-2:#D98E22;
-  --acento-claro:#FFD591;
-  --acento-linha:#A17D42;
-  --acento-fundo:#241B0B;
-  --acento-fundo-2:#392B13;
-  --acento-tinta:#2A1B05;
-  --acento-rgb:242,169,59;
+  /* tangerina: a cor de ação do painel */
+  --acento:#FF9238;
+  --acento-2:#F2741F;
+  --acento-claro:#FFBE7A;
+  --acento-linha:#A8683A;
+  --acento-fundo:#25172A;
+  --acento-fundo-2:#341F33;
+  --acento-tinta:#2B1004;
+  --acento-rgb:255,146,56;
+  /* magenta: o fim do degradê de pôr do sol -- o par do laranja */
+  --magenta:#FF4FA8;
+  --magenta-2:#E8318E;
+  --magenta-claro:#FF9CCD;
+  --magenta-tinta:#3A0620;
+  --magenta-rgb:255,79,168;
 
   /* teal: confirmação e destaque frio */
-  --apoio:#3DD9C0;
-  --apoio-2:#2BB9A3;
-  --apoio-claro:#7FE6D5;
-  --apoio-tinta:#06302A;
-  --apoio-rgb:61,217,192;
-  --apoio-fundo-rgb:30,62,58;
+  --apoio:#2EE6C9;
+  --apoio-2:#1FC2A8;
+  --apoio-claro:#7FF0DD;
+  --apoio-tinta:#04302A;
+  --apoio-rgb:46,230,201;
+  --apoio-fundo-rgb:24,56,62;
 
-  --green:#5FD68A;
-  --green-2:#34A862;
-  --green-claro:#8FE9B6;
-  --green-linha:#3E8F5E;
-  --green-fundo:#0E2A1A;
-  --green-fundo-2:#14381F;
+  --green:#5BE38F;
+  --green-2:#33B566;
+  --green-claro:#93EDB8;
+  --green-linha:#3E9A62;
+  --green-fundo:#0E2A1D;
+  --green-fundo-2:#143823;
   --green-tinta:#06301A;
-  --green-rgb:95,214,138;
+  --green-rgb:91,227,143;
 
-  --red:#FF7A6B;
-  --red-claro:#FF9AAA;
-  --red-linha:#A4544B;
-  --red-fundo:#2C1310;
-  --red-fundo-2:#3A1A16;
-  --red-tinta:#3A0E08;
-  --red-rgb:255,122,107;
+  --red:#FF6470;
+  --red-claro:#FF9AA4;
+  --red-linha:#A84B57;
+  --red-fundo:#2E1119;
+  --red-fundo-2:#3D1822;
+  --red-tinta:#3A0810;
+  --red-rgb:255,100,112;
 
-  --yellow:#FFC94D;
-  --yellow-claro:#FFE09A;
-  --yellow-rgb:255,201,77;
+  --yellow:#FFD23F;
+  --yellow-claro:#FFE38C;
+  --yellow-rgb:255,210,63;
 
-  --violet:#C9A2FF;
-  --violet-claro:#D9BCFF;
-  --violet-rgb:201,162,255;
+  --violet:#B98BFF;
+  --violet-claro:#D4B8FF;
+  --violet-rgb:185,139,255;
 
-  --info:#4F91FF;
-  --info-claro:#87C8FF;
-  --info-rgb:73,155,255;
+  --info:#4FA3FF;
+  --info-claro:#8FC6FF;
+  --info-rgb:79,163,255;
 
   /* O "branco" das sobreposições: o véu que separa uma camada da outra.
      No claro ele vira escuro, senão sumiria dentro do papel. */
@@ -158,25 +174,27 @@
   /* O TOPO CLARO DOS PREENCHIMENTOS.
      Vale o mesmo nos três temas: um botão aceso é aceso em qualquer
      tema. Quem escurece no papel é `--x-claro`, que é a cor LIDA. */
-  --acento-brilho:#FFD591;
-  --apoio-brilho:#7FE6D5;
-  --green-brilho:#8FE9B6;
-  --red-brilho:#FF9AAA;
-  --yellow-brilho:#FFE09A;
-  --violet-brilho:#D9BCFF;
-  --info-brilho:#87C8FF;
+  --acento-brilho:#FFC978;
+  --apoio-brilho:#8CF5E4;
+  --green-brilho:#9CF0BF;
+  --red-brilho:#FFA3AD;
+  --yellow-brilho:#FFE79A;
+  --violet-brilho:#D9C2FF;
+  --info-brilho:#A3D1FF;
+  --magenta-brilho:#FFA6D5;
 
-  --acento-texto:#F2A93B;
-  --apoio-texto:#3DD9C0;
-  --green-texto:#5FD68A;
-  --red-texto:#FF7A6B;
-  --yellow-texto:#FFC94D;
-  --violet-texto:#C9A2FF;
-  --info-texto:#4F91FF;
+  --acento-texto:#FFA95C;
+  --apoio-texto:#2EE6C9;
+  --green-texto:#5BE38F;
+  --red-texto:#FF808B;
+  --yellow-texto:#FFD23F;
+  --violet-texto:#C4A3FF;
+  --info-texto:#6BB4FF;
+  --magenta-texto:#FF7DBF;
 
-  --sombra-rgb:0,0,0;
-  --shadow:0 24px 70px rgba(0,0,0,.42);
-  --shadow-soft:0 12px 34px rgba(0,0,0,.28);
+  --sombra-rgb:4,0,12;
+  --shadow:0 24px 70px rgba(4,0,12,.5);
+  --shadow-soft:0 12px 34px rgba(4,0,12,.34);
 
   --blue:var(--acento);    /* nomes históricos, ver o bloco acima */
   --blue-2:var(--acento-2);
@@ -193,10 +211,12 @@
 }
 
 /* ----------------------------------------------------------------------
-   SOL — papel quente, tinta escura.
+   SOL — tarde de sol: papel pêssego, tinta ameixa.
 
-   Não é branco puro: um creme baixo mantém a temperatura da marca e não
-   queima a vista de quem passa o dia na tela. O que muda de verdade aqui
+   O par exato da lua: o mesmo laranja e o mesmo magenta, e a tinta é o
+   ameixa da noite escurecido -- por isso os dois temas parecem um só,
+   de dia e de noite. Não é branco puro: um pêssego baixo mantém a
+   temperatura da marca e não queima a vista de quem passa o dia na tela. O que muda de verdade aqui
    não é o fundo -- é o acento. Um âmbar de fundo claro continua âmbar
    quando PREENCHE um botão, e escurece até 4,5:1 quando é LIDO como
    texto. Sem essa distinção, o tema claro fica bonito na captura de tela
@@ -206,81 +226,87 @@
   --astro:255,190,66;--astro-bg:#211a10;--astro-text:#ffda80;--astro-esq:#ffbe42;--astro-dir:#ffbe42;
   color-scheme:light;
 
-  --bg-0:#F4EEE2;
-  --bg-1:#FAF6EE;
-  --bg-2:#FDFAF4;
+  --bg-0:#FFF3E9;
+  --bg-1:#FFF8F2;
+  --bg-2:#FFFBF7;
   --panel:#FFFFFF;
-  --panel-2:#FAF5EB;
-  --panel-3:#F2EADB;
-  --panel-soft:#F7F2E7;
-  --sidebar:#FBF7EF;
-  --sidebar-2:#F3EDE0;
-  --bg-rgb:255,252,246;
-  --panel-rgb:250,245,235;
-  --sidebar-rgb:247,242,231;
+  --panel-2:#FFF7F0;
+  --panel-3:#FBEADF;
+  --panel-soft:#FFF4EC;
+  --sidebar:#FFFAF5;
+  --sidebar-2:#FFEDE2;
+  --bg-rgb:255,248,242;
+  --panel-rgb:255,247,240;
+  --sidebar-rgb:255,250,245;
   /* Quanto da sombra sobra. Sombra de papel é curta e leve; a do
      escuro, transposta, deixa cada card com uma poça embaixo. */
   --sombra-forca:.38;
 
-  --line-soft:#E9DFCC;
-  --line:#D8CAAF;
-  --line-forte:#B39A6C;
+  --line-soft:#F4E1D6;
+  --line:#E8CDBE;
+  --line-forte:#C8977F;
 
-  --text:#1D1710;
-  --text-2:#3A3226;
-  --muted:#6B5F4E;
-  --muted-2:#6F624F;
-  --muted-rgb:107,95,78;
-  --tinta:#2A1B05;
+  --text:#1F1229;
+  --text-2:#3C2B48;
+  --muted:#6C5A78;
+  --muted-2:#685674;
+  --muted-rgb:108,90,120;
+  --tinta:#2B1004;
 
-  --acento:#E89A1E;
-  --acento-2:#B87613;
-  --acento-claro:#7C5006;
-  --acento-linha:#D9AE62;
-  --acento-fundo:#FDF4E3;
-  --acento-fundo-2:#F8E8CB;
-  --acento-tinta:#2A1B05;
-  --acento-rgb:196,132,32;
+  --acento:#FF8A2A;
+  --acento-2:#E66D10;
+  --acento-claro:#A54300;
+  --acento-linha:#F2B07E;
+  --acento-fundo:#FFF1E6;
+  --acento-fundo-2:#FFE3CF;
+  --acento-tinta:#2B1004;
+  --acento-rgb:240,120,30;
+  /* magenta: o fim do degradê de pôr do sol -- o par do laranja */
+  --magenta:#F2389A;
+  --magenta-2:#CF1F7C;
+  --magenta-claro:#B3146A;
+  --magenta-tinta:#2B0418;
+  --magenta-rgb:226,48,140;
 
-  --apoio:#12A896;
-  --apoio-2:#0C8676;
-  --apoio-claro:#0A6A5D;
+  --apoio:#12B8A0;
+  --apoio-2:#0C937F;
+  --apoio-claro:#08695B;
   --apoio-tinta:#04241F;
-  --apoio-rgb:16,150,134;
-  --apoio-fundo-rgb:214,240,236;
+  --apoio-rgb:16,160,140;
+  --apoio-fundo-rgb:212,243,237;
 
-  --green:#2FA45F;
-  --green-2:#1E7C45;
-  --green-claro:#10643A;
-  --green-linha:#8CC9A6;
-  --green-fundo:#E9F6EE;
-  --green-fundo-2:#D8EEE1;
+  --green:#22AE5F;
+  --green-2:#178648;
+  --green-claro:#0E6A38;
+  --green-linha:#8DD2AA;
+  --green-fundo:#E8F8EF;
+  --green-fundo-2:#D3F0DF;
   --green-tinta:#052A16;
-  --green-rgb:36,138,80;
+  --green-rgb:30,150,85;
 
-  --red:#C42A1D;
-  --red-claro:#A82118;
-  --red-linha:#E8AAA3;
-  --red-fundo:#FDEDEB;
-  --red-fundo-2:#F9DCD8;
+  --red:#C9283C;
+  --red-claro:#B21E33;
+  --red-linha:#F0A7B1;
+  --red-fundo:#FFEDF0;
+  --red-fundo-2:#FCDCE1;
   /* Sobre o vermelho cheio do tema claro, tinta escura dá 3,9:1 -- o selo
      de urgência ficava justamente no limite de não se ler. Aqui a tinta
      clareia; nos outros temas o vermelho é mais aceso e a tinta escura é
      a leitura certa. */
-  --red-tinta:#FFF3F1;
-  --red-rgb:206,58,44;
+  --red-tinta:#FFF4F5;
+  --red-rgb:210,45,65;
 
-  --yellow:#D89A00;
+  --yellow:#F2B200;
   --yellow-claro:#7A5600;
-  --yellow-rgb:200,150,10;
+  --yellow-rgb:220,160,0;
 
-  --violet:#7B4FD1;
-  --violet-claro:#5A2FAE;
-  --violet-rgb:110,70,190;
+  --violet:#8A4FE6;
+  --violet-claro:#6431BE;
+  --violet-rgb:125,75,215;
 
-  --info:#2C74D6;
-  --info-claro:#14548F;
-  --info-rgb:32,100,190;
+  --info:#2D80E8;
+  --info-claro:#1557A6;
+  --info-rgb:40,110,210;
 
   /* A cor que se LÊ, escurecida até passar de 4,5:1 sobre o creme.
      O acento de PREENCHIMENTO (acima) continua aceso: é a cor de
@@ -288,45 +314,47 @@
   /* O TOPO CLARO DOS PREENCHIMENTOS.
      Vale o mesmo nos três temas: um botão aceso é aceso em qualquer
      tema. Quem escurece no papel é `--x-claro`, que é a cor LIDA. */
-  --acento-brilho:#FFD591;
-  --apoio-brilho:#7FE6D5;
-  --green-brilho:#8FE9B6;
-  --red-brilho:#FF9AAA;
-  --yellow-brilho:#FFE09A;
-  --violet-brilho:#D9BCFF;
-  --info-brilho:#87C8FF;
+  --acento-brilho:#FFC978;
+  --apoio-brilho:#8CF5E4;
+  --green-brilho:#9CF0BF;
+  --red-brilho:#FFA3AD;
+  --yellow-brilho:#FFE79A;
+  --violet-brilho:#D9C2FF;
+  --info-brilho:#A3D1FF;
+  --magenta-brilho:#FFA6D5;
 
-  --acento-texto:#7C5006;
-  --apoio-texto:#0A6A5D;
-  --green-texto:#10643A;
-  --red-texto:#A82118;
+  --acento-texto:#A54300;
+  --apoio-texto:#08695B;
+  --green-texto:#0E6A38;
+  --red-texto:#B21E33;
   --yellow-texto:#7A5600;
-  --violet-texto:#5A2FAE;
-  --info-texto:#14548F;
+  --violet-texto:#6431BE;
+  --info-texto:#1557A6;
+  --magenta-texto:#B3146A;
 
   /* O véu vira escuro: sobre papel, um branco a 6% não existe. */
   /* Sobre papel o x já é escuro; inverter faria sumir. */
   --filtro-btn-close:grayscale(1) brightness(.35);
 
-  --verniz-rgb:38,28,16;
+  --verniz-rgb:42,22,48;
   --verniz-solido:#FFFFFF;
 
-  --sombra-rgb:64,48,26;
+  --sombra-rgb:72,36,60;
   /* Sombra de papel é curta e fraca. A do escuro, transposta, deixa
      cada card com uma poça marrom embaixo. */
-  --shadow:0 18px 44px rgba(64,48,26,.13);
-  --shadow-soft:0 8px 20px rgba(64,48,26,.09);
+  --shadow:0 18px 44px rgba(72,36,60,.12);
+  --shadow-soft:0 8px 20px rgba(72,36,60,.08);
 }
 
 /* ----------------------------------------------------------------------
-   ECLIPSE — o meio-termo, e não a média preguiçosa dos dois.
+   ECLIPSE — crepúsculo: o meio-termo, e não a média preguiçosa dos dois.
 
    A tentação era pegar claro e escuro e tirar a média: sai um cinza sem
    caráter, com texto a 3:1 de contraste, que é o pior dos três mundos.
    Aqui o meio-termo é de SUPERFÍCIE, não de tinta: os fundos sobem para
-   um cinza-âmbar de entardecer -- nem o quase-preto da lua, nem o papel
-   do sol -- e a tinta continua clara e cheia, para o contraste ficar
-   acima de 7:1 no texto corrido.
+   um lilás de crepúsculo -- nem o quase-preto da lua, nem o papel do
+   sol -- e a tinta continua clara e cheia, para o contraste ficar acima
+   de 7:1 no texto corrido.
 
    É o tema de quem acha a lua escura demais na sala clara e o sol claro
    demais no galpão.
@@ -344,98 +372,106 @@
      Aqui os fundos ficam por volta de 22 a 30%, que é onde o olho lê
      "entardecer" e não "noite". A tinta continua clara e cheia -- é ela
      que sustenta o contraste quando o fundo sobe. */
-  --bg-0:#3A342C;
-  --bg-1:#413A31;
-  --bg-2:#473F35;
-  --panel:#4C443A;
-  --panel-2:#564D41;
-  --panel-3:#605648;
-  --panel-soft:#413A31;
-  --sidebar:#2F2922;
-  --sidebar-2:#39322A;
-  --bg-rgb:58,52,44;
-  --panel-rgb:76,68,58;
-  --sidebar-rgb:47,41,34;
+  --bg-0:#392D47;
+  --bg-1:#3F3250;
+  --bg-2:#453756;
+  --panel:#4A3B5D;
+  --panel-2:#544468;
+  --panel-3:#5F4E74;
+  --panel-soft:#3F3250;
+  --sidebar:#2C2238;
+  --sidebar-2:#362A45;
+  --bg-rgb:57,45,71;
+  --panel-rgb:74,59,93;
+  --sidebar-rgb:44,34,56;
   /* Quanto da sombra sobra. Sombra de papel é curta e leve; a do
      escuro, transposta, deixa cada card com uma poça embaixo. */
   --sombra-forca:.75;
 
-  --line-soft:#5A5044;
-  --line:#6E6252;
-  --line-forte:#9E8B6A;
+  --line-soft:#584A6B;
+  --line:#6C5B82;
+  --line-forte:#A68CC6;
 
-  --text:#FFFCF6;
-  --text-2:#F0E9DB;
-  --muted:#CFC4B1;
-  --muted-2:#C2B6A1;
-  --muted-rgb:207,196,177;
-  --tinta:#241703;
+  --text:#FFFBFF;
+  --text-2:#F2E9FB;
+  --muted:#D5C8E4;
+  --muted-2:#C9BADA;
+  --muted-rgb:213,200,228;
+  --tinta:#261003;
 
-  --acento:#F7B85F;
-  --acento-2:#DE9A31;
-  --acento-claro:#FFDCA6;
-  --acento-linha:#BB9A62;
-  --acento-fundo:#4A3E2C;
-  --acento-fundo-2:#5A4A33;
-  --acento-tinta:#2A1B05;
-  --acento-rgb:247,184,95;
+  --acento:#FFA556;
+  --acento-2:#F0862F;
+  --acento-claro:#FFCB94;
+  --acento-linha:#C08A63;
+  --acento-fundo:#4A3850;
+  --acento-fundo-2:#5A4255;
+  --acento-tinta:#2B1004;
+  --acento-rgb:255,165,86;
+  /* magenta: o fim do degradê de pôr do sol -- o par do laranja */
+  --magenta:#FF72C0;
+  --magenta-2:#F04FA8;
+  --magenta-claro:#FFB8DE;
+  --magenta-tinta:#3A0620;
+  --magenta-rgb:255,114,192;
 
-  --apoio:#5FE4CF;
-  --apoio-2:#37C0AA;
-  --apoio-claro:#9FF0E3;
-  --apoio-tinta:#06302A;
-  --apoio-rgb:95,228,207;
-  --apoio-fundo-rgb:56,86,81;
+  --apoio:#5CF0D8;
+  --apoio-2:#36CDB4;
+  --apoio-claro:#A3F6E9;
+  --apoio-tinta:#04302A;
+  --apoio-rgb:92,240,216;
+  --apoio-fundo-rgb:56,82,92;
 
-  --green:#7FE2A2;
-  --green-2:#48BC79;
-  --green-claro:#ADF0CA;
-  --green-linha:#59A776;
-  --green-fundo:#39473C;
-  --green-fundo-2:#425544;
+  --green:#7FE8A6;
+  --green-2:#4CC27E;
+  --green-claro:#B0F2CB;
+  --green-linha:#5CAA7E;
+  --green-fundo:#3B4A4A;
+  --green-fundo-2:#435850;
   --green-tinta:#06301A;
-  --green-rgb:127,226,162;
+  --green-rgb:127,232,166;
 
-  --red:#FF988A;
-  --red-claro:#FFCED4;
-  --red-linha:#BC736A;
-  --red-fundo:#4C3831;
-  --red-fundo-2:#5A4038;
-  --red-tinta:#3A0E08;
-  --red-rgb:255,152,138;
+  --red:#FF8C98;
+  --red-claro:#FFCCD2;
+  --red-linha:#C0707D;
+  --red-fundo:#57394C;
+  --red-fundo-2:#654152;
+  --red-tinta:#3A0810;
+  --red-rgb:255,140,152;
 
-  --yellow:#FFD976;
-  --yellow-claro:#FFEBB8;
-  --yellow-rgb:255,217,118;
+  --yellow:#FFDB6E;
+  --yellow-claro:#FFECB0;
+  --yellow-rgb:255,219,110;
 
-  --violet:#D7B6FF;
-  --violet-claro:#E5D0FF;
-  --violet-rgb:215,182,255;
+  --violet:#CFAEFF;
+  --violet-claro:#E3D0FF;
+  --violet-rgb:207,174,255;
 
-  --info:#7DAEFF;
-  --info-claro:#A6D6FF;
-  --info-rgb:125,174,255;
+  --info:#84B9FF;
+  --info-claro:#B0D6FF;
+  --info-rgb:132,185,255;
 
   /* O TOPO CLARO DOS PREENCHIMENTOS.
      Vale o mesmo nos três temas: um botão aceso é aceso em qualquer
      tema. Quem escurece no papel é `--x-claro`, que é a cor LIDA. */
-  --acento-brilho:#FFD591;
-  --apoio-brilho:#7FE6D5;
-  --green-brilho:#8FE9B6;
-  --red-brilho:#FF9AAA;
-  --yellow-brilho:#FFE09A;
-  --violet-brilho:#D9BCFF;
-  --info-brilho:#87C8FF;
+  --acento-brilho:#FFC978;
+  --apoio-brilho:#8CF5E4;
+  --green-brilho:#9CF0BF;
+  --red-brilho:#FFA3AD;
+  --yellow-brilho:#FFE79A;
+  --violet-brilho:#D9C2FF;
+  --info-brilho:#A3D1FF;
+  --magenta-brilho:#FFA6D5;
 
   /* Sobre o entardecer o acento precisa subir um pouco: o fundo
      médio come contraste que o quase-preto dava de graça. */
-  --acento-texto:#FFD08A;
-  --apoio-texto:#8FEDDD;
-  --green-texto:#A2EDBF;
-  --red-texto:#FFB0A4;
-  --yellow-texto:#FFE49E;
-  --violet-texto:#E2CBFF;
-  --info-texto:#A3CBFF;
+  --acento-texto:#FFC88C;
+  --apoio-texto:#8FF3E2;
+  --green-texto:#A4EEC2;
+  --red-texto:#FFB5BE;
+  --yellow-texto:#FFE59E;
+  --violet-texto:#E0CBFF;
+  --info-texto:#AFD2FF;
+  --magenta-texto:#FFB3DD;
 
   /* Fundo médio ainda é escuro para um desenho preto. */
   --filtro-btn-close:invert(1) grayscale(1) brightness(1.8);
@@ -443,9 +479,9 @@
   --verniz-rgb:255,255,255;
   --verniz-solido:#FFFFFF;
 
-  --sombra-rgb:0,0,0;
-  --shadow:0 20px 52px rgba(0,0,0,.30);
-  --shadow-soft:0 10px 26px rgba(0,0,0,.20);
+  --sombra-rgb:14,6,26;
+  --shadow:0 20px 52px rgba(14,6,26,.34);
+  --shadow-soft:0 10px 26px rgba(14,6,26,.24);
 }
 
 
@@ -4789,6 +4825,221 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
   .ls-tema-painel{padding:13px}
   .ls-tema-botao{grid-template-columns:28px minmax(0,1fr) 36px 15px;gap:6px}
   .ls-tema-amostra svg{width:36px}
+}
+
+/* ======================================================================
+   A CAMADA DE VIDA — o que acende
+
+   A paleta nova só funciona se o que acende for POUCO e sempre o mesmo:
+   a ação da tela (botão principal, item ativo do menu, "Novo
+   orçamento"), o fio do topo e o número de cada card. Todo o resto --
+   tabela, formulário, texto corrido -- fica nas superfícies calmas, e é
+   por contraste com elas que a ação chama o olho.
+
+   Três peças fazem quase todo o trabalho e moram aqui, e não em cada
+   tema, porque são feitas de tokens:
+
+     --degrade-marca   tangerina que desmancha em magenta: o preenchimento
+                       da ação. A tinta escura passa de 4,5:1 nos três
+                       pontos dele (o claro, o laranja e o magenta), então
+                       o rótulo se lê em qualquer pedaço do botão.
+     --degrade-texto   o mesmo pôr do sol, mas com as cores de LEITURA
+                       (`-texto`): é o que pinta título em degradê sem
+                       sumir no papel do tema claro.
+     --degrade-fio     o fio de neon do topo e dos cabeçalhos -- laranja,
+                       magenta, violeta, teal. É a assinatura do painel.
+   ====================================================================== */
+:root{
+  --degrade-marca:linear-gradient(118deg,var(--acento-brilho) 0%,var(--acento) 40%,var(--magenta) 100%);
+  --degrade-texto:linear-gradient(100deg,var(--acento-texto) 10%,var(--magenta-texto) 90%);
+  --degrade-fio:linear-gradient(90deg,var(--acento),var(--magenta) 38%,var(--violet) 68%,var(--apoio));
+  --halo-acao:0 10px 28px rgba(var(--acento-rgb),.26),0 4px 14px rgba(var(--magenta-rgb),.16);
+}
+
+::selection{color:var(--text);background:rgba(var(--magenta-rgb),.32)}
+
+/* O fundo: três luzes baixas -- laranja em cima à esquerda, magenta à
+   direita, teal embaixo. No papel do sol elas viram pêssego e rosa, no
+   escuro viram o brilho de fliperama ao fundo do galpão. */
+body.ls-body{
+  background:
+    radial-gradient(58rem 34rem at -10% -14%,rgba(var(--acento-rgb),.15),transparent 62%),
+    radial-gradient(48rem 30rem at 112% 2%,rgba(var(--magenta-rgb),.11),transparent 62%),
+    radial-gradient(46rem 30rem at 64% 112%,rgba(var(--apoio-rgb),.07),transparent 62%),
+    linear-gradient(180deg,var(--bg-0),var(--bg-1))!important;
+  background-color:var(--bg-0)!important;
+}
+
+/* ---------------------------------------------------------- lateral */
+.ls-sidebar{
+  background:
+    radial-gradient(22rem 18rem at 12% -4%,rgba(var(--acento-rgb),.20),transparent 70%),
+    radial-gradient(20rem 22rem at 110% 104%,rgba(var(--magenta-rgb),.15),transparent 70%),
+    linear-gradient(180deg,var(--sidebar),var(--sidebar-2));
+  background-color:var(--sidebar);
+  border-right-color:rgba(var(--magenta-rgb),.14);
+}
+/* O filete da borda acende de cima para baixo, como o do topo. */
+.ls-sidebar::after{
+  content:"";position:absolute;top:0;right:0;bottom:0;width:1px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(var(--acento-rgb),.7),rgba(var(--magenta-rgb),.45) 40%,transparent 85%);
+}
+.ls-brand-text strong{
+  background:var(--degrade-texto);-webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+}
+
+/* Cada seção do menu tem a sua cor no ícone. Com a lateral recolhida em
+   trilho, é a cor que diz onde começa vendas e onde começa produção --
+   antes eram vinte ícones do mesmo cinza. */
+.ls-nav-section:nth-of-type(6n+1) .ls-nav-icon{--nav-cor:var(--acento-texto)}
+.ls-nav-section:nth-of-type(6n+2) .ls-nav-icon{--nav-cor:var(--magenta-texto)}
+.ls-nav-section:nth-of-type(6n+3) .ls-nav-icon{--nav-cor:var(--apoio-texto)}
+.ls-nav-section:nth-of-type(6n+4) .ls-nav-icon{--nav-cor:var(--violet-texto)}
+.ls-nav-section:nth-of-type(6n+5) .ls-nav-icon{--nav-cor:var(--info-texto)}
+.ls-nav-section:nth-of-type(6n) .ls-nav-icon{--nav-cor:var(--green-texto)}
+.ls-nav-icon{
+  color:var(--nav-cor,var(--muted));
+  background:color-mix(in srgb,var(--nav-cor,var(--muted)) 11%,transparent);
+  transition:background .18s ease,color .18s ease,transform .18s ease;
+}
+.ls-nav-item:hover{
+  border-color:rgba(var(--acento-rgb),.16);
+  background:linear-gradient(100deg,rgba(var(--acento-rgb),.10),rgba(var(--magenta-rgb),.05));
+}
+.ls-nav-item:hover .ls-nav-icon{
+  color:var(--nav-cor,var(--text));
+  background:color-mix(in srgb,var(--nav-cor,var(--muted)) 20%,transparent);transform:scale(1.06);
+}
+/* O ATIVO É O PÔR DO SOL, COM TINTA ESCURA.
+
+   Antes o item ativo era âmbar com o nome em CREME por cima: 2:1 de
+   contraste, o nome mais importante do menu era o menos legível. */
+.ls-nav-item.active,
+.ls-sidebar.expandida .ls-nav-item.active{
+  color:var(--acento-tinta)!important;border-color:transparent;
+  background:var(--degrade-marca);box-shadow:var(--halo-acao);
+}
+.ls-nav-item.active .ls-nav-icon,
+.ls-nav-item.active:hover .ls-nav-icon{
+  color:var(--acento-tinta);background:color-mix(in srgb,var(--acento-brilho) 55%,transparent);transform:none;
+}
+.ls-nav-item.active .ls-nav-count{
+  color:var(--acento-tinta);border-color:transparent;background:color-mix(in srgb,var(--acento-brilho) 60%,transparent);
+}
+.ls-user-avatar{
+  color:var(--acento-tinta);border-color:transparent;background:var(--degrade-marca);
+  box-shadow:0 6px 16px rgba(var(--magenta-rgb),.22);
+}
+
+/* ---------------------------------------------------------- topo */
+.ls-topbar{border-bottom-color:transparent}
+.ls-topbar::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;pointer-events:none;
+  background:var(--degrade-fio);opacity:.9;
+}
+
+/* ---------------------------------------------------------- cabeçalho de tela */
+.ls-page-hero::after{
+  content:"";position:absolute;left:0;bottom:-1px;width:84px;height:3px;border-radius:3px;
+  background:var(--degrade-fio);
+}
+.ls-page-kicker,.app-eyebrow{
+  width:max-content;max-width:100%;
+  background:var(--degrade-texto);-webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+}
+.app-welcome h1{
+  width:max-content;max-width:100%;
+  background:linear-gradient(100deg,var(--text) 30%,var(--acento-texto) 70%,var(--magenta-texto));
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+}
+
+/* ---------------------------------------------------------- ação */
+.btn-primary,.btn-dark{
+  color:var(--acento-tinta)!important;border-color:transparent!important;
+  background:var(--degrade-marca)!important;background-size:140% 100%!important;background-position:0 0!important;
+  background-repeat:no-repeat!important;background-origin:border-box!important;
+  box-shadow:0 6px 18px rgba(var(--acento-rgb),.22)!important;
+  transition:background-position .25s ease,box-shadow .2s ease,transform .15s ease;
+}
+.btn-primary:hover,.btn-dark:hover,
+.btn-primary:focus-visible,.btn-dark:focus-visible{
+  color:var(--acento-tinta)!important;border-color:transparent!important;
+  background:var(--degrade-marca)!important;background-size:140% 100%!important;background-position:100% 0!important;
+  background-repeat:no-repeat!important;background-origin:border-box!important;
+  box-shadow:var(--halo-acao)!important;transform:translateY(-1px);
+}
+.btn-primary:active,.btn-dark:active{transform:translateY(0)}
+.btn-outline-primary:hover{
+  color:var(--acento-tinta)!important;border-color:transparent!important;background:var(--degrade-marca)!important;
+}
+.app-primary-action{
+  border-color:transparent;background:var(--degrade-marca);background-size:140% 100%;
+  background-repeat:no-repeat;background-origin:border-box;box-shadow:var(--halo-acao);
+}
+/* O selo "Gestão interna" do topo é o pôr do sol em miniatura. */
+.ls-ambiente{background:var(--degrade-marca);box-shadow:0 6px 18px rgba(var(--magenta-rgb),.22)}
+.app-primary-action:hover{background-position:100% 0;box-shadow:0 22px 46px rgba(var(--magenta-rgb),.26),0 8px 20px rgba(var(--acento-rgb),.24)}
+.app-primary-action>i{background:color-mix(in srgb,var(--acento-brilho) 60%,transparent)}
+
+/* ---------------------------------------------------------- números */
+.app-glance-card{
+  background:
+    radial-gradient(16rem 9rem at 0 0,color-mix(in srgb,var(--card-color) 10%,transparent),transparent 70%),
+    linear-gradient(160deg,var(--panel-2),var(--bg-1));
+}
+.app-glance-card::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:3px;
+  background:linear-gradient(90deg,var(--card-color),color-mix(in srgb,var(--card-color) 0%,transparent));
+}
+.app-glance-card:hover{
+  border-color:color-mix(in srgb,var(--card-color) 55%,transparent);
+  box-shadow:0 16px 36px color-mix(in srgb,var(--card-color) 20%,transparent);
+}
+.app-glance-icon{
+  border:1px solid color-mix(in srgb,var(--card-color) 30%,transparent);
+  background:linear-gradient(140deg,color-mix(in srgb,var(--card-color) 26%,transparent),color-mix(in srgb,var(--card-color) 8%,transparent));
+  box-shadow:0 6px 16px color-mix(in srgb,var(--card-color) 18%,transparent);
+}
+.ls-metric-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.ls-metric-card:hover{
+  transform:translateY(-2px);border-color:color-mix(in srgb,var(--metric,var(--acento)) 45%,transparent);
+  box-shadow:0 14px 32px color-mix(in srgb,var(--metric,var(--acento)) 18%,transparent);
+}
+
+/* ---------------------------------------------------------- superfícies */
+.app-focus-panel,.app-start-panel,.app-pipeline,.app-stock-strip,.card{
+  box-shadow:inset 0 1px 0 rgba(var(--verniz-rgb),.05),var(--shadow-soft)!important;
+}
+.app-start-grid>a:hover{
+  border-color:rgba(var(--acento-rgb),.38);
+  background:linear-gradient(140deg,rgba(var(--acento-rgb),.10),rgba(var(--magenta-rgb),.06));
+}
+.ls-tabs .nav-link.active,.nav-tabs .nav-link.active{
+  color:var(--text)!important;border-color:rgba(var(--acento-rgb),.30)!important;
+  background:linear-gradient(120deg,rgba(var(--acento-rgb),.20),rgba(var(--magenta-rgb),.14))!important;
+}
+.form-control:focus,.form-select:focus{
+  border-color:rgba(var(--acento-rgb),.7)!important;
+  box-shadow:0 0 0 3px rgba(var(--acento-rgb),.16),0 0 18px rgba(var(--magenta-rgb),.10)!important;
+}
+.form-check-input:checked{border-color:transparent!important;background-color:var(--acento)!important}
+.modal-content::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:3px;z-index:2;pointer-events:none;
+  background:var(--degrade-fio);
+}
+.modal-header{
+  background:linear-gradient(120deg,rgba(var(--acento-rgb),.10),rgba(var(--magenta-rgb),.06)),var(--acento-fundo)!important;
+}
+.ls-tema-botao.ativo{
+  background:linear-gradient(120deg,rgba(var(--acento-rgb),.12),rgba(var(--magenta-rgb),.08));
+}
+
+/* Quem pediu menos movimento não ganha nada que se mexe. */
+@media (prefers-reduced-motion:reduce){
+  .btn-primary,.btn-dark,.app-primary-action,.ls-metric-card,.ls-nav-icon{transition:none}
+  .btn-primary:hover,.btn-dark:hover,.ls-metric-card:hover{transform:none}
 }
 
 /* ---------------------------------------------------------- o papel

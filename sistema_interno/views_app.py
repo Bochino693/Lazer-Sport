@@ -44,8 +44,8 @@ def manifesto(request):
             # tablet da fábrica parecer um aplicativo, e não um site.
             "display": "standalone",
             "orientation": "any",
-            "background_color": "#13100B",
-            "theme_color": "#13100B",
+            "background_color": "#110C1A",
+            "theme_color": "#110C1A",
             "categories": ["business", "productivity"],
             "icons": [
                 {
