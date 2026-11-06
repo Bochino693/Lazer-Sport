@@ -173,6 +173,17 @@
             <strong id="pl-hud-titulo">Ajustar o controle</strong>
             <small data-pl-hud-dica>Arraste os botões para onde quiser. Toque num botão para mudar só o tamanho dele.</small>
         </div>
+        <div class="pl-hud-direcional" data-pl-direcional-caixa role="group" aria-label="Direcional">
+            <span>Direcional</span>
+            <button type="button" class="pl-hud-opcao" data-pl-direcional="analogico" aria-pressed="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="currentColor"/></svg>
+                Analógico
+            </button>
+            <button type="button" class="pl-hud-opcao" data-pl-direcional="cruz" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="currentColor"/></svg>
+                Cruz
+            </button>
+        </div>
         <label class="pl-hud-faixa">
             <span data-pl-hud-tamanho-nome>Tamanho de todos</span>
             <input type="range" min="60" max="170" step="5" value="100" data-pl-hud-tamanho>

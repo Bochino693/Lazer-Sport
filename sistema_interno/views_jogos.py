@@ -334,6 +334,10 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             # gerar o APK (Android) pelo painel: jogo de console (menos PSP e DOS) ou de um .html só
             "pode_gerar_apk": bool((jogo.sistema and jogo.sistema not in ("psp", "dos")) or jogo.arquivo_html),
             "gerar_apk": reverse("jogo_gerar_apk", args=[jogo.pk]) if jogo.pk else "",
+            # o .exe leva também o PSP e o DOS (a página dele é isolada)
+            "pode_gerar_exe": bool((jogo.sistema and jogo.sistema != "auto") or jogo.arquivo_html),
+            "gerar_exe": reverse("jogo_gerar_exe", args=[jogo.pk]) if jogo.pk else "",
+            "aviso_licenca": _aviso_de_licenca(jogo),
             "versao_pc": self._nome_do_arquivo(jogo.versao_pc),
             "versao_pc_link": jogo.versao_pc_link,
             "motor": jogo.motor,
@@ -478,6 +482,12 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
 
 
 
+def _aviso_de_licenca(jogo):
+    from core.jogos_exe_gerar import aviso_de_licenca
+
+    return aviso_de_licenca(jogo)
+
+
 class JogoGerarApkView(SuperusuarioInternoRequiredMixin, View):
     """GERAR O APK (ANDROID) DE UM JOGO -- o .bat dos jogos, num clique (core/jogos_apk_gerar.py).
 
@@ -534,3 +544,58 @@ class JogoGerarApkView(SuperusuarioInternoRequiredMixin, View):
         return JsonResponse({"ok": True, "tamanho": _tamanho_legivel(tamanho), "versao": resumo["versao"],
                              "mensagem": f"APK publicado ({_tamanho_legivel(tamanho)}): o botão “Baixar o aplicativo” "
                                          "já aparece na página do jogo."})
+
+
+class JogoGerarExeView(SuperusuarioInternoRequiredMixin, View):
+    """GERAR O PROGRAMA DE WINDOWS (.exe) DE UM JOGO (core/jogos_exe_gerar.py).
+
+    GET  baixa o .exe (dois cliques e o jogo abre, sem internet).
+    POST guarda o .exe no jogo, como a "versão para computador".
+    """
+
+    def _gerar(self, request, pk):
+        from core import jogos_exe_gerar
+        from core.jogos_apk_gerar import ApkNaoDa
+
+        jogo = get_object_or_404(JogoCadastrado.objects.prefetch_related("arquivos_emulador"), pk=pk)
+        destino = tempfile.TemporaryFile()
+        try:
+            resumo = jogos_exe_gerar.gerar_exe(jogo, destino, request=request)
+        except ApkNaoDa as exc:
+            destino.close()
+            return jogo, None, str(exc)
+        except Exception:  # noqa: BLE001 -- o painel mostra o motivo, o log guarda o resto
+            destino.close()
+            log.exception("gerar o .exe de %s", jogo.slug)
+            return jogo, None, "Não deu para gerar o .exe agora (um arquivo do jogo não baixou?). Tente de novo."
+        destino.seek(0)
+        return jogo, (destino, resumo), ""
+
+    def get(self, request, pk):
+        jogo, pronto, erro = self._gerar(request, pk)
+        if erro:
+            return HttpResponse(erro, status=422, content_type="text/plain; charset=utf-8")
+        destino, _resumo = pronto
+        resposta = FileResponse(destino, as_attachment=True, filename=f"{jogo.slug}.exe",
+                                content_type="application/vnd.microsoft.portable-executable")
+        resposta["Cache-Control"] = "no-store"
+        return resposta
+
+    def post(self, request, pk):
+        jogo, pronto, erro = self._gerar(request, pk)
+        if erro:
+            return JsonResponse({"ok": False, "erro": erro}, status=422)
+        destino, resumo = pronto
+        destino.seek(0, 2)
+        tamanho = destino.tell()
+        limite = _limite_de_arquivo_grande()
+        if tamanho > limite:
+            destino.close()
+            return JsonResponse({"ok": False, "erro": f"O .exe ficou com {_tamanho_legivel(tamanho)}: o site guarda até "
+                                 f"{_tamanho_legivel(limite)}. Baixe e mande o arquivo direto."}, status=422)
+        destino.seek(0)
+        jogo.versao_pc.save(f"{jogo.slug}.exe", File(destino), save=False)
+        jogo.save(update_fields=["versao_pc"])
+        destino.close()
+        return JsonResponse({"ok": True, "tamanho": _tamanho_legivel(tamanho), "versao": resumo["versao"],
+                             "mensagem": f".exe guardado como a versão para computador ({_tamanho_legivel(tamanho)})."})

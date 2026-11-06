@@ -477,6 +477,15 @@ html, body {
 .pl-hud-topo { display: grid; gap: 2px; }
 .pl-hud-topo strong { font-size: 1rem; font-weight: 900; }
 .pl-hud-topo small { color: var(--suave); font-size: .78rem; line-height: 1.35; }
+.pl-hud-direcional { display: grid; grid-template-columns: auto 1fr 1fr; align-items: center; gap: 8px; font-size: .82rem; font-weight: 700; }
+.pl-hud-direcional[hidden] { display: none; }
+.pl-hud-opcao {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 6px 10px;
+    border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06);
+    color: inherit; font: inherit; font-weight: 800; cursor: pointer;
+}
+.pl-hud-opcao svg { width: 18px; height: 18px; }
+.pl-hud-opcao[aria-pressed="true"] { border-color: var(--cor); background: color-mix(in srgb, var(--cor) 26%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor) 22%, transparent); }
 .pl-hud-faixa { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; font-size: .82rem; font-weight: 700; }
 .pl-hud-faixa span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .pl-hud-faixa input { grid-column: 1 / -1; grid-row: 2; width: 100%; accent-color: var(--cor); }
@@ -792,6 +801,27 @@ html, body {
 /* apertado: o ícone na cor do jogo por um instante */
 .pl .ejs_virtualGamepad_button_down.pl-com-icone .pl-ico-botao { color: #fff; filter: drop-shadow(0 0 6px var(--cor)); }
 /* o direcional: uma cruz de vidro */
+/* o ANALÓGICO (nipplejs): um anel com marcas das 4 direções e o polegar macio no meio */
+.pl .ejs_virtualGamepad_left .nipple { opacity: 1 !important; }
+.pl .ejs_virtualGamepad_left .nipple .back {
+    opacity: 1 !important;
+    /* de cima para baixo: o miolo liso, as 4 marcas das direções no aro, a base */
+    background:
+        radial-gradient(circle, rgba(10, 16, 34, .3) 0 60%, transparent 61%),
+        conic-gradient(from -5deg, rgba(255, 255, 255, .7) 0 10deg, transparent 10deg 90deg, rgba(255, 255, 255, .7) 90deg 100deg,
+            transparent 100deg 180deg, rgba(255, 255, 255, .7) 180deg 190deg, transparent 190deg 270deg,
+            rgba(255, 255, 255, .7) 270deg 280deg, transparent 280deg),
+        radial-gradient(circle, rgba(10, 16, 34, .25), rgba(10, 16, 34, .5)) !important;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .42), 0 8px 22px rgba(0, 0, 0, .35);
+}
+/* a área de toque do analógico é a caixa inteira (e o contorno do "Ajustar" cai certo) */
+.pl .ejs_virtualGamepad_left > .b_dpad:not(.ejs_dpad_main),
+.pl .ejs_virtualGamepad_left > .b_stick { position: absolute; inset: 0; }
+.pl .ejs_virtualGamepad_left .nipple .front {
+    opacity: .96 !important;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #dfe6f2 45%, #9fadc4 100%) !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, .45), inset 0 -3px 6px rgba(0, 0, 0, .18), 0 0 0 3px color-mix(in srgb, var(--cor) 55%, transparent);
+}
 .pl .ejs_dpad_main { opacity: 1; }
 .pl .ejs_dpad_horizontal { height: 50px; border-radius: 14px; }
 .pl .ejs_dpad_vertical { width: 50px; border-radius: 14px; }

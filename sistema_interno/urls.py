@@ -68,8 +68,9 @@ from .views_gestao import (
     OrdensProducaoView,
     ProdutosProducaoView,
 )
-from .views_jogos import JogoGerarApkView, JogosInnerView
+from .views_jogos import JogoGerarApkView, JogoGerarExeView, JogosInnerView
 from .views_objetos_3d import Objetos3DInnerView
+from .views_montar_3d import MontarTresDView
 from .views_site import LinkSitePublicoView
 from .views_ordens_servico import (
     OrdemServicoPreviaInnerView,
@@ -151,7 +152,9 @@ urlpatterns = [
     # já exige; a rota não passa por por_funcoes de propósito).
     path('site/jogos/', JogosInnerView.as_view(), name='jogos_inner'),
     path('site/jogos/<int:pk>/apk/', JogoGerarApkView.as_view(), name='jogo_gerar_apk'),
+    path('site/jogos/<int:pk>/exe/', JogoGerarExeView.as_view(), name='jogo_gerar_exe'),
     path('site/objetos-3d/', Objetos3DInnerView.as_view(), name='objetos_3d_inner'),
+    path('site/objetos-3d/montar/', MontarTresDView.as_view(), name='montar_3d_inner'),
     path('site/indicadores/', por_funcoes(DashboardAdminView, CRIACAO, GESTAO), name='dashboards'),
     path('site/estatisticas/', por_funcoes(EstatisticasGeraisView, CRIACAO, GESTAO), name='estatisticas_gerais'),
 

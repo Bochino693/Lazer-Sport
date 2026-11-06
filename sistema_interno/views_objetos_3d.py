@@ -21,15 +21,25 @@ import logging
 import unicodedata
 
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils.text import slugify
 from django.views import View
 
 import json
 
-from core import arena, composicao
+from core import arena, composicao, conversor_3d, modelo_fotos, produtos_parecidos
 from core.fotos import reduzir_imagem
-from core.models import Brinquedos, ComponenteBrinquedo, ModuloTresD, ObjetoTresD
+from core.models import (
+    Brinquedos,
+    BrinquedosProjeto,
+    ComponenteBrinquedo,
+    ModuloTresD,
+    ObjetoTresD,
+    ObjetoTresDProjeto,
+)
 from core.objetos_3d import ler_glb_do_site, tabela_pronta, validar_glb
 
 from .templatetags.interno_extras import estatico
@@ -41,6 +51,41 @@ log = logging.getLogger("sistema_interno.objetos_3d")
 #: Os objetos que vêm com o site, pelo caminho em static (o que o formulário
 #: pode escolher). Qualquer outro caminho é recusado.
 MODELOS_DO_SITE = {modelo["arquivo"]: modelo for modelo in arena.MODELOS_3D}
+
+
+#: O maior arquivo 3D que se converte (o .zip com as texturas) e a maior foto.
+TETO_DO_ARQUIVO_3D = 80 * 1024 * 1024
+TETO_DA_FOTO = 20 * 1024 * 1024
+
+
+def _titulo_e_texto_do_projeto(projeto):
+    """O nome e o texto de um projeto: o do Projeto (a vitrine), senão o do brinquedo projetado."""
+    try:
+        vitrine = projeto.projeto
+    except Exception:  # noqa: BLE001 -- brinquedo projetado sem projeto na vitrine
+        vitrine = None
+    titulo = (vitrine.titulo if vitrine else "") or projeto.nome_brinquedo_projeto
+    texto = "\n".join(t for t in ((vitrine.descricao if vitrine else ""), projeto.descricao) if t)
+    return titulo, texto
+
+
+#: A vista de cada foto pela legenda ("Lateral direita", "vista de cima"...).
+_VISTAS_DA_LEGENDA = (
+    ("esquerda", ("esquerd",)),
+    ("direita", ("direit",)),
+    ("costas", ("costa", "tras", "traseir", "fundo")),
+    ("cima", ("cima", "topo", "superior", "planta", "aerea")),
+    ("frente", ("frente", "frontal")),
+)
+
+
+def vista_provavel(legenda, indice):
+    """A vista da foto pela legenda; sem pista, a 1ª é a frente e a 2ª o lado direito."""
+    texto = _texto_de_busca(legenda or "")
+    for vista, pistas in _VISTAS_DA_LEGENDA:
+        if any(p in texto for p in pistas):
+            return vista
+    return {0: "frente", 1: "direita"}.get(indice, "")
 
 
 def _medidas_texto(medidas):
@@ -186,7 +231,14 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
         sem_objeto_sugeridos = [l for l in linhas if not l["objeto"] and l["sugestao"]]
         sem_objeto_outros = [l for l in linhas if not l["objeto"] and not l["sugestao"]]
         modulos = [self._serializar_modulo(modulo) for modulo in ModuloTresD.objects.all()] if tabela_pronta(ModuloTresD) else []
+        projetos = self._projetos()
         return render(request, self.template_name, {
+            "projetos": projetos,
+            "projetos_dados": projetos,
+            "projetos_com_3d": [p for p in projetos if p["objeto"] and p["objeto"]["url"]],
+            "tabela_projetos_3d": tabela_pronta(ObjetoTresDProjeto),
+            "vistas": [(v, modelo_fotos.NOMES_DAS_VISTAS[v]) for v in modelo_fotos.VISTAS],
+            "formatos_3d": ", ".join(conversor_3d.FORMATOS),
             "linhas": linhas,
             "linhas_dados": linhas,
             "com_objeto": com_objeto,
@@ -206,6 +258,35 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             "three": "vendor/three/three.module.min.js",
             "site": site,
         })
+
+    def _projetos(self):
+        """Os projetos (brinquedos projetados) para a criação do 3D: nome, fotos e o 3D que já têm."""
+        consulta = BrinquedosProjeto.objects.prefetch_related("imagens_brinquedo_projeto").order_by("-id")
+        com_tabela = tabela_pronta(ObjetoTresDProjeto)
+        saida = []
+        for projeto in consulta:
+            titulo, _texto = _titulo_e_texto_do_projeto(projeto)
+            imagens = [img for img in projeto.imagens_brinquedo_projeto.all() if img.imagem]
+            capa = ""
+            if imagens:
+                try:
+                    capa = reduzir_imagem(imagens[0].imagem.url, 480)
+                except Exception:  # noqa: BLE001
+                    capa = ""
+            objeto = None
+            if com_tabela:
+                existente = ObjetoTresDProjeto.objects.filter(projeto=projeto).select_related("produto").first()
+                if existente:
+                    objeto = {
+                        "url": existente.url,
+                        "medidas": _medidas_texto(existente.medidas or []),
+                        "modo": {"paineis": "Painéis", "volume": "Volume", "arquivo": "Arquivo 3D", "montagem": "Montagem"}.get(existente.modo, ""),
+                        "produto": existente.produto_id,
+                        "produto_nome": existente.produto.nome_brinquedo if existente.produto else "",
+                    }
+            saida.append({"id": projeto.pk, "titulo": titulo, "fotos": len(imagens), "capa": capa, "objeto": objeto,
+                          "busca": _texto_de_busca(titulo, "projeto")})
+        return saida
 
     @staticmethod
     def _serializar_modulo(modulo):
@@ -382,6 +463,7 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
         return self.sucesso(
             request,
             f"Peça \"{modulo.nome}\" guardada no laboratório: {_medidas_texto(lido['medidas']) or 'medidas não lidas'}.",
+            id=modulo.pk, url=modulo.url, medidas=lido["medidas"],
         )
 
     def _apagar_modulo(self, request, modulo_id):
@@ -396,11 +478,33 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
         log.warning("módulo 3D %s removido por %s", nome, request.user.username)
         return self.sucesso(request, f"A peça \"{nome}\" foi apagada do laboratório, com o arquivo.")
 
+    def _apagar_do_projeto(self, request, projeto_id):
+        """Tira o 3D do projeto (o arquivo é apagado); o paralelo com a loja fica."""
+        objeto = get_object_or_404(ObjetoTresDProjeto, projeto_id=projeto_id)
+        exigir_confirmacao_exclusao(request)
+        nome = objeto.arquivo.name if objeto.arquivo else ""
+        titulo, _texto = _titulo_e_texto_do_projeto(objeto.projeto)
+        if objeto.produto_id:
+            objeto.arquivo = None
+            objeto.medidas = []
+            objeto.save()
+        else:
+            objeto.delete()
+        if nome:
+            try:
+                ObjetoTresDProjeto._meta.get_field("arquivo").storage.delete(nome)
+            except Exception as erro:  # noqa: BLE001
+                log.warning("arquivo 3D do projeto %s não apagado: %r", nome, erro)
+        log.warning("objeto 3D do projeto %s removido por %s", titulo, request.user.username)
+        return self.sucesso(request, f"O objeto 3D do projeto “{titulo}” foi apagado.")
+
     def acao_delete(self, request):
         """Tira o objeto do brinquedo (o enviado é apagado; o do site só sai) -- ou apaga uma peça do laboratório."""
         bruto = (request.POST.get("id") or "").strip()
         if bruto.startswith("modulo-") and bruto[7:].isdigit():
             return self._apagar_modulo(request, int(bruto[7:]))
+        if bruto.startswith("projeto3d-") and bruto[10:].isdigit():
+            return self._apagar_do_projeto(request, int(bruto[10:]))
         brinquedo = self._brinquedo_do_pedido(request)
         objeto = get_object_or_404(ObjetoTresD, brinquedo=brinquedo)
         exigir_confirmacao_exclusao(request)
@@ -420,3 +524,233 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             texto = "foi apagado, com o arquivo"
         log.warning("objeto 3D de %s removido por %s", brinquedo.nome_brinquedo, request.user.username)
         return self.sucesso(request, f"O objeto 3D de \"{brinquedo.nome_brinquedo}\" {texto}.")
+
+    # ------------------------------------------- criar o objeto 3D aqui mesmo
+
+    def _medidas_do_pedido(self, request):
+        """{"largura", "profundidade", "altura"} em metros, do que veio preenchido."""
+        saida = {}
+        for chave in ("largura", "profundidade", "altura"):
+            bruto = (request.POST.get(chave) or "").strip().replace(",", ".")
+            if not bruto:
+                continue
+            try:
+                valor = float(bruto)
+            except ValueError as exc:
+                raise ErroDeFormulario(f"A {chave} precisa ser um número em metros (ex.: 3,20).") from exc
+            if not 0.05 <= valor <= 200:
+                raise ErroDeFormulario(f"A {chave} precisa estar entre 0,05 m e 200 m.")
+            saida[chave] = valor
+        return saida
+
+    def _projeto_do_pedido(self, request):
+        bruto = (request.POST.get("projeto") or "").strip()
+        if not bruto.isdigit():
+            raise ErroDeFormulario("Escolha o projeto.")
+        return get_object_or_404(BrinquedosProjeto, pk=int(bruto))
+
+    @staticmethod
+    def _ler_arquivo(arquivo, teto, rotulo):
+        if arquivo.size > teto:
+            raise ErroDeFormulario(f"{rotulo} passa de {teto // (1024 * 1024)} MB.")
+        arquivo.seek(0)
+        return arquivo.read()
+
+    def _fotos_do_projeto(self, request):
+        """{vista: bytes} das fotos do projeto, pela escolha de vista de cada uma."""
+        projeto = self._projeto_do_pedido(request)
+        try:
+            escolhas = json.loads(request.POST.get("vistas") or "{}")
+        except ValueError as exc:
+            raise ErroDeFormulario("A escolha das vistas veio quebrada.") from exc
+        fotos = {}
+        imagens = {img.pk: img for img in projeto.imagens_brinquedo_projeto.all()}
+        for foto_id, vista in escolhas.items():
+            if not vista:
+                continue
+            if vista not in modelo_fotos.VISTAS:
+                raise ErroDeFormulario("Vista desconhecida.")
+            if vista in fotos:
+                raise ErroDeFormulario(f"Duas fotos marcadas como \"{modelo_fotos.NOMES_DAS_VISTAS[vista]}\": deixe uma só.")
+            imagem = imagens.get(int(foto_id)) if str(foto_id).isdigit() else None
+            if imagem is None or not imagem.imagem:
+                raise ErroDeFormulario("Uma das fotos escolhidas não é deste projeto.")
+            try:
+                with imagem.imagem.open("rb") as aberto:
+                    fotos[vista] = aberto.read()
+            except Exception as exc:  # noqa: BLE001 -- armazenamento fora do ar
+                log.warning("foto %s do projeto %s não abriu: %r", imagem.pk, projeto.pk, exc)
+                raise ErroDeFormulario("Uma das fotos do projeto não abriu agora. Tente de novo em instantes.") from exc
+        return fotos
+
+    def acao_gerar(self, request):
+        """A prévia: monta (ou converte) o objeto e devolve o .glb, sem gravar nada."""
+        origem = request.POST.get("origem") or ""
+        medidas = self._medidas_do_pedido(request)
+        try:
+            if origem == "arquivo":
+                arquivo = request.FILES.get("arquivo3d")
+                if not arquivo:
+                    raise ErroDeFormulario("Escolha o arquivo 3D.")
+                dados = self._ler_arquivo(arquivo, TETO_DO_ARQUIVO_3D, "O arquivo 3D")
+                glb, info = conversor_3d.converter(
+                    arquivo.name, dados,
+                    eixo=request.POST.get("eixo") or "auto",
+                    unidade=request.POST.get("unidade") or "auto",
+                    medidas=medidas,
+                    limpar=request.POST.get("limpar") == "on",
+                )
+                info["modo"] = "arquivo"
+            elif origem in ("fotos", "projeto"):
+                if origem == "fotos":
+                    fotos = {}
+                    for vista in modelo_fotos.VISTAS:
+                        enviada = request.FILES.get(f"foto_{vista}")
+                        if enviada:
+                            fotos[vista] = self._ler_arquivo(enviada, TETO_DA_FOTO, f"A foto ({modelo_fotos.NOMES_DAS_VISTAS[vista]})")
+                else:
+                    fotos = self._fotos_do_projeto(request)
+                glb, info = modelo_fotos.gerar(
+                    fotos, medidas,
+                    modo=request.POST.get("modo") or "paineis",
+                    recortar_fundo=request.POST.get("recortar") == "on",
+                )
+            else:
+                raise ErroDeFormulario("Escolha de onde vem o objeto: fotos, projeto ou arquivo 3D.")
+        except (conversor_3d.ErroDeConversao, modelo_fotos.ErroDasFotos) as exc:
+            raise ErroDeFormulario(str(exc)) from exc
+        info["origem"] = origem
+        resposta = HttpResponse(glb, content_type="model/gltf-binary")
+        resposta["X-Objeto3D-Info"] = json.dumps(info, ensure_ascii=True)
+        resposta["Cache-Control"] = "no-store"
+        return resposta
+
+    def acao_projeto_dados(self, request):
+        """As fotos do projeto (com a vista provável de cada uma), as medidas
+        da descrição e os produtos da loja mais parecidos com ele."""
+        projeto = self._projeto_do_pedido(request)
+        titulo, descricao = _titulo_e_texto_do_projeto(projeto)
+        fotos = []
+        for indice, imagem in enumerate(projeto.imagens_brinquedo_projeto.all().order_by("id")):
+            if not imagem.imagem:
+                continue
+            try:
+                url = reduzir_imagem(imagem.imagem.url, 360)
+            except Exception:  # noqa: BLE001
+                continue
+            fotos.append({"id": imagem.pk, "url": url, "legenda": imagem.legenda or "", "vista": vista_provavel(imagem.legenda, indice)})
+        medidas = produtos_parecidos.medidas_no_texto(f"{titulo}\n{descricao}")
+        catalogo = Brinquedos.objects.filter(ativo=True).prefetch_related("categorias_brinquedos")
+        sugestoes = [
+            {"id": s["brinquedo"].pk, "nome": s["brinquedo"].nome_brinquedo, "nota": s["nota"],
+             "motivos": s["motivos"], "capa": self._capa(s["brinquedo"]),
+             "tem_3d": bool(getattr(s["brinquedo"], "objeto_3d", None)) if tabela_pronta() else False}
+            for s in produtos_parecidos.parecidos(titulo, descricao, catalogo, medidas)
+        ]
+        atual = None
+        if tabela_pronta(ObjetoTresDProjeto):
+            existente = ObjetoTresDProjeto.objects.filter(projeto=projeto).select_related("produto").first()
+            if existente:
+                atual = {"url": existente.url, "produto": existente.produto_id,
+                         "produto_nome": existente.produto.nome_brinquedo if existente.produto else ""}
+        return self.sucesso(request, "", projeto={"id": projeto.pk, "titulo": titulo}, fotos=fotos,
+                            medidas=medidas, sugestoes=sugestoes, atual=atual)
+
+    def acao_projeto_paralelo(self, request):
+        """Só o paralelo: este projeto é (ou parece) aquele produto da loja."""
+        if not tabela_pronta(ObjetoTresDProjeto):
+            raise ErroDeFormulario("O banco ainda não tem a tabela do 3D dos projetos: rode a migração.")
+        projeto = self._projeto_do_pedido(request)
+        produto = self._produto_do_pedido(request)
+        objeto = ObjetoTresDProjeto.objects.filter(projeto=projeto).first() or ObjetoTresDProjeto(projeto=projeto)
+        objeto.produto = produto
+        objeto.save()
+        titulo, _texto = _titulo_e_texto_do_projeto(projeto)
+        if produto:
+            return self.sucesso(request, f"Pronto: a ficha de “{titulo}” mostra “{produto.nome_brinquedo}” como o produto da loja.")
+        return self.sucesso(request, f"A ficha de “{titulo}” não mostra mais produto da loja.")
+
+    def _produto_do_pedido(self, request):
+        bruto = (request.POST.get("produto") or "").strip()
+        if not bruto:
+            return None
+        if not bruto.isdigit():
+            raise ErroDeFormulario("Produto inválido.")
+        return get_object_or_404(Brinquedos, pk=int(bruto))
+
+    def acao_gerado_salvar(self, request):
+        """Grava o objeto da prévia: nos brinquedos escolhidos (um ou vários) e/ou no projeto."""
+        arquivo = request.FILES.get("arquivo")
+        if not arquivo:
+            raise ErroDeFormulario("Gere a prévia antes de gravar.")
+        try:
+            lido = validar_glb(arquivo)
+        except ValidationError as exc:
+            raise ErroDeFormulario(" ".join(exc.messages)) from exc
+        ids = sorted({int(x) for x in request.POST.getlist("brinquedos") if str(x).isdigit()})
+        brinquedos = list(Brinquedos.objects.filter(pk__in=ids)) if ids else []
+        projeto = self._projeto_do_pedido(request) if (request.POST.get("projeto") or "").strip() else None
+        if not brinquedos and projeto is None:
+            raise ErroDeFormulario("Escolha onde o objeto vai: um ou mais brinquedos e/ou o projeto.")
+        if projeto is not None and not tabela_pronta(ObjetoTresDProjeto):
+            raise ErroDeFormulario("O banco ainda não tem a tabela do 3D dos projetos: rode a migração.")
+        produto = self._produto_do_pedido(request) if projeto is not None else None
+        exibir = request.POST.get("exibir_na_arena") == "on"
+        origem = request.POST.get("origem") if request.POST.get("origem") in ("fotos", "projeto", "arquivo", "montagem") else ""
+        modo = request.POST.get("modo") if request.POST.get("modo") in ("paineis", "volume", "arquivo", "montagem") else ""
+
+        novos, antigos = [], []
+        try:
+            with transaction.atomic():
+                for brinquedo in brinquedos:
+                    objeto = ObjetoTresD.objects.filter(brinquedo=brinquedo).first() or ObjetoTresD(brinquedo=brinquedo)
+                    if objeto.arquivo:
+                        antigos.append((objeto.arquivo.storage, objeto.arquivo.name))
+                    arquivo.seek(0)
+                    objeto.arquivo.save(f"{slugify(brinquedo.nome_brinquedo) or 'objeto'}.glb", File(arquivo), save=False)
+                    novos.append((objeto.arquivo.storage, objeto.arquivo.name))
+                    objeto.arquivo_estatico = ""
+                    objeto.codigo = ""  # feito aqui: sem as animações de um objeto do site
+                    objeto.cores = lido["cores"]
+                    objeto.medidas = lido["medidas"]
+                    objeto.exibir_na_arena = exibir
+                    objeto.ativo = True
+                    objeto.save()
+                if projeto is not None:
+                    titulo, _texto = _titulo_e_texto_do_projeto(projeto)
+                    objeto = ObjetoTresDProjeto.objects.filter(projeto=projeto).first() or ObjetoTresDProjeto(projeto=projeto)
+                    if objeto.arquivo:
+                        antigos.append((objeto.arquivo.storage, objeto.arquivo.name))
+                    arquivo.seek(0)
+                    objeto.arquivo.save(f"projeto-{slugify(titulo) or projeto.pk}.glb", File(arquivo), save=False)
+                    novos.append((objeto.arquivo.storage, objeto.arquivo.name))
+                    objeto.medidas = lido["medidas"]
+                    objeto.origem = origem
+                    objeto.modo = modo
+                    if produto is not None or request.POST.get("produto") == "":
+                        objeto.produto = produto
+                    objeto.ativo = True
+                    objeto.save()
+        except Exception:
+            for armazenamento, nome in novos:
+                try:
+                    armazenamento.delete(nome)
+                except Exception as erro:  # noqa: BLE001
+                    log.warning("arquivo 3D órfão não apagado (%s): %r", nome, erro)
+            raise
+        for armazenamento, nome in antigos:
+            if (armazenamento, nome) in novos:
+                continue
+            try:
+                armazenamento.delete(nome)
+            except Exception as erro:  # noqa: BLE001
+                log.warning("arquivo 3D antigo não apagado (%s): %r", nome, erro)
+
+        destinos = [f"“{b.nome_brinquedo}”" for b in brinquedos]
+        if projeto is not None:
+            destinos.append(f"o projeto “{_titulo_e_texto_do_projeto(projeto)[0]}”")
+        log.info("objeto 3D criado no painel (%s/%s) gravado por %s em %s", origem, modo, request.user.username, ", ".join(destinos))
+        return self.sucesso(
+            request,
+            f"Objeto 3D gravado em {', '.join(destinos)}: {_medidas_texto(lido['medidas']) or 'medidas não lidas'}.",
+        )

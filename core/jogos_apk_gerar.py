@@ -496,8 +496,11 @@ def _ler_arquivo_do_jogo(arquivo, request=None):
     return bytes(bloco)
 
 
-def conteudo_do_jogo(jogo, request=None):
+def conteudo_do_jogo(jogo, request=None, para="apk"):
     """[(caminho em assets/www/, bytes)] + a capa, para um jogo de console ou de HTML5.
+
+    `para`: "apk" (o app do Android) ou "exe" (o programa do Windows, que serve a
+    página isolada: aí o PSP e o DOS entram, com o núcleo de várias linhas).
 
     O painel roda no endereço interno, que tem as rotas dele: a página do jogo é montada
     com as rotas do site (as mesmas que o reprodutor usa no ar).
@@ -507,19 +510,19 @@ def conteudo_do_jogo(jogo, request=None):
     anterior = get_urlconf()
     set_urlconf(None)
     try:
-        return _conteudo_do_jogo(jogo, request)
+        return _conteudo_do_jogo(jogo, request, para)
     finally:
         set_urlconf(anterior)
 
 
-def _conteudo_do_jogo(jogo, request=None):
+def _conteudo_do_jogo(jogo, request=None, para="apk"):
     from django.template.loader import render_to_string
 
     from .jogos_emulador import SISTEMAS
     from .views_jogos import config_do_emulador
 
     if jogo.sistema:
-        if jogo.sistema in SEM_APK:
+        if jogo.sistema in SEM_APK and para == "apk":
             raise ApkNaoDa(f"{SISTEMAS[jogo.sistema].nome if jogo.sistema in SISTEMAS else jogo.sistema} não vai para APK: "
                            "o núcleo dele precisa de um isolamento que o app do Android não dá. Ele roda no site.")
         if jogo.sistema not in SISTEMAS:
@@ -544,7 +547,11 @@ def _conteudo_do_jogo(jogo, request=None):
         # o núcleo do console: o do site ou, quando ele não mora no site, o do pacote oficial
         sistema = SISTEMAS[jogo.sistema]
         dados_emu = "vendor/emulatorjs/data/"
-        for fim in ("-wasm.data", "-legacy-wasm.data"):
+        fins = ("-wasm.data", "-legacy-wasm.data")
+        if para == "exe" and sistema.threads:
+            # a página do .exe é isolada: o núcleo de várias linhas (PSP, DOS) funciona
+            fins += ("-thread-wasm.data", "-thread-legacy-wasm.data")
+        for fim in fins:
             nome = sistema.nucleo + fim
             local = ESTATICO / dados_emu / "cores" / nome
             if local.exists():

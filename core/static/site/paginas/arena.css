@@ -975,13 +975,16 @@ html.arena-tela-cheia body { overflow: hidden; }
     cursor: pointer;
 }
 .arena3d-cor i {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: var(--amostra, conic-gradient(#e63946, #ffb703, #2a9d8f, #3a86ff, #e63946));
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .35);
 }
-.arena3d-cor[aria-pressed="true"] { border-color: #fff; background: rgba(255, 255, 255, .16); color: #fff; }
+.arena3d-cor[aria-pressed="true"] { border-color: #ffd23f; background: rgba(255, 210, 63, .14); color: #fff; box-shadow: 0 0 0 3px rgba(255, 210, 63, .18); }
+.arena3d-cor:hover { background: rgba(255, 255, 255, .1); }
+.arena3d-cor[aria-pressed="true"] i { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 0 10px rgba(255, 210, 63, .55); }
+.arena3d-ficha-cores span.arena3d-cores-rotulo { display: inline-flex; align-items: center; gap: 5px; color: #ffd23f; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .arena3d-cor:focus-visible { outline: 2px solid #ffb703; outline-offset: 2px; }
 
 /* os jogos da casa que rodam no espaço (Swish, Gol Flash) */

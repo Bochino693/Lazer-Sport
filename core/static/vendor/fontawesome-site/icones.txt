@@ -122,6 +122,7 @@ fa-map-location-dot
 fa-map-marked-alt
 fa-mobile-screen
 fa-mobile-screen-button
+fa-palette
 fa-paper-plane
 fa-pause
 fa-pen

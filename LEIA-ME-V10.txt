@@ -901,3 +901,172 @@ Dependência nova: rjsmin (requirements.txt).
        projeto já escrito.
      * No celular, a ficha ocupa a tela: fotos em cima, texto embaixo.
    Os cartões mostram o começo da descrição, sem emojis.
+
+36) AS CORES DOS OBJETOS 3D (BRINQUEDÕES, ESPAÇOS ESPORTIVOS E MÁQUINAS)
+   Antes, cada "cor" girava o matiz do objeto inteiro: o azul virava amarelo,
+   o verde virava roxo, a arte dos adesivos saía trocada -- combinações sem pé
+   nem cabeça. Agora são PALETAS MONTADAS (core/static/site/arena/cores3d.js):
+     Arco-íris  estrutura azul royal, painéis amarelo, vermelho e verde
+     Oceano     azul profundo, turquesa, coral e areia
+     Selva      verde mata, amarelo sol, laranja e madeira
+     Doce       estrutura rosa, lilás, azul bebê e amarelo
+     Esporte    grafite com vermelho, amarelo e azul marinho
+     Neon       roxo elétrico com verde, rosa e ciano neon
+   Como funciona: cada FAMÍLIA de cor do desenho original (os verdes, os
+   amarelos, os laranjas, os azuis...) ganha a sua cor na paleta. O que era de
+   cores diferentes continua diferente, o tom escuro continua mais escuro
+   (contornos), e o neutro fica como está: branco, preto, cinza, a madeira das
+   colunas, as cordas, as letras e contornos dos ADESIVOS (a arte troca de
+   cores pixel a pixel sem perder os brancos e pretos), o piso do salão e as
+   camas elásticas. O arquivo que já trouxer as suas variações de cor (feitas
+   no programa de 3D) continua usando as dele.
+   Os botões mostram a roda com as 4 cores de cada paleta, com o rótulo
+   "CORES" e o ícone da paleta.
+
+37) CRIAR OBJETO 3D PELO PAINEL: FOTOS, PROJETO OU ARQUIVO 3D
+   Painel > Objetos 3D > "Criar objeto 3D". Três origens, uma janela só; a
+   prévia aparece girando ao lado e NADA é gravado antes de "Gravar".
+
+   A) FOTOS E MEDIDAS (os "sprites" 2D com processamento)
+      Suba a FRENTE (obrigatória) e, se tiver, lado direito, costas, lado
+      esquerdo e a de cima (a de cima com a frente para baixo na foto).
+      Informe largura, profundidade e altura em metros; o que faltar sai da
+      proporção das fotos. O fundo de cada foto é recortado sozinho (fundo
+      liso, céu, fundo branco de render); PNG já recortado vale como está.
+      Dois jeitos:
+        PAINÉIS  cada foto recortada vira um painel no lugar dela, na medida.
+                 PRECISÃO: de frente e de cada lado é a própria foto (exato
+                 como a câmera viu). Nas diagonais aparecem os painéis em
+                 quina e o meio é vazio. Só com a frente, vira um painel
+                 recortado ("totem").
+        VOLUME   o contorno de cada foto recorta um bloco do tamanho do
+                 brinquedo, e cada face do sólido ganha a foto da vista dela.
+                 PRECISÃO: o contorno de cada vista fica certo, na medida,
+                 com erro de uma fatia (1/128 do lado maior: 3 cm num
+                 brinquedo de 4 m). Entre as vistas é sólido: vãos, redes,
+                 tubos e o miolo ficam cheios, e não se anda por dentro.
+      Foto em perspectiva (render inclinado, foto de canto) deforma o
+      contorno: quanto mais de frente a foto, mais certo o objeto.
+
+   B) DE UM PROJETO (o brinquedão / espaço esportivo kids com as fotos)
+      Escolha o projeto: as fotos dele aparecem, cada uma com a vista
+      provável (pela legenda: "frontal", "lateral direita", "costas", "vista
+      de cima"...; sem pista, a 1ª é a frente e a 2ª o lado direito). As
+      medidas escritas na descrição ("6 x 4 x 3,2 m", "altura: 3,5 m")
+      entram sozinhas. Daí é igual ao A.
+      O PARALELO COM A LOJA: o projeto é comparado com cada brinquedo do
+      catálogo pelo nome, pela descrição e pelas medidas (as palavras raras
+      pesam mais, "parquinho" = "playground", "cama elástica" = "trampolim")
+      e aparecem os mais parecidos com uma nota de 0 a 100 e o motivo.
+      Marque o que for este projeto: a ficha do projeto no site passa a
+      mostrar "Este projeto na loja" com o link do produto. Dá para guardar
+      só o paralelo, sem 3D ("Guardar só o paralelo"). É sugestão: quem
+      confirma é a equipe.
+
+   C) ARQUIVO 3D (de um programa de projeto)
+      .glb, .gltf (com o .bin e as texturas num .zip), .obj (com o .mtl e as
+      texturas num .zip), .stl, .3ds, .dae e .kmz (o que o SketchUp
+      exporta), até 80 MB. O objeto chega de pé, no chão, no centro e na
+      medida: a unidade vem do arquivo (o COLLADA grava), da escolha (m,
+      cm, mm, polegada) ou da altura informada; sem nada disso é adivinhada
+      pela altura (brinquedo não tem 250 m nem 3 mm). Cotas, linhas e
+      pessoas de escala espalhadas longe do conjunto saem sozinhas (o .3ds
+      do trampolim tinha 2.392 triângulos assim, numa área de 170 m).
+      Texturas são reduzidas a 1024 px e o objeto vai compactado (posições
+      em 16 bits: décimos de milímetro), para caber nos 10 MB do
+      armazenamento: os .3ds da fábrica (280 mil triângulos) ficam com 4 a
+      5 MB e convertem em ~6 s.
+      PRECISÃO: exata. É a forma do arquivo ponto por ponto; tubos, redes e
+      vãos ficam como no projeto.
+      O que não abre aqui diz como sair dele: .skp (SketchUp: Exportar >
+      Modelo 3D > COLLADA), .fbx/.blend (Blender: Exportar > glTF), .max,
+      .c4d, .3dm.
+
+   GRAVAR: o objeto da prévia vai para UM OU VÁRIOS brinquedos (troca o que
+   eles tinham; o arquivo antigo é apagado) e/ou para o PROJETO. O projeto
+   em 3D ganha "Ver em 3D" na ficha (página inicial e /projetos/): as fotos
+   dão lugar ao objeto girando, arrasta para girar, pinça/rodinha aproxima,
+   toque duplo volta (core/static/site/ls-ficha-3d.js; o three.js só chega
+   no toque). Os projetos em 3D aparecem na aba "Projetos" da tela, com
+   Ver em 3D, Refazer e Apagar (o paralelo com a loja continua).
+   A tabela nova (core.ObjetoTresDProjeto, migração 0137) é separada: se o
+   código subir antes da migração, o site segue sem o 3D dos projetos.
+   Código: core/glb_montar.py (escreve o .glb), core/conversor_3d.py,
+   core/modelo_fotos.py, core/produtos_parecidos.py.
+
+38) O ANALÓGICO NO CELULAR (NO LUGAR DA CRUZ)
+   No controle da tela, o direcional agora é um ANALÓGICO: o polegar arrasta,
+   sem procurar a seta. Ele aperta as setas da cruz pelo ângulo do polegar,
+   com as diagonais (cima + direita, por exemplo): serve para todo console,
+   com o celular em pé ou deitado. É maior que o do emulador (128 px) e tem
+   ZONA MORTA no meio: encostar o dedo não anda; só andar quando arrasta.
+   Quem prefere a CRUZ (jogo de luta, por exemplo) troca em "Ajustar o
+   controle" > Direcional: Analógico | Cruz. A troca é na hora, no lugar e no
+   tamanho que a pessoa deixou, e fica guardada no aparelho. O PSP continua com
+   o analógico de verdade (com força, não só as setas).
+
+39) MONTAR EM 3D, COMO NUM CAD (A BIBLIOTECA QUE APRENDE)
+   Painel > Objetos 3D > "Montar em 3D" (/site/objetos-3d/montar/). É o passo
+   2 do Laboratório: montar o brinquedão ou o espaço peça por peça, numa
+   planta em metros, com grade.
+   AS PEÇAS (à esquerda):
+     * Peças: desenhadas na medida que você pedir -- coluna, barra,
+       plataforma, painel, rede, escorregador, escada, túnel, cama elástica,
+       piscina de bolinhas (com as bolinhas), cerca/tela e telhado.
+     * Guardadas: as peças do laboratório (.glb).
+     * Objetos: os objetos 3D dos brinquedos e dos projetos, para montar um
+       espaço inteiro com eles.
+     * Aprender: mande o .3ds/.dae/.kmz/.obj da fábrica e o sistema acha as
+       peças que se REPETEM nele, com a medida (no .3ds do Brinquedão
+       Modelo 2: barra de 1,05 m x55, coluna de 0,97 m x52, ...). Um toque
+       guarda a peça no laboratório, com nome e categoria sugeridos, e ela
+       já fica pronta para pôr na montagem.
+   COMO SE MONTA: escolha a peça e clique na planta -- ela encaixa na grade
+   (1 m, 50, 25, 10, 5 cm ou livre) e, se clicar em cima de outra peça,
+   sobe nela (a plataforma no alto da coluna). Clique numa peça para
+   escolher: as alças movem (e sobem/descem), "Girar" gira de 15 em 15°;
+   à direita mudam a medida, a cor, a posição e o giro. Teclado: setas
+   movem, PgUp/PgDn sobem/descem, R gira 90°, Del apaga, Ctrl+D duplica,
+   Ctrl+Z/Ctrl+Shift+Z desfazem/refazem, F mostra tudo, Esc solta.
+   A vista: arrastar o fundo gira, botão direito (ou Shift, ou dois dedos)
+   arrasta, a rodinha (ou a pinça) aproxima; "Planta" mostra de cima, sem
+   perspectiva. As COTAS mostram a largura, a profundidade e a altura da
+   montagem inteira, e o rodapé, o total e quantas peças.
+   GUARDAR leva as peças e o .glb da montagem (exportado do próprio desenho:
+   o que se vê é o que vai). "USAR EM…" grava o .glb num ou vários
+   brinquedos e/ou num projeto (a ficha do projeto ganha "Ver em 3D");
+   ".glb" baixa o arquivo para o computador.
+   A BIBLIOTECA APRENDE de dois jeitos: pelos ARQUIVOS (as peças que se
+   repetem viram peças guardadas) e pelo USO (as medidas que mais aparecem
+   nas montagens guardadas viram atalhos no topo: "Coluna 3,50 m -- usada
+   24 vezes"). Quanto mais objetos e montagens entram, mais pronta ela fica.
+   Código: sistema_interno/views_montar_3d.py, static/interno/montar3d.js,
+   core/conversor_3d.pecas_que_se_repetem; tabela core.MontagemTresD
+   (migração 0138). O three.js ganhou o exportador de .glb e as alças de
+   mover/girar, da mesma versão (core/static/vendor/three/).
+
+40) O PROGRAMA DE WINDOWS (.EXE) E O APK, PARA QUALQUER CONSOLE
+   Painel > Jogos > o jogo > "Programa para Windows (.exe)": "Gerar e baixar"
+   ou "Gerar e guardar como versão para computador". Um .exe só, que abre
+   com dois cliques numa janela própria (a do Edge, que todo Windows 10/11
+   tem, ou a do Chrome), em tela cheia, SEM INTERNET, com o jogo salvo
+   guardado no computador (porta fixa por jogo: o jogo salvo continua de
+   uma vez para outra). Roda QUALQUER console do site, inclusive PSP e DOS
+   (o .exe serve a página isolada que o núcleo de várias linhas pede -- no
+   APK eles ficam de fora, porque o WebView do Android não garante isso).
+   Como é feito: o painel não compila nada. A casca (core/exe_casca/
+   jogo-windows.exe, feita em Go: ferramentas/exe/, recompile com
+   ferramentas/exe/montar_casca.sh) + um .zip com o mesmo conteúdo do APK
+   (o reprodutor, o EmulatorJS, o núcleo e os arquivos do jogo) + a marca
+   no fim. Os arquivos grandes vão sem compressão e são lidos em pedaços.
+   Na primeira vez o Windows pode avisar "o Windows protegeu o computador"
+   (todo programa sem assinatura digital paga): "Mais informações" >
+   "Executar assim mesmo". Para sumir esse aviso, só com um certificado de
+   assinatura de código (pago, em nome da empresa).
+   O APK (seção 28) continua igual, para todos os consoles menos PSP e DOS.
+   LIMITES (os dois): o jogo é montado no servidor, na hora, até 160 MB
+   (discos maiores: compacte em .chd, ou mande o arquivo direto); e a
+   LICENÇA -- os núcleos de licença não comercial (Super Nintendo, Mega
+   Drive/Master System/Game Gear/Sega CD, 32X, fliperama) servem para uso
+   particular: o painel avisa junto do botão. Vender ou distribuir esses
+   programas, ou qualquer jogo sem os direitos, não é permitido.

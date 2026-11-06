@@ -234,8 +234,13 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
   // ---- as cores ----
   const cores = cores3d.coresDoObjeto(gltf);
   if (coresCaixa && cores.length > 1) {
+    // o rótulo com o ícone da paleta: "Cores do brinquedo"
     const rotulo = document.createElement("span");
-    rotulo.textContent = "Cores:";
+    rotulo.className = "produto-cores-rotulo";
+    const iconePaleta = document.createElement("i");
+    iconePaleta.className = "fa-solid fa-palette";
+    iconePaleta.setAttribute("aria-hidden", "true");
+    rotulo.append(iconePaleta, document.createTextNode(" Cores"));
     const botoes = cores.map((cor, i) => {
       const botao = document.createElement("button");
       botao.type = "button";

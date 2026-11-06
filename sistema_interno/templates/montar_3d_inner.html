@@ -1,0 +1,204 @@
+{% extends "base_inner.html" %}
+{% load static interno_extras %}
+
+{% block title %}Montar em 3D | Lazer & Sport{% endblock %}
+{% block top_title %}Montar em 3D{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/montar3d.css' %}">
+{% endblock %}
+
+{% block content %}
+{% if tabela_ausente %}
+<section class="ls-card p-4">
+  <h2 class="h5 mb-2"><i class="bi bi-hourglass-split me-1"></i> O banco ainda não tem a tabela das montagens</h2>
+  <p class="mb-0 text-muted">A migração roda sozinha na próxima subida (ou com <code>python manage.py migrate</code>).</p>
+</section>
+{% else %}
+<div class="mt-app" id="montar3d"
+     data-three="{% static 'vendor/three/three.module.min.js' %}"
+     data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+     data-exportar="{% static 'vendor/three/GLTFExporter.js' %}"
+     data-controles="{% static 'vendor/three/TransformControls.js' %}"
+     data-motor="{% estatico 'interno/montar3d.js' %}"
+     data-acao="{% url 'montar_3d_inner' %}"
+     data-acao-objetos="{% url 'objetos_3d_inner' %}">
+  {% csrf_token %}
+
+  <header class="mt-topo">
+    <a class="mt-voltar" href="{% url 'objetos_3d_inner' %}#laboratorio" data-no-soft-nav="true" aria-label="Voltar aos objetos 3D"><i class="bi bi-arrow-left"></i></a>
+    <label class="mt-nome"><span class="visually-hidden">Nome da montagem</span>
+      <input id="mtNome" maxlength="120" placeholder="Nome da montagem (ex.: Brinquedão 3 torres)" value="{{ atual.nome|default:'' }}" autocomplete="off">
+    </label>
+    <div class="mt-topo-acoes">
+      <select id="mtAbrir" class="form-select form-select-sm" aria-label="Abrir outra montagem">
+        <option value="">{% if montagens %}Abrir montagem…{% else %}Nenhuma montagem guardada{% endif %}</option>
+        {% for m in montagens %}<option value="{{ m.id }}"{% if atual and atual.pk == m.id %} selected{% endif %}>{{ m.nome }} · {{ m.pecas }} peça{{ m.pecas|pluralize }}</option>{% endfor %}
+        <option value="nova">+ Nova montagem</option>
+      </select>
+      <button type="button" class="btn btn-sm btn-success" id="mtSalvar"><i class="bi bi-floppy"></i> Guardar</button>
+      <button type="button" class="btn btn-sm btn-warning" id="mtUsar"><i class="bi bi-box-arrow-up-right"></i> Usar em…</button>
+      <button type="button" class="btn btn-sm btn-outline-light" id="mtBaixar" title="Baixar o .glb da montagem"><i class="bi bi-download"></i><span class="d-none d-xl-inline"> .glb</span></button>
+    </div>
+  </header>
+
+  <div class="mt-corpo">
+    <aside class="mt-biblioteca" aria-label="Peças">
+      <div class="mt-abas" role="tablist">
+        <button type="button" class="mt-aba" data-aba="desenhar" aria-selected="true"><i class="bi bi-bounding-box"></i> Peças</button>
+        <button type="button" class="mt-aba" data-aba="guardadas" aria-selected="false"><i class="bi bi-bricks"></i> Guardadas</button>
+        <button type="button" class="mt-aba" data-aba="objetos" aria-selected="false"><i class="bi bi-box-seam"></i> Objetos</button>
+        <button type="button" class="mt-aba" data-aba="aprender" aria-selected="false"><i class="bi bi-mortarboard"></i> Aprender</button>
+      </div>
+      <div class="mt-lista" data-painel="desenhar">
+        <div class="mt-usadas" id="mtUsadas" hidden>
+          <h6><i class="bi bi-graph-up-arrow"></i> Mais usadas nas montagens</h6>
+          <div class="mt-grade" id="mtUsadasGrade"></div>
+        </div>
+        <h6><i class="bi bi-rulers"></i> Desenhar na medida</h6>
+        <div class="mt-grade" id="mtDesenhar"></div>
+      </div>
+      <div class="mt-lista" data-painel="guardadas" hidden>
+        <p class="mt-dica">As peças do laboratório (.glb). Guarde peças novas em <a href="{% url 'objetos_3d_inner' %}#laboratorio" data-no-soft-nav="true">Objetos 3D &gt; Laboratório</a> ou na aba <strong>Aprender</strong>.</p>
+        <div class="mt-grade" id="mtGuardadas"></div>
+      </div>
+      <div class="mt-lista" data-painel="objetos" hidden>
+        <p class="mt-dica">Os objetos 3D dos brinquedos e dos projetos: monte um espaço inteiro com eles.</p>
+        <div class="mt-grade" id="mtObjetos"></div>
+      </div>
+      <div class="mt-lista" data-painel="aprender" hidden>
+        <p class="mt-dica"><strong>A biblioteca aprende com os arquivos da fábrica.</strong> Mande um .3ds, .dae/.kmz ou .obj: as peças que se repetem nele (colunas, barras, plataformas, redes…) aparecem com a medida, para guardar e usar nas montagens.</p>
+        <input type="file" class="form-control form-control-sm" id="mtAprenderArquivo" accept=".3ds,.dae,.kmz,.obj,.zip">
+        <button type="button" class="btn btn-sm btn-primary w-100 mt-2" id="mtAprender"><i class="bi bi-search"></i> Achar as peças</button>
+        <div class="mt-aprendidas" id="mtAprendidas"></div>
+      </div>
+    </aside>
+
+    <section class="mt-palco" aria-label="Planta da montagem">
+      <div class="mt-ferramentas" role="toolbar" aria-label="Ferramentas">
+        <div class="mt-grupo" role="group" aria-label="Modo">
+          <button type="button" class="mt-ferr" data-modo="mover" aria-pressed="true" title="Mover (G)"><i class="bi bi-arrows-move"></i><span>Mover</span></button>
+          <button type="button" class="mt-ferr" data-modo="girar" aria-pressed="false" title="Girar (R gira 90°)"><i class="bi bi-arrow-clockwise"></i><span>Girar</span></button>
+        </div>
+        <div class="mt-grupo" role="group" aria-label="Vista">
+          <button type="button" class="mt-ferr" data-vista="3d" aria-pressed="true" title="Vista 3D"><i class="bi bi-badge-3d"></i><span>3D</span></button>
+          <button type="button" class="mt-ferr" data-vista="planta" aria-pressed="false" title="Planta (de cima)"><i class="bi bi-grid-3x3"></i><span>Planta</span></button>
+          <button type="button" class="mt-ferr" id="mtEnquadrar" title="Ver tudo (F)"><i class="bi bi-fullscreen"></i><span>Ver tudo</span></button>
+        </div>
+        <label class="mt-grade-passo" title="O passo da grade: as peças andam e encaixam nele">
+          <i class="bi bi-magnet"></i>
+          <select id="mtPasso" aria-label="Passo da grade">
+            <option value="1">1 m</option><option value="0.5">50 cm</option><option value="0.25" selected>25 cm</option>
+            <option value="0.1">10 cm</option><option value="0.05">5 cm</option><option value="0">livre</option>
+          </select>
+        </label>
+        <div class="mt-grupo" role="group" aria-label="Histórico">
+          <button type="button" class="mt-ferr" id="mtDesfazer" title="Desfazer (Ctrl+Z)" disabled><i class="bi bi-arrow-counterclockwise"></i></button>
+          <button type="button" class="mt-ferr" id="mtRefazer" title="Refazer (Ctrl+Shift+Z)" disabled><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+        <button type="button" class="mt-ferr" id="mtCotas" aria-pressed="true" title="Mostrar as medidas"><i class="bi bi-rulers"></i><span>Cotas</span></button>
+      </div>
+      <div class="mt-tela">
+        <canvas id="mtTela" tabindex="0" aria-label="A montagem em 3D: clique numa peça para escolher, arraste o fundo para girar a vista"></canvas>
+        <div class="mt-cotas" id="mtCotasCaixa" aria-hidden="true"></div>
+        <p class="mt-aviso" id="mtAviso">Carregando o desenho 3D…</p>
+        <p class="mt-colocando" id="mtColocando" hidden><i class="bi bi-hand-index"></i> <span></span> · clique na planta para pôr · <kbd>Esc</kbd> cancela</p>
+      </div>
+      <footer class="mt-rodape">
+        <span id="mtResumo">Nenhuma peça ainda: escolha uma à esquerda.</span>
+        <span class="mt-atalhos"><kbd>Del</kbd> apagar · <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicar · <kbd>R</kbd> girar 90° · setas movem · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> sobe/desce</span>
+      </footer>
+    </section>
+
+    <aside class="mt-propriedades" id="mtPropriedades" aria-label="A peça escolhida">
+      <div class="mt-vazio" id="mtNada"><i class="bi bi-cursor"></i><p>Escolha uma peça na planta para mudar a medida, a cor, a posição e o giro.</p></div>
+      <div id="mtPeca" hidden>
+        <div class="mt-peca-topo"><strong id="mtPecaNome"></strong><small id="mtPecaMedidas"></small></div>
+        <div class="mt-campos" id="mtCamposMedida"></div>
+        <h6>Posição (m)</h6>
+        <div class="mt-campos mt-campos--3">
+          <label><span>X</span><input type="number" step="0.05" data-pos="0"></label>
+          <label><span>Altura</span><input type="number" step="0.05" data-pos="1"></label>
+          <label><span>Z</span><input type="number" step="0.05" data-pos="2"></label>
+        </div>
+        <h6>Giro</h6>
+        <div class="mt-giro">
+          <input type="number" step="15" id="mtGiro" aria-label="Giro em graus"><span>°</span>
+          <button type="button" class="btn btn-sm btn-outline-light" data-girar="-90">−90°</button>
+          <button type="button" class="btn btn-sm btn-outline-light" data-girar="90">+90°</button>
+        </div>
+        <div id="mtEscalaCaixa" hidden>
+          <h6>Tamanho</h6>
+          <div class="mt-campos"><label><span>Escala</span><input type="number" step="0.05" min="0.05" id="mtEscala"></label></div>
+        </div>
+        <div id="mtCorCaixa">
+          <h6>Cor</h6>
+          <div class="mt-cores" id="mtCores"></div>
+        </div>
+        <div class="mt-peca-acoes">
+          <button type="button" class="btn btn-sm btn-outline-light" id="mtChao"><i class="bi bi-arrow-bar-down"></i> No chão</button>
+          <button type="button" class="btn btn-sm btn-outline-light" id="mtDuplicar"><i class="bi bi-copy"></i> Duplicar</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="mtApagarPeca"><i class="bi bi-trash3"></i> Apagar</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+{# usar a montagem: nos brinquedos e/ou no projeto (a mesma gravação da janela "Criar objeto 3D") #}
+<div class="modal fade" id="modalUsar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Usar a montagem</span><h5 class="modal-title">Ligar o 3D da montagem</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="usarErro"></div>
+        <p class="small">O .glb da montagem (exatamente o que está na tela) vai para os brinquedos escolhidos (troca o 3D que eles tinham) e/ou para o projeto (a ficha do projeto ganha "Ver em 3D").</p>
+        <label class="form-label" for="usarProjeto">Projeto</label>
+        <select class="form-select mb-3" id="usarProjeto"><option value="">Nenhum projeto</option></select>
+        <label class="form-label" for="usarBusca">Brinquedos da loja <span class="text-muted fw-normal">(um ou vários)</span></label>
+        <input type="search" class="form-control form-control-sm" id="usarBusca" placeholder="Buscar brinquedo…" autocomplete="off">
+        <div class="mt-usar-lista" id="usarBrinquedos"></div>
+        <label class="form-check mt-2"><input class="form-check-input" type="checkbox" id="usarArena" checked><span class="form-check-label">Mostrar na Arena 3D</span></label>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="button" id="usarGravar"><i class="bi bi-cloud-check"></i> Gravar</button></div>
+    </div>
+  </div>
+</div>
+
+{# guardar uma peça aprendida no laboratório #}
+<div class="modal fade" id="modalGuardarPeca" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Biblioteca</span><h5 class="modal-title">Guardar a peça</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="guardarErro"></div>
+        <label class="form-label" for="guardarNome">Nome</label>
+        <input class="form-control mb-2" id="guardarNome" maxlength="80">
+        <label class="form-label" for="guardarCategoria">Categoria</label>
+        <select class="form-select" id="guardarCategoria">{% for valor, rotulo in categorias_modulo %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="button" id="guardarPeca">Guardar no laboratório</button></div>
+    </div>
+  </div>
+</div>
+{{ dados|json_script:"montarDados" }}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not tabela_ausente %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+  var raiz = document.getElementById("montar3d");
+  if (!raiz) return;
+  import(raiz.dataset.motor).then(function (m) { return m.iniciar(raiz); }).catch(function (erro) {
+    console.error("Montar 3D:", erro);
+    var aviso = document.getElementById("mtAviso");
+    aviso.hidden = false;
+    aviso.textContent = "Não deu para abrir o desenho 3D aqui: " + (erro && erro.message ? erro.message : erro);
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

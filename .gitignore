@@ -4,3 +4,6 @@ __pycache__/
 
 # Resultados brutos do teste de carga (gerados por ferramentas/carga/rodar.sh)
 ferramentas/carga/resultados/
+
+# a casca de Linux do .exe (só para testar aqui; a do Windows vai no repositório)
+ferramentas/exe/jogo-linux

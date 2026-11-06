@@ -123,10 +123,11 @@
   As janelas ficam fora da grade: `position: fixed` dentro de um cartão
   com `overflow: hidden` seria recortada por ele.
 {% endcomment %}
-{% for projeto in projetos %}{% with pid=projeto.id|stringformat:"s" %}
-{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." %}
+{% for projeto in projetos %}{% with pid=projeto.id|stringformat:"s" o3d=projeto.brinquedo_projetado|objeto_3d_do_projeto %}
+{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all objeto3d=o3d tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." %}
 {% endwith %}{% endfor %}
 
 <script src="{% estatico 'site/ls-galeria.js' %}" defer></script>
+<script type="module" src="{% estatico 'site/ls-ficha-3d.js' %}"></script>
 
 {% endblock content %}

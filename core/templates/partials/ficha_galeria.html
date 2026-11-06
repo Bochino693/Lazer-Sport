@@ -5,7 +5,11 @@
   etiquetas (core/ficha_texto.py) --, os brinquedos e o convite para o WhatsApp.
   Quem abre e fecha é o ls-galeria.js; a cara é a do ls-ficha.css.
 
-  {% include "partials/ficha_galeria.html" with janela="galeria-projeto-3" titulo=projeto.titulo texto=projeto.descricao fotos=... selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="..." todos_url=... todos_texto="Ver todos os projetos" brinquedos=... %}
+  {% include "partials/ficha_galeria.html" with janela="galeria-projeto-3" titulo=projeto.titulo texto=projeto.descricao fotos=... selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="..." todos_url=... todos_texto="Ver todos os projetos" brinquedos=... objeto3d=... %}
+
+  `objeto3d` (só nos projetos): o ObjetoTresDProjeto -- o "Ver em 3D" no
+  visor (ls-ficha-3d.js, o three.js só chega no toque) e, quando a equipe
+  ligou, "Este projeto na loja" com o produto do catálogo.
 {% endcomment %}{% with f=texto|ficha %}
 <div class="ls-galeria ls-ficha ls-ficha--{{ tipo|default:'projeto' }}" id="{{ janela }}" role="dialog" aria-modal="true" aria-labelledby="{{ janela }}-titulo" hidden>
     <article class="ls-galeria-caixa ls-ficha-caixa">
@@ -14,6 +18,16 @@
         </button>
 
         <div class="ls-ficha-visor">
+            {% if objeto3d and objeto3d.url %}
+            <button type="button" class="ls-ficha-ver3d" data-ficha-3d="{{ objeto3d.url }}" data-three="{% static 'vendor/three/three.module.min.js' %}" data-gltf="{% static 'vendor/three/GLTFLoader.js' %}" aria-pressed="false">
+                <i class="fa-solid fa-cube" aria-hidden="true"></i><span data-ficha-3d-texto>Ver em 3D</span>
+            </button>
+            <div class="ls-ficha-3d" data-ficha-3d-palco hidden>
+                <canvas tabindex="0" aria-label="{{ titulo }} em 3D: arraste para girar, role ou pince para aproximar"></canvas>
+                <p class="ls-ficha-3d-aviso" data-ficha-3d-aviso>Carregando o 3D…</p>
+                <span class="ls-ficha-3d-dica" aria-hidden="true"><i class="fa-solid fa-hand-pointer"></i> Arraste para girar</span>
+            </div>
+            {% endif %}
             {% if fotos %}
             <div class="ls-galeria-palco ls-ficha-palco">
                 {% for img in fotos %}
@@ -63,6 +77,17 @@
             {% endfor %}
 
             {% for p in f.fecho %}<p class="ls-ficha-fecho"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span>{{ p }}</span></p>{% endfor %}
+
+            {% if objeto3d and objeto3d.produto and objeto3d.produto.ativo %}{% with produto=objeto3d.produto %}
+            <a class="ls-ficha-na-loja" href="{% url 'brinquedo_detalhe' produto.id %}">
+                {% if produto.imagem_brinquedo %}<img src="{{ produto.imagem_brinquedo|foto:240 }}" alt="" loading="lazy" decoding="async">{% else %}<img src="{% static 'images/sem-imagem.svg' %}" alt="" loading="lazy">{% endif %}
+                <span class="ls-ficha-na-loja-texto">
+                    <small><i class="fa-solid fa-store" aria-hidden="true"></i> Este projeto na loja</small>
+                    <strong>{{ produto.nome_brinquedo }}</strong>
+                    <em>Ver o produto, as fotos e o 3D <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></em>
+                </span>
+            </a>
+            {% endwith %}{% endif %}
 
             {% if brinquedos %}
             <section class="ls-ficha-secao">
