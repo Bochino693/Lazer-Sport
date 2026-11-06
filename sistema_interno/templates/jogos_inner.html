@@ -217,6 +217,18 @@
                 <div class="col-12 col-md-6"><label class="form-label" for="jogoPcLink">Link da versão para computador <span class="text-muted fw-normal">(build grande: Drive, Dropbox)</span></label><input type="url" class="form-control" id="jogoPcLink" name="versao_pc_link" maxlength="500" placeholder="https://drive.google.com/..." data-rotulo="link da versão para computador"></div>
                 <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoAtivo" type="checkbox" name="ativo" checked><span class="form-check-label">No ar (aparece em /jogos/)</span></label></div>
                 <div class="col-12 col-md-6"><label class="form-check form-switch"><input class="form-check-input" id="jogoLiberar" type="checkbox" name="liberar_download"><span class="form-check-label">Deixar baixar o APK pelo site</span></label></div>
+                {# GERAR O APK: o jogo vira um aplicativo Android, assinado, pronto para instalar (core/jogos_apk_gerar.py) #}
+                <div class="col-12 d-none" id="jfApkGerar">
+                  <div class="border rounded-3 p-3">
+                    <strong class="d-block mb-1"><i class="bi bi-android2 me-1"></i>Aplicativo Android (APK)</strong>
+                    <span class="form-text mt-0 d-block mb-2">O painel monta o APK deste jogo: tela cheia deitada, os botões na tela com os ícones das ações, o Ajustar controle, os Gráficos — e roda <b>sem internet</b> (o jogo vai dentro do app). Assinado sempre com a mesma chave: a versão nova instala por cima da antiga.</span>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                      <button type="button" class="btn btn-sm btn-primary" id="jfApkBaixar"><i class="bi bi-download me-1"></i>Gerar e baixar o APK</button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="jfApkPublicar"><i class="bi bi-cloud-arrow-up me-1"></i>Gerar e pôr no site (“Baixar o aplicativo”)</button>
+                      <span class="small" id="jfApkStatus" aria-live="polite"></span>
+                    </div>
+                  </div>
+                </div>
                 <div class="col-12"><label class="form-label" for="jogoAcoes">O que cada botão faz neste jogo <span class="text-muted fw-normal">(uma linha por botão: “botão: ação”)</span></label>
                   <textarea class="form-control" id="jogoAcoes" name="acoes" rows="3" placeholder="B: Pular&#10;Y: Correr e pegar&#10;Start: Pausar"></textarea>
                   <span class="form-text">Aparece no “Como jogar” e no botão Comandos do jogo, no lugar da função geral do console. Use o nome do botão do console (A, B, ✕, ○, L, R, Start…).</span></div>
@@ -743,6 +755,48 @@ LSTela.pronto(function () {
     if (envio && envio.temArquivos()) envio.conferir().catch(function (erro) { Painel.erro("jogoErro", erro.message); });
   });
 
+  /* GERAR O APK: baixa o arquivo, ou publica no jogo (o botão "Baixar o aplicativo" da página) */
+  function apkStatus(texto, erro) {
+    var caixa = el("jfApkStatus");
+    caixa.textContent = texto;
+    caixa.className = "small " + (erro ? "text-danger" : "text-muted");
+  }
+  function apkOcupado(sim) {
+    el("jfApkBaixar").disabled = sim;
+    el("jfApkPublicar").disabled = sim;
+  }
+  el("jfApkBaixar").addEventListener("click", function () {
+    if (!jogoAberto || !jogoAberto.gerar_apk) return;
+    apkOcupado(true);
+    apkStatus("Montando o APK (o jogo, o emulador e os botões)…");
+    fetch(jogoAberto.gerar_apk, { credentials: "same-origin" }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || "Não deu para gerar o APK."); });
+      return r.blob();
+    }).then(function (arquivo) {
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(arquivo);
+      link.download = (jogoAberto.slug || "jogo") + ".apk";
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
+      apkStatus("Pronto: " + (arquivo.size / 1048576).toFixed(1).replace(".", ",") + " MB. No celular, abra o arquivo para instalar (permita “instalar apps desconhecidos”).");
+    }).catch(function (e) { apkStatus(e.message, true); }).finally(function () { apkOcupado(false); });
+  });
+  el("jfApkPublicar").addEventListener("click", function () {
+    if (!jogoAberto || !jogoAberto.gerar_apk) return;
+    apkOcupado(true);
+    apkStatus("Montando e guardando o APK…");
+    var dados = new FormData();
+    dados.append("publicar", "1");
+    var token = form.querySelector("[name=csrfmiddlewaretoken]");
+    fetch(jogoAberto.gerar_apk, { method: "POST", credentials: "same-origin", body: dados,
+      headers: { "X-CSRFToken": token ? token.value : "" } }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.erro || "Não deu para publicar o APK."); return j; });
+    }).then(function (j) {
+      apkStatus(j.mensagem);
+      el("jogoLiberar").checked = true;
+    }).catch(function (e) { apkStatus(e.message, true); }).finally(function () { apkOcupado(false); });
+  });
+
   function abrir(jogo, irArquivos) {
     form.reset(); Painel.erro("jogoErro", "");
     fotoDaCapa = null;
@@ -771,6 +825,8 @@ LSTela.pronto(function () {
     el("jogoDestaque").checked = jogo ? !!jogo.destaque : false;
     el("jogoParticular").checked = jogo ? !!jogo.particular : false;
     Painel.valor("jogoAcoes", jogo ? (jogo.acoes || "") : "");
+    el("jfApkGerar").classList.toggle("d-none", !(jogo && jogo.pode_gerar_apk && jogo.gerar_apk));
+    el("jfApkStatus").textContent = "";
     liberarConsoles();
     // a capa
     var temCapa = !!(jogo && jogo.capa);

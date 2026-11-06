@@ -673,17 +673,82 @@ Dependência nova: rjsmin (requirements.txt).
    (nomes de variável em inglês). iPhone: o Safari não deixa site em tela
    cheia; o botão ensina a "Adicionar à Tela de Início", que abre sem barras.
 
-26) A VITRINE DO ALTO DA BIBLIOTECA (estilo loja de jogos) E AS ARTES DO TOPO
-   O alto de /jogos/ virou uma vitrine como a das lojas de jogos: a arte larga
-   do jogo de ponta a ponta, o nome, as marcas (gênero, ranking, partidas,
-   grátis no navegador) e o botão JOGAR; embaixo, a fila com os outros
-   destaques (a capinha e o nome, com a barrinha do tempo até o próximo).
-   No celular a arte fica em cima e o texto embaixo.
+26) O CARROSSEL DO ALTO DA BIBLIOTECA (O ORIGINAL, MAIS LEVE) E AS ARTES DO TOPO
+   O alto de /jogos/ continua com o carrossel original (a arte do jogo, o
+   nome, as marcas e o JOGAR AGORA). Ficou mais leve: o fundo desfocado é
+   desenhado uma vez numa imagem pequena (antes o navegador refazia o
+   desfoque a cada quadro, o que pesava no celular), só o slide da vez anima,
+   e ele para sozinho quando sai da tela, quando a aba fica escondida ou
+   enquanto se joga.
    AS ARTES DO TOPO dos jogos da casa ficam em
    core/static/site/arena/capas/topo/<jogo>.webp (1600 x 600), montadas a
-   partir das capas e dos pôsteres que já existiam (o pôster deitado inteiro à
-   direita; o pôster em pé ou a capa em destaque, com a luz na cor do jogo; o
-   logo do Strike Kids sobre o fundo). Trocou uma capa ou um pôster, ou entrou
-   um jogo novo em core/arena.JOGOS? Rode de novo:
+   partir das capas e dos pôsteres que já existiam. Elas seguem no projeto
+   (os cartões já levam o caminho, em "topo") para quando quiserem usá-las.
+   Trocou uma capa ou um pôster, ou entrou um jogo novo em core/arena.JOGOS?
+   Rode de novo:
        python core/static/site/arena/capas/topo/gerar.py
-   Os jogos cadastrados pelo painel usam o pôster (ou a capa) deles.
+
+27) O LAUNCHER VIRA APP: CARREGAMENTO, JOGO DENTRO DO APP E SEM INTERNET
+   ABRE COMO APP. /jogos/ abre com a tela de carregamento "LAZER & SPORT
+   GAMES apresenta" (uma vez por visita) e sem o topo e o rodapé da loja. Os
+   botões do alto: Instalar o app, Tela cheia e Site (voltar para a loja).
+   O JOGO ABRE DENTRO DO APP. "Jogar" (no carrossel ou na ficha) abre o jogo
+   por cima da biblioteca, no mesmo documento: a TELA CHEIA NÃO FECHA mais ao
+   apertar Jogar, e o Voltar do jogo (ou o voltar do celular) devolve à
+   biblioteca, ainda em tela cheia. PSP e DOS ainda abrem na página deles (o
+   núcleo deles precisa de um isolamento que a janela interna não dá).
+   SEM INTERNET. O app tem um "service worker" só dele (/jogos/sw.js, que só
+   cuida do que está abaixo de /jogos/ -- a loja continua sempre fresca) e um
+   manifesto (/jogos/app.webmanifest: instala na tela de início, abre em tela
+   cheia). Ele guarda a biblioteca, as fichas, os reprodutores dos jogos já
+   abertos, o emulador, os núcleos dos consoles e as capas. Sem sinal, a
+   biblioteca abre, dá para navegar, e os jogos já abertos rodam (os arquivos
+   dos jogos o reprodutor já guarda no aparelho). Um aviso "Sem internet"
+   aparece no alto. O código está em core/views_app_jogos.py.
+   O MENU "JOGOS" do computador virou um link direto para a biblioteca; a
+   Arena 3D e "Todas as máquinas" foram para o menu Brinquedos.
+   JOGOS LISOS. A lentidão tinha uma causa clara: em celular que economiza
+   bateria (tela a 30 Hz, comum nos Xiaomi), o emulador rodava um quadro por
+   atualização da tela -- o jogo ia a 30 quadros por segundo, na METADE da
+   velocidade, e o som se arrastava junto (era o emulador, não a ROM). Agora o
+   reprodutor roda os quadros que faltam: 60 por segundo em tela de 30, 60, 90
+   ou 120 Hz. Além disso a imagem tem um limite de pixels (tela de celular com
+   densidade 3 não desenha 3x mais à toa) e, se o aparelho não der conta, o
+   modo Leve entra sozinho, com aviso.
+   GRÁFICOS. O botão Imagem tem o formato (tela toda / original) e os
+   gráficos: HD (o mais bonito), Nítido, TV de tubo (as linhas da TV antiga) e
+   Leve (para aparelho fraco). Fica guardado no aparelho.
+   ÍCONES DENTRO DOS BOTÕES. No controle da tela do celular, o ícone da ação
+   (pular, atacar, atirar...) fica DENTRO do botão, com a letra num selo
+   pequeno -- é ali que o dedo aperta.
+
+28) GERAR O APK (ANDROID) DE UM JOGO PELO PAINEL
+   É o que os .bat dos jogos faziam, num clique. No painel, em "Jogos do
+   simulador", abrindo um jogo (só o SUPERADMINISTRADOR vê):
+     * "Gerar e baixar o APK": gera e baixa o arquivo .apk (para instalar no
+       celular ou mandar para alguém);
+     * "Gerar e pôr no site ('Baixar o aplicativo')": gera, guarda no jogo e
+       libera o botão de baixar o app na página do jogo.
+   O QUE VAI DENTRO. O app é uma tela cheia (deitada; o DS e os jogos em pé
+   ficam em pé) com o mesmo reprodutor do site: o jogo inteiro, o emulador, o
+   núcleo do console e os controles da tela (com os ícones e o "Ajustar
+   controle"). Tudo vai DENTRO do APK:
+   o jogo abre e roda SEM INTERNET. O ícone sai da capa do jogo. Nome do
+   pacote: br.com.lazersport.jogo.<slug> (ex.: br.com.lazersport.jogo.mega_teste).
+   ASSINATURA. O APK sai assinado (esquemas v1 e v2, os que o Android pede).
+   A chave é criada uma vez e fica guardada no banco (ChaveDosApks): é sempre
+   a mesma, então gerar de novo e instalar por cima ATUALIZA o app (o número
+   da versão sobe sozinho). NÃO apague esse registro: com uma chave nova, o
+   celular recusa atualizar e é preciso desinstalar o app antigo.
+   LIMITES. PSP e DOS não viram APK (o núcleo deles não roda no app do
+   Android; rodam no site). O painel empacota jogos de até 160 MB. Para
+   publicar, o APK precisa caber no limite de arquivo do site.
+   INSTALAR. Como o APK não vem da Play Store, o Android pede para permitir
+   "instalar apps desconhecidos" (fontes desconhecidas) na primeira vez.
+   COMO FUNCIONA (para quem mexer no código). Não precisa do Android SDK no
+   servidor: core/jogos_apk_gerar.py escreve em Python o manifesto e os
+   recursos no formato binário do Android, monta o zip alinhado e assina. A
+   parte em Java (a tela com o WebView que serve os arquivos de dentro do APK)
+   já vem compilada em core/apk_casca/classes.dex. Mudou o
+   ferramentas/apk/src/.../Jogo.java? Recompile (precisa de Java e internet):
+       sh ferramentas/apk/montar_casca.sh

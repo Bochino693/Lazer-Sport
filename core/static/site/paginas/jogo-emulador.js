@@ -61,7 +61,10 @@
 
   corpo.classList.add("is-abrindo");
   var voltar = $("[data-pl-voltar]");
-  if (app && voltar) {
+  if (config.apk && voltar) {
+    // no aplicativo (APK) não há biblioteca para voltar: o voltar do Android sai do jogo
+    voltar.hidden = true;
+  } else if (app && voltar) {
     voltar.addEventListener("click", function (e) { e.preventDefault(); app.fechar(); });
   } else if (dentroDeQuadro && voltar) {
     // aberta num quadro de outra página: o Voltar não faz sentido aqui
@@ -149,6 +152,8 @@
   }
   /* Do aparelho quando o jogo já está guardado (jogo-guardado.js); senão baixa e guarda. */
   function pegar(itens) {
+    // no APK o jogo já está no aparelho (dentro do app): nada de guardar de novo
+    if (config.apk) return baixarTudo(itens);
     var guardado = window.LSJogoGuardado;
     if (!guardado || !guardado.disponivel) return baixarTudo(itens);
     return guardado.pegarTudo(config.jogo || config.nome, itens, function (feito, total, doAparelho) {

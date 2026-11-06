@@ -48,6 +48,11 @@ EXIGEM_PARAMETRO = {
     "campanha_preparar": "precisa da oferta escolhida",
     "consultar_cep_inner": "precisa do CEP",
 }
+# Rotas que abrem um registro que precisa existir: com um id inventado, 404.
+SO_DE_UM_REGISTRO = {
+    "campanha_detalhe": "token inventado",
+    "jogo_gerar_apk": "gera o APK de um jogo cadastrado (core/tests_jogos_apk_gerar.py testa com um de verdade)",
+}
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -128,7 +133,7 @@ class TodasAsTelasAbremTests(TestCase):
             esperados = {200, 302}
             if nome in EXIGEM_PARAMETRO:
                 esperados.add(400)
-            if nome == "campanha_detalhe":
+            if nome in SO_DE_UM_REGISTRO:
                 esperados.add(404)
 
             if codigo not in esperados:
