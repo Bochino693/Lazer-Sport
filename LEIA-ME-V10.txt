@@ -833,3 +833,29 @@ Dependência nova: rjsmin (requirements.txt).
    feito na hora, sem baixar nada, e segue o botão de som dos jogos. Vale nos
    jogos de console, nos cadastrados e nos da casa. Quem pediu "menos
    movimento" no aparelho vê a versão parada.
+
+33) IMAGEM SEM "PIXELIZADO" E SEM PIXEL FALTANDO (O EQUILÍBRIO COM A VELOCIDADE)
+   O QUE ERA (não eram os arquivos dos jogos: as ROMs estão certas).
+     * O emulador estica a imagem "no grosso" (vizinho mais próximo). Numa tela
+       que não é múltiplo exato do jogo, cada pixel sai de um tamanho: o jogo
+       fica serrilhado e parece que faltam pixels -- o "1990,1991" do Super
+       Mario World, com letras de larguras diferentes.
+     * Quando o aparelho (ou o computador) não dava conta, o modo Automático
+       caía no Leve, que ia SEM FILTRO e com a tela desenhada menor: rodava
+       liso, mas pixelizado. E nas aberturas e vídeos do PlayStation (que têm
+       o dobro de linhas do jogo) a tela pequena pulava linhas inteiras.
+   O QUE FICOU.
+     * Nada mais sai sem filtro. Dois filtros novos do site, leves:
+       "nítido e liso" (cada pixel do jogo do MESMO tamanho, só a emenda
+       suavizada: uma leitura por pixel, tão leve quanto sem filtro) e
+       "suave" (o bicúbico no dobro do jogo e depois o nítido até a tela).
+     * HD: arte 2D no computador com o SABR (contornos lisos), no celular com
+       o nítido e liso; 3D (PlayStation, N64, Saturn...) com o suave.
+       Nítido e Leve usam o nítido e liso -- o Leve agora é bonito também.
+     * A tela nunca fica abaixo de 720 linhas no 3D e 480 no 2D: nenhuma linha
+       das aberturas some.
+     * Todo mundo recomeça no Automático (a escolha antiga de Gráficos foi
+       zerada, porque os filtros mudaram).
+   SE AINDA ACHAR PIXELIZADO: no jogo, toque em Imagem (no alto) e veja em
+   "Gráficos" qual está marcado. Se estiver Leve, foi o aparelho que pediu;
+   escolha HD para ver o mais bonito. "TV antiga" imita a TV de tubo.
