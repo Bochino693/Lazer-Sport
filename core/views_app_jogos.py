@@ -36,6 +36,7 @@ CASCA = (
     "site/paginas/jogo-emulador.css",
     "site/paginas/jogo-emulador.js",
     "site/paginas/jogo-guardado.js",
+    "site/paginas/jogo-passe.js",
     "site/paginas/intro-jogos.css",
     "site/paginas/intro-jogos.js",
     "images/logoofi.png",

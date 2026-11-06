@@ -168,6 +168,9 @@ MIDDLEWARE = [
     "core.middleware.BandwidthEconomyMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
+    # Robôs de IA, programas de cópia e quem caiu na armadilha ficam fora dos
+    # jogos (antes do WhiteNoise: os arquivos dos jogos da casa passam por ele).
+    "core.escudo_jogos.EscudoDosJogosMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

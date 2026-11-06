@@ -984,7 +984,15 @@
   }
   mostrar("Abrindo o jogo…", 0);
   adiantarEmulador();
-  pegar(config.arquivos).then(function (bytes) {
+  /* O passe (jogo-passe.js, core/escudo_jogos.py): de onde baixar o jogo não vem na página.
+     No APK os arquivos já vêm com o caminho de dentro do app. */
+  function comPasse() {
+    if (config.apk || !config.passe) return Promise.resolve(config.arquivos);
+    if (!window.LSPasse) return Promise.reject(new Error("faltou uma parte da página; recarregue"));
+    return window.LSPasse.pegar(config.passe, config.jogo || config.nome, function () { mostrar("Conferindo o acesso ao jogo…", 2); })
+      .then(function (lista) { config.arquivos = window.LSPasse.juntar(config.arquivos, lista); return config.arquivos; });
+  }
+  comPasse().then(pegar).then(function (bytes) {
     bytesProntos = bytes;
     mostrar("Pronto!", 100);
     progresso.hidden = true;
@@ -995,6 +1003,8 @@
     botaoJogar.focus({ preventScroll: true });
     requestAnimationFrame(olharControle);
   }, function (erro) {
-    falhou("Não deu para baixar o jogo — " + erro.message + ".");
+    if (erro && erro.recusado) falhou(erro.message);
+    else if (erro && erro.rede) falhou("Sem internet, e este jogo ainda não estava guardado no aparelho. Conecte e tente de novo.");
+    else falhou("Não deu para baixar o jogo — " + erro.message + ".");
   });
 })();

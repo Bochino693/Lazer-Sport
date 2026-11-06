@@ -10,6 +10,7 @@ from .views_favoritos import (
 )
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_app_avisos import service_worker_do_site
+from .escudo_jogos import ArmadilhaView, PasseDoJogoView
 from .views_app_jogos import manifesto_dos_jogos, service_worker_dos_jogos
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_arena import ArenaView
@@ -264,6 +265,8 @@ urlpatterns = [
     path("jogos/sw.js", service_worker_dos_jogos, name="jogos_app_sw"),
     path("jogos/app.webmanifest", manifesto_dos_jogos, name="jogos_app_manifesto"),
     path("jogos/abriu/", AbriuJogoView.as_view(), name="jogos_abriu"),
+    # a armadilha dos robôs (escondida na biblioteca, proibida no robots.txt): ver core/escudo_jogos.py
+    path("jogos/_acervo/", ArmadilhaView.as_view(), name="jogos_armadilha"),
     path("jogos/anuncio/<int:pk>/", AnuncioJogosView.as_view(), name="anuncio_jogos"),
     # antes de jogos/<slug>/: "partida" e "ranking" não são jogos
     path("jogos/partida/", PartidaJogoView.as_view(), name="jogos_partida"),
@@ -271,6 +274,8 @@ urlpatterns = [
     path("jogos/<slug:slug>/", SimuladorView.as_view(), name="jogo"),
     # jogos de console pelo emulador: a página do quadro e o índice (.cue/.m3u)
     path("jogos/<slug:slug>/emulador/", JogoEmuladorView.as_view(), name="jogo_emulador"),
+    # o passe: a prova de trabalho que libera de onde baixar o jogo (core/escudo_jogos.py)
+    path("jogos/<slug:slug>/passe/", PasseDoJogoView.as_view(), name="jogo_passe"),
     path("jogos/<slug:slug>/emulador/<path:nome>", ArquivoDoEmuladorView.as_view(), name="jogo_emulador_arquivo"),
 
     path("eventos/", EventosView.as_view(), name="eventos"),

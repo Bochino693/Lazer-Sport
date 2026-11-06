@@ -86,7 +86,10 @@
   function desenharBotaoCheia() {
     corpo.classList.toggle("app-tela-cheia", emTelaCheia());
     if (!botaoCheia) return;
-    botaoCheia.querySelector("span").textContent = emTelaCheia() ? "Sair da tela cheia" : "Tela cheia";
+    var nome = emTelaCheia() ? "Sair da tela cheia" : "Tela cheia";
+    botaoCheia.querySelector("span").textContent = nome;
+    botaoCheia.title = nome;
+    botaoCheia.setAttribute("aria-label", nome);
     var i = botaoCheia.querySelector("i");
     if (i) i.className = emTelaCheia() ? "fa-solid fa-compress" : "fa-solid fa-expand";
   }
@@ -178,7 +181,7 @@
     if (!daHistoria && history.state && history.state.lsJogo) {
       try { history.back(); } catch (e) { /* nada */ }
     }
-    var volta = document.querySelector("[data-bj-ficha]:not([hidden]) [data-bj-ficha-jogar]") || document.querySelector(".pg-topo a");
+    var volta = document.querySelector("[data-bj-ficha]:not([hidden]) [data-bj-ficha-jogar]") || document.querySelector(".pg-marca");
     if (volta && volta.focus) volta.focus({ preventScroll: true });
   }
   // o botão voltar do celular (e do navegador) fecha o jogo, não sai do app
@@ -226,6 +229,63 @@
       }).catch(function () { /* sem app offline: segue online */ });
     });
   }
+
+  /* ---------------------------------------------------------------- a barra do app */
+  // presa no alto (computador e tablet), ganha o vidro escuro ao rolar; a aba da seção
+  // à vista fica acesa; "/" leva à busca; no celular, a aba Buscar abre a busca.
+  var barraDoApp = $("[data-pg-barra]");
+  var abas = Array.prototype.slice.call(document.querySelectorAll("[data-pg-aba]"));
+  var secoes = { biblioteca: document.getElementById("biblioteca"), ranking: document.getElementById("ranking") };
+  var campoBusca = $("[data-portal-busca]");
+  var marcando = false;
+  function presa() { return barraDoApp && getComputedStyle(barraDoApp).position === "sticky"; }
+  function marcarBarra() {
+    marcando = false;
+    if (!barraDoApp) return;
+    var altura = presa() ? barraDoApp.offsetHeight : 0;
+    document.documentElement.style.setProperty("--pg-barra-altura", altura + "px");
+    barraDoApp.classList.toggle("is-rolada", window.scrollY > 8);
+    var linha = Math.max(altura + 40, window.innerHeight * 0.35);
+    var atual = "inicio";
+    if (secoes.biblioteca && secoes.biblioteca.getBoundingClientRect().top <= linha) atual = "biblioteca";
+    if (secoes.ranking && secoes.ranking.getBoundingClientRect().top <= linha) atual = "ranking";
+    // no fim da página, o ranking (a última seção) mesmo que não chegue à linha
+    if (secoes.ranking && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) atual = "ranking";
+    abas.forEach(function (a) {
+      if (a.dataset.pgAba === atual) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+    });
+  }
+  function pedirMarca() { if (!marcando) { marcando = true; requestAnimationFrame(marcarBarra); } }
+  window.addEventListener("scroll", pedirMarca, { passive: true });
+  window.addEventListener("resize", pedirMarca);
+  marcarBarra();
+  abas.forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      var alvo = a.dataset.pgAba === "inicio" ? null : secoes[a.dataset.pgAba];
+      if (a.dataset.pgAba !== "inicio" && !alvo) return;
+      e.preventDefault();
+      var suave = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+      if (alvo) alvo.scrollIntoView({ behavior: suave ? "smooth" : "auto", block: "start" });
+      else window.scrollTo({ top: 0, behavior: suave ? "smooth" : "auto" });
+      if (history.replaceState) history.replaceState(history.state, "", location.pathname + location.search + (alvo ? "#" + alvo.id : ""));
+    });
+  });
+  function irParaBusca() {
+    if (!campoBusca) return;
+    window.scrollTo({ top: 0, behavior: "auto" });
+    campoBusca.focus({ preventScroll: true });
+    try { campoBusca.select(); } catch (e) { /* nada */ }
+  }
+  var abaBuscar = $("[data-pg-aba-buscar]");
+  if (abaBuscar) abaBuscar.addEventListener("click", function (e) { e.preventDefault(); irParaBusca(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || aberto) return;
+    var ali = document.activeElement;
+    if (ali && (ali.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ali.tagName))) return;
+    if (document.querySelector("[data-bj-ficha]:not([hidden])")) return;
+    e.preventDefault();
+    irParaBusca();
+  });
 
   var tempoAviso = null;
   function avisar(mensagem) {

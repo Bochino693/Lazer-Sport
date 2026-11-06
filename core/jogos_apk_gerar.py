@@ -463,7 +463,7 @@ def chave_e_certificado():
 #: O que o reprodutor usa do site (o resto da página vem no HTML).
 ARQUIVOS_DO_REPRODUTOR = (
     "site/paginas/jogo-emulador.css", "site/paginas/jogo-emulador.js", "site/paginas/jogo-guardado.js",
-    "site/paginas/intro-jogos.css", "site/paginas/intro-jogos.js", "images/logoofi.png",
+    "site/paginas/jogo-passe.js", "site/paginas/intro-jogos.css", "site/paginas/intro-jogos.js", "images/logoofi.png",
 )
 ARQUIVOS_DO_EMULADOR = (
     "loader.js", "emulator.min.js", "emulator.min.css", "version.json", "localization/pt-BR.json",

@@ -317,10 +317,16 @@ class EmuladorNoSiteTests(TestCase):
         self.assertEqual(sorted(arquivos), ["/Jogo (Disc 1).cue", "/Track 01.bin", "/Track 02.bin"])
         principal = arquivos["/Jogo (Disc 1).cue"]
         self.assertTrue(principal["principal"])
+        # de onde baixar não vai na página: vem com o passe (core/escudo_jogos.py)
+        self.assertFalse(any("partes" in a for a in config["arquivos"]))
+        self.assertNotIn("guardado_Track", resposta.content.decode())
+        from .tests_escudo_jogos import pedir_passe
+
+        partes = {a["nome"]: a["partes"] for a in pedir_passe(self.client, config["passe"]).json()["arquivos"]}
         # o índice leva a versão: o jogo guardado no aparelho nunca abre o índice velho
-        self.assertTrue(principal["partes"][0].startswith(reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"]) + "?v="))
+        self.assertTrue(partes["Jogo (Disc 1).cue"][0].startswith(reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"]) + "?v="))
         self.assertEqual(config["jogo"], "disco-teste")
-        self.assertIn("guardado_Track", arquivos["/Track 01.bin"]["partes"][0])
+        self.assertIn("guardado_Track", partes["Track 01.bin"][0])
         self.assertEqual(arquivos["/Track 01.bin"]["tamanho"], len(FAIXA_PSX))
         # o jogo salvo leva o nome do jogo no site (único), com a extensão do que o emulador abre
         self.assertEqual(config["nome"], "disco-teste.cue")
@@ -457,7 +463,7 @@ class EmuladorNoSiteTests(TestCase):
         resposta = self.client.get(pagina)
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, "Jogo particular")
-        self.assertEqual(resposta["X-Robots-Tag"], "noindex, nofollow")
+        self.assertTrue(resposta["X-Robots-Tag"].startswith("noindex, nofollow"))
         self.assertIn("no-store", resposta["Cache-Control"])
         self.assertEqual(self.config(self.client.get(emulador))["core"], "snes")
         self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")  # nem para a equipe, no portal

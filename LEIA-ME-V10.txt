@@ -752,3 +752,54 @@ Dependência nova: rjsmin (requirements.txt).
    já vem compilada em core/apk_casca/classes.dex. Mudou o
    ferramentas/apk/src/.../Jogo.java? Recompile (precisa de Java e internet):
        sh ferramentas/apk/montar_casca.sh
+
+29) A BARRA DO APP DOS JOGOS (O TOPO DE /jogos/)
+   O topo foi refeito: cada peça tem o seu lugar em cada largura, sem nada
+   por cima de nada.
+     * Computador largo (1440 px ou mais): numa linha só, a marca, as seções
+       (Início, Biblioteca, Ranking), a busca, os atalhos (Instalar app, Tela
+       cheia, Loja) e a conta (a bolinha com a inicial, o nome e a posição no
+       ranking; sem conta, Entrar e Criar conta).
+     * Computador menor e tablet: a marca, a busca, os atalhos e a conta em
+       cima; as seções embaixo, como as abas de um programa.
+     * Nos dois, a barra fica PRESA NO ALTO ao rolar (com o vidro escuro) e a
+       aba da seção à vista fica acesa. A tecla "/" leva direto à busca.
+     * Celular: a marca, os atalhos e a conta em cima; a busca inteira
+       embaixo; e as seções numa BARRA DE ABAS NO PÉ DA TELA, como nos
+       aplicativos (Início, Biblioteca, Buscar, Ranking, Loja). Celular
+       deitado: a barra não fica presa (a tela é baixa).
+   Os atalhos são ícones com o nome ao parar o mouse em cima (e para o leitor
+   de tela). O aviso "Sem internet" aparece embaixo da barra.
+
+30) O ESCUDO DOS JOGOS: ROBÔS DE IA E CÓPIA EM MASSA DO LADO DE FORA
+   Está em core/escudo_jogos.py (os detalhes no começo do arquivo).
+     * ROBÔS DE IA (GPTBot, ClaudeBot, CCBot, PerplexityBot, Bytespider e
+       outros): o robots.txt pede que não entrem em /jogos/ e, se entrarem,
+       levam "403" em tudo dos jogos -- a biblioteca, o reprodutor e os
+       arquivos dos jogos da casa. A loja continua aberta para eles.
+     * PROGRAMAS DE CÓPIA (curl, wget, python, Scrapy, navegador "sem tela"):
+       não abrem o reprodutor, não pedem o passe e não baixam os arquivos.
+     * A ARMADILHA: a biblioteca tem um link escondido (/jogos/_acervo/) que
+       pessoa nenhuma vê nem alcança, e que o robots.txt proíbe. Quem entra
+       nele é robô lendo o código atrás de arquivos: fica 6 horas sem abrir
+       jogo nenhum (pelo IP e o navegador juntos; outra pessoa na mesma rede
+       continua jogando).
+     * O PASSE: o endereço dos arquivos do jogo NÃO vai mais na página. O
+       reprodutor faz uma "prova de trabalho" (uma conta de SHA-256 que leva
+       uma fração de segundo; no teste, 0,1 s) e troca a resposta pela lista
+       de onde baixar. Cada desafio é assinado pelo site, vale 15 minutos e
+       uma vez só. Quem abre jogo demais faz mais conta (10, 25 e 40 jogos em
+       10 minutos deixam a conta 4, 16 e 64 vezes mais longa) e, acima de 60,
+       espera. Navegador controlado por programa (o sinal "webdriver") e
+       pedido vindo de outro site são recusados.
+     * SEM INTERNET continua: a lista de onde baixar fica guardada no
+       aparelho, e o jogo já guardado abre sem rede. O APK não muda (lá o
+       jogo vai dentro do app).
+     * O Google e o Bing continuam vendo a biblioteca e as páginas dos jogos
+       (a busca do site não perde nada); o reprodutor já não era indexado.
+   O QUE NENHUM SITE CONSEGUE: o que o navegador de uma pessoa baixa, a pessoa
+   consegue guardar. O escudo impede o robô e a cópia em massa, e deixa caro
+   e lento quem tenta automatizar.
+   Com mais de um processo no servidor (WEB_WORKERS acima de 1), a contagem
+   e o "uma vez só" valem por processo (o cache é de memória); a assinatura
+   do desafio vale sempre.

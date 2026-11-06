@@ -67,12 +67,19 @@
     try { preparoDoServidor = JSON.parse(arquivosBruto.textContent || "{}"); } catch (e) { return; }
     const dados = preparoDoServidor.config || {};
     preCarregarEmulador(preparoDoServidor);
-    const itens = dados.arquivos || [];
-    if (!itens.length) return;
-    const total = itens.reduce(function (t, i) { return t + i.tamanho; }, 0);
-    guardado.quantoFalta(itens).then(function (falta) {
+    const semEndereco = dados.arquivos || [];
+    const passe = window.LSPasse;
+    if (!semEndereco.length || !passe) return;
+    const total = semEndereco.reduce(function (t, i) { return t + i.tamanho; }, 0);
+    const economia = navigator.connection && navigator.connection.saveData;
+    // de onde baixar não vem na página (core/escudo_jogos.py): a lista guardada no aparelho,
+    // ou o passe (a prova de trabalho) quando o jogo é pequeno e vai ser preparado agora
+    const guardada = passe.lerLista(dados.jogo);
+    let itens = null;
+    try { itens = guardada ? passe.juntar(semEndereco, guardada) : null; } catch (e) { itens = null; }
+    const faltando = itens ? guardado.quantoFalta(itens) : Promise.resolve(total);
+    faltando.then(function (falta) {
       if (!falta) { avisar("Já está no aparelho: abre na hora."); return; }
-      const economia = navigator.connection && navigator.connection.saveData;
       if (falta > PREPARO_AUTOMATICO || economia) {
         avisar("Na primeira vez baixa " + mb(falta) + "; depois fica guardado e abre na hora.");
         return;
@@ -80,9 +87,11 @@
       const controle = typeof AbortController !== "undefined" ? new AbortController() : null;
       preparo = controle;
       avisar("Preparando o jogo…");
-      guardado.preparar(dados.jogo, itens, function (feito) {
-        avisar("Preparando o jogo: " + Math.min(99, Math.floor(feito / total * 100)) + "%");
-      }, controle && controle.signal).then(function (r) {
+      passe.pegar(dados.passe, dados.jogo).then(function (lista) {
+        return guardado.preparar(dados.jogo, passe.juntar(semEndereco, lista), function (feito) {
+          avisar("Preparando o jogo: " + Math.min(99, Math.floor(feito / total * 100)) + "%");
+        }, controle && controle.signal);
+      }).then(function (r) {
         preparo = null;
         avisar(r && r.guardado ? "Pronto: abre na hora." : "");
       }, function () { preparo = null; avisar(""); });
