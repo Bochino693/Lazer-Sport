@@ -150,6 +150,14 @@ class PainelApkTests(BaseApk):
         self.assertIn('filename="disco-teste.apk"', resposta["Content-Disposition"])
         conteudo = b"".join(resposta.streaming_content)
         self.assertIn("AndroidManifest.xml", zipfile.ZipFile(io.BytesIO(conteudo)).namelist())
+        # o tamanho para a barra de progresso do painel (atravessa o gzip, que tira o Content-Length)
+        self.assertEqual(int(resposta["X-Tamanho-Arquivo"]), len(conteudo))
+
+    def test_o_tamanho_vai_junto_mesmo_com_gzip(self):
+        self.client.force_login(self.chefe)
+        resposta = self.client.get(self.url, HTTP_HOST=HOST, HTTP_ACCEPT_ENCODING="gzip")
+        self.assertEqual(resposta.status_code, 200)
+        self.assertTrue(int(resposta["X-Tamanho-Arquivo"]) > 0)
 
     def test_publicar_poe_o_botao_baixar_o_aplicativo(self):
         self.client.force_login(self.chefe)
