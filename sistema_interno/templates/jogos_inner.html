@@ -229,6 +229,19 @@
                     </div>
                   </div>
                 </div>
+                {# GERAR O .EXE: o jogo vira um programa de Windows, que abre com dois cliques e sem internet (core/jogos_exe_gerar.py) #}
+                <div class="col-12 d-none" id="jfExeGerar">
+                  <div class="border rounded-3 p-3">
+                    <strong class="d-block mb-1"><i class="bi bi-windows me-1"></i>Programa para Windows (.exe)</strong>
+                    <span class="form-text mt-0 d-block mb-2">Um .exe só: dois cliques e o jogo abre numa janela própria (a do Edge, que todo Windows 10/11 tem, ou a do Chrome), em tela cheia, <b>sem internet</b> e com o jogo salvo guardado no computador. Roda <b>qualquer console</b> do site, inclusive PSP e DOS. Na primeira vez o Windows pode avisar “o Windows protegeu o computador”: <em>Mais informações › Executar assim mesmo</em> (programa sem assinatura digital paga).</span>
+                    <div class="alert alert-warning py-2 small d-none" id="jfExeLicenca"></div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                      <button type="button" class="btn btn-sm btn-primary" id="jfExeBaixar"><i class="bi bi-download me-1"></i>Gerar e baixar o .exe</button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="jfExeGuardar"><i class="bi bi-hdd me-1"></i>Gerar e guardar como versão para computador</button>
+                      <span class="small" id="jfExeStatus" aria-live="polite"></span>
+                    </div>
+                  </div>
+                </div>
                 <div class="col-12"><label class="form-label" for="jogoAcoes">O que cada botão faz neste jogo <span class="text-muted fw-normal">(uma linha por botão: “botão: ação”)</span></label>
                   <textarea class="form-control" id="jogoAcoes" name="acoes" rows="3" placeholder="B: Pular&#10;Y: Correr e pegar&#10;Start: Pausar"></textarea>
                   <span class="form-text">Aparece no “Como jogar” e no botão Comandos do jogo, no lugar da função geral do console. Use o nome do botão do console (A, B, ✕, ○, L, R, Start…).</span></div>
@@ -797,6 +810,40 @@ LSTela.pronto(function () {
     }).catch(function (e) { apkStatus(e.message, true); }).finally(function () { apkOcupado(false); });
   });
 
+  /* GERAR O .EXE: baixa, ou guarda como a versão para computador */
+  function exeStatus(texto, erro) {
+    var caixa = el("jfExeStatus");
+    caixa.textContent = texto;
+    caixa.className = "small " + (erro ? "text-danger" : "text-muted");
+  }
+  function exeOcupado(sim) { el("jfExeBaixar").disabled = sim; el("jfExeGuardar").disabled = sim; }
+  el("jfExeBaixar").addEventListener("click", function () {
+    if (!jogoAberto || !jogoAberto.gerar_exe) return;
+    exeOcupado(true);
+    exeStatus("Montando o .exe (o jogo, o emulador e a janela)…");
+    fetch(jogoAberto.gerar_exe, { credentials: "same-origin" }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || "Não deu para gerar o .exe."); });
+      return r.blob();
+    }).then(function (arquivo) {
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(arquivo);
+      link.download = (jogoAberto.slug || "jogo") + ".exe";
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
+      exeStatus("Pronto: " + (arquivo.size / 1048576).toFixed(1).replace(".", ",") + " MB. No Windows, dois cliques no arquivo e o jogo abre.");
+    }).catch(function (e) { exeStatus(e.message, true); }).finally(function () { exeOcupado(false); });
+  });
+  el("jfExeGuardar").addEventListener("click", function () {
+    if (!jogoAberto || !jogoAberto.gerar_exe) return;
+    exeOcupado(true);
+    exeStatus("Montando e guardando o .exe…");
+    var token = form.querySelector("[name=csrfmiddlewaretoken]");
+    fetch(jogoAberto.gerar_exe, { method: "POST", credentials: "same-origin", body: new FormData(),
+      headers: { "X-CSRFToken": token ? token.value : "" } }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.erro || "Não deu para guardar o .exe."); return j; });
+    }).then(function (j) { exeStatus(j.mensagem); }).catch(function (e) { exeStatus(e.message, true); }).finally(function () { exeOcupado(false); });
+  });
+
   function abrir(jogo, irArquivos) {
     form.reset(); Painel.erro("jogoErro", "");
     fotoDaCapa = null;
@@ -827,6 +874,10 @@ LSTela.pronto(function () {
     Painel.valor("jogoAcoes", jogo ? (jogo.acoes || "") : "");
     el("jfApkGerar").classList.toggle("d-none", !(jogo && jogo.pode_gerar_apk && jogo.gerar_apk));
     el("jfApkStatus").textContent = "";
+    el("jfExeGerar").classList.toggle("d-none", !(jogo && jogo.pode_gerar_exe && jogo.gerar_exe));
+    el("jfExeStatus").textContent = "";
+    el("jfExeLicenca").classList.toggle("d-none", !(jogo && jogo.aviso_licenca));
+    el("jfExeLicenca").textContent = jogo && jogo.aviso_licenca ? jogo.aviso_licenca : "";
     liberarConsoles();
     // a capa
     var temCapa = !!(jogo && jogo.capa);

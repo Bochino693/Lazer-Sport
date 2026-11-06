@@ -1044,3 +1044,29 @@ Dependência nova: rjsmin (requirements.txt).
    core/conversor_3d.pecas_que_se_repetem; tabela core.MontagemTresD
    (migração 0138). O three.js ganhou o exportador de .glb e as alças de
    mover/girar, da mesma versão (core/static/vendor/three/).
+
+40) O PROGRAMA DE WINDOWS (.EXE) E O APK, PARA QUALQUER CONSOLE
+   Painel > Jogos > o jogo > "Programa para Windows (.exe)": "Gerar e baixar"
+   ou "Gerar e guardar como versão para computador". Um .exe só, que abre
+   com dois cliques numa janela própria (a do Edge, que todo Windows 10/11
+   tem, ou a do Chrome), em tela cheia, SEM INTERNET, com o jogo salvo
+   guardado no computador (porta fixa por jogo: o jogo salvo continua de
+   uma vez para outra). Roda QUALQUER console do site, inclusive PSP e DOS
+   (o .exe serve a página isolada que o núcleo de várias linhas pede -- no
+   APK eles ficam de fora, porque o WebView do Android não garante isso).
+   Como é feito: o painel não compila nada. A casca (core/exe_casca/
+   jogo-windows.exe, feita em Go: ferramentas/exe/, recompile com
+   ferramentas/exe/montar_casca.sh) + um .zip com o mesmo conteúdo do APK
+   (o reprodutor, o EmulatorJS, o núcleo e os arquivos do jogo) + a marca
+   no fim. Os arquivos grandes vão sem compressão e são lidos em pedaços.
+   Na primeira vez o Windows pode avisar "o Windows protegeu o computador"
+   (todo programa sem assinatura digital paga): "Mais informações" >
+   "Executar assim mesmo". Para sumir esse aviso, só com um certificado de
+   assinatura de código (pago, em nome da empresa).
+   O APK (seção 28) continua igual, para todos os consoles menos PSP e DOS.
+   LIMITES (os dois): o jogo é montado no servidor, na hora, até 160 MB
+   (discos maiores: compacte em .chd, ou mande o arquivo direto); e a
+   LICENÇA -- os núcleos de licença não comercial (Super Nintendo, Mega
+   Drive/Master System/Game Gear/Sega CD, 32X, fliperama) servem para uso
+   particular: o painel avisa junto do botão. Vender ou distribuir esses
+   programas, ou qualquer jogo sem os direitos, não é permitido.
