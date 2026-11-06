@@ -88,6 +88,11 @@ MARCAS_DE_HTML = ("<!doctype", "<html", "<head", "<body", "<script", "<canvas")
 
 
 def _tamanho_legivel(bytes_):
+    """43 KB, 6,4 MB, 120 MB: o APK de um jogo HTML5 pequeno não vira "0 MB"."""
+    if bytes_ < MB:
+        return f"{max(1, round(bytes_ / 1024))} KB"
+    if bytes_ < 10 * MB and bytes_ % MB:
+        return f"{bytes_ / MB:.1f} MB".replace(".", ",")
     return f"{bytes_ / MB:.0f} MB"
 
 
@@ -242,6 +247,12 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             jogo.versao_pc_url = self._url_do_arquivo(jogo.versao_pc)
             jogo.apk_motor_nome = jogos_apk.MOTORES.get(jogo.apk_motor, "") if jogo.apk_motor else ""
             jogo.apk_caminho = jogos_apk.caminho_para_o_site(jogo.apk_motor) if jogo.apk and jogo.apk_motor else ""
+            # o card: o selo do estado, a sigla de como roda e o que dá para gerar
+            # (desligado, o card mostra "Desligado": os dois selos vão no HTML e o interruptor escolhe)
+            jogo.estado_ligado, jogo.estado_ligado_rotulo = _estado_quando_ligado(jogo)
+            jogo.sigla = _sigla(jogo)
+            jogo.gera_apk, jogo.gera_exe = _o_que_gera(jogo, emulador_pronto)
+            jogo.aviso_licenca = _aviso_de_licenca(jogo) if (jogo.gera_apk or jogo.gera_exe) else ""
 
         todos = JogoCadastrado.objects.all()
         oficiais = self._oficiais(site, busca)
@@ -309,6 +320,7 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             return ""
 
     def _serializar(self, jogo):
+        pode_apk, pode_exe = _o_que_gera(jogo, tabela_pronta(ArquivoEmulador))
         return {
             "id": jogo.pk,
             "nome": jogo.nome,
@@ -331,11 +343,10 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "poster": self._nome_do_arquivo(jogo.poster),
             "arquivo_html": self._nome_do_arquivo(jogo.arquivo_html),
             "apk": self._nome_do_arquivo(jogo.apk),
-            # gerar o APK (Android) pelo painel: jogo de console (menos PSP e DOS) ou de um .html só
-            "pode_gerar_apk": bool((jogo.sistema and jogo.sistema not in ("psp", "dos")) or jogo.arquivo_html),
+            # gerar o APK (Android) e o .exe (Windows) pelo painel: ver _o_que_gera
+            "pode_gerar_apk": pode_apk,
             "gerar_apk": reverse("jogo_gerar_apk", args=[jogo.pk]) if jogo.pk else "",
-            # o .exe leva também o PSP e o DOS (a página dele é isolada)
-            "pode_gerar_exe": bool((jogo.sistema and jogo.sistema != "auto") or jogo.arquivo_html),
+            "pode_gerar_exe": pode_exe,
             "gerar_exe": reverse("jogo_gerar_exe", args=[jogo.pk]) if jogo.pk else "",
             "aviso_licenca": _aviso_de_licenca(jogo),
             "versao_pc": self._nome_do_arquivo(jogo.versao_pc),
@@ -409,10 +420,14 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
         jogo = self._jogo_do_pedido(request)
         if jogo is None:
             raise ErroDeFormulario("Jogo não encontrado.")
-        jogo.ativo = not jogo.ativo
+        # O interruptor do card manda o estado que a pessoa escolheu ("1" liga,
+        # "0" desliga): dois toques seguidos, ou a tela velha aberta noutra aba,
+        # não invertem a escolha dela. Sem o campo, alterna (como sempre foi).
+        pedido = (request.POST.get("ativo") or "").strip()
+        jogo.ativo = pedido == "1" if pedido in ("0", "1") else not jogo.ativo
         jogo.save(update_fields=["ativo", "atualizado"])
         log.info("jogo %s %s por %s", jogo.slug, "ligado" if jogo.ativo else "desligado", request.user.username)
-        return self.sucesso(request, f"\"{jogo.nome}\" {'está no ar' if jogo.ativo else 'saiu do ar'}.")
+        return self.sucesso(request, f"\"{jogo.nome}\" {'está no ar' if jogo.ativo else 'saiu do ar'}.", ativo=jogo.ativo)
 
     def acao_delete(self, request):
         # "delete" é a ação que a janela de confirmação compartilhada envia
@@ -488,6 +503,78 @@ def _aviso_de_licenca(jogo):
     return aviso_de_licenca(jogo)
 
 
+def _o_que_gera(jogo, tabela_do_emulador=True):
+    """O que o painel consegue gerar deste jogo AGORA: (apk, exe).
+
+    * jogo de console: precisa do sistema reconhecido e do arquivo do jogo já
+      guardado -- sem ele, o gerador só devolveria "faltou o arquivo". O PSP e
+      o DOS não vão para APK (o núcleo pede um isolamento que o app do Android
+      não dá), mas vão para o .exe, que abre a página dele isolada;
+    * jogo de um .html só: vai para os dois;
+    * jogo só por endereço (ou só com a versão para computador): não tem o que
+      empacotar, e os botões nem aparecem.
+    """
+    from core.jogos_apk_gerar import SEM_APK
+
+    if jogo.sistema:
+        if jogo.sistema not in emu.SISTEMAS or not jogo.pk or not tabela_do_emulador:
+            return False, False
+        tem_o_jogo = any(a.papel == ArquivoEmulador.JOGO for a in jogo.arquivos_emulador.all())
+        return tem_o_jogo and jogo.sistema not in SEM_APK, tem_o_jogo
+    tem_html = bool(jogo.arquivo_html)
+    return tem_html, tem_html
+
+
+def _estado_quando_ligado(jogo):
+    """O selo do card com o jogo ligado: (chave, rótulo).
+
+    Ligado nem sempre é "no ar": sem os arquivos do console, ou só com a
+    versão para computador, o jogo ainda não aparece no site -- e o selo diz
+    isso, em vez de um "No ar" que não é verdade. Desligado é sempre
+    "Desligado" (o card cuida disso, para o interruptor trocar na hora).
+    """
+    if jogo.aguardando_arquivos:
+        return "faltam", "Faltam arquivos"
+    if jogo.so_versao_pc:
+        return "so-pc", "Só para computador"
+    if jogo.particular:
+        return "particular", "Particular"
+    if not (jogo.endereco or jogo.arquivo_html or jogo.sistema):
+        return "faltam", "Sem onde jogar"
+    return "no-ar", "No ar"
+
+
+def _sigla(jogo):
+    """A etiqueta curta de como o jogo roda, no canto da arte: PS1, SNES, HTML5, LINK, PC."""
+    from core.portal_jogos import SIGLAS
+
+    if jogo.endereco:
+        return "LINK"
+    if jogo.arquivo_html:
+        return "HTML5"
+    if jogo.sistema and jogo.sistema in emu.SISTEMAS:
+        return SIGLAS.get(jogo.sistema, "CONSOLE")
+    if jogo.sistema:
+        return "CONSOLE"
+    if jogo.so_versao_pc:
+        return "PC"
+    return ""
+
+
+def _com_o_tamanho(resposta, arquivo):
+    """O tamanho do arquivo num cabeçalho próprio, para a barra de progresso do painel.
+
+    O GZipMiddleware comprime a resposta em fluxo e tira o Content-Length: sem
+    ele, o navegador não sabe quanto falta. O X-Tamanho-Arquivo atravessa a
+    compressão (e o painel conta os bytes já descomprimidos, que batem com ele).
+    """
+    posicao = arquivo.tell()
+    arquivo.seek(0, 2)
+    resposta["X-Tamanho-Arquivo"] = str(arquivo.tell() - posicao)
+    arquivo.seek(posicao)
+    return resposta
+
+
 class JogoGerarApkView(SuperusuarioInternoRequiredMixin, View):
     """GERAR O APK (ANDROID) DE UM JOGO -- o .bat dos jogos, num clique (core/jogos_apk_gerar.py).
 
@@ -521,7 +608,7 @@ class JogoGerarApkView(SuperusuarioInternoRequiredMixin, View):
         resposta = FileResponse(destino, as_attachment=True, filename=f"{jogo.slug}.apk",
                                 content_type="application/vnd.android.package-archive")
         resposta["Cache-Control"] = "no-store"
-        return resposta
+        return _com_o_tamanho(resposta, destino)
 
     def post(self, request, pk):
         jogo, pronto, erro = self._gerar(request, pk)
@@ -579,7 +666,7 @@ class JogoGerarExeView(SuperusuarioInternoRequiredMixin, View):
         resposta = FileResponse(destino, as_attachment=True, filename=f"{jogo.slug}.exe",
                                 content_type="application/vnd.microsoft.portable-executable")
         resposta["Cache-Control"] = "no-store"
-        return resposta
+        return _com_o_tamanho(resposta, destino)
 
     def post(self, request, pk):
         jogo, pronto, erro = self._gerar(request, pk)

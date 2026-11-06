@@ -1,7 +1,7 @@
 {% extends "base_inner.html" %}
 {% load static interno_extras %}
 
-{% block title %}Jogos do simulador | Lazer & Sport{% endblock %}
+{% block title %}Jogos do portal | Lazer & Sport{% endblock %}
 {% block top_title %}Lazer & Sport Games{% endblock %}
 
 {% block extra_css %}
@@ -12,8 +12,8 @@
 <section class="ls-games-hero">
   <img class="ls-games-hero-marca" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="68" height="68">
   <span class="ls-eyebrow">LAZER &amp; SPORT GAMES · SÓ O SUPERADMINISTRADOR</span>
-  <h1>Jogos do simulador</h1>
-  <p>Os jogos oficiais das máquinas já vêm com o site, com capa, pôster e textos. Jogo novo da casa entra por aqui: com endereço hospedado ou um .html único, ele ganha a própria página em <strong>/jogos/</strong> — sem deploy e sem mexer no código.</p>
+  <h1>Jogos do portal</h1>
+  <p>Tudo o que aparece em <strong>/jogos/</strong>, o portal Lazer &amp; Sport Games. Os <strong>oficiais da casa</strong> já vêm com o site; os <strong>cadastrados</strong> entram por aqui — jogo HTML5, jogo de console no emulador, APK ou versão para computador —, sem deploy e sem mexer no código. De cada jogo cadastrado sai também o aplicativo <strong>Android (APK)</strong> e o programa de <strong>Windows (.exe)</strong>.</p>
   {% if not tabela_ausente %}
   <button class="btn btn-success" id="novoJogo" type="button"><i class="bi bi-plus-lg me-1"></i> Cadastrar jogo novo</button>
   {% endif %}
@@ -28,14 +28,14 @@
 
 <section class="ls-metrics mb-3">
   <article class="ls-metric-card blue">
-    <div class="ls-metric-head"><span class="ls-metric-label">Oficiais</span><span class="ls-metric-icon"><i class="bi bi-stars"></i></span></div>
+    <div class="ls-metric-head"><span class="ls-metric-label">Oficiais da casa</span><span class="ls-metric-icon"><i class="bi bi-stars"></i></span></div>
     <strong class="ls-metric-value">{{ total_oficiais }}</strong>
     <span class="ls-metric-note">Vêm com o site, sem APK</span>
   </article>
   <article class="ls-metric-card green">
     <div class="ls-metric-head"><span class="ls-metric-label">Cadastrados</span><span class="ls-metric-icon"><i class="bi bi-joystick"></i></span></div>
     <strong class="ls-metric-value">{{ total }}</strong>
-    <span class="ls-metric-note">{{ total_ativos }} no ar agora</span>
+    <span class="ls-metric-note">Ligados agora: <span data-total-ativos>{{ total_ativos }}</span></span>
   </article>
   <article class="ls-metric-card violet">
     <div class="ls-metric-head"><span class="ls-metric-label">Com APK guardado</span><span class="ls-metric-icon"><i class="bi bi-android2"></i></span></div>
@@ -60,64 +60,104 @@
   </form>
 </section>
 
-<h2 class="ls-games-titulo"><i class="bi bi-stars"></i> Jogos oficiais do simulador <small>{{ oficiais|length }} de {{ total_oficiais }} · vêm com o site</small></h2>
-<div class="ls-games-grade">
-  {% for jogo in oficiais %}
-    <article class="ls-game" style="--cor: {{ jogo.cor }}">
-      <div class="ls-game-arte">
-        {% if jogo.poster %}<img src="{{ jogo.poster }}" alt="" loading="lazy">{% else %}<img class="capa" src="{{ jogo.capa }}" alt="" loading="lazy">{% endif %}
-        <span class="ls-game-selo">No ar</span>
-        <span class="ls-game-selo cinza direita">Sem APK</span>
-      </div>
-      <div class="ls-game-corpo">
-        <strong>{{ jogo.titulo }}</strong>
-        <span>{{ jogo.maquina }}</span>
-        <em>{{ jogo.chamada }}</em>
-      </div>
-      <div class="ls-game-acoes">
-        <a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-play-fill"></i> Jogar a prévia</a>
-      </div>
-      <p class="ls-game-nota">Motor feito à mão, no código do site: capa, pôster e textos já prontos. O jogo de verdade fica na máquina — nada para baixar.</p>
-    </article>
-  {% empty %}
-    <div class="ls-game-vazio"><i class="bi bi-search"></i>Nenhum jogo oficial com "{{ busca }}".</div>
-  {% endfor %}
-</div>
-
+{% comment %}
+  OS CADASTRADOS VÊM PRIMEIRO: são eles que se ligam, editam, apagam e
+  viram APK e .exe. Cada card tem três andares: a arte com o selo do
+  estado (No ar, Desligado, Particular, Faltam arquivos); o nome e como o
+  jogo roda; e as ações -- a principal (Abrir), as secundárias (Editar,
+  Arquivos, Android, Windows) e, no rodapé, o interruptor e o menu "⋯"
+  com o Apagar. Desligado, o card esmaece: os dois selos e os dois textos
+  do interruptor já estão no HTML, e a classe `is-desligado` escolhe.
+{% endcomment %}
 <h2 class="ls-games-titulo rosa"><i class="bi bi-cloud-arrow-up"></i> Cadastrados pelo painel <small>{{ jogos|length }} jogo{{ jogos|length|pluralize }}</small></h2>
-<div class="ls-games-grade">
+<p class="ls-games-sub">Ligue e desligue no interruptor de cada jogo. Os botões <strong>Android (APK)</strong> e <strong>Windows (.exe)</strong> geram o aplicativo na hora e baixam; na setinha ao lado, a opção de guardar no site.</p>
+<div class="ls-games-grade ls-games-grade--painel">
   {% for jogo in jogos %}
-    <article class="ls-game" style="--cor: {{ jogo.cor }}">
+    <article class="ls-game ls-game--painel ls-game--cadastrado{% if not jogo.ativo %} is-desligado{% endif %}" style="--cor: {{ jogo.cor }}" data-jogo-card="{{ jogo.id }}" aria-labelledby="jogoNome{{ jogo.id }}">
       <div class="ls-game-arte">
-        {% if jogo.poster_url %}<img src="{{ jogo.poster_url }}" alt="" loading="lazy">{% elif jogo.capa_url %}<img class="capa" src="{{ jogo.capa_url }}" alt="" loading="lazy">{% else %}<i class="bi bi-image text-muted"></i>{% endif %}
-        <span class="ls-game-selo {% if not jogo.ativo %}cinza{% endif %}">{% if not jogo.ativo %}Desligado{% elif jogo.particular %}<i class="bi bi-lock-fill"></i> Particular{% else %}No ar{% endif %}</span>
-        {% if jogo.sistema %}<span class="ls-game-selo direita {% if jogo.aguardando_arquivos %}cinza{% endif %}">{% if jogo.aguardando_arquivos %}Faltam os arquivos{% else %}Emulador{% endif %}</span>{% elif jogo.so_versao_pc %}<span class="ls-game-selo direita">Só para computador</span>{% elif jogo.apk %}<span class="ls-game-selo direita {% if not jogo.liberar_download %}cinza{% endif %}">{% if jogo.liberar_download %}APK liberado{% else %}APK guardado{% endif %}</span>{% endif %}
+        {% if jogo.poster %}<img class="ls-game-imagem" src="{{ jogo.poster_url }}" alt="" loading="lazy">{% elif jogo.capa_url %}<img class="ls-game-fundo" src="{{ jogo.capa_url }}" alt="" loading="lazy" aria-hidden="true"><img class="ls-game-capa" src="{{ jogo.capa_url }}" alt="" loading="lazy">{% else %}<i class="bi bi-image ls-game-sem-arte" aria-hidden="true"></i>{% endif %}
+        <span class="ls-game-estado is-{{ jogo.estado_ligado }} so-ligado">{% if jogo.estado_ligado == "no-ar" %}<span class="ls-game-ponto" aria-hidden="true"></span>{% elif jogo.estado_ligado == "particular" %}<i class="bi bi-lock-fill" aria-hidden="true"></i>{% elif jogo.estado_ligado == "so-pc" %}<i class="bi bi-pc-display" aria-hidden="true"></i>{% else %}<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>{% endif %}{{ jogo.estado_ligado_rotulo }}</span>
+        <span class="ls-game-estado is-desligado so-desligado"><i class="bi bi-power" aria-hidden="true"></i>Desligado</span>
+        {% if jogo.sigla %}<span class="ls-game-sigla">{{ jogo.sigla }}</span>{% endif %}
       </div>
-      <div class="ls-game-corpo">
-        <strong>{{ jogo.nome }}</strong>
-        <span>/jogos/{{ jogo.slug }}/ · {{ jogo.como_roda }} · {{ jogo.get_proporcao_display }} · ordem {{ jogo.ordem }}</span>
-        {% if jogo.chamada %}<em>{{ jogo.chamada|truncatechars:70 }}</em>{% endif %}
-        {% if jogo.sistema %}
-          <span><i class="bi bi-controller"></i> {% if jogo.aguardando_arquivos %}Jogo de console: <strong>faltam os arquivos do jogo</strong> — toque em “Arquivos do jogo”.{% else %}{{ jogo.emulador_resumo }}{% endif %}</span>
-        {% endif %}
-        {% if jogo.apk %}
-          <span><i class="bi bi-android2"></i> APK {% if jogo.liberar_download %}liberado para baixar{% else %}guardado, sem download{% endif %}{% if jogo.apk_motor_nome %} · feito em <strong>{{ jogo.apk_motor_nome }}</strong>{% endif %}</span>
-        {% endif %}
-        {% if jogo.versao_pc or jogo.versao_pc_link %}
-          <span><i class="bi bi-windows"></i> Versão para computador guardada{% if jogo.motor_nome %} · feito em <strong>{{ jogo.motor_nome }}</strong>{% endif %}
-            {% if jogo.versao_pc_url %} · <a href="{{ jogo.versao_pc_url }}" target="_blank" rel="noopener" data-no-soft-nav="true">baixar o arquivo</a>{% endif %}
-            {% if jogo.versao_pc_link %} · <a href="{{ jogo.versao_pc_link }}" target="_blank" rel="noopener noreferrer" data-no-soft-nav="true">abrir o link</a>{% endif %}
-          </span>
+
+      <div class="ls-game-info">
+        <h3 class="ls-game-nome" id="jogoNome{{ jogo.id }}" title="{{ jogo.nome }}">{{ jogo.nome }}</h3>
+        <p class="ls-game-endereco"><span>/jogos/{{ jogo.slug }}/</span><span>{{ jogo.get_proporcao_display }}</span></p>
+        {% if jogo.chamada %}<p class="ls-game-chamada">{{ jogo.chamada }}</p>{% endif %}
+        <ul class="ls-game-fatos">
+          {% if jogo.sistema %}
+            <li{% if jogo.aguardando_arquivos %} class="is-alerta"{% endif %}><i class="bi bi-controller" aria-hidden="true"></i><span>{% if jogo.aguardando_arquivos %}Jogo de console: <strong>faltam os arquivos do jogo</strong>{% elif jogo.emulador_resumo %}Emulador · {{ jogo.emulador_resumo }}{% else %}{{ jogo.como_roda }}{% endif %}</span></li>
+          {% else %}
+            <li><i class="bi {% if jogo.endereco %}bi-globe2{% elif jogo.arquivo_html %}bi-filetype-html{% else %}bi-pc-display{% endif %}" aria-hidden="true"></i><span>{{ jogo.como_roda }}</span></li>
+          {% endif %}
+          <li data-fato-apk{% if not jogo.apk %} hidden{% endif %}><i class="bi bi-android2" aria-hidden="true"></i><span data-fato-apk-texto>{% if jogo.liberar_download %}APK liberado para baixar (“Baixar o aplicativo”){% else %}APK guardado, sem download{% endif %}{% if jogo.apk_motor_nome %} · {{ jogo.apk_motor_nome }}{% endif %}</span></li>
+          <li data-fato-pc{% if not jogo.versao_pc and not jogo.versao_pc_link %} hidden{% endif %}><i class="bi bi-windows" aria-hidden="true"></i><span>Versão para computador guardada{% if jogo.motor_nome %} · {{ jogo.motor_nome }}{% endif %}{% if jogo.versao_pc_url %} · <a href="{{ jogo.versao_pc_url }}" target="_blank" rel="noopener" data-no-soft-nav="true">baixar</a>{% endif %}{% if jogo.versao_pc_link %} · <a href="{{ jogo.versao_pc_link }}" target="_blank" rel="noopener noreferrer" data-no-soft-nav="true">abrir o link</a>{% endif %}</span></li>
+        </ul>
+        {% if jogo.so_versao_pc %}<details class="ls-game-dica"><summary><i class="bi bi-info-circle" aria-hidden="true"></i> Ainda não joga no site</summary><p>O navegador não roda .exe. {{ jogo.caminho_para_o_site }}</p></details>{% endif %}
+        {% if jogo.apk_caminho and not jogo.endereco and not jogo.arquivo_html and not jogo.sistema %}<details class="ls-game-dica"><summary><i class="bi bi-info-circle" aria-hidden="true"></i> Sobre o APK</summary><p>O navegador não roda APK. {{ jogo.apk_caminho }}</p></details>{% endif %}
+      </div>
+
+      <div class="ls-game-botoes">
+        {% if jogo.aguardando_arquivos %}
+          <button class="ls-game-btn ls-game-btn--primario" type="button" data-editar="{{ jogo.id }}" data-ir-arquivos="1"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>Enviar os arquivos</span></button>
+          <button class="ls-game-btn" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil" aria-hidden="true"></i><span>Editar</span></button>
+        {% else %}
+          {% if not jogo.so_versao_pc %}<a class="ls-game-btn ls-game-btn--primario" data-so-ligado href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="{% if jogo.ativo %}Abrir a página do jogo no site{% else %}Ligue o jogo para abrir a página{% endif %}"{% if not jogo.ativo %} aria-disabled="true" tabindex="-1"{% endif %}><i class="bi bi-play-fill" aria-hidden="true"></i><span>Abrir</span></a>{% endif %}
+          <button class="ls-game-btn" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil" aria-hidden="true"></i><span>Editar</span></button>
+          <button class="ls-game-btn" type="button" data-editar="{{ jogo.id }}" data-ir-arquivos="1" aria-label="Arquivos do jogo" title="Arquivos do jogo"><i class="bi bi-hdd-stack" aria-hidden="true"></i><span>Arquivos</span></button>
         {% endif %}
       </div>
-      {% if jogo.so_versao_pc %}<p class="ls-game-nota"><strong>Ainda não joga no site:</strong> o navegador não roda .exe. {{ jogo.caminho_para_o_site }}</p>{% endif %}
-      {% if jogo.apk_caminho and not jogo.endereco and not jogo.arquivo_html and not jogo.sistema %}<p class="ls-game-nota"><strong>Sobre o APK:</strong> o navegador não roda APK. {{ jogo.apk_caminho }}</p>{% endif %}
-      <div class="ls-game-acoes">
-        <button class="btn btn-sm btn-outline-success" type="button" data-editar="{{ jogo.id }}" data-ir-arquivos="1"><i class="bi bi-hdd-stack"></i> Arquivos do jogo</button>
-        {% if not jogo.so_versao_pc and not jogo.aguardando_arquivos %}<a class="ls-game-jogar" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a página do jogo no site"><i class="bi bi-play-fill"></i> Abrir</a>{% endif %}
-        <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil"></i> Editar</button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ jogo.id }}">{% if jogo.ativo %}Desligar{% else %}Ligar{% endif %}</button>
-        <button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ jogo.id }}" data-nome="{{ jogo.nome }}" title="Excluir"><i class="bi bi-trash3"></i></button>
+
+      {% if jogo.gera_apk or jogo.gera_exe %}
+      <div class="ls-game-gerar" data-gerar-caixa>
+        <span class="ls-game-gerar-rotulo">Gerar o aplicativo</span>
+        <div class="ls-game-gerar-botoes">
+          {% if jogo.gera_apk %}
+          <div class="btn-group ls-gerar" data-gerar-grupo="apk">
+            <button class="ls-gerar-principal" type="button" data-gerar="apk" data-jogo="{{ jogo.id }}" title="Gerar e baixar o APK (aplicativo Android)"><i class="bi bi-android2 ls-gerar-icone" aria-hidden="true"></i><span>Android (APK)</span><i class="bi bi-download ls-gerar-seta" aria-hidden="true"></i></button>
+            <button class="ls-gerar-mais" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais opções do APK de {{ jogo.nome }}" title="Mais opções do APK"><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end ls-game-menu">
+              <li><button class="dropdown-item" type="button" data-gerar="apk" data-jogo="{{ jogo.id }}"><i class="bi bi-download" aria-hidden="true"></i><span><strong>Gerar e baixar</strong><small>Para instalar no celular ou mandar para alguém. Não muda nada no site.</small></span></button></li>
+              <li><button class="dropdown-item" type="button" data-gerar="apk" data-guardar="1" data-jogo="{{ jogo.id }}"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span><strong>Gerar e publicar no site</strong><small>A página do jogo ganha o botão “Baixar o aplicativo”.</small></span></button></li>
+            </ul>
+          </div>
+          {% endif %}
+          {% if jogo.gera_exe %}
+          <div class="btn-group ls-gerar" data-gerar-grupo="exe">
+            <button class="ls-gerar-principal" type="button" data-gerar="exe" data-jogo="{{ jogo.id }}" title="Gerar e baixar o programa de Windows (.exe)"><i class="bi bi-windows ls-gerar-icone" aria-hidden="true"></i><span>Windows (.exe)</span><i class="bi bi-download ls-gerar-seta" aria-hidden="true"></i></button>
+            <button class="ls-gerar-mais" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais opções do .exe de {{ jogo.nome }}" title="Mais opções do .exe"><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end ls-game-menu">
+              <li><button class="dropdown-item" type="button" data-gerar="exe" data-jogo="{{ jogo.id }}"><i class="bi bi-download" aria-hidden="true"></i><span><strong>Gerar e baixar</strong><small>Dois cliques no Windows e o jogo abre, sem internet.</small></span></button></li>
+              <li><button class="dropdown-item" type="button" data-gerar="exe" data-guardar="1" data-jogo="{{ jogo.id }}"><i class="bi bi-hdd" aria-hidden="true"></i><span><strong>Gerar e guardar no site</strong><small>Fica como a versão para computador do jogo (só a equipe vê).</small></span></button></li>
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+        <div class="ls-gerar-estado" role="status" aria-live="polite" hidden>
+          <span class="ls-gerar-barra" aria-hidden="true"><span></span></span>
+          <i class="bi ls-gerar-estado-icone" aria-hidden="true"></i>
+          <span class="ls-gerar-texto"></span>
+          <button class="ls-gerar-fechar" type="button" aria-label="Fechar o aviso" title="Fechar o aviso"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
+        {% if jogo.aviso_licenca %}<details class="ls-game-dica ls-game-dica--licenca"><summary><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Licença: só para uso particular</summary><p>{{ jogo.aviso_licenca }}</p></details>{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="ls-game-rodape">
+        <button class="ls-interruptor" type="button" role="switch" aria-checked="{% if jogo.ativo %}true{% else %}false{% endif %}" data-alternar="{{ jogo.id }}" title="Ligar ou desligar o jogo no site">
+          <span class="ls-interruptor-trilho" aria-hidden="true"><span class="ls-interruptor-bolinha"></span></span>
+          <span class="ls-interruptor-texto"><span class="so-ligado">Ligado</span><span class="so-desligado">Desligado</span><span class="visually-hidden"> no site: {{ jogo.nome }}</span></span>
+        </button>
+        <div class="dropdown ls-game-mais">
+          <button class="ls-game-mais-botao" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mais ações de {{ jogo.nome }}" title="Mais ações"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end ls-game-menu">
+            {% if not jogo.so_versao_pc and not jogo.aguardando_arquivos %}<li><a class="dropdown-item{% if not jogo.ativo %} disabled{% endif %}" data-so-ligado href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true"{% if not jogo.ativo %} aria-disabled="true" tabindex="-1"{% endif %}><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Ver a página no site</span></a></li>{% endif %}
+            <li><button class="dropdown-item" type="button" data-copiar="{{ jogo.url_publica }}"><i class="bi bi-link-45deg" aria-hidden="true"></i><span>Copiar o link do jogo</span></button></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item ls-game-menu-perigo" type="button" data-excluir="{{ jogo.id }}" data-nome="{{ jogo.nome }}"><i class="bi bi-trash3" aria-hidden="true"></i><span>Apagar o jogo…</span></button></li>
+          </ul>
+        </div>
       </div>
     </article>
   {% empty %}
@@ -125,9 +165,34 @@
   {% endfor %}
 </div>
 
+<h2 class="ls-games-titulo"><i class="bi bi-stars"></i> Oficiais da casa <small>{{ oficiais|length }} de {{ total_oficiais }} · vêm com o site, sem APK</small></h2>
+<p class="ls-games-sub">Motor feito à mão, no código do site: capa, pôster e textos já prontos. O jogo de verdade fica na máquina — estes não se editam por aqui e não têm nada para baixar.</p>
+<div class="ls-games-grade ls-games-grade--painel ls-games-grade--oficiais">
+  {% for jogo in oficiais %}
+    <article class="ls-game ls-game--painel ls-game--oficial" style="--cor: {{ jogo.cor }}" aria-labelledby="oficial-{{ jogo.slug }}">
+      <div class="ls-game-arte">
+        {% if jogo.poster %}<img class="ls-game-imagem" src="{{ jogo.poster }}" alt="" loading="lazy">{% else %}<img class="ls-game-fundo" src="{{ jogo.capa }}" alt="" loading="lazy" aria-hidden="true"><img class="ls-game-capa" src="{{ jogo.capa }}" alt="" loading="lazy">{% endif %}
+        <span class="ls-game-estado is-no-ar"><span class="ls-game-ponto" aria-hidden="true"></span>No ar</span>
+        <span class="ls-game-sigla">Oficial</span>
+      </div>
+      <div class="ls-game-info">
+        <h3 class="ls-game-nome" id="oficial-{{ jogo.slug }}" title="{{ jogo.titulo }}">{{ jogo.titulo }}</h3>
+        <p class="ls-game-endereco"><span>{{ jogo.maquina }}</span></p>
+        <p class="ls-game-chamada">{{ jogo.chamada }}</p>
+      </div>
+      <div class="ls-game-botoes">
+        <a class="ls-game-btn ls-game-btn--primario" href="{{ jogo.url_publica }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="Abrir a prévia do jogo no site"><i class="bi bi-play-fill" aria-hidden="true"></i><span>Jogar a prévia</span></a>
+      </div>
+    </article>
+  {% empty %}
+    <div class="ls-game-vazio"><i class="bi bi-search"></i>Nenhum jogo oficial com "{{ busca }}".</div>
+  {% endfor %}
+</div>
+
 <div class="ls-games-aviso"><i class="bi bi-controller"></i><div><strong>Jogo de console ou de fliperama.</strong> Em “Cadastrar jogo novo”, arraste <strong>todos os arquivos do jogo de uma vez</strong> — o .cue com todos os .bin (Track 01, Track 02…), os discos de um jogo de vários discos, a BIOS se o console pedir. O painel lê o .cue, diz o nome de cada arquivo que faltar, reconhece o sistema pelo conteúdo e sugere o formato da tela e os controles. Rodam no site: {% for s in emulador.sistemas %}{% if s.ligado %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}. {% if emulador.modo == "grande" %}Os arquivos vão direto do seu navegador para o armazenamento de jogos grandes (até {{ emulador.limite_mb }} MB cada).{% else %}Disco grande (PS1 tem 300–700 MB) vai em pedaços de {{ emulador.pedaco_mb }} MB, direto do seu navegador para o armazenamento; o jogo junta os pedaços na hora de jogar.{% endif %}</div></div>
+<div class="ls-games-aviso"><i class="bi bi-android2"></i><div><strong>O aplicativo Android (APK) e o programa de Windows (.exe).</strong> O painel monta os dois a partir do jogo cadastrado, nos botões de cada card. <em>Gerar e baixar</em> não muda nada no site. <em>Publicar no site</em> (APK) liga o botão “Baixar o aplicativo” na página do jogo; <em>guardar no site</em> (.exe) deixa o programa como a versão para computador, só para a equipe. Jogo de console precisa dos arquivos já enviados; PSP e PC antigo (DOS) só saem em .exe.</div></div>
 <div class="ls-games-aviso"><i class="bi bi-windows"></i><div><strong>Jogo que só tem versão para computador.</strong> Cadastre o jogo e guarde o .exe (ou um .zip com a pasta do jogo) em "Versão para computador". O navegador não roda .exe, então o jogo fica guardado, sem aparecer no site, até ganhar a versão de navegador: o painel reconhece o motor (Godot, Unity...) e diz o caminho mais curto; a partir desse arquivo dá para portar o jogo para o site, como os oficiais. Nada disso vai para o público, e o arquivo não tem download para visitantes.</div></div>
-<div class="ls-games-aviso"><i class="bi bi-shield-lock-fill"></i><div><strong>Sobre o APK.</strong> Ele só é pedido ao cadastrar um jogo pelo painel, é opcional, e fica guardado sem link para ninguém — a não ser que "Deixar baixar" esteja marcado. Os jogos oficiais não têm APK no site: o material deles (capa, pôster, textos) é o do simulador, e o jogo de verdade fica na máquina.</div></div>
+<div class="ls-games-aviso"><i class="bi bi-shield-lock-fill"></i><div><strong>Sobre o APK enviado.</strong> O APK que se envia ao cadastrar é opcional e fica guardado sem link para ninguém — a não ser que "Deixar baixar" esteja marcado. Os jogos oficiais não têm APK no site: o material deles (capa, pôster, textos) é o das máquinas, e o jogo de verdade fica na máquina.</div></div>
 
 <div class="modal fade" id="modalJogo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -270,8 +335,8 @@
   </div>
 </div>
 
-<form id="formAlternar" method="post" action="{% url 'jogos_inner' %}" hidden>{% csrf_token %}<input name="action" value="alternar"><input name="id" id="alternarId"></form>
-{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=request.path exclusao_titulo="Excluir jogo" exclusao_aviso="O jogo sai do site na hora e os arquivos guardados (capa, .html, APK, versão para computador e os arquivos do emulador) são apagados. Não dá para desfazer." %}
+<form id="formAlternar" method="post" action="{% url 'jogos_inner' %}" hidden>{% csrf_token %}<input name="action" value="alternar"><input name="id" id="alternarId"><input name="ativo" id="alternarAtivo"></form>
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=request.path exclusao_titulo="Apagar o jogo" exclusao_aviso="O jogo sai do site na hora e os arquivos guardados (capa, .html, APK, versão para computador e os arquivos do emulador) são apagados. Não dá para desfazer." %}
 {{ jogos_dados|json_script:"jogosDados" }}
 {{ emulador|json_script:"emuladorDados" }}
 {% endif %}
@@ -768,81 +833,272 @@ LSTela.pronto(function () {
     if (envio && envio.temArquivos()) envio.conferir().catch(function (erro) { Painel.erro("jogoErro", erro.message); });
   });
 
-  /* GERAR O APK: baixa o arquivo, ou publica no jogo (o botão "Baixar o aplicativo" da página) */
-  function apkStatus(texto, erro) {
-    var caixa = el("jfApkStatus");
-    caixa.textContent = texto;
-    caixa.className = "small " + (erro ? "text-danger" : "text-muted");
+  /* ---------------- GERAR O APK (ANDROID) E O .EXE (WINDOWS) ----------------
+     Um caminho só, para os botões do card e para os da janela de edição.
+     GET gera e baixa (com o progresso do download: o arquivo pode ter dezenas
+     de MB); POST gera e guarda no jogo -- o APK vira o "Baixar o aplicativo"
+     da página, o .exe vira a versão para computador. O servidor leva alguns
+     segundos montando: enquanto isso o relógio corre, para ninguém achar que
+     travou. */
+  var GERAR = {
+    apk: {
+      extensao: ".apk", erro: "Não deu para gerar o APK.",
+      montando: "Montando o APK (o jogo, o emulador e os botões)…",
+      guardando: "Montando e publicando o APK…",
+      pronto: "No celular, abra o arquivo para instalar (permita “instalar apps desconhecidos”)."
+    },
+    exe: {
+      extensao: ".exe", erro: "Não deu para gerar o .exe.",
+      montando: "Montando o .exe (o jogo, o emulador e a janela)…",
+      guardando: "Montando e guardando o .exe…",
+      pronto: "No Windows, dois cliques no arquivo e o jogo abre."
+    }
+  };
+  var SESSAO_CAIU = "A sessão do painel expirou: recarregue a página e entre de novo.";
+
+  /* O motivo, em português, de uma resposta que não deu certo. */
+  function erroDaResposta(r, padrao) {
+    var tipo = r.headers.get("content-type") || "";
+    if (/json/.test(tipo)) return r.json().then(function (j) { return new Error(j.erro || j.msg || padrao); }, function () { return new Error(padrao); });
+    if (/text\/plain/.test(tipo)) return r.text().then(function (t) { return new Error(t || padrao); });
+    if (r.status === 401 || r.status === 403) return Promise.resolve(new Error(SESSAO_CAIU));
+    return Promise.resolve(new Error(padrao + " O servidor respondeu " + r.status + "; tente de novo em instantes."));
   }
-  function apkOcupado(sim) {
-    el("jfApkBaixar").disabled = sim;
-    el("jfApkPublicar").disabled = sim;
+
+  /* O arquivo chega aos pedaços: a faixa mostra quanto já veio. O tamanho vem
+     no X-Tamanho-Arquivo: com a compressão (gzip) da resposta, o navegador
+     perde o Content-Length, mas conta os bytes já descomprimidos. */
+  function lerComProgresso(r, aoAvancar) {
+    var total = Number(r.headers.get("x-tamanho-arquivo") || r.headers.get("content-length")) || 0;
+    var tipo = r.headers.get("content-type") || "application/octet-stream";
+    if (!r.body || !r.body.getReader) return r.blob();
+    var leitor = r.body.getReader(), partes = [], recebido = 0;
+    function ler() {
+      return leitor.read().then(function (passo) {
+        if (passo.done) return new Blob(partes, { type: tipo });
+        partes.push(passo.value);
+        recebido += passo.value.length;
+        aoAvancar(recebido, total);
+        return ler();
+      });
+    }
+    return ler();
   }
-  el("jfApkBaixar").addEventListener("click", function () {
-    if (!jogoAberto || !jogoAberto.gerar_apk) return;
-    apkOcupado(true);
-    apkStatus("Montando o APK (o jogo, o emulador e os botões)…");
-    fetch(jogoAberto.gerar_apk, { credentials: "same-origin" }).then(function (r) {
-      if (!r.ok) return r.text().then(function (t) { throw new Error(t || "Não deu para gerar o APK."); });
-      return r.blob();
-    }).then(function (arquivo) {
-      var link = document.createElement("a");
-      link.href = URL.createObjectURL(arquivo);
-      link.download = (jogoAberto.slug || "jogo") + ".apk";
-      document.body.appendChild(link); link.click(); link.remove();
-      setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
-      apkStatus("Pronto: " + (arquivo.size / 1048576).toFixed(1).replace(".", ",") + " MB. No celular, abra o arquivo para instalar (permita “instalar apps desconhecidos”).");
-    }).catch(function (e) { apkStatus(e.message, true); }).finally(function () { apkOcupado(false); });
+
+  function entregar(arquivo, nome) {
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(arquivo);
+    link.download = nome;
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
+  }
+
+  /* gerar(jogo, "apk" | "exe", guardar, aoAndar): a promessa da frase de pronto.
+     aoAndar(texto, porcento, fase) -- fase "gerando" (o servidor monta) ou
+     "baixando"; porcento null quando não dá para saber quanto falta. */
+  function gerar(jogo, tipo, guardar, aoAndar) {
+    var c = GERAR[tipo], url = tipo === "apk" ? jogo.gerar_apk : jogo.gerar_exe;
+    aoAndar(guardar ? c.guardando : c.montando, null, "gerando");
+    var pedido;
+    if (guardar) {
+      var dados = new FormData();
+      if (tipo === "apk") dados.append("publicar", "1");
+      pedido = fetch(url, { method: "POST", credentials: "same-origin", body: dados,
+        headers: { "X-CSRFToken": CSRF, "X-Requested-With": "XMLHttpRequest" } }).then(function (r) {
+        if (!r.ok) return erroDaResposta(r, c.erro).then(function (e) { throw e; });
+        return r.json().then(function (j) {
+          if (!j.ok) throw new Error(j.erro || c.erro);
+          guardouNoSite(jogo, tipo);
+          return j.mensagem;
+        }, function () { throw new Error(SESSAO_CAIU); });
+      });
+    } else {
+      pedido = fetch(url, { credentials: "same-origin" }).then(function (r) {
+        if (!r.ok) return erroDaResposta(r, c.erro).then(function (e) { throw e; });
+        // sessão vencida: o login volta como página (status 200), e não é o arquivo
+        if (r.redirected || /text\/html/.test(r.headers.get("content-type") || "")) throw new Error(SESSAO_CAIU);
+        return lerComProgresso(r, function (recebido, total) {
+          aoAndar(total ? "Baixando… " + mb(recebido) + " de " + mb(total) : "Baixando… " + mb(recebido),
+                  total ? Math.min(100, Math.round(recebido * 100 / total)) : null, "baixando");
+        });
+      }).then(function (arquivo) {
+        var nome = (jogo.slug || "jogo") + c.extensao;
+        entregar(arquivo, nome);
+        return "Pronto: " + nome + " (" + mb(arquivo.size) + "). " + c.pronto;
+      });
+    }
+    return pedido.catch(function (erro) {
+      // o fetch que nem chegou ao servidor diz "Failed to fetch": em português, e com o que fazer
+      if (erro instanceof TypeError) throw new Error("A conexão caiu antes de o arquivo ficar pronto. Confira a internet e tente de novo.");
+      throw erro;
+    });
+  }
+
+  /* O relógio da espera: "… 7 s" enquanto o servidor monta. */
+  function comRelogio(aoAndar) {
+    var inicio = Date.now(), texto = "", porcento = null, fase = "gerando";
+    function pintar() {
+      var segundos = Math.round((Date.now() - inicio) / 1000);
+      aoAndar(texto + (fase === "gerando" && segundos >= 2 ? " " + segundos + " s" : ""), porcento, fase);
+    }
+    var tique = window.setInterval(pintar, 1000);
+    return {
+      andar: function (novo, pct, qual) { texto = novo; porcento = pct; fase = qual || fase; pintar(); },
+      parar: function () { window.clearInterval(tique); }
+    };
+  }
+
+  function cardDe(id) { return document.querySelector('[data-jogo-card="' + Number(id) + '"]'); }
+
+  /* Guardou no site: o card e os dados da janela já mostram, sem recarregar. */
+  function guardouNoSite(jogo, tipo) {
+    var card = cardDe(jogo.id);
+    if (tipo === "apk") {
+      jogo.apk = (jogo.slug || "jogo") + ".apk"; jogo.liberar_download = true; jogo.apk_motor = "html5";
+      var fatoApk = card && card.querySelector("[data-fato-apk]");
+      if (fatoApk) { fatoApk.hidden = false; fatoApk.querySelector("[data-fato-apk-texto]").textContent = "APK liberado para baixar (“Baixar o aplicativo”)"; }
+      if (jogoAberto && Number(jogoAberto.id) === Number(jogo.id)) el("jogoLiberar").checked = true;
+    } else {
+      jogo.versao_pc = (jogo.slug || "jogo") + ".exe";
+      var fatoPc = card && card.querySelector("[data-fato-pc]");
+      if (fatoPc) fatoPc.hidden = false;
+    }
+    // a tela guardada para a navegação rápida já não vale
+    if (window.LSNavigation && window.LSNavigation.clear) window.LSNavigation.clear();
+  }
+
+  var ICONE_DA_FASE = { gerando: "bi-hourglass-split", baixando: "bi-download", pronto: "bi-check-circle-fill", erro: "bi-exclamation-octagon-fill" };
+
+  /* No card: o botão gira, a faixa de baixo conta o tempo e o download, e
+     fica a frase de pronto (ou o motivo do erro) até alguém fechar. */
+  Painel.aoClicar("[data-gerar]", function (botao) {
+    var jogo = achar(botao.dataset.jogo), card = cardDe(botao.dataset.jogo);
+    var caixa = card && card.querySelector("[data-gerar-caixa]");
+    if (!jogo || !caixa || caixa.classList.contains("is-ocupado")) return;
+    var tipo = botao.dataset.gerar, guardar = botao.dataset.guardar === "1";
+    var grupo = caixa.querySelector('[data-gerar-grupo="' + tipo + '"]');
+    var aviso = caixa.querySelector(".ls-gerar-estado");
+    var texto = aviso.querySelector(".ls-gerar-texto"), barra = aviso.querySelector(".ls-gerar-barra > span");
+    var icone = aviso.querySelector(".ls-gerar-estado-icone");
+    var botoes = caixa.querySelectorAll(".ls-gerar-principal, .ls-gerar-mais");
+    function fase(nome, frase, pct) {
+      aviso.hidden = false;
+      aviso.dataset.fase = nome;
+      aviso.dataset.semFim = String(pct === null && (nome === "gerando" || nome === "baixando"));
+      icone.className = "bi ls-gerar-estado-icone " + ICONE_DA_FASE[nome];
+      texto.textContent = frase;
+      barra.style.width = pct === null || pct === undefined ? "" : pct + "%";
+    }
+    function ocupar(sim) {
+      caixa.classList.toggle("is-ocupado", sim);
+      caixa.setAttribute("aria-busy", sim ? "true" : "false");
+      if (grupo) grupo.classList.toggle("is-gerando", sim);
+      botoes.forEach(function (b) { b.disabled = sim; });
+    }
+    ocupar(true);
+    var relogio = comRelogio(function (frase, pct, qual) { fase(qual, frase, pct); });
+    gerar(jogo, tipo, guardar, relogio.andar).then(function (frase) {
+      relogio.parar();
+      fase("pronto", frase, 100);
+    }, function (erro) {
+      relogio.parar();
+      fase("erro", erro.message);
+    }).finally(function () { ocupar(false); });
   });
-  el("jfApkPublicar").addEventListener("click", function () {
-    if (!jogoAberto || !jogoAberto.gerar_apk) return;
-    apkOcupado(true);
-    apkStatus("Montando e guardando o APK…");
-    var dados = new FormData();
-    dados.append("publicar", "1");
-    var token = form.querySelector("[name=csrfmiddlewaretoken]");
-    fetch(jogoAberto.gerar_apk, { method: "POST", credentials: "same-origin", body: dados,
-      headers: { "X-CSRFToken": token ? token.value : "" } }).then(function (r) {
-      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.erro || "Não deu para publicar o APK."); return j; });
-    }).then(function (j) {
-      apkStatus(j.mensagem);
-      el("jogoLiberar").checked = true;
-    }).catch(function (e) { apkStatus(e.message, true); }).finally(function () { apkOcupado(false); });
+  Painel.aoClicar(".ls-gerar-fechar", function (botao) { botao.closest(".ls-gerar-estado").hidden = true; });
+
+  /* Na janela de edição: os mesmos dois pares de botões, pelo mesmo caminho. */
+  function ligarGeradorDaJanela(tipo, idBaixar, idGuardar, idStatus) {
+    function escrever(texto, erro) {
+      var caixa = el(idStatus);
+      caixa.textContent = texto;
+      caixa.className = "small " + (erro ? "text-danger" : "text-muted");
+    }
+    function ocupado(sim) { el(idBaixar).disabled = sim; el(idGuardar).disabled = sim; }
+    [[idBaixar, false], [idGuardar, true]].forEach(function (par) {
+      el(par[0]).addEventListener("click", function () {
+        if (!jogoAberto || !(tipo === "apk" ? jogoAberto.gerar_apk : jogoAberto.gerar_exe)) return;
+        ocupado(true);
+        var relogio = comRelogio(function (frase, pct) { escrever(frase + (pct === null ? "" : " (" + pct + "%)")); });
+        gerar(jogoAberto, tipo, par[1], relogio.andar).then(function (frase) {
+          relogio.parar(); escrever(frase);
+        }, function (erro) {
+          relogio.parar(); escrever(erro.message, true);
+        }).finally(function () { ocupado(false); });
+      });
+    });
+  }
+  ligarGeradorDaJanela("apk", "jfApkBaixar", "jfApkPublicar", "jfApkStatus");
+  ligarGeradorDaJanela("exe", "jfExeBaixar", "jfExeGuardar", "jfExeStatus");
+
+  /* ---------------- LIGAR E DESLIGAR ----------------
+     O interruptor troca NA HORA (o card esmaece, o selo vira "Desligado", o
+     Abrir se apaga) e o servidor confirma por trás, com o estado escolhido
+     -- não um "inverta", que dois toques seguidos desfariam. Se ele recusar,
+     o card volta como estava e a tarja diz o motivo. */
+  var totalLigados = document.querySelector("[data-total-ativos]");
+  function pintarLigado(card, ligado) {
+    card.classList.toggle("is-desligado", !ligado);
+    card.querySelector("[data-alternar]").setAttribute("aria-checked", ligado ? "true" : "false");
+    card.querySelectorAll("[data-so-ligado]").forEach(function (link) {
+      if (link.classList.contains("dropdown-item")) link.classList.toggle("disabled", !ligado);
+      else link.title = ligado ? "Abrir a página do jogo no site" : "Ligue o jogo para abrir a página";
+      if (ligado) { link.removeAttribute("aria-disabled"); link.removeAttribute("tabindex"); }
+      else { link.setAttribute("aria-disabled", "true"); link.setAttribute("tabindex", "-1"); }
+    });
+  }
+  Painel.aoClicar("[data-alternar]", function (chave) {
+    var card = chave.closest("[data-jogo-card]"), jogo = achar(chave.dataset.alternar);
+    if (!card || card.classList.contains("is-salvando")) return;
+    var ligar = chave.getAttribute("aria-checked") !== "true";
+    pintarLigado(card, ligar);
+    card.classList.add("is-salvando");
+    Painel.enviar(el("formAlternar"), { id: chave.dataset.alternar, ativo: ligar ? "1" : "0" }).then(function (json) {
+      var ficou = typeof json.ativo === "boolean" ? json.ativo : ligar;
+      pintarLigado(card, ficou);
+      if (jogo) jogo.ativo = ficou;
+      if (totalLigados && ficou === ligar) totalLigados.textContent = Math.max(0, Number(totalLigados.textContent) + (ligar ? 1 : -1));
+      if (window.LSNavigation && window.LSNavigation.clear) window.LSNavigation.clear();
+      Painel.aviso(json.msg, "ok");
+    }, function (erro) {
+      pintarLigado(card, !ligar);
+      Painel.aviso(erro.message, "erro");
+    }).finally(function () { card.classList.remove("is-salvando"); });
   });
 
-  /* GERAR O .EXE: baixa, ou guarda como a versão para computador */
-  function exeStatus(texto, erro) {
-    var caixa = el("jfExeStatus");
-    caixa.textContent = texto;
-    caixa.className = "small " + (erro ? "text-danger" : "text-muted");
+  /* "Copiar o link do jogo", no menu ⋯ */
+  Painel.aoClicar("[data-copiar]", function (botao) {
+    var link = botao.dataset.copiar;
+    function manual() { window.prompt("Copie o link do jogo:", link); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(link).then(function () { Painel.aviso("Link copiado: " + link, "ok"); }, manual);
+    } else {
+      manual();
+    }
+  });
+
+  /* Os menus do card (⋯ e as opções do APK / .exe) abrem para o lado que tem
+     espaço DE VERDADE: a barra do topo e, no celular, a barra de atalhos de
+     baixo ficam por cima de tudo, e o menu não pode nascer escondido atrás delas. */
+  function folgaDasBarras() {
+    var topo = document.querySelector(".ls-topbar"), abas = document.querySelector(".ls-abas");
+    var cima = topo ? Math.max(0, topo.getBoundingClientRect().bottom) : 0;
+    var baixo = abas && window.getComputedStyle(abas).display !== "none" ? Math.max(0, window.innerHeight - abas.getBoundingClientRect().top) : 0;
+    return { top: cima + 8, bottom: baixo + 8, left: 8, right: 8 };
   }
-  function exeOcupado(sim) { el("jfExeBaixar").disabled = sim; el("jfExeGuardar").disabled = sim; }
-  el("jfExeBaixar").addEventListener("click", function () {
-    if (!jogoAberto || !jogoAberto.gerar_exe) return;
-    exeOcupado(true);
-    exeStatus("Montando o .exe (o jogo, o emulador e a janela)…");
-    fetch(jogoAberto.gerar_exe, { credentials: "same-origin" }).then(function (r) {
-      if (!r.ok) return r.text().then(function (t) { throw new Error(t || "Não deu para gerar o .exe."); });
-      return r.blob();
-    }).then(function (arquivo) {
-      var link = document.createElement("a");
-      link.href = URL.createObjectURL(arquivo);
-      link.download = (jogoAberto.slug || "jogo") + ".exe";
-      document.body.appendChild(link); link.click(); link.remove();
-      setTimeout(function () { URL.revokeObjectURL(link.href); }, 4000);
-      exeStatus("Pronto: " + (arquivo.size / 1048576).toFixed(1).replace(".", ",") + " MB. No Windows, dois cliques no arquivo e o jogo abre.");
-    }).catch(function (e) { exeStatus(e.message, true); }).finally(function () { exeOcupado(false); });
-  });
-  el("jfExeGuardar").addEventListener("click", function () {
-    if (!jogoAberto || !jogoAberto.gerar_exe) return;
-    exeOcupado(true);
-    exeStatus("Montando e guardando o .exe…");
-    var token = form.querySelector("[name=csrfmiddlewaretoken]");
-    fetch(jogoAberto.gerar_exe, { method: "POST", credentials: "same-origin", body: new FormData(),
-      headers: { "X-CSRFToken": token ? token.value : "" } }).then(function (r) {
-      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.erro || "Não deu para guardar o .exe."); return j; });
-    }).then(function (j) { exeStatus(j.mensagem); }).catch(function (e) { exeStatus(e.message, true); }).finally(function () { exeOcupado(false); });
-  });
+  if (window.bootstrap && window.bootstrap.Dropdown) {
+    document.querySelectorAll('.ls-game--painel [data-bs-toggle="dropdown"]').forEach(function (botao) {
+      window.bootstrap.Dropdown.getOrCreateInstance(botao, {
+        popperConfig: function (padrao) {
+          var folga = folgaDasBarras();
+          return Object.assign({}, padrao, { modifiers: (padrao.modifiers || []).concat([
+            { name: "preventOverflow", options: { padding: folga } },
+            { name: "flip", options: { padding: folga } }
+          ]) });
+        }
+      });
+    });
+  }
 
   function abrir(jogo, irArquivos) {
     form.reset(); Painel.erro("jogoErro", "");
@@ -935,7 +1191,6 @@ LSTela.pronto(function () {
   document.querySelectorAll("[data-editar]").forEach(function (botao) {
     botao.addEventListener("click", function () { abrir(achar(botao.dataset.editar), botao.dataset.irArquivos === "1"); });
   });
-  document.querySelectorAll("[data-alternar]").forEach(function (botao) { botao.addEventListener("click", function () { Painel.valor("alternarId", botao.dataset.alternar); el("formAlternar").requestSubmit(); }); });
 
   /* ---------------- salvar ---------------- */
 
@@ -1012,7 +1267,6 @@ LSTela.pronto(function () {
       fecharEAtualizar("modalJogo");
     }
   });
-  Painel.ligar({ form: "formAlternar" });
   Painel.ligarExclusao();
 
   /* Vindo do /system/ ("Anexar os arquivos do jogo") ou de um link: ?editar=<id> ou ?novo=1. */

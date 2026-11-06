@@ -103,7 +103,9 @@ class PermissaoTests(BaseTela):
         self.client.force_login(self.super)
         resposta = self.client.get("/site/jogos/", HTTP_HOST=HOST)
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, "Jogos do simulador")
+        # a tela é a dos jogos do portal (o nome do menu é outro assunto)
+        self.assertContains(resposta, "<h1>Jogos do portal</h1>", html=True)
+        self.assertContains(resposta, "<title>Jogos do portal | Lazer &amp; Sport</title>", html=True)
         self.assertContains(resposta, 'href="/site/jogos/"')
 
 
@@ -228,8 +230,8 @@ class JogosOficiaisNaTelaTests(BaseTela):
         for jogo in arena.JOGOS:
             self.assertContains(pagina, jogo["titulo"])
             self.assertContains(pagina, f"/jogos/{jogo['slug']}/")
-        self.assertContains(pagina, "Jogos oficiais do simulador")
-        self.assertContains(pagina, "Sem APK")
+        self.assertContains(pagina, "Oficiais da casa")
+        self.assertContains(pagina, "sem APK")
         self.assertContains(pagina, "Lazer &amp; Sport Games")   # o bloco do menu
         self.assertContains(pagina, 'style="--cor: %s"' % arena.JOGOS[0]["cor"])
 
@@ -384,3 +386,133 @@ class ApkEExeRevisadosTests(BaseTela):
         resposta = self.enviar(self.dados(apk=self.apk(saida.getvalue())))
         self.assertEqual(resposta.status_code, 400)
         self.assertIn("o limite é 1 MB", resposta.json()["msg"])
+
+
+class CardsDosJogosTests(BaseTela):
+    """Os cards da tela: o estado à vista, o APK e o .exe nos botões, o interruptor e o Apagar no menu."""
+
+    def criar(self, **extra):
+        from core.models import ArquivoEmulador
+
+        arquivos = extra.pop("arquivos", False)
+        base = {"nome": "Jogo Teste", "slug": "jogo-teste", "cor": "#22d3ee", "capa": "jogos/capas/capa.png"}
+        base.update(extra)
+        jogo = JogoCadastrado.objects.create(**base)
+        if arquivos:
+            ArquivoEmulador.objects.create(jogo=jogo, nome="jogo.bin", papel=ArquivoEmulador.JOGO, tamanho=10, lote="t")
+        return jogo
+
+    def card(self, jogo):
+        """O HTML do card do jogo (do <article> dele até o próximo)."""
+        self.client.force_login(self.super)
+        pagina = self.client.get("/site/jogos/", HTTP_HOST=HOST).content.decode()
+        inicio = pagina.index(f'data-jogo-card="{jogo.pk}"')
+        fim = pagina.find("<article", inicio)
+        return pagina[pagina.rindex("<article", 0, inicio):fim if fim > 0 else None]
+
+    def test_jogo_html5_tem_android_e_windows_a_vista(self):
+        jogo = self.criar(arquivo_html="jogos/html/jogo.html")
+        card = self.card(jogo)
+        self.assertIn('data-gerar="apk"', card)
+        self.assertIn('data-gerar="exe"', card)
+        self.assertIn("Android (APK)", card)
+        self.assertIn("Windows (.exe)", card)
+        # as duas opções de cada um: baixar, e guardar no site
+        self.assertIn("Gerar e publicar no site", card)
+        self.assertIn("Gerar e guardar no site", card)
+        self.assertIn('data-guardar="1"', card)
+        self.assertIn(">No ar<", card.replace('<span class="ls-game-ponto" aria-hidden="true"></span>', ""))
+        self.assertIn(">HTML5<", card)
+
+    def test_psp_com_os_arquivos_so_tem_o_exe(self):
+        jogo = self.criar(sistema="psp", arquivos=True)
+        card = self.card(jogo)
+        self.assertNotIn('data-gerar="apk"', card)
+        self.assertIn('data-gerar="exe"', card)
+        self.assertIn(">PSP<", card)
+
+    def test_sem_arquivo_para_empacotar_nao_tem_botao(self):
+        # console ainda sem os arquivos: o selo avisa e a ação principal é enviá-los
+        sem_arquivos = self.criar(sistema="psx")
+        card = self.card(sem_arquivos)
+        self.assertNotIn("data-gerar=", card)
+        self.assertIn("Faltam arquivos", card)
+        self.assertIn("Enviar os arquivos", card)
+        # jogo só por endereço: roda online, não tem o que empacotar
+        JogoCadastrado.objects.all().delete()
+        so_endereco = self.criar(endereco="https://jogos.exemplo.com/x/index.html")
+        self.assertNotIn("data-gerar=", self.card(so_endereco))
+
+    def test_os_dados_da_janela_dizem_o_mesmo_que_o_card(self):
+        import json
+        import re
+
+        sem_arquivos = self.criar(sistema="psx")
+        dos = self.criar(nome="DOS", slug="dos-teste", sistema="dos", arquivos=True)
+        self.client.force_login(self.super)
+        pagina = self.client.get("/site/jogos/", HTTP_HOST=HOST).content.decode()
+        bruto = re.search(r'<script id="jogosDados" type="application/json">(.*?)</script>', pagina, re.S).group(1)
+        dados = {jogo["id"]: jogo for jogo in json.loads(bruto)}
+        # console sem os arquivos: a janela também não oferece gerar (daria "faltou o arquivo")
+        self.assertFalse(dados[sem_arquivos.pk]["pode_gerar_apk"])
+        self.assertFalse(dados[sem_arquivos.pk]["pode_gerar_exe"])
+        # DOS: só o .exe
+        self.assertFalse(dados[dos.pk]["pode_gerar_apk"])
+        self.assertTrue(dados[dos.pk]["pode_gerar_exe"])
+        self.assertEqual(dados[dos.pk]["gerar_exe"], f"/site/jogos/{dos.pk}/exe/")
+
+    def test_aviso_de_licenca_aparece_no_card(self):
+        jogo = self.criar(sistema="snes", particular=True, arquivos=True)
+        card = self.card(jogo)
+        self.assertIn("Licença: só para uso particular", card)
+        self.assertIn("uso particular", card)
+        self.assertIn("Particular", card)
+
+    def test_desligado_parece_desligado(self):
+        jogo = self.criar(endereco="https://jogos.exemplo.com/x/index.html", ativo=False)
+        card = self.card(jogo)
+        self.assertIn("is-desligado", card[:200])
+        self.assertIn('role="switch" aria-checked="false"', card)
+        self.assertIn("Desligado", card)
+        # o Abrir não leva a uma página que está fora do ar
+        self.assertRegex(card, r'<a class="ls-game-btn ls-game-btn--primario" data-so-ligado[^>]*aria-disabled="true"')
+        ligado = self.criar(nome="Outro", slug="outro", endereco="https://jogos.exemplo.com/y/index.html")
+        card = self.card(ligado)
+        self.assertNotIn("is-desligado", card[:200])
+        self.assertIn('role="switch" aria-checked="true"', card)
+
+    def test_apagar_fica_no_menu_e_pede_a_palavra(self):
+        jogo = self.criar(endereco="https://jogos.exemplo.com/x/index.html")
+        card = self.card(jogo)
+        self.assertIn(f'data-excluir="{jogo.pk}"', card)
+        self.assertIn('data-nome="Jogo Teste"', card)
+        self.assertIn("Apagar o jogo", card)
+        pagina = self.client.get("/site/jogos/", HTTP_HOST=HOST)
+        self.assertContains(pagina, 'name="confirmacao_exclusao"')
+        self.assertContains(pagina, "CONFIRMAR")
+
+    def test_o_interruptor_manda_o_estado_escolhido(self):
+        jogo = self.criar(endereco="https://jogos.exemplo.com/x/index.html")
+        # desligar duas vezes (dois toques, ou a tela velha noutra aba) continua desligado
+        for _ in range(2):
+            resposta = self.enviar({"action": "alternar", "id": jogo.pk, "ativo": "0"})
+            self.assertEqual(resposta.status_code, 200, resposta.content)
+            self.assertIs(resposta.json()["ativo"], False)
+            jogo.refresh_from_db()
+            self.assertFalse(jogo.ativo)
+        resposta = self.enviar({"action": "alternar", "id": jogo.pk, "ativo": "1"})
+        self.assertIs(resposta.json()["ativo"], True)
+        jogo.refresh_from_db()
+        self.assertTrue(jogo.ativo)
+        # valor estranho: alterna, como antes
+        self.enviar({"action": "alternar", "id": jogo.pk, "ativo": "talvez"})
+        jogo.refresh_from_db()
+        self.assertFalse(jogo.ativo)
+
+    def test_contador_de_ligados_e_o_menu_sem_o_nome_antigo(self):
+        self.criar(endereco="https://jogos.exemplo.com/x/index.html")
+        self.criar(nome="Outro", slug="outro", endereco="https://jogos.exemplo.com/y/index.html", ativo=False)
+        self.client.force_login(self.super)
+        pagina = self.client.get("/site/jogos/", HTTP_HOST=HOST)
+        self.assertContains(pagina, "Ligados agora: <span data-total-ativos>1</span>", html=False)
+        self.assertNotContains(pagina, "<h1>Jogos do simulador</h1>")
