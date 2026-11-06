@@ -279,11 +279,30 @@
     });
     return cfg;
   }
+  /* SEM CÓPIA NA MEMÓRIA. O emulador copiava cada arquivo do jogo para a pasta dele: um disco
+     de PlayStation de 600 MB ocupava 1,2 GB na hora de abrir (e um jogo de dois discos, mais de
+     2 GB -- a aba caía). Aqui a pasta fica DONA dos bytes que a página já baixou ("canOwn"
+     do Emscripten): o mesmo bloco de memória, uma vez só. */
+  function pastaSemCopia(FS) {
+    if (!FS || FS.__lsSemCopia || typeof FS.writeFile !== "function") return;
+    var gravar = FS.writeFile;
+    FS.writeFile = function (caminho, dados, opcoes) {
+      if (dados && ArrayBuffer.isView(dados) && dados.byteLength > 1048576 && !(opcoes && opcoes.canOwn)) {
+        opcoes = Object.assign({}, opcoes || {}, { canOwn: true });
+      }
+      return gravar.call(this, caminho, dados, opcoes);
+    };
+    FS.__lsSemCopia = true;
+  }
   function remendarCfg(classe) {
     if (!classe || !classe.prototype || classe.prototype.__lsTelaToda) return;
     var original = classe.prototype.getRetroArchCfg;
     if (typeof original !== "function") return;
-    classe.prototype.getRetroArchCfg = function () { return ajustarCfg(String(original.apply(this, arguments) || "")); };
+    classe.prototype.getRetroArchCfg = function () {
+      // o primeiro uso da pasta do emulador passa por aqui: antes do jogo ser gravado nela
+      try { pastaSemCopia(this.FS); } catch (e) { /* segue copiando */ }
+      return ajustarCfg(String(original.apply(this, arguments) || ""));
+    };
     classe.prototype.__lsTelaToda = true;
   }
   (function () {
@@ -330,7 +349,7 @@
       b.setAttribute("aria-checked", b.dataset.plGraficos === escolhaGraficos ? "true" : "false");
     });
     var agora = menuImagem.querySelector("[data-pl-graficos-agora]");
-    if (agora) agora.textContent = escolhaGraficos === "auto" ? "agora: " + ({ hd: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) : "";
+    if (agora) agora.textContent = escolhaGraficos === "auto" ? "agora: " + ({ hd: "HD", medio: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) + (pulandoQuadros ? " · pulando quadros" : "") : "";
   }
   function abrirMenuImagem(abrir) {
     if (!menuImagem) return;
@@ -383,6 +402,8 @@
     nitido: { filtro: NITIDO, pixels: celular ? 2.6e6 : 4.2e6 },
     tv: { filtro: "crt-easymode.glslp", pixels: celular ? 1.6e6 : 3.7e6 },
     leve: { filtro: NITIDO, pixels: celular ? 0.42e6 : 0.9e6 },
+    // o degrau do meio do Automático (fora do menu): o mesmo filtro do HD, com menos pixels
+    medio: { filtro: filtroHD, pixels: celular ? 0.9e6 : 1.4e6 },
   };
   // NENHUMA LINHA SOME: as aberturas e os vídeos do PlayStation (e as telas de 480 linhas do
   // Saturn e do N64) têm o dobro de linhas do jogo; com a tela desenhada abaixo disso, linhas
@@ -432,7 +453,20 @@
     if (avisarTambem) avisar(avisarTambem, 3500);
   }
 
-  /* o modo leve automático: olha o marca-passo a cada segundo */
+  /* O AUTOMÁTICO, EM DEGRAUS (a velocidade sem estragar a imagem): olha o marca-passo a cada
+     segundo e, se o aparelho não dá conta por 3 segundos seguidos, desce UM degrau --
+       1. HD com menos pixels (o mesmo filtro: a diferença quase não se vê);
+       2. o núcleo pula o desenho de um quadro quando atrasa (o jogo continua na velocidade
+          certa e a imagem continua HD; é o que salva quando o peso é o processador, como no
+          PlayStation, que no navegador roda sem o recompilador);
+       3. só então o Leve. */
+  var PULAR_QUADROS = {
+    psx: ["pcsx_rearmed_frameskip_type", "auto"], snes: ["snes9x_frameskip", "auto"],
+    segaMD: ["genesis_plus_gx_frameskip", "auto"], segaCD: ["genesis_plus_gx_frameskip", "auto"],
+    gba: ["mgba_frameskip", "auto"], gb: ["gambatte_frameskip", "auto"], nes: ["fceumm_frameskip", "auto"],
+    psp: ["ppsspp_frameskip", "1"], n64: ["mupen64plus-FrameDuping", "True"],
+  }[config.core] || null;
+  var pulandoQuadros = false;
   var vigiaDoPeso = { segundosPesados: 0, ultimoRecuperado: 0, trabalho: 0 };
   setInterval(function () {
     if (!jogando || escolhaGraficos !== "auto" || nivelAtual === "leve" || document.hidden) return;
@@ -443,10 +477,13 @@
     // muitos quadros recuperados E quadro pesado: é o aparelho (não só a tela a 30 Hz)
     var pesado = recuperados >= 8 && ritmo.trabalho >= 11;
     vigiaDoPeso.segundosPesados = pesado ? vigiaDoPeso.segundosPesados + 1 : Math.max(0, vigiaDoPeso.segundosPesados - 1);
-    if (vigiaDoPeso.segundosPesados >= 3) {
-      vigiaDoPeso.segundosPesados = 0;
-      aplicarGraficos("leve", "Gráficos no modo Leve: o jogo roda liso neste aparelho. (Imagem, no alto, troca.)");
+    if (vigiaDoPeso.segundosPesados < 3) return;
+    vigiaDoPeso.segundosPesados = 0;
+    if (nivelAtual === "hd") { aplicarGraficos("medio"); return; }
+    if (!pulandoQuadros && PULAR_QUADROS && emu && emu.gameManager && emu.gameManager.setVariable) {
+      try { emu.gameManager.setVariable(PULAR_QUADROS[0], PULAR_QUADROS[1]); pulandoQuadros = true; desenharMenuImagem(); return; } catch (e) { pulandoQuadros = true; }
     }
+    aplicarGraficos("leve", "Gráficos no modo Leve: o jogo roda liso neste aparelho. (Imagem, no alto, troca.)");
   }, 1000);
 
   /* O FILTRO "NÍTIDO E LISO" (ls-nitido). Esticar um jogo de 320 x 240 numa tela de 2400 x 1080
@@ -847,6 +884,7 @@
       if (!abrir && pausadoPeloPainel && emu) { emu.play(); pausadoPeloPainel = false; }
     } catch (e) { pausadoPeloPainel = false; }
     if (abrir) {
+      mostrarDisco();
       escolherAba(controleLigado() ? "controle" : celular ? "celular" : (lista.className.split("--")[1] || "teclado"));
       painel.querySelector("[data-pl-fechar-comandos]").focus();
       mostrarBarra(60000);
@@ -869,11 +907,87 @@
     var nome = (e.gamepad && e.gamepad.id || "").replace(/\s*\(.*$/, "").trim();
     avisar("Controle conectado" + (nome ? ": " + nome : "") + ". Já pode jogar com ele.", 4500);
     if (painel && !painel.hidden) escolherAba("controle");
-    if (!jogando && !pronto.hidden) dicaPronto.textContent = "Aperte A no controle ou toque em Jogar.";
+    if (!jogando && !pronto.hidden) {
+      dicaPronto.textContent = progressoSalvo && botaoContinuar
+        ? "No controle: A continua de onde parou, Y começa do início."
+        : "Aperte A no controle ou toque em Jogar.";
+    }
   });
   window.addEventListener("gamepadconnected", function () {
     var emu = window.EJS_emulator;
     if (celular && jogando && emu && emu.virtualGamepad) emu.virtualGamepad.style.display = "none";
+  });
+  /* O ANALÓGICO ESQUERDO TAMBÉM ANDA COMO A CRUZ. Muito jogo só lê a cruz (o Crash do
+     PlayStation, os de Super Nintendo, Mega Drive, GBA...): com o controle de Xbox, as
+     setas andavam e o analógico não fazia nada -- ele ia só para o "analógico do console",
+     que esses jogos não olham. Aqui o analógico aperta a cruz junto, com diagonal e com
+     folga (aperta passando da metade, solta abaixo de 35%: sem pisca-pisca), e nunca solta
+     uma seta que a cruz de verdade está segurando. O analógico do console continua indo
+     para os jogos que o usam. No N64 e no PSP o analógico já é o do próprio console. */
+  var CRUZ_PELO_ANALOGICO = ["n64", "psp"].indexOf(config.core) === -1;
+  var setasDoAnalogico = {}; // "jogador:seta" -> apertada pelo analógico
+  // RetroPad: 4 cima, 5 baixo, 6 esquerda, 7 direita; no controle padrão: 12, 13, 14, 15
+  var SETAS = [[4, 12, 1, -1], [5, 13, 1, 1], [6, 14, 0, -1], [7, 15, 0, 1]];
+  /* View + Menu (Select + Start) SEGURADOS por 0,7 s: pausa e abre os Comandos (de novo,
+     ou o B, fecha e volta ao jogo). Um toque rápido nos dois continua indo para o jogo. */
+  var atalhoDesde = 0, atalhoFeito = false, bAntes = false, yAntes = false;
+  function atalhoDoControle(pads) {
+    var juntos = false, b = false;
+    for (var i = 0; i < pads.length; i++) {
+      var botoes = pads[i] && pads[i].buttons;
+      if (!botoes) continue;
+      if (botoes[8] && botoes[8].pressed && botoes[9] && botoes[9].pressed) juntos = true;
+      if (botoes[1] && botoes[1].pressed) b = true;
+    }
+    if (!juntos) { atalhoDesde = 0; atalhoFeito = false; }
+    else if (!atalhoDesde) atalhoDesde = Date.now();
+    else if (!atalhoFeito && Date.now() - atalhoDesde > 700) { atalhoFeito = true; if (painel) abrirComandos(painel.hidden); }
+    if (b && !bAntes && painel && !painel.hidden) abrirComandos(false);
+    bAntes = b;
+    var y = false;
+    for (var k = 0; k < pads.length; k++) { var bt = pads[k] && pads[k].buttons; if (bt && bt[3] && bt[3].pressed) y = true; }
+    if (y && !yAntes && painel && !painel.hidden && quantosDiscos() > 1) trocarDisco();
+    yAntes = y;
+  }
+  // a cada 10 ms, como o próprio emulador lê o controle (o quadro desenhado pode demorar)
+  function analogicoNaCruz() {
+    setTimeout(analogicoNaCruz, 10);
+    var emu = window.EJS_emulator;
+    if (!jogando || !emu || !emu.gameManager || !emu.gamepadSelection) return;
+    var pads;
+    try { pads = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { return; }
+    atalhoDoControle(pads);
+    if (!CRUZ_PELO_ANALOGICO) return;
+    for (var p = 0; p < pads.length; p++) {
+      var pad = pads[p];
+      if (!pad || !pad.connected || !pad.axes || pad.axes.length < 2) continue;
+      var jogador = emu.gamepadSelection.indexOf(pad.id + "_" + pad.index);
+      if (jogador < 0 || jogador > 3) continue;
+      for (var k = 0; k < SETAS.length; k++) {
+        var s = SETAS[k];
+        var valor = pad.axes[s[2]] * s[3];
+        var chave = jogador + ":" + s[0];
+        var cruz = pad.buttons[s[1]] && pad.buttons[s[1]].pressed;
+        if (!setasDoAnalogico[chave] && valor > 0.5) {
+          setasDoAnalogico[chave] = true;
+          if (!cruz) emu.gameManager.simulateInput(jogador, s[0], 1);
+        } else if (setasDoAnalogico[chave] && valor < 0.35) {
+          setasDoAnalogico[chave] = false;
+          if (!cruz) emu.gameManager.simulateInput(jogador, s[0], 0);
+        }
+      }
+    }
+  }
+  setTimeout(analogicoNaCruz, 500);
+  window.addEventListener("gamepaddisconnected", function () {
+    // o controle saiu com o analógico inclinado: nenhuma seta fica presa
+    var emu = window.EJS_emulator;
+    Object.keys(setasDoAnalogico).forEach(function (chave) {
+      if (!setasDoAnalogico[chave]) return;
+      setasDoAnalogico[chave] = false;
+      var partes = chave.split(":");
+      try { if (emu && emu.gameManager) emu.gameManager.simulateInput(Number(partes[0]), Number(partes[1]), 0); } catch (e) { /* já saiu */ }
+    });
   });
   window.addEventListener("gamepaddisconnected", function () {
     avisar("Controle desconectado." + (celular ? " O controle da tela voltou." : ""), 3000);
@@ -1204,7 +1318,7 @@
   function ligarPorTras(bytes) {
     consolePronto = new Promise(function (ok) { avisarConsolePronto = ok; });
     var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
-    var jogo = bytes[principal.caminho];
+    var jogo = /\.m3u$/i.test(principal.nome) ? m3uComOInicial(bytes[principal.caminho]) : bytes[principal.caminho];
     delete bytes[principal.caminho];
     mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
     ligarEmulador(jogo, bytes);
@@ -1267,7 +1381,11 @@
       try {
         var pads = navigator.getGamepads ? navigator.getGamepads() : [];
         for (var i = 0; i < pads.length; i++) {
-          if (pads[i] && pads[i].buttons && pads[i].buttons[0] && pads[i].buttons[0].pressed) { jogar(); return; }
+          var b = pads[i] && pads[i].buttons;
+          if (!b) continue;
+          // A (ou Menu): continua de onde parou, se houver; Y: começa do início
+          if ((b[0] && b[0].pressed) || (b[9] && b[9].pressed)) { jogar(); return; }
+          if (b[3] && b[3].pressed) { jogar(false); return; }
         }
       } catch (e) { /* sem controle */ }
     }
@@ -1276,6 +1394,11 @@
 
   function comecou() {
     jogando = true;
+    if (!discosProntos) {
+      avisar("Começou pelo disco 1. O disco 2 baixa enquanto você joga.", 5000);
+      setTimeout(baixarDiscosDepois, 3000);
+    }
+    setTimeout(function () { mostrarDisco(); }, 1500);
     // o jogo começou: para de olhar o texto do emulador (cada toque num botão mexia nele)
     if (vigiaDoTexto) { vigiaDoTexto.disconnect(); vigiaDoTexto = null; }
     var emu = window.EJS_emulator;
@@ -1351,8 +1474,133 @@
     return window.LSPasse.pegar(config.passe, config.jogo || config.nome, function () { mostrar("Conferindo o acesso ao jogo…", 2); })
       .then(function (lista) { config.arquivos = window.LSPasse.juntar(config.arquivos, lista); return config.arquivos; });
   }
+  /* JOGO DE VÁRIOS DISCOS (Valkyrie Profile, Final Fantasy...): cada disco de PlayStation tem
+     500 a 700 MB, e o disco 2 só é pedido horas depois. O jogo começa com o disco 1 (metade
+     da espera e da memória) e os outros baixam com ele rodando; quando chegam, entram na
+     pasta do emulador antes de o jogo pedir. "Trocar de disco" fica nos Comandos (Y no
+     controle). Os índices (.cue, .m3u) vão todos já: são pequenos. */
+  var discosDepois = [];
+  var discosProntos = true;
+  var discosNoJogo = (config.arquivos || []).reduce(function (n, a) { return Math.max(n, Number(a.disco) || 0); }, 0);
+  // o disco em que o console liga (o plano B do "Trocar de disco" reinicia já no disco pedido)
+  var CHAVE_DISCO = "ls-disco-inicial-" + (config.jogo || config.nome);
+  var discoInicial = 1;
+  // fica guardado no aparelho: quem está no disco 2 volta no disco 2 (o "Continuar" é dele)
+  try { discoInicial = Math.min(discosNoJogo, Math.max(1, Number(localStorage.getItem(CHAVE_DISCO)) || 1)); } catch (e) { discoInicial = 1; }
+  function ficaParaDepois(item) {
+    return discosNoJogo > 1 && Number(item.disco) >= 1 && Number(item.disco) !== discoInicial && item.tamanho > 2 * 1048576;
+  }
+  function separarDiscos(lista) {
+    discosDepois = (lista || []).filter(ficaParaDepois);
+    discosProntos = !discosDepois.length;
+    return (lista || []).filter(function (item) { return !ficaParaDepois(item); });
+  }
+  /* A lista dos discos (.m3u) com o disco inicial primeiro: é com ele que o console liga. */
+  function m3uComOInicial(bytes) {
+    if (discoInicial <= 1 || !bytes) return bytes;
+    var linhas = new TextDecoder().decode(bytes).split(/\r?\n/).filter(function (l) { return l.trim(); });
+    if (linhas.length < discoInicial) return bytes;
+    var primeiro = linhas.splice(discoInicial - 1, 1)[0];
+    linhas.unshift(primeiro);
+    return new TextEncoder().encode(linhas.join("\n") + "\n");
+  }
+  var tentativasDosDiscos = 0;
+  function baixarDiscosDepois() {
+    if (discosProntos || !discosDepois.length) return;
+    var total = discosDepois.reduce(function (t, i) { return t + i.tamanho; }, 0);
+    var guardado = window.LSJogoGuardado;
+    var baixar;
+    function andou(feito) { mostrarDisco("baixando: " + Math.round(Math.min(100, feito / Math.max(1, total) * 100)) + "%"); }
+    if (!config.apk && guardado && guardado.disponivel) {
+      baixar = guardado.pegarTudo(config.jogo || config.nome, discosDepois, function (feito) { andou(feito); })
+        .then(function (r) { return r.bytes; });
+    } else {
+      var bytes = {}, feitos = 0;
+      baixar = discosDepois.reduce(function (promessa, item) {
+        return promessa.then(function () {
+          return baixarArquivo(item, function (agora) { andou(feitos + agora); }).then(function (dados) { feitos += item.tamanho; bytes[item.caminho] = dados; });
+        });
+      }, Promise.resolve()).then(function () { return bytes; });
+    }
+    baixar.then(function (bytes) {
+      var emu = window.EJS_emulator;
+      var FS = emu && emu.gameManager && emu.gameManager.FS;
+      if (!FS) throw new Error("o emulador ainda não abriu a pasta");
+      pastaSemCopia(FS);
+      Object.keys(bytes).forEach(function (caminho) {
+        FS.writeFile(caminho, bytes[caminho]);
+        delete bytes[caminho];
+      });
+      discosProntos = true;
+      mostrarDisco();
+      avisar("Disco " + (Number(discosDepois[0].disco) || 2) + " pronto. Quando o jogo pedir, troque nos Comandos (no controle: segure View + Menu e aperte Y).", 7000);
+    }).catch(function () {
+      tentativasDosDiscos++;
+      mostrarDisco("não baixou agora: tentando de novo…");
+      if (tentativasDosDiscos < 6) setTimeout(baixarDiscosDepois, 30000 * tentativasDosDiscos);
+    });
+  }
+  // o bloco "Disco 1 de 2" dos Comandos
+  var caixaDisco = $("[data-pl-disco]");
+  function quantosDiscos() {
+    var emu = window.EJS_emulator;
+    try { return emu && emu.gameManager ? emu.gameManager.getDiskCount() : 0; } catch (e) { return 0; }
+  }
+  // o disco que está no console (0 = o primeiro): o do emulador ou, sem ele, o que ligou
+  // a ordem da lista que o console recebeu: o disco inicial primeiro, depois os outros
+  function ordemDosDiscos(total) {
+    var ordem = [discoInicial - 1];
+    for (var i = 0; i < total; i++) if (i !== discoInicial - 1) ordem.push(i);
+    return ordem;
+  }
+  function discoAtual() {
+    var atual = -1;
+    try { atual = window.EJS_emulator.gameManager.getCurrentDisk(); } catch (e) { atual = -1; }
+    var total = quantosDiscos();
+    return atual >= 0 && total > 1 ? (ordemDosDiscos(total)[atual] !== undefined ? ordemDosDiscos(total)[atual] : atual) : discoInicial - 1;
+  }
+  function mostrarDisco(estado) {
+    if (!caixaDisco) return;
+    var total = Math.max(quantosDiscos(), discosNoJogo);
+    caixaDisco.hidden = !(total > 1);
+    if (!(total > 1)) return;
+    var atual = discoAtual();
+    var proximo = (atual + 1) % total;
+    caixaDisco.querySelector("[data-pl-disco-atual]").textContent = atual + 1;
+    caixaDisco.querySelector("[data-pl-disco-total]").textContent = total;
+    caixaDisco.querySelector("[data-pl-disco-proximo]").textContent = proximo + 1;
+    var falta = !discosProntos && proximo > 0;
+    caixaDisco.querySelector("[data-pl-trocar-disco]").disabled = falta;
+    caixaDisco.querySelector("[data-pl-disco-estado]").textContent = estado || (falta ? "o disco " + (proximo + 1) + " ainda está baixando" : "");
+  }
+  function trocarDisco() {
+    var noEmulador = quantosDiscos();
+    var total = Math.max(noEmulador, discosNoJogo);
+    if (!(total > 1)) return;
+    var emu = window.EJS_emulator;
+    var atual = discoAtual();
+    var proximo = (atual + 1) % total;
+    if (noEmulador > 1) {
+      if (!discosProntos && proximo !== discoInicial - 1) { avisar("O disco " + (proximo + 1) + " ainda está baixando. Mais um pouquinho.", 4000); return; }
+      try {
+        emu.gameManager.setCurrentDisk(Math.max(0, ordemDosDiscos(noEmulador).indexOf(proximo)));
+        avisar("Disco " + (proximo + 1) + " no console.", 3500);
+        try { localStorage.setItem(CHAVE_DISCO, String(proximo + 1)); } catch (e) { /* só não lembra */ }
+        mostrarDisco();
+        return;
+      } catch (e) { /* plano B, abaixo */ }
+    }
+    // PLANO B (o núcleo não troca o disco sozinho): guarda o cartão de memória e o console
+    // reinicia já no disco pedido -- é só carregar o jogo salvo no cartão.
+    try { emu.gameManager.saveSaveFiles(); } catch (e) { /* o emulador já guarda a cada 30 s */ }
+    try { localStorage.setItem(CHAVE_DISCO, String(proximo + 1)); } catch (e) { /* sem guardar, volta no 1 */ }
+    avisar("O console reinicia no disco " + (proximo + 1) + ": carregue o seu jogo salvo do cartão de memória.", 4000);
+    setTimeout(function () { location.reload(); }, 1600);
+  }
+  if (caixaDisco) caixaDisco.querySelector("[data-pl-trocar-disco]").addEventListener("click", trocarDisco);
+
   var consoleEsperando = false;
-  comPasse().then(pegar).then(ligarPorTras).then(function () {
+  comPasse().then(function (lista) { return pegar(separarDiscos(lista)); }).then(ligarPorTras).then(function () {
     consoleEsperando = true;
     mostrar("Pronto!", 100);
     progresso.hidden = true;
@@ -1362,7 +1610,8 @@
     pronto.hidden = false;
     // a apresentação já se monta escondida agora (o processador está folgado): o toque só dá o play
     if (window.LSIntroJogos && window.LSIntroJogos.preparar) window.LSIntroJogos.preparar(abertura, opcoesDaApresentacao());
-    dicaPronto.textContent = controleLigado() ? "Aperte A no controle ou toque em Jogar."
+    dicaPronto.textContent = controleLigado()
+      ? (progressoSalvo && botaoContinuar ? "No controle: A continua de onde parou, Y começa do início." : "Aperte A no controle ou toque em Jogar.")
       : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
         : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";
     (progressoSalvo && botaoContinuar ? botaoContinuar : botaoJogar).focus({ preventScroll: true });

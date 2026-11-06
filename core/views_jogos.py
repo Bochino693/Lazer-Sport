@@ -376,6 +376,8 @@ def config_do_emulador(jogo):
             "tamanhos": [tamanho for _, tamanho in partes],
             "tamanho": sum(tamanho for _, tamanho in partes),
             "principal": arquivo.papel == ArquivoEmulador.JOGO,
+            # de que disco é (jogo de vários discos): o reprodutor começa com o 1 e baixa os outros jogando
+            "disco": arquivo.disco,
         }
         if item["principal"]:
             principal = item

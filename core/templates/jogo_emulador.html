@@ -159,9 +159,14 @@
             {% endfor %}
         </ul>
         {% if config.comandosTexto %}<p class="pl-comandos-texto">{{ config.comandosTexto }}</p>{% endif %}
+        <div class="pl-disco" data-pl-disco hidden>
+            <p><strong>Disco <span data-pl-disco-atual>1</span> de <span data-pl-disco-total>2</span></strong> <small data-pl-disco-estado></small></p>
+            <button type="button" class="pl-disco-botao" data-pl-trocar-disco>Trocar para o disco <span data-pl-disco-proximo>2</span></button>
+            <small class="pl-disco-dica">Troque quando o jogo pedir. No controle: Y, com estes comandos abertos.</small>
+        </div>
         <p class="pl-dica" data-pl-dica="teclado">Clique no jogo e use o teclado. Um controle USB ou Bluetooth também funciona: ligue e aperte um botão.</p>
         <p class="pl-dica" data-pl-dica="celular" hidden>O controle aparece por cima do jogo. Deite o celular e toque em Tela cheia: fica maior e sem barras.</p>
-        <p class="pl-dica" data-pl-dica="controle" hidden>Ligue o controle de Xbox (cabo ou Bluetooth) no computador ou no celular e aperte qualquer botão: ele já vale. O de PlayStation e os genéricos funcionam igual, pela posição dos botões.</p>
+        <p class="pl-dica" data-pl-dica="controle" hidden>Ligue o controle de Xbox (cabo ou Bluetooth) no computador ou no celular e aperte qualquer botão: ele já vale. O de PlayStation e os genéricos funcionam igual, pela posição dos botões. O analógico esquerdo anda igual à cruz em todo jogo; segure View + Menu para pausar e abrir estes comandos (B fecha).</p>
     </div>
 </aside>
 {% endif %}

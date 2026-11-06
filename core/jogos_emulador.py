@@ -294,7 +294,8 @@ MOTIVO_NAO_SUPORTADO = {
     "gamecube": "não existe emulador de GameCube que rode no navegador (o Dolphin só roda instalado no computador ou no Android).",
     "wii": "não existe emulador de Wii que rode no navegador (o Dolphin só roda instalado no computador ou no Android).",
     "switch": "não existe emulador de Switch que rode no navegador, e os de computador exigem as chaves do console.",
-    "3ds": "não existe emulador de 3DS que rode no navegador.",
+    "3ds": "não existe emulador de 3DS que rode no navegador (o Azahar, que sucedeu o Citra, só roda instalado no computador "
+           "ou no Android), e o .3ds tirado do cartucho costuma vir criptografado. Jogo de 3DS fica fora do site e do APK/.exe.",
     "windows": "é um programa de Windows (.exe) -- o navegador não roda programas de Windows, nem launchers como o TeknoParrot. "
                "Roda programa de MS-DOS (PC antigo). Jogo de Windows feito por vocês: exporte a versão Web no Godot ou no Unity "
                "e cadastre o link; o .exe pode ficar guardado em \"Versão para computador\".",

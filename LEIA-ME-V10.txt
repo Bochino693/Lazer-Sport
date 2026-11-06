@@ -1120,3 +1120,35 @@ Dependência nova: rjsmin (requirements.txt).
    Drive/Master System/Game Gear/Sega CD, 32X, fliperama) servem para uso
    particular: o painel avisa junto do botão. Vender ou distribuir esses
    programas, ou qualquer jogo sem os direitos, não é permitido.
+
+41) CONTROLE DE XBOX EM TUDO, VELOCIDADE E JOGOS DE VÁRIOS DISCOS
+   O CONTROLE (Xbox, PlayStation, 8BitDo, genéricos -- pela posição dos
+   botões): o ANALÓGICO ESQUERDO anda igual à cruz em todo jogo (o Crash
+   do PlayStation, os de Super Nintendo, Mega Drive, GBA... só leem a
+   cruz). Aperta passando da metade, solta abaixo de 35% (sem pisca-
+   pisca), faz diagonal e nunca solta uma seta que a cruz está segurando.
+   No N64 e no PSP o analógico já é o do próprio console. Na tela do
+   Jogar: A (ou Menu) continua de onde parou, Y começa do início. Jogando:
+   SEGURAR View + Menu pausa e abre os Comandos; B fecha e volta ao jogo;
+   Y, com os Comandos abertos, troca o disco.
+   A VELOCIDADE: o Automático (Imagem > Gráficos) desce em degraus quando
+   o aparelho não dá conta por 3 s: 1) HD com menos pixels (o mesmo
+   filtro); 2) o núcleo pula o desenho de um quadro quando atrasa (o jogo
+   fica na velocidade certa e a imagem continua HD -- é o que salva no
+   PlayStation, que no navegador roda sem o recompilador); 3) só então o
+   Leve. Os bytes do jogo vão para a pasta do emulador SEM CÓPIA (antes
+   um disco de 600 MB ocupava 1,2 GB na hora de abrir).
+   VÁRIOS DISCOS (Valkyrie Profile, Final Fantasy...): o jogo começa só
+   com o disco 1 (metade da espera e da memória); os outros baixam com o
+   jogo rodando e entram na pasta do emulador antes de o jogo pedir.
+   "Trocar de disco" fica nos Comandos: troca na hora quando o núcleo
+   deixa; senão guarda o cartão de memória e o console religa já no disco
+   pedido (é só carregar o jogo salvo do cartão). O aparelho lembra em que
+   disco a pessoa está. Envie UMA versão só (ex.: Disc 1 e Disc 2 da mesma
+   versão, com os .cue): o painel monta a lista dos discos.
+   Jogo de 3DS (.3ds/.cia) não roda em site: não existe emulador de 3DS
+   para navegador (o painel explica ao recusar).
+   Código: core/static/site/paginas/jogo-emulador.js (analogicoNaCruz,
+   atalhoDoControle, PULAR_QUADROS, pastaSemCopia, separarDiscos,
+   trocarDisco), core/views_jogos.config_do_emulador ("disco" de cada
+   arquivo), core/templates/jogo_emulador.html (o bloco do disco).
