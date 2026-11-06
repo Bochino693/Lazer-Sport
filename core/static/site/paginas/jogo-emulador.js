@@ -543,6 +543,65 @@
   }
   FILTROS_DO_SITE["ls-suave"] = emDuasEtapas("bicubic", 2);
 
+  /* ---------------------------------------------------------------- o direcional da tela
+     ANALÓGICO (o padrão) ou a CRUZ. O analógico é o polegar arrastando: as 8 direções
+     da cruz (as diagonais também), sem procurar a seta -- melhor no celular, em pé ou
+     deitado. A cruz continua para quem prefere (jogo de luta, por exemplo): troca no
+     "Ajustar o controle" e fica guardada no aparelho. O PSP tem analógico de verdade. */
+  var CHAVE_DIRECIONAL = "ls-direcional-v1";
+  var direcional = "analogico";
+  try { direcional = localStorage.getItem(CHAVE_DIRECIONAL) === "cruz" ? "cruz" : "analogico"; } catch (e) { /* padrão */ }
+  function controleDaTela(desenho) {
+    if (!desenho) return desenho;
+    return desenho.map(function (b) {
+      if (b.type === "dpad" && direcional === "analogico") {
+        // a "zona" do emulador sem joystickInput aperta as setas da cruz pelo ângulo do polegar
+        return { type: "zone", id: b.id, location: b.location, left: b.left, top: b.top,
+                 joystickInput: false, inputValues: b.inputValues, color: "#ffffff", acao: b.acao };
+      }
+      return Object.assign({}, b);
+    });
+  }
+  /* O analógico do emulador (nipplejs) vem pequeno (100 px) e sem zona morta: um toque
+     leve no meio já andava. Aqui ele fica maior e o centro não anda. O emulador conta o
+     curso cheio em 50 px: no maior, a distância é reescalada (o PSP segue certo). */
+  (function prepararAnalogico() {
+    var TAMANHO = 128, MORTA = 0.24;
+    var lib = window.nipplejs;
+    function envolver(n) {
+      if (!n || typeof n.create !== "function" || n.__lsAnalogico) return n;
+      var criar = n.create;
+      n.create = function (op) {
+        var zona = criar.call(n, Object.assign({}, op, { size: TAMANHO, restOpacity: 0.95, fadeTime: 90 }));
+        var raio = TAMANHO / 2, fins = [], ligar = zona.on;
+        zona.on = function (tipo, fn) {
+          if (tipo === "end") fins.push(fn);
+          if (tipo !== "move") return ligar.call(zona, tipo, fn);
+          var solto = true;
+          return ligar.call(zona, tipo, function (e, info) {
+            if (!info) return fn(e, info);
+            if (info.distance < raio * MORTA) {
+              if (!solto) { solto = true; fins.forEach(function (f) { f(e, info); }); }
+              return;
+            }
+            solto = false;
+            fn(e, Object.assign({}, info, { distance: Math.min(raio, info.distance) * 50 / raio }));
+          });
+        };
+        return zona;
+      };
+      n.__lsAnalogico = true;
+      return n;
+    }
+    try {
+      Object.defineProperty(window, "nipplejs", {
+        configurable: true, enumerable: true,
+        get: function () { return lib; },
+        set: function (v) { lib = envolver(v); },
+      });
+    } catch (e) { /* segue com o do emulador */ }
+  })();
+
   /* ---------------------------------------------------------------- ligar o emulador */
   function ligarEmulador(jogo, externos) {
     window.EJS_player = "#jogo";
@@ -562,7 +621,7 @@
     // o teclado que os Comandos ensinam e o controle de Xbox pela posição dos botões
     if (config.controles) window.EJS_defaultControls = config.controles;
     // o controle na tela do celular com os nomes do console (sem "Fast/Slow" no meio)
-    if (config.gamepad) window.EJS_VirtualGamepadSettings = config.gamepad;
+    if (config.gamepad) window.EJS_VirtualGamepadSettings = controleDaTela(config.gamepad);
     // PSP e DOS: o núcleo de várias linhas (a página veio isolada pelo servidor)
     if (config.threads) window.EJS_threads = true;
     // O NÚCLEO QUE NÃO MORA NO SITE (Super Nintendo, Mega Drive, fliperama...) vem do
@@ -932,6 +991,39 @@
     arrasto = null;
   }, true);
 
+  /* Cada botão do controle da tela ganha o ícone do que faz (ver o comentário onde é
+     chamado). Função à parte: a troca analógico/cruz refaz o controle e rotula de novo. */
+  function rotularBotoes() {
+    var svgNS = "http://www.w3.org/2000/svg";
+    Object.keys(config.legendas || {}).forEach(function (id) {
+      var rotulo = config.legendas[id] || {};
+      Array.prototype.forEach.call(document.querySelectorAll("#jogo .ejs_virtualGamepad_button.b_" + id), function (el) {
+        if (el.classList.contains("pl-com-icone")) return;
+        var letra = (el.textContent || "").trim();
+        el.setAttribute("data-letra", letra);
+        if (rotulo.texto) el.setAttribute("title", letra + ": " + rotulo.texto);
+        var redondo = !el.closest(".ejs_virtualGamepad_bottom") && !/\bb_(l|r|l2|r2|z)\b/.test(el.className);
+        if (!rotulo.icone || !redondo) {
+          if (rotulo.texto && redondo) el.setAttribute("data-acao", rotulo.texto);
+          return;
+        }
+        el.classList.add("pl-com-icone");
+        el.textContent = "";
+        var icone = document.createElementNS(svgNS, "svg");
+        icone.setAttribute("class", "pl-ico-botao");
+        icone.setAttribute("aria-hidden", "true");
+        var uso = document.createElementNS(svgNS, "use");
+        uso.setAttribute("href", "#a-" + rotulo.icone);
+        icone.appendChild(uso);
+        el.appendChild(icone);
+        var selo = document.createElement("span");
+        selo.className = "pl-letra";
+        selo.textContent = letra;
+        el.appendChild(selo);
+      });
+    });
+  }
+
   function abrirHud() {
     if (!hud || !jogando) return;
     pecas = acharPecas();
@@ -960,6 +1052,35 @@
   if (hud && botaoHud) {
     botaoHud.addEventListener("click", abrirHud);
     hud.querySelector("[data-pl-hud-pronto]").addEventListener("click", fecharHud);
+    // ANALÓGICO ou CRUZ: troca na hora (o controle da tela é refeito, no lugar e no tamanho ajustados)
+    var escolhaDirecional = hud.querySelectorAll("[data-pl-direcional]");
+    var temDirecional = (config.gamepad || []).some(function (b) { return b.type === "dpad"; });
+    var caixaDirecional = hud.querySelector("[data-pl-direcional-caixa]");
+    if (caixaDirecional) caixaDirecional.hidden = !temDirecional;
+    function marcarDirecional() {
+      escolhaDirecional.forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.plDirecional === direcional ? "true" : "false"); });
+    }
+    marcarDirecional();
+    escolhaDirecional.forEach(function (botao) {
+      botao.addEventListener("click", function () {
+        if (botao.dataset.plDirecional === direcional) return;
+        direcional = botao.dataset.plDirecional;
+        try { localStorage.setItem(CHAVE_DIRECIONAL, direcional); } catch (e) { /* só não guarda */ }
+        marcarDirecional();
+        var emu = window.EJS_emulator;
+        if (!emu || typeof emu.setVirtualGamepad !== "function" || !emu.virtualGamepad) return;
+        var visivel = emu.virtualGamepad.style.display !== "none";
+        emu.virtualGamepad.remove();
+        emu.config.VirtualGamepadSettings = controleDaTela(config.gamepad);
+        emu.setVirtualGamepad();
+        if (!visivel) emu.virtualGamepad.style.display = "none";
+        rotularBotoes();
+        pecas = acharPecas();
+        aplicarHud();
+        if (editando) pecas.forEach(function (p) { p.el.classList.add("is-editavel"); });
+        escolher(null);
+      });
+    });
     hud.querySelector("[data-pl-hud-restaurar]").addEventListener("click", function () {
       ajuste = { escala: 1, opacidade: 1, pecas: {} };
       aplicarHud();
@@ -1200,34 +1321,7 @@
     // cada botão do controle da tela: o ÍCONE do que ele faz no próprio botão (o mesmo em
     // todo jogo: pular, atacar, atirar...), e a letra do console num selinho no canto -- o
     // jogo ainda diz "aperte B". Os de ombro e START/SELECT ficam com o nome.
-    var svgNS = "http://www.w3.org/2000/svg";
-    Object.keys(config.legendas || {}).forEach(function (id) {
-      var rotulo = config.legendas[id] || {};
-      Array.prototype.forEach.call(document.querySelectorAll("#jogo .ejs_virtualGamepad_button.b_" + id), function (el) {
-        if (el.classList.contains("pl-com-icone")) return;
-        var letra = (el.textContent || "").trim();
-        el.setAttribute("data-letra", letra);
-        if (rotulo.texto) el.setAttribute("title", letra + ": " + rotulo.texto);
-        var redondo = !el.closest(".ejs_virtualGamepad_bottom") && !/\bb_(l|r|l2|r2|z)\b/.test(el.className);
-        if (!rotulo.icone || !redondo) {
-          if (rotulo.texto && redondo) el.setAttribute("data-acao", rotulo.texto);
-          return;
-        }
-        el.classList.add("pl-com-icone");
-        el.textContent = "";
-        var icone = document.createElementNS(svgNS, "svg");
-        icone.setAttribute("class", "pl-ico-botao");
-        icone.setAttribute("aria-hidden", "true");
-        var uso = document.createElementNS(svgNS, "use");
-        uso.setAttribute("href", "#a-" + rotulo.icone);
-        icone.appendChild(uso);
-        el.appendChild(icone);
-        var selo = document.createElement("span");
-        selo.className = "pl-letra";
-        selo.textContent = letra;
-        el.appendChild(selo);
-      });
-    });
+    rotularBotoes();
     // o menu de ajustes sem as "opções do núcleo" (nomes de variável em inglês)
     Array.prototype.forEach.call(document.querySelectorAll("#jogo .ejs_settings_main_bar"), function (el) {
       if (/núcleo|Backend Core/i.test(el.textContent)) el.style.display = "none";

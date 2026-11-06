@@ -993,3 +993,14 @@ Dependência nova: rjsmin (requirements.txt).
    código subir antes da migração, o site segue sem o 3D dos projetos.
    Código: core/glb_montar.py (escreve o .glb), core/conversor_3d.py,
    core/modelo_fotos.py, core/produtos_parecidos.py.
+
+38) O ANALÓGICO NO CELULAR (NO LUGAR DA CRUZ)
+   No controle da tela, o direcional agora é um ANALÓGICO: o polegar arrasta,
+   sem procurar a seta. Ele aperta as setas da cruz pelo ângulo do polegar,
+   com as diagonais (cima + direita, por exemplo): serve para todo console,
+   com o celular em pé ou deitado. É maior que o do emulador (128 px) e tem
+   ZONA MORTA no meio: encostar o dedo não anda; só andar quando arrasta.
+   Quem prefere a CRUZ (jogo de luta, por exemplo) troca em "Ajustar o
+   controle" > Direcional: Analógico | Cruz. A troca é na hora, no lugar e no
+   tamanho que a pessoa deixou, e fica guardada no aparelho. O PSP continua com
+   o analógico de verdade (com força, não só as setas).
