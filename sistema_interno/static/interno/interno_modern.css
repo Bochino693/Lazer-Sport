@@ -5248,7 +5248,14 @@ body.ls-body{
 .ls-nav-section--games .ls-nav-caption i{margin-right:5px;color:#ffd23f}
 .ls-nav-section--games .ls-nav-item{margin:2px 0}
 .ls-nav-section--games .ls-nav-icon{color:#fff;background:linear-gradient(135deg,#0878f9,#3fd0ff);box-shadow:0 6px 14px rgba(8,120,249,.3)}
-.ls-nav-section--games .ls-nav-item:nth-of-type(2) .ls-nav-icon{background:linear-gradient(135deg,#ff3d71,#ffd23f);box-shadow:0 6px 14px rgba(255,61,113,.28)}
+.ls-nav-section--games .ls-nav-item--3d .ls-nav-icon{background:linear-gradient(135deg,#ff3d71,#ffd23f);box-shadow:0 6px 14px rgba(255,61,113,.28)}
+.ls-nav-section--games .ls-nav-item--montar .ls-nav-icon{background:linear-gradient(135deg,#22c55e,#3fd0ff);box-shadow:0 6px 14px rgba(34,197,94,.28)}
+/* o nome e, embaixo, o que tem dentro (sem etiqueta cortando o texto) */
+.ls-nav-section--games .ls-nav-item{min-height:50px;height:auto;padding-top:6px;padding-bottom:6px}
+.ls-nav-texto{min-width:0;line-height:1.15}
+.ls-nav-texto strong{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-nav-texto small{display:block;margin-top:2px;font-size:.68rem;font-weight:600;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-nav-section--games .ls-nav-item.active .ls-nav-texto small{color:inherit;opacity:.82}
 .ls-nav-section--games .ls-nav-item:hover{border-color:rgba(63,208,255,.35);background:rgba(63,208,255,.10)}
 .ls-nav-section--games .ls-nav-item.active{
   border-color:rgba(63,208,255,.6);
