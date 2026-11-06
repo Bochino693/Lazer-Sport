@@ -157,6 +157,57 @@ class VitrineTests(BasePortal):
         self.assertContains(resposta, '"@type": "CollectionPage"')
 
 
+class GaleriaTests(BasePortal):
+    """Os cartões da biblioteca: a capa ou a arte de reserva, os selos, o Jogar por cima e a barra de ferramentas."""
+
+    def test_cada_cartao_leva_a_ficha_e_tem_o_jogar_por_cima_da_capa(self):
+        self.salvo()
+        resposta = self.portal()
+        url = reverse("jogo", args=["corrida-maluca"])
+        # o cartão inteiro abre a ficha (sem JavaScript, a página do jogo)...
+        self.assertContains(resposta, f'<a class="bj-capa-link" href="{url}" data-bj-jogo="corrida-maluca">')
+        # ...e o Jogar abre o jogo direto, dentro do app, com o nome do jogo para o leitor de tela
+        self.assertContains(resposta, f'<a class="bj-capa-jogar" href="{url}" data-app-jogo="corrida-maluca" aria-label="Jogar Corrida Maluca">')
+        # nas estantes, a grade que vira fila no celular
+        self.assertContains(resposta, 'class="bj-grade bj-grade--fila"')
+        self.assertContains(resposta, 'class="bj-capa-img"')
+        self.assertNotContains(resposta, 'class="bj-capa-reserva"')  # todos têm capa
+
+    def test_jogo_sem_capa_ganha_a_arte_de_reserva(self):
+        self.salvo()
+        JogoCadastrado.objects.filter(slug="corrida-maluca").update(capa="")
+        resposta = self.portal()
+        corrida = next(c for c in resposta.context["todos"] if c["slug"] == "corrida-maluca")
+        self.assertEqual(corrida["capa"], "")
+        self.assertEqual(corrida["icone"], "fa-html5")
+        # nunca um quadrado vazio: o ícone do console e o nome, sobre a cor do jogo
+        self.assertContains(resposta, '<span class="bj-capa-reserva" aria-hidden="true"><i class="fa-brands fa-html5"></i><b>Corrida Maluca</b></span>',
+                            count=1, html=False)
+        self.assertContains(resposta, "data-bj-ficha-reserva")  # e a ficha também tem a dela
+
+    def test_o_recorde_aparece_no_selo_de_ranking(self):
+        from .models import RecordeJogo
+
+        ana = _cliente("ana", "ana@exemplo.com", first_name="Ana", last_name="Souza")
+        RecordeJogo.objects.create(usuario=ana, jogo="hit-music", pontos=9000, partidas=1)
+        resposta = self.portal()
+        hit = next(c for c in resposta.context["todos"] if c["slug"] == "hit-music")
+        self.assertEqual(hit["campeao"], {"nome": "Ana S.", "pontos": 9000})
+        self.assertContains(resposta, 'title="Com ranking · recorde de Ana S.: 9.000 pts"')
+        self.assertContains(resposta, '<span class="bj-oculto">Recorde:</span> 9.000')
+        # quem ainda não tem recorde fica só com o troféu (e o nome dele para o leitor de tela)
+        self.assertContains(resposta, '<span class="bj-oculto">Com ranking</span>')
+
+    def test_o_genero_tambem_fica_na_barra_de_ferramentas(self):
+        self.salvo(categoria="corrida")
+        resposta = self.portal(genero="Corrida")
+        self.assertContains(resposta, "data-bj-genero-escolha")
+        self.assertContains(resposta, '<option value="Corrida" selected>Corrida (1)</option>')
+        # o gênero vai uma vez só no formulário (a escolha), não também num campo escondido
+        self.assertNotContains(resposta, 'type="hidden" name="genero"')
+        self.assertEqual([j["slug"] for j in resposta.context["lista"]], ["corrida-maluca"])
+
+
 class LauncherAppTests(BasePortal):
     """O launcher é um app: sem o cabeçalho do site, com o carrossel, instalável e sem internet."""
 

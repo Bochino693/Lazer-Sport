@@ -70,6 +70,7 @@
   var formulario = raiz.querySelector("[data-portal-form]");
   var hero = raiz.querySelector("[data-portal-hero]");
   var barra = raiz.querySelector("[data-bj-barra]");
+  var generoEl = raiz.querySelector("[data-bj-genero-escolha]");
   if (!bibEl || !conteudo) return;
 
   function lerVista() { try { return localStorage.getItem("ls-biblioteca-vista") === "lista" ? "lista" : "capas"; } catch (e) { return "capas"; } }
@@ -82,7 +83,7 @@
     vista: lerVista(),
   };
 
-  /* ---------- a capa (a mesma de partials/cartao_jogo.html) ---------- */
+  /* ---------- o cartão (o mesmo de partials/cartao_jogo.html) ---------- */
   function el(tag, classe, texto) {
     var n = document.createElement(tag);
     if (classe) n.className = classe;
@@ -94,60 +95,96 @@
     i.setAttribute("aria-hidden", "true");
     return i;
   }
+  // não pode se chamar "pontos": o carrossel, mais abaixo, tem um "var pontos" que sobe para esta função toda e a apagaria
+  function emPontos(n) { return Number(n || 0).toLocaleString("pt-BR"); }
+  // a arte de reserva de quem não tem capa: o gradiente da cor do jogo, o ícone do console e o nome
+  function reserva(jogo) {
+    var r = el("span", "bj-capa-reserva");
+    r.setAttribute("aria-hidden", "true");
+    r.appendChild(icone((temaDe[jogo.estante] || {}).icone || "fa-gamepad"));
+    r.appendChild(el("b", "", jogo.titulo));
+    return r;
+  }
   function capa(jogo) {
-    var a = el("a", "bj-capa");
+    var cartao = el("article", "bj-capa");
+    cartao.dataset.portalCartao = jogo.slug;
+    cartao.style.setProperty("--cor", jogo.cor || "#3fd0ff");
+    cartao.style.setProperty("--tema", jogo.tema || "#3fd0ff");
+    // o cartão inteiro leva à ficha (os cliques, mais abaixo); sem JavaScript, à página do jogo
+    var a = el("a", "bj-capa-link");
     a.href = jogo.url;
     a.dataset.bjJogo = jogo.slug;
-    a.style.setProperty("--cor", jogo.cor || "#3fd0ff");
-    a.style.setProperty("--tema", jogo.tema || "#3fd0ff");
     var arte = el("span", "bj-capa-arte");
     if (jogo.capa) {
       var fundo = el("img", "bj-capa-fundo");
       fundo.src = jogo.capa; fundo.alt = ""; fundo.loading = "lazy"; fundo.decoding = "async"; fundo.setAttribute("aria-hidden", "true");
       var img = el("img", "bj-capa-img");
-      img.src = jogo.capa; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
+      img.src = jogo.capa; img.alt = ""; img.loading = "lazy"; img.decoding = "async"; img.width = 320; img.height = 320;
       arte.appendChild(fundo);
       arte.appendChild(img);
     } else {
-      var sem = icone("fa-gamepad");
-      sem.classList.add("bj-capa-sem");
-      arte.appendChild(sem);
+      arte.appendChild(reserva(jogo));
     }
-    arte.appendChild(el("span", "bj-sigla", jogo.sigla || ""));
+    a.appendChild(arte);
+    var texto = el("span", "bj-capa-texto");
+    texto.appendChild(el("strong", "", jogo.titulo));
+    if (comPonto[jogo.slug]) {
+      // tem um ponto guardado neste aparelho: o jogo continua de onde a pessoa parou
+      var ponto = el("small", "bj-capa-ponto");
+      ponto.appendChild(icone("fa-clock-rotate-left"));
+      ponto.appendChild(document.createTextNode(" Ponto guardado"));
+      texto.appendChild(ponto);
+    } else {
+      // o console já está no selo da capa: aqui vão o gênero e as partidas
+      var partes = [jogo.categoria || (jogo.tipo === "nosso" ? "Lazer & Sport" : jogo.plataforma)];
+      if (jogo.partidas) partes.push(jogo.partidas + " partida" + (jogo.partidas === 1 ? "" : "s"));
+      texto.appendChild(el("small", "", partes.join(" · ")));
+    }
+    a.appendChild(texto);
+    // os selos vêm depois do nome no código (o leitor de tela diz o nome primeiro); na tela, sobre a capa
+    var selos = el("span", "bj-capa-selos");
+    selos.appendChild(el("span", "bj-sigla", jogo.sigla || ""));
     var marcas = el("span", "bj-marcas");
-    if (jogo.ranking) { var r = el("span", "bj-marca bj-marca--ranking"); r.title = "Com ranking"; r.appendChild(icone("fa-trophy")); marcas.appendChild(r); }
     if (jogo.novidade) marcas.appendChild(el("span", "bj-marca bj-marca--nova", "Novo"));
+    if (jogo.ranking) {
+      var r = el("span", "bj-marca bj-marca--ranking");
+      r.appendChild(icone("fa-trophy"));
+      if (jogo.campeao) {
+        r.title = "Com ranking · recorde de " + jogo.campeao.nome + ": " + emPontos(jogo.campeao.pontos) + " pts";
+        r.appendChild(el("span", "bj-oculto", "Recorde:"));
+        r.appendChild(document.createTextNode(" " + emPontos(jogo.campeao.pontos)));
+      } else {
+        r.title = "Com ranking";
+        r.appendChild(el("span", "bj-oculto", "Com ranking"));
+      }
+      marcas.appendChild(r);
+    }
     if (noAparelho.indexOf(jogo.slug) >= 0) {
       var g = el("span", "bj-marca bj-marca--aparelho");
       g.title = "Já no aparelho: abre na hora";
       g.appendChild(icone("fa-download"));
+      g.appendChild(el("span", "bj-oculto", "Já no aparelho"));
       marcas.appendChild(g);
     }
-    arte.appendChild(marcas);
-    if (comPonto[jogo.slug]) {
-      // tem um ponto guardado neste aparelho: o jogo continua de onde a pessoa parou
-      var c = el("span", "bj-capa-continuar");
-      c.title = "Continuar de onde parou";
-      c.appendChild(icone("fa-play"));
-      c.appendChild(document.createTextNode(" Continuar"));
-      arte.appendChild(c);
-    }
-    var play = el("span", "bj-capa-play");
-    play.setAttribute("aria-hidden", "true");
-    play.appendChild(icone("fa-play"));
-    arte.appendChild(play);
-    var texto = el("span", "bj-capa-texto");
-    texto.appendChild(el("strong", "", jogo.titulo));
-    var partes = [jogo.tipo === "nosso" ? "Lazer & Sport" : jogo.plataforma];
-    if (jogo.categoria) partes.push(jogo.categoria);
-    if (jogo.partidas) partes.push(jogo.partidas + " partida" + (jogo.partidas === 1 ? "" : "s"));
-    texto.appendChild(el("small", "", partes.join(" · ")));
-    arte.appendChild(texto);
-    a.appendChild(arte);
-    return a;
+    selos.appendChild(marcas);
+    a.appendChild(selos);
+    cartao.appendChild(a);
+    // o Jogar por cima da capa: abre o jogo direto, dentro do app (o clique do [data-app-jogo], no fim)
+    var continuar = !!comPonto[jogo.slug];
+    var acoes = el("span", "bj-capa-acoes");
+    var jogar = el("a", "bj-capa-jogar");
+    jogar.href = jogo.url;
+    jogar.dataset.appJogo = jogo.slug;
+    jogar.setAttribute("aria-label", (continuar ? "Continuar " : "Jogar ") + jogo.titulo);
+    jogar.appendChild(icone("fa-play"));
+    jogar.appendChild(el("span", "", continuar ? "Continuar" : "Jogar"));
+    acoes.appendChild(jogar);
+    cartao.appendChild(acoes);
+    return cartao;
   }
-  function grade(lista) {
-    var g = el("div", "bj-grade");
+  // fila: nas estantes, a grade vira uma fila que rola de lado no celular (portal-jogos.css)
+  function grade(lista, fila) {
+    var g = el("div", "bj-grade" + (fila ? " bj-grade--fila" : ""));
     lista.forEach(function (j) { g.appendChild(capa(j)); });
     return g;
   }
@@ -155,24 +192,42 @@
     var s = el("section", "bj-estante");
     s.dataset.estante = tema.chave;
     s.style.setProperty("--tema", tema.cor);
+    s.setAttribute("aria-labelledby", "estante-" + tema.chave);
     var f = el("div", "bj-estante-faixa");
     var ic = el("span", "bj-estante-icone");
+    ic.setAttribute("aria-hidden", "true");
     ic.appendChild(icone(tema.icone));
     f.appendChild(ic);
     var nome = el("div", "bj-estante-nome");
-    nome.appendChild(el("h3", "", tema.nome));
+    var h = el("h3", "", tema.nome);
+    h.id = "estante-" + tema.chave;
+    nome.appendChild(h);
     nome.appendChild(el("p", "", tema.sub));
     f.appendChild(nome);
     f.appendChild(el("span", "bj-estante-total", total + " jogo" + (total === 1 ? "" : "s")));
     if (mais) {
       var link = el("a", "bj-estante-todos", "Ver todos ");
       link.href = "?estante=" + (filtroDoVerTodos || tema.chave) + "#biblioteca";
+      link.setAttribute("aria-label", "Ver todos os jogos de " + tema.nome);
       link.dataset.bjFiltro = filtroDoVerTodos || tema.chave;
       link.appendChild(icone("fa-chevron-right"));
       f.appendChild(link);
     }
     s.appendChild(f);
     return s;
+  }
+
+  // nada achado: o mesmo aviso do servidor, com o atalho para a biblioteca inteira
+  function vazio() {
+    var p = el("p", "bj-vazio");
+    p.appendChild(icone("fa-magnifying-glass"));
+    p.appendChild(document.createTextNode(" Nenhum jogo encontrado aqui ainda. Tente outra palavra ou "));
+    var tudo = el("a", "", "veja a biblioteca inteira");
+    tudo.href = location.pathname + "#biblioteca";
+    tudo.setAttribute("data-bj-limpar", "");
+    p.appendChild(tudo);
+    p.appendChild(document.createTextNode("."));
+    return p;
   }
 
   /* ---------- filtrar e ordenar (o mesmo que core/portal_jogos.py faz) ---------- */
@@ -231,7 +286,7 @@
     if (lista) {
       lista = ordenar(lista, ordem);
       if (lista.length) pedacos.push(grade(lista));
-      else pedacos.push(el("p", "bj-vazio", "Nenhum jogo encontrado aqui ainda. Tente outra palavra ou toque em “Ver tudo”."));
+      else pedacos.push(vazio());
       titulo.textContent = nome;
       sub.textContent = lista.length + " jogo" + (lista.length === 1 ? "" : "s") + (frase ? " · " + frase : "");
     } else {
@@ -239,14 +294,14 @@
       if (listaRecentes.length) {
         var r = faixa({ chave: "recentes", nome: "Continue de onde parou", sub: "Os jogos que você abriu por último neste aparelho",
                         icone: "fa-clock-rotate-left", cor: "#3fd0ff" }, listaRecentes.length, listaRecentes.length > 6, "recentes");
-        r.appendChild(grade(listaRecentes.slice(0, 6).map(function (s) { return porSlug[s]; })));
+        r.appendChild(grade(listaRecentes.slice(0, 6).map(function (s) { return porSlug[s]; }), true));
         pedacos.push(r);
       }
       ESTANTES.forEach(function (tema) {
         var daEstante = ordenar(jogos.filter(function (j) { return (j.familias || []).indexOf(tema.chave) >= 0; }), ordem);
         if (!daEstante.length) return;
         var s = faixa(tema, daEstante.length, daEstante.length > POR_ESTANTE);
-        s.appendChild(grade(daEstante.slice(0, POR_ESTANTE)));
+        s.appendChild(grade(daEstante.slice(0, POR_ESTANTE), true));
         pedacos.push(s);
       });
       titulo.textContent = "Todas as estantes";
@@ -258,6 +313,7 @@
     if (limpar) limpar.hidden = !lista;
     if (hero) hero.hidden = !!lista;
     if (ordemEl && ordemEl.value !== estado.ordem) ordemEl.value = estado.ordem;
+    if (generoEl && generoEl.value !== estado.genero) generoEl.value = estado.genero;
 
     // a lateral mostra onde a pessoa está
     raiz.querySelectorAll(".bj-item[data-bj-filtro]").forEach(function (item) {
@@ -275,6 +331,16 @@
       });
       history.replaceState(null, "", url);
     } catch (e) { /* nada */ }
+  }
+
+  // no tablet e no celular a lateral é uma fila que rola de lado: o botão escolhido vem para o meio dela
+  // (só a fila rola; a página fica onde está)
+  function mostrarEscolhido() {
+    var fila = raiz.querySelector("[data-bj-lado]");
+    var escolhido = fila && fila.querySelector('.bj-item[aria-current="true"]:not([hidden])');
+    if (!escolhido || fila.scrollWidth <= fila.clientWidth + 1) return;
+    var f = fila.getBoundingClientRect(), b = escolhido.getBoundingClientRect();
+    fila.scrollLeft += (b.left - f.left) - (f.width - b.width) / 2;
   }
 
   function irParaABiblioteca() {
@@ -317,9 +383,12 @@
       estado.filtro = alvo.dataset.bjFiltro;
     }
     desenhar();
+    mostrarEscolhido();
     irParaABiblioteca();
   });
   if (ordemEl) ordemEl.addEventListener("change", function () { estado.ordem = ordemEl.value; desenhar(); });
+  // o gênero da barra (tablet e celular): o mesmo filtro dos gêneros da lateral
+  if (generoEl) generoEl.addEventListener("change", function () { estado.genero = generoEl.value; desenhar(); });
   if (barra) barra.addEventListener("submit", function (e) { e.preventDefault(); desenhar(); });
   var vistas = raiz.querySelector("[data-bj-vistas]");
   if (vistas) {
@@ -433,6 +502,11 @@
     imagem.hidden = !jogo.capa;
     if (jogo.capa) imagem.src = jogo.capa;
     imagem.alt = jogo.titulo;
+    var semCapa = campoDaFicha("reserva");
+    if (semCapa) {
+      semCapa.hidden = !!jogo.capa;
+      semCapa.replaceChildren(icone((temaDe[jogo.estante] || {}).icone || "fa-gamepad"), el("b", "", jogo.titulo));
+    }
     campoDaFicha("sigla").textContent = jogo.sigla || "";
     campoDaFicha("estante").textContent = tema.nome || jogo.plataforma;
     campoDaFicha("titulo").textContent = jogo.titulo;
@@ -483,6 +557,7 @@
   }
 
   desenhar();
+  mostrarEscolhido();
 
   /* ---------- o Jogar da vitrine: no app, o jogo abre ali mesmo ---------- */
   raiz.addEventListener("click", function (e) {

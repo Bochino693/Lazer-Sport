@@ -138,17 +138,21 @@
     </section>
     {% endif %}
 
-    <!-- ================= A BIBLIOTECA ================= -->
+    <!-- ================= A BIBLIOTECA =================
+         Como a biblioteca de um launcher: à esquerda (no computador) a lateral presa com as coleções,
+         as estantes e os gêneros; à direita, na mesma coluna, o título, a barra de ferramentas e as
+         estantes -- tudo alinhado pela mesma borda da grade. No tablet e no celular a lateral vira uma
+         fila de botões que rola de lado, e o gênero vai para a barra de ferramentas. -->
     <section class="bj" id="biblioteca" aria-labelledby="bj-titulo" data-bj>
-        <div class="bj-cabeca">
-            <span class="bj-cabeca-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
-            <div>
-                <h2 id="bj-titulo">Biblioteca de jogos</h2>
-                <p>{{ total }} jogo{{ total|pluralize }} em {{ estantes|length }} estante{{ estantes|length|pluralize }}. Toque num jogo para ver a ficha e o como jogar.</p>
-            </div>
-        </div>
-
         <div class="bj-corpo">
+            <div class="bj-cabeca">
+                <span class="bj-cabeca-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+                <div class="bj-cabeca-texto">
+                    <h2 id="bj-titulo">Biblioteca de jogos</h2>
+                    <p>{{ total }} jogo{{ total|pluralize }} em {{ estantes|length }} estante{{ estantes|length|pluralize }}. Toque num jogo para ver a ficha e o como jogar.</p>
+                </div>
+            </div>
+
             <!-- as coleções, as estantes e os gêneros -->
             <nav class="bj-lado" aria-label="Organizar a biblioteca" data-bj-lado>
                 <div class="bj-lado-grupo">
@@ -180,55 +184,60 @@
                 {% endif %}
             </nav>
 
-            <div class="bj-principal">
-                <!-- o título do que está à vista, a ordem e o jeito de ver -->
-                <form class="bj-barra" method="get" action="{% url 'jogos' %}#biblioteca" data-bj-barra>
-                    <div class="bj-barra-titulo" data-bj-barra-titulo{% if lista_tema %} style="--tema: {{ lista_tema }}"{% endif %}>
-                        <h3 data-bj-lista-titulo>{% if lista is not None %}{{ lista_titulo }}{% else %}Todas as estantes{% endif %}</h3>
-                        <p data-bj-lista-sub>{% if lista is not None %}{{ lista|length }} jogo{{ lista|length|pluralize }}{% if lista_sub %} · {{ lista_sub }}{% endif %}{% else %}Organizadas por plataforma{% endif %}</p>
-                    </div>
-                    <div class="bj-barra-acoes">
-                        {% if estante %}<input type="hidden" name="estante" value="{{ estante }}">{% endif %}
-                        {% if genero %}<input type="hidden" name="genero" value="{{ genero }}">{% endif %}
-                        {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
-                        <label class="bj-ordem"><i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
-                            <select name="ordem" data-bj-ordem aria-label="Ordenar por">
-                                {% for valor, nome in ordens %}<option value="{{ valor }}"{% if valor == ordem %} selected{% endif %}>{{ nome }}</option>{% endfor %}
-                            </select>
-                        </label>
-                        <noscript><button type="submit" class="pg-botao">Ordenar</button></noscript>
-                        <div class="bj-vista" role="group" aria-label="Como ver a biblioteca" data-bj-vistas hidden>
-                            <button type="button" data-bj-vista="capas" aria-pressed="true" title="Capas"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></button>
-                            <button type="button" data-bj-vista="lista" aria-pressed="false" title="Lista"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
-                        </div>
-                        <a class="bj-limpar" href="{% url 'jogos' %}#biblioteca" data-bj-limpar{% if lista is None %} hidden{% endif %}><i class="fa-solid fa-xmark" aria-hidden="true"></i> Ver tudo</a>
-                    </div>
-                </form>
-
-                <div class="bj-conteudo" data-bj-conteudo aria-live="polite">
-                    {% if lista is not None %}
-                        {% if lista %}
-                        <div class="bj-grade">{% for jogo in lista %}{% include "partials/cartao_jogo.html" %}{% endfor %}</div>
-                        {% else %}
-                        <p class="bj-vazio">Nenhum jogo encontrado aqui ainda. Tente outra palavra ou <a href="{% url 'jogos' %}#biblioteca">veja a biblioteca inteira</a>.</p>
-                        {% endif %}
-                    {% else %}
-                        {% for e in estantes %}
-                        <section class="bj-estante" data-estante="{{ e.chave }}" style="--tema: {{ e.cor }}" aria-labelledby="estante-{{ e.chave }}">
-                            <div class="bj-estante-faixa">
-                                <span class="bj-estante-icone" aria-hidden="true"><i class="fa-{% if e.icone == 'fa-html5' %}brands{% else %}solid{% endif %} {{ e.icone }}"></i></span>
-                                <div class="bj-estante-nome">
-                                    <h3 id="estante-{{ e.chave }}">{{ e.nome }}</h3>
-                                    <p>{{ e.sub }}</p>
-                                </div>
-                                <span class="bj-estante-total">{{ e.total }} jogo{{ e.total|pluralize }}</span>
-                                {% if e.mais %}<a class="bj-estante-todos" href="?estante={{ e.chave }}#biblioteca" data-bj-filtro="{{ e.chave }}">Ver todos <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>{% endif %}
-                            </div>
-                            <div class="bj-grade">{% for jogo in e.jogos %}{% include "partials/cartao_jogo.html" %}{% endfor %}</div>
-                        </section>
-                        {% endfor %}
-                    {% endif %}
+            <!-- a barra de ferramentas: o que está à vista, o gênero (fora do computador), a ordem, o jeito de ver -->
+            <form class="bj-barra" method="get" action="{% url 'jogos' %}#biblioteca" data-bj-barra>
+                <div class="bj-barra-titulo" data-bj-barra-titulo{% if lista_tema %} style="--tema: {{ lista_tema }}"{% endif %}>
+                    <h3 data-bj-lista-titulo>{% if lista is not None %}{{ lista_titulo }}{% else %}Todas as estantes{% endif %}</h3>
+                    <p data-bj-lista-sub>{% if lista is not None %}{{ lista|length }} jogo{{ lista|length|pluralize }}{% if lista_sub %} · {{ lista_sub }}{% endif %}{% else %}Organizadas por plataforma{% endif %}</p>
                 </div>
+                <div class="bj-barra-campos">
+                    {% if estante %}<input type="hidden" name="estante" value="{{ estante }}">{% endif %}
+                    {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
+                    {% if generos %}
+                    <label class="bj-campo bj-campo--genero"><i class="fa-solid fa-tag" aria-hidden="true"></i>
+                        <select name="genero" data-bj-genero-escolha aria-label="Gênero">
+                            <option value="">Todos os gêneros</option>
+                            {% for g in generos %}<option value="{{ g.nome }}"{% if g.nome == genero %} selected{% endif %}>{{ g.nome }} ({{ g.total }})</option>{% endfor %}
+                        </select>
+                    </label>
+                    {% endif %}
+                    <label class="bj-campo bj-ordem"><i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+                        <select name="ordem" data-bj-ordem aria-label="Ordenar por">
+                            {% for valor, nome in ordens %}<option value="{{ valor }}"{% if valor == ordem %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <noscript><button type="submit" class="bj-aplicar">Aplicar</button></noscript>
+                </div>
+                <div class="bj-vista" role="group" aria-label="Como ver a biblioteca" data-bj-vistas hidden>
+                    <button type="button" data-bj-vista="capas" aria-pressed="true" aria-label="Ver em capas" title="Capas"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></button>
+                    <button type="button" data-bj-vista="lista" aria-pressed="false" aria-label="Ver em lista" title="Lista"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
+                </div>
+                <a class="bj-limpar" href="{% url 'jogos' %}#biblioteca" aria-label="Ver tudo (limpar os filtros)" title="Limpar os filtros" data-bj-limpar{% if lista is None %} hidden{% endif %}><i class="fa-solid fa-xmark" aria-hidden="true"></i> <span>Ver tudo</span></a>
+            </form>
+
+            <div class="bj-conteudo" data-bj-conteudo aria-live="polite">
+                {% if lista is not None %}
+                    {% if lista %}
+                    <div class="bj-grade">{% for jogo in lista %}{% include "partials/cartao_jogo.html" %}{% endfor %}</div>
+                    {% else %}
+                    <p class="bj-vazio"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Nenhum jogo encontrado aqui ainda. Tente outra palavra ou <a href="{% url 'jogos' %}#biblioteca">veja a biblioteca inteira</a>.</p>
+                    {% endif %}
+                {% else %}
+                    {% for e in estantes %}
+                    <section class="bj-estante" data-estante="{{ e.chave }}" style="--tema: {{ e.cor }}" aria-labelledby="estante-{{ e.chave }}">
+                        <div class="bj-estante-faixa">
+                            <span class="bj-estante-icone" aria-hidden="true"><i class="fa-{% if e.icone == 'fa-html5' %}brands{% else %}solid{% endif %} {{ e.icone }}"></i></span>
+                            <div class="bj-estante-nome">
+                                <h3 id="estante-{{ e.chave }}">{{ e.nome }}</h3>
+                                <p>{{ e.sub }}</p>
+                            </div>
+                            <span class="bj-estante-total">{{ e.total }} jogo{{ e.total|pluralize }}</span>
+                            {% if e.mais %}<a class="bj-estante-todos" href="?estante={{ e.chave }}#biblioteca" aria-label="Ver todos os jogos de {{ e.nome }}" data-bj-filtro="{{ e.chave }}">Ver todos <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>{% endif %}
+                        </div>
+                        <div class="bj-grade bj-grade--fila">{% for jogo in e.jogos %}{% include "partials/cartao_jogo.html" %}{% endfor %}</div>
+                    </section>
+                    {% endfor %}
+                {% endif %}
             </div>
         </div>
     </section>
@@ -296,6 +305,7 @@
         <div class="bj-ficha-arte">
             <img class="bj-ficha-poster" alt="" data-bj-ficha-poster>
             <img class="bj-ficha-capa" alt="" data-bj-ficha-capa>
+            <span class="bj-capa-reserva bj-ficha-reserva" aria-hidden="true" data-bj-ficha-reserva hidden><i></i><b></b></span>
             <span class="bj-sigla bj-ficha-sigla" data-bj-ficha-sigla></span>
         </div>
         <div class="bj-ficha-corpo">
