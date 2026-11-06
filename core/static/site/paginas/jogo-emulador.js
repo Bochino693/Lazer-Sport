@@ -615,7 +615,7 @@
       Object.keys(externos).forEach(function (chave) { delete externos[chave]; });
       window.EJS_gameUrl = null;
       try { localStorage.setItem(marcaDoNucleo, "1"); } catch (e) { /* nada */ }
-      comecou();
+      consoleLigou();
     };
     vigiarErroDoEmulador();
     var loader = document.createElement("script");
@@ -1070,35 +1070,69 @@
   setInterval(function () { if (document.visibilityState === "visible") salvarAgora(); }, 60000);
 
   /* ---------------------------------------------------------------- começar */
-  var bytesProntos = null;
   var comecando = false;
   var apresentacao = Promise.resolve();
+  /* A ORDEM DAS COISAS (para a abertura rodar lisa e o jogo abrir na hora):
+     1. o jogo baixa (ou sai do aparelho);
+     2. o console LIGA POR TRÁS da abertura -- o núcleo, a compilação, o jogo na memória:
+        o que mais pesa no processador acontece aqui, antes do toque;
+     3. o jogo começa e fica PARADO (sem gastar nada), e aparece o Jogar;
+     4. o toque em Jogar libera o som, toca a apresentação sozinha no processador e, quando
+        ela acaba, solta o jogo -- já ligado, sem espera. */
+  var consolePronto = null, avisarConsolePronto = null;
+  function ligarPorTras(bytes) {
+    consolePronto = new Promise(function (ok) { avisarConsolePronto = ok; });
+    var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
+    var jogo = bytes[principal.caminho];
+    delete bytes[principal.caminho];
+    mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
+    ligarEmulador(jogo, bytes);
+    return consolePronto;
+  }
+  function consoleLigou() {
+    var emu = window.EJS_emulator;
+    // parado e calado até o Jogar (a apresentação roda sem dividir o processador)
+    try { if (emu) emu.pause(true); } catch (e) { /* segue */ }
+    if (avisarConsolePronto) avisarConsolePronto();
+  }
+  /* O som do emulador nasce "suspenso" (ele ligou sem toque): o toque em Jogar libera. */
+  function liberarSom() {
+    try {
+      var al = window.EJS_emulator && window.EJS_emulator.Module && window.EJS_emulator.Module.AL;
+      var ctx = al && al.currentCtx;
+      if (ctx && ctx.audioCtx && ctx.audioCtx.state !== "running") ctx.audioCtx.resume();
+      (ctx && ctx.sources ? Object.keys(ctx.sources).map(function (k) { return ctx.sources[k]; }) : []).forEach(function (fonte) {
+        var c = fonte && fonte.gain && fonte.gain.context;
+        if (c && c.state !== "running" && c.resume) c.resume();
+      });
+    } catch (e) { /* sem som não trava o jogo */ }
+  }
+  function soltarJogo() {
+    var emu = window.EJS_emulator;
+    liberarSom();
+    try { if (emu) emu.play(true); } catch (e) { /* segue */ }
+    comecou();
+  }
+  function opcoesDaApresentacao() {
+    return { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || ""), capa: config.capa || "", console: config.sistemaNome || "" };
+  }
   function jogar(continuar) {
-    if (comecando || !bytesProntos) return;
+    if (comecando || !consoleEsperando) return;
     comecando = true;
     // sem dizer (Enter, o A do controle): continua, se houver de onde
     if (continuar === undefined) continuar = !!progressoSalvo;
     estadoParaCarregar = continuar && progressoSalvo ? progressoSalvo.estado : null;
     pronto.hidden = true;
-    mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
-    // "LAZER & SPORT GAMES apresenta": a espera do emulador ligando vira apresentação
+    liberarSom();
+    // no celular, o toque abre a tela cheia deitada
+    if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().catch(function () { /* segue */ });
+    // "LAZER & SPORT GAMES apresenta", com o processador só para ela; depois, o jogo
     if (window.LSIntroJogos) {
       abertura.classList.add("is-apresentando");
-      apresentacao = window.LSIntroJogos.mostrar(abertura, { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || ""),
-        capa: config.capa || "", console: config.sistemaNome || "" })
+      apresentacao = window.LSIntroJogos.mostrar(abertura, opcoesDaApresentacao())
         .then(function () { abertura.classList.remove("is-apresentando"); });
     }
-    var depois = function () {
-      var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
-      var jogo = bytesProntos[principal.caminho];
-      delete bytesProntos[principal.caminho];
-      var externos = bytesProntos;
-      bytesProntos = null;
-      ligarEmulador(jogo, externos);
-    };
-    // no celular, o toque abre a tela cheia deitada; o emulador liga logo depois
-    if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().then(depois, depois);
-    else depois();
+    apresentacao.then(soltarJogo, soltarJogo);
   }
   botaoJogar.addEventListener("click", function () { jogar(false); });
   if (botaoContinuar) botaoContinuar.addEventListener("click", function () { jogar(true); });
@@ -1143,7 +1177,7 @@
         }
         estadoParaCarregar = null;
         jogandoDesde = Date.now();
-      }, 400);
+      }, 120);
     }
     setTimeout(renovarFoto, 9000);
     // a abertura sai quando a apresentação termina (ou na hora, se já terminou)
@@ -1223,14 +1257,17 @@
     return window.LSPasse.pegar(config.passe, config.jogo || config.nome, function () { mostrar("Conferindo o acesso ao jogo…", 2); })
       .then(function (lista) { config.arquivos = window.LSPasse.juntar(config.arquivos, lista); return config.arquivos; });
   }
-  comPasse().then(pegar).then(function (bytes) {
-    bytesProntos = bytes;
+  var consoleEsperando = false;
+  comPasse().then(pegar).then(ligarPorTras).then(function () {
+    consoleEsperando = true;
     mostrar("Pronto!", 100);
     progresso.hidden = true;
     return lendoProgresso;
   }).then(function (salvo) {
     if (salvo) mostrarContinuar(salvo);
     pronto.hidden = false;
+    // a apresentação já se monta escondida agora (o processador está folgado): o toque só dá o play
+    if (window.LSIntroJogos && window.LSIntroJogos.preparar) window.LSIntroJogos.preparar(abertura, opcoesDaApresentacao());
     dicaPronto.textContent = controleLigado() ? "Aperte A no controle ou toque em Jogar."
       : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
         : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";

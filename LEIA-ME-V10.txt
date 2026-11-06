@@ -859,3 +859,22 @@ Dependência nova: rjsmin (requirements.txt).
    SE AINDA ACHAR PIXELIZADO: no jogo, toque em Imagem (no alto) e veja em
    "Gráficos" qual está marcado. Se estiver Leve, foi o aparelho que pediu;
    escolha HD para ver o mais bonito. "TV antiga" imita a TV de tubo.
+
+34) A ABERTURA LISA: O CONSOLE LIGA ANTES, PARADO
+   Antes, o toque em Jogar fazia tudo ao mesmo tempo: a apresentação animando
+   e, por baixo, o emulador baixando o núcleo, descompactando, compilando e
+   começando o jogo. Os dois disputavam o processador e a apresentação
+   engasgava (no teste, com o processador freado 4x como num celular: 27 a 33
+   quadros por segundo e trancos de até meio segundo).
+   A ORDEM AGORA:
+     1. o jogo baixa (ou sai do aparelho);
+     2. o console liga por trás da tela de abertura ("Ligando o console...");
+     3. o jogo começa e fica PARADO e calado, sem gastar nada; a apresentação
+        se monta escondida; aparece o Jogar;
+     4. o toque em Jogar libera o som e só dá o "play" na apresentação, que
+        roda sozinha no processador; quando ela acaba, o jogo é solto, já
+        ligado -- sem espera.
+   E a própria apresentação ficou leve: só anima o que a placa de vídeo faz
+   sozinha (mover, girar, aparecer); a capa do jogo é desfocada uma vez só,
+   num quadro pequeno; as faíscas são desenhadas em resolução comum.
+   No mesmo teste: 57 a 58 quadros por segundo, sem tranco.

@@ -11,13 +11,18 @@
     animation: ls-intro-entra .3s ease both;
 }
 .ls-intro--saindo { animation: ls-intro-sai .42s ease both; }
+/* preparada antes do toque: na página, mas invisível e parada no começo (intro-jogos.js) */
+.ls-intro--preparada { visibility: hidden; pointer-events: none; }
+.ls-intro--preparada, .ls-intro--preparada *, .ls-intro--preparada *::before, .ls-intro--preparada *::after { animation-play-state: paused !important; }
 
 /* a capa do jogo ao fundo: acende quando o nome entra */
 .ls-intro-capa {
-    position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover;
-    filter: blur(16px) saturate(1.25) brightness(.5);
+    /* um quadro pequeno, desfocado UMA vez no script, ampliado pelo navegador (já fica liso):
+       desfocar a imagem grande a cada quadro pesava na placa de vídeo do celular */
+    position: absolute; left: -6%; top: -6%; width: 112%; height: 112%;
     opacity: 0; transform: scale(1.18);
     animation: ls-intro-capa 2.2s 2.25s cubic-bezier(.2, .7, .2, 1) both;
+    will-change: transform, opacity;
 }
 .ls-intro::before {
     /* a vinheta: as bordas escurecem, o centro brilha */
@@ -29,14 +34,14 @@
     background-image: linear-gradient(rgba(63, 208, 255, .13) 1px, transparent 1px), linear-gradient(90deg, rgba(63, 208, 255, .13) 1px, transparent 1px);
     background-size: 44px 44px;
     transform: perspective(500px) rotateX(60deg) translateY(34%);
-    animation: ls-intro-grade 4.3s linear both;
     mask-image: linear-gradient(transparent, #000 45%, #000 70%, transparent);
     -webkit-mask-image: linear-gradient(transparent, #000 45%, #000 70%, transparent);
     opacity: .8;
 }
 .ls-intro-raios {
     /* os raios de luz atrás do logo, girando */
-    position: absolute; left: 50%; top: 42%; z-index: 1; width: 150vmax; aspect-ratio: 1; translate: -50% -50%;
+    position: absolute; left: 50%; top: 42%; z-index: 1; width: 115vmax; aspect-ratio: 1; translate: -50% -50%;
+    will-change: transform, opacity;
     background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .07) 0deg 4deg, transparent 4deg 18deg),
                 conic-gradient(from 0deg, transparent, rgba(255, 71, 87, .3), transparent 30%, rgba(47, 139, 255, .32), transparent 60%, rgba(255, 210, 63, .28), transparent 85%);
     mask-image: radial-gradient(closest-side, #000 10%, transparent 70%);
@@ -50,11 +55,13 @@
 .ls-intro-palco {
     position: relative; z-index: 3; display: grid; place-items: center; width: 100%; height: 100%;
     animation: ls-intro-tranco .32s .72s linear both;
+    will-change: transform;
 }
 .ls-intro-grupo {
     position: absolute; left: 0; right: 0; top: 42%; translate: 0 -50%;
     display: grid; justify-items: center; gap: clamp(6px, 1.6vmin, 14px); padding: 0 6%;
     animation: ls-intro-sobe-grupo .7s 2.3s cubic-bezier(.6, 0, .2, 1) both;
+    will-change: transform;
 }
 .ls-intro--sem-nome .ls-intro-grupo { animation: none; }
 .ls-intro-miolo { position: relative; display: grid; place-items: center; }
@@ -62,7 +69,14 @@
     position: relative; width: clamp(64px, 17vmin, 136px); aspect-ratio: 1; display: grid; place-items: center;
     border-radius: 26%; background: #fff;
     box-shadow: 0 0 0 3px rgba(255, 255, 255, .18), 0 0 46px rgba(63, 208, 255, .65), 0 0 110px rgba(255, 71, 87, .35), 0 16px 36px rgba(0, 0, 0, .55);
-    animation: ls-intro-logo .62s .72s cubic-bezier(.2, 1.7, .35, 1) both, ls-intro-pulsa 1.4s 1.5s ease-in-out infinite;
+    animation: ls-intro-logo .62s .72s cubic-bezier(.2, 1.7, .35, 1) both;
+}
+.ls-intro-logo::after {
+    /* o pulso de luz em volta do logo: só a transparência anima */
+    content: ""; position: absolute; inset: -14%; border-radius: 30%; pointer-events: none;
+    box-shadow: 0 0 60px 10px rgba(63, 208, 255, .55), 0 0 120px 30px rgba(255, 71, 87, .3);
+    opacity: 0; animation: ls-intro-pulsa 1.4s 1.5s ease-in-out infinite;
+    will-change: opacity;
 }
 .ls-intro-logo img { width: 86%; height: 86%; object-fit: contain; }
 .ls-intro-onda {
@@ -156,22 +170,21 @@
 .ls-intro--parada.ls-intro--sem-nome .ls-intro-grupo { top: 42%; }
 
 @keyframes ls-intro-entra { from { opacity: 0; } }
-@keyframes ls-intro-sai { to { opacity: 0; transform: scale(1.06); filter: blur(4px); } }
-@keyframes ls-intro-grade { from { background-position: 0 0; } to { background-position: 0 190px; } }
+@keyframes ls-intro-sai { to { opacity: 0; transform: scale(1.06); } }
 @keyframes ls-intro-raios { from { rotate: -40deg; opacity: 0; } 15% { opacity: 1; } to { rotate: 80deg; opacity: .75; } }
 @keyframes ls-intro-tranco {
     0%, 100% { transform: none; } 15% { transform: translate(-7px, 4px); } 30% { transform: translate(6px, -5px); }
     45% { transform: translate(-4px, -3px); } 60% { transform: translate(4px, 3px); } 80% { transform: translate(-2px, 1px); }
 }
-@keyframes ls-intro-logo { from { transform: scale(.15) rotate(-18deg); opacity: 0; filter: brightness(3); } 60% { filter: brightness(1.6); } }
-@keyframes ls-intro-pulsa { 50% { box-shadow: 0 0 0 3px rgba(255, 255, 255, .24), 0 0 70px rgba(63, 208, 255, .85), 0 0 140px rgba(255, 71, 87, .45), 0 16px 36px rgba(0, 0, 0, .55); } }
+@keyframes ls-intro-logo { from { transform: scale(.15) rotate(-18deg); opacity: 0; } }
+@keyframes ls-intro-pulsa { 50% { opacity: 1; } }
 @keyframes ls-intro-onda { 0% { transform: scale(.6); opacity: 0; } 2% { opacity: 1; } 100% { transform: scale(6); opacity: 0; } }
-@keyframes ls-intro-letra { from { transform: translateY(.9em) scale(.6) rotate(8deg); opacity: 0; filter: blur(6px); } }
+@keyframes ls-intro-letra { from { transform: translateY(.9em) scale(.6) rotate(8deg); opacity: 0; } }
 @keyframes ls-intro-varre { to { transform: translateX(120%); } }
 @keyframes ls-intro-apresenta { from { letter-spacing: 1.6em; opacity: 0; } }
-@keyframes ls-intro-sobe-grupo { to { top: 24%; scale: .72; } }
+@keyframes ls-intro-sobe-grupo { to { transform: translateY(-18vh) scale(.72); } }
 @keyframes ls-intro-capa { to { opacity: .95; transform: scale(1.04); } }
-@keyframes ls-intro-titulo { from { transform: scale(1.9); opacity: 0; filter: blur(14px); } 70% { filter: blur(0); } }
+@keyframes ls-intro-titulo { from { transform: scale(1.9); opacity: 0; } }
 @keyframes ls-intro-linha { from { transform: scaleX(0); opacity: 0; } }
 @keyframes ls-intro-console { from { transform: translateY(10px); opacity: 0; } }
 @keyframes ls-intro-flare { 0% { opacity: 0; transform: scaleX(0); } 25% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1.2); } }
