@@ -447,8 +447,10 @@ body.app-jogando { overflow: hidden; }
     .pg-barra.is-rolada {
         background-color: rgba(5, 10, 28, .9);
         border-bottom-color: rgba(255, 255, 255, .08);
-        box-shadow: 0 0 0 100vmax rgba(5, 10, 28, .9), 0 14px 30px rgba(0, 0, 0, .35);
-        clip-path: inset(0 -100vmax -40px);
+        /* o vidro vai de ponta a ponta só para OS LADOS: a folga de 40 px embaixo deixava uma
+           faixa escura vazia por cima da biblioteca (o card "Continue de onde parou" e a lateral) */
+        box-shadow: 0 0 0 100vmax rgba(5, 10, 28, .9);
+        clip-path: inset(0 -100vmax);
         -webkit-backdrop-filter: blur(14px) saturate(1.2);
         backdrop-filter: blur(14px) saturate(1.2);
     }
