@@ -357,7 +357,7 @@
 
 <div class="modal fade" id="modalCriar3d" tabindex="-1" aria-hidden="true" aria-labelledby="criarTitulo">
   <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">
-    <form class="modal-content ls-criar3d" id="formCriar3d" method="post" action="{% url 'objetos_3d_inner' %}" enctype="multipart/form-data" novalidate>
+    <form class="modal-content ls-criar3d" id="formCriar3d" method="post" action="{% url 'objetos_3d_inner' %}" enctype="multipart/form-data" novalidate data-ocr="{% static 'vendor/tesseract/' %}">
       {% csrf_token %}<input type="hidden" name="origem" id="criarOrigem" value="fotos"><input type="hidden" name="vistas" id="criarVistas" value="{}">
       <div class="modal-header"><div><span class="ls-modal-kicker">Criar objeto 3D</span><h5 class="modal-title" id="criarTitulo">Do que vocês tiverem: fotos, projeto ou arquivo 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
@@ -424,6 +424,8 @@
                 <label><span>Profundidade</span><input class="form-control" name="profundidade" inputmode="decimal" placeholder="ex.: 4,00" autocomplete="off"></label>
                 <label><span>Altura</span><input class="form-control" name="altura" inputmode="decimal" placeholder="ex.: 3,20" autocomplete="off"></label>
               </div>
+              {# as medidas escritas nas fotos (lidas no navegador) e o que falta perguntar #}
+              <div class="ls-criar3d-ocr" id="criarOcr" aria-live="polite" hidden></div>
             </fieldset>
 
             <div class="ls-criar3d-precisao" id="criarPrecisao" aria-live="polite"></div>
@@ -517,6 +519,7 @@
 
 {% block scripts %}
 {% if not tabela_ausente %}
+<script src="{% estatico 'interno/medidas-nas-fotos.js' %}"></script>
 <script>
 LSTela.pronto(function () {
   "use strict";
@@ -1109,6 +1112,7 @@ LSTela.pronto(function () {
       formCriar.querySelectorAll("[data-painel-origem]").forEach(function (p) { p.hidden = p.dataset.painelOrigem !== origem; });
       el("criarModos").hidden = origem === "arquivo";
       pintarPrecisao();
+      pintarOcr();
     }
     formCriar.querySelectorAll("[data-origem]").forEach(function (b) { b.addEventListener("click", function () { escolherOrigem(b.dataset.origem); }); });
     formCriar.querySelectorAll('[name="modo"]').forEach(function (r) { r.addEventListener("change", pintarPrecisao); });
@@ -1123,8 +1127,77 @@ LSTela.pronto(function () {
         if (!arquivo) { img.innerHTML = '<i class="bi bi-image"></i>'; return; }
         var foto = document.createElement("img"); foto.alt = ""; foto.src = URL.createObjectURL(arquivo);
         img.replaceChildren(foto);
+        olharFoto(arquivo, caixa.dataset.vista, caixa);
       });
     });
+
+    /* ---- AS MEDIDAS ESCRITAS NAS FOTOS (medidas-nas-fotos.js): cada foto escolhida é lida no
+       navegador; as medidas achadas preenchem só os campos vazios (ou os que ela mesma
+       preencheu) e a janela pergunta só o que faltar. Cada foto também é conferida (pequena,
+       escura, borrada, fundo bagunçado) e o aviso aparece na própria vista. ---- */
+    var NOMES_VISTA = { frente: "frente", direita: "lado direito", costas: "costas", esquerda: "lado esquerdo", cima: "de cima" };
+    var lidas = {};          // vista/foto -> medidas achadas
+    var lendo = 0;
+    function metrosBr(v) { return (Math.round(v * 100) / 100).toFixed(2).replace(".", ","); }
+    function pintarOcr() {
+      var caixa = el("criarOcr");
+      if (!window.LSMedidasNasFotos || estado.origem === "arquivo") { caixa.hidden = true; return; }
+      var junto = { largura: null, profundidade: null, altura: null }, de = {};
+      Object.keys(lidas).forEach(function (onde) {
+        ["largura", "profundidade", "altura"].forEach(function (k) {
+          var v = lidas[onde][k];
+          if (v && (!junto[k] || v > junto[k])) { junto[k] = v; de[k] = onde; }
+        });
+      });
+      // preenche: o campo vazio, ou o que a leitura já tinha preenchido (a pessoa digitou: fica)
+      ["largura", "profundidade", "altura"].forEach(function (k) {
+        var campo = formCriar.querySelector('[name="' + k + '"]');
+        if (junto[k] && (!campo.value || campo.dataset.lido === "1")) {
+          campo.value = metrosBr(junto[k]);
+          campo.dataset.lido = "1";
+          campo.classList.add("ls-criar3d-lido");
+        }
+      });
+      var partes = [];
+      ["largura", "profundidade", "altura"].forEach(function (k) {
+        if (junto[k]) partes.push('<span class="ls-criar3d-lida"><b>' + k.charAt(0).toUpperCase() + k.slice(1) + "</b> " + metrosBr(junto[k]) + " m <small>(" + (NOMES_VISTA[de[k]] || de[k]) + ")</small></span>");
+      });
+      var faltam = ["largura", "profundidade", "altura"].filter(function (k) { return !formCriar.querySelector('[name="' + k + '"]').value; });
+      var html = "";
+      if (lendo) html += '<p class="ls-criar3d-ocr-lendo"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Lendo as medidas escritas nas fotos…</p>';
+      if (partes.length) html += '<p class="ls-criar3d-ocr-achou"><i class="bi bi-magic" aria-hidden="true"></i> Achei nas fotos: ' + partes.join(" ") + ' <small>Confira antes de gerar.</small></p>';
+      else if (!lendo && Object.keys(lidas).length) html += '<p class="ls-criar3d-ocr-nada"><i class="bi bi-search" aria-hidden="true"></i> Nenhuma medida escrita nas fotos.</p>';
+      if (!lendo && faltam.length && Object.keys(lidas).length) {
+        html += '<p class="ls-criar3d-ocr-falta"><i class="bi bi-question-circle" aria-hidden="true"></i> Falta' + (faltam.length > 1 ? "m" : "") + ": <b>" + faltam.join(", ") + "</b> — digite " + (faltam.length > 1 ? "as que souber" : "se souber") + "; o que ficar vazio sai da proporção das fotos.</p>";
+        faltam.forEach(function (k) { formCriar.querySelector('[name="' + k + '"]').classList.add("ls-criar3d-falta"); });
+      }
+      caixa.innerHTML = html;
+      caixa.hidden = !html;
+    }
+    formCriar.querySelectorAll(".ls-criar3d-medidas input").forEach(function (campo) {
+      campo.addEventListener("input", function () { campo.dataset.lido = ""; campo.classList.remove("ls-criar3d-lido", "ls-criar3d-falta"); });
+    });
+    function olharFoto(fonte, onde, caixaDaVista) {
+      if (!window.LSMedidasNasFotos || !fonte) return;
+      // a conferência da foto: o aviso fica na própria vista
+      if (caixaDaVista) {
+        caixaDaVista.classList.remove("tem-aviso");
+        caixaDaVista.removeAttribute("title");
+        LSMedidasNasFotos.conferir(fonte).then(function (avisos) {
+          if (!avisos.length) return;
+          caixaDaVista.classList.add("tem-aviso");
+          caixaDaVista.title = "Atenção: " + avisos.join("; ");
+        }).catch(function () { /* sem conferir */ });
+      }
+      lendo++;
+      pintarOcr();
+      LSMedidasNasFotos.ler(fonte).then(function (r) {
+        lidas[onde] = r.medidas;
+      }).catch(function () { /* sem leitura: segue com o que a pessoa digitar */ }).then(function () {
+        lendo--;
+        pintarOcr();
+      });
+    }
 
     // ---- de um projeto: as fotos com a vista de cada uma, e o paralelo com a loja ----
     var OPCOES_VISTA = [["", "Não usar"], ["frente", "Frente"], ["direita", "Lado direito"], ["costas", "Costas"], ["esquerda", "Lado esquerdo"], ["cima", "De cima"]];
@@ -1197,6 +1270,9 @@ LSTela.pronto(function () {
             if (json.medidas && json.medidas[chave] && !campo.value) campo.value = String(json.medidas[chave]).replace(".", ",");
           });
           el("criarDestinoProjeto").value = String(id);
+          // as fotos do projeto também são lidas (as plantas com as cotas costumam vir junto)
+          lidas = {};
+          (json.fotos || []).slice(0, 8).forEach(function (f) { olharFoto(f.url, f.legenda || ("foto " + f.id), null); });
           pintarSugestoes(json);
         })
         .catch(function (erro) { el("criarFotosProjeto").innerHTML = ""; Painel.erro("criarErro", erro.message); });

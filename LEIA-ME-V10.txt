@@ -1152,3 +1152,20 @@ Dependência nova: rjsmin (requirements.txt).
    atalhoDoControle, PULAR_QUADROS, pastaSemCopia, separarDiscos,
    trocarDisco), core/views_jogos.config_do_emulador ("disco" de cada
    arquivo), core/templates/jogo_emulador.html (o bloco do disco).
+
+42) AS MEDIDAS ESCRITAS NAS FOTOS (CRIAR OBJETO 3D)
+   Ao escolher as fotos (ou o projeto), a janela LÊ cada foto no próprio
+   navegador (OCR: o Tesseract do site, core/static/vendor/tesseract/; a
+   foto não vai a ninguém) e acha as medidas escritas: "Comprimento 5,30
+   m", "Larg. 2.65m", "ALTURA 4,35", "600 x 400 x 320 cm", até a cota
+   escrita na vertical (a foto é lida de pé e deitada). O "comprimento"
+   dos catálogos vai para Largura (a frente) e a "largura" deles para
+   Profundidade. Preenche SÓ os campos vazios (o que você digitou fica),
+   mostra de qual foto veio cada medida ("Confira antes de gerar") e
+   pergunta só o que faltar ("Faltam: profundidade -- digite se souber; o
+   que ficar vazio sai da proporção das fotos").
+   E CONFERE cada foto: pequena (menos de 480 px), escura, borrada ou com
+   o fundo bagunçado ganha um "!" na vista, com o motivo ao passar o mouse.
+   Código: sistema_interno/static/interno/medidas-nas-fotos.js (ler,
+   interpretar, conferir) e o trecho "AS MEDIDAS ESCRITAS NAS FOTOS" em
+   sistema_interno/templates/objetos_3d_inner.html.

@@ -120,6 +120,22 @@ class PreviaTests(BaseCriar):
         self.assertNotEqual(resposta.status_code, 200)
 
 
+class MedidasNasFotosTests(BaseCriar):
+    """A janela lê as medidas escritas nas fotos no próprio navegador (Tesseract do site)."""
+
+    def test_a_janela_leva_o_leitor_e_a_pasta_dele(self):
+        from django.contrib.staticfiles import finders
+
+        self.client.force_login(self.super)
+        tela = self.client.get("/site/objetos-3d/", HTTP_HOST=HOST)
+        self.assertContains(tela, "interno/medidas-nas-fotos.js")
+        self.assertContains(tela, 'data-ocr="/static/vendor/tesseract/"')
+        self.assertContains(tela, 'id="criarOcr"')
+        # o leitor inteiro mora no site: nada de buscar fora (o painel funciona sem a CDN)
+        for nome in ("tesseract.min.js", "worker.min.js", "tesseract-core-simd-lstm.wasm.js", "eng.traineddata.gz"):
+            self.assertTrue(finders.find("vendor/tesseract/" + nome), nome)
+
+
 class ProjetoDadosTests(BaseCriar):
     def test_fotos_com_a_vista_e_o_produto_parecido(self):
         resposta = self.enviar({"action": "projeto_dados", "projeto": self.projetado.pk})

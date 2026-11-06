@@ -385,3 +385,28 @@ a.ls-3d-jogo:hover { color: #fff3c4; border-color: rgba(255, 210, 63, .7); }
   .ls-criar3d-vistas { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "frente direita" "costas esquerda" "cima ."; }
   .ls-criar3d-modos { grid-template-columns: 1fr; }
 }
+
+/* AS MEDIDAS LIDAS NAS FOTOS: o que achou (com a vista de onde veio), o que falta perguntar,
+   e o campo preenchido pela leitura ganha uma marca (some quando a pessoa digita). */
+.ls-criar3d-ocr { margin-top: 10px; display: grid; gap: 6px; font-size: .82rem; }
+.ls-criar3d-ocr[hidden] { display: none; }
+.ls-criar3d-ocr p { margin: 0; line-height: 1.45; }
+.ls-criar3d-ocr-lendo { color: var(--muted); }
+.ls-criar3d-ocr-achou { color: var(--text); }
+.ls-criar3d-ocr-achou > i { color: #22c55e; }
+.ls-criar3d-lida {
+  display: inline-flex; align-items: baseline; gap: 4px; margin: 2px 4px 2px 0; padding: 2px 9px; border-radius: 999px;
+  background: rgba(34, 197, 94, .14); border: 1px solid rgba(34, 197, 94, .35);
+}
+.ls-criar3d-lida small { color: var(--muted); }
+.ls-criar3d-ocr-nada { color: var(--muted); }
+.ls-criar3d-ocr-falta { color: #f59e0b; }
+.ls-criar3d-medidas input.ls-criar3d-lido { border-color: rgba(34, 197, 94, .7); box-shadow: 0 0 0 3px rgba(34, 197, 94, .14); }
+.ls-criar3d-medidas input.ls-criar3d-falta:placeholder-shown { border-color: rgba(245, 158, 11, .7); }
+/* a foto com algum problema (pequena, escura, borrada, fundo bagunçado): o aviso no canto */
+.ls-criar3d-vista { position: relative; }
+.ls-criar3d-vista.tem-aviso::after {
+  content: "!"; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 900; font-size: .8rem; color: #1a1300; background: #f59e0b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+}
