@@ -15,30 +15,37 @@
   <p class="mb-0 text-muted">A migração roda sozinha na próxima subida (ou com <code>python manage.py migrate</code>).</p>
 </section>
 {% else %}
-<div class="mt-app" id="montar3d"
+{# O editor é um APP: ocupa a janela inteira (como o launcher dos jogos), sem a página rolando atrás. #}
+<div class="mt-app" id="montar3d" data-gaveta=""
      data-three="{% static 'vendor/three/three.module.min.js' %}"
      data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
      data-exportar="{% static 'vendor/three/GLTFExporter.js' %}"
      data-controles="{% static 'vendor/three/TransformControls.js' %}"
      data-motor="{% estatico 'interno/montar3d.js' %}"
+     data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
+     data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
+     data-cores="{% estatico 'site/arena/cores3d.js' %}"
      data-acao="{% url 'montar_3d_inner' %}"
      data-acao-objetos="{% url 'objetos_3d_inner' %}">
   {% csrf_token %}
 
   <header class="mt-topo">
-    <a class="mt-voltar" href="{% url 'objetos_3d_inner' %}#laboratorio" data-no-soft-nav="true" aria-label="Voltar aos objetos 3D"><i class="bi bi-arrow-left"></i></a>
+    <a class="mt-voltar" href="{% url 'objetos_3d_inner' %}#laboratorio" data-no-soft-nav="true" aria-label="Sair do Montar em 3D (voltar aos objetos 3D)" title="Sair"><i class="bi bi-x-lg"></i></a>
+    <span class="mt-marca" aria-hidden="true"><i class="bi bi-boxes"></i></span>
     <label class="mt-nome"><span class="visually-hidden">Nome da montagem</span>
       <input id="mtNome" maxlength="120" placeholder="Nome da montagem (ex.: Brinquedão 3 torres)" value="{{ atual.nome|default:'' }}" autocomplete="off">
     </label>
     <div class="mt-topo-acoes">
-      <select id="mtAbrir" class="form-select form-select-sm" aria-label="Abrir outra montagem">
-        <option value="">{% if montagens %}Abrir montagem…{% else %}Nenhuma montagem guardada{% endif %}</option>
+      <button type="button" class="mt-botao mt-botao--magico" id="mtGerar" title="O projetista monta sozinho pela medida e a cor"><i class="bi bi-stars"></i><span>Projetista</span></button>
+      <select id="mtAbrir" class="mt-abrir" aria-label="Abrir outra montagem">
+        <option value="">{% if montagens %}Abrir…{% else %}Nenhuma guardada{% endif %}</option>
         {% for m in montagens %}<option value="{{ m.id }}"{% if atual and atual.pk == m.id %} selected{% endif %}>{{ m.nome }} · {{ m.pecas }} peça{{ m.pecas|pluralize }}</option>{% endfor %}
         <option value="nova">+ Nova montagem</option>
       </select>
-      <button type="button" class="btn btn-sm btn-success" id="mtSalvar"><i class="bi bi-floppy"></i> Guardar</button>
-      <button type="button" class="btn btn-sm btn-warning" id="mtUsar"><i class="bi bi-box-arrow-up-right"></i> Usar em…</button>
-      <button type="button" class="btn btn-sm btn-outline-light" id="mtBaixar" title="Baixar o .glb da montagem"><i class="bi bi-download"></i><span class="d-none d-xl-inline"> .glb</span></button>
+      <button type="button" class="mt-botao mt-botao--ok" id="mtSalvar" title="Guardar a montagem"><i class="bi bi-floppy"></i><span>Guardar</span></button>
+      <button type="button" class="mt-botao mt-botao--usar" id="mtUsar" title="Usar nos brinquedos ou no projeto"><i class="bi bi-box-arrow-up-right"></i><span>Usar em…</span></button>
+      <button type="button" class="mt-botao" id="mtBaixar" title="Baixar o .glb da montagem"><i class="bi bi-download"></i><span>.glb</span></button>
+      <button type="button" class="mt-botao" id="mtTelaCheia" title="Tela cheia" hidden><i class="bi bi-arrows-fullscreen"></i></button>
     </div>
   </header>
 
@@ -51,19 +58,21 @@
         <button type="button" class="mt-aba" data-aba="aprender" aria-selected="false"><i class="bi bi-mortarboard"></i> Aprender</button>
       </div>
       <div class="mt-lista" data-painel="desenhar">
+        <label class="mt-busca"><i class="bi bi-search"></i><span class="visually-hidden">Buscar peça</span>
+          <input type="search" id="mtBuscaPeca" placeholder="Buscar peça (tobogã, colmeia, argolas…)" autocomplete="off">
+        </label>
         <div class="mt-usadas" id="mtUsadas" hidden>
           <h6><i class="bi bi-graph-up-arrow"></i> Mais usadas nas montagens</h6>
           <div class="mt-grade" id="mtUsadasGrade"></div>
         </div>
-        <h6><i class="bi bi-rulers"></i> Desenhar na medida</h6>
-        <div class="mt-grade" id="mtDesenhar"></div>
+        <div id="mtDesenhar"></div>
       </div>
       <div class="mt-lista" data-painel="guardadas" hidden>
         <p class="mt-dica">As peças do laboratório (.glb). Guarde peças novas em <a href="{% url 'objetos_3d_inner' %}#laboratorio" data-no-soft-nav="true">Objetos 3D &gt; Laboratório</a> ou na aba <strong>Aprender</strong>.</p>
         <div class="mt-grade" id="mtGuardadas"></div>
       </div>
       <div class="mt-lista" data-painel="objetos" hidden>
-        <p class="mt-dica">Os objetos 3D dos brinquedos e dos projetos: monte um espaço inteiro com eles.</p>
+        <p class="mt-dica">Os objetos 3D dos brinquedos e dos projetos: monte um espaço inteiro com eles. Escolha um na planta para trocar as cores dele.</p>
         <div class="mt-grade" id="mtObjetos"></div>
       </div>
       <div class="mt-lista" data-painel="aprender" hidden>
@@ -80,11 +89,6 @@
           <button type="button" class="mt-ferr" data-modo="mover" aria-pressed="true" title="Mover (G)"><i class="bi bi-arrows-move"></i><span>Mover</span></button>
           <button type="button" class="mt-ferr" data-modo="girar" aria-pressed="false" title="Girar (R gira 90°)"><i class="bi bi-arrow-clockwise"></i><span>Girar</span></button>
         </div>
-        <div class="mt-grupo" role="group" aria-label="Vista">
-          <button type="button" class="mt-ferr" data-vista="3d" aria-pressed="true" title="Vista 3D"><i class="bi bi-badge-3d"></i><span>3D</span></button>
-          <button type="button" class="mt-ferr" data-vista="planta" aria-pressed="false" title="Planta (de cima)"><i class="bi bi-grid-3x3"></i><span>Planta</span></button>
-          <button type="button" class="mt-ferr" id="mtEnquadrar" title="Ver tudo (F)"><i class="bi bi-fullscreen"></i><span>Ver tudo</span></button>
-        </div>
         <label class="mt-grade-passo" title="O passo da grade: as peças andam e encaixam nele">
           <i class="bi bi-magnet"></i>
           <select id="mtPasso" aria-label="Passo da grade">
@@ -93,27 +97,78 @@
           </select>
         </label>
         <div class="mt-grupo" role="group" aria-label="Histórico">
-          <button type="button" class="mt-ferr" id="mtDesfazer" title="Desfazer (Ctrl+Z)" disabled><i class="bi bi-arrow-counterclockwise"></i></button>
-          <button type="button" class="mt-ferr" id="mtRefazer" title="Refazer (Ctrl+Shift+Z)" disabled><i class="bi bi-arrow-clockwise"></i></button>
+          <button type="button" class="mt-ferr" id="mtDesfazer" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled><i class="bi bi-arrow-counterclockwise"></i></button>
+          <button type="button" class="mt-ferr" id="mtRefazer" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer" disabled><i class="bi bi-arrow-clockwise"></i></button>
         </div>
         <button type="button" class="mt-ferr" id="mtCotas" aria-pressed="true" title="Mostrar as medidas"><i class="bi bi-rulers"></i><span>Cotas</span></button>
+        <button type="button" class="mt-ferr mt-ferr--tema" id="mtTema" aria-expanded="false" aria-controls="mtTemaPainel" title="Pintar a montagem inteira numa cor-tema"><span class="mt-tema-amostra" id="mtTemaAmostra"></span><span>Cor-tema</span></button>
       </div>
       <div class="mt-tela">
         <canvas id="mtTela" tabindex="0" aria-label="A montagem em 3D: clique numa peça para escolher, arraste o fundo para girar a vista"></canvas>
         <div class="mt-cotas" id="mtCotasCaixa" aria-hidden="true"></div>
         <p class="mt-aviso" id="mtAviso">Carregando o desenho 3D…</p>
-        <p class="mt-colocando" id="mtColocando" hidden><i class="bi bi-hand-index"></i> <span></span> · clique na planta para pôr · <kbd>Esc</kbd> cancela</p>
+        <p class="mt-colocando" id="mtColocando" hidden><i class="bi bi-hand-index"></i> <span></span> · toque na planta para pôr · <button type="button" class="mt-colocando-x" id="mtCancelarColocar">cancelar</button></p>
+
+        {# a vista: os botões ficam em cima do 3D, como no launcher #}
+        <div class="mt-vistas" role="toolbar" aria-label="Vista">
+          <div class="mt-vistas-grupo">
+            <button type="button" data-vista="3d" aria-pressed="true" title="Vista 3D"><i class="bi bi-badge-3d"></i><span>3D</span></button>
+            <button type="button" data-vista="frente" aria-pressed="false" title="De frente"><i class="bi bi-square"></i><span>Frente</span></button>
+            <button type="button" data-vista="lado" aria-pressed="false" title="De lado"><i class="bi bi-layout-sidebar-inset"></i><span>Lado</span></button>
+            <button type="button" data-vista="planta" aria-pressed="false" title="Planta (de cima)"><i class="bi bi-grid-3x3"></i><span>Planta</span></button>
+          </div>
+          <div class="mt-vistas-grupo">
+            <button type="button" data-rodar="-45" title="Girar a vista para a esquerda" aria-label="Girar a vista para a esquerda"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button" data-rodar="45" title="Girar a vista para a direita" aria-label="Girar a vista para a direita"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" data-zoom="0.8" title="Aproximar" aria-label="Aproximar"><i class="bi bi-zoom-in"></i></button>
+            <button type="button" data-zoom="1.25" title="Afastar" aria-label="Afastar"><i class="bi bi-zoom-out"></i></button>
+            <button type="button" id="mtEnquadrar" title="Ver tudo (F)" aria-label="Ver tudo"><i class="bi bi-bullseye"></i></button>
+          </div>
+        </div>
+        <p class="mt-gestos" id="mtGestos"><i class="bi bi-hand-index-thumb"></i> <span data-gesto-pc>Arraste para girar · botão direito arrasta · rodinha aproxima</span><span data-gesto-toque>1 dedo gira · 2 dedos arrastam e aproximam</span></p>
+
+        {# cor-tema: pinta a montagem inteira (peças desenhadas pelo papel; objetos .glb pelas famílias de cor) #}
+        <div class="mt-tema-painel" id="mtTemaPainel" hidden>
+          <strong>Cor-tema da montagem</strong>
+          <p>Cada peça ganha a cor do seu papel: a estrutura na cor escolhida, os pisos e painéis nas vizinhas, o tobogã no destaque. Os objetos .glb trocam as cores do desenho.</p>
+          <div class="mt-cores mt-cores--tema" id="mtTemaCores"></div>
+          <label class="mt-cor-livre"><input type="color" id="mtTemaLivre" value="#2563eb"> outra cor</label>
+          <div class="mt-tema-acoes">
+            <button type="button" class="mt-botao" id="mtTemaOriginal">Cores de fábrica</button>
+            <button type="button" class="mt-botao mt-botao--ok" id="mtTemaAplicar"><i class="bi bi-palette2"></i> Pintar tudo</button>
+          </div>
+        </div>
+
+        {# o resultado do projetista #}
+        <section class="mt-ideia" id="mtIdeia" hidden aria-live="polite">
+          <header>
+            <span class="mt-ideia-selo"><i class="bi bi-stars"></i> Projetista</span>
+            <button type="button" class="mt-ideia-x" id="mtIdeiaFechar" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+          </header>
+          <h3 id="mtIdeiaTitulo"></h3>
+          <ul class="mt-ideia-pecas" id="mtIdeiaResumo"></ul>
+          <details>
+            <summary>As regras que ele seguiu</summary>
+            <ul class="mt-ideia-regras" id="mtIdeiaRegras"></ul>
+          </details>
+          <p class="mt-ideia-nota">Rascunho para conversar com o cliente: o projeto final segue a ABNT NBR 16071 e a engenharia da fábrica.</p>
+          <div class="mt-ideia-acoes">
+            <button type="button" class="mt-botao" id="mtIdeiaAjustar"><i class="bi bi-sliders"></i> Ajustar</button>
+            <button type="button" class="mt-botao mt-botao--magico" id="mtIdeiaOutra"><i class="bi bi-shuffle"></i> Outra ideia</button>
+          </div>
+        </section>
       </div>
       <footer class="mt-rodape">
-        <span id="mtResumo">Nenhuma peça ainda: escolha uma à esquerda.</span>
-        <span class="mt-atalhos"><kbd>Del</kbd> apagar · <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicar · <kbd>R</kbd> girar 90° · setas movem · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> sobe/desce</span>
+        <span id="mtResumo">Nenhuma peça ainda: escolha uma à esquerda ou chame o Projetista.</span>
+        <span class="mt-atalhos"><kbd>Del</kbd> apagar · <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicar · <kbd>R</kbd> girar 90° · setas movem · <kbd>PgUp</kbd>/<kbd>PgDn</kbd> sobe/desce · <kbd>F</kbd> ver tudo</span>
       </footer>
     </section>
 
     <aside class="mt-propriedades" id="mtPropriedades" aria-label="A peça escolhida">
       <div class="mt-vazio" id="mtNada"><i class="bi bi-cursor"></i><p>Escolha uma peça na planta para mudar a medida, a cor, a posição e o giro.</p></div>
       <div id="mtPeca" hidden>
-        <div class="mt-peca-topo"><strong id="mtPecaNome"></strong><small id="mtPecaMedidas"></small></div>
+        <div class="mt-peca-topo"><strong id="mtPecaNome"></strong><small id="mtPecaMedidas"></small>
+          <button type="button" class="mt-peca-x" id="mtSoltar" aria-label="Soltar a peça" title="Soltar (Esc)"><i class="bi bi-x-lg"></i></button></div>
         <div class="mt-campos" id="mtCamposMedida"></div>
         <h6>Posição (m)</h6>
         <div class="mt-campos mt-campos--3">
@@ -124,24 +179,67 @@
         <h6>Giro</h6>
         <div class="mt-giro">
           <input type="number" step="15" id="mtGiro" aria-label="Giro em graus"><span>°</span>
-          <button type="button" class="btn btn-sm btn-outline-light" data-girar="-90">−90°</button>
-          <button type="button" class="btn btn-sm btn-outline-light" data-girar="90">+90°</button>
+          <button type="button" class="mt-botao" data-girar="-90">−90°</button>
+          <button type="button" class="mt-botao" data-girar="90">+90°</button>
         </div>
         <div id="mtEscalaCaixa" hidden>
           <h6>Tamanho</h6>
           <div class="mt-campos"><label><span>Escala</span><input type="number" step="0.05" min="0.05" id="mtEscala"></label></div>
         </div>
         <div id="mtCorCaixa">
-          <h6>Cor</h6>
+          <h6 id="mtCorTitulo">Cor</h6>
           <div class="mt-cores" id="mtCores"></div>
+          <div class="mt-cor-extra">
+            <label class="mt-cor-livre"><input type="color" id="mtCorLivre" value="#2563eb"> outra cor</label>
+            <button type="button" class="mt-botao" id="mtCorOriginal" hidden>Cores de fábrica</button>
+          </div>
+        </div>
+        <div id="mtCor2Caixa" hidden>
+          <h6>Segunda cor <small>(diagonal, xadrez ou moldura)</small></h6>
+          <div class="mt-cores" id="mtCores2"></div>
         </div>
         <div class="mt-peca-acoes">
-          <button type="button" class="btn btn-sm btn-outline-light" id="mtChao"><i class="bi bi-arrow-bar-down"></i> No chão</button>
-          <button type="button" class="btn btn-sm btn-outline-light" id="mtDuplicar"><i class="bi bi-copy"></i> Duplicar</button>
-          <button type="button" class="btn btn-sm btn-outline-danger" id="mtApagarPeca"><i class="bi bi-trash3"></i> Apagar</button>
+          <button type="button" class="mt-botao" id="mtChao"><i class="bi bi-arrow-bar-down"></i> No chão</button>
+          <button type="button" class="mt-botao" id="mtDuplicar"><i class="bi bi-copy"></i> Duplicar</button>
+          <button type="button" class="mt-botao mt-botao--perigo" id="mtApagarPeca"><i class="bi bi-trash3"></i> Apagar</button>
         </div>
       </div>
     </aside>
+  </div>
+
+  {# no celular: a gaveta de baixo alterna entre as peças e a peça escolhida; tocar de novo recolhe #}
+  <nav class="mt-gaveta-abas" aria-label="Painéis">
+    <button type="button" data-gaveta="biblioteca" aria-pressed="false"><i class="bi bi-grid-3x2-gap"></i><span>Peças</span></button>
+    <button type="button" data-gaveta="propriedades" aria-pressed="false"><i class="bi bi-sliders"></i><span>Peça escolhida</span></button>
+    <button type="button" data-gaveta-gerar><i class="bi bi-stars"></i><span>Projetista</span></button>
+  </nav>
+</div>
+
+{# o projetista automático: tipo de espaço, estilo, medidas e a cor raiz #}
+<div class="modal fade" id="modalGerar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content mt-gerar">
+      <div class="modal-header"><div><span class="ls-modal-kicker"><i class="bi bi-stars"></i> Projetista automático</span><h5 class="modal-title">Montar sozinho pela medida e pela cor</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <h6 class="mt-gerar-titulo">1. O que montar</h6>
+        <div class="mt-gerar-tipos" id="gerarTipos" role="radiogroup" aria-label="O que montar"></div>
+        <h6 class="mt-gerar-titulo">2. O estilo</h6>
+        <div class="mt-gerar-estilos" id="gerarEstilos" role="radiogroup" aria-label="Estilo"></div>
+        <h6 class="mt-gerar-titulo">3. O espaço (metros)</h6>
+        <div class="mt-gerar-medidas">
+          <label><span>Largura</span><input type="number" step="0.05" min="2.5" max="60" id="gerarLargura"></label>
+          <label><span>Profundidade</span><input type="number" step="0.05" min="2" max="40" id="gerarProfundidade"></label>
+          <label><span>Pé-direito (altura)</span><input type="number" step="0.05" min="2" max="12" id="gerarAltura"></label>
+        </div>
+        <h6 class="mt-gerar-titulo">4. A cor raiz</h6>
+        <div class="mt-cores mt-cores--tema" id="gerarCores"></div>
+        <label class="mt-cor-livre mt-2"><input type="color" id="gerarCorLivre" value="#2563eb"> outra cor</label>
+        <div class="mt-gerar-paleta" id="gerarPaleta" aria-label="A paleta que sai da cor raiz"></div>
+        <p class="mt-gerar-aprendeu" id="gerarAprendeu" hidden></p>
+        <p class="mt-dica mb-0" id="gerarAviso">A montagem que está na tela é trocada pela ideia nova (Ctrl+Z desfaz).</p>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning" type="button" id="gerarIr"><i class="bi bi-stars"></i> Gerar o projeto</button></div>
+    </div>
   </div>
 </div>
 

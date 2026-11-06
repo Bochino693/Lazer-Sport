@@ -22,21 +22,31 @@
    ====================================================================== */
 
 const PASSO_PADRAO = 0.25;
-const ROTULOS = {
-  altura: "Altura", largura: "Largura", profundidade: "Profundidade", comprimento: "Comprimento",
-  diametro: "Diâmetro", espessura: "Espessura", degraus: "Degraus",
+/** As medidas das peças: as em metros (sem `tipo`), as contadas e as de ligar/desligar. */
+const CHAVES = {
+  altura: { rotulo: "Altura" }, largura: { rotulo: "Largura" }, profundidade: { rotulo: "Profundidade" },
+  comprimento: { rotulo: "Comprimento" }, diametro: { rotulo: "Diâmetro" }, espessura: { rotulo: "Espessura" },
+  raio: { rotulo: "Raio" },
+  degraus: { rotulo: "Degraus", tipo: "inteiro" }, quantidade: { rotulo: "Quantidade", tipo: "inteiro" },
+  voltas: { rotulo: "Voltas", tipo: "voltas" },
+  fechado: { rotulo: "Tubo fechado", tipo: "sim" }, espelhado: { rotulo: "Espelhado", tipo: "sim" },
 };
+const emMetros = (k) => !(CHAVES[k] && CHAVES[k].tipo);
 //: as cores da casa (as das paletas dos brinquedões)
 const CORES = ["#2563eb", "#facc15", "#ef4444", "#22c55e", "#f97316", "#ec4899", "#8b5cf6", "#06b6d4",
   "#ffffff", "#9ca3af", "#1f2937", "#c8a26b"];
+//: as cores raiz do projetista e da cor-tema
+const RAIZES = ["#2563eb", "#0ea5e9", "#14b8a6", "#22c55e", "#84cc16", "#facc15", "#f97316", "#ef4444",
+  "#ec4899", "#a855f7", "#7c3aed", "#6b4f3a", "#4b5563", "#0f766e", "#be123c", "#1e3a8a"];
 
+// As peças antigas; as novas (montar3d-pecas.js) entram aqui quando o editor abre.
 const CATALOGO = {
   coluna: { nome: "Coluna", d: { altura: 3.5, diametro: 0.12 }, cor: "#2563eb" },
   barra: { nome: "Barra", d: { comprimento: 1.5, diametro: 0.1 }, cor: "#facc15" },
   plataforma: { nome: "Plataforma", d: { largura: 1.5, profundidade: 1.5, espessura: 0.06 }, cor: "#f97316" },
   painel: { nome: "Painel", d: { largura: 1.5, altura: 1.0, espessura: 0.03 }, cor: "#ef4444" },
   rede: { nome: "Rede", d: { largura: 1.5, altura: 1.0 }, cor: "#1f2937" },
-  escorregador: { nome: "Escorregador", d: { comprimento: 3.0, altura: 1.5, largura: 0.6 }, cor: "#22c55e" },
+  escorregador: { nome: "Escorregador", d: { comprimento: 3.0, altura: 1.5, largura: 0.6, fechado: 0 }, cor: "#22c55e" },
   escada: { nome: "Escada", d: { altura: 1.5, largura: 0.6, degraus: 5 }, cor: "#facc15" },
   tunel: { nome: "Túnel", d: { comprimento: 1.5, diametro: 0.7 }, cor: "#ec4899" },
   cama: { nome: "Cama elástica", d: { largura: 3.0, profundidade: 3.0, altura: 0.9 }, cor: "#2563eb" },
@@ -49,18 +59,21 @@ function metros(v) { return (Math.round(v * 100) / 100).toFixed(2).replace(".", 
 function rotuloDaPeca(tipo, d) {
   const c = CATALOGO[tipo];
   if (!c) return tipo;
-  const chaves = Object.keys(c.d).filter((k) => k !== "espessura" && k !== "diametro" && k !== "degraus");
+  const chaves = Object.keys(c.d).filter((k) => emMetros(k) && k !== "espessura" && k !== "diametro");
+  if (!chaves.length) return c.nome;
   return `${c.nome} ${chaves.map((k) => metros(d[k] ?? c.d[k])).join(" × ")} m`;
 }
+const semAcento = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export async function iniciar(raiz) {
   let sujo = true; // desenhar de novo no próximo quadro
   const dados = JSON.parse(document.getElementById("montarDados").textContent || "{}");
   const pasta = raiz.dataset.three.slice(0, raiz.dataset.three.lastIndexOf("/") + 1);
-  const [T, leitorMod, controlesMod, utilidades] = await Promise.all([
+  const [T, leitorMod, controlesMod, utilidades, pecasMod, gerador, cores3d] = await Promise.all([
     import(raiz.dataset.three), import(raiz.dataset.gltf), import(raiz.dataset.controles),
-    import(pasta + "BufferGeometryUtils.js"),
+    import(pasta + "BufferGeometryUtils.js"), import(raiz.dataset.pecas), import(raiz.dataset.gerador), import(raiz.dataset.cores),
   ]);
+  const celular = window.matchMedia("(max-width: 767.98px)");
   const $ = (id) => document.getElementById(id);
   const csrf = raiz.querySelector("[name=csrfmiddlewaretoken]").value;
   const tela = $("mtTela");
@@ -181,7 +194,18 @@ export async function iniciar(raiz) {
       g.translate(0, r, 0);
       return [malha(g, material(cor, { metalness: 0.2, roughness: 0.4 }))];
     },
-    plataforma(d, cor) {
+    plataforma(d, cor, extra) {
+      if (extra && extra.cor2) {
+        // o piso de duas cores, cortado na diagonal (o mais comum nos brinquedões)
+        const L = d.largura / 2, P = d.profundidade / 2;
+        const tri = (pts) => {
+          const forma = new T.Shape(pts.map(([x, z]) => new T.Vector2(x, -z)));
+          const g = new T.ExtrudeGeometry(forma, { depth: d.espessura, bevelEnabled: false });
+          g.rotateX(-Math.PI / 2);
+          return g;
+        };
+        return [malha(tri([[-L, -P], [L, -P], [-L, P]]), material(cor)), malha(tri([[L, -P], [L, P], [-L, P]]), material(extra.cor2))];
+      }
       const g = caixa(d.largura, d.espessura, d.profundidade);
       g.translate(0, d.espessura / 2, 0);
       return [malha(g, material(cor))];
@@ -191,11 +215,12 @@ export async function iniciar(raiz) {
       g.translate(0, d.altura / 2, 0);
       return [malha(g, material(cor))];
     },
-    rede(d, cor) {
+    rede(d, cor, extra) {
       const plano = new T.PlaneGeometry(d.largura, d.altura);
       plano.translate(0, d.altura / 2, 0);
       const m = malha(plano, rede(d.largura, d.altura, cor));
-      const moldura = material("#9ca3af", { metalness: 0.3 });
+      // a moldura: a segunda cor (a da estrutura, no projetista) ou o cinza do tubo
+      const moldura = material((extra && extra.cor2) || "#9ca3af", { metalness: 0.3 });
       const w = d.largura / 2, h = d.altura;
       return [m, tubo(0.02, d.largura, [-w, 0, 0], [w, 0, 0], moldura), tubo(0.02, d.largura, [-w, h, 0], [w, h, 0], moldura),
         tubo(0.02, h, [-w, 0, 0], [-w, h, 0], moldura), tubo(0.02, h, [w, 0, 0], [w, h, 0], moldura)];
@@ -204,6 +229,19 @@ export async function iniciar(raiz) {
       const L = d.comprimento, H = d.altura, W = d.largura;
       const rampa = Math.hypot(L, H), angulo = -Math.atan2(H, L);
       const grupo = [];
+      if (Math.round(d.fechado || 0)) {
+        // o tobogã de tubo fechado, reto
+        const r = Math.max(0.3, W * 0.6);
+        const g = new T.CylinderGeometry(r, r, rampa, 24, 1, true);
+        g.rotateZ(Math.PI / 2);
+        const tuboFechado = malha(g, material(cor, { side: T.DoubleSide, roughness: 0.25 }));
+        tuboFechado.position.set(0, H / 2 + r * 0.9, 0);
+        tuboFechado.rotation.z = angulo;
+        const aro = malha(new T.TorusGeometry(r, 0.035, 8, 28), material("#ffffff"));
+        aro.rotation.y = Math.PI / 2;
+        aro.position.set(-L / 2, H + r * 0.9, 0);
+        return [tuboFechado, aro];
+      }
       const base = malha(caixa(rampa, 0.04, W), material(cor, { roughness: 0.25 }));
       base.position.set(0, H / 2 + 0.03, 0);
       base.rotation.z = angulo;
@@ -307,6 +345,31 @@ export async function iniciar(raiz) {
       return [malha(g, material(cor, { flatShading: true }))];
     },
   };
+  // as peças novas (estrutura, brincadeiras, esporte e ninja)
+  Object.assign(CATALOGO, pecasMod.CATALOGO_EXTRA);
+  Object.entries(pecasMod.GRUPO_DAS_ANTIGAS).forEach(([tipo, grupo]) => { CATALOGO[tipo].grupo = grupo; });
+  Object.assign(DESENHOS, pecasMod.desenhosExtra(T, {
+    material, malha, caixa, tubo, redeMat: rede, aleatorio, juntar: (lista) => utilidades.mergeGeometries(lista),
+  }));
+  const COM_COR2 = pecasMod.COM_COR2;
+  /** Solta da memória a geometria de uma peça desenhada (as dos .glb são do arquivo: ficam). */
+  function descartar(objeto) {
+    objeto.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+  }
+
+  /* ---------------------------------------------------------------- as cores dos .glb (cor-tema) */
+  const originaisGlb = new WeakMap();
+  const guardaTemas = { userData: {} };
+  const temasPorCor = new Map();
+  function temaDaCor(hex) {
+    if (!temasPorCor.has(hex)) temasPorCor.set(hex, cores3d.temaDeCores("raiz-" + hex, hex, gerador.familiasDaCor(hex)));
+    return temasPorCor.get(hex);
+  }
+  function vestir(peca) {
+    if (CATALOGO[peca.tipo]) return;
+    cores3d.vestirObjeto(peca.obj, peca.tema ? temaDaCor(peca.tema) : null, originaisGlb, guardaTemas);
+    sujo = true;
+  }
 
   /* ---------------------------------------------------------------- os .glb (guardadas e objetos) */
   const biblioteca = dados.biblioteca || { modulos: [], objetos: [], projetos: [], mais_usadas: [] };
@@ -345,6 +408,8 @@ export async function iniciar(raiz) {
       id: proximoId++, tipo: dadosPeca.tipo, ref: dadosPeca.ref ?? null,
       d: Object.assign({}, (CATALOGO[dadosPeca.tipo] || {}).d || {}, dadosPeca.d || {}),
       cor: dadosPeca.cor || (CATALOGO[dadosPeca.tipo] || {}).cor || "#2563eb",
+      cor2: COM_COR2.has(dadosPeca.tipo) ? (dadosPeca.cor2 || null) : null,
+      tema: CATALOGO[dadosPeca.tipo] ? null : (dadosPeca.tema || null),
       s: dadosPeca.s || 1,
       obj: new T.Group(),
     };
@@ -357,16 +422,28 @@ export async function iniciar(raiz) {
     return peca;
   }
   async function redesenhar(peca) {
+    if (CATALOGO[peca.tipo]) descartar(peca.obj);
     peca.obj.clear();
-    const partes = CATALOGO[peca.tipo] ? DESENHOS[peca.tipo](peca.d, peca.cor) : await desenhoDeArquivo(peca);
+    const partes = CATALOGO[peca.tipo] ? DESENHOS[peca.tipo](peca.d, peca.cor, { cor2: peca.cor2 }) : await desenhoDeArquivo(peca);
     partes.forEach((p) => peca.obj.add(p));
-    if (!CATALOGO[peca.tipo]) peca.obj.scale.setScalar(peca.s || 1);
+    if (!CATALOGO[peca.tipo]) {
+      peca.obj.scale.setScalar(peca.s || 1);
+      if (peca.tema) vestir(peca);
+    }
     sujo = true;
   }
   function paraJson(peca) {
     const j = { tipo: peca.tipo, p: peca.obj.position.toArray().map((v) => Math.round(v * 10000) / 10000),
       r: Math.round(T.MathUtils.radToDeg(peca.obj.rotation.y) * 1000) / 1000 };
-    if (CATALOGO[peca.tipo]) { j.d = Object.assign({}, peca.d); j.cor = peca.cor; } else { j.ref = peca.ref; if (peca.s !== 1) j.s = peca.s; }
+    if (CATALOGO[peca.tipo]) {
+      j.d = Object.assign({}, peca.d);
+      j.cor = peca.cor;
+      if (peca.cor2) j.cor2 = peca.cor2;
+    } else {
+      j.ref = peca.ref;
+      if (peca.s !== 1) j.s = peca.s;
+      if (peca.tema) j.tema = peca.tema;
+    }
     return j;
   }
   function lerTransformacao(peca) {
@@ -401,6 +478,7 @@ export async function iniciar(raiz) {
   }
   async function restaurar(json) {
     selecionar(null);
+    pecas.forEach((p) => { if (CATALOGO[p.tipo]) descartar(p.obj); });
     montagem.clear();
     pecas = [];
     for (const p of JSON.parse(json)) {
@@ -425,11 +503,18 @@ export async function iniciar(raiz) {
       controles.detach();
       caixaSelecao.visible = false;
     }
+    raiz.classList.toggle("tem-peca", !!peca);
+    // no celular, a gaveta abre na peça escolhida (e fecha quando solta)
+    if (celular.matches) {
+      if (peca) abrirGaveta("propriedades");
+      else if (raiz.dataset.gaveta === "propriedades") abrirGaveta("");
+    }
     mostrarPropriedades();
     sujo = true;
   }
   function apagar(peca) {
     if (!peca) return;
+    if (CATALOGO[peca.tipo]) descartar(peca.obj);
     montagem.remove(peca.obj);
     pecas = pecas.filter((p) => p !== peca);
     selecionar(null);
@@ -449,61 +534,98 @@ export async function iniciar(raiz) {
   /* ---------------------------------------------------------------- o painel da peça */
   const campos = $("mtCamposMedida");
   const cores = $("mtCores");
-  CORES.forEach((cor) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "mt-cor";
-    b.style.setProperty("--c", cor);
-    b.title = cor;
-    b.setAttribute("aria-label", "Cor " + cor);
-    b.addEventListener("click", async () => {
-      if (!selecionada || !CATALOGO[selecionada.tipo]) return;
-      selecionada.cor = cor;
-      await redesenhar(selecionada);
+  /** Uma fileira de bolinhas de cor; `nenhuma` põe a primeira "sem cor". */
+  function amostras(destino, lista, aoEscolher, nenhuma) {
+    destino.innerHTML = "";
+    const todas = nenhuma ? [""].concat(lista) : lista;
+    todas.forEach((cor) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mt-cor" + (cor ? "" : " mt-cor--nenhuma");
+      if (cor) b.style.setProperty("--c", cor);
+      b.dataset.cor = cor;
+      b.title = cor || nenhuma;
+      b.setAttribute("aria-label", cor ? "Cor " + cor : nenhuma);
+      b.addEventListener("click", () => aoEscolher(cor));
+      destino.appendChild(b);
+    });
+  }
+  const marcarAmostra = (destino, cor) => destino.querySelectorAll(".mt-cor").forEach((b) => b.setAttribute("aria-pressed", b.dataset.cor === (cor || "") ? "true" : "false"));
+  /** A cor da peça escolhida: a das peças desenhadas, ou o tema (as cores do desenho) do .glb. */
+  async function pintarEscolhida(cor) {
+    const p = selecionada;
+    if (!p) return;
+    if (CATALOGO[p.tipo]) { if (!cor) return; p.cor = cor; await redesenhar(p); } else { p.tema = cor || null; vestir(p); }
+    registrar();
+    mostrarPropriedades();
+  }
+  amostras(cores, CORES, pintarEscolhida);
+  $("mtCorLivre").addEventListener("change", function () { pintarEscolhida(this.value); });
+  $("mtCorOriginal").addEventListener("click", () => pintarEscolhida(null));
+  amostras($("mtCores2"), CORES, async (cor) => {
+    if (!selecionada || !COM_COR2.has(selecionada.tipo)) return;
+    selecionada.cor2 = cor || null;
+    await redesenhar(selecionada);
+    registrar();
+    mostrarPropriedades();
+  }, "Uma cor só");
+  function campoDeMedida(p, chave) {
+    const meta = CHAVES[chave] || { rotulo: chave };
+    const rotulo = document.createElement("label");
+    const nome = document.createElement("span");
+    const campo = document.createElement("input");
+    const mudar = async (v) => {
+      p.d[chave] = v;
+      await redesenhar(p);
+      caixaSelecao.setFromObject(p.obj);
       registrar();
       mostrarPropriedades();
+    };
+    if (meta.tipo === "sim") {
+      rotulo.className = "mt-sim";
+      campo.type = "checkbox";
+      campo.checked = !!Math.round(p.d[chave] || 0);
+      campo.addEventListener("change", () => mudar(campo.checked ? 1 : 0));
+      nome.textContent = meta.rotulo;
+      rotulo.append(campo, nome);
+      return rotulo;
+    }
+    const inteiro = meta.tipo === "inteiro";
+    nome.textContent = meta.rotulo + (meta.tipo ? "" : " (m)");
+    campo.type = "number";
+    campo.step = inteiro ? "1" : meta.tipo === "voltas" ? "0.25" : "0.05";
+    campo.min = inteiro ? "1" : meta.tipo === "voltas" ? "0.25" : "0.01";
+    campo.value = inteiro ? Math.round(p.d[chave]) : (Math.round(p.d[chave] * 1000) / 1000);
+    campo.addEventListener("change", () => {
+      const v = parseFloat(String(campo.value).replace(",", "."));
+      if (v > 0) mudar(inteiro ? Math.round(v) : v);
     });
-    cores.appendChild(b);
-  });
+    rotulo.append(nome, campo);
+    return rotulo;
+  }
   function mostrarPropriedades() {
     const p = selecionada;
     $("mtNada").hidden = !!p;
     $("mtPeca").hidden = !p;
     if (!p) return;
+    const desenhada = !!CATALOGO[p.tipo];
     $("mtPecaNome").textContent = nomeDe(p);
     const tamanho = new T.Box3().setFromObject(p.obj).getSize(new T.Vector3());
     $("mtPecaMedidas").textContent = `${metros(tamanho.x)} × ${metros(tamanho.z)} m, ${metros(tamanho.y)} m de altura`;
     campos.innerHTML = "";
-    if (CATALOGO[p.tipo]) {
-      Object.keys(CATALOGO[p.tipo].d).forEach((chave) => {
-        const rotulo = document.createElement("label");
-        const nome = document.createElement("span");
-        nome.textContent = ROTULOS[chave] + (chave === "degraus" ? "" : " (m)");
-        const campo = document.createElement("input");
-        campo.type = "number";
-        campo.step = chave === "degraus" ? "1" : "0.05";
-        campo.min = chave === "degraus" ? "1" : "0.01";
-        campo.value = chave === "degraus" ? Math.round(p.d[chave]) : (Math.round(p.d[chave] * 1000) / 1000);
-        campo.addEventListener("change", async () => {
-          const v = parseFloat(String(campo.value).replace(",", "."));
-          if (!(v > 0)) return;
-          p.d[chave] = chave === "degraus" ? Math.round(v) : v;
-          await redesenhar(p);
-          caixaSelecao.setFromObject(p.obj);
-          registrar();
-          mostrarPropriedades();
-        });
-        rotulo.append(nome, campo);
-        campos.appendChild(rotulo);
-      });
-    }
+    if (desenhada) Object.keys(CATALOGO[p.tipo].d).forEach((chave) => campos.appendChild(campoDeMedida(p, chave)));
     raiz.querySelectorAll("[data-pos]").forEach((campo) => { campo.value = Math.round(p.obj.position.getComponent(Number(campo.dataset.pos)) * 1000) / 1000; });
     $("mtGiro").value = Math.round(T.MathUtils.radToDeg(p.obj.rotation.y));
-    $("mtCorCaixa").hidden = !CATALOGO[p.tipo];
-    $("mtEscalaCaixa").hidden = !!CATALOGO[p.tipo];
+    $("mtEscalaCaixa").hidden = desenhada;
     $("mtEscala").value = p.s || 1;
-    cores.querySelectorAll(".mt-cor").forEach((b) => b.setAttribute("aria-pressed", b.title === p.cor ? "true" : "false"));
+    $("mtCorTitulo").textContent = desenhada ? "Cor" : "Cores do objeto";
+    $("mtCorOriginal").hidden = desenhada;
+    marcarAmostra(cores, desenhada ? p.cor : p.tema);
+    $("mtCorLivre").value = (desenhada ? p.cor : p.tema) || "#2563eb";
+    $("mtCor2Caixa").hidden = !COM_COR2.has(p.tipo);
+    marcarAmostra($("mtCores2"), p.cor2);
   }
+  $("mtSoltar").addEventListener("click", () => selecionar(null));
   raiz.querySelectorAll("[data-pos]").forEach((campo) => {
     campo.addEventListener("change", () => {
       if (!selecionada) return;
@@ -596,27 +718,73 @@ export async function iniciar(raiz) {
     destino.appendChild(b);
     return b;
   }
-  Object.entries(CATALOGO).forEach(([tipo, c]) => {
-    cartao($("mtDesenhar"), {
-      foto: fotografar(DESENHOS[tipo](c.d, c.cor)),
-      nome: c.nome,
-      sub: Object.keys(c.d).filter((k) => k !== "degraus").map((k) => metros(c.d[k])).join(" × ") + " m",
-      aoEscolher: () => comecarColocar({ tipo, d: Object.assign({}, c.d), cor: c.cor }),
+  // as miniaturas saem aos poucos (sem segurar a abertura do editor)
+  const filaFotos = [];
+  function fotoDepois(botao, desenhar) {
+    filaFotos.push(() => {
+      const partes = desenhar();
+      const foto = fotografar(partes);
+      partes.forEach(descartar);
+      botao.querySelector(".mt-item-foto").innerHTML = `<img src="${foto}" alt="">`;
     });
+  }
+  function revelarFotos() {
+    const ate = performance.now() + 12;
+    while (filaFotos.length && performance.now() < ate) filaFotos.shift()();
+    if (filaFotos.length) requestAnimationFrame(revelarFotos);
+  }
+  const subDoCatalogo = (c) => {
+    const chaves = Object.keys(c.d).filter(emMetros);
+    return chaves.length ? chaves.map((k) => metros(c.d[k])).join(" × ") + " m" : "";
+  };
+  const listaDesenhar = $("mtDesenhar");
+  Object.entries(pecasMod.GRUPOS).forEach(([grupo, titulo]) => {
+    const tipos = Object.keys(CATALOGO).filter((t) => CATALOGO[t].grupo === grupo);
+    if (!tipos.length) return;
+    const h = document.createElement("h6");
+    h.className = "mt-grupo-titulo";
+    h.dataset.grupo = grupo;
+    h.innerHTML = `<i class="bi ${grupo === "estrutura" ? "bi-bricks" : grupo === "brincar" ? "bi-balloon-fill" : "bi-trophy-fill"}"></i> <span></span> <small>${tipos.length}</small>`;
+    h.querySelector("span").textContent = titulo;
+    const grade = document.createElement("div");
+    grade.className = "mt-grade";
+    grade.dataset.grupo = grupo;
+    listaDesenhar.append(h, grade);
+    tipos.forEach((tipo) => {
+      const c = CATALOGO[tipo];
+      const botao = cartao(grade, {
+        foto: "", nome: c.nome, sub: subDoCatalogo(c),
+        aoEscolher: () => comecarColocar({ tipo, d: Object.assign({}, c.d), cor: c.cor, cor2: c.cor2 }),
+      });
+      botao.dataset.busca = semAcento(c.nome + " " + tipo.replace(/_/g, " "));
+      fotoDepois(botao, () => DESENHOS[tipo](c.d, c.cor, { cor2: c.cor2 }));
+    });
+  });
+  $("mtBuscaPeca").addEventListener("input", function () {
+    const termo = semAcento(this.value.trim());
+    listaDesenhar.querySelectorAll(".mt-grade").forEach((grade) => {
+      let algum = false;
+      grade.querySelectorAll(".mt-item").forEach((b) => { b.hidden = !!termo && b.dataset.busca.indexOf(termo) < 0; algum = algum || !b.hidden; });
+      grade.hidden = !algum;
+      listaDesenhar.querySelector(`h6[data-grupo="${grade.dataset.grupo}"]`).hidden = !algum;
+    });
+    $("mtUsadas").hidden = !!termo || !(biblioteca.mais_usadas || []).length;
   });
   if ((biblioteca.mais_usadas || []).length) {
     $("mtUsadas").hidden = false;
     biblioteca.mais_usadas.forEach((u) => {
       if (!CATALOGO[u.tipo]) return;
       const d = Object.assign({}, CATALOGO[u.tipo].d, u.d);
-      cartao($("mtUsadasGrade"), {
-        foto: fotografar(DESENHOS[u.tipo](d, CATALOGO[u.tipo].cor)),
+      const botao = cartao($("mtUsadasGrade"), {
+        foto: "",
         nome: rotuloDaPeca(u.tipo, d),
         sub: `usada ${u.vezes} vezes`,
         aoEscolher: () => comecarColocar({ tipo: u.tipo, d, cor: CATALOGO[u.tipo].cor }),
       });
+      fotoDepois(botao, () => DESENHOS[u.tipo](d, CATALOGO[u.tipo].cor, {}));
     });
   }
+  requestAnimationFrame(revelarFotos);
   function medidasDaFonte(f) { return f.medidas && f.medidas.length === 3 ? `${metros(f.medidas[1])} × ${metros(f.medidas[2])} × ${metros(f.medidas[0])} m` : ""; }
   function listarArquivos(destino, tipo, lista, vazio) {
     destino.innerHTML = "";
@@ -668,19 +836,25 @@ export async function iniciar(raiz) {
       }
     });
     colocando = { dados: dadosPeca, fantasma };
+    raiz.classList.add("colocando");
     const faixa = $("mtColocando");
     faixa.hidden = false;
     faixa.querySelector("span").textContent = nomeDe(fantasma);
     fantasma.obj.visible = false;
-    tela.focus();
+    // no celular a gaveta desce: a planta fica livre para o toque que põe a peça
+    if (celular.matches) abrirGaveta("");
+    tela.focus({ preventScroll: true });
   }
   function cancelarColocar() {
     if (!colocando) return;
     montagem.remove(colocando.fantasma.obj);
+    if (CATALOGO[colocando.fantasma.tipo]) descartar(colocando.fantasma.obj);
     colocando = null;
+    raiz.classList.remove("colocando");
     $("mtColocando").hidden = true;
     sujo = true;
   }
+  $("mtCancelarColocar").addEventListener("click", cancelarColocar);
 
   const raio = new T.Raycaster();
   const ponteiro = new T.Vector2();
@@ -727,24 +901,110 @@ export async function iniciar(raiz) {
     }
     sujo = true;
   }
-  function trocarVista(nova) {
-    modoVista = nova;
-    camera = nova === "planta" ? cameraPlanta : camera3d;
-    controles.camera = camera;
-    raiz.querySelectorAll("[data-vista]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.vista === nova ? "true" : "false"));
+  /* As vistas prontas: o 3D em volta, de frente, de lado e a planta. A troca é animada (sem pulo). */
+  const VISTAS = { "3d": { giro: 0.75, inclinacao: 0.55 }, frente: { giro: 0, inclinacao: 0.1 }, lado: { giro: Math.PI / 2, inclinacao: 0.1 } };
+  let animacao = null;
+  function animarVista(para, ms = 420) {
+    animacao = {
+      de: { giro: vista.giro, inclinacao: vista.inclinacao, distancia: vista.distancia, zoomPlanta: vista.zoomPlanta, alvo: vista.alvo.clone() },
+      para, t0: performance.now(), ms,
+    };
+    sujo = true;
+  }
+  function passoDaAnimacao() {
+    if (!animacao) return;
+    const { de, para, t0, ms } = animacao;
+    const t = Math.min(1, (performance.now() - t0) / ms), e = 1 - Math.pow(1 - t, 3);
+    if (para.giro !== undefined) {
+      const delta = ((para.giro - de.giro + Math.PI * 3) % (Math.PI * 2)) - Math.PI; // pelo lado mais curto
+      vista.giro = de.giro + delta * e;
+    }
+    for (const k of ["inclinacao", "distancia", "zoomPlanta"]) if (para[k] !== undefined) vista[k] = de[k] + (para[k] - de[k]) * e;
+    if (para.alvo) vista.alvo.lerpVectors(de.alvo, para.alvo, e);
     posicionarCamera();
+    if (t >= 1) animacao = null;
+    sujo = true;
+  }
+  function marcarVista(nome) {
+    raiz.querySelectorAll("[data-vista]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.vista === nome ? "true" : "false"));
+  }
+  function trocarVista(nova) {
+    const planta = nova === "planta";
+    modoVista = planta ? "planta" : "3d";
+    camera = planta ? cameraPlanta : camera3d;
+    controles.camera = camera;
+    marcarVista(nova);
+    if (!planta && VISTAS[nova]) {
+      // a vista pronta já enquadra a montagem inteira, olhando daquele lado
+      const para = Object.assign({}, VISTAS[nova]);
+      const caixaToda = new T.Box3().setFromObject(montagem);
+      if (!caixaToda.isEmpty()) {
+        animacao = { para };
+        para.alvo = caixaToda.getCenter(new T.Vector3());
+        para.distancia = distanciaQueCabe(caixaToda, para.alvo);
+      }
+      animarVista(para);
+    } else posicionarCamera();
   }
   raiz.querySelectorAll("[data-vista]").forEach((b) => b.addEventListener("click", () => trocarVista(b.dataset.vista)));
-  function enquadrar() {
-    const b = new T.Box3().setFromObject(montagem);
-    if (b.isEmpty()) { vista.alvo.set(0, 0.8, 0); vista.distancia = 14; vista.zoomPlanta = 8; posicionarCamera(); return; }
-    const centro = b.getCenter(new T.Vector3()), tamanho = b.getSize(new T.Vector3());
-    vista.alvo.copy(centro);
-    vista.distancia = Math.max(4, tamanho.length() / 2 / Math.sin(T.MathUtils.degToRad(20)) * 0.9);
-    vista.zoomPlanta = Math.max(3, Math.max(tamanho.x, tamanho.z) * 0.7 + 1);
-    posicionarCamera();
+  raiz.querySelectorAll("[data-rodar]").forEach((b) => b.addEventListener("click", () => {
+    if (modoVista === "planta") trocarVista("3d");
+    animarVista({ giro: vista.giro + T.MathUtils.degToRad(Number(b.dataset.rodar)) }, 300);
+    marcarVista("3d");
+  }));
+  raiz.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => {
+    const f = Number(b.dataset.zoom);
+    if (modoVista === "planta") animarVista({ zoomPlanta: Math.min(80, Math.max(1, vista.zoomPlanta * f)) }, 250);
+    else animarVista({ distancia: Math.min(150, Math.max(1.5, vista.distancia * f)) }, 250);
+  }));
+  /**
+   * A distância em que os 8 cantos da montagem cabem na tela, olhando do giro e da inclinação
+   * de agora (com folga para os botões da vista): projeta, corrige e repete.
+   */
+  function distanciaQueCabe(caixa, centro) {
+    const cantos = [];
+    for (const x of [caixa.min.x, caixa.max.x]) for (const y of [caixa.min.y, caixa.max.y]) for (const z of [caixa.min.z, caixa.max.z]) cantos.push(new T.Vector3(x, y, z));
+    const cam = camera3d.clone();
+    const ponto = new T.Vector3();
+    let d = Math.max(4, caixa.getSize(new T.Vector3()).length());
+    const giro = animacao && animacao.para.giro !== undefined ? animacao.para.giro : vista.giro;
+    const inclinacao = animacao && animacao.para.inclinacao !== undefined ? animacao.para.inclinacao : vista.inclinacao;
+    for (let volta = 0; volta < 4; volta++) {
+      cam.position.set(centro.x + Math.sin(giro) * Math.cos(inclinacao) * d, centro.y + Math.sin(inclinacao) * d, centro.z + Math.cos(giro) * Math.cos(inclinacao) * d);
+      cam.lookAt(centro);
+      cam.updateMatrixWorld(true);
+      let maior = 0;
+      for (const c of cantos) {
+        ponto.copy(c).project(cam);
+        maior = Math.max(maior, Math.abs(ponto.x) / 0.86, Math.abs(ponto.y) / 0.8);
+      }
+      if (!(maior > 0)) break;
+      d = Math.max(2.5, Math.min(300, d * maior));
+    }
+    return d;
   }
-  $("mtEnquadrar").addEventListener("click", enquadrar);
+  function enquadrar(animado = true) {
+    const b = new T.Box3().setFromObject(montagem);
+    let para;
+    if (b.isEmpty()) para = { alvo: new T.Vector3(0, 0.8, 0), distancia: 14, zoomPlanta: 8 };
+    else {
+      const centro = b.getCenter(new T.Vector3()), tamanho = b.getSize(new T.Vector3());
+      const r = tela.getBoundingClientRect();
+      const aspecto = Math.max(0.3, (r.width || 1) / (r.height || 1));
+      para = {
+        alvo: centro, distancia: distanciaQueCabe(b, centro),
+        zoomPlanta: Math.max(3, Math.max(tamanho.z * 0.58, (tamanho.x * 0.58) / aspecto) + 0.6),
+      };
+    }
+    if (animado) animarVista(para, 450);
+    else { Object.assign(vista, { distancia: para.distancia, zoomPlanta: para.zoomPlanta }); vista.alvo.copy(para.alvo); posicionarCamera(); }
+  }
+  $("mtEnquadrar").addEventListener("click", () => enquadrar());
+  // a dica dos gestos some depois do primeiro toque (ou sozinha)
+  const gestos = $("mtGestos");
+  let dicaSumiu = false;
+  const sumirDica = () => { if (dicaSumiu) return; dicaSumiu = true; setTimeout(() => gestos.classList.add("some"), 1800); };
+  setTimeout(sumirDica, 9000);
   raiz.querySelectorAll("[data-modo]").forEach((b) => b.addEventListener("click", () => {
     controles.setMode(b.dataset.modo === "girar" ? "rotate" : "translate");
     controles.showX = controles.showZ = b.dataset.modo !== "girar";
@@ -759,7 +1019,9 @@ export async function iniciar(raiz) {
   let pinca = 0;
   tela.addEventListener("contextmenu", (e) => e.preventDefault());
   tela.addEventListener("pointerdown", (e) => {
-    tela.focus();
+    tela.focus({ preventScroll: true });
+    sumirDica();
+    animacao = null;
     if (controles.axis !== null || arrastandoAlca) return; // a alça da peça cuida
     tela.setPointerCapture(e.pointerId);
     dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -795,6 +1057,7 @@ export async function iniciar(raiz) {
       pinca = d;
       arrastarVista(dx / 2, dy / 2, r);
     } else if (gesto.tipo === "girar" && modoVista === "3d") {
+      if (gesto.moveu) marcarVista("3d");
       vista.giro -= (dx / r.width) * Math.PI * 1.6;
       vista.inclinacao = Math.min(1.5, Math.max(0.05, vista.inclinacao + (dy / r.height) * Math.PI));
       posicionarCamera();
@@ -820,7 +1083,10 @@ export async function iniciar(raiz) {
     else vista.distancia = Math.min(150, Math.max(1.5, vista.distancia * fator));
     posicionarCamera();
   }
-  tela.addEventListener("wheel", (e) => { e.preventDefault(); aproximar(Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+  tela.addEventListener("wheel", (e) => { e.preventDefault(); animacao = null; sumirDica(); aproximar(Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+  // nada de rolar a página nem dar zoom no navegador por cima do 3D (o app é a janela inteira)
+  raiz.querySelector(".mt-tela").addEventListener("touchmove", (e) => { if (e.target === tela) e.preventDefault(); }, { passive: false });
+  raiz.querySelector(".mt-tela").addEventListener("gesturestart", (e) => e.preventDefault());
   const soltar = async (e) => {
     const eraGesto = gesto;
     dedos.delete(e.pointerId);
@@ -901,7 +1167,7 @@ export async function iniciar(raiz) {
   }
   function atualizarResumo() {
     const b = medirTudo();
-    if (!pecas.length || b.isEmpty()) { $("mtResumo").textContent = "Nenhuma peça ainda: escolha uma à esquerda."; return; }
+    if (!pecas.length || b.isEmpty()) { $("mtResumo").textContent = "Nenhuma peça ainda: escolha uma à esquerda ou chame o Projetista."; return; }
     const t = b.getSize(new T.Vector3());
     $("mtResumo").innerHTML = `<strong>${pecas.length} peça${pecas.length > 1 ? "s" : ""}</strong> · ${metros(t.x)} m de largura × ${metros(t.z)} m de profundidade × ${metros(t.y)} m de altura`;
     // a sombra cobre a montagem inteira
@@ -954,6 +1220,7 @@ export async function iniciar(raiz) {
   new ResizeObserver(medir).observe(tela);
   function quadro() {
     requestAnimationFrame(quadro);
+    passoDaAnimacao();
     if (!sujo) return;
     sujo = false;
     if (selecionada && caixaSelecao.visible) caixaSelecao.setFromObject(selecionada.obj);
@@ -1147,18 +1414,206 @@ export async function iniciar(raiz) {
     } finally { pronto(); }
   });
 
+  /* ---------------------------------------------------------------- o app: gaveta (celular) e tela cheia */
+  function abrirGaveta(qual) {
+    raiz.dataset.gaveta = qual || "";
+    raiz.querySelectorAll(".mt-gaveta-abas [data-gaveta]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.gaveta === qual ? "true" : "false"));
+    requestAnimationFrame(medir);
+  }
+  raiz.querySelectorAll(".mt-gaveta-abas [data-gaveta]").forEach((b) => b.addEventListener("click", () => {
+    abrirGaveta(raiz.dataset.gaveta === b.dataset.gaveta ? "" : b.dataset.gaveta);
+  }));
+  raiz.querySelector("[data-gaveta-gerar]").addEventListener("click", () => abrirProjetista());
+  const aoTrocarDeTamanho = () => abrirGaveta("");
+  if (celular.addEventListener) celular.addEventListener("change", aoTrocarDeTamanho); else celular.addListener(aoTrocarDeTamanho);
+  const botaoTelaCheia = $("mtTelaCheia");
+  if (document.fullscreenEnabled && document.documentElement.requestFullscreen) {
+    botaoTelaCheia.hidden = false;
+    botaoTelaCheia.addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    });
+    document.addEventListener("fullscreenchange", () => {
+      if (!raiz.isConnected) return;
+      botaoTelaCheia.querySelector("i").className = document.fullscreenElement ? "bi bi-fullscreen-exit" : "bi bi-arrows-fullscreen";
+      botaoTelaCheia.title = document.fullscreenElement ? "Sair da tela cheia" : "Tela cheia";
+    });
+  }
+
+  /* ---------------------------------------------------------------- cor-tema (a montagem inteira) */
+  const projetista = {
+    tipo: "brinquedao", estilo: "colorido", cor: "#2563eb", semente: 1,
+    medidas: Object.assign({}, gerador.PROJETOS.brinquedao.medidas),
+  };
+  let corTema = projetista.cor;
+  const temaPainel = $("mtTemaPainel");
+  function amostraDoTema(hex) {
+    const p = gerador.paletaDaCor(hex, projetista.estilo);
+    $("mtTemaAmostra").style.background = `conic-gradient(${p.estrutura} 0 25%, ${p.acento} 0 50%, ${p.destaque} 0 75%, ${p.varias[0]} 0)`;
+  }
+  function escolherCorTema(cor) {
+    corTema = cor;
+    marcarAmostra($("mtTemaCores"), cor);
+    $("mtTemaLivre").value = cor;
+    amostraDoTema(cor);
+  }
+  amostras($("mtTemaCores"), RAIZES, escolherCorTema);
+  $("mtTemaLivre").addEventListener("input", function () { corTema = this.value; marcarAmostra($("mtTemaCores"), this.value); amostraDoTema(this.value); });
+  function fecharTema() { temaPainel.hidden = true; $("mtTema").setAttribute("aria-expanded", "false"); }
+  $("mtTema").addEventListener("click", () => {
+    const abrir = temaPainel.hidden;
+    temaPainel.hidden = !abrir;
+    $("mtTema").setAttribute("aria-expanded", abrir ? "true" : "false");
+    if (abrir) { $("mtIdeia").hidden = true; escolherCorTema(corTema); }
+  });
+  /** Pinta a montagem inteira: cada peça desenhada pelo seu papel; os .glb pelas famílias de cor. Sem cor: as de fábrica. */
+  async function pintarTudo(hex) {
+    if (!pecas.length) { window.Painel && Painel.aviso("Ponha peças (ou chame o Projetista) antes de pintar.", "erro"); return; }
+    const paleta = hex ? gerador.paletaDaCor(hex, projetista.estilo) : null;
+    const contagem = {};
+    for (const p of pecas) {
+      if (CATALOGO[p.tipo]) {
+        const i = (contagem[p.tipo] = (contagem[p.tipo] || 0) + 1) - 1;
+        p.cor = paleta ? gerador.corDoPapel(paleta, p.tipo, i) : CATALOGO[p.tipo].cor;
+        if (p.cor2) {
+          const segunda = p.tipo === "piso_eva" ? paleta && paleta.chao2 : p.tipo === "rede" ? paleta && paleta.estrutura : paleta && gerador.corDoPapel(paleta, p.tipo, i + 3);
+          p.cor2 = segunda || CATALOGO[p.tipo].cor2 || null;
+        }
+        await redesenhar(p);
+      } else {
+        p.tema = hex || null;
+        vestir(p);
+      }
+    }
+    if (selecionada) caixaSelecao.setFromObject(selecionada.obj);
+    registrar();
+    mostrarPropriedades();
+  }
+  $("mtTemaAplicar").addEventListener("click", async () => { await pintarTudo(corTema); fecharTema(); });
+  $("mtTemaOriginal").addEventListener("click", async () => { await pintarTudo(null); fecharTema(); });
+
+  /* ---------------------------------------------------------------- o projetista */
+  const tiposGerar = $("gerarTipos");
+  Object.entries(gerador.PROJETOS).forEach(([chave, p]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "mt-gerar-tipo";
+    b.setAttribute("role", "radio");
+    b.dataset.tipo = chave;
+    b.innerHTML = `<i class="bi ${p.icone}"></i><strong></strong><small></small>`;
+    b.querySelector("strong").textContent = p.nome;
+    b.querySelector("small").textContent = `${p.sub} · ${metros(p.medidas.largura)} × ${metros(p.medidas.profundidade)} m`;
+    b.addEventListener("click", () => {
+      projetista.tipo = chave;
+      projetista.medidas = Object.assign({}, p.medidas);
+      mostrarProjetista();
+    });
+    tiposGerar.appendChild(b);
+  });
+  const estilosGerar = $("gerarEstilos");
+  Object.entries(gerador.ESTILOS).forEach(([chave, e]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "mt-gerar-estilo";
+    b.setAttribute("role", "radio");
+    b.dataset.estilo = chave;
+    b.innerHTML = `<span style="background:${e.amostra}"></span>`;
+    b.append(e.nome);
+    b.addEventListener("click", () => { projetista.estilo = chave; mostrarProjetista(); });
+    estilosGerar.appendChild(b);
+  });
+  amostras($("gerarCores"), RAIZES, (cor) => { projetista.cor = cor; mostrarProjetista(); });
+  $("gerarCorLivre").addEventListener("input", function () { projetista.cor = this.value; mostrarProjetista(); });
+  const camposGerar = { largura: $("gerarLargura"), profundidade: $("gerarProfundidade"), altura: $("gerarAltura") };
+  Object.entries(camposGerar).forEach(([chave, campo]) => campo.addEventListener("change", () => {
+    const v = parseFloat(String(campo.value).replace(",", "."));
+    if (v > 0) projetista.medidas[chave] = v;
+  }));
+  const aprendido = dados.aprendido || {};
+  if (aprendido.modulo || aprendido.nivel) {
+    const partes = [];
+    if (aprendido.modulo) partes.push(`módulo de ${metros(aprendido.modulo)} m`);
+    if (aprendido.nivel) partes.push(`pisos a cada ${metros(aprendido.nivel)} m`);
+    $("gerarAprendeu").hidden = false;
+    $("gerarAprendeu").innerHTML = '<i class="bi bi-mortarboard"></i> ';
+    $("gerarAprendeu").append(`Aprendido das ${aprendido.vezes} montagens guardadas: ${partes.join(" e ")} (o brinquedão sai assim).`);
+  }
+  function mostrarProjetista() {
+    tiposGerar.querySelectorAll("[data-tipo]").forEach((b) => b.setAttribute("aria-checked", b.dataset.tipo === projetista.tipo ? "true" : "false"));
+    estilosGerar.querySelectorAll("[data-estilo]").forEach((b) => b.setAttribute("aria-checked", b.dataset.estilo === projetista.estilo ? "true" : "false"));
+    Object.entries(camposGerar).forEach(([chave, campo]) => { campo.value = projetista.medidas[chave]; });
+    marcarAmostra($("gerarCores"), projetista.cor);
+    $("gerarCorLivre").value = projetista.cor;
+    const p = gerador.paletaDaCor(projetista.cor, projetista.estilo);
+    $("gerarPaleta").innerHTML = [p.estrutura, p.chao, ...p.varias, p.destaque, p.protecao].map((c) => `<span style="background:${c}" title="${c}"></span>`).join("");
+    $("gerarAviso").hidden = !pecas.length;
+  }
+  function abrirProjetista() {
+    mostrarProjetista();
+    Painel.abrir("modalGerar");
+  }
+  $("mtGerar").addEventListener("click", abrirProjetista);
+  let nomeDoProjetista = "";
+  async function aplicarIdeia() {
+    const ideia = gerador.gerar(projetista.tipo, projetista.medidas, projetista.cor, projetista.semente, { estilo: projetista.estilo, aprendido });
+    cancelarColocar();
+    selecionar(null);
+    fecharTema();
+    aviso.hidden = false;
+    aviso.textContent = "O projetista está montando…";
+    await new Promise((pronto) => requestAnimationFrame(() => setTimeout(pronto, 0)));
+    pecas.forEach((p) => { if (CATALOGO[p.tipo]) descartar(p.obj); });
+    montagem.clear();
+    pecas = [];
+    for (const p of ideia.pecas) await montarPeca(p);
+    aviso.hidden = true;
+    const nome = $("mtNome");
+    if (!nome.value.trim() || nome.value === nomeDoProjetista) { nome.value = ideia.titulo; nomeDoProjetista = ideia.titulo; }
+    registrar();
+    if (modoVista === "planta") trocarVista("3d");
+    enquadrar();
+    escolherCorTema(projetista.cor);
+    // o cartão da ideia: o que entrou e as regras que ele seguiu
+    $("mtIdeiaTitulo").textContent = ideia.titulo;
+    const resumo = $("mtIdeiaResumo"), regras = $("mtIdeiaRegras");
+    resumo.innerHTML = "";
+    regras.innerHTML = "";
+    ideia.resumo.forEach((r) => { const li = document.createElement("li"); li.textContent = r; resumo.appendChild(li); });
+    ideia.regras.forEach((r) => { const li = document.createElement("li"); li.textContent = r; regras.appendChild(li); });
+    $("mtIdeia").hidden = false;
+    if (celular.matches) abrirGaveta("");
+    return ideia;
+  }
+  $("gerarIr").addEventListener("click", async () => {
+    Object.entries(camposGerar).forEach(([chave, campo]) => {
+      const v = parseFloat(String(campo.value).replace(",", "."));
+      if (v > 0) projetista.medidas[chave] = v;
+    });
+    projetista.semente = 1;
+    Painel.fechar("modalGerar");
+    await aplicarIdeia();
+  });
+  $("mtIdeiaOutra").addEventListener("click", async () => { projetista.semente += 1; await aplicarIdeia(); });
+  $("mtIdeiaAjustar").addEventListener("click", abrirProjetista);
+  $("mtIdeiaFechar").addEventListener("click", () => { $("mtIdeia").hidden = true; });
+
   /* ---------------------------------------------------------------- começar */
   medir();
   if (dados.montagem && dados.montagem.pecas && dados.montagem.pecas.length) {
     aviso.textContent = "Abrindo a montagem…";
     await restaurar(JSON.stringify(dados.montagem.pecas));
-    enquadrar();
+    enquadrar(false);
   } else {
     posicionarCamera();
   }
+  amostraDoTema(corTema);
   estadoAtual = JSON.stringify(pecas.map(paraJson));
   aviso.hidden = true;
   requestAnimationFrame(quadro);
   // para os testes e para quem quiser olhar no console
-  window.LSMontar3D = { pecas: () => pecas.map(paraJson), colocar: (d) => montarPeca(d).then((p) => { registrar(); return p; }), exportarGlb, selecionar: (i) => selecionar(pecas[i] || null) };
+  window.LSMontar3D = {
+    pecas: () => pecas.map(paraJson), colocar: (d) => montarPeca(d).then((p) => { registrar(); return p; }), exportarGlb,
+    selecionar: (i) => selecionar(pecas[i] || null), tipos: () => Object.keys(CATALOGO),
+    gerar: (cfg) => { Object.assign(projetista, cfg || {}); return aplicarIdeia(); }, pintar: pintarTudo, vista: trocarVista,
+  };
 }

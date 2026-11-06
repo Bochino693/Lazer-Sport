@@ -204,6 +204,32 @@ export async function aplicarCor(gltf, cor) {
   await Promise.all(trocas);
 }
 
+/**
+ * O tema de UMA COR RAIZ (o "tema da montagem" do painel): cada família do desenho original
+ * ganha uma cor tirada da raiz -- a estrutura (os verdes e os azuis) fica na própria cor, e
+ * os painéis viram as vizinhas, a complementar e o destaque. `cores`: { familia: "#rrggbb" }.
+ */
+export function temaDeCores(chave, nome, cores) {
+  return { chave, nome, cores };
+}
+
+/**
+ * Veste QUALQUER objeto 3D (por exemplo a cópia de um .glb numa montagem) num tema. `originais`
+ * (um WeakMap da malha para o material de fábrica) e `guarda` (um objeto qualquer) ficam com
+ * quem chama: assim a cópia não leva o material original no userData (o three.js copia o
+ * userData ao clonar e ao exportar). Sem tema, volta às cores de fábrica.
+ */
+export function vestirObjeto(objeto, tema, originais, guarda) {
+  objeto.traverse((o) => {
+    if (!o.isMesh) return;
+    if (!originais.has(o)) originais.set(o, o.material);
+    const original = originais.get(o);
+    const nome = (original && original.name) || o.name || "";
+    const fixo = SEM_TINGIR.test(o.name) || SEM_TINGIR.test(nome);
+    o.material = !tema || !tema.cores || fixo ? original : materialNoTema(guarda, original, tema);
+  });
+}
+
 /** As cores de destaque do próprio objeto (para a amostra do "Original"). */
 function coresDoArquivo(gltf) {
   if (gltf.userData.coresDoArquivo) return gltf.userData.coresDoArquivo;
