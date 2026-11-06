@@ -783,6 +783,11 @@ class JogoCadastrado(Prime):
         default=False, verbose_name="Destaque no topo do portal",
         help_text="Entra no carrossel grande do topo de /jogos/.",
     )
+    acoes = models.TextField(
+        blank=True, default="", verbose_name="O que cada botão faz neste jogo",
+        help_text="Uma linha por botão, no formato “botão: ação”. Ex.: “B: Pular”, “Y: Correr e pegar”, "
+                  "“Start: Pausar”. Aparece no “Como jogar” e no botão Comandos, no lugar da função geral do console.",
+    )
     particular = models.BooleanField(
         default=False, verbose_name="Particular (só a equipe)",
         help_text="Só quem entra com conta de administrador vê e joga: fica fora do portal, da busca e do Google. "

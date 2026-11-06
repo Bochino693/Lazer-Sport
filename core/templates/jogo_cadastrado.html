@@ -17,6 +17,7 @@
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/jogo-cadastrado.css' %}">
+{% include "partials/icones_das_acoes.html" %}
 
 <div class="jc" style="--cor-jogo: {{ jogo.cor }}">
     <div class="jc-topo">
@@ -70,7 +71,7 @@
                 <button type="button" data-jogo-comandos-fechar aria-label="Fechar os comandos"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
             {% if controles %}
             <ul class="jc-teclas jc-teclas--compacto">
-                {% for c in controles %}<li class="jc-tecla"><span>{{ c.acao }}</span><div>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</div><small>{{ c.celular|capfirst }}</small></li>{% endfor %}
+                {% for c in controles %}<li class="jc-tecla"><span>{{ c.acao }}</span>{% if c.funcao %}<em class="jc-funcao">{% if c.icone %}<svg class="jc-ico" aria-hidden="true"><use href="#a-{{ c.icone }}"/></svg>{% endif %}{{ c.funcao }}</em>{% endif %}<div>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</div><small>{{ c.celular|capfirst }}</small></li>{% endfor %}
             </ul>
             {% endif %}
             {% if jogo.comandos %}<p class="jc-comandos-texto">{{ jogo.comandos }}</p>{% endif %}
@@ -99,12 +100,15 @@
                 <button type="button" role="tab" id="aba-celular" aria-controls="painel-celular" aria-selected="false" data-aba="celular" tabindex="-1">
                     <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> No celular
                 </button>
+                <button type="button" role="tab" id="aba-controle" aria-controls="painel-controle" aria-selected="false" data-aba="controle" tabindex="-1">
+                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Controle de Xbox
+                </button>
             </div>
             <div class="jc-aba" role="tabpanel" id="painel-pc" aria-labelledby="aba-pc" data-painel="pc">
                 <h3 class="jc-aba-titulo"><i class="fa-solid fa-keyboard" aria-hidden="true"></i> No computador: o teclado vira o controle do {{ jogo.sistema }}</h3>
                 <ul class="jc-teclas">
                     {% for c in controles %}
-                    <li class="jc-tecla"><span>{{ c.acao }}</span><div>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</div></li>
+                    <li class="jc-tecla"><span>{{ c.acao }}</span>{% if c.funcao %}<em class="jc-funcao">{% if c.icone %}<svg class="jc-ico" aria-hidden="true"><use href="#a-{{ c.icone }}"/></svg>{% endif %}{{ c.funcao }}</em>{% endif %}<div>{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</div></li>
                     {% endfor %}
                 </ul>
                 <p class="jc-dica"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> {{ dicas_de_controle.pc }}</p>
@@ -113,10 +117,19 @@
                 <h3 class="jc-aba-titulo"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> No celular: o controle aparece na tela</h3>
                 <ul class="jc-toques">
                     {% for c in controles %}
-                    <li><strong>{{ c.acao }}</strong><span>{{ c.celular|capfirst }}</span></li>
+                    <li><strong>{{ c.acao }}</strong>{% if c.funcao %}<em class="jc-funcao">{% if c.icone %}<svg class="jc-ico" aria-hidden="true"><use href="#a-{{ c.icone }}"/></svg>{% endif %}{{ c.funcao }}</em>{% endif %}<span>{{ c.celular|capfirst }}</span></li>
                     {% endfor %}
                 </ul>
                 <p class="jc-dica"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> {{ dicas_de_controle.celular }}</p>
+            </div>
+            <div class="jc-aba" role="tabpanel" id="painel-controle" aria-labelledby="aba-controle" data-painel="controle">
+                <h3 class="jc-aba-titulo"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Com o controle de Xbox (ou outro USB/Bluetooth)</h3>
+                <ul class="jc-teclas">
+                    {% for c in controles %}
+                    <li class="jc-tecla"><span>{{ c.acao }}</span>{% if c.funcao %}<em class="jc-funcao">{% if c.icone %}<svg class="jc-ico" aria-hidden="true"><use href="#a-{{ c.icone }}"/></svg>{% endif %}{{ c.funcao }}</em>{% endif %}<div>{% for b in c.controle %}<kbd class="jc-xb jc-xb-{{ b|slugify }}">{{ b }}</kbd>{% empty %}<small>como no console</small>{% endfor %}</div></li>
+                    {% endfor %}
+                </ul>
+                <p class="jc-dica"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> {{ dicas_de_controle.controle }}</p>
             </div>
             {% endif %}
         </section>

@@ -76,6 +76,50 @@
 .pg-faixa-topo p { margin: 4px 0 0; color: var(--pg-suave); font-size: .92rem; }
 .pg-hero[hidden] { display: none; }
 
+/* ---------- a vitrine (estilo loja de jogos): arte larga + fila de destaques ---------- */
+.pg-hero.pg-vitrine { height: auto; overflow: visible; border: 0; background: none; box-shadow: none; border-radius: 0; }
+.pg-vitrine-palco { position: relative; height: clamp(340px, 38vw, 500px); border-radius: 22px; overflow: hidden;
+                    background: #050914; border: 1px solid var(--pg-borda); box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .7); }
+.pg-slide { isolation: isolate; }
+.pg-slide--topo { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); background: linear-gradient(90deg, rgba(4, 7, 16, .55), transparent 55%); }
+.pg-slide-topo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center;
+                 transform: scale(1.04); transition: transform 6.5s ease-out; }
+.pg-slide--ativo .pg-slide-topo { transform: scale(1); }
+.pg-slide-marcas { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.pg-slide-marcas li { padding: 5px 11px; border-radius: 8px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14);
+                      color: #e7eefc; font-size: .8rem; font-weight: 700; }
+.pg-slide-marcas .pg-marca-ranking { color: var(--pg-amarelo); border-color: rgba(255, 210, 63, .35); }
+.pg-vitrine .pg-botao--jogar { min-height: 56px; padding: 0 38px; font-size: 1.12rem; letter-spacing: .02em; text-transform: uppercase;
+                               background: linear-gradient(180deg, #4ade80, #16a34a); box-shadow: 0 14px 34px -8px rgba(34, 197, 94, .7); }
+.pg-vitrine-fila { display: flex; gap: 10px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.pg-vitrine-fila::-webkit-scrollbar { display: none; }
+.pg-mini { position: relative; flex: 1 0 168px; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 12px 10px 8px;
+           border: 1px solid var(--pg-borda); border-radius: 14px; background: rgba(12, 20, 44, .7); color: #cfd9ee; cursor: pointer;
+           text-align: left; font: 700 .85rem/1.2 inherit; overflow: hidden; transition: background .2s, border-color .2s, transform .2s; }
+.pg-mini img, .pg-mini > i:first-child { flex: none; width: 46px; height: 46px; border-radius: 10px; object-fit: contain; display: grid; place-items: center; background: #0b1530; }
+.pg-mini span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pg-mini:hover { background: rgba(24, 36, 72, .9); }
+.pg-mini[aria-current="true"] { color: #fff; border-color: color-mix(in srgb, var(--cor) 70%, #fff); background: color-mix(in srgb, var(--cor) 22%, #0c1430); transform: translateY(-2px); }
+.pg-mini-tempo { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--cor); }
+.pg-mini[aria-current="true"] .pg-mini-tempo { animation: pg-tempo 6.5s linear forwards; }
+@keyframes pg-tempo { to { width: 100%; } }
+@media (max-width: 900px) {
+    .pg-hero.pg-vitrine { height: auto; }
+    .pg-vitrine-palco { height: clamp(380px, 105vw, 520px); }
+    .pg-vitrine .pg-slide { grid-template-columns: 1fr; align-content: end; padding-bottom: 28px; }
+    /* no celular a arte fica em cima (o jogo inteiro à vista) e o texto embaixo, no escuro */
+    .pg-slide--topo { background: #04070f; }
+    .pg-slide-topo { height: 58%; object-position: 80% center;
+                     -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+    .pg-slide--topo h2 { font-size: clamp(1.8rem, 8vw, 2.6rem); }
+    .pg-marca-gratis { display: none; }
+    .pg-mini { flex-basis: 150px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pg-slide-topo { transition: none; transform: none; }
+    .pg-mini[aria-current="true"] .pg-mini-tempo { animation: none; width: 100%; }
+}
+
 /* ======================================================================
    A BIBLIOTECA
    Estantes por plataforma, cada uma com a sua cor (--tema) e o seu
@@ -265,6 +309,8 @@
 .bj-tecla { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border-radius: 12px; background: rgba(5, 11, 31, .6); border: 1px solid rgba(255, 255, 255, .06); }
 .bj-tecla > span { color: var(--pg-suave); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .bj-tecla > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.bj-tecla-faz { display: flex; align-items: center; gap: 7px; color: #eef3ff; font-size: .8rem; font-style: normal; font-weight: 600; line-height: 1.3; }
+.bj-ico { flex: none; width: 24px; height: 24px; padding: 4px; border-radius: 50%; background: var(--tema, #ff3df2); color: #fff; box-sizing: border-box; }
 .bj-tecla kbd, .bj-dica kbd { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 8px;
                               font: 800 .8rem "Poppins", sans-serif; color: #fff; background: linear-gradient(#1c2f5c, #101d40);
                               border: 1px solid rgba(255, 255, 255, .22); border-bottom-width: 3px; }

@@ -1,5 +1,6 @@
 /* ======================================================================
-   O QUADRO DO EMULADOR: liga o EmulatorJS do próprio site a este jogo.
+   O REPRODUTOR DOS JOGOS DE CONSOLE: liga o EmulatorJS do próprio site
+   a este jogo e põe por cima a interface do site.
 
    A configuração vem do servidor (core/views_jogos.config_do_emulador):
    o núcleo do console e TODOS os arquivos do jogo -- o que o emulador
@@ -7,16 +8,20 @@
    (as faixas .bin, os outros discos, a BIOS) --, cada um com o nome exato
    que o índice pede e com a lista de partes de onde baixar.
 
-   POR QUE ESTE ARQUIVO BAIXA TUDO, E NÃO O EMULADOR.
+   O CAMINHO DE QUEM JOGA
+   1. A abertura "LAZER & SPORT GAMES apresenta" enquanto o jogo baixa (com
+      o progresso). Da segunda vez, o jogo sai do aparelho (jogo-guardado.js).
+   2. Pronto: o botão Jogar. O toque é o que o navegador exige para o som e,
+      no celular, para a tela cheia deitada -- o jogo abre assim.
+   3. O emulador liga por baixo da abertura; quando o jogo começa, a abertura
+      sai, a barra de cima aparece e some sozinha.
+
+   POR QUE ESTE ARQUIVO BAIXA TUDO, E NÃO O EMULADOR
    1. Arquivo grande fica guardado em PEDAÇOS (o Cloudinary aceita até 10
-      MB por arquivo): aqui os pedaços são baixados e juntados, na ordem,
-      num bloco só -- o emulador recebe o .bin inteiro.
+      MB por arquivo): aqui os pedaços são baixados e juntados, na ordem.
    2. O EmulatorJS 4.2.3 grava os "arquivos externos" que ele mesmo baixa
-      num formato que a pasta virtual recusa (ArrayBuffer em vez de
-      Uint8Array): o arquivo fica criado e VAZIO, sem erro na tela.
+      num formato que a pasta virtual recusa (fica criado e VAZIO, sem erro).
       Entregando os bytes prontos, ele grava certo.
-   3. Quem joga vê o progresso: um disco de PS1 tem centenas de MB.
-   4. Da segunda vez, o jogo sai do aparelho (jogo-guardado.js), na hora.
    ====================================================================== */
 (function () {
   "use strict";
@@ -26,25 +31,65 @@
   var config = JSON.parse(bruto.textContent || "{}");
   if (!config.core || !(config.arquivos || []).length) return;
 
+  var corpo = document.body;
+  var $ = function (seletor) { return document.querySelector(seletor); };
+  var abertura = $("[data-pl-abertura]");
+  var status = $("[data-pl-status]");
+  var progresso = $("[data-pl-progresso]");
+  var pronto = $("[data-pl-pronto]");
+  var botaoJogar = $("[data-pl-jogar]");
+  var dicaPronto = $("[data-pl-pronto-dica]");
+  var caixaErro = $("[data-pl-erro]");
+  var barra = $("[data-pl-barra]");
+  var botaoCheia = $("[data-pl-tela-cheia]");
+  var botaoMenu = $("[data-pl-menu]");
+  var painel = $("[data-pl-comandos]");
+  var botaoComandos = $("[data-pl-abrir-comandos]");
+  var girar = $("[data-pl-girar]");
+  var aviso = $("[data-pl-aviso]");
+
+  function consulta(q) { try { return window.matchMedia(q).matches; } catch (e) { return false; } }
+  var celular = consulta("(pointer: coarse)");
+  // o DS fica em pé (as duas telas, uma em cima da outra); o resto, deitado
+  var emPe = config.core === "nds" || config.formato === "retrato";
+  var dentroDeQuadro = window.self !== window.top;
+  var jogando = false;
+
+  corpo.classList.add("is-abrindo");
+  if (dentroDeQuadro) {
+    // aberta num quadro (o jeito antigo): o Voltar não faz sentido aqui
+    var voltar = $("[data-pl-voltar]");
+    if (voltar) voltar.hidden = true;
+  }
+
   function mb(bytes) {
     return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1).replace(".", ",") + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
   }
-
-  var aviso = document.createElement("div");
-  aviso.className = "emu-aviso";
-  aviso.setAttribute("role", "status");
-  var texto = document.createElement("p");
-  var barra = document.createElement("div");
-  barra.className = "emu-barra";
-  barra.appendChild(document.createElement("span"));
-  aviso.appendChild(texto);
-  aviso.appendChild(barra);
   function mostrar(mensagem, pct) {
-    texto.textContent = mensagem;
-    barra.hidden = typeof pct !== "number";
-    if (!barra.hidden) barra.firstChild.style.width = Math.max(0, Math.min(100, pct)) + "%";
+    status.textContent = mensagem;
+    progresso.hidden = pct === null;
+    progresso.classList.toggle("is-sem-numero", pct === undefined);
+    if (typeof pct === "number") progresso.firstElementChild.style.width = Math.max(0, Math.min(100, pct)) + "%";
+  }
+  function falhou(mensagem) {
+    abertura.classList.add("is-erro");
+    abertura.classList.remove("is-saindo");
+    mostrar(mensagem, null);
+    pronto.hidden = true;
+    caixaErro.hidden = false;
+  }
+  $("[data-pl-recarregar]").addEventListener("click", function () { location.reload(); });
+
+  var tempoAviso = null;
+  function avisar(texto, duracao) {
+    if (!aviso) return;
+    aviso.textContent = texto;
+    aviso.hidden = false;
+    clearTimeout(tempoAviso);
+    tempoAviso = setTimeout(function () { aviso.hidden = true; }, duracao || 4000);
   }
 
+  /* ---------------------------------------------------------------- baixar o jogo */
   function baixarParte(url, aoProgresso) {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
@@ -59,7 +104,6 @@
       xhr.send();
     });
   }
-
   /* Um arquivo: as partes, na ordem, num bloco só do tamanho certo. */
   function baixarArquivo(item, aoProgresso) {
     var bloco = new Uint8Array(item.tamanho);
@@ -79,16 +123,17 @@
       return bloco;
     });
   }
-
+  function avisoDeTamanho(total) {
+    return total > 300 * 1048576 ? " · jogo grande: no celular pode não abrir" : "";
+  }
   function baixarTudo(itens) {
     var total = itens.reduce(function (t, i) { return t + i.tamanho; }, 0);
     var feitos = 0;
-    var grande = total > 300 * 1048576 ? " — jogo grande: no celular pode não abrir" : "";
     var bytes = {};
     return itens.reduce(function (promessa, item) {
       return promessa.then(function () {
         return baixarArquivo(item, function (agora) {
-          mostrar("Baixando o jogo: " + mb(feitos + agora) + " de " + mb(total) + grande, total ? (feitos + agora) / total * 100 : 0);
+          mostrar("Baixando o jogo: " + mb(feitos + agora) + " de " + mb(total) + avisoDeTamanho(total), total ? (feitos + agora) / total * 100 : 0);
         }).then(function (dados) {
           feitos += item.tamanho;
           bytes[item.caminho] = dados;
@@ -96,7 +141,108 @@
       });
     }, Promise.resolve()).then(function () { return bytes; });
   }
+  /* Do aparelho quando o jogo já está guardado (jogo-guardado.js); senão baixa e guarda. */
+  function pegar(itens) {
+    var guardado = window.LSJogoGuardado;
+    if (!guardado || !guardado.disponivel) return baixarTudo(itens);
+    return guardado.pegarTudo(config.jogo || config.nome, itens, function (feito, total, doAparelho) {
+      mostrar((doAparelho ? "Abrindo o jogo guardado no aparelho" : "Baixando o jogo (fica guardado para a próxima)") +
+        ": " + mb(feito) + " de " + mb(total) + (doAparelho ? "" : avisoDeTamanho(total)), total ? feito / total * 100 : 0);
+    }).then(function (r) { return r.bytes; }, function () { return baixarTudo(itens); });
+  }
 
+  /* O emulador e o núcleo, adiantados enquanto o jogo baixa (na primeira vez: depois o
+     próprio emulador guarda o núcleo no aparelho). O nome segue o do emulador: "-thread"
+     (PSP, DOS) e "-legacy" (sem WebGL 2). */
+  var marcaDoNucleo = "ls-emulador-" + (config.nucleo || config.core);
+  function adiantarEmulador() {
+    var arquivos = [config.dados + "loader.js", config.dados + "emulator.min.js", config.dados + "emulator.min.css",
+      config.dados + "localization/pt-BR.json"];
+    var jaTem = false;
+    try { jaTem = !!localStorage.getItem(marcaDoNucleo); } catch (e) { jaTem = false; }
+    if (!jaTem && config.nucleo) {
+      var webgl2 = false;
+      try { webgl2 = !!document.createElement("canvas").getContext("webgl2"); } catch (e) { webgl2 = false; }
+      var nome = config.nucleo + (config.threads ? "-thread" : "") + (webgl2 ? "" : "-legacy") + "-wasm.data";
+      arquivos.push((config.nucleoExterno || config.dados + "cores/") + nome);
+    }
+    arquivos.forEach(function (url) {
+      var link = document.createElement("link");
+      link.rel = "prefetch";
+      link.href = url;
+      if (/^https?:/.test(url) && url.indexOf(location.origin) !== 0) link.crossOrigin = "anonymous";
+      document.head.appendChild(link);
+    });
+  }
+
+  /* ---------------------------------------------------------------- a imagem na tela toda
+     O RetroArch do emulador desenha a imagem no formato do console (4:3) e põe faixas
+     pretas dos lados. Aqui ele desenha ESTICADA na área toda (aspect_ratio_index 24 =
+     "Full" no RetroArch), já na resolução da tela -- nítida, sem ampliar uma imagem
+     pequena. O formato original continua a um toque ("Imagem" na barra): aí a área do
+     jogo é que encolhe para o formato do console, e o RetroArch acompanha na hora, sem
+     reiniciar o jogo. O emulador grava o retroarch.cfg ao ligar o núcleo
+     (EJS_GameManager.getRetroArchCfg): a página acrescenta as duas linhas assim que a
+     classe chega, antes de o núcleo ligar. */
+  // O que o site muda no retroarch.cfg do emulador:
+  // - a imagem esticada na área toda ("Full"), que encolhe para o formato do console no botão Imagem;
+  // - no celular, mais folga no som (96 ms): aparelho mais fraco atrasa um quadro e o som
+  //   estala; com a folga ele continua liso (a diferença não se sente ao jogar).
+  var AJUSTES_DO_RETROARCH = [["video_aspect_ratio_auto", "false"], ["aspect_ratio_index", "24"]];
+  if (celular) AJUSTES_DO_RETROARCH.push(["audio_latency", "96"]);
+  function ajustarCfg(cfg) {
+    AJUSTES_DO_RETROARCH.forEach(function (par) {
+      var linha = par[0] + " = " + (/^\d+$/.test(par[1]) ? par[1] : '"' + par[1] + '"');
+      var regra = new RegExp("^" + par[0] + " = .*$", "m");
+      cfg = regra.test(cfg) ? cfg.replace(regra, linha) : cfg + linha + "\n";
+    });
+    return cfg;
+  }
+  function remendarCfg(classe) {
+    if (!classe || !classe.prototype || classe.prototype.__lsTelaToda) return;
+    var original = classe.prototype.getRetroArchCfg;
+    if (typeof original !== "function") return;
+    classe.prototype.getRetroArchCfg = function () { return ajustarCfg(String(original.apply(this, arguments) || "")); };
+    classe.prototype.__lsTelaToda = true;
+  }
+  (function () {
+    var real = window.EJS_GameManager;
+    try {
+      Object.defineProperty(window, "EJS_GameManager", {
+        configurable: true,
+        get: function () { return real; },
+        set: function (classe) { real = classe; remendarCfg(classe); },
+      });
+    } catch (e) { /* o EJS_ready ainda tenta */ }
+  })();
+
+  var CHAVE_IMAGEM = "ls-imagem-v1";
+  var imagemOriginal = emPe; // o DS (duas telas) fica no formato dele
+  try { var guardada = localStorage.getItem(CHAVE_IMAGEM); if (guardada && !emPe) imagemOriginal = guardada === "original"; } catch (e) { /* padrão */ }
+  function proporcaoDoJogo() {
+    var emu = window.EJS_emulator, a = 0;
+    try { a = Number(emu && emu.gameManager && emu.gameManager.getVideoDimensions("aspect")); } catch (e) { a = 0; }
+    return a > 0.2 && a < 5 ? a : (emPe ? 256 / 384 : 4 / 3);
+  }
+  function medirImagem() {
+    var a = proporcaoDoJogo(), l = innerWidth, h = innerHeight;
+    var largura = l / h > a ? Math.round(h * a) : l;
+    var altura = l / h > a ? h : Math.round(l / a);
+    corpo.style.setProperty("--pl-imagem-l", largura + "px");
+    corpo.style.setProperty("--pl-imagem-a", altura + "px");
+  }
+  function aplicarImagem() {
+    corpo.classList.toggle("is-imagem-original", imagemOriginal);
+    if (imagemOriginal) medirImagem();
+    var botao = $("[data-pl-imagem]");
+    if (botao) {
+      botao.querySelector("[data-pl-imagem-texto]").textContent = imagemOriginal ? "Imagem: original" : "Imagem: tela toda";
+      botao.setAttribute("aria-pressed", imagemOriginal ? "false" : "true");
+    }
+  }
+  window.addEventListener("resize", function () { if (imagemOriginal) medirImagem(); });
+
+  /* ---------------------------------------------------------------- ligar o emulador */
   function ligarEmulador(jogo, externos) {
     window.EJS_player = "#jogo";
     window.EJS_core = config.core;
@@ -107,56 +253,536 @@
     window.EJS_pathtodata = config.dados;
     window.EJS_language = "pt-BR";
     window.EJS_color = config.cor || "#ff3df2";
-    // quem abriu o quadro já tocou em "Jogar": o jogo começa sem outro toque
+    window.EJS_backgroundColor = "#000000";
+    // o som começa alto o bastante (o padrão do emulador é a metade)
+    window.EJS_volume = 0.85;
+    // quem tocou em Jogar não toca de novo
     window.EJS_startOnLoaded = true;
-    // o teclado que a página do jogo ensina (core/jogos_emulador.CONTROLES): no N64, o analógico nas setas
+    // o teclado que os Comandos ensinam e o controle de Xbox pela posição dos botões
     if (config.controles) window.EJS_defaultControls = config.controles;
+    // o controle na tela do celular com os nomes do console (sem "Fast/Slow" no meio)
+    if (config.gamepad) window.EJS_VirtualGamepadSettings = config.gamepad;
     // PSP e DOS: o núcleo de várias linhas (a página veio isolada pelo servidor)
     if (config.threads) window.EJS_threads = true;
-    // fora da barra: trapaça, jogo em rede (não há servidor), "sair do jogo"
-    // (deixaria o quadro preto) e o gerenciador de cache
-    window.EJS_Buttons = { cheat: false, netplay: false, exitEmulation: false, cacheManager: false };
+    // O NÚCLEO QUE NÃO MORA NO SITE (Super Nintendo, Mega Drive, fliperama...) vem do
+    // pacote oficial do EmulatorJS no npm (jsDelivr), com o "plano B" do CDN dele.
+    if (config.nucleoExterno && config.nucleo) {
+      var n = config.nucleo, caminhos = {};
+      ["-wasm.data", "-legacy-wasm.data", "-thread-wasm.data", "-thread-legacy-wasm.data"].forEach(function (fim) {
+        caminhos[n + fim] = config.nucleoExterno + n + fim;
+      });
+      caminhos[n + ".json"] = config.nucleoExterno + "reports/" + n + ".json";
+      window.EJS_paths = caminhos;
+    }
+    // A QUALIDADE DA IMAGEM: o filtro do console e, no computador, o mais caprichado
+    // (SABR na arte 2D) e mais resolução por dentro (N64, PSP); o núcleo certo
+    var opcoes = {};
+    Object.keys(config.opcoes || {}).forEach(function (k) { opcoes[k] = config.opcoes[k]; });
+    if (!celular) Object.keys(config.opcoesNoComputador || {}).forEach(function (k) { opcoes[k] = config.opcoesNoComputador[k]; });
+    // tela de toque = controle na tela. O emulador decide pelo "nome" do navegador: o iPad
+    // (que se diz Mac) e o tablet no modo computador ficavam sem controle nenhum.
+    if (celular) opcoes["virtual-gamepad"] = "enabled";
+    window.EJS_defaultOptions = opcoes;
+    // a versão dos ajustes do site: subiu, todo mundo começa com os novos (controle pela
+    // posição, filtro novo). O jogo salvo fica em outro lugar e continua.
+    window.EJS_gameID = 3;
+    // fora da barra do emulador: o que não tem servidor (rede, trapaça), o que confunde
+    // (gravar a tela, exportar o arquivo de save, "sair") e a tela cheia dele -- a do
+    // site (em cima) leva junto os Comandos e deita o celular
+    window.EJS_Buttons = {
+      cheat: false, netplay: false, exitEmulation: false, cacheManager: false, screenRecord: false,
+      saveSavFiles: false, loadSavFiles: false, fullscreen: false, enterFullscreen: false, exitFullscreen: false,
+    };
+    // os ajustes técnicos saem do menu: fica o que muda a imagem, o som e a velocidade
+    window.EJS_hideSettings = ["ejs_threads", "vsync", "videoRotation", "screenshotSource", "screenshotFormat",
+      "screenshotUpscale", "screenRecordFPS", "screenRecordFormat", "screenRecordUpscale", "screenRecordVideoBitrate",
+      "screenRecordAudioBitrate", "menubarBehavior", "altKeyboardInput"];
+    // O CONTROLE NA TELA DO CELULAR. O emulador só desenha o controle quando o toque foi
+    // no botão "Start" DELE; com o jogo começando sozinho (o toque foi no Jogar do site),
+    // ele achava que não era celular -- e o controle nunca aparecia. Aqui ele fica sabendo.
+    window.EJS_ready = function () {
+      if (celular && window.EJS_emulator) window.EJS_emulator.touch = true;
+      remendarCfg(window.EJS_GameManager);
+    };
     window.EJS_onGameStart = function () {
       // o emulador já copiou tudo para a pasta dele: solta as cópias daqui (memória)
       Object.keys(externos).forEach(function (chave) { delete externos[chave]; });
       window.EJS_gameUrl = null;
+      try { localStorage.setItem(marcaDoNucleo, "1"); } catch (e) { /* nada */ }
+      comecou();
     };
+    vigiarErroDoEmulador();
     var loader = document.createElement("script");
     loader.src = config.dados + "loader.js";
+    loader.onerror = function () { falhou("Não deu para abrir o emulador. Confira a internet e tente de novo."); };
     document.body.appendChild(loader);
   }
 
-  /* Do aparelho quando o jogo já está guardado (jogo-guardado.js); senão baixa e guarda. */
-  function pegar(itens) {
-    var guardado = window.LSJogoGuardado;
-    if (!guardado || !guardado.disponivel) return baixarTudo(itens);
-    var grande = "";
-    return guardado.pegarTudo(config.jogo || config.nome, itens, function (feito, total, doAparelho) {
-      grande = !doAparelho && total > 300 * 1048576 ? " — jogo grande: no celular pode não abrir" : "";
-      mostrar((doAparelho ? "Abrindo o jogo guardado no aparelho" : "Baixando o jogo (fica guardado para a próxima)") +
-        ": " + mb(feito) + " de " + mb(total) + grande, total ? feito / total * 100 : 0);
-    }).then(function (r) { return r.bytes; }, function () { return baixarTudo(itens); });
+  /* O emulador escreve o progresso e os erros num texto dele (que fica por baixo da
+     abertura): a abertura repete, e o erro aparece com "Tentar de novo". */
+  function vigiarErroDoEmulador() {
+    var vigia = new MutationObserver(function () {
+      var texto = document.querySelector("#jogo .ejs_loading_text");
+      if (!texto || jogando) return;
+      if (texto.classList.contains("ejs_error_text")) {
+        vigia.disconnect();
+        falhou(texto.textContent.replace(/\s+/g, " ").trim() || "O emulador não conseguiu abrir este jogo.");
+      } else if (texto.textContent.trim()) {
+        mostrar(texto.textContent.trim(), undefined);
+      }
+    });
+    vigia.observe(document.getElementById("jogo"), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["class"] });
   }
 
-  // aberta na tela inteira (PSP, DOS, ou "Abrir numa aba"): o caminho de volta para a página do jogo
-  var voltar = document.querySelector("[data-emu-voltar]");
-  if (voltar && window.self === window.top) voltar.hidden = false;
+  /* ---------------------------------------------------------------- tela cheia e celular deitado */
+  var raiz = document.documentElement;
+  var podeTelaCheia = !!(raiz.requestFullscreen || raiz.webkitRequestFullscreen);
+  function emTelaCheia() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function entrarTelaCheia() {
+    var pedido = raiz.requestFullscreen ? raiz.requestFullscreen({ navigationUI: "hide" }) : raiz.webkitRequestFullscreen();
+    return Promise.resolve(pedido).then(function () {
+      if (!celular || !screen.orientation || !screen.orientation.lock) return;
+      return screen.orientation.lock(emPe ? "portrait" : "landscape").catch(function () { /* o aparelho não deixa */ });
+    });
+  }
+  function sairTelaCheia() {
+    if (document.exitFullscreen) return document.exitFullscreen();
+    if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+  }
+  function atualizarBotaoCheia() {
+    var cheia = emTelaCheia();
+    corpo.classList.toggle("is-tela-cheia", cheia);
+    var icone = botaoCheia.querySelector("use");
+    if (icone) icone.setAttribute("href", cheia ? "#i-sair-cheia" : "#i-cheia");
+    botaoCheia.querySelector("[data-pl-tela-cheia-texto]").textContent = cheia ? "Sair da tela cheia" : "Tela cheia";
+  }
+  botaoCheia.addEventListener("click", function () {
+    if (!podeTelaCheia) {
+      // o iPhone não deixa um site ocupar a tela toda; o atalho na tela de início deixa
+      avisar("No iPhone: toque em Compartilhar e em “Adicionar à Tela de Início”. Aberto por lá, o jogo ocupa a tela toda.", 7000);
+      return;
+    }
+    if (emTelaCheia()) sairTelaCheia(); else entrarTelaCheia().catch(function () {});
+  });
+  document.addEventListener("fullscreenchange", atualizarBotaoCheia);
+  document.addEventListener("webkitfullscreenchange", atualizarBotaoCheia);
+
+  var girarIgnorado = false;
+  function conferirGiro() {
+    if (!girar) return;
+    var precisa = celular && !emPe && !girarIgnorado && consulta("(orientation: portrait)");
+    girar.hidden = !precisa;
+  }
+  if (girar) {
+    $("[data-pl-girar-ignorar]").addEventListener("click", function () { girarIgnorado = true; conferirGiro(); });
+    window.addEventListener("resize", conferirGiro);
+    window.addEventListener("orientationchange", conferirGiro);
+  }
+
+  /* As teclas vão para o quadro do emulador (#jogo) só quando ele está com o foco: depois
+     de um clique na interface do site, o foco volta para o jogo -- senão o Enter (Start)
+     apertaria de novo o último botão clicado. */
+  function devolverFoco() {
+    if (!jogando || (painel && !painel.hidden)) return;
+    var quadro = document.getElementById("jogo");
+    if (quadro) quadro.focus({ preventScroll: true });
+  }
+  barra.addEventListener("click", function (e) {
+    if (e.target.closest("button") && e.detail > 0) setTimeout(devolverFoco, 0); // clique de mouse ou toque
+  });
+
+  /* ---------------------------------------------------------------- a barra de cima */
+  var tempoBarra = null;
+  var alca = null;
+  function esconderBarra() {
+    if (!jogando || (painel && !painel.hidden) || barra.matches(":hover") || barra.contains(document.activeElement)) return;
+    barra.classList.add("is-escondida");
+    if (alca) alca.hidden = false;
+  }
+  function mostrarBarra(tempo) {
+    barra.classList.remove("is-escondida");
+    if (alca) alca.hidden = true;
+    clearTimeout(tempoBarra);
+    tempoBarra = setTimeout(esconderBarra, tempo || (celular ? 4000 : 2600));
+  }
+  if (celular) {
+    // no celular a barra volta por uma alça no alto (um toque no jogo é botão do controle)
+    alca = document.createElement("button");
+    alca.type = "button";
+    alca.className = "pl-alca";
+    alca.hidden = true;
+    alca.setAttribute("aria-label", "Mostrar a barra (Voltar, Comandos, Tela cheia)");
+    alca.addEventListener("click", function () { mostrarBarra(); });
+    corpo.appendChild(alca);
+  } else {
+    document.addEventListener("mousemove", function () { if (jogando) mostrarBarra(); }, { passive: true });
+  }
+  barra.addEventListener("focusin", function () { mostrarBarra(8000); });
+
+  /* "Salvar e ajustes": a barra do emulador (salvar e carregar o jogo, som, filtro de imagem) */
+  if (botaoMenu) {
+    botaoMenu.hidden = true;
+    botaoMenu.addEventListener("click", function () {
+      var emu = window.EJS_emulator;
+      if (emu && emu.menu) emu.menu.open(); // ela some sozinha depois de uns segundos
+    });
+  }
+
+  /* ---------------------------------------------------------------- os comandos */
+  var abas = painel ? Array.prototype.slice.call(painel.querySelectorAll("[data-pl-aba]")) : [];
+  var lista = painel && painel.querySelector("[data-pl-lista]");
+  function escolherAba(qual, focar) {
+    if (!lista) return;
+    abas.forEach(function (aba) {
+      var ativa = aba.dataset.plAba === qual;
+      aba.setAttribute("aria-selected", ativa ? "true" : "false");
+      aba.tabIndex = ativa ? 0 : -1;
+      if (ativa) lista.setAttribute("aria-labelledby", aba.id);
+      if (ativa && focar) aba.focus();
+    });
+    lista.className = "pl-lista pl-lista--" + qual;
+    Array.prototype.forEach.call(painel.querySelectorAll("[data-pl-dica]"), function (p) { p.hidden = p.dataset.plDica !== qual; });
+  }
+  abas.forEach(function (aba, i) {
+    aba.addEventListener("click", function () { escolherAba(aba.dataset.plAba); });
+    aba.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      escolherAba(abas[(i + (e.key === "ArrowRight" ? 1 : abas.length - 1)) % abas.length].dataset.plAba, true);
+    });
+  });
+  function controleLigado() {
+    try {
+      return Array.prototype.some.call(navigator.getGamepads ? navigator.getGamepads() : [], function (g) { return g && g.connected; });
+    } catch (e) { return false; }
+  }
+  escolherAba(controleLigado() ? "controle" : celular ? "celular" : "teclado");
+
+  var pausadoPeloPainel = false;
+  function abrirComandos(abrir) {
+    if (!painel) return;
+    painel.hidden = !abrir;
+    botaoComandos.setAttribute("aria-expanded", abrir ? "true" : "false");
+    var emu = window.EJS_emulator;
+    // o jogo espera enquanto a pessoa lê (e volta de onde parou)
+    try {
+      if (abrir && jogando && emu && !emu.paused) { emu.pause(); pausadoPeloPainel = true; }
+      if (!abrir && pausadoPeloPainel && emu) { emu.play(); pausadoPeloPainel = false; }
+    } catch (e) { pausadoPeloPainel = false; }
+    if (abrir) {
+      escolherAba(controleLigado() ? "controle" : celular ? "celular" : (lista.className.split("--")[1] || "teclado"));
+      painel.querySelector("[data-pl-fechar-comandos]").focus();
+      mostrarBarra(60000);
+    } else {
+      mostrarBarra();
+      devolverFoco();
+    }
+  }
+  if (painel && botaoComandos) {
+    botaoComandos.addEventListener("click", function () { abrirComandos(painel.hidden); });
+    painel.querySelector("[data-pl-fechar-comandos]").addEventListener("click", function () { abrirComandos(false); });
+    painel.addEventListener("click", function (e) { if (e.target === painel) abrirComandos(false); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !painel.hidden) { e.stopPropagation(); abrirComandos(false); }
+    }, true);
+  }
+
+  /* ---------------------------------------------------------------- o controle de Xbox */
+  window.addEventListener("gamepadconnected", function (e) {
+    var nome = (e.gamepad && e.gamepad.id || "").replace(/\s*\(.*$/, "").trim();
+    avisar("Controle conectado" + (nome ? ": " + nome : "") + ". Já pode jogar com ele.", 4500);
+    if (painel && !painel.hidden) escolherAba("controle");
+    if (!jogando && !pronto.hidden) dicaPronto.textContent = "Aperte A no controle ou toque em Jogar.";
+  });
+  window.addEventListener("gamepadconnected", function () {
+    var emu = window.EJS_emulator;
+    if (celular && jogando && emu && emu.virtualGamepad) emu.virtualGamepad.style.display = "none";
+  });
+  window.addEventListener("gamepaddisconnected", function () {
+    avisar("Controle desconectado." + (celular ? " O controle da tela voltou." : ""), 3000);
+    var emu = window.EJS_emulator;
+    if (celular && jogando && emu && emu.virtualGamepad && !controleLigado()) emu.virtualGamepad.style.display = "";
+  });
+
+  /* ---------------------------------------------------------------- o controle do seu jeito (HUD)
+     Como nos jogos de celular: arrastar cada botão, aumentar um só ou todos, e a
+     transparência. Fica guardado no aparelho, por console (o do PlayStation é um,
+     o do Super Nintendo é outro). As peças mudam pelas propriedades "translate" e
+     "scale" do CSS: o emulador mede o botão a cada toque, então ele continua
+     respondendo no lugar novo. */
+  var hud = $("[data-pl-hud]");
+  var botaoHud = $("[data-pl-hud-abrir]");
+  var CHAVE_HUD = "ls-hud-v1-" + config.core;
+  var ajuste = { escala: 1, opacidade: 1, pecas: {} };
+  try { ajuste = Object.assign(ajuste, JSON.parse(localStorage.getItem(CHAVE_HUD) || "{}")); } catch (e) { /* padrão */ }
+  var pecas = [];        // [{el, chave, nome}]
+  var escolhida = null;
+  var editando = false;
+
+  function acharPecas() {
+    var pai = document.querySelector("#jogo .ejs_virtualGamepad_parent");
+    if (!pai) return [];
+    var vistas = {};
+    var lista = [];
+    Array.prototype.forEach.call(pai.querySelectorAll("[class*='b_']"), function (el) {
+      var classe = Array.prototype.filter.call(el.classList, function (c) { return c.indexOf("b_") === 0; })[0];
+      if (!classe) return;
+      // o direcional: o que se vê e se toca é a cruz de dentro
+      var alvo = el.classList.contains("ejs_virtualGamepad_button") ? el : (el.querySelector(".ejs_dpad_main") || el);
+      var chave = classe + (vistas[classe] ? "-" + (vistas[classe] + 1) : "");
+      vistas[classe] = (vistas[classe] || 0) + 1;
+      var nome = el.classList.contains("ejs_virtualGamepad_button") ? "botão " + (el.textContent || "").trim()
+        : alvo.classList.contains("ejs_dpad_main") ? "direcional" : "analógico";
+      alvo.setAttribute("data-pl-peca", chave);
+      lista.push({ el: alvo, chave: chave, nome: nome });
+    });
+    return lista;
+  }
+  function aplicarPeca(p) {
+    var a = ajuste.pecas[p.chave] || {};
+    p.el.style.translate = (a.x || a.y) ? (a.x || 0) + "px " + (a.y || 0) + "px" : "";
+    var escala = (a.s || 1) * (ajuste.escala || 1);
+    p.el.style.scale = escala === 1 ? "" : String(escala);
+  }
+  function aplicarHud() {
+    if (!pecas.length) pecas = acharPecas();
+    pecas.forEach(aplicarPeca);
+    var pai = document.querySelector("#jogo .ejs_virtualGamepad_parent");
+    if (pai) pai.style.opacity = ajuste.opacidade < 1 ? String(ajuste.opacidade) : "";
+  }
+  function guardarHud() {
+    try { localStorage.setItem(CHAVE_HUD, JSON.stringify(ajuste)); } catch (e) { /* só não guarda */ }
+  }
+
+  var faixaTamanho = hud && hud.querySelector("[data-pl-hud-tamanho]");
+  var faixaOpacidade = hud && hud.querySelector("[data-pl-hud-opacidade]");
+  function mostrarFaixas() {
+    var nome = hud.querySelector("[data-pl-hud-tamanho-nome]");
+    var valor = escolhida ? ((ajuste.pecas[escolhida.chave] || {}).s || 1) : (ajuste.escala || 1);
+    nome.textContent = escolhida ? "Tamanho do " + escolhida.nome : "Tamanho de todos";
+    faixaTamanho.value = Math.round(valor * 100);
+    hud.querySelector("[data-pl-hud-tamanho-valor]").textContent = Math.round(valor * 100) + "%";
+    faixaOpacidade.value = Math.round((ajuste.opacidade || 1) * 100);
+    hud.querySelector("[data-pl-hud-opacidade-valor]").textContent = Math.round((ajuste.opacidade || 1) * 100) + "%";
+  }
+  function escolher(p) {
+    pecas.forEach(function (x) { x.el.classList.toggle("is-escolhida", x === p); });
+    escolhida = p;
+    mostrarFaixas();
+  }
+
+  /* arrastar: o toque não chega ao emulador enquanto se edita (o jogo está parado) */
+  var arrasto = null;
+  function pecaDoToque(alvo) {
+    var el = alvo && alvo.closest ? alvo.closest("[data-pl-peca]") : null;
+    return el ? pecas.filter(function (p) { return p.el === el; })[0] : null;
+  }
+  function bloquearToque(e) {
+    if (!editando || (hud && hud.contains(e.target))) return;
+    e.stopPropagation();
+    if (e.cancelable) e.preventDefault();
+  }
+  ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(function (tipo) {
+    document.addEventListener(tipo, bloquearToque, { capture: true, passive: false });
+  });
+  document.addEventListener("pointerdown", function (e) {
+    if (!editando || hud.contains(e.target)) return;
+    var p = pecaDoToque(e.target);
+    if (!p) { escolher(null); return; }
+    var a = ajuste.pecas[p.chave] || {};
+    arrasto = { p: p, x0: e.clientX, y0: e.clientY, x: a.x || 0, y: a.y || 0, mexeu: false, id: e.pointerId };
+    e.preventDefault();
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!arrasto || e.pointerId !== arrasto.id) return;
+    var dx = e.clientX - arrasto.x0, dy = e.clientY - arrasto.y0;
+    if (!arrasto.mexeu && Math.abs(dx) + Math.abs(dy) < 6) return;
+    arrasto.mexeu = true;
+    var a = ajuste.pecas[arrasto.p.chave] = ajuste.pecas[arrasto.p.chave] || {};
+    a.x = Math.round(arrasto.x + dx);
+    a.y = Math.round(arrasto.y + dy);
+    aplicarPeca(arrasto.p);
+    // não deixa sair da tela
+    var r = arrasto.p.el.getBoundingClientRect();
+    var ajusteX = r.left < 0 ? -r.left : r.right > innerWidth ? innerWidth - r.right : 0;
+    var ajusteY = r.top < 0 ? -r.top : r.bottom > innerHeight ? innerHeight - r.bottom : 0;
+    if (ajusteX || ajusteY) { a.x += Math.round(ajusteX); a.y += Math.round(ajusteY); aplicarPeca(arrasto.p); }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!arrasto || e.pointerId !== arrasto.id) return;
+    if (!arrasto.mexeu) escolher(arrasto.p); // um toque sem arrastar escolhe a peça
+    arrasto = null;
+  }, true);
+
+  function abrirHud() {
+    if (!hud || !jogando) return;
+    pecas = acharPecas();
+    if (!pecas.length) { avisar("Este jogo usa o controle de toque do próprio console."); return; }
+    editando = true;
+    corpo.classList.add("pl-editando");
+    hud.hidden = false;
+    var emu = window.EJS_emulator;
+    try { if (emu && !emu.paused) { emu.pause(); pausadoPeloPainel = true; } } catch (e) { /* segue */ }
+    escolher(null);
+  }
+  function fecharHud() {
+    editando = false;
+    arrasto = null;
+    corpo.classList.remove("pl-editando");
+    hud.hidden = true;
+    escolher(null);
+    guardarHud();
+    var emu = window.EJS_emulator;
+    try { if (pausadoPeloPainel && emu) { emu.play(); pausadoPeloPainel = false; } } catch (e) { pausadoPeloPainel = false; }
+    // o analógico (nipplejs) mede a área dele de novo
+    window.dispatchEvent(new Event("resize"));
+    devolverFoco();
+    avisar("Controle guardado neste aparelho.", 2500);
+  }
+  if (hud && botaoHud) {
+    botaoHud.addEventListener("click", abrirHud);
+    hud.querySelector("[data-pl-hud-pronto]").addEventListener("click", fecharHud);
+    hud.querySelector("[data-pl-hud-restaurar]").addEventListener("click", function () {
+      ajuste = { escala: 1, opacidade: 1, pecas: {} };
+      aplicarHud();
+      escolher(null);
+    });
+    faixaTamanho.addEventListener("input", function () {
+      var v = Number(faixaTamanho.value) / 100;
+      if (escolhida) {
+        var a = ajuste.pecas[escolhida.chave] = ajuste.pecas[escolhida.chave] || {};
+        a.s = v;
+      } else {
+        ajuste.escala = v;
+      }
+      aplicarHud();
+      mostrarFaixas();
+    });
+    faixaOpacidade.addEventListener("input", function () {
+      ajuste.opacidade = Number(faixaOpacidade.value) / 100;
+      aplicarHud();
+      mostrarFaixas();
+    });
+  }
+
+  /* ---------------------------------------------------------------- começar */
+  var bytesProntos = null;
+  var comecando = false;
+  function jogar() {
+    if (comecando || !bytesProntos) return;
+    comecando = true;
+    pronto.hidden = true;
+    mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
+    var depois = function () {
+      var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
+      var jogo = bytesProntos[principal.caminho];
+      delete bytesProntos[principal.caminho];
+      var externos = bytesProntos;
+      bytesProntos = null;
+      ligarEmulador(jogo, externos);
+    };
+    // no celular, o toque abre a tela cheia deitada; o emulador liga logo depois
+    if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().then(depois, depois);
+    else depois();
+  }
+  botaoJogar.addEventListener("click", jogar);
+  document.addEventListener("keydown", function (e) {
+    if (!jogando && !pronto.hidden && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); jogar(); }
+  });
+  // o controle também começa: o botão de baixo (A no Xbox) na tela do Jogar
+  function olharControle() {
+    if (jogando || comecando) return;
+    if (!pronto.hidden) {
+      try {
+        var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (var i = 0; i < pads.length; i++) {
+          if (pads[i] && pads[i].buttons && pads[i].buttons[0] && pads[i].buttons[0].pressed) { jogar(); return; }
+        }
+      } catch (e) { /* sem controle */ }
+    }
+    requestAnimationFrame(olharControle);
+  }
+
+  function comecou() {
+    jogando = true;
+    var emu = window.EJS_emulator;
+    if (celular && emu && emu.virtualGamepad) {
+      emu.touch = true;
+      // com um controle de verdade ligado no celular, o da tela sai da frente
+      emu.virtualGamepad.style.display = controleLigado() ? "none" : "";
+    }
+    corpo.classList.remove("is-abrindo");
+    corpo.classList.add("is-jogando");
+    abertura.classList.add("is-saindo");
+    setTimeout(function () { abertura.hidden = true; }, 500);
+    if (botaoMenu) botaoMenu.hidden = false;
+    aplicarImagem();
+    var botaoImagem = $("[data-pl-imagem]");
+    if (botaoImagem) {
+      botaoImagem.hidden = false;
+      botaoImagem.addEventListener("click", function () {
+        imagemOriginal = !imagemOriginal;
+        try { localStorage.setItem(CHAVE_IMAGEM, imagemOriginal ? "original" : "tela-toda"); } catch (e) { /* só não guarda */ }
+        aplicarImagem();
+        avisar(imagemOriginal ? "Imagem no formato original do console." : "Imagem na tela toda.", 2200);
+      });
+    }
+    // o controle da tela do jeito que a pessoa deixou (e o botão para ajustar)
+    if (celular && emu && emu.virtualGamepad) {
+      aplicarHud();
+      if (botaoHud) botaoHud.hidden = !pecas.length;
+    }
+    mostrarBarra(celular ? 5000 : 3500);
+    // cada botão do controle da tela: o ícone do que ele faz (o mesmo em todo jogo) e,
+    // quando a equipe disse o que ele faz neste jogo, o texto embaixo da letra
+    var svgNS = "http://www.w3.org/2000/svg";
+    Object.keys(config.legendas || {}).forEach(function (id) {
+      var rotulo = config.legendas[id] || {};
+      Array.prototype.forEach.call(document.querySelectorAll("#jogo .ejs_virtualGamepad_button.b_" + id), function (el) {
+        if (rotulo.texto) el.setAttribute("data-acao", rotulo.texto);
+        if (rotulo.icone && !el.querySelector(".pl-selo")) {
+          var selo = document.createElementNS(svgNS, "svg");
+          selo.setAttribute("class", "pl-selo");
+          selo.setAttribute("aria-hidden", "true");
+          var uso = document.createElementNS(svgNS, "use");
+          uso.setAttribute("href", "#a-" + rotulo.icone);
+          selo.appendChild(uso);
+          el.appendChild(selo);
+        }
+      });
+    });
+    // o menu de ajustes sem as "opções do núcleo" (nomes de variável em inglês)
+    Array.prototype.forEach.call(document.querySelectorAll("#jogo .ejs_settings_main_bar"), function (el) {
+      if (/núcleo|Backend Core/i.test(el.textContent)) el.style.display = "none";
+    });
+    devolverFoco();
+    if (painel) {
+      avisar(controleLigado() ? "Controle conectado. Em Comandos, lá em cima, você vê o que cada botão faz."
+        : celular ? "Comandos e Tela cheia ficam no alto: toque na alça para mostrar."
+          : "Em Comandos, lá em cima, você vê o que cada botão faz.", 4500);
+    }
+  }
+
+  /* ---------------------------------------------------------------- abrir */
+  conferirGiro();
   if (config.threads && typeof window.SharedArrayBuffer !== "function") {
-    mostrar("Este navegador não libera o modo que o " + (config.core === "psp" ? "PSP" : "DOS") +
+    falhou("Este navegador não libera o modo que o " + (config.core === "psp" ? "PSP" : "DOS") +
       " precisa. Abra no Chrome, no Edge, no Firefox ou no Safari atualizados.");
-    document.body.appendChild(aviso);
     return;
   }
-
-  document.body.appendChild(aviso);
   mostrar("Abrindo o jogo…", 0);
+  adiantarEmulador();
   pegar(config.arquivos).then(function (bytes) {
-    var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
-    var jogo = bytes[principal.caminho];
-    delete bytes[principal.caminho];
-    aviso.remove();
-    ligarEmulador(jogo, bytes);
+    bytesProntos = bytes;
+    mostrar("Pronto!", 100);
+    progresso.hidden = true;
+    pronto.hidden = false;
+    dicaPronto.textContent = controleLigado() ? "Aperte A no controle ou toque em Jogar."
+      : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
+        : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";
+    botaoJogar.focus({ preventScroll: true });
+    requestAnimationFrame(olharControle);
   }, function (erro) {
-    mostrar("Não deu para baixar o jogo — " + erro.message + ". Recarregue a página para tentar de novo.");
+    falhou("Não deu para baixar o jogo — " + erro.message + ".");
   });
 })();

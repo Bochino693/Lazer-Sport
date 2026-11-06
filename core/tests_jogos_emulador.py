@@ -378,8 +378,15 @@ class EmuladorNoSiteTests(TestCase):
         self.assertIn("No computador", html)
         self.assertIn("No celular", html)
         # o ✕ do PlayStation é a tecla X; o △, a tecla A (o mapa do próprio emulador)
-        self.assertIn('<li class="jc-tecla"><span>✕</span><div><kbd>X</kbd></div></li>', html)
-        self.assertIn('<li class="jc-tecla"><span>△</span><div><kbd>A</kbd></div></li>', html)
+        # o botão, o que ele FAZ e a tecla
+        # o botão, o ícone e o que ele FAZ, e a tecla
+        self.assertIn('<li class="jc-tecla"><span>✕</span><em class="jc-funcao"><svg class="jc-ico" aria-hidden="true">'
+                      '<use href="#a-confirmar"/></svg>Confirmar e ação principal</em><div><kbd>X</kbd></div></li>', html)
+        self.assertIn('<use href="#a-atacar"/></svg>Ação 3 (atacar, usar)</em><div><kbd>S</kbd></div></li>', html)
+        self.assertIn('<symbol id="a-pular"', html)  # os desenhos vão junto com a página
+        # e no controle de Xbox: o ✕ no botão de baixo (A)
+        self.assertIn('<kbd class="jc-xb jc-xb-a">A</kbd>', html)
+        self.assertIn("Controle de Xbox", html)
         self.assertIn("o controle do PlayStation (PS1)", html)
         # e o botão "Comandos" sobre o jogo, que vale em tela cheia
         self.assertIn("data-jogo-comandos-botao", html)
@@ -394,7 +401,19 @@ class EmuladorNoSiteTests(TestCase):
         self.assertContains(portal, '<span class="bj-sigla">PS1</span>')
         # a ficha da biblioteca ensina os comandos do PS1, tecla por tecla
         controles = portal.context["dados_da_biblioteca"]["controles"]["psx"]
-        self.assertIn({"acao": "✕", "teclas": ["X"], "celular": "✕, à direita"}, controles)
+        self.assertIn({"acao": "✕", "funcao": "Confirmar e ação principal", "do_jogo": False, "icone": "confirmar",
+                       "teclas": ["X"], "celular": "✕, à direita", "controle": ["A"]}, controles)
+
+    def test_o_super_nintendo_leva_o_endereco_do_nucleo_e_a_qualidade(self):
+        JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="snes", particular=True)
+        config = config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))
+        self.assertEqual(config["nucleo"], "snes9x")
+        self.assertTrue(config["nucleoExterno"].startswith("https://cdn.jsdelivr.net/npm/@emulatorjs/core-snes9x@"))
+        # no celular o filtro leve; no computador o SABR, mais caprichado
+        self.assertEqual(config["opcoes"]["shader"], "2xScaleHQ.glslp")
+        self.assertEqual(config["opcoesNoComputador"]["shader"], "sabr")
+        JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="psx")
+        self.assertEqual(config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["nucleoExterno"], "")
 
     def test_psp_e_dos_abrem_na_pagina_isolada_e_os_outros_no_quadro(self):
         url = reverse("jogo_emulador", args=["disco-teste"])
@@ -408,7 +427,10 @@ class EmuladorNoSiteTests(TestCase):
         config = self.config(isolada)
         self.assertTrue(config["threads"])
         self.assertEqual(config["voltar"], reverse("jogo", args=["disco-teste"]))
-        self.assertContains(isolada, "data-emu-voltar")
+        # o reprodutor: Voltar, Comandos e Tela cheia por cima do jogo
+        self.assertContains(isolada, "data-pl-voltar")
+        self.assertContains(isolada, "data-pl-tela-cheia")
+        self.assertContains(isolada, "Controle Xbox")
         pagina = self.client.get(reverse("jogo", args=["disco-teste"]))
         self.assertContains(pagina, 'data-jogo-tela-propria="1"')
         # o adiantamento do núcleo pede o de várias linhas e os arquivos de apoio do PPSSPP
@@ -441,7 +463,11 @@ class EmuladorNoSiteTests(TestCase):
         self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")  # nem para a equipe, no portal
 
     def test_so_o_n64_troca_as_teclas_do_emulador(self):
-        self.assertIsNone(config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["controles"])
+        normal = config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["controles"]["0"]
+        self.assertEqual(normal["4"]["value"], "up arrow")  # nos outros, as setas são a cruz
+        # o controle de Xbox pela posição: o botão de baixo (A) é o de baixo do console
+        self.assertEqual(normal["0"]["value2"], "BUTTON_1")
+        self.assertEqual(normal["8"]["value2"], "BUTTON_2")
         JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="n64")
         controles = config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["controles"]
         jogador = controles["0"]
@@ -663,3 +689,169 @@ class ParticularTests(SimpleTestCase):
         an = analisar(E("jogo.min", bytes(512)))
         self.assertFalse(an.ok)
         self.assertTrue(any("Pokémon Mini" in e for e in an.erros), an.erros)
+
+
+def _rom_snes(copiadora=False, soma_certa=True):
+    """Uma ROM LoROM de 512 KB com o cabeçalho interno do Super Nintendo em 0x7FC0."""
+    rom = bytearray(512 * 1024)
+    rom[0x7FC0:0x7FC0 + 21] = b"SUPER MARIOWORLD".ljust(21)
+    rom[0x7FD5] = 0x20  # LoROM
+    soma = 0x1234 if soma_certa else 0x1111
+    complemento = soma ^ 0xFFFF if soma_certa else 0x2222
+    rom[0x7FDC:0x7FE0] = bytes([complemento & 0xFF, complemento >> 8, soma & 0xFF, soma >> 8])
+    return (bytes(512) if copiadora else b"") + bytes(rom)
+
+
+class FichaDoArquivoTests(SimpleTestCase):
+    """O painel diz o que o cabeçalho do jogo diz: é o que ajuda a achar o problema."""
+
+    def test_super_nintendo_titulo_mapa_copiadora_e_soma(self):
+        an = emu.analisar([E("mario.smc", _rom_snes(copiadora=True))], "", ligados=emu.sistemas_para(True))
+        self.assertEqual(an.sistema, "snes")
+        ficha = " ".join(an.ficha)
+        self.assertIn("“SUPER MARIOWORLD”", ficha)
+        self.assertIn("LoROM", ficha)
+        self.assertIn("copiadora de 512 bytes", ficha)
+        self.assertIn("Soma de verificação certa", ficha)
+        an = emu.analisar([E("mario-hack.sfc", _rom_snes(soma_certa=False))], "snes", ligados=emu.sistemas_para(True))
+        self.assertIn("não bate", " ".join(an.ficha))
+        self.assertIn("ficha", an.para_json())
+
+    def test_mega_drive_titulo_e_regiao_e_o_smd(self):
+        rom = bytearray(256 * 1024)
+        rom[0x100:0x110] = b"SEGA MEGA DRIVE "
+        rom[0x150:0x150 + 20] = b"SONIC THE HEDGEHOG  "
+        rom[0x1F0:0x1F3] = b"JUE"
+        an = emu.analisar([E("sonic.md", bytes(rom))], "", ligados=emu.sistemas_para(True))
+        self.assertEqual(an.sistema, "segaMD")
+        ficha = " ".join(an.ficha)
+        self.assertIn("“SONIC THE HEDGEHOG”", ficha)
+        self.assertIn("Japão, EUA, Europa", ficha)
+        smd = emu.analisar([E("sonic.smd", bytes(512) + bytes(16384 * 4))], "segaMD", ligados=emu.sistemas_para(True))
+        self.assertIn(".smd", " ".join(smd.ficha))
+
+    def test_nes_mostra_o_mapper(self):
+        self.assertIn("mapper 0", " ".join(analisar(E("jogo.nes", NES)).ficha))
+
+
+class NucleoEQualidadeTests(SimpleTestCase):
+    def test_o_nucleo_que_nao_mora_no_site_vem_do_pacote_oficial(self):
+        self.assertEqual(emu.origem_do_nucleo("snes"), "https://cdn.jsdelivr.net/npm/@emulatorjs/core-snes9x@4.2.3/")
+        self.assertEqual(emu.origem_do_nucleo("segaMD"), "https://cdn.jsdelivr.net/npm/@emulatorjs/core-genesis_plus_gx@4.2.3/")
+        self.assertEqual(emu.origem_do_nucleo("psx"), "")  # mora no site
+
+    def test_filtro_de_imagem_e_o_nucleo_certo(self):
+        self.assertEqual(emu.opcoes_do_emulador("snes")["shader"], "2xScaleHQ.glslp")
+        self.assertEqual(emu.opcoes_no_computador("snes")["shader"], "sabr")
+        self.assertEqual(emu.opcoes_do_emulador("psx")["shader"], "bicubic")
+        self.assertNotIn("shader", emu.opcoes_no_computador("psx"))
+        self.assertEqual(emu.opcoes_no_computador("psp")["ppsspp_internal_resolution"], "960x544")
+        self.assertEqual(emu.opcoes_do_emulador("psx")["pcsx_rearmed_dithering"], "disabled")
+        # no Master System o emulador escolheria o smsplus por conta própria
+        self.assertEqual(emu.opcoes_do_emulador("segaMS")["retroarch_core"], "genesis_plus_gx")
+        self.assertNotIn("retroarch_core", emu.opcoes_do_emulador("n64"))
+        self.assertEqual(emu.RESOLUCAO_NO_COMPUTADOR["psp"]["ppsspp_internal_resolution"], "960x544")
+
+    def test_o_portugues_do_emulador_tem_todos_os_textos(self):
+        import re
+        from django.contrib.staticfiles import finders
+
+        js = open(finders.find("vendor/emulatorjs/data/emulator.min.js"), encoding="utf-8", errors="replace").read()
+        pt = json.load(open(finders.find("vendor/emulatorjs/data/localization/pt-BR.json"), encoding="utf-8"))
+        usados = {u for u in re.findall(r'localization\("([^"]+)"', js) if "\\u" not in u}
+        self.assertEqual(sorted(u for u in usados if u not in pt), [])
+        self.assertEqual(pt["Shaders"], "Filtro de imagem")
+        self.assertEqual(pt["Save State"], "Salvar o jogo")
+
+
+class TresAparelhosTests(SimpleTestCase):
+    """Teclado, celular e controle de Xbox: cada comando diz onde fica em cada um."""
+
+    def test_o_controle_de_xbox_vai_pela_posicao_dos_botoes(self):
+        snes = {c["acao"]: c["controle"] for c in emu.controles_do_sistema("snes")}
+        self.assertEqual(snes["B"], ["A"])  # o pulo do Super Nintendo no botão de baixo do Xbox
+        self.assertEqual(snes["Y"], ["X"])
+        self.assertEqual(snes["L / R"], ["LB", "RB"])
+        self.assertEqual(snes["Start"], ["Menu"])
+        psx = {c["acao"]: c["controle"] for c in emu.controles_do_sistema("psx")}
+        self.assertEqual(psx["✕"], ["A"])
+        self.assertEqual(psx["△"], ["Y"])
+        self.assertEqual(psx["L2 / R2"], ["LT", "RT"])
+        n64 = {c["acao"]: c["controle"] for c in emu.controles_do_sistema("n64")}
+        self.assertEqual(n64["Analógico"], ["Analógico esquerdo"])
+        self.assertEqual(n64["Botões C"], ["Analógico direito"])
+        fliperama = {c["acao"]: c["controle"] for c in emu.controles_do_sistema("arcade")}
+        self.assertEqual(fliperama["Botões 1 a 4"], ["A", "B", "X", "Y"])
+        self.assertEqual(emu.controles_do_sistema("mame"), emu.controles_do_sistema("arcade"))
+
+    def test_o_teclado_e_o_controle_batem_com_o_que_o_emulador_recebe(self):
+        for codigo in emu.SISTEMAS:
+            jogador = emu.controles_do_emulador(codigo)["0"]
+            mapa = emu._TECLA_DO_RETROPAD_ANALOGICO if codigo in emu.ANALOGICO_NAS_SETAS else emu._TECLA_DO_RETROPAD
+            for c in emu.controles_do_sistema(codigo):
+                for tecla in c["teclas"]:
+                    if tecla not in mapa:
+                        continue
+                    nome = {"↑": "up arrow", "↓": "down arrow", "←": "left arrow", "→": "right arrow"}.get(tecla, tecla.lower())
+                    with self.subTest(sistema=codigo, comando=c["acao"], tecla=tecla):
+                        self.assertEqual(jogador[str(mapa[tecla])]["value"], nome)
+
+    def test_o_controle_da_tela_tem_os_nomes_do_console_e_a_legenda_do_jogo(self):
+        desenho, legendas = emu.gamepad_na_tela("psx", emu.ler_acoes("X: Pular\nquadrado: Atacar", "psx"))
+        textos = [b.get("text") for b in desenho if b["type"] == "button"]
+        for simbolo in ("△", "□", "○", "✕", "L1", "R1", "L2", "R2", "START", "SELECT"):
+            self.assertIn(simbolo, textos)
+        self.assertNotIn("Fast", textos)  # nada de "Fast/Slow/Rewind" no meio da tela
+        self.assertEqual(legendas["xis"], {"icone": "pular", "texto": "Pular"})
+        self.assertEqual(legendas["quadrado"], {"icone": "atacar", "texto": "Atacar"})
+        self.assertEqual(legendas["bola"], {"icone": "voltar", "texto": ""})  # o costume do console, sem texto
+        # o botão aperta o que a tecla aperta (o mesmo número do RetroPad)
+        xis = next(b for b in desenho if b.get("id") == "xis")
+        self.assertEqual(xis["input_value"], emu._TECLA_DO_RETROPAD["X"])
+        # o EmulatorJS ignora posição 0: nenhum botão vai com 0
+        for b in desenho:
+            for lado in ("left", "top", "right"):
+                self.assertNotEqual(b.get(lado), 0)
+        self.assertEqual(emu.gamepad_na_tela("dos"), (None, {}))  # o do emulador
+
+    def test_cada_botao_da_tela_aperta_o_mesmo_que_o_teclado(self):
+        for codigo, desenho in emu.GAMEPAD_NA_TELA.items():
+            teclas = {c["acao"]: c["teclas"] for c in emu.controles_do_sistema(codigo)}
+            for b in desenho:
+                if b["type"] != "button" or not b.get("acao") or b["acao"] not in teclas:
+                    continue
+                valores = {emu._TECLA_DO_RETROPAD.get(t) for t in teclas[b["acao"]]}
+                with self.subTest(sistema=codigo, botao=b["text"]):
+                    self.assertIn(b["input_value"], valores)
+
+
+class IconesDasAcoesTests(SimpleTestCase):
+    """A mesma ação, o mesmo ícone, em todo jogo."""
+
+    def test_o_icone_sai_da_primeira_acao_do_texto(self):
+        self.assertEqual(emu.icone_da_funcao("Pular"), "pular")
+        self.assertEqual(emu.icone_da_funcao("Pular e confirmar (na maioria)"), "pular")
+        self.assertEqual(emu.icone_da_funcao("Correr, pegar e atirar"), "correr")
+        self.assertEqual(emu.icone_da_funcao("Soco forte"), "atacar")
+        self.assertEqual(emu.icone_da_funcao("Chutar"), "atacar")
+        self.assertEqual(emu.icone_da_funcao("Atirar"), "atirar")
+        self.assertEqual(emu.icone_da_funcao("Defender"), "defender")
+        self.assertEqual(emu.icone_da_funcao("Pôr ficha (créditos)"), "ficha")
+        self.assertEqual(emu.icone_da_funcao("Ação 1"), "")
+
+    def test_o_pular_do_mario_e_o_do_sonic_sao_o_mesmo(self):
+        snes = emu.gamepad_na_tela("snes", emu.ler_acoes("B: Pular", "snes"))[1]
+        mega = emu.gamepad_na_tela("segaMD", emu.ler_acoes("C: Pular", "segaMD"))[1]
+        self.assertEqual(snes["b"], {"icone": "pular", "texto": "Pular"})
+        self.assertEqual(mega["c"], {"icone": "pular", "texto": "Pular"})
+        # andar é sempre o de mover, mesmo na cruz do N64 ("Menus e atalhos")
+        n64 = {c["acao"]: c["icone"] for c in emu.controles_do_sistema("n64")}
+        self.assertEqual(n64["Direcional (cruz)"], "mover")
+        self.assertEqual(n64["Analógico"], "mover")
+
+    def test_todo_icone_tem_desenho(self):
+        from pathlib import Path
+        desenhos = (Path(__file__).parent / "templates" / "partials" / "icones_das_acoes.html").read_text(encoding="utf-8")
+        for icone, _ in emu.ICONES_DAS_ACOES:
+            with self.subTest(icone=icone):
+                self.assertIn(f'<symbol id="a-{icone}"', desenhos)

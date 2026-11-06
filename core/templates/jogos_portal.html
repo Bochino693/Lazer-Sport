@@ -8,6 +8,7 @@
 {% block extra_head %}<script type="application/ld+json">{{ dados_estruturados|safe }}</script>{% endblock %}
 
 {% block content %}
+{% include "partials/icones_das_acoes.html" %}
 {% comment %}
   LAZER & SPORT GAMES -- a biblioteca de jogos (core/portal_jogos.py).
 
@@ -57,28 +58,51 @@
 
     <!-- ================= DESTAQUES ================= -->
     {% if destaques %}
-    <section class="pg-hero" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero{% if lista is not None %} hidden{% endif %}>
-        {% for jogo in destaques %}
-        <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
-                 aria-label="{{ forloop.counter }} de {{ destaques|length }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
-            {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
-            <div class="pg-slide-texto">
-                <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
-                <h2>{{ jogo.titulo }}</h2>
-                {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
-                <div class="pg-slide-acoes">
-                    <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
-                    {% if jogo.ranking %}<span class="pg-slide-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</span>{% endif %}
+    <section class="pg-hero pg-vitrine" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero{% if lista is not None %} hidden{% endif %}>
+        {% comment %}
+          A VITRINE (como a de uma loja de jogos): a arte larga do jogo de ponta a ponta,
+          o nome, as marcas e o Jogar; embaixo, a fila com os outros destaques.
+        {% endcomment %}
+        <div class="pg-vitrine-palco">
+            {% for jogo in destaques %}
+            <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}{% if jogo.topo %} pg-slide--topo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
+                     aria-label="{{ forloop.counter }} de {{ destaques|length }}: {{ jogo.titulo }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
+                {% if jogo.topo %}
+                <img class="pg-slide-topo" src="{{ jogo.topo }}" alt="" width="1600" height="600" {% if not forloop.first %}loading="lazy" {% else %}fetchpriority="high" {% endif %}decoding="async">
+                {% else %}
+                {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+                {% endif %}
+                <div class="pg-slide-texto">
+                    <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}</span>
+                    <h2>{{ jogo.titulo }}</h2>
+                    {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
+                    <ul class="pg-slide-marcas" aria-label="Sobre o jogo">
+                        {% if jogo.categoria %}<li>{{ jogo.categoria }}</li>{% endif %}
+                        {% if jogo.ranking %}<li class="pg-marca-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</li>{% endif %}
+                        {% if jogo.partidas %}<li>{{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}</li>{% endif %}
+                        <li class="pg-marca-gratis">Grátis no navegador</li>
+                    </ul>
+                    <div class="pg-slide-acoes">
+                        <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar</a>
+                    </div>
                 </div>
-            </div>
-            {% if jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
-        </article>
-        {% endfor %}
+                {% if not jogo.topo and jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+            </article>
+            {% endfor %}
+            {% if destaques|length > 1 %}
+            <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+            <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+            {% endif %}
+        </div>
         {% if destaques|length > 1 %}
-        <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-        <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-        <div class="pg-hero-pontos" data-portal-pontos>
-            {% for jogo in destaques %}<button type="button" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}></button>{% endfor %}
+        <div class="pg-vitrine-fila" data-portal-pontos>
+            {% for jogo in destaques %}
+            <button type="button" class="pg-mini" style="--cor: {{ jogo.cor }}" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}>
+                {% if jogo.capa %}<img src="{{ jogo.capa }}" alt="" width="56" height="56" loading="lazy" decoding="async">{% else %}<i class="fa-solid fa-gamepad" aria-hidden="true"></i>{% endif %}
+                <span>{{ jogo.titulo }}</span>
+                <i class="pg-mini-tempo" aria-hidden="true"></i>
+            </button>
+            {% endfor %}
         </div>
         {% endif %}
     </section>

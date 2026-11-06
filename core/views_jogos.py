@@ -32,7 +32,8 @@ from sistema_interno.templatetags.interno_extras import estatico
 
 from . import arena, paginas_tema, ranking
 from .home_cache import get_cached_catalog_page
-from .jogos_emulador import SISTEMAS, controles_do_emulador, controles_do_sistema, DICAS_DE_CONTROLE, sistemas_para
+from .jogos_emulador import (DICAS_DE_CONTROLE, SISTEMAS, controles_do_emulador, controles_do_sistema, gamepad_na_tela, opcoes_no_computador,
+                             ler_acoes, opcoes_do_emulador, origem_do_nucleo, sistemas_para)
 from .models import ArquivoEmulador, Brinquedos, JogoCadastrado
 from .views_arena import WHATSAPP
 
@@ -84,8 +85,12 @@ def jogos_cadastrados(particulares=False, slug=None):
             "codigo_sistema": jogo.sistema if emulador else "",
             # PSP e DOS: o núcleo precisa de várias linhas de execução, e o navegador
             # só libera isso numa página isolada -- o jogo abre na tela inteira, fora do quadro
-            "tela_propria": bool(emulador and jogo.sistema in SISTEMAS and SISTEMAS[jogo.sistema].threads),
+            # todo jogo de console abre no REPRODUTOR (a página do emulador, em tela inteira): sem a página
+            # por trás ele roda mais leve, deita no celular com os controles por cima e (PSP, DOS) usa threads
+            "tela_propria": bool(emulador),
             "particular": jogo.particular,
+            # o que cada botão faz neste jogo ("B: Pular"), já com o nome do botão do console
+            "acoes": ler_acoes(jogo.acoes, jogo.sistema) if emulador else {},
             "categoria": jogo.get_categoria_display() if jogo.categoria else "",
             "feito_pela_lazer": jogo.feito_pela_lazer,
             "destaque": jogo.destaque,
@@ -279,7 +284,7 @@ class SimuladorView(View):
             "jogos": arena.jogos_do_simulador(arena.JOGOS),
             "parecidos": portal_jogos.parecidos(dados, jogo["slug"]),
             # "Como jogar": tecla por tecla no computador, botão por botão no celular
-            "controles": controles_do_sistema(codigo) if codigo else [],
+            "controles": controles_do_sistema(codigo, jogo.get("acoes")) if codigo else [],
             "dicas_de_controle": DICAS_DE_CONTROLE,
             "anuncio": portal_jogos.anuncio_da_pagina_do_jogo(),
             "abriu_url": reverse("jogos_abriu"),
@@ -379,6 +384,8 @@ def config_do_emulador(jogo):
     if jogo.sistema == "dos" and principal:
         # o MS-DOS só abre nome 8.3 (JOGO.EXE): "dos-teste.com" seria "Illegal command"
         nome = _nome_do_dos(principal["nome"])
+    acoes = ler_acoes(jogo.acoes, jogo.sistema)
+    gamepad = gamepad_na_tela(jogo.sistema, acoes)
     return {
         "core": jogo.sistema,
         # o jogo guardado no aparelho é separado por jogo (para liberar espaço do mais antigo)
@@ -388,10 +395,29 @@ def config_do_emulador(jogo):
         "dados": static("vendor/emulatorjs/data/"),
         "cor": jogo.cor[:7],
         "titulo": jogo.nome,
-        # ajustes de teclado do site (N64 e PSP com o analógico nas setas); None = o padrão do emulador
+        # a arte da abertura do reprodutor ("LAZER & SPORT GAMES apresenta")
+        "capa": jogo.poster_url,
+        # o teclado e o controle (Xbox, PlayStation, USB, Bluetooth) que o site entrega ao emulador
         "controles": controles_do_emulador(jogo.sistema),
+        # o controle na tela do celular, com os nomes do console (None = o do emulador) e,
+        # embaixo de cada botão, o que ele faz neste jogo (quando a equipe disse no painel)
+        "gamepad": gamepad[0],
+        "legendas": gamepad[1],
         # PSP e DOS: o núcleo de várias linhas (EJS_threads), na página isolada
         "threads": bool(jogo.sistema in SISTEMAS and SISTEMAS[jogo.sistema].threads),
+        # o núcleo e, quando ele não mora no site, de onde ele vem (o pacote oficial no npm)
+        "nucleo": SISTEMAS[jogo.sistema].nucleo if jogo.sistema in SISTEMAS else "",
+        "nucleoExterno": origem_do_nucleo(jogo.sistema),
+        # a qualidade da imagem (filtro, resolução interna) e o núcleo certo
+        "opcoes": opcoes_do_emulador(jogo.sistema),
+        "opcoesNoComputador": opcoes_no_computador(jogo.sistema),
+        # o como jogar do reprodutor: o botão, o que ele faz (neste jogo, ou no console) e onde
+        # fica no teclado, na tela do celular e no controle de Xbox
+        "comandos": controles_do_sistema(jogo.sistema, acoes),
+        "comandosTexto": jogo.comandos,
+        "sistemaNome": SISTEMAS[jogo.sistema].nome if jogo.sistema in SISTEMAS else "",
+        "formato": jogo.proporcao,
+        "dicas": DICAS_DE_CONTROLE,
         # aberta na tela inteira (sem o quadro), a página do emulador mostra o caminho de volta
         "voltar": reverse("jogo", args=[jogo.slug]),
     }
@@ -470,7 +496,7 @@ class PortalJogosView(View):
             {
                 **{chave: c[chave] for chave in ("slug", "titulo", "url", "capa", "poster", "cor", "plataforma", "sigla",
                                                  "categoria", "tipo", "familias", "estante", "tema", "busca", "ranking",
-                                                 "destaque", "partidas", "novidade", "chamada", "como", "sistema", "dicas")},
+                                                 "destaque", "partidas", "novidade", "chamada", "como", "sistema", "dicas", "acoes", "icones")},
                 "descricao": c["descricao"][:420],
                 "criado": c["criado"][:10],
                 "ordem": c["_ordem"],
