@@ -56,8 +56,16 @@
         <div class="pl-progresso" data-pl-progresso aria-hidden="true"><span></span></div>
         <p class="pl-status" data-pl-status role="status" aria-live="polite">Abrindo o jogo…</p>
         <div class="pl-pronto" data-pl-pronto hidden>
+            {# CONTINUAR DE ONDE PAROU: o ponto exato que ficou guardado no aparelho (jogo-progresso.js) #}
+            <div class="pl-continuar" data-pl-continuar-caixa hidden>
+                <img class="pl-continuar-foto" data-pl-continuar-foto alt="" hidden>
+                <button type="button" class="pl-jogar" data-pl-continuar>
+                    <svg aria-hidden="true"><use href="#i-play"/></svg> Continuar de onde parou
+                </button>
+                <p class="pl-continuar-quando" data-pl-continuar-quando></p>
+            </div>
             <button type="button" class="pl-jogar" data-pl-jogar>
-                <svg aria-hidden="true"><use href="#i-play"/></svg> Jogar
+                <svg aria-hidden="true"><use href="#i-play"/></svg> <span data-pl-jogar-texto>Jogar</span>
             </button>
             <p class="pl-pronto-dica" data-pl-pronto-dica></p>
         </div>
@@ -196,6 +204,8 @@
 {{ config|json_script:"emuladorConfig" }}
 <script src="{% estatico 'site/paginas/intro-jogos.js' %}" data-logo="{% estatico 'images/logoofi.png' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-guardado.js' %}"></script>
+<script src="{% estatico 'site/paginas/jogo-passe.js' %}"></script>
+<script src="{% estatico 'site/paginas/jogo-progresso.js' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-emulador.js' %}"></script>
 </body>
 </html>

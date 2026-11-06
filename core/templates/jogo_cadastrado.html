@@ -39,7 +39,7 @@
     <p class="jc-particular" role="note"><i class="fa-solid fa-lock" aria-hidden="true"></i> Jogo particular: só a equipe vê esta página. Ele não aparece no portal, na busca nem no Google.</p>
     {% endif %}
     <div class="jc-palco jc-palco--{{ jogo.proporcao }}" data-jogo
-         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}" data-jogo-cor="{{ jogo.cor }}"{% if jogo.emulador %} data-jogo-emulador="1"{% endif %}{% if jogo.tela_propria %} data-jogo-tela-propria="1"{% endif %}
+         data-jogo-src="{{ jogo.jogar }}" data-jogo-titulo="{{ jogo.titulo }}" data-jogo-cor="{{ jogo.cor }}" data-jogo-arte="{{ jogo.poster|default:jogo.capa }}"{% if jogo.emulador %} data-jogo-emulador="1"{% endif %}{% if jogo.tela_propria %} data-jogo-tela-propria="1"{% endif %}
          data-jogo-slug="{{ jogo.slug }}" data-jogo-abriu="{{ abriu_url }}">
         {# a capa com o botão: o jogo só baixa ao tocar em Jogar #}
         <div class="jc-capa" data-jogo-capa>
@@ -213,6 +213,7 @@
 {% endcomment %}
 {{ preparo|json_script:"jogoArquivos" }}
 <script src="{% estatico 'site/paginas/jogo-guardado.js' %}" defer></script>
+<script src="{% estatico 'site/paginas/jogo-passe.js' %}" defer></script>
 {% endif %}
 <link rel="stylesheet" href="{% estatico 'site/paginas/intro-jogos.css' %}">
 <script src="{% estatico 'site/paginas/intro-jogos.js' %}" data-logo="{% static 'images/logoofi.png' %}" defer></script>

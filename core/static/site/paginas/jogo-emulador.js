@@ -70,6 +70,15 @@
     // aberta num quadro de outra página: o Voltar não faz sentido aqui
     voltar.hidden = true;
   }
+  if (voltar && !app && !voltar.hidden) {
+    // sair pelo Voltar guarda o ponto do jogo antes (o "Continuar de onde parou")
+    voltar.addEventListener("click", function (e) {
+      if (!jogando) return;
+      e.preventDefault();
+      var destino = voltar.href;
+      salvarAgora().then(function () { location.href = destino; }, function () { location.href = destino; });
+    });
+  }
 
   function mb(bytes) {
     return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1).replace(".", ",") + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
@@ -208,9 +217,13 @@
     var emu = window.EJS_emulator;
     try { return emu && emu.gameManager ? emu.gameManager.getFrameNum() : -1; } catch (e) { return -1; }
   }
+  // a foto da tela ("Continuar de onde parou") sai logo depois de um quadro desenhado:
+  // fora dele a imagem do WebGL já foi entregue à tela e a cópia sairia preta
+  var pedidoDeFoto = null;
   function rodarQuadro(cb, t) {
     var antes = quadrosDoJogo();
     cb(t);
+    if (pedidoDeFoto) { var fotografar = pedidoDeFoto; pedidoDeFoto = null; try { fotografar(); } catch (e) { /* sem foto */ } }
     var depois = quadrosDoJogo();
     // rodou um quadro do jogo (ou não dá para saber): ele conta no relógio
     if (antes < 0 || depois !== antes) ritmo.devido += QUADRO_MS;
@@ -463,6 +476,9 @@
     // (que se diz Mac) e o tablet no modo computador ficavam sem controle nenhum.
     if (celular) opcoes["virtual-gamepad"] = "enabled";
     opcoes.shader = GRAFICOS[nivelAtual].filtro;
+    // os saves do próprio jogo vão para o aparelho a cada 30 s (o padrão do emulador era 5 min:
+    // quem fechava antes perdia o que tinha salvado no jogo)
+    opcoes["save-save-interval"] = "30";
     window.EJS_defaultOptions = opcoes;
     // a versão dos ajustes do site: subiu, todo mundo começa com os novos (controle pela
     // posição, filtro novo). O jogo salvo fica em outro lugar e continua.
@@ -858,19 +874,109 @@
     });
   }
 
+  /* ---------------------------------------------------------------- continuar de onde parou */
+  // O ESTADO do jogo (o ponto exato) fica no aparelho (jogo-progresso.js): ao sair -- fechar
+  // a aba, trocar de app, Voltar -- e a cada minuto jogando. Na volta, a abertura oferece
+  // "Continuar de onde parou". Os saves do PRÓPRIO jogo (o "salvar" do menu do jogo) o
+  // emulador guarda sozinho; aqui eles vão para o aparelho a cada 30 s e ao sair.
+  var guardaProgresso = window.LSProgresso || null;
+  var chaveProgresso = (config.jogo || config.nome) + "|" + config.core;
+  var progressoSalvo = null;
+  var lendoProgresso = guardaProgresso ? guardaProgresso.ler(chaveProgresso).catch(function () { return null; }) : Promise.resolve(null);
+  var estadoParaCarregar = null;
+  var jogandoDesde = 0;
+  var salvando = null;
+  var ultimaFoto = null;
+  var caixaContinuar = $("[data-pl-continuar-caixa]");
+  var botaoContinuar = $("[data-pl-continuar]");
+  var textoJogar = $("[data-pl-jogar-texto]");
+
+  function haQuanto(quando) {
+    var minutos = Math.max(0, Math.round((Date.now() - quando) / 60000));
+    if (minutos < 1) return "agora há pouco";
+    if (minutos < 60) return "há " + minutos + " min";
+    var horas = Math.round(minutos / 60);
+    if (horas < 24) return "há " + horas + " h";
+    var dias = Math.round(horas / 24);
+    if (dias === 1) return "ontem";
+    if (dias < 30) return "há " + dias + " dias";
+    return "em " + new Date(quando).toLocaleDateString("pt-BR");
+  }
+  function mostrarContinuar(salvo) {
+    progressoSalvo = salvo && salvo.estado && salvo.estado.byteLength ? salvo : null;
+    if (!caixaContinuar || !progressoSalvo) return;
+    caixaContinuar.hidden = false;
+    $("[data-pl-continuar-quando]").textContent = "Você parou " + haQuanto(progressoSalvo.quando) + ".";
+    var foto = $("[data-pl-continuar-foto]");
+    if (progressoSalvo.imagem && foto) { foto.src = progressoSalvo.imagem; foto.hidden = false; }
+    ultimaFoto = progressoSalvo.imagem || null;
+    if (textoJogar) textoJogar.textContent = "Começar do início";
+    botaoJogar.classList.add("pl-jogar--outro");
+  }
+  function podeGuardarEstado() {
+    var emu = window.EJS_emulator;
+    if (!guardaProgresso || !jogando || !emu || !emu.gameManager || estadoParaCarregar) return false;
+    try { return emu.gameManager.supportsStates(); } catch (e) { return false; }
+  }
+  /* A foto da tela (pequena) para a abertura mostrar onde a pessoa parou. */
+  function tirarFoto() {
+    var emu = window.EJS_emulator;
+    var tela = document.querySelector("#jogo canvas");
+    if (!emu || emu.paused || !tela || !tela.width) return Promise.resolve(null);
+    return new Promise(function (ok) {
+      var relogio = setTimeout(function () { pedidoDeFoto = null; ok(null); }, 2000);
+      pedidoDeFoto = function () {
+        clearTimeout(relogio);
+        var largura = 320, altura = Math.max(1, Math.round(largura * tela.height / tela.width));
+        var copia = document.createElement("canvas");
+        copia.width = largura; copia.height = altura;
+        copia.getContext("2d").drawImage(tela, 0, 0, largura, altura);
+        try { ok(copia.toDataURL("image/jpeg", 0.72)); } catch (e) { ok(null); }
+      };
+    });
+  }
+  /* Guarda o ponto do jogo (com a última foto da tela). */
+  function salvarAgora() {
+    var emu = window.EJS_emulator;
+    try { if (jogando && emu && emu.gameManager) emu.gameManager.saveSaveFiles(); } catch (e) { /* o jogo não tem save */ }
+    if (!podeGuardarEstado() || Date.now() - jogandoDesde < 8000) return Promise.resolve(false);
+    if (salvando) return salvando;
+    var estado;
+    try { estado = emu.gameManager.getState(); } catch (e) { return Promise.resolve(false); }
+    var chave = chaveProgresso;
+    salvando = guardaProgresso.gravar(chave, { estado: estado, imagem: ultimaFoto, titulo: config.titulo || "", jogo: config.jogo || "" })
+      .then(function (ok) { salvando = null; return ok; }, function () { salvando = null; return false; });
+    return salvando;
+  }
+  /* A foto de onde a pessoa está fica pronta na memória (a cada 30 s): a saída não espera por ela. */
+  function renovarFoto() {
+    if (!podeGuardarEstado() || document.visibilityState !== "visible" || Date.now() - jogandoDesde < 6000) return;
+    tirarFoto().then(function (foto) { if (foto) ultimaFoto = foto; });
+  }
+  setInterval(renovarFoto, 30000);
+  // para o app (app-jogos.js): fechar o jogo pela biblioteca também guarda o ponto
+  window.LSJogoSalvar = function () { return salvarAgora(); };
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") salvarAgora(); });
+  window.addEventListener("pagehide", function () { salvarAgora(); });
+  setInterval(function () { if (document.visibilityState === "visible") salvarAgora(); }, 60000);
+
   /* ---------------------------------------------------------------- começar */
   var bytesProntos = null;
   var comecando = false;
   var apresentacao = Promise.resolve();
-  function jogar() {
+  function jogar(continuar) {
     if (comecando || !bytesProntos) return;
     comecando = true;
+    // sem dizer (Enter, o A do controle): continua, se houver de onde
+    if (continuar === undefined) continuar = !!progressoSalvo;
+    estadoParaCarregar = continuar && progressoSalvo ? progressoSalvo.estado : null;
     pronto.hidden = true;
     mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
     // "LAZER & SPORT GAMES apresenta": a espera do emulador ligando vira apresentação
     if (window.LSIntroJogos) {
       abertura.classList.add("is-apresentando");
-      apresentacao = window.LSIntroJogos.mostrar(abertura, { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || "") })
+      apresentacao = window.LSIntroJogos.mostrar(abertura, { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || ""),
+        capa: config.capa || "", console: config.sistemaNome || "" })
         .then(function () { abertura.classList.remove("is-apresentando"); });
     }
     var depois = function () {
@@ -885,7 +991,8 @@
     if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().then(depois, depois);
     else depois();
   }
-  botaoJogar.addEventListener("click", jogar);
+  botaoJogar.addEventListener("click", function () { jogar(false); });
+  if (botaoContinuar) botaoContinuar.addEventListener("click", function () { jogar(true); });
   document.addEventListener("keydown", function (e) {
     if (!jogando && !pronto.hidden && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); jogar(); }
   });
@@ -915,6 +1022,21 @@
     }
     corpo.classList.remove("is-abrindo");
     corpo.classList.add("is-jogando");
+    jogandoDesde = Date.now();
+    if (estadoParaCarregar) {
+      var estado = estadoParaCarregar;
+      setTimeout(function () {
+        try {
+          emu.gameManager.loadState(estado);
+          avisar("Continuando de onde você parou.", 3500);
+        } catch (e) {
+          avisar("Não deu para continuar daquele ponto: o jogo começou do início.", 5000);
+        }
+        estadoParaCarregar = null;
+        jogandoDesde = Date.now();
+      }, 400);
+    }
+    setTimeout(renovarFoto, 9000);
     // a abertura sai quando a apresentação termina (ou na hora, se já terminou)
     apresentacao.then(function () {
       abertura.classList.add("is-saindo");
@@ -984,17 +1106,30 @@
   }
   mostrar("Abrindo o jogo…", 0);
   adiantarEmulador();
-  pegar(config.arquivos).then(function (bytes) {
+  /* O passe (jogo-passe.js, core/escudo_jogos.py): de onde baixar o jogo não vem na página.
+     No APK os arquivos já vêm com o caminho de dentro do app. */
+  function comPasse() {
+    if (config.apk || !config.passe) return Promise.resolve(config.arquivos);
+    if (!window.LSPasse) return Promise.reject(new Error("faltou uma parte da página; recarregue"));
+    return window.LSPasse.pegar(config.passe, config.jogo || config.nome, function () { mostrar("Conferindo o acesso ao jogo…", 2); })
+      .then(function (lista) { config.arquivos = window.LSPasse.juntar(config.arquivos, lista); return config.arquivos; });
+  }
+  comPasse().then(pegar).then(function (bytes) {
     bytesProntos = bytes;
     mostrar("Pronto!", 100);
     progresso.hidden = true;
+    return lendoProgresso;
+  }).then(function (salvo) {
+    if (salvo) mostrarContinuar(salvo);
     pronto.hidden = false;
     dicaPronto.textContent = controleLigado() ? "Aperte A no controle ou toque em Jogar."
       : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
         : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";
-    botaoJogar.focus({ preventScroll: true });
+    (progressoSalvo && botaoContinuar ? botaoContinuar : botaoJogar).focus({ preventScroll: true });
     requestAnimationFrame(olharControle);
   }, function (erro) {
-    falhou("Não deu para baixar o jogo — " + erro.message + ".");
+    if (erro && erro.recusado) falhou(erro.message);
+    else if (erro && erro.rede) falhou("Sem internet, e este jogo ainda não estava guardado no aparelho. Conecte e tente de novo.");
+    else falhou("Não deu para baixar o jogo — " + erro.message + ".");
   });
 })();

@@ -265,10 +265,13 @@ class SimuladorView(View):
             except Http404:
                 modelo = None
             if modelo is not None:
-                config = config_do_emulador(modelo)
+                from .escudo_jogos import config_publica
+
+                # o endereço dos arquivos não vai na página: o preparo pede o passe, como o reprodutor
+                config = config_publica(config_do_emulador(modelo), request, modelo.slug)
                 sistema = SISTEMAS.get(modelo.sistema)
                 preparo = {
-                    "config": {"jogo": config["jogo"], "arquivos": config["arquivos"]},
+                    "config": {"jogo": config["jogo"], "arquivos": config["arquivos"], "passe": config["passe"]},
                     "dados": config["dados"],
                     # só o núcleo que mora no site (os de licença livre); os outros vêm do CDN do emulador
                     "nucleo": sistema.nucleo if sistema and sistema.uso_comercial else "",
@@ -433,9 +436,13 @@ class JogoEmuladorView(View):
     """
 
     def get(self, request, slug):
+        from .escudo_jogos import config_publica
+
         jogo = _jogo_no_emulador(slug, equipe=request.user.is_staff)
-        config = config_do_emulador(jogo)
+        # sem de onde baixar: isso vem com o passe (core/escudo_jogos.py)
+        config = config_publica(config_do_emulador(jogo), request, jogo.slug)
         resposta = render(request, "jogo_emulador.html", {"jogo": jogo, "config": config})
+        resposta["Cache-Control"] = "private, no-cache"
         resposta["X-Robots-Tag"] = "noindex"
         if config["threads"]:
             # ISOLAMENTO DE ORIGEM: sem estes dois cabeçalhos o navegador não libera

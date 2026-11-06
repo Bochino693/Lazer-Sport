@@ -5,33 +5,11 @@
 /* as cores do portal valem também na ficha do jogo, que abre por cima da página (fora do .pg) */
 .pg, .bj-ficha { --pg-fundo: #050b1f; --pg-cartao: rgba(255, 255, 255, .055); --pg-borda: rgba(255, 255, 255, .1);
                  --pg-texto: #eaf2ff; --pg-suave: #a9bcd9; --pg-ciano: #3fd0ff; --pg-azul: #2f8bff; --pg-vermelho: #ff4757; --pg-amarelo: #ffd23f; }
-.pg { max-width: 1440px; margin: 0 auto; padding: 14px clamp(14px, 3vw, 36px) 56px; color: var(--pg-texto); }
+.pg { --pg-lado: clamp(14px, 3vw, 36px); max-width: 1440px; margin: 0 auto; padding: 14px var(--pg-lado) 56px; color: var(--pg-texto); }
 .bj-ficha h2, .bj-ficha h3 { font-family: "Poppins", sans-serif; }
 .pg h2, .pg h3 { font-family: "Poppins", sans-serif; }
 
-/* ---------- topo ---------- */
-.pg-topo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 16px 0 18px; }
-.pg-marca { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
-.pg-marca-logo { width: 56px; height: 56px; border-radius: 16px; background: #fff; display: grid; place-items: center;
-                 box-shadow: 0 0 0 2px rgba(63, 208, 255, .3), 0 0 26px rgba(63, 208, 255, .35); }
-.pg-marca-logo img { width: 86%; height: 86%; object-fit: contain; }
-.pg-marca-texto strong { display: block; font: 800 1.35rem/1.05 "Poppins", sans-serif; letter-spacing: .02em;
-                         background: linear-gradient(90deg, var(--pg-vermelho), var(--pg-azul) 45%, var(--pg-ciano) 75%);
-                         -webkit-background-clip: text; background-clip: text; color: transparent; }
-.pg-marca-texto strong b { color: var(--pg-amarelo); -webkit-text-fill-color: var(--pg-amarelo); text-shadow: 0 0 16px rgba(255, 210, 63, .55); }
-.pg-marca-texto small { color: var(--pg-suave); font-size: .82rem; }
-.pg-busca { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 6px 4px 18px; border-radius: 999px;
-            background: rgba(255, 255, 255, .07); border: 1px solid rgba(63, 208, 255, .35); box-shadow: 0 0 0 4px rgba(63, 208, 255, .06); }
-.pg-busca:focus-within { border-color: var(--pg-ciano); box-shadow: 0 0 0 4px rgba(63, 208, 255, .18), 0 0 30px rgba(63, 208, 255, .2); }
-.pg-busca i { color: var(--pg-ciano); }
-.pg-busca input { flex: 1; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: var(--pg-texto); font: 500 1rem "Manrope", sans-serif; }
-.pg-busca input::placeholder { color: #8ea3c4; }
-.pg-busca button { min-height: 42px; padding: 0 20px; border: 0; border-radius: 999px; font: 700 .95rem "Poppins", sans-serif; color: #fff; cursor: pointer;
-                   background: linear-gradient(120deg, var(--pg-azul), #8a5cff); }
-.pg-conta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.pg-conta-ola { font-weight: 800; }
-.pg-conta-ola i { color: var(--pg-amarelo); }
-.pg-conta small { color: var(--pg-suave); width: 100%; text-align: right; }
+/* ---------- a barra do app: ver "A BARRA DO APP" no fim ---------- */
 .pg-botao { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; text-decoration: none;
             font: 700 .92rem "Poppins", sans-serif; color: var(--pg-texto); background: var(--pg-cartao); border: 1px solid var(--pg-borda);
             transition: transform .15s ease, box-shadow .15s ease; white-space: nowrap; }
@@ -224,6 +202,8 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
 .bj-marca--ranking { color: var(--pg-amarelo); }
 .bj-marca--nova { color: #04121f; background: var(--pg-ciano); border: 0; }
 .bj-marca--aparelho { color: #34d399; border-color: rgba(52, 211, 153, .5); }
+.bj-capa-continuar { position: absolute; z-index: 3; left: 10px; bottom: 74px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+                     font: 800 .66rem "Poppins", sans-serif; color: #241600; background: #ffd23f; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
 .bj-capa-play { position: absolute; z-index: 3; right: 10px; bottom: 66px; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
                 color: #04210f; background: #22c55e; box-shadow: 0 6px 18px rgba(34, 197, 94, .5); opacity: 0; transform: scale(.75); transition: .2s ease; }
 .bj-capa:hover .bj-capa-play, .bj-capa:focus-visible .bj-capa-play { opacity: 1; transform: none; }
@@ -359,9 +339,6 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
     .bj-ficha-caixa { grid-template-columns: minmax(0, 1fr); max-height: 94vh; border-radius: 24px 24px 0 0; animation-name: bj-sobe; }
     .bj-ficha-arte { min-height: 230px; }
     .bj-ficha-capa { width: 46%; }
-    .pg-topo { grid-template-columns: 1fr; gap: 12px; }
-    .pg-conta { justify-content: flex-start; }
-    .pg-conta small { text-align: left; }
     .pg-slide { grid-template-columns: 1fr; align-content: end; padding-bottom: 46px; }
     .pg-slide-arte { position: absolute; top: 14px; right: 4%; width: 46%; opacity: .95; }
     .pg-slide-texto { margin-top: auto; }
@@ -373,7 +350,6 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
     .pg-botao { min-height: 42px; padding: 0 14px; }
     .bj-grade { gap: 10px; }
     .bj-capa-texto strong { font-size: .9rem; }
-    .pg-busca button { padding: 0 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .pg-slide { transition: none; }
@@ -390,19 +366,6 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
    ====================================================================== */
 /* no modo app o launcher começa colado no topo, como um aplicativo */
 .ls-launcher .pg { padding-top: max(4px, env(safe-area-inset-top)); }
-.pg-app-botoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.pg-botao--app { min-height: 42px; padding: 0 14px; font-size: .86rem; }
-.pg-sem-rede { padding: 8px 12px; border-radius: 999px; background: rgba(255, 210, 63, .14); border: 1px solid rgba(255, 210, 63, .35);
-               color: var(--pg-amarelo); font-size: .8rem; font-weight: 700; }
-@media (max-width: 980px) {
-    .pg-topo { grid-template-columns: auto minmax(0, 1fr); }
-    .pg-busca { grid-column: 1 / -1; grid-row: 2; }
-    .pg-app-botoes { grid-column: 2; grid-row: 1; }
-    .pg-conta { grid-column: 1 / -1; justify-content: flex-start; }
-    .pg-botao--app span { display: none; }
-    .pg-botao--app { width: 44px; padding: 0; justify-content: center; }
-}
-
 /* o carregamento: a marca enquanto a biblioteca abre */
 .app-abertura {
     position: fixed;
@@ -449,3 +412,211 @@ body.app-jogando { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .app-abertura-logo, .app-abertura-marca { animation: none; }
 }
+
+
+/* ======================================================================
+   A BARRA DO APP: marca, seções, busca, atalhos e a conta
+   Cada peça tem um lugar pensado em cada largura:
+     * computador largo (1440+): tudo numa linha, presa no alto ao rolar;
+     * computador menor e tablet (760-1439): marca, busca, atalhos e conta
+       em cima; as seções embaixo; presa no alto;
+     * celular: marca, atalhos e conta em cima, a busca inteira embaixo, e as
+       seções numa barra de abas no pé da tela, como nos aplicativos.
+   ====================================================================== */
+.pg-barra {
+    position: relative;
+    z-index: 40;
+    display: grid;
+    grid-template-areas: "marca abas busca atalhos conta";
+    grid-template-columns: auto auto minmax(190px, 1fr) auto auto;
+    align-items: center;
+    gap: 12px 14px;
+    margin: 0 calc(-1 * var(--pg-lado)) 14px;
+    padding: max(12px, env(safe-area-inset-top)) var(--pg-lado) 12px;
+    border-bottom: 1px solid transparent;
+    transition: background-color .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+@media (min-width: 760px) and (min-height: 521px) {
+    .pg-barra { position: sticky; top: 0; }
+    /* presa e com a página rolada: o vidro escuro, de ponta a ponta da tela */
+    .pg-barra.is-rolada {
+        background-color: rgba(5, 10, 28, .9);
+        border-bottom-color: rgba(255, 255, 255, .08);
+        box-shadow: 0 0 0 100vmax rgba(5, 10, 28, .9), 0 14px 30px rgba(0, 0, 0, .35);
+        clip-path: inset(0 -100vmax -40px);
+        -webkit-backdrop-filter: blur(14px) saturate(1.2);
+        backdrop-filter: blur(14px) saturate(1.2);
+    }
+}
+#biblioteca, #ranking { scroll-margin-top: calc(var(--pg-barra-altura, 0px) + 12px); }
+.pg-ancora { position: absolute; top: 0; }
+
+/* a marca */
+.pg-marca { grid-area: marca; display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.pg-marca-logo { flex: none; width: 50px; height: 50px; border-radius: 15px; background: #fff; display: grid; place-items: center;
+                 box-shadow: 0 0 0 2px rgba(63, 208, 255, .3), 0 0 22px rgba(63, 208, 255, .32); }
+.pg-marca-logo img { width: 86%; height: 86%; object-fit: contain; }
+.pg-marca-texto { min-width: 0; }
+.pg-marca-texto strong { display: block; white-space: nowrap; font: 800 1.18rem/1.08 "Poppins", sans-serif; letter-spacing: .02em;
+                         background: linear-gradient(90deg, var(--pg-vermelho), var(--pg-azul) 45%, var(--pg-ciano) 75%);
+                         -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pg-marca-texto strong b { color: var(--pg-amarelo); -webkit-text-fill-color: var(--pg-amarelo); text-shadow: 0 0 16px rgba(255, 210, 63, .55); }
+.pg-marca-texto small { display: block; margin-top: 3px; white-space: nowrap; color: var(--pg-suave); font-size: .76rem; }
+
+/* as seções (Início, Biblioteca, Ranking) */
+.pg-abas { grid-area: abas; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .05);
+           border: 1px solid var(--pg-borda); justify-self: start; }
+.pg-abas a { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: 999px;
+             color: var(--pg-suave); text-decoration: none; white-space: nowrap; font: 700 .88rem "Poppins", sans-serif;
+             transition: color .2s ease, background-color .2s ease; }
+.pg-abas a:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.pg-abas a:focus-visible { outline: 2px solid var(--pg-ciano); outline-offset: 2px; }
+.pg-abas a[aria-current="true"] { color: #fff; background: linear-gradient(120deg, rgba(47, 139, 255, .42), rgba(138, 92, 255, .42));
+                                  box-shadow: inset 0 0 0 1px rgba(63, 208, 255, .45); }
+.pg-abas i { font-size: .9rem; }
+.pg-abas .pg-aba-site, .pg-abas .pg-aba-buscar { display: none; }
+
+/* a busca */
+.pg-busca { grid-area: busca; display: flex; align-items: center; gap: 10px; min-width: 0; height: 48px; padding: 4px 4px 4px 16px; border-radius: 999px;
+            background: rgba(255, 255, 255, .07); border: 1px solid rgba(63, 208, 255, .32); transition: border-color .2s ease, box-shadow .2s ease; }
+.pg-busca:focus-within { border-color: var(--pg-ciano); box-shadow: 0 0 0 4px rgba(63, 208, 255, .16), 0 0 26px rgba(63, 208, 255, .18); }
+.pg-busca > i { color: var(--pg-ciano); }
+.pg-busca input { flex: 1; min-width: 0; height: 38px; border: 0; outline: 0; background: transparent; color: var(--pg-texto); font: 500 .96rem "Manrope", sans-serif; }
+.pg-busca input::placeholder { color: #8ea3c4; }
+/* o anel de foco é o da caixa inteira (acima), não um quadrado dentro dela */
+.pg-busca input:focus, .pg-busca input:focus-visible { outline: none !important; box-shadow: none !important; }
+.pg-busca input::-webkit-search-cancel-button { filter: invert(1) opacity(.6); }
+.pg-busca-atalho { flex: none; display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 6px;
+                   border: 1px solid rgba(255, 255, 255, .2); color: var(--pg-suave); font: 700 .78rem "Manrope", sans-serif; background: rgba(0, 0, 0, .2); }
+.pg-busca:focus-within .pg-busca-atalho { display: none; }
+.pg-busca button { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 18px;
+                   border: 0; border-radius: 999px; font: 700 .9rem "Poppins", sans-serif; color: #fff; cursor: pointer;
+                   background: linear-gradient(120deg, var(--pg-azul), #8a5cff); }
+.pg-busca button i { display: none; }
+
+/* os atalhos do app (instalar, tela cheia, voltar à loja): ícones com o nome no "title" */
+.pg-atalhos { grid-area: atalhos; display: flex; align-items: center; gap: 6px; }
+.pg-atalho { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; min-width: 42px; padding: 0 12px;
+             border-radius: 13px; border: 1px solid var(--pg-borda); background: var(--pg-cartao); color: var(--pg-texto);
+             font: 700 .86rem "Poppins", sans-serif; text-decoration: none; cursor: pointer; transition: background-color .2s ease, transform .2s ease; }
+.pg-atalho:hover { background: rgba(255, 255, 255, .12); color: #fff; transform: translateY(-1px); }
+.pg-atalho:focus-visible { outline: 2px solid var(--pg-ciano); outline-offset: 2px; }
+.pg-atalho span { display: none; }
+.pg-atalho--instalar { color: #04131f; border: 0; background: linear-gradient(120deg, #3fd0ff, #2fffb0); }
+.pg-atalho--instalar:hover { color: #04131f; background: linear-gradient(120deg, #6bdcff, #63ffc4); }
+.pg-atalho[hidden], .pg-sem-rede[hidden] { display: none; }
+
+/* a conta */
+.pg-conta { grid-area: conta; display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.pg-conta-chip { display: flex; align-items: center; gap: 10px; max-width: 230px; min-width: 0; padding: 4px 14px 4px 4px; border-radius: 999px;
+                 border: 1px solid var(--pg-borda); background: var(--pg-cartao); color: var(--pg-texto); text-decoration: none; }
+.pg-conta-chip:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.pg-avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+             font: 800 1rem "Poppins", sans-serif; color: #2a1404; background: linear-gradient(135deg, #ffd23f, #ff9238 55%, #ff4757);
+             box-shadow: 0 0 0 2px rgba(255, 210, 63, .35); }
+.pg-conta-texto { min-width: 0; line-height: 1.15; }
+.pg-conta-texto b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 .88rem "Poppins", sans-serif; }
+.pg-conta-texto small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pg-suave); font-size: .72rem; }
+.pg-conta-texto small i { color: var(--pg-amarelo); }
+.pg-conta .pg-botao { min-height: 42px; padding: 0 16px; white-space: nowrap; }
+
+.pg-sem-rede { display: flex; align-items: center; gap: 8px; width: fit-content; margin: -4px auto 14px; padding: 8px 14px; border-radius: 999px;
+               background: rgba(255, 210, 63, .14); border: 1px solid rgba(255, 210, 63, .35); color: var(--pg-amarelo); font-size: .82rem; font-weight: 700; }
+
+/* computador largo (1440+): tudo numa linha. A busca fica com o ícone de ir (o Enter também busca),
+   para sobrar espaço para o que se digita; o "Instalar app" leva o nome (é o convite). */
+@media (min-width: 1440px) {
+    .pg-atalho--instalar span { display: inline; }
+    .pg-marca-texto small { display: none; }
+    .pg-busca button { width: 38px; padding: 0; }
+    .pg-busca button span { display: none; }
+    .pg-busca button i { display: inline; }
+    .pg-conta-entrar { width: 42px; padding: 0 !important; justify-content: center; }
+    .pg-conta-entrar span { display: none; }
+}
+@media (min-width: 1600px) {
+    .pg-barra { grid-template-columns: auto auto minmax(260px, 1fr) auto auto; }
+}
+/* computador menor e tablet (760-1439): marca, busca, atalhos e conta em cima; as seções
+   embaixo, como as abas de um programa, de ponta a ponta com a linha de baixo */
+@media (max-width: 1439px) {
+    .pg-barra { grid-template-areas: "marca busca atalhos conta" "abas abas abas abas"; grid-template-columns: auto minmax(0, 1fr) auto auto;
+                row-gap: 10px; padding-bottom: 0; }
+    .pg-abas { justify-self: stretch; gap: 6px; padding: 0; border: 0; border-radius: 0; background: none;
+               border-top: 1px solid rgba(255, 255, 255, .07); }
+    .pg-abas a { height: 44px; padding: 0 16px; border-radius: 0; }
+    .pg-abas a:hover { background: none; }
+    .pg-abas a[aria-current="true"] { background: none; box-shadow: none; color: #fff; }
+    .pg-abas a[aria-current="true"]::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0;
+                                              background: linear-gradient(90deg, var(--pg-ciano), #8a5cff); box-shadow: 0 0 14px rgba(63, 208, 255, .6); }
+    .pg-abas a[aria-current="true"] i { color: var(--pg-ciano); }
+    .pg-busca-atalho { display: none; }
+}
+@media (max-width: 1099px) {
+    .pg-marca-texto small { display: none; }
+}
+@media (max-width: 1023px) {
+    .pg-conta-chip { padding: 3px; }
+    .pg-conta-texto { display: none; }
+    .pg-conta-criar span { display: none; }
+    .pg-conta-criar { width: 42px; padding: 0; justify-content: center; }
+}
+/* celular */
+@media (max-width: 759px) {
+    .pg-barra { grid-template-areas: "marca atalhos conta" "busca busca busca"; grid-template-columns: minmax(0, 1fr) auto auto;
+                gap: 12px 8px; margin-bottom: 10px; padding-bottom: 6px; }
+    .pg-marca { gap: 10px; min-width: 0; }
+    .pg-marca-logo { width: 42px; height: 42px; border-radius: 13px; }
+    .pg-marca-texto strong { font-size: .98rem; line-height: 1.02; }
+    .pg-marca-texto strong span { display: block; }
+    .pg-atalho { width: 40px; height: 40px; min-width: 0; padding: 0; border-radius: 12px; }
+    .pg-atalho--instalar span { display: none; }
+    .pg-atalhos .pg-atalho--site { display: none; }
+    .pg-conta .pg-botao { width: 40px; min-height: 40px; padding: 0; justify-content: center; }
+    .pg-conta .pg-botao span, .pg-conta-criar { display: none; }
+    .pg-avatar { width: 34px; height: 34px; }
+    .pg-busca { height: 46px; }
+    .pg-busca button { width: 38px; padding: 0; }
+    .pg-busca button span { display: none; }
+    .pg-busca button i { display: inline; }
+
+    /* as seções viram a barra de abas do pé da tela, como num aplicativo */
+    .pg-abas {
+        position: fixed;
+        z-index: 60;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        justify-self: stretch;
+        justify-content: space-around;
+        gap: 0;
+        padding: 6px 4px max(6px, env(safe-area-inset-bottom));
+        border-radius: 0;
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, .09);
+        background: rgba(5, 10, 28, .94);
+        -webkit-backdrop-filter: blur(14px) saturate(1.2);
+        backdrop-filter: blur(14px) saturate(1.2);
+        box-shadow: 0 -10px 28px rgba(0, 0, 0, .35);
+    }
+    .pg-abas .pg-aba-site, .pg-abas .pg-aba-buscar { display: inline-flex; }
+    .pg-abas a { flex: 1 1 0; flex-direction: column; justify-content: center; gap: 3px; height: 52px; padding: 0 2px; border-radius: 14px;
+                 font-size: .68rem; font-weight: 700; }
+    .pg-abas i { font-size: 1.12rem; }
+    .pg-abas a[aria-current="true"] { background: none; box-shadow: none; color: var(--pg-ciano); }
+    .pg-abas a[aria-current="true"]::after { content: none; }
+    .pg-abas a[aria-current="true"] i { filter: drop-shadow(0 0 8px rgba(63, 208, 255, .7)); }
+    .pg-abas a[aria-current="true"]::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 3px; border-radius: 0 0 4px 4px;
+                                              background: var(--pg-ciano); box-shadow: 0 0 12px var(--pg-ciano); }
+    .ls-launcher .pg { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+    .ls-launcher .app-aviso { bottom: calc(76px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 359px) {
+    .pg-marca-logo { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pg-barra, .pg-abas a, .pg-atalho { transition: none; }
+}
+
+/* a armadilha dos robôs (core/escudo_jogos.py): fora da tela, fora do teclado, fora do leitor de tela */
+.pg-armadilha { position: absolute !important; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; pointer-events: none; }

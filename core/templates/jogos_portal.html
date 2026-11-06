@@ -50,37 +50,58 @@
 
 <div class="pg" data-portal>
 
-    <!-- ================= TOPO: marca, busca e a conta ================= -->
-    <div class="pg-topo">
-        <a class="pg-marca" href="{% url 'jogos' %}">
+    <!-- ================= A BARRA DO APP: marca, seções, busca, atalhos e a conta =================
+         Fica presa no alto ao rolar. Cada peça tem o seu lugar em cada largura (portal-jogos.css):
+         no computador, tudo numa linha; no tablet, a busca e as seções descem; no celular, a
+         marca, os atalhos e a conta em cima, a busca e as seções embaixo. -->
+    <div class="pg-barra" data-pg-barra>
+        <a class="pg-marca" href="{% url 'jogos' %}" aria-label="Lazer &amp; Sport Games: início">
             <span class="pg-marca-logo"><img src="{% static 'images/logoofi.png' %}" alt="" width="56" height="56"></span>
             <span class="pg-marca-texto">
-                <strong>LAZER &amp; SPORT <b>GAMES</b></strong>
-                <small>{{ total }} jogo{{ total|pluralize }} na biblioteca · grátis no navegador e no celular</small>
+                <strong><span>LAZER &amp; SPORT</span> <b>GAMES</b></strong>
+                <small>{{ total }} jogo{{ total|pluralize }} · grátis no navegador e no celular</small>
             </span>
         </a>
-        <form class="pg-busca" action="{% url 'jogos' %}#biblioteca" method="get" role="search" data-portal-form>
+
+        <nav class="pg-abas" aria-label="Seções do app" data-pg-abas>
+            <a href="#inicio" data-pg-aba="inicio" aria-current="true"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span></a>
+            <a href="#biblioteca" data-pg-aba="biblioteca"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Biblioteca</span></a>
+            <a class="pg-aba-buscar" href="#buscar" data-pg-aba-buscar><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span></a>
+            <a href="#ranking" data-pg-aba="ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i><span>Ranking</span></a>
+            <a class="pg-aba-site" href="{% url 'home' %}"><i class="fa-solid fa-store" aria-hidden="true"></i><span>Loja</span></a>
+        </nav>
+
+        <form class="pg-busca" id="buscar" action="{% url 'jogos' %}#biblioteca" method="get" role="search" data-portal-form>
             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-            <input type="search" name="q" value="{{ busca }}" placeholder="Buscar jogo, console ou gênero…"
-                   aria-label="Buscar jogo" autocomplete="off" data-portal-busca>
-            <button type="submit">Buscar</button>
+            <input type="search" name="q" value="{{ busca }}" placeholder="Buscar jogos e consoles"
+                   aria-label="Buscar jogo" autocomplete="off" enterkeyhint="search" data-portal-busca>
+            <kbd class="pg-busca-atalho" title="Aperte / para buscar">/</kbd>
+            <button type="submit" aria-label="Buscar"><span>Buscar</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </form>
-        <div class="pg-app-botoes">
-            <span class="pg-sem-rede" data-app-sem-rede hidden><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Sem internet: os jogos já guardados no aparelho continuam</span>
-            <button type="button" class="pg-botao pg-botao--app" data-app-instalar hidden><i class="fa-solid fa-download" aria-hidden="true"></i> <span>Instalar o app</span></button>
-            <button type="button" class="pg-botao pg-botao--app" data-app-tela-cheia><i class="fa-solid fa-expand" aria-hidden="true"></i> <span>Tela cheia</span></button>
-            <a class="pg-botao pg-botao--app" href="{% url 'home' %}" title="Voltar ao site da Lazer &amp; Sport"><i class="fa-solid fa-house" aria-hidden="true"></i> <span>Site</span></a>
+
+        <div class="pg-atalhos">
+            <button type="button" class="pg-atalho pg-atalho--instalar" data-app-instalar title="Instalar o app" aria-label="Instalar o app" hidden><i class="fa-solid fa-download" aria-hidden="true"></i><span>Instalar app</span></button>
+            <button type="button" class="pg-atalho" data-app-tela-cheia title="Tela cheia" aria-label="Tela cheia"><i class="fa-solid fa-expand" aria-hidden="true"></i><span>Tela cheia</span></button>
+            <a class="pg-atalho pg-atalho--site" href="{% url 'home' %}" title="Voltar à loja da Lazer &amp; Sport" aria-label="Voltar à loja da Lazer &amp; Sport"><i class="fa-solid fa-store" aria-hidden="true"></i><span>Loja</span></a>
         </div>
+
         <div class="pg-conta">
             {% if eu %}
-                <span class="pg-conta-ola"><i class="fa-solid fa-crown" aria-hidden="true"></i> Olá, {{ eu.nome }}</span>
-                <small>{% if eu.geral %}Você é o {{ eu.geral.posicao }}º no ranking geral{% else %}Jogue um jogo da casa para entrar no ranking{% endif %}</small>
+                <a class="pg-conta-chip" href="#ranking" title="{{ eu.nome }}{% if eu.geral %} · {{ eu.geral.posicao }}º no ranking geral{% endif %}">
+                    <span class="pg-avatar" aria-hidden="true">{{ eu.nome|slice:":1"|upper }}</span>
+                    <span class="pg-conta-texto">
+                        <b>{{ eu.nome }}</b>
+                        <small>{% if eu.geral %}<i class="fa-solid fa-crown" aria-hidden="true"></i> {{ eu.geral.posicao }}º no ranking geral{% else %}Jogue para entrar no ranking{% endif %}</small>
+                    </span>
+                </a>
             {% else %}
-                <a class="pg-botao pg-botao--forte" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
-                <a class="pg-botao" href="{% url 'login' %}?next={% url 'jogos' %}#login-box"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Entrar</a>
+                <a class="pg-botao pg-conta-entrar" href="{% url 'login' %}?next={% url 'jogos' %}#login-box" title="Entrar" aria-label="Entrar"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> <span>Entrar</span></a>
+                <a class="pg-botao pg-botao--forte pg-conta-criar" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span>Criar conta</span></a>
             {% endif %}
         </div>
     </div>
+    <p class="pg-sem-rede" data-app-sem-rede role="status" hidden><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Sem internet: a biblioteca e os jogos já abertos continuam funcionando.</p>
+    <span id="inicio" class="pg-ancora" aria-hidden="true"></span>
 
     {% if anuncio_topo %}
     <aside class="pg-anuncio pg-anuncio--topo" aria-label="Anúncio">
@@ -263,6 +284,8 @@
         </div>
     </section>
     {% endif %}
+    {# a armadilha dos robôs (core/escudo_jogos.py): ninguém vê nem alcança pelo teclado; só quem lê o código atrás de arquivos #}
+    <a class="pg-armadilha" href="{% url 'jogos_armadilha' %}" rel="nofollow" tabindex="-1" aria-hidden="true">Acervo completo de ROMs para baixar</a>
 </div>
 
 <!-- ================= A FICHA DO JOGO (abre ao tocar numa capa) ================= -->
@@ -286,7 +309,7 @@
                 <div class="bj-ficha-teclas" data-bj-ficha-teclas></div>
             </div>
             <div class="bj-ficha-acoes">
-                <a class="pg-botao pg-botao--jogar" data-bj-ficha-jogar href="#"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
+                <a class="pg-botao pg-botao--jogar" data-bj-ficha-jogar href="#"><i class="fa-solid fa-play" aria-hidden="true"></i> <span data-bj-ficha-jogar-texto>Jogar agora</span></a>
                 <button type="button" class="pg-botao" data-bj-ficha-mais><i class="fa-solid fa-layer-group" aria-hidden="true"></i> <span>Mais da estante</span></button>
             </div>
         </div>

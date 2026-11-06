@@ -888,7 +888,8 @@ class Console {
       this.estado = "abertura";
       this.capa.hidden = true;
       this.fim.hidden = true;
-      intro.mostrar(this.quadro, { titulo: this.dados.titulo, cor: this.dados.cor, chave: "casa:" + slug }).then(() => {
+      intro.mostrar(this.quadro, { titulo: this.dados.titulo, cor: this.dados.cor, chave: "casa:" + slug,
+        capa: this.dados.poster || this.dados.capa || "", console: "Jogo da Lazer & Sport" }).then(() => {
         if (vez !== this.aberturaVez || this.estado !== "abertura") return;
         this.estado = "pronto";
         this.comecarDeVez();

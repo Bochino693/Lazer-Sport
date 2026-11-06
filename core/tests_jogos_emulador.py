@@ -317,16 +317,35 @@ class EmuladorNoSiteTests(TestCase):
         self.assertEqual(sorted(arquivos), ["/Jogo (Disc 1).cue", "/Track 01.bin", "/Track 02.bin"])
         principal = arquivos["/Jogo (Disc 1).cue"]
         self.assertTrue(principal["principal"])
+        # de onde baixar não vai na página: vem com o passe (core/escudo_jogos.py)
+        self.assertFalse(any("partes" in a for a in config["arquivos"]))
+        self.assertNotIn("guardado_Track", resposta.content.decode())
+        from .tests_escudo_jogos import pedir_passe
+
+        partes = {a["nome"]: a["partes"] for a in pedir_passe(self.client, config["passe"]).json()["arquivos"]}
         # o índice leva a versão: o jogo guardado no aparelho nunca abre o índice velho
-        self.assertTrue(principal["partes"][0].startswith(reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"]) + "?v="))
+        self.assertTrue(partes["Jogo (Disc 1).cue"][0].startswith(reverse("jogo_emulador_arquivo", args=["disco-teste", "Jogo (Disc 1).cue"]) + "?v="))
         self.assertEqual(config["jogo"], "disco-teste")
-        self.assertIn("guardado_Track", arquivos["/Track 01.bin"]["partes"][0])
+        self.assertIn("guardado_Track", partes["Track 01.bin"][0])
         self.assertEqual(arquivos["/Track 01.bin"]["tamanho"], len(FAIXA_PSX))
         # o jogo salvo leva o nome do jogo no site (único), com a extensão do que o emulador abre
         self.assertEqual(config["nome"], "disco-teste.cue")
         self.assertTrue(config["dados"].endswith("vendor/emulatorjs/data/"))
         self.assertContains(resposta, "jogo-emulador.js")
         self.assertContains(resposta, "jogo-guardado.js")
+
+    def test_continuar_de_onde_parou(self):
+        """O reprodutor guarda o ponto do jogo no aparelho e oferece "Continuar" (jogo-progresso.js)."""
+        resposta = self.client.get(reverse("jogo_emulador", args=["disco-teste"]))
+        self.assertContains(resposta, "jogo-progresso.js")
+        self.assertContains(resposta, "data-pl-continuar")
+        self.assertContains(resposta, "Continuar de onde parou")
+        from .jogos_apk_gerar import ARQUIVOS_DO_REPRODUTOR
+        from .views_app_jogos import CASCA
+
+        # no APK e no app sem internet também
+        self.assertIn("site/paginas/jogo-progresso.js", ARQUIVOS_DO_REPRODUTOR)
+        self.assertIn("site/paginas/jogo-progresso.js", CASCA)
 
     def test_arquivo_em_pedacos_vai_com_as_partes_na_ordem(self):
         faixa = self.jogo.arquivos_emulador.get(nome="Track 01.bin")
@@ -457,7 +476,7 @@ class EmuladorNoSiteTests(TestCase):
         resposta = self.client.get(pagina)
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, "Jogo particular")
-        self.assertEqual(resposta["X-Robots-Tag"], "noindex, nofollow")
+        self.assertTrue(resposta["X-Robots-Tag"].startswith("noindex, nofollow"))
         self.assertIn("no-store", resposta["Cache-Control"])
         self.assertEqual(self.config(self.client.get(emulador))["core"], "snes")
         self.assertNotContains(self.client.get(reverse("jogos")), "Disco Teste")  # nem para a equipe, no portal

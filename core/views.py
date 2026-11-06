@@ -6807,30 +6807,27 @@ def verify_auth_api(request):
 
 def robots_txt(request):
     """robots.txt do site principal -- antes não existia rota nenhuma
-    pra esse caminho, e o Googlebot recebia 500 ao tentar acessá-lo."""
-    linhas = [
-        "User-agent: *",
-        "Allow: /",
-        "Disallow: /adm/",
-        "Disallow: /carrinho/",
-        "Disallow: /perfil/",
-        "Disallow: /meus-pedidos/",
-        "Disallow: /pagamento/",
-        "Disallow: /processar_cartao/",
-        "Disallow: /api/",
-        "Disallow: /login/",
-        "Disallow: /registrar/",
-        "Disallow: /acesso-negado/",
-        "Disallow: /*?filter_cat=",
-        "Disallow: /*&filter_cat=",
-        "Disallow: /*?shop_view=",
-        "Disallow: /*&shop_view=",
-        "Disallow: /*?column=",
-        "Disallow: /*&column=",
-        "Crawl-delay: 10",
-        "",
-        "Sitemap: https://www.lazersport.com.br/sitemap.xml",
+    pra esse caminho, e o Googlebot recebia 500 ao tentar acessá-lo.
+
+    Os jogos: o reprodutor, o passe e a armadilha dos robôs ficam fora para
+    todos (core/escudo_jogos.py); os robôs de IA não entram em nada dos jogos
+    -- a loja continua aberta para eles (e para os buscadores, tudo como era).
+    """
+    from .escudo_jogos import ARMADILHA, ROBOS_DE_IA_NO_ROBOTS
+
+    proibidos = [
+        "/adm/", "/carrinho/", "/perfil/", "/meus-pedidos/", "/pagamento/", "/processar_cartao/", "/api/",
+        "/login/", "/registrar/", "/acesso-negado/",
+        "/*?filter_cat=", "/*&filter_cat=", "/*?shop_view=", "/*&shop_view=", "/*?column=", "/*&column=",
+        ARMADILHA, "/jogos/*/emulador/", "/jogos/*/passe/",
     ]
+    linhas = ["User-agent: *", "Allow: /"]
+    linhas += ["Disallow: " + caminho for caminho in proibidos]
+    linhas += ["Crawl-delay: 10", "", "# Os jogos da Lazer & Sport não são para treinar nem alimentar IA."]
+    linhas += ["User-agent: " + robo for robo in ROBOS_DE_IA_NO_ROBOTS]
+    linhas += ["Disallow: " + caminho for caminho in proibidos]
+    linhas += ["Disallow: /jogos/", "Disallow: /static/site/arena/jogos/", "",
+               "Sitemap: https://www.lazersport.com.br/sitemap.xml"]
     return HttpResponse("\n".join(linhas), content_type="text/plain")
 
 
