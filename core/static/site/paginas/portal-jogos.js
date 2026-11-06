@@ -46,6 +46,15 @@
   Object.keys(abertos).forEach(function (s) { recentes[s] = Number(abertos[s]) || 0; });
   Object.keys(guardados).forEach(function (s) { recentes[s] = Math.max(recentes[s] || 0, Number((guardados[s] || {}).usado) || 0); });
   var noAparelho = Object.keys(guardados).filter(function (s) { return porSlug[s] && ((guardados[s] || {}).bytes || 0) > 0; });
+  // os jogos com um ponto guardado ("Continuar de onde parou", jogo-progresso.js)
+  var comPonto = {};
+  (function () {
+    var indice = lerLocal("ls-progresso-indice");
+    Object.keys(indice).forEach(function (chave) {
+      var jogo = (indice[chave] || {}).jogo || chave.split("|")[0];
+      if (porSlug[jogo]) comPonto[jogo] = Math.max(comPonto[jogo] || 0, Number(indice[chave].quando) || 0);
+    });
+  })();
   var listaRecentes = Object.keys(recentes).filter(function (s) { return porSlug[s] && recentes[s] > 0; })
     .sort(function (a, b) { return recentes[b] - recentes[a]; });
 
@@ -115,6 +124,14 @@
       marcas.appendChild(g);
     }
     arte.appendChild(marcas);
+    if (comPonto[jogo.slug]) {
+      // tem um ponto guardado neste aparelho: o jogo continua de onde a pessoa parou
+      var c = el("span", "bj-capa-continuar");
+      c.title = "Continuar de onde parou";
+      c.appendChild(icone("fa-play"));
+      c.appendChild(document.createTextNode(" Continuar"));
+      arte.appendChild(c);
+    }
     var play = el("span", "bj-capa-play");
     play.setAttribute("aria-hidden", "true");
     play.appendChild(icone("fa-play"));
@@ -429,11 +446,14 @@
     if (jogo.partidas) dados.push(dado("fa-fire", jogo.partidas.toLocaleString("pt-BR") + " partida" + (jogo.partidas === 1 ? "" : "s")));
     if (noAparelho.indexOf(jogo.slug) >= 0) dados.push(dado("fa-download", "Já no aparelho: abre na hora"));
     if (recentes[jogo.slug]) dados.push(dado("fa-clock-rotate-left", "Você jogou " + quandoFoi(recentes[jogo.slug])));
+    if (comPonto[jogo.slug]) dados.push(dado("fa-play", "Ponto guardado: continua de onde você parou"));
     campoDaFicha("dados").replaceChildren.apply(campoDaFicha("dados"), dados);
     var como = campoDaFicha("como"), comandos = comoJogar(jogo);
     como.hidden = !comandos;
     campoDaFicha("teclas").replaceChildren.apply(campoDaFicha("teclas"), comandos ? [comandos] : []);
     campoDaFicha("jogar").href = jogo.url;
+    var textoJogar = campoDaFicha("jogar").querySelector("[data-bj-ficha-jogar-texto]");
+    if (textoJogar) textoJogar.textContent = comPonto[jogo.slug] ? "Continuar" : "Jogar agora";
     // no app, o jogo abre ali mesmo (a tela cheia não fecha)
     campoDaFicha("jogar").onclick = function (e) {
       if (window.LSApp && window.LSApp.abrir(jogo, e)) { e.preventDefault(); fecharFicha(); }

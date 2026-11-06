@@ -334,6 +334,19 @@ class EmuladorNoSiteTests(TestCase):
         self.assertContains(resposta, "jogo-emulador.js")
         self.assertContains(resposta, "jogo-guardado.js")
 
+    def test_continuar_de_onde_parou(self):
+        """O reprodutor guarda o ponto do jogo no aparelho e oferece "Continuar" (jogo-progresso.js)."""
+        resposta = self.client.get(reverse("jogo_emulador", args=["disco-teste"]))
+        self.assertContains(resposta, "jogo-progresso.js")
+        self.assertContains(resposta, "data-pl-continuar")
+        self.assertContains(resposta, "Continuar de onde parou")
+        from .jogos_apk_gerar import ARQUIVOS_DO_REPRODUTOR
+        from .views_app_jogos import CASCA
+
+        # no APK e no app sem internet também
+        self.assertIn("site/paginas/jogo-progresso.js", ARQUIVOS_DO_REPRODUTOR)
+        self.assertIn("site/paginas/jogo-progresso.js", CASCA)
+
     def test_arquivo_em_pedacos_vai_com_as_partes_na_ordem(self):
         faixa = self.jogo.arquivos_emulador.get(nome="Track 01.bin")
         faixa.arquivo = ""

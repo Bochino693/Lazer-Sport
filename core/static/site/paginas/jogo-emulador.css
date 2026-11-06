@@ -192,6 +192,22 @@ html, body {
 .pl-jogar svg { width: 24px; height: 24px; }
 .pl-jogar:hover { filter: brightness(1.1); }
 .pl-pronto-dica { margin: 0; font-size: .82rem; color: var(--suave); }
+/* CONTINUAR DE ONDE PAROU: a foto de onde a pessoa parou, o botão forte e quando foi */
+.pl-continuar { display: grid; justify-items: center; gap: 8px; }
+.pl-continuar[hidden] { display: none; }
+.pl-continuar-foto { width: min(240px, 46vw); aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px;
+                     border: 2px solid rgba(255, 255, 255, .22); box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .8), 0 0 0 6px rgba(255, 255, 255, .04);
+                     image-rendering: pixelated; }
+.pl-continuar-foto[hidden] { display: none; }
+.pl-continuar-quando { margin: 0; font-size: .82rem; font-weight: 600; color: var(--suave); }
+/* com o Continuar à vista, o "Começar do início" fica discreto */
+.pl-jogar.pl-jogar--outro { padding: 11px 26px; font-size: .95rem; font-weight: 800; background: rgba(255, 255, 255, .1);
+                            border: 1px solid rgba(255, 255, 255, .22); box-shadow: none; animation: none; }
+.pl-jogar.pl-jogar--outro svg { width: 18px; height: 18px; }
+@media (max-height: 520px) {
+    .pl-continuar-foto { width: auto; height: 26vh; }
+    .pl-pronto { gap: 6px; }
+}
 .pl-erro { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 4px; }
 
 @keyframes pl-surge { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
@@ -791,3 +807,7 @@ html, body {
 
 /* a apresentação "LAZER & SPORT GAMES apresenta" cobre a tela inteira, por cima da abertura */
 .pl-abertura > .ls-intro { position: fixed; inset: 0; z-index: 70; }
+/* durante a apresentação ela fica por cima de tudo (o jogo pode ligar antes de ela acabar),
+   e o texto da abertura sai da frente (não aparece por trás quando a apresentação some) */
+.pl-abertura.is-apresentando { z-index: 90; }
+.pl-abertura.is-apresentando .pl-abertura-miolo { visibility: hidden; }

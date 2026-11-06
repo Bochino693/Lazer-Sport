@@ -202,6 +202,8 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
 .bj-marca--ranking { color: var(--pg-amarelo); }
 .bj-marca--nova { color: #04121f; background: var(--pg-ciano); border: 0; }
 .bj-marca--aparelho { color: #34d399; border-color: rgba(52, 211, 153, .5); }
+.bj-capa-continuar { position: absolute; z-index: 3; left: 10px; bottom: 74px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+                     font: 800 .66rem "Poppins", sans-serif; color: #241600; background: #ffd23f; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
 .bj-capa-play { position: absolute; z-index: 3; right: 10px; bottom: 66px; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
                 color: #04210f; background: #22c55e; box-shadow: 0 6px 18px rgba(34, 197, 94, .5); opacity: 0; transform: scale(.75); transition: .2s ease; }
 .bj-capa:hover .bj-capa-play, .bj-capa:focus-visible .bj-capa-play { opacity: 1; transform: none; }

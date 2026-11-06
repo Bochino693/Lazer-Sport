@@ -169,7 +169,16 @@
     quadro.addEventListener("load", function () { try { quadro.focus(); } catch (e) { /* nada */ } });
   }
   function fecharQuadro() {
-    if (quadro) { quadro.src = "about:blank"; quadro.remove(); quadro = null; }
+    if (!quadro) return;
+    var q = quadro;
+    quadro = null;
+    var tirar = function () { if (!q) return; q.src = "about:blank"; q.remove(); q = null; };
+    // antes de fechar, o jogo guarda o ponto onde parou ("Continuar de onde parou")
+    var salvar = null;
+    try { salvar = q.contentWindow && q.contentWindow.LSJogoSalvar; } catch (e) { salvar = null; }
+    if (typeof salvar !== "function") { tirar(); return; }
+    setTimeout(tirar, 1500);
+    try { Promise.resolve(salvar()).then(tirar, tirar); } catch (e) { tirar(); }
   }
   function fechar(daHistoria) {
     if (!aberto) return;

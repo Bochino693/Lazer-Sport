@@ -803,3 +803,33 @@ Dependência nova: rjsmin (requirements.txt).
    Com mais de um processo no servidor (WEB_WORKERS acima de 1), a contagem
    e o "uma vez só" valem por processo (o cache é de memória); a assinatura
    do desafio vale sempre.
+
+31) CONTINUAR DE ONDE PAROU (E OS SAVES DO JOGO)
+   Antes, fechar a página perdia tudo. Agora, nos jogos de console:
+     * O PONTO EXATO DO JOGO fica guardado no aparelho quando a pessoa sai
+       (fecha a aba, troca de app, aperta Voltar, fecha o jogo na biblioteca)
+       e a cada minuto jogando. Na próxima vez, a abertura mostra a foto de
+       onde ela parou, "Você parou há 2 h" e o botão CONTINUAR DE ONDE PAROU
+       (Enter ou o A do controle também continuam); "Começar do início" fica
+       embaixo. Na biblioteca, a capa ganha o selo "Continuar" e a ficha troca
+       "Jogar agora" por "Continuar".
+     * OS SAVES DO PRÓPRIO JOGO (o "salvar" do menu do jogo, a bateria do
+       cartucho) vão para o aparelho a cada 30 segundos e ao sair -- o
+       emulador só fazia isso a cada 5 minutos, e quem fechava antes perdia.
+   Fica no aparelho (no navegador; no APK, dentro do app): os 8 jogos mais
+   recentes (um ponto de PlayStation tem uns 4 MB). Trocar de celular ou
+   limpar os dados do navegador apaga. Jogar menos de 8 segundos não troca o
+   ponto guardado (abrir e fechar sem querer não perde o progresso).
+   O código: core/static/site/paginas/jogo-progresso.js e a parte
+   "continuar de onde parou" de jogo-emulador.js.
+
+32) A ABERTURA DOS JOGOS REFEITA ("LAZER & SPORT GAMES apresenta")
+   Uns quatro segundos de cinema antes de cada jogo (uma vez por visita; um
+   toque, Enter ou Esc pula): faíscas nas cores da marca correm para o
+   centro; no IMPACTO o logo aparece com onda de choque, clarão e o tranco da
+   tela; "LAZER & SPORT GAMES" entra letra por letra com um brilho passando;
+   a marca sobe, a CAPA DO JOGO acende ao fundo e o nome do jogo bate na tela,
+   com o console embaixo. O som (sopro, grave do impacto, notas e acorde) é
+   feito na hora, sem baixar nada, e segue o botão de som dos jogos. Vale nos
+   jogos de console, nos cadastrados e nos da casa. Quem pediu "menos
+   movimento" no aparelho vê a versão parada.
