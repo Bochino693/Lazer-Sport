@@ -9,7 +9,7 @@
 {% block meta_description %}Fábrica de brinquedos em São Paulo: fliperamas, boliche virtual e infantil, brinquedões e espaço esportivo kids para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
 
 {% block content %}
-{% cache home_cache_ttl home_public_v5 %}
+{% cache home_cache_ttl home_public_v6 %}
 
   <link rel="stylesheet" href="{% estatico 'site/ls-home.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/ls-galeria.css' %}">
@@ -1186,117 +1186,7 @@
 {% endif %}
 
 
-<!-- ======= IDENTIDADE VISUAL UNIFICADA DAS VITRINES ======= -->
-
-
-<!-- ======= CONTATO ======= -->
-
-
-<section id="contato" class="ls-loc-section">
-
-    <div class="ls-loc-inner">
-
-        <div class="ls-loc-card">
-
-            <span class="ls-loc-tag">Localização</span>
-
-            <h2>Venha até a Lazer &amp; Sport.</h2>
-
-            <p>
-                Estamos em São Paulo, na zona norte, com rota pré-programada
-                pra facilitar sua visita, retirada ou atendimento presencial.
-            </p>
-
-            <div class="ls-loc-line">
-                <div class="ls-loc-icon"><i class="fa-solid fa-location-dot"></i></div>
-                <div>
-                    <h5>Endereço</h5>
-                    <p>Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP, CEP 02679-110</p>
-                </div>
-            </div>
-
-            <div class="ls-loc-line">
-                <div class="ls-loc-icon"><i class="fa-solid fa-phone"></i></div>
-                <div>
-                    <h5>Telefone / WhatsApp</h5>
-                    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">+55 11 96056-3135</a>
-                </div>
-            </div>
-
-            <div class="ls-loc-line">
-                <div class="ls-loc-icon"><i class="fa-solid fa-envelope"></i></div>
-                <div>
-                    <h5>E-mail</h5>
-                    <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
-                </div>
-            </div>
-
-            <div class="ls-loc-routes">
-                <a
-                    href="https://www.google.com/maps/dir/?api=1&destination=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2002679-110"
-                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-maps"
-                >
-                    <i class="fa-solid fa-diamond-turn-right"></i> Rota no Google Maps
-                </a>
-
-                <a
-                    href="https://waze.com/ul?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP&navigate=yes"
-                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-waze"
-                >
-                    <i class="fa-brands fa-waze"></i> Abrir no Waze
-                </a>
-            </div>
-
-        </div>
-
-        <div class="ls-loc-map">
-            <iframe
-                src="https://maps.google.com/maps?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%20S%C3%A3o%20Paulo%20-%20SP%2002679-110&t=&z=15&ie=UTF8&iwloc=&output=embed"
-                loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"
-                allowfullscreen>
-            </iframe>
-        </div>
-
-    </div>
-
-    <div class="ls-loc-social">
-        <p>Siga a Lazer &amp; Sport nas redes sociais</p>
-
-        <div class="social-icons">
-            <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Instagram" class="instagram">
-                <i class="fa-brands fa-instagram"></i>
-            </a>
-
-            <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" aria-label="WhatsApp" class="whatsapp">
-                <i class="fa-brands fa-whatsapp"></i>
-            </a>
-
-            <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook" class="facebook">
-                <i class="fa-brands fa-facebook"></i>
-            </a>
-
-            <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn" class="linkedin">
-                <i class="fa-brands fa-linkedin"></i>
-            </a>
-
-            <a href="https://www.threads.net/@lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Threads" class="threads">
-                <i class="fa-brands fa-threads"></i>
-            </a>
-        </div>
-    </div>
-
-</section>
-
-<!-- ======= CLIENTES (MAPA) ======= -->
-
-<!-- Tema claro premium do mapa e dos controles de clientes. -->
-
-<!-- Padronização clara do topo e destaque especial dos projetos. -->
-
-<!-- Ajuste final: contraste original no topo, subtítulos nítidos e combos completos. -->
-
-<!-- Correções finais: faixa do hero integrada e carrossel de combos completo. -->
+<!-- ======= ONDE ESTAMOS: A FÁBRICA E OS CLIENTES NUM MAPA SÓ ======= -->
 
 {% comment %}
   A FÁBRICA COMO NEGÓCIO LOCAL: endereço, mapa, telefone e as cidades onde
@@ -1340,77 +1230,211 @@
 }
 </script>
 
-{# O mapa conta onde os CLIENTES estão: sem cliente publicado, não vem (a fábrica já está no "Venha até a Lazer & Sport", logo acima). #}
-{% if clientes_mapa %}
-<div class="espacador"></div>
-<section id="clientes-section" class="clientes-section">
+{% comment %}
+  UM MAPA SÓ PARA A FÁBRICA E PARA OS CLIENTES.
 
-    <div class="clientes-header">
+  Eram duas seções seguidas, cada uma com o seu mapa: "Venha até a Lazer &
+  Sport" (endereço, contatos, rotas e um mapa do Google só com a fábrica)
+  e, logo abaixo, "Nossa fábrica e onde nossos clientes estão" (o mapa com
+  os alfinetes, o filtro por cidade e a lista de clientes). A fábrica
+  aparecia duas vezes e a página ganhava quase uma tela inteira a mais.
+
+  Agora é uma seção e um mapa. Nada se perdeu:
+    * o cartão da fábrica leva endereço, telefone/WhatsApp, e-mail, as
+      rotas (Google Maps e Waze), as redes sociais e o botão "Ver no mapa",
+      que aproxima o mapa até a rua da fábrica (o que o mapa do Google
+      fazia);
+    * em cima do mapa ficam as camadas -- Fábrica e Clientes, com a
+      contagem de cada uma, que também servem de legenda -- e o filtro por
+      cidade;
+    * a lista de clientes (a mesma "Lazer & Sport em Cidade/UF -- Nome"
+      que o Google lê) fica ao lado do mapa, e clicar num nome leva até o
+      alfinete dele.
+
+  As âncoras do menu continuam valendo: "Nossa Localização" (#contato) cai
+  no começo da seção, e "Mapa de Clientes" (#clientes-section) cai no mapa.
+  Sem cliente publicado, o mapa continua, só com a fábrica.
+
+  O comportamento do mapa está em site/paginas/home-mapa.js.
+{% endcomment %}
+<section id="contato" class="ls-onde{% if clientes_mapa %} ls-onde--com-clientes{% endif %}" aria-labelledby="onde-titulo">
+
+    <div class="ls-onde-topo">
         <div>
-          <span class="ls-showcase-tag">
-            <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
-            Presença nacional e internacional
-          </span>
-          <h2 class="titulo-eventos">Nossa fábrica e onde nossos clientes estão</h2>
-          <p class="clientes-subtitle">
-              O pino vermelho é a nossa fábrica, em São Paulo. Os demais são clientes que já
-              confiam na Lazer &amp; Sport, espalhados pelo Brasil e também fora dele.
-              Use o filtro para explorar por cidade.
-          </p>
+            <span class="ls-showcase-tag">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                {% if clientes_mapa %}Localização e presença nacional{% else %}Localização{% endif %}
+            </span>
+            <h2 class="titulo-eventos" id="onde-titulo">Venha até a Lazer &amp; Sport</h2>
+            <p class="section-subtitle">
+                Nossa fábrica fica na zona norte de São Paulo, com rota pronta para a sua visita,
+                retirada ou atendimento presencial.{% if clientes_mapa %} No mapa, o alfinete vermelho
+                é a fábrica e os azuis são clientes que já confiam na Lazer &amp; Sport, pelo Brasil
+                e fora dele.{% endif %}
+            </p>
         </div>
     </div>
 
-    <div class="clientes-controls-panel">
-        <div class="clientes-toolbar">
-            <div class="clientes-filtro">
-                <label for="filtro-cidade-cliente"><i class="fa-solid fa-filter"></i> Cidade</label>
-                <select id="filtro-cidade-cliente">
-                    <option value="todas">Todas as cidades</option>
-                </select>
+    <div class="ls-onde-grade">
+
+        <article class="ls-onde-fabrica" aria-labelledby="onde-fabrica-titulo">
+            <div class="ls-onde-fabrica-cabeca">
+                <span class="ls-onde-fabrica-icone" aria-hidden="true"><i class="fa-solid fa-industry"></i></span>
+                <div>
+                    <h3 id="onde-fabrica-titulo">Nossa fábrica</h3>
+                    <small>São Paulo · zona norte</small>
+                </div>
+                <button type="button" class="ls-onde-ver-fabrica" data-onde-ver-fabrica hidden
+                        aria-label="Ver a fábrica no mapa" title="Ver a fábrica no mapa">
+                    <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> <span>Ver no mapa</span>
+                </button>
             </div>
-            <span class="clientes-contador" id="clientes-contador"></span>
+
+            <ul class="ls-onde-contatos">
+                <li>
+                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                    <div>
+                        <h4>Endereço</h4>
+                        <p>Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP, CEP 02679-110</p>
+                    </div>
+                </li>
+                <li>
+                    <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                    <div>
+                        <h4>Telefone / WhatsApp</h4>
+                        <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">+55 11 96056-3135</a>
+                    </div>
+                </li>
+                <li>
+                    <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                    <div>
+                        <h4>E-mail</h4>
+                        <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="ls-onde-rotas">
+                <a href="https://www.google.com/maps/dir/?api=1&destination=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2002679-110"
+                   target="_blank" rel="noopener" class="ls-onde-rota ls-onde-rota--maps">
+                    <i class="fa-solid fa-diamond-turn-right" aria-hidden="true"></i> Rota no Google Maps
+                </a>
+                <a href="https://waze.com/ul?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP&navigate=yes"
+                   target="_blank" rel="noopener" class="ls-onde-rota ls-onde-rota--waze">
+                    <i class="fa-brands fa-waze" aria-hidden="true"></i> Abrir no Waze
+                </a>
+            </div>
+
+            <div class="ls-onde-redes">
+                <p>Siga a Lazer &amp; Sport</p>
+                <div class="social-icons">
+                    <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Instagram" class="instagram">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" aria-label="WhatsApp" class="whatsapp">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </a>
+                    <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook" class="facebook">
+                        <i class="fa-brands fa-facebook"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn" class="linkedin">
+                        <i class="fa-brands fa-linkedin"></i>
+                    </a>
+                    <a href="https://www.threads.net/@lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Threads" class="threads">
+                        <i class="fa-brands fa-threads"></i>
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <div class="ls-onde-mapa"{% if clientes_mapa %} id="clientes-section"{% endif %}>
+            <div class="ls-onde-barra">
+                <div class="ls-onde-camadas" role="group" aria-label="O que mostrar no mapa">
+                    <button type="button" class="ls-onde-camada ls-onde-camada--fabrica" data-onde-camada="fabrica" aria-pressed="true">
+                        <i class="fa-solid fa-location-dot ls-onde-ponto" aria-hidden="true"></i> Fábrica <b>1</b>
+                    </button>
+                    {% if clientes_mapa %}
+                    <button type="button" class="ls-onde-camada ls-onde-camada--clientes" data-onde-camada="clientes" aria-pressed="true">
+                        <i class="fa-solid fa-location-dot ls-onde-ponto" aria-hidden="true"></i> Clientes <b data-onde-contagem>{{ clientes_mapa|length }}</b>
+                    </button>
+                    {% endif %}
+                </div>
+                {% if clientes_mapa %}
+                <label class="ls-onde-filtro" for="filtro-cidade-cliente">
+                    <i class="fa-solid fa-filter" aria-hidden="true"></i>
+                    <span>Cidade</span>
+                    <select id="filtro-cidade-cliente">
+                        <option value="todas">Todas as cidades</option>
+                    </select>
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="ls-onde-moldura">
+                <div class="ls-onde-dica" aria-hidden="true">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span class="ls-onde-dica-pc">Passe o mouse para visualizar · clique para manter aberto</span>
+                    <span class="ls-onde-dica-toque">Toque em um alfinete para ver {% if clientes_mapa %}o cliente{% else %}a fábrica{% endif %}</span>
+                </div>
+                <div id="mapa-onde" class="ls-onde-mapa-caixa" data-logo="{% estatico 'images/logo-96.png' %}">
+                    {# Some quando o mapa monta. Se o mapa não carregar (rede bloqueada, script desligado), fica o caminho até a fábrica. #}
+                    <div class="ls-onde-reserva">
+                        <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+                        <p>Carregando o mapa…</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2002679-110"
+                           target="_blank" rel="noopener">Ver a fábrica no Google Maps</a>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="clientes-legenda">
-            <span><i class="ponto fabrica"></i> Nossa fábrica</span>
-            <span><i class="ponto cliente"></i> Clientes atendidos</span>
+        {% if clientes_mapa %}
+        <div class="ls-onde-clientes">
+            <div class="ls-onde-clientes-cabeca">
+                <h3><i class="fa-solid fa-earth-americas" aria-hidden="true"></i> Clientes no mapa</h3>
+                <span class="ls-onde-contador" id="clientes-contador"><strong data-onde-contagem>{{ clientes_mapa|length }}</strong> {{ clientes_mapa|length|pluralize:"cliente,clientes" }}</span>
+            </div>
+            <ul class="ls-onde-lista">
+                {% for cliente in clientes_mapa %}
+                <li>
+                    <button type="button" class="ls-onde-item" data-onde-cliente="{{ forloop.counter0 }}">
+                        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                        <span>
+                            <b>{{ cliente.nome }}</b>
+                            <small><strong>Lazer &amp; Sport</strong> em {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}{% if cliente.pais != "Brasil" %}, {{ cliente.pais }}{% endif %}</small>
+                        </span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
+        {% endif %}
+
     </div>
-
-    <div class="clientes-mapa-wrap">
-        <div class="clientes-map-hint" aria-hidden="true">
-            <i class="fa-solid fa-location-dot"></i>
-            <span class="hint-desktop">Passe o mouse para visualizar · clique para manter aberto</span>
-            <span class="hint-mobile">Toque em um pino para ver o cliente</span>
-        </div>
-        <div id="mapa-clientes"></div>
-    </div>
-
-    <ul class="clientes-seo-lista">
-        {% for cliente in clientes_mapa %}
-        <li>
-            <strong>Lazer &amp; Sport</strong> em {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}{% if cliente.pais != "Brasil" %}, {{ cliente.pais }}{% endif %} — {{ cliente.nome }}
-        </li>
-        {% endfor %}
-    </ul>
-
 </section>
 
-{{ pontos_mapa|json_script:"dados-clientes-mapa" }}
-{# O mapa de clientes também sai daqui: sem CDN, a seção inteira sumia. #}
+{{ pontos_mapa|json_script:"dados-mapa-onde" }}
 {% comment %}
   O MAPA SÓ CARREGA QUANDO CHEGA PERTO DA TELA.
 
   O Leaflet são ~150 KB de script e o mapa fica lá no fim da home: baixar
   e montar tudo na abertura atrasava a página inteira para quem nem
-  chega até ele. Agora o CSS, o script e os pinos entram quando a seção
-  está a uns 600 px de aparecer.
+  chega até ele. O CSS, o script e o comportamento do mapa
+  (site/paginas/home-mapa.js) entram quando a seção está a uns 600 px de
+  aparecer. Tudo sai daqui mesmo, sem CDN.
 {% endcomment %}
 <script>
 (function () {
-    const caixa = document.getElementById('mapa-clientes');
+    const caixa = document.getElementById('mapa-onde');
     if (!caixa) return;
     let pedido = false;
+    const script = (endereco) => new Promise((pronto, falhou) => {
+        const js = document.createElement('script');
+        js.src = endereco;
+        js.onload = pronto;
+        js.onerror = falhou;
+        document.head.append(js);
+    });
     const carregar = () => {
         if (pedido) return;
         pedido = true;
@@ -1418,10 +1442,13 @@
         css.rel = 'stylesheet';
         css.href = "{% estatico 'vendor/leaflet/leaflet.css' %}";
         css.onload = css.onerror = () => {
-            const js = document.createElement('script');
-            js.src = "{% estatico 'vendor/leaflet/leaflet.js' %}";
-            js.onload = montarMapaDeClientes;
-            document.head.append(js);
+            script("{% estatico 'vendor/leaflet/leaflet.js' %}")
+                .then(() => script("{% estatico 'site/paginas/home-mapa.js' %}"))
+                .catch(() => {
+                    // Sem o mapa, fica o atalho para o Google Maps que já está na caixa.
+                    const aviso = caixa.querySelector('.ls-onde-reserva p');
+                    if (aviso) aviso.textContent = 'O mapa não carregou agora.';
+                });
         };
         document.head.append(css);
     };
@@ -1437,637 +1464,7 @@
         carregar();
     }
 })();
-
-function montarMapaDeClientes() {
-    const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
-    const todosPontos = todosPontosBrutos.filter(p =>
-        Number.isFinite(Number(p.lat)) &&
-        Number.isFinite(Number(p.lng)) &&
-        Number(p.lat) >= -90 && Number(p.lat) <= 90 &&
-        Number(p.lng) >= -180 && Number(p.lng) <= 180
-    ).map(p => ({ ...p, lat: Number(p.lat), lng: Number(p.lng) }));
-    if (!todosPontos.length) return;
-
-    const fabrica = todosPontos.find(p => p.tipo === 'fabrica') || null;
-    const clientesDados = todosPontos.filter(p => p.tipo === 'cliente');
-
-    const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
-    mapa.setView([-14.235, -51.925], 4);
-
-    /* O servidor de mapas do OpenStreetMap recusa (o quadro "Access
-       blocked") quem pede o mapa sem dizer de que site vem. O site manda
-       `Referrer-Policy: same-origin` -- o padrão do Django --, que não diz
-       nada para outros domínios; aqui os quadros do mapa dizem só o
-       endereço do site (sem a página), como pede a regra de uso. */
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        referrerPolicy: 'strict-origin-when-cross-origin',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-    }).addTo(mapa);
-
-    function escapeHTML(texto) {
-        const div = document.createElement('div');
-        div.textContent = texto || '';
-        return div.innerHTML;
-    }
-
-    function normalizarUrlExterna(valor) {
-        const url = String(valor || '').trim();
-        if (!/^https?:\/\//i.test(url)) return '';
-
-        try {
-            const destino = new URL(url);
-            return ['http:', 'https:'].includes(destino.protocol)
-                ? destino.href
-                : '';
-        } catch (erro) {
-            return '';
-        }
-    }
-
-    /* 96x96 (9 KB). Era o logotipo de 1024px e 796 KB para preencher um
-       furo de 21 pixels no alfinete -- e a home carrega um por ponto. */
-    const LOGO_CLIENTE_PADRAO = "{% estatico 'images/logo-96.png' %}";
-    const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
-
-    const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
-
-    let sequenciaPino = 0;
-
-    function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg = '' }) {
-        const idMascara = `mascara-pino-${++sequenciaPino}`;
-        const centroY = 179;
-        const raioFuro = Math.round((janela / largura) * 192);
-
-        return `
-            <span class="pino-gota" style="width:${largura}px;height:${altura}px;">
-                <span class="pino-gota__janela" style="width:${janela}px;height:${janela}px;">
-                    ${conteudoJanela}
-                </span>
-                <svg class="pino-gota__corpo ${classeSvg}" viewBox="0 0 384 512"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <defs>
-                        <mask id="${idMascara}">
-                            <rect width="384" height="512" fill="#fff"/>
-                            <circle cx="192" cy="${centroY}" r="${raioFuro}" fill="#000"/>
-                        </mask>
-                    </defs>
-                    <path d="${PINO_PATH_D}" fill="${corPino}" mask="url(#${idMascara})"/>
-                </svg>
-                <svg class="pino-gota__aro" viewBox="0 0 384 512"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <circle cx="192" cy="${centroY}" r="${raioFuro}"
-                            fill="none" stroke="#fff" stroke-width="18"/>
-                </svg>
-            </span>
-        `;
-    }
-
-    // Pinos menores agora (34x46 cliente, 44x59 fábrica) -- o raio de
-    // agrupamento (RAIO_CLUSTER_PX, mais abaixo) foi ajustado pra ser
-    // maior que essa largura, então pinos que ficariam colados viram
-    // bolha em vez de se sobreporem e esconderem a foto um do outro.
-    function criarIconeCliente(c) {
-        // A marca do pino é sempre a da casa (ver `clientes_mapa`, em
-        // core/views.py): o mapa diz onde a Lazer & Sport atende, e não
-        // quais marcas existem em cada cidade.
-        const imagemCliente = escapeHTML(c.logo || LOGO_CLIENTE_PADRAO);
-        return L.divIcon({
-            className: 'cliente-marker',
-            html: criarPino({
-                largura: 38, altura: 51, corPino: '#004AAD', janela: 21,
-                conteudoJanela: `<img src="${imagemCliente}" alt="" onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`
-            }),
-            iconSize: [38, 51],
-            iconAnchor: [19, 51],
-            popupAnchor: [0, -47],
-        });
-    }
-
-    const iconeFabrica = L.divIcon({
-        className: 'fabrica-marker',
-        html: criarPino({
-            largura: 46, altura: 62, corPino: '#E63946', janela: 25, classeSvg: 'pino-pulse',
-            conteudoJanela: `
-                <svg class="pino-fabrica-icone" viewBox="0 0 64 64"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M6 56V26l15 8V24l15 9V18h9v20l13 7v11H6zm8-8h7v-7h-7v7zm14 0h7v-7h-7v7zm14 0h7v-7h-7v7zM38 14V7h7v7h-7z"/>
-                </svg>`
-        }),
-        iconSize: [46, 62],
-        iconAnchor: [23, 62],
-        popupAnchor: [0, -57],
-    });
-
-    function criarPopupCliente(c) {
-        const nome = escapeHTML(c.nome);
-        const imagemCliente = escapeHTML(c.logo || LOGO_CLIENTE_PADRAO);
-        const logo = `
-            <img src="${imagemCliente}"
-                 alt="${nome}"
-                 onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`;
-        const cidadeEstado = [c.cidade, c.estado].filter(Boolean).join(' - ');
-        const localCompleto = [
-            cidadeEstado,
-            c.pais && c.pais !== 'Brasil' ? c.pais : ''
-        ].filter(Boolean).join(', ') || c.pais || 'Localização disponível no mapa';
-        const local = escapeHTML(localCompleto);
-        const descricao = escapeHTML(
-            c.descricao ||
-            'Espaço atendido com equipamentos e soluções da Lazer & Sport Brinquedos.'
-        );
-        const urlCliente = normalizarUrlExterna(c.site || c.instagram);
-        const linkInstagram = urlCliente.includes('instagram.com');
-        const link = urlCliente
-            ? `<a class="cliente-popup__action ${linkInstagram ? 'cliente-popup__action--instagram' : ''}"
-                  href="${escapeHTML(urlCliente)}"
-                  target="_blank"
-                  rel="noopener"
-                  aria-label="${linkInstagram ? `Abrir Instagram de ${nome}` : `Visitar site de ${nome}`}">
-                   <i class="${linkInstagram ? 'fa-brands fa-instagram' : 'fa-solid fa-globe'}"></i>
-                   ${linkInstagram
-                       ? '<span class="cliente-popup__instagram-text">Instagram</span>'
-                       : 'Visitar site'}
-               </a>`
-            : '';
-        const rota = `
-            <a class="cliente-popup__action cliente-popup__action--route"
-               href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${c.lat},${c.lng}`)}"
-               target="_blank"
-               rel="noopener">
-                <i class="fa-solid fa-route"></i>
-                Como chegar
-            </a>`;
-        const acoes = `
-            <div class="cliente-popup__actions ${link ? '' : 'cliente-popup__actions--single'}">
-                ${link}
-                ${rota}
-            </div>`;
-        const categoriasRecebidas = Array.isArray(c.brinquedos)
-            ? c.brinquedos
-            : (Array.isArray(c.categorias) ? c.categorias : CATEGORIAS_PADRAO);
-        const categorias = categoriasRecebidas
-            .map(item => typeof item === 'string' ? item : (item.nome || item.nome_brinquedo || ''))
-            .filter(Boolean)
-            .slice(0, 4);
-        const tags = `<div class="cliente-popup-tags">${
-            categorias.map(t => `<span>${escapeHTML(t)}</span>`).join('')
-          }</div>`;
-
-        return `
-            <div class="cliente-popup cliente-popup--cliente">
-                <div class="cliente-popup__top">
-                    <div class="cliente-popup__media">${logo}</div>
-                    <div class="cliente-popup__copy">
-                        <span class="cliente-popup__kicker">
-                            <i class="fa-solid fa-circle-check"></i>
-                            Cliente Lazer &amp; Sport
-                        </span>
-                        <h4>${nome}</h4>
-                    </div>
-                </div>
-                <div class="cliente-popup__location">
-                    <i class="fa-solid fa-location-dot"></i>
-                    <span>${local}</span>
-                </div>
-                <p class="cliente-popup__description">${descricao}</p>
-                ${tags}
-                ${acoes}
-            </div>
-        `;
-    }
-
-    function criarPopupFabrica(f) {
-        const nome = escapeHTML(f.nome);
-        const local = escapeHTML([f.cidade, f.estado].filter(Boolean).join(' - '));
-        const endereco = escapeHTML(f.endereco || '');
-        const logoFabrica = escapeHTML(f.logo || LOGO_CLIENTE_PADRAO);
-        const localCompleto = [endereco, local].filter(Boolean).join(' — ');
-        const rotaFabrica = `
-            <div class="cliente-popup__actions cliente-popup__actions--single">
-                <a class="cliente-popup__action cliente-popup__action--route"
-                   href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${f.lat},${f.lng}`)}"
-                   target="_blank"
-                   rel="noopener">
-                    <i class="fa-solid fa-route"></i>
-                    Como chegar
-                </a>
-            </div>`;
-
-        return `
-            <div class="cliente-popup cliente-popup--fabrica">
-                <div class="cliente-popup__top">
-                    <div class="cliente-popup__media">
-                        <img src="${logoFabrica}" alt="${nome}">
-                    </div>
-                    <div class="cliente-popup__copy">
-                        <span class="cliente-popup__kicker">
-                            <i class="fa-solid fa-industry"></i>
-                            Nossa fábrica
-                        </span>
-                        <h4>${nome}</h4>
-                    </div>
-                </div>
-                <div class="cliente-popup__location">
-                    <i class="fa-solid fa-location-dot"></i>
-                    <span>${localCompleto}</span>
-                </div>
-                <p class="cliente-popup__description">
-                    Tecnologia, fabricação própria e diversão para projetos em todo o Brasil.
-                </p>
-                ${rotaFabrica}
-            </div>
-        `;
-    }
-
-    function criarTooltipMarcador(ponto, fabrica = false) {
-        const nome = escapeHTML(ponto.nome || 'Lazer & Sport');
-        const local = escapeHTML(
-            [ponto.cidade, ponto.estado]
-                .filter(Boolean)
-                .join(' - ') ||
-            ponto.pais ||
-            ''
-        );
-
-        return `
-            <div class="cliente-hover-card ${fabrica ? 'cliente-hover-card--fabrica' : ''}">
-                <strong>${nome}</strong>
-                ${local ? `<span>${local}</span>` : ''}
-                <small>
-                    <i class="fa-solid fa-computer-mouse"></i>
-                    Clique para manter as informações abertas
-                </small>
-            </div>
-        `;
-    }
-
-    const dispositivoComHover = window.matchMedia(
-        '(hover: hover) and (pointer: fine)'
-    ).matches;
-    const dispositivoCompacto = window.matchMedia(
-        '(max-width: 575px), (hover: none)'
-    ).matches;
-    let marcadorPopupFixado = null;
-    let sequenciaCentralizacaoPopup = 0;
-
-    function alternarElevacaoMarcador(marcador, ativo, zIndexBase = 0) {
-        const elemento = marcador.getElement();
-        elemento?.classList.toggle('marcador-elevado', ativo);
-        marcador.setZIndexOffset(ativo ? zIndexBase + 1400 : zIndexBase);
-    }
-
-    function abrirPopupDoMarcador(marcador) {
-        if (!marcador._popupLazerSport) return;
-
-        const abrir = () => {
-            marcador._popupLazerSport
-                .setLatLng(marcador.getLatLng())
-                .openOn(mapa);
-        };
-
-        if (!dispositivoCompacto) {
-            abrir();
-            return;
-        }
-
-        const tokenCentralizacao = ++sequenciaCentralizacaoPopup;
-        mapa.stop();
-
-        const tamanhoMapa = mapa.getSize();
-        const pontoAtual = mapa.latLngToContainerPoint(
-            marcador.getLatLng()
-        );
-        const pontoSeguro = L.point(
-            tamanhoMapa.x / 2,
-            tamanhoMapa.y * .68
-        );
-        const deslocamento = pontoAtual.subtract(pontoSeguro);
-
-        if (
-            Math.abs(deslocamento.x) < 5 &&
-            Math.abs(deslocamento.y) < 5
-        ) {
-            abrir();
-            return;
-        }
-
-        let finalizado = false;
-        let fallbackCentralizacao = null;
-
-        const concluirCentralizacao = () => {
-            if (finalizado) return;
-            finalizado = true;
-            mapa.off('moveend', concluirCentralizacao);
-            window.clearTimeout(fallbackCentralizacao);
-
-            if (tokenCentralizacao === sequenciaCentralizacaoPopup) {
-                abrir();
-            }
-        };
-
-        mapa.once('moveend', concluirCentralizacao);
-        fallbackCentralizacao = window.setTimeout(
-            concluirCentralizacao,
-            240
-        );
-        mapa.panBy(deslocamento, {
-            animate: true,
-            duration: .18,
-            easeLinearity: .25
-        });
-    }
-
-    function fecharPopupsDoMapa() {
-        sequenciaCentralizacaoPopup += 1;
-        marcadorPopupFixado?.closeTooltip();
-        marcadorPopupFixado = null;
-        mapa.closePopup();
-    }
-
-    function configurarInteracaoMarcador(
-        marcador,
-        zIndexBase,
-        conteudoPopup,
-        conteudoTooltip,
-        deslocamentoY
-    ) {
-        const paddingSuperior = dispositivoCompacto ? 56 : 86;
-        const paddingLateral = dispositivoCompacto ? 12 : 24;
-        const paddingInferior = dispositivoCompacto ? 14 : 34;
-
-        marcador._zIndexBaseLazerSport = zIndexBase || 0;
-        marcador._popupLazerSport = L.popup({
-            autoClose: true,
-            autoPan: true,
-            autoPanPaddingTopLeft: L.point(
-                paddingLateral,
-                paddingSuperior
-            ),
-            autoPanPaddingBottomRight: L.point(
-                paddingLateral,
-                paddingInferior
-            ),
-            closeButton: true,
-            closeOnClick: false,
-            className: 'popup-cliente-lazer-sport',
-            keepInView: true,
-            maxWidth: dispositivoCompacto ? 252 : 320,
-            minWidth: 0,
-            offset: L.point(0, deslocamentoY)
-        }).setContent(conteudoPopup);
-
-        if (dispositivoComHover) {
-            marcador.bindTooltip(conteudoTooltip, {
-                className: 'cliente-hover-tooltip',
-                direction: 'top',
-                offset: L.point(0, deslocamentoY + 5),
-                opacity: 1
-            });
-
-            marcador.on('mouseover', function () {
-                alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
-
-                // O popup fixo já contém as informações completas. Evita
-                // sobrepor o tooltip de hover no mesmo marcador.
-                if (marcador === marcadorPopupFixado) {
-                    marcador.closeTooltip();
-                }
-            });
-
-            marcador.on('mouseout', function () {
-                // A elevação representa somente o hover. O popup clicado
-                // continua fixo, mas a gota volta à posição normal e pode
-                // subir novamente no próximo hover.
-                alternarElevacaoMarcador(marcador, false, zIndexBase || 0);
-            });
-        }
-
-        marcador.on('click', function (e) {
-            if (e.originalEvent) {
-                L.DomEvent.stopPropagation(e.originalEvent);
-                L.DomEvent.preventDefault(e.originalEvent);
-            }
-
-            marcador.closeTooltip();
-            marcadorPopupFixado = marcador;
-            abrirPopupDoMarcador(marcador);
-        });
-
-        function prepararElementoMarcador() {
-            const elemento = marcador.getElement();
-            if (!elemento) return;
-
-            elemento.setAttribute('role', 'button');
-            elemento.setAttribute(
-                'aria-label',
-                `Ver informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
-            );
-            elemento.setAttribute('aria-haspopup', 'dialog');
-            elemento.setAttribute('aria-expanded', 'false');
-            elemento.style.touchAction = 'manipulation';
-        }
-
-        marcador.on('add', prepararElementoMarcador);
-        prepararElementoMarcador();
-
-        marcador._popupLazerSport.on('add', function () {
-            marcador.getElement()?.setAttribute('aria-expanded', 'true');
-
-            const elementoPopup = marcador._popupLazerSport.getElement?.();
-            if (elementoPopup) {
-                elementoPopup.setAttribute('role', 'dialog');
-                elementoPopup.setAttribute(
-                    'aria-label',
-                    `Informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
-                );
-                elementoPopup
-                    .querySelector('.leaflet-popup-close-button')
-                    ?.setAttribute('aria-label', 'Fechar informações');
-            }
-        });
-
-        marcador._popupLazerSport.on('remove', function () {
-            marcador.getElement()?.setAttribute('aria-expanded', 'false');
-            if (marcadorPopupFixado === marcador) {
-                marcadorPopupFixado = null;
-            }
-        });
-
-        marcador.on('keypress', function (e) {
-            if (e.originalEvent?.key !== 'Enter' && e.originalEvent?.key !== ' ') {
-                return;
-            }
-            e.originalEvent.preventDefault();
-            marcador.closeTooltip();
-            marcadorPopupFixado = marcador;
-            abrirPopupDoMarcador(marcador);
-        });
-    }
-
-    mapa.on('popupopen', function (e) {
-        const popupAberto = e.popup;
-
-        if (
-            marcadorPopupFixado &&
-            marcadorPopupFixado._popupLazerSport !== popupAberto
-        ) {
-            marcadorPopupFixado = null;
-        }
-    });
-
-    // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
-    const RAIO_CLUSTER_PX = 48;
-    const camadaClientes = L.layerGroup().addTo(mapa);
-    let clientesAtuais = clientesDados;
-
-    function agruparPorPixel(lista) {
-        const restantes = lista.map(c => ({
-            cliente: c,
-            pt: mapa.latLngToContainerPoint([c.lat, c.lng])
-        }));
-        const grupos = [];
-
-        while (restantes.length) {
-            const base = restantes.shift();
-            const grupo = [base];
-
-            for (let i = restantes.length - 1; i >= 0; i--) {
-                const dx = restantes[i].pt.x - base.pt.x;
-                const dy = restantes[i].pt.y - base.pt.y;
-                if (Math.sqrt(dx * dx + dy * dy) <= RAIO_CLUSTER_PX) {
-                    grupo.push(restantes[i]);
-                    restantes.splice(i, 1);
-                }
-            }
-
-            grupos.push(grupo);
-        }
-
-        return grupos;
-    }
-
-    function atualizarContador(n) {
-        const contador = document.getElementById('clientes-contador');
-        if (contador) {
-            contador.innerHTML = `<strong>${n}</strong> cliente${n === 1 ? '' : 's'} no mapa`;
-        }
-    }
-
-    function renderizarPinosNoMapa() {
-        fecharPopupsDoMapa();
-        camadaClientes.clearLayers();
-        atualizarContador(clientesAtuais.length);
-        if (!clientesAtuais.length) return;
-
-        agruparPorPixel(clientesAtuais).forEach(grupo => {
-            if (grupo.length === 1) {
-                const c = grupo[0].cliente;
-                const marcador = L.marker([c.lat, c.lng], {
-                    icon: criarIconeCliente(c),
-                    riseOnHover: true,
-                    riseOffset: 1200,
-                    keyboard: true,
-                    bubblingMouseEvents: false,
-                    title: c.nome || 'Cliente Lazer & Sport'
-                });
-                configurarInteracaoMarcador(
-                    marcador,
-                    0,
-                    criarPopupCliente(c),
-                    criarTooltipMarcador(c),
-                    -47
-                );
-                camadaClientes.addLayer(marcador);
-                return;
-            }
-
-            const latMedia = grupo.reduce((s, g) => s + g.cliente.lat, 0) / grupo.length;
-            const lngMedia = grupo.reduce((s, g) => s + g.cliente.lng, 0) / grupo.length;
-
-            const marcadorCluster = L.marker([latMedia, lngMedia], {
-                icon: L.divIcon({
-                    className: 'cluster-lazer',
-                    html: `<span>${grupo.length}</span>`,
-                    iconSize: [36, 36],
-                }),
-                zIndexOffset: 500,
-                bubblingMouseEvents: false,
-            }).bindTooltip(`${grupo.length} clientes aqui — clique para ver cada um`, { direction: 'top' });
-
-            marcadorCluster.on('click', function () {
-                mapa.setView([latMedia, lngMedia], Math.min(mapa.getZoom() + 3, 18));
-            });
-
-            camadaClientes.addLayer(marcadorCluster);
-        });
-    }
-
-    // A distância visual entre os pinos só muda com o zoom. Recriar os
-    // marcadores em "moveend" fechava o popup logo após o autoPan no celular.
-    mapa.on('zoomend', renderizarPinosNoMapa);
-
-    let marcadorFabrica = null;
-    if (fabrica) {
-        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], {
-            icon: iconeFabrica,
-            zIndexOffset: 2000,
-            keyboard: true,
-            bubblingMouseEvents: false,
-            title: fabrica.nome || 'Lazer & Sport Brinquedos'
-        });
-        marcadorFabrica.addTo(mapa);
-        configurarInteracaoMarcador(
-            marcadorFabrica,
-            2000,
-            criarPopupFabrica(fabrica),
-            criarTooltipMarcador(fabrica, true),
-            -57
-        );
-    }
-
-    function ajustarEnquadramento() {
-        const pontosBounds = clientesAtuais.map(c => [c.lat, c.lng]);
-        if (fabrica) pontosBounds.push([fabrica.lat, fabrica.lng]);
-
-        if (pontosBounds.length) {
-            mapa.fitBounds(L.latLngBounds(pontosBounds).pad(0.25), { maxZoom: 11 });
-        } else {
-            mapa.setView([-14.235, -51.925], 4);
-        }
-    }
-
-    const selectCidade = document.getElementById('filtro-cidade-cliente');
-    if (selectCidade) {
-        const cidades = [...new Set(clientesDados.map(c => c.cidade).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
-
-        cidades.forEach(cidade => {
-            const opt = document.createElement('option');
-            opt.value = cidade;
-            opt.textContent = cidade;
-            selectCidade.appendChild(opt);
-        });
-
-        selectCidade.addEventListener('change', () => {
-            const valor = selectCidade.value;
-            clientesAtuais = valor === 'todas'
-                ? clientesDados
-                : clientesDados.filter(c => c.cidade === valor);
-            ajustarEnquadramento();
-            renderizarPinosNoMapa();
-        });
-    }
-
-    ajustarEnquadramento();
-    renderizarPinosNoMapa();
-
-    mapa.on('click', () => {
-        fecharPopupsDoMapa();
-    });
-}
 </script>
-{% endif %}
 
   <script src="{% estatico 'site/paginas/home.js' %}"></script>
   <script src="{% estatico 'site/ls-galeria.js' %}" defer></script>

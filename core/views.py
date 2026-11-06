@@ -447,7 +447,11 @@ class HomeView(View):
         # Sport atende aqui, aqui e aqui". Um único símbolo repetido é o
         # que faz o mapa contar essa história; o nome do cliente continua
         # no cartão que abre no toque.
-        logo_da_casa = static("images/logoofi.png")
+        #
+        # A versão de 96 px (9 KB) basta: no alfinete a logo ocupa um furo
+        # de 21 px, e no cartão, 58 px. A logoofi.png (159 KB) era baixada
+        # só para ser reduzida na tela.
+        logo_da_casa = static("images/logo-96.png")
 
         clientes_mapa = [
             {
@@ -500,7 +504,7 @@ class HomeView(View):
             "lat": fabrica_lat,
             "lng": fabrica_lng,
             "site": "",
-            "logo": static("images/logoofi.png"),
+            "logo": logo_da_casa,
             "endereco": fabrica_endereco_texto,
         }
 

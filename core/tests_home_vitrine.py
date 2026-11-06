@@ -12,7 +12,11 @@ O que estes testes protegem:
     script do 3D e o three.js); o sem objeto, não; o objeto desligado no
     painel não volta pelo nome; sem cadastro, vale o objeto do site pelo nome;
   * a vitrine com o 3D vem do cache da home: a segunda visita não consulta
-    o banco, e mexer no objeto 3D vale na visita seguinte.
+    o banco, e mexer no objeto 3D vale na visita seguinte;
+  * a fábrica e os clientes ficam numa seção só (#contato), com UM mapa:
+    sem cliente publicado, o mapa mostra só a fábrica (sem lista, sem
+    filtro, sem a âncora "Mapa de Clientes"); com cliente, a lista sai no
+    HTML para o Google ler e a âncora #clientes-section cai no mapa.
 """
 
 from decimal import Decimal
@@ -93,8 +97,11 @@ class SecoesVaziasTests(HomeBase):
             self.assertNotContains(resposta, secao, msg_prefix=secao)
         for caixa in self.CAIXAS_VAZIAS:
             self.assertNotContains(resposta, caixa, msg_prefix=caixa)
-        # o mapa nem carrega: sem cliente, não há pino para mostrar
-        self.assertNotContains(resposta, 'id="dados-clientes-mapa"')
+        # sem cliente, nada de clientes: nem lista, nem filtro, nem a camada
+        # (o mapa continua, com a fábrica -- ver MapaUnicoTests)
+        self.assertNotContains(resposta, 'class="ls-onde-lista')
+        self.assertNotContains(resposta, 'id="filtro-cidade-cliente"')
+        self.assertNotContains(resposta, 'data-onde-camada="clientes"')
         # sem a vitrine de brinquedos, nada aponta para ela
         self.assertNotContains(resposta, 'href="#brinquedos"')
         # o que não é lista continua: a arena, a manutenção e o contato
@@ -230,3 +237,71 @@ class CacheDaHomeComTresDTests(HomeBase):
         objeto.save()  # o signal do ObjetoTresD apaga o cache da home
 
         self.assertNotContains(self.home(), "data-modelo3d")
+
+
+class MapaUnicoTests(HomeBase):
+    """A fábrica e os clientes numa seção só, com um mapa só.
+
+    Eram duas seções seguidas, cada uma com o seu mapa (o do Google, só da
+    fábrica, e o dos clientes). Agora é uma: o cartão da fábrica com os
+    contatos e as rotas, as camadas e o filtro em cima do mapa, e a lista
+    de clientes ao lado.
+    """
+
+    def publicar_cliente(self, nome, cidade, estado, lat, lng):
+        from sistema_interno.models import Cliente, EnderecoCliente
+
+        cliente = Cliente.objects.create(
+            nome_cliente=f"Responsável {nome}",
+            nome_estabelecimento=nome,
+            telefone="(11) 90000-0000",
+            publicar_no_mapa=True,
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente, endereco="Rua A", cidade=cidade, estado=estado,
+            latitude=lat, longitude=lng,
+        )
+        return cliente
+
+    def test_sem_cliente_o_mapa_mostra_so_a_fabrica(self):
+        resposta = self.home()
+        html = resposta.content.decode()
+        # um mapa só, o da casa (nada do mapa do Google embutido)
+        self.assertContains(resposta, 'id="mapa-onde"', count=1)
+        self.assertNotIn("output=embed", html)
+        self.assertNotIn('id="mapa-clientes"', html)
+        # os dados do mapa saem com a fábrica, e a camada dela aparece
+        self.assertContains(resposta, 'id="dados-mapa-onde"', count=1)
+        self.assertContains(resposta, '"tipo": "fabrica"')
+        self.assertContains(resposta, 'data-onde-camada="fabrica"')
+        # o cartão da fábrica: endereço, contatos e rotas
+        self.assertContains(resposta, "Rua São Roque de Minas, 104")
+        self.assertContains(resposta, 'href="https://wa.me/5511960563135"')
+        self.assertContains(resposta, 'href="mailto:comercial@lazersport.com.br"')
+        self.assertContains(resposta, "Rota no Google Maps")
+        self.assertContains(resposta, "Abrir no Waze")
+        # e a âncora "Mapa de Clientes" só existe com cliente
+        self.assertNotContains(resposta, 'id="clientes-section"')
+
+    def test_com_cliente_a_lista_e_a_ancora_aparecem_e_o_mapa_continua_um(self):
+        self.publicar_cliente("Buffet Alegria", "Salvador", "BA", "-12.9777", "-38.5016")
+        self.publicar_cliente("Rio Fun Park", "Rio de Janeiro", "RJ", "-22.9068", "-43.1729")
+
+        resposta = self.home()
+        self.assertContains(resposta, 'id="contato"', count=1)
+        self.assertContains(resposta, 'id="clientes-section"', count=1)
+        self.assertContains(resposta, 'id="mapa-onde"', count=1)
+        self.assertNotContains(resposta, "output=embed")
+        # a camada de clientes com a contagem, e o filtro por cidade
+        self.assertContains(resposta, 'data-onde-camada="clientes"')
+        self.assertContains(resposta, 'id="filtro-cidade-cliente"')
+        # a lista que o Google lê, cada nome levando ao alfinete dele
+        self.assertContains(resposta, 'data-onde-cliente="0"')
+        self.assertContains(resposta, 'data-onde-cliente="1"')
+        self.assertContains(resposta, "<strong>Lazer &amp; Sport</strong> em Salvador/BA")
+        self.assertContains(resposta, "Buffet Alegria")
+        # o alfinete leva a logo pequena da casa, não a de 1024 px
+        self.assertContains(resposta, "images/logo-96.png")
+        self.assertNotContains(resposta, '"logo": "/static/images/logoofi.png"')
+        # o comportamento do mapa vem do arquivo próprio, carregado sob demanda
+        self.assertContains(resposta, "site/paginas/home-mapa.js")
