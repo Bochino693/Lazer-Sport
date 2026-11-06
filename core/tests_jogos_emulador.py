@@ -429,7 +429,7 @@ class EmuladorNoSiteTests(TestCase):
         self.assertEqual(config["nucleo"], "snes9x")
         self.assertTrue(config["nucleoExterno"].startswith("https://cdn.jsdelivr.net/npm/@emulatorjs/core-snes9x@"))
         # no celular o filtro leve; no computador o SABR, mais caprichado
-        self.assertEqual(config["opcoes"]["shader"], "2xScaleHQ.glslp")
+        self.assertEqual(config["opcoes"]["shader"], "ls-nitido")
         self.assertEqual(config["opcoesNoComputador"]["shader"], "sabr")
         JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="psx")
         self.assertEqual(config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["nucleoExterno"], "")
@@ -760,9 +760,9 @@ class NucleoEQualidadeTests(SimpleTestCase):
         self.assertEqual(emu.origem_do_nucleo("psx"), "")  # mora no site
 
     def test_filtro_de_imagem_e_o_nucleo_certo(self):
-        self.assertEqual(emu.opcoes_do_emulador("snes")["shader"], "2xScaleHQ.glslp")
+        self.assertEqual(emu.opcoes_do_emulador("snes")["shader"], "ls-nitido")
         self.assertEqual(emu.opcoes_no_computador("snes")["shader"], "sabr")
-        self.assertEqual(emu.opcoes_do_emulador("psx")["shader"], "bicubic")
+        self.assertEqual(emu.opcoes_do_emulador("psx")["shader"], "ls-suave")
         self.assertNotIn("shader", emu.opcoes_no_computador("psx"))
         self.assertEqual(emu.opcoes_no_computador("psp")["ppsspp_internal_resolution"], "960x544")
         self.assertEqual(emu.opcoes_do_emulador("psx")["pcsx_rearmed_dithering"], "disabled")

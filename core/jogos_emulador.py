@@ -1562,15 +1562,17 @@ EMULATORJS_VERSAO = "4.2.3"
 #: e cache no mundo todo. Se ele falhar, o próprio emulador ainda tenta o CDN dele.
 NUCLEO_NO_NPM = "https://cdn.jsdelivr.net/npm/@emulatorjs/core-{nucleo}@" + EMULATORJS_VERSAO + "/"
 
-#: O filtro de imagem de cada console. O RetroArch do emulador estica a imagem sem
-#: suavizar (video_smooth = false): numa tela que não é múltiplo exato, cada pixel sai de
-#: um tamanho e o jogo fica "pixelizado". SABR alisa os contornos da arte 2D sem borrar;
-#: o bicúbico suaviza a imagem dos consoles 3D e dos computadores (o texto fica por igual).
+#: O filtro de imagem de cada console. O RetroArch do emulador estica a imagem "no grosso"
+#: (vizinho mais próximo): numa tela que não é múltiplo exato do jogo, cada pixel sai de um
+#: tamanho -- serrilhado, e parecendo que faltam pixels. Por isso nada vai sem filtro:
+#:   sabr      (2D no computador)  contornos arredondados e nítidos, na tela toda;
+#:   ls-nitido (2D no celular, Nítido e Leve)  os pixels do console, todos do mesmo tamanho,
+#:             só a emenda suavizada -- uma leitura por pixel, leve para qualquer aparelho;
+#:   ls-suave  (3D e computadores)  o bicúbico no dobro do jogo e depois o ls-nitido até a tela.
+#: Os dois "ls-" são do site (definidos em jogo-emulador.js).
 FILTRO_2D = "sabr"
-FILTRO_3D = "bicubic"
-#: No celular, a arte 2D vai com o 2xScaleHQ: o mesmo contorno liso, com bem menos conta
-#: por pixel -- a tela do celular é densa, e o que pesa no aparelho fraco é o que trava.
-FILTRO_2D_CELULAR = "2xScaleHQ.glslp"
+FILTRO_3D = "ls-suave"
+FILTRO_2D_CELULAR = "ls-nitido"
 CONSOLES_3D = {"psx", "n64", "psp", "segaSaturn", "nds", "3do", "pcfx", "jaguar",
                "dos", "amiga", "c64", "c128", "vic20", "plus4", "pet"}
 #: Mais resolução por dentro (no computador; o celular fica no padrão, que pesa menos).

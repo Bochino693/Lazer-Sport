@@ -36,6 +36,17 @@
     try { return window.localStorage.getItem("ls-jogos-som") !== "0"; } catch (e) { return true; }
   }
 
+  /* O ruído do sopro e do estalo: um segundo de números ao acaso, feito uma vez só (na
+     preparação, antes do toque) e não no meio da apresentação. */
+  var ruidoGuardado = null;
+  function ruidoPronto() {
+    if (!ruidoGuardado) {
+      ruidoGuardado = new Float32Array(96000);
+      for (var i = 0; i < ruidoGuardado.length; i++) ruidoGuardado[i] = Math.random() * 2 - 1;
+    }
+    return ruidoGuardado;
+  }
+
   /* ---------------------------------------------------------------- o som */
   function tocar() {
     if (!somLigado()) return null;
@@ -50,8 +61,7 @@
     mestre.connect(comp); comp.connect(ctx.destination);
 
     var ruido = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-    var dados = ruido.getChannelData(0);
-    for (var i = 0; i < dados.length; i++) dados[i] = Math.random() * 2 - 1;
+    ruido.getChannelData(0).set(ruidoPronto().subarray(0, ctx.sampleRate));
     function sopro(inicio, dur, de, ate, volume) {
       var fonte = ctx.createBufferSource(); fonte.buffer = ruido;
       var filtro = ctx.createBiquadFilter(); filtro.type = "bandpass"; filtro.Q.value = 1.4;
@@ -105,7 +115,8 @@
   function faiscas(tela, cor) {
     var ctx = tela.getContext("2d");
     if (!ctx) return function () {};
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // riscos de luz macios não precisam da densidade da tela: 1 pixel por pixel da página
+    var dpr = 1;
     var w = 0, h = 0;
     function medir() {
       var r = tela.getBoundingClientRect();
@@ -116,7 +127,7 @@
     medir();
     var pequeno = Math.min(w, h) < 520;
     var paleta = CORES.concat(cor ? [cor, cor] : []);
-    var n = pequeno ? 70 : 130;
+    var n = pequeno ? 56 : 110;
     var raio = Math.hypot(w, h) * 0.6;
     var parts = [];
     for (var i = 0; i < n; i++) {
@@ -127,7 +138,7 @@
       });
     }
     var brasas = [];
-    for (i = 0; i < (pequeno ? 26 : 50); i++) {
+    for (i = 0; i < (pequeno ? 20 : 36); i++) {
       brasas.push({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, fase: Math.random() * 6.28,
                     tam: 0.6 + Math.random() * 1.6, cor: paleta[(Math.random() * paleta.length) | 0] });
     }
@@ -189,6 +200,31 @@
     return function parar() { vivo = false; window.removeEventListener("resize", medir); };
   }
 
+  /* A capa do jogo ao fundo: desenhada UMA vez num quadro pequeno (160 x 90), já escura e
+     desfocada; o navegador amplia liso. Desfocar a imagem grande a cada quadro da animação
+     era o que mais pesava na placa de vídeo do celular. */
+  function capaDesfocada(endereco) {
+    var quadro = document.createElement("canvas");
+    quadro.className = "ls-intro-capa";
+    quadro.width = 160; quadro.height = 90;
+    var img = new Image();
+    img.decoding = "async";
+    img.onload = function () {
+      var ctx = quadro.getContext("2d");
+      if (!ctx) return;
+      // cobre o quadro inteiro (como o object-fit: cover), sem deformar
+      var escala = Math.max(160 / img.width, 90 / img.height);
+      var w = img.width * escala, h = img.height * escala;
+      var comFiltro = "filter" in ctx;
+      if (comFiltro) ctx.filter = "blur(2.5px) saturate(1.3) brightness(.55)";
+      ctx.drawImage(img, (160 - w) / 2, (90 - h) / 2, w, h);
+      if (!comFiltro) { ctx.fillStyle = "rgba(2, 5, 15, .5)"; ctx.fillRect(0, 0, 160, 90); }
+    };
+    img.onerror = function () { quadro.remove(); };
+    img.src = endereco;
+    return quadro;
+  }
+
   /* ---------------------------------------------------------------- a cena */
   function elemento(tag, classe, texto) {
     var el = document.createElement(tag);
@@ -217,6 +253,69 @@
     return caixa;
   }
 
+  /* A cena inteira (os elementos, a capa já desfocada), sem começar a animar. */
+  function montar(opcoes) {
+    var tela = elemento("div", "ls-intro" + (reduzido ? " ls-intro--parada" : ""));
+    tela.setAttribute("role", "img");
+    tela.setAttribute("aria-label", "Lazer & Sport Games apresenta " + (opcoes.titulo || ""));
+    if (opcoes.cor) tela.style.setProperty("--cor-intro", opcoes.cor);
+
+    if (opcoes.capa) tela.appendChild(capaDesfocada(opcoes.capa));
+    tela.appendChild(elemento("span", "ls-intro-grade"));
+    tela.appendChild(elemento("span", "ls-intro-raios"));
+    var canvas = null;
+    if (!reduzido) { canvas = elemento("canvas", "ls-intro-faiscas"); tela.appendChild(canvas); }
+
+    var palco = elemento("div", "ls-intro-palco");
+    var grupo = elemento("div", "ls-intro-grupo");
+    var miolo = elemento("div", "ls-intro-miolo");
+    miolo.appendChild(elemento("span", "ls-intro-onda"));
+    miolo.appendChild(elemento("span", "ls-intro-onda ls-intro-onda--2"));
+    if (LOGO) {
+      var logo = elemento("span", "ls-intro-logo");
+      var img = document.createElement("img");
+      img.src = LOGO; img.alt = "";
+      logo.appendChild(img);
+      miolo.appendChild(logo);
+    }
+    grupo.appendChild(miolo);
+    var marca = elemento("strong", "ls-intro-marca");
+    marca.appendChild(letras("LAZER & SPORT", "ls-intro-marca-a", T.letras, 0.045, [[255, 71, 87], [47, 139, 255], [63, 208, 255]]));
+    marca.appendChild(letras("GAMES", "ls-intro-marca-b", T.letras + 0.62, 0.06));
+    grupo.appendChild(marca);
+    grupo.appendChild(elemento("span", "ls-intro-apresenta", "apresenta"));
+    palco.appendChild(grupo);
+
+    if (opcoes.titulo) {
+      var nome = elemento("div", "ls-intro-nome");
+      nome.appendChild(elemento("span", "ls-intro-titulo", opcoes.titulo));
+      if (opcoes.console) nome.appendChild(elemento("span", "ls-intro-console", opcoes.console));
+      palco.appendChild(nome);
+    } else {
+      tela.classList.add("ls-intro--sem-nome");
+    }
+    tela.appendChild(palco);
+    tela.appendChild(elemento("span", "ls-intro-flare"));
+    tela.appendChild(elemento("span", "ls-intro-clarao"));
+    tela.appendChild(elemento("span", "ls-intro-pular", "toque para pular"));
+    return { tela: tela, canvas: canvas };
+  }
+
+  /* PREPARAR (antes do toque, com o processador folgado): a cena já entra na página,
+     escondida e com as animações paradas no começo -- estilos calculados, capa decodificada,
+     texto pronto, o ruído do som feito. O toque em Jogar só dá o "play". */
+  var preparadas = {};
+  function preparar(caixa, opcoes) {
+    opcoes = opcoes || {};
+    var chave = opcoes.chave || opcoes.titulo || "jogo";
+    if (!caixa || vistos[chave] || preparadas[chave]) return;
+    var cena = montar(opcoes);
+    cena.tela.classList.add("ls-intro--preparada");
+    caixa.appendChild(cena.tela);
+    preparadas[chave] = cena;
+    if (!reduzido) ruidoPronto();
+  }
+
   function mostrar(caixa, opcoes) {
     opcoes = opcoes || {};
     var chave = opcoes.chave || opcoes.titulo || "jogo";
@@ -224,57 +323,13 @@
     vistos[chave] = true;
 
     return new Promise(function (resolve) {
-      var tela = elemento("div", "ls-intro" + (reduzido ? " ls-intro--parada" : ""));
-      tela.setAttribute("role", "img");
-      tela.setAttribute("aria-label", "Lazer & Sport Games apresenta " + (opcoes.titulo || ""));
-      if (opcoes.cor) tela.style.setProperty("--cor-intro", opcoes.cor);
-
-      if (opcoes.capa) {
-        var fundo = document.createElement("img");
-        fundo.className = "ls-intro-capa";
-        fundo.alt = ""; fundo.decoding = "async";
-        fundo.onerror = function () { fundo.remove(); };
-        fundo.src = opcoes.capa;
-        tela.appendChild(fundo);
-      }
-      tela.appendChild(elemento("span", "ls-intro-grade"));
-      tela.appendChild(elemento("span", "ls-intro-raios"));
-      var canvas = null;
-      if (!reduzido) { canvas = elemento("canvas", "ls-intro-faiscas"); tela.appendChild(canvas); }
-
-      var palco = elemento("div", "ls-intro-palco");
-      var grupo = elemento("div", "ls-intro-grupo");
-      var miolo = elemento("div", "ls-intro-miolo");
-      miolo.appendChild(elemento("span", "ls-intro-onda"));
-      miolo.appendChild(elemento("span", "ls-intro-onda ls-intro-onda--2"));
-      if (LOGO) {
-        var logo = elemento("span", "ls-intro-logo");
-        var img = document.createElement("img");
-        img.src = LOGO; img.alt = "";
-        logo.appendChild(img);
-        miolo.appendChild(logo);
-      }
-      grupo.appendChild(miolo);
-      var marca = elemento("strong", "ls-intro-marca");
-      marca.appendChild(letras("LAZER & SPORT", "ls-intro-marca-a", T.letras, 0.045, [[255, 71, 87], [47, 139, 255], [63, 208, 255]]));
-      marca.appendChild(letras("GAMES", "ls-intro-marca-b", T.letras + 0.62, 0.06));
-      grupo.appendChild(marca);
-      grupo.appendChild(elemento("span", "ls-intro-apresenta", "apresenta"));
-      palco.appendChild(grupo);
-
-      if (opcoes.titulo) {
-        var nome = elemento("div", "ls-intro-nome");
-        nome.appendChild(elemento("span", "ls-intro-titulo", opcoes.titulo));
-        if (opcoes.console) nome.appendChild(elemento("span", "ls-intro-console", opcoes.console));
-        palco.appendChild(nome);
-      } else {
-        tela.classList.add("ls-intro--sem-nome");
-      }
-      tela.appendChild(palco);
-      tela.appendChild(elemento("span", "ls-intro-flare"));
-      tela.appendChild(elemento("span", "ls-intro-clarao"));
-      tela.appendChild(elemento("span", "ls-intro-pular", "toque para pular"));
-      caixa.appendChild(tela);
+      var cena = preparadas[chave];
+      delete preparadas[chave];
+      if (cena && cena.tela.parentNode !== caixa) { cena.tela.remove(); cena = null; }
+      if (!cena) { cena = montar(opcoes); caixa.appendChild(cena.tela); }
+      var tela = cena.tela, canvas = cena.canvas;
+      // o "play": tudo começa do zero agora
+      tela.classList.remove("ls-intro--preparada");
       var parar = canvas ? faiscas(canvas, opcoes.cor) : function () {};
       var som = reduzido ? null : tocar();
 
@@ -299,5 +354,5 @@
     });
   }
 
-  window.LSIntroJogos = { mostrar: mostrar };
+  window.LSIntroJogos = { mostrar: mostrar, preparar: preparar };
 })();

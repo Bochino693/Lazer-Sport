@@ -1,0 +1,235 @@
+/* ======================================================================
+   A FICHA DE PROJETOS E EVENTOS (partials/ficha_galeria.html).
+   A janela é a do ls-galeria.js (abre, fecha, setas, dedo, teclado); aqui
+   está a cara: escura e legível, fotos à esquerda (uma por vez, com o fundo
+   desfocado da própria foto), texto organizado à direita, e a abertura com
+   o painel subindo e as informações entrando em sequência.
+   ====================================================================== */
+.ls-galeria.ls-ficha {
+    --fi-fundo: #08112a;
+    --fi-painel: #0c1736;
+    --fi-borda: rgba(255, 255, 255, .1);
+    --fi-texto: #eaf2ff;
+    --fi-suave: #a9bcd9;
+    --fi-ciano: #3fd0ff;
+    --fi-amarelo: #ffd23f;
+    --fi-vermelho: #ff4757;
+    display: grid;
+    place-items: center;
+    padding: clamp(10px, 3vh, 32px) clamp(10px, 3vw, 32px);
+    overflow: hidden;
+    background: rgba(2, 6, 18, .72);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.2);
+    transition: opacity .28s ease;
+}
+
+.ls-galeria.ls-ficha .ls-galeria-caixa.ls-ficha-caixa {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(340px, 1fr);
+    width: min(1220px, 100%);
+    height: min(800px, 100%);
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 26px;
+    color: var(--fi-texto);
+    background: linear-gradient(160deg, #0f1c42 0%, var(--fi-painel) 45%, #070f26 100%);
+    border: 1px solid var(--fi-borda);
+    box-shadow: 0 40px 120px -20px rgba(0, 0, 0, .8), 0 0 0 1px rgba(63, 208, 255, .06), inset 0 1px 0 rgba(255, 255, 255, .06);
+    transform: translateY(26px) scale(.965);
+    opacity: 0;
+    transition: transform .5s cubic-bezier(.2, .9, .25, 1.06), opacity .3s ease;
+}
+.ls-galeria.ls-ficha.aberta .ls-galeria-caixa.ls-ficha-caixa { transform: none; opacity: 1; }
+
+/* ---------- o fechar ---------- */
+.ls-ficha-fechar {
+    position: absolute; z-index: 6; top: 14px; right: 14px;
+    width: 44px; height: 44px; display: grid; place-items: center;
+    border: 1px solid rgba(255, 255, 255, .18); border-radius: 50%;
+    background: rgba(5, 10, 28, .55); color: #fff; font-size: 1.15rem; cursor: pointer;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    transition: background-color .2s ease, transform .2s ease;
+}
+.ls-ficha-fechar:hover { background: var(--fi-vermelho); transform: rotate(90deg); }
+.ls-ficha-fechar:focus-visible { outline: 2px solid var(--fi-ciano); outline-offset: 2px; }
+
+/* ---------- o visor de fotos ---------- */
+.ls-ficha-visor { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; background: #030712; }
+.ls-galeria.ls-ficha .ls-ficha-palco { position: relative; min-height: 0; overflow: hidden; cursor: default; }
+.ls-galeria.ls-ficha .ls-ficha-slide { position: absolute; inset: 0; display: block; margin: 0; }
+.ls-galeria.ls-ficha .ls-ficha-slide[hidden] { display: none; }
+.ls-galeria.ls-ficha .ls-ficha-slide img { filter: none; border-radius: 0; max-width: none; max-height: none; }
+.ls-galeria.ls-ficha .ls-ficha-slide-fundo {
+    position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover;
+    filter: blur(26px) brightness(.45) saturate(1.3); transform: scale(1.05);
+}
+.ls-galeria.ls-ficha .ls-ficha-slide-foto {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+    padding: clamp(10px, 3vh, 28px) clamp(48px, 6vw, 72px);
+    filter: drop-shadow(0 26px 40px rgba(0, 0, 0, .55));
+}
+.ls-galeria.ls-ficha .ls-ficha-slide.ativo .ls-ficha-slide-foto { animation: ls-ficha-foto .55s cubic-bezier(.2, .8, .2, 1) both; }
+.ls-ficha-seta {
+    position: absolute; z-index: 3; top: 50%; translate: 0 -50%;
+    width: 48px; height: 48px; display: grid; place-items: center;
+    border: 1px solid rgba(255, 255, 255, .2); border-radius: 50%;
+    background: rgba(5, 10, 28, .55); color: #fff; font-size: 1rem; cursor: pointer;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    transition: background-color .2s ease, transform .2s ease;
+}
+.ls-ficha-seta:hover { background: var(--fi-ciano); color: #04121f; transform: scale(1.06); }
+.ls-ficha-seta--antes { left: 14px; }
+.ls-ficha-seta--depois { right: 14px; }
+.ls-ficha-contador {
+    position: absolute; z-index: 3; left: 16px; bottom: 14px; padding: 6px 12px; border-radius: 999px;
+    background: rgba(5, 10, 28, .6); color: #fff; font: 700 .78rem "Poppins", sans-serif; letter-spacing: .04em;
+}
+.ls-ficha-legenda {
+    position: absolute; z-index: 3; left: 50%; bottom: 14px; translate: -50% 0; max-width: min(80%, 520px); margin: 0;
+    padding: 7px 14px; border-radius: 12px; background: rgba(5, 10, 28, .65); color: #eaf2ff; font-size: .82rem; text-align: center;
+}
+.ls-ficha-legenda[hidden] { display: none; }
+.ls-ficha-miniaturas {
+    display: flex; gap: 8px; padding: 10px 12px; overflow-x: auto; scrollbar-width: thin;
+    background: rgba(3, 7, 18, .9); border-top: 1px solid var(--fi-borda);
+}
+.ls-ficha-miniatura {
+    flex: none; width: 74px; height: 54px; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer;
+    border: 2px solid transparent; background: #0b1430; opacity: .55; transition: opacity .2s ease, border-color .2s ease, transform .2s ease;
+}
+.ls-ficha-miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ls-ficha-miniatura:hover { opacity: .9; }
+.ls-ficha-miniatura.ativa { opacity: 1; border-color: var(--fi-ciano); transform: translateY(-2px); }
+.ls-ficha-sem-foto { grid-row: 1 / -1; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--fi-suave); text-align: center; padding: 24px; }
+.ls-ficha-sem-foto i { font-size: 2.6rem; color: var(--fi-ciano); }
+
+/* projetos: as fotos são renderizações com fundo branco -- um palco claro de estúdio, que
+   funde com o branco da imagem (no escuro, a foto virava um quadro branco solto) */
+.ls-galeria.ls-ficha--projeto .ls-ficha-palco { background: radial-gradient(120% 90% at 50% 42%, #ffffff 0%, #eef3fb 55%, #d7e2f3 100%); }
+.ls-galeria.ls-ficha--projeto .ls-ficha-slide-fundo { display: none; }
+.ls-galeria.ls-ficha--projeto .ls-ficha-slide-foto { filter: drop-shadow(0 18px 28px rgba(11, 34, 79, .18)); mix-blend-mode: multiply; }
+.ls-galeria.ls-ficha--projeto .ls-ficha-miniatura { background: #fff; }
+
+/* ---------- o texto ---------- */
+.ls-ficha-info {
+    min-height: 0; overflow-y: auto; background: var(--fi-painel); padding: clamp(22px, 3.4vw, 40px) clamp(20px, 3vw, 36px) 28px;
+    scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) transparent;
+}
+.ls-ficha-selo {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+    background: rgba(63, 208, 255, .12); border: 1px solid rgba(63, 208, 255, .35); color: var(--fi-ciano);
+    font: 800 .72rem "Poppins", sans-serif; letter-spacing: .1em; text-transform: uppercase;
+}
+.ls-ficha-titulo {
+    margin: 14px 48px 12px 0; font: 800 clamp(1.5rem, 2.6vw, 2.2rem)/1.12 "Poppins", sans-serif; letter-spacing: -.01em;
+    color: #fff;
+}
+.ls-ficha-lead { margin: 0 0 12px; color: #d4e0f5; font-size: 1rem; line-height: 1.65; }
+.ls-ficha-lead:first-of-type { font-size: 1.06rem; color: #eaf2ff; }
+.ls-ficha-secao { margin-top: 22px; }
+.ls-ficha-secao h3 {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 12px;
+    font: 800 .86rem "Poppins", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--fi-amarelo);
+}
+.ls-ficha-secao-icone {
+    width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px;
+    background: rgba(255, 210, 63, .14); color: var(--fi-amarelo); font-size: .86rem;
+}
+.ls-ficha-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ls-ficha-lista li {
+    display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start;
+    padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .045); border: 1px solid rgba(255, 255, 255, .06);
+    color: #e3ecfb; line-height: 1.45; font-size: .95rem;
+}
+.ls-ficha-lista li i {
+    width: 22px; height: 22px; display: grid; place-items: center; margin-top: 1px; border-radius: 50%;
+    background: rgba(52, 211, 153, .16); color: #34d399; font-size: .7rem;
+}
+.ls-ficha-etiquetas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.ls-ficha-etiquetas li {
+    padding: 8px 14px; border-radius: 999px; background: linear-gradient(120deg, rgba(47, 139, 255, .22), rgba(138, 92, 255, .22));
+    border: 1px solid rgba(63, 208, 255, .3); color: #eaf2ff; font-weight: 700; font-size: .86rem;
+}
+.ls-ficha-fecho {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; margin: 22px 0 0; padding: 14px 16px; border-radius: 16px;
+    background: linear-gradient(120deg, rgba(255, 210, 63, .12), rgba(255, 71, 87, .1)); border: 1px solid rgba(255, 210, 63, .28);
+    color: #f6efd8; line-height: 1.55; font-size: .95rem;
+}
+.ls-ficha-fecho i { color: var(--fi-amarelo); font-size: 1.1rem; margin-top: 2px; }
+.ls-ficha-brinquedos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.ls-ficha-brinquedo {
+    display: grid; gap: 6px; padding: 8px; border-radius: 14px; text-decoration: none; color: #eaf2ff;
+    background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); transition: transform .2s ease, border-color .2s ease;
+}
+.ls-ficha-brinquedo:hover { transform: translateY(-2px); border-color: rgba(63, 208, 255, .45); color: #fff; }
+.ls-ficha-brinquedo img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 10px; background: #fff; }
+.ls-ficha-brinquedo span { font-size: .8rem; font-weight: 700; line-height: 1.25; }
+.ls-ficha-acoes {
+    position: sticky; bottom: -28px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin: 26px -4px 0; padding: 16px 4px 4px;
+    background: linear-gradient(transparent, var(--fi-painel) 30%);
+}
+.ls-ficha-convite {
+    display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 999px; text-decoration: none;
+    font: 800 .95rem "Poppins", sans-serif; color: #06210f; background: linear-gradient(120deg, #25d366, #8af0a8);
+    box-shadow: 0 14px 30px -10px rgba(37, 211, 102, .6); transition: transform .2s ease, box-shadow .2s ease;
+}
+.ls-ficha-convite:hover { color: #06210f; transform: translateY(-2px); box-shadow: 0 18px 36px -10px rgba(37, 211, 102, .75); }
+.ls-ficha-convite i { font-size: 1.2rem; }
+.ls-ficha-todos {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 18px; border-radius: 999px; text-decoration: none;
+    color: var(--fi-texto); font-weight: 700; border: 1px solid var(--fi-borda); background: rgba(255, 255, 255, .05);
+}
+.ls-ficha-todos:hover { color: #fff; border-color: rgba(63, 208, 255, .5); }
+
+/* ---------- a abertura: o texto entra em sequência ---------- */
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > * { animation: ls-ficha-sobe .55s cubic-bezier(.2, .8, .2, 1) both; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > :nth-child(1) { animation-delay: .12s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > :nth-child(2) { animation-delay: .17s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > :nth-child(3) { animation-delay: .22s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > :nth-child(4) { animation-delay: .27s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > :nth-child(5) { animation-delay: .32s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-info > :nth-child(n+6) { animation-delay: .37s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-lista li { animation: ls-ficha-sobe .45s cubic-bezier(.2, .8, .2, 1) both; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-lista li:nth-child(2) { animation-delay: .05s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-lista li:nth-child(3) { animation-delay: .1s; }
+.ls-galeria.ls-ficha.aberta .ls-ficha-lista li:nth-child(n+4) { animation-delay: .15s; }
+
+@keyframes ls-ficha-sobe { from { opacity: 0; transform: translateY(14px); } }
+@keyframes ls-ficha-foto { from { opacity: 0; transform: scale(1.04); } }
+
+/* ---------- tablet e celular: as fotos em cima, o texto embaixo, a janela toda ---------- */
+@media (max-width: 900px) {
+    .ls-galeria.ls-ficha { padding: 0; place-items: stretch; }
+    .ls-galeria.ls-ficha .ls-galeria-caixa.ls-ficha-caixa {
+        grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+        width: 100%; height: 100%; border-radius: 0; border: 0;
+        transform: translateY(40px);
+    }
+    .ls-ficha-visor { height: min(52vh, 74vw); }
+    .ls-ficha-miniaturas { padding: 8px 10px; }
+    .ls-ficha-miniatura { width: 60px; height: 44px; }
+    .ls-galeria.ls-ficha .ls-ficha-slide-foto { padding: 10px 52px; }
+    .ls-ficha-seta { width: 40px; height: 40px; }
+    .ls-ficha-seta--antes { left: 8px; }
+    .ls-ficha-seta--depois { right: 8px; }
+    .ls-ficha-fechar { top: max(10px, env(safe-area-inset-top)); right: 10px; }
+    .ls-ficha-info { padding: 20px 18px calc(24px + env(safe-area-inset-bottom)); }
+    .ls-ficha-acoes { bottom: calc(-24px - env(safe-area-inset-bottom)); }
+    .ls-ficha-convite, .ls-ficha-todos { flex: 1 1 auto; justify-content: center; }
+}
+@media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+    /* celular deitado: lado a lado de novo, a foto ocupando a altura */
+    .ls-galeria.ls-ficha .ls-galeria-caixa.ls-ficha-caixa { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: none; }
+    .ls-ficha-visor { height: auto; }
+    .ls-ficha-miniaturas { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ls-galeria.ls-ficha .ls-galeria-caixa.ls-ficha-caixa { transition: opacity .2s ease; transform: none; }
+    .ls-galeria.ls-ficha.aberta .ls-ficha-info > *, .ls-galeria.ls-ficha.aberta .ls-ficha-lista li,
+    .ls-galeria.ls-ficha .ls-ficha-slide.ativo .ls-ficha-slide-foto { animation: none; }
+}

@@ -267,7 +267,9 @@
   // - a imagem esticada na área toda ("Full"), que encolhe para o formato do console no botão Imagem;
   // - no celular, mais folga no som (96 ms): aparelho mais fraco atrasa um quadro e o som
   //   estala; com a folga ele continua liso (a diferença não se sente ao jogar).
-  var AJUSTES_DO_RETROARCH = [["video_aspect_ratio_auto", "false"], ["aspect_ratio_index", "24"]];
+  // video_smooth: o que for esticado sem filtro sai liso (o padrão do emulador esticava
+  // "no grosso": numa tela que não é múltiplo exato, cada pixel saía de um tamanho)
+  var AJUSTES_DO_RETROARCH = [["video_aspect_ratio_auto", "false"], ["aspect_ratio_index", "24"], ["video_smooth", "true"]];
   if (celular) AJUSTES_DO_RETROARCH.push(["audio_latency", "96"]);
   function ajustarCfg(cfg) {
     AJUSTES_DO_RETROARCH.forEach(function (par) {
@@ -369,23 +371,35 @@
      Automático (o padrão) começa em HD e, se o aparelho não der conta (o marca-passo
      precisando recuperar quadros e cada quadro pesando), desce sozinho para Leve. */
   var TRES_D = ["psx", "n64", "psp", "segaSaturn", "nds", "3do", "pcfx", "jaguar", "dos"].indexOf(config.core) !== -1;
-  var filtroHD = (config.opcoes || {}).shader || (TRES_D ? "bicubic" : "2xScaleHQ.glslp");
+  var NITIDO = "ls-nitido";
+  var filtroHD = (config.opcoes || {}).shader || (TRES_D ? "ls-suave" : NITIDO);
   if (!celular && config.opcoesNoComputador && config.opcoesNoComputador.shader) filtroHD = config.opcoesNoComputador.shader;
+  // Nítido e Leve usam o filtro "nítido e liso" (ls-nitido, abaixo): cada pixel do jogo do
+  // mesmo tamanho e só a emenda suavizada -- custa quase nada, então o Leve fica bonito também
   var GRAFICOS = {
-    hd: { filtro: filtroHD, pixels: celular ? 1.6e6 : 3.7e6 },
-    nitido: { filtro: "disabled", pixels: celular ? 2.6e6 : 4.2e6 },
+    // no computador, o HD da arte 2D é o SABR (contornos lisos e nítidos), que faz a conta na
+    // tela toda: até 2,4 milhões de pixels (um Full HD) ele é leve até para placa de vídeo simples
+    hd: { filtro: filtroHD, pixels: celular ? 1.6e6 : 2.4e6 },
+    nitido: { filtro: NITIDO, pixels: celular ? 2.6e6 : 4.2e6 },
     tv: { filtro: "crt-easymode.glslp", pixels: celular ? 1.6e6 : 3.7e6 },
-    leve: { filtro: "disabled", pixels: celular ? 0.42e6 : 0.9e6 },
+    leve: { filtro: NITIDO, pixels: celular ? 0.42e6 : 0.9e6 },
   };
-  var CHAVE_GRAFICOS = "ls-graficos-v1";
+  // NENHUMA LINHA SOME: as aberturas e os vídeos do PlayStation (e as telas de 480 linhas do
+  // Saturn e do N64) têm o dobro de linhas do jogo; com a tela desenhada abaixo disso, linhas
+  // inteiras eram puladas. A tela nunca fica abaixo desta altura (em pixels do aparelho).
+  var ALTURA_MINIMA = TRES_D ? 720 : 480;
+  // v2: os filtros mudaram (nada mais sai "no grosso"); todo mundo recomeça no Automático
+  var CHAVE_GRAFICOS = "ls-graficos-v2";
   var escolhaGraficos = "auto";
   try { escolhaGraficos = localStorage.getItem(CHAVE_GRAFICOS) || "auto"; } catch (e) { escolhaGraficos = "auto"; }
   if (escolhaGraficos !== "auto" && !GRAFICOS[escolhaGraficos]) escolhaGraficos = "auto";
   var nivelAtual = escolhaGraficos === "auto" ? "hd" : escolhaGraficos;
   var dprReal = window.devicePixelRatio || 1;
   function dprLimitado() {
-    var area = Math.max(1, (window.innerWidth || 1) * (window.innerHeight || 1));
-    return Math.max(0.5, Math.min(dprReal, Math.sqrt(GRAFICOS[nivelAtual].pixels / area)));
+    var largura = window.innerWidth || 1, altura = window.innerHeight || 1;
+    var pelaConta = Math.sqrt(GRAFICOS[nivelAtual].pixels / Math.max(1, largura * altura));
+    var pelaAltura = ALTURA_MINIMA / Math.max(1, Math.min(largura, altura));
+    return Math.max(0.5, Math.min(dprReal, Math.max(pelaConta, pelaAltura)));
   }
   // o RetroArch mede a tela pelo devicePixelRatio e pelo ResizeObserver: os dois passam pelo orçamento
   try { Object.defineProperty(window, "devicePixelRatio", { configurable: true, get: dprLimitado }); } catch (e) { /* segue na resolução cheia */ }
@@ -435,6 +449,100 @@
     }
   }, 1000);
 
+  /* O FILTRO "NÍTIDO E LISO" (ls-nitido). Esticar um jogo de 320 x 240 numa tela de 2400 x 1080
+     "no grosso" (vizinho mais próximo) faz cada pixel sair de um tamanho -- o jogo fica
+     serrilhado e parece que faltam pixels; esticar liso (bilinear) borra tudo. Este faz os dois
+     pela metade certa: cada pixel do jogo vira um bloco do MESMO tamanho (a maior escala
+     inteira que cabe) e só a emenda entre um bloco e outro é suavizada. Uma leitura de textura
+     por pixel: tão leve quanto não ter filtro nenhum. Abaixo de 1x (tela menor que o jogo)
+     ele vira bilinear puro: soma as linhas em vez de pular. */
+  var GLSL_NITIDO = [
+    "#if defined(VERTEX)",
+    "#if __VERSION__ >= 130",
+    "#define COMPAT_VARYING out",
+    "#define COMPAT_ATTRIBUTE in",
+    "#else",
+    "#define COMPAT_VARYING varying",
+    "#define COMPAT_ATTRIBUTE attribute",
+    "#endif",
+    "#ifdef GL_ES",
+    "#define COMPAT_PRECISION mediump",
+    "#else",
+    "#define COMPAT_PRECISION",
+    "#endif",
+    "COMPAT_ATTRIBUTE vec4 VertexCoord;",
+    "COMPAT_ATTRIBUTE vec4 TexCoord;",
+    "COMPAT_VARYING vec4 TEX0;",
+    "uniform mat4 MVPMatrix;",
+    "void main() {",
+    "  gl_Position = MVPMatrix * VertexCoord;",
+    "  TEX0.xy = TexCoord.xy;",
+    "}",
+    "#elif defined(FRAGMENT)",
+    "#ifdef GL_ES",
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH",
+    "precision highp float;",
+    "#else",
+    "precision mediump float;",
+    "#endif",
+    "#define COMPAT_PRECISION mediump",
+    "#else",
+    "#define COMPAT_PRECISION",
+    "#endif",
+    "#if __VERSION__ >= 130",
+    "#define COMPAT_VARYING in",
+    "#define COMPAT_TEXTURE texture",
+    "out COMPAT_PRECISION vec4 FragColor;",
+    "#else",
+    "#define COMPAT_VARYING varying",
+    "#define FragColor gl_FragColor",
+    "#define COMPAT_TEXTURE texture2D",
+    "#endif",
+    "uniform COMPAT_PRECISION vec2 OutputSize;",
+    "uniform COMPAT_PRECISION vec2 TextureSize;",
+    "uniform COMPAT_PRECISION vec2 InputSize;",
+    "uniform sampler2D Texture;",
+    "COMPAT_VARYING vec4 TEX0;",
+    "void main() {",
+    "  vec2 texel = TEX0.xy * TextureSize;",
+    "  vec2 escala = max(floor(OutputSize / InputSize), vec2(1.0));",
+    "  vec2 dentro = fract(texel) - 0.5;",
+    "  vec2 faixa = 0.5 - 0.5 / escala;",
+    "  vec2 f = (dentro - clamp(dentro, -faixa, faixa)) * escala + 0.5;",
+    "  FragColor = vec4(COMPAT_TEXTURE(Texture, (floor(texel) + f) / TextureSize).rgb, 1.0);",
+    "}",
+    "#endif"
+  ].join("\n");
+  var FILTROS_DO_SITE = {};
+  // a última etapa SEM "scale_type": ela desenha direto na tela (com ele, o RetroArch criava
+  // uma tela intermediária do tamanho da tela -- zero, enquanto o emulador liga -- e falhava)
+  FILTROS_DO_SITE[NITIDO] = {
+    shader: { type: "text", value: "shaders = 1\n\nshader0 = ls-nitido.glsl\nfilter_linear0 = true\n" },
+    resources: [{ name: "ls-nitido.glsl", type: "text", value: GLSL_NITIDO }]
+  };
+  /* O "SUAVE" (o HD do 3D: PlayStation, N64, Saturn, os computadores): duas etapas, as duas
+     leves. 1) o bicúbico do emulador no DOBRO do jogo -- no dobro de 320 x 240 são só 300 mil
+     pixels, conta pequena (antes ele fazia as 16 leituras por pixel na tela inteira); 2) o
+     "nítido e liso" leva esse dobro até a tela, com todos os pixels do mesmo tamanho. O código
+     do bicúbico vem do próprio emulador (EJS_SHADERS), lido na hora de aplicar. */
+  function emDuasEtapas(primeiro, vezes) {
+    var preset = "shaders = 2\n\nshader0 = ls-etapa1.glsl\nfilter_linear0 = false\nscale_type0 = source\nscale0 = " + (vezes || 2) + ".0\n" +
+      "shader1 = ls-nitido.glsl\nfilter_linear1 = true\n";
+    var filtro = { shader: { type: "text", value: preset } };
+    Object.defineProperty(filtro, "resources", {
+      enumerable: true,
+      get: function () {
+        var dele = window.EJS_SHADERS && window.EJS_SHADERS[primeiro];
+        var codigo = dele && dele.resources && dele.resources[0];
+        var lista = [{ name: "ls-nitido.glsl", type: "text", value: GLSL_NITIDO }];
+        if (codigo) lista.unshift({ name: "ls-etapa1.glsl", type: codigo.type, value: codigo.value });
+        return lista;
+      }
+    });
+    return filtro;
+  }
+  FILTROS_DO_SITE["ls-suave"] = emDuasEtapas("bicubic", 2);
+
   /* ---------------------------------------------------------------- ligar o emulador */
   function ligarEmulador(jogo, externos) {
     window.EJS_player = "#jogo";
@@ -476,6 +584,7 @@
     // (que se diz Mac) e o tablet no modo computador ficavam sem controle nenhum.
     if (celular) opcoes["virtual-gamepad"] = "enabled";
     opcoes.shader = GRAFICOS[nivelAtual].filtro;
+    window.EJS_shaders = FILTROS_DO_SITE;
     // os saves do próprio jogo vão para o aparelho a cada 30 s (o padrão do emulador era 5 min:
     // quem fechava antes perdia o que tinha salvado no jogo)
     opcoes["save-save-interval"] = "30";
@@ -506,7 +615,7 @@
       Object.keys(externos).forEach(function (chave) { delete externos[chave]; });
       window.EJS_gameUrl = null;
       try { localStorage.setItem(marcaDoNucleo, "1"); } catch (e) { /* nada */ }
-      comecou();
+      consoleLigou();
     };
     vigiarErroDoEmulador();
     var loader = document.createElement("script");
@@ -961,35 +1070,69 @@
   setInterval(function () { if (document.visibilityState === "visible") salvarAgora(); }, 60000);
 
   /* ---------------------------------------------------------------- começar */
-  var bytesProntos = null;
   var comecando = false;
   var apresentacao = Promise.resolve();
+  /* A ORDEM DAS COISAS (para a abertura rodar lisa e o jogo abrir na hora):
+     1. o jogo baixa (ou sai do aparelho);
+     2. o console LIGA POR TRÁS da abertura -- o núcleo, a compilação, o jogo na memória:
+        o que mais pesa no processador acontece aqui, antes do toque;
+     3. o jogo começa e fica PARADO (sem gastar nada), e aparece o Jogar;
+     4. o toque em Jogar libera o som, toca a apresentação sozinha no processador e, quando
+        ela acaba, solta o jogo -- já ligado, sem espera. */
+  var consolePronto = null, avisarConsolePronto = null;
+  function ligarPorTras(bytes) {
+    consolePronto = new Promise(function (ok) { avisarConsolePronto = ok; });
+    var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
+    var jogo = bytes[principal.caminho];
+    delete bytes[principal.caminho];
+    mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
+    ligarEmulador(jogo, bytes);
+    return consolePronto;
+  }
+  function consoleLigou() {
+    var emu = window.EJS_emulator;
+    // parado e calado até o Jogar (a apresentação roda sem dividir o processador)
+    try { if (emu) emu.pause(true); } catch (e) { /* segue */ }
+    if (avisarConsolePronto) avisarConsolePronto();
+  }
+  /* O som do emulador nasce "suspenso" (ele ligou sem toque): o toque em Jogar libera. */
+  function liberarSom() {
+    try {
+      var al = window.EJS_emulator && window.EJS_emulator.Module && window.EJS_emulator.Module.AL;
+      var ctx = al && al.currentCtx;
+      if (ctx && ctx.audioCtx && ctx.audioCtx.state !== "running") ctx.audioCtx.resume();
+      (ctx && ctx.sources ? Object.keys(ctx.sources).map(function (k) { return ctx.sources[k]; }) : []).forEach(function (fonte) {
+        var c = fonte && fonte.gain && fonte.gain.context;
+        if (c && c.state !== "running" && c.resume) c.resume();
+      });
+    } catch (e) { /* sem som não trava o jogo */ }
+  }
+  function soltarJogo() {
+    var emu = window.EJS_emulator;
+    liberarSom();
+    try { if (emu) emu.play(true); } catch (e) { /* segue */ }
+    comecou();
+  }
+  function opcoesDaApresentacao() {
+    return { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || ""), capa: config.capa || "", console: config.sistemaNome || "" };
+  }
   function jogar(continuar) {
-    if (comecando || !bytesProntos) return;
+    if (comecando || !consoleEsperando) return;
     comecando = true;
     // sem dizer (Enter, o A do controle): continua, se houver de onde
     if (continuar === undefined) continuar = !!progressoSalvo;
     estadoParaCarregar = continuar && progressoSalvo ? progressoSalvo.estado : null;
     pronto.hidden = true;
-    mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
-    // "LAZER & SPORT GAMES apresenta": a espera do emulador ligando vira apresentação
+    liberarSom();
+    // no celular, o toque abre a tela cheia deitada
+    if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().catch(function () { /* segue */ });
+    // "LAZER & SPORT GAMES apresenta", com o processador só para ela; depois, o jogo
     if (window.LSIntroJogos) {
       abertura.classList.add("is-apresentando");
-      apresentacao = window.LSIntroJogos.mostrar(abertura, { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || ""),
-        capa: config.capa || "", console: config.sistemaNome || "" })
+      apresentacao = window.LSIntroJogos.mostrar(abertura, opcoesDaApresentacao())
         .then(function () { abertura.classList.remove("is-apresentando"); });
     }
-    var depois = function () {
-      var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
-      var jogo = bytesProntos[principal.caminho];
-      delete bytesProntos[principal.caminho];
-      var externos = bytesProntos;
-      bytesProntos = null;
-      ligarEmulador(jogo, externos);
-    };
-    // no celular, o toque abre a tela cheia deitada; o emulador liga logo depois
-    if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().then(depois, depois);
-    else depois();
+    apresentacao.then(soltarJogo, soltarJogo);
   }
   botaoJogar.addEventListener("click", function () { jogar(false); });
   if (botaoContinuar) botaoContinuar.addEventListener("click", function () { jogar(true); });
@@ -1034,7 +1177,7 @@
         }
         estadoParaCarregar = null;
         jogandoDesde = Date.now();
-      }, 400);
+      }, 120);
     }
     setTimeout(renovarFoto, 9000);
     // a abertura sai quando a apresentação termina (ou na hora, se já terminou)
@@ -1114,14 +1257,17 @@
     return window.LSPasse.pegar(config.passe, config.jogo || config.nome, function () { mostrar("Conferindo o acesso ao jogo…", 2); })
       .then(function (lista) { config.arquivos = window.LSPasse.juntar(config.arquivos, lista); return config.arquivos; });
   }
-  comPasse().then(pegar).then(function (bytes) {
-    bytesProntos = bytes;
+  var consoleEsperando = false;
+  comPasse().then(pegar).then(ligarPorTras).then(function () {
+    consoleEsperando = true;
     mostrar("Pronto!", 100);
     progresso.hidden = true;
     return lendoProgresso;
   }).then(function (salvo) {
     if (salvo) mostrarContinuar(salvo);
     pronto.hidden = false;
+    // a apresentação já se monta escondida agora (o processador está folgado): o toque só dá o play
+    if (window.LSIntroJogos && window.LSIntroJogos.preparar) window.LSIntroJogos.preparar(abertura, opcoesDaApresentacao());
     dicaPronto.textContent = controleLigado() ? "Aperte A no controle ou toque em Jogar."
       : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
         : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
-{% load fotos %}
+{% load fotos fichas %}
 
 {% block title %}Eventos e recreação | Lazer &amp; Sport{% endblock %}
 
@@ -24,6 +24,7 @@
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/ls-galeria.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-ficha.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/eventos.css' %}">
 
 <div class="ls-pagina">
@@ -106,7 +107,7 @@
 
         <div class="ls-cartao-corpo">
             <h2 class="ls-cartao-titulo">{{ evento.titulo }}</h2>
-            <p class="ls-cartao-desc">{{ evento.descricao|truncatewords:22 }}</p>
+            <p class="ls-cartao-desc">{{ evento.descricao|resumo_ficha:140 }}</p>
 
             {% with usados=evento.brinquedos.all|length %}
                 {% if usados %}
@@ -146,47 +147,9 @@
   `position: fixed`, um pai com `overflow: hidden` -- que é o caso do
   cartão -- as recortaria.
 {% endcomment %}
-{% for evento in eventos %}
-<div class="ls-galeria" id="galeria-evento-{{ evento.id }}" role="dialog" aria-modal="true"
-     aria-labelledby="titulo-evento-{{ evento.id }}" hidden>
-    <div class="ls-galeria-caixa">
-        <button type="button" class="ls-galeria-fechar" data-ls-galeria-fechar
-                aria-label="Fechar as fotos de {{ evento.titulo }}">&times;</button>
-
-        <h2 class="ls-galeria-titulo" id="titulo-evento-{{ evento.id }}">{{ evento.titulo }}</h2>
-        <p class="ls-galeria-texto">{{ evento.descricao }}</p>
-
-        <div class="ls-galeria-fotos">
-            {% for img in evento.imagens_evento.all %}
-            <figure class="ls-galeria-foto">
-                <img src="{{ img.imagem|foto:1400 }}" alt="{{ img.legenda|default:evento.titulo }}" loading="lazy" decoding="async">
-                {% if img.legenda %}<span>{{ img.legenda }}</span>{% endif %}
-            </figure>
-            {% empty %}
-            <p class="ls-galeria-vazio">Este evento ainda não tem fotos publicadas.</p>
-            {% endfor %}
-        </div>
-
-        <div class="ls-galeria-secao">
-            <h3><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Brinquedos usados</h3>
-            <div class="ls-galeria-itens">
-                {% for b in evento.brinquedos.all %}
-                <div class="ls-galeria-item">
-                    {% if b.imagem_brinquedo %}
-                        <img src="{{ b.imagem_brinquedo|foto:480 }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
-                    {% else %}
-                        <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ b.nome_brinquedo }}" loading="lazy">
-                    {% endif %}
-                    <span>{{ b.nome_brinquedo }}</span>
-                </div>
-                {% empty %}
-                <p class="ls-galeria-vazio">Nenhum brinquedo informado para este evento.</p>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
+{% for evento in eventos %}{% with eid=evento.id|stringformat:"s" %}
+{% include "partials/ficha_galeria.html" with janela="galeria-evento-"|add:eid titulo=evento.titulo texto=evento.descricao fotos=evento.imagens_evento.all brinquedos=evento.brinquedos.all tipo="evento" selo="Evento realizado" selo_icone="fa-champagne-glasses" convite="Quero um evento assim" mensagem="Olá! Vi no site o evento “"|add:evento.titulo|add:"” e quero um parecido." %}
+{% endwith %}{% endfor %}
 
 <script src="{% estatico 'site/ls-galeria.js' %}" defer></script>
 

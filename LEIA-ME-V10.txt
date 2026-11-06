@@ -833,3 +833,71 @@ Dependência nova: rjsmin (requirements.txt).
    feito na hora, sem baixar nada, e segue o botão de som dos jogos. Vale nos
    jogos de console, nos cadastrados e nos da casa. Quem pediu "menos
    movimento" no aparelho vê a versão parada.
+
+33) IMAGEM SEM "PIXELIZADO" E SEM PIXEL FALTANDO (O EQUILÍBRIO COM A VELOCIDADE)
+   O QUE ERA (não eram os arquivos dos jogos: as ROMs estão certas).
+     * O emulador estica a imagem "no grosso" (vizinho mais próximo). Numa tela
+       que não é múltiplo exato do jogo, cada pixel sai de um tamanho: o jogo
+       fica serrilhado e parece que faltam pixels -- o "1990,1991" do Super
+       Mario World, com letras de larguras diferentes.
+     * Quando o aparelho (ou o computador) não dava conta, o modo Automático
+       caía no Leve, que ia SEM FILTRO e com a tela desenhada menor: rodava
+       liso, mas pixelizado. E nas aberturas e vídeos do PlayStation (que têm
+       o dobro de linhas do jogo) a tela pequena pulava linhas inteiras.
+   O QUE FICOU.
+     * Nada mais sai sem filtro. Dois filtros novos do site, leves:
+       "nítido e liso" (cada pixel do jogo do MESMO tamanho, só a emenda
+       suavizada: uma leitura por pixel, tão leve quanto sem filtro) e
+       "suave" (o bicúbico no dobro do jogo e depois o nítido até a tela).
+     * HD: arte 2D no computador com o SABR (contornos lisos), no celular com
+       o nítido e liso; 3D (PlayStation, N64, Saturn...) com o suave.
+       Nítido e Leve usam o nítido e liso -- o Leve agora é bonito também.
+     * A tela nunca fica abaixo de 720 linhas no 3D e 480 no 2D: nenhuma linha
+       das aberturas some.
+     * Todo mundo recomeça no Automático (a escolha antiga de Gráficos foi
+       zerada, porque os filtros mudaram).
+   SE AINDA ACHAR PIXELIZADO: no jogo, toque em Imagem (no alto) e veja em
+   "Gráficos" qual está marcado. Se estiver Leve, foi o aparelho que pediu;
+   escolha HD para ver o mais bonito. "TV antiga" imita a TV de tubo.
+
+34) A ABERTURA LISA: O CONSOLE LIGA ANTES, PARADO
+   Antes, o toque em Jogar fazia tudo ao mesmo tempo: a apresentação animando
+   e, por baixo, o emulador baixando o núcleo, descompactando, compilando e
+   começando o jogo. Os dois disputavam o processador e a apresentação
+   engasgava (no teste, com o processador freado 4x como num celular: 27 a 33
+   quadros por segundo e trancos de até meio segundo).
+   A ORDEM AGORA:
+     1. o jogo baixa (ou sai do aparelho);
+     2. o console liga por trás da tela de abertura ("Ligando o console...");
+     3. o jogo começa e fica PARADO e calado, sem gastar nada; a apresentação
+        se monta escondida; aparece o Jogar;
+     4. o toque em Jogar libera o som e só dá o "play" na apresentação, que
+        roda sozinha no processador; quando ela acaba, o jogo é solto, já
+        ligado -- sem espera.
+   E a própria apresentação ficou leve: só anima o que a placa de vídeo faz
+   sozinha (mover, girar, aparecer); a capa do jogo é desfocada uma vez só,
+   num quadro pequeno; as faíscas são desenhadas em resolução comum.
+   No mesmo teste: 57 a 58 quadros por segundo, sem tranco.
+
+35) A FICHA DE PROJETOS E EVENTOS (A JANELA QUE ABRE NO CARTÃO)
+   Era um quadro branco com o texto claro quase invisível, a descrição num
+   parágrafo só e os emojis no meio da frase (no Windows, os mais novos
+   viravam quadradinhos). Agora é uma ficha moderna, a mesma na página
+   inicial, em /projetos/ e em /eventos/ (partials/ficha_galeria.html):
+     * ABERTURA: o fundo escurece e desfoca, a ficha sobe com uma mola suave
+       e as informações entram em sequência.
+     * FOTOS à esquerda, uma por vez, grandes: setas, contador (2 / 5),
+       miniaturas embaixo, as setas do teclado e o dedo no celular. Nos
+       PROJETOS o palco é claro, de estúdio (as renderizações com fundo
+       branco se fundem nele); nos EVENTOS, a própria foto desfocada ao fundo.
+     * O TEXTO organizado sozinho (core/ficha_texto.py), do jeito que a equipe
+       já escreve no painel: a abertura em parágrafos, "Principais atrações"
+       e "Características" em tópicos com um ✓, "Indicado para" em
+       etiquetas, e a frase final em destaque. Os emojis saem (cada item
+       ganha o ícone da seção, igual em todos). Funciona com ou sem quebra
+       de linha.
+     * Os BRINQUEDOS usados (nos eventos), com link para cada um.
+     * O convite "Quero um projeto assim" abre o WhatsApp com o nome do
+       projeto já escrito.
+     * No celular, a ficha ocupa a tela: fotos em cima, texto embaixo.
+   Os cartões mostram o começo da descrição, sem emojis.
