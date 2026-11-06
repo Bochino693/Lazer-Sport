@@ -699,8 +699,7 @@ html.ls-escuro:not(#_):not(#__) #combos-section .scroll-wrapper,
 html.ls-escuro:not(#_):not(#__) .eventos-grid,
 html.ls-escuro:not(#_):not(#__) .projetos-header,
 html.ls-escuro:not(#_):not(#__) #projetos .projetos-header,
-html.ls-escuro:not(#_):not(#__) .clientes-section,
-html.ls-escuro:not(#_):not(#__) .ls-loc-inner,
+html.ls-escuro:not(#_):not(#__) #contato .ls-onde-topo,
 html.ls-escuro:not(#_):not(#__) #brinquedos #filtros-bar,
 html.ls-escuro:not(#_):not(#__) .loja-shell,
 html.ls-escuro:not(#_):not(#__) .ls-section-intro,
@@ -938,7 +937,7 @@ html.ls-escuro:not(#_):not(#__) #pecas-section,
 html.ls-escuro:not(#_):not(#__) #combos-section,
 html.ls-escuro:not(#_):not(#__) #eventos,
 html.ls-escuro:not(#_):not(#__) #projetos,
-html.ls-escuro:not(#_):not(#__) #clientes-section {
+html.ls-escuro:not(#_):not(#__) #contato {
     border: 1px solid var(--ls-borda);
     background:
         radial-gradient(900px 400px at 100% 0%, rgba(47, 139, 255, .12), transparent 60%),
@@ -955,7 +954,7 @@ html.ls-escuro:not(#_):not(#__) #pecas-section::before,
 html.ls-escuro:not(#_):not(#__) #combos-section::before,
 html.ls-escuro:not(#_):not(#__) #eventos::before,
 html.ls-escuro:not(#_):not(#__) #projetos::before,
-html.ls-escuro:not(#_):not(#__) #clientes-section::before { opacity: .18; }
+html.ls-escuro:not(#_):not(#__) #contato::before { opacity: .18; }
 
 html.ls-escuro:not(#_):not(#__) main .titulo-sec,
 html.ls-escuro:not(#_):not(#__) main .titulo-eventos,
@@ -966,7 +965,7 @@ html.ls-escuro:not(#_):not(#__) #pecas-section h2,
 html.ls-escuro:not(#_):not(#__) #combos-section h2,
 html.ls-escuro:not(#_):not(#__) #eventos h2,
 html.ls-escuro:not(#_):not(#__) #projetos h2,
-html.ls-escuro:not(#_):not(#__) #clientes-section h2 {
+html.ls-escuro:not(#_):not(#__) #contato h2 {
     color: #fff;
     text-shadow: none;
     -webkit-text-fill-color: currentColor;
@@ -974,7 +973,6 @@ html.ls-escuro:not(#_):not(#__) #clientes-section h2 {
 }
 
 html.ls-escuro:not(#_):not(#__) main .section-subtitle,
-html.ls-escuro:not(#_):not(#__) main .clientes-subtitle,
 html.ls-escuro:not(#_):not(#__) #promocoes-section .eventos-header p,
 html.ls-escuro:not(#_):not(#__) #brinquedos .section-subtitle,
 html.ls-escuro:not(#_):not(#__) #pecas-section .section-subtitle,
@@ -1736,35 +1734,8 @@ html.ls-escuro:not(#_):not(#__) #combos-section .combo-precos .combo-economia-ne
 /* ======================================================================
    CONTATO E MAPA
    ====================================================================== */
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-controls-panel,
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-legenda,
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-filtro {
-    border-color: var(--ls-borda);
-    background: rgba(255, 255, 255, .05);
-    color: var(--ls-texto);
-    box-shadow: none;
-}
-
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-filtro select {
-    border: 1px solid var(--ls-borda-forte);
-    background: #0b1633;
-    color: #fff;
-}
-
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-mapa-wrap {
-    border-color: var(--ls-borda);
-    background: #0b1633;
-}
-
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-contador,
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-legenda span,
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-filtro label { color: var(--ls-texto-suave); }
-
-html.ls-escuro:not(#_):not(#__) #clientes-section .clientes-seo-lista li {
-    border-color: var(--ls-borda);
-    background: rgba(255, 255, 255, .05);
-    color: #cfe0ff;
-}
+/* A seção #contato (a fábrica e os clientes num mapa só) já nasce no
+   escuro: o CSS dela está no ls-home.css, bloco "ONDE ESTAMOS". */
 
 /* =========================================================
    CATÁLOGO (/brinquedos/) E LOJA (/loja/) NO TEMA ESCURO
@@ -2236,12 +2207,13 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia img {
    Eventos e projetos ficam de fora: as janelas deles são `position: fixed`,
    e a contenção prenderia a janela dentro da seção. Brinquedos e arena
    também: vêm logo depois do quadro inicial, e a altura estimada (900 px)
-   longe da real faria a página pular na primeira descida. */
+   longe da real faria a página pular na primeira descida. O mapa da
+   fábrica e dos clientes (#contato) também: o Leaflet mede a caixa do
+   mapa ao montar, e uma seção ainda não desenhada mede zero. */
 html.ls-escuro #categorias-section,
 html.ls-escuro #promocoes-section,
 html.ls-escuro #pecas-section,
-html.ls-escuro #combos-section,
-html.ls-escuro #clientes-section {
+html.ls-escuro #combos-section {
     content-visibility: auto;
     contain-intrinsic-size: auto 900px;
 }

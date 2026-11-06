@@ -2443,13 +2443,13 @@ main.content-section {
 }
 
 /* Bloco antigo de #contato (ID) removido: ele tinha mais
-   especificidade que as classes .ls-loc-* usadas hoje na
+   especificidade que as classes usadas hoje na
    seção de contato, e por isso vencia a briga de CSS,
    travando a altura do mapa em 300px, forçando os links a
    ficarem dourados (#FFD166) e trocando o fundo/padding da
    seção pelo gradiente azul/vermelho antigo. Toda a
-   estilização atual dessa seção vem das classes .ls-loc-*
-   logo abaixo, no bloco "CONTATO" com o mapa. */
+   estilização atual dessa seção vem das classes .ls-onde-*
+   (bloco "ONDE ESTAMOS", com o mapa da fábrica e dos clientes). */
 
 .social-icons a {
   display: inline-flex;
@@ -3475,7 +3475,8 @@ main.content-section {
   #combos-section,
   #estabelecimentos,
   #eventos,
-  #projetos {
+  #projetos,
+  #contato {
     --ls-section-blue: #0878f9;
     --ls-section-blue-deep: #004aad;
     --ls-section-red: #e63946;
@@ -3503,7 +3504,8 @@ main.content-section {
   #combos-section::before,
   #estabelecimentos::before,
   #eventos::before,
-  #projetos::before {
+  #projetos::before,
+  #contato::before {
     content: "";
     position: absolute;
     z-index: -1;
@@ -3520,7 +3522,8 @@ main.content-section {
   .ls-section-intro,
   #estabelecimentos .eventos-header,
   #eventos .eventos-header,
-  #projetos .projetos-header {
+  #projetos .projetos-header,
+  #contato .ls-onde-topo {
     width: 100%;
     max-width: 1320px;
     margin: 0 auto 31px;
@@ -3534,14 +3537,16 @@ main.content-section {
   .ls-section-intro-copy,
   #estabelecimentos .eventos-header > div,
   #eventos .eventos-header > div,
-  #projetos .projetos-header > div {
+  #projetos .projetos-header > div,
+  #contato .ls-onde-topo > div {
     max-width: 770px;
   }
 
   .ls-section-kicker,
   #estabelecimentos .ls-showcase-tag,
   #eventos .ls-showcase-tag,
-  #projetos .ls-showcase-tag {
+  #projetos .ls-showcase-tag,
+  #contato .ls-showcase-tag {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -3564,7 +3569,8 @@ main.content-section {
   #combos-section .ls-section-intro .section-title,
   #estabelecimentos .titulo-eventos,
   #eventos .titulo-eventos,
-  #projetos .titulo-eventos {
+  #projetos .titulo-eventos,
+  #contato .titulo-eventos {
     margin: 0;
     color: #102b4c;
     font-family: "Poppins", sans-serif;
@@ -3581,7 +3587,8 @@ main.content-section {
   #combos-section .ls-section-intro .section-subtitle,
   #estabelecimentos .eventos-header .section-subtitle,
   #eventos .eventos-header .section-subtitle,
-  #projetos .projetos-header .section-subtitle {
+  #projetos .projetos-header .section-subtitle,
+  #contato .ls-onde-topo .section-subtitle {
     max-width: 740px;
     margin: 13px 0 0;
     color: #60758f;
@@ -3919,7 +3926,8 @@ main.content-section {
     #combos-section,
     #estabelecimentos,
     #eventos,
-    #projetos {
+    #projetos,
+    #contato {
       padding: 52px 13px 58px;
       border-right: 0;
       border-left: 0;
@@ -3929,7 +3937,8 @@ main.content-section {
     .ls-section-intro,
     #estabelecimentos .eventos-header,
     #eventos .eventos-header,
-    #projetos .projetos-header {
+    #projetos .projetos-header,
+    #contato .ls-onde-topo {
       margin-bottom: 24px;
       flex-direction: column;
       align-items: flex-start;
@@ -3942,7 +3951,8 @@ main.content-section {
     #combos-section .ls-section-intro .section-title,
     #estabelecimentos .titulo-eventos,
     #eventos .titulo-eventos,
-    #projetos .titulo-eventos {
+    #projetos .titulo-eventos,
+    #contato .titulo-eventos {
       font-size: 2rem !important;
     }
 
@@ -4033,242 +4043,879 @@ main.content-section {
     }
   }
 
-.ls-loc-section {
-        background:
-            radial-gradient(circle at 10% 20%, rgba(230, 57, 70, 0.22), transparent 26%),
-            linear-gradient(135deg, #0d1b2e 0%, #16233a 100%);
-        color: #ffffff;
-        padding: 64px 24px;
+/* =========================================================
+   ONDE ESTAMOS (#contato): A FÁBRICA E OS CLIENTES NUM MAPA SÓ
+
+   Eram duas seções com um mapa cada ("Venha até a Lazer & Sport", com o
+   mapa do Google só da fábrica, e "Nossa fábrica e onde nossos clientes
+   estão", com o mapa dos clientes). Agora é uma, com a moldura das outras
+   vitrines (a lista de #eventos lá em cima):
+
+     computador:  [cartão da fábrica ] [ camadas · cidade     ]
+                  [lista de clientes ] [ mapa                 ]
+
+     celular:     cartão da fábrica, camadas e cidade, mapa, lista.
+
+   O comportamento do mapa está em site/paginas/home-mapa.js.
+========================================================= */
+#contato.ls-onde {
+    --onde-altura: 680px;
+    --onde-borda: rgba(255, 255, 255, .1);
+    --onde-vidro: rgba(255, 255, 255, .045);
+    --onde-texto-suave: #a9bcd9;
+    --onde-ciano: #7fdcff;
+    color: #eaf2ff;
+}
+
+.ls-onde [hidden] {
+    display: none !important;
+}
+
+.ls-onde-grade {
+    display: grid;
+    grid-template-columns: minmax(300px, 370px) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+        "fabrica mapa"
+        "clientes mapa";
+    gap: 16px 22px;
+    height: var(--onde-altura);
+}
+
+/* Sem cliente publicado: o cartão da fábrica e o mapa, lado a lado. */
+.ls-onde:not(.ls-onde--com-clientes) .ls-onde-grade {
+    grid-template-rows: auto;
+    grid-template-areas: "fabrica mapa";
+    height: auto;
+    min-height: 480px;
+}
+
+.ls-onde:not(.ls-onde--com-clientes) .ls-onde-fabrica {
+    align-self: start;
+}
+
+/* ---- Cartão da fábrica ---- */
+.ls-onde-fabrica {
+    grid-area: fabrica;
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid rgba(230, 57, 70, .3);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 0 0, rgba(230, 57, 70, .2), transparent 60%),
+        var(--onde-vidro);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+.ls-onde-fabrica-cabeca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ls-onde-fabrica-icone {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    color: #fff;
+    background: linear-gradient(135deg, #ef4352, #c91f31);
+    box-shadow: 0 8px 18px rgba(166, 17, 35, .35);
+}
+
+.ls-onde-fabrica-cabeca h3 {
+    margin: 0;
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.ls-onde-fabrica-cabeca small {
+    color: var(--onde-texto-suave);
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.ls-onde-ver-fabrica {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    margin-left: auto;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+    font-size: .74rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.ls-onde-ver-fabrica:hover,
+.ls-onde-ver-fabrica:focus-visible {
+    border-color: rgba(255, 119, 130, .65);
+    background: rgba(230, 57, 70, .25);
+}
+
+.ls-onde-ver-fabrica i {
+    color: #ff7782;
+}
+
+.ls-onde-contatos {
+    display: grid;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ls-onde-contatos li {
+    display: flex;
+    gap: 11px;
+    padding: 9px 0;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.ls-onde-contatos li > i {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    color: #ff7782;
+    background: rgba(230, 57, 70, .16);
+    font-size: .82rem;
+}
+
+.ls-onde-contatos li > div {
+    min-width: 0;
+}
+
+.ls-onde-contatos h4 {
+    margin: 0 0 1px;
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    font-size: .78rem;
+    font-weight: 800;
+}
+
+.ls-onde-contatos p,
+.ls-onde-contatos a {
+    margin: 0;
+    color: var(--onde-texto-suave);
+    font-size: .8rem;
+    line-height: 1.45;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.ls-onde-contatos a:hover {
+    color: #ff7782;
+}
+
+.ls-onde-rotas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.ls-onde-rota {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: .78rem;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.ls-onde-rota:hover {
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.ls-onde-rota--maps {
+    background: #e63946;
+    box-shadow: 0 8px 18px rgba(230, 57, 70, .3);
+}
+
+.ls-onde-rota--waze {
+    background: #004aad;
+    box-shadow: 0 8px 18px rgba(0, 74, 173, .35);
+}
+
+.ls-onde-redes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 10px;
+    margin-top: 12px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.ls-onde-redes p {
+    flex: 1 1 auto;
+    margin: 0;
+    color: var(--onde-texto-suave);
+    white-space: nowrap;
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.ls-onde-redes .social-icons {
+    display: flex;
+    flex: none;
+    gap: 6px;
+}
+
+.ls-onde-redes .social-icons a {
+    width: 31px;
+    height: 31px;
+    margin: 0;
+    font-size: 15px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, .3);
+}
+
+.ls-onde-redes .social-icons a:hover {
+    transform: translateY(-2px) scale(1.06);
+}
+
+/* ---- Mapa, com as camadas e o filtro em cima ---- */
+.ls-onde-mapa {
+    grid-area: mapa;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    min-height: 0;
+    scroll-margin-top: 84px;
+}
+
+.ls-onde-barra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ls-onde-camadas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ls-onde-camada {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 8px 0 13px;
+    border: 1px solid var(--onde-borda);
+    border-radius: 999px;
+    color: #eaf2ff;
+    background: rgba(255, 255, 255, .04);
+    font-size: .82rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, opacity .2s ease;
+}
+
+.ls-onde-camada b {
+    min-width: 26px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .1);
+    font-size: .74rem;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.ls-onde-camada .ls-onde-ponto {
+    font-size: .95rem;
+}
+
+.ls-onde-camada--fabrica .ls-onde-ponto {
+    color: #ff5a67;
+}
+
+.ls-onde-camada--clientes .ls-onde-ponto {
+    color: #3c95ff;
+}
+
+.ls-onde-camada--fabrica[aria-pressed="true"] {
+    border-color: rgba(255, 90, 103, .55);
+    background: rgba(230, 57, 70, .16);
+}
+
+.ls-onde-camada--clientes[aria-pressed="true"] {
+    border-color: rgba(60, 149, 255, .6);
+    background: rgba(8, 120, 249, .18);
+}
+
+/* Camada desligada: apagada, com o alfinete só no contorno. */
+.ls-onde-camada[aria-pressed="false"] {
+    color: var(--onde-texto-suave);
+    opacity: .62;
+}
+
+.ls-onde-camada[aria-pressed="false"] .ls-onde-ponto {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--onde-texto-suave);
+}
+
+.ls-onde-camada:hover,
+.ls-onde-camada:focus-visible {
+    opacity: 1;
+    border-color: rgba(255, 255, 255, .35);
+}
+
+.ls-onde-filtro {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    margin: 0;
+    padding: 0 5px 0 14px;
+    border: 1px solid var(--onde-borda);
+    border-radius: 999px;
+    color: var(--onde-texto-suave);
+    background: rgba(255, 255, 255, .04);
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.ls-onde-filtro i {
+    color: var(--onde-ciano);
+}
+
+.ls-onde-filtro select {
+    min-width: 172px;
+    height: 30px;
+    padding: 0 30px 0 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    color: #fff;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%237fdcff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center,
+        #0b1633;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.ls-onde-filtro select:focus-visible {
+    outline: 2px solid var(--onde-ciano);
+    outline-offset: 2px;
+}
+
+.ls-onde-moldura {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 6px;
+    border: 1px solid var(--onde-borda);
+    border-radius: 24px;
+    background: #0b1633;
+    box-shadow: 0 22px 48px rgba(0, 0, 0, .35);
+}
+
+.ls-onde-mapa-caixa {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    overflow: hidden;
+    border-radius: 18px;
+    background: #10284a;
+}
+
+#mapa-onde.leaflet-container {
+    background: #10284a;
+    font-family: inherit;
+}
+
+/* Enquanto o mapa não monta (ou se não montar): o caminho até a fábrica. */
+.ls-onde-reserva {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 10px;
+    height: 100%;
+    min-height: inherit;
+    padding: 24px;
+    color: var(--onde-texto-suave);
+    text-align: center;
+}
+
+.ls-onde-reserva i {
+    color: #3c95ff;
+    font-size: 2rem;
+}
+
+.ls-onde-reserva p {
+    margin: 0;
+    font-weight: 700;
+}
+
+.ls-onde-reserva a {
+    color: var(--onde-ciano);
+    font-weight: 800;
+}
+
+.ls-onde:not(.ls-onde--pronto) .ls-onde-dica {
+    display: none;
+}
+
+.ls-onde:not(.ls-onde--pronto) .ls-onde-barra {
+    opacity: .6;
+    pointer-events: none;
+}
+
+.ls-onde-dica {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    z-index: 640;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 110px);
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, .5);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(8, 27, 54, .88);
+    box-shadow: 0 10px 25px rgba(13, 27, 46, .25);
+    font-size: .72rem;
+    font-weight: 750;
+    line-height: 1.25;
+    text-align: center;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.ls-onde-dica i {
+    color: #7db8ff;
+}
+
+.ls-onde-dica {
+    transition: opacity .2s ease;
+}
+
+.ls-onde--cartao-aberto .ls-onde-dica {
+    opacity: 0;
+}
+
+.ls-onde-dica-toque {
+    display: none;
+}
+
+/* Controles do mapa no escuro da casa. */
+#mapa-onde .leaflet-bar {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .3);
+}
+
+#mapa-onde .leaflet-bar a {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-bottom-color: rgba(255, 255, 255, .12);
+    color: #fff;
+    background: rgba(8, 20, 48, .94);
+    font-size: 18px;
+    line-height: 1;
+}
+
+#mapa-onde .ls-onde-controle-tudo a {
+    font-size: 13px;
+}
+
+#mapa-onde .leaflet-bar a:hover,
+#mapa-onde .leaflet-bar a:focus-visible {
+    color: #fff;
+    background: #0878f9;
+}
+
+#mapa-onde .leaflet-bar a.leaflet-disabled {
+    color: rgba(255, 255, 255, .35);
+    background: rgba(8, 20, 48, .94);
+}
+
+#mapa-onde .leaflet-control-attribution {
+    border-top-left-radius: 8px;
+    color: var(--onde-texto-suave);
+    background: rgba(8, 20, 48, .82);
+}
+
+#mapa-onde .leaflet-control-attribution a {
+    color: var(--onde-ciano);
+}
+
+/* ---- Lista de clientes ---- */
+.ls-onde-clientes {
+    grid-area: clientes;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 15px 8px 10px 15px;
+    border: 1px solid var(--onde-borda);
+    border-radius: 22px;
+    background: var(--onde-vidro);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+.ls-onde-clientes-cabeca {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 8px 10px 0;
+}
+
+.ls-onde-clientes-cabeca h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    font-size: .95rem;
+    font-weight: 800;
+}
+
+.ls-onde-clientes-cabeca h3 i {
+    color: #3fd0ff;
+}
+
+.ls-onde-contador {
+    color: var(--onde-texto-suave);
+    font-size: .78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ls-onde-contador strong {
+    color: var(--onde-ciano);
+}
+
+.ls-onde-lista {
+    display: grid;
+    flex: 1 1 auto;
+    align-content: start;
+    gap: 6px;
+    min-height: 0;
+    margin: 0;
+    padding: 0 7px 0 0;
+    overflow-y: auto;
+    list-style: none;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(127, 220, 255, .35) transparent;
+}
+
+.ls-onde-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: inherit;
+    background: rgba(255, 255, 255, .035);
+    text-align: left;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease;
+}
+
+.ls-onde-item > i {
+    flex: none;
+    color: #3c95ff;
+    font-size: .95rem;
+}
+
+.ls-onde-item > span {
+    min-width: 0;
+}
+
+.ls-onde-item b {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font-size: .84rem;
+    font-weight: 800;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ls-onde-item small {
+    display: block;
+    margin-top: 2px;
+    color: var(--onde-texto-suave);
+    font-size: .72rem;
+    line-height: 1.3;
+}
+
+.ls-onde-item small strong {
+    color: var(--onde-ciano);
+    font-weight: 800;
+}
+
+.ls-onde-item:hover,
+.ls-onde-item:focus-visible {
+    border-color: rgba(60, 149, 255, .45);
+    background: rgba(8, 120, 249, .14);
+}
+
+.ls-onde-item--ativo,
+.ls-onde-item--ativo:hover {
+    border-color: rgba(127, 220, 255, .65);
+    background: rgba(8, 120, 249, .24);
+}
+
+.ls-onde-lista--desligada .ls-onde-item {
+    opacity: .55;
+}
+
+/* ---- Alfinetes: o grupo e o selo da fábrica ---- */
+/* O Leaflet pinta de azul todo link dentro do mapa (.leaflet-container a);
+   os botões do cartão (site, Instagram, "Como chegar") ficam claros. */
+#mapa-onde .cliente-popup__action,
+#mapa-onde .cliente-popup__action:hover {
+    color: #fff;
+}
+
+#mapa-onde .cliente-popup__action--route {
+    color: #f3f6fb;
+}
+
+.grupo-marker {
+    background: transparent !important;
+    border: 0 !important;
+    overflow: visible !important;
+}
+
+/* Um segundo alfinete "fantasma" atrás: lê-se como uma pilha. */
+.pino-gota__corpo--pilha {
+    filter:
+        drop-shadow(6px -4px 0 rgba(127, 192, 255, .6))
+        drop-shadow(0 4px 5px rgba(13, 27, 46, .45));
+}
+
+.pino-gota__numero {
+    position: relative;
+    z-index: 1;
+    color: #0757ae;
+    font-family: "Poppins", sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+/* O selo "+N" no corpo do alfinete da fábrica, logo abaixo da janela. */
+.fabrica-marker .pino-selo {
+    position: absolute;
+    top: 64%;
+    left: 50%;
+    /* acima dos desenhos do pino: o Leaflet põe z-index 200 em todo svg do mapa */
+    z-index: 210;
+    display: grid;
+    place-items: center;
+    min-width: 26px;
+    height: 18px;
+    padding: 0 5px;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, #2f8bff, #004aad);
+    box-shadow: 0 3px 8px rgba(0, 30, 80, .45);
+    font-family: "Poppins", sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+}
+
+/* Área de toque maior que o desenho. */
+.fabrica-marker .pino-selo::before {
+    content: "";
+    position: absolute;
+    inset: -5px -8px;
+}
+
+#mapa-onde .grupo-tooltip {
+    padding: 6px 10px;
+    border: 1px solid rgba(127, 192, 255, .35);
+    border-radius: 10px;
+    color: #fff;
+    background: #071a34;
+    box-shadow: 0 10px 24px rgba(8, 27, 54, .3);
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+#mapa-onde .grupo-tooltip::before {
+    border-top-color: #071a34;
+}
+
+/* ---- Telas menores ---- */
+@media (max-width: 1100px) {
+    .ls-onde-grade {
+        grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
     }
 
-    .ls-loc-inner {
-        max-width: 1180px;
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: 1fr 1.2fr;
-        gap: 40px;
+    .ls-onde-rotas .ls-onde-rota {
+        padding: 0 10px;
+    }
+
+    /* Cabeçalho do cartão mais justo: "Nossa fábrica" cabe numa linha
+       ao lado do "Ver no mapa" na coluna estreita e no celular. */
+    .ls-onde-fabrica-cabeca {
+        gap: 10px;
+    }
+
+    .ls-onde-fabrica-icone {
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+    }
+
+    .ls-onde-ver-fabrica {
+        padding: 0 10px;
+        font-size: .72rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .ls-onde-grade,
+    .ls-onde:not(.ls-onde--com-clientes) .ls-onde-grade {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        grid-template-areas:
+            "fabrica"
+            "mapa"
+            "clientes";
+        height: auto;
+        min-height: 0;
+        gap: 14px;
+    }
+
+    .ls-onde-moldura {
+        flex: none;
+    }
+
+    .ls-onde-mapa-caixa {
+        height: clamp(360px, 58vh, 480px);
+    }
+
+    .ls-onde-lista {
+        max-height: 330px;
+    }
+}
+
+@media (hover: none), (max-width: 575px) {
+    .ls-onde-dica-pc {
+        display: none;
+    }
+
+    .ls-onde-dica-toque {
+        display: inline;
+    }
+}
+
+@media (max-width: 575px) {
+    .ls-onde-barra {
+        flex-direction: column;
         align-items: stretch;
     }
 
-    .ls-loc-card {
-        background: rgba(255, 255, 255, 0.07);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 30px;
-        padding: 38px;
+    .ls-onde-camadas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     }
 
-    .ls-loc-tag {
-        display: inline-block;
-        background: #E63946;
-        color: #fff;
-        border-radius: 999px;
-        padding: 8px 16px;
-        font-size: 0.78rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        margin-bottom: 18px;
-    }
-
-    .ls-loc-card h2 {
-        font-family: 'Poppins', sans-serif;
-        font-size: 2rem;
-        font-weight: 800;
-        margin-bottom: 16px;
-    }
-
-    .ls-loc-card > p {
-        color: rgba(255, 255, 255, 0.7);
-        line-height: 1.7;
-        margin-bottom: 26px;
-    }
-
-    .ls-loc-line {
-        display: flex;
-        gap: 14px;
-        padding: 16px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .ls-loc-line:last-of-type { border-bottom: 0; }
-
-    .ls-loc-icon {
-        min-width: 42px;
-        height: 42px;
-        background: #E63946;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
+    .ls-onde-camada {
         justify-content: center;
-        font-size: 1rem;
-        flex-shrink: 0;
     }
 
-    .ls-loc-line h5 {
-        font-family: 'Poppins', sans-serif;
-        font-weight: 700;
-        margin-bottom: 3px;
-        font-size: 0.98rem;
+    .ls-onde-filtro {
+        width: 100%;
     }
 
-    .ls-loc-line p, .ls-loc-line a {
-        color: rgba(255, 255, 255, 0.7);
-        text-decoration: none;
-        font-size: 0.92rem;
-    }
-
-    .ls-loc-line a:hover { color: #E63946; }
-
-    .ls-loc-routes {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 24px;
-    }
-
-    .ls-loc-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 13px 22px;
-        border-radius: 999px;
-        font-weight: 700;
-        text-decoration: none;
-        font-size: 0.92rem;
-        transition: transform 0.2s ease;
-    }
-
-    .ls-loc-btn:hover { transform: translateY(-2px); }
-    .ls-loc-btn-maps { background: #E63946; color: #fff; }
-    .ls-loc-btn-waze { background: #004AAD; color: #fff; }
-
-    .ls-loc-map {
-        background: #ffffff;
-        border-radius: 30px;
-        padding: 10px;
-        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
-        min-height: 520px;
-        display: flex;
-        overflow: hidden;
-    }
-
-    .ls-loc-map iframe {
+    .ls-onde-filtro select {
         flex: 1;
-        width: 100%;
-        height: 100%;
-        min-height: 100%;
-        border: 0;
-        border-radius: 22px;
-        display: block;
+        min-width: 0;
     }
 
-    .ls-loc-social {
-        max-width: 1180px;
-        margin: 40px auto 0;
-        text-align: center;
+    .ls-onde-fabrica {
+        padding: 15px;
     }
 
-    .ls-loc-social p {
-        color: rgba(255, 255, 255, 0.6);
-        margin-bottom: 16px;
-    }
 
-    @media (max-width: 900px) {
-        .ls-loc-inner { grid-template-columns: 1fr; }
-        .ls-loc-map { min-height: 360px; height: 360px; }
-        .ls-loc-map iframe { min-height: 0; height: 100%; }
-    }
-
-.clientes-section {
-        max-width: 1200px;
-        margin: 70px auto 0;
-        padding: 0 20px;
-    }
-
-    .clientes-header {
-        margin-bottom: 8px;
-    }
-
-    .clientes-subtitle {
-        color: #6c757d;
-        font-size: 0.95rem;
-        max-width: 640px;
-        margin-bottom: 24px;
-    }
-
-    .clientes-toolbar {
-        display: flex;
+    .ls-onde-redes {
         flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 18px;
     }
 
-    .clientes-filtro {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: #fff;
-        border: 1px solid #e3e8f0;
-        border-radius: 999px;
-        padding: 8px 8px 8px 18px;
-        box-shadow: 0 6px 18px rgba(0, 74, 173, 0.08);
+    .ls-onde-moldura {
+        padding: 4px;
+        border-radius: 18px;
     }
 
-    .clientes-filtro label {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #004AAD;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 6px;
+    .ls-onde-mapa-caixa {
+        height: 420px;
+        border-radius: 14px;
     }
 
-    .clientes-filtro select {
-        border: none;
-        background: #f5f8ff;
-        border-radius: 999px;
-        padding: 8px 16px;
-        font-family: 'Poppins', sans-serif;
-        font-size: 0.88rem;
-        color: #2c3e50;
-        cursor: pointer;
-        outline: none;
+    .ls-onde-dica {
+        top: 10px;
+        max-width: calc(100% - 100px);
+        padding: 8px 12px;
+        font-size: .66rem;
     }
 
-    .clientes-contador {
-        font-size: 0.85rem;
-        color: #6c757d;
+    .ls-onde-clientes {
+        padding: 13px 6px 8px 13px;
+    }
+}
+
+/* Celular bem estreito: o "Ver no mapa" fica só com o ícone. */
+@media (max-width: 380px) {
+    .ls-onde-ver-fabrica {
+        justify-content: center;
+        width: 34px;
+        padding: 0;
     }
 
-    .clientes-contador strong {
-        color: #004AAD;
+    .ls-onde-ver-fabrica span {
+        display: none;
     }
-
-    .clientes-mapa-wrap {
-        position: relative;
-        border-radius: 24px;
-        overflow: hidden;
-        box-shadow: 0 20px 45px rgba(13, 27, 46, 0.14);
-        border: 1px solid #e3e8f0;
-    }
-
-    #mapa-clientes {
-        width: 100%;
-        height: 480px;
-        background: #eef3fb;
-    }
-
-    .clientes-vazio {
-        text-align: center;
-        color: #8a94a6;
-        padding: 40px 20px;
-        background: #fff;
-        border-radius: 24px;
-        border: 1px dashed #e3e8f0;
-    }
+}
 
     /* Tamanho, posição e cor do pino vão inline no HTML gerado pelo JS.
        Aqui só ficam efeitos que não afetam se o pino aparece ou não. */
@@ -4386,108 +5033,17 @@ main.content-section {
         }
     }
 
-    /* Bolha de agrupamento -- aparece quando clientes ficam perto
-       o bastante pra se tocarem visualmente na tela atual */
-    .cluster-lazer {
-        background: transparent !important;
-        border: 0 !important;
-        overflow: visible !important;
-    }
+    #mapa-onde .leaflet-tile-pane { z-index: 200; }
+    #mapa-onde .leaflet-overlay-pane { z-index: 400; }
+    #mapa-onde .leaflet-marker-pane { z-index: 600; }
+    #mapa-onde .leaflet-tooltip-pane { z-index: 650; }
+    #mapa-onde .leaflet-popup-pane { z-index: 700; }
 
-    .cluster-lazer span {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #4aa3ff, #004AAD);
-        color: #fff;
-        font-weight: 800;
-        font-family: 'Poppins', sans-serif;
-        font-size: 13px;
-        box-shadow: 0 6px 14px rgba(0,74,173,.45), 0 0 0 3px rgba(255,255,255,.9);
-        transition: transform 0.2s ease;
-        cursor: pointer;
-    }
-
-    .cluster-lazer:hover span {
-        transform: scale(1.1);
-    }
-
-    .clientes-legenda {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin: -6px 0 16px;
-        font-size: 0.82rem;
-        color: #6c757d;
-    }
-
-    .clientes-legenda span {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .clientes-legenda .ponto {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-
-    .clientes-legenda .ponto.fabrica {
-        background: linear-gradient(135deg, #ff6b6b, #E63946);
-    }
-
-    .clientes-legenda .ponto.cliente {
-        background: linear-gradient(135deg, #4aa3ff, #004AAD);
-    }
-
-    #mapa-clientes .leaflet-tile-pane { z-index: 200; }
-    #mapa-clientes .leaflet-overlay-pane { z-index: 400; }
-    #mapa-clientes .leaflet-marker-pane { z-index: 600; }
-    #mapa-clientes .leaflet-tooltip-pane { z-index: 650; }
-    #mapa-clientes .leaflet-popup-pane { z-index: 700; }
-
-    .clientes-map-hint {
-        position: absolute;
-        top: 14px;
-        left: 50%;
-        z-index: 640;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        max-width: calc(100% - 90px);
-        padding: 9px 14px;
-        border: 1px solid rgba(255, 255, 255, .72);
-        border-radius: 999px;
-        background: rgba(8, 27, 54, .86);
-        color: #fff;
-        box-shadow: 0 10px 25px rgba(13, 27, 46, .2);
-        font-size: .72rem;
-        font-weight: 750;
-        line-height: 1.25;
-        text-align: center;
-        transform: translateX(-50%);
-        backdrop-filter: blur(12px);
-        pointer-events: none;
-    }
-
-    .clientes-map-hint i {
-        color: #7db8ff;
-    }
-
-    .clientes-map-hint .hint-mobile {
-        display: none;
-    }
-
-    #mapa-clientes .leaflet-popup {
+    #mapa-onde .leaflet-popup {
         margin-bottom: 12px;
     }
 
-    #mapa-clientes .leaflet-popup-content-wrapper {
+    #mapa-onde .leaflet-popup-content-wrapper {
         overflow: hidden;
         padding: 0;
         border: 1px solid rgba(86, 157, 255, .28);
@@ -4500,18 +5056,18 @@ main.content-section {
         animation: clientePopupRise .22s cubic-bezier(.2, .8, .2, 1) both;
     }
 
-    #mapa-clientes .leaflet-popup-content {
+    #mapa-onde .leaflet-popup-content {
         width: auto !important;
         margin: 0;
         line-height: 1.45;
     }
 
-    #mapa-clientes .leaflet-popup-tip {
+    #mapa-onde .leaflet-popup-tip {
         background: #070b12;
         box-shadow: 4px 4px 10px rgba(0, 0, 0, .25);
     }
 
-    #mapa-clientes .leaflet-popup-close-button {
+    #mapa-onde .leaflet-popup-close-button {
         top: 10px;
         right: 10px;
         z-index: 5;
@@ -4530,7 +5086,7 @@ main.content-section {
         transition: color .2s ease, background .2s ease, transform .2s ease;
     }
 
-    #mapa-clientes .leaflet-popup-close-button:hover {
+    #mapa-onde .leaflet-popup-close-button:hover {
         background: #004AAD;
         color: #fff;
         transform: scale(1.05);
@@ -4759,7 +5315,7 @@ main.content-section {
         white-space: nowrap;
     }
 
-    #mapa-clientes .cliente-hover-tooltip {
+    #mapa-onde .cliente-hover-tooltip {
         padding: 0;
         border: 0;
         border-radius: 13px;
@@ -4767,7 +5323,7 @@ main.content-section {
         box-shadow: 0 12px 30px rgba(8, 27, 54, .18);
     }
 
-    #mapa-clientes .cliente-hover-tooltip::before {
+    #mapa-onde .cliente-hover-tooltip::before {
         border-top-color: #0a2548;
     }
 
@@ -4828,34 +5384,16 @@ main.content-section {
     }
 
     @media (max-width: 575px) {
-        .clientes-toolbar { flex-direction: column; align-items: stretch; }
-        #mapa-clientes { height: 360px; }
-
-        .clientes-map-hint {
-            top: 10px;
-            max-width: calc(100% - 100px);
-            padding: 8px 12px;
-            font-size: .66rem;
-        }
-
-        .clientes-map-hint .hint-desktop {
-            display: none;
-        }
-
-        .clientes-map-hint .hint-mobile {
-            display: inline;
-        }
-
         .cliente-popup {
             width: min(238px, calc(100vw - 48px));
             padding: 11px;
         }
 
-        #mapa-clientes .leaflet-popup-content-wrapper {
+        #mapa-onde .leaflet-popup-content-wrapper {
             border-radius: 16px;
         }
 
-        #mapa-clientes .leaflet-popup-close-button {
+        #mapa-onde .leaflet-popup-close-button {
             top: 7px;
             right: 7px;
             width: 25px;
@@ -4933,279 +5471,6 @@ main.content-section {
             border-radius: 9px;
             font-size: .59rem;
             line-height: 1.15;
-        }
-    }
-
-    .clientes-seo-lista {
-        list-style: none;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin: 22px 0 0;
-        padding: 0;
-    }
-
-    .clientes-seo-lista li {
-        background: #f5f8ff;
-        border: 1px solid #e3e8f0;
-        border-radius: 999px;
-        padding: 8px 16px;
-        font-size: 0.82rem;
-        color: #4a4a4a;
-    }
-
-    .clientes-seo-lista strong {
-        color: #004AAD;
-    }
-
-#clientes-section {
-        --clientes-blue: #0878f9;
-        --clientes-blue-deep: #004aad;
-        --clientes-red: #e63946;
-        position: relative;
-        isolation: isolate;
-        overflow: hidden;
-        width: 100%;
-        max-width: none;
-        margin: 0;
-        padding: 68px 28px 72px;
-        border: 1px solid rgba(0, 74, 173, .11);
-        border-radius: 30px;
-        color: #10233f;
-        background:
-            radial-gradient(circle at 7% 7%, rgba(8, 120, 249, .13), transparent 24rem),
-            radial-gradient(circle at 94% 88%, rgba(230, 57, 70, .07), transparent 24rem),
-            linear-gradient(150deg, #eef5fd 0%, #e7eff9 58%, #f7faff 100%);
-        box-shadow:
-            0 20px 48px rgba(19, 53, 92, .10),
-            inset 0 1px 0 rgba(255, 255, 255, .75);
-        scroll-margin-top: 84px;
-    }
-
-    #clientes-section::before {
-        content: "";
-        position: absolute;
-        z-index: -1;
-        inset: 0;
-        opacity: .62;
-        pointer-events: none;
-        background-image:
-            linear-gradient(rgba(0, 74, 173, .035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 74, 173, .035) 1px, transparent 1px);
-        background-size: 42px 42px;
-        mask-image: linear-gradient(to bottom, #000, transparent 88%);
-    }
-
-    #clientes-section .clientes-header {
-        width: 100%;
-        margin: 0 0 29px;
-        padding: 0;
-    }
-
-    #clientes-section .clientes-header > div {
-        max-width: 830px;
-    }
-
-    #clientes-section .ls-showcase-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin: 0 0 12px;
-        padding: 8px 12px;
-        border: 1px solid rgba(0, 105, 218, .18);
-        border-radius: 999px;
-        color: #0757ae;
-        background: rgba(8, 120, 249, .08);
-        font-size: .68rem;
-        font-weight: 900;
-        line-height: 1;
-        letter-spacing: .09em;
-        text-transform: uppercase;
-    }
-
-    #clientes-section .titulo-eventos {
-        margin: 0;
-        color: #102b4c;
-        font-family: "Poppins", sans-serif;
-        font-size: clamp(2rem, 4vw, 3.15rem) !important;
-        font-weight: 850;
-        line-height: 1.04;
-        letter-spacing: -.05em;
-        text-align: left;
-    }
-
-    #clientes-section .clientes-subtitle {
-        max-width: 790px;
-        margin: 13px 0 0;
-        color: #60758f;
-        font-size: .9rem;
-        line-height: 1.65;
-    }
-
-    #clientes-section .clientes-controls-panel {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 18px;
-        margin: 0 0 16px;
-        padding: 13px;
-        border: 1px solid rgba(0, 74, 173, .11);
-        border-radius: 18px;
-        background: rgba(238, 245, 253, .88);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78);
-    }
-
-    #clientes-section .clientes-toolbar {
-        flex: 1 1 auto;
-        margin: 0;
-    }
-
-    #clientes-section .clientes-filtro {
-        padding: 7px 7px 7px 15px;
-        border-color: rgba(0, 74, 173, .13);
-        background: #e5effb;
-        box-shadow: none;
-    }
-
-    #clientes-section .clientes-filtro label {
-        color: #0757ae;
-    }
-
-    #clientes-section .clientes-filtro select {
-        border: 1px solid rgba(0, 74, 173, .10);
-        color: #173858;
-        background: #d9e8f8;
-    }
-
-    #clientes-section .clientes-contador {
-        color: #60758f;
-        font-weight: 700;
-    }
-
-    #clientes-section .clientes-contador strong {
-        color: #004aad;
-    }
-
-    #clientes-section .clientes-legenda {
-        flex: 0 0 auto;
-        margin: 0;
-        padding: 8px 11px;
-        border: 1px solid rgba(0, 74, 173, .10);
-        border-radius: 13px;
-        color: #45617e;
-        background: #e2edf9;
-    }
-
-    #clientes-section .clientes-mapa-wrap {
-        padding: 7px;
-        border: 1px solid rgba(0, 74, 173, .16);
-        border-radius: 25px;
-        background: linear-gradient(145deg, #d8e7f7, #cbddef);
-        box-shadow: 0 22px 48px rgba(20, 55, 96, .16);
-    }
-
-    #clientes-section #mapa-clientes {
-        height: 500px;
-        overflow: hidden;
-        border-radius: 18px;
-        background: #dce8f5;
-    }
-
-    #mapa-clientes .leaflet-control-zoom a {
-        border-color: rgba(0, 74, 173, .12);
-        color: #0757ae;
-        background: #e9f2fc;
-    }
-
-    #mapa-clientes .leaflet-control-zoom a:hover {
-        color: #fff;
-        background: #0878f9;
-    }
-
-    #clientes-section .clientes-seo-lista {
-        gap: 8px;
-        margin-top: 18px;
-    }
-
-    #clientes-section .clientes-seo-lista li {
-        padding: 8px 13px;
-        border: 1px solid rgba(0, 74, 173, .11);
-        color: #45617e;
-        background: #e1ecf8;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62);
-    }
-
-    #clientes-section .clientes-seo-lista strong {
-        color: #004aad;
-    }
-
-    #clientes-section .clientes-vazio {
-        color: #60758f;
-        border-color: rgba(0, 74, 173, .17);
-        background: #e5effa;
-    }
-
-    @media (max-width: 920px) {
-        #clientes-section .clientes-controls-panel {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        #clientes-section .clientes-legenda {
-            justify-content: center;
-        }
-    }
-
-    @media (max-width: 768px) {
-        #clientes-section {
-            padding: 52px 13px 58px;
-            border-right: 0;
-            border-left: 0;
-            border-radius: 0;
-        }
-
-        #clientes-section .titulo-eventos {
-            font-size: 2rem !important;
-        }
-
-        #clientes-section .clientes-controls-panel {
-            padding: 9px;
-            border-radius: 15px;
-        }
-
-        #clientes-section .clientes-toolbar {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        #clientes-section .clientes-filtro {
-            border-radius: 15px;
-        }
-
-        #clientes-section .clientes-filtro select {
-            flex: 1;
-            min-width: 0;
-        }
-
-        #clientes-section .clientes-legenda {
-            gap: 10px;
-            font-size: .72rem;
-        }
-
-        #clientes-section .clientes-mapa-wrap {
-            padding: 5px;
-            border-radius: 19px;
-        }
-
-        #clientes-section #mapa-clientes {
-            height: 370px;
-            border-radius: 14px;
-        }
-
-        #clientes-section .clientes-seo-lista li {
-            width: 100%;
-            border-radius: 13px;
-            line-height: 1.4;
         }
     }
 
@@ -5665,7 +5930,7 @@ main.content-section {
     #estabelecimentos .ls-showcase-tag,
     #eventos .ls-showcase-tag,
     #projetos .ls-showcase-tag,
-    #clientes-section .ls-showcase-tag {
+    #contato .ls-showcase-tag {
         display: inline-flex;
         align-items: center;
         gap: 9px;
@@ -5695,7 +5960,7 @@ main.content-section {
     #estabelecimentos .ls-showcase-tag > i,
     #eventos .ls-showcase-tag > i,
     #projetos .ls-showcase-tag > i,
-    #clientes-section .ls-showcase-tag > i {
+    #contato .ls-showcase-tag > i {
         display: inline-grid;
         place-items: center;
         flex: 0 0 24px;
@@ -5727,7 +5992,7 @@ main.content-section {
     #estabelecimentos .eventos-header .section-subtitle,
     #eventos .eventos-header .section-subtitle,
     #projetos .projetos-header .section-subtitle,
-    #clientes-section .clientes-subtitle {
+    #contato .ls-onde-topo .section-subtitle {
         max-width: 760px;
         padding-left: 15px;
         border-left: 3px solid rgba(0, 105, 218, .55);
@@ -5992,7 +6257,7 @@ main.content-section {
         #estabelecimentos .ls-showcase-tag,
         #eventos .ls-showcase-tag,
         #projetos .ls-showcase-tag,
-        #clientes-section .ls-showcase-tag {
+        #contato .ls-showcase-tag {
             max-width: 100%;
             min-height: 36px;
             padding: 6px 11px 6px 7px;
@@ -6008,7 +6273,7 @@ main.content-section {
         #estabelecimentos .eventos-header .section-subtitle,
         #eventos .eventos-header .section-subtitle,
         #projetos .projetos-header .section-subtitle,
-        #clientes-section .clientes-subtitle {
+        #contato .ls-onde-topo .section-subtitle {
             padding-left: 12px;
             font-size: .84rem;
             line-height: 1.65;
@@ -6245,29 +6510,16 @@ main.content-section {
      (`.ls-home-hero`); agora vem depois de um respiro, como os outros;
    - "Venha até a Lazer & Sport" (#contato) era uma faixa de cantos retos,
      sem borda nem sombra, encostada no mapa de clientes logo abaixo.
-   Os dois ganham a moldura dos demais (a mesma borda, o mesmo raio e a
-   mesma sombra das seções do ls-tema.css).
+     Desde que a fábrica e os clientes viraram uma seção só, com um mapa,
+     o #contato entra na lista das vitrines (a de #eventos) e no
+     ls-tema.css, como as outras.
+   A categoria ganha a moldura dos demais (a mesma borda, o mesmo raio e
+   a mesma sombra das seções do ls-tema.css).
 ========================================================= */
-html.ls-escuro #contato.ls-loc-section {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--ls-borda, rgba(255, 255, 255, .1));
-  box-shadow: var(--ls-sombra, 0 18px 44px rgba(0, 0, 0, .42)), inset 0 1px 0 rgba(255, 255, 255, .06);
-}
-
 @media (min-width: 769px) {
-  html.ls-escuro #categorias-section,
-  html.ls-escuro #contato.ls-loc-section {
+  html.ls-escuro #categorias-section {
     border-radius: 30px;
   }
-}
-
-/* O número do contador ("2 clientes no mapa") e o "Lazer & Sport" da
-   lista de cidades ficaram no azul-escuro do tema claro (#004aad): no
-   fundo escuro, quase sumiam. */
-html.ls-escuro #clientes-section .clientes-contador strong,
-html.ls-escuro #clientes-section .clientes-seo-lista strong {
-  color: #7fdcff;
 }
 
 /* =========================================================
