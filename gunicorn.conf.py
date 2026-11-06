@@ -149,3 +149,14 @@ def on_starting(server):
             connections.close_all()
     except Exception as erro:  # o site sobe mesmo assim
         server.log.error(f"As migrações não foram aplicadas ao subir: {erro!r}")
+
+
+def post_worker_init(worker):
+    """Logo depois de o worker subir, ele mesmo aquece as telas principais (core/aquecer.py):
+    o primeiro visitante depois de um deploy já encontra o cache cheio."""
+    try:
+        from core.aquecer import agendar
+
+        agendar(atraso=2.0, motivo="servidor subiu")
+    except Exception as erro:  # o site sobe mesmo assim
+        worker.log.warning(f"Aquecimento do cache não agendado: {erro!r}")

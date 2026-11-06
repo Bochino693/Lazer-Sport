@@ -405,6 +405,10 @@ USE_TZ = True
 # então não existe `request.build_absolute_uri` para gerar os links. Sem
 # esta base, o e-mail sairia com links relativos, que não clicam.
 SITE_URL = os.getenv("SITE_URL", "https://www.lazersport.com.br").strip()
+# O servidor pede as telas principais sozinho quando o cache esvazia (core/aquecer.py):
+# ligado em produção; nos testes e no computador, desligado.
+AQUECER_CACHE = os.getenv("AQUECER_CACHE", "1" if (IS_RENDER or ENVIRONMENT == "production") else "0").strip().lower() in ("1", "true", "yes", "on")
+AQUECER_HOST = os.getenv("AQUECER_HOST", "www.lazersport.com.br").strip()
 
 # ============================================================
 # CONTATO DA EMPRESA

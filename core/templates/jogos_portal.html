@@ -35,7 +35,7 @@
 {% endcomment %}
 <div class="app-abertura" data-app-abertura aria-hidden="true">
     <div class="app-abertura-miolo">
-        <span class="app-abertura-logo"><img src="{% static 'images/logoofi.png' %}" alt="" width="112" height="112"></span>
+        <span class="app-abertura-logo"><img src="{% static 'images/logoofi-512.webp' %}" alt="" width="112" height="112" decoding="async"></span>
         <strong class="app-abertura-marca">LAZER &amp; SPORT <b>GAMES</b></strong>
         <span class="app-abertura-barra"><span data-app-abertura-barra></span></span>
         <small data-app-abertura-texto>Carregando a biblioteca…</small>
@@ -56,7 +56,7 @@
          marca, os atalhos e a conta em cima, a busca e as seções embaixo. -->
     <div class="pg-barra" data-pg-barra>
         <a class="pg-marca" href="{% url 'jogos' %}" aria-label="Lazer &amp; Sport Games: início">
-            <span class="pg-marca-logo"><img src="{% static 'images/logoofi.png' %}" alt="" width="56" height="56"></span>
+            <span class="pg-marca-logo"><img src="{% static 'images/logoofi-192.webp' %}" alt="" width="56" height="56" decoding="async" fetchpriority="high"></span>
             <span class="pg-marca-texto">
                 <strong><span>LAZER &amp; SPORT</span> <b>GAMES</b></strong>
                 <small>{{ total }} jogo{{ total|pluralize }} · grátis no navegador e no celular</small>
@@ -96,7 +96,7 @@
                 </a>
             {% else %}
                 <a class="pg-botao pg-conta-entrar" href="{% url 'login' %}?next={% url 'jogos' %}#login-box" title="Entrar" aria-label="Entrar"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> <span>Entrar</span></a>
-                <a class="pg-botao pg-botao--forte pg-conta-criar" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span>Criar conta</span></a>
+                <a class="pg-botao pg-botao--forte pg-conta-criar" href="{% url 'registrar' %}?next={% url 'jogos' %}#register-box" title="Criar conta" aria-label="Criar conta"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span>Criar conta</span></a>
             {% endif %}
         </div>
     </div>

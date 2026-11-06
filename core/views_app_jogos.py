@@ -41,6 +41,8 @@ CASCA = (
     "site/paginas/intro-jogos.css",
     "site/paginas/intro-jogos.js",
     "images/logoofi.png",
+    "images/logoofi-192.webp",
+    "images/logoofi-512.webp",
     "images/icone/icone-192.png",
     "images/icone/icone-512.png",
 )

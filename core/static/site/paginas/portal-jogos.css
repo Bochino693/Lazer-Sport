@@ -79,7 +79,7 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
    estante, a arte do jogo sobre o fundo desfocado dela mesma e o selo
    do console. A cor do jogo (--cor) só tinge o fundo da arte.
    ====================================================================== */
-.bj { margin: 6px 0 36px; scroll-margin-top: 80px; }
+.bj { margin: 6px 0 36px; scroll-margin-top: calc(var(--pg-barra-altura, 76px) + 12px); }
 .bj-cabeca { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .bj-cabeca-icone { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; font-size: 1.4rem; color: #04121f;
                    background: linear-gradient(135deg, var(--pg-ciano), #8a5cff); box-shadow: 0 0 26px rgba(63, 208, 255, .35); }
@@ -88,7 +88,9 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
 .bj-corpo { display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 24px; align-items: start; }
 
 /* ---------- a lateral: coleções, estantes, gêneros ---------- */
-.bj-lado { position: sticky; top: 88px; display: grid; gap: 18px; padding: 16px 12px; border-radius: 22px; max-height: calc(100vh - 108px); overflow: auto;
+/* presa logo abaixo da barra do app (a altura dela vem do app-jogos.js), nunca por baixo dela */
+.bj-lado { position: sticky; top: calc(var(--pg-barra-altura, 76px) + 14px); display: grid; gap: 18px; padding: 16px 12px; border-radius: 22px;
+           max-height: calc(100vh - var(--pg-barra-altura, 76px) - 28px); overflow: auto;
            background: linear-gradient(180deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .02)); border: 1px solid var(--pg-borda); scrollbar-width: thin; }
 .bj-lado-grupo { display: grid; gap: 3px; }
 .bj-lado h3 { margin: 0 0 6px 10px; font: 800 .68rem "Poppins", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #7f93b5; }
@@ -417,9 +419,12 @@ body.app-jogando { overflow: hidden; }
 /* ======================================================================
    A BARRA DO APP: marca, seções, busca, atalhos e a conta
    Cada peça tem um lugar pensado em cada largura:
-     * computador largo (1440+): tudo numa linha, presa no alto ao rolar;
-     * computador menor e tablet (760-1439): marca, busca, atalhos e conta
-       em cima; as seções embaixo; presa no alto;
+     * computador (1100+): tudo numa linha só, presa no alto ao rolar -- com
+       duas linhas, a de baixo virava uma faixa escura por cima da biblioteca;
+       quanto mais estreito, mais enxuto (o subtítulo sai, depois o nome da
+       marca e os nomes dos botões da conta);
+     * tablet (760-1099): marca, busca, atalhos e conta em cima; as seções
+       embaixo; presa no alto;
      * celular: marca, atalhos e conta em cima, a busca inteira embaixo, e as
        seções numa barra de abas no pé da tela, como nos aplicativos.
    ====================================================================== */
@@ -537,9 +542,26 @@ body.app-jogando { overflow: hidden; }
 @media (min-width: 1600px) {
     .pg-barra { grid-template-columns: auto auto minmax(260px, 1fr) auto auto; }
 }
-/* computador menor e tablet (760-1439): marca, busca, atalhos e conta em cima; as seções
-   embaixo, como as abas de um programa, de ponta a ponta com a linha de baixo */
-@media (max-width: 1439px) {
+/* computador menor (1100-1439): ainda numa linha só, mais enxuta */
+@media (min-width: 1100px) and (max-width: 1439px) {
+    .pg-barra { gap: 10px 12px; }
+    .pg-marca-texto small { display: none; }
+    .pg-busca-atalho { display: none; }
+    .pg-busca button { width: 38px; padding: 0; }
+    .pg-busca button span { display: none; }
+    .pg-busca button i { display: inline; }
+    .pg-abas a { padding: 0 12px; }
+}
+@media (min-width: 1100px) and (max-width: 1319px) {
+    .pg-marca-texto { display: none; }
+    .pg-conta-chip { padding: 3px; }
+    .pg-conta-texto { display: none; }
+    .pg-conta .pg-botao { width: 42px; padding: 0; justify-content: center; }
+    .pg-conta .pg-botao span { display: none; }
+}
+/* tablet (760-1099): marca, busca, atalhos e conta em cima; as seções embaixo, como as
+   abas de um programa, de ponta a ponta com a linha de baixo */
+@media (max-width: 1099px) {
     .pg-barra { grid-template-areas: "marca busca atalhos conta" "abas abas abas abas"; grid-template-columns: auto minmax(0, 1fr) auto auto;
                 row-gap: 10px; padding-bottom: 0; }
     .pg-abas { justify-self: stretch; gap: 6px; padding: 0; border: 0; border-radius: 0; background: none;
