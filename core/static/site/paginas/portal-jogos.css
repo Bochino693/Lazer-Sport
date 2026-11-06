@@ -74,159 +74,186 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
 
 /* ======================================================================
    A BIBLIOTECA
-   Estantes por plataforma, cada uma com a sua cor (--tema) e o seu
-   desenho de fundo; a capa é uma "caixinha": a lombada na cor da
-   estante, a arte do jogo sobre o fundo desfocado dela mesma e o selo
-   do console. A cor do jogo (--cor) só tinge o fundo da arte.
+   Como a biblioteca de um launcher de hoje. No computador, a lateral presa
+   à esquerda (coleções, estantes, gêneros) e, na coluna da direita, o
+   título, a barra de ferramentas e as estantes -- tudo pela mesma borda
+   da grade. A cor de cada estante (--tema) fica num detalhe só (o ícone e
+   o traço do título); os cartões são todos iguais: a capa quadrada, os
+   selos sempre no mesmo canto e o nome embaixo, fora da arte.
    ====================================================================== */
-.bj { margin: 6px 0 36px; scroll-margin-top: calc(var(--pg-barra-altura, 76px) + 12px); }
-.bj-cabeca { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.bj-cabeca-icone { flex: none; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; font-size: 1.4rem; color: #04121f;
-                   background: linear-gradient(135deg, var(--pg-ciano), #8a5cff); box-shadow: 0 0 26px rgba(63, 208, 255, .35); }
-.bj-cabeca h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.3rem); font-weight: 800; letter-spacing: -.02em; }
-.bj-cabeca p { margin: 4px 0 0; color: var(--pg-suave); }
-.bj-corpo { display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 24px; align-items: start; }
+.bj { margin: 6px 0 40px; scroll-margin-top: calc(var(--pg-barra-altura, 76px) + 12px); }
+/* Até 768 px o site põe overflow-x: hidden no body (ls-base.css): o body vira uma caixa de rolagem
+   e a barra do app deixa de ficar presa no alto justo no tablet em pé (760-768), enquanto a página
+   continua reservando o espaço dela ao pular para a biblioteca. "clip" corta do mesmo jeito sem
+   virar caixa de rolagem (onde o navegador não conhece o clip, fica o hidden de sempre). */
+body.ls-launcher { overflow-x: clip; }
+.bj-corpo { display: grid; grid-template-columns: 248px minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+            grid-template-areas: "lado cabeca" "lado barra" "lado conteudo"; column-gap: 28px; align-items: start; }
+.bj-cabeca { grid-area: cabeca; display: flex; align-items: center; gap: 14px; min-width: 0; margin-bottom: 18px; }
+.bj-cabeca-icone { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; font-size: 1.2rem; color: #04121f;
+                   background: linear-gradient(135deg, var(--pg-ciano), #8a5cff); box-shadow: 0 0 22px rgba(63, 208, 255, .3); }
+.bj-cabeca-texto { min-width: 0; }
+.bj-cabeca h2 { margin: 0; font-size: clamp(1.45rem, 2.6vw, 2rem); font-weight: 800; line-height: 1.1; letter-spacing: -.02em; }
+.bj-cabeca p { margin: 4px 0 0; color: var(--pg-suave); font-size: .92rem; }
+/* o texto que só o leitor de tela lê (o "Com ranking" do selo de troféu, por exemplo) */
+.bj-oculto { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ---------- a lateral: coleções, estantes, gêneros ---------- */
 /* presa logo abaixo da barra do app (a altura dela vem do app-jogos.js), nunca por baixo dela */
-.bj-lado { position: sticky; top: calc(var(--pg-barra-altura, 76px) + 14px); display: grid; gap: 18px; padding: 16px 12px; border-radius: 22px;
-           max-height: calc(100vh - var(--pg-barra-altura, 76px) - 28px); overflow: auto;
-           background: linear-gradient(180deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .02)); border: 1px solid var(--pg-borda); scrollbar-width: thin; }
-.bj-lado-grupo { display: grid; gap: 3px; }
-.bj-lado h3 { margin: 0 0 6px 10px; font: 800 .68rem "Poppins", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #7f93b5; }
-.bj-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; border-radius: 12px;
-           text-decoration: none; color: #cfdcf2; font: 700 .9rem "Manrope", sans-serif; transition: background .15s ease, color .15s ease; }
+.bj-lado { grid-area: lado; position: sticky; top: calc(var(--pg-barra-altura, 76px) + 14px); display: grid; gap: 18px; padding: 14px 10px; border-radius: 20px;
+           max-height: calc(100vh - var(--pg-barra-altura, 76px) - 28px); overflow: auto; overscroll-behavior: contain;
+           background: rgba(255, 255, 255, .035); border: 1px solid var(--pg-borda); scrollbar-width: thin; }
+.bj-lado-grupo { display: grid; gap: 2px; }
+.bj-lado h3 { margin: 0 0 6px 12px; font: 800 .68rem "Poppins", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #8193b3; }
+.bj-item { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px 6px 12px; border-radius: 12px;
+           text-decoration: none; color: #cfdcf2; font: 700 .9rem "Manrope", sans-serif; transition: background-color .15s ease, color .15s ease; }
 .bj-item[hidden] { display: none; }
 .bj-item i { color: var(--tema, var(--pg-ciano)); text-align: center; }
 .bj-item span { line-height: 1.2; }
-.bj-item b { min-width: 26px; padding: 2px 8px; border-radius: 999px; text-align: center; font: 800 .7rem "Poppins", sans-serif; color: #8ea3c4; background: rgba(255, 255, 255, .06); }
+.bj-item b { min-width: 26px; padding: 2px 8px; border-radius: 999px; text-align: center; font: 800 .7rem "Poppins", sans-serif; color: #93a7c7; background: rgba(255, 255, 255, .06); }
 .bj-item b:empty { display: none; }
 .bj-item:hover { background: rgba(255, 255, 255, .06); color: #fff; }
 .bj-item[aria-current="true"] { color: #fff; background: color-mix(in srgb, var(--tema, var(--pg-ciano)) 18%, transparent);
                                 box-shadow: inset 3px 0 0 var(--tema, var(--pg-ciano)); }
 .bj-item[aria-current="true"] b { color: #fff; background: color-mix(in srgb, var(--tema, var(--pg-ciano)) 35%, transparent); }
-.bj-item--genero { grid-template-columns: minmax(0, 1fr) auto; padding-left: 14px; font-weight: 600; }
+.bj-item--genero { grid-template-columns: minmax(0, 1fr) auto; }
 
-/* ---------- a barra: título, ordem, capas ou lista ---------- */
-.bj-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; padding: 12px 14px 12px 16px;
-            border-radius: 18px; background: rgba(255, 255, 255, .04); border: 1px solid var(--pg-borda); }
-.bj-barra-titulo { padding-left: 12px; border-left: 4px solid var(--tema, var(--pg-ciano)); }
-.bj-barra-titulo h3 { margin: 0; font-size: 1.15rem; font-weight: 800; }
+/* ---------- a barra de ferramentas: o que está à vista, gênero, ordem, capas ou lista ---------- */
+.bj-barra { grid-area: barra; display: flex; align-items: center; gap: 10px; min-width: 0; margin: 0 0 22px; padding: 0 0 16px; border-bottom: 1px solid var(--pg-borda); }
+.bj-barra-titulo { flex: 1 1 auto; min-width: 0; padding-left: 12px; border-left: 3px solid var(--tema, var(--pg-ciano)); }
+.bj-barra-titulo h3 { margin: 0; font-size: 1.08rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .bj-barra-titulo p { margin: 2px 0 0; color: var(--pg-suave); font-size: .84rem; }
-.bj-barra-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.bj-ordem { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 999px; color: var(--pg-ciano);
-            background: rgba(255, 255, 255, .06); border: 1px solid var(--pg-borda); }
-.bj-ordem select { max-width: 160px; border: 0; outline: 0; background: transparent; color: #fff; font: 700 .86rem "Manrope", sans-serif; cursor: pointer; }
-.bj-ordem select option { color: #0a1430; }
-.bj-vista { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid var(--pg-borda); }
+.bj-barra-campos { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bj-campo { display: inline-flex; align-items: center; gap: 8px; min-width: 0; height: 42px; padding: 0 6px 0 12px; border-radius: 12px; color: var(--pg-ciano);
+            background: rgba(255, 255, 255, .06); border: 1px solid var(--pg-borda); transition: border-color .15s ease, box-shadow .15s ease; }
+.bj-campo:hover { border-color: rgba(255, 255, 255, .22); }
+/* o anel de foco é o da caixa inteira, não um quadrado dentro dela */
+.bj-campo:focus-within { border-color: var(--pg-ciano); box-shadow: 0 0 0 3px rgba(63, 208, 255, .22); }
+.pg .bj-campo select:focus, .pg .bj-campo select:focus-visible { outline: none; }
+.bj-campo select { flex: 1; min-width: 0; max-width: 200px; height: 100%; padding-right: 4px; border: 0; outline: 0; background: transparent; color: #fff;
+                   font: 700 .86rem "Manrope", sans-serif; cursor: pointer; text-overflow: ellipsis; }
+/* a lista que abre: escura, com o texto claro (a cor do tema escuro do site) */
+.bj-campo select option { color: var(--pg-texto); background: #0a1430; }
+.bj-aplicar { height: 42px; padding: 0 16px; border-radius: 12px; border: 0; font: 700 .86rem "Poppins", sans-serif; color: #04121f; background: var(--pg-ciano); cursor: pointer; }
+.bj-vista { flex: none; display: inline-flex; gap: 2px; height: 42px; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, .06); border: 1px solid var(--pg-borda); }
 .bj-vista[hidden] { display: none; }
-.bj-vista button { width: 38px; height: 34px; border: 0; border-radius: 999px; background: transparent; color: var(--pg-suave); cursor: pointer; }
+.bj-vista button { width: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--pg-suave); cursor: pointer; transition: background-color .15s ease, color .15s ease; }
+.bj-vista button:hover { color: #fff; background: rgba(255, 255, 255, .08); }
 .bj-vista button[aria-pressed="true"] { color: #04121f; background: var(--pg-ciano); }
-.bj-limpar { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; text-decoration: none;
-             font: 700 .84rem "Poppins", sans-serif; color: #fff; background: rgba(255, 71, 87, .16); border: 1px solid rgba(255, 71, 87, .4); }
+.bj-limpar { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 14px; border-radius: 12px; text-decoration: none; white-space: nowrap;
+             font: 700 .86rem "Poppins", sans-serif; color: #fff; background: rgba(255, 71, 87, .16); border: 1px solid rgba(255, 71, 87, .42); }
+.bj-limpar:hover { color: #fff; background: rgba(255, 71, 87, .28); }
 .bj-limpar[hidden] { display: none; }
-.bj-vazio { padding: 28px; border-radius: 18px; text-align: center; color: var(--pg-suave); background: var(--pg-cartao); border: 1px dashed var(--pg-borda); }
+.bj-conteudo { grid-area: conteudo; min-width: 0; }
+.bj-vazio { margin: 0; padding: 36px 20px; border-radius: 18px; text-align: center; line-height: 1.6;
+            color: var(--pg-suave); background: var(--pg-cartao); border: 1px dashed var(--pg-borda); }
+.bj-vazio i { margin-right: 4px; color: var(--pg-ciano); }
 .bj-vazio a { color: var(--pg-ciano); }
 
-/* ---------- as estantes: a faixa de abertura de cada plataforma ---------- */
-.bj-estante { margin-bottom: 34px; }
-.bj-estante-faixa { position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 14px;
-                    margin-bottom: 16px; padding: 16px 18px; border-radius: 20px; isolation: isolate;
-                    border: 1px solid color-mix(in srgb, var(--tema) 42%, transparent);
-                    background: linear-gradient(100deg, color-mix(in srgb, var(--tema) 34%, #0a1430) 0%, #0a1430 72%); }
-.bj-estante-faixa::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.bj-estante-icone { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; font-size: 1.4rem; color: #071022;
-                    background: var(--tema); box-shadow: 0 0 24px color-mix(in srgb, var(--tema) 55%, transparent); }
-.bj-estante-nome h3 { margin: 0; font-size: clamp(1.1rem, 2vw, 1.35rem); font-weight: 800; }
-.bj-estante-nome p { margin: 2px 0 0; color: #c9d6ee; font-size: .86rem; }
-.bj-estante-total { padding: 5px 12px; border-radius: 999px; font: 800 .76rem "Poppins", sans-serif; color: var(--tema); white-space: nowrap;
-                    background: rgba(5, 11, 31, .6); border: 1px solid color-mix(in srgb, var(--tema) 45%, transparent); }
-.bj-estante-todos { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px; text-decoration: none; white-space: nowrap;
-                    font: 700 .84rem "Poppins", sans-serif; color: #071022; background: var(--tema); }
-/* o desenho de cada estante */
-.bj-estante[data-estante="nosso"] .bj-estante-faixa::after {
-    background: radial-gradient(circle at 88% 30%, rgba(255, 210, 63, .38), transparent 38%),
-                repeating-linear-gradient(115deg, rgba(255, 210, 63, .09) 0 2px, transparent 2px 15px); }
-.bj-estante[data-estante="playstation"] .bj-estante-faixa::after {
-    content: "△ ○ ✕ □"; display: flex; align-items: center; justify-content: flex-end; padding-right: 170px;
-    font: 900 clamp(2rem, 4vw, 3.4rem) "Poppins", sans-serif; letter-spacing: .35em; color: rgba(255, 255, 255, .07); }
-.bj-estante[data-estante="nintendo"] .bj-estante-faixa::after {
-    background-image: linear-gradient(rgba(255, 255, 255, .075) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .075) 1px, transparent 1px);
-    background-size: 10px 10px; -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000); mask-image: linear-gradient(90deg, transparent 25%, #000); }
-.bj-estante[data-estante="sega"] .bj-estante-faixa::after {
-    background: repeating-linear-gradient(-12deg, rgba(34, 211, 238, .2) 0 3px, transparent 3px 22px);
-    -webkit-mask-image: linear-gradient(90deg, transparent 20%, #000); mask-image: linear-gradient(90deg, transparent 20%, #000); }
-.bj-estante[data-estante="fliperama"] .bj-estante-faixa::after {
-    background: linear-gradient(transparent 55%, rgba(196, 92, 255, .35)),
-                repeating-linear-gradient(90deg, rgba(196, 92, 255, .25) 0 1px, transparent 1px 28px),
-                repeating-linear-gradient(0deg, rgba(196, 92, 255, .22) 0 1px, transparent 1px 14px);
-    -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000); mask-image: linear-gradient(90deg, transparent 25%, #000); }
-.bj-estante[data-estante="classicos"] .bj-estante-faixa::after {
-    background: linear-gradient(90deg, transparent 60%, #ff3b30 60% 62.5%, #ff8a1f 62.5% 65%, #ffd23f 65% 67.5%, #4ade80 67.5% 70%, transparent 70%);
-    opacity: .5; transform: skewX(-22deg); }
-.bj-estante[data-estante="pc"] .bj-estante-faixa::after {
-    content: "C:\\> RUN_"; display: flex; align-items: center; justify-content: flex-end; padding-right: 170px;
-    font: 700 clamp(1.4rem, 3vw, 2.4rem) "Courier New", monospace; color: rgba(52, 211, 153, .16);
-    background: repeating-linear-gradient(0deg, rgba(52, 211, 153, .07) 0 1px, transparent 1px 4px); }
-.bj-estante[data-estante="html"] .bj-estante-faixa::after {
-    content: "</>"; display: flex; align-items: center; justify-content: flex-end; padding-right: 170px;
-    font: 900 clamp(2rem, 4vw, 3.4rem) "Poppins", sans-serif; color: rgba(255, 106, 61, .16); }
-.bj-estante[data-estante="recentes"] .bj-estante-faixa::after {
-    background: radial-gradient(circle at 90% 50%, rgba(63, 208, 255, .3), transparent 45%); }
+/* ---------- as estantes: o título de cada uma, alinhado com a grade ---------- */
+.bj-estante { margin-bottom: 38px; }
+.bj-estante-faixa { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "icone nome total todos";
+                    align-items: center; gap: 4px 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--pg-borda); }
+/* o traço da cor da estante, debaixo do ícone */
+.bj-estante-faixa::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 56px; height: 2px; border-radius: 2px; background: var(--tema); }
+.bj-estante-icone { grid-area: icone; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; font-size: 1.05rem; color: var(--tema);
+                    background: color-mix(in srgb, var(--tema) 15%, transparent); border: 1px solid color-mix(in srgb, var(--tema) 38%, transparent); }
+.bj-estante-nome { grid-area: nome; min-width: 0; }
+.bj-estante-nome h3 { margin: 0; font-size: clamp(1.05rem, 1.6vw, 1.22rem); font-weight: 800; line-height: 1.2; }
+.bj-estante-nome p { margin: 2px 0 0; color: var(--pg-suave); font-size: .84rem; line-height: 1.4; }
+.bj-estante-total { grid-area: total; justify-self: end; padding: 4px 10px; border-radius: 999px; white-space: nowrap; font: 700 .76rem "Poppins", sans-serif;
+                    color: #c6d3ea; background: rgba(255, 255, 255, .07); }
+.bj-estante-todos { grid-area: todos; justify-self: end; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border-radius: 10px;
+                    text-decoration: none; white-space: nowrap; font: 700 .86rem "Poppins", sans-serif; color: var(--tema); transition: background-color .15s ease; }
+.bj-estante-todos:hover { color: var(--tema); background: color-mix(in srgb, var(--tema) 14%, transparent); }
 
-/* ---------- as capas ---------- */
-.bj-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(46%, 170px), 1fr)); gap: 16px; }
-.bj-capa { position: relative; display: block; border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; isolation: isolate;
-           background: #0b1530; border: 1px solid rgba(255, 255, 255, .09);
-           box-shadow: 0 10px 24px rgba(0, 0, 0, .35); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
-/* a lombada da caixinha, na cor da estante */
-.bj-capa::before { content: ""; position: absolute; z-index: 4; left: 0; top: 0; bottom: 0; width: 6px; background: var(--tema);
-                   box-shadow: 0 0 14px var(--tema); }
-/* o brilho que passa na capa */
-.bj-capa::after { content: ""; position: absolute; z-index: 4; inset: 0; pointer-events: none; opacity: 0; transition: opacity .2s ease;
-                  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .16) 48%, transparent 60%); }
-.bj-capa:hover, .bj-capa:focus-visible { transform: translateY(-6px); border-color: color-mix(in srgb, var(--tema) 65%, transparent);
-                                         box-shadow: 0 20px 38px rgba(0, 0, 0, .5), 0 0 30px color-mix(in srgb, var(--tema) 35%, transparent); outline: none; }
-.bj-capa:hover::after, .bj-capa:focus-visible::after { opacity: 1; }
-.bj-capa-arte { position: relative; display: grid; place-items: center; aspect-ratio: 3 / 4; overflow: hidden;
-                background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--cor) 60%, transparent), #060d24 74%); }
-.bj-capa-fundo { position: absolute; inset: -12%; width: 124%; height: 124%; object-fit: cover; filter: blur(16px) saturate(1.5) brightness(.62); opacity: .8; }
-.bj-capa-img { position: relative; z-index: 1; width: 86%; height: 62%; margin-top: -18%; object-fit: contain;
-               filter: drop-shadow(0 14px 22px rgba(0, 0, 0, .6)); transition: transform .3s ease; }
-.bj-capa:hover .bj-capa-img { transform: scale(1.07); }
-.bj-capa-sem { position: relative; z-index: 1; margin-top: -18%; font-size: 3.2rem; color: color-mix(in srgb, var(--tema) 70%, #fff); }
-.bj-sigla { position: absolute; z-index: 3; top: 10px; left: 14px; padding: 3px 9px; border-radius: 7px; font: 900 .64rem/1.25 "Poppins", sans-serif;
-            letter-spacing: .08em; color: #071022; background: var(--tema); box-shadow: 0 3px 10px rgba(0, 0, 0, .35); }
-.bj-marcas { position: absolute; z-index: 3; top: 9px; right: 9px; display: flex; gap: 5px; }
-.bj-marca { display: grid; place-items: center; min-width: 25px; height: 25px; padding: 0 7px; border-radius: 999px; font: 800 .62rem "Poppins", sans-serif;
-            background: rgba(5, 11, 31, .78); border: 1px solid rgba(255, 255, 255, .18); }
+/* ---------- os cartões ---------- */
+.bj-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(158px, calc(50% - 8px)), 1fr)); gap: 26px 16px; }
+.bj-capa { position: relative; min-width: 0; border-radius: 16px; transition: transform .22s ease; }
+.bj-capa-link { position: relative; display: flex; flex-direction: column; gap: 10px; height: 100%; border-radius: 16px; color: inherit; text-decoration: none;
+                -webkit-tap-highlight-color: transparent; }
+.bj-capa-link:hover { color: inherit; }
+/* a capa: quadrada, sempre do mesmo tamanho; a arte inteira à vista (contain) sobre ela mesma desfocada */
+.bj-capa-arte { position: relative; display: block; aspect-ratio: 1; overflow: hidden; border-radius: 14px; isolation: isolate; container-type: inline-size;
+                background: radial-gradient(120% 90% at 30% 12%, color-mix(in srgb, var(--cor) 55%, #0b1530), #070d22 78%);
+                box-shadow: 0 8px 20px rgba(0, 0, 0, .35); transition: box-shadow .22s ease; }
+/* o fio claro da borda e o escurecido do "Jogar" (por cima da arte, sem pegar clique) */
+.bj-capa-arte::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+                       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); transition: background-color .2s ease, box-shadow .2s ease; }
+.bj-capa-fundo { position: absolute; inset: -12%; width: 124%; height: 124%; object-fit: cover; filter: blur(16px) saturate(1.4) brightness(.6); }
+.bj-capa-img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: contain; transition: transform .35s ease; }
+/* sem capa: a arte de reserva -- o gradiente da cor do jogo, o ícone do console e o nome (no meio:
+   em cima ficam os selos e, no celular, embaixo fica o Jogar) */
+.bj-capa-reserva { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding: 24% 11% 26%; overflow: hidden; color: #fff;
+                   background: radial-gradient(85% 65% at 88% 8%, color-mix(in srgb, var(--cor) 80%, #fff 12%), transparent 70%),
+                               linear-gradient(160deg, color-mix(in srgb, var(--cor) 72%, #0b1530) 0%, color-mix(in srgb, var(--cor) 32%, #070d22) 55%, #050a1c 100%); }
+.bj-capa-reserva::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+                           background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, .1) 48%, transparent 58%),
+                                       repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 12px); }
+.bj-capa-reserva i { position: absolute; right: -10%; top: 12%; font-size: 6rem; font-size: 58cqi; line-height: 1; color: rgba(255, 255, 255, .17); transform: rotate(-12deg); }
+.bj-capa-reserva b { position: relative; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-wrap: balance;
+                     font: 800 1.1rem/1.08 "Poppins", sans-serif; font-size: clamp(.9rem, 12cqi, 1.6rem); letter-spacing: -.01em; text-shadow: 0 2px 14px rgba(0, 0, 0, .5); }
+/* os selos, sempre nos mesmos cantos da capa: o console à esquerda; Novo, ranking e "no aparelho" à direita */
+.bj-capa-selos { position: absolute; z-index: 3; top: 8px; left: 8px; right: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; pointer-events: none; }
+.bj-sigla { flex: none; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 8px; border-radius: 7px;
+            font: 800 .66rem/1.2 "Poppins", sans-serif; letter-spacing: .06em; color: #071022; background: var(--tema); box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+.bj-marcas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; min-width: 0; }
+.bj-marca { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 23px; min-width: 23px; padding: 0 7px; border-radius: 999px; white-space: nowrap;
+            font: 800 .66rem/1 "Poppins", sans-serif; color: #fff; background: rgba(4, 8, 22, .82); border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
 .bj-marca[hidden] { display: none; }
+.bj-marca--nova { color: #04121f; background: var(--pg-ciano); border-color: transparent; }
 .bj-marca--ranking { color: var(--pg-amarelo); }
-.bj-marca--nova { color: #04121f; background: var(--pg-ciano); border: 0; }
-.bj-marca--aparelho { color: #34d399; border-color: rgba(52, 211, 153, .5); }
-.bj-capa-continuar { position: absolute; z-index: 3; left: 10px; bottom: 74px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
-                     font: 800 .66rem "Poppins", sans-serif; color: #241600; background: #ffd23f; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
-.bj-capa-play { position: absolute; z-index: 3; right: 10px; bottom: 66px; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
-                color: #04210f; background: #22c55e; box-shadow: 0 6px 18px rgba(34, 197, 94, .5); opacity: 0; transform: scale(.75); transition: .2s ease; }
-.bj-capa:hover .bj-capa-play, .bj-capa:focus-visible .bj-capa-play { opacity: 1; transform: none; }
-.bj-capa-texto { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 3px; padding: 36px 12px 12px 18px;
-                 background: linear-gradient(transparent, rgba(4, 9, 26, .94) 46%); }
-.bj-capa-texto strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-                        font: 800 .98rem/1.2 "Poppins", sans-serif; text-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
-.bj-capa-texto small { overflow: hidden; color: #b9c8e2; font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; }
+.bj-marca--aparelho { color: #34d399; }
+/* o nome (no máximo duas linhas) e a linha de baixo (gênero e partidas, ou o ponto guardado) */
+.bj-capa-texto { display: grid; gap: 3px; min-width: 0; padding: 0 2px; }
+.bj-capa-texto strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+                        font: 700 .95rem/1.28 "Poppins", sans-serif; color: var(--pg-texto); }
+.bj-capa-texto small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--pg-suave); font-size: .78rem; }
+.bj-capa-texto .bj-capa-ponto { color: var(--pg-amarelo); font-weight: 700; }
+/* o Jogar: no centro da capa (a camada tem o tamanho dela e não pega clique; só o botão pega) */
+.bj-capa-acoes { position: absolute; z-index: 4; top: 0; left: 0; right: 0; aspect-ratio: 1; display: grid; place-items: center; pointer-events: none; }
+.bj-capa-jogar { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 999px; text-decoration: none;
+                 font: 800 .92rem "Poppins", sans-serif; color: #04210f; background: #22c55e; box-shadow: 0 10px 24px rgba(0, 0, 0, .45), 0 0 0 4px rgba(34, 197, 94, .18);
+                 opacity: 0; transform: translateY(8px) scale(.94); pointer-events: none; transition: opacity .18s ease, transform .18s ease, background-color .15s ease; }
+.bj-capa-jogar i { font-size: .82rem; }
+.bj-capa-jogar:hover { color: #04210f; background: #3fe07f; }
+.bj-capa:focus-within .bj-capa-jogar { opacity: 1; transform: none; pointer-events: auto; }
+/* ao focar pelo teclado, a capa sobe como ao passar o mouse */
+.bj-capa:focus-within { transform: translateY(-5px); }
+.bj-capa:focus-within .bj-capa-arte { box-shadow: 0 18px 34px rgba(0, 0, 0, .5); }
+/* o anel de foco segue o canto arredondado do cartão */
+.pg .bj-capa-link:focus-visible { outline-offset: 4px; }
+@media (hover: hover) {
+    .bj-capa:hover { transform: translateY(-5px); }
+    .bj-capa:hover .bj-capa-arte { box-shadow: 0 18px 34px rgba(0, 0, 0, .5), 0 0 26px color-mix(in srgb, var(--tema) 28%, transparent); }
+    .bj-capa:hover .bj-capa-arte::after { background-color: rgba(4, 8, 22, .34); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tema) 70%, transparent); }
+    .bj-capa:hover .bj-capa-img { transform: scale(1.04); }
+    .bj-capa:hover .bj-capa-jogar { opacity: 1; transform: none; pointer-events: auto; }
+    .bj-capa:hover .bj-capa-texto strong { color: #fff; }
+}
+/* no celular não há "passar o mouse": o Jogar fica sempre à vista, redondo, no canto de baixo da capa */
+@media (hover: none) {
+    .bj-capa-acoes { place-items: end; padding: 8px; }
+    .bj-capa-jogar { width: 44px; padding: 0; opacity: 1; transform: none; pointer-events: auto; box-shadow: 0 6px 16px rgba(0, 0, 0, .5); }
+    .bj-capa-jogar i { font-size: .95rem; }
+    .bj-capa-jogar span { display: none; }
+}
 
 /* ---------- a lista (o outro jeito de ver) ---------- */
-.bj-conteudo--lista .bj-grade { grid-template-columns: 1fr; gap: 8px; }
-.bj-conteudo--lista .bj-capa:hover { transform: translateX(4px); }
-.bj-conteudo--lista .bj-capa-arte { display: flex; align-items: center; gap: 14px; aspect-ratio: auto; padding: 8px 14px 8px 18px; background: rgba(255, 255, 255, .03); }
-.bj-conteudo--lista .bj-capa-fundo { display: none; }
-.bj-conteudo--lista .bj-capa-img, .bj-conteudo--lista .bj-capa-sem { flex: none; width: 58px; height: 58px; margin: 0; border-radius: 12px; font-size: 1.6rem;
-                                                                    display: grid; place-items: center; background: color-mix(in srgb, var(--cor) 25%, #060d24); }
-.bj-conteudo--lista .bj-capa-texto { position: static; order: 2; flex: 1; min-width: 0; padding: 0; background: none; }
-.bj-conteudo--lista .bj-sigla { position: static; order: 3; }
-.bj-conteudo--lista .bj-marcas { position: static; order: 4; }
-.bj-conteudo--lista .bj-capa-play { position: static; order: 5; flex: none; opacity: 1; transform: none; }
-.bj-conteudo--lista .bj-estante-faixa { margin-bottom: 10px; }
+.bj-conteudo--lista .bj-grade { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.bj-conteudo--lista .bj-capa { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 8px 12px 8px 8px; border-radius: 16px;
+                               background: rgba(255, 255, 255, .04); border: 1px solid var(--pg-borda); transform: none; }
+.bj-conteudo--lista .bj-capa:hover { background: rgba(255, 255, 255, .07); }
+.bj-conteudo--lista .bj-capa-link { display: grid; grid-template-columns: 60px minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.bj-conteudo--lista .bj-capa-arte { border-radius: 12px; box-shadow: none; }
+.bj-conteudo--lista .bj-capa-arte::after { background-color: transparent !important; }
+.bj-conteudo--lista .bj-capa-img { transform: none !important; }
+.bj-conteudo--lista .bj-capa-reserva { align-items: center; justify-content: center; padding: 0; }
+.bj-conteudo--lista .bj-capa-reserva i { position: static; font-size: 1.5rem; color: rgba(255, 255, 255, .85); transform: none; }
+.bj-conteudo--lista .bj-capa-reserva b { display: none; }
+.bj-conteudo--lista .bj-capa-selos { position: static; flex-direction: row-reverse; justify-content: flex-start; align-items: center; }
+.bj-conteudo--lista .bj-capa-acoes { position: static; display: block; aspect-ratio: auto; padding: 0 0 0 10px; pointer-events: auto; }
+.bj-conteudo--lista .bj-capa-jogar { height: 40px; opacity: 1; transform: none; pointer-events: auto; }
 
 /* ---------- a ficha do jogo ---------- */
 .bj-ficha { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; padding: 16px; }
@@ -243,7 +270,13 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
                  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cor) 60%, transparent), #060d24 75%); }
 .bj-ficha-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(8px) brightness(.5) saturate(1.3); transform: scale(1.12); }
 .bj-ficha-capa { position: relative; width: 74%; max-height: 82%; object-fit: contain; filter: drop-shadow(0 20px 34px rgba(0, 0, 0, .6)); animation: pg-flutua 5s ease-in-out infinite; }
-.bj-ficha-sigla { top: 16px; left: 16px; font-size: .74rem; }
+.bj-ficha-sigla { position: absolute; z-index: 3; top: 16px; left: 16px; font-size: .74rem; }
+.bj-ficha-sigla:empty { display: none; }
+/* o jogo sem capa: a mesma arte de reserva do cartão, na ficha */
+.bj-ficha-reserva[hidden] { display: none; }
+.bj-ficha-reserva { align-items: center; padding: 48px 28px; text-align: center; }
+.bj-ficha-reserva i { top: 50%; right: auto; left: 50%; font-size: 12rem; transform: translate(-50%, -50%) rotate(-12deg); }
+.bj-ficha-reserva b { max-width: 14ch; font-size: clamp(1.5rem, 3.4vw, 2.4rem); }
 .bj-ficha-corpo { display: flex; flex-direction: column; gap: 12px; padding: 28px 26px 24px; }
 .bj-ficha-estante { align-self: flex-start; padding: 4px 12px; border-radius: 999px; font: 800 .7rem "Poppins", sans-serif; letter-spacing: .12em; text-transform: uppercase;
                     color: var(--tema); background: color-mix(in srgb, var(--tema) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tema) 40%, transparent); }
@@ -318,29 +351,46 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
 
 @keyframes pg-flutua { 50% { transform: translateY(-10px); } }
 
-/* ---------- celular ---------- */
-@media (max-width: 1100px) {
-    .bj-corpo { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-    /* a lateral vira uma fila de botões que rola de lado */
-    .bj-lado { position: static; display: flex; gap: 6px; max-height: none; overflow-x: auto; padding: 8px; border-radius: 18px; scrollbar-width: none; }
+/* ---------- tablet e celular ---------- */
+@media (max-width: 1099px) {
+    /* uma coluna só: o título, a fila de botões (a lateral), a barra de ferramentas e as estantes */
+    .bj-corpo { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "cabeca" "lado" "barra" "conteudo"; }
+    /* a lateral vira uma fila de botões que rola de lado, de ponta a ponta da tela; a ponta
+       direita some num degradê, para mostrar que tem mais */
+    .bj-lado { position: static; display: flex; gap: 6px; max-height: none; overflow-x: auto; overscroll-behavior-x: contain;
+               margin: 0 calc(-1 * var(--pg-lado)) 16px; padding: 2px var(--pg-lado) 6px; border: 0; border-radius: 0; background: none; scrollbar-width: none;
+               -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--pg-lado), #000 calc(100% - 36px), transparent);
+               mask-image: linear-gradient(90deg, transparent, #000 var(--pg-lado), #000 calc(100% - 36px), transparent); }
     .bj-lado::-webkit-scrollbar { display: none; }
     .bj-lado-grupo { display: flex; flex: none; gap: 6px; }
-    .bj-lado-grupo + .bj-lado-grupo { padding-left: 8px; border-left: 1px solid var(--pg-borda); }
+    .bj-lado-grupo + .bj-lado-grupo { margin-left: 4px; padding-left: 10px; border-left: 1px solid var(--pg-borda); }
+    /* os gêneros vão para a escolha "Gênero" da barra de ferramentas */
+    .bj-lado-generos { display: none; }
     .bj-lado h3 { display: none; }
-    .bj-item { flex: none; grid-template-columns: auto auto auto; min-height: 38px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .05); }
+    .bj-item { flex: none; grid-template-columns: auto auto auto; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px;
+               background: rgba(255, 255, 255, .05); border: 1px solid var(--pg-borda); }
     .bj-item span { white-space: nowrap; }
-    .bj-item--genero { grid-template-columns: auto auto; }
-    .bj-item[aria-current="true"] { box-shadow: inset 0 0 0 1px var(--tema, var(--pg-ciano)); }
+    .bj-item[aria-current="true"] { box-shadow: none; border-color: var(--tema, var(--pg-ciano)); }
+    /* a barra de ferramentas em duas linhas: o título, o "Ver tudo" e o jeito de ver; embaixo,
+       o gênero e a ordem com a linha toda para eles (o nome escolhido aparece inteiro) */
+    .bj-barra { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "titulo limpar vista" "campos campos campos"; gap: 12px 8px; }
+    .bj-barra-titulo { grid-area: titulo; }
+    .bj-limpar { grid-area: limpar; }
+    .bj-vista { grid-area: vista; }
+    .bj-barra-campos { grid-area: campos; }
+    .bj-campo { flex: 0 1 260px; }
+    .bj-campo select { max-width: none; }
+}
+/* no computador os gêneros estão na lateral */
+@media (min-width: 1100px) {
+    .bj-campo--genero { display: none; }
 }
 @media (max-width: 900px) {
-    .bj-estante-faixa { grid-template-columns: auto minmax(0, 1fr); padding: 14px; }
-    .bj-estante-total { grid-column: 2; justify-self: start; }
-    .bj-estante-todos { grid-column: 1 / -1; justify-self: start; }
-    .bj-estante-faixa::after { padding-right: 16px !important; }
     .bj-ficha { place-items: end center; padding: 0; }
     .bj-ficha-caixa { grid-template-columns: minmax(0, 1fr); max-height: 94vh; border-radius: 24px 24px 0 0; animation-name: bj-sobe; }
     .bj-ficha-arte { min-height: 230px; }
     .bj-ficha-capa { width: 46%; }
+    .bj-ficha-reserva i { font-size: 8rem; }
     .pg-slide { grid-template-columns: 1fr; align-content: end; padding-bottom: 46px; }
     .pg-slide-arte { position: absolute; top: 14px; right: 4%; width: 46%; opacity: .95; }
     .pg-slide-texto { margin-top: auto; }
@@ -348,16 +398,43 @@ canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
     .pg-hero-seta { display: none; }
     .pg-anuncio-corpo img { aspect-ratio: 2 / 1; }
 }
-@media (max-width: 560px) {
+@media (max-width: 759px) {
+    .bj-cabeca { gap: 12px; margin-bottom: 14px; }
+    .bj-cabeca-icone { width: 40px; height: 40px; border-radius: 12px; font-size: 1.05rem; }
+    .bj-cabeca p { font-size: .86rem; }
+    /* no celular as escolhas dividem a linha; o "Ver tudo" fica só com o X (o nome vai no aria-label) */
+    .bj-campo { flex: 1 1 0; }
+    .bj-campo--genero { flex-grow: 1.25; }
+    .bj-limpar { width: 42px; padding: 0; justify-content: center; }
+    .bj-limpar span { display: none; }
+    /* o título da estante: o contador e o "Ver todos" um embaixo do outro, à direita */
+    .bj-estante-faixa { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icone nome total" "icone nome todos"; }
+    .bj-estante-todos { min-height: 36px; margin-right: -8px; padding: 0 8px; }
+}
+@media (max-width: 599px) {
     .pg-botao { min-height: 42px; padding: 0 14px; }
-    .bj-grade { gap: 10px; }
+    .bj-grade { gap: 22px 12px; }
+    .bj-estante { margin-bottom: 30px; }
+    /* nas estantes, a grade vira uma fila que rola de lado (como nas lojas de aplicativo): um
+       pedaço do terceiro cartão aparece na ponta, para mostrar que tem mais */
+    .bj-conteudo:not(.bj-conteudo--lista) .bj-grade--fila {
+        grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 24px) / 2.3); gap: 12px;
+        overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--pg-lado); scrollbar-width: none;
+        margin: -6px calc(-1 * var(--pg-lado)) 0; padding: 6px var(--pg-lado) 10px; }
+    .bj-grade--fila::-webkit-scrollbar { display: none; }
+    .bj-grade--fila > .bj-capa { scroll-snap-align: start; }
     .bj-capa-texto strong { font-size: .9rem; }
+    /* a lista no celular: o nome com a linha toda; os selos descem para debaixo dele */
+    .bj-conteudo--lista .bj-capa-link { grid-template-columns: 60px minmax(0, 1fr); row-gap: 6px; }
+    .bj-conteudo--lista .bj-capa-arte { grid-row: span 2; }
+    .bj-conteudo--lista .bj-capa-selos { grid-column: 2; flex-direction: row; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
     .pg-slide { transition: none; }
     .pg-slide-arte { animation: none; }
-    .pg-botao, .bj-capa, .bj-capa-img, .bj-item { transition: none; }
-    .bj-capa:hover, .bj-capa:focus-visible { transform: none; }
+    .pg-botao, .bj-capa, .bj-capa-arte, .bj-capa-img, .bj-capa-jogar, .bj-item { transition: none; }
+    .bj-capa:hover, .bj-capa:focus-within { transform: none; }
+    .bj-capa:hover .bj-capa-img { transform: none; }
     .bj-ficha-caixa, .bj-ficha-capa { animation: none; }
 }
 @keyframes bj-sobe { from { transform: translateY(40px); opacity: 0; } }

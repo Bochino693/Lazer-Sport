@@ -279,6 +279,8 @@ def montar(dados_do_catalogo, busca="", estante="", genero="", ordem=""):
         cartao["partidas"] = partidas.get(cartao["slug"], 0)
         cartao["estante"] = next((f for f in cartao["familias"] if f in TEMA), "html")
         cartao["tema"] = TEMA[cartao["estante"]]["cor"]
+        # o ícone do console: o desenho da arte de reserva do cartão, quando o jogo não tem capa
+        cartao["icone"] = TEMA[cartao["estante"]]["icone"]
         cartao["busca"] = sem_acento(" ".join([cartao["titulo"], cartao["plataforma"], cartao["sigla"], cartao["categoria"],
                                                cartao["maquina"], cartao["chamada"], cartao["descricao"][:200]]))
         cartao["_ordem"] = i

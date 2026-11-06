@@ -501,6 +501,9 @@ class PortalJogosView(View):
             contexto["eu"] = {"nome": ranking.nome_publico(request.user), "geral": ranking.posicao_geral(request.user)}
         # o campeão de cada jogo da casa vai na ficha do jogo, na biblioteca
         campeoes = {c["slug"]: {"nome": c["nome"], "pontos": c["pontos"]} for c in contexto["ranking_portal"]["campeoes"]}
+        # e no selo de ranking do cartão (o recorde à vista); as estantes e a lista são estes mesmos cartões
+        for cartao in contexto["todos"]:
+            cartao["campeao"] = campeoes.get(cartao["slug"])
         contexto["indice_busca"] = [
             {
                 **{chave: c[chave] for chave in ("slug", "titulo", "url", "capa", "poster", "cor", "plataforma", "sigla",

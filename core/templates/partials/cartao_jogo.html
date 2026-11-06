@@ -1,20 +1,28 @@
-{% comment %}
-  Uma capa da biblioteca (core/portal_jogos.py): a arte sobre o fundo desfocado dela mesma, o selo do console e o nome.
+{% load humanize %}{% comment %}
+  Um cartão da biblioteca (core/portal_jogos.py), como nas lojas de jogos: a capa quadrada em cima e o
+  nome embaixo. Os selos têm lugar fixo: o console no canto de cima à esquerda; Novo, ranking (com o
+  recorde, quando já tem) e "já no aparelho" no canto da direita. O cartão inteiro leva à ficha do jogo;
+  o "Jogar" por cima da capa (aparece ao passar o mouse ou focar; no celular fica sempre à vista) abre o
+  jogo direto, dentro do app. Sem capa, a arte de reserva: o gradiente da cor do jogo, o ícone do
+  console e o nome -- nunca um quadrado vazio.
   O JavaScript da biblioteca (portal-jogos.js, função "capa") monta a mesma coisa: mudou aqui, muda lá.
 {% endcomment %}
-<a class="bj-capa" href="{{ jogo.url }}" style="--cor: {{ jogo.cor }}; --tema: {{ jogo.tema }}" data-bj-jogo="{{ jogo.slug }}" data-portal-cartao="{{ jogo.slug }}">
-    <span class="bj-capa-arte">
-        {% if jogo.capa %}<img class="bj-capa-fundo" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" aria-hidden="true"><img class="bj-capa-img" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" width="320" height="320">{% else %}<i class="fa-solid fa-gamepad bj-capa-sem" aria-hidden="true"></i>{% endif %}
-        <span class="bj-sigla">{{ jogo.sigla }}</span>
-        <span class="bj-marcas">
-            {% if jogo.ranking %}<span class="bj-marca bj-marca--ranking" title="Com ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i></span>{% endif %}
-            {% if jogo.novidade %}<span class="bj-marca bj-marca--nova">Novo</span>{% endif %}
-            <span class="bj-marca bj-marca--aparelho" data-bj-aparelho hidden title="Já no aparelho: abre na hora"><i class="fa-solid fa-download" aria-hidden="true"></i></span>
+<article class="bj-capa" style="--cor: {{ jogo.cor }}; --tema: {{ jogo.tema }}" data-portal-cartao="{{ jogo.slug }}">
+    <a class="bj-capa-link" href="{{ jogo.url }}" data-bj-jogo="{{ jogo.slug }}">
+        <span class="bj-capa-arte">
+            {% if jogo.capa %}<img class="bj-capa-fundo" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" aria-hidden="true"><img class="bj-capa-img" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" width="320" height="320">{% else %}<span class="bj-capa-reserva" aria-hidden="true"><i class="fa-{% if jogo.icone == 'fa-html5' %}brands{% else %}solid{% endif %} {{ jogo.icone|default:'fa-gamepad' }}"></i><b>{{ jogo.titulo }}</b></span>{% endif %}
         </span>
-        <span class="bj-capa-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
-    </span>
-    <span class="bj-capa-texto">
-        <strong>{{ jogo.titulo }}</strong>
-        <small>{% if jogo.tipo == "nosso" %}Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}{% if jogo.partidas %} · {{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}{% endif %}</small>
-    </span>
-</a>
+        <span class="bj-capa-texto">
+            <strong>{{ jogo.titulo }}</strong>
+            <small>{% if jogo.categoria %}{{ jogo.categoria }}{% elif jogo.tipo == "nosso" %}Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.partidas %} · {{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}{% endif %}</small>
+        </span>
+        <span class="bj-capa-selos">
+            <span class="bj-sigla">{{ jogo.sigla }}</span>
+            <span class="bj-marcas">
+                {% if jogo.novidade %}<span class="bj-marca bj-marca--nova">Novo</span>{% endif %}
+                {% if jogo.ranking %}<span class="bj-marca bj-marca--ranking" title="Com ranking{% if jogo.campeao %} · recorde de {{ jogo.campeao.nome }}: {{ jogo.campeao.pontos|intcomma }} pts{% endif %}"><i class="fa-solid fa-trophy" aria-hidden="true"></i>{% if jogo.campeao %}<span class="bj-oculto">Recorde:</span> {{ jogo.campeao.pontos|intcomma }}{% else %}<span class="bj-oculto">Com ranking</span>{% endif %}</span>{% endif %}
+            </span>
+        </span>
+    </a>
+    <span class="bj-capa-acoes"><a class="bj-capa-jogar" href="{{ jogo.url }}" data-app-jogo="{{ jogo.slug }}" aria-label="Jogar {{ jogo.titulo }}"><i class="fa-solid fa-play" aria-hidden="true"></i><span>Jogar</span></a></span>
+</article>
