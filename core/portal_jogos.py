@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import datetime as dt
 import unicodedata
+from pathlib import Path
 
 from django.core.cache import cache
 from django.db import DatabaseError
@@ -99,6 +100,11 @@ ORDENS = (
 POR_ESTANTE = 12
 NOVIDADE_DIAS = 45
 
+#: As artes do topo (faixa larga) dos jogos da casa: core/static/site/arena/capas/topo/,
+#: montadas pelo gerar.py da pasta a partir das capas e pôsteres.
+_PASTA_DOS_TOPOS = Path(__file__).resolve().parent / "static" / "site" / "arena" / "capas" / "topo"
+TOPOS_DA_CASA = frozenset(p.stem for p in _PASTA_DOS_TOPOS.glob("*.webp"))
+
 
 def sem_acento(texto: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", texto or "") if unicodedata.category(c) != "Mn").lower()
@@ -112,6 +118,8 @@ def _cartao_da_casa(jogo):
         "descricao": jogo.get("descricao", ""),
         "capa": jogo.get("capa_url") or jogo.get("capa", ""),
         "poster": jogo.get("poster_url") or jogo.get("poster", ""),
+        # a arte larga do topo (a vitrine), quando já foi montada
+        "topo": f"site/arena/capas/topo/{jogo['slug']}.webp" if jogo["slug"] in TOPOS_DA_CASA else "",
         "cor": jogo.get("cor") or "#3fd0ff",
         "url": jogo["url"],
         "tipo": "nosso",
@@ -148,6 +156,7 @@ def _cartao_cadastrado(jogo):
         "descricao": jogo.get("descricao", ""),
         "capa": jogo.get("capa", ""),
         "poster": jogo.get("poster", "") or jogo.get("capa", ""),
+        "topo": "",
         "cor": jogo.get("cor") or "#3fd0ff",
         "url": jogo["url"],
         "tipo": tipo,
@@ -175,7 +184,7 @@ def cartoes(dados):
     for jogo in dados["jogos"]:
         cartao = _cartao_da_casa(jogo)
         # a capa dos jogos da casa vem do static (o caminho em arena.JOGOS)
-        for campo in ("capa", "poster"):
+        for campo in ("capa", "poster", "topo"):
             valor = cartao[campo]
             if valor and not valor.startswith(("/", "http")):
                 cartao[campo] = static(valor)

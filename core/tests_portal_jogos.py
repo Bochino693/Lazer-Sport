@@ -157,6 +157,24 @@ class VitrineTests(BasePortal):
         self.assertContains(resposta, '"@type": "CollectionPage"')
 
 
+class ArteDoTopoTests(BasePortal):
+    """A vitrine do alto: a arte larga de cada jogo da casa e a fila dos destaques."""
+
+    def test_cada_jogo_da_casa_tem_a_arte_larga_e_ela_vai_na_vitrine(self):
+        from . import portal_jogos
+
+        for jogo in arena.JOGOS:
+            with self.subTest(jogo=jogo["slug"]):
+                self.assertIn(jogo["slug"], portal_jogos.TOPOS_DA_CASA)
+        resposta = self.portal()
+        html = resposta.content.decode()
+        self.assertIn('class="pg-slide-topo"', html)
+        self.assertIn("site/arena/capas/topo/", html)
+        self.assertIn('class="pg-mini"', html)  # a fila dos destaques, no lugar dos pontinhos
+        self.assertNotIn("{#", html)  # nenhum comentário do template vazando na página
+        self.assertNotIn("{% comment", html)
+
+
 class BuscaTests(BasePortal):
     def test_a_busca_responde_sem_javascript_e_sem_acento(self):
         self.salvo()

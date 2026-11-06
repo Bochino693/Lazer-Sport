@@ -672,3 +672,18 @@ Dependência nova: rjsmin (requirements.txt).
    técnicos (gravação de tela, threads, rotação) e as "opções do núcleo"
    (nomes de variável em inglês). iPhone: o Safari não deixa site em tela
    cheia; o botão ensina a "Adicionar à Tela de Início", que abre sem barras.
+
+26) A VITRINE DO ALTO DA BIBLIOTECA (estilo loja de jogos) E AS ARTES DO TOPO
+   O alto de /jogos/ virou uma vitrine como a das lojas de jogos: a arte larga
+   do jogo de ponta a ponta, o nome, as marcas (gênero, ranking, partidas,
+   grátis no navegador) e o botão JOGAR; embaixo, a fila com os outros
+   destaques (a capinha e o nome, com a barrinha do tempo até o próximo).
+   No celular a arte fica em cima e o texto embaixo.
+   AS ARTES DO TOPO dos jogos da casa ficam em
+   core/static/site/arena/capas/topo/<jogo>.webp (1600 x 600), montadas a
+   partir das capas e dos pôsteres que já existiam (o pôster deitado inteiro à
+   direita; o pôster em pé ou a capa em destaque, com a luz na cor do jogo; o
+   logo do Strike Kids sobre o fundo). Trocou uma capa ou um pôster, ou entrou
+   um jogo novo em core/arena.JOGOS? Rode de novo:
+       python core/static/site/arena/capas/topo/gerar.py
+   Os jogos cadastrados pelo painel usam o pôster (ou a capa) deles.
