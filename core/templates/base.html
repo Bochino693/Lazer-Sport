@@ -224,19 +224,15 @@
           <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags" aria-hidden="true"></i><span><b>Promoções Especiais</b><small>Preço de fábrica por tempo limitado</small></span></a>
           <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span><b>Combos Promocionais</b><small>Monte o espaço com economia</small></span></a>
           <a href="{% url 'brinquedos' %}#catalogo-brinquedos"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span><b>Catálogo completo</b><small>Todos os brinquedos com filtro</small></span></a>
-        </div>
-      </div>
-
-      <div class="ls-topo-grupo" data-topo-grupo>
-        <button type="button" class="ls-topo-link ls-topo-link--arena" aria-expanded="false" aria-controls="topo-jogos">
-          <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogos <span class="ls-topo-novo">Novo</span> <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-        </button>
-        <div class="ls-topo-painel" id="topo-jogos">
-          <a href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span><b>Simulador de jogos</b><small>Jogue a prévia dos jogos das nossas máquinas</small></span></a>
           <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i><span><b>Arena 3D</b><small>As máquinas da fábrica em 3D, com as fotos reais</small></span></a>
           <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera" aria-hidden="true"></i><span><b>Todas as máquinas</b><small>Fotos reais de frente, lado e costas</small></span></a>
         </div>
       </div>
+
+      {# Jogos é um lugar só (o launcher, /jogos/), como no celular: link direto #}
+      <a class="ls-topo-link ls-topo-link--arena" href="{% url 'jogos' %}"{% if request.resolver_match.url_name == 'jogos' %} aria-current="page"{% endif %}>
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogos <span class="ls-topo-novo">Novo</span>
+      </a>
 
       <a class="ls-topo-link" href="{% url 'loja' %}#catalogo">Loja Online</a>
 
@@ -449,10 +445,10 @@
 
     <div class="ls-mobile-nav-list">
       <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Início</a>
-      <a class="ls-mobile-nav-arena" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Simulador de jogos<span class="ls-topo-novo">Novo</span></a>
+      <a class="ls-mobile-nav-arena" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Jogos<span class="ls-topo-novo">Novo</span></a>
+      <span class="ls-mobile-nav-grupo">Brinquedos</span>
       <a href="{% url 'arena' %}#arena-3d"><i class="fa-solid fa-cube nav-icon" aria-hidden="true"></i>Arena 3D</a>
       <a href="{% url 'arena' %}#maquinas"><i class="fa-solid fa-camera nav-icon" aria-hidden="true"></i>Todas as máquinas</a>
-      <span class="ls-mobile-nav-grupo">Brinquedos</span>
       <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
       <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-star nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
       <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>Promoções Especiais</a>

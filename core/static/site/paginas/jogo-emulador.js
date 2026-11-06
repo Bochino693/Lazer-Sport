@@ -175,6 +175,61 @@
     });
   }
 
+  /* ---------------------------------------------------------------- o ritmo do jogo (liso sempre)
+     O RetroArch do emulador roda UM quadro do jogo a cada quadro que o navegador
+     desenha (requestAnimationFrame). Quando o navegador entrega menos de 60 por segundo
+     -- economia de bateria, taxa de atualização "inteligente" do celular (Xiaomi,
+     Samsung...), um quadro que atrasou --, o jogo ia junto: a 30 por segundo, rodava na
+     METADE da velocidade, lento, com o som arrastando e engasgando. Medido aqui: tela a
+     30 Hz -> 30 quadros do jogo por segundo.
+
+     O MARCA-PASSO: conta o tempo de verdade e, quando o jogo ficou para trás, roda
+     na hora os quadros que faltam (a tela mostra o último). O jogo fica sempre na
+     velocidade dele, e o som -- que sai de cada quadro -- não engasga. Só mexe no laço
+     do emulador (a função "MainLoop_runner"); o resto da página segue normal. Quem
+     confere se o quadro rodou de fato é o contador do próprio RetroArch: em tela de
+     120 Hz ele mesmo pula metade das chamadas, e isso não conta como quadro. */
+  var QUADRO_MS = 1000 / 60;
+  var MAX_EXTRAS = 3;             // no máximo 4 quadros por desenho: nunca vira uma bola de neve
+  var rafDoNavegador = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
+  var ritmo = { devido: 0, agora: 0, noDesenho: false, extras: 0, recuperados: 0, trabalho: 0 };
+  function quadrosDoJogo() {
+    var emu = window.EJS_emulator;
+    try { return emu && emu.gameManager ? emu.gameManager.getFrameNum() : -1; } catch (e) { return -1; }
+  }
+  function rodarQuadro(cb, t) {
+    var antes = quadrosDoJogo();
+    cb(t);
+    var depois = quadrosDoJogo();
+    // rodou um quadro do jogo (ou não dá para saber): ele conta no relógio
+    if (antes < 0 || depois !== antes) ritmo.devido += QUADRO_MS;
+  }
+  if (rafDoNavegador) {
+    window.requestAnimationFrame = function (cb) {
+      if (!cb || cb.name !== "MainLoop_runner") return rafDoNavegador(cb);
+      // dentro do mesmo desenho, e o jogo ainda atrás do relógio: mais um quadro, já
+      if (ritmo.noDesenho && ritmo.extras < MAX_EXTRAS && ritmo.agora - ritmo.devido >= 0) {
+        ritmo.extras++;
+        ritmo.recuperados++;
+        rodarQuadro(cb, ritmo.agora);
+        return 0;
+      }
+      return rafDoNavegador(function (t) {
+        // primeira vez, ou voltando de uma pausa longa (aba escondida): sem correr atrás
+        if (!ritmo.devido || t - ritmo.devido > 250 || ritmo.devido - t > 100) ritmo.devido = t;
+        ritmo.agora = t;
+        ritmo.extras = 0;
+        ritmo.noDesenho = true;
+        var inicio = performance.now();
+        try { rodarQuadro(cb, t); } finally {
+          ritmo.noDesenho = false;
+          // a média de quanto cada desenho pesa (ms), com os quadros recuperados juntos
+          ritmo.trabalho = ritmo.trabalho * 0.9 + (performance.now() - inicio) * 0.1;
+        }
+      });
+    };
+  }
+
   /* ---------------------------------------------------------------- a imagem na tela toda
      O RetroArch do emulador desenha a imagem no formato do console (4:3) e põe faixas
      pretas dos lados. Aqui ele desenha ESTICADA na área toda (aspect_ratio_index 24 =
@@ -234,13 +289,127 @@
   function aplicarImagem() {
     corpo.classList.toggle("is-imagem-original", imagemOriginal);
     if (imagemOriginal) medirImagem();
-    var botao = $("[data-pl-imagem]");
-    if (botao) {
-      botao.querySelector("[data-pl-imagem-texto]").textContent = imagemOriginal ? "Imagem: original" : "Imagem: tela toda";
-      botao.setAttribute("aria-pressed", imagemOriginal ? "false" : "true");
-    }
+    desenharMenuImagem();
+  }
+
+  /* O MENU IMAGEM: o formato (tela toda / original) e os gráficos */
+  var menuImagem = $("[data-pl-menu-imagem]");
+  var botaoMenuImagem = $("[data-pl-imagem]");
+  function desenharMenuImagem() {
+    if (!menuImagem) return;
+    Array.prototype.forEach.call(menuImagem.querySelectorAll("[data-pl-formato]"), function (b) {
+      b.setAttribute("aria-checked", (b.dataset.plFormato === "original") === imagemOriginal ? "true" : "false");
+    });
+    Array.prototype.forEach.call(menuImagem.querySelectorAll("[data-pl-graficos]"), function (b) {
+      b.setAttribute("aria-checked", b.dataset.plGraficos === escolhaGraficos ? "true" : "false");
+    });
+    var agora = menuImagem.querySelector("[data-pl-graficos-agora]");
+    if (agora) agora.textContent = escolhaGraficos === "auto" ? "agora: " + ({ hd: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) : "";
+  }
+  function abrirMenuImagem(abrir) {
+    if (!menuImagem) return;
+    menuImagem.hidden = !abrir;
+    if (botaoMenuImagem) botaoMenuImagem.setAttribute("aria-expanded", abrir ? "true" : "false");
+    if (abrir) { desenharMenuImagem(); mostrarBarra(60000); var marcado = menuImagem.querySelector('[aria-checked="true"]'); if (marcado) marcado.focus(); }
+    else { mostrarBarra(); devolverFoco(); }
+  }
+  if (menuImagem && botaoMenuImagem) {
+    botaoMenuImagem.addEventListener("click", function (e) { e.stopPropagation(); abrirMenuImagem(menuImagem.hidden); });
+    menuImagem.addEventListener("click", function (e) {
+      var formato = e.target.closest("[data-pl-formato]");
+      var graficos = e.target.closest("[data-pl-graficos]");
+      if (formato) {
+        imagemOriginal = formato.dataset.plFormato === "original";
+        try { localStorage.setItem(CHAVE_IMAGEM, imagemOriginal ? "original" : "tela-toda"); } catch (x) { /* só não guarda */ }
+        aplicarImagem();
+      } else if (graficos) {
+        escolhaGraficos = graficos.dataset.plGraficos;
+        try { localStorage.setItem(CHAVE_GRAFICOS, escolhaGraficos); } catch (x) { /* só não guarda */ }
+        aplicarGraficos(escolhaGraficos === "auto" ? "hd" : escolhaGraficos);
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (!menuImagem.hidden && !menuImagem.contains(e.target) && e.target !== botaoMenuImagem) abrirMenuImagem(false);
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menuImagem.hidden) abrirMenuImagem(false); });
   }
   window.addEventListener("resize", function () { if (imagemOriginal) medirImagem(); });
+
+  /* ---------------------------------------------------------------- os gráficos
+     O RetroArch desenha na resolução da tela inteira -- num celular com tela de 2400
+     pixels, com o filtro de imagem, são 2,6 milhões de pixels a cada quadro, só para
+     esticar um jogo de 256 x 224. Aqui cada escolha tem um ORÇAMENTO de pixels: o
+     emulador desenha até ele e o navegador amplia (liso) o resto. HD fica no limite
+     que ainda é nítido; Leve desenha pouco mais que o dobro do jogo -- leve como o
+     console, e liso do mesmo jeito.
+     Automático (o padrão) começa em HD e, se o aparelho não der conta (o marca-passo
+     precisando recuperar quadros e cada quadro pesando), desce sozinho para Leve. */
+  var TRES_D = ["psx", "n64", "psp", "segaSaturn", "nds", "3do", "pcfx", "jaguar", "dos"].indexOf(config.core) !== -1;
+  var filtroHD = (config.opcoes || {}).shader || (TRES_D ? "bicubic" : "2xScaleHQ.glslp");
+  if (!celular && config.opcoesNoComputador && config.opcoesNoComputador.shader) filtroHD = config.opcoesNoComputador.shader;
+  var GRAFICOS = {
+    hd: { filtro: filtroHD, pixels: celular ? 1.6e6 : 3.7e6 },
+    nitido: { filtro: "disabled", pixels: celular ? 2.6e6 : 4.2e6 },
+    tv: { filtro: "crt-easymode.glslp", pixels: celular ? 1.6e6 : 3.7e6 },
+    leve: { filtro: "disabled", pixels: celular ? 0.42e6 : 0.9e6 },
+  };
+  var CHAVE_GRAFICOS = "ls-graficos-v1";
+  var escolhaGraficos = "auto";
+  try { escolhaGraficos = localStorage.getItem(CHAVE_GRAFICOS) || "auto"; } catch (e) { escolhaGraficos = "auto"; }
+  if (escolhaGraficos !== "auto" && !GRAFICOS[escolhaGraficos]) escolhaGraficos = "auto";
+  var nivelAtual = escolhaGraficos === "auto" ? "hd" : escolhaGraficos;
+  var dprReal = window.devicePixelRatio || 1;
+  function dprLimitado() {
+    var area = Math.max(1, (window.innerWidth || 1) * (window.innerHeight || 1));
+    return Math.max(0.5, Math.min(dprReal, Math.sqrt(GRAFICOS[nivelAtual].pixels / area)));
+  }
+  // o RetroArch mede a tela pelo devicePixelRatio e pelo ResizeObserver: os dois passam pelo orçamento
+  try { Object.defineProperty(window, "devicePixelRatio", { configurable: true, get: dprLimitado }); } catch (e) { /* segue na resolução cheia */ }
+  if (window.ResizeObserver) {
+    var ObservadorDoNavegador = window.ResizeObserver;
+    var ObservadorLimitado = function (cb) {
+      return new ObservadorDoNavegador(function (entradas, observador) {
+        cb(entradas.map(function (e) {
+          if (!e.target || !e.target.classList || !e.target.classList.contains("ejs_canvas")) return e;
+          // sem o tamanho em pixels do aparelho: o RetroArch usa a medida x devicePixelRatio (limitado)
+          return { target: e.target, contentRect: e.contentRect, contentBoxSize: e.contentBoxSize, borderBoxSize: e.borderBoxSize };
+        }), observador);
+      });
+    };
+    ObservadorLimitado.prototype = ObservadorDoNavegador.prototype;
+    window.ResizeObserver = ObservadorLimitado;
+  }
+  function aplicarGraficos(nivel, avisarTambem) {
+    nivelAtual = nivel;
+    var emu = window.EJS_emulator;
+    try {
+      if (emu && emu.changeSettingOption && emu.menuOptionChanged) {
+        emu.changeSettingOption("shader", GRAFICOS[nivel].filtro);
+        emu.menuOptionChanged("shader", GRAFICOS[nivel].filtro);
+      }
+    } catch (e) { /* o filtro fica o que estava */ }
+    // o RetroArch mede de novo (com o orçamento novo)
+    window.dispatchEvent(new Event("resize"));
+    desenharMenuImagem();
+    if (avisarTambem) avisar(avisarTambem, 3500);
+  }
+
+  /* o modo leve automático: olha o marca-passo a cada segundo */
+  var vigiaDoPeso = { segundosPesados: 0, ultimoRecuperado: 0, trabalho: 0 };
+  setInterval(function () {
+    if (!jogando || escolhaGraficos !== "auto" || nivelAtual === "leve" || document.hidden) return;
+    var emu = window.EJS_emulator;
+    if (emu && emu.paused) return;
+    var recuperados = ritmo.recuperados - vigiaDoPeso.ultimoRecuperado;
+    vigiaDoPeso.ultimoRecuperado = ritmo.recuperados;
+    // muitos quadros recuperados E quadro pesado: é o aparelho (não só a tela a 30 Hz)
+    var pesado = recuperados >= 8 && ritmo.trabalho >= 11;
+    vigiaDoPeso.segundosPesados = pesado ? vigiaDoPeso.segundosPesados + 1 : Math.max(0, vigiaDoPeso.segundosPesados - 1);
+    if (vigiaDoPeso.segundosPesados >= 3) {
+      vigiaDoPeso.segundosPesados = 0;
+      aplicarGraficos("leve", "Gráficos no modo Leve: o jogo roda liso neste aparelho. (Imagem, no alto, troca.)");
+    }
+  }, 1000);
 
   /* ---------------------------------------------------------------- ligar o emulador */
   function ligarEmulador(jogo, externos) {
@@ -282,6 +451,7 @@
     // tela de toque = controle na tela. O emulador decide pelo "nome" do navegador: o iPad
     // (que se diz Mac) e o tablet no modo computador ficavam sem controle nenhum.
     if (celular) opcoes["virtual-gamepad"] = "enabled";
+    opcoes.shader = GRAFICOS[nivelAtual].filtro;
     window.EJS_defaultOptions = opcoes;
     // a versão dos ajustes do site: subiu, todo mundo começa com os novos (controle pela
     // posição, filtro novo). O jogo salvo fica em outro lugar e continua.
@@ -320,8 +490,9 @@
 
   /* O emulador escreve o progresso e os erros num texto dele (que fica por baixo da
      abertura): a abertura repete, e o erro aparece com "Tentar de novo". */
+  var vigiaDoTexto = null;
   function vigiarErroDoEmulador() {
-    var vigia = new MutationObserver(function () {
+    var vigia = vigiaDoTexto = new MutationObserver(function () {
       var texto = document.querySelector("#jogo .ejs_loading_text");
       if (!texto || jogando) return;
       if (texto.classList.contains("ejs_error_text")) {
@@ -531,7 +702,7 @@
       var alvo = el.classList.contains("ejs_virtualGamepad_button") ? el : (el.querySelector(".ejs_dpad_main") || el);
       var chave = classe + (vistas[classe] ? "-" + (vistas[classe] + 1) : "");
       vistas[classe] = (vistas[classe] || 0) + 1;
-      var nome = el.classList.contains("ejs_virtualGamepad_button") ? "botão " + (el.textContent || "").trim()
+      var nome = el.classList.contains("ejs_virtualGamepad_button") ? "botão " + (el.getAttribute("data-letra") || el.textContent || "").trim()
         : alvo.classList.contains("ejs_dpad_main") ? "direcional" : "analógico";
       alvo.setAttribute("data-pl-peca", chave);
       lista.push({ el: alvo, chave: chave, nome: nome });
@@ -705,6 +876,8 @@
 
   function comecou() {
     jogando = true;
+    // o jogo começou: para de olhar o texto do emulador (cada toque num botão mexia nele)
+    if (vigiaDoTexto) { vigiaDoTexto.disconnect(); vigiaDoTexto = null; }
     var emu = window.EJS_emulator;
     if (celular && emu && emu.virtualGamepad) {
       emu.touch = true;
@@ -717,38 +890,45 @@
     setTimeout(function () { abertura.hidden = true; }, 500);
     if (botaoMenu) botaoMenu.hidden = false;
     aplicarImagem();
+    // o filtro da escolha (o emulador guarda o último que usou: aqui vale o do site)
+    aplicarGraficos(nivelAtual);
     var botaoImagem = $("[data-pl-imagem]");
-    if (botaoImagem) {
-      botaoImagem.hidden = false;
-      botaoImagem.addEventListener("click", function () {
-        imagemOriginal = !imagemOriginal;
-        try { localStorage.setItem(CHAVE_IMAGEM, imagemOriginal ? "original" : "tela-toda"); } catch (e) { /* só não guarda */ }
-        aplicarImagem();
-        avisar(imagemOriginal ? "Imagem no formato original do console." : "Imagem na tela toda.", 2200);
-      });
-    }
+    if (botaoImagem) botaoImagem.hidden = false;
     // o controle da tela do jeito que a pessoa deixou (e o botão para ajustar)
     if (celular && emu && emu.virtualGamepad) {
       aplicarHud();
       if (botaoHud) botaoHud.hidden = !pecas.length;
     }
     mostrarBarra(celular ? 5000 : 3500);
-    // cada botão do controle da tela: o ícone do que ele faz (o mesmo em todo jogo) e,
-    // quando a equipe disse o que ele faz neste jogo, o texto embaixo da letra
+    // cada botão do controle da tela: o ÍCONE do que ele faz no próprio botão (o mesmo em
+    // todo jogo: pular, atacar, atirar...), e a letra do console num selinho no canto -- o
+    // jogo ainda diz "aperte B". Os de ombro e START/SELECT ficam com o nome.
     var svgNS = "http://www.w3.org/2000/svg";
     Object.keys(config.legendas || {}).forEach(function (id) {
       var rotulo = config.legendas[id] || {};
       Array.prototype.forEach.call(document.querySelectorAll("#jogo .ejs_virtualGamepad_button.b_" + id), function (el) {
-        if (rotulo.texto) el.setAttribute("data-acao", rotulo.texto);
-        if (rotulo.icone && !el.querySelector(".pl-selo")) {
-          var selo = document.createElementNS(svgNS, "svg");
-          selo.setAttribute("class", "pl-selo");
-          selo.setAttribute("aria-hidden", "true");
-          var uso = document.createElementNS(svgNS, "use");
-          uso.setAttribute("href", "#a-" + rotulo.icone);
-          selo.appendChild(uso);
-          el.appendChild(selo);
+        if (el.classList.contains("pl-com-icone")) return;
+        var letra = (el.textContent || "").trim();
+        el.setAttribute("data-letra", letra);
+        if (rotulo.texto) el.setAttribute("title", letra + ": " + rotulo.texto);
+        var redondo = !el.closest(".ejs_virtualGamepad_bottom") && !/\bb_(l|r|l2|r2|z)\b/.test(el.className);
+        if (!rotulo.icone || !redondo) {
+          if (rotulo.texto && redondo) el.setAttribute("data-acao", rotulo.texto);
+          return;
         }
+        el.classList.add("pl-com-icone");
+        el.textContent = "";
+        var icone = document.createElementNS(svgNS, "svg");
+        icone.setAttribute("class", "pl-ico-botao");
+        icone.setAttribute("aria-hidden", "true");
+        var uso = document.createElementNS(svgNS, "use");
+        uso.setAttribute("href", "#a-" + rotulo.icone);
+        icone.appendChild(uso);
+        el.appendChild(icone);
+        var selo = document.createElement("span");
+        selo.className = "pl-letra";
+        selo.textContent = letra;
+        el.appendChild(selo);
       });
     });
     // o menu de ajustes sem as "opções do núcleo" (nomes de variável em inglês)
