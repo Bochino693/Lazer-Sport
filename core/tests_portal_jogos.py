@@ -157,22 +157,47 @@ class VitrineTests(BasePortal):
         self.assertContains(resposta, '"@type": "CollectionPage"')
 
 
-class ArteDoTopoTests(BasePortal):
-    """A vitrine do alto: a arte larga de cada jogo da casa e a fila dos destaques."""
+class LauncherAppTests(BasePortal):
+    """O launcher é um app: sem o cabeçalho do site, com o carrossel, instalável e sem internet."""
 
-    def test_cada_jogo_da_casa_tem_a_arte_larga_e_ela_vai_na_vitrine(self):
+    def test_o_launcher_abre_como_app_com_o_carrossel(self):
+        html = self.portal().content.decode()
+        self.assertIn("ls-modo-app", html)  # sem o cabeçalho e o rodapé do site
+        self.assertIn("data-app-abertura", html)  # o carregamento com a marca
+        self.assertIn('class="pg-slide-arte"', html)  # o carrossel de sempre (a capa que flutua)
+        self.assertIn("data-portal-pontos", html)
+        self.assertIn('data-app-jogo="', html)  # o Jogar abre o jogo dentro do app
+        self.assertIn("data-app-tela-cheia", html)
+        self.assertIn(reverse("jogos_app_manifesto"), html)
+        self.assertNotIn("{#", html)  # nenhum comentário do template vazando na página
+        self.assertNotIn("{% comment", html)
+
+    def test_o_service_worker_e_o_manifesto(self):
+        sw = self.client.get(reverse("jogos_app_sw"))
+        self.assertEqual(sw.status_code, 200)
+        self.assertIn("javascript", sw["Content-Type"])
+        self.assertEqual(sw["Service-Worker-Allowed"], reverse("jogos"))
+        corpo = sw.content.decode()
+        self.assertIn('"/jogos/"', corpo)  # a biblioteca guardada desde a primeira visita
+        self.assertIn("site/paginas/jogo-emulador.js", corpo)
+        self.assertNotIn("__VERSAO__", corpo)
+        manifesto = self.client.get(reverse("jogos_app_manifesto")).json()
+        self.assertEqual(manifesto["scope"], reverse("jogos"))
+        self.assertEqual(manifesto["display"], "fullscreen")
+        self.assertTrue(any(i["sizes"] == "512x512" for i in manifesto["icons"]))
+
+    def test_a_pagina_de_um_jogo_dentro_do_app_vem_sem_o_site(self):
+        normal = self.client.get(reverse("jogo", args=["super-boxing"])).content.decode()
+        no_app = self.client.get(reverse("jogo", args=["super-boxing"]), {"app": "1"}).content.decode()
+        self.assertNotIn('class=" ls-modo-app"', normal)
+        self.assertIn("ls-modo-app", no_app)
+
+    def test_cada_jogo_da_casa_tem_a_arte_larga(self):
         from . import portal_jogos
 
         for jogo in arena.JOGOS:
             with self.subTest(jogo=jogo["slug"]):
                 self.assertIn(jogo["slug"], portal_jogos.TOPOS_DA_CASA)
-        resposta = self.portal()
-        html = resposta.content.decode()
-        self.assertIn('class="pg-slide-topo"', html)
-        self.assertIn("site/arena/capas/topo/", html)
-        self.assertIn('class="pg-mini"', html)  # a fila dos destaques, no lugar dos pontinhos
-        self.assertNotIn("{#", html)  # nenhum comentário do template vazando na página
-        self.assertNotIn("{% comment", html)
 
 
 class BuscaTests(BasePortal):

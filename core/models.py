@@ -1008,6 +1008,28 @@ class ArquivoEmulador(models.Model):
             return [(p["url"], int(p["tamanho"])) for p in self.pedacos]
         return [(self.url, self.tamanho)] if self.url else []
 
+
+class ChaveDosApks(models.Model):
+    """A chave que assina os APKs que o painel gera (core/jogos_apk_gerar.py).
+
+    Uma só, criada no primeiro APK e usada para sempre: o Android só instala a
+    versão nova de um app por cima da antiga se as duas tiverem a mesma
+    assinatura. Trocar (ou apagar) esta chave obriga quem já instalou a
+    desinstalar antes de pôr o APK novo.
+    """
+
+    chave_pem = models.TextField(verbose_name="Chave (PEM)")
+    certificado_pem = models.TextField(verbose_name="Certificado (PEM)")
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Chave dos APKs"
+        verbose_name_plural = "Chave dos APKs"
+
+    def __str__(self):
+        return f"Chave dos APKs ({self.criada_em:%d/%m/%Y})"
+
+
 class CategoriaPeca(Prime):
     nome_categoria_peca = models.CharField(max_length=90)
 

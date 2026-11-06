@@ -10,7 +10,7 @@
 .pg h2, .pg h3 { font-family: "Poppins", sans-serif; }
 
 /* ---------- topo ---------- */
-.pg-topo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 16px 0 18px; }
+.pg-topo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 16px 0 18px; }
 .pg-marca { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
 .pg-marca-logo { width: 56px; height: 56px; border-radius: 16px; background: #fff; display: grid; place-items: center;
                  box-shadow: 0 0 0 2px rgba(63, 208, 255, .3), 0 0 26px rgba(63, 208, 255, .35); }
@@ -76,49 +76,23 @@
 .pg-faixa-topo p { margin: 4px 0 0; color: var(--pg-suave); font-size: .92rem; }
 .pg-hero[hidden] { display: none; }
 
-/* ---------- a vitrine (estilo loja de jogos): arte larga + fila de destaques ---------- */
-.pg-hero.pg-vitrine { height: auto; overflow: visible; border: 0; background: none; box-shadow: none; border-radius: 0; }
-.pg-vitrine-palco { position: relative; height: clamp(340px, 38vw, 500px); border-radius: 22px; overflow: hidden;
-                    background: #050914; border: 1px solid var(--pg-borda); box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .7); }
+/* ---------- o carrossel, mais leve ----------
+   O mesmo desenho, com menos trabalho para o aparelho:
+   - o fundo desfocado: o desfoque de 22px numa foto do tamanho do carrossel inteiro
+     era o que mais pesava (a cada troca de destaque). Agora a foto é desenhada uma vez
+     num quadro de 48 x 28 (já desfocada) e o navegador estica: o mesmo efeito, sem conta
+     nenhuma depois;
+   - a capa que flutua ganha uma camada própria (will-change): a sombra e o brilho dela
+     são desenhados uma vez só, e o movimento fica com a placa de vídeo;
+   - só o destaque da vez se mexe: os escondidos ficam parados;
+   - fora da tela (ou com a aba escondida, ou com um jogo aberto), o carrossel para. */
 .pg-slide { isolation: isolate; }
-.pg-slide--topo { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); background: linear-gradient(90deg, rgba(4, 7, 16, .55), transparent 55%); }
-.pg-slide-topo { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; object-position: right center;
-                 transform: scale(1.04); transition: transform 6.5s ease-out; }
-.pg-slide--ativo .pg-slide-topo { transform: scale(1); }
-.pg-slide-marcas { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
-.pg-slide-marcas li { padding: 5px 11px; border-radius: 8px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .14);
-                      color: #e7eefc; font-size: .8rem; font-weight: 700; }
-.pg-slide-marcas .pg-marca-ranking { color: var(--pg-amarelo); border-color: rgba(255, 210, 63, .35); }
-.pg-vitrine .pg-botao--jogar { min-height: 56px; padding: 0 38px; font-size: 1.12rem; letter-spacing: .02em; text-transform: uppercase;
-                               background: linear-gradient(180deg, #4ade80, #16a34a); box-shadow: 0 14px 34px -8px rgba(34, 197, 94, .7); }
-.pg-vitrine-fila { display: flex; gap: 10px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-.pg-vitrine-fila::-webkit-scrollbar { display: none; }
-.pg-mini { position: relative; flex: 1 0 168px; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 12px 10px 8px;
-           border: 1px solid var(--pg-borda); border-radius: 14px; background: rgba(12, 20, 44, .7); color: #cfd9ee; cursor: pointer;
-           text-align: left; font: 700 .85rem/1.2 inherit; overflow: hidden; transition: background .2s, border-color .2s, transform .2s; }
-.pg-mini img, .pg-mini > i:first-child { flex: none; width: 46px; height: 46px; border-radius: 10px; object-fit: contain; display: grid; place-items: center; background: #0b1530; }
-.pg-mini span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.pg-mini:hover { background: rgba(24, 36, 72, .9); }
-.pg-mini[aria-current="true"] { color: #fff; border-color: color-mix(in srgb, var(--cor) 70%, #fff); background: color-mix(in srgb, var(--cor) 22%, #0c1430); transform: translateY(-2px); }
-.pg-mini-tempo { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--cor); }
-.pg-mini[aria-current="true"] .pg-mini-tempo { animation: pg-tempo 6.5s linear forwards; }
-@keyframes pg-tempo { to { width: 100%; } }
-@media (max-width: 900px) {
-    .pg-hero.pg-vitrine { height: auto; }
-    .pg-vitrine-palco { height: clamp(380px, 105vw, 520px); }
-    .pg-vitrine .pg-slide { grid-template-columns: 1fr; align-content: end; padding-bottom: 28px; }
-    /* no celular a arte fica em cima (o jogo inteiro à vista) e o texto embaixo, no escuro */
-    .pg-slide--topo { background: #04070f; }
-    .pg-slide-topo { height: 58%; object-position: 80% center;
-                     -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
-    .pg-slide--topo h2 { font-size: clamp(1.8rem, 8vw, 2.6rem); }
-    .pg-marca-gratis { display: none; }
-    .pg-mini { flex-basis: 150px; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .pg-slide-topo { transition: none; transform: none; }
-    .pg-mini[aria-current="true"] .pg-mini-tempo { animation: none; width: 100%; }
-}
+/* o fundo já desfocado (portal-jogos.js desenha a foto em 48 x 28 e o navegador estica: liso,
+   sem o filtro de desfoque, que era refeito na tela inteira) */
+canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
+.pg-slide-arte { will-change: transform; }
+.pg-slide:not(.pg-slide--ativo) .pg-slide-arte { animation-play-state: paused; }
+.pg-hero.is-parado .pg-slide-arte { animation-play-state: paused; }
 
 /* ======================================================================
    A BIBLIOTECA
@@ -409,3 +383,69 @@
     .bj-ficha-caixa, .bj-ficha-capa { animation: none; }
 }
 @keyframes bj-sobe { from { transform: translateY(40px); opacity: 0; } }
+
+
+/* ======================================================================
+   O APP (app-jogos.js): o carregamento, os botões do app, o jogo por cima
+   ====================================================================== */
+/* no modo app o launcher começa colado no topo, como um aplicativo */
+.ls-launcher .pg { padding-top: max(4px, env(safe-area-inset-top)); }
+.pg-app-botoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pg-botao--app { min-height: 42px; padding: 0 14px; font-size: .86rem; }
+.pg-sem-rede { padding: 8px 12px; border-radius: 999px; background: rgba(255, 210, 63, .14); border: 1px solid rgba(255, 210, 63, .35);
+               color: var(--pg-amarelo); font-size: .8rem; font-weight: 700; }
+@media (max-width: 980px) {
+    .pg-topo { grid-template-columns: auto minmax(0, 1fr); }
+    .pg-busca { grid-column: 1 / -1; grid-row: 2; }
+    .pg-app-botoes { grid-column: 2; grid-row: 1; }
+    .pg-conta { grid-column: 1 / -1; justify-content: flex-start; }
+    .pg-botao--app span { display: none; }
+    .pg-botao--app { width: 44px; padding: 0; justify-content: center; }
+}
+
+/* o carregamento: a marca enquanto a biblioteca abre */
+.app-abertura {
+    position: fixed;
+    z-index: 3000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(60% 50% at 50% 42%, rgba(255, 61, 87, .28), transparent 70%),
+        radial-gradient(90% 80% at 50% 110%, #0b1a46, #02040c 70%);
+    transition: opacity .45s ease, visibility .45s;
+    /* sem JavaScript, some sozinha */
+    animation: app-some .45s 3.2s forwards;
+}
+.app-abertura.is-saindo { opacity: 0; visibility: hidden; }
+@keyframes app-some { to { opacity: 0; visibility: hidden; } }
+.app-abertura-miolo { display: grid; justify-items: center; gap: 14px; padding: 24px; text-align: center; }
+.app-abertura-logo { display: grid; place-items: center; width: 118px; height: 118px; border-radius: 30px;
+    background: #fff; box-shadow: 0 0 0 6px rgba(255, 255, 255, .08), 0 20px 60px -10px rgba(255, 61, 87, .7);
+    animation: app-pulsa 1.6s ease-in-out infinite; }
+.app-abertura-logo img { width: 92px; height: 92px; object-fit: contain; }
+.app-abertura-marca { font: 900 clamp(1.4rem, 5vw, 2.2rem)/1 "Poppins", sans-serif; letter-spacing: .06em; color: #fff;
+    animation: pl-entra .7s .15s ease both; }
+.app-abertura-marca b { color: var(--pg-amarelo, #ffd23f); }
+.app-abertura-barra { width: min(280px, 70vw); height: 6px; border-radius: 999px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.app-abertura-barra span { display: block; width: 8%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22d3ee, #ff3d57); transition: width .25s ease; }
+.app-abertura small { color: #a9b6d3; font-weight: 600; }
+@keyframes app-pulsa { 50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 255, 255, .05), 0 24px 70px -8px rgba(255, 61, 87, .85); } }
+@keyframes pl-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* o jogo dentro do app: por cima de tudo, a tela toda; a biblioteca embaixo fica parada */
+.app-jogo { position: fixed; z-index: 2500; inset: 0; background: #000; }
+.app-jogo[hidden] { display: none; }
+.app-jogo-quadro { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.app-jogo-fechar { position: absolute; z-index: 2; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
+    display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .2); background: rgba(6, 10, 24, .78); color: #fff; font: 800 .88rem/1 inherit; cursor: pointer; }
+.app-jogo-fechar[hidden], .app-aviso[hidden] { display: none; }
+.app-jogando .pg, .app-jogando .bj-ficha { visibility: hidden; }
+body.app-jogando { overflow: hidden; }
+.app-aviso { position: fixed; z-index: 2600; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); translate: -50% 0;
+    max-width: min(560px, calc(100% - 28px)); padding: 12px 18px; border-radius: 16px; background: rgba(6, 10, 24, .95);
+    border: 1px solid rgba(255, 255, 255, .16); color: #fff; font-weight: 600; text-align: center; box-shadow: 0 18px 50px -12px rgba(0, 0, 0, .8); }
+@media (prefers-reduced-motion: reduce) {
+    .app-abertura-logo, .app-abertura-marca { animation: none; }
+}

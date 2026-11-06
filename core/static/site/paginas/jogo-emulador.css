@@ -400,6 +400,46 @@ html, body {
 }
 .pl-dica { margin: 0; color: var(--suave); font-size: .85rem; line-height: 1.5; }
 
+/* ---------------------------------------------------------------- o menu Imagem (formato e gráficos) */
+.pl-menu {
+    position: fixed;
+    z-index: 61;
+    top: calc(max(10px, env(safe-area-inset-top)) + 54px);
+    right: max(14px, env(safe-area-inset-right));
+    display: grid;
+    gap: 8px;
+    width: min(340px, calc(100% - 28px));
+    max-height: calc(100dvh - 90px);
+    overflow: auto;
+    padding: 14px;
+    border: 1px solid var(--borda);
+    border-radius: 18px;
+    background: var(--vidro-forte);
+    box-shadow: 0 24px 60px -12px rgba(0, 0, 0, .85);
+    animation: pl-surge .18s ease both;
+}
+.pl-menu-titulo { margin: 2px 2px 0; color: var(--suave); font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.pl-menu-titulo small { letter-spacing: 0; text-transform: none; color: var(--cor); font-weight: 700; }
+.pl-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pl-opcoes--lista { grid-template-columns: 1fr; }
+.pl-opcoes button {
+    display: grid;
+    gap: 2px;
+    padding: 9px 12px;
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .04);
+    color: var(--texto);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+.pl-opcoes button strong { font-size: .9rem; }
+.pl-opcoes button small { color: var(--suave); font-size: .74rem; line-height: 1.3; }
+.pl-opcoes button[aria-checked="true"] { border-color: var(--cor); background: color-mix(in srgb, var(--cor) 22%, transparent); }
+.pl-opcoes button[aria-checked="true"] strong::after { content: " ✓"; color: var(--cor); }
+.pl-opcoes button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
 /* ---------------------------------------------------------------- o controle do seu jeito (HUD) */
 .pl-hud {
     position: fixed;
@@ -698,23 +738,43 @@ html, body {
 .pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button[data-acao] { line-height: 25px !important; }
 .pl .ejs_virtualGamepad_button.b_l[data-acao], .pl .ejs_virtualGamepad_button.b_r[data-acao],
 .pl .ejs_virtualGamepad_button.b_l2[data-acao], .pl .ejs_virtualGamepad_button.b_r2[data-acao] { line-height: 33px !important; }
-/* o selo do ícone (pular, atacar, atirar...): no canto do botão, na cor do jogo */
-.pl .ejs_virtualGamepad_button .pl-selo {
+/* o ÍCONE da ação no próprio botão (pular, atacar, atirar...) e a letra num selinho no canto */
+.pl .ejs_virtualGamepad_button.pl-com-icone { font-size: 0 !important; }
+.pl .pl-com-icone .pl-ico-botao {
     position: absolute;
-    top: -7px;
-    right: -7px;
-    width: 22px;
-    height: 22px;
-    padding: 3px;
-    border: 1.5px solid rgba(255, 255, 255, .85);
-    border-radius: 50%;
-    background: var(--cor);
+    left: 50%;
+    top: 50%;
+    width: 29px;
+    height: 29px;
+    translate: -50% -50%;
     color: #fff;
-    box-sizing: border-box;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
-    pointer-events: none; /* o toque é do botão, não do selo */
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .75));
+    pointer-events: none; /* o toque é do botão */
 }
-.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button .pl-selo { top: -9px; right: -6px; width: 18px; height: 18px; padding: 2px; }
+.pl .pl-com-icone .pl-letra {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 3px;
+    border: 1.5px solid rgba(255, 255, 255, .9);
+    border-radius: 999px;
+    background: #0b1020;
+    color: #fff;
+    font: 900 11px/18px var(--fonte);
+    text-align: center;
+    text-shadow: none;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+/* PlayStation: o símbolo do selinho na cor dele */
+.pl .b_triangulo .pl-letra { color: #4ade80; font-size: 12px; }
+.pl .b_bola .pl-letra { color: #f87171; font-size: 12px; }
+.pl .b_xis .pl-letra { color: #60a5fa; font-size: 12px; }
+.pl .b_quadrado .pl-letra { color: #f472b6; font-size: 12px; }
+/* apertado: o ícone na cor do jogo por um instante */
+.pl .ejs_virtualGamepad_button_down.pl-com-icone .pl-ico-botao { color: #fff; filter: drop-shadow(0 0 6px var(--cor)); }
 /* o direcional: uma cruz de vidro */
 .pl .ejs_dpad_main { opacity: 1; }
 .pl .ejs_dpad_horizontal { height: 50px; border-radius: 14px; }
@@ -728,3 +788,6 @@ html, body {
 .pl .ejs_dpad_right_pressed .ejs_dpad_horizontal::after { border-left-color: var(--cor); }
 .pl .ejs_dpad_up_pressed .ejs_dpad_vertical::before { border-bottom-color: var(--cor); }
 .pl .ejs_dpad_down_pressed .ejs_dpad_vertical::after { border-top-color: var(--cor); }
+
+/* a apresentação "LAZER & SPORT GAMES apresenta" cobre a tela inteira, por cima da abertura */
+.pl-abertura > .ls-intro { position: fixed; inset: 0; z-index: 70; }

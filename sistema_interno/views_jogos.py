@@ -25,12 +25,16 @@ sandbox): mesmo um .html malicioso não lê cookie, sessão nem a página.
 from __future__ import annotations
 
 import logging
+import tempfile
 
 from django import forms
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.db.models import Prefetch, Q
+from django.core.files import File
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.views import View
 
 from core import arena, emulador_envio as envio, jogos_apk
@@ -327,6 +331,9 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "poster": self._nome_do_arquivo(jogo.poster),
             "arquivo_html": self._nome_do_arquivo(jogo.arquivo_html),
             "apk": self._nome_do_arquivo(jogo.apk),
+            # gerar o APK (Android) pelo painel: jogo de console (menos PSP e DOS) ou de um .html só
+            "pode_gerar_apk": bool((jogo.sistema and jogo.sistema not in ("psp", "dos")) or jogo.arquivo_html),
+            "gerar_apk": reverse("jogo_gerar_apk", args=[jogo.pk]) if jogo.pk else "",
             "versao_pc": self._nome_do_arquivo(jogo.versao_pc),
             "versao_pc_link": jogo.versao_pc_link,
             "motor": jogo.motor,
@@ -468,3 +475,62 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
         envio.remover(jogo)
         log.info("arquivos do emulador de %s removidos por %s", jogo.slug, request.user.username)
         return self.sucesso(request, f"Os arquivos de \"{jogo.nome}\" saíram. O jogo sai do site até receber outros.")
+
+
+
+class JogoGerarApkView(SuperusuarioInternoRequiredMixin, View):
+    """GERAR O APK (ANDROID) DE UM JOGO -- o .bat dos jogos, num clique (core/jogos_apk_gerar.py).
+
+    GET  baixa o APK (para instalar no celular ou mandar para alguém).
+    POST com publicar=1 gera e guarda no jogo como "Baixar o aplicativo" (o
+         botão aparece na página do jogo quando o download está liberado).
+    """
+
+    def _gerar(self, request, pk):
+        from core import jogos_apk_gerar
+
+        jogo = get_object_or_404(JogoCadastrado.objects.prefetch_related("arquivos_emulador"), pk=pk)
+        destino = tempfile.TemporaryFile()
+        try:
+            resumo = jogos_apk_gerar.gerar_apk(jogo, destino, request=request)
+        except jogos_apk_gerar.ApkNaoDa as exc:
+            destino.close()
+            return jogo, None, str(exc)
+        except Exception:  # noqa: BLE001 -- o painel mostra o motivo, o log guarda o resto
+            destino.close()
+            log.exception("gerar o APK de %s", jogo.slug)
+            return jogo, None, "Não deu para gerar o APK agora (um arquivo do jogo não baixou?). Tente de novo."
+        destino.seek(0)
+        return jogo, (destino, resumo), ""
+
+    def get(self, request, pk):
+        jogo, pronto, erro = self._gerar(request, pk)
+        if erro:
+            return HttpResponse(erro, status=422, content_type="text/plain; charset=utf-8")
+        destino, _resumo = pronto
+        resposta = FileResponse(destino, as_attachment=True, filename=f"{jogo.slug}.apk",
+                                content_type="application/vnd.android.package-archive")
+        resposta["Cache-Control"] = "no-store"
+        return resposta
+
+    def post(self, request, pk):
+        jogo, pronto, erro = self._gerar(request, pk)
+        if erro:
+            return JsonResponse({"ok": False, "erro": erro}, status=422)
+        destino, resumo = pronto
+        destino.seek(0, 2)
+        tamanho = destino.tell()
+        limite = _limite_de_arquivo_grande()
+        if tamanho > limite:
+            destino.close()
+            return JsonResponse({"ok": False, "erro": f"O APK ficou com {_tamanho_legivel(tamanho)}: o site guarda até "
+                                 f"{_tamanho_legivel(limite)}. Baixe e mande o arquivo direto."}, status=422)
+        destino.seek(0)
+        jogo.apk.save(f"{jogo.slug}.apk", File(destino), save=False)
+        jogo.apk_motor = "html5"
+        jogo.liberar_download = True
+        jogo.save(update_fields=["apk", "apk_motor", "liberar_download"])
+        destino.close()
+        return JsonResponse({"ok": True, "tamanho": _tamanho_legivel(tamanho), "versao": resumo["versao"],
+                             "mensagem": f"APK publicado ({_tamanho_legivel(tamanho)}): o botão “Baixar o aplicativo” "
+                                         "já aparece na página do jogo."})

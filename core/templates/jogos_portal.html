@@ -5,7 +5,14 @@
 {% block meta_description %}Lazer & Sport Games: jogue grátis no navegador ou no celular, sem baixar. Os jogos das máquinas da Lazer & Sport (boliche virtual, boxe, basquete, tiro ao alvo) com ranking, e clássicos de console.{% endblock %}
 {% block og_title %}Lazer & Sport Games — jogos online grátis{% endblock %}
 {% block main_class %} content-section--full{% endblock %}
-{% block extra_head %}<script type="application/ld+json">{{ dados_estruturados|safe }}</script>{% endblock %}
+{% block body_class %}ls-modo-app ls-launcher{% endblock %}
+{% block extra_head %}<script type="application/ld+json">{{ dados_estruturados|safe }}</script>
+<link rel="manifest" href="{% url 'jogos_app_manifesto' %}">
+<meta name="theme-color" content="#04070f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="L&amp;S Games">{% endblock %}
 
 {% block content %}
 {% include "partials/icones_das_acoes.html" %}
@@ -21,6 +28,25 @@
   responde, e cada capa leva direto à página do jogo.
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/paginas/portal-jogos.css' %}">
+
+{% comment %}
+  O CARREGAMENTO DO APP: a marca Lazer & Sport Games enquanto a biblioteca abre (uma vez por
+  visita; no app instalado, sempre). Sem JavaScript ele some sozinho (animação do CSS).
+{% endcomment %}
+<div class="app-abertura" data-app-abertura aria-hidden="true">
+    <div class="app-abertura-miolo">
+        <span class="app-abertura-logo"><img src="{% static 'images/logoofi.png' %}" alt="" width="112" height="112"></span>
+        <strong class="app-abertura-marca">LAZER &amp; SPORT <b>GAMES</b></strong>
+        <span class="app-abertura-barra"><span data-app-abertura-barra></span></span>
+        <small data-app-abertura-texto>Carregando a biblioteca…</small>
+    </div>
+</div>
+<script>
+  try {
+    var instalado = matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone;
+    if (sessionStorage.getItem("ls-app-aberto") && !instalado) document.querySelector("[data-app-abertura]").remove();
+  } catch (e) {}
+</script>
 
 <div class="pg" data-portal>
 
@@ -39,6 +65,12 @@
                    aria-label="Buscar jogo" autocomplete="off" data-portal-busca>
             <button type="submit">Buscar</button>
         </form>
+        <div class="pg-app-botoes">
+            <span class="pg-sem-rede" data-app-sem-rede hidden><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Sem internet: os jogos já guardados no aparelho continuam</span>
+            <button type="button" class="pg-botao pg-botao--app" data-app-instalar hidden><i class="fa-solid fa-download" aria-hidden="true"></i> <span>Instalar o app</span></button>
+            <button type="button" class="pg-botao pg-botao--app" data-app-tela-cheia><i class="fa-solid fa-expand" aria-hidden="true"></i> <span>Tela cheia</span></button>
+            <a class="pg-botao pg-botao--app" href="{% url 'home' %}" title="Voltar ao site da Lazer &amp; Sport"><i class="fa-solid fa-house" aria-hidden="true"></i> <span>Site</span></a>
+        </div>
         <div class="pg-conta">
             {% if eu %}
                 <span class="pg-conta-ola"><i class="fa-solid fa-crown" aria-hidden="true"></i> Olá, {{ eu.nome }}</span>
@@ -58,51 +90,28 @@
 
     <!-- ================= DESTAQUES ================= -->
     {% if destaques %}
-    <section class="pg-hero pg-vitrine" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero{% if lista is not None %} hidden{% endif %}>
-        {% comment %}
-          A VITRINE (como a de uma loja de jogos): a arte larga do jogo de ponta a ponta,
-          o nome, as marcas e o Jogar; embaixo, a fila com os outros destaques.
-        {% endcomment %}
-        <div class="pg-vitrine-palco">
-            {% for jogo in destaques %}
-            <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}{% if jogo.topo %} pg-slide--topo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
-                     aria-label="{{ forloop.counter }} de {{ destaques|length }}: {{ jogo.titulo }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
-                {% if jogo.topo %}
-                <img class="pg-slide-topo" src="{{ jogo.topo }}" alt="" width="1600" height="600" {% if not forloop.first %}loading="lazy" {% else %}fetchpriority="high" {% endif %}decoding="async">
-                {% else %}
-                {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
-                {% endif %}
-                <div class="pg-slide-texto">
-                    <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}</span>
-                    <h2>{{ jogo.titulo }}</h2>
-                    {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
-                    <ul class="pg-slide-marcas" aria-label="Sobre o jogo">
-                        {% if jogo.categoria %}<li>{{ jogo.categoria }}</li>{% endif %}
-                        {% if jogo.ranking %}<li class="pg-marca-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</li>{% endif %}
-                        {% if jogo.partidas %}<li>{{ jogo.partidas }} partida{{ jogo.partidas|pluralize }}</li>{% endif %}
-                        <li class="pg-marca-gratis">Grátis no navegador</li>
-                    </ul>
-                    <div class="pg-slide-acoes">
-                        <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar</a>
-                    </div>
+    <section class="pg-hero" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero{% if lista is not None %} hidden{% endif %}>
+        {% for jogo in destaques %}
+        <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
+                 aria-label="{{ forloop.counter }} de {{ destaques|length }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
+            {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+            <div class="pg-slide-texto">
+                <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
+                <h2>{{ jogo.titulo }}</h2>
+                {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
+                <div class="pg-slide-acoes">
+                    <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}" data-app-jogo="{{ jogo.slug }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
+                    {% if jogo.ranking %}<span class="pg-slide-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</span>{% endif %}
                 </div>
-                {% if not jogo.topo and jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
-            </article>
-            {% endfor %}
-            {% if destaques|length > 1 %}
-            <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-            <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-            {% endif %}
-        </div>
+            </div>
+            {% if jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% else %}fetchpriority="high" {% endif %}decoding="async">{% endif %}
+        </article>
+        {% endfor %}
         {% if destaques|length > 1 %}
-        <div class="pg-vitrine-fila" data-portal-pontos>
-            {% for jogo in destaques %}
-            <button type="button" class="pg-mini" style="--cor: {{ jogo.cor }}" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}>
-                {% if jogo.capa %}<img src="{{ jogo.capa }}" alt="" width="56" height="56" loading="lazy" decoding="async">{% else %}<i class="fa-solid fa-gamepad" aria-hidden="true"></i>{% endif %}
-                <span>{{ jogo.titulo }}</span>
-                <i class="pg-mini-tempo" aria-hidden="true"></i>
-            </button>
-            {% endfor %}
+        <button type="button" class="pg-hero-seta pg-hero-seta--antes" aria-label="Destaque anterior" data-portal-antes><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+        <button type="button" class="pg-hero-seta pg-hero-seta--depois" aria-label="Próximo destaque" data-portal-depois><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+        <div class="pg-hero-pontos" data-portal-pontos>
+            {% for jogo in destaques %}<button type="button" aria-label="Ver {{ jogo.titulo }}"{% if forloop.first %} aria-current="true"{% endif %}></button>{% endfor %}
         </div>
         {% endif %}
     </section>
@@ -284,7 +293,17 @@
     </article>
 </div>
 
+{% comment %}
+  O JOGO DENTRO DO APP: o jogo abre aqui, por cima da biblioteca, no mesmo documento --
+  a tela cheia não fecha, e o voltar do celular traz de volta à biblioteca.
+{% endcomment %}
+<div class="app-jogo" data-app-palco data-app-sw="{% url 'jogos_app_sw' %}" data-app-abriu="{% url 'jogos_abriu' %}" hidden>
+    <button type="button" class="app-jogo-fechar" data-app-fechar hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Biblioteca</button>
+</div>
+<div class="app-aviso" data-app-aviso role="status" aria-live="polite" hidden></div>
+
 {{ indice_busca|json_script:"portal-jogos" }}
 {{ dados_da_biblioteca|json_script:"portal-biblioteca" }}
+<script src="{% estatico 'site/paginas/app-jogos.js' %}" defer></script>
 <script src="{% estatico 'site/paginas/portal-jogos.js' %}" defer></script>
 {% endblock %}

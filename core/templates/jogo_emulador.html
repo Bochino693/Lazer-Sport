@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>{{ jogo.nome }} · Lazer &amp; Sport Games</title>
 <link rel="stylesheet" href="{% estatico 'site/paginas/jogo-emulador.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/intro-jogos.css' %}">
 </head>
 <body class="pl" style="--cor: {{ config.cor|default:'#ff3df2' }}">
 {% comment %}
@@ -77,8 +78,8 @@
         {% if config.sistemaNome %}<small>{{ config.sistemaNome }}</small>{% endif %}
     </div>
     <div class="pl-barra-acoes">
-        <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-imagem aria-pressed="true" aria-label="Imagem na tela toda ou no formato original" hidden>
-            <svg aria-hidden="true"><use href="#i-imagem"/></svg><span data-pl-imagem-texto>Imagem: tela toda</span>
+        <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-imagem aria-expanded="false" aria-controls="pl-menu-imagem" aria-label="Imagem e gráficos" hidden>
+            <svg aria-hidden="true"><use href="#i-imagem"/></svg><span>Imagem</span>
         </button>
         <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-hud-abrir aria-label="Ajustar o controle da tela" hidden>
             <svg aria-hidden="true"><use href="#i-hud"/></svg><span>Ajustar controle</span>
@@ -96,6 +97,23 @@
         </button>
     </div>
 </header>
+
+{# O MENU IMAGEM: o formato e os gráficos #}
+<div class="pl-menu" id="pl-menu-imagem" data-pl-menu-imagem role="dialog" aria-label="Imagem e gráficos" hidden>
+    <p class="pl-menu-titulo">Formato</p>
+    <div class="pl-opcoes" role="radiogroup" aria-label="Formato da imagem">
+        <button type="button" role="radio" aria-checked="true" data-pl-formato="tela-toda"><strong>Tela toda</strong><small>De ponta a ponta</small></button>
+        <button type="button" role="radio" aria-checked="false" data-pl-formato="original"><strong>Original</strong><small>O formato do console</small></button>
+    </div>
+    <p class="pl-menu-titulo">Gráficos <small data-pl-graficos-agora></small></p>
+    <div class="pl-opcoes pl-opcoes--lista" role="radiogroup" aria-label="Gráficos">
+        <button type="button" role="radio" aria-checked="true" data-pl-graficos="auto"><strong>Automático</strong><small>HD, e mais leve sozinho se o aparelho precisar</small></button>
+        <button type="button" role="radio" aria-checked="false" data-pl-graficos="hd"><strong>HD</strong><small>Contornos lisos, o mais bonito</small></button>
+        <button type="button" role="radio" aria-checked="false" data-pl-graficos="tv"><strong>TV antiga</strong><small>As linhas da TV de tubo</small></button>
+        <button type="button" role="radio" aria-checked="false" data-pl-graficos="nitido"><strong>Nítido</strong><small>Os pixels do console, sem filtro</small></button>
+        <button type="button" role="radio" aria-checked="false" data-pl-graficos="leve"><strong>Leve</strong><small>O mais rápido, para aparelho simples</small></button>
+    </div>
+</div>
 
 {% if config.comandos %}
 {# OS COMANDOS: o que cada botão faz, e onde ele fica em cada aparelho #}
@@ -176,6 +194,7 @@
 
 <p class="emu-sem-js">Este jogo precisa de JavaScript ligado no navegador.</p>
 {{ config|json_script:"emuladorConfig" }}
+<script src="{% estatico 'site/paginas/intro-jogos.js' %}" data-logo="{% estatico 'images/logoofi.png' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-guardado.js' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-emulador.js' %}"></script>
 </body>
