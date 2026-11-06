@@ -841,3 +841,18 @@ html, body {
    e o texto da abertura sai da frente (não aparece por trás quando a apresentação some) */
 .pl-abertura.is-apresentando { z-index: 90; }
 .pl-abertura.is-apresentando .pl-abertura-miolo { visibility: hidden; }
+
+/* JOGO DE VÁRIOS DISCOS: o disco que está no console e o botão de trocar (o Y do controle também troca) */
+.pl-disco {
+  display: grid; gap: 8px; margin: 14px 0 4px; padding: 12px 14px; border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .05);
+}
+.pl-disco[hidden] { display: none; }
+.pl-disco p { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.pl-disco small { color: var(--suave, rgba(255, 255, 255, .62)); }
+.pl-disco-botao {
+  justify-self: start; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 999px;
+  background: var(--cor, #ff3df2); color: #fff; font-weight: 800;
+}
+.pl-disco-botao:disabled { opacity: .45; }
+.pl-disco-botao:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }

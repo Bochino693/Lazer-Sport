@@ -434,6 +434,15 @@ class EmuladorNoSiteTests(TestCase):
         JogoCadastrado.objects.filter(pk=self.jogo.pk).update(sistema="psx")
         self.assertEqual(config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))["nucleoExterno"], "")
 
+    def test_cada_arquivo_diz_de_que_disco_e(self):
+        # o reprodutor começa com o disco 1 e baixa os outros com o jogo rodando
+        ArquivoEmulador.objects.filter(jogo=self.jogo, papel=ArquivoEmulador.FAIXA).update(disco=2)
+        config = config_do_emulador(JogoCadastrado.objects.get(pk=self.jogo.pk))
+        self.assertTrue(all("disco" in a for a in config["arquivos"]))
+        self.assertIn(2, [a["disco"] for a in config["arquivos"]])
+        principal = [a for a in config["arquivos"] if a["principal"]][0]
+        self.assertIsNone(principal["disco"])
+
     def test_psp_e_dos_abrem_na_pagina_isolada_e_os_outros_no_quadro(self):
         url = reverse("jogo_emulador", args=["disco-teste"])
         normal = self.client.get(url)

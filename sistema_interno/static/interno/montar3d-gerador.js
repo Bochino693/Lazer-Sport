@@ -1,0 +1,568 @@
+/* ======================================================================
+   O PROJETISTA AUTOMÁTICO do "Montar em 3D": monta sozinho um brinquedão,
+   um espaço esportivo kids, uma área ninja, um trampolim park ou um espaço
+   baby nas medidas do lugar e na COR-TEMA escolhida. Não é um modelo de
+   linguagem: são as regras do ramo, escritas aqui, com sorteio para cada
+   ideia sair diferente ("Outra ideia" troca a semente).
+
+   AS REGRAS (o que se vê nos playgrounds indoor de verdade -- as fábricas
+   que o cliente mostrou: Nogueira, Brinquedão & Diversão, Kid Play; só o
+   padrão do ramo, nenhum desenho copiado):
+     * brinquedão: estrutura tubular de uma cor só, em módulos de ~1,05 m
+       (1,25 m nos espaços largos); os catálogos vão de 2,65 a 5,30 m de
+       comprimento e de 2,40 a 4,35 m de altura, com pisos a cada 0,80 m
+       nos baixinhos, 0,85 m nos médios e 1,0 m nos altos (até 3 níveis);
+       pisos de duas cores cortados na diagonal; rede de proteção de 1,0 m
+       em todo lado de nível elevado que não dá para outro módulo, com
+       janelas redondas na frente e painéis ábaco nos lados; o tobogã
+       espiral (quase sempre de tubo fechado) ou o escorregador sai do nível
+       mais alto, para fora, com a boca de frente para a torre; a piscina de
+       bolinhas fica no chão, DEBAIXO do 2º nível; rolos de espuma entre
+       dois pisos; bolas penduradas no alto; túnel de rede entre torres;
+       colmeia de hexágonos empilhados do lado, com degraus de espuma na
+       entrada; subida por degraus de espuma nos baixinhos; piso de EVA;
+       telhado ou teto em arco nas torres quando o pé-direito deixa;
+     * os ESTILOS: colorido (a paleta da cor raiz), neon (estrutura cinza,
+       piso escuro e fitas de LED na cor raiz) e selva (estrutura de
+       madeira, grama, teto em arco, tobogã aberto e piscina redonda);
+     * O QUE A CASA FAZ ENSINA: o módulo e a distância entre os pisos mais
+       usados nas montagens guardadas viram o padrão do projetista;
+     * espaço esportivo kids: quadra com traves e tabelas na altura das
+       crianças, tela de proteção, parede de escalada com colchão e camas
+       elásticas na faixa que sobra;
+     * área ninja: circuito em linha (ida e volta, se couber) -- degraus
+       ninja, trave, argolas, barra de macaco, corda e a parede curva no
+       fim --, tudo sobre colchões;
+     * trampolim park: grade de camas elásticas de 2,5 m, piscina de espuma
+       no fim com a cama de lançamento, pista de enterrada e tela em volta;
+     * espaço baby (0 a 3 anos): tudo baixo -- piso de EVA, cerca de 0,6 m,
+       portal de entrada, piscina de bolinhas rasa, rampa, degraus de
+       espuma, plataforma de 0,4 m com escorregador pequeno e túnel.
+   É um RASCUNHO para conversar com o cliente: o projeto final segue a
+   norma de playgrounds (ABNT NBR 16071) e a engenharia da fábrica.
+   ====================================================================== */
+
+/* ---------------------------------------------------------------- cores */
+function hexParaHsl(hex) {
+  const n = parseInt(String(hex || "#2563eb").replace("#", "").padEnd(6, "0").slice(0, 6), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return [h, s, l];
+}
+function hslParaHex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  s = Math.min(1, Math.max(0, s));
+  l = Math.min(1, Math.max(0, l));
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return "#" + [r, g, b].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * A paleta de uma cor raiz: cada PAPEL das peças ganha a sua cor.
+ *   estrutura  a própria cor (os tubos, as colunas)
+ *   piso       a vizinha (as plataformas, a quadra)
+ *   destaque   a complementar (tobogãs, painéis, túneis)
+ *   acento     a de 60° (escadas, agarras, obstáculos)
+ *   apoio      a raiz bem escura (redes, telas)
+ *   protecao   a complementar clara (colchões, espuma)
+ *   clara      a raiz clara (detalhes)
+ * `varias`: as cores para alternar nas plataformas e painéis (o colorido das referências).
+ */
+export function paletaDaCor(hex, estilo) {
+  const [h, s0, l0] = hexParaHsl(hex);
+  const s = Math.max(0.6, s0), l = Math.min(0.56, Math.max(0.42, l0));
+  const p = {
+    estrutura: hslParaHex(h, s, l),
+    piso: hslParaHex(h + 32, s, 0.55),
+    destaque: hslParaHex(h + 180, Math.max(0.7, s), 0.52),
+    acento: hslParaHex(h + 60, 0.9, 0.55),
+    apoio: hslParaHex(h, 0.35, 0.16),
+    protecao: hslParaHex(h + 180, 0.55, 0.72),
+    clara: hslParaHex(h, 0.65, 0.76),
+    led: hslParaHex(h, 1, 0.62),
+    madeira: "#6b4f3a",
+  };
+  p.varias = [hslParaHex(h + 120, 0.8, 0.52), p.acento, p.destaque, hslParaHex(h + 300, 0.75, 0.6), p.piso, hslParaHex(h + 210, 0.8, 0.55)];
+  p.chao = p.varias[0];
+  p.chao2 = p.acento;
+  if (estilo === "neon") {
+    Object.assign(p, { estrutura: "#4b5563", apoio: "#0f172a", chao: "#1f2937", chao2: "#334155" });
+  } else if (estilo === "selva") {
+    Object.assign(p, { estrutura: "#6b4f3a", apoio: "#3b2f25", chao: "#4caf50", chao2: "#4caf50" });
+  }
+  return p;
+}
+
+/** Os estilos do projetista (e da cor-tema). */
+export const ESTILOS = {
+  colorido: { nome: "Colorido", amostra: "conic-gradient(#2563eb 0 25%, #facc15 0 50%, #ef4444 0 75%, #22c55e 0)" },
+  neon: { nome: "Neon", amostra: "linear-gradient(135deg, #4b5563 45%, #3fd0ff 45% 65%, #d946ef 65%)" },
+  selva: { nome: "Selva (madeira e grama)", amostra: "linear-gradient(135deg, #6b4f3a 50%, #4caf50 50%)" },
+};
+
+/** O tema do cores3d.js (as famílias do desenho original) feito da cor raiz: para os objetos .glb. */
+export function familiasDaCor(hex) {
+  const p = paletaDaCor(hex);
+  return {
+    verde: p.estrutura, azul: p.estrutura, amarelo: p.acento, laranja: p.destaque, vermelho: p.varias[3],
+    ciano: p.piso, roxo: p.varias[5], rosa: p.varias[0],
+  };
+}
+
+/** De que papel é cada peça (para a cor-tema). */
+export const PAPEL = {
+  coluna: "estrutura", barra: "estrutura", macaco: "estrutura", argolas: "estrutura", corda: "estrutura",
+  trave: "estrutura", tabela: "estrutura", gol: "clara", cerca: "estrutura", escada: "acento", arco: "destaque",
+  plataforma: "varias", piso_eva: "chao", quadra: "piso", painel: "varias", janela: "varias", abaco: "varias",
+  escorregador: "destaque", toboga: "destaque", tunel: "varias", rolos: "varias", colmeia: "acento", pendulos: "varias",
+  degraus: "acento", rede: "apoio", tunel_rede: "apoio", colchao: "protecao", espuma: "varias", cama: "estrutura",
+  piscina: "destaque", piscina_redonda: "madeira", degraus_espuma: "varias", rampa: "acento", telhado: "destaque",
+  teto_arco: "estrutura", led: "led", escalada: "acento", parede_curva: "acento",
+};
+export function corDoPapel(paleta, tipo, indice) {
+  const papel = PAPEL[tipo] || "estrutura";
+  if (papel === "varias") return paleta.varias[(indice || 0) % paleta.varias.length];
+  return paleta[papel] || paleta.estrutura;
+}
+
+/* ---------------------------------------------------------------- os projetos */
+export const PROJETOS = {
+  brinquedao: {
+    nome: "Brinquedão", sub: "playground indoor em torres", icone: "bi-bricks",
+    medidas: { largura: 6.5, profundidade: 3.2, altura: 3.4 },
+  },
+  esportivo: {
+    nome: "Espaço esportivo kids", sub: "quadra, escalada e camas", icone: "bi-dribbble",
+    medidas: { largura: 18, profundidade: 10, altura: 5 },
+  },
+  ninja: {
+    nome: "Área ninja", sub: "circuito de obstáculos", icone: "bi-lightning-charge-fill",
+    medidas: { largura: 16, profundidade: 5, altura: 4 },
+  },
+  trampolim: {
+    nome: "Trampolim park", sub: "camas, espuma e enterrada", icone: "bi-arrows-collapse-vertical",
+    medidas: { largura: 14, profundidade: 9, altura: 5 },
+  },
+  baby: {
+    nome: "Espaço baby", sub: "0 a 3 anos, tudo baixo", icone: "bi-balloon-heart-fill",
+    medidas: { largura: 5, profundidade: 4, altura: 2.6 },
+  },
+};
+
+function sorteio(semente) {
+  let a = (semente >>> 0) || 1;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const arred = (v) => Math.round(v * 1000) / 1000;
+const contar = (n, um, varios) => (n ? `${n} ${n > 1 ? varios : um}` : "");
+const m2 = (v) => (Math.round(v * 100) / 100).toFixed(2).replace(".", ",");
+
+class Projeto {
+  constructor(paleta) {
+    this.pecas = [];
+    this.paleta = paleta;
+    this.contagem = {};
+    this.cores = {};
+  }
+  por(tipo, p, d, r = 0, cor, extra) {
+    const indice = (this.cores[tipo] = (this.cores[tipo] || 0) + 1) - 1;
+    this.pecas.push(Object.assign({ tipo, p: p.map(arred), r: arred(r), d, cor: cor || corDoPapel(this.paleta, tipo, indice) }, extra || {}));
+    this.contagem[tipo] = (this.contagem[tipo] || 0) + 1;
+  }
+}
+
+const NOMES = {
+  coluna: ["coluna", "colunas"], barra: ["barra", "barras"], plataforma: ["plataforma", "plataformas"],
+  rede: ["rede de proteção", "redes de proteção"], janela: ["painel com janela", "painéis com janela"],
+  painel: ["painel", "painéis"], escorregador: ["escorregador", "escorregadores"], toboga: ["tobogã espiral", "tobogãs espirais"],
+  tunel: ["túnel", "túneis"], tunel_rede: ["túnel de rede", "túneis de rede"], rolos: ["conjunto de rolos", "conjuntos de rolos"],
+  colmeia: ["colmeia", "colmeias"], piscina: ["piscina de bolinhas", "piscinas de bolinhas"], cama: ["cama elástica", "camas elásticas"],
+  escada: ["escada", "escadas"], telhado: ["telhado", "telhados"], piso_eva: ["piso de EVA", "pisos de EVA"],
+  quadra: ["quadra", "quadras"], gol: ["trave", "traves"], tabela: ["tabela de basquete", "tabelas de basquete"],
+  cerca: ["tela de proteção", "telas de proteção"], escalada: ["parede de escalada", "paredes de escalada"],
+  colchao: ["colchão", "colchões"], degraus: ["conjunto de degraus ninja", "conjuntos de degraus ninja"], trave: ["trave de equilíbrio", "traves de equilíbrio"],
+  argolas: ["conjunto de argolas", "conjuntos de argolas"], macaco: ["barra de macaco", "barras de macaco"], corda: ["corda", "cordas"],
+  parede_curva: ["parede curva", "paredes curvas"], espuma: ["piscina de espuma", "piscinas de espuma"],
+  rampa: ["rampa", "rampas"], degraus_espuma: ["escadinha de espuma", "escadinhas de espuma"], arco: ["portal", "portais"],
+  abaco: ["painel ábaco", "painéis ábaco"], pendulos: ["conjunto de bolas penduradas", "conjuntos de bolas penduradas"],
+  piscina_redonda: ["piscina redonda", "piscinas redondas"], teto_arco: ["teto em arco", "tetos em arco"], led: ["fita de LED", "fitas de LED"],
+};
+function resumoDe(contagem) {
+  return Object.entries(contagem).map(([tipo, n]) => `${n} ${(NOMES[tipo] || [tipo, tipo])[n > 1 ? 1 : 0]}`);
+}
+
+/* ---------------------------------------------------------------- brinquedão */
+function brinquedao(P, W, D, H, sorte, op) {
+  const regras = [];
+  const pal = P.paleta, estilo = op.estilo || "colorido";
+  const aprendido = op.aprendido || {};
+  // os pisos: a cada 0,80 m nos baixinhos (pé-direito até 3,2 m), 0,85 m nos médios e 1,0 m nos altos
+  const nivelAprendido = Number(aprendido.nivel) >= 0.7 && Number(aprendido.nivel) <= 1.3 ? Number(aprendido.nivel) : 0;
+  const L = nivelAprendido || (H >= 4.2 ? 1.0 : H >= 3.2 ? 0.85 : 0.8);
+  const niveis = Math.max(1, Math.min(3, Math.floor((H - 0.95) / L)));
+  const topo = niveis * L;
+  // o módulo: ~1,05 m (o padrão das fábricas); 1,25 m nos espaços largos
+  const moduloAprendido = Number(aprendido.modulo) >= 0.9 && Number(aprendido.modulo) <= 1.6 ? Number(aprendido.modulo) : 0;
+  let m = moduloAprendido || (W >= 9 ? 1.25 : 1.05);
+  // a saída: tobogã espiral com 2+ níveis (tubo fechado ou calha); escorregador com 1
+  const espiral = niveis >= 2;
+  const R = W < 6 ? 0.75 : m >= 1.2 ? 1.0 : 0.9; // nos espaços pequenos, a espiral é mais fechada
+  const saida = espiral ? 2 * R + 0.45 : Math.min(W * 0.4, topo * 1.9 + 0.4);
+  // a colmeia (hexágonos empilhados) do lado de fora, quando sobra largura
+  let colmeia = espiral && W >= 6 ? 1.0 : 0;
+  let nx = Math.floor((W - saida - colmeia) / m);
+  if (nx < 2 && colmeia) { colmeia = 0; nx = Math.floor((W - saida) / m); }
+  if (nx < 2) { nx = 2; m = Math.max(0.9, (W - saida) / 2); }
+  const nz = Math.max(1, Math.min(4, Math.floor((D - 0.7) / m)));
+  const usado = colmeia + nx * m + saida;
+  const x0 = -usado / 2 + colmeia, z0 = -nz * m / 2;
+  const fonte = moduloAprendido || nivelAprendido ? " (o que mais aparece nas montagens guardadas)" : "";
+  regras.push(`Módulos de ${m2(m)} m (${nx} × ${nz}), ${niveis} ${niveis > 1 ? "níveis" : "nível"}: pisos a cada ${m2(L)} m${fonte}.`);
+
+  // até onde vai cada módulo (t) e onde começa (b): a piscina fica DEBAIXO da estrutura, no chão
+  const t = [], b = [];
+  for (let i = 0; i < nx; i++) {
+    t.push([]); b.push([]);
+    for (let k = 0; k < nz; k++) {
+      t[i][k] = i === nx - 1 ? niveis : Math.max(1, niveis - (sorte() < 0.4 ? 1 : 0));
+      b[i][k] = 1;
+    }
+  }
+  const piscinaI = Math.min(nx - 2, Math.floor(sorte() * Math.max(1, nx - 1)));
+  const piscinaK = nz - 1;
+  const redonda = estilo === "selva" && D - nz * m >= 2.2;
+  let piscinaDebaixo = false;
+  if (!redonda) {
+    if (niveis >= 2) { b[piscinaI][piscinaK] = 2; t[piscinaI][piscinaK] = Math.max(2, t[piscinaI][piscinaK]); piscinaDebaixo = true; }
+    else if (nx >= 3 || nz >= 2) t[piscinaI][piscinaK] = 0;
+  }
+  const kSaida = Math.floor(sorte() * nz);
+  const cx = (i) => x0 + (i + 0.5) * m;
+  const cz = (k) => z0 + (k + 0.5) * m;
+  const tem = (i, k, n) => i >= 0 && k >= 0 && i < nx && k < nz && n >= b[i][k] && n <= t[i][k];
+  const alto = (i, k) => (i < 0 || k < 0 || i >= nx || k >= nz ? 0 : t[i][k]);
+
+  // o piso: EVA em xadrez (neon: escuro; selva: grama lisa)
+  P.por("piso_eva", [0, 0, 0],
+    { largura: arred(Math.min(W, usado + 0.6)), profundidade: arred(Math.min(D, nz * m + 1.4)) }, 0, pal.chao, { cor2: pal.chao2 });
+
+  // as colunas, em cada nó, até 1,0 m acima do piso mais alto em volta
+  for (let i = 0; i <= nx; i++) {
+    for (let k = 0; k <= nz; k++) {
+      const em = Math.max(alto(i - 1, k - 1), alto(i, k - 1), alto(i - 1, k), alto(i, k));
+      if (em < 1) continue;
+      P.por("coluna", [x0 + i * m, 0, z0 + k * m], { altura: arred(em * L + 1.0), diametro: 0.06 }, 0, pal.estrutura);
+    }
+  }
+  // os pisos (de duas cores na diagonal, metade deles) e a proteção de cada nível
+  let redes = 0, janelas = 0, abacos = 0, bicolores = 0;
+  for (let i = 0; i < nx; i++) {
+    for (let k = 0; k < nz; k++) {
+      for (let n = b[i][k]; n <= t[i][k]; n++) {
+        const cor = pal.varias[(i * 3 + k * 2 + n) % pal.varias.length];
+        const extra = sorte() < 0.5 ? { cor2: pal.varias[(i * 3 + k * 2 + n + 2) % pal.varias.length] } : null;
+        if (extra) bicolores++;
+        P.por("plataforma", [cx(i), n * L - 0.05, cz(k)], { largura: arred(m - 0.04), profundidade: arred(m - 0.04), espessura: 0.05 }, 0, cor, extra);
+        for (const [di, dk, giro] of [[1, 0, 90], [-1, 0, 90], [0, 1, 0], [0, -1, 0]]) {
+          if (tem(i + di, k + dk, n)) continue; // dá para o módulo vizinho: aberto
+          if (n === niveis && i === nx - 1 && k === kSaida && di === 1) continue; // a boca da saída
+          const px = cx(i) + di * m / 2, pz = cz(k) + dk * m / 2;
+          const frente = dk === 1 && k === nz - 1;
+          const sorteio = sorte();
+          if (frente && n <= 2 && sorteio < 0.4) {
+            P.por("janela", [px, n * L, pz], { largura: arred(m - 0.06), altura: arred(Math.min(0.9, L)), espessura: 0.03 }, giro);
+            janelas++;
+          } else if (!frente && n === b[i][k] && sorteio < 0.3) {
+            P.por("abaco", [px, n * L, pz], { largura: arred(m - 0.06), altura: arred(Math.min(0.9, L)) }, giro);
+            abacos++;
+          } else {
+            P.por("rede", [px, n * L, pz], { largura: arred(m - 0.06), altura: 1.0 }, giro, pal.apoio, { cor2: pal.estrutura });
+            redes++;
+          }
+        }
+      }
+    }
+  }
+  const protecao = [contar(redes, "rede de 1,0 m", "redes de 1,0 m"), contar(janelas, "painel com janela", "painéis com janela"), contar(abacos, "painel ábaco", "painéis ábaco")].filter(Boolean);
+  regras.push(`Proteção em todo lado de nível elevado que não dá para outro módulo: ${protecao.join(", ").replace(/, ([^,]*)$/, " e $1")}.`);
+  if (bicolores) regras.push(`${contar(bicolores, "piso", "pisos")} de duas cores na diagonal (o colorido dos brinquedões).`);
+
+  // a saída: tobogã espiral do nível mais alto, para fora, com a boca de frente para a torre
+  const xBorda = x0 + nx * m;
+  if (espiral) {
+    const lado = cz(kSaida) > 0 || nz === 1 ? 1 : -1;
+    const fechado = estilo === "selva" ? 0 : sorte() < 0.65 ? 1 : 0;
+    const voltas = Math.max(1, Math.round((topo / 1.9) * 4) / 4);
+    P.por("toboga", [arred(xBorda + R + 0.35), 0, arred(cz(kSaida) - lado * R)],
+      { altura: arred(topo), raio: R, voltas, fechado, espelhado: lado < 0 ? 1 : 0 });
+    regras.push(`Tobogã espiral ${fechado ? "de tubo fechado" : "aberto (calha)"} saindo do nível de ${m2(topo)} m, ${m2(voltas)} volta${voltas > 1 ? "s" : ""}, com a área de chegada livre.`);
+  } else {
+    const comp = Math.min(saida - 0.3, Math.max(1.6, topo * 1.9));
+    const fechado = sorte() < 0.4 ? 1 : 0;
+    P.por("escorregador", [xBorda + comp / 2, 0, cz(kSaida)], { comprimento: arred(comp), altura: arred(topo), largura: 0.6, fechado });
+    regras.push(`Escorregador ${fechado ? "de tubo " : ""}de ${m2(comp)} m saindo do nível de ${m2(topo)} m, para fora da estrutura.`);
+  }
+  // a subida: escadinha de espuma nos baixinhos, escada nos altos
+  let iEscada = 0;
+  while (iEscada < nx - 1 && !tem(iEscada, nz - 1, 1)) iEscada++;
+  if (tem(iEscada, nz - 1, 1)) {
+    if (L <= 0.85) {
+      const n = 3;
+      P.por("degraus_espuma", [cx(iEscada), 0, arred(z0 + nz * m + n * 0.15 + 0.02)], { largura: arred(Math.min(0.8, m - 0.2)), altura: arred(L), degraus: n }, 90);
+      regras.push("Subida por degraus de espuma (os pequenos sobem engatinhando).");
+    } else {
+      P.por("escada", [cx(iEscada), 0, arred(z0 + nz * m + L * 0.375)], { altura: L, largura: 0.6, degraus: 4 }, -90);
+    }
+  }
+  // túnel de rede entre dois módulos do mesmo nível
+  const nTunel = Math.min(niveis, 2);
+  for (let i = 0; i < nx - 1; i++) {
+    const k = Math.floor(sorte() * nz);
+    if (tem(i, k, nTunel) && tem(i + 1, k, nTunel)) {
+      P.por("tunel_rede", [x0 + (i + 1) * m, nTunel * L, cz(k)], { comprimento: arred(m * 0.9), diametro: 0.62 });
+      break;
+    }
+  }
+  // rolos entre dois pisos (de passar no meio) e bolas penduradas no alto
+  const usados = new Set();
+  if (niveis >= 2) {
+    for (let tentativa = 0; tentativa < 8; tentativa++) {
+      const i = Math.floor(sorte() * nx), k = Math.floor(sorte() * nz);
+      if (usados.has(i + "," + k) || !tem(i, k, 1) || !tem(i, k, 2)) continue;
+      P.por("rolos", [cx(i), L, cz(k)], { altura: arred(L - 0.07), largura: arred(m * 0.85), quantidade: m >= 1.2 ? 4 : 3 }, sorte() < 0.5 ? 0 : 90);
+      usados.add(i + "," + k);
+      break;
+    }
+  }
+  for (let tentativa = 0; tentativa < 8; tentativa++) {
+    const i = Math.floor(sorte() * nx), k = Math.floor(sorte() * nz);
+    if (usados.has(i + "," + k) || t[i][k] < 1) continue;
+    P.por("pendulos", [cx(i), t[i][k] * L, cz(k)], { largura: arred(m * 0.85), altura: 0.95, quantidade: 3 }, sorte() < 0.5 ? 0 : 90);
+    usados.add(i + "," + k);
+    break;
+  }
+  // a piscina de bolinhas: debaixo da estrutura (ou redonda, na frente, no tema selva)
+  if (redonda) {
+    const r = Math.min(1.4, (D - nz * m) / 2 - 0.25, W * 0.18);
+    P.por("piscina_redonda", [iEscada === nx - 1 ? cx(0) : cx(nx - 1), 0, arred(z0 + nz * m + r + 0.25)], { diametro: arred(r * 2), altura: 0.5 }, 0, pal.madeira);
+    regras.push("Piscina redonda de bolinhas na frente, com borda de madeira.");
+  } else {
+    P.por("piscina", [cx(piscinaI), 0, cz(piscinaK)], { largura: arred(m - 0.08), profundidade: arred(m - 0.08), altura: 0.5 });
+    if (piscinaDebaixo) regras.push("Piscina de bolinhas no chão, debaixo do 2º nível.");
+  }
+  // a colmeia do lado de fora, com a escadinha de espuma até o primeiro hexágono
+  if (colmeia) {
+    const kc = nz - 1;
+    P.por("colmeia", [arred(x0 - colmeia / 2), 0, cz(kc)], { largura: 0.9, altura: arred(Math.min(topo + 0.1, 3 * 0.78 + 0.05)), profundidade: arred(Math.min(0.8, m - 0.2)) });
+    if (D / 2 - (cz(kc) + 0.4) > 0.7) P.por("degraus_espuma", [arred(x0 - colmeia / 2), 0, arred(cz(kc) + 0.4 + 0.3)], { largura: 0.7, altura: 0.4, degraus: 2 }, 90);
+    regras.push("Colmeia de hexágonos empilhados do lado, com degraus de espuma na entrada.");
+  }
+  // o teto das torres mais altas, se o pé-direito deixa: em arco (selva) ou pirâmide
+  const sobra = H - (topo + 1.0);
+  if (sobra >= 0.4) {
+    const arco = estilo === "selva" || sorte() < 0.4;
+    for (let k = 0; k < nz; k++) {
+      if (t[nx - 1][k] !== niveis) continue;
+      if (arco) P.por("teto_arco", [cx(nx - 1), topo + 1.0, cz(k)], { largura: m, profundidade: m, altura: arred(Math.min(0.55, sobra)) }, 0, pal.estrutura);
+      else P.por("telhado", [cx(nx - 1), topo + 1.0, cz(k)], { largura: m, profundidade: m, altura: arred(Math.min(0.7, sobra)) });
+    }
+    regras.push(arco ? "Teto em arco nas torres mais altas." : "Telhado nas torres mais altas (o pé-direito deixa).");
+  }
+  // neon: a fita de LED no alto de cada lado de fora
+  if (estilo === "neon") {
+    let leds = 0;
+    for (let i = 0; i < nx; i++) {
+      for (let k = 0; k < nz; k++) {
+        if (t[i][k] < 1) continue;
+        const y = t[i][k] * L + 1.0 - 0.02;
+        for (const [di, dk, giro] of [[1, 0, 90], [-1, 0, 90], [0, 1, 0], [0, -1, 0]]) {
+          if (alto(i + di, k + dk) >= t[i][k]) continue;
+          P.por("led", [arred(cx(i) + di * m / 2), arred(y), arred(cz(k) + dk * m / 2)], { comprimento: arred(m) }, giro, pal.led);
+          leds++;
+        }
+      }
+    }
+    regras.push(`${leds} fitas de LED contornando o alto da estrutura (o tema neon).`);
+  }
+  return regras;
+}
+
+/* ---------------------------------------------------------------- espaço esportivo kids */
+function esportivo(P, W, D, H, sorte, op) {
+  const regras = [];
+  const faixa = W >= 12 ? Math.min(5, W * 0.28) : 0;
+  const qL = Math.max(6, W - faixa - 0.6), qP = Math.max(4, D - 0.6);
+  const qx = -W / 2 + 0.3 + qL / 2;
+  P.por("quadra", [qx, 0, 0], { largura: arred(qL), profundidade: arred(qP) });
+  const golL = qL >= 14 ? 3 : 2.4, golA = qL >= 14 ? 2 : 1.6;
+  // a trave tem 0,8 m de fundo: o meio dela fica 0,45 m para dentro da linha de fundo
+  P.por("gol", [qx - qL / 2 + 0.45, 0, 0], { largura: golL, altura: golA }, 90);
+  P.por("gol", [qx + qL / 2 - 0.45, 0, 0], { largura: golL, altura: golA }, -90);
+  const aro = H >= 3.6 ? 2.6 : 2.3;
+  P.por("tabela", [qx - qL / 2 + 0.7, 0, -qP / 2 + 0.6], { altura: aro }, 90);
+  P.por("tabela", [qx + qL / 2 - 0.7, 0, qP / 2 - 0.6], { altura: aro }, -90);
+  // a tela de proteção em volta da quadra
+  const telaA = Math.min(3, H - 0.4);
+  P.por("cerca", [qx, 0, -qP / 2], { comprimento: arred(qL), altura: arred(telaA) });
+  P.por("cerca", [qx, 0, qP / 2], { comprimento: arred(qL), altura: arred(telaA) });
+  P.por("cerca", [qx - qL / 2, 0, 0], { comprimento: arred(qP), altura: arred(telaA) }, 90);
+  P.por("cerca", [qx + qL / 2, 0, 0], { comprimento: arred(qP), altura: arred(telaA) }, 90);
+  regras.push(`Quadra de ${m2(qL)} × ${m2(qP)} m com traves de ${m2(golL)} m e tabelas com aro a ${m2(aro)} m (altura de criança).`);
+  if (faixa) {
+    const fx = W / 2 - faixa / 2;
+    const esc = Math.min(H - 0.5, 4);
+    P.por("escalada", [fx, 0, -D / 2 + 0.2], { largura: arred(Math.min(faixa - 0.4, 3)), altura: arred(esc) });
+    P.por("colchao", [fx, 0, -D / 2 + 1.2], { largura: arred(Math.min(faixa - 0.4, 3)), profundidade: 1.6, espessura: 0.3 });
+    const camas = Math.max(1, Math.min(3, Math.floor((D - 3) / 2.6)));
+    for (let i = 0; i < camas; i++) {
+      P.por("cama", [fx, 0, -D / 2 + 3.3 + i * 2.6], { largura: arred(Math.min(faixa - 0.6, 2.4)), profundidade: 2.3, altura: 0.6 });
+    }
+    regras.push(`Faixa de ${m2(faixa)} m: parede de escalada de ${m2(esc)} m com colchão de queda e ${camas} cama${camas > 1 ? "s" : ""} elástica${camas > 1 ? "s" : ""}.`);
+  }
+  return regras;
+}
+
+/* ---------------------------------------------------------------- área ninja */
+function ninja(P, W, D, H, sorte, op) {
+  const regras = [];
+  const alto = Math.min(2.3, H - 0.6);
+  const obstaculos = [
+    ["degraus", 3.5, { comprimento: 3.2, largura: 1.2 }],
+    ["trave", 2.8, { comprimento: 2.5, altura: 0.45 }],
+    ["argolas", 3.2, { comprimento: 3.0, altura: arred(alto), quantidade: 4 }],
+    ["macaco", 3.2, { comprimento: 3.0, altura: arred(alto), largura: 0.6 }],
+    ["corda", 1.8, { altura: arred(Math.min(3, H - 0.4)) }],
+    ["rolos", 2.0, { altura: 1.0, largura: 1.6, quantidade: 4 }],
+  ];
+  // mistura o miolo; a parede curva fecha o circuito
+  for (let i = obstaculos.length - 1; i > 0; i--) {
+    const j = Math.floor(sorte() * (i + 1));
+    [obstaculos[i], obstaculos[j]] = [obstaculos[j], obstaculos[i]];
+  }
+  const raias = D >= 4.5 ? 2 : 1;
+  const raiaZ = raias === 2 ? [-D / 4, D / 4] : [0];
+  const parede = H >= 3 ? 2.2 : 0;
+  let usados = 0;
+  for (let r = 0; r < raias; r++) {
+    const sentido = r === 0 ? 1 : -1;
+    let x = -W / 2 + 0.4;
+    const fim = W / 2 - 0.4 - (r === raias - 1 ? parede + 1.2 : 0);
+    for (; usados < obstaculos.length; usados++) {
+      const [tipo, comp, d] = obstaculos[usados];
+      if (x + comp > fim) break;
+      const meio = x + comp / 2;
+      const xm = sentido > 0 ? meio : -meio;
+      if (tipo !== "trave" && tipo !== "degraus") {
+        P.por("colchao", [xm, 0, raiaZ[r]], { largura: arred(comp - 0.1), profundidade: 1.6, espessura: 0.2 });
+      }
+      P.por(tipo, [xm, tipo === "rolos" ? 0.2 : 0, raiaZ[r]], d, 0);
+      x += comp + 0.3;
+    }
+  }
+  if (parede) {
+    // no fim da última raia, de frente para quem vem correndo (a curva olha para o circuito)
+    const xp = raias === 2 ? -W / 2 + 0.4 + 1.7 : W / 2 - 0.4 - 1.7;
+    P.por("parede_curva", [arred(xp), 0, raiaZ[raias - 1]], { largura: 2.0, altura: arred(Math.min(3, H - 0.6)) }, raias === 2 ? 90 : -90);
+    regras.push("A parede curva fecha o circuito, com plataforma de chegada.");
+  }
+  regras.push(`Circuito em ${raias === 2 ? "ida e volta (duas raias)" : "uma raia"}: ${usados} obstáculos sobre colchões; barras e argolas a ${m2(alto)} m.`);
+  return regras;
+}
+
+/* ---------------------------------------------------------------- trampolim park */
+function trampolim(P, W, D, H, sorte, op) {
+  const regras = [];
+  const lado = 2.5;
+  const espuma = W >= 9 ? 3.2 : 0;
+  const cols = Math.max(1, Math.floor((W - espuma - 0.6) / lado));
+  const linhas = Math.max(1, Math.floor((D - 0.6) / lado));
+  const x0 = -W / 2 + 0.3, z0 = -linhas * lado / 2;
+  for (let i = 0; i < cols; i++) {
+    for (let k = 0; k < linhas; k++) {
+      P.por("cama", [x0 + (i + 0.5) * lado, 0, z0 + (k + 0.5) * lado], { largura: lado - 0.05, profundidade: lado - 0.05, altura: 0.9 });
+    }
+  }
+  regras.push(`${cols * linhas} camas elásticas de ${m2(lado)} m em grade, com moldura acolchoada.`);
+  if (espuma) {
+    const ex = W / 2 - 0.3 - espuma / 2;
+    const ep = Math.min(D - 0.6, 6);
+    P.por("espuma", [ex, 0, 0], { largura: arred(espuma - 0.2), profundidade: arred(ep), altura: 0.9 });
+    regras.push(`Piscina de espuma de ${m2(espuma - 0.2)} × ${m2(ep)} m no fim, com a cama de lançamento antes.`);
+  }
+  if (linhas >= 2 && H >= 3.5) {
+    P.por("tabela", [x0 + 0.4, 0, z0 + lado / 2], { altura: 2.9 }, 90);
+    regras.push("Pista de enterrada: tabela na ponta da fileira de camas.");
+  }
+  const telaA = Math.min(2.2, H - 0.3);
+  P.por("cerca", [0, 0, -D / 2 + 0.15], { comprimento: arred(W - 0.3), altura: telaA });
+  P.por("cerca", [0, 0, D / 2 - 0.15], { comprimento: arred(W - 0.3), altura: telaA });
+  return regras;
+}
+
+/* ---------------------------------------------------------------- espaço baby */
+function baby(P, W, D, H, sorte, op) {
+  const regras = [];
+  P.por("piso_eva", [0, 0, 0], { largura: arred(W - 0.2), profundidade: arred(D - 0.2) }, 0, P.paleta.chao, { cor2: P.paleta.chao2 });
+  const c = 0.6;
+  P.por("cerca", [0, 0, -D / 2 + 0.15], { comprimento: arred(W - 0.4), altura: c });
+  P.por("cerca", [-W / 2 + 0.15, 0, 0], { comprimento: arred(D - 0.4), altura: c }, 90);
+  P.por("cerca", [W / 2 - 0.15, 0, 0], { comprimento: arred(D - 0.4), altura: c }, 90);
+  // a frente: cerca dos lados e o portal no meio
+  const vao = 1.4;
+  const ladoFrente = (W - 0.4 - vao) / 2;
+  P.por("cerca", [-W / 2 + 0.2 + ladoFrente / 2, 0, D / 2 - 0.15], { comprimento: arred(ladoFrente), altura: c });
+  P.por("cerca", [W / 2 - 0.2 - ladoFrente / 2, 0, D / 2 - 0.15], { comprimento: arred(ladoFrente), altura: c });
+  P.por("arco", [0, 0, D / 2 - 0.15], { largura: vao, altura: 2.0 });
+  const pis = Math.min(1.8, W * 0.35);
+  P.por("piscina", [-W / 2 + 0.4 + pis / 2, 0, -D / 2 + 0.4 + pis / 2], { largura: arred(pis), profundidade: arred(pis), altura: 0.4 });
+  P.por("plataforma", [W / 2 - 1.2, 0.4, -D / 2 + 1.0], { largura: 1.2, profundidade: 1.2, espessura: 0.08 });
+  P.por("coluna", [W / 2 - 1.8, 0, -D / 2 + 0.4], { altura: 1.0, diametro: 0.06 });
+  P.por("coluna", [W / 2 - 0.6, 0, -D / 2 + 0.4], { altura: 1.0, diametro: 0.06 });
+  P.por("escorregador", [W / 2 - 1.2, 0, -D / 2 + 2.1], { comprimento: 1.2, altura: 0.45, largura: 0.5 }, -90);
+  P.por("degraus_espuma", [W / 2 - 2.2, 0, -D / 2 + 1.0], { largura: 0.8, altura: 0.4, degraus: 2 }, 0);
+  if (D >= 3.5) P.por("rampa", [-W / 2 + 1.2, 0, D / 2 - 1.2], { comprimento: 1.2, altura: 0.35, largura: 0.9 });
+  if (W >= 4.5) P.por("tunel", [0, 0, -0.2], { comprimento: 1.2, diametro: 0.6 });
+  regras.push("Tudo baixo: plataforma a 0,40 m, escorregador pequeno, piscina rasa (0,40 m) e cerca de 0,60 m.");
+  regras.push("Piso de EVA no espaço todo e portal na entrada.");
+  return regras;
+}
+
+const MONTADORES = { brinquedao, esportivo, ninja, trampolim, baby };
+
+/**
+ * Monta a ideia: { pecas: [...], resumo: ["12 colunas", ...], regras: [...], titulo }.
+ * `medidas`: { largura, profundidade, altura } do espaço (m). `semente`: muda a ideia.
+ * `opcoes`: { estilo: "colorido" | "neon" | "selva", aprendido: { modulo, nivel } }.
+ */
+export function gerar(tipo, medidas, cor, semente = 1, opcoes = {}) {
+  if (!MONTADORES[tipo]) tipo = "brinquedao";
+  const montar = MONTADORES[tipo];
+  const W = Math.max(2.5, Math.min(60, Number(medidas.largura) || PROJETOS[tipo].medidas.largura));
+  const D = Math.max(2, Math.min(40, Number(medidas.profundidade) || PROJETOS[tipo].medidas.profundidade));
+  const H = Math.max(2, Math.min(12, Number(medidas.altura) || PROJETOS[tipo].medidas.altura));
+  const estilo = ESTILOS[opcoes.estilo] ? opcoes.estilo : "colorido";
+  const paleta = paletaDaCor(cor, estilo);
+  const P = new Projeto(paleta);
+  const regras = montar(P, W, D, H, sorteio(semente * 2654435761), { estilo, aprendido: opcoes.aprendido || {} });
+  return {
+    pecas: P.pecas,
+    resumo: resumoDe(P.contagem),
+    regras,
+    titulo: `${PROJETOS[tipo] ? PROJETOS[tipo].nome : "Projeto"} ${m2(W)} × ${m2(D)} m`,
+  };
+}

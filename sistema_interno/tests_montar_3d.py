@@ -20,7 +20,7 @@ from core.models import MontagemTresD
 from core.tests_objetos_3d import caixa, glb
 
 from .utils import PALAVRA_CONFIRMACAO_EXCLUSAO
-from .views_montar_3d import limpar_pecas, mais_usadas
+from .views_montar_3d import aprendido_das_montagens, limpar_pecas, mais_usadas
 
 HOST = "interno.testserver"
 
@@ -86,6 +86,44 @@ class MontarTests(TestCase):
         self.assertEqual(limpas[1]["d"], {"altura": 0.01})
         self.assertEqual(limpas[2], {"tipo": "modulo", "p": [1.0, 0.0, 1.0], "r": 0.0, "ref": 7, "s": 2.0})
         self.assertNotIn("cor", limpas[3])
+
+    def test_pecas_novas_e_medidas_especiais(self):
+        limpas = limpar_pecas(json.dumps([
+            {"tipo": "toboga", "p": [0, 0, 0], "d": {"altura": 2.5, "raio": 1, "voltas": 99, "fechado": 7, "espelhado": "x"}},
+            {"tipo": "rolos", "d": {"altura": 0.8, "largura": 0.95, "quantidade": 3.6}},
+            {"tipo": "plataforma", "d": {"largura": 1.0}, "cor": "#FF0000", "cor2": "#00FF00"},
+            {"tipo": "coluna", "d": {"altura": 3}, "cor2": "#00ff00"},              # coluna não tem segunda cor
+            {"tipo": "rede", "d": {"largura": 1, "altura": 1}, "cor2": "url(x)"},    # cor inválida: sai
+            {"tipo": "objeto", "ref": 4, "tema": "#22C55E"},
+            {"tipo": "parede_curva", "d": {"largura": 2, "altura": 3}},
+            {"tipo": "led", "d": {"comprimento": 1.05}},
+        ]))
+        self.assertEqual(limpas[0]["d"], {"altura": 2.5, "raio": 1.0, "voltas": 6.0, "fechado": 1, "espelhado": 0})
+        self.assertEqual(limpas[1]["d"]["quantidade"], 4)
+        self.assertEqual(limpas[2]["cor2"], "#00ff00")
+        self.assertNotIn("cor2", limpas[3])
+        self.assertNotIn("cor2", limpas[4])
+        self.assertEqual(limpas[5]["tema"], "#22c55e")
+        self.assertEqual([p["tipo"] for p in limpas[6:]], ["parede_curva", "led"])
+
+    def test_o_projetista_aprende_o_modulo_e_os_pisos(self):
+        def torre(x, largura=1.01, passo=0.9):
+            return [{"tipo": "plataforma", "p": [x, n * passo - 0.05, 0], "d": {"largura": largura, "profundidade": largura, "espessura": 0.05}}
+                    for n in (1, 2, 3)]
+        self.assertEqual(aprendido_das_montagens(), {"vezes": 0})
+        for nome in ("A", "B"):
+            MontagemTresD.objects.create(nome=nome, pecas=torre(0) + torre(1.05))
+        self.assertNotIn("modulo", aprendido_das_montagens())  # duas montagens ainda não ensinam
+        MontagemTresD.objects.create(nome="C", pecas=torre(0, 1.21, 0.8))
+        aprendido = aprendido_das_montagens()
+        self.assertEqual(aprendido["vezes"], 3)
+        self.assertEqual(aprendido["modulo"], 1.05)
+        self.assertEqual(aprendido["nivel"], 0.9)
+        self.client.force_login(self.super)
+        tela = self.client.get("/site/objetos-3d/montar/", HTTP_HOST=HOST)
+        self.assertContains(tela, '"modulo": 1.05')
+        self.assertContains(tela, "montar3d-gerador.js")
+        self.assertContains(tela, 'id="modalGerar"')
 
     def test_mais_usadas_aprende_pelo_uso(self):
         MontagemTresD.objects.create(nome="A", pecas=[coluna(0), coluna(1), coluna(2, 2.0)])

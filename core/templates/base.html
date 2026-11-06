@@ -89,6 +89,15 @@
   {% endcomment %}
   <script type="speculationrules">
   {
+    "prerender": [{
+      "source": "document",
+      "where": {"and": [
+        {"href_matches": ["/", "/loja/", "/brinquedos/", "/brinquedo/*", "/pecas-reposicao/", "/arena/", "/jogos/",
+                          "/eventos/", "/projetos/", "/categoria/*", "/combo/*"]},
+        {"not": {"selector_matches": "[data-no-prefetch], [download], [target=_blank]"}}
+      ]},
+      "eagerness": "moderate"
+    }],
     "prefetch": [{
       "source": "document",
       "where": {"and": [

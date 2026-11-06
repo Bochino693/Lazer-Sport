@@ -275,7 +275,7 @@
 
     <a class="ls-brand" href="{% url 'home_inner' %}">
       <span class="ls-brand-logo">
-        <img src="{% static 'images/logoofi.png' %}" alt="Lazer & Sport" decoding="async" fetchpriority="high">
+        <img src="{% static 'images/logoofi-192.webp' %}" alt="Lazer & Sport" decoding="async" fetchpriority="high">
       </span>
       <span class="ls-brand-text">
         <strong>Lazer & Sport</strong>
@@ -476,17 +476,20 @@
 
       {% if permissoes_interno.usuarios %}
       {% comment %}
-        LAZER & SPORT GAMES. O simulador e o 3D são a parte da casa que
-        mais aparece: ganham o próprio bloco no menu, com a cara da arena,
-        em vez de se perderem no meio da administração.
+        LAZER & SPORT GAMES. Os jogos do portal e o 3D são a parte da casa
+        que mais aparece: ganham o próprio bloco no menu, com a cara da
+        arena -- cada item com o nome e, embaixo, o que tem dentro.
       {% endcomment %}
       <div class="ls-nav-section ls-nav-section--games">
         <span class="ls-nav-caption"><i class="bi bi-stars"></i> Lazer &amp; Sport Games</span>
-        <a data-titulo="Jogos do simulador" aria-label="Jogos do simulador" class="ls-nav-item {% if request.resolver_match.url_name == 'jogos_inner' %}active{% endif %}" href="{% url 'jogos_inner' %}">
-          <span class="ls-nav-icon"><i class="bi bi-joystick"></i></span><span>Jogos do simulador</span><span class="ls-nav-tag">Arena</span>
+        <a data-titulo="Jogos do portal" aria-label="Jogos do portal" class="ls-nav-item ls-nav-item--jogos {% if request.resolver_match.url_name == 'jogos_inner' %}active{% endif %}" href="{% url 'jogos_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-controller"></i></span><span class="ls-nav-texto"><strong>Jogos</strong><small>portal · APK · Windows</small></span>
         </a>
-        <a data-titulo="Objetos 3D e Laboratório" aria-label="Objetos 3D e Laboratório" class="ls-nav-item {% if request.resolver_match.url_name == 'objetos_3d_inner' %}active{% endif %}" href="{% url 'objetos_3d_inner' %}">
-          <span class="ls-nav-icon"><i class="bi bi-box"></i></span><span>Objetos 3D &amp; Laboratório</span><span class="ls-nav-tag">3D</span>
+        <a data-titulo="Objetos 3D" aria-label="Objetos 3D" class="ls-nav-item ls-nav-item--3d {% if request.resolver_match.url_name == 'objetos_3d_inner' %}active{% endif %}" href="{% url 'objetos_3d_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-box"></i></span><span class="ls-nav-texto"><strong>Objetos 3D</strong><small>brinquedos · projetos · fotos</small></span>
+        </a>
+        <a data-titulo="Montar em 3D" aria-label="Montar em 3D" class="ls-nav-item ls-nav-item--montar {% if request.resolver_match.url_name == 'montar_3d_inner' %}active{% endif %}" href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true">
+          <span class="ls-nav-icon"><i class="bi bi-bricks"></i></span><span class="ls-nav-texto"><strong>Montar em 3D</strong><small>projetista · 38 peças</small></span>
         </a>
       </div>
       {% endif %}

@@ -82,8 +82,10 @@ class PainelExeTests(BaseApk):
         resposta = self.client.get(self.url, HTTP_HOST=HOST)
         self.assertEqual(resposta.status_code, 200, getattr(resposta, "content", b"")[:300])
         self.assertIn('filename="disco-teste.exe"', resposta["Content-Disposition"])
-        _casca, pacote = abrir_exe(b"".join(resposta.streaming_content))
+        conteudo = b"".join(resposta.streaming_content)
+        _casca, pacote = abrir_exe(conteudo)
         self.assertIn("index.html", pacote.namelist())
+        self.assertEqual(int(resposta["X-Tamanho-Arquivo"]), len(conteudo))
 
     def test_guardar_como_versao_para_computador(self):
         self.client.force_login(self.chefe)

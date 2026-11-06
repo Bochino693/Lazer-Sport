@@ -81,3 +81,6 @@ for _host_de_teste in ("testserver", "interno.testserver", ".testserver"):
 GEOIP_ATIVO = False
 TURNSTILE_SITE_KEY = ""
 TURNSTILE_SECRET_KEY = ""
+
+# o aquecimento do cache (core/aquecer.py) nunca roda nos testes
+AQUECER_CACHE = False

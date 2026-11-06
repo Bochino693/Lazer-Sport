@@ -3,10 +3,18 @@
 O passo 2 do laboratório (Objetos 3D > Laboratório). Uma planta com grade, em
 metros, onde se põem:
 
-  * as peças que se desenham sozinhas na medida pedida -- coluna, barra,
-    plataforma, painel, rede, escorregador, escada, túnel, cama elástica,
-    piscina de bolinhas, cerca, telhado (o desenho é do navegador:
-    sistema_interno/static/interno/montar3d.js);
+  * as peças que se desenham sozinhas na medida pedida -- da estrutura
+    (coluna, barra, plataforma, painéis, rede, cerca, telhados, piso de
+    EVA, LED), das brincadeiras (escorregador, tobogã espiral, túneis,
+    rolos, colmeia, bolas penduradas, piscinas, camas, espuma, rampa,
+    degraus, portal) e do esporte e da área ninja (quadra, gol, tabela,
+    escalada, colchão, degraus ninja, trave, argolas, barra de macaco,
+    corda, parede curva) -- o desenho é do navegador
+    (sistema_interno/static/interno/montar3d.js e montar3d-pecas.js);
+  * o PROJETISTA monta sozinho um brinquedão, um espaço esportivo, uma
+    área ninja, um trampolim park ou um espaço baby pela medida, pelo
+    estilo e pela cor raiz (montar3d-gerador.js); a cor-tema pinta a
+    montagem inteira, inclusive os objetos .glb;
   * as peças guardadas no laboratório (ModuloTresD, .glb);
   * os objetos 3D que já existem: os dos brinquedos e os dos projetos.
 
@@ -53,21 +61,61 @@ from .views_objetos_3d import TETO_DO_ARQUIVO_3D, _medidas_texto, _titulo_e_text
 
 log = logging.getLogger("sistema_interno.montar_3d")
 
-#: As peças que o navegador desenha, e as medidas de cada uma (em metros).
+#: As peças que o navegador desenha, e as medidas de cada uma (o desenho é do montar3d.js e do
+#: montar3d-pecas.js). As medidas são em metros, menos as de MEDIDAS_ESPECIAIS.
 PARAMETRICAS = {
+    # estrutura
     "coluna": ("altura", "diametro"),
     "barra": ("comprimento", "diametro"),
     "plataforma": ("largura", "profundidade", "espessura"),
     "painel": ("largura", "altura", "espessura"),
+    "janela": ("largura", "altura", "espessura"),
+    "abaco": ("largura", "altura"),
     "rede": ("largura", "altura"),
-    "escorregador": ("comprimento", "altura", "largura"),
-    "escada": ("altura", "largura", "degraus"),
-    "tunel": ("comprimento", "diametro"),
-    "cama": ("largura", "profundidade", "altura"),
-    "piscina": ("largura", "profundidade", "altura"),
     "cerca": ("comprimento", "altura"),
     "telhado": ("largura", "profundidade", "altura"),
+    "teto_arco": ("largura", "profundidade", "altura"),
+    "piso_eva": ("largura", "profundidade"),
+    "led": ("comprimento",),
+    # brincadeiras
+    "escorregador": ("comprimento", "altura", "largura", "fechado"),
+    "toboga": ("altura", "raio", "voltas", "fechado", "espelhado"),
+    "escada": ("altura", "largura", "degraus"),
+    "tunel": ("comprimento", "diametro"),
+    "tunel_rede": ("comprimento", "diametro"),
+    "rolos": ("altura", "largura", "quantidade"),
+    "colmeia": ("largura", "altura", "profundidade"),
+    "pendulos": ("largura", "altura", "quantidade"),
+    "cama": ("largura", "profundidade", "altura"),
+    "piscina": ("largura", "profundidade", "altura"),
+    "piscina_redonda": ("diametro", "altura"),
+    "espuma": ("largura", "profundidade", "altura"),
+    "rampa": ("comprimento", "altura", "largura"),
+    "degraus_espuma": ("largura", "altura", "degraus"),
+    "arco": ("largura", "altura"),
+    # esporte e ninja
+    "quadra": ("largura", "profundidade"),
+    "gol": ("largura", "altura"),
+    "tabela": ("altura",),
+    "escalada": ("largura", "altura"),
+    "colchao": ("largura", "profundidade", "espessura"),
+    "degraus": ("comprimento", "largura"),
+    "trave": ("comprimento", "altura"),
+    "argolas": ("comprimento", "altura", "quantidade"),
+    "macaco": ("comprimento", "altura", "largura"),
+    "corda": ("altura",),
+    "parede_curva": ("largura", "altura"),
 }
+#: As medidas que não são metros: (menor, maior, inteiro?).
+MEDIDAS_ESPECIAIS = {
+    "degraus": (1, 60, True),
+    "quantidade": (1, 60, True),
+    "voltas": (0.25, 6, False),
+    "fechado": (0, 1, True),
+    "espelhado": (0, 1, True),
+}
+#: As que aceitam a segunda cor (a diagonal das plataformas, o xadrez do EVA, a moldura da rede).
+COM_COR2 = {"plataforma", "piso_eva", "rede"}
 #: As que vêm de um .glb: a peça do laboratório, o objeto do brinquedo, o do projeto.
 DE_ARQUIVO = ("modulo", "objeto", "projeto")
 MAXIMO_DE_PECAS = 3000
@@ -81,6 +129,19 @@ def _numero(valor, menor, maior, padrao=None):
     if math.isnan(numero) or math.isinf(numero):
         return padrao
     return min(maior, max(menor, numero))
+
+
+def _cor(valor):
+    cor = str(valor or "")
+    if len(cor) == 7 and cor.startswith("#") and all(c in "0123456789abcdefABCDEF" for c in cor[1:]):
+        return cor.lower()
+    return ""
+
+
+def _medida(chave, valor):
+    menor, maior, inteiro = MEDIDAS_ESPECIAIS.get(chave, (0.01, 100, False))
+    numero = _numero(valor, menor, maior, menor if chave in ("fechado", "espelhado") else max(menor, 1.0))
+    return int(round(numero)) if inteiro else round(numero, 4)
 
 
 def limpar_pecas(bruto):
@@ -108,15 +169,16 @@ def limpar_pecas(bruto):
             "p": [round(_numero(v, -500, 500, 0.0), 4) for v in p],
             "r": round(_numero(peca.get("r"), -360, 360, 0.0), 3),
         }
-        cor = str(peca.get("cor") or "")
-        if len(cor) == 7 and cor.startswith("#") and all(c in "0123456789abcdefABCDEF" for c in cor[1:]):
-            limpa["cor"] = cor.lower()
+        cor = _cor(peca.get("cor"))
+        if cor:
+            limpa["cor"] = cor
         if tipo in PARAMETRICAS:
             medidas = peca.get("d") if isinstance(peca.get("d"), dict) else {}
-            limpa["d"] = {
-                chave: round(_numero(medidas.get(chave), 1 if chave == "degraus" else 0.01, 60 if chave == "degraus" else 100, 1.0), 4)
-                for chave in PARAMETRICAS[tipo] if medidas.get(chave) is not None
-            }
+            limpa["d"] = {chave: _medida(chave, medidas.get(chave))
+                          for chave in PARAMETRICAS[tipo] if medidas.get(chave) is not None}
+            cor2 = _cor(peca.get("cor2")) if tipo in COM_COR2 else ""
+            if cor2:
+                limpa["cor2"] = cor2
         else:
             ref = peca.get("ref")
             if not str(ref).isdigit():
@@ -125,8 +187,46 @@ def limpar_pecas(bruto):
             escala = _numero(peca.get("s"), 0.05, 20, 1.0)
             if escala != 1.0:
                 limpa["s"] = round(escala, 4)
+            tema = _cor(peca.get("tema"))
+            if tema:
+                limpa["tema"] = tema
         limpas.append(limpa)
     return limpas
+
+
+def aprendido_das_montagens(minimo=3):
+    """O que o projetista aprende com as montagens guardadas: o módulo e a distância entre os pisos.
+
+    O módulo é a largura de plataforma que mais se repete (arredondada a 5 cm); a distância entre
+    os pisos é o degrau de altura mais comum entre plataformas empilhadas no mesmo lugar. Só vale
+    com `minimo` montagens guardadas -- antes disso o projetista usa as medidas das fábricas.
+    """
+    modulos, niveis, quantas = Counter(), Counter(), 0
+    for pecas in MontagemTresD.objects.filter(ativo=True).values_list("pecas", flat=True)[:300]:
+        plataformas = [p for p in (pecas or []) if p.get("tipo") == "plataforma" and isinstance(p.get("d"), dict)]
+        if not plataformas:
+            continue
+        quantas += 1
+        alturas_por_lugar = {}
+        for p in plataformas:
+            largura = p["d"].get("largura")
+            if isinstance(largura, (int, float)) and 0.8 <= largura <= 1.7:
+                modulos[round(round((largura + 0.04) * 20) / 20, 2)] += 1
+            x, y, z = (p.get("p") or [0, 0, 0])[:3]
+            alturas_por_lugar.setdefault((round(x, 1), round(z, 1)), []).append(y)
+        for alturas in alturas_por_lugar.values():
+            alturas.sort()
+            for de, ate in zip(alturas, alturas[1:]):
+                if 0.6 <= ate - de <= 1.4:
+                    niveis[round(round((ate - de) * 20) / 20, 2)] += 1
+    if quantas < minimo:
+        return {"vezes": quantas}
+    saida = {"vezes": quantas}
+    if modulos:
+        saida["modulo"] = modulos.most_common(1)[0][0]
+    if niveis:
+        saida["nivel"] = niveis.most_common(1)[0][0]
+    return saida
 
 
 def mais_usadas(quantas=10):
@@ -203,6 +303,7 @@ class MontarTresDView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View)
                 "brinquedos": brinquedos,
                 "projetos": projetos_lista,
                 "tipos": {tipo: list(medidas) for tipo, medidas in PARAMETRICAS.items()},
+                "aprendido": aprendido_das_montagens(),
             },
             "categorias_modulo": ModuloTresD.Categoria.choices,
         })

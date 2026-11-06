@@ -113,6 +113,10 @@ def invalidate_public_catalog_caches():
     invalidate_home_cache()
     invalidate_catalog_cache()
     cache.delete(ADMIN_CATALOG_VERSION_KEY)
+    # o próximo visitante não paga a reconstrução: o servidor aquece sozinho
+    from .aquecer import agendar
+
+    agendar(motivo="catálogo mudou")
 
 
 def versao_do_catalogo():

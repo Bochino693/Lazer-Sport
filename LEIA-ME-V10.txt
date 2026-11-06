@@ -1009,10 +1009,21 @@ Dependência nova: rjsmin (requirements.txt).
    Painel > Objetos 3D > "Montar em 3D" (/site/objetos-3d/montar/). É o passo
    2 do Laboratório: montar o brinquedão ou o espaço peça por peça, numa
    planta em metros, com grade.
-   AS PEÇAS (à esquerda):
-     * Peças: desenhadas na medida que você pedir -- coluna, barra,
-       plataforma, painel, rede, escorregador, escada, túnel, cama elástica,
-       piscina de bolinhas (com as bolinhas), cerca/tela e telhado.
+   AS PEÇAS (à esquerda, com busca):
+     * Peças: desenhadas na medida que você pedir, em três grupos (38):
+       ESTRUTURA -- coluna, barra, plataforma (lisa ou de duas cores na
+       diagonal), painel, painel com janela redonda, painel ábaco, rede
+       (com a moldura na cor da estrutura), cerca/tela, telhado, teto em
+       arco, piso de EVA (xadrez ou liso, como grama) e fita de LED;
+       BRINCADEIRAS -- escorregador (aberto ou de tubo), tobogã espiral
+       (tubo fechado ou calha, voltas e lado), escada, túnel, túnel de
+       rede, rolos de espuma, colmeia de hexágonos, bolas penduradas, cama
+       elástica, piscina de bolinhas (quadrada ou redonda), piscina de
+       espuma, rampa e degraus de espuma, portal;
+       ESPORTE E NINJA -- quadra com as linhas, trave de gol, tabela de
+       basquete, parede de escalada com agarras, colchão, degraus ninja,
+       trave de equilíbrio, argolas, barra de macaco, corda de subir e
+       parede curva.
      * Guardadas: as peças do laboratório (.glb).
      * Objetos: os objetos 3D dos brinquedos e dos projetos, para montar um
        espaço inteiro com eles.
@@ -1036,11 +1047,50 @@ Dependência nova: rjsmin (requirements.txt).
    o que se vê é o que vai). "USAR EM…" grava o .glb num ou vários
    brinquedos e/ou num projeto (a ficha do projeto ganha "Ver em 3D");
    ".glb" baixa o arquivo para o computador.
-   A BIBLIOTECA APRENDE de dois jeitos: pelos ARQUIVOS (as peças que se
+   O PROJETISTA (botão "Projetista"): monta sozinho pela MEDIDA do espaço,
+   pelo ESTILO e por uma COR RAIZ -- brinquedão, espaço esportivo kids, área
+   ninja, trampolim park ou espaço baby. Não é um robô de conversa: são as
+   regras do ramo, tiradas dos catálogos que vocês mostraram (Nogueira,
+   Brinquedão & Diversão e Kid Play; só o padrão, nenhum desenho copiado):
+   módulos de ~1,05 m; pisos a cada 0,80 m (pé-direito até 3,2 m), 0,85 m
+   ou 1,0 m; rede de 1,0 m em todo lado alto aberto, janela redonda na
+   frente e ábaco nos lados; pisos de duas cores na diagonal; tobogã
+   espiral (quase sempre de tubo) saindo do nível mais alto com a boca de
+   frente para a torre; piscina de bolinhas no chão, debaixo do 2º nível;
+   rolos entre dois pisos; bolas penduradas no alto; túnel de rede entre
+   torres; colmeia empilhada do lado com degraus de espuma; subida por
+   degraus de espuma nos baixinhos; telhado ou teto em arco. Os estilos:
+   Colorido, Neon (estrutura cinza, piso escuro, LED na cor raiz) e Selva
+   (madeira, grama, teto em arco, tobogã aberto, piscina redonda). Cada
+   ideia mostra o que entrou e as regras que seguiu; "Outra ideia" sorteia
+   outra; "Ajustar" volta à janela. Ela troca a montagem da tela (Ctrl+Z
+   desfaz). É RASCUNHO para conversar com o cliente: o projeto final segue
+   a ABNT NBR 16071 e a engenharia da fábrica.
+   COR-TEMA (botão na barra do 3D): pinta a montagem INTEIRA numa cor raiz
+   -- a estrutura na cor, pisos e painéis nas vizinhas, o tobogã no
+   destaque, as redes no escuro -- e os objetos .glb (brinquedos, projetos,
+   peças guardadas) trocam as cores do desenho pelas famílias de cor, como
+   nas paletas da Arena. Uma peça escolhida também muda de cor sozinha
+   ("outra cor" abre qualquer cor; "Cores de fábrica" volta ao original
+   dos .glb).
+   O APP: o Montar em 3D ocupa a janela inteira (como o launcher dos
+   jogos), sem a página rolando atrás; cada painel rola por dentro. Em
+   cima do 3D: 3D, Frente, Lado e Planta (com transição, já enquadrando
+   tudo), girar 45°, aproximar, afastar e Ver tudo; "tela cheia" no topo.
+   No celular, o 3D fica na tela toda e as abas de baixo abrem a gaveta
+   das Peças, da Peça escolhida e o Projetista (tocar de novo recolhe; ao
+   pôr uma peça a gaveta desce). No tablet, a peça escolhida flutua sobre
+   o 3D.
+   A BIBLIOTECA APRENDE de três jeitos: pelos ARQUIVOS (as peças que se
    repetem viram peças guardadas) e pelo USO (as medidas que mais aparecem
    nas montagens guardadas viram atalhos no topo: "Coluna 3,50 m -- usada
-   24 vezes"). Quanto mais objetos e montagens entram, mais pronta ela fica.
-   Código: sistema_interno/views_montar_3d.py, static/interno/montar3d.js,
+   24 vezes") e pelo PROJETISTA (com 3 montagens guardadas ou mais, o
+   módulo e a distância entre os pisos que mais aparecem nelas viram o
+   padrão do brinquedão que ele monta -- a janela avisa o que aprendeu).
+   Quanto mais objetos e montagens entram, mais pronta ela fica.
+   Código: sistema_interno/views_montar_3d.py, static/interno/montar3d.js
+   (o editor), montar3d-pecas.js (as peças novas), montar3d-gerador.js (o
+   projetista e as paletas), core/static/site/arena/cores3d.js (vestirObjeto),
    core/conversor_3d.pecas_que_se_repetem; tabela core.MontagemTresD
    (migração 0138). O three.js ganhou o exportador de .glb e as alças de
    mover/girar, da mesma versão (core/static/vendor/three/).
@@ -1070,3 +1120,35 @@ Dependência nova: rjsmin (requirements.txt).
    Drive/Master System/Game Gear/Sega CD, 32X, fliperama) servem para uso
    particular: o painel avisa junto do botão. Vender ou distribuir esses
    programas, ou qualquer jogo sem os direitos, não é permitido.
+
+41) CONTROLE DE XBOX EM TUDO, VELOCIDADE E JOGOS DE VÁRIOS DISCOS
+   O CONTROLE (Xbox, PlayStation, 8BitDo, genéricos -- pela posição dos
+   botões): o ANALÓGICO ESQUERDO anda igual à cruz em todo jogo (o Crash
+   do PlayStation, os de Super Nintendo, Mega Drive, GBA... só leem a
+   cruz). Aperta passando da metade, solta abaixo de 35% (sem pisca-
+   pisca), faz diagonal e nunca solta uma seta que a cruz está segurando.
+   No N64 e no PSP o analógico já é o do próprio console. Na tela do
+   Jogar: A (ou Menu) continua de onde parou, Y começa do início. Jogando:
+   SEGURAR View + Menu pausa e abre os Comandos; B fecha e volta ao jogo;
+   Y, com os Comandos abertos, troca o disco.
+   A VELOCIDADE: o Automático (Imagem > Gráficos) desce em degraus quando
+   o aparelho não dá conta por 3 s: 1) HD com menos pixels (o mesmo
+   filtro); 2) o núcleo pula o desenho de um quadro quando atrasa (o jogo
+   fica na velocidade certa e a imagem continua HD -- é o que salva no
+   PlayStation, que no navegador roda sem o recompilador); 3) só então o
+   Leve. Os bytes do jogo vão para a pasta do emulador SEM CÓPIA (antes
+   um disco de 600 MB ocupava 1,2 GB na hora de abrir).
+   VÁRIOS DISCOS (Valkyrie Profile, Final Fantasy...): o jogo começa só
+   com o disco 1 (metade da espera e da memória); os outros baixam com o
+   jogo rodando e entram na pasta do emulador antes de o jogo pedir.
+   "Trocar de disco" fica nos Comandos: troca na hora quando o núcleo
+   deixa; senão guarda o cartão de memória e o console religa já no disco
+   pedido (é só carregar o jogo salvo do cartão). O aparelho lembra em que
+   disco a pessoa está. Envie UMA versão só (ex.: Disc 1 e Disc 2 da mesma
+   versão, com os .cue): o painel monta a lista dos discos.
+   Jogo de 3DS (.3ds/.cia) não roda em site: não existe emulador de 3DS
+   para navegador (o painel explica ao recusar).
+   Código: core/static/site/paginas/jogo-emulador.js (analogicoNaCruz,
+   atalhoDoControle, PULAR_QUADROS, pastaSemCopia, separarDiscos,
+   trocarDisco), core/views_jogos.config_do_emulador ("disco" de cada
+   arquivo), core/templates/jogo_emulador.html (o bloco do disco).
