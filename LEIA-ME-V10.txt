@@ -901,3 +901,24 @@ Dependência nova: rjsmin (requirements.txt).
        projeto já escrito.
      * No celular, a ficha ocupa a tela: fotos em cima, texto embaixo.
    Os cartões mostram o começo da descrição, sem emojis.
+
+36) AS CORES DOS OBJETOS 3D (BRINQUEDÕES, ESPAÇOS ESPORTIVOS E MÁQUINAS)
+   Antes, cada "cor" girava o matiz do objeto inteiro: o azul virava amarelo,
+   o verde virava roxo, a arte dos adesivos saía trocada -- combinações sem pé
+   nem cabeça. Agora são PALETAS MONTADAS (core/static/site/arena/cores3d.js):
+     Arco-íris  estrutura azul royal, painéis amarelo, vermelho e verde
+     Oceano     azul profundo, turquesa, coral e areia
+     Selva      verde mata, amarelo sol, laranja e madeira
+     Doce       estrutura rosa, lilás, azul bebê e amarelo
+     Esporte    grafite com vermelho, amarelo e azul marinho
+     Neon       roxo elétrico com verde, rosa e ciano neon
+   Como funciona: cada FAMÍLIA de cor do desenho original (os verdes, os
+   amarelos, os laranjas, os azuis...) ganha a sua cor na paleta. O que era de
+   cores diferentes continua diferente, o tom escuro continua mais escuro
+   (contornos), e o neutro fica como está: branco, preto, cinza, a madeira das
+   colunas, as cordas, as letras e contornos dos ADESIVOS (a arte troca de
+   cores pixel a pixel sem perder os brancos e pretos), o piso do salão e as
+   camas elásticas. O arquivo que já trouxer as suas variações de cor (feitas
+   no programa de 3D) continua usando as dele.
+   Os botões mostram a roda com as 4 cores de cada paleta, com o rótulo
+   "CORES" e o ícone da paleta.

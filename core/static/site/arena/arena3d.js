@@ -2010,8 +2010,13 @@ class Arena {
     if (vez !== this.vezDasCores || this.selecionada !== m) return;
     const cores = modulo.coresDoObjeto(m.gltf);
     if (cores.length < 2) return;
+    // o rótulo com o ícone da paleta: "Cores do brinquedo"
     const rotulo = document.createElement("span");
-    rotulo.textContent = "Cores:";
+    rotulo.className = "arena3d-cores-rotulo";
+    const iconePaleta = document.createElement("i");
+    iconePaleta.className = "fa-solid fa-palette";
+    iconePaleta.setAttribute("aria-hidden", "true");
+    rotulo.append(iconePaleta, document.createTextNode(" Cores"));
     const botoes = cores.map((cor, i) => {
       const botao = document.createElement("button");
       botao.type = "button";
