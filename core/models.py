@@ -2616,3 +2616,46 @@ class ModuloTresD(Prime):
             return self.arquivo.url if self.arquivo else ""
         except Exception:
             return ""
+
+
+class MontagemTresD(Prime):
+    """Uma MONTAGEM: um brinquedão ou espaço montado peça por peça no painel, como num CAD.
+
+    O laboratório (Objetos 3D > Montar) põe as peças numa planta com grade:
+    as que se desenham sozinhas na medida pedida (coluna, barra, plataforma,
+    painel, rede, escorregador, escada, túnel, cama elástica, piscina de
+    bolinhas, cerca, telhado), as peças guardadas (ModuloTresD) e os objetos
+    3D que já existem (dos brinquedos e dos projetos). `pecas` guarda cada
+    uma -- o tipo, a referência, a posição, o giro, as medidas e a cor -- e
+    `arquivo`, o .glb da montagem inteira, exportado do próprio desenho.
+
+    A biblioteca APRENDE: as medidas mais usadas nas montagens viram atalhos
+    ("Coluna 3,50 m, usada 24 vezes"), e as peças que se repetem num arquivo
+    3D da fábrica (.3ds, .dae, .obj) podem ser guardadas como peças novas
+    (core/conversor_3d.pecas_que_se_repetem).
+    """
+
+    nome = models.CharField(max_length=120, verbose_name="Nome da montagem")
+    descricao = models.TextField(blank=True, verbose_name="Descrição")
+    pecas = models.JSONField(default=list, blank=True, verbose_name="Peças")
+    medidas = models.JSONField(default=list, blank=True, verbose_name="Medidas (altura, largura, profundidade)")
+    arquivo = models.FileField(upload_to="objetos_3d/montagens/", storage=_armazenamento_3d, blank=True,
+                               verbose_name="Arquivo 3D (.glb)")
+    projeto = models.ForeignKey(BrinquedosProjeto, null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="montagens", verbose_name="Projeto")
+    feito_por = models.CharField(max_length=150, blank=True)
+
+    class Meta:
+        verbose_name = "Montagem 3D"
+        verbose_name_plural = "Montagens 3D"
+        ordering = ["-atualizado", "-id"]
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def url(self):
+        try:
+            return self.arquivo.url if self.arquivo else ""
+        except Exception:  # noqa: BLE001
+            return ""

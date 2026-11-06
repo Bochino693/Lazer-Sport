@@ -1004,3 +1004,43 @@ Dependência nova: rjsmin (requirements.txt).
    controle" > Direcional: Analógico | Cruz. A troca é na hora, no lugar e no
    tamanho que a pessoa deixou, e fica guardada no aparelho. O PSP continua com
    o analógico de verdade (com força, não só as setas).
+
+39) MONTAR EM 3D, COMO NUM CAD (A BIBLIOTECA QUE APRENDE)
+   Painel > Objetos 3D > "Montar em 3D" (/site/objetos-3d/montar/). É o passo
+   2 do Laboratório: montar o brinquedão ou o espaço peça por peça, numa
+   planta em metros, com grade.
+   AS PEÇAS (à esquerda):
+     * Peças: desenhadas na medida que você pedir -- coluna, barra,
+       plataforma, painel, rede, escorregador, escada, túnel, cama elástica,
+       piscina de bolinhas (com as bolinhas), cerca/tela e telhado.
+     * Guardadas: as peças do laboratório (.glb).
+     * Objetos: os objetos 3D dos brinquedos e dos projetos, para montar um
+       espaço inteiro com eles.
+     * Aprender: mande o .3ds/.dae/.kmz/.obj da fábrica e o sistema acha as
+       peças que se REPETEM nele, com a medida (no .3ds do Brinquedão
+       Modelo 2: barra de 1,05 m x55, coluna de 0,97 m x52, ...). Um toque
+       guarda a peça no laboratório, com nome e categoria sugeridos, e ela
+       já fica pronta para pôr na montagem.
+   COMO SE MONTA: escolha a peça e clique na planta -- ela encaixa na grade
+   (1 m, 50, 25, 10, 5 cm ou livre) e, se clicar em cima de outra peça,
+   sobe nela (a plataforma no alto da coluna). Clique numa peça para
+   escolher: as alças movem (e sobem/descem), "Girar" gira de 15 em 15°;
+   à direita mudam a medida, a cor, a posição e o giro. Teclado: setas
+   movem, PgUp/PgDn sobem/descem, R gira 90°, Del apaga, Ctrl+D duplica,
+   Ctrl+Z/Ctrl+Shift+Z desfazem/refazem, F mostra tudo, Esc solta.
+   A vista: arrastar o fundo gira, botão direito (ou Shift, ou dois dedos)
+   arrasta, a rodinha (ou a pinça) aproxima; "Planta" mostra de cima, sem
+   perspectiva. As COTAS mostram a largura, a profundidade e a altura da
+   montagem inteira, e o rodapé, o total e quantas peças.
+   GUARDAR leva as peças e o .glb da montagem (exportado do próprio desenho:
+   o que se vê é o que vai). "USAR EM…" grava o .glb num ou vários
+   brinquedos e/ou num projeto (a ficha do projeto ganha "Ver em 3D");
+   ".glb" baixa o arquivo para o computador.
+   A BIBLIOTECA APRENDE de dois jeitos: pelos ARQUIVOS (as peças que se
+   repetem viram peças guardadas) e pelo USO (as medidas que mais aparecem
+   nas montagens guardadas viram atalhos no topo: "Coluna 3,50 m -- usada
+   24 vezes"). Quanto mais objetos e montagens entram, mais pronta ela fica.
+   Código: sistema_interno/views_montar_3d.py, static/interno/montar3d.js,
+   core/conversor_3d.pecas_que_se_repetem; tabela core.MontagemTresD
+   (migração 0138). O three.js ganhou o exportador de .glb e as alças de
+   mover/girar, da mesma versão (core/static/vendor/three/).

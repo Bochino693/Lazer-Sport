@@ -18,6 +18,7 @@
   {% if not tabela_ausente %}
   <div class="ls-3d-hero-acoes">
     <button class="btn btn-warning" id="criar3d" type="button"><i class="bi bi-magic me-1"></i> Criar objeto 3D</button>
+    <a class="btn btn-primary" href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true"><i class="bi bi-bricks me-1"></i> Montar em 3D</a>
     <button class="btn btn-success" id="novoObjeto" type="button"><i class="bi bi-cloud-arrow-up me-1"></i> Enviar .glb pronto</button>
   </div>
   {% endif %}
@@ -249,11 +250,11 @@
       <strong>A ideia:</strong> os brinquedões são feitos de peças que se repetem — torre, plataforma, escorregador, rede, túnel, piscina de bolinhas. Aqui vocês vão guardando essas peças em 3D (.glb), com o tempo. Cada peça chega com as medidas e as cores lidas do arquivo, e abre no visor.
       <ol class="ls-lab-passos">
         <li><i class="bi bi-1-circle-fill" aria-hidden="true"></i> Guardar as peças (já funciona)</li>
-        <li><i class="bi bi-2-circle-fill" aria-hidden="true"></i> Montar: encaixar as peças numa planta e ver o brinquedão inteiro (próximo passo)</li>
+        <li><i class="bi bi-2-circle-fill" aria-hidden="true"></i> <a href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true">Montar: encaixar as peças numa planta, como num CAD, e ver o brinquedão inteiro (já funciona)</a></li>
         <li><i class="bi bi-3-circle-fill" aria-hidden="true"></i> Orçar pela montagem e mostrar ao cliente na Arena</li>
       </ol>
     </div>
-    {% if tabela_modulos %}<button class="btn btn-warning" id="novoModulo" type="button"><i class="bi bi-plus-lg me-1"></i> Guardar peça 3D</button>{% endif %}
+    {% if tabela_modulos %}<div class="d-flex flex-wrap gap-2"><button class="btn btn-warning" id="novoModulo" type="button"><i class="bi bi-plus-lg me-1"></i> Guardar peça 3D</button><a class="btn btn-primary" href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true"><i class="bi bi-bricks me-1"></i> Montar</a></div>{% endif %}
   </div>
   {% if not tabela_modulos %}
     <div class="ls-game-vazio"><i class="bi bi-hourglass-split"></i>A tabela das peças ainda não existe no banco: a migração roda na próxima subida.</div>

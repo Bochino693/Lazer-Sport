@@ -280,7 +280,7 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
                     objeto = {
                         "url": existente.url,
                         "medidas": _medidas_texto(existente.medidas or []),
-                        "modo": {"paineis": "Painéis", "volume": "Volume", "arquivo": "Arquivo 3D"}.get(existente.modo, ""),
+                        "modo": {"paineis": "Painéis", "volume": "Volume", "arquivo": "Arquivo 3D", "montagem": "Montagem"}.get(existente.modo, ""),
                         "produto": existente.produto_id,
                         "produto_nome": existente.produto.nome_brinquedo if existente.produto else "",
                     }
@@ -463,6 +463,7 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
         return self.sucesso(
             request,
             f"Peça \"{modulo.nome}\" guardada no laboratório: {_medidas_texto(lido['medidas']) or 'medidas não lidas'}.",
+            id=modulo.pk, url=modulo.url, medidas=lido["medidas"],
         )
 
     def _apagar_modulo(self, request, modulo_id):
@@ -695,8 +696,8 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             raise ErroDeFormulario("O banco ainda não tem a tabela do 3D dos projetos: rode a migração.")
         produto = self._produto_do_pedido(request) if projeto is not None else None
         exibir = request.POST.get("exibir_na_arena") == "on"
-        origem = request.POST.get("origem") if request.POST.get("origem") in ("fotos", "projeto", "arquivo") else ""
-        modo = request.POST.get("modo") if request.POST.get("modo") in ("paineis", "volume", "arquivo") else ""
+        origem = request.POST.get("origem") if request.POST.get("origem") in ("fotos", "projeto", "arquivo", "montagem") else ""
+        modo = request.POST.get("modo") if request.POST.get("modo") in ("paineis", "volume", "arquivo", "montagem") else ""
 
         novos, antigos = [], []
         try:

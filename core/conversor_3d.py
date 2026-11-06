@@ -71,6 +71,10 @@ class Modelo:
         self.materiais = {}  # nome -> {"cor": (r, g, b, a), "textura": "arquivo" | None}
         self.triangulos = {}  # nome do material -> [((p1, p2, p3), (uv1, uv2, uv3) | None)]
         self.total = 0
+        # cada objeto do arquivo (o OBJECT do .3ds, a instância do .dae, o "o"/"g" do .obj):
+        # é por eles que se acham as peças que se repetem (ver pecas_que_se_repetem)
+        self.grupo = None
+        self.grupos = {}  # nome do grupo -> [(material, pontos, uvs)]
 
     def material(self, nome, cor=COR_NEUTRA, textura=None):
         if nome not in self.materiais:
@@ -87,6 +91,8 @@ class Modelo:
         if material not in self.materiais:
             self.material(material)
         self.triangulos.setdefault(material, []).append((pontos, uvs))
+        if self.grupo is not None:
+            self.grupos.setdefault(self.grupo, []).append((material, pontos, uvs))
 
     def tirar_soltas(self, margem=0.15, teto=0.12):
         """Tira as peças soltas longe do conjunto; devolve quantos triângulos saíram.
@@ -225,6 +231,8 @@ def ler_obj(dados, arquivos):
                 modelo.triangulo(material, pontos, uvs)
         elif tag == "usemtl":
             material = " ".join(partes[1:]) or "padrao"
+        elif tag in ("o", "g"):
+            modelo.grupo = f"{' '.join(partes[1:]) or 'grupo'}#{len(modelo.grupos)}"
         elif tag == "mtllib":
             mtl = arquivos.achar(" ".join(partes[1:]))
             if mtl:
@@ -392,7 +400,8 @@ def ler_3ds(dados, arquivos):
             elif cid == 0xAFFF:
                 material(corpo, final)
             elif cid == 0x4000:
-                _nome, p = texto(corpo)
+                nome_objeto, p = texto(corpo)
+                modelo.grupo = f"{nome_objeto}#{len(modelo.grupos)}"
                 objeto(p, final)
                 descarregar()
             posicao += tamanho
@@ -624,6 +633,7 @@ def ler_dae(dados, arquivos):
                     im.get("symbol"): (im.get("target") or "").lstrip("#")
                     for im in filho.iter("instance_material")
                 }
+                modelo.grupo = f"{geo.get('id') or 'geo'}#{len(modelo.grupos)}"
                 for simbolo, triangulos in geometria(geo):
                     nome = ligacoes.get(simbolo, simbolo) or "padrao"
                     for pontos, uvs in triangulos:
@@ -754,14 +764,8 @@ def _extensao(nome):
     return posixpath.splitext((nome or "").lower())[1]
 
 
-def converter(nome, dados, eixo="auto", unidade="auto", medidas=None, limpar=True):
-    """(bytes do .glb, info) do arquivo enviado; ErroDeConversao com o motivo, se não der.
-
-    `eixo`: "auto" (o do formato), "y" ou "z" (o lado de cima do arquivo).
-    `unidade`: "auto" ou uma de glb_montar.UNIDADES. `medidas`: as do painel
-    (a primeira informada manda na escala). `limpar`: tirar as peças soltas
-    longe do conjunto (ver Modelo.tirar_soltas).
-    """
+def _abrir(nome, dados):
+    """(nome, extensão, dados, Arquivos) do que veio: o .zip/.kmz é aberto e o objeto achado."""
     extensao = _extensao(nome)
     if extensao in COMO_EXPORTAR:
         raise ErroDeConversao(f"Esse formato ({extensao}) não abre aqui. {COMO_EXPORTAR[extensao]}")
@@ -779,7 +783,103 @@ def converter(nome, dados, eixo="auto", unidade="auto", medidas=None, limpar=Tru
         # o maior é o objeto (os outros, peças soltas ou cópias)
         nome, dados = max(candidatos, key=lambda par: len(par[1]))
         extensao = _extensao(nome)
+    return nome, extensao, dados, arquivos
 
+
+def _caixa_dos(triangulos):
+    baixo = [math.inf] * 3
+    alto = [-math.inf] * 3
+    for _material, pontos, _uvs in triangulos:
+        for p in pontos:
+            for i in range(3):
+                if p[i] < baixo[i]:
+                    baixo[i] = p[i]
+                if p[i] > alto[i]:
+                    alto[i] = p[i]
+    return baixo, alto
+
+
+def _nome_e_categoria(altura, largura, profundidade, materiais):
+    """O que a peça provavelmente é, pelo formato (e pelo nome do material, quando diz)."""
+    texto = " ".join(materiais).lower()
+    def m(v):
+        return f"{v:.2f}".replace(".", ",")
+    if "rede" in texto:
+        return f"Rede {m(largura)} × {m(altura)} m", "rede"
+    if "escorreg" in texto or "toboga" in texto:
+        return f"Escorregador {m(max(largura, profundidade))} m", "escorregador"
+    maior_base, menor_base = max(largura, profundidade), min(largura, profundidade)
+    if altura >= 0.8 and altura > 3 * maior_base:
+        return f"Coluna {m(altura)} m", "torre"
+    if maior_base >= 0.6 and maior_base > 4 * max(altura, menor_base):
+        return f"Barra {m(maior_base)} m", "torre"
+    if altura < 0.2 and menor_base > 0.4:
+        return f"Plataforma {m(largura)} × {m(profundidade)} m", "torre"
+    return f"Peça {m(altura)} × {m(largura)} × {m(profundidade)} m", "outro"
+
+
+def pecas_que_se_repetem(nome, dados, eixo="auto", unidade="auto", minimo=3, quantas=8):
+    """As peças que se repetem num arquivo da fábrica, prontas para a biblioteca de montagem.
+
+    Um brinquedão de verdade é feito de poucas peças repetidas muitas vezes: o
+    .3ds do Brinquedão Modelo 2 tem 244 objetos, mas são colunas de um mesmo
+    tamanho, barras de dois ou três comprimentos, uma rede... Aqui cada objeto
+    do arquivo ganha uma "assinatura" (quantos triângulos e as três medidas,
+    sem importar para que lado está girado) e as assinaturas que aparecem
+    `minimo` vezes ou mais viram peças: [{"nome", "categoria", "vezes",
+    "medidas" (altura, largura, profundidade em m), "glb" (bytes)}], as mais
+    importantes primeiro. Quanto mais arquivos entram, mais peças a
+    biblioteca tem -- é assim que ela aprende.
+    """
+    nome, extensao, dados, arquivos = _abrir(nome, dados)
+    if extensao not in LEITORES or extensao == ".stl":
+        raise ErroDeConversao("Para achar as peças, envie o arquivo do projeto em .3ds, .dae/.kmz ou .obj "
+                              "(eles guardam cada peça separada; o .glb e o .stl chegam como um bloco só).")
+    modelo, info_formato = LEITORES[extensao](dados, arquivos)
+    eixo_z = info_formato.get("eixo_z", False) if eixo not in ("y", "z") else eixo == "z"
+    if unidade == "auto" and info_formato.get("unidade"):
+        unidade = info_formato["unidade"]
+    _matriz, info = encaixe(modelo.caixa(), eixo_z, unidade)
+    escala = info["escala"]
+    baixo, alto = modelo.caixa()
+    tolerancia = max(alto[i] - baixo[i] for i in range(3)) * 0.002 or 1e-6
+
+    por_assinatura = {}
+    for grupo, triangulos in modelo.grupos.items():
+        if len(triangulos) < 8:
+            continue
+        b, a = _caixa_dos(triangulos)
+        medidas = tuple(sorted((round((a[i] - b[i]) / tolerancia) for i in range(3)), reverse=True))
+        por_assinatura.setdefault((len(triangulos), medidas), []).append(grupo)
+
+    achadas = sorted(
+        ((chave, grupos) for chave, grupos in por_assinatura.items() if len(grupos) >= minimo),
+        key=lambda par: -(len(par[1]) * min(par[0][0], 2000)),
+    )[:quantas]
+    saida = []
+    for (_n, _medidas), grupos in achadas:
+        peca = Modelo()
+        for material, pontos, uvs in modelo.grupos[grupos[0]]:
+            if material not in peca.materiais:
+                peca.materiais[material] = modelo.materiais.get(material) or {"cor": COR_NEUTRA, "textura": None}
+            peca.triangulo(material, pontos, uvs)
+        glb, info_peca = montar(peca, arquivos, eixo_z, escala)
+        altura, largura, profundidade = info_peca["medidas"]
+        nome_peca, categoria = _nome_e_categoria(altura, largura, profundidade, list(peca.materiais))
+        saida.append({"nome": nome_peca, "categoria": categoria, "vezes": len(grupos),
+                      "medidas": info_peca["medidas"], "triangulos": peca.total, "glb": glb})
+    return saida
+
+
+def converter(nome, dados, eixo="auto", unidade="auto", medidas=None, limpar=True):
+    """(bytes do .glb, info) do arquivo enviado; ErroDeConversao com o motivo, se não der.
+
+    `eixo`: "auto" (o do formato), "y" ou "z" (o lado de cima do arquivo).
+    `unidade`: "auto" ou uma de glb_montar.UNIDADES. `medidas`: as do painel
+    (a primeira informada manda na escala). `limpar`: tirar as peças soltas
+    longe do conjunto (ver Modelo.tirar_soltas).
+    """
+    nome, extensao, dados, arquivos = _abrir(nome, dados)
     escolhido_z = {"y": False, "z": True}.get(eixo)
     info_formato = {}
     if extensao in (".glb", ".gltf"):
