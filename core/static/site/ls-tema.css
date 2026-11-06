@@ -2776,3 +2776,17 @@ html.ls-escuro .ls-topo .user-dropdown.is-open .ls-mc-lista a + a { animation-de
     html.ls-escuro .ls-topo .user-dropdown.is-open .ls-mc-lista a,
     html.ls-escuro .ls-topo .user-dropdown.is-open .ls-mc-botoes a { animation: none; }
 }
+
+
+/* ======================================================================
+   O MODO APP: o launcher de jogos e os jogos abertos dentro dele -- sem o
+   cabeçalho, a busca, a barra de baixo e o rodapé do site.
+   ====================================================================== */
+body.ls-modo-app .ls-pular,
+body.ls-modo-app .ls-topo,
+body.ls-modo-app .ls-mobile-backdrop,
+body.ls-modo-app #busca,
+body.ls-modo-app .ls-barra-app,
+body.ls-modo-app .ls-footer { display: none !important; }
+html.ls-escuro body.ls-modo-app { padding-bottom: 0; }
+body.ls-modo-app main.content-section { padding-top: 0; margin-top: 0; }

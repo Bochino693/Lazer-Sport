@@ -179,7 +179,12 @@
   <script src="{% estatico 'site/ls-fotos.js' %}" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}{% if request.GET.app == '1' %} ls-modo-app{% endif %}">
+{% comment %}
+  O MODO APP (body.ls-modo-app): sem o cabeçalho, a busca, a barra de baixo e o rodapé
+  do site. É o launcher de jogos (/jogos/, que pede pelo bloco body_class) e as páginas
+  de jogo abertas DENTRO dele (?app=1): ali o site some e fica só o jogo.
+{% endcomment %}
 
 <!-- ======= CABEÇALHO ======= -->
 <a class="ls-pular" href="#conteudo">Pular para o conteúdo</a>

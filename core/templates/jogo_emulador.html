@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>{{ jogo.nome }} · Lazer &amp; Sport Games</title>
 <link rel="stylesheet" href="{% estatico 'site/paginas/jogo-emulador.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/intro-jogos.css' %}">
 </head>
 <body class="pl" style="--cor: {{ config.cor|default:'#ff3df2' }}">
 {% comment %}
@@ -193,6 +194,7 @@
 
 <p class="emu-sem-js">Este jogo precisa de JavaScript ligado no navegador.</p>
 {{ config|json_script:"emuladorConfig" }}
+<script src="{% estatico 'site/paginas/intro-jogos.js' %}" data-logo="{% estatico 'images/logoofi.png' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-guardado.js' %}"></script>
 <script src="{% estatico 'site/paginas/jogo-emulador.js' %}"></script>
 </body>

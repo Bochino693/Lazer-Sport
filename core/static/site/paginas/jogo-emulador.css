@@ -788,3 +788,6 @@ html, body {
 .pl .ejs_dpad_right_pressed .ejs_dpad_horizontal::after { border-left-color: var(--cor); }
 .pl .ejs_dpad_up_pressed .ejs_dpad_vertical::before { border-bottom-color: var(--cor); }
 .pl .ejs_dpad_down_pressed .ejs_dpad_vertical::after { border-top-color: var(--cor); }
+
+/* a apresentação "LAZER & SPORT GAMES apresenta" cobre a tela inteira, por cima da abertura */
+.pl-abertura > .ls-intro { position: fixed; inset: 0; z-index: 70; }

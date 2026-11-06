@@ -53,13 +53,19 @@
   // o DS fica em pé (as duas telas, uma em cima da outra); o resto, deitado
   var emPe = config.core === "nds" || config.formato === "retrato";
   var dentroDeQuadro = window.self !== window.top;
+  // DENTRO DO APP (o launcher /jogos/ abre o jogo por cima da biblioteca): Voltar volta à
+  // biblioteca e a tela cheia é a do app inteiro -- assim ela não fecha entre um e outro
+  var app = null;
+  try { if (dentroDeQuadro && window.parent.LSApp) app = window.parent.LSApp; } catch (e) { app = null; }
   var jogando = false;
 
   corpo.classList.add("is-abrindo");
-  if (dentroDeQuadro) {
-    // aberta num quadro (o jeito antigo): o Voltar não faz sentido aqui
-    var voltar = $("[data-pl-voltar]");
-    if (voltar) voltar.hidden = true;
+  var voltar = $("[data-pl-voltar]");
+  if (app && voltar) {
+    voltar.addEventListener("click", function (e) { e.preventDefault(); app.fechar(); });
+  } else if (dentroDeQuadro && voltar) {
+    // aberta num quadro de outra página: o Voltar não faz sentido aqui
+    voltar.hidden = true;
   }
 
   function mb(bytes) {
@@ -507,9 +513,10 @@
 
   /* ---------------------------------------------------------------- tela cheia e celular deitado */
   var raiz = document.documentElement;
-  var podeTelaCheia = !!(raiz.requestFullscreen || raiz.webkitRequestFullscreen);
-  function emTelaCheia() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  var podeTelaCheia = app ? app.podeTelaCheia : !!(raiz.requestFullscreen || raiz.webkitRequestFullscreen);
+  function emTelaCheia() { return app ? app.emTelaCheia() : !!(document.fullscreenElement || document.webkitFullscreenElement); }
   function entrarTelaCheia() {
+    if (app) return app.pedirTelaCheia(emPe);
     var pedido = raiz.requestFullscreen ? raiz.requestFullscreen({ navigationUI: "hide" }) : raiz.webkitRequestFullscreen();
     return Promise.resolve(pedido).then(function () {
       if (!celular || !screen.orientation || !screen.orientation.lock) return;
@@ -517,6 +524,7 @@
     });
   }
   function sairTelaCheia() {
+    if (app) return app.telaCheia(emPe);
     if (document.exitFullscreen) return document.exitFullscreen();
     if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
   }
@@ -537,6 +545,15 @@
   });
   document.addEventListener("fullscreenchange", atualizarBotaoCheia);
   document.addEventListener("webkitfullscreenchange", atualizarBotaoCheia);
+  if (app) {
+    app.documento.addEventListener("fullscreenchange", atualizarBotaoCheia);
+    app.documento.addEventListener("webkitfullscreenchange", atualizarBotaoCheia);
+    window.addEventListener("pagehide", function () {
+      app.documento.removeEventListener("fullscreenchange", atualizarBotaoCheia);
+      app.documento.removeEventListener("webkitfullscreenchange", atualizarBotaoCheia);
+    });
+    atualizarBotaoCheia();
+  }
 
   var girarIgnorado = false;
   function conferirGiro() {
@@ -839,11 +856,18 @@
   /* ---------------------------------------------------------------- começar */
   var bytesProntos = null;
   var comecando = false;
+  var apresentacao = Promise.resolve();
   function jogar() {
     if (comecando || !bytesProntos) return;
     comecando = true;
     pronto.hidden = true;
     mostrar("Ligando o " + (config.sistemaNome || "console") + "…", undefined);
+    // "LAZER & SPORT GAMES apresenta": a espera do emulador ligando vira apresentação
+    if (window.LSIntroJogos) {
+      abertura.classList.add("is-apresentando");
+      apresentacao = window.LSIntroJogos.mostrar(abertura, { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || "") })
+        .then(function () { abertura.classList.remove("is-apresentando"); });
+    }
     var depois = function () {
       var principal = config.arquivos.filter(function (a) { return a.principal; })[0];
       var jogo = bytesProntos[principal.caminho];
@@ -886,8 +910,11 @@
     }
     corpo.classList.remove("is-abrindo");
     corpo.classList.add("is-jogando");
-    abertura.classList.add("is-saindo");
-    setTimeout(function () { abertura.hidden = true; }, 500);
+    // a abertura sai quando a apresentação termina (ou na hora, se já terminou)
+    apresentacao.then(function () {
+      abertura.classList.add("is-saindo");
+      setTimeout(function () { abertura.hidden = true; }, 500);
+    });
     if (botaoMenu) botaoMenu.hidden = false;
     aplicarImagem();
     // o filtro da escolha (o emulador guarda o último que usou: aqui vale o do site)

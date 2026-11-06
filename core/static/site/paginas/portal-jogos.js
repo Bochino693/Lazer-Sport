@@ -434,6 +434,10 @@
     como.hidden = !comandos;
     campoDaFicha("teclas").replaceChildren.apply(campoDaFicha("teclas"), comandos ? [comandos] : []);
     campoDaFicha("jogar").href = jogo.url;
+    // no app, o jogo abre ali mesmo (a tela cheia não fecha)
+    campoDaFicha("jogar").onclick = function (e) {
+      if (window.LSApp && window.LSApp.abrir(jogo, e)) { e.preventDefault(); fecharFicha(); }
+    };
     var mais = campoDaFicha("mais");
     mais.querySelector("span").textContent = "Mais de " + (tema.nome || "da estante");
     mais.onclick = function () {
@@ -460,6 +464,13 @@
 
   desenhar();
 
+  /* ---------- o Jogar da vitrine: no app, o jogo abre ali mesmo ---------- */
+  raiz.addEventListener("click", function (e) {
+    var link = e.target.closest && e.target.closest("[data-app-jogo]");
+    if (!link || !window.LSApp) return;
+    if (window.LSApp.abrir(porSlug[link.dataset.appJogo], e)) e.preventDefault();
+  });
+
   /* ---------- o carrossel de destaques ---------- */
   if (hero) {
     var slides = Array.prototype.slice.call(hero.querySelectorAll("[data-portal-slide]"));
@@ -467,6 +478,36 @@
     var atual = 0;
     var reduzido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var relogio = 0;
+    // o fundo desfocado de cada destaque: a foto desenhada pequena (48 x 28), já desfocada,
+    // e esticada pelo navegador -- o efeito do blur(22px) sem refazer a conta na tela inteira
+    var desfocar = function (img) {
+      var fazer = function () {
+        try {
+          var tela = document.createElement("canvas");
+          tela.width = 48; tela.height = 28;
+          var c = tela.getContext("2d");
+          if (!c || !img.naturalWidth) return;
+          if ("filter" in c) c.filter = "blur(1.6px) saturate(1.3)";
+          var escala = Math.max(48 / img.naturalWidth, 28 / img.naturalHeight);
+          var l = img.naturalWidth * escala, a = img.naturalHeight * escala;
+          c.drawImage(img, (48 - l) / 2, (28 - a) / 2, l, a);
+          tela.className = img.className;
+          tela.setAttribute("aria-hidden", "true");
+          img.replaceWith(tela);
+        } catch (e) { /* fica a foto com o desfoque do CSS */ }
+      };
+      if (img.complete && img.naturalWidth) fazer(); else img.addEventListener("load", fazer, { once: true });
+    };
+    Array.prototype.forEach.call(hero.querySelectorAll("img.pg-slide-fundo"), desfocar);
+    // o carrossel só trabalha quando está na tela
+    var naTela = true;
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entradas) {
+        naTela = entradas[0].isIntersecting;
+        hero.classList.toggle("is-parado", !naTela);
+      }, { threshold: 0.15 }).observe(hero);
+    }
+    document.addEventListener("visibilitychange", function () { hero.classList.toggle("is-parado", document.hidden || !naTela); });
     var mostrar = function (i) {
       atual = (i + slides.length) % slides.length;
       slides.forEach(function (s, k) {
@@ -477,7 +518,10 @@
     };
     var girar = function () {
       clearInterval(relogio);
-      if (!reduzido && slides.length > 1) relogio = setInterval(function () { if (!hero.hidden) mostrar(atual + 1); }, 6500);
+      if (!reduzido && slides.length > 1) relogio = setInterval(function () {
+        // parado fora da tela, com a aba escondida ou com um jogo aberto por cima
+        if (!hero.hidden && naTela && !document.hidden && !document.body.classList.contains("app-jogando")) mostrar(atual + 1);
+      }, 6500);
     };
     var antes = hero.querySelector("[data-portal-antes]");
     var depois = hero.querySelector("[data-portal-depois]");
