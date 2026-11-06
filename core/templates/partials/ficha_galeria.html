@@ -1,0 +1,90 @@
+{% load static fotos fichas %}{% comment %}
+  A FICHA DE UM PROJETO OU EVENTO (a janela que abre ao tocar no cartão): fotos à
+  esquerda (uma por vez, com setas, miniaturas e o dedo no celular), e à direita o
+  texto organizado -- a abertura, as seções em tópicos, o "Indicado para" em
+  etiquetas (core/ficha_texto.py) --, os brinquedos e o convite para o WhatsApp.
+  Quem abre e fecha é o ls-galeria.js; a cara é a do ls-ficha.css.
+
+  {% include "partials/ficha_galeria.html" with janela="galeria-projeto-3" titulo=projeto.titulo texto=projeto.descricao fotos=... selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="..." todos_url=... todos_texto="Ver todos os projetos" brinquedos=... %}
+{% endcomment %}{% with f=texto|ficha %}
+<div class="ls-galeria ls-ficha ls-ficha--{{ tipo|default:'projeto' }}" id="{{ janela }}" role="dialog" aria-modal="true" aria-labelledby="{{ janela }}-titulo" hidden>
+    <article class="ls-galeria-caixa ls-ficha-caixa">
+        <button type="button" class="ls-ficha-fechar" data-ls-galeria-fechar aria-label="Fechar {{ titulo }}">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+
+        <div class="ls-ficha-visor">
+            {% if fotos %}
+            <div class="ls-galeria-palco ls-ficha-palco">
+                {% for img in fotos %}
+                <figure class="ls-galeria-slide ls-ficha-slide"{% if img.legenda %} data-legenda="{{ img.legenda }}"{% endif %}{% if not forloop.first %} hidden{% endif %}>
+                    <img class="ls-ficha-slide-fundo" src="{{ img.imagem|foto:320 }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                    <img class="ls-ficha-slide-foto" src="{{ img.imagem|foto:1400 }}" alt="{{ img.legenda|default:titulo }}" loading="lazy" decoding="async">
+                </figure>
+                {% endfor %}
+                {% if fotos|length > 1 %}
+                <button type="button" class="ls-ficha-seta ls-ficha-seta--antes" data-ls-galeria-anterior aria-label="Foto anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                <button type="button" class="ls-ficha-seta ls-ficha-seta--depois" data-ls-galeria-proxima aria-label="Próxima foto"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                <span class="ls-ficha-contador" data-ls-galeria-contador>1 / {{ fotos|length }}</span>
+                {% endif %}
+                <p class="ls-ficha-legenda" data-ls-galeria-legenda hidden></p>
+            </div>
+            {% if fotos|length > 1 %}
+            <div class="ls-ficha-miniaturas" role="group" aria-label="Fotos">
+                {% for img in fotos %}
+                <button type="button" class="ls-ficha-miniatura{% if forloop.first %} ativa{% endif %}" data-ls-galeria-ir="{{ forloop.counter0 }}" aria-label="Foto {{ forloop.counter }}">
+                    <img src="{{ img.imagem|foto:200 }}" alt="" loading="lazy" decoding="async">
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="ls-ficha-sem-foto">
+                <i class="fa-solid fa-images" aria-hidden="true"></i>
+                <span>As fotos deste {{ tipo|default:"projeto" }} chegam em breve.</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="ls-ficha-info">
+            <span class="ls-ficha-selo"><i class="fa-solid {{ selo_icone|default:'fa-compass-drafting' }}" aria-hidden="true"></i> {{ selo }}</span>
+            <h2 class="ls-ficha-titulo" id="{{ janela }}-titulo">{{ titulo }}</h2>
+            {% for p in f.lead %}<p class="ls-ficha-lead">{{ p }}</p>{% endfor %}
+
+            {% for secao in f.secoes %}
+            <section class="ls-ficha-secao">
+                <h3><span class="ls-ficha-secao-icone"><i class="fa-solid {{ secao.icone }}" aria-hidden="true"></i></span>{{ secao.titulo }}</h3>
+                {% if secao.etiquetas %}
+                <ul class="ls-ficha-etiquetas">{% for item in secao.itens %}<li>{{ item|capfirst }}</li>{% endfor %}</ul>
+                {% else %}
+                <ul class="ls-ficha-lista">{% for item in secao.itens %}<li><i class="fa-solid fa-check" aria-hidden="true"></i><span>{{ item }}</span></li>{% endfor %}</ul>
+                {% endif %}
+            </section>
+            {% endfor %}
+
+            {% for p in f.fecho %}<p class="ls-ficha-fecho"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span>{{ p }}</span></p>{% endfor %}
+
+            {% if brinquedos %}
+            <section class="ls-ficha-secao">
+                <h3><span class="ls-ficha-secao-icone"><i class="fa-solid fa-gamepad" aria-hidden="true"></i></span>Brinquedos usados</h3>
+                <div class="ls-ficha-brinquedos">
+                    {% for b in brinquedos %}
+                    <a class="ls-ficha-brinquedo" href="{% url 'brinquedo_detalhe' b.id %}">
+                        {% if b.imagem_brinquedo %}<img src="{{ b.imagem_brinquedo|foto:240 }}" alt="" loading="lazy" decoding="async">{% else %}<img src="{% static 'images/sem-imagem.svg' %}" alt="" loading="lazy">{% endif %}
+                        <span>{{ b.nome_brinquedo }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <div class="ls-ficha-acoes">
+                <a class="ls-ficha-convite" href="https://wa.me/5511960563135?text={{ mensagem|urlencode }}" target="_blank" rel="noopener">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> {{ convite|default:"Quero um projeto assim" }}
+                </a>
+                {% if todos_url %}<a class="ls-ficha-todos" href="{{ todos_url }}">{{ todos_texto }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>{% endif %}
+            </div>
+        </div>
+    </article>
+</div>
+{% endwith %}

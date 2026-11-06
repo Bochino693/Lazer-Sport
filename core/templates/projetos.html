@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
-{% load fotos %}
+{% load fotos fichas %}
 
 {% block title %}Projetos sob medida | Lazer &amp; Sport{% endblock %}
 
@@ -10,6 +10,7 @@
 
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/ls-galeria.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-ficha.css' %}">
 
 <div class="ls-pagina">
 
@@ -83,7 +84,7 @@
 
         <div class="ls-cartao-corpo">
             <h2 class="ls-cartao-titulo">{{ projeto.titulo }}</h2>
-            <p class="ls-cartao-desc">{{ projeto.descricao|truncatewords:20 }}</p>
+            <p class="ls-cartao-desc">{{ projeto.descricao|resumo_ficha:140 }}</p>
 
             {% with fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all|length %}
                 {% if fotos %}
@@ -122,29 +123,9 @@
   As janelas ficam fora da grade: `position: fixed` dentro de um cartão
   com `overflow: hidden` seria recortada por ele.
 {% endcomment %}
-{% for projeto in projetos %}
-<div class="ls-galeria" id="galeria-projeto-{{ projeto.id }}" role="dialog" aria-modal="true"
-     aria-labelledby="titulo-projeto-{{ projeto.id }}" hidden>
-    <div class="ls-galeria-caixa">
-        <button type="button" class="ls-galeria-fechar" data-ls-galeria-fechar
-                aria-label="Fechar as fotos de {{ projeto.titulo }}">&times;</button>
-
-        <h2 class="ls-galeria-titulo" id="titulo-projeto-{{ projeto.id }}">{{ projeto.titulo }}</h2>
-        <p class="ls-galeria-texto">{{ projeto.descricao }}</p>
-
-        <div class="ls-galeria-fotos">
-            {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-            <figure class="ls-galeria-foto">
-                <img src="{{ img.imagem|foto:1400 }}" alt="{{ img.legenda|default:projeto.titulo }}" loading="lazy" decoding="async">
-                {% if img.legenda %}<span>{{ img.legenda }}</span>{% endif %}
-            </figure>
-            {% empty %}
-            <p class="ls-galeria-vazio">Este projeto ainda não tem fotos publicadas.</p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% endfor %}
+{% for projeto in projetos %}{% with pid=projeto.id|stringformat:"s" %}
+{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." %}
+{% endwith %}{% endfor %}
 
 <script src="{% estatico 'site/ls-galeria.js' %}" defer></script>
 

@@ -285,7 +285,7 @@ class TelasAntigasUsamOCascoDoSiteTests(TestCase):
         """
         corpo = self.html("/eventos/")
         self.assertIn("data-ls-galeria=", corpo)
-        self.assertIn('class="ls-galeria"', corpo)
+        self.assertIn('class="ls-galeria', corpo)
         self.assertIn("site/ls-galeria.js", corpo)
         self.assertIn("site/ls-galeria.css", corpo)
 

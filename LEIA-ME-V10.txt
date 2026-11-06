@@ -878,3 +878,26 @@ Dependência nova: rjsmin (requirements.txt).
    sozinha (mover, girar, aparecer); a capa do jogo é desfocada uma vez só,
    num quadro pequeno; as faíscas são desenhadas em resolução comum.
    No mesmo teste: 57 a 58 quadros por segundo, sem tranco.
+
+35) A FICHA DE PROJETOS E EVENTOS (A JANELA QUE ABRE NO CARTÃO)
+   Era um quadro branco com o texto claro quase invisível, a descrição num
+   parágrafo só e os emojis no meio da frase (no Windows, os mais novos
+   viravam quadradinhos). Agora é uma ficha moderna, a mesma na página
+   inicial, em /projetos/ e em /eventos/ (partials/ficha_galeria.html):
+     * ABERTURA: o fundo escurece e desfoca, a ficha sobe com uma mola suave
+       e as informações entram em sequência.
+     * FOTOS à esquerda, uma por vez, grandes: setas, contador (2 / 5),
+       miniaturas embaixo, as setas do teclado e o dedo no celular. Nos
+       PROJETOS o palco é claro, de estúdio (as renderizações com fundo
+       branco se fundem nele); nos EVENTOS, a própria foto desfocada ao fundo.
+     * O TEXTO organizado sozinho (core/ficha_texto.py), do jeito que a equipe
+       já escreve no painel: a abertura em parágrafos, "Principais atrações"
+       e "Características" em tópicos com um ✓, "Indicado para" em
+       etiquetas, e a frase final em destaque. Os emojis saem (cada item
+       ganha o ícone da seção, igual em todos). Funciona com ou sem quebra
+       de linha.
+     * Os BRINQUEDOS usados (nos eventos), com link para cada um.
+     * O convite "Quero um projeto assim" abre o WhatsApp com o nome do
+       projeto já escrito.
+     * No celular, a ficha ocupa a tela: fotos em cima, texto embaixo.
+   Os cartões mostram o começo da descrição, sem emojis.

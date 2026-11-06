@@ -37,7 +37,7 @@ from django.core.paginator import Paginator
 
 
 HOME_CONTEXT_CACHE_KEY = "home:public-context:v3"
-HOME_FRAGMENT_NAME = "home_public_v4"
+HOME_FRAGMENT_NAME = "home_public_v5"
 CATALOG_METADATA_CACHE_KEY = "catalog:public-metadata:v1"
 ADMIN_CATALOG_VERSION_KEY = "catalog:admin-version:v1"
 CATALOG_PAGE_CACHE_PREFIX = "catalog:page:v1"
