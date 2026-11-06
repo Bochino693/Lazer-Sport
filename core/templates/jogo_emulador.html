@@ -4,18 +4,176 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>{{ jogo.nome }} · Lazer &amp; Sport Games</title>
 <link rel="stylesheet" href="{% estatico 'site/paginas/jogo-emulador.css' %}">
 </head>
-<body>
+<body class="pl" style="--cor: {{ config.cor|default:'#ff3df2' }}">
 {% comment %}
-  O QUADRO DO EMULADOR (o que a página do jogo abre no iframe).
+  O REPRODUTOR DOS JOGOS DE CONSOLE: a página inteira é o jogo.
+
   Só o EmulatorJS do próprio site (core/static/vendor/emulatorjs/) e a
-  configuração deste jogo: o núcleo, o arquivo que ele abre e os que vão ao
-  lado, cada um com o nome exato. Ver core/views_jogos.config_do_emulador.
+  configuração deste jogo (core/views_jogos.config_do_emulador): o núcleo, o
+  arquivo que ele abre e os que vão ao lado, cada um com o nome exato.
+
+  Por cima do jogo, a interface do site, a mesma em todo console:
+  - a abertura "LAZER & SPORT GAMES apresenta", que é também a espera do download;
+  - a barra de cima (Voltar, o nome do jogo, Comandos e Tela cheia), que some sozinha;
+  - os Comandos: o que cada botão FAZ, e onde ele fica no teclado, na tela do
+    celular e no controle de Xbox (ou outro controle USB/Bluetooth);
+  - no celular em pé, o convite para deitar a tela.
+  O desenho do controle na tela e o do menu do emulador são do CSS deste reprodutor.
 {% endcomment %}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-controle" viewBox="0 0 24 24"><path d="M7.5 7h9a5 5 0 0 1 4.9 6l-.7 3.4a2.4 2.4 0 0 1-4.1 1.2L14.4 15H9.6l-2.2 2.6a2.4 2.4 0 0 1-4.1-1.2L2.6 13A5 5 0 0 1 7.5 7z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M7.5 9.6v3.2M5.9 11.2h3.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="16" cy="10.4" r="1.1" fill="currentColor"/><circle cx="17.9" cy="12.6" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-cheia" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sair-cheia" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.6-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></symbol>
+    <symbol id="i-teclado" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 13.5h.01M18 13.5h.01M9 14h6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-celular" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6.5 12h3M8 10.5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="11" r="1" fill="currentColor"/><circle cx="17.8" cy="13" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-hud" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-imagem" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6 9.5V8h2M18 9.5V8h-2M6 14.5V16h2M18 14.5V16h-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-girar" viewBox="0 0 64 64"><rect x="22" y="8" width="20" height="36" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M29 39h6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M12 46a22 22 0 0 0 30 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M38 52l5 4-4 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+{% include "partials/icones_das_acoes.html" %}
 <div id="jogo" class="emu-jogo"></div>
-<a class="emu-voltar" href="{{ config.voltar }}" data-emu-voltar hidden>← Voltar ao jogo</a>
+
+{# A ABERTURA: "LAZER & SPORT GAMES apresenta" enquanto o jogo baixa; depois, o botão Jogar #}
+<section class="pl-abertura" data-pl-abertura aria-labelledby="pl-nome">
+    {% if config.capa %}<img class="pl-abertura-arte" src="{{ config.capa }}" alt="" decoding="async" aria-hidden="true">{% endif %}
+    <div class="pl-abertura-miolo">
+        <p class="pl-marca"><strong>LAZER &amp; SPORT GAMES</strong> <span>apresenta</span></p>
+        <h1 id="pl-nome" class="pl-nome">{{ jogo.nome }}</h1>
+        {% if config.sistemaNome %}<p class="pl-console">{{ config.sistemaNome }}</p>{% endif %}
+        <div class="pl-progresso" data-pl-progresso aria-hidden="true"><span></span></div>
+        <p class="pl-status" data-pl-status role="status" aria-live="polite">Abrindo o jogo…</p>
+        <div class="pl-pronto" data-pl-pronto hidden>
+            <button type="button" class="pl-jogar" data-pl-jogar>
+                <svg aria-hidden="true"><use href="#i-play"/></svg> Jogar
+            </button>
+            <p class="pl-pronto-dica" data-pl-pronto-dica></p>
+        </div>
+        <div class="pl-erro" data-pl-erro hidden>
+            <button type="button" class="pl-bt pl-bt--claro" data-pl-recarregar>Tentar de novo</button>
+            <a class="pl-bt" href="{{ config.voltar }}">Voltar ao jogo</a>
+        </div>
+    </div>
+</section>
+
+{# A BARRA DE CIMA: some sozinha quando o jogo está rodando; volta ao mexer o mouse ou tocar no topo #}
+<header class="pl-barra" data-pl-barra>
+    <a class="pl-bt pl-bt--icone-celular" href="{{ config.voltar }}" data-pl-voltar>
+        <svg aria-hidden="true"><use href="#i-voltar"/></svg><span>Voltar</span>
+    </a>
+    <div class="pl-titulo">
+        <strong>{{ jogo.nome }}</strong>
+        {% if config.sistemaNome %}<small>{{ config.sistemaNome }}</small>{% endif %}
+    </div>
+    <div class="pl-barra-acoes">
+        <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-imagem aria-pressed="true" aria-label="Imagem na tela toda ou no formato original" hidden>
+            <svg aria-hidden="true"><use href="#i-imagem"/></svg><span data-pl-imagem-texto>Imagem: tela toda</span>
+        </button>
+        <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-hud-abrir aria-label="Ajustar o controle da tela" hidden>
+            <svg aria-hidden="true"><use href="#i-hud"/></svg><span>Ajustar controle</span>
+        </button>
+        <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-menu aria-label="Salvar o jogo e ajustes">
+            <svg aria-hidden="true"><use href="#i-ajustes"/></svg><span>Salvar e ajustes</span>
+        </button>
+        {% if config.comandos %}
+        <button type="button" class="pl-bt pl-bt--icone-celular" data-pl-abrir-comandos aria-expanded="false" aria-controls="pl-comandos">
+            <svg aria-hidden="true"><use href="#i-controle"/></svg><span>Comandos</span>
+        </button>
+        {% endif %}
+        <button type="button" class="pl-bt pl-bt--destaque pl-bt--icone-celular" data-pl-tela-cheia>
+            <svg aria-hidden="true"><use href="#i-cheia" data-pl-tela-cheia-icone/></svg><span data-pl-tela-cheia-texto>Tela cheia</span>
+        </button>
+    </div>
+</header>
+
+{% if config.comandos %}
+{# OS COMANDOS: o que cada botão faz, e onde ele fica em cada aparelho #}
+<aside class="pl-comandos" id="pl-comandos" data-pl-comandos role="dialog" aria-modal="true" aria-labelledby="pl-comandos-titulo" hidden>
+    <div class="pl-comandos-caixa">
+        <div class="pl-comandos-topo">
+            <div>
+                <h2 id="pl-comandos-titulo">Como jogar</h2>
+                <p>{{ jogo.nome }}{% if config.sistemaNome %} · {{ config.sistemaNome }}{% endif %}</p>
+            </div>
+            <button type="button" class="pl-fechar" data-pl-fechar-comandos aria-label="Fechar os comandos e voltar ao jogo">
+                <svg aria-hidden="true"><use href="#i-fechar"/></svg>
+            </button>
+        </div>
+        <div class="pl-abas" role="tablist" aria-label="Onde você está jogando">
+            <button type="button" role="tab" id="pl-aba-teclado" aria-controls="pl-lista" aria-selected="true" data-pl-aba="teclado">
+                <svg aria-hidden="true"><use href="#i-teclado"/></svg> Computador
+            </button>
+            <button type="button" role="tab" id="pl-aba-celular" aria-controls="pl-lista" aria-selected="false" data-pl-aba="celular" tabindex="-1">
+                <svg aria-hidden="true"><use href="#i-celular"/></svg> Celular
+            </button>
+            <button type="button" role="tab" id="pl-aba-controle" aria-controls="pl-lista" aria-selected="false" data-pl-aba="controle" tabindex="-1">
+                <svg aria-hidden="true"><use href="#i-controle"/></svg> Controle Xbox
+            </button>
+        </div>
+        <ul class="pl-lista pl-lista--teclado" id="pl-lista" role="tabpanel" data-pl-lista>
+            {% for c in config.comandos %}
+            <li class="pl-cmd{% if c.do_jogo %} pl-cmd--jogo{% endif %}">
+                <span class="pl-cmd-botao" data-botao="{{ c.acao }}">{{ c.acao }}</span>
+                <span class="pl-cmd-funcao">{% if c.icone %}<svg class="pl-cmd-ico" aria-hidden="true"><use href="#a-{{ c.icone }}"/></svg>{% endif %}<span>{{ c.funcao|default:"—" }}{% if c.do_jogo %} <em>neste jogo</em>{% endif %}</span></span>
+                <span class="pl-cmd-onde pl-cmd-onde--teclado">{% for t in c.teclas %}<kbd>{{ t }}</kbd>{% endfor %}</span>
+                <span class="pl-cmd-onde pl-cmd-onde--celular">{{ c.celular|capfirst }}</span>
+                <span class="pl-cmd-onde pl-cmd-onde--controle">{% for b in c.controle %}<kbd class="xb xb-{{ b|slugify }}">{{ b }}</kbd>{% empty %}<small>como no console</small>{% endfor %}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if config.comandosTexto %}<p class="pl-comandos-texto">{{ config.comandosTexto }}</p>{% endif %}
+        <p class="pl-dica" data-pl-dica="teclado">Clique no jogo e use o teclado. Um controle USB ou Bluetooth também funciona: ligue e aperte um botão.</p>
+        <p class="pl-dica" data-pl-dica="celular" hidden>O controle aparece por cima do jogo. Deite o celular e toque em Tela cheia: fica maior e sem barras.</p>
+        <p class="pl-dica" data-pl-dica="controle" hidden>Ligue o controle de Xbox (cabo ou Bluetooth) no computador ou no celular e aperte qualquer botão: ele já vale. O de PlayStation e os genéricos funcionam igual, pela posição dos botões.</p>
+    </div>
+</aside>
+{% endif %}
+
+{# O CONTROLE DO SEU JEITO (como o HUD dos jogos de celular): arrastar, aumentar, transparência #}
+<div class="pl-hud" data-pl-hud role="dialog" aria-labelledby="pl-hud-titulo" hidden>
+    <div class="pl-hud-painel">
+        <div class="pl-hud-topo">
+            <strong id="pl-hud-titulo">Ajustar o controle</strong>
+            <small data-pl-hud-dica>Arraste os botões para onde quiser. Toque num botão para mudar só o tamanho dele.</small>
+        </div>
+        <label class="pl-hud-faixa">
+            <span data-pl-hud-tamanho-nome>Tamanho de todos</span>
+            <input type="range" min="60" max="170" step="5" value="100" data-pl-hud-tamanho>
+            <output data-pl-hud-tamanho-valor>100%</output>
+        </label>
+        <label class="pl-hud-faixa">
+            <span>Transparência</span>
+            <input type="range" min="25" max="100" step="5" value="100" data-pl-hud-opacidade>
+            <output data-pl-hud-opacidade-valor>100%</output>
+        </label>
+        <div class="pl-hud-acoes">
+            <button type="button" class="pl-bt" data-pl-hud-restaurar>Restaurar padrão</button>
+            <button type="button" class="pl-bt pl-bt--destaque" data-pl-hud-pronto>Pronto</button>
+        </div>
+    </div>
+</div>
+
+{# NO CELULAR EM PÉ: o convite para deitar a tela (o DS fica em pé: as duas telas, uma em cima da outra) #}
+<div class="pl-girar" data-pl-girar hidden>
+    <svg class="pl-girar-icone" aria-hidden="true"><use href="#i-girar"/></svg>
+    <strong>Gire o celular</strong>
+    <p>Deitado o jogo fica maior, com o controle dos lados.</p>
+    <button type="button" class="pl-bt" data-pl-girar-ignorar>Jogar em pé assim mesmo</button>
+</div>
+
+<div class="pl-aviso" data-pl-aviso role="status" aria-live="polite" hidden></div>
+
 <p class="emu-sem-js">Este jogo precisa de JavaScript ligado no navegador.</p>
 {{ config|json_script:"emuladorConfig" }}
 <script src="{% estatico 'site/paginas/jogo-guardado.js' %}"></script>

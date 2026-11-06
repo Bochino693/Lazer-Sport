@@ -718,6 +718,115 @@ def exe_de_windows(dados):
     return dados[novo:novo + 4] == b"PE\x00\x00" or dados[novo:novo + 2] == b"NE"
 
 
+# ---------------------------------------------------------------------------
+# A ficha técnica do arquivo: o que o cabeçalho diz (para achar o problema)
+# ---------------------------------------------------------------------------
+
+def _texto_do_cabecalho(bruto):
+    return bruto.decode("latin-1", "replace").replace("\x00", " ").strip()
+
+
+def _ficha_snes(entrada):
+    copiadora = 512 if entrada.tamanho % 1024 == 512 else 0
+    melhor = None
+    for base, mapa in ((0x7FC0, "LoROM"), (0xFFC0, "HiROM"), (0x40FFC0, "ExHiROM")):
+        cab = entrada.pedaco(copiadora + base, 32)
+        if len(cab) < 32:
+            continue
+        soma = cab[0x1E] | cab[0x1F] << 8
+        complemento = cab[0x1C] | cab[0x1D] << 8
+        certa = soma ^ complemento == 0xFFFF and soma not in (0, 0xFFFF)
+        titulo = _texto_do_cabecalho(cab[:21])
+        legivel = sum(32 <= c < 127 for c in cab[:21]) >= 15
+        if certa or (legivel and melhor is None):
+            melhor = (mapa, titulo, certa, cab)
+            if certa:
+                break
+    if melhor is None:
+        return ["Não achei o cabeçalho do Super Nintendo: o arquivo pode não ser uma ROM de SNES, ou estar corrompido."]
+    mapa, titulo, certa, cab = melhor
+    rapida = " FastROM" if cab[0x15] & 0x10 else ""
+    tamanho = entrada.tamanho - copiadora
+    linhas = [f"Super Nintendo · título interno “{titulo or 'sem título'}” · {mapa}{rapida} · {_mb(tamanho)}"]
+    if copiadora:
+        linhas.append("Tem o cabeçalho de copiadora de 512 bytes (.smc antigo): normal, o emulador ignora.")
+    if tamanho % (128 * 1024):
+        linhas.append("O tamanho não é múltiplo de 128 KB: a ROM pode estar cortada ou ter lixo no fim.")
+    linhas.append("Soma de verificação certa: a ROM parece íntegra." if certa else
+                  "A soma de verificação não bate: ROM modificada (hack, tradução) ou corrompida. Muitas abrem assim mesmo; "
+                  "se esta não abrir, use uma cópia sem modificação.")
+    return linhas
+
+
+def _ficha_mega(entrada):
+    if entrada.ext == "smd" or (b"SEGA" not in entrada.pedaco(0x100, 16) and entrada.tamanho % 16384 == 512):
+        return ["Mega Drive no formato .smd (o de copiadora, intercalado): o emulador converte sozinho.",
+                f"Tamanho: {_mb(entrada.tamanho - 512)}."]
+    cab = entrada.pedaco(0x100, 0x100)
+    if len(cab) < 0x100 or b"SEGA" not in cab[:16]:
+        return ["Não achei o cabeçalho “SEGA” no lugar do Mega Drive (0x100): o arquivo pode ser de outro console ou estar corrompido."]
+    console = _texto_do_cabecalho(cab[:16])
+    titulo = _texto_do_cabecalho(cab[0x50:0x80]) or _texto_do_cabecalho(cab[0x20:0x50])
+    regiao = _texto_do_cabecalho(cab[0xF0:0xF3])
+    nomes = {"J": "Japão", "U": "EUA", "E": "Europa", "4": "EUA", "8": "Europa", "1": "Japão", "F": "todas"}
+    regioes = ", ".join(dict.fromkeys(nomes[c] for c in regiao if c in nomes)) or regiao or "não informada"
+    return [f"{console} · título “{titulo or 'sem título'}” · região: {regioes} · {_mb(entrada.tamanho)}"]
+
+
+def _ficha_nes(entrada):
+    cab = entrada.pedaco(0, 16)
+    if cab[:4] != b"NES\x1a":
+        return ["Sem o cabeçalho iNES (“NES” + 1A): o emulador não sabe o formato do cartucho -- use a ROM .nes com cabeçalho."]
+    mapper = (cab[6] >> 4) | (cab[7] & 0xF0)
+    formato = "NES 2.0" if cab[7] & 0x0C == 0x08 else "iNES"
+    return [f"NES · {formato} · mapper {mapper} · {cab[4] * 16} KB de programa, {cab[5] * 8} KB de gráficos"]
+
+
+def _ficha_gb(entrada):
+    if entrada.pedaco(4, 8) == _LOGO_GBA:
+        return [f"Game Boy Advance · título “{_texto_do_cabecalho(entrada.pedaco(0xA0, 12)) or 'sem título'}” · "
+                f"código {_texto_do_cabecalho(entrada.pedaco(0xAC, 4))} · {_mb(entrada.tamanho)}"]
+    cor = " Color" if entrada.pedaco(0x143, 1) in (b"\x80", b"\xc0") else ""
+    return [f"Game Boy{cor} · título “{_texto_do_cabecalho(entrada.pedaco(0x134, 11)) or 'sem título'}” · {_mb(entrada.tamanho)}"]
+
+
+def _ficha_n64(entrada):
+    comeco = entrada.pedaco(0, 0x40)
+    ordem = {bytes.fromhex("80371240"): ("z64", "big-endian, o formato padrão"),
+             bytes.fromhex("37804012"): ("v64", "byte-swapped"),
+             bytes.fromhex("40123780"): ("n64", "little-endian")}.get(comeco[:4], ("?", "desconhecida"))
+    nome = comeco[0x20:0x34]
+    if ordem[0] == "v64":
+        nome = bytes(b for par in zip(nome[1::2], nome[0::2]) for b in par)
+    elif ordem[0] == "n64":
+        nome = bytes(b for i in range(0, len(nome), 4) for b in reversed(nome[i:i + 4]))
+    return [f"Nintendo 64 · título “{_texto_do_cabecalho(nome) or 'sem título'}” · ordem dos bytes {ordem[0]} ({ordem[1]}) · "
+            f"{_mb(entrada.tamanho)}. O emulador abre as três ordens."]
+
+
+def ficha_do_arquivo(entrada, sistema):
+    """O que o cabeçalho do arquivo diz (título interno, formato, integridade), em linhas para o painel."""
+    try:
+        if entrada.ext in PACOTES:
+            nomes = nomes_no_pacote(entrada)
+            if nomes:
+                return [f"Pacote .{entrada.ext} com {len(nomes)} arquivo(s): " + ", ".join(nomes[:6]) + ("…" if len(nomes) > 6 else "")]
+            return []
+        if sistema == "snes":
+            return _ficha_snes(entrada)
+        if sistema in ("segaMD", "sega32x"):
+            return _ficha_mega(entrada)
+        if sistema == "nes" and entrada.ext != "fds":
+            return _ficha_nes(entrada)
+        if sistema in ("gb", "gba"):
+            return _ficha_gb(entrada)
+        if sistema == "n64":
+            return _ficha_n64(entrada)
+    except ForaDoTrecho:
+        return []
+    return []
+
+
 def sistema_do_cartucho(entrada):
     """O sistema de um cartucho pelo cabeçalho, ou None. Pode levantar ForaDoTrecho."""
     comeco = entrada.pedaco(0, 16)
@@ -798,6 +907,8 @@ class Analise:
     erros: list = field(default_factory=list)
     avisos: list = field(default_factory=list)
     ignorados: list = field(default_factory=list)
+    #: o que o cabeçalho do arquivo principal diz (título interno, formato, integridade)
+    ficha: list = field(default_factory=list)
 
     @property
     def ok(self):
@@ -836,6 +947,7 @@ class Analise:
             "erros": self.erros,
             "avisos": self.avisos,
             "ignorados": self.ignorados,
+            "ficha": self.ficha,
         }
 
 
@@ -1085,6 +1197,8 @@ def analisar(entradas, sistema_escolhido="", ligados=None, limite_por_arquivo=No
         elif not an.sistema and an.principal and not an.erros:
             an.erros.append("Não deu para reconhecer o sistema pelos arquivos: escolha na lista “Sistema”.")
 
+    if an.principal is not None and an.principal.conteudo is None:
+        an.ficha = ficha_do_arquivo(an.principal.entrada, an.sistema or an.detectado)
     sistema = SISTEMAS.get(an.sistema)
     if an.sistema in ("arcade", "mame") and an.principal is not None and an.principal.entrada.tamanho > MAX_FLIPERAMA:
         an.erros.append(
@@ -1302,49 +1416,379 @@ CONTROLES = {
     "segaCD": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), _START),
     "snes": (_DIRECIONAL, ("A", ("Z",), "A"), ("B", ("X",), "B"), ("X", ("A",), "X"), ("Y", ("S",), "Y"), ("L / R", ("Q", "E"), "L e R"), _START, _SELECT),
     "segaMD": (_DIRECIONAL, ("A", ("S",), "A"), ("B", ("X",), "B"), ("C", ("Z",), "C"), _START),
-    "arcade": (_DIRECIONAL, ("Botões 1 a 4", ("Z", "X", "A", "S"), "os botões, à direita"), ("Ficha (moeda)", ("V",), "COIN"), ("Começar", ("Enter",), "START")),
+    "arcade": (_DIRECIONAL, ("Botões 1 a 4", ("X", "Z", "S", "A"), "os botões 1 a 4, à direita (5 e 6 ao lado)"), ("Ficha (moeda)", ("V",), "COIN"), ("Começar", ("Enter",), "START")),
 }
+
+#: O MAME 2003 Plus é fliperama também: os mesmos comandos.
+CONTROLES["mame"] = CONTROLES["arcade"]
 
 #: Vale para todo console: o que não muda de um para o outro.
 DICAS_DE_CONTROLE = {
     "pc": "Um controle de videogame USB ou Bluetooth funciona na hora: é só ligar e apertar um botão. "
-          "O menu do emulador (salvar e carregar o jogo, tela cheia, volume) fica na barra de baixo.",
-    "celular": "O controle aparece por cima do jogo. Deite o celular para ver maior; um controle Bluetooth "
-               "pareado também funciona. Salvar e carregar ficam na barra de baixo.",
+          "Salvar e carregar o jogo, o som e o filtro da imagem ficam em “Salvar e ajustes”, no alto.",
+    "celular": "O controle aparece por cima do jogo, e você pode mudar o lugar e o tamanho de cada botão "
+               "(Ajustar controle). Deite o celular e use a Tela cheia; um controle Bluetooth pareado também funciona.",
+    "controle": "Ligue o controle de Xbox no computador ou no celular (cabo ou Bluetooth) e aperte qualquer botão: "
+                "ele já vale. O de PlayStation e os genéricos funcionam igual, pela posição dos botões.",
 }
 
 
-def controles_do_sistema(codigo):
-    """[{acao, teclas, celular}] para a página do jogo ("No computador" / "No celular")."""
-    return [{"acao": a, "teclas": list(t), "celular": c} for a, t, c in CONTROLES.get(codigo, ())]
+#: O QUE CADA BOTÃO FAZ, em geral, em cada console (a convenção dos jogos dele). O
+#: jogo pode dizer o dele no painel (JogoCadastrado.acoes: "B: Pular"): manda esse.
+_FUNCAO_GERAL = {
+    "Mover": "Andar e escolher no menu", "Analógico": "Andar e mirar", "Direcional (cruz)": "Menus e atalhos",
+    "Start": "Pausar ou começar", "Select": "Opções e trocar", "L / R": "Botões de ombro: trocar, câmera, defender",
+    "L1 / R1": "Ombros: trocar, defender, câmera", "L2 / R2": "Gatilhos: acelerar, mirar, especial",
+    "Botões C": "Câmera e ações extras", "Z (gatilho)": "Gatilho: mirar e agachar",
+    "Tela de baixo": "Tocar na tela de baixo do DS", "Joystick": "Andar e mirar", "Disparo": "Atirar e pular",
+    "Teclado do PC antigo": "Digitar e os atalhos do jogo", "Mouse": "Apontar e clicar",
+    "Teclado do C64": "Digitar (LOAD, RUN) e os atalhos do jogo", "Ficha (moeda)": "Pôr ficha (créditos)",
+    "Começar": "Começar a partida", "Option": "Opções e começar", "Pause": "Pausar", "Reset": "Recomeçar",
+    "Reset (começar)": "Começar a partida", "Run": "Pausar ou começar",
+}
+_FUNCAO_POR_CONSOLE = {
+    "nes": {"A": "Pular e confirmar", "B": "Correr, atirar e voltar"},
+    "snes": {"B": "Pular e confirmar (na maioria)", "Y": "Correr, pegar e atirar", "A": "Ação extra (pulo especial)", "X": "Menu e ação extra"},
+    "gb": {"A": "Pular e confirmar", "B": "Correr, atirar e voltar"},
+    "gba": {"A": "Pular e confirmar", "B": "Correr, atacar e voltar"},
+    "n64": {"A": "Pular e confirmar", "B": "Atacar e voltar"},
+    "psx": {"✕": "Confirmar e ação principal", "○": "Voltar e ação 2", "□": "Ação 3 (atacar, usar)", "△": "Menu e ação 4"},
+    "psp": {"✕": "Confirmar e ação principal", "○": "Voltar e ação 2", "□": "Ação 3 (atacar, usar)", "△": "Menu e ação 4"},
+    "segaMD": {"A": "Ação 1", "B": "Ação principal (pular)", "C": "Ação 3 (pular em muitos jogos)"},
+    "segaCD": {"A": "Ação 1", "B": "Ação principal", "C": "Ação 3"},
+    "sega32x": {"A": "Ação 1", "B": "Ação principal", "C": "Ação 3"},
+    "segaMS": {"Botão 1 (e Start)": "Ação 1 e começar", "Botão 2": "Ação 2 (pular, atirar)"},
+    "segaGG": {"Botão 1": "Ação 1", "Botão 2": "Ação 2 (pular, atirar)"},
+    "nds": {"A": "Confirmar e ação principal", "B": "Voltar e pular"},
+    "arcade": {"Botões 1 a 4": "Golpes, tiros e pulos (cada jogo é um)"},
+    "mame": {"Botões 1 a 4": "Golpes, tiros e pulos (cada jogo é um)"},
+}
+#: Como a equipe escreve o botão no painel (e o nome dele aqui).
+_APELIDOS_DE_BOTAO = {"X": "✕", "XIS": "✕", "O": "○", "BOLA": "○", "CIRCULO": "○", "QUADRADO": "□", "TRIANGULO": "△",
+                      "START": "Start", "SELECT": "Select", "DIRECIONAL": "Mover", "SETAS": "Mover", "CRUZ": "Mover",
+                      "ANALOGICO": "Analógico", "L": "L / R", "R": "L / R", "L1": "L1 / R1", "R1": "L1 / R1", "L2": "L2 / R2", "R2": "L2 / R2"}
+
+
+def _chave_do_botao(texto):
+    sem = "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn")
+    return sem.strip().upper()
+
+
+def ler_acoes(texto, codigo):
+    """O "o que cada botão faz" do painel ("B: Pular" por linha) -> {nome do botão aqui: ação}."""
+    nomes = {_chave_do_botao(a): a for a, _, _ in CONTROLES.get(codigo, ())}
+    acoes = {}
+    for linha in (texto or "").splitlines():
+        if ":" not in linha and "=" not in linha:
+            continue
+        botao, acao = re.split(r"[:=]", linha, maxsplit=1)
+        chave = _chave_do_botao(botao)
+        nome = nomes.get(chave)
+        if nome is None:
+            apelido = _APELIDOS_DE_BOTAO.get(chave)
+            nome = apelido if apelido in nomes.values() else None
+        if nome is None:  # "L" num console com "L / R": vale o par
+            nome = next((n for k, n in nomes.items() if chave and chave in [p.strip() for p in k.split("/")]), None)
+        if nome and acao.strip():
+            acoes[nome] = acao.strip()[:60]
+    return acoes
+
+
+#: O ÍCONE DE CADA AÇÃO: o mesmo em todo jogo (o "Pular" do Mario e o do Sonic são o
+#: mesmo bonequinho), para quem joga pegar a prática de um jogo para o outro. Vale a
+#: primeira palavra que aparece no que o botão faz ("Pular e confirmar" -> pular).
+#: Os desenhos ficam em templates/partials/icones_das_acoes.html.
+ICONES_DAS_ACOES = (
+    ("pular", ("pul", "salt")),
+    ("atacar", ("atac", "golpe", "soco", "socar", "chut", "bater", "lut", "espad", "cort")),
+    ("atirar", ("atir", "tiro", "dispar", "mira", "mirar")),
+    ("correr", ("corr", "aceler", "turbo", "veloc", "nitro")),
+    ("defender", ("defen", "bloq", "escud", "proteg")),
+    ("especial", ("especial", "poder", "magia", "super")),
+    ("pegar", ("peg", "usar", "agarr", "interag", "abrir", "segur")),
+    ("confirmar", ("confirm", "aceit")),
+    ("voltar", ("volt", "cancel")),
+    ("pausar", ("paus", "comec", "inici", "menu")),
+    ("trocar", ("troc", "mud", "altern")),
+    ("opcoes", ("opc", "ajust")),
+    ("camera", ("camer", "olh")),
+    ("ficha", ("ficha", "moed", "credit")),
+    ("frear", ("frei", "frea")),
+    ("mover", ("andar", "mover", "anda ", "direc")),
+    ("digitar", ("digit", "tecl")),
+)
+
+
+#: Os comandos de andar: o ícone é sempre o de mover.
+_COMANDOS_DE_MOVER = {"Mover", "Analógico", "Direcional (cruz)", "Joystick", "Cruz X", "Cruz Y",
+                      "Direcional esquerdo", "Direcional direito"}
+
+
+def icone_da_funcao(texto):
+    """O ícone do que o botão faz ("Pular e confirmar" -> "pular"); "" quando nenhum serve."""
+    sem = "".join(c for c in unicodedata.normalize("NFD", texto or "") if unicodedata.category(c) != "Mn").lower()
+    melhor, onde = "", len(sem) + 1
+    for icone, palavras in ICONES_DAS_ACOES:
+        for palavra in palavras:
+            achou = sem.find(palavra)
+            if achou != -1 and achou < onde:
+                melhor, onde = icone, achou
+    return melhor
+
+
+def controles_do_sistema(codigo, acoes=None):
+    """[{acao, funcao, teclas, celular, controle}]: o botão, o que ele faz e onde fica no
+    teclado, na tela do celular e no controle de Xbox (ou qualquer controle USB/Bluetooth).
+
+    `acoes`: o que cada botão faz NESTE jogo (ler_acoes); sem ela, o que costuma fazer no console.
+    """
+    acoes = acoes or {}
+    gerais = _FUNCAO_POR_CONSOLE.get(codigo, {})
+    return [
+        {"acao": a, "funcao": funcao, "do_jogo": a in acoes,
+         "icone": "mover" if a in _COMANDOS_DE_MOVER and a not in acoes else icone_da_funcao(funcao),
+         "teclas": list(t), "celular": c, "controle": botoes_no_xbox(t, codigo)}
+        for a, t, c in CONTROLES.get(codigo, ())
+        for funcao in [acoes.get(a) or gerais.get(a) or _FUNCAO_GERAL.get(a, "")]
+    ]
+
+
+# ---------------------------------------------------------------- de onde vem o núcleo e a qualidade da imagem
+
+#: A versão do EmulatorJS que mora em core/static/vendor/emulatorjs/ (a dos núcleos também).
+EMULATORJS_VERSAO = "4.2.3"
+#: O núcleo que NÃO mora no site (os de licença não comercial ou não confirmada) vem do
+#: pacote oficial do EmulatorJS no npm, pelo jsDelivr -- o espelho público do npm, com CORS
+#: e cache no mundo todo. Se ele falhar, o próprio emulador ainda tenta o CDN dele.
+NUCLEO_NO_NPM = "https://cdn.jsdelivr.net/npm/@emulatorjs/core-{nucleo}@" + EMULATORJS_VERSAO + "/"
+
+#: O filtro de imagem de cada console. O RetroArch do emulador estica a imagem sem
+#: suavizar (video_smooth = false): numa tela que não é múltiplo exato, cada pixel sai de
+#: um tamanho e o jogo fica "pixelizado". SABR alisa os contornos da arte 2D sem borrar;
+#: o bicúbico suaviza a imagem dos consoles 3D e dos computadores (o texto fica por igual).
+FILTRO_2D = "sabr"
+FILTRO_3D = "bicubic"
+#: No celular, a arte 2D vai com o 2xScaleHQ: o mesmo contorno liso, com bem menos conta
+#: por pixel -- a tela do celular é densa, e o que pesa no aparelho fraco é o que trava.
+FILTRO_2D_CELULAR = "2xScaleHQ.glslp"
+CONSOLES_3D = {"psx", "n64", "psp", "segaSaturn", "nds", "3do", "pcfx", "jaguar",
+               "dos", "amiga", "c64", "c128", "vic20", "plus4", "pet"}
+#: Mais resolução por dentro (no computador; o celular fica no padrão, que pesa menos).
+RESOLUCAO_NO_COMPUTADOR = {
+    "n64": {"mupen64plus-43screensize": "960x720"},
+    "psp": {"ppsspp_internal_resolution": "960x544"},
+}
+
+
+def opcoes_no_computador(codigo):
+    """O que muda no computador (placa de vídeo folgada): mais resolução por dentro e o SABR na arte 2D."""
+    opcoes = dict(RESOLUCAO_NO_COMPUTADOR.get(codigo, {}))
+    if codigo not in CONSOLES_3D:
+        opcoes["shader"] = FILTRO_2D
+    return opcoes
+
+
+def origem_do_nucleo(codigo):
+    """O endereço (pasta) do núcleo quando ele não mora no site; "" quando mora."""
+    sistema = SISTEMAS.get(codigo)
+    if sistema is None or sistema.uso_comercial:
+        return ""
+    return NUCLEO_NO_NPM.format(nucleo=sistema.nucleo)
+
+
+def opcoes_do_emulador(codigo):
+    """Os ajustes iniciais do emulador para o console (EJS_defaultOptions)."""
+    sistema = SISTEMAS.get(codigo)
+    # o filtro do celular; no computador, opcoes_no_computador troca pelo mais caprichado
+    opcoes = {"shader": FILTRO_3D if codigo in CONSOLES_3D else FILTRO_2D_CELULAR}
+    if codigo == "psx":
+        opcoes["pcsx_rearmed_dithering"] = "disabled"  # o pontilhado do PS1 some: a imagem fica limpa
+    # o núcleo certo (no Master System o emulador escolheria outro por conta própria); o
+    # N64 fica de fora: no Safari do iPhone o emulador troca de núcleo de propósito
+    if sistema is not None and codigo != "n64":
+        opcoes["retroarch_core"] = sistema.nucleo
+    return opcoes
 
 
 #: Os consoles em que o analógico vai para as setas (e a cruz para T/F/G/H).
 ANALOGICO_NAS_SETAS = ("n64", "psp")
 
+# ---------------------------------------------------------------- o controle de Xbox (e qualquer controle USB/Bluetooth)
+#
+# O RetroArch fala "RetroPad": um controle de Super Nintendo com analógicos. Cada botão
+# do console é um número dele (0 = B, 8 = A...). O EmulatorJS liga o teclado e o controle
+# a esses números. No padrão dele, o controle vai PELO NOME (o A do Xbox no A do Super
+# Nintendo): no PlayStation, o ✕ caía no B do Xbox, à direita. Aqui vai PELA POSIÇÃO,
+# como o RetroArch faz: o botão de baixo do Xbox (A) é o botão de baixo do console (o B
+# do Super Nintendo, o ✕ do PlayStation), o da esquerda (X) é o da esquerda, e assim vai.
+# Xbox, PlayStation, 8BitDo e afins seguem o "controle padrão" do navegador: valem todos.
+
+#: A tecla do computador -> o botão do RetroPad (o teclado padrão do EmulatorJS).
+_TECLA_DO_RETROPAD = {"X": 0, "S": 1, "V": 2, "Enter": 3, "↑": 4, "↓": 5, "←": 6, "→": 7, "Z": 8, "A": 9,
+                      "Q": 10, "E": 11, "Tab": 12, "R": 13}
+#: N64 e PSP: as setas são o analógico e a cruz vai para T/F/G/H; I/J/K/L, o analógico da direita.
+_TECLA_DO_RETROPAD_ANALOGICO = dict(_TECLA_DO_RETROPAD, **{"↑": 19, "↓": 18, "←": 17, "→": 16, "T": 4, "G": 5, "F": 6,
+                                                           "H": 7, "I": 23, "K": 22, "J": 21, "L": 20})
+#: O botão do RetroPad -> o nome no controle de Xbox.
+_RETROPAD_NO_XBOX = {0: "A", 1: "X", 2: "Exibir", 3: "Menu", 4: "Direcional", 5: "Direcional", 6: "Direcional",
+                     7: "Direcional", 8: "B", 9: "Y", 10: "LB", 11: "RB", 12: "LT", 13: "RT", 16: "Analógico esquerdo",
+                     17: "Analógico esquerdo", 18: "Analógico esquerdo", 19: "Analógico esquerdo",
+                     20: "Analógico direito", 21: "Analógico direito", 22: "Analógico direito", 23: "Analógico direito"}
+#: O botão do RetroPad -> o botão do "controle padrão" do navegador (como o EmulatorJS escreve).
+_RETROPAD_NO_CONTROLE = {0: "BUTTON_1", 1: "BUTTON_3", 2: "SELECT", 3: "START", 4: "DPAD_UP", 5: "DPAD_DOWN",
+                         6: "DPAD_LEFT", 7: "DPAD_RIGHT", 8: "BUTTON_2", 9: "BUTTON_4", 10: "LEFT_TOP_SHOULDER",
+                         11: "RIGHT_TOP_SHOULDER", 12: "LEFT_BOTTOM_SHOULDER", 13: "RIGHT_BOTTOM_SHOULDER",
+                         16: "LEFT_STICK_X:+1", 17: "LEFT_STICK_X:-1", 18: "LEFT_STICK_Y:+1", 19: "LEFT_STICK_Y:-1",
+                         20: "RIGHT_STICK_X:+1", 21: "RIGHT_STICK_X:-1", 22: "RIGHT_STICK_Y:+1", 23: "RIGHT_STICK_Y:-1"}
+
+
+def botoes_no_xbox(teclas, codigo):
+    """As teclas de um comando -> os botões do controle de Xbox (["A"], ["LB", "RB"], ["Direcional"])."""
+    mapa = _TECLA_DO_RETROPAD_ANALOGICO if codigo in ANALOGICO_NAS_SETAS else _TECLA_DO_RETROPAD
+    nomes = []
+    for tecla in teclas:
+        nome = _RETROPAD_NO_XBOX.get(mapa.get(tecla))
+        if nome and nome not in nomes:
+            nomes.append(nome)
+    return nomes
+
 
 def controles_do_emulador(codigo):
-    """Os ajustes de teclado que o site faz no emulador (N64 e PSP: o analógico nas setas).
+    """O teclado e o controle que o site entrega ao emulador (EJS_defaultControls).
 
-    No padrão do EmulatorJS as setas são a CRUZ e o analógico fica em
-    T/F/G/H -- e quase todo jogo de N64 e de PSP anda pelo analógico. Aqui
-    os dois trocam de lugar, e CONTROLES mostra assim.
+    O teclado é o padrão do EmulatorJS (o que a página ensina, CONTROLES), com uma troca
+    no N64 e no PSP: lá as setas são o ANALÓGICO e a cruz fica em T/F/G/H -- quase todo
+    jogo deles anda pelo analógico. O controle (Xbox, PlayStation, USB, Bluetooth) vai
+    pela posição dos botões (ver _RETROPAD_NO_CONTROLE).
     """
-    if codigo not in ANALOGICO_NAS_SETAS:
-        return None
-    padrao = {
-        0: "x", 1: "s", 2: "v", 3: "enter", 8: "z", 9: "a", 10: "q", 11: "e", 12: "tab", 13: "r",
-        20: "l", 21: "j", 22: "k", 23: "i", 24: "1", 25: "2", 26: "3",
-        # a cruz em T/F/G/H, o analógico nas setas
-        4: "t", 5: "g", 6: "f", 7: "h",
-        16: "right arrow", 17: "left arrow", 18: "down arrow", 19: "up arrow",
+    teclado = {
+        0: "x", 1: "s", 2: "v", 3: "enter", 4: "up arrow", 5: "down arrow", 6: "left arrow", 7: "right arrow",
+        8: "z", 9: "a", 10: "q", 11: "e", 12: "tab", 13: "r",
+        16: "h", 17: "f", 18: "g", 19: "t", 20: "l", 21: "j", 22: "k", 23: "i", 24: "1", 25: "2", 26: "3",
     }
-    nomes = {0: "BUTTON_2", 1: "BUTTON_4", 2: "SELECT", 3: "START", 4: "DPAD_UP", 5: "DPAD_DOWN", 6: "DPAD_LEFT",
-             7: "DPAD_RIGHT", 8: "BUTTON_1", 9: "BUTTON_3", 10: "LEFT_TOP_SHOULDER", 11: "RIGHT_TOP_SHOULDER",
-             12: "LEFT_BOTTOM_SHOULDER", 13: "RIGHT_BOTTOM_SHOULDER", 16: "LEFT_STICK_X:+1", 17: "LEFT_STICK_X:-1",
-             18: "LEFT_STICK_Y:+1", 19: "LEFT_STICK_Y:-1", 20: "RIGHT_STICK_X:+1", 21: "RIGHT_STICK_X:-1",
-             22: "RIGHT_STICK_Y:+1", 23: "RIGHT_STICK_Y:-1"}
-    jogador = {str(i): ({"value": v, "value2": nomes[i]} if i in nomes else {"value": v}) for i, v in padrao.items()}
+    if codigo in ANALOGICO_NAS_SETAS:
+        teclado.update({4: "t", 5: "g", 6: "f", 7: "h",
+                        16: "right arrow", 17: "left arrow", 18: "down arrow", 19: "up arrow"})
+    jogador = {str(i): ({"value": v, "value2": _RETROPAD_NO_CONTROLE[i]} if i in _RETROPAD_NO_CONTROLE else {"value": v})
+               for i, v in teclado.items()}
     jogador.update({"14": {"value": "", "value2": "LEFT_STICK"}, "15": {"value": "", "value2": "RIGHT_STICK"},
                     "27": {}, "28": {}, "29": {}})
     return {"0": jogador, "1": {}, "2": {}, "3": {}}
+
+
+# ---------------------------------------------------------------- o controle na tela do celular
+#
+# O EmulatorJS desenha um controle por cima do jogo (EJS_VirtualGamepadSettings). O dele
+# vem com "Fast", "Slow" e "Rewind" no meio da tela, o PlayStation com Y/X/B/A de Xbox e
+# o disparo do Atari sem nome. Aqui cada console tem o dele: o direcional à esquerda, os
+# botões com os nomes do console à direita, os de ombro em cima e START/SELECT embaixo,
+# no meio -- e só isso. O desenho (vidro escuro, cores do PlayStation) é do CSS do site.
+# "acao" liga o botão ao comando de CONTROLES (o que ele faz no jogo vira legenda).
+#
+# Posições em px dentro das caixas do EmulatorJS: a da direita tem 150 x 150 (o CSS do
+# site), botão de 56. (O EmulatorJS ignora o 0: o menor é 1.)
+_DIAMANTE = ((47, 1), (1, 47), (93, 47), (47, 93))   # cima, esquerda, direita, baixo
+_DOIS = ((6, 74), (88, 30))                          # embaixo à esquerda, em cima à direita
+_SEIS = ((-40, 12), (28, 1), (96, 12), (-40, 82), (28, 71), (96, 82))  # duas fileiras de três
+_TRES = ((-36, 80), (30, 58), (96, 36))
+
+
+def _bt(texto, id_, valor, onde, acao="", x=None, y=None, direita=None):
+    b = {"type": "button", "text": texto, "id": id_, "location": onde, "input_value": valor, "bold": True}
+    if x is not None:
+        b["left"] = x
+    if direita is not None:
+        b["right"] = direita
+    if y is not None:
+        b["top"] = y
+    if acao:
+        b["acao"] = acao
+    return b
+
+
+def _face(botoes, posicoes):
+    """[(texto, id, valor, acao)] nas posições dadas, na caixa da direita."""
+    return [_bt(t, i, v, "right", a, x, y) for (t, i, v, a), (x, y) in zip(botoes, posicoes)]
+
+
+_CRUZ = {"type": "dpad", "id": "dpad", "location": "left", "left": "50%", "top": "50%",
+         "joystickInput": False, "inputValues": [4, 5, 6, 7], "acao": "Mover"}
+_ANALOGICO = {"type": "zone", "id": "stick", "location": "left", "left": "50%", "top": "50%",
+              "joystickInput": True, "inputValues": [16, 17, 18, 19], "color": "#ffffff", "acao": "Analógico"}
+
+
+def _ombros(par="L / R", l=("L", 10), r=("R", 11), y=-54):
+    return [_bt(l[0], "l", l[1], "left", par, x=2, y=y), _bt(r[0], "r", r[1], "right", par, direita=2, y=y)]
+
+
+def _meio(*botoes):
+    """START, SELECT e afins, embaixo no meio (a caixa do meio tem 200 de largura no CSS do site)."""
+    largura, espaco = 62, 6
+    total = len(botoes) * largura + (len(botoes) - 1) * espaco
+    inicio = (200 - total) // 2
+    return [_bt(t, i, v, "center", a, x=max(1, inicio + n * (largura + espaco)), y=1)
+            for n, (t, i, v, a) in enumerate(botoes)]
+
+
+_START_SELECT = (("SELECT", "select", 2, "Select"), ("START", "start", 3, "Start"))
+_PS = (("△", "triangulo", 9, "△"), ("□", "quadrado", 1, "□"), ("○", "bola", 8, "○"), ("✕", "xis", 0, "✕"))
+_SNES = (("X", "x", 9, "X"), ("Y", "y", 1, "Y"), ("A", "a", 8, "A"), ("B", "b", 0, "B"))
+_SEGA = (("X", "x", 10, ""), ("Y", "y", 9, ""), ("Z", "z", 11, ""), ("A", "a", 1, "A"), ("B", "b", 0, "B"), ("C", "c", 8, "C"))
+_FLIPERAMA = (("3", "b3", 1, "Botões 1 a 4"), ("4", "b4", 9, "Botões 1 a 4"), ("5", "b5", 10, ""),
+              ("1", "b1", 0, "Botões 1 a 4"), ("2", "b2", 8, "Botões 1 a 4"), ("6", "b6", 11, ""))
+
+GAMEPAD_NA_TELA = {
+    "nes": [_CRUZ, *_face((("B", "b", 0, "B"), ("A", "a", 8, "A")), _DOIS), *_meio(*_START_SELECT)],
+    "gb": [_CRUZ, *_face((("B", "b", 0, "B"), ("A", "a", 8, "A")), _DOIS), *_meio(*_START_SELECT)],
+    "gba": [_CRUZ, *_face((("B", "b", 0, "B"), ("A", "a", 8, "A")), _DOIS), *_ombros(), *_meio(*_START_SELECT)],
+    "snes": [_CRUZ, *_face(_SNES, _DIAMANTE), *_ombros(), *_meio(*_START_SELECT)],
+    "nds": [_CRUZ, *_face(_SNES, _DIAMANTE), *_ombros(), *_meio(*_START_SELECT)],
+    "psx": [_CRUZ, *_face(_PS, _DIAMANTE), *_ombros("L1 / R1", ("L1", 10), ("R1", 11)),
+            _bt("L2", "l2", 12, "left", "L2 / R2", x=2, y=-100), _bt("R2", "r2", 13, "right", "L2 / R2", direita=2, y=-100),
+            *_meio(*_START_SELECT)],
+    "psp": [_ANALOGICO, *_face(_PS, _DIAMANTE), *_ombros(), *_meio(*_START_SELECT)],
+    "segaMD": [_CRUZ, *_face(_SEGA, _SEIS), *_meio(("MODE", "mode", 2, ""), ("START", "start", 3, "Start"))],
+    "segaCD": [_CRUZ, *_face(_SEGA, _SEIS), *_meio(("MODE", "mode", 2, ""), ("START", "start", 3, "Start"))],
+    "sega32x": [_CRUZ, *_face(_SEGA, _SEIS), *_meio(("MODE", "mode", 2, "Mode"), ("START", "start", 3, "Start"))],
+    "segaSaturn": [_CRUZ, *_face((("X", "x", 9, "X"), ("Y", "y", 10, "Y"), ("Z", "z", 11, "Z"), ("A", "a", 1, "A"),
+                                  ("B", "b", 0, "B"), ("C", "c", 8, "C")), _SEIS),
+                   *_ombros(l=("L", 12), r=("R", 13)), *_meio(("START", "start", 3, "Start"))],
+    "segaMS": [_CRUZ, *_face((("1", "b1", 0, "Botão 1 (e Start)"), ("2", "b2", 8, "Botão 2")), _DOIS)],
+    "segaGG": [_CRUZ, *_face((("1", "b1", 0, "Botão 1"), ("2", "b2", 8, "Botão 2")), _DOIS), *_meio(("START", "start", 3, "Start"))],
+    "arcade": [_CRUZ, *_face(_FLIPERAMA, _SEIS), *_meio(("FICHA", "ficha", 2, "Ficha (moeda)"), ("INICIAR", "start", 3, "Começar"))],
+    "mame": [_CRUZ, *_face(_FLIPERAMA, _SEIS), *_meio(("FICHA", "ficha", 2, "Ficha (moeda)"), ("INICIAR", "start", 3, "Começar"))],
+    "atari2600": [_CRUZ, _bt("FOGO", "fogo", 0, "right", "Disparo", x=44, y=44),
+                  *_meio(("SELECT", "select", 2, "Select"), ("RESET", "reset", 3, "Reset (começar)"))],
+    "atari5200": [_CRUZ, _bt("FOGO", "fogo", 0, "right", "Disparo", x=44, y=44), *_meio(("START", "start", 3, "Start"))],
+    "atari7800": [_CRUZ, *_face((("1", "b1", 0, "Botão 1"), ("2", "b2", 8, "Botão 2")), _DOIS),
+                  *_meio(("SELECT", "select", 2, "Select"), ("PAUSE", "pause", 3, "Pause"), ("RESET", "reset", 9, "Reset"))],
+    "lynx": [_CRUZ, *_face((("B", "b", 0, "B"), ("A", "a", 8, "A")), _DOIS),
+             *_meio(("OPT 1", "opt1", 10, "Option 1 / 2"), ("PAUSE", "pause", 3, "Pause"), ("OPT 2", "opt2", 11, "Option 1 / 2"))],
+    "pce": [_CRUZ, *_face((("II", "ii", 0, "II"), ("I", "i", 8, "I")), _DOIS), *_meio(("SELECT", "select", 2, "Select"), ("RUN", "run", 3, "Run"))],
+    "ngp": [_CRUZ, *_face((("A", "a", 0, "A"), ("B", "b", 8, "B")), _DOIS), *_meio(("OPTION", "option", 3, "Option"))],
+    "jaguar": [_CRUZ, *_face((("A", "a", 8, "A"), ("B", "b", 0, "B"), ("C", "c", 1, "C")), _TRES),
+               *_meio(("PAUSE", "pause", 2, "Pause"), ("OPTION", "option", 3, "Option"))],
+    "3do": [_CRUZ, *_face((("A", "a", 1, "A"), ("B", "b", 0, "B"), ("C", "c", 8, "C")), _TRES), *_ombros(),
+            *_meio(("X", "parar", 2, "Stop (X)"), ("P", "play", 3, "Play (P)"))],
+}
+
+
+def gamepad_na_tela(codigo, acoes=None):
+    """(o controle da tela, {id do botão: {"icone", "texto"}}); (None, {}) = o do emulador.
+
+    Cada botão leva o ícone do que ele faz (o do jogo, se a equipe disse; senão o costume
+    do console) e, quando a equipe disse, o texto curto embaixo da letra.
+    """
+    desenho = GAMEPAD_NA_TELA.get(codigo)
+    if not desenho:
+        return None, {}
+    funcoes = {c["acao"]: c for c in controles_do_sistema(codigo, acoes)}
+    rotulos = {}
+    for b in desenho:
+        comando = funcoes.get(b.get("acao"))
+        if b["type"] != "button" or not comando:
+            continue
+        rotulo = {"icone": comando["icone"], "texto": comando["funcao"] if comando["do_jogo"] else ""}
+        if rotulo["icone"] or rotulo["texto"]:
+            rotulos[b["id"]] = rotulo
+    return [dict(b) for b in desenho], rotulos

@@ -148,7 +148,8 @@
       // origem, para o jogo salvo ficar guardado no navegador
       doEmulador = palco.dataset.jogoEmulador === "1" && !deFora && /^\/jogos\/[a-z0-9-]+\/emulador\/$/.test(alvo.pathname);
     } catch (e) { deFora = false; }
-    const permissoes = ["allow-scripts", "allow-pointer-lock", "allow-orientation-lock", "allow-fullscreen"];
+    // (a tela cheia vem do atributo "allow" abaixo: "allow-fullscreen" não é permissão de sandbox)
+    const permissoes = ["allow-scripts", "allow-pointer-lock", "allow-orientation-lock"];
     if (deFora || doEmulador) permissoes.push("allow-same-origin");
     quadro.setAttribute("sandbox", permissoes.join(" "));
     quadro.setAttribute("allow", "autoplay; fullscreen; gamepad; accelerometer; gyroscope; clipboard-write");
@@ -295,5 +296,9 @@
   try { toque = window.matchMedia("(pointer: coarse)").matches; } catch (e) { toque = false; }
   abas.hidden = false;
   caixa.classList.add("jc-controles--abas");
-  escolher(toque ? "celular" : "pc");
+  // um controle já ligado (e acordado com um toque num botão) abre direto a aba dele
+  let controle = false;
+  try { controle = Array.prototype.some.call(navigator.getGamepads ? navigator.getGamepads() : [], function (g) { return g && g.connected; }); } catch (e) { controle = false; }
+  escolher(controle ? "controle" : toque ? "celular" : "pc");
+  window.addEventListener("gamepadconnected", function () { escolher("controle"); });
 })();

@@ -95,7 +95,7 @@ class JogoForm(forms.ModelForm):
         fields = [
             "nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo",
             "capa", "poster", "endereco", "arquivo_html", "proporcao", "apk", "liberar_download",
-            "versao_pc", "versao_pc_link", "sistema", "categoria", "feito_pela_lazer", "destaque", "particular",
+            "versao_pc", "versao_pc_link", "sistema", "categoria", "feito_pela_lazer", "destaque", "particular", "acoes",
         ]
 
     def _conferir_tamanho(self, campo):
@@ -322,6 +322,7 @@ class JogosInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, View):
             "feito_pela_lazer": jogo.feito_pela_lazer,
             "destaque": jogo.destaque,
             "particular": jogo.particular,
+            "acoes": jogo.acoes,
             "capa": jogo.capa_url,
             "poster": self._nome_do_arquivo(jogo.poster),
             "arquivo_html": self._nome_do_arquivo(jogo.arquivo_html),

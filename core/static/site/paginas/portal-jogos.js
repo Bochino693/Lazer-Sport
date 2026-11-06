@@ -367,6 +367,23 @@
       lista.forEach(function (c) {
         var tile = el("div", "bj-tecla");
         tile.appendChild(el("span", "", c.acao));
+        // o que o botão FAZ: o que a equipe disse para este jogo, ou o costume do console
+        var faz = (jogo.acoes && jogo.acoes[c.acao]) || c.funcao;
+        var icone = (jogo.acoes && jogo.acoes[c.acao]) ? (jogo.icones || {})[c.acao] : c.icone;
+        if (faz) {
+          var linhaFaz = el("em", "bj-tecla-faz");
+          if (icone) {
+            var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "bj-ico");
+            svg.setAttribute("aria-hidden", "true");
+            var uso = document.createElementNS("http://www.w3.org/2000/svg", "use");
+            uso.setAttribute("href", "#a-" + icone);
+            svg.appendChild(uso);
+            linhaFaz.appendChild(svg);
+          }
+          linhaFaz.appendChild(document.createTextNode(faz));
+          tile.appendChild(linhaFaz);
+        }
         var ks = el("div");
         if (tocar) ks.appendChild(el("small", "", c.celular));
         else c.teclas.forEach(function (k) { ks.appendChild(el("kbd", "", k)); });

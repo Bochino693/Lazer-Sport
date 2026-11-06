@@ -82,6 +82,8 @@
     el(p + "Resumo").textContent = analise.ok ? "✓ " + analise.resumo : "Ainda não dá para publicar";
     el(p + "Como").textContent = analise.como === "cabeçalho" ? "reconhecido pelo conteúdo" : analise.como === "extensão" ? "reconhecido pela extensão" : analise.como === "escolhido" ? "sistema escolhido" : "";
     var lista = el(p + "Lista"); lista.innerHTML = "";
+    // o que o cabeçalho do arquivo diz: título interno, formato, se a ROM está íntegra
+    (analise.ficha || []).forEach(function (linha) { item(lista, "🔎 " + linha, "text-info"); });
     (analise.arquivos || []).forEach(function (a) {
       item(lista, "• " + a.nome + " — " + (PAPEIS[a.papel] || a.papel) + (a.disco ? " do disco " + a.disco : "") + " · " + mb(a.tamanho));
     });

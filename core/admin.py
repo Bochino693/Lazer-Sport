@@ -531,7 +531,7 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
     readonly_fields = ("previa_da_capa", "ver_no_site", "criacao", "atualizado", "motor", "arquivos_do_console")
     fieldsets = (
         ("O jogo", {
-            "fields": ("nome", "slug", "chamada", "descricao", "comandos", "cor", "ordem", "ativo"),
+            "fields": ("nome", "slug", "chamada", "descricao", "comandos", "acoes", "cor", "ordem", "ativo"),
         }),
         ("No portal Lazer & Sport Games (/jogos/)", {
             "description": (

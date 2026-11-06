@@ -1,16 +1,44 @@
-/* O quadro do emulador: o jogo ocupa tudo, fundo preto. */
+/* ======================================================================
+   O REPRODUTOR DOS JOGOS DE CONSOLE (jogo_emulador.html)
+
+   A página inteira é o jogo: fundo preto, nada em volta da imagem. Por
+   cima, a interface do site (abertura, barra, comandos, "gire o celular")
+   e, no fim, o EmulatorJS com a cara do site: a barra de baixo, o menu de
+   ajustes e o controle na tela do celular (vidro escuro, sem "Fast/Slow").
+
+   Nada de backdrop-filter por cima do jogo: desfocar o que está atrás a
+   cada quadro pesa na placa de vídeo e é o tipo de coisa que faz o jogo
+   travar no celular. O vidro aqui é só cor translúcida.
+   ====================================================================== */
+:root {
+    --cor: #ff3df2;
+    --vidro: rgba(8, 12, 26, .72);
+    --vidro-forte: rgba(8, 12, 26, .94);
+    --borda: rgba(255, 255, 255, .16);
+    --texto: #eef3ff;
+    --suave: #a9b6d3;
+    --fonte: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 html, body {
     margin: 0;
     height: 100%;
     background: #000;
-    color: #e8f0ff;
-    font-family: system-ui, sans-serif;
+    color: var(--texto);
+    font-family: var(--fonte);
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
 }
 
+/* o jogo ocupa a tela inteira (dvh: sem a barra do navegador do celular) */
 .emu-jogo {
+    position: fixed;
+    inset: 0;
     width: 100%;
     height: 100%;
+    height: 100dvh;
+    background: #000;
 }
 
 .emu-sem-js {
@@ -22,59 +50,681 @@ html, body {
     padding: 20px;
     text-align: center;
 }
-
-.emu-jogo:not(:empty) ~ .emu-sem-js,
 .js .emu-sem-js { display: none; }
 
-/* o aviso enquanto as faixas do disco baixam */
-.emu-aviso {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-content: center;
-    gap: 14px;
-    padding: 24px;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 600;
-    background: radial-gradient(80% 70% at 50% 40%, #12204a, #000);
-}
+[hidden] { display: none !important; }
 
-.emu-barra {
+/* ---------------------------------------------------------------- botões do site */
+.pl-bt {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    background: var(--vidro);
+    color: var(--texto);
+    font: 700 .9rem/1 var(--fonte);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+}
+.pl-bt svg { width: 20px; height: 20px; flex: none; }
+.pl-bt:hover { background: rgba(30, 40, 72, .9); border-color: rgba(255, 255, 255, .3); }
+.pl-bt:active { transform: scale(.96); }
+.pl-bt:focus-visible, .pl-jogar:focus-visible, .pl-abas button:focus-visible, .pl-fechar:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+/* a Tela cheia, bem à vista: na cor do jogo */
+.pl-bt--destaque {
+    background: var(--cor);
+    border-color: transparent;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    box-shadow: 0 6px 22px -6px var(--cor);
+}
+.pl-bt--destaque:hover { background: var(--cor); filter: brightness(1.12); }
+.pl-bt--claro { background: #fff; color: #0b1020; border-color: #fff; }
+.pl-bt--claro:hover { background: #e9eefc; }
+
+/* ---------------------------------------------------------------- a abertura */
+.pl-abertura {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding: 24px;
+    background:
+        radial-gradient(70% 60% at 50% 38%, color-mix(in srgb, var(--cor) 30%, transparent), transparent 70%),
+        radial-gradient(90% 80% at 50% 120%, #0b1a46, #02040c 70%);
+    transition: opacity .45s ease, visibility .45s;
+}
+.pl-abertura.is-saindo { opacity: 0; visibility: hidden; }
+.pl-abertura-arte {
+    position: absolute;
+    inset: -8%;
+    width: 116%;
+    height: 116%;
+    object-fit: cover;
+    filter: blur(26px) brightness(.38) saturate(1.3);
+    transform: scale(1.04);
+}
+.pl-abertura-miolo {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    width: min(620px, 100%);
+    text-align: center;
+}
+.pl-marca {
+    margin: 0;
+    font-size: .78rem;
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--suave);
+    animation: pl-surge .7s ease both;
+}
+.pl-marca strong { color: #fff; font-weight: 900; }
+.pl-marca span { display: block; margin-top: 6px; letter-spacing: .4em; font-size: .7rem; color: color-mix(in srgb, var(--cor) 70%, #fff); }
+.pl-nome {
+    margin: 4px 0 0;
+    font-size: clamp(1.9rem, 6.4vw, 4rem);
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+    text-shadow: 0 6px 40px color-mix(in srgb, var(--cor) 55%, transparent);
+    animation: pl-surge .8s .15s ease both;
+}
+.pl-console {
+    margin: 0;
+    padding: 6px 14px;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .06);
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--suave);
+    animation: pl-surge .8s .25s ease both;
+}
+.pl-progresso {
     width: min(360px, 80vw);
-    height: 8px;
-    margin: 0 auto;
+    height: 6px;
+    margin-top: 14px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .12);
 }
-
-.emu-barra span {
+.pl-progresso span {
     display: block;
     width: 0;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #22d3ee, #ff3df2);
+    background: linear-gradient(90deg, #22d3ee, var(--cor));
     transition: width .2s ease;
 }
-.emu-aviso p { margin: 0; }
-.emu-barra[hidden] { display: none; }
-
-/* aberta na tela inteira (PSP, DOS, "Abrir numa aba"): o caminho de volta, discreto no canto */
-.emu-voltar {
-    position: fixed;
-    z-index: 20;
-    top: max(10px, env(safe-area-inset-top));
-    left: max(10px, env(safe-area-inset-left));
-    padding: 8px 14px;
+/* sem número (o console ligando): a barra corre de um lado para o outro */
+.pl-progresso.is-sem-numero span { width: 35% !important; animation: pl-corre 1.1s ease-in-out infinite; }
+.pl-status { margin: 0; min-height: 1.3em; font-size: .9rem; font-weight: 600; color: var(--suave); }
+.pl-abertura.is-erro .pl-status { color: #ffd2d2; max-width: 520px; line-height: 1.45; }
+.pl-pronto { display: grid; justify-items: center; gap: 10px; margin-top: 6px; animation: pl-surge .35s ease both; }
+.pl-jogar {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 44px;
+    border: 0;
     border-radius: 999px;
-    background: rgba(6, 13, 34, .78);
-    border: 1px solid rgba(255, 255, 255, .2);
+    background: var(--cor);
     color: #fff;
-    font-size: .85rem;
-    font-weight: 700;
-    text-decoration: none;
-    opacity: .75;
+    font: 900 1.3rem/1 var(--fonte);
+    letter-spacing: .02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    box-shadow: 0 14px 40px -10px var(--cor), inset 0 1px 0 rgba(255, 255, 255, .35);
+    cursor: pointer;
+    animation: pl-pulsa 2.2s ease-in-out infinite;
 }
-.emu-voltar:hover, .emu-voltar:focus-visible { opacity: 1; }
-.emu-voltar[hidden] { display: none; }
+.pl-jogar svg { width: 24px; height: 24px; }
+.pl-jogar:hover { filter: brightness(1.1); }
+.pl-pronto-dica { margin: 0; font-size: .82rem; color: var(--suave); }
+.pl-erro { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 4px; }
+
+@keyframes pl-surge { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes pl-corre { 0% { transform: translateX(-110%); } 100% { transform: translateX(300%); } }
+@keyframes pl-pulsa { 50% { box-shadow: 0 14px 56px -4px var(--cor), inset 0 1px 0 rgba(255, 255, 255, .35); } }
+@media (prefers-reduced-motion: reduce) {
+    .pl-marca, .pl-nome, .pl-console, .pl-pronto, .pl-jogar { animation: none; }
+}
+
+/* ---------------------------------------------------------------- a barra de cima */
+.pl-barra {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 22px max(14px, env(safe-area-inset-left));
+    background: linear-gradient(rgba(2, 4, 12, .88), rgba(2, 4, 12, .5) 60%, transparent);
+    transition: opacity .3s ease, transform .3s ease;
+}
+.pl-barra.is-escondida { opacity: 0; transform: translateY(-100%); pointer-events: none; }
+.pl-titulo { display: grid; min-width: 0; flex: 1; line-height: 1.15; }
+.pl-titulo strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1rem; }
+.pl-titulo small { color: var(--suave); font-size: .75rem; font-weight: 600; }
+.pl-barra-acoes { display: flex; gap: 8px; }
+/* durante a abertura, só o Voltar */
+.pl.is-abrindo .pl-titulo, .pl.is-abrindo .pl-barra-acoes { visibility: hidden; }
+.pl.is-abrindo .pl-barra { background: none; }
+
+/* a alça: quando a barra some no celular, um toque nela traz de volta */
+.pl-alca {
+    position: fixed;
+    z-index: 45;
+    top: max(6px, env(safe-area-inset-top));
+    left: 50%;
+    width: 56px;
+    height: 22px;
+    margin-left: -28px;
+    padding: 0;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    background: rgba(8, 12, 26, .45);
+    cursor: pointer;
+}
+.pl-alca::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22px;
+    height: 3px;
+    margin: -1.5px 0 0 -11px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .75);
+}
+
+/* ---------------------------------------------------------------- os comandos */
+.pl-comandos {
+    position: fixed;
+    z-index: 60;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 14px max(14px, env(safe-area-inset-left));
+    background: rgba(1, 3, 10, .72);
+}
+.pl-comandos-caixa {
+    display: grid;
+    gap: 14px;
+    width: min(780px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: 22px;
+    border: 1px solid var(--borda);
+    border-radius: 22px;
+    background: var(--vidro-forte);
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .8);
+    animation: pl-surge .22s ease both;
+}
+.pl-comandos-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.pl-comandos-topo h2 { margin: 0; font-size: 1.35rem; font-weight: 900; }
+.pl-comandos-topo p { margin: 2px 0 0; color: var(--suave); font-size: .85rem; }
+.pl-fechar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--borda);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+    cursor: pointer;
+}
+.pl-fechar svg { width: 20px; height: 20px; }
+.pl-abas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 5px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .06);
+}
+.pl-abas button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--suave);
+    font: 700 .88rem/1.1 var(--fonte);
+    cursor: pointer;
+}
+.pl-abas button svg { width: 20px; height: 20px; flex: none; }
+.pl-abas button[aria-selected="true"] { background: var(--cor); color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+.pl-lista { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pl-cmd {
+    display: grid;
+    grid-template-columns: minmax(64px, 112px) 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .04);
+}
+.pl-cmd--jogo { background: color-mix(in srgb, var(--cor) 12%, transparent); }
+.pl-cmd-botao {
+    justify-self: start;
+    min-width: 40px;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .08);
+    font-weight: 900;
+    font-size: .92rem;
+    line-height: 1.15;
+    text-align: center;
+}
+/* os símbolos do PlayStation, nas cores dele */
+.pl-cmd-botao[data-botao="△"] { color: #4ade80; font-size: 1.15rem; }
+.pl-cmd-botao[data-botao="○"] { color: #f87171; font-size: 1.15rem; }
+.pl-cmd-botao[data-botao="✕"] { color: #60a5fa; font-size: 1.15rem; }
+.pl-cmd-botao[data-botao="□"] { color: #f472b6; font-size: 1.15rem; }
+.pl-cmd-funcao { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: .95rem; line-height: 1.3; }
+.pl-cmd-ico {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--cor) 85%, #000);
+    color: #fff;
+    box-sizing: border-box;
+}
+.pl-cmd-funcao em {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--cor);
+    color: #fff;
+    font: 800 .66rem/1.5 var(--fonte);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: 2px;
+}
+.pl-cmd-onde { display: none; flex-wrap: wrap; justify-content: flex-end; gap: 5px; color: var(--suave); font-size: .85rem; text-align: right; }
+.pl-lista--teclado .pl-cmd-onde--teclado,
+.pl-lista--celular .pl-cmd-onde--celular,
+.pl-lista--controle .pl-cmd-onde--controle { display: flex; }
+.pl-cmd kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid rgba(255, 255, 255, .25);
+    border-bottom-width: 3px;
+    border-radius: 8px;
+    background: #182038;
+    color: #fff;
+    font: 800 .8rem/1 var(--fonte);
+    white-space: nowrap;
+}
+/* o controle de Xbox: cada botão na cor dele */
+.pl-cmd kbd.xb { border-radius: 999px; border-bottom-width: 1px; min-width: 32px; }
+.pl-cmd kbd.xb-a { background: #15803d; border-color: #22c55e; }
+.pl-cmd kbd.xb-b { background: #b91c1c; border-color: #ef4444; }
+.pl-cmd kbd.xb-x { background: #1d4ed8; border-color: #3b82f6; }
+.pl-cmd kbd.xb-y { background: #a16207; border-color: #eab308; }
+.pl-cmd kbd.xb-lb, .pl-cmd kbd.xb-rb, .pl-cmd kbd.xb-lt, .pl-cmd kbd.xb-rt { border-radius: 8px; background: #2a3350; }
+.pl-comandos-texto {
+    margin: 0;
+    padding: 12px 14px;
+    border-left: 3px solid var(--cor);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .05);
+    line-height: 1.5;
+    white-space: pre-line;
+}
+.pl-dica { margin: 0; color: var(--suave); font-size: .85rem; line-height: 1.5; }
+
+/* ---------------------------------------------------------------- o controle do seu jeito (HUD) */
+.pl-hud {
+    position: fixed;
+    z-index: 62;
+    top: max(8px, env(safe-area-inset-top));
+    left: 50%;
+    width: min(440px, calc(100% - 24px));
+    translate: -50% 0;
+}
+.pl-hud-painel {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--borda);
+    border-radius: 16px;
+    background: var(--vidro-forte);
+    box-shadow: 0 18px 50px -12px rgba(0, 0, 0, .85);
+}
+.pl-hud-topo { display: grid; gap: 2px; }
+.pl-hud-topo strong { font-size: 1rem; font-weight: 900; }
+.pl-hud-topo small { color: var(--suave); font-size: .78rem; line-height: 1.35; }
+.pl-hud-faixa { display: grid; grid-template-columns: 7.5em 1fr 3.2em; align-items: center; gap: 10px; font-size: .82rem; font-weight: 700; }
+.pl-hud-faixa span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pl-hud-faixa input { width: 100%; accent-color: var(--cor); }
+.pl-hud-faixa output { color: var(--suave); text-align: right; font-variant-numeric: tabular-nums; }
+.pl-hud-acoes { display: flex; justify-content: flex-end; gap: 8px; }
+.pl-hud-acoes .pl-bt { min-height: 38px; }
+/* editando: cada peça com o contorno, a escolhida brilhando; o jogo fica parado */
+.pl-editando .ejs_virtualGamepad_parent { opacity: 1 !important; }
+.pl-editando .ejs_virtualGamepad_parent * { touch-action: none; }
+.pl-editando [data-pl-peca] { outline: 2px dashed rgba(255, 255, 255, .55); outline-offset: 3px; cursor: grab; }
+.pl-editando [data-pl-peca].is-escolhida { outline: 3px solid var(--cor); outline-offset: 4px; }
+.pl-editando .pl-barra, .pl-editando .pl-alca { display: none; }
+
+/* ---------------------------------------------------------------- gire o celular */
+.pl-girar {
+    position: fixed;
+    z-index: 55;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    padding: 28px;
+    text-align: center;
+    background: radial-gradient(80% 60% at 50% 40%, #13214c, #02040c);
+}
+.pl-girar-icone { width: 92px; height: 92px; color: var(--cor); animation: pl-gira 2.4s ease-in-out infinite; }
+.pl-girar strong { font-size: 1.5rem; font-weight: 900; }
+.pl-girar p { margin: 0 0 8px; color: var(--suave); line-height: 1.45; }
+@keyframes pl-gira { 0%, 20% { transform: rotate(0); } 50%, 75% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+
+/* ---------------------------------------------------------------- o aviso rápido */
+.pl-aviso {
+    position: fixed;
+    z-index: 58;
+    top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+    left: 50%;
+    max-width: min(560px, calc(100% - 32px));
+    padding: 10px 18px;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    background: var(--vidro-forte);
+    font-size: .9rem;
+    font-weight: 600;
+    text-align: center;
+    translate: -50% 0; /* o "transform" fica livre para a animação de entrada */
+    animation: pl-surge .25s ease both;
+    pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- celular */
+@media (pointer: coarse) {
+    /* na barra: só os ícones (o Tela cheia continua com o nome, bem à vista) */
+    .pl-bt--icone-celular:not(.pl-bt--destaque) { width: 44px; min-height: 44px; padding: 0; justify-content: center; }
+    .pl-bt--icone-celular:not(.pl-bt--destaque) span { display: none; }
+    .pl-bt--destaque { min-height: 44px; }
+    .pl-barra { background: none; padding-bottom: 0; }
+    .pl-titulo { visibility: hidden; }
+    /* em tela cheia, o "Sair da tela cheia" vira só o ícone: menos coisa por cima do jogo */
+    .pl.is-tela-cheia .pl-bt--destaque { width: 44px; padding: 0; justify-content: center; }
+    .pl.is-tela-cheia .pl-bt--destaque span { display: none; }
+}
+@media (max-width: 600px) {
+    .pl-cmd { grid-template-columns: minmax(56px, 92px) 1fr; }
+    .pl-cmd-onde { grid-column: 1 / -1; justify-content: flex-start; text-align: left; }
+}
+@media (pointer: coarse) and (max-height: 460px) {
+    .pl-comandos-caixa { gap: 10px; padding: 14px 16px; }
+    .pl-cmd { padding: 7px 10px; }
+    .pl-cmd-funcao { font-size: .88rem; }
+    .pl-abas button { min-height: 36px; }
+}
+@media (max-width: 560px) {
+    .pl-abas button { font-size: .78rem; flex-direction: column; gap: 4px; min-height: 52px; }
+    .pl-comandos-caixa { padding: 16px; border-radius: 18px; }
+}
+@media (max-height: 460px) {
+    .pl-comandos { align-items: start; }
+    .pl-abertura-miolo { gap: 8px; }
+    .pl-nome { font-size: clamp(1.6rem, 6vh, 2.6rem); }
+    .pl-jogar { padding: 12px 34px; font-size: 1.1rem; }
+}
+
+/* ======================================================================
+   O EMULATORJS COM A CARA DO SITE
+   (o CSS dele chega depois deste: as regras vão com ".pl" na frente, e o
+   controle da tela, que o emulador escreve no atributo style, com !important)
+   ====================================================================== */
+.pl .ejs_parent { background: #000; }
+/* nada de borda nem canto arredondado em volta da imagem do jogo */
+.pl .ejs_parent, .pl .ejs_game, .pl .ejs_canvas_parent, .pl .ejs_canvas { border: 0 !important; border-radius: 0 !important; }
+.pl .ejs_parent, .pl .ejs_parent * { font-family: var(--fonte); }
+/* a imagem no formato original do console: a área do jogo encolhe para o formato
+   dele, no meio (o RetroArch, que desenha esticado na área, acompanha) */
+.pl.is-imagem-original .ejs_canvas {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--pl-imagem-l, 100%) !important;
+    height: var(--pl-imagem-a, 100%) !important;
+    translate: -50% -50%;
+}
+/* a tela de carregar do emulador fica por baixo da abertura do site */
+.pl .ejs_start_button, .pl .ejs_loading_text:not(.ejs_error_text) { visibility: hidden; }
+
+/* a barra de baixo (computador) */
+.pl .ejs_big_screen .ejs_menu_bar {
+    padding: 26px 18px max(12px, env(safe-area-inset-bottom));
+    background: linear-gradient(transparent, rgba(2, 4, 12, .9));
+}
+.pl .ejs_big_screen .ejs_menu_button { border-radius: 12px; padding: 9px; }
+.pl .ejs_big_screen .ejs_menu_button:hover { background: var(--cor); }
+.pl .ejs_menu_bar svg { width: 20px; height: 20px; }
+.pl .ejs_menu_text {
+    border-radius: 8px;
+    background: var(--vidro-forte);
+    font-weight: 700;
+}
+/* a barra de baixo (celular): uma grade de botões com nome */
+.pl .ejs_small_screen .ejs_menu_bar {
+    border: 1px solid var(--borda);
+    border-radius: 18px;
+    background: var(--vidro-forte);
+    padding: 8px;
+    box-shadow: 0 20px 60px -10px rgba(0, 0, 0, .8);
+}
+.pl .ejs_small_screen .ejs_menu_button { padding: 10px 8px; border-radius: 10px; font-weight: 700; }
+.pl .ejs_small_screen .ejs_menu_button:hover { background: var(--cor); }
+
+/* o menu de ajustes e as janelas do emulador */
+.pl .ejs_settings_parent {
+    border: 1px solid var(--borda);
+    border-radius: 16px;
+    background: var(--vidro-forte);
+    box-shadow: 0 24px 70px -12px rgba(0, 0, 0, .85);
+}
+.pl .ejs_settings_parent::before, .pl .ejs_settings_parent::after { display: none; }
+.pl .ejs_settings_main_bar { padding: 9px 30px 9px 12px; border-radius: 10px; color: #dfe7fb; font-size: .9rem; }
+.pl .ejs_settings_main_bar:hover { background: var(--cor); }
+.pl .ejs_settings_main_bar_selected { color: var(--suave); }
+.pl .ejs_popup_container { background: rgba(1, 3, 10, .82); color: var(--texto); }
+.pl .ejs_popup_container h4 { color: #fff; font-weight: 900; }
+.pl .ejs_popup_container * { color: inherit; }
+.pl .ejs_popup_container .ejs_menu_button,
+.pl .ejs_popup_container button {
+    border-radius: 999px;
+    font-weight: 800;
+}
+.pl .ejs_popup_container .ejs_menu_button { background: var(--cor); color: #fff; box-shadow: 0 14px 40px -10px var(--cor); }
+.pl .ejs_context_menu { border: 1px solid var(--borda); border-radius: 12px; background: var(--vidro-forte); }
+.pl .ejs_context_menu li:hover { background: var(--cor); box-shadow: none; }
+/* "Jogo salvo" e afins: no alto, no meio, como o aviso do site */
+.pl .ejs_message {
+    top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+    left: 50%;
+    padding: 9px 16px;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    background: var(--vidro-forte);
+    color: #fff;
+    font-size: .88rem;
+    font-weight: 700;
+    text-shadow: none;
+    transform: translateX(-50%);
+}
+.pl .ejs_message:empty { display: none; }
+.pl .ejs_virtualGamepad_open { display: none !important; }
+
+/* ---------------------------------------------------------------- o controle na tela do celular */
+.pl .ejs_virtualGamepad_parent { bottom: 0; }
+.pl .ejs_virtualGamepad_left {
+    left: max(22px, env(safe-area-inset-left));
+    bottom: max(22px, env(safe-area-inset-bottom));
+    width: 150px;
+    height: 150px;
+}
+.pl .ejs_virtualGamepad_right {
+    right: max(22px, env(safe-area-inset-right));
+    bottom: max(22px, env(safe-area-inset-bottom));
+    width: 150px;
+    height: 150px;
+}
+.pl .ejs_virtualGamepad_bottom {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: 200px;
+    height: 30px;
+    margin-left: -100px;
+}
+.pl .ejs_virtualGamepad_button {
+    box-sizing: border-box;
+    width: 56px !important;
+    height: 56px !important;
+    border: 1.5px solid rgba(255, 255, 255, .42) !important;
+    border-radius: 50% !important;
+    background: rgba(10, 16, 34, .38) !important;
+    color: #fff;
+    font: 800 22px/53px var(--fonte) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 6px 16px rgba(0, 0, 0, .22);
+    transition: transform .06s ease, background-color .06s ease;
+}
+.pl .ejs_virtualGamepad_button_down {
+    background: color-mix(in srgb, var(--cor) 62%, transparent) !important;
+    border-color: #fff !important;
+    transform: scale(.92);
+}
+/* START, SELECT e afins: pílulas pequenas, embaixo no meio */
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button {
+    width: 62px !important;
+    height: 28px !important;
+    border-radius: 999px !important;
+    font: 800 10.5px/25px var(--fonte) !important;
+    letter-spacing: .08em;
+}
+/* os de ombro (L, R, L2, R2, Z) */
+.pl .ejs_virtualGamepad_button.b_l, .pl .ejs_virtualGamepad_button.b_r,
+.pl .ejs_virtualGamepad_button.b_l2, .pl .ejs_virtualGamepad_button.b_r2,
+.pl .ejs_virtualGamepad_button.b_z.cs_n64 {
+    width: 74px !important;
+    height: 36px !important;
+    border-radius: 12px !important;
+    font: 800 15px/33px var(--fonte) !important;
+}
+/* PlayStation: os símbolos nas cores dele */
+.pl .ejs_virtualGamepad_button.b_triangulo { color: #4ade80; font-size: 25px !important; }
+.pl .ejs_virtualGamepad_button.b_bola { color: #f87171; font-size: 25px !important; }
+.pl .ejs_virtualGamepad_button.b_xis { color: #60a5fa; font-size: 25px !important; }
+.pl .ejs_virtualGamepad_button.b_quadrado { color: #f472b6; font-size: 25px !important; }
+/* o disparo do Atari: um só, grande */
+.pl .ejs_virtualGamepad_button.b_fogo { width: 64px !important; height: 64px !important; font: 900 13px/61px var(--fonte) !important; letter-spacing: .06em; }
+/* fliperama e Sega: seis botões, um pouco menores */
+.pl .ejs_virtualGamepad_button.cs_arcade, .pl .ejs_virtualGamepad_button.cs_mame,
+.pl .ejs_virtualGamepad_button.cs_segaMD, .pl .ejs_virtualGamepad_button.cs_segaCD,
+.pl .ejs_virtualGamepad_button.cs_sega32x, .pl .ejs_virtualGamepad_button.cs_segaSaturn {
+    width: 52px !important;
+    height: 52px !important;
+    line-height: 49px !important;
+}
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button.cs_arcade,
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button.cs_mame,
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button.cs_segaMD,
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button.cs_segaCD,
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button.cs_sega32x,
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button.cs_segaSaturn {
+    width: 62px !important;
+    height: 28px !important;
+    line-height: 25px !important;
+}
+/* o que o botão faz NESTE jogo (a equipe disse no painel): pequeno, dentro do botão,
+   embaixo da letra -- fora dele, a legenda cairia em cima do botão vizinho */
+.pl .ejs_virtualGamepad_button[data-acao] { line-height: 42px !important; }
+.pl .ejs_virtualGamepad_button[data-acao]::after {
+    content: attr(data-acao);
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 9px;
+    overflow: hidden;
+    color: rgba(255, 255, 255, .92);
+    font: 800 8.5px/1.1 var(--fonte);
+    letter-spacing: 0;
+    text-align: center;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+    white-space: nowrap;
+    pointer-events: none;
+}
+/* nas pílulas do meio e nos de ombro não cabe: o que eles fazem fica nos Comandos */
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button[data-acao],
+.pl .ejs_virtualGamepad_button.b_l[data-acao], .pl .ejs_virtualGamepad_button.b_r[data-acao],
+.pl .ejs_virtualGamepad_button.b_l2[data-acao], .pl .ejs_virtualGamepad_button.b_r2[data-acao] { line-height: inherit; }
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button[data-acao]::after,
+.pl .ejs_virtualGamepad_button.b_l::after, .pl .ejs_virtualGamepad_button.b_r::after,
+.pl .ejs_virtualGamepad_button.b_l2::after, .pl .ejs_virtualGamepad_button.b_r2::after { display: none; }
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button[data-acao] { line-height: 25px !important; }
+.pl .ejs_virtualGamepad_button.b_l[data-acao], .pl .ejs_virtualGamepad_button.b_r[data-acao],
+.pl .ejs_virtualGamepad_button.b_l2[data-acao], .pl .ejs_virtualGamepad_button.b_r2[data-acao] { line-height: 33px !important; }
+/* o selo do ícone (pular, atacar, atirar...): no canto do botão, na cor do jogo */
+.pl .ejs_virtualGamepad_button .pl-selo {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    width: 22px;
+    height: 22px;
+    padding: 3px;
+    border: 1.5px solid rgba(255, 255, 255, .85);
+    border-radius: 50%;
+    background: var(--cor);
+    color: #fff;
+    box-sizing: border-box;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
+    pointer-events: none; /* o toque é do botão, não do selo */
+}
+.pl .ejs_virtualGamepad_bottom .ejs_virtualGamepad_button .pl-selo { top: -9px; right: -6px; width: 18px; height: 18px; padding: 2px; }
+/* o direcional: uma cruz de vidro */
+.pl .ejs_dpad_main { opacity: 1; }
+.pl .ejs_dpad_horizontal { height: 50px; border-radius: 14px; }
+.pl .ejs_dpad_vertical { width: 50px; border-radius: 14px; }
+.pl .ejs_dpad_bar { background: rgba(10, 16, 34, .4); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .38); }
+.pl .ejs_dpad_horizontal::before { border-color: transparent rgba(255, 255, 255, .8) transparent transparent; left: 6px; }
+.pl .ejs_dpad_horizontal::after { border-color: transparent transparent transparent rgba(255, 255, 255, .8); right: 6px; }
+.pl .ejs_dpad_vertical::before { border-color: transparent transparent rgba(255, 255, 255, .8) transparent; top: 6px; }
+.pl .ejs_dpad_vertical::after { border-color: rgba(255, 255, 255, .8) transparent transparent transparent; bottom: 6px; }
+.pl .ejs_dpad_left_pressed .ejs_dpad_horizontal::before { border-right-color: var(--cor); }
+.pl .ejs_dpad_right_pressed .ejs_dpad_horizontal::after { border-left-color: var(--cor); }
+.pl .ejs_dpad_up_pressed .ejs_dpad_vertical::before { border-bottom-color: var(--cor); }
+.pl .ejs_dpad_down_pressed .ejs_dpad_vertical::after { border-top-color: var(--cor); }

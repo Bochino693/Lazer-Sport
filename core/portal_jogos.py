@@ -23,6 +23,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from . import arena, paginas_tema, ranking
+from .jogos_emulador import icone_da_funcao
 
 CHAVE_VIVO = "portal-jogos:vivo:v1"
 VIVO_SEGUNDOS = 120
@@ -124,6 +125,8 @@ def _cartao_da_casa(jogo):
         "criado": "",
         "como": ((jogo.get("controle") or {}).get("rotulo") or ""),
         "sistema": "",
+        "acoes": {},
+        "icones": {},
         # o como jogar dos jogos da casa: dito para o computador e para o celular (core/arena.CONTROLES)
         "dicas": {"pc": (jogo.get("controle") or {}).get("pc", ""), "celular": (jogo.get("controle") or {}).get("celular", "")},
     }
@@ -159,6 +162,8 @@ def _cartao_cadastrado(jogo):
         "como": jogo.get("comandos", ""),
         "sistema": jogo.get("codigo_sistema", ""),
         "dicas": None,
+        "acoes": jogo.get("acoes") or {},
+        "icones": {botao: icone_da_funcao(texto) for botao, texto in (jogo.get("acoes") or {}).items()},
     }
 
 

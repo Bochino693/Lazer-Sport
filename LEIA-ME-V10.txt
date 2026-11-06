@@ -623,3 +623,52 @@ Dependência nova: rjsmin (requirements.txt).
    SEM JAVASCRIPT tudo continua: cada estante, gênero, ordem e busca é um
    endereço (/jogos/?estante=playstation, ?genero=Corrida, ?ordem=az,
    ?q=mario) que o servidor responde, e a capa leva direto ao jogo.
+
+25) O REPRODUTOR DOS JOGOS DE CONSOLE (imagem, som, controles, tela cheia)
+   SUPER NINTENDO E SEGA QUE NÃO ABRIAM. O núcleo deles não mora no site
+   (licença não comercial: só liga com JOGOS_EMULADORES_NAO_COMERCIAIS ou no
+   modo Particular). Antes o emulador só tentava um "plano B" no CDN dele e o
+   jogo ficava em "erro ao baixar". Agora o núcleo vem do pacote oficial do
+   EmulatorJS no npm, pelo jsDelivr (cdn.jsdelivr.net), com o núcleo certo
+   travado (no Master System ele escolhia outro). No painel, ao conferir a
+   ROM, aparece a ficha do arquivo (🔎): o título dentro da ROM, LoROM/HiROM,
+   cabeçalho de copiadora, tamanho, região, byte order do N64 -- se o arquivo
+   estiver errado, dá para ver ali.
+   A PÁGINA DO JOGO VIRA O REPRODUTOR. "Jogar" abre /jogos/<jogo>/emulador/
+   na tela inteira (sem o quadro da página, que pesava e deixava o jogo
+   travado). Abre com "LAZER & SPORT GAMES apresenta" e o progresso do
+   download; pronto, o botão Jogar (Enter ou o A do controle também). No
+   celular, o toque já abre em TELA CHEIA E DEITADO. Por cima do jogo, uma
+   barra que some sozinha: Voltar, o nome, Imagem, Ajustar controle (celular),
+   Salvar e ajustes, Comandos e Tela cheia (na cor do jogo, bem à vista).
+   A IMAGEM. Na TELA TODA por padrão: o RetroArch desenha esticado na tela
+   inteira, já na resolução dela (nítido, sem faixas pretas). O botão Imagem
+   volta ao formato original do console na hora, sem reiniciar o jogo (o DS
+   fica sempre no formato dele). Sem "pixelizado": filtro em cada console
+   (SABR na arte 2D no computador; 2xScaleHQ no celular, mais leve; bicúbico
+   nos 3D), N64 e PSP com mais resolução no computador, PS1 sem pontilhado.
+   O SOM. Volume inicial 85% e, no celular, mais folga no som (não estala em
+   aparelho mais fraco).
+   OS COMANDOS, PELA AÇÃO. Cada botão diz o que FAZ ("Pular", "Atacar",
+   "Atirar"), com um ÍCONE que é o mesmo em todo jogo (o pular do Mario e o
+   do Sonic são o mesmo bonequinho). No painel, no jogo, o campo "O que cada
+   botão faz neste jogo" (uma linha por botão: "B: Pular") manda; sem ele,
+   vale o costume do console. Em Comandos há três abas: Computador (teclas),
+   Celular (onde fica cada botão) e Controle Xbox.
+   CONTROLE DE XBOX (e PlayStation, 8BitDo, genéricos). Ligou no computador
+   ou no celular e apertou um botão: já vale, com aviso "Controle conectado".
+   Vai pela POSIÇÃO: o botão de baixo (A do Xbox) é o de baixo do console
+   (o B do Super Nintendo, o ✕ do PlayStation). No celular, com o controle
+   ligado, o controle da tela sai da frente.
+   O CONTROLE DA TELA (celular). Cada console com o dele, com os nomes certos
+   (△○✕□ coloridos no PlayStation, 1 a 6 no fliperama, FOGO no Atari), sem
+   "Fast/Slow" no meio da tela. O ícone da ação fica num selo no canto de cada
+   botão. "Ajustar controle" (como o HUD dos jogos de celular): arrastar cada
+   botão, mudar o tamanho de um ou de todos e a transparência; fica guardado
+   no aparelho, por console, e "Restaurar padrão" desfaz. (Corrigido também:
+   com o jogo começando sozinho, o emulador não desenhava o controle da tela
+   no celular, e o iPad nunca tinha controle.)
+   O MENU DO EMULADOR em português, com a cara do site; saíram os ajustes
+   técnicos (gravação de tela, threads, rotação) e as "opções do núcleo"
+   (nomes de variável em inglês). iPhone: o Safari não deixa site em tela
+   cheia; o botão ensina a "Adicionar à Tela de Início", que abre sem barras.
