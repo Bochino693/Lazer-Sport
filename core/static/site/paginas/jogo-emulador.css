@@ -421,9 +421,9 @@ html, body {
 .pl-hud-topo { display: grid; gap: 2px; }
 .pl-hud-topo strong { font-size: 1rem; font-weight: 900; }
 .pl-hud-topo small { color: var(--suave); font-size: .78rem; line-height: 1.35; }
-.pl-hud-faixa { display: grid; grid-template-columns: 7.5em 1fr 3.2em; align-items: center; gap: 10px; font-size: .82rem; font-weight: 700; }
+.pl-hud-faixa { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; font-size: .82rem; font-weight: 700; }
 .pl-hud-faixa span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.pl-hud-faixa input { width: 100%; accent-color: var(--cor); }
+.pl-hud-faixa input { grid-column: 1 / -1; grid-row: 2; width: 100%; accent-color: var(--cor); }
 .pl-hud-faixa output { color: var(--suave); text-align: right; font-variant-numeric: tabular-nums; }
 .pl-hud-acoes { display: flex; justify-content: flex-end; gap: 8px; }
 .pl-hud-acoes .pl-bt { min-height: 38px; }
@@ -480,8 +480,8 @@ html, body {
     .pl-barra { background: none; padding-bottom: 0; }
     .pl-titulo { visibility: hidden; }
     /* em tela cheia, o "Sair da tela cheia" vira só o ícone: menos coisa por cima do jogo */
-    .pl.is-tela-cheia .pl-bt--destaque { width: 44px; padding: 0; justify-content: center; }
-    .pl.is-tela-cheia .pl-bt--destaque span { display: none; }
+    .pl.is-tela-cheia .pl-barra .pl-bt--destaque { width: 44px; padding: 0; justify-content: center; }
+    .pl.is-tela-cheia .pl-barra .pl-bt--destaque span { display: none; }
 }
 @media (max-width: 600px) {
     .pl-cmd { grid-template-columns: minmax(56px, 92px) 1fr; }
