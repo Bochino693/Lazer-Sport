@@ -25,6 +25,7 @@ from .models import (
     ImagensSite,
     JogoCadastrado,
     ObjetoTresD,
+    ObjetoTresDProjeto,
     Pedido,
     PecasReposicao,
     Projetos,
@@ -106,6 +107,8 @@ _MODELOS_DA_HOME = (
     # As telas do catálogo em cache (core/home_cache.py) também mostram o
     # objeto 3D da ficha do brinquedo e os jogos cadastrados do simulador.
     ObjetoTresD,
+    # a ficha do projeto mostra o 3D dele e o produto da loja (o paralelo)
+    ObjetoTresDProjeto,
     JogoCadastrado,
     # a página do brinquedo mostra o que vem dentro dele e de que conjunto faz parte
     ComponenteBrinquedo,

@@ -16,7 +16,10 @@
   <h1>Objetos 3D &amp; Laboratório</h1>
   <p>Cada máquina com o seu .glb: as cores e as medidas saem de dentro do arquivo. Ligado, o objeto aparece na página do brinquedo e na Arena 3D — e, se a máquina tem jogo, a prévia abre daqui. Mais abaixo, o <strong>Laboratório</strong>: a biblioteca de peças para montar brinquedões.</p>
   {% if not tabela_ausente %}
-  <button class="btn btn-success" id="novoObjeto" type="button"><i class="bi bi-cloud-arrow-up me-1"></i> Enviar objeto 3D</button>
+  <div class="ls-3d-hero-acoes">
+    <button class="btn btn-warning" id="criar3d" type="button"><i class="bi bi-magic me-1"></i> Criar objeto 3D</button>
+    <button class="btn btn-success" id="novoObjeto" type="button"><i class="bi bi-cloud-arrow-up me-1"></i> Enviar .glb pronto</button>
+  </div>
   {% endif %}
 </section>
 
@@ -56,6 +59,7 @@
     <button class="ls-3d-aba" type="button" data-filtro3d="com" aria-pressed="false"><i class="bi bi-badge-3d" aria-hidden="true"></i> Com objeto <span>{{ com_objeto|length }}</span></button>
     <button class="ls-3d-aba" type="button" data-filtro3d="sem" aria-pressed="false"><i class="bi bi-dash-circle" aria-hidden="true"></i> Sem objeto <span>{{ total_sem_objeto }}</span></button>
     <button class="ls-3d-aba" type="button" data-filtro3d="site" aria-pressed="false"><i class="bi bi-box-seam" aria-hidden="true"></i> Do site <span>{{ modelos_do_site|length }}</span></button>
+    <button class="ls-3d-aba" type="button" data-filtro3d="projetos" aria-pressed="false"><i class="bi bi-easel2" aria-hidden="true"></i> Projetos <span>{{ projetos_com_3d|length }}</span></button>
     <button class="ls-3d-aba" type="button" data-filtro3d="lab" aria-pressed="false"><i class="bi bi-bricks" aria-hidden="true"></i> Laboratório <span>{{ modulos|length }}</span></button>
   </div>
   <label class="ls-3d-busca">
@@ -211,6 +215,33 @@
   </div>
 </section>
 
+<section class="ls-3d-secao" data-grupo3d="projetos" id="projetos3d">
+  <h2 class="ls-games-titulo verde"><i class="bi bi-easel2"></i> Projetos em 3D <small>{{ projetos_com_3d|length }} de {{ projetos|length }} projeto{{ projetos|length|pluralize }}</small></h2>
+  {% if not tabela_projetos_3d %}
+    <div class="ls-game-vazio"><i class="bi bi-hourglass-split"></i>A tabela do 3D dos projetos ainda não existe no banco: a migração roda na próxima subida.</div>
+  {% else %}
+  <div class="ls-3d-lista ls-3d-lista--largo">
+    {% for p in projetos_com_3d %}
+      <article class="ls-3d-mini empilhado" data-busca3d="{{ p.busca }}">
+        <span class="ls-3d-mini-foto">{% if p.capa %}<img src="{{ p.capa }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-image"></i>{% endif %}</span>
+        <div class="ls-3d-mini-texto">
+          <strong title="{{ p.titulo }}">{{ p.titulo }}</strong>
+          <span>{% if p.objeto.modo %}<em class="ls-3d-etiqueta">{{ p.objeto.modo }}</em> {% endif %}{{ p.objeto.medidas }}</span>
+          {% if p.objeto.produto_nome %}<span><i class="bi bi-shop" aria-hidden="true"></i> Na loja: {{ p.objeto.produto_nome }}</span>{% endif %}
+        </div>
+        <div class="ls-3d-mini-acoes">
+          <button class="btn btn-sm ls-3d-ver" type="button" data-ver3d-projeto="{{ p.id }}"><i class="bi bi-badge-3d"></i> Ver em 3D</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-criar-projeto="{{ p.id }}"><i class="bi bi-arrow-repeat"></i> Refazer</button>
+          <button class="btn btn-sm btn-outline-danger ls-3d-icone" type="button" data-excluir="projeto3d-{{ p.id }}" data-nome="Objeto 3D do projeto {{ p.titulo }}" title="Apagar o 3D do projeto" aria-label="Apagar o objeto 3D do projeto {{ p.titulo }}"><i class="bi bi-trash3"></i></button>
+        </div>
+      </article>
+    {% empty %}
+      <div class="ls-game-vazio"><i class="bi bi-easel2"></i>Nenhum projeto em 3D ainda. Toque em <strong>Criar objeto 3D</strong> &gt; <strong>De um projeto</strong>: as fotos do projeto viram o objeto, e o site mostra se ele já existe na loja.</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
 <section id="laboratorio" class="ls-3d-secao ls-3d-secao--lab" data-grupo3d="lab">
   <h2 class="ls-games-titulo rosa"><i class="bi bi-bricks"></i> Laboratório: montar brinquedões <small>{{ modulos|length }} peça{{ modulos|length|pluralize }} na biblioteca</small></h2>
   <div class="ls-lab-topo">
@@ -323,6 +354,112 @@
   </div>
 </div>
 
+<div class="modal fade" id="modalCriar3d" tabindex="-1" aria-hidden="true" aria-labelledby="criarTitulo">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">
+    <form class="modal-content ls-criar3d" id="formCriar3d" method="post" action="{% url 'objetos_3d_inner' %}" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}<input type="hidden" name="origem" id="criarOrigem" value="fotos"><input type="hidden" name="vistas" id="criarVistas" value="{}">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Criar objeto 3D</span><h5 class="modal-title" id="criarTitulo">Do que vocês tiverem: fotos, projeto ou arquivo 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="criarErro"></div>
+        <div class="ls-criar3d-grade">
+          <div class="ls-criar3d-passos">
+            <div class="ls-criar3d-origens" role="group" aria-label="De onde vem o objeto">
+              <button type="button" class="ls-criar3d-origem" data-origem="fotos" aria-pressed="true"><i class="bi bi-camera-fill" aria-hidden="true"></i><strong>Fotos e medidas</strong><small>frente, lados, costas, cima</small></button>
+              <button type="button" class="ls-criar3d-origem" data-origem="projeto" aria-pressed="false"><i class="bi bi-easel2-fill" aria-hidden="true"></i><strong>De um projeto</strong><small>as fotos dele + o produto parecido</small></button>
+              <button type="button" class="ls-criar3d-origem" data-origem="arquivo" aria-pressed="false"><i class="bi bi-box-fill" aria-hidden="true"></i><strong>Arquivo 3D</strong><small>.glb .obj .stl .3ds .dae .kmz .gltf</small></button>
+            </div>
+
+            <div class="ls-criar3d-painel" data-painel-origem="fotos">
+              <div class="ls-criar3d-vistas">
+                {% for vista, nome in vistas %}
+                <label class="ls-criar3d-vista ls-criar3d-vista--{{ vista }}" data-vista="{{ vista }}">
+                  <input type="file" name="foto_{{ vista }}" accept="image/jpeg,image/png,image/webp" class="visually-hidden">
+                  <span class="ls-criar3d-vista-img"><i class="bi {% if vista == 'cima' %}bi-arrow-down-square{% elif vista == 'frente' %}bi-person-bounding-box{% else %}bi-image{% endif %}" aria-hidden="true"></i></span>
+                  <span class="ls-criar3d-vista-nome">{{ nome }}{% if vista == "frente" %} <b title="obrigatória">*</b>{% endif %}</span>
+                </label>
+                {% endfor %}
+              </div>
+              <p class="form-text mb-0">Fundo limpo (parede lisa, céu, fundo branco de render) recorta melhor; PNG já recortado vale como está. A de cima vai com a frente para baixo na foto. Quanto mais de frente (sem perspectiva), mais certo o contorno.</p>
+            </div>
+
+            <div class="ls-criar3d-painel" data-painel-origem="projeto" hidden>
+              <label class="form-label" for="criarProjeto">Projeto</label>
+              <select class="form-select" id="criarProjeto" name="projeto">
+                <option value="">Escolha o projeto…</option>
+                {% for p in projetos %}<option value="{{ p.id }}">{{ p.titulo }} · {{ p.fotos }} foto{{ p.fotos|pluralize }}{% if p.objeto and p.objeto.url %} · já tem 3D{% endif %}</option>{% empty %}<option value="" disabled>Nenhum projeto cadastrado</option>{% endfor %}
+              </select>
+              <p class="form-text" id="criarProjetoDica">Diga qual foto é cada vista (a legenda da foto já ajuda: "lateral direita", "costas"…). Fotos sem vista ficam de fora.</p>
+              <div class="ls-criar3d-fotos-projeto" id="criarFotosProjeto"></div>
+              <div class="ls-criar3d-paralelo" id="criarParalelo" hidden>
+                <h6><i class="bi bi-shop" aria-hidden="true"></i> Já existe na loja?</h6>
+                <p class="small mb-2">Comparado pelo nome, pela descrição e pelas medidas. Marque o produto que é este projeto: a ficha do projeto no site passa a mostrar o produto.</p>
+                <ul class="list-unstyled mb-2" id="criarSugestoes"></ul>
+                <button type="button" class="btn btn-sm btn-outline-success" id="criarSoParalelo"><i class="bi bi-check2-circle"></i> Guardar só o paralelo</button>
+              </div>
+            </div>
+
+            <div class="ls-criar3d-painel" data-painel-origem="arquivo" hidden>
+              <label class="form-label" for="criarArquivo3d">Arquivo 3D <span class="text-muted fw-normal">(até 80 MB)</span></label>
+              <input type="file" class="form-control" id="criarArquivo3d" name="arquivo3d" accept=".glb,.gltf,.zip,.obj,.stl,.3ds,.dae,.kmz">
+              <span class="form-text">O .obj com o .mtl e as texturas, e o .gltf com o .bin, vão juntos num .zip. Do SketchUp: Arquivo &gt; Exportar &gt; Modelo 3D &gt; COLLADA (.dae). Do Blender: Exportar &gt; glTF (.glb).</span>
+              <div class="row g-2 mt-1">
+                <div class="col-6"><label class="form-label" for="criarEixo">Lado de cima</label><select class="form-select" id="criarEixo" name="eixo"><option value="auto">Automático (pelo formato)</option><option value="y">Y para cima</option><option value="z">Z para cima (SketchUp, 3ds Max)</option></select></div>
+                <div class="col-6"><label class="form-label" for="criarUnidade">Unidade</label><select class="form-select" id="criarUnidade" name="unidade"><option value="auto">Automática</option><option value="m">metros</option><option value="cm">centímetros</option><option value="mm">milímetros</option><option value="pol">polegadas</option></select></div>
+              </div>
+              <label class="form-check mt-2"><input class="form-check-input" type="checkbox" name="limpar" checked><span class="form-check-label">Tirar peças soltas longe do conjunto (cotas, linhas, pessoas de escala)</span></label>
+            </div>
+
+            <fieldset class="ls-criar3d-modos" id="criarModos">
+              <legend>Jeito</legend>
+              <label class="ls-criar3d-modo"><input type="radio" name="modo" value="paineis" checked><span><strong><i class="bi bi-layers-fill" aria-hidden="true"></i> Painéis</strong><small>Cada foto recortada no lugar dela ("sprites" 2D)</small></span></label>
+              <label class="ls-criar3d-modo"><input type="radio" name="modo" value="volume"><span><strong><i class="bi bi-box-fill" aria-hidden="true"></i> Volume</strong><small>Sólido recortado pelos contornos das fotos</small></span></label>
+              <label class="form-check ls-criar3d-recorte"><input class="form-check-input" type="checkbox" name="recortar" checked><span class="form-check-label">Recortar o fundo das fotos</span></label>
+            </fieldset>
+
+            <fieldset class="ls-criar3d-medidas">
+              <legend>Medidas em metros <small id="criarMedidasDica">o que faltar sai da proporção das fotos</small></legend>
+              <div class="ls-criar3d-medidas-linha">
+                <label><span>Largura</span><input class="form-control" name="largura" inputmode="decimal" placeholder="ex.: 6,00" autocomplete="off"></label>
+                <label><span>Profundidade</span><input class="form-control" name="profundidade" inputmode="decimal" placeholder="ex.: 4,00" autocomplete="off"></label>
+                <label><span>Altura</span><input class="form-control" name="altura" inputmode="decimal" placeholder="ex.: 3,20" autocomplete="off"></label>
+              </div>
+            </fieldset>
+
+            <div class="ls-criar3d-precisao" id="criarPrecisao" aria-live="polite"></div>
+            <button type="button" class="btn btn-primary w-100 ls-criar3d-gerar" id="criarGerar"><i class="bi bi-magic" aria-hidden="true"></i> Gerar a prévia</button>
+          </div>
+
+          <div class="ls-criar3d-lado">
+            <div class="ls-visor3d ls-criar3d-visor">
+              <canvas id="criarTela" tabindex="0" aria-label="Prévia do objeto 3D: arraste para girar"></canvas>
+              <p class="ls-visor3d-aviso" id="criarAviso"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> A prévia aparece aqui, girando. Nada é gravado antes de você confirmar.</p>
+            </div>
+            <div class="ls-visor3d-cores" id="criarCores" role="group" aria-label="Cores do objeto 3D"></div>
+            <p class="ls-criar3d-info" id="criarInfo"></p>
+            <ul class="ls-criar3d-avisos" id="criarAvisos"></ul>
+
+            <div class="ls-criar3d-destino" id="criarDestino" hidden>
+              <h6><i class="bi bi-link-45deg" aria-hidden="true"></i> Ligar a</h6>
+              <label class="form-label" for="criarDestinoProjeto">Projeto <span class="text-muted fw-normal">(a ficha do projeto ganha "Ver em 3D")</span></label>
+              <select class="form-select form-select-sm mb-2" id="criarDestinoProjeto">
+                <option value="">Nenhum projeto</option>
+                {% for p in projetos %}<option value="{{ p.id }}">{{ p.titulo }}{% if p.objeto and p.objeto.url %} (já tem 3D: troca){% endif %}</option>{% endfor %}
+              </select>
+              <label class="form-label" for="criarBuscaBrinquedo">Brinquedos da loja <span class="text-muted fw-normal">(um ou vários)</span></label>
+              <input type="search" class="form-control form-control-sm" id="criarBuscaBrinquedo" placeholder="Buscar brinquedo…" autocomplete="off">
+              <div class="ls-criar3d-brinquedos" id="criarBrinquedos">
+                {% for linha in linhas %}<label class="ls-criar3d-brinquedo" data-busca="{{ linha.busca }}"><input type="checkbox" name="brinquedos" value="{{ linha.id }}"><span>{{ linha.nome }}</span>{% if linha.objeto %}<small>tem 3D: troca</small>{% endif %}</label>{% endfor %}
+              </div>
+              <label class="form-check mt-2"><input class="form-check-input" type="checkbox" name="exibir_na_arena" id="criarArena" checked><span class="form-check-label">Mostrar na Arena 3D (brinquedos)</span></label>
+              <button type="button" class="btn btn-success w-100 mt-2" id="criarSalvar"><i class="bi bi-cloud-check" aria-hidden="true"></i> Gravar o objeto 3D</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="modal fade" id="modalVisor3d" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
@@ -373,6 +510,7 @@
 </div>
 {{ linhas_dados|json_script:"objetosDados" }}
 {{ modulos_dados|json_script:"modulosDados" }}
+{{ projetos_dados|json_script:"projetosDados" }}
 {% endif %}
 {% endblock %}
 
@@ -516,7 +654,7 @@ LSTela.pronto(function () {
   var barra = document.getElementById("barra3d");
   if (barra) {
     var CHAVE_FILTRO = "ls-objetos3d-filtro";
-    var GRUPOS = { todos: null, com: ["com", "desligados"], sem: ["sem"], site: ["site"], lab: ["lab"] };
+    var GRUPOS = { todos: null, com: ["com", "desligados"], sem: ["sem"], site: ["site"], projetos: ["projetos"], lab: ["lab"] };
     var campoBusca = document.getElementById("busca3d");
     var abas = barra.querySelectorAll("[data-filtro3d]");
     var secoes = document.querySelectorAll("[data-grupo3d]");
@@ -601,8 +739,13 @@ LSTela.pronto(function () {
     camera.lookAt(alvo);
   }
 
-  async function carregar(url) {
-    if (motor) { motor.parar(); motor = null; }
+  /* `onde`: outra tela para o mesmo desenho (a prévia da janela "Criar
+     objeto 3D"): { tela, aviso, cores }. Sem ele, é o visor. */
+  async function carregar(url, onde) {
+    var tela = (onde && onde.tela) || document.getElementById("visor3dTela");
+    var aviso = (onde && onde.aviso) || document.getElementById("visor3dAviso");
+    var coresCaixa = (onde && onde.cores) || document.getElementById("visor3dCores");
+    if (!onde && motor) { motor.parar(); motor = null; }
     coresCaixa.replaceChildren();
     aviso.hidden = false; aviso.textContent = "Carregando o 3D…";
     await carregarModulos();
@@ -645,7 +788,7 @@ LSTela.pronto(function () {
       if (Math.abs(vista.giro + vista.inclinacao + vista.perto - antes) > 1e-5) sujo = true;
       if (!sujo) return;
       sujo = false; posicionar(); renderer.render(cena, camera);
-      if (!fotografado) { fotografado = true; fotoDoVisor(url, tela); }
+      if (!fotografado && !onde) { fotografado = true; fotoDoVisor(url, tela); }
     }
     var dedos = new Map(), pinca = 0;
     function mexeu() { sozinho = false; parado = 0; }
@@ -680,11 +823,13 @@ LSTela.pronto(function () {
     }
     aviso.hidden = true;
     medir(); requestAnimationFrame(passo);
-    motor = { parar: function () {
+    var este = { parar: function () {
       vivo = false; observador.disconnect();
       Object.keys(ouvintes).forEach(function (n) { tela.removeEventListener(n, ouvintes[n]); });
       renderer.dispose();
     } };
+    if (!onde) motor = este;
+    return este;
   }
 
   document.querySelectorAll("[data-ver3d]").forEach(function (b) {
@@ -932,6 +1077,284 @@ LSTela.pronto(function () {
     faltam.forEach(function (caixa) { observadorDePrevias.observe(caixa); });
     window.LSPrevias3DObservador = observadorDePrevias;
   }
+
+  /* ================= CRIAR OBJETO 3D (fotos, projeto ou arquivo) =================
+     A prévia vem do servidor como .glb (acao "gerar": nada é gravado) e abre no
+     mesmo desenho do visor, na tela da janela. "Gravar" manda ESSE .glb, com os
+     destinos: um ou vários brinquedos e/ou o projeto (core/modelo_fotos.py,
+     core/conversor_3d.py, core/produtos_parecidos.py). */
+  (function () {
+    var formCriar = document.getElementById("formCriar3d");
+    if (!formCriar) return;
+    var projetos = JSON.parse((document.getElementById("projetosDados") || { textContent: "[]" }).textContent || "[]");
+    var el = function (id) { return document.getElementById(id); };
+    var estado = { origem: "fotos", glb: null, url: "", info: null, motor: null, projeto: null, paralelo: "" };
+    var PRECISAO = {
+      paineis: '<i class="bi bi-bullseye"></i> <strong>Precisão dos Painéis:</strong> de frente e de cada lado é a própria foto, na medida informada. Nas diagonais aparecem os painéis em quina e o meio fica vazio. Ótimo para mostrar e para a Arena; não serve para medir peça por peça.',
+      volume: '<i class="bi bi-bullseye"></i> <strong>Precisão do Volume:</strong> o contorno de cada vista fica certo, na medida, com erro de uma fatia (1/128 do lado maior: 3 cm num brinquedo de 4 m). Entre as vistas é sólido: vãos, redes e o miolo ficam cheios, e não se anda por dentro. Foto em perspectiva deforma o contorno: quanto mais de frente, melhor.',
+      arquivo: '<i class="bi bi-bullseye"></i> <strong>Precisão do Arquivo 3D:</strong> exata. É a forma do arquivo ponto por ponto, só posta de pé no chão e no centro; tubos, redes e vãos ficam como no projeto. O tamanho vem da unidade (a do arquivo, a escolhida ou a altura informada).'
+    };
+    function modo() { var m = formCriar.querySelector('[name="modo"]:checked'); return m ? m.value : "paineis"; }
+    function pintarPrecisao() {
+      el("criarPrecisao").innerHTML = PRECISAO[estado.origem === "arquivo" ? "arquivo" : modo()];
+      el("criarMedidasDica").textContent = estado.origem === "arquivo"
+        ? "opcional: a altura informada ajusta a escala (o objeto não deforma)"
+        : "o que faltar sai da proporção das fotos";
+    }
+    function escolherOrigem(origem) {
+      estado.origem = origem;
+      el("criarOrigem").value = origem;
+      formCriar.querySelectorAll("[data-origem]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.origem === origem ? "true" : "false"); });
+      formCriar.querySelectorAll("[data-painel-origem]").forEach(function (p) { p.hidden = p.dataset.painelOrigem !== origem; });
+      el("criarModos").hidden = origem === "arquivo";
+      pintarPrecisao();
+    }
+    formCriar.querySelectorAll("[data-origem]").forEach(function (b) { b.addEventListener("click", function () { escolherOrigem(b.dataset.origem); }); });
+    formCriar.querySelectorAll('[name="modo"]').forEach(function (r) { r.addEventListener("change", pintarPrecisao); });
+
+    // as fotos de cada vista: a miniatura aparece no quadrinho
+    formCriar.querySelectorAll(".ls-criar3d-vista input[type=file]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        var caixa = campo.closest(".ls-criar3d-vista");
+        var img = caixa.querySelector(".ls-criar3d-vista-img");
+        var arquivo = campo.files && campo.files[0];
+        caixa.classList.toggle("tem-foto", !!arquivo);
+        if (!arquivo) { img.innerHTML = '<i class="bi bi-image"></i>'; return; }
+        var foto = document.createElement("img"); foto.alt = ""; foto.src = URL.createObjectURL(arquivo);
+        img.replaceChildren(foto);
+      });
+    });
+
+    // ---- de um projeto: as fotos com a vista de cada uma, e o paralelo com a loja ----
+    var OPCOES_VISTA = [["", "Não usar"], ["frente", "Frente"], ["direita", "Lado direito"], ["costas", "Costas"], ["esquerda", "Lado esquerdo"], ["cima", "De cima"]];
+    function vistasEscolhidas() {
+      var saida = {};
+      el("criarFotosProjeto").querySelectorAll("select[data-foto]").forEach(function (s) { if (s.value) saida[s.dataset.foto] = s.value; });
+      return saida;
+    }
+    function pintarSugestoes(dados) {
+      var lista = el("criarSugestoes"); lista.innerHTML = "";
+      estado.paralelo = dados.atual && dados.atual.produto ? String(dados.atual.produto) : "";
+      var nenhum = document.createElement("li");
+      nenhum.innerHTML = '<label class="ls-criar3d-sugestao ls-criar3d-sugestao--nenhum"><input type="radio" name="paralelo" value=""><span><strong>Nenhum</strong><small>é um projeto único, sem par na loja</small></span></label>';
+      (dados.sugestoes || []).forEach(function (s) {
+        var li = document.createElement("li");
+        var rotulo = document.createElement("label"); rotulo.className = "ls-criar3d-sugestao";
+        var radio = document.createElement("input"); radio.type = "radio"; radio.name = "paralelo"; radio.value = String(s.id);
+        var foto = document.createElement("span"); foto.className = "ls-criar3d-sugestao-foto";
+        if (s.capa) { var img = document.createElement("img"); img.src = s.capa; img.alt = ""; img.loading = "lazy"; foto.appendChild(img); } else { foto.innerHTML = '<i class="bi bi-image"></i>'; }
+        var texto = document.createElement("span");
+        var nome = document.createElement("strong"); nome.textContent = s.nome;
+        var nota = document.createElement("em"); nota.className = "ls-criar3d-nota"; nota.textContent = s.nota + "%";
+        nota.style.setProperty("--nota", s.nota + "%");
+        var motivo = document.createElement("small"); motivo.textContent = (s.motivos || []).join(" · ") + (s.tem_3d ? " · já tem 3D" : "");
+        texto.append(nome, nota, motivo);
+        rotulo.append(radio, foto, texto); li.appendChild(rotulo); lista.appendChild(li);
+      });
+      lista.appendChild(nenhum);
+      if (!(dados.sugestoes || []).length) {
+        var vazio = document.createElement("li"); vazio.className = "small text-muted mb-1";
+        vazio.textContent = "Nada parecido no catálogo: pelo nome, pela descrição e pelas medidas, este projeto não tem par na loja.";
+        lista.insertBefore(vazio, lista.firstChild);
+      }
+      lista.querySelectorAll('[name="paralelo"]').forEach(function (r) {
+        r.checked = r.value === estado.paralelo;
+        r.addEventListener("change", function () { estado.paralelo = r.value; });
+      });
+      el("criarParalelo").hidden = false;
+    }
+    function carregarProjeto(id) {
+      estado.projeto = null;
+      el("criarFotosProjeto").innerHTML = "";
+      el("criarParalelo").hidden = true;
+      if (!id) return Promise.resolve();
+      el("criarFotosProjeto").innerHTML = '<p class="small text-muted mb-0"><i class="bi bi-hourglass-split"></i> Buscando as fotos e comparando com a loja…</p>';
+      var dados = new FormData(); dados.set("action", "projeto_dados"); dados.set("projeto", id);
+      dados.set("csrfmiddlewaretoken", formCriar.querySelector("[name=csrfmiddlewaretoken]").value);
+      return fetch(formCriar.getAttribute("action"), { method: "POST", body: dados, headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+          if (json.status !== "sucesso") throw new Error(json.msg || "Não deu para abrir o projeto.");
+          estado.projeto = json;
+          var caixa = el("criarFotosProjeto"); caixa.innerHTML = "";
+          if (!json.fotos.length) caixa.innerHTML = '<p class="small text-warning mb-0">Este projeto não tem fotos: cadastre as fotos em Projetos, ou use "Fotos e medidas".</p>';
+          json.fotos.forEach(function (f) {
+            var item = document.createElement("div"); item.className = "ls-criar3d-foto-projeto";
+            var img = document.createElement("img"); img.src = f.url; img.alt = f.legenda || ""; img.loading = "lazy";
+            var sel = document.createElement("select"); sel.className = "form-select form-select-sm"; sel.dataset.foto = String(f.id);
+            sel.setAttribute("aria-label", "Vista da foto " + (f.legenda || f.id));
+            OPCOES_VISTA.forEach(function (o) { var op = document.createElement("option"); op.value = o[0]; op.textContent = o[1]; sel.appendChild(op); });
+            sel.value = f.vista || "";
+            item.classList.toggle("usada", !!sel.value);
+            sel.addEventListener("change", function () { item.classList.toggle("usada", !!sel.value); });
+            item.append(img, sel);
+            if (f.legenda) { var leg = document.createElement("small"); leg.textContent = f.legenda; item.appendChild(leg); }
+            caixa.appendChild(item);
+          });
+          ["largura", "profundidade", "altura"].forEach(function (chave) {
+            var campo = formCriar.querySelector('[name="' + chave + '"]');
+            if (json.medidas && json.medidas[chave] && !campo.value) campo.value = String(json.medidas[chave]).replace(".", ",");
+          });
+          el("criarDestinoProjeto").value = String(id);
+          pintarSugestoes(json);
+        })
+        .catch(function (erro) { el("criarFotosProjeto").innerHTML = ""; Painel.erro("criarErro", erro.message); });
+    }
+    el("criarProjeto").addEventListener("change", function () { Painel.erro("criarErro", ""); carregarProjeto(this.value); });
+
+    el("criarSoParalelo").addEventListener("click", function () {
+      var botao = this;
+      if (!estado.projeto) return;
+      var dados = new FormData(); dados.set("action", "projeto_paralelo"); dados.set("projeto", el("criarProjeto").value); dados.set("produto", estado.paralelo || "");
+      dados.set("csrfmiddlewaretoken", formCriar.querySelector("[name=csrfmiddlewaretoken]").value);
+      botao.disabled = true;
+      fetch(formCriar.getAttribute("action"), { method: "POST", body: dados, headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (json) { if (json.status !== "sucesso") throw new Error(json.msg); Painel.aviso(json.msg, "ok"); })
+        .catch(function (erro) { Painel.erro("criarErro", erro.message || "Não deu para guardar."); })
+        .then(function () { botao.disabled = false; });
+    });
+
+    // ---- a prévia ----
+    function limparPrevia() {
+      if (estado.motor) { estado.motor.parar(); estado.motor = null; }
+      if (estado.url) { URL.revokeObjectURL(estado.url); estado.url = ""; }
+      estado.glb = null; estado.info = null;
+      el("criarDestino").hidden = true;
+      el("criarInfo").textContent = ""; el("criarAvisos").innerHTML = "";
+    }
+    function mb(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
+    function medidasTexto(m) { return m && m.length === 3 ? m[1].toFixed(2).replace(".", ",") + " m de largura × " + m[2].toFixed(2).replace(".", ",") + " m de profundidade × " + m[0].toFixed(2).replace(".", ",") + " m de altura" : ""; }
+    function validar() {
+      if (estado.origem === "fotos" && !(formCriar.querySelector('[name="foto_frente"]').files || []).length) return "Escolha pelo menos a foto da FRENTE.";
+      if (estado.origem === "projeto") {
+        if (!el("criarProjeto").value) return "Escolha o projeto.";
+        var vistas = vistasEscolhidas(), usadas = Object.keys(vistas).map(function (k) { return vistas[k]; });
+        if (usadas.indexOf("frente") < 0) return "Marque qual foto do projeto é a FRENTE.";
+        if (usadas.length !== new Set(usadas).size) return "Duas fotos com a mesma vista: deixe uma só em cada.";
+      }
+      if (estado.origem === "arquivo" && !(el("criarArquivo3d").files || []).length) return "Escolha o arquivo 3D.";
+      return null;
+    }
+    el("criarGerar").addEventListener("click", function () {
+      var botao = this, problema = validar();
+      Painel.erro("criarErro", problema || "");
+      if (problema) return;
+      el("criarVistas").value = JSON.stringify(vistasEscolhidas());
+      var dados = new FormData(formCriar);
+      dados.set("action", "gerar");
+      // só vai o que a origem usa (as fotos não sobem junto com o arquivo 3D, e vice-versa)
+      if (estado.origem !== "fotos") ["frente", "direita", "costas", "esquerda", "cima"].forEach(function (v) { dados.delete("foto_" + v); });
+      if (estado.origem !== "arquivo") dados.delete("arquivo3d");
+      dados.delete("brinquedos");
+      limparPrevia();
+      botao.disabled = true;
+      botao.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ' + (estado.origem === "arquivo" ? "Convertendo…" : "Recortando as fotos e montando…");
+      el("criarAviso").hidden = false; el("criarAviso").textContent = estado.origem === "arquivo" ? "Lendo e convertendo o arquivo (os grandes levam alguns segundos)…" : "Recortando o fundo e montando o objeto…";
+      fetch(formCriar.getAttribute("action"), { method: "POST", body: dados, headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (resposta) {
+          var tipo = resposta.headers.get("Content-Type") || "";
+          if (tipo.indexOf("model/gltf-binary") !== 0) {
+            return resposta.json().catch(function () { return null; }).then(function (json) {
+              throw new Error((json && json.msg) || "O servidor não conseguiu montar o objeto (" + resposta.status + ").");
+            });
+          }
+          var info = {};
+          try { info = JSON.parse(resposta.headers.get("X-Objeto3D-Info") || "{}"); } catch (e) { info = {}; }
+          return resposta.blob().then(function (blob) { return { blob: blob, info: info }; });
+        })
+        .then(function (r) {
+          estado.glb = r.blob; estado.info = r.info;
+          estado.url = URL.createObjectURL(r.blob);
+          return carregar(estado.url, { tela: el("criarTela"), aviso: el("criarAviso"), cores: el("criarCores") }).then(function (m) {
+            estado.motor = m;
+            var partes = [];
+            var med = medidasTexto(r.info.medidas); if (med) partes.push(med);
+            if (r.info.triangulos) partes.push(Number(r.info.triangulos).toLocaleString("pt-BR") + " triângulos");
+            if (r.info.unidade) partes.push("unidade: " + r.info.unidade);
+            if (r.info.vistas) partes.push("vistas: " + r.info.vistas.join(", "));
+            partes.push(mb(r.info.tamanho || r.blob.size));
+            el("criarInfo").textContent = partes.join(" · ");
+            var avisos = el("criarAvisos"); avisos.innerHTML = "";
+            (r.info.avisos || []).forEach(function (a) { var li = document.createElement("li"); li.textContent = a; avisos.appendChild(li); });
+            el("criarDestino").hidden = false;
+            if (estado.origem === "projeto") el("criarDestinoProjeto").value = el("criarProjeto").value;
+          });
+        })
+        .catch(function (erro) {
+          console.error("Criar 3D:", erro);
+          el("criarAviso").hidden = false; el("criarAviso").textContent = "Sem prévia: " + (erro.message || erro);
+          Painel.erro("criarErro", erro.message || String(erro));
+        })
+        .then(function () { botao.disabled = false; botao.innerHTML = '<i class="bi bi-magic"></i> Gerar de novo'; });
+    });
+
+    // ---- gravar ----
+    el("criarBuscaBrinquedo").addEventListener("input", function () {
+      var termo = this.value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+      el("criarBrinquedos").querySelectorAll("[data-busca]").forEach(function (item) {
+        item.hidden = !!termo && item.dataset.busca.indexOf(termo) < 0 && !item.querySelector("input").checked;
+      });
+    });
+    el("criarSalvar").addEventListener("click", function () {
+      var botao = this;
+      if (!estado.glb) { Painel.erro("criarErro", "Gere a prévia antes de gravar."); return; }
+      var marcados = Array.prototype.map.call(el("criarBrinquedos").querySelectorAll("input:checked"), function (c) { return c.value; });
+      var projeto = el("criarDestinoProjeto").value;
+      if (!marcados.length && !projeto) { Painel.erro("criarErro", "Escolha onde o objeto vai: um ou mais brinquedos e/ou o projeto."); return; }
+      var dados = new FormData();
+      dados.set("csrfmiddlewaretoken", formCriar.querySelector("[name=csrfmiddlewaretoken]").value);
+      dados.set("action", "gerado_salvar");
+      dados.set("arquivo", estado.glb, "objeto-3d.glb");
+      marcados.forEach(function (id) { dados.append("brinquedos", id); });
+      if (projeto) {
+        dados.set("projeto", projeto);
+        if (estado.origem === "projeto" && projeto === el("criarProjeto").value && estado.projeto) dados.set("produto", estado.paralelo || "");
+      }
+      if (el("criarArena").checked) dados.set("exibir_na_arena", "on");
+      dados.set("origem", estado.origem);
+      dados.set("modo", estado.origem === "arquivo" ? "arquivo" : modo());
+      botao.disabled = true; botao.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gravando…';
+      fetch(formCriar.getAttribute("action"), { method: "POST", body: dados, headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (json) {
+          if (!json || json.status !== "sucesso") throw new Error((json && json.msg) || "Não deu para gravar agora.");
+          Painel.aviso(json.msg, "ok");
+          Painel.fechar("modalCriar3d");
+          setTimeout(function () { location.reload(); }, 900);
+        })
+        .catch(function (erro) { Painel.erro("criarErro", erro.message); })
+        .then(function () { botao.disabled = false; botao.innerHTML = '<i class="bi bi-cloud-check"></i> Gravar o objeto 3D'; });
+    });
+
+    function abrirCriar(projetoId) {
+      Painel.erro("criarErro", "");
+      limparPrevia();
+      el("criarAviso").hidden = false;
+      el("criarAviso").innerHTML = '<i class="bi bi-arrow-repeat"></i> A prévia aparece aqui, girando. Nada é gravado antes de você confirmar.';
+      escolherOrigem(projetoId ? "projeto" : estado.origem);
+      Painel.abrir("modalCriar3d");
+      if (projetoId) { el("criarProjeto").value = String(projetoId); carregarProjeto(String(projetoId)); }
+    }
+    el("criar3d").addEventListener("click", function () { abrirCriar(""); });
+    document.querySelectorAll("[data-criar-projeto]").forEach(function (b) { b.addEventListener("click", function () { abrirCriar(b.dataset.criarProjeto); }); });
+    el("modalCriar3d").addEventListener("hidden.bs.modal", function () { if (estado.motor) { estado.motor.parar(); estado.motor = null; } });
+    document.querySelectorAll("[data-ver3d-projeto]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var p = projetos.find(function (x) { return Number(x.id) === Number(b.dataset.ver3dProjeto); });
+        if (!p || !p.objeto || !p.objeto.url) return;
+        document.getElementById("visorTitulo").textContent = p.titulo + " · projeto";
+        document.getElementById("visorMedidas").textContent = (p.objeto.medidas ? "Medidas: " + p.objeto.medidas + ". " : "") + (p.objeto.produto_nome ? "Na loja: " + p.objeto.produto_nome + "." : "");
+        document.getElementById("visorJogar").classList.add("d-none");
+        document.getElementById("visorSite").classList.add("d-none");
+        Painel.abrir("modalVisor3d");
+        carregar(p.objeto.url).catch(function (erro) {
+          aviso.hidden = false; aviso.textContent = "Não deu para abrir o 3D aqui: " + (erro && erro.message ? erro.message : erro);
+        });
+      });
+    });
+    pintarPrecisao();
+  })();
 });
 </script>
 {% endif %}

@@ -233,3 +233,55 @@
     .ls-galeria.ls-ficha.aberta .ls-ficha-info > *, .ls-galeria.ls-ficha.aberta .ls-ficha-lista li,
     .ls-galeria.ls-ficha .ls-ficha-slide.ativo .ls-ficha-slide-foto { animation: none; }
 }
+
+/* ---------- "Ver em 3D" (o projeto com objeto 3D) e "Este projeto na loja" ---------- */
+.ls-ficha-ver3d {
+  position: absolute; z-index: 6; top: 14px; left: 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px 9px 12px; border: 0; border-radius: 999px; cursor: pointer;
+  font-family: inherit; font-weight: 800; font-size: .86rem; line-height: 1; letter-spacing: .01em; color: #071225;
+  background: linear-gradient(135deg, #ffd23f, #ff8a1f);
+  box-shadow: 0 10px 24px rgba(255, 138, 31, .38), inset 0 1px 0 rgba(255, 255, 255, .55);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.ls-ficha-ver3d i { font-size: 1rem; }
+.ls-ficha-ver3d:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(255, 138, 31, .46), inset 0 1px 0 rgba(255, 255, 255, .55); }
+.ls-ficha-ver3d:focus-visible { outline: 3px solid #3fd0ff; outline-offset: 3px; }
+.ls-ficha-ver3d[aria-pressed="true"] { color: #e8f1ff; background: rgba(8, 18, 38, .78); box-shadow: 0 0 0 1px rgba(255, 255, 255, .22), 0 10px 24px rgba(0, 0, 0, .35); backdrop-filter: blur(8px); }
+.ls-ficha-visor { position: relative; }
+.ls-ficha-3d {
+  position: absolute; inset: 0; z-index: 5; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(63, 208, 255, .2), transparent 55%),
+    linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(165deg, #0d2446, #050c1a 82%);
+}
+.ls-ficha-3d[hidden] { display: none; }
+.ls-ficha-3d canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; cursor: grab; }
+.ls-ficha-3d canvas:active { cursor: grabbing; }
+.ls-ficha-3d-aviso {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); margin: 0;
+  padding: 8px 14px; border-radius: 999px; font-size: .8rem; color: #dbe8ff; background: rgba(5, 12, 26, .82);
+}
+.ls-ficha-3d-aviso[hidden] { display: none; }
+.ls-ficha-3d-dica { position: absolute; right: 14px; bottom: 12px; font-size: .72rem; color: rgba(219, 232, 255, .7); pointer-events: none; }
+/* com o 3D à mostra, as setas, o contador e as miniaturas das fotos saem */
+.ls-ficha-visor--3d .ls-ficha-seta,
+.ls-ficha-visor--3d .ls-ficha-contador,
+.ls-ficha-visor--3d .ls-ficha-legenda,
+.ls-ficha-visor--3d .ls-ficha-miniaturas { visibility: hidden; }
+
+.ls-ficha-na-loja {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 14px;
+  margin: 18px 0 4px; padding: 10px 14px 10px 10px; border-radius: 16px; text-decoration: none;
+  color: inherit; border: 1px solid rgba(52, 196, 106, .45);
+  background: linear-gradient(120deg, rgba(52, 196, 106, .16), rgba(63, 208, 255, .08));
+  transition: transform .15s ease, border-color .15s ease;
+}
+.ls-ficha-na-loja:hover { transform: translateY(-1px); border-color: #34c46a; }
+.ls-ficha-na-loja img { width: 76px; height: 64px; object-fit: cover; border-radius: 12px; background: rgba(255, 255, 255, .08); }
+.ls-ficha-na-loja-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ls-ficha-na-loja-texto small { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #34c46a; }
+.ls-ficha-na-loja-texto strong { font-size: 1rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-ficha-na-loja-texto em { font-style: normal; font-size: .8rem; opacity: .8; }

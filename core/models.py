@@ -1355,6 +1355,60 @@ class Projetos(models.Model):
         verbose_name_plural = "Projetos"
 
 
+class ObjetoTresDProjeto(Prime):
+    """O OBJETO 3D de um PROJETO (o brinquedão, o espaço esportivo kids sob medida).
+
+    Feito no painel (Objetos 3D > Criar objeto 3D): pelas fotos do próprio
+    projeto e as medidas, ou por um arquivo 3D convertido. A ficha do projeto
+    no site ganha "Ver em 3D". Mora numa tabela própria (e não numa coluna
+    nova de BrinquedosProjeto) para o site não cair se o código chegar antes
+    da migração: sem a tabela, as telas seguem sem o 3D (ver
+    `core.objetos_3d.tabela_pronta`).
+
+    `produto` é o PARALELO com a loja: o brinquedo do catálogo que é este
+    projeto (ou o mais parecido), escolhido pela equipe entre as sugestões
+    (core/produtos_parecidos.py). A ficha mostra "Este projeto na loja".
+    """
+
+    projeto = models.OneToOneField(
+        BrinquedosProjeto,
+        on_delete=models.CASCADE,
+        related_name="objeto_3d",
+        verbose_name="Projeto",
+    )
+    arquivo = models.FileField(
+        upload_to="objetos_3d/projetos/",
+        storage=_armazenamento_3d,
+        blank=True,
+        verbose_name="Arquivo 3D (.glb)",
+    )
+    medidas = models.JSONField(default=list, blank=True, verbose_name="Medidas do objeto")
+    origem = models.CharField(max_length=20, blank=True, verbose_name="Feito a partir de")
+    modo = models.CharField(max_length=20, blank=True, verbose_name="Jeito")
+    produto = models.ForeignKey(
+        Brinquedos,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="projetos_parecidos",
+        verbose_name="Produto da loja",
+    )
+
+    def __str__(self):
+        return f"Objeto 3D — {self.projeto}"
+
+    @property
+    def url(self):
+        try:
+            return self.arquivo.url if self.arquivo else ""
+        except Exception:  # noqa: BLE001 -- armazenamento fora do ar: a ficha segue sem o 3D
+            return ""
+
+    class Meta:
+        verbose_name = "Objeto 3D de projeto"
+        verbose_name_plural = "Objetos 3D de projetos"
+
+
 class Eventos(models.Model):
     titulo = models.CharField(max_length=200)
     descricao = models.TextField()

@@ -71,6 +71,17 @@ def prefetch_do_objeto():
     return ("objeto_3d",) if tabela_pronta() else ()
 
 
+def prefetch_do_3d_dos_projetos():
+    """O prefetch do objeto 3D dos projetos (e do produto parecido), só com a tabela."""
+    from django.db.models import Prefetch
+
+    from .models import ObjetoTresDProjeto
+
+    if not tabela_pronta(ObjetoTresDProjeto):
+        return ()
+    return (Prefetch("brinquedo_projetado__objeto_3d", queryset=ObjetoTresDProjeto.objects.select_related("produto")),)
+
+
 def objeto_do_brinquedo(brinquedo, so_ativo=True):
     """O objeto 3D já trazido com o brinquedo (prefetch), ou None.
 

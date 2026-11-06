@@ -922,3 +922,74 @@ Dependência nova: rjsmin (requirements.txt).
    no programa de 3D) continua usando as dele.
    Os botões mostram a roda com as 4 cores de cada paleta, com o rótulo
    "CORES" e o ícone da paleta.
+
+37) CRIAR OBJETO 3D PELO PAINEL: FOTOS, PROJETO OU ARQUIVO 3D
+   Painel > Objetos 3D > "Criar objeto 3D". Três origens, uma janela só; a
+   prévia aparece girando ao lado e NADA é gravado antes de "Gravar".
+
+   A) FOTOS E MEDIDAS (os "sprites" 2D com processamento)
+      Suba a FRENTE (obrigatória) e, se tiver, lado direito, costas, lado
+      esquerdo e a de cima (a de cima com a frente para baixo na foto).
+      Informe largura, profundidade e altura em metros; o que faltar sai da
+      proporção das fotos. O fundo de cada foto é recortado sozinho (fundo
+      liso, céu, fundo branco de render); PNG já recortado vale como está.
+      Dois jeitos:
+        PAINÉIS  cada foto recortada vira um painel no lugar dela, na medida.
+                 PRECISÃO: de frente e de cada lado é a própria foto (exato
+                 como a câmera viu). Nas diagonais aparecem os painéis em
+                 quina e o meio é vazio. Só com a frente, vira um painel
+                 recortado ("totem").
+        VOLUME   o contorno de cada foto recorta um bloco do tamanho do
+                 brinquedo, e cada face do sólido ganha a foto da vista dela.
+                 PRECISÃO: o contorno de cada vista fica certo, na medida,
+                 com erro de uma fatia (1/128 do lado maior: 3 cm num
+                 brinquedo de 4 m). Entre as vistas é sólido: vãos, redes,
+                 tubos e o miolo ficam cheios, e não se anda por dentro.
+      Foto em perspectiva (render inclinado, foto de canto) deforma o
+      contorno: quanto mais de frente a foto, mais certo o objeto.
+
+   B) DE UM PROJETO (o brinquedão / espaço esportivo kids com as fotos)
+      Escolha o projeto: as fotos dele aparecem, cada uma com a vista
+      provável (pela legenda: "frontal", "lateral direita", "costas", "vista
+      de cima"...; sem pista, a 1ª é a frente e a 2ª o lado direito). As
+      medidas escritas na descrição ("6 x 4 x 3,2 m", "altura: 3,5 m")
+      entram sozinhas. Daí é igual ao A.
+      O PARALELO COM A LOJA: o projeto é comparado com cada brinquedo do
+      catálogo pelo nome, pela descrição e pelas medidas (as palavras raras
+      pesam mais, "parquinho" = "playground", "cama elástica" = "trampolim")
+      e aparecem os mais parecidos com uma nota de 0 a 100 e o motivo.
+      Marque o que for este projeto: a ficha do projeto no site passa a
+      mostrar "Este projeto na loja" com o link do produto. Dá para guardar
+      só o paralelo, sem 3D ("Guardar só o paralelo"). É sugestão: quem
+      confirma é a equipe.
+
+   C) ARQUIVO 3D (de um programa de projeto)
+      .glb, .gltf (com o .bin e as texturas num .zip), .obj (com o .mtl e as
+      texturas num .zip), .stl, .3ds, .dae e .kmz (o que o SketchUp
+      exporta), até 80 MB. O objeto chega de pé, no chão, no centro e na
+      medida: a unidade vem do arquivo (o COLLADA grava), da escolha (m,
+      cm, mm, polegada) ou da altura informada; sem nada disso é adivinhada
+      pela altura (brinquedo não tem 250 m nem 3 mm). Cotas, linhas e
+      pessoas de escala espalhadas longe do conjunto saem sozinhas (o .3ds
+      do trampolim tinha 2.392 triângulos assim, numa área de 170 m).
+      Texturas são reduzidas a 1024 px e o objeto vai compactado (posições
+      em 16 bits: décimos de milímetro), para caber nos 10 MB do
+      armazenamento: os .3ds da fábrica (280 mil triângulos) ficam com 4 a
+      5 MB e convertem em ~6 s.
+      PRECISÃO: exata. É a forma do arquivo ponto por ponto; tubos, redes e
+      vãos ficam como no projeto.
+      O que não abre aqui diz como sair dele: .skp (SketchUp: Exportar >
+      Modelo 3D > COLLADA), .fbx/.blend (Blender: Exportar > glTF), .max,
+      .c4d, .3dm.
+
+   GRAVAR: o objeto da prévia vai para UM OU VÁRIOS brinquedos (troca o que
+   eles tinham; o arquivo antigo é apagado) e/ou para o PROJETO. O projeto
+   em 3D ganha "Ver em 3D" na ficha (página inicial e /projetos/): as fotos
+   dão lugar ao objeto girando, arrasta para girar, pinça/rodinha aproxima,
+   toque duplo volta (core/static/site/ls-ficha-3d.js; o three.js só chega
+   no toque). Os projetos em 3D aparecem na aba "Projetos" da tela, com
+   Ver em 3D, Refazer e Apagar (o paralelo com a loja continua).
+   A tabela nova (core.ObjetoTresDProjeto, migração 0137) é separada: se o
+   código subir antes da migração, o site segue sem o 3D dos projetos.
+   Código: core/glb_montar.py (escreve o .glb), core/conversor_3d.py,
+   core/modelo_fotos.py, core/produtos_parecidos.py.

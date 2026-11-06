@@ -254,3 +254,134 @@ a.ls-3d-jogo:hover { color: #fff3c4; border-color: rgba(255, 210, 63, .7); }
   .ls-3d-corpo { padding: 12px 12px 4px; }
   .ls-3d-acoes { padding: 10px 12px 12px; }
 }
+
+/* ---------- criar objeto 3D (fotos, projeto ou arquivo) ---------- */
+.ls-3d-hero-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.ls-criar3d-grade { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 22px; align-items: start; }
+.ls-criar3d-passos { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ls-criar3d-lado { position: sticky; top: 0; min-width: 0; }
+.ls-criar3d-origens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ls-criar3d-origem {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0;
+  padding: 12px 12px 10px; border-radius: 14px; text-align: left;
+  border: 1px solid var(--line, #3f3527); background: var(--panel, #231d16); color: var(--text, #f3eadb);
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.ls-criar3d-origem i { font-size: 1.35rem; color: #3fd0ff; }
+.ls-criar3d-origem strong { font-size: .86rem; line-height: 1.2; }
+.ls-criar3d-origem small { font-size: .7rem; color: var(--muted, #a2917a); line-height: 1.25; }
+.ls-criar3d-origem:hover { transform: translateY(-1px); }
+.ls-criar3d-origem[aria-pressed="true"] {
+  border-color: #3fd0ff; box-shadow: 0 0 0 3px rgba(63, 208, 255, .22), 0 10px 24px rgba(63, 208, 255, .14);
+}
+.ls-criar3d-origem[aria-pressed="true"] i { color: #ffd23f; }
+
+.ls-criar3d-vistas {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas: "cima frente direita" "esquerda costas .";
+}
+.ls-criar3d-vista--frente { grid-area: frente; }
+.ls-criar3d-vista--direita { grid-area: direita; }
+.ls-criar3d-vista--costas { grid-area: costas; }
+.ls-criar3d-vista--esquerda { grid-area: esquerda; }
+.ls-criar3d-vista--cima { grid-area: cima; }
+.ls-criar3d-vista {
+  display: flex; flex-direction: column; gap: 4px; margin: 0; cursor: pointer; min-width: 0;
+  padding: 6px; border-radius: 12px; border: 1.5px dashed var(--line, #3f3527); background: var(--panel, #231d16);
+}
+.ls-criar3d-vista:focus-within { outline: 2px solid #3fd0ff; outline-offset: 2px; }
+.ls-criar3d-vista.tem-foto { border-style: solid; border-color: #34c46a; }
+.ls-criar3d-vista--frente { border-color: #ffd23f; }
+.ls-criar3d-vista-img {
+  display: grid; place-items: center; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
+  background: repeating-conic-gradient(rgba(255, 255, 255, .06) 0 25%, transparent 0 50%) 0 0 / 14px 14px;
+  color: var(--muted, #a2917a); font-size: 1.4rem;
+}
+.ls-criar3d-vista-img img { width: 100%; height: 100%; object-fit: contain; }
+.ls-criar3d-vista-nome { font-size: .74rem; font-weight: 800; color: var(--text, #f3eadb); text-align: center; }
+.ls-criar3d-vista-nome b { color: #ffd23f; }
+
+.ls-criar3d-fotos-projeto { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; margin-top: 8px; }
+.ls-criar3d-foto-projeto {
+  display: flex; flex-direction: column; gap: 4px; padding: 5px; border-radius: 12px; min-width: 0;
+  border: 1.5px solid var(--line, #3f3527); background: var(--panel, #231d16); opacity: .72; transition: opacity .15s, border-color .15s;
+}
+.ls-criar3d-foto-projeto.usada { opacity: 1; border-color: #34c46a; }
+.ls-criar3d-foto-projeto img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; }
+.ls-criar3d-foto-projeto small { font-size: .66rem; color: var(--muted, #a2917a); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ls-criar3d-paralelo {
+  margin-top: 12px; padding: 12px; border-radius: 14px;
+  border: 1px solid rgba(52, 196, 106, .45); background: rgba(52, 196, 106, .08);
+}
+.ls-criar3d-paralelo h6 { font-weight: 800; margin: 0 0 4px; color: var(--text, #f3eadb); }
+.ls-criar3d-sugestao {
+  display: grid; grid-template-columns: auto 52px minmax(0, 1fr); align-items: center; gap: 10px;
+  padding: 6px 8px; margin: 0 0 6px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--line, #3f3527); background: var(--panel, #231d16);
+}
+.ls-criar3d-sugestao:has(input:checked) { border-color: #34c46a; box-shadow: 0 0 0 2px rgba(52, 196, 106, .25); }
+.ls-criar3d-sugestao > span:last-child { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.ls-criar3d-sugestao strong { font-size: .84rem; color: var(--text, #f3eadb); }
+.ls-criar3d-sugestao small { flex-basis: 100%; font-size: .7rem; color: var(--muted, #a2917a); }
+.ls-criar3d-sugestao-foto { width: 52px; height: 40px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: rgba(255, 255, 255, .06); }
+.ls-criar3d-sugestao-foto img { width: 100%; height: 100%; object-fit: cover; }
+.ls-criar3d-sugestao--nenhum { grid-template-columns: auto minmax(0, 1fr); }
+.ls-criar3d-nota {
+  font-style: normal; font-size: .68rem; font-weight: 900; color: #06210f; padding: 1px 7px; border-radius: 999px;
+  background: linear-gradient(90deg, #34c46a var(--nota, 50%), #b8f5cc var(--nota, 50%));
+}
+
+.ls-criar3d-modos, .ls-criar3d-medidas { margin: 0; padding: 0; border: 0; min-width: 0; }
+.ls-criar3d-modos legend, .ls-criar3d-medidas legend { font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #a2917a); margin-bottom: 6px; float: none; width: auto; }
+.ls-criar3d-medidas legend small { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.ls-criar3d-modos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ls-criar3d-modos legend { grid-column: 1 / -1; }
+.ls-criar3d-modo { margin: 0; cursor: pointer; }
+.ls-criar3d-modo input { position: absolute; opacity: 0; pointer-events: none; }
+.ls-criar3d-modo span {
+  display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--line, #3f3527); background: var(--panel, #231d16);
+}
+.ls-criar3d-modo strong { font-size: .84rem; color: var(--text, #f3eadb); }
+.ls-criar3d-modo strong i { color: #ff8a1f; }
+.ls-criar3d-modo small { font-size: .7rem; color: var(--muted, #a2917a); line-height: 1.3; }
+.ls-criar3d-modo input:checked + span { border-color: #ff8a1f; box-shadow: 0 0 0 3px rgba(255, 138, 31, .22); }
+.ls-criar3d-modo input:focus-visible + span { outline: 2px solid #3fd0ff; outline-offset: 2px; }
+.ls-criar3d-recorte { grid-column: 1 / -1; margin: 0; }
+.ls-criar3d-medidas-linha { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ls-criar3d-medidas-linha label { display: flex; flex-direction: column; gap: 3px; margin: 0; font-size: .72rem; font-weight: 800; color: var(--text-2, #d9ccb6); }
+.ls-criar3d-precisao {
+  padding: 10px 12px; border-radius: 12px; font-size: .76rem; line-height: 1.45; color: var(--text-2, #d9ccb6);
+  border-left: 4px solid #3fd0ff; background: rgba(63, 208, 255, .08);
+}
+.ls-criar3d-precisao i { color: #3fd0ff; }
+.ls-criar3d-gerar { font-weight: 800; padding-block: 10px; }
+
+.ls-criar3d-visor { aspect-ratio: 4 / 3; min-height: 260px; }
+.ls-criar3d-info { margin: 8px 0 4px; font-size: .78rem; color: var(--text-2, #d9ccb6); }
+.ls-criar3d-avisos { margin: 0 0 8px; padding-left: 18px; font-size: .74rem; color: #ffb547; }
+.ls-criar3d-avisos:empty { display: none; }
+.ls-criar3d-destino { margin-top: 10px; padding: 12px; border-radius: 14px; border: 1px solid var(--line, #3f3527); background: var(--panel, #231d16); }
+.ls-criar3d-destino h6 { font-weight: 800; color: var(--text, #f3eadb); }
+.ls-criar3d-brinquedos {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 10px;
+  max-height: 180px; overflow: auto; margin-top: 6px; padding: 6px; border-radius: 10px; background: rgba(0, 0, 0, .12);
+}
+.ls-criar3d-brinquedo { display: flex; align-items: center; gap: 6px; margin: 0; font-size: .78rem; color: var(--text, #f3eadb); min-width: 0; }
+.ls-criar3d-brinquedo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ls-criar3d-brinquedo small { flex: 0 0 auto; font-size: .62rem; color: #ffb547; }
+
+@media (max-width: 991.98px) {
+  .ls-criar3d-grade { grid-template-columns: 1fr; }
+  .ls-criar3d-lado { position: static; order: -1; }
+  .ls-criar3d-visor { min-height: 220px; max-height: 46vh; }
+}
+@media (max-width: 575.98px) {
+  .ls-criar3d-origens { grid-template-columns: 1fr; }
+  .ls-criar3d-origem { flex-direction: row; align-items: center; gap: 10px; }
+  .ls-criar3d-origem small { display: none; }
+  .ls-criar3d-vistas { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "frente direita" "costas esquerda" "cima ."; }
+  .ls-criar3d-modos { grid-template-columns: 1fr; }
+}

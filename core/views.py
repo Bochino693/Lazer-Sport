@@ -35,7 +35,7 @@ from django.templatetags.static import static
 from . import checkout
 from . import arena, painel_publico
 from . import objetos_3d
-from .objetos_3d import objeto_do_brinquedo, prefetch_do_objeto
+from .objetos_3d import objeto_do_brinquedo, prefetch_do_3d_dos_projetos, prefetch_do_objeto
 from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
 from .home_cache import (
     admin_catalog_etag,
@@ -330,7 +330,8 @@ class HomeView(View):
             Projetos.objects
             .select_related("brinquedo_projetado")
             .prefetch_related(
-                "brinquedo_projetado__imagens_brinquedo_projeto"
+                "brinquedo_projetado__imagens_brinquedo_projeto",
+                *prefetch_do_3d_dos_projetos(),
             )
             .order_by("-id")
         )
@@ -2075,6 +2076,7 @@ class ProjetosView(View):
             "brinquedo_projetado",
         ).prefetch_related(
             "brinquedo_projetado__imagens_brinquedo_projeto",
+            *prefetch_do_3d_dos_projetos(),
         )
         return render(request, "projetos.html", {"projetos": projetos})
 
