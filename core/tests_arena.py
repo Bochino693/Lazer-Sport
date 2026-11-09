@@ -16,6 +16,9 @@ O que estes testes protegem:
   * as máquinas vêm em seções: as dos jogos da casa primeiro, depois as
     que já fazíamos e os trampolins e brinquedões; nada de 3D montado à
     mão (nem na arena, nem na página do produto);
+  * na roda da Arena 3D (e na lista, que é a roda sem WebGL) só entra quem
+    tem objeto 3D de verdade (.glb); o resto fica na galeria de fotos, e a
+    área sem nenhum objeto some;
   * o painel ao vivo responde com totais e pode ser guardado em cache;
   * a home troca "Nossos Parceiros" pela chamada da arena.
 """
@@ -32,7 +35,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from . import arena
-from .models import Brinquedos
+from .models import Brinquedos, ObjetoTresD
 
 JOGOS_DIR = Path(finders.find("site/arena/console.js")).parent / "jogos"
 
@@ -57,6 +60,12 @@ def _brinquedo(nome, **extra):
     return Brinquedos.objects.create(**dados)
 
 
+def _com_objeto_3d(brinquedo, arquivo="site/arena/modelos/strike-kids.glb"):
+    """Liga um .glb (um que vem com o site) ao brinquedo, como o painel liga."""
+    ObjetoTresD.objects.create(brinquedo=brinquedo, arquivo_estatico=arquivo, medidas=[1.8, 1.0, 1.2])
+    return brinquedo
+
+
 class ArenaPaginaTests(TestCase):
 
     def setUp(self):
@@ -75,21 +84,29 @@ class ArenaPaginaTests(TestCase):
         for jogo in arena.JOGOS:
             self.assertIn(f'href="{reverse("jogo", args=[jogo["slug"]])}"', html)
 
-    def test_todas_as_maquinas_vao_para_o_3d_e_para_a_lista(self):
+    def test_so_quem_tem_objeto_3d_vai_para_a_roda_e_para_a_lista(self):
         resposta = self.client.get(reverse("arena"))
         html = resposta.content.decode()
-        # a lista (a página sem 3D) tem as duas, e o 3D recebe as duas com as
-        # fotos -- mais os objetos 3D que ainda não estão no catálogo
-        self.assertEqual(html.count("data-arena-id="), 2 + len(arena.MODELOS_3D))
-        self.assertIn("Air Game Hockey", html)
+        # a roda 3D e a lista (a roda sem WebGL): só os objetos 3D de verdade
+        # -- aqui, os do site, que ainda não estão no catálogo
+        self.assertEqual(html.count("data-arena-id="), len(arena.MODELOS_3D))
         maquinas = resposta.context["arena_dados"]["maquinas"]
-        self.assertEqual(
-            sorted(m["nome"] for m in maquinas),
-            sorted(["Air Game Hockey", "Dragon Bowling Rosa", *(m["titulo"] for m in arena.MODELOS_3D)]),
-        )
-        # o Dragon Bowling Rosa vai com o volume das fotos dele, e roda o jogo
-        rosa = next(m for m in maquinas if m["nome"] == "Dragon Bowling Rosa")
-        self.assertEqual((rosa["modelo"], rosa["jogo"]), ("", "dragon-bowling"))
+        self.assertEqual(sorted(m["nome"] for m in maquinas), sorted(m["titulo"] for m in arena.MODELOS_3D))
+        self.assertTrue(all(m["modelo"] for m in maquinas))
+        # as duas sem .glb seguem na galeria de fotos (com o jogo da prévia)
+        galeria = {b["nome"]: b for b in resposta.context["brinquedos_arena"]}
+        self.assertEqual((galeria["Dragon Bowling Rosa"]["modelo"], galeria["Dragon Bowling Rosa"]["jogo"]), ("", "dragon-bowling"))
+        self.assertIn("Air Game Hockey", html.split('id="titulo-maquinas"')[1])
+        self.assertNotIn("Air Game Hockey", html.split('id="titulo-maquinas"')[0])
+        # o número do topo conta os da roda
+        self.assertIn(f"<b>{len(arena.MODELOS_3D)}</b> brinquedos na Arena 3D", html)
+
+    def test_com_objeto_3d_no_cadastro_entra_na_roda(self):
+        _com_objeto_3d(Brinquedos.objects.get(nome_brinquedo="Air Game Hockey"))
+        resposta = self.client.get(reverse("arena"))
+        nomes = [m["nome"] for m in resposta.context["arena_dados"]["maquinas"]]
+        self.assertIn("Air Game Hockey", nomes)
+        self.assertNotIn("Dragon Bowling Rosa", nomes)
 
     def test_da_para_ver_a_maquina_de_todos_os_lados(self):
         html = self.client.get(reverse("arena")).content.decode()
@@ -257,7 +274,8 @@ class SecoesDaArenaTests(TestCase):
 
     def test_cada_maquina_na_sua_secao(self):
         for nome in ("Air Game Hockey", "Dragon Bowling Rosa", "Cama Elástica 3m", "Lazer Shot Arena"):
-            _brinquedo(nome)
+            _com_objeto_3d(_brinquedo(nome))
+        _brinquedo("Pebolim Clássico")  # sem objeto 3D: fora da roda
         resposta = self.client.get(reverse("arena"))
         grupos = {g["id"]: [b["nome"] for b in g["brinquedos"]] for g in resposta.context["grupos_arena"]}
         self.assertEqual(list(grupos), ["jogos", "maquinas", "brinquedoes"])
@@ -266,11 +284,26 @@ class SecoesDaArenaTests(TestCase):
         self.assertEqual(grupos["brinquedoes"], ["Cama Elástica 3m"])
 
     def test_area_vazia_nao_aparece(self):
-        _brinquedo("Air Game Hockey")
-        html = self.client.get(reverse("arena")).content.decode()
+        _com_objeto_3d(_brinquedo("Air Game Hockey"))
+        # a área dos trampolins só teria a cama sem .glb: some da roda
+        _brinquedo("Cama Elástica 3m", altura_m=Decimal("2.4"))
+        resposta = self.client.get(reverse("arena"))
+        html = resposta.content.decode()
         self.assertIn('data-arena-zona="maquinas"', html)
         self.assertNotIn('data-arena-zona="jogos"', html)
         self.assertNotIn('data-arena-zona="brinquedoes"', html)
+        self.assertEqual([z["id"] for z in resposta.context["arena_dados"]["zonas"]], ["maquinas"])
+        # e a cama continua na galeria de fotos
+        self.assertIn("Cama Elástica 3m", html.split('id="titulo-maquinas"')[1])
+
+    def test_sem_nenhum_objeto_3d_a_roda_avisa_e_a_galeria_fica(self):
+        _brinquedo("Air Game Hockey")
+        resposta = self.client.get(reverse("arena"))
+        self.assertEqual(resposta.context["arena_dados"]["maquinas"], [])
+        html = resposta.content.decode()
+        self.assertNotIn("data-arena3d", html)
+        self.assertIn("Os objetos 3D estão chegando", html)
+        self.assertIn("Air Game Hockey", html.split('id="titulo-maquinas"')[1])
 
     def test_jogo_so_pelo_nome_da_maquina(self):
         # basquete e boxe do catálogo são outras máquinas, com outros jogos

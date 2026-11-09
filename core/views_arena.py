@@ -68,8 +68,10 @@ class ArenaView(View):
 
         # os objetos 3D que chegaram antes do cadastro: na arena, já aparecem
         na_arena = dados + arena.modelos_fora_do_catalogo(dados)
-        categorias = sorted({c for b in na_arena for c in b["categorias"]})
-        grupos = arena.grupos_da_arena(na_arena)
+        # a roda 3D só com quem tem objeto 3D de verdade (.glb); as áreas
+        # (e a lista, que é a roda sem WebGL) saem dela: área vazia some
+        na_roda = arena.na_roda_3d(na_arena)
+        grupos = arena.grupos_da_arena(na_roda)
         jogos = jogos_com_maquina(dados)
 
         return render(request, "arena.html", {
@@ -77,12 +79,14 @@ class ArenaView(View):
             # "Todas as máquinas da fábrica": o catálogo e os objetos 3D que
             # ainda não estão nele (o Strike Kids antes do cadastro), por nome
             "brinquedos_arena": sorted(na_arena, key=lambda b: arena._normalizar(b["nome"])),
-            # o que o arena3d.js monta: as áreas e as máquinas com as fotos
+            # o que o arena3d.js monta: as áreas e as máquinas com o objeto 3D
             "arena_dados": {
                 "zonas": [{k: g[k] for k in ("id", "titulo", "kicker")} for g in grupos],
-                "maquinas": na_arena,
+                "maquinas": na_roda,
             },
-            "categorias_arena": categorias,
+            # o filtro da roda (só as categorias de quem está nela) e o da galeria
+            "categorias_roda": sorted({c for b in na_roda for c in b["categorias"]}),
+            "categorias_arena": sorted({c for b in na_arena for c in b["categorias"]}),
             "jogos": jogos,
             "total_jogaveis": len(jogos),
             "whatsapp": WHATSAPP,

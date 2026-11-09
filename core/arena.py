@@ -531,8 +531,8 @@ def avisos_da_maquina(nome):
 
 #: Os objetos 3D montados aqui com os arquivos da fábrica (o .3ds, os
 #: planos de corte, as imagens do projeto), em `static/site/arena/modelos/`.
-#: Na arena, a máquina que tem um destes aparece com ele, e não com o volume
-#: deduzido das fotos. Liga-se pelo NOME da máquina, como os jogos: quem
+#: Na roda da Arena 3D só entra quem tem um destes (ou o .glb do cadastro,
+#: ObjetoTresD). Liga-se pelo NOME da máquina, como os jogos: quem
 #: renomear o brinquedo no cadastro precisa manter o trecho de `nomes`.
 #: `medidas` = altura, largura e profundidade do objeto, em metros, já com
 #: escorregadores e colchões (é o espaço que ele ocupa na roda).
@@ -661,6 +661,19 @@ def modelo_da_maquina(nome):
     return None
 
 
+def modelo_do_arquivo(cadastro):
+    """O objeto do site (MODELOS_3D) que É o .glb do cadastro, ou None.
+
+    O cadastro sem "Código na Arena" que aponta para um objeto que vem com
+    o site (`arquivo_estatico`) é aquele objeto: as animações (as crianças
+    jogando no Espaço Esportivo), o passeio e as medidas são as dele. Sem
+    isto, o Espaço ligado assim aparecia sem as crianças e com o passeio
+    genérico (a volta em torno).
+    """
+    caminho = getattr(cadastro, "arquivo_estatico", "") or ""
+    return next((m for m in MODELOS_3D if caminho and m["arquivo"] == caminho), None)
+
+
 def objeto_3d_do_cadastro(brinquedo):
     """O objeto 3D do cadastro do brinquedo para a arena: (objeto, desligado).
 
@@ -741,10 +754,9 @@ def jogos_do_modelo(modelo):
 # AS SEÇÕES DA ARENA
 # ======================================================================
 
-#: A arena separa as máquinas em três seções, nesta ordem. O 3D montado à
-#: mão (o gabinete de boliche) saiu: não era a máquina de verdade. Os
-#: objetos 3D voltam feitos a partir das fotos reais de cada máquina
-#: (frente, lados e costas), e até lá cada seção mostra as fotos.
+#: A arena separa as máquinas nestas seções, nesta ordem. Na roda da Arena
+#: 3D cada seção é um trecho, só com as máquinas que têm objeto 3D (.glb):
+#: seção sem nenhuma não aparece (`na_roda_3d`, `grupos_da_arena`).
 GRUPOS_DA_ARENA = (
     {
         "id": "jogos",
@@ -787,6 +799,16 @@ def grupo_da_arena(desenho, jogo):
     return "maquinas"
 
 
+def na_roda_3d(catalogo):
+    """As máquinas que entram na roda da Arena 3D: só as que têm objeto 3D de verdade.
+
+    O objeto é o .glb (o do cadastro ou o do MODELOS_3D). A máquina sem ele
+    fica de fora da roda -- o volume levantado das fotos não era a máquina
+    de verdade -- e segue na galeria de fotos e no resto do site.
+    """
+    return [b for b in catalogo if b.get("modelo")]
+
+
 def grupos_da_arena(catalogo):
     """As seções com as máquinas de cada uma; seção vazia não aparece."""
     return [
@@ -817,14 +839,17 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
     )
     jogo = jogo_da_maquina(brinquedo.nome_brinquedo)
     # O objeto 3D do CADASTRO (o .glb do painel) vence o ligado pelo nome no
-    # código; o código dele liga as animações e o passeio do MODELOS_3D.
+    # código; o código dele (ou o próprio arquivo, quando é um objeto do
+    # site) liga as animações e o passeio do MODELOS_3D.
     cadastro, desligado = objeto_3d_do_cadastro(brinquedo)
+    do_arquivo = modelo_do_arquivo(cadastro) if cadastro else None
     modelo = None if desligado else (
         next((m for m in MODELOS_3D if cadastro and cadastro.codigo and m["id"] == cadastro.codigo), None)
+        or do_arquivo
         or modelo_da_maquina(brinquedo.nome_brinquedo)
     )
     if cadastro:
-        modelo_id = cadastro.codigo or f"objeto-{cadastro.pk}"
+        modelo_id = cadastro.codigo or (do_arquivo or {}).get("id") or f"objeto-{cadastro.pk}"
         url_modelo = cadastro.url
         # o tamanho: o do código, o lido de dentro do .glb ou, sem os dois, o do cadastro
         if modelo:
@@ -855,7 +880,8 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         "url": url_detalhe,
         "desenho": desenho,
         "jogo": jogo,
-        "grupo": (modelo or {}).get("grupo") or grupo_da_arena(desenho, jogo),
+        # a área do objeto 3D é a dele (como fora do catálogo); sem objeto, a do desenho
+        "grupo": modelo.get("grupo", "brinquedoes") if modelo else grupo_da_arena(desenho, jogo),
         "reino": bool((modelo or {}).get("reino")),
         "categorias": categorias,
         "medidas": medidas,

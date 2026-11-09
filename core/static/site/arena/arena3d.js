@@ -1,42 +1,35 @@
 /* ======================================================================
-   ARENA 3D — a roda das máquinas da fábrica, cada uma feita das fotos dela.
+   ARENA 3D — um parque à noite, com a roda dos brinquedos em 3D de verdade.
 
-   A CENA É A DE SEMPRE: as máquinas em estandes (pedestal com anel de
-   luz), em roda e de frente para o centro, onde gira o alvo da marca;
-   pilares de luz em volta, estrelas no céu e a câmera que voa até a
-   máquina escolhida. As áreas da arena (jogos da Lazer & Sport, as
-   máquinas que já fazíamos, trampolins e brinquedões) são trechos da
-   roda, cada um com a sua cor no piso e a sua placa. A roda tem SEMPRE
-   todas as máquinas: os botões de área -- e o próprio piso ou a placa da
+   A CENA: os brinquedos em estandes (pedestal com anel de luz), em roda e
+   de frente para o centro, onde gira o alvo da marca sobre o símbolo da
+   Lazer & Sport pintado no chão. As áreas da arena (jogos da Lazer &
+   Sport, as máquinas que já fazíamos, trampolins e brinquedões) são
+   trechos da roda, cada um com a sua cor no piso e a sua placa; os
+   espaços grandes demais para a roda (o Espaço Esportivo) ficam no seu
+   "reino", ao lado. Os botões de área -- e o próprio piso ou a placa da
    área, tocados no 3D -- levam a câmera até aquele trecho, que acende. O
    filtro de categoria é o único que tira máquinas da roda.
 
-   CADA MÁQUINA É UM OBJETO 3D FEITO DAS FOTOS DELA. O catálogo tem até
-   quatro fotos (frente, lado direito, costas, lado esquerdo):
+   SÓ ENTRA NA RODA QUEM TEM OBJETO 3D DE VERDADE: o .glb do cadastro
+   (ObjetoTresD) ou o feito com os arquivos da fábrica (core/arena.py,
+   MODELOS_3D). O volume que se levantava das fotos (recorte + casco) não
+   era a máquina de verdade e saiu; quem não tem .glb segue na galeria de
+   fotos da página. Ver `na_roda_3d`.
 
-     1. RECORTE: a máquina sai do fundo da foto (PNG transparente vale
-        como está; fundo liso é apagado a partir das bordas).
-     2. VOLUME: em cada altura, a largura vem da silhueta da frente e a
-        profundidade da silhueta do lado -- o casco que as duas fotos
-        cruzadas desenham. Sem foto de lado, a profundidade é a do
-        cadastro e a forma é a da frente.
-     3. PELE: cada face veste a sua foto (a frente na frente, as costas
-        atrás, cada lado no seu lado), esticada fatia a fatia até a beira
-        do casco. Lado sem foto pega a cor da beira da frente; costas sem
-        foto viram o painel traseiro do gabinete; embaixo fica a base.
+   EM VOLTA, O PARQUE (`montarParque`): a calçada com os pilares de luz e
+   as bandeirinhas, o gramado com árvores, postes, bancos e canteiros, os
+   caminhos que ligam as áreas, a mureta com a entrada e os carrinhos de
+   pipoca e algodão-doce. E o CÉU de festa (`montarCeu`): o crepúsculo de
+   anil a magenta, as estrelas, a silhueta do parque lá longe, os
+   holofotes, uns fogos discretos e o confete no ar. Tudo leve: poucas
+   chamadas de desenho (instâncias e peças juntadas), nenhuma luz nova de
+   verdade e, com "menos movimento" no aparelho, o céu fica parado.
 
    DÁ PARA VER DE TODOS OS LADOS: o prato do estande gira (Frente,
    Direita, Costas, Esquerda), a câmera sobe (Cima) e a máquina levanta e
-   tomba para mostrar a base (Baixo). Arrastar gira a câmera em volta.
-
-   Foto que não dá para recortar (fundo complicado) vira um painel em pé
-   com a foto inteira. Foto vazada (rede, grade) vira duas placas
-   cruzadas, para continuar vazada.
-
-   O QUE NÃO SAI DAS FOTOS: a máquina com objeto feito a partir dos
-   arquivos da fábrica (.glb; core/arena.py, MODELOS_3D) aparece com ele,
-   e a cama elástica é montada peça por peça (FORMAS, abaixo) -- da foto
-   ela só tira as cores.
+   tomba para mostrar a base (Baixo). Arrastar gira a câmera em volta. E o
+   PASSEIO anda por dentro do objeto, na altura de uma criança.
 
    A FICHA FICA FORA DO PALCO: ao lado no computador, embaixo no celular.
 
@@ -56,8 +49,11 @@ const NOME_DO_LADO = { perfil: "Frente", lado_direito: "Lado direito", verso: "C
 const VISTA_DO_LADO = { perfil: "frente", lado_direito: "direita", verso: "costas", lado_esquerdo: "esquerda" };
 // o giro do prato que põe cada lado da máquina de frente para o centro
 const GIRO_DA_VISTA = { frente: 0, direita: -PI / 2, costas: PI, esquerda: PI / 2, cima: 0, baixo: 0 };
+// o lado da entrada (o portal), na roda: o nome do símbolo do chão olha para ele
+const A_ENTRADA = 0.5;
+// o horizonte do céu de festa: a neblina e o chão de longe têm esta cor
+const HORIZONTE = "#3a1d6b";
 const TOMBO = -1.3; // "Baixo": a máquina tomba para a frente e mostra a base
-const LINHAS = 40; // fatias do casco, de baixo para cima
 
 const limitar = (valor, menor, maior) => Math.min(maior, Math.max(menor, valor));
 // o mesmo ângulo, na volta mais perto de onde o prato está
@@ -132,656 +128,182 @@ async function iniciar(raiz) {
   }
 }
 
-/* ======================================================================
-   RECORTE — a máquina sem o fundo da foto
-   ====================================================================== */
-
-/** A mesma foto do Cloudinary em outra largura (as outras URLs vêm como estão). */
-function fotoNaLargura(url, largura) {
-  if (!url.includes("res.cloudinary.com")) return url;
-  if (/\/upload\/[^/]*\bw_\d+/.test(url)) return url.replace(/\bw_\d+/, `w_${largura}`);
-  return url.replace("/upload/", `/upload/c_limit,w_${largura},f_auto,q_auto/`);
-}
-
-function carregarImagem(url) {
-  return new Promise((resolver, falhar) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous"; // a foto vira textura: precisa de CORS
-    img.decoding = "async";
-    img.onload = () => resolver(img);
-    img.onerror = () => falhar(new Error("foto não carregou: " + url));
-    img.src = url;
-  });
-}
-
-const distancia = (p, i, r, g, b) => Math.abs(p[i] - r) + Math.abs(p[i + 1] - g) + Math.abs(p[i + 2] - b);
-
-/**
- * Recorta a máquina da foto. Devolve { tela, aspecto, recortada } -- com
- * `recortada` falso quando o fundo não é liso: aí a tela é a foto inteira,
- * para o painel em pé. `null` se a foto não pode ser lida (sem CORS).
- */
-function recortar(img, maximo) {
-  const escala = Math.min(1, maximo / Math.max(img.naturalWidth, img.naturalHeight));
-  const w = Math.max(2, Math.round(img.naturalWidth * escala));
-  const h = Math.max(2, Math.round(img.naturalHeight * escala));
-  const tela = document.createElement("canvas");
-  tela.width = w;
-  tela.height = h;
-  const g = tela.getContext("2d", { willReadFrequently: true });
-  g.drawImage(img, 0, 0, w, h);
-  let quadro;
-  try {
-    quadro = g.getImageData(0, 0, w, h);
-  } catch (erro) {
-    return null;
-  }
-  const p = quadro.data;
-  const n = w * h;
-  const fundo = new Uint8Array(n);
-
-  const borda = [];
-  for (let x = 0; x < w; x++) borda.push(x, (h - 1) * w + x);
-  for (let y = 1; y < h - 1; y++) borda.push(y * w, y * w + w - 1);
-
-  // 1) já recortada: a borda é transparente
-  const transparentes = borda.filter((i) => p[i * 4 + 3] < 24).length;
-  if (transparentes / borda.length > 0.6) {
-    for (let i = 0; i < n; i++) fundo[i] = p[i * 4 + 3] < 24 ? 1 : 0;
-  } else {
-    // 2) fundo liso: a cor mais comum da borda (mediana de cada canal)
-    const canal = (c) => {
-      const valores = borda.map((i) => p[i * 4 + c]).sort((a, b) => a - b);
-      return valores[valores.length >> 1];
-    };
-    const r0 = canal(0);
-    const g0 = canal(1);
-    const b0 = canal(2);
-    const lisos = borda.filter((i) => distancia(p, i * 4, r0, g0, b0) < 48).length;
-    if (lisos / borda.length < 0.62) return { tela, aspecto: w / h, recortada: false };
-
-    // apaga a partir das bordas tudo o que é da cor do fundo e encosta nele
-    const fila = new Int32Array(n);
-    let inicio = 0;
-    let fim = 0;
-    for (const i of borda) {
-      if (!fundo[i] && distancia(p, i * 4, r0, g0, b0) < 60) {
-        fundo[i] = 1;
-        fila[fim++] = i;
-      }
-    }
-    while (inicio < fim) {
-      const i = fila[inicio++];
-      const x = i % w;
-      const vizinhos = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w];
-      for (const v of vizinhos) {
-        if (v < 0 || v >= n || fundo[v]) continue;
-        if (distancia(p, v * 4, r0, g0, b0) < 60 && distancia(p, v * 4, p[i * 4], p[i * 4 + 1], p[i * 4 + 2]) < 34) {
-          fundo[v] = 1;
-          fila[fim++] = v;
-        }
-      }
-    }
-
-    // Os vãos fechados também são fundo: os quadrados da rede de uma cama
-    // elástica, o meio de um aro, o espaço entre as pernas com travessa.
-    // Só manchas grandes e bem da cor do fundo -- um adesivo branco fica.
-    const minimo = Math.max(30, n * 0.0015);
-    const mancha = new Int32Array(n);
-    for (let semente = 0; semente < n; semente++) {
-      if (fundo[semente] || distancia(p, semente * 4, r0, g0, b0) >= 36) continue;
-      let a = 0;
-      let b = 0;
-      mancha[b++] = semente;
-      fundo[semente] = 2;
-      while (a < b) {
-        const i = mancha[a++];
-        const x = i % w;
-        const vizinhos = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w];
-        for (const v of vizinhos) {
-          if (v < 0 || v >= n || fundo[v] || distancia(p, v * 4, r0, g0, b0) >= 36) continue;
-          fundo[v] = 2;
-          mancha[b++] = v;
-        }
-      }
-      // mancha pequena volta a ser máquina
-      const valor = b >= minimo ? 1 : 3;
-      for (let k = 0; k < b; k++) fundo[mancha[k]] = valor;
-    }
-    for (let i = 0; i < n; i++) if (fundo[i] === 3) fundo[i] = 0;
-  }
-
-  // sobrou máquina de verdade? (nem quase nada, nem a foto inteira)
-  let cheios = 0;
-  let x0 = w;
-  let y0 = h;
-  let x1 = -1;
-  let y1 = -1;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      if (fundo[i]) continue;
-      cheios++;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
-    }
-  }
-  if (cheios / n < 0.05 || cheios / n > 0.97) return { tela, aspecto: w / h, recortada: false };
-
-  // o fundo some; a beira da máquina fica meio transparente (sem serrilhado)
-  for (let i = 0; i < n; i++) {
-    if (fundo[i]) {
-      p[i * 4 + 3] = 0;
-      continue;
-    }
-    const x = i % w;
-    const beira = (x > 0 && fundo[i - 1]) || (x < w - 1 && fundo[i + 1]) || (i >= w && fundo[i - w]) || (i + w < n && fundo[i + w]);
-    if (beira) p[i * 4 + 3] = Math.min(p[i * 4 + 3], 140);
-  }
-  g.putImageData(quadro, 0, 0);
-
-  const bw = x1 - x0 + 1;
-  const bh = y1 - y0 + 1;
-  const corte = document.createElement("canvas");
-  corte.width = bw;
-  corte.height = bh;
-  corte.getContext("2d").drawImage(tela, x0, y0, bw, bh, 0, 0, bw, bh);
-  return { tela: corte, aspecto: bw / bh, recortada: true };
-}
-
-/* ======================================================================
-   DA FOTO AO VOLUME
-   ====================================================================== */
-
-/**
- * A silhueta da foto recortada, fatia a fatia de baixo para cima: onde a
- * máquina começa e termina em cada altura, de 0 a 1 na largura da foto.
- * `cheio` é quanto do retângulo a máquina ocupa (rede e grade dão pouco).
- */
-function silhueta(tela) {
-  const w = tela.width;
-  const h = tela.height;
-  const p = tela.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data;
-  const esq = new Float32Array(LINHAS + 1);
-  const dir = new Float32Array(LINHAS + 1);
-  const achou = new Uint8Array(LINHAS + 1);
-  const colunas = new Uint32Array(w);
-  const meia = Math.max(1, h / LINHAS / 2);
-  let cheios = 0;
-  for (let i = 3; i < p.length; i += 4) if (p[i] > 127) cheios++;
-
-  for (let k = 0; k <= LINHAS; k++) {
-    const centro = (1 - k / LINHAS) * (h - 1);
-    const y0 = Math.max(0, Math.floor(centro - meia));
-    const y1 = Math.min(h - 1, Math.ceil(centro + meia));
-    colunas.fill(0);
-    let total = 0;
-    for (let y = y0; y <= y1; y++) {
-      let i = y * w * 4 + 3;
-      for (let x = 0; x < w; x++, i += 4) {
-        if (p[i] > 127) {
-          colunas[x]++;
-          total++;
-        }
-      }
-    }
-    if (!total) continue;
-    // 2% de cada lado ficam de fora: um fio solto não alarga a máquina
-    let soma = 0;
-    let a = -1;
-    let b = w - 1;
-    for (let x = 0; x < w; x++) {
-      soma += colunas[x];
-      if (a < 0 && soma > total * 0.02) a = x;
-      if (soma >= total * 0.98) {
-        b = x;
-        break;
-      }
-    }
-    esq[k] = Math.max(0, a) / w;
-    dir[k] = (b + 1) / w;
-    achou[k] = 1;
-  }
-
-  [esq, dir].forEach((lista) => {
-    // altura sem nada (um vão no meio): as fatias vizinhas cobrem
-    for (let k = 0; k <= LINHAS; k++) {
-      if (achou[k]) continue;
-      let baixo = k - 1;
-      while (baixo >= 0 && !achou[baixo]) baixo--;
-      let cima = k + 1;
-      while (cima <= LINHAS && !achou[cima]) cima++;
-      if (baixo < 0 && cima > LINHAS) lista[k] = lista === esq ? 0 : 1;
-      else if (baixo < 0) lista[k] = lista[cima];
-      else if (cima > LINHAS) lista[k] = lista[baixo];
-      else lista[k] = lista[baixo] + (lista[cima] - lista[baixo]) * ((k - baixo) / (cima - baixo));
-    }
-    // mediana de três: um degrau de um pixel não vira dente no casco
-    const copia = Float32Array.from(lista);
-    for (let k = 1; k < LINHAS; k++) {
-      const [x, y, z] = [copia[k - 1], copia[k], copia[k + 1]];
-      lista[k] = Math.max(Math.min(x, y), Math.min(Math.max(x, y), z));
-    }
-  });
-  for (let k = 0; k <= LINHAS; k++) {
-    if (dir[k] - esq[k] < 0.04) {
-      const meio = (dir[k] + esq[k]) / 2;
-      esq[k] = Math.max(0, meio - 0.02);
-      dir[k] = Math.min(1, meio + 0.02);
-    }
-  }
-  return { esq, dir, cheio: cheios / (w * h), aspecto: w / h };
-}
-
-/** A cor média da máquina na foto (o fundo transparente não conta). */
-function corMedia(tela) {
-  const mini = document.createElement("canvas");
-  mini.width = mini.height = 16;
-  const g = mini.getContext("2d", { willReadFrequently: true });
-  g.drawImage(tela, 0, 0, 16, 16);
-  const p = g.getImageData(0, 0, 16, 16).data;
-  let r = 0;
-  let v = 0;
-  let b = 0;
-  let peso = 0;
-  for (let i = 0; i < p.length; i += 4) {
-    r += p[i] * p[i + 3];
-    v += p[i + 1] * p[i + 3];
-    b += p[i + 2] * p[i + 3];
-    peso += p[i + 3];
-  }
-  return peso ? [r / peso, v / peso, b / peso].map(Math.round) : [40, 52, 90];
-}
-
-/**
- * As costas de quem não tem foto de trás: o painel traseiro pintado, com o
- * contorno da frente espelhado (de costas, a máquina tem a mesma silhueta).
- */
-function costasRecortadas(frente, cor) {
-  const c = document.createElement("canvas");
-  c.width = frente.width;
-  c.height = frente.height;
-  const g = c.getContext("2d");
-  g.drawImage(pintarCostas(cor), 0, 0, c.width, c.height);
-  g.globalCompositeOperation = "destination-in";
-  g.translate(c.width, 0);
-  g.scale(-1, 1);
-  g.drawImage(frente, 0, 0);
-  return c;
-}
-
-/** As costas de um gabinete sem foto de trás: porta de serviço, grade e a plaqueta. */
-function pintarCostas(cor) {
-  const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 512;
-  const g = c.getContext("2d");
-  const escuro = cor.map((v) => Math.round(v * 0.42 + 10));
-  const grad = g.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0, `rgb(${escuro.map((v) => Math.min(255, v + 22)).join(",")})`);
-  grad.addColorStop(1, `rgb(${escuro.join(",")})`);
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 256, 512);
-  g.strokeStyle = "rgba(0, 0, 0, .4)";
-  g.lineWidth = 4;
-  g.strokeRect(36, 140, 184, 320);
-  g.fillStyle = "rgba(0, 0, 0, .45)";
-  for (let y = 360; y < 440; y += 13) g.fillRect(66, y, 124, 5);
-  g.fillStyle = "rgba(255, 255, 255, .9)";
-  g.fillRect(70, 52, 116, 36);
-  g.fillStyle = "#071433";
-  g.font = "900 15px Poppins, Manrope, sans-serif";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText("LAZER & SPORT", 128, 71);
-  return c;
-}
-
-/**
- * O casco: em cada fatia de altura, um retângulo -- de x0 a x1 (a
- * silhueta da frente) e de zb a zf (a silhueta do lado). As paredes ligam
- * uma fatia à de cima, e cada parede leva a coordenada da sua foto na
- * mesma altura: a foto encosta na beira do casco em toda a volta.
- *
- * `uv.<face>[k]` = [u na beira esquerda, u na beira direita] de quem olha
- * aquela face de fora. Grupos de material: 0 frente, 1 costas, 2 direita,
- * 3 esquerda, 4 topo, 5 base.
- */
-function montarCasco(T, { y, x0, x1, zf, zb, uv }) {
-  const posicoes = [];
-  const coords = [];
-  const cores = [];
-  const geometria = new T.BufferGeometry();
-  const L = y.length - 1;
-  const alto = y[L] - y[0];
-  let inicio = 0;
-  const fechar = (material) => {
-    const n = posicoes.length / 3;
-    geometria.addGroup(inicio, n - inicio, material);
-    inicio = n;
-  };
-  const ponto = (x, yy, z, u, v, luz) => {
-    posicoes.push(x, yy, z);
-    coords.push(u, v);
-    // o pé da máquina um pouco mais escuro: parece apoiada, não flutuando
-    const tom = luz * (0.72 + 0.28 * Math.min(1, (yy - y[0]) / Math.max(0.3, alto * 0.18)));
-    cores.push(tom, tom, tom);
-  };
-  // A e B embaixo, C e D em cima; esquerda e direita de quem olha a face
-  const quad = (A, B, C, D, luz) => {
-    ponto(...A, luz); ponto(...B, luz); ponto(...D, luz);
-    ponto(...A, luz); ponto(...D, luz); ponto(...C, luz);
-  };
-  const v = (k) => k / L;
-
-  for (let k = 0; k < L; k++) {
-    const [a0, b0] = uv.frente[k];
-    const [a1, b1] = uv.frente[k + 1];
-    quad([x0[k], y[k], zf[k], a0, v(k)], [x1[k], y[k], zf[k], b0, v(k)],
-      [x0[k + 1], y[k + 1], zf[k + 1], a1, v(k + 1)], [x1[k + 1], y[k + 1], zf[k + 1], b1, v(k + 1)], 1);
-  }
-  fechar(0);
-  // de costas, o +X fica à esquerda de quem olha
-  for (let k = 0; k < L; k++) {
-    const [a0, b0] = uv.costas[k];
-    const [a1, b1] = uv.costas[k + 1];
-    quad([x1[k], y[k], zb[k], a0, v(k)], [x0[k], y[k], zb[k], b0, v(k)],
-      [x1[k + 1], y[k + 1], zb[k + 1], a1, v(k + 1)], [x0[k + 1], y[k + 1], zb[k + 1], b1, v(k + 1)], 0.8);
-  }
-  fechar(1);
-  // do lado direito, a frente fica à esquerda de quem olha
-  for (let k = 0; k < L; k++) {
-    const [a0, b0] = uv.direita[k];
-    const [a1, b1] = uv.direita[k + 1];
-    quad([x1[k], y[k], zf[k], a0, v(k)], [x1[k], y[k], zb[k], b0, v(k)],
-      [x1[k + 1], y[k + 1], zf[k + 1], a1, v(k + 1)], [x1[k + 1], y[k + 1], zb[k + 1], b1, v(k + 1)], 0.66);
-  }
-  fechar(2);
-  // do lado esquerdo, a frente fica à direita
-  for (let k = 0; k < L; k++) {
-    const [a0, b0] = uv.esquerda[k];
-    const [a1, b1] = uv.esquerda[k + 1];
-    quad([x0[k], y[k], zb[k], a0, v(k)], [x0[k], y[k], zf[k], b0, v(k)],
-      [x0[k + 1], y[k + 1], zb[k + 1], a1, v(k + 1)], [x0[k + 1], y[k + 1], zf[k + 1], b1, v(k + 1)], 0.66);
-  }
-  fechar(3);
-  const [u0, u1, vt] = uv.topo;
-  quad([x0[L], y[L], zf[L], u0, vt], [x1[L], y[L], zf[L], u1, vt], [x0[L], y[L], zb[L], u0, vt], [x1[L], y[L], zb[L], u1, vt], 1.15);
-  fechar(4);
-  quad([x0[0], y[0], zb[0], 0, 0], [x1[0], y[0], zb[0], 1, 0], [x0[0], y[0], zf[0], 0, 1], [x1[0], y[0], zf[0], 1, 1], 1.4);
-  fechar(5);
-
-  geometria.setAttribute("position", new T.Float32BufferAttribute(posicoes, 3));
-  geometria.setAttribute("uv", new T.Float32BufferAttribute(coords, 2));
-  geometria.setAttribute("color", new T.Float32BufferAttribute(cores, 3));
-  geometria.computeBoundingSphere();
-  return geometria;
-}
-
-/* ======================================================================
-   FORMAS — o que a arena monta peça por peça, em 3D de verdade.
-   Por enquanto a cama elástica: aro de aço, pernas em W, molas, lona,
-   acolchoado, postes com espuma, rede com a entrada e a escadinha. O
-   tamanho é o do cadastro; a foto só dá as cores (acolchoado e espumas).
-   ====================================================================== */
-
-/** As duas cores mais fortes da foto: [principal, segunda] (ou null). */
-function coresDaFoto(tela) {
-  const mini = document.createElement("canvas");
-  mini.width = mini.height = 48;
-  const g = mini.getContext("2d", { willReadFrequently: true });
-  g.drawImage(tela, 0, 0, 48, 48);
-  const p = g.getImageData(0, 0, 48, 48).data;
-  // doze faixas de matiz; cinza, preto e branco não contam (são a lona,
-  // a rede, o aço e o fundo -- não a cor do brinquedo)
-  const faixas = Array.from({ length: 12 }, (_, k) => ({ k, peso: 0, r: 0, g: 0, b: 0 }));
-  for (let i = 0; i < p.length; i += 4) {
-    if (p[i + 3] < 128) continue;
-    const r = p[i] / 255;
-    const v = p[i + 1] / 255;
-    const b = p[i + 2] / 255;
-    const max = Math.max(r, v, b);
-    const min = Math.min(r, v, b);
-    const c = max - min;
-    const l = (max + min) / 2;
-    if (c < 0.22 || l < 0.16 || l > 0.88) continue;
-    let h = max === r ? ((v - b) / c) % 6 : max === v ? (b - r) / c + 2 : (r - v) / c + 4;
-    h = (h * 60 + 360) % 360;
-    const faixa = faixas[Math.floor(h / 30) % 12];
-    faixa.peso += c;
-    faixa.r += p[i] * c;
-    faixa.g += p[i + 1] * c;
-    faixa.b += p[i + 2] * c;
-  }
-  const ordem = faixas.filter((f) => f.peso > 0).sort((a, b) => b.peso - a.peso);
-  if (!ordem.length || ordem[0].peso < 3) return null;
-  const hex = (f) => "#" + [f.r, f.g, f.b].map((x) => Math.round(x / f.peso).toString(16).padStart(2, "0")).join("");
-  const primeira = ordem[0];
-  const segunda = ordem.find((f) => Math.min(Math.abs(f.k - primeira.k), 12 - Math.abs(f.k - primeira.k)) >= 2 && f.peso > primeira.peso * 0.1);
-  return [hex(primeira), segunda ? hex(segunda) : null];
-}
-
-/** A cama elástica, em metros, com o chão em y = 0 e a entrada na frente (+Z). */
-function montarCamaElastica(T, { diametro, cores }) {
-  const g = new T.Group();
-  const R = diametro / 2;
-  const hM = diametro >= 2.4 ? 0.82 : 0.62; // altura da lona
-  const hN = diametro >= 2.4 ? 1.8 : 1.5; // altura da rede, acima da lona
-  const topo = hM + hN;
-  const V = (x, y, z) => new T.Vector3(x, y, z);
-  const noAro = (a, raio, y) => V(Math.sin(a) * raio, y, Math.cos(a) * raio);
-  const aco = new T.MeshStandardMaterial({ color: "#b9c2cf", roughness: 0.35, metalness: 0.8 });
-  const acolchoado = new T.MeshStandardMaterial({ color: (cores && cores[0]) || "#1f6fff", roughness: 0.55, side: T.DoubleSide });
-  const espuma = new T.MeshStandardMaterial({ color: (cores && (cores[1] || cores[0])) || "#e63946", roughness: 0.6 });
-  const borracha = new T.MeshStandardMaterial({ color: "#14161b", roughness: 0.9 });
-  const tubo = (curva, r, material, lados = 8, passos = 16) => {
-    const m = new T.Mesh(new T.TubeGeometry(curva, passos, r, lados, false), material);
-    g.add(m);
-    return m;
-  };
-  const reta = (a, b, r, material) => tubo(new T.LineCurve3(a, b), r, material, 8, 1);
-  const textura = (w, h, pintar) => {
-    const c = document.createElement("canvas");
-    c.width = w;
-    c.height = h;
-    pintar(c.getContext("2d"));
-    const t = new T.CanvasTexture(c);
-    t.colorSpace = T.SRGBColorSpace;
-    return t;
-  };
-
-  // o aro de aço
-  const aro = new T.Mesh(new T.TorusGeometry(R, 0.028, 8, 72), aco);
-  aro.rotation.x = PI / 2;
-  aro.position.y = hM - 0.04;
-  g.add(aro);
-
-  // pernas em W: dois tubos descem do aro abrindo e pisam num tubo no chão
-  const pernas = diametro >= 3 ? 6 : 4;
-  for (let i = 0; i < pernas; i++) {
-    const a = (i / pernas) * PI * 2 + PI / pernas;
-    const abre = 0.34 / R;
-    const pe1 = noAro(a - abre, R + 0.06, 0.03);
-    const pe2 = noAro(a + abre, R + 0.06, 0.03);
-    reta(noAro(a - abre * 0.55, R, hM - 0.04), pe1, 0.024, aco);
-    reta(noAro(a + abre * 0.55, R, hM - 0.04), pe2, 0.024, aco);
-    reta(pe1, pe2, 0.026, aco);
-    [pe1, pe2].forEach((ponto) => {
-      const pe = new T.Mesh(new T.CylinderGeometry(0.045, 0.05, 0.04, 10), borracha);
-      pe.position.set(ponto.x, 0.02, ponto.z);
-      g.add(pe);
-    });
-  }
-
-  // as molas, do aro até a lona (aparecem por baixo)
-  const molas = Math.round((R * 2 * PI) / 0.11);
-  const instancias = new T.InstancedMesh(new T.CylinderGeometry(0.009, 0.009, 0.17, 6), aco, molas);
-  const matriz = new T.Matrix4();
-  const giro = new T.Quaternion();
-  for (let i = 0; i < molas; i++) {
-    const a = (i / molas) * PI * 2;
-    giro.setFromUnitVectors(V(0, 1, 0), V(Math.sin(a), 0, Math.cos(a)));
-    matriz.compose(noAro(a, R - 0.11, hM - 0.035), giro, V(1, 1, 1));
-    instancias.setMatrixAt(i, matriz);
-  }
-  g.add(instancias);
-
-  // a lona de pular: preta, com as costuras em círculo
-  const lona = new T.Mesh(
-    new T.CircleGeometry(R - 0.2, 64),
-    new T.MeshStandardMaterial({
-      roughness: 0.85,
-      side: T.DoubleSide,
-      map: textura(256, 256, (c) => {
-        c.fillStyle = "#17191f";
-        c.fillRect(0, 0, 256, 256);
-        c.strokeStyle = "rgba(255, 255, 255, .13)";
-        c.lineWidth = 2;
-        for (let r = 22; r < 128; r += 21) { c.beginPath(); c.arc(128, 128, r, 0, PI * 2); c.stroke(); }
-      }),
-    }),
-  );
-  lona.rotation.x = -PI / 2;
-  lona.position.y = hM - 0.03;
-  lona.userData.lona = true; // no passeio, quem pisa aqui quica
-  g.add(lona);
-
-  // o acolchoado sobre as molas
-  const perfil = [[R - 0.27, -0.01], [R - 0.28, 0.03], [R - 0.25, 0.065], [R + 0.08, 0.065], [R + 0.11, 0.03], [R + 0.11, -0.06], [R + 0.07, -0.09]];
-  const almofada = new T.Mesh(new T.LatheGeometry(perfil.map(([x, y]) => new T.Vector2(x, y)), 72), acolchoado);
-  almofada.position.y = hM - 0.02;
-  g.add(almofada);
-
-  // a rede de proteção, aberta na frente (a entrada)
-  const vao = Math.min(1.1, 0.62 / R);
-  const rede = new T.Mesh(
-    new T.CylinderGeometry(R - 0.04, R - 0.22, hN - 0.06, 72, 1, true, vao / 2, PI * 2 - vao),
-    new T.MeshStandardMaterial({
-      transparent: true,
-      alphaTest: 0.3,
-      side: T.DoubleSide,
-      roughness: 0.9,
-      map: (() => {
-        const t = textura(64, 64, (c) => {
-          c.clearRect(0, 0, 64, 64);
-          c.strokeStyle = "rgba(24, 27, 35, .95)";
-          c.lineWidth = 3;
-          c.beginPath();
-          for (let k = 0; k <= 64; k += 16) { c.moveTo(k, 0); c.lineTo(k, 64); c.moveTo(0, k); c.lineTo(64, k); }
-          c.stroke();
-        });
-        t.wrapS = t.wrapT = T.RepeatWrapping;
-        t.repeat.set(Math.round(((PI * 2 - vao) * R) / 0.4), Math.round(hN / 0.4));
-        return t;
-      })(),
-    }),
-  );
-  rede.position.y = hM + (hN - 0.06) / 2;
-  g.add(rede);
-  // as bordas do zíper, de cada lado da entrada
-  [vao / 2, -vao / 2].forEach((a) => reta(noAro(a, R - 0.22, hM + 0.02), noAro(a, R - 0.04, topo - 0.06), 0.016, espuma));
-
-  // os postes da rede, curvos, com a espuma
-  const postes = diametro >= 3 ? 8 : 6;
-  for (let i = 0; i < postes; i++) {
-    const a = (i / postes) * PI * 2 + PI / postes; // nenhum poste no meio da entrada
-    const curva = new T.CatmullRomCurve3([noAro(a, R + 0.03, hM - 0.3), noAro(a, R + 0.09, hM + hN * 0.5), noAro(a, R - 0.02, topo)]);
-    tubo(curva, 0.022, aco);
-    tubo(new T.CatmullRomCurve3(Array.from({ length: 12 }, (_, k) => curva.getPoint(0.18 + (0.8 * k) / 11))), 0.05, espuma, 10);
-    const tampa = new T.Mesh(new T.SphereGeometry(0.055, 12, 8), espuma);
-    tampa.position.copy(curva.getPoint(1));
-    g.add(tampa);
-  }
-  const aroDeCima = new T.Mesh(new T.TorusGeometry(R - 0.03, 0.026, 8, 72), espuma);
-  aroDeCima.rotation.x = PI / 2;
-  aroDeCima.position.y = topo - 0.03;
-  g.add(aroDeCima);
-
-  // a escadinha da entrada
-  const z0 = R + 0.55;
-  const z1 = R + 0.06;
-  [-0.22, 0.22].forEach((x) => reta(V(x, 0.02, z0), V(x, hM - 0.06, z1), 0.02, aco));
-  [0.36, 0.68].forEach((t) => {
-    const degrau = new T.Mesh(new T.BoxGeometry(0.46, 0.035, 0.14), borracha);
-    degrau.position.set(0, (hM - 0.06) * t, z0 + (z1 - z0) * t);
-    g.add(degrau);
-  });
-  return g;
-}
-
-/** O desenho do cadastro (core/arena.py) -> a forma montada aqui. */
-const FORMAS = { cama_elastica: montarCamaElastica };
-
-/* As crianças que brincam no espaço: um corpo simples -- short, camiseta,
-   cabeça e cabelo numa peça só (as cores ficam nos vértices: uma chamada de
-   desenho) -- e braços e pernas que mexem (arremessar, chutar, pular). */
+/* As crianças que brincam no espaço: UMA malha por criança, com esqueleto
+   (quadril, tronco, cabeça, braços com cotovelo, pernas com joelho) -- uma
+   chamada de desenho só, e o corpo dobra de verdade para arremessar, chutar,
+   pular e escalar. As cores ficam nos vértices (short, camiseta, pele,
+   cabelo, tênis), num material só para todas. */
 const PELES = ["#f1c27d", "#e0ac69", "#c68642", "#8d5524"];
 const CABELOS = ["#2b1b10", "#4a2c17", "#141414", "#8a4b23"];
 const CAMISAS = ["#e63946", "#2f8bff", "#ffd700", "#22c55e", "#ff3df2", "#ff9f1c", "#ffffff"];
 const SHORTS = ["#1d2b53", "#222222", "#3a4b6b", "#5b2a86"];
 
-/** Uma peça com a cor nos vértices (para juntar com as outras). */
-function pecaColorida(T, geometria, cor, x = 0, y = 0, z = 0) {
+/** Uma peça com a cor nos vértices (para juntar com as outras); `osso`: a junta que a leva. */
+function pecaColorida(T, geometria, cor, x = 0, y = 0, z = 0, osso = -1) {
   const g = geometria.index ? geometria.toNonIndexed() : geometria;
   if (g !== geometria) geometria.dispose();
   g.translate(x, y, z);
   const c = new T.Color(cor);
-  const cores = new Float32Array(g.attributes.position.count * 3);
+  const n = g.attributes.position.count;
+  const cores = new Float32Array(n * 3);
   for (let i = 0; i < cores.length; i += 3) cores.set([c.r, c.g, c.b], i);
   g.setAttribute("color", new T.BufferAttribute(cores, 3));
+  if (osso >= 0) {
+    const indices = new Uint16Array(n * 4);
+    const pesos = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { indices[i * 4] = osso; pesos[i * 4] = 1; }
+    g.setAttribute("skinIndex", new T.BufferAttribute(indices, 4));
+    g.setAttribute("skinWeight", new T.BufferAttribute(pesos, 4));
+  }
   return g;
 }
 
-/** Junta as peças numa geometria só. */
-function juntarPecas(T, partes) {
-  const total = partes.reduce((n, g) => n + g.attributes.position.count, 0);
-  const pos = new Float32Array(total * 3);
-  const nor = new Float32Array(total * 3);
-  const cor = new Float32Array(total * 3);
-  let k = 0;
-  partes.forEach((g) => {
-    pos.set(g.attributes.position.array, k * 3);
-    nor.set(g.attributes.normal.array, k * 3);
-    cor.set(g.attributes.color.array, k * 3);
-    k += g.attributes.position.count;
-    g.dispose();
-  });
+/** Junta as peças numa geometria só (os atributos que todas têm; o uv, só se pedido). */
+function juntarPecas(T, partes, comUv = false) {
+  const nomes = Object.keys(partes[0].attributes).filter((nome) => (comUv || nome !== "uv") && partes.every((p) => p.attributes[nome]));
+  const total = partes.reduce((n, p) => n + p.attributes.position.count, 0);
   const g = new T.BufferGeometry();
-  g.setAttribute("position", new T.BufferAttribute(pos, 3));
-  g.setAttribute("normal", new T.BufferAttribute(nor, 3));
-  g.setAttribute("color", new T.BufferAttribute(cor, 3));
+  nomes.forEach((nome) => {
+    const primeiro = partes[0].attributes[nome];
+    const lista = new primeiro.array.constructor(total * primeiro.itemSize);
+    let k = 0;
+    partes.forEach((p) => { lista.set(p.attributes[nome].array, k); k += p.attributes[nome].array.length; });
+    g.setAttribute(nome, new T.BufferAttribute(lista, primeiro.itemSize));
+  });
+  partes.forEach((p) => p.dispose());
   return g;
 }
 
-/** Uma criança de 1,2 m, de frente para +z, com os pés na origem. */
+/** Uma criança de 1,2 m, de frente para +z, com os pés na origem (no `grupo`). */
 function montarCrianca(T, material, i) {
   const pele = PELES[i % PELES.length];
-  const grupo = new T.Group();
-  grupo.add(new T.Mesh(juntarPecas(T, [
-    pecaColorida(T, new T.CylinderGeometry(0.115, 0.125, 0.15, 10), SHORTS[(i * 3) % SHORTS.length], 0, 0.6, 0),
-    pecaColorida(T, new T.CylinderGeometry(0.105, 0.12, 0.34, 10), CAMISAS[(i * 5) % CAMISAS.length], 0, 0.84, 0),
-    pecaColorida(T, new T.SphereGeometry(0.105, 12, 10), pele, 0, 1.1, 0),
-    pecaColorida(T, new T.SphereGeometry(0.112, 12, 8, 0, PI * 2, 0, PI * 0.55), CABELOS[(i * 7) % CABELOS.length], 0, 1.115, -0.01),
-  ]), material));
-  const membro = (x, y, raio, comprimento, cor, sapato) => {
-    const pivo = new T.Group();
-    pivo.position.set(x, y, 0);
-    const partes = [pecaColorida(T, new T.CylinderGeometry(raio, raio * 0.88, comprimento, 8), cor, 0, -comprimento / 2, 0)];
-    if (sapato) partes.push(pecaColorida(T, new T.BoxGeometry(0.09, 0.06, 0.15), sapato, 0, -comprimento - 0.01, 0.03));
-    pivo.add(new T.Mesh(juntarPecas(T, partes), material));
-    grupo.add(pivo);
-    return pivo;
+  const camisa = CAMISAS[(i * 5) % CAMISAS.length];
+  const osso = (pai, x, y) => {
+    const b = new T.Bone();
+    b.position.set(x, y, 0);
+    if (pai) pai.add(b);
+    return b;
   };
+  // o esqueleto parado (cada junta onde ela fica no corpo de pé)
+  const quadril = osso(null, 0, 0.6);
+  const tronco = osso(quadril, 0, 0.06); // 0,66
+  const cabeca = osso(tronco, 0, 0.36); // 1,02
+  const bracoE = osso(tronco, -0.15, 0.31); // o ombro, a 0,97
+  const cotoveloE = osso(bracoE, 0, -0.2);
+  const bracoD = osso(tronco, 0.15, 0.31);
+  const cotoveloD = osso(bracoD, 0, -0.2);
+  const pernaE = osso(quadril, -0.06, -0.05); // o quadril, a 0,55
+  const joelhoE = osso(pernaE, 0, -0.26);
+  const pernaD = osso(quadril, 0.06, -0.05);
+  const joelhoD = osso(pernaD, 0, -0.26);
+  const ossos = [quadril, tronco, cabeca, bracoE, cotoveloE, bracoD, cotoveloD, pernaE, joelhoE, pernaD, joelhoD];
+  const P = (geo, cor, x, y, z, junta) => pecaColorida(T, geo, cor, x, y, z, ossos.indexOf(junta));
+  const cilindro = (r0, r1, h) => new T.CylinderGeometry(r0, r1, h, 8);
+  const partes = [
+    P(cilindro(0.115, 0.125, 0.15), SHORTS[(i * 3) % SHORTS.length], 0, 0.6, 0, quadril),
+    P(cilindro(0.105, 0.12, 0.34), camisa, 0, 0.84, 0, tronco),
+    P(new T.SphereGeometry(0.105, 12, 10), pele, 0, 1.1, 0, cabeca),
+    P(new T.SphereGeometry(0.112, 12, 8, 0, PI * 2, 0, PI * 0.55), CABELOS[(i * 7) % CABELOS.length], 0, 1.115, -0.01, cabeca),
+  ];
+  [[-0.15, bracoE, cotoveloE], [0.15, bracoD, cotoveloD]].forEach(([x, ombro, cotovelo]) => {
+    partes.push(
+      P(cilindro(0.046, 0.042, 0.09), camisa, x, 0.925, 0, ombro), // a manga
+      P(cilindro(0.034, 0.031, 0.2), pele, x, 0.87, 0, ombro),
+      P(cilindro(0.031, 0.028, 0.2), pele, x, 0.67, 0, cotovelo),
+      P(new T.SphereGeometry(0.036, 8, 6), pele, x, 0.565, 0, cotovelo),
+    );
+  });
+  [[-0.06, pernaE, joelhoE], [0.06, pernaD, joelhoD]].forEach(([x, coxa, joelho]) => {
+    partes.push(
+      P(cilindro(0.05, 0.046, 0.26), pele, x, 0.42, 0, coxa),
+      P(cilindro(0.046, 0.04, 0.24), pele, x, 0.17, 0, joelho),
+      P(new T.BoxGeometry(0.09, 0.06, 0.15), "#f4f6ff", x, 0.035, 0.03, joelho),
+    );
+  });
+  const corpo = new T.SkinnedMesh(juntarPecas(T, partes), material);
+  corpo.add(quadril);
+  corpo.bind(new T.Skeleton(ossos));
+  // a esfera do corte da câmera cobre os braços para cima e o pulo grupado
+  corpo.boundingSphere = new T.Sphere(new T.Vector3(0, 0.7, 0), 1.15);
+  const grupo = new T.Group();
+  grupo.add(corpo);
   return {
-    grupo,
-    pernaE: membro(-0.06, 0.55, 0.048, 0.5, pele, "#f4f6ff"),
-    pernaD: membro(0.06, 0.55, 0.048, 0.5, pele, "#f4f6ff"),
-    bracoE: membro(-0.15, 0.98, 0.034, 0.4, pele),
-    bracoD: membro(0.15, 0.98, 0.034, 0.4, pele),
+    grupo, corpo, tronco, cabeca, bracoE, bracoD, cotoveloE, cotoveloD, pernaE, pernaD, joelhoE, joelhoD,
+    pose: { ...POSE_PARADA },
   };
 }
+
+/* O CORPO EM MOVIMENTO. Cada criança pede uma pose (os ângulos de cada
+   junta, em radianos) e o corpo vai até ela com uma mola curta: sem pulo
+   de um movimento para o outro. Braço e perna para a frente é negativo;
+   joelho e cotovelo dobram para o lado de sempre. Os pés ficam no chão
+   sozinhos: o quadril desce o tanto que as pernas dobram (`descida`). */
+const POSE_PARADA = {
+  tronco: 0, cabeca: 0, giroCabeca: 0,
+  bE: 0.05, bD: 0.05, bEz: -0.12, bDz: 0.12, cE: -0.2, cD: -0.2,
+  pE: 0, pD: 0, pEz: 0, pDz: 0, jE: 0.04, jD: 0.04,
+};
+const JUNTAS = Object.keys(POSE_PARADA);
+
+function posar(k, alvo, dt, rapidez = 14) {
+  const f = dt > 0 ? 1 - Math.exp(-dt * rapidez) : 1;
+  const p = k.pose;
+  for (const j of JUNTAS) p[j] += ((alvo[j] ?? POSE_PARADA[j]) - p[j]) * f;
+  k.tronco.rotation.x = p.tronco;
+  k.cabeca.rotation.set(p.cabeca, p.giroCabeca, 0);
+  k.bracoE.rotation.set(p.bE, 0, p.bEz);
+  k.bracoD.rotation.set(p.bD, 0, p.bDz);
+  k.cotoveloE.rotation.x = p.cE;
+  k.cotoveloD.rotation.x = p.cD;
+  k.pernaE.rotation.set(p.pE, 0, p.pEz);
+  k.pernaD.rotation.set(p.pD, 0, p.pDz);
+  k.joelhoE.rotation.x = p.jE;
+  k.joelhoD.rotation.x = p.jD;
+}
+
+/** Quanto o quadril desce com as pernas dobradas (pisa a perna mais esticada). */
+function descida(p) {
+  const perna = (a, j, z) => (0.26 * Math.cos(a) + 0.24 * Math.cos(a + j)) * Math.cos(z);
+  return 0.5 - Math.max(perna(p.pE, p.jE, p.pEz), perna(p.pD, p.jD, p.pDz));
+}
+
+/** O meio das duas mãos, no corpo da criança: [altura, para a frente] (para a bola ir nas mãos). */
+function maos(p) {
+  const t = p.tronco;
+  const y = 0.66 + 0.31 * Math.cos(t) - descida(p);
+  const z = 0.31 * Math.sin(t);
+  const meio = (b, c) => {
+    const a = t + b;
+    return [-0.2 * Math.cos(a) - 0.2 * Math.cos(a + c), -0.2 * Math.sin(a) - 0.2 * Math.sin(a + c)];
+  };
+  const [ey, ez] = meio(p.bE, p.cE);
+  const [dy, dz] = meio(p.bD, p.cD);
+  return [y + (ey + dy) / 2, z + (ez + dz) / 2];
+}
+
+/** Um ponto do corpo da criança (lado, altura, frente) no espaço do objeto. */
+function noCorpo(k, x, y, z, saida) {
+  const g = k.grupo;
+  const s = Math.sin(g.rotation.y);
+  const c = Math.cos(g.rotation.y);
+  return saida.set(g.position.x + x * c + z * s, g.position.y + y, g.position.z - x * s + z * c);
+}
+
+/** Corrida (ou caminhada, mais lenta): pernas e braços alternados, `f` é a fase do passo. */
+function passada(f, forca = 1, ré = false) {
+  const s = Math.sin(f) * (ré ? -1 : 1);
+  return {
+    pE: 0.62 * s * forca, pD: -0.62 * s * forca,
+    jE: 0.25 + 1.0 * Math.max(0, s) * forca, jD: 0.25 + 1.0 * Math.max(0, -s) * forca,
+    bE: -0.55 * s * forca, bD: 0.55 * s * forca, cE: -1.25, cD: -1.25,
+    tronco: ré ? -0.05 : 0.18 * forca,
+  };
+}
+
+const suave = (x) => {
+  const t = limitar(x, 0, 1);
+  return t * t * (3 - 2 * t);
+};
 
 /* ======================================================================
    O MOVIMENTO NOS OBJETOS DA FÁBRICA -- o que o espaço tem de jogo mexe,
@@ -798,9 +320,17 @@ function montarCrianca(T, material, i) {
      para um aceso e chuta: no aceso é GOOOL (o LED brilha e outro acende);
      no apagado, o LED pisca vermelho. Uma tela atrás de cada círculo, com
      os 7 anéis do jogo, os gols e o tempo.
-   - E crianças pulando nas camas elásticas.
+   - CRIANÇAS BRINCANDO, com o corpo inteiro (joelho, cotovelo, pulo de
+     verdade, com subida e descida): o arremesso agacha, estica e salta; o
+     chute tem corrida, a perna vai para trás e vem com tudo, e o gol é
+     comemorado (o erro, mão na cabeça); nas camas elásticas, pulos com
+     truque (estrela, grupado, carpado, giro, tesoura), a lona afundando a
+     cada volta; uma criança escala a parede e se joga na espuma; outra
+     dribla na quadra de basquete e arremessa.
    Coordenadas no objeto (metros, frente em +z). Só anda com o espaço
-   perto da câmera: de longe não se vê, e o celular agradece.
+   perto da câmera: de longe não se vê, e o celular agradece. Com "menos
+   movimento" no aparelho, as crianças ficam paradas na vista da arena --
+   mas no passeio, que a pessoa pediu, elas brincam.
    ====================================================================== */
 const ANIMACOES = {
   "espaco-esportivo-modelo-1": (arena, maquina) => {
@@ -944,9 +474,8 @@ const ANIMACOES = {
       const cesta = {
         i, x,
         aro: V(x, 2.8, -10.88),
-        mao: V(x, 2.12, -9.0),
-        naMao: V(x, 0.97 + 1.02, -8.95),
         fase: "segura", tempo: -i * 0.7, balanco: 0, erra: false, de: V(), fora: V(),
+        salto: 9, saltou: false, reacao: 0, acertou: false,
       };
       // a tabela da cesta é uma tela: o Swish Arena de verdade (o mesmo
       // jogo do simulador) roda nela -- até ele chegar, o pôster
@@ -1098,6 +627,34 @@ const ANIMACOES = {
       });
     };
 
+    /** A bola nas mãos da criança (segurando, mirando, pegando de volta). */
+    const bolaNasMaos = (k, saida) => {
+      const [y, z] = maos(k.pose);
+      return noCorpo(k, 0, y + 0.03, z + 0.13, saida);
+    };
+    /** A altura do salto (subida e descida), `s` segundos depois de sair do chão. */
+    const alturaDoSalto = (s, duracao, altura) => (s >= 0 && s < duracao ? altura * 4 * (s / duracao) * (1 - s / duracao) : 0);
+    /** O arremesso, `f` segundos depois de começar: agacha, estica e salta (a bola sai no alto). */
+    const poseDoArremesso = (f) => (f < 0.35
+      ? { bE: -0.7, bD: -0.7, bEz: 0.3, bDz: -0.3, cE: -1.7, cD: -1.7, tronco: 0.3, cabeca: -0.35, pE: -0.75, pD: -0.75, jE: 1.35, jD: 1.35 }
+      : { bE: -2.75, bD: -2.75, bEz: 0.2, bDz: -0.2, cE: -0.65, cD: -0.65, cabeca: -0.45, tronco: -0.05 });
+    /** Depois de arremessar: o braço acompanha a bola e desce; acertou, comemora; errou, mão na cabeça. */
+    const poseDepois = (tempo, reacao, acertou) => {
+      if (reacao > 0) {
+        return acertou
+          ? { bD: -2.95, cD: -1.3, bDz: 0.05, bE: -0.35, cE: -0.9, cabeca: -0.2 }
+          : { bE: -2.45, bD: -2.45, bEz: -0.5, bDz: 0.5, cE: -2.35, cD: -2.35, cabeca: 0.25 };
+      }
+      return tempo < 0.5 ? { bE: -2.6, bD: -2.6, cE: -0.15, cD: -0.15, cabeca: -0.45 } : { bE: -0.35, bD: -0.35, cE: -0.5, cD: -0.5, cabeca: -0.3 };
+    };
+    /** O pouso: os joelhos amortecem logo que o pé volta à cama. */
+    const amortecer = (alvo, s, duracao) => {
+      const f = (s - duracao) / 0.22;
+      if (f < 0 || f > 1) return alvo;
+      const peso = Math.sin(f * PI);
+      return { ...alvo, pE: -0.45 * peso, pD: -0.45 * peso, jE: 0.85 * peso, jD: 0.85 * peso, tronco: (alvo.tronco || 0) + 0.15 * peso };
+    };
+
     const andarCesta = (c, dt, t) => {
       c.balanco = Math.max(0, c.balanco - dt * 1.6);
       c.rede.scale.y = 1 + Math.sin(t * 24) * 0.18 * c.balanco;
@@ -1105,29 +662,38 @@ const ANIMACOES = {
       const k = c.crianca;
       const b = c.bola.position;
       c.tempo += dt;
+      c.salto += dt;
+      c.reacao = Math.max(0, c.reacao - dt);
+      let alvo;
+      let quique = 0; // parada na cama, a criança quica de leve
       if (c.fase === "segura") {
-        // mira com a bola no peito; no fim, os braços sobem e ela salta
-        const f = limitar(c.tempo / 1.0, 0, 1);
-        const sobe = f > 0.7 ? (f - 0.7) / 0.3 : 0;
-        k.bracoE.rotation.x = k.bracoD.rotation.x = -1.25 - sobe * 1.5;
-        k.grupo.position.y = 0.97 + Math.sin(sobe * PI) * 0.14;
-        b.set(c.x, k.grupo.position.y + 1.02 + sobe * 0.35, -8.95 + sobe * 0.05);
-        if (c.tempo >= 1.0) {
-          c.fase = "voo";
-          c.tempo = 0;
-          c.de.copy(b);
-          c.erra = Math.random() < 0.22;
-          arremessarNoJogo(c.jogo, c.erra); // o mesmo arremesso no jogo da tabela
+        if (c.tempo < 0.6) {
+          // mira, com a bola no peito
+          alvo = { bE: -0.9, bD: -0.9, bEz: 0.3, bDz: -0.3, cE: -1.5, cD: -1.5, cabeca: -0.2, pE: -0.15, pD: -0.15, jE: 0.3, jD: 0.3 };
+          quique = Math.abs(Math.sin(Math.max(0, c.tempo) * 8)) * 0.035;
+        } else {
+          const f = c.tempo - 0.6;
+          alvo = poseDoArremesso(f);
+          if (f >= 0.35 && !c.saltou) { c.saltou = true; c.salto = 0; }
+          if (f >= 0.62) {
+            // solta no alto do salto: o mesmo arremesso no jogo da tabela
+            c.fase = "voo";
+            c.tempo = 0;
+            c.de.copy(b);
+            c.erra = Math.random() < 0.22;
+            arremessarNoJogo(c.jogo, c.erra);
+          }
         }
       } else if (c.fase === "voo") {
         const f = Math.min(1, c.tempo / 0.9);
         b.lerpVectors(c.de, c.aro, f);
         b.y += Math.sin(f * PI) * 0.75 + 0.06;
         c.bola.rotation.x -= dt * 9;
-        k.bracoE.rotation.x = k.bracoD.rotation.x = -2.75 + f * 2.2; // os braços descem
-        k.grupo.position.y = 0.97;
+        alvo = poseDepois(c.tempo, 0, false);
         if (f >= 1) {
           c.tempo = 0;
+          c.reacao = 0.95;
+          c.acertou = !c.erra;
           if (c.erra) {
             c.fase = "fora";
             c.balanco = 0.3;
@@ -1147,22 +713,29 @@ const ANIMACOES = {
         const zFim = c.fase === "queda" ? -10.88 : -10.88 + c.fora.z;
         b.set(c.x + c.fora.x * f * (c.fase === "fora" ? 1 : 0), 0, c.aro.z + (zFim - c.aro.z) * f);
         b.y = c.aro.y + (c.fase === "fora" ? Math.sin(f * PI) * 0.35 : 0) - (c.aro.y - camaY(b.z) - 0.12) * f * f;
+        alvo = poseDepois(1, c.reacao, c.acertou);
         if (f >= 1) { c.fase = "rola"; c.tempo = 0; c.de.copy(b); }
       } else if (c.fase === "rola") {
-        // desce rolando a cama até a criança
+        // a bola desce rolando a cama até a criança, que comemora (ou lamenta) e espera
         const f = Math.min(1, c.tempo / 1.0);
         const z = c.de.z + (-9.1 - c.de.z) * (1 - (1 - f) * (1 - f));
         b.set(c.de.x + (c.x - c.de.x) * f, camaY(z) + 0.12, z);
         c.bola.rotation.x += dt * 10;
-        k.bracoE.rotation.x = k.bracoD.rotation.x = -0.55;
+        alvo = c.reacao > 0 ? poseDepois(1, c.reacao, c.acertou) : { pE: -0.1, pD: -0.1, jE: 0.22, jD: 0.22, bE: 0.1, bD: 0.1, cabeca: -0.1 };
+        if (c.reacao > 0 && c.acertou) quique = Math.abs(Math.sin(c.reacao * 10)) * 0.12; // pulinho de alegria
+        else if (c.reacao <= 0) quique = Math.abs(Math.sin(t * 7 + c.i)) * 0.05;
         if (f >= 1) { c.fase = "pega"; c.tempo = 0; c.de.copy(b); }
-      } else if (c.fase === "pega") {
-        const f = Math.min(1, c.tempo / 0.4);
-        b.lerpVectors(c.de, c.naMao, f);
-        k.bracoE.rotation.x = k.bracoD.rotation.x = -0.55 - f * 0.7;
-        if (f >= 1) { c.fase = "segura"; c.tempo = 0; }
+      } else {
+        // pega: abaixa e estica os braços até a bola
+        alvo = { bE: -1.1, bD: -1.1, bEz: 0.25, bDz: -0.25, cE: -0.45, cD: -0.45, tronco: 0.4, cabeca: -0.1, pE: -0.55, pD: -0.55, jE: 1.0, jD: 1.0 };
+        if (c.tempo >= 0.45) { c.fase = "segura"; c.tempo = 0; c.saltou = false; }
       }
+      posar(k, amortecer(alvo, c.salto, 0.55), dt);
+      k.grupo.position.y = 0.97 + alturaDoSalto(c.salto, 0.55, 0.3) + quique - descida(k.pose);
+      if (c.fase === "segura") bolaNasMaos(k, b);
+      else if (c.fase === "pega") b.lerp(bolaNasMaos(k, naMao), Math.min(1, c.tempo / 0.45));
     };
+    const naMao = new T.Vector3();
 
     /* --- GOL FLASH: os dois círculos, 7 LEDs cada --- */
     const CORES_LED = ["#ffe600", "#ff2626", "#22ff4a", "#3d8bff"].map((c) => new T.Color(c));
@@ -1191,10 +764,11 @@ const ANIMACOES = {
         k, centro, leds,
         crianca: crianca(),
         bola: new T.Mesh(geoBola, matFutebol),
-        fase: "mira", tempo: -k * 0.8, alvo: 0, de: V(), ate: V(), olhar: 0,
+        fase: "mira", tempo: -k * 0.8, alvo: k * 3, escolheu: false, de: V(), ate: V(), inicio: V(),
+        voo: -1, volta: -1, chutou: false, reacao: 0, acertou: false,
         gols: 0, pontos: 0, ganho: 0, grito: 0, acender: 0.3,
       };
-      jogo.crianca.grupo.position.set(x, 0.07, 2.4);
+      jogo.crianca.grupo.position.set(x, 0.07, 2.4 - 1.05);
       g.add(jogo.crianca.grupo, jogo.bola);
       jogo.tela = tela(x, 1.62, -0.78, 1.7, "chao", (ctx) => {
         fundo(ctx, posters["gol-flash-arena"], 0.55);
@@ -1229,8 +803,18 @@ const ANIMACOES = {
     const cor = new T.Color();
     const acesos = (j) => j.leds.filter((l) => l.aceso);
     const quantosAcesos = (j) => { let n = 0; for (const l of j.leds) if (l.aceso) n++; return n; };
-    const peAux = new T.Vector3();
 
+    const bolaParada = new T.Vector3();
+    const ondeIr = new T.Vector3();
+    /** Escolhe o próximo alvo: um aceso (às vezes erra o tempo e chuta num apagado). */
+    const escolherAlvo = (j) => {
+      const ok = acesos(j);
+      j.alvo = ok.length && Math.random() < 0.78 ? j.leds.indexOf(ok[Math.floor(Math.random() * ok.length)]) : Math.floor(Math.random() * LEDS);
+    };
+    /* O CHUTE: a criança espera atrás da bola (no meio do círculo), de
+       frente para o LED escolhido; corre, a perna vai para trás e vem com
+       tudo; a bola voa até a parede. GOOOL: braços para cima e pulos; no
+       apagado, mão na cabeça. E volta de costas para a marca do próximo. */
     const andarCirculo = (j, dt, t) => {
       const kid = j.crianca;
       const b = j.bola.position;
@@ -1251,32 +835,21 @@ const ANIMACOES = {
         j.acender = 0.5;
       }
       j.grito = Math.max(0, j.grito - dt);
+      j.reacao = Math.max(0, j.reacao - dt);
       j.tempo += dt;
-      const alvo = j.leds[j.alvo];
-      if (j.fase === "mira") {
-        // escolhe um aceso (às vezes erra o tempo e chuta num apagado) e vira para ele
-        if (j.tempo <= dt + 1e-6 || j.tempo < 0) {
-          const ok = acesos(j);
-          j.alvo = ok.length && Math.random() < 0.78 ? j.leds.indexOf(ok[Math.floor(Math.random() * ok.length)]) : Math.floor(Math.random() * LEDS);
-        }
-        const d = j.leds[j.alvo].dir;
-        const quer = Math.atan2(d.x, d.z);
-        let delta = quer - kid.grupo.rotation.y;
-        delta = Math.atan2(Math.sin(delta), Math.cos(delta));
-        kid.grupo.rotation.y += delta * (1 - Math.exp(-dt * 8));
-        kid.grupo.position.set(j.centro.x - d.x * 0.45, 0.07, j.centro.z - d.z * 0.45);
-        const frente = kid.grupo.rotation.y;
-        b.set(kid.grupo.position.x + Math.sin(frente) * 0.28, 0.19, kid.grupo.position.z + Math.cos(frente) * 0.28);
-        kid.pernaD.rotation.x = Math.min(0.7, Math.max(0, j.tempo - 0.45) * 3); // a perna vai para trás
-        if (j.tempo > 0.7) { j.fase = "chuta"; j.tempo = 0; j.de.copy(b); j.ate.copy(j.leds[j.alvo].p).setY(0.19).addScaledVector(j.leds[j.alvo].dir, -0.14); }
-      } else if (j.fase === "chuta") {
-        kid.pernaD.rotation.x = 0.7 - Math.min(1, j.tempo / 0.12) * 1.7;
-        const f = Math.min(1, j.tempo / 0.32);
+      bolaParada.set(j.centro.x, 0.19, j.centro.z);
+
+      // a bola: voando até a parede, e depois voltando para o meio
+      if (j.voo >= 0) {
+        j.voo += dt;
+        const f = Math.min(1, j.voo / 0.32);
         b.lerpVectors(j.de, j.ate, f);
         j.bola.rotation.x += dt * 20;
         if (f >= 1) {
           // bateu na parede: no LED aceso é gol
-          if (alvo.aceso && fimGol <= 0) {
+          const alvo = j.leds[j.alvo];
+          j.acertou = Boolean(alvo.aceso) && fimGol <= 0;
+          if (j.acertou) {
             j.ganho = 100 + Math.round(Math.max(0, alvo.vida / 3.6) * 100);
             j.pontos += j.ganho;
             j.gols++;
@@ -1287,24 +860,76 @@ const ANIMACOES = {
           } else if (!alvo.aceso) {
             alvo.erro = 0.5;
           }
-          j.fase = "volta";
-          j.tempo = 0;
+          j.reacao = 1.1;
+          j.voo = -1;
+          j.volta = 0;
           j.de.copy(b);
         }
-      } else if (j.fase === "volta") {
-        // a bola volta da parede e para no pé da criança
-        kid.pernaD.rotation.x *= Math.max(0, 1 - dt * 8);
-        const f = Math.min(1, j.tempo / 0.9);
-        const frente = kid.grupo.rotation.y;
-        const pe = peAux.set(kid.grupo.position.x + Math.sin(frente) * 0.28, 0.19, kid.grupo.position.z + Math.cos(frente) * 0.28);
-        b.lerpVectors(j.de, pe, 1 - (1 - f) * (1 - f));
+      } else if (j.volta >= 0) {
+        j.volta += dt;
+        const f = Math.min(1, j.volta / 1.1);
+        b.lerpVectors(j.de, bolaParada, 1 - (1 - f) * (1 - f));
         j.bola.rotation.x -= dt * 8 * (1 - f);
-        if (f >= 1) { j.fase = "mira"; j.tempo = 0; }
+        if (f >= 1) j.volta = -1;
+      } else if (!j.chutou) {
+        b.copy(bolaParada);
       }
-      // os braços balançam para o equilíbrio
-      kid.bracoE.rotation.z = -0.25 - Math.max(0, kid.pernaD.rotation.x) * 0.3;
-      kid.bracoD.rotation.z = 0.25;
-      kid.bracoE.rotation.x = 0.3 * Math.sin(kid.pernaD.rotation.x);
+
+      // a criança
+      const d = j.leds[j.alvo].dir;
+      let delta = Math.atan2(d.x, d.z) - kid.grupo.rotation.y;
+      delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+      kid.grupo.rotation.y += delta * (1 - Math.exp(-dt * 7));
+      const marca = (distancia, saida) => saida.set(j.centro.x - d.x * distancia, 0.07, j.centro.z - d.z * distancia);
+      let alvo;
+      let quique = 0;
+      let rapidez = 14;
+      if (j.fase === "mira") {
+        if (!j.escolheu && j.tempo >= 0) { escolherAlvo(j); j.escolheu = true; }
+        // pronta, atrás da bola: joelhos dobrados, braços abertos, quicando
+        alvo = { pE: -0.3, pD: -0.3, jE: 0.6, jD: 0.6, tronco: 0.3, bE: -0.3, bD: -0.3, bEz: -0.55, bDz: 0.55, cE: -0.9, cD: -0.9, cabeca: -0.25 };
+        quique = Math.abs(Math.sin(j.tempo * 9)) * 0.03;
+        kid.grupo.position.lerp(marca(1.05, ondeIr), 1 - Math.exp(-dt * 6));
+        if (j.tempo > 0.55) { j.fase = "corre"; j.tempo = 0; j.inicio.copy(kid.grupo.position); }
+      } else if (j.fase === "corre") {
+        // três passos até a bola; no último, a perna do chute vai para trás
+        const f = Math.min(1, j.tempo / 0.5);
+        kid.grupo.position.lerpVectors(j.inicio, marca(0.34, ondeIr), f * (0.6 + 0.4 * f));
+        const passo = j.tempo * PI * 2 * 3;
+        alvo = passada(passo, 1);
+        if (f > 0.68) Object.assign(alvo, { pD: 0.95, jD: 1.65, pE: -0.25, jE: 0.4, bEz: -0.7, bE: -0.5, bD: 0.5 });
+        quique = Math.abs(Math.sin(passo)) * 0.06;
+        if (f >= 1) { j.fase = "chuta"; j.tempo = 0; j.chutou = false; }
+      } else if (j.fase === "chuta") {
+        // a perna vem com tudo, bate na bola e segue alto; o braço de fora equilibra
+        rapidez = 30;
+        alvo = { pD: j.tempo < 0.07 ? -0.4 : -1.3, jD: j.tempo < 0.07 ? 0.7 : 0.05, pE: -0.1, jE: 0.35, tronco: -0.15, bE: -0.5, bEz: -1.05, cE: -0.3, bD: 0.6, bDz: 0.5, cabeca: -0.3 };
+        if (j.tempo >= 0.07 && !j.chutou) {
+          j.chutou = true;
+          j.voo = 0;
+          j.de.copy(b);
+          j.ate.copy(j.leds[j.alvo].p).setY(0.19).addScaledVector(j.leds[j.alvo].dir, -0.14);
+        }
+        if (j.tempo > 0.5) { j.fase = "reage"; j.tempo = 0; }
+      } else if (j.fase === "reage") {
+        // GOOOL: braços para cima e pulos; no apagado, mão na cabeça
+        if (j.acertou) {
+          alvo = { bE: -2.9, bD: -2.9, bEz: -0.35, bDz: 0.35, cE: -0.25, cD: -0.25, cabeca: -0.3 };
+          quique = Math.abs(Math.sin(j.tempo * 7.5)) * 0.24;
+        } else {
+          alvo = { bE: -2.45, bD: -2.45, bEz: -0.5, bDz: 0.5, cE: -2.35, cD: -2.35, cabeca: 0.3, tronco: 0.1 };
+        }
+        if (j.reacao <= 0 && j.voo < 0) { j.fase = "volta"; j.tempo = 0; escolherAlvo(j); j.inicio.copy(kid.grupo.position); }
+      } else {
+        // de costas, trotando até a marca do próximo chute
+        const f = Math.min(1, j.tempo / 0.9);
+        kid.grupo.position.lerpVectors(j.inicio, marca(1.05, ondeIr), suave(f));
+        alvo = passada(j.tempo * PI * 2 * 2.2, 0.7, true);
+        quique = Math.abs(Math.sin(j.tempo * PI * 2 * 2.2)) * 0.035;
+        if (f >= 1) { j.fase = "mira"; j.tempo = 0; j.chutou = false; }
+      }
+      posar(kid, alvo, dt, rapidez);
+      kid.grupo.position.y = 0.07 + quique - descida(kid.pose);
       // a cor de cada LED
       j.leds.forEach((l, i) => {
         if (l.gol > 0) cor.copy(l.aceso || branco).lerp(branco, 0.5 + 0.5 * Math.sin(t * 12));
@@ -1318,15 +943,210 @@ const ANIMACOES = {
       });
     };
 
-    /* --- e crianças pulando nas camas elásticas --- */
-    const pulando = [[15.6, -5.7], [13.6, -7.7], [5.6, -2.7]].map(([x, z], i) => {
-      const c = crianca();
-      c.grupo.position.set(x, 0.982, z);
-      c.grupo.rotation.y = i * 2.1;
-      c.fase = i * 1.3;
-      g.add(c.grupo);
-      return c;
+    /* --- crianças pulando nas camas elásticas: cada pulo com um truque --- */
+    // o pulo no alto (os braços e as pernas de cada um, no meio do ar)
+    const TRUQUES = {
+      reto: { bE: -2.8, bD: -2.8, bEz: -0.15, bDz: 0.15, cE: -0.1, cD: -0.1, cabeca: -0.15 },
+      estrela: { bE: -1.7, bD: -1.7, bEz: -1.25, bDz: 1.25, cE: -0.05, cD: -0.05, pEz: -0.5, pDz: 0.5 },
+      grupado: { pE: -1.75, pD: -1.75, jE: 2.3, jD: 2.3, bE: -0.9, bD: -0.9, cE: -0.75, cD: -0.75, tronco: 0.45, cabeca: 0.2 },
+      carpado: { pE: -1.45, pD: -1.45, jE: 0, jD: 0, bE: -1.45, bD: -1.45, cE: 0, cD: 0, tronco: 0.55 },
+      giro: { bE: -0.55, bD: -0.55, bEz: 0.55, bDz: -0.55, cE: -2.2, cD: -2.2, cabeca: -0.1 },
+      tesoura: { pE: -0.95, pD: 0.55, jE: 0.1, jD: 0.65, bE: 0.5, bD: -2.5, cE: -0.4, cD: -0.2 },
+    };
+    const NO_AR = { bE: -1.1, bD: -1.1, cE: -0.25, cD: -0.25, jE: 0.05, jD: 0.05 };
+    const CONTATO = 0.24; // a lona afundando e devolvendo
+    const NO_AR_DURA = 0.84;
+    const misturar = (a, b, peso) => {
+      const saida = {};
+      for (const j of JUNTAS) saida[j] = (a[j] ?? POSE_PARADA[j]) * (1 - peso) + (b[j] ?? POSE_PARADA[j]) * peso;
+      return saida;
+    };
+    // em cada cama, longe do caminho do passeio (que também pula por elas)
+    const pulando = [
+      [15.6, -5.7, ["reto", "estrela", "reto", "grupado"]],
+      [13.6, -7.7, ["reto", "giro", "reto", "carpado"]],
+      [5.6, -2.7, ["estrela", "reto", "tesoura", "reto"]],
+      [5.65, 4.3, ["reto", "grupado", "estrela"]],
+      [9.69, 4.3, ["reto", "reto", "giro"]],
+      [17.6, -7.7, ["carpado", "reto", "estrela", "reto"]],
+      [7.6, -5.7, ["tesoura", "reto", "grupado", "reto"]],
+    ].map(([x, z, truques], i) => {
+      const k = crianca();
+      k.grupo.position.set(x, 0.982, z);
+      k.grupo.rotation.y = i * 2.1;
+      g.add(k.grupo);
+      return { k, truques, t: i * 0.37, giro0: i * 2.1, altura: 0.62 + (i % 3) * 0.08 };
     });
+    const andarPulando = (c, dt) => {
+      const k = c.k;
+      c.t += dt;
+      const ciclo = CONTATO + NO_AR_DURA;
+      const n = Math.floor(c.t / ciclo);
+      const local = c.t - n * ciclo;
+      const truque = c.truques[n % c.truques.length];
+      if (local < CONTATO) {
+        // na lona: ela afunda, os joelhos dobram e os braços vão para trás
+        const s = Math.sin((local / CONTATO) * PI);
+        posar(k, { pE: -0.45 * s, pD: -0.45 * s, jE: 0.9 * s, jD: 0.9 * s, bE: 0.55 * s, bD: 0.55 * s, cE: -0.3, cD: -0.3, tronco: 0.25 * s }, dt, 24);
+        k.grupo.position.y = 0.982 - 0.12 * s - descida(k.pose);
+        k.grupo.rotation.y = c.giro0;
+      } else {
+        // no ar: sobe, faz o truque no alto e volta esticado para a lona
+        const s = (local - CONTATO) / NO_AR_DURA;
+        posar(k, misturar(NO_AR, TRUQUES[truque], Math.pow(Math.sin(s * PI), 0.7)), dt, 22);
+        k.grupo.position.y = 0.982 + c.altura * 4 * s * (1 - s);
+        k.grupo.rotation.y = c.giro0 + (truque === "giro" ? PI * 2 * suave(s * 1.15) : 0);
+      }
+    };
+
+    /* --- a parede de escalada: sobe agarra por agarra e se joga de costas na espuma --- */
+    const PAREDE = -11.115;
+    const escalando = { k: crianca(), t: 0 };
+    escalando.k.grupo.position.set(5.1, 0.95, PAREDE + 0.24);
+    escalando.k.grupo.rotation.y = PI; // de frente para a parede
+    g.add(escalando.k.grupo);
+    const LANCES = 7;
+    const andarEscalada = (e, dt) => {
+      const k = e.k;
+      const grupo = k.grupo;
+      e.t += dt;
+      const local = e.t % 10.4;
+      let alvo;
+      let y = 0.95;
+      let z = PAREDE + 0.24;
+      let deitar = 0;
+      const subida = LANCES * 0.62;
+      if (local < subida) {
+        // um braço sobe até a próxima agarra e a perna do outro lado pisa mais alto
+        const n = Math.floor(local / 0.62);
+        const f = (local - n * 0.62) / 0.62;
+        const sobe = Math.sin(f * PI);
+        y = 0.95 + 0.21 * (n + suave(f));
+        const direita = n % 2 === 0;
+        const alcanca = -2.35 - 0.6 * suave(f);
+        const puxa = -2.95 + 0.6 * suave(f);
+        alvo = {
+          bE: direita ? puxa : alcanca, bD: direita ? alcanca : puxa, bEz: -0.35, bDz: 0.35, cE: -0.5, cD: -0.5,
+          pE: direita ? -1.0 * sobe - 0.2 : -0.25, jE: direita ? 1.7 * sobe + 0.3 : 0.35,
+          pD: direita ? -0.25 : -1.0 * sobe - 0.2, jD: direita ? 0.35 : 1.7 * sobe + 0.3,
+          tronco: 0.12, cabeca: -0.45,
+        };
+      } else if (local < subida + 0.7) {
+        // lá no alto: olha para trás e acena
+        y = 0.95 + 0.21 * LANCES;
+        alvo = { bE: -2.95, bEz: -0.3, cE: -0.5, bD: -2.1, bDz: 1.0, cD: -0.6 - 0.4 * Math.sin(local * 14), giroCabeca: 1.0, pE: -0.25, jE: 0.35, pD: -0.2, jD: 0.3 };
+      } else if (local < subida + 1.6) {
+        // se joga de costas, de braços abertos
+        const s = (local - subida - 0.7) / 0.9;
+        const alto = 0.95 + 0.21 * LANCES;
+        y = alto + (0.62 - alto) * s * s + 0.3 * Math.sin(s * PI);
+        z = PAREDE + 0.24 + 1.1 * s;
+        deitar = 1.3 * suave(s * 1.3);
+        alvo = { bE: -2.6, bD: -2.6, bEz: -0.6, bDz: 0.6, cE: -0.2, cD: -0.2, pE: -0.7, pD: -0.7, jE: 0.4, jD: 0.4, cabeca: 0.3 };
+      } else if (local < subida + 3.0) {
+        // afundada na espuma, nadando nos cubos
+        const s = local - subida - 1.6;
+        y = 0.62 - 0.04 * Math.sin(s * 5);
+        z = PAREDE + 1.34;
+        deitar = 1.3;
+        alvo = { bE: -2.2 + 0.5 * Math.sin(s * 6), bD: -2.2 - 0.5 * Math.sin(s * 6), bEz: -0.8, bDz: 0.8, pE: -0.6, pD: -0.6, jE: 0.6, jD: 0.6 };
+      } else if (local < subida + 3.8) {
+        // levanta
+        const s = (local - subida - 3.0) / 0.8;
+        y = 0.62 + 0.1 * s;
+        z = PAREDE + 1.34;
+        deitar = 1.3 * (1 - suave(s));
+        alvo = { pE: -0.9 * (1 - s), pD: -0.9 * (1 - s), jE: 1.4 * (1 - s), jD: 1.4 * (1 - s), bE: -0.8, bD: -0.8, tronco: 0.4 * (1 - s) };
+      } else {
+        // e volta para a parede pela espuma, com o joelho alto
+        const s = Math.min(1, (local - subida - 3.8) / (10.4 - subida - 3.8));
+        y = 0.72 + 0.23 * suave(s);
+        z = PAREDE + 1.34 - 1.1 * suave(s);
+        alvo = passada(local * 7, 0.8);
+        alvo.jE += 0.4;
+        alvo.jD += 0.4;
+      }
+      posar(k, alvo, dt, 12);
+      grupo.position.set(5.1, y - (deitar ? 0 : descida(k.pose) * 0.5), z);
+      grupo.rotation.set(deitar, PI, 0);
+    };
+
+    /* --- a quadra de basquete: dribla até a cesta, arremessa e volta driblando --- */
+    const ARO_DA_QUADRA = V(-2.45, 2.4, -5);
+    const QUADRA_LONGE = V(-6.3, 0.06, -4.55);
+    const QUADRA_PERTO = V(-3.95, 0.06, -5.0);
+    const quadra = {
+      k: crianca(), bola: new T.Mesh(geoBola, matBasquete),
+      fase: "vai", tempo: 0, de: V(), salto: 9, saltou: false, reacao: 0, acertou: false, erra: false,
+    };
+    quadra.k.grupo.position.copy(QUADRA_LONGE);
+    g.add(quadra.k.grupo, quadra.bola);
+    const ladoDaBola = new T.Vector3();
+    /** O drible: a bola desce do lado da mão, bate no chão e volta para a mão. */
+    const driblar = (q, tempo, alvo) => {
+      const u = (tempo % 0.44) / 0.44;
+      noCorpo(q.k, 0.23, 0, 0.3, ladoDaBola);
+      q.bola.position.set(ladoDaBola.x, 0.06 + 0.12 + 0.6 * Math.abs(Math.cos(u * PI)), ladoDaBola.z);
+      q.bola.rotation.x += 0.08;
+      alvo.bD = -0.55 + 0.3 * Math.sin(u * PI * 2);
+      alvo.bDz = 0.25;
+      alvo.cD = -0.75;
+      return alvo;
+    };
+    const andarQuadra = (q, dt) => {
+      const k = q.k;
+      const b = q.bola.position;
+      q.tempo += dt;
+      q.salto += dt;
+      q.reacao = Math.max(0, q.reacao - dt);
+      const olharPara = (destino) => {
+        let delta = Math.atan2(destino.x - k.grupo.position.x, destino.z - k.grupo.position.z) - k.grupo.rotation.y;
+        delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+        k.grupo.rotation.y += delta * (1 - Math.exp(-dt * 6));
+      };
+      let alvo;
+      let quique = 0;
+      if (q.fase === "vai" || q.fase === "sai") {
+        // driblando: até perto da cesta, ou de volta para o meio da quadra
+        const vai = q.fase === "vai";
+        const f = Math.min(1, q.tempo / 1.8);
+        k.grupo.position.lerpVectors(vai ? QUADRA_LONGE : QUADRA_PERTO, vai ? QUADRA_PERTO : QUADRA_LONGE, suave(f));
+        if (vai || f < 0.85) olharPara(vai ? ARO_DA_QUADRA : QUADRA_LONGE);
+        alvo = driblar(q, q.tempo, passada(q.tempo * PI * 2 * 1.9, 0.75));
+        quique = Math.abs(Math.sin(q.tempo * PI * 2 * 1.9)) * 0.03;
+        if (f >= 1) { q.fase = vai ? "arremessa" : "vira"; q.tempo = 0; q.saltou = false; }
+      } else if (q.fase === "vira") {
+        // no meio da quadra, vira para a cesta driblando parado
+        olharPara(ARO_DA_QUADRA);
+        alvo = driblar(q, q.tempo, { pE: -0.2, pD: -0.2, jE: 0.4, jD: 0.4, tronco: 0.15 });
+        if (q.tempo > 0.9) { q.fase = "vai"; q.tempo = 0; }
+      } else if (q.fase === "arremessa") {
+        olharPara(ARO_DA_QUADRA);
+        alvo = poseDoArremesso(q.tempo);
+        if (q.tempo >= 0.35 && !q.saltou) { q.saltou = true; q.salto = 0; }
+        bolaNasMaos(k, b);
+        if (q.tempo >= 0.62) { q.fase = "voo"; q.tempo = 0; q.de.copy(b); q.erra = Math.random() < 0.3; }
+      } else if (q.fase === "voo") {
+        const f = Math.min(1, q.tempo / 0.95);
+        b.lerpVectors(q.de, ARO_DA_QUADRA, f);
+        b.y += Math.sin(f * PI) * 0.9 + 0.08;
+        q.bola.rotation.z -= dt * 9;
+        alvo = poseDepois(q.tempo, 0, false);
+        if (f >= 1) { q.fase = "quica"; q.tempo = 0; q.reacao = 1.0; q.acertou = !q.erra; q.de.copy(b); }
+      } else if (q.fase === "quica") {
+        // pela rede (ou espirrando do aro), quica duas vezes e volta para a mão
+        const f = Math.min(1, q.tempo / 1.3);
+        noCorpo(k, 0, 0.9, 0.35, ladoDaBola);
+        b.lerpVectors(q.de, ladoDaBola, f);
+        const queda = Math.max(0, 1 - f * 1.6);
+        b.y = 0.18 + (q.de.y - 0.18) * queda * queda + Math.abs(Math.sin(f * PI * 2)) * 0.5 * (1 - f) + (ladoDaBola.y - 0.18) * suave((f - 0.8) / 0.2);
+        alvo = q.tempo < 0.25 ? poseDepois(0.6, 0, false) : poseDepois(1, q.reacao, q.acertou);
+        if (q.reacao > 0 && q.acertou) quique = Math.abs(Math.sin(q.reacao * 10)) * 0.14;
+        if (f >= 1) { q.fase = "sai"; q.tempo = 0; }
+      }
+      posar(k, amortecer(alvo, q.salto, 0.55), dt);
+      k.grupo.position.y = 0.06 + alturaDoSalto(q.salto, 0.55, 0.32) + quique - descida(k.pose);
+    };
 
     (maquina.dados.jogos_no_espaco || []).forEach((j) => {
       if (!j.poster) return;
@@ -1346,8 +1166,17 @@ const ANIMACOES = {
       img.src = j.poster;
       posters[j.slug] = img;
     });
-    // as primeiras cores e telas (com menos movimento, ficam assim, paradas)
-    circulos.forEach((j) => andarCirculo(j, 0, 0));
+    /** As crianças brincando (um passo de `dt` segundos). */
+    const brincar = (dt, t) => {
+      cestas.forEach((c) => andarCesta(c, dt, t));
+      circulos.forEach((j) => andarCirculo(j, dt, t));
+      pulando.forEach((c) => andarPulando(c, dt));
+      andarEscalada(escalando, dt);
+      andarQuadra(quadra, dt);
+    };
+    // as primeiras cores e telas, e as crianças já no meio da brincadeira
+    // (com menos movimento, ficam assim, paradas, até o passeio)
+    for (let n = 0; n < 30; n++) brincar(0.05, n * 0.05);
     aros.instanceColor.needsUpdate = true;
     lentes.instanceColor.needsUpdate = true;
     telas.forEach((item) => { item.pintar(item.ctx); item.tex.needsUpdate = true; });
@@ -1363,7 +1192,7 @@ const ANIMACOES = {
       maquina.grupo.getWorldPosition(onde);
       if (camera.position.distanceTo(onde) > 95) return;
       if (infoSwish && !pediuSwish) carregarSwish();
-      cestas.forEach((c) => andarCesta(c, dt, t));
+      brincar(dt, t);
       andarSwish(dt, t, camera, camera.position.distanceTo(cestas[2].tabela.getWorldPosition(olhar)) < 45);
       if (swish.visible) {
         swishVida = Math.max(0, swishVida - dt * 0.8);
@@ -1381,17 +1210,8 @@ const ANIMACOES = {
         tempoGol -= dt;
         if (tempoGol <= 0) { tempoGol = 0; fimGol = 4; }
       }
-      circulos.forEach((j) => andarCirculo(j, dt, t));
       aros.instanceColor.needsUpdate = true;
       lentes.instanceColor.needsUpdate = true;
-      pulando.forEach((c) => {
-        const f = Math.abs(Math.sin(t * 3.4 + c.fase));
-        c.grupo.position.y = 0.982 + f * 0.75;
-        c.bracoE.rotation.x = c.bracoD.rotation.x = -1.2 - f * 1.6;
-        c.bracoE.rotation.z = -0.3 * f;
-        c.bracoD.rotation.z = 0.3 * f;
-        c.pernaE.rotation.x = c.pernaD.rotation.x = -0.35 * (1 - f);
-      });
       // as telas: no máximo duas por quadro, 8 vezes por segundo cada,
       // só as de perto e de frente para a câmera
       camera.getWorldDirection(olhar);
@@ -1420,10 +1240,10 @@ const ANIMACOES = {
 };
 
 /* ======================================================================
-   UMA MÁQUINA — o estande e o objeto feito das fotos
+   UMA MÁQUINA — o estande e o objeto 3D (.glb) dela
    ====================================================================== */
 
-/** As fotos de cada lado (lado -> URL); a capa vale como frente. */
+/** As fotos de cada lado (lado -> URL), para a ficha; a capa vale como frente. */
 function fotosDe(dados) {
   const fotos = {};
   (dados.fotos || []).forEach((f) => {
@@ -1441,18 +1261,18 @@ class Maquina {
     this.indice = indice;
     this.cor = COR_DA_ZONA[dados.grupo] || CORES[indice % CORES.length];
     this.fotos = fotosDe(dados);
-    // o objeto feito com os arquivos da fábrica (.glb) vence o das fotos;
-    // e o que a arena sabe montar peça por peça (a cama elástica) também
+    // só entra na roda quem tem o objeto 3D de verdade (core/arena.py, na_roda_3d)
     this.modelo = dados.modelo || "";
-    this.forma = !this.modelo && FORMAS[dados.desenho] ? dados.desenho : "";
     // um espaço inteiro (o parque de trampolins com as quadras) não cabe na
     // roda: fica no seu próprio "reino", ao lado, ligado por uma passarela
-    this.reino = Boolean(dados.reino && this.modelo);
+    this.reino = Boolean(dados.reino);
 
-    const medidas = this.modelo && (dados.medidas_modelo || []).length === 3 ? dados.medidas_modelo : dados.medidas;
+    // o tamanho de verdade do objeto (o do código ou o lido do .glb) reserva
+    // o lugar dele na roda antes de o arquivo chegar
+    const medidas = (dados.medidas_modelo || []).length === 3 ? dados.medidas_modelo : dados.medidas;
     const [altura, largura, fundo] = (medidas || []).map(Number);
-    const teto = this.modelo ? (dados.reino ? 60 : 14) : 4.5;
-    this.altura = limitar(altura || 1.8, 0.6, this.modelo ? 6 : 4.5);
+    const teto = dados.reino ? 60 : 14;
+    this.altura = limitar(altura || 1.8, 0.6, 6);
     this.largura = limitar(largura || 1, 0.4, teto);
     this.fundo = limitar(fundo || 1, 0.3, teto);
     // Grande (um brinquedão de 11 m) não gira no prato -- varreria os
@@ -1462,16 +1282,15 @@ class Maquina {
     this.retangular = this.grande && Math.max(this.largura, this.fundo) > 1.6 * Math.min(this.largura, this.fundo);
     this.raioP = this.retangular ? this.fundo / 2 + 0.55 : Math.max(this.largura, this.fundo) * 0.62 + 0.45;
     this.alturaP = 0.3;
-    // o objeto montado (até a foto chegar, o tamanho do cadastro)
+    // o objeto montado (até o arquivo chegar, o tamanho reservado)
     this.H = this.altura;
     this.D = this.fundo;
-    this.pedido = 0;
+    this.pedido = false;
     this.montada = 0;
     this.girando = false;
     this.giroAlvo = 0;
     this.tombo = 0;
     this.tomboAlvo = 0;
-    this.descartaveis = [];
 
     const grupo = new T.Group();
     this.grupo = grupo;
@@ -1510,10 +1329,6 @@ class Maquina {
     arena.cena.add(grupo);
   }
 
-  get temFoto() {
-    return Object.keys(this.fotos).length > 0 || Boolean(this.modelo || this.forma);
-  }
-
   /** Tudo do estande responde ao toque como a máquina. */
   marcar() {
     this.grupo.traverse((obj) => { obj.userData.maquina = this; });
@@ -1525,51 +1340,11 @@ class Maquina {
     this.corpo.position.y = -this.H / 2;
   }
 
-  /** Baixa e recorta as fotos no tamanho pedido (uma vez por tamanho). */
-  pedir(tamanho) {
-    if (this.modelo || this.forma) {
-      // o objeto da fábrica (ou a forma montada aqui) vem inteiro, uma vez só
-      if (this.pedido) return;
-      this.pedido = Infinity;
-      // o objeto da fábrica fura a fila: é o que mais se quer ver
-      const tarefa = () => (this.modelo ? this.vestirModelo() : this.vestirForma());
-      if (this.modelo) this.arena.fila.unshift(tarefa);
-      else this.arena.fila.push(tarefa);
-      return;
-    }
-    if (this.pedido >= tamanho || !this.temFoto) return;
-    this.pedido = tamanho;
-    this.arena.fila.push(() => this.carregar(tamanho));
-  }
-
-  /** A forma montada peça por peça, no tamanho do cadastro, com as cores da foto. */
-  async vestirForma() {
-    const T = this.arena.T;
-    let cores = null;
-    const url = this.fotos.perfil || Object.values(this.fotos)[0];
-    if (url) {
-      try {
-        const recorte = recortar(await carregarImagem(fotoNaLargura(url, 320)), 320);
-        if (recorte) cores = coresDaFoto(recorte.tela);
-      } catch (erro) {
-        // sem a foto, as cores da casa
-      }
-    }
-    this.limpar();
-    const objeto = FORMAS[this.forma](T, { diametro: limitar(Math.min(this.largura, this.fundo), 1.4, 4.6), cores });
-    objeto.traverse((o) => {
-      if (o.geometry) this.descartaveis.push(o.geometry);
-      if (o.material) this.descartaveis.push(o.material, ...(o.material.map ? [o.material.map] : []));
-    });
-    this.corpo.add(objeto);
-    const tamanho = new T.Box3().setFromObject(objeto).getSize(new T.Vector3());
-    this.H = tamanho.y;
-    this.W = tamanho.x;
-    this.D = tamanho.z;
-    this.montada = 1;
-    this.sombra.scale.set(this.W * 0.6, this.D * 0.6, 1);
-    this.ajustarPivo();
-    this.marcar();
+  /** Pede o objeto 3D (uma vez só): ele fura a fila, é o que mais se quer ver. */
+  pedir() {
+    if (this.pedido) return;
+    this.pedido = true;
+    this.arena.fila.unshift(() => this.vestirModelo());
   }
 
   /** O objeto 3D feito com os arquivos da fábrica (.glb), no tamanho real. */
@@ -1580,7 +1355,6 @@ class Maquina {
       const objeto = gltf.scene;
       // o arquivo inteiro fica guardado: as cores trocam os materiais dele
       this.gltf = gltf;
-      this.limpar();
       const caixa = new T.Box3().setFromObject(objeto);
       const tamanho = caixa.getSize(new T.Vector3());
       objeto.position.y -= caixa.min.y;
@@ -1600,232 +1374,11 @@ class Maquina {
       // escolhida antes de o objeto chegar: as cores aparecem agora na ficha
       if (this.arena.selecionada === this) this.arena.mostrarCores(this);
     } catch (erro) {
-      // sem o objeto, a máquina volta para o volume feito das fotos
+      // sem o objeto não há o que mostrar: a máquina sai da roda (fica na
+      // lista e na galeria de fotos) e a roda se fecha sem o buraco
       console.error("Arena 3D: o objeto 3D não carregou", erro);
-      this.modelo = "";
-      this.pedido = 0;
-      if (this.temFoto) this.pedir(this.arena.fotoLonge);
-      else this.semFoto = true;
+      this.arena.tirarDaRoda(this);
     }
-  }
-
-  async carregar(tamanho) {
-    const lados = LADOS.filter((lado) => this.fotos[lado]);
-    const prontas = await Promise.all(lados.map(async (lado) => {
-      try {
-        const img = await carregarImagem(fotoNaLargura(this.fotos[lado], tamanho));
-        const recorte = recortar(img, tamanho);
-        return recorte ? [lado, recorte] : null;
-      } catch (erro) {
-        return null;
-      }
-    }));
-    const fotos = {};
-    prontas.forEach((par) => { if (par) fotos[par[0]] = par[1]; });
-    if (!fotos.perfil) {
-      // sem a frente, a primeira foto que chegou faz o papel dela
-      const outra = LADOS.find((lado) => fotos[lado]);
-      if (!outra) {
-        if (!this.montada) this.semFoto = true;
-        return;
-      }
-      fotos.perfil = fotos[outra];
-      delete fotos[outra];
-    }
-    if (tamanho < this.montada) return;
-    this.montar(fotos);
-    this.montada = tamanho;
-  }
-
-  limpar() {
-    this.corpo.children.slice().forEach((filho) => this.corpo.remove(filho));
-    new Set(this.descartaveis).forEach((item) => item.dispose());
-    this.descartaveis = [];
-  }
-
-  textura(tela) {
-    const T = this.arena.T;
-    const textura = new T.CanvasTexture(tela);
-    textura.colorSpace = T.SRGBColorSpace;
-    textura.anisotropy = this.arena.anisotropia;
-    this.descartaveis.push(textura);
-    return textura;
-  }
-
-  material(opcoes) {
-    const material = new this.arena.T.MeshBasicMaterial({ toneMapped: false, ...opcoes });
-    this.descartaveis.push(material);
-    return material;
-  }
-
-  montar(fotos) {
-    this.limpar();
-    const frente = fotos.perfil;
-    if (!frente.recortada) this.montarPainel(frente);
-    else {
-      const forma = silhueta(frente.tela);
-      if (forma.cheio < 0.4) this.montarVazado(frente, fotos);
-      else this.montarCasco(frente, forma, fotos);
-    }
-    this.sombra.scale.set(Math.max(0.5, this.W) * 0.8, Math.max(0.5, this.D) * 0.8, 1);
-    this.ajustarPivo();
-    this.marcar();
-  }
-
-  /** Grande demais para o pedestal: encolhe por inteiro (nunca deforma). */
-  caber(W, D) {
-    const meiaDiagonal = Math.hypot(W, D) / 2;
-    return Math.min(1, (this.raioP * 1.08) / meiaDiagonal);
-  }
-
-  montarCasco(frente, forma, fotos) {
-    const T = this.arena.T;
-    const lados = {};
-    ["lado_direito", "lado_esquerdo", "verso"].forEach((lado) => {
-      if (fotos[lado] && fotos[lado].recortada) lados[lado] = silhueta(fotos[lado].tela);
-    });
-    let H = this.altura;
-    let W = limitar(H * forma.aspecto, 0.3, 5);
-    // a profundidade é a das fotos de lado (na escala da altura) ou a do cadastro
-    const deLado = [lados.lado_direito, lados.lado_esquerdo].filter(Boolean);
-    let D = deLado.length ? deLado.reduce((soma, s) => soma + H * s.aspecto, 0) / deLado.length : this.fundo;
-    D = limitar(D, 0.25, 5);
-    const escala = this.caber(W, D);
-    H *= escala;
-    W *= escala;
-    D *= escala;
-
-    const y = [];
-    const x0 = [];
-    const x1 = [];
-    const zf = [];
-    const zb = [];
-    const uv = { frente: [], costas: [], direita: [], esquerda: [] };
-    const beira = 0.006; // um fio para dentro da beira da frente
-    const ld = lados.lado_direito;
-    const le = lados.lado_esquerdo;
-    const lv = lados.verso;
-    for (let k = 0; k <= LINHAS; k++) {
-      y.push((H * k) / LINHAS);
-      x0.push(-W / 2 + forma.esq[k] * W);
-      x1.push(-W / 2 + forma.dir[k] * W);
-      let f = 0;
-      let b = 0;
-      // foto do lado direito: a frente da máquina fica à esquerda da foto
-      if (ld) { f += D / 2 - ld.esq[k] * D; b += D / 2 - ld.dir[k] * D; }
-      if (le) { f += -D / 2 + le.dir[k] * D; b += -D / 2 + le.esq[k] * D; }
-      if (deLado.length) { f /= deLado.length; b /= deLado.length; } else { f = D / 2; b = -D / 2; }
-      if (f - b < 0.06) {
-        const meio = (f + b) / 2;
-        f = meio + 0.03;
-        b = meio - 0.03;
-      }
-      zf.push(f);
-      zb.push(b);
-      uv.frente.push([forma.esq[k], forma.dir[k]]);
-      uv.costas.push(lv ? [lv.esq[k], lv.dir[k]] : [0, 1]);
-      uv.direita.push(ld ? [ld.esq[k], ld.dir[k]] : [forma.dir[k] - beira, forma.dir[k] - beira]);
-      uv.esquerda.push(le ? [le.esq[k], le.dir[k]] : [forma.esq[k] + beira, forma.esq[k] + beira]);
-    }
-    uv.topo = [forma.esq[LINHAS], forma.dir[LINHAS], 0.985];
-
-    // Cada face é a foto recortada: onde a foto é vazada (entre as pernas,
-    // no vão de um aro) a face também é, e o que se vê lá dentro é o
-    // avesso escuro das outras faces -- como o interior de um gabinete.
-    const cor = corMedia(frente.tela);
-    const texFrente = this.textura(frente.tela);
-    const texturas = [
-      texFrente,
-      this.textura(lv ? fotos.verso.tela : costasRecortadas(frente.tela, cor)),
-      ld ? this.textura(fotos.lado_direito.tela) : texFrente,
-      le ? this.textura(fotos.lado_esquerdo.tela) : texFrente,
-      texFrente,
-    ];
-    const unicos = new Map();
-    const pele = (textura, lado) => {
-      const chave = textura.uuid + lado;
-      if (!unicos.has(chave)) {
-        unicos.set(chave, this.material(lado === "fora"
-          ? { map: textura, alphaTest: 0.5, vertexColors: true }
-          : { map: textura, alphaTest: 0.5, color: "#2b3140", side: T.BackSide }));
-      }
-      return unicos.get(chave);
-    };
-    const geometria = montarCasco(T, { y, x0, x1, zf, zb, uv });
-    this.descartaveis.push(geometria);
-    this.corpo.add(new T.Mesh(geometria, [...texturas.map((t) => pele(t, "fora")), this.arena.matBase()]));
-    this.corpo.add(new T.Mesh(geometria, [...texturas.map((t) => pele(t, "dentro")), this.arena.matBaseDentro()]));
-    // os pés de borracha nos cantos da base (aparecem na vista de baixo)
-    const pe = Math.min(0.09, (x1[0] - x0[0]) * 0.12, (zf[0] - zb[0]) * 0.12);
-    [[x0[0], zf[0]], [x1[0], zf[0]], [x0[0], zb[0]], [x1[0], zb[0]]].forEach(([x, z]) => {
-      this.arena.cilindro(this.corpo, pe, 0.05, this.arena.borracha(), x - Math.sign(x) * pe * 1.6, -0.025, z - Math.sign(z) * pe * 1.6, 12);
-    });
-    this.H = H;
-    this.W = W;
-    this.D = Math.max(...zf) - Math.min(...zb);
-  }
-
-  /** Foto de fundo complicado: um painel em pé com a foto inteira na frente. */
-  montarPainel(frente) {
-    const T = this.arena.T;
-    const pe = 0.35;
-    let H = limitar(this.altura, 1.3, 2.4);
-    let W = limitar(H * frente.aspecto, 0.6, 3.2);
-    const escala = this.caber(W, 0.3);
-    H *= escala;
-    W *= escala;
-    const y = [];
-    const lista = (valor) => Array.from({ length: LINHAS + 1 }, () => valor);
-    for (let k = 0; k <= LINHAS; k++) y.push(pe + (H * k) / LINHAS);
-    const cor = corMedia(frente.tela);
-    const matFoto = this.material({ map: this.textura(frente.tela), vertexColors: true });
-    const geometria = montarCasco(T, {
-      y,
-      x0: lista(-W / 2),
-      x1: lista(W / 2),
-      zf: lista(0.07),
-      zb: lista(-0.07),
-      uv: {
-        frente: lista([0, 1]),
-        costas: lista([0, 1]),
-        direita: lista([0.995, 0.995]),
-        esquerda: lista([0.005, 0.005]),
-        topo: [0, 1, 0.99],
-      },
-    });
-    this.descartaveis.push(geometria);
-    const materiais = [matFoto, this.material({ map: this.textura(pintarCostas(cor)), vertexColors: true }), matFoto, matFoto, matFoto, this.arena.matBase()];
-    this.corpo.add(new T.Mesh(geometria, materiais));
-    this.arena.caixa(this.corpo, Math.min(0.5, W * 0.4), pe, 0.3, this.arena.escuro(), 0, pe / 2, 0);
-    this.H = H + pe;
-    this.W = W;
-    this.D = 0.3;
-  }
-
-  /** Foto vazada (rede, grade): duas placas cruzadas, a frente e o lado. */
-  montarVazado(frente, fotos) {
-    const T = this.arena.T;
-    const lado = [fotos.lado_direito, fotos.lado_esquerdo].find((f) => f && f.recortada);
-    let H = this.altura;
-    let W = limitar(H * frente.aspecto, 0.4, 5);
-    let D = lado ? limitar(H * lado.aspecto, 0.3, 5) : limitar(this.fundo, 0.3, 5);
-    const escala = this.caber(W, D);
-    H *= escala;
-    W *= escala;
-    D *= escala;
-    const plano = this.arena.geo("plano", () => new T.PlaneGeometry(1, 1));
-    const placa = (foto, largura, giro) => {
-      const malha = new T.Mesh(plano, this.material({ map: this.textura(foto.tela), alphaTest: 0.5, side: T.DoubleSide }));
-      malha.scale.set(largura, H, 1);
-      malha.position.y = H / 2;
-      malha.rotation.y = giro;
-      this.corpo.add(malha);
-    };
-    placa(frente, W, 0);
-    placa(lado || frente, D, -PI / 2);
-    this.H = H;
-    this.W = W;
-    this.D = D;
   }
 
   /** O centro do que a câmera deve olhar, já com o "levantar" da vista de baixo. */
@@ -1851,6 +1404,170 @@ class Maquina {
 }
 
 /* ======================================================================
+   O SÍMBOLO E O PARQUE — os desenhos que não dependem da cena
+   ====================================================================== */
+
+/** Números "sorteados" sempre iguais (o parque fica igual a cada montagem da roda). */
+function sorteador(semente) {
+  let s = semente >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Um texto ao longo de um arco, com o pé das letras para fora e o topo
+ * para o meio, lido da esquerda para a direita por quem está do lado de
+ * fora daquele arco (`centro` é o ângulo do meio do texto, no canvas).
+ */
+function textoNoArco(g, texto, centro, raio, peso, tamanho, cor, espaco = 0.05) {
+  g.font = `${peso} ${tamanho}px Poppins, Manrope, sans-serif`;
+  const letras = [...texto];
+  const larguras = letras.map((letra) => g.measureText(letra).width + tamanho * espaco);
+  let a = centro + larguras.reduce((soma, l) => soma + l, 0) / raio / 2;
+  g.fillStyle = cor;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  letras.forEach((letra, i) => {
+    const meio = a - larguras[i] / raio / 2;
+    a -= larguras[i] / raio;
+    g.save();
+    g.translate(Math.cos(meio) * raio, Math.sin(meio) * raio);
+    g.rotate(meio - PI / 2);
+    g.fillText(letra, 0, 0);
+    g.restore();
+  });
+}
+
+/** O símbolo da Lazer & Sport (o do logo), num canvas de `n` px: alvo, dardo e o nome em volta. */
+function pintarSimbolo(g, n) {
+  g.clearRect(0, 0, n, n);
+  g.save();
+  g.translate(n / 2, n / 2);
+  g.scale(n / 1024, n / 1024); // desenhado em 1024 px
+  const disco = (r, cor) => { g.fillStyle = cor; g.beginPath(); g.arc(0, 0, r, 0, PI * 2); g.fill(); };
+  const anel = (r, cor, largura) => { g.strokeStyle = cor; g.lineWidth = largura; g.beginPath(); g.arc(0, 0, r, 0, PI * 2); g.stroke(); };
+  // a borda azul-noite com o neon amarelo
+  disco(512, "#0b1440");
+  g.save();
+  g.shadowColor = "#ffd700";
+  g.shadowBlur = 20;
+  anel(493, "#ffd700", 9);
+  g.restore();
+  // a faixa branca do nome, como o selo do logo, com os fios vermelhos
+  disco(476, "#fbfbff");
+  anel(464, "#e63946", 6);
+  // o alvo, vermelho e branco, com o contorno escuro e o brilho do volume
+  disco(330, "#141a3a");
+  [[322, "#e63946"], [266, "#ffffff"], [210, "#e63946"], [154, "#ffffff"], [98, "#e63946"]].forEach(([r, cor]) => disco(r, cor));
+  const luz = g.createRadialGradient(-120, -130, 10, -70, -70, 340);
+  luz.addColorStop(0, "rgba(255, 255, 255, .3)");
+  luz.addColorStop(1, "rgba(255, 255, 255, 0)");
+  g.fillStyle = luz;
+  g.beginPath(); g.arc(0, 0, 322, 0, PI * 2); g.fill();
+  // os nomes na faixa: "Lazer & Sport" embaixo (a entrada), o resto em cima
+  textoNoArco(g, "Lazer & Sport", PI / 2, 396, 800, 104, "#141a3a", 0.03);
+  textoNoArco(g, "BRINQUEDOS • CENOGRAFIA • PARQUES", -PI / 2, 402, 800, 46, "#e63946", 0.08);
+  // estrelinhas no vão da esquerda
+  [[-0.17, 404, 22], [0, 400, 30], [0.17, 404, 22]].forEach(([da, r, t]) => {
+    const a = PI + da;
+    g.save();
+    g.translate(Math.cos(a) * r, Math.sin(a) * r);
+    g.rotate(a);
+    g.fillStyle = "#ffc400";
+    g.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const ri = i % 2 ? t * 0.45 : t;
+      g.lineTo(Math.cos((i / 10) * PI * 2 - PI / 2) * ri, Math.sin((i / 10) * PI * 2 - PI / 2) * ri);
+    }
+    g.fill();
+    g.restore();
+  });
+  // o dardo azul, cravado no meio, saindo pelo vão da direita
+  g.save();
+  g.rotate(-0.02);
+  g.lineJoin = "round";
+  g.fillStyle = "#3d4660";
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(70, -12); g.lineTo(70, 12); g.closePath(); g.fill();
+  g.fillStyle = "#2f8bff";
+  g.beginPath(); g.arc(78, 0, 22, 0, PI * 2); g.fill();
+  g.fillStyle = "#f4f6ff";
+  g.strokeStyle = "#141a3a";
+  g.lineWidth = 7;
+  g.beginPath();
+  if (g.roundRect) g.roundRect(96, -15, 300, 30, 15); else g.rect(96, -15, 300, 30);
+  g.fill();
+  g.stroke();
+  [[-1, "#3fd0ff"], [1, "#2f8bff"]].forEach(([lado, cor]) => {
+    g.fillStyle = cor;
+    g.beginPath();
+    g.moveTo(350, lado * 10);
+    g.lineTo(455, lado * 74);
+    g.lineTo(478, lado * 50);
+    g.lineTo(420, lado * 8);
+    g.closePath();
+    g.fill();
+    g.stroke();
+  });
+  g.restore();
+  g.restore();
+}
+
+/**
+ * Um carrinho de festa (pipoca ou algodão-doce), em peças com a cor nos
+ * vértices, de frente para +z e com as rodas no chão: o toldo listrado, a
+ * vitrine acesa e as rodas. Devolve a geometria (para juntar com as outras).
+ */
+function montarCarrinho(T, tipo) {
+  const pipoca = tipo === "pipoca";
+  const corpo = pipoca ? "#e63946" : "#ff5fc8";
+  const pecas = [];
+  [-0.62, 0.62].forEach((x) => {
+    const roda = new T.CylinderGeometry(0.28, 0.28, 0.07, 14);
+    roda.rotateZ(PI / 2);
+    pecas.push(pecaColorida(T, roda, "#232838", x, 0.28, 0));
+    const cubo = new T.CylinderGeometry(0.07, 0.07, 0.09, 8);
+    cubo.rotateZ(PI / 2);
+    pecas.push(pecaColorida(T, cubo, "#ffd700", x, 0.28, 0));
+  });
+  pecas.push(
+    pecaColorida(T, new T.BoxGeometry(1.25, 0.72, 0.75), corpo, 0, 0.78, 0),
+    pecaColorida(T, new T.BoxGeometry(1.27, 0.1, 0.77), "#ffffff", 0, 1.0, 0),
+    pecaColorida(T, new T.BoxGeometry(1.15, 0.06, 0.7), corpo, 0, 1.72, 0),
+    pecaColorida(T, new T.CylinderGeometry(0.03, 0.03, 0.5, 6), "#e9e9f2", 0, 1.98, 0),
+  );
+  const alca = new T.CylinderGeometry(0.025, 0.025, 0.9, 6);
+  alca.rotateZ(PI / 2);
+  pecas.push(pecaColorida(T, alca, "#e9e9f2", 0, 1.1, -0.55));
+  if (pipoca) {
+    // a vitrine cheia de pipoca, acesa
+    pecas.push(pecaColorida(T, new T.BoxGeometry(1.05, 0.55, 0.6), "#fff0a6", 0, 1.42, 0));
+  } else {
+    // as nuvens de algodão-doce no palito
+    [[-0.3, "#ffb3e6"], [0.05, "#9fe1ff"], [0.35, "#ffd1f0"]].forEach(([x, cor], i) => {
+      pecas.push(pecaColorida(T, new T.CylinderGeometry(0.012, 0.012, 0.35, 4), "#f4f6ff", x, 1.3, 0.05 * i));
+      pecas.push(pecaColorida(T, new T.IcosahedronGeometry(0.2, 1), cor, x, 1.55, 0.05 * i));
+    });
+  }
+  // o toldo listrado: um cone de 8 gomos, cada gomo de uma cor
+  const toldo = new T.ConeGeometry(0.95, 0.45, 8, 1, true).toNonIndexed();
+  const listra = [new T.Color(corpo), new T.Color("#ffffff")];
+  const cores = new Float32Array(toldo.attributes.position.count * 3);
+  for (let v = 0; v < toldo.attributes.position.count; v++) {
+    const c = listra[Math.floor(v / 6) % 2];
+    cores.set([c.r, c.g, c.b], v * 3);
+  }
+  toldo.setAttribute("color", new T.BufferAttribute(cores, 3));
+  toldo.translate(0, 2.42, 0);
+  pecas.push(toldo);
+  return juntarPecas(T, pecas);
+}
+
+/* ======================================================================
    A ARENA
    ====================================================================== */
 class Arena {
@@ -1862,8 +1579,6 @@ class Arena {
     this.zonas = dados.zonas || [];
     this.reduzido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.celular = window.matchMedia && window.matchMedia("(max-width: 700px)").matches;
-    this.fotoLonge = 384;
-    this.fotoPerto = this.celular ? 768 : 1024;
     this.zona = "";
     this.categoria = "";
     this.roda = [];
@@ -1881,7 +1596,7 @@ class Arena {
     this.canvas = document.createElement("canvas");
     this.canvas.className = "arena3d-tela";
     this.canvas.setAttribute("role", "img");
-    this.canvas.setAttribute("aria-label", "Arena 3D com as máquinas da Lazer & Sport, montadas com as fotos reais. Arraste para girar e toque numa máquina para ver a ficha.");
+    this.canvas.setAttribute("aria-label", "Arena 3D da Lazer & Sport: um parque com os brinquedos da fábrica em 3D. Arraste para girar e toque num brinquedo para ver a ficha.");
     palco.prepend(this.canvas);
 
     const densidade = Math.min(window.devicePixelRatio || 1, this.celular ? 1.5 : 1.75);
@@ -1895,8 +1610,10 @@ class Arena {
     this.anisotropia = Math.min(4, this.renderer.capabilities.getMaxAnisotropy());
 
     this.cena = new T.Scene();
-    this.cena.background = new T.Color("#0a1238");
-    this.cena.fog = new T.Fog("#141c4a", 30, 90);
+    // o fundo e a neblina na cor do horizonte do céu (montarCeu): o chão
+    // de longe some nele sem emenda
+    this.cena.background = new T.Color(HORIZONTE);
+    this.cena.fog = new T.Fog(HORIZONTE, 30, 90);
     this.camera = new T.PerspectiveCamera(45, 1, 0.1, 400);
     this.camera.position.set(0, 12, 28);
     this.raycaster = new T.Raycaster();
@@ -1911,10 +1628,8 @@ class Arena {
     this.decoracao = new T.Group();
     this.cena.add(this.decoracao);
 
-    // sem foto não há de onde montar o objeto: a máquina fica só na lista
-    this.maquinas = (dados.maquinas || [])
-      .map((d, i) => (Object.keys(fotosDe(d)).length || d.modelo || FORMAS[d.desenho] ? new Maquina(this, d, i) : null))
-      .filter(Boolean);
+    // só quem tem o objeto 3D (o servidor já manda só esses)
+    this.maquinas = (dados.maquinas || []).filter((d) => d.modelo).map((d, i) => new Maquina(this, d, i));
     this.camera3d = new Camera(this);
   }
 
@@ -2340,62 +2055,411 @@ class Arena {
     this.alvoMarca = alvo;
   }
 
+  /**
+   * O CÉU DE FESTA, todo num grupo que acompanha a câmera (o céu fica
+   * sempre "no infinito", e nunca sai do alcance dela):
+   *   - a cúpula: o crepúsculo de anil (em cima) a roxo e magenta, com o
+   *     brilho rosado do parque logo acima do horizonte -- um shader de
+   *     poucas contas, sem textura nenhuma; embaixo do horizonte, a cor da
+   *     neblina, para o chão sumir nele sem emenda;
+   *   - as estrelas, pontos fixos na cúpula (uma chamada de desenho);
+   *   - a silhueta do parque lá longe: roda-gigante, montanha-russa e tendas
+   *     com as luzinhas (um canvas de 1024 x 128, repetido em volta).
+   * E, no mundo, os holofotes do parque varrendo o céu, uns fogos
+   * discretos de vez em quando e o confete caindo devagar no ar da arena.
+   * Com "menos movimento", holofotes e confete ficam parados e não há fogos.
+   */
   montarCeu() {
     const T = this.T;
-    // estrelas e faíscas: pontos aditivos, uma chamada de desenho só
-    const quantidade = this.celular ? 260 : 520;
-    const posicoes = new Float32Array(quantidade * 3);
-    for (let i = 0; i < quantidade; i++) {
+    const ceu = new T.Group();
+    this.ceu = ceu;
+    this.cena.add(ceu);
+    const cupula = new T.Mesh(new T.SphereGeometry(300, 32, 20), new T.ShaderMaterial({
+      uniforms: {
+        alto: { value: new T.Color("#060a2c") },
+        meio: { value: new T.Color("#26176a") },
+        baixo: { value: new T.Color("#7a2c8c") },
+        brilho: { value: new T.Color("#ff5f8f") },
+        chao: { value: new T.Color(HORIZONTE) },
+      },
+      vertexShader: "varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: `
+        uniform vec3 alto, meio, baixo, brilho, chao;
+        varying vec3 vDir;
+        void main() {
+          float h = vDir.y;
+          vec3 c = mix(baixo, meio, smoothstep(0.0, 0.2, h));
+          c = mix(c, alto, smoothstep(0.16, 0.72, h));
+          // o brilho do parque no horizonte, mais forte para uns lados (as luzes da cidade)
+          float lado = 0.75 + 0.25 * sin(atan(vDir.z, vDir.x) * 3.0);
+          c += brilho * (0.5 * lado) * exp(-max(h, 0.0) * 13.0);
+          c = mix(chao, c, smoothstep(-0.03, 0.015, h));
+          gl_FragColor = vec4(c, 1.0);
+          #include <colorspace_fragment>
+        }`,
+      side: T.BackSide, depthWrite: false,
+    }));
+    cupula.renderOrder = -3;
+    ceu.add(cupula);
+
+    // as estrelas: na cúpula, mais densas no alto, cada uma com o seu brilho
+    const brilho = this.texturaDeBrilho();
+    const quantas = this.celular ? 220 : 420;
+    const pos = new Float32Array(quantas * 3);
+    const cores = new Float32Array(quantas * 3);
+    for (let i = 0; i < quantas; i++) {
+      const y = 0.12 + 0.88 * Math.sqrt(Math.random());
       const a = Math.random() * PI * 2;
-      const r = 6 + Math.random() * 50;
-      posicoes[i * 3] = Math.cos(a) * r;
-      posicoes[i * 3 + 1] = 0.5 + Math.random() * 26;
-      posicoes[i * 3 + 2] = Math.sin(a) * r;
+      const r = Math.sqrt(1 - y * y);
+      pos.set([Math.cos(a) * r * 280, y * 280, Math.sin(a) * r * 280], i * 3);
+      const k = 0.45 + Math.random() * 0.55;
+      cores.set(Math.random() < 0.15 ? [k, k * 0.8, k * 0.95] : [k * 0.85, k * 0.92, k], i * 3);
     }
-    const geometria = new T.BufferGeometry();
-    geometria.setAttribute("position", new T.Float32BufferAttribute(posicoes, 3));
-    const brilho = document.createElement("canvas");
-    brilho.width = brilho.height = 64;
-    const g = brilho.getContext("2d");
+    const geoEstrelas = new T.BufferGeometry();
+    geoEstrelas.setAttribute("position", new T.BufferAttribute(pos, 3));
+    geoEstrelas.setAttribute("color", new T.BufferAttribute(cores, 3));
+    const estrelas = new T.Points(geoEstrelas, new T.PointsMaterial({
+      size: 2.6, sizeAttenuation: false, map: brilho, vertexColors: true, transparent: true,
+      depthWrite: false, blending: T.AdditiveBlending, fog: false, toneMapped: false,
+    }));
+    estrelas.renderOrder = -2;
+    ceu.add(estrelas);
+
+    // a silhueta do parque no horizonte
+    const silhueta = new T.Mesh(
+      new T.CylinderGeometry(220, 220, 46, 64, 1, true),
+      new T.MeshBasicMaterial({ map: this.texturaDaSilhueta(), transparent: true, side: T.BackSide, depthWrite: false, fog: false, toneMapped: false }),
+    );
+    silhueta.position.y = 46 / 2 - 9; // o pé um pouco abaixo do horizonte
+    silhueta.renderOrder = -1;
+    ceu.add(silhueta);
+
+    this.montarHolofotes();
+    this.montarFogos();
+    this.montarConfete();
+  }
+
+  /** O brilho redondo (estrelas, postes, fogos): um canvas de 64 px, feito uma vez. */
+  texturaDeBrilho() {
+    if (this.brilhoRedondo) return this.brilhoRedondo;
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const g = c.getContext("2d");
     const rad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
     rad.addColorStop(0, "rgba(255,255,255,1)");
-    rad.addColorStop(0.3, "rgba(160,210,255,.6)");
-    rad.addColorStop(1, "rgba(160,210,255,0)");
+    rad.addColorStop(0.25, "rgba(255,255,255,.55)");
+    rad.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = rad;
     g.fillRect(0, 0, 64, 64);
-    this.estrelas = new T.Points(geometria, new T.PointsMaterial({
-      size: 0.35, map: new T.CanvasTexture(brilho), transparent: true, depthWrite: false,
-      blending: T.AdditiveBlending, color: "#bfe0ff",
-    }));
-    this.cena.add(this.estrelas);
+    this.brilhoRedondo = new this.T.CanvasTexture(c);
+    return this.brilhoRedondo;
+  }
+
+  /** A silhueta: roda-gigante, montanha-russa, tendas e árvores, com as luzinhas acesas. */
+  texturaDaSilhueta() {
+    const T = this.T;
+    const W = 1024;
+    const H = 128;
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const g = c.getContext("2d");
+    const pe = H - 6;
+    const cor = "#170d3f";
+    g.fillStyle = cor;
+    g.strokeStyle = cor;
+    const luzes = [];
+    // árvores e morrinhos ao longo de tudo
+    for (let x = 0; x < W; x += 9) {
+      const h = 10 + 7 * Math.sin(x * 0.031) + 5 * Math.sin(x * 0.11 + 1.3);
+      g.beginPath();
+      g.arc(x, pe - h * 0.5, 7 + (x % 5), 0, PI * 2);
+      g.fill();
+    }
+    g.fillRect(0, pe - 6, W, 6 + 6);
+    // a roda-gigante
+    const rodaGigante = (cx, r) => {
+      const cy = pe - r - 8;
+      g.lineWidth = 2.2;
+      g.beginPath(); g.arc(cx, cy, r, 0, PI * 2); g.stroke();
+      g.lineWidth = 1.2;
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * PI * 2;
+        g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.stroke();
+        g.fillRect(cx + Math.cos(a) * r - 3, cy + Math.sin(a) * r, 6, 6);
+        luzes.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, i % 3]);
+      }
+      g.lineWidth = 3;
+      g.beginPath(); g.moveTo(cx - r * 0.5, pe); g.lineTo(cx, cy); g.lineTo(cx + r * 0.5, pe); g.stroke();
+    };
+    // a montanha-russa: o trilho ondulado nos pilares
+    const montanhaRussa = (x0, x1, alto) => {
+      g.lineWidth = 2.5;
+      g.beginPath();
+      for (let x = x0; x <= x1; x += 4) {
+        const t = (x - x0) / (x1 - x0);
+        const y = pe - 10 - alto * (0.55 + 0.45 * Math.sin(t * PI * 3.2 + 0.6)) * Math.sin(t * PI);
+        if (x === x0) g.moveTo(x, y); else g.lineTo(x, y);
+        if ((x - x0) % 16 === 0) { g.fillRect(x - 1, y, 2, pe - y); if ((x - x0) % 32 === 0) luzes.push([x, y - 2, 1]); }
+      }
+      g.stroke();
+    };
+    // a tenda listrada do circo, com a bandeirinha
+    const tenda = (cx, w, h) => {
+      g.beginPath();
+      g.moveTo(cx - w / 2, pe);
+      g.lineTo(cx - w / 2, pe - h * 0.45);
+      g.quadraticCurveTo(cx - w * 0.2, pe - h * 0.6, cx, pe - h);
+      g.quadraticCurveTo(cx + w * 0.2, pe - h * 0.6, cx + w / 2, pe - h * 0.45);
+      g.lineTo(cx + w / 2, pe);
+      g.fill();
+      g.fillRect(cx - 1, pe - h - 12, 2, 12);
+      g.beginPath(); g.moveTo(cx + 1, pe - h - 12); g.lineTo(cx + 11, pe - h - 9); g.lineTo(cx + 1, pe - h - 6); g.fill();
+      luzes.push([cx, pe - h, 2], [cx - w / 2, pe - h * 0.45, 0], [cx + w / 2, pe - h * 0.45, 0]);
+    };
+    // a torre de queda livre
+    const torre = (cx, h) => {
+      g.fillRect(cx - 3, pe - h, 6, h);
+      g.fillRect(cx - 9, pe - h * 0.55, 18, 6);
+      luzes.push([cx, pe - h, 1], [cx, pe - h * 0.5, 2]);
+    };
+    rodaGigante(150, 46);
+    montanhaRussa(250, 470, 52);
+    tenda(560, 90, 54);
+    torre(660, 96);
+    tenda(760, 60, 38);
+    rodaGigante(880, 34);
+    montanhaRussa(930, 1010, 30);
+    // as luzinhas acesas (amarelas, rosas e azuis), com um halo
+    const tons = ["#ffd84a", "#ff6fd8", "#7fd8ff"];
+    luzes.forEach(([x, y, k]) => {
+      g.fillStyle = tons[k];
+      g.shadowColor = tons[k];
+      g.shadowBlur = 6;
+      g.beginPath(); g.arc(x, y, 1.8, 0, PI * 2); g.fill();
+    });
+    g.shadowBlur = 0;
+    const textura = new T.CanvasTexture(c);
+    textura.colorSpace = T.SRGBColorSpace;
+    textura.wrapS = T.RepeatWrapping;
+    textura.repeat.set(3, 1);
+    return textura;
   }
 
   /**
-   * A FESTA -- a arena como um parque de diversões à noite: o céu de fim de
-   * tarde (roxo no horizonte, azul em cima), firme, sem nada piscando. As
-   * bandeirinhas, as lâmpadas, os balões, o portal e as placas no ar vêm
-   * com a roda (dependem do tamanho dela): `montarPilares` e `marcarArea`.
+   * Os holofotes: fachos de luz saindo de trás do parque e varrendo o céu
+   * devagar. Uma instância por facho (uma chamada de desenho), num shader
+   * que apaga o facho para cima e nas beiradas -- parece luz, não cone.
+   */
+  montarHolofotes() {
+    const T = this.T;
+    const altura = 90;
+    const geo = new T.CylinderGeometry(5.5, 0.35, altura, 20, 1, true);
+    geo.translate(0, altura / 2, 0);
+    const material = new T.ShaderMaterial({
+      uniforms: { altura: { value: altura } },
+      vertexShader: `
+        uniform float altura;
+        varying float vSubida;
+        varying float vBorda;
+        varying vec3 vCor;
+        void main() {
+          vec4 p = vec4(position, 1.0);
+          mat3 giro = mat3(1.0);
+          vCor = vec3(1.0);
+          #ifdef USE_INSTANCING
+            p = instanceMatrix * p;
+            giro = mat3(instanceMatrix);
+          #endif
+          #ifdef USE_INSTANCING_COLOR
+            vCor = instanceColor;
+          #endif
+          vec4 mv = modelViewMatrix * p;
+          vec3 n = normalize(normalMatrix * giro * normal);
+          vBorda = abs(dot(n, normalize(-mv.xyz)));
+          vSubida = position.y / altura;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        varying float vSubida;
+        varying float vBorda;
+        varying vec3 vCor;
+        void main() {
+          float a = pow(1.0 - vSubida, 1.7) * pow(vBorda, 2.2) * 0.22;
+          gl_FragColor = vec4(vCor * a, 1.0);
+        }`,
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide,
+    });
+    const tons = ["#ff5fd2", "#7fd8ff", "#ffd84a", "#ffffff", "#ff5fd2", "#7fd8ff"];
+    const n = this.celular ? 4 : 6;
+    const fachos = new T.InstancedMesh(geo, material, n);
+    fachos.frustumCulled = false;
+    fachos.renderOrder = 2;
+    this.fachos = { malha: fachos, lista: [] };
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * PI * 2 + 0.35;
+      this.fachos.lista.push({ x: Math.sin(a) * 62, z: Math.cos(a) * 62, fase: i * 1.7, giro: a });
+      fachos.setColorAt(i, new T.Color(tons[i]));
+    }
+    this.cena.add(fachos);
+    this.animarHolofotes(0);
+  }
+
+  animarHolofotes(t) {
+    const ajuda = this.ajudaObjeto || (this.ajudaObjeto = new this.T.Object3D());
+    const { malha, lista } = this.fachos;
+    lista.forEach((f, i) => {
+      ajuda.position.set(f.x, -1, f.z);
+      // inclinado para dentro do parque, balançando devagar de um lado para o outro
+      ajuda.rotation.set(0, 0, 0);
+      ajuda.rotateY(f.giro + Math.sin(t * 0.23 + f.fase) * 0.55);
+      ajuda.rotateX(-0.42 + Math.sin(t * 0.17 + f.fase * 1.3) * 0.12);
+      ajuda.updateMatrix();
+      malha.setMatrixAt(i, ajuda.matrix);
+    });
+    malha.instanceMatrix.needsUpdate = true;
+  }
+
+  /**
+   * Os fogos: de vez em quando, um estouro pequeno lá longe, sobre o parque
+   * (uns 60 pontos que se abrem, caem um pouco e apagam). Um conjunto de
+   * pontos só, para todos; as contas são poucas e só com os fogos no ar.
+   */
+  montarFogos() {
+    const T = this.T;
+    const POR_ESTOURO = 56;
+    const ESTOUROS = 3;
+    const total = POR_ESTOURO * ESTOUROS;
+    const geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.BufferAttribute(new Float32Array(total * 3), 3));
+    geo.setAttribute("color", new T.BufferAttribute(new Float32Array(total * 3), 3));
+    const pontos = new T.Points(geo, new T.PointsMaterial({
+      size: 2.4, map: this.texturaDeBrilho(), vertexColors: true, transparent: true, depthWrite: false,
+      blending: T.AdditiveBlending, fog: false, toneMapped: false,
+    }));
+    pontos.frustumCulled = false;
+    this.cena.add(pontos);
+    const direcoes = [];
+    for (let i = 0; i < POR_ESTOURO; i++) {
+      const y = 1 - (2 * (i + 0.5)) / POR_ESTOURO;
+      const r = Math.sqrt(1 - y * y);
+      const a = i * 2.39996;
+      direcoes.push([Math.cos(a) * r, y, Math.sin(a) * r]);
+    }
+    this.fogos = {
+      pontos, direcoes, POR_ESTOURO,
+      estouros: Array.from({ length: ESTOUROS }, () => ({ vida: 99, centro: new T.Vector3(), cor: new T.Color(), forca: 1 })),
+      proximo: 2.5,
+    };
+    pontos.visible = false;
+  }
+
+  animarFogos(dt) {
+    const f = this.fogos;
+    f.proximo -= dt;
+    if (f.proximo <= 0) {
+      const livre = f.estouros.find((e) => e.vida > 2.2);
+      if (livre) {
+        const a = Math.random() * PI * 2;
+        const r = 80 + Math.random() * 50;
+        livre.centro.set(Math.sin(a) * r, 38 + Math.random() * 26, Math.cos(a) * r);
+        livre.cor.set(["#ffd84a", "#ff3df2", "#3fd0ff", "#e63946", "#7dff9a"][Math.floor(Math.random() * 5)]);
+        livre.forca = 9 + Math.random() * 5;
+        livre.vida = 0;
+      }
+      f.proximo = 2.2 + Math.random() * 3.5;
+    }
+    const pos = f.pontos.geometry.attributes.position;
+    const cor = f.pontos.geometry.attributes.color;
+    let algum = false;
+    f.estouros.forEach((e, k) => {
+      e.vida += dt;
+      const vivo = e.vida < 2.2;
+      algum = algum || vivo;
+      const abre = (1 - Math.exp(-e.vida * 2.6)) * e.forca / 2.6;
+      const cai = 1.6 * e.vida * e.vida;
+      const apaga = vivo ? Math.pow(1 - e.vida / 2.2, 1.6) : 0;
+      for (let i = 0; i < f.POR_ESTOURO; i++) {
+        const [dx, dy, dz] = f.direcoes[i];
+        const j = k * f.POR_ESTOURO + i;
+        pos.setXYZ(j, e.centro.x + dx * abre, e.centro.y + dy * abre - cai, e.centro.z + dz * abre);
+        const pisca = 0.75 + 0.25 * Math.sin(e.vida * 30 + i);
+        cor.setXYZ(j, e.cor.r * apaga * pisca, e.cor.g * apaga * pisca, e.cor.b * apaga * pisca);
+      }
+    });
+    f.pontos.visible = algum;
+    if (algum) {
+      pos.needsUpdate = true;
+      cor.needsUpdate = true;
+    }
+  }
+
+  /** O confete: papeizinhos coloridos caindo devagar no ar da arena, balançando. */
+  montarConfete() {
+    const T = this.T;
+    const quantos = this.celular ? 90 : 170;
+    const pos = new Float32Array(quantos * 3);
+    const cores = new Float32Array(quantos * 3);
+    const tons = ["#e63946", "#ffd700", "#2f8bff", "#22c55e", "#ff3df2", "#ff9f1c", "#ffffff"].map((c) => new T.Color(c));
+    const dados = [];
+    for (let i = 0; i < quantos; i++) {
+      const a = Math.random() * PI * 2;
+      const r = Math.sqrt(Math.random());
+      dados.push({ a, r, y: Math.random(), fase: Math.random() * PI * 2, v: 0.6 + Math.random() * 0.6 });
+      const t = tons[i % tons.length];
+      cores.set([t.r, t.g, t.b], i * 3);
+    }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new T.BufferAttribute(cores, 3));
+    // um papelzinho retangular (o ponto sempre de frente: o retângulo dá o jeito de papel)
+    const c = document.createElement("canvas");
+    c.width = c.height = 16;
+    const g = c.getContext("2d");
+    g.fillStyle = "#ffffff";
+    g.fillRect(4, 1, 8, 14);
+    const pontos = new T.Points(geo, new T.PointsMaterial({
+      size: 0.16, map: new T.CanvasTexture(c), vertexColors: true, alphaTest: 0.5, toneMapped: false,
+    }));
+    pontos.frustumCulled = false;
+    this.cena.add(pontos);
+    this.confete = { pontos, dados };
+    this.animarConfete(0, 0);
+  }
+
+  animarConfete(dt, t) {
+    const { pontos, dados } = this.confete;
+    const raio = (this.raio || 8) + (this.folga || 1.5) + 3;
+    const pos = pontos.geometry.attributes.position;
+    dados.forEach((d, i) => {
+      d.y -= (dt * d.v * 0.045);
+      if (d.y < 0) d.y += 1;
+      const balanco = Math.sin(t * 1.3 + d.fase) * 0.5;
+      pos.setXYZ(i, Math.sin(d.a) * d.r * raio + balanco, 0.4 + d.y * 13, Math.cos(d.a) * d.r * raio + Math.cos(t * 1.1 + d.fase) * 0.4);
+    });
+    pos.needsUpdate = true;
+  }
+
+  /** O que é do céu (e não do chão): fica fora da planta do passeio. */
+  festaNoCeu() {
+    return [this.ceu, this.fachos && this.fachos.malha, this.fogos && this.fogos.pontos, this.confete && this.confete.pontos].filter(Boolean);
+  }
+
+  /** O céu a cada quadro: acompanha a câmera; holofotes, fogos e confete andam (sem "menos movimento"). */
+  animarCeu(dt, t) {
+    this.ceu.position.copy(this.camera.position);
+    if (this.reduzido) return;
+    this.animarHolofotes(t);
+    this.animarFogos(dt);
+    this.animarConfete(dt, t);
+  }
+
+  /**
+   * A FESTA: as bandeirinhas, as lâmpadas, os balões, o portal e as placas
+   * no ar vêm com a roda (dependem do tamanho dela): `montarPilares`,
+   * `marcarArea` e `montarParque`.
    */
   montarFesta() {
-    const T = this.T;
-    const c = document.createElement("canvas");
-    c.width = 16;
-    c.height = 256;
-    const g = c.getContext("2d");
-    const ceu = g.createLinearGradient(0, 0, 0, 256);
-    ceu.addColorStop(0, "#050b26");
-    ceu.addColorStop(0.45, "#13245e");
-    ceu.addColorStop(0.62, "#3b2a78");
-    ceu.addColorStop(0.7, "#7a3d86");
-    ceu.addColorStop(1, "#141c4a");
-    g.fillStyle = ceu;
-    g.fillRect(0, 0, 16, 256);
-    const textura = new T.CanvasTexture(c);
-    textura.colorSpace = T.SRGBColorSpace;
-    const cupula = new T.Mesh(new T.SphereGeometry(300, 32, 16), new T.MeshBasicMaterial({ map: textura, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false }));
-    cupula.renderOrder = -1;
-    this.cena.add(cupula);
-
     this.baloes = [];
     this.placasNoAr = [];
   }
@@ -2408,6 +2472,23 @@ class Arena {
       b.rotation.y = Math.sin(t * 0.6 + b.userData.fase) * 0.25;
     });
     this.placasNoAr.forEach((p) => { p.position.y = p.userData.y + Math.sin(t * 1.1 + p.userData.fase) * 0.18; });
+  }
+
+  /**
+   * A placa no ar do lado de cá da roda (entre a câmera e o meio) some: ela
+   * taparia a roda e o símbolo do chão. As do outro lado ficam, de frente.
+   */
+  clarearPlacas() {
+    const c = this.camera.position;
+    const longe = Math.hypot(c.x, c.z);
+    this.placasNoAr.forEach((p) => {
+      const perto = Math.hypot(p.position.x - c.x, p.position.z - c.z);
+      const r = Math.hypot(p.position.x, p.position.z) || 1;
+      // o cosseno entre a placa e a câmera, vistos do meio da roda
+      const doLado = longe > 1 ? (p.position.x * c.x + p.position.z * c.z) / (r * longe) : -1;
+      p.material.opacity = Math.min(limitar((perto - 8) / 6, 0, 1), 1 - limitar((doLado - 0.3) / 0.35, 0, 1));
+      p.visible = p.material.opacity > 0.02;
+    });
   }
 
   /** Um cacho de balões coloridos com as fitas, num ponto do chão. */
@@ -2604,6 +2685,530 @@ class Arena {
     this.cena.add(grupo);
     this.pilares = grupo;
     this.piso.scale.setScalar(Math.max(36, raio + 10));
+    this.recortarPiso(raio - 1.2);
+  }
+
+  /**
+   * O piso da roda vai só até a calçada dos pilares: dali para fora é o
+   * parque (desenhar o piso embaixo da grama era pintar a tela duas vezes).
+   * O desenho dele (os anéis, o nome da casa) fica onde estava.
+   */
+  recortarPiso(raio) {
+    const T = this.T;
+    const k = Math.min(1, raio / this.piso.scale.x);
+    const g = new T.CircleGeometry(k, 96);
+    const uv = g.attributes.uv;
+    const pos = g.attributes.position;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / 2, 0.5 + pos.getY(i) / 2);
+    this.piso.geometry.dispose();
+    this.piso.geometry = g;
+  }
+
+  /* ---------- o símbolo no chão e o parque em volta ---------- */
+
+  /**
+   * O SÍMBOLO DA LAZER & SPORT PINTADO NO CHÃO, no meio da roda, como o
+   * piso de um parque: o alvo vermelho e branco com o dardo azul (o do
+   * logo), e o nome numa faixa branca em volta -- "Lazer & Sport" embaixo,
+   * de frente para a ENTRADA, e "Brinquedos • Cenografia • Parques" em
+   * cima. O alvo de verdade gira em pé no meio dele.
+   *
+   * É uma malha própria, com um canvas só dela (1024 px; 768 no celular):
+   * desenhado no piso inteiro (72 m num canvas), o nome sairia borrado.
+   * As letras se leem de fora da roda, sem espelhar: o pé para fora e o
+   * topo para o meio (a mesma regra do nome da casa no piso).
+   */
+  montarSimbolo(raio, folga) {
+    const T = this.T;
+    // cabe por dentro das placas das áreas, que ficam deitadas no chão
+    const R = limitar(raio - folga - 2.2, 2.3, 7);
+    const material = this.mat("simbolo", () => {
+      const n = this.celular ? 768 : 1024;
+      const c = document.createElement("canvas");
+      c.width = c.height = n;
+      const textura = new T.CanvasTexture(c);
+      textura.colorSpace = T.SRGBColorSpace;
+      textura.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+      const pintar = () => {
+        pintarSimbolo(c.getContext("2d"), n);
+        textura.needsUpdate = true;
+      };
+      pintar();
+      // a fonte da marca (Poppins 800) pode chegar depois: aí repinta
+      if (document.fonts && document.fonts.load) document.fonts.load("800 64px Poppins").then(pintar, () => {});
+      // sem conta de luz: as cores da marca como são (e a tela pintada uma vez só)
+      const m = this.noChao(new T.MeshBasicMaterial({ map: textura, color: "#f2f2f7" }));
+      m.userData.compartilhado = true;
+      return m;
+    });
+    const simbolo = new T.Mesh(this.geo("discoSimbolo", () => new T.CircleGeometry(1, 96)), material);
+    simbolo.scale.setScalar(R);
+    // o pé do nome para o lado da entrada (o canvas de baixo vai para +z, girado até ela)
+    simbolo.rotation.set(-PI / 2, 0, A_ENTRADA);
+    simbolo.position.y = 0.012;
+    simbolo.userData.compartilhado = true;
+    simbolo.raycast = () => {};
+    this.decoracao.add(simbolo);
+    this.raioDoSimbolo = R;
+  }
+
+  /**
+   * O PARQUE EM VOLTA DA RODA, por anéis a partir da cerca de pilares
+   * (`beira`): a calçada de pedra (com os pilares, as bandeirinhas e o
+   * portal), o gramado com árvores, postes, bancos e canteiros, os caminhos
+   * que saem da entrada e de cada área, com o varal de luzes, e a mureta
+   * colorida em volta. Os carrinhos de pipoca e de algodão-doce ficam na
+   * entrada. A praça na frente de cada reino (o Espaço Esportivo) e a
+   * passarela até ele ficam livres.
+   *
+   * Leve de propósito: cada tipo de coisa é UMA chamada de desenho
+   * (instâncias, ou peças juntadas numa geometria com as cores nos
+   * vértices); as luzes são material que brilha e um brilho em ponto, sem
+   * nenhuma luz de verdade a mais. Nada passa de 3,4 m: a câmera, ao
+   * entrar no parque, sobe por cima (`alturaLivre`).
+   */
+  montarParque(beira) {
+    const T = this.T;
+    const antes = this.decoracao.children.length;
+    const sorte = sorteador(7);
+    const calcadaDentro = beira - 1.4;
+    const gramaDentro = beira + 2.2;
+    const gramaFora = beira + 12;
+    this.parque = { dentro: gramaDentro, fora: gramaFora + 0.6, portao: gramaFora + 0.3 };
+    // as praças dos reinos (e o caminho até cada uma): nada do parque ali
+    const pracas = (this.trechos || []).filter((t) => t.tipo === "reino").flatMap((t) => {
+      const meio = (t.x0 + t.x1) / 2;
+      return [
+        { x0: t.x0 - 3, x1: t.x1 + 3, z0: t.z0 - 3, z1: t.z1 + 8.5 },
+        { x0: meio - 5.5, x1: meio + 5.5, z0: t.z1, z1: -(beira - 3) },
+      ];
+    });
+    const livre = (x, z, margem = 0) => !pracas.some((p) => x > p.x0 - margem && x < p.x1 + margem && z > p.z0 - margem && z < p.z1 + margem);
+    const noAnel = (a, r) => [Math.sin(a) * r, Math.cos(a) * r];
+    const portao = noAnel(A_ENTRADA, gramaFora + 0.3);
+    /** Os trechos de um anel, em volta: [[a0, a1, livre], ...] (livre = fora das praças). */
+    const trechosDoAnel = (r0, r1) => {
+      const passos = 240;
+      const ok = [];
+      for (let i = 0; i < passos; i++) {
+        const a = ((i + 0.5) / passos) * PI * 2;
+        ok.push([r0, (r0 + r1) / 2, r1].every((r) => livre(...noAnel(a, r), 0.3)));
+      }
+      if (ok.every(Boolean) || !ok.some(Boolean)) return [[0, PI * 2, ok[0]]];
+      const saida = [];
+      const comeco = ok.findIndex((v, i) => v !== ok[(i + passos - 1) % passos]);
+      let inicio = comeco;
+      for (let k = 1; k <= passos; k++) {
+        const i = (comeco + k) % passos;
+        if (ok[i] !== ok[(i + passos - 1) % passos] || k === passos) {
+          saida.push([(inicio / passos) * PI * 2, ((comeco + k) / passos) * PI * 2, ok[inicio % passos]]);
+          inicio = comeco + k;
+        }
+      }
+      return saida;
+    };
+    /** Um pedaço de anel deitado no chão, com o uv do mundo (as emendas somem). */
+    const anelNoChao = (r0, r1, a0, a1, escala) => {
+      const g = new T.RingGeometry(r0, r1, Math.max(8, Math.round(((a1 - a0) / (PI * 2)) * 160)), 1, a0 - PI / 2, a1 - a0);
+      g.rotateX(-PI / 2);
+      return uvDoMundo(g, escala);
+    };
+    const uvDoMundo = (g, escala) => {
+      const pos = g.attributes.position;
+      const uv = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) { uv[i * 2] = pos.getX(i) / escala; uv[i * 2 + 1] = pos.getZ(i) / escala; }
+      g.setAttribute("uv", new T.BufferAttribute(uv, 2));
+      return g.index ? g.toNonIndexed() : g;
+    };
+
+    // os caminhos: o da entrada e um na direção de cada área da roda
+    const caminhos = [A_ENTRADA];
+    (this.trechos || []).filter((t) => t.tipo !== "reino").forEach((t) => {
+      const meio = (t.a0 + t.a1) / 2;
+      const longe = (a) => Math.abs(Math.atan2(Math.sin(meio - a), Math.cos(meio - a))) > 0.42;
+      if (caminhos.every(longe) && livre(...noAnel(meio, gramaFora), 1)) caminhos.push(meio);
+    });
+    const LARGURA = 2.4;
+    const noCaminho = (x, z, folgaExtra) => caminhos.some((a) => {
+      const ao = x * Math.sin(a) + z * Math.cos(a); // ao longo do caminho
+      const lado = x * Math.cos(a) - z * Math.sin(a);
+      return ao > gramaDentro - 1 && Math.abs(lado) < LARGURA / 2 + folgaExtra;
+    });
+
+    // --- a calçada (o anel dos pilares) e os caminhos: pedra, uma geometria só
+    const pedras = [anelNoChao(calcadaDentro, gramaDentro + 0.05, 0, PI * 2, 1.6)];
+    caminhos.forEach((a) => {
+      const comprimento = gramaFora - gramaDentro + 1.2;
+      const g = new T.PlaneGeometry(LARGURA, comprimento);
+      g.rotateX(-PI / 2);
+      g.rotateY(a);
+      const meio = gramaDentro + comprimento / 2 - 0.6;
+      g.translate(Math.sin(a) * meio, 0.003, Math.cos(a) * meio);
+      pedras.push(uvDoMundo(g, 1.6));
+    });
+
+    // --- o gramado, fora das praças dos reinos (três faixas, para a borda seguir a
+    // praça), e a praça calçada na frente de cada reino
+    const faixas = [gramaDentro, gramaDentro + (gramaFora - gramaDentro) / 3, gramaDentro + (2 * (gramaFora - gramaDentro)) / 3, gramaFora];
+    const gramas = [];
+    for (let k = 0; k < 3; k++) {
+      trechosDoAnel(faixas[k], faixas[k + 1]).forEach(([a0, a1, ehGrama]) => {
+        (ehGrama ? gramas : pedras).push(anelNoChao(faixas[k], faixas[k + 1], a0, a1, ehGrama ? 2.4 : 1.6));
+      });
+    }
+    if (gramas.length) {
+      const grama = new T.Mesh(juntarPecas(T, gramas, true), this.mat("grama", () => this.materialDoParque("grama")));
+      grama.position.y = 0.003;
+      this.decoracao.add(grama);
+    }
+    const calcada = new T.Mesh(juntarPecas(T, pedras, true), this.mat("calcada", () => this.materialDoParque("pedra")));
+    calcada.position.y = 0.006;
+    this.decoracao.add(calcada);
+    // e o chão de fora do parque, escurecendo até a cor do horizonte (sem
+    // borda nenhuma: o chão de longe vira o céu de baixo)
+    const chaoDeFora = new T.RingGeometry(gramaFora - 0.1, 170, 96, 4);
+    chaoDeFora.rotateX(-PI / 2);
+    const tonsDoChao = [[0, "#0e1838"], [0.25, "#16153f"], [0.55, "#26174f"], [1, HORIZONTE]].map(([k, c]) => [k, new T.Color(c)]);
+    const posChao = chaoDeFora.attributes.position;
+    const coresDoChao = new Float32Array(posChao.count * 3);
+    const tom = new T.Color();
+    for (let i = 0; i < posChao.count; i++) {
+      const k = (Math.hypot(posChao.getX(i), posChao.getZ(i)) - gramaFora) / (170 - gramaFora);
+      const j = Math.max(1, tonsDoChao.findIndex(([limite]) => limite >= k));
+      const [k0, c0] = tonsDoChao[j - 1];
+      const [k1, c1] = tonsDoChao[j];
+      tom.copy(c0).lerp(c1, limitar((k - k0) / (k1 - k0 || 1), 0, 1));
+      coresDoChao.set([tom.r, tom.g, tom.b], i * 3);
+    }
+    chaoDeFora.setAttribute("color", new T.BufferAttribute(coresDoChao, 3));
+    const terreno = new T.Mesh(chaoDeFora, this.mat("terreno", () => this.materialDoParque("terreno")));
+    terreno.position.y = -0.002;
+    this.decoracao.add(terreno);
+    // e as luzinhas da cidade lá longe, no chão da noite (pontos de 1 a 2 px)
+    const luzesLonge = [];
+    const coresLonge = [];
+    const tonsLonge = ["#ffd98a", "#ff8fd8", "#8fdcff", "#fff2c4"].map((c) => new T.Color(c));
+    for (let i = 0; i < (this.celular ? 160 : 300); i++) {
+      const a = sorte() * PI * 2;
+      const r = 75 + sorte() * 90;
+      const [x, z] = noAnel(a, r);
+      if (!livre(x, z, 4)) continue;
+      luzesLonge.push(x, 0.3, z);
+      const c = tonsLonge[i % tonsLonge.length];
+      const k = 0.5 + sorte() * 0.5;
+      coresLonge.push(c.r * k, c.g * k, c.b * k);
+    }
+    const geoLonge = new T.BufferGeometry();
+    geoLonge.setAttribute("position", new T.Float32BufferAttribute(luzesLonge, 3));
+    geoLonge.setAttribute("color", new T.Float32BufferAttribute(coresLonge, 3));
+    this.decoracao.add(new T.Points(geoLonge, this.mat("luzesLonge", () => {
+      const m = new T.PointsMaterial({
+        size: 3.4, sizeAttenuation: false, vertexColors: true, map: this.texturaDeBrilho(), transparent: true,
+        depthWrite: false, blending: T.AdditiveBlending, fog: false, toneMapped: false,
+      });
+      m.userData.compartilhado = true;
+      return m;
+    })));
+
+    // --- o que fica em pé no gramado: lugares sorteados, longe dos caminhos e das praças
+    const lugares = [];
+    // os carrinhos da entrada (mais abaixo) já têm o lugar deles
+    const rCarrinho = gramaDentro + 2.6;
+    const lugarDoCarrinho = (lado) => [
+      Math.sin(A_ENTRADA) * rCarrinho + Math.cos(A_ENTRADA) * lado * (LARGURA / 2 + 1.5),
+      Math.cos(A_ENTRADA) * rCarrinho - Math.sin(A_ENTRADA) * lado * (LARGURA / 2 + 1.5),
+    ];
+    [-1, 1].forEach((lado) => lugares.push([...lugarDoCarrinho(lado), 1.2]));
+    const cabe = (x, z, raioDaCoisa) => livre(x, z, raioDaCoisa + 0.5) && !noCaminho(x, z, raioDaCoisa + 0.5)
+      && lugares.every((p) => Math.hypot(p[0] - x, p[1] - z) > p[2] + raioDaCoisa + 0.4);
+    const sortearLugar = (r0, r1, raioDaCoisa) => {
+      for (let tentativa = 0; tentativa < 40; tentativa++) {
+        const a = sorte() * PI * 2;
+        const r = r0 + sorte() * (r1 - r0);
+        const [x, z] = noAnel(a, r);
+        if (cabe(x, z, raioDaCoisa)) {
+          lugares.push([x, z, raioDaCoisa]);
+          return [x, z];
+        }
+      }
+      return null;
+    };
+
+    // os postes, dos dois lados de cada caminho, com o varal de luzes entre eles
+    const postes = [];
+    caminhos.forEach((a) => {
+      [-1, 1].forEach((lado) => {
+        const fila = [];
+        for (let r = gramaDentro + 1.6; r < gramaFora - 0.5; r += 3.4) {
+          const x = Math.sin(a) * r + Math.cos(a) * lado * (LARGURA / 2 + 0.45);
+          const z = Math.cos(a) * r - Math.sin(a) * lado * (LARGURA / 2 + 0.45);
+          if (!livre(x, z, 0.6)) continue;
+          fila.push([x, z]);
+          lugares.push([x, z, 0.3]);
+        }
+        postes.push(fila);
+      });
+    });
+    const ALTURA_DO_POSTE = 3.1;
+    const todosOsPostes = postes.flat();
+    const ajuda = new T.Object3D();
+    const instancias = (geometria, material, lista, colocar) => {
+      if (!lista.length) return null;
+      const malha = new T.InstancedMesh(geometria, material, lista.length);
+      lista.forEach((item, i) => {
+        ajuda.position.set(0, 0, 0);
+        ajuda.rotation.set(0, 0, 0);
+        ajuda.scale.set(1, 1, 1);
+        colocar(item, i);
+        ajuda.updateMatrix();
+        malha.setMatrixAt(i, ajuda.matrix);
+      });
+      this.decoracao.add(malha);
+      return malha;
+    };
+    instancias(this.geo("poste", () => juntarPecas(T, [
+      pecaColorida(T, new T.CylinderGeometry(0.13, 0.16, 0.28, 10), "#1f2742", 0, 0.14, 0),
+      pecaColorida(T, new T.CylinderGeometry(0.045, 0.06, ALTURA_DO_POSTE - 0.3, 8), "#2a3352", 0, ALTURA_DO_POSTE / 2, 0),
+      pecaColorida(T, new T.CylinderGeometry(0.17, 0.11, 0.1, 10), "#ffd700", 0, ALTURA_DO_POSTE - 0.12, 0),
+      pecaColorida(T, new T.ConeGeometry(0.2, 0.16, 10), "#ffd700", 0, ALTURA_DO_POSTE + 0.36, 0),
+    ])), this.mat("parquePecas", () => this.materialDoParque("pecas")), todosOsPostes, ([x, z]) => ajuda.position.set(x, 0, z));
+    instancias(this.geo("globoDoPoste", () => new T.SphereGeometry(0.19, 14, 10)), this.mat("globo", () => {
+      const m = new T.MeshBasicMaterial({ color: "#fff1c4", toneMapped: false });
+      m.userData.compartilhado = true;
+      return m;
+    }), todosOsPostes, ([x, z]) => ajuda.position.set(x, ALTURA_DO_POSTE + 0.1, z));
+
+    // o varal de luzes: de poste em poste, com a barriguinha do fio
+    const fios = [];
+    const lampadas = [];
+    postes.forEach((fila) => {
+      for (let i = 0; i + 1 < fila.length; i++) {
+        const [x0, z0] = fila[i];
+        const [x1, z1] = fila[i + 1];
+        const ponto = (t) => [x0 + (x1 - x0) * t, ALTURA_DO_POSTE - 0.15 - Math.sin(t * PI) * 0.55, z0 + (z1 - z0) * t];
+        for (let j = 0; j < 6; j++) fios.push(...ponto(j / 6), ...ponto((j + 1) / 6));
+        for (let j = 1; j < 6; j++) lampadas.push(ponto(j / 6));
+      }
+    });
+    if (fios.length) {
+      const geo = new T.BufferGeometry();
+      geo.setAttribute("position", new T.Float32BufferAttribute(fios, 3));
+      this.decoracao.add(new T.LineSegments(geo, new T.LineBasicMaterial({ color: "#f4f6ff", transparent: true, opacity: 0.45 })));
+    }
+
+    // a mureta colorida em volta do parque (pedaços de 1 m, nas cores da marca), com a entrada aberta
+    const pedacos = [];
+    const rMureta = gramaFora + 0.3;
+    const passosMureta = Math.round((rMureta * PI * 2) / 1.05);
+    for (let i = 0; i < passosMureta; i++) {
+      const a = ((i + 0.5) / passosMureta) * PI * 2;
+      const [x, z] = noAnel(a, rMureta);
+      if (!livre(x, z, 0.8) || noCaminho(x, z, 0.4) || Math.hypot(x - portao[0], z - portao[1]) < 4.3) continue;
+      pedacos.push([x, z, a, i]);
+    }
+    const corDaMureta = ["#e63946", "#ffffff", "#ffd700", "#2f8bff"].map((c) => new T.Color(c));
+    const mureta = instancias(this.geo("mureta", () => new T.BoxGeometry(0.96, 0.5, 0.26)), this.mat("muretaMaterial", () => {
+      const m = new T.MeshStandardMaterial({ roughness: 0.55, emissive: "#ffffff", emissiveIntensity: 0.12 });
+      m.userData.compartilhado = true;
+      return m;
+    }), pedacos, ([x, z, a]) => { ajuda.position.set(x, 0.25, z); ajuda.rotation.y = a + PI / 2; });
+    if (mureta) pedacos.forEach((p, i) => mureta.setColorAt(i, corDaMureta[p[3] % corDaMureta.length]));
+    // uma bolinha de luz em cima da mureta, de tanto em tanto
+    pedacos.forEach(([x, z], i) => { if (i % 4 === 0) lampadas.push([x, 0.58, z]); });
+
+    // as lâmpadas do varal e da mureta, nas cores da festa
+    const tons = ["#fff2b0", "#ffd166", "#ff9fb2", "#9fe1ff", "#c7ffb0"].map((c) => new T.Color(c));
+    const materialDaLuz = this.mat("luzDoParque", () => {
+      const m = new T.MeshBasicMaterial({ toneMapped: false });
+      m.userData.compartilhado = true;
+      return m;
+    });
+    const bolinhas = instancias(this.geo("lampada", () => new T.SphereGeometry(0.08, 8, 6)), materialDaLuz, lampadas, ([x, y, z]) => ajuda.position.set(x, y, z));
+    if (bolinhas) lampadas.forEach((_, i) => bolinhas.setColorAt(i, tons[i % tons.length]));
+
+    // as árvores: redondas e pinheirinhos, baixas (a copa até 2,9 m)
+    const arvores = { redonda: [], pinheiro: [] };
+    const quantas = this.celular ? 26 : 46;
+    for (let i = 0; i < quantas; i++) {
+      const lugar = sortearLugar(gramaDentro + 1.4, gramaFora - 1.2, 1.0);
+      if (lugar) arvores[i % 3 ? "redonda" : "pinheiro"].push([...lugar, sorte()]);
+    }
+    // e o bosque lá fora, depois da mureta: árvores grandes que somem na
+    // neblina e enchem o chão até o horizonte (sem elas, ele ficava vazio)
+    const bosque = { redonda: [], pinheiro: [] };
+    const rBosque0 = gramaFora + 6;
+    const rBosque1 = gramaFora + 46;
+    this.parque.bosque = rBosque1;
+    for (let i = 0; i < 130; i++) {
+      const a = sorte() * PI * 2;
+      const r = rBosque0 + Math.pow(sorte(), 0.8) * (rBosque1 - rBosque0);
+      const [x, z] = noAnel(a, r);
+      // a praça do reino e a vista do portão ficam livres
+      if (!livre(x, z, 6) || Math.abs(Math.atan2(Math.sin(a - A_ENTRADA), Math.cos(a - A_ENTRADA))) < 0.22) continue;
+      bosque[i % 3 ? "redonda" : "pinheiro"].push([x, z, sorte()]);
+    }
+    const grandeDoBosque = ([x, z, s]) => {
+      ajuda.position.set(x, 0, z);
+      ajuda.rotation.y = s * PI * 2;
+      ajuda.scale.setScalar(1.9 + s * 1.3);
+    };
+
+    const materialDasPecas = this.mat("parquePecas", () => this.materialDoParque("pecas"));
+    const tamanhoDaArvore = ([x, z, s]) => {
+      ajuda.position.set(x, 0, z);
+      ajuda.rotation.y = s * PI * 2;
+      ajuda.scale.setScalar(0.85 + s * 0.35);
+    };
+    instancias(this.geo("arvoreRedonda", () => juntarPecas(T, [
+      pecaColorida(T, new T.CylinderGeometry(0.09, 0.13, 1.1, 7), "#6b4a2f", 0, 0.55, 0),
+      pecaColorida(T, new T.IcosahedronGeometry(0.85, 0), "#22a35a", 0, 1.7, 0),
+      pecaColorida(T, new T.IcosahedronGeometry(0.55, 0), "#35c46c", 0.32, 2.1, 0.12),
+      pecaColorida(T, new T.IcosahedronGeometry(0.45, 0), "#1c8c4c", -0.38, 1.95, -0.1),
+    ])), materialDasPecas, [...arvores.redonda, ...bosque.redonda.map((b) => [...b, true])], (item) => (item[3] ? grandeDoBosque(item) : tamanhoDaArvore(item)));
+    instancias(this.geo("pinheiro", () => juntarPecas(T, [
+      pecaColorida(T, new T.CylinderGeometry(0.07, 0.1, 0.7, 7), "#6b4a2f", 0, 0.35, 0),
+      pecaColorida(T, new T.ConeGeometry(0.8, 1.3, 7), "#1b7f4f", 0, 1.2, 0),
+      pecaColorida(T, new T.ConeGeometry(0.6, 1.05, 7), "#22985c", 0, 1.85, 0),
+      pecaColorida(T, new T.ConeGeometry(0.4, 0.85, 7), "#2bb26b", 0, 2.42, 0),
+    ])), materialDasPecas, [...arvores.pinheiro, ...bosque.pinheiro.map((b) => [...b, true])], (item) => (item[3] ? grandeDoBosque(item) : tamanhoDaArvore(item)));
+
+    // os bancos, na beira dos caminhos, de frente para eles
+    const bancos = [];
+    // (no caminho da entrada ficam os carrinhos)
+    caminhos.slice(1).forEach((a) => {
+      [-1, 1].forEach((lado) => {
+        const r = gramaDentro + 3.3 + (lado > 0 ? 3.4 : 0);
+        const x = Math.sin(a) * r + Math.cos(a) * lado * (LARGURA / 2 + 0.75);
+        const z = Math.cos(a) * r - Math.sin(a) * lado * (LARGURA / 2 + 0.75);
+        if (livre(x, z, 0.8)) bancos.push([x, z, a + (lado > 0 ? -PI / 2 : PI / 2)]);
+      });
+    });
+    instancias(this.geo("banco", () => juntarPecas(T, [
+      pecaColorida(T, new T.BoxGeometry(1.4, 0.06, 0.42), "#c9783a", 0, 0.46, 0),
+      pecaColorida(T, new T.BoxGeometry(1.4, 0.3, 0.05), "#c9783a", 0, 0.74, -0.2),
+      pecaColorida(T, new T.BoxGeometry(0.07, 0.46, 0.4), "#2a3352", -0.6, 0.23, 0),
+      pecaColorida(T, new T.BoxGeometry(0.07, 0.46, 0.4), "#2a3352", 0.6, 0.23, 0),
+    ])), materialDasPecas, bancos, ([x, z, giro]) => { ajuda.position.set(x, 0, z); ajuda.rotation.y = giro; });
+
+    // os canteiros: a terra com a beirada e as flores (pontinhos de cor que brilham de leve)
+    const canteiros = [];
+    for (let i = 0; i < (this.celular ? 6 : 10); i++) {
+      const lugar = sortearLugar(gramaDentro + 1, gramaFora - 1, 0.9);
+      if (lugar) canteiros.push(lugar);
+    }
+    if (canteiros.length) {
+      const pecas = [];
+      canteiros.forEach(([x, z]) => {
+        const beira = new T.CylinderGeometry(0.9, 0.95, 0.14, 18);
+        pecas.push(pecaColorida(T, beira, "#e9e2cf", x, 0.07, z));
+        pecas.push(pecaColorida(T, new T.CylinderGeometry(0.8, 0.8, 0.15, 18), "#3a2618", x, 0.08, z));
+      });
+      this.decoracao.add(new T.Mesh(juntarPecas(T, pecas), materialDasPecas));
+      const flores = [];
+      canteiros.forEach(([x, z]) => {
+        for (let k = 0; k < 14; k++) {
+          const a = sorte() * PI * 2;
+          const r = Math.sqrt(sorte()) * 0.7;
+          flores.push([x + Math.cos(a) * r, 0.2 + sorte() * 0.12, z + Math.sin(a) * r]);
+        }
+      });
+      const coresDasFlores = ["#ff3df2", "#ffd700", "#e63946", "#ffffff", "#3fd0ff", "#ff9f1c"].map((c) => new T.Color(c));
+      const malha = instancias(this.geo("flor", () => new T.IcosahedronGeometry(0.075, 0)), materialDaLuz, flores, ([x, y, z]) => ajuda.position.set(x, y, z));
+      if (malha) flores.forEach((_, i) => malha.setColorAt(i, coresDasFlores[i % coresDasFlores.length]));
+    }
+
+    // os carrinhos de pipoca e de algodão-doce, na entrada, de frente para o caminho
+    const carrinhos = [];
+    [[-1, "pipoca"], [1, "algodao"]].forEach(([lado, tipo]) => {
+      const a = A_ENTRADA;
+      const [x, z] = lugarDoCarrinho(lado);
+      if (!livre(x, z, 1)) return;
+      const g = montarCarrinho(T, tipo);
+      g.rotateY(a + (lado > 0 ? -PI / 2 : PI / 2));
+      g.translate(x, 0, z);
+      carrinhos.push(g);
+      // a lampadinha do toldo e o letreiro
+      const placa = new T.Mesh(this.geo("plano", () => new T.PlaneGeometry(1, 1)), this.materialDeTexto([tipo === "pipoca" ? "Pipoca" : "Algodão-doce"], tipo === "pipoca" ? "#ffd700" : "#ff3df2", 640, 128));
+      placa.scale.set(1.5, 0.3, 1);
+      placa.position.set(x, 2.55, z);
+      placa.rotation.y = a + (lado > 0 ? -PI / 2 : PI / 2);
+      this.decoracao.add(placa);
+      // e um cacho de balões ao lado do de algodão-doce
+      if (tipo === "algodao") this.decoracao.add(this.balões(x + Math.cos(a) * 0.9, z - Math.sin(a) * 0.9, 6, 0.8));
+    });
+    if (carrinhos.length) this.decoracao.add(new T.Mesh(juntarPecas(T, carrinhos), materialDasPecas));
+
+    // os brilhos de todas as luzes do parque: um ponto de luz em cada globo (sem luz de verdade)
+    const brilhos = todosOsPostes.map(([x, z]) => [x, ALTURA_DO_POSTE + 0.1, z]);
+    if (brilhos.length) {
+      const geo = new T.BufferGeometry();
+      geo.setAttribute("position", new T.Float32BufferAttribute(brilhos.flat(), 3));
+      const pontos = new T.Points(geo, this.mat("brilhoDoPoste", () => {
+        const m = new T.PointsMaterial({
+          size: 2.4, map: this.texturaDeBrilho(), color: "#ffc978", transparent: true, depthWrite: false,
+          blending: T.AdditiveBlending, fog: false, toneMapped: false,
+        });
+        m.userData.compartilhado = true;
+        return m;
+      }));
+      this.decoracao.add(pontos);
+    }
+    // o parque não se toca: o toque e o mouse (as placas das áreas) passam direto por ele
+    this.decoracao.children.slice(antes).forEach((o) => o.traverse((x) => { x.raycast = () => {}; }));
+  }
+
+  /** Os materiais do parque (pedra, grama, as peças com cor nos vértices), feitos uma vez. */
+  materialDoParque(tipo) {
+    const T = this.T;
+    let m;
+    if (tipo === "pecas") {
+      // Lambert com as faces chapadas: o jeito low-poly, e a conta de luz mais barata
+      m = new T.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: "#1d1640" });
+    } else if (tipo === "terreno") {
+      // o chão de fora do parque: liso, some na neblina do horizonte
+      m = new T.MeshBasicMaterial({ vertexColors: true });
+      m.polygonOffset = true;
+      m.polygonOffsetFactor = 1;
+      m.polygonOffsetUnits = 2;
+    } else {
+      const c = document.createElement("canvas");
+      c.width = c.height = 128;
+      const g = c.getContext("2d");
+      if (tipo === "pedra") {
+        // as pedras da calçada: blocos claros e quentes, com o rejunte escuro
+        g.fillStyle = "#5b4d6e";
+        g.fillRect(0, 0, 128, 128);
+        const tons = ["#c9b8d6", "#bba8c9", "#d6c6df", "#b39fc4"];
+        for (let y = 0; y < 4; y++) {
+          for (let x = 0; x < 4; x++) {
+            g.fillStyle = tons[(x * 3 + y * 5) % tons.length];
+            const desloca = (y % 2) * 16;
+            g.fillRect(((x * 32 + desloca) % 128) + 2, y * 32 + 2, 28, 28);
+            if (x * 32 + desloca + 30 > 128) g.fillRect(-2, y * 32 + 2, (x * 32 + desloca + 30) % 128, 28);
+          }
+        }
+      } else {
+        // a grama: verde com tufinhos mais claros e mais escuros
+        g.fillStyle = "#1f7a43";
+        g.fillRect(0, 0, 128, 128);
+        const sorte = sorteador(3);
+        for (let i = 0; i < 420; i++) {
+          g.fillStyle = sorte() < 0.5 ? "rgba(86, 196, 112, .45)" : "rgba(12, 70, 38, .5)";
+          g.fillRect(sorte() * 128, sorte() * 128, 2, 2 + sorte() * 3);
+        }
+      }
+      const textura = new T.CanvasTexture(c);
+      textura.colorSpace = T.SRGBColorSpace;
+      textura.wrapS = textura.wrapT = T.RepeatWrapping;
+      textura.anisotropy = Math.min(4, this.renderer.capabilities.getMaxAnisotropy());
+      // o chão grande do parque sem conta de luz (é muita tela): a cor da noite já vem no tom
+      m = new T.MeshBasicMaterial({ map: textura, color: tipo === "pedra" ? "#a99cc4" : "#8fb59c" });
+      m.polygonOffset = true;
+      m.polygonOffsetFactor = tipo === "pedra" ? -2 : -1;
+      m.polygonOffsetUnits = tipo === "pedra" ? -4 : -2;
+    }
+    m.userData.compartilhado = true;
+    return m;
   }
 
   /* ---------- a roda ---------- */
@@ -2677,10 +3282,13 @@ class Arena {
     trechos.forEach((trecho) => this.marcarArea(trecho, raio, folga));
     this.montarPilares(raio + folga + 4.5);
     this.montarReinos(reinos, raio + folga + 4.5);
-    // o portal de entrada, do lado de onde a câmera chega
-    const aPortal = 0.5;
-    const rPortal = raio + folga + 4.5;
-    this.decoracao.add(this.portal(Math.sin(aPortal) * rPortal, Math.cos(aPortal) * rPortal, aPortal, ["Bem-vindo à", "Arena Lazer & Sport"], "#ffd700", 6.8));
+    // o símbolo da marca pintado no meio da roda, e o parque em volta; o
+    // portal de entrada é o portão do parque, do lado de onde a câmera chega
+    // (atrás dela, na vista de sempre: emoldura a chegada sem tapar a roda)
+    this.montarSimbolo(raio, folga);
+    this.montarParque(raio + folga + 4.5);
+    const rPortal = this.parque.portao;
+    this.decoracao.add(this.portal(Math.sin(A_ENTRADA) * rPortal, Math.cos(A_ENTRADA) * rPortal, A_ENTRADA, ["Bem-vindo à", "Arena Lazer & Sport"], "#ffd700", 6.8));
     this.caixasSujas = true;
     this.cena.fog.near = raio * 2.2;
     this.cena.fog.far = Math.max(raio * 5 + 30, this.longeDosReinos || 0);
@@ -2689,8 +3297,19 @@ class Arena {
     this.realcarArea(zona ? this.zona : "");
     if (zona && !entrada) this.camera3d.olharZona(zona);
     else this.camera3d.visaoGeral(entrada);
-    this.roda.forEach((m) => m.pedir(this.fotoLonge));
+    this.roda.forEach((m) => m.pedir());
     this.marcarLista();
+  }
+
+  /** O objeto 3D não chegou: a máquina sai da roda, que se fecha sem o buraco. */
+  tirarDaRoda(m) {
+    if (!this.maquinas.includes(m)) return;
+    if (this.selecionada === m) this.soltarSelecao({ voar: false });
+    this.maquinas = this.maquinas.filter((x) => x !== m);
+    this.cena.remove(m.grupo);
+    this.montar();
+    this.atualizarContagem();
+    this.mostrarProgresso();
   }
 
   /**
@@ -2801,7 +3420,8 @@ class Arena {
     const zona = this.zonas.find((z) => z.id === trecho.id);
     if (!zona) return;
     const meio = (trecho.a0 + trecho.a1) / 2;
-    const r = raio - folga - 2.1;
+    // perto dos estandes: o meio da roda fica para o símbolo da marca no chão
+    const r = raio - folga - 1.6;
     const suporte = new T.Group();
     suporte.position.set(Math.sin(meio) * r, 0, Math.cos(meio) * r);
     suporte.rotation.y = meio + PI;
@@ -2813,13 +3433,10 @@ class Arena {
     placa.userData.zona = trecho.id;
     suporte.add(placa);
     this.decoracao.add(suporte);
-    // um cacho de balões de cada lado da placa e o nome da área no ar
-    const lado = largura / 2 + 0.7;
-    [-1, 1].forEach((s) => {
-      const bx = Math.sin(meio) * r + Math.cos(meio) * lado * s;
-      const bz = Math.cos(meio) * r - Math.sin(meio) * lado * s;
-      this.decoracao.add(this.balões(bx, bz, 3, meio + s));
-    });
+    // um cacho de balões no corredor que abre a área (por fora dos estandes,
+    // sem tapar o símbolo do meio) e o nome da área no ar
+    const rb = raio + folga + 0.8;
+    this.decoracao.add(this.balões(Math.sin(trecho.a0) * rb, Math.cos(trecho.a0) * rb, 4, trecho.a0));
     const ra = raio + folga + 1.2;
     this.decoracao.add(this.placaNoAr([zona.kicker || "", zona.titulo], cor, Math.sin(meio) * ra, 7.6, Math.cos(meio) * ra, 6.4, trecho.id));
   }
@@ -2901,7 +3518,7 @@ class Arena {
   }
 
   mostrarProgresso() {
-    const prontas = this.roda.filter((m) => m.montada || m.semFoto).length;
+    const prontas = this.roda.filter((m) => m.montada).length;
     if (prontas >= Math.min(this.roda.length, 3)) this.esconderAviso();
   }
 
@@ -2927,7 +3544,6 @@ class Arena {
     if (this.selecionada && this.selecionada !== maquina) this.largar(this.selecionada);
     this.selecionada = maquina;
     this.roda.forEach((m) => { m.aro.material = this.luz(m.cor, m === maquina ? 5 : 2.2); });
-    maquina.pedir(this.fotoPerto);
     this.vista("girar", { voar });
     const alvo = maquina.centro(this.ajuda);
     this.foco.position.set(alvo.x * 0.55, maquina.H + 6, alvo.z * 0.55);
@@ -2936,7 +3552,7 @@ class Arena {
     if (this.vistas) {
       this.vistas.hidden = false;
       const passeio = this.vistas.querySelector('[data-arena-vista="passeio"]');
-      if (passeio) passeio.hidden = !(maquina.modelo || maquina.forma);
+      if (passeio) passeio.hidden = false;
     }
     this.mostrarFicha(maquina);
     this.corpo.classList.add("tem-ficha");
@@ -3010,7 +3626,6 @@ class Arena {
     this.escolherZona("");
   }
 
-  /** O passeio por dentro do brinquedo escolhido (só nos objetos 3D de verdade). */
   /** O painel do passeio: pausar / continuar (no fim, "De novo") e sair. */
   ligarPainelDoPasseio(painel) {
     painel.querySelector("[data-passeio-sair]").addEventListener("click", () => this.sairPasseio());
@@ -3034,7 +3649,7 @@ class Arena {
 
   entrarPasseio() {
     const m = this.selecionada;
-    if (!m || !(m.modelo || m.forma) || !m.montada) return;
+    if (!m || !m.montada) return;
     this.largar(m);
     m.prato.rotation.y = giroMaisPerto(m.prato.rotation.y, 0);
     this.tour = false;
@@ -3240,8 +3855,8 @@ class Arena {
     this.atualizarContagem();
     new ResizeObserver(() => this.redimensionar()).observe(this.palco);
     this.camera3d.ligarEventos(this.canvas);
-    if (!this.maquinas.length) avisar(this.palco, "Nenhuma máquina com foto ainda", "Assim que as fotos entrarem no catálogo, as máquinas aparecem aqui.");
-    // foto que demora não segura o aviso para sempre
+    if (!this.maquinas.length) avisar(this.palco, "Nenhum brinquedo em 3D ainda", "Assim que um brinquedo ganhar o objeto 3D, ele aparece aqui.");
+    // objeto que demora não segura o aviso para sempre
     window.setTimeout(() => { if (this.maquinas.length) this.esconderAviso(); }, 9000);
 
     if (this.controles) {
@@ -3474,13 +4089,17 @@ class Arena {
 
     // O cenário fica firme: luzes, pilares, lâmpadas e estrelas paradas (cor
     // que corre pela tela parece defeito). Mexe só o que tem motivo: o alvo
-    // da marca, os balões e os jogos.
+    // da marca, os balões, os jogos e, devagar, a festa no céu (holofotes,
+    // fogos e confete).
     if (!this.reduzido) this.alvoMarca.rotation.y = t * 0.6;
     this.animarFesta(dt, t);
 
+    // as crianças brincando: com "menos movimento" ficam paradas na arena,
+    // mas no passeio (que a pessoa pediu, e que anda sozinho) elas brincam
     this.roda.forEach((m) => {
       m.atualizar(dt, this.reduzido);
-      if (m.animar && m.grupo.visible && !this.reduzido) m.animar(dt, t, this.camera);
+      const brinca = !this.reduzido || (this.passeio && this.passeio.maquina === m);
+      if (m.animar && m.grupo.visible && brinca) m.animar(dt, t, this.camera);
     });
     if (this.passeio) {
       this.passeio.quadro(dt);
@@ -3490,6 +4109,8 @@ class Arena {
       this.posicionarRotulo();
       this.atualizarMapa();
     }
+    this.animarCeu(dt, t);
+    this.clarearPlacas();
     this.renderer.render(this.cena, this.camera);
   }
 
@@ -3548,6 +4169,20 @@ class Arena {
       if (d >= BEIRA) continue;
       const k = 1 - d / BEIRA;
       minimo = Math.max(minimo, (c.topo + 0.7) * k * k * (3 - 2 * k));
+    }
+    // no parque em volta (árvores e postes de até 3,5 m) e no bosque lá fora
+    // (árvores de até 9 m), a câmera passa por cima das copas
+    const p = this.parque;
+    if (p) {
+      const r = Math.hypot(x, z);
+      const subir = (r0, r1, altura) => {
+        const longe = Math.max(r0 - r, 0, r - r1);
+        if (longe >= 1.6) return;
+        const k = 1 - longe / 1.6;
+        minimo = Math.max(minimo, altura * k * k * (3 - 2 * k));
+      };
+      subir(p.dentro - 0.5, p.fora + 0.5, 4.6);
+      subir(p.fora + 4, p.bosque + 1, 10);
     }
     return minimo;
   }
@@ -3704,10 +4339,12 @@ class Arena {
     g.strokeStyle = "rgba(63, 208, 255, .55)";
     g.lineWidth = 1.5;
     g.beginPath(); g.arc(cx, cy, R * s, 0, PI * 2); g.stroke();
-    g.fillStyle = "#e63946";
-    g.beginPath(); g.arc(cx, cy, Math.max(3, 1.2 * s), 0, PI * 2); g.fill();
-    g.fillStyle = "#ffffff";
-    g.beginPath(); g.arc(cx, cy, Math.max(1.5, 0.6 * s), 0, PI * 2); g.fill();
+    // o símbolo da marca pintado no chão: a faixa branca e o alvo
+    const simbolo = Math.max(4, (this.raioDoSimbolo || 1.5) * s);
+    [[1, "#fbfbff"], [0.68, "#e63946"], [0.52, "#ffffff"], [0.36, "#e63946"], [0.2, "#ffffff"]].forEach(([k, cor]) => {
+      g.fillStyle = cor;
+      g.beginPath(); g.arc(cx, cy, simbolo * k, 0, PI * 2); g.fill();
+    });
 
     // as áreas: a faixa colorida de cada uma na roda; o reino, ao lado
     (this.trechos || []).forEach((t) => {
@@ -3742,9 +4379,16 @@ class Arena {
     g.globalAlpha = 1;
 
     // a entrada (o portal), embaixo
-    const aP = 0.5;
+    const aP = A_ENTRADA;
     const ex = cx + Math.sin(aP) * R * s;
     const ey = cy + Math.cos(aP) * R * s;
+    // o caminho da entrada, da roda até o portão do parque (na borda do mapa)
+    g.strokeStyle = "rgba(201, 184, 214, .55)";
+    g.lineWidth = Math.max(2, 2.4 * s);
+    g.beginPath();
+    g.moveTo(ex, ey);
+    g.lineTo(limitar(cx + Math.sin(aP) * (R + 12) * s, 4, w - 4), limitar(cy + Math.cos(aP) * (R + 12) * s, 4, h - 4));
+    g.stroke();
     g.fillStyle = "#ffd700";
     g.beginPath(); g.arc(ex, ey, 4, 0, PI * 2); g.fill();
     g.font = fonte(grande ? 11 : 9, 900);
@@ -3881,8 +4525,8 @@ class Arena {
 /* ======================================================================
    PASSEIO — um só fluxo por dentro do brinquedo, na altura de uma criança
 
-   Só nos objetos 3D de verdade (o da fábrica e os montados peça por
-   peça): por dentro de um volume feito de fotos não há o que ver.
+   Em todo objeto 3D da roda: o caminho é desenho do objeto (CAMINHOS);
+   quem não tem um dá a volta em torno dele, parando em cada lado.
 
    O passeio é UM caminho que passa por tudo o que o brinquedo tem --
    subir a escadinha, engatinhar na rede, passar pelo tubo, descer o
@@ -3974,7 +4618,7 @@ function toboganKids() {
   return pontos;
 }
 
-/** O caminho de cada objeto (pelo id do modelo ou pela forma). */
+/** O caminho de cada objeto (pelo id do modelo). */
 const CAMINHOS = {
   // escadinha, a rede da torre das bolas, o andar de cima com a rede de
   // escalada, o tubo e o saco, o tobogã em espiral; por trás, o andar do
@@ -4193,24 +4837,6 @@ const CAMINHOS = {
     [15.9, 0.05, 10.8, "andar"],
     [14.6, 0.05, 10.8, "andar", { pausa: 2, olhar: [0, 1.5, 0] }],
   ],
-  // a cama elástica: a medida sai do cadastro, como a forma dela
-  cama_elastica: (m) => {
-    const diametro = limitar(Math.min(m.largura, m.fundo), 1.4, 4.6);
-    const R = diametro / 2;
-    const h = (diametro >= 2.4 ? 0.82 : 0.62) - 0.02;
-    return [
-      [0, 0, R + 0.75, "andar"],
-      [0, h * 0.36, R + 0.4, "subir"],
-      [0, h, R - 0.25, "subir"],
-      [0, h, 0, "pular", { pausa: 2.5 }],
-      [-R * 0.45, h, -R * 0.3, "pular"],
-      [R * 0.45, h, -R * 0.25, "pular"],
-      [0, h, R * 0.1, "pular", { pausa: 2 }],
-      [0, h, R - 0.3, "andar"],
-      [0, h * 0.5, R + 0.35, "subir"],
-      [0, 0, R + 1.2, "andar"],
-    ];
-  },
 };
 
 /* O trampolim de enterrada (num bloco próprio, fora do CAMINHOS: fácil de
@@ -4299,7 +4925,7 @@ class Passeio {
     this.baixo = new T.Vector3(0, -1, 0);
     this.normal = new T.Vector3();
     this.origem = new T.Vector3();
-    const caminho = CAMINHOS[maquina.dados.modelo_id] || CAMINHOS[maquina.forma] || voltaEmVolta;
+    const caminho = CAMINHOS[maquina.dados.modelo_id] || voltaEmVolta;
     this.pontos = caminho(maquina);
     // num espaço grande (o parque de trampolins), o passo é mais largo
     this.ritmo = Math.max(maquina.largura, maquina.fundo) > 15 ? 1.3 : 1;
@@ -4584,10 +5210,14 @@ class Passeio {
     const neblina = a.cena.fog;
     const fundo = a.cena.background;
     a.cena.fog = null;
-    a.cena.background = new T.Color("#0a1636");
+    // a planta tem o fundo da noite do céu, sem o céu (os fachos e os fogos não entram)
+    a.cena.background = new T.Color("#0d0b33");
+    const festa = a.festaNoCeu();
+    festa.forEach((o) => { o.userData.visivel = o.visible; o.visible = false; });
     a.renderer.setRenderTarget(alvo);
     a.renderer.render(a.cena, camera);
     a.renderer.setRenderTarget(null);
+    festa.forEach((o) => { o.visible = o.userData.visivel; });
     a.cena.fog = neblina;
     a.cena.background = fundo;
     const px = new Uint8Array(n * n * 4);
@@ -4655,11 +5285,13 @@ class Camera {
 
   visaoGeral(entrada = false) {
     const raioArena = this.arena.raio || 8;
-    this.alvoDesejado.set(0, 1.2, 0);
-    // em pé, a roda inteira só cabe de mais longe
-    const folga = this.arena.camera.aspect < 0.8 ? 1.5 : 1;
-    this.raioDesejado = (raioArena * 1.75 + 7) * folga;
-    this.phiDesejado = 1.0;
+    // A roda inteira e, em cima, o céu de festa atrás do parque: a câmera
+    // um pouco mais baixa e mais longe, olhando um tico acima do chão. Em
+    // pé (celular), a roda só cabe de mais longe.
+    const emPe = this.arena.camera.aspect < 0.8;
+    this.alvoDesejado.set(0, emPe ? 2.6 : 3.2, 0);
+    this.raioDesejado = (raioArena * 1.75 + 7) * (emPe ? 1.5 : 1.15);
+    this.phiDesejado = emPe ? 1.12 : 1.22;
     if (entrada && !this.arena.reduzido) {
       // entrada de cinema: vem de longe e de cima
       this.raio = this.raioDesejado * 1.8;

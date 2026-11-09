@@ -5,7 +5,7 @@
 
 {% block main_class %} content-section--full{% endblock %}
 
-{% block meta_description %}A Arena 3D da Lazer &amp; Sport: todas as máquinas da fábrica em 3D, montadas com as fotos reais, para girar e ver de todos os lados. E as prévias dos jogos desenvolvidos aqui (Lazer Shot, Dragon Bowling, Strike Kids, Super Boxing e outros) para jogar no site.{% endblock %}
+{% block meta_description %}A Arena 3D da Lazer &amp; Sport: os brinquedos da fábrica em 3D de verdade, num parque para girar, ver de todos os lados e passear por dentro. E as prévias dos jogos desenvolvidos aqui (Lazer Shot, Dragon Bowling, Strike Kids, Super Boxing e outros) para jogar no site.{% endblock %}
 
 {% block content %}
 
@@ -20,15 +20,14 @@
   lista de links (é o que o buscador lê e o que aparece num aparelho sem
   WebGL) e os jogos como cartões que levam ao simulador (/jogos/<jogo>/).
 
-  A ARENA 3D É A RODA DE SEMPRE, COM AS MÁQUINAS FEITAS DAS FOTOS REAIS.
-  Os estandes ficam em roda, de frente para o alvo da marca no centro. No
-  navegador de quem visita, o arena3d.js recorta a máquina do fundo de
-  cada foto (frente, lados e costas) e levanta um objeto com volume: a
-  largura vem da foto da frente, a profundidade da foto do lado, e cada
-  face veste a sua foto. Dá para ver de frente, dos lados, de costas, de
-  cima e por baixo. Dentro do 3D ficam as áreas (máquinas com jogos da
-  casa, as que já fazíamos, trampolins e brinquedões), como trechos da
-  roda, e o filtro por categoria. Sem WebGL, a lista abaixo é a página.
+  A ARENA 3D É UM PARQUE: A RODA COM OS OBJETOS 3D DE VERDADE.
+  Os estandes ficam em roda, de frente para o alvo da marca no centro (e o
+  símbolo da Lazer & Sport pintado no chão), com o parque em volta. Na
+  roda entra só a máquina que tem objeto 3D (.glb, do cadastro ou do
+  core/arena.py); as outras seguem na galeria de fotos, mais abaixo.
+  Dentro do 3D ficam as áreas (máquinas com jogos da casa, trampolins e
+  brinquedões, espaços esportivos), como trechos da roda, e o filtro por
+  categoria. Sem WebGL, a lista abaixo (as mesmas máquinas) é a página.
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
@@ -54,7 +53,7 @@
 
             <p class="ls-pagina-sub">
                 Os jogos das nossas máquinas em prévia, para jogar aqui mesmo com o dedo ou
-                o mouse. E todas as máquinas da fábrica em 3D, montadas com as fotos reais.
+                o mouse. E os brinquedos da fábrica em 3D, num parque para girar e passear por dentro.
             </p>
 
             <div class="ls-pagina-stats">
@@ -64,7 +63,7 @@
                 </div>
                 <div class="ls-pagina-stat">
                     <i class="fa-solid fa-cubes" aria-hidden="true"></i>
-                    <span><b>{{ brinquedos_arena|length }}</b> máquina{{ brinquedos_arena|length|pluralize }} na Arena 3D</span>
+                    <span><b>{{ arena_dados.maquinas|length }}</b> brinquedo{{ arena_dados.maquinas|length|pluralize }} na Arena 3D</span>
                 </div>
                 <div class="ls-pagina-stat">
                     <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
@@ -132,14 +131,14 @@
     </div>
 </section>
 
-<!-- ================= ARENA 3D: as máquinas, com as fotos reais ================= -->
+<!-- ================= ARENA 3D: os objetos 3D de verdade, num parque ================= -->
 <section class="arena-secao arena-secao--palco" id="arena-3d" aria-labelledby="titulo-arena">
     <div class="arena-secao-head">
         <span class="arena-kicker"><i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D</span>
         <h2 id="titulo-arena">As máquinas da fábrica em 3D</h2>
         <p>
-            Cada máquina montada com as fotos reais dela, em volume: toque numa máquina e veja
-            de frente, dos lados, de costas, de cima e por baixo. Gire com o dedo ou o mouse e aproxime.
+            Os brinquedos da fábrica em 3D de verdade, num parque: toque num e veja de frente,
+            dos lados, de costas e de cima, ou entre no passeio por dentro. Gire com o dedo ou o mouse e aproxime.
         </p>
     </div>
 
@@ -156,12 +155,12 @@
                 </button>
                 {% endfor %}
             </div>
-            {% if categorias_arena|length > 1 %}
+            {% if categorias_roda|length > 1 %}
             <label class="arena3d-categoria">
                 <span>Categoria</span>
                 <select data-arena-categoria>
                     <option value="">Todas as categorias</option>
-                    {% for categoria in categorias_arena %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}
+                    {% for categoria in categorias_roda %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}
                 </select>
             </label>
             {% endif %}
@@ -175,7 +174,7 @@
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
                     <strong data-arena-aviso-titulo>Montando a arena…</strong>
-                    <span data-arena-aviso-texto>Levantando as máquinas a partir das fotos.</span>
+                    <span data-arena-aviso-texto>Trazendo os brinquedos em 3D para o parque.</span>
                 </div>
                 {% comment %}
                   OS CONTROLES, iguais no celular, no tablet e no computador: as
@@ -306,8 +305,8 @@
     {% else %}
     <div class="ls-vazio">
         <i class="fa-solid fa-cube" aria-hidden="true"></i>
-        <h2>As máquinas chegam com o catálogo</h2>
-        <p>Assim que os brinquedos forem cadastrados com fotos, eles aparecem aqui em 3D.</p>
+        <h2>Os objetos 3D estão chegando</h2>
+        <p>Assim que um brinquedo ganhar o objeto 3D, ele aparece aqui. As fotos de todos estão logo abaixo.</p>
     </div>
     {% endif %}
 </section>
@@ -319,7 +318,7 @@
         <h2 id="titulo-maquinas">Todas as máquinas da fábrica</h2>
         <p>
             Passe o dedo ou o mouse na foto para ver a máquina de frente, de lado e de costas.
-            Para girar cada uma, entre na Arena 3D logo acima.
+            As que têm objeto 3D giram aqui mesmo no cartão e estão na Arena 3D, logo acima.
         </p>
     </div>
 
