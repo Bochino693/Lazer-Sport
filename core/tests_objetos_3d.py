@@ -514,6 +514,10 @@ class AntesDaMigracaoTests(TestCase):
             imagem_brinquedo="brinquedos/capa.webp",
         )
         ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
+        # as telas do painel importam a `tabela_pronta` quando carregam: carregadas
+        # aqui pela primeira vez, guardariam o dublê para os testes seguintes
+        import sistema_interno.urls  # noqa: F401
+
         sem_tabela = mock.patch.object(objetos_3d, "tabela_pronta", return_value=False)
         sem_tabela.start()
         self.addCleanup(sem_tabela.stop)
