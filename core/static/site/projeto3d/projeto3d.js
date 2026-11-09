@@ -61,6 +61,8 @@ export async function iniciar(raiz) {
     estilo: "colorido",
     cor: dados.cores[0],
     semente: 1,
+    // por área (trampolim, esportivo, baby): { porte: "auto" | "compacto" | "medio" | "grande", sem: [componentes tirados] }
+    opcoes: {},
   };
   if (inicial) {
     Object.assign(estado.espaco, inicial.espaco || {});
@@ -78,6 +80,14 @@ export async function iniciar(raiz) {
     if (dados.estilos.includes(inicial.estilo)) estado.estilo = inicial.estilo;
     if (/^#[0-9a-f]{6}$/i.test(inicial.cor || "")) estado.cor = inicial.cor;
     estado.semente = Number(inicial.semente) || 1;
+    for (const [chave, op] of Object.entries(inicial.opcoes || {})) {
+      const a = dados.areas[chave];
+      if (!a || !(a.portes || []).length || !op) continue;
+      estado.opcoes[chave] = {
+        porte: (a.portes || []).some((p) => p.chave === op.porte) ? op.porte : "auto",
+        sem: Array.isArray(op.sem) ? op.sem.filter((c) => dados.componentes[c]) : [],
+      };
+    }
   }
   const escolha = () => ({
     principal: estado.principal,
@@ -86,6 +96,7 @@ export async function iniciar(raiz) {
     estilo: estado.estilo,
     cor: estado.cor,
     semente: estado.semente,
+    opcoes: estado.opcoes,
   });
 
   /* ---------------------------------------------------------------- os controles */
@@ -124,7 +135,8 @@ export async function iniciar(raiz) {
         <span><b>Só máquinas</b><small>fliperamas e jogos nas paredes</small></span>
       </button>`;
     const prontos = dados.itens.filter((i) => i.tipo === "grande" && i.area === atual);
-    if (!atual) {
+    if (!atual || !prontos.length) {
+      // sem modelo pronto (o trampolim park, a área baby): é o sob medida, com as opções abaixo
       listaProntos.hidden = true;
       listaProntos.innerHTML = "";
     } else {
@@ -146,14 +158,76 @@ export async function iniciar(raiz) {
     if (!b) return;
     estado.principal = b.dataset.area ? { tipo: "area", area: b.dataset.area } : null;
     estado.areas = estado.areas.filter((a) => a !== b.dataset.area);
-    desenharModelos(); desenharAreas(); mudou();
+    desenharModelos(); desenharAreas(); desenharOpcoes(); mudou();
   });
   listaProntos.addEventListener("click", (e) => {
     const b = e.target.closest("[data-pronto]");
     if (!b) return;
     estado.principal = b.dataset.pronto ? { tipo: "item", id: b.dataset.pronto } : { tipo: "area", area: areaDoPrincipal() };
-    desenharModelos(); mudou();
+    desenharModelos(); desenharOpcoes(); mudou();
   });
+
+  // as opções das áreas sob medida que mudam com o tamanho: o porte (só os que cabem) e o que vai dentro
+  const nomePorte = (area, chave) => ((dados.areas[area].portes || []).find((p) => p.chave === chave) || {}).nome || "";
+  const opcaoDe = (area) => estado.opcoes[area] || { porte: "auto", sem: [] };
+  /** Cabe no espaço (com a entrada e a passagem)? De qualquer lado. */
+  function cabeNoEspaco(min) {
+    const W = Number(estado.espaco.largura) - 0.6, D = Number(estado.espaco.comprimento) - 3.4;
+    const [a, b] = min;
+    return (a <= W && b <= D) || (b <= W && a <= D);
+  }
+  function porteEfetivo(area) {
+    const portes = dados.areas[area].portes || [];
+    const op = opcaoDe(area);
+    const escolhido = portes.find((p) => p.chave === op.porte);
+    if (escolhido) return escolhido;
+    let melhor = portes[0];
+    for (const p of portes) if (cabeNoEspaco(p.min)) melhor = p;
+    return melhor;
+  }
+  function blocoDeOpcoes(area) {
+    const a = dados.areas[area];
+    const portes = a.portes || [];
+    if (!portes.length) return "";
+    const op = opcaoDe(area);
+    const efetivo = porteEfetivo(area);
+    const chips = [`<button type="button" class="p3d-chip" data-op-area="${area}" data-porte="auto" aria-pressed="${op.porte === "auto"}">Automático${op.porte === "auto" ? ` <small>(${escapar(efetivo.nome.toLowerCase())})</small>` : ""}</button>`]
+      .concat(portes.map((p) => {
+        const cabe = cabeNoEspaco(p.min);
+        return `<button type="button" class="p3d-chip p3d-chip--porte" data-op-area="${area}" data-porte="${p.chave}" aria-pressed="${op.porte === p.chave}"${cabe ? "" : " disabled"} title="${cabe ? "" : "Não cabe no seu espaço"}">${escapar(p.nome)} <small>${metros(p.min[0])} × ${metros(p.min[1])} m</small></button>`;
+      }));
+    const comps = efetivo.componentes.filter((c) => !dados.fixos.includes(c)).map((c) => `
+      <button type="button" class="p3d-chip p3d-chip--comp" data-op-area="${area}" data-comp="${c}" aria-pressed="${!op.sem.includes(c)}">${escapar(dados.componentes[c] || c)}</button>`).join("");
+    return `<div class="p3d-opcao">
+      <p class="p3d-rotulo">${escapar(a.nome)}: o tamanho</p>
+      <div class="p3d-chips">${chips.join("")}</div>
+      ${comps ? `<p class="p3d-rotulo">O que vai dentro</p><div class="p3d-chips">${comps}</div>` : ""}
+    </div>`;
+  }
+  const caixaOpcoes = $("#p3dOpcoes", raiz);
+  const caixaOpcoesMais = $("#p3dOpcoesMais", raiz);
+  function desenharOpcoes() {
+    const principal = estado.principal && estado.principal.tipo === "area" ? estado.principal.area : "";
+    const p = principal ? blocoDeOpcoes(principal) : "";
+    caixaOpcoes.innerHTML = p;
+    caixaOpcoes.hidden = !p;
+    const mais = estado.areas.filter((a) => a !== principal).map(blocoDeOpcoes).join("");
+    caixaOpcoesMais.innerHTML = mais;
+    caixaOpcoesMais.hidden = !mais;
+  }
+  const aoMexerNasOpcoes = (e) => {
+    const b = e.target.closest("[data-op-area]");
+    if (!b || b.disabled) return;
+    const area = b.dataset.opArea;
+    const op = { ...opcaoDe(area), sem: [...opcaoDe(area).sem] };
+    if (b.dataset.porte) op.porte = b.dataset.porte;
+    if (b.dataset.comp) op.sem = op.sem.includes(b.dataset.comp) ? op.sem.filter((c) => c !== b.dataset.comp) : op.sem.concat([b.dataset.comp]);
+    estado.opcoes[area] = op;
+    desenharOpcoes();
+    mudou();
+  };
+  caixaOpcoes.addEventListener("click", aoMexerNasOpcoes);
+  caixaOpcoesMais.addEventListener("click", aoMexerNasOpcoes);
 
   // o estilo e a cor-tema (das áreas sob medida e do mini 3D)
   const listaEstilos = $("#p3dEstilos", raiz);
@@ -191,6 +265,7 @@ export async function iniciar(raiz) {
     const k = b.dataset.mais;
     estado.areas = estado.areas.includes(k) ? estado.areas.filter((a) => a !== k) : estado.areas.concat([k]);
     b.setAttribute("aria-pressed", String(estado.areas.includes(k)));
+    desenharOpcoes();
     mudou();
   });
 
@@ -256,6 +331,14 @@ export async function iniciar(raiz) {
     }
     return [...mapa.values()];
   }
+  /** O nome da área com o porte que ela ficou ("Trampolim park (médio)"). */
+  function nomeComPorte(i) {
+    if (!i.area || !(dados.areas[i.area.tipo] || {}).portes || !dados.areas[i.area.tipo].portes.length) return i.nome;
+    const op = opcaoDe(i.area.tipo);
+    const porte = op.porte !== "auto" ? op.porte : (geradorMod.porteQueCabe(i.area.tipo, i.area.largura, i.area.profundidade) || {}).chave;
+    const nome = nomePorte(i.area.tipo, porte);
+    return nome ? `${i.nome} (${nome.toLowerCase()})` : i.nome;
+  }
   function mostrarResultado() {
     const r = resultado;
     const coube = contarPorNome(r.itens);
@@ -267,7 +350,7 @@ export async function iniciar(raiz) {
         <span><b>${n.ocupacao}%</b><small>ocupado com uso</small></span>
         <span><b>${r.itens.length}</b><small>no projeto</small></span>
       </div>
-      ${coube.length ? `<ul class="p3d-coube">${coube.map((i) => `<li><button type="button" data-ver="${escapar(i.nome)}"><i class="fa-solid fa-check" aria-hidden="true"></i> ${i.qtd > 1 ? `<b>${i.qtd}×</b> ` : ""}${escapar(i.nome)}${i.area ? ` <small>${metros(i.area.largura)} × ${metros(i.area.profundidade)} m</small>` : ""}</button></li>`).join("")}</ul>` : `<p class="p3d-nota">Escolha o modelo do espaço e as máquinas.</p>`}
+      ${coube.length ? `<ul class="p3d-coube">${coube.map((i) => `<li><button type="button" data-ver="${escapar(i.nome)}"><i class="fa-solid fa-check" aria-hidden="true"></i> ${i.qtd > 1 ? `<b>${i.qtd}×</b> ` : ""}${escapar(nomeComPorte(i))}${i.area ? ` <small>${metros(i.area.largura)} × ${metros(i.area.profundidade)} m</small>` : ""}</button></li>`).join("")}</ul>` : `<p class="p3d-nota">Escolha o modelo do espaço e as máquinas.</p>`}
       ${fora.length ? `<p class="p3d-rotulo p3d-rotulo--fora">Ficou de fora</p><ul class="p3d-fora">${fora.map((i) => `<li><i class="fa-solid fa-xmark" aria-hidden="true"></i> <span>${i.qtd > 1 ? `<b>${i.qtd}×</b> ` : ""}<b>${escapar(i.nome)}</b>: ${escapar(i.motivo)}</span></li>`).join("")}</ul>` : ""}
       <div class="p3d-sugestao" id="p3dSugestao"${sugestao ? "" : " hidden"}></div>
       <p class="p3d-nota">Rascunho do arrumador: corredor de 1,20 m até cada coisa, área de quem joga na frente das máquinas e faixa de segurança em volta dos brinquedos. O projeto final é da nossa engenharia (NBR 16071).</p>`;
@@ -303,7 +386,7 @@ export async function iniciar(raiz) {
   let esperaSugestao = 0;
   function mudou() {
     clearTimeout(espera);
-    espera = setTimeout(refazer, 120);
+    espera = setTimeout(() => { desenharOpcoes(); refazer(); }, 120);
   }
   function refazer() {
     resultado = arrumar(estado.espaco, escolha(), dados);
@@ -354,6 +437,7 @@ export async function iniciar(raiz) {
 
   desenharModelos();
   desenharAreas();
+  desenharOpcoes();
   refazer();
   raiz.classList.add("p3d--pronto");
 
@@ -375,7 +459,7 @@ export async function iniciar(raiz) {
       erro.hidden = true;
       botao.disabled = true;
       const f = new FormData(formulario);
-      const coube = contarPorNome(resultado.itens).map((i) => ({ nome: i.nome, qtd: String(i.qtd) }));
+      const coube = contarPorNome(resultado.itens).map((i) => ({ nome: nomeComPorte(i), qtd: String(i.qtd) }));
       const fora = contarPorNome(resultado.recusados).map((i) => ({ nome: (i.qtd > 1 ? i.qtd + "× " : "") + i.nome, motivo: i.motivo }));
       const corpo = {
         site: f.get("site") || "",
@@ -752,7 +836,10 @@ async function criarCena(raiz, dados, geradorMod) {
       projeto.add(grupo);
       objetos.push({ item, grupo });
       if (item.area) {
-        const ideia = geradorMod.gerar(item.area.tipo, { largura: item.area.largura, profundidade: item.area.profundidade, altura: H }, estado.cor, estado.semente, { estilo: estado.estilo });
+        const op = (estado.opcoes || {})[item.area.tipo] || {};
+        const ideia = geradorMod.gerar(item.area.tipo, { largura: item.area.largura, profundidade: item.area.profundidade, altura: H }, estado.cor, estado.semente, {
+          estilo: estado.estilo, porte: op.porte && op.porte !== "auto" ? op.porte : "", sem: op.sem || [],
+        });
         const miolo = new T.Group();
         if (item.area.girar) miolo.rotation.y = Math.PI / 2;
         for (const peca of ideia.pecas) {

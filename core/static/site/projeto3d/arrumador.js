@@ -174,9 +174,16 @@ function pecasDaEscolha(escolha, catalogo) {
   const areaPeca = (chave, principal) => {
     const a = (catalogo.areas || {})[chave];
     if (!a) return null;
+    // o porte que o cliente escolheu (compacto, médio, grande): o mínimo e o ideal são os dele, e
+    // ela cresce só até o mínimo do porte de cima (escolheu o compacto, fica compacto)
+    const portes = a.portes || [];
+    const i = portes.findIndex((p) => p.chave === ((escolha.opcoes || {})[chave] || {}).porte);
+    const porte = i >= 0 ? portes[i] : null;
+    const min = porte ? porte.min : a.min, ideal = porte ? porte.ideal : a.ideal;
+    const max = porte && portes[i + 1] ? portes[i + 1].min : a.max;
     return {
       chave: (principal ? "principal-" : "area-") + chave, ref: chave, nome: a.nome, tipo: "area", area: chave, principal,
-      w: a.min[0], d: a.min[1], h: a.pe_direito_minimo || 0, flex: true, min: a.min, ideal: a.ideal, max: a.max,
+      w: min[0], d: min[1], h: a.pe_direito_minimo || 0, flex: true, min, ideal, max,
       seg: a.seguranca || 0, uso: { frente: a.seguranca || 0, tras: a.seguranca || 0, lados: a.seguranca || 0 },
       prefere: principal ? "principal" : (a.prefere || "canto"),
     };

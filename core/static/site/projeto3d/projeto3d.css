@@ -311,6 +311,15 @@
 .p3d-pronto-foto img { width: 100%; height: 100%; object-fit: contain; }
 .p3d-pronto-foto--sob { color: #0b1220; background: var(--p3d-amarelo); font-size: 18px; }
 
+/* as opções das áreas pelo tamanho: o porte (o que não cabe fica apagado) e o que vai dentro */
+.p3d-opcoes { display: grid; gap: 4px; margin-top: 6px; }
+.p3d-opcao { padding: 10px 12px 12px; border-radius: 14px; border: 1px dashed var(--p3d-borda-forte); background: rgba(0, 0, 0, .12); }
+.p3d-opcao .p3d-rotulo { margin-top: 6px; }
+.p3d-chip small { font-weight: 600; opacity: .75; }
+.p3d-chip:disabled { opacity: .35; cursor: not-allowed; text-decoration: line-through; }
+.p3d-chip--comp[aria-pressed="false"] { opacity: .55; text-decoration: line-through; }
+.p3d-chip--comp[aria-pressed="true"] { border-color: transparent; color: #0b1220; background: #86efac; }
+
 .p3d-cores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .p3d-cor {
   width: 30px;

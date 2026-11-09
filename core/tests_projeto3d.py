@@ -81,11 +81,17 @@ class PaginaTests(TestCase):
         self.assertContains(resposta, "As áreas que a fábrica monta sob medida")
         self.assertContains(resposta, "Basquete Street</b> — 1,00 × 2,40 m")
 
-    def test_o_trampolim_de_enterrada_e_do_trampolim_park(self):
+    def test_um_trampolim_so_nao_e_o_trampolim_park(self):
+        # o park é o sob medida (com os portes); a cama elástica e o trampolim de enterrada são brinquedos grandes
         dados = projeto3d.catalogo()
         enterrada = next(i for i in dados["itens"] if i["nome"] == "Trampolim de Enterrada")
-        self.assertEqual(enterrada["area"], "trampolim")
+        self.assertEqual((enterrada["tipo"], enterrada["area"]), ("grande", ""))
         self.assertIn("trampolim-enterrada.glb", enterrada["modelo"])
+        park = dados["areas"]["trampolim"]
+        self.assertEqual([p["chave"] for p in park["portes"]], ["compacto", "medio", "grande"])
+        self.assertIn("parede_inclinada", park["portes"][2]["componentes"])
+        self.assertIn("trampolim_park", dados["areas"]["esportivo"]["portes"][1]["componentes"])
+        self.assertEqual(dados["componentes"]["espuma"], "Piscina de espuma")
 
     def test_o_endereco_antigo_leva_para_a_arena(self):
         resposta = self.client.get("/monte-seu-projeto/")
@@ -107,6 +113,19 @@ class ValidarPedidoTests(TestCase):
         self.assertEqual(campos["escolhas"]["areas"], ["baby"])
         self.assertEqual(campos["estilo"], "neon")
         self.assertEqual(campos["semente"], 7)
+
+    def test_guarda_o_porte_e_o_que_o_cliente_tirou(self):
+        escolha = _escolha(opcoes={
+            "trampolim": {"porte": "grande", "sem": ["queimada", "camas", "inventado"]},
+            "baby": {"porte": "gigante"},
+            "brinquedao": {"porte": "grande"},
+            "lixo": "x",
+        })
+        campos = projeto3d.validar_pedido(_pedido(escolha=escolha), self.catalogo)
+        self.assertEqual(campos["escolhas"]["opcoes"], {
+            "trampolim": {"porte": "grande", "sem": ["queimada"]},  # as camas não saem; o inventado some
+            "baby": {"porte": "auto", "sem": []},
+        })
 
     def test_o_principal_pode_ser_um_modelo_pronto(self):
         campos = projeto3d.validar_pedido(_pedido(escolha=_escolha(principal={"tipo": "item", "id": "modelo-brinquedao-ninja"})), self.catalogo)

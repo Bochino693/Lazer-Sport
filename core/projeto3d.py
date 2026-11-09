@@ -82,6 +82,49 @@ AREAS = {
     },
 }
 
+#: Os PORTES das áreas que mudam com o tamanho (os mesmos números do gerador,
+#: sistema_interno/static/interno/montar3d-gerador.js, PORTES): o mínimo e o
+#: ideal do miolo e o que entra. A página mostra só os que cabem no espaço.
+PORTES = {
+    "trampolim": (
+        {"chave": "compacto", "nome": "Compacto", "min": (5.5, 5.5), "ideal": (8.0, 6.5),
+         "componentes": ("camas", "espuma")},
+        {"chave": "medio", "nome": "Médio", "min": (9.0, 7.0), "ideal": (13.0, 9.0),
+         "componentes": ("camas", "espuma", "enterrada")},
+        {"chave": "grande", "nome": "Grande", "min": (14.0, 10.0), "ideal": (20.0, 13.0),
+         "componentes": ("camas", "espuma", "enterrada", "parede_inclinada", "escalada", "queimada")},
+    ),
+    "esportivo": (
+        {"chave": "compacto", "nome": "Compacto", "min": (7.0, 5.0), "ideal": (14.0, 8.0),
+         "componentes": ("quadra", "escalada")},
+        {"chave": "medio", "nome": "Médio", "min": (16.0, 10.0), "ideal": (22.0, 13.0),
+         "componentes": ("quadra", "trampolim_park", "escalada")},
+        {"chave": "grande", "nome": "Grande", "min": (26.0, 16.0), "ideal": (36.0, 22.0),
+         "componentes": ("quadra_futebol", "quadra_basquete", "trampolim_park", "escalada", "circuito_kids")},
+    ),
+    "baby": (
+        {"chave": "compacto", "nome": "Compacta", "min": (3.0, 3.0), "ideal": (4.0, 3.5),
+         "componentes": ("piscina", "escorregador", "blocos")},
+        {"chave": "medio", "nome": "Média", "min": (5.0, 4.0), "ideal": (6.0, 4.5),
+         "componentes": ("piscina", "escorregador", "blocos", "tunel", "paineis", "casinha")},
+        {"chave": "grande", "nome": "Grande", "min": (7.0, 5.0), "ideal": (8.0, 6.0),
+         "componentes": ("piscina", "escorregador", "blocos", "tunel", "paineis", "casinha", "pendulos", "rampa")},
+    ),
+}
+
+#: O nome de cada coisa que vai dentro das áreas (as opções que o cliente liga e desliga).
+COMPONENTES = {
+    "camas": "Camas elásticas", "espuma": "Piscina de espuma", "enterrada": "Pista de enterrada",
+    "parede_inclinada": "Trampolim de parede", "escalada": "Parede de escalada", "queimada": "Quadra de queimada",
+    "quadra": "Quadra multiuso", "quadra_futebol": "Quadra de futebol", "quadra_basquete": "Quadra de basquete",
+    "trampolim_park": "Trampolim park", "circuito_kids": "Circuito kids",
+    "piscina": "Piscina rasa", "escorregador": "Plataforma com escorregador", "blocos": "Blocos de espuma",
+    "tunel": "Túnel", "paineis": "Painéis ábaco", "casinha": "Casinha", "pendulos": "Bolas penduradas",
+    "rampa": "Rampa e degraus",
+}
+#: O que não sai (sem isto a área não é ela).
+COMPONENTES_FIXOS = {"camas", "quadra", "piscina"}
+
 #: O principal pode ser "só máquinas" (um espaço de fliperamas, sem área no meio).
 SO_MAQUINAS = "maquinas"
 
@@ -95,7 +138,9 @@ CORES = (
 )
 
 #: Que área cada brinquedo grande do catálogo é (o modelo pronto daquela área).
-AREA_DO_DESENHO = {"playground": "brinquedao", "cama_elastica": "trampolim"}
+#: Um trampolim só (a Cama Elástica, o Trampolim de Enterrada) NÃO é um trampolim
+#: park: entra como brinquedo grande, e o park é o sob medida (com os portes).
+AREA_DO_DESENHO = {"playground": "brinquedao"}
 
 # ======================================================================
 # O LUGAR DE CADA MÁQUINA
@@ -171,7 +216,10 @@ def item_do_catalogo(dados):
         "desenho": desenho,
         "tipo": "grande" if grande else "maquina",
         # o modelo pronto de qual área (o Brinquedão Ninja é um brinquedão; o Espaço Esportivo, um esportivo)
-        "area": "esportivo" if dados.get("reino") or dados.get("grupo") == "esportivos" else AREA_DO_DESENHO.get(desenho, "brinquedao" if grande else ""),
+        "area": (
+            "esportivo" if dados.get("reino") or dados.get("grupo") == "esportivos"
+            else AREA_DO_DESENHO.get(desenho, "brinquedao" if grande and desenho != "cama_elastica" else "")
+        ),
         "medidas": medidas,
         "medidas_reais": bool(dados.get("medidas_reais")) or len(dados.get("medidas_modelo") or []) == 3,
         "modelo": dados.get("modelo") or "",
@@ -196,9 +244,17 @@ def catalogo():
     itens = sorted((item_do_catalogo(d) for d in dados), key=lambda i: (i["tipo"] != "maquina", arena._normalizar(i["nome"])))
     return {
         "areas": {
-            chave: {**a, "min": list(a["min"]), "ideal": list(a["ideal"]), "max": list(a["max"])}
+            chave: {
+                **a, "min": list(a["min"]), "ideal": list(a["ideal"]), "max": list(a["max"]),
+                "portes": [
+                    {**p, "min": list(p["min"]), "ideal": list(p["ideal"]), "componentes": list(p["componentes"])}
+                    for p in PORTES.get(chave, ())
+                ],
+            }
             for chave, a in AREAS.items()
         },
+        "componentes": COMPONENTES,
+        "fixos": sorted(COMPONENTES_FIXOS),
         "itens": itens,
         "estilos": list(ESTILOS),
         "cores": list(CORES),
@@ -309,6 +365,15 @@ def validar_pedido(dados, catalogo_atual):
             itens.append({"id": str(linha["id"]), "qtd": min(qtd, LIMITES["qtd"])})
     if not principal and not areas and not itens:
         raise PedidoInvalido("Escolha o modelo do espaço ou ao menos uma máquina.")
+    opcoes = {}
+    for chave, opcao in (escolha.get("opcoes") or {}).items() if isinstance(escolha.get("opcoes"), dict) else ():
+        if chave not in PORTES or not isinstance(opcao, dict):
+            continue
+        portes = {p["chave"]: p for p in PORTES[chave]}
+        porte = opcao.get("porte") if opcao.get("porte") in portes else "auto"
+        todos = {c for p in PORTES[chave] for c in p["componentes"]} - COMPONENTES_FIXOS
+        sem = sorted({c for c in (opcao.get("sem") or []) if c in todos})
+        opcoes[chave] = {"porte": porte, "sem": sem}
     estilo = escolha.get("estilo") if escolha.get("estilo") in ESTILOS else "colorido"
     cor = escolha.get("cor") if re.fullmatch(r"#[0-9a-fA-F]{6}", str(escolha.get("cor") or "")) else CORES[0]
     try:
@@ -329,6 +394,7 @@ def validar_pedido(dados, catalogo_atual):
         "estilo": estilo,
         "cor": cor.lower(),
         "semente": semente,
-        "escolhas": {"principal": principal, "areas": areas, "itens": itens, "estilo": estilo, "cor": cor.lower(), "semente": semente},
+        "escolhas": {"principal": principal, "areas": areas, "itens": itens, "estilo": estilo, "cor": cor.lower(),
+                     "semente": semente, "opcoes": opcoes},
         "resumo": _resumo(dados.get("resumo")),
     }

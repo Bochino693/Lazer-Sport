@@ -93,11 +93,33 @@ const gerador = await import(pathToFileURL(path.join(AQUI, "..", "..", "sistema_
 const base = pecas.desenhosBase(T, utilidades);
 const desenhos = Object.assign({}, base.desenhos, pecas.desenhosExtra(T, base.ferramentas));
 for (const tipo of Object.keys(catalogo.areas)) {
-  for (const estilo of ["colorido", "neon", "selva"]) {
-    const ideia = gerador.gerar(tipo, { largura: catalogo.areas[tipo].ideal[0], profundidade: catalogo.areas[tipo].ideal[1], altura: 5 }, "#2563eb", 2, { estilo });
-    for (const p of ideia.pecas) confere(typeof desenhos[p.tipo] === "function", `a área ${tipo} (${estilo}) pede a peça ${p.tipo}, que não tem desenho`);
+  const portes = catalogo.areas[tipo].portes || [];
+  const medidas = portes.length ? portes.map((p) => [p.chave, p.ideal]) : [["", catalogo.areas[tipo].ideal]];
+  for (const [porte, ideal] of medidas) {
+    for (const estilo of ["colorido", "neon", "selva"]) {
+      const ideia = gerador.gerar(tipo, { largura: ideal[0], profundidade: ideal[1], altura: 6 }, "#2563eb", 2, { estilo, porte });
+      for (const p of ideia.pecas) confere(typeof desenhos[p.tipo] === "function", `a área ${tipo} (${porte} ${estilo}) pede a peça ${p.tipo}, que não tem desenho`);
+      if (porte) confere(ideia.porte === porte, `${tipo}: pediu o porte ${porte} na medida ideal dele e saiu ${ideia.porte}`);
+    }
   }
 }
+// os portes do servidor (core/projeto3d.py) e os do gerador são os mesmos
+for (const [tipo, lista] of Object.entries(gerador.PORTES)) {
+  const doServidor = (catalogo.areas[tipo] || {}).portes || [];
+  confere(JSON.stringify(lista.map((p) => [p.chave, p.min, p.componentes])) === JSON.stringify(doServidor.map((p) => [p.chave, p.min, p.componentes])),
+    `os portes de ${tipo} no gerador e no core/projeto3d.py não batem`);
+}
+// o trampolim park grande tem o que um park de verdade tem; o compacto, só o básico
+const grande = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, {});
+const tipos = new Set(grande.pecas.map((p) => p.tipo));
+for (const t of ["cama", "espuma", "tabela", "cama_inclinada", "escalada", "cerca", "degraus_espuma"]) confere(tipos.has(t), `o trampolim park grande sem ${t}`);
+const compacto = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 5 }, "#2563eb", 1, {});
+confere(!compacto.pecas.some((p) => p.tipo === "cama_inclinada" || p.tipo === "tabela"), "o trampolim park compacto não leva enterrada nem trampolim de parede");
+const semEnterrada = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["enterrada"] });
+confere(!semEnterrada.pecas.some((p) => p.tipo === "tabela"), "tirar a pista de enterrada não tirou as tabelas");
+const esportivoGrande = gerador.gerar("esportivo", { largura: 36, profundidade: 22, altura: 6 }, "#2563eb", 1, {});
+confere(esportivoGrande.pecas.filter((p) => p.tipo === "quadra").length === 2 && esportivoGrande.pecas.some((p) => p.tipo === "espuma"),
+  "o espaço esportivo grande leva as duas quadras e o trampolim park");
 confere(typeof desenhos.coluna(pecas.CATALOGO_BASE.coluna.d, "#2563eb")[0].geometry === "object", "a coluna não se desenha");
 
 if (problemas.length) {

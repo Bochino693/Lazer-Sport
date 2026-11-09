@@ -74,6 +74,7 @@ class PedidoProjeto3DView(GestorInternoRequiredMixin):
             "estilo": escolhas.get("estilo") or pedido.estilo,
             "cor": escolhas.get("cor") or pedido.cor,
             "semente": escolhas.get("semente") or pedido.semente,
+            "opcoes": escolhas.get("opcoes") or {},
         }
         resumo = pedido.resumo or {}
         whatsapp = pedido.whatsapp if pedido.whatsapp.startswith("55") else "55" + pedido.whatsapp

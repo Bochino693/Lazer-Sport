@@ -36,6 +36,11 @@ export const CATALOGO_EXTRA = {
   pendulos: { nome: "Bolas penduradas", grupo: "brincar", d: { largura: 0.95, altura: 0.95, quantidade: 3 }, cor: "#2563eb" },
   piscina_redonda: { nome: "Piscina redonda", grupo: "brincar", d: { diametro: 2.4, altura: 0.5 }, cor: "#6b4f3a" },
   espuma: { nome: "Piscina de espuma", grupo: "brincar", d: { largura: 3.0, profundidade: 4.0, altura: 0.9 }, cor: "#2563eb" },
+  // os blocos de espuma da área baby (cubo, cilindro, meia-lua, cunha e arco, em cores vivas) e a casinha
+  blocos_espuma: { nome: "Blocos de espuma", grupo: "brincar", d: { largura: 1.6, profundidade: 1.2 }, cor: "#facc15" },
+  casinha: { nome: "Casinha", grupo: "brincar", d: { largura: 1.2, profundidade: 1.2, altura: 1.4 }, cor: "#ec4899" },
+  // o trampolim de parede dos trampolim parks: a cama inclinada que sobe do nível das camas
+  cama_inclinada: { nome: "Trampolim de parede", grupo: "brincar", d: { largura: 2.0, profundidade: 1.6, altura: 2.6, base: 0.9 }, cor: "#2563eb" },
   rampa: { nome: "Rampa de espuma", grupo: "brincar", d: { comprimento: 1.2, altura: 0.35, largura: 0.9 }, cor: "#facc15" },
   degraus_espuma: { nome: "Degraus de espuma", grupo: "brincar", d: { largura: 0.8, altura: 0.6, degraus: 3 }, cor: "#f97316" },
   arco: { nome: "Portal", grupo: "brincar", d: { largura: 1.4, altura: 2.0 }, cor: "#ec4899" },
@@ -539,6 +544,88 @@ export function desenhosExtra(T, h) {
         bolas[i % 5].push(g);
       }
       return grupo.concat(porCor(bolas, VIVAS.slice(0, 5), (c) => material(c, { roughness: 0.3 })));
+    },
+    // os blocos de espuma soltos da área baby: um conjunto que cabe em largura × profundidade
+    blocos_espuma(d, cor) {
+      const L = d.largura, P = d.profundidade, grupo = [];
+      const sorte = aleatorio(Math.round(L * 173 + P * 29));
+      const mat = (i) => material(i % 3 === 0 ? cor : variar(cor, i), { roughness: 0.8 });
+      const pecasDe = [
+        (i) => { const g = caixa(0.4, 0.4, 0.4); g.translate(0, 0.2, 0); return malha(g, mat(i)); },
+        (i) => { const g = new T.CylinderGeometry(0.2, 0.2, 0.5, 20); g.translate(0, 0.25, 0); return malha(g, mat(i)); },
+        (i) => { const g = new T.CylinderGeometry(0.3, 0.3, 0.3, 24, 1, false, 0, Math.PI); g.rotateX(Math.PI / 2); return malha(g, mat(i)); },
+        (i) => malha(silhueta([[-0.3, 0], [0.3, 0], [0.3, 0.3]], 0.45), mat(i)),
+        (i) => {
+          const g = new T.TorusGeometry(0.28, 0.1, 10, 20, Math.PI);
+          return malha(g, mat(i));
+        },
+      ];
+      const n = Math.max(3, Math.min(10, Math.round(L * P * 2.5)));
+      for (let i = 0; i < n; i++) {
+        const m = pecasDe[i % pecasDe.length](i);
+        m.position.x += (sorte() - 0.5) * (L - 0.6);
+        m.position.z += (sorte() - 0.5) * (P - 0.6);
+        m.rotation.y = sorte() * Math.PI;
+        grupo.push(m);
+      }
+      return grupo;
+    },
+    // a casinha de bonecas: paredes com a porta e a janela, telhado de duas águas
+    casinha(d, cor) {
+      const L = d.largura, P = d.profundidade, A = d.altura, ap = A * 0.65, e = 0.05, grupo = [];
+      const parede = material(clarear(cor, 0.55), { roughness: 0.8 });
+      const frente = silhueta([[-L / 2, 0], [-0.22, 0], [-0.22, ap * 0.75], [0.22, ap * 0.75], [0.22, 0], [L / 2, 0], [L / 2, ap], [-L / 2, ap]], e);
+      const mf = malha(frente, parede);
+      mf.position.z = P / 2;
+      const mt = malha(caixa(L, ap, e), parede);
+      mt.position.set(0, ap / 2, -P / 2);
+      grupo.push(mf, mt);
+      for (const s of [-1, 1]) {
+        const lado = malha(caixa(e, ap, P), parede);
+        lado.position.set(s * L / 2, ap / 2, 0);
+        grupo.push(lado);
+        const janela = malha(caixa(0.02, 0.3, 0.3), material("#38bdf8", { roughness: 0.2 }));
+        janela.position.set(s * (L / 2 + 0.02), ap * 0.6, 0);
+        grupo.push(janela);
+      }
+      const ag = A - ap;
+      for (const s of [-1, 1]) {
+        const agua = malha(caixa(Math.hypot(L / 2 + 0.1, ag), 0.06, P + 0.2), material(cor, { roughness: 0.6 }));
+        agua.position.set(s * (L / 4 + 0.05), ap + ag / 2, 0);
+        agua.rotation.z = -s * Math.atan2(ag, L / 2 + 0.1);
+        grupo.push(agua);
+      }
+      const oitao = malha(silhueta([[-L / 2, 0], [L / 2, 0], [0, ag]], e), parede);
+      oitao.position.set(0, ap, P / 2);
+      const oitao2 = oitao.clone();
+      oitao2.position.z = -P / 2;
+      grupo.push(oitao, oitao2);
+      return grupo;
+    },
+    // o trampolim de parede: a lona inclinada (do nível das camas, `base`, na frente (+z), até
+    // `altura`, encostada atrás (-z)), com a moldura estofada nos lados e o caixote escuro por baixo
+    cama_inclinada(d, cor) {
+      const L = d.largura, P = d.profundidade, A = d.altura, B = Math.min(d.base ?? 0.9, A - 0.3);
+      const ang = Math.atan2(A - B, P), rampa = Math.hypot(P, A - B), borda = 0.22;
+      const grupo = [];
+      // o perfil no plano (z, y): alto atrás (-z, encostado na parede), na altura das camas na frente (+z)
+      const caixote = malha(silhueta([[-P / 2, 0], [P / 2, 0], [P / 2, B], [-P / 2, A]], L), material("#1f2937", { roughness: 0.85 }));
+      caixote.rotation.y = -Math.PI / 2;
+      grupo.push(caixote);
+      const lona = malha(caixa(L - 2 * borda, 0.03, rampa), material("#111827", { roughness: 0.9 }));
+      lona.position.set(0, (A + B) / 2 + 0.02, 0);
+      lona.rotation.x = ang;
+      grupo.push(lona);
+      for (const s of [-1, 1]) {
+        const m = malha(caixa(borda, 0.14, rampa), material(cor, { roughness: 0.7 }));
+        m.position.set(s * (L / 2 - borda / 2), (A + B) / 2 + 0.05, 0);
+        m.rotation.x = ang;
+        grupo.push(m);
+      }
+      const topo = malha(caixa(L, 0.2, 0.3), material(cor, { roughness: 0.7 }));
+      topo.position.set(0, A + 0.05, -P / 2 + 0.15);
+      grupo.push(topo);
+      return grupo;
     },
     espuma(d, cor) {
       const L = d.largura, P = d.profundidade, A = d.altura, e = 0.25;
