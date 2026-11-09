@@ -6,6 +6,9 @@ O que estes testes protegem:
     as medidas que estão dentro do .glb (o L de 10 m × 5,20 m, 3,75 m de
     altura), e o arquivo é leve; o .glb e as quatro fotos existem; o Modelo 2
     continua com o dele;
+  * a planta é o L do projeto: a piscina de bolinhas e o tobogã ficam DENTRO
+    da barra, nos últimos 2 m (o espaço que ele ocupa decide o que cabe no
+    "Monte seu projeto");
   * antes de estar no catálogo, o objeto já aparece na arena (na seção dos
     brinquedões, na roda e não num reino), com a frente de capa; cadastrado,
     o do catálogo toma o lugar (sem duplicar);
@@ -21,6 +24,7 @@ O que estes testes protegem:
 """
 
 import importlib
+import math
 import re
 import tempfile
 from decimal import Decimal
@@ -57,6 +61,46 @@ def _disco(pasta):
     )
 
 
+def _caixa_do_no(nome):
+    """A caixa (mínimo, máximo) do nó `nome` do .glb do site, no objeto, em metros.
+
+    Como `medidas_do_glb`, mas só com as malhas debaixo daquele nó (o
+    gltfpack põe a malha de cada material num nó filho, com a escala da
+    compressão).
+    """
+    from .objetos_3d import _MAXIMO_DO_TIPO, _matriz_do_no, _multiplicar, ler_json_do_glb
+
+    with open(finders.find(GLB), "rb") as arquivo:
+        dados = ler_json_do_glb(arquivo)
+    nos, malhas, acessores = dados["nodes"], dados["meshes"], dados["accessors"]
+    baixo, alto = [math.inf] * 3, [-math.inf] * 3
+
+    def andar(indice, pai, dentro):
+        no = nos[indice]
+        matriz = _multiplicar(pai, _matriz_do_no(no))
+        dentro = dentro or no.get("name") == nome
+        if dentro and "mesh" in no:
+            for primitiva in malhas[no["mesh"]]["primitives"]:
+                acessor = acessores[primitiva["attributes"]["POSITION"]]
+                menor, maior = acessor["min"], acessor["max"]
+                if acessor.get("normalized"):
+                    teto = _MAXIMO_DO_TIPO[acessor["componentType"]]
+                    menor, maior = [max(v / teto, -1.0) for v in menor], [max(v / teto, -1.0) for v in maior]
+                for x in (menor[0], maior[0]):
+                    for y in (menor[1], maior[1]):
+                        for z in (menor[2], maior[2]):
+                            for eixo in range(3):
+                                v = matriz[eixo] * x + matriz[4 + eixo] * y + matriz[8 + eixo] * z + matriz[12 + eixo]
+                                baixo[eixo], alto[eixo] = min(baixo[eixo], v), max(alto[eixo], v)
+        for filho in no.get("children") or []:
+            andar(filho, matriz, dentro)
+
+    identidade = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    for raiz in dados["scenes"][dados.get("scene", 0)]["nodes"]:
+        andar(raiz, identidade, False)
+    return baixo, alto
+
+
 def _categorias():
     CategoriasBrinquedos.objects.create(nome_categoria="Brinquedões", imagem_categoria="categorias/brinquedoes.png")
     CategoriasBrinquedos.objects.create(nome_categoria="Eletrônicos", imagem_categoria="categorias/eletronicos.png")
@@ -86,6 +130,23 @@ class ObjetoNaArenaTests(TestCase):
         self.assertEqual(ler_glb_do_site(GLB)["medidas"], MEDIDAS)
         # a Arena baixa o objeto inteiro: abaixo de 800 KB
         self.assertLess(Path(finders.find(GLB)).stat().st_size, 800 * 1024)
+
+    def test_a_piscina_e_o_tobogan_ficam_dentro_da_barra(self):
+        # No objeto (centralizado, a frente em +z): a barra de 10 m × 2 m vai
+        # de x = -5 a 5 e de z = -2,6 (o fundo) a -0,6 (a frente dela); a perna
+        # é que avança até z = 2,6. A piscina e a espiral ocupam os últimos 2 m
+        # da barra (x de 3 a 5), sem nada saindo na frente dela.
+        for nome in ("bolinhas", "toboga-azul", "toboga-magenta", "toboga-amarelo", "toboga-laranja"):
+            baixo, alto = _caixa_do_no(nome)
+            self.assertGreater(alto[0], baixo[0], nome)  # o nó existe e tem malha
+            self.assertGreaterEqual(baixo[0], 3.0 - 0.01, nome)
+            self.assertLessEqual(alto[0], 5.0 + 0.01, nome)
+            self.assertGreaterEqual(baixo[2], -2.6 - 0.01, nome)
+            self.assertLessEqual(alto[2], -0.6 + 0.01, nome)
+        # a boca do tobogã sai do piso do 2º andar (1,90 m) e o tubo chega à piscina
+        baixo, alto = _caixa_do_no("toboga-azul")
+        self.assertLess(baixo[1], 0.45)
+        self.assertGreater(alto[1], 2.3)
 
     def test_aparece_na_arena_antes_do_cadastro(self):
         Brinquedos.objects.create(nome_brinquedo="Air Game Hockey", descricao="x", avaliacao=5, voltz="220v")

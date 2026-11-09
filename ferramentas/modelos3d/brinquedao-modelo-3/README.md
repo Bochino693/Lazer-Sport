@@ -40,13 +40,23 @@ quebra-blocos de pixels), desenhada em `canvas` no `montar.js`.
 
 Como as imagens foram lidas onde elas não fecham sozinhas:
 
-- **A piscina de bolinhas** (2 m × 2 m) fica no chão, na frente da ponta
-  direita da barra: a planta a mostra na ponta direita, junto do topo do
-  tobogã, e embaixo do 2º andar ela não apareceria; atrás dos 10 m ela
-  passaria da medida. O tobogã desce na frente do 10º módulo, sobre ela.
-- **O tobogã** dá 2,25 voltas na espiral mais a entrada (≈ 2,5 voltas de
-  frente): sai do 10º da frente, passa por baixo do painel da janela e
-  termina na piscina. Tubo de 52 cm, espiral de 46 cm de raio.
+- **A piscina de bolinhas e o tobogã ficam DENTRO da barra**, nos últimos
+  2 m dela (x de 8 a 10 m), nos 2 m de fundo inteiros: a piscina de 2 m ×
+  2 m no chão e a espiral descendo dentro dela, em volta da coluna do meio
+  (o poste do tobogã). Em cima, nesses 2 m, só o módulo amarelo de trás
+  (8 a 9 m, com os dois sacos azuis) tem piso: a boca do tobogã sai da
+  beira dele, para a direita; a frente dos módulos 9 e 10 e o fundo do 10º
+  são o vão da espiral (sem piso e sem as travessas que a cruzariam, com
+  tela em volta). O painel da janela redonda fica no alto da ponta direita.
+  A escadinha amarela de 2 degraus fica colada na frente da piscina (x de
+  9,3 a 9,8 m) e é a única coisa que sai da frente da barra (35 cm): vista
+  de cima, o objeto é exatamente o L de 10 m × 5,20 m. (Na primeira versão
+  a piscina ficava na frente da barra; a planta cotada a põe dentro.)
+- **O tobogã** dá 2,25 voltas na espiral mais a boca (≈ 2,5 voltas de
+  frente). Tubo de 50 cm, espiral de 52 cm de raio em volta da coluna. Os
+  primeiros 2/3 de volta são mais inclinados: quando a espiral passa por
+  baixo do piso amarelo, o tubo já desceu o bastante (sobram ~11 cm até o
+  piso, ~6 cm até as travessas e ~3 cm entre uma volta e a outra).
 - **A escada da torre**: quatro plataformas em triângulo, alternando as
   metades da diagonal (0,45 m, 0,9 m, 1,4 m e 1,9 m). As duas de baixo são
   blocos de espuma branca: de frente, são os degraus brancos da vista.
@@ -56,10 +66,10 @@ Como as imagens foram lidas onde elas não fecham sozinhas:
 - **As barraquinhas** têm 1,5 m cada (o tamanho delas na vista de frente):
   as colunas da frente passam diante delas e o toldo tem um vão em cada
   coluna.
-- Embaixo dos módulos 7 e 8 e atrás da piscina, o chão fica livre.
+- Embaixo, os fliperamas vão até ~7,4 m; no 8º módulo o chão fica livre.
 
 Medidas finais do objeto: 10 m × 5,20 m, altura 3,75 m (exatas: as colunas
-de fora ficam para dentro da tampa); ~37,6 mil triângulos; ~570 KB depois do
+de fora ficam para dentro da tampa); ~37,2 mil triângulos; ~565 KB depois do
 `gltfpack`.
 
 ## Refazer
@@ -91,8 +101,9 @@ quatro fotos e o objeto 3D ligado sai sozinho no deploy, pela migração
 O passeio por dentro (`CAMINHOS["brinquedao-modelo-3"]` em
 `core/static/site/arena/arena3d.js`) entra pela torre e sobe as plataformas,
 atravessa a passarela de rede, o corredor de cunhas, o piso de rede sob a
-bola, o balanço e os sacos, desce o tobogã até a piscina, sai pela escadinha
-e termina olhando o brinquedão inteiro. Os pontos são escritos nas
+bola, o balanço e os sacos, passa entre os sacos azuis do módulo amarelo,
+desce o tobogã por dentro até a piscina, sai pela escadinha da frente e
+termina olhando o brinquedão inteiro. Os pontos são escritos nas
 coordenadas de trabalho do `montar.js` (mm): `M3` leva ao objeto
 centralizado (o deslocamento que o `gerar.cjs` imprime) e o tobogã está nos
 dois lugares (`TOBOGA` no `montar.js`, `toboganDoModelo3` na Arena). Os

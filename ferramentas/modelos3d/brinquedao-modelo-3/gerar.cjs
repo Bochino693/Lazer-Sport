@@ -31,7 +31,8 @@ const FOTOS = path.join(__dirname, "../../../core/static/site/arena/modelos/brin
     dir34: [[10.5, 5, 10.5], [1, 1.4, 0], 34],
     costas: [[1, 4.5, -15.5], [0, 1.6, 0], 34],
     // de perto: o tobogã e a piscina, a torre e o andar de cima por dentro
-    toboga: [[8.2, 2.4, 6.2], await P(9200, 2300, 1250), 40],
+    toboga: [[7.4, 2.5, 3.4], await P(9000, 4200, 1150), 40],
+    piscina: [[4.2, 4.6, 0.6], await P(9000, 4200, 600), 45],
     torre: [[-4.2, 3.0, 6.0], await P(500, 900, 1800), 40],
     andar: [[-0.5, 6.6, 4.2], await P(5000, 4300, 2100), 42],
     dentro: [await P(500, 3650, 2750), await P(6000, 3900, 2250), 72],

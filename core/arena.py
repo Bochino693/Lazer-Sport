@@ -674,8 +674,9 @@ MODELOS_3D = (
         # Sem .3ds: o objeto sai das três imagens do projeto (a frente, a
         # planta e a perspectiva), nas medidas delas -- o L de 10 m × 5,20 m
         # (a barra de 2 m e a perna de 1 m na ponta esquerda), 3,75 m de
-        # altura. A piscina de bolinhas fica no chão, na frente da ponta
-        # direita (dentro dos 10 m). As fotos são vistas do próprio objeto.
+        # altura. A piscina de bolinhas e o tobogã ficam DENTRO da barra, nos
+        # últimos 2 m: vista de cima, a planta é exatamente o L (é ela que o
+        # "Monte seu projeto" usa). As fotos são vistas do próprio objeto.
         "id": "brinquedao-modelo-3",
         "titulo": "Brinquedão Modelo 3",
         "nomes": ("Brinquedão Modelo 3",),
