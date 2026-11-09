@@ -476,17 +476,30 @@
 
       {% if permissoes_interno.usuarios %}
       {% comment %}
-        LAZER & SPORT GAMES. Os jogos do portal e o 3D são a parte da casa
-        que mais aparece: ganham o próprio bloco no menu, com a cara da
-        arena -- cada item com o nome e, embaixo, o que tem dentro.
+        LAZER & SPORT GAMES: a build dos jogos (o portal, o APK e o .exe) e o
+        que está acontecendo AGORA no portal (gente online, quem joga o quê,
+        partidas, ranking, contas novas). Só jogo: o 3D dos brinquedos é
+        ferramenta da fábrica e mora no bloco "Estúdio 3D", logo abaixo.
       {% endcomment %}
       <div class="ls-nav-section ls-nav-section--games">
         <span class="ls-nav-caption"><i class="bi bi-stars"></i> Lazer &amp; Sport Games</span>
         <a data-titulo="Jogos do portal" aria-label="Jogos do portal" class="ls-nav-item ls-nav-item--jogos {% if request.resolver_match.url_name == 'jogos_inner' %}active{% endif %}" href="{% url 'jogos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-controller"></i></span><span class="ls-nav-texto"><strong>Jogos</strong><small>portal · APK · Windows</small></span>
         </a>
+        <a data-titulo="Ao vivo no portal" aria-label="Ao vivo no portal" class="ls-nav-item ls-nav-item--vivo {% if request.resolver_match.url_name == 'jogos_ao_vivo' %}active{% endif %}" href="{% url 'jogos_ao_vivo' %}">
+          <span class="ls-nav-icon"><i class="bi bi-broadcast"></i></span><span class="ls-nav-texto"><strong>Ao vivo</strong><small>online · partidas · ranking</small></span><span class="ls-nav-pulso" aria-hidden="true"></span>
+        </a>
+      </div>
+
+      {% comment %}
+        ESTÚDIO 3D: os objetos 3D dos brinquedos (o .glb de cada máquina, a
+        Arena, os projetos pelas fotos) e o projetista que monta peça por
+        peça. Separado dos jogos: outra cor, outro assunto.
+      {% endcomment %}
+      <div class="ls-nav-section ls-nav-section--estudio">
+        <span class="ls-nav-caption"><i class="bi bi-box"></i> Estúdio 3D</span>
         <a data-titulo="Objetos 3D" aria-label="Objetos 3D" class="ls-nav-item ls-nav-item--3d {% if request.resolver_match.url_name == 'objetos_3d_inner' %}active{% endif %}" href="{% url 'objetos_3d_inner' %}">
-          <span class="ls-nav-icon"><i class="bi bi-box"></i></span><span class="ls-nav-texto"><strong>Objetos 3D</strong><small>brinquedos · projetos · fotos</small></span>
+          <span class="ls-nav-icon"><i class="bi bi-box"></i></span><span class="ls-nav-texto"><strong>Objetos 3D</strong><small>brinquedos · Arena · fotos</small></span>
         </a>
         <a data-titulo="Montar em 3D" aria-label="Montar em 3D" class="ls-nav-item ls-nav-item--montar {% if request.resolver_match.url_name == 'montar_3d_inner' %}active{% endif %}" href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true">
           <span class="ls-nav-icon"><i class="bi bi-bricks"></i></span><span class="ls-nav-texto"><strong>Montar em 3D</strong><small>projetista · 38 peças</small></span>

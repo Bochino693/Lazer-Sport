@@ -1236,3 +1236,27 @@ Dependência nova: rjsmin (requirements.txt).
    2,5 s, o jogo abre assim mesmo: o convite nunca trava quem quer jogar.
    É um limite de boa-fé: quem apaga os cookies ou abre uma aba anônima
    ganha as 2 de novo -- o que importa é convidar quem está gostando.
+
+44) ÁREA INTERNA: LAZER & SPORT GAMES (JOGOS) x ESTÚDIO 3D, E O "AO VIVO"
+   O menu lateral separa os dois assuntos:
+   - LAZER & SPORT GAMES = a build dos jogos: "Jogos" (/site/jogos/: o
+     portal, o APK e o .exe de cada jogo) e "Ao vivo" (/site/jogos/ao-vivo/);
+   - ESTÚDIO 3D (bloco próprio, verde-água e anil) = "Objetos 3D" e "Montar
+     em 3D". A tela dos objetos 3D não usa mais a marca dos jogos.
+   AO VIVO NO PORTAL: gente online agora, quem está jogando o quê (com
+   barras), as partidas de cada jogo ("Mais jogados"), quem jogou hoje com
+   conta, as contas novas (hoje e 7 dias: o convite das 2 jogadas grátis
+   existe para isto), o ranking geral e o campeão de cada jogo da casa. A
+   tela se atualiza sozinha a cada 15 s (?formato=json) e para quando se
+   sai dela. O "online" vem da batida das abas do portal (seção do
+   launcher; core/presenca_jogos.py, na memória: zera quando o site é
+   publicado de novo e volta em meio minuto). Só o superadministrador.
+   OS CARDS: o topo das telas (ícone do assunto, nome, selo "Só o
+   superadministrador" e botões da mesma altura) é um só desenho; nos cards
+   dos jogos, o Abrir/Editar fica na mesma altura em toda a linha (o
+   "Gerar o aplicativo" tem sempre a altura de dois botões; o card sem
+   aplicativo explica por quê; a licença do núcleo foi para o texto do
+   jogo); no 3D, o "O que vem junto" fica ao lado do conjunto, não solto.
+   Código: sistema_interno/views_jogos_vivo.py, templates/jogos_ao_vivo_inner.html,
+   o menu em templates/base_inner.html, interno/games.css (ls-hero-*, ls-vivo-*,
+   ls-game-gerar-vazio, ls-3d-conjunto) e interno_modern.css (ls-nav-section--estudio).

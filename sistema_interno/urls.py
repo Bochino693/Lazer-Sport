@@ -69,6 +69,7 @@ from .views_gestao import (
     ProdutosProducaoView,
 )
 from .views_jogos import JogoGerarApkView, JogoGerarExeView, JogosInnerView
+from .views_jogos_vivo import JogosAoVivoView
 from .views_objetos_3d import Objetos3DInnerView
 from .views_montar_3d import MontarTresDView
 from .views_site import LinkSitePublicoView
@@ -151,6 +152,7 @@ urlpatterns = [
     # Os jogos que rodam dentro do site: só o superadministrador (a view
     # já exige; a rota não passa por por_funcoes de propósito).
     path('site/jogos/', JogosInnerView.as_view(), name='jogos_inner'),
+    path('site/jogos/ao-vivo/', JogosAoVivoView.as_view(), name='jogos_ao_vivo'),
     path('site/jogos/<int:pk>/apk/', JogoGerarApkView.as_view(), name='jogo_gerar_apk'),
     path('site/jogos/<int:pk>/exe/', JogoGerarExeView.as_view(), name='jogo_gerar_exe'),
     path('site/objetos-3d/', Objetos3DInnerView.as_view(), name='objetos_3d_inner'),

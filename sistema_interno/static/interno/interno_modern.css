@@ -5248,19 +5248,41 @@ body.ls-body{
 .ls-nav-section--games .ls-nav-caption i{margin-right:5px;color:#ffd23f}
 .ls-nav-section--games .ls-nav-item{margin:2px 0}
 .ls-nav-section--games .ls-nav-icon{color:#fff;background:linear-gradient(135deg,#0878f9,#3fd0ff);box-shadow:0 6px 14px rgba(8,120,249,.3)}
-.ls-nav-section--games .ls-nav-item--3d .ls-nav-icon{background:linear-gradient(135deg,#ff3d71,#ffd23f);box-shadow:0 6px 14px rgba(255,61,113,.28)}
-.ls-nav-section--games .ls-nav-item--montar .ls-nav-icon{background:linear-gradient(135deg,#22c55e,#3fd0ff);box-shadow:0 6px 14px rgba(34,197,94,.28)}
+.ls-nav-section--games .ls-nav-item--vivo .ls-nav-icon{background:linear-gradient(135deg,#ff3d71,#ffd23f);box-shadow:0 6px 14px rgba(255,61,113,.28)}
 /* o nome e, embaixo, o que tem dentro (sem etiqueta cortando o texto) */
-.ls-nav-section--games .ls-nav-item{min-height:50px;height:auto;padding-top:6px;padding-bottom:6px}
+.ls-nav-section--games .ls-nav-item,.ls-nav-section--estudio .ls-nav-item{min-height:50px;height:auto;padding-top:6px;padding-bottom:6px}
 .ls-nav-texto{min-width:0;line-height:1.15}
 .ls-nav-texto strong{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ls-nav-texto small{display:block;margin-top:2px;font-size:.68rem;font-weight:600;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ls-nav-section--games .ls-nav-item.active .ls-nav-texto small{color:inherit;opacity:.82}
+.ls-nav-section--games .ls-nav-item.active .ls-nav-texto small,.ls-nav-section--estudio .ls-nav-item.active .ls-nav-texto small{color:inherit;opacity:.82}
 .ls-nav-section--games .ls-nav-item:hover{border-color:rgba(63,208,255,.35);background:rgba(63,208,255,.10)}
 .ls-nav-section--games .ls-nav-item.active{
   border-color:rgba(63,208,255,.6);
   background:linear-gradient(135deg,rgba(8,120,249,.95),rgba(63,208,255,.9));
   box-shadow:0 12px 30px rgba(63,208,255,.28);
+}
+/* "Ao vivo": um ponto verde que pulsa (o portal está no ar agora) */
+.ls-nav-pulso{flex:0 0 auto;width:8px;height:8px;margin-left:auto;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:ls-nav-pulso 2s ease-out infinite}
+@keyframes ls-nav-pulso{70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@media (prefers-reduced-motion:reduce){.ls-nav-pulso{animation:none}}
+
+/* ESTÚDIO 3D: o 3D dos brinquedos e o projetista, fora dos jogos. Cor de
+   prancheta (verde-água e anil), para não confundir com o bloco dos jogos. */
+.ls-nav-section--estudio{
+  padding:10px;border:1px solid rgba(45,212,191,.26);border-radius:18px;
+  background:linear-gradient(145deg,rgba(45,212,191,.11),rgba(99,102,241,.10));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 26px rgba(20,184,166,.10);
+}
+.ls-nav-section--estudio .ls-nav-caption{color:#5eead4;padding-bottom:7px}
+.ls-nav-section--estudio .ls-nav-caption i{margin-right:5px;color:#a5b4fc}
+.ls-nav-section--estudio .ls-nav-item{margin:2px 0}
+.ls-nav-section--estudio .ls-nav-icon{color:#fff;background:linear-gradient(135deg,#14b8a6,#6366f1);box-shadow:0 6px 14px rgba(20,184,166,.28)}
+.ls-nav-section--estudio .ls-nav-item--montar .ls-nav-icon{background:linear-gradient(135deg,#22c55e,#14b8a6);box-shadow:0 6px 14px rgba(34,197,94,.26)}
+.ls-nav-section--estudio .ls-nav-item:hover{border-color:rgba(45,212,191,.38);background:rgba(45,212,191,.10)}
+.ls-nav-section--estudio .ls-nav-item.active{
+  border-color:rgba(45,212,191,.6);
+  background:linear-gradient(135deg,rgba(13,148,136,.95),rgba(99,102,241,.9));
+  box-shadow:0 12px 30px rgba(20,184,166,.26);
 }
 .ls-nav-tag{
   margin-left:auto;padding:3px 8px;border-radius:999px;flex:0 0 auto;

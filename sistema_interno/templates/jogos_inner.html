@@ -10,13 +10,20 @@
 
 {% block content %}
 <section class="ls-games-hero">
-  <img class="ls-games-hero-marca" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="68" height="68">
-  <span class="ls-eyebrow">LAZER &amp; SPORT GAMES · SÓ O SUPERADMINISTRADOR</span>
-  <h1>Jogos do portal</h1>
+  <div class="ls-hero-cabeca">
+    <span class="ls-hero-icone ls-hero-icone--games" aria-hidden="true"><i class="bi bi-controller"></i></span>
+    <div class="ls-hero-nome">
+      <span class="ls-eyebrow">Lazer &amp; Sport Games</span>
+      <h1>Jogos do portal</h1>
+    </div>
+    <span class="ls-hero-selo"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i>Só o superadministrador</span>
+  </div>
   <p>Tudo o que aparece em <strong>/jogos/</strong>, o portal Lazer &amp; Sport Games. Os <strong>oficiais da casa</strong> já vêm com o site; os <strong>cadastrados</strong> entram por aqui — jogo HTML5, jogo de console no emulador, APK ou versão para computador —, sem deploy e sem mexer no código. De cada jogo cadastrado sai também o aplicativo <strong>Android (APK)</strong> e o programa de <strong>Windows (.exe)</strong>.</p>
-  {% if not tabela_ausente %}
-  <button class="btn btn-success" id="novoJogo" type="button"><i class="bi bi-plus-lg me-1"></i> Cadastrar jogo novo</button>
-  {% endif %}
+  <div class="ls-hero-acoes">
+    {% if not tabela_ausente %}<button class="btn btn-success" id="novoJogo" type="button"><i class="bi bi-plus-lg"></i> Cadastrar jogo novo</button>{% endif %}
+    <a class="ls-hero-botao" href="{% url 'jogos_ao_vivo' %}"><i class="bi bi-broadcast"></i> Ao vivo no portal</a>
+    <a class="ls-hero-botao" href="/jogos/" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-box-arrow-up-right"></i> Abrir o portal</a>
+  </div>
 </section>
 
 {% if tabela_ausente %}
@@ -96,6 +103,8 @@
         </ul>
         {% if jogo.so_versao_pc %}<details class="ls-game-dica"><summary><i class="bi bi-info-circle" aria-hidden="true"></i> Ainda não joga no site</summary><p>O navegador não roda .exe. {{ jogo.caminho_para_o_site }}</p></details>{% endif %}
         {% if jogo.apk_caminho and not jogo.endereco and not jogo.arquivo_html and not jogo.sistema %}<details class="ls-game-dica"><summary><i class="bi bi-info-circle" aria-hidden="true"></i> Sobre o APK</summary><p>O navegador não roda APK. {{ jogo.apk_caminho }}</p></details>{% endif %}
+        {# a licença do núcleo vale para o APK e o .exe: fica no texto do jogo, e o "Gerar" tem a mesma altura em todos #}
+        {% if jogo.aviso_licenca %}<details class="ls-game-dica ls-game-dica--licenca"><summary><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Licença: só para uso particular</summary><p>{{ jogo.aviso_licenca }}</p></details>{% endif %}
       </div>
 
       <div class="ls-game-botoes">
@@ -140,8 +149,10 @@
           <span class="ls-gerar-texto"></span>
           <button class="ls-gerar-fechar" type="button" aria-label="Fechar o aviso" title="Fechar o aviso"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </div>
-        {% if jogo.aviso_licenca %}<details class="ls-game-dica ls-game-dica--licenca"><summary><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Licença: só para uso particular</summary><p>{{ jogo.aviso_licenca }}</p></details>{% endif %}
       </div>
+      {% else %}
+      {# sem aplicativo para gerar: a vaga fica (o Abrir/Editar deste card na altura dos outros), com o porquê #}
+      <div class="ls-game-gerar-vazio">{% if jogo.aguardando_arquivos %}Com os arquivos do jogo, aqui saem o APK e o .exe.{% else %}Este jogo não gera aplicativo.{% endif %}</div>
       {% endif %}
 
       <div class="ls-game-rodape">

@@ -10,16 +10,21 @@
 {% endblock %}
 
 {% block content %}
-<section class="ls-games-hero">
-  <img class="ls-games-hero-marca" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="68" height="68">
-  <span class="ls-eyebrow">LAZER &amp; SPORT GAMES · 3D · SÓ O SUPERADMINISTRADOR</span>
-  <h1>Objetos 3D &amp; Laboratório</h1>
+<section class="ls-games-hero ls-games-hero--estudio">
+  <div class="ls-hero-cabeca">
+    <span class="ls-hero-icone ls-hero-icone--estudio" aria-hidden="true"><i class="bi bi-box"></i></span>
+    <div class="ls-hero-nome">
+      <span class="ls-eyebrow">Estúdio 3D</span>
+      <h1>Objetos 3D &amp; Laboratório</h1>
+    </div>
+    <span class="ls-hero-selo"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i>Só o superadministrador</span>
+  </div>
   <p>Cada máquina com o seu .glb: as cores e as medidas saem de dentro do arquivo. Ligado, o objeto aparece na página do brinquedo e na Arena 3D — e, se a máquina tem jogo, a prévia abre daqui. Mais abaixo, o <strong>Laboratório</strong>: a biblioteca de peças para montar brinquedões.</p>
   {% if not tabela_ausente %}
-  <div class="ls-3d-hero-acoes">
-    <button class="btn btn-warning" id="criar3d" type="button"><i class="bi bi-magic me-1"></i> Criar objeto 3D</button>
-    <a class="btn btn-primary" href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true"><i class="bi bi-bricks me-1"></i> Montar em 3D</a>
-    <button class="btn btn-success" id="novoObjeto" type="button"><i class="bi bi-cloud-arrow-up me-1"></i> Enviar .glb pronto</button>
+  <div class="ls-hero-acoes">
+    <button class="btn btn-warning" id="criar3d" type="button"><i class="bi bi-magic"></i> Criar objeto 3D</button>
+    <a class="ls-hero-botao" href="{% url 'montar_3d_inner' %}" data-no-soft-nav="true"><i class="bi bi-bricks"></i> Montar em 3D</a>
+    <button class="ls-hero-botao" id="novoObjeto" type="button"><i class="bi bi-cloud-arrow-up"></i> Enviar .glb pronto</button>
   </div>
   {% endif %}
 </section>

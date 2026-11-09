@@ -256,7 +256,6 @@ a.ls-3d-jogo:hover { color: #fff3c4; border-color: rgba(255, 210, 63, .7); }
 }
 
 /* ---------- criar objeto 3D (fotos, projeto ou arquivo) ---------- */
-.ls-3d-hero-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
 .ls-criar3d-grade { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 22px; align-items: start; }
 .ls-criar3d-passos { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .ls-criar3d-lado { position: sticky; top: 0; min-width: 0; }

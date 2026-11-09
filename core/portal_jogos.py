@@ -267,6 +267,20 @@ def vivo():
     return dados
 
 
+def contagens():
+    """Só as partidas de cada jogo e quem jogou hoje: sem os anúncios, que levam links do portal
+    (o painel, em outro endereço, não conhece essas rotas -- views_jogos_vivo usa isto)."""
+    try:
+        partidas = _partidas()
+    except DatabaseError:
+        partidas = {}
+    try:
+        hoje = _jogadores_de_hoje()
+    except DatabaseError:
+        hoje = 0
+    return {"partidas": partidas, "jogadores_hoje": hoje}
+
+
 def esquecer_vivo():
     cache.delete(CHAVE_VIVO)
 

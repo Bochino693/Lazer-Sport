@@ -1,0 +1,173 @@
+{% extends "base_inner.html" %}
+{% load static interno_extras %}
+
+{% block title %}Ao vivo | Lazer & Sport Games{% endblock %}
+{% block top_title %}Ao vivo no portal{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/games.css' %}">
+{% endblock %}
+
+{% block content %}
+<div data-vivo data-vivo-url="{% url 'jogos_ao_vivo' %}?formato=json" data-vivo-segundos="{{ atualiza }}">
+
+<section class="ls-games-hero">
+  <div class="ls-hero-cabeca">
+    <span class="ls-hero-icone ls-hero-icone--games" aria-hidden="true"><i class="bi bi-broadcast"></i></span>
+    <div class="ls-hero-nome">
+      <span class="ls-eyebrow">Lazer &amp; Sport Games</span>
+      <h1>Ao vivo no portal</h1>
+    </div>
+    <span class="ls-vivo-selo" role="status"><i aria-hidden="true"></i> ao vivo · <span data-vivo-hora>{{ vivo.hora }}</span></span>
+  </div>
+  <p>Quem está no portal neste minuto, o que estão jogando, as partidas de cada jogo, o ranking e as contas novas que o convite das jogadas grátis trouxe. A tela se atualiza sozinha a cada {{ atualiza }} segundos.</p>
+  <div class="ls-hero-acoes">
+    <a class="ls-hero-botao ls-hero-botao--principal" href="/jogos/" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Abrir o portal</a>
+    <a class="ls-hero-botao" href="{% url 'jogos_inner' %}"><i class="bi bi-controller" aria-hidden="true"></i> Jogos do portal</a>
+  </div>
+</section>
+
+<section class="ls-metrics ls-vivo-numeros">
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Online agora</span><span class="ls-metric-icon"><i class="bi bi-people-fill"></i></span></div>
+    <strong class="ls-metric-value" data-vivo-n="online">{{ vivo.online }}</strong>
+    <span class="ls-metric-note">aparelhos com o portal aberto</span>
+  </article>
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Jogando agora</span><span class="ls-metric-icon"><i class="bi bi-joystick"></i></span></div>
+    <strong class="ls-metric-value" data-vivo-n="jogando_total">{{ vivo.jogando_total }}</strong>
+    <span class="ls-metric-note">numa página de jogo</span>
+  </article>
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Partidas contadas</span><span class="ls-metric-icon"><i class="bi bi-fire"></i></span></div>
+    <strong class="ls-metric-value" data-vivo-n="partidas_total">{{ vivo.partidas_total }}</strong>
+    <span class="ls-metric-note">o "Mais jogados" do portal</span>
+  </article>
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head"><span class="ls-metric-label">Contas novas hoje</span><span class="ls-metric-icon"><i class="bi bi-person-plus-fill"></i></span></div>
+    <strong class="ls-metric-value" data-vivo-n="contas_hoje">{{ vivo.contas.hoje }}</strong>
+    <span class="ls-metric-note"><span data-vivo-n="contas_semana">{{ vivo.contas.semana }}</span> nos últimos 7 dias · <span data-vivo-n="jogadores_hoje">{{ vivo.jogadores_hoje }}</span> jogaram hoje com conta</span>
+  </article>
+</section>
+
+<div class="ls-vivo-grade">
+  <section class="ls-vivo-caixa">
+    <h2><i class="bi bi-joystick" aria-hidden="true"></i> Jogando agora</h2>
+    <ol class="ls-vivo-barras" data-vivo-lista="jogando" data-vivo-vazio="Ninguém numa página de jogo neste minuto.">
+      {% for j in vivo.jogando %}
+      <li style="--cor: {{ j.cor }}; --p: {% widthratio j.n vivo.jogando.0.n 100 %}%"><span>{{ j.nome }}{% if j.casa %} <em>da casa</em>{% endif %}</span><b>{{ j.n }}</b></li>
+      {% empty %}
+      <li class="ls-vivo-vazio">Ninguém numa página de jogo neste minuto.</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="ls-vivo-caixa">
+    <h2><i class="bi bi-fire" aria-hidden="true"></i> Mais jogados</h2>
+    <ol class="ls-vivo-barras" data-vivo-lista="mais_jogados" data-vivo-vazio="Nenhuma partida contada ainda.">
+      {% for j in vivo.mais_jogados %}
+      <li style="--cor: {{ j.cor }}; --p: {% widthratio j.n vivo.maior_partidas 100 %}%"><span>{{ j.nome }}{% if j.casa %} <em>da casa</em>{% endif %}</span><b>{{ j.n }}</b></li>
+      {% empty %}
+      <li class="ls-vivo-vazio">Nenhuma partida contada ainda.</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="ls-vivo-caixa">
+    <h2><i class="bi bi-trophy-fill" aria-hidden="true"></i> Ranking geral</h2>
+    <ol class="ls-vivo-ranking" data-vivo-lista="ranking" data-vivo-vazio="O ranking começa com a primeira partida de um cadastrado.">
+      {% for r in vivo.ranking %}
+      <li><b>{{ r.posicao }}º</b><span>{{ r.nome }}</span><small>{{ r.jogos }} jogo{{ r.jogos|pluralize }}</small><strong>{{ r.pontos }}</strong></li>
+      {% empty %}
+      <li class="ls-vivo-vazio">O ranking começa com a primeira partida de um cadastrado.</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="ls-vivo-caixa">
+    <h2><i class="bi bi-award-fill" aria-hidden="true"></i> Campeões de cada jogo</h2>
+    <ul class="ls-vivo-campeoes" data-vivo-lista="campeoes" data-vivo-vazio="Nenhum recorde ainda.">
+      {% for c in vivo.campeoes %}
+      <li style="--cor: {{ c.cor }}"><span>{{ c.jogo }}</span><b>{{ c.nome }}</b><strong>{{ c.pontos }}</strong></li>
+      {% empty %}
+      <li class="ls-vivo-vazio">Nenhum recorde ainda.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<p class="ls-vivo-nota"><i class="bi bi-info-circle" aria-hidden="true"></i>
+  Como contamos: cada aba do portal avisa o site a cada 30 segundos (por aparelho, sem guardar login nem IP; robôs não contam). Quem fecha a aba sai na hora; quem some sai em até 75 segundos. O número de agora zera quando o site é publicado de novo e volta em meio minuto. As partidas e o ranking ficam guardados.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* A tela se atualiza sozinha: pede os números (?formato=json) e troca só o que mudou.
+   Para quando a pessoa sai desta tela (a navegação do painel troca a tela sem recarregar)
+   e não pede nada com a aba escondida. */
+(function () {
+  "use strict";
+  var raiz = document.querySelector("[data-vivo]");
+  if (!raiz) return;
+  clearInterval(window.__lsVivoRelogio);
+  var segundos = Number(raiz.dataset.vivoSegundos) || 15;
+
+  function item(classe, partes, estilo) {
+    var li = document.createElement("li");
+    if (classe) li.className = classe;
+    if (estilo) li.setAttribute("style", estilo);
+    partes.forEach(function (p) {
+      var el = document.createElement(p[0]);
+      el.textContent = p[1];
+      if (p[2]) { var em = document.createElement("em"); em.textContent = p[2]; el.append(" ", em); }
+      li.appendChild(el);
+    });
+    return li;
+  }
+  function lista(nome, itens) {
+    var caixa = raiz.querySelector('[data-vivo-lista="' + nome + '"]');
+    if (!caixa) return;
+    if (!itens.length) {
+      var vazio = document.createElement("li");
+      vazio.className = "ls-vivo-vazio";
+      vazio.textContent = caixa.dataset.vivoVazio;
+      caixa.replaceChildren(vazio);
+      return;
+    }
+    caixa.replaceChildren.apply(caixa, itens);
+  }
+  function barras(jogos, maior) {
+    return jogos.map(function (j) {
+      return item("", [["span", j.nome, j.casa ? "da casa" : ""], ["b", String(j.n)]],
+        "--cor: " + j.cor + "; --p: " + Math.round(100 * j.n / Math.max(1, maior)) + "%");
+    });
+  }
+  function desenhar(d) {
+    var n = { online: d.online, jogando_total: d.jogando_total, partidas_total: d.partidas_total,
+              contas_hoje: d.contas.hoje, contas_semana: d.contas.semana, jogadores_hoje: d.jogadores_hoje };
+    Object.keys(n).forEach(function (k) {
+      raiz.querySelectorAll('[data-vivo-n="' + k + '"]').forEach(function (el) { el.textContent = String(n[k]); });
+    });
+    var hora = raiz.querySelector("[data-vivo-hora]");
+    if (hora) hora.textContent = d.hora;
+    lista("jogando", barras(d.jogando, d.jogando.length ? d.jogando[0].n : 1));
+    lista("mais_jogados", barras(d.mais_jogados, d.maior_partidas));
+    lista("ranking", d.ranking.map(function (r) {
+      return item("", [["b", r.posicao + "º"], ["span", r.nome], ["small", r.jogos + (r.jogos === 1 ? " jogo" : " jogos")], ["strong", String(r.pontos)]]);
+    }));
+    lista("campeoes", d.campeoes.map(function (c) {
+      return item("", [["span", c.jogo], ["b", c.nome], ["strong", String(c.pontos)]], "--cor: " + c.cor);
+    }));
+  }
+  window.__lsVivoRelogio = setInterval(function () {
+    if (!document.body.contains(raiz)) { clearInterval(window.__lsVivoRelogio); return; }
+    if (document.hidden) return;
+    fetch(raiz.dataset.vivoUrl, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && typeof d.online === "number") desenhar(d); })
+      .catch(function () { /* a próxima volta tenta de novo */ });
+  }, segundos * 1000);
+})();
+</script>
+{% endblock %}
