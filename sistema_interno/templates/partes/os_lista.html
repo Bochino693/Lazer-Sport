@@ -16,7 +16,7 @@
   deixa o cabeçalho, os modais e o script da tela de pé -- eles não mudam
   quando o filtro muda.
 {% endcomment %}
-<section class="ls-metrics ls-budget-card-filters" data-ls-parte="cartoes" data-ls-sincronia="ordens_servico" data-ls-revisao="{{ revisao_lista }}" aria-label="Filtrar ordens por fase">
+<section class="ls-metrics ls-budget-card-filters ls-filtros-leves" data-ls-parte="cartoes" data-ls-sincronia="ordens_servico" data-ls-revisao="{{ revisao_lista }}" aria-label="Filtrar ordens por fase">
   {% for chave, rotulo, quantidade, icone in cards %}
     <a class="ls-metric-card ls-budget-filter-card {% if chave == 'concluidas' or chave == 'pagas' %}green{% elif chave == 'aguardando' or chave == 'pecas' or chave == 'a_receber' %}yellow{% elif chave == 'execucao' %}cyan{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
        href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
@@ -45,7 +45,7 @@
   receber e quanto entrou. Versões substituídas ficam fora dos quatro:
   somá-las contaria o mesmo serviço duas vezes.
 {% endcomment %}
-<section class="ls-budget-money-strip" data-ls-parte="dinheiro">
+<section class="ls-budget-money-strip ls-dinheiro-compacto" data-ls-parte="dinheiro">
   <div><span>Em serviço aberto</span><strong>R$ {{ total_em_servico|moeda }}</strong></div>
   <div><span>Concluído</span><strong>R$ {{ total_concluido|moeda }}</strong></div>
   <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
@@ -72,18 +72,22 @@
   <div class="ls-data-body">
     <div class="table-responsive">
       <table class="ls-table ls-commercial-table ls-os-tabela">
-        <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Tipo</th><th>Situação</th><th>Agenda</th><th class="text-end">Total</th><th>Pagamento</th><th>Técnico</th><th class="text-end">Ações</th></tr></thead>
+        {% comment %}
+          SEIS COLUNAS, NÃO NOVE. Com nove, cada uma ficava estreita demais: o navegador quebrava
+          a palavra no meio ("Manutenç-ão", "AÇÕE-S", "PAGAMENT-O") e o número da O.S. invadia a
+          coluna do lado. O que anda junto ficou junto: o tipo e a prioridade embaixo do número
+          (é o serviço), o técnico embaixo da agenda (quem vai e quando) e o pagamento embaixo
+          do total (quanto e se já entrou).
+        {% endcomment %}
+        <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Situação</th><th>Agenda / técnico</th><th class="text-end">Total</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
         {% for ordem in ordens %}
           <tr data-registro="{{ ordem.id }}">
-            <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ ordem.versao }} desta O.S.">v{{ ordem.versao }}</span>{% endif %}{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}{% if ordem.ordem_anterior_id %}<span class="material-sub d-block">refeita da {{ ordem.ordem_anterior.numero_documento }}</span>{% endif %}</td>
+            <td data-rotulo="O.S." class="ls-os-numero"><strong>{{ ordem.numero_documento }}</strong>{% if ordem.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ ordem.versao }} desta O.S.">v{{ ordem.versao }}</span>{% endif %}{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}{% if ordem.ordem_anterior_id %}<span class="material-sub d-block">refeita da {{ ordem.ordem_anterior.numero_documento }}</span>{% endif %}<span class="ls-os-tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger">{{ ordem.get_prioridade_display }}</span>{% endif %}</span></td>
             <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Identificação: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
-            <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
             <td data-rotulo="Situação"><div class="ls-situacao-card ls-situacao-os"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' or ordem.status == 'substituida' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub">cliente ciente ✓</span>{% endif %}{% if ordem.arquivada and ordem.ordem_refeita %}<span class="material-sub">virou a {{ ordem.ordem_refeita.numero_documento }}</span>{% endif %}</div></td>
-            <td data-rotulo="Agenda">{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Não agendada</span>{% endif %}</td>
-            <td data-rotulo="Total" class="text-end"><strong class="ls-money">R$ {{ ordem.total|moeda }}</strong></td>
-            <td data-rotulo="Pagamento">{% if ordem.quitado %}<span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span><span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }} recebido</span>{% elif ordem.status_pagamento == 'parcial' %}<span class="ls-status warning">Pagamento parcial</span><span class="material-sub d-block mt-1">faltam <strong>R$ {{ ordem.saldo_pagamento|moeda }}</strong></span>{% else %}<span class="ls-status neutral">{{ ordem.get_status_pagamento_display }}</span>{% endif %}</td>
-            <td data-rotulo="Técnico">{% if ordem.tecnico %}{{ ordem.tecnico.get_full_name|default:ordem.tecnico.username }}{% else %}<span class="text-muted">A definir</span>{% endif %}</td>
+            <td data-rotulo="Agenda / técnico" class="ls-os-agenda">{% if ordem.agendada_para %}<span class="ls-os-quando"><i class="bi bi-calendar2-check" aria-hidden="true"></i> {{ ordem.agendada_para|date:"d/m/Y" }} <b>{{ ordem.agendada_para|date:"H:i" }}</b></span>{% else %}<span class="ls-os-quando text-muted"><i class="bi bi-calendar2" aria-hidden="true"></i> Não agendada</span>{% endif %}<span class="material-sub d-block"><i class="bi bi-person-gear" aria-hidden="true"></i> {% if ordem.tecnico %}{{ ordem.tecnico.get_full_name|default:ordem.tecnico.username }}{% else %}Técnico a definir{% endif %}</span></td>
+            <td data-rotulo="Total / pagamento" class="text-end ls-os-dinheiro"><strong class="ls-money">R$ {{ ordem.total|moeda }}</strong>{% if ordem.quitado %}<span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span><span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }} recebido</span>{% elif ordem.status_pagamento == 'parcial' %}<span class="ls-status warning" title="Pagamento parcial">Parcial</span><span class="material-sub d-block mt-1">faltam <strong>R$ {{ ordem.saldo_pagamento|moeda }}</strong></span>{% elif ordem.status_pagamento == 'pendente' %}<span class="ls-status neutral" title="Pagamento pendente">Pendente</span>{% else %}<span class="ls-status neutral">{{ ordem.get_status_pagamento_display }}</span>{% endif %}</td>
             <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end"><div class="ls-row-actions">
               {% comment %}
                 AS AÇÕES SÃO EM CIMA DA SITUAÇÃO -- a mesma regra que a
@@ -127,7 +131,7 @@
               {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-excluir-os data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
           </tr>
-        {% empty %}<tr data-lista-vazia><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
+        {% empty %}<tr data-lista-vazia><td colspan="6"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

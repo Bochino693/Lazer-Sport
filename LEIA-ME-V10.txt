@@ -1260,3 +1260,19 @@ Dependência nova: rjsmin (requirements.txt).
    Código: sistema_interno/views_jogos_vivo.py, templates/jogos_ao_vivo_inner.html,
    o menu em templates/base_inner.html, interno/games.css (ls-hero-*, ls-vivo-*,
    ls-game-gerar-vazio, ls-3d-conjunto) e interno_modern.css (ls-nav-section--estudio).
+
+45) ORDENS DE SERVIÇO: A ABERTURA MAIS LEVE E A TABELA ORGANIZADA
+   - O topo: a explicação "Uma O.S. nasce de um chamado de manutenção..."
+     fica dobrada em "De onde nasce uma O.S." (abre num toque).
+   - Os dez filtros (Todas, Em aberto, ... Versões anteriores) eram dez
+     cartões grandes em duas fileiras; agora são uma barra de pílulas
+     (ícone, nome e a contagem). No celular, uma faixa que rola para o lado;
+     os quatro valores (em serviço, concluído, a receber, recebido) em 2 x 2.
+     A barra é a classe `ls-filtros-leves` e serve a outras telas de filtro.
+   - A tabela tem seis colunas em vez de nove: O.S. (com o tipo e a
+     prioridade embaixo), Cliente / equipamento, Situação, Agenda / técnico,
+     Total (com o pagamento embaixo: Pago, Parcial, Pendente) e Ações.
+     Nenhuma palavra quebra no meio ("Manutenç-ão", "AÇÕE-S" eram o padrão
+     das tabelas apertadas) e os selos ficam numa linha só.
+   Código: sistema_interno/templates/partes/os_lista.html, o topo em
+   ordens_servico_inner.html, e o fim do interno/interno_modern.css.

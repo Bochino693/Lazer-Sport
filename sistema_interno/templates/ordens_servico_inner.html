@@ -121,12 +121,15 @@
       agenda. Esse caminho saiu. Quem procurar por ele precisa achar aqui
       a resposta de para onde ir -- senão conclui que a função sumiu.
     {% endcomment %}
-    <p class="ls-page-hero-nota">
-      <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-      Uma O.S. nasce de um <strong>chamado de manutenção</strong>, que já
-      traz equipamento, defeito e endereço, ou de uma <strong>nova O.S.</strong>
-      para atendimento direto. Ela não é mais gerada a partir do orçamento.
-    </p>
+    {# a abertura mais leve: a explicação fica a um toque, em vez de ocupar o topo inteiro #}
+    <details class="ls-page-hero-dobra">
+      <summary><i class="bi bi-info-circle me-1" aria-hidden="true"></i> De onde nasce uma O.S.</summary>
+      <p class="ls-page-hero-nota">
+        Uma O.S. nasce de um <strong>chamado de manutenção</strong>, que já
+        traz equipamento, defeito e endereço, ou de uma <strong>nova O.S.</strong>
+        para atendimento direto. Ela não é mais gerada a partir do orçamento.
+      </p>
+    </details>
   </div>
   <div class="ls-page-hero-actions">
     <a class="btn btn-outline-secondary" href="{% url 'manutencao_inner' %}"><i class="bi bi-inbox me-1"></i> Chamados</a>

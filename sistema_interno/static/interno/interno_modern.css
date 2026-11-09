@@ -5289,3 +5289,75 @@ body.ls-body{
   background:rgba(255,210,63,.18);color:#ffd23f;font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
 }
 .ls-nav-item.active .ls-nav-tag{background:rgba(255,255,255,.22);color:#fff}
+
+/* ======================================================================
+   ORDENS DE SERVIÇO: A ABERTURA MAIS LEVE E A TABELA ORGANIZADA.
+
+   Os dez filtros eram dez cartões grandes (duas fileiras inteiras antes
+   da lista). Agora são uma barra de pílulas -- ícone, nome e a contagem
+   --, numa linha só no computador; o "Toque para filtrar" de cada um
+   saiu (a pílula é o botão). `ls-filtros-leves` serve a qualquer tela
+   com os cartões de filtro.
+
+   A tabela: seis colunas (partes/os_lista.html) e nenhuma palavra
+   partida no meio. O padrão das tabelas comerciais (`overflow-wrap:
+   anywhere`) existe para colunas apertadas; aqui elas têm folga, e
+   "Manutenção" ou "Ações" quebrados ao meio só atrapalhavam.
+   ====================================================================== */
+.ls-budget-card-filters.ls-filtros-leves{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ls-filtros-leves .ls-budget-filter-card{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;min-height:0;padding:6px 8px 6px 6px;
+  border-radius:999px;overflow:visible;box-shadow:none;
+}
+.ls-filtros-leves .ls-budget-filter-card::before,.ls-filtros-leves .ls-budget-filter-card::after{display:none}
+.ls-filtros-leves .ls-budget-filter-card:hover{transform:none}
+.ls-filtros-leves .ls-metric-head{display:contents}
+.ls-filtros-leves .ls-metric-icon{order:0;width:28px;height:28px;border-radius:50%;font-size:.82rem}
+.ls-filtros-leves .ls-metric-label{order:1;color:var(--text-2,var(--text));font-size:.8rem;font-weight:800;letter-spacing:0;text-transform:none;white-space:nowrap}
+.ls-filtros-leves .ls-metric-value{
+  order:2;margin:0;min-width:24px;padding:3px 8px;border-radius:999px;font-size:.78rem;letter-spacing:0;text-align:center;
+  background:var(--metric-bg,rgba(var(--acento-rgb),.12));color:var(--metric,var(--acento-texto));
+}
+.ls-filtros-leves .ls-metric-note{display:none}
+.ls-filtros-leves .ls-budget-filter-card[aria-current="page"],.ls-filtros-leves .ls-budget-filter-card.active{
+  border-color:var(--metric,var(--acento-linha));
+  background:color-mix(in srgb,var(--metric,var(--acento)) 18%,var(--panel-2,transparent));
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--metric,var(--acento)) 40%,transparent);
+}
+.ls-filtros-leves .ls-budget-filter-card[aria-current="page"] .ls-metric-label{color:var(--text)}
+@media (max-width:720px){
+  /* no celular: uma faixa que rola para o lado, sem empurrar a lista para baixo */
+  .ls-budget-card-filters.ls-filtros-leves{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+}
+
+.ls-os-tabela th{overflow-wrap:normal;word-break:keep-all;white-space:nowrap!important}
+.ls-os-tabela td{overflow-wrap:break-word;word-break:normal}
+.ls-os-tabela .ls-actions{width:74px!important;min-width:74px!important}
+.ls-os-tabela td.ls-os-numero strong{white-space:nowrap}
+.ls-os-tipo{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:5px;color:var(--text-2,var(--muted));font-size:.76rem;font-weight:700}
+.ls-os-tipo .ls-status{margin:0}
+.ls-os-tabela td.ls-os-agenda{white-space:nowrap}
+.ls-os-quando{display:block}
+.ls-os-quando i,.ls-os-agenda .material-sub i{margin-right:3px;opacity:.75}
+.ls-os-tabela td.ls-os-dinheiro{white-space:nowrap;text-align:right}
+.ls-os-dinheiro .ls-money{display:block;font-size:.92rem}
+.ls-os-dinheiro .ls-pago,.ls-os-dinheiro .ls-status{display:inline-flex;margin-top:6px}
+.ls-os-dinheiro .material-sub{white-space:normal}
+/* os selos (situação e pagamento) numa linha só: quebrados em duas, pareciam outro botão */
+.ls-os-tabela .ls-status,.ls-os-tabela .ls-pago{white-space:nowrap}
+/* a explicação do topo, dobrada: abre num toque */
+.ls-page-hero-dobra{margin-top:10px}
+.ls-page-hero-dobra>summary{display:inline-flex;align-items:center;gap:4px;cursor:pointer;list-style:none;color:var(--muted);font-size:.82rem;font-weight:800}
+.ls-page-hero-dobra>summary::-webkit-details-marker{display:none}
+.ls-page-hero-dobra>summary::after{content:"\F282";font-family:"bootstrap-icons";font-size:.7rem;margin-left:4px;transition:transform .2s ease}
+.ls-page-hero-dobra[open]>summary::after{transform:rotate(180deg)}
+.ls-page-hero-dobra .ls-page-hero-nota{margin-top:8px}
+/* no celular, os quatro valores em 2 x 2 (eram quatro linhas antes da lista) */
+@media (max-width:720px){
+  .ls-budget-money-strip.ls-dinheiro-compacto{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ls-dinheiro-compacto>div{min-width:0}
+}
+/* o selo da situação numa linha só ("Em execução" saía partido em dois); a caixa acompanha o selo */
+.ls-os-tabela .ls-situacao-card{width:max-content;max-width:none}
+.ls-os-tabela .ls-situacao-card .ls-status{width:auto;white-space:nowrap!important}
+.ls-os-tabela td.ls-os-agenda{padding-left:14px!important}
