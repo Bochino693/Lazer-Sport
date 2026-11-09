@@ -1122,6 +1122,22 @@ Dependência nova: rjsmin (requirements.txt).
    programas, ou qualquer jogo sem os direitos, não é permitido.
 
 41) CONTROLE DE XBOX EM TUDO, VELOCIDADE E JOGOS DE VÁRIOS DISCOS
+   O CONTROLE JÁ LIGADO: o emulador (EmulatorJS 4.2.3) só punha no Jogador 1
+   o controle que ele visse CONECTAR depois de montar o menu de controles;
+   quem chegava com o controle já ligado (no launcher, no .exe, no celular)
+   via "conectado" e o jogo não recebia nada. O reprodutor agora põe todo
+   controle que o emulador enxerga no primeiro jogador vago (ligarControles).
+   OS JOGOS DA CASA (Strike Kids, Dragon Bowling, Lazer Shot, Super Boxing,
+   Slam/Swish Arena, Gol Flash, Craque de Botão, Hit Music) também aceitam
+   o controle (core/static/site/arena/console.js, CONTROLE_DOS_JOGOS): A ou
+   Menu começam; no boliche LB X A B RB são as 5 faixas (a cruz: ← meio-
+   esquerda, ↑ centro, → meio-direita); no soco A/B/X/Y/RT socam; na mira
+   (basquete, gol, botão) a cruz/analógico miram e A segurado carrega a força;
+   no Lazer Shot A/RT atiram e X/B recarregam; no Hit Music a cruz dá as 4
+   faixas retas, Y B A X as diagonais e o analógico aponta qualquer uma das 8.
+   Jogo HTML enviado pelo painel roda isolado (de outro endereço): o site
+   não aperta teclas lá dentro; ele já tem permissão de ler o controle, e
+   funciona se o próprio jogo tiver suporte (Godot e Unity Web costumam ter).
    O CONTROLE (Xbox, PlayStation, 8BitDo, genéricos -- pela posição dos
    botões): o ANALÓGICO ESQUERDO anda igual à cruz em todo jogo (o Crash
    do PlayStation, os de Super Nintendo, Mega Drive, GBA... só leem a

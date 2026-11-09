@@ -538,6 +538,37 @@ class Efeitos {
 /* ----------------------------------------------------------------------
    O CONSOLE
    ---------------------------------------------------------------------- */
+/* O CONTROLE EM CADA JOGO DA CASA: botão do controle (o "controle padrão" do navegador: 0 A,
+   1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT, 8 View, 9 Menu, 12-15 a cruz) -> a tecla que o jogo já
+   entende. O analógico esquerdo vale como a cruz (12-15). */
+const CRUZ_EM_SETAS = { 12: "ArrowUp", 13: "ArrowDown", 14: "ArrowLeft", 15: "ArrowRight" };
+const CONTROLE_PADRAO = { 0: "Space", 1: "Enter", 7: "Space", 9: "Enter", ...CRUZ_EM_SETAS };
+// o boliche: as 5 faixas da pista (Z X C V B) -- LB, X, A, B, RB da esquerda para a direita;
+// na cruz, ← meio-esquerda, ↑ centro, → meio-direita
+const CONTROLE_BOLICHE = {
+  4: "KeyZ", 2: "KeyX", 0: "KeyC", 1: "KeyV", 5: "KeyB", 3: "KeyC", 7: "KeyC",
+  14: "KeyX", 12: "KeyC", 15: "KeyV", 9: "Enter",
+};
+// A, B e RT fazem a ação; a cruz (e o analógico) miram
+const CONTROLE_MIRA = { 0: "Space", 1: "Space", 7: "Space", 9: "Enter", ...CRUZ_EM_SETAS };
+// o Hit Music: as 8 faixas no sentido do relógio a partir do topo (A S D F J K L Ç). A cruz dá
+// as 4 retas, Y B A X as diagonais (onde ficam no controle) e o analógico aponta qualquer uma.
+const FAIXAS_DO_HIT_MUSIC = ["KeyA", "KeyS", "KeyD", "KeyF", "KeyJ", "KeyK", "KeyL", "Semicolon"];
+const CONTROLE_DOS_JOGOS = {
+  "strike-kids": CONTROLE_BOLICHE,
+  "dragon-bowling": CONTROLE_BOLICHE,
+  "lazer-shot": { 0: "Space", 7: "Space", 2: "KeyR", 1: "KeyR", 9: "Enter", ...CRUZ_EM_SETAS },
+  "super-boxing": { 0: "Space", 1: "Space", 2: "Space", 3: "Space", 7: "Space", 6: "Space", 9: "Enter" },
+  "slam-arena": CONTROLE_MIRA,
+  "swish-arena": CONTROLE_MIRA,
+  "gol-flash-arena": CONTROLE_MIRA,
+  "craque-de-botao": CONTROLE_MIRA,
+  "hit-music": {
+    estrela: true, 12: "KeyA", 15: "KeyD", 13: "KeyJ", 14: "KeyL",
+    3: "KeyS", 1: "KeyF", 0: "KeyK", 2: "Semicolon", 9: "Enter",
+  },
+};
+
 class Console {
   constructor(raiz) {
     this.raiz = raiz;
@@ -564,6 +595,8 @@ class Console {
 
     this.ligarEventos();
     this.mostrarSom();
+    // para conferir de fora (testes e o console do navegador)
+    raiz.lsConsole = this;
   }
 
   /* ---------- eventos fixos ---------- */
@@ -677,6 +710,90 @@ class Console {
 
     window.addEventListener("resize", () => this.ajustarTela());
     document.addEventListener("fullscreenchange", () => window.setTimeout(() => this.ajustarTela(), 60));
+    this.ligarControle();
+  }
+
+  /* ---------- o controle (Xbox, PlayStation, 8BitDo, genéricos) ----------
+     Os jogos da casa entendem teclas (Z X C V B no boliche, Espaço no soco, as setas na mira...).
+     Ninguém lia o controle aqui: ele aparecia "conectado" e o jogo não recebia nada. Agora, a
+     cada ~16 ms, cada botão do controle vira a tecla que AQUELE jogo já entende (CONTROLE_DOS_
+     JOGOS), com apertar e soltar de verdade -- quem carrega força segurando o Espaço carrega
+     segurando o A. O analógico esquerdo vale como a cruz (folga: aperta passando de 50%, solta
+     abaixo de 35%); no Hit Music ele aponta as 8 faixas como um relógio. Fora da partida (capa
+     e fim), A ou Menu começam. */
+  ligarControle() {
+    if (!navigator.getGamepads) return;
+    const apertadas = new Set();
+    const eixo = { cima: false, baixo: false, esquerda: false, direita: false };
+    let faixaDoAnalogico = null;
+    let comecarAntes = false;
+    const passo = () => {
+      window.setTimeout(passo, 16);
+      if (this.estado === "fechado" || document.hidden) return;
+      let pads;
+      try { pads = navigator.getGamepads(); } catch (erro) { return; }
+      const pad = Array.prototype.find.call(pads || [], (p) => p && p.connected);
+      if (!pad) {
+        apertadas.forEach((codigo) => this.teclaVirtual(codigo, false));
+        apertadas.clear();
+        return;
+      }
+      const slug = this.dados && this.dados.slug;
+      const mapa = CONTROLE_DOS_JOGOS[slug] || CONTROLE_PADRAO;
+      const botao = (i) => !!(pad.buttons[i] && (pad.buttons[i].pressed || pad.buttons[i].value > 0.5));
+      // o analógico esquerdo como a cruz, com folga para não ficar pisca-pisca
+      const x = pad.axes[0] || 0, y = pad.axes[1] || 0;
+      eixo.esquerda = eixo.esquerda ? x < -0.35 : x < -0.5;
+      eixo.direita = eixo.direita ? x > 0.35 : x > 0.5;
+      eixo.cima = eixo.cima ? y < -0.35 : y < -0.5;
+      eixo.baixo = eixo.baixo ? y > 0.35 : y > 0.5;
+      const agora = new Set();
+      Object.keys(mapa).forEach((indice) => {
+        const i = Number(indice);
+        if (Number.isNaN(i)) return;
+        let ligado = botao(i);
+        if (i === 12 && eixo.cima && !mapa.estrela) ligado = true;
+        if (i === 13 && eixo.baixo && !mapa.estrela) ligado = true;
+        if (i === 14 && eixo.esquerda && !mapa.estrela) ligado = true;
+        if (i === 15 && eixo.direita && !mapa.estrela) ligado = true;
+        if (ligado && mapa[indice]) agora.add(mapa[indice]);
+      });
+      // Hit Music: o analógico aponta uma das 8 faixas (o topo é a 1ª, no sentido do relógio)
+      if (mapa.estrela) {
+        const forca = Math.hypot(x, y);
+        if (forca > (faixaDoAnalogico !== null ? 0.45 : 0.6)) {
+          const angulo = (Math.atan2(x, -y) + Math.PI * 2) % (Math.PI * 2);
+          faixaDoAnalogico = Math.round(angulo / (Math.PI / 4)) % 8;
+          agora.add(FAIXAS_DO_HIT_MUSIC[faixaDoAnalogico]);
+        } else faixaDoAnalogico = null;
+      }
+      // fora da partida: A ou Menu começam (como o Enter)
+      if (this.estado !== "jogando") {
+        const comecar = botao(0) || botao(9);
+        if (comecar && !comecarAntes && (this.estado === "capa" || this.estado === "fim")) {
+          this.som.acordar();
+          this.comecar();
+        }
+        comecarAntes = comecar;
+        apertadas.forEach((codigo) => this.teclaVirtual(codigo, false));
+        apertadas.clear();
+        return;
+      }
+      comecarAntes = true; // segurando o A do começo, ele não vale como jogada na hora
+      agora.forEach((codigo) => {
+        if (apertadas.has(codigo)) return;
+        apertadas.add(codigo);
+        this.som.acordar();
+        this.teclaVirtual(codigo, true);
+      });
+      Array.from(apertadas).forEach((codigo) => {
+        if (agora.has(codigo)) return;
+        apertadas.delete(codigo);
+        this.teclaVirtual(codigo, false);
+      });
+    };
+    window.addEventListener("gamepadconnected", () => this.raiz.classList.add("tem-controle"));
+    passo();
   }
 
   teclaVirtual(codigo, apertada) {

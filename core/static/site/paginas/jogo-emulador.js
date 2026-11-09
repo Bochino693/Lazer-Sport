@@ -949,11 +949,37 @@
     if (y && !yAntes && painel && !painel.hidden && quantosDiscos() > 1) trocarDisco();
     yAntes = y;
   }
+  /* O CONTROLE QUE JÁ ESTAVA LIGADO. O emulador (EmulatorJS 4.2.3) só põe um controle no
+     Jogador 1 quando o vê conectar DEPOIS de montar o menu de controles -- e ele procura os
+     controles uma primeira vez antes disso, quando ainda ninguém escuta. Quem já chega com o
+     controle ligado (no launcher, no celular, no .exe) ficava com o aviso "conectado" e o jogo
+     sem receber nenhum botão. Aqui todo controle que o emulador enxerga e não está em nenhum
+     jogador entra no primeiro lugar vago (Jogador 1, depois 2...). */
+  function ligarControles(emu) {
+    var lista = emu.gamepad && emu.gamepad.gamepads;
+    if (!lista || !lista.length || !emu.gamepadSelection || !emu.gamepadSelection.length) return;
+    var mudou = false;
+    for (var i = 0; i < lista.length; i++) {
+      var g = lista[i];
+      if (!g || g.id === undefined) continue;
+      var chave = g.id + "_" + g.index;
+      if (emu.gamepadSelection.indexOf(chave) !== -1) continue;
+      var vaga = emu.gamepadSelection.indexOf("");
+      if (vaga === -1) break;
+      emu.gamepadSelection[vaga] = chave;
+      mudou = true;
+    }
+    if (mudou && typeof emu.updateGamepadLabels === "function") {
+      try { emu.updateGamepadLabels(); } catch (e) { /* o menu de controles ainda vai se montar */ }
+    }
+  }
   // a cada 10 ms, como o próprio emulador lê o controle (o quadro desenhado pode demorar)
   function analogicoNaCruz() {
     setTimeout(analogicoNaCruz, 10);
     var emu = window.EJS_emulator;
-    if (!jogando || !emu || !emu.gameManager || !emu.gamepadSelection) return;
+    if (!emu || !emu.gameManager || !emu.gamepadSelection) return;
+    ligarControles(emu);
+    if (!jogando) return;
     var pads;
     try { pads = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { return; }
     atalhoDoControle(pads);
