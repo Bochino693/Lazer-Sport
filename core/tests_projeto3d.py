@@ -90,7 +90,7 @@ class PaginaTests(TestCase):
         self.assertIn("trampolim-enterrada.glb", enterrada["modelo"])
         park = dados["areas"]["trampolim"]
         self.assertEqual([p["chave"] for p in park["portes"]], ["compacto", "medio", "grande"])
-        self.assertIn("parede_inclinada", park["portes"][2]["componentes"])
+        self.assertIn("enterrada", park["portes"][0]["componentes"])  # até o compacto tem a rampa com a cesta
         self.assertIn("trampolim_park", dados["areas"]["esportivo"]["portes"][1]["componentes"])
         self.assertEqual(dados["componentes"]["espuma"], "Piscina de espuma")
 

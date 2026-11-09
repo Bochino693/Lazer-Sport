@@ -1460,15 +1460,17 @@ Dependência nova: rjsmin (requirements.txt).
    core/tests_js/sugestoes.mjs (as ideias cabem inteiras, uma por modelo,
    na ordem da nota, e em salão alto a primeira é uma atração de verdade),
    rodados por core/tests_projeto3d.py.
-   CESTA SWISH ARENA NO TRAMPOLIM PARK: a peça "swish" (montar3d-pecas.js) é
-   a cesta do Swish Arena, o basquete da casa: tabela preta com moldura de
-   LED, aro e rede, e o telão do placar em cima ("SWISH" e os pontos). Ela é
-   um item do trampolim park (e do park dentro do espaço esportivo médio e
-   grande), ligado de saída: no médio e no grande as raias da pista de
-   enterrada terminam nela; no compacto (sem pista), uma cama de enterrada
-   de 2 camas na frente termina nela (o fundo fica para o trampolim de
-   parede). O cliente tira e põe em "O que vai dentro" (Cesta Swish Arena):
-   sem ela, a pista leva a tabela comum.
+   AS ENTERRADAS DO TRAMPOLIM PARK, COMO NO ESPAÇO ESPORTIVO MODELO 1: a
+   cesta do park é SÓ a da enterrada -- a rampa (cama inclinada) que sobe até
+   a parede escura do fundo, com a cesta presa na parede em cima dela: a
+   tabela é a TELA do Swish Arena (o jogo e o placar rodando) e o aro fica
+   preso embaixo dela, a 2,75 m; na frente de cada rampa, a cama de corrida
+   em linha. Nada de tabela em poste no meio das camas. Duas no compacto,
+   três no médio, cinco no grande (como as cinco do Modelo 1); pedem
+   pé-direito de 3,60 m. Em "O que vai dentro": "Enterradas (a rampa com a
+   cesta)" e "Swish Arena na cesta (o telão)" -- sem a Swish, a cesta da
+   parede leva a tabela comum. Peça: "cesta_parede" (montar3d-pecas.js).
+
 51) AIR GAME HOCKEY ESPACIAL E BASQUETE STREET QUADRINHOS (OS ADESIVOS NOVOS)
    Dois produtos novos que são a MESMA máquina de dois que já estão no
    catálogo, só com outra adesivagem, cada um com o seu objeto 3D (na Arena 3D,

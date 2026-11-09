@@ -109,19 +109,38 @@ for (const [tipo, lista] of Object.entries(gerador.PORTES)) {
   confere(JSON.stringify(lista.map((p) => [p.chave, p.min, p.componentes])) === JSON.stringify(doServidor.map((p) => [p.chave, p.min, p.componentes])),
     `os portes de ${tipo} no gerador e no core/projeto3d.py não batem`);
 }
-// o trampolim park grande tem o que um park de verdade tem; o compacto, só o básico
+// o trampolim park grande tem o que um park de verdade tem (como o do Espaço Esportivo Modelo 1)
 const grande = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, {});
 const tipos = new Set(grande.pecas.map((p) => p.tipo));
-for (const t of ["cama", "espuma", "swish", "cama_inclinada", "escalada", "cerca", "degraus_espuma"]) confere(tipos.has(t), `o trampolim park grande sem ${t}`);
+for (const t of ["cama", "espuma", "cama_inclinada", "cesta_parede", "painel", "escalada", "cerca", "degraus_espuma"]) confere(tipos.has(t), `o trampolim park grande sem ${t}`);
+// a ÚNICA cesta do park é a da enterrada (a rampa com a cesta presa na parede): nada de tabela em poste
+const semPoste = (ideia) => !ideia.pecas.some((p) => p.tipo === "tabela" || p.tipo === "swish");
+confere(semPoste(grande), "o trampolim park tem cesta em poste");
+const rampas = (ideia) => ideia.pecas.filter((p) => p.tipo === "cama_inclinada").length;
+const cestas = (ideia) => ideia.pecas.filter((p) => p.tipo === "cesta_parede");
+confere(rampas(grande) === 5 && cestas(grande).length === 5, `o grande com ${rampas(grande)} rampas e ${cestas(grande).length} cestas (pede 5 e 5)`);
+confere(cestas(grande).every((c) => c.d.tela === 1), "a cesta da enterrada sem a tela do Swish Arena");
+// cada cesta fica em cima da rampa dela (o mesmo x, na parede atrás)
+for (const c of cestas(grande)) {
+  const r = grande.pecas.find((p) => p.tipo === "cama_inclinada" && Math.abs(p.p[0] - c.p[0]) < 1e-6);
+  confere(r && c.p[2] < r.p[2], "uma cesta da enterrada não está na parede em cima da rampa");
+}
 const compacto = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 5 }, "#2563eb", 1, {});
-confere(!compacto.pecas.some((p) => p.tipo === "tabela") && compacto.pecas.filter((p) => p.tipo === "swish").length === 1,
-  "o trampolim park compacto leva uma cama de enterrada com a Swish, e não a pista");
-const compactoBaixo = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 4 }, "#2563eb", 1, {});
-confere(!compactoBaixo.pecas.some((p) => p.tipo === "cama_inclinada"), "o trampolim de parede pede pé-direito de 4,50 m");
-// o porte vai pela área de verdade: 13,5 × 5,5 m (74 m²) é médio, com a pista de enterrada e o trampolim de parede
+confere(semPoste(compacto) && rampas(compacto) >= 1 && rampas(compacto) === cestas(compacto).length, "o compacto sem a rampa com a cesta");
+const compactoBaixo = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 3.4 }, "#2563eb", 1, {});
+confere(!rampas(compactoBaixo) && !cestas(compactoBaixo).length, "a enterrada pede pé-direito de 3,60 m");
+const semEnterrada = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["enterrada"] });
+confere(!rampas(semEnterrada) && !cestas(semEnterrada).length && semPoste(semEnterrada), "tirar as enterradas não tirou as rampas e as cestas");
+// a Swish liga e desliga: sem ela, a cesta da enterrada leva a tabela comum (e continua na parede)
+const semSwish = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["swish"] });
+confere(cestas(semSwish).length === 5 && cestas(semSwish).every((c) => c.d.tela === 0) && semPoste(semSwish), "sem a Swish, a cesta não virou a tabela comum na parede");
+// o porte vai pela área de verdade: 13,5 × 5,5 m (74 m²) é médio, com as enterradas
 confere(gerador.porteQueCabe("trampolim", 13.5, 5.5).chave === "medio", "13,5 × 5,5 m de trampolim park não deu o porte médio");
 const faixa = gerador.gerar("trampolim", { largura: 13.5, profundidade: 5.5, altura: 6 }, "#2563eb", 1, {});
-for (const t of ["swish", "cama_inclinada", "espuma"]) confere(faixa.pecas.some((p) => p.tipo === t), `o trampolim park de 13,5 × 5,5 × 6 m sem ${t}`);
+for (const t of ["cama_inclinada", "cesta_parede", "espuma"]) confere(faixa.pecas.some((p) => p.tipo === t), `o trampolim park de 13,5 × 5,5 × 6 m sem ${t}`);
+const esportivoGrande = gerador.gerar("esportivo", { largura: 36, profundidade: 22, altura: 6 }, "#2563eb", 1, {});
+confere(esportivoGrande.pecas.filter((p) => p.tipo === "quadra").length === 2 && esportivoGrande.pecas.some((p) => p.tipo === "espuma")
+  && esportivoGrande.pecas.some((p) => p.tipo === "cesta_parede"), "o espaço esportivo grande leva as duas quadras e o trampolim park com as enterradas");
 // a área ninja enche a área: raias em zigue-zague, mais obstáculos quanto maior, a escalada e a parede curva na grande
 const obstaculos = (ideia) => ideia.pecas.filter((p) => ["degraus", "trave", "rolos", "argolas", "macaco", "corda", "tunel"].includes(p.tipo)).length;
 const ninjaMedia = gerador.gerar("ninja", { largura: 13, profundidade: 5, altura: 5 }, "#2563eb", 1, {});
@@ -138,18 +157,7 @@ const babyPequena = gerador.gerar("baby", { largura: 3.5, profundidade: 3.2, alt
 const dentro = (ideia, W, D) => ideia.pecas.every((p) => Math.abs(p.p[0]) <= W / 2 + 0.05 && Math.abs(p.p[2]) <= D / 2 + 0.05);
 confere(dentro(babyPequena, 3.5, 3.2) && dentro(babyGrande, 14, 10), "uma peça da área baby saiu da área");
 confere(dentro(ninjaGrande, 24, 11) && dentro(ninjaMedia, 13, 5), "uma peça da área ninja saiu da área");
-const semEnterrada = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["enterrada"] });
-confere(!semEnterrada.pecas.some((p) => p.tipo === "tabela" || p.tipo === "swish"), "tirar a pista de enterrada não tirou as cestas");
-// a cesta Swish Arena: liga e desliga; sem ela, a pista leva a tabela comum
-const semSwish = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["swish"] });
-confere(!semSwish.pecas.some((p) => p.tipo === "swish") && semSwish.pecas.some((p) => p.tipo === "tabela"), "tirar a Swish não pôs a tabela comum na pista");
-const compactoSemSwish = gerador.gerar("trampolim", { largura: 8.4, profundidade: 4.9, altura: 6 }, "#2563eb", 1, { sem: ["swish"] });
-confere(!compactoSemSwish.pecas.some((p) => p.tipo === "swish" || p.tipo === "tabela"), "o compacto sem a Swish ficou com cesta");
-confere(gerador.gerar("trampolim", { largura: 8.4, profundidade: 4.9, altura: 6 }, "#2563eb", 1, {}).pecas.some((p) => p.tipo === "cama_inclinada"),
-  "a cama de enterrada do compacto tirou o trampolim de parede");
-const esportivoGrande = gerador.gerar("esportivo", { largura: 36, profundidade: 22, altura: 6 }, "#2563eb", 1, {});
-confere(esportivoGrande.pecas.filter((p) => p.tipo === "quadra").length === 2 && esportivoGrande.pecas.some((p) => p.tipo === "espuma"),
-  "o espaço esportivo grande leva as duas quadras e o trampolim park");
+
 confere(typeof desenhos.coluna(pecas.CATALOGO_BASE.coluna.d, "#2563eb")[0].geometry === "object", "a coluna não se desenha");
 
 if (problemas.length) {

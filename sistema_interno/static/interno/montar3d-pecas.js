@@ -48,7 +48,7 @@ export const CATALOGO_EXTRA = {
   quadra: { nome: "Quadra", grupo: "esporte", d: { largura: 14, profundidade: 8 }, cor: "#1d4ed8" },
   gol: { nome: "Trave de gol", grupo: "esporte", d: { largura: 2.4, altura: 1.6 }, cor: "#ffffff" },
   tabela: { nome: "Tabela de basquete", grupo: "esporte", d: { altura: 2.6 }, cor: "#ef4444" },
-  swish: { nome: "Cesta Swish Arena", grupo: "esporte", d: { altura: 2.9 }, cor: "#3fd0ff" },
+  cesta_parede: { nome: "Cesta da enterrada (Swish Arena)", grupo: "esporte", d: { altura: 2.75, tela: 1 }, cor: "#3fd0ff" },
   escalada: { nome: "Parede de escalada", grupo: "esporte", d: { largura: 3.0, altura: 3.5 }, cor: "#0ea5e9" },
   colchao: { nome: "Colchão", grupo: "esporte", d: { largura: 2.0, profundidade: 1.6, espessura: 0.25 }, cor: "#2563eb" },
   degraus: { nome: "Degraus ninja", grupo: "esporte", d: { comprimento: 3.2, largura: 1.2 }, cor: "#f97316" },
@@ -741,67 +741,58 @@ export function desenhosExtra(T, h) {
       return grupo;
     },
     /**
-     * A CESTA SWISH ARENA (o jogo de basquete da casa, com placar de LED): a tabela preta com a
-     * moldura de LED, o aro e a rede, e em cima o telão com o "SWISH" e o placar. De frente para +z.
+     * A CESTA DA ENTERRADA, presa na parede em cima da rampa (como no Espaço Esportivo Modelo 1):
+     * a moldura preta com a TELA do Swish Arena como tabela (o jogo e o placar rodando) -- ou, com
+     * `tela: 0`, a tabela comum branca -- e o aro laranja com a rede, preso embaixo dela. O ponto da
+     * peça é a face da parede (z = 0); a cesta sai para +z. `altura`: a do aro.
      */
-    swish(d, cor) {
-      const A = d.altura, grupo = [];
+    cesta_parede(d, cor) {
+      const A = d.altura ?? 2.75, grupo = [];
       const neon = cor || "#3fd0ff";
-      const ferro = material("#111827", { metalness: 0.45, roughness: 0.35 });
-      const base = malha(caixa(0.8, 0.2, 1.0), material("#111827"));
-      base.position.set(0, 0.1, -0.6);
-      grupo.push(base, tubo(0.07, A + 1.35, [0, 0, -0.6], [0, A + 1.35, -0.6], ferro),
-        tubo(0.045, 0.38, [0, A + 0.3, -0.6], [0, A + 0.3, -0.22], ferro));
-      // a tabela preta com a moldura de LED
-      const placa = malha(caixa(1.1, 0.75, 0.05), material("#0b1220", { roughness: 0.25, metalness: 0.2 }));
-      placa.position.set(0, A + 0.32, -0.2);
-      grupo.push(placa);
-      const led = material(neon, { emissive: neon, emissiveIntensity: 2.2, roughness: 0.3 });
-      for (const [w, h, x, y] of [[1.12, 0.035, 0, A + 0.7], [1.12, 0.035, 0, A - 0.06], [0.035, 0.76, -0.56, A + 0.32], [0.035, 0.76, 0.56, A + 0.32]]) {
-        const faixa = malha(caixa(w, h, 0.02), led);
-        faixa.position.set(x, y, -0.17);
-        grupo.push(faixa);
-      }
-      const alvo = malha(caixa(0.46, 0.32, 0.012), led);
-      alvo.position.set(0, A + 0.2, -0.17);
-      const miolo = malha(caixa(0.42, 0.28, 0.014), material("#0b1220"));
-      miolo.position.set(0, A + 0.2, -0.165);
-      grupo.push(alvo, miolo);
-      const aro = malha(new T.TorusGeometry(0.21, 0.016, 8, 32), material("#f97316", { metalness: 0.4 }));
-      aro.rotation.x = Math.PI / 2;
-      aro.position.set(0, A, 0.04);
-      const cesto = new T.CylinderGeometry(0.21, 0.14, 0.38, 18, 1, true);
-      cesto.translate(0, A - 0.19, 0.04);
-      const rede = redeMat(1.2, 0.38, "#f8fafc");
-      rede.side = T.DoubleSide;
-      grupo.push(aro, malha(cesto, rede));
-      // o telão do placar, em cima da tabela
-      const caixaTela = malha(caixa(1.2, 0.62, 0.12), material("#111827", { roughness: 0.4 }));
-      caixaTela.position.set(0, A + 1.05, -0.24);
-      grupo.push(caixaTela);
-      let telaMat;
-      if (typeof document !== "undefined") {
+      const y0 = A - 0.11, y1 = A + 0.61, meio = (y0 + y1) / 2; // a moldura de 1,28 × 0,72 m
+      const moldura = malha(caixa(1.28, y1 - y0, 0.05), material("#0b0f19", { roughness: 0.35 }));
+      moldura.position.set(0, meio, 0.025);
+      grupo.push(moldura);
+      let face;
+      if (d.tela === 0) {
+        face = material("#f8fafc", { roughness: 0.3 });
+        const quadro = malha(caixa(0.45, 0.32, 0.01), material("#ef4444"));
+        quadro.position.set(0, A + 0.2, 0.056);
+        grupo.push(quadro);
+      } else if (typeof document !== "undefined") {
         const c = document.createElement("canvas");
-        c.width = 512; c.height = 256;
+        c.width = 512; c.height = 288;
         const g = c.getContext("2d");
-        g.fillStyle = "#020617"; g.fillRect(0, 0, 512, 256);
-        g.strokeStyle = neon; g.lineWidth = 10; g.strokeRect(8, 8, 496, 240);
-        g.font = "900 92px system-ui, sans-serif"; g.textAlign = "left"; g.textBaseline = "middle";
-        g.fillStyle = neon; g.shadowColor = neon; g.shadowBlur = 18;
-        g.fillText("SWISH", 34, 104);
-        g.shadowBlur = 0; g.font = "800 40px system-ui, sans-serif"; g.fillStyle = "#f8fafc";
-        g.fillText("ARENA", 38, 190);
-        g.font = "900 120px ui-monospace, monospace"; g.textAlign = "right"; g.fillStyle = "#facc15"; g.shadowColor = "#facc15"; g.shadowBlur = 16;
-        g.fillText("28", 480, 140);
+        const fundo = g.createLinearGradient(0, 0, 0, 288);
+        fundo.addColorStop(0, "#0b1a3a"); fundo.addColorStop(1, "#020617");
+        g.fillStyle = fundo; g.fillRect(0, 0, 512, 288);
+        g.strokeStyle = neon; g.lineWidth = 8; g.strokeRect(10, 10, 492, 268);
+        g.textBaseline = "middle"; g.textAlign = "center";
+        g.shadowColor = neon; g.shadowBlur = 16; g.fillStyle = neon;
+        g.font = "900 84px system-ui, sans-serif"; g.fillText("SWISH", 256, 86);
+        g.shadowBlur = 0; g.fillStyle = "#f8fafc"; g.font = "800 34px system-ui, sans-serif"; g.fillText("ARENA", 256, 150);
+        g.shadowColor = "#facc15"; g.shadowBlur = 14; g.fillStyle = "#facc15";
+        g.font = "900 70px ui-monospace, monospace"; g.fillText("28", 256, 222);
         const tex = new T.CanvasTexture(c);
         tex.colorSpace = T.SRGBColorSpace;
-        telaMat = new T.MeshBasicMaterial({ map: tex, toneMapped: false });
+        face = new T.MeshBasicMaterial({ map: tex, toneMapped: false });
       } else {
-        telaMat = material(neon, { emissive: neon, emissiveIntensity: 1.2 });
+        face = material(neon, { emissive: neon, emissiveIntensity: 1.1 });
       }
-      const tela = malha(new T.PlaneGeometry(1.08, 0.52), telaMat);
-      tela.position.set(0, A + 1.05, -0.175);
+      const tela = malha(new T.PlaneGeometry(1.18, y1 - y0 - 0.1), face);
+      tela.position.set(0, meio, 0.052);
       grupo.push(tela);
+      // o suporte do aro e o aro com a rede, saindo da parede embaixo da tela
+      const suporte = malha(caixa(0.3, 0.06, 0.22), material("#111827", { metalness: 0.4 }));
+      suporte.position.set(0, A - 0.02, 0.13);
+      const aro = malha(new T.TorusGeometry(0.2, 0.018, 8, 28), material("#f97316", { metalness: 0.4 }));
+      aro.rotation.x = Math.PI / 2;
+      aro.position.set(0, A, 0.32);
+      const cesto = new T.CylinderGeometry(0.2, 0.13, 0.36, 18, 1, true);
+      cesto.translate(0, A - 0.18, 0.32);
+      const rede = redeMat(1.2, 0.36, "#f8fafc");
+      rede.side = T.DoubleSide;
+      grupo.push(suporte, aro, malha(cesto, rede));
       return grupo;
     },
     escalada(d, cor) {

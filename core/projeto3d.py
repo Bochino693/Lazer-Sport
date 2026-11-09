@@ -96,11 +96,11 @@ AREAS = {
 PORTES = {
     "trampolim": (
         {"chave": "compacto", "nome": "Compacto", "min": (5.5, 5.5), "ideal": (7.5, 6.0), "area": 30, "lado": 5.5,
-         "componentes": ("camas", "espuma", "parede_inclinada", "swish")},
+         "componentes": ("camas", "espuma", "enterrada", "swish")},
         {"chave": "medio", "nome": "Médio", "min": (9.0, 7.0), "ideal": (13.0, 9.0), "area": 50, "lado": 5.0,
-         "componentes": ("camas", "espuma", "enterrada", "swish", "parede_inclinada", "queimada")},
+         "componentes": ("camas", "espuma", "enterrada", "swish", "queimada")},
         {"chave": "grande", "nome": "Grande", "min": (14.0, 10.0), "ideal": (20.0, 13.0), "area": 120, "lado": 8.0,
-         "componentes": ("camas", "espuma", "enterrada", "swish", "parede_inclinada", "escalada", "queimada")},
+         "componentes": ("camas", "espuma", "enterrada", "swish", "escalada", "queimada")},
     ),
     "esportivo": (
         {"chave": "compacto", "nome": "Compacto", "min": (7.0, 5.0), "ideal": (14.0, 8.0), "area": 35, "lado": 5.0,
@@ -130,9 +130,9 @@ PORTES = {
 
 #: O nome de cada coisa que vai dentro das áreas (as opções que o cliente liga e desliga).
 COMPONENTES = {
-    "camas": "Camas elásticas", "espuma": "Piscina de espuma", "enterrada": "Pista de enterrada",
-    "swish": "Cesta Swish Arena (placar de LED)",
-    "parede_inclinada": "Trampolim de parede", "escalada": "Parede de escalada", "queimada": "Quadra de queimada",
+    "camas": "Camas elásticas", "espuma": "Piscina de espuma", "enterrada": "Enterradas (a rampa com a cesta)",
+    "swish": "Swish Arena na cesta (o telão)",
+    "escalada": "Parede de escalada", "queimada": "Quadra de queimada",
     "quadra": "Quadra multiuso", "quadra_futebol": "Quadra de futebol", "quadra_basquete": "Quadra de basquete",
     "trampolim_park": "Trampolim park", "circuito_kids": "Circuito kids",
     "piscina": "Piscina rasa", "escorregador": "Plataforma com escorregador", "blocos": "Blocos de espuma",

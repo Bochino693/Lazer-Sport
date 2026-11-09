@@ -419,9 +419,9 @@ function brinquedao(P, W, D, H, sorte, op) {
  */
 export const PORTES = {
   trampolim: [
-    { chave: "compacto", min: [5.5, 5.5], area: 30, lado: 5.5, componentes: ["camas", "espuma", "parede_inclinada", "swish"] },
-    { chave: "medio", min: [9, 7], area: 50, lado: 5, componentes: ["camas", "espuma", "enterrada", "swish", "parede_inclinada", "queimada"] },
-    { chave: "grande", min: [14, 10], area: 120, lado: 8, componentes: ["camas", "espuma", "enterrada", "swish", "parede_inclinada", "escalada", "queimada"] },
+    { chave: "compacto", min: [5.5, 5.5], area: 30, lado: 5.5, componentes: ["camas", "espuma", "enterrada", "swish"] },
+    { chave: "medio", min: [9, 7], area: 50, lado: 5, componentes: ["camas", "espuma", "enterrada", "swish", "queimada"] },
+    { chave: "grande", min: [14, 10], area: 120, lado: 8, componentes: ["camas", "espuma", "enterrada", "swish", "escalada", "queimada"] },
   ],
   esportivo: [
     { chave: "compacto", min: [7, 5], area: 35, lado: 5, componentes: ["quadra", "escalada"] },
@@ -569,7 +569,7 @@ function esportivo(P, W, D, H, sorte, op) {
   const comps = new Set(porte === "grande" ? PORTES.trampolim[2].componentes : PORTES.trampolim[1].componentes);
   if (!tem.has("escalada")) comps.delete("escalada");
   if (!tem.has("swish")) comps.delete("swish");
-  regras.push(...trampolimPark(regiao(P, W / 2 - parkW / 2, parkZ, girar), pw, pd, H, sorte, comps, porte === "grande" ? 4 : 2));
+  regras.push(...trampolimPark(regiao(P, W / 2 - parkW / 2, parkZ, girar), pw, pd, H, sorte, comps, porte === "grande" ? 5 : 3));
   return regras;
 }
 
@@ -671,11 +671,12 @@ function ninja(P, W, D, H, sorte, op) {
 /**
  * O trampolim park de verdade (o que fica dentro do Espaço Esportivo Modelo 1): as camas em grade
  * com o estofado colorido, a piscina de espuma no fim (com as camas de lançamento antes e, se o
- * pé-direito deixa, a parede de escalada por cima dela), a pista de enterrada (raias de três camas
- * com a tabela no fim), o trampolim de parede no fundo, a quadra de queimada, a tela em volta e a
- * escadinha na entrada. `tem`: os componentes; `raias`: quantas raias de enterrada no máximo.
+ * pé-direito deixa, a parede de escalada por cima dela), as ENTERRADAS no fundo (a rampa com a cesta
+ * presa na parede, a tela do Swish Arena como tabela, e a cama de corrida na frente), a quadra de
+ * queimada, a tela em volta e a escadinha na entrada. `tem`: os componentes; `raias`: quantas
+ * enterradas no máximo.
  */
-function trampolimPark(P, W, D, H, sorte, tem, raias = 2, { miniEnterrada = false } = {}) {
+function trampolimPark(P, W, D, H, sorte, tem, raias = 2) {
   const regras = [];
   const m = 0.3, x0 = -W / 2 + m, x1 = W / 2 - m, z0 = -D / 2 + m, z1 = D / 2 - m;
   const alto = H >= 4.5;
@@ -710,67 +711,53 @@ function trampolimPark(P, W, D, H, sorte, tem, raias = 2, { miniEnterrada = fals
     if (pd < z1 - z0 - 1.4) grade(x1 - pw, x1, z0 + pd, z1);
     xr = x1 - pw;
   }
-  // 2. a pista de enterrada (esquerda): raias de camas em linha com a cesta no fim -- a Swish Arena
-  //    (o basquete da casa, com placar de LED e telão) ou a tabela comum, se o cliente tirou a Swish.
-  //    No compacto (sem pista), a Swish fica no fim de uma cama de enterrada de duas camas.
-  let xl = x0;
-  const cesta = tem.has("swish") ? "swish" : "tabela";
-  const nomeCesta = cesta === "swish" ? "a cesta Swish Arena (placar de LED e telão, aro a 2,90 m)" : "a tabela (aro a 2,90 m)";
-  const pista = tem.has("enterrada") && xr - x0 >= 6;
-  const mini = !pista && miniEnterrada && tem.has("swish") && xr - x0 >= 4.2 && z1 - z0 >= 3;
-  let zLivre = z1; // até onde vão as camas livres do meio (a cama de enterrada do compacto fica na frente)
-  if (mini) {
-    // a cama de enterrada do compacto, na frente (o fundo fica para o trampolim de parede)
-    const raiaP = 1.6, cl = 1.5;
-    const zc = z1 - raiaP / 2;
-    P.por(cesta, [x0 + 0.35, 0, zc], { altura: 2.9 }, 90);
-    for (let k = 0; k < 2; k++) cama(x0 + 0.9 + cl * (k + 0.5), zc, cl, raiaP);
-    grade(x0 + 0.9 + 2 * cl, xr, z1 - raiaP, z1);
-    zLivre = z1 - raiaP;
-    regras.push(`Cama de enterrada: 2 camas em linha com ${nomeCesta} no fim.`);
-  } else if (pista) {
-    const raiaP = 1.6, cl = 1.5;
-    const n = Math.max(1, Math.min(raias, Math.floor((z1 - z0) / raiaP)));
-    const camas = xr - x0 - 0.9 >= 3 * cl + 2.4 ? 3 : 2;
-    for (let i = 0; i < n; i++) {
-      const zc = z0 + raiaP * (i + 0.5);
-      P.por(cesta, [x0 + 0.35, 0, zc], { altura: 2.9 }, 90);
-      for (let k = 0; k < camas; k++) cama(x0 + 0.9 + cl * (k + 0.5), zc, cl, raiaP);
-    }
-    xl = x0 + 0.9 + camas * cl;
-    // na frente das raias, mais camas livres
-    grade(x0, xl, z0 + n * raiaP, z1);
-    regras.push(`Pista de enterrada: ${n} raia${n > 1 ? "s" : ""} de ${camas} camas em linha com ${nomeCesta} no fim.`);
-  }
-  // 3. o trampolim de parede no fundo do meio
-  let zb = z0;
-  if (tem.has("parede_inclinada")) {
-    if (alto && xr - xl >= 2) {
-      const n = Math.max(1, Math.floor((xr - xl) / 2));
-      const lw = (xr - xl) / n;
+  // 2. AS ENTERRADAS, como no Espaço Esportivo Modelo 1: no fundo, lado a lado, a RAMPA (a cama
+  //    inclinada que sobe até a parede) e, presa na parede em cima de cada rampa, a CESTA -- a tabela
+  //    é a tela do Swish Arena (o jogo e o placar rodando; sem a Swish, a tabela comum) e o aro preso
+  //    embaixo dela. Na frente de cada rampa, a cama de corrida, em linha. É a única cesta do park:
+  //    nada de tabela em poste no meio das camas.
+  const larguraRampa = 2.0, fundoRampa = 1.6;
+  let xe1 = x0, zEnt = z0, zCorrida = z0; // o pedaço das enterradas: [x0, xe1] × [z0, zCorrida]
+  if (tem.has("enterrada")) {
+    if (H < 3.6) {
+      regras.push("As enterradas (a rampa com a cesta na parede) pedem pé-direito de 3,60 m: ficaram de fora.");
+    } else if (xr - x0 >= larguraRampa + 0.2 && z1 - z0 >= fundoRampa + 2.2) {
+      const n = Math.max(1, Math.min(raias, Math.floor((xr - x0) / larguraRampa)));
+      xe1 = x0 + n * larguraRampa;
+      // a parede escura do fundo, atrás das rampas (onde ficam as cestas)
+      P.por("painel", [arred((x0 + xe1) / 2), 0, arred(z0 + 0.03)], { largura: arred(xe1 - x0), altura: arred(Math.min(3.45, H - 0.1)), espessura: 0.06 }, 0, "#111827");
+      zEnt = z0 + 0.06 + fundoRampa;
       for (let i = 0; i < n; i++) {
-        P.por("cama_inclinada", [xl + (i + 0.5) * lw, 0, z0 + 0.8], { largura: arred(lw - 0.05), profundidade: 1.6, altura: 2.6, base: 0.9 }, 0, cores[(i + 2) % cores.length]);
+        const xc = arred(x0 + larguraRampa * (i + 0.5));
+        P.por("cama_inclinada", [xc, 0, arred(z0 + 0.06 + fundoRampa / 2)], { largura: larguraRampa - 0.05, profundidade: fundoRampa, altura: 2.4, base: 0.9 }, 0, cores[(i + 1) % cores.length]);
+        P.por("cesta_parede", [xc, 0, arred(z0 + 0.06)], { altura: 2.75, tela: tem.has("swish") ? 1 : 0 });
       }
-      zb = z0 + 1.6;
-      regras.push(`${n} ${n > 1 ? "trampolins" : "trampolim"} de parede (camas inclinadas) no fundo.`);
-    } else if (!alto) {
-      regras.push("O trampolim de parede pede pé-direito de 4,50 m: ficou de fora.");
+      // a cama de corrida na frente de cada rampa (em linha com ela)
+      const corrida = z1 - zEnt >= 4.2 ? 2.0 : z1 - zEnt >= 2.2 ? Math.min(2.0, z1 - zEnt - 0.2) : 0;
+      for (let i = 0; i < n && corrida; i++) cama(x0 + larguraRampa * (i + 0.5), zEnt + corrida / 2, larguraRampa, corrida);
+      zCorrida = zEnt + corrida;
+      regras.push(`${n} ${n > 1 ? "enterradas" : "enterrada"} como no Espaço Esportivo: a rampa (cama inclinada) até a parede do fundo com a cesta presa nela -- ${tem.has("swish") ? "a tabela é a tela do Swish Arena, com o jogo e o placar rodando" : "a tabela comum"}, aro a 2,75 m --, e a cama de corrida na frente de cada uma.`);
+    } else {
+      regras.push("As enterradas (a rampa com a cesta na parede) não couberam nesta área.");
     }
   }
-  // 4. a quadra de queimada na frente do meio (camas com a tela baixa em volta e a rede no meio)
-  let zf = zLivre;
-  if (tem.has("queimada") && xr - xl >= 6 && zLivre - zb >= 7) {
-    const qP = 4.4, qL = Math.min(xr - xl, 8.8);
-    const qx = xl + qL / 2, qz = z1 - qP / 2;
-    grade(xl, xl + qL, z1 - qP, z1, 2.2);
+  // 3. a quadra de queimada na frente, à esquerda (camas com a tela baixa em volta e a rede no meio)
+  let zf = z1;
+  let xq = x0;
+  if (tem.has("queimada") && xr - x0 >= 6 && z1 - zCorrida >= 7) {
+    const qP = 4.4, qL = Math.min(xr - x0, 8.8);
+    const qx = x0 + qL / 2, qz = z1 - qP / 2;
+    grade(x0, x0 + qL, z1 - qP, z1, 2.2);
     P.por("cerca", [qx, 0.9, qz - qP / 2], { comprimento: arred(qL), altura: 1.2 });
     P.por("cerca", [qx, 0.9, qz], { comprimento: arred(qP), altura: 0.9 }, 90);
-    grade(xl + qL, xr, z1 - qP, z1);
+    grade(x0 + qL, xr, z1 - qP, z1);
     zf = z1 - qP;
+    xq = x0 + qL;
     regras.push(`Quadra de queimada de ${m2(qL)} × ${m2(qP)} m (camas com tela baixa e a rede no meio).`);
   }
-  // 5. as camas livres no resto
-  grade(xl, xr, zb, zf);
+  // 4. as camas livres no resto: atrás das corridas, ao lado das enterradas e na frente
+  grade(x0, xe1, zCorrida, zf);
+  grade(xe1, xr, z0, zf);
   regras.unshift(`${nCamas} camas elásticas com o estofado colorido em volta de cada uma (lona a 0,90 m).`);
   // 6. a tela em volta (com a entrada na frente) e a escadinha da entrada
   const telaA = arred(Math.min(2.2, H - 0.3));
@@ -788,7 +775,7 @@ function trampolimPark(P, W, D, H, sorte, tem, raias = 2, { miniEnterrada = fals
 
 function trampolim(P, W, D, H, sorte, op) {
   const { porte, tem } = componentesDe("trampolim", W, D, op);
-  return trampolimPark(P, W, D, H, sorte, tem, porte === "grande" ? 4 : 2, { miniEnterrada: porte === "compacto" });
+  return trampolimPark(P, W, D, H, sorte, tem, porte === "grande" ? 5 : porte === "medio" ? 3 : 2);
 }
 
 /* ---------------------------------------------------------------- espaço baby */
