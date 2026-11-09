@@ -3,6 +3,7 @@
     python manage.py cadastrar_modelo_3d espaco-esportivo-modelo-1
     python manage.py cadastrar_modelo_3d brinquedao-modelo-2
     python manage.py cadastrar_modelo_3d brinquedao-ninja
+    python manage.py cadastrar_modelo_3d brinquedao-modelo-4
     python manage.py cadastrar_modelo_3d strike-kids
 
 Normalmente nem é preciso: as migrações de dados cadastram no deploy. Este

@@ -4883,6 +4883,103 @@ CAMINHOS["trampolim-enterrada"] = () => [
   [...TE(5600, -3300, 0), "andar", { pausa: 2, olhar: TE(2750, 1130, 1500) }],
 ];
 
+/* O Brinquedão Modelo 4 (num bloco próprio, como o do trampolim). O projeto
+   é em milímetros, como o .3ds: x ao longo, y para o FUNDO, z para cima; o
+   objeto 3D é o mesmo desenho, virado para a frente em +z e centralizado (o
+   deslocamento sai do gerar.cjs de ferramentas/modelos3d/brinquedao-modelo-4/).
+   O andar de cima fica a 2,595 m (a faixa da rede em V, a 2,575 m). */
+const M4 = (x, y, z) => [x / 1000 - 10.8075, z / 1000, -y / 1000 + 5.43];
+
+/** O tobogã espiral do Modelo 4 (o TOBOGA do montar.js), com os pés no fundo do tubo. */
+function toboganDoModelo4() {
+  const pontos = [[...M4(19020, 4200, 2610), "escorregar"]];
+  for (let i = 0; i <= 28; i++) {
+    const t = i / 28;
+    const a = ((180 + 700 * t) * PI) / 180;
+    pontos.push([...M4(19590 + 570 * Math.cos(a), 3900 + 570 * Math.sin(a), 2880 - 2240 * t - 270), "escorregar"]);
+  }
+  pontos.push([...M4(18880, 3250, 290), "escorregar"]);
+  return pontos;
+}
+
+// sobe a escada da ponta esquerda, atravessa o trecho de 12 m (rolos em pé,
+// as redes em V, a pirâmide), a passagem pelos rolos magenta, o trecho de
+// 9 m (o saco, os pares de rolos, o rolo amarelo, a rede), desce o tobogã até
+// a piscina de bolinhas, sai pela escadinha verde e olha a Área Baby e o
+// brinquedão inteiro
+CAMINHOS["brinquedao-modelo-4"] = () => [
+  [...M4(1550, 5200, 0), "ir"],
+  [...M4(1550, 6350, 0), "andar"],
+  // a escada: o piso de baixo, o degrau de 0,98 m, o piso pink do meio, o degrau de 2,18 m e o amarelo de cima
+  [...M4(1550, 6800, 240), "subir"],
+  [...M4(1300, 7000, 240), "andar"],
+  [...M4(1200, 7250, 980), "subir"],
+  [...M4(1350, 7400, 1630), "subir"],
+  [...M4(1700, 7450, 2180), "subir"],
+  [...M4(1850, 6950, 2595), "subir"],
+  // o andar de cima tem o teto baixo: anda-se abaixado, pelo lado dos rolos em pé
+  [...M4(2250, 6850, 2595), "agachado", { pausa: 0.9, olhar: M4(2500, 7100, 3050) }],
+  [...M4(2850, 7100, 2595), "agachado"],
+  [...M4(3050, 7100, 2575), "rede"],
+  [...M4(4850, 7100, 2575), "rede"],
+  [...M4(5300, 7100, 2595), "agachado"],
+  [...M4(6100, 6850, 2595), "agachado"],
+  [...M4(6650, 6850, 2595), "agachado"],
+  [...M4(6800, 7100, 2595), "agachado"],
+  [...M4(6920, 7100, 2575), "rede"],
+  [...M4(7750, 7100, 2575), "rede"],
+  // por cima da pirâmide magenta
+  [...M4(8050, 7100, 2595), "agachado"],
+  [...M4(8300, 7100, 2880), "agachado"],
+  [...M4(8600, 7100, 2595), "agachado"],
+  [...M4(9950, 7100, 2595), "agachado"],
+  [...M4(10050, 6850, 2595), "agachado"],
+  [...M4(10500, 6850, 2595), "agachado"],
+  [...M4(10650, 7100, 2595), "agachado"],
+  [...M4(10780, 7100, 2575), "rede"],
+  [...M4(11640, 7100, 2575), "rede"],
+  // a passagem: por cima do rolo baixo, por baixo do alto, por cima do outro baixo
+  [...M4(12170, 7100, 2595), "agachado", { pausa: 0.8, olhar: M4(12170, 5300, 2900) }],
+  [...M4(12170, 6520, 2595), "agachado"],
+  [...M4(12170, 6280, 2925), "subir"],
+  [...M4(12170, 6020, 2595), "agachado"],
+  [...M4(12170, 5760, 2595), "tubo"],
+  [...M4(12170, 5510, 2595), "agachado"],
+  [...M4(12170, 5280, 2925), "subir"],
+  [...M4(12170, 4950, 2595), "agachado"],
+  // o saco azul e o par de rolos amarelos (passa-se pela fresta entre os dois)
+  [...M4(11950, 4650, 2595), "agachado", { pausa: 0.8, olhar: M4(12170, 4405, 3100) }],
+  [...M4(12450, 4150, 2595), "agachado"],
+  [...M4(12900, 4405, 2595), "tubo"],
+  [...M4(13130, 4405, 2700), "tubo"],
+  [...M4(13360, 4405, 2595), "tubo"],
+  // o rolo amarelo em pé, pela frente, e a rede em V
+  [...M4(13800, 4100, 2595), "agachado"],
+  [...M4(14450, 4100, 2595), "agachado"],
+  [...M4(14660, 4405, 2575), "rede"],
+  [...M4(16500, 4405, 2575), "rede"],
+  // o outro par de rolos e o outro saco
+  [...M4(16880, 4405, 2595), "tubo"],
+  [...M4(17100, 4405, 2700), "tubo"],
+  [...M4(17330, 4405, 2595), "tubo"],
+  [...M4(17700, 4150, 2595), "agachado"],
+  [...M4(18350, 4150, 2595), "agachado", { pausa: 0.7, olhar: M4(18050, 4405, 3100) }],
+  // atrás da boca do tobogã, de frente para ela
+  [...M4(18800, 4700, 2595), "agachado"],
+  [...M4(19020, 4650, 2595), "agachado", { pausa: 0.9, olhar: M4(19020, 3900, 2400) }],
+  ...toboganDoModelo4(),
+  [...M4(19150, 3100, 280), "cair", { pausa: 1.2, olhar: M4(19590, 3900, 1700) }],
+  // pela piscina até o arco azul, por cima da mureta e a escadinha verde
+  [...M4(19800, 3150, 300), "andar"],
+  [...M4(20105, 2900, 430), "subir"],
+  [...M4(20105, 2720, 430), "subir"],
+  [...M4(20105, 2530, 215), "subir"],
+  [...M4(20105, 2250, 0), "andar"],
+  // a Área Baby, de frente, e o brinquedão inteiro
+  [...M4(15070, 2200, 0), "andar", { pausa: 1.4, olhar: M4(15070, 3500, 1200) }],
+  [...M4(11500, -5500, 0), "andar", { pausa: 2, olhar: M4(11000, 5500, 1500) }],
+];
+
 /** Um objeto sem caminho próprio: a volta em torno dele, parando em cada lado. */
 function voltaEmVolta(m) {
   const a = (m.W || m.largura) / 2 + 0.9;

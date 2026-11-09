@@ -600,6 +600,26 @@ MODELOS_3D = (
         ),
     },
     {
+        # Dois trechos em "Z" (12 m ao fundo e 9 m na frente, ligados por uma
+        # passagem): a estrutura de tubos é a do .3ds da fábrica; o resto, das
+        # imagens do projeto (ferramentas/modelos3d/brinquedao-modelo-4/). Com
+        # 19,6 m passa do teto da roda (14 m), como o Ninja (14,3 m).
+        "id": "brinquedao-modelo-4",
+        "titulo": "Brinquedão Modelo 4",
+        "nomes": ("Brinquedão Modelo 4",),
+        "arquivo": "site/arena/modelos/brinquedao-modelo-4.glb",
+        "medidas": (3.55, 19.62, 5.98),
+        "pasta": "site/arena/modelos/brinquedao-modelo-4/",
+        "fotos": (("perfil", "perspectiva.webp"),),
+        "medidas_texto": "3,55 m × 19,6 m × 6 m",
+        "categorias": ("Brinquedões",),
+        "descricao": (
+            "Brinquedão de dois andares em Z (12 m + 9 m ligados por uma passagem): painéis X, rolos em pé e "
+            "deitados, redes amarelas em V, sacos azuis e pirâmide no andar de cima; piscina de bolinhas com "
+            "escorregadores ondulados, Área Baby e tobogã espiral até a piscina de bolinhas embaixo."
+        ),
+    },
+    {
         # Grande demais para a roda: fica no seu próprio "reino", ao lado.
         "id": "espaco-esportivo-modelo-1",
         "titulo": "Espaço Esportivo Modelo 1",
