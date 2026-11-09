@@ -1,0 +1,32 @@
+{
+ "_como": [
+  "Onde cada peça está na folha de adesivos da fábrica (a imagem da folha fica nesta pasta, com o nome de 'folha').",
+  "caixa: [x0, y0, x1, y1] em px da folha (o canto de cima à esquerda e o de baixo à direita); ou caixa_rel, em frações de 0 a 1.",
+  "girar: 0, 90, 180 ou 270 graus (anti-horário) para a peça ficar em pé, como o 'onde' do pecas.json; espelhar: true se precisar.",
+  "Uma peça noutra imagem: 'folha' dentro da peça. Sem caixa (null), a peça fica com a arte que já está em adesivos/.",
+  "Confira com: python3 recortar_adesivos.py --previa (desenha as caixas na folha: previa-recortes.jpg)."
+ ],
+ "folha": "folha-adesivos.jpg",
+ "pecas": {
+  "lateral-esquerda": {
+   "caixa": null,
+   "girar": 0
+  },
+  "lateral-direita": {
+   "caixa": null,
+   "girar": 0
+  },
+  "lateral-esquerda-2": {
+   "caixa": null,
+   "girar": 0
+  },
+  "lateral-direita-2": {
+   "caixa": null,
+   "girar": 0
+  },
+  "tampo": {
+   "caixa": null,
+   "girar": 0
+  }
+ }
+}

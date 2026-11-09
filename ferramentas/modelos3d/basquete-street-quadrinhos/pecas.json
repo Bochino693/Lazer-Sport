@@ -1,0 +1,442 @@
+{
+ "lateral-externa-esquerda": {
+  "arquivo": "adesivos/lateral-externa-esquerda.png",
+  "mm": [
+   2150,
+   2400
+  ],
+  "onde": "o lado de fora da esquerda (vista de fora, recortada no contorno)",
+  "contorno": [
+   [
+    0,
+    1
+   ],
+   [
+    1,
+    1
+   ],
+   [
+    1,
+    0.6
+   ],
+   [
+    0.781,
+    0.5788
+   ],
+   [
+    0.7689,
+    0.5772
+   ],
+   [
+    0.7575,
+    0.5749
+   ],
+   [
+    0.7466,
+    0.5719
+   ],
+   [
+    0.7363,
+    0.5681
+   ],
+   [
+    0.7266,
+    0.5636
+   ],
+   [
+    0.7175,
+    0.5584
+   ],
+   [
+    0.709,
+    0.5524
+   ],
+   [
+    0.701,
+    0.5457
+   ],
+   [
+    0.6937,
+    0.5382
+   ],
+   [
+    0.6869,
+    0.53
+   ],
+   [
+    0.6807,
+    0.5211
+   ],
+   [
+    0.6751,
+    0.5114
+   ],
+   [
+    0.4385,
+    0.064
+   ],
+   [
+    0.4341,
+    0.0563
+   ],
+   [
+    0.4293,
+    0.049
+   ],
+   [
+    0.4242,
+    0.0423
+   ],
+   [
+    0.4188,
+    0.036
+   ],
+   [
+    0.4129,
+    0.0303
+   ],
+   [
+    0.4068,
+    0.025
+   ],
+   [
+    0.4002,
+    0.0203
+   ],
+   [
+    0.3933,
+    0.016
+   ],
+   [
+    0.3861,
+    0.0123
+   ],
+   [
+    0.3785,
+    0.009
+   ],
+   [
+    0.3706,
+    0.0063
+   ],
+   [
+    0.3623,
+    0.004
+   ],
+   [
+    0.3536,
+    0.0023
+   ],
+   [
+    0.3446,
+    0.001
+   ],
+   [
+    0.3353,
+    0.0003
+   ],
+   [
+    0.3256,
+    0
+   ],
+   [
+    0,
+    0
+   ]
+  ]
+ },
+ "lateral-interna-esquerda": {
+  "arquivo": "adesivos/lateral-interna-esquerda.png",
+  "mm": [
+   2131,
+   1601
+  ],
+  "onde": "o lado de dentro da esquerda, em L (visto da pista)",
+  "contorno": [
+   [
+    0,
+    1
+   ],
+   [
+    0,
+    0.8876
+   ],
+   [
+    0.6804,
+    0.7898
+   ],
+   [
+    0.6804,
+    0
+   ],
+   [
+    1,
+    0
+   ],
+   [
+    1,
+    0.8562
+   ]
+  ]
+ },
+ "lateral-externa-direita": {
+  "arquivo": "adesivos/lateral-externa-direita.png",
+  "mm": [
+   2150,
+   2400
+  ],
+  "onde": "o lado de fora da direita (vista de fora, recortada no contorno)",
+  "contorno": [
+   [
+    1,
+    1
+   ],
+   [
+    0,
+    1
+   ],
+   [
+    0,
+    0.6
+   ],
+   [
+    0.219,
+    0.5788
+   ],
+   [
+    0.2311,
+    0.5772
+   ],
+   [
+    0.2425,
+    0.5749
+   ],
+   [
+    0.2534,
+    0.5719
+   ],
+   [
+    0.2637,
+    0.5681
+   ],
+   [
+    0.2734,
+    0.5636
+   ],
+   [
+    0.2825,
+    0.5584
+   ],
+   [
+    0.291,
+    0.5524
+   ],
+   [
+    0.299,
+    0.5457
+   ],
+   [
+    0.3063,
+    0.5382
+   ],
+   [
+    0.3131,
+    0.53
+   ],
+   [
+    0.3193,
+    0.5211
+   ],
+   [
+    0.3249,
+    0.5114
+   ],
+   [
+    0.5615,
+    0.064
+   ],
+   [
+    0.5659,
+    0.0563
+   ],
+   [
+    0.5707,
+    0.049
+   ],
+   [
+    0.5758,
+    0.0423
+   ],
+   [
+    0.5812,
+    0.036
+   ],
+   [
+    0.5871,
+    0.0303
+   ],
+   [
+    0.5932,
+    0.025
+   ],
+   [
+    0.5998,
+    0.0203
+   ],
+   [
+    0.6067,
+    0.016
+   ],
+   [
+    0.6139,
+    0.0123
+   ],
+   [
+    0.6215,
+    0.009
+   ],
+   [
+    0.6294,
+    0.0063
+   ],
+   [
+    0.6377,
+    0.004
+   ],
+   [
+    0.6464,
+    0.0023
+   ],
+   [
+    0.6554,
+    0.001
+   ],
+   [
+    0.6647,
+    0.0003
+   ],
+   [
+    0.6744,
+    0
+   ],
+   [
+    1,
+    0
+   ]
+  ]
+ },
+ "lateral-interna-direita": {
+  "arquivo": "adesivos/lateral-interna-direita.png",
+  "mm": [
+   2131,
+   1601
+  ],
+  "onde": "o lado de dentro da direita, em L (visto da pista)",
+  "contorno": [
+   [
+    1,
+    1
+   ],
+   [
+    1,
+    0.8876
+   ],
+   [
+    0.3196,
+    0.7898
+   ],
+   [
+    0.3196,
+    0
+   ],
+   [
+    0,
+    0
+   ],
+   [
+    0,
+    0.8562
+   ]
+  ]
+ },
+ "fundo-cesta": {
+  "arquivo": "adesivos/fundo-cesta.png",
+  "mm": [
+   960,
+   1371
+  ],
+  "onde": "o painel do fundo, atrás da cesta (da prancha até o teto)"
+ },
+ "teto-interno": {
+  "arquivo": "adesivos/teto-interno.png",
+  "mm": [
+   960,
+   681
+  ],
+  "onde": "o teto da parte alta, visto de baixo (a frente no alto da imagem)"
+ },
+ "testeira-frente": {
+  "arquivo": "adesivos/testeira-frente.png",
+  "mm": [
+   1000,
+   300
+  ],
+  "onde": "a frente da testeira (o letreiro, aceso)"
+ },
+ "testeira-teto": {
+  "arquivo": "adesivos/testeira-teto.png",
+  "mm": [
+   1000,
+   430
+  ],
+  "onde": "o alto da testeira, visto de cima (a frente embaixo da imagem)"
+ },
+ "testeira-lado": {
+  "arquivo": "adesivos/testeira-lado.png",
+  "mm": [
+   430,
+   300
+  ],
+  "onde": "os dois lados da testeira (a mesma peça), vistos de fora"
+ },
+ "prancha": {
+  "arquivo": "adesivos/prancha.png",
+  "mm": [
+   960,
+   2143
+  ],
+  "onde": "a rampa, vista de quem joga (a cesta no alto da imagem)"
+ },
+ "faixa-rampa": {
+  "arquivo": "adesivos/faixa-rampa.png",
+  "mm": [
+   474,
+   90
+  ],
+  "onde": "a faixa do corrimão, em cima da parte baixa, vista de fora (os dois lados)"
+ },
+ "poste": {
+  "arquivo": "adesivos/poste.png",
+  "mm": [
+   60,
+   960
+  ],
+  "onde": "a faixa do poste da frente, do corrimão para cima, vista de fora (os dois lados)"
+ },
+ "frente": {
+  "arquivo": "adesivos/frente.png",
+  "mm": [
+   1000,
+   900
+  ],
+  "onde": "a frente do console (o lado de quem joga)"
+ },
+ "frente-lateral": {
+  "arquivo": "adesivos/frente-lateral.png",
+  "mm": [
+   250,
+   900
+  ],
+  "onde": "os dois lados do console, vistos de fora (a mesma peça)"
+ }
+}

@@ -5,6 +5,8 @@
     python manage.py cadastrar_modelo_3d brinquedao-ninja
     python manage.py cadastrar_modelo_3d brinquedao-modelo-4
     python manage.py cadastrar_modelo_3d strike-kids
+    python manage.py cadastrar_modelo_3d air-game-hockey-espacial     # copia o Air Game Hockey
+    python manage.py cadastrar_modelo_3d basquete-street-quadrinhos   # copia o Basquete Street
 
 Normalmente nem é preciso: as migrações de dados cadastram no deploy. Este
 comando é para quando elas não conseguiram (ver `core/cadastro_modelos.py`).

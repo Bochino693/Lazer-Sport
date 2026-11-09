@@ -1469,3 +1469,62 @@ Dependência nova: rjsmin (requirements.txt).
    de 2 camas na frente termina nela (o fundo fica para o trampolim de
    parede). O cliente tira e põe em "O que vai dentro" (Cesta Swish Arena):
    sem ela, a pista leva a tabela comum.
+51) AIR GAME HOCKEY ESPACIAL E BASQUETE STREET QUADRINHOS (OS ADESIVOS NOVOS)
+   Dois produtos novos que são a MESMA máquina de dois que já estão no
+   catálogo, só com outra adesivagem, cada um com o seu objeto 3D (na Arena 3D,
+   na seção "As máquinas que já fazíamos", e na página do produto):
+     * AIR GAME HOCKEY ESPACIAL = a mesa do Air Game Hockey (1,00 x 1,10 x
+       2,10 m) com o espaço: o HOCKEY KIDS no tampo, alienígenas astronautas
+       jogando hóquei, discos voadores, planetas, estrelas e o chão lunar
+       laranja; as laterais recortadas (sobem nas pontas, afundam no meio e
+       ficam em pé em dois pés largos) e as cabeceiras com o azul embaixo;
+     * BASQUETE STREET QUADRINHOS = o basquete de arcade do Basquete Street
+       (2,70 x 1,00 x 2,40 m) em quadrinhos: fundo preto, faixas arredondadas,
+       POW!, BOOM!, WOW!, o letreiro BASKETBALL, as crianças jogando, a bola
+       grande nas laterais e a quadra vermelha na prancha (a rampa).
+   O CADASTRO COPIA A MÁQUINA DE ANTES (achada pelo nome inteiro, sem acento
+   nem maiúscula: "AIR GAME HOCKEY", "Basquete Street"): preço, voltagem,
+   "exibir na loja", avaliação, medidas, categorias e tags. A descrição é nova
+   (fala da arte nova) e as fotos são vistas do próprio 3D (a frente de 3/4,
+   os dois lados, o verso e o tampo / a vista de quem joga). Sem a máquina de
+   antes no catálogo, o produto entra como os outros modelos: as medidas do
+   projeto, a categoria pelo nome ("Eletrônicos"), sem preço e fora da loja
+   (confira no painel). O 3D se liga pelo nome inteiro: o Air Game Hockey e o
+   Basquete Street de antes continuam sem objeto 3D.
+   MIGRAÇÃO: 0145_variantes_de_adesivo (no deploy do Render cadastra os dois,
+   com as fotos no Cloudinary; em todo lugar, liga o 3D ao que já estiver no
+   catálogo com o nome). Se ela não conseguir (Cloudinary fora do ar):
+       python manage.py cadastrar_variantes_adesivo
+       python manage.py cadastrar_variantes_adesivo --so basquete-street-quadrinhos
+   (o mesmo que cadastrar_modelo_3d air-game-hockey-espacial / basquete-street-quadrinhos).
+   A ARTE AINDA É PROVISÓRIA: a folha de adesivos da fábrica não chegou.
+   Cada adesivo é UM ARQUIVO (ferramentas/modelos3d/<id>/adesivos/<peça>.png:
+   tampo, lateral-esquerda, lateral-direita, lateral-esquerda-2,
+   lateral-direita-2; prancha, frente, frente-lateral, fundo-cesta,
+   teto-interno, lateral-interna-esquerda/direita, lateral-externa-
+   esquerda/direita, testeira-frente/teto/lado, faixa-rampa, poste); o
+   montar.js só cola cada imagem na sua face (a peça recortada leva a imagem
+   inteira e o contorno corta o resto). Quando a folha chegar, em cada pasta:
+     1. salve a folha como folha-adesivos.jpg;
+     2. no recortes.json, marque a caixa de cada peça na folha ([x0, y0, x1,
+        y1] em px) e quanto girar para ela ficar em pé, vista de fora (a
+        tabela do README e o "onde" do pecas.json dizem como cada uma fica);
+     3. python3 recortar_adesivos.py --previa   (confira previa-recortes.jpg)
+     4. python3 recortar_adesivos.py            (grava adesivos/; avisa se a
+        proporção não bate com a peça do 3D)
+     5. python3 -m http.server 8790 --bind 127.0.0.1  e  node gerar.cjs glb fotos
+        e o npx gltfpack do README (o .glb e as fotos novas);
+     6. python manage.py test core.tests_variantes_adesivo  (o .glb abaixo de
+        800 KB);
+     7. no servidor, depois de subir: python manage.py cadastrar_variantes_adesivo --fotos
+        (a galeria do cadastro com as fotos novas).
+   Tamanhos: 284 KB (hockey) e 615 KB (basquete), os adesivos em JPEG dentro
+   do .glb.
+   Código: core/arena.py (MODELOS_3D), core/cadastro_modelos.py (CADASTROS,
+   achar_base, VARIANTES_DE_ADESIVO), core/management/commands/
+   cadastrar_variantes_adesivo.py, ferramentas/modelos3d/air-game-hockey-
+   espacial/ e basquete-street-quadrinhos/ (montar.js, gerar.cjs,
+   desenhar_provisorios.py, recortar_adesivos.py, recortes.json, pecas.json,
+   README.md) e ferramentas/modelos3d/adesivos_comum.py (o recorte e o
+   desenho, só com o Pillow).
+   Testes: core/tests_variantes_adesivo.py.
