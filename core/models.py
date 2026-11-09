@@ -876,6 +876,10 @@ class JogoCadastrado(Prime):
 
         if self.slug in arena.JOGOS_POR_SLUG:
             raise ValidationError({"slug": "Este endereço já é de um jogo do simulador. Escolha outro."})
+        # /jogos/partida/, /jogos/ranking/, /jogos/presenca/... vêm antes de /jogos/<jogo>/ (core/urls.py):
+        # um jogo com um desses nomes nunca abriria
+        if self.slug in ("partida", "ranking", "presenca", "abriu", "anuncio"):
+            raise ValidationError({"slug": "Este endereço é de uma página do portal de jogos. Escolha outro."})
         if not (self.endereco or self.arquivo_html or self.versao_pc or self.versao_pc_link or self.sistema):
             raise ValidationError(
                 "Informe o endereço do jogo hospedado, envie o arquivo .html, escolha o sistema "

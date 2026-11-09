@@ -4,12 +4,14 @@
   recorde, quando já tem) e "já no aparelho" no canto da direita. O cartão inteiro leva à ficha do jogo;
   o "Jogar" por cima da capa (aparece ao passar o mouse ou focar; no celular fica sempre à vista) abre o
   jogo direto, dentro do app. Sem capa, a arte de reserva: o gradiente da cor do jogo, o ícone do
-  console e o nome -- nunca um quadrado vazio.
+  console e o nome -- nunca um quadrado vazio. Quando tem gente jogando agora (core/presenca_jogos.py),
+  o "N jogando" no canto de baixo da capa.
   O JavaScript da biblioteca (portal-jogos.js, função "capa") monta a mesma coisa: mudou aqui, muda lá.
 {% endcomment %}
 <article class="bj-capa" style="--cor: {{ jogo.cor }}; --tema: {{ jogo.tema }}" data-portal-cartao="{{ jogo.slug }}">
     <a class="bj-capa-link" href="{{ jogo.url }}" data-bj-jogo="{{ jogo.slug }}">
         <span class="bj-capa-arte">
+            {% if jogo.jogando %}<span class="bj-vivo"><i class="pg-vivo-ponto" aria-hidden="true"></i>{{ jogo.jogando }} jogando</span>{% endif %}
             {% if jogo.capa %}<img class="bj-capa-fundo" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" aria-hidden="true"><img class="bj-capa-img" src="{{ jogo.capa }}" alt="" loading="lazy" decoding="async" width="320" height="320">{% else %}<span class="bj-capa-reserva" aria-hidden="true"><i class="fa-{% if jogo.icone == 'fa-html5' %}brands{% else %}solid{% endif %} {{ jogo.icone|default:'fa-gamepad' }}"></i><b>{{ jogo.titulo }}</b></span>{% endif %}
         </span>
         <span class="bj-capa-texto">

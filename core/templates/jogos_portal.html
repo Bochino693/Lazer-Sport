@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static interno_extras %}
+{% load static interno_extras humanize %}
 
 {% block title %}Lazer & Sport Games: jogos online grátis — boliche, boxe, basquete e clássicos de console{% endblock %}
 {% block meta_description %}Lazer & Sport Games: jogue grátis no navegador ou no celular, sem baixar. Os jogos das máquinas da Lazer & Sport (boliche virtual, boxe, basquete, tiro ao alvo) com ranking, e clássicos de console.{% endblock %}
@@ -80,6 +80,10 @@
         </form>
 
         <div class="pg-atalhos">
+            {# gente online agora (core/presenca_jogos.py): some com 0 ou 1 -- uma pessoa só é quem está olhando #}
+            <span class="pg-online" data-pg-online title="Pessoas com o Lazer &amp; Sport Games aberto agora"{% if presenca.online < 2 %} hidden{% endif %}>
+                <i class="pg-vivo-ponto" aria-hidden="true"></i><b data-pg-online-n>{{ presenca.online }}</b> <span>online</span>
+            </span>
             <button type="button" class="pg-atalho pg-atalho--instalar" data-app-instalar title="Instalar o app" aria-label="Instalar o app" hidden><i class="fa-solid fa-download" aria-hidden="true"></i><span>Instalar app</span></button>
             <button type="button" class="pg-atalho" data-app-tela-cheia title="Tela cheia" aria-label="Tela cheia"><i class="fa-solid fa-expand" aria-hidden="true"></i><span>Tela cheia</span></button>
             <a class="pg-atalho pg-atalho--site" href="{% url 'home' %}" title="Voltar à loja da Lazer &amp; Sport" aria-label="Voltar à loja da Lazer &amp; Sport"><i class="fa-solid fa-store" aria-hidden="true"></i><span>Loja</span></a>
@@ -113,19 +117,38 @@
     {% if destaques %}
     <section class="pg-hero" aria-roledescription="carrossel" aria-label="Jogos em destaque" data-portal-hero{% if lista is not None %} hidden{% endif %}>
         {% for jogo in destaques %}
-        <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
+        <article class="pg-slide{% if forloop.first %} pg-slide--ativo{% endif %}{% if jogo.topo %} pg-slide--cena{% endif %}" style="--cor: {{ jogo.cor }}" aria-roledescription="slide"
                  aria-label="{{ forloop.counter }} de {{ destaques|length }}" data-portal-slide{% if not forloop.first %} aria-hidden="true"{% endif %}>
-            {% if jogo.poster %}<img class="pg-slide-fundo" src="{{ jogo.poster }}" alt="" {% if not forloop.first %}loading="lazy" {% endif %}decoding="async">{% endif %}
+            {% if jogo.topo %}
+            {% comment %}
+              A cena do jogo da casa (capas/topo/gerar.py): a faixa larga no computador, a quase quadrada no
+              tablet em pé e no celular. Só o primeiro destaque baixa já; os outros, quando chegam perto da vez
+              (data-src, portal-jogos.js).
+            {% endcomment %}
+            <picture class="pg-slide-cena">
+                {% if jogo.topo_estreito %}<source media="(max-width: 900px)" {% if forloop.first %}srcset{% else %}data-srcset{% endif %}="{{ jogo.topo_estreito }}" width="900" height="900">{% endif %}
+                <img {% if forloop.first %}src{% else %}data-src{% endif %}="{{ jogo.topo }}" alt="" width="1600" height="680" decoding="async"{% if forloop.first %} fetchpriority="high"{% endif %}>
+            </picture>
+            {% else %}
+            {# os outros jogos: um mural da capa, montado no navegador (portal-jogos.js); sem capa, o gradiente da cor do jogo #}
+            <span class="pg-slide-mural" data-pg-mural="{{ jogo.capa }}" aria-hidden="true"></span>
+            {% endif %}
             <div class="pg-slide-texto">
                 <span class="pg-slide-kicker">{% if jogo.tipo == "nosso" %}Feito pela Lazer &amp; Sport{% else %}{{ jogo.plataforma }}{% endif %}{% if jogo.categoria %} · {{ jogo.categoria }}{% endif %}</span>
                 <h2>{{ jogo.titulo }}</h2>
                 {% if jogo.chamada %}<p>{{ jogo.chamada }}</p>{% endif %}
+                {# os números do jogo: quem joga agora (a batida atualiza), as partidas e o recorde #}
+                <ul class="pg-slide-dados">
+                    <li class="pg-slide-vivo" data-pg-jogando="{{ jogo.slug }}"{% if not jogo.jogando %} hidden{% endif %}><i class="pg-vivo-ponto" aria-hidden="true"></i><span data-pg-jogando-texto>{% if jogo.jogando %}{{ jogo.jogando }} jogando agora{% endif %}</span></li>
+                    {% if jogo.partidas %}<li><i class="fa-solid fa-fire" aria-hidden="true"></i>{{ jogo.partidas|intcomma }} partida{{ jogo.partidas|pluralize }}</li>{% endif %}
+                    {% if jogo.campeao %}<li class="pg-slide-recorde"><i class="fa-solid fa-crown" aria-hidden="true"></i>Recorde: {{ jogo.campeao.nome }} · {{ jogo.campeao.pontos|intcomma }} pts</li>
+                    {% elif jogo.ranking %}<li class="pg-slide-recorde"><i class="fa-solid fa-trophy" aria-hidden="true"></i>Com ranking</li>{% endif %}
+                </ul>
                 <div class="pg-slide-acoes">
                     <a class="pg-botao pg-botao--jogar" href="{{ jogo.url }}" data-app-jogo="{{ jogo.slug }}"><i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora</a>
-                    {% if jogo.ranking %}<span class="pg-slide-ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i> Com ranking</span>{% endif %}
                 </div>
             </div>
-            {% if jogo.capa %}<img class="pg-slide-arte" src="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if not forloop.first %}loading="lazy" {% else %}fetchpriority="high" {% endif %}decoding="async">{% endif %}
+            {% if jogo.capa %}<img class="pg-slide-arte" {% if forloop.first %}src{% else %}data-src{% endif %}="{{ jogo.capa }}" alt="{{ jogo.titulo }}" {% if forloop.first %}fetchpriority="high" {% endif %}decoding="async">{% endif %}
         </article>
         {% endfor %}
         {% if destaques|length > 1 %}
@@ -137,6 +160,28 @@
         {% endif %}
     </section>
     {% endif %}
+
+    <!-- ================= O PULSO: o que acontece agora no portal =================
+         Só número de verdade: quem joga agora (a batida de presença atualiza sem recarregar), as partidas
+         contadas, quem jogou valendo ranking hoje, o líder do ranking e, deste aparelho, o último jogo
+         aberto (o JavaScript preenche). -->
+    <div class="pg-pulso" data-pg-pulso aria-label="Agora no Lazer &amp; Sport Games"{% if lista is not None %} hidden{% endif %}>
+        <a class="pg-pulso-item pg-pulso-item--alta" data-pg-alta href="{% if em_alta %}{{ em_alta.url }}{% else %}#biblioteca{% endif %}"{% if em_alta %} data-app-jogo="{{ em_alta.slug }}"{% else %} hidden{% endif %}>
+            <i class="pg-vivo-ponto" aria-hidden="true"></i><span>Em alta agora:</span> <b data-pg-alta-nome>{% if em_alta %}{{ em_alta.titulo }}{% endif %}</b> <small data-pg-alta-n>{% if em_alta %}{{ em_alta.jogando }} jogando{% endif %}</small>
+        </a>
+        <a class="pg-pulso-item pg-pulso-item--continuar" data-pg-continuar href="#biblioteca" hidden>
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span>Continuar:</span> <b data-pg-continuar-nome></b>
+        </a>
+        {% if partidas_total %}
+        <span class="pg-pulso-item"><i class="fa-solid fa-gamepad" aria-hidden="true"></i><b>{{ partidas_total|intcomma }}</b> <span>partida{{ partidas_total|pluralize }} jogada{{ partidas_total|pluralize }}</span></span>
+        {% endif %}
+        {% if jogadores_hoje %}
+        <a class="pg-pulso-item" href="#ranking"><i class="fa-solid fa-trophy" aria-hidden="true"></i><b>{{ jogadores_hoje|intcomma }}</b> <span>jogador{{ jogadores_hoje|pluralize:"es" }} no ranking hoje</span></a>
+        {% endif %}
+        {% if lider %}
+        <a class="pg-pulso-item pg-pulso-item--lider" href="#ranking"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>Líder do ranking:</span> <b>{{ lider.nome }}</b> <small>{{ lider.pontos|intcomma }} pts</small></a>
+        {% endif %}
+    </div>
 
     <!-- ================= A BIBLIOTECA =================
          Como a biblioteca de um launcher: à esquerda (no computador) a lateral presa com as coleções,
