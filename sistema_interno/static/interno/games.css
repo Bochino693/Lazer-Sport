@@ -520,14 +520,16 @@ li.ls-vivo-vazio::before{display:none}
    --------------------------------------------------------------- */
 /* o conjunto: o texto à esquerda (uma linha por informação) e o botão "O que vem junto" à direita,
    no meio da altura -- antes o botão caía sozinho numa linha de baixo, encostado à direita */
-.ls-3d-conjunto{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px;margin-top:8px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.12)}
-.ls-3d-conjunto>:not(.ls-3d-conjunto-botao){grid-column:1}
+/* o conjunto: o que ele traz (ou "nenhum brinquedo ligado") numa linha, e o botão "O que vem
+   junto" embaixo, na largura toda -- alinhado com o "Ver em 3D". Lado a lado, num cartão de
+   ~290 px, o texto ficava espremido em quatro linhas ao lado do botão. */
+.ls-3d-conjunto{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:7px;margin-top:8px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.12)}
 .ls-3d-conjunto-rotulo{display:inline-flex;align-items:center;gap:5px;color:#9fb5cc;font-size:.72rem;font-weight:800}
 .ls-3d-conjunto-rotulo.dica{color:var(--acento-texto,#f2a93b)}
 .ls-3d-conjunto-itens{display:flex;flex-wrap:wrap;gap:4px}
 .ls-3d-chip{padding:3px 8px;border-radius:999px;background:rgba(63,208,255,.12);border:1px solid rgba(63,208,255,.3);color:#dff4ff;font-size:.7rem;font-weight:800}
 .ls-3d-chip b{color:#ffd23f}
-.ls-3d-conjunto-botao{grid-column:2;grid-row:1/span 3;align-self:center;margin:0;font-size:.72rem;white-space:nowrap;border-radius:10px}
+.ls-3d-conjunto-botao{width:100%;margin:0;font-size:.74rem;white-space:nowrap;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .ls-3d-sugestoes{padding:12px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--acento-texto,#f2a93b) 45%,transparent);background:color-mix(in srgb,var(--acento-texto,#f2a93b) 9%,transparent)}
 .ls-3d-sugestao{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line,rgba(255,255,255,.1));color:var(--text-2,#e7ddcb);font-size:.82rem}
 .ls-3d-sugestao:first-child{border-top:0}

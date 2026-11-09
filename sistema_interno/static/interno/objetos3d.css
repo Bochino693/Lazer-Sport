@@ -81,7 +81,16 @@
 .ls-3d-card { --cor: #3fd0ff; min-width: 0; }
 .ls-3d-card--enviado { --cor: #5fd68a; }
 .ls-3d-arte { cursor: pointer; }
-.ls-game-arte .ls-3d-foto { width: 100%; height: 100%; object-fit: cover; }
+/* A FOTO DA MÁQUINA INTEIRA, EM FUNDO BRANCO. Com `cover` a foto em pé (a do Strike Kids)
+   era cortada em cima e embaixo -- parecia um zoom -- e, sendo recortada, ficava no fundo escuro
+   do cartão, diferente das outras (fotos de catálogo, em fundo branco). Agora toda foto fica
+   inteira (`contain`) sobre o branco; a em pé fica um pouco à esquerda, longe da janelinha 3D. */
+.ls-3d-arte:has(.ls-3d-foto) { background: #fff; }
+/* presa ao quadro (absoluta): no fluxo, a foto quadrada media pela largura (356 px num quadro de
+   ~190) e o excesso era cortado -- o "zoom" que se via no Strike Kids */
+.ls-game-arte .ls-3d-foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: 34% 50%; padding: 8px 10px 6px; box-sizing: border-box; }
+/* sobre o branco, a sombra de baixo é só um toque (com a de antes, a base da máquina sumia) */
+.ls-3d-arte:has(.ls-3d-foto)::after { height: 26%; opacity: .55; }
 /* a janelinha 3D: o mesmo palco do visor, com a foto do objeto quando fica pronta */
 .ls-3d-previa,
 .ls-visor3d {
