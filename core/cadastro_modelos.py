@@ -117,6 +117,36 @@ CADASTROS = {
         "categorias": ("boliche", "jogos", "eletronic"),
         "evitar": (),
     },
+    # ---- Trampolim de Enterrada ----
+    # O .3ds da fábrica (a estrutura) e as imagens do projeto (ver
+    # `ferramentas/modelos3d/trampolim-enterrada/`). As fotos ainda são vistas
+    # do próprio objeto 3D, com o fundo claro do catálogo: quando chegarem as
+    # do projeto, troque os .webp da pasta e rode o comando com `--fotos`.
+    "trampolim-enterrada": {
+        "nome": "Trampolim de Enterrada",
+        "nomes": ("trampolim de enterrada", "trampolim enterrada"),
+        "pasta": MODELOS / "trampolim-enterrada",
+        "objeto_3d": "site/arena/modelos/trampolim-enterrada.glb",
+        "descricao": (
+            "Trampolim de enterrada com 6 m de comprimento, 2 m de profundidade e 3,25 m de altura. Pista de "
+            "três camas elásticas em linha (uma de 2 m e duas de 1,5 m), com moldura e divisórias estofadas em "
+            "amarelo, que termina na parede inclinada estofada com a cesta de basquete (aro e rede) para a "
+            "enterrada. Base em caixote, estrutura de tubos com quatro colunas e quadro superior amarelo, e "
+            "escada de espuma de três degraus. Variante com piscina de cubos de espuma no lugar da cama do meio. "
+            "Projeto ilustrativo: cores e itens podem ser ajustados conforme o espaço e a disponibilidade de "
+            "materiais."
+        ),
+        "medidas": ("3.25", "6.00", "2.00"),
+        "fotos": (
+            ("frente.webp", "perfil", "Trampolim de Enterrada visto de frente: as três camas, a parede com a cesta e a escada"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Trampolim de Enterrada visto pelo lado da cesta"),
+            ("lado_direito.webp", "lado_direito", "Trampolim de Enterrada visto pelo lado da escada, com a pista até a cesta"),
+            ("planta.webp", None, "Trampolim de Enterrada visto de cima: 6 m por 2 m"),
+            ("espuma.webp", None, "A variante com a piscina de cubos de espuma no lugar da cama do meio"),
+        ),
+        "categorias": ("trampolim", "cama elastica", "camas elasticas"),
+        "evitar": (),
+    },
 }
 
 
