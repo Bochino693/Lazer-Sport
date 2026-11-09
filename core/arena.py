@@ -581,6 +581,25 @@ MODELOS_3D = (
         ),
     },
     {
+        # O brinquedão com as duas camas elásticas é UM objeto (14 m): o .3ds
+        # da fábrica traz os dois juntos. 14,3 m passa um pouco do teto da
+        # roda (14 m): a plataforma dele, com a folga, ainda cobre o objeto.
+        "id": "brinquedao-ninja",
+        "titulo": "Brinquedão Ninja",
+        "nomes": ("Brinquedão Ninja",),
+        "arquivo": "site/arena/modelos/brinquedao-ninja.glb",
+        "medidas": (3.37, 14.3, 2.42),
+        "pasta": "site/arena/modelos/brinquedao-ninja/",
+        "fotos": (("perfil", "frente.webp"),),
+        "medidas_texto": "3,10 m × 14 m × 2 m",
+        "categorias": ("Brinquedões",),
+        "descricao": (
+            "Brinquedão ninja de dois andares com duas camas elásticas: cilindros pendurados, postes com pegas, "
+            "rolo vazado e passarela de rede em V em cima; piscina de cubos com cordas e tirolesa, piscina de "
+            "bolinhas com tobogã em espiral e as camas elásticas embaixo."
+        ),
+    },
+    {
         # Grande demais para a roda: fica no seu próprio "reino", ao lado.
         "id": "espaco-esportivo-modelo-1",
         "titulo": "Espaço Esportivo Modelo 1",
