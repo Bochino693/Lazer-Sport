@@ -613,6 +613,31 @@ def _producao(user, gestor):
     )]
 
 
+def _projetos_3d():
+    """Os projetos que clientes montaram no site (/monte-seu-projeto/) e ninguém abriu ainda.
+
+    Sem a tabela (a migração ainda não rodou), não avisa nada -- e não
+    consulta de novo a cada página (core.objetos_3d.tabela_pronta).
+    """
+    from core.models import PedidoProjeto3D
+    from core.objetos_3d import tabela_pronta
+
+    if not tabela_pronta(PedidoProjeto3D):
+        return []
+    novos = PedidoProjeto3D.objects.filter(status="novo").count()
+    if not novos:
+        return []
+    return [Aviso(
+        chave="projetos_3d",
+        titulo="Projeto 3D novo do site" if novos == 1 else "Projetos 3D novos do site",
+        detalhe="O cliente montou o espaço em 3D e pediu o projeto.",
+        quantidade=novos,
+        url=reverse("pedidos_projeto_3d", urlconf=URLCONF) + "?status=novo",
+        nivel="novidade",
+        icone="bi-badge-3d",
+    )]
+
+
 def coletar(user):
     """Todos os avisos que este usuário deve ver, do pior para o menor.
 
@@ -638,6 +663,9 @@ def coletar(user):
 
     if acesso["clientes"]:
         avisos += _clientes_incompletos()
+
+    if acesso["vendas"] or acesso["gestao"]:
+        avisos += _projetos_3d()
 
     if acesso["operacao"]:
         avisos += _operacao(acesso)

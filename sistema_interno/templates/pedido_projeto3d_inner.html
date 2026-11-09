@@ -1,0 +1,76 @@
+{% extends "base_inner.html" %}
+{% load static interno_extras %}
+{% block title %}Projeto 3D nº {{ pedido.pk }} | Lazer & Sport{% endblock %}
+{% block top_title %}Projeto 3D nº {{ pedido.pk }}{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'vendor/fontawesome-site/fontawesome-site.css' %}">
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'site/projeto3d/projeto3d.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker"><a href="{% url 'pedidos_projeto_3d' %}">Projetos 3D do site</a> · chegou em {{ pedido.criacao|date:"d/m/Y H:i" }}</span>
+    <h1>{{ pedido.nome }} — {{ pedido.medidas_texto }}</h1>
+    <p>{{ pedido.principal|default:"Só máquinas" }}{% if pedido.cidade %} · {{ pedido.cidade }}{% endif %}. O 3D abaixo é refeito da escolha do cliente: é o mesmo que ele viu. Dá para mexer aqui para conversar (não grava por cima do pedido).</p>
+  </div>
+</section>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4">
+    <section class="ls-card p-3 h-100">
+      <h2 class="h6 mb-3"><i class="bi bi-person-lines-fill me-1"></i> Contato</h2>
+      <p class="mb-1"><strong>{{ pedido.nome }}</strong></p>
+      <p class="mb-1"><a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-whatsapp me-1"></i>{{ pedido.whatsapp }}</a></p>
+      {% if pedido.email %}<p class="mb-1"><a href="mailto:{{ pedido.email }}"><i class="bi bi-envelope me-1"></i>{{ pedido.email }}</a></p>{% endif %}
+      {% if pedido.usuario %}<p class="mb-1 text-muted small">Conta do site: {{ pedido.usuario.username }}</p>{% endif %}
+      {% if pedido.mensagem %}<p class="mt-2 mb-0" style="white-space:pre-line">“{{ pedido.mensagem }}”</p>{% endif %}
+    </section>
+  </div>
+  <div class="col-lg-4">
+    <section class="ls-card p-3 h-100">
+      <h2 class="h6 mb-3"><i class="bi bi-check2-square me-1"></i> O que coube{% if numeros.ocupacao %} · {{ numeros.ocupacao|floatformat:"0" }}% ocupado{% endif %}</h2>
+      <ul class="list-unstyled mb-2">
+        {% for c in coube %}<li><i class="bi bi-check-lg text-success me-1"></i>{% if c.qtd and c.qtd != "1" %}{{ c.qtd }}× {% endif %}{{ c.nome }}</li>{% empty %}<li class="text-muted">—</li>{% endfor %}
+      </ul>
+      {% if ficou_de_fora %}
+      <h3 class="h6 mt-3 mb-2 text-danger">Ficou de fora</h3>
+      <ul class="list-unstyled mb-0 small">
+        {% for c in ficou_de_fora %}<li class="mb-1"><i class="bi bi-x-lg text-danger me-1"></i><strong>{{ c.nome }}</strong>: {{ c.motivo }}</li>{% endfor %}
+      </ul>
+      {% if espaco_para_tudo.largura %}<p class="small mt-2 mb-0"><i class="bi bi-rulers me-1"></i>Para caber tudo: uns {{ espaco_para_tudo.largura|floatformat:"-2" }} × {{ espaco_para_tudo.comprimento|floatformat:"-2" }} m.</p>{% endif %}
+      {% endif %}
+    </section>
+  </div>
+  <div class="col-lg-4">
+    <section class="ls-card p-3 h-100">
+      <h2 class="h6 mb-3"><i class="bi bi-flag me-1"></i> Situação</h2>
+      <form method="post">
+        {% csrf_token %}
+        <select name="status" class="form-select mb-2" aria-label="Situação do pedido">
+          {% for chave, nome in situacoes %}<option value="{{ chave }}"{% if pedido.status == chave %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+        </select>
+        <textarea name="anotacao" class="form-control mb-2" rows="4" placeholder="Anotação da equipe (o que foi conversado, o valor, o prazo)">{{ pedido.anotacao }}</textarea>
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-floppy me-1"></i>Guardar</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<div class="p3d-pagina p3d-pagina--painel">
+<section class="p3d" id="p3d" data-modo="painel"
+         data-three="{% static 'vendor/three/three.module.min.js' %}"
+         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+         data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
+         data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
+         data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
+         data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}">
+  {{ projeto_dados|json_script:"p3dDados" }}
+  {{ projeto_estado|json_script:"p3dEstado" }}
+  <script>document.getElementById("p3d").classList.add("p3d--js");</script>
+  {% include "partials/projeto3d_app.html" with modo="painel" %}
+</section>
+</div>
+<script type="module" src="{% estatico 'site/projeto3d/projeto3d.js' %}" data-ls-tela="1"></script>
+{% endblock %}

@@ -376,6 +376,12 @@
           <span class="ls-nav-count" data-selo="count_orcamentos" data-mostrar-zero="1" title="Em aberto">…</span>
         </a>
         {% endif %}
+        {% if permissoes_interno.clientes %}
+        <a data-titulo="Projetos 3D do site" aria-label="Projetos 3D do site" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_projeto_3d' or request.resolver_match.url_name == 'pedido_projeto_3d' %}active{% endif %}" href="{% url 'pedidos_projeto_3d' %}">
+          <span class="ls-nav-icon"><i class="bi bi-badge-3d-fill"></i></span>
+          <span>Projetos 3D do site</span>
+        </a>
+        {% endif %}
         {% if permissoes_interno.gestao %}
         <a data-titulo="Clientes no mapa" aria-label="Clientes no mapa" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-geo-alt-fill"></i></span>

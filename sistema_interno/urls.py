@@ -72,6 +72,7 @@ from .views_jogos import JogoGerarApkView, JogoGerarExeView, JogosInnerView
 from .views_jogos_vivo import JogosAoVivoView
 from .views_objetos_3d import Objetos3DInnerView
 from .views_montar_3d import MontarTresDView
+from .views_pedidos_projeto3d import PedidoProjeto3DView, PedidosProjeto3DView
 from .views_site import LinkSitePublicoView
 from .views_ordens_servico import (
     OrdemServicoPreviaInnerView,
@@ -157,6 +158,9 @@ urlpatterns = [
     path('site/jogos/<int:pk>/exe/', JogoGerarExeView.as_view(), name='jogo_gerar_exe'),
     path('site/objetos-3d/', Objetos3DInnerView.as_view(), name='objetos_3d_inner'),
     path('site/objetos-3d/montar/', MontarTresDView.as_view(), name='montar_3d_inner'),
+    # os pedidos do "Monte seu projeto" do site (core/projeto3d.py)
+    path('site/projetos-3d/', PedidosProjeto3DView.as_view(), name='pedidos_projeto_3d'),
+    path('site/projetos-3d/<int:pk>/', PedidoProjeto3DView.as_view(), name='pedido_projeto_3d'),
     path('site/indicadores/', por_funcoes(DashboardAdminView, CRIACAO, GESTAO), name='dashboards'),
     path('site/estatisticas/', por_funcoes(EstatisticasGeraisView, CRIACAO, GESTAO), name='estatisticas_gerais'),
 

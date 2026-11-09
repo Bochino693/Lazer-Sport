@@ -2663,3 +2663,65 @@ class MontagemTresD(Prime):
             return self.arquivo.url if self.arquivo else ""
         except Exception:  # noqa: BLE001
             return ""
+
+
+class PedidoProjeto3D(Prime):
+    """Um pedido do "Monte seu projeto" do site: o espaço que o cliente montou em 3D.
+
+    O cliente informa o tamanho do lugar, escolhe o modelo do espaço, as
+    áreas e as máquinas; o arrumador (core/static/site/projeto3d/) põe tudo
+    na planta e diz o que coube. `escolhas` guarda a escolha conferida
+    (core/projeto3d.validar_pedido) com a semente: o painel refaz o MESMO 3D
+    a partir dela. `resumo` guarda o que coube e o que ficou de fora, como
+    o cliente viu, para a lista e para a conversa. Não guarda IP nem
+    localização: só o contato que o próprio cliente digitou.
+    """
+
+    STATUS = (
+        ("novo", "Novo"),
+        ("conversa", "Em conversa"),
+        ("orcado", "Orçado"),
+        ("fechado", "Fechado"),
+        ("arquivado", "Arquivado"),
+    )
+
+    nome = models.CharField(max_length=120, verbose_name="Nome")
+    whatsapp = models.CharField(max_length=20, verbose_name="WhatsApp")
+    email = models.EmailField(blank=True, verbose_name="E-mail")
+    cidade = models.CharField(max_length=80, blank=True, verbose_name="Cidade")
+    mensagem = models.TextField(blank=True, verbose_name="Mensagem")
+    usuario = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="pedidos_projeto_3d", verbose_name="Conta do site",
+    )
+    largura = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Largura (m)")
+    comprimento = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Comprimento (m)")
+    pe_direito = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Pé-direito (m)")
+    principal = models.CharField(max_length=150, blank=True, verbose_name="Modelo do espaço")
+    estilo = models.CharField(max_length=20, blank=True, verbose_name="Estilo")
+    cor = models.CharField(max_length=9, blank=True, verbose_name="Cor-tema")
+    semente = models.PositiveIntegerField(default=1, verbose_name="Arrumação")
+    escolhas = models.JSONField(default=dict, blank=True, verbose_name="Escolha")
+    resumo = models.JSONField(default=dict, blank=True, verbose_name="O que coube")
+    status = models.CharField(max_length=12, choices=STATUS, default="novo", verbose_name="Situação")
+    anotacao = models.TextField(blank=True, verbose_name="Anotação da equipe")
+
+    class Meta:
+        verbose_name = "Pedido de projeto 3D"
+        verbose_name_plural = "Pedidos de projeto 3D"
+        ordering = ["-criacao", "-id"]
+
+    def __str__(self):
+        return f"Projeto 3D de {self.nome} — {self.medidas_texto}"
+
+    @property
+    def medidas_texto(self):
+        def m(v):
+            return f"{v:.2f}".replace(".", ",").replace(",00", "")
+
+        texto = f"{m(self.largura)} × {m(self.comprimento)} m"
+        return texto + (f", pé-direito {m(self.pe_direito)} m" if self.pe_direito else "")
+
+    @property
+    def area(self):
+        return self.largura * self.comprimento

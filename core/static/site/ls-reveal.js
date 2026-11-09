@@ -312,7 +312,12 @@
 
         /* Âncora com hash precisa do destino já pintado. */
         if (window.location.hash) {
-            var alvo = document.querySelector(window.location.hash);
+            var alvo = null;
+            try {
+                alvo = document.querySelector(window.location.hash);
+            } catch (erro) {
+                /* hash que não é seletor (o "#p=..." do Monte seu projeto, "#!"): não é âncora */
+            }
             if (alvo) {
                 var bloco = alvo.closest("[data-ls-reveal]") || alvo;
                 bloco.classList.add("is-visible", "is-settled");

@@ -1,0 +1,65 @@
+{% extends "base_inner.html" %}
+{% block title %}Projetos 3D do site | Lazer & Sport{% endblock %}
+{% block top_title %}Projetos 3D do site{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Monte seu projeto</span>
+    <h1>Projetos 3D do site</h1>
+    <p>O que os clientes montaram em /monte-seu-projeto/: o tamanho do lugar, o modelo do espaço, as máquinas, o que coube e o que ficou de fora. Abra para ver o mesmo 3D que o cliente viu e chamar no WhatsApp.</p>
+  </div>
+</section>
+
+{% if tabela_ausente %}
+<section class="ls-card p-4">
+  <h2 class="h5 mb-2"><i class="bi bi-hourglass-split me-1"></i> O banco ainda não tem a tabela dos pedidos</h2>
+  <p class="mb-0 text-muted">A migração roda sozinha na próxima subida (ou com <code>python manage.py migrate</code>).</p>
+</section>
+{% else %}
+<section class="ls-metrics">
+  {% for chave, nome, n in situacoes %}
+  <a class="ls-metric-card {% if chave == 'novo' %}yellow{% elif chave == 'fechado' %}green{% else %}blue{% endif %}{% if status_atual == chave %} active{% endif %}" href="?status={{ chave }}" style="text-decoration:none">
+    <div class="ls-metric-head"><span class="ls-metric-label">{{ nome }}</span><span class="ls-metric-icon"><i class="bi {% if chave == 'novo' %}bi-stars{% elif chave == 'conversa' %}bi-chat-dots{% elif chave == 'orcado' %}bi-file-earmark-text{% elif chave == 'fechado' %}bi-check2-circle{% else %}bi-archive{% endif %}"></i></span></div>
+    <strong class="ls-metric-value">{{ n }}</strong>
+  </a>
+  {% endfor %}
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div><h2>Pedidos{% if status_atual %} · {% for chave, nome, n in situacoes %}{% if chave == status_atual %}{{ nome }}{% endif %}{% endfor %}{% endif %}</h2><p>{{ total }} no total.{% if status_atual %} <a href="?">Ver todos</a>{% endif %}</p></div>
+    <a class="btn btn-sm btn-outline-primary" href="/monte-seu-projeto/" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir no site</a>
+  </div>
+  <div class="ls-data-body">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table">
+        <thead><tr><th>Nº</th><th>Cliente</th><th>Espaço</th><th>Modelo</th><th>No projeto</th><th>Situação</th><th>Chegou</th><th class="text-end">Ação</th></tr></thead>
+        <tbody>
+          {% for p in pedidos %}
+          <tr>
+            <td data-rotulo="Nº"><strong>#{{ p.id }}</strong></td>
+            <td data-rotulo="Cliente"><strong>{{ p.nome }}</strong><span class="d-block ls-subtext">{{ p.cidade|default:"" }}</span></td>
+            <td data-rotulo="Espaço">{{ p.medidas_texto }}</td>
+            <td data-rotulo="Modelo">{{ p.principal|default:"—" }}</td>
+            <td data-rotulo="No projeto">{% with n=p.resumo.coube|length %}{{ n }} {% if n == 1 %}item{% else %}itens{% endif %}{% endwith %}{% if p.resumo.ficou_de_fora %}<span class="d-block ls-subtext">{{ p.resumo.ficou_de_fora|length }} ficou de fora</span>{% endif %}</td>
+            <td data-rotulo="Situação">
+              {% if p.status == "novo" %}<span class="ls-status warning">{{ p.get_status_display }}</span>
+              {% elif p.status == "fechado" %}<span class="ls-status success">{{ p.get_status_display }}</span>
+              {% elif p.status == "arquivado" %}<span class="ls-status neutral">{{ p.get_status_display }}</span>
+              {% else %}<span class="ls-status info">{{ p.get_status_display }}</span>{% endif %}
+            </td>
+            <td data-rotulo="Chegou">{{ p.criacao|date:"d/m/Y H:i" }}</td>
+            <td data-rotulo="Ação" class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'pedido_projeto_3d' p.pk %}" data-no-soft-nav="true"><i class="bi bi-badge-3d me-1"></i>Abrir</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8"><div class="ls-empty"><i class="bi bi-badge-3d"></i>Nenhum projeto {% if status_atual %}nesta situação{% else %}pedido pelo site ainda{% endif %}.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "includes/paginacao.html" with pagina=page_obj %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -15,8 +15,10 @@ fa-arrow-up-9-1
 fa-arrow-up-right-from-square
 fa-arrow-up-z-a
 fa-arrows-rotate
+fa-arrows-up-down
 fa-at
 fa-award
+fa-baby
 fa-bag-shopping
 fa-ban
 fa-barcode
@@ -118,6 +120,7 @@ fa-location-dot
 fa-lock
 fa-lock-open
 fa-magnifying-glass
+fa-map
 fa-map-location-dot
 fa-map-marked-alt
 fa-mobile-screen
@@ -128,6 +131,7 @@ fa-pause
 fa-pen
 fa-pen-ruler
 fa-pen-to-square
+fa-person-running
 fa-phone
 fa-piggy-bank
 fa-pix
@@ -147,6 +151,7 @@ fa-screwdriver-wrench
 fa-search
 fa-shapes
 fa-shield-halved
+fa-shuffle
 fa-signature
 fa-sliders
 fa-spinner

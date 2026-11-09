@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static interno_extras %}
+
+{% block title %}Monte seu projeto em 3D | Lazer &amp; Sport{% endblock %}
+
+{% block main_class %} content-section--full{% endblock %}
+
+{% block meta_description %}Monte o seu espaço kids em 3D: informe o tamanho do lugar, escolha o modelo (espaço esportivo kids, brinquedão, área baby, trampolim park, área ninja) e as máquinas da Lazer &amp; Sport. O site arruma tudo na planta, com corredor e área de uso, e diz o que cabe.{% endblock %}
+
+{% block content %}
+{% comment %}
+  MONTE SEU PROJETO (core/projeto3d.py, core/views_projeto3d.py).
+
+  O cliente informa SÓ o tamanho do lugar e escolhe o modelo do espaço, as
+  outras áreas e as máquinas; o arrumador (static/site/projeto3d/) põe tudo
+  na planta e diz o que ficou de fora e por quê; o 3D mostra o resultado.
+  Sem JavaScript (ou sem WebGL), a página continua de pé: a lista das
+  áreas e das máquinas com as medidas e o WhatsApp.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/projeto3d/projeto3d.css' %}">
+
+<div class="ls-pagina p3d-pagina">
+
+<section class="ls-pagina-hero p3d-hero" id="header">
+  <div class="ls-pagina-hero-inner">
+    <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
+      <a href="{% url 'home' %}">Home</a><span>›</span>
+      <a href="{% url 'projetos' %}">Projetos</a><span>›</span>
+      <strong>Monte seu projeto</strong>
+    </nav>
+    <span class="ls-pagina-selo"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Projeto em 3D na hora</span>
+    <h1 class="ls-pagina-titulo">Monte o seu espaço <span>e veja em 3D</span></h1>
+    <p class="ls-pagina-sub">Diga só o tamanho do lugar. Escolha o modelo do espaço e as máquinas: a gente arruma tudo na planta, com corredor e área de quem joga, e mostra o que cabe.</p>
+  </div>
+</section>
+
+<section class="p3d" id="p3d" data-modo="cliente"
+         data-three="{% static 'vendor/three/three.module.min.js' %}"
+         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+         data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
+         data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
+         data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
+         data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
+         data-url-pedido="{% url 'monte_seu_projeto_pedir' %}">
+  {{ projeto_dados|json_script:"p3dDados" }}
+  {# com JavaScript, o app; sem, a lista do fim (projeto3d.css: .p3d--js) #}
+  <script>document.getElementById("p3d").classList.add("p3d--js");</script>
+
+  {% include "partials/projeto3d_app.html" with modo="cliente" %}
+
+  <dialog class="p3d-dialogo" id="p3dDialogo" aria-labelledby="p3dDialogoTitulo">
+    <button type="button" class="p3d-fechar" data-fechar aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    <h2 id="p3dDialogoTitulo">Pedir este projeto</h2>
+    <p class="p3d-nota" id="p3dPedidoResumo"></p>
+    <form id="p3dPedido" novalidate>
+      <label>Seu nome<input name="nome" required maxlength="120" autocomplete="name" value="{{ contato_inicial.nome }}"></label>
+      <label>WhatsApp com DDD<input name="whatsapp" required inputmode="tel" maxlength="20" autocomplete="tel" placeholder="(11) 90000-0000" value="{{ contato_inicial.whatsapp }}"></label>
+      <label>E-mail <small>(se quiser)</small><input name="email" type="email" maxlength="254" autocomplete="email" value="{{ contato_inicial.email }}"></label>
+      <label>Cidade<input name="cidade" maxlength="80" autocomplete="address-level2"></label>
+      <label>Algo mais? <small>(o tema, a idade das crianças, o prazo)</small><textarea name="mensagem" rows="3" maxlength="1500"></textarea></label>
+      {# a armadilha para robôs: gente não vê nem preenche #}
+      <label class="p3d-armadilha" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
+      <p class="p3d-erro" id="p3dPedidoErro" role="alert" hidden></p>
+      <p class="p3d-nota">Usamos o contato só para falar deste projeto. A equipe recebe o 3D do jeito que você montou.</p>
+      <button type="submit" class="p3d-botao p3d-botao--forte"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Mandar para a equipe</button>
+    </form>
+    <div class="p3d-ok" id="p3dPedidoOk" hidden>
+      <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+      <h3>Recebemos o seu projeto <span id="p3dPedidoNumero"></span></h3>
+      <p>A nossa equipe vai olhar o 3D e chamar você no WhatsApp para acertar os detalhes.</p>
+      <a class="p3d-botao p3d-botao--zap-largo" id="p3dPedidoZap" href="#" target="_blank" rel="noopener" hidden><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Adiantar pelo WhatsApp</a>
+      <button type="button" class="p3d-botao p3d-botao--leve" data-fechar>Continuar montando</button>
+    </div>
+  </dialog>
+
+  {# sem JavaScript: o que dá para montar, com as medidas (o app esconde esta lista) #}
+  <div class="p3d-semjs">
+    <h2>As áreas que a fábrica monta sob medida</h2>
+    <ul>
+      {% for a in areas %}<li><b>{{ a.nome }}</b> — {{ a.sub }} A partir de {{ a.min.0|floatformat:"-1" }} × {{ a.min.1|floatformat:"-1" }} m; pé-direito de {{ a.pe_direito_minimo|floatformat:"-1" }} m.</li>{% endfor %}
+    </ul>
+    {% if grandes %}
+    <h2>Brinquedos grandes</h2>
+    <ul>{% for i in grandes %}<li><b>{{ i.nome }}</b> — {{ i.medidas.1|floatformat:2 }} × {{ i.medidas.2|floatformat:2 }} m, {{ i.medidas.0|floatformat:2 }} m de altura</li>{% endfor %}</ul>
+    {% endif %}
+    <h2>Máquinas</h2>
+    <ul>{% for i in maquinas %}<li><b>{{ i.nome }}</b> — {{ i.medidas.1|floatformat:2 }} × {{ i.medidas.2|floatformat:2 }} m, {{ i.medidas.0|floatformat:2 }} m de altura</li>{% endfor %}</ul>
+    <p><a class="p3d-botao p3d-botao--forte" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">Mandar as medidas do seu espaço pelo WhatsApp</a></p>
+  </div>
+</section>
+
+</div>
+
+<script type="module" src="{% estatico 'site/projeto3d/projeto3d.js' %}"></script>
+{% endblock %}

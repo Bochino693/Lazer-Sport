@@ -462,3 +462,24 @@ a.ls-cartao:focus-visible {
     .ls-pagina-secao { padding: 16px 14px 60px; }
     .ls-grade { grid-template-columns: 1fr; gap: 20px; }
 }
+
+/* O atalho do "Monte seu projeto em 3D" (projetos.html): um cartão claro dentro do herói. */
+.ls-pagina-cta-3d {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 100%;
+    margin-top: 22px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    color: #0b1220;
+    background: linear-gradient(135deg, var(--ls-amarelo), #ffb703);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .25);
+    text-decoration: none;
+    transition: transform .15s ease;
+}
+.ls-pagina-cta-3d:hover { color: #0b1220; transform: translateY(-2px); }
+.ls-pagina-cta-3d > i { font-size: 1.4rem; }
+.ls-pagina-cta-3d span { display: grid; gap: 2px; }
+.ls-pagina-cta-3d b { font-size: 1.05rem; }
+.ls-pagina-cta-3d small { font-size: .85rem; opacity: .85; }

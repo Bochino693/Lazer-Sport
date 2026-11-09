@@ -63,6 +63,239 @@ export const GRUPO_DAS_ANTIGAS = {
 /** As peças que aceitam a segunda cor (a diagonal das plataformas, o xadrez do EVA, a moldura da rede). */
 export const COM_COR2 = new Set(["plataforma", "piso_eva", "rede"]);
 
+/* ---------------------------------------------------------------- as peças antigas e as ferramentas
+   Os desenhos das peças de sempre (coluna, barra, plataforma...) e as ferramentas que todos usam
+   (material com cache, malha com sombra, tubo, a textura da rede). Moram aqui, e não dentro do
+   editor, para o site desenhar o MESMO projeto (o "Monte seu projeto" do cliente, core/static/
+   site/projeto3d/) com o mesmo código do painel. */
+export const CATALOGO_BASE = {
+  coluna: { nome: "Coluna", d: { altura: 3.5, diametro: 0.12 }, cor: "#2563eb" },
+  barra: { nome: "Barra", d: { comprimento: 1.5, diametro: 0.1 }, cor: "#facc15" },
+  plataforma: { nome: "Plataforma", d: { largura: 1.5, profundidade: 1.5, espessura: 0.06 }, cor: "#f97316" },
+  painel: { nome: "Painel", d: { largura: 1.5, altura: 1.0, espessura: 0.03 }, cor: "#ef4444" },
+  rede: { nome: "Rede", d: { largura: 1.5, altura: 1.0 }, cor: "#1f2937" },
+  escorregador: { nome: "Escorregador", d: { comprimento: 3.0, altura: 1.5, largura: 0.6, fechado: 0 }, cor: "#22c55e" },
+  escada: { nome: "Escada", d: { altura: 1.5, largura: 0.6, degraus: 5 }, cor: "#facc15" },
+  tunel: { nome: "Túnel", d: { comprimento: 1.5, diametro: 0.7 }, cor: "#ec4899" },
+  cama: { nome: "Cama elástica", d: { largura: 3.0, profundidade: 3.0, altura: 0.9 }, cor: "#2563eb" },
+  piscina: { nome: "Piscina de bolinhas", d: { largura: 2.0, profundidade: 2.0, altura: 0.5 }, cor: "#06b6d4" },
+  cerca: { nome: "Cerca / tela", d: { comprimento: 2.0, altura: 1.0 }, cor: "#f97316" },
+  telhado: { nome: "Telhado", d: { largura: 1.5, profundidade: 1.5, altura: 0.8 }, cor: "#ef4444" },
+};
+
+/** As ferramentas de desenho e os desenhos das peças antigas: { ferramentas, desenhos }. */
+export function desenhosBase(T, utilidades) {
+  const materiais = new Map();
+  function material(cor, extra) {
+    const chave = cor + JSON.stringify(extra || {});
+    if (!materiais.has(chave)) {
+      materiais.set(chave, new T.MeshStandardMaterial(Object.assign({ color: cor, roughness: 0.5, metalness: 0.06 }, extra || {})));
+    }
+    return materiais.get(chave);
+  }
+  let texturaRede = null;
+  function rede(largura, altura, cor) {
+    if (!texturaRede) {
+      const c = document.createElement("canvas");
+      c.width = c.height = 64;
+      const g = c.getContext("2d");
+      g.strokeStyle = "#ffffff";
+      g.lineWidth = 6;
+      g.strokeRect(0, 0, 64, 64);
+      texturaRede = new T.CanvasTexture(c);
+      texturaRede.wrapS = texturaRede.wrapT = T.RepeatWrapping;
+      texturaRede.colorSpace = T.SRGBColorSpace;
+    }
+    const tex = texturaRede.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(Math.max(1, largura / 0.1), Math.max(1, altura / 0.1));
+    const m = new T.MeshStandardMaterial({ color: cor, map: tex, alphaTest: 0.5, transparent: false, side: T.DoubleSide, roughness: 0.8 });
+    m.alphaMap = tex;
+    return m;
+  }
+  const caixa = (l, a, p) => new T.BoxGeometry(Math.max(l, 0.005), Math.max(a, 0.005), Math.max(p, 0.005));
+  const malha = (geo, mat) => { const m = new T.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m; };
+  function tubo(r, comprimento, de, para, mat) {
+    const g = new T.CylinderGeometry(r, r, comprimento, 14);
+    const m = malha(g, mat);
+    const a = new T.Vector3(...de), b = new T.Vector3(...para);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    return m;
+  }
+  function aleatorio(semente) { let s = semente >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+
+  /* Cada desenho: um grupo com a base no chão (y = 0) e o meio em x = z = 0. */
+  const DESENHOS = {
+    coluna(d, cor) {
+      const g = new T.CylinderGeometry(d.diametro / 2, d.diametro / 2, d.altura, 24);
+      g.translate(0, d.altura / 2, 0);
+      return [malha(g, material(cor, { metalness: 0.2, roughness: 0.4 }))];
+    },
+    barra(d, cor) {
+      const r = d.diametro / 2;
+      const g = new T.CylinderGeometry(r, r, d.comprimento, 20);
+      g.rotateZ(Math.PI / 2);
+      g.translate(0, r, 0);
+      return [malha(g, material(cor, { metalness: 0.2, roughness: 0.4 }))];
+    },
+    plataforma(d, cor, extra) {
+      if (extra && extra.cor2) {
+        // o piso de duas cores, cortado na diagonal (o mais comum nos brinquedões)
+        const L = d.largura / 2, P = d.profundidade / 2;
+        const tri = (pts) => {
+          const forma = new T.Shape(pts.map(([x, z]) => new T.Vector2(x, -z)));
+          const g = new T.ExtrudeGeometry(forma, { depth: d.espessura, bevelEnabled: false });
+          g.rotateX(-Math.PI / 2);
+          return g;
+        };
+        return [malha(tri([[-L, -P], [L, -P], [-L, P]]), material(cor)), malha(tri([[L, -P], [L, P], [-L, P]]), material(extra.cor2))];
+      }
+      const g = caixa(d.largura, d.espessura, d.profundidade);
+      g.translate(0, d.espessura / 2, 0);
+      return [malha(g, material(cor))];
+    },
+    painel(d, cor) {
+      const g = caixa(d.largura, d.altura, d.espessura);
+      g.translate(0, d.altura / 2, 0);
+      return [malha(g, material(cor))];
+    },
+    rede(d, cor, extra) {
+      const plano = new T.PlaneGeometry(d.largura, d.altura);
+      plano.translate(0, d.altura / 2, 0);
+      const m = malha(plano, rede(d.largura, d.altura, cor));
+      // a moldura: a segunda cor (a da estrutura, no projetista) ou o cinza do tubo
+      const moldura = material((extra && extra.cor2) || "#9ca3af", { metalness: 0.3 });
+      const w = d.largura / 2, h = d.altura;
+      return [m, tubo(0.02, d.largura, [-w, 0, 0], [w, 0, 0], moldura), tubo(0.02, d.largura, [-w, h, 0], [w, h, 0], moldura),
+        tubo(0.02, h, [-w, 0, 0], [-w, h, 0], moldura), tubo(0.02, h, [w, 0, 0], [w, h, 0], moldura)];
+    },
+    escorregador(d, cor) {
+      const L = d.comprimento, H = d.altura, W = d.largura;
+      const rampa = Math.hypot(L, H), angulo = -Math.atan2(H, L);
+      const grupo = [];
+      if (Math.round(d.fechado || 0)) {
+        // o tobogã de tubo fechado, reto
+        const r = Math.max(0.3, W * 0.6);
+        const g = new T.CylinderGeometry(r, r, rampa, 24, 1, true);
+        g.rotateZ(Math.PI / 2);
+        const tuboFechado = malha(g, material(cor, { side: T.DoubleSide, roughness: 0.25 }));
+        tuboFechado.position.set(0, H / 2 + r * 0.9, 0);
+        tuboFechado.rotation.z = angulo;
+        const aro = malha(new T.TorusGeometry(r, 0.035, 8, 28), material("#ffffff"));
+        aro.rotation.y = Math.PI / 2;
+        aro.position.set(-L / 2, H + r * 0.9, 0);
+        return [tuboFechado, aro];
+      }
+      const base = malha(caixa(rampa, 0.04, W), material(cor, { roughness: 0.25 }));
+      base.position.set(0, H / 2 + 0.03, 0);
+      base.rotation.z = angulo;
+      grupo.push(base);
+      for (const lado of [-1, 1]) {
+        const parede = malha(caixa(rampa, 0.26, 0.04), material(cor, { roughness: 0.3 }));
+        parede.position.set(0, H / 2 + 0.16, lado * (W / 2 - 0.02));
+        parede.rotation.z = angulo;
+        grupo.push(parede);
+      }
+      return grupo;
+    },
+    escada(d, cor) {
+      const H = d.altura, W = d.largura, n = Math.max(1, Math.round(d.degraus));
+      const P = H * 0.75, grupo = [];
+      const lateral = material(cor, { metalness: 0.2 });
+      for (const lado of [-1, 1]) grupo.push(tubo(0.03, Math.hypot(P, H), [P / 2, 0, lado * W / 2], [-P / 2, H, lado * W / 2], lateral));
+      for (let i = 0; i < n; i++) {
+        const t = (i + 1) / n;
+        const degrau = malha(caixa(Math.max(0.12, P / n), 0.04, W), material("#1f2937"));
+        degrau.position.set(P / 2 - t * P, t * H - 0.02, 0);
+        grupo.push(degrau);
+      }
+      return grupo;
+    },
+    tunel(d, cor) {
+      const r = d.diametro / 2;
+      const g = new T.CylinderGeometry(r, r, d.comprimento, 32, 1, true);
+      g.rotateZ(Math.PI / 2);
+      g.translate(0, r, 0);
+      const m = malha(g, material(cor, { side: T.DoubleSide, roughness: 0.35 }));
+      const aro = material("#ffffff");
+      const grupo = [m];
+      for (const lado of [-1, 1]) {
+        const anel = malha(new T.TorusGeometry(r, 0.03, 8, 32), aro);
+        anel.rotation.y = Math.PI / 2;
+        anel.position.set(lado * d.comprimento / 2, r, 0);
+        grupo.push(anel);
+      }
+      return grupo;
+    },
+    cama(d, cor) {
+      const L = d.largura, P = d.profundidade, A = d.altura, borda = Math.min(0.35, Math.min(L, P) * 0.15);
+      const grupo = [];
+      const moldura = material(cor);
+      for (const [l, p, x, z] of [[L, borda, 0, P / 2 - borda / 2], [L, borda, 0, -P / 2 + borda / 2], [borda, P - 2 * borda, L / 2 - borda / 2, 0], [borda, P - 2 * borda, -L / 2 + borda / 2, 0]]) {
+        const b = malha(caixa(l, 0.12, p), moldura);
+        b.position.set(x, A - 0.06, z);
+        grupo.push(b);
+      }
+      const lona = malha(caixa(L - 2 * borda, 0.02, P - 2 * borda), material("#111827", { roughness: 0.9 }));
+      lona.position.set(0, A - 0.08, 0);
+      grupo.push(lona);
+      const perna = material("#9ca3af", { metalness: 0.4 });
+      for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) grupo.push(tubo(0.04, A - 0.12, [x * (L / 2 - 0.1), 0, z * (P / 2 - 0.1)], [x * (L / 2 - 0.1), A - 0.12, z * (P / 2 - 0.1)], perna));
+      return grupo;
+    },
+    piscina(d, cor) {
+      const L = d.largura, P = d.profundidade, A = d.altura, e = 0.1;
+      const grupo = [];
+      const parede = material(cor);
+      for (const [l, p, x, z] of [[L, e, 0, P / 2 - e / 2], [L, e, 0, -P / 2 + e / 2], [e, P - 2 * e, L / 2 - e / 2, 0], [e, P - 2 * e, -L / 2 + e / 2, 0]]) {
+        const b = malha(caixa(l, A, p), parede);
+        b.position.set(x, A / 2, z);
+        grupo.push(b);
+      }
+      // as bolinhas: até 360, em 5 cores, numa malha por cor (leve de desenhar e de exportar)
+      const sorte = aleatorio(Math.round(L * 1000 + P * 37 + A * 11));
+      const quantas = Math.min(360, Math.round((L - 2 * e) * (P - 2 * e) * 70));
+      const porCor = [[], [], [], [], []];
+      const r = 0.04;
+      for (let i = 0; i < quantas; i++) {
+        const g = new T.SphereGeometry(r, 8, 6);
+        g.translate((sorte() - 0.5) * (L - 2 * e - 2 * r), r + sorte() * A * 0.55, (sorte() - 0.5) * (P - 2 * e - 2 * r));
+        porCor[i % 5].push(g);
+      }
+      ["#ef4444", "#facc15", "#2563eb", "#22c55e", "#ec4899"].forEach((c, i) => {
+        if (porCor[i].length) grupo.push(malha(utilidades.mergeGeometries(porCor[i]), material(c, { roughness: 0.3 })));
+      });
+      return grupo;
+    },
+    cerca(d, cor) {
+      const L = d.comprimento, A = d.altura, grupo = [];
+      const postes = Math.max(2, Math.round(L / 1) + 1);
+      const metal = material(cor, { metalness: 0.25 });
+      for (let i = 0; i < postes; i++) {
+        const x = -L / 2 + (L * i) / (postes - 1);
+        grupo.push(tubo(0.025, A, [x, 0, 0], [x, A, 0], metal));
+      }
+      grupo.push(tubo(0.02, L, [-L / 2, A, 0], [L / 2, A, 0], metal), tubo(0.02, L, [-L / 2, 0.08, 0], [L / 2, 0.08, 0], metal));
+      const tela = new T.PlaneGeometry(L, A - 0.08);
+      tela.translate(0, 0.08 + (A - 0.08) / 2, 0);
+      grupo.push(malha(tela, rede(L, A, "#1f2937")));
+      return grupo;
+    },
+    telhado(d, cor) {
+      const g = new T.ConeGeometry(Math.SQRT1_2, 1, 4, 1);
+      g.rotateY(Math.PI / 4);
+      g.scale(d.largura, d.altura, d.profundidade);
+      g.translate(0, d.altura / 2, 0);
+      return [malha(g, material(cor, { flatShading: true }))];
+    },
+  };
+  const ferramentas = {
+    material, malha, caixa, tubo, redeMat: rede, aleatorio, juntar: (lista) => utilidades.mergeGeometries(lista),
+  };
+  return { ferramentas, desenhos: DESENHOS };
+}
+
 export function desenhosExtra(T, h) {
   const { material, malha, caixa, tubo, redeMat, aleatorio, juntar } = h;
   const variar = (cor, passo) => {

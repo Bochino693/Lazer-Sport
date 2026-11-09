@@ -1289,3 +1289,61 @@ Dependência nova: rjsmin (requirements.txt).
    Código: o "Trilho" em sistema_interno/templates/base_inner.html
    (fecharTrilho, closeSidebar) e o bloco "A LATERAL ABERTA É UMA GAVETA"
    no fim do interno/interno_modern.css.
+
+47) MONTE SEU PROJETO EM 3D (/monte-seu-projeto/)
+   O cliente diz SÓ o tamanho do lugar (largura x comprimento e, se quiser,
+   o pé-direito) e escolhe:
+     * o MODELO DO ESPAÇO (o principal): espaço esportivo kids, brinquedão,
+       área baby, trampolim park, área ninja ou "só máquinas" -- sob medida
+       (desenhado para o espaço dele) ou um dos prontos do catálogo
+       (Brinquedão Modelo 2, Brinquedão Ninja, Trampolim de Enterrada,
+       Espaço Esportivo Modelo 1...), com o estilo e a cor;
+     * MAIS ÁREAS (a área baby junto do esportivo, por exemplo) e os
+       BRINQUEDOS GRANDES do catálogo, com a quantidade;
+     * as MÁQUINAS do catálogo (Lazer Shot, Strike Kids, basquete...), com
+       a quantidade.
+   O ARRUMADOR põe tudo na planta na hora e diz o que coube:
+     * a entrada no meio da parede da frente, com o hall livre;
+     * o principal no meio do fundo, do maior tamanho em que tudo cabe; as
+       outras áreas e os grandes nos cantos (a área baby perto da entrada);
+       as mesas (hockey, pebolim, carrossel) soltas; as máquinas de
+       gabinete de COSTAS PARA A PAREDE, lado a lado, as iguais juntas;
+     * cada coisa ocupa a medida dela MAIS a área de quem joga na frente
+       (ex.: 1,20 m no Lazer Shot) ou a faixa de segurança em volta (1 m nos
+       brinquedões e nas camas) -- nada se sobrepõe;
+     * da entrada até cada coisa tem de haver um CORREDOR DE 1,20 m (a rota
+       acessível da NBR 9050); o 3D desenha esse corredor no chão;
+     * o que não cabe fica de fora COM O MOTIVO ("tem 2,70 m de altura; o
+       pé-direito é 2,50 m", "precisa de 3,40 x 4,00 m livres", "não sobrou
+       passagem até ele") e a página diz o tamanho em que caberia tudo
+       ("Ver nessa medida").
+   O 3D: as áreas sob medida são desenhadas pelo MESMO projetista do Montar
+   em 3D do painel; as máquinas com objeto 3D (.glb) entram com ele, no
+   tamanho real; as que ainda não têm ganham um MINI 3D na medida do
+   cadastro, com o desenho do tipo (gabinete, pista, cesta, mesa...) e a
+   foto da máquina na frente. Paredes que somem do lado da câmera, Planta
+   (de cima), nomes, "Outra ideia" (outra arrumação) e "Imagem" (baixa o
+   PNG). O link guarda o projeto (#p=...): quem abre vê o mesmo.
+   "PEDIR ESTE PROJETO" pede nome e WhatsApp (e-mail, cidade e recado se
+   quiser) e grava o pedido; o cliente pode adiantar pelo WhatsApp com a
+   mensagem pronta. Contra robôs: um campo escondido que só robô preenche
+   (finge que gravou e não grava), no máximo 5 pedidos por hora do mesmo
+   endereço (só no cache, o IP não é guardado) e o CSRF.
+   NO PAINEL: Comercial > Projetos 3D do site (Vendas, Ambulante e Gestão):
+   a lista com a situação (Novo, Em conversa, Orçado, Fechado, Arquivado),
+   e a ficha com o contato, o que coube e o que ficou de fora e o MESMO 3D
+   que o cliente viu (refeito da escolha e da arrumação guardadas). O sino
+   avisa dos projetos novos. Migração: 0141_pedido_projeto_3d (sem ela, a
+   página funciona e o pedido manda para o WhatsApp).
+   As regras (tamanho mínimo, ideal e máximo de cada área, a faixa de
+   segurança, o pé-direito, a área de quem joga de cada tipo de máquina)
+   ficam num lugar só: core/projeto3d.py. É um RASCUNHO para a conversa: o
+   projeto final é da engenharia (NBR 16071).
+   Código: core/projeto3d.py, core/views_projeto3d.py,
+   core/templates/monte_seu_projeto.html (+ partials/projeto3d_app.html),
+   core/static/site/projeto3d/ (arrumador.js, maquinas3d.js, projeto3d.js,
+   projeto3d.css); no painel, sistema_interno/views_pedidos_projeto3d.py.
+   As peças antigas do Montar em 3D passaram para montar3d-pecas.js
+   (desenhosBase), para o site desenhar com o mesmo código.
+   Testes: core/tests_projeto3d.py (com o arrumador conferido pelo node em
+   core/tests_js/arrumador.mjs).

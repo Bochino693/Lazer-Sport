@@ -53,6 +53,7 @@ SO_DE_UM_REGISTRO = {
     "campanha_detalhe": "token inventado",
     "jogo_gerar_apk": "gera o APK de um jogo cadastrado (core/tests_jogos_apk_gerar.py testa com um de verdade)",
     "jogo_gerar_exe": "gera o .exe de um jogo cadastrado (core/tests_jogos_exe_gerar.py testa com um de verdade)",
+    "pedido_projeto_3d": "a ficha de um pedido do Monte seu projeto (core/tests_projeto3d.py abre um de verdade)",
 }
 
 

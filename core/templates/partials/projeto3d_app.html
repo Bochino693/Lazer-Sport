@@ -1,0 +1,75 @@
+{% comment %}
+  O APP DO "MONTE SEU PROJETO" (static/site/projeto3d/projeto3d.js): o 3D e as
+  escolhas. O mesmo no site (monte_seu_projeto.html, modo "cliente", com o
+  "Pedir este projeto") e na ficha do pedido no painel (modo "painel": a
+  equipe vê e mexe no projeto do cliente, sem gravar por cima).
+{% endcomment %}
+  <div class="p3d-app">
+    <div class="p3d-visor">
+      <canvas id="p3dTela" class="p3d-tela" aria-label="O seu espaço em 3D: arraste para girar, use a rodinha ou a pinça para aproximar"></canvas>
+      <div class="p3d-nomes" id="p3dNomesCamada" aria-hidden="true"></div>
+      <div class="p3d-carregando" aria-hidden="true"><i class="fa-solid fa-cube fa-spin"></i> Montando o 3D…</div>
+      <div class="p3d-sem3d">Este aparelho não mostra 3D, mas a conta do que cabe vale do mesmo jeito: veja ao lado.</div>
+      <div class="p3d-barra" role="toolbar" aria-label="Vista do 3D">
+        <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dOutra" title="Outra arrumação (e outra ideia para as áreas sob medida)"><i class="fa-solid fa-shuffle" aria-hidden="true"></i><span>Outra ideia</span></button>
+        <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dVista" aria-pressed="false" title="Ver de cima (a planta)"><i class="fa-solid fa-map" aria-hidden="true"></i><span>Planta</span></button>
+        <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dNomes" aria-pressed="true" title="Mostrar os nomes"><i class="fa-solid fa-tag" aria-hidden="true"></i><span>Nomes</span></button>
+        <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dImagem" title="Baixar a imagem"><i class="fa-solid fa-camera" aria-hidden="true"></i><span>Imagem</span></button>
+      </div>
+      <button type="button" class="p3d-pilula" id="p3dPilula" aria-label="Ver o que coube"></button>
+      <div class="p3d-ficha" id="p3dFicha" hidden></div>
+      <p class="p3d-dica"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Arraste para girar · pinça ou rodinha aproxima · dois dedos arrastam</p>
+    </div>
+
+    <aside class="p3d-painel" aria-label="Monte o seu projeto">
+      <section class="p3d-passo">
+        <h2><span class="p3d-num">1</span> O tamanho do lugar</h2>
+        <div class="p3d-medidas">
+          <label>Largura <span><input name="largura" inputmode="decimal" autocomplete="off" aria-describedby="p3dMetros"> m</span></label>
+          <label>Comprimento <span><input name="comprimento" inputmode="decimal" autocomplete="off"> m</span></label>
+          <label>Pé-direito <span><input name="pe_direito" inputmode="decimal" autocomplete="off"> m</span></label>
+        </div>
+        <p class="p3d-nota" id="p3dMetros">A entrada fica no meio da parede da frente (a de baixo na planta).</p>
+        <div class="p3d-chips" aria-label="Medidas comuns">
+          <button type="button" class="p3d-chip" data-medida="10x8">10 × 8 m</button>
+          <button type="button" class="p3d-chip" data-medida="15x12">15 × 12 m</button>
+          <button type="button" class="p3d-chip" data-medida="20x15">20 × 15 m</button>
+          <button type="button" class="p3d-chip" data-medida="30x20">30 × 20 m</button>
+        </div>
+      </section>
+
+      <section class="p3d-passo">
+        <h2><span class="p3d-num">2</span> O modelo do espaço</h2>
+        <div class="p3d-modelos" id="p3dModelos"></div>
+        <div class="p3d-prontos" id="p3dProntos" hidden></div>
+        <p class="p3d-rotulo">Estilo e cor das áreas</p>
+        <div class="p3d-chips" id="p3dEstilos"></div>
+        <div class="p3d-cores" id="p3dCores"></div>
+      </section>
+
+      <section class="p3d-passo">
+        <h2><span class="p3d-num">3</span> Mais áreas e brinquedos grandes</h2>
+        <div class="p3d-chips" id="p3dAreas"></div>
+        <ul class="p3d-itens" id="p3dGrandes"></ul>
+      </section>
+
+      <section class="p3d-passo">
+        <h2><span class="p3d-num">4</span> As máquinas</h2>
+        <label class="p3d-busca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="p3dBusca" type="search" placeholder="Buscar máquina (boliche, basquete, tiro…)" aria-label="Buscar máquina"></label>
+        <ul class="p3d-itens" id="p3dMaquinas"></ul>
+      </section>
+
+      <section class="p3d-passo p3d-passo--resultado">
+        <h2><span class="p3d-num"><i class="fa-solid fa-check" aria-hidden="true"></i></span> O que coube</h2>
+        <div id="p3dResultado" aria-live="polite"></div>
+      </section>
+
+      {% if modo == "cliente" %}
+      <div class="p3d-pedir">
+        <button type="button" class="p3d-botao p3d-botao--forte" data-pedir><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Pedir este projeto</button>
+        <a class="p3d-botao p3d-botao--zap" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" title="Falar no WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+
