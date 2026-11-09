@@ -20,7 +20,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from core import projeto3d
 from core.models import PedidoProjeto3D
-from core.objetos_3d import tabela_pronta
+from core import objetos_3d
 
 from .views import GestorInternoRequiredMixin
 
@@ -28,7 +28,8 @@ POR_PAGINA = 25
 
 
 def _tabela():
-    return tabela_pronta(PedidoProjeto3D)
+    # pelo módulo, na hora: quem importa a função guarda a de quando importou
+    return objetos_3d.tabela_pronta(PedidoProjeto3D)
 
 
 class PedidosProjeto3DView(GestorInternoRequiredMixin):
