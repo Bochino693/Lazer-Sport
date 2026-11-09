@@ -3,9 +3,9 @@
 //   python3 -m http.server 8790 --bind 127.0.0.1   (nesta pasta, com o node_modules)
 //   node gerar.cjs [glb] [fotos]
 //   npx gltfpack -i basquete-street-quadrinhos.glb -o ../../../core/static/site/arena/modelos/basquete-street-quadrinhos.glb -kn -km -ke
-// Sempre: as vistas de conferência (v-*.jpg) e o pecas.json (o tamanho, a
-// face e o contorno de cada adesivo, que o recortar_adesivos.py e o
-// desenhar_provisorios.py leem). "fotos" grava as foto-*.jpg (a vista
+// Antes: python3 recortar_adesivos.py (as peças e o formas.json, da folha).
+// Sempre: as vistas de conferência (v-*.jpg) e o pecas.json (o tamanho de
+// cada adesivo no 3D e onde ele vai). "fotos" grava as foto-*.jpg (a vista
 // inteira, para conferir) e as .webp do cadastro, já recortadas no objeto, na
 // pasta do modelo no static.
 // PORTA=8791 node gerar.cjs ...  se a 8790 estiver ocupada.
@@ -22,8 +22,9 @@ const FOTOS = path.join(__dirname, `../../../core/static/site/arena/modelos/${NO
   page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("404")) console.log("console:", m.text()); });
   await page.goto(`http://localhost:${process.env.PORTA || 8790}/index.html`);
   await page.waitForFunction(() => window.pronto, null, { timeout: 180000 });
-  const info = await page.evaluate(() => ({ medidas: window.medidas, triangulos: window.triangulos, pecas: window.pecas, avisos: window.avisos }));
+  const info = await page.evaluate(() => ({ medidas: window.medidas, triangulos: window.triangulos, pecas: window.pecas, avisos: window.avisos, escala: window.escala }));
   console.log("medidas (L, A, P) em m:", info.medidas, "triângulos:", info.triangulos);
+  console.log("a escala da folha e o que sai dela:", JSON.stringify(info.escala));
   for (const aviso of info.avisos) console.log("AVISO:", aviso);
   fs.writeFileSync(path.join(__dirname, "pecas.json"), JSON.stringify(info.pecas, null, 1) + "\n");
   const salvar = (arquivo, url) => fs.writeFileSync(arquivo, Buffer.from(url.split(",")[1], "base64"));

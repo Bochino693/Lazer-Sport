@@ -1,63 +1,75 @@
 // Monta o Air Game Hockey Espacial em three.js e exporta um .glb.
 //
-// É a MESMA máquina do Air Game Hockey (a mesa de air hockey de 1,00 m de
-// altura, 1,10 m de largura e 2,10 m de comprimento), só com os adesivos
-// novos, do espaço: o logotipo HOCKEY KIDS, alienígenas astronautas, discos
-// voadores, planetas, estrelas e o chão lunar laranja.
+// A mesa de air hockey com os adesivos do espaço (HOCKEY KIDS, os alienígenas
+// astronautas, os discos voadores, os planetas e o chão lunar laranja). TUDO
+// sai da folha de adesivos da fábrica (folha-adesivos.webp, a 26567-1): a arte
+// de cada peça (adesivos/<peça>.png) e o desenho dela (formas.json: o tamanho
+// em px e, nas laterais, o CONTORNO de verdade), que o recortar_adesivos.py
+// tira da folha. Nada da arte é redesenhado: cada imagem vai inteira na sua
+// face, e a face tem a forma e a proporção da peça.
 //
-// A arte NÃO é desenhada aqui: cada adesivo é um arquivo da pasta adesivos/
-// (adesivos/<peça>.png, recortado da folha de adesivos da fábrica pelo
-// recortar_adesivos.py; enquanto a folha não chega, a arte provisória do
-// desenhar_provisorios.py). Este arquivo faz a mesa e põe cada adesivo na sua
-// face, na posição certa; a peça recortada (as laterais compridas) leva a
-// imagem inteira e o contorno da peça corta o que sobra.
+// A folha é desenhada em ESCALA (as peças encaixam umas nas outras: as
+// laterais são 33 px mais compridas que o tampo, a cabeceira 7 px mais larga):
+// uma escala só (mm por px da folha) dá a mesa inteira. Ela sai da altura da
+// mesa, 1,00 m, que é a das laterais (o alto da corcova do meio). Daí:
+// laterais de 1,67 m, tampo de 1,57 m x 0,90 m, cabeceiras com o campo a
+// 0,83 m do chão (ver o README: as proporções da folha não fecham com 2,10 x
+// 1,10 m).
 //
 // As peças (cada uma vista DE FORA, em pé, como na folha):
-//   tampo               o tampo inteiro, deitado: 2100 x 1064 mm; a cabeceira
-//                       de trás (a da lateral esquerda 2) à esquerda da
-//                       imagem e a da frente (lateral direita 2) à direita; o
-//                       alto da imagem é o lado direito da mesa
-//   lateral-esquerda    a lateral comprida da esquerda (de quem joga na
-//   lateral-direita     frente): 2100 x 1000 mm, recortada (o alto sobe nas
-//                       duas pontas e afunda um pouco no meio; embaixo, o vão
-//                       entre os dois pés largos)
-//   lateral-esquerda-2  as cabeceiras (as pontas curtas): 1064 x 795 mm,
-//   lateral-direita-2   retângulos; a esquerda 2 é a de trás, a direita 2 a da frente
-// O tamanho de cada peça e o contorno vão para o pecas.json (o gerar.cjs
-// grava): é ele que o recortar_adesivos.py e o desenhar_provisorios.py leem.
+//   tampo               o tampo, deitado: a cabeceira do "Jogador 02" (a de
+//                       trás) à esquerda da imagem, a do "Jogador 01" (a da
+//                       frente) à direita; o alto da imagem é o lado direito
+//   lateral-esquerda    as laterais compridas, com o contorno recortado da folha
+//   lateral-direita     (a corcova em cima, os dois pés embaixo)
+//   lateral-esquerda-2  a cabeceira de trás (a da esquerda do tampo, na folha)
+//   lateral-direita-2   a cabeceira da frente
 //
 // Coordenadas: as do three.js, em milímetros: x na largura (da esquerda para a
-// direita de quem joga na frente), y para cima, z no comprimento (a frente da
-// mesa, a cabeceira da lateral direita 2, em +z). No fim tudo vira metros,
-// centralizado e no chão.
+// direita de quem joga na frente), y para cima, z no comprimento (a frente, a
+// cabeceira do Jogador 01, em +z). No fim tudo vira metros, centralizado e no chão.
 import * as THREE from "three";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const PI = Math.PI;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const FORMAS = await (await fetch(`formas.json?v=${Date.now()}`)).json();
 
-// ---------- as medidas (mm) ----------
-const COMP = 2100; // o comprimento (z)
-const LARG = 1100; // a largura (x)
-const ALT = 1000; // a altura: a ponta das laterais
-const ESP = 18; // o MDF das laterais e das cabeceiras
-const XF = LARG / 2; // 550: a face de fora das laterais compridas
-const XD = XF - ESP; // 532: a face de dentro
-const ZF = COMP / 2; // 1050: a face de fora das cabeceiras
-const ZD = ZF - ESP; // 1032
-const TAMPO = 820; // a superfície de jogo
-const TAMPO_ESP = 25;
-const CABECEIRA = TAMPO - TAMPO_ESP; // 795: o alto das cabeceiras, embaixo do tampo
-// a borda (as réguas em volta do campo): de lado e, nas cabeceiras, mais
-// larga, com a boca do gol no meio
-const BORDA = { altura: 40, lado: 35, cabeceira: 80, gol: 300, fundoGol: 15 };
-// o desenho das laterais compridas: o alto sobe nas pontas (até a altura da
-// mesa) e afunda no meio; embaixo, os dois pés largos e o vão entre eles
-const LATERAL = { meio: 885, ponta: ALT, pe: 300, vao: 470, raioVao: 110, raioPonta: 60 };
-// a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px)
-const RESOLUCAO = { tampo: 1024, "lateral-esquerda": 1024, "lateral-direita": 1024, "lateral-esquerda-2": 512, "lateral-direita-2": 512 };
-const QUALIDADE_JPEG = 0.82;
+// ---------- a escala da folha e as medidas (mm) ----------
+const ALT = 1000; // a altura da mesa: o alto das laterais
+const ESP = 18; // o MDF das cabeceiras e do tampo
+const ESP_LAT = 12; // o das laterais: a cabeceira é 7 px (2 x 12 mm) mais larga que o tampo
+const PELE = 1; // o adesivo fica 1 mm fora da madeira
+// uma peça da folha em mm, na escala `s`: o contorno de verdade (ou o retângulo
+// da peça), com o canto de baixo à esquerda em (0, 0), e o retângulo da imagem
+// (o contorno fica 1 px para dentro da arte: no 3D não aparece o branco da folha)
+function emMm(nome, s) {
+  const { px: [w, h], contorno } = FORMAS[nome];
+  const pts = (contorno || [[0, 0], [1, 0], [1, 1], [0, 1]]).map(([u, v]) => [u * w * s, (1 - v) * h * s]);
+  const a0 = Math.min(...pts.map((p) => p[0]));
+  const b0 = Math.min(...pts.map((p) => p[1]));
+  const largura = Math.max(...pts.map((p) => p[0])) - a0;
+  const altura = Math.max(...pts.map((p) => p[1])) - b0;
+  return { pontos: pts.map(([a, b]) => [a - a0, b - b0]), ret: [-a0, -b0, w * s - a0, h * s - b0], largura, altura };
+}
+// a escala: as laterais (o contorno) têm a altura da mesa
+const S = ALT / emMm("lateral-direita", 1).altura; // mm por px da folha (~3,4)
+const LATERAIS = { esquerda: emMm("lateral-esquerda", S), direita: emMm("lateral-direita", S) };
+const TAMPO = emMm("tampo", S); // ~1557 x 892
+const XD = TAMPO.altura / 2; // a face de dentro das laterais: o tampo vai de uma à outra
+const XF = XD + ESP_LAT + PELE; // o adesivo de fora das laterais
+const ZT = TAMPO.largura / 2; // as pontas do tampo
+// a cabeceira fica entre as laterais (as laterais passam dela): na largura do tampo,
+// com a proporção da peça
+const [CW, CH] = FORMAS["lateral-esquerda-2"].px;
+const CABECEIRA = (2 * XD * CH) / CW;
+const CAMPO = CABECEIRA; // a superfície de jogo: o alto das cabeceiras
+const ZC = ZT + ESP + PELE; // o adesivo das cabeceiras
+const BORDA = { altura: 30, largura: 22, gol: 220 }; // a régua das pontas, com o gol no meio
+// a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/3)
+const RESOLUCAO = { tampo: 1024, "lateral-esquerda": 1024, "lateral-direita": 1024, "lateral-esquerda-2": 640, "lateral-direita-2": 640 };
+const QUALIDADE_JPEG = 0.85;
 
 // ---------- materiais e o acúmulo de peças por material ----------
 const pecas = new Map(); // nome -> { material, geometrias: [] }
@@ -73,15 +85,14 @@ function por(nome, geometria, matriz) {
 }
 
 const COR = {
-  azul: "#1d4f8f", // a pintura da mesa (e o azul de baixo das cabeceiras)
-  borda: "#2457b8", // as réguas da borda
-  boca: "#0d1420", // a boca do gol
+  azul: "#1d4f8f", // a pintura da mesa (o azul de baixo das cabeceiras)
+  borda: "#1e56b0", // a régua das pontas (o azul da moldura do tampo)
+  boca: "#0d1420",
   soprador: "#3a3f48",
   grade: "#15181d",
   vermelho: "#e2232a",
   verde: "#2fbf4a",
-  disco: "#ffcf1f",
-  branco: "#f4f6f9",
+  disco: "#151515",
 };
 const M = {
   pintura: material("pintura-azul", { color: COR.azul, roughness: 0.55 }),
@@ -91,11 +102,11 @@ const M = {
   grade: material("grade-do-soprador", { color: COR.grade, roughness: 0.8 }),
   rebatedorVermelho: material("rebatedor-vermelho", { color: COR.vermelho, roughness: 0.3 }),
   rebatedorVerde: material("rebatedor-verde", { color: COR.verde, roughness: 0.3 }),
-  disco: material("disco", { color: COR.disco, roughness: 0.3 }),
+  disco: material("disco", { color: COR.disco, roughness: 0.35 }),
 };
 
-// ---------- os adesivos: um arquivo por peça ----------
-const PECAS = {}; // o que vai para o pecas.json
+// ---------- os adesivos: a imagem da peça, inteira, na sua face ----------
+const PECAS = {}; // o que vai para o pecas.json (o tamanho de cada peça no 3D)
 const avisos = [];
 function imagem(arquivo) {
   return new Promise((ok, falha) => {
@@ -105,27 +116,29 @@ function imagem(arquivo) {
     i.src = arquivo;
   });
 }
-// o material de um adesivo: a imagem da peça, esticada no tamanho dela (mm) e
-// reduzida para caber no .glb; sem o arquivo, uma cor lisa (e o aviso)
-async function adesivo(peca, mm, onde, contorno = null) {
+// o material de um adesivo: a imagem da peça, ampliada com suavização até a
+// RESOLUCAO (a folha tem pouca resolução) e com a proporção dela; `mm` é o
+// retângulo da imagem no 3D (avisa se a proporção não bate)
+async function adesivo(peca, mm, onde) {
   const arquivo = `adesivos/${peca}.png`;
-  PECAS[peca] = { arquivo, mm: mm.map((v) => Math.round(v)), onde, ...(contorno ? { contorno } : {}) };
-  const escala = (RESOLUCAO[peca] || 512) / Math.max(...mm);
+  PECAS[peca] = { arquivo, mm: mm.map((v) => Math.round(v)), onde, ...(FORMAS[peca].contorno ? { contorno: true } : {}) };
+  const [w, h] = FORMAS[peca].px;
+  const escala = (RESOLUCAO[peca] || 512) / Math.max(w, h);
   const c = document.createElement("canvas");
-  c.width = Math.max(8, Math.round(mm[0] * escala));
-  c.height = Math.max(8, Math.round(mm[1] * escala));
+  c.width = Math.round(w * escala);
+  c.height = Math.round(h * escala);
   const g = c.getContext("2d");
   try {
     const i = await imagem(`${arquivo}?v=${Date.now()}`);
     g.imageSmoothingQuality = "high";
     g.drawImage(i, 0, 0, c.width, c.height);
-    const proporcao = i.width / i.height / (mm[0] / mm[1]);
-    if (Math.abs(proporcao - 1) > 0.04) avisos.push(`${arquivo}: a imagem tem ${i.width} x ${i.height} px, fora da proporção da peça (${PECAS[peca].mm.join(" x ")} mm); foi esticada`);
   } catch {
     g.fillStyle = "#8a93a3";
     g.fillRect(0, 0, c.width, c.height);
     avisos.push(`${arquivo} não existe: a peça ficou cinza`);
   }
+  const proporcao = w / h / (mm[0] / mm[1]);
+  if (Math.abs(proporcao - 1) > 0.01) avisos.push(`${peca}: a face tem outra proporção que a peça (${(100 * (proporcao - 1)).toFixed(1)}%)`);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
@@ -153,16 +166,14 @@ function base(origem, U, W) {
   const N = new THREE.Vector3().crossVectors(U, W).normalize();
   return { origem, U, W, N, matriz: () => new THREE.Matrix4().makeBasis(U, W, N).setPosition(origem) };
 }
-// o adesivo fica 1 mm fora da madeira: a medida de fora é a do adesivo
-const PELE = 1;
-// uma placa: o contorno extrudado para DENTRO (a espessura), na pintura
+// uma placa: o contorno extrudado para DENTRO (a espessura), atrás do adesivo
 function placa(nome, pontos, b, espessura) {
   const g = new THREE.ExtrudeGeometry(forma(pontos), { depth: espessura, bevelEnabled: false });
   g.translate(0, 0, -espessura - PELE);
   por(nome, g, b.matriz());
 }
-// o adesivo da face de fora: o contorno (ou o retângulo) da peça; a imagem
-// cobre o retângulo `ret` [a0, b0, a1, b1] e o contorno corta o resto
+// o adesivo de uma face: o contorno da peça; a imagem cobre o retângulo `ret`
+// [a0, b0, a1, b1] (o da peça inteira) e o contorno corta o resto
 function colar(nome, pontos, b, ret) {
   const g = new THREE.ShapeGeometry(forma(pontos));
   const pos = g.attributes.position;
@@ -173,99 +184,62 @@ function colar(nome, pontos, b, ret) {
   por(nome, g, b.matriz());
 }
 const retangulo = (a0, b0, a1, b1) => [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
-// o contorno no pecas.json: em frações da imagem (0 a 1), a partir do canto de cima à esquerda
-const contornoDaImagem = (pontos, ret) => pontos.map(([a, b]) => [
-  +((a - ret[0]) / (ret[2] - ret[0])).toFixed(4), +(1 - (b - ret[1]) / (ret[3] - ret[1])).toFixed(4),
-]);
 
 /* ======================================================================
-   1. AS LATERAIS COMPRIDAS: o contorno recortado (os pés e a onda de cima)
+   1. AS LATERAIS COMPRIDAS: o contorno de verdade de cada uma (a da folha)
    ====================================================================== */
-// no plano da lateral, vista de fora: a = ao longo da mesa (de -1050 a 1050),
-// b = a altura. O desenho é simétrico: serve para os dois lados.
-const CONTORNO_LATERAL = (() => {
-  const { meio, ponta, pe, vao, raioVao, raioPonta } = LATERAL;
-  const zp = ZF - pe; // onde acaba cada pé
-  const pts = [];
-  const arco = (cx, cy, r, a0, a1, n = 10) => {
-    for (let i = 0; i <= n; i++) {
-      const a = a0 + ((a1 - a0) * i) / n;
-      pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
-    }
-  };
-  // o alto: plano no meio, subindo para as pontas (smoothstep a partir de 30% da metade)
-  const topo = (a) => {
-    const u = Math.min(1, Math.max(0, (Math.abs(a) / ZF - 0.3) / 0.7));
-    return meio + (ponta - meio) * u * u * (3 - 2 * u);
-  };
-  // o pé de trás, o vão (as quinas de cima arredondadas) e o pé da frente
-  pts.push([-ZF, 0], [-zp, 0]);
-  arco(-zp + raioVao, vao - raioVao, raioVao, PI, PI / 2);
-  arco(zp - raioVao, vao - raioVao, raioVao, PI / 2, 0);
-  pts.push([zp, 0], [ZF, 0]);
-  // a ponta da frente arredondada e a onda de cima, da frente para trás
-  arco(ZF - raioPonta, ponta - raioPonta, raioPonta, 0, PI / 2, 8);
-  for (let i = 1; i < 48; i++) {
-    const a = ZF - raioPonta - ((2 * (ZF - raioPonta)) * i) / 48;
-    pts.push([a, topo(a)]);
-  }
-  arco(-ZF + raioPonta, ponta - raioPonta, raioPonta, PI / 2, PI, 8);
-  return pts;
-})();
-const RET_LATERAL = [-ZF, 0, ZF, ALT];
 const LADOS = {
   esquerda: base(V(-XF, 0, 0), V(0, 0, 1), V(0, 1, 0)), // de fora (-x): a frente fica à direita
   direita: base(V(XF, 0, 0), V(0, 0, -1), V(0, 1, 0)), // de fora (+x): a frente fica à esquerda
 };
 for (const [lado, b] of Object.entries(LADOS)) {
-  placa(M.pintura, CONTORNO_LATERAL, b, ESP);
-  const m = await adesivo(`lateral-${lado}`, [COMP, ALT], `a lateral comprida da ${lado}, vista de fora`, contornoDaImagem(CONTORNO_LATERAL, RET_LATERAL));
-  colar(m, CONTORNO_LATERAL, b, RET_LATERAL);
+  const { pontos, ret, largura } = LATERAIS[lado];
+  // centralizada no comprimento: a vai de -largura/2 a largura/2
+  const pts = pontos.map(([a, y]) => [a - largura / 2, y]);
+  const r = [ret[0] - largura / 2, ret[1], ret[2] - largura / 2, ret[3]];
+  placa(M.pintura, pts, b, ESP_LAT);
+  const m = await adesivo(`lateral-${lado}`, [r[2] - r[0], r[3] - r[1]], `a lateral comprida da ${lado}, vista de fora (o contorno da folha)`);
+  colar(m, pts, b, r);
 }
 
 /* ======================================================================
-   2. AS CABECEIRAS (as pontas curtas): retângulos até o tampo
+   2. AS CABECEIRAS: entre as laterais, do chão até o campo
    ====================================================================== */
 // a de trás é a "lateral esquerda 2" (à esquerda do tampo, na folha); a da frente, a "direita 2"
 const CABECEIRAS = {
-  "lateral-esquerda-2": { z: -ZF, b: base(V(XD, 0, -ZF), V(-1, 0, 0), V(0, 1, 0)), onde: "a cabeceira de trás (a ponta curta à esquerda do tampo), vista de fora" },
-  "lateral-direita-2": { z: ZF, b: base(V(-XD, 0, ZF), V(1, 0, 0), V(0, 1, 0)), onde: "a cabeceira da frente (a ponta curta à direita do tampo), vista de fora" },
+  "lateral-esquerda-2": { z: -ZC, b: base(V(XD, 0, -ZC), V(-1, 0, 0), V(0, 1, 0)), onde: "a cabeceira de trás (a do Jogador 02), vista de fora" },
+  "lateral-direita-2": { z: ZC, b: base(V(-XD, 0, ZC), V(1, 0, 0), V(0, 1, 0)), onde: "a cabeceira da frente (a do Jogador 01), vista de fora" },
 };
 for (const [peca, { z, b, onde }] of Object.entries(CABECEIRAS)) {
-  caixa(M.pintura, -XD, XD, 0, CABECEIRA, z - Math.sign(z) * (ESP + PELE), z - Math.sign(z) * PELE);
+  caixa(M.pintura, -XD, XD, 0, CAMPO - PELE, z - Math.sign(z) * (ESP + PELE), z - Math.sign(z) * PELE);
   const m = await adesivo(peca, [2 * XD, CABECEIRA], onde);
   colar(m, retangulo(0, 0, 2 * XD, CABECEIRA), b, [0, 0, 2 * XD, CABECEIRA]);
 }
 
 /* ======================================================================
-   3. O TAMPO: a prancha com o adesivo, a borda em volta e as bocas do gol
+   3. O TAMPO: a prancha com o adesivo, a régua das pontas e as bocas do gol
    ====================================================================== */
-caixa(M.pintura, -XD, XD, CABECEIRA, TAMPO - PELE, -ZF, ZF);
+caixa(M.pintura, -XD, XD, CAMPO - 25, CAMPO - PELE, -ZT, ZT);
 {
   // de cima, com a frente (+z) à direita: o alto da imagem é o lado direito (+x)
-  const b = base(V(0, TAMPO, -ZF), V(0, 0, 1), V(1, 0, 0));
-  const m = await adesivo("tampo", [COMP, 2 * XD], "o tampo inteiro, de cima: a cabeceira de trás à esquerda, o lado direito da mesa no alto");
-  colar(m, retangulo(0, -XD, COMP, XD), b, [0, -XD, COMP, XD]);
+  const b = base(V(0, CAMPO, -ZT), V(0, 0, 1), V(1, 0, 0));
+  const m = await adesivo("tampo", [2 * ZT, 2 * XD], "o tampo, de cima: a cabeceira do Jogador 02 (a de trás) à esquerda, o lado direito da mesa no alto");
+  colar(m, retangulo(0, -XD, 2 * ZT, XD), b, [0, -XD, 2 * ZT, XD]);
 }
-// a caixa de ar embaixo do tampo e o soprador (aparecem pelo vão das laterais)
-caixa(M.pintura, -XD, XD, 650, CABECEIRA, -ZD, ZD);
-caixa(M.soprador, -240, 240, 540, 650, -280, 280);
-cilindro(M.grade, 0, 530, 540, 0, 150, 40);
+// a caixa de ar embaixo do tampo e o soprador
+caixa(M.pintura, -XD, XD, CAMPO - 170, CAMPO - 25, -ZT, ZT);
+caixa(M.soprador, -200, 200, CAMPO - 270, CAMPO - 170, -240, 240);
+cilindro(M.grade, 0, CAMPO - 280, CAMPO - 270, 0, 130, 40);
 {
-  const { altura, lado, cabeceira, gol, fundoGol } = BORDA;
-  const y1 = TAMPO + altura;
-  // as réguas compridas, de ponta a ponta
-  caixa(M.borda, -XD, -XD + lado, TAMPO, y1, -ZF, ZF);
-  caixa(M.borda, XD - lado, XD, TAMPO, y1, -ZF, ZF);
+  // a régua de cada ponta, sobre a beira de fora da moldura (o "Jogador" fica
+  // mais para dentro), com o vão do gol no meio e a boca escura
+  const { altura, largura, gol } = BORDA;
   for (const s of [-1, 1]) {
-    const zFora = s * ZF;
-    const zDentro = s * (ZF - cabeceira);
-    // a régua da cabeceira, com o vão do gol no meio
-    caixa(M.borda, -XD + lado, -gol / 2, TAMPO, y1, zDentro, zFora);
-    caixa(M.borda, gol / 2, XD - lado, TAMPO, y1, zDentro, zFora);
-    // o gol: o fundo da boca (a parede de fora) e a boca escura, onde o disco cai
-    caixa(M.borda, -gol / 2, gol / 2, TAMPO, y1, zFora - s * fundoGol, zFora);
-    caixa(M.boca, -gol / 2, gol / 2, TAMPO, TAMPO + 1.5, zDentro, zFora - s * fundoGol);
+    const zFora = s * ZT;
+    const zDentro = s * (ZT - largura);
+    caixa(M.borda, -XD, -gol / 2, CAMPO, CAMPO + altura, zDentro, zFora);
+    caixa(M.borda, gol / 2, XD, CAMPO, CAMPO + altura, zDentro, zFora);
+    caixa(M.boca, -gol / 2, gol / 2, CAMPO, CAMPO + 1.5, zDentro, zFora);
   }
 }
 
@@ -274,13 +248,13 @@ cilindro(M.grade, 0, 530, 540, 0, 150, 40);
    ====================================================================== */
 function rebatedor(nome, z) {
   const perfil = [ // o meio perfil, girado em volta do eixo: a base larga, o pescoço e a pega
-    [0, 0], [48, 0], [50, 3], [50, 14], [44, 20], [24, 24], [19, 30], [18, 58], [22, 64], [24, 72], [21, 80], [12, 85], [0, 86],
+    [0, 0], [43, 0], [45, 3], [45, 13], [40, 18], [22, 22], [17, 27], [16, 52], [20, 58], [22, 65], [19, 72], [11, 77], [0, 78],
   ].map(([r, y]) => new THREE.Vector2(r, y));
-  por(nome, new THREE.LatheGeometry(perfil, 40), new THREE.Matrix4().makeTranslation(0, TAMPO + 0.5, z));
+  por(nome, new THREE.LatheGeometry(perfil, 40), new THREE.Matrix4().makeTranslation(0, CAMPO + 0.5, z));
 }
-rebatedor(M.rebatedorVermelho, ZF - 430);
-rebatedor(M.rebatedorVerde, -ZF + 430);
-cilindro(M.disco, -140, TAMPO + 0.5, TAMPO + 6.5, 180, 31, 32);
+rebatedor(M.rebatedorVermelho, ZT - 300);
+rebatedor(M.rebatedorVerde, -ZT + 300);
+cilindro(M.disco, -110, CAMPO + 0.5, CAMPO + 6, 140, 28, 32);
 
 /* ======================================================================
    MONTAGEM FINAL: metros, junta por material, centraliza e assenta no chão
@@ -315,6 +289,7 @@ window.medidas = final.getSize(new THREE.Vector3()).toArray().map((v) => Math.ro
 window.triangulos = raiz.children.reduce((s, m) => s + (m.geometry.index ? m.geometry.index.count / 3 : m.geometry.attributes.position.count / 3), 0);
 window.pecas = PECAS;
 window.avisos = avisos;
+window.escala = { mm_por_px: +S.toFixed(4), campo: Math.round(CAMPO), tampo: [Math.round(2 * ZT), Math.round(2 * XD)] };
 
 // ---------- vistas para conferir e as fotos do cadastro ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });

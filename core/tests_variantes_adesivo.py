@@ -4,11 +4,13 @@ O que estes testes protegem:
 
   * cada uma leva o SEU .glb para a Arena 3D e para a página do produto, pelo
     nome inteiro: o "Air Game Hockey" e o "Basquete Street" de antes não pegam
-    o objeto novo; o .glb tem as medidas da máquina de antes (1,00 × 1,10 ×
-    2,10 m e 2,70 × 1,00 × 2,40 m) e é leve; as fotos existem;
-  * cada adesivo é uma imagem: toda peça do pecas.json tem o arquivo em
-    adesivos/, uma caixa no recortes.json e um material com a imagem (JPEG)
-    dentro do .glb -- trocar a arte é trocar o arquivo e refazer o 3D;
+    o objeto novo; o .glb tem as medidas que a folha de adesivos dá (1,00 ×
+    0,92 × 1,67 m e 2,70 × 1,00 × 2,40 m) e é leve; as fotos existem;
+  * cada adesivo é a peça recortada da folha da fábrica: toda peça do
+    pecas.json tem o arquivo em adesivos/ (do tamanho que o recorte achou),
+    uma caixa no recortes.json e um material com a imagem (JPEG) dentro do
+    .glb; as peças recortadas têm o contorno de verdade (formas.json), e não
+    sobrou arte provisória;
   * o desenho é o da máquina (mesa de hockey, basquete) e a seção é "As
     máquinas que já fazíamos"; no "Monte seu projeto" é uma máquina, com o
     lugar de quem joga do tipo dela;
@@ -51,7 +53,7 @@ HOCKEY = "air-game-hockey-espacial"
 BASQUETE = "basquete-street-quadrinhos"
 #: id -> (nome, nome da máquina de antes, desenho, medidas do .glb: altura, largura, profundidade)
 VARIANTES = {
-    HOCKEY: ("Air Game Hockey Espacial", "Air Game Hockey", "hockey", [1.0, 1.1, 2.1]),
+    HOCKEY: ("Air Game Hockey Espacial", "Air Game Hockey", "hockey", [1.0, 0.92, 1.67]),
     BASQUETE: ("Basquete Street Quadrinhos", "Basquete Street", "basquete", [2.7, 1.0, 2.4]),
 }
 FERRAMENTAS = Path(settings.BASE_DIR) / "ferramentas" / "modelos3d"
@@ -140,6 +142,37 @@ class ObjetoNaArenaTests(TestCase):
                 # as peças recortadas levam o contorno (as laterais)
                 self.assertTrue(any("contorno" in info for info in pecas.values()))
 
+    def test_toda_peca_sai_da_folha_de_adesivos(self):
+        # a arte é a da folha da fábrica, recortada: cada peça tem a imagem do
+        # tamanho que o recorte achou, e a peça recortada tem o contorno de
+        # verdade (o polígono), que vira o contorno da placa no 3D
+        from PIL import Image
+
+        recortadas = {
+            HOCKEY: {"lateral-esquerda", "lateral-direita"},
+            BASQUETE: {"lateral-externa-esquerda", "lateral-externa-direita", "lateral-interna-esquerda",
+                       "lateral-interna-direita", "testeira-frente", "testeira-fundo"},
+        }
+        for chave in VARIANTES:
+            with self.subTest(chave):
+                pasta = FERRAMENTAS / chave
+                recortes = json.loads((pasta / "recortes.json").read_text(encoding="utf-8"))
+                formas = json.loads((pasta / "formas.json").read_text(encoding="utf-8"))
+                self.assertTrue((pasta / recortes["folha"]).exists(), recortes["folha"])
+                self.assertEqual(set(formas), set(recortes["pecas"]))
+                self.assertFalse((pasta / "desenhar_provisorios.py").exists())  # nada de arte provisória
+                for peca, forma in formas.items():
+                    with Image.open(pasta / "adesivos" / f"{peca}.png") as imagem:
+                        self.assertEqual(list(imagem.size), forma["px"], peca)
+                    self.assertEqual("contorno" in forma, peca in recortadas[chave], peca)
+                    for u, v in forma.get("contorno", ()):
+                        self.assertTrue(0 <= u <= 1 and 0 <= v <= 1, peca)
+                    if "contorno" in forma:
+                        self.assertGreaterEqual(len(forma["contorno"]), 6, peca)
+        # a Frente do basquete dobra em três faixas (as linhas da folha)
+        frente = json.loads((FERRAMENTAS / BASQUETE / "formas.json").read_text(encoding="utf-8"))["frente"]
+        self.assertEqual(len(frente["dobras"]), 2)
+
     def test_desenho_e_secao_das_maquinas(self):
         for chave, (nome, _antes, desenho, _medidas) in VARIANTES.items():
             with self.subTest(chave):
@@ -184,7 +217,7 @@ class ObjetoNaArenaTests(TestCase):
     def test_e_uma_maquina_no_monte_seu_projeto(self):
         itens = {i["id"]: i for i in projeto3d.catalogo()["itens"]}
         hockey = itens[f"modelo-{HOCKEY}"]
-        self.assertEqual((hockey["tipo"], hockey["desenho"], hockey["medidas"]), ("maquina", "hockey", [1.0, 1.1, 2.1]))
+        self.assertEqual((hockey["tipo"], hockey["desenho"], hockey["medidas"]), ("maquina", "hockey", [1.0, 0.92, 1.67]))
         self.assertFalse(hockey["parede"])  # a mesa fica solta: joga-se nas duas cabeceiras
         basquete = itens[f"modelo-{BASQUETE}"]
         self.assertEqual((basquete["tipo"], basquete["desenho"], basquete["medidas"]), ("maquina", "basquete", [2.7, 1.0, 2.4]))

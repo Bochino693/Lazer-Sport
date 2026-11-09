@@ -251,29 +251,30 @@ CADASTROS = {
     # cadastro novo copia da base o preço, a voltagem, o "exibir na loja", a
     # avaliação, as medidas, as categorias e as tags; a descrição é a daqui
     # (fala da arte nova). Sem a base no catálogo, entra como os outros: as
-    # medidas daqui, as categorias pelo nome, sem preço e fora da loja (confira
-    # no painel). As fotos são vistas do próprio 3D; quando a folha de adesivos
-    # chegar, refaça o 3D e as fotos e rode `cadastrar_variantes_adesivo --fotos`.
-    # A migração que cadastra no deploy é a `0145_variantes_de_adesivo`.
+    # medidas daqui (as do 3D, tiradas da folha de adesivos), as categorias
+    # pelo nome, sem preço e fora da loja (confira no painel). As fotos são
+    # vistas do próprio 3D, com a arte de verdade (a folha de adesivos da
+    # fábrica). A migração que cadastra no deploy é a `0145_variantes_de_adesivo`.
     "air-game-hockey-espacial": {
         "nome": "Air Game Hockey Espacial",
         "base": ("Air Game Hockey",),
         "pasta": MODELOS / "air-game-hockey-espacial",
         "objeto_3d": "site/arena/modelos/air-game-hockey-espacial.glb",
+        # sem as medidas no texto: as da folha de adesivos (1,00 x 0,92 x 1,67 m)
+        # não são as do Air Game Hockey do catálogo (ver o README da pasta do modelo)
         "descricao": (
-            "O Air Game Hockey Espacial é o Air Game Hockey, a nossa mesa de air hockey, com a adesivagem nova do "
-            "espaço: o logotipo HOCKEY KIDS no centro do tampo, o chão lunar laranja com crateras nas duas "
-            "cabeceiras do campo e, nas laterais, alienígenas astronautas jogando hóquei, discos voadores, planetas "
-            "e estrelas.\n"
+            "O Air Game Hockey Espacial é a nossa mesa de air hockey com a adesivagem do espaço: no centro do "
+            "tampo, o logotipo HOCKEY KIDS com um alienígena verde, o campo branco com o chão lunar laranja e as "
+            "crateras em volta, e o Jogador 01 e o Jogador 02 nas cabeceiras; nas laterais recortadas, os "
+            "alienígenas astronautas jogando hóquei, o disco voador, planetas, estrelas e o HOCKEY KIDS; nas "
+            "cabeceiras, o disco voador sobre o chão lunar.\n"
             "\n"
             "Dois jogadores disputam cada ponto rebatendo o disco que desliza sobre o colchão de ar, atacando e "
             "defendendo o próprio gol. Partidas rápidas, que estimulam reflexo, coordenação motora e concentração.\n"
             "\n"
-            "Medidas aproximadas: 1,00 m de altura, 1,10 m de largura e 2,10 m de comprimento.\n"
-            "\n"
             "Ideal para buffets infantis, brinquedotecas, parques, shoppings, hotéis, condomínios e áreas kids."
         ),
-        "medidas": ("1.00", "1.10", "2.10"),
+        "medidas": ("1.00", "0.92", "1.67"),
         "fotos": (
             ("frente.webp", "perfil", "Air Game Hockey Espacial: a mesa de air hockey com os adesivos do espaço e o logotipo HOCKEY KIDS"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Air Game Hockey Espacial pelo lado esquerdo: os alienígenas astronautas no chão lunar"),
@@ -291,13 +292,14 @@ CADASTROS = {
         "objeto_3d": "site/arena/modelos/basquete-street-quadrinhos.glb",
         "descricao": (
             "O Basquete Street Quadrinhos é o Basquete Street, o basquete de arcade em tamanho profissional, com a "
-            "adesivagem nova em estilo história em quadrinhos: fundo preto com faixas arredondadas em amarelo, "
-            "laranja, vermelho e rosa, os balões \"POW!\", \"BOOM!\" e \"WOW!\", o letreiro BASKETBALL, crianças "
-            "jogando bola e a quadra de basquete com as linhas vermelhas na rampa.\n"
+            "adesivagem nova em estilo história em quadrinhos: fundo preto com formas arredondadas em amarelo, "
+            "laranja, vermelho e rosa; nas laterais de fora, a bola de basquete grande e duas crianças jogando com "
+            "o balão BASKETBALL; o \"BOOM!\" e a janela do placar no fundo da cesta, o \"POW!\" na frente e no teto "
+            "interno, o \"WOW!\", o letreiro BASKETBALL na testeira e na frente, e a quadra de basquete com as "
+            "linhas vermelhas no chão da pista.\n"
             "\n"
-            "A rampa devolve as bolas ao jogador, que arremessa na cesta para somar pontos antes de o tempo acabar. "
-            "Tela de 32 polegadas com o placar e o jogo, cesta que se movimenta, rede de proteção em volta da área "
-            "de arremesso, iluminação em LED e rodízios para facilitar a movimentação.\n"
+            "O jogador arremessa na cesta para somar pontos antes de o tempo acabar. Tela de 32 polegadas com o "
+            "placar e o jogo, cesta que se movimenta, iluminação em LED e rodízios para facilitar a movimentação.\n"
             "\n"
             "Medidas aproximadas: 2,70 m de altura, 1,00 m de largura e 2,40 m de comprimento.\n"
             "\n"
@@ -305,11 +307,11 @@ CADASTROS = {
         ),
         "medidas": ("2.70", "1.00", "2.40"),
         "fotos": (
-            ("frente.webp", "perfil", "Basquete Street Quadrinhos: a frente com o POW!, a rampa e a testeira BASKETBALL"),
+            ("frente.webp", "perfil", "Basquete Street Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Street Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
             ("lado_direito.webp", "lado_direito", "Basquete Street Quadrinhos pelo lado direito"),
             ("verso.webp", "verso", "Basquete Street Quadrinhos visto por trás"),
-            ("jogador.webp", None, "Basquete Street Quadrinhos visto de quem joga: a quadra na rampa, a cesta e o BOOM!"),
+            ("jogador.webp", None, "Basquete Street Quadrinhos visto de quem joga: a cesta, o BOOM! e o console"),
         ),
         "categorias": ("eletronic",),
         "evitar": (),
