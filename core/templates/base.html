@@ -1407,5 +1407,9 @@ window.addEventListener("pageshow", function (event) {
   {{ ls_confirmacao_urls|json_script:"ls-confirmacao-config" }}
   <script src="{% estatico 'site/ls-confirmacao.js' %}" defer></script>
 {% endif %}
+{% if presenca_jogos %}
+  {# o "estou aqui" dos jogos (core/presenca_jogos.py): só no portal e nas páginas de jogo, que pedem pela view #}
+  <script src="{% estatico 'site/paginas/presenca-jogos.js' %}" data-presenca-url="{% url 'jogos_presenca' %}" data-jogo="{{ presenca_jogos.jogo }}" defer></script>
+{% endif %}
 </body>
 </html>

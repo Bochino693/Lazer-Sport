@@ -58,6 +58,32 @@
   var listaRecentes = Object.keys(recentes).filter(function (s) { return porSlug[s] && recentes[s] > 0; })
     .sort(function (a, b) { return recentes[b] - recentes[a]; });
 
+  /* ---------- quem está jogando agora (presenca-jogos.js) ----------
+     A conta vem na resposta de cada batida da aba (o evento "ls-presenca"); antes da primeira, vale a
+     que veio na página. Quem está olhando a biblioteca não está jogando: se o jogo aberto no app for um
+     deles, a conta dele desconta este aparelho. */
+  var vivo = { online: 0, jogando: {}, meu: "" };
+  jogos.forEach(function (j) { if (j.jogando) vivo.jogando[j.slug] = j.jogando; });
+  function jogandoAgora(slug) {
+    var n = Number(vivo.jogando[slug]) || 0;
+    return Math.max(0, n - (vivo.meu === slug ? 1 : 0));
+  }
+  function textoJogando(n) { return n + " jogando agora"; }
+  // o "N jogando" no canto de baixo da capa de um cartão (some com ninguém)
+  function pintarVivo(arte, n) {
+    var selo = arte.querySelector(".bj-vivo");
+    if (!n) { if (selo) selo.remove(); return; }
+    if (!selo) {
+      selo = el("span", "bj-vivo");
+      var ponto = el("i", "pg-vivo-ponto");
+      ponto.setAttribute("aria-hidden", "true");
+      selo.appendChild(ponto);
+      selo.appendChild(document.createTextNode(""));
+      arte.insertBefore(selo, arte.firstChild);
+    }
+    selo.lastChild.nodeValue = n + " jogando";
+  }
+
   /* ---------- os elementos ---------- */
   var bibEl = raiz.querySelector("[data-bj]");
   var conteudo = raiz.querySelector("[data-bj-conteudo]");
@@ -71,6 +97,7 @@
   var hero = raiz.querySelector("[data-portal-hero]");
   var barra = raiz.querySelector("[data-bj-barra]");
   var generoEl = raiz.querySelector("[data-bj-genero-escolha]");
+  var pulso = raiz.querySelector("[data-pg-pulso]");
   if (!bibEl || !conteudo) return;
 
   function lerVista() { try { return localStorage.getItem("ls-biblioteca-vista") === "lista" ? "lista" : "capas"; } catch (e) { return "capas"; } }
@@ -125,6 +152,7 @@
     } else {
       arte.appendChild(reserva(jogo));
     }
+    pintarVivo(arte, jogandoAgora(jogo.slug));
     a.appendChild(arte);
     var texto = el("span", "bj-capa-texto");
     texto.appendChild(el("strong", "", jogo.titulo));
@@ -312,6 +340,7 @@
     if (barraTitulo) { if (cor) barraTitulo.style.setProperty("--tema", cor); else barraTitulo.style.removeProperty("--tema"); }
     if (limpar) limpar.hidden = !lista;
     if (hero) hero.hidden = !!lista;
+    if (pulso) pulso.hidden = !!lista;
     if (ordemEl && ordemEl.value !== estado.ordem) ordemEl.value = estado.ordem;
     if (generoEl && generoEl.value !== estado.genero) generoEl.value = estado.genero;
 
@@ -497,8 +526,11 @@
     caixa.style.setProperty("--tema", jogo.tema || tema.cor);
     caixa.style.setProperty("--cor", jogo.cor || "#3fd0ff");
     var poster = campoDaFicha("poster"), imagem = campoDaFicha("capa");
-    poster.hidden = !(jogo.poster || jogo.capa);
-    if (!poster.hidden) poster.src = jogo.poster || jogo.capa;
+    // atrás da capa: a cena do jogo da casa (capas/topo/), nítida; nos outros, o pôster
+    var cena = jogo.topo_estreito || "";
+    poster.hidden = !(cena || jogo.poster || jogo.capa);
+    poster.classList.toggle("is-cena", !!cena);
+    if (!poster.hidden) poster.src = cena || jogo.poster || jogo.capa;
     imagem.hidden = !jogo.capa;
     if (jogo.capa) imagem.src = jogo.capa;
     imagem.alt = jogo.titulo;
@@ -517,6 +549,14 @@
     if (jogo.categoria) dados.push(dado("fa-tag", jogo.categoria));
     if (jogo.ranking) dados.push(dado("fa-trophy", "Com ranking"));
     if (jogo.campeao) dados.push(dado("fa-crown", "Campeão: " + jogo.campeao.nome + " · " + Number(jogo.campeao.pontos).toLocaleString("pt-BR") + " pts"));
+    if (jogandoAgora(jogo.slug)) {
+      var agora = el("li", "bj-ficha-vivo");
+      var ponto = el("i", "pg-vivo-ponto");
+      ponto.setAttribute("aria-hidden", "true");
+      agora.appendChild(ponto);
+      agora.appendChild(document.createTextNode(textoJogando(jogandoAgora(jogo.slug))));
+      dados.push(agora);
+    }
     if (jogo.partidas) dados.push(dado("fa-fire", jogo.partidas.toLocaleString("pt-BR") + " partida" + (jogo.partidas === 1 ? "" : "s")));
     if (noAparelho.indexOf(jogo.slug) >= 0) dados.push(dado("fa-download", "Já no aparelho: abre na hora"));
     if (recentes[jogo.slug]) dados.push(dado("fa-clock-rotate-left", "Você jogou " + quandoFoi(recentes[jogo.slug])));
@@ -573,27 +613,6 @@
     var atual = 0;
     var reduzido = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var relogio = 0;
-    // o fundo desfocado de cada destaque: a foto desenhada pequena (48 x 28), já desfocada,
-    // e esticada pelo navegador -- o efeito do blur(22px) sem refazer a conta na tela inteira
-    var desfocar = function (img) {
-      var fazer = function () {
-        try {
-          var tela = document.createElement("canvas");
-          tela.width = 48; tela.height = 28;
-          var c = tela.getContext("2d");
-          if (!c || !img.naturalWidth) return;
-          if ("filter" in c) c.filter = "blur(1.6px) saturate(1.3)";
-          var escala = Math.max(48 / img.naturalWidth, 28 / img.naturalHeight);
-          var l = img.naturalWidth * escala, a = img.naturalHeight * escala;
-          c.drawImage(img, (48 - l) / 2, (28 - a) / 2, l, a);
-          tela.className = img.className;
-          tela.setAttribute("aria-hidden", "true");
-          img.replaceWith(tela);
-        } catch (e) { /* fica a foto com o desfoque do CSS */ }
-      };
-      if (img.complete && img.naturalWidth) fazer(); else img.addEventListener("load", fazer, { once: true });
-    };
-    Array.prototype.forEach.call(hero.querySelectorAll("img.pg-slide-fundo"), desfocar);
     // o carrossel só trabalha quando está na tela
     var naTela = true;
     if ("IntersectionObserver" in window) {
@@ -636,4 +655,271 @@
     document.addEventListener("visibilitychange", function () { if (document.hidden) clearInterval(relogio); else girar(); });
     girar();
   }
+
+  /* ---------- os números ao vivo: gente online, quem joga cada jogo, o "Em alta agora" ----------
+     Tudo some com elegância: o selo da barra só aparece com mais alguém além de quem olha (2 ou mais),
+     e o "jogando agora" só com alguém jogando. */
+  var seloOnline = raiz.querySelector("[data-pg-online]");
+  var emAlta = raiz.querySelector("[data-pg-alta]");
+  function pintarNumeros() {
+    if (seloOnline) {
+      seloOnline.hidden = vivo.online < 2;
+      seloOnline.querySelector("[data-pg-online-n]").textContent = emPontos(vivo.online);
+      seloOnline.setAttribute("aria-label", emPontos(vivo.online) + " pessoas online agora");
+    }
+    // o destaque de cada jogo
+    raiz.querySelectorAll("[data-pg-jogando]").forEach(function (item) {
+      var n = jogandoAgora(item.dataset.pgJogando);
+      item.hidden = !n;
+      if (n) item.querySelector("[data-pg-jogando-texto]").textContent = textoJogando(n);
+    });
+    // as capas da biblioteca
+    raiz.querySelectorAll("[data-portal-cartao]").forEach(function (cartao) {
+      var arte = cartao.querySelector(".bj-capa-arte");
+      if (arte) pintarVivo(arte, jogandoAgora(cartao.dataset.portalCartao));
+    });
+    // o jogo com mais gente agora (empate: o que vem antes na biblioteca)
+    if (emAlta) {
+      var melhor = null;
+      jogos.forEach(function (j) {
+        var n = jogandoAgora(j.slug);
+        if (n && (!melhor || n > melhor.n)) melhor = { jogo: j, n: n };
+      });
+      emAlta.hidden = !melhor;
+      if (melhor) {
+        emAlta.href = melhor.jogo.url;
+        emAlta.dataset.appJogo = melhor.jogo.slug;
+        emAlta.querySelector("[data-pg-alta-nome]").textContent = melhor.jogo.titulo;
+        emAlta.querySelector("[data-pg-alta-n]").textContent = melhor.n + " jogando";
+      }
+    }
+  }
+  if (seloOnline) vivo.online = Number(seloOnline.querySelector("[data-pg-online-n]").textContent) || 0;
+  document.addEventListener("ls-presenca", function (e) {
+    var d = e.detail || {};
+    vivo = { online: Number(d.online) || 0, jogando: d.jogando || {}, meu: d.meu || "" };
+    pintarNumeros();
+  });
+  if (window.LSPresenca && window.LSPresenca.ultimo) {
+    var u = window.LSPresenca.ultimo;
+    vivo = { online: Number(u.online) || 0, jogando: u.jogando || {}, meu: u.meu || "" };
+    pintarNumeros();
+  }
+
+  /* ---------- o "Continuar" do pulso: o último jogo aberto neste aparelho ---------- */
+  var continuar = raiz.querySelector("[data-pg-continuar]");
+  if (continuar && listaRecentes.length) {
+    var ultimo = porSlug[listaRecentes[0]];
+    continuar.hidden = false;
+    continuar.href = ultimo.url;
+    continuar.dataset.appJogo = ultimo.slug;
+    continuar.querySelector("[data-pg-continuar-nome]").textContent = ultimo.titulo;
+    continuar.title = "Você jogou " + quandoFoi(recentes[ultimo.slug]);
+  }
+
+  /* ---------- as artes do destaque ----------
+     Os jogos da casa têm a cena do jogo (capas/topo/); os outros ganham aqui um MURAL da capa: a capa
+     repetida em ladrilhos inclinados, com a cor do jogo, uma luz, a vinheta, um grão bem leve e o escuro
+     do lado do texto (à esquerda no computador; embaixo no tablet em pé e no celular, onde o texto fica
+     embaixo). Sem capa, só a cor do jogo. Nada de foto desfocada esticada.
+     LEVE: só o destaque da vez e os vizinhos baixam a arte (data-src) e pintam o mural; o mural é
+     desenhado uma vez no tamanho da tela (até 1600 px de largura) e refeito só se o destaque mudar
+     de tamanho de verdade. */
+  if (hero) (function () {
+    var lista = Array.prototype.slice.call(hero.querySelectorAll("[data-portal-slide]"));
+    if (!lista.length) return;
+    var grao = null;
+
+    function corDe(hexa) {
+      var m = /^#?([0-9a-f]{6})$/i.exec((hexa || "").trim());
+      var n = m ? parseInt(m[1], 16) : 0x3fd0ff;
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function rgba(c, a) { return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
+    function misturar(c, d, t) { return [0, 1, 2].map(function (i) { return Math.round(c[i] * (1 - t) + d[i] * t); }); }
+    // o grão: um ladrilho de ruído feito uma vez só, repetido por cima de tudo
+    function padraoDeGrao(g) {
+      if (!grao) {
+        grao = document.createElement("canvas");
+        grao.width = grao.height = 96;
+        var gg = grao.getContext("2d"), dados = gg.createImageData(96, 96);
+        for (var i = 0; i < dados.data.length; i += 4) {
+          var v = Math.random() * 255;
+          dados.data[i] = dados.data[i + 1] = dados.data[i + 2] = v;
+          dados.data[i + 3] = 14;
+        }
+        gg.putImageData(dados, 0, 0);
+      }
+      return g.createPattern(grao, "repeat");
+    }
+    function ladrilho(g, img, x, y, lado, raio) {
+      g.save();
+      g.beginPath();
+      if (g.roundRect) g.roundRect(x, y, lado, lado, raio); else g.rect(x, y, lado, lado);
+      g.clip();
+      var escala = Math.max(lado / img.naturalWidth, lado / img.naturalHeight);
+      var l = img.naturalWidth * escala, a = img.naturalHeight * escala;
+      g.drawImage(img, x + (lado - l) / 2, y + (lado - a) / 2, l, a);
+      g.restore();
+    }
+    function desenharMural(tela, W, H, cor, img) {
+      var g = tela.getContext("2d");
+      if (!g) return;
+      var largo = W / H > 1.2;
+      var escuro = [4, 7, 15];
+      // a base: a cor do jogo, bem escura
+      g.globalCompositeOperation = "source-over";
+      g.globalAlpha = 1;
+      var base = g.createLinearGradient(0, 0, W, H);
+      base.addColorStop(0, rgba(misturar(cor, escuro, 0.9), 1));
+      base.addColorStop(1, rgba(misturar(cor, escuro, 0.72), 1));
+      g.fillStyle = base;
+      g.fillRect(0, 0, W, H);
+      // o centro da luz: do lado da arte (à direita no largo, em cima no estreito)
+      var cx = largo ? W * 0.68 : W * 0.58, cy = largo ? H * 0.45 : H * 0.3;
+      if (img && img.naturalWidth) {
+        var lado = largo ? H * 0.46 : W * 0.4;
+        var passo = lado * 1.09, raio = lado * 0.07, angulo = -0.22;
+        var cos = Math.cos(angulo), sen = Math.sin(angulo), alcance = Math.hypot(W, H) * 0.62;
+        var n = Math.ceil(Math.hypot(W, H) / passo / 2) + 2;
+        g.save();
+        g.translate(cx, cy);
+        g.rotate(angulo);
+        for (var lin = -n; lin <= n; lin++) {
+          for (var col = -n; col <= n; col++) {
+            // as fileiras desencontradas, como um mural de cartazes
+            var x = (col + (lin % 2 ? 0.5 : 0)) * passo, y = lin * passo;
+            var px = cx + x * cos - y * sen, py = cy + x * sen + y * cos;
+            if (px < -lado || px > W + lado || py < -lado || py > H + lado) continue;
+            // os ladrilhos perto da luz acesos; os de longe somem no escuro
+            var perto = Math.max(0, 1 - Math.hypot(x, y) / (alcance * 1.25));
+            g.globalAlpha = 0.2 + 0.78 * perto * Math.sqrt(perto);
+            ladrilho(g, img, x - lado / 2, y - lado / 2, lado, raio);
+          }
+        }
+        g.restore();
+        g.globalAlpha = 1;
+        // a cor do jogo amarra as capas num desenho só
+        g.globalCompositeOperation = "soft-light";
+        g.fillStyle = rgba(cor, 0.45);
+        g.fillRect(0, 0, W, H);
+      }
+      // a luz na cor do jogo, somada por cima
+      g.globalCompositeOperation = "screen";
+      var luz = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.55);
+      luz.addColorStop(0, rgba(cor, 0.42));
+      luz.addColorStop(0.45, rgba(cor, 0.12));
+      luz.addColorStop(1, rgba(cor, 0));
+      g.fillStyle = luz;
+      g.fillRect(0, 0, W, H);
+      // riscos de luz em diagonal, bem leves
+      g.lineCap = "round";
+      [[0.5, 0.012, 0.16], [0.6, 0.004, 0.3], [0.74, 0.02, 0.1], [0.88, 0.005, 0.24]].forEach(function (r) {
+        g.strokeStyle = rgba(misturar(cor, [255, 255, 255], 0.35), r[2]);
+        g.lineWidth = Math.max(1, W * r[1]);
+        g.beginPath();
+        g.moveTo(W * r[0], H * 1.05);
+        g.lineTo(W * r[0] + H * 0.55, -H * 0.05);
+        g.stroke();
+      });
+      // a vinheta e o escuro do lado do texto
+      g.globalCompositeOperation = "source-over";
+      var vinheta = g.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.hypot(W, H) * 0.75);
+      vinheta.addColorStop(0, rgba(escuro, 0));
+      vinheta.addColorStop(1, rgba(escuro, 0.72));
+      g.fillStyle = vinheta;
+      g.fillRect(0, 0, W, H);
+      var lado2 = largo ? g.createLinearGradient(0, 0, W, 0) : g.createLinearGradient(0, H, 0, 0);
+      lado2.addColorStop(0, rgba(escuro, 0.94));
+      lado2.addColorStop(largo ? 0.32 : 0.36, rgba(escuro, 0.72));
+      lado2.addColorStop(largo ? 0.62 : 0.72, rgba(escuro, 0));
+      g.fillStyle = lado2;
+      g.fillRect(0, 0, W, H);
+      if (largo) {
+        var chao = g.createLinearGradient(0, H, 0, H * 0.5);
+        chao.addColorStop(0, rgba(escuro, 0.6));
+        chao.addColorStop(1, rgba(escuro, 0));
+        g.fillStyle = chao;
+        g.fillRect(0, 0, W, H);
+      }
+      // o grão por cima de tudo (some o degrau dos gradientes)
+      var padrao = padraoDeGrao(g);
+      if (padrao) { g.fillStyle = padrao; g.fillRect(0, 0, W, H); }
+    }
+
+    var capas = {};  // a mesma capa serve a vários desenhos
+    function carregarCapa(url) {
+      if (!url) return Promise.resolve(null);
+      if (!capas[url]) capas[url] = new Promise(function (ok) {
+        var img = new Image();
+        img.decoding = "async";
+        img.onload = function () { ok(img); };
+        img.onerror = function () { ok(null); };
+        img.src = url;
+      });
+      return capas[url];
+    }
+    function pintarMural(caixa) {
+      var largura = caixa.clientWidth, altura = caixa.clientHeight;
+      if (!largura || !altura) return;
+      var densidade = Math.min(1.5, window.devicePixelRatio || 1);
+      var W = Math.min(1600, Math.round(largura * densidade)), H = Math.round(W * altura / largura);
+      var tamanho = W + "x" + H;
+      if (caixa.dataset.pgPintado === tamanho) return;
+      caixa.dataset.pgPintado = tamanho;
+      var cor = corDe(getComputedStyle(caixa.closest("[data-portal-slide]")).getPropertyValue("--cor"));
+      carregarCapa(caixa.dataset.pgMural).then(function (img) {
+        if (caixa.dataset.pgPintado !== tamanho) return;  // a tela mudou no caminho: outro desenho vem aí
+        var tela = document.createElement("canvas");
+        tela.width = W; tela.height = H;
+        try { desenharMural(tela, W, H, cor, img); } catch (e) { return; }
+        caixa.replaceChildren(tela);
+        caixa.classList.add("is-pronto");
+      });
+    }
+    // a arte de um destaque: troca o data-src pelo src (a cena) ou pinta o mural
+    function acordar(slide) {
+      if (!slide) return;
+      slide.querySelectorAll("source[data-srcset]").forEach(function (fonte) {
+        fonte.srcset = fonte.dataset.srcset;
+        fonte.removeAttribute("data-srcset");
+      });
+      slide.querySelectorAll("img[data-src]").forEach(function (img) {
+        img.src = img.dataset.src;
+        img.removeAttribute("data-src");
+      });
+      var mural = slide.querySelector("[data-pg-mural]");
+      if (mural) pintarMural(mural);
+    }
+    // o da vez e os dois vizinhos (o próximo a entrar e o de antes, se a pessoa voltar)
+    function emVolta(slide) {
+      var i = lista.indexOf(slide);
+      acordar(slide);
+      acordar(lista[(i + 1) % lista.length]);
+      acordar(lista[(i - 1 + lista.length) % lista.length]);
+    }
+    function daVez() { return lista.filter(function (s) { return s.classList.contains("pg-slide--ativo"); })[0] || lista[0]; }
+    acordar(daVez());
+    // os vizinhos esperam a página terminar de abrir (não disputam com a primeira arte)
+    var depois = function () { setTimeout(function () { emVolta(daVez()); }, 600); };
+    if (document.readyState === "complete") depois(); else window.addEventListener("load", depois, { once: true });
+    if ("MutationObserver" in window) {
+      var vigia = new MutationObserver(function (mudancas) {
+        mudancas.forEach(function (m) { if (m.target.classList.contains("pg-slide--ativo")) emVolta(m.target); });
+      });
+      lista.forEach(function (s) { vigia.observe(s, { attributes: true, attributeFilter: ["class"] }); });
+    }
+    // mudou o tamanho do destaque (girou o celular, mudou a janela): os murais já pintados são refeitos
+    if ("ResizeObserver" in window) {
+      var espera = 0;
+      new ResizeObserver(function () {
+        clearTimeout(espera);
+        espera = setTimeout(function () {
+          hero.querySelectorAll("[data-pg-mural][data-pg-pintado]").forEach(pintarMural);
+          // o destaque estava escondido (a página abriu numa busca) e voltou: o da vez ganha a arte
+          acordar(daVez());
+        }, 250);
+      }).observe(hero);
+    }
+  })();
 })();

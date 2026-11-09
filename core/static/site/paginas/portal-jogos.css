@@ -26,7 +26,27 @@
             padding: clamp(22px, 4vw, 56px); opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s;
             background: radial-gradient(70% 90% at 80% 50%, color-mix(in srgb, var(--cor) 45%, transparent), transparent 70%), linear-gradient(110deg, #050b1f 30%, rgba(5, 11, 31, .4)); }
 .pg-slide--ativo { opacity: 1; visibility: visible; }
-.pg-slide-fundo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(22px) saturate(1.3); opacity: .35; transform: scale(1.15); z-index: -1; }
+/* a arte do destaque, atrás do texto: a cena do jogo da casa (capas/topo/, já escura do lado do texto)
+   ou o mural da capa (portal-jogos.js, que já pinta o escuro); por baixo dela, enquanto chega, o
+   gradiente da cor do jogo do próprio slide */
+.pg-slide-cena, .pg-slide-mural { position: absolute; inset: 0; z-index: -1; display: block; overflow: hidden; }
+.pg-slide-cena img, .pg-slide-mural canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* a cena: o que importa fica no meio e à direita (no corte do tablet, a direita aparece) */
+.pg-slide-cena img { object-position: 62% 50%; }
+.pg-slide-mural canvas { animation: pg-aparece .5s ease both; }
+@keyframes pg-aparece { from { opacity: 0; } }
+/* com a cena do jogo atrás, a logo fica menor e mais para a direita: a cena (os personagens, o
+   cenário) aparece entre o texto e a logo */
+.pg-slide--cena .pg-slide-arte { justify-self: end; width: min(100%, 270px); margin-right: clamp(0px, 2vw, 28px); }
+@media (max-width: 900px) {
+    /* no tablet em pé a capa (46% da largura) descia por cima do nome do jogo: tem um teto */
+    .pg-slide .pg-slide-arte { width: min(46%, 260px); }
+    .pg-slide--cena .pg-slide-arte { width: min(36%, 220px); margin: 0; }
+    /* no tablet em pé e no celular o texto ocupa a metade de baixo: um véu a mais, medido pela caixa
+       (a arte é cortada diferente em cada tela), para o nome e os números lerem bem sobre a cena */
+    .pg-slide-cena::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+                            background: linear-gradient(to top, rgba(4, 7, 15, .78), rgba(4, 7, 15, .5) 48%, rgba(4, 7, 15, 0) 76%); }
+}
 .pg-slide-texto { position: relative; z-index: 1; }
 .pg-slide-kicker { display: inline-block; margin-bottom: 10px; padding: 6px 12px; border-radius: 999px; font: 800 .74rem "Poppins", sans-serif;
                    letter-spacing: .12em; text-transform: uppercase; color: var(--pg-amarelo); background: rgba(5, 11, 31, .6); border: 1px solid rgba(255, 210, 63, .35); }
@@ -34,7 +54,15 @@
                text-shadow: 0 0 30px color-mix(in srgb, var(--cor) 70%, transparent); }
 .pg-slide p { max-width: 46ch; margin: 14px 0 0; color: #d3def2; font-size: clamp(1rem, 1.6vw, 1.2rem); line-height: 1.55; }
 .pg-slide-acoes { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 22px; }
-.pg-slide-ranking { color: var(--pg-amarelo); font-weight: 700; }
+/* os números do jogo no destaque: quem joga agora, as partidas, o recorde */
+.pg-slide-dados { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.pg-slide-dados li { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 12px; border-radius: 999px;
+                     font: 700 .82rem "Poppins", sans-serif; color: #e2ebfb; background: rgba(4, 8, 20, .58); border: 1px solid rgba(255, 255, 255, .14);
+                     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.pg-slide-dados li[hidden] { display: none; }
+.pg-slide-dados i { color: #ff9a3d; font-size: .8rem; }
+.pg-slide-dados .pg-slide-recorde, .pg-slide-dados .pg-slide-recorde i { color: var(--pg-amarelo); }
+.pg-slide-dados .pg-slide-vivo { color: #b8ffd3; border-color: rgba(34, 197, 94, .45); background: rgba(6, 40, 22, .62); }
 .pg-slide-arte { position: relative; z-index: 1; justify-self: center; width: min(100%, 380px); max-height: 100%; aspect-ratio: 1; object-fit: contain;
                  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .55)) drop-shadow(0 0 30px color-mix(in srgb, var(--cor) 50%, transparent));
                  animation: pg-flutua 5s ease-in-out infinite; }
@@ -56,18 +84,13 @@
 
 /* ---------- o carrossel, mais leve ----------
    O mesmo desenho, com menos trabalho para o aparelho:
-   - o fundo desfocado: o desfoque de 22px numa foto do tamanho do carrossel inteiro
-     era o que mais pesava (a cada troca de destaque). Agora a foto é desenhada uma vez
-     num quadro de 48 x 28 (já desfocada) e o navegador estica: o mesmo efeito, sem conta
-     nenhuma depois;
+   - a arte de fundo é uma imagem pronta (a cena) ou um mural pintado uma vez (portal-jogos.js):
+     nada de filtro de desfoque refeito na tela inteira a cada troca de destaque;
    - a capa que flutua ganha uma camada própria (will-change): a sombra e o brilho dela
      são desenhados uma vez só, e o movimento fica com a placa de vídeo;
    - só o destaque da vez se mexe: os escondidos ficam parados;
    - fora da tela (ou com a aba escondida, ou com um jogo aberto), o carrossel para. */
 .pg-slide { isolation: isolate; }
-/* o fundo já desfocado (portal-jogos.js desenha a foto em 48 x 28 e o navegador estica: liso,
-   sem o filtro de desfoque, que era refeito na tela inteira) */
-canvas.pg-slide-fundo { filter: none; transform: scale(1.08); }
 .pg-slide-arte { will-change: transform; }
 .pg-slide:not(.pg-slide--ativo) .pg-slide-arte { animation-play-state: paused; }
 .pg-hero.is-parado .pg-slide-arte { animation-play-state: paused; }
@@ -269,6 +292,8 @@ body.ls-launcher { overflow-x: clip; }
 .bj-ficha-arte { position: relative; display: grid; place-items: center; min-height: 360px; overflow: hidden;
                  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cor) 60%, transparent), #060d24 75%); }
 .bj-ficha-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(8px) brightness(.5) saturate(1.3); transform: scale(1.12); }
+/* a cena do jogo da casa (a mesma do destaque): nítida, só um pouco mais escura para a capa saltar */
+.bj-ficha-poster.is-cena { filter: brightness(.62) saturate(1.1); transform: none; }
 .bj-ficha-capa { position: relative; width: 74%; max-height: 82%; object-fit: contain; filter: drop-shadow(0 20px 34px rgba(0, 0, 0, .6)); animation: pg-flutua 5s ease-in-out infinite; }
 .bj-ficha-sigla { position: absolute; z-index: 3; top: 16px; left: 16px; font-size: .74rem; }
 .bj-ficha-sigla:empty { display: none; }
@@ -286,6 +311,7 @@ body.ls-launcher { overflow-x: clip; }
 .bj-ficha-dados { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .bj-ficha-dados li { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 10px; font-size: .8rem; color: #d6e2f6; background: rgba(255, 255, 255, .06); }
 .bj-ficha-dados i { color: var(--tema); }
+.bj-ficha-dados .bj-ficha-vivo { color: #c9f7da; background: rgba(34, 197, 94, .12); }
 .bj-ficha-desc { margin: 0; color: var(--pg-suave); font-size: .92rem; line-height: 1.6; }
 .bj-ficha-como { padding: 14px; border-radius: 18px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .09); }
 .bj-ficha-como[hidden] { display: none; }
@@ -717,6 +743,70 @@ body.app-jogando { overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {
     .pg-barra, .pg-abas a, .pg-atalho { transition: none; }
+}
+
+/* ======================================================================
+   OS NÚMEROS AO VIVO (core/presenca_jogos.py, presenca-jogos.js)
+   Gente online na barra, "jogando agora" no destaque e nas capas, e o
+   pulso embaixo do destaque. O ponto verde pulsa devagar: vivo, sem
+   chamar mais atenção que o jogo. Com o "menos movimento", fica parado.
+   ====================================================================== */
+.pg-vivo-ponto { position: relative; flex: none; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+                 box-shadow: 0 0 8px rgba(34, 197, 94, .9); }
+.pg-vivo-ponto::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: #22c55e; animation: pg-pulsa 2s ease-out infinite; }
+@keyframes pg-pulsa { from { transform: scale(1); opacity: .7; } to { transform: scale(2.8); opacity: 0; } }
+
+/* o selo da barra: "● 12 online" */
+.pg-online { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 11px; margin-right: 4px; border-radius: 999px; white-space: nowrap;
+             font: 700 .8rem "Poppins", sans-serif; color: #c9f7da; background: rgba(34, 197, 94, .1); border: 1px solid rgba(34, 197, 94, .32); }
+.pg-online b { color: #fff; font-weight: 800; }
+.pg-online[hidden] { display: none; }
+/* no computador menor a barra é uma linha só e a busca precisa do espaço: fica só o número */
+@media (min-width: 1100px) and (max-width: 1439px) {
+    .pg-online { padding: 0 10px; margin-right: 2px; }
+    .pg-online span { display: none; }
+}
+/* no tablet o selo desce para a linha das seções, na ponta direita (lá sobra espaço; em cima, a busca precisa dele) */
+@media (min-width: 760px) and (max-width: 1099px) {
+    .pg-online { position: absolute; right: var(--pg-lado); bottom: 7px; margin: 0; }
+}
+
+/* o "N jogando" na capa: no canto de baixo à esquerda (o Jogar redondo do celular fica à direita) */
+.bj-vivo { position: absolute; z-index: 3; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 16px);
+           height: 23px; padding: 0 9px 0 8px; border-radius: 999px; white-space: nowrap; overflow: hidden; pointer-events: none;
+           font: 800 .66rem/1 "Poppins", sans-serif; color: #d6ffe5; background: rgba(3, 26, 13, .84); border: 1px solid rgba(34, 197, 94, .45);
+           box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+.bj-vivo .pg-vivo-ponto { width: 6px; height: 6px; }
+.bj-conteudo--lista .bj-vivo { display: none; }
+
+/* o pulso: uma fila de fichas embaixo do destaque (no celular, rola de lado) */
+.pg-pulso { display: flex; flex-wrap: wrap; gap: 10px; margin: -14px 0 26px; }
+.pg-pulso[hidden] { display: none; }
+.pg-pulso-item { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border-radius: 999px; white-space: nowrap;
+                 font: 600 .84rem "Manrope", sans-serif; color: var(--pg-suave); text-decoration: none;
+                 background: rgba(255, 255, 255, .045); border: 1px solid var(--pg-borda); }
+.pg-pulso-item[hidden] { display: none; }
+.pg-pulso-item b { color: var(--pg-texto); font: 800 .86rem "Poppins", sans-serif; }
+.pg-pulso-item small { color: var(--pg-suave); font-size: .78rem; }
+.pg-pulso-item i { color: var(--pg-ciano); }
+a.pg-pulso-item:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+a.pg-pulso-item:focus-visible { outline: 2px solid var(--pg-ciano); outline-offset: 2px; }
+.pg-pulso-item--alta { color: #c9f7da; background: rgba(34, 197, 94, .08); border-color: rgba(34, 197, 94, .32); }
+.pg-pulso-item--alta small { color: #86efac; }
+.pg-pulso-item--continuar i { color: var(--pg-amarelo); }
+.pg-pulso-item--lider i { color: var(--pg-amarelo); }
+@media (max-width: 759px) {
+    .pg-pulso { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+                margin: -18px calc(-1 * var(--pg-lado)) 20px; padding: 2px var(--pg-lado); }
+    .pg-pulso::-webkit-scrollbar { display: none; }
+    .pg-pulso-item { min-height: 36px; padding: 0 12px; font-size: .8rem; }
+    /* no celular o selo da barra fica só com o número (o "online" vai no aria-label) */
+    .pg-online { height: 30px; padding: 0 10px; margin-right: 2px; }
+    .pg-online span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pg-vivo-ponto::after { animation: none; opacity: 0; }
+    .pg-slide-mural canvas { animation: none; }
 }
 
 /* a armadilha dos robôs (core/escudo_jogos.py): fora da tela, fora do teclado, fora do leitor de tela */

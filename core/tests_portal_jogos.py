@@ -458,3 +458,115 @@ class PainelTests(BasePortal):
         self.assertEqual(jogo.categoria, "corrida")
         self.assertTrue(jogo.feito_pela_lazer)
         self.assertTrue(jogo.destaque)
+
+
+class LauncherAoVivoTests(BasePortal):
+    """O topo do launcher: a arte de cada destaque e os números de agora.
+
+    * os jogos da casa têm a cena do jogo (capas/topo/: a larga e a quase quadrada); o primeiro
+      destaque baixa já e os outros esperam a vez (data-src); os cadastrados ganham o mural da capa;
+    * gente online, "jogando agora", "Em alta agora" e quem jogou valendo ranking hoje saem de dados
+      de verdade e somem quando não há nada para mostrar.
+    """
+
+    def setUp(self):
+        super().setUp()
+        import itertools
+
+        from . import presenca_jogos
+
+        presenca_jogos.esquecer()
+        self.addCleanup(presenca_jogos.esquecer)
+        # o relógio da conta anda um segundo a cada leitura (a conta é refeita a cada batida)
+        relogio = itertools.count(10_000.0, 1.0)
+        trocar = mock.patch.object(presenca_jogos, "_agora", lambda: next(relogio))
+        trocar.start()
+        self.addCleanup(trocar.stop)
+
+    def test_todo_jogo_da_casa_tem_as_duas_artes_do_destaque(self):
+        from pathlib import Path
+
+        pasta = Path(portal_jogos.__file__).resolve().parent / "static" / "site" / "arena" / "capas" / "topo"
+        for jogo in arena.JOGOS:
+            with self.subTest(jogo=jogo["slug"]):
+                self.assertIn(jogo["slug"], portal_jogos.TOPOS_DA_CASA)
+                self.assertIn(jogo["slug"], portal_jogos.TOPOS_ESTREITOS)
+                for nome in (f"{jogo['slug']}.webp", f"{jogo['slug']}-estreito.webp"):
+                    arquivo = pasta / nome
+                    # leve: nenhuma arte do destaque passa de 160 KB
+                    self.assertLess(arquivo.stat().st_size, 160 * 1024, nome)
+
+    def test_o_destaque_usa_a_cena_e_so_o_primeiro_baixa_ja(self):
+        resposta = self.portal()
+        html = resposta.content.decode()
+        destaques = resposta.context["destaques"]
+        self.assertTrue(all(d["tipo"] == "nosso" for d in destaques))
+        primeiro, segundo = destaques[0]["slug"], destaques[1]["slug"]
+        self.assertIn(f'src="/static/site/arena/capas/topo/{primeiro}.webp?v=', html)
+        self.assertIn(f'srcset="/static/site/arena/capas/topo/{primeiro}-estreito.webp?v=', html)
+        self.assertIn(f'data-src="/static/site/arena/capas/topo/{segundo}.webp?v=', html)
+        self.assertIn(f'data-srcset="/static/site/arena/capas/topo/{segundo}-estreito.webp?v=', html)
+        # o fundo desfocado (o "borrão marrom") saiu
+        self.assertNotIn("pg-slide-fundo", html)
+        self.assertEqual(html.count("pg-slide--cena"), len(destaques))
+
+    def test_o_cadastrado_em_destaque_ganha_o_mural_da_capa(self):
+        jogo = self.salvo(destaque=True)
+        resposta = self.portal()
+        self.assertEqual(resposta.context["destaques"][0]["slug"], "corrida-maluca")
+        self.assertContains(resposta, f'data-pg-mural="{jogo.capa.url}"')
+
+    def test_os_jogos_da_casa_se_revezam_no_destaque_dia_a_dia(self):
+        hoje = timezone.localdate()
+        primeiros = set()
+        for dias in range(len(arena.JOGOS)):
+            with mock.patch.object(portal_jogos.timezone, "localdate", return_value=hoje + dt.timedelta(days=dias)):
+                destaques = portal_jogos.montar({"jogos": arena.jogos_do_simulador(arena.JOGOS), "externos": []})["destaques"]
+            self.assertEqual(len(destaques), portal_jogos.DESTAQUES)
+            primeiros.add(destaques[0]["slug"])
+        # em tantos dias quantos são os jogos, cada um abriu o carrossel uma vez
+        self.assertEqual(primeiros, {j["slug"] for j in arena.JOGOS})
+
+    def test_ninguem_online_nada_aparece(self):
+        resposta = self.portal()
+        self.assertContains(resposta, 'data-pg-online title="Pessoas com o Lazer &amp; Sport Games aberto agora" hidden')
+        self.assertNotContains(resposta, 'class="bj-vivo"')
+        self.assertIsNone(resposta.context["em_alta"])
+        self.assertNotContains(resposta, "0 jogando")
+
+    def test_gente_jogando_aparece_no_selo_no_destaque_e_nas_capas(self):
+        from . import presenca_jogos
+
+        slug = arena.JOGOS[2]["slug"]
+        for i in range(3):
+            presenca_jogos.bater(f"aparelho-de-teste-{i:03d}", "aba001", slug if i < 2 else "")
+        resposta = self.portal()
+        self.assertEqual(resposta.context["presenca"]["online"], 3)
+        self.assertContains(resposta, '<b data-pg-online-n>3</b>')
+        self.assertNotContains(resposta, 'data-pg-online title="Pessoas com o Lazer &amp; Sport Games aberto agora" hidden')
+        self.assertEqual(resposta.context["em_alta"]["slug"], slug)
+        self.assertContains(resposta, "2 jogando</small>")
+        self.assertContains(resposta, '<span class="bj-vivo"><i class="pg-vivo-ponto" aria-hidden="true"></i>2 jogando</span>')
+        self.assertEqual(next(j for j in resposta.context["indice_busca"] if j["slug"] == slug)["jogando"], 2)
+
+    def test_o_pulso_traz_as_partidas_e_quem_jogou_hoje_valendo_ranking(self):
+        from .models import RecordeJogo
+
+        PartidasDoJogo.objects.create(slug=arena.JOGOS[0]["slug"], partidas=1200)
+        PartidasDoJogo.objects.create(slug=arena.JOGOS[1]["slug"], partidas=34)
+        ana = _cliente("ana@exemplo.com", "ana@exemplo.com", first_name="Ana")
+        rui = _cliente("rui@exemplo.com", "rui@exemplo.com", first_name="Rui")
+        RecordeJogo.objects.create(usuario=ana, jogo=arena.JOGOS[0]["slug"], pontos=90, partidas=2)
+        RecordeJogo.objects.create(usuario=ana, jogo=arena.JOGOS[1]["slug"], pontos=40, partidas=1)
+        antigo = RecordeJogo.objects.create(usuario=rui, jogo=arena.JOGOS[0]["slug"], pontos=50, partidas=1)
+        RecordeJogo.objects.filter(pk=antigo.pk).update(atualizado_em=timezone.now() - dt.timedelta(days=3))
+        portal_jogos.esquecer_vivo()
+        resposta = self.portal()
+        self.assertEqual(resposta.context["partidas_total"], 1234)
+        self.assertContains(resposta, "<b>1.234</b> <span>partidas jogadas</span>", html=False)
+        self.assertEqual(resposta.context["jogadores_hoje"], 1)
+        self.assertContains(resposta, "<b>1</b> <span>jogador no ranking hoje</span>")
+        self.assertEqual(resposta.context["lider"]["nome"], "Ana")
+
+    def test_com_busca_o_pulso_sai_junto_com_o_destaque(self):
+        self.assertContains(self.portal(q="boliche"), 'data-pg-pulso aria-label="Agora no Lazer &amp; Sport Games" hidden')

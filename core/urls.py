@@ -15,7 +15,7 @@ from .views_app_jogos import manifesto_dos_jogos, service_worker_dos_jogos
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_arena import ArenaView
 from .views_jogos import (AbriuJogoView, AnuncioJogosView, ArquivoDoEmuladorView, JogoEmuladorView, PartidaJogoView,
-                          PortalJogosView, RankingJogosView, SimuladorView)
+                          PortalJogosView, PresencaJogosView, RankingJogosView, SimuladorView)
 from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
@@ -268,9 +268,11 @@ urlpatterns = [
     # a armadilha dos robôs (escondida na biblioteca, proibida no robots.txt): ver core/escudo_jogos.py
     path("jogos/_acervo/", ArmadilhaView.as_view(), name="jogos_armadilha"),
     path("jogos/anuncio/<int:pk>/", AnuncioJogosView.as_view(), name="anuncio_jogos"),
-    # antes de jogos/<slug>/: "partida" e "ranking" não são jogos
+    # antes de jogos/<slug>/: "partida", "ranking" e "presenca" não são jogos
     path("jogos/partida/", PartidaJogoView.as_view(), name="jogos_partida"),
     path("jogos/ranking/", RankingJogosView.as_view(), name="jogos_ranking"),
+    # o "estou aqui" das abas dos jogos: gente online e quem joga cada jogo (core/presenca_jogos.py)
+    path("jogos/presenca/", PresencaJogosView.as_view(), name="jogos_presenca"),
     path("jogos/<slug:slug>/", SimuladorView.as_view(), name="jogo"),
     # jogos de console pelo emulador: a página do quadro e o índice (.cue/.m3u)
     path("jogos/<slug:slug>/emulador/", JogoEmuladorView.as_view(), name="jogo_emulador"),

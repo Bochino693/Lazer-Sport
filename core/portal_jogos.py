@@ -96,14 +96,20 @@ ORDENS = (
     ("jogados", "Mais jogados"),
     ("novos", "Mais novos"),
 )
+#: Quantos jogos o carrossel do alto mostra.
+DESTAQUES = 6
 #: Na vista das estantes, quantos jogos cada uma mostra antes do "Ver todos".
 POR_ESTANTE = 12
 NOVIDADE_DIAS = 45
 
-#: As artes do topo (faixa larga) dos jogos da casa: core/static/site/arena/capas/topo/,
-#: montadas pelo gerar.py da pasta a partir das capas e pôsteres.
+#: As artes do destaque dos jogos da casa (core/static/site/arena/capas/topo/): cenas de
+#: verdade dos jogos, fotografadas no navegador e montadas pelo gerar.py da pasta. Cada jogo
+#: tem a faixa larga (<slug>.webp, computador) e a quase quadrada (<slug>-estreito.webp, tablet
+#: em pé e celular, onde o texto fica embaixo).
 _PASTA_DOS_TOPOS = Path(__file__).resolve().parent / "static" / "site" / "arena" / "capas" / "topo"
-TOPOS_DA_CASA = frozenset(p.stem for p in _PASTA_DOS_TOPOS.glob("*.webp"))
+SUFIXO_ESTREITO = "-estreito"
+TOPOS_DA_CASA = frozenset(p.stem for p in _PASTA_DOS_TOPOS.glob("*.webp") if not p.stem.endswith(SUFIXO_ESTREITO))
+TOPOS_ESTREITOS = frozenset(p.stem[: -len(SUFIXO_ESTREITO)] for p in _PASTA_DOS_TOPOS.glob(f"*{SUFIXO_ESTREITO}.webp"))
 
 
 def sem_acento(texto: str) -> str:
@@ -118,8 +124,10 @@ def _cartao_da_casa(jogo):
         "descricao": jogo.get("descricao", ""),
         "capa": jogo.get("capa_url") or jogo.get("capa", ""),
         "poster": jogo.get("poster_url") or jogo.get("poster", ""),
-        # a arte larga do topo (a vitrine), quando já foi montada
+        # as artes do destaque (a cena do jogo), quando já foram montadas
         "topo": f"site/arena/capas/topo/{jogo['slug']}.webp" if jogo["slug"] in TOPOS_DA_CASA else "",
+        "topo_estreito": (f"site/arena/capas/topo/{jogo['slug']}{SUFIXO_ESTREITO}.webp"
+                          if jogo["slug"] in TOPOS_ESTREITOS else ""),
         "cor": jogo.get("cor") or "#3fd0ff",
         "url": jogo["url"],
         "tipo": "nosso",
@@ -156,7 +164,9 @@ def _cartao_cadastrado(jogo):
         "descricao": jogo.get("descricao", ""),
         "capa": jogo.get("capa", ""),
         "poster": jogo.get("poster", "") or jogo.get("capa", ""),
+        # sem arte própria: o destaque monta um mural da capa no navegador (portal-jogos.js)
         "topo": "",
+        "topo_estreito": "",
         "cor": jogo.get("cor") or "#3fd0ff",
         "url": jogo["url"],
         "tipo": tipo,
@@ -180,14 +190,21 @@ def cartoes(dados):
     """Todos os jogos do site como cartões (os da casa primeiro)."""
     from django.templatetags.static import static
 
+    from sistema_interno.templatetags.interno_extras import estatico
+
     da_casa = []
     for jogo in dados["jogos"]:
         cartao = _cartao_da_casa(jogo)
         # a capa dos jogos da casa vem do static (o caminho em arena.JOGOS)
-        for campo in ("capa", "poster", "topo"):
+        for campo in ("capa", "poster"):
             valor = cartao[campo]
             if valor and not valor.startswith(("/", "http")):
                 cartao[campo] = static(valor)
+        # as artes do destaque levam a versão do conteúdo (?v=): refeitas pelo gerar.py com o mesmo
+        # nome, o navegador busca a nova em vez de guardar a velha por 30 dias
+        for campo in ("topo", "topo_estreito"):
+            if cartao[campo]:
+                cartao[campo] = estatico(cartao[campo])
         da_casa.append(cartao)
     return da_casa + [_cartao_cadastrado(j) for j in dados["externos"]]
 
@@ -226,14 +243,26 @@ def _partidas():
     return dict(PartidasDoJogo.objects.values_list("slug", "partidas"))
 
 
+def _jogadores_de_hoje():
+    """Quantos cadastrados jogaram hoje um jogo com ranking (a linha do recorde de cada um é tocada a cada partida)."""
+    from .models import RecordeJogo
+
+    inicio = timezone.make_aware(dt.datetime.combine(timezone.localdate(), dt.time.min))
+    return RecordeJogo.objects.filter(atualizado_em__gte=inicio).values("usuario_id").distinct().count()
+
+
 def vivo():
-    """O que muda com o uso (partidas e anúncios), num cache curto."""
+    """O que muda com o uso (partidas, anúncios e quem jogou hoje), num cache curto."""
     dados = cache.get(CHAVE_VIVO)
     if dados is None:
         try:
             dados = {"partidas": _partidas(), "anuncios": _anuncios_no_ar()}
         except DatabaseError:
             dados = {"partidas": {}, "anuncios": []}
+        try:
+            dados["jogadores_hoje"] = _jogadores_de_hoje()
+        except DatabaseError:
+            dados["jogadores_hoje"] = 0
         cache.set(CHAVE_VIVO, dados, VIVO_SEGUNDOS)
     return dados
 
@@ -287,9 +316,14 @@ def montar(dados_do_catalogo, busca="", estante="", genero="", ordem=""):
         cartao["_criado"] = _criado(cartao)
         cartao["novidade"] = bool(cartao["_criado"] and agora - cartao["_criado"] <= dt.timedelta(days=NOVIDADE_DIAS))
 
+    # o carrossel: primeiro os cadastrados que a equipe destacou; depois os jogos da casa, que se
+    # revezam dia a dia (cada dia um abre a fila), para todos passarem pelo destaque com a cena deles
     destaques = [c for c in todos if c["tipo"] != "nosso" and c["destaque"]]
-    destaques += [c for c in todos if c["tipo"] == "nosso"]
-    destaques = destaques[:6]
+    da_casa = [c for c in todos if c["tipo"] == "nosso"]
+    if da_casa:
+        giro = timezone.localdate().toordinal() % len(da_casa)
+        da_casa = da_casa[giro:] + da_casa[:giro]
+    destaques = (destaques + da_casa)[:DESTAQUES]
 
     ordem = ordem if ordem in dict(ORDENS) else "destaque"
     estantes = []
@@ -364,6 +398,9 @@ def montar(dados_do_catalogo, busca="", estante="", genero="", ordem=""):
         "anuncio_topo": next((a for a in anuncios if a["local"] == "topo"), None),
         "anuncios_meio": [a for a in anuncios if a["local"] == "meio"],
         "total": len(todos),
+        # todas as partidas contadas (o toque em Jogar, PartidasDoJogo): o pulso do portal
+        "partidas_total": sum(c["partidas"] for c in todos),
+        "jogadores_hoje": estado.get("jogadores_hoje", 0),
     }
 
 

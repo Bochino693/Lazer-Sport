@@ -167,6 +167,11 @@
     corpo.classList.add("app-jogando");
     try { history.pushState({ lsJogo: jogo.slug }, "", location.pathname + location.search + "#jogando"); } catch (e) { /* nada */ }
     quadro.addEventListener("load", function () { try { quadro.focus(); } catch (e) { /* nada */ } });
+    contarJogo();
+  }
+  // a conta de quem joga cada jogo (presenca-jogos.js) muda na hora em que o jogo abre ou fecha
+  function contarJogo() {
+    try { document.dispatchEvent(new CustomEvent("ls-app-jogo", { detail: aberto ? aberto.slug : "" })); } catch (e) { /* nada */ }
   }
   function fecharQuadro() {
     if (!quadro) return;
@@ -187,6 +192,7 @@
     palco.hidden = true;
     corpo.classList.remove("app-jogando");
     soltarGiro();
+    contarJogo();
     if (!daHistoria && history.state && history.state.lsJogo) {
       try { history.back(); } catch (e) { /* nada */ }
     }
@@ -317,5 +323,7 @@
     emTelaCheia: emTelaCheia,
     podeTelaCheia: podeTelaCheia,
     documento: document,
+    // o jogo aberto agora dentro do app ("" com a biblioteca à vista)
+    jogoAberto: function () { return aberto ? aberto.slug : ""; },
   };
 })();

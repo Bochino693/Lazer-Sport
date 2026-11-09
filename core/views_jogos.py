@@ -25,7 +25,7 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.generic import View
 
 from sistema_interno.templatetags.interno_extras import estatico
@@ -206,7 +206,15 @@ def dados_do_simulador():
 
 
 @method_decorator(ensure_csrf_cookie, name="get")
+@method_decorator(xframe_options_sameorigin, name="dispatch")
 class SimuladorView(View):
+    """A página de cada jogo (os da casa e os cadastrados).
+
+    SAMEORIGIN: o launcher (/jogos/) abre o jogo num quadro por cima da biblioteca (app-jogos.js,
+    "?app=1"); com o DENY padrão do Django o navegador recusava o quadro e aparecia a página de
+    erro no lugar do jogo. Outro site continua sem poder pôr a página num quadro.
+    """
+
     def get(self, request, slug=None):
         dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
         externos = dados["externos"]
@@ -252,6 +260,9 @@ class SimuladorView(View):
                 "entrarUrl": reverse("login"),
                 "voltar": voltar,
             },
+            # o "estou aqui" da aba (base.html): "auto" segue o jogo do endereço, que muda
+            # quando a pessoa troca de jogo sem recarregar a página
+            "presenca_jogos": {"jogo": "auto"},
         })
 
     def pagina_do_jogo_cadastrado(self, request, jogo, dados):
@@ -292,6 +303,8 @@ class SimuladorView(View):
             "anuncio": portal_jogos.anuncio_da_pagina_do_jogo(),
             "abriu_url": reverse("jogos_abriu"),
             "whatsapp": WHATSAPP,
+            # o "estou aqui" da aba (base.html): quem está nesta página está jogando este jogo
+            "presenca_jogos": {"jogo": jogo["slug"]},
         })
 
 
@@ -484,7 +497,7 @@ class PortalJogosView(View):
     """Lazer & Sport Games: a vitrine com busca, destaques, faixas, ranking e anúncios."""
 
     def get(self, request):
-        from . import portal_jogos
+        from . import portal_jogos, presenca_jogos
 
         dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
         pedido = request.GET
@@ -496,19 +509,29 @@ class PortalJogosView(View):
             ordem=(pedido.get("ordem") or "")[:12],
         )
         contexto["ranking_portal"] = portal_jogos.ranking_do_portal()
+        # gente online e quem joga cada jogo: a página já abre com a conta (depois, a batida atualiza)
+        contexto["presenca_jogos"] = {"jogo": ""}
+        contexto["presenca"] = presenca_jogos.resumo()
         contexto["eu"] = None
         if request.user.is_authenticated:
             contexto["eu"] = {"nome": ranking.nome_publico(request.user), "geral": ranking.posicao_geral(request.user)}
         # o campeão de cada jogo da casa vai na ficha do jogo, na biblioteca
         campeoes = {c["slug"]: {"nome": c["nome"], "pontos": c["pontos"]} for c in contexto["ranking_portal"]["campeoes"]}
         # e no selo de ranking do cartão (o recorde à vista); as estantes e a lista são estes mesmos cartões
+        jogando = contexto["presenca"]["jogando"]
         for cartao in contexto["todos"]:
             cartao["campeao"] = campeoes.get(cartao["slug"])
+            cartao["jogando"] = jogando.get(cartao["slug"], 0)
+        # o jogo com mais gente jogando agora (o "Em alta agora" do pulso, embaixo do destaque)
+        em_alta = max(contexto["todos"], key=lambda c: c["jogando"], default=None)
+        contexto["em_alta"] = em_alta if em_alta and em_alta["jogando"] else None
+        contexto["lider"] = (contexto["ranking_portal"]["geral"] or [None])[0]
         contexto["indice_busca"] = [
             {
                 **{chave: c[chave] for chave in ("slug", "titulo", "url", "capa", "poster", "cor", "plataforma", "sigla",
                                                  "categoria", "tipo", "familias", "estante", "tema", "busca", "ranking",
-                                                 "destaque", "partidas", "novidade", "chamada", "como", "sistema", "dicas", "acoes", "icones")},
+                                                 "destaque", "partidas", "novidade", "chamada", "como", "sistema", "dicas", "acoes", "icones",
+                                                 "jogando", "topo_estreito")},
                 "descricao": c["descricao"][:420],
                 "criado": c["criado"][:10],
                 "ordem": c["_ordem"],
@@ -593,6 +616,77 @@ class AbriuJogoView(View):
             gratis.append(slug)
             request.session[SESSAO_GRATIS] = gratis
         return JsonResponse({"liberado": True, "ultima_gratis": cadastrado is not None and visitante})
+
+
+def _slugs_dos_jogos():
+    """Os jogos cadastrados públicos, do cache do catálogo."""
+    dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
+    return {j["slug"] for j in dados["externos"]}
+
+
+def _mesmo_site(request):
+    """A batida vem das páginas do próprio site (o Origin, quando o navegador manda, é o daqui)."""
+    from urllib.parse import urlsplit
+
+    origem = request.META.get("HTTP_ORIGIN") or ""
+    if not origem:
+        return True
+    try:
+        de_onde = (urlsplit(origem).hostname or "").lower()
+        daqui = request.get_host().split(":")[0].lower()
+    except Exception:  # Host fora do ALLOWED_HOSTS
+        return False
+
+    def sem_www(host):
+        return host[4:] if host.startswith("www.") else host
+
+    return sem_www(de_onde) == sem_www(daqui)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PresencaJogosView(View):
+    """O "estou aqui" das abas dos jogos: a conta de gente online e de quem joga cada jogo.
+
+    Sem login e sem IP guardado (as regras e os limites em core/presenca_jogos.py).
+    Sem o CSRF de propósito: o "saí" sai pelo sendBeacon, que não leva cabeçalho, e a
+    batida não mexe em nada de ninguém -- só num contador na memória.
+    """
+
+    http_method_names = ["post"]
+
+    def post(self, request):
+        from . import presenca_jogos as presenca
+
+        try:
+            tamanho = int(request.META.get("CONTENT_LENGTH") or 0)
+        except ValueError:
+            tamanho = presenca.CORPO_MAXIMO + 1
+        if tamanho > presenca.CORPO_MAXIMO:
+            return JsonResponse({"erro": "corpo grande demais"}, status=413)
+        if not _mesmo_site(request):
+            return JsonResponse({"erro": "de outro site"}, status=403)
+        if presenca.e_robo(request):
+            return HttpResponse(status=204)
+        try:
+            pedido = json.loads(request.body[:presenca.CORPO_MAXIMO] or b"{}")
+        except ValueError:
+            return JsonResponse({"erro": "corpo inválido"}, status=400)
+        if not isinstance(pedido, dict):
+            return JsonResponse({"erro": "corpo inválido"}, status=400)
+        aparelho, aba = str(pedido.get("aparelho") or ""), str(pedido.get("aba") or "")
+        if not presenca.FORMATO_DO_APARELHO.match(aparelho) or not presenca.FORMATO_DA_ABA.match(aba):
+            return JsonResponse({"erro": "aparelho inválido"}, status=400)
+        jogo = str(pedido.get("jogo") or "")[:80]
+        # só jogo que existe entra na conta (um nome inventado não vira uma linha a mais para todo mundo)
+        if jogo and not (presenca.FORMATO_DO_JOGO.match(jogo) and (jogo in arena.JOGOS_POR_SLUG or jogo in _slugs_dos_jogos())):
+            jogo = ""
+        conta = presenca.bater(aparelho, aba, jogo, saiu=bool(pedido.get("saiu")))
+        if conta is None:
+            resposta = JsonResponse({"erro": "devagar", "intervalo": 60}, status=429)
+        else:
+            resposta = JsonResponse({**conta, "intervalo": presenca.INTERVALO})
+        resposta["Cache-Control"] = "no-store"
+        return resposta
 
 
 class AnuncioJogosView(View):
