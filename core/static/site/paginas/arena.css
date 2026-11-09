@@ -92,6 +92,36 @@
     filter: drop-shadow(0 12px 20px rgba(0, 0, 0, .5));
 }
 
+/* A arte do topo são os próprios objetos 3D (vistas dos .glb, sem fundo):
+   o brinquedão em cima, o Strike Kids e o trampolim na frente, o alvo da
+   marca no canto. */
+.arena-hero-alvo--canto {
+    top: 0;
+    left: auto;
+    right: 0;
+    width: min(30%, 140px);
+    transform: none;
+}
+.arena-hero-obj { filter: drop-shadow(0 22px 26px rgba(0, 0, 0, .5)); }
+.arena-hero-obj--ninja {
+    top: 70px;
+    left: 0;
+    width: 92%;
+    animation: arena-flutua 6.4s ease-in-out infinite;
+}
+.arena-hero-obj--strike {
+    bottom: 0;
+    left: 2%;
+    width: min(34%, 160px);
+    animation: arena-flutua 5s ease-in-out .4s infinite;
+}
+.arena-hero-obj--trampolim {
+    bottom: 6px;
+    right: 0;
+    width: min(56%, 260px);
+    animation: arena-flutua 5.6s ease-in-out .9s infinite;
+}
+
 @keyframes arena-flutua {
     0%, 100% { translate: 0 0; }
     50% { translate: 0 -12px; }

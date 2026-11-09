@@ -73,10 +73,12 @@
             </div>
         </div>
 
-        <div class="arena-hero-mascotes" aria-hidden="true">
-            <img class="arena-hero-alvo" src="{% estatico 'site/arena/capas/alvo.webp' %}" alt="" width="560" height="528" decoding="async">
-            <img class="arena-hero-bob" src="{% estatico 'site/arena/capas/bob.webp' %}" alt="" width="360" height="360" decoding="async">
-            <img class="arena-hero-mia" src="{% estatico 'site/arena/capas/mia.webp' %}" alt="" width="360" height="360" decoding="async">
+        {# a arte é dos próprios objetos 3D da arena (vistas dos .glb, sem fundo) com o alvo da marca #}
+        <div class="arena-hero-mascotes arena-hero-objetos" aria-hidden="true">
+            <img class="arena-hero-alvo arena-hero-alvo--canto" src="{% estatico 'site/arena/capas/alvo.webp' %}" alt="" width="560" height="528" decoding="async">
+            <img class="arena-hero-obj arena-hero-obj--ninja" src="{% estatico 'site/arena/capas/objeto-ninja.webp' %}" alt="" width="760" height="407" decoding="async">
+            <img class="arena-hero-obj arena-hero-obj--strike" src="{% estatico 'site/arena/capas/objeto-strike.webp' %}" alt="" width="420" height="562" decoding="async">
+            <img class="arena-hero-obj arena-hero-obj--trampolim" src="{% estatico 'site/arena/capas/objeto-trampolim.webp' %}" alt="" width="560" height="433" decoding="async">
         </div>
     </div>
 </section>
