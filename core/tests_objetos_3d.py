@@ -360,15 +360,20 @@ class NaArenaTests(TestCase):
         maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
         return next(m for m in maquinas if m["nome"] == "Strike Kids Boliche")
 
+    def fora_da_roda(self, nome):
+        """Sem objeto 3D: fora da roda (e da lista), mas na galeria de fotos."""
+        contexto = self.client.get(reverse("arena")).context
+        self.assertNotIn(nome, [m["nome"] for m in contexto["arena_dados"]["maquinas"]])
+        self.assertEqual(next(b for b in contexto["brinquedos_arena"] if b["nome"] == nome)["modelo"], "")
+
     def test_sem_cadastro_vale_o_objeto_do_site_pelo_nome(self):
         # o Strike Kids do catálogo tem o .glb do site mesmo antes da ligação
         dados = self.maquina()
         self.assertIn("site/arena/modelos/strike-kids.glb", dados["modelo"])
         self.assertEqual((dados["grupo"], dados["jogo"]), ("jogos", "strike-kids"))
-        # e um brinquedo sem objeto nenhum continua com o volume das fotos
+        # e um brinquedo sem objeto nenhum fica fora da roda (só nas fotos)
         Brinquedos.objects.create(nome_brinquedo="Air Game Hockey", descricao="x", avaliacao=5)
-        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
-        self.assertEqual(next(m for m in maquinas if m["nome"] == "Air Game Hockey")["modelo"], "")
+        self.fora_da_roda("Air Game Hockey")
 
     def test_aparece_na_arena_antes_do_catalogo(self):
         self.strike.delete()
@@ -383,7 +388,7 @@ class NaArenaTests(TestCase):
         objeto = ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
         objeto.ativo = False
         objeto.save()
-        self.assertEqual(self.maquina()["modelo"], "")
+        self.fora_da_roda("Strike Kids Boliche")
 
     def test_com_objeto_vai_o_glb_nas_medidas_dele(self):
         ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
@@ -397,7 +402,7 @@ class NaArenaTests(TestCase):
         objeto = ligar_objeto_3d("strike-kids", self.strike, ObjetoTresD)
         objeto.exibir_na_arena = False
         objeto.save()
-        self.assertEqual(self.maquina()["modelo"], "")
+        self.fora_da_roda("Strike Kids Boliche")
 
     def test_codigo_do_espaco_continua_no_reino(self):
         espaco = Brinquedos.objects.create(nome_brinquedo="Espaço Esportivo Modelo 1", descricao="x", avaliacao=5)
@@ -406,6 +411,23 @@ class NaArenaTests(TestCase):
         dados = next(m for m in maquinas if m["nome"] == "Espaço Esportivo Modelo 1")
         self.assertEqual((dados["grupo"], dados["reino"]), ("esportivos", True))
         self.assertEqual({j["slug"] for j in dados["jogos_no_espaco"]}, {"swish-arena", "gol-flash-arena"})
+
+    def test_objeto_do_site_sem_codigo_vale_pelo_arquivo(self):
+        # ligado sem o "Código na Arena", o .glb do Espaço continua sendo o
+        # Espaço: com as crianças (as animações), o passeio e o reino dele --
+        # mesmo num brinquedo de outro nome, e sem repetir o do site
+        gol = Brinquedos.objects.create(nome_brinquedo="Gol Flash Arena", descricao="x", avaliacao=5)
+        ObjetoTresD.objects.create(brinquedo=gol, arquivo_estatico="site/arena/modelos/espaco-esportivo-modelo-1.glb")
+        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        dados = next(m for m in maquinas if m["nome"] == "Gol Flash Arena")
+        self.assertEqual(dados["modelo_id"], "espaco-esportivo-modelo-1")
+        self.assertEqual((dados["grupo"], dados["reino"], dados["medidas_modelo"]), ("esportivos", True, [3.9, 39.0, 23.0]))
+        self.assertEqual(sum(m["modelo_id"] == "espaco-esportivo-modelo-1" for m in maquinas), 1)
+        # um .glb enviado (sem código) segue como objeto do cadastro, sem as animações
+        ObjetoTresD.objects.filter(brinquedo=gol).update(arquivo_estatico="", arquivo="objetos_3d/gol.glb")
+        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        dados = next(m for m in maquinas if m["nome"] == "Gol Flash Arena")
+        self.assertTrue(dados["modelo_id"].startswith("objeto-"))
 
 
 class PaginaDoBrinquedoTests(TestCase):

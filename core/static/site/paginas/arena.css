@@ -395,7 +395,8 @@
     overflow: hidden;
     border: 1px solid var(--arena-borda);
     border-radius: 24px;
-    background: radial-gradient(circle at 50% 30%, #0d1d48, #040a1c 70%);
+    /* o céu de festa da arena (o mesmo do 3D) enquanto a cena chega */
+    background: linear-gradient(180deg, #060a2c 0%, #26176a 42%, #7a2c8c 68%, #3a1d6b 100%);
     touch-action: none;
 }
 
