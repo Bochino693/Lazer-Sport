@@ -2,6 +2,10 @@
 
   * BRINQUEDÃO MODELO 2: o .3ds da fábrica e as imagens do projeto
     (ver `ferramentas/modelos3d/brinquedao-modelo-2/`);
+  * BRINQUEDÃO NINJA: o brinquedão de dois andares com as duas camas
+    elásticas, UM objeto só (o .3ds da fábrica traz os dois juntos); as
+    fotos são a imagem do projeto e a planta (ver
+    `ferramentas/modelos3d/brinquedao-ninja/`);
   * ESPAÇO ESPORTIVO MODELO 1: o trampo.3ds do parque de trampolins, as
     plantas do parque e das quadras e as imagens do espaço completo (ver
     `ferramentas/modelos3d/espaco-esportivo-modelo-1/`). As fotos dele são
@@ -14,8 +18,9 @@
 
 Quem cadastra:
   * as migrações de dados (`0113_brinquedao_modelo_2`,
-    `0114_espaco_esportivo_modelo_1`), no deploy do Render (o migrate roda
-    sozinho no Pre-Deploy Command): o brinquedo já entra no catálogo;
+    `0114_espaco_esportivo_modelo_1`, `0139_brinquedao_ninja`), no deploy
+    do Render (o migrate roda sozinho no Pre-Deploy Command): o brinquedo
+    já entra no catálogo;
   * `python manage.py cadastrar_modelo_3d <id>`, se a migração não
     conseguiu (sem Cloudinary naquela hora, por exemplo).
 
@@ -56,6 +61,28 @@ CADASTROS = {
             ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 2 visto pelo lado da torre das bolas"),
             ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 2 visto pelo lado dos escorregadores"),
             ("planta.webp", None, "Planta do Brinquedão Modelo 2 vista de cima: 11 m por 2 m, altura de 3,5 m"),
+        ),
+        "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
+        "evitar": (),
+    },
+    "brinquedao-ninja": {
+        "nome": "Brinquedão Ninja",
+        "pasta": MODELOS / "brinquedao-ninja",
+        "objeto_3d": "site/arena/modelos/brinquedao-ninja.glb",
+        "descricao": (
+            "Brinquedão Ninja com 14 m de comprimento (10 m de brinquedão e 4 m de camas elásticas), 2 m de "
+            "profundidade e 3,10 m de altura. Entrada pelo canto com degraus acolchoados; no andar de cima, o "
+            "circuito ninja: cilindros pendurados, postes com pegas, rolo vazado, passarela de rede em V e "
+            "painéis temáticos. Embaixo, piscina de cubos de espuma com cordas e tirolesa, módulo com piscina "
+            "de bolinhas e tobogã em espiral, e duas camas elásticas de 2 m × 2 m com rede de proteção. "
+            "Estrutura em tubos com conexões e telas de proteção. Projeto ilustrativo: cores, painéis e itens "
+            "podem ser ajustados conforme o espaço e a disponibilidade de materiais."
+        ),
+        # as da planta (o .3ds chega a 3,3 m no corrimão de cima; o cadastro fica com o da fábrica)
+        "medidas": ("3.10", "14.00", "2.00"),
+        "fotos": (
+            ("frente.webp", "perfil", "Brinquedão Ninja visto de frente: o andar de cima com os obstáculos, a piscina de cubos e o tobogã"),
+            ("planta.webp", None, "Planta do Brinquedão Ninja vista de cima: 10 m + 4 m de camas elásticas, por 2 m, altura de 3,10 m"),
         ),
         "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
         "evitar": (),

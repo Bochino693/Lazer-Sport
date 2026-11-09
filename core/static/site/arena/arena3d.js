@@ -3901,6 +3901,7 @@ const OLHOS = 0.85; // altura dos olhos acima do piso: uma criança
      enterrada   o pulo grande da enterrada, até a cesta
      escorregar  escorregador e tobogã: sentado, acelerando, deitando nas curvas
      cair        o pulo na piscina de espuma ou de bolinhas (afunda)
+     tirolesa    pendurado no pegador da tirolesa, por cima da espuma
    Extras: pausa (segundos parado), olhar (o ponto que se olha na pausa),
    evento (avisa a animação do objeto: "swish:2" = o próximo arremesso vai
    na cesta 2, a da enterrada).
@@ -3937,6 +3938,23 @@ function escorregadorDuplo() {
     const z = 1104 - 844 * t + 110 * Math.sin(t * PI * 3) * (1 - t) - (t > 0.85 ? (t - 0.85) * 600 : 0) - 20;
     pontos.push([...BQ(x, -2620 + 1750 * t, z), "escorregar"]);
   }
+  return pontos;
+}
+
+/* O Brinquedão Ninja: o .3ds dele tem a frente em y baixo (x ao longo, y
+   para o FUNDO, z para cima, em mm); o objeto 3D é o mesmo desenho, virado
+   para a frente em +z e centralizado (ferramentas/modelos3d/brinquedao-ninja/). */
+const NJ = (x, y, z) => [x / 1000 - 7.58, z / 1000, -y / 1000 + 2.8375];
+
+/** O tobogã em espiral do ninja (o TOBOGA do montar.js), com os pés no fundo do tubo. */
+function toboganDoNinja() {
+  const pontos = [[...NJ(9900, 3060, 2295), "escorregar"]];
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24;
+    const a = (-540 * t * PI) / 180;
+    pontos.push([...NJ(9030 + 400 * Math.cos(a), 2290 + 400 * Math.sin(a), 2525 - 1885 * t - 235), "escorregar"]);
+  }
+  pontos.push([...NJ(8700, 2600, 345), "escorregar"], [...NJ(8760, 2850, 295), "escorregar"]);
   return pontos;
 }
 
@@ -4005,6 +4023,104 @@ const CAMINHOS = {
     [...BQ(-8763, -650, 120), "cair"],
     [...BQ(-8763, 250, 0), "andar"],
     [...BQ(-5500, 250, 0), "andar", { pausa: 1.6, olhar: BQ(-5500, -2200, 1700) }],
+  ],
+  // o canto em L e os degraus, o circuito do andar de cima (cilindros,
+  // postes com pegas, o rolo vazado, a rede em V), o tobogã, a piscina de
+  // bolinhas, as duas camas elásticas, a tirolesa e o pulo na espuma; e o
+  // brinquedão inteiro visto da frente
+  "brinquedao-ninja": () => [
+    [...NJ(1750, 1300, 0), "ir"],
+    // entra pelo lado direito do canto e sobe: degrau, triângulo azul, degrau, triângulo amarelo
+    [...NJ(1750, 2700, 0), "andar"],
+    [...NJ(1320, 2700, 0), "andar"],
+    [...NJ(1260, 2700, 650), "subir"],
+    [...NJ(1000, 2250, 1222), "subir"],
+    [...NJ(785, 2300, 1742), "subir"],
+    [...NJ(1020, 2720, 2260), "subir"],
+    // o andar de cima tem o teto baixo: anda-se abaixado
+    [...NJ(980, 3460, 2260), "agachado"],
+    [...NJ(1400, 3480, 2260), "agachado", { pausa: 1, olhar: NJ(1690, 3480, 2800) }],
+    // entre os cilindros pendurados (empurrando)
+    [...NJ(1700, 3485, 2260), "agachado"],
+    [...NJ(2200, 3560, 2260), "agachado"],
+    [...NJ(2900, 3462, 2260), "agachado"],
+    // os postes com as pegas
+    [...NJ(3350, 3462, 2260), "agachado", { pausa: 0.9, olhar: NJ(3580, 3000, 2750) }],
+    [...NJ(4400, 3462, 2260), "agachado"],
+    // por dentro do rolo vazado
+    [...NJ(4600, 3462, 2300), "tubo"],
+    [...NJ(5440, 3462, 2300), "tubo"],
+    [...NJ(5700, 3462, 2260), "agachado"],
+    [...NJ(6250, 3462, 2290), "agachado"],
+    // a passarela de rede em V, pela faixa verde do meio
+    [...NJ(6500, 3462, 2290), "rede"],
+    [...NJ(8200, 3462, 2290), "rede"],
+    // o módulo vermelho, por trás do cilindro, até a boca do tobogã
+    [...NJ(8550, 3400, 2260), "agachado"],
+    [...NJ(8800, 3250, 2260), "agachado"],
+    [...NJ(9600, 3250, 2260), "agachado"],
+    [...NJ(9950, 3300, 2260), "agachado", { pausa: 0.8, olhar: NJ(9700, 2600, 2000) }],
+    ...toboganDoNinja(),
+    [...NJ(8950, 3150, 300), "cair", { pausa: 1.2, olhar: NJ(9300, 2300, 1400) }],
+    // pela piscina de bolinhas até a saída da frente (por baixo do corrimão) e os degraus
+    [...NJ(9650, 3250, 300), "andar"],
+    [...NJ(9900, 2750, 300), "andar"],
+    [...NJ(10200, 2250, 320), "andar"],
+    [...NJ(10200, 2000, 340), "tubo"],
+    [...NJ(10180, 1870, 300), "subir"],
+    [...NJ(10180, 1700, 150), "subir"],
+    [...NJ(10180, 1400, 0), "andar"],
+    // a primeira cama elástica: degraus, a entrada sob o corrimão e os pulos
+    [...NJ(12240, 1350, 0), "andar"],
+    [...NJ(12240, 1700, 150), "subir"],
+    [...NJ(12240, 1880, 300), "subir"],
+    [...NJ(12240, 2080, 330), "tubo"],
+    [...NJ(11700, 2600, 330), "pular"],
+    [...NJ(11000, 3300, 330), "pular"],
+    [...NJ(11480, 2970, 330), "pular", { pausa: 1.6 }],
+    [...NJ(10900, 2500, 330), "pular"],
+    [...NJ(11900, 3400, 330), "pular"],
+    [...NJ(12240, 2200, 330), "pular"],
+    [...NJ(12240, 2000, 330), "tubo"],
+    [...NJ(12240, 1800, 300), "subir"],
+    [...NJ(12240, 1650, 150), "subir"],
+    [...NJ(12400, 1350, 0), "andar"],
+    // a segunda cama
+    [...NJ(14400, 1350, 0), "andar"],
+    [...NJ(14400, 1700, 150), "subir"],
+    [...NJ(14400, 1880, 300), "subir"],
+    [...NJ(14400, 2080, 330), "tubo"],
+    [...NJ(13800, 2700, 330), "pular"],
+    [...NJ(13100, 3350, 330), "pular"],
+    [...NJ(13600, 2970, 330), "pular", { pausa: 1.6 }],
+    [...NJ(13000, 2450, 330), "pular"],
+    [...NJ(14000, 3300, 330), "pular"],
+    [...NJ(14400, 2200, 330), "pular"],
+    [...NJ(14400, 2000, 330), "tubo"],
+    [...NJ(14400, 1800, 300), "subir"],
+    [...NJ(14400, 1650, 150), "subir"],
+    [...NJ(14300, 1300, 0), "andar"],
+    // de volta pela frente até a saída da piscina de cubos: sobe no bloco rosa
+    [...NJ(7860, 1300, 0), "andar"],
+    [...NJ(7860, 2550, 0), "andar"],
+    [...NJ(7860, 2700, 150), "subir"],
+    [...NJ(7860, 2870, 300), "subir"],
+    [...NJ(7700, 3300, 450), "subir"],
+    [...NJ(7480, 3600, 450), "andar", { pausa: 1, olhar: NJ(6700, 3462, 1500) }],
+    // a tirolesa por cima da espuma (por trás do poste da estrela) e o pulo nos cubos
+    [...NJ(6950, 3700, 560), "tirolesa"],
+    [...NJ(6600, 3462, 560), "tirolesa"],
+    [...NJ(3500, 3462, 560), "tirolesa"],
+    // (olha as cordas, e não ao longo da viga: de baixo ela fica escura)
+    [...NJ(3250, 3462, 280), "cair", { pausa: 1.4, olhar: NJ(2240, 3100, 1300) }],
+    // pela espuma de volta ao bloco, desce os degraus e olha o brinquedão inteiro
+    [...NJ(5200, 3500, 300), "andar"],
+    [...NJ(7100, 3700, 300), "andar"],
+    [...NJ(7700, 3500, 450), "subir"],
+    [...NJ(7860, 2870, 300), "subir"],
+    [...NJ(7860, 2700, 150), "subir"],
+    [...NJ(7600, 1200, 0), "andar"],
+    [...NJ(7200, -2400, 0), "andar", { pausa: 1.8, olhar: NJ(7200, 3000, 1500) }],
   ],
   // da entrada: o Gol Flash (telão e os dois círculos), as quadras, a
   // piscina de espuma grande, as camas (por cima do varredor), a enterrada
@@ -4116,6 +4232,7 @@ const MODOS_DO_PASSEIO = {
   viga: { v: 0.75, olhos: OLHOS, nome: "Na beirada" },
   pular: { v: 1.5, olhos: OLHOS, quique: 0.8, nome: "Pulando" },
   enterrada: { v: 1.2, olhos: OLHOS, quique: 1.2, nome: "Enterrada!" },
+  tirolesa: { v: 2.2, olhos: 0.75, nome: "Na tirolesa!" },
   escorregar: { v: 4.6, olhos: 0.45, nome: "Escorregando!" },
   cair: { v: 2.4, olhos: 0.45, olhar: -0.3, nome: "Tchibum!" },
 };
@@ -4361,7 +4478,7 @@ class Passeio {
     let sobe = Math.abs(Math.sin(this.fase * 4.4)) * this.quique;
     let rolar = this.rolar;
     if (andando && (modo === "andar" || modo === "subir")) sobe += Math.abs(Math.sin(this.fase * 5.6)) * 0.03;
-    if (!this.fim && (modo === "rede" || modo === "viga")) {
+    if (!this.fim && (modo === "rede" || modo === "viga" || modo === "tirolesa")) {
       sobe += Math.sin(this.fase * 3.6) * 0.04;
       rolar += Math.sin(this.fase * 2.1) * (modo === "rede" ? 0.08 : 0.05);
     }
