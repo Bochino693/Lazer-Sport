@@ -37,6 +37,9 @@ from . import arena
 #: Cada área: o nome, o ícone (Font Awesome do site), o tamanho do miolo em
 #: metros (largura × profundidade: mínimo, ideal e máximo), a faixa livre em
 #: volta (de queda, de segurança), o pé-direito que pede e onde prefere ficar.
+#: `max_principal`: até onde ela cresce quando é o modelo do espaço (o
+#: principal) -- uma área baby que é o espaço inteiro vira um parque baby,
+#: não um cercadinho de 8 × 6 m no canto de um salão de 300 m².
 #: `projetista` é o tipo do gerador (sistema_interno/static/interno/montar3d-gerador.js).
 AREAS = {
     "esportivo": {
@@ -51,7 +54,7 @@ AREAS = {
         "nome": "Brinquedão",
         "sub": "Playground indoor em torres: pisos, redes, tobogã, piscina de bolinhas, rolos e túneis.",
         "icone": "fa-cubes-stacked",
-        "min": (4.0, 2.5), "ideal": (6.5, 3.25), "max": (12.0, 6.0),
+        "min": (4.0, 2.5), "ideal": (6.5, 3.25), "max": (12.0, 6.0), "max_principal": (16.0, 8.0),
         "seguranca": 1.0, "pe_direito_minimo": 2.6,
         "prefere": "canto",
     },
@@ -59,7 +62,7 @@ AREAS = {
         "nome": "Área baby",
         "sub": "De 0 a 3 anos, tudo baixo: piso de EVA, cerca, piscina rasa, rampa e escorregador pequeno.",
         "icone": "fa-baby",
-        "min": (3.0, 3.0), "ideal": (5.0, 4.0), "max": (8.0, 6.0),
+        "min": (3.0, 3.0), "ideal": (5.0, 4.0), "max": (8.0, 6.0), "max_principal": (14.0, 10.0),
         "seguranca": 0.4, "pe_direito_minimo": 2.2,
         # perto da entrada: os pais ficam de olho e os pequenos não cruzam o espaço
         "prefere": "perto_da_entrada",
@@ -74,9 +77,9 @@ AREAS = {
     },
     "ninja": {
         "nome": "Área ninja",
-        "sub": "Circuito de obstáculos sobre colchões: degraus, trave, argolas, barra de macaco, corda e parede curva.",
+        "sub": "Circuito de obstáculos em raias sobre piso macio: degraus, trave, rolos, argolas, barra de macaco, corda, parede de escalada e parede curva.",
         "icone": "fa-person-running",
-        "min": (7.0, 2.5), "ideal": (16.0, 5.0), "max": (24.0, 8.0),
+        "min": (7.0, 2.5), "ideal": (16.0, 5.0), "max": (24.0, 8.0), "max_principal": (30.0, 12.0),
         "seguranca": 0.8, "pe_direito_minimo": 3.0,
         "prefere": "canto",
     },
@@ -85,30 +88,43 @@ AREAS = {
 #: Os PORTES das áreas que mudam com o tamanho (os mesmos números do gerador,
 #: sistema_interno/static/interno/montar3d-gerador.js, PORTES): o mínimo e o
 #: ideal do miolo e o que entra. A página mostra só os que cabem no espaço.
+#: Um porte cabe numa área quando o retângulo mínimo dele entra nela OU
+#: quando ela tem a `area` (m²) e o lado menor (`lado`) que ele pede: um
+#: trampolim park de 13,5 × 5,5 m (74 m²) é médio, mesmo sem os 7 m de fundo
+#: do retângulo mínimo -- o que entra dentro, quem decide é a geometria (o
+#: gerador põe cada coisa só onde ela cabe de verdade).
 PORTES = {
     "trampolim": (
-        {"chave": "compacto", "nome": "Compacto", "min": (5.5, 5.5), "ideal": (8.0, 6.5),
-         "componentes": ("camas", "espuma")},
-        {"chave": "medio", "nome": "Médio", "min": (9.0, 7.0), "ideal": (13.0, 9.0),
-         "componentes": ("camas", "espuma", "enterrada")},
-        {"chave": "grande", "nome": "Grande", "min": (14.0, 10.0), "ideal": (20.0, 13.0),
+        {"chave": "compacto", "nome": "Compacto", "min": (5.5, 5.5), "ideal": (7.5, 6.0), "area": 30, "lado": 5.5,
+         "componentes": ("camas", "espuma", "parede_inclinada")},
+        {"chave": "medio", "nome": "Médio", "min": (9.0, 7.0), "ideal": (13.0, 9.0), "area": 50, "lado": 5.0,
+         "componentes": ("camas", "espuma", "enterrada", "parede_inclinada", "queimada")},
+        {"chave": "grande", "nome": "Grande", "min": (14.0, 10.0), "ideal": (20.0, 13.0), "area": 120, "lado": 8.0,
          "componentes": ("camas", "espuma", "enterrada", "parede_inclinada", "escalada", "queimada")},
     ),
     "esportivo": (
-        {"chave": "compacto", "nome": "Compacto", "min": (7.0, 5.0), "ideal": (14.0, 8.0),
+        {"chave": "compacto", "nome": "Compacto", "min": (7.0, 5.0), "ideal": (14.0, 8.0), "area": 35, "lado": 5.0,
          "componentes": ("quadra", "escalada")},
-        {"chave": "medio", "nome": "Médio", "min": (16.0, 10.0), "ideal": (22.0, 13.0),
+        {"chave": "medio", "nome": "Médio", "min": (16.0, 10.0), "ideal": (22.0, 13.0), "area": 140, "lado": 9.0,
          "componentes": ("quadra", "trampolim_park", "escalada")},
-        {"chave": "grande", "nome": "Grande", "min": (26.0, 16.0), "ideal": (36.0, 22.0),
+        {"chave": "grande", "nome": "Grande", "min": (26.0, 16.0), "ideal": (36.0, 22.0), "area": 380, "lado": 14.0,
          "componentes": ("quadra_futebol", "quadra_basquete", "trampolim_park", "escalada", "circuito_kids")},
     ),
     "baby": (
-        {"chave": "compacto", "nome": "Compacta", "min": (3.0, 3.0), "ideal": (4.0, 3.5),
+        {"chave": "compacto", "nome": "Compacta", "min": (3.0, 3.0), "ideal": (4.0, 3.5), "area": 9, "lado": 3.0,
          "componentes": ("piscina", "escorregador", "blocos")},
-        {"chave": "medio", "nome": "Média", "min": (5.0, 4.0), "ideal": (6.0, 4.5),
+        {"chave": "medio", "nome": "Média", "min": (5.0, 4.0), "ideal": (6.0, 4.5), "area": 18, "lado": 3.6,
          "componentes": ("piscina", "escorregador", "blocos", "tunel", "paineis", "casinha")},
-        {"chave": "grande", "nome": "Grande", "min": (7.0, 5.0), "ideal": (8.0, 6.0),
-         "componentes": ("piscina", "escorregador", "blocos", "tunel", "paineis", "casinha", "pendulos", "rampa")},
+        {"chave": "grande", "nome": "Grande", "min": (7.0, 5.0), "ideal": (8.0, 6.0), "area": 32, "lado": 4.4,
+         "componentes": ("piscina", "escorregador", "blocos", "tunel", "paineis", "casinha", "pendulos", "rampa", "torrinha")},
+    ),
+    "ninja": (
+        {"chave": "compacto", "nome": "Compacta", "min": (7.0, 2.5), "ideal": (9.0, 3.0), "area": 17, "lado": 2.5,
+         "componentes": ("degraus", "trave", "rolos", "argolas")},
+        {"chave": "medio", "nome": "Média", "min": (12.0, 4.5), "ideal": (16.0, 5.5), "area": 50, "lado": 4.2,
+         "componentes": ("degraus", "trave", "rolos", "argolas", "macaco", "corda", "parede_curva")},
+        {"chave": "grande", "nome": "Grande", "min": (18.0, 7.0), "ideal": (24.0, 9.0), "area": 120, "lado": 6.5,
+         "componentes": ("degraus", "trave", "rolos", "argolas", "macaco", "corda", "parede_curva", "escalada")},
     ),
 }
 
@@ -120,10 +136,12 @@ COMPONENTES = {
     "trampolim_park": "Trampolim park", "circuito_kids": "Circuito kids",
     "piscina": "Piscina rasa", "escorregador": "Plataforma com escorregador", "blocos": "Blocos de espuma",
     "tunel": "Túnel", "paineis": "Painéis ábaco", "casinha": "Casinha", "pendulos": "Bolas penduradas",
-    "rampa": "Rampa e degraus",
+    "rampa": "Rampa e degraus", "torrinha": "Torrinha com escorregador",
+    "degraus": "Degraus ninja", "trave": "Trave de equilíbrio", "rolos": "Rolos", "argolas": "Argolas",
+    "macaco": "Barra de macaco", "corda": "Corda de subir", "parede_curva": "Parede curva",
 }
 #: O que não sai (sem isto a área não é ela).
-COMPONENTES_FIXOS = {"camas", "quadra", "piscina"}
+COMPONENTES_FIXOS = {"camas", "quadra", "piscina", "degraus"}
 
 #: O principal pode ser "só máquinas" (um espaço de fliperamas, sem área no meio).
 SO_MAQUINAS = "maquinas"
@@ -246,6 +264,7 @@ def catalogo():
         "areas": {
             chave: {
                 **a, "min": list(a["min"]), "ideal": list(a["ideal"]), "max": list(a["max"]),
+                "max_principal": list(a.get("max_principal") or a["max"]),
                 "portes": [
                     {**p, "min": list(p["min"]), "ideal": list(p["ideal"]), "componentes": list(p["componentes"])}
                     for p in PORTES.get(chave, ())

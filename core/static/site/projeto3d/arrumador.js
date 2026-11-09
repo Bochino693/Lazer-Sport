@@ -180,7 +180,10 @@ function pecasDaEscolha(escolha, catalogo) {
     const i = portes.findIndex((p) => p.chave === ((escolha.opcoes || {})[chave] || {}).porte);
     const porte = i >= 0 ? portes[i] : null;
     const min = porte ? porte.min : a.min, ideal = porte ? porte.ideal : a.ideal;
-    const max = porte && portes[i + 1] ? portes[i + 1].min : a.max;
+    // o modelo do espaço (o principal) cresce até o máximo de principal: a área baby que é o
+    // espaço inteiro vira um parque baby; as outras áreas ficam no máximo de área de apoio
+    const teto = principal ? (a.max_principal || a.max) : a.max;
+    const max = porte && portes[i + 1] ? portes[i + 1].min : teto;
     return {
       chave: (principal ? "principal-" : "area-") + chave, ref: chave, nome: a.nome, tipo: "area", area: chave, principal,
       w: min[0], d: min[1], h: a.pe_direito_minimo || 0, flex: true, min, ideal, max,

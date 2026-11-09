@@ -1412,3 +1412,51 @@ Dependência nova: rjsmin (requirements.txt).
    fotos) e core/tests_js/foto3d.mjs (fotos de mentira tiradas de câmeras
    conhecidas: a conta acha a mesma câmera, e o three.js põe os cantos nos
    mesmos pixels).
+
+50) ARENA 3D: SETAS SEM IR E VOLTAR E O "IR PARA"; MONTE SEU ESPAÇO MAIS FORTE
+   SETAS. Antes elas escolhiam o vizinho pela direção da câmera naquele
+   instante: clicando com a câmera ainda voando, a escolha virava e a seta
+   ficava indo e voltando entre dois brinquedos. Agora há uma FILA FIXA que
+   dá a volta na arena (a roda pelo ângulo, da direita para a esquerda de
+   quem olha do meio; os espaços grandes no ponto em que a roda passa por
+   trás deles): a seta da direita anda para a frente na fila, a da esquerda
+   para trás. "IR PARA" (botão na barra): a lista de tudo o que está na
+   arena, por área ("ver a área" leva até ela), com foto, medidas e busca
+   (Enter vai para o primeiro). Um toque leva a câmera até o brinquedo.
+   Código: core/static/site/arena/arena3d.js (filaDasSetas, vizinha,
+   ligarIrPara, desenharIrPara), arena.html, paginas/arena.css.
+
+   MONTE SEU ESPAÇO -- a geração em todos os modelos:
+     * O PORTE vai pela área de verdade: cabe quando o retângulo mínimo entra
+       OU quando a área tem os m² e o lado menor que ele pede (`area`,
+       `lado` em PORTES, core/projeto3d.py e montar3d-gerador.js, iguais).
+       Um trampolim park de 13,5 × 5,5 m (num salão de 15 × 9) é médio: pista
+       de enterrada, trampolim de parede, piscina de espuma e camas -- antes
+       saía compacto (só camas e espuma). O que entra dentro, quem decide é a
+       geometria (cada coisa só onde cabe e com o pé-direito que pede).
+     * O MODELO DO ESPAÇO cresce mais (`max_principal`): a área baby que é o
+       espaço inteiro vira um parque baby (até 14 × 10 m), a ninja até
+       30 × 12 m, o brinquedão até 16 × 8 m.
+     * ÁREA NINJA refeita, com portes (compacta, média, grande): raias em
+       zigue-zague que enchem a área (até 5), obstáculos em fila sobre piso
+       macio (degraus, trave, rolos, argolas, barra de macaco, corda, túnel),
+       colchão sob os suspensos, largada na frente e a parede curva na
+       chegada; na grande, a parede de escalada no fundo.
+     * ÁREA BABY refeita: ESTAÇÕES em fileiras com passagem (piscina com
+       plataforma e escorregador, torrinha, casinha, blocos, rampa, túnel,
+       bolas penduradas, piscina redonda), a frente livre, painéis ábaco na
+       cerca; a área grande repete estações (no máximo duas de cada).
+     * "O QUE TEM DENTRO": no resultado, cada área mostra o que o gerador pôs
+       nela, com as medidas (camas, raias, piscina, tela...).
+     * IDEIAS PARA O SEU ESPAÇO (passo 1): assim que o cliente digita o
+       tamanho, o programa monta várias combinações (cada modelo sozinho, com
+       a área baby, com máquinas nas paredes, com brinquedão...), arruma cada
+       uma de verdade e dá nota (espaço bem usado, perto de 70%; variedade;
+       o porte e o tamanho do modelo principal; o que aproveita o pé-direito;
+       nada de fora). As 3 melhores, de modelos diferentes, aparecem em
+       cartões com a planta em miniatura; um toque aplica e o cliente segue
+       ajustando. Código: core/static/site/projeto3d/sugestoes.js.
+   Testes: core/tests_js/arrumador.mjs (portes pela área, ninja, baby) e
+   core/tests_js/sugestoes.mjs (as ideias cabem inteiras, uma por modelo,
+   na ordem da nota, e em salão alto a primeira é uma atração de verdade),
+   rodados por core/tests_projeto3d.py.

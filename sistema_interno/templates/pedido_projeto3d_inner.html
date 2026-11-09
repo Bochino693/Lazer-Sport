@@ -87,7 +87,8 @@
          data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
          data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
          data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
-         data-foto="{% estatico 'site/projeto3d/foto3d.js' %}">
+         data-foto="{% estatico 'site/projeto3d/foto3d.js' %}"
+         data-sugestoes="{% estatico 'site/projeto3d/sugestoes.js' %}">
   {{ projeto_dados|json_script:"p3dDados" }}
   {{ projeto_estado|json_script:"p3dEstado" }}
   {% if projeto_fotos %}{{ projeto_fotos|json_script:"p3dFotosDados" }}{% endif %}

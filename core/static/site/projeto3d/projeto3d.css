@@ -505,6 +505,45 @@
 .p3d-ok p { margin: 0; color: var(--p3d-suave); }
 .p3d-botao--zap-largo { width: 100%; min-height: 48px; }
 
+/* ---------------------------------------------------------------- as ideias para o espaço (sugestoes.js) */
+.p3d-propostas { margin-top: 14px; }
+.p3d-propostas .p3d-rotulo i { color: var(--p3d-amarelo); }
+.p3d-propostas .p3d-rotulo span { font-weight: 700; letter-spacing: 0; text-transform: none; }
+.p3d-propostas-lista { display: grid; gap: 8px; }
+.p3d-proposta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--p3d-borda-forte);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, .14);
+  color: var(--p3d-texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.p3d-proposta:hover { border-color: var(--p3d-ciano); }
+.p3d-proposta:focus-visible { outline: 3px solid var(--p3d-amarelo); outline-offset: 2px; }
+.p3d-proposta[aria-pressed="true"] { border-color: var(--p3d-amarelo); box-shadow: inset 0 0 0 1px var(--p3d-amarelo); background: rgba(255, 210, 63, .07); }
+.p3d-proposta-planta { display: block; border-radius: 8px; background: #0b1636; }
+.p3d-proposta-texto { display: grid; gap: 3px; min-width: 0; }
+.p3d-proposta-texto b { font-size: 13.5px; font-weight: 800; line-height: 1.3; }
+.p3d-proposta-texto small { font-size: 11.5px; line-height: 1.35; color: var(--p3d-suave); }
+.p3d-proposta-selo { display: inline-block; margin-right: 2px; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-style: normal; font-weight: 900; color: #0b1220; background: var(--p3d-amarelo); vertical-align: 1px; }
+.p3d-proposta-usar { margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--p3d-ciano); }
+.p3d-proposta[aria-pressed="true"] .p3d-proposta-usar { color: var(--p3d-amarelo); }
+.p3d-proposta[aria-pressed="true"] .p3d-proposta-usar::before { content: "Escolhida · "; }
+
+/* "O que tem dentro" de cada área, no resultado */
+.p3d-detalhe { margin: 8px 0 0; padding: 8px 12px; border: 1px solid var(--p3d-borda); border-radius: 12px; background: rgba(0, 0, 0, .12); }
+.p3d-detalhe summary { cursor: pointer; font-size: 13px; font-weight: 800; color: var(--p3d-texto); }
+.p3d-detalhe summary i { margin-right: 4px; color: var(--p3d-ciano); }
+.p3d-detalhe ul { margin: 6px 0 2px; padding-left: 18px; }
+.p3d-detalhe li { margin: 3px 0; font-size: 12.5px; line-height: 1.45; color: var(--p3d-suave); }
+
 /* ---------------------------------------------------------------- veja no seu espaço (as fotos do lugar) */
 .p3d-botao--foto { margin-top: 10px; cursor: pointer; }
 .p3d-botao--esperando { opacity: .6; pointer-events: none; }

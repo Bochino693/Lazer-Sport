@@ -128,6 +128,17 @@ class ValidarPedidoTests(TestCase):
             "baby": {"porte": "auto", "sem": []},
         })
 
+    def test_a_area_ninja_tem_portes_e_o_principal_cresce_mais(self):
+        catalogo = projeto3d.catalogo()
+        self.assertEqual([p["chave"] for p in catalogo["areas"]["ninja"]["portes"]], ["compacto", "medio", "grande"])
+        # o modelo do espaço cresce além do máximo de área de apoio (o parque baby, a ninja grande)
+        for chave in ("baby", "ninja", "brinquedao"):
+            a = catalogo["areas"][chave]
+            self.assertGreater(a["max_principal"][0] * a["max_principal"][1], a["max"][0] * a["max"][1], chave)
+        escolha = _escolha(opcoes={"ninja": {"porte": "grande", "sem": ["corda", "degraus"]}})
+        campos = projeto3d.validar_pedido(_pedido(escolha=escolha), self.catalogo)
+        self.assertEqual(campos["escolhas"]["opcoes"]["ninja"], {"porte": "grande", "sem": ["corda"]})  # os degraus não saem
+
     def test_o_principal_pode_ser_um_modelo_pronto(self):
         campos = projeto3d.validar_pedido(_pedido(escolha=_escolha(principal={"tipo": "item", "id": "modelo-brinquedao-ninja"})), self.catalogo)
         self.assertEqual(campos["principal"], "Brinquedão Ninja")
@@ -421,4 +432,8 @@ class ArrumadorTests(TestCase):
             arquivo.write_text(json.dumps(projeto3d.catalogo()))
             resultado = subprocess.run([node, str(RAIZ / "tests_js" / "arrumador.mjs"), str(arquivo)],
                                        capture_output=True, text=True, timeout=120)
-        self.assertEqual(resultado.returncode, 0, resultado.stdout + resultado.stderr)
+            self.assertEqual(resultado.returncode, 0, resultado.stdout + resultado.stderr)
+            # as ideias para o espaço (sugestoes.js), com o mesmo catálogo
+            ideias = subprocess.run([node, str(RAIZ / "tests_js" / "sugestoes.mjs"), str(arquivo)],
+                                    capture_output=True, text=True, timeout=180)
+        self.assertEqual(ideias.returncode, 0, ideias.stdout + ideias.stderr)

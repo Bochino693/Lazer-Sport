@@ -299,6 +299,7 @@
          data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
          data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
          data-foto="{% estatico 'site/projeto3d/foto3d.js' %}"
+         data-sugestoes="{% estatico 'site/projeto3d/sugestoes.js' %}"
          data-url-pedido="{% url 'monte_seu_projeto_pedir' %}">
       {{ projeto_dados|json_script:"p3dDados" }}
       {# com JavaScript, o app; sem, a lista do fim (projeto3d.css: .p3d--js) #}

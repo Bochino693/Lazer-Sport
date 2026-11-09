@@ -114,7 +114,29 @@ const grande = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altur
 const tipos = new Set(grande.pecas.map((p) => p.tipo));
 for (const t of ["cama", "espuma", "tabela", "cama_inclinada", "escalada", "cerca", "degraus_espuma"]) confere(tipos.has(t), `o trampolim park grande sem ${t}`);
 const compacto = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 5 }, "#2563eb", 1, {});
-confere(!compacto.pecas.some((p) => p.tipo === "cama_inclinada" || p.tipo === "tabela"), "o trampolim park compacto não leva enterrada nem trampolim de parede");
+confere(!compacto.pecas.some((p) => p.tipo === "tabela"), "o trampolim park compacto não leva a pista de enterrada");
+const compactoBaixo = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 4 }, "#2563eb", 1, {});
+confere(!compactoBaixo.pecas.some((p) => p.tipo === "cama_inclinada"), "o trampolim de parede pede pé-direito de 4,50 m");
+// o porte vai pela área de verdade: 13,5 × 5,5 m (74 m²) é médio, com a pista de enterrada e o trampolim de parede
+confere(gerador.porteQueCabe("trampolim", 13.5, 5.5).chave === "medio", "13,5 × 5,5 m de trampolim park não deu o porte médio");
+const faixa = gerador.gerar("trampolim", { largura: 13.5, profundidade: 5.5, altura: 6 }, "#2563eb", 1, {});
+for (const t of ["tabela", "cama_inclinada", "espuma"]) confere(faixa.pecas.some((p) => p.tipo === t), `o trampolim park de 13,5 × 5,5 × 6 m sem ${t}`);
+// a área ninja enche a área: raias em zigue-zague, mais obstáculos quanto maior, a escalada e a parede curva na grande
+const obstaculos = (ideia) => ideia.pecas.filter((p) => ["degraus", "trave", "rolos", "argolas", "macaco", "corda", "tunel"].includes(p.tipo)).length;
+const ninjaMedia = gerador.gerar("ninja", { largura: 13, profundidade: 5, altura: 5 }, "#2563eb", 1, {});
+const ninjaGrande = gerador.gerar("ninja", { largura: 24, profundidade: 11, altura: 5 }, "#2563eb", 1, {});
+confere(ninjaMedia.porte === "medio" && obstaculos(ninjaMedia) >= 5, `a área ninja média de 13 × 5 m com ${obstaculos(ninjaMedia)} obstáculos`);
+confere(ninjaGrande.porte === "grande" && obstaculos(ninjaGrande) >= 14, `a área ninja grande de 24 × 11 m com ${obstaculos(ninjaGrande)} obstáculos`);
+for (const t of ["escalada", "parede_curva", "piso_eva", "degraus_espuma"]) confere(ninjaGrande.pecas.some((p) => p.tipo === t), `a área ninja grande sem ${t}`);
+// a área baby que é o espaço inteiro vira um parque baby (estações repetidas, com variedade)
+const babyGrande = gerador.gerar("baby", { largura: 14, profundidade: 10, altura: 3 }, "#2563eb", 1, {});
+for (const t of ["piscina", "piscina_redonda", "casinha", "tunel", "blocos_espuma", "pendulos", "rampa", "escorregador", "arco"]) {
+  confere(babyGrande.pecas.some((p) => p.tipo === t), `o parque baby de 14 × 10 m sem ${t}`);
+}
+const babyPequena = gerador.gerar("baby", { largura: 3.5, profundidade: 3.2, altura: 3 }, "#2563eb", 1, {});
+const dentro = (ideia, W, D) => ideia.pecas.every((p) => Math.abs(p.p[0]) <= W / 2 + 0.05 && Math.abs(p.p[2]) <= D / 2 + 0.05);
+confere(dentro(babyPequena, 3.5, 3.2) && dentro(babyGrande, 14, 10), "uma peça da área baby saiu da área");
+confere(dentro(ninjaGrande, 24, 11) && dentro(ninjaMedia, 13, 5), "uma peça da área ninja saiu da área");
 const semEnterrada = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["enterrada"] });
 confere(!semEnterrada.pecas.some((p) => p.tipo === "tabela"), "tirar a pista de enterrada não tirou as tabelas");
 const esportivoGrande = gerador.gerar("esportivo", { largura: 36, profundidade: 22, altura: 6 }, "#2563eb", 1, {});

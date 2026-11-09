@@ -42,7 +42,10 @@ function decodificar(texto) {
 export async function iniciar(raiz) {
   const dados = JSON.parse($("#p3dDados").textContent || "{}");
   const modo = raiz.dataset.modo || "cliente";
-  const [arrumadorMod, geradorMod] = await Promise.all([import(raiz.dataset.arrumador), import(raiz.dataset.gerador)]);
+  const [arrumadorMod, geradorMod, sugestoesMod] = await Promise.all([
+    import(raiz.dataset.arrumador), import(raiz.dataset.gerador),
+    raiz.dataset.sugestoes ? import(raiz.dataset.sugestoes).catch(() => null) : null,
+  ]);
   const { arrumar, espacoParaTudo } = arrumadorMod;
   const itensPorId = new Map(dados.itens.map((i) => [i.id, i]));
 
@@ -171,18 +174,25 @@ export async function iniciar(raiz) {
   const nomePorte = (area, chave) => ((dados.areas[area].portes || []).find((p) => p.chave === chave) || {}).nome || "";
   const opcaoDe = (area) => estado.opcoes[area] || { porte: "auto", sem: [] };
   /** Cabe no espaço (com a entrada e a passagem)? De qualquer lado. */
-  function cabeNoEspaco(min) {
+  function cabeNoEspaco(p) {
+    // o maior pedaço que a área pode ter (tirando a entrada e a passagem), com a mesma regra do gerador
     const W = Number(estado.espaco.largura) - 0.6, D = Number(estado.espaco.comprimento) - 3.4;
-    const [a, b] = min;
-    return (a <= W && b <= D) || (b <= W && a <= D);
+    return geradorMod.porteCabe ? geradorMod.porteCabe(p, W, D) : ((p.min[0] <= W && p.min[1] <= D) || (p.min[1] <= W && p.min[0] <= D));
   }
   function porteEfetivo(area) {
     const portes = dados.areas[area].portes || [];
     const op = opcaoDe(area);
     const escolhido = portes.find((p) => p.chave === op.porte);
     if (escolhido) return escolhido;
+    // o automático: o porte que a área arrumada tem de verdade (a do resultado), senão o que o espaço dá
+    const arrumada = resultado && resultado.itens.find((i) => i.area && i.area.tipo === area);
+    if (arrumada) {
+      const doGerador = geradorMod.porteQueCabe(area, arrumada.area.largura, arrumada.area.profundidade);
+      const igual = doGerador && portes.find((p) => p.chave === doGerador.chave);
+      if (igual) return igual;
+    }
     let melhor = portes[0];
-    for (const p of portes) if (cabeNoEspaco(p.min)) melhor = p;
+    for (const p of portes) if (cabeNoEspaco(p)) melhor = p;
     return melhor;
   }
   function blocoDeOpcoes(area) {
@@ -193,7 +203,7 @@ export async function iniciar(raiz) {
     const efetivo = porteEfetivo(area);
     const chips = [`<button type="button" class="p3d-chip" data-op-area="${area}" data-porte="auto" aria-pressed="${op.porte === "auto"}">Automático${op.porte === "auto" ? ` <small>(${escapar(efetivo.nome.toLowerCase())})</small>` : ""}</button>`]
       .concat(portes.map((p) => {
-        const cabe = cabeNoEspaco(p.min);
+        const cabe = cabeNoEspaco(p);
         return `<button type="button" class="p3d-chip p3d-chip--porte" data-op-area="${area}" data-porte="${p.chave}" aria-pressed="${op.porte === p.chave}"${cabe ? "" : " disabled"} title="${cabe ? "" : "Não cabe no seu espaço"}">${escapar(p.nome)} <small>${metros(p.min[0])} × ${metros(p.min[1])} m</small></button>`;
       }));
     const comps = efetivo.componentes.filter((c) => !dados.fixos.includes(c)).map((c) => `
@@ -339,6 +349,26 @@ export async function iniciar(raiz) {
     const nome = nomePorte(i.area.tipo, porte);
     return nome ? `${i.nome} (${nome.toLowerCase()})` : i.nome;
   }
+  /** "O que tem dentro" de cada área sob medida: o que o gerador pôs nela, com as medidas. */
+  function detalhesDasAreas(r) {
+    const areas = r.itens.filter((i) => i.area);
+    if (!areas.length) return "";
+    return areas.map((i) => {
+      const op = (estado.opcoes || {})[i.area.tipo] || {};
+      let ideia;
+      try {
+        ideia = geradorMod.gerar(i.area.tipo, { largura: i.area.largura, profundidade: i.area.profundidade, altura: r.sala.pe_direito }, estado.cor, estado.semente, {
+          estilo: estado.estilo, porte: op.porte && op.porte !== "auto" ? op.porte : "", sem: op.sem || [],
+        });
+      } catch (_) {
+        return "";
+      }
+      return `<details class="p3d-detalhe"${i.principal ? " open" : ""}>
+        <summary><i class="fa-solid fa-list-check" aria-hidden="true"></i> O que tem ${/^área/i.test(i.nome) ? "na" : "no"} ${escapar(nomeComPorte(i).toLowerCase())}</summary>
+        <ul>${ideia.regras.map((t) => `<li>${escapar(t)}</li>`).join("")}</ul>
+      </details>`;
+    }).join("");
+  }
   function mostrarResultado() {
     const r = resultado;
     const coube = contarPorNome(r.itens);
@@ -351,6 +381,7 @@ export async function iniciar(raiz) {
         <span><b>${r.itens.length}</b><small>no projeto</small></span>
       </div>
       ${coube.length ? `<ul class="p3d-coube">${coube.map((i) => `<li><button type="button" data-ver="${escapar(i.nome)}"><i class="fa-solid fa-check" aria-hidden="true"></i> ${i.qtd > 1 ? `<b>${i.qtd}×</b> ` : ""}${escapar(nomeComPorte(i))}${i.area ? ` <small>${metros(i.area.largura)} × ${metros(i.area.profundidade)} m</small>` : ""}</button></li>`).join("")}</ul>` : `<p class="p3d-nota">Escolha o modelo do espaço e as máquinas.</p>`}
+      ${detalhesDasAreas(r)}
       ${fora.length ? `<p class="p3d-rotulo p3d-rotulo--fora">Ficou de fora</p><ul class="p3d-fora">${fora.map((i) => `<li><i class="fa-solid fa-xmark" aria-hidden="true"></i> <span>${i.qtd > 1 ? `<b>${i.qtd}×</b> ` : ""}<b>${escapar(i.nome)}</b>: ${escapar(i.motivo)}</span></li>`).join("")}</ul>` : ""}
       <div class="p3d-sugestao" id="p3dSugestao"${sugestao ? "" : " hidden"}></div>
       <p class="p3d-nota">Rascunho do arrumador: corredor de 1,20 m até cada coisa, área de quem joga na frente das máquinas e faixa de segurança em volta dos brinquedos. O projeto final é da nossa engenharia (NBR 16071).</p>`;
@@ -386,12 +417,13 @@ export async function iniciar(raiz) {
   let esperaSugestao = 0;
   function mudou() {
     clearTimeout(espera);
-    espera = setTimeout(() => { desenharOpcoes(); refazer(); }, 120);
+    espera = setTimeout(() => { refazer(); desenharOpcoes(); }, 120);
   }
   function refazer() {
     resultado = arrumar(estado.espaco, escolha(), dados);
     sugestao = null;
     mostrarResultado();
+    calcularPropostas();
     if (cena) cena.desenhar(resultado, estado);
     if (modo === "cliente") {
       const hash = "#p=" + codificar({ espaco: estado.espaco, ...escolha() });
@@ -406,6 +438,112 @@ export async function iniciar(raiz) {
       }, 450);
     }
   }
+
+  /* ---------------------------------------------------------------- as ideias para o espaço */
+  const caixaPropostas = $("#p3dPropostas", raiz);
+  const listaPropostas = $("#p3dPropostasLista", raiz);
+  let propostas = [];
+  let medidaDasPropostas = "";
+  let esperaPropostas;
+  const CORES_DA_PLANTA = { trampolim: "#2563eb", esportivo: "#16a34a", ninja: "#f97316", brinquedao: "#a855f7", baby: "#ec4899", grande: "#14b8a6", maquina: "#eab308" };
+  function plantaPequena(canvas, r) {
+    const W = r.sala.largura, D = r.sala.comprimento;
+    const larg = 128, alt = Math.round(Math.max(64, Math.min(150, larg * (D / W))));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(larg * dpr);
+    canvas.height = Math.round(alt * dpr);
+    canvas.style.width = `${larg}px`;
+    canvas.style.height = `${alt}px`;
+    const g = canvas.getContext("2d");
+    g.scale(dpr, dpr);
+    const k = Math.min((larg - 6) / W, (alt - 6) / D);
+    const ox = (larg - W * k) / 2, oy = (alt - D * k) / 2;
+    const X = (x) => ox + (x + W / 2) * k, Y = (z) => oy + (z + D / 2) * k;
+    const caixa = (q) => [X(q.x0), Y(q.z0), (q.x1 - q.x0) * k, (q.z1 - q.z0) * k];
+    g.fillStyle = "#e9e6df";
+    g.fillRect(ox, oy, W * k, D * k);
+    g.fillStyle = "rgba(34, 197, 94, .45)";
+    g.fillRect(...caixa(r.hall));
+    for (const i of r.itens) {
+      const cor = CORES_DA_PLANTA[i.area ? i.area.tipo : i.tipo === "grande" ? "grande" : "maquina"] || "#64748b";
+      g.globalAlpha = 0.22;
+      g.fillStyle = cor;
+      g.fillRect(...caixa(i.zona));
+      g.globalAlpha = 1;
+      g.fillRect(...caixa(i.corpo));
+    }
+    g.strokeStyle = "#94a3b8";
+    g.lineWidth = 1;
+    g.strokeRect(ox + 0.5, oy + 0.5, W * k - 1, D * k - 1);
+  }
+  const chaveDaEscolha = (e) => JSON.stringify([
+    e.principal ? (e.principal.area || e.principal.id) : "",
+    [...(e.areas || [])].sort(),
+    (Array.isArray(e.itens) ? e.itens : Object.entries(e.itens || {}).filter(([, q]) => q > 0).map(([id, qtd]) => ({ id, qtd })))
+      .map((l) => `${l.id}:${l.qtd}`).sort(),
+  ]);
+  function marcarPropostas() {
+    const atual = chaveDaEscolha({ principal: estado.principal, areas: estado.areas, itens: estado.itens });
+    listaPropostas.querySelectorAll("[data-proposta]").forEach((b) => {
+      const p = propostas[Number(b.dataset.proposta)];
+      b.setAttribute("aria-pressed", String(Boolean(p) && chaveDaEscolha(p.escolha) === atual));
+    });
+  }
+  function mostrarPropostas() {
+    if (!caixaPropostas || !sugestoesMod) return;
+    caixaPropostas.hidden = !propostas.length;
+    $("#p3dPropostasTamanho", raiz).textContent = `(${metros(estado.espaco.largura)} × ${metros(estado.espaco.comprimento)} m)`;
+    listaPropostas.innerHTML = propostas.map((p, i) => `
+      <button type="button" class="p3d-proposta" data-proposta="${i}" aria-pressed="false">
+        <canvas class="p3d-proposta-planta" aria-hidden="true"></canvas>
+        <span class="p3d-proposta-texto">
+          <b>${i === 0 ? '<em class="p3d-proposta-selo">Melhor uso</em> ' : ""}${escapar(p.titulo)}</b>
+          ${p.linhas.map((l) => `<small>${escapar(l)}</small>`).join("")}
+          <span class="p3d-proposta-usar">Usar esta ideia <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+        </span>
+      </button>`).join("");
+    listaPropostas.querySelectorAll("[data-proposta]").forEach((b) => plantaPequena($("canvas", b), propostas[Number(b.dataset.proposta)].resultado));
+    marcarPropostas();
+  }
+  function calcularPropostas() {
+    if (!sugestoesMod || !caixaPropostas) return;
+    const medida = `${estado.espaco.largura}x${estado.espaco.comprimento}x${estado.espaco.pe_direito}`;
+    if (medida === medidaDasPropostas) { marcarPropostas(); return; }
+    clearTimeout(esperaPropostas);
+    esperaPropostas = setTimeout(() => {
+      medidaDasPropostas = medida;
+      try {
+        propostas = sugestoesMod.sugerir(estado.espaco, dados, arrumar, geradorMod, { limite: 3 });
+      } catch (erro) {
+        console.warn("Monte seu projeto: sem as ideias", erro);
+        propostas = [];
+      }
+      mostrarPropostas();
+    }, 500);
+  }
+  listaPropostas?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-proposta]");
+    if (!b) return;
+    const p = propostas[Number(b.dataset.proposta)];
+    if (!p) return;
+    const esc = p.escolha;
+    estado.principal = esc.principal ? { ...esc.principal } : null;
+    estado.areas = [...esc.areas];
+    estado.itens = {};
+    for (const l of esc.itens) estado.itens[String(l.id)] = (estado.itens[String(l.id)] || 0) + Number(l.qtd || 1);
+    estado.opcoes = {};
+    raiz.querySelectorAll("[data-item]").forEach((li) => {
+      const q = estado.itens[li.dataset.item] || 0;
+      const saida = $("output", li);
+      if (saida) saida.textContent = String(q);
+      li.classList.toggle("p3d-item--com", q > 0);
+    });
+    desenharModelos(); desenharAreas();
+    refazer();
+    desenharOpcoes();
+    // no celular, o 3D está acima: leva até ele para ver a ideia montada
+    if (window.matchMedia("(max-width: 960px)").matches) $(".p3d-visor", raiz)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   /* ---------------------------------------------------------------- o 3D */
   let cena = null;
@@ -449,6 +587,7 @@ export async function iniciar(raiz) {
   desenharAreas();
   desenharOpcoes();
   refazer();
+  desenharOpcoes(); // de novo, com o porte que a área arrumada tem de verdade
   raiz.classList.add("p3d--pronto");
 
   /* ---------------------------------------------------------------- o pedido */

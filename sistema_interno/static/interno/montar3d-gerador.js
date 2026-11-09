@@ -419,33 +419,46 @@ function brinquedao(P, W, D, H, sorte, op) {
  */
 export const PORTES = {
   trampolim: [
-    { chave: "compacto", min: [5.5, 5.5], componentes: ["camas", "espuma"] },
-    { chave: "medio", min: [9, 7], componentes: ["camas", "espuma", "enterrada"] },
-    { chave: "grande", min: [14, 10], componentes: ["camas", "espuma", "enterrada", "parede_inclinada", "escalada", "queimada"] },
+    { chave: "compacto", min: [5.5, 5.5], area: 30, lado: 5.5, componentes: ["camas", "espuma", "parede_inclinada"] },
+    { chave: "medio", min: [9, 7], area: 50, lado: 5, componentes: ["camas", "espuma", "enterrada", "parede_inclinada", "queimada"] },
+    { chave: "grande", min: [14, 10], area: 120, lado: 8, componentes: ["camas", "espuma", "enterrada", "parede_inclinada", "escalada", "queimada"] },
   ],
   esportivo: [
-    { chave: "compacto", min: [7, 5], componentes: ["quadra", "escalada"] },
-    { chave: "medio", min: [16, 10], componentes: ["quadra", "trampolim_park", "escalada"] },
-    { chave: "grande", min: [26, 16], componentes: ["quadra_futebol", "quadra_basquete", "trampolim_park", "escalada", "circuito_kids"] },
+    { chave: "compacto", min: [7, 5], area: 35, lado: 5, componentes: ["quadra", "escalada"] },
+    { chave: "medio", min: [16, 10], area: 140, lado: 9, componentes: ["quadra", "trampolim_park", "escalada"] },
+    { chave: "grande", min: [26, 16], area: 380, lado: 14, componentes: ["quadra_futebol", "quadra_basquete", "trampolim_park", "escalada", "circuito_kids"] },
   ],
   baby: [
-    { chave: "compacto", min: [3, 3], componentes: ["piscina", "escorregador", "blocos"] },
-    { chave: "medio", min: [5, 4], componentes: ["piscina", "escorregador", "blocos", "tunel", "paineis", "casinha"] },
-    { chave: "grande", min: [7, 5], componentes: ["piscina", "escorregador", "blocos", "tunel", "paineis", "casinha", "pendulos", "rampa"] },
+    { chave: "compacto", min: [3, 3], area: 9, lado: 3, componentes: ["piscina", "escorregador", "blocos"] },
+    { chave: "medio", min: [5, 4], area: 18, lado: 3.6, componentes: ["piscina", "escorregador", "blocos", "tunel", "paineis", "casinha"] },
+    { chave: "grande", min: [7, 5], area: 32, lado: 4.4, componentes: ["piscina", "escorregador", "blocos", "tunel", "paineis", "casinha", "pendulos", "rampa", "torrinha"] },
+  ],
+  ninja: [
+    { chave: "compacto", min: [7, 2.5], area: 17, lado: 2.5, componentes: ["degraus", "trave", "rolos", "argolas"] },
+    { chave: "medio", min: [12, 4.5], area: 50, lado: 4.2, componentes: ["degraus", "trave", "rolos", "argolas", "macaco", "corda", "parede_curva"] },
+    { chave: "grande", min: [18, 7], area: 120, lado: 6.5, componentes: ["degraus", "trave", "rolos", "argolas", "macaco", "corda", "parede_curva", "escalada"] },
   ],
 };
-const cabe = (min, W, D) => Math.max(W, D) >= Math.max(...min) - 1e-6 && Math.min(W, D) >= Math.min(...min) - 1e-6;
+/**
+ * O porte cabe em W × D: o retângulo mínimo entra (de qualquer jeito) OU a área tem os m² e o lado
+ * menor que ele pede -- o que entra dentro, quem decide é a geometria de cada montador.
+ */
+export function porteCabe(p, W, D) {
+  const ret = Math.max(W, D) >= Math.max(...p.min) - 1e-6 && Math.min(W, D) >= Math.min(...p.min) - 1e-6;
+  const porArea = p.area && W * D >= p.area - 1e-6 && Math.min(W, D) >= (p.lado || 0) - 1e-6;
+  return ret || Boolean(porArea);
+}
 /** O maior porte da área que cabe em W × D (ou o menor, se nem ele cabe). */
 export function porteQueCabe(tipo, W, D) {
   const lista = PORTES[tipo] || [];
   let melhor = lista[0] || null;
-  for (const p of lista) if (cabe(p.min, W, D)) melhor = p;
+  for (const p of lista) if (porteCabe(p, W, D)) melhor = p;
   return melhor;
 }
 /** O porte pedido (ou o que cabe) e os componentes dele, menos os que o cliente tirou (`opcoes.sem`). */
 function componentesDe(tipo, W, D, op) {
   const lista = PORTES[tipo] || [];
-  const pedido = lista.find((p) => p.chave === op.porte && cabe(p.min, W, D));
+  const pedido = lista.find((p) => p.chave === op.porte && porteCabe(p, W, D));
   const porte = pedido || porteQueCabe(tipo, W, D);
   const sem = new Set(op.sem || []);
   return { porte: porte ? porte.chave : "", tem: new Set((porte ? porte.componentes : []).filter((c) => !sem.has(c))) };
@@ -560,49 +573,96 @@ function esportivo(P, W, D, H, sorte, op) {
 }
 
 /* ---------------------------------------------------------------- área ninja */
+/**
+ * A área ninja: o circuito em RAIAS EM ZIGUE-ZAGUE que enchem a área (uma raia na compacta, duas na
+ * média, até cinco na grande), cada uma com os obstáculos em fila sobre o piso macio -- os suspensos
+ * (argolas, barra de macaco, corda) com colchão embaixo --, a largada com a escadinha na frente
+ * (o lado da entrada) e a chegada na parede curva. Na grande, com pé-direito de 3,50 m, a parede de
+ * escalada no fundo, com o colchão de queda. Área maior, mais raias e mais obstáculos (repetem na
+ * ordem sorteada quando a lista acaba).
+ */
 function ninja(P, W, D, H, sorte, op) {
+  const { porte, tem } = componentesDe("ninja", W, D, op);
   const regras = [];
-  const alto = Math.min(2.3, H - 0.6);
-  const obstaculos = [
-    ["degraus", 3.5, { comprimento: 3.2, largura: 1.2 }],
-    ["trave", 2.8, { comprimento: 2.5, altura: 0.45 }],
-    ["argolas", 3.2, { comprimento: 3.0, altura: arred(alto), quantidade: 4 }],
-    ["macaco", 3.2, { comprimento: 3.0, altura: arred(alto), largura: 0.6 }],
-    ["corda", 1.8, { altura: arred(Math.min(3, H - 0.4)) }],
-    ["rolos", 2.0, { altura: 1.0, largura: 1.6, quantidade: 4 }],
-  ];
-  // mistura o miolo; a parede curva fecha o circuito
-  for (let i = obstaculos.length - 1; i > 0; i--) {
-    const j = Math.floor(sorte() * (i + 1));
-    [obstaculos[i], obstaculos[j]] = [obstaculos[j], obstaculos[i]];
-  }
-  const raias = D >= 4.5 ? 2 : 1;
-  const raiaZ = raias === 2 ? [-D / 4, D / 4] : [0];
-  const parede = H >= 3 ? 2.2 : 0;
-  let usados = 0;
-  for (let r = 0; r < raias; r++) {
-    const sentido = r === 0 ? 1 : -1;
-    let x = -W / 2 + 0.4;
-    const fim = W / 2 - 0.4 - (r === raias - 1 ? parede + 1.2 : 0);
-    for (; usados < obstaculos.length; usados++) {
-      const [tipo, comp, d] = obstaculos[usados];
-      if (x + comp > fim) break;
-      const meio = x + comp / 2;
-      const xm = sentido > 0 ? meio : -meio;
-      if (tipo !== "trave" && tipo !== "degraus") {
-        P.por("colchao", [xm, 0, raiaZ[r]], { largura: arred(comp - 0.1), profundidade: 1.6, espessura: 0.2 });
-      }
-      P.por(tipo, [xm, tipo === "rolos" ? 0.2 : 0, raiaZ[r]], d, 0);
-      x += comp + 0.3;
+  const alto = arred(Math.min(2.3, H - 0.6));
+  P.por("piso_eva", [0, 0, 0], { largura: arred(W - 0.2), profundidade: arred(D - 0.2) }, 0, P.paleta.chao, { cor2: P.paleta.chao2 });
+  // 1. o fundo: a parede de escalada (e, do lado, a parede curva da chegada)
+  let zTopo = -D / 2 + 0.3;
+  let curvaNoFundo = false;
+  if (tem.has("escalada") && H >= 3.5 && D >= 6) {
+    const ew = arred(Math.min(W - 1.2, Math.max(3, W * 0.4), 7)), ea = arred(Math.min(H - 0.5, 4));
+    const ex = W / 2 - 0.6 - ew / 2;
+    P.por("escalada", [ex, 0, -D / 2 + 0.15], { largura: ew, altura: ea });
+    P.por("colchao", [ex, 0, -D / 2 + 1.0], { largura: ew, profundidade: 1.5, espessura: 0.3 });
+    regras.push(`Parede de escalada de ${m2(ew)} m de largura e ${m2(ea)} m de altura no fundo, com colchão de queda.`);
+    if (tem.has("parede_curva") && H >= 3 && W - ew - 1.2 >= 2.6) {
+      P.por("parede_curva", [arred(-W / 2 + 0.6 + 1.1), 0, arred(-D / 2 + 0.9)], { largura: 2.0, altura: arred(Math.min(3, H - 0.6)) }, 0);
+      curvaNoFundo = true;
+      regras.push("A parede curva da chegada no fundo, ao lado da escalada.");
     }
+    zTopo = -D / 2 + 1.9;
   }
-  if (parede) {
-    // no fim da última raia, de frente para quem vem correndo (a curva olha para o circuito)
-    const xp = raias === 2 ? -W / 2 + 0.4 + 1.7 : W / 2 - 0.4 - 1.7;
-    P.por("parede_curva", [arred(xp), 0, raiaZ[raias - 1]], { largura: 2.0, altura: arred(Math.min(3, H - 0.6)) }, raias === 2 ? 90 : -90);
-    regras.push("A parede curva fecha o circuito, com plataforma de chegada.");
+  // 2. as raias: da frente (a largada, perto da entrada) para o fundo, uma indo e a outra voltando
+  const zFrente = D / 2 - 0.6; // a fila da largada, na frente
+  const passoRaia = 1.9;
+  const teto = porte === "compacto" ? 1 : porte === "medio" ? 2 : 5;
+  const n = Math.max(1, Math.min(teto, Math.floor((zFrente - zTopo) / passoRaia)));
+  const passo = (zFrente - zTopo) / n;
+  const raias = Array.from({ length: n }, (_, k) => arred(zFrente - passo * (k + 0.5)));
+  const lista = [
+    ["degraus", 3.5, { comprimento: 3.2, largura: 1.2 }, false],
+    ["trave", 2.8, { comprimento: 2.5, altura: 0.45 }, false],
+    ["rolos", 2.0, { altura: 1.0, largura: 1.6, quantidade: 4 }, false],
+    ["argolas", 3.2, { comprimento: 3.0, altura: alto, quantidade: 4 }, true],
+    ["macaco", 3.2, { comprimento: 3.0, altura: alto, largura: 0.6 }, true],
+    ["corda", 1.8, { altura: arred(Math.min(3, H - 0.4)) }, true],
+  ].filter(([tipo]) => tem.has(tipo));
+  // o túnel de rastejar entra como respiro nas raias compridas
+  if (W * n >= 24) lista.push(["tunel", 1.8, { comprimento: 1.5, diametro: 0.7 }, false]);
+  for (let i = lista.length - 1; i > 0; i--) {
+    const j = Math.floor(sorte() * (i + 1));
+    [lista[i], lista[j]] = [lista[j], lista[i]];
   }
-  regras.push(`Circuito em ${raias === 2 ? "ida e volta (duas raias)" : "uma raia"}: ${usados} obstáculos sobre colchões; barras e argolas a ${m2(alto)} m.`);
+  const curvaNaRaia = tem.has("parede_curva") && H >= 3 && !curvaNoFundo;
+  const usados = {};
+  let total = 0, proximo = 0;
+  raias.forEach((zc, k) => {
+    const sentido = k % 2 === 0 ? 1 : -1; // a primeira vai para a direita
+    let x = -W / 2 + 0.5;
+    let fim = W / 2 - 0.5;
+    if (k === 0) {
+      // a largada: a escadinha de espuma
+      P.por("degraus_espuma", [sentido > 0 ? arred(-W / 2 + 0.6) : arred(W / 2 - 0.6), 0, zc], { largura: 1.2, altura: 0.6, degraus: 2 }, sentido > 0 ? 90 : -90);
+      x += 1.2;
+    }
+    if (k === n - 1 && curvaNaRaia) fim -= 2.6;
+    let tentativas = 0;
+    while (lista.length && tentativas < lista.length) {
+      const [tipo, comp, d, colchao] = lista[proximo % lista.length];
+      if (x + comp > fim + 1e-6) { proximo++; tentativas++; continue; } // não cabe: tenta o seguinte
+      tentativas = 0;
+      const meio = x + comp / 2;
+      const xm = arred(sentido > 0 ? meio : -meio);
+      if (colchao) P.por("colchao", [xm, 0, zc], { largura: arred(comp - 0.1), profundidade: 1.6, espessura: 0.2 });
+      P.por(tipo, [xm, tipo === "rolos" ? 0.2 : 0, zc], d, tipo === "tunel" ? 90 : 0);
+      usados[tipo] = (usados[tipo] || 0) + 1;
+      total++;
+      proximo++;
+      x += comp + 0.4;
+    }
+    if (k === n - 1 && curvaNaRaia) {
+      const xp = sentido > 0 ? W / 2 - 0.5 - 1.3 : -(W / 2 - 0.5 - 1.3);
+      P.por("parede_curva", [arred(xp), 0, zc], { largura: 2.0, altura: arred(Math.min(3, H - 0.6)) }, sentido > 0 ? -90 : 90);
+      regras.push("A parede curva fecha o circuito, de frente para quem vem correndo.");
+    }
+  });
+  const nomes = {
+    degraus: ["conjunto de degraus", "conjuntos de degraus"], trave: ["trave", "traves"], rolos: ["conjunto de rolos", "conjuntos de rolos"],
+    argolas: ["conjunto de argolas", "conjuntos de argolas"], macaco: ["barra de macaco", "barras de macaco"], corda: ["corda", "cordas"], tunel: ["túnel", "túneis"],
+  };
+  const tipos = Object.entries(usados).map(([t, q]) => `${q} ${nomes[t][q > 1 ? 1 : 0]}`);
+  regras.unshift(`${n === 1 ? "Uma raia" : `${n} raias em zigue-zague`} com ${total} obstáculos (${tipos.join(", ")}) sobre piso macio; os suspensos a ${m2(alto)} m, com colchão embaixo.`);
+  regras.push("A largada na frente (a escadinha de espuma), do lado da entrada.");
   return regras;
 }
 
@@ -675,7 +735,7 @@ function trampolimPark(P, W, D, H, sorte, tem, raias = 2) {
         P.por("cama_inclinada", [xl + (i + 0.5) * lw, 0, z0 + 0.8], { largura: arred(lw - 0.05), profundidade: 1.6, altura: 2.6, base: 0.9 }, 0, cores[(i + 2) % cores.length]);
       }
       zb = z0 + 1.6;
-      regras.push(`${n} trampolim${n > 1 ? "s" : ""} de parede (camas inclinadas) no fundo.`);
+      regras.push(`${n} ${n > 1 ? "trampolins" : "trampolim"} de parede (camas inclinadas) no fundo.`);
     } else if (!alto) {
       regras.push("O trampolim de parede pede pé-direito de 4,50 m: ficou de fora.");
     }
@@ -716,70 +776,114 @@ function trampolim(P, W, D, H, sorte, op) {
 
 /* ---------------------------------------------------------------- espaço baby */
 /**
- * O espaço baby (0 a 3 anos), tudo baixo e macio, mais coisas a cada porte: piso de EVA, cerca de
- * 0,60 m com o portal; a piscina rasa com a plataforma de 0,40 m, a escadinha e o escorregador
- * pequeno; os blocos de espuma soltos; e, no médio e no grande, o túnel, a casinha, os painéis
- * ábaco na cerca, as bolas penduradas e a rampa.
+ * O espaço baby (0 a 3 anos), tudo baixo e macio: piso de EVA, cerca de 0,60 m com o portal e os
+ * painéis ábaco nela; dentro, as ESTAÇÕES -- a piscina rasa com a plataforma de 0,40 m e o
+ * escorregador caindo nela, a torrinha com escorregador, a casinha, os blocos de espuma, o túnel,
+ * a rampa com degraus, as bolas penduradas -- postas em fileiras do fundo para a frente, com
+ * passagem entre elas e a frente livre (a chegada pelo portal). Área grande (o espaço baby como
+ * modelo do espaço) ganha mais estações: a piscina redonda, outro canto de blocos, outro túnel...
  */
 function baby(P, W, D, H, sorte, op) {
-  const { tem } = componentesDe("baby", W, D, op);
+  const { porte, tem } = componentesDe("baby", W, D, op);
   const regras = [];
   P.por("piso_eva", [0, 0, 0], { largura: arred(W - 0.2), profundidade: arred(D - 0.2) }, 0, P.paleta.chao, { cor2: P.paleta.chao2 });
   const c = 0.6;
   P.por("cerca", [0, 0, -D / 2 + 0.15], { comprimento: arred(W - 0.4), altura: c });
   P.por("cerca", [-W / 2 + 0.15, 0, 0], { comprimento: arred(D - 0.4), altura: c }, 90);
   P.por("cerca", [W / 2 - 0.15, 0, 0], { comprimento: arred(D - 0.4), altura: c }, 90);
-  // a frente: cerca dos lados e o portal no meio
   const vao = 1.4;
   const ladoFrente = (W - 0.4 - vao) / 2;
   P.por("cerca", [-W / 2 + 0.2 + ladoFrente / 2, 0, D / 2 - 0.15], { comprimento: arred(ladoFrente), altura: c });
   P.por("cerca", [W / 2 - 0.2 - ladoFrente / 2, 0, D / 2 - 0.15], { comprimento: arred(ladoFrente), altura: c });
   P.por("arco", [0, 0, D / 2 - 0.15], { largura: vao, altura: 2.0 });
-  const coisas = [];
-  // a piscina rasa no canto do fundo à esquerda, com a plataforma e o escorregador caindo nela
-  if (tem.has("piscina")) {
-    const pis = Math.min(2.2, W * 0.35, D * 0.5);
-    P.por("piscina", [-W / 2 + 0.4 + pis / 2, 0, -D / 2 + 0.4 + pis / 2], { largura: arred(pis), profundidade: arred(pis), altura: 0.4 });
-    coisas.push(`piscina rasa de ${m2(pis)} × ${m2(pis)} m`);
-    const px = -W / 2 + 0.4 + pis + 0.75, pz = -D / 2 + 0.95;
-    // a plataforma (1,10 m) com a escadinha atrás só entra se couber dentro da cerca
-    if (tem.has("escorregador") && px + 1.25 <= W / 2 - 0.2) {
-      P.por("plataforma", [px, 0.4, pz], { largura: 1.1, profundidade: 1.1, espessura: 0.08 });
-      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) P.por("coluna", [px + dx * 0.5, 0, pz + dz * 0.5], { altura: 1.0, diametro: 0.06 });
-      P.por("escorregador", [px - 0.55 - 0.45, 0, pz], { comprimento: 0.9, altura: 0.4, largura: 0.5 }, 180);
-      P.por("degraus_espuma", [px + 0.95, 0, pz], { largura: 0.8, altura: 0.4, degraus: 2 }, 180);
-      coisas.push("plataforma de 0,40 m com escadinha e escorregador caindo na piscina");
-    }
+
+  // o miolo onde vão as estações (a frente fica livre: a chegada pelo portal)
+  const x0 = -W / 2 + 0.45, x1 = W / 2 - 0.45, z0 = -D / 2 + 0.45;
+  const z1 = D / 2 - Math.max(0.7, Math.min(1.4, D * 0.22));
+  const fundoUtil = z1 - z0, larguraUtil = x1 - x0;
+  const cores = P.paleta.varias;
+  const pis = arred(Math.max(1.4, Math.min(2.2, larguraUtil * 0.45, fundoUtil)));
+  const montar = {
+    piscina: (cx, cz, w) => {
+      // a piscina rasa à esquerda e, se couber, a plataforma de 0,40 m com o escorregador caindo nela
+      const px = cx - w / 2 + pis / 2;
+      P.por("piscina", [arred(px), 0, arred(cz)], { largura: pis, profundidade: pis, altura: 0.4 });
+      if (w > pis + 1.5) {
+        const tx = arred(px + pis / 2 + 0.95), tz = arred(cz - pis / 2 + 0.6);
+        P.por("plataforma", [tx, 0.4, tz], { largura: 1.1, profundidade: 1.1, espessura: 0.08 });
+        for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) P.por("coluna", [tx + dx * 0.5, 0, tz + dz * 0.5], { altura: 1.0, diametro: 0.06 });
+        P.por("escorregador", [arred(tx - 0.55 - 0.45), 0, tz], { comprimento: 0.9, altura: 0.4, largura: 0.5 }, 180);
+        P.por("degraus_espuma", [arred(tx + 0.95), 0, tz], { largura: 0.8, altura: 0.4, degraus: 2 }, 180);
+        return `piscina rasa de ${m2(pis)} × ${m2(pis)} m com a plataforma de 0,40 m e o escorregador caindo nela`;
+      }
+      return `piscina rasa de ${m2(pis)} × ${m2(pis)} m`;
+    },
+    torrinha: (cx, cz) => {
+      // a torrinha de 0,60 m, com a escadinha de espuma de um lado e o escorregador do outro
+      P.por("plataforma", [arred(cx), 0.6, arred(cz)], { largura: 1.0, profundidade: 1.0, espessura: 0.08 }, 0, cores[1 % cores.length]);
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) P.por("coluna", [arred(cx + dx * 0.45), 0, arred(cz + dz * 0.45)], { altura: 1.25, diametro: 0.06 });
+      P.por("telhado", [arred(cx), 1.25, arred(cz)], { largura: 1.1, profundidade: 1.1, altura: 0.45 }, 0, cores[3 % cores.length]);
+      P.por("degraus_espuma", [arred(cx - 0.95), 0, arred(cz)], { largura: 0.8, altura: 0.6, degraus: 3 });
+      P.por("escorregador", [arred(cx + 0.5 + 0.6), 0, arred(cz)], { comprimento: 1.2, altura: 0.6, largura: 0.5 });
+      return "torrinha de 0,60 m com escadinha e escorregador";
+    },
+    casinha: (cx, cz) => { P.por("casinha", [arred(cx), 0, arred(cz)], { largura: 1.2, profundidade: 1.2, altura: 1.4 }, 0, P.paleta.destaque); return "casinha"; },
+    blocos: (cx, cz, w, d) => { P.por("blocos_espuma", [arred(cx), 0, arred(cz)], { largura: arred(w - 0.2), profundidade: arred(d - 0.2) }); return "blocos de espuma (cubos, cilindros, meia-lua, cunha e arco)"; },
+    tunel: (cx, cz) => { P.por("tunel", [arred(cx), 0, arred(cz)], { comprimento: 1.2, diametro: 0.6 }); return "túnel"; },
+    rampa: (cx, cz) => {
+      P.por("rampa", [arred(cx + 0.5), 0, arred(cz)], { comprimento: 1.2, altura: 0.35, largura: 0.9 });
+      P.por("degraus_espuma", [arred(cx - 0.75), 0, arred(cz)], { largura: 0.9, altura: 0.35, degraus: 2 });
+      return "rampa e degraus de espuma";
+    },
+    pendulos: (cx, cz) => { P.por("pendulos", [arred(cx), 1.3, arred(cz)], { largura: 0.95, altura: 0.9, quantidade: 3 }); return "bolas penduradas"; },
+    redonda: (cx, cz) => { P.por("piscina_redonda", [arred(cx), 0, arred(cz)], { diametro: 2.2, altura: 0.4 }); return "piscina redonda de 2,20 m"; },
+  };
+  // [chave, largura, fundo] na ordem de importância; a área grande repete (a segunda rodada)
+  const primeira = [
+    ["piscina", tem.has("escorregador") && larguraUtil >= pis + 2.2 ? pis + 2.0 : pis, pis],
+    ["torrinha", 2.9, 1.4],
+    ["casinha", 1.5, 1.5],
+    ["blocos", Math.min(2.2, larguraUtil), Math.min(1.8, fundoUtil)],
+    ["rampa", 2.2, 1.1],
+    ["tunel", 1.5, 0.9],
+    ["pendulos", 1.3, 1.0],
+  ].filter(([k]) => (k === "piscina" ? tem.has("piscina") : k === "torrinha" ? tem.has("torrinha") : tem.has(k)));
+  const segunda = porte === "grande" ? [["redonda", 2.4, 2.4], ["blocos", 2.2, 1.8], ["tunel", 1.5, 0.9], ["casinha", 1.5, 1.5], ["pendulos", 1.3, 1.0], ["rampa", 2.2, 1.1]] : [];
+  const fila = [...primeira];
+  // a área bem maior que o porte grande ganha a segunda rodada (e mais, se ainda sobrar muito)
+  const rodadas = porte === "grande" ? Math.max(0, Math.floor((W * D) / 40) - 1) : 0;
+  for (let r = 0; r < rodadas; r++) fila.push(...segunda.filter(([k]) => k !== "redonda" || r % 2 === 0));
+  // fileiras do fundo para a frente, da esquerda para a direita, com passagem entre as estações
+  const vaoX = 0.7, vaoZ = 0.8;
+  let x = x0, z = z0, alturaFileira = 0;
+  const feitos = [];
+  const vezes = {};
+  for (const [k, w, d] of fila) {
+    if (w > larguraUtil + 1e-6) continue;
+    if ((vezes[k] || 0) >= (k === "tunel" ? 3 : 2)) continue; // variedade: no máximo duas de cada (três túneis)
+    if (x + w > x1 + 1e-6) { x = x0; z += alturaFileira + vaoZ; alturaFileira = 0; }
+    if (z + d > z1 + 1e-6) continue; // não cabe nesta fileira nem nas próximas: a seguinte, menor, pode caber
+    const texto = montar[k](x + w / 2, z + d / 2, w, d);
+    vezes[k] = (vezes[k] || 0) + 1;
+    feitos.push(texto);
+    x += w + vaoX;
+    alturaFileira = Math.max(alturaFileira, d);
   }
-  // os blocos de espuma soltos, no meio
-  if (tem.has("blocos")) {
-    P.por("blocos_espuma", [W * 0.08, 0, D * 0.12], { largura: arred(Math.min(2, W * 0.3)), profundidade: arred(Math.min(1.6, D * 0.3)) });
-    coisas.push("blocos de espuma (cubos, cilindros, meia-lua, cunha e arco)");
-  }
-  if (tem.has("tunel") && W >= 4.5) {
-    P.por("tunel", [-W / 2 + 1.2, 0, D / 2 - 1.1], { comprimento: 1.2, diametro: 0.6 });
-    coisas.push("túnel");
-  }
-  if (tem.has("casinha") && W >= 4.5 && D >= 3.8) {
-    P.por("casinha", [W / 2 - 0.95, 0, -D / 2 + 0.95], { largura: 1.2, profundidade: 1.2, altura: 1.4 }, 0, P.paleta.destaque);
-    coisas.push("casinha");
-  }
+  // os painéis ábaco na cerca: um a cada 3 m das laterais
   if (tem.has("paineis")) {
-    P.por("abaco", [W / 2 - 0.3, 0.05, 0], { largura: 0.9, altura: 0.55 }, -90);
-    P.por("abaco", [-W / 2 + 0.3, 0.05, 0.2], { largura: 0.9, altura: 0.55 }, 90);
-    coisas.push("painéis ábaco na cerca");
+    const n = Math.max(1, Math.floor((D - 1) / 3));
+    for (let i = 0; i < n; i++) {
+      const zp = arred(-D / 2 + (i + 0.5) * ((D - 1) / n) + 0.3);
+      P.por("abaco", [W / 2 - 0.3, 0.05, zp], { largura: 0.9, altura: 0.55 }, -90);
+      P.por("abaco", [-W / 2 + 0.3, 0.05, zp], { largura: 0.9, altura: 0.55 }, 90);
+    }
+    feitos.push(`${n * 2} painéis ábaco na cerca`);
   }
-  if (tem.has("pendulos") && W >= 6) {
-    P.por("pendulos", [W * 0.22, 1.3, -D / 2 + 1.0], { largura: 0.95, altura: 0.9, quantidade: 3 });
-    coisas.push("bolas penduradas");
-  }
-  if (tem.has("rampa") && D >= 4) {
-    P.por("rampa", [W / 2 - 1.2, 0, D / 2 - 1.2], { comprimento: 1.2, altura: 0.35, largura: 0.9 });
-    P.por("degraus_espuma", [W / 2 - 2.3, 0, D / 2 - 1.2], { largura: 0.9, altura: 0.35, degraus: 2 });
-    coisas.push("rampa e degraus de espuma");
-  }
-  regras.push(`Tudo baixo e macio: ${coisas.join(", ")}.`);
-  regras.push("Piso de EVA no espaço todo, cerca de 0,60 m e o portal na entrada.");
+  const contagem = {};
+  for (const t of feitos) contagem[t] = (contagem[t] || 0) + 1;
+  const lista = Object.entries(contagem).map(([t, q]) => (q > 1 ? `${q}× ${t}` : t));
+  regras.push(`${feitos.length} estações baixas e macias: ${lista.join("; ")}.`);
+  regras.push("Piso de EVA no espaço todo, cerca de 0,60 m, o portal na entrada e a frente livre para chegar.");
   return regras;
 }
 
