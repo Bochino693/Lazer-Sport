@@ -6,6 +6,9 @@
     elásticas, UM objeto só (o .3ds da fábrica traz os dois juntos); as
     fotos são a imagem do projeto e a planta (ver
     `ferramentas/modelos3d/brinquedao-ninja/`);
+  * BRINQUEDÃO MODELO 4: dois trechos em "Z" (12 m + 9 m); a estrutura do
+    .3ds da fábrica, o resto e as fotos das imagens do projeto (ver
+    `ferramentas/modelos3d/brinquedao-modelo-4/`);
   * ESPAÇO ESPORTIVO MODELO 1: o trampo.3ds do parque de trampolins, as
     plantas do parque e das quadras e as imagens do espaço completo (ver
     `ferramentas/modelos3d/espaco-esportivo-modelo-1/`). As fotos dele são
@@ -18,7 +21,8 @@
 
 Quem cadastra:
   * as migrações de dados (`0113_brinquedao_modelo_2`,
-    `0114_espaco_esportivo_modelo_1`, `0140_brinquedao_ninja`), no deploy
+    `0114_espaco_esportivo_modelo_1`, `0140_brinquedao_ninja`,
+    `0142_brinquedao_modelo_4`), no deploy
     do Render (o migrate roda sozinho no Pre-Deploy Command): o brinquedo
     já entra no catálogo;
   * `python manage.py cadastrar_modelo_3d <id>`, se a migração não
@@ -83,6 +87,36 @@ CADASTROS = {
         "fotos": (
             ("frente.webp", "perfil", "Brinquedão Ninja visto de frente: o andar de cima com os obstáculos, a piscina de cubos e o tobogã"),
             ("planta.webp", None, "Planta do Brinquedão Ninja vista de cima: 10 m + 4 m de camas elásticas, por 2 m, altura de 3,10 m"),
+        ),
+        "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
+        "evitar": (),
+    },
+    # ---- Brinquedão Modelo 4 ----
+    # O .3ds da fábrica (a estrutura de tubos azuis) e as imagens do projeto
+    # (ver `ferramentas/modelos3d/brinquedao-modelo-4/`). As fotos são as
+    # imagens do projeto mesmo: o render em perspectiva (a principal), a vista
+    # de frente, a planta e o brinquedão montado num salão.
+    "brinquedao-modelo-4": {
+        "nome": "Brinquedão Modelo 4",
+        "pasta": MODELOS / "brinquedao-modelo-4",
+        "objeto_3d": "site/arena/modelos/brinquedao-modelo-4.glb",
+        "descricao": (
+            "Brinquedão de dois andares em Z, com 19,6 m de comprimento (um trecho de 12 m e outro de 9 m, "
+            "ligados por uma passagem), 2 m de fundo em cada trecho e 3,55 m de altura. Sobe-se pela escada da "
+            "ponta esquerda; no andar de cima, painéis X, rolos de espuma em pé e em pares deitados, quatro "
+            "passarelas de rede amarela em V, sacos azuis pendurados e a pirâmide magenta. Embaixo, piscina de "
+            "bolinhas com dois escorregadores ondulados, Área Baby com cercadinho, blocos de espuma e piso de "
+            "EVA, e o tobogã espiral amarelo e magenta que desce até a piscina de bolinhas com a escadinha "
+            "verde. Estrutura em tubos azuis com telas de proteção. Projeto ilustrativo: cores, painéis e itens "
+            "podem ser ajustados conforme o espaço e a disponibilidade de materiais."
+        ),
+        # as do objeto (a planta: 12 m + 9 m, 3,60 m de fundo da estrutura, altura de 3,45 m)
+        "medidas": ("3.55", "19.60", "6.00"),
+        "fotos": (
+            ("perspectiva.webp", "perfil", "Brinquedão Modelo 4 em perspectiva: o tobogã espiral, a Área Baby e os dois andares"),
+            ("frente.webp", None, "Brinquedão Modelo 4 visto de frente, com 3,45 m de altura"),
+            ("planta.webp", None, "Planta do Brinquedão Modelo 4 vista de cima: 12 m + 9 m, 2 m de fundo em cada trecho"),
+            ("salao.webp", None, "O Brinquedão Modelo 4 montado num salão (projeto ilustrativo)"),
         ),
         "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
         "evitar": (),
