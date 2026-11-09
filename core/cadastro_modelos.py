@@ -18,14 +18,19 @@
     fábrica. É o PRIMEIRO objeto 3D ligado pelo cadastro (`ObjetoTresD`):
     se o brinquedo já está no catálogo (com as fotos reais), só ganha o
     objeto; se não está, entra com as fotos tiradas do próprio 3D.
+  * AIR GAME HOCKEY ESPACIAL e BASQUETE STREET QUADRINHOS: as máquinas de
+    sempre (a `base`: o Air Game Hockey e o Basquete Street) com os
+    adesivos novos; o cadastro copia da base o preço, a voltagem, a loja,
+    as medidas, as categorias e as tags (ver `ferramentas/modelos3d/<id>/`).
 
 Quem cadastra:
   * as migrações de dados (`0113_brinquedao_modelo_2`,
     `0114_espaco_esportivo_modelo_1`, `0140_brinquedao_ninja`,
-    `0142_brinquedao_modelo_4`), no deploy
+    `0142_brinquedao_modelo_4`, `0145_variantes_de_adesivo`...), no deploy
     do Render (o migrate roda sozinho no Pre-Deploy Command): o brinquedo
     já entra no catálogo;
-  * `python manage.py cadastrar_modelo_3d <id>`, se a migração não
+  * `python manage.py cadastrar_modelo_3d <id>` (ou
+    `cadastrar_variantes_adesivo`, as duas variantes), se a migração não
     conseguiu (sem Cloudinary naquela hora, por exemplo).
 
 O objeto 3D se liga ao brinquedo pelo NOME (`core/arena.py`, MODELOS_3D).
@@ -240,14 +245,114 @@ CADASTROS = {
         "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
         "evitar": (),
     },
+    # ---- As máquinas de sempre com os adesivos novos ----
+    # A MESMA máquina de um brinquedo do catálogo (a `base`, pelo nome
+    # inteiro), só com outra adesivagem (ver `ferramentas/modelos3d/<id>/`). O
+    # cadastro novo copia da base o preço, a voltagem, o "exibir na loja", a
+    # avaliação, as medidas, as categorias e as tags; a descrição é a daqui
+    # (fala da arte nova). Sem a base no catálogo, entra como os outros: as
+    # medidas daqui, as categorias pelo nome, sem preço e fora da loja (confira
+    # no painel). As fotos são vistas do próprio 3D; quando a folha de adesivos
+    # chegar, refaça o 3D e as fotos e rode `cadastrar_variantes_adesivo --fotos`.
+    # A migração que cadastra no deploy é a `0145_variantes_de_adesivo`.
+    "air-game-hockey-espacial": {
+        "nome": "Air Game Hockey Espacial",
+        "base": ("Air Game Hockey",),
+        "pasta": MODELOS / "air-game-hockey-espacial",
+        "objeto_3d": "site/arena/modelos/air-game-hockey-espacial.glb",
+        "descricao": (
+            "O Air Game Hockey Espacial é o Air Game Hockey, a nossa mesa de air hockey, com a adesivagem nova do "
+            "espaço: o logotipo HOCKEY KIDS no centro do tampo, o chão lunar laranja com crateras nas duas "
+            "cabeceiras do campo e, nas laterais, alienígenas astronautas jogando hóquei, discos voadores, planetas "
+            "e estrelas.\n"
+            "\n"
+            "Dois jogadores disputam cada ponto rebatendo o disco que desliza sobre o colchão de ar, atacando e "
+            "defendendo o próprio gol. Partidas rápidas, que estimulam reflexo, coordenação motora e concentração.\n"
+            "\n"
+            "Medidas aproximadas: 1,00 m de altura, 1,10 m de largura e 2,10 m de comprimento.\n"
+            "\n"
+            "Ideal para buffets infantis, brinquedotecas, parques, shoppings, hotéis, condomínios e áreas kids."
+        ),
+        "medidas": ("1.00", "1.10", "2.10"),
+        "fotos": (
+            ("frente.webp", "perfil", "Air Game Hockey Espacial: a mesa de air hockey com os adesivos do espaço e o logotipo HOCKEY KIDS"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Air Game Hockey Espacial pelo lado esquerdo: os alienígenas astronautas no chão lunar"),
+            ("lado_direito.webp", "lado_direito", "Air Game Hockey Espacial pelo lado direito"),
+            ("verso.webp", "verso", "Air Game Hockey Espacial visto pela outra cabeceira"),
+            ("tampo.webp", None, "O tampo do Air Game Hockey Espacial visto de cima: o campo, o chão lunar e o HOCKEY KIDS"),
+        ),
+        "categorias": ("eletronic",),
+        "evitar": (),
+    },
+    "basquete-street-quadrinhos": {
+        "nome": "Basquete Street Quadrinhos",
+        "base": ("Basquete Street",),
+        "pasta": MODELOS / "basquete-street-quadrinhos",
+        "objeto_3d": "site/arena/modelos/basquete-street-quadrinhos.glb",
+        "descricao": (
+            "O Basquete Street Quadrinhos é o Basquete Street, o basquete de arcade em tamanho profissional, com a "
+            "adesivagem nova em estilo história em quadrinhos: fundo preto com faixas arredondadas em amarelo, "
+            "laranja, vermelho e rosa, os balões \"POW!\", \"BOOM!\" e \"WOW!\", o letreiro BASKETBALL, crianças "
+            "jogando bola e a quadra de basquete com as linhas vermelhas na rampa.\n"
+            "\n"
+            "A rampa devolve as bolas ao jogador, que arremessa na cesta para somar pontos antes de o tempo acabar. "
+            "Tela de 32 polegadas com o placar e o jogo, cesta que se movimenta, rede de proteção em volta da área "
+            "de arremesso, iluminação em LED e rodízios para facilitar a movimentação.\n"
+            "\n"
+            "Medidas aproximadas: 2,70 m de altura, 1,00 m de largura e 2,40 m de comprimento.\n"
+            "\n"
+            "Ideal para shoppings, game centers, parques, buffets, clubes e espaços esportivos."
+        ),
+        "medidas": ("2.70", "1.00", "2.40"),
+        "fotos": (
+            ("frente.webp", "perfil", "Basquete Street Quadrinhos: a frente com o POW!, a rampa e a testeira BASKETBALL"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Street Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
+            ("lado_direito.webp", "lado_direito", "Basquete Street Quadrinhos pelo lado direito"),
+            ("verso.webp", "verso", "Basquete Street Quadrinhos visto por trás"),
+            ("jogador.webp", None, "Basquete Street Quadrinhos visto de quem joga: a quadra na rampa, a cesta e o BOOM!"),
+        ),
+        "categorias": ("eletronic",),
+        "evitar": (),
+    },
 }
+
+#: As máquinas que são outra adesivagem de um brinquedo do catálogo (têm `base`).
+VARIANTES_DE_ADESIVO = tuple(chave for chave, dados in CADASTROS.items() if dados.get("base"))
+
+
+def achar_base(chave, Brinquedos):
+    """O brinquedo do catálogo que é a MESMA máquina da variante `chave` (a `base`), ou None.
+
+    Pelo nome inteiro, sem acento nem maiúscula: "BASQUETE STREET" é a base
+    do Basquete Street Quadrinhos; o próprio Basquete Street Quadrinhos (ou
+    outro "Basquete Street Kids") não é. O ativo vem antes do desativado.
+    """
+    nomes = {_normalizar(n) for n in CADASTROS[chave].get("base", ())}
+    if not nomes:
+        return None
+    return next(
+        (b for b in Brinquedos.objects.order_by("-ativo", "id") if _normalizar(b.nome_brinquedo or "") in nomes),
+        None,
+    )
+
+
+def _categorias_pelo_nome(dados, CategoriasBrinquedos):
+    """As categorias que servem pelo nome (`categorias`, sem as de `evitar`); nenhuma é criada."""
+    candidatas = [
+        c for c in CategoriasBrinquedos.objects.all()
+        if any(trecho in _normalizar(c.nome_categoria) for trecho in dados["categorias"])
+    ]
+    preferidas = [c for c in candidatas if not any(t in _normalizar(c.nome_categoria) for t in dados["evitar"])]
+    return preferidas or candidatas
 
 
 def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos=False, avisar=print):
     """Cria o brinquedo com as fotos. Devolve (brinquedo, criado).
 
     Recebe os modelos para servir às migrações (modelos históricos) e ao
-    comando (os de verdade).
+    comando (os de verdade). A variante de adesivo (com `base`) copia da
+    máquina de antes o que é da máquina: preço, voltagem, loja, avaliação,
+    medidas, categorias e tags.
     """
     dados = CADASTROS[chave]
     nome = dados["nome"]
@@ -260,25 +365,39 @@ def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_
         criado = brinquedo is None
         if criado:
             altura, largura, profundidade = (Decimal(v) for v in dados["medidas"])
-            brinquedo = Brinquedos.objects.create(
-                nome_brinquedo=nome,
-                descricao=dados["descricao"],
-                valor_brinquedo=None,
-                avaliacao=Decimal("5.00"),
-                exibir_na_loja=False,
-                voltz="",
-                altura_m=altura,
-                largura_m=largura,
-                profundidade_m=profundidade,
-            )
-            candidatas = [
-                c for c in CategoriasBrinquedos.objects.all()
-                if any(trecho in _normalizar(c.nome_categoria) for trecho in dados["categorias"])
-            ]
-            preferidas = [c for c in candidatas if not any(t in _normalizar(c.nome_categoria) for t in dados["evitar"])]
-            categorias = preferidas or candidatas
+            campos = {
+                "nome_brinquedo": nome,
+                "descricao": dados["descricao"],
+                "valor_brinquedo": None,
+                "avaliacao": Decimal("5.00"),
+                "exibir_na_loja": False,
+                "voltz": "",
+                "altura_m": altura,
+                "largura_m": largura,
+                "profundidade_m": profundidade,
+            }
+            base = achar_base(chave, Brinquedos) if dados.get("base") else None
+            if base is not None:
+                campos.update(
+                    valor_brinquedo=base.valor_brinquedo,
+                    avaliacao=base.avaliacao,
+                    exibir_na_loja=base.exibir_na_loja,
+                    voltz=base.voltz or "",
+                )
+                if None not in (base.altura_m, base.largura_m, base.profundidade_m):
+                    campos.update(altura_m=base.altura_m, largura_m=base.largura_m, profundidade_m=base.profundidade_m)
+            brinquedo = Brinquedos.objects.create(**campos)
+            categorias = list(base.categorias_brinquedos.all()) if base is not None else []
+            if not categorias:
+                categorias = _categorias_pelo_nome(dados, CategoriasBrinquedos)
             brinquedo.categorias_brinquedos.set(categorias)
             avisar(f"Criado: {nome} (id {brinquedo.pk}).")
+            if base is not None:
+                brinquedo.tags.set(base.tags.all())
+                avisar(f"Copiado de {base.nome_brinquedo} (id {base.pk}): preço, voltagem, loja, avaliação, medidas, "
+                       "categorias e tags.")
+            elif dados.get("base"):
+                avisar(f"{dados['base'][0]} não está no catálogo: confira preço, voltagem e loja no painel.")
             avisar("Categorias: " + (", ".join(c.nome_categoria for c in categorias) or "nenhuma que sirva; escolha no painel"))
         else:
             brinquedo.imagens_brinquedo.all().delete()
