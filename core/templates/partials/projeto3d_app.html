@@ -66,6 +66,20 @@
         <div id="p3dResultado" aria-live="polite"></div>
       </section>
 
+      {% if modo == "cliente" or projeto_fotos %}
+      <section class="p3d-passo p3d-passo--fotos" id="p3dFotosPasso">
+        <h2><span class="p3d-num"><i class="fa-solid fa-camera" aria-hidden="true"></i></span> Veja no seu espaço</h2>
+        {% if modo == "cliente" %}
+        <p class="p3d-nota">Mande até 3 fotos do lugar. Você marca os cantos do chão e o projeto aparece dentro da foto, do ângulo em que ela foi tirada. As fotos vão junto do pedido.</p>
+        <label class="p3d-botao p3d-botao--foto"><i class="fa-solid fa-image" aria-hidden="true"></i> Escolher fotos<input type="file" id="p3dFotosEntrada" accept="image/jpeg,image/png,image/webp,image/*" multiple hidden></label>
+        {% else %}
+        <p class="p3d-nota">As fotos que o cliente mandou, com os cantos que ele marcou. Abra uma para ver dentro dela o projeto que estiver montado aqui.</p>
+        {% endif %}
+        <ul class="p3d-fotos" id="p3dFotos"></ul>
+        <p class="p3d-erro" id="p3dFotosErro" role="alert" hidden></p>
+      </section>
+      {% endif %}
+
       {% if modo == "cliente" %}
       <div class="p3d-pedir">
         <button type="button" class="p3d-botao p3d-botao--forte" data-pedir><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Pedir este projeto</button>
@@ -74,4 +88,31 @@
       {% endif %}
     </aside>
   </div>
+
+  {# o projeto na foto do espaço: os pontos vão nos cantos do chão e o 3D aparece do ângulo da foto (foto3d.js) #}
+  <dialog class="p3d-dialogo p3d-dialogo--foto" id="p3dFotoDialogo" aria-labelledby="p3dFotoTitulo">
+    <button type="button" class="p3d-fechar" data-fechar-foto aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    <h2 id="p3dFotoTitulo">O projeto na foto do espaço</h2>
+    <div class="p3d-chips p3d-foto-modo" role="group" aria-label="O que aparece na foto">
+      <button type="button" class="p3d-chip" data-frente="1" aria-pressed="true">Os 4 cantos aparecem</button>
+      <button type="button" class="p3d-chip" data-frente="0" aria-pressed="false">A frente ficou fora da foto</button>
+    </div>
+    <p class="p3d-nota" id="p3dFotoDica"></p>
+    <div class="p3d-foto-palco" id="p3dFotoPalco">
+      <div class="p3d-foto-quadro" id="p3dFotoQuadro">
+        <img id="p3dFotoImg" alt="A foto do espaço" draggable="false">
+        <canvas id="p3dFotoTela" aria-hidden="true"></canvas>
+      </div>
+      <svg class="p3d-foto-linhas" id="p3dFotoLinhas" aria-hidden="true"></svg>
+      <span class="p3d-foto-entrada" id="p3dFotoEntrada" hidden><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> entrada</span>
+      {% for n in "0123" %}<button type="button" class="p3d-canto" data-canto="{{ n }}"><span></span></button>{% endfor %}
+    </div>
+    <p class="p3d-foto-aviso" id="p3dFotoAviso" role="status" hidden></p>
+    <div class="p3d-foto-acoes">
+      <button type="button" class="p3d-botao p3d-botao--leve" id="p3dFotoGirar" title="Qual parede do projeto fica no fundo da foto"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Girar o projeto</button>
+      <button type="button" class="p3d-botao p3d-botao--leve" id="p3dFotoVer" aria-pressed="true"><i class="fa-solid fa-eye" aria-hidden="true"></i> <span>Esconder o projeto</span></button>
+      <button type="button" class="p3d-botao p3d-botao--leve" id="p3dFotoBaixar"><i class="fa-solid fa-download" aria-hidden="true"></i> Baixar a montagem</button>
+      <button type="button" class="p3d-botao p3d-botao--forte" data-fechar-foto><i class="fa-solid fa-check" aria-hidden="true"></i> Pronto</button>
+    </div>
+  </dialog>
 

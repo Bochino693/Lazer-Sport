@@ -2725,3 +2725,40 @@ class PedidoProjeto3D(Prime):
     @property
     def area(self):
         return self.largura * self.comprimento
+
+
+class FotoDoEspaco(Prime):
+    """Uma foto do espaço que o cliente mandou com o pedido do projeto 3D -- ou o projeto montado nela.
+
+    No "Monte seu espaço" o cliente sobe fotos do lugar e marca os quatro
+    cantos do chão; a página calcula de onde a foto foi tirada e desenha o
+    projeto por cima, na perspectiva dela (`montagem`). As fotos e a
+    montagem vão junto do pedido, para a equipe ver o espaço de verdade.
+    `cantos`: o que o cliente marcou, para refazer a montagem --
+    {"pontos": [[x, y] x4] (fração da foto, na ordem fundo esq., fundo dir.,
+    frente dir., frente esq.), "giro": 0-3 (qual parede do projeto ficou no
+    fundo da foto), "frente": a frente do espaço aparece na foto ou não}.
+    """
+
+    TIPOS = (("foto", "Foto do espaço"), ("montagem", "O projeto na foto"))
+
+    pedido = models.ForeignKey(PedidoProjeto3D, on_delete=models.CASCADE, related_name="fotos", verbose_name="Pedido")
+    # o armazenamento padrão: o Cloudinary em produção, o disco no resto
+    imagem = models.ImageField(upload_to="projetos_3d/", verbose_name="Imagem")
+    tipo = models.CharField(max_length=12, choices=TIPOS, default="foto", verbose_name="Tipo")
+    cantos = models.JSONField(default=dict, blank=True, verbose_name="Cantos do chão marcados")
+
+    class Meta:
+        verbose_name = "Foto do espaço"
+        verbose_name_plural = "Fotos do espaço"
+        ordering = ["tipo", "id"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — pedido nº {self.pedido_id}"
+
+    @property
+    def url(self):
+        try:
+            return self.imagem.url if self.imagem else ""
+        except Exception:  # noqa: BLE001
+            return ""

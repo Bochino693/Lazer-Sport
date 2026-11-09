@@ -505,6 +505,139 @@
 .p3d-ok p { margin: 0; color: var(--p3d-suave); }
 .p3d-botao--zap-largo { width: 100%; min-height: 48px; }
 
+/* ---------------------------------------------------------------- veja no seu espaço (as fotos do lugar) */
+.p3d-botao--foto { margin-top: 10px; cursor: pointer; }
+.p3d-botao--esperando { opacity: .6; pointer-events: none; }
+.p3d-fotos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.p3d-fotos:empty { display: none; }
+.p3d-foto { position: relative; }
+.p3d-foto-abrir {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--p3d-borda-forte);
+  border-radius: 12px;
+  background: #000;
+  cursor: pointer;
+}
+.p3d-foto-abrir:hover, .p3d-foto-abrir:focus-visible { border-color: var(--p3d-ciano); }
+.p3d-foto-abrir:focus-visible { outline: 3px solid var(--p3d-amarelo); outline-offset: 2px; }
+.p3d-foto-abrir img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.p3d-foto-selo {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  color: #0b1220;
+  background: var(--p3d-amarelo);
+}
+.p3d-foto-selo--ok { color: #052e16; background: #86efac; }
+.p3d-foto-tirar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(5, 11, 31, .78);
+  cursor: pointer;
+}
+.p3d-foto-tirar:hover { background: var(--p3d-vermelho); }
+
+/* o editor: a foto no meio do palco, com espaço em volta para os cantos que ficam fora dela */
+.p3d-dialogo--foto { width: min(1120px, calc(100vw - 16px)); max-height: calc(100vh - 16px); padding: 18px; overflow: auto; }
+.p3d-foto-modo { margin-top: 8px; }
+.p3d-foto-palco {
+  position: relative;
+  height: clamp(300px, 60vh, 660px);
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--p3d-borda);
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .025) 0 12px, transparent 12px 24px),
+    #070e24;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.p3d-foto-quadro { position: absolute; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); }
+.p3d-foto-quadro img, .p3d-foto-quadro canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.p3d-foto-quadro img { object-fit: fill; pointer-events: none; }
+.p3d-foto-quadro canvas { pointer-events: none; }
+.p3d-foto-linhas { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.p3d-foto-grade polyline { fill: none; stroke: rgba(63, 208, 255, .6); stroke-width: 1; }
+.p3d-foto-marca { fill: rgba(255, 210, 63, .07); stroke: var(--p3d-amarelo); stroke-width: 2.2; stroke-dasharray: 7 5; stroke-linejoin: round; }
+polyline.p3d-foto-marca { fill: none; }
+.p3d-foto-marca--corte { stroke-dasharray: 2 6; opacity: .8; }
+.p3d-canto {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  padding: 0;
+  border: 2.5px solid var(--p3d-amarelo);
+  border-radius: 50%;
+  background: rgba(5, 11, 31, .25);
+  box-shadow: 0 0 0 2px rgba(5, 11, 31, .55);
+  cursor: grab;
+  touch-action: none;
+  z-index: 2;
+}
+.p3d-canto::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--p3d-amarelo); }
+.p3d-canto span {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: #0b1220;
+  background: var(--p3d-amarelo);
+  pointer-events: none;
+}
+.p3d-canto--ativo { cursor: grabbing; background: rgba(255, 210, 63, .18); }
+.p3d-canto:focus-visible { outline: 3px solid var(--p3d-ciano); outline-offset: 2px; }
+.p3d-foto-entrada {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -130%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(22, 163, 74, .92);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.p3d-foto-aviso { margin: 10px 0 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; color: var(--p3d-suave); background: rgba(255, 255, 255, .05); }
+.p3d-foto-aviso[data-tipo="erro"] { color: #fecaca; background: rgba(220, 38, 38, .18); }
+.p3d-foto-aviso[data-tipo="atencao"] { color: #fde68a; background: rgba(234, 179, 8, .16); }
+.p3d-foto-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+@media (max-width: 767.98px) {
+  .p3d-dialogo--foto { padding: 14px 10px; }
+  .p3d-foto-palco { height: 58vh; }
+  .p3d-foto-acoes .p3d-botao { flex: 1 1 calc(50% - 8px); justify-content: center; }
+}
+
 /* ---------------------------------------------------------------- no painel (a ficha do pedido) */
 .p3d-pagina--painel .p3d {
   border-radius: 22px;

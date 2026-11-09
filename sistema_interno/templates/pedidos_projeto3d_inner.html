@@ -40,7 +40,7 @@
           <tr>
             <td data-rotulo="Nº"><strong>#{{ p.id }}</strong></td>
             <td data-rotulo="Cliente"><strong>{{ p.nome }}</strong><span class="d-block ls-subtext">{{ p.cidade|default:"" }}</span></td>
-            <td data-rotulo="Espaço">{{ p.medidas_texto }}</td>
+            <td data-rotulo="Espaço">{{ p.medidas_texto }}{% if p.resumo.fotos %}<span class="d-block ls-subtext"><i class="bi bi-camera me-1"></i>{{ p.resumo.fotos }} {% if p.resumo.fotos == 1 %}foto{% else %}fotos{% endif %} do espaço</span>{% endif %}</td>
             <td data-rotulo="Modelo">{{ p.principal|default:"—" }}</td>
             <td data-rotulo="No projeto">{% with n=p.resumo.coube|length %}{{ n }} {% if n == 1 %}item{% else %}itens{% endif %}{% endwith %}{% if p.resumo.ficou_de_fora %}<span class="d-block ls-subtext">{{ p.resumo.ficou_de_fora|length }} ficou de fora</span>{% endif %}</td>
             <td data-rotulo="Situação">

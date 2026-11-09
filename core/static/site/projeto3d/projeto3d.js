@@ -415,6 +415,16 @@ export async function iniciar(raiz) {
     console.warn("Monte seu projeto: sem 3D", erro);
     raiz.classList.add("p3d--sem-3d");
   }
+  // as fotos do espaço (o projeto dentro delas): só com o 3D de pé
+  let fotosApp = null;
+  if (cena && raiz.dataset.foto) {
+    try {
+      fotosApp = await iniciarFotos(raiz, { modo, cena, estado, fotoMod: await import(raiz.dataset.foto) });
+    } catch (erro) {
+      console.warn("Monte seu projeto: sem as fotos do espaço", erro);
+    }
+  }
+  if (!fotosApp) { const p = $("#p3dFotosPasso", raiz); if (p) p.hidden = true; }
   $("#p3dOutra", raiz)?.addEventListener("click", () => { estado.semente = (estado.semente % 997) + 1; refazer(); });
   $("#p3dVista", raiz)?.addEventListener("click", (e) => {
     if (!cena) return;
@@ -446,7 +456,8 @@ export async function iniciar(raiz) {
   if (formulario && modo === "cliente") {
     const dialogo = $("#p3dDialogo", raiz);
     raiz.querySelectorAll("[data-pedir]").forEach((b) => b.addEventListener("click", () => {
-      $("#p3dPedidoResumo", raiz).textContent = `${metros(estado.espaco.largura)} × ${metros(estado.espaco.comprimento)} m · ${resultado.itens.length} no projeto${resultado.recusados.length ? ` · ${resultado.recusados.length} ficaram de fora` : ""}`;
+      const nFotos = fotosApp ? fotosApp.total() : 0;
+      $("#p3dPedidoResumo", raiz).textContent = `${metros(estado.espaco.largura)} × ${metros(estado.espaco.comprimento)} m · ${resultado.itens.length} no projeto${resultado.recusados.length ? ` · ${resultado.recusados.length} ficaram de fora` : ""}${nFotos ? ` · ${nFotos} ${nFotos === 1 ? "foto" : "fotos"} do espaço` : ""}`;
       $("#p3dPedidoOk", raiz).hidden = true;
       formulario.hidden = false;
       if (dialogo.showModal) dialogo.showModal(); else dialogo.setAttribute("open", "");
@@ -469,15 +480,23 @@ export async function iniciar(raiz) {
         resumo: { coube, ficou_de_fora: fora, numeros: resultado.numeros, espaco_para_tudo: sugestao },
       };
       try {
-        const resposta = await fetch(raiz.dataset.urlPedido, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || document.querySelector('meta[name="csrf-token"]')?.content || "",
-          },
-          body: JSON.stringify(corpo),
-          credentials: "same-origin",
-        });
+        const cabecalhos = { "X-CSRFToken": (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || document.querySelector('meta[name="csrf-token"]')?.content || "" };
+        // com fotos do espaço, vai em partes (o pedido + as fotos + as montagens); sem, só o pedido
+        const anexos = fotosApp ? await fotosApp.paraOPedido() : [];
+        let envio;
+        if (anexos.length) {
+          envio = new FormData();
+          envio.append("dados", JSON.stringify(corpo));
+          anexos.forEach((a, i) => {
+            envio.append(`foto_${i}`, a.foto, `foto-${i + 1}.jpg`);
+            envio.append(`cantos_${i}`, JSON.stringify(a.cantos));
+            if (a.montagem) envio.append(`montagem_${i}`, a.montagem, `projeto-na-foto-${i + 1}.jpg`);
+          });
+        } else {
+          cabecalhos["Content-Type"] = "application/json";
+          envio = JSON.stringify(corpo);
+        }
+        const resposta = await fetch(raiz.dataset.urlPedido, { method: "POST", headers: cabecalhos, body: envio, credentials: "same-origin" });
         const volta = await resposta.json().catch(() => ({}));
         if (!resposta.ok || volta.status !== "sucesso") {
           erro.innerHTML = escapar(volta.mensagem || "Não deu para mandar agora. Tente de novo.") + (volta.whatsapp ? ` <a href="${escapar(volta.whatsapp)}" target="_blank" rel="noopener">Mandar pelo WhatsApp</a>` : "");
@@ -490,6 +509,14 @@ export async function iniciar(raiz) {
         $("#p3dPedidoNumero", raiz).textContent = volta.numero ? `nº ${volta.numero}` : "";
         const zap = $("#p3dPedidoZap", raiz);
         if (volta.whatsapp) { zap.href = volta.whatsapp; zap.hidden = false; } else zap.hidden = true;
+        const notaFotos = $("#p3dPedidoFotosNota", raiz);
+        if (notaFotos) {
+          const mandadas = fotosApp ? fotosApp.total() : 0;
+          notaFotos.hidden = !mandadas;
+          notaFotos.textContent = mandadas && (volta.fotos || 0) < mandadas
+            ? "As fotos do espaço não chegaram junto: mande pelo WhatsApp, por favor."
+            : `Com ${mandadas} ${mandadas === 1 ? "foto" : "fotos"} do espaço${mandadas ? " e o projeto montado nelas" : ""}.`;
+        }
       } catch (_) {
         erro.textContent = "Sem conexão agora. Tente de novo em instantes.";
         erro.hidden = false;
@@ -498,6 +525,393 @@ export async function iniciar(raiz) {
       }
     });
   }
+}
+
+/* ======================================================================
+   VEJA NO SEU ESPAÇO: as fotos do lugar, com o projeto dentro delas
+   O cliente sobe as fotos, arrasta quatro pontos até o chão do espaço e o
+   3D aparece do ângulo da foto (a conta da câmera: foto3d.js). As fotos e as
+   montagens vão junto do pedido. No painel, as fotos que o cliente mandou,
+   com os pontos dele, para ver dentro delas o projeto como estiver aqui.
+   ====================================================================== */
+const MAX_FOTOS = 3;
+const LADO_DA_FOTO = 1400; // o bastante para ver o espaço, leve para mandar
+const PONTOS_DE_PARTIDA = [[0.26, 0.45], [0.74, 0.45], [0.97, 0.96], [0.03, 0.96]];
+const MARGEM_DO_PALCO = { e: 0.12, d: 0.12, c: 0.04, b: 0.18 }; // o espaço em volta da foto, para os cantos que ficam fora dela
+
+function carregarImagem(src) {
+  return new Promise((ok, falha) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => ok(img);
+    img.onerror = falha;
+    img.src = src;
+  });
+}
+const paraBlob = (canvas, tipo, qualidade) => new Promise((ok) => canvas.toBlob(ok, tipo, qualidade));
+
+/* A foto no tamanho que basta, em JPEG. Passar pelo canvas também deixa para trás
+   os dados do aparelho gravados na foto (o EXIF, com o lugar onde ela foi tirada). */
+async function prepararFoto(arquivo) {
+  let fonte;
+  try {
+    fonte = await createImageBitmap(arquivo, { imageOrientation: "from-image" });
+  } catch (_) {
+    const url = URL.createObjectURL(arquivo);
+    try { fonte = await carregarImagem(url); } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  }
+  const w0 = fonte.naturalWidth || fonte.width, h0 = fonte.naturalHeight || fonte.height;
+  if (!w0 || !h0) throw new Error("foto vazia");
+  const k = Math.min(1, LADO_DA_FOTO / Math.max(w0, h0));
+  const c = document.createElement("canvas");
+  c.width = Math.round(w0 * k);
+  c.height = Math.round(h0 * k);
+  c.getContext("2d").drawImage(fonte, 0, 0, c.width, c.height);
+  if (fonte.close) fonte.close();
+  const blob = await paraBlob(c, "image/jpeg", 0.84);
+  if (!blob) throw new Error("sem imagem");
+  const src = URL.createObjectURL(blob);
+  return { blob, src, img: await carregarImagem(src), largura: c.width, altura: c.height };
+}
+
+async function iniciarFotos(raiz, { modo, cena, estado, fotoMod }) {
+  const passo = $("#p3dFotosPasso", raiz);
+  const dialogo = $("#p3dFotoDialogo", raiz);
+  if (!passo || !dialogo || !fotoMod) return null;
+  const lista = $("#p3dFotos", raiz), erro = $("#p3dFotosErro", raiz), entrada = $("#p3dFotosEntrada", raiz);
+  const palco = $("#p3dFotoPalco", raiz), quadro = $("#p3dFotoQuadro", raiz), img = $("#p3dFotoImg", raiz), tela = $("#p3dFotoTela", raiz);
+  const svg = $("#p3dFotoLinhas", raiz), aviso = $("#p3dFotoAviso", raiz), dica = $("#p3dFotoDica", raiz), porta = $("#p3dFotoEntrada", raiz);
+  const cantos = [...raiz.querySelectorAll(".p3d-canto")];
+  const botaoVer = $("#p3dFotoVer", raiz), botaoBaixar = $("#p3dFotoBaixar", raiz);
+  const fotos = [];
+  let aberta = null;
+  let caixa = { x: 0, y: 0, w: 1, h: 1, W: 1, H: 1 };
+  let chave = "";
+  let projetoVisivel = true;
+
+  const sala = () => ({ largura: Number(estado.espaco.largura), comprimento: Number(estado.espaco.comprimento) });
+  const calcular = (f) => (f && f.pontos
+    ? fotoMod.cameraDaFoto(f.pontos.map(([x, y]) => [x * f.largura, y * f.altura]), f.largura, f.altura, sala(), { giro: f.giro, frente: f.frente })
+    : null);
+  const nomeDoPonto = (f, k) => (!f.frente && k >= 2 ? (k === 2 ? "parede dir." : "parede esq.") : fotoMod.NOMES_DOS_CANTOS[(k + f.giro) % 4]);
+
+  // no painel: as fotos que o cliente mandou (com os pontos que ele marcou), sem segurar o 3D
+  const doServidor = $("#p3dFotosDados");
+  if (doServidor) {
+    Promise.all(JSON.parse(doServidor.textContent || "[]").map(async (d) => {
+      try {
+        const im = await carregarImagem(d.url);
+        const c = d.cantos || {};
+        const ok = Array.isArray(c.pontos) && c.pontos.length === 4;
+        return { src: d.url, img: im, largura: im.naturalWidth, altura: im.naturalHeight, pontos: ok ? c.pontos : null, giro: Number(c.giro) || 0, frente: c.frente !== false };
+      } catch (_) {
+        return null; // a foto que não abriu fica só no link da ficha
+      }
+    })).then((lidas) => {
+      fotos.push(...lidas.filter(Boolean));
+      desenharLista();
+      passo.hidden = !fotos.length;
+    });
+  }
+
+  function desenharLista() {
+    lista.innerHTML = fotos.map((f, i) => `<li class="p3d-foto">
+        <button type="button" class="p3d-foto-abrir" data-abrir="${i}" aria-label="Ver o projeto na foto ${i + 1}">
+          <img src="${escapar(f.src)}" alt="" loading="lazy">
+          <span class="p3d-foto-selo${f.pontos ? " p3d-foto-selo--ok" : ""}">${f.pontos ? '<i class="fa-solid fa-check" aria-hidden="true"></i> Projeto na foto' : '<i class="fa-solid fa-crosshairs" aria-hidden="true"></i> Marcar o chão'}</span>
+        </button>
+        ${modo === "cliente" ? `<button type="button" class="p3d-foto-tirar" data-tirar="${i}" aria-label="Tirar a foto ${i + 1}" title="Tirar esta foto"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>` : ""}
+      </li>`).join("");
+    if (entrada) entrada.closest("label").hidden = fotos.length >= MAX_FOTOS;
+  }
+
+  entrada?.addEventListener("change", async () => {
+    const escolhidas = [...entrada.files];
+    entrada.value = "";
+    erro.hidden = true;
+    const cabem = escolhidas.slice(0, MAX_FOTOS - fotos.length);
+    const antes = fotos.length;
+    const rotulo = entrada.closest("label");
+    rotulo.classList.add("p3d-botao--esperando");
+    for (const arquivo of cabem) {
+      try {
+        fotos.push({ ...(await prepararFoto(arquivo)), pontos: null, giro: 0, frente: true });
+      } catch (_) {
+        erro.textContent = "Uma das fotos não abriu. Mande em JPG ou PNG (no iPhone: Ajustes › Câmera › Formatos › Mais Compatível).";
+        erro.hidden = false;
+      }
+    }
+    rotulo.classList.remove("p3d-botao--esperando");
+    if (escolhidas.length > cabem.length && erro.hidden) {
+      erro.textContent = `Vão até ${MAX_FOTOS} fotos: ficaram as primeiras.`;
+      erro.hidden = false;
+    }
+    desenharLista();
+    if (fotos.length > antes) abrir(antes);
+  });
+
+  lista.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-abrir]");
+    if (a) { abrir(Number(a.dataset.abrir)); return; }
+    const t = e.target.closest("[data-tirar]");
+    if (t) {
+      const [f] = fotos.splice(Number(t.dataset.tirar), 1);
+      if (f && f.blob) URL.revokeObjectURL(f.src);
+      desenharLista();
+    }
+  });
+
+  /* ---------------------------------------------------------------- o editor */
+  function marcarModo() {
+    raiz.querySelectorAll("[data-frente]").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.frente === "1") === aberta.frente)));
+    dica.textContent = aberta.frente
+      ? "Arraste os 4 pontos até os cantos do chão do espaço. Canto fora da foto? Leve o ponto para fora dela, até onde ele estaria."
+      : "Os 2 pontos de cima vão nos cantos do fundo. Os 2 de baixo ficam em cima da linha do chão das paredes dos lados, na mesma distância do fundo (perto da beira da foto).";
+    chave = "";
+  }
+  function abrir(i) {
+    aberta = fotos[i];
+    if (!aberta) return;
+    if (!aberta.pontos) aberta.pontos = PONTOS_DE_PARTIDA.map((p) => p.slice());
+    img.src = aberta.src;
+    botaoBaixar.hidden = !aberta.blob; // no painel a montagem do cliente já está na ficha
+    marcarModo();
+    if (dialogo.showModal) dialogo.showModal(); else dialogo.setAttribute("open", "");
+    requestAnimationFrame(() => { medir(); laco(); });
+  }
+  function fechar() {
+    if (dialogo.close) { dialogo.close(); return; }
+    // sem <dialog> de verdade (navegador antigo) não vem o "close"
+    dialogo.removeAttribute("open");
+    aberta = null;
+    desenharLista();
+  }
+  dialogo.addEventListener("close", () => { aberta = null; desenharLista(); });
+  raiz.querySelectorAll("[data-fechar-foto]").forEach((b) => b.addEventListener("click", fechar));
+
+  function medir() {
+    if (!aberta) return;
+    let r = palco.getBoundingClientRect();
+    // no celular (tela em pé) a margem é menor e o palco só tem a altura que a foto pede
+    const m = r.width < 600 ? { e: 0.08, d: 0.08, c: 0.04, b: 0.14 } : MARGEM_DO_PALCO;
+    if (r.width < 600) {
+      const pede = (r.width * (1 - m.e - m.d) * (aberta.altura / aberta.largura)) / (1 - m.c - m.b);
+      const altura = Math.round(Math.max(240, Math.min(window.innerHeight * 0.62, pede)));
+      if (Math.abs(altura - r.height) > 2) {
+        palco.style.height = `${altura}px`;
+        r = palco.getBoundingClientRect();
+      }
+    } else if (palco.style.height) {
+      palco.style.height = "";
+      r = palco.getBoundingClientRect();
+    }
+    const livreW = r.width * (1 - m.e - m.d), livreH = r.height * (1 - m.c - m.b);
+    const k = Math.min(livreW / aberta.largura, livreH / aberta.altura);
+    const w = aberta.largura * k, h = aberta.altura * k;
+    caixa = { x: r.width * m.e + (livreW - w) / 2, y: r.height * m.c + (livreH - h) / 2, w, h, W: r.width, H: r.height };
+    Object.assign(quadro.style, { left: `${caixa.x}px`, top: `${caixa.y}px`, width: `${w}px`, height: `${h}px` });
+    svg.setAttribute("viewBox", `0 0 ${r.width} ${r.height}`);
+    chave = "";
+  }
+  new ResizeObserver(() => { if (aberta) medir(); }).observe(palco);
+
+  // os pontos: arrastar (dedo ou mouse) ou as setas do teclado
+  let arrasto = null;
+  cantos.forEach((botao, k) => {
+    botao.addEventListener("pointerdown", (e) => {
+      if (!aberta) return;
+      e.preventDefault();
+      botao.setPointerCapture(e.pointerId);
+      const r = palco.getBoundingClientRect();
+      const [px, py] = aberta.pontos[k];
+      // segura de onde pegou: o ponto não pula para baixo do dedo
+      arrasto = { k, id: e.pointerId, dx: caixa.x + px * caixa.w - (e.clientX - r.left), dy: caixa.y + py * caixa.h - (e.clientY - r.top) };
+      botao.classList.add("p3d-canto--ativo");
+    });
+    botao.addEventListener("pointermove", (e) => {
+      if (!arrasto || arrasto.id !== e.pointerId || !aberta) return;
+      const r = palco.getBoundingClientRect();
+      const x = Math.min(r.width, Math.max(0, e.clientX - r.left + arrasto.dx));
+      const y = Math.min(r.height, Math.max(0, e.clientY - r.top + arrasto.dy));
+      aberta.pontos[arrasto.k] = [(x - caixa.x) / caixa.w, (y - caixa.y) / caixa.h];
+    });
+    const soltar = () => { arrasto = null; botao.classList.remove("p3d-canto--ativo"); };
+    botao.addEventListener("pointerup", soltar);
+    botao.addEventListener("pointercancel", soltar);
+    botao.addEventListener("keydown", (e) => {
+      const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!d || !aberta) return;
+      e.preventDefault();
+      const passoPx = e.shiftKey ? 12 : 2;
+      const [px, py] = aberta.pontos[k];
+      const x = Math.min(caixa.W, Math.max(0, caixa.x + px * caixa.w + d[0] * passoPx));
+      const y = Math.min(caixa.H, Math.max(0, caixa.y + py * caixa.h + d[1] * passoPx));
+      aberta.pontos[k] = [(x - caixa.x) / caixa.w, (y - caixa.y) / caixa.h];
+    });
+  });
+
+  raiz.querySelectorAll("[data-frente]").forEach((b) => b.addEventListener("click", () => {
+    if (!aberta) return;
+    aberta.frente = b.dataset.frente === "1";
+    marcarModo();
+  }));
+  $("#p3dFotoGirar", raiz)?.addEventListener("click", () => { if (aberta) { aberta.giro = (aberta.giro + 1) % 4; chave = ""; } });
+  botaoVer?.addEventListener("click", () => {
+    projetoVisivel = !projetoVisivel;
+    botaoVer.setAttribute("aria-pressed", String(projetoVisivel));
+    botaoVer.querySelector("span").textContent = projetoVisivel ? "Esconder o projeto" : "Mostrar o projeto";
+    chave = "";
+  });
+  botaoBaixar?.addEventListener("click", async () => {
+    if (!aberta) return;
+    const blob = await montagem(aberta).catch(() => null);
+    if (!blob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `projeto-no-meu-espaco-${metros(estado.espaco.largura)}x${metros(estado.espaco.comprimento)}m.jpg`.replace(/,/g, "-");
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  });
+
+  // do chão do mundo (x, z) para o palco
+  const noPalco = (pose, x, y, z) => {
+    const [u, v, prof] = fotoMod.projetar(pose, x, y, z);
+    return [caixa.x + (u / aberta.largura) * caixa.w, caixa.y + (v / aberta.altura) * caixa.h, prof];
+  };
+  function linhaNoChao(pose, a, b) {
+    // amostrada: o pedaço atrás da câmera fica de fora
+    const partes = [];
+    let atual = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24;
+      const [x, y, prof] = noPalco(pose, a[0] + (b[0] - a[0]) * t, 0, a[1] + (b[1] - a[1]) * t);
+      if (prof > 0.15 && Math.abs(x) < 1e5 && Math.abs(y) < 1e5) atual.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      else if (atual.length) { partes.push(atual); atual = []; }
+    }
+    if (atual.length) partes.push(atual);
+    return partes.filter((p) => p.length > 1).map((p) => `<polyline points="${p.join(" ")}"/>`).join("");
+  }
+
+  function desenharMarcas() {
+    const f = aberta;
+    const P = f.pontos.map(([x, y]) => [caixa.x + x * caixa.w, caixa.y + y * caixa.h]);
+    cantos.forEach((b, k) => {
+      b.style.transform = `translate(${P[k][0]}px, ${P[k][1]}px)`;
+      const nome = nomeDoPonto(f, k);
+      b.querySelector("span").textContent = nome;
+      b.setAttribute("aria-label", `Ponto ${nome}: arraste ou use as setas do teclado`);
+    });
+    const pose = calcular(f);
+    const { largura: W, comprimento: D } = sala();
+    let grade = "";
+    if (pose && pose.ok) {
+      // o chão do projeto em quadros de 1 ou 2 m: mostra se a perspectiva bateu
+      const passoM = Math.max(W, D) > 24 ? 2 : 1;
+      for (let x = -W / 2; x <= W / 2 + 1e-6; x += passoM) grade += linhaNoChao(pose, [x, -D / 2], [x, D / 2]);
+      for (let z = -D / 2; z <= D / 2 + 1e-6; z += passoM) grade += linhaNoChao(pose, [-W / 2, z], [W / 2, z]);
+    }
+    const borda = f.frente
+      ? `<polygon class="p3d-foto-marca" points="${P.map((p) => p.join(",")).join(" ")}"/>`
+      : `<polyline class="p3d-foto-marca" points="${[P[3], P[0], P[1], P[2]].map((p) => p.join(",")).join(" ")}"/><line class="p3d-foto-marca p3d-foto-marca--corte" x1="${P[2][0]}" y1="${P[2][1]}" x2="${P[3][0]}" y2="${P[3][1]}"/>`;
+    svg.innerHTML = `<g class="p3d-foto-grade">${grade}</g>${borda}`;
+
+    // a entrada (o meio da parede da frente), se ela cair na tela
+    porta.hidden = true;
+    if (pose && pose.ok) {
+      const [x, y, prof] = noPalco(pose, 0, 0, D / 2);
+      if (prof > 0.15 && x > 0 && x < caixa.W && y > 0 && y < caixa.H) {
+        porta.hidden = false;
+        porta.style.transform = `translate(${x}px, ${y}px)`;
+      }
+    }
+
+    // o aviso
+    let texto = "", tipo = "";
+    if (!pose) texto = "";
+    else if (!pose.ok) {
+      tipo = "erro";
+      texto = {
+        invertido: "Os pontos parecem trocados (esquerda com direita, ou fundo com frente). Confira o nome em cada ponto.",
+        retangulo: "Esses pontos não fecham um retângulo no chão: os dois de baixo ficam em cima das linhas das paredes, na mesma distância do fundo.",
+        pontos: "Os pontos se cruzaram. Deixe cada um no seu canto.",
+      }[pose.motivo] || "Não deu para achar o ângulo da foto com esses pontos.";
+    } else if (pose.motivo === "torto") {
+      tipo = "atencao";
+      texto = `Os pontos não fecham com um espaço de ${metros(W)} × ${metros(D)} m. Confira se cada um está no canto certo, ou se as medidas do passo 1 são as do lugar.`;
+    } else if (!f.frente && pose.profundidade) {
+      const fundo = f.giro % 2 ? D : W;
+      texto = `Pela foto, o chão marcado tem uns ${metros(fundo)} × ${metros(Math.round(pose.profundidade * 10) / 10)} m.`;
+    }
+    aviso.hidden = !texto;
+    aviso.textContent = texto;
+    aviso.dataset.tipo = tipo;
+
+    if (pose && pose.ok && cena && projetoVisivel) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      try {
+        cena.naFoto(tela, fotoMod.cameraThree(pose), caixa.w * dpr, caixa.h * dpr);
+        tela.hidden = false;
+      } catch (e) {
+        console.warn("Monte seu projeto: o 3D na foto não saiu", e);
+        tela.hidden = true;
+      }
+    } else {
+      tela.hidden = true;
+    }
+  }
+  function laco() {
+    if (!aberta) return;
+    requestAnimationFrame(laco);
+    const nova = JSON.stringify([aberta.pontos, aberta.giro, aberta.frente, estado.espaco.largura, estado.espaco.comprimento, caixa.w, caixa.h, cena ? cena.versao() : "", projetoVisivel]);
+    if (nova === chave) return;
+    chave = nova;
+    desenharMarcas();
+  }
+
+  /* ---------------------------------------------------------------- a montagem (a foto + o 3D), em JPEG */
+  async function montagem(f) {
+    const pose = calcular(f);
+    if (!pose || !pose.ok || !cena) return null;
+    const c = document.createElement("canvas");
+    c.width = f.largura;
+    c.height = f.altura;
+    const g = c.getContext("2d");
+    g.drawImage(f.img, 0, 0, c.width, c.height);
+    // o mesmo canvas do editor, no tamanho da foto (some no próximo quadro do editor)
+    cena.naFoto(tela, fotoMod.cameraThree(pose), c.width, c.height);
+    g.drawImage(tela, 0, 0, c.width, c.height);
+    chave = "";
+    // a legenda
+    const fonte = Math.max(12, Math.round(c.height * 0.026));
+    const texto = `Lazer & Sport · projeto ilustrativo · ${metros(estado.espaco.largura)} × ${metros(estado.espaco.comprimento)} m`;
+    g.font = `700 ${fonte}px system-ui, sans-serif`;
+    const largura = g.measureText(texto).width;
+    g.fillStyle = "rgba(5, 11, 31, .72)";
+    g.fillRect(fonte * 0.6, c.height - fonte * 2.4, largura + fonte * 1.2, fonte * 1.8);
+    g.fillStyle = "#ffd23f";
+    g.fillText(texto, fonte * 1.2, c.height - fonte * 1.1);
+    return paraBlob(c, "image/jpeg", 0.85);
+  }
+
+  desenharLista();
+  if (modo !== "cliente") passo.hidden = true; // aparece quando as fotos do cliente abrirem
+  return {
+    total: () => fotos.filter((f) => f.blob).length,
+    /** O que vai no pedido: cada foto, o que foi marcado nela e a montagem (quando os pontos fecham). */
+    async paraOPedido() {
+      const saida = [];
+      for (const f of fotos) {
+        if (!f.blob) continue;
+        const pose = calcular(f);
+        saida.push({
+          foto: f.blob,
+          cantos: f.pontos ? { pontos: f.pontos, giro: f.giro, frente: f.frente } : {},
+          montagem: pose && pose.ok ? await montagem(f).catch(() => null) : null,
+        });
+      }
+      return saida;
+    },
+  };
 }
 
 /* ======================================================================
@@ -551,6 +965,8 @@ async function criarCena(raiz, dados, geradorMod) {
 
   /* ---------------------------------------------------------------- a câmera */
   const camera = new T.PerspectiveCamera(40, 1, 0.1, 600);
+  const camFoto = new T.PerspectiveCamera(50, 1, 0.05, 800); // a da foto do cliente
+  const fotoRenderers = new Map();
   const vista = { alvo: new T.Vector3(), giro: 0.55, inclinacao: 0.78, distancia: 30 };
   let alvoVista = null; // a vista para onde a câmera desliza (planta, foco)
   let planta = false;
@@ -772,6 +1188,7 @@ async function criarCena(raiz, dados, geradorMod) {
     );
     contorno.position.y = H / 2;
     projeto.add(contorno);
+    contornoAtual = contorno;
     return lista;
   }
   function esconderParedes() {
@@ -783,7 +1200,9 @@ async function criarCena(raiz, dados, geradorMod) {
 
   /* ---------------------------------------------------------------- desenhar o projeto */
   let versao = 0;
+  let carregados = 0; // os .glb que chegaram depois do desenho (a foto do cliente redesenha com eles)
   let ultimoTamanho = "";
+  let chaoAtual = null, contornoAtual = null, sombraAtual = null;
   function limpar() {
     projeto.traverse((o) => {
       if (o.isMesh || o.isLineSegments) {
@@ -813,6 +1232,15 @@ async function criarCena(raiz, dados, geradorMod) {
     chao.rotation.x = -Math.PI / 2;
     chao.receiveShadow = true;
     projeto.add(chao);
+    chaoAtual = chao;
+    // na foto do cliente o chão é o dele: fica só a sombra do projeto
+    const sombra = new T.Mesh(new T.PlaneGeometry(W, D), new T.ShadowMaterial({ opacity: 0.32 }));
+    sombra.rotation.x = -Math.PI / 2;
+    sombra.position.y = 0.002;
+    sombra.receiveShadow = true;
+    sombra.visible = false;
+    projeto.add(sombra);
+    sombraAtual = sombra;
     paredes = fazerParedes(r, W, D, H);
 
     // a luz e a sombra cobrem a sala
@@ -873,6 +1301,7 @@ async function criarCena(raiz, dados, geradorMod) {
           grupo.remove(reserva);
           reserva.traverse((o) => o.geometry?.dispose());
           grupo.add(copia);
+          carregados++;
           sujo = true;
         }).catch(() => {});
       } else {
@@ -947,6 +1376,58 @@ async function criarCena(raiz, dados, geradorMod) {
       esconderParedes();
       renderer.render(cena, camera);
       return tela.toDataURL("image/png");
+    },
+    /** Muda a cada desenho e a cada .glb que chega: a foto do cliente sabe quando redesenhar. */
+    versao: () => `${versao}.${carregados}`,
+    /**
+     * O projeto na foto do cliente: desenha no `canvas` (fundo transparente, para ir por cima da foto)
+     * o projeto visto pela câmera da foto (foto3d.cameraThree), em largura × altura pixels.
+     * Sem paredes, sem o chão desenhado e sem a mesa: só as peças e a sombra delas no chão de verdade.
+     */
+    naFoto(canvas, cam, largura, altura) {
+      let r = fotoRenderers.get(canvas);
+      if (!r) {
+        r = new T.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+        r.outputColorSpace = T.SRGBColorSpace;
+        r.toneMapping = T.ACESFilmicToneMapping;
+        r.toneMappingExposure = 1.05;
+        r.shadowMap.enabled = true;
+        r.shadowMap.type = T.PCFSoftShadowMap;
+        r.setClearColor(0x000000, 0);
+        fotoRenderers.set(canvas, r);
+      }
+      r.setPixelRatio(1);
+      r.setSize(Math.max(1, Math.round(largura)), Math.max(1, Math.round(altura)), false);
+      camFoto.fov = cam.fov;
+      camFoto.aspect = cam.aspecto;
+      camFoto.near = 1; // o que está a menos de 1 m da lente fica de fora: é onde o fotógrafo está
+      camFoto.far = 800;
+      camFoto.position.fromArray(cam.posicao);
+      camFoto.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(...cam.eixos.map((e) => new T.Vector3(...e))));
+      camFoto.updateProjectionMatrix();
+      camFoto.updateMatrixWorld();
+      const antes = { fundo: cena.background, nevoa: cena.fog, fora: fora.visible, selecao: selecao.visible };
+      cena.background = null;
+      cena.fog = null;
+      fora.visible = false;
+      selecao.visible = false;
+      for (const p of paredes) p.g.visible = false;
+      if (contornoAtual) contornoAtual.visible = false;
+      if (chaoAtual) chaoAtual.visible = false;
+      if (sombraAtual) sombraAtual.visible = true;
+      try {
+        r.render(cena, camFoto);
+      } finally {
+        cena.background = antes.fundo;
+        cena.fog = antes.nevoa;
+        fora.visible = antes.fora;
+        selecao.visible = antes.selecao;
+        if (contornoAtual) contornoAtual.visible = true;
+        if (chaoAtual) chaoAtual.visible = true;
+        if (sombraAtual) sombraAtual.visible = false;
+        sujo = true; // as paredes voltam pela câmera do 3D no próximo quadro
+      }
+      return canvas;
     },
   };
 }

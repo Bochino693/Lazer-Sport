@@ -4,7 +4,9 @@ O cliente monta o espaço no site (/monte-seu-projeto/, core/projeto3d.py) e
 pede o projeto. Aqui a equipe comercial vê a lista (o tamanho, o modelo, o
 que coube e o que ficou de fora), abre a ficha com o MESMO 3D que o cliente
 viu (o app do site em modo "painel", refeito da escolha e da semente
-guardadas), chama no WhatsApp e anota a situação.
+guardadas), chama no WhatsApp e anota a situação. As fotos do espaço que o
+cliente mandou aparecem na ficha, com o projeto montado nelas, e o app abre
+cada uma com os pontos que ele marcou (para ver o projeto como estiver aqui).
 
 Quem entra: a equipe comercial (Vendas, Ambulante, Gestão), como as
 outras telas de cliente. Sem a tabela (a migração ainda não rodou), a tela
@@ -19,7 +21,7 @@ from django.db import DatabaseError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from core import projeto3d
-from core.models import PedidoProjeto3D
+from core.models import FotoDoEspaco, PedidoProjeto3D
 from core import objetos_3d
 
 from .views import GestorInternoRequiredMixin
@@ -30,6 +32,24 @@ POR_PAGINA = 25
 def _tabela():
     # pelo módulo, na hora: quem importa a função guarda a de quando importou
     return objetos_3d.tabela_pronta(PedidoProjeto3D)
+
+
+def _fotos(pedido):
+    """As fotos do espaço do pedido, cada uma com a sua montagem (se veio): [{foto, montagem}]."""
+    if not objetos_3d.tabela_pronta(FotoDoEspaco):
+        return []
+    try:
+        todas = list(pedido.fotos.all())
+    except DatabaseError:
+        return []
+    fotos = [f for f in todas if f.tipo == "foto"]
+    montagens = [f for f in todas if f.tipo == "montagem"]
+    # a montagem vem logo depois da sua foto (o id seguinte): casa pela ordem de chegada
+    pares = []
+    for f in fotos:
+        par = next((m for m in montagens if m.id > f.id and all(not (f.id < o.id < m.id) for o in fotos)), None)
+        pares.append({"foto": f, "montagem": par})
+    return pares
 
 
 class PedidosProjeto3DView(GestorInternoRequiredMixin):
@@ -78,6 +98,7 @@ class PedidoProjeto3DView(GestorInternoRequiredMixin):
         }
         resumo = pedido.resumo or {}
         whatsapp = pedido.whatsapp if pedido.whatsapp.startswith("55") else "55" + pedido.whatsapp
+        fotos = _fotos(pedido)
         return render(request, "pedido_projeto3d_inner.html", {
             "pedido": pedido,
             "projeto_dados": projeto3d.catalogo(),
@@ -88,6 +109,9 @@ class PedidoProjeto3DView(GestorInternoRequiredMixin):
             "espaco_para_tudo": resumo.get("espaco_para_tudo") or {},
             "whatsapp": whatsapp,
             "situacoes": PedidoProjeto3D.STATUS,
+            "fotos": fotos,
+            # para o app: a foto e os pontos marcados (o projeto entra na foto como estiver montado aqui)
+            "projeto_fotos": [{"url": p["foto"].url, "cantos": p["foto"].cantos or {}} for p in fotos if p["foto"].url],
         })
 
     def post(self, request, pk):

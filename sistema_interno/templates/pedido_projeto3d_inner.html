@@ -58,6 +58,27 @@
   </div>
 </div>
 
+{% if fotos %}
+<section class="ls-card p-3 mb-3">
+  <h2 class="h6 mb-3"><i class="bi bi-camera me-1"></i> O espaço do cliente ({{ fotos|length }} {% if fotos|length == 1 %}foto{% else %}fotos{% endif %})</h2>
+  <p class="small text-muted mb-3">A foto que ele mandou e, ao lado, o projeto montado nela do jeito que ele marcou. No 3D abaixo, em "Veja no seu espaço", dá para abrir a foto com o projeto como estiver aqui.</p>
+  <div class="row g-3">
+    {% for par in fotos %}
+    <div class="col-md-6 col-xl-4">
+      <div class="d-grid gap-2">
+        {% if par.montagem and par.montagem.url %}
+        <a href="{{ par.montagem.url }}" target="_blank" rel="noopener" data-no-soft-nav="true" title="O projeto na foto (abrir grande)"><img src="{{ par.montagem.url }}" alt="O projeto montado na foto {{ forloop.counter }}" class="img-fluid rounded border" loading="lazy"></a>
+        {% endif %}
+        {% if par.foto.url %}
+        <a href="{{ par.foto.url }}" target="_blank" rel="noopener" data-no-soft-nav="true" class="small"><i class="bi bi-image me-1"></i>{% if par.montagem %}A foto sem o projeto{% else %}<img src="{{ par.foto.url }}" alt="A foto {{ forloop.counter }} do espaço" class="img-fluid rounded border mb-1" loading="lazy">A foto {{ forloop.counter }}{% endif %}</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <div class="p3d-pagina p3d-pagina--painel">
 <section class="p3d" id="p3d" data-modo="painel"
          data-three="{% static 'vendor/three/three.module.min.js' %}"
@@ -65,9 +86,11 @@
          data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
          data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
          data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
-         data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}">
+         data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
+         data-foto="{% estatico 'site/projeto3d/foto3d.js' %}">
   {{ projeto_dados|json_script:"p3dDados" }}
   {{ projeto_estado|json_script:"p3dEstado" }}
+  {% if projeto_fotos %}{{ projeto_fotos|json_script:"p3dFotosDados" }}{% endif %}
   <script>document.getElementById("p3d").classList.add("p3d--js");</script>
   {% include "partials/projeto3d_app.html" with modo="painel" %}
 </section>
