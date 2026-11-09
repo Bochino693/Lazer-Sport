@@ -8,14 +8,17 @@
 //    os módulos de 1 m (10 colunas × 2 fileiras na barra) e o piso de cada
 //    módulo do 2º andar; a torre da ponta da perna com o piso de duas cores
 //    na diagonal, a passarela de rede quadriculada e, na ponta direita, o
-//    topo do tobogã e a piscina de bolinhas;
+//    topo do tobogã e a piscina de bolinhas -- DENTRO da barra: os últimos
+//    2 m dela, nos 2 m de fundo, com só o piso amarelo de trás em cima. Vista
+//    de cima, o objeto é exatamente o L (só a escadinha sai 35 cm na frente);
 //  - da vista de frente: as alturas (o piso do 2º andar a 1,90 m, 1,85 m de
 //    pé-direito em cima, 3,75 m no total), as três barraquinhas com o toldo
 //    listrado, o fliperama em cubo e a mesa de fliperama embaixo; em cima,
 //    as cunhas de espuma sob o painel magenta, a bola-pêndulo, os sacos de
-//    pancada, o balanço e o saco azul do módulo 9; o painel da janela
-//    redonda e o tobogã em espiral de tubo fechado, em gomos coloridos, até
-//    a piscina de bolinhas, com a escadinha amarela na frente;
+//    pancada, o balanço e o saco azul do módulo amarelo; no alto da ponta
+//    direita, o painel da janela redonda, e embaixo o tobogã em espiral de
+//    tubo fechado, em gomos coloridos, dentro da piscina de bolinhas, com a
+//    escadinha amarela colada na frente dela;
 //  - da perspectiva: a escada da torre em zigue-zague (as plataformas
 //    amarelas e azuis, os degraus brancos), as redes em onda acima dela e a
 //    passarela a ~1,9 m ligando a torre à barra.
@@ -328,9 +331,16 @@ for (const [x, y] of colunas) {
   cilindro(M.estrutura, V(x, y, 0), V(x, y, TOPO - TAMPA), RT, 10, true);
   esfera(M.estrutura, V(x, y, TOPO - TAMPA), TAMPA, 10, 6); // a tampa arredondada
 }
+// Embaixo do piso, no vão do tobogã (a frente dos módulos 9 e 10 e o fundo do
+// 10º não têm piso), as duas travessas que cruzariam a espiral não existem:
+// a do meio no 10º e a da coluna do meio da piscina para a frente.
+const noVaoDoTobogan = (xa, ya, xb, yb, z) => z === ZP && ((ya === MEIO && yb === MEIO && xa >= 9000) || (xa === 9000 && xb === 9000 && ya === BARRA));
 for (const z of [ZT, ZP]) {
-  for (const y of YB) for (let i = 0; i < 10; i++) travessa(XB[i], y, XB[i + 1], y, z);
-  for (const x of XB) { travessa(x, YB[0], x, YB[1], z); travessa(x, YB[1], x, YB[2], z); }
+  for (const y of YB) for (let i = 0; i < 10; i++) if (!noVaoDoTobogan(XB[i], y, XB[i + 1], y, z)) travessa(XB[i], y, XB[i + 1], y, z);
+  for (const x of XB) {
+    if (!noVaoDoTobogan(x, YB[0], x, YB[1], z)) travessa(x, YB[0], x, YB[1], z);
+    travessa(x, YB[1], x, YB[2], z);
+  }
   for (const x of XP) { travessa(x, YP[0], x, YP[1], z); travessa(x, YP[1], x, YP[2], z); travessa(x, YP[2], x, BARRA, z); }
   for (const y of YP) travessa(XP[0], y, XP[1], y, z);
 }
@@ -414,18 +424,18 @@ const diagonal = (corA, corB, x0, x1, [y0, y1]) => {
   laje(corB, [[x0, y0], [x0, y1], [x1, y1]], ANDAR - 100, 100);
 };
 // a fileira de trás: magenta/laranja, a base das ondas (2 a 4), a rede (5 a
-// 7, abaixo), o módulo dos sacos, o laranja/amarelo na diagonal e o amarelo
+// 7, abaixo), o módulo dos sacos e o amarelo de onde sai a boca do tobogã
+// (8 a 9 m). Nos últimos 2 m da barra, só este tem piso: o resto é o vão
+// do tobogã, que desce em espiral dentro da piscina de bolinhas.
 diagonal(M.magenta, M.laranja, 0, 1000, TRAS);
 piso(M.azul, 1000, 4000, TRAS);
 piso(M.azul, 7000, 8000, TRAS);
-diagonal(M.laranja, M.amarelo, 8000, 9000, TRAS);
-piso(M.amarelo, 9000, L, TRAS);
+piso(M.amarelo, 8000, 9000, TRAS);
 // a fileira da frente: o 1º é a rede da passarela; magenta, a base azul das
-// cunhas (3 a 7), magenta, e o amarelo do 9º e da boca do tobogã (10º)
+// cunhas (3 a 7) e magenta (o balanço); no 9º e no 10º, o vão do tobogã
 piso(M.magenta, 1000, 2000, FRENTE);
 piso(M.azul, 2000, 7000, FRENTE);
 piso(M.magenta, 7000, 8000, FRENTE);
-piso(M.amarelo, 8000, L, FRENTE);
 // os módulos 5 a 7 de trás: piso de rede azul quadriculada, com as beiras
 quad(M.redeAzul, V(4000, MEIO, ANDAR - 10), V(7000, MEIO, ANDAR - 10), V(7000, FUNDO, ANDAR - 10), V(4000, FUNDO, ANDAR - 10), 130);
 travessa(4000, MEIO, 7000, MEIO, ANDAR - 20, 18);
@@ -464,7 +474,7 @@ esfera(M.amarelo, V(BOLA.x, BOLA.y, BOLA.z), BOLA.r, 20, 14);
 // azul), em zigue-zague: de frente, os cinco aparecem lado a lado
 const SACOS = [[7160, 4420, M.azul], [7330, 4960, M.vermelho], [7500, 4560, M.amarelo], [7670, 4980, M.rosa], [7840, 4430, M.azul]];
 function saco(x, y, cor) {
-  pendurar(x, y, 3150, x === 8500 ? FRENTE : TRAS);
+  pendurar(x, y, 3150, TRAS);
   cilindro(cor, V(x, y, 3150), V(x, y, 2250), 120, 16);
   cilindro(M.ferragem, V(x, y, 3150), V(x, y, 3175), 60, 10); // a argola de cima
 }
@@ -477,9 +487,10 @@ for (const [x, y, cor] of SACOS) saco(x, y, cor);
   cilindro(M.azul, V(x, 3900, ZT), V(x, 3900, 2400), 14, 6, true);
   almofada(M.amarelo, x - 110, x + 110, 3440, 3960, 2350, 2410, 18);
 }
-// o 9º da frente: os dois sacos azuis (um atrás do outro: de frente parece um)
-saco(8500, 3470, M.azul);
-saco(8500, 3930, M.azul);
+// o módulo amarelo da boca do tobogã: os dois sacos azuis (um atrás do
+// outro: de frente parece um; de cima, as duas bolinhas azuis da planta)
+saco(8400, 4450, M.azul);
+saco(8400, 4950, M.azul);
 
 /* ======================================================================
    5. AS TELAS DE PROTEÇÃO EM VOLTA DO 2º ANDAR E O PAINEL MAGENTA
@@ -492,9 +503,10 @@ saco(8500, 3930, M.azul);
   // a frente: do 2º ao 9º módulo (o 1º é a passarela; o 10º, o painel da janela)
   painelY(M.tela, BARRA - 25, 1000, 8000, ANDAR, 3400, 100);
   painelY(M.tela, BARRA - 25, 8000, 9000, ANDAR, zt, 100);
-  // no 10º, embaixo do painel da janela: dos dois lados da boca do tobogã
-  painelY(M.tela, BARRA - 25, 9000, 9220, ANDAR, 2500, 100);
-  painelY(M.tela, BARRA - 25, 9800, L, ANDAR, 2500, 100);
+  painelY(M.tela, BARRA - 25, 9000, L, ANDAR, 2500, 100); // embaixo do painel da janela
+  // em volta do vão do tobogã: na beira do balanço e na frente do piso amarelo
+  painelX(M.tela, 8000, BARRA, MEIO, ANDAR, zt, 100);
+  painelY(M.tela, MEIO, 8000, 9000, ANDAR, zt, 100);
 }
 // o painel magenta comprido, no alto da frente, sobre os obstáculos
 almofada(M.magenta, 1000, 8000, BARRA - 90, BARRA - 35, 3400, ZT + 10, 22);
@@ -644,8 +656,8 @@ barraquinha(4000, 5500, M.azulBebe);
 }
 
 /* ======================================================================
-   8. A PONTA DIREITA: o painel da janela redonda, o tobogã em espiral e
-      a piscina de bolinhas com a escadinha
+   8. A PONTA DIREITA (os últimos 2 m da barra): o painel da janela
+      redonda, o tobogã em espiral dentro da piscina de bolinhas e a escadinha
    ====================================================================== */
 // o painel amarelo da frente do 10º módulo, em cima, com o quadro laranja e
 // a janela redonda (o círculo preto vazado)
@@ -662,24 +674,33 @@ barraquinha(4000, 5500, M.azulBebe);
   por(M.laranja, new THREE.RingGeometry(r + 40, r + 100, 36, 1), DE_FRENTE().setPosition(cx, BARRA - 77, cz));
   por(M.preto, new THREE.TorusGeometry(r + 18, 26, 8, 36), DE_FRENTE().setPosition(cx, BARRA - 80, cz));
 }
-// O tobogã: sai do 2º andar (o assento no 10º da frente), passa por baixo do
-// painel da janela e desce em espiral na frente da barra -- 2,5 voltas
-// contando a entrada -- até a piscina de bolinhas, em gomos azul, magenta,
-// amarelo e laranja. As mesmas medidas estão no passeio da Arena
-// (toboganDoModelo3, em arena3d.js).
+// O tobogã: sai do piso amarelo de trás (8 a 9 m), pela beira da direita,
+// e desce em espiral DENTRO da piscina de bolinhas -- os últimos 2 m da barra,
+// nos 2 m de fundo inteiros --, em volta da coluna do meio, que é o poste
+// dele: 2,25 voltas mais a boca (≈ 2,5 voltas de frente), em gomos azul,
+// magenta, amarelo e laranja. A primeira volta é mais inclinada: quando a
+// espiral passa por baixo do piso amarelo (uns 2/3 de volta depois da boca),
+// o tubo já desceu o bastante para não bater nele. As mesmas medidas estão
+// no passeio da Arena (toboganDoModelo3, em arena3d.js).
 const TOBOGA = {
-  cx: 9250, cy: 2380, raio: 460, r: 260, voltas: 2.25, zTopo: 2120, zFim: 650,
-  entrada: [[9480, 3520, 2170], [9510, 3200, 2165], [9630, 2820, 2145]],
-  saida: [[8800, 1960, 610], [8430, 2030, 570]],
+  cx: 9000, cy: MEIO, raio: 520, r: 250, a0: 90, voltas: 2.25,
+  zTopo: 2160, quebra: 0.67, zQuebra: 1480, zFim: 550,
+  entrada: [[8650, 4720, 2165], [8850, 4720, 2163]],
+  saida: [[9560, 3800, 510], [9600, 3580, 480]],
 };
+// a altura do centro do tubo depois de `u` voltas: mais inclinada até a quebra
+function alturaDoTobogan(u) {
+  const { voltas, zTopo, quebra, zQuebra, zFim } = TOBOGA;
+  return u <= quebra ? zTopo - ((zTopo - zQuebra) * u) / quebra : zQuebra - ((zQuebra - zFim) * (u - quebra)) / (voltas - quebra);
+}
 {
-  const { cx, cy, raio, r, voltas, zTopo, zFim, entrada, saida } = TOBOGA;
+  const { cx, cy, raio, r, a0, voltas, entrada, saida } = TOBOGA;
   const pontos = entrada.map(([x, y, z]) => V(x, y, z));
   const passos = Math.round(voltas * 32);
   for (let i = 0; i <= passos; i++) {
-    const t = i / passos;
-    const a = -t * voltas * 2 * PI; // de cima, no sentido do relógio
-    pontos.push(V(cx + raio * Math.cos(a), cy + raio * Math.sin(a), zTopo - (zTopo - zFim) * t));
+    const u = (i / passos) * voltas;
+    const a = ((a0 - u * 360) * PI) / 180; // de cima, no sentido do relógio
+    pontos.push(V(cx + raio * Math.cos(a), cy + raio * Math.sin(a), alturaDoTobogan(u)));
   }
   pontos.push(...saida.map(([x, y, z]) => V(x, y, z)));
   const curva = new THREE.CatmullRomCurve3(pontos);
@@ -688,22 +709,17 @@ const TOBOGA = {
     const u0 = k / gomos, u1 = Math.min(1, (k + 1) / gomos + 0.003);
     const sub = new THREE.CatmullRomCurve3(Array.from({ length: 12 }, (_, j) => curva.getPointAt(u0 + (u1 - u0) * (j / 11))));
     por(M.gomos[k % 4], new THREE.TubeGeometry(sub, 14, r, 16, false));
-    // a junta branca entre um gomo e o outro (e as duas bocas)
-    for (const u of k ? [u0] : [0, u0]) {
-      if (k && u === 0) continue;
-      const p = curva.getPointAt(u), d = curva.getTangentAt(u);
-      por(M.estrutura, new THREE.TorusGeometry(r + 6, 16, 5, 22), new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), d), V(1, 1, 1)));
-    }
+    // a junta branca no começo de cada gomo (o primeiro é a boca)
+    const p = curva.getPointAt(u0), d = curva.getTangentAt(u0);
+    por(M.estrutura, new THREE.TorusGeometry(r + 6, 16, 5, 22), new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), d), V(1, 1, 1)));
   }
   const fim = curva.getPointAt(1), dFim = curva.getTangentAt(1);
   por(M.estrutura, new THREE.TorusGeometry(r + 6, 16, 5, 22), new THREE.Matrix4().compose(fim, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dFim), V(1, 1, 1)));
-  // o poste branco no meio da espiral
-  cilindro(M.estrutura, V(cx, cy, 0), V(cx, cy, zTopo + 120), 45, 12, true);
-  esfera(M.estrutura, V(cx, cy, zTopo + 120), 50, 12, 6);
 }
-// a piscina de bolinhas (~2 m × 2 m) na frente da ponta direita: a mureta
-// azul acolchoada, o fundo e a camada de cima das bolinhas
-const PISCINA = { x0: 8000, x1: L, y0: 1200, y1: BARRA - 35, alto: 450, borda: 120 };
+// a piscina de bolinhas (2 m × 2 m) embaixo dos últimos 2 m da barra: a
+// mureta azul acolchoada, o fundo e a camada de cima das bolinhas (a coluna
+// do meio, o poste do tobogã, passa por ela)
+const PISCINA = { x0: 8000, x1: L, y0: BARRA, y1: FUNDO, alto: 450, borda: 120 };
 {
   const { x0, x1, y0, y1, alto, borda } = PISCINA;
   almofada(M.azul, x0, x1, y0, y0 + borda, 0, alto, 40);
@@ -715,15 +731,17 @@ const PISCINA = { x0: 8000, x1: L, y0: 1200, y1: BARRA - 35, alto: 450, borda: 1
   const bolas = [];
   for (let x = x0 + borda + 85; x < x1 - borda - 60; x += 165) {
     for (let y = y0 + borda + 85; y < y1 - borda - 60; y += 165) {
-      if (Math.hypot(x - TOBOGA.cx, y - TOBOGA.cy) < 110) continue; // o poste
+      if (Math.hypot(x - TOBOGA.cx, y - TOBOGA.cy) < 110) continue; // a coluna do meio
       bolas.push({ m: new THREE.Matrix4().makeTranslation(x + (sorte() - 0.5) * 50, y + (sorte() - 0.5) * 50, 285 + sorte() * 50), cor: cores[Math.floor(sorte() * cores.length)] });
     }
   }
   coloridos(M.bolinhas, bolas, new THREE.IcosahedronGeometry(80, 1));
 }
-// a escadinha amarela de espuma, de 2 degraus, na frente da piscina (fora dela)
-almofada(M.amarelo, 8200, 8800, 800, 1010, 0, 225, 40);
-almofada(M.amarelo, 8200, 8800, 1000, PISCINA.y0, 0, PISCINA.alto, 40);
+// a escadinha amarela de espuma, de 2 degraus, colada na frente da piscina
+// (perto da ponta direita): é a única coisa que sai da frente da barra (35 cm)
+const ESCADINHA = { x0: 9300, x1: 9800, y0: BARRA - 350 };
+almofada(M.amarelo, ESCADINHA.x0, ESCADINHA.x1, ESCADINHA.y0, BARRA - 160, 0, 225, 35);
+almofada(M.amarelo, ESCADINHA.x0, ESCADINHA.x1, BARRA - 170, BARRA, 0, PISCINA.alto, 35);
 
 /* ======================================================================
    MONTAGEM FINAL: metros, Y para cima, a frente em +Z; junta por material,

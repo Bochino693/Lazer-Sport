@@ -4918,25 +4918,28 @@ const M3 = (x, y, z) => [x / 1000 - 5, z / 1000, -y / 1000 + 2.6];
 
 /** O tobogã em espiral do Modelo 3 (o TOBOGA do montar.js), com os olhos no meio do tubo. */
 function toboganDoModelo3() {
-  // os "pés" ficam 29 cm abaixo do centro do tubo (raio de 26 cm): com os
-  // olhos 45 cm acima deles, a cabeça fica 10 cm abaixo do teto do tubo e o
+  // os "pés" ficam 29 cm abaixo do centro do tubo (raio de 25 cm): com os
+  // olhos 45 cm acima deles, a cabeça fica 9 cm abaixo do teto do tubo e o
   // plano de perto da câmera não corta a parede
   const pes = (x, y, z) => [...M3(x, y, z - 290), "escorregar"];
-  const pontos = [pes(9480, 3520, 2170), pes(9510, 3200, 2165), pes(9630, 2820, 2145)];
-  // 2,25 voltas de cima, no sentido do relógio, de 2,12 m a 0,65 m (o centro do tubo)
+  const pontos = [pes(8650, 4720, 2165), pes(8850, 4720, 2163)];
+  // 2,25 voltas de cima, no sentido do relógio, em volta da coluna do meio da
+  // piscina (dentro da barra); os primeiros 2/3 de volta mais inclinados
   for (let i = 0; i <= 27; i++) {
-    const t = i / 27;
-    const a = -t * 2.25 * 2 * PI;
-    pontos.push(pes(9250 + 460 * Math.cos(a), 2380 + 460 * Math.sin(a), 2120 - 1470 * t));
+    const u = (i / 27) * 2.25;
+    const a = ((90 - u * 360) * PI) / 180;
+    const z = u <= 0.67 ? 2160 - (680 * u) / 0.67 : 1480 - (930 * (u - 0.67)) / 1.58;
+    pontos.push(pes(9000 + 520 * Math.cos(a), 4200 + 520 * Math.sin(a), z));
   }
-  pontos.push(pes(8800, 1960, 610), pes(8430, 2030, 570));
+  pontos.push(pes(9560, 3800, 510), pes(9600, 3580, 480));
   return pontos;
 }
 
 // entra pela torre da ponta da perna e sobe as plataformas em zigue-zague,
 // atravessa a passarela de rede, o corredor de cunhas, o piso de rede com a
 // bola-pêndulo, o balanço e os sacos de pancada; desce o tobogã em espiral
-// até a piscina de bolinhas, sai pela escadinha e olha o brinquedão inteiro
+// dentro da piscina de bolinhas (na ponta direita da barra), sai pela
+// escadinha da frente e olha o brinquedão inteiro
 CAMINHOS["brinquedao-modelo-3"] = () => [
   [...M3(500, -1600, 0), "ir"],
   [...M3(500, -350, 0), "andar"],
@@ -4970,21 +4973,19 @@ CAMINHOS["brinquedao-modelo-3"] = () => [
   [...M3(7300, 4700, 1900), "agachado"],
   [...M3(7600, 4770, 1900), "agachado"],
   [...M3(7850, 4700, 1900), "agachado"],
-  // os últimos módulos de trás e a boca do tobogã, no 10º da frente
-  [...M3(8500, 4700, 1900), "andar"],
-  [...M3(9400, 4700, 1900), "andar"],
-  [...M3(9480, 4000, 1900), "andar"],
-  [...M3(9480, 3760, 1900), "andar", { pausa: 0.9, olhar: M3(9550, 2900, 1900) }],
+  // o módulo amarelo de trás: entre os dois sacos azuis até a boca do tobogã
+  [...M3(8400, 4700, 1900), "agachado"],
+  [...M3(8560, 4720, 1900), "andar", { pausa: 0.9, olhar: M3(9300, 4500, 1700) }],
   ...toboganDoModelo3(),
-  [...M3(8250, 2050, 300), "cair", { pausa: 1.2, olhar: M3(9250, 2380, 1500) }],
-  // pela piscina até a frente, por cima da mureta e pela escadinha
-  [...M3(8500, 1500, 300), "andar"],
-  [...M3(8500, 1260, 450), "subir"],
-  [...M3(8500, 1100, 450), "subir"],
-  [...M3(8500, 900, 225), "subir"],
-  [...M3(8500, 500, 0), "andar"],
+  [...M3(9600, 3450, 300), "cair", { pausa: 1.2, olhar: M3(9000, 4200, 1300) }],
+  // pela frente da piscina até a escadinha: por cima da mureta e os dois degraus
+  [...M3(9550, 3380, 300), "andar"],
+  [...M3(9550, 3260, 450), "subir"],
+  [...M3(9550, 3110, 450), "subir"],
+  [...M3(9550, 2940, 225), "subir"],
+  [...M3(9550, 2600, 0), "andar"],
   // e o brinquedão inteiro, de frente
-  [...M3(6000, -2600, 0), "andar"],
+  [...M3(7000, -2400, 0), "andar"],
   [...M3(5000, -5200, 0), "andar", { pausa: 2, olhar: M3(5000, 3800, 1700) }],
 ];
 
