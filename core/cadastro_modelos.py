@@ -174,6 +174,38 @@ CADASTROS = {
         "categorias": ("trampolim", "cama elastica", "camas elasticas"),
         "evitar": (),
     },
+    # ---- Brinquedão Modelo 3 ----
+    # O brinquedão em L feito com as três imagens do projeto (a frente, a
+    # planta e a perspectiva; não há .3ds: ver
+    # `ferramentas/modelos3d/brinquedao-modelo-3/`). As fotos são vistas do
+    # próprio objeto 3D, com o fundo claro do catálogo; quando chegarem as do
+    # projeto, troque os .webp da pasta e rode o comando com `--fotos`.
+    # A migração que cadastra no deploy é a `0142_brinquedao_modelo_3`.
+    "brinquedao-modelo-3": {
+        "nome": "Brinquedão Modelo 3",
+        "pasta": MODELOS / "brinquedao-modelo-3",
+        "objeto_3d": "site/arena/modelos/brinquedao-modelo-3.glb",
+        "descricao": (
+            "Brinquedão Modelo 3, de dois andares em L: 10 m de comprimento, 5,20 m de fundo (a barra de 2 m "
+            "encostada no fundo e a perna de 1 m que avança na frente) e 3,75 m de altura. Entrada pela torre da "
+            "frente, com plataformas em zigue-zague e redes em onda, e passarela de rede até o andar de cima "
+            "(a 1,90 m): corredor de cunhas de espuma, rolos, piso de rede, bola-pêndulo, sacos de pancada e "
+            "balanço. Embaixo, três barraquinhas de faz-de-conta (máquina de prêmios, padaria e cozinha), um "
+            "fliperama em cubo e uma mesa de fliperama. Na ponta direita, tobogã em espiral de tubo fechado até "
+            "a piscina de bolinhas, com escadinha de espuma. Estrutura em tubos brancos com telas de proteção. "
+            "Projeto ilustrativo: cores, painéis e itens podem ser ajustados conforme o espaço e a "
+            "disponibilidade de materiais."
+        ),
+        "medidas": ("3.75", "10.00", "5.20"),
+        "fotos": (
+            ("frente.webp", "perfil", "Brinquedão Modelo 3 visto de frente: a torre, as barraquinhas, o andar de cima e o tobogã"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 3 visto pelo lado da torre e da passarela de rede"),
+            ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 3 visto pelo lado do tobogã em espiral e da piscina de bolinhas"),
+            ("planta.webp", None, "Planta do Brinquedão Modelo 3 vista de cima: o L de 10 m por 5,20 m"),
+        ),
+        "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
+        "evitar": (),
+    },
 }
 
 

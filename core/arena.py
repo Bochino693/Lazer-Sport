@@ -649,6 +649,29 @@ MODELOS_3D = (
             "no alto e escada de espuma de três degraus."
         ),
     },
+    # ---- Brinquedão Modelo 3 ----
+    {
+        # Sem .3ds: o objeto sai das três imagens do projeto (a frente, a
+        # planta e a perspectiva), nas medidas delas -- o L de 10 m × 5,20 m
+        # (a barra de 2 m e a perna de 1 m na ponta esquerda), 3,75 m de
+        # altura. A piscina de bolinhas fica no chão, na frente da ponta
+        # direita (dentro dos 10 m). As fotos são vistas do próprio objeto.
+        "id": "brinquedao-modelo-3",
+        "titulo": "Brinquedão Modelo 3",
+        "nomes": ("Brinquedão Modelo 3",),
+        "arquivo": "site/arena/modelos/brinquedao-modelo-3.glb",
+        "medidas": (3.75, 10.0, 5.2),
+        "grupo": "brinquedoes",
+        "pasta": "site/arena/modelos/brinquedao-modelo-3/",
+        "fotos": (("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"), ("lado_direito", "lado_direito.webp")),
+        "medidas_texto": "3,75 m × 10 m × 5,20 m",
+        "categorias": ("Brinquedões",),
+        "descricao": (
+            "Brinquedão de dois andares em L: torre de entrada com plataformas em zigue-zague e redes em onda, "
+            "passarela de rede e, em cima, cunhas de espuma, bola-pêndulo, sacos de pancada e balanço; embaixo, "
+            "três barraquinhas de faz-de-conta e dois fliperamas; tobogã em espiral até a piscina de bolinhas."
+        ),
+    },
 )
 
 

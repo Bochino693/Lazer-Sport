@@ -4909,6 +4909,85 @@ const MODOS_DO_PASSEIO = {
   cair: { v: 2.4, olhos: 0.45, olhar: -0.3, nome: "Tchibum!" },
 };
 
+/* O Brinquedão Modelo 3 (num bloco próprio, como o do trampolim). O projeto
+   é em milímetros, como os .3ds: x ao longo da barra, y para o FUNDO (y = 0
+   é a ponta da perna, onde fica a torre), z para cima. O objeto 3D é o mesmo
+   desenho, virado para a frente em +z e centralizado (o deslocamento sai do
+   gerar.cjs de ferramentas/modelos3d/brinquedao-modelo-3/). */
+const M3 = (x, y, z) => [x / 1000 - 5, z / 1000, -y / 1000 + 2.6];
+
+/** O tobogã em espiral do Modelo 3 (o TOBOGA do montar.js), com os olhos no meio do tubo. */
+function toboganDoModelo3() {
+  // os "pés" ficam 29 cm abaixo do centro do tubo (raio de 26 cm): com os
+  // olhos 45 cm acima deles, a cabeça fica 10 cm abaixo do teto do tubo e o
+  // plano de perto da câmera não corta a parede
+  const pes = (x, y, z) => [...M3(x, y, z - 290), "escorregar"];
+  const pontos = [pes(9480, 3520, 2170), pes(9510, 3200, 2165), pes(9630, 2820, 2145)];
+  // 2,25 voltas de cima, no sentido do relógio, de 2,12 m a 0,65 m (o centro do tubo)
+  for (let i = 0; i <= 27; i++) {
+    const t = i / 27;
+    const a = -t * 2.25 * 2 * PI;
+    pontos.push(pes(9250 + 460 * Math.cos(a), 2380 + 460 * Math.sin(a), 2120 - 1470 * t));
+  }
+  pontos.push(pes(8800, 1960, 610), pes(8430, 2030, 570));
+  return pontos;
+}
+
+// entra pela torre da ponta da perna e sobe as plataformas em zigue-zague,
+// atravessa a passarela de rede, o corredor de cunhas, o piso de rede com a
+// bola-pêndulo, o balanço e os sacos de pancada; desce o tobogã em espiral
+// até a piscina de bolinhas, sai pela escadinha e olha o brinquedão inteiro
+CAMINHOS["brinquedao-modelo-3"] = () => [
+  [...M3(500, -1600, 0), "ir"],
+  [...M3(500, -350, 0), "andar"],
+  // as plataformas da torre: amarela (0,45 m), azul (0,9 m), azul (1,4 m) e a
+  // amarela do 2º andar, alternando as metades da diagonal; cada subida
+  // acontece depois de passar para a outra metade (é lá que há altura livre)
+  [...M3(600, 120, 450), "subir"],
+  [...M3(560, 470, 450), "subir"],
+  [...M3(380, 620, 900), "subir"],
+  [...M3(470, 560, 900), "subir"],
+  [...M3(650, 380, 1400), "subir"],
+  [...M3(560, 450, 1400), "subir"],
+  [...M3(350, 700, 1900), "subir", { pausa: 1, olhar: M3(500, 200, 2900) }],
+  // a passarela de rede, até o 1º módulo da barra
+  [...M3(500, 1150, 1900), "rede"],
+  [...M3(500, 3650, 1900), "rede", { pausa: 0.8, olhar: M3(4500, 3700, 2200) }],
+  // o corredor de cunhas de espuma: sobe e desce cada uma
+  [...M3(1500, 3700, 1900), "andar"],
+  [...M3(2025, 3700, 1900), "andar"],
+  ...[2230, 2640, 3050, 3460, 3870].flatMap((c) => [[...M3(c, 3700, 2200), "subir"], [...M3(c + 205, 3700, 1900), "andar"]]),
+  // a passagem magenta e o piso de rede, por baixo da bola amarela pendurada
+  [...M3(4500, 3700, 1940), "andar"],
+  [...M3(4550, 4550, 1900), "rede"],
+  [...M3(5100, 4420, 1900), "rede", { pausa: 1.2, olhar: M3(5500, 4700, 2650) }],
+  [...M3(5500, 4300, 1900), "rede"],
+  [...M3(6600, 4550, 1900), "rede"],
+  // o balanço (as cordas vermelha e azul) e os sacos de pancada, passando entre eles
+  [...M3(6880, 4350, 1900), "andar"],
+  [...M3(7200, 3700, 1900), "andar", { pausa: 1, olhar: M3(7500, 3700, 2700) }],
+  [...M3(7300, 4250, 1900), "agachado"],
+  [...M3(7300, 4700, 1900), "agachado"],
+  [...M3(7600, 4770, 1900), "agachado"],
+  [...M3(7850, 4700, 1900), "agachado"],
+  // os últimos módulos de trás e a boca do tobogã, no 10º da frente
+  [...M3(8500, 4700, 1900), "andar"],
+  [...M3(9400, 4700, 1900), "andar"],
+  [...M3(9480, 4000, 1900), "andar"],
+  [...M3(9480, 3760, 1900), "andar", { pausa: 0.9, olhar: M3(9550, 2900, 1900) }],
+  ...toboganDoModelo3(),
+  [...M3(8250, 2050, 300), "cair", { pausa: 1.2, olhar: M3(9250, 2380, 1500) }],
+  // pela piscina até a frente, por cima da mureta e pela escadinha
+  [...M3(8500, 1500, 300), "andar"],
+  [...M3(8500, 1260, 450), "subir"],
+  [...M3(8500, 1100, 450), "subir"],
+  [...M3(8500, 900, 225), "subir"],
+  [...M3(8500, 500, 0), "andar"],
+  // e o brinquedão inteiro, de frente
+  [...M3(6000, -2600, 0), "andar"],
+  [...M3(5000, -5200, 0), "andar", { pausa: 2, olhar: M3(5000, 3800, 1700) }],
+];
+
 class Passeio {
   constructor(arena, maquina) {
     const T = arena.T;
