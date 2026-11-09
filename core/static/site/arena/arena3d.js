@@ -4092,6 +4092,47 @@ const CAMINHOS = {
   },
 };
 
+/* O trampolim de enterrada (num bloco próprio, fora do CAMINHOS: fácil de
+   juntar com os caminhos dos outros objetos). O projeto é em milímetros,
+   como o .3ds: x ao longo, com a parede da cesta em x = 0; y para o fundo,
+   com a frente em y = 0; z para cima. O objeto 3D é o mesmo desenho,
+   centralizado (o deslocamento sai do gerar.cjs de
+   ferramentas/modelos3d/trampolim-enterrada/). */
+const TE = (x, y, z) => [x / 1000 - 2.9962, z / 1000, -y / 1000 + 1.1475];
+const ARO_DO_TRAMPOLIM = TE(634, 1130, 2450);
+// sobe a escada do canto, pula pelas três camas em linha até a da cesta,
+// enterra, volta pulando, desce a escada e olha o trampolim inteiro de fora
+CAMINHOS["trampolim-enterrada"] = () => [
+  [...TE(6350, -350, 0), "ir"],
+  [...TE(6450, 610, 0), "andar"],
+  // os três degraus de espuma (27,5 cm cada) e o estofado do fim, a 1,11 m
+  [...TE(5904, 610, 278), "subir"],
+  [...TE(5710, 610, 555), "subir"],
+  [...TE(5517, 610, 833), "subir"],
+  [...TE(5320, 610, 1110), "subir", { pausa: 1.2, olhar: ARO_DO_TRAMPOLIM }],
+  // a última cama, a do meio e a da cesta (a lona fica a 1,02 m)
+  [...TE(4690, 900, 1015), "pular"],
+  [...TE(4690, 1450, 1015), "pular"],
+  [...TE(3210, 1130, 1015), "pular"],
+  [...TE(3210, 700, 1015), "pular"],
+  [...TE(3210, 1450, 1015), "pular"],
+  [...TE(1650, 1130, 1015), "pular", { pausa: 1.6, olhar: ARO_DO_TRAMPOLIM }],
+  // a enterrada: o pulo grande até o aro, e a queda de volta na cama
+  [...TE(1150, 1130, 1650), "enterrada", { pausa: 0.8, olhar: ARO_DO_TRAMPOLIM }],
+  [...TE(1800, 1130, 1015), "cair", { pausa: 1.2, olhar: TE(634, 1130, 2100) }],
+  // de volta pelas camas até a escada, e desce degrau por degrau
+  [...TE(3210, 1130, 1015), "pular"],
+  [...TE(4690, 800, 1015), "pular"],
+  [...TE(5320, 610, 1110), "subir"],
+  [...TE(5517, 610, 833), "subir"],
+  [...TE(5710, 610, 555), "subir"],
+  [...TE(5904, 610, 278), "subir"],
+  [...TE(6400, 610, 0), "subir"],
+  // e o trampolim inteiro, de fora, de 3/4
+  [...TE(6600, -1600, 0), "andar"],
+  [...TE(5600, -3300, 0), "andar", { pausa: 2, olhar: TE(2750, 1130, 1500) }],
+];
+
 /** Um objeto sem caminho próprio: a volta em torno dele, parando em cada lado. */
 function voltaEmVolta(m) {
   const a = (m.W || m.largura) / 2 + 0.9;

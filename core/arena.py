@@ -38,6 +38,9 @@ from .fotos import reduzir_imagem
 #: importa: "basquete kids" tem que ser basquete, e não brinquedo
 #: infantil; "simulador de tiro zumbi" tem que ser tiro, e não corrida.
 REGRAS = (
+    # o trampolim de enterrada tem cesta, mas é cama elástica (vai para os
+    # trampolins): vem antes do basquete, que pegaria o "enterrada"
+    ("cama_elastica", ("trampolim de enterrada", "trampolim enterrada")),
     ("basquete", ("basquete", "basket", "cesta", "enterrada")),
     ("boliche", ("boliche", "bowling", "strike", "pino")),
     ("pinball", ("pinball", "pimbal", "pinbal", "fliper de bola")),
@@ -602,6 +605,29 @@ MODELOS_3D = (
             "Espaço esportivo completo: parque de trampolins com piscinas de espuma, enterradas, parede de "
             "escalada e varredor; quadras de campo e basquete enjauladas, dois círculos do Gol Flash, pista de 14 m "
             "e o circuito kids com tobogã e piscina de bolinhas."
+        ),
+    },
+    # ---- Trampolim de Enterrada ----
+    {
+        # A estrutura é a do .3ds da fábrica (colunas, quadro de cima, a base
+        # a 1 m e a parede inclinada); o resto, das imagens do projeto. As
+        # fotos são vistas do próprio objeto, até chegarem as do projeto. A
+        # variante com a piscina de espuma no meio (trampolim-enterrada-espuma.glb)
+        # não se liga pelo nome: vai pelo cadastro, no painel.
+        "id": "trampolim-enterrada",
+        "titulo": "Trampolim de Enterrada",
+        "nomes": ("Trampolim de Enterrada", "Trampolim Enterrada"),
+        "arquivo": "site/arena/modelos/trampolim-enterrada.glb",
+        "medidas": (2.98, 6.01, 2.25),
+        "grupo": "brinquedoes",
+        "pasta": "site/arena/modelos/trampolim-enterrada/",
+        "fotos": (("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"), ("lado_direito", "lado_direito.webp")),
+        "medidas_texto": "3,25 m × 6 m × 2 m",
+        "categorias": ("Trampolins",),
+        "descricao": (
+            "Trampolim de enterrada: pista de três camas elásticas em linha, com moldura e divisórias estofadas, "
+            "que termina na parede inclinada com a cesta de basquete; base em caixote, quadro de tubos amarelo "
+            "no alto e escada de espuma de três degraus."
         ),
     },
 )
