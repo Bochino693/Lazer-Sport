@@ -1471,7 +1471,7 @@ Dependência nova: rjsmin (requirements.txt).
    cesta)" e "Swish Arena na cesta (o telão)" -- sem a Swish, a cesta da
    parede leva a tabela comum. Peça: "cesta_parede" (montar3d-pecas.js).
 
-51) AIR GAME HOCKEY ESPACIAL E BASQUETE STREET QUADRINHOS (OS ADESIVOS NOVOS)
+51) AIR GAME KIDS ALIENÍGENAS E BASQUETE STREET QUADRINHOS (OS ADESIVOS NOVOS)
    Dois produtos novos que são a MESMA máquina de dois que já estão no
    catálogo, só com outra adesivagem, cada um com o seu objeto 3D (na Arena 3D,
    na seção "As máquinas que já fazíamos", e na página do produto), feito
@@ -1480,11 +1480,14 @@ Dependência nova: rjsmin (requirements.txt).
    a arte de cada peça e o desenho dela. Nada da arte é redesenhado,
    recolorido ou tirado (os personagens inclusive): cada imagem vai inteira
    na sua face, e a face tem a forma e a proporção da peça.
-     * AIR GAME HOCKEY ESPACIAL: o tampo (o campo com o chão lunar, o HOCKEY
-       KIDS no meio e o "Jogador · 01"/"Jogador · 02", cada um lido da sua
-       cabeceira), as duas laterais recortadas no contorno da folha (a corcova
-       em cima, os dois pés embaixo, os alienígenas astronautas e o HOCKEY
-       KIDS) e as duas cabeceiras (o espaço em cima, o azul embaixo);
+     * AIR GAME KIDS ALIENÍGENAS (id air-game-kids-alienigenas; até a 0146 era
+       o "Air Game Hockey Espacial", id air-game-hockey-espacial): o Air Game
+       Kids, a mesa infantil de formato recortado, com o tampo (o campo com o
+       chão lunar, o HOCKEY KIDS no meio e o "Jogador · 01"/"Jogador · 02",
+       cada um lido da sua cabeceira), as duas laterais recortadas no
+       contorno da folha (a corcova em cima, os dois pés embaixo, os
+       alienígenas astronautas e o HOCKEY KIDS) e as duas cabeceiras (o espaço
+       em cima, o azul embaixo);
      * BASQUETE STREET QUADRINHOS: as laterais de fora no contorno da folha
        (a bola grande, as duas crianças com o BASKETBALL), as paredes de
        dentro em L, o fundo da cesta (o placar e o BOOM!), o teto interno, a
@@ -1494,33 +1497,53 @@ Dependência nova: rjsmin (requirements.txt).
        fundo, o teto, os dois chanfros, endireitados, e os dois lados retos).
        As três peças soltas ao lado da Lateral Externa Esquerda são as três
        faixas da Frente desenhadas de lado (a mesma arte): não são outros adesivos.
-   AS MEDIDAS saem da folha, que é desenhada em escala (as peças encaixam):
+   AS MEDIDAS saem da folha, que é desenhada em escala (as peças encaixam), na
+   altura da máquina:
      * basquete: 2,70 m x 1,00 m x 2,40 m (a testeira, a frente, a prancha, o
        fundo e o teto medem 1,00 m; a lateral de fora com a testeira, 2,70 m; as
        paredes de dentro, 2,40 m), como o Basquete Street do catálogo;
-     * hockey: na altura de 1,00 m, a folha dá 0,92 m de largura e 1,67 m de
-       comprimento (o tampo de 1,57 x 0,90 m, o campo a 0,83 m). NÃO fecha com
-       os 2,10 x 1,10 m do Air Game Hockey: o tampo da folha tem outra
-       proporção (1,746; 2,10 x 1,10 dá 1,91), e na escala de 2,10 m a mesa
-       teria 1,26 m de altura, com o campo a 1,07 m. Bate com o Air Game Kids
-       (0,90 x 0,86 x 1,50 m). Confirmar com a fábrica qual é a mesa; mudar é
-       uma constante (ALT) no montar.js e as medidas no core/arena.py e no
-       core/cadastro_modelos.py.
+     * hockey: na altura do Air Game Kids, 0,90 m (ALT no montar.js), a folha
+       dá 1,51 m de comprimento (o 1,50 m do Air Game Kids) e 0,83 m de
+       largura (o catálogo diz 0,86 m: conta a borda); o tampo de 1,41 x
+       0,81 m, o campo a 0,75 m. O cadastro (sem a base) usa as do catálogo,
+       0,90 x 0,86 x 1,50 m. A folha NÃO é a do Air Game Hockey (2,10 x 1,10 m:
+       o tampo dela tem outra proporção), por isso o produto mudou de nome e
+       de base (a 0146, abaixo).
    O CADASTRO COPIA A MÁQUINA DE ANTES (achada pelo nome inteiro, sem acento
-   nem maiúscula: "AIR GAME HOCKEY", "Basquete Street"): preço, voltagem,
+   nem maiúscula: "AIR GAME KIDS", "Basquete Street"): preço, voltagem,
    "exibir na loja", avaliação, medidas, categorias e tags. A descrição fala da
    arte nova e as fotos são vistas do próprio 3D (a frente de 3/4, os dois
    lados, o verso e o tampo / a vista de quem joga). Sem a máquina de antes no
-   catálogo, entra com as medidas do 3D, a categoria pelo nome
+   catálogo, entra com as medidas do projeto, a categoria pelo nome
    ("Eletrônicos"), sem preço e fora da loja. O 3D se liga pelo nome inteiro:
-   o Air Game Hockey e o Basquete Street de antes continuam sem objeto 3D.
-   MIGRAÇÃO: 0145_variantes_de_adesivo (no deploy do Render cadastra os dois,
-   com as fotos no Cloudinary; em todo lugar, liga o 3D ao que já estiver no
-   catálogo com o nome). Se ela não conseguir (Cloudinary fora do ar):
+   o Air Game Kids, o Air Game Hockey e o Basquete Street de antes continuam
+   sem objeto 3D (o nome de antes, "Air Game Hockey Espacial", ainda liga o
+   Air Game Kids Alienígenas).
+   MIGRAÇÕES:
+     * 0145_variantes_de_adesivo (fica como estava): no deploy do Render
+       cadastra os dois, com as fotos no Cloudinary; em todo lugar, liga o 3D
+       ao que já estiver no catálogo com o nome. Num banco novo ela já
+       cadastra o Air Game Kids Alienígenas (a chave antiga é um apelido da
+       nova, em core/cadastro_modelos.py, APELIDOS);
+     * 0146_air_game_kids_alienigenas: onde a 0145 já rodou, o "Air Game Hockey
+       Espacial" vira o "Air Game Kids Alienígenas": o nome, a descrição e, do
+       AIR GAME KIDS do catálogo, preço, avaliação, loja, voltagem, medidas,
+       categorias e tags (sem ele, só as medidas do projeto; o resto fica como
+       estava -- confira no painel); o nome novo nas descrições das fotos; o
+       objeto 3D passa para o código air-game-kids-alienigenas e o .glb novo
+       (o air-game-hockey-espacial.glb não existe mais), com as medidas dele.
+       Isso em todo lugar (só o banco). No Render, se as fotos são as que o
+       cadastro subiu, ganham as de hoje (Cloudinary). Fora isso faz o que a
+       0145 fazia: cadastra no Render se a máquina não está no catálogo, e nos
+       outros lugares só liga o 3D. Rodar de novo não faz nada.
+   Se uma delas não conseguir (Cloudinary fora do ar), no servidor:
+       python manage.py migrate
        python manage.py cadastrar_variantes_adesivo
+       python manage.py cadastrar_variantes_adesivo --so air-game-kids-alienigenas --fotos
        python manage.py cadastrar_variantes_adesivo --so basquete-street-quadrinhos
-   e, se o produto já foi cadastrado antes desta arte: --fotos (a galeria
-   com as fotos novas).
+   (o comando também renomeia um "Air Game Hockey Espacial" que tenha
+   sobrado, como a 0146; --so air-game-hockey-espacial ainda vale: é o novo;
+   --fotos refaz a galeria com as fotos novas).
    FOLHA NOVA (ou refazer), em cada pasta ferramentas/modelos3d/<id>/:
      1. salve a folha como folha-adesivos.webp e acerte as caixas aproximadas
         no recortes.json (o recorte acha a peça de verdade dentro de cada uma);
@@ -1535,10 +1558,11 @@ Dependência nova: rjsmin (requirements.txt).
    Tamanhos: ~565 KB (hockey) e ~610 KB (basquete), os adesivos em JPEG dentro
    do .glb (ampliados com suavização: a folha tem ~400 a 500 px por peça).
    Código: core/arena.py (MODELOS_3D), core/cadastro_modelos.py (CADASTROS,
-   achar_base, VARIANTES_DE_ADESIVO), core/management/commands/
-   cadastrar_variantes_adesivo.py, ferramentas/modelos3d/air-game-hockey-
-   espacial/ e basquete-street-quadrinhos/ (folha-adesivos.webp, recortes.json,
-   recortar_adesivos.py, formas.json, adesivos/, montar.js, gerar.cjs,
-   pecas.json, README.md) e ferramentas/modelos3d/adesivos_comum.py (o recorte:
-   a máscara, o contorno e o endireitar, só com o Pillow).
+   achar_base, VARIANTES_DE_ADESIVO, APELIDOS, renomear_variante,
+   migracao_renomear_variante), core/management/commands/
+   cadastrar_variantes_adesivo.py, ferramentas/modelos3d/air-game-kids-
+   alienigenas/ e basquete-street-quadrinhos/ (folha-adesivos.webp,
+   recortes.json, recortar_adesivos.py, formas.json, adesivos/, montar.js,
+   gerar.cjs, pecas.json, README.md) e ferramentas/modelos3d/adesivos_comum.py
+   (o recorte: a máscara, o contorno e o endireitar, só com o Pillow).
    Testes: core/tests_variantes_adesivo.py.

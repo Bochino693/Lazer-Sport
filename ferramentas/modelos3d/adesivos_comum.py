@@ -1,4 +1,4 @@
-"""O recorte das folhas de adesivos da fábrica (Air Game Hockey Espacial, Basquete Street Quadrinhos).
+"""O recorte das folhas de adesivos da fábrica (Air Game Kids Alienígenas, Basquete Street Quadrinhos).
 
 Cada máquina com adesivos tem, na pasta dela (ferramentas/modelos3d/<id>/):
 

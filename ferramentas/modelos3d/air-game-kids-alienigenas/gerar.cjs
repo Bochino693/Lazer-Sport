@@ -2,7 +2,7 @@
 //   npm install three@0.169.0 playwright gltfpack
 //   python3 -m http.server 8790 --bind 127.0.0.1   (nesta pasta, com o node_modules)
 //   node gerar.cjs [glb] [fotos]
-//   npx gltfpack -i air-game-hockey-espacial.glb -o ../../../core/static/site/arena/modelos/air-game-hockey-espacial.glb -kn -km -ke
+//   npx gltfpack -i air-game-kids-alienigenas.glb -o ../../../core/static/site/arena/modelos/air-game-kids-alienigenas.glb -kn -km -ke
 // Antes: python3 recortar_adesivos.py (as peças e o formas.json, da folha).
 // Sempre: as vistas de conferência (v-*.jpg) e o pecas.json (o tamanho de
 // cada adesivo no 3D e onde ele vai). "fotos" grava as foto-*.jpg (a vista
@@ -13,7 +13,7 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 
-const NOME = "air-game-hockey-espacial";
+const NOME = "air-game-kids-alienigenas";
 const FOTOS = path.join(__dirname, `../../../core/static/site/arena/modelos/${NOME}`);
 (async () => {
   const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
