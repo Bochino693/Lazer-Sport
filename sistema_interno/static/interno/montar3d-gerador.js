@@ -419,14 +419,14 @@ function brinquedao(P, W, D, H, sorte, op) {
  */
 export const PORTES = {
   trampolim: [
-    { chave: "compacto", min: [5.5, 5.5], area: 30, lado: 5.5, componentes: ["camas", "espuma", "parede_inclinada"] },
-    { chave: "medio", min: [9, 7], area: 50, lado: 5, componentes: ["camas", "espuma", "enterrada", "parede_inclinada", "queimada"] },
-    { chave: "grande", min: [14, 10], area: 120, lado: 8, componentes: ["camas", "espuma", "enterrada", "parede_inclinada", "escalada", "queimada"] },
+    { chave: "compacto", min: [5.5, 5.5], area: 30, lado: 5.5, componentes: ["camas", "espuma", "parede_inclinada", "swish"] },
+    { chave: "medio", min: [9, 7], area: 50, lado: 5, componentes: ["camas", "espuma", "enterrada", "swish", "parede_inclinada", "queimada"] },
+    { chave: "grande", min: [14, 10], area: 120, lado: 8, componentes: ["camas", "espuma", "enterrada", "swish", "parede_inclinada", "escalada", "queimada"] },
   ],
   esportivo: [
     { chave: "compacto", min: [7, 5], area: 35, lado: 5, componentes: ["quadra", "escalada"] },
-    { chave: "medio", min: [16, 10], area: 140, lado: 9, componentes: ["quadra", "trampolim_park", "escalada"] },
-    { chave: "grande", min: [26, 16], area: 380, lado: 14, componentes: ["quadra_futebol", "quadra_basquete", "trampolim_park", "escalada", "circuito_kids"] },
+    { chave: "medio", min: [16, 10], area: 140, lado: 9, componentes: ["quadra", "trampolim_park", "swish", "escalada"] },
+    { chave: "grande", min: [26, 16], area: 380, lado: 14, componentes: ["quadra_futebol", "quadra_basquete", "trampolim_park", "swish", "escalada", "circuito_kids"] },
   ],
   baby: [
     { chave: "compacto", min: [3, 3], area: 9, lado: 3, componentes: ["piscina", "escorregador", "blocos"] },
@@ -568,6 +568,7 @@ function esportivo(P, W, D, H, sorte, op) {
   const pw = girar ? parkD : parkW, pd = girar ? parkW : parkD;
   const comps = new Set(porte === "grande" ? PORTES.trampolim[2].componentes : PORTES.trampolim[1].componentes);
   if (!tem.has("escalada")) comps.delete("escalada");
+  if (!tem.has("swish")) comps.delete("swish");
   regras.push(...trampolimPark(regiao(P, W / 2 - parkW / 2, parkZ, girar), pw, pd, H, sorte, comps, porte === "grande" ? 4 : 2));
   return regras;
 }
@@ -674,7 +675,7 @@ function ninja(P, W, D, H, sorte, op) {
  * com a tabela no fim), o trampolim de parede no fundo, a quadra de queimada, a tela em volta e a
  * escadinha na entrada. `tem`: os componentes; `raias`: quantas raias de enterrada no máximo.
  */
-function trampolimPark(P, W, D, H, sorte, tem, raias = 2) {
+function trampolimPark(P, W, D, H, sorte, tem, raias = 2, { miniEnterrada = false } = {}) {
   const regras = [];
   const m = 0.3, x0 = -W / 2 + m, x1 = W / 2 - m, z0 = -D / 2 + m, z1 = D / 2 - m;
   const alto = H >= 4.5;
@@ -709,21 +710,37 @@ function trampolimPark(P, W, D, H, sorte, tem, raias = 2) {
     if (pd < z1 - z0 - 1.4) grade(x1 - pw, x1, z0 + pd, z1);
     xr = x1 - pw;
   }
-  // 2. a pista de enterrada (esquerda): raias de camas em linha com a tabela no fim
+  // 2. a pista de enterrada (esquerda): raias de camas em linha com a cesta no fim -- a Swish Arena
+  //    (o basquete da casa, com placar de LED e telão) ou a tabela comum, se o cliente tirou a Swish.
+  //    No compacto (sem pista), a Swish fica no fim de uma cama de enterrada de duas camas.
   let xl = x0;
-  if (tem.has("enterrada") && xr - x0 >= 6) {
+  const cesta = tem.has("swish") ? "swish" : "tabela";
+  const nomeCesta = cesta === "swish" ? "a cesta Swish Arena (placar de LED e telão, aro a 2,90 m)" : "a tabela (aro a 2,90 m)";
+  const pista = tem.has("enterrada") && xr - x0 >= 6;
+  const mini = !pista && miniEnterrada && tem.has("swish") && xr - x0 >= 4.2 && z1 - z0 >= 3;
+  let zLivre = z1; // até onde vão as camas livres do meio (a cama de enterrada do compacto fica na frente)
+  if (mini) {
+    // a cama de enterrada do compacto, na frente (o fundo fica para o trampolim de parede)
+    const raiaP = 1.6, cl = 1.5;
+    const zc = z1 - raiaP / 2;
+    P.por(cesta, [x0 + 0.35, 0, zc], { altura: 2.9 }, 90);
+    for (let k = 0; k < 2; k++) cama(x0 + 0.9 + cl * (k + 0.5), zc, cl, raiaP);
+    grade(x0 + 0.9 + 2 * cl, xr, z1 - raiaP, z1);
+    zLivre = z1 - raiaP;
+    regras.push(`Cama de enterrada: 2 camas em linha com ${nomeCesta} no fim.`);
+  } else if (pista) {
     const raiaP = 1.6, cl = 1.5;
     const n = Math.max(1, Math.min(raias, Math.floor((z1 - z0) / raiaP)));
     const camas = xr - x0 - 0.9 >= 3 * cl + 2.4 ? 3 : 2;
     for (let i = 0; i < n; i++) {
       const zc = z0 + raiaP * (i + 0.5);
-      P.por("tabela", [x0 + 0.35, 0, zc], { altura: 2.9 }, 90);
+      P.por(cesta, [x0 + 0.35, 0, zc], { altura: 2.9 }, 90);
       for (let k = 0; k < camas; k++) cama(x0 + 0.9 + cl * (k + 0.5), zc, cl, raiaP);
     }
     xl = x0 + 0.9 + camas * cl;
     // na frente das raias, mais camas livres
     grade(x0, xl, z0 + n * raiaP, z1);
-    regras.push(`Pista de enterrada: ${n} raia${n > 1 ? "s" : ""} de ${camas} camas em linha com a tabela (aro a 2,90 m) no fim.`);
+    regras.push(`Pista de enterrada: ${n} raia${n > 1 ? "s" : ""} de ${camas} camas em linha com ${nomeCesta} no fim.`);
   }
   // 3. o trampolim de parede no fundo do meio
   let zb = z0;
@@ -741,8 +758,8 @@ function trampolimPark(P, W, D, H, sorte, tem, raias = 2) {
     }
   }
   // 4. a quadra de queimada na frente do meio (camas com a tela baixa em volta e a rede no meio)
-  let zf = z1;
-  if (tem.has("queimada") && xr - xl >= 6 && z1 - zb >= 7) {
+  let zf = zLivre;
+  if (tem.has("queimada") && xr - xl >= 6 && zLivre - zb >= 7) {
     const qP = 4.4, qL = Math.min(xr - xl, 8.8);
     const qx = xl + qL / 2, qz = z1 - qP / 2;
     grade(xl, xl + qL, z1 - qP, z1, 2.2);
@@ -771,7 +788,7 @@ function trampolimPark(P, W, D, H, sorte, tem, raias = 2) {
 
 function trampolim(P, W, D, H, sorte, op) {
   const { porte, tem } = componentesDe("trampolim", W, D, op);
-  return trampolimPark(P, W, D, H, sorte, tem, porte === "grande" ? 4 : 2);
+  return trampolimPark(P, W, D, H, sorte, tem, porte === "grande" ? 4 : 2, { miniEnterrada: porte === "compacto" });
 }
 
 /* ---------------------------------------------------------------- espaço baby */

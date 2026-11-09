@@ -1460,3 +1460,12 @@ Dependência nova: rjsmin (requirements.txt).
    core/tests_js/sugestoes.mjs (as ideias cabem inteiras, uma por modelo,
    na ordem da nota, e em salão alto a primeira é uma atração de verdade),
    rodados por core/tests_projeto3d.py.
+   CESTA SWISH ARENA NO TRAMPOLIM PARK: a peça "swish" (montar3d-pecas.js) é
+   a cesta do Swish Arena, o basquete da casa: tabela preta com moldura de
+   LED, aro e rede, e o telão do placar em cima ("SWISH" e os pontos). Ela é
+   um item do trampolim park (e do park dentro do espaço esportivo médio e
+   grande), ligado de saída: no médio e no grande as raias da pista de
+   enterrada terminam nela; no compacto (sem pista), uma cama de enterrada
+   de 2 camas na frente termina nela (o fundo fica para o trampolim de
+   parede). O cliente tira e põe em "O que vai dentro" (Cesta Swish Arena):
+   sem ela, a pista leva a tabela comum.

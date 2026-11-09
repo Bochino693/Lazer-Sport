@@ -96,19 +96,19 @@ AREAS = {
 PORTES = {
     "trampolim": (
         {"chave": "compacto", "nome": "Compacto", "min": (5.5, 5.5), "ideal": (7.5, 6.0), "area": 30, "lado": 5.5,
-         "componentes": ("camas", "espuma", "parede_inclinada")},
+         "componentes": ("camas", "espuma", "parede_inclinada", "swish")},
         {"chave": "medio", "nome": "Médio", "min": (9.0, 7.0), "ideal": (13.0, 9.0), "area": 50, "lado": 5.0,
-         "componentes": ("camas", "espuma", "enterrada", "parede_inclinada", "queimada")},
+         "componentes": ("camas", "espuma", "enterrada", "swish", "parede_inclinada", "queimada")},
         {"chave": "grande", "nome": "Grande", "min": (14.0, 10.0), "ideal": (20.0, 13.0), "area": 120, "lado": 8.0,
-         "componentes": ("camas", "espuma", "enterrada", "parede_inclinada", "escalada", "queimada")},
+         "componentes": ("camas", "espuma", "enterrada", "swish", "parede_inclinada", "escalada", "queimada")},
     ),
     "esportivo": (
         {"chave": "compacto", "nome": "Compacto", "min": (7.0, 5.0), "ideal": (14.0, 8.0), "area": 35, "lado": 5.0,
          "componentes": ("quadra", "escalada")},
         {"chave": "medio", "nome": "Médio", "min": (16.0, 10.0), "ideal": (22.0, 13.0), "area": 140, "lado": 9.0,
-         "componentes": ("quadra", "trampolim_park", "escalada")},
+         "componentes": ("quadra", "trampolim_park", "swish", "escalada")},
         {"chave": "grande", "nome": "Grande", "min": (26.0, 16.0), "ideal": (36.0, 22.0), "area": 380, "lado": 14.0,
-         "componentes": ("quadra_futebol", "quadra_basquete", "trampolim_park", "escalada", "circuito_kids")},
+         "componentes": ("quadra_futebol", "quadra_basquete", "trampolim_park", "swish", "escalada", "circuito_kids")},
     ),
     "baby": (
         {"chave": "compacto", "nome": "Compacta", "min": (3.0, 3.0), "ideal": (4.0, 3.5), "area": 9, "lado": 3.0,
@@ -131,6 +131,7 @@ PORTES = {
 #: O nome de cada coisa que vai dentro das áreas (as opções que o cliente liga e desliga).
 COMPONENTES = {
     "camas": "Camas elásticas", "espuma": "Piscina de espuma", "enterrada": "Pista de enterrada",
+    "swish": "Cesta Swish Arena (placar de LED)",
     "parede_inclinada": "Trampolim de parede", "escalada": "Parede de escalada", "queimada": "Quadra de queimada",
     "quadra": "Quadra multiuso", "quadra_futebol": "Quadra de futebol", "quadra_basquete": "Quadra de basquete",
     "trampolim_park": "Trampolim park", "circuito_kids": "Circuito kids",

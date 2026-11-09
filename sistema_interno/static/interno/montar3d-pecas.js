@@ -48,6 +48,7 @@ export const CATALOGO_EXTRA = {
   quadra: { nome: "Quadra", grupo: "esporte", d: { largura: 14, profundidade: 8 }, cor: "#1d4ed8" },
   gol: { nome: "Trave de gol", grupo: "esporte", d: { largura: 2.4, altura: 1.6 }, cor: "#ffffff" },
   tabela: { nome: "Tabela de basquete", grupo: "esporte", d: { altura: 2.6 }, cor: "#ef4444" },
+  swish: { nome: "Cesta Swish Arena", grupo: "esporte", d: { altura: 2.9 }, cor: "#3fd0ff" },
   escalada: { nome: "Parede de escalada", grupo: "esporte", d: { largura: 3.0, altura: 3.5 }, cor: "#0ea5e9" },
   colchao: { nome: "Colchão", grupo: "esporte", d: { largura: 2.0, profundidade: 1.6, espessura: 0.25 }, cor: "#2563eb" },
   degraus: { nome: "Degraus ninja", grupo: "esporte", d: { comprimento: 3.2, largura: 1.2 }, cor: "#f97316" },
@@ -737,6 +738,70 @@ export function desenhosExtra(T, h) {
       const m = redeMat(1.2, 0.36, "#f8fafc");
       m.side = T.DoubleSide;
       grupo.push(placa, quadro, aro, malha(cesto, m));
+      return grupo;
+    },
+    /**
+     * A CESTA SWISH ARENA (o jogo de basquete da casa, com placar de LED): a tabela preta com a
+     * moldura de LED, o aro e a rede, e em cima o telão com o "SWISH" e o placar. De frente para +z.
+     */
+    swish(d, cor) {
+      const A = d.altura, grupo = [];
+      const neon = cor || "#3fd0ff";
+      const ferro = material("#111827", { metalness: 0.45, roughness: 0.35 });
+      const base = malha(caixa(0.8, 0.2, 1.0), material("#111827"));
+      base.position.set(0, 0.1, -0.6);
+      grupo.push(base, tubo(0.07, A + 1.35, [0, 0, -0.6], [0, A + 1.35, -0.6], ferro),
+        tubo(0.045, 0.38, [0, A + 0.3, -0.6], [0, A + 0.3, -0.22], ferro));
+      // a tabela preta com a moldura de LED
+      const placa = malha(caixa(1.1, 0.75, 0.05), material("#0b1220", { roughness: 0.25, metalness: 0.2 }));
+      placa.position.set(0, A + 0.32, -0.2);
+      grupo.push(placa);
+      const led = material(neon, { emissive: neon, emissiveIntensity: 2.2, roughness: 0.3 });
+      for (const [w, h, x, y] of [[1.12, 0.035, 0, A + 0.7], [1.12, 0.035, 0, A - 0.06], [0.035, 0.76, -0.56, A + 0.32], [0.035, 0.76, 0.56, A + 0.32]]) {
+        const faixa = malha(caixa(w, h, 0.02), led);
+        faixa.position.set(x, y, -0.17);
+        grupo.push(faixa);
+      }
+      const alvo = malha(caixa(0.46, 0.32, 0.012), led);
+      alvo.position.set(0, A + 0.2, -0.17);
+      const miolo = malha(caixa(0.42, 0.28, 0.014), material("#0b1220"));
+      miolo.position.set(0, A + 0.2, -0.165);
+      grupo.push(alvo, miolo);
+      const aro = malha(new T.TorusGeometry(0.21, 0.016, 8, 32), material("#f97316", { metalness: 0.4 }));
+      aro.rotation.x = Math.PI / 2;
+      aro.position.set(0, A, 0.04);
+      const cesto = new T.CylinderGeometry(0.21, 0.14, 0.38, 18, 1, true);
+      cesto.translate(0, A - 0.19, 0.04);
+      const rede = redeMat(1.2, 0.38, "#f8fafc");
+      rede.side = T.DoubleSide;
+      grupo.push(aro, malha(cesto, rede));
+      // o telão do placar, em cima da tabela
+      const caixaTela = malha(caixa(1.2, 0.62, 0.12), material("#111827", { roughness: 0.4 }));
+      caixaTela.position.set(0, A + 1.05, -0.24);
+      grupo.push(caixaTela);
+      let telaMat;
+      if (typeof document !== "undefined") {
+        const c = document.createElement("canvas");
+        c.width = 512; c.height = 256;
+        const g = c.getContext("2d");
+        g.fillStyle = "#020617"; g.fillRect(0, 0, 512, 256);
+        g.strokeStyle = neon; g.lineWidth = 10; g.strokeRect(8, 8, 496, 240);
+        g.font = "900 92px system-ui, sans-serif"; g.textAlign = "left"; g.textBaseline = "middle";
+        g.fillStyle = neon; g.shadowColor = neon; g.shadowBlur = 18;
+        g.fillText("SWISH", 34, 104);
+        g.shadowBlur = 0; g.font = "800 40px system-ui, sans-serif"; g.fillStyle = "#f8fafc";
+        g.fillText("ARENA", 38, 190);
+        g.font = "900 120px ui-monospace, monospace"; g.textAlign = "right"; g.fillStyle = "#facc15"; g.shadowColor = "#facc15"; g.shadowBlur = 16;
+        g.fillText("28", 480, 140);
+        const tex = new T.CanvasTexture(c);
+        tex.colorSpace = T.SRGBColorSpace;
+        telaMat = new T.MeshBasicMaterial({ map: tex, toneMapped: false });
+      } else {
+        telaMat = material(neon, { emissive: neon, emissiveIntensity: 1.2 });
+      }
+      const tela = malha(new T.PlaneGeometry(1.08, 0.52), telaMat);
+      tela.position.set(0, A + 1.05, -0.175);
+      grupo.push(tela);
       return grupo;
     },
     escalada(d, cor) {

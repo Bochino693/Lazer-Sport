@@ -112,15 +112,16 @@ for (const [tipo, lista] of Object.entries(gerador.PORTES)) {
 // o trampolim park grande tem o que um park de verdade tem; o compacto, só o básico
 const grande = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, {});
 const tipos = new Set(grande.pecas.map((p) => p.tipo));
-for (const t of ["cama", "espuma", "tabela", "cama_inclinada", "escalada", "cerca", "degraus_espuma"]) confere(tipos.has(t), `o trampolim park grande sem ${t}`);
+for (const t of ["cama", "espuma", "swish", "cama_inclinada", "escalada", "cerca", "degraus_espuma"]) confere(tipos.has(t), `o trampolim park grande sem ${t}`);
 const compacto = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 5 }, "#2563eb", 1, {});
-confere(!compacto.pecas.some((p) => p.tipo === "tabela"), "o trampolim park compacto não leva a pista de enterrada");
+confere(!compacto.pecas.some((p) => p.tipo === "tabela") && compacto.pecas.filter((p) => p.tipo === "swish").length === 1,
+  "o trampolim park compacto leva uma cama de enterrada com a Swish, e não a pista");
 const compactoBaixo = gerador.gerar("trampolim", { largura: 6, profundidade: 6, altura: 4 }, "#2563eb", 1, {});
 confere(!compactoBaixo.pecas.some((p) => p.tipo === "cama_inclinada"), "o trampolim de parede pede pé-direito de 4,50 m");
 // o porte vai pela área de verdade: 13,5 × 5,5 m (74 m²) é médio, com a pista de enterrada e o trampolim de parede
 confere(gerador.porteQueCabe("trampolim", 13.5, 5.5).chave === "medio", "13,5 × 5,5 m de trampolim park não deu o porte médio");
 const faixa = gerador.gerar("trampolim", { largura: 13.5, profundidade: 5.5, altura: 6 }, "#2563eb", 1, {});
-for (const t of ["tabela", "cama_inclinada", "espuma"]) confere(faixa.pecas.some((p) => p.tipo === t), `o trampolim park de 13,5 × 5,5 × 6 m sem ${t}`);
+for (const t of ["swish", "cama_inclinada", "espuma"]) confere(faixa.pecas.some((p) => p.tipo === t), `o trampolim park de 13,5 × 5,5 × 6 m sem ${t}`);
 // a área ninja enche a área: raias em zigue-zague, mais obstáculos quanto maior, a escalada e a parede curva na grande
 const obstaculos = (ideia) => ideia.pecas.filter((p) => ["degraus", "trave", "rolos", "argolas", "macaco", "corda", "tunel"].includes(p.tipo)).length;
 const ninjaMedia = gerador.gerar("ninja", { largura: 13, profundidade: 5, altura: 5 }, "#2563eb", 1, {});
@@ -138,7 +139,14 @@ const dentro = (ideia, W, D) => ideia.pecas.every((p) => Math.abs(p.p[0]) <= W /
 confere(dentro(babyPequena, 3.5, 3.2) && dentro(babyGrande, 14, 10), "uma peça da área baby saiu da área");
 confere(dentro(ninjaGrande, 24, 11) && dentro(ninjaMedia, 13, 5), "uma peça da área ninja saiu da área");
 const semEnterrada = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["enterrada"] });
-confere(!semEnterrada.pecas.some((p) => p.tipo === "tabela"), "tirar a pista de enterrada não tirou as tabelas");
+confere(!semEnterrada.pecas.some((p) => p.tipo === "tabela" || p.tipo === "swish"), "tirar a pista de enterrada não tirou as cestas");
+// a cesta Swish Arena: liga e desliga; sem ela, a pista leva a tabela comum
+const semSwish = gerador.gerar("trampolim", { largura: 20, profundidade: 13, altura: 6 }, "#2563eb", 1, { sem: ["swish"] });
+confere(!semSwish.pecas.some((p) => p.tipo === "swish") && semSwish.pecas.some((p) => p.tipo === "tabela"), "tirar a Swish não pôs a tabela comum na pista");
+const compactoSemSwish = gerador.gerar("trampolim", { largura: 8.4, profundidade: 4.9, altura: 6 }, "#2563eb", 1, { sem: ["swish"] });
+confere(!compactoSemSwish.pecas.some((p) => p.tipo === "swish" || p.tipo === "tabela"), "o compacto sem a Swish ficou com cesta");
+confere(gerador.gerar("trampolim", { largura: 8.4, profundidade: 4.9, altura: 6 }, "#2563eb", 1, {}).pecas.some((p) => p.tipo === "cama_inclinada"),
+  "a cama de enterrada do compacto tirou o trampolim de parede");
 const esportivoGrande = gerador.gerar("esportivo", { largura: 36, profundidade: 22, altura: 6 }, "#2563eb", 1, {});
 confere(esportivoGrande.pecas.filter((p) => p.tipo === "quadra").length === 2 && esportivoGrande.pecas.some((p) => p.tipo === "espuma"),
   "o espaço esportivo grande leva as duas quadras e o trampolim park");
