@@ -3557,6 +3557,7 @@ class Arena {
     this.mostrarFicha(maquina);
     this.corpo.classList.add("tem-ficha");
     this.marcarLista();
+    if (this.irPara && !this.irPara.hidden) this.desenharIrPara();
   }
 
   /** A máquina volta ao normal no estande: de frente, em pé. */
@@ -3688,31 +3689,46 @@ class Arena {
   }
 
   /**
-   * As setas: o brinquedo que está daquele lado NA TELA (lado = 1, direita;
-   * -1, esquerda), qualquer que seja o lado de onde a câmera olha. Sem
-   * nenhum escolhido, começa pelo que está mais no meio da tela.
+   * A FILA DAS SETAS: uma ordem fixa, que dá a volta na arena inteira -- a
+   * roda pelo ângulo (da direita para a esquerda de quem olha do meio para
+   * fora, que é de onde a câmera vê cada brinquedo da roda) e, no ponto em
+   * que a roda passa por trás, os reinos (os espaços grandes), da esquerda
+   * para a direita de quem olha da roda para eles. A seta da direita anda
+   * para a frente na fila e a da esquerda para trás: nunca volta no meio do
+   * caminho, mesmo clicando com a câmera ainda voando (antes a escolha saía
+   * da direção da câmera naquele instante e podia ir e voltar entre dois).
+   */
+  filaDasSetas() {
+    const visiveis = this.lista.filter((m) => m.grupo.visible);
+    const angulo = (m) => Math.atan2(m.grupo.position.x, m.grupo.position.z);
+    const roda = visiveis.filter((m) => !m.reino).sort((a, b) => angulo(b) - angulo(a));
+    const reinos = visiveis.filter((m) => m.reino).sort((a, b) => a.grupo.position.x - b.grupo.position.x);
+    return [...roda, ...reinos];
+  }
+
+  /**
+   * As setas: lado = 1 (direita) anda para a frente na fila, -1 (esquerda)
+   * para trás, dando a volta. Sem nenhum escolhido, começa pelo que está
+   * mais no meio da tela.
    */
   vizinha(lado) {
-    const lista = this.lista.filter((m) => m.grupo.visible);
-    const total = lista.length;
+    const fila = this.filaDasSetas();
+    const total = fila.length;
     if (!total) return;
-    const T = this.T;
-    const frente = this.camera.getWorldDirection(new T.Vector3()).setY(0).normalize();
-    const direita = new T.Vector3(-frente.z, 0, frente.x);
     const atual = this.selecionada;
-    if (!atual || !lista.includes(atual)) {
+    if (!atual || !fila.includes(atual)) {
+      const T = this.T;
+      const frente = this.camera.getWorldDirection(new T.Vector3()).setY(0).normalize();
       const c = this.camera.position;
       const noMeio = (m) => {
         const d = this.ajuda.subVectors(m.grupo.position, c).setY(0);
         return d.dot(frente) / (d.length() || 1);
       };
-      this.selecionar(lista.reduce((a, b) => (noMeio(b) > noMeio(a) ? b : a)));
+      this.selecionar(fila.reduce((a, b) => (noMeio(b) > noMeio(a) ? b : a)));
       return;
     }
-    const i = lista.indexOf(atual);
-    const vizinhas = [lista[(i + 1) % total], lista[(i - 1 + total) % total]];
-    const deLado = (m) => lado * this.ajuda.subVectors(m.grupo.position, atual.grupo.position).dot(direita);
-    this.selecionar(deLado(vizinhas[0]) >= deLado(vizinhas[1]) ? vizinhas[0] : vizinhas[1]);
+    const i = fila.indexOf(atual);
+    this.selecionar(fila[(i + (lado > 0 ? 1 : -1) + total) % total]);
   }
 
   /**
@@ -3881,6 +3897,7 @@ class Arena {
       });
     }
     this.ligarMapa();
+    this.ligarIrPara();
     this.painelPasseio = this.palco.querySelector("[data-arena-passeio]");
     if (this.painelPasseio) this.ligarPainelDoPasseio(this.painelPasseio);
 
@@ -3918,8 +3935,9 @@ class Arena {
       if (evento.key === "ArrowRight") { this.vizinha(1); evento.preventDefault(); }
       else if (evento.key === "ArrowLeft") { this.vizinha(-1); evento.preventDefault(); }
       else if (evento.key === "Escape") {
-        // Esc solta a máquina; sem nenhuma, sai da tela cheia ou volta para a arena inteira
-        if (this.selecionada) this.fecharSelecao();
+        // Esc fecha a lista do "Ir para"; depois solta a máquina; sem nenhuma, sai da tela cheia ou volta para a arena inteira
+        if (this.irPara && !this.irPara.hidden) this.abrirIrPara(false);
+        else if (this.selecionada) this.fecharSelecao();
         else if (this.expandida) this.telaCheia(false);
         else this.verTudo();
         evento.preventDefault();
@@ -3946,6 +3964,7 @@ class Arena {
     else if (nome === "esquerda") this.vizinha(-1);
     else if (nome === "visao") this.verTudo();
     else if (nome === "mapa") this.abrirMapa(this.mapa ? this.mapa.hidden : false);
+    else if (nome === "irpara") this.abrirIrPara(this.irPara ? this.irPara.hidden : false);
     else if (nome === "tour") {
       this.tour = !this.tour;
       this.tourTempo = 0;
@@ -4194,6 +4213,102 @@ class Arena {
     camera.updateProjectionMatrix();
   }
 
+  /* ---------- "Ir para": a lista de tudo o que está na arena, por área, com busca ---------- */
+  ligarIrPara() {
+    this.irPara = this.palco.querySelector("[data-arena-irpara]");
+    if (!this.irPara) return;
+    this.listaIrPara = this.irPara.querySelector("[data-arena-irpara-lista]");
+    this.buscaIrPara = this.irPara.querySelector("[data-arena-irpara-busca]");
+    this.irPara.querySelector("[data-arena-irpara-fechar]").addEventListener("click", () => this.abrirIrPara(false));
+    this.buscaIrPara.addEventListener("input", () => this.desenharIrPara());
+    this.buscaIrPara.addEventListener("keydown", (evento) => {
+      if (evento.key === "Enter") {
+        // Enter vai para o primeiro que a busca achou
+        const primeiro = this.listaIrPara.querySelector("[data-irpara-id]");
+        if (primeiro) primeiro.click();
+        evento.preventDefault();
+      } else if (evento.key === "Escape") {
+        this.abrirIrPara(false);
+        evento.stopPropagation();
+        evento.preventDefault();
+      }
+    });
+    this.listaIrPara.addEventListener("click", (evento) => {
+      const area = evento.target.closest("[data-irpara-area]");
+      if (area) {
+        this.abrirIrPara(false);
+        this.escolherZona(area.dataset.irparaArea);
+        return;
+      }
+      const item = evento.target.closest("[data-irpara-id]");
+      if (!item) return;
+      const maquina = this.maquinas.find((m) => String(m.dados.id) === item.dataset.irparaId);
+      if (!maquina) return;
+      if (!this.lista.includes(maquina)) {
+        // fora da categoria escolhida: volta para todas
+        const categoria = this.raiz.querySelector("[data-arena-categoria]");
+        if (categoria) categoria.value = "";
+        this.filtrar("");
+      }
+      this.abrirIrPara(false);
+      if (this.tour) this.acao("tour", this.controles.querySelector('[data-arena-acao="tour"]'));
+      this.selecionar(maquina);
+      this.canvas.focus({ preventScroll: true });
+    });
+  }
+
+  abrirIrPara(abrir) {
+    if (!this.irPara) return;
+    this.irPara.hidden = !abrir;
+    const botao = this.controles && this.controles.querySelector('[data-arena-acao="irpara"]');
+    if (botao) {
+      botao.setAttribute("aria-pressed", abrir ? "true" : "false");
+      botao.setAttribute("aria-expanded", abrir ? "true" : "false");
+    }
+    if (!abrir) return;
+    // no celular a lista e o mapa não cabem juntos: fica a lista
+    if (window.matchMedia("(max-width: 960px)").matches) this.abrirMapa(false);
+    this.buscaIrPara.value = "";
+    this.desenharIrPara();
+    if (!this.celular) this.buscaIrPara.focus({ preventScroll: true });
+    const atual = this.listaIrPara.querySelector('[aria-current="true"]');
+    if (atual) atual.scrollIntoView({ block: "nearest" });
+  }
+
+  desenharIrPara() {
+    const semAcento = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const busca = semAcento(this.buscaIrPara.value.trim());
+    const todas = this.maquinas.filter((m) => !this.categoria || (m.dados.categorias || []).includes(this.categoria) || !busca);
+    const acha = (m) => !busca || semAcento(`${m.dados.nome} ${(m.dados.categorias || []).join(" ")}`).includes(busca);
+    const fila = this.filaDasSetas();
+    const ordem = (m) => { const i = fila.indexOf(m); return i < 0 ? 999 : i; };
+    const escapar = (t) => String(t || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const blocos = [];
+    const zonas = this.zonas.length ? this.zonas : [{ id: "", titulo: "Brinquedos" }];
+    zonas.forEach((zona) => {
+      const daqui = todas.filter((m) => (!zona.id || m.dados.grupo === zona.id) && acha(m)).sort((a, b) => ordem(a) - ordem(b));
+      if (!daqui.length) return;
+      const cor = COR_DA_ZONA[zona.id] || "#3fd0ff";
+      const itens = daqui.map((m) => {
+        const atual = m === this.selecionada;
+        const foto = m.dados.capa ? `<img src="${escapar(m.dados.capa)}" alt="" loading="lazy" decoding="async">` : `<span class="arena3d-irpara-sem-foto" style="--cor:${cor}"><i class="fa-solid fa-cube" aria-hidden="true"></i></span>`;
+        return `<button type="button" class="arena3d-irpara-item" data-irpara-id="${m.dados.id}"${atual ? ' aria-current="true"' : ""}>${foto}<span><b>${escapar(m.dados.nome)}</b><small>${escapar(m.dados.medidas_texto || (m.dados.categorias || [])[0] || "")}</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>`;
+      }).join("");
+      const titulo = zona.id
+        ? `<button type="button" class="arena3d-irpara-area" data-irpara-area="${escapar(zona.id)}" style="--cor:${cor}"><span class="arena3d-irpara-ponto"></span>${escapar(zona.titulo)} <small>ver a área</small></button>`
+        : "";
+      blocos.push(`<section class="arena3d-irpara-grupo">${titulo}${itens}</section>`);
+    });
+    this.listaIrPara.innerHTML = blocos.join("") || '<p class="arena3d-irpara-nada">Nada com esse nome. Tente "boliche", "ninja" ou "trampolim".</p>';
+    // a foto que não abrir vira o ícone
+    this.listaIrPara.querySelectorAll(".arena3d-irpara-item img").forEach((img) => img.addEventListener("error", () => {
+      const icone = document.createElement("span");
+      icone.className = "arena3d-irpara-sem-foto";
+      icone.innerHTML = '<i class="fa-solid fa-cube" aria-hidden="true"></i>';
+      img.replaceWith(icone);
+    }, { once: true }));
+  }
+
   /* ---------- o mapa: a arena vista de cima, como um mapa comum ---------- */
   ligarMapa() {
     this.mapa = this.palco.querySelector("[data-arena-mapa]");
@@ -4225,6 +4340,7 @@ class Arena {
   abrirMapa(abrir) {
     if (!this.mapa) return;
     this.mapa.hidden = !abrir;
+    if (abrir && this.irPara && !this.irPara.hidden && window.matchMedia("(max-width: 960px)").matches) this.abrirIrPara(false);
     const botao = this.controles && this.controles.querySelector('[data-arena-acao="mapa"]');
     if (botao) botao.setAttribute("aria-pressed", abrir ? "true" : "false");
     this.marcaDoMapa = "";

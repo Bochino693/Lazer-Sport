@@ -526,6 +526,99 @@ html.arena-tela-cheia body { overflow: hidden; }
 .arena-controle--texto { font-size: .84rem; white-space: nowrap; }
 .arena-controle[aria-pressed="true"]:not(.arena-controle--tour) { background: linear-gradient(135deg, #1f6fff, #3fd0ff); color: #031024; }
 
+/* "Ir para": a lista de tudo o que está na arena, por área e com busca,
+   em cima da barra de controles (no celular, por cima do 3D, como o mapa) */
+.arena3d-irpara {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    bottom: 72px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    /* no computador, ao lado do mapa (que fica no canto direito) */
+    width: min(400px, calc(100% - 290px));
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 18px;
+    background: rgba(4, 10, 28, .94);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .5);
+    backdrop-filter: blur(6px);
+}
+.arena3d-irpara[hidden],
+.arena3d-palco.em-passeio .arena3d-irpara { display: none; }
+.arena3d-irpara-busca {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 2px 8px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+    color: #a9bcd9;
+}
+.arena3d-irpara-busca:focus-within { border-color: #3fd0ff; }
+.arena3d-irpara-busca input {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: .92rem;
+}
+.arena3d-irpara-lista { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 2px 2px; }
+.arena3d-irpara-grupo + .arena3d-irpara-grupo { margin-top: 8px; }
+.arena3d-irpara-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 6px 4px;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    font-size: .74rem;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+}
+.arena3d-irpara-area small { margin-left: auto; color: #a9bcd9; font-size: .7rem; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.arena3d-irpara-area:hover small { color: #3fd0ff; }
+.arena3d-irpara-ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--cor); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor) 30%, transparent); }
+.arena3d-irpara-item {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 4px;
+    padding: 6px 10px 6px 6px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .05);
+    color: #fff;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.arena3d-irpara-item:hover,
+.arena3d-irpara-item:focus-visible { border-color: #3fd0ff; background: rgba(63, 208, 255, .1); outline: 0; }
+.arena3d-irpara-item[aria-current="true"] { border-color: #ffd700; background: rgba(255, 215, 0, .1); }
+.arena3d-irpara-item img,
+.arena3d-irpara-sem-foto { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; background: #0b1636; }
+.arena3d-irpara-sem-foto { display: grid; place-items: center; color: var(--cor); font-size: 1.1rem; }
+.arena3d-irpara-item b { display: block; overflow: hidden; font-size: .9rem; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+.arena3d-irpara-item small { display: block; overflow: hidden; color: #a9bcd9; font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; }
+.arena3d-irpara-item > i { color: #a9bcd9; font-size: .8rem; }
+.arena3d-irpara-nada { margin: 10px 6px; color: #a9bcd9; font-size: .86rem; }
+
 /* o mapa: a arena vista de cima. No computador fica no canto do palco;
    no celular e no tablet abre por cima do 3D (o botão "Mapa"), sem cobrir
    os controles de baixo. */
@@ -1059,6 +1152,7 @@ html.arena-tela-cheia body { overflow: hidden; }
     .arena3d-palco { height: clamp(340px, calc(100svh - 170px), 640px); scroll-margin-top: 76px; }
     .arena3d-vistas { max-width: calc(100% - 24px); }
     .arena3d-mapa { top: 10px; right: 10px; left: 10px; bottom: 70px; z-index: 5; width: auto; }
+    .arena3d-irpara { top: 10px; right: 10px; left: 10px; bottom: 70px; z-index: 6; width: auto; }
     .arena3d-mapa-tela { flex: 1; height: auto; min-height: 0; }
     .arena3d-ficha { overflow: visible; }
     .arena3d-ficha-cheia { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: start; gap: 8px 12px; }
@@ -1093,6 +1187,7 @@ html.arena-tela-cheia body { overflow: hidden; }
     .arena3d-so-grande,
     .arena3d-passeio-novo { display: none; }
     .arena3d-mapa { top: 8px; right: 8px; left: 8px; bottom: 60px; }
+    .arena3d-irpara { top: 8px; right: 8px; left: 8px; bottom: 60px; }
     .arena3d-dica { max-width: calc(100% - 24px); font-size: .74rem; white-space: normal; text-align: center; border-radius: 14px; }
     .arena3d-passeio-dica { top: 8px; left: 8px; max-width: calc(100% - 132px); font-size: .72rem; border-radius: 14px; transform: none; text-align: left; }
     .arena3d-passeio-mapa { top: 8px; right: 8px; width: 112px; height: 112px; border-radius: 14px; }

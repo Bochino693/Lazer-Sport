@@ -115,6 +115,14 @@ class ArenaPaginaTests(TestCase):
         for vista in ("girar", "frente", "direita", "costas", "esquerda", "cima", "baixo"):
             self.assertIn(f'data-arena-vista="{vista}"', html)
 
+    def test_da_para_ir_direto_a_qualquer_brinquedo(self):
+        # as setas, o "Ir para" (a lista com busca), o "Ver tudo" e o mapa
+        html = self.client.get(reverse("arena")).content.decode()
+        for acao in ("esquerda", "direita", "irpara", "visao", "mapa"):
+            self.assertIn(f'data-arena-acao="{acao}"', html)
+        for parte in ("data-arena-irpara", "data-arena-irpara-busca", "data-arena-irpara-lista"):
+            self.assertIn(parte, html)
+
 
 
 class SimuladorTests(TestCase):

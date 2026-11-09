@@ -144,9 +144,19 @@
                         <i class="fa-solid fa-play" aria-hidden="true"></i><span>Tour</span>
                     </button>
                     <button type="button" class="arena-controle" data-arena-acao="direita" aria-label="Brinquedo da direita"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                    <button type="button" class="arena-controle arena-controle--texto arena-controle--irpara" data-arena-acao="irpara" aria-pressed="false" aria-controls="arena-irpara" aria-expanded="false"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>Ir para</span></button>
                     <button type="button" class="arena-controle arena-controle--texto" data-arena-acao="visao"><i class="fa-solid fa-expand" aria-hidden="true"></i><span>Ver tudo</span></button>
                     <button type="button" class="arena-controle arena-controle--texto" data-arena-acao="mapa" aria-pressed="false" aria-controls="arena-mapa"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Mapa</span></button>
                     <button type="button" class="arena-controle arena-controle--cheia" data-arena-acao="tela-cheia" aria-label="Tela cheia" aria-pressed="false"><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i><span data-tela-cheia-rotulo></span></button>
+                </div>
+                {# "Ir para": todos os brinquedos da arena por área, com busca; um toque leva a câmera até ele #}
+                <div class="arena3d-irpara" id="arena-irpara" data-arena-irpara role="dialog" aria-label="Ir para um brinquedo" hidden>
+                    <div class="arena3d-mapa-topo">
+                        <strong><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Ir para</strong>
+                        <button type="button" class="arena3d-mapa-fechar" data-arena-irpara-fechar aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    </div>
+                    <label class="arena3d-irpara-busca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" data-arena-irpara-busca placeholder="Buscar: boliche, ninja, trampolim…" aria-label="Buscar brinquedo" autocomplete="off"></label>
+                    <div class="arena3d-irpara-lista" data-arena-irpara-lista></div>
                 </div>
                 <div class="arena3d-mapa" id="arena-mapa" data-arena-mapa hidden>
                     <div class="arena3d-mapa-topo">
