@@ -119,6 +119,24 @@ function recolorir(r, g, b, alvos) {
   const sat = Math.min(1, alvo[1] * (0.75 + 0.25 * Math.min(1, s / 0.6)));
   return rgbDeHsl(alvo[0], sat, luz);
 }
+/**
+ * A cor na ARTE (adesivos, a logo): a mesma família do tema, mas cada pixel guarda o claro/escuro
+ * do desenho (a letra, o contorno, o brilho continuam onde estavam) e NUNCA fica menos saturado do
+ * que era. Com a conta das peças lisas (acima), que aproxima tudo da cor do tema, a letra perdia o
+ * contorno e o brilho -- o "Strike Kids" ficava apagado no Doce, no Oceano, na Selva.
+ */
+function recolorirArte(r, g, b, alvos) {
+  const [h, s, l] = hsl(r, g, b);
+  const f = familia(h, s, l);
+  if (!f || !alvos[f]) return null;
+  const alvo = alvos[f];
+  // cor de tema quase cinza (o grafite do Esporte): o escuro é a graça dela -- vale o claro/escuro
+  // do tema, como nas peças lisas (com o desenho por cima); senão o grafite virava um cinza opaco
+  if (alvo[1] < 0.3) return recolorir(r, g, b, alvos);
+  const luz = Math.min(0.93, Math.max(0.05, l + (alvo[2] - 0.5) * 0.3));
+  const sat = Math.min(1, Math.max(s, alvo[1] * 0.95));
+  return rgbDeHsl(alvo[0], sat, luz);
+}
 /* o three.js guarda as cores dos materiais em linear; as contas acima são em sRGB */
 const paraSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
 const paraLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
@@ -130,7 +148,8 @@ export function coresDoObjeto(gltf) {
   return TEMAS.map((t) => ({ nome: t.nome, tema: t }));
 }
 
-/** A arte (textura) no tema, pixel a pixel; brancos, pretos e letras ficam. */
+/** A arte (textura) no tema, pixel a pixel: brancos, pretos e contornos ficam; as letras e o
+ *  desenho trocam de cor guardando o claro/escuro e o brilho (recolorirArte). */
 function arteNoTema(imagem, alvos) {
   const tela = document.createElement("canvas");
   tela.width = imagem.width;
@@ -145,7 +164,7 @@ function arteNoTema(imagem, alvos) {
     const chave = (p[i] << 16) | (p[i + 1] << 8) | p[i + 2];
     let novo = lembrado.get(chave);
     if (novo === undefined) {
-      const c = recolorir(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255, alvos);
+      const c = recolorirArte(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255, alvos);
       novo = c ? ((Math.round(c[0] * 255) << 16) | (Math.round(c[1] * 255) << 8) | Math.round(c[2] * 255)) : -1;
       if (lembrado.size < 200000) lembrado.set(chave, novo);
     }
@@ -164,8 +183,16 @@ function materialNoTema(gltf, original, tema) {
     const alvos = alvosDoTema(tema);
     const m = original.clone();
     if (m.map && m.map.image && m.map.image.width) {
+      // A CÓPIA DA TEXTURA PRECISA DE UMA IMAGEM SÓ DELA. No three.js a textura clonada divide a
+      // mesma "fonte" (Source) com a original, e `textura.image = ...` troca a imagem DA FONTE:
+      // pintar a cópia pintava a original junto. Era o "não volta": o Original ficava com a arte
+      // do último estilo, e cada estilo novo era pintado por cima do anterior -- as cores se
+      // somavam até a letra do Strike Kids ficar apagada. Agora a arte pintada ganha uma fonte
+      // nova, e a conta parte sempre da imagem de fábrica.
       const textura = m.map.clone();
-      textura.image = arteNoTema(m.map.image, alvos);
+      const Fonte = m.map.source && m.map.source.constructor;
+      const arte = arteNoTema(original.map.image, alvos);
+      if (Fonte) textura.source = new Fonte(arte); else textura.image = arte;
       textura.needsUpdate = true;
       m.map = textura;
     }

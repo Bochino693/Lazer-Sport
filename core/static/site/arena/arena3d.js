@@ -2028,9 +2028,14 @@ class Arena {
       bolinha.setAttribute("aria-hidden", "true");
       botao.append(bolinha, document.createTextNode(cor.nome));
       botao.addEventListener("click", async () => {
-        m.corEscolhida = i;
-        botoes.forEach((x) => x.setAttribute("aria-pressed", x === botao ? "true" : "false"));
-        await modulo.aplicarCor(m.gltf, cor);
+        // tocar de novo na cor escolhida volta para a anterior (ou para a original)
+        let k = i;
+        const atual = m.corEscolhida || 0;
+        if (k === atual) { if (k === 0) return; k = (m.corAnterior || 0) === k ? 0 : (m.corAnterior || 0); }
+        m.corAnterior = atual;
+        m.corEscolhida = k;
+        botoes.forEach((x, j) => x.setAttribute("aria-pressed", j === k ? "true" : "false"));
+        await modulo.aplicarCor(m.gltf, cores[k]);
       });
       return botao;
     });

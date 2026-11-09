@@ -241,6 +241,16 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
     iconePaleta.className = "fa-solid fa-palette";
     iconePaleta.setAttribute("aria-hidden", "true");
     rotulo.append(iconePaleta, document.createTextNode(" Cores"));
+    // a cor da vez e a de antes: tocar de novo na cor escolhida volta para a anterior
+    let atual = 0, anterior = 0;
+    const escolher = async (i) => {
+      if (i === atual) { if (i === 0) return; i = anterior === i ? 0 : anterior; }
+      anterior = atual;
+      atual = i;
+      botoes.forEach((x, k) => x.setAttribute("aria-pressed", k === i ? "true" : "false"));
+      await cores3d.aplicarCor(gltf, cores[i]);
+      sujo = true;
+    };
     const botoes = cores.map((cor, i) => {
       const botao = document.createElement("button");
       botao.type = "button";
@@ -251,11 +261,7 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
       const bolinha = document.createElement("i");
       bolinha.setAttribute("aria-hidden", "true");
       botao.append(bolinha, document.createTextNode(cor.nome));
-      botao.addEventListener("click", async () => {
-        botoes.forEach((x) => x.setAttribute("aria-pressed", x === botao ? "true" : "false"));
-        await cores3d.aplicarCor(gltf, cor);
-        sujo = true;
-      });
+      botao.addEventListener("click", () => escolher(i));
       return botao;
     });
     coresCaixa.replaceChildren(rotulo, ...botoes);

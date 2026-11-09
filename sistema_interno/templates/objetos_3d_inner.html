@@ -820,12 +820,20 @@ LSTela.pronto(function () {
     var cores = modulos.cores3d.coresDoObjeto(gltf);
     if (cores.length > 1) {
       var rotulo = document.createElement("span"); rotulo.textContent = "Cores:";
+      var corAtual = 0, corAnterior = 0;
       var botoes = cores.map(function (cor, i) {
         var botao = document.createElement("button"); botao.type = "button"; botao.setAttribute("aria-pressed", i === 0 ? "true" : "false");
         var amostra = modulos.cores3d.amostraDaCor(gltf, cor); if (amostra) botao.style.setProperty("--amostra", amostra);
         var bolinha = document.createElement("i"); bolinha.setAttribute("aria-hidden", "true");
         botao.append(bolinha, document.createTextNode(cor.nome));
-        botao.addEventListener("click", async function () { botoes.forEach(function (x) { x.setAttribute("aria-pressed", x === botao ? "true" : "false"); }); await modulos.cores3d.aplicarCor(gltf, cor); sujo = true; });
+        botao.addEventListener("click", async function () {
+          // tocar de novo na cor escolhida volta para a anterior (ou para a original)
+          var k = i;
+          if (k === corAtual) { if (k === 0) return; k = corAnterior === k ? 0 : corAnterior; }
+          corAnterior = corAtual; corAtual = k;
+          botoes.forEach(function (x, j) { x.setAttribute("aria-pressed", j === k ? "true" : "false"); });
+          await modulos.cores3d.aplicarCor(gltf, cores[k]); sujo = true;
+        });
         return botao;
       });
       coresCaixa.replaceChildren.apply(coresCaixa, [rotulo].concat(botoes));
