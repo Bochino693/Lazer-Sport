@@ -1,68 +1,28 @@
 {
  "_como": [
-  "Onde cada peça está na folha de adesivos da fábrica (a imagem da folha fica nesta pasta, com o nome de 'folha').",
-  "caixa: [x0, y0, x1, y1] em px da folha (o canto de cima à esquerda e o de baixo à direita); ou caixa_rel, em frações de 0 a 1.",
-  "girar: 0, 90, 180 ou 270 graus (anti-horário) para a peça ficar em pé, como o 'onde' do pecas.json; espelhar: true se precisar.",
-  "Uma peça noutra imagem: 'folha' dentro da peça. Sem caixa (null), a peça fica com a arte que já está em adesivos/.",
-  "Confira com: python3 recortar_adesivos.py --previa (desenha as caixas na folha: previa-recortes.jpg)."
+  "Onde cada peça está na folha de adesivos da fábrica (folha-adesivos.webp, a folha 26567-2 como veio).",
+  "caixa: [x0, y0, x1, y1] aproximada, em px da folha; o recorte acha a peça de verdade dentro dela (o maior pedaço não branco, sem o nome escrito em cima).",
+  "forma: 'contorno' na peça recortada (o contorno de verdade vai para o formas.json e vira o contorno no 3D); 'retangulo' na peça reta.",
+  "angulo: a peça desenhada torta na folha é endireitada (graus, anti-horário); dobras: onde a peça dobra (frações da altura, de cima).",
+  "As três peças soltas ao lado da Lateral Externa Esquerda (a tira de pé, a faixa BASKETBALL inclinada e o retângulo do POW!) são as três faixas da Frente, desenhadas de lado: não são adesivos à parte (ver o README).",
+  "Se a folha mudar: ajuste as caixas, rode python3 recortar_adesivos.py --previa e confira previa-recortes.png."
  ],
- "folha": "folha-adesivos.jpg",
+ "folha": "folha-adesivos.webp",
  "pecas": {
-  "lateral-externa-esquerda": {
-   "caixa": null,
-   "girar": 0
-  },
-  "lateral-interna-esquerda": {
-   "caixa": null,
-   "girar": 0
-  },
-  "lateral-externa-direita": {
-   "caixa": null,
-   "girar": 0
-  },
-  "lateral-interna-direita": {
-   "caixa": null,
-   "girar": 0
-  },
-  "fundo-cesta": {
-   "caixa": null,
-   "girar": 0
-  },
-  "teto-interno": {
-   "caixa": null,
-   "girar": 0
-  },
-  "testeira-frente": {
-   "caixa": null,
-   "girar": 0
-  },
-  "testeira-teto": {
-   "caixa": null,
-   "girar": 0
-  },
-  "testeira-lado": {
-   "caixa": null,
-   "girar": 0
-  },
-  "prancha": {
-   "caixa": null,
-   "girar": 0
-  },
-  "faixa-rampa": {
-   "caixa": null,
-   "girar": 0
-  },
-  "poste": {
-   "caixa": null,
-   "girar": 0
-  },
-  "frente": {
-   "caixa": null,
-   "girar": 0
-  },
-  "frente-lateral": {
-   "caixa": null,
-   "girar": 0
-  }
+  "lateral-externa-esquerda": {"caixa": [0, 885, 423, 1331], "forma": "contorno"},
+  "lateral-externa-direita": {"caixa": [907, 852, 1330, 1298], "forma": "contorno"},
+  "lateral-interna-esquerda": {"caixa": [75, 374, 516, 724], "forma": "contorno"},
+  "lateral-interna-direita": {"caixa": [930, 371, 1372, 721], "forma": "contorno"},
+  "prancha": {"caixa": [632, 911, 815, 1330], "forma": "retangulo"},
+  "fundo-cesta": {"caixa": [630, 523, 812, 834], "forma": "retangulo"},
+  "teto-interno": {"caixa": [646, 355, 828, 485], "forma": "retangulo"},
+  "frente": {"caixa": [624, 1374, 807, 1600], "forma": "retangulo", "dobras": [0.188, 0.416]},
+  "testeira-frente": {"caixa": [647, 231, 829, 281], "forma": "contorno"},
+  "testeira-fundo": {"caixa": [653, 17, 835, 66], "forma": "contorno"},
+  "testeira-teto": {"caixa": [682, 92, 801, 198], "forma": "retangulo"},
+  "testeira-superior-esquerda": {"caixa": [581, 112, 678, 206], "forma": "retangulo", "angulo": 52.4},
+  "testeira-superior-direita": {"caixa": [804, 114, 900, 222], "forma": "retangulo", "angulo": -52.4},
+  "testeira-lateral-esquerda": {"caixa": [538, 224, 643, 249], "forma": "retangulo"},
+  "testeira-lateral-direita": {"caixa": [840, 224, 945, 249], "forma": "retangulo"}
  }
 }

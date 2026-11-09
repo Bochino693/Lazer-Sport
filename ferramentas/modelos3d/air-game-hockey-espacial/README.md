@@ -4,85 +4,78 @@ O `.glb` que a Arena 3D e a página do produto usam
 (`core/static/site/arena/modelos/air-game-hockey-espacial.glb`) e as fotos do
 cadastro (`.../air-game-hockey-espacial/*.webp`) saem daqui.
 
-É a MESMA máquina do **Air Game Hockey** (a mesa de air hockey: 1,00 m de
-altura, 1,10 m de largura e 2,10 m de comprimento), só com os adesivos novos,
-do espaço: o logotipo HOCKEY KIDS, alienígenas astronautas jogando hóquei,
-discos voadores, planetas, estrelas e o chão lunar laranja.
+A mesa de air hockey com os adesivos do espaço. **Tudo sai da folha de
+adesivos da fábrica** (`folha-adesivos.webp`, a folha 26567-1, guardada como
+veio): a arte de cada peça e o desenho dela. Nada da arte é redesenhado,
+recolorido nem tirado: cada imagem vai inteira na sua face, e a face tem a
+forma e a proporção da peça.
 
-## De onde vem cada parte
+## As peças (a folha → adesivos/<peça>.png)
 
-- **A mesa** (`montar.js`), desenhada pelos moldes dos adesivos, nas medidas
-  do Air Game Hockey: o tampo a 82 cm com a borda em volta (as réguas de 4 cm,
-  mais largas nas cabeceiras, com a boca do gol no meio), os dois rebatedores e
-  o disco; as duas laterais compridas com o contorno recortado (o alto sobe
-  nas pontas até 1,00 m e afunda no meio, a 88,5 cm; embaixo, o vão de 47 cm
-  entre os dois pés largos de 30 cm); as duas cabeceiras lisas, até o tampo;
-  embaixo do tampo, a caixa de ar e o soprador, que aparecem pelo vão.
-- **A arte**: cada adesivo é um arquivo de `adesivos/` (abaixo). O `montar.js`
-  só cola cada imagem na sua face; a lateral recortada leva a imagem inteira e
-  o contorno da peça corta o que sobra. No `.glb`, cada adesivo vai em JPEG,
-  com no máximo 1024 px no lado maior (`RESOLUCAO` e `QUALIDADE_JPEG` no
-  `montar.js`).
+| Peça                 | Na folha             | Onde vai                                                             |
+|----------------------|----------------------|----------------------------------------------------------------------|
+| `tampo`              | Prancha tampo mesa   | o tampo, de cima: a cabeceira do "Jogador · 02" (a de trás) à esquerda da imagem, a do "Jogador · 01" (a da frente) à direita; cada "Jogador" se lê da sua cabeceira |
+| `lateral-esquerda`   | Lateral esquerda     | a lateral comprida da esquerda, com o **contorno da folha** (a corcova em cima, os dois pés embaixo); de fora, a frente fica à direita |
+| `lateral-direita`    | Lateral Direita      | a da direita, com o contorno dela; de fora, a frente fica à esquerda |
+| `lateral-esquerda-2` | Lateral Esquerda 2   | a cabeceira de trás                                                  |
+| `lateral-direita-2`  | Lateral Direita 2    | a cabeceira da frente                                                |
 
-## As peças (adesivos/<peça>.png)
+O `recortar_adesivos.py` acha cada peça na folha (o maior pedaço não branco
+dentro da caixa aproximada do `recortes.json`, sem o nome escrito em cima; os
+traços brancos finos da arte que encostam na borda não viram recorte), grava
+a imagem recortada no limite da peça e, no `formas.json`, o tamanho em px e o
+**contorno de verdade** das laterais (o polígono da máscara, 1 px para dentro
+da arte, para o branco da folha não aparecer no 3D). O `montar.js` usa esse
+contorno como o contorno da placa.
 
-Cada imagem é a peça vista DE FORA, em pé, como na folha da gráfica. O
-tamanho (mm), onde ela vai e o contorno estão no `pecas.json` (o `gerar.cjs`
-grava, a partir do `montar.js`).
+## As medidas: a folha é desenhada em escala
 
-| Peça                 | mm          | Onde                                                                 |
-|----------------------|-------------|----------------------------------------------------------------------|
-| `tampo`              | 2100 × 1064 | o tampo inteiro, deitado: a cabeceira de trás (a da lateral esquerda 2) à esquerda da imagem, a da frente à direita; o alto da imagem é o lado direito da mesa. As réguas cobrem os 3,5 cm dos lados e os 8 cm das pontas |
-| `lateral-esquerda`   | 2100 × 1000 | a lateral comprida da esquerda (recortada): a frente à direita da imagem |
-| `lateral-direita`    | 2100 × 1000 | a da direita (recortada): a frente à esquerda da imagem              |
-| `lateral-esquerda-2` | 1064 × 795  | a cabeceira de trás (a ponta curta à esquerda do tampo)              |
-| `lateral-direita-2`  | 1064 × 795  | a cabeceira da frente (a ponta curta à direita do tampo)             |
+As peças da folha encaixam umas nas outras (as laterais são 33 px mais
+compridas que o tampo, a cabeceira é 7 px mais larga que ele): é uma escala
+só. O `montar.js` põe a mesa na altura de **1,00 m** (o alto das laterais, na
+corcova do meio) e o resto sai da folha: **1,67 m de comprimento, 0,92 m de
+largura**, o tampo de 1,57 m × 0,90 m e o campo a 0,83 m do chão (as laterais
+sobem 8 a 17 cm acima dele). As cabeceiras ficam entre as laterais, na largura
+do tampo (as laterais passam 4 cm de cada ponta).
 
-**A arte que está aí é PROVISÓRIA** (`desenhar_provisorios.py`, só formas
-simples e os textos do tema, sem personagem de ninguém): a folha de adesivos
-da fábrica ainda não chegou.
+**Atenção:** essas proporções não fecham com 2,10 m × 1,10 m × 1,00 m (a
+medida do Air Game Hockey passada para o cadastro): o tampo da folha tem a
+proporção 1,746 (2,10 × 1,10 dá 1,91), e na escala de 2,10 m a mesa teria
+1,26 m de altura, com o campo a 1,07 m. As medidas da folha batem com as do
+Air Game Kids do catálogo (0,90 × 0,86 × 1,50 m: o tampo de 1,50 × 0,86 m tem
+a mesma proporção). Se a mesa de verdade for outra, é mudar `ALT` no
+`montar.js` (a escala sai dele) e as medidas no `core/arena.py` e no
+`core/cadastro_modelos.py`.
 
-## Quando a folha de adesivos chegar
+O resto da mesa não está na folha e é o mínimo para ela funcionar: a régua
+das pontas (2,2 cm, sobre a beira de fora da moldura, sem cobrir o "Jogador")
+com a boca do gol, os dois rebatedores e o disco, a caixa de ar e o soprador
+embaixo do tampo.
 
-1. Salve a imagem da folha nesta pasta como `folha-adesivos.jpg` (outro nome:
-   mude `"folha"` no `recortes.json`; uma peça noutra imagem leva `"folha"`
-   dentro dela).
-2. No `recortes.json`, marque cada peça: a `caixa` `[x0, y0, x1, y1]` em px da
-   folha (o canto de cima à esquerda e o de baixo à direita; abra a folha num
-   editor de imagem e leia as coordenadas) e quanto `girar` (0, 90, 180 ou
-   270, anti-horário) para ela ficar como na tabela acima. Peça sem caixa
-   (`null`) fica com a arte que já está em `adesivos/`.
-3. `python3 recortar_adesivos.py --previa` e confira as caixas em
-   `previa-recortes.jpg`.
-4. `python3 recortar_adesivos.py` grava `adesivos/<peça>.png` e avisa quando o
-   recorte não tem a proporção da peça no 3D (confira a caixa e o giro; se a
-   peça de verdade for de outro tamanho, acerte as medidas no `montar.js`).
-5. Refaça o 3D e as fotos (abaixo, "Refazer") e olhe as vistas `v-*.jpg`.
-6. `python manage.py test core.tests_variantes_adesivo` (o `.glb` tem de ficar
-   abaixo de 800 KB: se passar, baixe a `RESOLUCAO` ou a `QUALIDADE_JPEG`).
-7. Suba os arquivos novos (`adesivos/`, o `.glb` e os `.webp`) e, no servidor,
-   `python manage.py cadastrar_variantes_adesivo --fotos`: a galeria do
-   cadastro (no Cloudinary) passa a mostrar a arte nova.
+~6,7 mil triângulos; ~565 KB depois do `gltfpack` (os cinco adesivos em JPEG,
+~420 KB, ampliados com suavização a ~1024 px: a folha tem só ~500 px por peça).
 
-## Refazer
+## Trocar a folha (ou refazer)
 
+    python3 recortar_adesivos.py --previa   # as caixas achadas e os contornos: previa-recortes.png
+    python3 recortar_adesivos.py            # adesivos/<peça>.png e o formas.json
     npm install three@0.169.0 playwright gltfpack
-    python3 desenhar_provisorios.py                   # só sem a folha: a arte provisória
     python3 -m http.server 8790 --bind 127.0.0.1     # nesta pasta, com o node_modules
     node gerar.cjs glb fotos                          # vistas v-*.jpg, pecas.json, fotos e o .glb
     npx gltfpack -i air-game-hockey-espacial.glb -o ../../../core/static/site/arena/modelos/air-game-hockey-espacial.glb -kn -km -ke
+    python manage.py test core.tests_variantes_adesivo   # (na raiz) o .glb abaixo de 800 KB
 
-Com a porta 8790 ocupada: `python3 -m http.server 8791 ...` e
-`PORTA=8791 node gerar.cjs ...`. O `fotos` grava as `foto-*.jpg` (a vista
-inteira, para conferir) e as `.webp` do cadastro já recortadas no objeto, em
-16:10 (a frente de 3/4, os dois lados, a outra cabeceira e o tampo de cima),
-direto na pasta do modelo no static. O `node_modules`, o `.glb` sem o
-`gltfpack`, as vistas e a prévia dos recortes não vão para o repositório
-(`.gitignore` desta pasta). O recorte e a arte provisória só precisam do Pillow;
-o código que as duas máquinas dividem está em `../adesivos_comum.py`.
-
-Medidas finais do objeto: 1,10 m × 1,00 m × 2,10 m (exatas); ~3,3 mil
-triângulos; ~280 KB depois do `gltfpack` (as cinco imagens, ~215 KB).
+Folha nova: salve-a como `folha-adesivos.webp` (ou mude `"folha"` no
+`recortes.json`) e acerte as caixas aproximadas das peças. Com a porta 8790
+ocupada: `python3 -m http.server 8791 ...` e `PORTA=8791 node gerar.cjs ...`.
+O `fotos` grava as `foto-*.jpg` (a vista inteira, para conferir) e as `.webp`
+do cadastro já recortadas no objeto, em 16:10 (a frente de 3/4, os dois lados,
+a outra cabeceira e o tampo de cima), na pasta do modelo no static. Depois de
+subir, no servidor: `python manage.py cadastrar_variantes_adesivo --fotos` (a
+galeria do cadastro, no Cloudinary, com as fotos novas). O `node_modules`, o
+`.glb` sem o `gltfpack`, as vistas e a prévia não vão para o repositório
+(`.gitignore` desta pasta). O recorte só precisa do Pillow; o código que as
+duas máquinas dividem está em `../adesivos_comum.py`.
 
 ## Ligar no site
 

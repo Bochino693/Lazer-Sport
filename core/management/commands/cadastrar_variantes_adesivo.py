@@ -11,8 +11,10 @@ descrição da arte nova, as fotos (vistas do próprio 3D) e o objeto 3D ligado.
 O mesmo que `cadastrar_modelo_3d <id>` para cada uma. Normalmente nem é
 preciso: a migração 0145 cadastra no deploy (ver `core/cadastro_modelos.py`).
 Se a máquina já está no catálogo (cadastrada no painel), só ganha o objeto
-3D. Rodar de novo não duplica. Quando a folha de adesivos chegar e o 3D e as
-fotos forem refeitos (ferramentas/modelos3d/<id>/README.md), rode com `--fotos`.
+3D. Rodar de novo não duplica. O 3D e as fotos saem da folha de adesivos da
+fábrica (ferramentas/modelos3d/<id>/README.md): quando forem refeitos (uma
+folha nova), ou se o produto foi cadastrado antes da arte de verdade, rode com
+`--fotos`.
 """
 
 from django.core.management import call_command
