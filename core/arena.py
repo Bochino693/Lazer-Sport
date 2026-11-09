@@ -693,6 +693,56 @@ MODELOS_3D = (
             "três barraquinhas de faz-de-conta e dois fliperamas; tobogã em espiral até a piscina de bolinhas."
         ),
     },
+    # ---- As máquinas de sempre com os adesivos novos ----
+    # A MESMA máquina de um brinquedo do catálogo, só com outra adesivagem: o
+    # objeto 3D tem a forma da máquina e cada adesivo é uma imagem (a peça da
+    # folha da fábrica; até ela chegar, a arte provisória), ver
+    # ferramentas/modelos3d/<id>/. O nome da máquina de antes ("Air Game
+    # Hockey", "Basquete Street") NÃO liga estes objetos: o trecho é o nome inteiro.
+    {
+        # a mesa do Air Game Hockey com o espaço: HOCKEY KIDS, os alienígenas
+        # astronautas, os discos voadores e o chão lunar laranja
+        "id": "air-game-hockey-espacial",
+        "titulo": "Air Game Hockey Espacial",
+        "nomes": ("Air Game Hockey Espacial",),
+        "arquivo": "site/arena/modelos/air-game-hockey-espacial.glb",
+        "medidas": (1.0, 1.1, 2.1),
+        "grupo": "maquinas",
+        "pasta": "site/arena/modelos/air-game-hockey-espacial/",
+        "fotos": (
+            ("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"),
+            ("lado_direito", "lado_direito.webp"), ("verso", "verso.webp"),
+        ),
+        "medidas_texto": "1 m × 1,1 m × 2,1 m",
+        "categorias": ("Eletrônicos",),
+        "descricao": (
+            "Air Game Hockey Espacial: a mesa de air hockey do Air Game Hockey com os adesivos do espaço -- "
+            "o logotipo HOCKEY KIDS no tampo, alienígenas astronautas jogando hóquei, discos voadores, planetas, "
+            "estrelas e o chão lunar laranja."
+        ),
+    },
+    {
+        # o Basquete Street em quadrinhos: fundo preto, faixas arredondadas,
+        # POW!, BOOM!, o letreiro BASKETBALL e a quadra vermelha na prancha
+        "id": "basquete-street-quadrinhos",
+        "titulo": "Basquete Street Quadrinhos",
+        "nomes": ("Basquete Street Quadrinhos",),
+        "arquivo": "site/arena/modelos/basquete-street-quadrinhos.glb",
+        "medidas": (2.7, 1.0, 2.4),
+        "grupo": "maquinas",
+        "pasta": "site/arena/modelos/basquete-street-quadrinhos/",
+        "fotos": (
+            ("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"),
+            ("lado_direito", "lado_direito.webp"), ("verso", "verso.webp"),
+        ),
+        "medidas_texto": "2,7 m × 1 m × 2,4 m",
+        "categorias": ("Eletrônicos",),
+        "descricao": (
+            "Basquete Street Quadrinhos: o basquete de arcade do Basquete Street com os adesivos em quadrinhos -- "
+            "fundo preto com faixas amarelas, laranja, vermelhas e rosa, os balões POW!, BOOM! e WOW!, o letreiro "
+            "BASKETBALL, crianças jogando e a quadra vermelha na prancha."
+        ),
+    },
 )
 
 
