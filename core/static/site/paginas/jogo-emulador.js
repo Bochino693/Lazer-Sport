@@ -349,7 +349,13 @@
       b.setAttribute("aria-checked", b.dataset.plGraficos === escolhaGraficos ? "true" : "false");
     });
     var agora = menuImagem.querySelector("[data-pl-graficos-agora]");
-    if (agora) agora.textContent = escolhaGraficos === "auto" ? "agora: " + ({ hd: "HD", medio: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) + (pulandoQuadros ? " · pulando quadros" : "") : "";
+    if (agora) {
+      var partes = [];
+      if (escolhaGraficos === "auto") partes.push(({ hd: "HD", medio: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) + (pulandoQuadros ? ", pulando quadros" : ""));
+      // o jogo roda 50 ou 60 quadros por segundo: abaixo disso, o aparelho não está dando conta
+      if (qpsAgora !== null) partes.push(qpsAgora + " quadros/s");
+      agora.textContent = partes.length ? "agora: " + partes.join(" · ") : "";
+    }
   }
   function abrirMenuImagem(abrir) {
     if (!menuImagem) return;
@@ -464,26 +470,81 @@
     psx: ["pcsx_rearmed_frameskip_type", "auto"], snes: ["snes9x_frameskip", "auto"],
     segaMD: ["genesis_plus_gx_frameskip", "auto"], segaCD: ["genesis_plus_gx_frameskip", "auto"],
     gba: ["mgba_frameskip", "auto"], gb: ["gambatte_frameskip", "auto"], nes: ["fceumm_frameskip", "auto"],
-    psp: ["ppsspp_frameskip", "1"], n64: ["mupen64plus-FrameDuping", "True"],
+    // [opção, ligado, desligado] (sem o terceiro: "disabled")
+    psp: ["ppsspp_frameskip", "1", "0"], n64: ["mupen64plus-FrameDuping", "True", "False"],
   }[config.core] || null;
   var pulandoQuadros = false;
-  var vigiaDoPeso = { segundosPesados: 0, ultimoRecuperado: 0, trabalho: 0 };
+  /* E VOLTA A SUBIR. Antes o Automático só descia: um engasgo no começo (a abertura animada e
+     o núcleo ligando ao mesmo tempo, o jogo salvo carregando, outra aba pesada) deixava o jogo
+     no Leve -- pixelado -- até o fim da partida. Agora: os primeiros 8 s não contam; descer
+     pede 4 s seguidos de peso; e, com o aparelho folgado por 20 s seguidos, ele SOBE um degrau
+     (Leve -> pulo de quadros desligado -> HD com menos pixels -> HD). Se subir e pesar de novo
+     logo em seguida, ele fica no degrau de baixo de vez (sem ficar subindo e descendo). */
+  var vigiaDoPeso = { segundosPesados: 0, segundosFolgados: 0, ultimoRecuperado: 0, subiuEm: 0, travado: false };
+  var DEGRAUS = ["hd", "medio", "pulando", "leve"];
+  function degrauAtual() { return nivelAtual === "leve" ? 3 : pulandoQuadros ? 2 : nivelAtual === "medio" ? 1 : 0; }
+  function irAoDegrau(n, emu) {
+    var querPular = n >= 2;
+    if (querPular !== pulandoQuadros && PULAR_QUADROS && emu && emu.gameManager && emu.gameManager.setVariable) {
+      try { emu.gameManager.setVariable(PULAR_QUADROS[0], querPular ? PULAR_QUADROS[1] : (PULAR_QUADROS[2] || "disabled")); } catch (e) { /* segue */ }
+    }
+    pulandoQuadros = querPular && !!PULAR_QUADROS;
+    var nivel = n >= 3 ? "leve" : n >= 1 ? "medio" : "hd";
+    if (nivel !== nivelAtual) aplicarGraficos(nivel, n >= 3 ? "Gráficos no modo Leve: o jogo roda liso neste aparelho. (Imagem, no alto, troca.)" : "");
+    else desenharMenuImagem();
+  }
+  // o medidor ao vivo (menu Imagem): quantos quadros do JOGO rodaram por segundo, na média
+  // dos últimos 3 s (o contador do núcleo anda aos saltos: um segundo sozinho engana) e só
+  // com o jogo rodando -- a pausa, a aba escondida e o recomeço zeram a conta
+  var qpsAgora = null, amostrasQps = [];
   setInterval(function () {
-    if (!jogando || escolhaGraficos !== "auto" || nivelAtual === "leve" || document.hidden) return;
+    var emuAgora = window.EJS_emulator;
+    var n = quadrosDoJogo();
+    if (!jogando || document.hidden || (emuAgora && emuAgora.paused) || n < 0) { amostrasQps = []; return; }
+    var ultima = amostrasQps[amostrasQps.length - 1];
+    if (ultima && n < ultima[1]) amostrasQps = [];
+    amostrasQps.push([performance.now(), n]);
+    if (amostrasQps.length > 4) amostrasQps.shift();
+    if (amostrasQps.length < 2) return;
+    var a = amostrasQps[0], z = amostrasQps[amostrasQps.length - 1];
+    qpsAgora = Math.round((z[1] - a[1]) * 1000 / Math.max(1, z[0] - a[0]));
+    if (menuImagem && !menuImagem.hidden) desenharMenuImagem();
+  }, 1000);
+  setInterval(function () {
+    if (!jogando || escolhaGraficos !== "auto" || document.hidden) return;
     var emu = window.EJS_emulator;
     if (emu && emu.paused) return;
     var recuperados = ritmo.recuperados - vigiaDoPeso.ultimoRecuperado;
     vigiaDoPeso.ultimoRecuperado = ritmo.recuperados;
+    // os primeiros segundos não contam (abertura, núcleo ligando, jogo salvo carregando)
+    if (Date.now() - jogandoDesde < 8000) { vigiaDoPeso.segundosPesados = 0; vigiaDoPeso.segundosFolgados = 0; return; }
     // muitos quadros recuperados E quadro pesado: é o aparelho (não só a tela a 30 Hz)
-    var pesado = recuperados >= 8 && ritmo.trabalho >= 11;
+    // -- ou o jogo rodando abaixo de 45 quadros/s (os consoles rodam a 50 ou 60). Aí o peso
+    // pode nem estar no quadro: é a placa de vídeo que não dá conta de pintar a tela grande
+    // (o desenho volta rápido, mas o navegador demora a pedir o próximo) -- e é justamente
+    // o caso em que menos pixels resolve
+    var lento = qpsAgora !== null && qpsAgora < 45;
+    var pesado = (recuperados >= 8 && ritmo.trabalho >= 11) || lento;
+    var folgado = recuperados <= 1 && ritmo.trabalho < 7 && !lento;
     vigiaDoPeso.segundosPesados = pesado ? vigiaDoPeso.segundosPesados + 1 : Math.max(0, vigiaDoPeso.segundosPesados - 1);
-    if (vigiaDoPeso.segundosPesados < 3) return;
-    vigiaDoPeso.segundosPesados = 0;
-    if (nivelAtual === "hd") { aplicarGraficos("medio"); return; }
-    if (!pulandoQuadros && PULAR_QUADROS && emu && emu.gameManager && emu.gameManager.setVariable) {
-      try { emu.gameManager.setVariable(PULAR_QUADROS[0], PULAR_QUADROS[1]); pulandoQuadros = true; desenharMenuImagem(); return; } catch (e) { pulandoQuadros = true; }
+    vigiaDoPeso.segundosFolgados = folgado ? vigiaDoPeso.segundosFolgados + 1 : 0;
+    var degrau = degrauAtual();
+    if (vigiaDoPeso.segundosPesados >= 4 && degrau < 3) {
+      vigiaDoPeso.segundosPesados = 0;
+      // subiu há pouco e já pesou: o degrau de baixo é o deste aparelho (fica nele)
+      if (vigiaDoPeso.subiuEm && Date.now() - vigiaDoPeso.subiuEm < 30000) vigiaDoPeso.travado = true;
+      var proximo = degrau + 1;
+      if (proximo === 2 && !PULAR_QUADROS) proximo = 3;
+      irAoDegrau(proximo, emu);
+      return;
     }
-    aplicarGraficos("leve", "Gráficos no modo Leve: o jogo roda liso neste aparelho. (Imagem, no alto, troca.)");
+    if (vigiaDoPeso.segundosFolgados >= 20 && degrau > 0 && !vigiaDoPeso.travado) {
+      vigiaDoPeso.segundosFolgados = 0;
+      vigiaDoPeso.subiuEm = Date.now();
+      var acima = degrau - 1;
+      if (acima === 2 && !PULAR_QUADROS) acima = 1;
+      irAoDegrau(acima, emu);
+    }
   }, 1000);
 
   /* O FILTRO "NÍTIDO E LISO" (ls-nitido). Esticar um jogo de 320 x 240 numa tela de 2400 x 1080

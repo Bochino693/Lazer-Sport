@@ -241,9 +241,19 @@ func comandoDaJanela(url string, jogo info) *exec.Cmd {
 	}
 	pasta := filepath.Join(pastaDeDados(), "LazerSportJogos", jogo.Slug)
 	_ = os.MkdirAll(pasta, 0o755)
+	// Os de desempenho (o jogo liso no PC):
+	// - ignore-gpu-blocklist: placa de vídeo antiga "na lista" fazia o WebGL cair no desenho
+	//   por software (lentíssimo, o jogo travando); se a placa falhar, o próprio navegador volta
+	//   ao software sozinho;
+	// - disable-renderer-backgrounding / disable-backgrounding-occluded-windows /
+	//   CalculateNativeWinOcclusion: o Windows às vezes "acha" a janela coberta (barra de jogo,
+	//   sobreposições, dois monitores) e o navegador passa a desenhar menos quadros -- o jogo
+	//   engasgava com a janela à vista. (Minimizada, a página pausa o jogo do mesmo jeito.)
 	return exec.Command(navegador,
 		"--app="+url, "--user-data-dir="+pasta, "--no-first-run", "--no-default-browser-check",
-		"--autoplay-policy=no-user-gesture-required", "--window-size=1280,760", "--disable-features=Translate",
+		"--autoplay-policy=no-user-gesture-required", "--window-size=1280,760",
+		"--ignore-gpu-blocklist", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",
+		"--disable-features=Translate,CalculateNativeWinOcclusion",
 	)
 }
 

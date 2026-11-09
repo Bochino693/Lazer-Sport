@@ -18,6 +18,8 @@ import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.InputDevice;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -63,6 +65,10 @@ public class Jogo extends Activity {
 
         tela.setWebChromeClient(new WebChromeClient());
         tela.setWebViewClient(new Cliente(getAssets()));
+        // o controle (Bluetooth/USB) só chega ao jogo pela tela que está com o foco
+        tela.setFocusable(true);
+        tela.setFocusableInTouchMode(true);
+        tela.requestFocus();
         imersivo();
         if (salvo != null) tela.restoreState(salvo);
         else tela.loadUrl(ENDERECO + "index.html");
@@ -97,7 +103,24 @@ public class Jogo extends Activity {
     protected void onResume() {
         super.onResume();
         tela.onResume();
+        tela.requestFocus();
         imersivo();
+    }
+
+    /* O CONTROLE. Botão de controle que o jogo não pegou o Android transforma em outra tecla
+     * (o B e o Y viram "Voltar", o A vira "OK", o Select vira "Menu"): no controle do Xbox,
+     * o B -- botão de jogo -- mostrava "toque de novo para sair" e, duas vezes, fechava o
+     * jogo. Aqui todo botão de controle vai para o jogo e para nele. */
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent evento) {
+        boolean doControle = KeyEvent.isGamepadButton(evento.getKeyCode())
+                || (evento.getSource() & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD;
+        if (doControle && evento.getKeyCode() != KeyEvent.KEYCODE_BACK) {
+            if (!tela.hasFocus()) tela.requestFocus();
+            super.dispatchKeyEvent(evento);
+            return true;
+        }
+        return super.dispatchKeyEvent(evento);
     }
 
     @Override

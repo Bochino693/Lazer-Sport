@@ -1148,11 +1148,24 @@ Dependência nova: rjsmin (requirements.txt).
    SEGURAR View + Menu pausa e abre os Comandos; B fecha e volta ao jogo;
    Y, com os Comandos abertos, troca o disco.
    A VELOCIDADE: o Automático (Imagem > Gráficos) desce em degraus quando
-   o aparelho não dá conta por 3 s: 1) HD com menos pixels (o mesmo
+   o aparelho não dá conta por 4 s: 1) HD com menos pixels (o mesmo
    filtro); 2) o núcleo pula o desenho de um quadro quando atrasa (o jogo
    fica na velocidade certa e a imagem continua HD -- é o que salva no
    PlayStation, que no navegador roda sem o recompilador); 3) só então o
-   Leve. Os bytes do jogo vão para a pasta do emulador SEM CÓPIA (antes
+   Leve. E SOBE DE VOLTA: antes ele só descia, e um engasgo na abertura
+   deixava o jogo pixelado (Leve) até o fim. Agora os primeiros 8 s não
+   contam, e com o aparelho folgado por 20 s seguidos ele sobe um degrau;
+   se subir e pesar de novo em até 30 s, fica no degrau de baixo (sem
+   sobe-e-desce). "Não dá conta" é o quadro pesado OU o jogo abaixo de
+   45 quadros/s (os consoles rodam a 50/60) -- este pega a placa de vídeo
+   fraca, que pinta a tela grande devagar sem o quadro pesar. O menu
+   Imagem mostra ao vivo o degrau e os quadros/s do jogo (60 = liso).
+   O .exe abre o Edge/Chrome com a placa de vídeo liberada mesmo se
+   estiver "na lista" (senão o jogo caía no desenho por software) e sem
+   o Windows reduzir os quadros quando "acha" a janela coberta. No APK, o
+   controle vai sempre para o jogo, e o B (e o Y) do controle não viram
+   mais "Voltar" (dois toques no B fechavam o jogo).
+   Os bytes do jogo vão para a pasta do emulador SEM CÓPIA (antes
    um disco de 600 MB ocupava 1,2 GB na hora de abrir).
    VÁRIOS DISCOS (Valkyrie Profile, Final Fantasy...): o jogo começa só
    com o disco 1 (metade da espera e da memória); os outros baixam com o
@@ -1165,9 +1178,12 @@ Dependência nova: rjsmin (requirements.txt).
    Jogo de 3DS (.3ds/.cia) não roda em site: não existe emulador de 3DS
    para navegador (o painel explica ao recusar).
    Código: core/static/site/paginas/jogo-emulador.js (analogicoNaCruz,
-   atalhoDoControle, PULAR_QUADROS, pastaSemCopia, separarDiscos,
-   trocarDisco), core/views_jogos.config_do_emulador ("disco" de cada
-   arquivo), core/templates/jogo_emulador.html (o bloco do disco).
+   atalhoDoControle, PULAR_QUADROS, vigiaDoPeso/DEGRAUS, qpsAgora,
+   pastaSemCopia, separarDiscos, trocarDisco), ferramentas/exe/main.go
+   (comandoDaJanela) e ferramentas/apk/src/.../Jogo.java (dispatchKeyEvent)
+   -- mudou um dos dois? rode o montar_casca.sh da pasta --,
+   core/views_jogos.config_do_emulador ("disco" de cada arquivo),
+   core/templates/jogo_emulador.html (o bloco do disco).
 
 42) AS MEDIDAS ESCRITAS NAS FOTOS (CRIAR OBJETO 3D)
    Ao escolher as fotos (ou o projeto), a janela LÊ cada foto no próprio
