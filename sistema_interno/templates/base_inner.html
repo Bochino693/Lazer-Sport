@@ -812,16 +812,10 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
     toggle?.setAttribute("aria-expanded", "false");
     document.body.classList.remove("menu-open");
 
-    /* Entre 761 e 1100 px o menu é o trilho expandido, e não a gaveta.
-       Remover só `.open` não fazia nada nessa faixa. No tablet os dois
-       modos precisam fechar juntos ao escolher outra tela. */
-    if (menuCompacto()) {
-      sidebar?.classList.remove("expandida");
-      aberto = false;
-      try { localStorage.setItem(CHAVE, "0"); } catch (e) {}
-      railToggle?.setAttribute("aria-label", "Expandir menu");
-      railToggle?.setAttribute("title", "Expandir menu");
-    }
+    /* E a lateral aberta do computador também: AO MUDAR DE TELA O MENU
+       SEMPRE VEM FECHADO, em qualquer largura (antes só até 1100 px; acima
+       disso ele ficava aberto, e lembrado, de tela em tela). */
+    fecharTrilho();
   }
 
   window.LSFecharMenuTablet = closeSidebar;
@@ -977,29 +971,51 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   });
 
   /* ---------------------------------------------------------------
-     Trilho: encolhido por padrão, e a escolha fica no aparelho.
+     Trilho: encolhido sempre; aberto, é uma gaveta por cima da tela.
      --------------------------------------------------------------- */
   const CHAVE = "ls-menu-aberto";
   const railToggle = document.getElementById("railToggle");
 
   function aplicarTrilho(aberto) {
     sidebar?.classList.toggle("expandida", aberto);
+    document.body.classList.toggle("ls-gaveta-aberta", !!aberto);
     railToggle?.setAttribute("aria-label", aberto ? "Encolher menu" : "Expandir menu");
     railToggle?.setAttribute("title", aberto ? "Encolher menu" : "Expandir menu");
+    railToggle?.setAttribute("aria-expanded", aberto ? "true" : "false");
+  }
+  function fecharTrilho() {
+    if (!sidebar?.classList.contains("expandida")) return;
+    aberto = false;
+    sidebar?.classList.remove("expandida");
+    aplicarTrilho(false);
   }
 
-  /* try/catch porque em navegador com armazenamento bloqueado o acesso
-     ao localStorage LEVANTA, e derrubaria o resto deste script junto --
-     inclusive o menu do celular. */
+  /* A LATERAL ABERTA É UMA GAVETA: abre por cima do conteúdo (a tela não
+     muda de largura -- era isso que travava: a página inteira era refeita
+     a cada quadro da animação) e SEMPRE COMEÇA FECHADA. A escolha não é
+     mais lembrada no aparelho: abrir é para achar uma tela; achou, fecha.
+     Fecha ao escolher um item, ao trocar de tela, ao tocar fora e no Esc. */
   let aberto = false;
-  try { aberto = localStorage.getItem(CHAVE) === "1"; } catch (e) {}
-  if (menuCompacto()) aberto = false;
-  aplicarTrilho(aberto);
+  try { localStorage.removeItem(CHAVE); } catch (e) { /* armazenamento bloqueado: segue */ }
+  aplicarTrilho(false);
 
   railToggle?.addEventListener("click", function () {
     aberto = !sidebar.classList.contains("expandida");
     aplicarTrilho(aberto);
-    try { localStorage.setItem(CHAVE, aberto ? "1" : "0"); } catch (e) {}
+  });
+  // escolheu uma tela: a gaveta já vai fechando enquanto a tela nova chega
+  sidebar?.addEventListener("click", function (evento) {
+    if (evento.target.closest && evento.target.closest("a.ls-nav-item[href]")) closeSidebar();
+  });
+  document.addEventListener("ls:tela", closeSidebar);
+  window.addEventListener("pageshow", function (evento) { if (evento.persisted) closeSidebar(); });
+  document.addEventListener("click", function (evento) {
+    if (!aberto || !sidebar || sidebar.contains(evento.target)) return;
+    if (railToggle && railToggle.contains(evento.target)) return;
+    fecharTrilho();
+  });
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key === "Escape") fecharTrilho();
   });
 
   /* ---------------------------------------------------------------

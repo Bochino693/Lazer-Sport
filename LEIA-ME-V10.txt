@@ -1276,3 +1276,16 @@ Dependência nova: rjsmin (requirements.txt).
      das tabelas apertadas) e os selos ficam numa linha só.
    Código: sistema_interno/templates/partes/os_lista.html, o topo em
    ordens_servico_inner.html, e o fim do interno/interno_modern.css.
+
+46) O MENU LATERAL É UMA GAVETA (NÃO TRAVA E VOLTA SEMPRE FECHADO)
+   No computador e no tablet, abrir a lateral animava a largura dela e a
+   margem do conteúdo: a página inteira era refeita a cada quadro (medido:
+   ~45 ms de layout e um quadro de 200 ms -- o "trava"). Agora a lateral
+   abre POR CIMA da tela, com um fundo escuro leve, e o conteúdo não se
+   mexe (~10 ms de layout no total). Ela SEMPRE começa fechada (a escolha
+   não é mais lembrada no aparelho) e fecha sozinha ao escolher um item,
+   ao trocar de tela, ao tocar fora e no Esc. No celular continua a gaveta
+   de sempre, que também fecha ao trocar de tela.
+   Código: o "Trilho" em sistema_interno/templates/base_inner.html
+   (fecharTrilho, closeSidebar) e o bloco "A LATERAL ABERTA É UMA GAVETA"
+   no fim do interno/interno_modern.css.

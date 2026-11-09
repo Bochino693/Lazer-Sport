@@ -5361,3 +5361,39 @@ body.ls-body{
 .ls-os-tabela .ls-situacao-card{width:max-content;max-width:none}
 .ls-os-tabela .ls-situacao-card .ls-status{width:auto;white-space:nowrap!important}
 .ls-os-tabela td.ls-os-agenda{padding-left:14px!important}
+
+/* ======================================================================
+   A LATERAL ABERTA É UMA GAVETA (computador e tablet, a partir de 761 px).
+
+   Antes, abrir a lateral animava a LARGURA dela e a MARGEM do conteúdo:
+   a cada quadro da animação o navegador refazia a página inteira (as
+   tabelas, os cartões) -- era isso que travava. Agora o conteúdo fica
+   parado no lugar do trilho e a gaveta abre POR CIMA dele, com um fundo
+   escuro leve (sem desfoque, que pesa); só a própria gaveta se mexe, e
+   ela é isolada (`contain`) para não mexer no resto. Os nomes que surgem
+   durante a abertura ficam cortados dentro dela, sem vazar por cima da
+   tela nem criar rolagem para o lado. O JavaScript (base_inner.html)
+   fecha a gaveta ao escolher um item, ao trocar de tela, ao tocar fora e
+   no Esc -- e ela sempre começa fechada.
+   ====================================================================== */
+@media (min-width:761px){
+  .ls-main{transition:none!important}
+  .ls-sidebar.expandida ~ .ls-main,
+  .ls-shell:has(.ls-sidebar.expandida) .ls-main{margin-left:var(--sidebar-rail)!important}
+  .ls-sidebar{
+    contain:layout style;
+    transition:width .26s cubic-bezier(.22,.9,.24,1),box-shadow .26s ease!important;
+  }
+  .ls-sidebar.expandida{box-shadow:28px 0 70px rgba(0,0,0,.5)}
+  .ls-sidebar .ls-nav{overflow-x:hidden}
+  .ls-sidebar .ls-brand,.ls-sidebar .ls-sidebar-footer{overflow:hidden}
+  body.ls-gaveta-aberta .ls-main::after{
+    content:"";position:fixed;inset:0 0 0 var(--sidebar-rail);z-index:1040;
+    background:rgba(8,5,16,.34);animation:ls-gaveta-fundo .26s ease both;
+  }
+}
+@keyframes ls-gaveta-fundo{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .ls-sidebar{transition:none!important}
+  body.ls-gaveta-aberta .ls-main::after{animation:none}
+}

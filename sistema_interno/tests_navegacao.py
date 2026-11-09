@@ -220,6 +220,22 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             navegacao,
         )
 
+    def test_a_lateral_aberta_e_gaveta_que_sempre_volta_fechada(self):
+        """Abrir a lateral não empurra a tela (era o que travava) e, em qualquer largura,
+        ela começa fechada e fecha ao trocar de tela, ao tocar fora e no Esc."""
+        base = (Path(__file__).resolve().parent / "templates" / "base_inner.html").read_text(encoding="utf-8")
+        self.assertIn('localStorage.removeItem(CHAVE)', base)  # não lembra mais aberta
+        self.assertNotIn('localStorage.getItem(CHAVE) === "1"', base)
+        self.assertIn('document.addEventListener("ls:tela", closeSidebar)', base)
+        fechar = base[base.index("function closeSidebar()"):]
+        fechar = fechar[:fechar.index("window.LSFecharMenuTablet")]
+        self.assertIn("fecharTrilho();", fechar)
+        self.assertNotIn("if (menuCompacto())", fechar)  # fecha em qualquer largura
+        css = (Path(__file__).resolve().parent / "static" / "interno" / "interno_modern.css").read_text(encoding="utf-8")
+        gaveta = css[css.index("A LATERAL ABERTA É UMA GAVETA"):]
+        self.assertIn(".ls-shell:has(.ls-sidebar.expandida) .ls-main{margin-left:var(--sidebar-rail)!important}", gaveta)
+        self.assertIn(".ls-main{transition:none!important}", gaveta)
+
     def test_troca_fecha_gaveta_e_502_preserva_a_tela_atual(self):
         """Falha transitória não pode jogar o operador na página do proxy."""
         navegacao = (
