@@ -17,9 +17,17 @@ do cadastro (`.../trampolim-enterrada/*.webp`) saem daqui.
   ilustrativo"): o caixote cinza-escuro da base, as camas de lona grafite com a
   moldura e as divisórias amarelas, o estofado cinza da parede com a moldura
   amarela que desce até as camas, a cesta (aro laranja e rede branca), o quadro
-  de cima amarelo com os cotovelos arredondados e a escada de espuma de três
-  degraus com o tampo amarelo, no canto da frente da cabeceira oposta à cesta
-  (no `.3ds` não há escada).
+  de cima amarelo com os cotovelos arredondados e a escada de espuma (no `.3ds`
+  não há escada).
+- **A cesta e a escada, conferidas com o desenho da fábrica** (a vista de cima
+  em perspectiva, "projeto meramente ilustrativo"): a CESTA fica no alto da
+  parede inclinada, com a chapa colada logo abaixo da moldura amarela de cima,
+  no meio da largura (o aro a ~2,70 m do chão); a ESCADA fica na cabeceira
+  oposta à cesta, colada no caixote e saindo 58 cm dele, na METADE DO FUNDO:
+  no fundo, o bloco de cima (45 cm, escuro), na altura dos estofados das camas,
+  e na frente dele três degraus rasos (22 cm de piso, 27,75 cm de altura) com o
+  tampo amarelo, descendo para a frente até o chão. Sobe-se da frente para o
+  fundo e, do bloco de cima, passa-se para a última cama.
 - **A variante** (`index.html?variante=espuma`): a cama do meio vira uma
   piscina de cubos de espuma, amarelos e cinza-escuros alternados.
 
@@ -48,6 +56,11 @@ vira o `espuma.webp`). **São vistas do próprio 3D**, até chegarem as fotos do
 projeto: aí é trocar os `.webp` e rodar `python manage.py cadastrar_trampolim_enterrada --fotos`.
 
 ## Ligar no site
+
+Trocou o desenho (a cesta, a escada)? Refaça o `.glb`, as fotos e o passeio
+(os pontos da escada e do aro em `CAMINHOS["trampolim-enterrada"]`) e, no
+servidor, `python manage.py cadastrar_trampolim_enterrada --fotos` para a
+galeria do cadastro (no Cloudinary) também mostrar o desenho novo.
 
 `core/arena.py`, `MODELOS_3D`: liga pelo nome ("Trampolim de Enterrada"), na
 área "Trampolins e brinquedões" (`grupo`; e em `REGRAS` o nome vira cama

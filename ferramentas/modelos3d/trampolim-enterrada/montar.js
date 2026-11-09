@@ -8,13 +8,14 @@
 //  - das imagens do projeto (6 m x 2 m, altura de 3,25 m; "projeto meramente
 //    ilustrativo"): as cores, o caixote escuro que cobre a base, a lona das
 //    camas com a moldura e as divisórias amarelas, o estofado da parede com a
-//    moldura amarela, a cesta (aro e rede) e a escada de espuma de três
-//    degraus no canto da cabeceira oposta à cesta (no .3ds não há escada).
+//    moldura amarela, a cesta (aro e rede) no alto da parede e a escada de
+//    espuma na cabeceira oposta à cesta, de ponta a ponta da largura,
+//    subindo da frente para o fundo (no .3ds não há escada).
 //
 // Coordenadas de trabalho = as do .3ds: x ao longo (a parede da cesta em
 // x = 0), y para o fundo (y = 0 é a frente), z para cima, milímetros. No fim
 // tudo vira metros, Y para cima e a frente em +Z: de frente, a cesta fica à
-// esquerda e a escada no canto da direita, na frente.
+// esquerda e a escada na cabeceira da direita.
 //
 // index.html?variante=espuma: a cama do meio vira uma piscina de cubos de
 // espuma (amarelos e cinza-escuros, alternados), como na variante do projeto.
@@ -43,9 +44,11 @@ const ESTOFADO = 110; // a espessura dos estofados amarelos, sobre a base
 const BORDA = 200; // a largura da moldura amarela de cada cama
 const LONA = BASE + 15; // a lona fica na altura do quadro de aço (as molas ficam sob os estofados)
 const TOPO = BASE + ESTOFADO;
-// a escada: 50 cm depois do fim da estrutura (as colunas), encostada no canto
-// da frente; o degrau de cima encosta no caixote. Começa depois da coluna do canto.
-const ESCADA = { x0: M3[1], x1: E.caixa[1] + 500, y0: Y0 + 31, y1: Y0 + 931 };
+// a escada: como no desenho da fábrica, na cabeceira oposta à cesta, colada no
+// caixote e saindo 58 cm dele, na METADE DO FUNDO; sobe da frente para o fundo:
+// três degraus rasos (22 cm de piso) com o tampo amarelo e, no fundo, o bloco de
+// cima (45 cm, escuro) na altura dos estofados das camas
+const ESCADA = { x0: M3[1], x1: E.caixa[1] + 500, fundo: Y1, bloco: 450, piso: 220, niveis: 4 };
 
 // ---------- materiais e o acúmulo de peças por material ----------
 const pecas = new Map();
@@ -295,21 +298,24 @@ placaNaParede(M.amarelo, COMPRIMENTO / 2, ESP_PAREDE / 2, ESP_PAREDE, LARGURA, C
   placaNaParede(M.cinza, baixo + comprimento / 2, (ESP_PAREDE + 18) / 2, ESP_PAREDE + 18, LARGURA - 2 * MOLDURA, comprimento);
 }
 
-// a cesta: perto do alto da parede, no meio; aro laranja com a rede branca
+// a cesta: como no desenho da fábrica, NO ALTO da parede -- a chapa colada
+// logo abaixo da moldura amarela de cima, no meio da largura --, com o aro
+// laranja e a rede branca saindo para as camas
 const CESTA = (() => {
-  const altura = 2450; // o aro, do chão
   const raio = 225; // o aro oficial (45 cm por dentro)
-  // onde a frente do campo cinza passa nessa altura
-  const t = ESP_PAREDE + 18;
-  const s = (altura - PE.z - N.z * t) / U.z;
+  const t = ESP_PAREDE + 18; // a frente do campo cinza
+  const chapa = 230; // a chapa de fixação, ao longo da parede
+  // o alto da chapa encosta na moldura de cima (1 cm de folga); o aro sai do alto da chapa
+  const s = COMPRIMENTO - MOLDURA - 10 - chapa / 2 + 50;
   const frente = PE.clone().addScaledVector(U, s).addScaledVector(N, t);
+  const altura = Math.round(frente.z); // o aro, do chão
   const centro = V(frente.x + 70 + raio, YC, altura);
-  return { altura, raio, s, t, frente, centro };
+  return { altura, raio, s, t, frente, centro, chapa };
 })();
 {
-  const { altura, raio, s, t, frente, centro } = CESTA;
+  const { altura, raio, s, t, frente, centro, chapa } = CESTA;
   // a chapa de fixação na parede e os braços até o aro
-  placaNaParede(M.aro, s - 50, t + 12, 24, 300, 230, false);
+  placaNaParede(M.aro, s - 50, t + 12, 24, 300, chapa, false);
   for (const lado of [-1, 1]) {
     const a = 0.75; // os braços pegam o aro a ±43° da parte de trás
     cilindro(M.aro, V(frente.x + 8, YC + lado * 120, altura), V(centro.x - raio * Math.cos(a), YC + lado * raio * Math.sin(a), altura), 13, 8);
@@ -326,18 +332,21 @@ const CESTA = (() => {
 }
 
 /* ======================================================================
-   5. A ESCADA: bloco cinza-escuro de espuma com três degraus, cada um com
-   o tampo amarelo; o de cima encosta no caixote
+   5. A ESCADA (a do desenho da fábrica): na cabeceira oposta à cesta, colada
+   no caixote, na metade do fundo. No fundo, o bloco de cima (escuro), na
+   altura dos estofados das camas (de lá se passa para a última cama); na
+   frente dele, três degraus rasos e iguais, cada um com o tampo amarelo,
+   descendo para a frente até o chão
    ====================================================================== */
 {
-  const { x0, x1, y0, y1 } = ESCADA;
-  const passo = (x1 - x0) / 3;
-  for (let d = 1; d <= 3; d++) {
-    const alto = (d * TOPO) / 4; // degraus iguais, até o alto dos estofados
-    const a = x1 - d * passo;
-    const b = x1 - (d - 1) * passo;
-    almofada(M.cinza, d === 3 ? x0 : a, b, y0, y1, 0, alto - 55, 30);
-    almofada(M.amarelo, d === 3 ? x0 : a, b, y0, y1, alto - 60, alto, 25);
+  const { x0, x1, fundo, bloco, piso, niveis } = ESCADA;
+  almofada(M.cinza, x0, x1, fundo - bloco, fundo, 0, TOPO, 30);
+  for (let d = niveis - 1; d >= 1; d--) {
+    const alto = (d * TOPO) / niveis; // degraus iguais (27,75 cm), até o alto dos estofados
+    const b = fundo - bloco - (niveis - 1 - d) * piso;
+    const a = b - piso;
+    almofada(M.cinza, x0, x1, a, b, 0, alto - 55, 30);
+    almofada(M.amarelo, x0, x1, a, b, alto - 60, alto, 25);
   }
 }
 
