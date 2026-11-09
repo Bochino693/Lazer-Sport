@@ -307,6 +307,16 @@ class EmuladorNoSiteTests(TestCase):
         inicio = html.index('<script id="emuladorConfig" type="application/json">') + len('<script id="emuladorConfig" type="application/json">')
         return json.loads(html[inicio: html.index("</script>", inicio)])
 
+    def test_a_jogada_gratis_vai_so_para_o_visitante(self):
+        """Sem conta, o Jogar do emulador gasta uma das 2 jogadas (e ela dura 5 minutos)."""
+        gratis = self.config(self.client.get(reverse("jogo_emulador", args=["disco-teste"])))["gratis"]
+        self.assertEqual((gratis["limite"], gratis["usadas"], gratis["segundos"]), (2, 0, 300))
+        self.assertEqual(gratis["abriu"], reverse("jogos_abriu"))
+        self.assertIn("next=" + reverse("jogo", args=["disco-teste"]), gratis["cadastro"])
+        from .tests_ranking import _cliente
+        self.client.force_login(_cliente("ana", "ana@exemplo.com"))
+        self.assertNotIn("gratis", self.config(self.client.get(reverse("jogo_emulador", args=["disco-teste"]))))
+
     def test_a_pagina_do_quadro_entrega_cada_arquivo_com_o_nome_exato(self):
         resposta = self.client.get(reverse("jogo_emulador", args=["disco-teste"]))
         self.assertEqual(resposta.status_code, 200)

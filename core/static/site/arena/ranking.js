@@ -6,11 +6,14 @@
    placar final, que vai na hora para o ranking) e "console:fim" (acabou,
    com os pontos). Aqui mora o resto:
 
-   - VISITANTE SEM CONTA joga uma vez cada jogo. A marca fica no aparelho
-     e na sessão; ao acabar a partida (ou ao apertar Jogar de novo) vem o
-     convite de cadastro, que leva sozinho para a tela de criar conta em
-     poucos segundos. O placar dessa partida vai para o ranking quando a
-     pessoa entra (core/ranking.py), e ela volta para o mesmo jogo.
+   - VISITANTE SEM CONTA tem 2 JOGADAS GRÁTIS NO TOTAL, somando todos os
+     jogos do site (aqui, cada partida é uma: perdeu duas, acabou; ou jogou
+     dois jogos uma vez cada). A conta é do servidor (/jogos/abriu/ com
+     "gastar"), que a página traz ao abrir (jogador.gratis). Ao acabar a
+     última partida (ou ao apertar Jogar de novo) vem o convite de cadastro,
+     que leva sozinho para a tela de criar conta em poucos segundos. O placar
+     vai para o ranking quando a pessoa entra (core/ranking.py), e ela volta
+     para o mesmo jogo.
    - CADASTRADO joga à vontade: cada fim de partida grava o recorde e o
      ranking (do jogo e geral) se atualiza na ficha.
    ====================================================================== */
@@ -20,7 +23,6 @@ const raiz = pagina && pagina.querySelector("[data-console]");
 const dadosDoJogador = document.getElementById("sim-jogador");
 
 const SEGUNDOS_PARA_IR = 8;
-const MARCA = "ls-jogo-gratis:";
 
 if (raiz && dadosDoJogador) {
   const jogador = JSON.parse(dadosDoJogador.textContent);
@@ -28,13 +30,12 @@ if (raiz && dadosDoJogador) {
   let jogoAtual = jogador.jogo;
   let aba = "jogo";
 
-  const ler = (chave) => { try { return window.localStorage.getItem(chave); } catch (erro) { return null; } };
-  const gravar = (chave, valor) => { try { window.localStorage.setItem(chave, valor); } catch (erro) { /* aba anônima */ } };
-
-  // os jogos que este visitante já usou: os da sessão e os do aparelho
-  const jogados = new Set(jogador.jogados || []);
-  const jaJogou = (slug) => jogados.has(slug) || ler(MARCA + slug) === "1";
-  const marcar = (slug) => { jogados.add(slug); gravar(MARCA + slug, "1"); };
+  // as jogadas grátis (de todos os jogos): o servidor diz quantas já foram ao abrir a página;
+  // as desta página entram na conta na hora (o Jogar não pode esperar a resposta)
+  const gratis = jogador.gratis || null;
+  const LIMITE = gratis ? gratis.limite : 2;
+  let usadas = gratis ? gratis.usadas : 0;
+  const restantes = () => Math.max(0, LIMITE - usadas);
 
   const csrf = () => {
     const achado = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
@@ -151,7 +152,7 @@ if (raiz && dadosDoJogador) {
     selo.hidden = !temResultado;
     passos.hidden = !temResultado;
     if (!temResultado) {
-      titulo.textContent = "Você já jogou a sua partida grátis";
+      titulo.textContent = `Você já usou as suas ${LIMITE} jogadas grátis`;
       texto.textContent = "Crie a conta grátis ou entre para jogar à vontade e disputar o ranking.";
     } else if (lugar === 1) {
       // bateu o recorde do jogo: o primeiro lugar espera só o cadastro
@@ -196,16 +197,30 @@ if (raiz && dadosDoJogador) {
     atualizar(slug);
   });
 
-  // o "Mais jogados" do portal (/jogos/): o servidor conta no máximo uma vez
-  // a cada meia hora por visitante e jogo; falhar aqui nunca segura o jogo
+  // conta a partida no "Mais jogados" do portal (/jogos/: no máximo uma vez a cada meia
+  // hora por visitante e jogo) e, do visitante, gasta uma jogada grátis. Se o servidor
+  // disser que não havia mais (gastou noutra aba), a partida para e vem o convite.
+  // Falhar aqui nunca segura o jogo.
   const contar = (slug) => {
     if (!jogador.abriuUrl) return;
     fetch(jogador.abriuUrl, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-      body: JSON.stringify({ jogo: slug }),
-    }).catch(() => {});
+      body: JSON.stringify({ jogo: slug, gastar: !logado }),
+    })
+      .then((resposta) => (resposta.ok ? resposta.json() : null))
+      .then((dados) => {
+        if (!dados || logado || !dados.visitante) return;
+        if (dados.liberado === false) {
+          usadas = LIMITE;
+          if (raiz.lsConsole) raiz.lsConsole.pausar();
+          abrirPortao();
+          return;
+        }
+        usadas = LIMITE - dados.restantes;
+      })
+      .catch(() => {});
   };
 
   // "Jogados recentemente", na biblioteca (/jogos/): o aparelho anota quando cada jogo abriu
@@ -222,14 +237,14 @@ if (raiz && dadosDoJogador) {
   raiz.addEventListener("console:jogar", (evento) => {
     const slug = evento.detail.slug;
     lembrarNaBiblioteca(slug);
-    if (!logado && jaJogou(slug)) {
+    if (!logado && restantes() <= 0) {
       evento.preventDefault();
       abrirPortao();
       return;
     }
+    // a partida grátis começou (recomeçar no meio também conta)
+    if (!logado) usadas += 1;
     contar(slug);
-    // a partida grátis começou: recomeçar no meio também conta
-    if (!logado) marcar(slug);
   });
 
   /* O RESULTADO vai para o ranking assim que o jogo sabe o placar final
@@ -275,8 +290,13 @@ if (raiz && dadosDoJogador) {
     const { slug, pontos } = evento.detail;
     mostrarLugar();
     if (!logado) {
-      marcar(slug);
-      // um instante para ver o placar, e o convite vem por cima
+      if (restantes() > 0) {
+        // ainda tem jogada: o cartão do fim diz quantas
+        const caixaRecorde = raiz.querySelector("[data-console-fim-recorde]");
+        if (caixaRecorde) caixaRecorde.textContent = `Sobra ${restantes()} jogada grátis. Com a conta grátis você joga à vontade.`;
+        return;
+      }
+      // a última: um instante para ver o placar, e o convite vem por cima
       window.setTimeout(() => { if (slug === jogoAtual) abrirPortao({ pontos }); }, 1600);
     }
   });

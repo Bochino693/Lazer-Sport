@@ -82,7 +82,8 @@
     {% if not user.is_authenticated %}
     <p class="jc-gratis" data-jogo-gratis hidden role="status">
         <i class="fa-solid fa-star" aria-hidden="true"></i>
-        <span>Esta é a sua partida grátis de visitante. Para jogar de novo, guardar o progresso e entrar no ranking,
+        <span><span data-jogo-gratis-texto>Sem conta, são 2 jogadas grátis, somando todos os jogos.</span>
+        Para jogar à vontade, guardar o progresso e entrar no ranking,
         <a href="{% url 'registrar' %}?next={{ request.path|urlencode }}#register-box">crie sua conta grátis</a>.</span>
     </p>
     {% endif %}
@@ -196,7 +197,7 @@
         <button type="button" class="jc-portao-fechar" data-jogo-portao-fechar aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
         <span class="jc-portao-icone" aria-hidden="true"><i class="fa-solid fa-crown"></i></span>
         <h2 id="jc-portao-titulo">Gostou? Crie sua conta grátis e jogue à vontade</h2>
-        <p>Sem conta, cada jogo dá uma partida. Com a conta, você joga {{ jogo.titulo }} quanto quiser, guarda os seus recordes e entra no ranking da Lazer &amp; Sport Games.</p>
+        <p>Sem conta, são 2 jogadas grátis, somando todos os jogos. Com a conta, você joga {{ jogo.titulo }} quanto quiser, guarda os seus recordes e entra no ranking da Lazer &amp; Sport Games.</p>
         <div class="jc-portao-acoes">
             <a class="ls-botao jc-jogar" href="{% url 'registrar' %}?next={{ request.path|urlencode }}#register-box"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Criar conta grátis</a>
             <a class="ls-botao ls-botao--fantasma" href="{% url 'login' %}?next={{ request.path|urlencode }}#login-box"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> Já tenho conta</a>

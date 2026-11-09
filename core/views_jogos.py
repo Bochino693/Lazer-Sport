@@ -6,8 +6,8 @@ de jogo dentro da página não recarrega nada: o script troca o jogo e o
 endereço juntos. Sem JavaScript, a página continua dizendo o que é cada
 jogo e como se joga, e o seletor é uma lista de links.
 
-Quem não entrou na conta joga uma partida de cada jogo; o fim de cada
-partida chega em /jogos/partida/ e o ranking (do jogo e geral) sai de
+Quem não entrou na conta tem 2 jogadas grátis no total, somando todos os jogos
+(`AbriuJogoView`); o fim de cada partida chega em /jogos/partida/ e o ranking (do jogo e geral) sai de
 /jogos/ranking/. As regras moram em `core/ranking.py`.
 """
 
@@ -247,6 +247,7 @@ class SimuladorView(View):
                 **painel,
                 "partidaUrl": reverse("jogos_partida"),
                 "abriuUrl": reverse("jogos_abriu"),
+                "gratis": situacao_gratis(request),
                 "rankingUrl": reverse("jogos_ranking"),
                 "cadastroUrl": reverse("registrar"),
                 "entrarUrl": reverse("login"),
@@ -429,6 +430,8 @@ def config_do_emulador(jogo):
 
 
 @method_decorator(xframe_options_sameorigin, name="dispatch")
+# o Jogar do visitante avisa o site (/jogos/abriu/, um POST): a página precisa do cookie do CSRF
+@method_decorator(ensure_csrf_cookie, name="get")
 class JogoEmuladorView(View):
     """A página do emulador: o que o quadro da página do jogo abre.
 
@@ -443,6 +446,15 @@ class JogoEmuladorView(View):
         jogo = _jogo_no_emulador(slug, equipe=request.user.is_staff)
         # sem de onde baixar: isso vem com o passe (core/escudo_jogos.py)
         config = config_publica(config_do_emulador(jogo), request, jogo.slug)
+        # a jogada grátis do visitante: o Jogar daqui gasta uma (e ela dura o tempo do site).
+        # Só nesta página do site: o APK e o .exe montam o reprodutor sem isto (jogo comprado é livre)
+        gratis = situacao_gratis(request)
+        if gratis is not None:
+            volta = reverse("jogo", args=[jogo.slug])
+            gratis.update({"abriu": reverse("jogos_abriu"),
+                           "cadastro": reverse("registrar") + "?next=" + volta + "#register-box",
+                           "entrar": reverse("login") + "?next=" + volta + "#login-box"})
+            config = {**config, "gratis": gratis}
         resposta = render(request, "jogo_emulador.html", {"jogo": jogo, "config": config})
         resposta["Cache-Control"] = "private, no-cache"
         resposta["X-Robots-Tag"] = "noindex"
@@ -475,9 +487,27 @@ class ArquivoDoEmuladorView(View):
 # ---------------------------------------------------------------- o portal (/jogos/)
 
 SESSAO_ABERTOS = "jogos_abertos"
-SESSAO_GRATIS = "jogos_gratis_usados"
+#: As jogadas grátis de quem não entrou na conta: [[jogo, quando], ...], somando TODOS os jogos.
+SESSAO_GRATIS = "jogos_jogadas_gratis"
+#: Quantas jogadas grátis o visitante tem, no total (dois jogos uma vez cada, ou o mesmo duas vezes).
+JOGADAS_GRATIS = 2
+#: Quanto dura cada jogada grátis num jogo de console ou HTML. O site não vê o Mario morrer
+#: (a ROM não avisa ninguém): nesses jogos a jogada é o Jogar, com este tempo no máximo.
+#: Nos jogos da casa a jogada é a partida (o console sabe quando ela acaba).
+SEGUNDOS_POR_JOGADA_GRATIS = 5 * 60
 #: Uma partida contada por visitante e jogo a cada meia hora (recarregar não infla o "Mais jogados").
 INTERVALO_DE_CONTAGEM = 30 * 60
+
+
+def jogadas_gratis_usadas(request) -> int:
+    return len(request.session.get(SESSAO_GRATIS, []))
+
+
+def situacao_gratis(request):
+    """O que a página precisa saber da jogada grátis (None para quem entrou na conta)."""
+    if request.user.is_authenticated:
+        return None
+    return {"limite": JOGADAS_GRATIS, "usadas": jogadas_gratis_usadas(request), "segundos": SEGUNDOS_POR_JOGADA_GRATIS}
 
 
 class PortalJogosView(View):
@@ -557,42 +587,64 @@ def _contar_partida(slug):
 class AbriuJogoView(View):
     """O toque em Jogar: conta a partida e diz se o visitante pode jogar.
 
-    Quem não entrou na conta joga UMA vez cada jogo cadastrado (a mesma regra
-    dos jogos da casa, que o ranking.js já aplica); da segunda vez, a página
-    convida a criar a conta. Falha de rede ou de banco nunca trava o jogo.
+    Quem não entrou na conta tem DUAS jogadas grátis no total, somando todos os jogos
+    (dois jogos uma vez cada, ou o mesmo duas vezes); a terceira pede o cadastro.
+
+    * ``{"jogo": slug}`` só PERGUNTA (o launcher e a página do jogo antes de abrir o
+      emulador: quem gasta a jogada é a página que de fato começa o jogo -- assim o
+      mesmo Jogar não conta duas vezes);
+    * ``{"jogo": slug, "gastar": true}`` GASTA uma jogada: a partida de um jogo da casa
+      (ranking.js), o Jogar do emulador (jogo-emulador.js) e o do jogo HTML
+      (jogo-cadastrado.js). Nos de console e HTML a jogada dura até
+      ``SEGUNDOS_POR_JOGADA_GRATIS`` (a resposta traz "segundos").
+
+    Falha de rede ou de banco nunca trava o jogo (as páginas abrem sem resposta).
     """
 
     def post(self, request):
         try:
-            slug = str(json.loads(request.body or b"{}").get("jogo") or "")[:80]
-        except ValueError:
+            corpo = json.loads(request.body or b"{}")
+            slug = str(corpo.get("jogo") or "")[:80]
+        except (ValueError, AttributeError):
             return JsonResponse({"erro": "corpo inválido"}, status=400)
+        gastar = corpo.get("gastar") is True
         da_casa = slug in arena.JOGOS_POR_SLUG
-        cadastrado = None
         if not da_casa:
             dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
-            cadastrado = next((j for j in dados["externos"] if j["slug"] == slug), None)
-            if cadastrado is None:
+            if not any(j["slug"] == slug for j in dados["externos"]):
                 return JsonResponse({"erro": "jogo desconhecido"}, status=404)
-        visitante = not request.user.is_authenticated
-        gratis = list(request.session.get(SESSAO_GRATIS, []))
-        if cadastrado is not None and visitante and slug in gratis:
-            url = cadastrado["url"]
-            return JsonResponse({
-                "liberado": False,
-                "cadastro": reverse("registrar") + "?next=" + url,
-                "entrar": reverse("login") + "?next=" + url,
-            })
         agora = time.time()
         abertos = dict(request.session.get(SESSAO_ABERTOS, {}))
         if agora - float(abertos.get(slug, 0)) > INTERVALO_DE_CONTAGEM:
             _contar_partida(slug)
             abertos[slug] = agora
             request.session[SESSAO_ABERTOS] = abertos
-        if cadastrado is not None and visitante:
-            gratis.append(slug)
-            request.session[SESSAO_GRATIS] = gratis
-        return JsonResponse({"liberado": True, "ultima_gratis": cadastrado is not None and visitante})
+        if request.user.is_authenticated:
+            return JsonResponse({"liberado": True, "visitante": False, "ultima_gratis": False})
+        jogadas = list(request.session.get(SESSAO_GRATIS, []))
+        if len(jogadas) >= JOGADAS_GRATIS:
+            volta = reverse("jogo", args=[slug])
+            return JsonResponse({
+                "liberado": False,
+                "visitante": True,
+                "restantes": 0,
+                "limite": JOGADAS_GRATIS,
+                "cadastro": reverse("registrar") + "?next=" + volta,
+                "entrar": reverse("login") + "?next=" + volta,
+            })
+        if gastar:
+            jogadas.append([slug, int(agora)])
+            request.session[SESSAO_GRATIS] = jogadas
+        restantes = JOGADAS_GRATIS - len(jogadas)
+        return JsonResponse({
+            "liberado": True,
+            "visitante": True,
+            "restantes": restantes,
+            "limite": JOGADAS_GRATIS,
+            "ultima_gratis": gastar and restantes == 0,
+            # a jogada do jogo de console ou HTML acaba no tempo; a da casa, no fim da partida
+            "segundos": SEGUNDOS_POR_JOGADA_GRATIS if gastar and not da_casa else None,
+        })
 
 
 class AnuncioJogosView(View):

@@ -1438,7 +1438,101 @@
   function opcoesDaApresentacao() {
     return { titulo: config.titulo || "", cor: config.cor || "", chave: "emu:" + (config.jogo || ""), capa: config.capa || "", console: config.sistemaNome || "" };
   }
+  /* A JOGADA GRÁTIS de quem não entrou na conta (config.gratis só vem nesta página do site;
+     o APK e o .exe não têm). São 2 jogadas no total, somando todos os jogos; aqui cada Jogar
+     gasta uma e ela dura até 5 minutos de jogo de verdade (pausa, Comandos e aba escondida
+     não contam). O site não vê o personagem morrer -- a ROM não avisa --, então o tempo é a
+     medida. Acabou: o jogo para e vem o convite de cadastro. Sem resposta do site em 2,5 s
+     (rede ruim), o jogo abre: o convite nunca trava quem quer jogar. */
+  var gratis = config.gratis || null;
+  var perguntandoGratis = false, restanteGratis = null, gratisAcabou = false;
+  function csrfDaPagina() {
+    var achado = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+    return achado ? decodeURIComponent(achado[1]) : "";
+  }
+  function gastarJogadaGratis() {
+    var livre = { liberado: true };
+    if (!gratis || !gratis.abriu || !window.fetch) return Promise.resolve(livre);
+    var pedido = fetch(gratis.abriu, {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfDaPagina() },
+      body: JSON.stringify({ jogo: config.jogo, gastar: true }),
+    }).then(function (r) { return r.ok ? r.json() : livre; }).catch(function () { return livre; });
+    return Promise.race([pedido, new Promise(function (ok) { setTimeout(function () { ok(livre); }, 2500); })]);
+  }
+  var SVG_COROA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7zm2.4 14h13.2v1.6H5.4z"/></svg>';
+  function mostrarConviteGratis(acabouOTempo) {
+    var minutos = Math.round(((gratis && gratis.segundos) || 300) / 60);
+    var caixa = document.createElement("div");
+    caixa.className = "pl-gratis";
+    caixa.setAttribute("role", "dialog");
+    caixa.setAttribute("aria-modal", "true");
+    caixa.setAttribute("aria-labelledby", "pl-gratis-titulo");
+    caixa.innerHTML = '<div class="pl-gratis-caixa"><span class="pl-gratis-icone">' + SVG_COROA + '</span>' +
+      '<h2 id="pl-gratis-titulo"></h2><p></p><div class="pl-gratis-acoes">' +
+      '<a class="pl-gratis-criar" target="_top" data-pl-gratis-criar>Criar conta grátis</a>' +
+      '<a class="pl-gratis-entrar" target="_top" data-pl-gratis-entrar>Já tenho conta</a></div>' +
+      '<small>Com a conta do Google é um toque só.</small></div>';
+    caixa.querySelector("h2").textContent = acabouOTempo
+      ? "Os seus " + minutos + " minutos grátis acabaram"
+      : "Você já usou as suas " + ((gratis && gratis.limite) || 2) + " jogadas grátis";
+    caixa.querySelector("p").textContent = "Crie a sua conta grátis (ou entre) para continuar jogando " +
+      (config.titulo || "este jogo") + " à vontade, guardar o progresso e entrar no ranking da Lazer & Sport Games.";
+    caixa.querySelector("[data-pl-gratis-criar]").href = (gratis && gratis.cadastro) || "/";
+    caixa.querySelector("[data-pl-gratis-entrar]").href = (gratis && gratis.entrar) || "/";
+    corpo.appendChild(caixa);
+    corpo.classList.add("is-convite");
+    // em tela cheia o convite some atrás do jogo em alguns aparelhos: sai dela
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) { /* segue */ }
+    caixa.querySelector("[data-pl-gratis-criar]").focus();
+  }
+  // o relógio da jogada grátis: só anda com o jogo rodando de verdade
+  function contarTempoGratis(segundos, ultima) {
+    restanteGratis = segundos;
+    var avisouUmMinuto = segundos <= 60, jogados = 0;
+    setInterval(function () {
+      var emu = window.EJS_emulator;
+      if (gratisAcabou) { try { if (emu && !emu.paused) emu.pause(); } catch (e) { /* segue */ } return; }
+      if (!jogando || document.hidden || !emu || emu.paused) return;
+      restanteGratis -= 1;
+      // a última: o aviso vem com o jogo já na tela (não no meio da abertura)
+      if (ultima && ++jogados === 3) avisar("Esta é a sua última jogada grátis (até " + Math.round(segundos / 60) + " minutos). Com a conta grátis, você joga à vontade.", 7000);
+      if (!avisouUmMinuto && restanteGratis <= 60) {
+        avisouUmMinuto = true;
+        avisar("Falta 1 minuto da sua jogada grátis. Com a conta grátis, você joga à vontade.", 6000);
+      }
+      if (restanteGratis > 0) return;
+      gratisAcabou = true;
+      try { emu.pause(); } catch (e) { /* segue */ }
+      // os Comandos abertos saem da frente, sem devolver o jogo (fechar o painel retomaria)
+      if (painel && !painel.hidden) { pausadoPeloPainel = false; try { abrirComandos(false); } catch (e) { /* segue */ } }
+      mostrarConviteGratis(true);
+    }, 1000);
+  }
   function jogar(continuar) {
+    if (!gratis) { jogarDeVez(continuar); return; }
+    if (perguntandoGratis || comecando || !consoleEsperando || gratisAcabou) return;
+    perguntandoGratis = true;
+    // o toque vale agora (o som e a tela cheia pedem o toque, e a resposta chega depois)
+    liberarSom();
+    if (celular && podeTelaCheia && !emTelaCheia()) entrarTelaCheia().catch(function () { /* segue */ });
+    botaoJogar.setAttribute("aria-busy", "true");
+    gastarJogadaGratis().then(function (resposta) {
+      perguntandoGratis = false;
+      botaoJogar.removeAttribute("aria-busy");
+      if (resposta && resposta.liberado === false) {
+        if (resposta.cadastro) gratis.cadastro = resposta.cadastro + "#register-box";
+        if (resposta.entrar) gratis.entrar = resposta.entrar + "#login-box";
+        pronto.hidden = true;
+        gratisAcabou = true;
+        mostrarConviteGratis(false);
+        return;
+      }
+      if (resposta && resposta.segundos) contarTempoGratis(resposta.segundos, resposta.restantes === 0);
+      jogarDeVez(continuar);
+    });
+  }
+  function jogarDeVez(continuar) {
     if (comecando || !consoleEsperando) return;
     comecando = true;
     // sem dizer (Enter, o A do controle): continua, se houver de onde

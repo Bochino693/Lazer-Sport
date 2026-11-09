@@ -311,34 +311,65 @@ class AnunciosTests(BasePortal):
 
 @override_settings(ALLOWED_HOSTS=["*"])
 class PartidaGratisTests(BasePortal):
-    def abrir(self, slug):
-        return self.client.post(reverse("jogos_abriu"), data=json.dumps({"jogo": slug}), content_type="application/json")
+    def abrir(self, slug, gastar=False):
+        corpo = {"jogo": slug, "gastar": True} if gastar else {"jogo": slug}
+        return self.client.post(reverse("jogos_abriu"), data=json.dumps(corpo), content_type="application/json")
 
-    def test_visitante_joga_uma_vez_cada_jogo_cadastrado(self):
+    def test_visitante_tem_duas_jogadas_no_total(self):
+        """Morreu uma, morreu duas: a terceira pede o cadastro (o mesmo jogo duas vezes)."""
         self.salvo()
-        primeira = self.abrir("corrida-maluca").json()
+        primeira = self.abrir("corrida-maluca", gastar=True).json()
         self.assertTrue(primeira["liberado"])
-        self.assertTrue(primeira["ultima_gratis"])
-        segunda = self.abrir("corrida-maluca").json()
-        self.assertFalse(segunda["liberado"])
-        self.assertIn(reverse("registrar"), segunda["cadastro"])
-        self.assertIn("next=" + reverse("jogo", args=["corrida-maluca"]), segunda["cadastro"])
+        self.assertEqual(primeira["restantes"], 1)
+        self.assertFalse(primeira["ultima_gratis"])
+        self.assertEqual(primeira["segundos"], 5 * 60)  # jogo HTML/console: até 5 minutos
+        segunda = self.abrir("corrida-maluca", gastar=True).json()
+        self.assertTrue(segunda["liberado"])
+        self.assertEqual(segunda["restantes"], 0)
+        self.assertTrue(segunda["ultima_gratis"])
+        terceira = self.abrir("corrida-maluca", gastar=True).json()
+        self.assertFalse(terceira["liberado"])
+        self.assertIn(reverse("registrar"), terceira["cadastro"])
+        self.assertIn("next=" + reverse("jogo", args=["corrida-maluca"]), terceira["cadastro"])
         # a partida conta uma vez (recarregar não infla o "Mais jogados")
         self.assertEqual(PartidasDoJogo.objects.get(slug="corrida-maluca").partidas, 1)
+
+    def test_dois_jogos_diferentes_uma_vez_cada_tambem_esgotam(self):
+        self.salvo()
+        casa = arena.JOGOS[0]["slug"]
+        partida = self.abrir(casa, gastar=True).json()
+        self.assertTrue(partida["liberado"])
+        self.assertIsNone(partida["segundos"])  # o da casa acaba no fim da partida, sem relógio
+        self.assertTrue(self.abrir("corrida-maluca", gastar=True).json()["liberado"])
+        # acabou para TODOS os jogos, os da casa também
+        self.assertFalse(self.abrir(casa, gastar=True).json()["liberado"])
+        self.assertFalse(self.abrir("corrida-maluca").json()["liberado"])
+
+    def test_perguntar_nao_gasta(self):
+        """O launcher e a página do jogo de console só perguntam: quem gasta é o Jogar do emulador."""
+        self.salvo()
+        for _ in range(3):
+            resposta = self.abrir("corrida-maluca").json()
+            self.assertTrue(resposta["liberado"])
+            self.assertEqual(resposta["restantes"], 2)
+            self.assertIsNone(resposta["segundos"])
 
     def test_quem_tem_conta_joga_a_vontade(self):
         self.salvo()
         self.client.force_login(_cliente("bia", "bia@exemplo.com"))
-        for _ in range(3):
-            resposta = self.abrir("corrida-maluca").json()
+        for _ in range(4):
+            resposta = self.abrir("corrida-maluca", gastar=True).json()
             self.assertTrue(resposta["liberado"])
             self.assertFalse(resposta["ultima_gratis"])
+            self.assertNotIn("segundos", resposta)
 
-    def test_o_jogo_da_casa_so_conta(self):
+    def test_o_jogo_da_casa_traz_as_jogadas_da_sessao(self):
         slug = arena.JOGOS[0]["slug"]
-        self.assertTrue(self.abrir(slug).json()["liberado"])
-        self.assertTrue(self.abrir(slug).json()["liberado"])  # a regra da casa é do ranking.js
-        self.assertEqual(PartidasDoJogo.objects.get(slug=slug).partidas, 1)
+        self.abrir(slug, gastar=True)
+        pagina = self.client.get(reverse("jogo", args=[slug]))
+        self.assertEqual(pagina.context["jogador"]["gratis"], {"limite": 2, "usadas": 1, "segundos": 300})
+        self.client.force_login(_cliente("rui", "rui@exemplo.com"))
+        self.assertIsNone(self.client.get(reverse("jogo", args=[slug])).context["jogador"]["gratis"])
 
     def test_depois_de_meia_hora_conta_de_novo(self):
         slug = arena.JOGOS[0]["slug"]

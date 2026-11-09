@@ -265,7 +265,7 @@ TEMAS = {
             {
                 "titulo": "Grátis, e com ranking",
                 "texto": (
-                    "Sem conta, você joga uma partida de cada jogo. Com a conta grátis do site, joga "
+                    "Sem conta, você tem 2 jogadas grátis. Com a conta grátis do site, joga "
                     "quanto quiser e o seu recorde entra no ranking."
                 ),
             },
@@ -277,7 +277,7 @@ TEMAS = {
             ),
             (
                 "O jogo de boliche é grátis?",
-                "É. Sem conta, dá uma partida de cada jogo; com a conta grátis do site, você joga à "
+                "É. Sem conta, são 2 jogadas grátis; com a conta grátis do site, você joga à "
                 "vontade e entra no ranking.",
             ),
             (

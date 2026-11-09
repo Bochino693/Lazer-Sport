@@ -2,8 +2,8 @@
 
 Regras que o resto do site pode confiar:
 
-* quem não entrou na conta joga UMA partida de cada jogo. A marca fica na
-  sessão (e no aparelho, pelo console); o placar dessa partida fica
+* quem não entrou na conta tem 2 jogadas grátis no total, somando todos os
+  jogos (a conta mora em views_jogos.AbriuJogoView); o placar delas fica
   guardado na sessão e entra no ranking quando a pessoa cria a conta ou
   entra -- o login do Django troca a chave da sessão mas mantém os dados;
 * cadastrado joga à vontade e guarda o melhor resultado de cada jogo

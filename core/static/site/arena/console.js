@@ -983,8 +983,8 @@ class Console {
   }
 
   /* ---------- partida ---------- */
-  /* A página pode segurar a partida: o visitante sem conta joga uma vez
-     cada jogo (ranking.js cancela o evento e mostra o cadastro). */
+  /* A página pode segurar a partida: o visitante sem conta tem 2 jogadas
+     grátis no total (ranking.js cancela o evento e mostra o cadastro). */
   liberar() {
     return this.raiz.dispatchEvent(new CustomEvent("console:jogar", {
       cancelable: true,

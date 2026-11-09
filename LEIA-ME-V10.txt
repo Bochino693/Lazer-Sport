@@ -503,9 +503,8 @@ Dependência nova: rjsmin (requirements.txt).
    MAIS JOGADOS. Cada toque em Jogar conta uma partida (no máximo uma a
    cada meia hora por visitante e jogo, para recarregar a página não
    inflar). A lista está em /system/ > Partidas dos jogos, só para ver.
-   CADASTRO E LOGIN. Sem conta, cada jogo dá uma partida -- a regra dos
-   jogos da casa agora vale também para os cadastrados. Na segunda vez
-   aparece o convite: "Crie sua conta grátis e jogue à vontade", com o
+   CADASTRO E LOGIN. Sem conta, são 2 jogadas grátis NO TOTAL (ver a
+   seção 43). Acabou, aparece o convite: "Crie sua conta grátis e jogue à vontade", com o
    botão de criar a conta e o de entrar, e a pessoa volta para o mesmo jogo
    depois. Se o site demorar a responder, o jogo abre assim mesmo: o
    convite nunca trava quem quer jogar.
@@ -1210,3 +1209,30 @@ Dependência nova: rjsmin (requirements.txt).
    Código: sistema_interno/static/interno/medidas-nas-fotos.js (ler,
    interpretar, conferir) e o trecho "AS MEDIDAS ESCRITAS NAS FOTOS" em
    sistema_interno/templates/objetos_3d_inner.html.
+
+43) SEM CONTA: 2 JOGADAS GRÁTIS NO TOTAL (DEPOIS, O CADASTRO)
+   Quem não entrou na conta tem 2 jogadas grátis somando TODOS os jogos do
+   site: o mesmo jogo duas vezes, ou dois jogos uma vez cada. A terceira
+   pede o cadastro (Criar conta grátis / Já tenho conta), e a pessoa volta
+   para o mesmo jogo depois.
+   O QUE É UMA JOGADA:
+   - jogos da casa (Strike Kids, Dragon Bowling...): cada PARTIDA. O
+     console sabe quando ela acaba: perdeu a primeira, o fim da partida
+     avisa "Sobra 1 jogada grátis"; perdeu a segunda, vem o convite com os
+     pontos (que vão para o ranking quando a pessoa cria a conta);
+   - jogos de console (Super Mario, Crash...) e jogos HTML: cada JOGAR, com
+     no máximo 5 MINUTOS de jogo. O site não tem como ver o Mario morrer
+     (a ROM não avisa ninguém, só mostra na tela), então o tempo é a
+     medida. Conta só o jogo rodando (pausa, Comandos e aba escondida não
+     contam). Falta 1 minuto: aviso. Acabou: o jogo PARA e o convite fica
+     por cima (no jogo HTML, o jogo sai da tela).
+   A conta mora no servidor, na sessão (views_jogos.AbriuJogoView;
+   JOGADAS_GRATIS e SEGUNDOS_POR_JOGADA_GRATIS no topo): /jogos/abriu/ só
+   pergunta (o launcher e a página do jogo, antes de abrir o emulador) ou
+   GASTA ("gastar": a partida da casa no ranking.js, o Jogar do emulador
+   no jogo-emulador.js, o Jogar do jogo HTML no jogo-cadastrado.js) --
+   assim o mesmo Jogar nunca conta duas vezes. O APK e o .exe não têm
+   limite (o jogo foi entregue para a pessoa). Se o site não responder em
+   2,5 s, o jogo abre assim mesmo: o convite nunca trava quem quer jogar.
+   É um limite de boa-fé: quem apaga os cookies ou abre uma aba anônima
+   ganha as 2 de novo -- o que importa é convidar quem está gostando.

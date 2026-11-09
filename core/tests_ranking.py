@@ -2,7 +2,7 @@
 
 O que estes testes protegem:
 
-  * o visitante joga uma partida de cada jogo: a sessão guarda quais já
+  * o visitante tem 2 jogadas grátis no total: a sessão guarda quais já
     foram e o placar; ao entrar na conta, esse placar vai para o ranking;
   * o cadastrado guarda só o melhor resultado de cada jogo, e conta as
     partidas;

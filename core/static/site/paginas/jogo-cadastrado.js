@@ -25,6 +25,7 @@
   const aviso = palco.querySelector("[data-jogo-preparo]");
   const arquivosBruto = document.getElementById("jogoArquivos");
   let preparo = null;
+  let quadroDoJogo = null;
 
   function mb(bytes) {
     return bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1).replace(".", ",") + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
@@ -140,6 +141,7 @@
     // pode estar num quadro -- o jogo abre na tela inteira (com "Voltar ao jogo")
     if (palco.dataset.jogoTelaPropria === "1") { location.assign(src); return; }
     const quadro = document.createElement("iframe");
+    quadroDoJogo = quadro;
     quadro.className = "jc-quadro";
     quadro.src = src;
     quadro.title = palco.dataset.jogoTitulo || "Jogo";
@@ -181,13 +183,15 @@
     }
   }
 
-  /* A PARTIDA GRÁTIS. O toque em Jogar avisa o site (/jogos/abriu/): ele conta
-     a partida para o "Mais jogados" do portal e diz se o visitante sem conta
-     ainda tem a sua partida grátis deste jogo. Da segunda vez vem o convite
-     de cadastro. Se o site não responder logo (rede ruim, servidor fora),
-     o jogo abre do mesmo jeito: o convite nunca trava quem quer jogar. */
+  /* A JOGADA GRÁTIS. Sem conta são 2 jogadas no total, somando todos os jogos. O toque em
+     Jogar avisa o site (/jogos/abriu/), que conta a partida do "Mais jogados" e diz se ainda
+     há jogada grátis. Quem GASTA a jogada é quem começa o jogo de fato: aqui o jogo HTML (e
+     ela dura até 5 minutos de jogo -- o site não vê o personagem morrer); o de console gasta
+     no Jogar do próprio emulador, que abre depois deste. Sem jogada, vem o convite de
+     cadastro. Se o site não responder logo (rede ruim), o jogo abre do mesmo jeito. */
   const abriuUrl = palco.dataset.jogoAbriu;
   const slug = palco.dataset.jogoSlug;
+  const doConsole = palco.dataset.jogoEmulador === "1";
   const portao = document.querySelector("[data-jogo-portao]");
   const avisoGratis = document.querySelector("[data-jogo-gratis]");
   const ESPERA_MAXIMA = 2500;
@@ -203,7 +207,7 @@
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-      body: JSON.stringify({ jogo: slug }),
+      body: JSON.stringify({ jogo: slug, gastar: !doConsole }),
     }).then(function (r) { return r.ok ? r.json() : livre; }).catch(function () { return livre; });
     const espera = new Promise(function (pronto) { setTimeout(function () { pronto(livre); }, ESPERA_MAXIMA); });
     return Promise.race([pedido, espera]);
@@ -218,8 +222,13 @@
   function teclaDoPortao(evento) {
     if (evento.key === "Escape") fecharPortao();
   }
-  function abrirPortao() {
+  function abrirPortao(titulo) {
     if (!portao) return;
+    const cabeca = portao.querySelector("h2");
+    if (cabeca) {
+      if (!cabeca.dataset.original) cabeca.dataset.original = cabeca.textContent;
+      cabeca.textContent = titulo || cabeca.dataset.original;
+    }
     portao.hidden = false;
     const primeiro = portao.querySelector("a, button:not([data-jogo-portao-fechar])");
     if (primeiro) primeiro.focus();
@@ -228,6 +237,38 @@
   if (portao) {
     portao.querySelector("[data-jogo-portao-fechar]").addEventListener("click", fecharPortao);
     portao.addEventListener("click", function (evento) { if (evento.target === portao) fecharPortao(); });
+  }
+  // o aviso embaixo do jogo: quantas jogadas grátis sobram
+  function mostrarAvisoGratis(resposta) {
+    if (!avisoGratis || !resposta || !resposta.visitante) return;
+    const texto = avisoGratis.querySelector("[data-jogo-gratis-texto]");
+    if (texto) {
+      const minutos = resposta.segundos ? Math.round(resposta.segundos / 60) : 5;
+      texto.textContent = doConsole
+        ? "Sem conta, são " + resposta.limite + " jogadas grátis de até " + minutos + " minutos, somando todos os jogos."
+        : resposta.restantes === 0
+          ? "Esta é a sua última jogada grátis (até " + minutos + " minutos)."
+          : "Jogada grátis: até " + minutos + " minutos. Sobra " + resposta.restantes + " de " + resposta.limite + ".";
+    }
+    avisoGratis.hidden = false;
+  }
+  // o tempo da jogada grátis do jogo HTML: só anda com a página à vista
+  function contarTempo(segundos) {
+    let resta = segundos;
+    const relogio = setInterval(function () {
+      if (!quadroDoJogo || !quadroDoJogo.isConnected) { clearInterval(relogio); return; }
+      if (document.hidden) return;
+      resta -= 1;
+      if (resta > 0) return;
+      clearInterval(relogio);
+      // acabou: o jogo sai (o quadro leva o jogo junto) e vem o convite
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+      quadroDoJogo.remove();
+      quadroDoJogo = null;
+      palco.classList.remove("jc-palco--jogando");
+      palco.classList.add("jc-palco--acabou");
+      abrirPortao("Os seus " + Math.round(segundos / 60) + " minutos grátis acabaram");
+    }, 1000);
   }
 
   let pedindo = false;
@@ -238,9 +279,10 @@
     perguntar().then(function (resposta) {
       pedindo = false;
       botao.removeAttribute("aria-busy");
-      if (resposta && resposta.liberado === false) { abrirPortao(); return; }
-      if (resposta && resposta.ultima_gratis && avisoGratis) avisoGratis.hidden = false;
+      if (resposta && resposta.liberado === false) { abrirPortao("Você já usou as suas " + (resposta.limite || 2) + " jogadas grátis"); return; }
+      mostrarAvisoGratis(resposta);
       jogar();
+      if (resposta && resposta.segundos && !doConsole) contarTempo(resposta.segundos);
     });
   });
 
