@@ -9,12 +9,15 @@ trampolins e brinquedões.
 
 from django.db.models import Prefetch
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.urls import reverse
 from django.views.generic import View
 
 from . import arena
 from .models import Brinquedos, ImagemBrinquedo
 from .objetos_3d import prefetch_do_objeto
+from .views_projeto3d import contexto_do_projeto
 
 WHATSAPP = "5511960563135"
 
@@ -43,20 +46,15 @@ def brinquedos_da_arena():
     )
 
 
-def jogos_com_maquina(dados):
-    """Cada jogo com o link da máquina de verdade, quando ela está no catálogo."""
-    jogos = []
-    for jogo in arena.JOGOS:
-        maquina = next((b for b in dados if b["jogo"] == jogo["slug"]), None)
-        jogos.append({
-            **jogo,
-            "maquina_url": maquina["url"] if maquina else "",
-            "maquina_nome": maquina["nome"] if maquina else "",
-        })
-    return jogos
-
-
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class ArenaView(View):
+    """A Arena 3D: os objetos 3D da fábrica num parque e o "Monte seu espaço".
+
+    Os jogos foram para o portal Lazer & Sport Games (/jogos/): aqui fica só
+    o 3D -- ver os brinquedos e montar o espaço do cliente pela medida dele,
+    com o pedido do projeto.
+    """
+
     def get(self, request):
         dados = [
             arena.dados_do_brinquedo(
@@ -72,9 +70,10 @@ class ArenaView(View):
         # (e a lista, que é a roda sem WebGL) saem dela: área vazia some
         na_roda = arena.na_roda_3d(na_arena)
         grupos = arena.grupos_da_arena(na_roda)
-        jogos = jogos_com_maquina(dados)
 
         return render(request, "arena.html", {
+            # o "Monte seu espaço" (core/projeto3d.py): o catálogo, as áreas e o contato
+            **contexto_do_projeto(request),
             "grupos_arena": grupos,
             # "Todas as máquinas da fábrica": o catálogo e os objetos 3D que
             # ainda não estão nele (o Strike Kids antes do cadastro), por nome
@@ -87,7 +86,5 @@ class ArenaView(View):
             # o filtro da roda (só as categorias de quem está nela) e o da galeria
             "categorias_roda": sorted({c for b in na_roda for c in b["categorias"]}),
             "categorias_arena": sorted({c for b in na_arena for c in b["categorias"]}),
-            "jogos": jogos,
-            "total_jogaveis": len(jogos),
             "whatsapp": WHATSAPP,
         })

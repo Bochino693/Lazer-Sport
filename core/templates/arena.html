@@ -1,33 +1,28 @@
 {% extends "base.html" %}
 {% load static interno_extras avisos %}
 
-{% block title %}Arena 3D e Lazer &amp; Sport Jogos | Lazer &amp; Sport{% endblock %}
+{% block title %}Arena 3D: os brinquedos em 3D e monte o seu espaço | Lazer &amp; Sport{% endblock %}
 
 {% block main_class %} content-section--full{% endblock %}
 
-{% block meta_description %}A Arena 3D da Lazer &amp; Sport: os brinquedos da fábrica em 3D de verdade, num parque para girar, ver de todos os lados e passear por dentro. E as prévias dos jogos desenvolvidos aqui (Lazer Shot, Dragon Bowling, Strike Kids, Super Boxing e outros) para jogar no site.{% endblock %}
+{% block meta_description %}A Arena 3D da Lazer &amp; Sport: os brinquedos da fábrica em 3D de verdade, num parque para girar, ver de todos os lados e passear por dentro. E monte o seu espaço: diga a medida do lugar, escolha o modelo (espaço esportivo kids, brinquedão, área baby, trampolim) e as máquinas, veja tudo arrumado em 3D e peça o projeto.{% endblock %}
 
 {% block content %}
 
 {% comment %}
-  A ARENA ENTROU NO LUGAR DE "NOSSOS PARCEIROS" NO MENU.
+  A ARENA 3D É A VITRINE DOS OBJETOS 3D E O "MONTE SEU ESPAÇO".
 
-  A página de parceiros continua de pé em /estabelecimentos/ -- a busca
-  ainda leva a ela ("Brinquedos para ...") e o fim desta página tem o
-  link. Só deixou de ocupar um dos lugares do menu principal.
+  Os jogos foram para o portal Lazer & Sport Games (/jogos/): aqui fica só o
+  3D. Primeiro a RODA: os estandes em volta do alvo da marca, num parque,
+  só com as máquinas que têm objeto 3D (.glb, do cadastro ou do
+  core/arena.py), com as áreas e o filtro por categoria. Depois o MONTE O
+  SEU ESPAÇO (core/projeto3d.py): o cliente diz a medida, escolhe o modelo
+  e as máquinas, vê o espaço arrumado em 3D e pede o projeto. Por fim, as
+  fotos de todas as máquinas.
 
-  ESTA PÁGINA ABRE INTEIRA SEM JAVASCRIPT: os brinquedos chegam como uma
-  lista de links (é o que o buscador lê e o que aparece num aparelho sem
-  WebGL) e os jogos como cartões que levam ao simulador (/jogos/<jogo>/).
-
-  A ARENA 3D É UM PARQUE: A RODA COM OS OBJETOS 3D DE VERDADE.
-  Os estandes ficam em roda, de frente para o alvo da marca no centro (e o
-  símbolo da Lazer & Sport pintado no chão), com o parque em volta. Na
-  roda entra só a máquina que tem objeto 3D (.glb, do cadastro ou do
-  core/arena.py); as outras seguem na galeria de fotos, mais abaixo.
-  Dentro do 3D ficam as áreas (máquinas com jogos da casa, trampolins e
-  brinquedões, espaços esportivos), como trechos da roda, e o filtro por
-  categoria. Sem WebGL, a lista abaixo (as mesmas máquinas) é a página.
+  ESTA PÁGINA ABRE INTEIRA SEM JAVASCRIPT: as máquinas chegam como uma lista
+  de links e o "Monte seu espaço" como a lista das áreas e das máquinas com as
+  medidas (é o que o buscador lê e o que aparece num aparelho sem WebGL).
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/arena.css' %}">
@@ -40,39 +35,40 @@
             <nav class="ls-pagina-trilha" aria-label="Navegação estrutural">
                 <a href="{% url 'home' %}">Home</a>
                 <span>›</span>
-                <strong>Arena 3D &amp; Jogos</strong>
+                <strong>Arena 3D</strong>
             </nav>
 
             <span class="ls-pagina-selo">
-                <i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D &amp; Lazer &amp; Sport Jogos
+                <i class="fa-solid fa-cube" aria-hidden="true"></i> Arena 3D · Monte o seu espaço
             </span>
 
             <h1 class="ls-pagina-titulo">
-                Entre na arena e <span>jogue antes de comprar</span>
+                Veja em 3D e <span>monte o seu espaço</span>
             </h1>
 
             <p class="ls-pagina-sub">
-                Os jogos das nossas máquinas em prévia, para jogar aqui mesmo com o dedo ou
-                o mouse. E os brinquedos da fábrica em 3D, num parque para girar e passear por dentro.
+                Os brinquedos da fábrica em 3D de verdade, num parque para girar e passear por dentro.
+                E diga a medida do seu lugar: a gente arruma o espaço esportivo, o brinquedão, a área baby
+                e as máquinas que você escolher, mostra em 3D o que cabe e você pede o projeto.
             </p>
 
             <div class="ls-pagina-stats">
                 <div class="ls-pagina-stat">
-                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
-                    <span><b>{{ total_jogaveis }}</b> jogos para jogar agora</span>
+                    <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+                    <span><b>{{ arena_dados.maquinas|length }}</b> brinquedo{{ arena_dados.maquinas|length|pluralize }} em 3D</span>
                 </div>
                 <div class="ls-pagina-stat">
-                    <i class="fa-solid fa-cubes" aria-hidden="true"></i>
-                    <span><b>{{ arena_dados.maquinas|length }}</b> brinquedo{{ arena_dados.maquinas|length|pluralize }} na Arena 3D</span>
+                    <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                    <span>Montado pela medida do seu espaço</span>
                 </div>
                 <div class="ls-pagina-stat">
                     <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
-                    <span>Gire · aproxime · jogue</span>
+                    <span>Gire · aproxime · passeie</span>
                 </div>
             </div>
 
             <div class="arena-hero-acoes">
-                <a class="ls-botao" href="{% url 'jogos' %}"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Jogar agora</a>
+                <a class="ls-botao" href="#monte-seu-espaco"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Monte o seu espaço</a>
                 <a class="ls-botao ls-botao--claro" href="#arena-3d"><i class="fa-solid fa-cube" aria-hidden="true"></i> Ver em 3D</a>
             </div>
         </div>
@@ -81,7 +77,6 @@
             <img class="arena-hero-alvo" src="{% estatico 'site/arena/capas/alvo.webp' %}" alt="" width="560" height="528" decoding="async">
             <img class="arena-hero-bob" src="{% estatico 'site/arena/capas/bob.webp' %}" alt="" width="360" height="360" decoding="async">
             <img class="arena-hero-mia" src="{% estatico 'site/arena/capas/mia.webp' %}" alt="" width="360" height="360" decoding="async">
-            <img class="arena-hero-games" src="{% estatico 'site/arena/capas/marca-games.webp' %}" alt="" width="400" height="122" decoding="async">
         </div>
     </div>
 </section>
@@ -89,47 +84,6 @@
 <svg class="ls-pagina-onda arena-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
     <path d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
 </svg>
-
-<!-- ================= LAZER & SPORT JOGOS ================= -->
-<section class="arena-secao arena-secao--jogos" id="jogos" aria-labelledby="titulo-jogos">
-    <div class="arena-secao-head arena-secao-head--jogos">
-        <img class="arena-jogos-bob" src="{% estatico 'site/arena/capas/bob.webp' %}" alt="" width="360" height="360" loading="lazy" decoding="async">
-        <div>
-            <span class="arena-kicker arena-kicker--quente"><i class="fa-solid fa-gamepad" aria-hidden="true"></i> Lazer &amp; Sport Jogos</span>
-            <h2 id="titulo-jogos">Os jogos das nossas máquinas: jogue a prévia</h2>
-            <p>
-                Os mesmos jogos que rodam nas máquinas da Lazer &amp; Sport, numa versão de bolso
-                para jogar agora. Gostou? A máquina de verdade é feita aqui na fábrica.
-            </p>
-        </div>
-        <img class="arena-jogos-mia" src="{% estatico 'site/arena/capas/mia.webp' %}" alt="" width="360" height="360" loading="lazy" decoding="async">
-    </div>
-
-    <div class="arena-jogos-grade">
-        {% for jogo in jogos %}
-        <article class="jogo-cartao" style="--cor-jogo: {{ jogo.cor }}">
-            <a class="jogo-cartao-capa" href="{% url 'jogo' jogo.slug %}" aria-label="Jogar {{ jogo.titulo }}">
-                <img src="{% estatico jogo.capa %}" alt="" width="480" height="480" loading="lazy" decoding="async">
-                <span class="jogo-cartao-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
-            </a>
-            <div class="jogo-cartao-corpo">
-                <span class="jogo-cartao-maquina">{{ jogo.maquina }}</span>
-                <h3>{{ jogo.titulo }}</h3>
-                <p class="jogo-cartao-chamada">{{ jogo.chamada }}</p>
-                <p class="jogo-cartao-desc">{{ jogo.descricao }}</p>
-                <div class="jogo-cartao-acoes">
-                    <a class="ls-botao" href="{% url 'jogo' jogo.slug %}">
-                        <i class="fa-solid fa-play" aria-hidden="true"></i> Jogar agora
-                    </a>
-                    {% if jogo.maquina_url %}
-                    <a class="jogo-cartao-link" href="{{ jogo.maquina_url }}">Ver a máquina <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-                    {% endif %}
-                </div>
-            </div>
-        </article>
-        {% endfor %}
-    </div>
-</section>
 
 <!-- ================= ARENA 3D: os objetos 3D de verdade, num parque ================= -->
 <section class="arena-secao arena-secao--palco" id="arena-3d" aria-labelledby="titulo-arena">
@@ -311,6 +265,37 @@
     {% endif %}
 </section>
 
+<!-- ================= MONTE O SEU ESPAÇO (core/projeto3d.py) ================= -->
+<section class="arena-secao arena-secao--monte" id="monte-seu-espaco" aria-labelledby="titulo-monte">
+    <div class="arena-secao-head">
+        <span class="arena-kicker"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Monte o seu espaço</span>
+        <h2 id="titulo-monte">Diga a medida do lugar: a gente arruma tudo em 3D</h2>
+        <p>
+            Escolha o modelo do espaço (esportivo kids, brinquedão, área baby, trampolim park, área ninja),
+            as outras áreas e as máquinas. O site arruma tudo na planta, com corredor e área de quem joga,
+            mostra o que cabe e o que fica de fora, e você manda o projeto para a nossa equipe.
+        </p>
+    </div>
+
+    <link rel="stylesheet" href="{% estatico 'site/projeto3d/projeto3d.css' %}">
+    <div class="p3d-pagina p3d-pagina--arena">
+    <div class="p3d" id="p3d" data-modo="cliente" data-preguica="1"
+         data-three="{% static 'vendor/three/three.module.min.js' %}"
+         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+         data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
+         data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
+         data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
+         data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
+         data-url-pedido="{% url 'monte_seu_projeto_pedir' %}">
+      {{ projeto_dados|json_script:"p3dDados" }}
+      {# com JavaScript, o app; sem, a lista do fim (projeto3d.css: .p3d--js) #}
+      <script>document.getElementById("p3d").classList.add("p3d--js");</script>
+      {% include "partials/projeto3d_app.html" with modo="cliente" %}
+      {% include "partials/projeto3d_pedido.html" %}
+    </div>
+    </div>
+</section>
+
 <!-- ================= TODAS AS MÁQUINAS (fotos reais) ================= -->
 <section class="arena-secao arena-secao--fotos" id="maquinas" aria-labelledby="titulo-maquinas">
     <div class="arena-secao-head">
@@ -393,14 +378,17 @@
 <section class="arena-secao arena-secao--chamada" aria-labelledby="titulo-chamada">
     <div class="arena-chamada">
         <div>
-            <h2 id="titulo-chamada">Quer essa arena no seu espaço?</h2>
+            <h2 id="titulo-chamada">Quer isso no seu espaço?</h2>
             <p>
                 Shoppings, buffets, parques e quiosques: a fábrica monta, entrega e dá manutenção.
                 Conheça também quem já trabalha com os nossos brinquedos.
             </p>
         </div>
         <div class="arena-chamada-acoes">
-            <a class="ls-botao" href="https://wa.me/{{ whatsapp }}?text=Ol%C3%A1!%20Vi%20a%20Arena%203D%20no%20site%20e%20quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">
+            <a class="ls-botao" href="#monte-seu-espaco">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Monte o seu espaço
+            </a>
+            <a class="ls-botao ls-botao--fantasma" href="https://wa.me/{{ whatsapp }}?text=Ol%C3%A1!%20Vi%20a%20Arena%203D%20no%20site%20e%20quero%20um%20or%C3%A7amento." target="_blank" rel="noopener">
                 <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pedir orçamento
             </a>
             <a class="ls-botao ls-botao--fantasma" href="{% url 'estabelecimentos' %}#header">
@@ -416,5 +404,6 @@
 <script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/vitrine.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/vitrine3d.js' %}"></script>
+<script type="module" src="{% estatico 'site/projeto3d/projeto3d.js' %}"></script>
 
 {% endblock %}

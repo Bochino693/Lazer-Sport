@@ -1,5 +1,5 @@
 /* ======================================================================
-   O ARRUMADOR do "Monte seu projeto" (a página é monte_seu_projeto.html;
+   O ARRUMADOR do "Monte seu espaço" (na Arena 3D, arena.html;
    as regras de cada área e de cada máquina vêm do servidor, em
    core/projeto3d.py, para o painel e o site falarem a mesma língua).
 

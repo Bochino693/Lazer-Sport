@@ -1,5 +1,5 @@
 /* ======================================================================
-   MONTE SEU PROJETO -- o app da página (monte_seu_projeto.html) e da
+   MONTE SEU ESPAÇO -- o app da Arena 3D (arena.html, #monte-seu-espaco) e da
    ficha do pedido no painel (sistema_interno, modo "painel").
 
    As escolhas ficam de um lado; o 3D, do outro. A cada mudança o
@@ -865,4 +865,18 @@ async function criarCena(raiz, dados, geradorMod) {
 }
 
 const raiz = document.getElementById("p3d");
-if (raiz) iniciar(raiz).catch((erro) => console.error("Monte seu projeto", erro));
+if (raiz) {
+  const comecar = () => iniciar(raiz).catch((erro) => console.error("Monte seu projeto", erro));
+  // na Arena 3D o app só acorda perto da tela (a roda 3D já está ocupando a placa de vídeo);
+  // o link de um projeto (#p=...) acorda na hora e leva até ele
+  const doLink = /^#p=/.test(location.hash);
+  if (doLink) requestAnimationFrame(() => raiz.scrollIntoView({ block: "start" }));
+  if (raiz.dataset.preguica && !doLink && "IntersectionObserver" in window) {
+    const vigia = new IntersectionObserver((vistos) => {
+      if (vistos.some((v) => v.isIntersecting)) { vigia.disconnect(); comecar(); }
+    }, { rootMargin: "600px 0px" });
+    vigia.observe(raiz);
+  } else {
+    comecar();
+  }
+}

@@ -78,11 +78,11 @@ class ArenaPaginaTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         html = resposta.content.decode()
         self.assertEqual(html.count("<h1"), 1)
-        for ancora in ('id="jogos"', 'id="arena-3d"', 'id="arena-dados"', "arena3d.js"):
+        for ancora in ('id="arena-3d"', 'id="arena-dados"', "arena3d.js", 'id="monte-seu-espaco"', 'id="p3dDados"', "projeto3d.js"):
             self.assertIn(ancora, html)
-        # Todos os jogos chegam como cartão, levando ao simulador.
-        for jogo in arena.JOGOS:
-            self.assertIn(f'href="{reverse("jogo", args=[jogo["slug"]])}"', html)
+        # os jogos foram para o portal (/jogos/): a arena é só o 3D e o "Monte seu espaço"
+        self.assertNotIn('id="jogos"', html)
+        self.assertNotIn("jogo-cartao", html)
 
     def test_so_quem_tem_objeto_3d_vai_para_a_roda_e_para_a_lista(self):
         resposta = self.client.get(reverse("arena"))
@@ -97,9 +97,11 @@ class ArenaPaginaTests(TestCase):
         galeria = {b["nome"]: b for b in resposta.context["brinquedos_arena"]}
         self.assertEqual((galeria["Dragon Bowling Rosa"]["modelo"], galeria["Dragon Bowling Rosa"]["jogo"]), ("", "dragon-bowling"))
         self.assertIn("Air Game Hockey", html.split('id="titulo-maquinas"')[1])
-        self.assertNotIn("Air Game Hockey", html.split('id="titulo-maquinas"')[0])
+        # a roda 3D (até o "Monte seu espaço", que lista o catálogo inteiro para montar) não leva quem não tem .glb
+        roda = html.split('id="arena-3d"')[1].split('id="monte-seu-espaco"')[0]
+        self.assertNotIn("Air Game Hockey", roda)
         # o número do topo conta os da roda
-        self.assertIn(f"<b>{len(arena.MODELOS_3D)}</b> brinquedos na Arena 3D", html)
+        self.assertIn(f"<b>{len(arena.MODELOS_3D)}</b> brinquedos em 3D", html)
 
     def test_com_objeto_3d_no_cadastro_entra_na_roda(self):
         _com_objeto_3d(Brinquedos.objects.get(nome_brinquedo="Air Game Hockey"))

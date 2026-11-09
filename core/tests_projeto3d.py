@@ -1,4 +1,4 @@
-"""Monte seu projeto (/monte-seu-projeto/) e os pedidos no painel.
+"""Monte seu espaço (na Arena 3D, /arena/#monte-seu-espaco) e os pedidos no painel.
 
 O que se garante: a página abre com o catálogo e as regras (e sem
 JavaScript, com a lista); o pedido é conferido (o contato, as medidas, só o
@@ -60,7 +60,7 @@ class PaginaTests(TestCase):
         )
 
     def test_a_pagina_abre_com_o_catalogo_e_as_regras(self):
-        resposta = self.client.get("/monte-seu-projeto/")
+        resposta = self.client.get("/arena/")
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, 'id="p3dDados"')
         self.assertContains(resposta, "site/projeto3d/arrumador.js")
@@ -87,8 +87,10 @@ class PaginaTests(TestCase):
         self.assertEqual(enterrada["area"], "trampolim")
         self.assertIn("trampolim-enterrada.glb", enterrada["modelo"])
 
-    def test_esta_no_sitemap_e_no_menu(self):
-        self.assertContains(self.client.get("/sitemap.xml"), "/monte-seu-projeto/")
+    def test_o_endereco_antigo_leva_para_a_arena(self):
+        resposta = self.client.get("/monte-seu-projeto/")
+        self.assertEqual((resposta.status_code, resposta["Location"]), (301, "/arena/#monte-seu-espaco"))
+        self.assertContains(self.client.get("/arena/"), 'href="/arena/#monte-seu-espaco"')
 
 
 class ValidarPedidoTests(TestCase):
@@ -181,7 +183,7 @@ class PedirTests(TestCase):
     def test_pede_o_csrf(self):
         cliente = Client(enforce_csrf_checks=True)
         self.assertEqual(self.mandar(_pedido(), cliente).status_code, 403)
-        cliente.get("/monte-seu-projeto/")
+        cliente.get("/arena/")
         resposta = cliente.post(self.URL, json.dumps(_pedido()), content_type="application/json",
                                 HTTP_X_CSRFTOKEN=cliente.cookies["csrftoken"].value)
         self.assertEqual(resposta.status_code, 200)

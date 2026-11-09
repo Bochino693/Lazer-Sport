@@ -1347,3 +1347,22 @@ Dependência nova: rjsmin (requirements.txt).
    (desenhosBase), para o site desenhar com o mesmo código.
    Testes: core/tests_projeto3d.py (com o arrumador conferido pelo node em
    core/tests_js/arrumador.mjs).
+
+48) A ARENA 3D É A VITRINE DO 3D E O "MONTE SEU ESPAÇO" (/arena/)
+   Os jogos foram para o portal Lazer & Sport Games (/jogos/): a Arena 3D
+   não tem mais a seção dos jogos nem o "Jogar agora". A página agora é:
+     * o topo "Veja em 3D e monte o seu espaço", com "Monte o seu espaço" e
+       "Ver em 3D";
+     * a RODA 3D com os brinquedos que têm objeto 3D (como antes);
+     * o MONTE O SEU ESPAÇO (#monte-seu-espaco): o app da seção 47 (a medida,
+       o modelo, as áreas, as máquinas, o 3D arrumado e o "Pedir este
+       projeto"). O 3D dele só liga quando o cliente chega perto (a roda já
+       usa a placa de vídeo); o link de um projeto (#p=...) abre direto nele;
+     * as fotos de todas as máquinas e a chamada final (agora com "Monte o
+       seu espaço").
+   /monte-seu-projeto/ leva para /arena/#monte-seu-espaco (o pedido continua
+   em /monte-seu-projeto/pedir/). O menu ("Monte seu espaço em 3D") e o
+   atalho da página de Projetos apontam para a arena.
+   Código: core/templates/arena.html, core/views_arena.py (ArenaView com o
+   contexto do projeto), core/views_projeto3d.py (contexto_do_projeto,
+   monte_seu_projeto), partials/projeto3d_app.html e projeto3d_pedido.html.

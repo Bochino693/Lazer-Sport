@@ -14,7 +14,7 @@ from .escudo_jogos import ArmadilhaView, PasseDoJogoView
 from .views_app_jogos import manifesto_dos_jogos, service_worker_dos_jogos
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_arena import ArenaView
-from .views_projeto3d import MonteSeuProjetoView, PedirProjeto3DView
+from .views_projeto3d import PedirProjeto3DView, monte_seu_projeto
 from .views_jogos import (AbriuJogoView, AnuncioJogosView, ArquivoDoEmuladorView, JogoEmuladorView, PartidaJogoView,
                           PortalJogosView, PresencaJogosView, RankingJogosView, SimuladorView)
 from .views_painel import painel_ao_vivo
@@ -259,9 +259,10 @@ urlpatterns = [
     # Parceiros" no menu. A página de parceiros continua em
     # /estabelecimentos/, com link a partir da arena e da busca.
     path("arena/", ArenaView.as_view(), name="arena"),
-    # Monte seu projeto: o cliente informa o tamanho do lugar, escolhe o modelo
-    # do espaço e as máquinas, e vê tudo arrumado em 3D (core/projeto3d.py)
-    path("monte-seu-projeto/", MonteSeuProjetoView.as_view(), name="monte_seu_projeto"),
+    # Monte seu espaço: mora na Arena 3D (o cliente informa o tamanho do lugar,
+    # escolhe o modelo e as máquinas e vê tudo arrumado em 3D, core/projeto3d.py);
+    # o endereço antigo leva para lá, e o pedido chega aqui
+    path("monte-seu-projeto/", monte_seu_projeto, name="monte_seu_projeto"),
     path("monte-seu-projeto/pedir/", PedirProjeto3DView.as_view(), name="monte_seu_projeto_pedir"),
     path("api/painel-ao-vivo/", painel_ao_vivo, name="painel_ao_vivo"),
     # O simulador: a área dedicada às prévias dos jogos, um endereço por jogo.

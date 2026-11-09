@@ -1,8 +1,10 @@
 """Monte seu projeto (/monte-seu-projeto/): a página e o pedido (as regras: core/projeto3d.py).
 
-A página abre inteira sem JavaScript: as áreas e as máquinas do catálogo
-com as medidas, como lista, e o botão do WhatsApp. Com JavaScript (e
-WebGL), vira o app: as escolhas de um lado, o 3D do outro.
+A página é a ARENA 3D (/arena/, core/views_arena.py): os objetos 3D da
+fábrica e, logo abaixo, o "Monte seu espaço". Ela abre inteira sem
+JavaScript: as áreas e as máquinas do catálogo com as medidas, como lista, e
+o botão do WhatsApp. Com JavaScript (e WebGL), vira o app: as escolhas de um
+lado, o 3D do outro. /monte-seu-projeto/ (o endereço antigo) leva para lá.
 
 O pedido é público (não pede conta): por isso tem a armadilha para robôs
 (um campo que só robô preenche), um teto por endereço (5 por hora) e o
@@ -19,10 +21,7 @@ from urllib.parse import quote
 from django.core.cache import cache
 from django.db import DatabaseError, transaction
 from django.http import JsonResponse
-from django.shortcuts import render
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import ensure_csrf_cookie
 
 from . import projeto3d
 from .registro_cadastro import ip_da_requisicao
@@ -55,23 +54,33 @@ def texto_do_whatsapp(campos):
     return "\n".join(linhas)
 
 
-@method_decorator(ensure_csrf_cookie, name="dispatch")
-class MonteSeuProjetoView(View):
-    def get(self, request):
-        dados = projeto3d.catalogo()
-        usuario = request.user if request.user.is_authenticated else None
-        return render(request, "monte_seu_projeto.html", {
-            "projeto_dados": dados,
-            "areas": [{"chave": k, **v} for k, v in projeto3d.AREAS.items()],
-            "maquinas": [i for i in dados["itens"] if i["tipo"] == "maquina"],
-            "grandes": [i for i in dados["itens"] if i["tipo"] == "grande"],
-            "contato_inicial": {
-                "nome": (usuario.get_full_name() or usuario.username) if usuario else "",
-                "email": usuario.email if usuario else "",
-                "whatsapp": (getattr(getattr(usuario, "perfil", None), "telefone", "") or "") if usuario else "",
-            },
-            "whatsapp": WHATSAPP,
-        })
+def contexto_do_projeto(request):
+    """O que o "Monte seu espaço" pede no template: o catálogo, as áreas e o contato de quem está logado."""
+    dados = projeto3d.catalogo()
+    usuario = request.user if request.user.is_authenticated else None
+    return {
+        "projeto_dados": dados,
+        "areas": [{"chave": k, **v} for k, v in projeto3d.AREAS.items()],
+        "maquinas": [i for i in dados["itens"] if i["tipo"] == "maquina"],
+        "grandes": [i for i in dados["itens"] if i["tipo"] == "grande"],
+        "contato_inicial": {
+            "nome": (usuario.get_full_name() or usuario.username) if usuario else "",
+            "email": usuario.email if usuario else "",
+            "whatsapp": (getattr(getattr(usuario, "perfil", None), "telefone", "") or "") if usuario else "",
+        },
+        "whatsapp": WHATSAPP,
+    }
+
+
+def monte_seu_projeto(request):
+    """O endereço antigo: o "Monte seu espaço" mora na Arena 3D (/arena/#monte-seu-espaco).
+
+    O link compartilhado leva o projeto no fim (#p=...): ele segue junto.
+    """
+    from django.http import HttpResponsePermanentRedirect
+    from django.urls import reverse
+
+    return HttpResponsePermanentRedirect(reverse("arena") + "#monte-seu-espaco")
 
 
 class PedirProjeto3DView(View):
