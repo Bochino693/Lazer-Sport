@@ -20,12 +20,15 @@
 .pg-botao--jogar:hover { color: #04210f; }
 
 /* ---------- destaques ---------- */
-.pg-hero { position: relative; height: clamp(340px, 46vw, 520px); border-radius: 28px; overflow: hidden; margin-bottom: 30px;
+.pg-hero { position: relative; height: clamp(340px, 46vw, 520px); border-radius: 28px; overflow: hidden; margin-bottom: 30px; touch-action: pan-y;
            background: #0c1c44; border: 1px solid var(--pg-borda); box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
 .pg-slide { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: center; gap: 24px;
-            padding: clamp(22px, 4vw, 56px); opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s;
+            padding: clamp(22px, 4vw, 56px); visibility: hidden;
+            /* desliza para o lado (portal-jogos.js põe quem entra do lado certo e empurra quem sai) */
+            transform: translate3d(100%, 0, 0); transition: transform .65s cubic-bezier(.22, .8, .24, 1);
             background: radial-gradient(70% 90% at 80% 50%, color-mix(in srgb, var(--cor) 45%, transparent), transparent 70%), linear-gradient(110deg, #050b1f 30%, rgba(5, 11, 31, .4)); }
-.pg-slide--ativo { opacity: 1; visibility: visible; }
+.pg-slide--ativo, .pg-slide--saindo { visibility: visible; will-change: transform; }
+.pg-slide--ativo { transform: none; }
 .pg-slide-fundo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(22px) saturate(1.3); opacity: .35; transform: scale(1.15); z-index: -1; }
 .pg-slide-texto { position: relative; z-index: 1; }
 .pg-slide-kicker { display: inline-block; margin-bottom: 10px; padding: 6px 12px; border-radius: 999px; font: 800 .74rem "Poppins", sans-serif;

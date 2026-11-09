@@ -603,36 +603,120 @@
       }, { threshold: 0.15 }).observe(hero);
     }
     document.addEventListener("visibilitychange", function () { hero.classList.toggle("is-parado", document.hidden || !naTela); });
-    var mostrar = function (i) {
-      atual = (i + slides.length) % slides.length;
+    /* A TROCA DESLIZA PARA O LADO: o destaque da vez sai por um lado e o próximo entra pelo
+       outro (antes os dois só se misturavam no lugar, sem sair do lugar). No celular, o
+       destaque segue o dedo e passa ao soltar (ou volta, se o arrasto foi curto). */
+    var DURACAO = 650;
+    var largura = function () { return hero.clientWidth || 1; };
+    var posicionar = function (s, x, animar) {   // x em px; null devolve ao CSS
+      s.style.transition = animar ? "" : "none";
+      s.style.transform = x === null ? "" : "translate3d(" + x + "px, 0, 0)";
+    };
+    // o que saiu fica à vista até terminar de sair; depois volta escondido para o lado
+    var guardar = function (s) {
+      clearTimeout(s.lsFim);
+      s.lsFim = setTimeout(function () { s.classList.remove("pg-slide--saindo"); posicionar(s, null, false); }, DURACAO + 60);
+    };
+    // a arte dos vizinhos já baixada quando eles entrarem (sem entrar em branco)
+    var adiantar = function (k) {
+      Array.prototype.forEach.call(slides[(k + slides.length) % slides.length].querySelectorAll('img[loading="lazy"]'), function (img) { img.loading = "eager"; });
+    };
+    var mostrar = function (i, dir, deOnde) {
+      var novo = (i + slides.length) % slides.length;
+      if (novo === atual) return;
+      if (!dir) dir = novo > atual ? 1 : -1;    // 1: o novo vem da direita
+      var sai = slides[atual], entra = slides[novo];
+      atual = novo;
       slides.forEach(function (s, k) {
         s.classList.toggle("pg-slide--ativo", k === atual);
         if (k === atual) s.removeAttribute("aria-hidden"); else s.setAttribute("aria-hidden", "true");
       });
       pontos.forEach(function (p, k) { if (k === atual) p.setAttribute("aria-current", "true"); else p.removeAttribute("aria-current"); });
+      if (!reduzido) {
+        var w = largura();
+        clearTimeout(entra.lsFim);
+        entra.classList.remove("pg-slide--saindo");
+        posicionar(entra, deOnde !== undefined ? deOnde : dir * w, false);
+        void entra.offsetWidth;                  // a posição de partida vale antes de animar
+        posicionar(entra, null, true);
+        sai.classList.add("pg-slide--saindo");
+        posicionar(sai, -dir * w, true);
+        guardar(sai);
+      }
+      adiantar(atual + 1); adiantar(atual - 1);
     };
+    adiantar(1); adiantar(-1);
     var girar = function () {
       clearInterval(relogio);
       if (!reduzido && slides.length > 1) relogio = setInterval(function () {
         // parado fora da tela, com a aba escondida ou com um jogo aberto por cima
-        if (!hero.hidden && naTela && !document.hidden && !document.body.classList.contains("app-jogando")) mostrar(atual + 1);
+        if (!hero.hidden && naTela && !document.hidden && !document.body.classList.contains("app-jogando")) mostrar(atual + 1, 1);
       }, 6500);
     };
     var antes = hero.querySelector("[data-portal-antes]");
     var depois = hero.querySelector("[data-portal-depois]");
-    if (antes) antes.addEventListener("click", function () { mostrar(atual - 1); girar(); });
-    if (depois) depois.addEventListener("click", function () { mostrar(atual + 1); girar(); });
+    if (antes) antes.addEventListener("click", function () { mostrar(atual - 1, -1); girar(); });
+    if (depois) depois.addEventListener("click", function () { mostrar(atual + 1, 1); girar(); });
     pontos.forEach(function (p, k) { p.addEventListener("click", function () { mostrar(k); girar(); }); });
-    hero.addEventListener("mouseenter", function () { clearInterval(relogio); });
-    hero.addEventListener("mouseleave", girar);
-    var inicioX = null;
-    hero.addEventListener("touchstart", function (e) { inicioX = e.touches[0].clientX; }, { passive: true });
-    hero.addEventListener("touchend", function (e) {
-      if (inicioX === null) return;
-      var dx = e.changedTouches[0].clientX - inicioX;
-      inicioX = null;
-      if (Math.abs(dx) > 40) { mostrar(atual + (dx < 0 ? 1 : -1)); girar(); }
+    hero.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowLeft") { mostrar(atual - 1, -1); girar(); }
+      else if (e.key === "ArrowRight") { mostrar(atual + 1, 1); girar(); }
     });
+    // NÃO para com o mouse em cima: o destaque ocupa quase a tela, o mouse ficava nele e o
+    // carrossel nunca passava. Para só com o foco do teclado dentro (quem lê com calma).
+    hero.addEventListener("focusin", function (e) {
+      try { if (e.target.matches(":focus-visible")) clearInterval(relogio); } catch (x) { /* navegador antigo: segue */ }
+    });
+    hero.addEventListener("focusout", function () { girar(); });
+    // o dedo: o destaque acompanha o arrasto, com o vizinho entrando colado (touch-action:
+    // pan-y no CSS deixa a rolagem da página para o navegador e o arrasto de lado para cá)
+    var toque = null;
+    hero.addEventListener("touchstart", function (e) {
+      if (slides.length < 2 || e.touches.length !== 1) { toque = null; return; }
+      toque = { x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lado: 0, vizinho: null, arrastando: false, t: Date.now() };
+      clearInterval(relogio);
+    }, { passive: true });
+    hero.addEventListener("touchmove", function (e) {
+      if (!toque) return;
+      var dx = e.touches[0].clientX - toque.x, dy = e.touches[0].clientY - toque.y;
+      if (!toque.arrastando) {
+        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { toque = null; girar(); return; }   // é a página rolando
+        if (Math.abs(dx) < 8) return;
+        toque.arrastando = true;
+      }
+      toque.dx = dx;
+      if (reduzido) return;
+      var lado = dx < 0 ? 1 : -1;
+      if (lado !== toque.lado) {
+        if (toque.vizinho) { toque.vizinho.classList.remove("pg-slide--saindo"); posicionar(toque.vizinho, null, false); }
+        toque.lado = lado;
+        toque.vizinho = slides[(atual + lado + slides.length) % slides.length];
+        clearTimeout(toque.vizinho.lsFim);
+        toque.vizinho.classList.add("pg-slide--saindo");
+      }
+      posicionar(slides[atual], dx, false);
+      posicionar(toque.vizinho, dx + lado * largura(), false);
+    }, { passive: true });
+    var soltar = function () {
+      if (!toque) return;
+      var t = toque; toque = null;
+      if (t.arrastando) {
+        var w = largura();
+        var rapido = Math.abs(t.dx) / Math.max(1, Date.now() - t.t) > 0.45;
+        if (Math.abs(t.dx) > Math.min(90, w * 0.22) || (rapido && Math.abs(t.dx) > 30)) {
+          var lado = t.dx < 0 ? 1 : -1;
+          mostrar(atual + lado, lado, reduzido ? undefined : t.dx + lado * w);
+        } else if (t.vizinho) {
+          // arrasto curto: volta tudo para o lugar
+          posicionar(slides[atual], 0, true);
+          posicionar(t.vizinho, t.lado * w, true);
+          guardar(t.vizinho);
+        }
+      }
+      girar();
+    };
+    hero.addEventListener("touchend", soltar);
+    hero.addEventListener("touchcancel", soltar);
     document.addEventListener("visibilitychange", function () { if (document.hidden) clearInterval(relogio); else girar(); });
     girar();
   }

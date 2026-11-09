@@ -680,6 +680,15 @@ Dependência nova: rjsmin (requirements.txt).
    desfoque a cada quadro, o que pesava no celular), só o slide da vez anima,
    e ele para sozinho quando sai da tela, quando a aba fica escondida ou
    enquanto se joga.
+   A TROCA DESLIZA PARA O LADO (antes só esmaecia no lugar): o destaque sai
+   por um lado e o próximo entra pelo outro (as setas, os pontinhos, as
+   setas do teclado e a troca sozinha a cada 6,5 s). No celular o destaque
+   segue o dedo e passa ao soltar; arrasto curto volta; rolar a página por
+   cima dele não troca. Ele NÃO para mais com o mouse em cima: o destaque
+   ocupa quase a tela, o mouse ficava nele e o carrossel nunca passava
+   (para só com o foco do teclado dentro). Código: portal-jogos.js (bloco
+   "o carrossel de destaques": mostrar, girar, toque) e .pg-slide no
+   portal-jogos.css.
    AS ARTES DO TOPO dos jogos da casa ficam em
    core/static/site/arena/capas/topo/<jogo>.webp (1600 x 600), montadas a
    partir das capas e dos pôsteres que já existiam. Elas seguem no projeto
