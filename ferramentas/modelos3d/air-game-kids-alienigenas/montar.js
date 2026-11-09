@@ -1,20 +1,21 @@
-// Monta o Air Game Hockey Espacial em three.js e exporta um .glb.
+// Monta o Air Game Kids Alienígenas em three.js e exporta um .glb.
 //
-// A mesa de air hockey com os adesivos do espaço (HOCKEY KIDS, os alienígenas
-// astronautas, os discos voadores, os planetas e o chão lunar laranja). TUDO
-// sai da folha de adesivos da fábrica (folha-adesivos.webp, a 26567-1): a arte
-// de cada peça (adesivos/<peça>.png) e o desenho dela (formas.json: o tamanho
-// em px e, nas laterais, o CONTORNO de verdade), que o recortar_adesivos.py
-// tira da folha. Nada da arte é redesenhado: cada imagem vai inteira na sua
-// face, e a face tem a forma e a proporção da peça.
+// A mesa de air hockey infantil do Air Game Kids (0,90 m x 0,86 m x 1,50 m),
+// com os adesivos dos alienígenas (o HOCKEY KIDS, os alienígenas astronautas,
+// o disco voador, os planetas e o chão lunar laranja). TUDO sai da folha de
+// adesivos da fábrica (folha-adesivos.webp, a 26567-1): a arte de cada peça
+// (adesivos/<peça>.png) e o desenho dela (formas.json: o tamanho em px e, nas
+// laterais, o CONTORNO de verdade), que o recortar_adesivos.py tira da folha.
+// Nada da arte é redesenhado: cada imagem vai inteira na sua face, e a face
+// tem a forma e a proporção da peça.
 //
 // A folha é desenhada em ESCALA (as peças encaixam umas nas outras: as
 // laterais são 33 px mais compridas que o tampo, a cabeceira 7 px mais larga):
-// uma escala só (mm por px da folha) dá a mesa inteira. Ela sai da altura da
-// mesa, 1,00 m, que é a das laterais (o alto da corcova do meio). Daí:
-// laterais de 1,67 m, tampo de 1,57 m x 0,90 m, cabeceiras com o campo a
-// 0,83 m do chão (ver o README: as proporções da folha não fecham com 2,10 x
-// 1,10 m).
+// uma escala só (mm por px da folha) dá a mesa inteira. Ela sai da altura do
+// Air Game Kids, 0,90 m, que é a das laterais (o alto da corcova do meio).
+// Daí: 1,50 m de comprimento (o do Air Game Kids), o tampo de 1,41 m x
+// 0,81 m, o campo a 0,75 m do chão e 0,83 m de largura (os 0,86 m do
+// catálogo contam a borda).
 //
 // As peças (cada uma vista DE FORA, em pé, como na folha):
 //   tampo               o tampo, deitado: a cabeceira do "Jogador 02" (a de
@@ -37,9 +38,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const FORMAS = await (await fetch(`formas.json?v=${Date.now()}`)).json();
 
 // ---------- a escala da folha e as medidas (mm) ----------
-const ALT = 1000; // a altura da mesa: o alto das laterais
+const ALT = 900; // a altura do Air Game Kids: o alto das laterais
 const ESP = 18; // o MDF das cabeceiras e do tampo
-const ESP_LAT = 12; // o das laterais: a cabeceira é 7 px (2 x 12 mm) mais larga que o tampo
 const PELE = 1; // o adesivo fica 1 mm fora da madeira
 // uma peça da folha em mm, na escala `s`: o contorno de verdade (ou o retângulo
 // da peça), com o canto de baixo à esquerda em (0, 0), e o retângulo da imagem
@@ -54,9 +54,11 @@ function emMm(nome, s) {
   return { pontos: pts.map(([a, b]) => [a - a0, b - b0]), ret: [-a0, -b0, w * s - a0, h * s - b0], largura, altura };
 }
 // a escala: as laterais (o contorno) têm a altura da mesa
-const S = ALT / emMm("lateral-direita", 1).altura; // mm por px da folha (~3,4)
+const S = ALT / emMm("lateral-direita", 1).altura; // mm por px da folha (~3,06)
 const LATERAIS = { esquerda: emMm("lateral-esquerda", S), direita: emMm("lateral-direita", S) };
-const TAMPO = emMm("tampo", S); // ~1557 x 892
+const TAMPO = emMm("tampo", S); // ~1411 x 808
+// as laterais: a cabeceira é 7 px mais larga que o tampo (3,5 px de cada lado, ~11 mm)
+const ESP_LAT = Math.round(((FORMAS["lateral-esquerda-2"].px[0] - FORMAS.tampo.px[1]) / 2) * S);
 const XD = TAMPO.altura / 2; // a face de dentro das laterais: o tampo vai de uma à outra
 const XF = XD + ESP_LAT + PELE; // o adesivo de fora das laterais
 const ZT = TAMPO.largura / 2; // as pontas do tampo
@@ -66,7 +68,7 @@ const [CW, CH] = FORMAS["lateral-esquerda-2"].px;
 const CABECEIRA = (2 * XD * CH) / CW;
 const CAMPO = CABECEIRA; // a superfície de jogo: o alto das cabeceiras
 const ZC = ZT + ESP + PELE; // o adesivo das cabeceiras
-const BORDA = { altura: 30, largura: 22, gol: 220 }; // a régua das pontas, com o gol no meio
+const BORDA = { altura: 27, largura: 20, gol: 200 }; // a régua das pontas, com o gol no meio
 // a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/3)
 const RESOLUCAO = { tampo: 1024, "lateral-esquerda": 1024, "lateral-direita": 1024, "lateral-esquerda-2": 640, "lateral-direita-2": 640 };
 const QUALIDADE_JPEG = 0.85;
@@ -249,19 +251,19 @@ cilindro(M.grade, 0, CAMPO - 280, CAMPO - 270, 0, 130, 40);
 function rebatedor(nome, z) {
   const perfil = [ // o meio perfil, girado em volta do eixo: a base larga, o pescoço e a pega
     [0, 0], [43, 0], [45, 3], [45, 13], [40, 18], [22, 22], [17, 27], [16, 52], [20, 58], [22, 65], [19, 72], [11, 77], [0, 78],
-  ].map(([r, y]) => new THREE.Vector2(r, y));
+  ].map(([r, y]) => new THREE.Vector2(r * 0.9, y * 0.9)); // os da mesa infantil
   por(nome, new THREE.LatheGeometry(perfil, 40), new THREE.Matrix4().makeTranslation(0, CAMPO + 0.5, z));
 }
-rebatedor(M.rebatedorVermelho, ZT - 300);
-rebatedor(M.rebatedorVerde, -ZT + 300);
-cilindro(M.disco, -110, CAMPO + 0.5, CAMPO + 6, 140, 28, 32);
+rebatedor(M.rebatedorVermelho, ZT - 270);
+rebatedor(M.rebatedorVerde, -ZT + 270);
+cilindro(M.disco, -100, CAMPO + 0.5, CAMPO + 5.5, 125, 25, 32);
 
 /* ======================================================================
    MONTAGEM FINAL: metros, junta por material, centraliza e assenta no chão
    ====================================================================== */
 const cena = new THREE.Scene();
 const raiz = new THREE.Group();
-raiz.name = "air-game-hockey-espacial";
+raiz.name = "air-game-kids-alienigenas";
 cena.add(raiz);
 const mm = new THREE.Matrix4().makeScale(0.001, 0.001, 0.001);
 for (const [nome, { material: mat, geometrias }] of pecas) {
