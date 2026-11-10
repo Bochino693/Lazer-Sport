@@ -1566,3 +1566,107 @@ Dependência nova: rjsmin (requirements.txt).
    gerar.cjs, pecas.json, README.md) e ferramentas/modelos3d/adesivos_comum.py
    (o recorte: a máscara, o contorno e o endireitar, só com o Pillow).
    Testes: core/tests_variantes_adesivo.py.
+
+53) CATEGORIAS: A ÁREA NINJA, OS NOMES EM MAIÚSCULAS E MINÚSCULAS E AS FOTOS NOVAS
+   O pedido do cliente: "veja se área ninja, entre outros tem categoria, se
+   não adicione e recrie as fotos das categorias [...] uma imagem que combine
+   e tenha o corte favorável a aparecer. além de deixar tudo maiúscula e
+   minúscula, boliche virtual tem tudo maiúsculo." Tudo numa migração só,
+   0147_categorias_capas_e_nomes (depois da 0146), e num comando para refazer.
+   AS ÁREAS QUE FALTAVAM. O "Monte seu espaço" tem cinco áreas (espaço
+   esportivo kids, brinquedão, área baby, trampolim park e área ninja); a
+   vitrine tinha categoria para três (Espaço Esportivo Kids, Brinquedão e
+   Trampolins). As outras nascem SÓ com produto ATIVO que tenha o nome
+   delas (sem acento nem caixa):
+     * ÁREA NINJA: nasce com o Brinquedão Ninja (que continua no Brinquedão);
+     * ÁREA BABY: não há produto "baby" no catálogo, então ela NÃO nasce --
+       categoria sem brinquedo não aparece na home (a home só mostra
+       categoria com produto, HomeView), mas aparecia nas sugestões do topo
+       (base.html, categorias_header) e levava a uma página vazia. Quando um
+       produto "Área Baby ..." for cadastrado, rode o comando com --areas: a
+       categoria nasce já com a foto (core/static/site/categorias/area-baby.webp).
+   E os produtos de área que estavam fora da categoria dela entram: o
+   Trampolim de Enterrada (não tinha categoria nenhuma) nos Trampolins, o
+   Espaço Esportivo Modelo 1 no Espaço Esportivo Kids. Só acrescenta: nenhum
+   produto sai de categoria nenhuma. A página das áreas ganhou o texto e os
+   argumentos delas (ninja, baby, trampolim: CategoriasInfoView.VITRINES).
+   A categoria nova nasce sem foto como NULL, e não "" (o campo da foto é
+   único: duas com "" brigariam).
+   OS NOMES. core/nomes.py, nome_bonito: o nome TODO em maiúsculas (ou todo em
+   minúsculas) vira Maiúsculas e Minúsculas -- "BOLICHE VIRTUAL" -> "Boliche
+   Virtual", "CAIXA DE SOM MULTIMÍDIA KNUP RGB PULSE 2.0" -> "Caixa de Som
+   Multimídia Knup RGB Pulse 2.0", "CONTROLE DE XBOX 360" -> "Controle de Xbox
+   360". Conectivos em minúsculas no meio (de, da, do, e, com, para, por, em,
+   na, no...), siglas e unidades como se escrevem (HDMI, RGB, USB, LED, TV, VR,
+   3D, 110V, 3x3, 32"), Xbox, PlayStation, Wi-Fi, os acentos como estão, cada
+   pedaço do hífen (All-Stars). O nome que já tem as duas caixas fica como
+   está ("Brinquedão Modelo 2", "JoySticks"). Vale para as categorias, os
+   produtos, as peças de reposição e as categorias das peças. Nada procura
+   produto pelo nome exato em maiúsculas: a Arena, o cadastro dos modelos e a
+   busca comparam sem acento e sem caixa, e os endereços são pelo número
+   (/brinquedo/<id>/, /categoria/<id>/) -- os testes conferem que a Arena
+   reconhece cada máquina igual antes e depois.
+   AS FOTOS. Uma por categoria, feita para o NOME dela, em
+   core/static/site/categorias/<chave>.webp, 1200 x 900: o 4:3 do card da
+   home (.categoria-media, ~234 x 167 px, object-fit: contain) -- enche a
+   caixa sem faixa vazia, com o objeto no meio, folga dos lados e embaixo e
+   uma folga maior em cima (onde fica a etiqueta "Categoria"), fundo claro
+   da mesma família do card, sombra macia no chão e um brilho fraco da cor da
+   categoria. Sem texto nenhum (o card já diz o nome) e sem marca de ninguém.
+   Feitas com o que é da fábrica, numa cena 3D cada uma:
+     * Brinquedão: o Brinquedão Modelo 2 (.glb) em 3/4;
+     * Área Ninja: o Brinquedão Ninja (.glb), pelo lado das camas elásticas;
+     * Área Baby: as peças do projetista do painel (montar3d-pecas.js) --
+       piso de EVA, cerca baixa, piscina rasa com escorregador, blocos,
+       túnel, casinha e painel ábaco;
+     * Trampolins: o trampolim park do projetista (as camas em grade e a
+       piscina de espuma);
+     * Espaço Esportivo Kids: o Espaço Esportivo Modelo 1 (.glb) de cima;
+     * Espaço Kids Play: o brinquedão colorido do projetista com o Air Game
+       Kids Alienígenas e o Strike Kids (.glb) na frente;
+     * Boliche Virtual: o Strike Kids (.glb), os pinos e as bolas;
+     * Eletrônicos, Competitivos, Esportivos, Famosos, Kids, Jogos de Mesa:
+       grupos com o Basquete Street Quadrinhos, o Air Game Kids Alienígenas e
+       o Strike Kids (.glb) e as peças de ferramentas/categorias/pecas.js
+       (gabinete de fliperama, pebolim, mesa de fliperama, gol de LED, bolas,
+       o palco com as estrelas dos Famosos);
+     * Fliperama, Simuladores, Mecânicos: os gabinetes, os simuladores de
+       corrida, o carrossel e a mini roda-gigante de pecas.js (as telas são
+       desenhadas, sem jogo de ninguém).
+   As fotos de capa dos produtos (no Cloudinary) não entraram: o Cloudinary
+   não estava acessível daqui. Com elas dá para trocar as telas desenhadas
+   pelas capas reais (ARTES em pecas.js).
+   ONDE A FOTO APARECE: o carrossel da home (o principal), a busca
+   (/pesquisa/) e a API (/api/v1/categorias/). A página da categoria não
+   mostra a foto (de propósito: o herói é texto e os produtos); o menu de
+   sugestões e os filtros do catálogo são só o nome.
+   A SUBIDA: como as fotos da 0142 e da 0143, só no Render (onde está o
+   Cloudinary); no computador e nos testes a migração muda só o banco. Cada
+   categoria é achada pelo nome (core/categorias_capas.py, CAPAS: "Boliche
+   Virtual", "BOLICHE VIRTUAL" e "boliche" dão a mesma); a que não tem foto
+   aqui (uma criada no painel depois) fica com a dela. A foto sobe com a
+   assinatura do arquivo no nome (kids-<10 dígitos>): rodar de novo não sobe
+   o que já está, e trocar o .webp no repositório sobe o novo. O campo é
+   único: duas categorias com a mesma foto ganham arquivos diferentes.
+   Se a subida falhar no deploy (o deploy segue), no servidor:
+       python manage.py atualizar_capas_categorias --simular   (só diz o que faria)
+       python manage.py atualizar_capas_categorias             (as fotos que faltam)
+       python manage.py atualizar_capas_categorias --so kids fliperama --refazer
+       python manage.py atualizar_capas_categorias --areas     (a área que ganhou produto)
+       python manage.py atualizar_capas_categorias --nomes     (os nomes em caixa-alta de novo)
+   REFAZER AS FOTOS (uma cena nova, outro ângulo):
+       node ferramentas/categorias/gerar.cjs [chaves]   (os renders em render/)
+       python ferramentas/categorias/compor.py [chaves] (o fundo e o corte 4:3)
+       python manage.py test core.tests_categorias_capas
+   e, no servidor, python manage.py atualizar_capas_categorias. O gerar.cjs
+   serve o próprio repositório (o three.js de core/static/vendor/three, os
+   .glb, o projetista do painel) e precisa do Playwright com o Chromium.
+   "chave@giro,altura" experimenta outro ângulo; "glb:<nome>" mostra um .glb
+   sozinho; compor.py --para <pasta> grava as provas fora do site.
+   Código: core/nomes.py, core/categorias_capas.py (CAPAS, AREAS,
+   garantir_areas, arrumar_nomes, atualizar_capas, migrar),
+   core/management/commands/atualizar_capas_categorias.py,
+   core/migrations/0147_categorias_capas_e_nomes.py, core/views.py
+   (CategoriasInfoView.VITRINES), ferramentas/categorias/ (cenas.js,
+   pecas.js, gerar.cjs, compor.py, index.html).
+   Testes: core/tests_categorias_capas.py.
