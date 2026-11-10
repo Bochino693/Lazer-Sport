@@ -224,6 +224,52 @@ function coloridos(nome, itens, base) {
 let semente = 11;
 const sorte = () => ((semente = (semente * 16807) % 2147483647) / 2147483647);
 
+/* O TOBOGÃ (o tubo vem no item 5): sai do andar de cima (na metade direita
+   do módulo vermelho, ao lado da coluna do meio), desce uma volta e meia em
+   espiral na frente do módulo -- passando para fora da planta, como na
+   imagem -- e entra na piscina de bolinhas. A espiral passa entre as colunas
+   (8360 na frente e 9400 no meio) com folga de uns 4 cm: o lugar dela na
+   imagem (pela câmera achada com as colunas) é esse. As mesmas medidas estão
+   no passeio da Arena (toboganDoNinja, em core/static/site/arena/caminhos.js).
+   Ele vem antes da estrutura porque a barra do .3ds que cruzava o tubo (a da
+   frente, a 2,21 m, entre as colunas 8360 e 9400) é cortada onde ele passa. */
+const TOBOGA = {
+  cx: 9030, cy: 2290, raio: 400, r: 265, a0: 0, a1: -540, zTopo: ANDAR + 265, zFim: 640,
+  boca: [9900, 3060], saida: [[8700, 2600, 580], [8760, 2850, 530]],
+};
+function curvaDoTobogan() {
+  const { cx, cy, raio, a0, a1, zTopo, zFim, boca: [bx, by], saida } = TOBOGA;
+  const grau = PI / 180;
+  const pontos = [V(bx, by, zTopo + 5)];
+  const passos = 60;
+  for (let i = 0; i <= passos; i++) {
+    const t = i / passos;
+    const a = (a0 + (a1 - a0) * t) * grau;
+    pontos.push(V(cx + raio * Math.cos(a), cy + raio * Math.sin(a), zTopo - (zTopo - zFim) * t));
+  }
+  pontos.push(...saida.map(([x, y, z]) => V(x, y, z)));
+  return new THREE.CatmullRomCurve3(pontos);
+}
+// o eixo do tubo, a cada ~2 cm: para nenhuma barra passar por dentro dele
+const EIXO_DO_TOBOGAN = curvaDoTobogan().getSpacedPoints(400);
+/** Os pedaços da barra de a até b que ficam FORA do tubo do tobogã (com `folga` mm de sobra). */
+function foraDoTobogan(a, b, folga) {
+  const n = Math.max(2, Math.ceil(a.distanceTo(b) / 10));
+  const fora = [];
+  for (let i = 0; i <= n; i++) {
+    const p = a.clone().lerp(b, i / n);
+    fora.push(EIXO_DO_TOBOGAN.every((q) => q.distanceTo(p) > TOBOGA.r + folga));
+  }
+  const pedacos = [];
+  let inicio = -1;
+  for (let i = 0; i <= n + 1; i++) {
+    if (i <= n && fora[i]) { if (inicio < 0) inicio = i; continue; }
+    if (inicio >= 0 && i - 1 - inicio >= 6) pedacos.push([a.clone().lerp(b, inicio / n), a.clone().lerp(b, (i - 1) / n)]);
+    inicio = -1;
+  }
+  return pedacos;
+}
+
 /* ======================================================================
    1. A ESTRUTURA DO .3DS: colunas rosa e barras laranja
    ====================================================================== */
@@ -245,7 +291,8 @@ for (const [k, [z0, z1]] of colunas) {
     const chave = [xa, ya, za, xb, yb, zb].map((v) => Math.round(v / 40)).join(":");
     if (vistas.has(chave)) continue;
     vistas.add(chave);
-    cilindro(M.barras, V(xa, ya, za), V(xb, yb, zb), 42, 10);
+    // onde o tobogã passa, a barra acaba na parede dele (não atravessa o tubo)
+    for (const [a, b] of foraDoTobogan(V(xa, ya, za), V(xb, yb, zb), 42 + 15)) cilindro(M.barras, a, b, 42, 10);
   }
 }
 // as barras azuis de cima da rede em V
@@ -453,40 +500,23 @@ painelY(M.placa, MEIO - 50, X.pe + 40, X.vermelho0 - 40, 1790, 2150);
   // a saída da frente: os degraus verdes sob o corrimão rosa
   degraus(9930, 10420, FRENTE - 20, [150, 300]);
 }
-// O tobogã: sai do andar de cima (na metade direita do módulo vermelho, ao
-// lado da coluna do meio), desce uma volta e meia em espiral na frente do
-// módulo -- passando para fora da planta, como na imagem -- e entra na
-// piscina de bolinhas. A espiral passa entre as colunas (8360 na frente e
-// 9400 no meio) com folga de uns 4 cm: o lugar dela na imagem (pela câmera
-// achada com as colunas) é esse. As mesmas medidas estão no passeio da
-// Arena (TOBOGA, em arena3d.js).
-const TOBOGA = {
-  cx: 9030, cy: 2290, raio: 400, r: 265, a0: 0, a1: -540, zTopo: ANDAR + 265, zFim: 640,
-  boca: [9900, 3060], saida: [[8700, 2600, 580], [8760, 2850, 530]],
-};
 {
-  const { cx, cy, raio, r, a0, a1, zTopo, zFim, boca: [bx, by], saida } = TOBOGA;
-  const grau = PI / 180;
-  const pontos = [V(bx, by, zTopo + 5)];
-  const passos = 60;
-  for (let i = 0; i <= passos; i++) {
-    const t = i / passos;
-    const a = (a0 + (a1 - a0) * t) * grau;
-    pontos.push(V(cx + raio * Math.cos(a), cy + raio * Math.sin(a), zTopo - (zTopo - zFim) * t));
-  }
-  pontos.push(...saida.map(([x, y, z]) => V(x, y, z)));
-  const curva = new THREE.CatmullRomCurve3(pontos);
-  // rosa e verde-limão alternados, um quarto de volta cada (como na imagem)
+  const { r, zTopo } = TOBOGA;
+  const curva = curvaDoTobogan();
+  // rosa e verde-limão alternados, um quarto de volta cada (como na imagem).
+  // Cada pedaço entra 0,4% no seguinte (sem fresta) com 3 mm a menos de
+  // raio, um sim, um não: na emenda as duas paredes não brigam (antes, do
+  // mesmo raio, piscavam -- uma faixa riscando o túnel no passeio)
   const partes = 7;
   for (let k = 0; k < partes; k++) {
     const t0 = k / partes, t1 = (k + 1) / partes + 0.004;
     const sub = new THREE.CatmullRomCurve3(Array.from({ length: 16 }, (_, j) => curva.getPoint(Math.min(1, t0 + (t1 - t0) * (j / 15)))));
-    por(k % 2 ? M.tuboRosa : M.tuboVerde, new THREE.TubeGeometry(sub, 18, r, 18, false));
+    por(k % 2 ? M.tuboRosa : M.tuboVerde, new THREE.TubeGeometry(sub, 18, r - (k % 2) * 3, 18, false));
   }
   // a boca do tobogã: o aro verde-limão na beira do piso e o capuz verde-limão
   // por cima de quem senta para descer (o pedaço verde mais alto da imagem)
   const boca = curva.getPoint(0), dirBoca = curva.getTangent(0);
-  por(M.tuboVerde, new THREE.TorusGeometry(r + 10, 34, 8, 24), new THREE.Matrix4().compose(boca, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dirBoca), V(1, 1, 1)));
+  por(M.tuboVerde, new THREE.TorusGeometry(r + 36, 34, 8, 24), new THREE.Matrix4().compose(boca, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dirBoca), V(1, 1, 1)));
   const eixo = V(dirBoca.x, dirBoca.y, 0).normalize(), cima = V(0, 0, 1);
   const lado = new THREE.Vector3().crossVectors(eixo, cima);
   const capuz = new THREE.CylinderGeometry(r + 60, r + 60, 520, 18, 1, true, -PI / 2, PI);

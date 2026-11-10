@@ -725,6 +725,35 @@ html.arena-tela-cheia body { overflow: hidden; }
 .arena3d-vistas .arena3d-vista-fechar:hover { background: #fff; color: #e63946; }
 
 .arena3d-lados { position: relative; pointer-events: auto; }
+
+/* O TROCADOR DA VAGA: "‹ Brinquedão · 2 de 3 ›" e os nomes dos modelos da
+   categoria; o escolhido fica aceso, e o que está chegando pisca de leve */
+.arena3d-troca {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 560px;
+    padding: 5px;
+    border: 1px solid rgba(255, 216, 74, .4);
+    border-radius: 18px;
+    background: rgba(4, 10, 28, .88);
+    pointer-events: auto;
+    backdrop-filter: blur(6px);
+}
+.arena3d-troca[hidden] { display: none; }
+.arena3d-vistas .arena3d-troca-seta { justify-content: center; width: 34px; padding: 0; background: rgba(255, 216, 74, .16); color: #ffd84a; }
+.arena3d-troca-meio { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.arena3d-troca-meio strong { color: #ffd84a; font-size: .74rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.arena3d-troca-lista { display: flex; flex-wrap: wrap; gap: 4px; }
+.arena3d-vistas .arena3d-troca-chip { min-height: 28px; padding: 0 10px; font-size: .74rem; }
+.arena3d-troca-estado { color: #9fb3d9; font-size: .72rem; font-weight: 700; }
+.arena3d-troca-estado:empty { display: none; }
+.arena3d-troca[aria-busy="true"] .arena3d-troca-chip[aria-pressed="true"] { animation: arena-troca-chegando 1s ease-in-out infinite; }
+@keyframes arena-troca-chegando { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+    .arena3d-troca[aria-busy="true"] .arena3d-troca-chip[aria-pressed="true"] { animation: none; }
+}
 .arena3d-lados-botao .fa-chevron-down { font-size: .7em; opacity: .8; }
 
 .arena3d-lados-menu {

@@ -126,6 +126,8 @@
             <div class="arena3d-palco" data-arena-palco
                  data-three="{% static 'vendor/three/three.module.min.js' %}"
                  data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+                 data-roda="{% estatico 'site/arena/roda.js' %}"
+                 data-caminhos="{% estatico 'site/arena/caminhos.js' %}"
                  data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
@@ -189,6 +191,21 @@
                             <button type="button" data-arena-vista="baixo" aria-pressed="false">Baixo</button>
                             <button type="button" data-arena-vista="direita" aria-pressed="false">Direita</button>
                         </div>
+                    </div>
+                    {% comment %}
+                      O TROCADOR DA VAGA: brinquedão, área ninja, área baby e área
+                      esportiva têm UM lugar cada na roda, e os modelos da categoria se
+                      revezam nele (só o que está à vista é baixado). Aparece com o
+                      modelo escolhido, quando a categoria dele tem mais de um.
+                    {% endcomment %}
+                    <div class="arena3d-troca" data-arena-troca role="group" aria-label="Trocar o modelo deste lugar" aria-busy="false" hidden>
+                        <button type="button" class="arena3d-troca-seta" data-troca-passo="-1" aria-label="Modelo anterior deste lugar"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                        <div class="arena3d-troca-meio">
+                            <strong data-troca-titulo></strong>
+                            <span class="arena3d-troca-lista" data-troca-lista></span>
+                            <span class="arena3d-troca-estado" data-troca-estado aria-live="polite"></span>
+                        </div>
+                        <button type="button" class="arena3d-troca-seta" data-troca-passo="1" aria-label="Próximo modelo deste lugar"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 {% comment %}

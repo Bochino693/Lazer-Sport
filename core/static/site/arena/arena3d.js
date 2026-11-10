@@ -33,12 +33,34 @@
 
    A FICHA FICA FORA DO PALCO: ao lado no computador, embaixo no celular.
 
+   UM DE CADA POR VEZ (roda.js): o brinquedão, a área ninja, a área baby e
+   a área esportiva têm cada um o seu lugar fixo na roda, do tamanho do
+   maior modelo da categoria; os modelos da mesma categoria se revezam
+   nele ("‹ Brinquedão 1 de 3 ›"), e só o que está à vista é baixado e vai
+   para a placa de vídeo. O Espaço Esportivo fica no parque, com os outros.
+
+   LISO EM QUALQUER APARELHO: a QUALIDADE (alta no computador, média ou
+   baixa no celular) diz a resolução, o céu e quantas crianças e telas
+   andam; a medida dos quadros baixa a resolução antes de perder quadro e,
+   se não bastar, desce um degrau da qualidade. Os sombreadores são
+   compilados quando o objeto chega (nada de engasgo no meio do passeio),
+   o que não aparece não anda, e o mouse em cima da arena não faz conta
+   com os triângulos dos objetos (só com as caixas dos estandes).
+
    O QUE ESTE ARQUIVO NÃO FAZ: baixar o three.js (~170 KB) antes de o
    palco chegar perto da tela, nem num aparelho sem WebGL -- ali a lista
    de máquinas é a página.
    ====================================================================== */
 
 const raiz = document.querySelector("[data-arena3d]");
+// a conta da roda (quem fica nela e onde: roda.js) e os caminhos do passeio
+// (caminhos.js): módulos puros, que chegam junto com o three.js
+let RODA = null;
+let OLHOS = 0.85;
+let CAMINHOS = {};
+let MODOS_DO_PASSEIO = {};
+let voltaEmVolta = null;
+let amostrarCaminho = null;
 if (raiz) iniciar(raiz);
 
 const PI = Math.PI;
@@ -54,6 +76,35 @@ const A_ENTRADA = 0.5;
 // o horizonte do céu de festa: a neblina e o chão de longe têm esta cor
 const HORIZONTE = "#3a1d6b";
 const TOMBO = -1.3; // "Baixo": a máquina tomba para a frente e mostra a base
+
+/* A QUALIDADE: o que cada degrau desenha. `pixels`: o máximo de pixels da
+   tela (a densidade baixa sozinha numa tela grande); `densidade`: a maior
+   densidade de pixels e `piso`, a menor a que a resolução desce antes de
+   cair um degrau; `estrelas`, `confete`, `fachos` e `fogos`: o céu de
+   festa; `criancas`: quantas vezes por segundo as crianças do espaço se
+   mexem (0 = todo quadro); `telas`: quantas vezes por segundo as telas dos
+   jogos repintam. Começa alta no computador e média ou baixa no celular
+   (pela memória e pelos núcleos), e a medida dos quadros desce (e volta a
+   subir, até a de partida) sozinha. ?qualidade=alta|media|baixa força uma. */
+const QUALIDADES = {
+  alta: { nome: "alta", densidade: 1.75, piso: 1, pixels: 2.8e6, antialias: true, estrelas: 420, confete: 170, fachos: 6, fogos: true, criancas: 0, telas: 8 },
+  media: { nome: "media", densidade: 1.5, piso: 0.85, pixels: 1.6e6, antialias: true, estrelas: 300, confete: 110, fachos: 4, fogos: true, criancas: 30, telas: 6 },
+  baixa: { nome: "baixa", densidade: 1.25, piso: 0.7, pixels: 0.9e6, antialias: false, estrelas: 180, confete: 60, fachos: 3, fogos: false, criancas: 20, telas: 4 },
+};
+const DEGRAUS = ["alta", "media", "baixa"];
+
+/** A qualidade de partida, pelo aparelho (e o ?qualidade= da página, para conferir). */
+function qualidadeDePartida(celular) {
+  try {
+    const pedida = new URLSearchParams(window.location.search).get("qualidade");
+    if (QUALIDADES[pedida]) return pedida;
+  } catch (erro) { /* sem endereço: segue pelo aparelho */ }
+  const memoria = navigator.deviceMemory || 8;
+  const nucleos = navigator.hardwareConcurrency || 4;
+  const toque = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  if (celular || toque) return memoria >= 6 && nucleos >= 8 ? "media" : "baixa";
+  return memoria < 4 || nucleos <= 2 ? "media" : "alta";
+}
 
 const limitar = (valor, menor, maior) => Math.min(maior, Math.max(menor, valor));
 // o mesmo ângulo, na volta mais perto de onde o prato está
@@ -111,7 +162,11 @@ async function iniciar(raiz) {
 
   let THREE;
   try {
-    THREE = await import(palco.dataset.three);
+    let caminhos;
+    [THREE, RODA, caminhos] = await Promise.all([
+      import(palco.dataset.three), import(palco.dataset.roda || "./roda.js"), import(palco.dataset.caminhos || "./caminhos.js"),
+    ]);
+    ({ OLHOS, CAMINHOS, MODOS_DO_PASSEIO, voltaEmVolta, amostrarCaminho } = caminhos);
   } catch (erro) {
     console.error("Arena 3D: o motor não carregou", erro);
     semTresD(raiz, "Não foi possível carregar o motor 3D agora.");
@@ -618,7 +673,7 @@ const ANIMACOES = {
           item.parado += dt;
           if (item.parado > 2.4) arremessarNoJogo(item, Math.random() < 0.25);
         }
-        if (t - item.ultimo < 1 / 10 || !aVista(item.tabela) || !arena.podePintar()) return;
+        if (t - item.ultimo < 1 / (arena.qualidade.telas + 2) || !aVista(item.tabela) || !arena.podePintar()) return;
         item.ultimo = t;
         item.ctx.setTransform(1, 0, 0, 1, 0, 0);
         item.ctx.clearRect(0, 0, 480, 270);
@@ -1217,7 +1272,7 @@ const ANIMACOES = {
       camera.getWorldDirection(olhar);
       for (let n = 0; n < telas.length; n++) {
         const item = telas[(vez + n) % telas.length];
-        if (t - item.ultimo < 1 / 8 || !aVista(item.suporte)) continue;
+        if (t - item.ultimo < 1 / arena.qualidade.telas || !aVista(item.suporte)) continue;
         if (!arena.podePintar()) break;
         item.ultimo = t;
         item.pintar(item.ctx);
@@ -1253,12 +1308,114 @@ function fotosDe(dados) {
   return fotos;
 }
 
+/* A ÁREA BABY da roda: enquanto o cadastro não tem uma de verdade (um
+   objeto 3D com "baby" no nome ou na categoria, que toma a vaga sozinho), a
+   arena monta uma com o projetista do "Monte seu espaço" -- o porte grande
+   de 7 x 5 m, colorido: piscina rasa com plataforma e escorregador,
+   torrinha, casinha, blocos de espuma, rampa, túnel, bolas penduradas, os
+   painéis ábaco na cerca de 0,60 m e o portal. */
+const AREA_BABY_COR = "#ec4899";
+const AREA_BABY = {
+  id: "area-baby", nome: "Área Baby", modelo_id: "area-baby", gerado: "baby", modelo: "",
+  grupo: "brinquedoes", categorias: ["Área baby"], reino: false, jogo: "", url: "", capa: "", fotos: [],
+  medidas: [2.0, 7, 5], medidas_modelo: [2.0, 7, 5], medidas_texto: "2 m × 7 m × 5 m",
+  descricao: "",
+};
+
+/**
+ * Junta as malhas de um grupo numa por material (as que são iguais de
+ * verdade: a cor, a textura, a transparência), no espaço do grupo. A rede de
+ * cada peça tem a própria repetição da textura: ela vai para o uv, e todas
+ * ficam com a mesma textura -- de dezenas de chamadas de desenho, poucas.
+ */
+function juntarPorMaterial(T, utilidades, grupo) {
+  grupo.updateMatrixWorld(true);
+  const lotes = new Map();
+  const soltas = [];
+  grupo.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.isInstancedMesh || o.isSkinnedMesh || Array.isArray(o.material)) {
+      soltas.push(o);
+      return;
+    }
+    const mat = o.material;
+    const mapa = mat.map;
+    const chave = mapa
+      ? ["mapa", mat.type, mat.color.getHexString(), mapa.source.uuid, mat.alphaTest, mat.side, mat.transparent, mat.opacity, mat.roughness, mat.metalness, Boolean(mat.alphaMap)].join("|")
+      : mat.uuid;
+    let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    g.applyMatrix4(o.matrixWorld);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    if (!g.attributes.uv) g.setAttribute("uv", new T.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    Object.keys(g.attributes).forEach((nome) => { if (!["position", "normal", "uv"].includes(nome)) g.deleteAttribute(nome); });
+    if (mapa) {
+      // a repetição da textura desta peça vai para o uv
+      mapa.updateMatrix();
+      const uv = g.attributes.uv;
+      const v = new T.Vector2();
+      for (let i = 0; i < uv.count; i++) {
+        v.fromBufferAttribute(uv, i).applyMatrix3(mapa.matrix);
+        uv.setXY(i, v.x, v.y);
+      }
+    }
+    if (!lotes.has(chave)) lotes.set(chave, { material: mat, geometrias: [] });
+    lotes.get(chave).geometrias.push(g);
+  });
+  const saida = new T.Group();
+  lotes.forEach(({ material, geometrias }) => {
+    const junta = utilidades.mergeGeometries(geometrias);
+    geometrias.forEach((g) => g.dispose());
+    if (!junta) return;
+    if (material.map) {
+      // uma textura só, sem repetição (ela já está no uv)
+      const mapa = material.map.clone();
+      mapa.repeat.set(1, 1);
+      mapa.offset.set(0, 0);
+      mapa.needsUpdate = true;
+      if (material.alphaMap === material.map) material.alphaMap = mapa;
+      material.map = mapa;
+    }
+    saida.add(new T.Mesh(junta, material));
+  });
+  soltas.forEach((o) => {
+    o.updateMatrixWorld(true);
+    o.matrix.copy(o.matrixWorld);
+    o.matrix.decompose(o.position, o.quaternion, o.scale);
+    saida.add(o);
+  });
+  return saida;
+}
+
+/**
+ * Devolve à placa de vídeo o que um objeto usa: as geometrias, os materiais e
+ * as texturas deles. O que é da arena inteira (a caixa e o material escuro
+ * que as telas do espaço também usam, `arena.geometrias` e `arena.materiais`)
+ * fica: os outros continuam usando.
+ */
+function descartarObjeto(objeto, arena = null) {
+  const geometrias = new Set(arena ? arena.geometrias.values() : []);
+  const materiaisDaArena = new Set(arena ? arena.materiais.values() : []);
+  objeto.traverse((o) => {
+    if (o.geometry && !geometrias.has(o.geometry)) o.geometry.dispose();
+    if (o.isInstancedMesh) o.dispose();
+    if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose();
+    const materiais = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    materiais.forEach((m) => {
+      if (materiaisDaArena.has(m) || m.userData.compartilhado) return;
+      Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose(); });
+      m.dispose();
+    });
+  });
+}
+
 class Maquina {
-  constructor(arena, dados, indice) {
+  /** `vaga`: o lugar fixo da categoria (roda.js), quando ela se reveza com outras; o estande tem o tamanho dele. */
+  constructor(arena, dados, indice, vaga = null) {
     const T = arena.T;
     this.arena = arena;
     this.dados = dados;
     this.indice = indice;
+    this.vaga = vaga;
     this.cor = COR_DA_ZONA[dados.grupo] || CORES[indice % CORES.length];
     this.fotos = fotosDe(dados);
     // só entra na roda quem tem o objeto 3D de verdade (core/arena.py, na_roda_3d)
@@ -1275,12 +1432,17 @@ class Maquina {
     this.altura = limitar(altura || 1.8, 0.6, 6);
     this.largura = limitar(largura || 1, 0.4, teto);
     this.fundo = limitar(fundo || 1, 0.3, teto);
+    // o estande: o da vaga (o maior da categoria: trocar de modelo não mexe
+    // na roda) ou o do próprio objeto
+    const lado = vaga ? limitar(vaga.largura, 0.4, teto) : this.largura;
+    const fundoDoEstande = vaga ? limitar(vaga.fundo, 0.3, teto) : this.fundo;
+    this.estande = RODA.estande(lado, fundoDoEstande);
     // Grande (um brinquedão de 11 m) não gira no prato -- varreria os
     // vizinhos da roda --: nas vistas, quem dá a volta é a câmera. E fica
     // numa plataforma do seu formato, e não num pedestal redondo.
-    this.grande = Math.max(this.largura, this.fundo) > 4.5;
-    this.retangular = this.grande && Math.max(this.largura, this.fundo) > 1.6 * Math.min(this.largura, this.fundo);
-    this.raioP = this.retangular ? this.fundo / 2 + 0.55 : Math.max(this.largura, this.fundo) * 0.62 + 0.45;
+    this.grande = this.estande.grande;
+    this.retangular = this.grande;
+    this.raioP = this.estande.raio;
     this.alturaP = 0.3;
     // o objeto montado (até o arquivo chegar, o tamanho reservado)
     this.H = this.altura;
@@ -1295,7 +1457,7 @@ class Maquina {
     const grupo = new T.Group();
     this.grupo = grupo;
     if (this.retangular) {
-      this.aro = arena.plataforma(grupo, this.largura + 0.9, this.fundo + 0.9, this.alturaP, this.cor);
+      this.aro = arena.plataforma(grupo, this.estande.w, this.estande.d, this.alturaP, this.cor);
     } else {
       arena.cilindro(grupo, this.raioP, this.alturaP, arena.pedestal(), 0, this.alturaP / 2, 0, 48);
       this.aro = arena.anel(grupo, this.raioP + 0.02, 0.045, arena.luz(this.cor, 2.2), 0, this.alturaP, 0);
@@ -1317,10 +1479,16 @@ class Maquina {
     this.pivo.add(this.corpo);
     this.ajustarPivo();
 
-    // a placa com o nome, no pé do pedestal, virada para o centro
-    const placa = new T.Mesh(arena.geo("plano", () => new T.PlaneGeometry(1, 1)), arena.materialDeTexto([dados.nome], this.cor, 640, 128));
-    placa.scale.set(Math.min(2.4, this.raioP * 1.7), Math.min(2.4, this.raioP * 1.7) / 5, 1);
-    placa.position.set(0, 0.22, this.raioP + 0.5);
+    // a placa com o nome, no pé do pedestal, virada para o centro; na vaga
+    // que se reveza, embaixo do nome, "Brinquedão · 1 de 3"
+    const membros = vaga ? vaga.membros : [];
+    const linhas = membros.length > 1
+      ? [`${vaga.nome} · ${membros.findIndex((x) => x.dados === dados) + 1} de ${membros.length}`, dados.nome]
+      : [dados.nome];
+    const placa = new T.Mesh(arena.geo("plano", () => new T.PlaneGeometry(1, 1)), arena.materialDeTexto(linhas, this.cor, 640, linhas.length > 1 ? 192 : 128));
+    const larguraDaPlaca = this.estande.placa.w;
+    placa.scale.set(larguraDaPlaca, (larguraDaPlaca / 5) * (linhas.length > 1 ? 1.5 : 1), 1);
+    placa.position.set(0, 0.22, this.estande.placa.z);
     placa.rotation.x = -1.1;
     grupo.add(placa);
 
@@ -1344,17 +1512,26 @@ class Maquina {
   pedir() {
     if (this.pedido) return;
     this.pedido = true;
-    this.arena.fila.unshift(() => this.vestirModelo());
+    this.carregando = true;
+    // a vez deste pedido: trocado de novo enquanto o arquivo chegava, o que chega é descartado
+    const vez = (this.vez = (this.vez || 0) + 1);
+    this.arena.fila.unshift(() => this.vestirModelo(vez));
   }
 
-  /** O objeto 3D feito com os arquivos da fábrica (.glb), no tamanho real. */
-  async vestirModelo() {
+  /** O objeto 3D feito com os arquivos da fábrica (.glb), no tamanho real -- ou a área gerada (a baby). */
+  async vestirModelo(vez) {
     const T = this.arena.T;
     try {
-      const gltf = await this.arena.carregarModelo(this.modelo);
+      const gltf = this.dados.gerado ? await this.arena.gerarArea(this) : await this.arena.carregarModelo(this.modelo);
+      if (vez !== this.vez) {
+        // a vaga já trocou de modelo: nada deste vai para a placa de vídeo
+        descartarObjeto(gltf.scene, this.arena);
+        return;
+      }
       const objeto = gltf.scene;
       // o arquivo inteiro fica guardado: as cores trocam os materiais dele
       this.gltf = gltf;
+      this.arena.prepararMateriais(objeto);
       const caixa = new T.Box3().setFromObject(objeto);
       const tamanho = caixa.getSize(new T.Vector3());
       objeto.position.y -= caixa.min.y;
@@ -1363,6 +1540,7 @@ class Maquina {
       this.W = tamanho.x;
       this.D = tamanho.z;
       this.montada = 1;
+      this.carregando = false;
       this.sombra.scale.set(this.W * 0.62, this.D * 0.7, 1);
       // o espaço tem o próprio piso: a sombra por cima dele só mancharia
       this.sombra.visible = !this.reino;
@@ -1371,14 +1549,46 @@ class Maquina {
       if (animacao && !this.animar) this.animar = animacao(this.arena, this);
       this.ajustarPivo();
       this.marcar();
+      // os sombreadores do objeto já agora (em paralelo, onde a placa deixa):
+      // compilados no primeiro quadro em que aparecessem, travavam o passeio
+      this.arena.compilar(this.corpo);
+      this.arena.chegou(this);
       // escolhida antes de o objeto chegar: as cores aparecem agora na ficha
       if (this.arena.selecionada === this) this.arena.mostrarCores(this);
     } catch (erro) {
+      if (vez !== this.vez) return;
       // sem o objeto não há o que mostrar: a máquina sai da roda (fica na
       // lista e na galeria de fotos) e a roda se fecha sem o buraco
       console.error("Arena 3D: o objeto 3D não carregou", erro);
+      this.carregando = false;
       this.arena.tirarDaRoda(this);
     }
+  }
+
+  /**
+   * A vaga trocou de modelo: tudo o que este usava (malhas, materiais,
+   * texturas, as crianças e as telas do espaço) sai da placa de vídeo. O
+   * estande fica pronto para a próxima vez que ele for escolhido.
+   */
+  descartar() {
+    this.vez = (this.vez || 0) + 1;
+    this.pedido = false;
+    this.carregando = false;
+    this.montada = 0;
+    this.animar = null;
+    this.gltf = null;
+    this.corEscolhida = 0;
+    this.corAnterior = 0;
+    this.corpo.children.slice().forEach((filho) => {
+      this.corpo.remove(filho);
+      descartarObjeto(filho, this.arena);
+    });
+    this.H = this.altura;
+    this.W = 0;
+    this.D = this.fundo;
+    this.ajustarPivo();
+    this.sombra.scale.set(this.largura * 0.75, this.fundo * 0.75, 1);
+    this.arena.caixasSujas = true;
   }
 
   /** O centro do que a câmera deve olhar, já com o "levantar" da vista de baixo. */
@@ -1599,11 +1809,12 @@ class Arena {
     this.canvas.setAttribute("aria-label", "Arena 3D da Lazer & Sport: um parque com os brinquedos da fábrica em 3D. Arraste para girar e toque num brinquedo para ver a ficha.");
     palco.prepend(this.canvas);
 
-    const densidade = Math.min(window.devicePixelRatio || 1, this.celular ? 1.5 : 1.75);
-    this.densidadeMaxima = densidade;
-    this.densidadeMinima = Math.min(densidade, this.celular ? 0.75 : 1);
-    this.renderer = new T.WebGLRenderer({ canvas: this.canvas, antialias: densidade < 2, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(densidade);
+    // a qualidade de partida (alta no computador; no celular, pela memória e pelos núcleos)
+    this.qualidadeInicial = qualidadeDePartida(this.celular);
+    this.qualidade = QUALIDADES[this.qualidadeInicial];
+    this.renderer = new T.WebGLRenderer({ canvas: this.canvas, antialias: this.qualidade.antialias, powerPreference: "high-performance" });
+    this.densidade = this.densidadeDoDegrau();
+    this.renderer.setPixelRatio(this.densidade);
     this.renderer.toneMapping = T.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
     this.renderer.outputColorSpace = T.SRGBColorSpace;
@@ -1628,8 +1839,31 @@ class Arena {
     this.decoracao = new T.Group();
     this.cena.add(this.decoracao);
 
-    // só quem tem o objeto 3D (o servidor já manda só esses)
-    this.maquinas = (dados.maquinas || []).filter((d) => d.modelo).map((d, i) => new Maquina(this, d, i));
+    // só quem tem o objeto 3D (o servidor já manda só esses) e a área baby,
+    // que a arena monta com o projetista do "Monte seu espaço" enquanto não
+    // há uma área baby de verdade no cadastro
+    const comObjeto = (dados.maquinas || []).filter((d) => d.modelo);
+    const projetista = document.querySelector("[data-gerador][data-pecas]");
+    if (projetista && !comObjeto.some((d) => RODA.vagaDe(d) === "baby")) comObjeto.push(AREA_BABY);
+    // UM DE CADA POR VEZ: as categorias que se revezam, cada uma na sua vaga
+    // (do tamanho do maior modelo dela, lido das medidas antes de qualquer download)
+    const medidas = (d) => {
+      const m = (d.medidas_modelo || []).length === 3 ? d.medidas_modelo : d.medidas || [];
+      return { largura: Number(m[1]) || 1, fundo: Number(m[2]) || 1 };
+    };
+    const { lugares, vagas } = RODA.montarVagas(comObjeto.map((d) => ({ dados: d, ...medidas(d) })));
+    this.lugares = lugares;
+    this.vagas = vagas;
+    this.maquinas = comObjeto.map((d, i) => {
+      const id = RODA.vagaDe(d);
+      return new Maquina(this, d, i, id ? vagas[id] : null);
+    });
+    // o que está à vista em cada vaga: o primeiro da categoria (a ordem do cadastro)
+    this.naVaga = {};
+    Object.values(vagas).forEach((v) => {
+      v.maquinas = this.maquinas.filter((m) => m.vaga === v);
+      this.naVaga[v.id] = v.maquinas[0];
+    });
     this.camera3d = new Camera(this);
   }
 
@@ -1698,6 +1932,120 @@ class Arena {
     return (await this.carregadorGLB).loadAsync(url);
   }
 
+  /**
+   * A ÁREA GERADA (a baby): o projetista do "Monte seu espaço" (o mesmo
+   * código do painel: montar3d-gerador.js e montar3d-pecas.js) monta as
+   * peças, e elas viram poucas malhas -- uma por material, com a rede de
+   * cada peça na mesma textura (a repetição vai para o uv) --, como um .glb.
+   */
+  async gerarArea(m) {
+    const T = this.T;
+    const fonte = document.querySelector("[data-gerador][data-pecas]");
+    const pasta = this.palco.dataset.three.slice(0, this.palco.dataset.three.lastIndexOf("/") + 1);
+    const [gerador, pecas, utilidades] = await Promise.all([
+      import(fonte.dataset.gerador), import(fonte.dataset.pecas), import(pasta + "BufferGeometryUtils.js"),
+    ]);
+    const base = pecas.desenhosBase(T, utilidades);
+    const desenhos = Object.assign({}, base.desenhos, pecas.desenhosExtra(T, base.ferramentas));
+    const padroes = Object.assign({}, pecas.CATALOGO_BASE, pecas.CATALOGO_EXTRA);
+    const [, largura, fundo] = m.dados.medidas;
+    const ideia = gerador.gerar(m.dados.gerado, { largura, profundidade: fundo, altura: 3 }, AREA_BABY_COR, 3, { estilo: "colorido" });
+    const montado = new T.Group();
+    for (const peca of ideia.pecas) {
+      const desenho = desenhos[peca.tipo];
+      if (!desenho) continue;
+      const d = Object.assign({}, (padroes[peca.tipo] || {}).d || {}, peca.d || {});
+      const g = new T.Group();
+      desenho(d, peca.cor, { cor2: peca.cor2 }).forEach((malha) => g.add(malha));
+      g.position.fromArray(peca.p || [0, 0, 0]);
+      g.rotation.y = ((peca.r || 0) * PI) / 180;
+      montado.add(g);
+    }
+    const cena = juntarPorMaterial(T, utilidades, montado);
+    cena.name = m.dados.nome;
+    m.dados.descricao = m.dados.descricao || ideia.regras.join(" ");
+    return { scene: cena, ideia };
+  }
+
+  /**
+   * Os materiais de um objeto que chegou: a tela de proteção transparente
+   * dos dois lados é desenhada numa passada só (o three.js faz duas, as
+   * costas e a frente: o dobro de chamadas e de pintura por cima de pintura,
+   * e numa tela plana não há o que ordenar).
+   */
+  prepararMateriais(objeto) {
+    objeto.traverse((o) => {
+      if (!o.isMesh) return;
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach((mat) => {
+        if (mat.transparent && mat.side === this.T.DoubleSide) mat.forceSinglePass = true;
+      });
+    });
+  }
+
+  /** Compila os sombreadores de um objeto antes de ele aparecer (em paralelo, onde a placa deixa). */
+  compilar(objeto) {
+    try {
+      const pronto = this.renderer.compileAsync(objeto, this.camera, this.cena);
+      if (pronto && pronto.catch) pronto.catch(() => {});
+    } catch (erro) { /* compila no primeiro quadro, como antes */ }
+  }
+
+  /** Um objeto chegou: a troca da vaga sai do "carregando" e a área gerada ganha a foto da ficha. */
+  chegou(m) {
+    if (m.dados.gerado && !m.fotos.perfil) {
+      try { m.fotos.perfil = this.fotografar(m); } catch (erro) { /* a ficha fica sem foto */ }
+    }
+    if (this.selecionada === m) {
+      this.mostrarFicha(m);
+      // a câmera enquadra o tamanho de verdade (até chegar, valia o reservado)
+      if (this.vistaAtual && this.vistaAtual !== "livre") this.camera3d.olharPara(m, this.vistaAtual === "girar" ? "girar" : this.vistaAtual);
+    }
+    this.desenharTroca();
+  }
+
+  /** A foto da ficha de um objeto sem fotos (a área gerada): o próprio 3D, de 3/4, num fundo claro. */
+  fotografar(m) {
+    const T = this.T;
+    const objeto = m.corpo;
+    const cena = new T.Scene();
+    cena.background = new T.Color("#e9eef7");
+    cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
+    const sol = new T.DirectionalLight("#ffffff", 2.2);
+    sol.position.set(4, 9, 7);
+    cena.add(sol);
+    const pai = objeto.parent;
+    const posicao = objeto.position.clone();
+    cena.add(objeto);
+    objeto.position.set(0, 0, 0);
+    objeto.updateMatrixWorld(true);
+    const caixa = new T.Box3().setFromObject(objeto);
+    const meio = caixa.getCenter(new T.Vector3());
+    const raio = caixa.getSize(new T.Vector3()).length() / 2;
+    const camera = new T.PerspectiveCamera(30, 4 / 3, 0.1, 200);
+    const longe = raio / Math.sin((15 * PI) / 180);
+    camera.position.set(meio.x + longe * 0.55, meio.y + longe * 0.55, meio.z + longe * 0.63);
+    camera.lookAt(meio);
+    const w = 480;
+    const h = 360;
+    const alvo = new T.WebGLRenderTarget(w, h, { samples: 4 });
+    alvo.texture.colorSpace = T.SRGBColorSpace;
+    this.renderer.setRenderTarget(alvo);
+    this.renderer.render(cena, camera);
+    this.renderer.setRenderTarget(null);
+    const px = new Uint8Array(w * h * 4);
+    this.renderer.readRenderTargetPixels(alvo, 0, 0, w, h, px);
+    alvo.dispose();
+    pai.add(objeto);
+    objeto.position.copy(posicao);
+    const tela = document.createElement("canvas");
+    tela.width = w;
+    tela.height = h;
+    const imagem = tela.getContext("2d").createImageData(w, h);
+    for (let y = 0; y < h; y++) imagem.data.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+    tela.getContext("2d").putImageData(imagem, 0, 0);
+    return tela.toDataURL("image/jpeg", 0.86);
+  }
+
   /** O módulo das cores dos objetos 3D (cores3d.js), na primeira vez que precisa. */
   modulosDeCor() {
     if (!this.cores3d) this.cores3d = import(this.palco.dataset.cores3d);
@@ -1715,7 +2063,7 @@ class Arena {
     const vez = (this.vezDasCores = (this.vezDasCores || 0) + 1);
     caixa.hidden = true;
     caixa.replaceChildren();
-    if (!m.gltf || !this.palco.dataset.cores3d) return;
+    if (!m.gltf || m.dados.gerado || !this.palco.dataset.cores3d) return;
     let modulo;
     try {
       modulo = await this.modulosDeCor();
@@ -2104,7 +2452,8 @@ class Arena {
 
     // as estrelas: na cúpula, mais densas no alto, cada uma com o seu brilho
     const brilho = this.texturaDeBrilho();
-    const quantas = this.celular ? 220 : 420;
+    // todas as estrelas da qualidade alta; a qualidade de agora desenha só as primeiras
+    const quantas = QUALIDADES.alta.estrelas;
     const pos = new Float32Array(quantas * 3);
     const cores = new Float32Array(quantas * 3);
     for (let i = 0; i < quantas; i++) {
@@ -2123,7 +2472,9 @@ class Arena {
       depthWrite: false, blending: T.AdditiveBlending, fog: false, toneMapped: false,
     }));
     estrelas.renderOrder = -2;
+    geoEstrelas.setDrawRange(0, this.qualidade.estrelas);
     ceu.add(estrelas);
+    this.estrelas = estrelas;
 
     // a silhueta do parque no horizonte
     const silhueta = new T.Mesh(
@@ -2291,7 +2642,7 @@ class Arena {
       transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide,
     });
     const tons = ["#ff5fd2", "#7fd8ff", "#ffd84a", "#ffffff", "#ff5fd2", "#7fd8ff"];
-    const n = this.celular ? 4 : 6;
+    const n = QUALIDADES.alta.fachos;
     const fachos = new T.InstancedMesh(geo, material, n);
     fachos.frustumCulled = false;
     fachos.renderOrder = 2;
@@ -2303,6 +2654,7 @@ class Arena {
     }
     this.cena.add(fachos);
     this.animarHolofotes(0);
+    fachos.count = Math.min(this.qualidade.fachos, n);
   }
 
   animarHolofotes(t) {
@@ -2397,7 +2749,7 @@ class Arena {
   /** O confete: papeizinhos coloridos caindo devagar no ar da arena, balançando. */
   montarConfete() {
     const T = this.T;
-    const quantos = this.celular ? 90 : 170;
+    const quantos = QUALIDADES.alta.confete;
     const pos = new Float32Array(quantos * 3);
     const cores = new Float32Array(quantos * 3);
     const tons = ["#e63946", "#ffd700", "#2f8bff", "#22c55e", "#ff3df2", "#ff9f1c", "#ffffff"].map((c) => new T.Color(c));
@@ -2425,18 +2777,25 @@ class Arena {
     this.cena.add(pontos);
     this.confete = { pontos, dados };
     this.animarConfete(0, 0);
+    geo.setDrawRange(0, this.qualidade.confete);
   }
 
   animarConfete(dt, t) {
     const { pontos, dados } = this.confete;
-    const raio = (this.raio || 8) + (this.folga || 1.5) + 3;
+    const raio = (this.raio || 8) + 5;
     const pos = pontos.geometry.attributes.position;
-    dados.forEach((d, i) => {
+    // só os que a qualidade de agora desenha (os outros nem andam)
+    const quantos = Math.min(dados.length, pontos.geometry.drawRange.count);
+    for (let i = 0; i < quantos; i++) {
+      const d = dados[i];
       d.y -= (dt * d.v * 0.045);
       if (d.y < 0) d.y += 1;
       const balanco = Math.sin(t * 1.3 + d.fase) * 0.5;
       pos.setXYZ(i, Math.sin(d.a) * d.r * raio + balanco, 0.4 + d.y * 13, Math.cos(d.a) * d.r * raio + Math.cos(t * 1.1 + d.fase) * 0.4);
-    });
+    }
+    // sobe para a placa só o pedaço que mudou
+    pos.clearUpdateRanges();
+    pos.addUpdateRange(0, quantos * 3);
     pos.needsUpdate = true;
   }
 
@@ -2450,8 +2809,9 @@ class Arena {
     this.ceu.position.copy(this.camera.position);
     if (this.reduzido) return;
     this.animarHolofotes(t);
-    this.animarFogos(dt);
-    this.animarConfete(dt, t);
+    if (this.qualidade.fogos) this.animarFogos(dt);
+    // o confete cai no ar da roda: de dentro de um brinquedo (o passeio) ele quase não aparece
+    if (!this.passeio || this.qualidade.nome === "alta") this.animarConfete(dt, t);
   }
 
   /**
@@ -2718,10 +3078,10 @@ class Arena {
    * As letras se leem de fora da roda, sem espelhar: o pé para fora e o
    * topo para o meio (a mesma regra do nome da casa no piso).
    */
-  montarSimbolo(raio, folga) {
+  montarSimbolo() {
     const T = this.T;
     // cabe por dentro das placas das áreas, que ficam deitadas no chão
-    const R = limitar(raio - folga - 2.2, 2.3, 7);
+    const R = limitar(this.dentro - 2.2, 2.3, 7);
     const material = this.mat("simbolo", () => {
       const n = this.celular ? 768 : 1024;
       const c = document.createElement("canvas");
@@ -3236,69 +3596,187 @@ class Arena {
     });
     this.baloes = [];
     this.placasNoAr = [];
+    this.placasDasAreas = [];
   }
 
   montar({ entrada = false } = {}) {
-    // A roda tem TODAS as máquinas (só a categoria tira alguma): a visão é
-    // ampla, e as áreas são lugares da roda aonde a câmera vai.
+    // A roda tem um lugar para cada máquina pequena e UM para cada categoria
+    // que se reveza (a vaga, com o modelo escolhido nela); só o filtro de
+    // categoria tira alguém. `this.lista`: todas as que passam no filtro
+    // (as que esperam a vez na vaga também); `this.roda`: as que estão à vista.
     this.lista = this.filtradas();
-    // `this.roda` são todas as que estão à vista (a roda e os reinos)
-    this.roda = this.lista;
-    const roda = this.lista.filter((m) => !m.reino);
-    const reinos = this.lista.filter((m) => m.reino);
+    const lugares = [];
+    const vagasVistas = new Set();
+    this.lista.forEach((m) => {
+      if (!m.vaga) {
+        lugares.push({ m, estande: m.estande, grupo: m.dados.grupo });
+        return;
+      }
+      if (vagasVistas.has(m.vaga)) return;
+      vagasVistas.add(m.vaga);
+      // a vaga mostra o escolhido dela; fora do filtro, o primeiro que passa nele
+      let atual = this.naVaga[m.vaga.id];
+      if (!this.lista.includes(atual)) {
+        if (atual && atual !== m) atual.descartar();
+        atual = m;
+        this.naVaga[m.vaga.id] = m;
+      }
+      lugares.push({ m: atual, vaga: m.vaga, estande: atual.estande, grupo: m.vaga.grupo });
+    });
+    this.lugaresDaRoda = lugares;
+    this.roda = lugares.map((l) => l.m);
     this.maquinas.forEach((m) => { m.grupo.visible = false; });
     this.limparDecoracao();
 
-    // o raio da roda sai da soma das vagas: estande largo pede roda maior;
-    // entre uma área e outra, um corredor
-    const vagas = roda.map((m) => Math.max(m.largura, m.fundo, 1.2) + 2.2);
-    const corredor = 2.6;
-    const trocas = roda.map((m, i) => (i > 0 && m.dados.grupo !== roda[i - 1].dados.grupo ? corredor : 0));
-    const fecha = roda.length > 1 && roda[0].dados.grupo !== roda[roda.length - 1].dados.grupo ? corredor : 0;
-    const circunferencia = vagas.reduce((a, b) => a + b, 0) + trocas.reduce((a, b) => a + b, 0) + fecha || 1;
-    const raio = Math.max(6.5, circunferencia / (PI * 2));
-    this.raio = raio;
-
-    const trechos = [];
-    let andado = fecha / 2;
-    roda.forEach((m, i) => {
-      andado += trocas[i];
-      const a0 = (andado / circunferencia) * PI * 2;
-      const a = ((andado + vagas[i] / 2) / circunferencia) * PI * 2;
-      andado += vagas[i];
-      const a1 = (andado / circunferencia) * PI * 2;
-      m.grupo.position.set(Math.sin(a) * raio, 0, Math.cos(a) * raio);
-      m.grupo.rotation.y = a + PI; // de frente para o centro
-      m.grupo.visible = true;
-      const ultimo = trechos[trechos.length - 1];
-      if (ultimo && ultimo.id === m.dados.grupo) ultimo.a1 = a1;
-      else trechos.push({ id: m.dados.grupo, a0, a1 });
+    // O LUGAR DE CADA UM (roda.js): o polígono de cada estande, com a folga
+    // de chão livre entre vizinhos e o grande (o Espaço Esportivo) do lado
+    // oposto à entrada
+    const arrumado = RODA.arrumarRoda(lugares, { frente: A_ENTRADA });
+    this.arrumado = arrumado;
+    lugares.forEach((l, i) => {
+      const { a, r } = arrumado.itens[i];
+      l.a = a;
+      l.r = r;
+      l.m.grupo.position.set(Math.sin(a) * r, 0, Math.cos(a) * r);
+      l.m.grupo.rotation.y = a + PI; // de frente para o centro
+      l.m.grupo.visible = true;
     });
-
-    const folga = roda.length ? Math.max(...roda.map((m) => m.raioP)) : 1;
-    this.folga = folga;
-    this.trechos = trechos;
+    this.raio = arrumado.raio;
+    this.beira = arrumado.beira;
+    this.dentro = arrumado.dentro;
+    this.trechos = arrumado.trechos.map((t) => ({ ...t, tipo: "roda" }));
     this.fundosDasAreas = {};
-    trechos.forEach((trecho) => this.marcarArea(trecho, raio, folga));
-    this.montarPilares(raio + folga + 4.5);
-    this.montarReinos(reinos, raio + folga + 4.5);
+    this.trechos.forEach((trecho) => this.marcarArea(trecho));
+    this.montarPilares(this.beira);
     // o símbolo da marca pintado no meio da roda, e o parque em volta; o
     // portal de entrada é o portão do parque, do lado de onde a câmera chega
     // (atrás dela, na vista de sempre: emoldura a chegada sem tapar a roda)
-    this.montarSimbolo(raio, folga);
-    this.montarParque(raio + folga + 4.5);
+    this.montarSimbolo();
+    this.montarParque(this.beira);
     const rPortal = this.parque.portao;
     this.decoracao.add(this.portal(Math.sin(A_ENTRADA) * rPortal, Math.cos(A_ENTRADA) * rPortal, A_ENTRADA, ["Bem-vindo à", "Arena Lazer & Sport"], "#ffd700", 6.8));
     this.caixasSujas = true;
-    this.cena.fog.near = raio * 2.2;
-    this.cena.fog.far = Math.max(raio * 5 + 30, this.longeDosReinos || 0);
+    // a neblina vai com o tamanho do parque (o chão de longe some no horizonte)
+    const parque = this.parque.fora;
+    this.cena.fog.near = parque * 0.8;
+    this.cena.fog.far = parque * 2.8 + 5;
     if (this.selecionada && !this.roda.includes(this.selecionada)) this.soltarSelecao({ voar: false });
     const zona = this.trechos.find((t) => t.id === this.zona);
     this.realcarArea(zona ? this.zona : "");
     if (zona && !entrada) this.camera3d.olharZona(zona);
     else this.camera3d.visaoGeral(entrada);
+    // só o que está à vista é baixado (um de cada categoria)
     this.roda.forEach((m) => m.pedir());
     this.marcarLista();
+    this.marcaDoMapa = "";
+  }
+
+  /** As máquinas de um trecho da roda (o que está à vista em cada lugar dele). */
+  maquinasDoTrecho(trecho) {
+    return trecho.itens.map((k) => this.lugaresDaRoda[k].m);
+  }
+
+  /** O ponto (x, z) com `raio` metros em volta fica longe de todo estande da roda? (os balões, as placas) */
+  pontoLivreNaRoda(x, z, raio) {
+    const quadrado = [[x - raio, z - raio], [x + raio, z - raio], [x + raio, z + raio], [x - raio, z + raio]];
+    return (this.arrumado ? this.arrumado.itens : []).every((it) => RODA.distancia(it.mundo, quadrado) > 0.3);
+  }
+
+  /**
+   * TROCA DE MODELO NA VAGA: o modelo novo toma o lugar fixo da categoria (o
+   * estande é o mesmo: a roda não mexe), o de antes devolve tudo à placa de
+   * vídeo e o novo é baixado agora. Um de cada categoria, sempre.
+   */
+  trocarNaVaga(nova) {
+    const vaga = nova && nova.vaga;
+    if (!vaga) return;
+    const velha = this.naVaga[vaga.id];
+    if (velha === nova) return;
+    if (this.passeio && this.passeio.maquina === velha) this.sairPasseio({ voar: false });
+    if (this.selecionada === velha) {
+      this.largar(velha);
+      this.selecionada = null;
+    }
+    this.naVaga[vaga.id] = nova;
+    const lugar = (this.lugaresDaRoda || []).find((l) => l.m === velha);
+    if (lugar) {
+      lugar.m = nova;
+      nova.grupo.position.copy(velha.grupo.position);
+      nova.grupo.rotation.copy(velha.grupo.rotation);
+      nova.grupo.visible = true;
+      velha.grupo.visible = false;
+      this.roda = this.lugaresDaRoda.map((l) => l.m);
+    }
+    if (velha) velha.descartar();
+    nova.pedir();
+    this.caixasSujas = true;
+    this.marcaDoMapa = "";
+    this.desenharTroca();
+  }
+
+  /** Os modelos de uma vaga que passam no filtro de agora, na ordem fixa dela. */
+  membrosDaVaga(vaga) {
+    return vaga.maquinas.filter((m) => this.lista.includes(m));
+  }
+
+  /**
+   * O TROCADOR, no palco, com a máquina escolhida: "‹ Brinquedão 2 de 3 ›" e
+   * os nomes dos modelos da vaga. Some quando a escolhida não se reveza.
+   */
+  ligarTroca() {
+    this.troca = this.palco.querySelector("[data-arena-troca]");
+    if (!this.troca) return;
+    this.troca.addEventListener("click", (evento) => {
+      const m = this.selecionada;
+      if (!m || !m.vaga) return;
+      const membros = this.membrosDaVaga(m.vaga);
+      const passo = evento.target.closest("[data-troca-passo]");
+      const chip = evento.target.closest("[data-troca-id]");
+      let alvo = null;
+      if (passo) {
+        const i = membros.indexOf(m);
+        alvo = membros[(i + Number(passo.dataset.trocaPasso) + membros.length) % membros.length];
+      } else if (chip) {
+        alvo = membros.find((x) => String(x.dados.id) === chip.dataset.trocaId);
+      }
+      if (!alvo || alvo === m) return;
+      this.ocioso = 0;
+      if (this.tour) this.acao("tour", this.controles.querySelector('[data-arena-acao="tour"]'));
+      this.trocarNaVaga(alvo);
+      this.selecionar(alvo);
+    });
+  }
+
+  desenharTroca() {
+    const troca = this.troca;
+    if (!troca) return;
+    const m = this.selecionada;
+    const membros = m && m.vaga ? this.membrosDaVaga(m.vaga) : [];
+    if (membros.length < 2 || this.passeio) {
+      troca.hidden = true;
+      return;
+    }
+    troca.hidden = false;
+    const i = membros.indexOf(m);
+    troca.querySelector("[data-troca-titulo]").textContent = `${m.vaga.nome} · ${i + 1} de ${membros.length}`;
+    troca.setAttribute("aria-busy", m.carregando ? "true" : "false");
+    troca.querySelector("[data-troca-estado]").textContent = m.carregando ? `Carregando ${m.dados.nome}…` : "";
+    const lista = troca.querySelector("[data-troca-lista]");
+    const marca = membros.map((x) => x.dados.id).join("|");
+    if (lista.dataset.marca !== marca) {
+      lista.dataset.marca = marca;
+      lista.replaceChildren(...membros.map((x) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "arena3d-troca-chip";
+        chip.dataset.trocaId = String(x.dados.id);
+        chip.textContent = x.dados.nome;
+        return chip;
+      }));
+    }
+    lista.querySelectorAll("[data-troca-id]").forEach((chip) => {
+      chip.setAttribute("aria-pressed", chip.dataset.trocaId === String(m.dados.id) ? "true" : "false");
+    });
   }
 
   /** O objeto 3D não chegou: a máquina sai da roda, que se fecha sem o buraco. */
@@ -3306,6 +3784,11 @@ class Arena {
     if (!this.maquinas.includes(m)) return;
     if (this.selecionada === m) this.soltarSelecao({ voar: false });
     this.maquinas = this.maquinas.filter((x) => x !== m);
+    if (m.vaga) {
+      // a vaga segue com os outros modelos dela
+      m.vaga.maquinas = m.vaga.maquinas.filter((x) => x !== m);
+      if (this.naVaga[m.vaga.id] === m) this.naVaga[m.vaga.id] = m.vaga.maquinas[0];
+    }
     this.cena.remove(m.grupo);
     this.montar();
     this.atualizarContagem();
@@ -3313,97 +3796,18 @@ class Arena {
   }
 
   /**
-   * Os reinos: os espaços grandes demais para a roda (um parque de
-   * trampolins com quadras, 39 m x 23 m) ficam atrás dela, lado a lado,
-   * de frente para a roda, sobre o chão escuro, cada um ligado à roda por
-   * uma passarela de luz e com a placa da área na entrada. A área deles
-   * vira um "trecho" do tipo reino: o botão e a placa levam a câmera lá.
+   * O trecho de uma área no piso da roda, na cor dela, com a placa: a faixa
+   * vai de um pouco antes da frente dos estandes até o fundo deles (no
+   * grande, até 7 m para dentro: o resto fica embaixo da plataforma dele).
    */
-  montarReinos(reinos, beira) {
-    const T = this.T;
-    this.longeDosReinos = 0;
-    if (!reinos.length) return;
-    const vao = 8;
-    const larguras = reinos.map((m) => m.largura + 2);
-    const total = larguras.reduce((a, b) => a + b, 0) + vao * (reinos.length - 1);
-    const fundoMaior = Math.max(...reinos.map((m) => m.fundo));
-    const zFrente = -(beira + 10);
-    let x = -total / 2;
-    const porArea = {};
-    reinos.forEach((m, i) => {
-      const cx = x + larguras[i] / 2;
-      x += larguras[i] + vao;
-      const cz = zFrente - m.fundo / 2 - 0.6;
-      m.grupo.position.set(cx, 0, cz);
-      m.grupo.rotation.y = 0; // de frente para a roda
-      m.grupo.visible = true;
-      const id = m.dados.grupo;
-      const area = porArea[id] || (porArea[id] = { id, tipo: "reino", x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity });
-      area.x0 = Math.min(area.x0, cx - m.largura / 2);
-      area.x1 = Math.max(area.x1, cx + m.largura / 2);
-      area.z0 = Math.min(area.z0, cz - m.fundo / 2);
-      area.z1 = Math.max(area.z1, cz + m.fundo / 2);
-      // a passarela de luz, da beira da roda até a entrada do reino
-      const cor = COR_DA_ZONA[id] || "#ff9f1c";
-      const fim = new T.Vector3(cx, 0, zFrente + 1);
-      const inicio = fim.clone().setLength(beira - 1.5);
-      const caminho = new T.Vector3().subVectors(fim, inicio);
-      const suporte = new T.Group();
-      suporte.position.copy(inicio).add(fim).multiplyScalar(0.5);
-      suporte.position.y = 0.012;
-      suporte.rotation.y = Math.atan2(caminho.x, caminho.z);
-      const passarela = new T.Mesh(
-        new T.PlaneGeometry(3.2, caminho.length()),
-        this.noChao(new T.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0.18, depthWrite: false, toneMapped: false })),
-      );
-      passarela.rotation.x = -PI / 2;
-      passarela.userData.zona = id;
-      passarela.userData.piso = true;
-      suporte.add(passarela);
-      [-1.7, 1.7].forEach((lado) => {
-        const filete = new T.Mesh(this.geo("plano", () => new T.PlaneGeometry(1, 1)), this.noChao(new T.MeshBasicMaterial({ color: cor, toneMapped: false })));
-        filete.scale.set(0.08, caminho.length(), 1);
-        filete.rotation.x = -PI / 2;
-        filete.position.set(lado, 0.004, 0);
-        suporte.add(filete);
-      });
-      this.decoracao.add(suporte);
-    });
-    // o chão escuro sob os reinos e a placa da área na entrada
-    Object.values(porArea).forEach((area) => {
-      const cor = COR_DA_ZONA[area.id] || "#ff9f1c";
-      const chao = new T.Mesh(
-        new T.PlaneGeometry(area.x1 - area.x0 + 10, area.z1 - area.z0 + 10),
-        // embaixo do piso da roda (onde os dois se cruzam, a roda vence)
-        new T.MeshStandardMaterial({ color: "#081430", roughness: 0.9, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 8 }),
-      );
-      chao.rotation.x = -PI / 2;
-      chao.position.set((area.x0 + area.x1) / 2, -0.04, (area.z0 + area.z1) / 2);
-      chao.userData.zona = area.id;
-      chao.userData.piso = true;
-      this.decoracao.add(chao);
-      const zona = this.zonas.find((z) => z.id === area.id);
-      if (zona) {
-        const placa = new T.Mesh(this.geo("plano", () => new T.PlaneGeometry(1, 1)), this.materialDeTexto([zona.kicker || "", zona.titulo], cor));
-        placa.scale.set(7, 1.75, 1);
-        placa.position.set((area.x0 + area.x1) / 2, 0.5, area.z1 + 3.2);
-        placa.rotation.x = -1.05;
-        placa.userData.zona = area.id;
-        this.decoracao.add(placa);
-        this.decoracao.add(this.portal((area.x0 + area.x1) / 2, area.z1 + 5.8, 0, [zona.kicker || "", zona.titulo], cor, 8));
-      }
-      this.trechos.push(area);
-      this.longeDosReinos = Math.max(this.longeDosReinos, -area.z0 + 120);
-    });
-  }
-
-  /** O trecho de uma área no piso da roda, na cor dela, com a placa. */
-  marcarArea(trecho, raio, folga) {
+  marcarArea(trecho) {
     const T = this.T;
     const cor = COR_DA_ZONA[trecho.id] || "#2f8bff";
-    const arco = (dentro, fora, opacidade) => {
+    const dentro = Math.max(0.5, trecho.dentro - 0.9);
+    const fora = trecho.fora + 0.6;
+    const arco = (r0, r1, opacidade) => {
       const malha = new T.Mesh(
-        new T.RingGeometry(dentro, fora, 72, 1, trecho.a0 - PI / 2, trecho.a1 - trecho.a0),
+        new T.RingGeometry(r0, r1, Math.max(24, Math.round(((trecho.a1 - trecho.a0) / (PI * 2)) * 160)), 1, trecho.a0 - PI / 2, trecho.a1 - trecho.a0),
         this.noChao(new T.MeshBasicMaterial({ color: cor, transparent: true, opacity: opacidade, depthWrite: false, toneMapped: false })),
       );
       malha.rotation.x = -PI / 2;
@@ -3413,15 +3817,15 @@ class Arena {
       this.decoracao.add(malha);
       return malha;
     };
-    this.fundosDasAreas[trecho.id] = arco(raio - folga - 0.9, raio + folga + 0.6, 0.14);
-    arco(raio - folga - 0.9, raio - folga - 0.8, 0.9);
-    arco(raio + folga + 0.5, raio + folga + 0.6, 0.9);
+    this.fundosDasAreas[trecho.id] = arco(dentro, fora, 0.14);
+    arco(dentro, dentro + 0.1, 0.9);
+    arco(fora - 0.1, fora, 0.9);
 
     const zona = this.zonas.find((z) => z.id === trecho.id);
     if (!zona) return;
     const meio = (trecho.a0 + trecho.a1) / 2;
     // perto dos estandes: o meio da roda fica para o símbolo da marca no chão
-    const r = raio - folga - 1.6;
+    const r = trecho.dentro - 1.6;
     const suporte = new T.Group();
     suporte.position.set(Math.sin(meio) * r, 0, Math.cos(meio) * r);
     suporte.rotation.y = meio + PI;
@@ -3433,11 +3837,17 @@ class Arena {
     placa.userData.zona = trecho.id;
     suporte.add(placa);
     this.decoracao.add(suporte);
+    this.placasDasAreas.push(placa);
     // um cacho de balões no corredor que abre a área (por fora dos estandes,
-    // sem tapar o símbolo do meio) e o nome da área no ar
-    const rb = raio + folga + 0.8;
-    this.decoracao.add(this.balões(Math.sin(trecho.a0) * rb, Math.cos(trecho.a0) * rb, 4, trecho.a0));
-    const ra = raio + folga + 1.2;
+    // sem encostar em nenhum) e o nome da área no ar
+    for (const rb of [fora + 0.6, fora + 1.6, trecho.dentro + 1]) {
+      const x = Math.sin(trecho.a0) * rb;
+      const z = Math.cos(trecho.a0) * rb;
+      if (!this.pontoLivreNaRoda(x, z, 0.7)) continue;
+      this.decoracao.add(this.balões(x, z, 4, trecho.a0));
+      break;
+    }
+    const ra = Math.min(fora + 0.6, trecho.dentro + 9);
     this.decoracao.add(this.placaNoAr([zona.kicker || "", zona.titulo], cor, Math.sin(meio) * ra, 7.6, Math.cos(meio) * ra, 6.4, trecho.id));
   }
 
@@ -3453,8 +3863,36 @@ class Arena {
     const r = this.canvas.getBoundingClientRect();
     this.ponteiro.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ponteiro, this.camera);
-    const acerto = this.raycaster.intersectObjects(this.decoracao.children, true).find((a) => a.object.userData.zona && !a.object.userData.piso);
+    // só as placas das áreas (no chão e no ar): o resto do parque nem entra na conta
+    const placas = [...(this.placasDasAreas || []), ...this.placasNoAr.filter((p) => p.visible)];
+    const acerto = this.raycaster.intersectObjects(placas, false)[0];
     return acerto ? acerto.object.userData.zona : "";
+  }
+
+  /**
+   * A máquina sob o mouse que só passa por cima (o cursor de "dá para
+   * tocar" e o nome): pelas caixas dos estandes, e não pelos triângulos dos
+   * objetos -- com o mouse andando, era a conta mais pesada da arena (todos
+   * os triângulos de todos os brinquedos a cada movimento).
+   */
+  maquinaSobACaixa(x, y) {
+    if (this.caixasSujas || !this.caixas) this.medirCaixas();
+    const r = this.canvas.getBoundingClientRect();
+    this.ponteiro.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(this.ponteiro, this.camera);
+    const raio = this.raycaster.ray;
+    const caixa = this.caixaDoMouse || (this.caixaDoMouse = new this.T.Box3());
+    let melhor = null;
+    let perto = Infinity;
+    for (const c of this.caixas) {
+      caixa.min.set(c.x0, 0, c.z0);
+      caixa.max.set(c.x1, c.topo, c.z1);
+      const ponto = raio.intersectBox(caixa, this.ajuda);
+      if (!ponto) continue;
+      const d = ponto.distanceToSquared(raio.origin);
+      if (d < perto) { perto = d; melhor = c.m; }
+    }
+    return melhor;
   }
 
   /** O ponto do chão (y = 0) sob a tela, ou null (olhando para o céu). */
@@ -3557,6 +3995,7 @@ class Arena {
     this.mostrarFicha(maquina);
     this.corpo.classList.add("tem-ficha");
     this.marcarLista();
+    this.desenharTroca();
     if (this.irPara && !this.irPara.hidden) this.desenharIrPara();
   }
 
@@ -3574,6 +4013,7 @@ class Arena {
     this.roda.forEach((m) => { m.aro.material = this.luz(m.cor, 2.2); });
     this.foco.intensity = 0;
     if (this.vistas) this.vistas.hidden = true;
+    if (this.troca) this.troca.hidden = true;
     if (this.corpo) this.corpo.classList.remove("tem-ficha");
     if (this.ficha) {
       this.ficha.querySelector("[data-ficha-cheia]").hidden = true;
@@ -3691,25 +4131,23 @@ class Arena {
   /**
    * A FILA DAS SETAS: uma ordem fixa, que dá a volta na arena inteira -- a
    * roda pelo ângulo (da direita para a esquerda de quem olha do meio para
-   * fora, que é de onde a câmera vê cada brinquedo da roda) e, no ponto em
-   * que a roda passa por trás, os reinos (os espaços grandes), da esquerda
-   * para a direita de quem olha da roda para eles. A seta da direita anda
-   * para a frente na fila e a da esquerda para trás: nunca volta no meio do
-   * caminho, mesmo clicando com a câmera ainda voando (antes a escolha saía
-   * da direção da câmera naquele instante e podia ir e voltar entre dois).
+   * fora, que é de onde a câmera vê cada brinquedo da roda). Na vaga que se
+   * reveza, todos os modelos dela, na ordem dela: a seta passa por cada um
+   * (trocando o que está à vista) antes de seguir para o vizinho. A seta da
+   * direita anda para a frente na fila e a da esquerda para trás: nunca
+   * volta no meio do caminho, mesmo clicando com a câmera ainda voando.
    */
   filaDasSetas() {
-    const visiveis = this.lista.filter((m) => m.grupo.visible);
-    const angulo = (m) => Math.atan2(m.grupo.position.x, m.grupo.position.z);
-    const roda = visiveis.filter((m) => !m.reino).sort((a, b) => angulo(b) - angulo(a));
-    const reinos = visiveis.filter((m) => m.reino).sort((a, b) => a.grupo.position.x - b.grupo.position.x);
-    return [...roda, ...reinos];
+    const angulo = (l) => Math.atan2(Math.sin(l.a), Math.cos(l.a));
+    const lugares = (this.lugaresDaRoda || []).slice().sort((a, b) => angulo(b) - angulo(a));
+    return lugares.flatMap((l) => (l.vaga ? this.membrosDaVaga(l.vaga) : [l.m]));
   }
 
   /**
    * As setas: lado = 1 (direita) anda para a frente na fila, -1 (esquerda)
    * para trás, dando a volta. Sem nenhum escolhido, começa pelo que está
-   * mais no meio da tela.
+   * mais no meio da tela. O modelo que espera a vez na vaga entra no lugar
+   * do que estava lá (um de cada categoria, sempre).
    */
   vizinha(lado) {
     const fila = this.filaDasSetas();
@@ -3724,11 +4162,18 @@ class Arena {
         const d = this.ajuda.subVectors(m.grupo.position, c).setY(0);
         return d.dot(frente) / (d.length() || 1);
       };
-      this.selecionar(fila.reduce((a, b) => (noMeio(b) > noMeio(a) ? b : a)));
+      this.selecionar(this.roda.reduce((a, b) => (noMeio(b) > noMeio(a) ? b : a)));
       return;
     }
     const i = fila.indexOf(atual);
-    this.selecionar(fila[(i + (lado > 0 ? 1 : -1) + total) % total]);
+    this.escolherOuTrocar(fila[(i + (lado > 0 ? 1 : -1) + total) % total]);
+  }
+
+  /** Escolhe uma máquina; a que espera a vez na vaga entra no lugar da que estava lá. */
+  escolherOuTrocar(maquina, opcoes) {
+    if (!maquina) return;
+    if (maquina.vaga && !this.roda.includes(maquina)) this.trocarNaVaga(maquina);
+    this.selecionar(maquina, opcoes);
   }
 
   /**
@@ -3817,6 +4262,7 @@ class Arena {
     });
     lados.hidden = ordem.length < 2;
     if (ordem.length) trocar(ordem[0], lados.querySelector("button"));
+    foto.hidden = !ordem.length;
 
 
     const detalhe = f.querySelector("[data-ficha-detalhe]");
@@ -3871,6 +4317,7 @@ class Arena {
     this.atualizarContagem();
     new ResizeObserver(() => this.redimensionar()).observe(this.palco);
     this.camera3d.ligarEventos(this.canvas);
+    this.aplicarQualidade();
     if (!this.maquinas.length) avisar(this.palco, "Nenhum brinquedo em 3D ainda", "Assim que um brinquedo ganhar o objeto 3D, ele aparece aqui.");
     // objeto que demora não segura o aviso para sempre
     window.setTimeout(() => { if (this.maquinas.length) this.esconderAviso(); }, 9000);
@@ -3898,6 +4345,7 @@ class Arena {
     }
     this.ligarMapa();
     this.ligarIrPara();
+    this.ligarTroca();
     this.painelPasseio = this.palco.querySelector("[data-arena-passeio]");
     if (this.painelPasseio) this.ligarPainelDoPasseio(this.painelPasseio);
 
@@ -3925,7 +4373,7 @@ class Arena {
           if (categoria) categoria.value = "";
           this.filtrar("");
         }
-        this.selecionar(maquina);
+        this.escolherOuTrocar(maquina);
         if (!this.expandida) this.palco.scrollIntoView({ behavior: this.reduzido ? "auto" : "smooth", block: "center" });
       });
     });
@@ -4024,11 +4472,21 @@ class Arena {
   redimensionar() {
     const r = this.palco.getBoundingClientRect();
     if (!r.width || !r.height) return;
+    // a densidade do degrau, sem passar do máximo de pixels dele (numa tela
+    // grande, ou na tela cheia de um monitor 4K, a densidade desce sozinha)
+    const teto = Math.sqrt(this.qualidade.pixels / (r.width * r.height));
+    const densidade = Math.max(0.5, Math.min(this.densidade, teto));
+    if (Math.abs(this.renderer.getPixelRatio() - densidade) > 0.01) this.renderer.setPixelRatio(densidade);
     this.renderer.setSize(r.width, r.height, false);
     this.camera.aspect = r.width / r.height;
     // tela em pé (celular) precisa de lente mais aberta para caber a roda
-    this.camera.fov = this.camera.aspect < 0.8 ? 58 : 45;
+    if (!this.passeio) this.camera.fov = this.camera.aspect < 0.8 ? 58 : 45;
     this.camera.updateProjectionMatrix();
+  }
+
+  /** A densidade de pixels de partida do degrau (a do aparelho, até o máximo do degrau). */
+  densidadeDoDegrau() {
+    return Math.max(this.qualidade.piso, Math.min(window.devicePixelRatio || 1, this.qualidade.densidade));
   }
 
   acordar() {
@@ -4051,37 +4509,63 @@ class Arena {
   }
 
   /**
-   * A resolução acompanha o aparelho: com os quadros lentos (abaixo de ~45
-   * por segundo), a densidade de pixels desce um degrau; com folga por um
-   * tempo, volta a subir. No celular mais fraco a imagem fica um pouco mais
-   * macia, mas tudo anda liso.
+   * A RESOLUÇÃO E A QUALIDADE ACOMPANHAM O APARELHO, pela medida dos
+   * quadros (a cada segundo): com os quadros lentos (a média acima de ~22 ms,
+   * abaixo de ~45 por segundo), a densidade de pixels desce um degrau de
+   * 0,15 -- a imagem fica um pouco mais macia, mas nada engasga; já no piso
+   * do degrau de qualidade, desce a qualidade (menos céu de festa, as
+   * crianças e as telas mais devagar). Com folga por 3 segundos seguidos, a
+   * densidade sobe de volta e, no máximo dela, a qualidade volta um degrau
+   * (nunca acima da de partida). Quadro de aba voltando (>250 ms) não conta.
    */
   medirQuadro(ms) {
-    if (ms > 250) return; // a aba voltando: não conta
+    if (ms > 250) return;
     this.somaDosQuadros = (this.somaDosQuadros || 0) + ms;
     this.quadrosMedidos = (this.quadrosMedidos || 0) + 1;
-    if (this.somaDosQuadros < 2000) return;
+    if (this.somaDosQuadros < 1000) return;
     const media = this.somaDosQuadros / this.quadrosMedidos;
     this.somaDosQuadros = 0;
     this.quadrosMedidos = 0;
-    const atual = this.renderer.getPixelRatio();
-    let nova = atual;
+    this.mediaDoQuadro = media;
+    const q = this.qualidade;
     if (media > 22) {
-      nova = Math.max(this.densidadeMinima, atual - 0.25);
-      this.folga = 0;
-    } else if (media < 15 && atual < this.densidadeMaxima) {
-      this.folga = (this.folga || 0) + 1;
-      if (this.folga >= 3) {
-        nova = Math.min(this.densidadeMaxima, atual + 0.25);
-        this.folga = 0;
-      }
+      this.quadrosComFolga = 0;
+      if (this.densidade > q.piso + 0.01) this.densidade = Math.max(q.piso, this.densidade - 0.15);
+      else this.mudarDeDegrau(1);
+    } else if (media < 15) {
+      this.quadrosComFolga = (this.quadrosComFolga || 0) + 1;
+      if (this.quadrosComFolga < 3) return;
+      this.quadrosComFolga = 0;
+      const maxima = this.densidadeDoDegrau();
+      if (this.densidade < maxima - 0.01) this.densidade = Math.min(maxima, this.densidade + 0.15);
+      else this.mudarDeDegrau(-1);
     } else {
-      this.folga = 0;
+      this.quadrosComFolga = 0;
+      return;
     }
-    if (nova !== atual) {
-      this.renderer.setPixelRatio(nova);
-      this.redimensionar();
-    }
+    this.redimensionar();
+  }
+
+  /** Um degrau de qualidade para baixo (1) ou para cima (-1), sem passar da de partida. */
+  mudarDeDegrau(direcao) {
+    const atual = DEGRAUS.indexOf(this.qualidade.nome);
+    const limite = DEGRAUS.indexOf(this.qualidadeInicial);
+    const proximo = limitar(atual + direcao, limite, DEGRAUS.length - 1);
+    if (proximo === atual) return;
+    this.qualidade = QUALIDADES[DEGRAUS[proximo]];
+    // descendo, começa no alto do novo degrau (a densidade de antes, no máximo); subindo, no piso dele
+    this.densidade = direcao > 0 ? Math.min(this.densidade, this.densidadeDoDegrau()) : this.qualidade.piso;
+    this.aplicarQualidade();
+  }
+
+  /** O céu de festa do degrau: quantas estrelas, confetes e fachos aparecem, e se há fogos. */
+  aplicarQualidade() {
+    const q = this.qualidade;
+    if (this.estrelas) this.estrelas.geometry.setDrawRange(0, Math.min(q.estrelas, this.estrelas.geometry.attributes.position.count));
+    if (this.confete) this.confete.pontos.geometry.setDrawRange(0, Math.min(q.confete, this.confete.dados.length));
+    if (this.fachos) this.fachos.malha.count = Math.min(q.fachos, this.fachos.lista.length);
+    if (this.fogos && !q.fogos) this.fogos.pontos.visible = false;
+    if (this.raiz) this.raiz.dataset.qualidade = q.nome;
   }
 
   /** As telas (jogos, placares) pintam uma por quadro: nenhum quadro pesa mais que os outros. */
@@ -4113,13 +4597,7 @@ class Arena {
     if (!this.reduzido) this.alvoMarca.rotation.y = t * 0.6;
     this.animarFesta(dt, t);
 
-    // as crianças brincando: com "menos movimento" ficam paradas na arena,
-    // mas no passeio (que a pessoa pediu, e que anda sozinho) elas brincam
-    this.roda.forEach((m) => {
-      m.atualizar(dt, this.reduzido);
-      const brinca = !this.reduzido || (this.passeio && this.passeio.maquina === m);
-      if (m.animar && m.grupo.visible && brinca) m.animar(dt, t, this.camera);
-    });
+    this.roda.forEach((m) => m.atualizar(dt, this.reduzido));
     if (this.passeio) {
       this.passeio.quadro(dt);
     } else {
@@ -4128,9 +4606,47 @@ class Arena {
       this.posicionarRotulo();
       this.atualizarMapa();
     }
+    // as crianças brincando: com "menos movimento" ficam paradas na arena,
+    // mas no passeio (que a pessoa pediu, e que anda sozinho) elas brincam.
+    // Só anda o que a câmera vê (o espaço fora da tela, ou atrás de quem
+    // está no passeio de outro brinquedo, espera), no ritmo da qualidade
+    this.atualizarVista();
+    this.roda.forEach((m) => {
+      const brinca = !this.reduzido || (this.passeio && this.passeio.maquina === m);
+      if (!m.animar || !m.grupo.visible || !brinca) return;
+      m.tempoDeAnimar = (m.tempoDeAnimar || 0) + dt;
+      if (!this.aVista(m)) return;
+      const ritmo = this.qualidade.criancas;
+      if (ritmo && m.tempoDeAnimar < 1 / ritmo) return;
+      m.animar(Math.min(m.tempoDeAnimar, 0.1), t, this.camera);
+      m.tempoDeAnimar = 0;
+    });
     this.animarCeu(dt, t);
     this.clarearPlacas();
     this.renderer.render(this.cena, this.camera);
+  }
+
+  /** O que a câmera enxerga neste quadro (para não animar o que está fora da tela). */
+  atualizarVista() {
+    const T = this.T;
+    if (!this.frustum) {
+      this.frustum = new T.Frustum();
+      this.matrizDaVista = new T.Matrix4();
+      this.esferaDaVista = new T.Sphere();
+    }
+    this.camera.updateMatrixWorld();
+    this.matrizDaVista.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(this.matrizDaVista);
+  }
+
+  /** A máquina (a esfera em volta dela) aparece na tela? */
+  aVista(m) {
+    const e = this.esferaDaVista;
+    const W = m.W || m.largura;
+    const D = m.D || m.fundo;
+    e.center.set(m.grupo.position.x, m.alturaP + m.H / 2, m.grupo.position.z);
+    e.radius = Math.hypot(W, D, m.H) / 2 + 0.5;
+    return this.frustum.intersectsSphere(e);
   }
 
   /**
@@ -4252,7 +4768,8 @@ class Arena {
       }
       this.abrirIrPara(false);
       if (this.tour) this.acao("tour", this.controles.querySelector('[data-arena-acao="tour"]'));
-      this.selecionar(maquina);
+      // o modelo que espera a vez na vaga entra no lugar do que estava lá
+      this.escolherOuTrocar(maquina);
       this.canvas.focus({ preventScroll: true });
     });
   }
@@ -4291,8 +4808,9 @@ class Arena {
       const cor = COR_DA_ZONA[zona.id] || "#3fd0ff";
       const itens = daqui.map((m) => {
         const atual = m === this.selecionada;
+        const esperando = m.vaga && !this.roda.includes(m);
         const foto = m.dados.capa ? `<img src="${escapar(m.dados.capa)}" alt="" loading="lazy" decoding="async">` : `<span class="arena3d-irpara-sem-foto" style="--cor:${cor}"><i class="fa-solid fa-cube" aria-hidden="true"></i></span>`;
-        return `<button type="button" class="arena3d-irpara-item" data-irpara-id="${m.dados.id}"${atual ? ' aria-current="true"' : ""}>${foto}<span><b>${escapar(m.dados.nome)}</b><small>${escapar(m.dados.medidas_texto || (m.dados.categorias || [])[0] || "")}</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>`;
+        return `<button type="button" class="arena3d-irpara-item" data-irpara-id="${m.dados.id}"${atual ? ' aria-current="true"' : ""}>${foto}<span><b>${escapar(m.dados.nome)}</b><small>${escapar(m.dados.medidas_texto || (m.dados.categorias || [])[0] || "")}${esperando ? ` · troca no lugar do ${escapar(m.vaga.nome.toLowerCase())}` : ""}</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>`;
       }).join("");
       const titulo = zona.id
         ? `<button type="button" class="arena3d-irpara-area" data-irpara-area="${escapar(zona.id)}" style="--cor:${cor}"><span class="arena3d-irpara-ponto"></span>${escapar(zona.titulo)} <small>ver a área</small></button>`
@@ -4346,36 +4864,20 @@ class Arena {
     this.marcaDoMapa = "";
   }
 
-  /**
-   * Mundo (x, z) <-> mapa: a planta cabe inteira, com a entrada embaixo.
-   * O caminho até os reinos (a passarela) fica curto no desenho -- como num
-   * mapa de parque --, e a roda não vira um pontinho.
-   */
+  /** Mundo (x, z) <-> mapa: a planta da roda cabe inteira (até a cerca de pilares), com a entrada embaixo. */
   medidasDoMapa() {
     const tela = this.telaDoMapa;
     const w = tela.clientWidth;
     const h = tela.clientHeight;
-    const R = (this.raio || 8) + (this.folga || 1) + 4.5;
-    const reinos = (this.trechos || []).filter((t) => t.tipo === "reino");
-    const frente = reinos.length ? Math.max(...reinos.map((t) => t.z1)) : -R;
-    const vao = Math.max(0, -R - frente); // a passarela de verdade
-    const curto = Math.min(vao, 3);
-    // z do mundo -> z do desenho (e a volta), por trechos retos
-    const zm = (z) => (z >= -R ? z : z >= frente ? -R - ((-R - z) * curto) / (vao || 1) : z + vao - curto);
-    const zw = (z) => (z >= -R ? z : z >= -R - curto ? -R - ((-R - z) * vao) / (curto || 1) : z - vao + curto);
-    let [x0, x1, z0, z1] = [-R - 1, R + 1, -R - 1, R + 1];
-    reinos.forEach((t) => {
-      x0 = Math.min(x0, t.x0 - 2);
-      x1 = Math.max(x1, t.x1 + 2);
-      z0 = Math.min(z0, zm(t.z0) - 2);
-    });
+    const R = this.beira || 12;
+    const [x0, x1, z0, z1] = [-R - 1, R + 1, -R - 1, R + 1];
     const grande = w >= 300;
     // de cada lado, o espaço dos nomes (no mapa grande)
     const folga = grande ? Math.min(118, w * 0.27) : 10;
-    const s = Math.max(0.1, Math.min((w - folga * 2) / (x1 - x0), (h - 26) / (z1 - z0)));
+    const s = Math.max(0.05, Math.min((w - folga * 2) / (x1 - x0), (h - 26) / (z1 - z0)));
     const ox = (w - (x1 - x0) * s) / 2 - x0 * s;
     const oy = (h - (z1 - z0) * s) / 2 - z0 * s;
-    return { w, h, s, ox, oy, R, grande, folga, zm, zw, X: (x) => ox + x * s, Y: (z) => oy + zm(z) * s };
+    return { w, h, s, ox, oy, R, grande, folga, X: (x) => ox + x * s, Y: (z) => oy + z * s };
   }
 
   pinoNoMapa(cx, cy) {
@@ -4400,18 +4902,17 @@ class Arena {
       if (pequeno) this.abrirMapa(false); // no celular, o mapa sai da frente do brinquedo
       return;
     }
-    // fora dos pinos: a área tocada (a faixa da roda ou o reino)
+    // fora dos pinos: a área tocada (a faixa dela na roda) ou o meio (a arena inteira)
     const r = this.telaDoMapa.getBoundingClientRect();
-    const { ox, oy, s, zw } = this.medidaDoMapa;
+    const { ox, oy, s } = this.medidaDoMapa;
     const x = (cx - r.left - ox) / s;
-    const z = zw((cy - r.top - oy) / s);
-    const reino = (this.trechos || []).find((t) => t.tipo === "reino" && x >= t.x0 - 5 && x <= t.x1 + 5 && z >= t.z0 - 5 && z <= t.z1 + 5);
-    if (reino) { this.escolherZona(reino.id); return; }
+    const z = (cy - r.top - oy) / s;
     const d = Math.hypot(x, z);
-    if (d < (this.raio || 8) * 0.45) { this.verTudo(); return; }
+    if (d < (this.dentro || 6) * 0.8) { this.verTudo(); return; }
     const a = (Math.atan2(x, z) + PI * 2) % (PI * 2);
-    const trecho = (this.trechos || []).find((t) => t.tipo !== "reino" && a >= t.a0 && a <= t.a1);
-    if (trecho && d < (this.raio || 8) + (this.folga || 1) + 5) this.escolherZona(trecho.id);
+    const dentroDoArco = (t) => [a, a + PI * 2].some((b) => b >= t.a0 && b <= t.a1);
+    const trecho = (this.trechos || []).find((t) => dentroDoArco(t) && d >= t.dentro - 2 && d <= t.fora + 6);
+    if (trecho) this.escolherZona(trecho.id);
   }
 
   /** Redesenha o mapa só quando algo nele muda (a câmera, a escolha, o tamanho). */
@@ -4445,13 +4946,11 @@ class Arena {
     g.clearRect(0, 0, w, h);
     const cx = X(0);
     const cy = Y(0);
-    const raio = this.raio || 8;
-    const folga = this.folga || 1;
     const fonte = (px, peso = 800) => `${peso} ${px}px Poppins, Manrope, system-ui, sans-serif`;
 
     // o piso da roda, a cerca de pilares e o alvo do meio
     g.fillStyle = "#10224f";
-    g.beginPath(); g.arc(cx, cy, (raio + folga + 1.5) * s, 0, PI * 2); g.fill();
+    g.beginPath(); g.arc(cx, cy, (R - 1.2) * s, 0, PI * 2); g.fill();
     g.strokeStyle = "rgba(63, 208, 255, .55)";
     g.lineWidth = 1.5;
     g.beginPath(); g.arc(cx, cy, R * s, 0, PI * 2); g.stroke();
@@ -4462,35 +4961,30 @@ class Arena {
       g.beginPath(); g.arc(cx, cy, simbolo * k, 0, PI * 2); g.fill();
     });
 
-    // as áreas: a faixa colorida de cada uma na roda; o reino, ao lado
+    // as áreas: a faixa colorida de cada uma na roda e, por cima, o estande
+    // de cada lugar no tamanho de verdade (o Espaço Esportivo aparece inteiro)
     (this.trechos || []).forEach((t) => {
       const cor = COR_DA_ZONA[t.id] || "#2f8bff";
       const ativa = this.zona === t.id;
       g.globalAlpha = ativa ? 0.62 : this.zona ? 0.2 : 0.38;
       g.fillStyle = cor;
-      if (t.tipo === "reino") {
-        // a passarela de luz e o espaço inteiro
-        g.fillRect(X((t.x0 + t.x1) / 2) - 1.6 * s, Y(t.z1), 3.2 * s, Y(-R) - Y(t.z1));
-        g.fillRect(X(t.x0), Y(t.z0), (t.x1 - t.x0) * s, Y(t.z1) - Y(t.z0));
-        g.globalAlpha = 1;
-        g.strokeStyle = cor;
-        g.lineWidth = 1.5;
-        g.strokeRect(X(t.x0), Y(t.z0), (t.x1 - t.x0) * s, Y(t.z1) - Y(t.z0));
-        const zona = this.zonas.find((z) => z.id === t.id);
-        if (zona && (t.x1 - t.x0) * s > 70) {
-          g.fillStyle = "#ffffff";
-          g.font = fonte(grande ? 12 : 9);
-          g.textAlign = "center";
-          g.textBaseline = "top";
-          g.fillText(zona.titulo, X((t.x0 + t.x1) / 2), Y(t.z0) + 4);
-        }
-        return;
-      }
       g.beginPath();
-      g.arc(cx, cy, (raio + folga + 0.6) * s, PI / 2 - t.a0, PI / 2 - t.a1, true);
-      g.arc(cx, cy, Math.max(0, raio - folga - 0.9) * s, PI / 2 - t.a1, PI / 2 - t.a0, false);
+      g.arc(cx, cy, (t.fora + 0.6) * s, PI / 2 - t.a0, PI / 2 - t.a1, true);
+      g.arc(cx, cy, Math.max(0, t.dentro - 0.9) * s, PI / 2 - t.a1, PI / 2 - t.a0, false);
       g.closePath();
       g.fill();
+      g.globalAlpha = ativa || !this.zona ? 0.85 : 0.35;
+      t.itens.forEach((k) => {
+        const contorno = this.arrumado.itens[k].mundo;
+        g.beginPath();
+        contorno.forEach(([x, z], i) => (i ? g.lineTo(X(x), Y(z)) : g.moveTo(X(x), Y(z))));
+        g.closePath();
+        g.fillStyle = "rgba(9, 18, 48, .85)";
+        g.fill();
+        g.strokeStyle = cor;
+        g.lineWidth = 1.2;
+        g.stroke();
+      });
     });
     g.globalAlpha = 1;
 
@@ -4530,7 +5024,7 @@ class Arena {
       g.strokeStyle = "#ffffff";
       g.lineWidth = destaque ? 2.5 : 1.5;
       g.beginPath(); g.arc(px, py, destaque ? 8 : 5.5, 0, PI * 2); g.fill(); g.stroke();
-      if (grande && !m.reino) nomes.push({ m, px, py, destaque });
+      if (grande) nomes.push({ m, px, py, destaque });
     });
 
     // os nomes por fora da roda, na direção de cada brinquedo: de cada lado,
@@ -4651,559 +5145,8 @@ class Arena {
    olhar em volta (arrastar; o olhar volta sozinho para o caminho),
    pausar (o botão ou a barra de espaço) e sair (o botão ou Esc).
    ====================================================================== */
-const OLHOS = 0.85; // altura dos olhos acima do piso: uma criança
-
-/* Cada ponto do caminho é [x, y, z, modo, extras] no objeto (metros, frente
-   em +z, y = a altura dos PÉS ali) e o modo é o jeito de chegar nele:
-     ir          desliza da entrada até o começo
-     andar       passo normal (a cabeça balança de leve)
-     agachado    andar abaixado (teto baixo: o andar de cima do brinquedão)
-     subir       escada e escadinha: devagar, olhando para cima
-     rede        engatinhando na rede: balança para os lados
-     tubo        agachado, dentro do tubo
-     viga        andando na beirada, equilibrando
-     pular       quicando na cama elástica
-     enterrada   o pulo grande da enterrada, até a cesta
-     escorregar  escorregador e tobogã: sentado, acelerando, deitando nas curvas
-     cair        o pulo na piscina de espuma ou de bolinhas (afunda)
-     tirolesa    pendurado no pegador da tirolesa, por cima da espuma
-   Extras: pausa (segundos parado), olhar (o ponto que se olha na pausa),
-   evento (avisa a animação do objeto: "swish:2" = o próximo arremesso vai
-   na cesta 2, a da enterrada).
-   O caminho é calculado uma vez (uma curva amostrada a cada 6 cm): andar
-   nele não custa conta nenhuma por quadro. */
-
-/* O brinquedão: o projeto é em milímetros, como o .3ds (x ao longo, y para
-   a frente, z para cima); o objeto 3D é o mesmo desenho, centralizado. */
-const BQ = (x, y, z) => [-x / 1000 - 5.8705, z / 1000, y / 1000 + 1.948];
-
-/** O tobogã em espiral do brinquedão (o desenho do objeto), com os pés no fundo do tubo. */
-function toboganDoBrinquedao() {
-  const cx = -10590;
-  const cy = -1500;
-  const raio = 650;
-  const a0 = (-50 * PI) / 180;
-  const a1 = 2 * PI;
-  const pontos = [];
-  for (let i = 0; i <= 24; i++) {
-    const t = i / 24;
-    const a = a0 + (a1 - a0) * t;
-    pontos.push([...BQ(cx + raio * Math.cos(a), cy + raio * Math.sin(a), 2404 - t * 1974 - 300), "escorregar"]);
-  }
-  pontos.push([...BQ(cx + raio, cy + 380, 95), "escorregar"], [...BQ(cx + raio, cy + 700, 90), "escorregar"]);
-  return pontos;
-}
-
-/** O escorregador duplo ondulado (a pista da direita), com os pés na pista. */
-function escorregadorDuplo() {
-  const x = -9023.5 + 260;
-  const pontos = [];
-  for (let i = 0; i <= 18; i++) {
-    const t = i / 18;
-    const z = 1104 - 844 * t + 110 * Math.sin(t * PI * 3) * (1 - t) - (t > 0.85 ? (t - 0.85) * 600 : 0) - 20;
-    pontos.push([...BQ(x, -2620 + 1750 * t, z), "escorregar"]);
-  }
-  return pontos;
-}
-
-/* O Brinquedão Ninja: o .3ds dele tem a frente em y baixo (x ao longo, y
-   para o FUNDO, z para cima, em mm); o objeto 3D é o mesmo desenho, virado
-   para a frente em +z e centralizado (ferramentas/modelos3d/brinquedao-ninja/). */
-const NJ = (x, y, z) => [x / 1000 - 7.58, z / 1000, -y / 1000 + 2.8375];
-
-/** O tobogã em espiral do ninja (o TOBOGA do montar.js), com os pés no fundo do tubo. */
-function toboganDoNinja() {
-  const pontos = [[...NJ(9900, 3060, 2295), "escorregar"]];
-  for (let i = 0; i <= 24; i++) {
-    const t = i / 24;
-    const a = (-540 * t * PI) / 180;
-    pontos.push([...NJ(9030 + 400 * Math.cos(a), 2290 + 400 * Math.sin(a), 2525 - 1885 * t - 235), "escorregar"]);
-  }
-  pontos.push([...NJ(8700, 2600, 345), "escorregar"], [...NJ(8760, 2850, 295), "escorregar"]);
-  return pontos;
-}
-
-/** A espiral do tobogã do circuito kids (o desenho do Espaço Esportivo). */
-function toboganKids() {
-  const pontos = [[16.2, 1.7, 7.35, "escorregar"], [17.2, 1.7, 7.9, "escorregar"]];
-  for (let i = 0; i <= 24; i++) {
-    const t = i / 24;
-    const a = -PI / 2 + t * PI * 3;
-    pontos.push([17.8 + 0.75 * Math.cos(a), 1.65 - t * 1.25, 9.4 + 0.75 * Math.sin(a), "escorregar"]);
-  }
-  return pontos;
-}
-
-/** O caminho de cada objeto (pelo id do modelo). */
-const CAMINHOS = {
-  // escadinha, a rede da torre das bolas, o andar de cima com a rede de
-  // escalada, o tubo e o saco, o tobogã em espiral; por trás, o andar do
-  // meio e o escorregador duplo; e o brinquedão inteiro visto da frente
-  "brinquedao-modelo-2": () => [
-    [...BQ(-3323, -1900, 0), "ir"],
-    [...BQ(-3323, -2450, 0), "andar"],
-    // os degraus: 0,64 m na frente e 1,11 m atrás
-    [...BQ(-3323, -2700, 643), "subir"],
-    [...BQ(-3323, -3050, 643), "subir"],
-    [...BQ(-3323, -3250, 1109), "subir"],
-    [...BQ(-3323, -3420, 1109), "agachado"],
-    // sai de baixo do andar de cima antes de subir para a rede da torre
-    [...BQ(-2860, -3420, 1109), "agachado"],
-    [...BQ(-2450, -3300, 1833), "subir"],
-    [...BQ(-1700, -2700, 1833), "rede", { pausa: 1.4, olhar: BQ(-1318, -3085, 2380) }],
-    [...BQ(-2550, -3150, 1833), "rede"],
-    // da rede para a beira do andar de cima (sobe antes de passar por baixo dele)
-    [...BQ(-2720, -3150, 2074), "subir"],
-    // o andar de cima tem o teto baixo: anda-se abaixado
-    [...BQ(-3300, -3150, 2074), "agachado"],
-    [...BQ(-3870, -3150, 2074), "agachado"],
-    // a rede de escalada: sobe pela beira dela e engatinha por cima
-    [...BQ(-3950, -3150, 2490), "subir"],
-    [...BQ(-5300, -3150, 2490), "rede"],
-    [...BQ(-5420, -3250, 2074), "subir"],
-    [...BQ(-5600, -3350, 2074), "agachado"],
-    [...BQ(-6420, -3350, 2074), "agachado"],
-    [...BQ(-6460, -3150, 2084), "agachado"],
-    [...BQ(-7460, -3150, 2084), "tubo"],
-    [...BQ(-7750, -2850, 2074), "agachado"],
-    [...BQ(-8300, -2850, 2074), "agachado", { pausa: 0.8, olhar: BQ(-7990, -3150, 2450) }],
-    [...BQ(-9300, -2900, 2074), "agachado"],
-    [...BQ(-10150, -2600, 2074), "agachado"],
-    // atrás da boca do tobogã, de frente para ela
-    [...BQ(-10530, -2360, 2074), "agachado", { pausa: 0.9, olhar: BQ(-10172, -1998, 2250) }],
-    [...BQ(-10264, -2075, 2104), "agachado"],
-    ...toboganDoBrinquedao(),
-    [...BQ(-9940, -450, 120), "cair"],
-    [...BQ(-9940, 250, 0), "andar"],
-    // a volta pela ponta do tobogã até a escada de marinheiro de trás
-    [...BQ(-11950, 100, 0), "andar"],
-    [...BQ(-11950, -2000, 0), "andar"],
-    [...BQ(-11300, -3950, 0), "andar"],
-    [...BQ(-9023, -3950, 0), "andar"],
-    [...BQ(-9023, -3880, 560), "subir"],
-    [...BQ(-9023, -3800, 1104), "subir"],
-    [...BQ(-9023, -3450, 1104), "agachado"],
-    [...BQ(-8763, -2700, 1104), "agachado", { pausa: 0.8, olhar: BQ(-8763, -870, 300) }],
-    ...escorregadorDuplo(),
-    [...BQ(-8763, -650, 120), "cair"],
-    [...BQ(-8763, 250, 0), "andar"],
-    [...BQ(-5500, 250, 0), "andar", { pausa: 1.6, olhar: BQ(-5500, -2200, 1700) }],
-  ],
-  // o canto em L e os degraus, o circuito do andar de cima (cilindros,
-  // postes com pegas, o rolo vazado, a rede em V), o tobogã, a piscina de
-  // bolinhas, as duas camas elásticas, a tirolesa e o pulo na espuma; e o
-  // brinquedão inteiro visto da frente
-  "brinquedao-ninja": () => [
-    [...NJ(1750, 1300, 0), "ir"],
-    // entra pelo lado direito do canto e sobe: degrau, triângulo azul, degrau, triângulo amarelo
-    [...NJ(1750, 2700, 0), "andar"],
-    [...NJ(1320, 2700, 0), "andar"],
-    [...NJ(1260, 2700, 650), "subir"],
-    [...NJ(1000, 2250, 1222), "subir"],
-    [...NJ(785, 2300, 1742), "subir"],
-    [...NJ(1020, 2720, 2260), "subir"],
-    // o andar de cima tem o teto baixo: anda-se abaixado
-    [...NJ(980, 3460, 2260), "agachado"],
-    [...NJ(1400, 3480, 2260), "agachado", { pausa: 1, olhar: NJ(1690, 3480, 2800) }],
-    // entre os cilindros pendurados (empurrando)
-    [...NJ(1700, 3485, 2260), "agachado"],
-    [...NJ(2200, 3560, 2260), "agachado"],
-    [...NJ(2900, 3462, 2260), "agachado"],
-    // os postes com as pegas
-    [...NJ(3350, 3462, 2260), "agachado", { pausa: 0.9, olhar: NJ(3580, 3000, 2750) }],
-    [...NJ(4400, 3462, 2260), "agachado"],
-    // por dentro do rolo vazado
-    [...NJ(4600, 3462, 2300), "tubo"],
-    [...NJ(5440, 3462, 2300), "tubo"],
-    [...NJ(5700, 3462, 2260), "agachado"],
-    [...NJ(6250, 3462, 2290), "agachado"],
-    // a passarela de rede em V, pela faixa verde do meio
-    [...NJ(6500, 3462, 2290), "rede"],
-    [...NJ(8200, 3462, 2290), "rede"],
-    // o módulo vermelho, por trás do cilindro, até a boca do tobogã
-    [...NJ(8550, 3400, 2260), "agachado"],
-    [...NJ(8800, 3250, 2260), "agachado"],
-    [...NJ(9600, 3250, 2260), "agachado"],
-    [...NJ(9950, 3300, 2260), "agachado", { pausa: 0.8, olhar: NJ(9700, 2600, 2000) }],
-    ...toboganDoNinja(),
-    [...NJ(8950, 3150, 300), "cair", { pausa: 1.2, olhar: NJ(9300, 2300, 1400) }],
-    // pela piscina de bolinhas até a saída da frente (por baixo do corrimão) e os degraus
-    [...NJ(9650, 3250, 300), "andar"],
-    [...NJ(9900, 2750, 300), "andar"],
-    [...NJ(10200, 2250, 320), "andar"],
-    [...NJ(10200, 2000, 340), "tubo"],
-    [...NJ(10180, 1870, 300), "subir"],
-    [...NJ(10180, 1700, 150), "subir"],
-    [...NJ(10180, 1400, 0), "andar"],
-    // a primeira cama elástica: degraus, a entrada sob o corrimão e os pulos
-    [...NJ(12240, 1350, 0), "andar"],
-    [...NJ(12240, 1700, 150), "subir"],
-    [...NJ(12240, 1880, 300), "subir"],
-    [...NJ(12240, 2080, 330), "tubo"],
-    [...NJ(11700, 2600, 330), "pular"],
-    [...NJ(11000, 3300, 330), "pular"],
-    [...NJ(11480, 2970, 330), "pular", { pausa: 1.6 }],
-    [...NJ(10900, 2500, 330), "pular"],
-    [...NJ(11900, 3400, 330), "pular"],
-    [...NJ(12240, 2200, 330), "pular"],
-    [...NJ(12240, 2000, 330), "tubo"],
-    [...NJ(12240, 1800, 300), "subir"],
-    [...NJ(12240, 1650, 150), "subir"],
-    [...NJ(12400, 1350, 0), "andar"],
-    // a segunda cama
-    [...NJ(14400, 1350, 0), "andar"],
-    [...NJ(14400, 1700, 150), "subir"],
-    [...NJ(14400, 1880, 300), "subir"],
-    [...NJ(14400, 2080, 330), "tubo"],
-    [...NJ(13800, 2700, 330), "pular"],
-    [...NJ(13100, 3350, 330), "pular"],
-    [...NJ(13600, 2970, 330), "pular", { pausa: 1.6 }],
-    [...NJ(13000, 2450, 330), "pular"],
-    [...NJ(14000, 3300, 330), "pular"],
-    [...NJ(14400, 2200, 330), "pular"],
-    [...NJ(14400, 2000, 330), "tubo"],
-    [...NJ(14400, 1800, 300), "subir"],
-    [...NJ(14400, 1650, 150), "subir"],
-    [...NJ(14300, 1300, 0), "andar"],
-    // de volta pela frente até a saída da piscina de cubos: sobe no bloco rosa
-    [...NJ(7860, 1300, 0), "andar"],
-    [...NJ(7860, 2550, 0), "andar"],
-    [...NJ(7860, 2700, 150), "subir"],
-    [...NJ(7860, 2870, 300), "subir"],
-    [...NJ(7700, 3300, 450), "subir"],
-    [...NJ(7480, 3600, 450), "andar", { pausa: 1, olhar: NJ(6700, 3462, 1500) }],
-    // a tirolesa por cima da espuma (por trás do poste da estrela) e o pulo nos cubos
-    [...NJ(6950, 3700, 560), "tirolesa"],
-    [...NJ(6600, 3462, 560), "tirolesa"],
-    [...NJ(3500, 3462, 560), "tirolesa"],
-    // (olha as cordas, e não ao longo da viga: de baixo ela fica escura)
-    [...NJ(3250, 3462, 280), "cair", { pausa: 1.4, olhar: NJ(2240, 3100, 1300) }],
-    // pela espuma de volta ao bloco, desce os degraus e olha o brinquedão inteiro
-    [...NJ(5200, 3500, 300), "andar"],
-    [...NJ(7100, 3700, 300), "andar"],
-    [...NJ(7700, 3500, 450), "subir"],
-    [...NJ(7860, 2870, 300), "subir"],
-    [...NJ(7860, 2700, 150), "subir"],
-    [...NJ(7600, 1200, 0), "andar"],
-    [...NJ(7200, -2400, 0), "andar", { pausa: 1.8, olhar: NJ(7200, 3000, 1500) }],
-  ],
-  // da entrada: o Gol Flash (telão e os dois círculos), as quadras, a
-  // piscina de espuma grande, as camas (por cima do varredor), a enterrada
-  // na cesta (o Swish arremessa nela), a beirada das piscinas do percurso,
-  // o circuito kids com a rede e o tobogã, e o espaço inteiro no fim
-  "espaco-esportivo-modelo-1": () => [
-    [0, 0.05, 10.4, "ir"],
-    // o Gol Flash: cada círculo com a criança chutando, os LEDs e a tela
-    [-12.5, 0.05, 6.6, "andar", { pausa: 2.5, olhar: [-12.5, 0.6, 1.4] }],
-    [-6.5, 0.05, 6.6, "andar", { pausa: 2.5, olhar: [-6.5, 0.6, 1.4] }],
-    [-1.2, 0.05, 2.0, "andar"],
-    [-1.2, 0.05, -2.6, "andar", { pausa: 2, olhar: [-5.5, 2.0, -5] }],
-    [-1.3, 0.05, -4.0, "andar"],
-    [-0.45, 0.45, -4.0, "subir"],
-    [0.35, 0.97, -4.0, "subir"],
-    [3.6, 0.97, -5.15, "andar", { pausa: 0.8, olhar: [3.6, 0.9, -8.5] }],
-    [3.6, 0.65, -8.2, "cair", { pausa: 1.6, olhar: [3.6, 2.4, -11.2] }],
-    [3.6, 0.97, -5.4, "subir"],
-    [3.6, 0.98, -2.7, "pular"],
-    [1.6, 0.98, 0.3, "pular"],
-    [3.6, 0.98, 2.3, "pular"],
-    [5.6, 0.98, 0.3, "pular"],
-    [7.6, 0.98, 2.3, "pular"],
-    [9.6, 0.98, 0.3, "pular"],
-    [7.6, 0.98, -1.7, "pular"],
-    // por cima dos braços do varredor (o poste do meio fica de lado)
-    [9.6, 0.98, -1.7, "pular"],
-    [9.6, 0.98, -3.7, "pular"],
-    [11.6, 0.98, -5.7, "pular"],
-    // as cestas do Swish: as crianças arremessando e as telas; a do meio é a sua
-    [11.6, 0.98, -7.7, "pular", { pausa: 2.2, olhar: [11.6, 3.0, -11.0], evento: "swish:2" }],
-    [11.6, 0.97, -8.85, "andar"],
-    [11.6, 1.9, -10.25, "enterrada", { pausa: 0.7, olhar: [11.6, 2.8, -10.88] }],
-    [11.6, 0.97, -8.4, "cair"],
-    [12.75, 0.97, -6.0, "andar"],
-    // na beirada entre as piscinas do percurso, e o pulo na espuma
-    [12.75, 0.97, -0.9, "viga"],
-    [13.6, 0.97, -0.7, "viga"],
-    [13.6, 0.7, 1.3, "cair", { pausa: 1.6, olhar: [13.1, 2.0, 0.1] }],
-    [13.6, 0.97, 3.15, "subir"],
-    // pela beirada até a escada da frente, e desce degrau por degrau
-    [12.9, 0.97, 3.15, "viga"],
-    [11.65, 0.97, 3.15, "andar"],
-    [11.65, 0.85, 3.45, "subir"],
-    [11.65, 0.64, 3.75, "subir"],
-    [11.65, 0.43, 4.05, "subir"],
-    [11.65, 0.21, 4.35, "subir"],
-    [11.65, 0.05, 4.85, "subir"],
-    // entre o parque e o circuito kids, até a frente do circuito
-    [10.0, 0.05, 5.8, "andar"],
-    [0.4, 0.05, 5.8, "andar"],
-    [-0.1, 0.05, 7.4, "andar"],
-    [0.6, 0.05, 9.3, "andar"],
-    [5.7, 0.05, 9.45, "andar"],
-    // a rede amarela: sobe pela frente até o deck de cima
-    [5.7, 0.65, 8.95, "subir"],
-    [5.7, 1.8, 8.12, "rede"],
-    [5.7, 1.85, 7.82, "subir"],
-    [8.6, 1.85, 7.84, "agachado"],
-    [12.0, 1.85, 7.84, "agachado"],
-    [15.7, 1.85, 7.6, "agachado", { pausa: 0.8, olhar: [17.8, 1.0, 9.4] }],
-    ...toboganKids(),
-    [17.8, 0.3, 10.45, "cair", { pausa: 1.6, olhar: [16.5, 0.6, 10.4] }],
-    [16.4, 0.62, 10.8, "subir"],
-    [15.9, 0.05, 10.8, "andar"],
-    [14.6, 0.05, 10.8, "andar", { pausa: 2, olhar: [0, 1.5, 0] }],
-  ],
-};
-
-/* O trampolim de enterrada (num bloco próprio, fora do CAMINHOS: fácil de
-   juntar com os caminhos dos outros objetos). O projeto é em milímetros,
-   como o .3ds: x ao longo, com a parede da cesta em x = 0; y para o fundo,
-   com a frente em y = 0; z para cima. O objeto 3D é o mesmo desenho,
-   centralizado (o deslocamento sai do gerar.cjs de
-   ferramentas/modelos3d/trampolim-enterrada/). */
-const TE = (x, y, z) => [x / 1000 - 2.9962, z / 1000, -y / 1000 + 1.1475];
-// o aro: no alto da parede inclinada, colado embaixo da moldura de cima (como no desenho da fábrica)
-const ARO_DO_TRAMPOLIM = TE(566, 1130, 2695);
-// sobe a escada da cabeceira (da frente para o fundo), pula pelas três camas
-// em linha até a da cesta, enterra, volta pulando, desce a escada e olha o
-// trampolim inteiro de fora
-CAMINHOS["trampolim-enterrada"] = () => [
-  [...TE(6350, -350, 0), "ir"],
-  [...TE(5710, 650, 0), "andar"],
-  // a escada fica na metade do fundo da cabeceira: três degraus de 27,75 cm
-  // (22 cm de piso) e o bloco de cima, no fundo, a 1,11 m
-  [...TE(5710, 1131, 278), "subir"],
-  [...TE(5710, 1351, 555), "subir"],
-  [...TE(5710, 1571, 833), "subir"],
-  [...TE(5710, 1906, 1110), "subir", { pausa: 1.2, olhar: ARO_DO_TRAMPOLIM }],
-  // a última cama, a do meio e a da cesta (a lona fica a 1,02 m)
-  [...TE(4690, 1500, 1015), "pular"],
-  [...TE(4690, 900, 1015), "pular"],
-  [...TE(3210, 1130, 1015), "pular"],
-  [...TE(3210, 700, 1015), "pular"],
-  [...TE(3210, 1450, 1015), "pular"],
-  [...TE(1650, 1130, 1015), "pular", { pausa: 1.6, olhar: ARO_DO_TRAMPOLIM }],
-  // a enterrada: o pulo grande até o aro, e a queda de volta na cama
-  [...TE(1080, 1130, 1895), "enterrada", { pausa: 0.8, olhar: ARO_DO_TRAMPOLIM }],
-  [...TE(1800, 1130, 1015), "cair", { pausa: 1.2, olhar: TE(566, 1130, 2340) }],
-  // de volta pelas camas até a escada, e desce degrau por degrau
-  [...TE(3210, 1130, 1015), "pular"],
-  [...TE(4690, 1500, 1015), "pular"],
-  [...TE(5710, 1906, 1110), "subir"],
-  [...TE(5710, 1571, 833), "subir"],
-  [...TE(5710, 1351, 555), "subir"],
-  [...TE(5710, 1131, 278), "subir"],
-  [...TE(5710, 650, 0), "subir"],
-  // e o trampolim inteiro, de fora, de 3/4
-  [...TE(6600, -1600, 0), "andar"],
-  [...TE(5600, -3300, 0), "andar", { pausa: 2, olhar: TE(2750, 1130, 1500) }],
-];
-
-/* O Brinquedão Modelo 4 (num bloco próprio, como o do trampolim). O projeto
-   é em milímetros, como o .3ds: x ao longo, y para o FUNDO, z para cima; o
-   objeto 3D é o mesmo desenho, virado para a frente em +z e centralizado (o
-   deslocamento sai do gerar.cjs de ferramentas/modelos3d/brinquedao-modelo-4/).
-   O andar de cima fica a 2,595 m (a faixa da rede em V, a 2,575 m). */
-const M4 = (x, y, z) => [x / 1000 - 10.8075, z / 1000, -y / 1000 + 5.43];
-
-/** O tobogã espiral do Modelo 4 (o TOBOGA do montar.js), com os pés no fundo do tubo. */
-function toboganDoModelo4() {
-  const pontos = [[...M4(19020, 4200, 2610), "escorregar"]];
-  for (let i = 0; i <= 28; i++) {
-    const t = i / 28;
-    const a = ((180 + 700 * t) * PI) / 180;
-    pontos.push([...M4(19590 + 570 * Math.cos(a), 3900 + 570 * Math.sin(a), 2880 - 2240 * t - 270), "escorregar"]);
-  }
-  pontos.push([...M4(18880, 3250, 290), "escorregar"]);
-  return pontos;
-}
-
-// sobe a escada da ponta esquerda, atravessa o trecho de 12 m (rolos em pé,
-// as redes em V, a pirâmide), a passagem pelos rolos magenta, o trecho de
-// 9 m (o saco, os pares de rolos, o rolo amarelo, a rede), desce o tobogã até
-// a piscina de bolinhas, sai pela escadinha verde e olha a Área Baby e o
-// brinquedão inteiro
-CAMINHOS["brinquedao-modelo-4"] = () => [
-  [...M4(1550, 5200, 0), "ir"],
-  [...M4(1550, 6350, 0), "andar"],
-  // a escada: o piso de baixo, o degrau de 0,98 m, o piso pink do meio, o degrau de 2,18 m e o amarelo de cima
-  [...M4(1550, 6800, 240), "subir"],
-  [...M4(1300, 7000, 240), "andar"],
-  [...M4(1200, 7250, 980), "subir"],
-  [...M4(1350, 7400, 1630), "subir"],
-  [...M4(1700, 7450, 2180), "subir"],
-  [...M4(1850, 6950, 2595), "subir"],
-  // o andar de cima tem o teto baixo: anda-se abaixado, pelo lado dos rolos em pé
-  [...M4(2250, 6850, 2595), "agachado", { pausa: 0.9, olhar: M4(2500, 7100, 3050) }],
-  [...M4(2850, 7100, 2595), "agachado"],
-  [...M4(3050, 7100, 2575), "rede"],
-  [...M4(4850, 7100, 2575), "rede"],
-  [...M4(5300, 7100, 2595), "agachado"],
-  [...M4(6100, 6850, 2595), "agachado"],
-  [...M4(6650, 6850, 2595), "agachado"],
-  [...M4(6800, 7100, 2595), "agachado"],
-  [...M4(6920, 7100, 2575), "rede"],
-  [...M4(7750, 7100, 2575), "rede"],
-  // por cima da pirâmide magenta
-  [...M4(8050, 7100, 2595), "agachado"],
-  [...M4(8300, 7100, 2880), "agachado"],
-  [...M4(8600, 7100, 2595), "agachado"],
-  [...M4(9950, 7100, 2595), "agachado"],
-  [...M4(10050, 6850, 2595), "agachado"],
-  [...M4(10500, 6850, 2595), "agachado"],
-  [...M4(10650, 7100, 2595), "agachado"],
-  [...M4(10780, 7100, 2575), "rede"],
-  [...M4(11640, 7100, 2575), "rede"],
-  // a passagem: por cima do rolo baixo, por baixo do alto, por cima do outro baixo
-  [...M4(12170, 7100, 2595), "agachado", { pausa: 0.8, olhar: M4(12170, 5300, 2900) }],
-  [...M4(12170, 6520, 2595), "agachado"],
-  [...M4(12170, 6280, 2925), "subir"],
-  [...M4(12170, 6020, 2595), "agachado"],
-  [...M4(12170, 5760, 2595), "tubo"],
-  [...M4(12170, 5510, 2595), "agachado"],
-  [...M4(12170, 5280, 2925), "subir"],
-  [...M4(12170, 4950, 2595), "agachado"],
-  // o saco azul e o par de rolos amarelos (passa-se pela fresta entre os dois)
-  [...M4(11950, 4650, 2595), "agachado", { pausa: 0.8, olhar: M4(12170, 4405, 3100) }],
-  [...M4(12450, 4150, 2595), "agachado"],
-  [...M4(12900, 4405, 2595), "tubo"],
-  [...M4(13130, 4405, 2700), "tubo"],
-  [...M4(13360, 4405, 2595), "tubo"],
-  // o rolo amarelo em pé, pela frente, e a rede em V
-  [...M4(13800, 4100, 2595), "agachado"],
-  [...M4(14450, 4100, 2595), "agachado"],
-  [...M4(14660, 4405, 2575), "rede"],
-  [...M4(16500, 4405, 2575), "rede"],
-  // o outro par de rolos e o outro saco
-  [...M4(16880, 4405, 2595), "tubo"],
-  [...M4(17100, 4405, 2700), "tubo"],
-  [...M4(17330, 4405, 2595), "tubo"],
-  [...M4(17700, 4150, 2595), "agachado"],
-  [...M4(18350, 4150, 2595), "agachado", { pausa: 0.7, olhar: M4(18050, 4405, 3100) }],
-  // atrás da boca do tobogã, de frente para ela
-  [...M4(18800, 4700, 2595), "agachado"],
-  [...M4(19020, 4650, 2595), "agachado", { pausa: 0.9, olhar: M4(19020, 3900, 2400) }],
-  ...toboganDoModelo4(),
-  [...M4(19150, 3100, 280), "cair", { pausa: 1.2, olhar: M4(19590, 3900, 1700) }],
-  // pela piscina até o arco azul, por cima da mureta e a escadinha verde
-  [...M4(19800, 3150, 300), "andar"],
-  [...M4(20105, 2900, 430), "subir"],
-  [...M4(20105, 2720, 430), "subir"],
-  [...M4(20105, 2530, 215), "subir"],
-  [...M4(20105, 2250, 0), "andar"],
-  // a Área Baby, de frente, e o brinquedão inteiro
-  [...M4(15070, 2200, 0), "andar", { pausa: 1.4, olhar: M4(15070, 3500, 1200) }],
-  [...M4(11500, -5500, 0), "andar", { pausa: 2, olhar: M4(11000, 5500, 1500) }],
-];
-
-/** Um objeto sem caminho próprio: a volta em torno dele, parando em cada lado. */
-function voltaEmVolta(m) {
-  const a = (m.W || m.largura) / 2 + 0.9;
-  const b = (m.D || m.fundo) / 2 + 0.9;
-  const centro = [0, (m.H || m.altura) * 0.4, 0];
-  const pontos = [];
-  for (let i = 0; i <= 8; i++) {
-    const t = (i / 8) * PI * 2;
-    pontos.push([Math.sin(t) * a, 0, Math.cos(t) * b, "andar", i % 2 ? {} : { pausa: 1.2, olhar: centro }]);
-  }
-  return pontos;
-}
-
-/** O passo (m/s), a altura dos olhos, o quique e o nome de cada modo. */
-const MODOS_DO_PASSEIO = {
-  ir: { v: 6, olhos: OLHOS, nome: "Chegando" },
-  andar: { v: 1.4, olhos: OLHOS, nome: "Passeando" },
-  agachado: { v: 0.9, olhos: 0.58, nome: "Andando abaixado" },
-  subir: { v: 0.55, olhos: 0.65, olhar: 0.22, nome: "Subindo" },
-  rede: { v: 0.6, olhos: 0.6, nome: "Na rede" },
-  tubo: { v: 0.7, olhos: 0.45, nome: "No túnel" },
-  viga: { v: 0.75, olhos: OLHOS, nome: "Na beirada" },
-  pular: { v: 1.5, olhos: OLHOS, quique: 0.8, nome: "Pulando" },
-  enterrada: { v: 1.2, olhos: OLHOS, quique: 1.2, nome: "Enterrada!" },
-  tirolesa: { v: 2.2, olhos: 0.75, nome: "Na tirolesa!" },
-  escorregar: { v: 4.6, olhos: 0.45, nome: "Escorregando!" },
-  cair: { v: 2.4, olhos: 0.45, olhar: -0.3, nome: "Tchibum!" },
-};
-
-/* O Brinquedão Modelo 3 (num bloco próprio, como o do trampolim). O projeto
-   é em milímetros, como os .3ds: x ao longo da barra, y para o FUNDO (y = 0
-   é a ponta da perna, onde fica a torre), z para cima. O objeto 3D é o mesmo
-   desenho, virado para a frente em +z e centralizado (o deslocamento sai do
-   gerar.cjs de ferramentas/modelos3d/brinquedao-modelo-3/). */
-const M3 = (x, y, z) => [x / 1000 - 5, z / 1000, -y / 1000 + 2.6];
-
-/** O tobogã em espiral do Modelo 3 (o TOBOGA do montar.js), com os olhos no meio do tubo. */
-function toboganDoModelo3() {
-  // os "pés" ficam 29 cm abaixo do centro do tubo (raio de 25 cm): com os
-  // olhos 45 cm acima deles, a cabeça fica 9 cm abaixo do teto do tubo e o
-  // plano de perto da câmera não corta a parede
-  const pes = (x, y, z) => [...M3(x, y, z - 290), "escorregar"];
-  const pontos = [pes(8650, 4720, 2165), pes(8850, 4720, 2163)];
-  // 2,25 voltas de cima, no sentido do relógio, em volta da coluna do meio da
-  // piscina (dentro da barra); os primeiros 2/3 de volta mais inclinados
-  for (let i = 0; i <= 27; i++) {
-    const u = (i / 27) * 2.25;
-    const a = ((90 - u * 360) * PI) / 180;
-    const z = u <= 0.67 ? 2160 - (680 * u) / 0.67 : 1480 - (930 * (u - 0.67)) / 1.58;
-    pontos.push(pes(9000 + 520 * Math.cos(a), 4200 + 520 * Math.sin(a), z));
-  }
-  pontos.push(pes(9560, 3800, 510), pes(9600, 3580, 480));
-  return pontos;
-}
-
-// entra pela torre da ponta da perna e sobe as plataformas em zigue-zague,
-// atravessa a passarela de rede, o corredor de cunhas, o piso de rede com a
-// bola-pêndulo, o balanço e os sacos de pancada; desce o tobogã em espiral
-// dentro da piscina de bolinhas (na ponta direita da barra), sai pela
-// escadinha da frente e olha o brinquedão inteiro
-CAMINHOS["brinquedao-modelo-3"] = () => [
-  [...M3(500, -1600, 0), "ir"],
-  [...M3(500, -350, 0), "andar"],
-  // as plataformas da torre: amarela (0,45 m), azul (0,9 m), azul (1,4 m) e a
-  // amarela do 2º andar, alternando as metades da diagonal; cada subida
-  // acontece depois de passar para a outra metade (é lá que há altura livre)
-  [...M3(600, 120, 450), "subir"],
-  [...M3(560, 470, 450), "subir"],
-  [...M3(380, 620, 900), "subir"],
-  [...M3(470, 560, 900), "subir"],
-  [...M3(650, 380, 1400), "subir"],
-  [...M3(560, 450, 1400), "subir"],
-  [...M3(350, 700, 1900), "subir", { pausa: 1, olhar: M3(500, 200, 2900) }],
-  // a passarela de rede, até o 1º módulo da barra
-  [...M3(500, 1150, 1900), "rede"],
-  [...M3(500, 3650, 1900), "rede", { pausa: 0.8, olhar: M3(4500, 3700, 2200) }],
-  // o corredor de cunhas de espuma: sobe e desce cada uma
-  [...M3(1500, 3700, 1900), "andar"],
-  [...M3(2025, 3700, 1900), "andar"],
-  ...[2230, 2640, 3050, 3460, 3870].flatMap((c) => [[...M3(c, 3700, 2200), "subir"], [...M3(c + 205, 3700, 1900), "andar"]]),
-  // a passagem magenta e o piso de rede, por baixo da bola amarela pendurada
-  [...M3(4500, 3700, 1940), "andar"],
-  [...M3(4550, 4550, 1900), "rede"],
-  [...M3(5100, 4420, 1900), "rede", { pausa: 1.2, olhar: M3(5500, 4700, 2650) }],
-  [...M3(5500, 4300, 1900), "rede"],
-  [...M3(6600, 4550, 1900), "rede"],
-  // o balanço (as cordas vermelha e azul) e os sacos de pancada, passando entre eles
-  [...M3(6880, 4350, 1900), "andar"],
-  [...M3(7200, 3700, 1900), "andar", { pausa: 1, olhar: M3(7500, 3700, 2700) }],
-  [...M3(7300, 4250, 1900), "agachado"],
-  [...M3(7300, 4700, 1900), "agachado"],
-  [...M3(7600, 4770, 1900), "agachado"],
-  [...M3(7850, 4700, 1900), "agachado"],
-  // o módulo amarelo de trás: entre os dois sacos azuis até a boca do tobogã
-  [...M3(8400, 4700, 1900), "agachado"],
-  [...M3(8560, 4720, 1900), "andar", { pausa: 0.9, olhar: M3(9300, 4500, 1700) }],
-  ...toboganDoModelo3(),
-  [...M3(9600, 3450, 300), "cair", { pausa: 1.2, olhar: M3(9000, 4200, 1300) }],
-  // pela frente da piscina até a escadinha: por cima da mureta e os dois degraus
-  [...M3(9550, 3380, 300), "andar"],
-  [...M3(9550, 3260, 450), "subir"],
-  [...M3(9550, 3110, 450), "subir"],
-  [...M3(9550, 2940, 225), "subir"],
-  [...M3(9550, 2600, 0), "andar"],
-  // e o brinquedão inteiro, de frente
-  [...M3(7000, -2400, 0), "andar"],
-  [...M3(5000, -5200, 0), "andar", { pausa: 2, olhar: M3(5000, 3800, 1700) }],
-];
+/* Os caminhos de cada objeto (CAMINHOS), os modos (MODOS_DO_PASSEIO) e a
+   amostragem da curva ficam no caminhos.js (puro, conferido no node). */
 
 class Passeio {
   constructor(arena, maquina) {
@@ -5298,43 +5241,30 @@ class Passeio {
   }
 
   /**
-   * O caminho: os pontos (no objeto) viram uma curva no mundo, amostrada a
-   * cada 6 cm, com o modo de cada trecho e a pausa e o evento no fim dele.
-   * Ele sai de onde a pessoa entrou.
+   * O caminho: os pontos (no objeto) viram a curva do caminhos.js
+   * (amostrada a cada 6 cm, com a altura dos olhos de cada amostra), levada
+   * para o mundo. Ele sai de onde a pessoa entrou. Feito uma vez: andar nele
+   * não custa conta nenhuma por quadro (nem raio contra o objeto).
    */
   montarCaminho() {
     const T = this.arena.T;
     const m = this.maquina;
-    const noMundo = (p) => m.corpo.localToWorld(new T.Vector3(p[0], p[1], p[2]));
-    const pontos = [{ w: this.pes.clone(), modo: "andar" }, ...this.pontos.map(([x, y, z, modo = "andar", extras = {}]) => ({
-      w: noMundo([x, y, z]), modo, ...extras, olhar: extras.olhar ? noMundo(extras.olhar) : null,
+    m.corpo.updateMatrixWorld(true);
+    const daqui = m.corpo.worldToLocal(this.pes.clone());
+    const pontos = [{ p: [daqui.x, daqui.y, daqui.z], modo: "andar" }, ...this.pontos.map(([x, y, z, modo = "andar", extras = {}]) => ({
+      p: [x, y, z], modo, ...extras,
     }))];
-    const curva = new T.CatmullRomCurve3(pontos.map((p) => p.w), false, "centripetal");
-    const n = pontos.length - 1;
-    const amostras = [];
-    let s = 0;
-    for (let k = 0; k < n; k++) {
-      const passos = Math.max(2, Math.ceil(pontos[k].w.distanceTo(pontos[k + 1].w) / 0.06));
-      const y0 = Math.min(pontos[k].w.y, pontos[k + 1].w.y);
-      const y1 = Math.max(pontos[k].w.y, pontos[k + 1].w.y);
-      const solto = ["escorregar", "pular", "enterrada", "cair"].includes(pontos[k + 1].modo);
-      for (let j = k ? 1 : 0; j <= passos; j++) {
-        const p = curva.getPoint((k + j / passos) / n);
-        // a curva suave não afunda no piso nem sobe além do degrau
-        if (!solto) p.y = limitar(p.y, y0, y1);
-        if (amostras.length) s += p.distanceTo(amostras[amostras.length - 1].p);
-        amostras.push({ p, s, modo: pontos[k + 1].modo });
-      }
-      const fim = amostras[amostras.length - 1];
-      const ponto = pontos[k + 1];
-      if (ponto.pausa) Object.assign(fim, { pausa: ponto.pausa, olhar: ponto.olhar });
-      if (ponto.evento) fim.evento = ponto.evento;
-    }
+    const { amostras, total } = amostrarCaminho(pontos);
+    const noMundo = (q) => m.corpo.localToWorld(new T.Vector3(q[0], q[1], q[2]));
+    amostras.forEach((a) => {
+      a.p = noMundo(a.p);
+      if (a.olhar) a.olhar = noMundo(a.olhar);
+    });
     // o "ir" da entrada até o começo leva no máximo uns 2 segundos
     const ida = amostras.findIndex((a) => a.modo !== "ir");
     this.vIda = Math.max(MODOS_DO_PASSEIO.ir.v, (ida > 0 ? amostras[ida].s : 0) / 2);
     this.amostras = amostras;
-    this.total = s;
+    this.total = total;
     this.recomecar();
   }
 
@@ -5442,7 +5372,12 @@ class Passeio {
     const andando = this.v > 0.05;
     if (!this.pausado) this.fase += dt;
     this.quique += ((this.fim ? 0 : jeito.quique || 0) - this.quique) * (1 - Math.exp(-dt * 4));
-    this.olhos += ((this.fim ? OLHOS : jeito.olhos) - this.olhos) * (1 - Math.exp(-dt * 5));
+    // a altura dos olhos vem do caminho (ela já abaixa antes de o túnel
+    // começar): seguida sem atraso -- com o atraso de antes, quem entrava
+    // depressa no tobogã passava com a cabeça pela parede; no fim, volta devagar
+    const olhosDoCaminho = q0.olhos + (q1.olhos - q0.olhos) * f;
+    if (this.fim) this.olhos += (OLHOS - this.olhos) * (1 - Math.exp(-dt * 5));
+    else this.olhos = olhosDoCaminho;
     let sobe = Math.abs(Math.sin(this.fase * 4.4)) * this.quique;
     let rolar = this.rolar;
     if (andando && (modo === "andar" || modo === "subir")) sobe += Math.abs(Math.sin(this.fase * 5.6)) * 0.03;
@@ -5471,10 +5406,10 @@ class Passeio {
     }
   }
 
-  /** O mapa só se redesenha quando a pessoa se mexe (sem conta à toa), até 15 vezes por segundo. */
+  /** O mapa só se redesenha quando a pessoa se mexe (sem conta à toa), até 10 vezes por segundo. */
   atualizarMapa() {
     const agora = performance.now();
-    if (agora - (this.mapaPintado || 0) < 66) return;
+    if (agora - (this.mapaPintado || 0) < 100) return;
     const marca = `${this.pes.x.toFixed(2)},${this.pes.z.toFixed(2)},${(this.yaw + this.extra.yaw).toFixed(2)}`;
     if (marca !== this.ultimaMarca) {
       this.ultimaMarca = marca;
@@ -5503,9 +5438,12 @@ class Passeio {
     const n = 256;
     const alvo = new T.WebGLRenderTarget(n, n);
     alvo.texture.colorSpace = T.SRGBColorSpace;
-    const neblina = a.cena.fog;
+    // sem neblina na planta: ela vai para longe (tirar a neblina mudaria o
+    // sombreador de cada material -- era uma compilação de tudo na entrada)
+    const neblina = [a.cena.fog.near, a.cena.fog.far];
     const fundo = a.cena.background;
-    a.cena.fog = null;
+    a.cena.fog.near = 1e5;
+    a.cena.fog.far = 2e5;
     // a planta tem o fundo da noite do céu, sem o céu (os fachos e os fogos não entram)
     a.cena.background = new T.Color("#0d0b33");
     const festa = a.festaNoCeu();
@@ -5514,7 +5452,7 @@ class Passeio {
     a.renderer.render(a.cena, camera);
     a.renderer.setRenderTarget(null);
     festa.forEach((o) => { o.visible = o.userData.visivel; });
-    a.cena.fog = neblina;
+    [a.cena.fog.near, a.cena.fog.far] = neblina;
     a.cena.background = fundo;
     const px = new Uint8Array(n * n * 4);
     a.renderer.readRenderTargetPixels(alvo, 0, 0, n, n, px);
@@ -5580,18 +5518,27 @@ class Camera {
   }
 
   visaoGeral(entrada = false) {
-    const raioArena = this.arena.raio || 8;
-    // A roda inteira e, em cima, o céu de festa atrás do parque: a câmera
-    // um pouco mais baixa e mais longe, olhando um tico acima do chão. Em
-    // pé (celular), a roda só cabe de mais longe.
-    const emPe = this.arena.camera.aspect < 0.8;
-    this.alvoDesejado.set(0, emPe ? 2.6 : 3.2, 0);
-    this.raioDesejado = (raioArena * 1.75 + 7) * (emPe ? 1.5 : 1.15);
-    this.phiDesejado = emPe ? 1.12 : 1.22;
-    if (entrada && !this.arena.reduzido) {
+    // O parque inteiro (até a cerca de pilares, com o Espaço Esportivo no
+    // fundo) e, em cima, o céu de festa: a câmera do lado da entrada, alta o
+    // bastante para a roda não esconder o fundo. A distância sai da lente:
+    // a cerca cabe na largura da tela (em pé, no celular, também).
+    const arena = this.arena;
+    const camera = arena.camera;
+    const beira = arena.beira || 14;
+    const emPe = camera.aspect < 0.8;
+    const meiaV = (camera.fov * PI) / 360;
+    const meiaH = Math.atan(Math.tan(meiaV) * camera.aspect);
+    this.alvoDesejado.set(0, 1.5, -beira * 0.12);
+    this.raioDesejado = Math.min((beira * 0.92) / Math.sin(Math.min(meiaH, meiaV * 1.25)), beira * 4.2);
+    this.phiDesejado = emPe ? 0.9 : 0.98;
+    let delta = A_ENTRADA - this.thetaDesejado;
+    delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+    this.thetaDesejado += delta;
+    if (entrada && !arena.reduzido) {
       // entrada de cinema: vem de longe e de cima
-      this.raio = this.raioDesejado * 1.8;
-      this.phi = 0.55;
+      this.raio = this.raioDesejado * 1.6;
+      this.phi = 0.5;
+      this.theta = this.thetaDesejado - 0.5;
     }
   }
 
@@ -5626,29 +5573,20 @@ class Camera {
   olharZona(trecho) {
     const arena = this.arena;
     const camera = arena.camera;
-    if (trecho.tipo === "reino") {
-      // o reino inteiro, visto de cima e da frente (do lado da roda)
-      const th = Math.tan((camera.fov * PI) / 360) * camera.aspect;
-      const largura = trecho.x1 - trecho.x0 + 4;
-      const fundo = trecho.z1 - trecho.z0;
-      this.alvoDesejado.set((trecho.x0 + trecho.x1) / 2, 1.5, (trecho.z0 + trecho.z1) / 2);
-      this.raioDesejado = Math.min(140, (largura / 2 / th) * 1.05 + fundo / 2);
-      this.phiDesejado = 0.85;
-      let delta = 0 - this.thetaDesejado;
-      delta = Math.atan2(Math.sin(delta), Math.cos(delta));
-      this.thetaDesejado += delta;
-      return;
-    }
-    const raio = arena.raio || 8;
-    const meio = (trecho.a0 + trecho.a1) / 2;
-    const arco = Math.max(0.3, trecho.a1 - trecho.a0);
-    const corda = 2 * raio * Math.sin(Math.min(PI, arco) / 2) + 2 * (arena.folga || 1.5);
-    const th = Math.tan((camera.fov * PI) / 360) * camera.aspect;
-    const r = arco > PI ? raio * 0.35 : raio * 0.9;
-    this.alvoDesejado.set(Math.sin(meio) * r, 1.3, Math.cos(meio) * r);
-    this.raioDesejado = Math.min(raio * 3.4 + 12, Math.max(7, (corda / 2 / th) * 1.08 + 1.5));
+    // a caixa dos estandes da área (no chão), e o círculo que cobre todos
+    const pontos = trecho.itens.flatMap((k) => arena.arrumado.itens[k].mundo);
+    const xs = pontos.map((q) => q[0]);
+    const zs = pontos.map((q) => q[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+    const raio = Math.max(2, ...pontos.map(([x, z]) => Math.hypot(x - cx, z - cz)));
+    const meiaV = (camera.fov * PI) / 360;
+    const meiaH = Math.atan(Math.tan(meiaV) * camera.aspect);
+    this.alvoDesejado.set(cx, 1.3, cz);
+    this.raioDesejado = Math.min(160, Math.max(7, (raio / Math.sin(Math.min(meiaV, meiaH))) * 0.95 + 1.5));
     this.phiDesejado = 0.98;
-    let delta = Math.atan2(-Math.sin(meio), -Math.cos(meio)) - this.thetaDesejado;
+    // do lado do meio da roda, de frente para a área
+    let delta = Math.atan2(-cx, -cz) - this.thetaDesejado;
     delta = Math.atan2(Math.sin(delta), Math.cos(delta));
     this.thetaDesejado += delta;
   }
@@ -5719,7 +5657,11 @@ class Camera {
           const r = arena.palco.getBoundingClientRect();
           arena.mouseX = evento.clientX - r.left;
           arena.mouseY = evento.clientY - r.top;
-          arena.sobre = arena.escolher(evento.clientX, evento.clientY);
+          // o nome e o cursor: no máximo 10 vezes por segundo, pelas caixas dos estandes
+          const agora = performance.now();
+          if (agora - (this.ultimoSobre || 0) < 100) return;
+          this.ultimoSobre = agora;
+          arena.sobre = arena.maquinaSobACaixa(evento.clientX, evento.clientY);
           canvas.classList.toggle("sobre-maquina", Boolean(arena.sobre) || Boolean(arena.zonaSob(evento.clientX, evento.clientY)));
         }
         return;
@@ -5848,16 +5790,16 @@ class Camera {
 
   limitar() {
     this.phiDesejado = Math.min(1.45, Math.max(0.22, this.phiDesejado));
-    const maximo = Math.max((this.arena.raio || 8) * 3.6 + 14, this.arena.longeDosReinos ? 140 : 0);
-    this.raioDesejado = Math.min(maximo, Math.max(2.4, this.raioDesejado));
-    // andando pela arena, o alvo não sai dela (a roda e os reinos)
-    const borda = (this.arena.raio || 8) + (this.arena.folga || 1) + 12;
-    const reinos = (this.arena.trechos || []).filter((t) => t.tipo === "reino");
-    const fundo = Math.min(-borda, ...reinos.map((t) => t.z0 - 4));
-    const lado = Math.max(borda, ...reinos.map((t) => Math.max(-t.x0, t.x1) + 4));
+    const beira = this.arena.beira || 14;
+    this.raioDesejado = Math.min(beira * 4.4 + 20, Math.max(2.4, this.raioDesejado));
+    // andando pela arena, o alvo não sai do parque
+    const borda = beira + 8;
     for (const alvo of [this.alvo, this.alvoDesejado]) {
-      alvo.x = limitar(alvo.x, -lado, lado);
-      alvo.z = limitar(alvo.z, fundo, borda);
+      const longe = Math.hypot(alvo.x, alvo.z);
+      if (longe > borda) {
+        alvo.x *= borda / longe;
+        alvo.z *= borda / longe;
+      }
     }
   }
 

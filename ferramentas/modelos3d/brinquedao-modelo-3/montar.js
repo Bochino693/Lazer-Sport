@@ -471,8 +471,11 @@ const BOLA = { x: 5500, y: (MEIO + FUNDO) / 2, z: 2650, r: 300 };
 pendurar(BOLA.x, BOLA.y, BOLA.z + BOLA.r, TRAS);
 esfera(M.amarelo, V(BOLA.x, BOLA.y, BOLA.z), BOLA.r, 20, 14);
 // os cinco sacos de pancada do 8º de trás (azul, vermelho, amarelo, rosa,
-// azul), em zigue-zague: de frente, os cinco aparecem lado a lado
-const SACOS = [[7160, 4420, M.azul], [7330, 4960, M.vermelho], [7500, 4560, M.amarelo], [7670, 4980, M.rosa], [7840, 4430, M.azul]];
+// azul), em zigue-zague: de frente, os cinco aparecem lado a lado. Entre a
+// fileira da frente e a de trás fica o corredor de ~25 cm por onde o passeio
+// passa (o amarelo 4 cm para a frente, o vermelho e o rosa 4 e 2 cm para
+// trás: antes, a câmera roçava o amarelo)
+const SACOS = [[7160, 4420, M.azul], [7330, 5000, M.vermelho], [7500, 4520, M.amarelo], [7670, 5000, M.rosa], [7840, 4430, M.azul]];
 function saco(x, y, cor) {
   pendurar(x, y, 3150, TRAS);
   cilindro(cor, V(x, y, 3150), V(x, y, 2250), 120, 16);
@@ -708,13 +711,16 @@ function alturaDoTobogan(u) {
   for (let k = 0; k < gomos; k++) {
     const u0 = k / gomos, u1 = Math.min(1, (k + 1) / gomos + 0.003);
     const sub = new THREE.CatmullRomCurve3(Array.from({ length: 12 }, (_, j) => curva.getPointAt(u0 + (u1 - u0) * (j / 11))));
-    por(M.gomos[k % 4], new THREE.TubeGeometry(sub, 14, r, 16, false));
-    // a junta branca no começo de cada gomo (o primeiro é a boca)
+    // um gomo sim, um não, 3 mm mais fino: na emenda (0,3% de sobra) as paredes não brigam
+    por(M.gomos[k % 4], new THREE.TubeGeometry(sub, 14, r - (k % 2) * 3, 16, false));
+    // a junta branca no começo de cada gomo (o primeiro é a boca): POR FORA do
+    // tubo (o anel de 16 mm encosta na parede de fora; com o raio r + 6, ele
+    // entrava 1 cm no tubo e, no passeio, era um aro branco cruzando o túnel)
     const p = curva.getPointAt(u0), d = curva.getTangentAt(u0);
-    por(M.estrutura, new THREE.TorusGeometry(r + 6, 16, 5, 22), new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), d), V(1, 1, 1)));
+    por(M.estrutura, new THREE.TorusGeometry(r + 18, 16, 5, 22), new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), d), V(1, 1, 1)));
   }
   const fim = curva.getPointAt(1), dFim = curva.getTangentAt(1);
-  por(M.estrutura, new THREE.TorusGeometry(r + 6, 16, 5, 22), new THREE.Matrix4().compose(fim, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dFim), V(1, 1, 1)));
+  por(M.estrutura, new THREE.TorusGeometry(r + 18, 16, 5, 22), new THREE.Matrix4().compose(fim, new THREE.Quaternion().setFromUnitVectors(V(0, 0, 1), dFim), V(1, 1, 1)));
 }
 // a piscina de bolinhas (2 m × 2 m) embaixo dos últimos 2 m da barra: a
 // mureta azul acolchoada, o fundo e a camada de cima das bolinhas (a coluna

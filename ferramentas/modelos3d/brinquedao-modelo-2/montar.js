@@ -268,12 +268,15 @@ function faixa(nome, caminho, perfil, passos = 48) {
   const fim = pontos[pontos.length - 1];
   pontos.push(V(fim.x, fim.y + 380, 395), V(fim.x, fim.y + 700, 385));
   const curva = new THREE.CatmullRomCurve3(pontos);
-  const parte = (t0, t1, nome) => {
+  // o amarelo entra 2% no laranja (sem fresta) com 3 mm a menos de raio: na
+  // emenda as duas paredes não brigam (do mesmo raio, piscavam -- uma faixa
+  // riscando o túnel no passeio)
+  const parte = (t0, t1, nome, raio) => {
     const sub = new THREE.CatmullRomCurve3(Array.from({ length: 40 }, (_, k) => curva.getPoint(t0 + (t1 - t0) * (k / 39))));
-    por(nome, new THREE.TubeGeometry(sub, 90, r, 20, false));
+    por(nome, new THREE.TubeGeometry(sub, 90, raio, 20, false));
   };
-  parte(0, 0.52, LARANJA_ESC);
-  parte(0.5, 1, AMARELO_ESC);
+  parte(0, 0.52, LARANJA_ESC, r);
+  parte(0.5, 1, AMARELO_ESC, r - 3);
   const saida = curva.getPoint(1);
   caixa(LARANJA, saida.x - 430, saida.x + 430, saida.y + 60, saida.y + 660, 0, 120); // colchão da chegada
   // a cabine laranja de onde sai o tobogã
