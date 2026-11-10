@@ -1530,3 +1530,106 @@ Dependência nova: rjsmin (requirements.txt).
    README.md) e ferramentas/modelos3d/adesivos_comum.py (o recorte e o
    desenho, só com o Pillow).
    Testes: core/tests_variantes_adesivo.py.
+
+52) ARENA 3D LISA E SEM FERROS NOS TÚNEIS; UM DE CADA CATEGORIA NO PARQUE
+   O QUE O CLIENTE VIA: no passeio por dentro dos brinquedões, ferros
+   passando dentro dos túneis e a câmera atravessando peças; e lentidão até
+   num computador com placa de vídeo. As causas, e o que mudou:
+
+   OS TÚNEIS (cada caminho conferido com a geometria de verdade do .glb):
+     * TOBOGÃS: os "pés" do passeio iam no fundo do tubo e a cabeça ficava a
+       5-9 cm do teto -- nas curvas o plano de perto da câmera cortava a
+       parede (o "buraco" e o ferro que se via). Agora os olhos vão no EIXO
+       do tubo (os pés 45 cm abaixo do centro), pela mesma curva do montar.js
+       (os mesmos pontos), nos quatro brinquedões e no Espaço Esportivo;
+     * Brinquedão NINJA: a barra laranja da frente do módulo vermelho (a
+       2,21 m, do .3ds) atravessava o tobogã -- agora ela é cortada onde o
+       tubo passa (montar.js: foraDoTobogan); o aro da boca ficou por fora;
+     * Brinquedão MODELO 3: os aros brancos das juntas entravam 1 cm no tubo
+       (aros cruzando o túnel) -- agora ficam por fora; os sacos de pancada
+       do corredor afastaram 2 a 4 cm (o caminho passava rente);
+     * MODELOS 2, 3, 4 e NINJA: as emendas dos gomos do tobogã (dois tubos do
+       mesmo raio, um entrando no outro) piscavam como uma faixa riscando o
+       túnel -- um gomo sim, um não fica 8 mm mais fino (as medidas do objeto
+       não mudam);
+     * O RESTO DO CAMINHO: a cabeça entrava no piso pink da escada do Modelo
+       4, no rolo vermelho, no saco azul e entre os rolos deitados; no Ninja,
+       no degrau amarelo, na barra do canto, no capuz do tobogã, embaixo dos
+       corrimãos (agora "Passando por baixo", rastejando) e na estrela da
+       tirolesa; no Modelo 2, nas barras da frente, na rede da torre e no teto
+       da rede de escalada (agora sobe pela rede, de frente para trás); no
+       Espaço, nos cubos de espuma; no Modelo 3, na tela da torre, nas
+       plataformas e na coluna do meio. Os olhos abaixam ANTES de entrar num
+       lugar baixo (a altura dos olhos sai do caminho, sem atraso).
+   Os caminhos saíram do arena3d.js para o core/static/site/arena/caminhos.js
+   (puro, sem three.js). O teste core/tests_js/passeio.mjs lê cada .glb e
+   anda cada caminho de 6 em 6 cm: os olhos nunca chegam a menos de 10 cm de
+   uma peça, e no tobogã nada fica a menos de 20 cm do eixo (rodado por
+   core/tests_arena.py, RodaEPasseioJsTests).
+
+   LISO EM QUALQUER APARELHO (arena3d.js):
+     * A QUALIDADE: alta (computador), média ou baixa (celular, pela memória
+       e pelos núcleos). Cada degrau diz a densidade de pixels (alta até 1,75,
+       média 1,5, baixa 1,25), o máximo de pixels da tela (4,2 / 2,2 / 1,0
+       milhão: num monitor grande a densidade desce sozinha), o antisserrilhado
+       (sem ele na baixa), o céu de festa (estrelas, confete, fachos, fogos),
+       quantas vezes por segundo as crianças do Espaço se mexem e as telas dos
+       jogos repintam. A cada segundo a média dos quadros manda: acima de
+       ~22 ms a densidade desce 0,15 até o piso do degrau e, no piso, a
+       qualidade desce um degrau; com folga por 3 s, sobe de volta (até a de
+       partida). ?qualidade=alta|media|baixa no endereço força uma (para
+       conferir);
+     * os SOMBREADORES de cada objeto são compilados quando ele chega
+       (compileAsync), e a planta do passeio não troca mais a neblina (trocar
+       compilava de novo cada material): o engasgo na entrada e no meio do
+       passeio sumiu;
+     * só anima o que a câmera vê (as crianças e as telas do Espaço, de dentro
+       de outro brinquedo, esperam), no ritmo da qualidade;
+     * o MOUSE em cima da arena fazia conta com todos os triângulos de todos
+       os objetos a cada movimento: agora é pelas caixas dos estandes, no
+       máximo 10 vezes por segundo; nenhum raio por quadro (nem no passeio);
+     * a tela de proteção transparente dos dois lados é desenhada numa
+       passada só (eram duas: o dobro de chamadas e de pintura).
+   Sombras: a arena não usa mapa de sombra (a sombra é um disco pintado).
+
+   UM DE CADA CATEGORIA, NO MESMO LUGAR (roda.js): brinquedão, área ninja,
+   área baby e área esportiva têm UM lugar fixo cada na roda, do tamanho do
+   MAIOR modelo da categoria. Os modelos se revezam nele: com o brinquedo
+   escolhido, o trocador "‹ Brinquedão · 2 de 3 ›" (e os nomes de cada um)
+   troca o que está ali; a placa no chão diz "Brinquedão · 2 de 3". Só o
+   modelo à vista é baixado; o de antes devolve à placa de vídeo as malhas,
+   os materiais e as texturas. As setas, o tour e o "Ir para" passam por
+   todos os modelos e trocam no lugar (um de cada categoria, sempre). O
+   modelo novo de uma categoria entra no lugar dela sozinho, pelo nome e
+   pelas categorias do cadastro ("ninja", "baby", "Espaço esportivo",
+   "Brinquedões"), sem mexer em código. As máquinas pequenas e o trampolim
+   de enterrada ficam todos.
+     * ÁREA BABY: sem uma no cadastro, a arena monta a de 9 x 6 m com o
+       projetista do "Monte seu espaço" (montar3d-gerador.js e
+       montar3d-pecas.js), juntando as peças numa malha por material; a foto
+       da ficha é o próprio 3D;
+     * O ESPAÇO ESPORTIVO fica no parque, com os outros (não mais atrás do
+       arco): no mesmo círculo, do lado oposto à entrada;
+     * NADA COLADO: cada estande (a plataforma ou o pedestal, com a placa do
+       nome) é um polígono de verdade, virado para o meio; a conta acha o
+       menor ângulo entre vizinhos que deixa 2,8 m de chão livre (3,2 m entre
+       áreas), os cantos de dentro e de fora contam, e o que sobra da volta se
+       reparte por igual. A cerca de pilares, o parque, a neblina, o mapa, as
+       áreas (os botões), o "Ver tudo" e o tour vão com o tamanho da roda.
+   Testes: core/tests_js/roda.mjs (rodado por core/tests_arena.py): um lugar
+   por categoria, os modelos 2, 3 e 4 na vaga do brinquedão, um modelo novo
+   entra na vaga sem mexer na roda, e de 2,5 a 4 m de chão livre entre
+   vizinhos.
+
+   O CATÁLOGO ("Todas as máquinas", vitrine3d.js) mostra TODOS os objetos
+   3D, e agora com UMA placa de vídeo para a vitrine inteira (um renderer
+   fora da página desenha o cartão e a imagem vai para o canvas dele): antes
+   cada cartão abria o seu contexto WebGL e o seu laço de quadros. O .glb do
+   cartão só vem quando ele aparece; o laço só roda com algum cartão à vista.
+
+   OS NÚMEROS (medidos no Chromium sem placa, o swiftshader: o tempo absoluto
+   não vale, a comparação sim): ver a tabela no fim desta seção.
+   Código: core/static/site/arena/arena3d.js, roda.js, caminhos.js,
+   vitrine3d.js, core/templates/arena.html, paginas/arena.css e os montar.js
+   de ferramentas/modelos3d/brinquedao-modelo-2, -3, -4 e brinquedao-ninja
+   (os .glb refeitos como manda o README de cada um).

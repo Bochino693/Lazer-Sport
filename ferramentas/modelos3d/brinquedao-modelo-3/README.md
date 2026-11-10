@@ -99,7 +99,7 @@ quatro fotos e o objeto 3D ligado sai sozinho no deploy, pela migração
 `python manage.py cadastrar_brinquedao_modelo_3`.
 
 O passeio por dentro (`CAMINHOS["brinquedao-modelo-3"]` em
-`core/static/site/arena/arena3d.js`) entra pela torre e sobe as plataformas,
+`core/static/site/arena/caminhos.js`) entra pela torre e sobe as plataformas,
 atravessa a passarela de rede, o corredor de cunhas, o piso de rede sob a
 bola, o balanço e os sacos, passa entre os sacos azuis do módulo amarelo,
 desce o tobogã por dentro até a piscina, sai pela escadinha da frente e

@@ -20,7 +20,7 @@ const FOTOS = path.join(__dirname, "../../../core/static/site/arena/modelos/brin
   await page.waitForFunction(() => window.pronto, null, { timeout: 180000 });
   const info = await page.evaluate(() => ({ medidas: window.medidas, triangulos: window.triangulos, centro: window.centro }));
   console.log("medidas (L, A, P) em m:", info.medidas, "triângulos:", info.triangulos);
-  console.log("deslocamento (x, chão, z) das coordenadas de trabalho em m, para o passeio (M3 em arena3d.js):", info.centro);
+  console.log("deslocamento (x, chão, z) das coordenadas de trabalho em m, para o passeio (M3 em core/static/site/arena/caminhos.js):", info.centro);
   const salvar = (arquivo, url) => fs.writeFileSync(arquivo, Buffer.from(url.split(",")[1], "base64"));
   // um ponto de trabalho (mm) no objeto final
   const P = (x, y, z) => page.evaluate(([x, y, z]) => window.noObjeto(x, y, z), [x, y, z]);

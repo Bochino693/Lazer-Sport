@@ -73,7 +73,7 @@ sozinho no deploy, pela migração `core/0142_brinquedao_modelo_4`; se ela não
 conseguir, `python manage.py cadastrar_brinquedao_modelo_4`.
 
 O passeio por dentro (`CAMINHOS["brinquedao-modelo-4"]` em
-`core/static/site/arena/arena3d.js`) sobe a escada da ponta esquerda,
+`core/static/site/arena/caminhos.js`) sobe a escada da ponta esquerda,
 atravessa o trecho de 12 m (rolos em pé, redes em V, por cima da pirâmide),
 a passagem pelos rolos magenta, o trecho de 9 m (o saco, a fresta dos pares de
 rolos, a rede), desce o tobogã até a piscina, sai pela escadinha verde e olha

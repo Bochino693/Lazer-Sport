@@ -15,7 +15,7 @@ const fs = require("fs");
   await page.goto(`http://localhost:${process.env.PORTA || 8790}/index.html`);
   await page.waitForFunction(() => window.pronto, null, { timeout: 180000 });
   console.log("medidas (L, A, P) em m:", await page.evaluate(() => window.medidas), "triângulos:", await page.evaluate(() => window.triangulos));
-  console.log("centro (o .3ds em metros -> o objeto; M4 em arena3d.js):", await page.evaluate(() => window.centro));
+  console.log("centro (o .3ds em metros -> o objeto; M4 em core/static/site/arena/caminhos.js):", await page.evaluate(() => window.centro));
   const salvar = (nome, url) => fs.writeFileSync(nome, Buffer.from(url.split(",")[1], "base64"));
   const c = await page.evaluate(() => window.centro);
   // um ponto do .3ds (mm) no objeto (m)

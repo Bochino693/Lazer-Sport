@@ -17,7 +17,7 @@ const fs = require("fs");
   await page.waitForFunction(() => window.pronto, null, { timeout: 120000 });
   const info = await page.evaluate(() => ({ medidas: window.medidas, triangulos: window.triangulos, centro: window.centro, aro: window.aro }));
   console.log("medidas (L, A, P) em m:", info.medidas, "triângulos:", info.triangulos);
-  console.log("deslocamento (x, chão, z) do .3ds em m, para o passeio (TE em arena3d.js):", info.centro, "aro:", info.aro);
+  console.log("deslocamento (x, chão, z) do .3ds em m, para o passeio (TE em core/static/site/arena/caminhos.js):", info.centro, "aro:", info.aro);
   const salvar = (arquivo, url) => fs.writeFileSync(arquivo, Buffer.from(url.split(",")[1], "base64"));
   // as vistas de conferência: de frente 3/4 (o lado da escada), de frente, de
   // cima, o lado da cesta, a pista vista de cima da escada e as costas

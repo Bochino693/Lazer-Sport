@@ -66,7 +66,7 @@ galeria do cadastro (no Cloudinary) também mostrar o desenho novo.
 área "Trampolins e brinquedões" (`grupo`; e em `REGRAS` o nome vira cama
 elástica, e não basquete, por causa do "enterrada"). O passeio por dentro
 (sobe a escada, pula nas três camas, enterra na cesta e volta) é o
-`CAMINHOS["trampolim-enterrada"]` do `core/static/site/arena/arena3d.js`, com
+`CAMINHOS["trampolim-enterrada"]` do `core/static/site/arena/caminhos.js`, com
 os pontos em mm do `.3ds` (`TE` leva para o objeto centralizado; o
 deslocamento sai do `gerar.cjs`). O cadastro com as fotos sai no deploy pela
 migração `core/0139_trampolim_enterrada`; se ela não conseguir,

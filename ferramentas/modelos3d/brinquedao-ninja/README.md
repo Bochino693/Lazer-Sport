@@ -56,7 +56,7 @@ ligado sai sozinho no deploy, pela migração `core/0140_brinquedao_ninja`;
 se ela não conseguir, `python manage.py cadastrar_brinquedao_ninja`.
 
 O passeio por dentro (`CAMINHOS["brinquedao-ninja"]` em
-`core/static/site/arena/arena3d.js`) sobe os degraus do canto, atravessa o
+`core/static/site/arena/caminhos.js`) sobe os degraus do canto, atravessa o
 andar de cima (cilindros, postes, o rolo por dentro, a rede em V), desce o
 tobogã, sai da piscina de bolinhas, pula nas duas camas, vai de tirolesa
 por cima da espuma e termina olhando o brinquedão inteiro. As medidas do

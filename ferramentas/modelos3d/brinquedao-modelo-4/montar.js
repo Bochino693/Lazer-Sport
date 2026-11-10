@@ -335,7 +335,7 @@ for (const [y, z] of [[6280, PISO + 165], [5760, 3260], [5280, PISO + 165]]) {
       quase duas voltas em torno da coluna da quina (19,59 m, como na planta)
       e sai na piscina de bolinhas, na frente, à esquerda. Amarelo na frente,
       magenta por trás, como no render. As mesmas medidas estão no passeio
-      da Arena (toboganDoModelo4, em arena3d.js).
+      da Arena (toboganDoModelo4, em core/static/site/arena/caminhos.js).
    ====================================================================== */
 const TOBOGA = { cx: 19590, cy: 3900, raio: 570, r: 290, a0: 180, a1: 880, zTopo: 2880, zFim: 640, boca: [19020, 4200], saida: [18880, 3250, 560] };
 {

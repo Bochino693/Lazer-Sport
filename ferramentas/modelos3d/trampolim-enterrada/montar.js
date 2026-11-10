@@ -380,7 +380,7 @@ for (const [nome, { material: mat, geometrias, extras }] of pecas) {
   raiz.add(malha);
 }
 // assenta no chão e centraliza; o deslocamento vai para o passeio da Arena
-// (TE, em arena3d.js: lá os pontos do caminho são escritos em mm do .3ds)
+// (TE, em core/static/site/arena/caminhos.js: lá os pontos do caminho são escritos em mm do .3ds)
 const caixaTotal = new THREE.Box3().setFromObject(raiz);
 const centro = caixaTotal.getCenter(new THREE.Vector3());
 raiz.children.forEach((m) => m.geometry.translate(-centro.x, -caixaTotal.min.y, -centro.z));

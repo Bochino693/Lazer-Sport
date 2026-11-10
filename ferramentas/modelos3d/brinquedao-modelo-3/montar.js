@@ -684,7 +684,7 @@ barraquinha(4000, 5500, M.azulBebe);
 // magenta, amarelo e laranja. A primeira volta é mais inclinada: quando a
 // espiral passa por baixo do piso amarelo (uns 2/3 de volta depois da boca),
 // o tubo já desceu o bastante para não bater nele. As mesmas medidas estão
-// no passeio da Arena (toboganDoModelo3, em arena3d.js).
+// no passeio da Arena (toboganDoModelo3, em core/static/site/arena/caminhos.js).
 const TOBOGA = {
   cx: 9000, cy: MEIO, raio: 520, r: 250, a0: 90, voltas: 2.25,
   zTopo: 2160, quebra: 0.67, zQuebra: 1480, zFim: 550,
@@ -784,7 +784,7 @@ raiz.children.forEach((m) => m.geometry.translate(-centro.x, -caixaTotal.min.y, 
 const final = new THREE.Box3().setFromObject(raiz);
 window.medidas = final.getSize(new THREE.Vector3()).toArray().map((v) => Math.round(v * 100) / 100);
 // o deslocamento que leva as coordenadas de trabalho (em metros, já viradas)
-// ao objeto: o passeio da Arena usa (M3, em arena3d.js)
+// ao objeto: o passeio da Arena usa (M3, em core/static/site/arena/caminhos.js)
 window.centro = { x: +centro.x.toFixed(4), chao: +caixaTotal.min.y.toFixed(4), z: +centro.z.toFixed(4) };
 window.triangulos = raiz.children.reduce((s, m) => s + (m.geometry.index ? m.geometry.index.count / 3 : m.geometry.attributes.position.count / 3), 0);
 // um ponto de trabalho (mm) no objeto final, para as câmeras do gerar.cjs
