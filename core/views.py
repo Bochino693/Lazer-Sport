@@ -1168,6 +1168,58 @@ class CategoriasInfoView(View):
     # Os ícones são do recorte do Font Awesome do site (tests_assets).
     # ------------------------------------------------------------------
     VITRINES = (
+        # as áreas que nasceram na migração 0147 (core/categorias_capas.py)
+        (("ninja",), {
+            "icone": "fa-person-running",
+            "descricao": (
+                "Circuitos de obstáculos para a criançada correr, pular e "
+                "escalar: degraus, rolos, argolas, redes e camas elásticas, "
+                "sobre piso macio e com proteção em volta."
+            ),
+            "beneficios": (
+                ("fa-person-running", "Circuito de obstáculos",
+                 "Desafios em sequência, do mais fácil ao mais difícil."),
+                ("fa-shield-halved", "Piso macio e redes",
+                 "Colchões, acolchoados e redes de proteção em todo o percurso."),
+                ("fa-compass-drafting", "Projeto sob medida",
+                 "Montado para a medida e o pé-direito do seu espaço."),
+            ),
+            "zap": "Olá! Quero um orçamento de área ninja para o meu espaço.",
+        }),
+        (("baby", "bebe"), {
+            "icone": "fa-baby",
+            "descricao": (
+                "Espaços para os pequenos de 0 a 3 anos, com tudo baixo e "
+                "macio: piso de EVA, piscina rasa de bolinhas, escorregador, "
+                "blocos de espuma e cerca baixa."
+            ),
+            "beneficios": (
+                ("fa-baby", "De 0 a 3 anos",
+                 "Alturas, peças e cores pensadas para os bebês."),
+                ("fa-shield-halved", "Tudo macio",
+                 "Espuma, EVA e cantos arredondados em todo o espaço."),
+                ("fa-ruler-combined", "Compacto",
+                 "Cabe perto da entrada, onde os pais ficam de olho."),
+            ),
+            "zap": "Olá! Quero um orçamento de área baby para o meu espaço.",
+        }),
+        (("trampolim", "trampolins", "cama elastica"), {
+            "icone": "fa-arrows-up-down",
+            "descricao": (
+                "Trampolins e camas elásticas para parques, buffets e espaços "
+                "esportivos: camas em grade, piscina de espuma e pista de "
+                "enterrada, com tela de proteção em volta."
+            ),
+            "beneficios": (
+                ("fa-arrows-up-down", "Pulo de verdade",
+                 "Lonas e molas para uso profissional e contínuo."),
+                ("fa-shield-halved", "Proteção em volta",
+                 "Estofados, tela e piscina de espuma para cair macio."),
+                ("fa-compass-drafting", "Projeto sob medida",
+                 "Do trampolim de enterrada ao parque inteiro."),
+            ),
+            "zap": "Olá! Quero um orçamento de trampolim para o meu espaço.",
+        }),
         (("brinquedao", "brinquedoes"), {
             "icone": "fa-layer-group",
             "descricao": (
