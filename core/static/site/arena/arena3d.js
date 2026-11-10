@@ -87,9 +87,9 @@ const TOMBO = -1.3; // "Baixo": a máquina tomba para a frente e mostra a base
    (pela memória e pelos núcleos), e a medida dos quadros desce (e volta a
    subir, até a de partida) sozinha. ?qualidade=alta|media|baixa força uma. */
 const QUALIDADES = {
-  alta: { nome: "alta", densidade: 1.75, piso: 1, pixels: 2.8e6, antialias: true, estrelas: 420, confete: 170, fachos: 6, fogos: true, criancas: 0, telas: 8 },
-  media: { nome: "media", densidade: 1.5, piso: 0.85, pixels: 1.6e6, antialias: true, estrelas: 300, confete: 110, fachos: 4, fogos: true, criancas: 30, telas: 6 },
-  baixa: { nome: "baixa", densidade: 1.25, piso: 0.7, pixels: 0.9e6, antialias: false, estrelas: 180, confete: 60, fachos: 3, fogos: false, criancas: 20, telas: 4 },
+  alta: { nome: "alta", densidade: 1.75, piso: 1, pixels: 4.2e6, antialias: true, estrelas: 420, confete: 170, fachos: 6, fogos: true, criancas: 0, telas: 8 },
+  media: { nome: "media", densidade: 1.5, piso: 0.85, pixels: 2.2e6, antialias: true, estrelas: 300, confete: 110, fachos: 4, fogos: true, criancas: 30, telas: 6 },
+  baixa: { nome: "baixa", densidade: 1.25, piso: 0.7, pixels: 1.0e6, antialias: false, estrelas: 180, confete: 60, fachos: 3, fogos: false, criancas: 20, telas: 4 },
 };
 const DEGRAUS = ["alta", "media", "baixa"];
 
@@ -1311,14 +1311,14 @@ function fotosDe(dados) {
 /* A ÁREA BABY da roda: enquanto o cadastro não tem uma de verdade (um
    objeto 3D com "baby" no nome ou na categoria, que toma a vaga sozinho), a
    arena monta uma com o projetista do "Monte seu espaço" -- o porte grande
-   de 7 x 5 m, colorido: piscina rasa com plataforma e escorregador,
-   torrinha, casinha, blocos de espuma, rampa, túnel, bolas penduradas, os
-   painéis ábaco na cerca de 0,60 m e o portal. */
+   de 9 x 6 m, colorido (em 7 x 5 m o projetista só põe a piscina): a
+   piscina rasa com plataforma e escorregador, a torrinha, a rampa, o túnel,
+   as bolas penduradas, os painéis ábaco na cerca de 0,60 m e o portal. */
 const AREA_BABY_COR = "#ec4899";
 const AREA_BABY = {
   id: "area-baby", nome: "Área Baby", modelo_id: "area-baby", gerado: "baby", modelo: "",
   grupo: "brinquedoes", categorias: ["Área baby"], reino: false, jogo: "", url: "", capa: "", fotos: [],
-  medidas: [2.0, 7, 5], medidas_modelo: [2.0, 7, 5], medidas_texto: "2 m × 7 m × 5 m",
+  medidas: [2.3, 9, 6], medidas_modelo: [2.3, 9, 6], medidas_texto: "2,3 m × 9 m × 6 m",
   descricao: "",
 };
 
@@ -1993,12 +1993,15 @@ class Arena {
   /** Um objeto chegou: a troca da vaga sai do "carregando" e a área gerada ganha a foto da ficha. */
   chegou(m) {
     if (m.dados.gerado && !m.fotos.perfil) {
-      try { m.fotos.perfil = this.fotografar(m); } catch (erro) { /* a ficha fica sem foto */ }
+      try {
+        m.fotos.perfil = this.fotografar(m);
+        m.dados.capa = m.fotos.perfil; // a foto do "Ir para" também
+      } catch (erro) { /* a ficha fica sem foto */ }
     }
     if (this.selecionada === m) {
       this.mostrarFicha(m);
       // a câmera enquadra o tamanho de verdade (até chegar, valia o reservado)
-      if (this.vistaAtual && this.vistaAtual !== "livre") this.camera3d.olharPara(m, this.vistaAtual === "girar" ? "girar" : this.vistaAtual);
+      if (this.vistaAtual && this.vistaAtual !== "livre") this.camera3d.olharPara(m, this.vistaAtual);
     }
     this.desenharTroca();
   }

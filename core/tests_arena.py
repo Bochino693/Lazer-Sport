@@ -410,3 +410,68 @@ class PrecoSoDaLojaTests(TestCase):
         )}
         self.assertEqual(dados["Air Game Hockey"]["preco"], "R$ 8.900,00")
         self.assertEqual(dados["Basquete Street"]["preco"], "")
+
+
+class RodaEPasseioJsTests(TestCase):
+    """A roda (um de cada categoria, nada colado) e o passeio (nada atravessa os túneis), no node.
+
+    core/tests_js/roda.mjs confere a conta da roda (core/static/site/arena/roda.js) com as máquinas
+    de verdade da página; core/tests_js/passeio.mjs confere cada caminho do passeio
+    (caminhos.js) com a geometria do .glb de cada objeto.
+    """
+
+    def _node(self):
+        import shutil
+
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Sem node para rodar o JavaScript da arena")
+        return node
+
+    def test_um_de_cada_categoria_e_nada_colado(self):
+        import json
+        import subprocess
+        import tempfile
+
+        node = self._node()
+        cache.clear()
+        maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as arquivo:
+            json.dump(maquinas, arquivo)
+        try:
+            resultado = subprocess.run([node, str(Path(__file__).parent / "tests_js" / "roda.mjs"), arquivo.name],
+                                       capture_output=True, text=True, timeout=120)
+        finally:
+            Path(arquivo.name).unlink(missing_ok=True)
+        self.assertEqual(resultado.returncode, 0, resultado.stdout + resultado.stderr)
+
+    def test_o_passeio_nao_atravessa_nada(self):
+        import subprocess
+
+        node = self._node()
+        resultado = subprocess.run([node, str(Path(__file__).parent / "tests_js" / "passeio.mjs")],
+                                   capture_output=True, text=True, timeout=300)
+        self.assertEqual(resultado.returncode, 0, resultado.stdout + resultado.stderr)
+
+    def test_a_pagina_traz_os_modulos_da_roda_e_do_passeio(self):
+        html = self.client.get(reverse("arena")).content.decode()
+        for trecho in ("site/arena/roda.js", "site/arena/caminhos.js", "data-arena-troca", "data-troca-passo"):
+            self.assertIn(trecho, html)
+
+    def test_nenhum_raio_por_quadro_e_a_qualidade_adapta(self):
+        # o quadro da arena e o do passeio não fazem conta com os triângulos dos
+        # objetos (o mouse vai pelas caixas dos estandes, o piso do passeio é o
+        # caminho amostrado); a qualidade tem os três degraus e desce sozinha
+        js = Path(finders.find("site/arena/arena3d.js")).read_text(encoding="utf-8")
+        quadro = js[js.index("  quadro(dt) {\n    this.pinturasNoQuadro = 0;"):]
+        quadro = quadro[:quadro.index("\n  }\n")]
+        self.assertNotIn("intersect", quadro)
+        passeio = js[js.index("class Passeio {"):js.index("class Camera {")]
+        quadro_do_passeio = passeio[passeio.index("  quadro(dt) {"):]
+        quadro_do_passeio = quadro_do_passeio[:quadro_do_passeio.index("\n  }\n")]
+        self.assertNotIn("intersect", quadro_do_passeio)
+        self.assertNotIn("this.piso(", quadro_do_passeio)
+        self.assertIn("maquinaSobACaixa", js)
+        for degrau in ("alta:", "media:", "baixa:"):
+            self.assertIn(degrau, js[js.index("const QUALIDADES = {"):])
+        self.assertIn("mudarDeDegrau(1)", js)

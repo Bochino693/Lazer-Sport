@@ -711,8 +711,8 @@ function alturaDoTobogan(u) {
   for (let k = 0; k < gomos; k++) {
     const u0 = k / gomos, u1 = Math.min(1, (k + 1) / gomos + 0.003);
     const sub = new THREE.CatmullRomCurve3(Array.from({ length: 12 }, (_, j) => curva.getPointAt(u0 + (u1 - u0) * (j / 11))));
-    // um gomo sim, um não, 3 mm mais fino: na emenda (0,3% de sobra) as paredes não brigam
-    por(M.gomos[k % 4], new THREE.TubeGeometry(sub, 14, r - (k % 2) * 3, 16, false));
+    // um gomo sim, um não, 8 mm mais fino (mais que o canto do polígono do tubo): na emenda (0,3% de sobra) as paredes não brigam nem se cruzam em dentes
+    por(M.gomos[k % 4], new THREE.TubeGeometry(sub, 14, r - (k % 2) * 8, 16, false));
     // a junta branca no começo de cada gomo (o primeiro é a boca): POR FORA do
     // tubo (o anel de 16 mm encosta na parede de fora; com o raio r + 6, ele
     // entrava 1 cm no tubo e, no passeio, era um aro branco cruzando o túnel)

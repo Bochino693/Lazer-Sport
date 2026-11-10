@@ -117,10 +117,10 @@ class ObjetoNaArenaTests(TestCase):
 
 
 class PasseioTests(TestCase):
-    """O caminho do passeio fica no arena3d.js (é desenho do objeto, como as animações)."""
+    """O caminho do passeio fica no caminhos.js da arena (é desenho do objeto, como as animações)."""
 
     def test_tem_caminho_proprio_e_todo_modo_existe(self):
-        js = Path(finders.find("site/arena/arena3d.js")).read_text(encoding="utf-8")
+        js = Path(finders.find("site/arena/caminhos.js")).read_text(encoding="utf-8")
         inicio = js.index('CAMINHOS["brinquedao-modelo-4"] = () => [')
         caminho = js[inicio:js.index("\n];", inicio)]
         tobogan = js[js.index("function toboganDoModelo4()"):]

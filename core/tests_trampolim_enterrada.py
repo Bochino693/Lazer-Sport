@@ -81,8 +81,8 @@ class ObjetoNaArenaTests(TestCase):
 
     def test_o_passeio_tem_o_caminho_do_trampolim(self):
         # o caminho (subir a escada, pular nas camas, enterrar) fica no
-        # arena3d.js, pelo id do modelo: o id tem de ser o mesmo dos dois lados
-        codigo = Path(finders.find("site/arena/arena3d.js")).read_text(encoding="utf-8")
+        # caminhos.js da arena, pelo id do modelo: o id tem de ser o mesmo dos dois lados
+        codigo = Path(finders.find("site/arena/caminhos.js")).read_text(encoding="utf-8")
         self.assertIn('CAMINHOS["trampolim-enterrada"]', codigo)
 
     def test_aparece_na_arena_antes_do_cadastro(self):

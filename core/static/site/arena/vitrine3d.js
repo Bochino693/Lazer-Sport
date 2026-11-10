@@ -7,10 +7,18 @@
    os lados -- de cima para baixo o dedo continua rolando a página). Dois
    toques voltam para a frente.
 
-   Leve de propósito: cada cartão só monta o seu 3D quando chega perto da
-   tela (o three.js e o leitor do .glb vêm uma vez só, na primeira vez), só
-   desenha enquanto está visível e no máximo 30 quadros por segundo; até o
-   objeto chegar, fica a foto. Sem JavaScript, fica a foto.
+   ECONÔMICO DE PROPÓSITO (o catálogo mostra TODOS os objetos 3D):
+   - UMA placa de vídeo só para a vitrine inteira: um WebGLRenderer, fora
+     da página, desenha o cartão da vez e a imagem vai para o canvas 2D do
+     cartão. Antes cada cartão abria o seu contexto WebGL (nove cartões,
+     nove contextos -- mais o da arena; o navegador derruba os mais velhos
+     depois de 16) e o seu laço de quadros;
+   - o .glb de cada cartão só é baixado quando o cartão aparece na tela (até
+     ele chegar, e sem JavaScript, fica a foto); o three.js e o leitor vêm
+     uma vez só, na primeira vez;
+   - UM laço de quadros para todos: ele só roda com algum cartão 3D à vista
+     e a aba aberta, e para sozinho quando nenhum está; cada cartão é
+     desenhado no máximo 30 vezes por segundo, e só quando algo muda.
    ====================================================================== */
 
 const grade = document.querySelector("[data-fotos-grade]");
@@ -18,12 +26,21 @@ const cartoes = grade ? Array.from(grade.querySelectorAll("[data-vitrine3d]")) :
 
 if (cartoes.length) {
   let motor = null;
+  const visores = new Set(); // os cartões com o 3D montado
+  let rodando = false;
+
+  /** O three.js, o leitor e O renderer da vitrine (um só, fora da página). */
   const carregarMotor = () => {
     if (!motor) {
-      motor = Promise.all([import(grade.dataset.three), import(grade.dataset.gltf)]).then(([T, leitor]) => ({
-        T,
-        carregador: new leitor.GLTFLoader(),
-      }));
+      motor = Promise.all([import(grade.dataset.three), import(grade.dataset.gltf)]).then(([T, leitor]) => {
+        const renderer = new T.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
+        renderer.toneMapping = T.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        renderer.outputColorSpace = T.SRGBColorSpace;
+        renderer.setClearColor(0x000000, 0);
+        renderer.setPixelRatio(1); // a densidade vai no tamanho de cada cartão (abaixo)
+        return { T, carregador: new leitor.GLTFLoader(), renderer, tamanho: [0, 0] };
+      });
     }
     return motor;
   };
@@ -35,27 +52,46 @@ if (cartoes.length) {
         cartao.dataset.montado = "1";
         montar(cartao).catch((erro) => console.error("Vitrine 3D: o objeto não carregou", erro));
       }
-      if (cartao.visor) cartao.visor.visivel = entrada.isIntersecting;
+      if (cartao.visor) {
+        cartao.visor.visivel = entrada.isIntersecting;
+        cartao.visor.sujo = true;
+      }
     });
-  }, { rootMargin: "250px 0px" });
+    acordar();
+  }, { rootMargin: "120px 0px" });
 
   cartoes.forEach((cartao) => aoChegar.observe(cartao));
+  document.addEventListener("visibilitychange", acordar);
+
+  /** O laço de quadros: um só, e só com algum cartão 3D à vista. */
+  function acordar() {
+    if (rodando || document.hidden || ![...visores].some((v) => v.visivel)) return;
+    rodando = true;
+    let anterior = performance.now();
+    const passo = (agora) => {
+      const dt = Math.min(0.1, (agora - anterior) / 1000);
+      anterior = agora;
+      const vistos = [...visores].filter((v) => v.visivel);
+      if (document.hidden || !vistos.length) {
+        rodando = false;
+        return;
+      }
+      vistos.forEach((v) => v.passo(dt));
+      requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+  }
 
   async function montar(cartao) {
-    const { T, carregador } = await carregarMotor();
+    const m = await carregarMotor();
+    const { T, carregador, renderer } = m;
     const gltf = await carregador.loadAsync(cartao.dataset.modelo);
 
     const tela = document.createElement("canvas");
     tela.className = "arena-foto-3d";
     tela.setAttribute("aria-label", "Objeto 3D: arraste para girar");
     cartao.append(tela);
-
-    const renderer = new T.WebGLRenderer({ canvas: tela, antialias: true, alpha: true, powerPreference: "low-power" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
-    renderer.outputColorSpace = T.SRGBColorSpace;
-    renderer.setClearColor(0x000000, 0);
+    const pincel = tela.getContext("2d");
 
     const cena = new T.Scene();
     cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
@@ -73,6 +109,8 @@ if (cartoes.length) {
     objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
     objeto.position.y -= caixa.min.y;
     cena.add(objeto);
+    // os sombreadores já agora (em paralelo, onde a placa deixa): o primeiro quadro não engasga
+    try { renderer.compileAsync(cena, new T.PerspectiveCamera(), cena).catch(() => {}); } catch (erro) { /* compila no primeiro quadro */ }
 
     const raio = tamanho.length() / 2;
     const alvo = new T.Vector3(0, tamanho.y * 0.48, 0);
@@ -90,26 +128,42 @@ if (cartoes.length) {
     const BALANCO = 0.85; // até ~50° para cada lado
     let centro = 0;
     let tempo = Math.asin(inicio.giro / BALANCO) / 0.45;
-    let sujo = true;
-    let anterior = 0;
     let acumulado = 0;
-    const visor = { visivel: true };
+    const visor = { visivel: true, sujo: true, passo: null };
     cartao.visor = visor;
 
     function medir() {
       const r = tela.getBoundingClientRect();
       if (!r.width || !r.height) return;
-      renderer.setSize(r.width, r.height, false);
+      const densidade = Math.min(window.devicePixelRatio || 1, 1.5);
+      tela.width = Math.round(r.width * densidade);
+      tela.height = Math.round(r.height * densidade);
       camera.aspect = r.width / r.height;
       camera.updateProjectionMatrix();
-      sujo = true;
+      visor.sujo = true;
     }
 
-    function passo(agora) {
-      requestAnimationFrame(passo);
-      const dt = Math.min(0.1, (agora - (anterior || agora)) / 1000);
-      anterior = agora;
-      if (!visor.visivel || document.hidden) return;
+    /** Desenha o cartão na placa da vitrine e copia a imagem para o canvas dele. */
+    function desenhar() {
+      const w = tela.width;
+      const h = tela.height;
+      if (!w || !h) return;
+      // o renderer cresce até o maior cartão (e fica): sem refazer o buffer a cada cartão
+      if (w > m.tamanho[0] || h > m.tamanho[1]) {
+        m.tamanho = [Math.max(w, m.tamanho[0]), Math.max(h, m.tamanho[1])];
+        renderer.setSize(m.tamanho[0], m.tamanho[1], false);
+      }
+      renderer.setViewport(0, 0, w, h);
+      renderer.setScissor(0, 0, w, h);
+      renderer.setScissorTest(true);
+      renderer.render(cena, camera);
+      renderer.setScissorTest(false);
+      // o canto de baixo do buffer (o viewport do WebGL começa embaixo) vai para o cartão
+      pincel.clearRect(0, 0, w, h);
+      pincel.drawImage(renderer.domElement, 0, m.tamanho[1] - h, w, h, 0, 0, w, h);
+    }
+
+    visor.passo = (dt) => {
       acumulado += dt;
       if (acumulado < 1 / 30) return; // 30 quadros bastam para girar liso
       const passoDt = acumulado;
@@ -130,17 +184,17 @@ if (cartoes.length) {
       const antes = vista.giro + vista.inclinacao;
       vista.giro += (meta.giro - vista.giro) * k;
       vista.inclinacao += (meta.inclinacao - vista.inclinacao) * k;
-      if (Math.abs(vista.giro + vista.inclinacao - antes) > 1e-5) sujo = true;
-      if (!sujo) return;
-      sujo = false;
+      if (Math.abs(vista.giro + vista.inclinacao - antes) > 1e-5) visor.sujo = true;
+      if (!visor.sujo) return;
+      visor.sujo = false;
       camera.position.set(
         alvo.x + Math.sin(vista.giro) * Math.cos(vista.inclinacao) * distancia,
         alvo.y + Math.sin(vista.inclinacao) * distancia,
         alvo.z + Math.cos(vista.giro) * Math.cos(vista.inclinacao) * distancia,
       );
       camera.lookAt(alvo);
-      renderer.render(cena, camera);
-    }
+      desenhar();
+    };
 
     // arrastar gira; no dedo, só para os lados (o resto rola a página)
     let toque = null;
@@ -173,7 +227,13 @@ if (cartoes.length) {
 
     new ResizeObserver(medir).observe(tela);
     medir();
-    requestAnimationFrame(passo);
+    // à vista agora? (o cartão pode ter saído da tela enquanto o .glb chegava)
+    const r = cartao.getBoundingClientRect();
+    visor.visivel = r.bottom > -120 && r.top < window.innerHeight + 120;
+    visores.add(visor);
+    // o primeiro quadro já agora (o cartão sai da foto para o 3D sem esperar o laço)
+    visor.passo(1);
     cartao.classList.add("arena-foto-midia--pronta");
+    acordar();
   }
 }

@@ -504,14 +504,14 @@ painelY(M.placa, MEIO - 50, X.pe + 40, X.vermelho0 - 40, 1790, 2150);
   const { r, zTopo } = TOBOGA;
   const curva = curvaDoTobogan();
   // rosa e verde-limão alternados, um quarto de volta cada (como na imagem).
-  // Cada pedaço entra 0,4% no seguinte (sem fresta) com 3 mm a menos de
+  // Cada pedaço entra 0,4% no seguinte (sem fresta) com 8 mm a menos de
   // raio, um sim, um não: na emenda as duas paredes não brigam (antes, do
   // mesmo raio, piscavam -- uma faixa riscando o túnel no passeio)
   const partes = 7;
   for (let k = 0; k < partes; k++) {
     const t0 = k / partes, t1 = (k + 1) / partes + 0.004;
     const sub = new THREE.CatmullRomCurve3(Array.from({ length: 16 }, (_, j) => curva.getPoint(Math.min(1, t0 + (t1 - t0) * (j / 15)))));
-    por(k % 2 ? M.tuboRosa : M.tuboVerde, new THREE.TubeGeometry(sub, 18, r - (k % 2) * 3, 18, false));
+    por(k % 2 ? M.tuboRosa : M.tuboVerde, new THREE.TubeGeometry(sub, 18, r - (k % 2) * 8, 18, false));
   }
   // a boca do tobogã: o aro verde-limão na beira do piso e o capuz verde-limão
   // por cima de quem senta para descer (o pedaço verde mais alto da imagem)

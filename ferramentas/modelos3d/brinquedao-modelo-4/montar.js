@@ -352,10 +352,10 @@ const TOBOGA = { cx: 19590, cy: 3900, raio: 570, r: 290, a0: 180, a1: 880, zTopo
     for (let a = inicio; a <= fim + 0.01; a += 15) pontos.push(ponto(a, z(a)));
     if (k === trechos.length - 1) pontos.push(V(...saida));
     else pontos.push(ponto(fim + 4, z(fim + 4)));
-    // cada meio-giro entra 4 graus no seguinte (sem fresta) com 3 mm a menos
+    // cada meio-giro entra 4 graus no seguinte (sem fresta) com 8 mm a menos
     // de raio, um sim, um não: na emenda as duas paredes não brigam (do mesmo
     // raio, piscavam -- a faixa amarela e magenta riscando o túnel no passeio)
-    por(nome, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pontos), pontos.length * 3, r - (k % 2) * 3, 16, false));
+    por(nome, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pontos), pontos.length * 3, r - (k % 2) * 8, 16, false));
     inicio = fim;
   });
   // a boca: o aro amarelo no piso do módulo
