@@ -2926,7 +2926,7 @@ class Arena {
     arco.position.y = alto;
     portal.add(arco);
     // as lâmpadas do arco
-    const lampadas = new T.InstancedMesh(this.geo("lampada", () => new T.SphereGeometry(0.08, 8, 6)), this.mat("lampada", () => {
+    const lampadas = new T.InstancedMesh(this.geo("lampada", () => new T.SphereGeometry(0.08, 6, 4)), this.mat("lampada", () => {
       const m = new T.MeshBasicMaterial({ color: "#fff2b0", toneMapped: false });
       m.userData.compartilhado = true;
       return m;
@@ -3031,7 +3031,7 @@ class Arena {
 
     // as lâmpadas de festa no aro de cima
     const quantas = Math.round((raio * PI * 2) / 0.9);
-    const lampadas = new T.InstancedMesh(this.geo("lampada", () => new T.SphereGeometry(0.08, 8, 6)), this.mat("lampadaCor", () => new T.MeshBasicMaterial({ toneMapped: false })), quantas);
+    const lampadas = new T.InstancedMesh(this.geo("lampada", () => new T.SphereGeometry(0.08, 6, 4)), this.mat("lampadaCor", () => new T.MeshBasicMaterial({ toneMapped: false })), quantas);
     const tons = ["#fff2b0", "#ffd166", "#ff9fb2", "#9fe1ff"].map((c) => new T.Color(c));
     for (let i = 0; i < quantas; i++) {
       const a = (i / quantas) * PI * 2;
@@ -3386,7 +3386,7 @@ class Arena {
       m.userData.compartilhado = true;
       return m;
     });
-    const bolinhas = instancias(this.geo("lampada", () => new T.SphereGeometry(0.08, 8, 6)), materialDaLuz, lampadas, ([x, y, z]) => ajuda.position.set(x, y, z));
+    const bolinhas = instancias(this.geo("lampada", () => new T.SphereGeometry(0.08, 6, 4)), materialDaLuz, lampadas, ([x, y, z]) => ajuda.position.set(x, y, z));
     if (bolinhas) lampadas.forEach((_, i) => bolinhas.setColorAt(i, tons[i % tons.length]));
 
     // as árvores: redondas e pinheirinhos, baixas (a copa até 2,9 m)
@@ -5438,9 +5438,14 @@ class Passeio {
     camera.position.set(centro.x, 60, centro.z);
     camera.up.set(0, 0, -1).applyQuaternion(m.grupo.quaternion);
     camera.lookAt(centro);
-    const n = 256;
-    const alvo = new T.WebGLRenderTarget(n, n);
-    alvo.texture.colorSpace = T.SRGBColorSpace;
+    // A planta é desenhada no canto da própria tela e lida de volta na hora (o
+    // quadro seguinte cobre): num alvo à parte, o three.js desenha sem o tom
+    // da tela e cada material à vista ganhava outro sombreador -- era uma
+    // leva de compilações (o engasgo) bem na entrada do passeio
+    const r = a.renderer;
+    const pr = r.getPixelRatio();
+    const buffer = r.getDrawingBufferSize(new T.Vector2());
+    const n = Math.max(64, Math.min(256, Math.floor(buffer.x), Math.floor(buffer.y)));
     // sem neblina na planta: ela vai para longe (tirar a neblina mudaria o
     // sombreador de cada material -- era uma compilação de tudo na entrada)
     const neblina = [a.cena.fog.near, a.cena.fog.far];
@@ -5451,15 +5456,18 @@ class Passeio {
     a.cena.background = new T.Color("#0d0b33");
     const festa = a.festaNoCeu();
     festa.forEach((o) => { o.userData.visivel = o.visible; o.visible = false; });
-    a.renderer.setRenderTarget(alvo);
-    a.renderer.render(a.cena, camera);
-    a.renderer.setRenderTarget(null);
+    const px = new Uint8Array(n * n * 4);
+    r.setViewport(0, 0, n / pr, n / pr);
+    r.setScissor(0, 0, n / pr, n / pr);
+    r.setScissorTest(true);
+    r.render(a.cena, camera);
+    const gl = r.getContext();
+    gl.readPixels(0, 0, n, n, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    r.setScissorTest(false);
+    r.setViewport(0, 0, buffer.x / pr, buffer.y / pr);
     festa.forEach((o) => { o.visible = o.userData.visivel; });
     [a.cena.fog.near, a.cena.fog.far] = neblina;
     a.cena.background = fundo;
-    const px = new Uint8Array(n * n * 4);
-    a.renderer.readRenderTargetPixels(alvo, 0, 0, n, n, px);
-    alvo.dispose();
     const base = document.createElement("canvas");
     base.width = base.height = n;
     const imagem = base.getContext("2d").createImageData(n, n);
