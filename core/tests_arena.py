@@ -31,6 +31,7 @@ from unittest import mock
 
 from django.contrib.staticfiles import finders
 from django.core.cache import cache
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.test import TestCase
 from django.urls import reverse
 
@@ -475,3 +476,35 @@ class RodaEPasseioJsTests(TestCase):
         for degrau in ("alta:", "media:", "baixa:"):
             self.assertIn(degrau, js[js.index("const QUALIDADES = {"):])
         self.assertIn("mudarDeDegrau(1)", js)
+
+
+class ArenaNoNavegadorTests(StaticLiveServerTestCase):
+    """A Arena 3D de verdade num Chromium sem tela (core/tests_js/arena_vagas.cjs, com o Playwright).
+
+    Um modelo carregado por categoria, a troca na vaga descarta o de antes e nenhum raio
+    por quadro (na arena e no passeio). Sem node, Playwright ou o Chromium dele, pula.
+    """
+
+    def test_um_carregado_por_categoria_e_a_troca_descarta(self):
+        import os
+        import shutil
+        import subprocess
+
+        node = shutil.which("node")
+        npm = shutil.which("npm")
+        if not node:
+            self.skipTest("Sem node")
+        ambiente = dict(os.environ)
+        if npm:
+            raiz_global = subprocess.run([npm, "root", "-g"], capture_output=True, text=True).stdout.strip()
+            ambiente["NODE_PATH"] = os.pathsep.join(filter(None, [ambiente.get("NODE_PATH", ""), raiz_global]))
+        tem = subprocess.run([node, "-e", "require.resolve('playwright')"], capture_output=True, env=ambiente)
+        if tem.returncode != 0:
+            self.skipTest("Sem o Playwright para abrir a arena num navegador")
+        resultado = subprocess.run(
+            [node, str(Path(__file__).parent / "tests_js" / "arena_vagas.cjs"), self.live_server_url + reverse("arena")],
+            capture_output=True, text=True, timeout=900, env=ambiente,
+        )
+        if "Executable doesn't exist" in resultado.stdout + resultado.stderr:
+            self.skipTest("Sem o Chromium do Playwright")
+        self.assertEqual(resultado.returncode, 0, resultado.stdout + resultado.stderr)
