@@ -1627,8 +1627,29 @@ Dependência nova: rjsmin (requirements.txt).
    cada cartão abria o seu contexto WebGL e o seu laço de quadros. O .glb do
    cartão só vem quando ele aparece; o laço só roda com algum cartão à vista.
 
-   OS NÚMEROS (medidos no Chromium sem placa, o swiftshader: o tempo absoluto
-   não vale, a comparação sim): ver a tabela no fim desta seção.
+   OS NÚMEROS (Chromium sem placa de vídeo, o swiftshader: o tempo absoluto
+   não vale, a comparação sim; 1280 x 720, densidade 1; "CPU" = o quadro
+   inteiro no JavaScript, "desenho" = até o último pixel sair):
+                                 antes            depois
+     Ver tudo: chamadas          401              332
+               triângulos        299.800          252.434
+               CPU / desenho     7,3 / 530 ms     5,1 / 324 ms
+               pior quadro       857 ms           353 ms
+     sombreadores no total       70               43
+     entrar no passeio (ms e sombreadores compilados na hora):
+       Strike Kids 1095 / 17 -> 315 / 1; Modelo 2 723 / 5 -> 378 / 0;
+       Ninja 1281 / 6 -> 491 / 0; Espaço 602 / 3 -> 458 / 0
+     passeio, CPU por quadro: 2,2 a 4,0 ms -> 2,2 a 4,3 ms (igual; nenhum raio
+       por quadro, antes e depois); no Modelo 4, 282 -> 169 chamadas
+     celular (a qualidade baixa x a de antes), desenho por quadro:
+       Ver tudo 380 -> 119 ms; passeios 176-374 -> 69-125 ms; entrar no
+       passeio do Modelo 2 1195 -> 225 ms, do Ninja 1427 -> 167 ms
+     mouse em cima da arena: 0,51 ms por movimento (todos os triângulos) ->
+       0,008 ms (as caixas), e no máximo 10 vezes por segundo
+     catálogo: contextos WebGL 11 -> 3 (a vitrine inteira num só); o mesmo
+       .glb baixado (4,8 MB, só quando cada cartão aparece) e o mesmo desenho
+     a roda: de 2,9 a 3,3 m de chão livre entre vizinhos (antes, os
+       brinquedões 3 e 4 se encostavam)
    Código: core/static/site/arena/arena3d.js, roda.js, caminhos.js,
    vitrine3d.js, core/templates/arena.html, paginas/arena.css e os montar.js
    de ferramentas/modelos3d/brinquedao-modelo-2, -3, -4 e brinquedao-ninja
