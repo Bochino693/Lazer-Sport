@@ -5553,12 +5553,13 @@ class Camera {
       perto = Math.min(perto, d);
       longe = Math.max(longe, d);
     });
-    const meio = (perto + longe) / 2;
     const metade = (longe - perto) / 2;
+    // o meio um pouco para o lado da câmera: a barra de botões cobre o pé da tela
+    const meio = (perto + longe) / 2 - metade * 0.1;
     const largura = (lado * (emPe ? 0.85 : 1)) / Math.tan(meiaH) + metade * Math.cos(elevacao);
     const altura = (metade * Math.sin(elevacao) + 2.5) / Math.tan(meiaV);
     this.alvoDesejado.set(-Math.sin(t) * meio, 1.5, -Math.cos(t) * meio);
-    this.raioDesejado = Math.max(largura, altura) * 1.05;
+    this.raioDesejado = Math.max(largura, altura) * 1.08;
     this.phiDesejado = phi;
     let delta = t - this.thetaDesejado;
     delta = Math.atan2(Math.sin(delta), Math.cos(delta));
