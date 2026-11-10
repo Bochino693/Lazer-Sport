@@ -5521,22 +5521,46 @@ class Camera {
   }
 
   visaoGeral(entrada = false) {
-    // O parque inteiro (até a cerca de pilares, com o Espaço Esportivo no
-    // fundo) e, em cima, o céu de festa: a câmera do lado da entrada, alta o
-    // bastante para a roda não esconder o fundo. A distância sai da lente:
-    // a cerca cabe na largura da tela (em pé, no celular, também).
+    // A roda inteira (com o Espaço Esportivo no fundo) e, em cima, o céu de
+    // festa: a câmera do lado da entrada, alta o bastante para a roda não
+    // esconder o fundo. A distância sai da lente e dos estandes de verdade:
+    // de lado, todos cabem na largura da tela (perto da câmera eles parecem
+    // maiores: a conta soma a metade da fundura); em pé (celular), a largura
+    // é pouca e a roda pode encostar nas bordas (85%)
     const arena = this.arena;
     const camera = arena.camera;
-    const beira = arena.beira || 14;
     const emPe = camera.aspect < 0.8;
+    const phi = emPe ? 0.9 : 0.98;
+    const elevacao = PI / 2 - phi;
     const meiaV = (camera.fov * PI) / 360;
     const meiaH = Math.atan(Math.tan(meiaV) * camera.aspect);
-    this.alvoDesejado.set(0, 1.5, -beira * 0.12);
-    this.raioDesejado = Math.min((beira * 0.92) / Math.sin(Math.min(meiaH, meiaV * 1.25)), beira * 4.2);
-    this.phiDesejado = emPe ? 0.9 : 0.98;
-    let delta = A_ENTRADA - this.thetaDesejado;
+    const t = A_ENTRADA;
+    const cantos = (arena.arrumado ? arena.arrumado.itens : []).flatMap((it) => it.mundo);
+    let lado = 6;
+    let perto = -6;
+    let longe = 6;
+    cantos.forEach(([x, z]) => {
+      lado = Math.max(lado, Math.abs(x * Math.cos(t) - z * Math.sin(t)));
+      const d = -(x * Math.sin(t) + z * Math.cos(t)); // para longe da câmera
+      perto = Math.min(perto, d);
+      longe = Math.max(longe, d);
+    });
+    const meio = (perto + longe) / 2;
+    const metade = (longe - perto) / 2;
+    const largura = (lado * (emPe ? 0.85 : 1)) / Math.tan(meiaH) + metade * Math.cos(elevacao);
+    const altura = (metade * Math.sin(elevacao) + 2.5) / Math.tan(meiaV);
+    this.alvoDesejado.set(-Math.sin(t) * meio, 1.5, -Math.cos(t) * meio);
+    this.raioDesejado = Math.max(largura, altura) * 1.05;
+    this.phiDesejado = phi;
+    let delta = t - this.thetaDesejado;
     delta = Math.atan2(Math.sin(delta), Math.cos(delta));
     this.thetaDesejado += delta;
+    // a neblina começa depois do que a vista de sempre mostra (de longe, no
+    // celular, o parque inteiro ficava enevoado)
+    if (arena.parque) {
+      arena.cena.fog.near = Math.max(arena.parque.fora * 0.8, this.raioDesejado * 0.85);
+      arena.cena.fog.far = Math.max(arena.parque.fora * 2.8 + 5, this.raioDesejado * 2.6);
+    }
     if (entrada && !arena.reduzido) {
       // entrada de cinema: vem de longe e de cima
       this.raio = this.raioDesejado * 1.6;
