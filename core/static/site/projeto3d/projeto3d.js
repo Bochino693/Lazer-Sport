@@ -22,6 +22,9 @@
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 const metros = (v) => (Math.round(v * 100) / 100).toFixed(2).replace(".", ",").replace(",00", "");
 const PADRAO = { largura: 20, comprimento: 15, pe_direito: 4 };
+// os ids que mudaram de nome: o projeto guardado (link #p=, pedido antigo) continua achando o item
+const IDS_ANTIGOS = { "modelo-air-game-hockey-espacial": "modelo-air-game-kids-alienigenas" };
+const idAtual = (id) => IDS_ANTIGOS[String(id)] || String(id);
 
 function escapar(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -73,13 +76,13 @@ export async function iniciar(raiz) {
     const pi = inicial.principal;
     if (pi === null) estado.principal = null;
     else if (pi && pi.tipo === "area" && dados.areas[pi.area]) estado.principal = { tipo: "area", area: pi.area };
-    else if (pi && pi.tipo === "item" && itensPorId.has(String(pi.id))) estado.principal = { tipo: "item", id: String(pi.id) };
+    else if (pi && pi.tipo === "item" && itensPorId.has(idAtual(pi.id))) estado.principal = { tipo: "item", id: idAtual(pi.id) };
     for (const k of ["largura", "comprimento", "pe_direito"]) {
       const v = Number(estado.espaco[k]);
       estado.espaco[k] = v > 0 && v <= 150 ? v : PADRAO[k];
     }
     estado.areas = Array.isArray(inicial.areas) ? inicial.areas.filter((a) => dados.areas[a]) : [];
-    for (const linha of inicial.itens || []) if (itensPorId.has(String(linha.id))) estado.itens[String(linha.id)] = Number(linha.qtd) || 0;
+    for (const linha of inicial.itens || []) if (itensPorId.has(idAtual(linha.id))) estado.itens[idAtual(linha.id)] = Number(linha.qtd) || 0;
     if (dados.estilos.includes(inicial.estilo)) estado.estilo = inicial.estilo;
     if (/^#[0-9a-f]{6}$/i.test(inicial.cor || "")) estado.cor = inicial.cor;
     estado.semente = Number(inicial.semente) || 1;

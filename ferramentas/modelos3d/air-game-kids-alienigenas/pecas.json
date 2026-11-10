@@ -1,0 +1,44 @@
+{
+ "lateral-esquerda": {
+  "arquivo": "adesivos/lateral-esquerda.png",
+  "mm": [
+   1512,
+   906
+  ],
+  "onde": "a lateral comprida da esquerda, vista de fora (o contorno da folha)",
+  "contorno": true
+ },
+ "lateral-direita": {
+  "arquivo": "adesivos/lateral-direita.png",
+  "mm": [
+   1512,
+   906
+  ],
+  "onde": "a lateral comprida da direita, vista de fora (o contorno da folha)",
+  "contorno": true
+ },
+ "lateral-esquerda-2": {
+  "arquivo": "adesivos/lateral-esquerda-2.png",
+  "mm": [
+   808,
+   752
+  ],
+  "onde": "a cabeceira de trás (a do Jogador 02), vista de fora"
+ },
+ "lateral-direita-2": {
+  "arquivo": "adesivos/lateral-direita-2.png",
+  "mm": [
+   808,
+   752
+  ],
+  "onde": "a cabeceira da frente (a do Jogador 01), vista de fora"
+ },
+ "tampo": {
+  "arquivo": "adesivos/tampo.png",
+  "mm": [
+   1411,
+   808
+  ],
+  "onde": "o tampo, de cima: a cabeceira do Jogador 02 (a de trás) à esquerda, o lado direito da mesa no alto"
+ }
+}

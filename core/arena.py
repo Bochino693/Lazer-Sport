@@ -694,36 +694,40 @@ MODELOS_3D = (
         ),
     },
     # ---- As máquinas de sempre com os adesivos novos ----
-    # A MESMA máquina de um brinquedo do catálogo, só com outra adesivagem: o
-    # objeto 3D tem a forma da máquina e cada adesivo é uma imagem (a peça da
-    # folha da fábrica; até ela chegar, a arte provisória), ver
+    # A MESMA máquina de um brinquedo do catálogo, só com outra adesivagem. O
+    # objeto 3D sai inteiro da folha de adesivos da fábrica (a arte de cada
+    # peça e o contorno dela; a folha é desenhada em escala), ver
     # ferramentas/modelos3d/<id>/. O nome da máquina de antes ("Air Game
-    # Hockey", "Basquete Street") NÃO liga estes objetos: o trecho é o nome inteiro.
+    # Kids", "Basquete Street") NÃO liga estes objetos: o trecho é o nome inteiro.
     {
-        # a mesa do Air Game Hockey com o espaço: HOCKEY KIDS, os alienígenas
-        # astronautas, os discos voadores e o chão lunar laranja
-        "id": "air-game-hockey-espacial",
-        "titulo": "Air Game Hockey Espacial",
-        "nomes": ("Air Game Hockey Espacial",),
-        "arquivo": "site/arena/modelos/air-game-hockey-espacial.glb",
-        "medidas": (1.0, 1.1, 2.1),
+        # o Air Game Kids (a mesa infantil de formato recortado) com os
+        # alienígenas: HOCKEY KIDS, os alienígenas astronautas, o disco voador e
+        # o chão lunar laranja. As medidas são as da folha na altura do Air Game
+        # Kids, 0,90 m (o tampo de 1,41 m x 0,81 m; o catálogo diz 0,86 m de
+        # largura, com a borda). Até a 0146 era o "air-game-hockey-espacial"
+        "id": "air-game-kids-alienigenas",
+        "titulo": "Air Game Kids Alienígenas",
+        # (o nome de antes ainda liga: o que a 0145 ligou pelo nome segue ligado)
+        "nomes": ("Air Game Kids Alienígenas", "Air Game Hockey Espacial"),
+        "arquivo": "site/arena/modelos/air-game-kids-alienigenas.glb",
+        "medidas": (0.9, 0.83, 1.51),
         "grupo": "maquinas",
-        "pasta": "site/arena/modelos/air-game-hockey-espacial/",
+        "pasta": "site/arena/modelos/air-game-kids-alienigenas/",
         "fotos": (
             ("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"),
             ("lado_direito", "lado_direito.webp"), ("verso", "verso.webp"),
         ),
-        "medidas_texto": "1 m × 1,1 m × 2,1 m",
+        "medidas_texto": "0,90 m × 0,83 m × 1,51 m",
         "categorias": ("Eletrônicos",),
         "descricao": (
-            "Air Game Hockey Espacial: a mesa de air hockey do Air Game Hockey com os adesivos do espaço -- "
-            "o logotipo HOCKEY KIDS no tampo, alienígenas astronautas jogando hóquei, discos voadores, planetas, "
-            "estrelas e o chão lunar laranja."
+            "Air Game Kids Alienígenas: a mesa de air hockey infantil do Air Game Kids com os adesivos dos "
+            "alienígenas -- o HOCKEY KIDS no tampo e nas laterais recortadas, os alienígenas astronautas jogando "
+            "hóquei, o disco voador, planetas, estrelas e o chão lunar laranja."
         ),
     },
     {
-        # o Basquete Street em quadrinhos: fundo preto, faixas arredondadas,
-        # POW!, BOOM!, o letreiro BASKETBALL e a quadra vermelha na prancha
+        # o Basquete Street em quadrinhos: fundo preto, formas arredondadas,
+        # POW!, BOOM!, WOW!, o BASKETBALL, as crianças e a quadra na prancha
         "id": "basquete-street-quadrinhos",
         "titulo": "Basquete Street Quadrinhos",
         "nomes": ("Basquete Street Quadrinhos",),
@@ -739,8 +743,8 @@ MODELOS_3D = (
         "categorias": ("Eletrônicos",),
         "descricao": (
             "Basquete Street Quadrinhos: o basquete de arcade do Basquete Street com os adesivos em quadrinhos -- "
-            "fundo preto com faixas amarelas, laranja, vermelhas e rosa, os balões POW!, BOOM! e WOW!, o letreiro "
-            "BASKETBALL, crianças jogando e a quadra vermelha na prancha."
+            "fundo preto com formas amarelas, laranja, vermelhas e rosa, os balões POW!, BOOM! e WOW!, o letreiro "
+            "BASKETBALL, duas crianças jogando e a quadra vermelha na prancha."
         ),
     },
 )

@@ -18,15 +18,18 @@
     fábrica. É o PRIMEIRO objeto 3D ligado pelo cadastro (`ObjetoTresD`):
     se o brinquedo já está no catálogo (com as fotos reais), só ganha o
     objeto; se não está, entra com as fotos tiradas do próprio 3D.
-  * AIR GAME HOCKEY ESPACIAL e BASQUETE STREET QUADRINHOS: as máquinas de
-    sempre (a `base`: o Air Game Hockey e o Basquete Street) com os
-    adesivos novos; o cadastro copia da base o preço, a voltagem, a loja,
-    as medidas, as categorias e as tags (ver `ferramentas/modelos3d/<id>/`).
+  * AIR GAME KIDS ALIENÍGENAS e BASQUETE STREET QUADRINHOS: as máquinas de
+    sempre (a `base`: o Air Game Kids e o Basquete Street) com os adesivos
+    novos; o cadastro copia da base o preço, a voltagem, a loja, as
+    medidas, as categorias e as tags (ver `ferramentas/modelos3d/<id>/`).
+    O Air Game Kids Alienígenas se chamava "Air Game Hockey Espacial" (com
+    o Air Game Hockey de base): a 0146 renomeia o que a 0145 cadastrou.
 
 Quem cadastra:
   * as migrações de dados (`0113_brinquedao_modelo_2`,
     `0114_espaco_esportivo_modelo_1`, `0140_brinquedao_ninja`,
-    `0142_brinquedao_modelo_4`, `0145_variantes_de_adesivo`...), no deploy
+    `0142_brinquedao_modelo_4`, `0145_variantes_de_adesivo`,
+    `0146_air_game_kids_alienigenas`...), no deploy
     do Render (o migrate roda sozinho no Pre-Deploy Command): o brinquedo
     já entra no catálogo;
   * `python manage.py cadastrar_modelo_3d <id>` (ou
@@ -251,35 +254,48 @@ CADASTROS = {
     # cadastro novo copia da base o preço, a voltagem, o "exibir na loja", a
     # avaliação, as medidas, as categorias e as tags; a descrição é a daqui
     # (fala da arte nova). Sem a base no catálogo, entra como os outros: as
-    # medidas daqui, as categorias pelo nome, sem preço e fora da loja (confira
-    # no painel). As fotos são vistas do próprio 3D; quando a folha de adesivos
-    # chegar, refaça o 3D e as fotos e rode `cadastrar_variantes_adesivo --fotos`.
-    # A migração que cadastra no deploy é a `0145_variantes_de_adesivo`.
-    "air-game-hockey-espacial": {
-        "nome": "Air Game Hockey Espacial",
-        "base": ("Air Game Hockey",),
-        "pasta": MODELOS / "air-game-hockey-espacial",
-        "objeto_3d": "site/arena/modelos/air-game-hockey-espacial.glb",
+    # medidas daqui (as do 3D, tiradas da folha de adesivos), as categorias
+    # pelo nome, sem preço e fora da loja (confira no painel). As fotos são
+    # vistas do próprio 3D, com a arte de verdade (a folha de adesivos da
+    # fábrica). A migração que cadastra no deploy é a `0145_variantes_de_adesivo`;
+    # `antes`: a chave e o nome de antes de uma variante renomeada (a
+    # `0146_air_game_kids_alienigenas` passa o cadastro antigo para o novo).
+    "air-game-kids-alienigenas": {
+        # o Air Game Kids (a mesa infantil de formato recortado, 0,90 x 0,86 x
+        # 1,50 m) com os adesivos dos alienígenas. Até a 0146 era o "Air Game
+        # Hockey Espacial", com o Air Game Hockey de base: a folha de adesivos
+        # é a do Air Game Kids (as proporções batem com as medidas dele)
+        "nome": "Air Game Kids Alienígenas",
+        "base": ("Air Game Kids",),
+        "antes": {"air-game-hockey-espacial": "Air Game Hockey Espacial"},
+        # o nome de antes também acha o brinquedo (um "Air Game Hockey Espacial
+        # (mesa)" do painel, que a 0145 ligou, segue ligado e não ganha um irmão)
+        "nomes": ("Air Game Kids Alienígenas", "Air Game Hockey Espacial"),
+        "pasta": MODELOS / "air-game-kids-alienigenas",
+        "objeto_3d": "site/arena/modelos/air-game-kids-alienigenas.glb",
         "descricao": (
-            "O Air Game Hockey Espacial é o Air Game Hockey, a nossa mesa de air hockey, com a adesivagem nova do "
-            "espaço: o logotipo HOCKEY KIDS no centro do tampo, o chão lunar laranja com crateras nas duas "
-            "cabeceiras do campo e, nas laterais, alienígenas astronautas jogando hóquei, discos voadores, planetas "
-            "e estrelas.\n"
+            "O Air Game Kids Alienígenas é o Air Game Kids, a nossa mesa de air hockey infantil de formato "
+            "recortado, com a adesivagem dos alienígenas: no centro do tampo, o logotipo HOCKEY KIDS com um "
+            "alienígena verde, o campo branco com o chão lunar laranja e as crateras em volta, e o Jogador 01 e o "
+            "Jogador 02 nas cabeceiras; nas laterais recortadas, os alienígenas astronautas jogando hóquei, o "
+            "disco voador, planetas, estrelas e o HOCKEY KIDS; nas cabeceiras, o disco voador sobre o chão lunar.\n"
             "\n"
             "Dois jogadores disputam cada ponto rebatendo o disco que desliza sobre o colchão de ar, atacando e "
             "defendendo o próprio gol. Partidas rápidas, que estimulam reflexo, coordenação motora e concentração.\n"
             "\n"
-            "Medidas aproximadas: 1,00 m de altura, 1,10 m de largura e 2,10 m de comprimento.\n"
+            "Medidas aproximadas: 0,90 m de altura, 0,86 m de largura e 1,50 m de comprimento.\n"
             "\n"
             "Ideal para buffets infantis, brinquedotecas, parques, shoppings, hotéis, condomínios e áreas kids."
         ),
-        "medidas": ("1.00", "1.10", "2.10"),
+        # as do Air Game Kids do catálogo (o 3D, feito da folha na altura de 0,90 m,
+        # tem 0,83 x 1,51 m: os 0,86 m contam a borda)
+        "medidas": ("0.90", "0.86", "1.50"),
         "fotos": (
-            ("frente.webp", "perfil", "Air Game Hockey Espacial: a mesa de air hockey com os adesivos do espaço e o logotipo HOCKEY KIDS"),
-            ("lado_esquerdo.webp", "lado_esquerdo", "Air Game Hockey Espacial pelo lado esquerdo: os alienígenas astronautas no chão lunar"),
-            ("lado_direito.webp", "lado_direito", "Air Game Hockey Espacial pelo lado direito"),
-            ("verso.webp", "verso", "Air Game Hockey Espacial visto pela outra cabeceira"),
-            ("tampo.webp", None, "O tampo do Air Game Hockey Espacial visto de cima: o campo, o chão lunar e o HOCKEY KIDS"),
+            ("frente.webp", "perfil", "Air Game Kids Alienígenas: a mesa de air hockey com os alienígenas e o logotipo HOCKEY KIDS"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Air Game Kids Alienígenas pelo lado esquerdo: os alienígenas astronautas no chão lunar"),
+            ("lado_direito.webp", "lado_direito", "Air Game Kids Alienígenas pelo lado direito"),
+            ("verso.webp", "verso", "Air Game Kids Alienígenas visto pela outra cabeceira"),
+            ("tampo.webp", None, "O tampo do Air Game Kids Alienígenas visto de cima: o campo, o chão lunar e o HOCKEY KIDS"),
         ),
         "categorias": ("eletronic",),
         "evitar": (),
@@ -291,13 +307,14 @@ CADASTROS = {
         "objeto_3d": "site/arena/modelos/basquete-street-quadrinhos.glb",
         "descricao": (
             "O Basquete Street Quadrinhos é o Basquete Street, o basquete de arcade em tamanho profissional, com a "
-            "adesivagem nova em estilo história em quadrinhos: fundo preto com faixas arredondadas em amarelo, "
-            "laranja, vermelho e rosa, os balões \"POW!\", \"BOOM!\" e \"WOW!\", o letreiro BASKETBALL, crianças "
-            "jogando bola e a quadra de basquete com as linhas vermelhas na rampa.\n"
+            "adesivagem nova em estilo história em quadrinhos: fundo preto com formas arredondadas em amarelo, "
+            "laranja, vermelho e rosa; nas laterais de fora, a bola de basquete grande e duas crianças jogando com "
+            "o balão BASKETBALL; o \"BOOM!\" e a janela do placar no fundo da cesta, o \"POW!\" na frente e no teto "
+            "interno, o \"WOW!\", o letreiro BASKETBALL na testeira e na frente, e a quadra de basquete com as "
+            "linhas vermelhas no chão da pista.\n"
             "\n"
-            "A rampa devolve as bolas ao jogador, que arremessa na cesta para somar pontos antes de o tempo acabar. "
-            "Tela de 32 polegadas com o placar e o jogo, cesta que se movimenta, rede de proteção em volta da área "
-            "de arremesso, iluminação em LED e rodízios para facilitar a movimentação.\n"
+            "O jogador arremessa na cesta para somar pontos antes de o tempo acabar. Tela de 32 polegadas com o "
+            "placar e o jogo, cesta que se movimenta, iluminação em LED e rodízios para facilitar a movimentação.\n"
             "\n"
             "Medidas aproximadas: 2,70 m de altura, 1,00 m de largura e 2,40 m de comprimento.\n"
             "\n"
@@ -305,11 +322,11 @@ CADASTROS = {
         ),
         "medidas": ("2.70", "1.00", "2.40"),
         "fotos": (
-            ("frente.webp", "perfil", "Basquete Street Quadrinhos: a frente com o POW!, a rampa e a testeira BASKETBALL"),
+            ("frente.webp", "perfil", "Basquete Street Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Street Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
             ("lado_direito.webp", "lado_direito", "Basquete Street Quadrinhos pelo lado direito"),
             ("verso.webp", "verso", "Basquete Street Quadrinhos visto por trás"),
-            ("jogador.webp", None, "Basquete Street Quadrinhos visto de quem joga: a quadra na rampa, a cesta e o BOOM!"),
+            ("jogador.webp", None, "Basquete Street Quadrinhos visto de quem joga: a cesta, o BOOM! e o console"),
         ),
         "categorias": ("eletronic",),
         "evitar": (),
@@ -319,6 +336,17 @@ CADASTROS = {
 #: As máquinas que são outra adesivagem de um brinquedo do catálogo (têm `base`).
 VARIANTES_DE_ADESIVO = tuple(chave for chave, dados in CADASTROS.items() if dados.get("base"))
 
+#: As chaves de antes (o `antes` dos cadastros), que as migrações antigas ainda
+#: usam: a 0145 cadastrava o "air-game-hockey-espacial", que virou o Air Game
+#: Kids Alienígenas. Rodando hoje (num banco novo), a 0145 já cadastra o novo;
+#: a 0146 renomeia o que ela cadastrou antes.
+APELIDOS = {antiga: chave for chave, dados in CADASTROS.items() for antiga in dados.get("antes", {})}
+
+
+def _chave(chave):
+    """A chave de hoje (a de antes de uma variante renomeada vira a nova)."""
+    return APELIDOS.get(chave, chave)
+
 
 def achar_base(chave, Brinquedos):
     """O brinquedo do catálogo que é a MESMA máquina da variante `chave` (a `base`), ou None.
@@ -327,7 +355,7 @@ def achar_base(chave, Brinquedos):
     do Basquete Street Quadrinhos; o próprio Basquete Street Quadrinhos (ou
     outro "Basquete Street Kids") não é. O ativo vem antes do desativado.
     """
-    nomes = {_normalizar(n) for n in CADASTROS[chave].get("base", ())}
+    nomes = {_normalizar(n) for n in CADASTROS[_chave(chave)].get("base", ())}
     if not nomes:
         return None
     return next(
@@ -346,6 +374,19 @@ def _categorias_pelo_nome(dados, CategoriasBrinquedos):
     return preferidas or candidatas
 
 
+def _campos_da_base(base):
+    """O que a variante copia da máquina de antes (a `base`): preço, avaliação, loja, voltagem e medidas."""
+    campos = {
+        "valor_brinquedo": base.valor_brinquedo,
+        "avaliacao": base.avaliacao,
+        "exibir_na_loja": base.exibir_na_loja,
+        "voltz": base.voltz or "",
+    }
+    if None not in (base.altura_m, base.largura_m, base.profundidade_m):
+        campos.update(altura_m=base.altura_m, largura_m=base.largura_m, profundidade_m=base.profundidade_m)
+    return campos
+
+
 def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos=False, avisar=print):
     """Cria o brinquedo com as fotos. Devolve (brinquedo, criado).
 
@@ -354,6 +395,7 @@ def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_
     máquina de antes o que é da máquina: preço, voltagem, loja, avaliação,
     medidas, categorias e tags.
     """
+    chave = _chave(chave)
     dados = CADASTROS[chave]
     nome = dados["nome"]
     brinquedo = Brinquedos.objects.filter(nome_brinquedo=nome).first()
@@ -378,14 +420,7 @@ def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_
             }
             base = achar_base(chave, Brinquedos) if dados.get("base") else None
             if base is not None:
-                campos.update(
-                    valor_brinquedo=base.valor_brinquedo,
-                    avaliacao=base.avaliacao,
-                    exibir_na_loja=base.exibir_na_loja,
-                    voltz=base.voltz or "",
-                )
-                if None not in (base.altura_m, base.largura_m, base.profundidade_m):
-                    campos.update(altura_m=base.altura_m, largura_m=base.largura_m, profundidade_m=base.profundidade_m)
+                campos.update(_campos_da_base(base))
             brinquedo = Brinquedos.objects.create(**campos)
             categorias = list(base.categorias_brinquedos.all()) if base is not None else []
             if not categorias:
@@ -419,7 +454,7 @@ def achar_no_catalogo(chave, Brinquedos):
     Desativado não conta: ele não aparece no site, e contar com ele fazia o
     cadastro só ligar o 3D num brinquedo escondido em vez de criar o novo.
     """
-    dados = CADASTROS[chave]
+    dados = CADASTROS[_chave(chave)]
     trechos = [_normalizar(t) for t in dados.get("nomes", ()) or (dados["nome"],)]
     for brinquedo in Brinquedos.objects.filter(ativo=True).order_by("id"):
         nome = _normalizar(brinquedo.nome_brinquedo or "")
@@ -432,6 +467,7 @@ def ligar_objeto_3d(chave, brinquedo, ObjetoTresD):
     """Liga o objeto 3D do site ao brinquedo (cria ou atualiza; não duplica)."""
     from .objetos_3d import ler_glb_do_site
 
+    chave = _chave(chave)
     caminho = CADASTROS[chave]["objeto_3d"]
     lido = ler_glb_do_site(caminho)
     objeto, _criado = ObjetoTresD.objects.update_or_create(
@@ -460,6 +496,8 @@ def migracao(chave):
     verdade). Se algo falhar, avisa e não derruba o deploy: o comando
     `cadastrar_modelo_3d` refaz depois.
     """
+    chave = _chave(chave)
+
     def cadastrar_no_deploy(apps, schema_editor):
         from django.conf import settings
 
@@ -563,6 +601,8 @@ def migracao_objetos_3d(*chaves, cadastrar_no_banco_real=False):
     fotos sobem para o Cloudinary); se falhar, o deploy segue e o comando
     `cadastrar_modelo_3d` refaz.
     """
+    chaves = tuple(_chave(chave) for chave in chaves)
+
     def ligar_no_deploy(apps, schema_editor):
         from django.conf import settings
 
@@ -591,3 +631,120 @@ def migracao_objetos_3d(*chaves, cadastrar_no_banco_real=False):
                 ligar_objeto_3d(chave, brinquedo, apps.get_model("core", "ObjetoTresD"))
 
     return ligar_no_deploy
+
+
+def renomear_variante(chave_antiga, nome_antigo, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD,
+                      avisar=print):
+    """Passa o cadastro de uma variante renomeada (`chave_antiga`, `nome_antigo`) para a de hoje.
+
+    A da 0146: o "Air Game Hockey Espacial" que a 0145 cadastrou (copiando o
+    Air Game Hockey) é o Air Game Kids Alienígenas. Só mexe no banco:
+      * o brinquedo com o nome antigo (o nome inteiro, sem acento nem
+        maiúscula) ganha o nome novo e a descrição daqui -- se nenhum outro já
+        tem o nome novo (aí fica como está, com um aviso);
+      * da base de hoje (`achar_base`), como no cadastro: preço, avaliação,
+        loja, voltagem, medidas, categorias e tags. Sem a base no catálogo, as
+        medidas daqui; o resto fica como está (confira no painel);
+      * nas descrições das fotos, o nome novo no lugar do antigo;
+      * o objeto 3D de antes (o `codigo` antigo ou o .glb antigo, que não
+        existe mais) passa para o .glb e o código de hoje, com as cores e as
+        medidas lidas do .glb novo.
+    Devolve os brinquedos renomeados. Rodar de novo não faz nada.
+    """
+    from .objetos_3d import ler_glb_do_site
+
+    chave = _chave(chave_antiga)
+    dados = CADASTROS[chave]
+    nome = dados["nome"]
+    alvo = _normalizar(nome_antigo)
+    antigos = [b for b in Brinquedos.objects.order_by("-ativo", "id") if _normalizar(b.nome_brinquedo or "") == alvo]
+    base = achar_base(chave, Brinquedos) if antigos else None
+    renomeados = []
+    for brinquedo in antigos:
+        if Brinquedos.objects.filter(nome_brinquedo=nome).exists():
+            avisar(f"{brinquedo.nome_brinquedo} (id {brinquedo.pk}) ficou com o nome: já há um {nome} no catálogo "
+                   "(confira no painel).")
+            continue
+        if base is not None:
+            campos = _campos_da_base(base)
+        else:
+            altura, largura, profundidade = (Decimal(v) for v in dados["medidas"])
+            campos = {"altura_m": altura, "largura_m": largura, "profundidade_m": profundidade}
+        campos.update(nome_brinquedo=nome, descricao=dados["descricao"])
+        for campo, valor in campos.items():
+            setattr(brinquedo, campo, valor)
+        brinquedo.save(update_fields=list(campos))
+        if base is not None:
+            categorias = list(base.categorias_brinquedos.all())
+            if categorias:
+                brinquedo.categorias_brinquedos.set(categorias)
+            brinquedo.tags.set(base.tags.all())
+        for imagem in ImagemBrinquedo.objects.filter(brinquedo=brinquedo):
+            texto = imagem.texto_alternativo or ""
+            if nome_antigo in texto:
+                imagem.texto_alternativo = texto.replace(nome_antigo, nome)
+                imagem.save(update_fields=["texto_alternativo"])
+        renomeados.append(brinquedo)
+        avisar(f"Renomeado: {nome_antigo} -> {nome} (id {brinquedo.pk}); " + (
+            f"copiado de {base.nome_brinquedo} (id {base.pk}): preço, voltagem, loja, avaliação, medidas, "
+            "categorias e tags." if base is not None
+            else f"{dados['base'][0]} não está no catálogo: confira preço, voltagem e loja no painel."
+        ))
+
+    caminho = dados["objeto_3d"]
+    antigo = f"site/arena/modelos/{chave_antiga}.glb"
+    objetos = ObjetoTresD.objects.filter(codigo=chave_antiga) | ObjetoTresD.objects.filter(arquivo_estatico=antigo)
+    objetos = list(objetos.distinct())
+    lido = ler_glb_do_site(caminho) if objetos else None
+    for objeto in objetos:
+        objeto.codigo = chave
+        if objeto.arquivo_estatico == antigo:  # um .glb enviado pelo painel (`arquivo`) fica, e vence
+            objeto.arquivo_estatico = caminho
+            objeto.cores, objeto.medidas = lido["cores"], lido["medidas"]
+        objeto.save(update_fields=["codigo", "arquivo_estatico", "cores", "medidas"])
+        avisar(f"Objeto 3D de {objeto.brinquedo.nome_brinquedo} (id {objeto.brinquedo_id}): {chave}, {caminho}.")
+    return renomeados
+
+
+def fotos_do_cadastro(brinquedo, chave):
+    """As fotos do brinquedo são as que o cadastro `chave` subiu (não as de alguém, pelo painel)?"""
+    return f"{chave}-" in (brinquedo.imagem_brinquedo.name or "")
+
+
+def migracao_renomear_variante(chave_antiga, nome_antigo):
+    """A migração que passa uma variante renomeada para a de hoje (a 0146).
+
+    Em todo lugar (só o banco): `renomear_variante`. Depois, no Render, o
+    renomeado que ainda tem as fotos que o cadastro subiu (vistas do 3D de
+    antes) ganha as fotos de hoje, que sobem para o Cloudinary. Por fim, a
+    `migracao_objetos_3d` da chave nova: cadastra onde a 0145 cadastraria
+    (no Render, se a máquina não está no catálogo) e só liga o 3D nos outros
+    lugares. Se a subida falhar, o deploy segue e o comando refaz.
+    """
+    chave = _chave(chave_antiga)
+    ligar = migracao_objetos_3d(chave)
+
+    def renomear_no_deploy(apps, schema_editor):
+        from django.conf import settings
+
+        Brinquedos = apps.get_model("core", "Brinquedos")
+        CategoriasBrinquedos = apps.get_model("core", "CategoriasBrinquedos")
+        ImagemBrinquedo = apps.get_model("core", "ImagemBrinquedo")
+        with transaction.atomic():
+            renomeados = renomear_variante(
+                chave_antiga, nome_antigo, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo,
+                apps.get_model("core", "ObjetoTresD"), avisar=print,
+            )
+        if getattr(settings, "IS_RENDER", False):
+            for brinquedo in renomeados:
+                if not fotos_do_cadastro(brinquedo, chave_antiga):
+                    continue
+                try:
+                    with transaction.atomic():
+                        cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos=True)
+                except Exception as erro:  # o deploy segue; o comando refaz depois
+                    print(f"As fotos de {brinquedo.nome_brinquedo} não foram refeitas agora ({erro}). "
+                          f"Rode: python manage.py cadastrar_variantes_adesivo --so {chave} --fotos")
+        ligar(apps, schema_editor)
+
+    return renomear_no_deploy

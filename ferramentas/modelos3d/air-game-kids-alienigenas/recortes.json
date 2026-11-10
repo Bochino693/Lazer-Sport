@@ -1,0 +1,16 @@
+{
+ "_como": [
+  "Onde cada peça está na folha de adesivos da fábrica (folha-adesivos.webp, a folha 26567-1 como veio).",
+  "caixa: [x0, y0, x1, y1] aproximada, em px da folha; o recorte acha a peça de verdade dentro dela (o maior pedaço não branco, sem o nome escrito em cima).",
+  "forma: 'contorno' na peça recortada (o contorno de verdade vai para o formas.json e vira o contorno da placa no 3D); 'retangulo' na peça reta.",
+  "Se a folha mudar: ajuste as caixas, rode python3 recortar_adesivos.py --previa e confira previa-recortes.png."
+ ],
+ "folha": "folha-adesivos.webp",
+ "pecas": {
+  "tampo": {"caixa": [591, 44, 1052, 308], "forma": "retangulo"},
+  "lateral-esquerda": {"caixa": [288, 408, 777, 704], "forma": "contorno"},
+  "lateral-direita": {"caixa": [822, 404, 1316, 700], "forma": "contorno"},
+  "lateral-esquerda-2": {"caixa": [0, 424, 271, 676], "forma": "retangulo"},
+  "lateral-direita-2": {"caixa": [1329, 424, 1600, 676], "forma": "retangulo"}
+ }
+}

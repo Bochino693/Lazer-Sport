@@ -1,8 +1,0 @@
-# o three e o gltfpack (npm install, ou um link para eles), o .glb antes do
-# gltfpack, as vistas de conferência e a prévia dos recortes: só o que refaz
-# o objeto vai para o repositório
-node_modules
-*.glb
-v-*.jpg
-foto-*.jpg
-previa-recortes.jpg

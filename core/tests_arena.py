@@ -100,10 +100,10 @@ class ArenaPaginaTests(TestCase):
         self.assertIn("Air Game Hockey", html.split('id="titulo-maquinas"')[1])
         # a roda 3D (até o "Monte seu espaço", que lista o catálogo inteiro para montar) não leva quem não tem .glb
         roda = html.split('id="arena-3d"')[1].split('id="monte-seu-espaco"')[0]
-        # (o nome inteiro: o "Air Game Hockey Espacial" tem o objeto dele e está na roda)
+        # (o nome inteiro: o "Air Game Kids Alienígenas" tem o objeto dele e está na roda)
         self.assertNotIn('"nome": "Air Game Hockey"', roda)
         self.assertNotIn(">Air Game Hockey<", roda)
-        self.assertIn('"nome": "Air Game Hockey Espacial"', roda)
+        self.assertIn('"nome": "Air Game Kids Alien\\u00edgenas"', roda)  # (no JSON, o "\u00ed" vem escapado)
         # o número do topo conta os da roda
         self.assertIn(f"<b>{len(arena.MODELOS_3D)}</b> brinquedos em 3D", html)
 
