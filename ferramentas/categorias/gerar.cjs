@@ -7,6 +7,8 @@
 //   node ferramentas/categorias/gerar.cjs fliperama kids  (só estas)
 //   node ferramentas/categorias/gerar.cjs capas           (as capas dos produtos: "capa:<chave>")
 //   node ferramentas/categorias/gerar.cjs capa:strike-kids (só esta capa)
+//   node ferramentas/categorias/gerar.cjs produtos        (as capas do catálogo: "produto:<chave>", seção 64)
+//   node ferramentas/categorias/gerar.cjs vistas          (as fotos da galeria dos nossos 3D: "vista:<chave>:<nome>")
 //   python ferramentas/categorias/compor.py               (os .webp em core/static/site/categorias/
 //                                                          e as capas em core/static/site/arena/modelos/<chave>/capa.webp)
 //
@@ -61,13 +63,15 @@ const servidor = http.createServer((req, res) => {
     else if (argumentos[i] !== "--compor") pedidas.push(argumentos[i]);
   }
   const capas = await page.evaluate(() => window.CAPAS);
+  const produtos = await page.evaluate(() => window.PRODUTOS);
+  const vistas = await page.evaluate(() => window.VISTAS);
   const todas = await page.evaluate(() => window.TODAS);
   if (glbs.length) {
     const usam = await page.evaluate((nomes) => window.cenasComGlb(...nomes), glbs);
     console.log(`as fotos com ${glbs.join(", ")}: ${usam.join(", ") || "nenhuma"}`);
     pedidas.push(...usam);
   }
-  const chaves = pedidas.length || glbs.length ? pedidas.flatMap((p) => (p === "capas" ? capas : [p])) : await page.evaluate(() => window.CENAS);
+  const chaves = pedidas.length || glbs.length ? pedidas.flatMap((p) => (p === "capas" ? capas : p === "produtos" ? produtos : p === "vistas" ? vistas : [p])) : await page.evaluate(() => window.CENAS);
   // "chave@giro,altura,lente" experimenta outro ângulo (e grava com esse nome)
   const lista = {};
   for (const pedido of chaves) {
@@ -78,7 +82,7 @@ const servidor = http.createServer((req, res) => {
     if (process.env.PREVIA) ajustes.previa = true;
     // a foto, a máscara dos brinquedos e o peso do desfoque (as duas últimas só com lugar)
     const imagens = await page.evaluate(([c, a]) => window.renderizar(c, a), [chave, ajustes]);
-    const nome = pedido.replace(":", "_");
+    const nome = pedido.replaceAll(":", "_");
     for (const [tipo, url] of Object.entries(imagens)) {
       const sufixo = tipo === "cor" ? "" : `-${tipo}`;
       fs.writeFileSync(path.join(SAIDA, `${nome}${sufixo}.png`), Buffer.from(url.split(",")[1], "base64"));
@@ -89,7 +93,7 @@ const servidor = http.createServer((req, res) => {
   }
   // as máquinas de cada foto (o LEIA-ME e os testes conferem: só itens da categoria no catálogo)
   // (as das capas, à parte: maquinas-das-capas.json, pela chave do produto)
-  for (const [arquivo, prefixo] of [["maquinas-das-fotos.json", ""], ["maquinas-das-capas.json", "capa:"]]) {
+  for (const [arquivo, prefixo] of [["maquinas-das-fotos.json", ""], ["maquinas-das-capas.json", "capa:"], ["maquinas-dos-produtos.json", "produto:"]]) {
     const arquivoLista = path.join(__dirname, arquivo);
     const antes = fs.existsSync(arquivoLista) ? JSON.parse(fs.readFileSync(arquivoLista, "utf8")) : {};
     let mudou = false;
@@ -106,7 +110,7 @@ const servidor = http.createServer((req, res) => {
   servidor.close();
   // o .webp de cada uma (o lugar desfocado, os brinquedos nítidos): as categorias e as capas
   if (compor && chaves.length) {
-    const nomes = chaves.filter((c) => !c.includes("@")).map((c) => c.replace(":", "_"));
+    const nomes = chaves.filter((c) => !c.includes("@")).map((c) => c.replaceAll(":", "_"));
     execFileSync(process.env.PYTHON || "python3", [path.join(__dirname, "compor.py"), ...nomes], { stdio: "inherit" });
   }
 })().catch((erro) => {

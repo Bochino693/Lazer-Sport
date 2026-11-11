@@ -104,7 +104,7 @@ MAQUINAS = {
     "top-racer": (38, "Simulador de Corrida Top Racer", "imagens_brinquedos/ChatGPT_Image_24_de_jul._de_2026__15_31_31-removebg-preview_t3qcnh", 1.50, "pronto"),
     "bob-esponja-kids": (39, "Bob Esponja Hammer Kids", "imagens_brinquedos/WhatsApp_Image_2026-07-24_at_16.01.53-removebg-preview_mdy0ek", 1.47, "pronto"),
     # (os que faltavam para as capas do catálogo, a seção 64)
-    "air-game-home": (2, "Air Game Home", "imagens_brinquedos/airhokey_lpyk86", 0.80, "branco"),
+    "air-game-home": (2, "Air Game Home", "imagens_brinquedos/airhokey_lpyk86", 0.80, "cinza"),
     "multi-jogos": (16, "Multi Jogos", "imagens_brinquedos/Multi_jogos_Mesa_foocks", 1.52, "branco+buracos"),
     "matrix-one-piece": (36, "Matrix One Piece", "imagens_brinquedos/matrix_oqoacy", 2.30, "pronto"),
     "air-game-kids": (40, "Air Game Kids", "imagens_brinquedos/WhatsApp_Image_2026-07-24_at_16.10.57-removebg-preview_hcfnmt", 0.90, "pronto"),
@@ -211,6 +211,9 @@ def recortar(chave, lista=None, pasta=PASTA, lado=LADO, largura_da_foto=1600, qu
         imagem = sem_fundo_branco(imagem, buracos=recorte == "branco+buracos")
     elif recorte == "branco+furinhos":
         imagem = sem_fundo_branco(imagem, buracos=True, buraco_minimo=0.0008)
+    elif recorte == "cinza":
+        # a foto com a sombra cinza do estúdio embaixo (o Air Game Home): some até o cinza claro
+        imagem = sem_fundo_branco(imagem, limite=165, buracos=True, buraco_minimo=0.0008)
     elif recorte == "escuro":
         # a peça escura no branco: some também a sombra cinza-clara da foto em volta
         imagem = sem_fundo_branco(imagem, limite=200, buracos=True, buraco_minimo=0.0008)

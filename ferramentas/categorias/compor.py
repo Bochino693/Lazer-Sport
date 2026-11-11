@@ -42,6 +42,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
 PASTA = Path(__file__).resolve().parent
 RENDERS = PASTA / "render"
 DESTINO = PASTA.parent.parent / "core" / "static" / "site" / "categorias"
+#: As capas do catálogo (seção 64): a foto de cada máquina no lugar dela, quadrada.
+CATALOGO = PASTA.parent.parent / "core" / "static" / "site" / "capas_catalogo"
 #: Onde ficam as fotos de cada produto nosso em 3D (a capa vai junto, como capa.webp).
 MODELOS = PASTA.parent.parent / "core" / "static" / "site" / "arena" / "modelos"
 
@@ -52,10 +54,14 @@ LARGURA_DO_RENDER = 3200
 TETO_KB = 250
 #: O teto da capa do produto (quadrada; a galeria a mostra grande).
 TETO_CAPA_KB = 250
+#: O teto de cada vista da galeria dos nossos 3D.
+TETO_VISTA_KB = 200
 #: O desfoque do lugar onde o peso é 1 (em pixels do render de 3200; a prévia, na metade, usa a metade).
 DESFOQUE = 8
 #: Na capa, o lugar desfoca pouco: o salão se lê inteiro, como nas imagens da fábrica.
 DESFOQUE_CAPA = 3
+#: Na capa do catálogo, o fundo desfoca como numa foto (a profundidade de campo da câmera).
+DESFOQUE_PRODUTO = 9
 #: As folgas, em fração da foto final: (esquerda, cima, direita, baixo).
 FOLGAS = (0.065, 0.13, 0.065, 0.075)
 
@@ -120,15 +126,23 @@ def compor_no_lugar(chave):
     peso = Image.open(RENDERS / f"{chave}-peso.png").convert("L")
     mascara = Image.open(RENDERS / f"{chave}-mascara.png").getchannel("A")
     capa = chave.startswith("capa_")
-    raio = DESFOQUES.get(chave, DESFOQUE_CAPA if capa else DESFOQUE) * cor.width / LARGURA_DO_RENDER
+    produto = chave.startswith(("produto_", "vista_"))
+    padrao = DESFOQUE_PRODUTO if produto else DESFOQUE_CAPA if capa else DESFOQUE
+    raio = DESFOQUES.get(chave, padrao) * cor.width / LARGURA_DO_RENDER
     desfocado = cor.filter(ImageFilter.GaussianBlur(raio))
     # o lugar desfocado perde um tico de cor: os brinquedos saltam (sem ficar lavado)
     desfocado = ImageEnhance.Color(desfocado).enhance(0.95)
     lugar = Image.composite(desfocado, cor, peso.filter(ImageFilter.GaussianBlur(3)))
     foto = Image.composite(cor, lugar, mascara)
-    # 4:3 nas categorias (1600 × 1200); a capa, quadrada, 1600 × 1600: a mesma largura
-    foto = foto.resize((LARGURA, round(LARGURA * cor.height / cor.width)), Image.LANCZOS)
+    # 4:3 nas categorias (1600 × 1200); a capa, quadrada, 1600 × 1600: a mesma largura; a vista
+    # da galeria, o tamanho do arquivo de antes (o render tem o dobro)
+    largura = cor.width // 2 if chave.startswith("vista_") else LARGURA
+    foto = foto.resize((largura, round(largura * cor.height / cor.width)), Image.LANCZOS)
     foto = foto.filter(ImageFilter.UnsharpMask(radius=1.0, percent=40, threshold=2))
+    if produto:
+        # a capa do catálogo, como uma foto: a cor como está (nada de saturar), o brilho só
+        # nas lâmpadas, a vinheta leve e um grão bem fino
+        return grao(vinheta(brilho(vida(foto, cor=1.0, contraste=1.03), forca=0.3), forca=0.1))
     if capa:
         # a capa: as cores limpas, o brilho só nos spots e a vinheta quase nada
         return vinheta(brilho(vida(foto, cor=1.06, contraste=1.03), forca=0.35), forca=0.08)
@@ -153,6 +167,19 @@ def brilho(foto, limite=236, forca=0.7):
     longe = luzes.filter(ImageFilter.GaussianBlur(34))
     halo = ImageChops.add(ImageEnhance.Brightness(perto).enhance(forca), ImageEnhance.Brightness(longe).enhance(forca * 0.8))
     return ImageChops.screen(foto, halo)
+
+
+def grao(foto, forca=4.0):
+    """Um grão bem leve, como o do sensor da câmera (o mesmo sempre: a semente é fixa)."""
+    import random
+
+    aleatorio = random.Random(7)
+    ruido = Image.new("L", foto.size)
+    ruido.putdata([max(0, min(255, int(128 + aleatorio.gauss(0, forca)))) for _ in range(foto.size[0] * foto.size[1])])
+    ruido = ruido.filter(ImageFilter.GaussianBlur(0.5))
+    neutro = Image.new("L", foto.size, 128)
+    canais = [ImageChops.add(ImageChops.subtract(c, neutro, offset=128), ruido, offset=-128) for c in foto.split()]
+    return Image.merge("RGB", canais)
 
 
 def vinheta(foto, forca=0.18):
@@ -200,6 +227,19 @@ def compor_no_estudio(chave):
 def compor(chave, destino=DESTINO):
     no_lugar = (RENDERS / f"{chave}-mascara.png").exists()
     foto = compor_no_lugar(chave) if no_lugar else compor_no_estudio(chave)
+    if chave.startswith("vista_"):
+        # a vista da galeria: por cima do arquivo de antes, em core/static/site/arena/modelos/<chave>/<vista>.webp
+        if destino == DESTINO:
+            modelo, vista = chave[len("vista_"):].split("_", 1)
+            saida = MODELOS / modelo / f"{vista}.webp"
+        else:
+            saida = destino / f"{chave}.webp"
+        return salvar(foto, saida, TETO_VISTA_KB)
+    if chave.startswith("produto_"):
+        # a capa do catálogo: core/static/site/capas_catalogo/<chave>.webp (ou, nas provas, <pasta>/produto_<chave>.webp)
+        saida = CATALOGO / f"{chave[len('produto_'):]}.webp" if destino == DESTINO else destino / f"{chave}.webp"
+        saida.parent.mkdir(parents=True, exist_ok=True)
+        return salvar(foto, saida, TETO_CAPA_KB)
     if chave.startswith("capa_"):
         # a capa do produto: na pasta dele (ou, nas provas, <pasta>/capa_<chave>.webp)
         saida = MODELOS / chave[len("capa_"):] / "capa.webp" if destino == DESTINO else destino / f"{chave}.webp"
@@ -218,7 +258,7 @@ def main(argumentos):
         argumentos = argumentos[:i] + argumentos[i + 2:]
     chaves = argumentos or sorted(
         p.stem for p in RENDERS.glob("*.png")
-        if p.stem in CORES or (p.stem.startswith("capa_") and not p.stem.endswith(("-mascara", "-peso")))
+        if p.stem in CORES or (p.stem.startswith(("capa_", "produto_", "vista_")) and not p.stem.endswith(("-mascara", "-peso")))
     )
     for chave in chaves:
         saida = compor(chave, destino)

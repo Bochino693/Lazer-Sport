@@ -33,6 +33,19 @@
                     piso de madeira com o reflexo suave, o teto claro com os
                     spots, a parede do lado verde com a janela, a luz difusa e,
                     num canto, a mesinha branca com as cadeiras;
+     showroom       o showroom da Lazer & Sport (o PADRÃO das fotos de produto,
+                    como a foto de verdade do Boliche Virtual): o painel preto
+                    texturizado no nicho branco com a placa do logo acesa, o
+                    canteiro com as plantas tropicais, a sanca com os perfis de
+                    LED, o porcelanato claro polido, a parede com os adesivos
+                    de fliperama (genéricos) e a vitrine de vidro escuro;
+     fliperama      a game zone de shopping de verdade (as capas do catálogo):
+                    o carpete com a trama e os desenhos apagados, o lambri de
+                    madeira, a parede pintada sóbria, o teto escuro com os
+                    trilhos de spots quentes;
+     corredor       o corredor do shopping (os brinquedos mecânicos): o
+                    porcelanato grande com o rejunte e o reflexo, as vitrines
+                    acesas ao fundo, as colunas, o forro com as luzes;
      loja           a loja de peças (o card "Peças e acessórios" da home): o
                     balcão de madeira, o painel perfurado com os ganchos, as
                     prateleiras com o estoque (as fotos das peças do
@@ -246,6 +259,53 @@ export function criarLugares(T, P, extra = {}) {
     for (let i = 0; i < 7; i++) {
       esf(g, 0.28 + r() * 0.18, mat(["#15803d", "#16a34a", "#22c55e", "#166534"][i % 4], { roughness: 0.8 }),
         x + (r() - 0.5) * 0.6, altura - 0.2 + (r() - 0.3) * 0.6, z + (r() - 0.5) * 0.6, 14);
+    }
+  }
+  /** A planta tropical do canteiro: as folhas compridas (a nervura e os folíolos, desenhados) em leque. */
+  const texFolha = () => tex("folha-tropical", 256, 1024, (c, l, a) => {
+    c.clearRect(0, 0, l, a);
+    const r = sorteio(5);
+    for (let i = 0; i < 44; i++) {
+      const t = i / 44;
+      const y = a - t * a * 0.96;
+      const comp = l * 0.46 * (1 - t * 0.7) * (0.85 + r() * 0.2);
+      for (const s of [-1, 1]) {
+        c.save();
+        c.translate(l / 2, y);
+        c.rotate(s * (0.9 - t * 0.3));
+        const d = c.createLinearGradient(0, 0, 0, -comp);
+        d.addColorStop(0, "#2d5e24");
+        d.addColorStop(1, r() > 0.5 ? "#5f9e3f" : "#4e8c38");
+        c.fillStyle = d;
+        c.beginPath();
+        c.ellipse(0, -comp / 2, comp * 0.11, comp / 2, 0, 0, PI * 2);
+        c.fill();
+        c.restore();
+      }
+    }
+    c.strokeStyle = "#3d6b2c";
+    c.lineWidth = 5;
+    c.beginPath();
+    c.moveTo(l / 2, a);
+    c.lineTo(l / 2, a * 0.03);
+    c.stroke();
+  });
+  function folhagem(g, x, y, z, altura = 1.1, semente = 1) {
+    const r = sorteio(semente);
+    const m = new T.MeshStandardMaterial({ map: texFolha(), alphaTest: 0.45, side: T.DoubleSide, roughness: 0.7 });
+    const n = 9 + Math.floor(r() * 5);
+    for (let i = 0; i < n; i++) {
+      const h = altura * (0.7 + r() * 0.4);
+      const geo = new T.PlaneGeometry(h * 0.42, h);
+      geo.translate(0, h / 2, 0);
+      const folha = new T.Mesh(geo, m);
+      folha.rotation.x = -(0.45 + r() * 0.7);
+      folha.castShadow = true;
+      const pe = new T.Group();
+      pe.add(folha);
+      pe.position.set(x + (r() - 0.5) * 0.1, y, z + (r() - 0.5) * 0.1);
+      pe.rotation.y = (i / n) * PI * 2 + r() * 0.5;
+      g.add(pe);
     }
   }
   /** Uma árvore (o tronco e a copa em bolas). */
@@ -931,7 +991,7 @@ export function criarLugares(T, P, extra = {}) {
         if (p) planta(f, p.x, p.z, 1.4, "#d6d3d1", 17);
         return f;
       };
-      return { grupo: g, frente, fundo: "#f5efe6", neblina: ["#f5efe6", 26, 90], luz: { ceu: "#fffbeb", chao: "#b98455", hemi: 1.15, sol: 2.3, amb: 0.55, exposicao: 1.0 } };
+      return { grupo: g, frente, fundo: "#f5efe6", neblina: ["#f5efe6", 26, 90], reflexo: op.reflexo === true, luz: { ceu: "#fffbeb", chao: "#b98455", hemi: 1.15, sol: 2.3, amb: 0.55, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ a quadra da escola */
@@ -1005,6 +1065,339 @@ export function criarLugares(T, P, extra = {}) {
         return f;
       };
       return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#bfe3fb", 40, 140], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
+    },
+
+    /* ------------------------------------------------------------ o showroom da Lazer & Sport (o padrão das fotos de produto) */
+    // Fiel à foto de verdade do Boliche Virtual no catálogo (o showroom da empresa): a parede
+    // de painel preto texturizado num nicho de moldura branca, com a placa do logo acesa; o
+    // canteiro branco com as plantas tropicais e as luzes de baixo; a sanca preta com os
+    // perfis de LED e os spots que lavam a parede; o porcelanato claro polido, com o rejunte
+    // e o reflexo; dos lados, a parede com os adesivos de fliperama (genéricos) e a vitrine
+    // de vidro escuro com os frisos de LED azul. `op.cenario` escolhe o que fica atrás do
+    // produto: "logo" (a placa ao lado dele), "plantas" (o canteiro atrás), "fliperama" (os
+    // adesivos) ou "vitrine".
+    showroom(caixaDos, giro, op = {}) {
+      const g = new T.Group();
+      const m = medidas(caixaDos, giro, op.atras ?? 2.2, op.lado ?? 3.2);
+      const H = Math.max(3.7, m.tam.y + 1.2, (op.alturaDaCamera ?? 0) + 0.7);
+      const c = m.centro;
+      const lado = m.ladoEsq ? 1 : -1; // a câmera vem da direita: o que fica à esquerda aparece ao lado do produto
+      // a placa do logo na medida do produto (inteira na foto, ao lado dele e na altura dele)
+      const lp = Math.min(2.0, Math.max(0.9, m.tam.y * 0.7));
+      const yPlaca = Math.min(2.2, Math.max(1.05, m.tam.y * 0.7));
+      // (no "logo", a placa fica logo atrás e ao lado do produto)
+      const meio = { logo: -lado * (m.tam.x / 2 + lp * 0.55 + 0.15), plantas: 0, fliperama: 7.2, vitrine: -7.2 }[op.cenario || "logo"] ?? 0;
+      const xL = c.x + meio + (op.deslocar ?? 0); // o meio do nicho do logo
+      const z = m.zFundo;
+      // o porcelanato claro polido (placas de 60 cm, o rejunte, os veios bem leves)
+      const porcelanato = (ctx, l, a) => {
+        const r = sorteio(op.semente ?? 19);
+        ctx.fillStyle = "#8f8c87";
+        ctx.fillRect(0, 0, l, a);
+        for (let i = 0; i < 18; i++) {
+          ctx.strokeStyle = `rgba(150,146,140,${0.05 + r() * 0.07})`;
+          ctx.lineWidth = 1 + r() * 2;
+          ctx.beginPath();
+          let x = r() * l, y = r() * a;
+          ctx.moveTo(x, y);
+          for (let k = 0; k < 5; k++) { x += (r() - 0.3) * l * 0.3; y += (r() - 0.5) * a * 0.2; ctx.lineTo(x, y); }
+          ctx.stroke();
+        }
+        for (let i = 0; i < 2500; i++) {
+          ctx.fillStyle = r() > 0.5 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.035)";
+          ctx.fillRect(r() * l, r() * a, 2, 2);
+        }
+        ctx.fillStyle = "rgba(95,92,88,0.95)";
+        ctx.fillRect(0, 0, l, 3);
+        ctx.fillRect(0, 0, 3, a);
+      };
+      const piso = chao(g, 160, 160, matTex("showroom-piso-" + (op.semente ?? 19), 160, 160, 0.6, porcelanato, { roughness: 0.2, envMapIntensity: 0.9 }, 1024), c.x, c.z);
+      refletir(g, piso, op.reflexo ?? 0.12, "#2a2a2a", m);
+      // o painel preto texturizado (o relevo em placas irregulares, como couro ou pedra)
+      const relevo = (ctx, l, a) => {
+        const r = sorteio(23);
+        ctx.fillStyle = "#121212";
+        ctx.fillRect(0, 0, l, a);
+        for (let i = 0; i < 260; i++) {
+          const x = r() * l, y = r() * a, s = 30 + r() * 60;
+          ctx.strokeStyle = `rgba(255,255,255,${0.03 + r() * 0.05})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          for (let k = 0; k < 5; k++) ctx.lineTo(x + Math.cos(k * 1.3 + r()) * s, y + Math.sin(k * 1.3 + r()) * s);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fillStyle = `rgba(255,255,255,${r() * 0.02})`;
+          ctx.fill();
+        }
+      };
+      const nichoL = 6.4, sanca = 0.55;
+      parede(g, nichoL, H - sanca, matTex("showroom-painel", nichoL, H, 1.2, relevo, { roughness: 0.75 }, 1024), xL, z, 0);
+      // a moldura branca do nicho e as paredes brancas dos lados dele
+      const branco = mat("#bdbab5", { roughness: 0.55 });
+      for (const s of [-1, 1]) caixa(g, 0.4, H, 0.5, branco, xL + s * (nichoL / 2 + 0.2), 0, z + 0.05);
+      // a sanca preta com os perfis de LED e os spots
+      caixa(g, nichoL, sanca, 0.5, mat("#0d0d0d", { roughness: 0.6 }), xL, H - sanca, z + 0.2);
+      for (const dz of [0.47, 0.03]) caixa(g, nichoL - 0.2, 0.02, 0.02, luz("#ffffff", 2.4), xL, H - sanca - 0.02, z + dz);
+      const cone = (ctx, l, a) => {
+        const d = ctx.createRadialGradient(l / 2, 0, 0, l / 2, 0, a);
+        d.addColorStop(0, "rgba(255,236,205,0.95)");
+        d.addColorStop(0.35, "rgba(255,226,190,0.35)");
+        d.addColorStop(1, "rgba(255,220,180,0)");
+        ctx.fillStyle = d;
+        ctx.beginPath();
+        ctx.moveTo(l / 2 - l * 0.08, 0);
+        ctx.lineTo(l / 2 + l * 0.08, 0);
+        ctx.lineTo(l, a);
+        ctx.lineTo(0, a);
+        ctx.fill();
+      };
+      const tCone = tex("cone-de-luz", 256, 512, cone);
+      for (let i = -2; i <= 2; i++) {
+        const x = xL + i * 1.25;
+        cil(g, 0.05, 0.08, mat("#1a1a1a", { roughness: 0.4, metalness: 0.4 }), x, H - sanca - 0.08, z + 0.25, 16);
+        esf(g, 0.03, luz("#fff1d8", 3), x, H - sanca - 0.09, z + 0.25, 10);
+        const facho = malha(new T.PlaneGeometry(1.3, 1.9), new T.MeshBasicMaterial({ map: tCone, transparent: true, opacity: 0.38, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false }), x, H - sanca - 0.95, z + 0.015);
+        g.add(facho);
+      }
+      // a placa do logo, acesa (o logo oficial: ferramentas/categorias/placa.py)
+      if (extra.placa) {
+        const ap = lp * extra.placa.image.height / extra.placa.image.width;
+        const placa = malha(new T.PlaneGeometry(lp, ap), new T.MeshStandardMaterial({ map: extra.placa, emissiveMap: extra.placa, emissive: "#ffffff", emissiveIntensity: 1.25, transparent: true, alphaTest: 0.05, roughness: 0.4 }), xL, Math.min(H - sanca - 0.3 - ap / 2, yPlaca), z + 0.02);
+        g.add(placa);
+      }
+      // o canteiro branco com o friso de LED e as plantas tropicais com a luz de baixo
+      const cl = nichoL - 0.2, ca = 0.55, cp = 0.55;
+      caixa(g, cl, ca, cp, branco, xL, 0, z + cp / 2 + 0.02);
+      caixa(g, cl, 0.02, 0.02, luz("#ffffff", 2.2), xL, ca - 0.06, z + cp + 0.03);
+      caixa(g, cl - 0.1, 0.03, cp - 0.1, mat("#2b1d14", { roughness: 1 }), xL, ca - 0.04, z + cp / 2 + 0.02);
+      const r = sorteio(op.semente ?? 19);
+      for (let i = 0; i < 9; i++) {
+        const x = xL - cl / 2 + 0.35 + (i + r() * 0.5) * ((cl - 0.7) / 9);
+        folhagem(g, x, ca - 0.02, z + cp / 2 + 0.02, 0.7 + r() * 0.3, 40 + i);
+        if (i % 2 === 0) {
+          esf(g, 0.03, luz("#ffcf8a", 3), x, ca, z + cp - 0.06, 10);
+          const facho = malha(new T.PlaneGeometry(0.9, 1.4), new T.MeshBasicMaterial({ map: tCone, transparent: true, opacity: 0.3, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false }), x, ca + 0.7, z + 0.016);
+          facho.rotation.z = Math.PI;
+          g.add(facho);
+        }
+      }
+      // à esquerda do nicho: a parede com os adesivos de fliperama (desenhos genéricos, em pixel)
+      const adesivos = (ctx, l, a) => {
+        ctx.fillStyle = "#16161d";
+        ctx.fillRect(0, 0, l, a);
+        const rr = sorteio(31);
+        const px = 12;
+        const desenhos = {
+          estrela: ["..#..", ".###.", "#####", ".#.#.", "#...#"],
+          coracao: [".#.#.", "#####", "#####", ".###.", "..#.."],
+          moeda: [".###.", "##.##", "#.#.#", "##.##", ".###."],
+          raio: ["..##", ".##.", "####", ".##.", "##.."],
+          controle: [".#####.", "#.###.#", "##.#.##", "#######", "##...##"],
+          seta: ["..#..", ".###.", "#####", "..#..", "..#.."],
+        };
+        const cores = ["#facc15", "#22d3ee", "#f472b6", "#4ade80", "#fb923c", "#a78bfa"];
+        const nomes = Object.keys(desenhos);
+        for (let i = 0; i < 46; i++) {
+          const forma = desenhos[nomes[i % nomes.length]];
+          const s = px * (1 + Math.floor(rr() * 3));
+          const x0 = rr() * (l - 8 * s), y0 = rr() * (a * 0.8 - 6 * s) + a * 0.05;
+          ctx.fillStyle = cores[(i * 5) % cores.length];
+          forma.forEach((linha, y) => [...linha].forEach((ch, x) => { if (ch === "#") ctx.fillRect(x0 + x * s, y0 + y * s, s - 2, s - 2); }));
+        }
+        // a trilha de pontinhos, como de jogo
+        for (let i = 0; i < 40; i++) {
+          ctx.fillStyle = "#fde68a";
+          ctx.fillRect(i * (l / 40) + 10, a * 0.88, 10, 10);
+        }
+      };
+      const tAdesivos = tex("adesivos-fliperama", 2048, 1024, adesivos);
+      const ad = parede(g, 9, H, new T.MeshStandardMaterial({ map: tAdesivos, roughness: 0.7, emissiveMap: tAdesivos, emissive: "#ffffff", emissiveIntensity: 0.12 }), xL - nichoL / 2 - 0.4 - 4.5, z, 0);
+      ad.position.z += 0.01;
+      // à direita do nicho: a vitrine de vidro escuro com os frisos de LED azul
+      const vidro = new T.MeshStandardMaterial({ color: "#0b1220", roughness: 0.08, metalness: 0.6, envMapIntensity: 0.8 });
+      parede(g, 9, H, vidro, xL + nichoL / 2 + 0.4 + 4.5, z, 0);
+      for (const y of [H - 0.45, 0.25]) caixa(g, 9, 0.03, 0.03, luz("#3b82f6", 1.8), xL + nichoL / 2 + 0.4 + 4.5, y, z + 0.03);
+      for (let i = 0; i < 4; i++) caixa(g, 0.06, H, 0.08, mat("#1f2937", { roughness: 0.4, metalness: 0.5 }), xL + nichoL / 2 + 0.6 + i * 2.6, 0, z + 0.04);
+      // o resto das paredes: branco, e a parede do lado com mais adesivos
+      parede(g, 200, H, branco, c.x, z - 0.02, 0);
+      const ladoParede = parede(g, 200, H, new T.MeshStandardMaterial({ map: tAdesivos.clone(), roughness: 0.7 }), m.xLado, c.z, m.giroLado);
+      ladoParede.material.map.wrapS = T.RepeatWrapping;
+      ladoParede.material.map.repeat.set(200 / 9, 1);
+      ladoParede.material.map.needsUpdate = true;
+      // o teto escuro com os perfis de LED e os spots quentes
+      const teto = malha(new T.PlaneGeometry(200, 200), mat("#161616", { roughness: 0.9 }), c.x, H, c.z);
+      teto.rotation.x = PI / 2;
+      g.add(teto);
+      for (let k = 0; k < 4; k++) {
+        caixa(g, 30, 0.02, 0.05, luz("#ffffff", 2.2), c.x, H - 0.03, z + 1.4 + k * 2.2);
+        for (let i = -5; i <= 5; i++) esf(g, 0.035, luz("#ffe8c4", 2.6), c.x + i * 1.6 + (k % 2) * 0.8, H - 0.04, z + 2.5 + k * 2.2, 10);
+      }
+      maquinasAoFundo(g, op.vizinhas, m, { folga: 1.6, distanciaDoFundo: 0.9 });
+      return {
+        grupo: g, fundo: "#111111", neblina: null, reflexo: true,
+        luz: { ceu: "#fff3e3", chao: "#6b6760", hemi: op.hemi ?? 0.7, sol: op.sol ?? 1.8, amb: op.amb ?? 0.5, exposicao: op.exposicao ?? 1.0 },
+      };
+    },
+
+    /* ------------------------------------------------------------ a game zone do shopping (as capas do catálogo) */
+    // A de verdade, e não a de neon: o carpete escuro com a trama e os desenhos apagados, o
+    // lambri de madeira embaixo, a parede pintada (cor sóbria), o teto escuro com os trilhos de
+    // spots quentes. Ao fundo, se pedido, outras máquinas do catálogo (desfocadas).
+    fliperama(caixaDos, giro, op = {}) {
+      const g = new T.Group();
+      const m = medidas(caixaDos, giro, op.atras ?? 2.6, op.lado ?? 2.6);
+      const H = Math.max(3.1, m.tam.y + 1.0, (op.alturaDaCamera ?? 0) + 0.7);
+      const r0 = sorteio(op.semente ?? 3);
+      const carpete = op.carpete || "#1c2233";
+      const desenhoCarpete = (c, l, a) => {
+        c.fillStyle = carpete;
+        c.fillRect(0, 0, l, a);
+        // a trama: fios claros e escuros, finos e cruzados
+        for (let i = 0; i < 9000; i++) {
+          c.fillStyle = r0() > 0.5 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.12)";
+          c.fillRect(r0() * l, r0() * a, 1 + r0() * 2, 1);
+        }
+        for (let y = 0; y < a; y += 3) {
+          c.fillStyle = "rgba(0,0,0,0.06)";
+          c.fillRect(0, y, l, 1);
+        }
+        // os desenhos do carpete de game zone, apagados (cor baixa, sem neon)
+        const cores = op.desenhos || ["#4f6bb3", "#a35d7d", "#b8975a", "#4f9a8d"];
+        for (let i = 0; i < 26; i++) {
+          c.strokeStyle = cores[i % cores.length];
+          c.globalAlpha = 0.35;
+          c.lineWidth = 6;
+          const x = r0() * l, y = r0() * a, s = 18 + r0() * 26;
+          c.beginPath();
+          if (i % 3 === 0) c.arc(x, y, s / 2, 0, PI * 2);
+          else if (i % 3 === 1) { c.moveTo(x - s, y); c.lineTo(x - s / 2, y - s / 2); c.lineTo(x, y); c.lineTo(x + s / 2, y - s / 2); }
+          else { c.moveTo(x, y - s / 2); c.lineTo(x + s / 2, y + s / 2); c.lineTo(x - s / 2, y + s / 2); c.closePath(); }
+          c.stroke();
+        }
+        c.globalAlpha = 1;
+      };
+      chao(g, 120, 120, matTex("carpete-" + carpete + (op.semente ?? 3), 120, 120, 1.4, desenhoCarpete, { roughness: 0.97 }, 1024), m.centro.x, m.centro.z);
+      // o lambri de madeira (as ripas verticais) até 1,1 m e a parede pintada em cima
+      const ripas = (c, l, a) => {
+        const r = sorteio(77);
+        for (let x = 0; x < l; x += 22) {
+          const tom = 0.85 + r() * 0.25;
+          c.fillStyle = `rgb(${Math.round(150 * tom)},${Math.round(98 * tom)},${Math.round(58 * tom)})`;
+          c.fillRect(x, 0, 18, a);
+          for (let k = 0; k < 4; k++) {
+            c.fillStyle = `rgba(60,30,10,${0.08 + r() * 0.1})`;
+            c.fillRect(x + r() * 16, 0, 1 + r() * 2, a);
+          }
+          c.fillStyle = "#1a120c";
+          c.fillRect(x + 18, 0, 4, a);
+        }
+      };
+      const corParede = op.parede || "#283548";
+      const pintura = (c, l, a) => {
+        c.fillStyle = corParede;
+        c.fillRect(0, 0, l, a);
+        const r = sorteio(5);
+        for (let i = 0; i < 4000; i++) {
+          c.fillStyle = r() > 0.5 ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0.04)";
+          c.fillRect(r() * l, r() * a, 2, 2);
+        }
+      };
+      for (const [x, z, ry] of [[m.centro.x, m.zFundo, 0], [m.xLado, m.centro.z, m.giroLado]]) {
+        parede(g, 200, H, matTex("pintura-" + corParede, 200, H, 2.0, pintura, { roughness: 0.92 }, 512), x, z, ry);
+        const lambri = parede(g, 200, 1.1, matTex("lambri", 200, 1.1, 0.5, ripas, { roughness: 0.6 }, 512), x, z, ry);
+        lambri.position.add(new T.Vector3(Math.sin(ry), 0, Math.cos(ry)).multiplyScalar(0.02));
+        // a régua de luz quente em cima do lambri (suave)
+        const regua = parede(g, 200, 0.025, luz("#ffd9a0", 1.3), x, z, ry, 1.1);
+        regua.position.add(new T.Vector3(Math.sin(ry), 0, Math.cos(ry)).multiplyScalar(0.03));
+      }
+      // o teto escuro com os trilhos e os spots
+      const teto = malha(new T.PlaneGeometry(200, 200), mat("#16181d", { roughness: 0.95 }), m.centro.x, H, m.centro.z);
+      teto.rotation.x = PI / 2;
+      g.add(teto);
+      for (let k = 0; k < 3; k++) {
+        const z = m.zFundo + 1.2 + k * 2.4;
+        caixa(g, 40, 0.03, 0.04, mat("#0b0c0f", { roughness: 0.5 }), m.centro.x, H - 0.05, z);
+        for (let i = -6; i <= 6; i++) {
+          const x = m.centro.x + i * 1.5 + (k % 2) * 0.75;
+          cil(g, 0.045, 0.14, mat("#111317", { roughness: 0.4, metalness: 0.5 }), x, H - 0.2, z, 16);
+          esf(g, 0.035, luz("#ffe7c2", 2.6), x, H - 0.2, z, 10);
+        }
+      }
+      maquinasAoFundo(g, op.fundo, m, { folga: 1.4, distanciaDoFundo: 0.7 });
+      return {
+        grupo: g, fundo: "#11141b", neblina: null, reflexo: false,
+        luz: { ceu: "#fff1dc", chao: "#3a3f52", hemi: op.hemi ?? 0.75, sol: op.sol ?? 1.8, amb: op.amb ?? 0.55, exposicao: op.exposicao ?? 1.08 },
+      };
+    },
+
+    /* ------------------------------------------------------------ o corredor do shopping (os brinquedos mecânicos) */
+    // O porcelanato grande, com o rejunte e o reflexo; as vitrines acesas ao fundo (sem nome de
+    // loja: desfocadas), as colunas, o forro claro com as luzes, os vasos.
+    corredor(caixaDos, giro, op = {}) {
+      const g = new T.Group();
+      const m = medidas(caixaDos, giro, op.atras ?? 3.2, op.lado ?? 4.0);
+      const H = Math.max(3.6, m.tam.y + 1.2, (op.alturaDaCamera ?? 0) + 0.8);
+      const placa = 0.9;
+      const porcelanato = (c, l, a) => {
+        const r = sorteio(op.semente ?? 11);
+        const base = op.piso || [226, 220, 210];
+        c.fillStyle = `rgb(${base.join(",")})`;
+        c.fillRect(0, 0, l, a);
+        // os veios suaves do porcelanato marmorizado
+        for (let i = 0; i < 26; i++) {
+          c.strokeStyle = `rgba(150,140,130,${0.05 + r() * 0.08})`;
+          c.lineWidth = 1 + r() * 3;
+          c.beginPath();
+          let x = r() * l, y = r() * a;
+          c.moveTo(x, y);
+          for (let k = 0; k < 6; k++) {
+            x += (r() - 0.3) * l * 0.25;
+            y += (r() - 0.5) * a * 0.2;
+            c.lineTo(x, y);
+          }
+          c.stroke();
+        }
+        for (let i = 0; i < 3000; i++) {
+          c.fillStyle = r() > 0.5 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)";
+          c.fillRect(r() * l, r() * a, 2, 2);
+        }
+        // o rejunte (na borda do quadro: as placas de 90 cm)
+        c.fillStyle = "rgba(120,112,104,0.9)";
+        c.fillRect(0, 0, l, 3);
+        c.fillRect(0, 0, 3, a);
+      };
+      const piso = chao(g, 160, 160, matTex("porcelanato-" + (op.semente ?? 11), 160, 160, placa, porcelanato, { roughness: 0.16, envMapIntensity: 1.0 }, 1024), m.centro.x, m.centro.z);
+      refletir(g, piso, 0.14, "#8d8478", m);
+      // as vitrines (o vidro com a luz de dentro, o caixilho escuro, a faixa da fachada lisa)
+      const cores = op.lojas || ["#c2410c", "#0f766e", "#1d4ed8", "#a21caf", "#b45309", "#334155"];
+      const larg = 4.6;
+      for (let i = -6; i <= 6; i++) {
+        const x = m.centro.x + i * larg;
+        const loja = new T.Group();
+        caixa(loja, larg - 0.15, H, 0.1, mat("#2b2b2e", { roughness: 0.5 }), 0, 0, -0.05);
+        const dentro = malha(new T.PlaneGeometry(larg - 0.5, 2.5), luz(["#fff4e0", "#f5f0ff", "#eefaf4"][(i + 9) % 3], 0.9), 0, 1.35, 0.01);
+        loja.add(dentro);
+        for (let k = 0; k < 4; k++) caixa(loja, 0.35 + ((i + k) % 3) * 0.2, 0.6 + ((i * k) % 4) * 0.25, 0.3, mat(["#e5e7eb", "#d6b88b", "#9ca3af", "#f5d0c5"][(i + k + 12) % 4], { roughness: 0.7 }), -1.3 + k * 0.85, 0.15, 0.25);
+        caixa(loja, larg - 0.15, 0.55, 0.12, mat(cores[(i + 12) % cores.length], { roughness: 0.6 }), 0, 2.85, 0.02);
+        loja.position.set(x, 0, m.zFundo);
+        g.add(loja);
+      }
+      // a parede do lado (clara) e as colunas redondas
+      parede(g, 200, H, mat("#ece7df", { roughness: 0.9 }), m.xLado, m.centro.z, m.giroLado);
+      for (let i = -3; i <= 3; i++) cil(g, 0.32, H, mat("#f4f1ec", { roughness: 0.35 }), m.centro.x + i * larg * 2 + larg / 2, 0, m.zFundo + 1.3, 32);
+      // o forro claro com as luzes lineares
+      const forro = malha(new T.PlaneGeometry(200, 200), mat("#f2f0ec", { roughness: 0.9, emissive: "#ffffff", emissiveIntensity: 0.25 }), m.centro.x, H, m.centro.z);
+      forro.rotation.x = PI / 2;
+      g.add(forro);
+      for (let k = 0; k < 4; k++) caixa(g, 60, 0.03, 0.12, luz("#fffaf0", 2.2), m.centro.x, H - 0.03, m.zFundo + 1.0 + k * 2.6);
+      // os vasos com as plantas, longe do brinquedo
+      planta(g, m.min.x - 1.6, m.zFundo + 0.9, 1.7, "#e7e5e4", 3);
+      planta(g, m.max.x + 1.7, m.zFundo + 0.9, 1.5, "#e7e5e4", 7);
+      return {
+        grupo: g, fundo: "#ece7df", neblina: null, reflexo: true,
+        luz: { ceu: "#ffffff", chao: "#cfc6b8", hemi: op.hemi ?? 0.95, sol: op.sol ?? 1.7, amb: op.amb ?? 0.7, exposicao: op.exposicao ?? 0.98 },
+      };
     },
 
     /* ------------------------------------------------------------ o salão do mural (as capas) */
@@ -1235,7 +1628,7 @@ export function criarLugares(T, P, extra = {}) {
         }
       }
       return {
-        grupo: g, fundo: "#f5f5f4", neblina: null,
+        grupo: g, fundo: "#f5f5f4", neblina: null, reflexo: op.reflexo === true,
         luz: { ceu: "#ffffff", chao: "#b98b62", hemi: op.hemi ?? 0.95, sol: op.sol ?? 1.7, amb: op.amb ?? 0.75, exposicao: op.exposicao ?? 1.0 },
       };
     },
