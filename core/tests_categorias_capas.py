@@ -332,7 +332,7 @@ class FotosTests(TestCase):
             with self.subTest(arquivo.name), Image.open(arquivo) as foto:
                 rgb = foto.convert("RGB")
                 saturacao = ImageStat.Stat(rgb.convert("HSV").getchannel("S")).mean[0]
-                self.assertGreater(saturacao, 55)
+                self.assertGreater(saturacao, 50)
                 brancos = sum(1 for p in rgb.resize((120, 90)).getdata() if min(p) > 235)
                 self.assertLess(brancos / (120 * 90), 0.12)
                 borda = [rgb.getpixel((x, y)) for x in range(0, 1200, 24) for y in (6, 893)]

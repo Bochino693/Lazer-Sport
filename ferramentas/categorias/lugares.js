@@ -275,16 +275,31 @@ export function criarLugares(T, P) {
       f.addColorStop(1, ["#fde68a", "#fbcfe8", "#bae6fd", "#ddd6fe", "#bbf7d0"][((semente % 5) + 5) % 5]);
       c.fillStyle = f;
       c.fillRect(0, 0, w, h);
-      c.filter = "blur(7px)";
-      for (let i = 0; i < 14; i++) {
-        c.fillStyle = ["#f472b6", "#60a5fa", "#fbbf24", "#34d399", "#a78bfa", "#f97316", "#ffffff"][Math.floor(r() * 7)];
-        const bw = 30 + r() * 80, bh = 40 + r() * 120;
-        c.fillRect(r() * w, h - bh - r() * 60, bw, bh);
+      c.filter = "blur(3px)";
+      // as prateleiras com as caixas coloridas, dos dois lados
+      for (const x0 of [0.04, 0.68]) {
+        for (let k = 0; k < 3; k++) {
+          const y = h * (0.3 + k * 0.22);
+          c.fillStyle = "#ffffff";
+          c.fillRect(w * x0, y, w * 0.28, 6);
+          for (let i = 0; i < 5; i++) {
+            c.fillStyle = ["#f472b6", "#60a5fa", "#fbbf24", "#34d399", "#a78bfa", "#f97316"][Math.floor(r() * 6)];
+            c.fillRect(w * x0 + i * w * 0.055, y - 30 - r() * 14, w * 0.045, 30 + r() * 10);
+          }
+        }
       }
-      c.fillStyle = "rgba(255,255,255,.8)";
+      // a porta aberta no meio, com o manequim
+      c.fillStyle = "rgba(255,255,255,.55)";
+      c.fillRect(w * 0.38, h * 0.22, w * 0.24, h * 0.78);
+      c.fillStyle = ["#7c3aed", "#db2777", "#0891b2", "#ea580c", "#16a34a"][((semente % 5) + 5) % 5];
+      c.beginPath();
+      c.arc(w * 0.5, h * 0.42, 16, 0, Math.PI * 2);
+      c.fill();
+      c.fillRect(w * 0.5 - 22, h * 0.46, 44, h * 0.3);
+      c.fillStyle = "rgba(255,255,255,.9)";
       for (let i = 0; i < 5; i++) {
         c.beginPath();
-        c.arc((i + 0.5) * (w / 5), 22, 12, 0, Math.PI * 2);
+        c.arc((i + 0.5) * (w / 5), 18, 10, 0, Math.PI * 2);
         c.fill();
       }
       c.filter = "none";
@@ -349,7 +364,7 @@ export function criarLugares(T, P) {
     /* ------------------------------------------------------------ o corredor do shopping */
     shopping(caixaDos, giro, op = {}) {
       const g = new T.Group();
-      const m = medidas(caixaDos, giro, op.atras ?? Math.max(2.2, m0(caixaDos) * 0.3), op.lado);
+      const m = medidas(caixaDos, giro, op.atras ?? Math.max(2.2, m0(caixaDos) * 0.3), op.lado ?? Math.max(3.5, m0(caixaDos) * 0.3));
       chao(g, 200, 200, matTex("piso-shopping", 200, 200, 2.4, (c, l, a) => {
         for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
           c.fillStyle = (i + j) % 2 ? "#cbbfae" : "#a8998a";
@@ -364,7 +379,7 @@ export function criarLugares(T, P) {
       faixa.position.y = -0.001;
       const cores = ["#f59e0b", "#0ea5e9", "#ec4899", "#10b981", "#8b5cf6", "#ef4444"];
       // as vitrines do térreo no fundo e no lado, o mezanino e as do andar de cima
-      const larg = 5.2, alt = 4.4;
+      const larg = 5.2, alt = 3.6;
       for (let i = -6; i <= 6; i++) {
         const x = m.centro.x + i * larg;
         vitrine(g, larg, alt, x, m.zFundo, 0, 20 + i, cores[(i + 12) % cores.length]);
@@ -390,8 +405,8 @@ export function criarLugares(T, P) {
       }
       // os vasos com as plantas e um banco
       const lado = m.ladoEsq ? 1 : -1;
-      planta(g, m.xLado + lado * 1.3, m.zFundo + 1.6, 2.0, "#f8fafc", 3);
-      planta(g, op.vasoX ?? (m.ladoEsq ? m.max.x + 2.6 : m.min.x - 2.6), m.zFundo + 1.2, 1.8, "#f8fafc", 7);
+      planta(g, m.min.x - 1.8, m.zFundo + 1.1, 2.0, "#f8fafc", 3);
+      planta(g, m.max.x + 1.8, m.zFundo + 1.1, 1.8, "#f8fafc", 7);
       banco(g, m.xLado + lado * 0.8, m.centro.z + m.tam.z * 0.6 + 1.5, lado * Math.PI / 2);
       return { grupo: g, fundo: "#e2e8f0", neblina: ["#e2e8f0", m.maior * 5 + 24, m.maior * 10 + 90], luz: { ceu: "#ffffff", chao: "#a8998a", hemi: 1.05, sol: 2.1, amb: 0.55, exposicao: 1.0 } };
     },
@@ -480,9 +495,9 @@ export function criarLugares(T, P) {
       const g = new T.Group();
       const m = medidas(caixaDos, giro, op.atras ?? 2.0, op.lado ?? 2.4);
       const H = Math.max(10, m.tam.y * 3.0);
-      chao(g, 220, 220, matTex("concreto", 220, 220, 3, ladrilhos("#c9ced6", "#b6bcc6", 1, 0.05), { roughness: 0.55 }), m.centro.x, m.centro.z);
+      chao(g, 220, 220, matTex("concreto", 220, 220, 3, ladrilhos("#7f8a99", "#6b7584", 1, 0.06), { roughness: 0.5 }), m.centro.x, m.centro.z);
       // o piso emborrachado azul em volta dos brinquedos
-      chao(g, m.tam.x + 3, m.tam.z + 3, matTex("borracha", m.tam.x + 3, m.tam.z + 3, 1.0, (c, l, a) => {
+      chao(g, m.tam.x + 7, m.tam.z + 7, matTex("borracha", m.tam.x + 7, m.tam.z + 7, 1.0, (c, l, a) => {
         c.fillStyle = "#2563eb";
         c.fillRect(0, 0, l, a);
         const r = sorteio(5);
@@ -493,13 +508,13 @@ export function criarLugares(T, P) {
       }, { roughness: 0.9 }), m.centro.x, m.centro.z, -0.001);
       // as paredes: a faixa colorida embaixo, a chapa metálica em cima, os pilares e a viga de treliça
       const chapa = (l) => matTex("chapa-" + l, l, H - 3, 0.9, (c, w, h) => {
-        c.fillStyle = "#e5e7eb";
+        c.fillStyle = "#9fb3c8";
         c.fillRect(0, 0, w, h);
         for (let i = 0; i < 8; i++) {
           const gr = c.createLinearGradient((i * w) / 8, 0, ((i + 1) * w) / 8, 0);
-          gr.addColorStop(0, "#f8fafc");
-          gr.addColorStop(0.5, "#cbd5e1");
-          gr.addColorStop(1, "#f1f5f9");
+          gr.addColorStop(0, "#b9cadb");
+          gr.addColorStop(0.5, "#7f97b0");
+          gr.addColorStop(1, "#adc0d3");
           c.fillStyle = gr;
           c.fillRect((i * w) / 8, 0, w / 8, h);
         }
@@ -543,7 +558,7 @@ export function criarLugares(T, P) {
         lamp.rotation.x = Math.PI / 2;
         g.add(lamp);
       }
-      return { grupo: g, fundo: "#dbe3ee", neblina: ["#e2e8f0", m.maior * 2.2 + 14, m.maior * 6 + 70], luz: { ceu: "#f8fafc", chao: "#94a3b8", hemi: 1.25, sol: 2.4, amb: 0.6, exposicao: 1.0 } };
+      return { grupo: g, fundo: "#b8c6d6", neblina: ["#c7d3e0", m.maior * 4 + 20, m.maior * 9 + 90], luz: { ceu: "#f8fafc", chao: "#64748b", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ a brinquedoteca */
@@ -551,36 +566,21 @@ export function criarLugares(T, P) {
       const g = new T.Group();
       const m = medidas(caixaDos, giro, op.atras ?? 1.2, op.lado ?? 1.4);
       const H = 5.5;
-      chao(g, 120, 120, matTex("eva-pastel", 120, 120, 1.2, (c, l, a) => {
-        const cores = ["#fde68a", "#bae6fd", "#fbcfe8", "#bbf7d0"];
-        for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
-          c.fillStyle = cores[(i + j * 2) % 4];
-          c.fillRect((i * l) / 2, (j * a) / 2, l / 2, a / 2);
-        }
-        c.strokeStyle = "rgba(255,255,255,.7)";
-        c.lineWidth = 6;
-        c.strokeRect(0, 0, l, a);
-        c.beginPath();
-        c.moveTo(l / 2, 0);
-        c.lineTo(l / 2, a);
-        c.moveTo(0, a / 2);
-        c.lineTo(l, a / 2);
-        c.stroke();
-      }, { roughness: 0.9 }), m.centro.x, m.centro.z);
-      // as paredes: creme com o arco-íris e as nuvens pintadas
-      const pintura = matTex("parede-arco-iris", 18, H, 18, (c, l, a) => {
-        c.fillStyle = "#fff7ed";
+      chao(g, 120, 120, matTex("piso-brinquedoteca", 120, 120, 1.4, tacos(214, 168, 112), { roughness: 0.45 }), m.centro.x, m.centro.z);
+      // as paredes: amarela com o arco-íris e as nuvens pintadas, e a do lado verde-água
+      const pintura = matTex("parede-arco-iris", 14, H, 14, (c, l, a) => {
+        c.fillStyle = "#fde68a";
         c.fillRect(0, 0, l, a);
-        const cores = ["#f87171", "#fb923c", "#facc15", "#4ade80", "#60a5fa", "#a78bfa"];
+        const cores = ["#ef4444", "#f97316", "#facc15", "#22c55e", "#3b82f6", "#8b5cf6"];
         cores.forEach((cor, i) => {
           c.strokeStyle = cor;
-          c.lineWidth = 16;
+          c.lineWidth = 34;
           c.beginPath();
-          c.arc(l * 0.5, a * 0.78, a * 0.42 - i * 16, Math.PI, 0);
+          c.arc(l * 0.5, a * 0.95, a * 0.6 - i * 34, Math.PI, 0);
           c.stroke();
         });
         c.fillStyle = "#ffffff";
-        for (const [x, y, r] of [[0.2, 0.3, 30], [0.25, 0.27, 38], [0.3, 0.31, 28], [0.75, 0.22, 30], [0.8, 0.19, 36], [0.85, 0.23, 26]]) {
+        for (const [x, y, r] of [[0.12, 0.62, 44], [0.17, 0.58, 56], [0.23, 0.63, 40], [0.78, 0.6, 46], [0.84, 0.56, 58], [0.9, 0.61, 42]]) {
           c.beginPath();
           c.arc(l * x, a * y, r, 0, Math.PI * 2);
           c.fill();
@@ -588,9 +588,9 @@ export function criarLugares(T, P) {
       }, { roughness: 0.9 }, 1024);
       pintura.map.repeat.set(1, 1);
       pintura.map.wrapS = pintura.map.wrapT = T.ClampToEdgeWrapping;
-      parede(g, 120, H, mat("#fff7ed", { roughness: 0.9 }), m.centro.x, m.zFundo - 0.01, 0);
-      parede(g, 18, H, pintura, m.centro.x + (m.ladoEsq ? 1.5 : -1.5), m.zFundo, 0);
-      parede(g, 120, H, mat("#ccfbf1", { roughness: 0.9 }), m.xLado, m.centro.z, m.giroLado);
+      parede(g, 120, H, mat("#fde68a", { roughness: 0.9 }), m.centro.x, m.zFundo - 0.01, 0);
+      parede(g, 14, H, pintura, m.centro.x, m.zFundo, 0);
+      parede(g, 120, H, mat("#5eead4", { roughness: 0.9 }), m.xLado, m.centro.z, m.giroLado);
       // o rodapé colorido
       parede(g, 120, 0.25, mat("#f9a8d4"), m.centro.x, m.zFundo + 0.01, 0);
       // a janela do lado, com a cortina
@@ -628,7 +628,7 @@ export function criarLugares(T, P) {
         esf(g, 0.18 + r() * 0.12, mat(["#fbcfe8", "#bae6fd", "#fde68a", "#ddd6fe"][i % 4], { roughness: 0.9 }), x, y, z);
         cil(g, 0.005, H - y, mat("#e5e7eb"), x, y, z, 4);
       }
-      return { grupo: g, fundo: "#fff7ed", neblina: ["#fff7ed", 30, 90], luz: { ceu: "#fffbeb", chao: "#fde68a", hemi: 1.2, sol: 2.1, amb: 0.6, exposicao: 1.0 } };
+      return { grupo: g, fundo: "#fde68a", neblina: ["#fef3c7", 40, 120], luz: { ceu: "#fffbeb", chao: "#d6a870", hemi: 1.0, sol: 1.9, amb: 0.45, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ a praça */
@@ -811,7 +811,7 @@ export function criarLugares(T, P) {
       }), m.centro.x, m.zFundo + P / 2 + 3.2, -0.001);
       quadra.receiveShadow = true;
       // o fundo: a arquibancada colorida, o muro e as janelas altas
-      parede(g, 160, H, mat("#e0f2fe", { roughness: 0.9 }), m.centro.x, m.zFundo - 3.2, 0);
+      parede(g, 160, H, mat("#7dd3fc", { roughness: 0.9 }), m.centro.x, m.zFundo - 3.2, 0);
       const janelas = parede(g, 160, 1.6, luz("#f0f9ff", 0.9), m.centro.x, m.zFundo - 3.18, 0, H - 2.6);
       janelas.material = luz("#f0f9ff", 0.9);
       for (let i = 0; i < 5; i++) {
@@ -820,7 +820,7 @@ export function criarLugares(T, P) {
       }
       caixa(g, 160, 1.0, 0.1, mat("#1e3a8a", { roughness: 0.6 }), m.centro.x, 0, m.zFundo + 0.05);
       // a parede do lado, com a proteção azul e a tabela de basquete
-      parede(g, 160, H, mat("#f1f5f9", { roughness: 0.9 }), m.xLado, m.centro.z, m.giroLado);
+      parede(g, 160, H, mat("#7dd3fc", { roughness: 0.9 }), m.xLado, m.centro.z, m.giroLado);
       parede(g, 160, 2.0, mat("#2563eb", { roughness: 0.8 }), m.xLado + Math.sin(m.giroLado) * 0.02, m.centro.z, m.giroLado);
       const n = new T.Vector3(Math.sin(m.giroLado), 0, Math.cos(m.giroLado));
       const tz = m.zFundo + P / 2 + 3.2;
@@ -834,7 +834,7 @@ export function criarLugares(T, P) {
       for (let i = -4; i <= 4; i++) {
         caixa(g, 1.0, 2.2, 0.03, mat(["#ef4444", "#facc15", "#22c55e", "#3b82f6"][(i + 8) % 4], { roughness: 0.8 }), m.centro.x + i * 3.2, H - 4.4, m.zFundo - 3.1);
       }
-      return { grupo: g, fundo: "#e0f2fe", neblina: ["#eef6ff", 30, 110], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.2, sol: 2.4, amb: 0.6, exposicao: 1.0 } };
+      return { grupo: g, fundo: "#7dd3fc", neblina: ["#bfe3fb", 40, 140], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
     },
   };
 

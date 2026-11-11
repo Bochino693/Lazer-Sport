@@ -1814,3 +1814,80 @@ Dependência nova: rjsmin (requirements.txt).
        python manage.py cadastrar_variantes_adesivo --so air-game-kids-alienigenas --fotos
        python manage.py atualizar_capas_categorias
    Testes: core/tests_variantes_adesivo.py (SemTabuaTests).
+
+55) AS FOTOS DAS CATEGORIAS DENTRO DE LUGARES (BUFFET, SHOPPING, GAME ZONE, PARQUE...)
+   O pedido do cliente: "enriqueça mais as fotos das categorias, estão muito
+   brancas, ponha em lugares, shoppings, parques, buffets entre outros." As
+   16 fotos de core/static/site/categorias/ foram refeitas: os brinquedos de
+   cada categoria (os mesmos da seção 53) agora estão DENTRO de um lugar de
+   verdade, montado em 3D (nada de foto baixada da internet: o lugar é
+   desenhado, sem nome de loja, sem marca de ninguém e sem jogo de ninguém
+   nas telas -- só as telas desenhadas de ferramentas/categorias/pecas.js):
+     Categoria               Lugar
+     Brinquedão              buffet infantil (parede rosa de bolinhas)
+     Kids                    buffet infantil (parede azul de bolinhas)
+     Espaço Kids Play        corredor de shopping
+     Famosos                 corredor de shopping (o palco com as estrelas)
+     Simuladores             corredor de shopping
+     Eletrônicos             game zone
+     Fliperama               game zone
+     Competitivos            game zone
+     Boliche Virtual         game zone
+     Trampolins              galpão de parque indoor
+     Área Ninja              galpão de parque indoor
+     Espaço Esportivo Kids   galpão de parque indoor (visto do alto: a treliça)
+     Área Baby               brinquedoteca
+     Mecânicos               praça ao ar livre
+     Jogos de Mesa           salão de festas do condomínio (vista para a piscina)
+     Esportivos              quadra da escola
+   OS LUGARES (ferramentas/categorias/lugares.js):
+     * buffet: piso de tacos, parede de bolinhas com o rodapé branco, o
+       painel redondo com os três cilindros e o arco de balões, as
+       bandeirinhas, os cachos de balões e a mesa de doces com o bolo;
+     * shopping: piso de porcelanato em xadrez (brilhante), as vitrines
+       acesas (as prateleiras, a porta e o manequim, sem nome de loja; a
+       faixa da fachada só com a cor), as colunas, o mezanino com o
+       guarda-corpo de vidro, os vasos e o banco;
+     * game zone: o carpete escuro com os desenhos em neon, as paredes com os
+       tubos de luz, o raio e os círculos de neon e as outras máquinas ao
+       fundo (os gabinetes de pecas.js);
+     * galpão: piso de concreto e o emborrachado azul, a faixa azul e amarela
+       na parede, a chapa metálica, os pilares de aço, a viga de treliça, as
+       janelas altas e as luminárias do galpão;
+     * brinquedoteca: piso de madeira clara, a parede amarela com o arco-íris
+       e as nuvens, a parede verde-água com a janela e a cortina, as estantes
+       de nichos com os brinquedos e os pompons;
+     * praça: a grama, o piso de pedra redondo, o céu com as nuvens, as
+       árvores, os bancos, os postes e os canteiros;
+     * salão: piso de tacos, a parede de vidro para o jardim e a piscina, o
+       painel de ripas, o sofá e os pendentes;
+     * quadra: o piso azul com as linhas, a arquibancada colorida, a parede
+       azul com as janelas altas e as faixas penduradas (sem nada escrito).
+   OS BRINQUEDOS SÃO O DESTAQUE. O enquadramento é pelo que se vê deles (a
+   silhueta, num render pequeno só com eles): inteiros, no meio, com folga
+   dos lados e embaixo e mais folga em cima (a etiqueta "Categoria" do
+   card). Cada foto sai em três imagens (gerar.cjs): a foto, a máscara dos
+   brinquedos e o peso do desfoque, pela profundidade -- o que está longe
+   deles. O compor.py desfoca o lugar na medida do peso e põe os brinquedos
+   de volta, nítidos: o lugar se lê e eles saltam. 1200 x 900 (o 4:3 do
+   card), até ~150 KB (a qualidade do WebP desce até caber). O teste confere
+   que nenhuma é branca: cor (saturação média), quase nada de branco
+   estourado, a borda não é um fundo liso e a foto não é escura demais.
+   A SUBIDA: a migração 0149_categorias_nos_lugares (depois da 0148), só no
+   Render, roda atualizar_capas para todas as categorias: só sobe a foto que
+   mudou (o nome leva a assinatura do arquivo). Se falhar, o deploy segue e,
+   no servidor:
+       python manage.py atualizar_capas_categorias --simular
+       python manage.py atualizar_capas_categorias
+   REFAZER (uma cena, outro lugar, outro ângulo):
+       node ferramentas/categorias/gerar.cjs [chaves]
+       python ferramentas/categorias/compor.py [chaves]
+       python manage.py test core.tests_categorias_capas
+   O lugar de cada categoria e o ângulo estão em cenas.js (LUGAR_DA_CENA:
+   lugar, lente, giro, altura, ocupa e lugarOp -- a cor da parede, a folga
+   até o fundo...). Uma cena demora ~25 s no Chromium sem placa de vídeo.
+   Código: ferramentas/categorias/ (lugares.js, cenas.js, pecas.js,
+   gerar.cjs, compor.py), core/categorias_capas.py (subir_fotos_no_deploy),
+   core/migrations/0149_categorias_nos_lugares.py.
+   Testes: core/tests_categorias_capas.py (MigracaoDosLugaresTests e
+   FotosTests).
