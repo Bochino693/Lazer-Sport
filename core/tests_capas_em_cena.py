@@ -17,7 +17,12 @@ protegem:
   * o card fixo "Peças e acessórios" da home é a foto das peças de verdade
     do catálogo, de ponta a ponta (sem o carrossel de antes);
   * a 0153 refaz, só no Render, a galeria que o cadastro subiu (uma vez), e
-    nunca derruba o deploy.
+    nunca derruba o deploy;
+  * a 0154 (o 3D novo do Basquete Street Quadrinhos e do Air Game Kids
+    Alienígenas, seção 61): no Render, refaz à força a galeria dos dois que o
+    cadastro subiu (mesmo com a capa em cena da 0153) e sobe as fotos das
+    categorias que mudaram; em todo lugar, religa o objeto 3D ao .glb de
+    hoje; nunca derruba o deploy.
 """
 
 import importlib
@@ -35,10 +40,13 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image, ImageStat
 
+from . import categorias_capas
 from .cadastro_modelos import CADASTROS
-from .models import Brinquedos, ImagemBrinquedo, PecasReposicao
+from .models import Brinquedos, ImagemBrinquedo, ObjetoTresD, PecasReposicao
+from .objetos_3d import ler_glb_do_site
 
 migracao = importlib.import_module("core.migrations.0153_capas_em_cena")
+migracao_0154 = importlib.import_module("core.migrations.0154_basquete_e_air_game_reais")
 
 FERRAMENTA = Path(__file__).resolve().parent.parent / "ferramentas" / "categorias"
 #: Os produtos com a capa em cena (o Modelo 5 tem a do salão da fábrica).
@@ -266,3 +274,110 @@ class MigracaoTests(TestCase):
             brinquedo.refresh_from_db()
             self.assertEqual(brinquedo.imagens_brinquedo.count(), 2)
             self.assertIn(f"{chave}-frente", brinquedo.imagem_brinquedo.name)
+
+
+@override_settings(IS_RENDER=False)
+class BasqueteEAirGameReaisTests(TestCase):
+    """A 0154: o 3D novo dos dois (seção 61) no site -- as fotos, o objeto e as fotos das categorias."""
+
+    def _do_cadastro(self, chave, capa="capa"):
+        """Como a 0153 deixou: as fotos que o cadastro subiu, com a capa em cena (do 3D de antes)."""
+        dados = CADASTROS[chave]
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo=dados["nome"], descricao="x", avaliacao=5, voltz="220v",
+            imagem_brinquedo=f"imagens_brinquedos/{chave}-{capa}.webp",
+        )
+        for ordem, (arquivo, tipo, _texto) in enumerate(dados["fotos"], start=1):
+            ImagemBrinquedo.objects.create(brinquedo=brinquedo, tipo=tipo, ordem=ordem, texto_alternativo="do 3D de antes",
+                                           imagem=f"imagens_brinquedos/{chave}-{Path(arquivo).stem}-antes.webp")
+        ObjetoTresD.objects.create(brinquedo=brinquedo, arquivo_estatico=dados["objeto_3d"], codigo=chave,
+                                   medidas=[1.0, 1.0, 1.0], cores=[])
+        return brinquedo
+
+    def _rodar(self, pasta=None, render=True):
+        avisos = []
+        with mock.patch.object(categorias_capas, "subir_fotos_no_deploy") as categorias, mock.patch("builtins.print"):
+            if render:
+                a, b = _disco(pasta)
+                with a, b, override_settings(IS_RENDER=True):
+                    migracao_0154.refazer(apps_reais, None, avisar=avisos.append)
+            else:
+                migracao_0154.refazer(apps_reais, None, avisar=avisos.append)
+        return " ".join(avisos), categorias
+
+    def test_vem_depois_da_0153(self):
+        self.assertEqual(migracao_0154.Migration.dependencies, [("core", "0153_capas_em_cena")])
+        self.assertIs(migracao_0154.Migration.operations[0].code, migracao_0154.refazer)
+        self.assertEqual(set(migracao_0154.CHAVES), {"basquete-street-quadrinhos", "air-game-kids-alienigenas"})
+
+    def test_fora_do_render_so_religa_o_3d(self):
+        brinquedos = {chave: self._do_cadastro(chave) for chave in migracao_0154.CHAVES}
+        avisos, categorias = self._rodar(render=False)
+        self.assertEqual(avisos, "")
+        categorias.assert_not_called()
+        for chave, brinquedo in brinquedos.items():
+            with self.subTest(chave):
+                self.assertTrue(all("antes" in f.imagem.name for f in brinquedo.imagens_brinquedo.all()))
+                objeto = ObjetoTresD.objects.get(brinquedo=brinquedo)
+                # as medidas e as cores do .glb de hoje
+                lido = ler_glb_do_site(CADASTROS[chave]["objeto_3d"])
+                self.assertEqual((objeto.medidas, objeto.cores), (lido["medidas"], lido["cores"]))
+
+    def test_no_render_refaz_a_forca_mesmo_com_a_capa_da_0153(self):
+        brinquedos = {chave: self._do_cadastro(chave) for chave in migracao_0154.CHAVES}
+        with tempfile.TemporaryDirectory() as pasta:
+            avisos, categorias = self._rodar(pasta)
+            for chave, brinquedo in brinquedos.items():
+                with self.subTest(chave):
+                    brinquedo.refresh_from_db()
+                    fotos = list(brinquedo.imagens_brinquedo.order_by("ordem"))
+                    dados = CADASTROS[chave]
+                    self.assertEqual([f.tipo for f in fotos], [tipo for _, tipo, _ in dados["fotos"]])
+                    self.assertEqual([f.texto_alternativo for f in fotos], [texto for _, _, texto in dados["fotos"]])
+                    self.assertFalse(any("antes" in f.imagem.name for f in fotos))
+                    self.assertIn(f"{chave}-capa", brinquedo.imagem_brinquedo.name)
+                    # o arquivo que subiu é a capa de hoje (a do 3D novo)
+                    with open(Path(pasta) / brinquedo.imagem_brinquedo.name, "rb") as subiu, \
+                            open(dados["pasta"] / "capa.webp", "rb") as de_hoje:
+                        self.assertEqual(subiu.read(), de_hoje.read())
+                    self.assertIn(dados["nome"], avisos)
+        # as fotos das categorias com estes .glb também sobem (só as que mudaram)
+        categorias.assert_called_once()
+        self.assertEqual(Brinquedos.objects.count(), 2)
+
+    def test_as_fotos_do_painel_ficam(self):
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo=CADASTROS["air-game-kids-alienigenas"]["nome"], descricao="x", avaliacao=5,
+            imagem_brinquedo="imagens_brinquedos/foto-da-loja.webp",
+        )
+        with tempfile.TemporaryDirectory() as pasta:
+            self.assertEqual(self._rodar(pasta)[0], "")
+        brinquedo.refresh_from_db()
+        self.assertEqual(brinquedo.imagem_brinquedo.name, "imagens_brinquedos/foto-da-loja.webp")
+        # o objeto 3D é ligado mesmo assim (o .glb de hoje)
+        self.assertEqual(brinquedo.objeto_3d.codigo, "air-game-kids-alienigenas")
+
+    def test_a_subida_falha_e_o_deploy_segue(self):
+        basquete = self._do_cadastro("basquete-street-quadrinhos")
+        with tempfile.TemporaryDirectory() as pasta, \
+                mock.patch.object(FileSystemStorage, "save", side_effect=OSError("sem rede")):
+            avisos, categorias = self._rodar(pasta)
+        self.assertIn("python manage.py cadastrar_variantes_adesivo --so basquete-street-quadrinhos --fotos", avisos)
+        # nada pela metade: a galeria de antes fica até o comando refazer; o 3D e as categorias seguem
+        basquete.refresh_from_db()
+        self.assertTrue(all("antes" in f.imagem.name for f in basquete.imagens_brinquedo.all()))
+        lido = ler_glb_do_site(CADASTROS["basquete-street-quadrinhos"]["objeto_3d"])
+        self.assertEqual(basquete.objeto_3d.medidas, lido["medidas"])
+        categorias.assert_called_once()
+
+    def test_as_fotos_com_estes_glb_sao_as_que_o_gerar_refaz(self):
+        # gerar.cjs --glb basquete-street-quadrinhos --glb air-game-kids-alienigenas refaz as capas
+        # dos dois e as fotos das categorias onde eles aparecem -- e só estas sobem na 0154
+        lista = json.loads((FERRAMENTA / "maquinas-das-fotos.json").read_text(encoding="utf-8"))
+        com_os_dois = {chave for chave, maquinas in lista.items()
+                       if {"Basquete Street Quadrinhos (3D)", "Air Game Kids Alienígenas (3D)"} & set(maquinas)}
+        self.assertEqual(com_os_dois, {"espaco-kids-play", "eletronicos", "jogos-de-mesa", "competitivos", "famosos",
+                                       "esportivos", "kids"})
+        capas = json.loads((FERRAMENTA / "maquinas-das-capas.json").read_text(encoding="utf-8"))
+        for chave in migracao_0154.CHAVES:
+            self.assertEqual(capas[chave][0], CADASTROS[chave]["nome"] + " (3D)")

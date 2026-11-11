@@ -2208,6 +2208,22 @@ Dependência nova: rjsmin (requirements.txt).
    core/migrations/0153_capas_em_cena.py.
    Testes: core/tests_capas_em_cena.py (e os testes de cada modelo, que
    conferem as fotos do cadastro).
+   COM O 3D NOVO DO BASQUETE E DO AIR GAME (seção 61): as cenas que usam
+   esses dois .glb foram refeitas com
+       node ferramentas/categorias/gerar.cjs --glb basquete-street-quadrinhos --glb air-game-kids-alienigenas --compor
+   -- as capas em cena dos dois e as fotos das categorias Eletrônicos,
+   Competitivos, Famosos, Esportivos, Kids, Espaço Kids Play e Jogos de Mesa
+   (o cenasComGlb não aponta outras: Mecânicos, Trampolins e as demais só têm
+   fotos do catálogo ou outros .glb). Em Competitivos e Eletrônicos as máquinas
+   foram afastadas para o basquete novo (com a rampa) aparecer inteiro: nenhuma
+   máquina na frente dele. A migração 0154_basquete_e_air_game_reais
+   (depois da 0153), SÓ NO RENDER, refaz À FORÇA a galeria dos dois que o
+   cadastro subiu (a capa e as vistas novas, com o mesmo nome de arquivo: a
+   0153 não subiria de novo) e sobe as fotos das categorias que mudaram
+   (atualizar_capas, só as de assinatura nova); em todo lugar, religa o
+   objeto 3D ao .glb de hoje (cores e medidas). Se falhar, o deploy segue e o
+   aviso diz o comando (cadastrar_variantes_adesivo --so <chave> --fotos;
+   atualizar_capas_categorias). Testes: BasqueteEAirGameReaisTests.
 
 61) BASQUETE STREET QUADRINHOS E AIR GAME KIDS ALIENÍGENAS IGUAIS ÀS MÁQUINAS DE VERDADE
    A cliente olhou o 3D do basquete: "essas madeiras quadradas não existem, a

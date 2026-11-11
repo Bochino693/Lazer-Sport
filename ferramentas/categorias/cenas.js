@@ -425,9 +425,10 @@ const CENAS = {
     lugarOp: { fundo: [] },
   },
   // Eletrônicos: o Basquete Street Quadrinhos, o Strike Kids e o Air Game Kids Alienígenas (3D) e o Mundo Zumbi (foto)
+  // (o basquete mais à esquerda: o Air Game na frente não tapa o console dele)
   eletronicos: {
     maquinas: async () => grupo(
-      await glb("basquete-street-quadrinhos", { x: -1.35, z: -0.5, r: 16 }),
+      await glb("basquete-street-quadrinhos", { x: -1.8, z: -0.6, r: 16 }),
       await glb("strike-kids", { x: 0.05, z: -0.45, r: 0 }),
       await maquina("mundo-zumbi", { x: 1.35, z: -0.3, r: -8 }),
       await glb("air-game-kids-alienigenas", { x: -0.05, z: 1.4, r: 10 }),
@@ -499,15 +500,16 @@ const CENAS = {
     lugar: "salao", lente: 40, giro: 18, altura: 18,
   },
   // Competitivos: o Basquete Street Quadrinhos (3D) e o Basquete Street (foto) lado a lado, e o Air Game Premium (foto)
+  // à direita -- nenhum na frente do outro (o basquete de hoje, com a rampa, aparece inteiro)
   competitivos: {
     maquinas: async () => grupo(
-      await glb("basquete-street-quadrinhos", { x: -0.62, z: 0, r: 0 }),
-      await maquina("basquete-street", { x: 0.7, z: 0.05, r: -4 }),
-      await maquina("air-game-premium", { x: 1.6, z: 2.3, r: -8 }),
+      await glb("basquete-street-quadrinhos", { x: -1.3, z: 0, r: 0 }),
+      await maquina("basquete-street", { x: 0.6, z: -0.9, r: -4 }),
+      await maquina("air-game-premium", { x: 2.85, z: 1.0, r: -8 }),
     ),
     vida: () => grupo(
-      crianca(0, "comemorando", { x: -1.75, z: 0.9, r: 30 }),
-      crianca(3, "jogando", { x: 1.75, z: 1.75, r: -8 }),
+      crianca(0, "comemorando", { x: -2.6, z: 0.6, r: 30 }),
+      crianca(3, "jogando", { x: 4.0, z: 1.4, r: -60 }),
     ),
     lugar: "gamezone", lente: 40, giro: 22, altura: 11,
     lugarOp: { fundo: ["nervo-teste", "mundo-zumbi", "pega-toupeira", "multi-jogos-retro", "pinball-40", "sonic-dash", "homem-aranha"] },
