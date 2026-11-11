@@ -1030,3 +1030,81 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
+
+/* =========================================================
+   Sem preço, preço "de", validade, condições e a arte da campanha
+========================================================= */
+.pr-rotulo small {
+    margin-left: 4px;
+    color: var(--muted);
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.pr-marcar--destaque {
+    align-items: flex-start;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(var(--verniz-rgb), .03);
+    line-height: 1.35;
+}
+
+.pr-marcar--destaque input { margin-top: 2px; }
+
+.pr-dupla {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.gestao-integrada .ls-content .pr-preco--pequeno input,
+.pr-preco--pequeno input {
+    font-size: 1rem !important;
+}
+
+.gestao-integrada .ls-content .pr-data,
+.pr-data,
+.gestao-integrada .ls-content .pr-condicoes,
+.pr-condicoes {
+    width: 100%;
+}
+
+.pr-condicoes {
+    min-height: 84px;
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.gestao-integrada .ls-content .pr-preco input:disabled {
+    opacity: .45;
+}
+
+.pr-imagem--arte img {
+    width: 62px;
+    height: 92px;
+    object-fit: contain;
+    background: #0b0d18;
+}
+
+.pr-validade {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    color: var(--text-2);
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.pr-validade.is-fim { color: var(--red-claro, var(--red)); }
+
+.pr-sem-preco {
+    font-size: .95rem;
+    color: var(--text-2);
+}
+
+@media (max-width: 520px) {
+    .pr-dupla { grid-template-columns: 1fr; }
+}

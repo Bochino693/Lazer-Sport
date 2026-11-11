@@ -40,7 +40,11 @@
     ".ls-result-media",
     ".desejo-foto",
     ".ls-vitrine-foto",
+    ".oferta-card-media",
   ].join(",");
+
+  // a foto do cartão (a cópia de fundo, `aria-hidden`, não conta)
+  const fotoDa = (caixa) => caixa.querySelector("img:not([aria-hidden='true'])") || caixa.querySelector("img");
 
   const SEM_TRANSPARENCIA = /\.(jpe?g|jfif)$/i;
   const MEMORIA = "ls-foto-cheia2:";
@@ -108,7 +112,7 @@
   const marcar = (caixa, cheia, proporcao) => {
     if (!cheia) return;
     caixa.classList.add("foto-cheia");
-    const foto = caixa.querySelector("img");
+    const foto = fotoDa(caixa);
     if (!outroFormato(caixa, proporcao || (foto.naturalWidth / foto.naturalHeight))) return;
     caixa.classList.add("foto-enquadrada");
     const original = foto.getAttribute("src") || "";
@@ -126,7 +130,7 @@
   const decidir = (caixa) => {
     if (decididos.has(caixa)) return;
     decididos.add(caixa);
-    const foto = caixa.querySelector("img");
+    const foto = fotoDa(caixa);
     if (!foto) return;
     const url = foto.getAttribute("src") || "";
     if (!url || url.startsWith("data:") || /\.svg($|\?)/i.test(url)) return;

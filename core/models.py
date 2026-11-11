@@ -1293,9 +1293,29 @@ class Combos(Prime):
         verbose_name_plural = "Combos"
 
 
+class PromocoesQuerySet(models.QuerySet):
+    def vigentes(self, hoje=None):
+        """As promoções que o site mostra: ligadas e dentro da validade
+        (`valida_ate` vazia ou de hoje em diante; o dia inteiro conta)."""
+        from django.utils import timezone
+
+        hoje = hoje or timezone.localdate()
+        return self.filter(ativo=True).filter(
+            models.Q(valida_ate__isnull=True) | models.Q(valida_ate__gte=hoje)
+        )
+
+
 class Promocoes(Prime):
     descricao = models.CharField(max_length=120)
+    # A foto do card (quadrada ou deitada, o produto bem enquadrado): o card
+    # da home e da loja, o slide do topo e a miniatura saem dela.
     imagem_promocao = models.ImageField(upload_to='promocoes/', null=True, storage=MediaCloudinaryStorage())
+    # A arte inteira da campanha (o cartaz em pé, com o texto): aparece
+    # inteira na página da promoção e é a imagem da divulgação.
+    arte_promocao = models.ImageField(
+        upload_to='promocoes/artes/', null=True, blank=True, storage=MediaCloudinaryStorage(),
+        verbose_name="Arte da campanha (cartaz inteiro)",
+    )
     # O brinquedo PRINCIPAL: a foto da promoção (quando ela não tem arte
     # própria), o carrinho e a divulgação saem dele.
     brinquedos = models.ForeignKey(Brinquedos, related_name='promocoes', on_delete=models.CASCADE)
@@ -1308,10 +1328,39 @@ class Promocoes(Prime):
         blank=True,
         verbose_name="Outros brinquedos da promoção",
     )
-    preco_promocao = models.DecimalField(decimal_places=2, max_digits=10, null=True)
+    # Vazio: a promoção sem preço (um brinde, "leve 4 pague 3"): o site
+    # mostra as condições e "Pedir orçamento" no lugar do carrinho.
+    preco_promocao = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
+    # O preço "de" escrito na arte (o kit de R$ 22.990 por R$ 19.990). Vazio,
+    # o "de" é a soma dos preços de tabela dos brinquedos.
+    preco_de = models.DecimalField(
+        decimal_places=2, max_digits=10, null=True, blank=True, verbose_name="Preço de (riscado)",
+    )
+    # As condições, numa frase cada linha: "Em até 10x sem juros", "À vista
+    # no PIX: R$ 4.990,00", "Ganhe um kit de mesinha kids de cortesia".
+    condicoes = models.TextField(blank=True, default="", verbose_name="Condições")
+    # O último dia da promoção (inclusive). Depois dele ela some do site
+    # sozinha; vazia, vale até ser desligada.
+    valida_ate = models.DateField(null=True, blank=True, verbose_name="Válida até")
+
+    objects = PromocoesQuerySet.as_manager()
 
     def __str__(self):
         return self.descricao
+
+    @property
+    def vigente(self):
+        from django.utils import timezone
+
+        return bool(self.ativo) and (self.valida_ate is None or self.valida_ate >= timezone.localdate())
+
+    @property
+    def tem_preco(self):
+        return bool(self.preco_promocao)
+
+    @property
+    def lista_condicoes(self):
+        return [linha.strip(" -•\t") for linha in (self.condicoes or "").splitlines() if linha.strip(" -•\t")]
 
     @property
     def todos_brinquedos(self):
@@ -1326,7 +1375,10 @@ class Promocoes(Prime):
 
     @property
     def preco_tabela(self):
-        """A soma dos preços de tabela do conjunto (None se algum não tem preço)."""
+        """O preço "de": o escrito na promoção (`preco_de`) ou a soma dos
+        preços de tabela do conjunto (None se algum não tem preço)."""
+        if self.preco_de:
+            return self.preco_de
         precos = [b.valor_brinquedo for b in self.todos_brinquedos]
         if not precos or any(not p for p in precos):
             return None

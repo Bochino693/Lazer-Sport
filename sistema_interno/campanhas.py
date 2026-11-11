@@ -72,21 +72,30 @@ def conteudo_do_objeto(tipo, objeto_id, *, perfil_cupom=None):
             raise ErroCampanha("Promoção não encontrada.")
         if not objeto.ativo:
             raise ErroCampanha("Ative a promoção antes de divulgá-la.")
+        if not objeto.vigente:
+            raise ErroCampanha("Esta promoção já terminou: mude a validade antes de divulgá-la.")
         titulo = objeto.descricao
         nomes = [b.nome_brinquedo for b in objeto.todos_brinquedos]
-        if len(nomes) > 1:
-            lista = ", ".join(nomes[:-1]) + f" e {nomes[-1]}"
-            mensagem = (
-                f"Oferta especial da Lazer & Sport: {objeto.descricao}. "
-                f"{lista}: os {len(nomes)} por R$ {_moeda(objeto.preco_promocao)}."
-            )
+        lista = (", ".join(nomes[:-1]) + f" e {nomes[-1]}") if len(nomes) > 1 else nomes[0]
+        if objeto.preco_promocao:
+            if len(nomes) > 1:
+                oferta = f"{lista}: os {len(nomes)} por R$ {_moeda(objeto.preco_promocao)}."
+            else:
+                oferta = f"{lista} por R$ {_moeda(objeto.preco_promocao)}."
         else:
-            mensagem = (
-                f"Oferta especial da Lazer & Sport: {objeto.descricao}. "
-                f"{objeto.brinquedos.nome_brinquedo} por R$ "
-                f"{_moeda(objeto.preco_promocao)}."
-            )
-        imagem = _url_imagem(objeto.imagem_promocao or objeto.brinquedos.imagem_brinquedo)
+            # a promoção sem preço (brinde, leve 4 pague 3): a condição é a oferta
+            oferta = f"{lista}."
+        extras = " ".join(
+            condicao if condicao.endswith((".", "!", "?")) else condicao + "."
+            for condicao in objeto.lista_condicoes
+        )
+        if extras:
+            oferta = f"{oferta} {extras}"
+        if objeto.valida_ate:
+            oferta = f"{oferta} Válida até {objeto.valida_ate:%d/%m/%Y}."
+        mensagem = f"Oferta especial da Lazer & Sport: {objeto.descricao}. {oferta}"
+        # a arte da campanha (o cartaz inteiro) é a melhor imagem para divulgar
+        imagem = _url_imagem(objeto.arte_promocao or objeto.imagem_promocao or objeto.brinquedos.imagem_brinquedo)
         destino = _site_url(reverse(
             "promocao", args=[objeto.pk], urlconf=settings.ROOT_URLCONF,
         ))

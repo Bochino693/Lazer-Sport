@@ -3202,3 +3202,60 @@ Dependência nova: rjsmin (requirements.txt).
    Conferido no navegador (PC e celular): escolher 2 brinquedos, -15%,
    digitar 25000, salvar, ligar/desligar; o slide da promoção no topo.
    Testes: core/tests_promocoes_varios.py.
+
+74) BLACK FRIDAY 2026, PROMOÇÃO COM VALIDADE/CONDIÇÕES E FOTOS QUE ENCHEM O CARTÃO
+   Pedidos: as 11 artes da Black Friday no site ("vá adicionando essas
+   promoções; as casinhas não tem ainda... crie os objetos como brinquedos";
+   "os objetos que não tiverem vc crie novos") e "essas bordas transparentes
+   não deveriam aparecer, e ficar full a imagem, bem enquadrada certinho...
+   para todos".
+   AS FOTOS DOS CARTÕES (ls-fotos.js, ls-tema.css): acabaram as faixas
+   desfocadas dos lados. A foto com fundo de outro formato que o da caixa
+   vira o recorte NO FORMATO DA CAIXA feito pelo conteúdo (Cloudinary
+   c_fill,g_auto: a máquina no centro) e preenche a caixa (`foto-enquadrada`);
+   sem Cloudinary, "cover" um pouco acima do meio. As caixas do catálogo, da
+   loja e dos cartões de promoção/combo da home são QUADRADAS, como as capas
+   dos produtos (a máquina inteira em cena): enchem sem cortar. O quadro do
+   topo da home ficou mais alto no celular (1 / 1.45) pelo mesmo motivo.
+   A PROMOÇÃO (core/models.py, migração 0162, só esquema):
+     * `valida_ate`: o último dia (inclusive). `Promocoes.objects.vigentes()`
+       (ligada e dentro da validade) é o que a home, o quadro do topo, a
+       loja, a busca, a API, a divulgação e o carrinho usam: no dia seguinte
+       a promoção some sozinha. A página dela continua no ar dizendo "Esta
+       promoção terminou" e sem botão de compra;
+     * `condicoes`: uma por linha ("Em até 10x sem juros", "À vista no PIX:
+       R$ 4.990,00"); a primeira aparece no card e no slide do topo, todas
+       na página e na divulgação (com a validade);
+     * `preco_de`: o "de" escrito na arte (o kit de 22.990 por 19.990);
+       vazio, o "de" é a soma de tabela. O "de" igual ao "por" não aparece;
+     * `preco_promocao` vazio = promoção SEM PREÇO (brinde, "leve 4"): o card
+       mostra a condição e "Quero esta", a página "Pedir orçamento"
+       (WhatsApp com o nome da promoção) e o carrinho recusa;
+     * `arte_promocao`: o cartaz inteiro, mostrado inteiro na página da
+       promoção e usado na divulgação; `imagem_promocao` é a foto do card.
+   O PAINEL (promocoes_adm): "Sem preço", preço "de", "Válida até",
+   condições e a arte da campanha; "22.990" é vinte e dois mil; a oferta
+   igual à tabela (com condição de parcelamento) agora salva, com aviso.
+   A BLACK FRIDAY (core/black_friday.py; imagens em
+   core/static/site/black_friday/; migração 0163 só no Render; comando
+   `python manage.py black_friday_2026 [--simular] [--forcar]`):
+     * produtos novos, fora da loja (sob consulta), com a foto recortada da
+       própria arte (sem texto; o fundo completado com a cor dela): Basquete
+       Duplo, Basquete Kids, Air Rock, Kid Play e as casinhas Cozinha
+       Infantil, Oficina de Engenharia e Salão de Beleza (categoria nova
+       "Casinhas Cenográficas"); o Brinquedão Modelo 5 entra assim se ainda
+       não estiver no catálogo;
+     * as 11 promoções, até 13/11/2026: 3 brinquedos por 31.970; Air Game
+       Kids 4.990 no PIX; Kit Boliche Kids + Air Game Kids + Basquete Kids
+       de 22.990 por 19.990; Kit Sucesso e Inovação (Air Game Home + Nervo
+       Teste + Boliche Kids) de 27.990 por 23.990; Basquete Duplo 16.990; Air
+       Rock de 14.990 por 12.990; Dragon Bowling (Boliche Virtual) 12.990;
+       Nervo Teste 7.990 (prazo, frete, garantia e validade da proposta);
+       playground 12x de 1.000; 3 cenográficos leve 4; Kid Play + kit de
+       mesinha (as duas últimas sem preço). "Boliche Kids" é o Strike Kids;
+     * as artes 8, 9 e 10 vieram com faixas desfocadas em cima e embaixo: o
+       cartaz guardado é só o meio. Cada card é a arte em quadrado (a janela
+       com os produtos e o preço, completada com o fundo dela).
+     * Rodar de novo não duplica; depois de 13/11 só os produtos são criados.
+   Testes: core/tests_black_friday.py; core/tests_capas_catalogo.py (o card
+   enche a caixa).

@@ -250,6 +250,7 @@ def slides_das_promocoes(promocoes, quantidade=6):
         tabela = promocao.preco_tabela
         pct = promocao.desconto_percentual
         nomes = [b.nome_brinquedo for b in brinquedos]
+        condicoes = promocao.lista_condicoes
         slides.append({
             "tipo": "promocao",
             "nome": promocao.descricao,
@@ -260,6 +261,8 @@ def slides_das_promocoes(promocoes, quantidade=6):
             "selo": f"-{pct}%" if pct else "Oferta",
             "preco": f"R$ {dinheiro(promocao.preco_promocao)}" if promocao.preco_promocao else "",
             "preco_de": f"R$ {dinheiro(tabela)}" if tabela and pct else "",
+            # a promoção sem preço (brinde, leve 4 pague 3): a condição no lugar
+            "condicao": condicoes[0] if condicoes else "",
             "brinquedos": " + ".join(nomes),
             "avaliacao": 0,
             "medidas": "",
@@ -373,7 +376,7 @@ class HomeView(View):
 
         promocoes = list(
             Promocoes.objects
-            .filter(ativo=True)
+            .vigentes()
             .select_related("brinquedos")
             .prefetch_related("brinquedos_extras")
             .order_by("-id")
@@ -2024,7 +2027,7 @@ class LojaView(View):
 
         promocoes = (
             Promocoes.objects
-            .filter(ativo=True)
+            .vigentes()
             .select_related('brinquedos')
             .prefetch_related('brinquedos_extras')
         )
@@ -2035,12 +2038,14 @@ class LojaView(View):
                 'tipo_label': 'Promoção',
                 'titulo': promo.descricao,
                 'imagem': (
-                    url_da_imagem(promo.brinquedos.imagem_brinquedo) or None
-                    if promo.brinquedos else None
+                    url_da_imagem(promo.imagem_promocao)
+                    or (url_da_imagem(promo.brinquedos.imagem_brinquedo) if promo.brinquedos else None)
+                    or None
                 ),
                 'preco': promo.preco_promocao,
                 # com vários brinquedos, o "de" é a soma do conjunto
                 'preco_original': promo.preco_tabela,
+                'condicao': (promo.lista_condicoes or [""])[0],
                 'url': reverse('promocao', args=[promo.id]),
             })
 
@@ -2174,8 +2179,15 @@ class PromocaoInfoView(View):
             preco_promocao=promocao.preco_promocao,
         )
 
+        from .paginas_tema import link_whatsapp
+
+        nomes = " + ".join(b.nome_brinquedo for b in promocao.todos_brinquedos)
         return render(request, 'promocao_info.html', {
-            'promocao': promocao
+            'promocao': promocao,
+            'whatsapp_url': link_whatsapp(
+                f"Olá! Quero a promoção \"{promocao.descricao}\" ({nomes}). "
+                f"{request.build_absolute_uri(reverse('promocao', args=[promocao.pk]))}"
+            ),
         })
 
 
@@ -2560,7 +2572,7 @@ class PromocaoAdminView(AdminOnlyMixin, View):
             .order_by("nome_brinquedo")
         )
         com_promocao = set(
-            Promocoes.objects.filter(ativo=True).values_list("brinquedos_id", flat=True)
+            Promocoes.objects.vigentes().values_list("brinquedos_id", flat=True)
         )
         lista = []
         for brinquedo in brinquedos:
@@ -2619,6 +2631,9 @@ class PromocaoAdminView(AdminOnlyMixin, View):
 
         if "," in valor:
             valor = valor.replace(".", "").replace(",", ".")
+        elif __import__("re").fullmatch(r"\d{1,3}(\.\d{3})+", valor):
+            # "22.990" é vinte e dois mil novecentos e noventa, não 22,99
+            valor = valor.replace(".", "")
         elif valor.count(".") > 1:
             partes = valor.split(".")
             valor = "".join(partes[:-1]) + "." + partes[-1]
@@ -2678,21 +2693,61 @@ class PromocaoAdminView(AdminOnlyMixin, View):
         brinquedo = escolhidos[int(brinquedo_ids[0])]
         extras = [escolhidos[int(i)] for i in brinquedo_ids[1:]]
 
-        try:
-            preco = self._converter_preco(
-                request.POST.get("preco_promocao")
-            )
-        except (InvalidOperation, TypeError, ValueError):
-            messages.error(
-                request,
-                "Informe um preço válido, por exemplo: 10.990,00.",
-            )
-            return redirect("promocoes_admin")
+        # Sem preço: a promoção de brinde ou de condição ("leve 4 pague 3"),
+        # que vai para o site com as condições e "Pedir orçamento".
+        sem_preco = request.POST.get("sem_preco") == "on"
+        condicoes = "\n".join(
+            linha.strip() for linha in (request.POST.get("condicoes") or "").splitlines() if linha.strip()
+        )[:1500]
+        if sem_preco:
+            preco = None
+            if not condicoes:
+                messages.error(request, "Sem preço, escreva a condição da promoção (por exemplo: ganhe um kit de mesinha).")
+                return redirect("promocoes_admin")
+        else:
+            try:
+                preco = self._converter_preco(
+                    request.POST.get("preco_promocao")
+                )
+            except (InvalidOperation, TypeError, ValueError):
+                messages.error(
+                    request,
+                    "Informe um preço válido, por exemplo: 10.990,00.",
+                )
+                return redirect("promocoes_admin")
+
+        preco_de = None
+        if (request.POST.get("preco_de") or "").strip():
+            try:
+                preco_de = self._converter_preco(request.POST.get("preco_de"))
+            except (InvalidOperation, TypeError, ValueError):
+                messages.error(request, "O preço \"de\" não está certo. Exemplo: 22.990,00.")
+                return redirect("promocoes_admin")
+
+        valida_ate = None
+        if (request.POST.get("valida_ate") or "").strip():
+            try:
+                from datetime import date as _Data
+
+                valida_ate = _Data.fromisoformat(request.POST["valida_ate"].strip())
+            except ValueError:
+                messages.error(request, "A data de validade não está certa.")
+                return redirect("promocoes_admin")
 
         promocao.descricao = descricao
         promocao.preco_promocao = preco
+        promocao.preco_de = preco_de
+        promocao.condicoes = condicoes
+        promocao.valida_ate = valida_ate
         promocao.brinquedos = brinquedo
         promocao.ativo = ativo
+
+        arte = request.FILES.get("arte_promocao")
+        if arte:
+            promocao.arte_promocao = arte
+        elif acao == "editar" and request.POST.get("remover_arte") == "on" and promocao.arte_promocao:
+            promocao.arte_promocao.delete(save=False)
+            promocao.arte_promocao = ""
 
         if imagem:
             promocao.imagem_promocao = imagem
@@ -4781,7 +4836,7 @@ class UserAdminView(AdminOnlyMixin, View):
         ofertas_contas = {
             "promocao": [
                 {"id": item.pk, "rotulo": item.descricao}
-                for item in Promocoes.objects.filter(ativo=True)
+                for item in Promocoes.objects.vigentes()
                 .order_by("descricao")[:100]
             ],
             "combo": [
@@ -5092,6 +5147,12 @@ def adicionar_ao_carrinho(request, tipo, object_id):
             exibir_na_loja=True,
             valor_brinquedo__isnull=False,
             valor_brinquedo__gt=0,
+        )
+    elif tipo == 'promocao':
+        # só a promoção que está no ar, dentro da validade e com preço (a de
+        # brinde/condição é "Pedir orçamento", não vai para o carrinho)
+        objeto = get_object_or_404(
+            Promocoes.objects.vigentes(), id=object_id, preco_promocao__isnull=False, preco_promocao__gt=0,
         )
     else:
         objeto = get_object_or_404(model, id=object_id)
@@ -7171,6 +7232,9 @@ class ComboAdminView(AdminOnlyMixin, View):
 
         if "," in valor:
             valor = valor.replace(".", "").replace(",", ".")
+        elif __import__("re").fullmatch(r"\d{1,3}(\.\d{3})+", valor):
+            # "22.990" é vinte e dois mil novecentos e noventa, não 22,99
+            valor = valor.replace(".", "")
         elif valor.count(".") > 1:
             partes = valor.split(".")
             valor = "".join(partes[:-1]) + "." + partes[-1]
@@ -7412,7 +7476,7 @@ class SearchView(View):
                 )
 
             promocoes = (
-                Promocoes.objects.filter(ativo=True)
+                Promocoes.objects.vigentes()
                 .select_related("brinquedos").prefetch_related("brinquedos_extras")
             )
             for promocao in promocoes:

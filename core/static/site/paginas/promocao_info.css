@@ -415,3 +415,136 @@
         grid-column: auto;
     }
 }
+
+/* =========================================================
+   A ARTE DA CAMPANHA (Black Friday e as próximas)
+
+   O cartaz da promoção aparece inteiro, no formato dele, ocupando a
+   coluna toda: sem moldura, sem faixas desfocadas, sem corte.
+========================================================= */
+.promo-gallery:has(.promo-arte) {
+    min-height: 0;
+    padding: 0;
+    align-items: flex-start;
+    background: #0b0d18;
+}
+
+.promo-gallery:has(.promo-arte)::after { display: none; }
+
+.promo-arte {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: none;
+}
+
+.promo-gallery:has(.promo-arte) .promo-badge { z-index: 2; }
+
+.promo-validade {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 14px;
+    padding: 8px 13px;
+    border-radius: 999px;
+    background: #fff3d6;
+    color: #8a5a00;
+    font-size: .85rem;
+    font-weight: 800;
+}
+
+.promo-validade--fim {
+    display: flex;
+    border-radius: 14px;
+    background: #ffe7ea;
+    color: #a3192a;
+    line-height: 1.4;
+}
+
+.promo-condicoes {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.promo-condicoes li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    color: #17324f;
+    font-size: .95rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.promo-condicoes li i {
+    margin-top: 3px;
+    color: #0ead55;
+}
+
+.promo-precos > .promo-condicoes:first-child { margin-top: 0; }
+
+.btn-orcamento {
+    grid-column: 1 / -1;
+    color: #fff;
+    background: linear-gradient(135deg, #25d366, #128c4a);
+    box-shadow: 0 10px 23px rgba(18, 140, 74, .24);
+}
+
+/* A arte começa no topo da coluna (sem sobra escura embaixo dela) e o selo
+   "Oferta especial" sai: a própria arte já diz a campanha. */
+.promo-grid:has(.promo-arte) { align-items: start; }
+.promo-gallery:has(.promo-arte) .promo-badge { display: none; }
+
+/* Os brinquedos da promoção (quando são vários): miniatura, nome e preço. */
+.promo-itens {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.promo-itens a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border: 1px solid #e3ecf6;
+    border-radius: 13px;
+    background: #fff;
+    color: var(--promo-ink);
+    text-decoration: none;
+    transition: border-color .2s ease, transform .2s ease;
+}
+
+.promo-itens a:hover {
+    border-color: rgba(0, 74, 173, .35);
+    transform: translateX(3px);
+}
+
+.promo-itens img {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #e9f1fb;
+}
+
+.promo-itens span {
+    display: grid;
+    gap: 2px;
+}
+
+.promo-itens strong {
+    font-size: .95rem;
+    font-weight: 800;
+}
+
+.promo-itens small {
+    color: var(--promo-muted);
+    font-size: .78rem;
+}

@@ -69,7 +69,7 @@
 
     cartoes.forEach((cartao) => {
         const ids = (cartao.dataset.brinquedos || '').split(',').filter(Boolean);
-        const tabela = somaTabela(ids);
+        const tabela = Number(cartao.dataset.precoDe) > 0 ? Number(cartao.dataset.precoDe) : somaTabela(ids);
         const promo = Number(cartao.dataset.preco);
         const pct = desconto(tabela, promo);
         if (pct > 0) {
@@ -151,6 +151,12 @@
         imagem: $('[data-pr-imagem]'),
         remover: $('[data-pr-remover]'),
         ativo: $('[data-pr-ativo]'),
+        semPreco: $('[data-pr-sem-preco]'),
+        precoDe: $('[data-pr-preco-de]'),
+        validade: $('[data-pr-validade]'),
+        condicoes: $('[data-pr-condicoes]'),
+        arte: $('[data-pr-arte]'),
+        removerArte: $('[data-pr-remover-arte]'),
     };
     const tituloJanela = $('[data-pr-titulo-janela]');
     const listaEscolhidos = $('[data-pr-escolhidos]');
@@ -336,9 +342,49 @@
         atualizar();
     });
 
+    // Preço "de" (o da arte): mesmo jeito de digitar do preço da oferta.
+    campo.precoDe.addEventListener('input', () => {
+        const limpo = campo.precoDe.value.replace(/[^\d.,]/g, '');
+        if (limpo !== campo.precoDe.value) campo.precoDe.value = limpo;
+        atualizar();
+    });
+    campo.precoDe.addEventListener('blur', () => {
+        const valor = numero(campo.precoDe.value);
+        if (valor > 0) campo.precoDe.value = semMoeda(valor);
+        atualizar();
+    });
+    campo.semPreco.addEventListener('change', atualizar);
+
+    // A arte da campanha (o cartaz inteiro): a prévia ao escolher.
+    const arteArea = $('[data-pr-arte-area]');
+    const artePrevia = $('[data-pr-arte-previa]');
+    const removerArteLinha = $('[data-pr-remover-arte-linha]');
+    let arteAtual = '';
+    let arteTemporaria = '';
+    function atualizarArte() {
+        const foto = arteTemporaria || (arteAtual && !campo.removerArte.checked ? arteAtual : '');
+        artePrevia.src = foto || '';
+        artePrevia.hidden = !foto;
+        arteArea.classList.toggle('tem-arte', Boolean(foto));
+        removerArteLinha.hidden = !arteAtual;
+    }
+    campo.arte.addEventListener('change', () => {
+        if (arteTemporaria) URL.revokeObjectURL(arteTemporaria);
+        const arquivo = campo.arte.files?.[0];
+        arteTemporaria = arquivo ? URL.createObjectURL(arquivo) : '';
+        if (arquivo) campo.removerArte.checked = false;
+        atualizarArte();
+    });
+    campo.removerArte.addEventListener('change', atualizarArte);
+
+    function tabelaDaOferta() {
+        const escrito = numero(campo.precoDe.value);
+        return escrito > 0 ? escrito : somaTabela(escolhidos);
+    }
+
     form.querySelectorAll('[data-pr-pct]').forEach((botao) => {
         botao.addEventListener('click', () => {
-            const tabela = somaTabela(escolhidos);
+            const tabela = tabelaDaOferta();
             if (!(tabela > 0)) return;
             const valor = Math.round(tabela * (1 - Number(botao.dataset.prPct) / 100));
             campo.preco.value = semMoeda(valor);
@@ -347,6 +393,7 @@
     });
 
     campo.titulo.addEventListener('input', atualizar);
+    campo.condicoes.addEventListener('input', atualizar);
     campo.remover.addEventListener('change', atualizarImagem);
     campo.imagem.addEventListener('change', () => {
         if (urlTemporaria) URL.revokeObjectURL(urlTemporaria);
@@ -378,15 +425,18 @@
     function atualizar() {
         const b = principal();
         const varios = escolhidos.length > 1;
-        const tabela = somaTabela(escolhidos);
-        const promo = numero(campo.preco.value);
+        const tabela = tabelaDaOferta();
+        const semPreco = campo.semPreco.checked;
+        const promo = semPreco ? NaN : numero(campo.preco.value);
         const pct = desconto(tabela, promo);
         const deTabela = varios ? 'a soma dos preços de tabela' : 'o preço de tabela';
 
-        form.querySelectorAll('[data-pr-pct]').forEach((botao) => { botao.disabled = !(tabela > 0); });
+        form.querySelectorAll('[data-pr-pct]').forEach((botao) => { botao.disabled = semPreco || !(tabela > 0); });
+        campo.preco.disabled = semPreco;
 
         previa.titulo.textContent = campo.titulo.value.trim() || 'Título da promoção';
-        previa.por.textContent = promo > 0 ? reais(promo) : 'R$ 0,00';
+        const condicao = (campo.condicoes.value.split('\n').map((l) => l.trim()).filter(Boolean)[0]) || '';
+        previa.por.textContent = semPreco ? (condicao || 'Condição especial') : (promo > 0 ? reais(promo) : 'R$ 0,00');
         previa.de.hidden = !(pct > 0);
         previa.de.textContent = pct > 0 ? reais(tabela) : '';
         previa.selo.hidden = !(pct > 0);
@@ -396,6 +446,11 @@
         ajuda.classList.remove('is-bom', 'is-ruim');
         if (!b) {
             ajuda.textContent = 'Escolha os brinquedos para ver o preço de tabela.';
+        } else if (semPreco) {
+            ajuda.textContent = condicao
+                ? 'Sem preço: o site mostra as condições abaixo e o botão "Pedir orçamento".'
+                : 'Sem preço: escreva a condição abaixo (por exemplo: ganhe um kit de mesinha kids).';
+            if (!condicao) ajuda.classList.add('is-ruim');
         } else if (!(tabela > 0)) {
             ajuda.textContent = varios
                 ? 'Algum brinquedo escolhido não tem preço de tabela no cadastro: confira o valor da oferta.'
@@ -405,9 +460,9 @@
                 ? `Os ${escolhidos.length} juntos somam ${reais(tabela)}. Digite o valor da oferta para o conjunto ou use um atalho.`
                 : `Preço de tabela: ${reais(tabela)}. Digite o valor da oferta ou use um atalho.`;
         } else if (promo >= tabela) {
-            ajuda.textContent = `A oferta precisa ser menor que ${deTabela} (${reais(tabela)}).`;
-            ajuda.classList.add('is-ruim');
-            problema = `O preço da oferta não está abaixo d${varios ? 'a soma dos preços' : 'o preço'} de tabela.`;
+            // Pode: a oferta pelo preço cheio com uma condição (10x sem juros,
+            // à vista com desconto). O site mostra só o preço e as condições.
+            ajuda.textContent = `Sem desconto sobre ${deTabela} (${reais(tabela)}): o site mostra o preço e as condições.`;
         } else {
             ajuda.textContent = `De ${reais(tabela)} por ${reais(promo)}${varios ? ' (o conjunto)' : ''}: ${pct}% de desconto (economia de ${reais(tabela - promo)}).`;
             ajuda.classList.add('is-bom');
@@ -428,6 +483,9 @@
         filtrarCatalogo();
         tituloAutomatico = '';
         erro.textContent = '';
+        if (arteTemporaria) URL.revokeObjectURL(arteTemporaria);
+        arteTemporaria = '';
+        arteAtual = '';
 
         if (cartao) {
             campo.acao.value = 'editar';
@@ -437,6 +495,12 @@
             const preco = Number(cartao.dataset.preco);
             campo.preco.value = preco > 0 ? semMoeda(preco) : '';
             campo.ativo.checked = cartao.dataset.ativo === '1';
+            campo.semPreco.checked = !(preco > 0);
+            const precoDe = Number(cartao.dataset.precoDe);
+            campo.precoDe.value = precoDe > 0 ? semMoeda(precoDe) : '';
+            campo.validade.value = cartao.dataset.validade || '';
+            campo.condicoes.value = cartao.dataset.condicoes || '';
+            arteAtual = cartao.dataset.arte || '';
             imagemAtual = cartao.dataset.imagem || '';
             escolhidos = (cartao.dataset.brinquedos || '').split(',').filter((id) => porId.has(id));
             tituloAutomatico = '';
@@ -453,6 +517,7 @@
             sugestoes.innerHTML = '';
             atualizar();
         }
+        atualizarArte();
         editor.showModal();
         if (!cartao) buscaCatalogo.focus();
     }
@@ -469,10 +534,13 @@
     form.addEventListener('submit', (e) => {
         const problema = atualizar();
         const b = principal();
+        const semPreco = campo.semPreco.checked;
         const promo = numero(campo.preco.value);
+        const temCondicao = campo.condicoes.value.trim().length > 0;
         let mensagem = problema;
         if (!b) mensagem = 'Escolha pelo menos um brinquedo para a promoção.';
-        else if (!(promo > 0)) mensagem = 'Digite o preço da oferta.';
+        else if (semPreco && !temCondicao) mensagem = 'Sem preço, escreva a condição da promoção.';
+        else if (!semPreco && !(promo > 0)) mensagem = 'Digite o preço da oferta.';
         else if (!campo.titulo.value.trim()) mensagem = 'Dê um título para a promoção.';
         if (mensagem) {
             e.preventDefault();
@@ -480,7 +548,9 @@
             if (!b) buscaCatalogo.focus();
             return;
         }
-        campo.precoEnviado.value = promo.toFixed(2);
+        campo.precoEnviado.value = semPreco ? '' : promo.toFixed(2);
+        const precoDe = numero(campo.precoDe.value);
+        campo.precoDe.value = precoDe > 0 ? precoDe.toFixed(2) : '';
         salvar.disabled = true;
         salvar.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
     });

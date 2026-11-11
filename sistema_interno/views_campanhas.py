@@ -47,7 +47,7 @@ class OfertasDisponiveisView(CriacaoInternoRequiredMixin, View):
         if tipo == CampanhaDivulgacao.Tipo.PROMOCAO:
             itens = [
                 {"id": o.pk, "rotulo": o.descricao}
-                for o in Promocoes.objects.filter(ativo=True).order_by("descricao")[:100]
+                for o in Promocoes.objects.vigentes().order_by("descricao")[:100]
             ]
         elif tipo == CampanhaDivulgacao.Tipo.COMBO:
             itens = [

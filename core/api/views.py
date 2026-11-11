@@ -291,7 +291,7 @@ class PromocaoListAPI(generics.ListAPIView):
     def get_queryset(self):
         return (
             Promocoes.objects
-            .filter(ativo=True)
+            .vigentes()
             .select_related("brinquedos")
             .prefetch_related("brinquedos_extras")
             .order_by("-id")

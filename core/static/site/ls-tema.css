@@ -1887,6 +1887,48 @@ html.ls-escuro:not(#_):not(#__) .loja-card-img {
     background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
 }
 
+/* Os cartões de promoção e de combo da home: a foto enche a caixa
+   quadrada, sem a cópia desfocada atrás (ls-fotos.js decide como no
+   catálogo: recorte transparente fica inteiro no fundo claro; foto com
+   fundo preenche, recortada pelo conteúdo se o formato for outro). A foto
+   própria da promoção (`oferta-card-foto`) sempre preenche. */
+html.ls-escuro:not(#_):not(#__) .oferta-card-media {
+    height: auto;
+    aspect-ratio: 1 / 1;
+}
+
+html.ls-escuro:not(#_):not(#__) .oferta-card-media.foto-cheia .oferta-card-media-bg,
+html.ls-escuro:not(#_):not(#__) .oferta-card-media:has(.oferta-card-foto) .oferta-card-media-bg { display: none; }
+
+html.ls-escuro:not(#_):not(#__) .oferta-card-media img.oferta-card-foto {
+    padding: 0;
+    object-fit: cover;
+    filter: none;
+}
+
+.oferta-card-validade {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: rgba(8, 12, 28, .78);
+    color: #ffd76a;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.oferta-card-condicao {
+    margin: 6px 0 0;
+    color: #34d399;
+    font-size: .86rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
 /* A caixa da foto do catálogo e da loja é quadrada, como as capas dos
    produtos (a máquina inteira em cena, quadrada): a foto enche a caixa de
    ponta a ponta sem cortar a máquina e sem faixas dos lados. A foto de

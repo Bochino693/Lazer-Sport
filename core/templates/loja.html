@@ -189,7 +189,7 @@
                                         {% if item.preco_original %}Preço promocional{% else %}Preço do produto{% endif %}
                                     </span>
                                     <div class="loja-card-preco-linha">
-                                        {% if item.preco_original %}
+                                        {% if item.preco_original and item.preco_original > item.preco %}
                                             <span class="loja-card-preco-original">
                                                 R$ {{ item.preco_original|moeda }}
                                             </span>
@@ -199,8 +199,11 @@
                                         </strong>
                                     </div>
                                     <span class="loja-card-condicao">
-                                        Consulte condições de pagamento e entrega
+                                        {{ item.condicao|default:"Consulte condições de pagamento e entrega" }}
                                     </span>
+                                {% elif item.condicao %}
+                                    <span class="loja-card-preco-label">Condição especial</span>
+                                    <strong class="loja-card-sem-preco">{{ item.condicao }}</strong>
                                 {% else %}
                                     <span class="loja-card-preco-label">Valor do produto</span>
                                     <strong class="loja-card-sem-preco">
@@ -216,6 +219,7 @@
                             {% endif %}
 
                             <div class="loja-card-acoes">
+                                {% if item.preco or item.tipo != 'promocao' %}
                                 <button
                                     type="button"
                                     class="loja-btn loja-btn-carrinho"
@@ -225,6 +229,13 @@
                                     <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
                                     <span>Adicionar</span>
                                 </button>
+                                {% else %}
+                                <a href="{{ item.url }}" class="loja-btn loja-btn-carrinho"
+                                   aria-label="Quero a promoção {{ item.titulo }}">
+                                    <i class="fa-solid fa-comments" aria-hidden="true"></i>
+                                    <span>Quero esta</span>
+                                </a>
+                                {% endif %}
 
                                 <a href="{{ item.url }}"
                                    class="loja-btn loja-btn-detalhes"

@@ -25,7 +25,20 @@
                 Oferta especial
             </span>
 
-            {% if promocao.brinquedos.imagem_brinquedo %}
+            {% if promocao.arte_promocao %}
+                {# A arte da campanha inteira, no formato dela (o cartaz em pé): sem moldura nem corte. #}
+                <img class="promo-arte"
+                     src="{{ promocao.arte_promocao|foto:1400 }}"
+                     alt="{{ promocao.descricao }}"
+                     fetchpriority="high"
+                     decoding="async">
+            {% elif promocao.imagem_promocao %}
+                <img class="promo-arte"
+                     src="{{ promocao.imagem_promocao|foto:1400 }}"
+                     alt="{{ promocao.descricao }}"
+                     fetchpriority="high"
+                     decoding="async">
+            {% elif promocao.brinquedos.imagem_brinquedo %}
                 <img class="promo-gallery-bg"
                      src="{{ promocao.brinquedos.imagem_brinquedo|foto:400 }}"
                      alt="" aria-hidden="true">
@@ -54,6 +67,18 @@
 
             <h1 class="promo-titulo">{{ promocao.descricao }}</h1>
 
+            {% if not promocao.vigente %}
+            <p class="promo-validade promo-validade--fim" role="status">
+                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                Esta promoção terminou{% if promocao.valida_ate %} em {{ promocao.valida_ate|date:"d/m/Y" }}{% endif %}. Fale com a gente: temos outras condições.
+            </p>
+            {% elif promocao.valida_ate %}
+            <p class="promo-validade">
+                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                Válida até {{ promocao.valida_ate|date:"d/m/Y" }}
+            </p>
+            {% endif %}
+
             <p class="promo-intro">
                 Uma condição especial para você investir em diversão, valorizar seu
                 espaço e aproveitar um brinquedo profissional direto da fábrica.
@@ -75,7 +100,9 @@
                     <li>
                         <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread">
                             {% if brinquedo.imagem_brinquedo %}
-                                <img src="{{ brinquedo.imagem_brinquedo|foto:160 }}" alt="" width="64" height="64" loading="lazy" decoding="async">
+                                <img src="{{ brinquedo.imagem_brinquedo|foto:160 }}" alt="" width="56" height="56" loading="lazy" decoding="async">
+                            {% else %}
+                                <img src="{% static 'images/sem-imagem.svg' %}" alt="" width="56" height="56" loading="lazy" decoding="async">
                             {% endif %}
                             <span>
                                 <strong>{{ brinquedo.nome_brinquedo }}</strong>
@@ -96,7 +123,8 @@
             {% endwith %}
 
             <div class="promo-precos">
-                {% if promocao.preco_tabela %}
+                {% if promocao.preco_promocao %}
+                {% if promocao.preco_tabela and promocao.preco_tabela > promocao.preco_promocao %}
                 <div class="promo-price-row">
                     <span>Preço normal{% if promocao.brinquedos_extras.all %} (o conjunto){% endif %}</span>
                     <span class="preco-normal money">R$ {{ promocao.preco_tabela|moeda }}</span>
@@ -104,9 +132,18 @@
                 {% endif %}
 
                 <div class="promo-price-row">
-                    <span>Preço promocional</span>
+                    <span>Preço promocional{% if promocao.brinquedos_extras.all %} (o conjunto){% endif %}</span>
                     <strong class="preco-promo money">R$ {{ promocao.preco_promocao|moeda }}</strong>
                 </div>
+                {% endif %}
+
+                {% if promocao.lista_condicoes %}
+                <ul class="promo-condicoes">
+                    {% for condicao in promocao.lista_condicoes %}
+                    <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> {{ condicao }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
 
                 <div class="promo-economia">
                     <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
@@ -115,6 +152,7 @@
             </div>
 
             <div class="promo-acoes">
+                {% if promocao.vigente and promocao.preco_promocao %}
                 <button type="button"
                         class="btn-promo btn-carrinho"
                         onclick="adicionarAoCarrinho('promocao', {{ promocao.id }})">
@@ -128,6 +166,14 @@
                     <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                     Comprar agora
                 </button>
+                {% endif %}
+
+                <a href="{{ whatsapp_url }}"
+                   class="btn-promo btn-orcamento"
+                   target="_blank" rel="noopener noreferrer">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    {% if promocao.vigente and promocao.preco_promocao %}Falar no WhatsApp{% else %}Pedir orçamento{% endif %}
+                </a>
 
                 <a href="{% url 'home' %}#promocoes-section"
                    class="btn-promo btn-voltar">
