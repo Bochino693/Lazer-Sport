@@ -457,6 +457,21 @@ PIX_CIDADE = os.getenv("PIX_CIDADE", "SAO PAULO").strip()
 
 
 # ============================================================
+# IMPORTAÇÃO DE ORÇAMENTO DO WORD (IA)
+# ============================================================
+# A chave da IA NÃO mora aqui: o SDK da Anthropic lê ANTHROPIC_API_KEY do
+# ambiente (Render > Environment), e sem ela a importação continua
+# funcionando só com a leitura das tabelas do documento. Ver LEIA-ME-V10,
+# seção 65, e sistema_interno/importacao_word/.
+#
+# O modelo é configuração, e não código, para poder trocar de modelo sem
+# publicar nada. O prazo é por tentativa: o SDK ainda tenta mais duas
+# vezes em erro de rede, limite de uso ou erro 5xx.
+ORCAMENTO_IA_MODELO = os.getenv("ORCAMENTO_IA_MODELO", "claude-opus-5-5").strip()
+ORCAMENTO_IA_TIMEOUT = int(os.getenv("ORCAMENTO_IA_TIMEOUT", "90") or 90)
+
+
+# ============================================================
 # NOTIFICAÇÃO NO CELULAR (Web Push)
 # ============================================================
 # Sem estas duas variáveis o painel simplesmente não oferece o aviso: a
