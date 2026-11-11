@@ -1,0 +1,52 @@
+{% comment %}
+  De onde veio o campo, e quanto confiar nele.
+
+  `campo` é um campo da proposta (importacao_word/conferencia.py) e
+  `alvo` o id do campo do formulário que as opções e sugestões preenchem.
+  Nada aqui preenche sozinho: opção e sugestão são BOTÕES, e é o toque da
+  pessoa que põe o valor no campo.
+{% endcomment %}
+<div class="ls-imp-origem">
+  {% if campo.confianca == "alta" %}<span class="ls-imp-selo alta" title="As duas leituras concordam, ou a regra leu sem dúvida">Confiança alta</span>
+  {% elif campo.confianca == "media" %}<span class="ls-imp-selo media" title="Só uma leitura achou, e o valor está na fonte citada">Confiança média</span>
+  {% elif campo.confianca == "baixa" %}<span class="ls-imp-selo baixa" title="As leituras discordam ou o valor não deu para usar">Confira</span>
+  {% else %}<span class="ls-imp-selo vazio" title="O documento não traz este dado">Sem fonte no documento</span>{% endif %}
+  {% if campo.origem == "ambas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf" %}transcrição e IA concordam{% else %}tabelas e IA concordam{% endif %}</span>
+  {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf" %}releitura da transcrição{% else %}leitura das tabelas{% endif %}</span>
+  {% elif campo.origem == "ia" %}<span class="ls-imp-tag">IA, conferida na fonte</span>
+  {% elif campo.origem == "divergente" %}<span class="ls-imp-tag vermelho">leituras diferentes</span>{% endif %}
+  {% if campo.fonte %}
+  <button type="button" class="ls-imp-fonte" data-fonte="{{ campo.fonte.id }}" title="Ver no documento: {{ campo.fonte.texto }}">
+    <i class="bi bi-quote" aria-hidden="true"></i><b>{{ campo.fonte.id }}</b><span>{{ campo.fonte.texto|truncatechars:90 }}</span>
+  </button>
+  {% endif %}
+</div>
+{% if campo.normalizado %}
+<div class="ls-imp-normal">
+  <span class="ls-imp-normal-word"><small>No documento</small>{{ campo.original }}</span>
+  <i class="bi bi-arrow-right" aria-hidden="true"></i>
+  <span class="ls-imp-normal-sistema"><small>No orçamento</small>{{ campo.exibir }}</span>
+</div>
+{% endif %}
+{% if campo.nota %}<p class="ls-imp-nota">{{ campo.nota|capfirst }}.</p>{% endif %}
+{% if campo.opcoes %}
+<div class="ls-imp-opcoes" role="group" aria-label="Leituras do documento">
+  {% for opcao in campo.opcoes %}
+  <button type="button" class="ls-chip" data-preencher="{{ alvo }}" data-valor="{{ opcao.valor }}">
+    {{ opcao.rotulo }}
+    <small>{% if opcao.origem == "ia" %}IA{% else %}tabelas{% endif %}{% if opcao.fonte %} · {{ opcao.fonte.id }}{% endif %}</small>
+  </button>
+  {% endfor %}
+</div>
+{% endif %}
+{% for sugestao in campo.sugestoes %}
+<div class="ls-imp-sugestao">
+  <button type="button" class="ls-chip" data-preencher="{{ alvo }}" data-valor="{{ sugestao.valor }}">
+    <i class="bi bi-lightbulb" aria-hidden="true"></i> Usar {{ sugestao.rotulo }}
+  </button>
+  <small>{{ sugestao.motivo }}</small>
+</div>
+{% endfor %}
+<p class="ls-imp-falta-motivo" data-falta-de="{{ alvo }}"{% if not falta %} hidden{% endif %}>
+  <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ falta|capfirst }}</span>
+</p>

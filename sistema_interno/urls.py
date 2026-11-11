@@ -68,6 +68,7 @@ from .views_gestao import (
     OrdensProducaoView,
     ProdutosProducaoView,
 )
+from .views_importacao import ConferirImportacaoView, ImportarOrcamentoWordView
 from .views_jogos import JogoGerarApkView, JogoGerarExeView, JogosInnerView
 from .views_jogos_vivo import JogosAoVivoView
 from .views_objetos_3d import Objetos3DInnerView
@@ -211,6 +212,19 @@ urlpatterns = [
         'orcamentos/<int:pk>/previa/',
         OrcamentoPreviaInnerView.as_view(),
         name='orcamento_previa_inner',
+    ),
+    # O orçamento escrito no Word vira rascunho conferido: sobe o .docx,
+    # confere campo por campo (com a fonte de cada valor) e cria. Ver
+    # `views_importacao.py` e `importacao_word/`.
+    path(
+        'orcamentos/importar/',
+        ImportarOrcamentoWordView.as_view(),
+        name='importar_orcamento_word',
+    ),
+    path(
+        'orcamentos/importar/<str:token>/',
+        ConferirImportacaoView.as_view(),
+        name='conferir_importacao_word',
     ),
     path(
         'orcamentos/itens/buscar/',

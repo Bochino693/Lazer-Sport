@@ -1,0 +1,131 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Importar orçamento (Word ou PDF) | Lazer & Sport{% endblock %}
+{% block top_title %}Importar orçamento{% endblock %}
+{% block body_class %}ls-orcamentos-body ls-commercial-body ls-imp-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="importacao-word" href="{% estatico 'interno/importacao-word.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Proposta comercial · importação</span>
+    <h1>Importar orçamento do Word ou PDF</h1>
+    <p>Suba o .docx ou o PDF do orçamento: o painel lê cliente, itens, valores e condições e monta a proposta para você só conferir.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'orcamentos_inner' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Orçamentos
+    </a>
+  </div>
+</section>
+
+{% if negado %}
+<div class="ls-panel ls-imp-envio">
+  <div class="ls-panel-body">
+    <p class="ls-imp-negado">
+      <i class="bi bi-lock-fill" aria-hidden="true"></i>
+      A importação cria uma proposta nova, e criar proposta cabe ao Comercial
+      (Vendas, Vendedor ambulante ou Gestão). O Financeiro participa das
+      propostas que já existem.
+    </p>
+  </div>
+</div>
+{% else %}
+<div class="ls-panel ls-imp-envio">
+  <div class="ls-panel-body">
+    {% if erro %}<div class="alert alert-danger" role="alert" id="importarErro">{{ erro }}</div>{% endif %}
+
+    <form method="post" enctype="multipart/form-data" action="{% url 'importar_orcamento_word' %}" id="formImportarWord">
+      {% csrf_token %}
+      <label class="ls-imp-soltar" for="arquivoWord" id="soltarWord">
+        <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+        <strong>Escolha o orçamento em Word (.docx) ou PDF</strong>
+        <span id="arquivoWordNome">Toque para escolher, ou arraste o arquivo para cá.</span>
+        <small>Até {{ tamanho_maximo_mb }} MB. .doc antigo (Word 97-2003): abra no Word e salve como .docx.</small>
+      </label>
+      <input type="file" name="arquivo" id="arquivoWord" class="ls-imp-arquivo"
+             accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" required>
+
+      <div class="ls-imp-envio-acoes">
+        <button type="submit" class="btn btn-success" id="lerDocumento">
+          <i class="bi bi-magic me-1" aria-hidden="true"></i> Ler documento
+        </button>
+        <span class="ls-imp-ia-estado {% if ia_ligada %}ligada{% else %}desligada{% endif %}">
+          {% if ia_ligada %}
+            <i class="bi bi-stars" aria-hidden="true"></i> Leitura com IA ({{ modelo_ia }}): o Word também é conferido pelas tabelas; o PDF, pela transcrição e pelas contas.
+          {% else %}
+            <i class="bi bi-table" aria-hidden="true"></i> IA desligada (sem a chave ANTHROPIC_API_KEY): o Word é lido só pelas tabelas, e o PDF não pode ser lido.
+          {% endif %}
+        </span>
+      </div>
+    </form>
+
+    <ol class="ls-imp-passos">
+      <li><strong>Ler.</strong> No Word: parágrafos, tabelas, cabeçalho, rodapé e caixas de texto. No PDF (inclusive digitalizado): a IA transcreve a página. Cada linha ganha o seu endereço no documento.</li>
+      <li><strong>Conferir.</strong> Cada valor mostra de onde veio. As contas são refeitas, e o que não bate fica em vermelho.</li>
+      <li><strong>Criar.</strong> Só quando estiver completo. Nasce como rascunho e abre na edição normal; nada é enviado ao cliente.</li>
+    </ol>
+
+    {% if ia_ligada %}
+    <p class="ls-imp-privacidade">
+      <i class="bi bi-shield-lock" aria-hidden="true"></i>
+      Com a IA ligada, o texto do Word (ou o PDF inteiro) é enviado à Anthropic (Claude) para a leitura. O arquivo não fica guardado: só o nome entra no histórico do orçamento.
+    </p>
+    {% else %}
+    <p class="ls-imp-privacidade">
+      <i class="bi bi-shield-lock" aria-hidden="true"></i>
+      O arquivo não fica guardado: só o nome entra no histórico do orçamento.
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+  var form = document.getElementById("formImportarWord");
+  if (!form) return;
+  var campo = document.getElementById("arquivoWord");
+  var nome = document.getElementById("arquivoWordNome");
+  var area = document.getElementById("soltarWord");
+
+  function mostrarNome() {
+    var arquivo = campo.files && campo.files[0];
+    nome.textContent = arquivo ? arquivo.name : "Toque para escolher, ou arraste o arquivo para cá.";
+    area.classList.toggle("escolhido", !!arquivo);
+  }
+  campo.addEventListener("change", mostrarNome);
+
+  /* Arrastar e soltar no computador: o arquivo vai para o próprio campo,
+     e o envio continua sendo o formulário normal. */
+  ["dragenter", "dragover"].forEach(function (evento) {
+    area.addEventListener(evento, function (e) { e.preventDefault(); area.classList.add("arrastando"); });
+  });
+  ["dragleave", "drop"].forEach(function (evento) {
+    area.addEventListener(evento, function (e) { e.preventDefault(); area.classList.remove("arrastando"); });
+  });
+  area.addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      campo.files = e.dataTransfer.files;
+      mostrarNome();
+    }
+  });
+
+  /* A leitura com IA leva de alguns segundos a um minuto. A tarja diz
+     isso, para ninguém tocar de novo achando que travou. */
+  form.addEventListener("submit", function () {
+    document.getElementById("lerDocumento").disabled = true;
+    if (window.Painel && Painel.ocupado) {
+      Painel.ocupado({% if ia_ligada %}"Lendo o documento com a IA… pode levar até um minuto."{% else %}"Lendo o documento…"{% endif %});
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1415 @@
+"""Importação de orçamento do Word: leitura, conferência, criação e permissões.
+
+OS .docx SÃO MONTADOS AQUI MESMO, com o XML mínimo do Word dentro de um
+zip. Nenhum arquivo binário entra no repositório, e cada documento diz no
+próprio teste o que tem dentro -- inclusive o erro que está ali de
+propósito (o total que não bate, o produto que não existe).
+
+A IA NUNCA É CHAMADA DE VERDADE. Onde ela entra, o cliente do SDK é
+trocado por um falso (`ClienteFalso`) que devolve a leitura que o teste
+escreveu, e que guarda os argumentos de cada chamada para conferir modelo,
+esforço, fallback e esquema.
+"""
+
+from __future__ import annotations
+
+import base64
+import io
+import json
+import os
+import zipfile
+from datetime import timedelta
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest import mock
+from xml.sax.saxutils import escape
+
+from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.utils import timezone
+
+from core.models import Brinquedos, PecasReposicao
+
+from .importacao_word import catalogo, conferencia, deterministica as det, formulario, ia, leitor
+from .models import AtividadeOrcamento, AvaliacaoBlocoOrcamento, Cliente, ItemOrcamento, Orcamento, ProdutoInterno
+from .permissoes import atribuir_funcoes
+
+HOST = {"HTTP_HOST": "interno.testserver"}
+URL_IMPORTAR = "/orcamentos/importar/"
+
+
+# ======================================================================
+# O .docx FEITO À MÃO
+# ======================================================================
+W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+MC = 'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+
+
+def corrida(texto, *, oculto=False, apagado=False):
+    if apagado:
+        return f'<w:del><w:r><w:delText xml:space="preserve">{escape(texto)}</w:delText></w:r></w:del>'
+    propriedades = "<w:rPr><w:vanish/></w:rPr>" if oculto else ""
+    pedacos = "<w:br/>".join(f'<w:t xml:space="preserve">{escape(p)}</w:t>' for p in texto.split("\n"))
+    return f"<w:r>{propriedades}{pedacos}</w:r>"
+
+
+def par(*corridas):
+    """Parágrafo; texto solto vira corrida. "\\n" é a quebra Shift+Enter."""
+    corpo = "".join(c if c.startswith("<") else corrida(c) for c in corridas)
+    return f"<w:p><w:pPr><w:tabs><w:tab w:val=\"left\" w:pos=\"720\"/></w:tabs></w:pPr>{corpo}</w:p>"
+
+
+def celula(conteudo, *, vao=1):
+    propriedades = f'<w:tcPr><w:gridSpan w:val="{vao}"/></w:tcPr>' if vao > 1 else ""
+    if not conteudo.startswith("<"):
+        conteudo = par(conteudo)
+    return f"<w:tc>{propriedades}{conteudo}</w:tc>"
+
+
+def tabela(*linhas):
+    xml = "<w:tbl>"
+    for linha in linhas:
+        xml += "<w:tr>"
+        for item in linha:
+            xml += celula(item[0], vao=item[1]) if isinstance(item, tuple) else celula(item)
+        xml += "</w:tr>"
+    return xml + "</w:tbl>"
+
+
+def caixa_de_texto(texto):
+    """Uma caixa de texto como o Word grava: DrawingML com cópia em VML."""
+    interno = f"<w:txbxContent>{par(texto)}</w:txbxContent>"
+    return (
+        f"<w:p><w:r><mc:AlternateContent {MC}>"
+        f"<mc:Choice Requires=\"wps\"><w:drawing>{interno}</w:drawing></mc:Choice>"
+        f"<mc:Fallback><w:pict>{interno}</w:pict></mc:Fallback>"
+        "</mc:AlternateContent></w:r></w:p>"
+    )
+
+
+def montar_docx(corpo, *, cabecalho="", rodape="", cabecalhos_extras=0):
+    memoria = io.BytesIO()
+    with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as arquivo:
+        arquivo.writestr("[Content_Types].xml", (
+            '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/'
+            'package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-'
+            'officedocument.wordprocessingml.document.main+xml"/></Types>'
+        ))
+        arquivo.writestr("word/document.xml", (
+            f'<?xml version="1.0" encoding="UTF-8"?><w:document {W} {MC}><w:body>{corpo}'
+            "<w:sectPr/></w:body></w:document>"
+        ))
+        if cabecalho:
+            for numero in range(1, 2 + cabecalhos_extras):
+                arquivo.writestr(f"word/header{numero}.xml",
+                                 f'<?xml version="1.0" encoding="UTF-8"?><w:hdr {W}>{cabecalho}</w:hdr>')
+        if rodape:
+            arquivo.writestr("word/footer1.xml",
+                             f'<?xml version="1.0" encoding="UTF-8"?><w:ftr {W}>{rodape}</w:ftr>')
+    return memoria.getvalue()
+
+
+def montar_pdf(linhas=("Orcamento 2026/041", "Cliente: Buffet Alegria Ltda", "Total: R$ 1.919,00")):
+    """Um PDF de verdade, pequeno: uma página com texto em Helvetica.
+
+    Feito à mão (cabeçalho, objetos, tabela xref e %%EOF) para o teste não
+    depender de biblioteca nem de arquivo guardado. O conteúdo vai para a
+    IA falsa; o que se testa aqui é o caminho, a forma do pedido e as
+    recusas.
+    """
+    texto = "BT /F1 12 Tf 72 760 Td 16 TL " + " ".join(
+        "(" + linha.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") + ") '" for linha in linhas
+    ) + " ET"
+    objetos = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R "
+        "/Resources << /Font << /F1 5 0 R >> >> >>",
+        f"<< /Length {len(texto)} >>\nstream\n{texto}\nendstream",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    ]
+    saida = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
+    posicoes = []
+    for numero, objeto in enumerate(objetos, start=1):
+        posicoes.append(len(saida))
+        saida += f"{numero} 0 obj\n{objeto}\nendobj\n".encode("latin-1")
+    inicio_xref = len(saida)
+    saida += f"xref\n0 {len(objetos) + 1}\n0000000000 65535 f \n".encode()
+    for posicao in posicoes:
+        saida += f"{posicao:010d} 00000 n \n".encode()
+    saida += f"trailer\n<< /Size {len(objetos) + 1} /Root 1 0 R >>\nstartxref\n{inicio_xref}\n%%EOF\n".encode()
+    return saida
+
+
+CABECALHO_DA_EMPRESA = par("Lazer & Sport Brinquedos — CNPJ 54.486.908/0001-86 — (11) 96056-3135")
+RODAPE_DA_EMPRESA = par("contato@lazersport.com · www.lazersport.com.br")
+
+
+def _data_br(dias):
+    return (timezone.localdate() + timedelta(days=dias)).strftime("%d/%m/%Y")
+
+
+# --------------------------------------------- os cinco documentos de exemplo
+def docx_com_tabela():
+    """O caso comum: dados do cliente em parágrafos e itens numa tabela."""
+    return montar_docx(
+        par("ORÇAMENTO Nº 2026/041")
+        + par(f"Data: {_data_br(-2)}")
+        + par("Cliente: Buffet Alegria Ltda\nCNPJ: 11.222.333/0001-81")
+        + par("Contato: Marina Souza")
+        + par("Telefone: (11) 98765-4321 · E-mail: Contato@BuffetAlegria.com.br")
+        + tabela(
+            ["Descrição", "Qtd", "Valor unitário", "Total"],
+            ["Cama elástica 3m com rede", "2", "R$ 280,00", "R$ 560,00"],
+            ["Pula pula", "1", "R$ 1.234", "R$ 1.234,00"],
+            ["Mola de reposição", "10 un", "12,50", "125,00"],
+            [("Total", 3), "R$ 1.919,00"],
+        )
+        + par("Frete: grátis")
+        + par("Validade da proposta: 15 dias")
+        + par("Forma de pagamento: PIX")
+        + par("Forma de envio: entrega Lazer & Sport")
+        + par("Prazo de entrega: 20 dias úteis"),
+        cabecalho=CABECALHO_DA_EMPRESA, rodape=RODAPE_DA_EMPRESA, cabecalhos_extras=2,
+    )
+
+
+def docx_com_paragrafos():
+    """Sem tabela: os itens escritos em linhas corridas."""
+    return montar_docx(
+        par("Proposta para: Escola Pequeno Príncipe")
+        + par("A/C: Sr. João Lima")
+        + par("E-mail: joao@pequenoprincipe.com.br")
+        + par("Itens:")
+        + par("- 2x Cama elástica 3 m — R$ 280,00 cada — total R$ 560,00")
+        + par("- 1x Piscina de bolinhas ........ R$ 450,00")
+        + par("Total: R$ 1.010,00")
+        + par(f"Validade: até {_data_br(20)}")
+        + par("Pagamento: 50% na entrada e 50% na entrega"),
+    )
+
+
+def docx_com_frete_e_desconto():
+    """Subtotal, frete e desconto na mesma linha, e o total depois."""
+    return montar_docx(
+        par("Cliente: Marina Souza")
+        + par("CPF: 529.982.247-25")
+        + par("WhatsApp: (11) 97777-6655")
+        + tabela(
+            ["Item", "Descrição", "Qtd.", "Preço unit.", "Total"],
+            ["1", "Air Game Kids", "1", "R$ 1.200,00", "R$ 1.200,00"],
+        )
+        + par("Subtotal R$ 1.200,00 | Frete R$ 150,00 | Desconto R$ 100,00")
+        + par("Valor total: R$ 1.250,00")
+        + par(f"Validade: {_data_br(10)}")
+        + par("Condições de pagamento: cartão de crédito em até 3x"),
+    )
+
+
+def docx_com_total_errado():
+    """O total do Word não é a soma das linhas -- de propósito."""
+    return montar_docx(
+        par("Cliente: Buffet Alegria Ltda")
+        + par("E-mail: contato@buffetalegria.com.br")
+        + tabela(
+            ["Produto", "Quantidade", "Unitário", "Total"],
+            ["Cama elástica 3 m", "2", "R$ 280,00", "R$ 560,00"],
+            ["Pula-pula", "1", "R$ 1.234,00", "R$ 1.234,00"],
+        )
+        + par("Total geral: R$ 1.850,00")
+        + par("Validade: 10 dias")
+        + par("Pagamento: Pix"),
+    )
+
+
+def docx_com_produto_inexistente():
+    """Um item que o catálogo não tem."""
+    return montar_docx(
+        par("Cliente: Condomínio Jardim das Flores")
+        + par("E-mail: sindico@jardimdasflores.com.br")
+        + tabela(
+            ["Descrição", "Qtd", "Valor unitário", "Total"],
+            ["Tobogã gigante inflável 8 m", "1", "R$ 3.500,00", "R$ 3.500,00"],
+        )
+        + par("Total: R$ 3.500,00"),
+    )
+
+
+def docx_com_valor_negociado():
+    """A soma das linhas dá R$ 10.200,00; a venda fechou em R$ 9.800,00."""
+    return montar_docx(
+        par("Cliente: Buffet Alegria Ltda")
+        + par("E-mail: contato@buffetalegria.com.br")
+        + tabela(
+            ["Descrição", "Qtd", "Valor unitário", "Total"],
+            ["Brinquedão Modelo 3", "1", "R$ 9.000,00", "R$ 9.000,00"],
+            ["Air Game Kids", "1", "R$ 1.200,00", "R$ 1.200,00"],
+        )
+        + par("Valor total negociado: R$ 9.800,00")
+        + par("Validade: 10 dias")
+        + par("Pagamento: Pix")
+        + par("Frete: grátis"),
+    )
+
+
+def criar_catalogo():
+    brinquedos = {
+        nome: Brinquedos.objects.create(
+            nome_brinquedo=nome, descricao=f"{nome} do catálogo", valor_brinquedo=valor,
+            avaliacao=Decimal("5.00"), voltz="110",
+        )
+        for nome, valor in (
+            ("Cama elástica 3 m", Decimal("280.00")),
+            ("Cama elástica 4 m", Decimal("350.00")),
+            ("Pula-pula", Decimal("1234.00")),
+            ("Piscina de bolinhas", Decimal("450.00")),
+            ("Air Game Kids", Decimal("1200.00")),
+            ("Brinquedão Modelo 3", Decimal("9000.00")),
+            ("Brinquedão Modelo 5", Decimal("12000.00")),
+        )
+    }
+    peca = PecasReposicao.objects.create(
+        nome="Mola de reposição", descricao_peca="Mola galvanizada", preco_venda=Decimal("12.50"),
+    )
+    produto = ProdutoInterno.objects.create(nome="Máquina de algodão doce", preco_venda=Decimal("2500.00"))
+    return brinquedos, peca, produto
+
+
+def linhas_de(conteudo):
+    return leitor.ler_docx(conteudo, "teste.docx")
+
+
+def proposta_de(conteudo, *, dados_ia=None, escolhas=None):
+    leitura = {"arquivo": "teste.docx", "linhas": linhas_de(conteudo),
+               "ia": {"usada": dados_ia is not None, "modelo": "claude-opus-5-5", "dados": dados_ia},
+               "escolhas": escolhas or {}}
+    return conferencia.montar_proposta(leitura)
+
+
+def alertas_por_id(proposta):
+    return {alerta["id"]: alerta for alerta in proposta["alertas"]}
+
+
+# ======================================================================
+# 1. LEITURA DO .docx
+# ======================================================================
+class LeitorDocxTests(SimpleTestCase):
+
+    def test_paragrafos_e_tabelas_saem_na_ordem_com_id(self):
+        linhas = linhas_de(docx_com_tabela())
+        ids = [linha["id"] for linha in linhas]
+
+        self.assertEqual(ids[0], "CAB-P1")
+        self.assertLess(ids.index("P6"), ids.index("T1L1C1"))
+        self.assertLess(ids.index("T1L5C4"), ids.index("P7"))
+        self.assertEqual(ids[-1], "ROD-P1")
+        textos = {linha["id"]: linha["texto"] for linha in linhas}
+        self.assertEqual(textos["T1L2C1"], "Cama elástica 3m com rede")
+        self.assertEqual(textos["T1L3C3"], "R$ 1.234")
+
+    def test_quebra_de_linha_dentro_do_paragrafo_vira_duas_linhas(self):
+        textos = {linha["id"]: linha["texto"] for linha in linhas_de(docx_com_tabela())}
+        self.assertEqual(textos["P3"], "Cliente: Buffet Alegria Ltda")
+        self.assertEqual(textos["P4"], "CNPJ: 11.222.333/0001-81")
+
+    def test_celula_mesclada_ocupa_a_coluna_onde_comeca(self):
+        """"Total" ocupa 3 colunas: o valor ao lado é a coluna 4, a do total."""
+        textos = {linha["id"]: linha["texto"] for linha in linhas_de(docx_com_tabela())}
+        self.assertEqual(textos["T1L5C1"], "Total")
+        self.assertEqual(textos["T1L5C4"], "R$ 1.919,00")
+
+    def test_cabecalhos_iguais_entram_uma_vez_so(self):
+        linhas = linhas_de(docx_com_tabela())
+        self.assertEqual([l["id"] for l in linhas if l["parte"] == "cabecalho"], ["CAB-P1"])
+
+    def test_texto_oculto_e_texto_apagado_nao_entram(self):
+        conteudo = montar_docx(
+            par("Preço: ", corrida("R$ 999,00", oculto=True), corrida("R$ 100,00", apagado=True), "R$ 80,00")
+        )
+        self.assertEqual([l["texto"] for l in linhas_de(conteudo)], ["Preço: R$ 80,00"])
+
+    def test_caixa_de_texto_entra_uma_vez_depois_do_paragrafo(self):
+        conteudo = montar_docx(par("Antes") + caixa_de_texto("Frete: R$ 50,00") + par("Depois"))
+        linhas = linhas_de(conteudo)
+        self.assertEqual(
+            [(l["id"], l["texto"]) for l in linhas],
+            [("P1", "Antes"), ("CX-P1", "Frete: R$ 50,00"), ("P2", "Depois")],
+        )
+
+    def test_tabela_dentro_de_celula_vira_tabela_propria(self):
+        interna = tabela(["Descrição", "Valor"], ["Pula-pula", "R$ 300,00"])
+        conteudo = montar_docx(f"<w:tbl><w:tr>{celula('Diagramação')}<w:tc>{interna}</w:tc></w:tr></w:tbl>")
+        ids = [l["id"] for l in linhas_de(conteudo)]
+        self.assertIn("T1L1C1", ids)
+        self.assertIn("T2L2C2", ids)
+
+    def test_texto_numerado_mostra_a_linha_da_tabela_numa_linha_so(self):
+        texto = leitor.texto_numerado(linhas_de(docx_com_tabela()))
+        self.assertIn(
+            "[T1L2C1] Cama elástica 3m com rede | [T1L2C2] 2 | [T1L2C3] R$ 280,00 | [T1L2C4] R$ 560,00",
+            texto,
+        )
+        self.assertIn("=== CABEÇALHO DO DOCUMENTO ===", texto)
+        self.assertIn("=== RODAPÉ DO DOCUMENTO ===", texto)
+
+    def test_doc_antigo_e_pdf_pedem_para_salvar_como_docx(self):
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "Salvar como"):
+            leitor.ler_docx(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"0" * 100, "velho.doc")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "Salvar como"):
+            leitor.ler_docx(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"0" * 100, "renomeado.docx")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "não é Word (.docx) nem PDF"):
+            leitor.ler_docx(b"texto qualquer", "orcamento.txt")
+
+    def test_extensao_e_conteudo_tem_de_concordar(self):
+        self.assertEqual(leitor.conferir_arquivo("a.docx", docx_com_tabela()), "docx")
+        self.assertEqual(leitor.conferir_arquivo("a.PDF", montar_pdf()), "pdf")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "tem nome de PDF, mas o conteúdo não é"):
+            leitor.conferir_arquivo("falso.pdf", b"PK\x03\x04 nao sou pdf")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "tem nome de .docx, mas é um PDF"):
+            leitor.conferir_arquivo("trocado.docx", montar_pdf())
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "não é um documento do Word (.docx) de verdade"):
+            leitor.conferir_arquivo("falso.docx", b"<html>orcamento</html>")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "cortado"):
+            leitor.conferir_pdf("cortado.pdf", montar_pdf()[:60])
+
+    def test_a_transcricao_do_pdf_so_aceita_id_valido_e_uma_vez(self):
+        linhas = leitor.linhas_transcritas([
+            {"id": "P1", "texto": "Cliente: Marina"},
+            {"id": "[T1L2C3]", "texto": "R$ 280,00"},
+            {"id": "P1", "texto": "repetido"},
+            {"id": "linha 7", "texto": "id inventado"},
+            {"id": "CAB-P1", "texto": "Lazer & Sport"},
+            {"id": "P2", "texto": "   "},
+        ])
+        self.assertEqual([l["id"] for l in linhas], ["P1", "T1L2C3", "CAB-P1"])
+        self.assertEqual((linhas[1]["tabela"], linhas[1]["linha"], linhas[1]["coluna"]), ("T1", 2, 3))
+        self.assertEqual(linhas[2]["parte"], "cabecalho")
+
+    def test_zip_sem_documento_e_xml_com_entidade_sao_recusados(self):
+        memoria = io.BytesIO()
+        with zipfile.ZipFile(memoria, "w") as arquivo:
+            arquivo.writestr("xl/workbook.xml", "<x/>")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "não tem o conteúdo"):
+            leitor.ler_docx(memoria.getvalue(), "planilha-renomeada.docx")
+
+        memoria = io.BytesIO()
+        with zipfile.ZipFile(memoria, "w") as arquivo:
+            arquivo.writestr("word/document.xml", '<!DOCTYPE x [<!ENTITY a "aaaa">]><x>&a;</x>')
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "estrutura que o Word não produz"):
+            leitor.ler_docx(memoria.getvalue(), "forjado.docx")
+
+    def test_arquivo_grande_demais_e_recusado_antes_de_abrir(self):
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "10 MB"):
+            leitor.conferir_arquivo("grande.docx", b"PK" + b"0" * (leitor.TAMANHO_MAXIMO + 1))
+
+
+# ======================================================================
+# 2. DINHEIRO, QUANTIDADE E DOCUMENTOS
+# ======================================================================
+class DinheiroBrasileiroTests(SimpleTestCase):
+
+    def test_os_formatos_de_reais_viram_decimal_exato(self):
+        casos = {
+            "R$ 1.234,56": Decimal("1234.56"),
+            "1234,56": Decimal("1234.56"),
+            "R$ 1.234": Decimal("1234.00"),
+            "R$1.234.567,89": Decimal("1234567.89"),
+            "80": Decimal("80.00"),
+            "0,5": Decimal("0.50"),
+            "1,234.56": Decimal("1234.56"),
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                valor = det.ler_dinheiro(texto)
+                self.assertIsInstance(valor, Decimal)
+                self.assertEqual(valor, esperado)
+
+    def test_o_milhar_com_ponto_nao_vira_um_real_e_vinte_e_tres(self):
+        """O erro clássico: Decimal("1.234") gravaria R$ 1,23."""
+        self.assertEqual(det.ler_dinheiro("1.234"), Decimal("1234.00"))
+
+    def test_por_extenso_e_ambiguo_nao_viram_numero(self):
+        for texto in ("mil e duzentos", "mil e duzentos reais", "1,234", "12,345", "1.234.5", ""):
+            with self.subTest(texto=texto):
+                self.assertIsNone(det.ler_dinheiro(texto))
+        self.assertEqual(det.valores_em_reais("mil e duzentos reais"), [])
+
+    def test_valor_abreviado_e_recusado_com_motivo(self):
+        achados = det.valores_em_reais("Investimento de R$ 1,2 mil")
+        self.assertEqual(len(achados), 1)
+        self.assertIsNone(achados[0]["valor"])
+        self.assertIn("abreviado", achados[0]["recusa"])
+
+    def test_no_texto_so_conta_o_que_tem_cara_de_dinheiro(self):
+        achados = det.valores_em_reais("Cama 3 m, 10% de sinal, 05/11/2026, R$ 280 e 125,00")
+        self.assertEqual([a["valor"] for a in achados], [Decimal("280.00"), Decimal("125.00")])
+
+    def test_quantidade_e_inteira_ou_recusada(self):
+        self.assertEqual(det.ler_quantidade("2")[0], 2)
+        self.assertEqual(det.ler_quantidade("02 un")[:2], (2, "un"))
+        self.assertEqual(det.ler_quantidade("1.000 peças")[0], 1000)
+        quantidade, _, motivo = det.ler_quantidade("1,5 m²")
+        self.assertIsNone(quantidade)
+        self.assertIn("fracionária", motivo)
+        self.assertIsNone(det.ler_quantidade("0")[0])
+        self.assertIsNone(det.ler_quantidade("2 x 3")[0])
+
+    def test_documento_e_validado_pelos_digitos(self):
+        achados = det.documentos("CPF 529.982.247-25 e CNPJ 11.222.333/0001-82")
+        self.assertEqual([(a["tipo"], a["valido"]) for a in achados], [("CPF", True), ("CNPJ", False)])
+        # Onze dígitos soltos é celular -- só vira CPF ao lado do rótulo.
+        self.assertEqual(det.documentos("Ligue 11987654321"), [])
+        self.assertEqual(det.documentos("CPF: 52998224725")[0]["chave"], "52998224725")
+
+    def test_telefone_sai_no_formato_do_painel(self):
+        self.assertEqual(det.formatar_telefone("+55 11 98765-4321"), "(11) 98765-4321")
+        self.assertEqual(det.formatar_telefone("1133334444"), "(11) 3333-4444")
+        self.assertEqual(det.formatar_documento("52998224725"), "529.982.247-25")
+
+
+# ======================================================================
+# 3. LEITURA POR REGRA (sem IA)
+# ======================================================================
+@override_settings(EMPRESA_CNPJ="54.486.908/0001-86")
+class LeituraPorRegraTests(SimpleTestCase):
+
+    def ler(self, conteudo):
+        return det.ler(linhas_de(conteudo), hoje=timezone.localdate(),
+                       empresa=conferencia.identidade_da_empresa())
+
+    def test_tabela_de_itens_pelo_cabecalho(self):
+        lido = self.ler(docx_com_tabela())
+        itens = [
+            (i["descricao"]["valor"], i["quantidade"]["valor"], i["valor_unitario"]["valor"], i["total_linha"]["valor"])
+            for i in lido["itens"]
+        ]
+        self.assertEqual(itens, [
+            ("Cama elástica 3m com rede", 2, Decimal("280.00"), Decimal("560.00")),
+            ("Pula pula", 1, Decimal("1234.00"), Decimal("1234.00")),
+            ("Mola de reposição", 10, Decimal("12.50"), Decimal("125.00")),
+        ])
+        # A linha "Total" fecha a tabela: é resumo, não item.
+        self.assertEqual(lido["campos"]["total"]["valor"], Decimal("1919.00"))
+        self.assertEqual(lido["campos"]["total"]["fonte"]["id"], "T1L5C4")
+
+    def test_o_cnpj_e_o_telefone_da_empresa_nao_viram_do_cliente(self):
+        campos = self.ler(docx_com_tabela())["campos"]
+        self.assertEqual(campos["documento"]["valor"], "11222333000181")
+        self.assertEqual(campos["telefone"]["valor"], "11987654321")
+        self.assertEqual(campos["email"]["valor"], "contato@buffetalegria.com.br")
+
+    def test_frete_gratis_e_validade_em_dias(self):
+        campos = self.ler(docx_com_tabela())["campos"]
+        self.assertEqual(campos["frete"]["valor"], Decimal("0.00"))
+        self.assertEqual(campos["validade"]["valor"], timezone.localdate() - timedelta(days=2) + timedelta(days=15))
+        self.assertIn("data do documento", campos["validade"]["motivo"])
+
+    def test_subtotal_frete_e_desconto_na_mesma_linha(self):
+        campos = self.ler(docx_com_frete_e_desconto())["campos"]
+        self.assertEqual(campos["subtotal"]["valor"], Decimal("1200.00"))
+        self.assertEqual(campos["frete"]["valor"], Decimal("150.00"))
+        self.assertEqual(campos["desconto"]["valor"], Decimal("100.00"))
+        self.assertEqual(campos["total"]["valor"], Decimal("1250.00"))
+        self.assertTrue(campos["documento"]["valido"])
+
+    def test_itens_em_paragrafo(self):
+        itens = self.ler(docx_com_paragrafos())["itens"]
+        self.assertEqual(len(itens), 2)
+        self.assertEqual(itens[0]["descricao"]["valor"], "Cama elástica 3 m")
+        self.assertEqual(itens[0]["quantidade"]["valor"], 2)
+        self.assertEqual(itens[0]["valor_unitario"]["valor"], Decimal("280.00"))
+        self.assertEqual(itens[0]["total_linha"]["valor"], Decimal("560.00"))
+        # Um valor só, sem "cada": é o total da linha, e o unitário fica vazio.
+        self.assertEqual(itens[1]["total_linha"]["valor"], Decimal("450.00"))
+        self.assertIsNone(itens[1]["valor_unitario"])
+
+    def test_frete_no_meio_da_frase_nao_e_o_frete(self):
+        campos = self.ler(montar_docx(par("Cama elástica com frete incluso R$ 280,00")))["campos"]
+        self.assertNotIn("frete", campos)
+
+    def test_desconto_em_porcentagem_sem_valor(self):
+        campos = self.ler(montar_docx(par("Desconto: 10%")))["campos"]
+        self.assertNotIn("desconto", campos)
+        self.assertEqual(campos["desconto_percentual"]["valor"], Decimal("10"))
+
+
+# ======================================================================
+# 4. CATÁLOGO E CLIENTE
+# ======================================================================
+class CasamentoTests(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.brinquedos, cls.peca, cls.produto = criar_catalogo()
+        cls.catalogo = catalogo.carregar_catalogo()
+
+    def test_nome_exato_sem_acento_e_sem_caixa(self):
+        resultado = catalogo.casar_item("PULA PULA", self.catalogo)
+        self.assertEqual(resultado["confianca"], "alta")
+        self.assertEqual(resultado["escolhido"], f"b:{self.brinquedos['Pula-pula'].pk}")
+
+    def test_o_numero_do_modelo_decide(self):
+        """Modelo 3 e Modelo 5 se parecem em tudo, menos no que importa."""
+        resultado = catalogo.casar_item("Brinquedão modelo 3 (5 x 3 m)", self.catalogo)
+        self.assertEqual(resultado["escolhido"], f"b:{self.brinquedos['Brinquedão Modelo 3'].pk}")
+        pontos_5, motivo_5 = catalogo.pontuar("Brinquedão modelo 3", "Brinquedão Modelo 5")
+        self.assertLess(pontos_5, catalogo.LIMITE_MEDIO)
+        self.assertIn("outro", motivo_5)
+
+    def test_a_medida_decide(self):
+        resultado = catalogo.casar_item("Cama elástica 4,0 m", self.catalogo)
+        self.assertEqual(resultado["escolhido"], f"b:{self.brinquedos['Cama elástica 4 m'].pk}")
+        self.assertEqual(resultado["confianca"], "alta")
+
+    def test_parecido_fica_como_sugestao_a_confirmar(self):
+        resultado = catalogo.casar_item("Cama elastica 3m com rede de proteção", self.catalogo)
+        self.assertEqual(resultado["confianca"], "media")
+        self.assertEqual(resultado["escolhido"], f"b:{self.brinquedos['Cama elástica 3 m'].pk}")
+
+    def test_o_que_nao_existe_fica_sem_vinculo(self):
+        resultado = catalogo.casar_item("Tobogã gigante inflável 8 m", self.catalogo)
+        self.assertEqual(resultado["confianca"], "baixa")
+
+    def test_peca_e_produto_de_producao_tambem_casam(self):
+        self.assertEqual(catalogo.casar_item("Mola de reposição", self.catalogo)["escolhido"], f"r:{self.peca.pk}")
+        self.assertEqual(
+            catalogo.casar_item("Máquina de algodão doce", self.catalogo)["escolhido"], f"p:{self.produto.pk}",
+        )
+
+    def test_cliente_por_documento_email_telefone_e_nome(self):
+        pelo_cpf = Cliente.objects.create(nome_cliente="Marina Souza", documento="529.982.247-25",
+                                          telefone="(11) 90000-1111")
+        pelo_email = Cliente.objects.create(nome_cliente="Buffet Alegria", email="contato@buffetalegria.com.br")
+        pelo_fone = Cliente.objects.create(nome_cliente="Carlos", telefone="(11) 97777-6655")
+        Cliente.objects.create(nome_cliente="Escola Pequeno Príncipe")
+
+        self.assertEqual(catalogo.casar_cliente(documento="52998224725")["cliente"], pelo_cpf)
+        self.assertEqual(catalogo.casar_cliente(email="CONTATO@buffetalegria.com.br")["cliente"], pelo_email)
+        self.assertEqual(catalogo.casar_cliente(telefone="+55 11 97777-6655")["cliente"], pelo_fone)
+        por_nome = catalogo.casar_cliente(nome="escola pequeno principe")
+        self.assertEqual(por_nome["confianca"], "media")
+        self.assertIsNone(catalogo.casar_cliente(nome="Ninguém Conhecido")["cliente"])
+
+    def test_documento_e_email_de_clientes_diferentes_viram_alerta(self):
+        Cliente.objects.create(nome_cliente="Marina Souza", documento="529.982.247-25")
+        Cliente.objects.create(nome_cliente="Outra Pessoa", email="marina@exemplo.com")
+        resultado = catalogo.casar_cliente(documento="529.982.247-25", email="marina@exemplo.com")
+        self.assertEqual(resultado["cliente"].nome_cliente, "Marina Souza")
+        self.assertTrue(resultado["alertas"])
+
+
+# ======================================================================
+# 5. A CONFERÊNCIA
+# ======================================================================
+def campo_ia(texto=None, fonte_id=None, trecho=""):
+    if texto is None:
+        return {"texto": None, "fonte": None}
+    return {"texto": texto, "fonte": {"id": fonte_id, "trecho": trecho or texto}}
+
+
+def leitura_ia_vazia():
+    nomes_cliente = ("nome", "documento", "contato", "telefone", "email", "endereco",
+                     "cep", "logradouro", "numero", "bairro", "cidade", "uf")
+    return {
+        "cliente": {nome: campo_ia() for nome in nomes_cliente},
+        "itens": [],
+        **{nome: campo_ia() for nome in (
+            "subtotal", "frete", "desconto", "total_geral", "validade", "forma_pagamento",
+            "prazo_entrega", "forma_envio", "observacoes", "data_documento",
+        )},
+    }
+
+
+def item_ia(descricao, quantidade, unitario, total, linha):
+    return {
+        "descricao": campo_ia(descricao, f"{linha}C1"),
+        "quantidade": campo_ia(quantidade, f"{linha}C2"),
+        "valor_unitario": campo_ia(unitario, f"{linha}C3"),
+        "total_linha": campo_ia(total, f"{linha}C4"),
+    }
+
+
+@override_settings(EMPRESA_CNPJ="54.486.908/0001-86")
+class ConferenciaTests(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.brinquedos, cls.peca, cls.produto = criar_catalogo()
+
+    def test_total_errado_vira_alerta_vermelho(self):
+        proposta = proposta_de(docx_com_total_errado())
+        alerta = alertas_por_id(proposta)["soma_total"]
+        self.assertEqual(alerta["nivel"], "vermelho")
+        self.assertIn("1.794,00", alerta["detalhe"])
+        self.assertIn("1.850,00", alerta["detalhe"])
+
+    def test_quantidade_vezes_unitario_que_nao_da_o_total_da_linha(self):
+        conteudo = montar_docx(tabela(
+            ["Descrição", "Qtd", "Valor unitário", "Total"],
+            ["Pula-pula", "2", "R$ 1.234,00", "R$ 2.400,00"],
+        ))
+        alerta = alertas_por_id(proposta_de(conteudo))["linha:i1"]
+        self.assertEqual(alerta["nivel"], "vermelho")
+        self.assertIn("2.468,00", alerta["detalhe"])
+
+    def test_documento_que_bate_nao_tem_alerta_de_conta(self):
+        proposta = proposta_de(docx_com_frete_e_desconto())
+        ids = alertas_por_id(proposta)
+        self.assertNotIn("soma_total", ids)
+        self.assertNotIn("soma_subtotal", ids)
+        self.assertEqual(proposta["contas"]["total"], "1.250,00")
+
+    def test_produto_que_nao_existe_fica_sem_vinculo_e_avisado(self):
+        proposta = proposta_de(docx_com_produto_inexistente())
+        self.assertIsNone(proposta["itens"][0]["produto"]["escolhido"])
+        self.assertIn("produto:i1", alertas_por_id(proposta))
+
+    def test_nome_do_catalogo_com_o_texto_do_word_ao_lado(self):
+        item = proposta_de(docx_com_tabela())["itens"][1]
+        self.assertEqual(item["descricao"]["valor"], "Pula-pula")
+        self.assertEqual(item["original"], "Pula pula")
+        self.assertTrue(item["descricao"]["normalizado"])
+
+    def test_valor_da_ia_que_nao_esta_na_fonte_nao_entra(self):
+        dados = leitura_ia_vazia()
+        dados["itens"] = [
+            item_ia("Cama elástica 3m com rede", "2", "R$ 290,00", "R$ 560,00", "T1L2"),
+        ]
+        dados["frete"] = campo_ia("R$ 75,00", "P9")
+        proposta = proposta_de(docx_com_tabela(), dados_ia=dados)
+        item = proposta["itens"][0]
+        # O unitário da tabela (280) entra; o 290 da IA não está em T1L2C3.
+        self.assertEqual(item["valor_unitario"]["valor"], "280,00")
+        self.assertEqual(item["valor_unitario"]["origem"], "tabelas")
+        descartes = [a for a in proposta["alertas"] if a["tipo"] == "sem_fonte"]
+        self.assertTrue(any("290,00" in a["detalhe"] for a in descartes))
+        self.assertTrue(any("75,00" in a["detalhe"] for a in descartes))
+        self.assertEqual(proposta["valores"]["frete"]["valor"], "0,00")
+
+    def test_item_inventado_pela_ia_nao_entra(self):
+        dados = leitura_ia_vazia()
+        dados["itens"] = [item_ia("Castelo inflável", "1", "R$ 900,00", "R$ 900,00", "T1L9")]
+        proposta = proposta_de(docx_com_produto_inexistente(), dados_ia=dados)
+        self.assertEqual([i["descricao"]["original"] for i in proposta["itens"]], ["Tobogã gigante inflável 8 m"])
+        self.assertIn("item_descartado:1", alertas_por_id(proposta))
+
+    def test_leituras_que_concordam_tem_confianca_alta(self):
+        dados = leitura_ia_vazia()
+        dados["itens"] = [item_ia("Air Game Kids", "1", "R$ 1.200,00", "R$ 1.200,00", "T1L2")]
+        dados["itens"][0]["descricao"]["fonte"]["id"] = "T1L2C2"
+        dados["itens"][0]["quantidade"]["fonte"]["id"] = "T1L2C3"
+        dados["itens"][0]["valor_unitario"]["fonte"]["id"] = "T1L2C4"
+        dados["itens"][0]["total_linha"]["fonte"]["id"] = "T1L2C5"
+        dados["total_geral"] = campo_ia("R$ 1.250,00", "P5")
+        proposta = proposta_de(docx_com_frete_e_desconto(), dados_ia=dados)
+        self.assertEqual(proposta["itens"][0]["valor_unitario"]["confianca"], "alta")
+        self.assertEqual(proposta["itens"][0]["valor_unitario"]["origem"], "ambas")
+        self.assertEqual(proposta["valores"]["total"]["origem"], "ambas")
+
+    def test_tabelas_e_ia_discordando_e_vermelho_e_o_campo_fica_vazio(self):
+        conteudo = montar_docx(
+            tabela(["Descrição", "Qtd", "Valor unitário", "Total"], ["Pula-pula", "1", "R$ 1.234,00", "R$ 1.234,00"])
+            + par("Frete: R$ 150,00 (ou R$ 90,00 com retirada parcial)")
+        )
+        dados = leitura_ia_vazia()
+        dados["frete"] = campo_ia("R$ 90,00", "P1")
+        proposta = proposta_de(conteudo, dados_ia=dados)
+        frete = proposta["valores"]["frete"]
+        self.assertEqual(frete["valor"], "")
+        self.assertEqual([o["valor"] for o in frete["opcoes"]], ["150,00", "90,00"])
+        alerta = alertas_por_id(proposta)["divergencia:valores.frete"]
+        self.assertEqual(alerta["nivel"], "vermelho")
+
+    def test_cnpj_da_empresa_citado_pela_ia_e_descartado(self):
+        dados = leitura_ia_vazia()
+        dados["cliente"]["documento"] = campo_ia("54.486.908/0001-86", "CAB-P1")
+        proposta = proposta_de(docx_com_tabela(), dados_ia=dados)
+        # O documento do cliente continua sendo o que a tabela leu.
+        self.assertEqual(proposta["cliente"]["documento"]["valor"], "11.222.333/0001-81")
+        self.assertTrue(any("própria Lazer" in a["detalhe"] for a in proposta["alertas"]))
+        proposta = proposta_de(docx_com_produto_inexistente(), dados_ia=dados)
+        self.assertEqual(proposta["cliente"]["documento"]["valor"], "")
+
+    def test_valor_do_word_que_nao_entrou_em_campo_nenhum(self):
+        conteudo = montar_docx(
+            tabela(["Descrição", "Qtd", "Valor unitário", "Total"], ["Pula-pula", "1", "R$ 1.234,00", "R$ 1.234,00"])
+            + par("Taxa de montagem especial R$ 350,00 por dia")
+        )
+        alerta = alertas_por_id(proposta_de(conteudo))["valores_nao_usados"]
+        self.assertIn("350,00", alerta["detalhe"])
+
+    def test_sem_ia_o_aviso_esta_na_proposta(self):
+        proposta = proposta_de(docx_com_tabela())
+        self.assertFalse(proposta["ia"]["usada"])
+        self.assertEqual(
+            proposta["ia"]["aviso"],
+            "IA indisponível: leitura pelas tabelas do documento; confira com atenção.",
+        )
+
+    def test_validade_vencida_no_word_vira_sugestao_e_nao_valor(self):
+        conteudo = montar_docx(par(f"Validade: {_data_br(-3)}") + par("Total: R$ 10,00"))
+        validade = proposta_de(conteudo)["condicoes"]["validade"]
+        self.assertEqual(validade["valor"], "")
+        self.assertIn("já passou", validade["nota"])
+        self.assertTrue(validade["sugestoes"])
+
+
+# ======================================================================
+# 6. O FLUXO PELA TELA
+# ======================================================================
+def formulario_de(envio, **mudancas):
+    """O POST que a tela de conferência mandaria, a partir do envio."""
+    envio = json.loads(json.dumps(envio))
+    for chave, valor in mudancas.items():
+        envio[chave] = valor
+    dados = {"action": "criar", "itens_ordem": ",".join(i["uid"] for i in envio["itens"])}
+    for chave in ("cliente_modo", "cliente_id", "nome", "documento", "tipo", "contato", "telefone",
+                  "whatsapp", "email", "cep", "endereco", "numero", "bairro", "cidade", "estado",
+                  "frete", "desconto", "validade", "forma_pagamento", "forma_envio", "prazo", "observacoes",
+                  "total_escolha"):
+        dados[chave] = envio.get(chave) or ""
+    if envio.get("cliente_confirmado"):
+        dados["cliente_confirmado"] = "1"
+    for item in envio["itens"]:
+        prefixo = f"item-{item['uid']}-"
+        dados[prefixo + "descricao"] = item["descricao"]
+        dados[prefixo + "produto"] = item["produto"]
+        dados[prefixo + "quantidade"] = item["quantidade"]
+        dados[prefixo + "valor_unitario"] = item["valor_unitario"]
+        if item.get("avulsa"):
+            dados[prefixo + "avulsa"] = "1"
+        if item.get("conferido"):
+            dados[prefixo + "conferido"] = "1"
+    for alerta, texto in (envio.get("justificativas") or {}).items():
+        dados[f"aceite-{alerta}"] = "1"
+        dados[f"justificativa-{alerta}"] = texto
+    return dados
+
+
+class _ComUsuario(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.brinquedos, cls.peca, cls.produto = criar_catalogo()
+        cls.vendedor = User.objects.create_user("vendedor", "vendedor@exemplo.com", "senha")
+        atribuir_funcoes(cls.vendedor, ["vendas"])
+
+    def setUp(self):
+        # Sem chave, por padrão: nenhum teste fala com a API de verdade,
+        # nem por acaso, mesmo numa máquina que tenha a chave no ambiente.
+        ambiente = mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""})
+        ambiente.start()
+        self.addCleanup(ambiente.stop)
+        self.client.force_login(self.vendedor)
+
+    def importar(self, conteudo, nome="orcamento.docx"):
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile(nome, conteudo)}, **HOST)
+        self.assertEqual(resposta.status_code, 302, getattr(resposta, "content", b"")[:400])
+        return resposta["Location"]
+
+    def proposta_e_envio(self, url):
+        resposta = self.client.get(url, **HOST)
+        self.assertEqual(resposta.status_code, 200)
+        return resposta.context["proposta"], resposta.context["envio"]
+
+
+class PermissoesTests(_ComUsuario):
+
+    def test_visitante_vai_para_o_login(self):
+        self.client.logout()
+        resposta = self.client.get(URL_IMPORTAR, **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        self.assertIn("login", resposta["Location"])
+
+    def test_fora_do_subdominio_a_tela_nao_existe(self):
+        resposta = self.client.get(URL_IMPORTAR)
+        self.assertNotEqual(resposta.status_code, 200)
+
+    def test_financeiro_ve_orcamento_mas_nao_importa(self):
+        financeiro = User.objects.create_user("financeiro", "f@exemplo.com", "senha")
+        atribuir_funcoes(financeiro, ["financeiro"])
+        self.client.force_login(financeiro)
+        self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 403)
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("a.docx", docx_com_tabela())}, **HOST)
+        self.assertEqual(resposta.status_code, 403)
+        # Nem o botão aparece na lista de orçamentos.
+        self.assertNotContains(self.client.get("/orcamentos/", **HOST), "Importar Word ou PDF")
+
+    def test_producao_nao_entra(self):
+        producao = User.objects.create_user("producao", "p@exemplo.com", "senha")
+        atribuir_funcoes(producao, ["producao"])
+        self.client.force_login(producao)
+        self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 302)
+
+    def test_vendas_ve_o_botao_e_a_tela(self):
+        self.assertContains(self.client.get("/orcamentos/", **HOST), "Importar Word ou PDF (IA)")
+        self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 200)
+
+    def test_a_leitura_de_um_nao_abre_para_outro(self):
+        url = self.importar(docx_com_tabela())
+        outro = User.objects.create_user("outro", "o@exemplo.com", "senha")
+        atribuir_funcoes(outro, ["vendas"])
+        self.client.force_login(outro)
+        self.assertEqual(self.client.get(url, **HOST)["Location"], URL_IMPORTAR)
+
+
+class EnvioDoArquivoTests(_ComUsuario):
+
+    def test_doc_antigo_volta_com_a_instrucao(self):
+        resposta = self.client.post(
+            URL_IMPORTAR, {"arquivo": SimpleUploadedFile("velho.doc", b"\xd0\xcf\x11\xe0" + b"0" * 64)}, **HOST,
+        )
+        self.assertEqual(resposta.status_code, 400)
+        self.assertContains(resposta, "Salvar como", status_code=400)
+
+    def test_pdf_falso_e_recusado(self):
+        resposta = self.client.post(
+            URL_IMPORTAR, {"arquivo": SimpleUploadedFile("orcamento.pdf", b"isto nao e um pdf")}, **HOST,
+        )
+        self.assertContains(resposta, "tem nome de PDF, mas o conteúdo não é de um PDF", status_code=400)
+
+    def test_pdf_sem_a_chave_pede_o_docx_em_vez_de_adivinhar(self):
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "PDF é lido pela IA", status_code=400)
+        self.assertContains(resposta, "importe o .docx", status_code=400)
+
+    def test_o_campo_aceita_word_e_pdf(self):
+        resposta = self.client.get(URL_IMPORTAR, **HOST)
+        self.assertContains(resposta, 'accept=".docx,.pdf,')
+        self.assertContains(resposta, "Word (.docx) ou PDF")
+
+    def test_sem_arquivo(self):
+        self.assertEqual(self.client.post(URL_IMPORTAR, {}, **HOST).status_code, 400)
+
+    def test_o_arquivo_nao_fica_na_sessao(self):
+        url = self.importar(docx_com_tabela())
+        token = url.rstrip("/").split("/")[-1]
+        guardado = self.client.session["importacoes_orcamento_word"][token]
+        self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "criado_em", "autor"})
+        self.assertNotIn("PK", json.dumps(guardado))
+
+    def test_token_inventado_volta_para_o_envio(self):
+        resposta = self.client.get(URL_IMPORTAR + "nao-existe/", **HOST)
+        self.assertEqual(resposta["Location"], URL_IMPORTAR)
+
+
+class SemChaveDaIATests(_ComUsuario):
+
+    def test_a_importacao_funciona_so_com_as_tabelas_e_avisa(self):
+        url = self.importar(docx_com_tabela())
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, "IA indisponível: leitura pelas tabelas do documento; confira com atenção.")
+        self.assertContains(resposta, "R$ 1.919,00")
+        proposta = resposta.context["proposta"]
+        self.assertEqual(len(proposta["itens"]), 3)
+        self.assertEqual(proposta["cliente"]["documento"]["valor"], "11.222.333/0001-81")
+
+    def test_a_tela_de_envio_diz_que_a_ia_esta_desligada(self):
+        self.assertContains(self.client.get(URL_IMPORTAR, **HOST), "IA desligada")
+
+
+class CriacaoTests(_ComUsuario):
+
+    def envio_completo(self, url, **mudancas):
+        proposta, envio = self.proposta_e_envio(url)
+        for item in envio["itens"]:
+            item["conferido"] = True
+        envio.update(mudancas)
+        return proposta, envio
+
+    def test_sem_os_obrigatorios_o_servidor_bloqueia(self):
+        url = self.importar(docx_com_tabela())
+        _, envio = self.proposta_e_envio(url)
+        resposta = self.client.post(url, formulario_de(envio, forma_envio="", whatsapp="",
+                                                       validade="", frete=""), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertEqual(Orcamento.objects.count(), 0)
+        campos = {p["campo"] for p in resposta.context["validado"]["pendencias"]}
+        self.assertTrue({"condicoes.forma_envio", "condicoes.validade", "valores.frete",
+                         "cliente.whatsapp"} <= campos)
+        self.assertContains(resposta, "Falta preencher", status_code=400)
+
+    def test_item_sem_produto_nem_linha_avulsa_bloqueia(self):
+        url = self.importar(docx_com_produto_inexistente())
+        _, envio = self.envio_completo(url, validade=(timezone.localdate() + timedelta(days=5)).isoformat(),
+                                       frete="0,00", forma_pagamento="Pix", forma_envio="Retirada pelo cliente")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("itens.i1.produto", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+
+        envio["itens"][0]["avulsa"] = True
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        item = Orcamento.objects.get().itens.get()
+        self.assertIsNone(item.brinquedo_id)
+        self.assertEqual(item.descricao, "Tobogã gigante inflável 8 m")
+
+    def test_completo_cria_o_rascunho_com_itens_vinculos_e_atividade(self):
+        url = self.importar(docx_com_tabela(), nome="Proposta Buffet Alegria.docx")
+        _, envio = self.envio_completo(url, whatsapp="sim")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(resposta["Location"], f"/orcamentos/?editar={orcamento.pk}")
+        self.assertEqual(orcamento.status, Orcamento.Status.RASCUNHO)
+        self.assertIsNone(orcamento.enviado_em)
+        self.assertEqual(orcamento.responsavel, self.vendedor)
+        self.assertEqual(orcamento.total, Decimal("1919.00"))
+
+        itens = list(orcamento.itens.order_by("id"))
+        self.assertEqual([i.descricao for i in itens], ["Cama elástica 3 m", "Pula-pula", "Mola de reposição"])
+        self.assertEqual(itens[0].brinquedo, self.brinquedos["Cama elástica 3 m"])
+        self.assertEqual(itens[1].brinquedo, self.brinquedos["Pula-pula"])
+        self.assertEqual(itens[2].peca, self.peca)
+        self.assertEqual([i.quantidade for i in itens], [2, 1, 10])
+        self.assertEqual([i.valor_unitario for i in itens], [Decimal("280.00"), Decimal("1234.00"), Decimal("12.50")])
+
+        cliente = orcamento.cliente
+        self.assertEqual(cliente.nome_cliente, "Buffet Alegria Ltda")
+        self.assertEqual(cliente.tipo, Cliente.Tipo.BUFFET)
+        self.assertTrue(cliente.documento_valido)
+        self.assertEqual(AvaliacaoBlocoOrcamento.objects.filter(orcamento=orcamento).count(), 2)
+
+        atividades = list(AtividadeOrcamento.objects.filter(orcamento=orcamento).order_by("id"))
+        principal = atividades[-1]
+        self.assertIn("Proposta Buffet Alegria.docx", principal.resumo)
+        self.assertIn("nada enviado ao cliente", principal.resumo)
+        self.assertEqual(principal.autor, self.vendedor)
+        self.assertTrue(any("«Cama elástica 3m com rede» → Cama elástica 3 m" in a.resumo for a in atividades))
+        # A leitura sai da sessão quando o orçamento nasce.
+        self.assertEqual(self.client.session.get("importacoes_orcamento_word"), {})
+
+    def test_o_que_vem_do_word_sai_no_padrao_do_painel(self):
+        url = self.importar(docx_com_tabela())
+        proposta, envio = self.envio_completo(url, whatsapp="sim")
+        self.assertEqual(envio["telefone"], "(11) 98765-4321")
+        self.assertEqual(envio["email"], "contato@buffetalegria.com.br")
+        self.assertEqual(envio["documento"], "11.222.333/0001-81")
+        self.assertEqual(envio["forma_pagamento"], "Pix")
+        self.assertEqual(envio["forma_envio"], "Entrega Lazer & Sport")
+        self.assertEqual(envio["validade"], (timezone.localdate() + timedelta(days=13)).isoformat())
+        self.assertEqual(envio["itens"][1]["valor_unitario"], "1.234,00")
+        pagamento = proposta["condicoes"]["forma_pagamento"]
+        self.assertTrue(pagamento["normalizado"])
+        self.assertEqual((pagamento["original"], pagamento["valor"]), ("PIX", "Pix"))
+
+        self.client.post(url, formulario_de(envio), **HOST)
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.whatsapp_cliente, "(11) 98765-4321")
+        self.assertEqual(orcamento.cliente.telefone, "(11) 98765-4321")
+        self.assertEqual(orcamento.cliente.canal_telefone, Cliente.CanalTelefone.WHATSAPP)
+        self.assertEqual(orcamento.cliente.documento, "11.222.333/0001-81")
+        self.assertEqual(orcamento.forma_pagamento, "Pix")
+        self.assertTrue(orcamento.observacoes.startswith("Prazo de entrega: 20 dias úteis."))
+
+    def test_a_validade_padrao_e_sugestao_e_nunca_vem_preenchida(self):
+        url = self.importar(docx_com_produto_inexistente())
+        proposta, envio = self.proposta_e_envio(url)
+        self.assertEqual(envio["validade"], "")
+        sugestao = proposta["condicoes"]["validade"]["sugestoes"][0]
+        self.assertEqual(sugestao["valor"], (timezone.localdate() + timedelta(days=5)).isoformat())
+        self.assertEqual(envio["frete"], "")
+        self.assertEqual(proposta["valores"]["frete"]["sugestoes"][0]["valor"], "0,00")
+
+    def test_alerta_vermelho_bloqueia_ate_corrigir_ou_justificar(self):
+        url = self.importar(docx_com_total_errado())
+        proposta, envio = self.envio_completo(
+            url, frete="0,00", forma_envio="Retirada pelo cliente",
+            validade=(timezone.localdate() + timedelta(days=5)).isoformat(),
+        )
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("alerta.soma_total", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+
+        # Justificativa curta demais não vale.
+        envio["justificativas"] = {"soma_total": "ok"}
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+
+        envio["justificativas"] = {"soma_total": "O total do Word somou errado; as linhas conferem."}
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.total, Decimal("1794.00"))
+        aceito = AtividadeOrcamento.objects.filter(orcamento=orcamento, resumo__contains="alerta aceito").get()
+        self.assertIn("O total do Word somou errado", aceito.resumo)
+        self.assertEqual(aceito.autor, self.vendedor)
+
+    def test_corrigir_o_valor_resolve_o_alerta_sem_justificativa(self):
+        """Com frete de R$ 56,00 a conta passa a dar os R$ 1.850,00 do Word."""
+        url = self.importar(docx_com_total_errado())
+        _, envio = self.envio_completo(
+            url, frete="56,00", forma_envio="Transportadora",
+            validade=(timezone.localdate() + timedelta(days=5)).isoformat(),
+        )
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        self.assertFalse(AtividadeOrcamento.objects.filter(resumo__contains="alerta aceito").exists())
+
+    def test_cliente_ja_cadastrado_e_vinculado_sem_alterar_o_cadastro(self):
+        existente = Cliente.objects.create(
+            nome_cliente="Buffet Alegria", email="contato@buffetalegria.com.br",
+            telefone="(11) 3333-4444", canal_telefone=Cliente.CanalTelefone.TELEFONE,
+        )
+        url = self.importar(docx_com_tabela())
+        _, envio = self.envio_completo(url, whatsapp="sim")
+        self.assertEqual(envio["cliente_modo"], "existente")
+        self.assertEqual(envio["cliente_id"], str(existente.pk))
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 302)
+
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.cliente, existente)
+        self.assertEqual(orcamento.whatsapp_cliente, "(11) 98765-4321")
+        existente.refresh_from_db()
+        self.assertEqual(existente.telefone, "(11) 3333-4444")
+        self.assertEqual(Cliente.objects.count(), 1)
+
+    def test_cliente_pelo_nome_pede_confirmacao(self):
+        Cliente.objects.create(nome_cliente="Condomínio Jardim das Flores", email="outro@exemplo.com")
+        url = self.importar(docx_com_produto_inexistente())
+        _, envio = self.envio_completo(
+            url, frete="0,00", forma_pagamento="Pix", forma_envio="Transportadora",
+            validade=(timezone.localdate() + timedelta(days=5)).isoformat(),
+        )
+        envio["itens"][0]["avulsa"] = True
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("cliente.vinculo", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+        envio["cliente_confirmado"] = True
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 302)
+
+    def test_produto_sugerido_pede_confirmacao(self):
+        url = self.importar(docx_com_tabela())
+        _, envio = self.proposta_e_envio(url)
+        envio["whatsapp"] = "sim"
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("itens.i1.conferido", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+
+    def test_trocar_o_produto_pela_busca_vale_como_escolha(self):
+        url = self.importar(docx_com_tabela())
+        _, envio = self.proposta_e_envio(url)
+        envio["whatsapp"] = "sim"
+        envio["itens"][0]["produto"] = f"b:{self.brinquedos['Cama elástica 4 m'].pk}"
+        envio["itens"][0]["valor_unitario"] = "280,00"
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 302)
+        self.assertEqual(Orcamento.objects.get().itens.order_by("id")[0].brinquedo, self.brinquedos["Cama elástica 4 m"])
+
+    def test_desconto_so_em_porcentagem_exige_o_valor(self):
+        conteudo = montar_docx(
+            par("Cliente: Marina Souza") + par("E-mail: marina@exemplo.com")
+            + tabela(["Descrição", "Qtd", "Valor unitário", "Total"], ["Pula-pula", "1", "R$ 1.000,00", "R$ 1.000,00"])
+            + par("Desconto: 10%")
+        )
+        url = self.importar(conteudo)
+        proposta, envio = self.envio_completo(
+            url, frete="0,00", forma_pagamento="Pix", forma_envio="Transportadora",
+            validade=(timezone.localdate() + timedelta(days=5)).isoformat(),
+        )
+        self.assertEqual(proposta["valores"]["desconto"]["sugestoes"][0]["valor"], "100,00")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertIn("valores.desconto", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+        self.assertEqual(self.client.post(url, formulario_de(envio, desconto="100,00"), **HOST).status_code, 302)
+        self.assertEqual(Orcamento.objects.get().total, Decimal("900.00"))
+
+    def test_total_negociado_oferece_o_valor_final_e_nao_escolhe_sozinho(self):
+        url = self.importar(docx_com_valor_negociado())
+        proposta, envio = self.envio_completo(url, forma_envio="Transportadora")
+        self.assertTrue(proposta["valor_final"]["oferecido"])
+        self.assertEqual(proposta["valor_final"]["valor"], "9.800,00")
+        self.assertEqual(proposta["valor_final"]["soma"], "10.200,00")
+        self.assertEqual(envio["total_escolha"], "")
+
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("alerta.soma_total", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+        self.assertContains(resposta, "Qual total vale?", status_code=400)
+
+        resposta = self.client.post(url, formulario_de(envio, total_escolha="valor_final", desconto="50,00"), **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.valor_final, Decimal("9800.00"))
+        self.assertEqual(orcamento.desconto, Decimal("0.00"))
+        self.assertEqual(orcamento.total, Decimal("9800.00"))
+        registro = AtividadeOrcamento.objects.get(orcamento=orcamento, resumo__contains="valor final combinado")
+        self.assertIn("R$ 9.800,00", registro.resumo)
+        self.assertIn("R$ 10.200,00", registro.resumo)
+
+    def test_manter_a_soma_pede_justificativa(self):
+        url = self.importar(docx_com_valor_negociado())
+        _, envio = self.envio_completo(url, forma_envio="Transportadora", total_escolha="soma")
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 400)
+        envio["justificativas"] = {"soma_total": "O cliente pediu a proposta cheia, sem o valor fechado."}
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 302)
+        orcamento = Orcamento.objects.get()
+        self.assertIsNone(orcamento.valor_final)
+        self.assertEqual(orcamento.total, Decimal("10200.00"))
+        self.assertTrue(AtividadeOrcamento.objects.filter(
+            orcamento=orcamento, resumo__contains="O cliente pediu a proposta cheia").exists())
+
+    def test_descartar_apaga_a_leitura(self):
+        url = self.importar(docx_com_tabela())
+        resposta = self.client.post(url, {"action": "descartar"}, **HOST)
+        self.assertEqual(resposta["Location"], "/orcamentos/")
+        self.assertEqual(self.client.get(url, **HOST)["Location"], URL_IMPORTAR)
+
+    def test_o_rascunho_abre_na_tela_normal_de_edicao(self):
+        url = self.importar(docx_com_tabela())
+        _, envio = self.envio_completo(url, whatsapp="sim")
+        destino = self.client.post(url, formulario_de(envio), **HOST)["Location"]
+        resposta = self.client.get(destino, **HOST)
+        self.assertEqual(resposta.status_code, 200)
+        dados = {o["id"]: o for o in resposta.context["orcamentos_dados"]}
+        orcamento = Orcamento.objects.get()
+        self.assertTrue(dados[orcamento.pk]["pode_editar"])
+        self.assertEqual(len(dados[orcamento.pk]["itens"]), 3)
+
+
+# ======================================================================
+# 7. A IA (com o cliente do SDK trocado por um falso)
+# ======================================================================
+class ClienteFalso:
+    """Faz o papel de `anthropic.Anthropic()` sem rede nenhuma."""
+
+    def __init__(self, leitura=None, escolhas=None, *, parar="end_turn", erro=None, sem_fallback=False,
+                 transcricao=None):
+        self.leitura = leitura
+        self.transcricao = transcricao
+        self.escolhas = escolhas or []
+        self.parar = parar
+        self.erro = erro
+        self.sem_fallback = sem_fallback
+        self.chamadas = []
+        self.beta = SimpleNamespace(messages=SimpleNamespace(parse=self.parse, create=self.create))
+
+    def parse(self, **argumentos):
+        if self.sem_fallback and "fallbacks" in argumentos:
+            raise TypeError("parse() got an unexpected keyword argument 'fallbacks'")
+        self.chamadas.append(("parse", argumentos))
+        if self.erro:
+            raise self.erro
+        formato = argumentos["output_format"]
+        if formato is ia.EscolhasDeProdutos:
+            dados = ia.EscolhasDeProdutos(escolhas=self.escolhas)
+        elif formato is ia.PdfLido:
+            dados = ia.PdfLido.model_validate({"linhas": self.transcricao or [], "orcamento": self.leitura})
+        else:
+            dados = ia.OrcamentoLido.model_validate(self.leitura)
+        return SimpleNamespace(stop_reason=self.parar, parsed_output=dados, model="claude-opus-5-5",
+                               stop_details=SimpleNamespace(category="cyber"), content=[])
+
+    def create(self, **argumentos):
+        self.chamadas.append(("create", argumentos))
+        texto = json.dumps(self.leitura)
+        return SimpleNamespace(stop_reason=self.parar, model="claude-opus-5-5",
+                               content=[SimpleNamespace(type="text", text=texto)])
+
+
+def leitura_ia_do_exemplo_com_tabela():
+    dados = leitura_ia_vazia()
+    dados["cliente"]["nome"] = campo_ia("Buffet Alegria Ltda", "P3")
+    dados["cliente"]["documento"] = campo_ia("11.222.333/0001-81", "P4")
+    dados["cliente"]["contato"] = campo_ia("Marina Souza", "P5")
+    dados["cliente"]["telefone"] = campo_ia("(11) 98765-4321", "P6")
+    dados["itens"] = [
+        item_ia("Cama elástica 3m com rede", "2", "R$ 280,00", "R$ 560,00", "T1L2"),
+        item_ia("Pula pula", "1", "R$ 1.234", "R$ 1.234,00", "T1L3"),
+        item_ia("Mola de reposição", "10 un", "12,50", "125,00", "T1L4"),
+    ]
+    dados["total_geral"] = campo_ia("R$ 1.919,00", "T1L5C4")
+    dados["frete"] = campo_ia("grátis", "P7", "Frete: grátis")
+    dados["validade"] = campo_ia("15 dias", "P8")
+    dados["forma_pagamento"] = campo_ia("PIX", "P9")
+    dados["prazo_entrega"] = campo_ia("20 dias úteis", "P11")
+    return dados
+
+
+@override_settings(ORCAMENTO_IA_MODELO="claude-opus-5-5")
+class IATests(_ComUsuario):
+
+    def setUp(self):
+        super().setUp()
+        ambiente = mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "chave-de-teste"})
+        ambiente.start()
+        self.addCleanup(ambiente.stop)
+
+    def com_cliente(self, falso):
+        trocar = mock.patch.object(ia, "_cliente", return_value=falso)
+        trocar.start()
+        self.addCleanup(trocar.stop)
+        return falso
+
+    def test_a_chamada_usa_o_modelo_o_esforco_o_fallback_e_o_esquema(self):
+        falso = self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela()))
+        dados, modelo = ia.ler_orcamento("[P1] teste")
+        self.assertEqual(modelo, "claude-opus-5-5")
+        self.assertEqual(dados["cliente"]["nome"]["texto"], "Buffet Alegria Ltda")
+        _, argumentos = falso.chamadas[0]
+        self.assertEqual(argumentos["model"], "claude-opus-5-5")
+        self.assertEqual(argumentos["max_tokens"], 16000)
+        self.assertEqual(argumentos["output_config"], {"effort": "high"})
+        self.assertIs(argumentos["output_format"], ia.OrcamentoLido)
+        self.assertEqual(argumentos["betas"], ["server-side-fallback-2026-07-01"])
+        self.assertEqual(argumentos["fallbacks"], "default")
+        self.assertNotIn("thinking", argumentos)
+        self.assertIn("[P1] teste", argumentos["messages"][0]["content"])
+
+    def test_sdk_sem_fallback_no_parse_usa_o_create_com_esquema(self):
+        falso = self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), sem_fallback=True))
+        dados, _ = ia.ler_orcamento("[P1] teste")
+        self.assertEqual(dados["frete"]["texto"], "grátis")
+        tipo, argumentos = falso.chamadas[0]
+        self.assertEqual(tipo, "create")
+        self.assertEqual(argumentos["output_config"]["format"]["type"], "json_schema")
+        self.assertEqual(argumentos["output_config"]["effort"], "high")
+
+    def test_recusa_e_corte_nao_viram_leitura(self):
+        self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), parar="refusal"))
+        with self.assertRaisesMessage(ia.IAIndisponivel, "recusou"):
+            ia.ler_orcamento("[P1] teste")
+
+    def test_erros_do_sdk_viram_mensagem_clara(self):
+        import anthropic
+        import httpx2
+
+        pedido = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+        casos = (
+            (anthropic.RateLimitError("limite", response=httpx2.Response(429, request=pedido), body=None), "limite de uso"),
+            (anthropic.InternalServerError("falha", response=httpx2.Response(500, request=pedido), body=None), "erro 500"),
+            (anthropic.APIConnectionError(request=pedido), "não consegui falar"),
+            (anthropic.APITimeoutError(request=pedido), "prazo"),
+        )
+        for erro, mensagem in casos:
+            with self.subTest(erro=type(erro).__name__):
+                with mock.patch.object(ia, "_cliente", return_value=ClienteFalso(erro=erro)):
+                    with self.assertRaisesMessage(ia.IAIndisponivel, mensagem):
+                        ia.ler_orcamento("[P1] teste")
+
+    def test_a_escolha_de_produto_so_aceita_id_da_lista(self):
+        self.com_cliente(ClienteFalso(escolhas=[
+            ia.EscolhaDeProduto(item=1, produto="b:1"),
+            ia.EscolhaDeProduto(item=2, produto="b:999"),
+            ia.EscolhaDeProduto(item=3, produto="nenhum"),
+        ]))
+        escolhas = ia.escolher_produtos([
+            {"item": 1, "descricao": "a", "candidatos": [{"id": "b:1", "nome": "A", "grupo": "Brinquedos"}]},
+            {"item": 2, "descricao": "b", "candidatos": [{"id": "b:2", "nome": "B", "grupo": "Brinquedos"}]},
+            {"item": 3, "descricao": "c", "candidatos": [{"id": "b:3", "nome": "C", "grupo": "Brinquedos"}]},
+        ])
+        self.assertEqual(escolhas, {1: "b:1"})
+
+    def test_importacao_com_ia_le_confere_e_marca_a_origem(self):
+        cama = self.brinquedos["Cama elástica 3 m"]
+        falso = self.com_cliente(ClienteFalso(
+            leitura_ia_do_exemplo_com_tabela(),
+            escolhas=[ia.EscolhaDeProduto(item=1, produto=f"b:{cama.pk}")],
+        ))
+        url = self.importar(docx_com_tabela())
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, "lido com IA (claude-opus-5-5)")
+        self.assertContains(resposta, "O texto do documento foi enviado à Anthropic")
+        self.assertNotContains(resposta, "IA indisponível")
+        proposta = resposta.context["proposta"]
+        self.assertEqual(proposta["itens"][1]["valor_unitario"]["origem"], "ambas")
+        self.assertEqual(proposta["cliente"]["contato"]["valor"], "Marina Souza")
+        produto = proposta["itens"][0]["produto"]
+        self.assertTrue(produto["por_ia"])
+        self.assertEqual(produto["confianca"], "media")
+        # Uma chamada para ler e uma para escolher os produtos em dúvida.
+        self.assertEqual([a["output_format"] for _, a in falso.chamadas],
+                         [ia.OrcamentoLido, ia.EscolhasDeProdutos])
+
+    def test_ia_que_falha_cai_na_leitura_das_tabelas_com_o_motivo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), parar="refusal"))
+        url = self.importar(docx_com_tabela())
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, "IA indisponível: leitura pelas tabelas do documento; confira com atenção.")
+        self.assertContains(resposta, "a IA recusou ler este documento")
+        self.assertEqual(len(resposta.context["proposta"]["itens"]), 3)
+
+
+class PdfTests(IATests):
+    """O PDF vai inteiro para o Claude, e volta transcrito e lido."""
+
+    def transcricao(self):
+        # A mesma transcrição que a IA faria do PDF gerado a partir do
+        # orçamento de exemplo: as linhas do .docx, com os mesmos ids.
+        return [{"id": linha["id"], "texto": linha["texto"]} for linha in linhas_de(docx_com_tabela())]
+
+    def test_o_pdf_vai_como_documento_e_volta_para_a_conferencia(self):
+        falso = self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
+        url = self.importar(montar_pdf(), nome="Orcamento Buffet.pdf")
+        _, argumentos = falso.chamadas[0]
+        self.assertIs(argumentos["output_format"], ia.PdfLido)
+        documento, pergunta = argumentos["messages"][0]["content"]
+        self.assertEqual(documento["type"], "document")
+        self.assertEqual(documento["source"]["type"], "base64")
+        self.assertEqual(documento["source"]["media_type"], "application/pdf")
+        self.assertEqual(base64.b64decode(documento["source"]["data"]), montar_pdf())
+        self.assertNotIn("\n", documento["source"]["data"])
+        self.assertEqual(pergunta["type"], "text")
+        self.assertEqual(argumentos["fallbacks"], "default")
+
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, "PDF lido pela IA")
+        self.assertContains(resposta, "O PDF foi enviado à Anthropic")
+        proposta = resposta.context["proposta"]
+        self.assertEqual(proposta["formato"], "pdf")
+        self.assertEqual(len(proposta["itens"]), 3)
+        # Concordância dentro da mesma transcrição não é prova independente.
+        self.assertEqual(proposta["itens"][1]["valor_unitario"]["origem"], "ambas")
+        self.assertEqual(proposta["itens"][1]["valor_unitario"]["confianca"], "media")
+        self.assertIn("transcrito do PDF", proposta["itens"][1]["valor_unitario"]["nota"])
+
+    def test_do_pdf_ao_rascunho_com_o_mesmo_padrao(self):
+        self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
+        url = self.importar(montar_pdf(), nome="Orcamento Buffet.pdf")
+        _, envio = self.proposta_e_envio(url)
+        for item in envio["itens"]:
+            item["conferido"] = True
+        envio.update(whatsapp="sim", forma_envio="Entrega Lazer & Sport")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.status, Orcamento.Status.RASCUNHO)
+        self.assertEqual(orcamento.total, Decimal("1919.00"))
+        self.assertEqual(orcamento.forma_pagamento, "Pix")
+        principal = AtividadeOrcamento.objects.filter(orcamento=orcamento).order_by("-id").first()
+        self.assertIn("Importado do PDF «Orcamento Buffet.pdf»", principal.resumo)
+
+    def test_pdf_que_volta_sem_texto_pede_outro_arquivo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[]))
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("scan.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "sem texto legível", status_code=400)
+        self.assertNotIn("importacoes_orcamento_word", self.client.session)
+
+    def test_pdf_sem_orcamento_dentro_pergunta_se_e_o_arquivo_certo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[{"id": "P1", "texto": "Ata da reunião"}]))
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("ata.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "não encontrei nele um orçamento", status_code=400)
+
+    def test_pdf_que_a_ia_nao_leu_diz_o_motivo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[], parar="refusal"))
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "Não consegui ler o PDF: a IA recusou", status_code=400)
+
+
+# ======================================================================
+# 8. A TELA SEGUE O TEMA
+# ======================================================================
+class FolhaDaTelaTests(SimpleTestCase):
+
+    def test_a_folha_nao_tem_cor_escrita_a_mao_e_toda_variavel_tem_dono(self):
+        import re
+        from pathlib import Path
+
+        base = Path(__file__).resolve().parent / "static" / "interno"
+        folha = (base / "importacao-word.css").read_text(encoding="utf-8")
+        sem_comentarios = re.sub(r"/\*.*?\*/", "", folha, flags=re.S)
+        self.assertEqual(re.findall(r"#[0-9a-fA-F]{3,8}\b", sem_comentarios), [])
+        definidas = set(re.findall(r"(--[a-z0-9-]+)\s*:", (base / "interno_modern.css").read_text(encoding="utf-8")))
+        usadas = set(re.findall(r"var\(\s*(--[a-z0-9-]+)\s*\)", sem_comentarios))
+        self.assertEqual(sorted(usadas - definidas), [])

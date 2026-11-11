@@ -18,6 +18,14 @@
       <i class="bi bi-graph-up-arrow me-1"></i> Financeiro
     </a>
     {% endif %}
+    {% comment %}
+      O orçamento que chega em Word ou PDF não precisa ser digitado de novo: a
+      importação lê, confere cada valor na fonte e entrega o rascunho.
+      Mesma permissão do "Novo orçamento" -- a importação também CRIA.
+    {% endcomment %}
+    {% if pode_criar_orcamento %}<a href="{% url 'importar_orcamento_word' %}" class="btn btn-outline-success" id="importarWord">
+      <i class="bi bi-file-earmark-arrow-up me-1"></i> Importar Word ou PDF (IA)
+    </a>{% endif %}
     {% if pode_criar_orcamento %}<button type="button" class="btn btn-success" id="novoOrcamento">
       <i class="bi bi-plus-lg me-1"></i> Novo orçamento
     </button>{% endif %}
