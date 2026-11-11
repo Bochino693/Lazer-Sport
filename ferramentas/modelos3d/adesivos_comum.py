@@ -1,4 +1,4 @@
-"""O recorte das folhas de adesivos da fábrica (Air Game Kids Alienígenas, Basquete Street Quadrinhos).
+"""O recorte das folhas de adesivos da fábrica (Air Game Kids Alienígenas, Basquete Home Quadrinhos).
 
 Cada máquina com adesivos tem, na pasta dela (ferramentas/modelos3d/<id>/):
 
@@ -278,7 +278,7 @@ def _sem_faixa_lisa(peca, tolerancia=28, fracao=0.97, sobra=6):
 def _furos(peca, dados):
     """Os recortes VAZADOS da peça: os brancos de dentro da `caixa` de `furos` (em frações da peça).
 
-    A bola da lateral de fora do Basquete Street Quadrinhos é vazada: os gomos
+    A bola da lateral de fora do Basquete Home Quadrinhos é vazada: os gomos
     brancos da folha são recortes que atravessam a chapa. Cada furo é um pedaço
     ligado de pixels quase brancos (todos os canais acima de `branco`) que fica
     inteiro dentro da caixa e tem pelo menos `area` px (as letras brancas e os

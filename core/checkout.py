@@ -240,7 +240,8 @@ def reservar_pedido(carrinho, usuario=None):
             pedido=pedido,
             content_type=item.content_type,
             object_id=item.object_id,
-            nome_item=str(item.item) if item.item else "Produto removido",
+            # com o adesivo escolhido, quando há: a equipe sabe qual arte foi pedida
+            nome_item=item.nome_com_adesivo,
             tipo_item=item.content_type.model,
             preco_unitario=valor_monetario(item.preco_unitario) or Decimal("0.00"),
             quantidade=item.quantidade,

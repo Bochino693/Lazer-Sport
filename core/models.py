@@ -563,6 +563,63 @@ class ImagemBrinquedo(Prime):
 
 
 
+class VarianteAdesivo(Prime):
+    """Um ADESIVO de um produto: a mesma máquina com outra arte (LEIA-ME, seção 72).
+
+    O cliente: "os dois devem se tornar o mesmo objeto, como um adesivo
+    diferente, ele quem deve ser o diferencial". O produto é um só (o card, a
+    página, o carrinho); o adesivo é a escolha dentro dele -- as fotos e o 3D
+    de cada um.
+
+    AS FOTOS E O 3D DE CADA ADESIVO são os de um produto do cadastro, a
+    `origem`: o adesivo padrão é o próprio produto (`origem` vazia: as fotos e
+    o objeto 3D dele); o outro adesivo aponta para a ficha que tinha as fotos
+    e o .glb dele -- a que era um produto à parte, agora DESATIVADA (sai das
+    listas) e redirecionada para cá (`?adesivo=<slug>`). Nada é copiado nem
+    apagado: pedidos, orçamentos e favoritos que apontam para ela continuam
+    valendo, e o painel continua editando as fotos de cada adesivo na ficha
+    dele. Para juntar outro par: um adesivo para cada ficha e a de fora
+    desativada (core/variantes.py, `juntar`).
+    """
+
+    brinquedo = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.CASCADE,
+        related_name="variantes_adesivo",
+        verbose_name="Produto",
+    )
+    nome = models.CharField(max_length=60, verbose_name="Adesivo", help_text="Como aparece na escolha: \"Alienígenas\".")
+    slug = models.SlugField(max_length=60, verbose_name="No endereço", help_text="?adesivo=<este> abre a página neste adesivo.")
+    ordem = models.PositiveSmallIntegerField(default=1, verbose_name="Ordem")
+    padrao = models.BooleanField(default=False, verbose_name="Padrão", help_text="O adesivo que a página abre.")
+    origem = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="variante_de",
+        verbose_name="Fotos e 3D de",
+        help_text="A ficha com as fotos e o objeto 3D deste adesivo; vazio, as do próprio produto.",
+    )
+
+    class Meta:
+        verbose_name = "Adesivo do produto"
+        verbose_name_plural = "Adesivos do produto"
+        ordering = ["ordem", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["brinquedo", "slug"], name="uniq_variante_adesivo_slug"),
+        ]
+
+    def __str__(self):
+        return f"{self.brinquedo} — adesivo {self.nome}"
+
+    @property
+    def ficha(self):
+        """O produto com as fotos e o 3D deste adesivo (a origem, ou o próprio produto)."""
+        return self.origem or self.brinquedo
+
+
+
 def _armazenamento_3d():
     # chamado pelo campo (e não na hora do import): a escolha acompanha o
     # settings de cada ambiente, inclusive o dos testes
@@ -1681,6 +1738,8 @@ class ItemCarrinho(Prime):
     item = GenericForeignKey('content_type', 'object_id')
 
     quantidade = models.PositiveIntegerField(default=1)
+    # o adesivo escolhido na página do produto (VarianteAdesivo.nome): a equipe sabe qual foi pedido
+    adesivo = models.CharField(max_length=60, blank=True, default="", verbose_name="Adesivo")
 
     @property
     def preco_unitario(self):
@@ -1712,7 +1771,14 @@ class ItemCarrinho(Prime):
         )
 
     def __str__(self):
-        return f"{self.item} (x{self.quantidade})"
+        adesivo = f" — adesivo {self.adesivo}" if self.adesivo else ""
+        return f"{self.item}{adesivo} (x{self.quantidade})"
+
+    @property
+    def nome_com_adesivo(self):
+        """O nome do item como vai para o pedido: com o adesivo escolhido, quando há."""
+        nome = str(self.item) if self.item else "Produto removido"
+        return f"{nome} — adesivo {self.adesivo}" if self.adesivo else nome
 
 
 from django.db import transaction
@@ -1933,10 +1999,13 @@ class Pedido(Prime):
                 # item fantasma sem preço.
                 continue
 
+            # o adesivo escolhido volta com o item (o pedido o guarda no nome: "— adesivo X")
+            adesivo = item.nome_item.rsplit(" — adesivo ", 1)[1] if " — adesivo " in (item.nome_item or "") else ""
             linha, criado = ItemCarrinho.objects.get_or_create(
                 carrinho=carrinho,
                 content_type_id=item.content_type_id,
                 object_id=item.object_id,
+                adesivo=adesivo,
                 defaults={"quantidade": item.quantidade},
             )
             if not criado:

@@ -27,6 +27,14 @@ supersampling) e aqui é reduzido com o filtro Lanczos -- as bordas, as
 texturas e as sombras sem serrilhado. Na capa, o lugar desfoca pouco (como
 nas imagens da fábrica, o salão inteiro se lê) e o brilho das luzes é leve.
 
+O BRINQUEDO VIVO (LEIA-ME, seção 72). O cliente: "veja se vc consegue deixar
+mais vivo os brinquedos nas fotos". Nas fotos de produto (as capas do
+catálogo, as capas e as vistas dos nossos 3D), só NO BRINQUEDO (a máscara;
+o fundo fica como está): a cor mais viva -- o "vibrance", que puxa mais a
+cor fraca e quase nada a que já é forte, e nada o branco, o cinza e o preto
+(sem estourar nem mudar o tom) --, o contraste local (a "clareza": o volume
+das peças e a arte dos adesivos) e um tico de contraste. `VIVO` diz quanto.
+
 O ARQUIVO fica abaixo de ~250 KB: a qualidade do WebP desce até caber.
 
     python ferramentas/categorias/compor.py                    (todas as que têm render)
@@ -62,6 +70,11 @@ DESFOQUE = 8
 DESFOQUE_CAPA = 3
 #: Na capa do catálogo, o fundo desfoca como numa foto (a profundidade de campo da câmera).
 DESFOQUE_PRODUTO = 9
+#: O brinquedo vivo (só no produto, nas fotos de produto): o vibrance (quanto a cor fraca sobe), a
+#: clareza (o contraste local: o raio, em fração da largura, e a força em %), o contraste, o teto e
+#: o piso (a luz, 0-255, acima e abaixo da qual a clareza e o contraste somem: o branco não estoura
+#: e o preto não empasta).
+VIVO = {"vibrance": 0.42, "clareza_raio": 1 / 90, "clareza": 22, "contraste": 1.05, "teto": 205, "piso": 48}
 #: As folgas, em fração da foto final: (esquerda, cima, direita, baixo).
 FOLGAS = (0.065, 0.13, 0.065, 0.075)
 
@@ -160,8 +173,11 @@ def compor_no_lugar(chave):
     foto = foto.filter(ImageFilter.UnsharpMask(radius=1.0, percent=40, threshold=2))
     if produto or capa:
         # a foto de produto: o produto bem nítido (a arte dos adesivos se lê; o fundo já está desfocado)
+        no_produto = mascara.resize(foto.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(2))
         nitido = foto.filter(ImageFilter.UnsharpMask(radius=1.8, percent=90, threshold=2))
-        foto = Image.composite(nitido, foto, mascara.resize(foto.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(2)))
+        foto = Image.composite(nitido, foto, no_produto)
+        # e vivo: a cor, o volume e o contraste, só nele
+        foto = Image.composite(vivo(foto), foto, no_produto)
     if produto:
         # a capa do catálogo, como uma foto: a cor como está (nada de saturar), o brilho só
         # nas lâmpadas, a vinheta leve e um grão bem fino
@@ -170,6 +186,32 @@ def compor_no_lugar(chave):
         # a capa: as cores limpas, o brilho só nos spots e a vinheta quase nada
         return vinheta(brilho(vida(foto, cor=1.06, contraste=1.03), forca=0.35), forca=0.08)
     return vinheta(brilho(vida(foto)))
+
+
+def vivo(foto, vibrance=None, clareza=None, contraste=None):
+    """O brinquedo mais vivo, sem estourar: o vibrance, a clareza e um tico de contraste (`VIVO`).
+
+    O vibrance: a saturação s vira s + k·s·(1 - s/255) -- a cor fraca sobe, a
+    forte quase não muda e o branco, o cinza e o preto (s = 0) ficam como
+    estão; o tom e a luz não mudam. A clareza: o unsharp de raio largo, que
+    dá volume às peças sem serrilhar as bordas.
+    """
+    vibrance = VIVO["vibrance"] if vibrance is None else vibrance
+    clareza = VIVO["clareza"] if clareza is None else clareza
+    contraste = VIVO["contraste"] if contraste is None else contraste
+    h, s, v = foto.convert("HSV").split()
+    s = s.point(lambda x: min(255, round(x + vibrance * x * (255 - x) / 255)))
+    foto = Image.merge("HSV", (h, s, v)).convert("RGB")
+    raio = max(2, round(foto.width * VIVO["clareza_raio"]))
+    forte = foto.filter(ImageFilter.UnsharpMask(radius=raio, percent=clareza, threshold=3))
+    forte = ImageEnhance.Contrast(forte).enhance(contraste)
+    # sem estourar nem empretecer: no que já é quase branco (a luz acima de `VIVO["teto"]`) e no
+    # que já é quase preto (abaixo de `VIVO["piso"]`), a clareza e o contraste somem aos poucos --
+    # o branco não vira chapado, o brilho não cresce e o preto do gabinete guarda os detalhes
+    teto, piso = VIVO["teto"], VIVO["piso"]
+    claro = v.point(lambda x: 0 if x < teto else min(255, (x - teto) * 255 // max(1, 250 - teto)))
+    escuro = v.point(lambda x: 0 if x > piso else min(255, (piso - x) * 255 // max(1, piso - 6)))
+    return Image.composite(foto, forte, ImageChops.lighter(claro, escuro))
 
 
 def vida(foto, cor=1.12, contraste=1.05):

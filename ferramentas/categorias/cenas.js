@@ -129,7 +129,7 @@ const GLB_DO_PRODUTO = {
   "brinquedao-modelo-2": "Brinquedão Modelo 2", "brinquedao-modelo-3": "Brinquedão Modelo 3", "brinquedao-modelo-4": "Brinquedão Modelo 4",
   "brinquedao-modelo-5": "Brinquedão Modelo 5",
   "brinquedao-ninja": "Brinquedão Ninja", "espaco-esportivo-modelo-1": "Espaço Esportivo Modelo 1", "strike-kids": "Strike Kids",
-  "air-game-kids-alienigenas": "Air Game Kids Alienígenas", "basquete-street-quadrinhos": "Basquete Street Quadrinhos",
+  "air-game-kids-alienigenas": "Air Game Kids Alienígenas", "basquete-street-quadrinhos": "Basquete Home Quadrinhos",
   "trampolim-enterrada": "Trampolim de Enterrada", "trampolim-enterrada-espuma": "Trampolim de Enterrada",
 };
 
@@ -446,7 +446,7 @@ const CENAS = {
     lugar: "gamezone", lente: 40, giro: 14, altura: 10, ocupa: 0.66,
     lugarOp: { fundo: [] },
   },
-  // Eletrônicos: o Basquete Street Quadrinhos, o Strike Kids e o Air Game Kids Alienígenas (3D) e o Mundo Zumbi (foto),
+  // Eletrônicos: o Basquete Home Quadrinhos, o Strike Kids e o Air Game Kids Alienígenas (3D) e o Mundo Zumbi (foto),
   // em fila e com espaço entre eles (o Air Game à direita, na frente de nenhum)
   eletronicos: {
     maquinas: async () => grupo(
@@ -510,7 +510,7 @@ const CENAS = {
     naTela: naFrente([[0.82, -0.84, 6, "comemorando", -30]]),
     lugar: "salao", lente: 40, giro: 10, altura: 12,
   },
-  // Competitivos: o Basquete Street Quadrinhos (3D) e o Basquete Street (foto) lado a lado, e o Air Game Premium (foto)
+  // Competitivos: o Basquete Home Quadrinhos (3D) e o Basquete Street (foto) lado a lado, e o Air Game Premium (foto)
   // à direita -- nenhum na frente do outro (o basquete de hoje, com a rampa, aparece inteiro)
   competitivos: {
     maquinas: async () => grupo(
@@ -525,7 +525,7 @@ const CENAS = {
     lugar: "gamezone", lente: 40, giro: 22, altura: 11,
     lugarOp: { fundo: [] },
   },
-  // Famosos: o Basquete Street Quadrinhos (3D), o Sonic Dash, o Homem Aranha e o Pac Man (fotos) no palco do shopping
+  // Famosos: o Basquete Home Quadrinhos (3D), o Sonic Dash, o Homem Aranha e o Pac Man (fotos) no palco do shopping
   famosos: {
     maquinas: async () => {
       const palco = new T.Group();
@@ -548,7 +548,7 @@ const CENAS = {
     lugar: "shopping", lente: 40, giro: 14, altura: 13, ocupa: 0.7,
     lugarOp: { confete: true, fundo: [] },
   },
-  // Esportivos: o Basquete Street Quadrinhos (3D), o Show de Bola e o Basquete Home (fotos), em fila, na quadra
+  // Esportivos: o Basquete Home Quadrinhos (3D), o Show de Bola e o Basquete Home (fotos), em fila, na quadra
   esportivos: {
     maquinas: async () => grupo(
       await glb("basquete-street-quadrinhos", { x: -2.1, z: -0.3, r: 14 }),
@@ -655,7 +655,7 @@ const CAPAS = {
     lugar: "showroom", lente: 40, giro: 30, altura: 16, ocupa: 0.78,
     lugarOp: { cenario: "plantas", deslocar: 0.6, semente: 91 },
   },
-  // o Basquete Street Quadrinhos, de 3/4 (o console, a rampa e a lateral)
+  // o Basquete Home Quadrinhos, de 3/4 (o console, a rampa e a lateral)
   "basquete-street-quadrinhos": {
     maquinas: async () => glb("basquete-street-quadrinhos"),
     lugar: "showroom", lente: 40, giro: 26, altura: 6, ocupa: 0.82,

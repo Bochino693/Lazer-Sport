@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static avisos l10n %}
+{% load adesivos %}
 {% load fotos %}
 
 {% block title %}{{ categoria.nome_categoria }} | Lazer &amp; Sport{% endblock %}
@@ -221,6 +222,7 @@
                                              loading="lazy"
                                              decoding="async">
                                     {% endif %}
+                                    {% adesivos_do_card item.id %}
                                 </div>
 
                                 <div class="card-mini-info">

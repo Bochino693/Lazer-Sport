@@ -135,6 +135,11 @@
                         <button class="produto-ver-3d" type="button" data-visor3d-abrir aria-pressed="false">
                             <i class="fa-solid fa-cube" aria-hidden="true"></i> Ver em 3D
                         </button>
+                    {% elif adesivo_com_3d %}
+                        {# este adesivo só tem fotos; o 3D é o do outro adesivo: o botão diz e leva até ele #}
+                        <a class="produto-ver-3d produto-ver-3d--outro" href="?adesivo={{ adesivo_com_3d.slug }}#bread">
+                            <i class="fa-solid fa-cube" aria-hidden="true"></i> 3D no adesivo {{ adesivo_com_3d.nome }}
+                        </a>
                     {% endif %}
                 </div>
 
@@ -184,6 +189,27 @@
             <section class="produto-conteudo" id="produto-informacoes">
                 <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
                 <h1>{{ brinquedo.nome_brinquedo }}</h1>
+
+                {% if variantes %}
+                    {% comment %}
+                      OS ADESIVOS (core/variantes.py): a mesma máquina com outra arte. Cada
+                      ficha leva à página no adesivo dela (?adesivo=<slug>): as fotos, o 3D
+                      e o pedido mudam com ela, e o endereço pode ser compartilhado.
+                    {% endcomment %}
+                    <div class="produto-adesivos" role="group" aria-label="Escolha o adesivo">
+                        <span class="produto-adesivos-rotulo">Adesivo:</span>
+                        {% for variante in variantes %}
+                            <a class="produto-adesivo{% if variante.slug == adesivo.slug %} ativo{% endif %}"
+                               href="?adesivo={{ variante.slug }}#bread"
+                               data-adesivo="{{ variante.slug }}"
+                               {% if variante.slug == adesivo.slug %}aria-current="true"{% endif %}>
+                                {% if variante.capa %}<img src="{{ variante.capa }}" alt="" width="34" height="34" loading="lazy">{% endif %}
+                                <span>{{ variante.nome }}</span>
+                                {% if variante.objeto_3d %}<i class="fa-solid fa-cube" aria-hidden="true" title="Tem 3D"></i>{% endif %}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
                 {% if brinquedo.avaliacao %}
                     <div class="produto-avaliacao">
@@ -317,6 +343,7 @@
                         data-url-carrinho="{% url 'carrinho' %}"
                     >
                         {% csrf_token %}
+                        {% if adesivo %}<input type="hidden" name="adesivo" value="{{ adesivo.nome }}">{% endif %}
                         <div class="produto-quantidade-linha">
                             <label for="quantidade-produto">Quantidade</label>
                             <div class="produto-quantidade">
@@ -716,7 +743,8 @@
             const mensagem = [
                 'Olá! Gostaria de um orçamento sob medida.',
                 '',
-                'Brinquedo: {{ brinquedo.nome_brinquedo|escapejs }}',
+                'Brinquedo: {{ brinquedo.nome_brinquedo|escapejs }}',{% if adesivo %}
+                'Adesivo: {{ adesivo.nome|escapejs }}',{% endif %}
                 '',
                 'Medidas desejadas:',
                 ...medidas,

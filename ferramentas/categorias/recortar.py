@@ -12,7 +12,8 @@ O RECORTE:
   * "pronto": a foto do catálogo já vem recortada (as "removebg" e
     "Photoroom"): só se apara a sobra transparente;
   * "branco": o fundo é branco liso: some o branco que encosta na borda
-    (o branco de dentro da máquina fica); "branco+buracos": também o branco
+    (o branco de dentro da máquina fica, menos os FUROS DE VERDADE, abaixo);
+    "branco+buracos": também o branco
     grande cercado pela máquina (o vão de um arco); "branco+furinhos": também
     o branco pequeno cercado (o miolo de um cabo enrolado); "branco-claro": só
     o branco quase puro (a bobina branca dos cabos fica); "escuro": a peça
@@ -21,6 +22,26 @@ O RECORTE:
   * uma lista de pontos: o contorno da máquina, desenhado à mão sobre a
     foto (o Boliche Virtual só tem fotos na loja, com o fundo da loja).
 A foto vai como é: nada redesenhado, nenhum logo acrescentado.
+
+OS FUROS DE VERDADE (LEIA-ME, seção 72). O cliente, sobre o card do Basquete
+Home: "no braço é furado, aquela parte branca deve ser furada, se atente
+nisso em outros também". O vão é o fundo da foto visto através da máquina,
+e no showroom tem de mostrar o showroom:
+  * no fundo branco ("branco", "branco+buracos"...), a mancha branca CERCADA
+    pela máquina vira furo quando é o próprio fundo: grande (mais de
+    `FURO_MINIMO` da foto), lisa (o desvio da luz baixo) e da cor do fundo da
+    foto (a mesma luz, sem cor nenhuma). A arte branca (letreiros, balões,
+    o tampo branco de uma mesa, as luzes) tem textura, tom ou cor e fica;
+  * "+chao": a sombra cinza-clara do estúdio no chão, entre os pés (o Air
+    Game Premium), também é fundo;
+  * nas fotos já recortadas ("pronto"), o recorte de fora tirou o fundo de
+    volta da máquina, mas não o que se via ATRAVÉS dela: na rede do Basquete
+    Street ficaram a parede e as caixas da loja. REDES dá, à mão, a área de
+    cada rede na foto; ali some o que é claro e sem cor (a parede) ou de tom
+    quente (as caixas), e ficam os fios da rede e os tubos.
+Conferido em todas as fotos (as manchas brancas cercadas que sobravam):
+só o braço do Basquete Home, a rede do Basquete Street e o chão do Air Game
+Premium eram fundo; o resto é arte ou peça da máquina.
 
     python ferramentas/categorias/recortar.py              (todas, e o catalogo.json)
     python ferramentas/categorias/recortar.py mundo-zumbi  (só esta)
@@ -44,7 +65,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageStat
 
 PASTA = Path(__file__).resolve().parent / "maquinas"
 CLOUDINARY = "https://res.cloudinary.com/dgikjmki8/image/upload/c_limit,w_1600,f_png/v1/"
@@ -54,6 +75,21 @@ LADO = 900
 #: em maquinas-alta/ -- a máquina ocupa a foto quase inteira.
 PASTA_ALTA = Path(__file__).resolve().parent / "maquinas-alta"
 LADO_ALTO = 1600
+
+#: O furo de verdade: a mancha cercada maior que isto (da foto), lisa e da cor do fundo (ver acima).
+FURO_MINIMO = 0.002
+#: O quanto a mancha pode fugir do fundo e ser lisa: (luz, desvio da luz, cor).
+FURO_TOLERANCIA = (4.0, 2.5, 2.5)
+
+#: A área de cada rede (polígonos, nos pixels da foto do site), onde o fundo visto através some.
+REDES = {
+    # a rede alta, o painel da direita e o vão embaixo da barra (as caixas da loja atrás)
+    "basquete-street": [
+        [(213, 83), (275, 54), (301, 83), (303, 205), (213, 205)],
+        [(317, 91), (368, 100), (368, 205), (317, 205)],
+        [(217, 214), (373, 214), (395, 231), (395, 270), (217, 270)],
+    ],
+}
 
 #: O contorno do Boliche Virtual na foto rosa da galeria (1086 x 1448), à mão.
 CONTORNO_BOLICHE = [
@@ -67,7 +103,7 @@ CONTORNO_BOLICHE = [
 
 #: chave -> (id no site, nome, foto no Cloudinary, altura em m, recorte)
 MAQUINAS = {
-    "air-game-premium": (1, "Air Game Premium", "imagens_brinquedos/Mesas_de_air_hockey_futuristas_com_LEDs_hr1x4m", 1.90, "branco+buracos"),
+    "air-game-premium": (1, "Air Game Premium", "imagens_brinquedos/Mesas_de_air_hockey_futuristas_com_LEDs_hr1x4m", 1.90, "branco+buracos+chao"),
     "basquete-home": (3, "Basquete Home", "imagens_brinquedos/basquetehome_s1antg", 2.10, "branco"),
     "mundo-zumbi": (4, "Mundo Zumbi", "imagens_brinquedos/Mundo_Zumbi_cj4fhq", 1.94, "pronto"),
     "porsche-simulador": (5, "Porsche Simulador", "imagens_brinquedos/Simulador_Porche_yrfemm", 1.70, "pronto"),
@@ -140,18 +176,43 @@ def baixar(foto):
         return Image.open(io.BytesIO(resposta.read())).convert("RGBA")
 
 
-def sem_fundo_branco(imagem, limite=232, buracos=False, buraco_minimo=0.015):
+def _cor(rgb):
+    """A cor de cada pixel (o canal mais forte menos o mais fraco): 0 no branco, no cinza e no preto."""
+    r, g, b = rgb.split()
+    return ImageChops.subtract(ImageChops.lighter(ImageChops.lighter(r, g), b), ImageChops.darker(ImageChops.darker(r, g), b))
+
+
+def _e_furo(rgb, luz, cor, mancha, fundo_da_foto):
+    """A mancha cercada é o fundo da foto (um furo)? Lisa e da luz e da cor do fundo."""
+    media, desvio = ImageStat.Stat(luz, mancha).mean[0], ImageStat.Stat(luz, mancha).stddev[0]
+    tom = ImageStat.Stat(cor, mancha).mean[0]
+    d_luz, d_desvio, d_cor = FURO_TOLERANCIA
+    return abs(media - fundo_da_foto[0]) <= d_luz and desvio <= d_desvio and tom <= fundo_da_foto[1] + d_cor
+
+
+def sem_fundo_branco(imagem, limite=232, buracos=False, buraco_minimo=0.015, furos=True, chao=False):
     """Tira o branco liso que encosta na borda (o de dentro da máquina fica).
 
     `buracos`: também o branco grande cercado pela máquina (o vão do arco do
     Air Game Premium e do Pebolim Eletrônico, onde se vê a parede do estúdio):
     a mancha com mais de `buraco_minimo` da foto (nas peças, o miolo do cabo
     enrolado e da alça, bem menor).
+    `furos`: a mancha cercada que é o próprio fundo (os furos de verdade:
+    `FURO_MINIMO`, `FURO_TOLERANCIA`), de qualquer tamanho acima do mínimo.
+    `chao`: também a sombra cinza-clara do estúdio, sem cor, que encosta no fundo.
     """
+    rgb = imagem.convert("RGB")
+    luz, cor = rgb.convert("L"), _cor(rgb)
     # "branco" só onde os três canais são claros
-    r, g, b = imagem.convert("RGB").split()
+    r, g, b = rgb.split()
     claros = [c.point(lambda v: 255 if v > limite else 0) for c in (r, g, b)]
     fundo = ImageChops.multiply(ImageChops.multiply(claros[0], claros[1]), claros[2])
+    if chao:
+        cinza = ImageChops.multiply(
+            ImageChops.darker(ImageChops.darker(r, g), b).point(lambda v: 255 if v > 200 else 0),
+            cor.point(lambda v: 255 if v < 12 else 0),
+        )
+        fundo = ImageChops.lighter(fundo, cinza)
     w, h = fundo.size
     for x in range(0, w, 4):
         for y in (0, h - 1):
@@ -161,19 +222,51 @@ def sem_fundo_branco(imagem, limite=232, buracos=False, buraco_minimo=0.015):
         for x in (0, w - 1):
             if fundo.getpixel((x, y)) == 255:
                 ImageDraw.floodfill(fundo, (x, y), 128)
-    if buracos:
-        # cada mancha branca que sobrou: se for grande (mais de 1,5% da foto), é fundo
+    # a luz e a cor do fundo da foto (o branco que encosta na borda)
+    borda = fundo.point(lambda v: 255 if v == 128 else 0)
+    fundo_da_foto = (ImageStat.Stat(luz, borda).mean[0], ImageStat.Stat(cor, borda).mean[0]) if borda.getbbox() else (255, 0)
+    if buracos or furos:
+        # cada mancha branca que sobrou: grande (`buraco_minimo`) é fundo; acima do mínimo, é furo se é o fundo
         for y in range(0, h, 6):
             for x in range(0, w, 6):
                 if fundo.getpixel((x, y)) == 255:
                     ImageDraw.floodfill(fundo, (x, y), 200)
                     area = fundo.histogram()[200]
-                    ImageDraw.floodfill(fundo, (x, y), 128 if area > buraco_minimo * w * h else 100)
+                    furo = buracos and area > buraco_minimo * w * h
+                    if not furo and furos and area > FURO_MINIMO * w * h:
+                        furo = _e_furo(rgb, luz, cor, fundo.point(lambda v: 255 if v == 200 else 0), fundo_da_foto)
+                    ImageDraw.floodfill(fundo, (x, y), 128 if furo else 100)
     alfa = fundo.point(lambda v: 0 if v == 128 else 255)
     # (a foto que já vem com parte transparente: o transparente dela continua transparente)
     alfa = ImageChops.multiply(alfa, imagem.getchannel("A"))
     # a borda do recorte: um tico para dentro e macia
     alfa = alfa.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+    imagem.putalpha(alfa)
+    return imagem
+
+
+def pela_rede(imagem, poligonos):
+    """O fundo visto através da rede some: dentro de cada polígono, o claro sem cor e o de tom quente.
+
+    Ficam os fios da rede (finos e escuros), os tubos (azul-marinho, roxos) e
+    o resto da máquina. A transição é macia: o fio de 1 px, meio claro, fica
+    meio transparente, como numa foto.
+    """
+    rgb = imagem.convert("RGB")
+    r, g, b = rgb.split()
+    luz, cor = rgb.convert("L"), _cor(rgb)
+    # a parede: clara e sem cor (some de 185 para cima; fica abaixo de 135)
+    parede = ImageChops.multiply(luz.point(lambda v: max(0, min(255, (v - 135) * 255 // 50))),
+                                 cor.point(lambda v: 255 if v < 30 else 0))
+    # as caixas de papelão: o vermelho bem acima do azul (o quente), até na sombra
+    quente = ImageChops.multiply(ImageChops.subtract(r, b).point(lambda v: max(0, min(255, (v - 18) * 255 // 14))),
+                                 luz.point(lambda v: 255 if v > 40 else 0))
+    sai = ImageChops.lighter(parede, quente)
+    area = Image.new("L", imagem.size, 0)
+    for poligono in poligonos:
+        ImageDraw.Draw(area).polygon(poligono, fill=255)
+    sai = ImageChops.multiply(sai, area.filter(ImageFilter.GaussianBlur(1)))
+    alfa = ImageChops.subtract(imagem.getchannel("A"), sai)
     imagem.putalpha(alfa)
     return imagem
 
@@ -207,8 +300,8 @@ def pelo_contorno(imagem, pontos):
 def recortar(chave, lista=None, pasta=PASTA, lado=LADO, largura_da_foto=1600, qualidade=80):
     _id, nome, foto, altura, recorte = (lista or MAQUINAS)[chave]
     imagem = baixar(foto)
-    if recorte in ("branco", "branco+buracos"):
-        imagem = sem_fundo_branco(imagem, buracos=recorte == "branco+buracos")
+    if recorte in ("branco", "branco+buracos", "branco+buracos+chao"):
+        imagem = sem_fundo_branco(imagem, buracos=recorte != "branco", chao=recorte.endswith("+chao"))
     elif recorte == "branco+furinhos":
         imagem = sem_fundo_branco(imagem, buracos=True, buraco_minimo=0.0008)
     elif recorte == "cinza":
@@ -224,6 +317,8 @@ def recortar(chave, lista=None, pasta=PASTA, lado=LADO, largura_da_foto=1600, qu
         imagem = sem_fundo_branco(imagem, limite=248)
     elif isinstance(recorte, list):
         imagem = pelo_contorno(imagem, recorte)
+    if chave in REDES and lista in (None, MAQUINAS):
+        imagem = pela_rede(imagem, REDES[chave])
     # apara a sobra transparente: a base da máquina fica na borda de baixo (no chão)
     caixa = imagem.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox()
     imagem = imagem.crop(caixa)

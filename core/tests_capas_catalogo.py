@@ -60,13 +60,15 @@ VISTAS = {
 #: ferramentas/categorias/areas-dos-produtos.json): o contraste (o desvio da luminância), a saturação
 #: média e a nitidez (a média das bordas). Na foto de verdade do Boliche Virtual (o showroom), a área
 #: da máquina dá ~76, ~67 e ~28; a capa apagada do Strike Kids (o salão do mural) dava 18,7 de nitidez.
-CONTRASTE_MINIMO = 45
-SATURACAO_MINIMA = 55
-NITIDEZ_MINIMA = 19.5
+#: Com o brinquedo mais vivo (seção 72: compor.py, `vivo`), os mínimos subiram (eram 45, 55 e 19,5;
+#: nas vistas, 40 e 45).
+CONTRASTE_MINIMO = 48
+SATURACAO_MINIMA = 70
+NITIDEZ_MINIMA = 20.5
 #: Nas vistas da galeria, o limite é mais baixo e a nitidez não conta: há vista que é, de verdade,
 #: uma chapa lisa (as costas verdes do Strike Kids) ou o parque inteiro visto do alto (o Espaço Esportivo).
-CONTRASTE_MINIMO_VISTA = 40
-SATURACAO_MINIMA_VISTA = 45
+CONTRASTE_MINIMO_VISTA = 45
+SATURACAO_MINIMA_VISTA = 53
 
 
 def vida(foto, caixa=(0.2, 0.15, 0.8, 0.9)):

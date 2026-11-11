@@ -14,7 +14,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.urls import reverse
 from django.views.generic import View
 
-from . import arena, projeto3d
+from . import arena, projeto3d, variantes
 from .home_cache import get_cached_catalog_page
 from .models import Brinquedos, ImagemBrinquedo
 from .objetos_3d import prefetch_do_objeto
@@ -67,6 +67,9 @@ def dados_publicos_da_arena():
         for brinquedo in brinquedos_da_arena()
     ]
 
+    # os adesivos (core/variantes.py): o produto aparece uma vez, e o 3D de um adesivo é o
+    # dele (sem 3D próprio, o do adesivo que tem); o .glb do adesivo não aparece à parte
+    variantes.completar_na_arena(dados)
     # os objetos 3D que chegaram antes do cadastro: na arena, já aparecem
     na_arena = dados + arena.modelos_fora_do_catalogo(dados)
     # a roda 3D só com quem tem objeto 3D de verdade (.glb); as áreas

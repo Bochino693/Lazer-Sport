@@ -28,7 +28,7 @@ def criar_pedido_a_partir_do_carrinho(carrinho: Carrinho) -> Pedido:
             pedido=pedido,
             content_type=item.content_type,
             object_id=item.object_id,
-            nome_item=str(item.item),
+            nome_item=item.nome_com_adesivo,
             tipo_item=(
                 'brinquedo'
                 if item.content_type.model == 'brinquedos'

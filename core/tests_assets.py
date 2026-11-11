@@ -154,6 +154,7 @@ class IconesDoSiteTests(TestCase):
             *core.joinpath("static", "site").rglob("*.js"),
             *core.joinpath("static", "site").rglob("*.css"),
             *core.glob("*.py"),
+            *core.joinpath("templatetags").glob("*.py"),
         ]
         faltando = set()
         for arquivo in arquivos:

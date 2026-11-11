@@ -78,7 +78,7 @@
             {% for item in itens %}
             <div class="item-card">
 
-                <div class="item-nome">{{ item.item }}</div>
+                <div class="item-nome">{{ item.item }}{% if item.adesivo %} <span class="item-adesivo">· adesivo {{ item.adesivo }}</span>{% endif %}</div>
 
                 <div class="item-linha">
                     <span>Preço</span>

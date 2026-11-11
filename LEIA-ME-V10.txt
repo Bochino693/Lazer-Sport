@@ -1750,7 +1750,7 @@ Dependência nova: rjsmin (requirements.txt).
        Kids Alienígenas e o Strike Kids (.glb) na frente;
      * Boliche Virtual: o Strike Kids (.glb), os pinos e as bolas;
      * Eletrônicos, Competitivos, Esportivos, Famosos, Kids, Jogos de Mesa:
-       grupos com o Basquete Street Quadrinhos, o Air Game Kids Alienígenas e
+       grupos com o Basquete Home Quadrinhos, o Air Game Kids Alienígenas e
        o Strike Kids (.glb) e as peças de ferramentas/categorias/pecas.js
        (gabinete de fliperama, pebolim, mesa de fliperama, gol de LED, bolas,
        o palco com as estrelas dos Famosos);
@@ -1979,13 +1979,13 @@ Dependência nova: rjsmin (requirements.txt).
        Bob Esponja Hammer Kids.
      Espaço Kids Play (shopping): Brinquedão Modelo 3 e Air Game Kids
        Alienígenas (3D) e Sonic Kids (foto).
-     Famosos (shopping, no palco): Basquete Street Quadrinhos (3D), Sonic
+     Famosos (shopping, no palco): Basquete Home Quadrinhos (3D), Sonic
        Dash, Homem Aranha e Pac Man (fotos); ao fundo, Flappy Bird e Corrida
        dos Minions.
      Simuladores (shopping): Simulador Mario Kart, Simulador de Corrida Top
        Racer e Porsche Simulador (fotos); ao fundo, Speed Turbo, Lazer Shot e
        Sonic Racing All-Stars.
-     Eletrônicos (game zone): Basquete Street Quadrinhos, Strike Kids e Air
+     Eletrônicos (game zone): Basquete Home Quadrinhos, Strike Kids e Air
        Game Kids Alienígenas (3D) e Mundo Zumbi (foto); ao fundo, Subway
        Surfers, Homem Aranha, Sonic Dash, Flappy Bird, Pinball 32 Polegadas,
        Tomb Raider Kids, Corrida dos Minions e Nervo Teste.
@@ -1993,7 +1993,7 @@ Dependência nova: rjsmin (requirements.txt).
        Polegadas e Subway Surfers (fotos); ao fundo, Tomb Raider Kids, Corrida
        dos Minions, Sonic Dash, Flappy Bird, Homem Aranha, Pinball 32
        Polegadas, Minions Kids e Sonic Kids.
-     Competitivos (game zone): Basquete Street Quadrinhos (3D), Basquete
+     Competitivos (game zone): Basquete Home Quadrinhos (3D), Basquete
        Street e Air Game Premium (fotos); ao fundo, Nervo Teste, Mundo Zumbi,
        Pega Toupeira, Multi Jogos Retro, Pinball 40 Polegadas, Sonic Dash e
        Homem Aranha.
@@ -2007,7 +2007,7 @@ Dependência nova: rjsmin (requirements.txt).
        (fotos); ao fundo, Sonic Racing All-Stars.
      Jogos de Mesa (salão de festas): Air Game Kids Alienígenas (3D), Pac Man,
        Pebolim Eletrônico e Matrix (fotos).
-     Esportivos (quadra): Basquete Street Quadrinhos (3D), Show de Bola e
+     Esportivos (quadra): Basquete Home Quadrinhos (3D), Show de Bola e
        Basquete Home (fotos).
      Área Baby: a categoria não tem produto no catálogo; a foto fica como
        estava (a da seção 55, com as peças da área baby).
@@ -3157,6 +3157,128 @@ Dependência nova: rjsmin (requirements.txt).
    (ImportacaoConcluidaView), templates conferir_importacao_inner.html e
    importacao_concluida_inner.html, clientes_inner.html (?abrir=),
    orcamentos_inner.html, static/interno/painel.js e importacao-word.js.
+
+72) OS ADESIVOS: UM PRODUTO, VÁRIAS ARTES (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
+   Pedido (com os cards "Air Game Kids" e "Air Game Kids Alienígenas" lado a
+   lado): "os dois devem se tornar o mesmo objeto, como um adesivo
+   diferente, ele quem deve ser o diferencial, rodando as duas imagens em
+   todo objeto também canalizando os dois objetos 3d ... vamos ter mais
+   exemplos assim então se atente em como fazer". Depois: "na verdade vc
+   deve juntar o basquete home com o street quadrinhos, que deveria na
+   verdade ser home quadrinhos. o street não".
+   O MECANISMO (core/variantes.py; o modelo core.models.VarianteAdesivo):
+     * o produto é um só; cada ADESIVO tem nome, slug, ordem e "padrão" e
+       mostra as fotos e o 3D de uma ficha do cadastro (`origem`; o padrão,
+       as do próprio produto). Nada é copiado: o painel continua editando
+       cada ficha;
+     * a ficha que vira adesivo fica DESATIVADA (sai de todas as listas) e
+       nada é apagado: pedidos, orçamentos e favoritos continuam apontando
+       para ela. O endereço dela redireciona (301) para o produto com
+       ?adesivo=<slug>;
+     * na página do produto, as fichas "Adesivo: Astronautas · Alienígenas"
+       (com a capa de cada um e um cubo em quem tem 3D) são links: o
+       ?adesivo= troca as fotos da galeria, o 3D (o .glb da ficha) e o
+       endereço, que pode ser compartilhado. O adesivo sem 3D mostra só as
+       fotos, e o botão diz "3D no adesivo Alienígenas" (leva até ele);
+     * o adesivo vai junto no pedido: no carrinho ("· adesivo Alienígenas";
+       o mesmo produto com outro adesivo é outra linha), no pedido (o nome do
+       item: "Air Game Kids — adesivo Alienígenas"; se o pagamento não sai,
+       volta para o carrinho com o adesivo), na mensagem do orçamento pelo
+       WhatsApp ("Adesivo: X") e no sob medida;
+     * nos cards (a home, as categorias, /brinquedos/, a loja e a busca) o
+       produto aparece UMA vez, com o selo "2 adesivos" e a foto revezando
+       as capas dos adesivos (site/ls-adesivos.js: só com o card na tela e a
+       aba à vista; com "reduzir movimento", parado). O selo vem da tag
+       {% adesivos_do_card %} (core/templatetags/adesivos.py), com o mapa dos
+       adesivos em cache (cai quando um adesivo, uma foto ou um produto
+       muda: core/signals.py);
+     * na Arena, uma vez, com o 3D do adesivo que tem (o .glb do adesivo não
+       aparece à parte, como objeto fora do catálogo).
+   OS PARES (a 0161, só dados; o esquema é a 0160):
+     * AIR GAME KIDS: o produto (os astronautas, adesivo padrão
+       "Astronautas") + o Air Game Kids Alienígenas (adesivo "Alienígenas",
+       com o .glb e as fotos dele). O preço é o do produto que fica: "estes
+       dois precisam estar juntos urgentemente, com o valor de 6990,00" -- a
+       junção não copia nada da ficha para o produto (o preço do painel
+       fica) e, se o Air Game Kids estiver sem preço, ele fica com
+       R$ 6.990,00 (core/variantes.py, PRECO_SE_VAZIO);
+     * BASQUETE HOME: o produto (o gabinete azul, adesivo padrão "Azul") + o
+       Quadrinhos. O "Basquete Street Quadrinhos" era o gabinete do Basquete
+       Home com a folha em quadrinhos (seção 61: a testeira em hexágono, o
+       console com o POW!, a lateral subindo atrás dele) e não o Basquete
+       Street: virou o "BASQUETE HOME QUADRINHOS" (o nome, a descrição, as
+       descrições das fotos, a Arena, as ferramentas e este LEIA-ME; a 0161
+       renomeia a ficha no site antes de juntar). A chave e os arquivos
+       (basquete-street-quadrinhos.glb, a pasta das fotos) ficaram com o nome
+       de antes. O 3D é o desse gabinete; o tamanho (2,70 x 1,00 x 2,40 m)
+       continua o do Basquete Street, porque o Basquete Home não tem medidas
+       no cadastro: com a altura de verdade, é mudar o ALT do montar.js e as
+       medidas no core/arena.py e no core/cadastro_modelos.py;
+     * o BASQUETE STREET (a estrutura aberta com a rede) fica sozinho.
+   JUNTAR UM PAR NOVO: um item em core/variantes.py (PARES: o produto, o
+   adesivo padrão e as fichas) e uma migração de dados que chame
+   `variantes.migrar` (como a 0161). Desfazer: `variantes.separar`.
+   O 3D DOS ASTRONAUTAS: NÃO FOI FEITO. O Air Game Kids tem UMA foto no
+   catálogo (433 x 577, de 3/4). A lateral da frente sai boa dela: o
+   contorno da lateral dos alienígenas (a mesma mesa) encaixa na foto com
+   0,7 px de erro e a perspectiva desentorta limpa. Mas o 3D tem cinco
+   peças de adesivo e a foto não mostra a outra lateral, o tampo nem as
+   cabeceiras (de uma, uma tira de 15 px): seria inventar a arte delas, ou
+   deixá-las lisas. O adesivo Astronautas fica só com as fotos e o botão
+   leva ao 3D do Alienígenas. Com a folha de adesivos da fábrica dos
+   astronautas (ou fotos do tampo, do outro lado e das cabeceiras), o 3D
+   sai pelo mesmo caminho do Alienígenas (ferramentas/modelos3d/).
+   OS FUROS DE VERDADE (ferramentas/categorias/recortar.py). "recorte bem
+   também o basquete home pq no braço é furado, aquela parte branca deve
+   ser furada, se atente nisso em outros também": o vão é o fundo da foto
+   visto através da máquina, e no showroom tem de mostrar o showroom.
+     * no fundo branco, a mancha branca CERCADA pela máquina vira furo quando
+       é o próprio fundo: grande (mais de 0,2% da foto), lisa (o desvio da
+       luz até 2,5) e da luz e da cor do fundo daquela foto. A arte branca
+       (letreiros, balões, luzes, o tampo branco de uma mesa) tem textura,
+       tom ou cor e fica;
+     * "+chao": a sombra cinza-clara do estúdio entre os pés também é fundo;
+     * REDES: nas fotos já recortadas, o recorte de fora não tirou o que se
+       via através da rede; ali some o claro sem cor (a parede) e o de tom
+       quente (as caixas), e ficam os fios e os tubos.
+     Conferidos todos os 40 recortes: eram fundo só o braço do Basquete
+     Home, a rede do Basquete Street (a parede e as caixas de papelão da
+     loja atrás) e o chão do Air Game Premium. O cercado de acrílico da Mini
+     Roda Sorvete mostra o salão da foto através dele, mas o acrílico é
+     peça da máquina (meio transparente): fica como está.
+   O BRINQUEDO MAIS VIVO (ferramentas/categorias/compor.py, `vivo` e VIVO).
+   "veja se vc consegue deixar mais vivo os brinquedos nas fotos": nas
+   fotos de produto (as 39 capas do catálogo, as capas e as vistas dos
+   nossos 3D), SÓ NO BRINQUEDO (a máscara; o fundo fica como está):
+     * o vibrance: a saturação s vira s + 0,42·s·(1 − s/255) -- a cor fraca
+       sobe, a forte quase não muda e o branco, o cinza e o preto ficam como
+       estão (o carro branco do Porsche continua branco), sem mudar o tom;
+     * a clareza (o contraste local, raio de 1/90 da largura, 22%): o
+       volume das peças e a arte dos adesivos;
+     * um tico de contraste (1,05);
+     * sem estourar nem empretecer: no quase branco (luz acima de 205) e no
+       quase preto (abaixo de 48), a clareza e o contraste somem aos poucos.
+       O branco estourado na área do produto ficou como era (8,2% -> 8,5%,
+       em média) e o preto chapado também (0,14% -> 0,15%).
+   A medida (core/tests_capas_catalogo.py, na área do produto), antes ->
+   depois, a mínima:
+       capas do catálogo (39): contraste 49,9 -> 51,7; saturação 60,6 -> 72,8;
+         nitidez 20,1 -> 21,2 (a saturação média 100,7 -> 119,1);
+       capas dos nossos 3D (8): 45,9 -> 49,4; 63,0 -> 72,4; 22,3 -> 24,3;
+       vistas da galeria (30): 43,7 -> 46,3; 47,0 -> 54,7.
+   Os mínimos do teste subiram: contraste 45 -> 48, saturação 55 -> 70,
+   nitidez 19,5 -> 20,5; nas vistas, 40 -> 45 e 45 -> 53.
+   NO SITE NO AR (a segunda operação da 0161, só no Render): as capas do
+   catálogo em cena ganham a foto de hoje (a assinatura no nome mudou), as
+   galerias dos nossos 3D são refeitas (como na 0158) e sobem as fotos de Competitivos e
+   Esportivos (com o Basquete Home, o Basquete Street e o Air Game Premium
+   recortados de novo). Se uma subida falhar:
+       python manage.py capas_em_cena
+       python manage.py cadastrar_modelo_3d <chave> --fotos
+       python manage.py atualizar_capas_categorias
+   Testes: core/tests_variantes_produto.py (o modelo, as migrações, o
+   endereço antigo, as listas, a página, o carrinho e o pedido),
+   core/tests_variantes_adesivo.py e core/tests_capas_catalogo.py.
 
 73) PROMOÇÕES: VÁRIOS BRINQUEDOS, A TELA DO PAINEL COMO APP E O QUADRO DA HOME
    Pedidos: "está bem difícil achar o brinquedo a aplicar a promo ...

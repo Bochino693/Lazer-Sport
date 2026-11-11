@@ -1,4 +1,4 @@
-# Basquete Street Quadrinhos — o objeto 3D
+# Basquete Home Quadrinhos — o objeto 3D
 
 O `.glb` que a Arena 3D e a página do produto usam
 (`core/static/site/arena/modelos/basquete-street-quadrinhos.glb`) e as fotos
@@ -139,7 +139,7 @@ código que as duas máquinas dividem está em `../adesivos_comum.py`.
 ## Ligar no site
 
 `core/arena.py`, `MODELOS_3D`: o objeto se liga à máquina pelo nome inteiro
-("Basquete Street Quadrinhos": o "Basquete Street" de antes continua sem ele),
+("Basquete Home Quadrinhos": o "Basquete Street" de antes continua sem ele),
 na seção "As máquinas que já fazíamos"; o passeio é a volta em torno. O
 cadastro (`core/cadastro_modelos.py`, `CADASTROS`) copia do Basquete Street o
 preço, a voltagem, a loja, a avaliação, as medidas, as categorias e as tags;

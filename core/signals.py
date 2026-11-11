@@ -27,6 +27,7 @@ from .models import (
     ObjetoTresD,
     ObjetoTresDProjeto,
     Pedido,
+    VarianteAdesivo,
     PecasReposicao,
     Projetos,
     Promocoes,
@@ -78,6 +79,11 @@ def _invalidar_home(sender, **kwargs):
     # custa nada; servir o cadastro velho custa uma venda.
     invalidate_public_catalog_caches()
     transaction.on_commit(invalidate_public_catalog_caches)
+    # os adesivos dos cards (core/variantes.py): as capas saem das fotos e dos produtos
+    from .variantes import limpar_cache
+
+    limpar_cache()
+    transaction.on_commit(limpar_cache)
 
 
 def _invalidar_home_m2m(sender, action, **kwargs):
@@ -112,6 +118,8 @@ _MODELOS_DA_HOME = (
     JogoCadastrado,
     # a página do brinquedo mostra o que vem dentro dele e de que conjunto faz parte
     ComponenteBrinquedo,
+    # os adesivos do produto (a página e os cards)
+    VarianteAdesivo,
 )
 
 for _modelo in _MODELOS_DA_HOME:

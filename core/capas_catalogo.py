@@ -96,7 +96,7 @@ FORA = {
     "Trampolim de Enterrada": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
     "Strike Kids": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
     "Air Game Kids Alienígenas": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
-    "Basquete Street Quadrinhos": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
+    "Basquete Home Quadrinhos": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
     "Brinquedão Modelo 4": "a capa é a imagem da fábrica (a perspectiva)",
     "Brinquedão Modelo 5": "a capa é a imagem da fábrica (o salão)",
 }

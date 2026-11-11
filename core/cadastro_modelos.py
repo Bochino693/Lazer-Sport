@@ -354,33 +354,37 @@ CADASTROS = {
         "evitar": (),
     },
     "basquete-street-quadrinhos": {
-        "nome": "Basquete Street Quadrinhos",
-        "base": ("Basquete Street",),
+        # o gabinete do Basquete Home (a testeira em hexágono, o console com o
+        # POW!, a lateral subindo atrás dele: LEIA-ME 61) com os adesivos em
+        # quadrinhos. Até a seção 72 era o "Basquete Street Quadrinhos", com o
+        # Basquete Street de base; a chave (os arquivos) ficou a mesma
+        "nome": "Basquete Home Quadrinhos",
+        "base": ("Basquete Home",),
+        # o nome de antes também acha o brinquedo (a 0161 o renomeia: core.variantes.RENOMEADAS)
+        "nomes": ("Basquete Home Quadrinhos", "Basquete Street Quadrinhos"),
         "pasta": MODELOS / "basquete-street-quadrinhos",
         "objeto_3d": "site/arena/modelos/basquete-street-quadrinhos.glb",
         "descricao": (
-            "O Basquete Street Quadrinhos é o Basquete Street, o basquete de arcade em tamanho profissional, com a "
-            "adesivagem nova em estilo história em quadrinhos: fundo preto com formas arredondadas em amarelo, "
+            "O Basquete Home Quadrinhos é o Basquete Home, o basquete de arcade do gabinete com a testeira em "
+            "hexágono, com a adesivagem nova em estilo história em quadrinhos: fundo preto com formas arredondadas em amarelo, "
             "laranja, vermelho e rosa; nas laterais de fora, a bola de basquete grande e duas crianças jogando com "
             "o balão BASKETBALL; o \"BOOM!\" e a janela do placar no fundo da cesta, o \"POW!\" na frente e no teto "
             "interno, o \"WOW!\", o letreiro BASKETBALL na testeira e na frente, e a quadra de basquete com as "
             "linhas vermelhas no chão da pista.\n"
             "\n"
-            "O jogador arremessa na cesta para somar pontos antes de o tempo acabar. Tela de 32 polegadas com o "
-            "placar e o jogo, cesta que se movimenta, iluminação em LED e rodízios para facilitar a movimentação.\n"
+            "A rampa leva as bolas até o jogador, que arremessa na cesta para somar pontos antes de o tempo "
+            "acabar.\n"
             "\n"
-            "Medidas aproximadas: 2,70 m de altura, 1,00 m de largura e 2,40 m de comprimento.\n"
-            "\n"
-            "Ideal para shoppings, game centers, parques, buffets, clubes e espaços esportivos."
+            "Ideal para residências, condomínios, salões de festas, buffets, escolas e áreas de lazer."
         ),
         "medidas": ("2.70", "1.00", "2.40"),
         "fotos": (
-            ("capa.webp", "perfil", "Basquete Street Quadrinhos numa game zone, com crianças torcendo (ilustração)"),
-            ("frente.webp", None, "Basquete Street Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
-            ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Street Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
-            ("lado_direito.webp", "lado_direito", "Basquete Street Quadrinhos pelo lado direito"),
-            ("verso.webp", "verso", "Basquete Street Quadrinhos visto por trás"),
-            ("jogador.webp", None, "Basquete Street Quadrinhos visto de quem joga: a cesta, o BOOM! e o console"),
+            ("capa.webp", "perfil", "Basquete Home Quadrinhos no showroom da Lazer & Sport"),
+            ("frente.webp", None, "Basquete Home Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Home Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
+            ("lado_direito.webp", "lado_direito", "Basquete Home Quadrinhos pelo lado direito"),
+            ("verso.webp", "verso", "Basquete Home Quadrinhos visto por trás"),
+            ("jogador.webp", None, "Basquete Home Quadrinhos visto de quem joga: a cesta, o BOOM! e o console"),
         ),
         "categorias": ("eletronic",),
         "evitar": (),
@@ -405,9 +409,9 @@ def _chave(chave):
 def achar_base(chave, Brinquedos):
     """O brinquedo do catálogo que é a MESMA máquina da variante `chave` (a `base`), ou None.
 
-    Pelo nome inteiro, sem acento nem maiúscula: "BASQUETE STREET" é a base
-    do Basquete Street Quadrinhos; o próprio Basquete Street Quadrinhos (ou
-    outro "Basquete Street Kids") não é. O ativo vem antes do desativado.
+    Pelo nome inteiro, sem acento nem maiúscula: "BASQUETE HOME" é a base
+    do Basquete Home Quadrinhos; o próprio Basquete Home Quadrinhos (ou
+    outro "Basquete Home Kids") não é. O ativo vem antes do desativado.
     """
     nomes = {_normalizar(n) for n in CADASTROS[_chave(chave)].get("base", ())}
     if not nomes:
