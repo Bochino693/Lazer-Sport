@@ -14,7 +14,7 @@
       <h2>Peças de reposição</h2>
       <p>Cadastre, publique e retire peças do ar sem passar pelo Django. O preço de venda sai automático do preço do fornecedor (+12%) quando você deixa em branco, e o ganho potencial é recalculado a cada salvamento.</p>
     </div>
-    <button type="button" class="btn-nova" data-nova-peca>+ Nova peça</button>
+    <button type="button" class="btn-nova pecas-primary" data-nova-peca>+ Nova peça</button>
   </section>
 
   <section class="pecas-kpis">
@@ -136,7 +136,7 @@
           {% for categoria in categorias %}
             <label><input type="checkbox" name="categorias" value="{{ categoria.id }}"> {{ categoria.nome_categoria_peca }}</label>
           {% empty %}
-            <span style="color:#A2917A;font-size:.72rem">Nenhuma categoria de peça cadastrada ainda.</span>
+            <span style="color:var(--muted);font-size:.72rem">Nenhuma categoria de peça cadastrada ainda.</span>
           {% endfor %}
         </div>
       </div>
@@ -156,7 +156,7 @@
 
       <div class="campo">
         <label>Galeria atual</label>
-        <div class="galeria" id="galeriaPeca"><span style="color:#A2917A;font-size:.72rem">Sem fotos.</span></div>
+        <div class="galeria" id="galeriaPeca"><span style="color:var(--muted);font-size:.72rem">Sem fotos.</span></div>
       </div>
 
       <div class="campo">
@@ -175,8 +175,8 @@
   <div class="pecas-card" style="width:min(500px,100%)">
     <header class="pecas-card-head"><strong id="tituloExcluirPeca">Excluir peça</strong><button type="button" class="fechar" data-fechar-exclusao aria-label="Fechar">×</button></header>
     <div class="pecas-form">
-      <p style="margin:0;color:#C4B6A0;font-size:.78rem;line-height:1.6">Esta ação apaga o cadastro e a galeria. Para confirmar, escreva exatamente:</p>
-      <strong id="fraseExcluirPeca" style="color:#FF9AAA;overflow-wrap:anywhere"></strong>
+      <p style="margin:0;color:var(--muted);font-size:.78rem;line-height:1.6">Esta ação apaga o cadastro e a galeria. Para confirmar, escreva exatamente:</p>
+      <strong id="fraseExcluirPeca" style="color:var(--red-claro);overflow-wrap:anywhere"></strong>
       <div class="campo"><label for="confirmarExcluirPeca">Confirmação</label><input id="confirmarExcluirPeca" autocomplete="off" spellcheck="false"></div>
       <div class="pecas-form-acoes"><button type="button" class="cancelar" data-fechar-exclusao>Cancelar</button><button type="button" class="salvar" id="executarExcluirPeca" disabled>Excluir definitivamente</button></div>
     </div>

@@ -11,16 +11,16 @@
  */
 
 :root {
-        --combo-surface: rgba(30, 25, 19, .94);
-        --combo-surface-2: #231D16;
-        --combo-border: rgba(44, 37, 27, .16);
-        --combo-text: #FCF8F1;
-        --combo-muted: #C4B6A0;
-        --combo-primary: #F2A93B;
-        --combo-primary-2: #F2A93B;
-        --combo-success: #5FD68A;
-        --combo-danger: #FF7A6B;
-        --combo-warning: #FFC94D;
+        --combo-surface: rgba(var(--panel-rgb),.94);
+        --combo-surface-2: var(--panel-2);
+        --combo-border: rgba(var(--muted-rgb),.16);
+        --combo-text: var(--text);
+        --combo-muted: var(--muted);
+        --combo-primary: var(--acento);
+        --combo-primary-2: var(--acento);
+        --combo-success: var(--green);
+        --combo-danger: var(--red);
+        --combo-warning: var(--yellow);
     }
 
     .combo-page,
@@ -46,8 +46,8 @@
         border: 1px solid var(--combo-border);
         border-radius: 24px;
         background:
-            radial-gradient(circle at 92% 15%, rgba(242, 169, 59, .25), transparent 34%),
-            linear-gradient(135deg, rgba(35, 29, 22, .98), rgba(24, 20, 16, .98));
+            radial-gradient(circle at 92% 15%, rgba(var(--acento-rgb),.25), transparent 34%),
+            linear-gradient(135deg, rgba(var(--panel-rgb),.98), rgba(var(--bg-rgb),.98));
         box-shadow: 0 24px 60px rgba(0, 0, 0, .25);
     }
 
@@ -58,7 +58,7 @@
         bottom: -110px;
         width: 280px;
         height: 280px;
-        border: 45px solid rgba(44, 37, 27, .025);
+        border: 45px solid rgba(var(--muted-rgb),.025);
         border-radius: 50%;
         pointer-events: none;
     }
@@ -68,7 +68,7 @@
         align-items: center;
         gap: 8px;
         margin-bottom: 8px;
-        color: #C4B6A0;
+        color: var(--muted);
         font-size: .75rem;
         font-weight: 800;
         letter-spacing: .12em;
@@ -108,9 +108,9 @@
         min-height: 46px;
         padding: 0 20px;
         border-radius: 14px;
-        color: #FCF8F1;
+        color: var(--text);
         background: linear-gradient(135deg, var(--combo-primary), var(--combo-primary-2));
-        box-shadow: 0 12px 28px rgba(242, 169, 59, .34);
+        box-shadow: 0 12px 28px rgba(var(--acento-rgb),.34);
         font-weight: 800;
         white-space: nowrap;
     }
@@ -156,7 +156,7 @@
         flex: 0 0 46px;
         place-items: center;
         border-radius: 14px;
-        background: rgba(242, 169, 59, .16);
+        background: rgba(var(--acento-rgb),.16);
         font-size: 1.25rem;
     }
 
@@ -210,7 +210,7 @@
         border-radius: 13px;
         outline: none;
         color: var(--combo-text);
-        background: rgba(24, 20, 16, .88);
+        background: rgba(var(--bg-rgb),.88);
         font: inherit;
         transition: border-color .2s ease, box-shadow .2s ease;
     }
@@ -230,14 +230,14 @@
         border: 1px solid var(--combo-border);
         border-radius: 13px;
         color: var(--combo-text);
-        background: rgba(24, 20, 16, .88);
+        background: rgba(var(--bg-rgb),.88);
     }
 
     .combo-search input:focus,
     .combo-toolbar select:focus,
     .combo-field input:focus {
-        border-color: #7A6540;
-        box-shadow: 0 0 0 4px rgba(242, 169, 59, .14);
+        border-color: var(--line-forte);
+        box-shadow: 0 0 0 4px rgba(var(--acento-rgb),.14);
     }
 
     .combo-secondary-btn {
@@ -249,7 +249,7 @@
         border: 1px solid var(--combo-border);
         border-radius: 13px;
         color: var(--combo-text);
-        background: #231D16;
+        background: var(--panel-2);
         font-weight: 750;
         text-decoration: none;
     }
@@ -272,7 +272,7 @@
 
     .combo-card:hover {
         transform: translateY(-5px);
-        border-color: rgba(90, 70, 112, .48);
+        border-color: var(--line-forte);
         box-shadow: 0 24px 52px rgba(0, 0, 0, .32);
     }
 
@@ -281,8 +281,8 @@
         height: 200px;
         overflow: hidden;
         background:
-            radial-gradient(circle at 50% 30%, rgba(242, 169, 59, .28), transparent 48%),
-            #1A1610;
+            radial-gradient(circle at 50% 30%, rgba(var(--acento-rgb),.28), transparent 48%),
+            var(--bg-2);
     }
 
     .combo-card-media img {
@@ -301,7 +301,7 @@
         width: 100%;
         height: 100%;
         place-items: center;
-        color: #F5C070;
+        color: var(--acento-claro);
         font-size: 3rem;
     }
 
@@ -313,18 +313,18 @@
         align-items: center;
         gap: 6px;
         padding: 7px 10px;
-        border: 1px solid rgba(44, 37, 27, .16);
+        border: 1px solid var(--line);
         border-radius: 999px;
-        color: #E7DDCB;
-        background: rgba(95, 214, 138, .86);
+        color: var(--text-2);
+        background: rgba(var(--green-rgb),.86);
         backdrop-filter: blur(8px);
         font-size: .72rem;
         font-weight: 850;
     }
 
     .combo-status.is-off {
-        color: #E7DDCB;
-        background: rgba(43, 36, 27, .9);
+        color: var(--text-2);
+        background: rgba(var(--panel-rgb),.9);
     }
 
     .combo-card-body {
@@ -351,10 +351,10 @@
     .combo-products li {
         align-self: flex-start;
         padding: 6px 9px;
-        border: 1px solid rgba(44, 37, 27, .14);
+        border: 1px solid var(--line);
         border-radius: 999px;
-        color: #E7DDCB;
-        background: rgba(35, 29, 22, .82);
+        color: var(--text-2);
+        background: rgba(var(--panel-rgb),.82);
         font-size: .75rem;
     }
 
@@ -376,19 +376,19 @@
         display: grid;
         min-height: 44px;
         place-items: center;
-        border: 1px solid rgba(110, 64, 56, .2);
+        border: 1px solid rgba(var(--red-rgb),.2);
         border-radius: 13px;
-        color: #FF9AAA;
-        background: rgba(255, 122, 107, .38);
+        color: var(--red-claro);
+        background: rgba(var(--red-rgb),.38);
     }
 
     .combo-empty {
         grid-column: 1 / -1;
         padding: 60px 24px;
-        border: 1px dashed rgba(44, 37, 27, .24);
+        border: 1px dashed var(--line);
         border-radius: 22px;
         text-align: center;
-        background: rgba(30, 25, 19, .55);
+        background: rgba(var(--panel-rgb),.55);
     }
 
     .combo-empty > span {
@@ -420,13 +420,13 @@
     }
 
     .combo-message.success {
-        border-color: rgba(63, 107, 82, .3);
-        color: #7CE7BC;
+        border-color: rgba(var(--green-rgb),.3);
+        color: var(--green-claro);
     }
 
     .combo-message.error {
-        border-color: rgba(110, 64, 56, .3);
-        color: #FF9AAA;
+        border-color: rgba(var(--red-rgb),.3);
+        color: var(--red-claro);
     }
 
     body.combo-modal-open {
@@ -455,7 +455,7 @@
     .combo-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(19, 16, 11, .84);
+        background: rgba(var(--sombra-rgb),.84);
         backdrop-filter: blur(7px);
     }
 
@@ -465,9 +465,9 @@
         width: min(820px, 100%);
         max-height: min(92vh, 900px);
         overflow: auto;
-        border: 1px solid rgba(44, 37, 27, .2);
+        border: 1px solid var(--line);
         border-radius: 24px;
-        background: linear-gradient(160deg, #231D16, #1A1610);
+        background: linear-gradient(160deg, var(--panel-2), var(--bg-2));
         box-shadow: 0 36px 100px rgba(0, 0, 0, .55);
         transform: translateY(14px) scale(.98);
         transition: transform .24s ease;
@@ -510,7 +510,7 @@
         border: 1px solid var(--combo-border);
         border-radius: 12px;
         color: var(--combo-text);
-        background: rgba(35, 29, 22, .85);
+        background: rgba(var(--panel-rgb),.85);
         cursor: pointer;
     }
 
@@ -538,7 +538,7 @@
     .combo-field-label {
         display: block;
         margin: 0 0 7px;
-        color: #E7DDCB;
+        color: var(--text-2);
         font-size: .78rem;
         font-weight: 800;
     }
@@ -556,9 +556,9 @@
         gap: 16px;
         align-items: center;
         padding: 13px;
-        border: 1px dashed rgba(90, 70, 112, .48);
+        border: 1px dashed var(--line-forte);
         border-radius: 16px;
-        background: rgba(242, 169, 59, .07);
+        background: rgba(var(--acento-rgb),.07);
     }
 
     .combo-image-preview {
@@ -568,8 +568,8 @@
         overflow: hidden;
         place-items: center;
         border-radius: 12px;
-        color: #F5C070;
-        background: #181410;
+        color: var(--acento-claro);
+        background: var(--bg-1);
         font-size: 1.7rem;
     }
 
@@ -589,7 +589,7 @@
         padding: 14px;
         border: 1px solid var(--combo-border);
         border-radius: 16px;
-        background: rgba(24, 20, 16, .62);
+        background: rgba(var(--bg-rgb),.62);
     }
 
     .combo-toy-search {
@@ -613,15 +613,15 @@
         padding: 10px;
         border: 1px solid var(--combo-border);
         border-radius: 12px;
-        color: #E7DDCB;
-        background: rgba(35, 29, 22, .65);
+        color: var(--text-2);
+        background: rgba(var(--panel-rgb),.65);
         cursor: pointer;
         transition: border-color .2s ease, background .2s ease;
     }
 
     .combo-toy-option:has(input:checked) {
-        border-color: #7A6540;
-        background: rgba(242, 169, 59, .18);
+        border-color: var(--line-forte);
+        background: rgba(var(--acento-rgb),.18);
     }
 
     .combo-toy-option input {
@@ -641,7 +641,7 @@
 
     .combo-selected-count {
         margin-top: 10px;
-        color: #C4B6A0;
+        color: var(--muted);
         font-size: .78rem;
         font-weight: 800;
     }
@@ -650,7 +650,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #E7DDCB;
+        color: var(--text-2);
         cursor: pointer;
     }
 
@@ -675,21 +675,21 @@
         min-height: 44px;
         padding: 0 18px;
         border-radius: 13px;
-        color: #211605;
-        background: linear-gradient(135deg, #FF7A6B, #FF7A6B);
+        color: var(--acento-tinta);
+        background: linear-gradient(135deg, var(--red), var(--red));
         font-weight: 800;
     }
 
     .combo-delete-copy {
         padding: 24px;
-        color: #E7DDCB;
+        color: var(--text-2);
         line-height: 1.6;
     }
 
     .combo-delete-name {
         display: block;
         margin: 10px 0 18px;
-        color: #FCF8F1;
+        color: var(--text);
         font-size: 1.05rem;
     }
 
