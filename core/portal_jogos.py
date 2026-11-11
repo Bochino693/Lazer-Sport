@@ -251,20 +251,28 @@ def _jogadores_de_hoje():
     return RecordeJogo.objects.filter(atualizado_em__gte=inicio).values("usuario_id").distinct().count()
 
 
-def vivo():
-    """O que muda com o uso (partidas, anúncios e quem jogou hoje), num cache curto."""
-    dados = cache.get(CHAVE_VIVO)
-    if dados is None:
-        try:
-            dados = {"partidas": _partidas(), "anuncios": _anuncios_no_ar()}
-        except DatabaseError:
-            dados = {"partidas": {}, "anuncios": []}
-        try:
-            dados["jogadores_hoje"] = _jogadores_de_hoje()
-        except DatabaseError:
-            dados["jogadores_hoje"] = 0
-        cache.set(CHAVE_VIVO, dados, VIVO_SEGUNDOS)
+def _montar_vivo():
+    try:
+        dados = {"partidas": _partidas(), "anuncios": _anuncios_no_ar()}
+    except DatabaseError:
+        dados = {"partidas": {}, "anuncios": []}
+    try:
+        dados["jogadores_hoje"] = _jogadores_de_hoje()
+    except DatabaseError:
+        dados["jogadores_hoje"] = 0
     return dados
+
+
+def vivo():
+    """O que muda com o uso (partidas, anúncios e quem jogou hoje), num cache curto.
+
+    Vencido o prazo, em produção, o número de antes continua servindo
+    enquanto o novo é montado por trás (core/renovar.py): eram três
+    consultas na conta de quem chegava naquele minuto.
+    """
+    from .renovar import valor
+
+    return valor(CHAVE_VIVO, _montar_vivo, VIVO_SEGUNDOS)
 
 
 def contagens():
@@ -421,12 +429,14 @@ def montar(dados_do_catalogo, busca="", estante="", genero="", ordem=""):
 def ranking_do_portal():
     """O ranking geral e o campeão de cada jogo da casa (do cache do ranking)."""
     geral = ranking.ranking_geral(10)
+    # todos os campeões de uma leitura só (era uma consulta por jogo)
+    primeiros = ranking.campeoes()
     campeoes = []
     for jogo in arena.JOGOS:
-        primeiro = ranking.ranking_do_jogo(jogo["slug"], 1)
+        primeiro = primeiros.get(jogo["slug"])
         if primeiro:
             campeoes.append({"jogo": jogo["titulo"], "slug": jogo["slug"], "url": reverse("jogo", args=[jogo["slug"]]),
-                             "cor": jogo.get("cor") or "#3fd0ff", **primeiro[0]})
+                             "cor": jogo.get("cor") or "#3fd0ff", **primeiro})
     return {"geral": geral, "campeoes": campeoes}
 
 

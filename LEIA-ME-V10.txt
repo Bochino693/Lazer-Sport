@@ -2423,3 +2423,176 @@ Dependência nova: rjsmin (requirements.txt).
    e as abas à vista. E a ficha do painel, no computador e no celular.
    Testes: core/tests_projeto3d.py (MontadorComoLauncherTests e
    PainelTests.test_a_ficha_tem_as_abas_sem_a_tela_cheia).
+
+63) O SITE MAIS RÁPIDO: MENOS IDAS AO BANCO EM CADA PÁGINA
+   O QUE ESTAVA LENTO. Medido no ar (curl, duas vezes cada, tempo até o
+   primeiro byte): /arena/ 2,9 e 2,6 s; /loja/ 2,9 e 2,8 s; /categoria/1/
+   3,4 e 1,7 s; /combo/3 1,7 e 1,4 s; /brinquedo/8/ 3,6 s na primeira e
+   0,9 s na segunda; /jogos/ 2,9 e 0,7 s. A home (0,8 s), /brinquedos/
+   (0,65 s) e as peças (0,24-0,6 s), que já saíam do cache sem consulta
+   nenhuma, mostram o que é rede e servidor sem o banco. O HTML é pequeno
+   (15-40 KB comprimido): o tempo é quase todo do servidor esperando o
+   Supabase.
+   POR QUÊ. Cada consulta ao banco é uma viagem pela rede até o Supabase.
+   Contando as consultas de cada página (abaixo) e comparando com os
+   tempos do ar, cada viagem custa ~0,15 s (de 0,11 a 0,21 s) -- e toda
+   requisição que usa o banco paga mais uma, a conferência da conexão
+   reaproveitada (conn_health_checks). Então o que pesa é QUANTAS
+   consultas a página faz:
+     * a Arena não tinha cache: 10 consultas por visita (os brinquedos com
+       categorias, tags, fotos e 3D lidos DUAS vezes, uma para a roda e
+       outra para o "Monte seu espaço") e ~110 ms de CPU passando cada nome
+       pelas regras de desenho;
+     * a Loja não tinha cache: 13 consultas (e lia os brinquedos e as peças
+       de novo só para contar as curtidas); de quebra, dava o cookie do
+       aparelho a quem só abria a página, e dali em diante TODA página
+       desse visitante custava mais duas consultas;
+     * o combo e a promoção não tinham cache: 5 e 4 consultas (o contador
+       de cliques em duas, get_or_create + update);
+     * a ficha do brinquedo e a categoria já saíam do cache, mas o contador
+       de cliques era um UPDATE no meio da visita: duas viagens (0,9 s em
+       vez de 0,65 s) -- e, com o banco fora do ar, a página que estava
+       pronta no cache caía em erro 500 por causa dele;
+     * a primeira visita depois de qualquer edição do catálogo (o cache
+       inteiro muda de versão) montava a ficha com 13 consultas, a
+       categoria com 13, a home com 102 -- uma por brinquedo, só para ler o
+       "ajuste de curtidas", que estava fora do only();
+     * o portal de jogos achava o campeão de cada jogo com uma consulta por
+       jogo, a cada minuto (o ranking vence em 60 s): 11 consultas na conta
+       de quem chegava naquele minuto -- o "/jogos/ 2,9 s na primeira";
+     * quem está logado pagava, em toda página, quatro consultas só para
+       os selos do cabeçalho (carrinho, manutenções, desejos, pedidos);
+     * os parceiros (/estabelecimentos/) contavam os brinquedos de cada um
+       duas vezes por cartão.
+   O QUE FOI FEITO
+     * Do cache do catálogo, com a versão que os signals já apagam a cada
+       edição (core/home_cache.py): a Arena e o "Monte seu espaço" juntos
+       (core/views_arena.py, dados_publicos_da_arena: os brinquedos lidos
+       uma vez para as duas partes), a Loja (core/views.py, LojaView), o
+       combo, a promoção, os eventos e os projetos. Fica de fora o que é de
+       quem olha: o contato de quem está logado no pedido do projeto e a
+       lista de desejos na Loja (uma consulta para quem pode ter guardado
+       algo, nenhuma para o visitante novo, que também não ganha mais
+       cookie só por olhar).
+     * O contador de cliques sai da requisição (core/cliques.py): a visita
+       entra numa fila e uma linha de fundo grava, somando as do mesmo
+       produto num UPDATE só. O número do painel é o mesmo, milissegundos
+       depois. Ligado só em produção (CLIQUES_EM_SEGUNDO_PLANO); nos testes
+       e no computador o UPDATE continua na hora. Se o processo morrer com
+       cliques na fila (um deploy no meio de uma rajada), esses poucos não
+       contam: é contador de interesse, não registro de venda.
+     * Os números "ao vivo" -- ranking dos jogos, partidas e anúncios do
+       portal, painel da home -- vencidos, continuam servindo enquanto o
+       novo é montado por trás (core/renovar.py, RENOVAR_EM_SEGUNDO_PLANO,
+       só em produção). Recorde novo e anúncio salvo apagam a chave, e
+       aí monta na hora, como antes: quem acabou de jogar se vê no ranking.
+     * Consultas a menos na montagem: a home com ajuste_curtidas no only()
+       (102 -> 38); a categoria com um agregado no lugar de três COUNT e
+       sem o prefetch de categorias, tags e fotos que o cartão não usa
+       (13 -> 7); a ficha com o 3D no mesmo SELECT do brinquedo, a galeria
+       tirada do prefetch (Brinquedos.imagens_ordenadas) e a composição
+       numa consulta (13 -> 9); a lista de brinquedos sem o prefetch das
+       tags; os campeões de todos os jogos da mesma leitura do ranking
+       geral (core/ranking.py, campeoes(): 9 consultas -> 0); os parceiros
+       com o total anotado; o painel ao vivo em três agregados (eram sete).
+     * Os selos do cabeçalho de quem está logado num SELECT só, com as
+       mesmas regras (core/context_processors.py, _selos_da_conta): 4 -> 1.
+     * Defeito achado no caminho: o ranking do jogo guardava a lista
+       cortada no campeão quando o portal pedia só o primeiro, e a página
+       do jogo mostrava uma linha só por até um minuto. Corrigido.
+     * Memória do processo, para o que não muda enquanto ele vive: a
+       normalização dos nomes e as expressões das regras da Arena
+       (core/arena.py: modelo_3d de 260 para 50 µs; os 61 brinquedos da
+       Arena de 29 para 11 ms); o endereço de cada foto do Cloudinary
+       (core/fotos.py: o filtro `foto` de 31 para 1 µs -- montar a URL não
+       vai à rede, mas passa pela configuração inteira do SDK); a
+       impressão digital dos estáticos sem procurar o arquivo de novo a
+       cada {% estatico %} (de 20 para 7 µs, de 30 a 100 por página); as
+       medidas e cores lidas dos .glb do site (core/objetos_3d.py,
+       ler_glb_do_site: lidas uma vez por arquivo, pela data e tamanho).
+     * Cache com 1.000 chaves (CACHE_MAX_ENTRIES; eram as 300 do Django):
+       com as telas novas no cache, 300 enchia e cada limpeza jogava fora um
+       terço, telas populares junto. Medido: uma tela ocupa de 2 a 30 KB (a
+       Arena ~80 KB, a home ~550 KB); mil chaves cabem em 10-20 MB. O menu e
+       o rodapé (categorias, parceiros, clientes) ficam 30 min no cache (eram
+       10): os signals já os apagam quando mudam. O aquecimento depois de
+       uma edição passa a incluir /brinquedos/.
+     * No navegador: <link rel="preconnect"> com o res.cloudinary.com no
+       base.html (a primeira foto da página não espera DNS + TLS), e a foto
+       do combo e da promoção com fetchpriority="high". O resto já estava
+       certo: scripts do <head> com defer (os do fim da página ficam sem
+       defer DE PROPÓSITO, ver o comentário de cada um), fotos fora da
+       tela com loading="lazy", CSS e JS com ?v= e "immutable", imagens 30
+       dias. O CSS do cabeçalho (~42 KB comprimido) não foi partido: com o
+       immutable ele é baixado uma vez, e partir é trabalho de risco.
+   OS NÚMEROS. Banco de dev parecido com o do ar (61 brinquedos com 4 fotos
+   cada, 16 categorias, 10 combos, 10 promoções, 30 peças, 10 objetos 3D, 15
+   jogos cadastrados, recordes, anúncios), PostgreSQL 16 local, o código de
+   antes (217d1e1) e o de agora no mesmo banco. Visitante novo (sem cookie,
+   como o curl). "No ar" = a CPU daqui x 2 (meia CPU do Render) + (consultas
+   + 1 conferência da conexão) x 0,15 s; não conta a rede até o visitante
+   (os ~0,25-0,6 s da home).
+                         consultas        consultas     CPU 2ª     servidor no ar  servidor no ar
+     tela                1ª visita        2ª visita     (ms)       1ª visita (s)   2ª visita (s)
+     /arena/             13 -> 8          10 -> 0       108 -> 22  2,3 -> 1,5      1,87 -> 0,04
+     /loja/              16 -> 10         13 -> 0        42 -> 24  2,6 -> 1,7      2,18 -> 0,05
+     /categoria/1/       13 -> 7           1 -> 0         9 -> 9   2,1 -> 1,2      0,32 -> 0,02
+     /combo/1             8 -> 5           5 -> 0         8 -> 6   1,4 -> 0,9      0,92 -> 0,01
+     /promocao/1          7 -> 4           4 -> 0         7 -> 8   1,2 -> 0,8      0,76 -> 0,01
+     /brinquedo/1/       13 -> 9           1 -> 0        12 -> 12  2,1 -> 1,5      0,32 -> 0,02
+     /jogos/             20 -> 11          0 -> 0        12 -> 14  3,2 -> 1,9      0,02 -> 0,03
+     / (home)           102 -> 38          0 -> 0        11 -> 12  15,7 -> 6,0     0,02 -> 0,02
+     /brinquedos/        11 -> 10          0 -> 0        14 -> 11  1,9 -> 1,7      0,03 -> 0,02
+     /eventos/            6 -> 6           3 -> 0        11 -> 6   1,1 -> 1,1      0,62 -> 0,01
+     /projetos/           4 -> 4           1 -> 0         5 -> 4   0,8 -> 0,8      0,31 -> 0,01
+     /estabelecimentos/  17 -> 7          14 -> 4        16 -> 8   2,7 -> 1,2      2,28 -> 0,77
+   A "1ª visita" é a primeira depois de uma edição do catálogo; em /jogos/,
+   é também a de quem chegava quando o ranking vencia (agora renovado por
+   trás). A home, a Arena, a Loja, a lista, os jogos, as peças, os eventos e
+   os projetos são aquecidos pelo próprio servidor logo depois da edição
+   (core/aquecer.py): o visitante quase nunca paga a 1ª.
+   Logado (cliente com carrinho e pedidos), 2ª visita: de 8 a 10 consultas
+   para 5 ou 6 em toda página (sessão, usuário, perfil, funções e os selos;
+   a ficha, mais as marcas da pessoa): no ar, de ~1,4-1,7 s para ~0,9-1,1
+   s. Arena e
+   Loja logado: 18 e 21 consultas -> 5 e 6 (3,1 e 3,4 s -> ~1,0 e 1,1 s).
+   COMO MEDIR DE NOVO: o cabeçalho Server-Timing de cada resposta (aba Rede
+   do navegador) é o tempo do servidor; curl -w '%{time_starttransfer}' em
+   /pronto/ menos o de /healthz/ é, grosso modo, uma viagem ao banco mais a
+   conferência da conexão.
+   O QUE DEPENDE DO AMBIENTE (nada disso foi mudado; é recomendação):
+     1. A REGIÃO DO BANCO. ~0,15 s por consulta é viagem entre continentes
+        (ou entre costas): na mesma região, uma consulta pelo pooler custa
+        1-5 ms. Confira a região do projeto no Supabase (Project Settings >
+        General) e a do serviço no Render (Settings > Region) e ponha os dois
+        juntos (Render Virginia com Supabase us-east-1, ou Ohio com
+        us-east-2) -- o Render não tem São Paulo; mudar o Supabase de região
+        é criar o projeto novo e migrar os dados. É a mudança que mais
+        rende: as páginas que ainda consultam (a 1ª visita depois de uma
+        edição, tudo de quem está logado, o painel inteiro) caem de
+        segundos para dezenas de milissegundos, e a conferência da conexão
+        deixa de custar.
+     2. REDIS ANTES DE SUBIR OS WORKERS. O cache é memória do processo: com
+        WEB_WORKERS=2 sem cache compartilhado, a edição feita num worker não
+        apaga o cache do outro (até 30 min de catálogo velho), a fila de
+        cliques fica em cada um (ok) e o número vivo renova em cada um (ok).
+        Com um Redis (Render > Key Value) em CACHES, os workers podem subir.
+     3. SESSÃO NO CACHE, SÓ DEPOIS DO REDIS. Com o Redis,
+        SESSION_ENGINE = "django.contrib.sessions.backends.cached_db" tira a
+        consulta da sessão de toda página de quem está logado. Com o cache
+        por processo e mais de um worker, NÃO: o logout feito num worker
+        deixaria a sessão viva no cache do outro.
+     4. ÍNDICES: hoje não são o gargalo -- as tabelas do site são pequenas e
+        cada consulta leva menos de 1 ms dentro do banco; o tempo é a
+        viagem. Os que importariam com volume (favoritos por aparelho e por
+        conta, recordes por jogo e pontos) já existem.
+     5. Cloudflare na frente (docs/TESTE_DE_CARGA.md, §10.6) continua valendo
+        para os estáticos e as fotos.
+   Testes: core/tests_desempenho.py (a montagem de cada tela não cresce com
+   o catálogo; a 2ª visita sem conta não consulta o banco; o clique continua
+   contado; o painel edita e a próxima visita mostra -- combo e promoção
+   pelo próprio /site/combos/ e /site/promocoes/ --; o campeão e os selos
+   dão os números de antes; o número vivo renovado por trás). Dois testes
+   antigos passaram a gravar como o painel grava (save(), que avisa o
+   cache) e a comparar montagem com montagem: core/tests_objetos_3d.py e
+   core/tests_telas_do_site.py.

@@ -29,9 +29,11 @@
                 <img class="promo-gallery-bg"
                      src="{{ promocao.brinquedos.imagem_brinquedo|foto:400 }}"
                      alt="" aria-hidden="true">
+                {# a foto da promoção é a maior coisa da tela: o navegador a pede antes das outras #}
                 <img class="promo-gallery-product"
                      src="{{ promocao.brinquedos.imagem_brinquedo|foto:1400 }}"
                      alt="{{ promocao.brinquedos.nome_brinquedo }}"
+                     fetchpriority="high"
                      decoding="async">
             {% else %}
                 <img class="promo-gallery-bg"

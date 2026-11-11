@@ -77,11 +77,13 @@ def painel_ao_vivo():
     # endereço -- o do painel -- não conhece)
     try:
         geral = ranking_dos_jogos.ranking_geral(10)
+        # os campeões de todos os jogos numa leitura só (era uma consulta por jogo)
+        primeiros = ranking_dos_jogos.campeoes()
         campeoes = []
         for j in arena.JOGOS:
-            primeiro = ranking_dos_jogos.ranking_do_jogo(j["slug"], 1)
+            primeiro = primeiros.get(j["slug"])
             if primeiro:
-                campeoes.append({"jogo": j["titulo"], "cor": j.get("cor") or "#3fd0ff", **primeiro[0]})
+                campeoes.append({"jogo": j["titulo"], "cor": j.get("cor") or "#3fd0ff", **primeiro})
     except DatabaseError:
         geral, campeoes = [], []
     return {

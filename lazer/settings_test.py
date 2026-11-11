@@ -84,3 +84,7 @@ TURNSTILE_SECRET_KEY = ""
 
 # o aquecimento do cache (core/aquecer.py) nunca roda nos testes
 AQUECER_CACHE = False
+# e o contador de cliques grava na hora (core/cliques.py): o teste confere o número logo depois da visita
+CLIQUES_EM_SEGUNDO_PLANO = False
+# e os números "ao vivo" são montados na hora (core/renovar.py)
+RENOVAR_EM_SEGUNDO_PLANO = False

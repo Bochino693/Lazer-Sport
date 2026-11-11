@@ -229,18 +229,44 @@ def ler_glb(arquivo):
     return {"cores": cores_do_glb(dados), "medidas": medidas_do_glb(dados)}
 
 
+#: O que já foi lido de cada .glb do site: (arquivo, mtime, tamanho) -> {"cores", "medidas"}.
+_LIDOS_DO_SITE = {}
+
+
 def ler_glb_do_site(caminho):
-    """As cores e as medidas de um .glb que vem com o site (static/...)."""
+    """As cores e as medidas de um .glb que vem com o site (static/...).
+
+    LIDO UMA VEZ POR PROCESSO. O .glb do site só muda com um deploy: abrir
+    o arquivo e decodificar o JSON de dentro dele a cada cadastro, a cada
+    subida (`garantir_strike_kids`) e a cada tela do painel que oferece os
+    objetos do site era trabalho de disco repetido. A chave leva a data e
+    o tamanho do arquivo -- trocado no lugar, ele é lido de novo -- e cada
+    chamada recebe uma cópia, porque quem chama completa as medidas no
+    próprio dicionário.
+    """
+    import copy
+    import os
+
     from django.contrib.staticfiles import finders
 
     achado = finders.find(caminho)
     if not achado:
         return {"cores": [], "medidas": []}
+    try:
+        info = os.stat(achado)
+        chave = (achado, info.st_mtime_ns, info.st_size)
+    except OSError:
+        chave = None
+    if chave is not None and chave in _LIDOS_DO_SITE:
+        return copy.deepcopy(_LIDOS_DO_SITE[chave])
     with open(achado, "rb") as arquivo:
         try:
-            return ler_glb(arquivo)
+            lido = ler_glb(arquivo)
         except ValidationError:
-            return {"cores": [], "medidas": []}
+            lido = {"cores": [], "medidas": []}
+    if chave is not None:
+        _LIDOS_DO_SITE[chave] = copy.deepcopy(lido)
+    return lido
 
 
 def validar_glb(arquivo):

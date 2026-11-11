@@ -169,7 +169,7 @@
             </p>
             <span class="est-meta">
                 <i class="fa-solid fa-gamepad"></i>
-                {{ est.brinquedos.count }} brinquedo{{ est.brinquedos.count|pluralize }}
+                {{ est.total_brinquedos }} brinquedo{{ est.total_brinquedos|pluralize }}
             </span>
             <a href="{% url 'estabelecimento_brinquedo' est.id %}#filter" class="est-btn">
                 Ver brinquedos <i class="fa-solid fa-arrow-right"></i>

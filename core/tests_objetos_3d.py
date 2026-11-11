@@ -427,7 +427,11 @@ class NaArenaTests(TestCase):
         self.assertEqual((dados["grupo"], dados["reino"], dados["medidas_modelo"]), ("esportivos", True, [3.9, 39.0, 23.0]))
         self.assertEqual(sum(m["modelo_id"] == "espaco-esportivo-modelo-1" for m in maquinas), 1)
         # um .glb enviado (sem código) segue como objeto do cadastro, sem as animações
-        ObjetoTresD.objects.filter(brinquedo=gol).update(arquivo_estatico="", arquivo="objetos_3d/gol.glb")
+        # (gravado com save(), como o painel faz: a Arena sai do cache do
+        # catálogo, e é o signal do save() que avisa que o cadastro mudou)
+        objeto = ObjetoTresD.objects.get(brinquedo=gol)
+        objeto.arquivo_estatico, objeto.arquivo = "", "objetos_3d/gol.glb"
+        objeto.save()
         maquinas = self.client.get(reverse("arena")).context["arena_dados"]["maquinas"]
         dados = next(m for m in maquinas if m["nome"] == "Gol Flash Arena")
         self.assertTrue(dados["modelo_id"].startswith("objeto-"))

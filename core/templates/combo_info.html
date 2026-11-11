@@ -32,9 +32,11 @@
             {% if combo.imagem_combo %}
                 <img class="combo-gallery-bg"
                      src="{{ combo.imagem_combo|foto:400 }}" alt="" aria-hidden="true">
+                {# a foto do combo é a maior coisa da tela: o navegador a pede antes das outras #}
                 <img class="combo-gallery-product"
                      src="{{ combo.imagem_combo|foto:1400 }}"
                      alt="{{ combo.descricao }}"
+                     fetchpriority="high"
                      decoding="async">
             {% else %}
                 <img class="combo-gallery-bg"

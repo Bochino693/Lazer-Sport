@@ -324,7 +324,19 @@ class Brinquedos(Prime):
 
     @property
     def imagens_ordenadas(self):
-        """Galeria pública tipada, limitada a três imagens."""
+        """Galeria pública tipada, limitada a três imagens.
+
+        Com a galeria já trazida (`prefetch_related("imagens_brinquedo")`,
+        como a página do brinquedo faz), a conta é feita na memória: o
+        `.filter()` sobre o related manager montava uma consulta nova e
+        jogava o prefetch fora. Mesma regra, mesma ordem.
+        """
+        fotos_cache = getattr(self, "_prefetched_objects_cache", {}).get("imagens_brinquedo")
+        if fotos_cache is not None:
+            return sorted(
+                (foto for foto in fotos_cache if foto.tipo),
+                key=lambda foto: (foto.ordem, foto.id),
+            )[:3]
         return (
             self.imagens_brinquedo
             .filter(tipo__isnull=False)
