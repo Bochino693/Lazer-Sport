@@ -593,7 +593,7 @@ class Orcamento3DTests(TestCase):
         node = shutil.which("node")
         if not node:
             self.skipTest("sem o node")
-        for caminho in ("site/arena/visor3d.js", "site/paginas/orcamento-3d.js"):
+        for caminho in ("site/arena/visor3d.js", "site/paginas/orcamento-3d.js", "site/arena/adesivos3d.js"):
             with self.subTest(caminho), tempfile.TemporaryDirectory() as pasta:
                 destino = Path(pasta) / "modulo.mjs"
                 destino.write_bytes(Path(finders.find(caminho)).read_bytes())
@@ -602,4 +602,4 @@ class Orcamento3DTests(TestCase):
         with open(finders.find("site/arena/visor3d.js"), encoding="utf-8") as arquivo:
             visor = arquivo.read()
         self.assertIn("export async function iniciar", visor)
-        self.assertIn("return { acordar, soltar: desligar }", visor)
+        self.assertIn("return { acordar, soltar: desligar, trocar }", visor)

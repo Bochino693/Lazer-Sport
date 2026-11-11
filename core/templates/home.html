@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static avisos %}
-{% load adesivos %}
+{% load giro %}
 {% load fotos fichas %}
 {% load humanize %}
 {% load cache %}
@@ -435,7 +435,7 @@
                   decoding="async"
                 >
               {% endif %}
-              {% adesivos_do_card brinquedo.id %}
+              {% fotos_do_card brinquedo.id %}
             </div>
 
             <div class="card-mini-info">

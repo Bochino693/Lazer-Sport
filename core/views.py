@@ -1157,10 +1157,14 @@ class BrinquedoInfoView(View):
         imagens_brinquedo = list(brinquedo.imagens_ordenadas)
         imagem_catalogo = brinquedo.imagem_catalogo
         componentes, faz_parte_de = _composicao_do_brinquedo(brinquedo)
-        # os adesivos (a mesma máquina com outra arte: core/variantes.py), com as fotos e o 3D de cada um
+        # os adesivos (a mesma máquina com outra arte, LEIA-ME 72): um objeto só, com os 3D de
+        # cada adesivo no mesmo visor -- o controle "Adesivo: A · B" troca o .glb ali mesmo
         from . import variantes as variantes_de_adesivo
 
-        variantes = variantes_de_adesivo.variantes_do_produto(brinquedo)
+        modelos_3d = variantes_de_adesivo.modelos_3d(brinquedo)
+        if objeto_3d is None and modelos_3d:
+            objeto_3d = {"url": modelos_3d[0]["url"]}
+        adesivos3d = [{"nome": m["nome"], "url": m["url"]} for m in modelos_3d]
 
         return {
             "contexto": {
@@ -1174,7 +1178,7 @@ class BrinquedoInfoView(View):
                 "imagens_brinquedo": imagens_brinquedo,
                 "permite_sob_medida": permite_sob_medida,
                 "objeto_3d": objeto_3d,
-                "variantes": variantes,
+                "adesivos3d": adesivos3d,
             },
             # As linhas da mensagem do WhatsApp, sem a última (o endereço
             # da página, que depende do host da requisição).
@@ -1191,32 +1195,15 @@ class BrinquedoInfoView(View):
         try:
             dados = get_cached_catalog_page("brinquedo", (id,), lambda: self._montar(id))
         except Http404:
-            # a ficha que virou o adesivo de outro produto: o endereço antigo (links,
-            # favoritos, orçamentos, pedidos) vai, para sempre, para o produto no adesivo dela
+            # a ficha da outra arte, juntada a outro produto (LEIA-ME 72): o endereço antigo
+            # (links, favoritos, orçamentos, pedidos) vai, para sempre, para o produto
             destino = variantes_de_adesivo.redirecionamento(id)
             if destino is None:
                 raise
-            return redirect(f"{reverse('brinquedo_detalhe', args=[destino[0]])}?adesivo={destino[1]}", permanent=True)
+            return redirect(reverse("brinquedo_detalhe", args=[destino]), permanent=True)
         brinquedo = dados["contexto"]["brinquedo"]
-
-        # O adesivo escolhido (?adesivo=<slug>): as fotos e o 3D dele, e ele na mensagem do orçamento.
-        variantes = dados["contexto"].get("variantes") or []
-        adesivo = variantes_de_adesivo.escolhida(variantes, request.GET.get("adesivo", ""))
-        extra = {}
         mensagem = list(dados["mensagem"])
-        if adesivo:
-            outro_3d = next((v for v in variantes if v["objeto_3d"] and v is not adesivo), None)
-            extra = {
-                "adesivo": adesivo,
-                "adesivo_sem_3d": not adesivo["objeto_3d"],
-                "adesivo_com_3d": outro_3d if not adesivo["objeto_3d"] else None,
-            }
-            if not adesivo["padrao"] or not dados["contexto"]["imagens_brinquedo"]:
-                extra["imagens_brinquedo"] = adesivo["imagens"]
-            extra["objeto_3d"] = (
-                (dados["contexto"]["objeto_3d"] if adesivo["padrao"] else None) or adesivo["objeto_3d"]
-            )
-            mensagem.insert(3, f"Adesivo: {adesivo['nome']}")
+        extra = {}
 
         # O contador de cliques é por visita: um UPDATE, fora do cache.
         _registrar_clique(BrinquedoClick, {"brinquedo_clicado_id": brinquedo.pk})

@@ -2,7 +2,7 @@
 {% load static interno_extras avisos %}
 {% load fotos %}
 {% load favoritos_extras %}
-{% load adesivos %}
+{% load giro %}
 
 {% block title %}Brinquedos | Catálogo Lazer &amp; Sport{% endblock %}
 
@@ -465,7 +465,7 @@
                                     decoding="async"
                                 >
                             {% endif %}
-                            {% adesivos_do_card brinquedo.id %}
+                            {% fotos_do_card brinquedo.id %}
                         </a>
 
                         <div class="catalogo-card-body">

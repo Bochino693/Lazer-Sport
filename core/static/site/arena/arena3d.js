@@ -1566,6 +1566,20 @@ class Maquina {
   }
 
   /**
+   * O ADESIVO (LEIA-ME 72): o mesmo produto com outra arte. Sai o .glb de
+   * agora e entra o do adesivo, no mesmo lugar da roda (o estande, a câmera e
+   * a ficha ficam); o outro só baixa quando é pedido.
+   */
+  trocarAdesivo(modelo) {
+    if (!modelo || !modelo.url || modelo.url === this.modelo) return;
+    this.descartar();
+    this.modelo = modelo.url;
+    this.dados = { ...this.dados, modelo: modelo.url, modelo_id: modelo.codigo || this.dados.modelo_id };
+    this.adesivoEscolhido = modelo.nome;
+    this.pedir();
+  }
+
+  /**
    * A vaga trocou de modelo: tudo o que este usava (malhas, materiais,
    * texturas, as crianças e as telas do espaço) sai da placa de vídeo. O
    * estande fica pronto para a próxima vez que ele for escolhido.
@@ -2053,6 +2067,37 @@ class Arena {
   modulosDeCor() {
     if (!this.cores3d) this.cores3d = import(this.palco.dataset.cores3d);
     return this.cores3d;
+  }
+
+  /** O controle "Adesivo: A · B" na ficha (site/arena/adesivos3d.js), quando o produto tem mais de um 3D. */
+  async mostrarAdesivos(m) {
+    const caixa = this.ficha && this.ficha.querySelector("[data-ficha-adesivos]");
+    if (!caixa) return;
+    caixa.hidden = true;
+    caixa.replaceChildren();
+    const modelos = (m && m.dados.adesivos3d) || [];
+    if (modelos.length < 2 || !this.palco.dataset.adesivos3d) return;
+    let modulo;
+    try {
+      modulo = await (this.adesivos3d = this.adesivos3d || import(this.palco.dataset.adesivos3d));
+    } catch (erro) {
+      return;
+    }
+    if (this.selecionada !== m) return;
+    const atual = Math.max(0, modelos.findIndex((x) => x.url === m.modelo));
+    caixa.replaceChildren(modulo.chipsDeAdesivo({
+      modelos,
+      atual,
+      onde: "ficha",
+      aoEscolher: (modelo) => new Promise((pronto) => {
+        m.trocarAdesivo(modelo);
+        // espera o objeto novo chegar (ou desistir) para soltar o botão
+        const inicio = Date.now();
+        const ver = () => (m.montada || !m.carregando || Date.now() - inicio > 20000 ? pronto() : setTimeout(ver, 150));
+        ver();
+      }),
+    }));
+    caixa.hidden = false;
   }
 
   /**
@@ -4280,6 +4325,8 @@ class Arena {
     if (b.jogo) jogar.href = `${jogar.dataset.base}${b.jogo}/`;
     // as cores do objeto 3D (quando a máquina tem um)
     this.mostrarCores(m);
+    // os adesivos (o mesmo produto com outra arte): trocar o 3D aqui mesmo
+    this.mostrarAdesivos(m);
     // num espaço inteiro, os jogos da casa que rodam nele (Swish, Gol Flash)
     const jogos = f.querySelector("[data-ficha-jogos]");
     if (jogos) {

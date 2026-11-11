@@ -1,35 +1,31 @@
-"""Os adesivos de um produto: a mesma máquina com outra arte (LEIA-ME, seção 72).
+"""Os adesivos: a mesma máquina com outra arte, num produto só (LEIA-ME, seção 72).
 
-O cliente, mostrando os cards "Air Game Kids" (os astronautas) e "Air Game
-Kids Alienígenas" (os alienígenas) lado a lado: "os dois devem se tornar o
-mesmo objeto, como um adesivo diferente, ele quem deve ser o diferencial,
-rodando as duas imagens em todo objeto também canalizando os dois objetos 3d
-... vamos ter mais exemplos assim então se atente em como fazer".
+O cliente: "vc deve deixar apenas um objeto ... como no boliche" e "EU QUERO
+OS DOIS OBJETOS 3D, NO MESMO BRINQUEDO" -- "TUDO DEVE AFUNILAR PARA UM
+OBJETO SÓ, PODENDO VISUALIZAR, EM ÁREAS 3D E ETC, TAMBÉM DEVE SER POSSÍVEL
+MUDAR PARA VER OS ADESIVOS".
 
-O MECANISMO (para este par e os próximos):
-  * o produto é um só; cada adesivo (core.models.VarianteAdesivo) mostra as
-    fotos e o 3D de uma ficha do cadastro (`origem`; o padrão, o próprio
-    produto);
-  * a ficha que era um produto à parte fica DESATIVADA (sai das listas; nada
-    é apagado: pedidos, orçamentos e favoritos seguem apontando para ela) e o
-    endereço dela redireciona, permanente, para o produto com
-    `?adesivo=<slug>`;
-  * na página do produto, as fichas "Adesivo: A · B" trocam as fotos e o 3D
-    (o .glb da ficha do adesivo) e o endereço; o adesivo vai para o carrinho
-    e para a mensagem do orçamento;
-  * nos cards (a home, as categorias, /brinquedos/, a loja, a busca), o
-    produto aparece uma vez, com as capas dos adesivos se revezando e o selo
-    "2 adesivos"; na Arena, uma vez, com o 3D do adesivo que tem.
+O MECANISMO (para estes pares e os próximos):
+  * o produto é UM objeto: uma página, um card, um item no carrinho e no
+    orçamento, uma máquina na Arena. A ficha da outra arte (a `origem` do
+    core.models.VarianteAdesivo) fica DESATIVADA, sem apagar nada (pedidos,
+    orçamentos e favoritos seguem apontando para ela), e o endereço dela
+    redireciona (301) para o produto;
+  * a galeria do produto tem as fotos das duas artes: as da ficha entram
+    depois das dele (`ImagemBrinquedo.PAPEL_OUTRA_ARTE`, os mesmos arquivos
+    do Cloudinary, sem subir nada: `unificar`); sem medidas, o produto fica
+    com as da ficha;
+  * os DOIS 3D ficam no produto: em toda área 3D (a página, a Arena, o "Ver
+    em 3D" da proposta) o controle "Adesivo: A · B" (site/arena/adesivos3d.js)
+    troca o .glb ali mesmo, sem sair da tela (`modelos_3d`). O adesivo
+    escolhido segue para o carrinho como observação.
 
 JUNTAR UM PAR NOVO: um item em PARES e uma migração de dados que chame
-`juntar` (como a 0161). Fora das migrações, o painel (o admin dos adesivos)
-faz o mesmo à mão.
+`migrar` e `unificar_todos` (como a 0161 e a 0166).
 """
 
-import json
 import unicodedata
 
-from django.core.cache import cache
 from django.db import transaction
 
 #: Os pares juntados: o produto (o adesivo padrão, as fotos dele) e as fichas que viram adesivos dele.
@@ -52,8 +48,6 @@ PRECO_SE_VAZIO = {"Air Game Kids": "6990.00"}
 #: As fichas renomeadas antes de virar adesivo: (a chave do cadastro, o nome de antes).
 RENOMEADAS = (("basquete-street-quadrinhos", "Basquete Street Quadrinhos"),)
 
-#: A chave do cache do mapa dos cards (a versão muda quando um adesivo, uma foto ou um produto muda).
-CHAVE_DO_MAPA = "variantes-adesivo:mapa"
 
 
 def _normalizar(texto):
@@ -141,14 +135,101 @@ def migrar(apps, schema_editor, avisar=print):
 
 
 # ----------------------------------------------------------------------
-# O que as telas usam
+# Um objeto só: as fotos e os 3D da outra arte no produto (a 0166)
 # ----------------------------------------------------------------------
 
+#: O 3D do próprio produto, quando ele não tem um: o dos Astronautas, feito do mesmo móvel do
+#: Alienígenas (ferramentas/modelos3d/air-game-kids-astronautas/). (o .glb, o código)
+TRES_D_PROPRIO = {"Air Game Kids": ("site/arena/modelos/air-game-kids-astronautas.glb", "air-game-kids-astronautas")}
 
-def _url(imagem, largura):
-    from .fotos import reduzir_imagem, url_da_imagem
+#: As fotos da outra arte que entram na galeria do produto (as primeiras da galeria pública da ficha).
+FOTOS_DA_OUTRA_ARTE = 3
 
-    return reduzir_imagem(url_da_imagem(imagem), largura) if imagem else ""
+PAPEL_OUTRA_ARTE = "outra_arte"
+MEDIDAS = ("altura_m", "largura_m", "profundidade_m")
+
+
+def _galeria_publica_da_ficha(ficha, ImagemBrinquedo):
+    """As fotos que a página da ficha mostrava (as tipadas e a "original"), na ordem."""
+    fotos = ImagemBrinquedo.objects.filter(brinquedo=ficha).order_by("ordem", "id")
+    return [f for f in fotos if f.tipo or f.papel_na_capa == "original"][:FOTOS_DA_OUTRA_ARTE]
+
+
+def unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, avisar=print):
+    """Põe no produto o que era da ficha da outra arte. Pode rodar de novo (não duplica).
+
+      * as medidas que faltam no produto (o Basquete Home: as do Quadrinhos);
+      * as fotos da ficha na galeria do produto, depois das dele, apontando
+        para os MESMOS arquivos (nada sobe para o Cloudinary);
+      * o 3D próprio do produto, quando ele não tem um e há um feito para ele
+        (TRES_D_PROPRIO: os Astronautas). O 3D da ficha continua nela: os dois
+        aparecem no produto (`modelos_3d`).
+    Nunca mexe no preço nem em nada que o produto já tenha.
+    """
+    from .objetos_3d import ler_glb_do_site
+
+    fichas = [v.origem for v in VarianteAdesivo.objects.filter(brinquedo=base, origem__isnull=False).select_related("origem").order_by("ordem", "id")]
+    with transaction.atomic():
+        mudou = []
+        for campo in MEDIDAS:
+            if getattr(base, campo) in (None, ""):
+                valor = next((getattr(f, campo) for f in fichas if getattr(f, campo) not in (None, "")), None)
+                if valor is not None:
+                    setattr(base, campo, valor)
+                    mudou.append(campo)
+        if mudou:
+            base.save(update_fields=mudou)
+            avisar(f"{base.nome_brinquedo}: as medidas que faltavam vieram da outra arte "
+                   f"({', '.join(f'{c}={getattr(base, c)}' for c in mudou)}).")
+        ja = set(ImagemBrinquedo.objects.filter(brinquedo=base).values_list("imagem", flat=True))
+        ordem = max(ImagemBrinquedo.objects.filter(brinquedo=base).values_list("ordem", flat=True), default=0)
+        for ficha in fichas:
+            for foto in _galeria_publica_da_ficha(ficha, ImagemBrinquedo):
+                nome = foto.imagem.name if hasattr(foto.imagem, "name") else str(foto.imagem)
+                if not nome or nome in ja:
+                    continue
+                ordem += 1
+                ImagemBrinquedo.objects.create(
+                    brinquedo=base, tipo=None, ordem=ordem, imagem=nome, papel_na_capa=PAPEL_OUTRA_ARTE,
+                    texto_alternativo=(foto.texto_alternativo or ficha.nome_brinquedo)[:180],
+                )
+                ja.add(nome)
+                avisar(f"{base.nome_brinquedo}: a foto {nome} (de {ficha.nome_brinquedo}) entrou na galeria.")
+        proprio = TRES_D_PROPRIO.get(_nome_da_lista(base.nome_brinquedo))
+        if proprio and not ObjetoTresD.objects.filter(brinquedo=base).exists():
+            caminho, codigo = proprio
+            try:
+                lido = ler_glb_do_site(caminho)
+            except Exception:  # o .glb não está no static: fica sem, como antes
+                lido = None
+            if lido is not None:
+                ObjetoTresD.objects.create(
+                    brinquedo=base, arquivo_estatico=caminho, codigo=codigo,
+                    cores=lido["cores"], medidas=lido["medidas"], ativo=True, exibir_na_arena=True,
+                )
+                avisar(f"{base.nome_brinquedo}: ganhou o 3D próprio ({caminho}).")
+    return base
+
+
+def _nome_da_lista(nome):
+    """O nome como está em PARES/TRES_D_PROPRIO (sem acento nem maiúscula)."""
+    alvo = _normalizar(nome)
+    return next((n for n in TRES_D_PROPRIO if _normalizar(n) == alvo), nome)
+
+
+def unificar_todos(apps, schema_editor=None, avisar=print):
+    """A migração (a 0166): `unificar` em cada produto com outra arte, em todo lugar (só o banco)."""
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    ids = VarianteAdesivo.objects.filter(origem__isnull=False).values_list("brinquedo_id", flat=True).distinct()
+    for base in Brinquedos.objects.filter(pk__in=list(ids)).order_by("id"):
+        unificar(base, Brinquedos, apps.get_model("core", "ImagemBrinquedo"), apps.get_model("core", "ObjetoTresD"),
+                 VarianteAdesivo, avisar=avisar)
+
+
+# ----------------------------------------------------------------------
+# O que as telas usam
+# ----------------------------------------------------------------------
 
 
 def _objeto_3d(ficha):
@@ -170,141 +251,102 @@ def _objeto_3d(ficha):
     return None
 
 
-def variantes_do_produto(brinquedo):
-    """Os adesivos do produto para a página dele: [] quando não tem.
+def modelos_3d(brinquedo):
+    """Os 3D do produto, um por adesivo: [{"nome", "url", "codigo"}] (o dele primeiro); [] sem outra arte.
 
-    Cada um: nome, slug, padrão, as fotos (a galeria pública da ficha: as
-    três primeiras com tipo), a capa e o 3D (ou None).
+    É o que o controle "Adesivo: A · B" das áreas 3D troca. O do próprio
+    produto leva o nome do adesivo padrão (os Astronautas); o da ficha, o do
+    adesivo dela (os Alienígenas). Adesivo sem 3D não entra.
     """
     from .models import VarianteAdesivo
 
-    variantes = list(VarianteAdesivo.objects.filter(brinquedo=brinquedo, ativo=True).select_related("origem"))
-    if len(variantes) < 2:
+    variantes = list(VarianteAdesivo.objects.filter(brinquedo=brinquedo, ativo=True).select_related("origem").order_by("ordem", "id"))
+    if not any(v.origem_id for v in variantes):
         return []
     saida = []
     for variante in variantes:
-        ficha = variante.ficha
-        imagens = list(ficha.imagens_ordenadas)
-        fotos = [
-            {"url": _url(foto.imagem, 1400), "miniatura": _url(foto.imagem, 240), "alt": foto.texto_alternativo or ficha.nome_brinquedo}
-            for foto in imagens
-        ]
-        capa = ficha.imagem_catalogo
-        saida.append({
-            "nome": variante.nome,
-            "slug": variante.slug,
-            "padrao": variante.padrao,
-            # as fotos da galeria pública da ficha (a página as mostra como as do produto)
-            "imagens": imagens,
-            "fotos": fotos or ([{"url": _url(capa, 1400), "miniatura": _url(capa, 240), "alt": ficha.nome_brinquedo}] if capa else []),
-            "capa": _url(capa, 720),
-            "objeto_3d": _objeto_3d(ficha),
-        })
-    if not any(v["padrao"] for v in saida):
-        saida[0]["padrao"] = True
+        objeto = _objeto_3d(variante.origem or brinquedo)
+        if objeto and objeto["url"] not in {m["url"] for m in saida}:
+            saida.append({"nome": variante.nome, "url": objeto["url"], "codigo": objeto["codigo"], "padrao": variante.padrao})
+    saida.sort(key=lambda m: not m["padrao"])
     return saida
 
 
-def escolhida(variantes, slug):
-    """O adesivo do `slug` (o ?adesivo= do endereço), ou o padrão."""
-    return next((v for v in variantes if slug and v["slug"] == slug), None) or next((v for v in variantes if v["padrao"]), None)
+def _nomes_dos_pares():
+    nomes = set()
+    for (produto, _padrao), fichas in PARES:
+        nomes.add(_normalizar(produto))
+        nomes.update(_normalizar(f[0]) for f in fichas)
+    nomes.update(_normalizar(antigo) for _chave, antigo in RENOMEADAS)
+    return nomes
+
+
+def modelos_do_item(item):
+    """Os 3D dos adesivos da linha da proposta: os do produto dela (ou do produto da ficha dela); [] sem.
+
+    Só consulta o banco para os brinquedos dos PARES (pelo nome, sem
+    consulta): a proposta com outros itens não paga nada a mais.
+    """
+    brinquedo = getattr(item, "brinquedo", None) if getattr(item, "brinquedo_id", None) else None
+    if brinquedo is None or _normalizar(brinquedo.nome_brinquedo) not in _nomes_dos_pares():
+        return []
+    from .models import VarianteAdesivo
+
+    base = brinquedo
+    juntada = VarianteAdesivo.objects.filter(origem=brinquedo, ativo=True).select_related("brinquedo").first()
+    if juntada is not None:
+        base = juntada.brinquedo
+    return modelos_3d(base)
 
 
 def redirecionamento(brinquedo_id):
-    """O produto e o adesivo para onde vai o endereço da ficha que virou adesivo, ou None."""
+    """O produto para onde vai o endereço da ficha que foi juntada a ele, ou None."""
     from .models import VarianteAdesivo
 
     variante = (
         VarianteAdesivo.objects.filter(origem_id=brinquedo_id, origem__ativo=False, brinquedo__ativo=True, ativo=True)
-        .select_related("brinquedo")
+        .only("brinquedo_id")
         .first()
     )
-    return (variante.brinquedo_id, variante.slug) if variante else None
-
-
-def mapa_dos_cards():
-    """{id do produto: {"total": n, "capas": [{"nome", "url"}]}} dos produtos com adesivos (em cache).
-
-    Uma consulta pequena (a tabela dos adesivos) e as capas das fichas; o
-    cache cai quando um adesivo, uma foto ou um produto muda (os signals).
-    """
-    mapa = cache.get(CHAVE_DO_MAPA)
-    if mapa is not None:
-        return mapa
-    from .models import VarianteAdesivo
-
-    mapa = {}
-    try:
-        variantes = list(
-            VarianteAdesivo.objects.filter(ativo=True, brinquedo__ativo=True)
-            .select_related("brinquedo", "origem")
-            .order_by("brinquedo_id", "ordem", "id")
-        )
-    except Exception:  # a tabela ainda não existe (o código chegou antes da migração)
-        return {}
-    for variante in variantes:
-        ficha = variante.ficha
-        item = mapa.setdefault(variante.brinquedo_id, {"total": 0, "capas": []})
-        item["total"] += 1
-        capa = ficha.imagem_catalogo
-        if capa:
-            item["capas"].append({"nome": variante.nome, "url": _url(capa, 720)})
-    mapa = {k: v for k, v in mapa.items() if v["total"] > 1}
-    cache.set(CHAVE_DO_MAPA, mapa, 60 * 30)
-    return mapa
-
-
-def do_card(brinquedo_id):
-    """Os adesivos de um card: {"total", "capas", "json"} ou None."""
-    item = mapa_dos_cards().get(brinquedo_id)
-    if not item:
-        return None
-    return {**item, "json": json.dumps([c["url"] for c in item["capas"]])}
-
-
-def limpar_cache(**_kwargs):
-    cache.delete(CHAVE_DO_MAPA)
-
-
-def modelos_das_variantes():
-    """Os códigos dos objetos 3D que são de um adesivo (a Arena não os mostra à parte)."""
-    from .models import VarianteAdesivo
-
-    try:
-        variantes = list(VarianteAdesivo.objects.filter(ativo=True, origem__isnull=False).select_related("origem", "brinquedo"))
-    except Exception:
-        return {}
-    saida = {}
-    for variante in variantes:
-        objeto = _objeto_3d(variante.origem)
-        if objeto:
-            saida.setdefault(variante.brinquedo_id, []).append({**objeto, "adesivo": variante.nome})
-    return saida
+    return variante.brinquedo_id if variante else None
 
 
 def completar_na_arena(dados):
-    """Na Arena (core/views_arena.py): o produto com adesivos leva o 3D dos adesivos.
+    """Na Arena (core/views_arena.py): o produto uma vez, com os 3D dos adesivos para trocar.
 
-    `modelos_variantes`: os códigos dos .glb dos adesivos (a Arena não os põe à
-    parte, como objetos fora do catálogo); sem 3D próprio, o produto fica com o
-    do primeiro adesivo que tem (e entra na roda).
+    `adesivos3d`: os 3D do produto (o controle da ficha da Arena troca um
+    pelo outro); `modelos_variantes`: os códigos deles (a Arena não os põe à
+    parte, como objetos fora do catálogo). Sem 3D próprio, o produto entra na
+    roda com o primeiro que houver.
     """
     from . import arena
+    from .models import Brinquedos
 
-    por_produto = modelos_das_variantes()
+    ids = [item.get("id") for item in dados if isinstance(item.get("id"), int)]
+    if not ids:
+        return
+    from .models import VarianteAdesivo
+
+    com_outra_arte = set(VarianteAdesivo.objects.filter(brinquedo_id__in=ids, origem__isnull=False, ativo=True)
+                         .values_list("brinquedo_id", flat=True))
+    if not com_outra_arte:
+        return
+    produtos = {b.pk: b for b in Brinquedos.objects.filter(pk__in=com_outra_arte)}
     for item in dados:
-        extras = por_produto.get(item.get("id"))
-        if not extras:
+        if item.get("id") not in com_outra_arte:
             continue
-        item["modelos_variantes"] = [e["codigo"] for e in extras if e["codigo"]]
-        item["adesivos"] = [e["adesivo"] for e in extras]
+        lista = modelos_3d(produtos[item["id"]])
+        if not lista:
+            continue
+        item["modelos_variantes"] = [m["codigo"] for m in lista if m["codigo"]]
+        if len(lista) > 1:
+            item["adesivos3d"] = [{k: m[k] for k in ("nome", "url", "codigo")} for m in lista]
         if item.get("modelo"):
             continue
-        primeiro = extras[0]
+        primeiro = lista[0]
         modelo = next((m for m in arena.MODELOS_3D if m["id"] == primeiro["codigo"]), None)
         item["modelo"] = primeiro["url"]
         item["modelo_id"] = primeiro["codigo"]
-        item["cores_modelo"] = primeiro["cores"]
         if modelo:
             item["medidas_modelo"] = list(modelo["medidas"])
             item["grupo"] = modelo.get("grupo", item.get("grupo"))

@@ -2823,30 +2823,24 @@ body.ls-modo-app main.content-section { padding-top: 0; margin-top: 0; }
 
 
 /* =========================================================
-   OS ADESIVOS NOS CARDS (LEIA-ME, seção 72): o produto com adesivos
-   aparece uma vez, com o selo "2 adesivos" e as capas se revezando
-   (ls-adesivos.js).
+   AS FOTOS QUE GIRAM NOS CARDS (LEIA-ME, seção 72; site/ls-giro.js):
+   o brinquedo com mais de uma foto reveza a galeria no card. A próxima
+   foto entra numa camada por cima, do mesmo tamanho e jeito da foto do
+   card, e aparece aos poucos (a troca suave).
 ========================================================= */
-.card-adesivos {
+.card-giro-camada {
     position: absolute;
-    left: 10px;
-    bottom: 10px;
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border-radius: 999px;
-    background: rgba(5, 11, 31, .78);
-    color: #fde68a;
-    font-size: .74rem;
-    font-weight: 700;
-    letter-spacing: .01em;
-    line-height: 1;
+    margin: 0;
+    opacity: 0;
+    transition: opacity .6s ease;
     pointer-events: none;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+    z-index: 1;
 }
 
-.card-adesivos i { color: #facc15; }
+.card-giro-camada.card-giro-visivel { opacity: 1; }
 
-.card-adesivos-troca { opacity: .15; }
+.card-giro-sumindo { opacity: 0 !important; transition: opacity .3s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+    .card-giro-camada, .card-giro-sumindo { transition: none; }
+}
