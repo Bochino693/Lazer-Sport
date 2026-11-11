@@ -421,12 +421,14 @@ def montar(dados_do_catalogo, busca="", estante="", genero="", ordem=""):
 def ranking_do_portal():
     """O ranking geral e o campeão de cada jogo da casa (do cache do ranking)."""
     geral = ranking.ranking_geral(10)
+    # todos os campeões de uma leitura só (era uma consulta por jogo)
+    primeiros = ranking.campeoes()
     campeoes = []
     for jogo in arena.JOGOS:
-        primeiro = ranking.ranking_do_jogo(jogo["slug"], 1)
+        primeiro = primeiros.get(jogo["slug"])
         if primeiro:
             campeoes.append({"jogo": jogo["titulo"], "slug": jogo["slug"], "url": reverse("jogo", args=[jogo["slug"]]),
-                             "cor": jogo.get("cor") or "#3fd0ff", **primeiro[0]})
+                             "cor": jogo.get("cor") or "#3fd0ff", **primeiro})
     return {"geral": geral, "campeoes": campeoes}
 
 

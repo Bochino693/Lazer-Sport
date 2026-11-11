@@ -45,7 +45,9 @@ SESSAO_PENDENTES = "jogos_pendentes"
 SESSAO_ULTIMO_ENVIO = "jogos_ultimo_envio"
 SESSAO_SALVOS = "jogos_salvos"
 
-CHAVE_CACHE_GERAL = "ranking_jogos:geral"
+# A chave do geral guarda também o campeão de cada jogo (v2): os dois saem
+# da mesma leitura da tabela de recordes (ver `_apurar_geral`).
+CHAVE_CACHE_GERAL = "ranking_jogos:geral:v2"
 CHAVE_CACHE_JOGO = "ranking_jogos:jogo:{}"
 CACHE_SEGUNDOS = 60
 TAMANHO = 10
@@ -201,52 +203,88 @@ def _linhas(consulta):
 
 
 def ranking_do_jogo(jogo, tamanho=TAMANHO) -> list[dict]:
+    # O cache guarda sempre os TAMANHO primeiros, e cada um corta o que
+    # quer. A chave não leva o tamanho: quando o portal pedia só o campeão
+    # (tamanho=1) antes de alguém abrir a página do jogo, a lista de UM
+    # ficava guardada e o ranking do jogo aparecia com uma linha só por até
+    # um minuto. O portal agora usa `campeoes()`; esta conta continua certa
+    # para quem pedir um pedaço.
     chave = CHAVE_CACHE_JOGO.format(jogo)
     lista = cache.get(chave)
-    if lista is None:
+    if lista is None or (len(lista) < tamanho and len(lista) == TAMANHO):
         recordes = _linhas(
             RecordeJogo.objects.filter(jogo=jogo, pontos__gt=0)
             .select_related("usuario", "usuario__perfil")
-            .order_by("-pontos", "atualizado_em")[:tamanho]
+            .order_by("-pontos", "atualizado_em")[:max(tamanho, TAMANHO)]
         )
         lista = [
             {"posicao": i, "nome": nome_publico(r.usuario), "pontos": r.pontos, "usuario": r.usuario_id}
             for i, r in enumerate(recordes, start=1)
         ]
         cache.set(chave, lista, CACHE_SEGUNDOS)
-    return lista
+    return lista[:tamanho]
 
 
-def _tabela_geral() -> list[dict]:
-    """Todos os cadastrados que jogaram, já somados e ordenados."""
-    tabela = cache.get(CHAVE_CACHE_GERAL)
-    if tabela is not None:
-        return tabela
+def _apurar_geral() -> dict:
+    """A tabela geral e o campeão de cada jogo, de UMA leitura da tabela de recordes.
+
+    O portal pedia o campeão jogo a jogo (`ranking_do_jogo(slug, 1)`): nove
+    consultas a cada minuto, mais as duas do geral, e quem abria /jogos/
+    depois de o cache vencer esperava as onze em fila (LEIA-ME-V10, seção
+    63). As linhas que o geral já lê bastam para o campeão: o maior placar
+    do jogo e, empatado, o mais antigo -- a mesma ordem de `ranking_do_jogo`.
+    """
+    dados = cache.get(CHAVE_CACHE_GERAL)
+    if dados is not None:
+        return dados
     linhas = _linhas(
         RecordeJogo.objects.filter(pontos__gt=0, jogo__in=list(arena.JOGOS_POR_SLUG))
-        .values_list("usuario_id", "jogo", "pontos")
+        .values_list("usuario_id", "jogo", "pontos", "atualizado_em")
     )
     maior = {}
-    for _, jogo, pontos in linhas:
+    primeiro = {}
+    for usuario_id, jogo, pontos, quando in linhas:
         maior[jogo] = max(maior.get(jogo, 0), pontos)
+        atual = primeiro.get(jogo)
+        if atual is None or (-pontos, quando) < (-atual[0], atual[1]):
+            primeiro[jogo] = (pontos, quando, usuario_id)
     soma = {}
     jogos = {}
-    for usuario_id, jogo, pontos in linhas:
+    for usuario_id, jogo, pontos, _ in linhas:
         soma[usuario_id] = soma.get(usuario_id, 0) + round(PONTOS_POR_JOGO * pontos / maior[jogo])
         jogos[usuario_id] = jogos.get(usuario_id, 0) + 1
     ordem = sorted(soma, key=lambda u: (-soma[u], -jogos[u], u))
     nomes = {}
-    if ordem:
+    com_nome = set(ordem[:TAMANHO]) | {usuario_id for _, _, usuario_id in primeiro.values()}
+    if com_nome:
         from django.contrib.auth.models import User
 
-        for usuario in _linhas(User.objects.filter(pk__in=ordem[:TAMANHO]).select_related("perfil")):
+        for usuario in _linhas(User.objects.filter(pk__in=com_nome).select_related("perfil")):
             nomes[usuario.pk] = nome_publico(usuario)
     tabela = [
         {"posicao": i, "usuario": u, "nome": nomes.get(u, ""), "pontos": soma[u], "jogos": jogos[u]}
         for i, u in enumerate(ordem, start=1)
     ]
-    cache.set(CHAVE_CACHE_GERAL, tabela, CACHE_SEGUNDOS)
-    return tabela
+    campeoes = {
+        jogo: {"posicao": 1, "nome": nomes.get(usuario_id, ""), "pontos": pontos, "usuario": usuario_id}
+        for jogo, (pontos, _, usuario_id) in primeiro.items()
+    }
+    dados = {"tabela": tabela, "campeoes": campeoes}
+    cache.set(CHAVE_CACHE_GERAL, dados, CACHE_SEGUNDOS)
+    return dados
+
+
+def _tabela_geral() -> list[dict]:
+    """Todos os cadastrados que jogaram, já somados e ordenados."""
+    return _apurar_geral()["tabela"]
+
+
+def campeoes() -> dict[str, dict]:
+    """O primeiro de cada jogo da casa: {slug: {"posicao", "nome", "pontos", "usuario"}}.
+
+    O mesmo que `ranking_do_jogo(slug, 1)[0]`, para todos os jogos de uma vez.
+    """
+    return _apurar_geral()["campeoes"]
 
 
 def ranking_geral(tamanho=TAMANHO) -> list[dict]:

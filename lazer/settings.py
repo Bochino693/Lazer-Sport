@@ -409,6 +409,13 @@ SITE_URL = os.getenv("SITE_URL", "https://www.lazersport.com.br").strip()
 # ligado em produção; nos testes e no computador, desligado.
 AQUECER_CACHE = os.getenv("AQUECER_CACHE", "1" if (IS_RENDER or ENVIRONMENT == "production") else "0").strip().lower() in ("1", "true", "yes", "on")
 AQUECER_HOST = os.getenv("AQUECER_HOST", "www.lazersport.com.br").strip()
+# O contador de cliques das páginas de produto, categoria, combo e promoção é
+# gravado por uma linha de fundo, e não no meio da requisição (core/cliques.py):
+# com o banco pela rede, o UPDATE custava duas viagens em toda visita. Ligado em
+# produção; nos testes e no computador, o UPDATE acontece na hora, como antes.
+CLIQUES_EM_SEGUNDO_PLANO = os.getenv(
+    "CLIQUES_EM_SEGUNDO_PLANO", "1" if (IS_RENDER or ENVIRONMENT == "production") else "0",
+).strip().lower() in ("1", "true", "yes", "on")
 
 # ============================================================
 # CONTATO DA EMPRESA

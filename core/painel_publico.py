@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 
 from django.core.cache import cache
-from django.db.models import Avg, Q, Sum
+from django.db.models import Avg, Count, Q, Sum
 from django.urls import reverse
 from django.utils import timezone
 
@@ -46,10 +46,11 @@ def _seguro(nome, conta):
 def _catalogo():
     from .models import Brinquedos, CategoriasBrinquedos, Eventos, PecasReposicao, Projetos
 
-    ativos = Brinquedos.objects.filter(ativo=True)
-    media = ativos.aggregate(media=Avg("avaliacao"))["media"]
+    # O total e a média numa ida ao banco só (eram duas).
+    resumo = Brinquedos.objects.filter(ativo=True).aggregate(total=Count("id"), media=Avg("avaliacao"))
+    media = resumo["media"]
     return {
-        "brinquedos": ativos.count(),
+        "brinquedos": resumo["total"],
         "categorias": CategoriasBrinquedos.objects.filter(ativo=True).count(),
         "pecas": PecasReposicao.da_vitrine().count(),
         "eventos": Eventos.objects.count(),
@@ -83,31 +84,35 @@ def _fabrica():
     from sistema_interno.models import OrdemProducao, OrdemServico
 
     inicio_do_mes = timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    em_producao = (
-        OrdemProducao.objects
-        .filter(status=OrdemProducao.Status.EM_PRODUCAO)
-        .aggregate(total=Sum("quantidade"))["total"]
-    ) or 0
-    fabricados_no_mes = (
-        OrdemProducao.objects
-        .filter(status=OrdemProducao.Status.CONCLUIDA, concluida_em__gte=inicio_do_mes)
-        .aggregate(total=Sum("quantidade"))["total"]
-    ) or 0
-    servicos_no_mes = OrdemServico.objects.filter(
-        status=OrdemServico.Status.CONCLUIDA, concluida_em__gte=inicio_do_mes,
-    ).count()
-    servicos_agora = OrdemServico.objects.filter(
-        status__in=(
-            OrdemServico.Status.AGENDADA,
-            OrdemServico.Status.EM_EXECUCAO,
-            OrdemServico.Status.AGUARDANDO_PECA,
+    # Uma consulta por tabela, com os filtros dentro da soma (eram quatro):
+    # o painel é refeito a cada minuto enquanto houver alguém na home, e
+    # cada ida ao Supabase é uma viagem pela rede.
+    producao = OrdemProducao.objects.aggregate(
+        em_producao=Sum("quantidade", filter=Q(status=OrdemProducao.Status.EM_PRODUCAO)),
+        fabricados_no_mes=Sum(
+            "quantidade",
+            filter=Q(status=OrdemProducao.Status.CONCLUIDA, concluida_em__gte=inicio_do_mes),
         ),
-    ).count()
+    )
+    servicos = OrdemServico.objects.aggregate(
+        no_mes=Count(
+            "id",
+            filter=Q(status=OrdemServico.Status.CONCLUIDA, concluida_em__gte=inicio_do_mes),
+        ),
+        agora=Count(
+            "id",
+            filter=Q(status__in=(
+                OrdemServico.Status.AGENDADA,
+                OrdemServico.Status.EM_EXECUCAO,
+                OrdemServico.Status.AGUARDANDO_PECA,
+            )),
+        ),
+    )
     return {
-        "em_producao": em_producao,
-        "fabricados_no_mes": fabricados_no_mes,
-        "servicos_no_mes": servicos_no_mes,
-        "servicos_agora": servicos_agora,
+        "em_producao": producao["em_producao"] or 0,
+        "fabricados_no_mes": producao["fabricados_no_mes"] or 0,
+        "servicos_no_mes": servicos["no_mes"] or 0,
+        "servicos_agora": servicos["agora"] or 0,
     }
 
 

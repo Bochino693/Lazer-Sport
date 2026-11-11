@@ -21,13 +21,14 @@ from __future__ import annotations
 import re
 import unicodedata
 from decimal import Decimal
+from functools import lru_cache
 
 from django.urls import reverse
 
 from sistema_interno.templatetags.interno_extras import estatico
 
 from .formatos import dinheiro, medida
-from .fotos import reduzir_imagem
+from .fotos import reduzir_imagem, url_da_imagem
 
 
 # ======================================================================
@@ -104,16 +105,34 @@ MEDIDAS_PADRAO = {
 MAIOR_MEDIDA_PLAUSIVEL = Decimal("8")
 
 
-def _normalizar(texto):
-    """Minúsculas, sem acento e sem pontuação: "Pebolim-Eletrônico" -> "pebolim eletronico"."""
-    texto = unicodedata.normalize("NFKD", str(texto or ""))
+# MEMORIZADO NO PROCESSO, PORQUE É A MESMA CONTA MILHARES DE VEZES.
+#
+# Cada brinquedo da Arena passa o nome por todas as palavras de REGRAS, dos
+# JOGOS e dos MODELOS_3D, e cada `_contem` normalizava a PALAVRA de novo e
+# montava a expressão regular de novo: ~10 mil normalizações por abertura
+# da Arena, ~100 ms de CPU só nisso (medido no LEIA-ME-V10, seção 63). O
+# resultado só depende do texto, e as palavras são as do código: guardar a
+# resposta é de graça e não muda nada do que sai.
+@lru_cache(maxsize=8192)
+def _normalizar_texto(texto):
+    texto = unicodedata.normalize("NFKD", texto)
     texto = "".join(c for c in texto if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]+", " ", texto.lower()).strip()
 
 
+def _normalizar(texto):
+    """Minúsculas, sem acento e sem pontuação: "Pebolim-Eletrônico" -> "pebolim eletronico"."""
+    return _normalizar_texto(str(texto or ""))
+
+
+@lru_cache(maxsize=2048)
+def _padrao_da_palavra(palavra):
+    return re.compile(r"(?:^| )" + re.escape(_normalizar(palavra)) + r"(?:$| )")
+
+
 def _contem(texto, palavra):
     """Palavra inteira, para "hit" não casar com "white" nem "pino" com "pinot"."""
-    return re.search(r"(?:^| )" + re.escape(_normalizar(palavra)) + r"(?:$| )", texto) is not None
+    return _padrao_da_palavra(palavra).search(texto) is not None
 
 
 def modelo_3d(nome, categorias=(), tags=()):
@@ -151,12 +170,10 @@ def medidas_para_3d(desenho, altura, largura, profundidade):
 
 
 def _url(imagem):
-    try:
-        return imagem.url if imagem else ""
-    except Exception:
-        # Arquivo sem nome ou storage fora do ar: o brinquedo continua na
-        # arena, só que com a placa "sem foto" no lugar.
-        return ""
+    # Arquivo sem nome ou storage fora do ar: o brinquedo continua na
+    # arena, só que com a placa "sem foto" no lugar. O endereço montado
+    # fica guardado no processo (core/fotos.py).
+    return url_da_imagem(imagem)
 
 
 # ======================================================================

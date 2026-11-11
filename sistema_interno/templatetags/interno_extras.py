@@ -137,6 +137,14 @@ def _caminho_no_disco(caminho):
 
 
 def _impressao_digital(caminho):
+    # A impressão já calculada sai daqui, sem procurar o arquivo de novo.
+    # Era o `finders.find` que custava: ele percorre as pastas de estáticos
+    # de todos os apps a cada chamada (~20 µs), e uma página do site chama
+    # `estatico` de trinta a cem vezes -- o hash já estava guardado, a
+    # procura não. Em desenvolvimento continua procurando: a chave leva o
+    # mtime, e salvar o CSS tem de bastar.
+    if not settings.DEBUG and caminho in _IMPRESSOES:
+        return _IMPRESSOES[caminho]
     arquivo = _caminho_no_disco(caminho)
     if arquivo is None:
         # Estático que não existe não pode derrubar a página inteira: sem

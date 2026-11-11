@@ -250,16 +250,21 @@ def item_do_catalogo(dados):
     }
 
 
-def catalogo():
+def catalogo(dados=None):
     """O que a página e o painel mandam para o arrumador: as áreas e os itens do catálogo.
 
     Os itens são as máquinas e os brinquedos ativos (com as medidas e o 3D
     da arena) e os objetos 3D do site que ainda não estão no catálogo.
-    """
-    from .views_arena import brinquedos_da_arena
 
-    dados = [arena.dados_do_brinquedo(b, "") for b in brinquedos_da_arena()]
-    dados += arena.modelos_fora_do_catalogo(dados)
+    `dados` são os brinquedos da Arena já montados (`arena.dados_do_brinquedo`
+    + `modelos_fora_do_catalogo`): a Arena passa os dela, e o catálogo não
+    lê os mesmos brinquedos do banco uma segunda vez na mesma página.
+    """
+    if dados is None:
+        from .views_arena import brinquedos_da_arena
+
+        dados = [arena.dados_do_brinquedo(b, "") for b in brinquedos_da_arena()]
+        dados += arena.modelos_fora_do_catalogo(dados)
     itens = sorted((item_do_catalogo(d) for d in dados), key=lambda i: (i["tipo"] != "maquina", arena._normalizar(i["nome"])))
     return {
         "areas": {

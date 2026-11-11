@@ -42,8 +42,13 @@ from .models import (
     Pedido,
 )
 
-# 10 minutos. Aumente à vontade se o conteúdo do header/rodapé é estável.
-TTL_GLOBAL = 60 * 10
+# 30 minutos, o mesmo prazo do cache do catálogo (CATALOG_CACHE_TTL). Era
+# 10: a cada dez minutos alguém pagava as três consultas do cabeçalho e do
+# rodapé -- uma viagem ao Supabase cada uma. O prazo não é o que mantém o
+# menu certo: os signals (core/signals.py) apagam as três chaves quando uma
+# categoria, um estabelecimento ou um cliente muda. Ele é só a rede de
+# segurança para uma mudança que não passe pelo `save()`.
+TTL_GLOBAL = 60 * 30
 
 CHAVE_CATEGORIAS = "ctx:categorias_header:v1"
 CHAVE_ESTABELECIMENTOS = "ctx:estabelecimentos_globais:v1"

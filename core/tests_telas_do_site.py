@@ -373,6 +373,13 @@ class ConsultaNaoCresceComAsLinhasTests(TestCase):
             )
 
     def consultas(self, rota):
+        # As duas telas saem do cache do catálogo (core/home_cache.py): sem
+        # apagá-lo, a "poucos" seria a visita em cache (zero consultas) e a
+        # "muitos" a primeira depois do cadastro novo. O que se compara é a
+        # MONTAGEM da tela, com poucos e com muitos registros.
+        from core.home_cache import invalidate_public_catalog_caches
+
+        invalidate_public_catalog_caches()
         with CaptureQueriesContext(connection) as capturadas:
             resposta = self.client.get(rota, **self.HOST)
         self.assertEqual(resposta.status_code, 200, rota)

@@ -183,9 +183,14 @@ def texto_do_whatsapp(campos):
     return "\n".join(linhas)
 
 
-def contexto_do_projeto(request):
-    """O que o "Monte seu espaço" pede no template: o catálogo, as áreas e o contato de quem está logado."""
-    dados = projeto3d.catalogo()
+def contexto_do_projeto(request, dados=None):
+    """O que o "Monte seu espaço" pede no template: o catálogo, as áreas e o contato de quem está logado.
+
+    `dados` é o `projeto3d.catalogo()` já montado (a Arena o tira do cache
+    do catálogo); sem ele, é montado aqui.
+    """
+    if dados is None:
+        dados = projeto3d.catalogo()
     usuario = request.user if request.user.is_authenticated else None
     return {
         "projeto_dados": dados,

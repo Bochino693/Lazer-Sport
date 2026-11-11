@@ -26,7 +26,7 @@ from django.conf import settings
 log = logging.getLogger("core.aquecer")
 
 #: As telas que o visitante mais abre primeiro (as do menu).
-PAGINAS = ("/", "/jogos/", "/loja/", "/arena/", "/projetos/", "/eventos/", "/pecas-reposicao/")
+PAGINAS = ("/", "/jogos/", "/loja/", "/arena/", "/brinquedos/", "/projetos/", "/eventos/", "/pecas-reposicao/")
 NAVEGADOR = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
              "Chrome/130.0.0.0 Safari/537.36 LazerSportAquecimento")
 

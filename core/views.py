@@ -263,6 +263,11 @@ class HomeView(View):
                 "largura_m",
                 "profundidade_m",
                 "exibir_na_loja",
+                # O ajuste do painel entra no número de curtidas de cada card
+                # (`contagem_curtidas`). Fora do `only`, cada brinquedo
+                # buscava o campo sozinho: 61 consultas a mais para montar a
+                # home, uma por brinquedo (LEIA-ME-V10, seção 63).
+                "ajuste_curtidas",
             )
             .prefetch_related(
                 "categorias_brinquedos",
@@ -593,13 +598,13 @@ def _registrar_clique(modelo, filtro, **dados_da_primeira):
 
     Era `get_or_create` + `update`: duas idas ao banco em toda abertura de
     produto e de categoria. O contador continua por visita e fora do cache
-    -- é exatamente o que deve mudar a cada abertura.
+    -- é exatamente o que deve mudar a cada abertura. Em produção o UPDATE
+    sai da requisição e vai para a linha de fundo de core/cliques.py: a
+    página em cache não espera o banco por causa dele.
     """
-    atualizadas = modelo.objects.filter(**filtro).update(
-        quantidade_click=F("quantidade_click") + 1,
-    )
-    if not atualizadas:
-        modelo.objects.create(**filtro, quantidade_click=1, **dados_da_primeira)
+    from . import cliques
+
+    cliques.registrar(modelo, filtro, **dados_da_primeira)
 
 
 class ReposicaoView(View):
@@ -972,12 +977,13 @@ class BrinquedoInfoView(View):
         """
         from unicodedata import normalize
 
+        # O objeto 3D vem no mesmo SELECT do brinquedo (é um para um): uma
+        # consulta a menos na montagem da ficha.
         brinquedo = get_object_or_404(
-            Brinquedos.objects.prefetch_related(
+            Brinquedos.objects.select_related(*prefetch_do_objeto()).prefetch_related(
                 "categorias_brinquedos",
                 "tags",
                 "imagens_brinquedo",
-                *prefetch_do_objeto(),
             ),
             id=id,
             ativo=True,
@@ -1091,7 +1097,7 @@ class BrinquedoInfoView(View):
         brinquedo = dados["contexto"]["brinquedo"]
 
         # O contador de cliques é por visita: um UPDATE, fora do cache.
-        _registrar_clique(BrinquedoClick, {"brinquedo_clicado": brinquedo})
+        _registrar_clique(BrinquedoClick, {"brinquedo_clicado_id": brinquedo.pk})
 
         # O endereço absoluto depende do host da requisição.
         produto_url = request.build_absolute_uri()
@@ -1320,20 +1326,29 @@ class CategoriasInfoView(View):
 
         # Os números do topo e das fichas de filtro são da categoria
         # INTEIRA, e não da página: "À venda (3)" continua dizendo três
-        # mesmo com o filtro de orçamento ligado.
-        total_categoria = ativos.count()
-        total_loja = ativos.filter(exibir_na_loja=True).count()
+        # mesmo com o filtro de orçamento ligado. Os dois numa consulta só
+        # (eram dois COUNT, e o paginador fazia um terceiro igual a um deles).
+        totais = ativos.aggregate(
+            total=Count("id"),
+            loja=Count("id", filter=Q(exibir_na_loja=True)),
+        )
+        total_categoria = totais["total"] or 0
+        total_loja = totais["loja"] or 0
 
         if disponibilidade == "loja":
             ativos = ativos.filter(exibir_na_loja=True)
+            total_da_lista = total_loja
         elif disponibilidade == "consulta":
             ativos = ativos.filter(exibir_na_loja=False)
+            total_da_lista = total_categoria - total_loja
+        else:
+            total_da_lista = total_categoria
 
-        brinquedos = ativos.prefetch_related(
-            "categorias_brinquedos",
-            "tags",
-            "imagens_brinquedo",
-        )
+        # Sem prefetch de categorias, tags e galeria: o cartão desta página
+        # só usa os campos do próprio brinquedo (nome, foto de capa, nota,
+        # loja). Eram três consultas a mais na montagem, e três listas a
+        # mais guardadas no cache de cada página.
+        brinquedos = ativos
 
         # O nome desempata sempre: sem ele, duas notas iguais trocariam de
         # lugar entre uma página e a outra.
@@ -1349,6 +1364,8 @@ class CategoriasInfoView(View):
             brinquedos = brinquedos.order_by("-criacao", "-id")
 
         paginator = Paginator(brinquedos, 12)
+        # o total da lista já saiu do agregado acima: o paginador não conta de novo
+        paginator.count = total_da_lista
         page_obj = paginator.get_page(pagina)
 
         # O coração do card abre com o número certo; o que ESTE visitante
@@ -1393,7 +1410,7 @@ class CategoriasInfoView(View):
         # REGISTRA CLICK: por visita, fora do cache, um UPDATE só.
         _registrar_clique(
             CategoriaClick,
-            {"categoria": categoria},
+            {"categoria_id": categoria.pk},
             nome_categoria=categoria.nome_categoria,
         )
 
@@ -1450,6 +1467,12 @@ class EstabelecimentosListView(ListView):
     model = Estabelecimentos
     template_name = "estabelecimentos_info.html"
     context_object_name = "estabelecimentos"
+
+    def get_queryset(self):
+        # O número de brinquedos de cada parceiro vem junto, num COUNT só.
+        # O cartão pedia `est.brinquedos.count` duas vezes (o número e o
+        # plural): duas consultas por parceiro em toda visita.
+        return super().get_queryset().annotate(total_brinquedos=Count("brinquedos"))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1738,9 +1761,12 @@ class BrinquedosView(View):
 
         Os parâmetros já passaram pela lista branca de `get`.
         """
+        # Só as categorias: o cartão mostra até três delas. As tags não
+        # aparecem no cartão, e o prefetch delas era uma consulta a mais
+        # em cada página montada.
         brinquedos_list = (
             Brinquedos.objects.filter(ativo=True)
-            .prefetch_related("categorias_brinquedos", "tags")
+            .prefetch_related("categorias_brinquedos")
         )
 
         if busca:
@@ -1858,30 +1884,32 @@ class LojaView(View):
     entram automaticamente. Brinquedos "normais" NÃO entram por padrão
     (Brinquedos.exibir_na_loja é False por padrão) -- só aparecem aqui
     os que foram marcados explicitamente no admin.
+
+    OS CARTÕES SAEM DO CACHE DO CATÁLOGO. Eram treze consultas por visita
+    (os produtos, as fotos, os brinquedos de cada combo, as curtidas -- e
+    os brinquedos e as peças lidos DE NOVO só para contar as curtidas); com
+    o Supabase pela rede, ~2,8 s no ar (LEIA-ME-V10, seção 63). Agora a
+    lista é montada uma vez por versão do catálogo, e só o que é do
+    visitante -- o que ele guardou na lista de desejos -- é resolvido aqui:
+    numa consulta para quem pode ter guardado algo, e em nenhuma para o
+    visitante novo (que também deixa de ganhar o cookie do aparelho só por
+    abrir a loja: a chave nasce na primeira marcação, como no resto do site).
     """
     template_name = 'loja.html'
 
+    #: Os tipos de cartão que têm curtida e lista de desejos (combo e
+    #: promoção são arranjos de venda, não produtos que alguém guarda).
+    TIPOS_COM_FAVORITO = ('brinquedo', 'peca')
+
     @staticmethod
-    def _marcar_favoritos(request, itens, tipo, modelo):
-        """Anexa curtidas e estado da lista de desejos aos cards do tipo."""
-        alvos = [item for item in itens if item['tipo'] == tipo]
-        if not alvos:
-            return
+    def _montar():
+        """Os cartões da loja como todo visitante os vê (vai para o cache)."""
+        from .fotos import url_da_imagem
 
-        objetos = modelo.objects.filter(id__in=[item['id'] for item in alvos])
-        totais = servico_favoritos.contagem_curtidas(objetos)
-        desejados = servico_favoritos.ids_marcados(request, 'desejo')[tipo]
-
-        for item in alvos:
-            item['fav_produto'] = tipo
-            item['fav_curtidas'] = totais.get(item['id'], 0)
-            item['fav_desejado'] = item['id'] in desejados
-
-    def get(self, request):
         itens = []
 
         # As máquinas vêm na frente; depois combos, promoções e peças.
-        brinquedos_na_loja = (
+        brinquedos_na_loja = list(
             Brinquedos.objects
             .filter(ativo=True, exibir_na_loja=True)
         )
@@ -1891,19 +1919,20 @@ class LojaView(View):
                 'tipo': 'brinquedo',
                 'tipo_label': 'Brinquedo',
                 'titulo': brinquedo.nome_brinquedo,
-                'imagem': brinquedo.imagem_brinquedo.url if brinquedo.imagem_brinquedo else None,
+                'imagem': url_da_imagem(brinquedo.imagem_brinquedo) or None,
                 'preco': brinquedo.valor_brinquedo,
                 'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
             })
 
-        combos = Combos.objects.filter(ativo=True).prefetch_related('brinquedos')
+        # O cartão do combo não lista os brinquedos dele: sem prefetch.
+        combos = Combos.objects.filter(ativo=True)
         for combo in combos:
             itens.append({
                 'id': combo.id,
                 'tipo': 'combo',
                 'tipo_label': 'Combo',
                 'titulo': combo.descricao,
-                'imagem': combo.imagem_combo.url if combo.imagem_combo else None,
+                'imagem': url_da_imagem(combo.imagem_combo) or None,
                 'preco': combo.valor_combo,
                 'url': reverse('combo', args=[combo.id]),
             })
@@ -1920,17 +1949,17 @@ class LojaView(View):
                 'tipo_label': 'Promoção',
                 'titulo': promo.descricao,
                 'imagem': (
-                    promo.brinquedos.imagem_brinquedo.url
-                    if promo.brinquedos and promo.brinquedos.imagem_brinquedo else None
+                    url_da_imagem(promo.brinquedos.imagem_brinquedo) or None
+                    if promo.brinquedos else None
                 ),
                 'preco': promo.preco_promocao,
                 'preco_original': promo.brinquedos.valor_brinquedo if promo.brinquedos else None,
                 'url': reverse('promocao', args=[promo.id]),
             })
 
-        pecas = (
+        pecas = list(
             PecasReposicao.da_vitrine()
-            .prefetch_related('imagem_peca_reposicao', 'categoria_peca')
+            .prefetch_related('imagem_peca_reposicao')
         )
         for peca in pecas:
             imagem_obj = peca.imagem_principal
@@ -1939,18 +1968,21 @@ class LojaView(View):
                 'tipo': 'peca',
                 'tipo_label': 'Peça de Reposição',
                 'titulo': peca.nome,
-                'imagem': imagem_obj.imagem.url if imagem_obj and imagem_obj.imagem else None,
+                'imagem': (url_da_imagem(imagem_obj.imagem) or None) if imagem_obj else None,
                 'preco': peca.preco_venda,
                 'url': reverse('reposicao_detalhe', args=[peca.id]),
             })
 
-        # Curtidas e lista de desejos nos cards da vitrine.
-        #
-        # Só brinquedo e peça têm: combo e promoção são arranjos de venda,
-        # não produtos que alguém guarda. Duas consultas resolvem a página
-        # inteira -- uma por tipo --, em vez de duas por card.
-        self._marcar_favoritos(request, itens, 'brinquedo', Brinquedos)
-        self._marcar_favoritos(request, itens, 'peca', PecasReposicao)
+        # As curtidas dos cards, uma consulta por tipo, sobre os objetos
+        # que já vieram -- antes cada tipo era lido de novo só para isso.
+        totais = {
+            'brinquedo': servico_favoritos.contagem_curtidas(brinquedos_na_loja),
+            'peca': servico_favoritos.contagem_curtidas(pecas),
+        }
+        for item in itens:
+            if item['tipo'] in totais:
+                item['fav_produto'] = item['tipo']
+                item['fav_curtidas'] = totais[item['tipo']].get(item['id'], 0)
 
         contagem_por_tipo = {
             'peca': sum(1 for i in itens if i['tipo'] == 'peca'),
@@ -1958,11 +1990,35 @@ class LojaView(View):
             'combo': sum(1 for i in itens if i['tipo'] == 'combo'),
             'brinquedo': sum(1 for i in itens if i['tipo'] == 'brinquedo'),
         }
+        return {'itens': itens, 'contagem_por_tipo': contagem_por_tipo}
+
+    @staticmethod
+    def _desejados(request):
+        """O que este visitante guardou: {'brinquedo': {ids}, 'peca': {ids}}, numa consulta só.
+
+        Visitante novo (sem conta e sem o cookie do aparelho) não guardou
+        nada: nenhuma consulta, e nenhuma chave de aparelho criada.
+        """
+        desejados = {'brinquedo': set(), 'peca': set()}
+        if not _visitante_identificado(request):
+            return desejados
+        return servico_favoritos.ids_marcados(request, 'desejo')
+
+    def get(self, request):
+        dados = get_cached_catalog_page("loja", (), self._montar)
+        desejados = self._desejados(request)
+
+        itens = []
+        for item in dados['itens']:
+            item = dict(item)
+            if item['tipo'] in self.TIPOS_COM_FAVORITO:
+                item['fav_desejado'] = item['id'] in desejados[item['tipo']]
+            itens.append(item)
 
         context = {
             'itens_loja': itens,
             'total_itens': len(itens),
-            'contagem_por_tipo': contagem_por_tipo,
+            'contagem_por_tipo': dados['contagem_por_tipo'],
         }
 
         resposta = render(request, self.template_name, context)
@@ -1970,24 +2026,18 @@ class LojaView(View):
 
 
 class ComboInfoView(View):
+    """A página do combo: igual para todo visitante, então sai do cache do catálogo.
 
-    def get(self, request, pk):
-        combo = get_object_or_404(Combos, id=pk)
+    Eram cinco consultas por visita -- o combo, os brinquedos dele duas
+    vezes (a conta da economia e a lista da página) e o contador de
+    cliques em duas (`get_or_create` + `update`). Agora o combo vem com os
+    brinquedos e as contas prontas, uma vez por versão do catálogo, e o
+    clique é um UPDATE só, fora da requisição (core/cliques.py).
+    """
 
-        # REGISTRA O CLICK
-        obj, created = ComboClick.objects.get_or_create(
-            combo_clicado=combo,
-            defaults={
-                'descricao_combo': combo.descricao,
-                'valor_combo': combo.valor_combo,
-                'quantidade_click': 1
-            }
-        )
-
-        if not created:
-            ComboClick.objects.filter(id=obj.id).update(
-                quantidade_click=F('quantidade_click') + 1
-            )
+    @staticmethod
+    def _montar(pk):
+        combo = get_object_or_404(Combos.objects.prefetch_related("brinquedos"), id=pk)
 
         # ===== CÁLCULOS =====
         total_original = sum(
@@ -2001,28 +2051,39 @@ class ComboInfoView(View):
         combo.total_original = total_original
         combo.economia = economia
         combo.porcentagem = porcentagem
+        return {"combo": combo}
+
+    def get(self, request, pk):
+        combo = get_cached_catalog_page("combo", (pk,), lambda: self._montar(pk))["combo"]
+
+        # REGISTRA O CLICK (por visita, fora do cache)
+        _registrar_clique(
+            ComboClick,
+            {"combo_clicado_id": combo.pk},
+            descricao_combo=combo.descricao,
+            valor_combo=combo.valor_combo,
+        )
 
         return render(request, 'combo_info.html', {'combo': combo})
 
 
 class PromocaoInfoView(View):
+    """A página da promoção, do cache do catálogo (a promoção já com o brinquedo dela)."""
+
+    @staticmethod
+    def _montar(pk):
+        return {"promocao": get_object_or_404(Promocoes.objects.select_related("brinquedos"), pk=pk)}
 
     def get(self, request, pk):
-        promocao = get_object_or_404(Promocoes, pk=pk)
+        promocao = get_cached_catalog_page("promocao", (pk,), lambda: self._montar(pk))["promocao"]
 
-        obj, created = PromocaoClick.objects.get_or_create(
-            promocao=promocao,
-            defaults={
-                'descricao_promocao': promocao.descricao,
-                'preco_promocao': promocao.preco_promocao,
-                'quantidade_click': 1
-            }
+        # REGISTRA O CLICK (por visita, fora do cache)
+        _registrar_clique(
+            PromocaoClick,
+            {"promocao_id": promocao.pk},
+            descricao_promocao=promocao.descricao,
+            preco_promocao=promocao.preco_promocao,
         )
-
-        if not created:
-            PromocaoClick.objects.filter(id=obj.id).update(
-                quantidade_click=F('quantidade_click') + 1
-            )
 
         return render(request, 'promocao_info.html', {
             'promocao': promocao
@@ -2081,23 +2142,30 @@ class EventosView(View):
     """
 
     def get(self, request):
-        eventos = Eventos.objects.prefetch_related(
-            "imagens_evento", "brinquedos",
-        )
-        return render(request, "eventos.html", {"eventos": eventos})
+        # Igual para todo visitante: sai do cache do catálogo (a versão muda
+        # quando um evento, uma foto dele ou os brinquedos dele mudam).
+        dados = get_cached_catalog_page("eventos", (), lambda: {
+            "eventos": list(Eventos.objects.prefetch_related("imagens_evento", "brinquedos")),
+        })
+        return render(request, "eventos.html", {"eventos": dados["eventos"]})
 
 
 class ProjetosView(View):
     """Mesma história: a galeria de cada projeto vem junto, de uma vez."""
 
     def get(self, request):
-        projetos = Projetos.objects.select_related(
-            "brinquedo_projetado",
-        ).prefetch_related(
-            "brinquedo_projetado__imagens_brinquedo_projeto",
-            *prefetch_do_3d_dos_projetos(),
-        )
-        return render(request, "projetos.html", {"projetos": projetos})
+        # Do cache do catálogo, como os eventos (projeto, fotos e 3D estão nos signals).
+        dados = get_cached_catalog_page("projetos", (), lambda: {
+            "projetos": list(
+                Projetos.objects.select_related(
+                    "brinquedo_projetado",
+                ).prefetch_related(
+                    "brinquedo_projetado__imagens_brinquedo_projeto",
+                    *prefetch_do_3d_dos_projetos(),
+                )
+            ),
+        })
+        return render(request, "projetos.html", {"projetos": dados["projetos"]})
 
 
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
@@ -7284,8 +7352,18 @@ def _composicao_do_brinquedo(brinquedo):
         return {"nome": outro.nome_brinquedo, "foto": foto, "quantidade": quantidade,
                 "url": reverse("brinquedo_detalhe", args=[outro.pk])}
 
-    dentro = (ComponenteBrinquedo.objects.filter(conjunto=brinquedo, item__ativo=True)
-              .select_related("item").order_by("ordem", "id"))
-    fora = (ComponenteBrinquedo.objects.filter(item=brinquedo, conjunto__ativo=True)
-            .select_related("conjunto").order_by("conjunto__nome_brinquedo"))
+    # As duas direções numa consulta só (eram duas): o que vem dentro deste
+    # brinquedo e os conjuntos de que ele faz parte. A separação e as duas
+    # ordens -- a do cadastro e a do nome do conjunto -- saem aqui mesmo.
+    ligacoes = list(
+        ComponenteBrinquedo.objects
+        .filter(Q(conjunto=brinquedo, item__ativo=True) | Q(item=brinquedo, conjunto__ativo=True))
+        .select_related("item", "conjunto")
+    )
+    dentro = sorted((c for c in ligacoes if c.conjunto_id == brinquedo.pk), key=lambda c: (c.ordem, c.id))
+    # sem caixa e sem acento, como a ordem do banco ("Área" junto de "Arena", e não depois do "Z")
+    fora = sorted(
+        (c for c in ligacoes if c.item_id == brinquedo.pk),
+        key=lambda c: (arena._normalizar(c.conjunto.nome_brinquedo), c.conjunto.nome_brinquedo),
+    )
     return [ficha(c.item, c.quantidade) for c in dentro], [ficha(c.conjunto) for c in fora]
