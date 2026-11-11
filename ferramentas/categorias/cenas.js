@@ -271,18 +271,16 @@ function noAr(n, x, y, z, raio, tipo = "bola", semente = 1) {
 const CENAS = {
   // Brinquedão: o Brinquedão Modelo 2 (3D) e, atrás, o Brinquedão Modelo 1 (foto), num buffet
   brinquedao: {
-    maquinas: async () => grupo(
-      await glb("brinquedao-modelo-2"),
-      await maquina("brinquedao-modelo-1", { x: 8.6, z: -3.4, r: -14 }),
-    ),
+    maquinas: async () => grupo(await glb("brinquedao-modelo-2")),
     vida: () => grupo(
-      crianca(0, "correndo", { x: 2.6, z: 2.6, r: 40 }),
-      crianca(1, "comemorando", { x: -2.4, z: 2.3, r: 10 }),
-      crianca(2, "pulando", { x: 0.6, z: 2.9, r: -15 }),
-      crianca(3, "andando", { x: -6.8, z: 1.4, r: 70, escala: 0.9 }),
+      crianca(0, "correndo", { x: 2.6, z: 1.9, r: 40 }),
+      crianca(1, "comemorando", { x: -2.4, z: 1.7, r: 10 }),
+      crianca(2, "pulando", { x: 0.6, z: 2.1, r: -15 }),
+      crianca(3, "andando", { x: -5.2, z: 1.2, r: 70, escala: 0.9 }),
       noAr(26, 4.0, 1.3, 2.0, 0.9, "bola", 3),
     ),
-    lugar: "buffet", lente: 40, giro: 40, altura: 14, ocupa: 0.78,
+    lugar: "buffet", lente: 40, giro: 40, altura: 14, ocupa: 0.8,
+    lugarOp: { fundo: ["brinquedao-modelo-1"] },
   },
   // Área Ninja: o Brinquedão Ninja (3D), o único item da categoria, num galpão de parque
   "area-ninja": {
@@ -367,8 +365,8 @@ const CENAS = {
       colocar(P.bolaBoliche("#2563eb", 0.15), { x: 1.75, z: 1.8 }),
     ),
     vida: () => grupo(
-      crianca(1, "comemorando", { x: 2.6, z: 1.0, r: -30 }),
-      crianca(5, "apontando", { x: -2.6, z: 1.5, r: 40 }),
+      crianca(1, "comemorando", { x: 2.55, z: 0.2, r: -30 }),
+      crianca(5, "apontando", { x: -2.5, z: 0.6, r: 40 }),
     ),
     lugar: "gamezone", lente: 40, giro: 22, altura: 12,
     lugarOp: { fundo: [] },
@@ -383,7 +381,7 @@ const CENAS = {
     ),
     vida: () => grupo(
       crianca(2, "jogando", { x: -0.05, z: 0.45, r: 10 }),
-      crianca(6, "comemorando", { x: 1.9, z: 1.5, r: -25 }),
+      crianca(6, "comemorando", { x: 2.15, z: 0.4, r: -25 }),
     ),
     lugar: "gamezone", lente: 40, giro: 14, altura: 12,
     lugarOp: { fundo: ["subway-surfers", "homem-aranha", "sonic-dash", "flappy-bird", "pinball-32", "tomb-raider-kids", "corrida-dos-minions", "nervo-teste"] },
@@ -397,8 +395,8 @@ const CENAS = {
       await maquina("subway-surfers", { x: 1.85, z: 0.05, r: -10 }),
     ),
     vida: () => grupo(
-      crianca(3, "apontando", { x: 0.2, z: 1.0, r: 20 }),
-      crianca(0, "comemorando", { x: 2.6, z: 0.9, r: -30 }),
+      crianca(3, "apontando", { x: 0.15, z: -0.75, r: 20 }),
+      crianca(0, "comemorando", { x: 2.95, z: -1.0, r: -30 }),
     ),
     lugar: "gamezone", lente: 40, giro: 16, altura: 10, ocupa: 0.74,
     lugarOp: { fundo: ["tomb-raider-kids", "corrida-dos-minions", "sonic-dash", "flappy-bird", "homem-aranha", "pinball-32", "minions-kids", "sonic-kids"] },
@@ -406,15 +404,15 @@ const CENAS = {
   // Simuladores: o Simulador Mario Kart, o Porsche Simulador e o Top Racer (fotos), no shopping
   simuladores: {
     maquinas: async () => grupo(
-      await maquina("simulador-mario-kart", { x: -1.25, z: 0, r: 4 }),
-      await maquina("top-racer", { x: 0.35, z: -0.7, r: 0 }),
-      await maquina("porsche-simulador", { x: 1.55, z: 0.3, r: -6 }),
+      await maquina("simulador-mario-kart", { x: -1.7, z: 0, r: 4 }),
+      await maquina("top-racer", { x: 0.2, z: -0.9, r: 0 }),
+      await maquina("porsche-simulador", { x: 1.95, z: 0.3, r: -6 }),
     ),
     vida: () => grupo(
-      crianca(4, "apontando", { x: 2.9, z: 1.2, r: -40 }),
-      crianca(1, "andando", { x: -3.0, z: 1.6, r: 70 }),
+      crianca(4, "apontando", { x: 1.0, z: -1.5, r: -20 }),
+      crianca(1, "andando", { x: -3.4, z: -0.6, r: 70 }),
     ),
-    lugar: "shopping", lente: 40, giro: 24, altura: 10, ocupa: 0.66,
+    lugar: "shopping", lente: 40, giro: 24, altura: 10, ocupa: 0.78,
     lugarOp: { atras: 2.4, fundo: ["speed-turbo", "lazer-shot", "sonic-racing"] },
   },
   // Mecânicos: o Carrossel Sorvetinho, a Mini Roda Sorvete e o Labamba (fotos), na praça
@@ -428,9 +426,9 @@ const CENAS = {
       crianca(0, "correndo", { x: -1.6, z: 1.6, r: 60 }),
       crianca(3, "comemorando", { x: 0.75, z: 1.3, r: -10 }),
       crianca(5, "andando", { x: -4.7, z: 1.2, r: 80, escala: 1.05 }),
-      crianca(6, "apontando", { x: 4.9, z: 1.3, r: -50 }),
+      crianca(6, "apontando", { x: 4.7, z: -0.4, r: -50 }),
     ),
-    lugar: "praca", lente: 40, giro: 14, altura: 10,
+    lugar: "praca", lente: 40, giro: 14, altura: 10, ocupa: 0.8,
     lugarOp: { fundo: ["sonic-racing"] },
   },
   // Jogos de Mesa: o Air Game Kids Alienígenas (3D), o Pac Man, o Matrix e o Pebolim Eletrônico (fotos), no salão
@@ -443,7 +441,7 @@ const CENAS = {
     ),
     vida: () => grupo(
       crianca(2, "jogando", { x: -1.9, z: -0.45, r: 24 }),
-      crianca(6, "comemorando", { x: 3.0, z: 0.9, r: -30 }),
+      crianca(6, "comemorando", { x: 2.95, z: -0.6, r: -30 }),
     ),
     lugar: "salao", lente: 40, giro: 18, altura: 18,
   },
@@ -455,8 +453,8 @@ const CENAS = {
       await maquina("air-game-premium", { x: 1.6, z: 2.3, r: -8 }),
     ),
     vida: () => grupo(
-      crianca(0, "comemorando", { x: -1.75, z: 1.5, r: 30 }),
-      crianca(3, "apontando", { x: 0.35, z: 2.3, r: -20 }),
+      crianca(0, "comemorando", { x: -1.75, z: 0.9, r: 30 }),
+      crianca(3, "jogando", { x: 1.75, z: 1.75, r: -8 }),
     ),
     lugar: "gamezone", lente: 40, giro: 22, altura: 11,
     lugarOp: { fundo: ["nervo-teste", "mundo-zumbi", "pega-toupeira", "multi-jogos-retro", "pinball-40", "sonic-dash", "homem-aranha"] },
@@ -469,18 +467,18 @@ const CENAS = {
       P.cilindro(palco, 2.63, 0.06, P.mat("#fbbf24", { metalness: 0.6, roughness: 0.35 }), 0, 0.05, 0, 72);
       return grupo(
         P.sombra(palco),
-        await glb("basquete-street-quadrinhos", { x: -1.25, z: -0.5, y: 0.16, r: 14 }),
-        await maquina("sonic-dash", { x: 0.25, y: 0.16, z: -0.85, r: 0 }),
-        await maquina("homem-aranha", { x: 1.25, y: 0.16, z: -0.6, r: -8 }),
-        await maquina("pac-man", { x: 0.45, y: 0.16, z: 0.95, r: -4 }),
+        await glb("basquete-street-quadrinhos", { x: -1.35, z: -0.55, y: 0.16, r: 14 }),
+        await maquina("sonic-dash", { x: 0.05, y: 0.16, z: -0.95, r: 0 }),
+        await maquina("homem-aranha", { x: 1.05, y: 0.16, z: -0.75, r: -8 }),
+        await maquina("pac-man", { x: 1.75, y: 0.16, z: 1.0, r: -10 }),
         colocar(P.estrela(0.42), { x: 2.05, y: 0.18 + 0.42, z: 0.9, r: -24 }),
         colocar(P.estrela(0.3), { x: -2.1, y: 0.18 + 0.3, z: 1.05, r: 24 }),
       );
     },
     vida: () => grupo(
-      crianca(1, "comemorando", { x: -2.9, z: 2.4, r: 30 }),
-      crianca(4, "apontando", { x: 3.1, z: 2.2, r: -40 }),
-      crianca(6, "andando", { x: -4.6, z: 0.4, r: 80, escala: 0.95 }),
+      crianca(1, "comemorando", { x: -2.9, z: 1.4, r: 30 }),
+      crianca(4, "apontando", { x: 3.2, z: 0.4, r: -40 }),
+      crianca(6, "andando", { x: -4.4, z: -0.2, r: 80, escala: 0.95 }),
     ),
     lugar: "shopping", lente: 40, giro: 14, altura: 13,
     lugarOp: { confete: true, fundo: ["flappy-bird", "corrida-dos-minions"] },
@@ -495,9 +493,9 @@ const CENAS = {
       colocar(P.bolaBasquete(0.21), { x: -0.4, z: 1.35 }),
     ),
     vida: () => grupo(
-      crianca(0, "correndo", { x: 2.9, z: 1.6, r: -60 }),
-      crianca(3, "comemorando", { x: -2.7, z: 1.8, r: 30 }),
-      colocar(P.bolaBasquete(0.12), { x: -2.4, y: 1.9, z: 1.6 }),
+      crianca(0, "correndo", { x: 2.85, z: 0.3, r: -60 }),
+      crianca(3, "comemorando", { x: -2.6, z: 0.8, r: 30 }),
+      colocar(P.bolaBasquete(0.12), { x: -2.35, y: 1.9, z: 0.6 }),
     ),
     lugar: "quadra", lente: 40, giro: 16, altura: 12,
   },
@@ -512,7 +510,7 @@ const CENAS = {
     ),
     vida: () => grupo(
       crianca(5, "jogando", { x: -0.15, z: 0.2, r: 0, escala: 0.92 }),
-      crianca(1, "comemorando", { x: 2.5, z: 1.1, r: -30, escala: 0.92 }),
+      crianca(1, "comemorando", { x: 2.4, z: 0.3, r: -30, escala: 0.92 }),
       crianca(3, "correndo", { x: -2.7, z: 1.3, r: 50, escala: 0.9 }),
       noAr(12, 0, 2.3, -0.2, 1.6, "bola", 9),
     ),

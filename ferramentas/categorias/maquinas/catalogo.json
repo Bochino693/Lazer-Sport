@@ -1,0 +1,498 @@
+{
+ "Air Game Premium": {
+  "id": 1,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Jogos de Mesa"
+  ]
+ },
+ "Air Game Home": {
+  "id": 2,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Jogos de Mesa"
+  ]
+ },
+ "Basquete Home": {
+  "id": 3,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos"
+  ]
+ },
+ "Mundo Zumbi": {
+  "id": 4,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play"
+  ]
+ },
+ "Porsche Simulador": {
+  "id": 5,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Simuladores"
+  ]
+ },
+ "Simulador Mario Kart": {
+  "id": 6,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Simuladores"
+  ]
+ },
+ "Pac Man": {
+  "id": 7,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Jogos de Mesa"
+  ]
+ },
+ "Basquete Street": {
+  "id": 8,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Famosos"
+  ]
+ },
+ "Show de Bola": {
+  "id": 9,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Famosos"
+  ]
+ },
+ "Homem Aranha Kids": {
+  "id": 10,
+  "categorias": [
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Kids"
+  ]
+ },
+ "Tomb Raider Kids": {
+  "id": 11,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama"
+  ]
+ },
+ "Corrida dos Minions": {
+  "id": 12,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama"
+  ]
+ },
+ "Pega Toupeira": {
+  "id": 13,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play"
+  ]
+ },
+ "Matrix": {
+  "id": 14,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Jogos de Mesa"
+  ]
+ },
+ "Multi Jogos Retro": {
+  "id": 15,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama"
+  ]
+ },
+ "Multi Jogos": {
+  "id": 16,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama",
+   "Jogos de Mesa"
+  ]
+ },
+ "Gabinete Games": {
+  "id": 17,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama",
+   "Jogos de Mesa"
+  ]
+ },
+ "Pinball 32 Polegadas": {
+  "id": 18,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama"
+  ]
+ },
+ "Pinball 40 Polegadas": {
+  "id": 19,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama"
+  ]
+ },
+ "Pebolim Eletrônico": {
+  "id": 20,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Famosos",
+   "Jogos de Mesa"
+  ]
+ },
+ "Homem Aranha": {
+  "id": 21,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama"
+  ]
+ },
+ "Sonic Dash": {
+  "id": 22,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama"
+  ]
+ },
+ "Subway Surfers": {
+  "id": 23,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama"
+  ]
+ },
+ "Flappy Bird": {
+  "id": 24,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama"
+  ]
+ },
+ "Speed Turbo": {
+  "id": 25,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Simuladores"
+  ]
+ },
+ "Pantera Cor de Rosa Kids": {
+  "id": 26,
+  "categorias": [
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama",
+   "Kids"
+  ]
+ },
+ "Sonic Kids": {
+  "id": 27,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Fliperama",
+   "Kids"
+  ]
+ },
+ "Minions Kids": {
+  "id": 28,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Fliperama",
+   "Kids"
+  ]
+ },
+ "Labamba": {
+  "id": 29,
+  "categorias": [
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Mecânicos"
+  ]
+ },
+ "Carrossel Sorvetinho": {
+  "id": 30,
+  "categorias": [
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Mecânicos"
+  ]
+ },
+ "Mini Roda Sorvete": {
+  "id": 31,
+  "categorias": [
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos",
+   "Mecânicos"
+  ]
+ },
+ "Nervo Teste": {
+  "id": 32,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play"
+  ]
+ },
+ "Brinquedão Modelo 1": {
+  "id": 33,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Kids",
+   "Trampolins"
+  ]
+ },
+ "Boliche Virtual": {
+  "id": 34,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Famosos",
+   "Fliperama",
+   "Kids",
+   "Simuladores",
+   "Boliche Virtual"
+  ]
+ },
+ "Lazer Shot": {
+  "id": 35,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Simuladores"
+  ]
+ },
+ "Matrix One Piece": {
+  "id": 36,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Famosos"
+  ]
+ },
+ "Sonic Racing All-Stars": {
+  "id": 37,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Esportivos",
+   "Famosos",
+   "Mecânicos",
+   "Simuladores"
+  ]
+ },
+ "Simulador de Corrida Top Racer": {
+  "id": 38,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Simuladores"
+  ]
+ },
+ "Bob Esponja Hammer Kids": {
+  "id": 39,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Famosos",
+   "Fliperama",
+   "Kids"
+  ]
+ },
+ "Air Game Kids": {
+  "id": 40,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Jogos de Mesa",
+   "Kids"
+  ]
+ },
+ "Brinquedão Modelo 2": {
+  "id": 47,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Kids Play"
+  ]
+ },
+ "Espaço Esportivo Modelo 1": {
+  "id": 48,
+  "categorias": [
+   "Espaço Esportivo Kids",
+   "Esportivos"
+  ]
+ },
+ "Strike Kids": {
+  "id": 49,
+  "categorias": [
+   "Eletrônicos",
+   "Jogos de Mesa",
+   "Boliche Virtual"
+  ]
+ },
+ "Trampolim de Enterrada": {
+  "id": 50,
+  "categorias": [
+   "Trampolins"
+  ]
+ },
+ "Brinquedão Ninja": {
+  "id": 51,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Kids Play",
+   "Área Ninja"
+  ]
+ },
+ "Brinquedão Modelo 4": {
+  "id": 52,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Kids Play"
+  ]
+ },
+ "Brinquedão Modelo 3": {
+  "id": 53,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Kids Play"
+  ]
+ },
+ "Air Game Kids Alienígenas": {
+  "id": 54,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Jogos de Mesa",
+   "Kids"
+  ]
+ },
+ "Basquete Street Quadrinhos": {
+  "id": 55,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Espaço Kids Play",
+   "Esportivos",
+   "Famosos"
+  ]
+ }
+}

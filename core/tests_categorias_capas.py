@@ -25,9 +25,11 @@ O que estes testes protegem:
 """
 
 import importlib
+import json
 import tempfile
 from decimal import Decimal
 from io import StringIO
+from pathlib import Path
 from unittest import mock
 
 from django.apps import apps as apps_reais
@@ -45,6 +47,9 @@ from .views import CategoriasInfoView
 
 migracao = importlib.import_module("core.migrations.0147_categorias_capas_e_nomes")
 migracao_lugares = importlib.import_module("core.migrations.0149_categorias_nos_lugares")
+migracao_reais = importlib.import_module("core.migrations.0151_categorias_maquinas_reais")
+
+FERRAMENTA = Path(__file__).resolve().parent.parent / "ferramentas" / "categorias"
 
 #: Os nomes do site no ar (novembro de 2026) e como eles ficam.
 NOMES_DO_SITE = {
@@ -473,3 +478,59 @@ class VitrineTests(TestCase):
         self.assertEqual(view.vitrine_da_categoria(CategoriasBrinquedos(nome_categoria="Brinquedão"))["icone"], "fa-layer-group")
         resposta = self.client.get(reverse("categoria_detalhe", args=[self.ninja.pk]))
         self.assertContains(resposta, "Circuitos de obstáculos")
+
+
+@override_settings(IS_RENDER=False)
+class MaquinasReaisTests(TestCase):
+    """A 0151 e as fotos com as máquinas de verdade: nenhuma máquina inventada."""
+
+    def test_depende_da_0150_e_sobe_as_fotos_no_render(self):
+        self.assertEqual(migracao_reais.Migration.dependencies, [("core", "0150_basquete_quadrinhos_fotos")])
+        self.assertIs(migracao_reais.Migration.operations[0].code, categorias_capas.subir_fotos_no_deploy)
+        kids = CategoriasBrinquedos.objects.create(nome_categoria="Kids", imagem_categoria="categorias/kids_antiga")
+        self.assertIsNone(migracao_reais.subir_fotos_no_deploy(apps_reais, None, avisar=_mudo))
+        with tempfile.TemporaryDirectory() as pasta, _disco(pasta), override_settings(IS_RENDER=True):
+            resultado = migracao_reais.subir_fotos_no_deploy(apps_reais, None, avisar=_mudo)
+        self.assertEqual(resultado["trocadas"], ["Kids"])
+        kids.refresh_from_db()
+        self.assertIn(categorias_capas.nome_no_cadastro("kids"), kids.imagem_categoria.name)
+
+    def test_cada_foto_so_tem_maquinas_da_categoria(self):
+        # a lista de cada foto (o gerar.cjs grava) contra o catálogo do site no ar
+        # (recortar.py --catalogo): toda máquina, na frente ou ao fundo, é um item
+        # de verdade da própria categoria
+        lista = json.loads((FERRAMENTA / "maquinas-das-fotos.json").read_text(encoding="utf-8"))
+        catalogo = json.loads((FERRAMENTA / "maquinas" / "catalogo.json").read_text(encoding="utf-8"))
+        nomes_da_chave = dict(categorias_capas.CAPAS)
+        feitas = {chave for chave, _ in categorias_capas.CAPAS} - {"area-baby"}
+        self.assertEqual(set(lista), feitas)
+        for chave, maquinas in lista.items():
+            with self.subTest(chave):
+                self.assertGreaterEqual(len([m for m in maquinas if "(ao fundo)" not in m]), 1)
+                for maquina in maquinas:
+                    nome = maquina.replace(" (ao fundo)", "").replace(" (3D)", "")
+                    self.assertIn(nome, catalogo, f"{maquina} não é um produto do catálogo")
+                    categorias = {arena._normalizar(c) for c in catalogo[nome]["categorias"]}
+                    self.assertTrue(categorias & set(nomes_da_chave[chave]), f"{nome} não é da categoria {chave}")
+
+    def test_os_recortes_existem_e_sao_leves(self):
+        ficha = json.loads((FERRAMENTA / "maquinas" / "maquinas.json").read_text(encoding="utf-8"))
+        catalogo = json.loads((FERRAMENTA / "maquinas" / "catalogo.json").read_text(encoding="utf-8"))
+        for chave, dados in ficha.items():
+            arquivo = FERRAMENTA / "maquinas" / f"{chave}.webp"
+            with self.subTest(chave), Image.open(arquivo) as foto:
+                self.assertIn(dados["nome"], catalogo)
+                self.assertEqual(catalogo[dados["nome"]]["id"], dados["id"])
+                self.assertEqual(foto.mode, "RGBA")  # recortada: o fundo é transparente
+                self.assertLessEqual(max(foto.size), 900)
+                self.assertLess(arquivo.stat().st_size, 120 * 1024)
+                self.assertGreater(dados["altura"], 0.5)
+
+    def test_as_cenas_nao_usam_maquina_inventada(self):
+        # as peças de pecas.js que imitavam máquina (o gabinete, o simulador, o
+        # pinball, o pebolim, o carrossel, a mini roda) saíram das cenas e dos lugares
+        for arquivo in ("cenas.js", "lugares.js"):
+            codigo = (FERRAMENTA / arquivo).read_text(encoding="utf-8")
+            for inventada in ("P.gabinete(", "P.simulador(", "P.pinball(", "P.pebolim(", "P.carrossel(", "P.rodaGigante(", "P.mesaArcade(", "P.golLed("):
+                with self.subTest(arquivo=arquivo, peca=inventada):
+                    self.assertNotIn(inventada, codigo)

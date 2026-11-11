@@ -59,8 +59,11 @@ const servidor = http.createServer((req, res) => {
     console.log(`${pedido}: ${((Date.now() - inicio) / 1000).toFixed(1)} s -- ${maquinas.join(", ")}`);
     lista[chave] = maquinas;
   }
-  // as máquinas de cada foto (o LEIA-ME e os testes conferem: só itens do catálogo)
-  fs.writeFileSync(path.join(SAIDA, "maquinas-das-fotos.json"), JSON.stringify(lista, null, 1));
+  // as máquinas de cada foto (o LEIA-ME e os testes conferem: só itens da categoria no catálogo)
+  const arquivoLista = path.join(__dirname, "maquinas-das-fotos.json");
+  const antes = fs.existsSync(arquivoLista) ? JSON.parse(fs.readFileSync(arquivoLista, "utf8")) : {};
+  for (const [chave, maquinas] of Object.entries(lista)) if (!chave.includes("@") && !chave.includes(":")) antes[chave] = maquinas;
+  fs.writeFileSync(arquivoLista, JSON.stringify(antes, null, 1) + "\n");
   await browser.close();
   servidor.close();
 })().catch((erro) => {

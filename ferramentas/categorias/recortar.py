@@ -18,8 +18,9 @@ O RECORTE:
     foto (o Boliche Virtual só tem fotos na loja, com o fundo da loja).
 A foto vai como é: nada redesenhado, nenhum logo acrescentado.
 
-    python ferramentas/categorias/recortar.py            (todas)
+    python ferramentas/categorias/recortar.py              (todas, e o catalogo.json)
     python ferramentas/categorias/recortar.py mundo-zumbi  (só esta)
+    python ferramentas/categorias/recortar.py --catalogo   (só o catalogo.json: as categorias de cada produto)
 
 `altura` é a do cadastro (altura_m, em metros): a escala da máquina na cena.
 """
@@ -151,6 +152,33 @@ def recortar(chave):
     return saida, imagem.size
 
 
+SITE = "https://www.lazersport.com.br/api/v1/brinquedos/"
+
+
+def _json(url):
+    with urllib.request.urlopen(url, timeout=60) as resposta:
+        return json.loads(resposta.read().decode("utf-8"))
+
+
+def catalogo():
+    """maquinas/catalogo.json: cada produto do site no ar e as categorias dele.
+
+    É o que prova que cada foto só tem itens da própria categoria
+    (core/tests_categorias_capas.py confere a lista de cada foto contra ele).
+    """
+    produtos, url = [], SITE
+    while url:
+        pagina = _json(url)
+        produtos += pagina["results"]
+        url = pagina["next"]
+    dados = {}
+    for p in sorted(produtos, key=lambda p: p["id"]):
+        detalhe = _json(f"{SITE}{p['id']}/")
+        dados[detalhe["nome"]] = {"id": detalhe["id"], "categorias": [c["nome"] for c in detalhe["categorias"]]}
+    (PASTA / "catalogo.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return dados
+
+
 def ficha():
     """maquinas/maquinas.json: o nome, o id no site e a altura de cada uma (o cenas.js lê)."""
     dados = {chave: {"id": i, "nome": nome, "altura": altura} for chave, (i, nome, _foto, altura, _r) in MAQUINAS.items()}
@@ -158,10 +186,15 @@ def ficha():
 
 
 def main(chaves):
+    if chaves == ["--catalogo"]:
+        print(f"{len(catalogo())} produtos em maquinas/catalogo.json")
+        return
     for chave in chaves or MAQUINAS:
         saida, tamanho = recortar(chave)
         print(f"{chave}: {saida.name} {tamanho[0]}x{tamanho[1]} ({saida.stat().st_size // 1024} KB)")
     ficha()
+    if not chaves:
+        catalogo()
 
 
 if __name__ == "__main__":

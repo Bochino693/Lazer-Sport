@@ -112,10 +112,13 @@ def vida(foto):
     return ImageEnhance.Contrast(foto).enhance(1.05)
 
 
-def brilho(foto, limite=228, forca=0.7):
-    """O brilho das luzes (bloom): o que está quase branco (as lâmpadas, o neon, as telas) se espalha."""
-    claro = ImageChops.lighter(ImageChops.lighter(*foto.split()[:2]), foto.split()[2])
-    mascara = claro.point(lambda v: 0 if v < limite else min(255, (v - limite) * 9))
+def brilho(foto, limite=236, forca=0.7):
+    """O brilho das luzes (bloom): o que é quase branco (as lâmpadas, o miolo do neon) se espalha.
+
+    Pela luminância, e não pelo canal mais forte: um piso azul bem saturado
+    tem o azul alto, mas não é luz -- e ficava lavado.
+    """
+    mascara = foto.convert("L").point(lambda v: 0 if v < limite else min(255, (v - limite) * 14))
     luzes = Image.composite(foto, Image.new("RGB", foto.size, 0), mascara)
     perto = luzes.filter(ImageFilter.GaussianBlur(10))
     longe = luzes.filter(ImageFilter.GaussianBlur(34))

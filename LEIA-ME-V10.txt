@@ -1936,3 +1936,100 @@ Dependência nova: rjsmin (requirements.txt).
    a subida falhar, o deploy segue; no servidor:
        python manage.py cadastrar_variantes_adesivo --so basquete-street-quadrinhos --fotos
    Testes: core/tests_variantes_adesivo.py (BasqueteFotosDeVerdadeTests).
+
+58) AS FOTOS DAS CATEGORIAS COM AS MÁQUINAS DE VERDADE (E O FUNDO COM VIDA)
+   O pedido do cliente: "vc pode por as máquinas reais ao invés de improvisar
+   estas nas categorias.. entende?" e, reforçando: "não quero nenhuma máquina
+   fake, você tem os itens nas categorias, é só pegar e posicionar, além de
+   caprichar mais no fundo, está muito sem vida, deve ter uma vida as fotos."
+   As fotos de core/static/site/categorias/ (seção 55) foram refeitas nos
+   mesmos lugares, com DUAS REGRAS:
+   1. NENHUMA MÁQUINA INVENTADA, nem no fundo. Toda máquina da foto é um item
+      de verdade da própria categoria no site:
+        * o .glb nosso, quando existe (Brinquedão Modelo 2, 3, Ninja, Espaço
+          Esportivo Modelo 1, Strike Kids, Air Game Kids Alienígenas, Basquete
+          Street Quadrinhos, Trampolim de Enterrada);
+        * senão, a FOTO DO PRÓPRIO CATÁLOGO (a capa do produto no Cloudinary),
+          recortada do fundo e posta em pé no chão: um plano virado para a
+          câmera (um tanto mais girado quando a foto é de 3/4), na altura do
+          cadastro (altura_m), com a luz da cena, a sombra e a sombra de
+          contato embaixo. A foto vai como é: nada redesenhado, nenhum logo
+          acrescentado.
+      Os gabinetes, o simulador, o pinball, o pebolim, o carrossel e a mini
+      roda que eram desenhados (ferramentas/categorias/pecas.js) saíram do
+      código; ficaram só os enfeites (as bolas, os pinos, a estrela do palco).
+   2. O FUNDO COM VIDA: as crianças brincando, perto e longe (as mesmas da
+      Arena 3D: ferramentas/categorias/pessoas.js, paradas no meio da
+      brincadeira -- correndo, pulando, comemorando, jogando), os balões, o
+      confete e as bolinhas e os cubos de espuma no ar, as luminárias, as
+      luzinhas, os spots e o neon acesos com o brilho (bloom), o sol das
+      janelas no chão, o reflexo no piso (buffet, shopping, salão, quadra),
+      uma coisa na frente, desfocada (os balões, o vaso, os blocos de espuma,
+      o canteiro, os cones), as cores mais vivas e uma vinheta leve. As
+      máquinas continuam inteiras, nítidas e no meio (o lugar é que desfoca).
+   AS MÁQUINAS DE CADA FOTO (a lista sai do gerar.cjs, em
+   ferramentas/categorias/maquinas-das-fotos.json, e o teste confere cada uma
+   contra as categorias do site no ar, em maquinas/catalogo.json):
+     Brinquedão (buffet): Brinquedão Modelo 2 (3D); ao fundo, Brinquedão
+       Modelo 1 (foto).
+     Kids (buffet): Sonic Kids, Minions Kids, Pantera Cor de Rosa Kids e
+       Homem Aranha Kids (fotos) e Air Game Kids Alienígenas (3D); ao fundo,
+       Bob Esponja Hammer Kids.
+     Espaço Kids Play (shopping): Brinquedão Modelo 3 e Air Game Kids
+       Alienígenas (3D) e Sonic Kids (foto).
+     Famosos (shopping, no palco): Basquete Street Quadrinhos (3D), Sonic
+       Dash, Homem Aranha e Pac Man (fotos); ao fundo, Flappy Bird e Corrida
+       dos Minions.
+     Simuladores (shopping): Simulador Mario Kart, Simulador de Corrida Top
+       Racer e Porsche Simulador (fotos); ao fundo, Speed Turbo, Lazer Shot e
+       Sonic Racing All-Stars.
+     Eletrônicos (game zone): Basquete Street Quadrinhos, Strike Kids e Air
+       Game Kids Alienígenas (3D) e Mundo Zumbi (foto); ao fundo, Subway
+       Surfers, Homem Aranha, Sonic Dash, Flappy Bird, Pinball 32 Polegadas,
+       Tomb Raider Kids, Corrida dos Minions e Nervo Teste.
+     Fliperama (game zone): Multi Jogos Retro, Gabinete Games, Pinball 40
+       Polegadas e Subway Surfers (fotos); ao fundo, Tomb Raider Kids, Corrida
+       dos Minions, Sonic Dash, Flappy Bird, Homem Aranha, Pinball 32
+       Polegadas, Minions Kids e Sonic Kids.
+     Competitivos (game zone): Basquete Street Quadrinhos (3D), Basquete
+       Street e Air Game Premium (fotos); ao fundo, Nervo Teste, Mundo Zumbi,
+       Pega Toupeira, Multi Jogos Retro, Pinball 40 Polegadas, Sonic Dash e
+       Homem Aranha.
+     Boliche Virtual (game zone): Boliche Virtual (foto) e Strike Kids (3D),
+       com os pinos e as bolas.
+     Trampolins (galpão): Trampolim de Enterrada (3D) e Brinquedão Modelo 1
+       (foto).
+     Área Ninja (galpão): Brinquedão Ninja (3D), o único item da categoria.
+     Espaço Esportivo Kids (galpão, de cima): Espaço Esportivo Modelo 1 (3D).
+     Mecânicos (praça): Carrossel Sorvetinho, Labamba e Mini Roda Sorvete
+       (fotos); ao fundo, Sonic Racing All-Stars.
+     Jogos de Mesa (salão de festas): Air Game Kids Alienígenas (3D), Pac Man,
+       Pebolim Eletrônico e Matrix (fotos).
+     Esportivos (quadra): Basquete Street Quadrinhos (3D), Show de Bola e
+       Basquete Home (fotos).
+     Área Baby: a categoria não tem produto no catálogo; a foto fica como
+       estava (a da seção 55, com as peças da área baby).
+   OS RECORTES (ferramentas/categorias/recortar.py -> maquinas/<chave>.webp,
+   900 px no lado maior, com transparência; ficam no repositório para refazer
+   sem rede): a maioria das capas do catálogo já vem recortada; a de fundo
+   branco perde o branco que encosta na borda (e, no Air Game Premium e no
+   Pebolim Eletrônico, também o vão branco do arco); o Boliche Virtual só tem
+   fotos na loja, e o contorno dele foi desenhado à mão sobre a foto rosa da
+   galeria. maquinas/maquinas.json traz o nome, o id e a altura de cada um;
+   maquinas/catalogo.json, as categorias de cada produto do site no ar.
+   A SUBIDA: a migração 0151_categorias_maquinas_reais (depois da 0150), só
+   no Render, sobe as fotos que mudaram, como a 0149. Se falhar, o deploy
+   segue e, no servidor: python manage.py atualizar_capas_categorias
+   REFAZER:
+       python ferramentas/categorias/recortar.py           (as fotos do catálogo; precisa de rede)
+       python ferramentas/categorias/recortar.py --catalogo (só as categorias de cada produto)
+       node ferramentas/categorias/gerar.cjs [chaves]       (sem chave: todas, menos a Área Baby)
+       python ferramentas/categorias/compor.py [chaves]
+       python manage.py test core.tests_categorias_capas
+   Trocou a máquina de uma foto? Mude a cena em cenas.js (CENAS: `maquinas`,
+   `vida`, `lugarOp.fundo`) e rode o gerar.cjs: ele regrava a lista, e o teste
+   recusa a máquina que não é da categoria no site.
+   Código: ferramentas/categorias/ (cenas.js, lugares.js, pessoas.js,
+   pecas.js, recortar.py, gerar.cjs, compor.py, maquinas/,
+   maquinas-das-fotos.json), core/migrations/0151_categorias_maquinas_reais.py.
+   Testes: core/tests_categorias_capas.py (MaquinasReaisTests).

@@ -408,7 +408,7 @@ export function criarLugares(T, P, extra = {}) {
     buffet(caixaDos, giro, op = {}) {
       const g = new T.Group();
       const m = medidas(caixaDos, giro, op.atras, op.lado);
-      const H = Math.max(6.5, m.tam.y * 2.2);
+      const H = Math.max(9, m.tam.y * 3.6);
       const piso = chao(g, 160, 160, matTex("piso-buffet", 160, 160, 1.6, tacos(205, 150, 98), { roughness: 0.3 }), m.centro.x, m.centro.z);
       refletir(g, piso, 0.12, "#7a5230", m);
       // a parede de bolinhas com o rodapé branco alto
@@ -441,15 +441,15 @@ export function criarLugares(T, P, extra = {}) {
       const rr = sorteio(9);
       for (let i = 0; i < 14; i++) esf(g, 0.045, mat(["#7c2d12", "#fbbf24", "#f472b6", "#ffffff"][i % 4], { roughness: 0.4 }), mx + (rr() - 0.5) * 0.6, 0.86, mz + (i < 7 ? -0.65 : 0.65) + (rr() - 0.5) * 0.4, 10);
       // as bandeirinhas e os cachos de balões
-      for (let i = 0; i < 3; i++) bandeirinhas(g, m.min.x - 6, m.max.x + 6, H - 0.8 - i * 0.55, m.zFundo + 0.4 + i * 0.9);
+      for (let i = 0; i < 3; i++) bandeirinhas(g, m.min.x - 6, m.max.x + 6, Math.min(H - 0.8, 6.8) - i * 0.55, m.zFundo + 0.4 + i * 0.9);
       cachoDeBaloes(g, m.xLado + lado * 0.6, m.zFundo + 0.7, 2.1, 2);
       cachoDeBaloes(g, op.cachoX ?? (m.ladoEsq ? m.max.x + 2.4 : m.min.x - 2.4), m.zFundo + 0.9, 1.9, 5);
       // a festa acesa: as luminárias de papel, as luzinhas e o confete no ar
-      for (let i = -4; i <= 4; i++) pendente(g, m.centro.x + i * Math.max(1.6, m.tam.x / 6), H - 1.6 - (i % 2) * 0.4, m.zFundo + 1.6 + (i % 3) * 0.6, ["#fff7ed", "#fde68a", "#fbcfe8"][(i + 9) % 3]);
-      luzinhas(g, m.min.x - 4, m.zFundo + 0.3, m.max.x + 4, m.zFundo + 0.3, H - 0.4);
-      luzinhas(g, m.xLado + lado * 0.3, m.zFundo, m.xLado + lado * 0.3, m.centro.z + 8, H - 0.6);
+      for (let i = -4; i <= 4; i++) pendente(g, m.centro.x + i * Math.max(1.6, m.tam.x / 6), Math.min(H - 1.6, 5.2) - (i % 2) * 0.4, m.zFundo + 1.6 + (i % 3) * 0.6, ["#fff7ed", "#fde68a", "#fbcfe8"][(i + 9) % 3]);
+      luzinhas(g, m.min.x - 4, m.zFundo + 0.3, m.max.x + 4, m.zFundo + 0.3, Math.min(H - 0.4, 6.2));
+      luzinhas(g, m.xLado + lado * 0.3, m.zFundo, m.xLado + lado * 0.3, m.centro.z + 8, Math.min(H - 0.6, 6.0));
       confete(g, caixaDos, 140, 3, Math.min(5, H - 1.5));
-      maquinasAoFundo(g, op.fundo, m);
+      maquinasAoFundo(g, op.fundo, m, { folga: 1.6, distanciaDoFundo: 1.4 });
       criancasAoFundo(g, [[m.xLado + lado * 2.4, m.zFundo + 1.6, "andando", 60 * lado], [m.max.x + 3.6, m.zFundo + 2.0, "comemorando", -30]]);
       const frente = (naTela) => {
         const f = new T.Group();
@@ -673,7 +673,7 @@ export function criarLugares(T, P, extra = {}) {
         lamp.rotation.x = Math.PI / 2;
         g.add(lamp);
       }
-      for (let i = -3; i <= 3; i++) solNoChao(g, m.centro.x + i * 4.2 + 1.5, m.max.z + 1.8 + (i % 2) * 1.2, 2.6, 4.2, 0.35, 0.32);
+      for (let i = -3; i <= 3; i += 2) solNoChao(g, m.centro.x + i * 4.2 + 1.5, m.max.z + 2.6, 2.4, 3.6, 0.35, 0.14);
       criancasAoFundo(g, [[m.max.x + 2.2, m.zFundo + 2.2, "correndo", -70], [m.min.x - 2.4, m.zFundo + 3.0, "andando", 80], [m.max.x + 4.2, m.centro.z + 2.0, "comemorando", -30]]);
       const frente = (naTela) => {
         const f = new T.Group();
@@ -841,7 +841,7 @@ export function criarLugares(T, P, extra = {}) {
         }
         return f;
       };
-      return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#cfe8fb", 60, 240], luz: { ceu: "#e0f2fe", chao: "#4ade80", hemi: 1.1, sol: 2.4, amb: 0.5, exposicao: 1.0 } };
+      return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#cfe8fb", 60, 240], luz: { ceu: "#e0f2fe", chao: "#4ade80", hemi: 1.0, sol: 2.0, amb: 0.45, exposicao: 0.95 } };
     },
 
     /* ------------------------------------------------------------ o salão de festas do condomínio */
