@@ -99,14 +99,14 @@
       do .glb importa "./three.module.min.js", e os dois endereços precisam
       ser o mesmo para o navegador não baixar o three.js duas vezes.
     {% endcomment %}
-    <div class="ls-quadro-vitrine" data-vitrine aria-roledescription="carrossel" aria-label="Brinquedos em destaque"
+    <div class="ls-quadro-vitrine" data-vitrine aria-roledescription="carrossel" aria-label="Brinquedos e promoções em destaque"
          {% if vitrine_tem_3d %}data-three="{% static 'vendor/three/three.module.min.js' %}" data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"{% endif %}>
       {% if vitrine_quadro %}
       <div class="ls-vitrine-palco" data-vitrine-palco>
         <span class="ls-vitrine-halo" aria-hidden="true"></span>
         <span class="ls-vitrine-anel" aria-hidden="true"></span>
         {% for item in vitrine_quadro %}
-        <article class="ls-vitrine-slide{% if forloop.first %} ativo{% endif %}" data-slide
+        <article class="ls-vitrine-slide{% if forloop.first %} ativo{% endif %}{% if item.tipo == 'promocao' %} ls-vitrine-slide--promo{% endif %}" data-slide
                  {% if item.modelo_3d %}data-modelo3d="{{ item.modelo_3d }}"{% endif %}
                  aria-roledescription="slide" aria-label="{{ forloop.counter }} de {{ vitrine_quadro|length }}"
                  {% if not forloop.first %}aria-hidden="true"{% endif %}>
@@ -114,6 +114,7 @@
             <img src="{{ item.capa }}" alt="{{ item.nome }}" width="900" height="900" decoding="async"
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
             {% if item.modelo_3d %}<span class="ls-vitrine-chip3d" aria-hidden="true"><i class="fa-solid fa-cube"></i> 3D</span>{% endif %}
+            {% if item.tipo == 'promocao' %}<span class="ls-vitrine-selo-promo"><i class="fa-solid fa-bolt" aria-hidden="true"></i> {{ item.selo }}</span>{% endif %}
           </a>
           <div class="ls-vitrine-ficha">
             <span class="ls-vitrine-categoria">{{ item.categoria }}</span>
@@ -122,9 +123,10 @@
             <div class="ls-vitrine-meta">
               {% if item.avaliacao %}<span><i class="fa-solid fa-star" aria-hidden="true"></i> {{ item.avaliacao|floatformat:1 }}</span>{% endif %}
               {% if item.medidas %}<span><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ item.medidas }}</span>{% endif %}
+              {% if item.brinquedos %}<span class="ls-vitrine-itens"><i class="fa-solid fa-tags" aria-hidden="true"></i> {{ item.brinquedos }}</span>{% endif %}
             </div>
             <div class="ls-vitrine-rodape">
-              <strong class="ls-vitrine-preco">{{ item.preco|default:"Sob consulta" }}</strong>
+              <strong class="ls-vitrine-preco">{% if item.preco_de %}<s class="ls-vitrine-preco-de">{{ item.preco_de }}</s> {% endif %}{{ item.preco|default:"Sob consulta" }}</strong>
               <a href="{{ item.url }}" class="ls-vitrine-ver" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">Ver <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
             </div>
           </div>
@@ -135,7 +137,7 @@
       {% if vitrine_quadro|length > 1 %}
       <div class="ls-vitrine-miniaturas" role="group" aria-label="Escolher brinquedo">
         {% for item in vitrine_quadro %}
-          <button type="button" class="ls-vitrine-mini{% if forloop.first %} ativo{% endif %}{% if item.modelo_3d %} ls-vitrine-mini--3d{% endif %}" data-ir="{{ forloop.counter0 }}"
+          <button type="button" class="ls-vitrine-mini{% if forloop.first %} ativo{% endif %}{% if item.modelo_3d %} ls-vitrine-mini--3d{% endif %}{% if item.tipo == 'promocao' %} ls-vitrine-mini--promo{% endif %}" data-ir="{{ forloop.counter0 }}"
                   aria-label="Mostrar {{ item.nome }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}">
             <img src="{{ item.miniatura }}" alt="" width="64" height="64" loading="lazy" decoding="async">
           </button>
@@ -721,7 +723,7 @@
             </a>
 
             <p class="nome-brinquedo">
-              {{ promo.brinquedos.nome_brinquedo }}
+              {{ promo.brinquedos.nome_brinquedo }}{% with extras=promo.brinquedos_extras.all %}{% if extras %} <span class="nome-brinquedo-mais">+ {{ extras|length }} brinquedo{{ extras|length|pluralize }}</span>{% endif %}{% endwith %}
             </p>
 
             <div class="oferta-card-benefits" aria-label="Benefícios">
@@ -732,11 +734,11 @@
              <!-- PREÇOS PROMO -->
             <div class="preco-box oferta-precos">
                 {# Sem o preço do brinquedo, o "De:" saía como "R$ 0,00". #}
-                {% if promo.brinquedos.valor_brinquedo %}
+                {% if promo.preco_tabela %}
                 <p class="preco-original">
                     De:
                     <span class="money"
-                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
+                          data-valor="{{ promo.preco_tabela }}">
                     </span>
                 </p>
                 {% endif %}

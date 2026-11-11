@@ -3024,3 +3024,48 @@ Dependência nova: rjsmin (requirements.txt).
    povoar a região (item 66); de perto cada um volta ao lugar real, e a
    cor é sempre a do lugar real.
    Testes: core/tests_mapa_estados.py.
+
+73) PROMOÇÕES: VÁRIOS BRINQUEDOS, A TELA DO PAINEL COMO APP E O QUADRO DA HOME
+   Pedidos: "está bem difícil achar o brinquedo a aplicar a promo ...
+   modernizar essa área, evitando dropdowns"; "as promoções devem conter
+   mais que um objeto de brinquedo agora, e devem rodar na headline de
+   banner, alternando entre a seção de demonstrativo".
+   VÁRIOS BRINQUEDOS (core/models.py, Promocoes):
+     * `brinquedos` continua sendo o PRINCIPAL (a foto da promoção sem arte
+       própria, o carrinho e a divulgação saem dele) e `brinquedos_extras`
+       (migração 0159, só esquema) guarda os outros;
+     * o preço da promoção vale para o CONJUNTO: `preco_tabela` é a soma
+       dos preços de tabela (None se algum não tem preço) e
+       `desconto_percentual` sai dela; `todos_brinquedos` dá o principal
+       primeiro, sem repetir;
+     * a página da promoção lista todos (foto, nome, preço de tabela) e
+       mostra o "preço normal (o conjunto)" e o desconto; os cards da home
+       dizem "+ N brinquedos" e o "De:" é a soma; a busca do site, a API
+       (`brinquedo_ids`) e a mensagem de divulgação ("X, Y e Z: os 3 por R$
+       ...") citam todos. Mexer nos brinquedos de uma promoção renova o
+       cache da home (m2m_changed em core/signals.py).
+   A TELA DO PAINEL (gestao/promocoes_adm.html + site/paginas/
+   gestao-promocoes_adm.css/.js), nas cores do tema do painel:
+     * nenhum <select>: o brinquedo se escolhe numa GRADE com foto, nome e
+       preço, com busca (sem acento) e chips de categoria; toque para
+       escolher um ou mais; o primeiro é o principal (marca "Principal";
+       tocar no nome de outro o torna principal; o x tira);
+     * o preço: digitado em reais inteiros (25000 vira 25.000,00; colar
+       "R$ 1.234,56" vale), atalhos -5% a -30% sobre a soma de tabela, e a
+       conta na hora: "De R$ 34.800,00 por R$ 25.000,00 (o conjunto): 28% de
+       desconto (economia de R$ 9.800,00)". Oferta acima da tabela não salva;
+     * título sugerido pelos brinquedos (e outras sugestões em chips);
+       imagem: sem arte, vai a foto do principal; prévia do cartão ao vivo;
+     * cada promoção liga e desliga no próprio cartão (sem abrir nada; a
+       view responde JSON para acao=alternar); filtros Todas / No site /
+       Desligadas como abas; busca instantânea na página (Enter busca em
+       todas); excluir pede só a confirmação, sem digitar "EXCLUIR";
+     * no celular a janela ocupa a tela, um passo embaixo do outro.
+   O QUADRO DA HOME (core/views.py: slides_das_promocoes e
+   intercalar_vitrine): as promoções ativas (até 6, com foto) entram no
+   carrossel do topo ENTRE os brinquedos em destaque -- brinquedo,
+   promoção, brinquedo, promoção... -- com o selo do desconto, "Promoção ·
+   N brinquedos", os nomes, o "de/por" e a miniatura com o %.
+   Conferido no navegador (PC e celular): escolher 2 brinquedos, -15%,
+   digitar 25000, salvar, ligar/desligar; o slide da promoção no topo.
+   Testes: core/tests_promocoes_varios.py.

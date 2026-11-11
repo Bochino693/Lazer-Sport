@@ -293,6 +293,7 @@ class PromocaoListAPI(generics.ListAPIView):
             Promocoes.objects
             .filter(ativo=True)
             .select_related("brinquedos")
+            .prefetch_related("brinquedos_extras")
             .order_by("-id")
         )
 

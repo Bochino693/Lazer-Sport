@@ -1296,11 +1296,48 @@ class Combos(Prime):
 class Promocoes(Prime):
     descricao = models.CharField(max_length=120)
     imagem_promocao = models.ImageField(upload_to='promocoes/', null=True, storage=MediaCloudinaryStorage())
+    # O brinquedo PRINCIPAL: a foto da promoção (quando ela não tem arte
+    # própria), o carrinho e a divulgação saem dele.
     brinquedos = models.ForeignKey(Brinquedos, related_name='promocoes', on_delete=models.CASCADE)
+    # Os outros brinquedos da MESMA promoção. O preço da promoção vale para o
+    # conjunto (o principal mais estes), comparado com a soma dos preços de
+    # tabela. Vazio, é a promoção de um brinquedo só, como sempre foi.
+    brinquedos_extras = models.ManyToManyField(
+        Brinquedos,
+        related_name='promocoes_extras',
+        blank=True,
+        verbose_name="Outros brinquedos da promoção",
+    )
     preco_promocao = models.DecimalField(decimal_places=2, max_digits=10, null=True)
 
     def __str__(self):
         return self.descricao
+
+    @property
+    def todos_brinquedos(self):
+        """O principal primeiro, depois os outros, sem repetir."""
+        lista = [self.brinquedos] if self.brinquedos_id else []
+        vistos = {self.brinquedos_id}
+        for brinquedo in self.brinquedos_extras.all():
+            if brinquedo.pk not in vistos:
+                vistos.add(brinquedo.pk)
+                lista.append(brinquedo)
+        return lista
+
+    @property
+    def preco_tabela(self):
+        """A soma dos preços de tabela do conjunto (None se algum não tem preço)."""
+        precos = [b.valor_brinquedo for b in self.todos_brinquedos]
+        if not precos or any(not p for p in precos):
+            return None
+        return sum(precos)
+
+    @property
+    def desconto_percentual(self):
+        tabela = self.preco_tabela
+        if not tabela or not self.preco_promocao or self.preco_promocao >= tabela:
+            return 0
+        return int(round((1 - self.preco_promocao / tabela) * 100))
 
     class Meta:
         verbose_name = "Promoção"

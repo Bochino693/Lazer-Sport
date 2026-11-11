@@ -224,6 +224,61 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
     return vitrine
 
 
+def slides_das_promocoes(promocoes, quantidade=6):
+    """As promoções ativas como slides do quadro inicial.
+
+    Mesmo formato dos slides de brinquedo (vitrine_do_quadro), com o tipo
+    "promocao", o selo do desconto e o preço "de" (a soma de tabela do
+    conjunto). A foto é a arte da promoção ou, sem ela, a do brinquedo
+    principal. Promoção sem foto nenhuma fica de fora: o slide é a foto.
+    """
+    from .formatos import dinheiro
+
+    slides = []
+    for promocao in promocoes:
+        if len(slides) >= quantidade:
+            break
+        brinquedos = promocao.todos_brinquedos
+        foto = promocao.imagem_promocao or (brinquedos[0].imagem_brinquedo if brinquedos else None)
+        if not foto:
+            continue
+        try:
+            url_foto = foto.url
+            capa = arena.reduzir_imagem(url_foto, 900)
+        except Exception:
+            continue
+        tabela = promocao.preco_tabela
+        pct = promocao.desconto_percentual
+        nomes = [b.nome_brinquedo for b in brinquedos]
+        slides.append({
+            "tipo": "promocao",
+            "nome": promocao.descricao,
+            "url": reverse("promocao", args=[promocao.pk]) + "#promocao-pagina",
+            "capa": capa,
+            "miniatura": arena.reduzir_imagem(url_foto, 160),
+            "categoria": "Promoção" + (f" · {len(nomes)} brinquedos" if len(nomes) > 1 else ""),
+            "selo": f"-{pct}%" if pct else "Oferta",
+            "preco": f"R$ {dinheiro(promocao.preco_promocao)}" if promocao.preco_promocao else "",
+            "preco_de": f"R$ {dinheiro(tabela)}" if tabela and pct else "",
+            "brinquedos": " + ".join(nomes),
+            "avaliacao": 0,
+            "medidas": "",
+            "modelo_3d": "",
+        })
+    return slides
+
+
+def intercalar_vitrine(brinquedos, promocoes):
+    """Brinquedo, promoção, brinquedo, promoção... e o que sobrar no fim."""
+    resultado = []
+    for i in range(max(len(brinquedos), len(promocoes))):
+        if i < len(brinquedos):
+            resultado.append(brinquedos[i])
+        if i < len(promocoes):
+            resultado.append(promocoes[i])
+    return resultado
+
+
 class HomeView(View):
     def head(self, request):
         # O Render verifica a raiz com HEAD. Não monte toda a vitrine nem
@@ -320,6 +375,8 @@ class HomeView(View):
             Promocoes.objects
             .filter(ativo=True)
             .select_related("brinquedos")
+            .prefetch_related("brinquedos_extras")
+            .order_by("-id")
         )
 
         eventos = list(
@@ -513,7 +570,12 @@ class HomeView(View):
             c["cidade"] for c in clientes_mapa if c["cidade"]
         })
 
-        vitrine_quadro = vitrine_do_quadro(brinquedos_todos)
+        # O quadro inicial gira os brinquedos em destaque e, entre eles, as
+        # promoções ativas: brinquedo, promoção, brinquedo, promoção...
+        vitrine_quadro = intercalar_vitrine(
+            vitrine_do_quadro(brinquedos_todos),
+            slides_das_promocoes(promocoes),
+        )
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
@@ -1964,6 +2026,7 @@ class LojaView(View):
             Promocoes.objects
             .filter(ativo=True)
             .select_related('brinquedos')
+            .prefetch_related('brinquedos_extras')
         )
         for promo in promocoes:
             itens.append({
@@ -1976,7 +2039,8 @@ class LojaView(View):
                     if promo.brinquedos else None
                 ),
                 'preco': promo.preco_promocao,
-                'preco_original': promo.brinquedos.valor_brinquedo if promo.brinquedos else None,
+                # com vários brinquedos, o "de" é a soma do conjunto
+                'preco_original': promo.preco_tabela,
                 'url': reverse('promocao', args=[promo.id]),
             })
 
@@ -2095,7 +2159,9 @@ class PromocaoInfoView(View):
 
     @staticmethod
     def _montar(pk):
-        return {"promocao": get_object_or_404(Promocoes.objects.select_related("brinquedos"), pk=pk)}
+        return {"promocao": get_object_or_404(
+            Promocoes.objects.select_related("brinquedos").prefetch_related("brinquedos_extras"), pk=pk,
+        )}
 
     def get(self, request, pk):
         promocao = get_cached_catalog_page("promocao", (pk,), lambda: self._montar(pk))["promocao"]
@@ -2458,6 +2524,7 @@ class PromocaoAdminView(AdminOnlyMixin, View):
         queryset = (
             Promocoes.objects
             .select_related("brinquedos")
+            .prefetch_related("brinquedos_extras")
             .order_by("-id")
         )
 
@@ -2468,7 +2535,8 @@ class PromocaoAdminView(AdminOnlyMixin, View):
             queryset = queryset.filter(
                 Q(descricao__icontains=busca)
                 | Q(brinquedos__nome_brinquedo__icontains=busca)
-            )
+                | Q(brinquedos_extras__nome_brinquedo__icontains=busca)
+            ).distinct()
 
         if status == "ativas":
             queryset = queryset.filter(ativo=True)
@@ -2477,21 +2545,59 @@ class PromocaoAdminView(AdminOnlyMixin, View):
 
         return queryset
 
+    @staticmethod
+    def _brinquedos_para_escolher():
+        """O catálogo que a tela mostra em grade para escolher o brinquedo.
+
+        Era um <select> com dezenas de nomes em ordem alfabética: achar o
+        brinquedo certo pedia rolar a lista inteira, sem foto e sem preço.
+        Agora vai cada um com a foto de capa, o preço de tabela (para a tela
+        calcular o desconto) e as categorias (para filtrar por elas).
+        """
+        brinquedos = (
+            Brinquedos.objects
+            .prefetch_related("imagens_brinquedo", "categorias_brinquedos")
+            .order_by("nome_brinquedo")
+        )
+        com_promocao = set(
+            Promocoes.objects.filter(ativo=True).values_list("brinquedos_id", flat=True)
+        )
+        lista = []
+        for brinquedo in brinquedos:
+            try:
+                foto = brinquedo.imagem_perfil
+                foto_url = foto.url if foto else ""
+            except Exception:  # noqa: BLE001 -- arquivo sumido não derruba a tela
+                foto_url = ""
+            lista.append({
+                "id": brinquedo.pk,
+                "nome": brinquedo.nome_brinquedo or "",
+                "preco": f"{brinquedo.valor_brinquedo:.2f}" if brinquedo.valor_brinquedo else "",
+                "foto": foto_url,
+                "categorias": [
+                    c.nome_categoria for c in brinquedo.categorias_brinquedos.all() if c.nome_categoria
+                ],
+                "em_promocao": brinquedo.pk in com_promocao,
+            })
+        return lista
+
     def get(self, request, *args, **kwargs):
         todas = Promocoes.objects.all()
         pagina = Paginator(self.get_queryset(), 24).get_page(request.GET.get("page"))
         query = request.GET.copy()
         query.pop("page", None)
+        brinquedos = self._brinquedos_para_escolher()
+        categorias = sorted(
+            {c for b in brinquedos for c in b["categorias"]},
+            key=lambda nome: nome.casefold(),
+        )
 
         context = {
             "promocoes": pagina.object_list,
             "pagina": pagina,
             "query_sem_pagina": query.urlencode(),
-            "brinquedos": (
-                Brinquedos.objects
-                .all()
-                .order_by("nome_brinquedo")
-            ),
+            "brinquedos_escolha": brinquedos,
+            "categorias_escolha": categorias,
             "busca": request.GET.get("q", "").strip(),
             "status_atual": request.GET.get("status", "todos"),
             "total_promocoes": todas.count(),
@@ -2529,6 +2635,9 @@ class PromocaoAdminView(AdminOnlyMixin, View):
         if acao == "excluir":
             return self._excluir(request)
 
+        if acao == "alternar":
+            return self._alternar(request)
+
         if acao not in {"criar", "editar"}:
             messages.error(request, "Ação inválida.")
             return redirect("promocoes_admin")
@@ -2539,7 +2648,13 @@ class PromocaoAdminView(AdminOnlyMixin, View):
     def _salvar(self, request, acao):
         promocao_id = request.POST.get("promocao_id")
         descricao = request.POST.get("descricao", "").strip()
-        brinquedo_id = request.POST.get("brinquedos", "").strip()
+        # Um ou mais brinquedos, na ordem em que foram escolhidos: o primeiro
+        # é o principal (a foto, o carrinho e a divulgação saem dele).
+        brinquedo_ids = []
+        for valor in request.POST.getlist("brinquedos"):
+            valor = (valor or "").strip()
+            if valor.isdigit() and valor not in brinquedo_ids:
+                brinquedo_ids.append(valor)
         imagem = request.FILES.get("imagem_promocao")
         ativo = request.POST.get("ativo") == "on"
 
@@ -2552,11 +2667,16 @@ class PromocaoAdminView(AdminOnlyMixin, View):
             messages.error(request, "Informe o título da promoção.")
             return redirect("promocoes_admin")
 
-        if not brinquedo_id:
-            messages.error(request, "Selecione o brinquedo da promoção.")
+        if not brinquedo_ids:
+            messages.error(request, "Escolha pelo menos um brinquedo para a promoção.")
             return redirect("promocoes_admin")
 
-        brinquedo = get_object_or_404(Brinquedos, pk=brinquedo_id)
+        escolhidos = Brinquedos.objects.in_bulk(brinquedo_ids)
+        if len(escolhidos) != len(brinquedo_ids):
+            messages.error(request, "Um dos brinquedos escolhidos não existe mais. Escolha de novo.")
+            return redirect("promocoes_admin")
+        brinquedo = escolhidos[int(brinquedo_ids[0])]
+        extras = [escolhidos[int(i)] for i in brinquedo_ids[1:]]
 
         try:
             preco = self._converter_preco(
@@ -2585,12 +2705,27 @@ class PromocaoAdminView(AdminOnlyMixin, View):
             promocao.imagem_promocao = ""
 
         promocao.save()
+        promocao.brinquedos_extras.set(extras)
 
         if acao == "criar":
             messages.success(request, "Promoção criada com sucesso.")
         else:
             messages.success(request, "Promoção atualizada com sucesso.")
 
+        return redirect("promocoes_admin")
+
+    def _alternar(self, request):
+        """Liga/desliga a promoção no próprio cartão, sem abrir o editor."""
+        promocao = get_object_or_404(Promocoes, pk=request.POST.get("promocao_id"))
+        promocao.ativo = not promocao.ativo
+        promocao.save()
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"ok": True, "ativo": promocao.ativo})
+        messages.success(
+            request,
+            "Promoção ativada: já aparece no site." if promocao.ativo
+            else "Promoção desativada: saiu do site.",
+        )
         return redirect("promocoes_admin")
 
     @transaction.atomic
@@ -7276,12 +7411,15 @@ class SearchView(View):
                     *(brinquedo.nome_brinquedo for brinquedo in combo.brinquedos.all()),
                 )
 
-            promocoes = Promocoes.objects.filter(ativo=True).select_related("brinquedos")
+            promocoes = (
+                Promocoes.objects.filter(ativo=True)
+                .select_related("brinquedos").prefetch_related("brinquedos_extras")
+            )
             for promocao in promocoes:
                 adicionar_resultado(
                     "Promoção",
                     promocao.descricao,
-                    promocao.brinquedos.nome_brinquedo,
+                    " · ".join(b.nome_brinquedo for b in promocao.todos_brinquedos),
                     reverse("promocao", args=[promocao.id]),
                     promocao.imagem_promocao,
                     promocao.brinquedos.descricao,
