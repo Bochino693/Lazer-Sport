@@ -326,6 +326,10 @@ class Brinquedos(Prime):
     def imagens_ordenadas(self):
         """Galeria pública tipada, limitada a três imagens.
 
+        Entra também a foto que era a capa antes da capa em cena (a seção 64
+        do LEIA-ME: `papel_na_capa = "original"`, sem tipo, para o "perfil"
+        ficar com a cena): a foto da equipe continua na galeria, logo depois.
+
         Com a galeria já trazida (`prefetch_related("imagens_brinquedo")`,
         como a página do brinquedo faz), a conta é feita na memória: o
         `.filter()` sobre o related manager montava uma consulta nova e
@@ -334,13 +338,18 @@ class Brinquedos(Prime):
         fotos_cache = getattr(self, "_prefetched_objects_cache", {}).get("imagens_brinquedo")
         if fotos_cache is not None:
             return sorted(
-                (foto for foto in fotos_cache if foto.tipo),
+                (
+                    foto for foto in fotos_cache
+                    if foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL
+                ),
                 key=lambda foto: (foto.ordem, foto.id),
             )[:3]
         return (
             self.imagens_brinquedo
-            .filter(tipo__isnull=False)
-            .exclude(tipo="")
+            .filter(
+                (models.Q(tipo__isnull=False) & ~models.Q(tipo=""))
+                | models.Q(papel_na_capa=ImagemBrinquedo.PAPEL_ORIGINAL)
+            )
             .order_by("ordem", "id")[:3]
         )
 
@@ -479,6 +488,17 @@ class ImagemBrinquedo(Prime):
         (TIPO_LADO_ESQUERDO, "Lado esquerdo"),
     )
 
+    # A capa em cena dos produtos do catálogo (core/capas_catalogo.py, o comando
+    # `capas_em_cena`): a foto em cena vira a capa ("perfil") e a capa de antes
+    # fica na galeria, sem tipo, marcada como a original -- é ela que o
+    # `--desfazer` põe de volta. Fora disso, vazio.
+    PAPEL_CENA = "cena"
+    PAPEL_ORIGINAL = "original"
+    PAPEL_CHOICES = (
+        (PAPEL_CENA, "A capa em cena"),
+        (PAPEL_ORIGINAL, "A capa de antes da cena"),
+    )
+
     brinquedo = models.ForeignKey(
         Brinquedos,
         on_delete=models.CASCADE,
@@ -509,6 +529,14 @@ class ImagemBrinquedo(Prime):
         blank=True,
         verbose_name="Descrição da imagem",
         help_text="Descreva o que aparece na foto para acessibilidade e busca.",
+    )
+    papel_na_capa = models.CharField(
+        max_length=10,
+        choices=PAPEL_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Papel na capa em cena",
+        help_text="Preenchido pelo comando capas_em_cena: a capa em cena e a capa de antes dela.",
     )
 
     def __str__(self):

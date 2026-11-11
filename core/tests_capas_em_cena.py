@@ -111,8 +111,8 @@ class CapasTests(TestCase):
                 self.assertNotIn("A", foto.getbands())
                 self.assertLessEqual(arquivo.stat().st_size, 250 * 1024)
                 rgb = foto.convert("RGB")
-                # "para não ficar brancão": cor, quase nada de branco estourado, nem escura demais
-                self.assertGreater(ImageStat.Stat(rgb.convert("HSV").getchannel("S")).mean[0], 50)
+                # "para não ficar brancão": quase nada de branco estourado, nem escura demais (a cor
+                # e o contraste do produto: core/tests_capas_catalogo.py, no padrão do showroom)
                 brancos = sum(1 for p in rgb.resize((120, 120)).getdata() if min(p) > 235)
                 self.assertLess(brancos / (120 * 120), 0.12)
                 self.assertGreater(ImageStat.Stat(rgb.convert("L")).mean[0], 70)
@@ -135,7 +135,7 @@ class CapasTests(TestCase):
         capas = codigo[inicio:codigo.index("\n};\n", inicio)]
         for gente in ("crianca(", "naFrente(", "vida:", "naTela:"):
             self.assertNotIn(gente, capas)
-        self.assertEqual(capas.count('lugar: "mural"') + capas.count('lugar: "galpao"'), len(EM_CENA))
+        self.assertEqual(capas.count('lugar: "showroom"') + capas.count('lugar: "galpao"'), len(EM_CENA))
         inicio = codigo.index("const CENAS = {")
         cenas = codigo[inicio:codigo.index("\n};\n", inicio)]
         self.assertGreaterEqual(cenas.count("naFrente(") + cenas.count("crianca("), 14)
