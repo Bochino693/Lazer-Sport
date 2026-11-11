@@ -615,6 +615,72 @@ CAMINHOS["brinquedao-modelo-3"] = () => [
   [...M3(5000, -5200, 0), "andar", { pausa: 2, olhar: M3(5000, 3800, 1700) }],
 ];
 
+/* O Brinquedão Modelo 5 (o L pequeno de tubos cor de madeira). O projeto é
+   em milímetros, como o do Modelo 3: x ao longo da barra, y para o FUNDO
+   (y = 0 é a frente da barra; a perna e o escorregador ficam em y < 0), z
+   para cima. O objeto 3D é o mesmo desenho, virado para a frente em +z e
+   centralizado (o deslocamento sai do gerar.cjs de
+   ferramentas/modelos3d/brinquedao-modelo-5/). Os pisos: o andar de cima a
+   1,04 m (com 0,92 m de pé-direito: anda-se abaixado), o degrau triangular
+   do 4º módulo a 0,64 m, a cunha azul do 2º com a cumeeira a ~1,42 m e a
+   cama do escorregador (a boca a 1,0 m, a saída a 0,17 m). */
+const M5 = (x, y, z) => [x / 1000 - 1.85, z / 1000, -y / 1000 - 0.241];
+
+// chega pela ponta direita e sobe a escada de tubos dela (0,1 m, 0,62 m e
+// 1 m) até o degrau triangular; do degrau, sobe para o piso triangular de
+// 1 m; atravessa o 3º módulo entre os dois sacos de pancada, passa por cima
+// da cunha azul do 2º, desce o escorregador amarelo pela perna e, embaixo,
+// olha os rolos e o brinquedão inteiro
+CAMINHOS["brinquedao-modelo-5"] = () => [
+  [...M5(4300, -2200, 0), "ir"],
+  [...M5(4250, 100, 0), "andar"],
+  [...M5(4020, 500, 0), "andar", { pausa: 1, olhar: M5(3200, 500, 900) }],
+  // a escada da ponta: os pés nos tubos de 0,1 m e de 0,62 m, por fora, e
+  // para dentro por cima do tubo de 1 m, no degrau triangular (a metade de
+  // trás e da direita do 4º módulo)
+  [...M5(3840, 500, 140), "subir"],
+  [...M5(3800, 500, 640), "subir"],
+  [...M5(3520, 580, 640), "subir"],
+  [...M5(3320, 650, 640), "subir", { pausa: 0.8, olhar: M5(2900, 250, 1300) }],
+  // do degrau para o piso de 1 m (a outra metade, a da frente e da esquerda)
+  [...M5(3000, 360, 1040), "subir"],
+  // o andar de cima é baixo (0,92 m até os tubos de cima): abaixado
+  [...M5(2800, 505, 1040), "agachado", { pausa: 0.8, olhar: M5(2350, 505, 1500) }],
+  // o 3º módulo: entre o saco laranja (da frente) e o amarelo (de trás)
+  [...M5(2600, 505, 1040), "agachado"],
+  [...M5(2350, 505, 1040), "agachado"],
+  [...M5(2100, 505, 1040), "agachado"],
+  // a cunha azul do 2º módulo: de gatinhas, por cima da cumeeira
+  [...M5(1960, 505, 1040), "agachado"],
+  [...M5(1900, 505, 1045), "rastejar"],
+  [...M5(1780, 505, 1250), "rastejar"],
+  [...M5(1650, 505, 1420), "rastejar"],
+  [...M5(1520, 505, 1250), "rastejar"],
+  [...M5(1400, 505, 1045), "rastejar"],
+  [...M5(1250, 505, 1040), "agachado"],
+  // o 1º módulo (o piso azul) até a boca do escorregador, na frente
+  [...M5(800, 480, 1040), "agachado"],
+  [...M5(450, 300, 1040), "agachado"],
+  [...M5(330, 170, 1040), "agachado", { pausa: 0.8, olhar: M5(330, -1400, 300) }],
+  // o escorregador: os olhos 45 cm acima da cama, no meio dela (a mesma
+  // curva do ESC.eixo do montar.js), passando entre as colunas da perna
+  [...M5(330, 80, 1004), "escorregar"],
+  [...M5(330, 0, 978), "escorregar"],
+  [...M5(330, -150, 860), "escorregar"],
+  [...M5(330, -330, 690), "escorregar"],
+  [...M5(330, -680, 480), "escorregar"],
+  [...M5(330, -1020, 250), "escorregar"],
+  [...M5(330, -1170, 190), "escorregar"],
+  [...M5(330, -1290, 172), "escorregar"],
+  [...M5(330, -1410, 170), "escorregar"],
+  // em pé, os rolos de espuma pendurados na frente dos módulos 2 e 3
+  [...M5(330, -1800, 0), "andar"],
+  [...M5(1300, -1350, 0), "andar"],
+  [...M5(1920, -800, 0), "andar", { pausa: 1.2, olhar: M5(1920, 0, 600) }],
+  // e o brinquedão inteiro, de frente
+  [...M5(1850, -4200, 0), "andar", { pausa: 2, olhar: M5(1850, 400, 1000) }],
+];
+
 /* ---------------------------------------------------------------- a curva
    A mesma Catmull-Rom centrípeta do three.js (CatmullRomCurve3, aberta):
    o passeio e o teste andam exatamente na mesma curva. */

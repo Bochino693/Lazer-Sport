@@ -41,13 +41,14 @@ from django.urls import reverse
 from PIL import Image, ImageStat
 
 from . import arena, categorias_capas
+from .cadastro_modelos import CADASTROS
 from .models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
 from .nomes import nome_bonito, precisa_arrumar
 from .views import CategoriasInfoView
 
 migracao = importlib.import_module("core.migrations.0147_categorias_capas_e_nomes")
 migracao_lugares = importlib.import_module("core.migrations.0149_categorias_nos_lugares")
-migracao_reais = importlib.import_module("core.migrations.0151_categorias_maquinas_reais")
+migracao_reais = importlib.import_module("core.migrations.0152_categorias_maquinas_reais")
 
 FERRAMENTA = Path(__file__).resolve().parent.parent / "ferramentas" / "categorias"
 
@@ -482,10 +483,10 @@ class VitrineTests(TestCase):
 
 @override_settings(IS_RENDER=False)
 class MaquinasReaisTests(TestCase):
-    """A 0151 e as fotos com as máquinas de verdade: nenhuma máquina inventada."""
+    """A 0152 e as fotos com as máquinas de verdade: nenhuma máquina inventada."""
 
-    def test_depende_da_0150_e_sobe_as_fotos_no_render(self):
-        self.assertEqual(migracao_reais.Migration.dependencies, [("core", "0150_basquete_quadrinhos_fotos")])
+    def test_depende_da_0151_e_sobe_as_fotos_no_render(self):
+        self.assertEqual(migracao_reais.Migration.dependencies, [("core", "0151_brinquedao_modelo_5")])
         self.assertIs(migracao_reais.Migration.operations[0].code, categorias_capas.subir_fotos_no_deploy)
         kids = CategoriasBrinquedos.objects.create(nome_categoria="Kids", imagem_categoria="categorias/kids_antiga")
         self.assertIsNone(migracao_reais.subir_fotos_no_deploy(apps_reais, None, avisar=_mudo))
@@ -502,6 +503,14 @@ class MaquinasReaisTests(TestCase):
         lista = json.loads((FERRAMENTA / "maquinas-das-fotos.json").read_text(encoding="utf-8"))
         catalogo = json.loads((FERRAMENTA / "maquinas" / "catalogo.json").read_text(encoding="utf-8"))
         nomes_da_chave = dict(categorias_capas.CAPAS)
+        # o modelo que uma migração nova cadastra (o Brinquedão Modelo 5, a 0151) ainda não está
+        # no site no ar: vale a categoria que o cadastro dá a ele (core/cadastro_modelos.py)
+        for dados in CADASTROS.values():
+            if dados["nome"] not in catalogo:
+                catalogo[dados["nome"]] = {"categorias": [
+                    nome for nomes in nomes_da_chave.values() for nome in nomes
+                    if any(trecho in nome for trecho in dados["categorias"])
+                ]}
         feitas = {chave for chave, _ in categorias_capas.CAPAS} - {"area-baby"}
         self.assertEqual(set(lista), feitas)
         for chave, maquinas in lista.items():

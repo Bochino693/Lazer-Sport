@@ -23,7 +23,7 @@ from core.categorias_capas import subir_fotos_no_deploy
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0150_basquete_quadrinhos_fotos"),
+        ("core", "0151_brinquedao_modelo_5"),
     ]
 
     operations = [

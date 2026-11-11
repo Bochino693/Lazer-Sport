@@ -94,6 +94,7 @@ const glbs = new Map();
 /** O produto do catálogo de cada objeto 3D nosso (o nome da máquina na lista da foto). */
 const GLB_DO_PRODUTO = {
   "brinquedao-modelo-2": "Brinquedão Modelo 2", "brinquedao-modelo-3": "Brinquedão Modelo 3", "brinquedao-modelo-4": "Brinquedão Modelo 4",
+  "brinquedao-modelo-5": "Brinquedão Modelo 5",
   "brinquedao-ninja": "Brinquedão Ninja", "espaco-esportivo-modelo-1": "Espaço Esportivo Modelo 1", "strike-kids": "Strike Kids",
   "air-game-kids-alienigenas": "Air Game Kids Alienígenas", "basquete-street-quadrinhos": "Basquete Street Quadrinhos",
   "trampolim-enterrada": "Trampolim de Enterrada", "trampolim-enterrada-espuma": "Trampolim de Enterrada",
@@ -269,9 +270,12 @@ function noAr(n, x, y, z, raio, tipo = "bola", semente = 1) {
    máquinas na foto). `manter`: a foto que fica como está (a Área Baby, que
    não tem produto no catálogo). */
 const CENAS = {
-  // Brinquedão: o Brinquedão Modelo 2 (3D) e, atrás, o Brinquedão Modelo 1 (foto), num buffet
+  // Brinquedão: o Brinquedão Modelo 2 e o Modelo 5 (3D) e, atrás, o Brinquedão Modelo 1 (foto), num buffet
   brinquedao: {
-    maquinas: async () => grupo(await glb("brinquedao-modelo-2")),
+    maquinas: async () => grupo(
+      await glb("brinquedao-modelo-2"),
+      await glb("brinquedao-modelo-5", { x: 8.3, z: 1.9, r: -28 }),
+    ),
     vida: () => grupo(
       crianca(0, "correndo", { x: 2.6, z: 1.9, r: 40 }),
       crianca(1, "comemorando", { x: -2.4, z: 1.7, r: 10 }),

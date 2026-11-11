@@ -9,6 +9,9 @@
   * BRINQUEDÃO MODELO 4: dois trechos em "Z" (12 m + 9 m); a estrutura do
     .3ds da fábrica, o resto e as fotos das imagens do projeto (ver
     `ferramentas/modelos3d/brinquedao-modelo-4/`);
+  * BRINQUEDÃO MODELO 5: o L pequeno de tubos cor de madeira (3,70 m × 1 m),
+    das quatro imagens do projeto; a galeria leva as vistas do 3D e as
+    imagens da fábrica (ver `ferramentas/modelos3d/brinquedao-modelo-5/`);
   * ESPAÇO ESPORTIVO MODELO 1: o trampo.3ds do parque de trampolins, as
     plantas do parque e das quadras e as imagens do espaço completo (ver
     `ferramentas/modelos3d/espaco-esportivo-modelo-1/`). As fotos dele são
@@ -29,6 +32,7 @@ Quem cadastra:
   * as migrações de dados (`0113_brinquedao_modelo_2`,
     `0114_espaco_esportivo_modelo_1`, `0140_brinquedao_ninja`,
     `0142_brinquedao_modelo_4`, `0145_variantes_de_adesivo`,
+    `0151_brinquedao_modelo_5`,
     `0146_air_game_kids_alienigenas`...), no deploy
     do Render (o migrate roda sozinho no Pre-Deploy Command): o brinquedo
     já entra no catálogo;
@@ -244,6 +248,48 @@ CADASTROS = {
             ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 3 visto pelo lado da torre e da passarela de rede"),
             ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 3 visto pelo lado do tobogã em espiral e da piscina de bolinhas"),
             ("planta.webp", None, "Planta do Brinquedão Modelo 3 vista de cima: o L de 10 m por 5,20 m"),
+        ),
+        "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
+        "evitar": (),
+    },
+    # ---- Brinquedão Modelo 5 ----
+    # O brinquedão pequeno de tubos cor de madeira em L, feito com as quatro
+    # imagens do projeto (não há .3ds: ver `ferramentas/modelos3d/brinquedao-modelo-5/`).
+    # A galeria leva as vistas do 3D (a frente, os dois lados e a perspectiva)
+    # e as quatro imagens da fábrica (a perspectiva, que é a principal, a
+    # planta e as duas do salão). A migração que cadastra no deploy é a
+    # `0151_brinquedao_modelo_5`.
+    "brinquedao-modelo-5": {
+        "nome": "Brinquedão Modelo 5",
+        "pasta": MODELOS / "brinquedao-modelo-5",
+        "objeto_3d": "site/arena/modelos/brinquedao-modelo-5.glb",
+        "descricao": (
+            "Brinquedão Modelo 5, o playground de tubos redondos cor de madeira em L, para espaços menores: "
+            "3,70 m de comprimento, 1 m de profundidade na barra (2,48 m com a perna e o escorregador) e 2 m de "
+            "altura, com o piso de cima a 1 m.\n"
+            "\n"
+            "Sobe-se pelo 4º módulo: do piso azul do térreo para o degrau triangular e dele para o andar de cima "
+            "(ou pela escada de tubos da ponta). Em cima, quatro módulos com piso de espuma: dois sacos de pancada "
+            "(laranja e amarelo) para atravessar, a cunha azul para passar por cima e, na frente, as casinhas rosa "
+            "e azul-clara com o telhado branco e a janela em arco, e o painel rosa com a fresta de janela alta. "
+            "Embaixo, quatro rolos de espuma pendurados (rosa, amarelo, azul e laranja) para atravessar. A descida "
+            "é pelo escorregador amarelo largo, de bordas arredondadas, que sai da perna da frente, sob o "
+            "telhadinho de tubos.\n"
+            "\n"
+            "Estrutura em tubos redondos com cantos arredondados. Ideal para buffets infantis, brinquedotecas, "
+            "restaurantes, condomínios e espaços kids. Projeto ilustrativo: cores, painéis e itens podem ser "
+            "ajustados conforme o espaço e a disponibilidade de materiais."
+        ),
+        "medidas": ("2.00", "3.70", "1.00"),
+        "fotos": (
+            ("perspectiva.webp", "perfil", "Brinquedão Modelo 5 em perspectiva: as casinhas, os sacos, os rolos e o escorregador"),
+            ("frente.webp", None, "Brinquedão Modelo 5 visto de frente, com 2 m de altura e o piso a 1 m"),
+            ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 5 visto pelo lado do escorregador"),
+            ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 5 visto pelo lado do degrau triangular de entrada"),
+            ("perspectiva_3d.webp", None, "Brinquedão Modelo 5 em 3D, do mesmo ponto da perspectiva do projeto"),
+            ("planta.webp", None, "Planta do Brinquedão Modelo 5 vista de cima: 3,70 m por 1 m, altura de 2 m"),
+            ("salao_frente.webp", None, "O Brinquedão Modelo 5 montado num salão, visto de frente (projeto ilustrativo)"),
+            ("salao_esquerda.webp", None, "O Brinquedão Modelo 5 montado num salão, visto pela esquerda (projeto ilustrativo)"),
         ),
         "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
         "evitar": (),
