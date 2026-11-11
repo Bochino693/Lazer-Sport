@@ -215,8 +215,27 @@ def atualizar_capas(CategoriasBrinquedos, so=(), refazer=False, simular=False, a
 
 
 # ----------------------------------------------------------------------
-# A MIGRAÇÃO
+# AS MIGRAÇÕES
 # ----------------------------------------------------------------------
+
+def subir_fotos_no_deploy(apps, schema_editor, avisar=print):
+    """A migração que troca as fotos (a 0149: as fotos nos lugares).
+
+    Só no Render (o Cloudinary só está lá); todas as categorias, e sobe só
+    o que mudou (a assinatura no nome). Se a subida falhar, o deploy segue
+    e o aviso diz o comando que refaz.
+    """
+    from django.conf import settings
+
+    if not getattr(settings, "IS_RENDER", False):
+        return None
+    try:
+        return atualizar_capas(apps.get_model("core", "CategoriasBrinquedos"), avisar=avisar)
+    except Exception as erro:  # o deploy segue; o comando refaz depois
+        avisar(f"As fotos das categorias não subiram agora ({erro!r}). "
+               "Rode: python manage.py atualizar_capas_categorias")
+        return None
+
 
 def migrar(apps, schema_editor, avisar=print):
     """A 0147: os nomes e as áreas em todo lugar (só o banco); as fotos, só no Render.

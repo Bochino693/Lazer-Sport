@@ -3,12 +3,15 @@
    da fábrica -- os objetos 3D (.glb) das máquinas e dos brinquedões, as
    áreas do projetista do painel (montar3d-gerador.js e montar3d-pecas.js,
    o mesmo código do "Monte seu espaço") e, para as máquinas que ainda não
-   têm .glb, as peças de pecas.js.
+   têm .glb, as peças de pecas.js -- DENTRO de um lugar de verdade
+   (lugares.js: o buffet, o shopping, a game zone, o galpão do parque, a
+   brinquedoteca, a praça, o salão de festas, a quadra).
 
    O gerar.cjs abre esta página num Chromium sem tela e chama
-   `renderizar(chave)` para cada categoria: a cena sai com o fundo
-   transparente (só o objeto e a sombra no chão), e o compor.py põe o fundo
-   claro e faz o corte 4:3 do card.
+   `renderizar(chave)` para cada categoria. Saem três imagens: a foto, a
+   máscara dos brinquedos (o que é brinquedo e está à vista) e o peso do
+   desfoque (o que está longe dos brinquedos, pela profundidade). O
+   compor.py desfoca o lugar e deixa os brinquedos nítidos: eles saltam.
    ====================================================================== */
 
 import * as T from "three";
@@ -17,6 +20,7 @@ import * as utilidades from "../../core/static/vendor/three/BufferGeometryUtils.
 import * as pecasDoPainel from "../../sistema_interno/static/interno/montar3d-pecas.js";
 import * as gerador from "../../sistema_interno/static/interno/montar3d-gerador.js";
 import { criarPecas } from "./pecas.js";
+import { criarLugares } from "./lugares.js";
 
 const LARGURA = 2400, ALTURA = 1800;
 const GRAU = Math.PI / 180;
@@ -49,7 +53,8 @@ const cena = new T.Scene();
   cena.environment = pmrem.fromScene(sala, 0.04).texture;
   cena.environmentIntensity = 0.55;
 }
-cena.add(new T.HemisphereLight("#ffffff", "#a3adbd", 1.25));
+const hemi = new T.HemisphereLight("#ffffff", "#a3adbd", 1.25);
+cena.add(hemi);
 const sol = new T.DirectionalLight("#fff8ef", 2.4);
 sol.castShadow = true;
 sol.shadow.mapSize.set(4096, 4096);
@@ -61,15 +66,14 @@ const preenche = new T.DirectionalLight("#e8f0ff", 0.7);
 cena.add(preenche, preenche.target);
 const contra = new T.DirectionalLight("#ffffff", 0.9);
 cena.add(contra, contra.target);
-// o chão: só a sombra (o fundo é do compor.py)
-const chao = new T.Mesh(new T.PlaneGeometry(400, 400), new T.ShadowMaterial({ opacity: 0.26 }));
-chao.rotation.x = -Math.PI / 2;
-chao.receiveShadow = true;
-cena.add(chao);
+// as luzes coloridas do lugar (as da game zone), trocadas a cada cena
+const coloridas = [new T.PointLight("#ffffff", 0, 0, 2), new T.PointLight("#ffffff", 0, 0, 2)];
+coloridas.forEach((l) => cena.add(l));
 const camera = new T.PerspectiveCamera(28, LARGURA / ALTURA, 0.05, 500);
 
 /* ---------------------------------------------------------------- as peças */
 const P = criarPecas(T);
+const LUGARES = criarLugares(T, P);
 const base = pecasDoPainel.desenhosBase(T, utilidades);
 const DESENHOS = Object.assign(base.desenhos, pecasDoPainel.desenhosExtra(T, base.ferramentas));
 const PADROES = Object.assign({}, pecasDoPainel.CATALOGO_BASE, pecasDoPainel.CATALOGO_EXTRA);
@@ -306,6 +310,30 @@ const CENAS = {
   },
 };
 
+/* ---------------------------------------------------------------- o lugar de cada foto
+   O lugar (lugares.js) que combina com a categoria, a lente (mais aberta
+   que a do estúdio: o lugar entra em volta) e, quando muda, o ângulo.
+   `lugarOp`: o que o lugar aceita (a cor da parede, onde vai o painel...). */
+const LUGAR_DA_CENA = {
+  brinquedao: { lugar: "buffet", lente: 40, giro: 40, altura: 14 },
+  kids: { lugar: "buffet", lente: 40, altura: 12, lugarOp: { parede: "#93c5fd" } },
+  "espaco-kids-play": { lugar: "shopping", lente: 40, altura: 16 },
+  famosos: { lugar: "shopping", lente: 40, altura: 13 },
+  simuladores: { lugar: "shopping", lente: 40, giro: 26, altura: 9, ocupa: 0.6, lugarOp: { atras: 1.5 } },
+  eletronicos: { lugar: "gamezone", lente: 40, altura: 12 },
+  fliperama: { lugar: "gamezone", lente: 40, giro: 18, altura: 10, ocupa: 0.7 },
+  competitivos: { lugar: "gamezone", lente: 40, altura: 11 },
+  "boliche-virtual": { lugar: "gamezone", lente: 40, altura: 12 },
+  trampolins: { lugar: "galpao", lente: 40, altura: 26 },
+  "area-ninja": { lugar: "galpao", lente: 40, altura: 18 },
+  "espaco-esportivo-kids": { lugar: "galpao", lente: 40, altura: 30 },
+  "area-baby": { lugar: "brinquedoteca", lente: 40, altura: 24 },
+  mecanicos: { lugar: "praca", lente: 40, altura: 10 },
+  "jogos-de-mesa": { lugar: "salao", lente: 40, altura: 22 },
+  esportivos: { lugar: "quadra", lente: 40, altura: 12 },
+};
+for (const [chave, dados] of Object.entries(LUGAR_DA_CENA)) Object.assign(CENAS[chave], dados);
+
 /* ---------------------------------------------------------------- o enquadramento */
 function cantos(caixa) {
   const { min, max } = caixa;
@@ -314,15 +342,19 @@ function cantos(caixa) {
   return lista;
 }
 
-/** Põe a câmera no giro e na altura pedidos, com o objeto inteiro na tela (o corte fino é do compor.py). */
-function enquadrar(caixa, giro, altura, lente) {
+/**
+ * Põe a câmera no giro e na altura pedidos, com os brinquedos inteiros na foto:
+ * o maior lado deles ocupa `ocupa` da metade da tela, e o meio deles fica
+ * `desce` abaixo do meio (sobra lugar em cima, onde o card põe a etiqueta).
+ */
+function enquadrar(caixa, giro, altura, lente, ocupa = 0.74, desce = 0.08) {
   camera.fov = lente;
   camera.updateProjectionMatrix();
   const dir = new T.Vector3(Math.sin(giro * GRAU) * Math.cos(altura * GRAU), Math.sin(altura * GRAU), Math.cos(giro * GRAU) * Math.cos(altura * GRAU));
   const alvo = caixa.getCenter(new T.Vector3());
   let dist = caixa.getBoundingSphere(new T.Sphere()).radius / Math.sin((lente / 2) * GRAU);
   const pontos = cantos(caixa);
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 10; i++) {
     camera.position.copy(alvo).addScaledVector(dir, dist);
     camera.lookAt(alvo);
     camera.updateMatrixWorld();
@@ -331,21 +363,145 @@ function enquadrar(caixa, giro, altura, lente) {
       const v = p.clone().project(camera);
       x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
     }
-    // o meio do que aparece vai para o meio da tela, e o maior lado ocupa 86%
     const meia = Math.tan((lente / 2) * GRAU) * dist;
     const direita = new T.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
     const cima = new T.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-    alvo.addScaledVector(direita, ((x0 + x1) / 2) * meia * camera.aspect).addScaledVector(cima, ((y0 + y1) / 2) * meia);
-    dist *= Math.max((x1 - x0) / 2, (y1 - y0) / 2) / 0.86;
+    alvo.addScaledVector(direita, ((x0 + x1) / 2) * meia * camera.aspect).addScaledVector(cima, ((y0 + y1) / 2 + desce) * meia);
+    dist *= Math.max((x1 - x0) / 2, (y1 - y0) / 2) / ocupa;
   }
   camera.position.copy(alvo).addScaledVector(dir, dist);
   camera.lookAt(alvo);
+  camera.updateMatrixWorld();
+  return { alvo, dir, dist };
 }
 
-let atual = null;
+/**
+ * O acerto fino pelo que se VÊ dos brinquedos (a silhueta, num render pequeno
+ * só com eles), e não pela caixa: a caixa de um brinquedão em L sobra nos
+ * cantos, e ele ficava pequeno e alto na foto.
+ */
+const alvoSilhueta = new T.WebGLRenderTarget(480, 360);
+function acertarPelaSilhueta(quadro, lugar, ocupa, desce) {
+  const { alvo, dir } = quadro;
+  for (let volta = 0; volta < 3; volta++) {
+    if (lugar) lugar.visible = false;
+    const fundo = cena.background;
+    cena.background = null;
+    renderer.setRenderTarget(alvoSilhueta);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear();
+    renderer.render(cena, camera);
+    const px = new Uint8Array(480 * 360 * 4);
+    renderer.readRenderTargetPixels(alvoSilhueta, 0, 0, 480, 360, px);
+    renderer.setRenderTarget(null);
+    cena.background = fundo;
+    if (lugar) lugar.visible = true;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (let y = 0; y < 360; y++) {
+      for (let x = 0; x < 480; x++) {
+        if (px[(y * 480 + x) * 4 + 3] > 40) {
+          const nx = ((x + 0.5) / 480) * 2 - 1, ny = ((y + 0.5) / 360) * 2 - 1; // de baixo para cima, como o NDC
+          x0 = Math.min(x0, nx); x1 = Math.max(x1, nx); y0 = Math.min(y0, ny); y1 = Math.max(y1, ny);
+        }
+      }
+    }
+    if (x0 === Infinity) return;
+    const meia = Math.tan((camera.fov / 2) * GRAU) * quadro.dist;
+    const direita = new T.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const cima = new T.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    alvo.addScaledVector(direita, ((x0 + x1) / 2) * meia * camera.aspect).addScaledVector(cima, ((y0 + y1) / 2 + desce) * meia);
+    quadro.dist *= Math.max((x1 - x0) / 2, (y1 - y0) / 2) / ocupa;
+    camera.position.copy(alvo).addScaledVector(dir, quadro.dist);
+    camera.lookAt(alvo);
+    camera.updateMatrixWorld();
+  }
+}
+
+/* ---------------------------------------------------------------- as três imagens */
+// a profundidade em metros, em dois canais (16 bits): R + G/255, de 0 a `maximo`
+const matProfundidade = new T.ShaderMaterial({
+  uniforms: { maximo: { value: 100 } },
+  vertexShader: "varying float vZ; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vZ = -mv.z; gl_Position = projectionMatrix * mv; }",
+  fragmentShader: "uniform float maximo; varying float vZ; void main() { float d = clamp(vZ / maximo, 0.0, 1.0) * 255.0; gl_FragColor = vec4(floor(d) / 255.0, fract(d), 0.0, 1.0); }",
+  side: T.DoubleSide,
+});
+const soProfundidade = new T.MeshBasicMaterial({ colorWrite: false, side: T.DoubleSide });
+const alvoProfundidade = new T.WebGLRenderTarget(LARGURA, ALTURA);
+
+/** O quanto cada ponto da foto é desfocado (0 = nítido): longe dos brinquedos, mais. */
+function pesoDoDesfoque(caixa, maximo) {
+  matProfundidade.uniforms.maximo.value = maximo;
+  const fundo = cena.background;
+  cena.background = null;
+  cena.overrideMaterial = matProfundidade;
+  renderer.setRenderTarget(alvoProfundidade);
+  renderer.setClearColor(0xffffff, 1);
+  renderer.clear();
+  renderer.render(cena, camera);
+  const px = new Uint8Array(LARGURA * ALTURA * 4);
+  renderer.readRenderTargetPixels(alvoProfundidade, 0, 0, LARGURA, ALTURA, px);
+  renderer.setRenderTarget(null);
+  renderer.setClearColor(0x000000, 0);
+  cena.overrideMaterial = null;
+  cena.background = fundo;
+  // a faixa de foco: do ponto mais perto ao mais longe dos brinquedos
+  let perto = Infinity, longe = 0;
+  for (const p of cantos(caixa)) {
+    const z = -p.clone().applyMatrix4(camera.matrixWorldInverse).z;
+    perto = Math.min(perto, z);
+    longe = Math.max(longe, z);
+  }
+  const rampa = Math.max(4, (longe + perto) * 0.6);
+  const tela = document.createElement("canvas");
+  tela.width = LARGURA;
+  tela.height = ALTURA;
+  const ctx = tela.getContext("2d");
+  const img = ctx.createImageData(LARGURA, ALTURA);
+  for (let y = 0; y < ALTURA; y++) {
+    const origem = (ALTURA - 1 - y) * LARGURA * 4; // o alvo vem de baixo para cima
+    for (let x = 0; x < LARGURA; x++) {
+      const i = origem + x * 4;
+      const d = ((px[i] + px[i + 1] / 255) / 255) * maximo;
+      let w = 0;
+      if (d > longe + 0.4) w = Math.min(1, (d - longe - 0.4) / rampa);
+      else if (d < perto - 0.6) w = 0.6 * Math.min(1, (perto - 0.6 - d) / rampa);
+      const v = Math.round(w * 255);
+      const o = (y * LARGURA + x) * 4;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return tela.toDataURL("image/png");
+}
+
+/** A máscara dos brinquedos: só eles, com o lugar escondendo o que fica atrás dele. */
+function mascara(produtos, lugar) {
+  const fundo = cena.background;
+  cena.background = null;
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
+  renderer.autoClear = false;
+  produtos.visible = false;
+  cena.overrideMaterial = soProfundidade;
+  renderer.render(cena, camera);
+  cena.overrideMaterial = null;
+  produtos.visible = true;
+  lugar.visible = false;
+  renderer.render(cena, camera);
+  lugar.visible = true;
+  renderer.autoClear = true;
+  cena.background = fundo;
+  return renderer.domElement.toDataURL("image/png");
+}
+
+let atual = null, atualLugar = null;
 window.CENAS = Object.keys(CENAS);
 
-/** A foto da categoria `chave`: PNG com o fundo transparente (o objeto e a sombra). */
+/**
+ * A foto da categoria `chave`: { cor, mascara, peso } (PNGs em data URL).
+ * Sem lugar ("glb:<nome>", "area:..."), sai como antes: fundo transparente.
+ */
 window.renderizar = async (chave, ajustes = {}) => {
   // "glb:<nome>" mostra um objeto 3D sozinho (para escolher o ângulo de uma cena nova)
   // "area:<tipo>:<cor>:<semente>:<largura>x<fundo>x<altura>:<porte>:<estilo>", uma área do projetista
@@ -359,13 +515,34 @@ window.renderizar = async (chave, ajustes = {}) => {
   c = Object.assign({}, c, ajustes);
   if (!c.montar) throw new Error("cena desconhecida: " + chave);
   if (atual) cena.remove(atual);
+  if (atualLugar) cena.remove(atualLugar);
   atual = await c.montar();
   cena.add(atual);
   atual.updateMatrixWorld(true);
-  const caixa = new T.Box3().setFromObject(atual);
+  // a caixa justa (pelos vértices): a dos .glb pela caixa de cada malha sobra e tira o enquadramento
+  const caixa = new T.Box3().setFromObject(atual, true);
   const centro = caixa.getCenter(new T.Vector3());
   const tamanho = caixa.getSize(new T.Vector3());
   const maior = Math.max(tamanho.x, tamanho.z, tamanho.y);
+  // o lugar em volta (e a luz dele)
+  const lugar = c.lugar ? LUGARES[c.lugar](caixa, c.giro, c.lugarOp || {}) : null;
+  const l = (lugar && lugar.luz) || {};
+  atualLugar = lugar ? lugar.grupo : null;
+  if (atualLugar) cena.add(atualLugar);
+  cena.background = lugar ? new T.Color(lugar.fundo) : null;
+  cena.fog = lugar && lugar.neblina ? new T.Fog(lugar.neblina[0], lugar.neblina[1], lugar.neblina[2]) : null;
+  hemi.color.set(l.ceu || "#ffffff");
+  hemi.groundColor.set(l.chao || "#a3adbd");
+  hemi.intensity = l.hemi ?? 1.25;
+  sol.intensity = l.sol ?? 2.4;
+  cena.environmentIntensity = l.amb ?? 0.55;
+  renderer.toneMappingExposure = l.exposicao ?? 1.0;
+  coloridas.forEach((luzColorida, i) => {
+    const [cor, lado] = (l.cores || [])[i] || ["#ffffff", 0];
+    luzColorida.color.set(cor);
+    luzColorida.intensity = lado ? 18 * Math.max(1, maior / 3) : 0;
+    luzColorida.position.set(centro.x + lado * (tamanho.x / 2 + 1.2), 2.4, centro.z + tamanho.z * 0.2);
+  });
   // o sol pela frente e pela direita, alto: a sombra cai para trás e para a esquerda
   sol.position.set(centro.x + maior * 0.55, centro.y + maior * 1.6 + 4, centro.z + maior * 0.9);
   sol.target.position.copy(centro);
@@ -375,8 +552,14 @@ window.renderizar = async (chave, ajustes = {}) => {
   preenche.target.position.copy(centro);
   contra.position.set(centro.x - maior * 0.3, centro.y + maior, centro.z - maior * 1.2);
   contra.target.position.copy(centro);
-  enquadrar(caixa, c.giro, c.altura, c.lente);
+  const ocupa = c.ocupa ?? (lugar ? 0.76 : 0.86), desce = c.desce ?? (lugar ? 0.1 : 0);
+  const quadro = enquadrar(caixa, c.giro, c.altura, c.lente, ocupa, desce);
+  if (lugar) acertarPelaSilhueta(quadro, atualLugar, ocupa, desce);
   renderer.render(cena, camera);
-  return renderer.domElement.toDataURL("image/png");
+  const cor = renderer.domElement.toDataURL("image/png");
+  if (!lugar) return { cor };
+  const peso = pesoDoDesfoque(caixa, camera.position.distanceTo(centro) * 6 + 40);
+  window.ultimaCaixa = [caixa.min.toArray(), caixa.max.toArray()].map((v) => v.map((n) => +n.toFixed(2)));
+  return { cor, mascara: mascara(atual, atualLugar), peso };
 };
 window.pronto = true;
