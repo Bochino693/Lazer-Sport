@@ -2224,6 +2224,48 @@ Dependência nova: rjsmin (requirements.txt).
    objeto 3D ao .glb de hoje (cores e medidas). Se falhar, o deploy segue e o
    aviso diz o comando (cadastrar_variantes_adesivo --so <chave> --fotos;
    atualizar_capas_categorias). Testes: BasqueteEAirGameReaisTests.
+   AS IMAGENS EM ALTA (a 0155). O cliente: "você é uma IA, não consegue fazer
+   algo com melhor resolução e mais coerência? Você pôs uma máquina atrás de um
+   balcão... veja os brinquedões que eu mandei, olha como estão as imagens,
+   maravilhosas.. nas categorias sim ponha as crianças, porém nas fotos
+   individuais não coloque as crianças". A referência são as imagens da fábrica
+   do Brinquedão Modelo 5 no salão. Tudo refeito (ferramentas/categorias/):
+     * O RENDER: no dobro do tamanho (3200 px; o compor.py reduz com o filtro
+       Lanczos), a luz de ambiente PBR (RoomEnvironment, pré-filtrada), as
+       sombras macias em mapa de 8192 (PCFSoft), a oclusão de ambiente (GTAO,
+       o escuro macio nos cantos e onde uma coisa encosta na outra), o tone
+       mapping ACES e o brilho só nas luzes. Os arquivos do three r169 para
+       isso ficam em ferramentas/categorias/vendor/ (só a ferramenta usa). As
+       texturas dos lugares são desenhadas em alta (1024 px por quadro; o piso
+       e o mural do salão, ~1000 e ~500 px por metro).
+     * AS CAPAS (1600 x 1600): SÓ O PRODUTO, sem gente e sem outra máquina, no
+       SALÃO DO MURAL (lugares.js, `mural`): a parede com o mural pintado (o
+       céu, as nuvens, os morros, as árvores, os arbustos e a cerca amarela),
+       o piso de madeira com o reflexo suave, o teto claro com a sanca, o LED e
+       os spots, a parede do lado verde com a janela e, num canto, a mesinha
+       branca com as cadeiras. A câmera fica sempre DENTRO do salão (o teto é
+       posto acima dela). O Espaço Esportivo Modelo 1, de 39 x 23 m, é visto do
+       alto, no galpão.
+     * AS CATEGORIAS (1600 x 1200): as máquinas em fila, com espaço entre elas,
+       quase de frente quando são fotos recortadas; nenhuma atrás de mesa ou
+       móvel (a mesa de doces do buffet fica encostada na parede do lado, longe
+       delas; o pufe solto do salão saiu); nada voando (as bolinhas e os cubos
+       no ar saíram) e nada cortado na borda (a coisa desfocada na frente saiu;
+       o arco de balões fica na medida das máquinas). As CRIANÇAS são novas
+       (pessoas.js): redondas, com proporção de criança (a cabeça grande, o
+       cabelo de seis jeitos, os olhos, a boca sorrindo, a camiseta e o short
+       ou a saia com volume, o tênis), em poses naturais (correndo, andando,
+       pulando, comemorando, jogando, apontando, olhando), poucas e nos cantos
+       livres da foto, sem tapar as máquinas. A foto do card das peças também
+       foi refeita em 1600 x 1200.
+   A migração 0155_imagens_em_alta (depois da 0154), SÓ NO RENDER, refaz À
+   FORÇA a galeria dos produtos com a capa em cena que o cadastro subiu (a
+   capa nova tem o mesmo nome) e sobe as fotos das categorias que mudaram; o
+   Brinquedão Modelo 5 (a foto da fábrica) e as fotos postas pelo painel
+   ficam. Se falhar, o deploy segue e o aviso diz o comando
+   (cadastrar_modelo_3d <chave> --fotos; atualizar_capas_categorias).
+   Testes: ImagensEmAltaTests (core/tests_capas_em_cena.py) e os de tamanho
+   e de cor de core/tests_categorias_capas.py.
 
 61) BASQUETE STREET QUADRINHOS E AIR GAME KIDS ALIENÍGENAS IGUAIS ÀS MÁQUINAS DE VERDADE
    A cliente olhou o 3D do basquete: "essas madeiras quadradas não existem, a

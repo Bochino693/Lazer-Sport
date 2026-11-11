@@ -1,7 +1,7 @@
 """As fotos das categorias: o lugar desfocado, os brinquedos nítidos, o corte 4:3 do card.
 
 Lê os renders do gerar.cjs em `render/` e grava
-`core/static/site/categorias/<chave>.webp`, 1200 × 900, que é o que o
+`core/static/site/categorias/<chave>.webp`, 1600 × 1200, que é o que o
 cadastro sobe para a categoria (ver core/categorias_capas.py e
 `python manage.py atualizar_capas_categorias`).
 
@@ -18,12 +18,16 @@ com o fundo transparente; aqui entram o fundo claro do card e o corte em
 volta do objeto.
 
 AS CAPAS DOS PRODUTOS ("capa:<chave>" no gerar.cjs, render/capa_<chave>.png):
-o mesmo, quadrado (1200 × 1200, o card de produto e a galeria), gravado em
+o mesmo, quadrado (1600 × 1600, o card de produto e a galeria), gravado em
 `core/static/site/arena/modelos/<chave>/capa.webp` -- a primeira foto do
 cadastro do produto (core/cadastro_modelos.py, CADASTROS[chave]["fotos"]).
 
-O ARQUIVO fica abaixo de ~150 KB (a capa, ~190 KB: é maior e a galeria a
-mostra grande): a qualidade do WebP desce até caber.
+A NITIDEZ: o render vem no DOBRO do tamanho (3200 px de largura: o
+supersampling) e aqui é reduzido com o filtro Lanczos -- as bordas, as
+texturas e as sombras sem serrilhado. Na capa, o lugar desfoca pouco (como
+nas imagens da fábrica, o salão inteiro se lê) e o brilho das luzes é leve.
+
+O ARQUIVO fica abaixo de ~250 KB: a qualidade do WebP desce até caber.
 
     python ferramentas/categorias/compor.py                    (todas as que têm render)
     python ferramentas/categorias/compor.py kids               (só esta)
@@ -41,13 +45,17 @@ DESTINO = PASTA.parent.parent / "core" / "static" / "site" / "categorias"
 #: Onde ficam as fotos de cada produto nosso em 3D (a capa vai junto, como capa.webp).
 MODELOS = PASTA.parent.parent / "core" / "static" / "site" / "arena" / "modelos"
 
-LARGURA, ALTURA = 1200, 900
+LARGURA, ALTURA = 1600, 1200
+#: O render tem o dobro da largura da foto (o supersampling).
+LARGURA_DO_RENDER = 3200
 #: O teto do arquivo (o card baixa a foto inteira).
-TETO_KB = 150
-#: O teto da capa do produto (quadrada, maior; a galeria a mostra grande).
-TETO_CAPA_KB = 190
-#: O desfoque do lugar onde o peso é 1 (em pixels do render, que tem o dobro da foto).
-DESFOQUE = 6
+TETO_KB = 250
+#: O teto da capa do produto (quadrada; a galeria a mostra grande).
+TETO_CAPA_KB = 250
+#: O desfoque do lugar onde o peso é 1 (em pixels do render de 3200; a prévia, na metade, usa a metade).
+DESFOQUE = 8
+#: Na capa, o lugar desfoca pouco: o salão se lê inteiro, como nas imagens da fábrica.
+DESFOQUE_CAPA = 3
 #: As folgas, em fração da foto final: (esquerda, cima, direita, baixo).
 FOLGAS = (0.065, 0.13, 0.065, 0.075)
 
@@ -73,7 +81,7 @@ CORES = {
     "pecas-e-acessorios": "#ea580c",
 }
 #: O desfoque de cada foto, quando não é o de sempre: a das peças é de perto (o fundo desfoca mais).
-DESFOQUES = {"pecas-e-acessorios": 16}
+DESFOQUES = {"pecas-e-acessorios": 21}
 
 
 def _hex(cor):
@@ -111,21 +119,26 @@ def compor_no_lugar(chave):
     cor = Image.open(RENDERS / f"{chave}.png").convert("RGB")
     peso = Image.open(RENDERS / f"{chave}-peso.png").convert("L")
     mascara = Image.open(RENDERS / f"{chave}-mascara.png").getchannel("A")
-    desfocado = cor.filter(ImageFilter.GaussianBlur(DESFOQUES.get(chave, DESFOQUE)))
+    capa = chave.startswith("capa_")
+    raio = DESFOQUES.get(chave, DESFOQUE_CAPA if capa else DESFOQUE) * cor.width / LARGURA_DO_RENDER
+    desfocado = cor.filter(ImageFilter.GaussianBlur(raio))
     # o lugar desfocado perde um tico de cor: os brinquedos saltam (sem ficar lavado)
     desfocado = ImageEnhance.Color(desfocado).enhance(0.95)
     lugar = Image.composite(desfocado, cor, peso.filter(ImageFilter.GaussianBlur(3)))
     foto = Image.composite(cor, lugar, mascara)
-    # 4:3 nas categorias (1200 × 900); a capa, quadrada, 1200 × 1200: a mesma largura
+    # 4:3 nas categorias (1600 × 1200); a capa, quadrada, 1600 × 1600: a mesma largura
     foto = foto.resize((LARGURA, round(LARGURA * cor.height / cor.width)), Image.LANCZOS)
-    foto = foto.filter(ImageFilter.UnsharpMask(radius=1.1, percent=50, threshold=2))
+    foto = foto.filter(ImageFilter.UnsharpMask(radius=1.0, percent=40, threshold=2))
+    if capa:
+        # a capa: as cores limpas, o brilho só nos spots e a vinheta quase nada
+        return vinheta(brilho(vida(foto, cor=1.06, contraste=1.03), forca=0.35), forca=0.08)
     return vinheta(brilho(vida(foto)))
 
 
-def vida(foto):
+def vida(foto, cor=1.12, contraste=1.05):
     """As cores um tanto mais vivas e com mais contraste."""
-    foto = ImageEnhance.Color(foto).enhance(1.12)
-    return ImageEnhance.Contrast(foto).enhance(1.05)
+    foto = ImageEnhance.Color(foto).enhance(cor)
+    return ImageEnhance.Contrast(foto).enhance(contraste)
 
 
 def brilho(foto, limite=236, forca=0.7):
