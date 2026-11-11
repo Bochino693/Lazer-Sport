@@ -54,7 +54,9 @@
   grid-template-areas: "topo" "abas" "visor" "painel";
   max-width: 1800px;
   margin: 0 auto;
+  /* clip, e não hidden: o app não vira uma caixa que rola (um scrollIntoView lá dentro não arrasta a grade) */
   overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--p3d-borda);
   border-radius: 22px;
   background: var(--p3d-app-fundo);
@@ -498,7 +500,9 @@
   color: var(--p3d-texto);
   background: transparent;
 }
-.p3d-medidas label > span:focus-within { border-color: var(--p3d-ciano); }
+.p3d-medidas label > span:focus-within { border-color: var(--p3d-ciano); box-shadow: 0 0 0 3px rgba(63, 208, 255, .22); }
+/* o anel de foco é o da caixa inteira (com o "m"), não um quadrado dentro dela */
+.p3d .p3d-medidas input:focus-visible, .p3d .p3d-busca input:focus-visible { outline: none; }
 
 .p3d-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .p3d-chip {
@@ -583,6 +587,7 @@
   background: rgba(0, 0, 0, .25);
 }
 .p3d-busca input { flex: 1; min-width: 0; height: 42px; border: 0; outline: 0; color: var(--p3d-texto); background: transparent; }
+.p3d-busca:focus-within { border-color: var(--p3d-ciano); box-shadow: 0 0 0 3px rgba(63, 208, 255, .22); }
 
 .p3d-itens { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
 .p3d-item {
@@ -1252,6 +1257,7 @@ polyline.p3d-foto-marca { fill: none; }
   background: var(--p3d-ciano);
 }
 .p3d-chamada-passos b { display: block; font-family: "Poppins", system-ui, sans-serif; color: #fff; }
+.p3d-chamada-passos small { font-size: inherit; }
 .p3d-chamada-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .p3d-chamada-abrir { min-height: 52px; padding-inline: 26px; font-size: 1.05rem; }
 .p3d-chamada-previa {
@@ -1291,8 +1297,14 @@ polyline.p3d-foto-marca { fill: none; }
   .p3d-chamada-previa { order: -1; transform: none; }
 }
 @media (max-width: 575.98px) {
+  /* no celular o "Abrir o montador" sobe para logo depois do texto; os passos ficam só com o nome */
   .p3d-chamada { padding: 14px 14px 18px; border-radius: 22px; }
-  .p3d-chamada-passos { grid-template-columns: minmax(0, 1fr); }
+  .p3d-chamada-texto { display: flex; flex-direction: column; align-items: stretch; }
+  .p3d-chamada-texto .arena-kicker { align-self: flex-start; }
+  .p3d-chamada-acoes { order: 3; margin-top: 18px; }
+  .p3d-chamada-passos { order: 4; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .p3d-chamada-passos li { align-items: center; padding: 8px 10px; }
+  .p3d-chamada-passos small { display: none; }
   .p3d-chamada-acoes .ls-botao { flex: 1 1 100%; justify-content: center; }
 }
 
@@ -1312,6 +1324,7 @@ polyline.p3d-foto-marca { fill: none; }
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+  overflow: clip;
   overscroll-behavior: contain;
   background: var(--p3d-app-fundo);
 }

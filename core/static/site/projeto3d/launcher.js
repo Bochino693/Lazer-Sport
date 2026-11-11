@@ -64,7 +64,7 @@ export function iniciarAbas(raiz) {
       const p = painelDe(b.dataset.aba);
       if (p) p.hidden = !esta;
     }
-    raiz.dataset.aba = nome;
+    raiz.dataset.abaAberta = nome;
     if (caixa) caixa.scrollTop = 0;
     // a aba fica à vista na fila que rola de lado (a ficha estreita do painel)
     if (lista.scrollWidth > lista.clientWidth + 2) {
@@ -309,13 +309,18 @@ export function iniciarTelaCheia(app, raiz) {
     app.classList.remove("p3dl--aberto");
     html.classList.remove("p3dl-trava", "p3dl-so-app");
     // a página volta para onde estava; quem chegou com o app aberto cai na chamada dele
-    const chamada = document.getElementById("monte-seu-espaco");
-    if (chegouAberto && chamada) {
-      const folga = parseFloat(getComputedStyle(html).getPropertyValue("--ls-ancora-offset")) || 96;
-      window.scrollTo(0, Math.max(0, chamada.getBoundingClientRect().top + window.scrollY - folga));
-    } else {
-      window.scrollTo(0, rolagem);
-    }
+    // (de novo no quadro seguinte: no voltar, o navegador devolve a rolagem da entrada depois do popstate)
+    const chamada = chegouAberto ? document.getElementById("monte-seu-espaco") : null;
+    const assentar = () => {
+      if (chamada) {
+        const folga = parseFloat(getComputedStyle(html).getPropertyValue("--ls-ancora-offset")) || 96;
+        window.scrollTo(0, Math.max(0, chamada.getBoundingClientRect().top + window.scrollY - folga));
+      } else {
+        window.scrollTo(0, rolagem);
+      }
+    };
+    assentar();
+    requestAnimationFrame(assentar);
     chegouAberto = false;
     if (!daHistoria) {
       if (history.state && history.state.p3dApp) history.back();

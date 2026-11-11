@@ -413,7 +413,8 @@ export async function iniciar(raiz) {
     const ver = e.target.closest("[data-ver]");
     if (ver && cena) cena.focar(ver.dataset.ver);
   });
-  pilula.addEventListener("click", () => caixaResultado.scrollIntoView({ behavior: "smooth", block: "start" }));
+  // com as abas (launcher.js), quem abre o "O que coube" é a aba; sem elas, rola até o resultado
+  pilula.addEventListener("click", () => { if (!$("[data-aba]", raiz)) caixaResultado.scrollIntoView({ behavior: "smooth", block: "start" }); });
 
   /* ---------------------------------------------------------------- refazer */
   let espera = 0;
