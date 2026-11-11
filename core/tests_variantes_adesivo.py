@@ -671,3 +671,78 @@ class SemTabuaTests(TestCase):
                 mock.patch.object(FileSystemStorage, "save", side_effect=OSError("sem rede")):
             _, avisos = self._rodar(render=True, pasta=pasta)
         self.assertIn(f"cadastrar_variantes_adesivo --so {HOCKEY} --fotos", avisos)
+
+
+migracao_0150 = importlib.import_module("core.migrations.0150_basquete_quadrinhos_fotos")
+
+
+class BasqueteFotosDeVerdadeTests(TestCase):
+    """A 0150: o Basquete Street Quadrinhos que a 0145 cadastrou com as fotos da arte provisória.
+
+    No Render, a galeria que o cadastro subiu vira a do 3D de hoje (a da
+    folha de adesivos); a que veio do painel fica. Em todo lugar, o objeto 3D
+    é religado ao .glb de hoje.
+    """
+
+    NOME = "Basquete Street Quadrinhos"
+
+    def _rodar(self, render=False, pasta=None):
+        with mock.patch("builtins.print") as aviso:
+            if render:
+                a, b = _disco(pasta)
+                with a, b, override_settings(IS_RENDER=True):
+                    migracao_0150.Migration.operations[0].code(apps_reais, None)
+            else:
+                migracao_0150.Migration.operations[0].code(apps_reais, None)
+        return " ".join(str(chamada[0][0]) for chamada in aviso.call_args_list)
+
+    def _da_0145(self, prefixo=BASQUETE):
+        """Como a 0145 deixou: as fotos da versão provisória e o 3D com as medidas dela."""
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo=self.NOME, descricao="x", avaliacao=5, voltz="220v",
+            imagem_brinquedo=f"brinquedos/{prefixo}-frente.webp",
+        )
+        for ordem, tipo in enumerate(("perfil", "lado_esquerdo"), start=1):
+            ImagemBrinquedo.objects.create(brinquedo=brinquedo, tipo=tipo, ordem=ordem,
+                                           texto_alternativo="provisória", imagem=f"brinquedos/{prefixo}-{ordem}.webp")
+        ObjetoTresD.objects.create(brinquedo=brinquedo, arquivo_estatico=_glb(BASQUETE), codigo=BASQUETE,
+                                   medidas=[1.0, 1.0, 1.0], cores=[])
+        return brinquedo
+
+    def test_vem_depois_da_0149(self):
+        self.assertEqual(migracao_0150.Migration.dependencies, [("core", "0149_categorias_nos_lugares")])
+
+    def test_fora_do_render_so_religa_o_3d(self):
+        brinquedo = self._da_0145()
+        self._rodar()
+        brinquedo.refresh_from_db()
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), 2)  # as fotos só mudam no Render
+        objeto = ObjetoTresD.objects.get(brinquedo=brinquedo)
+        self.assertEqual(objeto.medidas, VARIANTES[BASQUETE][3])  # as medidas do .glb de hoje
+
+    def test_no_render_as_fotos_viram_as_da_arte_de_verdade(self):
+        brinquedo = self._da_0145()
+        with tempfile.TemporaryDirectory() as pasta:
+            self._rodar(render=True, pasta=pasta)
+        brinquedo.refresh_from_db()
+        self.assertEqual(
+            list(brinquedo.imagens_brinquedo.order_by("ordem").values_list("texto_alternativo", flat=True)),
+            [texto for _, _, texto in CADASTROS[BASQUETE]["fotos"]],
+        )
+        self.assertIn(f"{BASQUETE}-frente", brinquedo.imagem_brinquedo.name)
+        self.assertEqual(Brinquedos.objects.filter(nome_brinquedo=self.NOME).count(), 1)
+
+    def test_no_render_as_fotos_do_painel_ficam(self):
+        brinquedo = self._da_0145(prefixo="foto-da-loja")
+        with tempfile.TemporaryDirectory() as pasta:
+            self._rodar(render=True, pasta=pasta)
+        brinquedo.refresh_from_db()
+        self.assertEqual(brinquedo.imagem_brinquedo.name, "brinquedos/foto-da-loja-frente.webp")
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), 2)
+
+    def test_no_render_com_o_cloudinary_fora_avisa_e_segue(self):
+        self._da_0145()
+        with tempfile.TemporaryDirectory() as pasta, \
+                mock.patch.object(FileSystemStorage, "save", side_effect=OSError("sem rede")):
+            avisos = self._rodar(render=True, pasta=pasta)
+        self.assertIn(f"cadastrar_variantes_adesivo --so {BASQUETE} --fotos", avisos)
