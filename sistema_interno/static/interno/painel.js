@@ -423,17 +423,22 @@
       var texto = String(valor || "").replace(/[^\d.,]/g, "");
       if (!texto) return "";
 
-      var ultimaVirgula = texto.lastIndexOf(",");
-      var ultimoPonto = texto.lastIndexOf(".");
-      var separador = Math.max(ultimaVirgula, ultimoPonto);
+      /* COM VÍRGULA, a vírgula é dos centavos e o ponto é do milhar --
+         que é como se escreve no Brasil e como chega o "R$ 1.234,56"
+         colado de nota fiscal ou planilha. */
+      var virgula = texto.lastIndexOf(",");
+      if (virgula >= 0) {
+        var inteiros = texto.slice(0, virgula).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+        var centavos = texto.slice(virgula + 1).replace(/\D/g, "").slice(0, 2);
+        return (inteiros || "0").slice(0, 13) + "," + centavos;
+      }
 
-      if (separador < 0) return digitos(texto, 13);
-
-      /* Em valor colado, pontos anteriores ao último separador são apenas
-         agrupadores: R$ 1.234,56 vira 1234,56. */
-      var inteiros = texto.slice(0, separador).replace(/\D/g, "") || "0";
-      var centavos = texto.slice(separador + 1).replace(/\D/g, "").slice(0, 2);
-      return inteiros.slice(0, 13) + "," + centavos;
+      /* SEM VÍRGULA, o ponto fica como foi digitado, e quem decide o que
+         ele é é a leitura do número (`numeroMoeda`): "18.000" é dezoito
+         mil, "18.5" é dezoito e cinquenta. Trocar o ponto por vírgula aqui
+         mesmo -- como esta máscara fazia -- transformava quem digita
+         "18.000" em R$ 18,00 no meio da digitação. */
+      return texto.replace(/\.{2,}/g, ".").replace(/^\./, "").slice(0, 17);
     },
 
     /* Metragem: mesma digitação da direita para a esquerda, em metros.
@@ -461,7 +466,9 @@
     if (!limpo) return null;
     if (limpo.indexOf(",") >= 0) {
       limpo = limpo.replace(/\./g, "").replace(",", ".");
-    } else if ((limpo.match(/\./g) || []).length > 1) {
+    } else if ((limpo.match(/\./g) || []).length > 1 || /^\d{1,3}\.\d{3}$/.test(limpo)) {
+      /* "18.000" sem vírgula é milhar, e não dezoito: é a mesma regra do
+         servidor (`decimal_br`). */
       limpo = limpo.replace(/\./g, "");
     }
     var numero = Number(limpo);
@@ -626,13 +633,32 @@
       campo.dataset.mascaraLigada = "1";
 
       campo.addEventListener("input", function () {
-        campo.value = Painel.mascarar(tipo, campo.value);
-        /* O cursor vai para o fim, onde a próxima tecla deve entrar. */
-        if (ehNumerico(tipo) && campo.setSelectionRange) {
-          try {
+        /* O tipo é lido a cada tecla, e não só ao ligar: o desconto troca
+           entre reais e porcentagem no mesmo campo. */
+        var tipoAgora = campo.dataset.mascara || tipo;
+        var antes = campo.value;
+        var cursor = typeof campo.selectionStart === "number" ? campo.selectionStart : antes.length;
+        campo.value = Painel.mascarar(tipoAgora, antes);
+        if (!campo.setSelectionRange || !ehNumerico(tipoAgora)) return;
+        try {
+          if (tipoAgora === "moeda-valor") {
+            /* Reais inteiros se editam no meio também ("18.000,00" ->
+               "19.000,00"): o cursor fica depois do mesmo algarismo em
+               que estava, em vez de pular para o fim. */
+            var significativos = antes.slice(0, cursor).replace(/[^\d,]/g, "").length;
+            var posicao = 0;
+            var contados = 0;
+            while (posicao < campo.value.length && contados < significativos) {
+              if (/[\d,]/.test(campo.value.charAt(posicao))) contados += 1;
+              posicao += 1;
+            }
+            campo.setSelectionRange(posicao, posicao);
+          } else {
+            /* Dinheiro da direita para a esquerda: o cursor vai para o
+               fim, onde a próxima tecla deve entrar. */
             campo.setSelectionRange(campo.value.length, campo.value.length);
-          } catch (e) { /* type=email e afins não aceitam seleção */ }
-        }
+          }
+        } catch (e) { /* type=email e afins não aceitam seleção */ }
       });
 
       if (ehNumerico(tipo)) {

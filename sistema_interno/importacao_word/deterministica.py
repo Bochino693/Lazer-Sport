@@ -501,17 +501,25 @@ def normalizar_envio(texto: str, existentes=()) -> str:
 # RÓTULOS: "Frete: R$ 150,00", "CPF | 123.456.789-09"
 # ======================================================================
 ROTULOS = {
-    "cliente": ("cliente", "nome do cliente", "razao social", "contratante", "nome",
-                "destinatario", "sr", "sra", "sr a", "empresa", "proposta para", "para"),
+    "cliente": ("cliente", "nome do cliente", "contratante", "nome",
+                "destinatario", "sr", "sra", "sr a", "proposta para", "para", "nome completo"),
+    # O NEGÓCIO do cliente, quando o documento o separa da pessoa: "Cliente:
+    # Ricardo Alves" e "Estabelecimento: Arena Kids". Vai para o campo
+    # "Nome do estabelecimento" do cadastro, e não para o nome.
+    "estabelecimento": ("estabelecimento", "empresa", "razao social", "nome fantasia",
+                        "nome do estabelecimento"),
     "contato": ("contato", "a c", "aos cuidados", "aos cuidados de", "responsavel",
-                "att", "attn", "solicitante"),
+                "att", "attn", "solicitante", "sindico", "sindica", "gerente", "comprador"),
     "documento": ("cpf", "cnpj", "cpf cnpj", "cnpj cpf", "documento", "cpf ou cnpj"),
     "telefone": ("telefone", "tel", "fone", "celular", "cel", "whatsapp", "whats",
-                 "telefone whatsapp", "contato telefonico"),
+                 "telefone whatsapp", "contato telefonico", "telefone celular", "zap"),
     "email": ("e mail", "email"),
     "endereco": ("endereco", "end", "endereco de entrega", "local de entrega",
-                 "local do evento", "local"),
+                 "local do evento", "local", "endereco completo"),
     "cep": ("cep",),
+    "logradouro": ("rua", "logradouro", "avenida", "av"),
+    "numero": ("numero", "n", "no", "nro"),
+    "complemento": ("complemento", "compl"),
     "bairro": ("bairro",),
     "cidade": ("cidade", "municipio", "cidade uf"),
     "uf": ("uf", "estado"),
@@ -530,10 +538,14 @@ ROTULOS = {
     "subtotal": ("subtotal", "sub total", "total dos itens", "total dos produtos",
                  "valor dos itens", "total parcial", "soma dos itens"),
     "total": ("total", "total geral", "valor total", "total do orcamento",
-              "total da proposta", "valor final", "total a pagar", "investimento",
-              "investimento total", "valor total da proposta", "total final",
-              "valor total negociado", "total negociado", "valor negociado", "valor fechado",
-              "valor combinado", "valor final combinado", "valor final negociado"),
+              "total da proposta", "total a pagar", "investimento",
+              "investimento total", "valor total da proposta", "total final"),
+    # O valor FECHADO na conversa, que pode ser diferente da conta das
+    # linhas -- e por isso é campo próprio (Orcamento.valor_final), e não o
+    # total que a conta tem de bater.
+    "valor_final": ("valor final", "valor total negociado", "total negociado", "valor negociado",
+                    "valor fechado", "valor combinado", "valor final combinado",
+                    "valor final negociado", "preco final negociado", "valor acordado"),
     "data": ("data", "data do orcamento", "data de emissao", "emissao", "emitido em"),
     "observacoes": ("observacoes", "observacao", "obs", "garantia", "condicoes gerais",
                     "informacoes adicionais"),
@@ -544,9 +556,10 @@ _ROTULO_POR_TEXTO = {
 #: Campos de dinheiro que um rótulo pode abrir no meio de uma linha corrida:
 #: "Subtotal R$ 1.200,00 | Frete R$ 50,00 | Total R$ 1.250,00".
 _ROTULO_DINHEIRO = re.compile(
-    r"\b(sub\s*-?\s*total|total\s+geral|valor\s+total(?:\s+negociado)?|total\s+do\s+orcamento|"
-    r"total\s+da\s+proposta|total\s+a\s+pagar|valor\s+final(?:\s+(?:combinado|negociado))?|"
-    r"total\s+negociado|valor\s+(?:negociado|fechado|combinado)|total|frete|desconto)\b"
+    r"\b(sub\s*-?\s*total|valor\s+total\s+negociado|valor\s+final(?:\s+(?:combinado|negociado))?|"
+    r"total\s+negociado|valor\s+(?:negociado|fechado|combinado|acordado)|"
+    r"total\s+geral|valor\s+total|total\s+do\s+orcamento|"
+    r"total\s+da\s+proposta|total\s+a\s+pagar|total|frete|desconto)\b"
 )
 _CAMPO_DO_ROTULO_DINHEIRO = {
     "frete": "frete", "desconto": "desconto",
@@ -592,6 +605,8 @@ def _segmentos_de_dinheiro(texto: str):
         palavra = re.sub(r"\s+", " ", achado.group(1))
         if palavra.startswith("sub"):
             campo = "subtotal"
+        elif re.search(r"negociad|fechad|combinad|acordad|valor final", palavra):
+            campo = "valor_final"
         else:
             campo = _CAMPO_DO_ROTULO_DINHEIRO.get(palavra, "total")
         segmentos.append((campo, trecho, achado.end(), texto[achado.start():fim]))
@@ -863,10 +878,20 @@ def itens_em_paragrafos(linhas: list[dict]) -> list[dict]:
             unitario = valores[0]
         else:
             total = valores[0]
+        motivo_quantidade = ""
+        if total and not unitario and quantidade in (None, 1):
+            # Um valor só, de UMA unidade: o unitário é o próprio valor da
+            # linha. Sem quantidade escrita, a linha é de uma unidade -- e a
+            # conta do total do documento confere isso logo adiante.
+            unitario = total
+            if quantidade is None:
+                motivo_quantidade = "sem quantidade escrita na linha: uma unidade"
+            quantidade = 1
         itens.append({
             "linha_fonte": linha["id"],
             "descricao": _campo(descricao, linha, texto_original=descricao),
-            "quantidade": _campo(quantidade, linha, texto_original=str(quantidade)) if quantidade else None,
+            "quantidade": _campo(quantidade, linha, texto_original=str(quantidade),
+                                 motivo=motivo_quantidade) if quantidade else None,
             "valor_unitario": _campo(unitario["valor"], linha, texto_original=unitario["texto"]) if unitario else None,
             "total_linha": _campo(total["valor"], linha, texto_original=total["texto"]) if total else None,
             "unidade": "",
@@ -877,20 +902,156 @@ def itens_em_paragrafos(linhas: list[dict]) -> list[dict]:
 
 
 # ======================================================================
+# ENDEREÇO: "Rua X, 45, Sala 3 – Centro – Guarulhos/SP – CEP 07010-020"
+# ======================================================================
+UFS = {
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
+    "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+}
+_CEP = re.compile(r"(?:\bCEP\b[:.\s]*)?(?<!\d)(\d{5})[-.\s]?(\d{3})(?!\d)", re.IGNORECASE)
+_SEPARADOR_DE_ENDERECO = re.compile(r"\s+[–—-]\s+|\s*[|;]\s*")
+_NUMERO_DA_CASA = re.compile(r"^(?:n[º°o.]?\s*)?(\d{1,6}[A-Za-z]?|s/?n)$", re.IGNORECASE)
+_COMPLEMENTO = re.compile(
+    r"^(sala|sl|salas|apto?|apartamento|ap|bloco|bl|casa|cj|conj|conjunto|loja|lj|andar|"
+    r"fundos|frente|galp[aã]o|km|lote|quadra|qd|box|torre|unidade)\b",
+    re.IGNORECASE,
+)
+
+
+def formatar_cep(texto: str) -> str:
+    digitos = somente_digitos(texto)
+    return f"{digitos[:5]}-{digitos[5:]}" if len(digitos) == 8 else (texto or "").strip()
+
+
+def ler_endereco(texto: str) -> dict:
+    """O endereço escrito numa linha só, separado nas partes do cadastro.
+
+    Aceita o que se escreve no Brasil: "Rua X, 45, Sala 3 – Centro –
+    Guarulhos/SP – CEP 07010-020", "Rua Y, 120, apto 12 - Vila Mariana -
+    São Paulo - SP - 04101000". O que não dá para separar com segurança
+    fica junto na rua, e não inventado num campo errado.
+    """
+    partes = {"cep": "", "rua": "", "numero": "", "complemento": "", "bairro": "",
+              "cidade": "", "uf": ""}
+    resto = espacos(texto)
+    if not resto:
+        return partes
+    ceps = list(_CEP.finditer(resto))
+    if ceps:
+        ultimo = ceps[-1]
+        partes["cep"] = f"{ultimo.group(1)}-{ultimo.group(2)}"
+        resto = (resto[:ultimo.start()] + resto[ultimo.end():]).strip()
+    resto = re.sub(r"\bCEP\b[:.]?", "", resto, flags=re.IGNORECASE)
+    pedacos = [p.strip(" ,.-–—") for p in _SEPARADOR_DE_ENDERECO.split(resto)]
+    pedacos = [p for p in pedacos if p]
+    if pedacos:
+        # Cidade e UF no fim: "Guarulhos/SP", ou "São Paulo", "SP" em dois.
+        ultimo = pedacos[-1]
+        achado = re.fullmatch(r"(.+?)\s*[/,]\s*([A-Za-z]{2})", ultimo)
+        if achado and achado.group(2).upper() in UFS:
+            partes["cidade"], partes["uf"] = achado.group(1).strip(), achado.group(2).upper()
+            pedacos.pop()
+        elif ultimo.upper() in UFS and len(pedacos) >= 2:
+            partes["uf"] = ultimo.upper()
+            pedacos.pop()
+            partes["cidade"] = pedacos.pop()
+    if pedacos:
+        primeiro = [p.strip() for p in pedacos.pop(0).split(",") if p.strip()]
+        rua = [primeiro.pop(0)] if primeiro else []
+        complementos = []
+        while primeiro:
+            pedaco = primeiro.pop(0)
+            numero = _NUMERO_DA_CASA.match(pedaco)
+            if numero and not partes["numero"]:
+                partes["numero"] = numero.group(1)
+            elif not partes["numero"] and not complementos and not _COMPLEMENTO.match(pedaco):
+                rua.append(pedaco)
+            else:
+                complementos.append(pedaco)
+        # "Rua X 45" sem vírgula: o número no fim do nome da rua.
+        if rua and not partes["numero"]:
+            achado = re.fullmatch(r"(.+?)\s+(?:n[º°o.]?\s*)?(\d{1,6}[A-Za-z]?)", rua[-1])
+            if achado:
+                rua[-1] = achado.group(1)
+                partes["numero"] = achado.group(2)
+        partes["rua"] = ", ".join(rua)
+        for pedaco in pedacos:
+            if _COMPLEMENTO.match(pedaco):
+                complementos.append(pedaco)
+            elif not partes["bairro"]:
+                partes["bairro"] = pedaco
+            elif not partes["cidade"]:
+                partes["cidade"] = pedaco
+            else:
+                complementos.append(pedaco)
+        partes["complemento"] = ", ".join(complementos)
+    return partes
+
+
+# ======================================================================
+# O QUE É DA LAZER & SPORT NÃO É DO CLIENTE
+# ======================================================================
+def linha_da_empresa(texto: str, empresa: dict) -> bool:
+    """A linha fala da própria Lazer & Sport (o timbre, o rodapé)?
+
+    Quatro sinais: o CNPJ, um telefone, um e-mail ou o nome da casa. O
+    endereço do timbre não tem sinal próprio -- ele é reconhecido por
+    estar colado numa linha destas (ver `ler`).
+    """
+    sem = sem_acento(texto)
+    digitos = somente_digitos(texto)
+    for documento in empresa.get("documentos", ()):
+        chave = somente_digitos(documento)
+        if chave and chave in digitos:
+            return True
+    for telefone in empresa.get("telefones", ()):
+        numero = digitos_do_telefone(telefone)
+        if len(numero) >= 10 and numero in digitos:
+            return True
+    for email in empresa.get("emails", ()):
+        if email and email.lower() in (texto or "").lower():
+            return True
+    if re.search(r"\blazer\s*(?:&|e|and)?\s*sport\b|lazersport", sem):
+        return True
+    for linha in empresa.get("enderecos", ()):
+        if linha and _normalizar(linha) and _normalizar(linha) in _normalizar(texto):
+            return True
+    return False
+
+
+# ======================================================================
 # A LEITURA INTEIRA
 # ======================================================================
-CAMPOS_DE_DINHEIRO = ("subtotal", "frete", "desconto", "total")
+CAMPOS_DE_DINHEIRO = ("subtotal", "frete", "desconto", "total", "valor_final")
 _DATA_DE_CARTA = re.compile(
-    r"^[a-z .'-]{3,40},\s*(\d{1,2})\s+de\s+(" + "|".join(MESES) + r")\s+de\s+(\d{4})\.?$"
+    r"^[a-z .'-]{3,40},\s*(?:(\d{1,2})\s+de\s+(" + "|".join(MESES) + r")\s+de\s+(\d{4})"
+    r"|(\d{1,2})/(\d{1,2})/(\d{4}))\.?$"
 )
+#: Rótulos que dizem "daqui para baixo é o cliente" -- num cabeçalho ou
+#: rodapé, só a parte que tem um destes é lida como dado do cliente.
+_CAMPOS_DE_CLIENTE = ("cliente", "contato", "estabelecimento")
+_CAMPOS_DO_CADASTRO = (
+    "cliente", "estabelecimento", "contato", "endereco", "cep", "logradouro", "numero",
+    "complemento", "bairro", "cidade", "uf",
+)
+_PARTES_DO_ENDERECO = (
+    ("cep", "cep"), ("rua", "logradouro"), ("numero", "numero"), ("complemento", "complemento"),
+    ("bairro", "bairro"), ("cidade", "cidade"), ("uf", "uf"),
+)
+_WHATSAPP = re.compile(r"\b(whats\s*app|whats|zap|wpp)\b")
+
+
+def _primeira_maiuscula(texto: str) -> str:
+    texto = (texto or "").strip()
+    return texto[:1].upper() + texto[1:]
 
 
 def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
     """Tudo o que as regras conseguem tirar do documento.
 
-    `empresa` traz CNPJ, telefones e e-mails da Lazer & Sport: o cabeçalho
-    e o rodapé do orçamento estão cheios deles, e nenhum pode ser lido
-    como se fosse do cliente.
+    `empresa` traz CNPJ, telefones, e-mails e endereços da Lazer & Sport:
+    o timbre e o rodapé do orçamento estão cheios deles, e nenhum pode ser
+    lido como se fosse do cliente.
     """
     campos: dict[str, dict] = {}
     recusas: list[dict] = []
@@ -899,6 +1060,7 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
     # Todas as ocorrências são guardadas: se discordarem, a conferência
     # avisa, em vez de ficar com a primeira e calar a segunda.
     dinheiro: dict[str, list[dict]] = {campo: [] for campo in CAMPOS_DE_DINHEIRO}
+    observacoes: list[tuple[str, dict]] = []
 
     def guardar(nome, campo):
         if nome not in campos:
@@ -909,25 +1071,66 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
 
     corpo = [l for l in linhas if l["parte"] in ("corpo", "caixa")]
 
-    # ------------------------------------------------ rótulo : valor
-    pares = []
-    for linha in corpo:
+    # -------------------------------------- o que é da Lazer & Sport
+    # A linha com CNPJ, telefone, e-mail ou nome da casa é dela; a linha
+    # colada numa dessas (o endereço do timbre, logo abaixo do nome) também
+    # -- a não ser que traga um rótulo de cliente.
+    da_empresa = {l["id"] for l in linhas if linha_da_empresa(l["texto"], empresa)}
+    vizinhas = set()
+    for posicao, linha in enumerate(linhas):
+        if linha["id"] not in da_empresa:
+            continue
+        for vizinho in (posicao - 1, posicao + 1):
+            if 0 <= vizinho < len(linhas) and linhas[vizinho]["parte"] == linha["parte"]:
+                vizinhas.add(linhas[vizinho]["id"])
+
+    def rotulo_de_cliente(linha):
         par = _par_rotulo_valor(linha["texto"])
-        if par:
-            pares.append((par[0], par[1], linha))
-    # Tabela de diagramação: "Cliente" | "Buffet Alegria" na mesma linha.
-    por_linha_de_tabela: dict[tuple, list[dict]] = {}
-    for linha in corpo:
-        if linha["tabela"]:
-            por_linha_de_tabela.setdefault((linha["tabela"], linha["linha"]), []).append(linha)
-    for celulas in por_linha_de_tabela.values():
-        celulas.sort(key=lambda c: c["coluna"])
-        for posicao, celula in enumerate(celulas[:-1]):
-            campo = campo_do_rotulo(celula["texto"].rstrip(" :"))
-            if campo:
-                vizinha = celulas[posicao + 1]
-                if not campo_do_rotulo(vizinha["texto"].rstrip(" :")):
-                    pares.append((campo, vizinha["texto"], vizinha))
+        return bool(par and par[0] in _CAMPOS_DE_CLIENTE)
+
+    # Cabeçalho e rodapé entram para os dados do cliente só quando a parte
+    # tem um rótulo de cliente ("Cliente:", "A/C:", "Síndico:"). Sem isso, o
+    # "Endereço:" do rodapé é o da fábrica.
+    partes_com_cliente = {
+        l["parte"] for l in linhas
+        if l["parte"] in ("cabecalho", "rodape") and rotulo_de_cliente(l)
+    }
+
+    def serve_ao_cliente(linha):
+        if linha["parte"] in ("cabecalho", "rodape") and linha["parte"] not in partes_com_cliente:
+            return False
+        if linha["id"] in da_empresa:
+            return False
+        if linha["id"] in vizinhas and not rotulo_de_cliente(linha):
+            return False
+        return True
+
+    do_cliente = [l for l in linhas if serve_ao_cliente(l)]
+
+    # ------------------------------------------------ rótulo : valor
+    def pares_de(origem):
+        achados = []
+        for linha in origem:
+            par = _par_rotulo_valor(linha["texto"])
+            if par:
+                achados.append((par[0], par[1], linha))
+        # Tabela de diagramação: "Cliente" | "Buffet Alegria" na mesma linha.
+        por_linha_de_tabela: dict[tuple, list[dict]] = {}
+        for linha in origem:
+            if linha["tabela"]:
+                por_linha_de_tabela.setdefault((linha["tabela"], linha["linha"]), []).append(linha)
+        for celulas in por_linha_de_tabela.values():
+            celulas.sort(key=lambda c: c["coluna"])
+            for posicao, celula in enumerate(celulas[:-1]):
+                campo = campo_do_rotulo(celula["texto"].rstrip(" :"))
+                if campo:
+                    vizinha = celulas[posicao + 1]
+                    if not campo_do_rotulo(vizinha["texto"].rstrip(" :")):
+                        achados.append((campo, vizinha["texto"], vizinha))
+        return achados
+
+    pares = pares_de(corpo)
+    pares_do_cliente = [par for par in pares_de(do_cliente) if par[0] in _CAMPOS_DO_CADASTRO]
 
     data_documento = None
     for campo, valor, linha in pares:
@@ -937,21 +1140,26 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
                 data_documento = achadas[0]["data"]
                 guardar("data_documento", _campo(data_documento, linha, texto_original=achadas[0]["texto"]))
     if data_documento is None:
-        # "São Paulo, 5 de novembro de 2026." -- a data de carta, sem rótulo.
+        # "São Paulo, 5 de novembro de 2026." ou "Guarulhos, 09/11/2026." --
+        # a data de carta, sem rótulo.
         for linha in corpo:
-            achado = _DATA_DE_CARTA.match(sem_acento(linha["texto"]))
-            if achado:
-                try:
+            achado = _DATA_DE_CARTA.match(sem_acento(linha["texto"]).strip())
+            if not achado:
+                continue
+            try:
+                if achado.group(1):
                     data_documento = date(int(achado.group(3)), MESES[achado.group(2)], int(achado.group(1)))
-                except ValueError:
-                    continue
-                guardar("data_documento", _campo(data_documento, linha, texto_original=linha["texto"]))
-                break
+                else:
+                    data_documento = date(int(achado.group(6)), int(achado.group(5)), int(achado.group(4)))
+            except ValueError:
+                continue
+            guardar("data_documento", _campo(data_documento, linha, texto_original=linha["texto"]))
+            break
 
-    for campo, valor, linha in pares:
-        sem = sem_acento(valor)
-        if campo in ("cliente", "contato", "endereco", "bairro", "cidade", "uf"):
-            limpo = valor.strip(" .;")
+    # ----------------------------------------------- dados do cliente
+    for campo, valor, linha in pares_do_cliente:
+        limpo = valor.strip(" .;")
+        if campo in ("cliente", "contato", "estabelecimento"):
             # "Cliente: Buffet Alegria - CNPJ 12.345.678/0001-90": o nome
             # para antes do primeiro dado que tem campo próprio.
             corte = len(limpo)
@@ -962,25 +1170,81 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
             )
             if rotulo_interno:
                 corte = min(corte, rotulo_interno.start())
-            limpo = limpo[:corte].strip(" -–—,;/|")
+            limpo = limpo[:corte].strip(" -–—,;/|·•")
+            limpo = re.sub(r"^(?:sr|sra|srta|dr|dra)\.?\s+", "", limpo, flags=re.IGNORECASE)
             if limpo:
                 guardar(campo, _campo(limpo, linha, texto_original=limpo))
+        elif campo == "endereco":
+            guardar("endereco", _campo(limpo, linha, texto_original=limpo))
         elif campo == "cep":
-            achado = re.search(r"\d{5}-?\d{3}", valor)
+            achado = _CEP.search(valor)
             if achado:
-                cep = somente_digitos(achado.group(0))
-                guardar("cep", _campo(f"{cep[:5]}-{cep[5:]}", linha, texto_original=achado.group(0)))
-        elif campo == "validade":
+                guardar("cep", _campo(f"{achado.group(1)}-{achado.group(2)}", linha,
+                                      texto_original=achado.group(0).strip()))
+        elif campo == "uf":
+            if limpo.upper() in UFS:
+                guardar("uf", _campo(limpo.upper(), linha, texto_original=limpo))
+        elif campo == "cidade":
+            achado = re.fullmatch(r"(.+?)\s*[/–—-]\s*([A-Za-z]{2})", limpo)
+            if achado and achado.group(2).upper() in UFS:
+                guardar("cidade", _campo(achado.group(1).strip(), linha, texto_original=limpo))
+                guardar("uf", _campo(achado.group(2).upper(), linha, texto_original=limpo))
+            else:
+                guardar("cidade", _campo(limpo, linha, texto_original=limpo))
+        elif limpo:
+            guardar(campo, _campo(limpo, linha, texto_original=limpo))
+
+    # "À" numa linha e o nome na seguinte -- o jeito de carta de dizer
+    # para quem é a proposta, sem rótulo nenhum.
+    if "cliente" not in campos:
+        for posicao, linha in enumerate(do_cliente[:-1]):
+            sem = _normalizar(linha["texto"])
+            proxima = do_cliente[posicao + 1]
+            if sem in ("a", "ao", "aos", "a sra", "ao sr", "prezado cliente") and proxima["parte"] == linha["parte"]:
+                nome = proxima["texto"].strip(" .,;")
+                if nome and not _par_rotulo_valor(nome) and not re.search(r"\d{3}", nome):
+                    guardar("cliente", _campo(nome, proxima, texto_original=nome))
+                    break
+            achado = re.match(r"^(?:À|Ao|Aos)\s+([A-ZÀ-Ú][^:\d]{2,80})$", linha["texto"].strip())
+            if achado and not re.search(r"(?i)\bvista\b|\bprazo\b", achado.group(1)):
+                nome = achado.group(1).strip(" .,;")
+                guardar("cliente", _campo(nome, linha, texto_original=nome))
+                break
+    if "cliente" not in campos and "estabelecimento" in campos:
+        # Só o nome do negócio: é ele o cliente.
+        campos["cliente"] = dict(campos.pop("estabelecimento"))
+
+    # O endereço numa linha só vira as partes do cadastro. A parte
+    # escrita com rótulo próprio ("CEP: ...", "Bairro: ...") vale mais.
+    if "endereco" in campos:
+        partes = ler_endereco(campos["endereco"]["valor"])
+        linha = {"id": campos["endereco"]["fonte"]["id"], "texto": campos["endereco"]["fonte"]["texto"]}
+        for nome_parte, campo in _PARTES_DO_ENDERECO:
+            if partes[nome_parte]:
+                guardar(campo, _campo(partes[nome_parte], linha, texto_original=partes[nome_parte]))
+
+    # ----------------------------------------------- condições e dinheiro
+    for campo, valor, linha in pares:
+        sem = sem_acento(valor)
+        if campo == "validade":
             lido = ler_validade(valor, data_documento=data_documento, hoje=hoje)
             if lido:
-                guardar("validade", _campo(lido["data"], linha, texto_original=valor.strip(),
+                guardar("validade", _campo(lido["data"], linha, texto_original=valor.strip(" ."),
                                            motivo=lido["como"]))
             else:
                 recusas.append({"campo": "validade",
                                 "motivo": f"validade “{valor.strip()}” sem data nem prazo em dias",
                                 "fonte": fonte(linha)})
-        elif campo in ("forma_pagamento", "prazo", "forma_envio", "observacoes"):
-            guardar(campo, _campo(valor.strip(" ."), linha, texto_original=valor.strip()))
+        elif campo in ("forma_pagamento", "prazo", "forma_envio"):
+            guardar(campo, _campo(_primeira_maiuscula(valor.strip(" .")), linha, texto_original=valor.strip()))
+        elif campo == "observacoes":
+            rotulo = _normalizar(linha["texto"].split(":", 1)[0])
+            if rotulo in ("observacoes", "observacao", "obs"):
+                texto = _primeira_maiuscula(valor.strip())
+            else:
+                texto = linha["texto"].strip()
+            if texto:
+                observacoes.append((texto, linha))
         elif campo in CAMPOS_DE_DINHEIRO:
             valores = valores_em_reais(valor)
             valido = next((v for v in valores if v["valor"] is not None), None)
@@ -1014,6 +1278,11 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
                                     "fonte": fonte(linha)})
                 elif _PRAZO_EM_DIAS.search(sem):
                     guardar("prazo", _campo(valor.strip(" ."), linha, texto_original=valor.strip()))
+    if observacoes:
+        campos["observacoes"] = _campo(
+            "\n".join(texto for texto, _ in observacoes), observacoes[0][1],
+            texto_original="\n".join(texto for texto, _ in observacoes),
+        )
 
     # ------------------------------ dinheiro sem dois-pontos no rótulo
     # "TOTAL GERAL R$ 1.250,00" e "Subtotal R$ 1.200 | Frete R$ 50".
@@ -1022,7 +1291,9 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
         if linha["tabela"]:
             continue  # tabela de itens tem leitura própria, logo abaixo
         for campo, trecho, _, pedaco in _segmentos_de_dinheiro(linha["texto"]):
-            if (linha["id"], campo) in ja_lidas:
+            if (linha["id"], campo) in ja_lidas or any(
+                (linha["id"], outro) in ja_lidas for outro in CAMPOS_DE_DINHEIRO
+            ):
                 continue
             valores = valores_em_reais(trecho)
             valido = next((v for v in valores if v["valor"] is not None), None)
@@ -1042,21 +1313,14 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
                                                 motivo="frete sem custo escrito no documento"))
 
     # ---------------------------------------- documento, telefone, e-mail
-    chaves_da_empresa = {chave_documento(c) for c in empresa.get("documentos", ()) if c}
-    telefones_da_empresa = {digitos_do_telefone(t) for t in empresa.get("telefones", ()) if t}
-    emails_da_empresa = {e.lower() for e in empresa.get("emails", ()) if e}
-
     documentos_achados, telefones_achados, emails_achados = [], [], []
-    for linha in corpo:
+    for linha in do_cliente:
         for achado in documentos(linha["texto"]):
-            if achado["chave"] not in chaves_da_empresa:
-                documentos_achados.append((achado, linha))
+            documentos_achados.append((achado, linha))
         for achado in telefones(linha["texto"]):
-            if achado["digitos"] not in telefones_da_empresa:
-                telefones_achados.append((achado, linha))
+            telefones_achados.append((achado, linha))
         for achado in emails(linha["texto"]):
-            if achado["email"] not in emails_da_empresa:
-                emails_achados.append((achado, linha))
+            emails_achados.append((achado, linha))
 
     if documentos_achados:
         achado, linha = documentos_achados[0]
@@ -1072,7 +1336,11 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
             })
     if telefones_achados:
         achado, linha = telefones_achados[0]
-        guardar("telefone", _campo(achado["digitos"], linha, texto_original=achado["texto"]))
+        # "WhatsApp" escrito na mesma linha do número (no rótulo ou entre
+        # parênteses) é o documento dizendo que o número tem WhatsApp.
+        whatsapp = bool(_WHATSAPP.search(sem_acento(linha["texto"])))
+        guardar("telefone", _campo(achado["digitos"], linha, texto_original=achado["texto"],
+                                   extra={"whatsapp_escrito": whatsapp}))
     if emails_achados:
         achado, linha = emails_achados[0]
         guardar("email", _campo(achado["email"], linha, texto_original=achado["texto"]))

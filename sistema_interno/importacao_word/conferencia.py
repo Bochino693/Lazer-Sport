@@ -42,10 +42,9 @@ CENTAVO = Decimal("0.01")
 NIVEL_VERMELHO = "vermelho"
 NIVEL_AMARELO = "amarelo"
 
-AVISO_SEM_IA = "IA indisponível: leitura pelas tabelas do documento; confira com atenção."
 AVISO_PDF = (
-    "PDF lido pela IA: o texto foi transcrito por ela, e cada valor foi conferido "
-    "nessa transcrição e nas contas. Confira com o PDF aberto ao lado."
+    "Este PDF é uma imagem: o texto foi transcrito automaticamente, e cada valor foi "
+    "conferido nessa transcrição e nas contas. Confira com o PDF aberto ao lado."
 )
 
 
@@ -56,7 +55,19 @@ def identidade_da_empresa() -> dict:
         ("EMPRESA_TELEFONE", "EMPRESA_WHATSAPP", "ORCAMENTO_TELEFONE", "ORCAMENTO_WHATSAPP")
     ]
     emails = [getattr(settings, nome, "") for nome in ("EMPRESA_EMAIL", "ORCAMENTO_EMAIL")]
-    return {"documentos": [cnpj_empresa()], "telefones": telefones, "emails": emails}
+    enderecos = []
+    try:
+        from core.models import EnderecoEmpresa
+
+        for endereco in EnderecoEmpresa.objects.all()[:5]:
+            if endereco.rua:
+                enderecos.append(f"{endereco.rua}, {endereco.numero}".strip(", "))
+            if getattr(endereco, "telefone", ""):
+                telefones.append(endereco.telefone)
+    except Exception:  # noqa: BLE001 -- banco sem a tabela não pode derrubar a leitura
+        pass
+    return {"documentos": [cnpj_empresa()], "telefones": telefones, "emails": emails,
+            "enderecos": enderecos}
 
 
 # ======================================================================
@@ -399,18 +410,43 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     # --------------------------------------------------------- cliente
     cliente = {
         "nome": campo("cliente.nome", "Nome do cliente", "texto", "cliente", "cliente.nome"),
+        "estabelecimento": campo("cliente.estabelecimento", "Estabelecimento", "texto",
+                                 "estabelecimento", "cliente.estabelecimento"),
         "documento": campo("cliente.documento", "CPF/CNPJ", "documento", "documento", "cliente.documento"),
         "contato": campo("cliente.contato", "Pessoa de contato", "texto", "contato", "cliente.contato"),
         "telefone": campo("cliente.telefone", "Telefone/WhatsApp", "telefone", "telefone", "cliente.telefone"),
         "email": campo("cliente.email", "E-mail", "email", "email", "cliente.email"),
         "endereco": campo("cliente.endereco", "Endereço", "texto", "endereco", "cliente.endereco"),
         "cep": campo("cliente.cep", "CEP", "texto", "cep", "cliente.cep"),
-        "logradouro": campo("cliente.logradouro", "Rua", "texto", "", "cliente.logradouro"),
-        "numero": campo("cliente.numero", "Número", "texto", "", "cliente.numero"),
+        "logradouro": campo("cliente.logradouro", "Rua", "texto", "logradouro", "cliente.logradouro"),
+        "numero": campo("cliente.numero", "Número", "texto", "numero", "cliente.numero"),
+        "complemento": campo("cliente.complemento", "Complemento", "texto", "complemento",
+                             "cliente.complemento"),
         "bairro": campo("cliente.bairro", "Bairro", "texto", "bairro", "cliente.bairro"),
         "cidade": campo("cliente.cidade", "Cidade", "texto", "cidade", "cliente.cidade"),
         "uf": campo("cliente.uf", "UF", "texto", "uf", "cliente.uf"),
     }
+    if cliente["cep"]["valor"]:
+        cliente["cep"]["valor"] = det.formatar_cep(cliente["cep"]["valor"])
+    if cliente["uf"]["valor"]:
+        cliente["uf"]["valor"] = cliente["uf"]["valor"].upper()[:2]
+    # Endereço inteiro vindo só da IA (sem as partes): a mesma separação
+    # da leitura por regra.
+    if cliente["endereco"]["valor"] and not cliente["logradouro"]["valor"]:
+        partes = det.ler_endereco(cliente["endereco"]["valor"])
+        for nome_parte, chave in (("cep", "cep"), ("rua", "logradouro"), ("numero", "numero"),
+                                  ("complemento", "complemento"), ("bairro", "bairro"),
+                                  ("cidade", "cidade"), ("uf", "uf")):
+            if partes[nome_parte] and not cliente[chave]["valor"]:
+                cliente[chave].update({
+                    "valor": partes[nome_parte], "exibir": partes[nome_parte],
+                    "original": partes[nome_parte], "fonte": cliente["endereco"]["fonte"],
+                    "confianca": cliente["endereco"]["confianca"], "origem": cliente["endereco"]["origem"],
+                })
+    # O documento disse "WhatsApp" ao lado do número?
+    cliente["telefone"]["whatsapp_escrito"] = bool(
+        (campos_det.get("telefone") or {}).get("whatsapp_escrito")
+    )
     documento = cliente["documento"]
     if documento["valor"] and not documento_valido(documento["valor"]):
         documento["nota"] = f"{tipo_documento(documento['valor'])} inválido: os dígitos não conferem"
@@ -477,8 +513,10 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         "frete": campo("valores.frete", "Frete", "dinheiro", "frete", "frete"),
         "desconto": campo("valores.desconto", "Desconto", "dinheiro", "desconto", "desconto"),
         "total": campo("valores.total", "Total do documento", "dinheiro", "total", "total_geral", referencia=True),
+        "valor_final": campo("valores.valor_final", "Valor final negociado", "dinheiro", "valor_final",
+                             "valor_negociado", referencia=True),
     }
-    for chave_valor in ("subtotal", "total", "frete", "desconto"):
+    for chave_valor in ("subtotal", "total", "frete", "desconto", "valor_final"):
         conflitos = (campos_det.get(chave_valor) or {}).get("conflitos")
         if conflitos:
             alertas.append({
@@ -495,9 +533,27 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     _tratar_percentual(valores, campos_det, percentuais.get("valores.desconto"))
     frete = valores["frete"]
     if not frete["valor"] and not frete["opcoes"]:
-        frete["sugestoes"] = [{"valor": "0,00", "rotulo": "Sem frete (R$ 0,00)",
-                               "motivo": "o documento não fala de frete: confirme que não há"}]
-        frete["nota"] = frete["nota"] or "o documento não traz frete; escolha de propósito, mesmo que seja zero"
+        # A conta do próprio documento decide: se itens − desconto já dão o
+        # total escrito, não há frete nessa conta -- é zero, e com a razão
+        # à mostra. Sem total para conferir, a pessoa escolhe.
+        total_doc = _decimal(valores["total"]["valor"])
+        desconto_doc = _decimal(valores["desconto"]["valor"]) or Decimal("0.00")
+        linhas_doc = [
+            (int(i["quantidade"]["valor"]) if i["quantidade"]["valor"].isdigit() else None,
+             _decimal(i["valor_unitario"]["valor"]))
+            for i in itens
+        ]
+        conta_doc = contas(linhas_doc, Decimal("0.00"), desconto_doc)
+        if itens and total_doc is not None and conta_doc["completos"] and conta_doc["total"] == total_doc:
+            frete.update({
+                "valor": "0,00", "exibir": "R$ 0,00", "confianca": "media", "origem": "tabelas",
+                "fonte": valores["total"]["fonte"], "original": "",
+                "nota": "o documento não cobra frete: itens − desconto já dão o total escrito",
+            })
+        else:
+            frete["sugestoes"] = [{"valor": "0,00", "rotulo": "Sem frete (R$ 0,00)",
+                                   "motivo": "o documento não fala de frete: confirme que não há"}]
+            frete["nota"] = frete["nota"] or "o documento não traz frete; escolha de propósito, mesmo que seja zero"
     if campos_det.get("frete", {}).get("motivo") and frete["origem"] in ("tabelas", "ambas"):
         frete["nota"] = campos_det["frete"]["motivo"]
 
@@ -556,7 +612,7 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         "ia": {
             "usada": ia_usada,
             "modelo": ia_info.get("modelo", "") if ia_usada else "",
-            "aviso": AVISO_PDF if formato == "pdf" else ("" if ia_usada else AVISO_SEM_IA),
+            "aviso": AVISO_PDF if formato == "pdf_ia" else "",
             "motivo": ia_info.get("motivo", ""),
         },
         "cliente": cliente,
@@ -570,7 +626,7 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         "data_documento": lido["data_documento"].isoformat() if lido["data_documento"] else "",
     }
     _valores_nao_usados(proposta, linhas, alertas)
-    if formato == "pdf":
+    if formato == "pdf_ia":
         _rebaixar_confianca_do_pdf(proposta)
     proposta["alertas"] = alertas
     recalcular_alertas(proposta)
@@ -589,11 +645,11 @@ def _rebaixar_confianca_do_pdf(proposta):
     def rebaixar(campo):
         if isinstance(campo, dict) and campo.get("confianca") == "alta":
             campo["confianca"] = "media"
-            campo["nota"] = (campo.get("nota") + " · " if campo.get("nota") else "") + "transcrito do PDF pela IA"
+            campo["nota"] = (campo.get("nota") + " · " if campo.get("nota") else "") + "transcrito do PDF"
 
     cliente = proposta["cliente"]
     for nome, campo in cliente.items():
-        if nome not in ("vinculo", "tipo_sugerido", "tipo_motivo", "whatsapp_confirmado"):
+        if nome != "vinculo" and isinstance(campo, dict) and "valor" in campo:
             rebaixar(campo)
     for item in proposta["itens"]:
         for nome in ("descricao", "quantidade", "valor_unitario", "total_linha"):
@@ -1034,18 +1090,31 @@ def recalcular_alertas(proposta, valores_atuais=None):
             "detalhe": "Sem total escrito, a conta não tem com o que ser comparada. Confira o total calculado.",
             "fonte": None,
         })
-    # O VALOR FINAL COMBINADO. O Word diz um total, a conta das linhas dá
-    # outro -- erro de digitação ou "fechamos em R$ 18.000". Ninguém
-    # escolhe pela pessoa: a tela mostra os dois e oferece gravar o total
-    # do Word como `valor_final` (o painel passa a mostrar a diferença
-    # como desconto ou ajuste), ou manter a soma, com justificativa.
-    proposta["valor_final"] = {
-        "oferecido": total_word is not None and resultado["total"] != total_word,
-        "valor": det.moeda(total_word) if total_word is not None else "",
-        "soma": det.moeda(resultado["total"]),
-        "fonte": proposta["valores"]["total"]["fonte"],
-        "original": proposta["valores"]["total"].get("original", ""),
-    }
+    # O VALOR FINAL COMBINADO. Dois casos, e só um deles é escolha óbvia:
+    #  * o documento ESCREVE um valor negociado ("Valor final negociado:
+    #    R$ 9.500,00") -- ele é o valor final, e a tela já o mostra
+    #    escolhido (a pessoa pode trocar);
+    #  * o documento diz um TOTAL que a conta das linhas não dá -- erro de
+    #    digitação ou venda fechada por outro valor. Aí ninguém escolhe
+    #    pela pessoa: a tela mostra os dois, nenhum marcado.
+    valor_final_doc = _decimal((proposta["valores"].get("valor_final") or {}).get("valor"))
+    if valor_final_doc is not None:
+        campo_final = proposta["valores"]["valor_final"]
+        proposta["valor_final"] = {
+            "oferecido": True, "explicito": True,
+            "valor": det.moeda(valor_final_doc),
+            "soma": det.moeda(resultado["total"]),
+            "fonte": campo_final["fonte"], "original": campo_final.get("original", ""),
+        }
+    else:
+        proposta["valor_final"] = {
+            "oferecido": total_word is not None and resultado["total"] != total_word,
+            "explicito": False,
+            "valor": det.moeda(total_word) if total_word is not None else "",
+            "soma": det.moeda(resultado["total"]),
+            "fonte": proposta["valores"]["total"]["fonte"],
+            "original": proposta["valores"]["total"].get("original", ""),
+        }
     desconto = proposta["valores"]["desconto"]
     if desconto.get("percentual"):
         base = resultado["subtotal"]
