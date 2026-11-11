@@ -3244,8 +3244,30 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         if request.headers.get("If-None-Match") == etag:
             return aplicar_cache_condicional(HttpResponseNotModified(), etag)
 
+        from urllib.parse import urlencode
+
+        from sistema_interno.utils import endereco_do_site
+
+        # OS FILTROS DA TELA (chips: categoria, na loja / fora, com capa /
+        # sem capa). Valor desconhecido vale como "todos": a categoria vai
+        # direto para um filtro de número, e "?categoria=abc" derrubava a
+        # tela com ValueError (500) em vez de só mostrar tudo.
         categoria = request.GET.get("categoria", "todas")
+        if not str(categoria).isdigit():
+            categoria = "todas"
+        loja = request.GET.get("loja", "todos")
+        if loja not in ("sim", "nao"):
+            loja = "todos"
+        # (`filtro_capa`, e não `capa`: `capa` é a foto de cada brinquedo
+        # no laço de baixo, e o nome repetido trocava o filtro pela foto.)
+        filtro_capa = request.GET.get("capa", "todas")
+        if filtro_capa not in ("com", "sem"):
+            filtro_capa = "todas"
         busca = request.GET.get("q", "").strip()
+
+        # "Com capa" é a mesma conta do número do topo: o arquivo da capa
+        # (imagem_brinquedo) preenchido.
+        sem_capa = Q(imagem_brinquedo__isnull=True) | Q(imagem_brinquedo="")
 
         brinquedos = (
             Brinquedos.objects
@@ -3263,20 +3285,46 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 categorias_brinquedos__id=categoria
             ).distinct()
 
+        if loja == "sim":
+            brinquedos = brinquedos.filter(exibir_na_loja=True)
+        elif loja == "nao":
+            brinquedos = brinquedos.filter(exibir_na_loja=False)
+
+        if filtro_capa == "com":
+            brinquedos = brinquedos.exclude(sem_capa)
+        elif filtro_capa == "sem":
+            brinquedos = brinquedos.filter(sem_capa)
+
         if busca:
-            brinquedos = brinquedos.filter(
-                nome_brinquedo__icontains=busca
-            )
+            # O cartão mostra o número (#12): buscar por ele também acha.
+            filtro_busca = Q(nome_brinquedo__icontains=busca)
+            numero = busca.lstrip("#").strip()
+            if numero.isdigit():
+                filtro_busca |= Q(pk=int(numero))
+            brinquedos = brinquedos.filter(filtro_busca)
 
         paginator = Paginator(brinquedos, 18)
         page = request.GET.get("page")
         brinquedos_page = paginator.get_page(page)
 
-        categorias = CategoriasBrinquedos.objects.order_by(
-            "nome_categoria",
-            "id",
+        categorias = list(
+            CategoriasBrinquedos.objects
+            .annotate(total_brinquedos=Count("brinquedos", distinct=True))
+            .order_by("nome_categoria", "id")
         )
         tags = TagsBrinquedos.objects.order_by("nome_tags", "id")
+
+        estado = {"q": busca, "categoria": categoria, "loja": loja, "capa": filtro_capa}
+        padroes = {"", "todas", "todos"}
+
+        def endereco(**trocas):
+            """O endereço desta tela com um filtro trocado (e a página 1)."""
+            pares = [
+                (chave, valor)
+                for chave, valor in {**estado, **trocas}.items()
+                if valor not in padroes
+            ]
+            return request.path + ("?" + urlencode(pares) if pares else "")
 
         def formatar_decimal_br(valor, casas=2, milhares=False):
             if valor is None:
@@ -3310,6 +3358,16 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 for foto in brinquedo.imagens_brinquedo.all()
                 if foto.tipo and foto.imagem
             ][:3]
+            objeto_3d = self._dados_do_objeto_3d(brinquedo)
+
+            # O cartão da lista mostra quantas vistas o brinquedo tem e se
+            # tem objeto 3D (a capa antiga, sem tipo, conta como PERFIL,
+            # como no formulário).
+            vistas = {foto["tipo"] for foto in fotos}
+            if capa:
+                vistas.add("perfil")
+            brinquedo.painel_fotos = len(vistas)
+            brinquedo.painel_3d = bool(objeto_3d)
 
             brinquedos_dados.append({
                 "id": brinquedo.id,
@@ -3346,34 +3404,78 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "exibir_na_loja": brinquedo.exibir_na_loja,
                 "imagem_url": capa.url if capa else "",
                 "imagens": fotos,
-                "objeto_3d": self._dados_do_objeto_3d(brinquedo),
-                "categorias_ids": list(
-                    brinquedo.categorias_brinquedos.values_list(
-                        "id",
-                        flat=True,
-                    )
-                ),
-                "tags_ids": list(
-                    brinquedo.tags.values_list("id", flat=True)
-                ),
+                "objeto_3d": objeto_3d,
+                # Pelo .all(), que usa o prefetch: o values_list fazia duas
+                # consultas por brinquedo da página.
+                "categorias_ids": [
+                    cat.id for cat in brinquedo.categorias_brinquedos.all()
+                ],
+                "tags_ids": [tag.id for tag in brinquedo.tags.all()],
             })
 
-        todos = Brinquedos.objects.all()
+        numeros = Brinquedos.objects.aggregate(
+            total=Count("id"),
+            loja=Count("id", filter=Q(exibir_na_loja=True)),
+            sem_capa=Count("id", filter=sem_capa),
+        )
+        total = numeros["total"]
+        total_com_imagem = total - numeros["sem_capa"]
+
+        def opcoes(chave, lista):
+            return [
+                {
+                    "rotulo": rotulo,
+                    "total": quantos,
+                    "url": endereco(**{chave: valor}),
+                    "ativo": estado[chave] == valor,
+                }
+                for valor, rotulo, quantos in lista
+            ]
+
+        pares_sem_pagina = [
+            (chave, valor) for chave, valor in estado.items()
+            if valor not in padroes
+        ]
 
         context = {
             "brinquedos": brinquedos_page,
             "categorias": categorias,
             "tags": tags,
             "categoria_ativa": categoria,
+            "loja_ativa": loja,
+            "capa_ativa": filtro_capa,
             "busca": busca,
             "page_obj": brinquedos_page,
             "brinquedos_dados": brinquedos_dados,
-            "total_brinquedos": todos.count(),
-            "total_loja": todos.filter(exibir_na_loja=True).count(),
-            "total_com_imagem": todos.exclude(
-                imagem_brinquedo__isnull=True
-            ).exclude(imagem_brinquedo="").count(),
-            "total_categorias": categorias.count(),
+            "total_brinquedos": total,
+            "total_loja": numeros["loja"],
+            "total_com_imagem": total_com_imagem,
+            "total_categorias": len(categorias),
+            "filtros_loja": opcoes("loja", [
+                ("todos", "Todos", total),
+                ("sim", "Na loja", numeros["loja"]),
+                ("nao", "Fora da loja", total - numeros["loja"]),
+            ]),
+            "filtros_capa": opcoes("capa", [
+                ("todas", "Todas", total),
+                ("com", "Com capa", total_com_imagem),
+                ("sem", "Sem capa", numeros["sem_capa"]),
+            ]),
+            "filtros_categoria": opcoes("categoria", [
+                ("todas", "Todas", total),
+                *[
+                    (str(cat.id), cat.nome_categoria or "Sem nome", cat.total_brinquedos)
+                    for cat in categorias
+                ],
+            ]),
+            "ha_filtro": bool(busca) or any(
+                estado[chave] not in padroes
+                for chave in ("categoria", "loja", "capa")
+            ),
+            "limpar_filtros_url": request.path,
+            "query_sem_pagina": urlencode(pares_sem_pagina),
+            # "Ver no site": a página pública mora no site, e não aqui.
+            "site_publico": endereco_do_site(request).rstrip("/"),
         }
 
         response = render(
@@ -3495,7 +3597,19 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         )
 
     @staticmethod
-    def _parse_decimal(valor, nome_campo, limite=None):
+    def _parse_decimal(valor, nome_campo, limite=None, milhar=False):
+        """Número em português ("1.234,56", "4,7", "1234.5").
+
+        `milhar=True` (o preço): "18.000" sem vírgula é dezoito mil, como
+        se escreve no Brasil e como o campo de reais inteiros deixa passar
+        quando a pessoa digita o ponto do milhar e aperta Enter sem sair do
+        campo. Lido como 18.000 em inglês, virava R$ 18,00 sem ninguém
+        perceber. É a mesma regra de `sistema_interno.utils.decimal_br`.
+        Nas medidas e na avaliação o ponto continua sendo a vírgula ("1.25"
+        é um metro e vinte e cinco).
+        """
+        import re
+
         if valor is None or not str(valor).strip():
             return None
 
@@ -3513,7 +3627,9 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 .replace(".", "")
                 .replace(",", ".")
             )
-        elif normalizado.count(".") > 1:
+        elif normalizado.count(".") > 1 or (
+            milhar and re.fullmatch(r"[1-9]\d{0,2}\.\d{3}", normalizado)
+        ):
             normalizado = normalizado.replace(".", "")
 
         try:
@@ -3709,6 +3825,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             request.POST.get("valor_brinquedo"),
             "Valor",
             Decimal("99999999.99"),
+            milhar=True,
         )
         avaliacao = self._parse_decimal(
             request.POST.get("avaliacao"),
@@ -3731,11 +3848,25 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             Decimal("9999.99"),
         )
 
+        # A VOLTAGEM CABE EM 10 LETRAS (o campo do banco). "Não se aplica",
+        # que a lista oferecia, tem 13: no Postgres o salvar caía com
+        # DataError ("Erro: DataError" no topo do formulário). Brinquedo
+        # sem voltagem é justamente o que não usa energia -- a ficha do site
+        # esconde a linha --, então "Não se aplica" grava vazio.
+        voltz = (request.POST.get("voltz") or "").strip()
+        if voltz.casefold() in {"não se aplica", "nao se aplica"}:
+            voltz = ""
+        limite_voltz = Brinquedos._meta.get_field("voltz").max_length
+        if len(voltz) > limite_voltz:
+            raise ErroDeFormulario(
+                f"Voltagem: use no máximo {limite_voltz} caracteres."
+            )
+
         brinquedo.nome_brinquedo = nome
         brinquedo.descricao = descricao
         brinquedo.valor_brinquedo = preco
         brinquedo.avaliacao = avaliacao if avaliacao is not None else Decimal("0")
-        brinquedo.voltz = request.POST.get("voltz") or ""
+        brinquedo.voltz = voltz
         brinquedo.altura_m = altura
         brinquedo.largura_m = largura
         brinquedo.profundidade_m = profundidade
