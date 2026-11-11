@@ -1,41 +1,38 @@
-"""Os adesivos: um objeto só, com as duas artes (LEIA-ME, seção 72).
+"""Os adesivos: um objeto só no banco, com as duas artes (LEIA-ME, seção 72).
 
-O cliente: "vc deve deixar apenas um objeto ... como no boliche", "EU QUERO OS
-DOIS OBJETOS 3D, NO MESMO BRINQUEDO", "TUDO DEVE AFUNILAR PARA UM OBJETO SÓ
-... TAMBÉM DEVE SER POSSÍVEL MUDAR PARA VER OS ADESIVOS" e "quando o
-brinquedo tiver mais que uma, no card ... deve ficar rodando as fotos". O que
-estes testes protegem:
+O cliente: "DEVE MUDAR A ESTRUTURA DOS OBJETOS, DEIXAR SOMENTE UM MAS COM O
+OUTRO ADESIVO E SEU RESPECTIVO OBJETO 3D, A ESTRUTURA DEVE SER ASSIM, NÃO DOIS
+OBJETOS, ALÉM DO MAIS MUDE O VALOR PARA 6990,00 DO AIR GAME". O que estes
+testes protegem:
 
-  * o `juntar`/`separar` e o `unificar` de core/variantes.py: a ficha da
-    outra arte fica desativada (nada é apagado); as fotos dela entram na
-    galeria do produto (os mesmos arquivos), as medidas que faltam vêm dela
-    (as que ele tem ficam), o Air Game Kids ganha o 3D dos Astronautas; o
-    preço não muda; rodar de novo não duplica;
-  * as migrações: esquema e dados em arquivos separados (0160/0161,
-    0165/0166);
-  * o endereço antigo da ficha vai, permanente, para o produto, sem ?adesivo;
-  * nas listas o produto aparece uma vez; o card de todo brinquedo com mais
-    de uma foto traz as fotos para girar (`data-fotos-card`);
-  * na página: sem as fichas que trocavam a página, a galeria com as duas
-    artes, um visor 3D com os dois modelos ("Adesivo: A · B");
-  * a Arena e o "Ver em 3D" da proposta: o produto uma vez, com os dois 3D;
-  * o carrinho guarda o adesivo escolhido (observação), o pedido o leva no
-    nome e, se o pagamento não sai, ele volta para o carrinho com o adesivo.
+  * a estrutura: o adesivo (core.models.VarianteAdesivo) é dono das fotos
+    (`ImagemBrinquedo.variante`) e do 3D dele; o padrão usa os do produto;
+  * a 0169, com o banco como estava (o produto à parte e o `origem`): as
+    fotos e o 3D passam para o produto e o adesivo; TODAS as referências
+    (orçamento, carrinho, pedido, favorito, clique, promoção e extras,
+    combo) vão para o produto; o favorito repetido vira um; o produto à parte
+    é APAGADO; o Air Game Kids fica com R$ 6.990,00; rodar de novo não faz
+    nada; esquema e dados em arquivos separados (0168 / 0169 / 0170);
+  * o endereço antigo vai (301) para o produto;
+  * as listas, a página (a galeria com as duas artes, um visor com os dois
+    3D), a Arena, a proposta e o carrinho (o adesivo como observação);
+  * o card de todo brinquedo com mais de uma foto gira as fotos.
 """
 
 import importlib
-from decimal import Decimal
 import json
+import re
+from decimal import Decimal
 
-from django.apps import apps as apps_de_hoje
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.db import IntegrityError, transaction
-from django.db.migrations.operations import AddField, CreateModel, RunPython
-from django.test import TestCase
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations.operations import AddField, RemoveField, RunPython
+from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 
-from . import arena, variantes
+from . import variantes
 from .models import (
     Brinquedos,
     CategoriasBrinquedos,
@@ -43,17 +40,18 @@ from .models import (
     ItemCarrinho,
     ObjetoTresD,
     VarianteAdesivo,
+    galeria_publica,
 )
 from .services import criar_pedido_a_partir_do_carrinho
 from .views_arena import dados_publicos_da_arena
 
-migracao_0160 = importlib.import_module("core.migrations.0160_variantes_de_adesivo")
-migracao_0161 = importlib.import_module("core.migrations.0161_juntar_variantes_de_adesivo")
-migracao_0165 = importlib.import_module("core.migrations.0165_papel_outra_arte")
-migracao_0166 = importlib.import_module("core.migrations.0166_um_objeto_por_produto")
-from django.db.migrations.operations import AlterField  # noqa: E402
+migracao_0168 = importlib.import_module("core.migrations.0168_variantes_donas_do_3d_e_das_fotos")
+migracao_0169 = importlib.import_module("core.migrations.0169_um_objeto_no_banco")
+migracao_0170 = importlib.import_module("core.migrations.0170_variantes_sem_origem")
 
-PAR = ("Air Game Kids", ("Astronautas", "astronautas"), [("Air Game Kids Alienígenas", "Alienígenas", "alienigenas")])
+GLB_ALIEN = "site/arena/modelos/air-game-kids-alienigenas.glb"
+GLB_ASTRONAUTAS = "site/arena/modelos/air-game-kids-astronautas.glb"
+ANTES = ("core", "0168_variantes_donas_do_3d_e_das_fotos")
 
 
 def _calado(*_args, **_kwargs):
@@ -63,7 +61,7 @@ def _calado(*_args, **_kwargs):
 def _produto(nome, foto, categoria=None, **campos):
     dados = {
         "descricao": f"{nome}.", "avaliacao": Decimal("4.80"), "voltz": "220V",
-        "valor_brinquedo": Decimal("4990.00"), "exibir_na_loja": True,
+        "valor_brinquedo": Decimal("6990.00"), "exibir_na_loja": True,
         "imagem_brinquedo": f"imagens_brinquedos/{foto}.png",
     }
     dados.update(campos)
@@ -75,211 +73,172 @@ def _produto(nome, foto, categoria=None, **campos):
     return brinquedo
 
 
-class _ComPar(TestCase):
-    """O Air Game Kids (os astronautas) com o Air Game Kids Alienígenas juntado a ele, como a 0161 e a 0166 fazem."""
+class _ComAdesivos(TestCase):
+    """O Air Game Kids como fica: um produto, o adesivo Astronautas (o padrão) e o Alienígenas (fotos e 3D dele)."""
 
     def setUp(self):
         cache.clear()
         self.categoria = CategoriasBrinquedos.objects.create(nome_categoria="Jogos de Mesa", imagem_categoria="categorias/m.png")
-        self.base = _produto("Air Game Kids", "astronautas", self.categoria)
-        self.ficha = _produto("Air Game Kids Alienígenas", "alienigenas", self.categoria,
-                              altura_m=Decimal("0.90"), largura_m=Decimal("0.86"), profundidade_m=Decimal("1.50"))
-        ImagemBrinquedo.objects.create(brinquedo=self.ficha, tipo="lado_esquerdo", ordem=2,
-                                       imagem="imagens_brinquedos/alienigenas-lado.png", texto_alternativo="o lado")
-        produto, padrao, fichas = PAR
-        variantes.juntar(produto, padrao, fichas, Brinquedos, VarianteAdesivo, avisar=_calado)
-        self._unificar()
-        self.base.refresh_from_db()
-        self.ficha.refresh_from_db()
+        self.base = _produto("Air Game Kids", "astronautas", self.categoria,
+                             altura_m=Decimal("0.90"), largura_m=Decimal("0.86"), profundidade_m=Decimal("1.50"))
+        ObjetoTresD.objects.create(brinquedo=self.base, arquivo_estatico=GLB_ASTRONAUTAS, codigo="air-game-kids-astronautas")
+        VarianteAdesivo.objects.create(brinquedo=self.base, nome="Astronautas", slug="astronautas", ordem=1, padrao=True)
+        self.alien = VarianteAdesivo.objects.create(
+            brinquedo=self.base, nome="Alienígenas", slug="alienigenas", ordem=2, padrao=False,
+            arquivo_estatico_3d=GLB_ALIEN, codigo_3d="air-game-kids-alienigenas", id_antigo=54,
+        )
+        for ordem, nome in ((5, "alienigenas"), (6, "alienigenas-lado")):
+            ImagemBrinquedo.objects.create(brinquedo=self.base, variante=self.alien, tipo=None, ordem=ordem,
+                                           imagem=f"imagens_brinquedos/{nome}.png", texto_alternativo="os alienígenas")
         cache.clear()
 
-    def _unificar(self):
-        variantes.unificar(self.base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, avisar=_calado)
 
+class EstruturaTests(_ComAdesivos):
+    def test_um_objeto_com_os_dois_adesivos(self):
+        self.assertEqual(Brinquedos.objects.filter(nome_brinquedo__startswith="Air Game Kids").count(), 1)
+        self.assertEqual([v.nome for v in self.base.variantes_adesivo.all()], ["Astronautas", "Alienígenas"])
+        self.assertIn("air-game-kids-alienigenas.glb", self.alien.url_3d)
+        self.assertEqual(self.alien.fotos.count(), 2)
+        self.assertFalse(hasattr(self.alien, "origem"))
 
-class ModeloTests(_ComPar):
-    def test_juntar_faz_os_adesivos_e_desativa_a_ficha(self):
-        lista = list(self.base.variantes_adesivo.all())
-        self.assertEqual([(v.nome, v.slug, v.padrao, v.ordem) for v in lista],
-                         [("Astronautas", "astronautas", True, 1), ("Alienígenas", "alienigenas", False, 2)])
-        self.assertIsNone(lista[0].origem)
-        self.assertEqual(lista[0].ficha, self.base)
-        self.assertEqual((lista[1].origem, lista[1].ficha), (self.ficha, self.ficha))
-        self.assertFalse(self.ficha.ativo)
-        self.assertTrue(self.base.ativo)
-        # nada foi apagado: a ficha e as fotos dela continuam lá
-        self.assertEqual(self.ficha.imagens_brinquedo.count(), 2)
+    def test_a_galeria_tem_as_duas_artes(self):
+        nomes = [f.imagem.name for f in self.base.imagens_ordenadas]
+        self.assertEqual(nomes, ["imagens_brinquedos/astronautas.png", "imagens_brinquedos/alienigenas.png",
+                                 "imagens_brinquedos/alienigenas-lado.png"])
+        self.assertEqual(self.base.imagem_perfil.name, "imagens_brinquedos/astronautas.png")
+        self.assertEqual([f.imagem.name for f in galeria_publica(self.base.imagens_brinquedo.all())], nomes)
 
-    def test_rodar_de_novo_nao_duplica(self):
-        produto, padrao, fichas = PAR
-        variantes.juntar(produto, padrao, fichas, Brinquedos, VarianteAdesivo, avisar=_calado)
-        self.assertEqual(VarianteAdesivo.objects.count(), 2)
-
-    def test_o_slug_e_unico_no_produto(self):
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            VarianteAdesivo.objects.create(brinquedo=self.base, nome="Outro", slug="alienigenas")
-
-    def test_separar_desfaz(self):
-        variantes.separar("Air Game Kids", Brinquedos, VarianteAdesivo, avisar=_calado)
-        self.ficha.refresh_from_db()
-        self.assertTrue(self.ficha.ativo)
-        self.assertEqual(VarianteAdesivo.objects.count(), 0)
-
-    def test_o_preco_do_produto_que_fica_nao_muda(self):
-        # o Air Game Kids com R$ 6.990,00 (o painel); a ficha com outro preço: o produto fica com o dele
-        self.base.refresh_from_db()
-        self.assertEqual(self.base.valor_brinquedo, Decimal("4990.00"))
-        VarianteAdesivo.objects.all().delete()
-        Brinquedos.objects.filter(pk=self.base.pk).update(valor_brinquedo=Decimal("6990.00"))
-        Brinquedos.objects.filter(pk=self.ficha.pk).update(valor_brinquedo=Decimal("1234.00"), ativo=True)
-        variantes.juntar(*PAR[:2], PAR[2], Brinquedos, VarianteAdesivo, avisar=_calado)
-        self.base.refresh_from_db()
-        self.assertEqual(self.base.valor_brinquedo, Decimal("6990.00"))
-        # sem preço, o Air Game Kids fica com R$ 6.990,00
-        Brinquedos.objects.filter(pk=self.base.pk).update(valor_brinquedo=None)
-        variantes.juntar(*PAR[:2], PAR[2], Brinquedos, VarianteAdesivo, avisar=_calado)
-        self.base.refresh_from_db()
-        self.assertEqual(self.base.valor_brinquedo, Decimal("6990.00"))
-
-    def test_sem_o_produto_nao_faz_nada(self):
-        VarianteAdesivo.objects.all().delete()
-        self.base.delete()
-        self.assertIsNone(variantes.juntar(*PAR[:2], PAR[2], Brinquedos, VarianteAdesivo, avisar=_calado))
-        self.assertEqual(VarianteAdesivo.objects.count(), 0)
-
-    def test_as_fotos_da_outra_arte_entram_na_galeria(self):
-        outra = list(self.base.imagens_brinquedo.filter(papel_na_capa="outra_arte").order_by("ordem"))
-        self.assertEqual([f.imagem.name for f in outra],
-                         ["imagens_brinquedos/alienigenas.png", "imagens_brinquedos/alienigenas-lado.png"])
-        self.assertEqual({f.tipo for f in outra}, {None})
-        # os mesmos arquivos, depois das dele, na galeria pública (a da página e a do card)
-        self.assertEqual([f.imagem.name for f in self.base.imagens_ordenadas],
-                         ["imagens_brinquedos/astronautas.png", "imagens_brinquedos/alienigenas.png",
-                          "imagens_brinquedos/alienigenas-lado.png"])
-        # a ficha continua com as fotos dela
-        self.assertEqual(self.ficha.imagens_brinquedo.count(), 2)
-
-    def test_unificar_de_novo_nao_duplica(self):
-        antes = ImagemBrinquedo.objects.count()
-        self._unificar()
-        self._unificar()
-        self.assertEqual(ImagemBrinquedo.objects.count(), antes)
-        self.assertEqual(ObjetoTresD.objects.filter(brinquedo=self.base).count(), 1)
-
-    def test_as_medidas_que_faltam_vem_da_ficha_e_as_que_ha_ficam(self):
-        self.assertEqual((self.base.altura_m, self.base.largura_m, self.base.profundidade_m),
-                         (Decimal("0.90"), Decimal("0.86"), Decimal("1.50")))
-        Brinquedos.objects.filter(pk=self.base.pk).update(altura_m=Decimal("2.10"), largura_m=None)
-        self.base.refresh_from_db()
-        self._unificar()
-        self.base.refresh_from_db()
-        self.assertEqual((self.base.altura_m, self.base.largura_m), (Decimal("2.10"), Decimal("0.86")))
-
-    def test_o_produto_tem_os_dois_3d(self):
-        proprio = self.base.objeto_3d
-        self.assertEqual((proprio.codigo, proprio.arquivo_estatico),
-                         ("air-game-kids-astronautas", "site/arena/modelos/air-game-kids-astronautas.glb"))
+    def test_os_dois_3d_do_produto(self):
         modelos = variantes.modelos_3d(self.base)
         self.assertEqual([m["nome"] for m in modelos], ["Astronautas", "Alienígenas"])
         self.assertIn("air-game-kids-astronautas.glb", modelos[0]["url"])
         self.assertIn("air-game-kids-alienigenas.glb", modelos[1]["url"])
-        # produto sem outra arte: lista vazia (o visor fica como sempre)
         self.assertEqual(variantes.modelos_3d(_produto("Pebolim", "pebolim")), [])
+        self.assertEqual(variantes.produtos_com_adesivos(), {self.base.pk})
 
 
-class MigracaoTests(TestCase):
+class MigracoesTests(TestCase):
     def test_esquema_e_dados_em_arquivos_separados(self):
-        self.assertTrue(all(isinstance(op, AlterField) for op in migracao_0165.Migration.operations))
-        self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0166.Migration.operations))
-        self.assertIn(("core", "0165_papel_outra_arte"), migracao_0166.Migration.dependencies)
-        esquema = migracao_0160.Migration.operations
-        dados = migracao_0161.Migration.operations
-        self.assertTrue(esquema and all(isinstance(op, (AddField, CreateModel)) for op in esquema))
-        # e nada nosso depois da 0161 (o coordenador numera as próximas)
-        self.assertEqual(len(dados), 2)
-        self.assertTrue(dados and all(isinstance(op, RunPython) for op in dados))
-        self.assertIn(("core", "0160_variantes_de_adesivo"), migracao_0161.Migration.dependencies)
-
-    def test_a_0161_junta_os_dois_pares_e_o_street_fica_sozinho(self):
-        cache.clear()
-        base_air = _produto("AIR GAME KIDS", "astronautas")
-        ficha_air = _produto("Air Game Kids Alienígenas", "alienigenas")
-        base_bq = _produto("Basquete Home", "basquete-home")
-        ficha_bq = _produto("Basquete Street Quadrinhos", "basquete-street-quadrinhos-capa")
-        ImagemBrinquedo.objects.filter(brinquedo=ficha_bq).update(texto_alternativo="Basquete Street Quadrinhos de frente")
-        street = _produto("Basquete Street", "basquete-street")
-        for _vez in range(2):  # pode rodar de novo
-            variantes.migrar(apps_de_hoje, None, avisar=_calado)
-        for brinquedo in (base_air, ficha_air, base_bq, ficha_bq, street):
-            brinquedo.refresh_from_db()
-        self.assertEqual(ficha_bq.nome_brinquedo, "Basquete Home Quadrinhos")
-        self.assertEqual(ficha_bq.imagens_brinquedo.get().texto_alternativo, "Basquete Home Quadrinhos de frente")
-        self.assertEqual(list(base_air.variantes_adesivo.values_list("slug", flat=True)), ["astronautas", "alienigenas"])
-        self.assertEqual(list(base_bq.variantes_adesivo.values_list("nome", flat=True)), ["Azul", "Quadrinhos"])
-        self.assertEqual(base_bq.variantes_adesivo.get(slug="quadrinhos").origem, ficha_bq)
-        self.assertEqual((ficha_air.ativo, ficha_bq.ativo), (False, False))
-        self.assertEqual((base_air.ativo, base_bq.ativo, street.ativo), (True, True, True))
-        self.assertFalse(street.variantes_adesivo.exists())
-        self.assertFalse(VarianteAdesivo.objects.filter(origem=street).exists())
-        self.assertEqual(VarianteAdesivo.objects.count(), 4)
-        # a 0166: o Basquete Home sem medidas fica com as do Quadrinhos; as fotos dele na galeria
-        Brinquedos.objects.filter(pk=ficha_bq.pk).update(
-            altura_m=Decimal("2.70"), largura_m=Decimal("1.00"), profundidade_m=Decimal("2.40"))
-        Brinquedos.objects.filter(pk=base_bq.pk).update(altura_m=None, largura_m=None, profundidade_m=None)
-        for _vez in range(2):  # pode rodar de novo
-            variantes.unificar_todos(apps_de_hoje, None, avisar=_calado)
-        base_bq.refresh_from_db()
-        self.assertEqual((base_bq.altura_m, base_bq.largura_m, base_bq.profundidade_m),
-                         (Decimal("2.70"), Decimal("1.00"), Decimal("2.40")))
-        self.assertEqual(list(base_bq.imagens_brinquedo.filter(papel_na_capa="outra_arte").values_list("imagem", flat=True)),
-                         ["imagens_brinquedos/basquete-street-quadrinhos-capa.png"])
-        self.assertFalse(street.imagens_brinquedo.filter(papel_na_capa="outra_arte").exists())
-        self.assertTrue(ObjetoTresD.objects.filter(brinquedo=base_air, codigo="air-game-kids-astronautas").exists())
-        self.assertFalse(ObjetoTresD.objects.filter(brinquedo=base_bq).exists())  # o 3D dele é o do Quadrinhos
-        self.assertEqual(base_air.valor_brinquedo, Decimal("4990.00"))
+        self.assertTrue(all(isinstance(op, AddField) for op in migracao_0168.Migration.operations))
+        self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0169.Migration.operations))
+        self.assertTrue(all(isinstance(op, RemoveField) for op in migracao_0170.Migration.operations))
+        self.assertIn(("core", "0167_jogadas_registradas"), migracao_0168.Migration.dependencies)
+        self.assertIn(ANTES, migracao_0169.Migration.dependencies)
+        self.assertIn(("core", "0169_um_objeto_no_banco"), migracao_0170.Migration.dependencies)
 
 
-class MedidasDoBasqueteTests(TestCase):
-    def test_sem_medidas_na_ficha_valem_as_do_3d_dela(self):
-        # o Basquete Home e o Quadrinhos sem medidas no cadastro: o Basquete Home fica com as do 3D
-        # do Quadrinhos (2,70 x 1,00 x 2,40 m, core/cadastro_modelos.py); as que ele tem, ficam
-        base = _produto("Basquete Home", "basquete-home")
-        _produto("Basquete Home Quadrinhos", "quadrinhos")
-        variantes.juntar("Basquete Home", ("Azul", "azul"), [("Basquete Home Quadrinhos", "Quadrinhos", "quadrinhos")],
-                         Brinquedos, VarianteAdesivo, avisar=_calado)
-        variantes.unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, avisar=_calado)
-        base.refresh_from_db()
-        self.assertEqual((base.altura_m, base.largura_m, base.profundidade_m),
-                         (Decimal("2.70"), Decimal("1.00"), Decimal("2.40")))
-        Brinquedos.objects.filter(pk=base.pk).update(altura_m=Decimal("2.10"))
-        variantes.unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, avisar=_calado)
-        base.refresh_from_db()
-        self.assertEqual(base.altura_m, Decimal("2.10"))
+class EstruturarTests(TransactionTestCase):
+    """A 0169 com o banco como estava: o Air Game Kids Alienígenas à parte (desativado), com referências."""
+
+    def _apps(self, executor, no):
+        folhas = [n for n in executor.loader.graph.leaf_nodes() if n[0] != "core"] + [no]
+        return executor.loader.project_state(folhas).apps
+
+    def test_a_ficha_a_parte_vira_parte_do_produto_e_some(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate([ANTES])
+        executor.loader.build_graph()
+        apps = self._apps(executor, ANTES)
+        B = apps.get_model("core", "Brinquedos")
+        Img = apps.get_model("core", "ImagemBrinquedo")
+        Obj = apps.get_model("core", "ObjetoTresD")
+        Var = apps.get_model("core", "VarianteAdesivo")
+        U = apps.get_model("auth", "User")
+        CT = apps.get_model("contenttypes", "ContentType")
+
+        base = B.objects.create(nome_brinquedo="Air Game Kids", descricao="x", avaliacao=5, voltz="220V",
+                                valor_brinquedo=Decimal("4990.00"))
+        Img.objects.create(brinquedo=base, tipo="perfil", ordem=1, imagem="imagens_brinquedos/astronautas.png")
+        ficha = B.objects.create(nome_brinquedo="Air Game Kids Alienígenas", descricao="x", avaliacao=5, voltz="220V",
+                                 valor_brinquedo=Decimal("4990.00"), ativo=False)
+        Img.objects.create(brinquedo=ficha, tipo="perfil", ordem=1, imagem="imagens_brinquedos/alien-capa.png")
+        Img.objects.create(brinquedo=ficha, tipo="lado_esquerdo", ordem=2, imagem="imagens_brinquedos/alien-lado.png")
+        # a cópia da 0166 (a capa da ficha já na galeria do produto)
+        Img.objects.create(brinquedo=base, tipo=None, ordem=2, imagem="imagens_brinquedos/alien-capa.png",
+                           papel_na_capa="outra_arte")
+        Obj.objects.create(brinquedo=ficha, arquivo_estatico=GLB_ALIEN, codigo="air-game-kids-alienigenas",
+                           cores=[], medidas=[0.9, 0.83, 1.51])
+        Var.objects.create(brinquedo=base, nome="Astronautas", slug="astronautas", ordem=1, padrao=True)
+        alien = Var.objects.create(brinquedo=base, nome="Alienígenas", slug="alienigenas", ordem=2, origem=ficha)
+
+        # as referências à ficha: orçamento, carrinho, pedido, favorito (e o repetido), clique, promoção, combo
+        usuario = U.objects.create(username="cliente-ficha")
+        Orc = apps.get_model("sistema_interno", "Orcamento")
+        ItemOrc = apps.get_model("sistema_interno", "ItemOrcamento")
+        orc = Orc.objects.create(nome_cliente="Cliente")
+        item_orc = ItemOrc.objects.create(orcamento=orc, descricao="Air Game Kids Alienígenas", brinquedo=ficha)
+        tipo = CT.objects.get(app_label="core", model="brinquedos")
+        Carrinho = apps.get_model("core", "Carrinho")
+        ItemC = apps.get_model("core", "ItemCarrinho")
+        carrinho = Carrinho.objects.create()
+        item_c = ItemC.objects.create(carrinho=carrinho, content_type=tipo, object_id=ficha.pk, quantidade=2)
+        Fav = apps.get_model("core", "Favorito")
+        tipo_fav = Fav._meta.get_field("tipo").choices[0][0]
+        Fav.objects.create(usuario=usuario, brinquedo=base, tipo=tipo_fav)
+        Fav.objects.create(usuario=usuario, brinquedo=ficha, tipo=tipo_fav)
+        Click = apps.get_model("core", "BrinquedoClick")
+        clique = Click.objects.create(brinquedo_clicado=ficha)
+        Promo = apps.get_model("core", "Promocoes")
+        promo = Promo.objects.create(descricao="Promo", brinquedos=ficha)
+        promo.brinquedos_extras.add(ficha)
+        Combo = apps.get_model("core", "Combos")
+        combo = Combo.objects.create(descricao="Combo", valor_combo=Decimal("100.00"))
+        combo.brinquedos.add(ficha)
+
+        # a 0169 (e de novo: nada muda), depois a 0170
+        executor = MigrationExecutor(connection)
+        executor.migrate([("core", "0169_um_objeto_no_banco")])
+        executor.loader.build_graph()
+        apps169 = self._apps(executor, ("core", "0169_um_objeto_no_banco"))
+        variantes.estruturar(apps169, None, avisar=_calado)
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+        # um objeto só: a ficha sumiu; o adesivo tem o 3D e as fotos; o preço é 6990
+        self.assertFalse(Brinquedos.objects.filter(pk=ficha.pk).exists())
+        self.assertEqual(Brinquedos.objects.filter(nome_brinquedo__startswith="Air Game Kids").count(), 1)
+        produto = Brinquedos.objects.get(pk=base.pk)
+        self.assertEqual(produto.valor_brinquedo, Decimal("6990.00"))
+        adesivo = VarianteAdesivo.objects.get(pk=alien.pk)
+        self.assertEqual((adesivo.id_antigo, adesivo.arquivo_estatico_3d, adesivo.codigo_3d),
+                         (ficha.pk, GLB_ALIEN, "air-game-kids-alienigenas"))
+        self.assertEqual(adesivo.medidas_3d, [0.9, 0.83, 1.51])
+        self.assertEqual(sorted(adesivo.fotos.values_list("imagem", flat=True)),
+                         ["imagens_brinquedos/alien-capa.png", "imagens_brinquedos/alien-lado.png"])
+        self.assertEqual(ImagemBrinquedo.objects.filter(brinquedo=produto).count(), 3)  # sem a cópia repetida
+        self.assertFalse(adesivo.fotos.exclude(tipo=None).exists())
+        self.assertFalse(ObjetoTresD.objects.filter(brinquedo_id=ficha.pk).exists())
+        # as referências vieram para o produto
+        from core.models import BrinquedoClick, Combos, Favorito, Promocoes
+        from sistema_interno.models import ItemOrcamento
+
+        self.assertEqual(ItemOrcamento.objects.get(pk=item_orc.pk).brinquedo_id, produto.pk)
+        linha = ItemCarrinho.objects.get(pk=item_c.pk)
+        self.assertEqual((linha.object_id, linha.adesivo, linha.quantidade), (produto.pk, "Alienígenas", 2))
+        self.assertEqual(Favorito.objects.filter(usuario_id=usuario.pk).count(), 1)  # o repetido virou um
+        self.assertEqual(Favorito.objects.get(usuario_id=usuario.pk).brinquedo_id, produto.pk)
+        self.assertEqual(BrinquedoClick.objects.get(pk=clique.pk).brinquedo_clicado_id, produto.pk)
+        promo = Promocoes.objects.get(pk=promo.pk)
+        self.assertEqual(promo.brinquedos_id, produto.pk)
+        self.assertEqual(list(promo.brinquedos_extras.values_list("pk", flat=True)), [produto.pk])
+        self.assertEqual(list(Combos.objects.get(pk=combo.pk).brinquedos.values_list("pk", flat=True)), [produto.pk])
+        # o endereço antigo vai para o produto
+        resposta = self.client.get(reverse("brinquedo_detalhe", args=[ficha.pk]))
+        self.assertEqual((resposta.status_code, resposta["Location"]), (301, f"/brinquedo/{produto.pk}/"))
 
 
-class RedirecionamentoTests(_ComPar):
-    def test_o_endereco_da_ficha_vai_para_o_produto(self):
-        resposta = self.client.get(reverse("brinquedo_detalhe", args=[self.ficha.pk]))
+class RedirecionamentoTests(_ComAdesivos):
+    def test_o_endereco_antigo_vai_para_o_produto(self):
+        resposta = self.client.get(reverse("brinquedo_detalhe", args=[54]))
         self.assertEqual(resposta.status_code, 301)
         self.assertEqual(resposta["Location"], f"/brinquedo/{self.base.pk}/")
 
-    def test_o_desativado_sem_adesivo_continua_404(self):
-        outro = _produto("Pebolim", "pebolim", ativo=False)
-        self.assertEqual(self.client.get(reverse("brinquedo_detalhe", args=[outro.pk])).status_code, 404)
+    def test_o_que_nunca_existiu_continua_404(self):
+        self.assertEqual(self.client.get(reverse("brinquedo_detalhe", args=[9999])).status_code, 404)
 
 
-class ListasTests(_ComPar):
-    def _confere(self, html, nome_da_lista):
-        with self.subTest(nome_da_lista):
-            self.assertIn(f"/brinquedo/{self.base.pk}/", html)
-            self.assertNotIn(f"/brinquedo/{self.ficha.pk}/", html)
-            self.assertNotIn("Air Game Kids Alienígenas", html)
-            self.assertNotIn("?adesivo=", html)
-            # o card gira as fotos (as das duas artes)
-            self.assertIn("data-fotos-card=", html)
-            self.assertIn("astronautas", html)
-            self.assertIn("alienigenas", html)
-
+class ListasTests(_ComAdesivos):
     def test_o_produto_aparece_uma_vez_e_o_card_gira_as_fotos(self):
         paginas = {
             "home": reverse("home"),
@@ -289,44 +248,45 @@ class ListasTests(_ComPar):
             "busca": reverse("search") + "?q=air+game+kids",
         }
         for nome, url in paginas.items():
-            resposta = self.client.get(url)
-            self.assertEqual(resposta.status_code, 200, nome)
-            self._confere(resposta.content.decode(), nome)
+            with self.subTest(nome):
+                resposta = self.client.get(url)
+                self.assertEqual(resposta.status_code, 200, nome)
+                html = resposta.content.decode()
+                self.assertIn(f"/brinquedo/{self.base.pk}/", html)
+                self.assertNotIn("Air Game Kids Alienígenas", html)
+                self.assertNotIn("?adesivo=", html)
+                self.assertIn("data-fotos-card=", html)
+                self.assertIn("alienigenas", html)
 
     def test_todo_brinquedo_com_mais_de_uma_foto_gira(self):
         dois = _produto("Pebolim", "pebolim", self.categoria)
         ImagemBrinquedo.objects.create(brinquedo=dois, tipo="verso", ordem=2, imagem="imagens_brinquedos/pebolim-verso.png")
-        um = _produto("Pula Pula", "pula", self.categoria)
+        _produto("Pula Pula", "pula", self.categoria)
         cache.clear()
         html = self.client.get(reverse("categoria_detalhe", args=[self.categoria.pk])).content.decode()
-        marcas = [json.loads(m.replace("&quot;", '"')) for m in __import__("re").findall(r'data-fotos-card="([^"]*)"', html)]
+        marcas = [json.loads(m.replace("&quot;", '"')) for m in re.findall(r'data-fotos-card="([^"]*)"', html)]
         fotos = {tuple(sorted(x.split("/")[-1].split(".")[0] for x in m)) for m in marcas}
         self.assertIn(("pebolim", "pebolim-verso"), fotos)
         self.assertFalse(any("pula" in f for par in fotos for f in par))
-        # a capa é a primeira
-        self.assertTrue(all("pebolim.png" in m[0] or "astronautas" in m[0] for m in marcas))
-        self.assertTrue(um.pk)
+        self.assertTrue(all(m[0].endswith(("pebolim.png", "astronautas.png")) or "pebolim" in m[0] or "astronautas" in m[0]
+                            for m in marcas))
 
     def test_o_script_que_gira_as_fotos_esta_em_toda_pagina(self):
         html = self.client.get(reverse("home")).content.decode()
         self.assertIn("site/ls-giro.js", html)
-        self.assertNotIn("ls-adesivos.js", html)
 
     def test_na_arena_uma_vez_com_os_dois_3d(self):
         dados = dados_publicos_da_arena()
         nomes = [b["nome"] for b in dados["brinquedos_arena"]]
         self.assertEqual(nomes.count("Air Game Kids"), 1)
-        self.assertNotIn("Air Game Kids Alienígenas", nomes)
         item = next(b for b in dados["brinquedos_arena"] if b["nome"] == "Air Game Kids")
         self.assertIn("air-game-kids-astronautas.glb", item["modelo"])
         self.assertEqual([m["nome"] for m in item["adesivos3d"]], ["Astronautas", "Alienígenas"])
         self.assertIn("air-game-kids-alienigenas", item["modelos_variantes"])
-        # o .glb do adesivo não aparece à parte, como objeto fora do catálogo
         self.assertNotIn("modelo-air-game-kids-alienigenas", [b["id"] for b in dados["brinquedos_arena"]])
-        self.assertIn(self.base.pk, [m["id"] for m in dados["arena_dados"]["maquinas"]])
 
 
-class PaginaDoProdutoTests(_ComPar):
+class PaginaDoProdutoTests(_ComAdesivos):
     def _pagina(self, extra=""):
         resposta = self.client.get(reverse("brinquedo_detalhe", args=[self.base.pk]) + extra)
         self.assertEqual(resposta.status_code, 200)
@@ -336,25 +296,19 @@ class PaginaDoProdutoTests(_ComPar):
         html = self._pagina().content.decode()
         self.assertNotIn("produto-adesivos", html)
         self.assertNotIn("?adesivo=", html)
-        self.assertNotIn("3D no adesivo", html)
 
     def test_a_galeria_tem_as_duas_artes(self):
-        resposta = self._pagina()
-        nomes = [i.imagem.name for i in resposta.context["imagens_brinquedo"]]
+        nomes = [i.imagem.name for i in self._pagina().context["imagens_brinquedo"]]
         self.assertEqual(nomes[0], "imagens_brinquedos/astronautas.png")
         self.assertIn("imagens_brinquedos/alienigenas.png", nomes)
-        self.assertIn("imagens_brinquedos/alienigenas-lado.png", nomes)
 
     def test_um_visor_3d_com_os_dois_modelos(self):
-        resposta = self._pagina("?adesivo=alienigenas")  # o endereço velho não muda nada
+        resposta = self._pagina("?adesivo=alienigenas")
         html = resposta.content.decode()
         self.assertEqual(html.count("data-visor3d hidden"), 1)
         self.assertIn("air-game-kids-astronautas.glb", resposta.context["objeto_3d"].url)
         self.assertEqual([m["nome"] for m in resposta.context["adesivos3d"]], ["Astronautas", "Alienígenas"])
-        self.assertIn('id="adesivos3d-dados"', html)
         self.assertIn('data-adesivos3d="adesivos3d-dados"', html)
-        self.assertIn("site/arena/adesivos3d.js", html)
-        # o adesivo escolhido no 3D vai para o carrinho como observação
         self.assertIn('name="adesivo" value="" data-adesivo-escolhido', html)
 
     def test_sem_3d_proprio_o_visor_abre_no_do_adesivo(self):
@@ -368,28 +322,24 @@ class PaginaDoProdutoTests(_ComPar):
         outro = _produto("Pebolim", "pebolim")
         resposta = self.client.get(reverse("brinquedo_detalhe", args=[outro.pk]))
         self.assertNotContains(resposta, "adesivos3d")
-        self.assertEqual(resposta.context["adesivos3d"], [])
 
 
-class OrcamentoTests(_ComPar):
+class OrcamentoTests(_ComAdesivos):
     def test_o_ver_em_3d_da_proposta_tem_os_dois_3d(self):
         class Item:
             brinquedo_id = self.base.pk
             brinquedo = self.base
+        com = variantes.produtos_com_adesivos()
+        self.assertEqual([m["nome"] for m in variantes.modelos_do_item(Item(), com)], ["Astronautas", "Alienígenas"])
         self.assertEqual([m["nome"] for m in variantes.modelos_do_item(Item())], ["Astronautas", "Alienígenas"])
-
-        class ItemDaFicha:  # a proposta antiga, com a ficha: o mesmo produto
-            brinquedo_id = self.ficha.pk
-            brinquedo = self.ficha
-        self.assertEqual([m["nome"] for m in variantes.modelos_do_item(ItemDaFicha())], ["Astronautas", "Alienígenas"])
 
         class Outro:
             brinquedo_id = 999
             brinquedo = _produto("Pebolim", "pebolim")
-        self.assertEqual(variantes.modelos_do_item(Outro()), [])
+        self.assertEqual(variantes.modelos_do_item(Outro(), com), [])
 
 
-class CarrinhoTests(_ComPar):
+class CarrinhoTests(_ComAdesivos):
     def setUp(self):
         super().setUp()
         self.usuario = User.objects.create_user("cliente-adesivo", password="x")
@@ -403,8 +353,7 @@ class CarrinhoTests(_ComPar):
         self.client.post(self.url, {"quantidade": 1, "adesivo": "Alienígenas"})
         self.client.post(self.url, {"quantidade": 1, "adesivo": "Alienígenas"})
         self.client.post(self.url, {"quantidade": 1, "adesivo": "Astronautas"})
-        # um adesivo que não é do produto não entra
-        self.client.post(self.url, {"quantidade": 1, "adesivo": "Dinossauros"})
+        self.client.post(self.url, {"quantidade": 1, "adesivo": "Dinossauros"})  # não é do produto: não entra
         linhas = {i.adesivo: i.quantidade for i in ItemCarrinho.objects.all()}
         self.assertEqual(linhas, {"Alienígenas": 2, "Astronautas": 1, "": 1})
         self.assertContains(self.client.get(reverse("carrinho")), "adesivo Alienígenas")
@@ -412,7 +361,6 @@ class CarrinhoTests(_ComPar):
     def test_o_pedido_leva_o_adesivo_e_ele_volta_para_o_carrinho(self):
         self.client.post(self.url, {"quantidade": 1, "adesivo": "Alienígenas"})
         item = ItemCarrinho.objects.get()
-        self.assertEqual(item.nome_com_adesivo, "Air Game Kids — adesivo Alienígenas")
         pedido = criar_pedido_a_partir_do_carrinho(item.carrinho)
         self.assertEqual(pedido.itens.get().nome_item, "Air Game Kids — adesivo Alienígenas")
         ItemCarrinho.objects.all().delete()

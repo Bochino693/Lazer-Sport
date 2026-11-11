@@ -133,10 +133,11 @@ def itens_em_3d(orcamento):
 def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     """Dados compartilhados pela página pública e pela prévia interna."""
     itens = list(orcamento.itens.all())
+    com_adesivos = variantes.produtos_com_adesivos()
     for item in itens:
         item.modelo_3d = modelo_3d_do_item(item)
         # os adesivos (LEIA-ME 72): o produto é um só, com um 3D por adesivo para trocar no "Ver em 3D"
-        modelos = variantes.modelos_do_item(item)
+        modelos = variantes.modelos_do_item(item, com_adesivos)
         item.adesivos3d = json.dumps([{"nome": m["nome"], "url": m["url"]} for m in modelos]) if modelos else ""
         if not item.modelo_3d and modelos:
             item.modelo_3d = modelos[0]["url"]
