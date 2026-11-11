@@ -418,7 +418,7 @@
     const updateCounter = () => {
         const total = activeExistingCount() + projectImages.files.length;
         imageCounter.textContent = `${total} de ${maximumImages} imagens`;
-        imageCounter.style.color = total > maximumImages ? "#FF9AAA" : "";
+        imageCounter.style.color = total > maximumImages ? "var(--red-claro)" : "";
         return total;
     };
 

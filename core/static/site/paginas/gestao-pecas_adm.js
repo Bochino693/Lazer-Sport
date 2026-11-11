@@ -92,7 +92,7 @@
     galeria.innerHTML = "";
     if (!imagens.length) {
       galeria.innerHTML =
-        '<span style="color:#A2917A;font-size:.72rem">Sem fotos.</span>';
+        '<span style="color:var(--muted);font-size:.72rem">Sem fotos.</span>';
       return;
     }
     imagens.forEach(function (foto) {

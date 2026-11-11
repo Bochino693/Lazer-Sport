@@ -15,7 +15,7 @@
 .dashboard-filters{
     display:flex;
     gap:10px;
-    background:rgba(255,255,255,0.04);
+    background:rgba(var(--verniz-rgb),0.04);
     padding:6px;
     border-radius:12px;
     backdrop-filter:blur(6px);
@@ -27,20 +27,20 @@
     text-decoration:none;
     font-size:13px;
     font-weight:600;
-    color:#E7DDCB;
+    color:var(--text-2);
     background:transparent;
     transition:.25s;
 }
 
 .filter-btn:hover{
-    background:rgba(242, 169, 59, .15);
-    color:#FCF8F1;
+    background:rgba(var(--acento-rgb),.15);
+    color:var(--text);
 }
 
 .filter-btn.active{
-    background:linear-gradient(135deg,#F2A93B,#F2A93B);
+    background:linear-gradient(135deg,var(--acento),var(--acento));
     color:white;
-    box-shadow:0 0 12px rgba(242, 169, 59, .45);
+    box-shadow:0 0 12px rgba(var(--acento-rgb),.45);
 }
 
 /* CARD HOVER */
@@ -59,7 +59,7 @@
 }
 
 .stats-table tr:hover{
-    background:rgba(255,255,255,.04);
+    background:rgba(var(--verniz-rgb),.04);
 }
 
 /* BLOCO CRESCIMENTO */
@@ -69,18 +69,18 @@
 
 .growth-table td{
     padding:8px 6px;
-    border-bottom:1px solid rgba(44, 37, 27, .05);
+    border-bottom:1px solid rgba(var(--muted-rgb),.05);
     font-size:13px;
 }
 
 .day{
-    color:#C4B6A0;
+    color:var(--muted);
 }
 
 .growth{
     text-align:right;
     font-weight:600;
-    color:#7CE7BC;
+    color:var(--green-claro);
 }
 .stats-wrapper {
     max-width: 1300px;
@@ -96,7 +96,7 @@
 }
 
 .kpi-box {
-    background: linear-gradient(135deg,#231D16,#1A1610);
+    background: linear-gradient(135deg,var(--panel-2),var(--bg-2));
     padding: 22px;
     border-radius: 14px;
     box-shadow: 0 10px 25px rgba(0,0,0,.25);
@@ -104,14 +104,14 @@
 
 .kpi-box h3 {
     font-size: 13px;
-    color: #C4B6A0;
+    color: var(--muted);
     margin: 0;
 }
 
 .kpi-box span {
     font-size: 30px;
     font-weight: bold;
-    color: #FCF8F1;
+    color: var(--text);
 }
 
 /* GRID TABELAS */
@@ -123,7 +123,7 @@
 
 /* CARD */
 .stats-card {
-    background: #231D16;
+    background: var(--panel-2);
     border-radius: 14px;
     padding: 18px;
     box-shadow: 0 8px 20px rgba(0,0,0,.25);
@@ -133,7 +133,7 @@
 .stats-card h4 {
     margin-bottom: 10px;
     font-size: 16px;
-    color: #F5C070;
+    color: var(--acento-claro);
 }
 
 /* TABELA */
@@ -144,27 +144,27 @@
 
 .stats-table td {
     padding: 10px 6px;
-    border-bottom: 1px solid rgba(44, 37, 27, .05);
+    border-bottom: 1px solid rgba(var(--muted-rgb),.05);
 }
 
 .rank {
     font-weight: bold;
-    color: #FFD77A;
+    color: var(--yellow-claro);
 }
 
 .name {
-    color: #FCF8F1;
+    color: var(--text);
 }
 
 .count {
     text-align: right;
-    color: #C4B6A0;
+    color: var(--muted);
     font-weight: 600;
 }
 
 /* TOP 1 destaque */
 .top1 {
-    background: rgba(242, 169, 59, .12);
+    background: rgba(var(--acento-rgb),.12);
     border-radius: 8px;
 }
 </style>

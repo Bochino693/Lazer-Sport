@@ -5,14 +5,19 @@
     <title>Acesso Negado</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    {% comment %}
+      Página que se basta: não carrega a folha do painel, então as cores
+      ficam escritas aqui -- as do tema escuro do painel (ameixa e
+      tangerina), e não mais o marrom do /adm antigo.
+    {% endcomment %}
     <style>
         :root {
-            --bg: #13100B;
-            --card: rgba(26, 22, 16, 0.85);
-            --primary: #FF7A6B;
-            --accent: #F2A93B;
-            --text: #E7DDCB;
-            --muted: #C4B6A0;
+            --bg: #110C1A;
+            --card: rgba(32, 23, 46, 0.85);
+            --primary: #FF6470;
+            --accent: #FF9238;
+            --text: #E7DEF6;
+            --muted: #B7AACB;
         }
 
         * {
@@ -21,7 +26,7 @@
         }
 
         body {
-            background: radial-gradient(circle at top, #13100B, #13100B);
+            background: radial-gradient(circle at top, #20172E, #110C1A);
             height: 100vh;
             margin: 0;
             display: flex;
@@ -74,7 +79,7 @@
 
         .btn-admin {
             background: var(--accent);
-            color: #FCF8F1;
+            color: #2B1004;
         }
 
         .btn-admin:hover {
@@ -114,8 +119,8 @@
     content: "⏱️ Acesso bloqueado temporariamente";
     position: absolute;
     inset: 0;
-    background: rgba(19, 16, 11, 0.85);
-    color: #F5C070;
+    background: rgba(17, 12, 26, 0.85);
+    color: #FFBE7A;
     font-weight: 600;
     font-size: 1.1rem;
     display: flex;

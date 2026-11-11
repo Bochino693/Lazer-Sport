@@ -386,7 +386,7 @@
 }
 
 .pr-editor::backdrop {
-    background: rgba(5, 8, 15, .62);
+    background: rgba(0, 0, 0, .55);
     backdrop-filter: blur(3px);
 }
 
@@ -919,7 +919,7 @@
     }
 
     .pr-editor--pequeno {
-        height: auto;
+        height: fit-content; /* auto esticava o <dialog> fixo até a tela inteira */
         max-height: none;
         margin: auto auto 0;
         border-radius: 20px 20px 0 0;

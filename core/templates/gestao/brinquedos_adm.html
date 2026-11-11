@@ -5,36 +5,152 @@
 {% block page_heading %}Gestão de Brinquedos{% endblock %}
 
 {% block content %}
-  <link rel="stylesheet" href="{% estatico 'site/paginas/gestao-brinquedos_adm.css' %}">
+{% comment %}
+  BRINQUEDOS, NAS CORES DO PAINEL.
 
-<div class="toys-page">
-  <section class="toys-hero">
-    <div><small>Catálogo de produtos</small><h2>Brinquedos</h2><p>Cadastre até 3 vistas por brinquedo. PERFIL / FRENTE é obrigatória e é sempre a imagem de capa usada nas vitrines e requisições.</p></div>
-    <button id="newToy" class="primary" type="button">+ Cadastrar brinquedo</button>
+  A tela tinha cor própria, escrita à mão: marrom de fundo, âmbar nos
+  títulos da tabela e nos chips, e um brilho laranja no topo. No tema claro
+  ela continuava marrom; no escuro, destoava do resto. Agora só usa as cores
+  do tema do painel (--text, --panel, --bg-1, --acento, --green, --red...
+  de interno_modern.css), então Lua, Sol e Eclipse mudam junto.
+
+  O que mudou na forma:
+    * a busca e os filtros são chips (categoria, na loja / fora, com capa /
+      sem capa), sem <select>; cada chip é um link e diz quantos são;
+    * a lista virou cartões: foto, nome, #número, voltagem, medidas, preço
+      (ou "Sob consulta"), categorias e as ações (editar, ver no site,
+      excluir); no celular o cartão deita, com a foto ao lado;
+    * o cadastro é um <dialog>: fotos e objeto 3D de um lado, os dados do
+      outro; categorias, tags e voltagem viram chips de tocar; o preço se
+      digita em reais (6990 é R$ 6.990,00);
+    * o JavaScript saiu do corpo da página para o bloco `scripts`. Dentro
+      do conteúdo ele não rodava de novo quando um filtro trocava a lista
+      sem recarregar a página (navegação suave): depois do primeiro filtro,
+      "Editar" e "Excluir" paravam de responder.
+
+  Os campos enviados (name=) e os ids do formulário são os mesmos de antes,
+  e a view só ganhou os filtros novos. Testes: core/tests_brinquedos_adm_tela.py.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/gestao-brinquedos_adm.css' %}">
+
+<div class="bq-tela">
+  {# Os avisos ("Brinquedo atualizado...") saem no topo do painel (base_inner). #}
+  <header class="bq-topo">
+    <div class="bq-topo-texto">
+      <span class="bq-olho"><i class="bi bi-joystick" aria-hidden="true"></i> Catálogo do site</span>
+      <h1>Brinquedos</h1>
+      <p>Fotos, preço, medidas e categorias de cada brinquedo. A foto <b>PERFIL / FRENTE</b> é a capa nas vitrines e nas propostas.</p>
+    </div>
+    <button id="newToy" class="bq-novo bq-primary" type="button">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Cadastrar brinquedo
+    </button>
+  </header>
+
+  <section class="bq-numeros" aria-label="Resumo do catálogo">
+    <div class="bq-numero">
+      <i class="bi bi-joystick" aria-hidden="true"></i>
+      <strong>{{ total_brinquedos }}</strong><span>Brinquedos</span>
+    </div>
+    <div class="bq-numero bq-numero--verde">
+      <i class="bi bi-bag-check-fill" aria-hidden="true"></i>
+      <strong>{{ total_loja }}</strong><span>Na loja</span>
+    </div>
+    <div class="bq-numero">
+      <i class="bi bi-image" aria-hidden="true"></i>
+      <strong>{{ total_com_imagem }}</strong><span>Com capa</span>
+    </div>
+    <div class="bq-numero">
+      <i class="bi bi-tags" aria-hidden="true"></i>
+      <strong>{{ total_categorias }}</strong><span>Categorias</span>
+    </div>
   </section>
 
-  <section class="toy-kpis">
-    <div class="tkpi"><strong>{{ total_brinquedos }}</strong><span>Brinquedos</span></div>
-    <div class="tkpi"><strong>{{ total_loja }}</strong><span>Na loja</span></div>
-    <div class="tkpi"><strong>{{ total_com_imagem }}</strong><span>Com capa</span></div>
-    <div class="tkpi"><strong>{{ total_categorias }}</strong><span>Categorias</span></div>
-  </section>
-
-  <section class="toy-panel">
-    <form method="get" class="toy-filter">
-      <input name="q" value="{{ busca }}" placeholder="Buscar brinquedo...">
-      <select name="categoria"><option value="todas">Todas as categorias</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" {% if categoria_ativa == categoria.id|stringformat:"s" %}selected{% endif %}>{{ categoria.nome_categoria }}</option>{% endfor %}</select>
-      <button type="submit">Filtrar</button>
+  <section class="bq-barra" aria-label="Buscar e filtrar">
+    <form class="bq-busca" method="get" role="search">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" name="q" value="{{ busca }}" autocomplete="off" enterkeyhint="search"
+             placeholder="Nome ou #número" aria-label="Buscar brinquedo pelo nome ou pelo número">
+      {% if categoria_ativa != "todas" %}<input type="hidden" name="categoria" value="{{ categoria_ativa }}">{% endif %}
+      {% if loja_ativa != "todos" %}<input type="hidden" name="loja" value="{{ loja_ativa }}">{% endif %}
+      {% if capa_ativa != "todas" %}<input type="hidden" name="capa" value="{{ capa_ativa }}">{% endif %}
+      <button type="submit" class="bq-busca-ir" aria-label="Buscar"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
     </form>
 
-    {% if brinquedos.object_list %}
-      <div class="toy-table-wrap">
-        <table class="toy-table">
-          <thead><tr><th>Brinquedo</th><th>Preço / status</th><th>Categorias</th><th>Ações</th></tr></thead>
-          <tbody>
-          {% for brinquedo in brinquedos %}
-            <tr>
-              <td><div class="toy-row"><span class="cover">{% with capa=brinquedo.imagem_catalogo %}{% if capa %}<img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async">{% else %}SEM FOTO{% endif %}{% endwith %}</span><span><strong class="toy-name">{{ brinquedo.nome_brinquedo }}</strong><span class="toy-sub">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
+    <div class="bq-grupos">
+      <nav class="bq-grupo" aria-label="Na loja ou fora" data-bq-filtro-loja>
+        <span class="bq-grupo-nome">Loja</span>
+        <div class="bq-opcoes-filtro">
+          {% for opcao in filtros_loja %}
+            <a class="bq-chip{% if opcao.ativo %} is-on{% endif %}" href="{{ opcao.url }}"{% if opcao.ativo %} aria-current="true"{% endif %}><span>{{ opcao.rotulo }}</span> <b>{{ opcao.total }}</b></a>
+          {% endfor %}
+        </div>
+      </nav>
+      <nav class="bq-grupo" aria-label="Com capa ou sem" data-bq-filtro-capa>
+        <span class="bq-grupo-nome">Capa</span>
+        <div class="bq-opcoes-filtro">
+          {% for opcao in filtros_capa %}
+            <a class="bq-chip{% if opcao.ativo %} is-on{% endif %}" href="{{ opcao.url }}"{% if opcao.ativo %} aria-current="true"{% endif %}><span>{{ opcao.rotulo }}</span> <b>{{ opcao.total }}</b></a>
+          {% endfor %}
+        </div>
+      </nav>
+    </div>
+
+    <nav class="bq-grupo bq-grupo--categorias" aria-label="Categorias" data-bq-filtro-categoria>
+      <span class="bq-grupo-nome">Categorias</span>
+      <div class="bq-opcoes-filtro" data-bq-cats>
+        {% for opcao in filtros_categoria %}
+          <a class="bq-chip{% if opcao.ativo %} is-on{% endif %}" href="{{ opcao.url }}"{% if opcao.ativo %} aria-current="true"{% endif %}><span>{{ opcao.rotulo }}</span> <b>{{ opcao.total }}</b></a>
+        {% endfor %}
+      </div>
+      <button type="button" class="bq-mais" data-bq-mais aria-expanded="false" hidden>
+        <span data-bq-mais-texto>Ver todas</span> <i class="bi bi-chevron-down" aria-hidden="true"></i>
+      </button>
+    </nav>
+
+    {% if ha_filtro %}
+      <p class="bq-resumo">
+        <span>{{ page_obj.paginator.count }} de {{ total_brinquedos }} brinquedo{{ total_brinquedos|pluralize }}{% if busca %} para “{{ busca }}”{% endif %}</span>
+        <a href="{{ limpar_filtros_url }}"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpar filtros</a>
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="bq-grade" aria-label="Brinquedos">
+    {% for brinquedo in brinquedos %}
+      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-id="{{ brinquedo.id }}">
+        <div class="bq-foto">
+          {% with capa=brinquedo.imagem_catalogo %}
+            {% if capa %}
+              <img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async">
+            {% else %}
+              <span class="bq-sem-foto"><i class="bi bi-image" aria-hidden="true"></i><small>Sem foto</small></span>
+            {% endif %}
+          {% endwith %}
+          <span class="bq-selos">
+            {% if brinquedo.exibir_na_loja %}
+              {% if brinquedo.valor_brinquedo %}
+                <span class="bq-selo bq-selo--loja"><i class="bi bi-bag-check-fill" aria-hidden="true"></i> Na loja</span>
+              {% else %}
+                <span class="bq-selo bq-selo--alerta" title="Marcado para a loja, mas sem preço: o site não põe à venda.">
+                  <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Na loja, sem preço
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="bq-selo">Só catálogo</span>
+            {% endif %}
+          </span>
+          <span class="bq-selos bq-selos--fim">
+            {% if brinquedo.painel_3d %}<span class="bq-selo" title="Tem objeto 3D"><i class="bi bi-badge-3d" aria-hidden="true"></i></span>{% endif %}
+            <span class="bq-selo" title="{{ brinquedo.painel_fotos }} de 3 fotos"><i class="bi bi-images" aria-hidden="true"></i> {{ brinquedo.painel_fotos }}/3</span>
+          </span>
+        </div>
+
+        <div class="bq-corpo">
+          <h3 class="bq-nome">{{ brinquedo.nome_brinquedo }}</h3>
+          <p class="bq-meta">
+            <span>#{{ brinquedo.id }}</span>
+            <span><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
+          </p>
 {% comment %}
   A MEDIDA APARECE AQUI PORQUE A FALTA DELA APARECE NO CLIENTE.
 
@@ -44,835 +160,391 @@
   documento deveria dizer. Quem cuida do catálogo não tinha como
   saber quais itens estavam assim sem abrir um por um.
 {% endcomment %}
-<span class="toy-sub{% if not brinquedo.dimensoes_m %} toy-falta{% endif %}">{{ brinquedo.dimensoes_m|default:"Sem medidas — a proposta sai sem o tamanho" }}</span></span></div></td>
-              <td>{% if brinquedo.valor_brinquedo != None %}<strong>R$ {{ brinquedo.valor_brinquedo|moeda }}</strong>{% else %}Sob consulta{% endif %}<br><span class="chip">{% if brinquedo.exibir_na_loja %}Na loja{% else %}Catálogo{% endif %}</span></td>
-              <td><div class="chips">{% for cat in brinquedo.categorias_brinquedos.all %}<span class="chip">{{ cat.nome_categoria }}</span>{% empty %}<span class="chip">Sem categoria</span>{% endfor %}</div></td>
-              <td><div class="actions"><button type="button" class="icon-btn" data-edit="{{ brinquedo.id }}">Editar</button><button type="button" class="icon-btn danger" data-delete="{{ brinquedo.id }}" data-name="{{ brinquedo.nome_brinquedo }}">Excluir</button></div></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+          <p class="bq-medidas{% if not brinquedo.dimensoes_m %} is-falta{% endif %}">
+            <i class="bi {% if brinquedo.dimensoes_m %}bi-rulers{% else %}bi-exclamation-triangle-fill{% endif %}" aria-hidden="true"></i>
+            <span>{{ brinquedo.dimensoes_m|default:"Sem medidas — a proposta sai sem o tamanho" }}</span>
+          </p>
+          <p class="bq-preco">
+            {% if brinquedo.valor_brinquedo != None %}<strong>R$ {{ brinquedo.valor_brinquedo|moeda }}</strong>{% else %}<span class="bq-consulta">Sob consulta</span>{% endif %}
+          </p>
+          <ul class="bq-cats-item" aria-label="Categorias">
+            {% for cat in brinquedo.categorias_brinquedos.all %}<li>{{ cat.nome_categoria }}</li>{% empty %}<li class="is-vazia">Sem categoria</li>{% endfor %}
+          </ul>
+          <div class="bq-acoes">
+            <button type="button" class="bq-editar" data-edit="{{ brinquedo.id }}">
+              <i class="bi bi-pencil-square" aria-hidden="true"></i> Editar
+            </button>
+            <a class="bq-ver" href="{{ site_publico }}/brinquedo/{{ brinquedo.id }}/" target="_blank" rel="noopener"
+               data-no-soft-nav="true" title="Ver no site" aria-label="Ver {{ brinquedo.nome_brinquedo }} no site">
+              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Ver no site</span>
+            </a>
+            <button type="button" class="bq-excluir" data-delete="{{ brinquedo.id }}" data-name="{{ brinquedo.nome_brinquedo }}"
+                    title="Excluir" aria-label="Excluir {{ brinquedo.nome_brinquedo }}">
+              <i class="bi bi-trash3" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      </article>
+    {% empty %}
+      <div class="bq-vazio">
+        <i class="bi bi-joystick" aria-hidden="true"></i>
+        <h3>Nenhum brinquedo encontrado</h3>
+        <p>{% if ha_filtro %}Mude a busca ou os filtros.{% else %}Cadastre o primeiro: a foto de frente, o nome e a descrição bastam para começar.{% endif %}</p>
+        {% if ha_filtro %}<a class="bq-chip" href="{{ limpar_filtros_url }}"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpar filtros</a>{% endif %}
       </div>
-    {% else %}<div style="padding:50px;text-align:center;color:#A2917A">Nenhum brinquedo encontrado.</div>{% endif %}
-
-    {% if page_obj.paginator.num_pages > 1 %}
-    <nav class="pagination">{% if page_obj.has_previous %}<a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}{% for numero in page_obj.paginator.page_range %}{% if numero == page_obj.number %}<span>{{ numero }}</span>{% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}<a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ numero }}">{{ numero }}</a>{% endif %}{% endfor %}{% if page_obj.has_next %}<a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</nav>
-    {% endif %}
+    {% endfor %}
   </section>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="bq-paginas" aria-label="Páginas">
+      {% if page_obj.has_previous %}
+        <a href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Página anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+      {% endif %}
+      {% for numero in page_obj.paginator.page_range %}
+        {% if numero == page_obj.number %}
+          <span aria-current="page">{{ numero }}</span>
+        {% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}
+          <a href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ numero }}">{{ numero }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Próxima página"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+      {% endif %}
+    </nav>
+  {% endif %}
 </div>
 
-<div id="toyDialog" class="dialog" aria-hidden="true">
-  <div class="dialog-card">
-    <form id="toyForm" method="post" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="save">
-      <input id="toyId" type="hidden" name="id">
-      <header class="dialog-head">
-        <div><strong id="toyTitle">Cadastrar brinquedo</strong><span>Dados comerciais e imagens tipadas.</span></div>
-        <button id="closeToy" class="close" type="button" aria-label="Fechar">×</button>
-      </header>
-      <div class="dialog-body">
-        <div id="toyError" class="dialog-alert" role="alert" aria-live="assertive"><strong>Não foi possível salvar</strong><span id="toyErrorText"></span></div>
+{# ----------------------------------------------------------------- #}
+{# O CADASTRO                                                        #}
+{# ----------------------------------------------------------------- #}
+<dialog id="toyDialog" class="bq-janela" aria-labelledby="toyTitle">
+  <form id="toyForm" method="post" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save">
+    <input id="toyId" type="hidden" name="id">
 
-        <section class="section">
-          <div class="section-title"><strong>Identificação</strong><span>Informações públicas do produto.</span></div>
-          <div class="form-grid">
-            <div class="field full"><label for="toyName">Nome</label><input id="toyName" name="nome_brinquedo" maxlength="150" required></div>
-            <div class="field full"><label for="toyDescription">Descrição</label><textarea id="toyDescription" name="descricao" maxlength="999" required></textarea></div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-title"><strong>Imagens do brinquedo</strong><span>Máximo de 3 imagens. Cada foto possui um tipo fixo.</span></div>
-          <div class="image-policy"><strong>PERFIL / FRENTE é obrigatória.</strong> Ela é sempre a capa. Escolha no máximo mais 2 entre verso, lado direito e lado esquerdo. Clique na miniatura para ver a foto inteira.</div>
-          <div class="image-grid">
-            <article class="image-slot" data-slot="perfil">
-              <div class="slot-head">
-                <span><strong>Perfil / Frente</strong><span>Foto frontal — vira a capa</span></span>
-                <span class="kind cover-kind">CAPA</span>
-              </div>
-              <div class="preview" data-preview="perfil">
-                <span class="slot-flag" data-flag="perfil" hidden></span>
-                <img id="prev-perfil" alt="">
-                <span class="slot-vazio">Perfil / Frente</span>
-              </div>
-              <div class="slot-actions">
-                <label class="pick" data-pick="perfil">
-                  <span data-pick-label="perfil">Escolher</span>
-                  <input id="img-perfil" name="imagem_perfil" type="file"
-                         accept="image/png,image/jpeg,image/webp">
-                </label>
-                <button type="button" class="remove hidden" data-remove="perfil"></button>
-                <input id="flag-perfil" name="remover_imagem_perfil" type="checkbox" hidden>
-              </div>
-            </article>
-            <article class="image-slot" data-slot="verso">
-              <div class="slot-head">
-                <span><strong>Verso / Costas</strong><span>Vista traseira</span></span>
-                <span class="kind">OPCIONAL</span>
-              </div>
-              <div class="preview" data-preview="verso">
-                <span class="slot-flag" data-flag="verso" hidden></span>
-                <img id="prev-verso" alt="">
-                <span class="slot-vazio">Verso / Costas</span>
-              </div>
-              <div class="slot-actions">
-                <label class="pick" data-pick="verso">
-                  <span data-pick-label="verso">Escolher</span>
-                  <input id="img-verso" name="imagem_verso" type="file"
-                         accept="image/png,image/jpeg,image/webp">
-                </label>
-                <button type="button" class="remove hidden" data-remove="verso"></button>
-                <input id="flag-verso" name="remover_imagem_verso" type="checkbox" hidden>
-              </div>
-            </article>
-            <article class="image-slot" data-slot="lado_direito">
-              <div class="slot-head">
-                <span><strong>Lado direito</strong><span>Vista lateral direita</span></span>
-                <span class="kind">OPCIONAL</span>
-              </div>
-              <div class="preview" data-preview="lado_direito">
-                <span class="slot-flag" data-flag="lado_direito" hidden></span>
-                <img id="prev-lado_direito" alt="">
-                <span class="slot-vazio">Lado direito</span>
-              </div>
-              <div class="slot-actions">
-                <label class="pick" data-pick="lado_direito">
-                  <span data-pick-label="lado_direito">Escolher</span>
-                  <input id="img-lado_direito" name="imagem_lado_direito" type="file"
-                         accept="image/png,image/jpeg,image/webp">
-                </label>
-                <button type="button" class="remove hidden" data-remove="lado_direito"></button>
-                <input id="flag-lado_direito" name="remover_imagem_lado_direito" type="checkbox" hidden>
-              </div>
-            </article>
-            <article class="image-slot" data-slot="lado_esquerdo">
-              <div class="slot-head">
-                <span><strong>Lado esquerdo</strong><span>Vista lateral esquerda</span></span>
-                <span class="kind">OPCIONAL</span>
-              </div>
-              <div class="preview" data-preview="lado_esquerdo">
-                <span class="slot-flag" data-flag="lado_esquerdo" hidden></span>
-                <img id="prev-lado_esquerdo" alt="">
-                <span class="slot-vazio">Lado esquerdo</span>
-              </div>
-              <div class="slot-actions">
-                <label class="pick" data-pick="lado_esquerdo">
-                  <span data-pick-label="lado_esquerdo">Escolher</span>
-                  <input id="img-lado_esquerdo" name="imagem_lado_esquerdo" type="file"
-                         accept="image/png,image/jpeg,image/webp">
-                </label>
-                <button type="button" class="remove hidden" data-remove="lado_esquerdo"></button>
-                <input id="flag-lado_esquerdo" name="remover_imagem_lado_esquerdo" type="checkbox" hidden>
-              </div>
-            </article>
-          </div>
-          <div id="imgCounter" class="counter"><span>PERFIL é a capa obrigatória.</span><strong><span id="imgCount">0</span>/3 imagens</strong></div>
-        </section>
-
-        {% comment %}
-          O OBJETO 3D da máquina (.glb): aparece na Arena 3D e na página do
-          brinquedo, além das fotos. As cores do botão "cores" saem de dentro
-          do próprio arquivo (as variações de material que o 3D já traz); sem
-          elas, o site oferece a adesivagem em outros tons.
-        {% endcomment %}
-        <section class="section">
-          <div class="section-title"><strong>Objeto 3D</strong><span>Arquivo .glb da máquina, com as cores dele.</span></div>
-          <div class="objeto3d" data-objeto3d>
-            <div class="objeto3d-atual" data-objeto3d-atual hidden>
-              <strong data-objeto3d-nome></strong>
-              <span data-objeto3d-cores></span>
-            </div>
-            <p class="objeto3d-vazio" data-objeto3d-vazio>Sem objeto 3D. Envie o .glb (até 10 MB): ele vai para a Arena 3D e para a página do brinquedo.</p>
-            <div class="slot-actions">
-              <label class="pick">
-                <span data-objeto3d-rotulo>Escolher .glb</span>
-                <input id="toyModel" name="objeto_3d" type="file" accept=".glb,model/gltf-binary">
-              </label>
-              <label class="remove hidden" data-objeto3d-remover><input name="remover_objeto_3d" type="checkbox"> Tirar o objeto 3D</label>
-            </div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-title"><strong>Organização</strong><span>Categorias e tags.</span></div>
-          <div class="form-grid">
-            <div class="field full"><div class="options-head"><label>Categorias</label><button id="openCategory" class="quick-open" type="button">+ Nova categoria</button></div><div class="options-tools" data-options-tools="categoryGrid"><input type="search" placeholder="Filtrar categorias" aria-label="Filtrar categorias"><span class="selected-count">0 selecionadas</span><button class="clear-options" type="button">Limpar</button></div><div id="categoryGrid" class="checks">{% for categoria in categorias %}<label class="check"><input name="categorias_brinquedos" type="checkbox" value="{{ categoria.id }}"><span>{{ categoria.nome_categoria }}</span></label>{% endfor %}</div></div>
-            <div class="field full"><div class="options-head"><label>Tags</label><button id="openTag" class="quick-open" type="button">+ Nova tag</button></div><div class="options-tools" data-options-tools="tagGrid"><input type="search" placeholder="Filtrar tags" aria-label="Filtrar tags"><span class="selected-count">0 selecionadas</span><button class="clear-options" type="button">Limpar</button></div><div id="tagGrid" class="checks">{% for tag in tags %}<label class="check"><input name="tags" type="checkbox" value="{{ tag.id }}"><span>{{ tag.nome_tags }}</span></label>{% endfor %}</div></div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-title"><strong>Comercial e especificações</strong><span>Preço, avaliação, voltagem e dimensões.</span></div>
-          <div class="form-grid">
-            <div class="field third"><label for="toyPrice">Valor</label><div class="number-wrap"><span class="number-unit prefix">R$</span><input id="toyPrice" name="valor_brinquedo" inputmode="decimal" autocomplete="off" data-mascara="moeda" placeholder="0,00"></div></div>
-            <div class="field third"><label for="toyRating">Avaliação</label><input id="toyRating" name="avaliacao" placeholder="4,7" required></div>
-            <div class="field third"><label for="toyVoltage">Voltagem</label><select id="toyVoltage" name="voltz" required><option value="">Selecione</option><option value="110V">110V</option><option value="220V">220V</option><option value="Bivolt">Bivolt</option><option value="Não se aplica">Não se aplica</option></select></div>
-            <div class="field third"><label for="toyHeight">Altura</label><div class="number-wrap"><input id="toyHeight" name="altura_m" inputmode="decimal" autocomplete="off" data-mascara="medida" placeholder="0,00"><span class="number-unit">m</span></div></div>
-            <div class="field third"><label for="toyWidth">Largura</label><div class="number-wrap"><input id="toyWidth" name="largura_m" inputmode="decimal" autocomplete="off" data-mascara="medida" placeholder="0,00"><span class="number-unit">m</span></div></div>
-            <div class="field third"><label for="toyDepth">Profundidade</label><div class="number-wrap"><input id="toyDepth" name="profundidade_m" inputmode="decimal" autocomplete="off" data-mascara="medida" placeholder="0,00"><span class="number-unit">m</span></div></div>
-            <div class="field full"><label class="toggle"><input id="toyStore" name="exibir_na_loja" type="checkbox"><span>Disponível na loja</span></label></div>
-          </div>
-        </section>
+    <header class="bq-janela-topo">
+      <div>
+        <h2 id="toyTitle">Cadastrar brinquedo</h2>
+        <p>Fotos, dados do site e especificações. Os campos com * são obrigatórios.</p>
       </div>
-      <footer class="dialog-foot"><button id="cancelToy" class="secondary" type="button">Cancelar</button><button id="submitToy" class="primary" type="submit">Salvar brinquedo</button></footer>
-    </form>
-  </div>
-</div>
+      <button id="closeToy" class="bq-fechar" type="button" aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    </header>
 
-<div id="deleteDialog" class="dialog" aria-hidden="true">
-  <div class="dialog-card small">
-    <form id="deleteForm" method="post" action="{% url 'brinquedos_admin' %}">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="delete">
-      <input id="deleteId" type="hidden" name="id">
-      <input id="deleteHidden" type="hidden" name="confirmacao_exclusao">
-      <div class="quick">
-        <h3>Excluir brinquedo?</h3>
-        <p>Digite exatamente:</p>
-        <code id="deletePhrase" style="padding:9px;border-radius:8px;color:#FF9AAA;background:#1A1610"></code>
-        <input id="deleteInput" autocomplete="off" placeholder="Confirmação">
-        <div id="deleteMsg" class="quick-msg"></div>
+    <div class="bq-janela-corpo">
+      <div id="toyError" class="bq-alerta" role="alert" aria-live="assertive" hidden>
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <div><strong>Não foi possível salvar</strong><span id="toyErrorText"></span></div>
       </div>
-      <footer class="dialog-foot"><button id="cancelDelete" class="secondary" type="button">Cancelar</button><button id="deleteSubmit" class="primary" style="background:#FF7A6B" type="submit" disabled>Excluir</button></footer>
-    </form>
-  </div>
-</div>
 
-<div id="categoryDialog" class="dialog" data-close-backdrop aria-hidden="true"><div class="dialog-card small"><form id="categoryForm" class="quick" enctype="multipart/form-data">{% csrf_token %}<h3>Nova categoria</h3><p>Crie e selecione sem fechar o brinquedo.</p><input name="nome_categoria" placeholder="Nome" required><input name="imagem_categoria" type="file" accept="image/*" required><div id="categoryMsg" class="quick-msg"></div><div style="display:flex;justify-content:flex-end;gap:7px"><button id="cancelCategory" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Criar</button></div></form></div></div>
+      <div class="bq-colunas">
+        <div class="bq-coluna">
+          <section class="bq-secao" aria-labelledby="bqSecFotos">
+            <h3 id="bqSecFotos"><i class="bi bi-images" aria-hidden="true"></i> Fotos</h3>
+            <p class="bq-dica"><b>PERFIL / FRENTE é obrigatória</b> e vira a capa. Escolha até mais 2 entre verso e lados. Toque na foto para ver inteira; arraste um arquivo para cima de um quadro para usá-lo.</p>
+            <div class="bq-fotos">
+              <article class="bq-vista" data-slot="perfil">
+                <div class="bq-vista-topo">
+                  <strong>Perfil / Frente *</strong>
+                  <span class="bq-tipo bq-tipo--capa">Capa</span>
+                </div>
+                <div class="bq-vista-foto" data-preview="perfil" role="button" tabindex="-1" aria-label="Ver a foto Perfil / Frente inteira">
+                  <span class="bq-vista-marca" data-flag="perfil" hidden></span>
+                  <img id="prev-perfil" alt="">
+                  <span class="bq-vista-vazia"><i class="bi bi-camera" aria-hidden="true"></i> Foto de frente</span>
+                </div>
+                <div class="bq-vista-acoes">
+                  <label class="bq-escolher" data-pick="perfil">
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <span data-pick-label="perfil">Escolher</span>
+                    <input id="img-perfil" name="imagem_perfil" type="file" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <button type="button" class="bq-tirar" data-remove="perfil" hidden></button>
+                  <input id="flag-perfil" name="remover_imagem_perfil" type="checkbox" hidden>
+                </div>
+              </article>
+              <article class="bq-vista" data-slot="verso">
+                <div class="bq-vista-topo">
+                  <strong>Verso / Costas</strong>
+                  <span class="bq-tipo">Opcional</span>
+                </div>
+                <div class="bq-vista-foto" data-preview="verso" role="button" tabindex="-1" aria-label="Ver a foto Verso / Costas inteira">
+                  <span class="bq-vista-marca" data-flag="verso" hidden></span>
+                  <img id="prev-verso" alt="">
+                  <span class="bq-vista-vazia"><i class="bi bi-camera" aria-hidden="true"></i> Vista de trás</span>
+                </div>
+                <div class="bq-vista-acoes">
+                  <label class="bq-escolher" data-pick="verso">
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <span data-pick-label="verso">Escolher</span>
+                    <input id="img-verso" name="imagem_verso" type="file" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <button type="button" class="bq-tirar" data-remove="verso" hidden></button>
+                  <input id="flag-verso" name="remover_imagem_verso" type="checkbox" hidden>
+                </div>
+              </article>
+              <article class="bq-vista" data-slot="lado_direito">
+                <div class="bq-vista-topo">
+                  <strong>Lado direito</strong>
+                  <span class="bq-tipo">Opcional</span>
+                </div>
+                <div class="bq-vista-foto" data-preview="lado_direito" role="button" tabindex="-1" aria-label="Ver a foto Lado direito inteira">
+                  <span class="bq-vista-marca" data-flag="lado_direito" hidden></span>
+                  <img id="prev-lado_direito" alt="">
+                  <span class="bq-vista-vazia"><i class="bi bi-camera" aria-hidden="true"></i> Lateral direita</span>
+                </div>
+                <div class="bq-vista-acoes">
+                  <label class="bq-escolher" data-pick="lado_direito">
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <span data-pick-label="lado_direito">Escolher</span>
+                    <input id="img-lado_direito" name="imagem_lado_direito" type="file" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <button type="button" class="bq-tirar" data-remove="lado_direito" hidden></button>
+                  <input id="flag-lado_direito" name="remover_imagem_lado_direito" type="checkbox" hidden>
+                </div>
+              </article>
+              <article class="bq-vista" data-slot="lado_esquerdo">
+                <div class="bq-vista-topo">
+                  <strong>Lado esquerdo</strong>
+                  <span class="bq-tipo">Opcional</span>
+                </div>
+                <div class="bq-vista-foto" data-preview="lado_esquerdo" role="button" tabindex="-1" aria-label="Ver a foto Lado esquerdo inteira">
+                  <span class="bq-vista-marca" data-flag="lado_esquerdo" hidden></span>
+                  <img id="prev-lado_esquerdo" alt="">
+                  <span class="bq-vista-vazia"><i class="bi bi-camera" aria-hidden="true"></i> Lateral esquerda</span>
+                </div>
+                <div class="bq-vista-acoes">
+                  <label class="bq-escolher" data-pick="lado_esquerdo">
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <span data-pick-label="lado_esquerdo">Escolher</span>
+                    <input id="img-lado_esquerdo" name="imagem_lado_esquerdo" type="file" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <button type="button" class="bq-tirar" data-remove="lado_esquerdo" hidden></button>
+                  <input id="flag-lado_esquerdo" name="remover_imagem_lado_esquerdo" type="checkbox" hidden>
+                </div>
+              </article>
+            </div>
+            <div id="imgCounter" class="bq-contagem" aria-live="polite">
+              <span>PERFIL é a capa obrigatória.</span>
+              <strong><span id="imgCount">0</span>/3 fotos</strong>
+            </div>
+          </section>
 
-<div id="tagDialog" class="dialog" data-close-backdrop aria-hidden="true"><div class="dialog-card small"><form id="tagForm" class="quick">{% csrf_token %}<h3>Nova tag</h3><p>Crie e selecione sem fechar o brinquedo.</p><input name="nome_tag" placeholder="Nome" required><div id="tagMsg" class="quick-msg"></div><div style="display:flex;justify-content:flex-end;gap:7px"><button id="cancelTag" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Criar</button></div></form></div></div>
+          {% comment %}
+            O OBJETO 3D da máquina (.glb): aparece na Arena 3D e na página do
+            brinquedo, além das fotos. As cores do botão "cores" saem de dentro
+            do próprio arquivo (as variações de material que o 3D já traz); sem
+            elas, o site oferece a adesivagem em outros tons.
+          {% endcomment %}
+          <section class="bq-secao" aria-labelledby="bqSec3d">
+            <h3 id="bqSec3d"><i class="bi bi-badge-3d" aria-hidden="true"></i> Objeto 3D</h3>
+            <div class="bq-objeto3d" data-objeto3d>
+              <div class="bq-objeto3d-atual" data-objeto3d-atual hidden>
+                <i class="bi bi-box" aria-hidden="true"></i>
+                <div>
+                  <strong data-objeto3d-nome></strong>
+                  <span data-objeto3d-cores></span>
+                </div>
+              </div>
+              <p class="bq-dica" data-objeto3d-vazio>Sem objeto 3D. Envie o .glb (até 10 MB): ele vai para a Arena 3D e para a página do brinquedo.</p>
+              <div class="bq-vista-acoes">
+                <label class="bq-escolher">
+                  <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                  <span data-objeto3d-rotulo>Escolher .glb</span>
+                  <input id="toyModel" name="objeto_3d" type="file" accept=".glb,model/gltf-binary">
+                </label>
+                <label class="bq-marcar" data-objeto3d-remover hidden><input name="remover_objeto_3d" type="checkbox"> Tirar o objeto 3D</label>
+              </div>
+            </div>
+          </section>
+        </div>
 
-<div id="lightbox" class="dialog" data-close-backdrop aria-hidden="true">
-  <div class="dialog-card">
-    <header class="dialog-head"><div><strong>Foto do brinquedo</strong><span>Imagem inteira, sem corte.</span></div><button id="closeLightbox" class="close" type="button" aria-label="Fechar">×</button></header>
-    <div class="dialog-body"><figure class="lightbox-figure" style="margin:0"><img id="lightboxImg" alt=""><figcaption id="lightboxCaption"></figcaption></figure></div>
-  </div>
-</div>
+        <div class="bq-coluna">
+          <section class="bq-secao" aria-labelledby="bqSecDados">
+            <h3 id="bqSecDados"><i class="bi bi-card-text" aria-hidden="true"></i> No site</h3>
+            <label class="bq-rotulo" for="toyName">Nome *</label>
+            <input id="toyName" name="nome_brinquedo" maxlength="150" required autocomplete="off" placeholder="Ex.: Air Game Hockey">
+            <label class="bq-rotulo" for="toyDescription">Descrição *</label>
+            <textarea id="toyDescription" name="descricao" maxlength="999" required rows="4"
+                      placeholder="O que é, para quem é, o que vem junto."></textarea>
+            <p class="bq-ajuda bq-ajuda--direita"><span data-bq-desc-conta>0</span>/999</p>
+          </section>
+
+          <section class="bq-secao" aria-labelledby="bqSecPreco">
+            <h3 id="bqSecPreco"><i class="bi bi-cash-coin" aria-hidden="true"></i> Preço e loja</h3>
+            <label class="bq-rotulo" for="toyPrice">Preço</label>
+            <div class="bq-preco-campo">
+              <span aria-hidden="true">R$</span>
+              <input id="toyPrice" name="valor_brinquedo" inputmode="decimal" autocomplete="off" data-mascara="moeda-valor" placeholder="Ex.: 6990">
+            </div>
+            <p class="bq-ajuda" data-bq-preco-ajuda aria-live="polite">Em reais: 6990 vira R$ 6.990,00. Em branco, o site mostra “Sob consulta”.</p>
+
+            <label class="bq-chave">
+              <input id="toyStore" name="exibir_na_loja" type="checkbox">
+              <span class="bq-chave-trilho" aria-hidden="true"></span>
+              <span class="bq-chave-texto">Mostrar na loja</span>
+            </label>
+            <p class="bq-ajuda" data-bq-loja-ajuda>A loja só põe à venda o que tem preço. Desligado, o brinquedo fica no catálogo, sob orçamento.</p>
+          </section>
+
+          <section class="bq-secao" aria-labelledby="bqSecSpecs">
+            <h3 id="bqSecSpecs"><i class="bi bi-rulers" aria-hidden="true"></i> Especificações</h3>
+            <span class="bq-rotulo" id="toyVoltageRotulo">Voltagem *</span>
+            <div id="toyVoltage" class="bq-escolhas" role="radiogroup" aria-labelledby="toyVoltageRotulo" data-bq-voltagens>
+              <label class="bq-opcao"><input type="radio" name="voltz" value="110V" required data-rotulo="Voltagem"><span>110V</span></label>
+              <label class="bq-opcao"><input type="radio" name="voltz" value="220V" data-rotulo="Voltagem"><span>220V</span></label>
+              <label class="bq-opcao"><input type="radio" name="voltz" value="Bivolt" data-rotulo="Voltagem"><span>Bivolt</span></label>
+              <label class="bq-opcao"><input type="radio" name="voltz" value="" data-rotulo="Voltagem" data-bq-sem-voltagem><span>Não se aplica</span></label>
+            </div>
+
+            <div class="bq-medidas-campos">
+              <div>
+                <label class="bq-rotulo" for="toyHeight">Altura</label>
+                <div class="bq-unidade"><input id="toyHeight" name="altura_m" inputmode="decimal" autocomplete="off" data-mascara="medida" placeholder="0,00"><span>m</span></div>
+              </div>
+              <div>
+                <label class="bq-rotulo" for="toyWidth">Largura</label>
+                <div class="bq-unidade"><input id="toyWidth" name="largura_m" inputmode="decimal" autocomplete="off" data-mascara="medida" placeholder="0,00"><span>m</span></div>
+              </div>
+              <div>
+                <label class="bq-rotulo" for="toyDepth">Profundidade</label>
+                <div class="bq-unidade"><input id="toyDepth" name="profundidade_m" inputmode="decimal" autocomplete="off" data-mascara="medida" placeholder="0,00"><span>m</span></div>
+              </div>
+            </div>
+            <p class="bq-ajuda">Só os números: 350 vira 3,50 m. Sem as três medidas, a proposta sai sem o tamanho.</p>
+
+            <label class="bq-rotulo" for="toyRating">Avaliação * <small>(de 0 a 5)</small></label>
+            <div class="bq-unidade bq-unidade--estrela"><input id="toyRating" name="avaliacao" inputmode="decimal" autocomplete="off" placeholder="Ex.: 4,8" required><span><i class="bi bi-star-fill" aria-hidden="true"></i></span></div>
+          </section>
+
+          <section class="bq-secao" aria-labelledby="bqSecCats">
+            <div class="bq-secao-topo">
+              <h3 id="bqSecCats"><i class="bi bi-tags" aria-hidden="true"></i> Categorias</h3>
+              <button id="openCategory" class="bq-rapido" type="button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova categoria</button>
+            </div>
+            <div class="bq-filtro-opcoes" data-options-tools="categoryGrid">
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input type="search" placeholder="Filtrar categorias" aria-label="Filtrar categorias" autocomplete="off">
+              <span class="bq-contador selected-count">0 selecionadas</span>
+              <button class="bq-limpar clear-options" type="button">Limpar</button>
+            </div>
+            <div id="categoryGrid" class="bq-escolhas bq-escolhas--lista">
+              {% for categoria in categorias %}<label class="bq-opcao"><input name="categorias_brinquedos" type="checkbox" value="{{ categoria.id }}"><span>{{ categoria.nome_categoria }}</span></label>{% endfor %}
+            </div>
+          </section>
+
+          <section class="bq-secao" aria-labelledby="bqSecTags">
+            <div class="bq-secao-topo">
+              <h3 id="bqSecTags"><i class="bi bi-tag" aria-hidden="true"></i> Tags</h3>
+              <button id="openTag" class="bq-rapido" type="button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova tag</button>
+            </div>
+            <div class="bq-filtro-opcoes" data-options-tools="tagGrid">
+              <i class="bi bi-search" aria-hidden="true"></i>
+              <input type="search" placeholder="Filtrar tags" aria-label="Filtrar tags" autocomplete="off">
+              <span class="bq-contador selected-count">0 selecionadas</span>
+              <button class="bq-limpar clear-options" type="button">Limpar</button>
+            </div>
+            <div id="tagGrid" class="bq-escolhas bq-escolhas--lista">
+              {% for tag in tags %}<label class="bq-opcao"><input name="tags" type="checkbox" value="{{ tag.id }}"><span>{{ tag.nome_tags }}</span></label>{% empty %}<p class="bq-dica" data-bq-sem-opcao>Nenhuma tag ainda. Crie a primeira em “Nova tag”.</p>{% endfor %}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <footer class="bq-janela-rodape">
+      <button id="cancelToy" class="bq-cancelar" type="button">Cancelar</button>
+      <button id="submitToy" class="bq-salvar" type="submit"><i class="bi bi-check2" aria-hidden="true"></i> <span>Salvar brinquedo</span></button>
+    </footer>
+  </form>
+</dialog>
+
+{# Excluir: o servidor pede "CONFIRMAR EXCLUSÃO <nome>"; aqui basta digitar o nome. #}
+<dialog id="deleteDialog" class="bq-janela bq-janela--pequena" aria-labelledby="bqExcluirTitulo">
+  <form id="deleteForm" method="post" action="{% url 'brinquedos_admin' %}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input id="deleteId" type="hidden" name="id">
+    <input id="deleteHidden" type="hidden" name="confirmacao_exclusao">
+    <header class="bq-janela-topo">
+      <div>
+        <h2 id="bqExcluirTitulo">Excluir este brinquedo?</h2>
+        <p>Ele sai do site, das vitrines e das categorias, com as fotos. Não tem volta.</p>
+      </div>
+    </header>
+    <div class="bq-janela-corpo">
+      <label class="bq-rotulo" for="deleteInput">Para confirmar, digite o nome: <strong id="deletePhrase" class="bq-frase"></strong></label>
+      <input id="deleteInput" autocomplete="off" placeholder="Nome do brinquedo">
+      <p id="deleteMsg" class="bq-erro" aria-live="assertive"></p>
+    </div>
+    <footer class="bq-janela-rodape">
+      <button id="cancelDelete" class="bq-cancelar" type="button">Cancelar</button>
+      <button id="deleteSubmit" class="bq-perigo" type="submit" disabled><i class="bi bi-trash3" aria-hidden="true"></i> <span>Excluir</span></button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="categoryDialog" class="bq-janela bq-janela--pequena" data-close-backdrop aria-labelledby="bqCatTitulo">
+  <form id="categoryForm" method="post" action="{% url 'categoria_new' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <header class="bq-janela-topo">
+      <div>
+        <h2 id="bqCatTitulo">Nova categoria</h2>
+        <p>Crie e já marque, sem fechar o brinquedo.</p>
+      </div>
+    </header>
+    <div class="bq-janela-corpo">
+      <label class="bq-rotulo" for="bqCatNome">Nome</label>
+      <input id="bqCatNome" name="nome_categoria" placeholder="Ex.: Fliperamas" required autocomplete="off">
+      <span class="bq-rotulo">Imagem da categoria</span>
+      <label class="bq-arquivo">
+        <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+        <span data-bq-arquivo-nome>Escolher imagem</span>
+        <input name="imagem_categoria" type="file" accept="image/*" required>
+      </label>
+      <p id="categoryMsg" class="bq-erro" aria-live="assertive"></p>
+    </div>
+    <footer class="bq-janela-rodape">
+      <button id="cancelCategory" class="bq-cancelar" type="button">Cancelar</button>
+      <button class="bq-salvar" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> Criar</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="tagDialog" class="bq-janela bq-janela--pequena" data-close-backdrop aria-labelledby="bqTagTitulo">
+  <form id="tagForm" method="post" action="{% url 'tag_new' %}">
+    {% csrf_token %}
+    <header class="bq-janela-topo">
+      <div>
+        <h2 id="bqTagTitulo">Nova tag</h2>
+        <p>Crie e já marque, sem fechar o brinquedo.</p>
+      </div>
+    </header>
+    <div class="bq-janela-corpo">
+      <label class="bq-rotulo" for="bqTagNome">Nome</label>
+      <input id="bqTagNome" name="nome_tag" placeholder="Ex.: Mais vendido" required autocomplete="off">
+      <p id="tagMsg" class="bq-erro" aria-live="assertive"></p>
+    </div>
+    <footer class="bq-janela-rodape">
+      <button id="cancelTag" class="bq-cancelar" type="button">Cancelar</button>
+      <button class="bq-salvar" type="submit"><i class="bi bi-plus-lg" aria-hidden="true"></i> Criar</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="lightbox" class="bq-janela bq-janela--foto" data-close-backdrop aria-labelledby="lightboxCaption">
+  <header class="bq-janela-topo">
+    <div><h2 id="lightboxCaption">Foto do brinquedo</h2><p>Imagem inteira, sem corte.</p></div>
+    <button id="closeLightbox" class="bq-fechar" type="button" aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+  </header>
+  <figure class="bq-foto-inteira"><img id="lightboxImg" alt=""></figure>
+</dialog>
 
 {{ brinquedos_dados|json_script:"toysAdminData" }}
-
-<script>
-(function () {
-  "use strict";
-
-  var TIPOS = ["perfil", "verso", "lado_direito", "lado_esquerdo"];
-  var ROTULOS = {
-    perfil: "Perfil / Frente",
-    verso: "Verso / Costas",
-    lado_direito: "Lado direito",
-    lado_esquerdo: "Lado esquerdo"
-  };
-  var MAX = 3;
-  var MAX_BYTES = 15 * 1024 * 1024;
-
-  var brinquedos = JSON.parse(
-    document.getElementById("toysAdminData").textContent || "[]"
-  );
-
-  var toyDialog = document.getElementById("toyDialog");
-  var deleteDialog = document.getElementById("deleteDialog");
-  var categoryDialog = document.getElementById("categoryDialog");
-  var tagDialog = document.getElementById("tagDialog");
-  var lightbox = document.getElementById("lightbox");
-
-  var form = document.getElementById("toyForm");
-  var deleteForm = document.getElementById("deleteForm");
-
-  function ligarOpcoes() {
-    document.querySelectorAll("[data-options-tools]").forEach(function (barra) {
-      var grade = document.getElementById(barra.dataset.optionsTools);
-      var busca = barra.querySelector('input[type="search"]');
-      var contador = barra.querySelector(".selected-count");
-      var limpar = barra.querySelector(".clear-options");
-      function atualizar() {
-        var marcadas = grade.querySelectorAll('input[type="checkbox"]:checked').length;
-        contador.textContent = marcadas + (marcadas === 1 ? " selecionada" : " selecionadas");
-      }
-      busca.addEventListener("input", function () {
-        var termo = busca.value.toLocaleLowerCase("pt-BR").trim();
-        grade.querySelectorAll(".check").forEach(function (opcao) {
-          opcao.hidden = !!termo && opcao.textContent.toLocaleLowerCase("pt-BR").indexOf(termo) < 0;
-        });
-      });
-      limpar.addEventListener("click", function () {
-        grade.querySelectorAll('input[type="checkbox"]').forEach(function (caixa) { caixa.checked = false; });
-        atualizar();
-      });
-      grade.addEventListener("change", atualizar);
-      barra.atualizarContador = atualizar;
-      atualizar();
-    });
-  }
-  ligarOpcoes();
-
-  var salvas = {};      // tipo -> foto ja gravada no servidor
-  var previas = {};     // tipo -> object URL da foto recem escolhida
-  var fraseExclusao = "";
-
-  // ----------------------------------------------------------------
-  // Pilha de modais
-  //
-  // Antes, Escape fechava TODOS os modais de uma vez -- abrir "nova
-  // categoria" e apertar Escape derrubava junto o cadastro inteiro,
-  // com tudo o que ja tinha sido digitado. Agora so o modal do topo
-  // fecha, e o scroll do fundo so volta quando nao sobra nenhum.
-  // ----------------------------------------------------------------
-  var pilha = [];
-
-  function abrir(el) {
-    if (pilha.indexOf(el) === -1) {
-      pilha.push(el);
-    }
-    el.classList.add("open");
-    el.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
-  }
-
-  function fechar(el) {
-    var i = pilha.indexOf(el);
-    if (i !== -1) {
-      pilha.splice(i, 1);
-    }
-    el.classList.remove("open");
-    el.setAttribute("aria-hidden", "true");
-    if (!pilha.length) {
-      document.body.style.overflow = "";
-    }
-  }
-
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && pilha.length) {
-      fechar(pilha[pilha.length - 1]);
-    }
-  });
-
-  // Clique no fundo so fecha modais descartaveis. O cadastro e a
-  // exclusao exigem Cancelar/×, senao um clique torto apaga o trabalho.
-  document.querySelectorAll(".dialog[data-close-backdrop]").forEach(function (d) {
-    d.addEventListener("click", function (e) {
-      if (e.target === d) {
-        fechar(d);
-      }
-    });
-  });
-
-  // ----------------------------------------------------------------
-  // Mensagens de erro dentro do proprio modal
-  // ----------------------------------------------------------------
-  function erro(texto) {
-    var caixa = document.getElementById("toyError");
-    document.getElementById("toyErrorText").textContent = texto || "";
-    caixa.classList.toggle("show", !!texto);
-    if (texto) {
-      caixa.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-  }
-
-  // ----------------------------------------------------------------
-  // Slots de imagem
-  // ----------------------------------------------------------------
-  function entrada(tipo) {
-    return document.getElementById("img-" + tipo);
-  }
-
-  function marcador(tipo) {
-    return document.getElementById("flag-" + tipo);
-  }
-
-  function arquivo(tipo) {
-    var el = entrada(tipo);
-    return el.files && el.files.length ? el.files[0] : null;
-  }
-
-  function removida(tipo) {
-    return marcador(tipo).checked && !arquivo(tipo);
-  }
-
-  function ativa(tipo) {
-    return !!arquivo(tipo) || (!!salvas[tipo] && !removida(tipo));
-  }
-
-  function ativas() {
-    return TIPOS.filter(ativa);
-  }
-
-  function descartarPrevia(tipo) {
-    if (previas[tipo]) {
-      URL.revokeObjectURL(previas[tipo]);
-      delete previas[tipo];
-    }
-  }
-
-  function origem(tipo) {
-    var f = arquivo(tipo);
-    if (f) {
-      if (!previas[tipo]) {
-        previas[tipo] = URL.createObjectURL(f);
-      }
-      return previas[tipo];
-    }
-    if (removida(tipo)) {
-      return "";
-    }
-    return salvas[tipo] ? salvas[tipo].url : "";
-  }
-
-  function pintar() {
-    var lista = ativas();
-    var cheio = lista.length >= MAX;
-
-    TIPOS.forEach(function (tipo) {
-      var slot = document.querySelector('[data-slot="' + tipo + '"]');
-      var img = document.getElementById("prev-" + tipo);
-      var preview = slot.querySelector('[data-preview="' + tipo + '"]');
-      var flag = slot.querySelector('[data-flag="' + tipo + '"]');
-      var botao = slot.querySelector('[data-remove="' + tipo + '"]');
-      var rotulo = slot.querySelector('[data-pick-label="' + tipo + '"]');
-      var src = origem(tipo);
-      var nova = !!arquivo(tipo);
-      var apagando = removida(tipo);
-
-      slot.classList.toggle("active", !!src);
-      slot.classList.toggle("removed", apagando);
-      // Slot bloqueado agora bloqueia de verdade: antes o arquivo era
-      // carregado e so depois um alert desfazia a escolha.
-      slot.classList.toggle("blocked", !src && cheio);
-      entrada(tipo).disabled = !src && cheio;
-
-      if (src) {
-        img.src = src;
-      } else {
-        img.removeAttribute("src");
-      }
-      preview.classList.toggle("zoomable", !!src);
-
-      if (nova) {
-        flag.hidden = false;
-        flag.textContent = "Nova";
-        flag.classList.remove("warn");
-      } else if (apagando) {
-        flag.hidden = false;
-        flag.textContent = "Será removida";
-        flag.classList.add("warn");
-      } else {
-        flag.hidden = true;
-      }
-
-      rotulo.textContent = src && !apagando ? "Trocar" : "Escolher";
-
-      // Um mesmo botao resolve os dois casos que antes ficavam de fora:
-      // desfazer um arquivo escolhido por engano e desmarcar a remocao.
-      if (nova) {
-        botao.textContent = "Descartar";
-        botao.className = "remove";
-      } else if (apagando) {
-        botao.textContent = "Manter foto";
-        botao.className = "remove undo";
-      } else if (salvas[tipo]) {
-        botao.textContent = "Remover";
-        botao.className = "remove";
-      } else {
-        botao.className = "remove hidden";
-      }
-    });
-
-    document.getElementById("imgCount").textContent = lista.length;
-
-    var contador = document.getElementById("imgCounter");
-    var texto = contador.querySelector("span");
-    var temPerfil = lista.indexOf("perfil") !== -1;
-
-    contador.classList.toggle("error", !temPerfil || lista.length > MAX);
-    texto.textContent = !temPerfil
-      ? "PERFIL / FRENTE é obrigatória e será a capa."
-      : cheio
-        ? "Limite atingido: 3 imagens. Remova uma para trocar o ângulo."
-        : "PERFIL será a capa. Você pode adicionar até 2 vistas complementares.";
-  }
-
-  function zerarImagens(brinquedo) {
-    TIPOS.forEach(function (tipo) {
-      descartarPrevia(tipo);
-      entrada(tipo).value = "";
-      entrada(tipo).disabled = false;
-      marcador(tipo).checked = false;
-    });
-
-    salvas = {};
-
-    if (brinquedo && Array.isArray(brinquedo.imagens)) {
-      brinquedo.imagens.forEach(function (foto) {
-        if (foto && foto.tipo && foto.url) {
-          salvas[foto.tipo] = foto;
-        }
-      });
-    }
-    // Brinquedo antigo, cadastrado antes das fotos tipadas: a capa
-    // legada entra como PERFIL para o slot nao aparecer vazio.
-    if (brinquedo && !salvas.perfil && brinquedo.imagem_url) {
-      salvas.perfil = { tipo: "perfil", url: brinquedo.imagem_url };
-    }
-
-    pintar();
-  }
-
-  TIPOS.forEach(function (tipo) {
-    entrada(tipo).addEventListener("change", function () {
-      descartarPrevia(tipo);
-      marcador(tipo).checked = false;
-
-      var f = arquivo(tipo);
-
-      if (f && f.type.indexOf("image/") !== 0) {
-        entrada(tipo).value = "";
-        erro("O arquivo escolhido para " + ROTULOS[tipo] + " não é uma imagem.");
-      } else if (f && f.size > MAX_BYTES) {
-        entrada(tipo).value = "";
-        erro("Cada imagem deve ter no máximo 15 MB. " +
-             ROTULOS[tipo] + " tem " + (f.size / 1048576).toFixed(1) + " MB.");
-      } else {
-        erro("");
-      }
-
-      pintar();
-    });
-
-    document
-      .querySelector('[data-remove="' + tipo + '"]')
-      .addEventListener("click", function () {
-        if (arquivo(tipo)) {
-          // Desfaz apenas a escolha nova; a foto ja gravada continua.
-          descartarPrevia(tipo);
-          entrada(tipo).value = "";
-          marcador(tipo).checked = false;
-        } else {
-          marcador(tipo).checked = !marcador(tipo).checked;
-        }
-        erro("");
-        pintar();
-      });
-
-    document
-      .querySelector('[data-preview="' + tipo + '"]')
-      .addEventListener("click", function () {
-        var src = origem(tipo);
-        if (!src) {
-          return;
-        }
-        document.getElementById("lightboxImg").src = src;
-        document.getElementById("lightboxImg").alt = ROTULOS[tipo];
-        document.getElementById("lightboxCaption").textContent = ROTULOS[tipo];
-        abrir(lightbox);
-      });
-  });
-
-  document
-    .getElementById("closeLightbox")
-    .addEventListener("click", function () {
-      fechar(lightbox);
-    });
-
-  // ----------------------------------------------------------------
-  // Abertura do cadastro
-  // ----------------------------------------------------------------
-  function valor(id, v) {
-    if (window.Painel) Painel.valor(id, v);
-    else document.getElementById(id).value = v === null || v === undefined ? "" : v;
-  }
-
-  function marcar(nome, ids) {
-    var alvo = (ids || []).map(Number);
-    // Escopo no proprio form: fora dele existem outros checkboxes.
-    form.querySelectorAll('input[name="' + nome + '"]').forEach(function (x) {
-      x.checked = alvo.indexOf(Number(x.value)) !== -1;
-    });
-    document.querySelectorAll("[data-options-tools]").forEach(function (barra) {
-      if (barra.atualizarContador) barra.atualizarContador();
-    });
-  }
-
-  function abrirBrinquedo(id) {
-    form.reset();
-    erro("");
-    travar(false);
-
-    var brinquedo = id
-      ? brinquedos.filter(function (x) {
-          return Number(x.id) === Number(id);
-        })[0]
-      : null;
-
-    valor("toyId", brinquedo ? brinquedo.id : "");
-    document.getElementById("toyTitle").textContent = brinquedo
-      ? "Editar brinquedo"
-      : "Cadastrar brinquedo";
-
-    if (brinquedo) {
-      valor("toyName", brinquedo.nome_brinquedo);
-      valor("toyDescription", brinquedo.descricao);
-      valor("toyPrice", brinquedo.valor_brinquedo);
-      valor("toyRating", brinquedo.avaliacao);
-      valor("toyVoltage", brinquedo.voltz);
-      valor("toyHeight", brinquedo.altura_m);
-      valor("toyWidth", brinquedo.largura_m);
-      valor("toyDepth", brinquedo.profundidade_m);
-      document.getElementById("toyStore").checked = !!brinquedo.exibir_na_loja;
-      marcar("categorias_brinquedos", brinquedo.categorias_ids);
-      marcar("tags", brinquedo.tags_ids);
-    } else {
-      marcar("categorias_brinquedos", []);
-      marcar("tags", []);
-    }
-
-    zerarImagens(brinquedo);
-    mostrarObjeto3d(brinquedo);
-    abrir(toyDialog);
-  }
-
-  // o objeto 3D do brinquedo: o arquivo atual e as cores de dentro dele
-  var caixa3d = document.querySelector("[data-objeto3d]");
-  var entrada3d = document.getElementById("toyModel");
-  function mostrarObjeto3d(brinquedo) {
-    var objeto = brinquedo && brinquedo.objeto_3d;
-    caixa3d.querySelector("[data-objeto3d-atual]").hidden = !objeto;
-    caixa3d.querySelector("[data-objeto3d-vazio]").hidden = !!objeto;
-    caixa3d.querySelector("[data-objeto3d-remover]").classList.toggle("hidden", !objeto);
-    caixa3d.querySelector("[data-objeto3d-rotulo]").textContent = objeto ? "Trocar .glb" : "Escolher .glb";
-    if (objeto) {
-      caixa3d.querySelector("[data-objeto3d-nome]").textContent = objeto.arquivo;
-      var medidas = (objeto.medidas || []).length === 3
-        ? "Tamanho: " + objeto.medidas.map(function (v) { return String(v).replace(".", ","); }).join(" × ") + " m (A × L × P) · "
-        : "";
-      caixa3d.querySelector("[data-objeto3d-cores]").textContent = medidas + (objeto.cores.length
-        ? "Cores: " + objeto.cores.join(", ")
-        : "Cores: os tons da adesivagem (o arquivo não traz variações)");
-    }
-  }
-  entrada3d.addEventListener("change", function () {
-    var arquivo = entrada3d.files && entrada3d.files[0];
-    if (arquivo) caixa3d.querySelector("[data-objeto3d-rotulo]").textContent = arquivo.name;
-  });
-
-  function fecharBrinquedo() {
-    TIPOS.forEach(descartarPrevia);
-    fechar(toyDialog);
-  }
-
-  document.getElementById("newToy").addEventListener("click", function () {
-    abrirBrinquedo(null);
-  });
-  document.querySelectorAll("[data-edit]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      abrirBrinquedo(b.dataset.edit);
-    });
-  });
-  document.getElementById("closeToy").addEventListener("click", fecharBrinquedo);
-  document.getElementById("cancelToy").addEventListener("click", fecharBrinquedo);
-
-  // ----------------------------------------------------------------
-  // Envio
-  //
-  // Vai por fetch: um erro de validacao volta como JSON e aparece no
-  // topo do modal. Antes o servidor respondia com redirect e o
-  // formulario inteiro -- textos, categorias, arquivos -- era perdido.
-  // ----------------------------------------------------------------
-  function travar(on) {
-    toyDialog.querySelector(".dialog-card").classList.toggle("is-loading", on);
-    document.getElementById("submitToy").disabled = on;
-    document.getElementById("submitToy").textContent = on
-      ? "Salvando..."
-      : "Salvar brinquedo";
-    document.getElementById("cancelToy").disabled = on;
-    document.getElementById("closeToy").disabled = on;
-  }
-
-  async function enviar(formulario) {
-    // getAttribute, nao formulario.action: o form tem um
-    // <input name="action">, e o acesso por propriedade devolve esse
-    // input em vez da URL.
-    var destino = formulario.getAttribute("action");
-
-    var resposta = await fetch(destino, {
-      method: "POST",
-      body: new FormData(formulario),
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      credentials: "same-origin"
-    });
-
-    var dados = null;
-    try {
-      dados = await resposta.json();
-    } catch (e) {
-      dados = null;
-    }
-
-    if (!resposta.ok || !dados || dados.status !== "sucesso") {
-      throw new Error(
-        (dados && dados.msg) ||
-          "Não foi possível salvar. Tente novamente em instantes."
-      );
-    }
-
-    return dados;
-  }
-
-  // A validacao nativa do navegador nao bubbla e o balaozinho some
-  // assim que o modal rola. Aqui o motivo tambem vai pro banner fixo.
-  form.addEventListener(
-    "invalid",
-    function (e) {
-      var campo = e.target;
-      var etiqueta = form.querySelector('label[for="' + campo.id + '"]');
-      erro(
-        "Confira o campo obrigatório " +
-          ((etiqueta && etiqueta.textContent) || campo.name) +
-          ": " +
-          campo.validationMessage
-      );
-      campo.scrollIntoView({ block: "center", behavior: "smooth" });
-      travar(false);
-    },
-    true
-  );
-
-  form.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    erro("");
-
-    var lista = ativas();
-
-    if (lista.indexOf("perfil") === -1) {
-      erro("A imagem PERFIL / FRENTE é obrigatória: ela é a capa do brinquedo.");
-      return;
-    }
-    if (lista.length > MAX) {
-      erro("Máximo de 3 imagens. Mantenha PERFIL e escolha apenas mais dois ângulos.");
-      return;
-    }
-
-    travar(true);
-    try {
-      await enviar(form);
-      window.location.reload();
-    } catch (err) {
-      erro(err.message);
-      travar(false);
-    }
-  });
-
-  // ----------------------------------------------------------------
-  // Exclusao
-  // ----------------------------------------------------------------
-  document.querySelectorAll("[data-delete]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      fraseExclusao = "CONFIRMAR EXCLUSÃO " + b.dataset.name;
-      document.getElementById("deleteId").value = b.dataset.delete;
-      document.getElementById("deletePhrase").textContent = fraseExclusao;
-      document.getElementById("deleteInput").value = "";
-      document.getElementById("deleteHidden").value = "";
-      document.getElementById("deleteMsg").textContent = "";
-      document.getElementById("deleteSubmit").disabled = true;
-      abrir(deleteDialog);
-    });
-  });
-
-  document.getElementById("cancelDelete").addEventListener("click", function () {
-    fechar(deleteDialog);
-  });
-
-  document.getElementById("deleteInput").addEventListener("input", function (e) {
-    var ok = e.target.value === fraseExclusao;
-    document.getElementById("deleteSubmit").disabled = !ok;
-    document.getElementById("deleteHidden").value = ok ? fraseExclusao : "";
-  });
-
-  deleteForm.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    var botao = document.getElementById("deleteSubmit");
-    botao.disabled = true;
-    botao.textContent = "Excluindo...";
-    try {
-      await enviar(deleteForm);
-      window.location.reload();
-    } catch (err) {
-      document.getElementById("deleteMsg").textContent = err.message;
-      botao.disabled = false;
-      botao.textContent = "Excluir";
-    }
-  });
-
-  // ----------------------------------------------------------------
-  // Cadastros rapidos de categoria e tag
-  // ----------------------------------------------------------------
-  function anexar(grid, nome, id, texto) {
-    var l = document.createElement("label");
-    l.className = "check";
-    var i = document.createElement("input");
-    i.type = "checkbox";
-    i.name = nome;
-    i.value = id;
-    i.checked = true;
-    // Sem o atributo, o form.reset() da proxima abertura desmarcaria
-    // a opcao recem criada sem motivo aparente.
-    i.setAttribute("checked", "checked");
-    var s = document.createElement("span");
-    s.textContent = texto;
-    l.appendChild(i);
-    l.appendChild(s);
-    document.getElementById(grid).appendChild(l);
-    var barra = document.querySelector('[data-options-tools="' + grid + '"]');
-    if (barra && barra.atualizarContador) barra.atualizarContador();
-  }
-
-  async function rapido(formulario, url, alvoMsg, pronto) {
-    document.getElementById(alvoMsg).textContent = "";
-    try {
-      var r = await fetch(url, {
-        method: "POST",
-        body: new FormData(formulario),
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-        credentials: "same-origin"
-      });
-      var d = await r.json();
-      if (!r.ok || d.status !== "sucesso") {
-        throw new Error(d.msg || "Não foi possível salvar.");
-      }
-      pronto(d);
-      formulario.reset();
-    } catch (err) {
-      document.getElementById(alvoMsg).textContent = err.message;
-    }
-  }
-
-  document.getElementById("openCategory").addEventListener("click", function () {
-    abrir(categoryDialog);
-  });
-  document.getElementById("cancelCategory").addEventListener("click", function () {
-    fechar(categoryDialog);
-  });
-  document.getElementById("openTag").addEventListener("click", function () {
-    abrir(tagDialog);
-  });
-  document.getElementById("cancelTag").addEventListener("click", function () {
-    fechar(tagDialog);
-  });
-
-  document.getElementById("categoryForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    rapido(e.currentTarget, "{% url 'categoria_new' %}", "categoryMsg", function (d) {
-      anexar("categoryGrid", "categorias_brinquedos", d.id, d.nome);
-      fechar(categoryDialog);
-    });
-  });
-
-  document.getElementById("tagForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    rapido(e.currentTarget, "{% url 'tag_new' %}", "tagMsg", function (d) {
-      anexar("tagGrid", "tags", d.id, d.nome);
-      fechar(tagDialog);
-    });
-  });
-})();
-</script>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  {# No bloco de scripts, e não no conteúdo: ver o comentário do topo. #}
+  <script src="{% estatico 'site/paginas/gestao-brinquedos_adm.js' %}"></script>
 {% endblock %}
