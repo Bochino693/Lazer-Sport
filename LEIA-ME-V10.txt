@@ -2370,13 +2370,14 @@ Dependência nova: rjsmin (requirements.txt).
    launcher.js vem antes do projeto3d.js); sem o "Pedir" e sem o fechar.
    Sem JavaScript, a chamada continua e o "Abrir o montador" leva à lista das
    áreas e das máquinas com as medidas (#p3dSemJs).
-   Conferido no Chromium (swiftshader) em 1366 x 860, 1920 x 1080, 1280 x
-   720, 1024 x 768, 768 x 1024, 915 x 412 (o celular deitado), Pixel 7,
-   iPhone 14 e iPhone SE: abrir, trocar as abas, a medida, a ideia, o
-   modelo, a área, a busca e as máquinas (o 3D muda a cada uma), o diálogo
-   da foto, o pedido chegando ao servidor (com a foto), fechar no X, no Esc
-   e no voltar, o link #p= e o #monte-seu-espaco vindos de fora; nada fora
-   da tela e a página sem rolar com o app aberto. E a ficha do painel, no
-   computador e no celular.
+   Conferido no Chromium (swiftshader), em 1366 x 860, 1920 x 1080, Pixel 7
+   e iPhone 14, o passeio inteiro: abrir, trocar as abas, a medida, a ideia,
+   o modelo, a área, a busca e as máquinas (o 3D muda a cada uma), o
+   diálogo da foto, o pedido chegando ao servidor (com a foto), a folha do
+   celular arrastada, fechar no X, no Esc e no voltar, o link #p= e o
+   #monte-seu-espaco vindos de fora; nada fora da tela e a página sem rolar
+   com o app aberto. Em 1280 x 720, 1024 x 768, 768 x 1024, 915 x 412 (o
+   celular deitado) e iPhone SE, cada aba: nada fora da tela, o pé do painel
+   e as abas à vista. E a ficha do painel, no computador e no celular.
    Testes: core/tests_projeto3d.py (MontadorComoLauncherTests e
    PainelTests.test_a_ficha_tem_as_abas_sem_a_tela_cheia).
