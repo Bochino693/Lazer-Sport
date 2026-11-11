@@ -1,17 +1,14 @@
 """Os estados (e os países) do mapa da home, coloridos pelo nível de pedidos.
 
-O Brasil vai pelos estados; fora dele, cada país inteiro (o cliente de
-fora do Brasil tem o país no endereço). Os países só contam propostas
-aprovadas e clientes do mapa -- a loja online só entrega no Brasil.
+O Brasil vai pelos estados; fora dele, cada país inteiro.
 
-O QUE CONTA COMO PEDIDO, POR ESTADO (UF):
-  * proposta APROVADA no painel (sistema_interno.Orcamento), no estado do
-    cliente -- o primeiro endereço dele, o mesmo que vira o alfinete;
-  * pedido da loja online pago ou adiante (pago, em preparação, saiu para
-    entrega, finalizado), no estado de entrega do pedido;
-  * cliente publicado no mapa sem nenhuma proposta aprovada registrada
-    conta 1: ele comprou (é por isso que está no mapa), só que antes do
-    painel existir. Assim todo estado com alfinete aparece colorido.
+O QUE CONTA: SÓ O QUE TEM ALFINETE.
+  Cada cliente publicado no mapa conta as propostas aprovadas dele (pelo
+  menos 1: está no mapa porque comprou), no estado ou país onde o
+  ALFINETE dele está -- pela coordenada, contra a mesma malha que o mapa
+  desenha. Proposta ou compra de quem não está no mapa não pinta nada:
+  antes o Paraná saía colorido por um pedido de alguém que não aparecia
+  no mapa, e o mapa contava um alfinete que não estava lá.
 
 O SITE MOSTRA A FAIXA, NUNCA O NÚMERO. O número exato de pedidos por
 estado é informação comercial; a página pública só recebe o nível (1 a 5)
@@ -21,8 +18,11 @@ cache da home, e não a cada visita.
 
 from __future__ import annotations
 
+import json
 import unicodedata
 from collections import Counter
+from functools import lru_cache
+from pathlib import Path
 
 #: As faixas da legenda, da mais clara à mais escura. O último limite é
 #: aberto ("21 ou mais").
@@ -39,8 +39,6 @@ UFS = {
     "SC": "Santa Catarina", "SP": "São Paulo", "SE": "Sergipe",
     "TO": "Tocantins",
 }
-
-STATUS_DA_LOJA_QUE_CONTAM = ("pago", "em_preparacao", "saiu_entrega", "finalizado")
 
 
 def _sem_acento(texto: str) -> str:
@@ -99,77 +97,155 @@ def pais_de(valor) -> str:
     return _APELIDOS_DE_PAIS.get(texto, texto)
 
 
-def _contar(clientes_no_mapa):
-    """(por estado, por país) -- ver o topo do arquivo."""
-    from django.db.models import OuterRef, Subquery
+# ---------------------------------------------------------------------
+# Em que estado (ou país) o ALFINETE está -- pela coordenada dele
+# ---------------------------------------------------------------------
+# A cor tem de bater com o alfinete: se o endereço diz "SP" mas o ponto
+# cai no Paraná, quem pinta é o Paraná, onde o alfinete aparece. Por isso
+# a região sai da coordenada, testada contra a mesma malha que o mapa
+# desenha (core/static/site/dados/), e o texto do endereço só desempata
+# um ponto que caia fora de tudo (no mar, rente à costa).
+_DADOS = Path(__file__).resolve().parent / "static" / "site" / "dados"
 
-    from core.models import Pedido
-    from sistema_interno.models import EnderecoCliente, Orcamento
+
+def _carregar_malha(nome):
+    geo = json.loads((_DADOS / nome).read_text(encoding="utf-8"))
+    regioes = []
+    for feature in geo["features"]:
+        poligonos = feature["geometry"]["coordinates"]
+        xs = [x for poligono in poligonos for anel in poligono for x, _ in anel]
+        ys = [y for poligono in poligonos for anel in poligono for _, y in anel]
+        regioes.append((feature["id"], (min(xs), min(ys), max(xs), max(ys)), poligonos))
+    return regioes
+
+
+@lru_cache(maxsize=None)
+def _malha_estados():
+    return _carregar_malha("estados-br.json")
+
+
+@lru_cache(maxsize=None)
+def _malha_paises():
+    return _carregar_malha("paises.json")
+
+
+def _dentro_do_anel(x, y, anel):
+    dentro = False
+    j = len(anel) - 1
+    for i in range(len(anel)):
+        xi, yi = anel[i]
+        xj, yj = anel[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi:
+            dentro = not dentro
+        j = i
+    return dentro
+
+
+def _dentro(x, y, poligonos):
+    for poligono in poligonos:
+        if _dentro_do_anel(x, y, poligono[0]) and not any(
+            _dentro_do_anel(x, y, buraco) for buraco in poligono[1:]
+        ):
+            return True
+    return False
+
+
+def _distancia(x, y, poligonos):
+    return min(
+        ((x - px) ** 2 + (y - py) ** 2) ** 0.5
+        for poligono in poligonos for anel in poligono for px, py in anel
+    )
+
+
+def _dentro_de_algum(malha, x, y):
+    for chave, (x0, y0, x1, y1), poligonos in malha:
+        if x0 <= x <= x1 and y0 <= y <= y1 and _dentro(x, y, poligonos):
+            return chave
+    return ""
+
+
+def _mais_perto(malha, x, y, folga):
+    perto = [
+        (_distancia(x, y, poligonos), chave)
+        for chave, (x0, y0, x1, y1), poligonos in malha
+        if x0 - folga <= x <= x1 + folga and y0 - folga <= y <= y1 + folga
+    ]
+    perto = [item for item in perto if item[0] <= folga]
+    return min(perto)[1] if perto else ""
+
+
+def regiao_do_ponto(lat, lng, estado="", pais=""):
+    """("estado", "SP"), ("pais", "PY") ou ("", "") para o alfinete.
+
+    Pela coordenada. Ponto fora de toda a malha (no mar rente à costa, numa
+    ilha que a malha simplificou -- Fernando de Noronha): vale o estado do
+    endereço se ele estiver por perto; senão, o estado mais próximo.
+    """
+    try:
+        x, y = float(lng), float(lat)
+    except (TypeError, ValueError):
+        x = y = None
+    uf_do_endereco = "" if pais_de(pais) else uf_de(estado)
+    if x is not None:
+        uf = _dentro_de_algum(_malha_estados(), x, y)
+        if uf:
+            return "estado", uf
+        iso = _dentro_de_algum(_malha_paises(), x, y)
+        if iso:
+            return "pais", iso
+        if uf_do_endereco:
+            regiao = next((p for chave, _caixa, p in _malha_estados() if chave == uf_do_endereco), None)
+            if regiao and _distancia(x, y, regiao) <= 4:
+                return "estado", uf_do_endereco
+        uf = _mais_perto(_malha_estados(), x, y, folga=0.35)
+        if uf:
+            return "estado", uf
+        iso = _mais_perto(_malha_paises(), x, y, folga=0.6)
+        if iso:
+            return "pais", iso
+    if uf_do_endereco:
+        return "estado", uf_do_endereco
+    return "", ""
+
+
+def _contar(clientes_no_mapa):
+    """(por estado, por país): SÓ o que tem alfinete no mapa.
+
+    Cada cliente publicado conta as propostas aprovadas dele (pelo menos 1:
+    ele está no mapa porque comprou), no estado ou país onde o alfinete
+    dele está. Proposta ou compra de quem não está no mapa não pinta nada:
+    um estado colorido sem alfinete nenhum seria um mapa mentindo.
+
+    `clientes_no_mapa`: (cliente_id, tipo, chave), com tipo/chave de
+    `regiao_do_ponto`.
+    """
+    from sistema_interno.models import Orcamento
+
+    clientes = [tuple(c) for c in clientes_no_mapa]
+    ids = {c[0] for c in clientes if c[0] is not None}
+    aprovadas = Counter(
+        Orcamento.objects
+        .filter(status=Orcamento.Status.APROVADO, cliente_id__in=ids)
+        .values_list("cliente_id", flat=True)
+    ) if ids else Counter()
 
     por_uf: Counter = Counter()
     por_pais: Counter = Counter()
-
-    def primeiro_endereco(campo):
-        return Subquery(
-            EnderecoCliente.objects
-            .filter(cliente_id=OuterRef("cliente_id"))
-            .order_by("id")
-            .values(campo)[:1]
-        )
-
-    clientes_com_pedido = set()
-    aprovadas = (
-        Orcamento.objects
-        .filter(status=Orcamento.Status.APROVADO, cliente__isnull=False)
-        .annotate(_uf=primeiro_endereco("estado"), _pais=primeiro_endereco("pais"))
-        .values_list("cliente_id", "_uf", "_pais")
-    )
-    for cliente_id, estado, pais in aprovadas:
-        clientes_com_pedido.add(cliente_id)
-        fora = pais_de(pais)
-        if fora:
-            por_pais[fora] += 1
+    for cliente_id, tipo, chave in clientes:
+        if not chave:
             continue
-        uf = uf_de(estado)
-        if uf:
-            por_uf[uf] += 1
-
-    da_loja = (
-        Pedido.objects
-        .filter(status__in=STATUS_DA_LOJA_QUE_CONTAM)
-        .values_list("estado", flat=True)
-    )
-    for estado in da_loja:
-        uf = uf_de(estado)
-        if uf:
-            por_uf[uf] += 1
-
-    for cliente in clientes_no_mapa:
-        cliente_id, estado, pais = (tuple(cliente) + ("",))[:3]
-        if cliente_id in clientes_com_pedido:
-            continue
-        fora = pais_de(pais)
-        if fora:
-            por_pais[fora] += 1
-            continue
-        uf = uf_de(estado)
-        if uf:
-            por_uf[uf] += 1
-
+        peso = max(1, aprovadas.get(cliente_id, 0))
+        (por_uf if tipo == "estado" else por_pais)[chave] += peso
     return por_uf, por_pais
 
 
 def pedidos_por_estado(clientes_no_mapa=()) -> Counter:
-    """Quantos pedidos de brinquedos cada estado (UF) já fez.
-
-    `clientes_no_mapa`: (cliente_id, estado[, país]) dos clientes publicados
-    no mapa -- os que ainda não têm proposta aprovada contam 1.
-    """
+    """Quantos pedidos de brinquedos cada estado (UF) tem no mapa."""
     return _contar(clientes_no_mapa)[0]
 
 
 def pedidos_por_pais(clientes_no_mapa=()) -> Counter:
-    """O mesmo para os países fora do Brasil (chave: o nome normalizado)."""
+    """O mesmo para os países fora do Brasil (chave: a sigla ISO)."""
     return _contar(clientes_no_mapa)[1]
 
 

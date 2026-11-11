@@ -2885,3 +2885,31 @@ Dependência nova: rjsmin (requirements.txt).
    No celular o toque perto de um alfinete abre o alfinete (é o celular que
    puxa o toque para o mais próximo); longe dele, abre o estado.
    Testes: core/tests_mapa_estados.py (países, nomes, sem o Brasil).
+
+70) O MAPA: A COR DO ESTADO SAI SÓ DOS ALFINETES, NO LUGAR DELES
+   Pedido (com o print do Paraná): "não tem nenhum alfinete no Paraná mas
+   ainda assim conta como se tivesse lá ... sem erros nem falhas".
+   O QUE ACONTECIA: o Paraná saía com a faixa "1 a 2 pedidos" por uma
+   proposta aprovada (ou compra da loja) de alguém do Paraná que não está
+   publicado no mapa -- o mapa contava um alfinete que não estava lá.
+   AGORA (core/mapa_estados.py):
+     * só conta quem tem alfinete: cada cliente publicado vale as propostas
+       aprovadas dele (pelo menos 1, porque está no mapa por ter comprado);
+       proposta ou compra de quem não está no mapa não pinta nada (para
+       aparecer, é publicar o cliente no mapa pelo painel);
+     * o estado (ou país) sai da COORDENADA do alfinete, testada contra a
+       mesma malha que o mapa desenha (regiao_do_ponto) -- não do texto do
+       endereço. Endereço "SP" com o ponto em Curitiba pinta o Paraná, e o
+       cliente aparece no cartão do Paraná. Ponto fora da malha (no mar,
+       numa ilha simplificada) usa o estado do endereço se estiver perto;
+     * cada alfinete leva "uf" (ou "pais_id", fora do Brasil) calculado do
+       mesmo jeito: a cor e a lista do cartão são sempre os mesmos
+       alfinetes; os países agora vêm pela sigla ISO;
+     * a malha de origem punha Fernando de Noronha e o arquipélago de São
+       Pedro e São Paulo no Rio Grande do Norte: passaram para Pernambuco
+       no estados-br.json.
+   Com os 18 clientes do ar: SP 8 alfinetes (6 a 10), RJ 2, MG, SC, GO,
+   MA 2, SE 2, AL; o Paraná sem cor. Longe, os alfinetes se espalham para
+   povoar a região (item 66); de perto cada um volta ao lugar real, e a
+   cor é sempre a do lugar real.
+   Testes: core/tests_mapa_estados.py.

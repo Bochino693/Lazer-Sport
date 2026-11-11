@@ -156,12 +156,8 @@
     const temEstados = Boolean(caixa.dataset.estados && dadosEstados && (dadosEstados.faixas || []).length);
     const rotuloDoNivel = (nivel) => (dadosEstados?.faixas || []).find((f) => f.nivel === nivel)?.rotulo || '';
 
-    function semAcento(texto) {
-        return String(texto || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-    }
-
-    // Quem é cada região: estado (pela sigla) ou país (por qualquer um dos
-    // nomes dele -- português, inglês, sigla de 2 e de 3 letras).
+    // Quem é cada região: estado (pela sigla) ou país (pela sigla ISO). A
+    // cor e os clientes do cartão são os dos alfinetes que estão nela.
     function regiaoDe(feature, tipo) {
         if (tipo === 'estado') {
             const uf = feature.id;
@@ -174,16 +170,15 @@
                 clientes: clientes.filter((c) => c.uf === uf),
             };
         }
-        const apelidos = new Set((feature.properties?.apelidos || []).concat(feature.properties?.nome || '').map(semAcento));
-        const nivelPais = Object.entries(dadosEstados?.paises || {})
-            .find(([nome]) => apelidos.has(semAcento(nome)));
+        // O servidor já diz em que país cada alfinete está (pela coordenada):
+        // a cor e a lista do cartão saem dos mesmos alfinetes.
         return {
             tipo,
             chave: feature.id,
             sigla: String(feature.id || '').length === 2 ? feature.id : '',
             nome: feature.properties?.nome || feature.id,
-            nivel: nivelPais ? Number(nivelPais[1]) : 0,
-            clientes: clientes.filter((c) => c.pais && apelidos.has(semAcento(c.pais))),
+            nivel: Number((dadosEstados?.paises || {})[feature.id] || 0),
+            clientes: clientes.filter((c) => c.pais_id === feature.id),
         };
     }
 

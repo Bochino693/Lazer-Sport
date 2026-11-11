@@ -422,6 +422,13 @@ class HomeView(View):
         # só para ser reduzida na tela.
         logo_da_casa = static("images/logo-96.png")
 
+        # Em que estado (ou país) cada alfinete está, pela coordenada dele: é
+        # isso que pinta o mapa e lista os clientes no cartão de cada estado.
+        regioes_dos_alfinetes = {
+            e.pk: mapa_estados.regiao_do_ponto(e.latitude, e.longitude, e.estado, e.pais)
+            for e in enderecos_no_mapa
+        }
+
         clientes_mapa = [
             {
                 "tipo": "cliente",
@@ -433,9 +440,10 @@ class HomeView(View):
                 "lat": float(e.latitude),
                 "lng": float(e.longitude),
                 "site": e.cliente.site_cliente or "",
-                # o estado em sigla (ou "" fora do Brasil): é por ele que o
-                # cartão do estado lista os clientes de lá
-                "uf": "" if mapa_estados.pais_de(e.pais) else mapa_estados.uf_de(e.estado),
+                # onde o alfinete está: o estado (sigla) ou, fora do Brasil, o
+                # país (sigla ISO) -- é por aqui que o cartão acha os clientes
+                "uf": regioes_dos_alfinetes[e.pk][1] if regioes_dos_alfinetes[e.pk][0] == "estado" else "",
+                "pais_id": regioes_dos_alfinetes[e.pk][1] if regioes_dos_alfinetes[e.pk][0] == "pais" else "",
             }
             for e in enderecos_no_mapa
         ]
@@ -445,7 +453,7 @@ class HomeView(View):
         # Um erro aqui nunca derruba a home: o mapa fica sem as cores.
         try:
             estados_mapa = mapa_estados.dados_do_mapa(
-                [(e.cliente_id, e.estado, e.pais) for e in enderecos_no_mapa]
+                [(e.cliente_id, *regioes_dos_alfinetes[e.pk]) for e in enderecos_no_mapa]
             )
         except Exception:  # noqa: BLE001
             logging.getLogger(__name__).exception("Mapa: não deu para contar os pedidos por estado")

@@ -4,10 +4,11 @@ O que estes testes protegem:
 
   * o estado vem certo de 'SP', 'sp', 'São Paulo' ou 'Sao Paulo', e o que
     não é estado não conta;
-  * contam a proposta aprovada (no estado do primeiro endereço do cliente),
-    o pedido pago da loja e o cliente do mapa sem proposta aprovada; não
-    contam a proposta não aprovada nem o pedido cancelado ou esperando
-    pagamento; o cliente do mapa com proposta aprovada não conta duas vezes;
+  * só conta quem tem alfinete: cada cliente do mapa vale as propostas
+    aprovadas dele (pelo menos 1); proposta ou compra de quem não está no
+    mapa não pinta nada (antes o Paraná saía colorido sem alfinete);
+  * o estado (ou país) sai da coordenada do alfinete, não do texto do
+    endereço; Fernando de Noronha é Pernambuco;
   * a página recebe só o NÍVEL de cada estado e o rótulo da faixa, nunca o
     número de pedidos;
   * a home leva os dados dos estados, a malha e a logo de fundo para o mapa,
@@ -46,57 +47,65 @@ class UfTests(TestCase):
         )
 
 
-class ContagemTests(TestCase):
-    def cliente(self, nome, estado):
-        cliente = Cliente.objects.create(nome_cliente=nome)
-        EnderecoCliente.objects.create(cliente=cliente, cidade="Cidade", estado=estado)
-        return cliente
+class RegiaoDoAlfineteTests(TestCase):
+    """O estado (ou país) sai da COORDENADA do alfinete, não do texto."""
 
-    def test_conta_aprovadas_loja_e_clientes_do_mapa(self):
-        sp = self.cliente("Buffet SP", "São Paulo")
-        rj = self.cliente("Parque RJ", "RJ")
-        ba = self.cliente("Shopping BA", "ba")
+    def test_vale_onde_o_alfinete_esta(self):
+        # endereço diz "SP", mas o ponto é Curitiba: quem pinta é o Paraná
+        self.assertEqual(mapa_estados.regiao_do_ponto(-25.43, -49.27, "SP", ""), ("estado", "PR"))
+        self.assertEqual(mapa_estados.regiao_do_ponto(-23.55, -46.63, "", ""), ("estado", "SP"))
+        self.assertEqual(mapa_estados.regiao_do_ponto(-25.26, -57.58, "Central", "Paraguai"), ("pais", "PY"))
+        self.assertEqual(mapa_estados.regiao_do_ponto(40.7, -74.0, "NY", "EUA"), ("pais", "US"))
+
+    def test_ilhas_e_pontos_fora_da_malha(self):
+        # Fernando de Noronha é Pernambuco (a malha de origem dizia RN)
+        self.assertEqual(mapa_estados.regiao_do_ponto(-3.85, -32.42, "PE", ""), ("estado", "PE"))
+        # no mar, longe de tudo: nada
+        self.assertEqual(mapa_estados.regiao_do_ponto(-23.0, -40.0, "", ""), ("", ""))
+        # sem coordenada: o endereço
+        self.assertEqual(mapa_estados.regiao_do_ponto(None, None, "Bahia", ""), ("estado", "BA"))
+
+
+class ContagemTests(TestCase):
+    def cliente(self, nome):
+        return Cliente.objects.create(nome_cliente=nome)
+
+    def test_so_conta_quem_tem_alfinete(self):
+        sp = self.cliente("Buffet SP")
+        rj = self.cliente("Parque RJ")
+        fora_do_mapa = self.cliente("Cliente do Paraná sem alfinete")
+        EnderecoCliente.objects.create(cliente=fora_do_mapa, cidade="Curitiba", estado="PR")
         for _ in range(3):
             Orcamento.objects.create(cliente=sp, status=Orcamento.Status.APROVADO)
-        Orcamento.objects.create(cliente=rj, status=Orcamento.Status.APROVADO)
-        # não contam: proposta não aprovada
-        Orcamento.objects.create(cliente=ba, status=Orcamento.Status.AGUARDANDO_RESPOSTA)
-        Orcamento.objects.create(cliente=ba, status=Orcamento.Status.RECUSADO)
-        # loja: pago conta, cancelado e esperando pagamento não
-        Pedido.objects.create(status="pago", estado="MG")
-        Pedido.objects.create(status="finalizado", estado="mg")
-        Pedido.objects.create(status="cancelado", estado="MG")
-        Pedido.objects.create(status="aguardando_pagamento", estado="MG")
+        # não aprovada não pesa
+        Orcamento.objects.create(cliente=rj, status=Orcamento.Status.AGUARDANDO_RESPOSTA)
+        # quem não está no mapa não pinta nada, nem a compra da loja
+        Orcamento.objects.create(cliente=fora_do_mapa, status=Orcamento.Status.APROVADO)
+        Pedido.objects.create(status="pago", estado="PR")
 
         contagem = mapa_estados.pedidos_por_estado(
-            # SP já tem aprovada (não conta de novo); BA está no mapa sem aprovada
-            [(sp.pk, "SP"), (ba.pk, "Bahia")]
+            [(sp.pk, "estado", "SP"), (rj.pk, "estado", "RJ")]
         )
 
-        self.assertEqual(contagem, {"SP": 3, "RJ": 1, "MG": 2, "BA": 1})
+        # SP: as 3 aprovadas do cliente; RJ: está no mapa, conta 1; PR: nada
+        self.assertEqual(contagem, {"SP": 3, "RJ": 1})
 
     def test_fora_do_brasil_conta_no_pais(self):
-        py = Cliente.objects.create(nome_cliente="Parque Asunción")
-        EnderecoCliente.objects.create(cliente=py, cidade="Asunción", estado="Central", pais="Paraguai")
-        us = Cliente.objects.create(nome_cliente="Mall Miami")
-        EnderecoCliente.objects.create(cliente=us, cidade="Miami", estado="FL", pais="EUA")
+        py = self.cliente("Parque Asunción")
         Orcamento.objects.create(cliente=py, status=Orcamento.Status.APROVADO)
         Orcamento.objects.create(cliente=py, status=Orcamento.Status.APROVADO)
 
-        dados = mapa_estados.dados_do_mapa([(us.pk, "FL", "EUA"), (py.pk, "Central", "Paraguai")])
+        dados = mapa_estados.dados_do_mapa([(py.pk, "pais", "PY")])
 
-        self.assertEqual(dados["paises"], {"paraguai": 1, "estados unidos": 1})
-        # "FL" não vira estado brasileiro, nem "Central"
+        self.assertEqual(dados["paises"], {"PY": 1})
         self.assertEqual(dados["niveis"], {})
-        self.assertEqual(mapa_estados.pais_de("Brasil"), "")
-        self.assertEqual(mapa_estados.pais_de("Paraguay"), "paraguay")
 
     def test_pagina_recebe_so_o_nivel_nunca_o_numero(self):
-        cliente = self.cliente("Buffet SP", "SP")
+        cliente = self.cliente("Buffet SP")
         for _ in range(7):
             Orcamento.objects.create(cliente=cliente, status=Orcamento.Status.APROVADO)
 
-        dados = mapa_estados.dados_do_mapa()
+        dados = mapa_estados.dados_do_mapa([(cliente.pk, "estado", "SP")])
 
         self.assertEqual(dados["niveis"], {"SP": 3})
         self.assertEqual(dados["faixas"][2], {"nivel": 3, "rotulo": "6 a 10 pedidos"})
@@ -120,6 +129,31 @@ class HomeComEstadosTests(TestCase):
         self.assertContains(resposta, "site/dados/paises.json")
         self.assertContains(resposta, "images/logoofi-512.webp")
         self.assertContains(resposta, 'data-onde-camada="estados"')
+
+    def test_a_cor_e_o_cartao_seguem_o_alfinete(self):
+        # O cadastro diz "SP", mas o alfinete está em Curitiba: o mapa pinta
+        # o Paraná e o cartão do Paraná lista esse cliente. E um pedido de
+        # quem não está no mapa (Bahia) não pinta a Bahia.
+        cliente = Cliente.objects.create(
+            nome_cliente="Responsável", nome_estabelecimento="Parque Curitiba",
+            telefone="(41) 90000-0000", publicar_no_mapa=True,
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente, endereco="Rua A", cidade="Curitiba", estado="SP",
+            latitude="-25.4284", longitude="-49.2733",
+        )
+        escondido = Cliente.objects.create(nome_cliente="Sem mapa", telefone="(71) 90000-0000")
+        EnderecoCliente.objects.create(cliente=escondido, endereco="Rua B", cidade="Salvador", estado="BA")
+        Orcamento.objects.create(cliente=escondido, status=Orcamento.Status.APROVADO)
+
+        resposta = self.client.get("/")
+        estados = resposta.context["estados_mapa"]
+        pontos = resposta.context["pontos_mapa"]
+
+        self.assertEqual(estados["niveis"], {"PR": 1})
+        curitiba = next(p for p in pontos if p.get("cidade") == "Curitiba")
+        self.assertEqual(curitiba["uf"], "PR")
+        self.assertEqual(curitiba["pais_id"], "")
 
     def test_erro_na_contagem_nao_derruba_a_home(self):
         with mock.patch.object(mapa_estados, "_contar", side_effect=RuntimeError("banco fora")):
