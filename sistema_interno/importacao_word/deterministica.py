@@ -1287,9 +1287,15 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
     # ------------------------------ dinheiro sem dois-pontos no rótulo
     # "TOTAL GERAL R$ 1.250,00" e "Subtotal R$ 1.200 | Frete R$ 50".
     ja_lidas = {(c["fonte"]["id"], campo) for campo, lista in dinheiro.items() for c in lista}
+    # "3x Piscina de bolinhas – R$ 450,00 cada – total R$ 1.350,00": o
+    # "total" ali é o da LINHA, e não o do orçamento. Lido como total do
+    # documento, ele brigava com o "Total: R$ 8.534,00" de verdade.
+    linhas_de_item = {item["linha_fonte"] for item in itens_em_paragrafos(linhas)}
     for linha in corpo:
         if linha["tabela"]:
             continue  # tabela de itens tem leitura própria, logo abaixo
+        if linha["id"] in linhas_de_item:
+            continue
         for campo, trecho, _, pedaco in _segmentos_de_dinheiro(linha["texto"]):
             if (linha["id"], campo) in ja_lidas or any(
                 (linha["id"], outro) in ja_lidas for outro in CAMPOS_DE_DINHEIRO

@@ -613,7 +613,6 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
             "usada": ia_usada,
             "modelo": ia_info.get("modelo", "") if ia_usada else "",
             "aviso": AVISO_PDF if formato == "pdf_ia" else "",
-            "motivo": ia_info.get("motivo", ""),
         },
         "cliente": cliente,
         "itens": itens,

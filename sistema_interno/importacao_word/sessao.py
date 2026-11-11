@@ -74,3 +74,29 @@ def descartar(request, token: str):
     todas.pop(token, None)
     request.session[CHAVE] = todas
     request.session.modified = True
+
+
+# ----------------------------------------------------------------------
+# O resumo da tela de conclusão
+# ----------------------------------------------------------------------
+#: O que a tela "Pronto" precisa saber e o banco não guarda: se o cliente
+#: nasceu agora ou já existia, e o que foi completado nele. Fica até a
+#: sessão acabar; as cinco últimas bastam (recarregar a tela não perde).
+CHAVE_CONCLUSAO = "importacoes_orcamento_concluidas"
+MAXIMO_CONCLUSOES = 5
+
+
+def guardar_conclusao(request, pk: int, resumo: dict):
+    concluidas = dict(request.session.get(CHAVE_CONCLUSAO) or {})
+    concluidas[str(pk)] = dict(resumo, autor=request.user.pk)
+    for velha in list(concluidas)[: max(0, len(concluidas) - MAXIMO_CONCLUSOES)]:
+        concluidas.pop(velha)
+    request.session[CHAVE_CONCLUSAO] = concluidas
+    request.session.modified = True
+
+
+def conclusao(request, pk: int) -> dict | None:
+    resumo = (request.session.get(CHAVE_CONCLUSAO) or {}).get(str(pk))
+    if not resumo or resumo.get("autor") != request.user.pk:
+        return None
+    return resumo

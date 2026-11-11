@@ -1,15 +1,24 @@
-"""Importar orçamento do Word: subir o .docx, conferir, criar o rascunho.
+"""Importar orçamento do Word ou PDF: subir, conferir, criar.
 
 DUAS TELAS, NESTA ORDEM, E NENHUM ATALHO ENTRE ELAS.
 
-  1. `ImportarOrcamentoWordView` recebe o .docx, lê (regras e, com a chave
-     configurada, IA), guarda a leitura na sessão e manda para a
-     conferência. O arquivo é lido da memória e descartado aqui mesmo.
-  2. `ConferirImportacaoView` mostra o orçamento como vai ficar, com a
-     fonte e a confiança de cada campo, o que falta preencher e os
-     alertas -- e só cria quando está tudo completo e todo alerta
-     vermelho foi resolvido ou aceito com justificativa. Cria RASCUNHO e
-     abre na tela normal de edição; nunca envia nada ao cliente.
+  1. `ImportarOrcamentoWordView` recebe o .docx ou o PDF, lê, guarda a
+     leitura na sessão e manda para a conferência. O arquivo é lido da
+     memória e descartado aqui mesmo.
+  2. `ConferirImportacaoView` mostra cliente e orçamento como vão ficar,
+     com a fonte e a confiança de cada campo, o que falta e os alertas
+     de dinheiro. A pessoa escolhe "Cadastrar cliente e criar orçamento"
+     ou "Só cadastrar o cliente". O orçamento nasce RASCUNHO; nada é
+     enviado ao cliente.
+  3. `ImportacaoConcluidaView` diz o que foi criado, com os links.
+
+A LEITURA É POR REGRA; A IA É REFORÇO. O Word é lido pelas tabelas e
+pelos textos; o PDF com texto, pelo texto de cada página (pypdf, aqui
+no servidor). Sem a chave da IA, é isso e funciona. Com ela, a IA lê as
+MESMAS linhas numeradas e a conferência aceita só o que estiver escrito
+nelas. Falha da IA vai para o log, nunca para a tela: quem importa não
+tem nada a fazer com "chave" ou "limite de uso". A única coisa que só a
+IA lê é o PDF que é foto (digitalização); sem ela, a tela pede o Word.
 
 QUEM ENTRA. As mesmas portas do orçamento (`OrcamentoInternoRequiredMixin`)
 e, dentro delas, só quem pode CRIAR proposta (`orcamentos_criar`): o
@@ -21,14 +30,17 @@ from __future__ import annotations
 
 import logging
 
+from urllib.parse import urlencode
+
 from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
 from .context_processors import invalidar_avisos
 from .importacao_word import conferencia, formulario, ia, leitor, sessao
+from .models import Orcamento
 from .permissoes import capacidades
 from .utils import ErroDeFormulario
 from .views import OrcamentoInternoRequiredMixin
@@ -127,52 +139,73 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
     def ler_docx(self, nome, conteudo):
         linhas = leitor.ler_docx(conteudo, nome)
         leitura = {"arquivo": nome, "formato": "docx", "linhas": linhas, "ia": {"usada": False}, "escolhas": {}}
-        if ia.chave_configurada():
-            try:
-                dados, modelo = ia.ler_orcamento(leitor.texto_numerado(linhas))
-                leitura["ia"] = {"usada": True, "modelo": modelo, "dados": dados}
-            except ia.IAIndisponivel as exc:
-                leitura["ia"] = {"usada": False, "motivo": str(exc)}
-        else:
-            leitura["ia"] = {"usada": False, "motivo": "a chave da IA (ANTHROPIC_API_KEY) não está configurada"}
+        leitura["ia"] = _reforco_da_ia(linhas)
         return leitura
 
     def ler_pdf(self, nome, conteudo):
-        """O PDF só é lido pela IA; sem ela, a pessoa é PERGUNTADA, não adivinhada.
+        """PDF com texto: lido aqui, como o Word. PDF que é foto: só a IA lê.
 
-        Não há leitor de PDF no servidor (e o PDF digitalizado nem texto
-        tem). Sem a chave, ou quando a leitura volta vazia, a tela diz o
-        que fazer -- importar o .docx, ou um PDF com texto nítido -- em vez
-        de montar um orçamento a partir de nada.
+        O PDF salvo pelo Word ou pelo sistema que fez o orçamento tem o
+        texto dentro, e `leitor.ler_pdf_local` tira dele as mesmas linhas
+        numeradas do Word -- com a tabela remontada pelas colunas. A IA,
+        quando ligada, lê essas linhas como lê as do Word.
+
+        O PDF digitalizado (foto da página) não tem texto nenhum. Com a IA
+        ligada, ela transcreve a página; sem ela, a tela pede o Word ou um
+        PDF com texto -- em vez de montar um orçamento a partir de nada.
         """
         leitor.conferir_pdf(nome, conteudo)
-        if not ia.chave_configurada():
-            raise leitor.ArquivoRecusado(
-                "PDF é lido pela IA, e a chave dela (ANTHROPIC_API_KEY) não está configurada "
-                "neste servidor. Abra o orçamento no Word e importe o .docx -- a leitura pelas "
-                "tabelas do Word funciona sem a IA."
-            )
+        try:
+            linhas = leitor.ler_pdf_local(conteudo, nome)
+        except leitor.PdfSemTexto:
+            if not ia.chave_configurada():
+                logger.info("PDF sem texto e sem a IA configurada: pedindo o Word (%s).", nome)
+                raise
+            return self.ler_pdf_pela_ia(nome, conteudo)
+        return {
+            "arquivo": nome, "formato": "pdf", "linhas": linhas, "escolhas": {},
+            "ia": _reforco_da_ia(linhas),
+        }
+
+    def ler_pdf_pela_ia(self, nome, conteudo):
         try:
             transcricao, dados, modelo = ia.ler_pdf(conteudo)
         except ia.IAIndisponivel as exc:
-            raise leitor.ArquivoRecusado(
-                f"Não consegui ler o PDF: {exc}. Tente de novo em instantes ou importe o .docx original."
-            ) from exc
+            logger.warning("Leitura do PDF digitalizado pela IA falhou (%s): %s", nome, exc)
+            raise leitor.ArquivoRecusado(leitor.MENSAGEM_PDF_IMAGEM) from exc
         linhas = leitor.linhas_transcritas(transcricao)
         if not any(l["parte"] in ("corpo", "caixa") for l in linhas):
             raise leitor.ArquivoRecusado(
                 "O PDF voltou sem texto legível (digitalização apagada, foto torta ou arquivo "
-                "protegido). Envie o .docx original ou um PDF com o texto nítido."
+                "protegido). Envie o arquivo do Word ou um PDF com o texto nítido."
             )
         if not _tem_orcamento(dados):
             raise leitor.ArquivoRecusado(
-                "Li o PDF, mas não encontrei nele um orçamento: nem cliente, nem itens, nem "
-                "valores. Confira se é o arquivo certo -- ou importe o .docx original."
+                "Li o PDF, mas não encontrei nele um orçamento nem um cadastro de cliente. "
+                "Confira se é o arquivo certo, ou envie o arquivo do Word."
             )
         return {
-            "arquivo": nome, "formato": "pdf", "linhas": linhas, "escolhas": {},
+            "arquivo": nome, "formato": "pdf_ia", "linhas": linhas, "escolhas": {},
             "ia": {"usada": True, "modelo": modelo, "dados": dados},
         }
+
+
+def _reforco_da_ia(linhas) -> dict:
+    """A IA lê as linhas numeradas, quando ligada. Sem ela, nada muda na tela.
+
+    O motivo de não ter usado (sem chave, chave recusada, limite de uso)
+    fica no log do servidor. A conferência segue com a leitura por regra,
+    que é a mesma de sempre.
+    """
+    if not ia.chave_configurada():
+        logger.info("Importação lida só pelas regras: ANTHROPIC_API_KEY não configurada.")
+        return {"usada": False}
+    try:
+        dados, modelo = ia.ler_orcamento(leitor.texto_numerado(linhas))
+    except ia.IAIndisponivel as exc:
+        logger.warning("Leitura pela IA não aconteceu; seguindo com as regras: %s", exc)
+        return {"usada": False}
+    return {"usada": True, "modelo": modelo, "dados": dados}
 
 
 def _tem_orcamento(dados: dict) -> bool:
@@ -230,7 +263,7 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
                 erro="O orçamento ainda não pode ser criado: veja o que falta preencher.",
             )
         try:
-            orcamento = formulario.criar_rascunho(request, proposta, validado, arquivo=leitura["arquivo"])
+            criado = formulario.criar(request, proposta, validado, arquivo=leitura["arquivo"])
         except ErroDeFormulario as exc:
             # O cadastro de clientes tem a última palavra (nome repetido,
             # CPF de outro cliente): a tela volta com o motivo dele.
@@ -240,16 +273,35 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             )
         sessao.descartar(request, token)
         invalidar_avisos(request.user)
-        messages.success(
-            request,
-            f"Orçamento #{orcamento.pk} criado como rascunho a partir de “{leitura['arquivo']}”. "
-            "Confira e salve para seguir com o envio.",
-        )
-        return redirect(f"{reverse('orcamentos_inner')}?editar={orcamento.pk}")
+        cliente = criado["cliente"]
+        orcamento = criado["orcamento"]
+        if orcamento is None:
+            # Só o cliente: a pessoa chega na ficha dele, já aberta.
+            if criado["cliente_novo"]:
+                texto = f"Cliente “{cliente.nome_cliente}” cadastrado a partir de “{leitura['arquivo']}”."
+            elif criado["completados"]:
+                texto = (f"Cadastro de “{cliente.nome_cliente}” atualizado a partir de "
+                         f"“{leitura['arquivo']}”: {', '.join(criado['completados'])}.")
+            else:
+                texto = f"Cadastro de “{cliente.nome_cliente}” conferido: nada mudou."
+            messages.success(request, texto)
+            return redirect(f"{reverse('clientes_inner')}?{urlencode({'q': cliente.nome_cliente, 'abrir': cliente.pk})}")
+        sessao.guardar_conclusao(request, orcamento.pk, {
+            "arquivo": leitura["arquivo"],
+            "cliente_novo": criado["cliente_novo"],
+            "completados": criado["completados"],
+        })
+        return redirect("importacao_concluida", pk=orcamento.pk)
 
     def desenhar(self, request, token, leitura, proposta, envio, *, validado=None, status=200, erro=""):
         validado = validado or formulario.validar(proposta, envio)
-        alertas = validado["alertas"]
+        # No "Só cadastrar o cliente" os alertas de dinheiro não contam --
+        # mas a tela tem de tê-los prontos, para quem troca para "criar
+        # orçamento" ver ali mesmo o que a conta diz.
+        do_orcamento = validado if envio["modo"] == "orcamento" else formulario.validar(
+            proposta, dict(envio, modo="orcamento"),
+        )
+        alertas = do_orcamento["alertas"]
         for alerta in alertas:
             if alerta["id"] in envio["justificativas"]:
                 alerta["aceito"] = True
@@ -288,6 +340,8 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             "erro": erro,
             "linhas": leitura["linhas"],
             "hoje": timezone.localdate(),
+            "validade_padrao": Orcamento.validade_padrao(),
+            "contas": do_orcamento["contas"],
             "tipos_cliente": formulario.Cliente.Tipo.choices,
             "dados_tela": {
                 "itens": {
@@ -303,6 +357,11 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
                 },
                 "subtotalWord": proposta["valores"]["subtotal"]["valor"],
                 "totalWord": proposta["valores"]["total"]["valor"],
+                # O valor final que a escolha "Qual total vale?" grava: o
+                # negociado escrito no documento, ou o total que não bate.
+                "valorFinal": (proposta.get("valor_final") or {}).get("valor", ""),
+                "valorFinalExplicito": bool((proposta.get("valor_final") or {}).get("explicito")),
+                "nomeDocumento": proposta["cliente"]["nome"]["valor"],
                 "descontoExigido": bool(proposta["valores"]["desconto"].get("exigir")),
                 "descontoPercentual": proposta["valores"]["desconto"].get("percentual", ""),
                 "cliente": {
@@ -318,3 +377,39 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             },
         }
         return render(request, self.template_name, contexto, status=status)
+
+
+class ImportacaoConcluidaView(_SoQuemCriaProposta, View):
+    """O que a importação criou, com o caminho para cada coisa.
+
+    Abrir direto a edição do orçamento escondia a outra metade: que o
+    cliente também foi cadastrado (ou ligado ao que já existia, e
+    completado). Esta tela diz as duas coisas e leva a cada uma.
+
+    Só quem importou vê: o orçamento é dele (`responsavel`), e o resumo
+    do que mudou no cliente vem da sessão dele.
+    """
+
+    template_name = "importacao_concluida_inner.html"
+
+    def get(self, request, pk):
+        if not self.pode_criar(request):
+            return self.negar(request)
+        orcamento = get_object_or_404(
+            Orcamento.objects.select_related("cliente"), pk=pk, responsavel=request.user,
+        )
+        resumo = sessao.conclusao(request, pk) or {}
+        cliente = orcamento.cliente
+        itens = list(orcamento.itens.select_related("brinquedo", "produto", "peca").order_by("id"))
+        contexto = {
+            "orcamento": orcamento,
+            "cliente": cliente,
+            "itens": itens,
+            "resumo": resumo,
+            "link_orcamento": f"{reverse('orcamentos_inner')}?editar={orcamento.pk}",
+            "link_cliente": (
+                f"{reverse('clientes_inner')}?{urlencode({'q': cliente.nome_cliente, 'abrir': cliente.pk})}"
+                if cliente else ""
+            ),
+        }
+        return render(request, self.template_name, contexto)

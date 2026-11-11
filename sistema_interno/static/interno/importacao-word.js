@@ -1,10 +1,12 @@
 /* ======================================================================
-   CONFERÊNCIA DA IMPORTAÇÃO DO WORD
+   CONFERÊNCIA DA IMPORTAÇÃO (WORD OU PDF)
 
-   O QUE ESTE ARQUIVO FAZ. Liga a tela de conferência: a busca de produto
-   em cada item (a mesma do orçamento), a busca de cliente, os botões de
-   leitura e de sugestão, as contas refeitas a cada tecla, a lista do que
-   falta e o botão "Criar orçamento", que só acende com tudo completo.
+   O QUE ESTE ARQUIVO FAZ. Liga a tela de conferência: a escolha entre
+   "Cadastrar cliente e criar orçamento" e "Só cadastrar o cliente", a
+   busca de produto em cada item (a mesma do orçamento), a busca de
+   cliente, os botões de leitura e de sugestão, as contas refeitas a cada
+   tecla, a lista do que falta e o botão "Criar", que só acende com tudo
+   completo.
 
    AS REGRAS SÃO AS DO SERVIDOR (importacao_word/formulario.py), repetidas
    aqui só para a pessoa ver na hora o que falta. Quem decide é o
@@ -29,15 +31,21 @@ LSTela.pronto(function () {
   var novos = 0;
 
   /* -------------------------------------------------------- números */
+  /* A mesma leitura do servidor (deterministica.ler_dinheiro) e do campo
+     de reais do painel (`moeda-valor`): "18000" e "18.000" são dezoito
+     mil; "1234,5" é mil duzentos e trinta e quatro e cinquenta; "18.5" é
+     dezoito e cinquenta; "R$ 1.234,56" colado de planilha também vale.
+     A vírgula ou o ponto no fim ("18,") é digitação pela metade. */
   function centavos(texto) {
-    var bruto = String(texto || "").replace(/R\$|\s/g, "");
+    var bruto = String(texto || "").replace(/R\$|\s/g, "").replace(/[.,]$/, "");
     if (!bruto) return null;
     var m;
-    if ((m = bruto.match(/^(\d{1,3}(?:\.\d{3})+|\d+),(\d{1,2})$/))) {
-      return BigInt(m[1].replace(/\./g, "") + (m[2] + "0").slice(0, 2));
-    }
+    function junta(inteiros, casas) { return BigInt(inteiros + (casas + "00").slice(0, 2)); }
+    if ((m = bruto.match(/^(\d{1,3}(?:\.\d{3})+|\d+),(\d{1,2})$/))) return junta(m[1].replace(/\./g, ""), m[2]);
     if (/^\d{1,3}(?:\.\d{3})+$/.test(bruto)) return BigInt(bruto.replace(/\./g, "") + "00");
     if (/^\d+$/.test(bruto)) return BigInt(bruto + "00");
+    if ((m = bruto.match(/^(\d+)\.(\d{1,2})$/))) return junta(m[1], m[2]);
+    if ((m = bruto.match(/^(\d{1,3}(?:,\d{3})+)\.(\d{1,2})$/))) return junta(m[1].replace(/,/g, ""), m[2]);
     return null;
   }
 
@@ -132,10 +140,37 @@ LSTela.pronto(function () {
     alvo.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
+  /* ------------------------------------- orçamento, ou só o cliente */
+  var caminho = (form.querySelector('[name="modo"]:checked') || {}).value || "orcamento";
+  function aplicarCaminho() {
+    caminho = (form.querySelector('[name="modo"]:checked') || {}).value || "orcamento";
+    /* As partes do orçamento SOMEM no "só o cliente", mas não perdem o
+       que já foi conferido: quem volta para "criar orçamento" acha tudo
+       como deixou. O servidor ignora esses campos no "só o cliente". */
+    form.querySelectorAll("[data-so-orcamento]").forEach(function (parte) {
+      parte.hidden = caminho !== "orcamento";
+    });
+    document.querySelectorAll("[data-nota-modo], [data-rotulo-modo]").forEach(function (el) {
+      el.hidden = (el.dataset.notaModo || el.dataset.rotuloModo) !== caminho;
+    });
+    atualizar();
+  }
+  form.querySelectorAll('[name="modo"]').forEach(function (radio) {
+    radio.addEventListener("change", aplicarCaminho);
+  });
+
   /* ----------------------------------------------------- cliente */
   var modoAtual = (form.querySelector('[name="cliente_modo"]:checked') || {}).value || "novo";
+  var clienteEscolhido = dados.cliente.opcao || null;
   function aplicarModo() {
+    var anterior = modoAtual;
     modoAtual = (form.querySelector('[name="cliente_modo"]:checked') || {}).value || "novo";
+    /* "Cadastrar novo" depois de olhar o cadastro: o nome volta a ser o
+       do documento, e não o do cliente que estava escolhido. */
+    if (anterior === "existente" && modoAtual === "novo" && clienteEscolhido
+        && valorDe("campoNome") === clienteEscolhido.rotulo && dados.nomeDocumento) {
+      document.getElementById("campoNome").value = dados.nomeDocumento;
+    }
     form.querySelectorAll("[data-modo]").forEach(function (secao) {
       var ativa = secao.dataset.modo === modoAtual;
       secao.hidden = !ativa;
@@ -154,15 +189,44 @@ LSTela.pronto(function () {
 
   var campoClienteId = document.getElementById("clienteId");
   function preencherContatoDoCadastro(opcao) {
+    clienteEscolhido = opcao || null;
     if (!opcao) return;
-    /* Escolha explícita na busca: o contato vazio deste orçamento passa a
-       ser o do cadastro -- como no formulário normal de orçamento. */
+    /* Escolha explícita na busca: o nome é o do cadastro, e o que estiver
+       vazio aqui passa a ser o do cadastro -- como no formulário normal
+       de orçamento. */
+    if (opcao.rotulo) document.getElementById("campoNome").value = opcao.rotulo;
+    if (!valorDe("campoDocumento") && opcao.documento) Painel.valor("campoDocumento", opcao.documento);
     if (!valorDe("campoTelefone") && (opcao.telefone || opcao.whatsapp)) {
       Painel.valor("campoTelefone", opcao.whatsapp || opcao.telefone);
-      if (opcao.whatsapp) document.getElementById("campoWhatsapp").value = "sim";
+      if (opcao.whatsapp) definirWhatsapp("sim", "Confirmado no cadastro do cliente.");
     }
     if (!valorDe("campoEmail") && opcao.email) Painel.valor("campoEmail", opcao.email);
   }
+
+  /* TEM WHATSAPP? Vem respondido, e a pessoa só troca se precisar:
+     celular de nove dígitos é sim, fixo é não. Enquanto ninguém mexeu na
+     resposta, trocar o número refaz a sugestão. */
+  var campoWhatsapp = document.getElementById("campoWhatsapp");
+  var whatsappEscolhido = false;
+  function definirWhatsapp(valor, nota) {
+    campoWhatsapp.value = valor;
+    var aviso = document.getElementById("notaWhatsapp");
+    if (aviso) aviso.textContent = nota || "";
+  }
+  campoWhatsapp.addEventListener("change", function () {
+    whatsappEscolhido = true;
+    var aviso = document.getElementById("notaWhatsapp");
+    if (aviso) aviso.textContent = "";
+  });
+  document.getElementById("campoTelefone").addEventListener("input", function () {
+    if (whatsappEscolhido) return;
+    var numero = valorDe("campoTelefone").replace(/\D/g, "");
+    if (numero.indexOf("55") === 0 && numero.length > 11) numero = numero.slice(2);
+    if (numero.length < 10) return;
+    var celular = numero.length === 11 && numero.charAt(2) === "9";
+    definirWhatsapp(celular ? "sim" : "nao",
+      celular ? "Celular: em geral tem WhatsApp. Troque se não tiver." : "Telefone fixo. Troque se tiver WhatsApp.");
+  });
 
   var caixaCliente = document.getElementById("clienteBuscaBox");
   var buscaCliente = null;
@@ -405,7 +469,7 @@ LSTela.pronto(function () {
     if (total < 0n) total = 0n;
     /* Com o valor final combinado, o total é o do documento e o desconto
        digitado não entra (o servidor grava zero). */
-    var valorFinal = escolhaDoTotal() === "valor_final" ? centavos(dados.totalWord) : null;
+    var valorFinal = escolhaDoTotal() === "valor_final" ? centavos(dados.valorFinal) : null;
     return { linhas: linhas, subtotal: subtotal, frete: frete, desconto: desconto, total: total,
              completos: completos, valorFinal: valorFinal,
              final: valorFinal !== null ? valorFinal : total };
@@ -448,18 +512,20 @@ LSTela.pronto(function () {
 
     /* A escolha entre a soma e o total do documento só aparece quando os
        dois diferem -- e some (desmarcada) quando a pessoa acerta a conta. */
+    /* O valor negociado ESCRITO no documento fica sempre à vista (é uma
+       informação do documento, e não um erro de conta). */
     var escolha = document.getElementById("escolhaTotal");
     var word = centavos(dados.totalWord);
+    var diferem = word !== null && conta.total !== word;
     if (escolha) {
-      var diferem = word !== null && conta.total !== word;
-      escolha.hidden = !diferem;
-      if (!diferem) {
+      escolha.hidden = !(dados.valorFinalExplicito || diferem);
+      if (escolha.hidden) {
         form.querySelectorAll('[name="total_escolha"]').forEach(function (r) { r.checked = false; });
       }
       var soma = document.getElementById("valorFinalSoma");
       if (soma) soma.textContent = moeda(conta.total);
       var justificativa = document.getElementById("justificativaSoma");
-      if (justificativa) justificativa.hidden = escolhaDoTotal() !== "soma";
+      if (justificativa) justificativa.hidden = !(escolhaDoTotal() === "soma" && diferem);
     }
   }
 
@@ -479,7 +545,9 @@ LSTela.pronto(function () {
     }
     if (tipo === "soma_total") {
       var tot = centavos(dados.totalWord);
-      if (escolhaDoTotal() === "valor_final" && tot !== null) return true;
+      /* O total escrito vira o valor final. (O negociado com rótulo
+         próprio não apaga um total que não bate: esse pede a conta.) */
+      if (escolhaDoTotal() === "valor_final" && tot !== null && !dados.valorFinalExplicito) return true;
       return conta.completos && tot !== null && conta.total === tot;
     }
     if (tipo === "documento_invalido") {
@@ -501,6 +569,9 @@ LSTela.pronto(function () {
   }
 
   /* --------------------------------------------- o que falta */
+  /* AS MESMAS REGRAS DE formulario.validar. O que bloqueia é o que
+     protege o dinheiro e o produto (e o cadastro do cliente); WhatsApp,
+     forma de pagamento, de envio e prazo não seguram o "Criar". */
   function pendencias(conta) {
     var lista_ = [];
     function falta(alvo, rotulo, motivo) { lista_.push({ alvo: alvo, rotulo: rotulo, motivo: motivo }); }
@@ -511,30 +582,32 @@ LSTela.pronto(function () {
                && !marcado("#clienteConfirmado")) {
         falta("clienteConfirmado", "Cliente", "confirme que é o cliente do documento");
       }
-    } else {
-      if (!valorDe("campoNome")) falta("campoNome", "Nome do cliente", "o orçamento precisa dizer para quem é");
-      if (valorDe("campoDocumento") && !documentoValido(valorDe("campoDocumento"))) {
-        falta("campoDocumento", "CPF/CNPJ", "documento inválido: corrija ou apague");
-      }
-      var algumEndereco = ["campoCep", "campoEndereco", "campoNumero", "campoBairro", "campoCidade", "campoEstado"]
-        .some(function (id) { return !!valorDe(id); });
-      if (algumEndereco && !(valorDe("campoEndereco") && valorDe("campoCidade"))) {
-        falta("campoEndereco", "Endereço", "para guardar o endereço, informe pelo menos a rua e a cidade");
-      }
+    }
+    if (!valorDe("campoNome")) falta("campoNome", "Nome do cliente", "escreva o nome do cliente");
+    if (valorDe("campoDocumento") && !documentoValido(valorDe("campoDocumento"))) {
+      falta("campoDocumento", "CPF/CNPJ", "documento inválido: corrija pelo documento do cliente ou apague");
+    }
+    var algumEndereco = ["campoCep", "campoEndereco", "campoNumero", "campoComplemento", "campoBairro", "campoCidade", "campoEstado"]
+      .some(function (id) { return !!valorDe(id); });
+    if (algumEndereco && !(valorDe("campoEndereco") && valorDe("campoCidade"))) {
+      falta("campoEndereco", "Endereço", "para guardar o endereço, informe pelo menos a rua e a cidade");
     }
     var telefone = valorDe("campoTelefone");
-    var whatsapp = valorDe("campoWhatsapp");
-    if (telefone && !telefoneValido(telefone)) falta("campoTelefone", "Telefone/WhatsApp", "telefone incompleto");
-    else if (telefone && !whatsapp) falta("campoWhatsapp", "Este número tem WhatsApp?", "confirme se o número tem WhatsApp");
+    var telefoneOk = !!telefone && telefoneValido(telefone);
+    if (telefone && !telefoneOk) falta("campoTelefone", "Telefone/WhatsApp", "telefone incompleto: informe DDD e número");
     var email = valorDe("campoEmail");
-    if (email && !emailValido(email)) falta("campoEmail", "E-mail", "e-mail inválido");
-    var temWhats = telefone && telefoneValido(telefone) && whatsapp === "sim";
-    if (!temWhats && !(email && emailValido(email))) {
-      falta("campoTelefone", "WhatsApp ou e-mail", "informe um WhatsApp confirmado ou um e-mail");
+    var emailOk = !!email && emailValido(email);
+    if (email && !emailOk) falta("campoEmail", "E-mail", "e-mail inválido");
+    var cadastroTemContato = modoAtual === "existente" && clienteEscolhido
+      && String(clienteEscolhido.valor) === String(campoClienteId.value)
+      && !!(clienteEscolhido.telefone || clienteEscolhido.email);
+    if (!telefone && !email && !cadastroTemContato) {
+      falta("campoTelefone", "Telefone ou e-mail", "informe ao menos um contato: telefone/WhatsApp ou e-mail");
     }
+    if (caminho === "cliente") return lista_;
 
     var itens = cartoes();
-    if (!itens.length) falta("acrescentarItem", "Itens", "o orçamento precisa de pelo menos um item");
+    if (!itens.length) falta("acrescentarItem", "Itens", "o orçamento precisa de pelo menos um item (ou escolha “Só cadastrar o cliente”)");
     itens.forEach(function (cartao, indice) {
       var uid = cartao.dataset.uid;
       var rotulo = "Item " + (indice + 1);
@@ -572,10 +645,9 @@ LSTela.pronto(function () {
       }
     }
     var validade = valorDe("campoValidade");
-    if (!validade) falta("campoValidade", "Validade", "escolha até quando a proposta vale");
-    else if (validade < dados.hoje) falta("campoValidade", "Validade", "a validade não pode ser anterior a hoje");
-    if (!valorDe("campoPagamento")) falta("campoPagamento", "Forma de pagamento", "escolha uma opção ou escreva a condição");
-    if (!valorDe("campoEnvio")) falta("campoEnvio", "Forma de envio", "escolha uma opção ou escreva como chega ao cliente");
+    var notaValidade = document.getElementById("notaValidade");
+    if (notaValidade) notaValidade.hidden = !!validade;
+    if (validade && validade < dados.hoje) falta("campoValidade", "Validade", "a validade não pode ser anterior a hoje");
 
     form.querySelectorAll(".ls-imp-alerta.vermelho").forEach(function (alerta) {
       var resolvido = alertaResolvido(alerta, conta);
@@ -586,8 +658,11 @@ LSTela.pronto(function () {
       if (aceite) aceite.hidden = resolvido;
       if (resolvido) return;
       var id = alerta.dataset.alerta;
-      /* O total que não bate se resolve no quadro "Qual total vale?". */
-      if (id === "soma_total" && document.getElementById("escolhaTotal")) return;
+      /* O total que não bate se resolve no quadro "Qual total vale?" --
+         menos quando o valor escolhido é o negociado escrito à parte: aí
+         o total errado continua pedindo conta ou justificativa. */
+      if (id === "soma_total" && document.getElementById("escolhaTotal")
+          && !(dados.valorFinalExplicito && escolhaDoTotal() === "valor_final")) return;
       var caixa = form.querySelector('[data-aceite="' + id + '"]');
       var texto = form.querySelector('[data-justificativa="' + id + '"]');
       var titulo = (alerta.querySelector("strong") || {}).textContent || "Alerta";
@@ -662,9 +737,12 @@ LSTela.pronto(function () {
       return;
     }
     botaoCriar.disabled = true;
-    if (window.Painel && Painel.ocupado) Painel.ocupado("Criando o orçamento…");
+    if (window.Painel && Painel.ocupado) {
+      Painel.ocupado(caminho === "cliente" ? "Cadastrando o cliente…" : "Criando o cliente e o orçamento…");
+    }
   });
 
   aplicarModo();
+  aplicarCaminho();
   renumerar();
 });

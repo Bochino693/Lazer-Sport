@@ -842,11 +842,15 @@ def registrar_importacao(orcamento, usuario, limpo, *, arquivo, ia, amarelos):
             ((i["valor_unitario"] * i["quantidade"]).quantize(Decimal("0.01")) for i in limpo["itens"]),
             Decimal("0.00"),
         ) + limpo["frete"]
+        de_onde = (
+            "o valor negociado escrito no documento" if limpo.get("valor_final_explicito")
+            else "o total escrito no documento"
+        )
         AtividadeOrcamento.registrar(
             orcamento, usuario, AtividadeOrcamento.Tipo.CRIADO,
             resumo=(
                 f"Importação do {fonte}: valor final combinado R$ {det.moeda(limpo['valor_final'])}, "
-                f"o total escrito no documento; a soma das linhas e do frete dá R$ {det.moeda(soma)}."
+                f"{de_onde}; a soma das linhas e do frete dá R$ {det.moeda(soma)}."
             ),
         )
     avulsas = sum(1 for item in limpo["itens"] if item["avulsa"])

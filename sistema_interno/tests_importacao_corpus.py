@@ -154,6 +154,10 @@ class LeituraDoCorpusTests(_SemChave):
                 for posicao, (lido, certo) in enumerate(zip(tela["itens"], esperado["itens"]), start=1):
                     for campo, valor in certo.items():
                         self.assertEqual(lido[campo], valor, f"{nome}: item {posicao}.{campo}")
+                # Documento certo não acende vermelho: alerta vermelho é
+                # conta que não bate ou valor em dúvida, e nenhum destes tem.
+                vermelhos = [a["titulo"] for a in proposta["alertas"] if a["nivel"] == conferencia.NIVEL_VERMELHO]
+                self.assertEqual(vermelhos, [], f"{nome}: alertas vermelhos")
                 if esperado["modo"] == "orcamento":
                     for campo in ("frete", "desconto", "valor_final", "validade", "forma_pagamento",
                                   "forma_envio", "prazo", "observacoes"):
