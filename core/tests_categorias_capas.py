@@ -15,7 +15,7 @@ O que estes testes protegem:
     sem tirar ninguém; rodar de novo não muda nada; fora do Render não sobe
     foto; no Render sobe, e se a subida falhar o deploy segue;
   * as fotos: uma para cada categoria do site no ar e para as áreas novas,
-    1200 × 900 (o 4:3 do card), leves; cada nome de categoria acha a sua;
+    1600 × 1200 (o 4:3 do card, em alta: a 0155), leves; cada nome de categoria acha a sua;
   * o comando: sobe as fotos que faltam com a assinatura no nome, não sobe
     de novo o que já está, `--so`, `--simular`, `--refazer`, `--areas` e
     `--nomes`; duas categorias com a mesma foto ficam com arquivos
@@ -328,9 +328,10 @@ class FotosTests(TestCase):
         for arquivo in arquivos:
             with self.subTest(arquivo.name), Image.open(arquivo) as foto:
                 self.assertEqual(foto.format, "WEBP")
-                self.assertEqual(foto.size, (1200, 900))
-                # o card baixa a foto inteira: até ~150 KB
-                self.assertLessEqual(arquivo.stat().st_size, 150 * 1024)
+                # em alta (a 0155); a Área Baby, sem produto no catálogo, fica como estava
+                self.assertEqual(foto.size, (1200, 900) if arquivo.stem == "area-baby" else (1600, 1200))
+                # o card baixa a foto inteira: até ~250 KB
+                self.assertLessEqual(arquivo.stat().st_size, 250 * 1024)
 
     def test_as_fotos_estao_num_lugar_e_nao_no_branco(self):
         # "estão muito brancas, ponha em lugares": a foto tem cor (saturação
@@ -342,8 +343,9 @@ class FotosTests(TestCase):
                 self.assertGreater(saturacao, 50)
                 brancos = sum(1 for p in rgb.resize((120, 90)).getdata() if min(p) > 235)
                 self.assertLess(brancos / (120 * 90), 0.12)
-                borda = [rgb.getpixel((x, y)) for x in range(0, 1200, 24) for y in (6, 893)]
-                borda += [rgb.getpixel((x, y)) for y in range(0, 900, 24) for x in (6, 1193)]
+                w, h = rgb.size
+                borda = [rgb.getpixel((x, y)) for x in range(0, w, w // 50) for y in (8, h - 9)]
+                borda += [rgb.getpixel((x, y)) for y in range(0, h, h // 37) for x in (8, w - 9)]
                 desvio = ImageStat.Stat(_imagem(borda)).stddev
                 self.assertGreater(max(desvio), 12)
                 # nem escura demais

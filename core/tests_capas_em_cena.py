@@ -22,7 +22,12 @@ protegem:
     Alienígenas, seção 61): no Render, refaz à força a galeria dos dois que o
     cadastro subiu (mesmo com a capa em cena da 0153) e sobe as fotos das
     categorias que mudaram; em todo lugar, religa o objeto 3D ao .glb de
-    hoje; nunca derruba o deploy.
+    hoje; nunca derruba o deploy;
+  * as imagens em alta (a 0155: "nas categorias sim ponha as crianças, porém
+    nas fotos individuais não coloque as crianças"): a capa em 1600 x 1600,
+    só o produto (sem gente e sem outra máquina), no salão do mural; as fotos
+    das categorias em 1600 x 1200, com as crianças; a 0155 refaz à força, no
+    Render, as capas que o cadastro subiu e sobe as fotos das categorias.
 """
 
 import importlib
@@ -47,6 +52,7 @@ from .objetos_3d import ler_glb_do_site
 
 migracao = importlib.import_module("core.migrations.0153_capas_em_cena")
 migracao_0154 = importlib.import_module("core.migrations.0154_basquete_e_air_game_reais")
+migracao_0155 = importlib.import_module("core.migrations.0155_imagens_em_alta")
 
 FERRAMENTA = Path(__file__).resolve().parent.parent / "ferramentas" / "categorias"
 #: Os produtos com a capa em cena (o Modelo 5 tem a do salão da fábrica).
@@ -99,11 +105,11 @@ class CapasTests(TestCase):
             arquivo = CADASTROS[chave]["pasta"] / "capa.webp"
             with self.subTest(chave), Image.open(arquivo) as foto:
                 self.assertEqual(foto.format, "WEBP")
-                # o card de produto é quadrado; a galeria também, no computador
-                self.assertEqual(foto.size, (1200, 1200))
+                # o card de produto é quadrado; a galeria também, no computador (em alta: a 0155)
+                self.assertEqual(foto.size, (1600, 1600))
                 # opaca: o card a mostra cheia, de ponta a ponta (ls-fotos.js, `foto-cheia`)
                 self.assertNotIn("A", foto.getbands())
-                self.assertLessEqual(arquivo.stat().st_size, 190 * 1024)
+                self.assertLessEqual(arquivo.stat().st_size, 250 * 1024)
                 rgb = foto.convert("RGB")
                 # "para não ficar brancão": cor, quase nada de branco estourado, nem escura demais
                 self.assertGreater(ImageStat.Stat(rgb.convert("HSV").getchannel("S")).mean[0], 50)
@@ -113,18 +119,42 @@ class CapasTests(TestCase):
                 # o estático do site serve a capa (é dela que o cadastro sobe a foto)
                 self.assertTrue(finders.find(f"site/arena/modelos/{chave}/capa.webp"))
 
-    def test_cada_capa_so_tem_maquina_de_verdade(self):
-        # a lista de cada capa (o gerar.cjs grava): o produto, o .glb nosso, e ao fundo
-        # só produtos do catálogo do site no ar (recortar.py --catalogo)
+    def test_cada_capa_so_tem_o_produto(self):
+        # a lista de cada capa (o gerar.cjs grava): só o produto, o .glb nosso -- como nas
+        # imagens da fábrica, sem outra máquina
         lista = json.loads((FERRAMENTA / "maquinas-das-capas.json").read_text(encoding="utf-8"))
-        catalogo = json.loads((FERRAMENTA / "maquinas" / "catalogo.json").read_text(encoding="utf-8"))
         self.assertEqual(set(lista), set(EM_CENA))
         for chave, maquinas in lista.items():
             with self.subTest(chave):
-                self.assertEqual(maquinas[0], CADASTROS[chave]["nome"] + " (3D)")
-                for maquina in maquinas[1:]:
-                    self.assertTrue(maquina.endswith(" (ao fundo)"), maquina)
-                    self.assertIn(maquina.replace(" (ao fundo)", ""), catalogo, f"{maquina} não é do catálogo")
+                self.assertEqual(maquinas, [CADASTROS[chave]["nome"] + " (3D)"])
+
+    def test_as_capas_nao_tem_gente_e_as_categorias_tem(self):
+        # "nas categorias sim ponha as crianças, porém nas fotos individuais não coloque as crianças"
+        codigo = (FERRAMENTA / "cenas.js").read_text(encoding="utf-8")
+        inicio = codigo.index("const CAPAS = {")
+        capas = codigo[inicio:codigo.index("\n};\n", inicio)]
+        for gente in ("crianca(", "naFrente(", "vida:", "naTela:"):
+            self.assertNotIn(gente, capas)
+        self.assertEqual(capas.count('lugar: "mural"') + capas.count('lugar: "galpao"'), len(EM_CENA))
+        inicio = codigo.index("const CENAS = {")
+        cenas = codigo[inicio:codigo.index("\n};\n", inicio)]
+        self.assertGreaterEqual(cenas.count("naFrente(") + cenas.count("crianca("), 14)
+
+    def test_as_criancas_sao_redondas_e_tem_cabelo(self):
+        pessoas = (FERRAMENTA / "pessoas.js").read_text(encoding="utf-8")
+        for peca in ("CapsuleGeometry", "LatheGeometry", "SphereGeometry", "function cabelo", "function rosto"):
+            self.assertIn(peca, pessoas)
+        self.assertNotIn("BoxGeometry(0.09, 0.06", pessoas)  # o pé de bloco de antes
+        for pose in ("correndo", "andando", "pulando", "comemorando", "jogando", "apontando", "olhando"):
+            self.assertIn(f"  {pose}: {{", pessoas)
+
+    def test_o_render_tem_o_acabamento(self):
+        # o dobro do tamanho (supersampling), a luz de ambiente PBR, a sombra macia e a oclusão de ambiente
+        codigo = (FERRAMENTA / "cenas.js").read_text(encoding="utf-8")
+        for peca in ("RoomEnvironment", "GTAOPass", "PCFSoftShadowMap", "mapSize.set(8192, 8192)", "[3200, 3200] : [3200, 2400]"):
+            self.assertIn(peca, codigo)
+        for arquivo in ("environments/RoomEnvironment.js", "postprocessing/GTAOPass.js", "postprocessing/EffectComposer.js"):
+            self.assertTrue((FERRAMENTA / "vendor" / arquivo).exists())
 
     def test_a_ferramenta_refaz_so_as_cenas_de_um_glb(self):
         # quando um .glb é refeito: node ferramentas/categorias/gerar.cjs --glb <nome> --compor
@@ -147,8 +177,8 @@ class PecasDaHomeTests(TestCase):
 
     def test_a_foto_tem_o_corte_do_card_e_cor(self):
         with Image.open(self.ARQUIVO) as foto:
-            self.assertEqual(foto.size, (1200, 900))
-            self.assertLessEqual(self.ARQUIVO.stat().st_size, 150 * 1024)
+            self.assertEqual(foto.size, (1600, 1200))
+            self.assertLessEqual(self.ARQUIVO.stat().st_size, 250 * 1024)
             rgb = foto.convert("RGB")
             self.assertGreater(ImageStat.Stat(rgb.convert("HSV").getchannel("S")).mean[0], 50)
             brancos = sum(1 for p in rgb.resize((120, 90)).getdata() if min(p) > 235)
@@ -381,3 +411,89 @@ class BasqueteEAirGameReaisTests(TestCase):
         capas = json.loads((FERRAMENTA / "maquinas-das-capas.json").read_text(encoding="utf-8"))
         for chave in migracao_0154.CHAVES:
             self.assertEqual(capas[chave][0], CADASTROS[chave]["nome"] + " (3D)")
+
+
+@override_settings(IS_RENDER=False)
+class ImagensEmAltaTests(TestCase):
+    """A 0155: no Render, as capas novas (em alta, sem gente) e as fotos das categorias novas sobem."""
+
+    def _do_cadastro(self, chave):
+        """Como a 0153/0154 deixaram: as fotos que o cadastro subiu, já com a capa em cena (a de antes)."""
+        dados = CADASTROS[chave]
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo=dados["nome"], descricao="x", avaliacao=5, voltz="220v",
+            imagem_brinquedo=f"imagens_brinquedos/{chave}-capa.webp",
+        )
+        for ordem, (arquivo, tipo, _texto) in enumerate(dados["fotos"], start=1):
+            ImagemBrinquedo.objects.create(brinquedo=brinquedo, tipo=tipo, ordem=ordem, texto_alternativo="de antes",
+                                           imagem=f"imagens_brinquedos/{chave}-{Path(arquivo).stem}-antes.webp")
+        return brinquedo
+
+    def _rodar(self, pasta=None, render=True):
+        avisos = []
+        with mock.patch.object(categorias_capas, "subir_fotos_no_deploy") as categorias:
+            if render:
+                a, b = _disco(pasta)
+                with a, b, override_settings(IS_RENDER=True):
+                    migracao_0155.refazer(apps_reais, None, avisar=avisos.append)
+            else:
+                migracao_0155.refazer(apps_reais, None, avisar=avisos.append)
+        return " ".join(avisos), categorias
+
+    def test_vem_depois_da_0154(self):
+        self.assertEqual(migracao_0155.Migration.dependencies, [("core", "0154_basquete_e_air_game_reais")])
+        self.assertIs(migracao_0155.Migration.operations[0].code, migracao_0155.refazer)
+        self.assertEqual(set(migracao_0155.CHAVES), set(EM_CENA))
+
+    def test_fora_do_render_nao_mexe(self):
+        brinquedo = self._do_cadastro("brinquedao-ninja")
+        avisos, categorias = self._rodar(render=False)
+        self.assertEqual(avisos, "")
+        categorias.assert_not_called()
+        self.assertTrue(all("antes" in f.imagem.name for f in brinquedo.imagens_brinquedo.all()))
+
+    def test_no_render_refaz_a_forca_e_sobe_as_categorias(self):
+        brinquedos = {chave: self._do_cadastro(chave) for chave in ("brinquedao-modelo-2", "strike-kids", "basquete-street-quadrinhos")}
+        with tempfile.TemporaryDirectory() as pasta:
+            avisos, categorias = self._rodar(pasta)
+            for chave, brinquedo in brinquedos.items():
+                with self.subTest(chave):
+                    brinquedo.refresh_from_db()
+                    fotos = list(brinquedo.imagens_brinquedo.order_by("ordem"))
+                    self.assertEqual([f.tipo for f in fotos], [tipo for _, tipo, _ in CADASTROS[chave]["fotos"]])
+                    self.assertFalse(any("antes" in f.imagem.name for f in fotos))
+                    # o que subiu é a capa de hoje (em alta)
+                    with open(Path(pasta) / brinquedo.imagem_brinquedo.name, "rb") as subiu, \
+                            open(CADASTROS[chave]["pasta"] / "capa.webp", "rb") as de_hoje:
+                        self.assertEqual(subiu.read(), de_hoje.read())
+                    self.assertIn(CADASTROS[chave]["nome"], avisos)
+        categorias.assert_called_once()
+        self.assertEqual(Brinquedos.objects.count(), 3)
+
+    def test_as_fotos_do_painel_ficam_e_o_modelo_5_tambem(self):
+        do_painel = Brinquedos.objects.create(
+            nome_brinquedo=CADASTROS["brinquedao-ninja"]["nome"], descricao="x", avaliacao=5,
+            imagem_brinquedo="imagens_brinquedos/foto-do-painel.webp",
+        )
+        modelo5 = Brinquedos.objects.create(
+            nome_brinquedo=CADASTROS["brinquedao-modelo-5"]["nome"], descricao="x", avaliacao=5,
+            imagem_brinquedo="imagens_brinquedos/brinquedao-modelo-5-salao_frente.webp",
+        )
+        with tempfile.TemporaryDirectory() as pasta:
+            avisos, categorias = self._rodar(pasta)
+        self.assertEqual(avisos, "")
+        for brinquedo, nome in ((do_painel, "imagens_brinquedos/foto-do-painel.webp"),
+                                (modelo5, "imagens_brinquedos/brinquedao-modelo-5-salao_frente.webp")):
+            brinquedo.refresh_from_db()
+            self.assertEqual(brinquedo.imagem_brinquedo.name, nome)
+        categorias.assert_called_once()
+
+    def test_a_subida_falha_e_o_deploy_segue(self):
+        brinquedo = self._do_cadastro("trampolim-enterrada")
+        with tempfile.TemporaryDirectory() as pasta, \
+                mock.patch.object(FileSystemStorage, "save", side_effect=OSError("sem rede")):
+            avisos, categorias = self._rodar(pasta)
+        self.assertIn("python manage.py cadastrar_modelo_3d trampolim-enterrada --fotos", avisos)
+        brinquedo.refresh_from_db()
+        self.assertTrue(all("antes" in f.imagem.name for f in brinquedo.imagens_brinquedo.all()))
+        categorias.assert_called_once()

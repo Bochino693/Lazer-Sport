@@ -61,6 +61,7 @@ const servidor = http.createServer((req, res) => {
     else if (argumentos[i] !== "--compor") pedidas.push(argumentos[i]);
   }
   const capas = await page.evaluate(() => window.CAPAS);
+  const todas = await page.evaluate(() => window.TODAS);
   if (glbs.length) {
     const usam = await page.evaluate((nomes) => window.cenasComGlb(...nomes), glbs);
     console.log(`as fotos com ${glbs.join(", ")}: ${usam.join(", ") || "nenhuma"}`);
@@ -94,7 +95,7 @@ const servidor = http.createServer((req, res) => {
     let mudou = false;
     for (const [chave, maquinas] of Object.entries(lista)) {
       if (chave.includes("@")) continue;
-      if (prefixo ? chave.startsWith(prefixo) : !chave.includes(":")) {
+      if (prefixo ? chave.startsWith(prefixo) : !chave.includes(":") && todas.includes(chave)) {
         antes[chave.slice(prefixo.length)] = maquinas;
         mudou = true;
       }

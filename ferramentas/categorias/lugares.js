@@ -27,6 +27,12 @@
                     ripas, o sofá e os pendentes;
      quadra         a quadra da escola: o piso com as linhas, a arquibancada,
                     a tabela de basquete e as janelas altas;
+     mural          o salão de festa infantil das imagens da fábrica (as capas
+                    dos produtos): a parede com o mural pintado (o céu, as
+                    nuvens, os morros, as árvores, os arbustos e a cerca), o
+                    piso de madeira com o reflexo suave, o teto claro com os
+                    spots, a parede do lado verde com a janela, a luz difusa e,
+                    num canto, a mesinha branca com as cadeiras;
      loja           a loja de peças (o card "Peças e acessórios" da home): o
                     balcão de madeira, o painel perfurado com os ganchos, as
                     prateleiras com o estoque (as fotos das peças do
@@ -48,6 +54,7 @@ function sorteio(semente) {
 
 export function criarLugares(T, P, extra = {}) {
   const GRAU = Math.PI / 180;
+  const PI = Math.PI;
   // os materiais do lugar são só dele (a máscara dos brinquedos não pode pegar um material do lugar)
   const mats = new Map();
   const mat = (cor, extra) => {
@@ -67,13 +74,13 @@ export function criarLugares(T, P, extra = {}) {
       const t = new T.CanvasTexture(c);
       t.colorSpace = T.SRGBColorSpace;
       t.wrapS = t.wrapT = T.RepeatWrapping;
-      t.anisotropy = 8;
+      t.anisotropy = 16;
       texturas.set(chave, t);
     }
     return texturas.get(chave);
   };
   /** Material com a textura repetida a cada `passo` metros numa superfície `l` x `a`. */
-  const matTex = (chave, l, a, passo, desenhar, extra = {}, px = 512) => {
+  const matTex = (chave, l, a, passo, desenhar, extra = {}, px = 1024) => {
     const t = tex(chave, px, px, desenhar).clone();
     t.needsUpdate = true;
     t.repeat.set(l / passo, a / passo);
@@ -428,16 +435,19 @@ export function criarLugares(T, P, extra = {}) {
       const lado = m.ladoEsq ? 1 : -1;
       const px = op.painelX ?? (m.ladoEsq ? m.max.x + 0.4 : m.min.x - 0.4) + lado * -0.2;
       const pz = m.zFundo + 0.08;
-      const rp = Math.min(2.0, Math.max(1.3, m.tam.y * 0.6));
-      const painel = malha(new T.CylinderGeometry(rp, rp, 0.06, 64), mat("#a7f3d0", { roughness: 0.5 }), px, rp + 0.3, pz + 0.05);
-      painel.rotation.x = Math.PI / 2;
-      g.add(painel);
-      arcoDeBaloes(g, px, rp + 0.3, pz + 0.35, rp + 0.15, -20, 200, 5);
-      for (const [dx, a, c] of [[-0.75, 0.55, "#f9a8d4"], [0, 0.8, "#fde68a"], [0.75, 0.42, "#bae6fd"]]) {
-        cil(g, 0.32, a, mat(c, { roughness: 0.45 }), px + dx, 0, pz + 0.7, 32).castShadow = true;
+      const rp = Math.min(2.0, Math.max(0.85, m.tam.y * 0.55));
+      if (op.painel !== false) {
+        const painel = malha(new T.CylinderGeometry(rp, rp, 0.06, 64), mat("#a7f3d0", { roughness: 0.5 }), px, rp + 0.3, pz + 0.05);
+        painel.rotation.x = Math.PI / 2;
+        g.add(painel);
+        arcoDeBaloes(g, px, rp + 0.3, pz + 0.35, rp + 0.15, -20, 200, 5);
+        for (const [dx, a, c] of [[-0.75, 0.55, "#f9a8d4"], [0, 0.8, "#fde68a"], [0.75, 0.42, "#bae6fd"]]) {
+          cil(g, 0.32, a, mat(c, { roughness: 0.45 }), px + dx, 0, pz + 0.7, 32).castShadow = true;
+        }
       }
       // a mesa de doces: a toalha, o bolo de três andares e os docinhos
-      const mx = op.mesaX ?? m.xLado + lado * 1.6, mz = op.mesaZ ?? m.min.z + 0.4;
+      // (encostada na parede do lado, perto do fundo: longe das máquinas, nunca na frente de uma)
+      const mx = op.mesaX ?? m.xLado + lado * 0.6, mz = op.mesaZ ?? m.zFundo + 1.5;
       caixa(g, 0.9, 0.82, 2.0, mat("#ffffff", { roughness: 0.7 }), mx, 0, mz);
       caixa(g, 0.94, 0.06, 2.04, mat("#fbcfe8", { roughness: 0.6 }), mx, 0.76, mz);
       for (const [ra, a, y, c] of [[0.28, 0.2, 0.82, "#f9a8d4"], [0.21, 0.18, 1.02, "#ffffff"], [0.14, 0.16, 1.2, "#c4b5fd"]]) cil(g, ra, a, mat(c, { roughness: 0.5 }), mx, y, mz, 32);
@@ -446,8 +456,8 @@ export function criarLugares(T, P, extra = {}) {
       for (let i = 0; i < 14; i++) esf(g, 0.045, mat(["#7c2d12", "#fbbf24", "#f472b6", "#ffffff"][i % 4], { roughness: 0.4 }), mx + (rr() - 0.5) * 0.6, 0.86, mz + (i < 7 ? -0.65 : 0.65) + (rr() - 0.5) * 0.4, 10);
       // as bandeirinhas e os cachos de balões
       for (let i = 0; i < 3; i++) bandeirinhas(g, m.min.x - 6, m.max.x + 6, Math.min(H - 0.8, 6.8) - i * 0.55, m.zFundo + 0.4 + i * 0.9);
-      cachoDeBaloes(g, m.xLado + lado * 0.6, m.zFundo + 0.7, 2.1, 2);
-      cachoDeBaloes(g, op.cachoX ?? (m.ladoEsq ? m.max.x + 2.4 : m.min.x - 2.4), m.zFundo + 0.9, 1.9, 5);
+      cachoDeBaloes(g, m.xLado + lado * 0.6, m.zFundo + 0.7, Math.min(2.1, m.tam.y + 0.4), 2);
+      cachoDeBaloes(g, op.cachoX ?? (m.ladoEsq ? m.max.x + 2.4 : m.min.x - 2.4), m.zFundo + 0.9, Math.min(1.9, m.tam.y + 0.3), 5);
       // a festa acesa: as luminárias de papel, as luzinhas e o confete no ar
       for (let i = -4; i <= 4; i++) pendente(g, m.centro.x + i * Math.max(1.6, m.tam.x / 6), Math.min(H - 1.6, 5.2) - (i % 2) * 0.4, m.zFundo + 1.6 + (i % 3) * 0.6, ["#fff7ed", "#fde68a", "#fbcfe8"][(i + 9) % 3]);
       luzinhas(g, m.min.x - 4, m.zFundo + 0.3, m.max.x + 4, m.zFundo + 0.3, Math.min(H - 0.4, 6.2));
@@ -602,7 +612,7 @@ export function criarLugares(T, P, extra = {}) {
         g.add(spot);
       }
       criancasAoFundo(g, [[m.max.x + 2.4, m.zFundo + 2.2, "andando", -60], [m.min.x - 2.8, m.zFundo + 2.6, "correndo", 70]]);
-      confete(g, caixaDos, 70, 8, 3.5);
+      if (op.confete) confete(g, caixaDos, 70, 8, 3.5);
       return {
         grupo: g, fundo: "#1b1650", neblina: ["#2a2068", m.maior * 2.5 + 8, m.maior * 6 + 30],
         luz: { ceu: "#c4b5fd", chao: "#2a1f6b", hemi: 1.0, sol: 2.6, amb: 0.35, exposicao: 1.05, cores: [["#f472b6", -1], ["#22d3ee", 1]] },
@@ -905,7 +915,6 @@ export function criarLugares(T, P, extra = {}) {
       sofa.position.set(m.xLado + n.x * 0.6, 0, m.centro.z + m.tam.z * 0.1);
       sofa.rotation.y = m.giroLado;
       g.add(sofa);
-      cil(g, 0.35, 0.45, mat("#f5f5f4", { roughness: 0.3 }), m.xLado + n.x * 1.6, 0, m.centro.z + m.tam.z * 0.1 + 1.6, 28);
       planta(g, m.ladoEsq ? m.max.x + 1.4 : m.min.x - 1.4, m.zFundo + 0.8, 1.9, "#d6d3d1", 9);
       for (let i = -3; i <= 3; i++) {
         const x = m.centro.x + i * 1.6, z = m.zFundo + 2.2;
@@ -996,6 +1005,239 @@ export function criarLugares(T, P, extra = {}) {
         return f;
       };
       return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#bfe3fb", 40, 140], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
+    },
+
+    /* ------------------------------------------------------------ o salão do mural (as capas) */
+    // Como as imagens da fábrica (o Brinquedão Modelo 5 no salão): um lugar limpo e de verdade,
+    // o produto sozinho no meio. As texturas são desenhadas aqui, em alta (o mural tem ~500 px
+    // por metro; o piso, ~1000), sem foto nenhuma e sem marca.
+    mural(caixaDos, giro, op = {}) {
+      const g = new T.Group();
+      const m = medidas(caixaDos, giro, op.atras ?? Math.max(1.0, m0(caixaDos) * 0.12), op.lado ?? Math.max(1.6, m0(caixaDos) * 0.18));
+      // o pé-direito: o do salão (um tanto acima do produto) e sempre acima da câmera (a foto é de dentro)
+      const H = op.teto ?? Math.max(3.2, m.tam.y + 0.95, (op.alturaDaCamera ?? 0) + 0.6);
+      // o piso de madeira (as réguas desencontradas, o veio), com o brilho e o reflexo suaves
+      const reguas = (c, l, a) => {
+        const r = sorteio(41);
+        const n = 11; // réguas de ~18 cm num quadro de 2 m
+        const h = a / n;
+        for (let i = 0; i < n; i++) {
+          let x = -r() * l * 0.5;
+          while (x < l) {
+            const comp = l * (0.35 + r() * 0.4);
+            const tom = 0.93 + r() * 0.12;
+            c.fillStyle = `rgb(${Math.round(98 * tom)},${Math.round(58 * tom)},${Math.round(34 * tom)})`;
+            c.fillRect(x, i * h, comp, h);
+            for (let k = 0; k < 9; k++) {
+              c.strokeStyle = `rgba(70,40,20,${0.05 + r() * 0.08})`;
+              c.lineWidth = 1 + r() * 2;
+              const yy = i * h + r() * h;
+              c.beginPath();
+              c.moveTo(x, yy);
+              c.bezierCurveTo(x + comp * 0.3, yy + (r() - 0.5) * 6, x + comp * 0.7, yy + (r() - 0.5) * 6, x + comp, yy);
+              c.stroke();
+            }
+            c.fillStyle = "rgba(40,22,10,0.55)";
+            c.fillRect(x, i * h, 2, h);
+            x += comp;
+          }
+          c.fillStyle = "rgba(40,22,10,0.45)";
+          c.fillRect(0, i * h, l, 2);
+        }
+      };
+      const piso = chao(g, 160, 160, matTex("piso-madeira", 160, 160, 2.0, reguas, { roughness: 0.38, envMapIntensity: 0.6 }, 2048), m.centro.x, m.centro.z);
+      refletir(g, piso, 0.08, "#3a2212", m);
+      // o mural da parede do fundo (um quadro de 12 m, repetido)
+      const quadro = 12;
+      const desenhoMural = (c, l, a) => {
+        const r = sorteio(op.semente ?? 7);
+        const px = l / quadro;
+        const y = (metros) => a - metros * px;
+        const ceu = c.createLinearGradient(0, 0, 0, a);
+        ceu.addColorStop(0, "#47b6ea");
+        ceu.addColorStop(0.55, "#93d6f4");
+        ceu.addColorStop(1, "#d8f1fb");
+        c.fillStyle = ceu;
+        c.fillRect(0, 0, l, a);
+        // as nuvens: bolas brancas juntas, com a sombra azulada embaixo
+        const nuvem = (cx, cy, s) => {
+          c.fillStyle = "rgba(160,200,225,0.55)";
+          for (const [dx, dy, rr] of [[-1.1, 0.25, 0.55], [-0.4, 0.3, 0.7], [0.45, 0.3, 0.62], [1.1, 0.28, 0.48]]) {
+            c.beginPath(); c.arc(cx + dx * s, cy + dy * s + s * 0.12, rr * s, 0, PI * 2); c.fill();
+          }
+          c.fillStyle = "#ffffff";
+          for (const [dx, dy, rr] of [[-1.1, 0.2, 0.5], [-0.45, -0.15, 0.72], [0.35, -0.3, 0.8], [1.05, 0.12, 0.52], [0.0, 0.25, 0.6]]) {
+            c.beginPath(); c.arc(cx + dx * s, cy + dy * s, rr * s, 0, PI * 2); c.fill();
+          }
+        };
+        for (let k = 0; k < 5; k++) nuvem((k + 0.3 + r() * 0.5) * l / 5, y(3.6 + r() * 1.2), px * (0.32 + r() * 0.16));
+        // os morros ao longe
+        for (const [cor, base, alto] of [["#9fd8b0", 1.5, 1.0], ["#7cc68f", 1.3, 0.7]]) {
+          c.fillStyle = cor;
+          c.beginPath();
+          c.moveTo(0, a);
+          for (let x = 0; x <= l; x += l / 60) c.lineTo(x, y(base + alto * (0.5 + 0.5 * Math.sin((x / l) * PI * 4 + base * 3))));
+          c.lineTo(l, a);
+          c.fill();
+        }
+        // as árvores: o tronco (com os galhos) à mostra entre os arbustos e a copa, e a copa num cacho de
+        // bolas sombreado (o verde escuro embaixo e atrás, o claro em cima, onde bate a luz)
+        const arvore = (cx, alt, s) => {
+          const base = y(1.0), topo = y(alt - 0.55 * s);
+          c.fillStyle = "#6f4428";
+          c.beginPath();
+          c.moveTo(cx - 0.11 * px * s, base);
+          c.quadraticCurveTo(cx - 0.05 * px * s, (base + topo) / 2, cx - 0.06 * px * s, topo);
+          c.lineTo(cx + 0.06 * px * s, topo);
+          c.quadraticCurveTo(cx + 0.05 * px * s, (base + topo) / 2, cx + 0.11 * px * s, base);
+          c.fill();
+          c.strokeStyle = "#6f4428";
+          c.lineWidth = 0.04 * px * s;
+          c.lineCap = "round";
+          for (const lado of [-1, 1]) {
+            c.beginPath();
+            c.moveTo(cx, y(alt - 0.9 * s));
+            c.quadraticCurveTo(cx + lado * 0.2 * px * s, y(alt - 0.75 * s), cx + lado * 0.32 * px * s, y(alt - 0.45 * s));
+            c.stroke();
+          }
+          const rr = sorteio(Math.round(cx));
+          const bolas = [];
+          for (let k = 0; k < 16; k++) {
+            const a = rr() * PI * 2, d = Math.sqrt(rr()) * 0.62;
+            bolas.push([Math.cos(a) * d * 1.15, Math.sin(a) * d * 0.85, 0.3 + rr() * 0.18]);
+          }
+          const cy = y(alt);
+          for (const [cor, dx, dy, f] of [["#2f7d32", 0.05, 0.06, 1.0], ["#4f9e34", 0.02, 0.02, 0.92], ["#76b843", -0.02, -0.03, 0.78], ["#a4d150", -0.06, -0.08, 0.5]]) {
+            c.fillStyle = cor;
+            for (const [bx, by, br] of bolas) {
+              c.beginPath();
+              c.arc(cx + (bx + dx) * px * s, cy - (by - dy) * px * s, br * f * px * s, 0, PI * 2);
+              c.fill();
+            }
+          }
+        };
+        for (let k = 0; k < 4; k++) arvore((k + 0.15 + r() * 0.7) * l / 4, 3.0 + r() * 0.7, 1.0 + r() * 0.3);
+        // os arbustos e a grama
+        for (let x = -px * 0.3; x < l + px; x += px * (0.45 + r() * 0.3)) {
+          const rr = px * (0.28 + r() * 0.18);
+          c.fillStyle = r() > 0.5 ? "#4fae4a" : "#5fbd55";
+          c.beginPath(); c.arc(x, y(1.05), rr, PI, 0); c.fill();
+        }
+        c.fillStyle = "#58b14e";
+        c.fillRect(0, y(1.08), l, 1.08 * px);
+        // a cerca de madeira amarela (as ripas com a ponta, as travessas)
+        const ripa = 0.16 * px, vao = 0.06 * px;
+        c.fillStyle = "#e7b53c";
+        c.fillRect(0, y(0.82), l, 0.08 * px);
+        c.fillRect(0, y(0.42), l, 0.08 * px);
+        for (let x = 0; x < l; x += ripa + vao) {
+          c.fillStyle = "#f6cf55";
+          c.beginPath();
+          c.moveTo(x, y(0.12));
+          c.lineTo(x, y(1.02));
+          c.lineTo(x + ripa / 2, y(1.12));
+          c.lineTo(x + ripa, y(1.02));
+          c.lineTo(x + ripa, y(0.12));
+          c.fill();
+          c.fillStyle = "rgba(160,110,20,0.35)";
+          c.fillRect(x + ripa - 3, y(1.02), 3, 0.9 * px);
+        }
+        // o chão do mural (a grama até o rodapé)
+        c.fillStyle = "#4ea347";
+        c.fillRect(0, y(0.12), l, 0.12 * px);
+      };
+      const texMural = tex("mural-" + (op.semente ?? 7) + "-" + H.toFixed(1), 6144, Math.round((6144 * H) / quadro), desenhoMural);
+      const larguraParede = 200;
+      const tMural = texMural.clone();
+      tMural.needsUpdate = true;
+      tMural.repeat.set(larguraParede / quadro, 1);
+      tMural.offset.x = (((m.centro.x - larguraParede / 2) / quadro) % 1 + 1) % 1;
+      parede(g, larguraParede, H, new T.MeshStandardMaterial({ map: tMural, roughness: 0.85 }), m.centro.x, m.zFundo, 0);
+      // o rodapé branco
+      const rodape = parede(g, larguraParede, 0.1, mat("#f8fafc", { roughness: 0.4 }), m.centro.x, m.zFundo, 0);
+      rodape.position.z += 0.012;
+      // a parede do lado (verde, lisa) com a janela
+      parede(g, larguraParede, H, mat(op.lateral || "#1f6b45", { roughness: 0.9 }), m.xLado, m.centro.z, m.giroLado);
+      const lado = m.ladoEsq ? 1 : -1;
+      const janela = new T.Group();
+      caixa(janela, 0.08, 1.5, 2.2, mat("#f8fafc", { roughness: 0.35 }), 0, 0, 0);
+      const desenhoJanela = (c, l, a) => {
+        const d = c.createLinearGradient(0, 0, 0, a);
+        d.addColorStop(0, "#9fd2f2");
+        d.addColorStop(0.7, "#cfe8f7");
+        d.addColorStop(1, "#b9dcc0");
+        c.fillStyle = d;
+        c.fillRect(0, 0, l, a);
+        c.fillStyle = "#f8fafc";
+        c.fillRect(l / 2 - 10, 0, 20, a);
+        c.fillRect(0, a * 0.42 - 8, l, 16);
+      };
+      const tJanela = tex("janela", 1024, 680, desenhoJanela);
+      const vidro = malha(new T.PlaneGeometry(2.0, 1.32), new T.MeshStandardMaterial({ map: tJanela, emissiveMap: tJanela, emissive: "#ffffff", emissiveIntensity: 0.45, roughness: 0.2 }), lado * 0.045, 0.75, 0);
+      vidro.rotation.y = (lado * PI) / 2;
+      janela.add(vidro);
+      janela.position.set(m.xLado, 0.95, m.zFundo + Math.max(2.4, m.tam.z * 0.5 + 1.6));
+      g.add(janela);
+      // o teto claro, a sanca e os spots
+      // (a luz que rebate no teto: mais clara em cima do produto e perto do mural, um degradê largo)
+      const desenhoTeto = (c, l, a) => {
+        const d = c.createRadialGradient(l / 2, a * 0.3, 0, l / 2, a * 0.3, l * 0.6);
+        d.addColorStop(0, "#fbfbfa");
+        d.addColorStop(1, "#d9d9d6");
+        c.fillStyle = d;
+        c.fillRect(0, 0, l, a);
+      };
+      const tTeto = tex("teto", 1024, 1024, desenhoTeto);
+      const lado2 = Math.max(30, m.maior * 3);
+      const teto = malha(new T.PlaneGeometry(lado2, lado2), new T.MeshStandardMaterial({ map: tTeto, emissiveMap: tTeto, emissive: "#ffffff", emissiveIntensity: 0.38, roughness: 0.9 }), m.centro.x, H, m.zFundo + lado2 / 2);
+      teto.rotation.x = PI / 2;
+      g.add(teto);
+      // a sanca branca em cima do mural, com a fita de LED quente escondida
+      caixa(g, larguraParede, 0.14, 0.22, mat("#ffffff", { roughness: 0.6 }), m.centro.x, H - 0.14, m.zFundo + 0.11);
+      caixa(g, larguraParede, 0.025, 0.03, luz("#fff1d6", 2.2), m.centro.x, H - 0.16, m.zFundo + 0.23);
+      // os spots embutidos, em fileiras do mural até a frente
+      const passo = Math.max(1.8, m.maior / 6);
+      for (let i = -8; i <= 8; i++) {
+        for (let k = 0; k < 6; k++) {
+          const spot = malha(new T.CircleGeometry(0.075, 24), luz("#fff7e6", 3.2), m.centro.x + i * passo, H - 0.005, m.zFundo + 1.0 + k * passo);
+          spot.rotation.x = PI / 2;
+          g.add(spot);
+          const aro = malha(new T.RingGeometry(0.075, 0.095, 24), mat("#e5e7eb", { roughness: 0.4, metalness: 0.4 }), m.centro.x + i * passo, H - 0.004, m.zFundo + 1.0 + k * passo);
+          aro.rotation.x = PI / 2;
+          g.add(aro);
+        }
+      }
+      // num canto, longe do produto: a mesinha branca e as cadeiras (como nas imagens da fábrica)
+      if (op.mesa !== false) {
+        const [mx, mz] = op.mesa || [m.ladoEsq ? m.max.x + 1.5 : m.min.x - 1.5, m.zFundo + 0.95];
+        const branco = mat("#f8fafc", { roughness: 0.35 });
+        const metal = mat("#d6d3d1", { roughness: 0.3, metalness: 0.6 });
+        cil(g, 0.42, 0.025, branco, mx, 0.55, mz, 48);
+        cil(g, 0.025, 0.55, metal, mx, 0, mz, 12);
+        cil(g, 0.22, 0.02, metal, mx, 0, mz, 32);
+        for (let k = 0; k < 4; k++) {
+          const a = (k / 4) * PI * 2 + PI / 4;
+          const cadeira = new T.Group();
+          const assento = malha(new T.SphereGeometry(0.22, 32, 16, 0, PI * 2, PI * 0.55, PI * 0.45), branco, 0, 0.62, 0);
+          assento.scale.set(1, 0.55, 1);
+          cadeira.add(assento);
+          const encosto = malha(new T.SphereGeometry(0.22, 32, 16, PI * 0.15, PI * 0.7, PI * 0.3, PI * 0.3), branco, 0, 0.5, 0);
+          encosto.scale.set(1, 1.2, 1);
+          cadeira.add(encosto);
+          for (const [lx, lz] of [[-0.13, -0.13], [0.13, -0.13], [-0.13, 0.13], [0.13, 0.13]]) {
+            const perna = malha(new T.CylinderGeometry(0.012, 0.012, 0.42, 8), mat("#c8a27a", { roughness: 0.5 }), lx * 0.8, 0.2, lz * 0.8);
+            perna.rotation.set(lz * 0.6, 0, -lx * 0.6);
+            cadeira.add(perna);
+          }
+          cadeira.position.set(mx + Math.cos(a) * 0.6, 0, mz + Math.sin(a) * 0.6);
+          cadeira.rotation.y = -a - PI / 2;
+          g.add(cadeira);
+        }
+      }
+      return {
+        grupo: g, fundo: "#f5f5f4", neblina: null,
+        luz: { ceu: "#ffffff", chao: "#b98b62", hemi: op.hemi ?? 0.95, sol: op.sol ?? 1.7, amb: op.amb ?? 0.75, exposicao: op.exposicao ?? 1.0 },
+      };
     },
 
     /* ------------------------------------------------------------ a loja de peças */

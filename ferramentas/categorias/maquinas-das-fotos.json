@@ -1,8 +1,7 @@
 {
  "brinquedao": [
   "Brinquedão Modelo 2 (3D)",
-  "Brinquedão Modelo 5 (3D)",
-  "Brinquedão Modelo 1 (ao fundo)"
+  "Brinquedão Modelo 5 (3D)"
  ],
  "area-ninja": [
   "Brinquedão Ninja (3D)"
@@ -27,69 +26,40 @@
   "Basquete Street Quadrinhos (3D)",
   "Strike Kids (3D)",
   "Mundo Zumbi",
-  "Air Game Kids Alienígenas (3D)",
-  "Subway Surfers (ao fundo)",
-  "Homem Aranha (ao fundo)",
-  "Sonic Dash (ao fundo)",
-  "Flappy Bird (ao fundo)",
-  "Pinball 32 Polegadas (ao fundo)",
-  "Tomb Raider Kids (ao fundo)",
-  "Corrida dos Minions (ao fundo)",
-  "Nervo Teste (ao fundo)"
+  "Air Game Kids Alienígenas (3D)"
  ],
  "fliperama": [
   "Multi Jogos Retro",
   "Gabinete Games",
   "Pinball 40 Polegadas",
-  "Subway Surfers",
-  "Tomb Raider Kids (ao fundo)",
-  "Corrida dos Minions (ao fundo)",
-  "Sonic Dash (ao fundo)",
-  "Flappy Bird (ao fundo)",
-  "Homem Aranha (ao fundo)",
-  "Pinball 32 Polegadas (ao fundo)",
-  "Minions Kids (ao fundo)",
-  "Sonic Kids (ao fundo)"
+  "Subway Surfers"
  ],
  "simuladores": [
   "Simulador Mario Kart",
   "Simulador de Corrida Top Racer",
-  "Porsche Simulador",
-  "Speed Turbo (ao fundo)",
-  "Lazer Shot (ao fundo)",
-  "Sonic Racing All-Stars (ao fundo)"
+  "Porsche Simulador"
  ],
  "mecanicos": [
   "Carrossel Sorvetinho",
   "Labamba",
-  "Mini Roda Sorvete",
-  "Sonic Racing All-Stars (ao fundo)"
+  "Mini Roda Sorvete"
  ],
  "jogos-de-mesa": [
   "Air Game Kids Alienígenas (3D)",
   "Pac Man",
-  "Pebolim Eletrônico",
-  "Matrix"
+  "Matrix",
+  "Pebolim Eletrônico"
  ],
  "competitivos": [
   "Basquete Street Quadrinhos (3D)",
   "Basquete Street",
-  "Air Game Premium",
-  "Nervo Teste (ao fundo)",
-  "Mundo Zumbi (ao fundo)",
-  "Pega Toupeira (ao fundo)",
-  "Multi Jogos Retro (ao fundo)",
-  "Pinball 40 Polegadas (ao fundo)",
-  "Sonic Dash (ao fundo)",
-  "Homem Aranha (ao fundo)"
+  "Air Game Premium"
  ],
  "famosos": [
   "Basquete Street Quadrinhos (3D)",
   "Sonic Dash",
   "Homem Aranha",
-  "Pac Man",
-  "Flappy Bird (ao fundo)",
-  "Corrida dos Minions (ao fundo)"
+  "Pac Man"
  ],
  "esportivos": [
   "Basquete Street Quadrinhos (3D)",
