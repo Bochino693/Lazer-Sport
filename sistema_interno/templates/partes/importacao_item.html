@@ -61,7 +61,7 @@
       <label class="form-label" for="item-{{ item.uid }}-descricao">Descrição na proposta <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
       <input class="form-control" id="item-{{ item.uid }}-descricao" name="item-{{ item.uid }}-descricao"
              maxlength="180" value="{{ env.descricao }}" data-original="{{ item.original }}">
-      {% if item.original %}<p class="ls-imp-nota ls-imp-no-word"><small>No documento:</small> “{{ item.original }}”</p>{% endif %}
+      {% if item.original and not item.descricao.normalizado %}<p class="ls-imp-nota ls-imp-no-word"><small>No documento:</small> “{{ item.original }}”</p>{% endif %}
       {% include "partes/importacao_origem.html" with campo=item.descricao alvo="item-"|add:item.uid|add:"-descricao" falta=item.faltas.descricao %}
     </div>
     <div class="ls-imp-campo">

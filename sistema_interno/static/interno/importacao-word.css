@@ -243,6 +243,8 @@
 .ls-imp-criar-total{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .ls-imp-criar-total span{color:var(--muted);font-weight:900;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
 .ls-imp-criar-total strong{font-size:1.25rem;color:var(--green-texto);font-variant-numeric:tabular-nums}
+.ls-imp-criar-falta{font-size:.78rem;font-weight:900;color:var(--red-texto);text-decoration:none}
+.ls-imp-criar-falta:hover{text-decoration:underline;color:var(--red-texto)}
 
 /* ======================================================= tablet e celular */
 @media (max-width:1100px){
@@ -252,12 +254,19 @@
      sempre à mão, acima das abas do celular. */
   .ls-imp-lateral{display:contents}
   .ls-imp-pendencias{order:-1}
+  /* Uma faixa só: total e o que falta à esquerda, o botão à direita. A
+     frase de "nada é enviado" já está no topo e no botão de cima; na
+     faixa presa ela só roubaria a tela de quem está conferindo. */
   .ls-imp-criar{
-    order:99;position:sticky;bottom:12px;z-index:20;
-    grid-template-columns:auto minmax(0,1fr);align-items:center;
+    order:99;position:sticky;bottom:12px;z-index:20;padding:10px 12px;gap:2px 12px;
+    grid-template-columns:minmax(0,1fr) auto;align-items:center;
     box-shadow:0 -10px 30px rgba(var(--sombra-rgb),.28);
   }
-  .ls-imp-criar small{grid-column:1 / -1}
+  .ls-imp-criar small{display:none}
+  .ls-imp-criar-total{flex-direction:column;align-items:flex-start;gap:0}
+  .ls-imp-criar-total strong{font-size:1.08rem}
+  .ls-imp-criar .btn{width:auto;grid-column:2;grid-row:1 / span 2}
+  .ls-imp-criar-falta{grid-column:1;grid-row:2}
   .ls-imp-item-campos{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ls-imp-item-campos .ls-imp-campo-largo{grid-column:1 / -1}
 }
@@ -273,5 +282,5 @@
 }
 @media (max-width:420px){
   .ls-imp-item-campos{grid-template-columns:minmax(0,1fr)}
-  .ls-imp-criar{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-criar .btn{padding-inline:.8rem!important}
 }

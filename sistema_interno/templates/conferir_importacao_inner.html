@@ -397,6 +397,7 @@
           <i class="bi bi-check2-all me-1" aria-hidden="true"></i> Criar orçamento
         </button>
         <small>Cria como <strong>rascunho</strong> e abre na edição normal. Nada é enviado ao cliente.</small>
+        <a href="#painelPendencias" class="ls-imp-criar-falta" id="criarFalta"{% if validado.pronto %} hidden{% endif %}>Falta preencher: <span>{{ validado.pendencias|length }}</span></a>
       </div>
     </aside>
   </div>

@@ -619,6 +619,11 @@ LSTela.pronto(function () {
     contagem.classList.toggle("zero", !lista_.length);
     document.getElementById("semPendencias").hidden = !!lista_.length;
     botaoCriar.disabled = !!lista_.length;
+    var falta = document.getElementById("criarFalta");
+    if (falta) {
+      falta.hidden = !lista_.length;
+      falta.querySelector("span").textContent = String(lista_.length);
+    }
   }
 
   document.getElementById("listaPendencias").addEventListener("click", function (evento) {

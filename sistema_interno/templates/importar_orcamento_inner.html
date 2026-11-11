@@ -42,7 +42,7 @@
     <form method="post" enctype="multipart/form-data" action="{% url 'importar_orcamento_word' %}" id="formImportarWord">
       {% csrf_token %}
       <label class="ls-imp-soltar" for="arquivoWord" id="soltarWord">
-        <i class="bi bi-file-earmark-word" aria-hidden="true"></i>
+        <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
         <strong>Escolha o orçamento em Word (.docx) ou PDF</strong>
         <span id="arquivoWordNome">Toque para escolher, ou arraste o arquivo para cá.</span>
         <small>Até {{ tamanho_maximo_mb }} MB. .doc antigo (Word 97-2003): abra no Word e salve como .docx.</small>
