@@ -100,3 +100,15 @@ loja, com as oito fotos (a perspectiva da fábrica de principal, as quatro
 vistas do 3D, a planta e as duas do salão) e o objeto 3D ligado, sai sozinho
 no deploy do Render, pela migração `core/0151_brinquedao_modelo_5`; se ela
 não conseguir, `python manage.py cadastrar_brinquedao_modelo_5`.
+
+O passeio por dentro (`CAMINHOS["brinquedao-modelo-5"]` em
+`core/static/site/arena/caminhos.js`) chega pela ponta direita, sobe a
+escada de tubos dela até o degrau triangular e dele para o piso de 1 m,
+atravessa o 3º módulo abaixado entre os dois sacos, passa de gatinhas por
+cima da cunha azul, desce o escorregador pela perna (os olhos 45 cm acima da
+cama, no meio dela: a mesma curva do `ESC.eixo`) e, embaixo, olha os rolos e
+o brinquedão inteiro. Os pontos são escritos nas coordenadas de trabalho do
+`montar.js` (mm): `M5` leva ao objeto centralizado (o deslocamento que o
+`gerar.cjs` imprime). O `core/tests_js/passeio.mjs` confere que os olhos
+nunca chegam a menos de 10 cm de nada. Os testes:
+`core/tests_brinquedao_modelo_5.py`.

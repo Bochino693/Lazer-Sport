@@ -1936,3 +1936,91 @@ Dependência nova: rjsmin (requirements.txt).
    a subida falhar, o deploy segue; no servidor:
        python manage.py cadastrar_variantes_adesivo --so basquete-street-quadrinhos --fotos
    Testes: core/tests_variantes_adesivo.py (BasqueteFotosDeVerdadeTests).
+
+59) BRINQUEDÃO MODELO 5: O L PEQUENO DE TUBOS COR DE MADEIRA, EM 3D
+   O pedido do cliente: "adicione este novo brinquedão", com quatro imagens
+   da fábrica: a planta cotada, a perspectiva sem fundo e o brinquedão num
+   salão, de frente e pela esquerda (os cavalinhos de balanço e a mesinha do
+   salão NÃO são do produto e não entram).
+   AS MEDIDAS (da planta): 3,70 m de comprimento × 1 m de profundidade na
+   barra, 2 m de altura, o piso de cima a 1 m. Os módulos: 1 m, 1 m, 0,70 m
+   e 1 m. A perna do L (embaixo à esquerda, na planta) tem 0,62 m de largura
+   e avança 0,86 m na frente da barra; o escorregador vai até ~1,45 m na
+   frente. O objeto mede 3,70 m × 2,48 m (com a perna e o escorregador) ×
+   2 m, cravados (os tubos de fora ficam para dentro).
+   A CÂMERA DA PERSPECTIVA: o que a planta não dá foi medido na perspectiva,
+   com a câmera dela calibrada pelos cantos da estrutura (calibrar.py: a DLT
+   com 10 pontos, ~2 px de erro). Foi assim que se leu o que as imagens não
+   deixavam claro:
+     * o módulo da esquerda: a frente da perna é mais baixa (1,42 m) e os
+       dois tubos do telhado sobem dela até o alto da barra -- de lado, a
+       silhueta de casinha; é uma água só, não há cumeeira;
+     * a faixa azul do 2º módulo (na planta) é uma CUNHA de espuma: uma
+       lombada de 0,50 m de base e 0,38 m de altura, da frente até o fundo,
+       com a cumeeira redonda no meio (a linha clara da planta). Não é
+       escorregador: a cumeeira aparece pela janela rosa e pelo vão do 3º;
+     * a "rampa" laranja do 4º módulo é um DEGRAU TRIANGULAR: a beira dela
+       fica a 0,62 m o tempo todo, do fundo à esquerda até a frente à direita
+       (na vista do salão é a "tábua" a ~0,6 m), e o terceiro canto também.
+       É a metade de trás e da direita do módulo; a outra metade é o piso de
+       1 m (outro triângulo laranja). Por isso a planta mostra o módulo todo
+       laranja com a linha da diagonal. Embaixo, o piso azul do térreo; na
+       ponta direita, os tubos a 0,1 m, 0,62 m e 1 m fazem a escada.
+   AS PEÇAS:
+     * a estrutura: tubos redondos de 8 cm, marrons cor de madeira, com os
+       cantos arredondados; em cima, a grade (as pontas, as travessas entre
+       os módulos e a dos sacos); embaixo dos módulos 2 e 3 não há coluna (o
+       piso de 1,70 m vai de uma coluna à outra);
+     * os pisos: azul (1º), amarelo com a cunha azul (2º), amarelo (3º) e os
+       dois triângulos laranja (4º), sobre o piso azul do térreo;
+     * na frente: a casinha rosa (2º módulo) e a azul-clara (4º), com o
+       telhado branco em V e a janela em arco branca com a cruz (vazada), e o
+       painel rosa estreito com a fresta de janela alta (1º módulo, ao lado
+       da perna);
+     * os dois sacos de pancada no 3º módulo (o da frente laranja, o de trás
+       amarelo, 0,22 m, de 1,24 m a ~1,85 m), presos na travessa do meio;
+     * os quatro rolos de espuma pendurados na frente dos módulos 2 e 3 (rosa,
+       amarelo, azul e laranja, 14 cm), do tubo do piso até 0,2 m do chão;
+     * o escorregador amarelo largo, de bordas arredondadas: sai da beira do
+       piso do 1º módulo, desce pela perna (~32°) e termina nas duas
+       "orelhas" redondas, com os dois tubos que o seguram dos lados.
+   ~28,4 mil triângulos; o .glb tem ~400 KB depois do gltfpack.
+   NO SITE:
+     * Arena 3D: liga pelo nome "Brinquedão Modelo 5" e entra sozinho na vaga
+       dos brinquedões da roda (core/arena.py, MODELOS_3D), com a perspectiva
+       da fábrica de capa; no "Monte seu projeto" é modelo pronto de
+       Brinquedão;
+     * o passeio por dentro (caminhos.js, CAMINHOS["brinquedao-modelo-5"]):
+       sobe a escada da ponta direita até o degrau triangular e o piso de
+       1 m, passa abaixado entre os dois sacos, de gatinhas por cima da cunha,
+       desce o escorregador e, embaixo, olha os rolos e o brinquedão inteiro
+       (core/tests_js/passeio.mjs: os olhos nunca a menos de 10 cm de nada;
+       o mais perto é 12 cm, na escada);
+     * o produto (core/cadastro_modelos.py, CADASTROS): fora da loja, sem
+       preço, na categoria Brinquedão, com as medidas da planta (2 × 3,70 ×
+       1 m), a descrição e oito fotos: a perspectiva da fábrica (a
+       principal), as vistas do 3D (a frente, os dois lados e a perspectiva
+       do mesmo ponto da fábrica), a planta e as duas do salão.
+   A MIGRAÇÃO 0151_brinquedao_modelo_5 (depois da 0150): em todo lugar, liga o
+   objeto 3D ao brinquedo que já estiver no catálogo com o nome; SÓ NO
+   RENDER cadastra o brinquedo (as fotos sobem para o Cloudinary). Se a
+   subida falhar, o deploy segue e o log avisa o comando; no servidor:
+       python manage.py cadastrar_brinquedao_modelo_5
+       python manage.py cadastrar_brinquedao_modelo_5 --fotos   # refaz a galeria
+   (o mesmo que `cadastrar_modelo_3d brinquedao-modelo-5`). Se outra 0151
+   chegar junto, é só renumerar esta e a dependência.
+   REFAZER O OBJETO (ferramentas/modelos3d/brinquedao-modelo-5/; o README
+   conta de onde vem cada parte):
+       python3 calibrar.py                             # só se mudar um ponto
+       python3 -m http.server 8790 --bind 127.0.0.1    # na pasta, com o node_modules
+       node gerar.cjs glb fotos                        # vistas, fotos e o .glb
+       npx gltfpack -i brinquedao-modelo-5.glb -o ../../../core/static/site/arena/modelos/brinquedao-modelo-5.glb -kn -km -ke
+   A v-projeto.png é o objeto visto da câmera da perspectiva da fábrica, do
+   tamanho dela: para comparar lado a lado. Se o objeto mudar de tamanho, o
+   deslocamento que o gerar.cjs imprime vai no M5 do caminhos.js.
+   Código: ferramentas/modelos3d/brinquedao-modelo-5/ (montar.js, gerar.cjs,
+   calibrar.py, camera-perspectiva.json), core/arena.py, core/cadastro_modelos.py,
+   core/management/commands/cadastrar_brinquedao_modelo_5.py,
+   core/migrations/0151_brinquedao_modelo_5.py, core/static/site/arena/caminhos.js.
+   Testes: core/tests_brinquedao_modelo_5.py (e o RodaEPasseioJsTests de
+   core/tests_arena.py, que confere a roda e todos os passeios).
