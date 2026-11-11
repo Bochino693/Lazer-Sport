@@ -16,8 +16,9 @@ O que estes testes protegem:
   * no "Monte seu projeto" ele é um modelo pronto de Brinquedão;
   * o passeio por dentro tem caminho próprio (a escada, os sacos, a cunha, o
     escorregador), e todo jeito de andar que ele usa existe na Arena;
-  * o comando cadastra uma vez só, fora da loja, com a perspectiva da
-    fábrica de foto principal, as vistas do 3D, a planta e as duas do salão
+  * o comando cadastra uma vez só, fora da loja, com a foto do salão da
+    fábrica (de frente) de foto principal -- a capa do card, a da 0153 --,
+    a perspectiva da fábrica, as vistas do 3D, a planta e a outra do salão
     na galeria, as medidas da planta e o objeto 3D ligado; se o brinquedo já
     está no catálogo, só ganha o objeto;
   * a migração liga o objeto em todo lugar, só cadastra no Render e nunca
@@ -57,8 +58,8 @@ CHAVE = "brinquedao-modelo-5"
 GLB = "site/arena/modelos/brinquedao-modelo-5.glb"
 MEDIDAS = [2.0, 3.7, 2.48]  # altura, largura, profundidade do .glb
 FOTOS = (
-    "perspectiva.webp", "frente.webp", "lado_esquerdo.webp", "lado_direito.webp", "perspectiva_3d.webp",
-    "planta.webp", "salao_frente.webp", "salao_esquerda.webp",
+    "salao_frente.webp", "perspectiva.webp", "frente.webp", "lado_esquerdo.webp", "lado_direito.webp",
+    "perspectiva_3d.webp", "planta.webp", "salao_esquerda.webp",
 )
 
 
@@ -262,11 +263,12 @@ class CadastroTests(TestCase):
         imagens = list(brinquedo.imagens_brinquedo.order_by("ordem"))
         self.assertEqual(
             [i.tipo for i in imagens],
-            ["perfil", None, "lado_esquerdo", "lado_direito", None, None, None, None],
+            ["perfil", None, None, "lado_esquerdo", "lado_direito", None, None, None],
         )
-        # a principal é a perspectiva da fábrica; depois as vistas do 3D, a planta e as duas do salão
+        # a principal (a capa do card) é a foto do salão da fábrica; depois a perspectiva da
+        # fábrica, as vistas do 3D, a planta e a outra do salão
         self.assertTrue(all(i.texto_alternativo.startswith(("Brinquedão Modelo 5", "Planta", "O Brinquedão")) for i in imagens))
-        self.assertIn("perspectiva", brinquedo.imagem_brinquedo.name)
+        self.assertIn("brinquedao-modelo-5-salao_frente", brinquedo.imagem_brinquedo.name)
         self.assertEqual([c.nome_categoria for c in brinquedo.categorias_brinquedos.all()], ["Brinquedões"])
         # as medidas do cadastro são as da planta
         self.assertEqual((brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m), (2, Decimal("3.70"), 1))

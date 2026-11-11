@@ -323,7 +323,8 @@ class FotosTests(TestCase):
 
     def test_as_fotos_tem_o_corte_do_card_e_sao_leves(self):
         arquivos = sorted(categorias_capas.PASTA.glob("*.webp"))
-        self.assertEqual({a.stem for a in arquivos}, {chave for chave, _ in categorias_capas.CAPAS})
+        # as das categorias e a do card fixo "Peças e acessórios" da home (estática, não sobe)
+        self.assertEqual({a.stem for a in arquivos}, {chave for chave, _ in categorias_capas.CAPAS} | {"pecas-e-acessorios"})
         for arquivo in arquivos:
             with self.subTest(arquivo.name), Image.open(arquivo) as foto:
                 self.assertEqual(foto.format, "WEBP")
@@ -512,7 +513,9 @@ class MaquinasReaisTests(TestCase):
                     if any(trecho in nome for trecho in dados["categorias"])
                 ]}
         feitas = {chave for chave, _ in categorias_capas.CAPAS} - {"area-baby"}
-        self.assertEqual(set(lista), feitas)
+        self.assertEqual(set(lista), feitas | {"pecas-e-acessorios"})
+        pecas = lista.pop("pecas-e-acessorios")  # (as peças: PecasDaHomeTests)
+        self.assertTrue(pecas)
         for chave, maquinas in lista.items():
             with self.subTest(chave):
                 self.assertGreaterEqual(len([m for m in maquinas if "(ao fundo)" not in m]), 1)

@@ -211,12 +211,14 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         strike = Brinquedos.objects.get()
         self.assertEqual(strike.nome_brinquedo, "Strike Kids")
         fotos = list(strike.imagens_brinquedo.order_by("ordem"))
-        # os lados que a Arena usa primeiro; depois mais ângulos e as cores
-        self.assertEqual([f.tipo for f in fotos[:4]], ["perfil", "lado_direito", "lado_esquerdo", "verso"])
-        self.assertEqual(len(fotos), 12)
+        # a capa (a cena na game zone, a da 0153: o card e a primeira da galeria), a foto
+        # sem fundo de antes (sem tipo), os lados que a Arena usa; depois mais ângulos e as cores
+        self.assertEqual([f.tipo for f in fotos[:5]], ["perfil", None, "lado_direito", "lado_esquerdo", "verso"])
+        self.assertEqual(len(fotos), 13)
         self.assertEqual(sum(1 for f in fotos if "cor_" in f.imagem.name), 5)
-        self.assertIn("strike-kids-foto", fotos[0].imagem.name)
-        self.assertIn("strike-kids-foto", strike.imagem_brinquedo.name)
+        self.assertIn("strike-kids-capa", fotos[0].imagem.name)
+        self.assertIn("strike-kids-foto", fotos[1].imagem.name)
+        self.assertIn("strike-kids-capa", strike.imagem_brinquedo.name)
         self.assertEqual(strike.objeto_3d.codigo, "strike-kids")
         self.assertIn("câmera", strike.descricao)
         self.assertIn("5 sensores", strike.descricao)
@@ -230,8 +232,8 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         antigo.refresh_from_db()
         self.assertEqual(Brinquedos.objects.count(), 1)
         self.assertEqual(antigo.nome_brinquedo, "Strike Kids")
-        self.assertIn("strike-kids-foto", antigo.imagem_brinquedo.name)
-        self.assertEqual(antigo.imagens_brinquedo.count(), 12)
+        self.assertIn("strike-kids-capa", antigo.imagem_brinquedo.name)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 13)
 
     def test_o_do_painel_fica_como_esta_e_ganha_o_3d(self):
         meu = Brinquedos.objects.create(
@@ -263,7 +265,7 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         antigo.refresh_from_db()
         self.assertTrue(antigo.ativo)
         self.assertEqual(Brinquedos.objects.count(), 1)
-        self.assertEqual(antigo.imagens_brinquedo.count(), 12)
+        self.assertEqual(antigo.imagens_brinquedo.count(), 13)
         self.assertEqual(antigo.objeto_3d.codigo, "strike-kids")
 
     def test_o_que_subiu_com_4_fotos_ganha_as_novas(self):
@@ -274,7 +276,7 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
             foto.delete()
         self.assertEqual(strike.imagens_brinquedo.count(), 4)
         self.rodar()
-        self.assertEqual(strike.imagens_brinquedo.count(), 12)
+        self.assertEqual(strike.imagens_brinquedo.count(), 13)
         self.assertEqual(Brinquedos.objects.count(), 1)
 
     def test_o_comando_conta_o_que_fez(self):
@@ -289,7 +291,8 @@ class StrikeKidsBrinquedoNovoTests(TestCase):
         self.assertIn("(id", saida.getvalue())
         self.assertEqual(Brinquedos.objects.count(), 1)
 
-    def test_a_foto_principal_tem_fundo_transparente(self):
+    def test_a_foto_sem_fundo_tem_fundo_transparente(self):
+        # a foto do produto (a capa da Arena, core/arena.py); a capa do card é a cena (capa.webp)
         from PIL import Image
 
         foto = Image.open(finders.find("site/arena/modelos/strike-kids/foto.webp"))

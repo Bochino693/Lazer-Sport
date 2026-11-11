@@ -59,7 +59,7 @@ from django.http import (
 )
 from django.conf import settings
 from django.utils.http import http_date
-from random import shuffle, sample
+from random import shuffle
 
 
 def media_serve(request, path):
@@ -364,42 +364,6 @@ class HomeView(View):
 
         categorias_peca = list(CategoriaPeca.objects.all())
 
-        from .models import ImagemPeca
-
-        ids_com_imagem = list(
-            PecasReposicao.da_vitrine()
-            .filter(imagem_peca_reposicao__isnull=False)
-            .values_list("id", flat=True)
-            .distinct()
-        )
-
-        # A vitrine rotativa (o slider "Produtos em Geral" na categoria
-        # premium fixa) continua sendo só uma amostra de 9 peças -- isso
-        # aqui não tem relação com a paginação da grade principal, é só
-        # pra não sobrecarregar o carrossel giratório.
-        ids_amostra = sample(
-            ids_com_imagem,
-            min(9, len(ids_com_imagem)),
-        )
-
-        pecas_preview = (
-            list(
-                PecasReposicao.da_vitrine()
-                .filter(id__in=ids_amostra)
-                .prefetch_related(
-                    Prefetch(
-                        "imagem_peca_reposicao",
-                        queryset=ImagemPeca.objects.order_by(
-                            "ordem",
-                            "id",
-                        ),
-                    )
-                )
-            )
-            if ids_amostra
-            else []
-        )
-
         # Todas as peças ativas. Mesma lógica do brinquedos_todos: a
         # paginação de 9 por página já é feita no JS
         # (inicializarPecasClientSide), então manda a lista completa.
@@ -532,7 +496,6 @@ class HomeView(View):
             "categorias_peca": categorias_peca,
             "pecas_todas": pecas_todas,
             "pecas_count": len(pecas_todas),
-            "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,

@@ -10,8 +10,8 @@ O que estes testes protegem:
     estar no catálogo; e o passeio da Arena tem o caminho dele;
   * antes de estar no catálogo, o objeto já aparece na arena, com a ficha e
     as fotos 2D; cadastrado, o do catálogo toma o lugar (sem duplicar);
-  * o comando e a migração cadastram uma vez só, com as cinco fotos na
-    galeria, a frente como foto principal, as medidas do projeto e o objeto
+  * o comando e a migração cadastram uma vez só, com as seis fotos na
+    galeria, a capa (a cena na quadra, a da 0153) como foto principal, as medidas do projeto e o objeto
     3D ligado no cadastro -- e a migração nunca derruba o deploy, nem
     cadastra fora do Render (lá, só liga o objeto ao que já está no catálogo).
 """
@@ -128,9 +128,9 @@ class CadastroTests(TestCase):
         brinquedo = Brinquedos.objects.get(nome_brinquedo=NOME)
         self.assertEqual(
             list(brinquedo.imagens_brinquedo.order_by("ordem").values_list("tipo", flat=True)),
-            ["perfil", "lado_esquerdo", "lado_direito", None, None],
+            ["perfil", None, "lado_esquerdo", "lado_direito", None, None],
         )
-        self.assertIn("trampolim-enterrada-frente", brinquedo.imagem_brinquedo.name)
+        self.assertIn("trampolim-enterrada-capa", brinquedo.imagem_brinquedo.name)
         self.assertEqual([c.nome_categoria for c in brinquedo.categorias_brinquedos.all()], ["Camas Elásticas"])
         self.assertEqual((brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m), (3.25, 6, 2))
         self.assertFalse(brinquedo.exibir_na_loja)
@@ -145,7 +145,7 @@ class CadastroTests(TestCase):
                 call_command("cadastrar_trampolim_enterrada", stdout=StringIO())
                 call_command("cadastrar_trampolim_enterrada", "--fotos", stdout=StringIO())
         self.assertEqual(Brinquedos.objects.filter(nome_brinquedo=NOME).count(), 1)
-        self.assertEqual(Brinquedos.objects.get(nome_brinquedo=NOME).imagens_brinquedo.count(), 5)
+        self.assertEqual(Brinquedos.objects.get(nome_brinquedo=NOME).imagens_brinquedo.count(), 6)
         self.assertEqual(ObjetoTresD.objects.count(), 1)
 
     def test_migracao_so_cadastra_no_render_e_sem_derrubar_o_deploy(self):
@@ -166,7 +166,7 @@ class CadastroTests(TestCase):
             with a, b, override_settings(IS_RENDER=True), mock.patch("builtins.print"):
                 _migrar()
         brinquedo = Brinquedos.objects.get(nome_brinquedo=NOME)
-        self.assertEqual(brinquedo.imagens_brinquedo.count(), 5)
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), 6)
         self.assertEqual(brinquedo.objeto_3d.codigo, "trampolim-enterrada")
 
     def test_migracao_liga_o_objeto_ao_que_ja_esta_no_catalogo(self):

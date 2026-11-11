@@ -17,10 +17,17 @@ NO ESTÚDIO (sem lugar: as provas de ângulo, "glb:<nome>"). O render vem
 com o fundo transparente; aqui entram o fundo claro do card e o corte em
 volta do objeto.
 
-O ARQUIVO fica abaixo de ~150 KB: a qualidade do WebP desce até caber.
+AS CAPAS DOS PRODUTOS ("capa:<chave>" no gerar.cjs, render/capa_<chave>.png):
+o mesmo, quadrado (1200 × 1200, o card de produto e a galeria), gravado em
+`core/static/site/arena/modelos/<chave>/capa.webp` -- a primeira foto do
+cadastro do produto (core/cadastro_modelos.py, CADASTROS[chave]["fotos"]).
 
-    python ferramentas/categorias/compor.py            (todas as que têm render)
-    python ferramentas/categorias/compor.py kids       (só esta)
+O ARQUIVO fica abaixo de ~150 KB (a capa, ~190 KB: é maior e a galeria a
+mostra grande): a qualidade do WebP desce até caber.
+
+    python ferramentas/categorias/compor.py                    (todas as que têm render)
+    python ferramentas/categorias/compor.py kids               (só esta)
+    python ferramentas/categorias/compor.py capa_strike-kids   (só esta capa)
 """
 
 import sys
@@ -31,10 +38,14 @@ from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
 PASTA = Path(__file__).resolve().parent
 RENDERS = PASTA / "render"
 DESTINO = PASTA.parent.parent / "core" / "static" / "site" / "categorias"
+#: Onde ficam as fotos de cada produto nosso em 3D (a capa vai junto, como capa.webp).
+MODELOS = PASTA.parent.parent / "core" / "static" / "site" / "arena" / "modelos"
 
 LARGURA, ALTURA = 1200, 900
 #: O teto do arquivo (o card baixa a foto inteira).
 TETO_KB = 150
+#: O teto da capa do produto (quadrada, maior; a galeria a mostra grande).
+TETO_CAPA_KB = 190
 #: O desfoque do lugar onde o peso é 1 (em pixels do render, que tem o dobro da foto).
 DESFOQUE = 6
 #: As folgas, em fração da foto final: (esquerda, cima, direita, baixo).
@@ -58,7 +69,11 @@ CORES = {
     "famosos": "#fbbf24",
     "esportivos": "#ea580c",
     "kids": "#06b6d4",
+    # o card fixo "Peças e acessórios" da home (não é categoria; o mesmo corte 4:3)
+    "pecas-e-acessorios": "#ea580c",
 }
+#: O desfoque de cada foto, quando não é o de sempre: a das peças é de perto (o fundo desfoca mais).
+DESFOQUES = {"pecas-e-acessorios": 16}
 
 
 def _hex(cor):
@@ -82,11 +97,11 @@ def fundo(cor, centro):
     return Image.composite(Image.new("RGB", base.size, _hex(cor)), base, brilho)
 
 
-def salvar(foto, saida):
+def salvar(foto, saida, teto_kb=TETO_KB):
     """O WebP com a melhor qualidade que cabe no teto."""
     for qualidade in (86, 82, 78, 74, 70, 66, 62, 58):
         foto.save(saida, "WEBP", quality=qualidade, method=6)
-        if saida.stat().st_size <= TETO_KB * 1024:
+        if saida.stat().st_size <= teto_kb * 1024:
             break
     return saida
 
@@ -96,12 +111,13 @@ def compor_no_lugar(chave):
     cor = Image.open(RENDERS / f"{chave}.png").convert("RGB")
     peso = Image.open(RENDERS / f"{chave}-peso.png").convert("L")
     mascara = Image.open(RENDERS / f"{chave}-mascara.png").getchannel("A")
-    desfocado = cor.filter(ImageFilter.GaussianBlur(DESFOQUE))
+    desfocado = cor.filter(ImageFilter.GaussianBlur(DESFOQUES.get(chave, DESFOQUE)))
     # o lugar desfocado perde um tico de cor: os brinquedos saltam (sem ficar lavado)
     desfocado = ImageEnhance.Color(desfocado).enhance(0.95)
     lugar = Image.composite(desfocado, cor, peso.filter(ImageFilter.GaussianBlur(3)))
     foto = Image.composite(cor, lugar, mascara)
-    foto = foto.resize((LARGURA, ALTURA), Image.LANCZOS)
+    # 4:3 nas categorias (1200 × 900); a capa, quadrada, 1200 × 1200: a mesma largura
+    foto = foto.resize((LARGURA, round(LARGURA * cor.height / cor.width)), Image.LANCZOS)
     foto = foto.filter(ImageFilter.UnsharpMask(radius=1.1, percent=50, threshold=2))
     return vinheta(brilho(vida(foto)))
 
@@ -171,6 +187,11 @@ def compor_no_estudio(chave):
 def compor(chave, destino=DESTINO):
     no_lugar = (RENDERS / f"{chave}-mascara.png").exists()
     foto = compor_no_lugar(chave) if no_lugar else compor_no_estudio(chave)
+    if chave.startswith("capa_"):
+        # a capa do produto: na pasta dele (ou, nas provas, <pasta>/capa_<chave>.webp)
+        saida = MODELOS / chave[len("capa_"):] / "capa.webp" if destino == DESTINO else destino / f"{chave}.webp"
+        saida.parent.mkdir(parents=True, exist_ok=True)
+        return salvar(foto, saida, TETO_CAPA_KB)
     destino.mkdir(parents=True, exist_ok=True)
     return salvar(foto, destino / f"{chave}.webp")
 
@@ -182,7 +203,10 @@ def main(argumentos):
         i = argumentos.index("--para")
         destino = Path(argumentos[i + 1])
         argumentos = argumentos[:i] + argumentos[i + 2:]
-    chaves = argumentos or sorted(p.stem for p in RENDERS.glob("*.png") if p.stem in CORES)
+    chaves = argumentos or sorted(
+        p.stem for p in RENDERS.glob("*.png")
+        if p.stem in CORES or (p.stem.startswith("capa_") and not p.stem.endswith(("-mascara", "-peso")))
+    )
     for chave in chaves:
         saida = compor(chave, destino)
         print(f"{chave}: {saida} ({saida.stat().st_size // 1024} KB)")

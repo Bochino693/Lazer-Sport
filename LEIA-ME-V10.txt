@@ -2123,3 +2123,88 @@ Dependência nova: rjsmin (requirements.txt).
    core/migrations/0151_brinquedao_modelo_5.py, core/static/site/arena/caminhos.js.
    Testes: core/tests_brinquedao_modelo_5.py (e o RodaEPasseioJsTests de
    core/tests_arena.py, que confere a roda e todos os passeios).
+
+60) AS CAPAS DOS PRODUTOS EM CENA E O CARD DAS PEÇAS DA HOME
+   O pedido do cliente (com o print de uma página de categoria): "ainda assim
+   não está 100%, além disso, as fotos nas categorias devem ficar full ali,
+   sem as bordas brancas... projete alguma coisa também para as peças de
+   reposição da primeira posição, para não ficar brancão também".
+   1. A CAPA DOS NOSSOS PRODUTOS EM 3D (a foto do card de produto, que é a
+      `imagem_brinquedo`, e a primeira da galeria) era a vista do 3D num fundo
+      claro: no card, a borda branca. Agora é uma CENA CHEIA, como as fotos das
+      categorias (seções 55 e 58): o produto sozinho no destaque, inteiro,
+      grande e nítido, num lugar que combina com ele, com a criançada em volta
+      (sem tapar o produto), a luz do lugar e, ao fundo e desfocadas, só
+      máquinas de verdade do catálogo. QUADRADA (1200 x 1200), porque o card
+      de produto é quadrado (ls-tema.css, `.card-mini .img-area`; opaca, a
+      foto ocupa o card de ponta a ponta) e a galeria da página do produto
+      também, no computador (no celular ela é 3:4 e a foto inteira aparece).
+        Brinquedão Modelo 2     buffet (a parede verde, os balões, as bandeirinhas)
+        Brinquedão Modelo 3     game zone (o neon); ao fundo, Sonic Kids e Minions Kids
+        Brinquedão Ninja        galpão do parque indoor
+        Espaço Esportivo Mod. 1 galpão, visto do alto, com a criançada nas quadras
+        Trampolim de Enterrada  quadra, com dois pulando nas camas
+        Strike Kids             game zone, com os pinos; ao fundo, Boliche
+                                Virtual, Sonic Kids, Minions Kids e Pac Man
+        Air Game Kids Alien.    buffet, com dois jogando; ao fundo, Sonic Kids,
+                                Minions Kids, Pantera Cor de Rosa Kids e Homem
+                                Aranha Kids
+        Basquete Street Quadr.  game zone; ao fundo, Basquete Street, Nervo
+                                Teste, Pinball 40 Polegadas e Sonic Dash
+      O arquivo é o capa.webp na pasta de cada um
+      (core/static/site/arena/modelos/<chave>/), e é a PRIMEIRA foto do
+      cadastro (core/cadastro_modelos.py, CADASTROS[chave]["fotos"]), com o
+      tipo "perfil". A vista que era a capa (frente.webp; no Strike Kids, a
+      foto sem fundo, foto.webp) continua na galeria, logo depois, SEM TIPO --
+      um tipo por brinquedo (a restrição única brinquedo + tipo da
+      ImagemBrinquedo). O resto da galeria fica como estava. A galeria pública
+      mostra as três primeiras fotos com tipo: a capa e os dois lados.
+      O BRINQUEDÃO MODELO 5 passa a ter de capa a foto do salão da fábrica
+      (salao_frente.webp); a perspectiva da fábrica vai para a galeria, sem
+      tipo. O MODELO 4 fica como estava. A capa da Arena 3D (core/arena.py,
+      MODELOS_3D) não mudou.
+      O Strike Kids que o servidor confere ao subir (garantir_strike_kids)
+      reconhece as fotos do cadastro pela capa de hoje (a primeira foto do
+      cadastro): com a de antes, ele refaz a galeria.
+   2. O CARD FIXO "PEÇAS E ACESSÓRIOS" da home (o primeiro do carrossel das
+      categorias) era um carrossel das fotos das peças no fundo branco. Agora
+      é uma foto de ponta a ponta, como as das categorias
+      (`categoria-media--cheia`): as PEÇAS DE VERDADE do catálogo (a página
+      /pecas-reposicao/) no balcão de madeira de uma loja -- o cabo HDMI, os
+      dois bonecos de pebolim, a maneta e o disco de air game e as duas
+      vistas da mini caixa de som -- e atrás, desfocados, o painel perfurado
+      com as peças nos ganchos, a prateleira com o estoque (os cabos
+      flexíveis, as caixinhas de som, caixas lisas sem marca), a fita de LED,
+      os pendentes e as luzinhas quentes. Cada peça é a foto do catálogo
+      recortada do fundo (recortar.py --pecas -> ferramentas/categorias/
+      reposicao/), em pé, na altura de verdade. Ficaram de fora o controle e
+      a caixa de som multimídia: a foto deles é a caixa de outra marca.
+      O arquivo: core/static/site/categorias/pecas-e-acessorios.webp (1200 x
+      900, estático: vem com o site, não precisa de migração). O carrossel
+      das peças saiu da home (o home.html, o home.js e a consulta da amostra
+      de peças em core/views.py).
+   A SUBIDA: a migração 0153_capas_em_cena (depois da 0152), SÓ NO RENDER,
+   refaz a galeria de cada um destes produtos que está no catálogo com as
+   fotos que o cadastro subiu (e não as postas pelo painel) -- uma vez: com a
+   capa de hoje, não sobe nada. O produto fora do catálogo fica para a
+   migração dele. Se a subida falhar, o deploy segue e o aviso diz o comando:
+       python manage.py cadastrar_modelo_3d <chave> --fotos
+   REFAZER AS IMAGENS (ferramentas/categorias/, as mesmas da seção 58):
+       python ferramentas/categorias/recortar.py --pecas    (as peças do catálogo; precisa de rede)
+       node ferramentas/categorias/gerar.cjs capas          (as capas; uma só: capa:strike-kids)
+       node ferramentas/categorias/gerar.cjs pecas-e-acessorios
+       python ferramentas/categorias/compor.py [capa_<chave> | pecas-e-acessorios]
+   UM .GLB FOI REFEITO? Refaça só as imagens que usam ele (as fotos das
+   categorias e as capas), já com o .webp no lugar:
+       node ferramentas/categorias/gerar.cjs --glb basquete-street-quadrinhos --glb air-game-kids-alienigenas --compor
+   (o cenas.js monta cada cena sem renderizar e vê quais .glb entram nela).
+   Depois, a foto de categoria que mudou sobe com uma migração como a 0152
+   (ou python manage.py atualizar_capas_categorias), e a capa, com uma como a
+   0153 (ou o cadastrar_modelo_3d <chave> --fotos).
+   Código: ferramentas/categorias/ (cenas.js: CAPAS e a cena
+   "pecas-e-acessorios"; lugares.js: a loja; recortar.py: PECAS; gerar.cjs;
+   compor.py; reposicao/; maquinas-das-capas.json), core/cadastro_modelos.py,
+   core/templates/home.html, core/static/site/paginas/home.js, core/views.py,
+   core/migrations/0153_capas_em_cena.py.
+   Testes: core/tests_capas_em_cena.py (e os testes de cada modelo, que
+   conferem as fotos do cadastro).

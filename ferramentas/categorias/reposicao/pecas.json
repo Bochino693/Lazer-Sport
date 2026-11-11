@@ -1,0 +1,47 @@
+{
+ "boneco-pebolim": {
+  "id": 1,
+  "nome": "Boneco para Mesa de Pebolim",
+  "altura": 0.13
+ },
+ "boneco-pebolim-vermelho": {
+  "id": 1,
+  "nome": "Boneco para Mesa de Pebolim",
+  "altura": 0.12
+ },
+ "boneco-pebolim-amarelo": {
+  "id": 1,
+  "nome": "Boneco para Mesa de Pebolim",
+  "altura": 0.12
+ },
+ "cabo-flexivel": {
+  "id": 7,
+  "nome": "Cabo Flexível",
+  "altura": 0.36
+ },
+ "cabo-hdmi": {
+  "id": 5,
+  "nome": "Cabo HDMI",
+  "altura": 0.17
+ },
+ "disco-air-game": {
+  "id": 12,
+  "nome": "Disco Air Game",
+  "altura": 0.045
+ },
+ "maneta-air-game": {
+  "id": 11,
+  "nome": "Maneta Air Game",
+  "altura": 0.075
+ },
+ "mini-caixa-de-som": {
+  "id": 8,
+  "nome": "Mini Caixa de Som Bluethoot Xtrad Pocket",
+  "altura": 0.075
+ },
+ "mini-caixa-de-som-frente": {
+  "id": 8,
+  "nome": "Mini Caixa de Som Bluethoot Xtrad Pocket",
+  "altura": 0.1
+ }
+}

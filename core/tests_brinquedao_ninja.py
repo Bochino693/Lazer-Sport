@@ -10,8 +10,8 @@ O que estes testes protegem:
     cadastrado, o do catálogo toma o lugar (sem duplicar);
   * o passeio por dentro tem caminho próprio, e todo jeito de andar que ele
     usa (a tirolesa, inclusive) existe na Arena;
-  * o comando cadastra uma vez só, com a frente de foto principal e a planta
-    na galeria, as medidas da planta e o objeto 3D ligado; se o brinquedo já
+  * o comando cadastra uma vez só, com a capa (a cena no galpão, a da 0153)
+    de foto principal, a frente e a planta na galeria, as medidas da planta e o objeto 3D ligado; se o brinquedo já
     está no catálogo, só ganha o objeto;
   * a migração liga o objeto em todo lugar, só cadastra no Render e nunca
     derruba o deploy;
@@ -137,9 +137,9 @@ class CadastroTests(TestCase):
         brinquedo = Brinquedos.objects.get(nome_brinquedo="Brinquedão Ninja")
         self.assertEqual(
             list(brinquedo.imagens_brinquedo.order_by("ordem").values_list("tipo", flat=True)),
-            ["perfil", None],
+            ["perfil", None, None],
         )
-        self.assertTrue(brinquedo.imagem_brinquedo.name)
+        self.assertIn("brinquedao-ninja-capa", brinquedo.imagem_brinquedo.name)
         self.assertEqual([c.nome_categoria for c in brinquedo.categorias_brinquedos.all()], ["Brinquedões"])
         # as medidas do cadastro são as da planta da fábrica
         self.assertEqual((brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m), (Decimal("3.10"), 14, 2))
@@ -173,7 +173,7 @@ class CadastroTests(TestCase):
             with a, b, override_settings(IS_RENDER=True), mock.patch("builtins.print"):
                 rodar(apps_reais, None)
         brinquedo = Brinquedos.objects.get(nome_brinquedo="Brinquedão Ninja")
-        self.assertEqual(brinquedo.imagens_brinquedo.count(), 2)
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), 3)
         self.assertEqual(brinquedo.objeto_3d.codigo, "brinquedao-ninja")
 
     def test_migracao_liga_o_que_ja_esta_no_catalogo_em_todo_lugar(self):

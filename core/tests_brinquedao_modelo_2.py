@@ -6,9 +6,9 @@ O que estes testes protegem:
     com as medidas do objeto (e o arquivo e as fotos existem no estático);
   * antes de estar no catálogo, o objeto já aparece na arena, com a ficha
     e as fotos 2D; cadastrado, o do catálogo toma o lugar (sem duplicar);
-  * o comando e a migração cadastram uma vez só, com as quatro fotos na
-    galeria e a frente como foto principal -- e a migração nunca derruba
-    o deploy, nem roda fora do Render.
+  * o comando e a migração cadastram uma vez só, com as cinco fotos na
+    galeria e a capa (a cena no buffet, a da 0153) como foto principal --
+    e a migração nunca derruba o deploy, nem roda fora do Render.
 """
 
 import importlib
@@ -99,9 +99,10 @@ class CadastroTests(TestCase):
         brinquedo = Brinquedos.objects.get(nome_brinquedo="Brinquedão Modelo 2")
         self.assertEqual(
             list(brinquedo.imagens_brinquedo.order_by("ordem").values_list("tipo", flat=True)),
-            ["perfil", "lado_esquerdo", "lado_direito", None],
+            ["perfil", None, "lado_esquerdo", "lado_direito", None],
         )
-        self.assertTrue(brinquedo.imagem_brinquedo.name)
+        # a capa (o card e a primeira da galeria) é a cena; a frente de antes fica na galeria, sem tipo
+        self.assertIn("brinquedao-modelo-2-capa", brinquedo.imagem_brinquedo.name)
         self.assertEqual([c.nome_categoria for c in brinquedo.categorias_brinquedos.all()], ["Brinquedões"])
         self.assertEqual((brinquedo.altura_m, brinquedo.largura_m, brinquedo.profundidade_m), (3.5, 11, 2))
         self.assertFalse(brinquedo.exibir_na_loja)
@@ -122,7 +123,7 @@ class CadastroTests(TestCase):
             a, b = _disco(pasta)
             with a, b, override_settings(IS_RENDER=True), mock.patch("builtins.print"):
                 migracao.cadastrar(apps_reais, None)
-        self.assertEqual(Brinquedos.objects.get(nome_brinquedo="Brinquedão Modelo 2").imagens_brinquedo.count(), 4)
+        self.assertEqual(Brinquedos.objects.get(nome_brinquedo="Brinquedão Modelo 2").imagens_brinquedo.count(), 5)
 
 
 class EspacoEsportivoTests(TestCase):
@@ -170,8 +171,8 @@ class EspacoEsportivoTests(TestCase):
                 call_command("cadastrar_modelo_3d", "espaco-esportivo-modelo-1", stdout=StringIO())
         espaco = Brinquedos.objects.get(nome_brinquedo="Espaço Esportivo Modelo 1")
         self.assertEqual([c.nome_categoria for c in espaco.categorias_brinquedos.all()], ["Espaço Esportivo"])
-        self.assertEqual(espaco.imagens_brinquedo.count(), 4)
-        self.assertTrue(espaco.imagem_brinquedo.name)
+        self.assertEqual(espaco.imagens_brinquedo.count(), 5)
+        self.assertIn("espaco-esportivo-modelo-1-capa", espaco.imagem_brinquedo.name)
 
     def test_migracao_so_no_render(self):
         migracao_espaco.Migration.operations[0].code(apps_reais, None)

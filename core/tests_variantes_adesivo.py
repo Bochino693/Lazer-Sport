@@ -307,9 +307,10 @@ class CadastroTests(TestCase):
                 self.assertEqual(novo.descricao, CADASTROS[chave]["descricao"])
                 self.assertEqual(
                     list(novo.imagens_brinquedo.order_by("ordem").values_list("tipo", flat=True)),
-                    ["perfil", "lado_esquerdo", "lado_direito", "verso", None],
+                    ["perfil", None, "lado_esquerdo", "lado_direito", "verso", None],
                 )
-                self.assertIn(f"{chave}-frente", novo.imagem_brinquedo.name)
+                # a capa (o card) é a cena da 0153; a frente de antes fica na galeria, sem tipo
+                self.assertIn(f"{chave}-capa", novo.imagem_brinquedo.name)
                 objeto = novo.objeto_3d
                 self.assertEqual((objeto.codigo, objeto.arquivo_estatico), (chave, _glb(chave)))
                 self.assertEqual(objeto.medidas, VARIANTES[chave][3])
@@ -326,7 +327,7 @@ class CadastroTests(TestCase):
         self._cadastrar("--fotos")
         for nome, _antes, _desenho, _medidas in VARIANTES.values():
             self.assertEqual(Brinquedos.objects.filter(nome_brinquedo=nome).count(), 1)
-            self.assertEqual(Brinquedos.objects.get(nome_brinquedo=nome).imagens_brinquedo.count(), 5)
+            self.assertEqual(Brinquedos.objects.get(nome_brinquedo=nome).imagens_brinquedo.count(), 6)
         self.assertEqual(ObjetoTresD.objects.count(), 2)
         self.assertEqual(Brinquedos.objects.count(), 4)
 
@@ -378,7 +379,7 @@ class CadastroTests(TestCase):
                 call_command("cadastrar_variantes_adesivo", "--so", HOCKEY_ANTES, HOCKEY, stdout=saida)
         novo = Brinquedos.objects.get(nome_brinquedo="Air Game Kids Alienígenas")
         self.assertEqual((novo.objeto_3d.codigo, novo.objeto_3d.arquivo_estatico), (HOCKEY, _glb(HOCKEY)))
-        self.assertIn(f"{HOCKEY}-frente", novo.imagem_brinquedo.name)
+        self.assertIn(f"{HOCKEY}-capa", novo.imagem_brinquedo.name)
         self.assertFalse(Brinquedos.objects.filter(nome_brinquedo=NOME_ANTES).exists())
         self.assertEqual(Brinquedos.objects.count(), 3)
 
@@ -420,7 +421,7 @@ class MigracaoTests(TestCase):
                 self._rodar()
         for chave, (nome, _antes, _desenho, _medidas) in VARIANTES.items():
             novo = Brinquedos.objects.get(nome_brinquedo=nome)
-            self.assertEqual(novo.imagens_brinquedo.count(), 5)
+            self.assertEqual(novo.imagens_brinquedo.count(), 6)
             self.assertEqual(novo.objeto_3d.codigo, chave)
             self.assertEqual((novo.valor_brinquedo, novo.voltz), (antes[chave].valor_brinquedo, antes[chave].voltz))
 
@@ -514,7 +515,7 @@ class Migracao0146Tests(TestCase):
             self._rodar(render=True, pasta=pasta)
         novo = Brinquedos.objects.get(pk=velho.pk)
         self.assertEqual(novo.nome_brinquedo, self.NOME)
-        self.assertIn(f"{HOCKEY}-frente", novo.imagem_brinquedo.name)
+        self.assertIn(f"{HOCKEY}-capa", novo.imagem_brinquedo.name)
         self.assertEqual(
             list(novo.imagens_brinquedo.order_by("ordem").values_list("texto_alternativo", flat=True)),
             [texto for _, _, texto in CADASTROS[HOCKEY]["fotos"]],
@@ -573,7 +574,7 @@ class Migracao0146Tests(TestCase):
             self._rodar(render=True, pasta=pasta)
         novo = Brinquedos.objects.get(nome_brinquedo=self.NOME)
         self.assertEqual((novo.valor_brinquedo, novo.voltz), (kids.valor_brinquedo, kids.voltz))
-        self.assertEqual(novo.imagens_brinquedo.count(), 5)
+        self.assertEqual(novo.imagens_brinquedo.count(), 6)
         self.assertEqual((novo.objeto_3d.codigo, novo.objeto_3d.arquivo_estatico), (HOCKEY, _glb(HOCKEY)))
         # num banco novo, a 0145 (pela chave antiga) já cadastra o novo, e a 0146 não duplica
         with tempfile.TemporaryDirectory() as pasta:
@@ -729,7 +730,7 @@ class BasqueteFotosDeVerdadeTests(TestCase):
             list(brinquedo.imagens_brinquedo.order_by("ordem").values_list("texto_alternativo", flat=True)),
             [texto for _, _, texto in CADASTROS[BASQUETE]["fotos"]],
         )
-        self.assertIn(f"{BASQUETE}-frente", brinquedo.imagem_brinquedo.name)
+        self.assertIn(f"{BASQUETE}-capa", brinquedo.imagem_brinquedo.name)
         self.assertEqual(Brinquedos.objects.filter(nome_brinquedo=self.NOME).count(), 1)
 
     def test_no_render_as_fotos_do_painel_ficam(self):

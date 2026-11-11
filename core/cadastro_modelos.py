@@ -73,7 +73,8 @@ CADASTROS = {
         ),
         "medidas": ("3.50", "11.00", "2.00"),
         "fotos": (
-            ("frente.webp", "perfil", "Brinquedão Modelo 2 visto de frente"),
+            ("capa.webp", "perfil", "Brinquedão Modelo 2 montado num buffet infantil, com a criançada brincando em volta (projeto ilustrativo)"),
+            ("frente.webp", None, "Brinquedão Modelo 2 visto de frente"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 2 visto pelo lado da torre das bolas"),
             ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 2 visto pelo lado dos escorregadores"),
             ("planta.webp", None, "Planta do Brinquedão Modelo 2 vista de cima: 11 m por 2 m, altura de 3,5 m"),
@@ -97,7 +98,8 @@ CADASTROS = {
         # as da planta (o .3ds chega a 3,3 m no corrimão de cima; o cadastro fica com o da fábrica)
         "medidas": ("3.10", "14.00", "2.00"),
         "fotos": (
-            ("frente.webp", "perfil", "Brinquedão Ninja visto de frente: o andar de cima com os obstáculos, a piscina de cubos e o tobogã"),
+            ("capa.webp", "perfil", "Brinquedão Ninja montado no galpão de um parque indoor, com a criançada em volta (projeto ilustrativo)"),
+            ("frente.webp", None, "Brinquedão Ninja visto de frente: o andar de cima com os obstáculos, a piscina de cubos e o tobogã"),
             ("planta.webp", None, "Planta do Brinquedão Ninja vista de cima: 10 m + 4 m de camas elásticas, por 2 m, altura de 3,10 m"),
         ),
         "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
@@ -147,7 +149,8 @@ CADASTROS = {
         ),
         "medidas": ("3.65", "39.00", "23.00"),
         "fotos": (
-            ("frente.webp", "perfil", "Espaço Esportivo Modelo 1 visto de frente: quadras, parque de trampolins e circuito kids"),
+            ("capa.webp", "perfil", "Espaço Esportivo Modelo 1 montado num galpão, visto do alto, com a criançada nas quadras e nas camas elásticas (projeto ilustrativo)"),
+            ("frente.webp", None, "Espaço Esportivo Modelo 1 visto de frente: quadras, parque de trampolins e circuito kids"),
             ("lado_direito.webp", "lado_direito", "Espaço Esportivo Modelo 1 visto pelo lado do circuito kids"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Espaço Esportivo Modelo 1 visto pelo lado das quadras"),
             ("planta.webp", None, "Espaço Esportivo Modelo 1 visto de cima"),
@@ -174,7 +177,8 @@ CADASTROS = {
         # principal de 3/4; os lados e as costas (os tipos que a Arena usa);
         # mais ângulos; e a adesivagem nas outras cores que o site oferece
         "fotos": (
-            ("foto.webp", "perfil", "Strike Kids, o boliche infantil, com a tela, a pista e a arte dos pinos"),
+            ("capa.webp", "perfil", "Strike Kids numa game zone, com os pinos no chão e uma criança comemorando (ilustração)"),
+            ("foto.webp", None, "Strike Kids, o boliche infantil, com a tela, a pista e a arte dos pinos"),
             ("lado_direito.webp", "lado_direito", "Strike Kids pelo lado direito, com a arte dos pinos"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids pelo lado esquerdo, com a arte dos pinos"),
             ("verso.webp", "verso", "Strike Kids visto por trás"),
@@ -211,7 +215,8 @@ CADASTROS = {
         ),
         "medidas": ("3.25", "6.00", "2.00"),
         "fotos": (
-            ("frente.webp", "perfil", "Trampolim de Enterrada visto de frente: as três camas, a parede com a cesta e a escada"),
+            ("capa.webp", "perfil", "Trampolim de Enterrada numa quadra, com crianças pulando nas camas (projeto ilustrativo)"),
+            ("frente.webp", None, "Trampolim de Enterrada visto de frente: as três camas, a parede com a cesta e a escada"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Trampolim de Enterrada visto pelo lado da cesta"),
             ("lado_direito.webp", "lado_direito", "Trampolim de Enterrada visto pelo lado da escada, com a pista até a cesta"),
             ("planta.webp", None, "Trampolim de Enterrada visto de cima: 6 m por 2 m"),
@@ -244,7 +249,8 @@ CADASTROS = {
         ),
         "medidas": ("3.75", "10.00", "5.20"),
         "fotos": (
-            ("frente.webp", "perfil", "Brinquedão Modelo 3 visto de frente: a torre, as barraquinhas, o andar de cima e o tobogã"),
+            ("capa.webp", "perfil", "Brinquedão Modelo 3 montado numa game zone, com a criançada brincando em volta (projeto ilustrativo)"),
+            ("frente.webp", None, "Brinquedão Modelo 3 visto de frente: a torre, as barraquinhas, o andar de cima e o tobogã"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 3 visto pelo lado da torre e da passarela de rede"),
             ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 3 visto pelo lado do tobogã em espiral e da piscina de bolinhas"),
             ("planta.webp", None, "Planta do Brinquedão Modelo 3 vista de cima: o L de 10 m por 5,20 m"),
@@ -282,13 +288,13 @@ CADASTROS = {
         ),
         "medidas": ("2.00", "3.70", "1.00"),
         "fotos": (
-            ("perspectiva.webp", "perfil", "Brinquedão Modelo 5 em perspectiva: as casinhas, os sacos, os rolos e o escorregador"),
+            ("salao_frente.webp", "perfil", "O Brinquedão Modelo 5 montado num salão, visto de frente (projeto ilustrativo)"),
+            ("perspectiva.webp", None, "Brinquedão Modelo 5 em perspectiva: as casinhas, os sacos, os rolos e o escorregador"),
             ("frente.webp", None, "Brinquedão Modelo 5 visto de frente, com 2 m de altura e o piso a 1 m"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Brinquedão Modelo 5 visto pelo lado do escorregador"),
             ("lado_direito.webp", "lado_direito", "Brinquedão Modelo 5 visto pelo lado do degrau triangular de entrada"),
             ("perspectiva_3d.webp", None, "Brinquedão Modelo 5 em 3D, do mesmo ponto da perspectiva do projeto"),
             ("planta.webp", None, "Planta do Brinquedão Modelo 5 vista de cima: 3,70 m por 1 m, altura de 2 m"),
-            ("salao_frente.webp", None, "O Brinquedão Modelo 5 montado num salão, visto de frente (projeto ilustrativo)"),
             ("salao_esquerda.webp", None, "O Brinquedão Modelo 5 montado num salão, visto pela esquerda (projeto ilustrativo)"),
         ),
         "categorias": ("brinquedao", "brinquedoes", "playground", "kid play", "kids play"),
@@ -337,7 +343,8 @@ CADASTROS = {
         # tem 0,83 x 1,51 m: os 0,86 m contam a borda)
         "medidas": ("0.90", "0.86", "1.50"),
         "fotos": (
-            ("frente.webp", "perfil", "Air Game Kids Alienígenas: a mesa de air hockey com os alienígenas e o logotipo HOCKEY KIDS"),
+            ("capa.webp", "perfil", "Air Game Kids Alienígenas num buffet infantil, com crianças jogando (ilustração)"),
+            ("frente.webp", None, "Air Game Kids Alienígenas: a mesa de air hockey com os alienígenas e o logotipo HOCKEY KIDS"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Air Game Kids Alienígenas pelo lado esquerdo: os alienígenas astronautas no chão lunar"),
             ("lado_direito.webp", "lado_direito", "Air Game Kids Alienígenas pelo lado direito"),
             ("verso.webp", "verso", "Air Game Kids Alienígenas visto pela outra cabeceira"),
@@ -368,7 +375,8 @@ CADASTROS = {
         ),
         "medidas": ("2.70", "1.00", "2.40"),
         "fotos": (
-            ("frente.webp", "perfil", "Basquete Street Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
+            ("capa.webp", "perfil", "Basquete Street Quadrinhos numa game zone, com crianças torcendo (ilustração)"),
+            ("frente.webp", None, "Basquete Street Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Street Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
             ("lado_direito.webp", "lado_direito", "Basquete Street Quadrinhos pelo lado direito"),
             ("verso.webp", "verso", "Basquete Street Quadrinhos visto por trás"),
@@ -603,7 +611,10 @@ def garantir_strike_kids(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, Obje
                 brinquedo.nome_brinquedo = dados["nome"]
                 brinquedo.descricao = dados["descricao"]
                 brinquedo.save(update_fields=["nome_brinquedo", "descricao"])
-            fotos_daqui = "strike-kids-foto" in (brinquedo.imagem_brinquedo.name or "")
+            # a capa de hoje é a primeira foto do cadastro (a cena da 0153; antes, foto.webp):
+            # com a capa de antes, as fotos são refeitas
+            capa = Path(dados["fotos"][0][0]).stem
+            fotos_daqui = f"strike-kids-{capa}" in (brinquedo.imagem_brinquedo.name or "")
             if not fotos_daqui or brinquedo.imagens_brinquedo.count() < len(dados["fotos"]):
                 brinquedo, _ = cadastrar(
                     "strike-kids", Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_fotos=True, avisar=avisar,
