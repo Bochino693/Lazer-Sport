@@ -2709,6 +2709,11 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_capas_catalogo.py.
 
 65) IMPORTAR ORÇAMENTO DO WORD OU DO PDF (A IA LÊ, A CONFERÊNCIA GARANTE)
+   >> O item 71 refez partes deste: sem a chave da IA tudo funciona (o PDF
+   >> com texto é lido no servidor), a tela não fala mais de chave nem de
+   >> "IA indisponível", WhatsApp/pagamento/envio/validade não travam o
+   >> "Criar", há o "Só cadastrar o cliente" e uma tela final com os links.
+   >> Onde os dois diferem, vale o 71.
    O pedido do cliente: "no sistema interno, você deve criar uma nova
    espécie de IA também, para ler o documento Word e gerar um orçamento em
    forma de objeto no sistema interno, para facilitar e evitar
@@ -2722,7 +2727,7 @@ Dependência nova: rjsmin (requirements.txt).
    e condições -- depois de a pessoa conferir campo por campo. Nada é
    enviado ao cliente: o rascunho abre na tela normal de edição, e dali
    segue o caminho de sempre (salvar, avaliar, enviar).
-   COMO USAR: interno > Orçamentos > "Importar Word ou PDF (IA)" (só quem
+   COMO USAR: interno > Orçamentos > "Importar Word ou PDF" (só quem
    pode criar orçamento: Vendas, Vendedor ambulante e Gestão; o Financeiro
    não vê o botão e a tela responde 403). Escolha o .docx ou o PDF (até
    10 MB) e toque em "Ler documento". .doc antigo (Word 97-2003), RTF e
@@ -3024,3 +3029,131 @@ Dependência nova: rjsmin (requirements.txt).
    povoar a região (item 66); de perto cada um volta ao lugar real, e a
    cor é sempre a do lugar real.
    Testes: core/tests_mapa_estados.py.
+
+71) IMPORTAR WORD OU PDF: FUNCIONA SEM A IA, CRIA O CLIENTE E O ORÇAMENTO
+   Pedido (depois de testar em produção, sem a chave): "o sistema não
+   cadastra o usuário e um orçamento se houver, isso deve realmente
+   acontecer, além de me dizer que falta essa tal variável que eu
+   desconheço. faça tudo funcionar certinho, os campos de valor também não
+   recebem bem o valor e pode ter vezes que não quero o orçamento junto,
+   apenas cadastrar o cliente". E: "quero tudo funcionando perfeitamente e
+   bem, colocando tudo corretamente nos campos".
+   O QUE ESTAVA QUEBRADO, E POR QUÊ:
+     * a tela falava de configuração do servidor ("IA desligada (sem a
+       chave ANTHROPIC_API_KEY)", "IA indisponível...") para quem só queria
+       importar um orçamento;
+     * o PDF era recusado sem a chave: não havia leitor de PDF no servidor;
+     * o "Criar orçamento" ficava apagado por perguntas que não protegem
+       dinheiro nem produto: "Este número tem WhatsApp?" sem resposta,
+       forma de envio, forma de pagamento, validade em branco;
+     * a leitura por regra não reconhecia o orçamento de verdade: o
+       bloco "À / Buffet Alegria" sem rótulo, a data "Guarulhos, 09/11/2026",
+       o endereço numa linha só ("Rua X, 45, Sala 3 – Centro –
+       Guarulhos/SP – CEP 07010-020"), dados do cliente no CABEÇALHO do
+       Word, o "Valor final negociado" separado do total, e o "total R$
+       1.350,00" no meio de uma linha de item lido como total do orçamento;
+     * dinheiro: o campo do orçamento usava a digitação de maquininha (18000
+       virava R$ 180,00); o campo de reais inteiros transformava "18.000" em
+       R$ 18,00; o painel (paraNumero) e o servidor (decimal_br) liam
+       "18.000" como dezoito.
+   AGORA:
+     * SEM A CHAVE, TUDO FUNCIONA, e nada de jargão na tela. O Word é lido
+       pelas tabelas e textos; o PDF com texto (o salvo pelo Word ou pelo
+       sistema que fez o orçamento) é lido no servidor com o pypdf
+       (pypdf==6.21.4 no requirements.txt; puro Python), que remonta a
+       tabela pelas colunas e devolve as mesmas linhas numeradas do Word
+       (cabeçalho e rodapé repetidos em cada página entram uma vez só). O
+       PDF que é FOTO (digitalização) não tem texto: sem a IA, a tela diz
+       "Este PDF é uma imagem (digitalização ou foto da página), e não dá
+       para ler o texto dele. Envie o arquivo do Word, ou um PDF salvo
+       direto do Word ou do sistema que fez o orçamento." Com a chave, a IA
+       lê as mesmas linhas, em silêncio, como reforço; e só ela transcreve
+       o PDF-foto. Falha da IA (chave recusada, limite, rede) vai para o
+       LOG do servidor; a tela segue com a leitura por regra. O botão é
+       "Importar Word ou PDF" (sem "(IA)").
+     * "O QUE FAZER COM ESTE DOCUMENTO?" -- primeira pergunta da
+       conferência, com duas saídas: "Cadastrar cliente e criar orçamento"
+       (vem marcada quando o documento tem itens ou valores) e "Só
+       cadastrar o cliente" (vem marcada quando não tem, como numa ficha de
+       cadastro). No "só o cliente" as partes do orçamento somem e nada
+       delas é pedido; o cliente é cadastrado, ou o cadastro que já existe é
+       atualizado (campo vazio na tela não apaga o que existe), e a pessoa
+       cai na aba Clientes com a ficha dele aberta (/clientes/?q=...&abrir=
+       id) e a mensagem "Cliente “...” cadastrado a partir de “...”".
+     * O CLIENTE É CRIADO DE VERDADE, pelas mesmas regras da aba Clientes
+       (clientes.salvar_cliente e salvar_endereco): nome, estabelecimento,
+       CPF/CNPJ, telefone com o canal (WhatsApp ou só telefone), e-mail e o
+       endereço em partes (CEP, rua, número, complemento, bairro, cidade,
+       UF). Cliente que já existe é LIGADO ao orçamento e só o que está
+       vazio no cadastro é completado com o documento (o telefone que o
+       cadastro já tem não é trocado).
+     * "TEM WHATSAPP?" VEM RESPONDIDO: "WhatsApp" escrito ao lado do número
+       ou celular de nove dígitos é sim; fixo é não; o que o cadastro já
+       confirmou vale. A pessoa troca com um toque. Não trava mais nada.
+     * O QUE AINDA TRAVA O "CRIAR" (segurança de dinheiro e de produto):
+       cliente identificado (o vínculo só pelo nome pede "Conferi"); nome;
+       CPF/CNPJ válido e não usado por outro; um contato (telefone ou
+       e-mail); cada item com produto do catálogo ou "linha avulsa";
+       quantidade inteira; valor unitário; frete (zero vale -- e quando o
+       documento não fala de frete e itens − desconto já dão o total
+       escrito, o frete vem 0,00 com a nota "o documento não cobra
+       frete"); toda conta vermelha resolvida ou aceita com justificativa.
+       Forma de pagamento, de envio e prazo são RECOMENDADOS; a validade
+       em branco vale o padrão do painel (a tela mostra a data).
+     * VALOR FINAL NEGOCIADO: "Valor final negociado: R$ 9.500,00" escrito
+       à parte do total já vem escolhido como valor final (o desconto é
+       gravado zero e o total fica R$ 9.500,00). Deixá-lo de lado pela
+       soma pede uma justificativa, que vai para o histórico. O total que
+       só não bate com a conta continua sem escolha marcada.
+     * A TELA FINAL (/orcamentos/importar/concluido/<id>/) mostra o que foi
+       criado: "Cliente novo" ou "Cliente já cadastrado" (com o que foi
+       completado), os dados do cliente e o botão "Ver o cliente"; o
+       orçamento com os itens, o frete, o total, "Abrir o orçamento" e
+       "Prévia". Só quem importou a vê.
+     * NADA DA LAZER & SPORT VAI PARA O CLIENTE: as linhas com o CNPJ, o
+       telefone, o e-mail, o site, "Lazer & Sport" ou um endereço da
+       empresa (Dados da empresa, no painel) -- e as vizinhas delas no
+       mesmo rodapé -- ficam fora dos campos do cliente.
+     * DINHEIRO SE DIGITA EM REAIS: na conferência e no formulário de
+       orçamento (valor unitário, frete, desconto em R$, valor final, e
+       também o valor pago, o brinquedo novo e a peça nova) a máscara é a
+       de reais inteiros: digitar 18000 dá 18.000,00; "18.000" também;
+       "1234,5" dá 1.234,50; colar "R$ 1.234,56" funciona; editar no meio
+       de um valor já preenchido mantém o cursor no lugar. O painel
+       (Painel.valorNumerico, que o paraNumero do orçamento passou a usar)
+       e o servidor (utils.decimal_br e a leitura da conferência) leem
+       igual: "18.000" é dezoito mil; "0.125" não é milhar. A porcentagem
+       do desconto continua como era.
+   O CORPUS (sistema_interno/tests_importacao_corpus/): seis documentos
+   como a equipe recebe, salvos pelo Word (python-docx) e pelo LibreOffice
+   (o PDF), e o valor esperado de CADA campo escrito à mão em
+   esperado.json: 01 tabela de itens com o bloco "À / cliente" e o rodapé
+   da empresa (cliente já cadastrado, só pelo e-mail); 02 texto corrido
+   ("2x Cama elástica 3m – R$ 2.800,00 cada"), telefone "11 98877 6655",
+   CEP sem traço e "São Paulo - SP"; 03 cliente no cabeçalho do Word,
+   "Tel.: (11)3333-4444" fixo, "Frete: grátis" e um item fora do catálogo;
+   04 ficha de cadastro sem itens (vira "só o cliente"); 05 desconto em
+   reais E valor final negociado, valores "9300,00" sem ponto; 06 o PDF do
+   01. Como gerar de novo: o cabeçalho de gerar_corpus.py.
+   Testes: sistema_interno/tests_importacao_corpus.py (cada campo da tela
+   de cada documento, sem a chave; nada da empresa no cliente; PDF igual
+   ao Word; e o que fica no banco -- Cliente, EnderecoCliente, Orcamento,
+   ItemOrcamento -- depois de "Criar" pela tela) e tests_importacao_word.py
+   (o PDF com texto lido sem a IA, o PDF-foto pedindo o Word sem jargão, a
+   falha da IA no log, o "só o cliente", a tela final, o cliente completado
+   e não sobrescrito, o dinheiro digitado lido igual no servidor).
+   Conferido no Chromium, sem a chave, no computador (1440 x 900) e no
+   celular (iPhone 13): os seis documentos importados pela tela, cada
+   campo da conferência igual ao esperado, criados, e as linhas do banco
+   iguais ao esperado; e a digitação de verdade (teclado) de 18000,
+   "18.000", "1234,5", "R$ 1.234,56" colado e a edição de um valor já
+   preenchido, na conferência e no formulário de orçamento (com o
+   Arredondar, a troca para % e de volta, o valor final e o rascunho
+   retomado).
+   Código: importacao_word/leitor.py (ler_pdf_local, PdfSemTexto),
+   deterministica.py (ler_endereco, linha_da_empresa, valor_final),
+   conferencia.py, formulario.py (criar, whatsapp_padrao, modo_padrao),
+   sessao.py (guardar_conclusao), views_importacao.py
+   (ImportacaoConcluidaView), templates conferir_importacao_inner.html e
+   importacao_concluida_inner.html, clientes_inner.html (?abrir=),
+   orcamentos_inner.html, static/interno/painel.js e importacao-word.js.
