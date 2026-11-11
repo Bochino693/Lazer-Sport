@@ -260,7 +260,11 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             return self.desenhar(
                 request, token, leitura, formulario.aplicar_envio(proposta, envio), envio,
                 validado=validado, status=400,
-                erro="O orçamento ainda não pode ser criado: veja o que falta preencher.",
+                erro=(
+                    "O cliente ainda não pode ser cadastrado: veja o que falta preencher."
+                    if envio["modo"] == "cliente"
+                    else "O orçamento ainda não pode ser criado: veja o que falta preencher."
+                ),
             )
         try:
             criado = formulario.criar(request, proposta, validado, arquivo=leitura["arquivo"])
