@@ -506,6 +506,180 @@ def linhas_transcritas(transcricao: list[dict]) -> list[dict]:
     return linhas
 
 
+# ======================================================================
+# PDF COM TEXTO: lido aqui mesmo, sem IA
+# ======================================================================
+class PdfSemTexto(ArquivoRecusado):
+    """PDF que é imagem (digitalização, foto): não há texto para ler aqui."""
+
+
+MENSAGEM_PDF_IMAGEM = (
+    "Este PDF é uma imagem (digitalização ou foto da página), e não dá para ler o texto "
+    "dele. Envie o arquivo do Word, ou um PDF salvo direto do Word ou do sistema que fez "
+    "o orçamento."
+)
+_SEGMENTO = re.compile(r"\S+(?: \S+)*")
+
+
+def _segmentos(linha: str) -> list[tuple[int, int, str]]:
+    """Pedaços separados por dois ou mais espaços, com a posição de cada um.
+
+    É assim que o texto do PDF em "layout" mostra as colunas: "Pula-pula"
+    e "R$ 1.234,00" na mesma altura viram dois pedaços com dez espaços
+    entre eles, e a posição diz a coluna.
+    """
+    return [(achado.start(), achado.end(), achado.group(0)) for achado in _SEGMENTO.finditer(linha)]
+
+
+def _linhas_do_pdf(paginas: list[str]) -> list[dict]:
+    """O texto das páginas no mesmo formato das linhas do .docx.
+
+    Tabela de itens: o cabeçalho é reconhecido pelos nomes das colunas
+    (Descrição, Qtd, Valor unitário...), e cada linha abaixo vira células
+    pela posição -- célula quebrada em várias linhas (descrição comprida
+    numa coluna estreita) é juntada de volta. Linha "Rótulo   valor" sem
+    dois-pontos (ficha de cadastro) vira par de células, como no Word.
+    Texto que se repete igual em todas as páginas é cabeçalho ou rodapé
+    e entra uma vez só.
+    """
+    from .deterministica import _mapear_cabecalho, campo_do_rotulo
+
+    repetidas = set()
+    if len(paginas) >= 2:
+        contagem: dict[str, int] = {}
+        for pagina in paginas:
+            for texto in {_ESPACOS.sub(" ", l).strip() for l in pagina.splitlines() if l.strip()}:
+                contagem[texto] = contagem.get(texto, 0) + 1
+        repetidas = {texto for texto, vezes in contagem.items() if vezes == len(paginas)}
+
+    linhas: list[dict] = []
+    vistas_repetidas: set[str] = set()
+    paragrafos = 0
+    tabelas = 0
+    tabela = None  # {"id", "colunas": [(inicio, fim)], "linha": n, "ultima": {coluna: indice em linhas}}
+
+    def nova_celula(numero_linha, coluna, texto):
+        linhas.append({
+            "id": f"{tabela['id']}L{numero_linha}C{coluna}", "texto": texto, "parte": "corpo",
+            "tabela": tabela["id"], "linha": numero_linha, "coluna": coluna,
+        })
+        return len(linhas) - 1
+
+    def coluna_de(inicio, fim):
+        centro = (inicio + fim) / 2
+        colunas = tabela["colunas"]
+        for posicao in range(len(colunas)):
+            limite = (colunas[posicao][1] + colunas[posicao + 1][0]) / 2 if posicao + 1 < len(colunas) else 10**6
+            if centro < limite:
+                return posicao + 1
+        return len(colunas)
+
+    for numero_pagina, pagina in enumerate(paginas):
+        texto_linhas = pagina.splitlines()
+        for posicao_linha, bruta in enumerate(texto_linhas):
+            limpa = _ESPACOS.sub(" ", bruta).strip()
+            if not limpa:
+                continue
+            if limpa in repetidas:
+                if limpa in vistas_repetidas:
+                    continue
+                vistas_repetidas.add(limpa)
+                parte = "cabecalho" if posicao_linha < len(texto_linhas) / 2 else "rodape"
+                paragrafos += 1
+                linhas.append({"id": f"{'CAB' if parte == 'cabecalho' else 'ROD'}-P{paragrafos}",
+                               "texto": limpa, "parte": parte, "tabela": "", "linha": 0, "coluna": 0})
+                continue
+            pedacos = _segmentos(bruta)
+
+            if tabela is not None:
+                if len(pedacos) >= 2:
+                    tabela["linha"] += 1
+                    celulas: dict[int, list[str]] = {}
+                    for inicio, fim, texto in pedacos:
+                        celulas.setdefault(coluna_de(inicio, fim), []).append(texto)
+                    tabela["ultima"] = {
+                        coluna: nova_celula(tabela["linha"], coluna, " ".join(textos))
+                        for coluna, textos in sorted(celulas.items())
+                    }
+                    continue
+                inicio, fim, texto = pedacos[0]
+                coluna = coluna_de(inicio, fim)
+                colunas = tabela["colunas"]
+                # Continuação cabe na coluna: começa nela e termina antes
+                # da próxima. Um parágrafo depois da tabela atravessa várias.
+                dentro = colunas[coluna - 1][0] - 2 <= inicio and (
+                    coluna == len(colunas) or fim <= colunas[coluna][0] + 2
+                )
+                if dentro and coluna in tabela["ultima"] and not re.search(r"R\$|\d+,\d{2}", texto):
+                    # Continuação da célula de cima: "Cama elástica 3" /
+                    # "m com rede de" / "proteção".
+                    linhas[tabela["ultima"][coluna]]["texto"] += " " + texto
+                    continue
+                tabela = None
+
+            celulas_cabecalho = {i + 1: {"texto": texto} for i, (_, _, texto) in enumerate(pedacos)}
+            if len(pedacos) >= 3 and _mapear_cabecalho(celulas_cabecalho):
+                tabelas += 1
+                tabela = {"id": f"T{tabelas}", "colunas": [(a, b) for a, b, _ in pedacos],
+                          "linha": 1, "ultima": {}}
+                for coluna, (_, _, texto) in enumerate(pedacos, start=1):
+                    nova_celula(1, coluna, texto)
+                continue
+            if len(pedacos) == 2 and campo_do_rotulo(pedacos[0][2].rstrip(" :")):
+                # "Nome          Marina Souza": a ficha em duas colunas.
+                tabelas += 1
+                tabela_par = {"id": f"T{tabelas}", "colunas": [], "linha": 1, "ultima": {}}
+                anterior, tabela = tabela, tabela_par
+                nova_celula(1, 1, pedacos[0][2])
+                nova_celula(1, 2, pedacos[1][2])
+                tabela = anterior
+                continue
+            paragrafos += 1
+            linhas.append({"id": f"P{paragrafos}", "texto": limpa, "parte": "corpo",
+                           "tabela": "", "linha": 0, "coluna": 0})
+    return linhas
+
+
+def ler_pdf_local(conteudo: bytes, nome: str = "documento.pdf") -> list[dict]:
+    """As linhas de um PDF que tem texto -- sem IA, como o .docx.
+
+    PDF digitalizado (só imagem) levanta `PdfSemTexto`, com uma frase que
+    diz o que enviar no lugar.
+    """
+    conferir_pdf(nome, conteudo)
+    try:
+        from pypdf import PdfReader
+    except ImportError as exc:  # pragma: no cover -- está no requirements
+        raise ArquivoRecusado("Não consegui abrir PDFs agora. Envie o arquivo do Word.") from exc
+    try:
+        documento = PdfReader(BytesIO(conteudo))
+        if documento.is_encrypted:
+            try:
+                documento.decrypt("")
+            except Exception as exc:  # noqa: BLE001
+                raise ArquivoRecusado(
+                    "O PDF está protegido por senha. Salve uma cópia sem senha, ou envie o "
+                    "arquivo do Word."
+                ) from exc
+        paginas = []
+        for pagina in documento.pages[:PAGINAS_MAXIMAS_PDF]:
+            paginas.append(pagina.extract_text(extraction_mode="layout") or "")
+    except ArquivoRecusado:
+        raise
+    except Exception as exc:  # noqa: BLE001 -- PDF quebrado chega de todo jeito
+        raise ArquivoRecusado(
+            "O PDF está corrompido e não abriu. Gere o PDF de novo ou envie o arquivo do Word."
+        ) from exc
+    if len(re.sub(r"\s", "", "".join(paginas))) < 20:
+        raise PdfSemTexto(MENSAGEM_PDF_IMAGEM)
+    linhas = _linhas_do_pdf(paginas)
+    if len(linhas) > LINHAS_MAXIMAS or sum(len(l["texto"]) for l in linhas) > CARACTERES_MAXIMOS:
+        raise ArquivoRecusado(
+            "O PDF é longo demais para um orçamento. Importe só as páginas do orçamento."
+        )
+    return linhas
+
+
 def mapa_de_linhas(linhas: list[dict]) -> dict[str, dict]:
     return {linha["id"]: linha for linha in linhas}
 

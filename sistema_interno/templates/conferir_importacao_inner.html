@@ -12,11 +12,11 @@
 {% block content %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Importação {% if proposta.formato == "pdf" %}do PDF{% else %}do Word{% endif %} · conferência</span>
-    <h1>Conferir o orçamento lido</h1>
+    <span class="ls-page-kicker">Importação {% if proposta.formato == "docx" %}do Word{% else %}do PDF{% endif %} · conferência</span>
+    <h1>Conferir o que foi lido</h1>
     <p>
-      <i class="bi {% if proposta.formato == "pdf" %}bi-file-earmark-pdf{% else %}bi-file-earmark-word{% endif %}" aria-hidden="true"></i> {{ proposta.arquivo }}
-      · {% if proposta.formato == "pdf" %}PDF transcrito e lido com IA ({{ proposta.ia.modelo }}), conferido nas contas{% elif proposta.ia.usada %}lido com IA ({{ proposta.ia.modelo }}) e conferido pelas tabelas{% else %}lido pelas tabelas do documento{% endif %}
+      <i class="bi {% if proposta.formato == "docx" %}bi-file-earmark-word{% else %}bi-file-earmark-pdf{% endif %}" aria-hidden="true"></i> {{ proposta.arquivo }}
+      · cada valor mostra de onde veio no documento, e as contas são refeitas
     </p>
   </div>
   <div class="ls-page-hero-actions">
@@ -33,15 +33,12 @@
 {% if proposta.ia.aviso %}
 <div class="ls-imp-aviso" role="status">
   <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-  <div>
-    <strong>{{ proposta.ia.aviso }}</strong>
-    {% if proposta.ia.motivo %}<span>Motivo: {{ proposta.ia.motivo }}.</span>{% endif %}
-  </div>
+  <div><strong>{{ proposta.ia.aviso }}</strong></div>
 </div>
 {% endif %}
 <p class="ls-imp-privacidade">
   <i class="bi bi-shield-lock" aria-hidden="true"></i>
-  {% if proposta.formato == "pdf" %}O PDF foi enviado à Anthropic (Claude) para a leitura. {% elif proposta.ia.usada %}O texto do documento foi enviado à Anthropic (Claude) para a leitura. {% endif %}O arquivo não ficou guardado; do documento, o orçamento guarda só o nome.
+  {% if proposta.formato == "pdf_ia" %}O PDF foi enviado à Anthropic (Claude) para a leitura. {% elif proposta.ia.usada %}O texto do documento foi enviado à Anthropic (Claude) para ajudar na leitura. {% endif %}O arquivo não ficou guardado; só o nome entra no histórico.
 </p>
 
 {% if erro %}<div class="alert alert-danger" role="alert" id="conferenciaErro">{{ erro }}</div>{% endif %}
@@ -54,6 +51,37 @@
   <div class="ls-imp-grade">
     <div class="ls-imp-principal">
 
+      <!-- ======================================== O QUE FAZER COM ELE -->
+      {% comment %}
+        "Pode ter vezes que não quero o orçamento junto, apenas cadastrar o
+        cliente." A escolha vem marcada pelo documento -- com itens ou
+        valores, orçamento; sem eles (uma ficha de cadastro), só o
+        cliente -- e a pessoa troca com um toque.
+      {% endcomment %}
+      <section class="ls-panel ls-imp-bloco" id="blocoModo" aria-labelledby="tituloModo">
+        <div class="ls-panel-body">
+          <h2 class="ls-imp-pergunta" id="tituloModo">O que fazer com este documento?</h2>
+          <div class="ls-imp-caminhos" role="radiogroup" aria-labelledby="tituloModo">
+            <label class="ls-imp-caminho">
+              <input type="radio" name="modo" value="orcamento" id="modoOrcamento"{% if envio.modo == "orcamento" %} checked{% endif %}>
+              <span>
+                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                <strong>Cadastrar cliente e criar orçamento</strong>
+                <small>O cliente é cadastrado (ou ligado ao cadastro que já existe) e o orçamento nasce como rascunho.</small>
+              </span>
+            </label>
+            <label class="ls-imp-caminho">
+              <input type="radio" name="modo" value="cliente" id="modoCliente"{% if envio.modo == "cliente" %} checked{% endif %}>
+              <span>
+                <i class="bi bi-person-plus" aria-hidden="true"></i>
+                <strong>Só cadastrar o cliente</strong>
+                <small>Sem orçamento: o cliente é cadastrado, ou o cadastro dele é atualizado, com os dados abaixo.</small>
+              </span>
+            </label>
+          </div>
+        </div>
+      </section>
+
       <!-- ===================================================== CLIENTE -->
       <section class="ls-panel ls-imp-bloco" id="blocoCliente" aria-labelledby="tituloCliente">
         <header class="ls-panel-header">
@@ -63,10 +91,10 @@
           </div>
         </header>
         <div class="ls-panel-body">
-          <div class="ls-imp-modo" role="radiogroup" aria-label="Cliente do orçamento">
+          <div class="ls-imp-modo" role="radiogroup" aria-label="Cliente">
             <label class="ls-imp-modo-opcao">
               <input type="radio" name="cliente_modo" value="existente"{% if envio.cliente_modo == "existente" %} checked{% endif %}>
-              <span><i class="bi bi-person-check" aria-hidden="true"></i> Cliente cadastrado</span>
+              <span><i class="bi bi-person-check" aria-hidden="true"></i> Cliente já cadastrado</span>
             </label>
             <label class="ls-imp-modo-opcao">
               <input type="radio" name="cliente_modo" value="novo"{% if envio.cliente_modo == "novo" %} checked{% endif %}>
@@ -103,15 +131,28 @@
               <div><dt>No cadastro</dt><dd>{{ proposta.cliente.vinculo.cadastro.nome }}{% if proposta.cliente.vinculo.cadastro.documento %} · {{ proposta.cliente.vinculo.cadastro.documento }}{% endif %}{% if proposta.cliente.vinculo.cadastro.telefone %} · {{ proposta.cliente.vinculo.cadastro.telefone }}{% endif %}{% if proposta.cliente.vinculo.cadastro.email %} · {{ proposta.cliente.vinculo.cadastro.email }}{% endif %}</dd></div>
               <div><dt>No documento</dt><dd>{{ proposta.cliente.nome.valor|default:"—" }}{% if proposta.cliente.documento.valor %} · {{ proposta.cliente.documento.valor }}{% endif %}{% if proposta.cliente.telefone.valor %} · {{ proposta.cliente.telefone.valor }}{% endif %}{% if proposta.cliente.email.valor %} · {{ proposta.cliente.email.valor }}{% endif %}</dd></div>
             </dl>
-            <p class="ls-imp-nota">O cadastro não é alterado pela importação; o que muda é só o contato deste orçamento.</p>
             {% endif %}
+            <p class="ls-imp-nota" data-nota-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              O que estiver vazio no cadastro é completado com os dados abaixo; o que o cadastro já tem não muda.
+            </p>
+            <p class="ls-imp-nota" data-nota-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              O cadastro é atualizado com os dados abaixo (campo vazio aqui não apaga o que já existe).
+            </p>
           </div>
 
-          <div class="ls-imp-secao ls-imp-campos" data-modo="novo"{% if envio.cliente_modo != "novo" %} hidden{% endif %}>
+          <h3 class="ls-imp-subtitulo">Dados do cliente</h3>
+          <div class="ls-imp-campos">
             <div class="ls-imp-campo ls-imp-campo-largo">
               <label class="form-label" for="campoNome">Nome do cliente <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
               <input class="form-control" id="campoNome" name="nome" maxlength="90" value="{{ envio.nome }}">
               {% include "partes/importacao_origem.html" with campo=proposta.cliente.nome alvo="campoNome" falta=faltas.cliente_nome %}
+            </div>
+            <div class="ls-imp-campo">
+              <label class="form-label" for="campoEstabelecimento">Estabelecimento</label>
+              <input class="form-control" id="campoEstabelecimento" name="estabelecimento" maxlength="150" value="{{ envio.estabelecimento }}">
+              {% include "partes/importacao_origem.html" with campo=proposta.cliente.estabelecimento alvo="campoEstabelecimento" falta=faltas.cliente_estabelecimento %}
             </div>
             <div class="ls-imp-campo">
               <label class="form-label" for="campoDocumento">CPF/CNPJ</label>
@@ -119,60 +160,40 @@
                      autocomplete="off" value="{{ envio.documento }}">
               {% include "partes/importacao_origem.html" with campo=proposta.cliente.documento alvo="campoDocumento" falta=faltas.cliente_documento %}
             </div>
-            <div class="ls-imp-campo">
+            <div class="ls-imp-campo" data-modo="novo"{% if envio.cliente_modo != "novo" %} hidden{% endif %}>
               <label class="form-label" for="campoTipo">Tipo de cadastro <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
               <select class="form-select" id="campoTipo" name="tipo">
                 {% for valor, rotulo in tipos_cliente %}<option value="{{ valor }}"{% if envio.tipo == valor %} selected{% endif %}>{{ rotulo }}</option>{% endfor %}
               </select>
               <p class="ls-imp-nota">Sugerido: {{ proposta.cliente.tipo_motivo }}.</p>
             </div>
-            <fieldset class="ls-imp-endereco ls-imp-campo-largo">
-              <legend>Endereço <small>(opcional; serve à entrega, à montagem e ao mapa)</small></legend>
-              {% if proposta.cliente.endereco.valor %}
-              <p class="ls-imp-nota"><small>No documento:</small> “{{ proposta.cliente.endereco.valor }}”
-                {% if proposta.cliente.endereco.fonte %}<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.cliente.endereco.fonte.id }}"><b>{{ proposta.cliente.endereco.fonte.id }}</b></button>{% endif %}</p>
-              {% endif %}
-              <div class="ls-imp-endereco-grade">
-                <div><label class="form-label" for="campoCep">CEP</label><input class="form-control" id="campoCep" name="cep" maxlength="9" data-mascara="cep" inputmode="numeric" value="{{ envio.cep }}"></div>
-                <div class="largo"><label class="form-label" for="campoEndereco">Rua</label><input class="form-control" id="campoEndereco" name="endereco" maxlength="120" value="{{ envio.endereco }}"></div>
-                <div><label class="form-label" for="campoNumero">Número</label><input class="form-control" id="campoNumero" name="numero" maxlength="10" value="{{ envio.numero }}"></div>
-                <div><label class="form-label" for="campoBairro">Bairro</label><input class="form-control" id="campoBairro" name="bairro" maxlength="50" value="{{ envio.bairro }}"></div>
-                <div><label class="form-label" for="campoCidade">Cidade</label><input class="form-control" id="campoCidade" name="cidade" maxlength="60" value="{{ envio.cidade }}"></div>
-                <div><label class="form-label" for="campoEstado">UF</label><input class="form-control" id="campoEstado" name="estado" maxlength="20" value="{{ envio.estado }}"></div>
-              </div>
-              <p class="ls-imp-falta-motivo" data-falta-de="cliente-endereco"{% if not faltas.cliente_endereco %} hidden{% endif %}>
-                <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ faltas.cliente_endereco|capfirst }}</span>
-              </p>
-            </fieldset>
-          </div>
-
-          <h3 class="ls-imp-subtitulo">Contato deste orçamento</h3>
-          <div class="ls-imp-campos">
             <div class="ls-imp-campo">
               <label class="form-label" for="campoTelefone">Telefone / WhatsApp</label>
               <input class="form-control" id="campoTelefone" name="telefone" maxlength="24" inputmode="tel"
                      data-mascara="telefone" autocomplete="off" value="{{ envio.telefone }}">
               {% include "partes/importacao_origem.html" with campo=proposta.cliente.telefone alvo="campoTelefone" falta=faltas.cliente_telefone %}
             </div>
+            {% comment %}
+              Vem respondido: "WhatsApp" escrito no documento ou celular de
+              nove dígitos é sim; fixo é não. Perguntar a quem está
+              importando um documento travava o "Criar" por um dado que o
+              documento já dizia -- e que se troca aqui com um toque.
+            {% endcomment %}
             <div class="ls-imp-campo">
-              <label class="form-label" for="campoWhatsapp">Este número tem WhatsApp?</label>
+              <label class="form-label" for="campoWhatsapp">Tem WhatsApp?</label>
               <select class="form-select" id="campoWhatsapp" name="whatsapp">
-                <option value=""{% if not envio.whatsapp %} selected{% endif %}>Escolha…</option>
-                <option value="sim"{% if envio.whatsapp == "sim" %} selected{% endif %}>Sim, tem WhatsApp</option>
+                <option value="sim"{% if envio.whatsapp != "nao" %} selected{% endif %}>Sim, tem WhatsApp</option>
                 <option value="nao"{% if envio.whatsapp == "nao" %} selected{% endif %}>Não, só telefone</option>
               </select>
-              {% if proposta.cliente.whatsapp_confirmado %}<p class="ls-imp-nota">Confirmado no cadastro do cliente.</p>{% endif %}
-              <p class="ls-imp-falta-motivo" data-falta-de="campoWhatsapp"{% if not faltas.cliente_whatsapp %} hidden{% endif %}>
-                <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ faltas.cliente_whatsapp|capfirst }}</span>
-              </p>
+              <p class="ls-imp-nota" id="notaWhatsapp">{% if proposta.cliente.whatsapp_confirmado %}Confirmado no cadastro do cliente.{% elif proposta.cliente.telefone.whatsapp_escrito %}O documento diz WhatsApp.{% elif envio.whatsapp == "sim" %}Celular: em geral tem WhatsApp. Troque se não tiver.{% elif envio.whatsapp == "nao" %}Telefone fixo. Troque se tiver WhatsApp.{% endif %}</p>
             </div>
             <div class="ls-imp-campo">
               <label class="form-label" for="campoEmail">E-mail</label>
               <input type="email" class="form-control" id="campoEmail" name="email" maxlength="150" autocomplete="off" value="{{ envio.email }}">
               {% include "partes/importacao_origem.html" with campo=proposta.cliente.email alvo="campoEmail" falta=faltas.cliente_email %}
             </div>
-            <div class="ls-imp-campo">
-              <label class="form-label" for="campoContato">Pessoa de contato</label>
+            <div class="ls-imp-campo" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %}>
+              <label class="form-label" for="campoContato">Pessoa de contato <small class="text-muted">(no orçamento)</small></label>
               <input class="form-control" id="campoContato" name="contato" maxlength="120" value="{{ envio.contato }}">
               {% include "partes/importacao_origem.html" with campo=proposta.cliente.contato alvo="campoContato" falta=faltas.cliente_contato %}
             </div>
@@ -180,11 +201,31 @@
           <p class="ls-imp-falta-motivo" data-falta-de="cliente-contato_envio"{% if not faltas.cliente_contato_envio %} hidden{% endif %}>
             <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ faltas.cliente_contato_envio|capfirst }}</span>
           </p>
+
+          <fieldset class="ls-imp-endereco">
+            <legend>Endereço <small>(serve à entrega, à montagem e ao mapa)</small></legend>
+            {% if proposta.cliente.endereco.valor %}
+            <p class="ls-imp-nota"><small>No documento:</small> “{{ proposta.cliente.endereco.valor }}”
+              {% if proposta.cliente.endereco.fonte %}<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.cliente.endereco.fonte.id }}"><b>{{ proposta.cliente.endereco.fonte.id }}</b></button>{% endif %}</p>
+            {% endif %}
+            <div class="ls-imp-endereco-grade">
+              <div><label class="form-label" for="campoCep">CEP</label><input class="form-control" id="campoCep" name="cep" maxlength="9" data-mascara="cep" inputmode="numeric" value="{{ envio.cep }}"></div>
+              <div class="largo"><label class="form-label" for="campoEndereco">Rua</label><input class="form-control" id="campoEndereco" name="endereco" maxlength="120" value="{{ envio.endereco }}"></div>
+              <div><label class="form-label" for="campoNumero">Número</label><input class="form-control" id="campoNumero" name="numero" maxlength="10" value="{{ envio.numero }}"></div>
+              <div><label class="form-label" for="campoComplemento">Complemento</label><input class="form-control" id="campoComplemento" name="complemento" maxlength="60" value="{{ envio.complemento }}"></div>
+              <div><label class="form-label" for="campoBairro">Bairro</label><input class="form-control" id="campoBairro" name="bairro" maxlength="50" value="{{ envio.bairro }}"></div>
+              <div><label class="form-label" for="campoCidade">Cidade</label><input class="form-control" id="campoCidade" name="cidade" maxlength="60" value="{{ envio.cidade }}"></div>
+              <div><label class="form-label" for="campoEstado">UF</label><input class="form-control" id="campoEstado" name="estado" maxlength="20" value="{{ envio.estado }}"></div>
+            </div>
+            <p class="ls-imp-falta-motivo" data-falta-de="cliente-endereco"{% if not faltas.cliente_endereco %} hidden{% endif %}>
+              <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ faltas.cliente_endereco|capfirst }}</span>
+            </p>
+          </fieldset>
         </div>
       </section>
 
       <!-- ======================================================= ITENS -->
-      <section class="ls-panel ls-imp-bloco" id="blocoItens" aria-labelledby="tituloItens">
+      <section class="ls-panel ls-imp-bloco" id="blocoItens" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %} aria-labelledby="tituloItens">
         <header class="ls-panel-header">
           <div>
             <h2 id="tituloItens"><i class="bi bi-box-seam" aria-hidden="true"></i> Itens</h2>
@@ -205,7 +246,7 @@
       </section>
 
       <!-- ===================================================== VALORES -->
-      <section class="ls-panel ls-imp-bloco" id="blocoValores" aria-labelledby="tituloValores">
+      <section class="ls-panel ls-imp-bloco" id="blocoValores" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %} aria-labelledby="tituloValores">
         <header class="ls-panel-header">
           <div>
             <h2 id="tituloValores"><i class="bi bi-cash-stack" aria-hidden="true"></i> Frete, desconto e total</h2>
@@ -218,7 +259,7 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control ls-imp-recalcula" id="campoFrete" name="frete" inputmode="decimal"
-                     data-mascara="moeda" autocomplete="off" placeholder="0,00" value="{{ envio.frete }}">
+                     data-mascara="moeda-valor" autocomplete="off" placeholder="0,00" value="{{ envio.frete }}">
             </div>
             {% include "partes/importacao_origem.html" with campo=proposta.valores.frete alvo="campoFrete" falta=faltas.valores_frete %}
           </div>
@@ -227,18 +268,18 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control ls-imp-recalcula" id="campoDesconto" name="desconto" inputmode="decimal"
-                     data-mascara="moeda" autocomplete="off" placeholder="0,00" value="{{ envio.desconto }}">
+                     data-mascara="moeda-valor" autocomplete="off" placeholder="0,00" value="{{ envio.desconto }}">
             </div>
             {% include "partes/importacao_origem.html" with campo=proposta.valores.desconto alvo="campoDesconto" falta=faltas.valores_desconto %}
           </div>
           <div class="ls-imp-campo ls-imp-campo-largo">
             <div class="ls-imp-totais" aria-live="polite">
-              <div><span>Soma das linhas</span><strong id="contaSubtotal">R$ {{ validado.contas.subtotal }}</strong>
+              <div><span>Soma das linhas</span><strong id="contaSubtotal">R$ {{ contas.subtotal }}</strong>
                 {% if proposta.valores.subtotal.valor %}<small>Documento: R$ {{ proposta.valores.subtotal.valor }}{% if proposta.valores.subtotal.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valores.subtotal.fonte.id }}"><b>{{ proposta.valores.subtotal.fonte.id }}</b></button>{% endif %}</small>{% endif %}
               </div>
               <div><span>+ Frete</span><strong id="contaFrete">R$ 0,00</strong></div>
               <div><span>− Desconto</span><strong id="contaDesconto">R$ 0,00</strong></div>
-              <div class="final"><span>Total do orçamento</span><strong id="contaTotal">R$ {{ validado.contas.total }}</strong>
+              <div class="final"><span>Total do orçamento</span><strong id="contaTotal">R$ {{ contas.total }}</strong>
                 {% if proposta.valores.total.valor %}<small>Documento: R$ {{ proposta.valores.total.valor }}{% if proposta.valores.total.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valores.total.fonte.id }}"><b>{{ proposta.valores.total.fonte.id }}</b></button>{% endif %}</small>
                 {% elif proposta.valores.total.opcoes %}<small>Documento: {% for opcao in proposta.valores.total.opcoes %}{{ opcao.rotulo }}{% if not forloop.last %} ou {% endif %}{% endfor %}</small>
                 {% else %}<small>O documento não traz total.</small>{% endif %}
@@ -257,7 +298,7 @@
           <fieldset class="ls-imp-campo ls-imp-campo-largo ls-imp-valor-final" id="escolhaTotal"
                     {% if not proposta.valor_final.oferecido %}hidden{% endif %}>
             <legend>Qual total vale? <span class="ls-imp-obrig" aria-hidden="true">*</span></legend>
-            <p class="ls-imp-nota">O documento diz <strong>R$ {{ proposta.valor_final.valor }}</strong>{% if proposta.valor_final.fonte %} (<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valor_final.fonte.id }}"><b>{{ proposta.valor_final.fonte.id }}</b></button>){% endif %}, e a conta das linhas dá <strong id="valorFinalSoma">R$ {{ proposta.valor_final.soma }}</strong>.</p>
+            <p class="ls-imp-nota">{% if proposta.valor_final.explicito %}O documento traz um valor final negociado{% else %}O documento diz{% endif %} <strong>R$ {{ proposta.valor_final.valor }}</strong>{% if proposta.valor_final.fonte %} (<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valor_final.fonte.id }}"><b>{{ proposta.valor_final.fonte.id }}</b></button>){% endif %}, e a conta das linhas dá <strong id="valorFinalSoma">R$ {{ proposta.valor_final.soma }}</strong>.</p>
             <label class="ls-imp-escolha">
               <input type="radio" name="total_escolha" value="valor_final"{% if envio.total_escolha == "valor_final" %} checked{% endif %}>
               <span><strong>Usar R$ {{ proposta.valor_final.valor }} como valor final combinado</strong>
@@ -266,7 +307,7 @@
             <label class="ls-imp-escolha">
               <input type="radio" name="total_escolha" value="soma"{% if envio.total_escolha == "soma" %} checked{% endif %}>
               <span><strong>Manter a soma das linhas</strong>
-                <small>O total do documento fica de lado. Escreva por quê (vai para o histórico).</small></span>
+                <small>{% if proposta.valor_final.explicito %}O valor negociado fica de lado e vale a conta das linhas. Escreva por quê (vai para o histórico).{% else %}O total do documento fica de lado. Escreva por quê (vai para o histórico).{% endif %}</small></span>
             </label>
             <textarea class="form-control ls-imp-justificativa" name="justificativa-soma_total" maxlength="160" rows="2"
                       data-justificativa="soma_total" id="justificativaSoma"
@@ -278,7 +319,7 @@
       </section>
 
       <!-- =================================================== CONDIÇÕES -->
-      <section class="ls-panel ls-imp-bloco" id="blocoCondicoes" aria-labelledby="tituloCondicoes">
+      <section class="ls-panel ls-imp-bloco" id="blocoCondicoes" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %} aria-labelledby="tituloCondicoes">
         <header class="ls-panel-header">
           <div>
             <h2 id="tituloCondicoes"><i class="bi bi-card-checklist" aria-hidden="true"></i> Condições</h2>
@@ -287,19 +328,20 @@
         </header>
         <div class="ls-panel-body ls-imp-campos">
           <div class="ls-imp-campo">
-            <label class="form-label" for="campoValidade">Válido até <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
+            <label class="form-label" for="campoValidade">Válido até</label>
             <input type="date" class="form-control" id="campoValidade" name="validade" min="{{ hoje|date:'Y-m-d' }}" value="{{ envio.validade }}">
+            <p class="ls-imp-nota" id="notaValidade"{% if envio.validade %} hidden{% endif %}>Em branco, vale o padrão do painel: {{ validade_padrao|date:"d/m/Y" }}.</p>
             {% include "partes/importacao_origem.html" with campo=proposta.condicoes.validade alvo="campoValidade" falta=faltas.condicoes_validade %}
           </div>
           <div class="ls-imp-campo">
-            <label class="form-label" for="campoPagamento">Forma de pagamento <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
+            <label class="form-label" for="campoPagamento">Forma de pagamento</label>
             <input class="form-control" id="campoPagamento" name="forma_pagamento" maxlength="120" list="opcoesPagamento"
                    autocomplete="off" value="{{ envio.forma_pagamento }}">
             <datalist id="opcoesPagamento">{% for opcao in proposta.opcoes.pagamento %}<option value="{{ opcao }}"></option>{% endfor %}</datalist>
             {% include "partes/importacao_origem.html" with campo=proposta.condicoes.forma_pagamento alvo="campoPagamento" falta=faltas.condicoes_forma_pagamento %}
           </div>
           <div class="ls-imp-campo">
-            <label class="form-label" for="campoEnvio">Forma de envio <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
+            <label class="form-label" for="campoEnvio">Forma de envio</label>
             <input class="form-control" id="campoEnvio" name="forma_envio" maxlength="120" list="opcoesEnvio"
                    autocomplete="off" value="{{ envio.forma_envio }}">
             <datalist id="opcoesEnvio">{% for opcao in proposta.opcoes.envio %}<option value="{{ opcao }}"></option>{% endfor %}</datalist>
@@ -321,7 +363,7 @@
       </section>
 
       <!-- ===================================================== ALERTAS -->
-      <section class="ls-panel ls-imp-bloco" id="blocoAlertas" aria-labelledby="tituloAlertas">
+      <section class="ls-panel ls-imp-bloco" id="blocoAlertas" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %} aria-labelledby="tituloAlertas">
         <header class="ls-panel-header">
           <div>
             <h2 id="tituloAlertas"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> Alertas da conferência</h2>
@@ -338,7 +380,7 @@
               <p data-alerta-detalhe>{{ alerta.detalhe }}</p>
               {% if alerta.fonte %}<button type="button" class="ls-imp-fonte" data-fonte="{{ alerta.fonte.id }}"><i class="bi bi-quote" aria-hidden="true"></i><b>{{ alerta.fonte.id }}</b><span>{{ alerta.fonte.texto|truncatechars:90 }}</span></button>{% endif %}
               <p class="ls-imp-alerta-resolvido" hidden><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Resolvido.</p>
-              {% if alerta.id == "soma_total" and proposta.valor_final.valor %}
+              {% if alerta.id == "soma_total" and proposta.valor_final.valor and not proposta.valor_final.explicito %}
               <p class="ls-imp-nota"><a href="#escolhaTotal">Escolha qual total vale</a>: o do documento, como valor final combinado, ou a soma das linhas, com justificativa.</p>
               {% else %}
               <label class="ls-imp-marca ls-imp-aceite">
@@ -392,11 +434,14 @@
         {% endif %}
       </div>
       <div class="ls-panel ls-imp-criar">
-        <div class="ls-imp-criar-total"><span>Total</span><strong id="contaTotalLateral">R$ {{ validado.contas.total }}</strong></div>
+        <div class="ls-imp-criar-total" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %}><span>Total</span><strong id="contaTotalLateral">R$ {{ contas.total }}</strong></div>
         <button type="submit" class="btn btn-success" id="criarOrcamento"{% if not validado.pronto %} disabled{% endif %}>
-          <i class="bi bi-check2-all me-1" aria-hidden="true"></i> Criar orçamento
+          <i class="bi bi-check2-all me-1" aria-hidden="true"></i>
+          <span data-rotulo-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>Criar cliente e orçamento</span>
+          <span data-rotulo-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>Cadastrar cliente</span>
         </button>
-        <small>Cria como <strong>rascunho</strong> e abre na edição normal. Nada é enviado ao cliente.</small>
+        <small data-rotulo-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>O orçamento nasce como <strong>rascunho</strong>. Nada é enviado ao cliente.</small>
+        <small data-rotulo-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>Nenhum orçamento é criado. Você vai para a ficha do cliente.</small>
         <a href="#painelPendencias" class="ls-imp-criar-falta" id="criarFalta"{% if validado.pronto %} hidden{% endif %}>Falta preencher: <span>{{ validado.pendencias|length }}</span></a>
       </div>
     </aside>

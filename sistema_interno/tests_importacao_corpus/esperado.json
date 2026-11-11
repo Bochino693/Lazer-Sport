@@ -1,0 +1,129 @@
+{
+  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11.",
+  "01-tabela-buffet-alegria.docx": {
+    "modo": "orcamento",
+    "cliente_existente": true,
+    "cliente": {
+      "nome": "Buffet Alegria", "estabelecimento": "", "documento": "11.444.777/0001-61",
+      "telefone": "(11) 98765-4321", "whatsapp": "sim", "email": "contato@buffetalegria.com.br",
+      "contato": "Marina Souza"
+    },
+    "endereco": {
+      "cep": "07010-020", "rua": "Rua das Palmeiras", "numero": "45", "complemento": "Sala 3",
+      "bairro": "Centro", "cidade": "Guarulhos", "uf": "SP"
+    },
+    "itens": [
+      {"descricao": "Cama elástica 3 m", "original": "Cama elástica 3 m com rede de proteção", "produto": "Cama elástica 3 m", "quantidade": "2", "valor_unitario": "2.800,00"},
+      {"descricao": "Pula-pula", "original": "Pula-pula", "produto": "Pula-pula", "quantidade": "1", "valor_unitario": "1.234,00"},
+      {"descricao": "Air Game Kids", "original": "Air Game Kids", "produto": "Air Game Kids", "quantidade": "1", "valor_unitario": "18.000,00"}
+    ],
+    "frete": "450,00", "desconto": "", "valor_final": "",
+    "validade": "2026-11-24",
+    "forma_pagamento": "50% na aprovação e 50% na entrega, via Pix",
+    "forma_envio": "Entrega e montagem pela equipe Lazer & Sport",
+    "prazo": "25 dias úteis após a aprovação",
+    "observacoes": "Garantia: 12 meses contra defeitos de fabricação.",
+    "salvo": {
+      "total": "25284.00", "desconto": "0.00", "valor_final": null,
+      "observacoes": "Prazo de entrega: 25 dias úteis após a aprovação.\nGarantia: 12 meses contra defeitos de fabricação."
+    }
+  },
+  "02-texto-livre-escola.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Escola Pequeno Príncipe", "estabelecimento": "", "documento": "11.222.333/0001-81",
+      "telefone": "(11) 98877-6655", "whatsapp": "sim", "email": "compras@pequenoprincipe.com.br",
+      "contato": "Juliana Ramos"
+    },
+    "endereco": {
+      "cep": "04101-000", "rua": "Rua das Flores", "numero": "120", "complemento": "apto 12",
+      "bairro": "Vila Mariana", "cidade": "São Paulo", "uf": "SP"
+    },
+    "itens": [
+      {"descricao": "Cama elástica 3 m", "original": "Cama elástica 3m", "produto": "Cama elástica 3 m", "quantidade": "2", "valor_unitario": "2.800,00"},
+      {"descricao": "Pula-pula", "original": "Pula-pula", "produto": "Pula-pula", "quantidade": "1", "valor_unitario": "1.234,00"},
+      {"descricao": "Piscina de bolinhas", "original": "Piscina de bolinhas", "produto": "Piscina de bolinhas", "quantidade": "3", "valor_unitario": "450,00"}
+    ],
+    "frete": "350,00", "desconto": "", "valor_final": "",
+    "validade": "2026-11-19",
+    "forma_pagamento": "Boleto em 3 parcelas",
+    "forma_envio": "Transportadora",
+    "prazo": "",
+    "observacoes": "Montagem inclusa no local do evento.",
+    "salvo": {
+      "total": "8534.00", "desconto": "0.00", "valor_final": null,
+      "observacoes": "Montagem inclusa no local do evento."
+    }
+  },
+  "03-cabecalho-condominio.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Condomínio Jardim das Flores", "estabelecimento": "", "documento": "33.000.167/0001-01",
+      "telefone": "(11) 3333-4444", "whatsapp": "nao", "email": "sindico@jardimdasflores.com.br",
+      "contato": "Paulo Mendes"
+    },
+    "endereco": {
+      "cep": "09040-200", "rua": "Av. das Acácias", "numero": "300", "complemento": "",
+      "bairro": "Jardim Bela Vista", "cidade": "Santo André", "uf": "SP"
+    },
+    "itens": [
+      {"descricao": "Brinquedão Modelo 3", "original": "Brinquedão Modelo 3", "produto": "Brinquedão Modelo 3", "quantidade": "1", "valor_unitario": "9.000,00"},
+      {"descricao": "Tobogã inflável 6 m", "original": "Tobogã inflável 6 m", "produto": null, "quantidade": "1", "valor_unitario": "3.500,00"}
+    ],
+    "frete": "0,00", "desconto": "", "valor_final": "",
+    "validade": "2026-11-30",
+    "forma_pagamento": "Pix",
+    "forma_envio": "",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "12500.00", "desconto": "0.00", "valor_final": null, "observacoes": ""
+    }
+  },
+  "04-ficha-cadastro-marina.docx": {
+    "modo": "cliente",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Marina Souza", "estabelecimento": "Festas da Marina", "documento": "529.982.247-25",
+      "telefone": "(11) 97777-6655", "whatsapp": "sim", "email": "marina@festasdamarina.com.br",
+      "contato": ""
+    },
+    "endereco": {
+      "cep": "01310-100", "rua": "Avenida Paulista", "numero": "1000", "complemento": "Conjunto 42",
+      "bairro": "Bela Vista", "cidade": "São Paulo", "uf": "SP"
+    },
+    "itens": []
+  },
+  "05-desconto-valor-final.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Ricardo Alves", "estabelecimento": "Arena Kids Diversões", "documento": "111.444.777-35",
+      "telefone": "(21) 99876-5432", "whatsapp": "sim", "email": "ricardo@arenakids.com.br",
+      "contato": ""
+    },
+    "endereco": {
+      "cep": "22270-010", "rua": "Rua Voluntários da Pátria", "numero": "190", "complemento": "",
+      "bairro": "Botafogo", "cidade": "Rio de Janeiro", "uf": "RJ"
+    },
+    "itens": [
+      {"descricao": "Brinquedão Modelo 3", "original": "Brinquedão Modelo 3", "produto": "Brinquedão Modelo 3", "quantidade": "1", "valor_unitario": "9.300,00"},
+      {"descricao": "Piscina de bolinhas", "original": "Piscina de bolinhas", "produto": "Piscina de bolinhas", "quantidade": "2", "valor_unitario": "450,00"}
+    ],
+    "frete": "0,00", "desconto": "500,00", "valor_final": "9.500,00",
+    "validade": "2026-11-30",
+    "forma_pagamento": "50% de entrada e 50% na entrega",
+    "forma_envio": "Transportadora",
+    "prazo": "",
+    "observacoes": "Inclui treinamento da equipe do cliente.",
+    "salvo": {
+      "total": "9500.00", "desconto": "0.00", "valor_final": "9500.00",
+      "observacoes": "Inclui treinamento da equipe do cliente."
+    }
+  },
+  "06-pdf-tabela-buffet-alegria.pdf": {
+    "igual_a": "01-tabela-buffet-alegria.docx"
+  }
+}

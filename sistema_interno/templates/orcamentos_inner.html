@@ -20,11 +20,13 @@
     {% endif %}
     {% comment %}
       O orçamento que chega em Word ou PDF não precisa ser digitado de novo: a
-      importação lê, confere cada valor na fonte e entrega o rascunho.
-      Mesma permissão do "Novo orçamento" -- a importação também CRIA.
+      importação lê, confere cada valor na fonte e cria o cliente e o
+      rascunho (ou só o cliente). Mesma permissão do "Novo orçamento" -- a
+      importação também CRIA. Sem "(IA)" no botão: a leitura funciona com
+      ou sem ela, e quem importa não tem o que fazer com essa diferença.
     {% endcomment %}
     {% if pode_criar_orcamento %}<a href="{% url 'importar_orcamento_word' %}" class="btn btn-outline-success" id="importarWord">
-      <i class="bi bi-file-earmark-arrow-up me-1"></i> Importar Word ou PDF (IA)
+      <i class="bi bi-file-earmark-arrow-up me-1"></i> Importar Word ou PDF
     </a>{% endif %}
     {% if pode_criar_orcamento %}<button type="button" class="btn btn-success" id="novoOrcamento">
       <i class="bi bi-plus-lg me-1"></i> Novo orçamento
@@ -192,7 +194,7 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control ls-recalcula" id="orcamentoFrete" name="frete"
-                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                      placeholder="0,00">
             </div>
           </div>
@@ -215,7 +217,7 @@
                       title="Trocar entre reais e porcentagem"
                       aria-label="Trocar entre reais e porcentagem">R$</button>
               <input class="form-control ls-recalcula" id="orcamentoDesconto"
-                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                      placeholder="0,00">
             </div>
             <input type="hidden" id="orcamentoDescontoValor" name="desconto">
@@ -275,7 +277,7 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control ls-recalcula" id="orcamentoValorFinal" name="valor_final"
-                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                      placeholder="0,00" disabled>
             </div>
             <span class="form-text" id="valorFinalExplicacao"></span>
@@ -360,7 +362,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <div class="col-sm-6">
             <label class="form-label" for="brinquedoNovoValor">Valor</label>
             <input class="form-control" id="brinquedoNovoValor" name="valor"
-                   inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                   inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                    placeholder="0,00">
           </div>
           <div class="col-sm-6">
@@ -531,7 +533,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="pecaNovaVenda" name="preco_venda"
-                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                      placeholder="0,00">
             </div>
           </div>
@@ -540,7 +542,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="pecaNovaFornecedor" name="preco_fornecedor"
-                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                      placeholder="0,00">
             </div>
           </div>
@@ -1067,7 +1069,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <label class="form-label" for="pagamentoValor">
           Valor total recebido até agora
         </label>
-        <div class="input-group"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoValor" name="valor_pago" inputmode="decimal" data-mascara="moeda" required></div>
+        <div class="input-group"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoValor" name="valor_pago" inputmode="decimal" data-mascara="moeda-valor" required></div>
         {% comment %}
           É o TOTAL acumulado, não a parcela desta vez -- e a frase abaixo
           existe porque a leitura natural do campo é a outra. Quem digita
@@ -1542,16 +1544,13 @@ LSTela.pronto(function () {
      O painel inteiro digita no formato brasileiro; a conta é feita em
      ponto e só a exibição volta para vírgula.
      ------------------------------------------------------------------ */
+  /* A MESMA LEITURA DO CAMPO E DO SERVIDOR (Painel.valorNumerico e
+     utils.decimal_br). O parseFloat que estava aqui lia "18.000" -- o
+     que o campo de reais mostra enquanto a pessoa digita o milhar --
+     como dezoito, e o total da tela saía mil vezes menor que o salvo. */
   function paraNumero(texto) {
-    var limpo = String(texto || "").trim().replace(/[R$\s]/g, "");
-    if (!limpo) return 0;
-
-    if (limpo.indexOf(",") >= 0) {
-      limpo = limpo.replace(/\./g, "").replace(",", ".");
-    }
-
-    var numero = parseFloat(limpo);
-    return isNaN(numero) ? 0 : numero;
+    var numero = Painel.valorNumerico(String(texto || ""));
+    return numero === null || !isFinite(numero) ? 0 : numero;
   }
 
   function moeda(valor) {
@@ -1571,7 +1570,7 @@ LSTela.pronto(function () {
       '<td data-rotulo="Item"></td>' +
       '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
       '<td data-rotulo="Qtd."><input type="number" class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" min="1" max="100000" step="1" value="1"></td>' +
-      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" data-mascara="moeda" autocomplete="off" placeholder="0,00"></td>' +
+      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" data-mascara="moeda-valor" autocomplete="off" placeholder="0,00"></td>' +
       '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
       '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-item-remover" aria-label="Remover item"><i class="bi bi-x-lg"></i></button></td>';
 
@@ -1602,6 +1601,8 @@ LSTela.pronto(function () {
       tr.querySelector(".ls-item-descricao").value = item.descricao || "";
       tr.querySelector(".ls-item-quantidade").value = item.quantidade || 1;
       tr.querySelector(".ls-item-valor").value = item.valor_unitario || "";
+      /* O valor salvo é número ("2800,00"): sai já no formato da tela. */
+      Painel.aplicarMascaras(tr);
     }
 
     recalcular();
@@ -1656,7 +1657,7 @@ LSTela.pronto(function () {
 
     botaoUnidade.dataset.modo = modo;
     botaoUnidade.textContent = modo === "porcentagem" ? "%" : "R$";
-    campoDesconto.dataset.mascara = modo === "porcentagem" ? "percentual" : "moeda";
+    campoDesconto.dataset.mascara = modo === "porcentagem" ? "percentual" : "moeda-valor";
     campoDesconto.placeholder = modo === "porcentagem" ? "0,00" : "0,00";
 
     if (manterValor === false) return;

@@ -54,33 +54,25 @@
         <button type="submit" class="btn btn-success" id="lerDocumento">
           <i class="bi bi-magic me-1" aria-hidden="true"></i> Ler documento
         </button>
-        <span class="ls-imp-ia-estado {% if ia_ligada %}ligada{% else %}desligada{% endif %}">
-          {% if ia_ligada %}
-            <i class="bi bi-stars" aria-hidden="true"></i> Leitura com IA ({{ modelo_ia }}): o Word também é conferido pelas tabelas; o PDF, pela transcrição e pelas contas.
-          {% else %}
-            <i class="bi bi-table" aria-hidden="true"></i> IA desligada (sem a chave ANTHROPIC_API_KEY): o Word é lido só pelas tabelas, e o PDF não pode ser lido.
-          {% endif %}
-        </span>
       </div>
     </form>
 
     <ol class="ls-imp-passos">
-      <li><strong>Ler.</strong> No Word: parágrafos, tabelas, cabeçalho, rodapé e caixas de texto. No PDF (inclusive digitalizado): a IA transcreve a página. Cada linha ganha o seu endereço no documento.</li>
+      <li><strong>Ler.</strong> No Word: parágrafos, tabelas, cabeçalho, rodapé e caixas de texto. No PDF: o texto de cada página, com as colunas da tabela. Cada linha ganha o seu endereço no documento.</li>
       <li><strong>Conferir.</strong> Cada valor mostra de onde veio. As contas são refeitas, e o que não bate fica em vermelho.</li>
-      <li><strong>Criar.</strong> Só quando estiver completo. Nasce como rascunho e abre na edição normal; nada é enviado ao cliente.</li>
+      <li><strong>Criar.</strong> Cliente e orçamento juntos, ou só o cliente (uma ficha de cadastro, por exemplo). O orçamento nasce como rascunho; nada é enviado ao cliente.</li>
     </ol>
 
-    {% if ia_ligada %}
+    {% comment %}
+      A linha de privacidade diz o que acontece com o arquivo -- e, quando
+      a leitura assistida está ligada, para quem o texto vai. Nada de
+      "chave", "variável" ou "IA desligada": isso é configuração do
+      servidor, e quem importa um orçamento não tem o que fazer com ela.
+    {% endcomment %}
     <p class="ls-imp-privacidade">
       <i class="bi bi-shield-lock" aria-hidden="true"></i>
-      Com a IA ligada, o texto do Word (ou o PDF inteiro) é enviado à Anthropic (Claude) para a leitura. O arquivo não fica guardado: só o nome entra no histórico do orçamento.
+      {% if ia_ligada %}Para ajudar na leitura, o texto do documento (ou o PDF) é enviado à Anthropic (Claude). {% endif %}O arquivo não fica guardado: só o nome entra no histórico.
     </p>
-    {% else %}
-    <p class="ls-imp-privacidade">
-      <i class="bi bi-shield-lock" aria-hidden="true"></i>
-      O arquivo não fica guardado: só o nome entra no histórico do orçamento.
-    </p>
-    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -118,12 +110,12 @@ LSTela.pronto(function () {
     }
   });
 
-  /* A leitura com IA leva de alguns segundos a um minuto. A tarja diz
-     isso, para ninguém tocar de novo achando que travou. */
+  /* A leitura leva alguns segundos (até um minuto num PDF grande). A
+     tarja diz isso, para ninguém tocar de novo achando que travou. */
   form.addEventListener("submit", function () {
     document.getElementById("lerDocumento").disabled = true;
     if (window.Painel && Painel.ocupado) {
-      Painel.ocupado({% if ia_ligada %}"Lendo o documento com a IA… pode levar até um minuto."{% else %}"Lendo o documento…"{% endif %});
+      Painel.ocupado("Lendo o documento… pode levar alguns segundos.");
     }
   });
 });

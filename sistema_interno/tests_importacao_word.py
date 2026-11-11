@@ -111,6 +111,27 @@ def montar_docx(corpo, *, cabecalho="", rodape="", cabecalhos_extras=0):
     return memoria.getvalue()
 
 
+def montar_pdf_imagem():
+    """O PDF digitalizado: página sem texto nenhum (só a "foto")."""
+    return montar_pdf(linhas=())
+
+
+#: O que a tela NUNCA mostra a quem importa. "A chave da IA não está
+#: configurada" é assunto de quem cuida do servidor (fica no log); na tela,
+#: a pessoa só lia que faltava "uma tal variável que eu desconheço".
+JARGAO = ("ANTHROPIC_API_KEY", "ANTHROPIC", "chave", "variável", "IA desligada", "IA indisponível")
+
+
+def texto_visivel(resposta) -> str:
+    """O HTML da resposta sem <script> e sem comentários: o que se lê na tela."""
+    import re as _re
+
+    html = resposta.content.decode()
+    html = _re.sub(r"(?is)<script\b.*?</script>", " ", html)
+    html = _re.sub(r"(?s)<!--.*?-->", " ", html)
+    return html
+
+
 def montar_pdf(linhas=("Orcamento 2026/041", "Cliente: Buffet Alegria Ltda", "Total: R$ 1.919,00")):
     """Um PDF de verdade, pequeno: uma página com texto em Helvetica.
 
@@ -446,6 +467,25 @@ class DinheiroBrasileiroTests(SimpleTestCase):
         achados = det.valores_em_reais("Cama 3 m, 10% de sinal, 05/11/2026, R$ 280 e 125,00")
         self.assertEqual([a["valor"] for a in achados], [Decimal("280.00"), Decimal("125.00")])
 
+    def test_o_que_se_digita_no_campo_de_reais_vale_o_mesmo_no_servidor(self):
+        # O campo `moeda-valor` deixa passar o que a pessoa digita: "18000",
+        # "18.000" (com o ponto do milhar), "1234,5", "R$ 1.234,56" colado.
+        # O formulário normal (decimal_br) e a conferência (valor_do_campo)
+        # leem tudo igual -- e igual ao Painel.valorNumerico do navegador.
+        from .utils import decimal_br
+
+        casos = {
+            "18000": "18000.00", "18.000": "18000.00", "18.000,00": "18000.00", "1234,5": "1234.50",
+            "R$ 1.234,56": "1234.56", "1.234.567,89": "1234567.89", "18.5": "18.50", "2800,00": "2800.00",
+            "450.00": "450.00",
+        }
+        for digitado, certo in casos.items():
+            with self.subTest(digitado=digitado):
+                self.assertEqual(decimal_br(digitado, "Valor"), Decimal(certo))
+                self.assertEqual(det.valor_do_campo(digitado), Decimal(certo))
+        # Começando em zero não há milhar: "0.125" não vira cento e vinte e cinco.
+        self.assertEqual(decimal_br("0.125", "Valor"), Decimal("0.12"))
+
     def test_quantidade_e_inteira_ou_recusada(self):
         self.assertEqual(det.ler_quantidade("2")[0], 2)
         self.assertEqual(det.ler_quantidade("02 un")[:2], (2, "un"))
@@ -521,9 +561,11 @@ class LeituraPorRegraTests(SimpleTestCase):
         self.assertEqual(itens[0]["quantidade"]["valor"], 2)
         self.assertEqual(itens[0]["valor_unitario"]["valor"], Decimal("280.00"))
         self.assertEqual(itens[0]["total_linha"]["valor"], Decimal("560.00"))
-        # Um valor só, sem "cada": é o total da linha, e o unitário fica vazio.
+        # Um valor só, de UMA unidade: o valor da linha é também o
+        # unitário (a conta do total do documento confere logo adiante).
         self.assertEqual(itens[1]["total_linha"]["valor"], Decimal("450.00"))
-        self.assertIsNone(itens[1]["valor_unitario"])
+        self.assertEqual(itens[1]["valor_unitario"]["valor"], Decimal("450.00"))
+        self.assertEqual(itens[1]["quantidade"]["valor"], 1)
 
     def test_frete_no_meio_da_frase_nao_e_o_frete(self):
         campos = self.ler(montar_docx(par("Cama elástica com frete incluso R$ 280,00")))["campos"]
@@ -610,13 +652,13 @@ def campo_ia(texto=None, fonte_id=None, trecho=""):
 
 
 def leitura_ia_vazia():
-    nomes_cliente = ("nome", "documento", "contato", "telefone", "email", "endereco",
-                     "cep", "logradouro", "numero", "bairro", "cidade", "uf")
+    nomes_cliente = ("nome", "estabelecimento", "documento", "contato", "telefone", "email", "endereco",
+                     "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf")
     return {
         "cliente": {nome: campo_ia() for nome in nomes_cliente},
         "itens": [],
         **{nome: campo_ia() for nome in (
-            "subtotal", "frete", "desconto", "total_geral", "validade", "forma_pagamento",
+            "subtotal", "frete", "desconto", "total_geral", "valor_negociado", "validade", "forma_pagamento",
             "prazo_entrega", "forma_envio", "observacoes", "data_documento",
         )},
     }
@@ -740,13 +782,12 @@ class ConferenciaTests(TestCase):
         alerta = alertas_por_id(proposta_de(conteudo))["valores_nao_usados"]
         self.assertIn("350,00", alerta["detalhe"])
 
-    def test_sem_ia_o_aviso_esta_na_proposta(self):
+    def test_sem_ia_a_leitura_por_regra_nao_tem_aviso_tecnico(self):
+        # Sem a IA, a leitura é a de sempre (tabelas e textos): não há o que
+        # avisar. Aviso só existe para o PDF que é imagem, transcrito pela IA.
         proposta = proposta_de(docx_com_tabela())
         self.assertFalse(proposta["ia"]["usada"])
-        self.assertEqual(
-            proposta["ia"]["aviso"],
-            "IA indisponível: leitura pelas tabelas do documento; confira com atenção.",
-        )
+        self.assertEqual(proposta["ia"]["aviso"], "")
 
     def test_validade_vencida_no_word_vira_sugestao_e_nao_valor(self):
         conteudo = montar_docx(par(f"Validade: {_data_br(-3)}") + par("Total: R$ 10,00"))
@@ -765,8 +806,9 @@ def formulario_de(envio, **mudancas):
     for chave, valor in mudancas.items():
         envio[chave] = valor
     dados = {"action": "criar", "itens_ordem": ",".join(i["uid"] for i in envio["itens"])}
-    for chave in ("cliente_modo", "cliente_id", "nome", "documento", "tipo", "contato", "telefone",
-                  "whatsapp", "email", "cep", "endereco", "numero", "bairro", "cidade", "estado",
+    for chave in ("modo", "cliente_modo", "cliente_id", "nome", "estabelecimento", "documento", "tipo", "contato",
+                  "telefone", "whatsapp", "email", "cep", "endereco", "numero", "complemento", "bairro", "cidade",
+                  "estado",
                   "frete", "desconto", "validade", "forma_pagamento", "forma_envio", "prazo", "observacoes",
                   "total_escolha"):
         dados[chave] = envio.get(chave) or ""
@@ -844,7 +886,9 @@ class PermissoesTests(_ComUsuario):
         self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 302)
 
     def test_vendas_ve_o_botao_e_a_tela(self):
-        self.assertContains(self.client.get("/orcamentos/", **HOST), "Importar Word ou PDF (IA)")
+        lista = self.client.get("/orcamentos/", **HOST)
+        self.assertContains(lista, "Importar Word ou PDF")
+        self.assertNotContains(lista, "Importar Word ou PDF (IA)")
         self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 200)
 
     def test_a_leitura_de_um_nao_abre_para_outro(self):
@@ -870,10 +914,24 @@ class EnvioDoArquivoTests(_ComUsuario):
         )
         self.assertContains(resposta, "tem nome de PDF, mas o conteúdo não é de um PDF", status_code=400)
 
-    def test_pdf_sem_a_chave_pede_o_docx_em_vez_de_adivinhar(self):
-        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf())}, **HOST)
-        self.assertContains(resposta, "PDF é lido pela IA", status_code=400)
-        self.assertContains(resposta, "importe o .docx", status_code=400)
+    def test_pdf_com_texto_e_lido_aqui_mesmo_sem_a_ia(self):
+        url = self.importar(montar_pdf(), nome="orcamento.pdf")
+        resposta = self.client.get(url, **HOST)
+        self.assertEqual(resposta.context["proposta"]["formato"], "pdf")
+        self.assertEqual(resposta.context["envio"]["nome"], "Buffet Alegria Ltda")
+        self.assertEqual(resposta.context["proposta"]["valores"]["total"]["valor"], "1.919,00")
+        for termo in JARGAO:
+            self.assertNotIn(termo, texto_visivel(resposta))
+
+    def test_pdf_imagem_sem_a_ia_pede_o_word_sem_jargao(self):
+        with self.assertLogs("sistema_interno.views_importacao", "INFO"):
+            resposta = self.client.post(
+                URL_IMPORTAR, {"arquivo": SimpleUploadedFile("scan.pdf", montar_pdf_imagem())}, **HOST,
+            )
+        self.assertContains(resposta, "Este PDF é uma imagem", status_code=400)
+        self.assertContains(resposta, "Envie o arquivo do Word", status_code=400)
+        for termo in JARGAO:
+            self.assertNotIn(termo, texto_visivel(resposta))
 
     def test_o_campo_aceita_word_e_pdf(self):
         resposta = self.client.get(URL_IMPORTAR, **HOST)
@@ -897,17 +955,25 @@ class EnvioDoArquivoTests(_ComUsuario):
 
 class SemChaveDaIATests(_ComUsuario):
 
-    def test_a_importacao_funciona_so_com_as_tabelas_e_avisa(self):
-        url = self.importar(docx_com_tabela())
+    def test_a_importacao_funciona_pela_regra_e_nao_fala_de_chave(self):
+        with self.assertLogs("sistema_interno.views_importacao", "INFO") as registro:
+            url = self.importar(docx_com_tabela())
+        # O motivo fica no log do servidor, para quem cuida dele.
+        self.assertIn("ANTHROPIC_API_KEY", "\n".join(registro.output))
         resposta = self.client.get(url, **HOST)
-        self.assertContains(resposta, "IA indisponível: leitura pelas tabelas do documento; confira com atenção.")
         self.assertContains(resposta, "R$ 1.919,00")
+        for termo in JARGAO:
+            self.assertNotIn(termo, texto_visivel(resposta))
         proposta = resposta.context["proposta"]
         self.assertEqual(len(proposta["itens"]), 3)
         self.assertEqual(proposta["cliente"]["documento"]["valor"], "11.222.333/0001-81")
 
-    def test_a_tela_de_envio_diz_que_a_ia_esta_desligada(self):
-        self.assertContains(self.client.get(URL_IMPORTAR, **HOST), "IA desligada")
+    def test_a_tela_de_envio_nao_fala_de_chave_nem_de_ia(self):
+        resposta = self.client.get(URL_IMPORTAR, **HOST)
+        for termo in JARGAO:
+            self.assertNotIn(termo, texto_visivel(resposta))
+        self.assertNotContains(resposta, "Anthropic")
+        self.assertNotContains(self.client.get("/orcamentos/", **HOST), "(IA)")
 
 
 class CriacaoTests(_ComUsuario):
@@ -922,14 +988,29 @@ class CriacaoTests(_ComUsuario):
     def test_sem_os_obrigatorios_o_servidor_bloqueia(self):
         url = self.importar(docx_com_tabela())
         _, envio = self.proposta_e_envio(url)
+        for item in envio["itens"]:
+            item["conferido"] = True
         resposta = self.client.post(url, formulario_de(envio, forma_envio="", whatsapp="",
                                                        validade="", frete=""), **HOST)
         self.assertEqual(resposta.status_code, 400)
         self.assertEqual(Orcamento.objects.count(), 0)
-        campos = {p["campo"] for p in resposta.context["validado"]["pendencias"]}
-        self.assertTrue({"condicoes.forma_envio", "condicoes.validade", "valores.frete",
-                         "cliente.whatsapp"} <= campos)
+        validado = resposta.context["validado"]
+        # Só o dinheiro segura: frete em branco. WhatsApp, forma de envio e
+        # validade em branco não travam mais (vêm da regra ou do padrão).
+        self.assertEqual({p["campo"] for p in validado["pendencias"]}, {"valores.frete"})
+        self.assertIn("condicoes.forma_envio", {p["campo"] for p in validado["recomendacoes"]})
         self.assertContains(resposta, "Falta preencher", status_code=400)
+
+    def test_whatsapp_em_branco_segue_a_regra_e_nao_trava(self):
+        url = self.importar(docx_com_tabela())
+        proposta, envio = self.envio_completo(url, whatsapp="", forma_envio="", validade="")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        orcamento = Orcamento.objects.get()
+        # (11) 98765-4321: celular de nove dígitos, então WhatsApp.
+        self.assertEqual(orcamento.cliente.canal_telefone, Cliente.CanalTelefone.WHATSAPP)
+        self.assertEqual(orcamento.validade, Orcamento.validade_padrao())
+        self.assertEqual(orcamento.forma_envio, "")
 
     def test_item_sem_produto_nem_linha_avulsa_bloqueia(self):
         url = self.importar(docx_com_produto_inexistente())
@@ -953,7 +1034,7 @@ class CriacaoTests(_ComUsuario):
 
         self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
         orcamento = Orcamento.objects.get()
-        self.assertEqual(resposta["Location"], f"/orcamentos/?editar={orcamento.pk}")
+        self.assertEqual(resposta["Location"], f"/orcamentos/importar/concluido/{orcamento.pk}/")
         self.assertEqual(orcamento.status, Orcamento.Status.RASCUNHO)
         self.assertIsNone(orcamento.enviado_em)
         self.assertEqual(orcamento.responsavel, self.vendedor)
@@ -1009,10 +1090,16 @@ class CriacaoTests(_ComUsuario):
         url = self.importar(docx_com_produto_inexistente())
         proposta, envio = self.proposta_e_envio(url)
         self.assertEqual(envio["validade"], "")
+        # Em branco não trava: vale o padrão do painel, que a tela mostra.
+        self.assertNotIn("condicoes.validade", {
+            p["campo"] for p in formulario.validar(proposta, envio)["pendencias"]})
+        self.assertContains(self.client.get(url, **HOST), "Em branco, vale o padrão do painel")
         sugestao = proposta["condicoes"]["validade"]["sugestoes"][0]
         self.assertEqual(sugestao["valor"], (timezone.localdate() + timedelta(days=5)).isoformat())
-        self.assertEqual(envio["frete"], "")
-        self.assertEqual(proposta["valores"]["frete"]["sugestoes"][0]["valor"], "0,00")
+        # O documento não fala de frete, e a linha já dá o total escrito:
+        # o frete é zero, dito ao lado do campo (e a pessoa troca se for o caso).
+        self.assertEqual(envio["frete"], "0,00")
+        self.assertIn("não cobra frete", proposta["valores"]["frete"]["nota"])
 
     def test_alerta_vermelho_bloqueia_ate_corrigir_ou_justificar(self):
         url = self.importar(docx_com_total_errado())
@@ -1115,28 +1202,42 @@ class CriacaoTests(_ComUsuario):
         self.assertEqual(self.client.post(url, formulario_de(envio, desconto="100,00"), **HOST).status_code, 302)
         self.assertEqual(Orcamento.objects.get().total, Decimal("900.00"))
 
-    def test_total_negociado_oferece_o_valor_final_e_nao_escolhe_sozinho(self):
+    def test_valor_negociado_escrito_vem_escolhido_como_valor_final(self):
         url = self.importar(docx_com_valor_negociado())
         proposta, envio = self.envio_completo(url, forma_envio="Transportadora")
         self.assertTrue(proposta["valor_final"]["oferecido"])
+        self.assertTrue(proposta["valor_final"]["explicito"])
         self.assertEqual(proposta["valor_final"]["valor"], "9.800,00")
         self.assertEqual(proposta["valor_final"]["soma"], "10.200,00")
-        self.assertEqual(envio["total_escolha"], "")
+        # Escrito com rótulo próprio ("Valor total negociado"), é o preço
+        # combinado: já vem escolhido, e a tela mostra a escolha.
+        self.assertEqual(envio["total_escolha"], "valor_final")
+        self.assertContains(self.client.get(url, **HOST), "Qual total vale?")
 
-        resposta = self.client.post(url, formulario_de(envio), **HOST)
-        self.assertEqual(resposta.status_code, 400)
-        self.assertIn("alerta.soma_total", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
-        self.assertContains(resposta, "Qual total vale?", status_code=400)
-
-        resposta = self.client.post(url, formulario_de(envio, total_escolha="valor_final", desconto="50,00"), **HOST)
-        self.assertEqual(resposta.status_code, 302)
+        resposta = self.client.post(url, formulario_de(envio, desconto="50,00"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
         orcamento = Orcamento.objects.get()
         self.assertEqual(orcamento.valor_final, Decimal("9800.00"))
         self.assertEqual(orcamento.desconto, Decimal("0.00"))
         self.assertEqual(orcamento.total, Decimal("9800.00"))
         registro = AtividadeOrcamento.objects.get(orcamento=orcamento, resumo__contains="valor final combinado")
         self.assertIn("R$ 9.800,00", registro.resumo)
+        self.assertIn("valor negociado escrito no documento", registro.resumo)
         self.assertIn("R$ 10.200,00", registro.resumo)
+
+    def test_total_que_nao_bate_oferece_o_valor_final_e_nao_escolhe_sozinho(self):
+        url = self.importar(docx_com_total_errado())
+        proposta, envio = self.envio_completo(url, frete="0,00")
+        self.assertTrue(proposta["valor_final"]["oferecido"])
+        self.assertFalse(proposta["valor_final"]["explicito"])
+        self.assertEqual(proposta["valor_final"]["valor"], "1.850,00")
+        self.assertEqual(envio["total_escolha"], "")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("alerta.soma_total", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+        resposta = self.client.post(url, formulario_de(envio, total_escolha="valor_final"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        self.assertEqual(Orcamento.objects.get().total, Decimal("1850.00"))
 
     def test_manter_a_soma_pede_justificativa(self):
         url = self.importar(docx_com_valor_negociado())
@@ -1150,6 +1251,98 @@ class CriacaoTests(_ComUsuario):
         self.assertTrue(AtividadeOrcamento.objects.filter(
             orcamento=orcamento, resumo__contains="O cliente pediu a proposta cheia").exists())
 
+    def test_a_tela_final_mostra_cliente_e_orcamento_com_os_links(self):
+        url = self.importar(docx_com_tabela(), nome="Proposta Buffet Alegria.docx")
+        _, envio = self.envio_completo(url)
+        destino = self.client.post(url, formulario_de(envio), **HOST)["Location"]
+        orcamento = Orcamento.objects.get()
+        cliente = orcamento.cliente
+        resposta = self.client.get(destino, **HOST)
+        self.assertContains(resposta, "Cliente cadastrado e orçamento criado")
+        self.assertContains(resposta, "Cliente novo")
+        self.assertContains(resposta, f"Orçamento #{orcamento.pk}")
+        self.assertContains(resposta, f'href="/orcamentos/?editar={orcamento.pk}"')
+        self.assertContains(resposta, f"abrir={cliente.pk}")
+        self.assertContains(resposta, "Proposta Buffet Alegria.docx")
+        self.assertContains(resposta, "R$ 1.919,00")
+        # O link do cliente abre a ficha dele, já aberta.
+        ficha = self.client.get(resposta.context["link_cliente"], **HOST)
+        self.assertEqual(ficha.status_code, 200)
+        self.assertContains(ficha, 'get("abrir")')
+        # E é só de quem importou.
+        outro = User.objects.create_user("outra", "outra@exemplo.com", "senha")
+        atribuir_funcoes(outro, ["vendas"])
+        self.client.force_login(outro)
+        self.assertEqual(self.client.get(destino, **HOST).status_code, 404)
+
+    def test_so_cadastrar_o_cliente_nao_pede_nada_do_orcamento(self):
+        url = self.importar(docx_com_tabela())
+        _, envio = self.proposta_e_envio(url)
+        # Nada do orçamento conferido: nem produto, nem frete, nem total.
+        resposta = self.client.post(url, formulario_de(envio, modo="cliente", frete="", forma_envio=""), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        self.assertEqual(Orcamento.objects.count(), 0)
+        cliente = Cliente.objects.get()
+        self.assertEqual(cliente.nome_cliente, "Buffet Alegria Ltda")
+        self.assertEqual(cliente.documento, "11.222.333/0001-81")
+        self.assertEqual(cliente.telefone, "(11) 98765-4321")
+        self.assertEqual(cliente.canal_telefone, Cliente.CanalTelefone.WHATSAPP)
+        self.assertEqual(cliente.email, "contato@buffetalegria.com.br")
+        self.assertEqual(resposta["Location"], f"/clientes/?q=Buffet+Alegria+Ltda&abrir={cliente.pk}")
+        pagina = self.client.get(resposta["Location"], **HOST)
+        self.assertContains(pagina, "Cliente “Buffet Alegria Ltda” cadastrado a partir de “orcamento.docx”.")
+        self.assertEqual(self.client.session.get("importacoes_orcamento_word"), {})
+
+    def test_documento_sem_itens_abre_em_so_o_cliente(self):
+        ficha = montar_docx(
+            par("FICHA DE CADASTRO")
+            + tabela(["Nome", "Marina Souza"], ["CPF", "529.982.247-25"], ["Celular", "11 97777-6655"],
+                     ["E-mail", "marina@festas.com.br"], ["CEP", "01310100"], ["Rua", "Avenida Paulista"],
+                     ["Número", "1000"], ["Bairro", "Bela Vista"], ["Cidade", "São Paulo"], ["UF", "SP"]),
+        )
+        url = self.importar(ficha)
+        proposta, envio = self.proposta_e_envio(url)
+        self.assertEqual(envio["modo"], "cliente")
+        self.assertEqual((envio["nome"], envio["documento"], envio["telefone"], envio["cep"]),
+                         ("Marina Souza", "529.982.247-25", "(11) 97777-6655", "01310-100"))
+        self.assertEqual(formulario.validar(proposta, envio)["pendencias"], [])
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        cliente = Cliente.objects.get()
+        endereco = cliente.endereco_principal
+        self.assertEqual((endereco.cep, endereco.endereco, endereco.numero, endereco.bairro, endereco.cidade,
+                          endereco.estado), ("01310-100", "Avenida Paulista", "1000", "Bela Vista", "São Paulo", "SP"))
+
+    def test_so_o_cliente_que_ja_existe_atualiza_o_cadastro_sem_duplicar(self):
+        existente = Cliente.objects.create(nome_cliente="Buffet Alegria Ltda", email="contato@buffetalegria.com.br")
+        url = self.importar(docx_com_tabela())
+        _, envio = self.proposta_e_envio(url)
+        self.assertEqual(envio["cliente_modo"], "existente")
+        resposta = self.client.post(url, formulario_de(envio, modo="cliente"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        self.assertEqual(Cliente.objects.count(), 1)
+        existente.refresh_from_db()
+        self.assertEqual(existente.documento, "11.222.333/0001-81")
+        self.assertEqual(existente.telefone, "(11) 98765-4321")
+        self.assertIn(f"abrir={existente.pk}", resposta["Location"])
+
+    def test_cliente_que_ja_existe_e_completado_e_nao_sobrescrito(self):
+        existente = Cliente.objects.create(
+            nome_cliente="Buffet Alegria Ltda", email="contato@buffetalegria.com.br",
+            telefone="(11) 3333-0000", canal_telefone=Cliente.CanalTelefone.TELEFONE,
+        )
+        url = self.importar(docx_com_tabela())
+        _, envio = self.envio_completo(url)
+        destino = self.client.post(url, formulario_de(envio), **HOST)["Location"]
+        existente.refresh_from_db()
+        # O telefone que o cadastro já tinha fica; o CNPJ que faltava entra.
+        self.assertEqual(existente.telefone, "(11) 3333-0000")
+        self.assertEqual(existente.documento, "11.222.333/0001-81")
+        self.assertEqual(Orcamento.objects.get().cliente, existente)
+        pronto = self.client.get(destino, **HOST)
+        self.assertContains(pronto, "Cliente já cadastrado")
+        self.assertContains(pronto, "Completado no cadastro com o documento: CPF/CNPJ")
+
     def test_descartar_apaga_a_leitura(self):
         url = self.importar(docx_com_tabela())
         resposta = self.client.post(url, {"action": "descartar"}, **HOST)
@@ -1159,7 +1352,8 @@ class CriacaoTests(_ComUsuario):
     def test_o_rascunho_abre_na_tela_normal_de_edicao(self):
         url = self.importar(docx_com_tabela())
         _, envio = self.envio_completo(url, whatsapp="sim")
-        destino = self.client.post(url, formulario_de(envio), **HOST)["Location"]
+        concluido = self.client.get(self.client.post(url, formulario_de(envio), **HOST)["Location"], **HOST)
+        destino = concluido.context["link_orcamento"]
         resposta = self.client.get(destino, **HOST)
         self.assertEqual(resposta.status_code, 200)
         dados = {o["id"]: o for o in resposta.context["orcamentos_dados"]}
@@ -1309,10 +1503,11 @@ class IATests(_ComUsuario):
         ))
         url = self.importar(docx_com_tabela())
         resposta = self.client.get(url, **HOST)
-        self.assertContains(resposta, "lido com IA (claude-opus-5-5)")
         self.assertContains(resposta, "O texto do documento foi enviado à Anthropic")
         self.assertNotContains(resposta, "IA indisponível")
         proposta = resposta.context["proposta"]
+        self.assertTrue(proposta["ia"]["usada"])
+        self.assertEqual(proposta["ia"]["modelo"], "claude-opus-5-5")
         self.assertEqual(proposta["itens"][1]["valor_unitario"]["origem"], "ambas")
         self.assertEqual(proposta["cliente"]["contato"]["valor"], "Marina Souza")
         produto = proposta["itens"][0]["produto"]
@@ -1322,12 +1517,15 @@ class IATests(_ComUsuario):
         self.assertEqual([a["output_format"] for _, a in falso.chamadas],
                          [ia.OrcamentoLido, ia.EscolhasDeProdutos])
 
-    def test_ia_que_falha_cai_na_leitura_das_tabelas_com_o_motivo(self):
+    def test_ia_que_falha_cai_na_leitura_por_regra_e_o_motivo_vai_para_o_log(self):
         self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), parar="refusal"))
-        url = self.importar(docx_com_tabela())
+        with self.assertLogs("sistema_interno.views_importacao", "WARNING") as registro:
+            url = self.importar(docx_com_tabela())
+        self.assertIn("a IA recusou ler este documento", "\n".join(registro.output))
         resposta = self.client.get(url, **HOST)
-        self.assertContains(resposta, "IA indisponível: leitura pelas tabelas do documento; confira com atenção.")
-        self.assertContains(resposta, "a IA recusou ler este documento")
+        for termo in JARGAO + ("recusou",):
+            self.assertNotIn(termo, texto_visivel(resposta))
+        self.assertFalse(resposta.context["proposta"]["ia"]["usada"])
         self.assertEqual(len(resposta.context["proposta"]["itens"]), 3)
 
 
@@ -1339,25 +1537,37 @@ class PdfTests(IATests):
         # orçamento de exemplo: as linhas do .docx, com os mesmos ids.
         return [{"id": linha["id"], "texto": linha["texto"]} for linha in linhas_de(docx_com_tabela())]
 
-    def test_o_pdf_vai_como_documento_e_volta_para_a_conferencia(self):
-        falso = self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
+    def test_pdf_com_texto_e_lido_aqui_e_a_ia_le_as_mesmas_linhas(self):
+        falso = self.com_cliente(ClienteFalso(leitura_ia_vazia()))
         url = self.importar(montar_pdf(), nome="Orcamento Buffet.pdf")
+        # O PDF com texto não vai inteiro: vão as linhas tiradas dele aqui,
+        # numeradas como as do Word.
+        _, argumentos = falso.chamadas[0]
+        self.assertIs(argumentos["output_format"], ia.OrcamentoLido)
+        self.assertIn("Cliente: Buffet Alegria Ltda", argumentos["messages"][0]["content"])
+        resposta = self.client.get(url, **HOST)
+        self.assertEqual(resposta.context["proposta"]["formato"], "pdf")
+        self.assertEqual(resposta.context["envio"]["nome"], "Buffet Alegria Ltda")
+
+    def test_o_pdf_imagem_vai_como_documento_e_volta_para_a_conferencia(self):
+        falso = self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
+        url = self.importar(montar_pdf_imagem(), nome="Orcamento Buffet.pdf")
         _, argumentos = falso.chamadas[0]
         self.assertIs(argumentos["output_format"], ia.PdfLido)
         documento, pergunta = argumentos["messages"][0]["content"]
         self.assertEqual(documento["type"], "document")
         self.assertEqual(documento["source"]["type"], "base64")
         self.assertEqual(documento["source"]["media_type"], "application/pdf")
-        self.assertEqual(base64.b64decode(documento["source"]["data"]), montar_pdf())
+        self.assertEqual(base64.b64decode(documento["source"]["data"]), montar_pdf_imagem())
         self.assertNotIn("\n", documento["source"]["data"])
         self.assertEqual(pergunta["type"], "text")
         self.assertEqual(argumentos["fallbacks"], "default")
 
         resposta = self.client.get(url, **HOST)
-        self.assertContains(resposta, "PDF lido pela IA")
+        self.assertContains(resposta, "Este PDF é uma imagem")
         self.assertContains(resposta, "O PDF foi enviado à Anthropic")
         proposta = resposta.context["proposta"]
-        self.assertEqual(proposta["formato"], "pdf")
+        self.assertEqual(proposta["formato"], "pdf_ia")
         self.assertEqual(len(proposta["itens"]), 3)
         # Concordância dentro da mesma transcrição não é prova independente.
         self.assertEqual(proposta["itens"][1]["valor_unitario"]["origem"], "ambas")
@@ -1366,7 +1576,7 @@ class PdfTests(IATests):
 
     def test_do_pdf_ao_rascunho_com_o_mesmo_padrao(self):
         self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
-        url = self.importar(montar_pdf(), nome="Orcamento Buffet.pdf")
+        url = self.importar(montar_pdf_imagem(), nome="Orcamento Buffet.pdf")
         _, envio = self.proposta_e_envio(url)
         for item in envio["itens"]:
             item["conferido"] = True
@@ -1382,19 +1592,25 @@ class PdfTests(IATests):
 
     def test_pdf_que_volta_sem_texto_pede_outro_arquivo(self):
         self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[]))
-        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("scan.pdf", montar_pdf())}, **HOST)
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("scan.pdf", montar_pdf_imagem())}, **HOST)
         self.assertContains(resposta, "sem texto legível", status_code=400)
         self.assertNotIn("importacoes_orcamento_word", self.client.session)
 
     def test_pdf_sem_orcamento_dentro_pergunta_se_e_o_arquivo_certo(self):
         self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[{"id": "P1", "texto": "Ata da reunião"}]))
-        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("ata.pdf", montar_pdf())}, **HOST)
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("ata.pdf", montar_pdf_imagem())}, **HOST)
         self.assertContains(resposta, "não encontrei nele um orçamento", status_code=400)
 
-    def test_pdf_que_a_ia_nao_leu_diz_o_motivo(self):
+    def test_pdf_imagem_que_a_ia_nao_leu_pede_o_word_sem_jargao(self):
         self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[], parar="refusal"))
-        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf())}, **HOST)
-        self.assertContains(resposta, "Não consegui ler o PDF: a IA recusou", status_code=400)
+        with self.assertLogs("sistema_interno.views_importacao", "WARNING") as registro:
+            resposta = self.client.post(
+                URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf_imagem())}, **HOST,
+            )
+        self.assertIn("recusou", "\n".join(registro.output))
+        self.assertContains(resposta, "Este PDF é uma imagem", status_code=400)
+        for termo in JARGAO + ("recusou",):
+            self.assertNotIn(termo, texto_visivel(resposta))
 
 
 # ======================================================================
