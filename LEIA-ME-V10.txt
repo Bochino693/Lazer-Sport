@@ -2278,9 +2278,11 @@ Dependência nova: rjsmin (requirements.txt).
    arena/modelos/<id>/), que são também a capa e as fotos da Arena 3D, e as
    vistas de conferência (v-*.jpg, fora do repositório). O "Monte seu espaço"
    usa o próprio .glb e a pegada das medidas (1,00 x 2,40 m; 0,83 x 1,51 m):
-   não tem desenho 2D próprio dessas máquinas. NÃO há migração nesta
-   entrega: a que refaz no Render as capas e as galerias destes produtos é a
-   0153 (outro trabalho). As fotos das categorias (ferramentas/categorias/,
-   que usam estes .glb) ficam com quem cuida delas. Até lá, no servidor:
+   não tem desenho 2D próprio dessas máquinas. NO SITE NO AR: a
+   0154_basquete_e_air_game_reais (seção 60) refaz no Render, à força, a
+   galeria e a capa dos dois, religa o 3D e sobe as fotos das categorias que
+   foram refeitas com o 3D novo (Eletrônicos, Competitivos, Famosos,
+   Esportivos, Kids, Espaço Kids Play e Jogos de Mesa). Se a subida falhar:
        python manage.py cadastrar_variantes_adesivo --fotos
+       python manage.py atualizar_capas_categorias
    Testes: core/tests_variantes_adesivo.py (PecasDeVerdadeTests).
