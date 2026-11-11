@@ -1958,10 +1958,25 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 f"Válida até {orcamento.validade.strftime('%d/%m/%Y')}"
             )
 
+        # O 3D É ARGUMENTO DE VENDA: se algum item abre em 3D na página, a
+        # mensagem diz -- é o que faz o cliente abrir o link na hora.
+        try:
+            from core.views_orcamento import itens_em_3d
+
+            em_3d = itens_em_3d(orcamento)
+        except Exception:  # a mensagem sai de qualquer jeito
+            em_3d = 0
+
         linhas.extend([
             "",
             "Abra a proposta completa para conferir fotos, itens e condições. "
-            "Por essa mesma página você pode *aprovar ou pedir ajustes*:",
+            + (
+                ("Dá para ver *em 3D* o item da proposta: girar, aproximar e conferir as cores. "
+                 if em_3d == 1 else
+                 f"Dá para ver *em 3D* {em_3d} itens da proposta: girar, aproximar e conferir as cores. ")
+                if em_3d else ""
+            )
+            + "Por essa mesma página você pode *aprovar ou pedir ajustes*:",
             link,
             "",
             "Se tiver qualquer dúvida, responda esta mensagem. 😊",

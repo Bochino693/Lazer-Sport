@@ -6,6 +6,10 @@
    (cores3d.js) só chegam quando a pessoa toca em "Ver em 3D". E só se
    desenha quando algo muda (girando sozinho, arrastando, trocando de cor)
    e com o visor na tela.
+
+   `iniciar` também serve a outras páginas (a proposta do orçamento abre o
+   3D de cada item numa janela: site/paginas/orcamento-3d.js): devolve
+   `acordar` e `soltar` (solta o WebGL e a memória ao fechar).
    ====================================================================== */
 
 const raiz = document.querySelector("[data-visor3d]");
@@ -49,7 +53,7 @@ function ligar(visor) {
   if (location.hash === "#ver-3d") mostrar(true);
 }
 
-async function iniciar(visor, tela, aviso, coresCaixa) {
+export async function iniciar(visor, tela, aviso, coresCaixa) {
   aviso.hidden = false;
   aviso.textContent = "Carregando o 3D…";
   const [T, leitor, cores3d] = await Promise.all([
@@ -111,16 +115,23 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
   const vista = { giro: 0.55, inclinacao: 0.22, perto: 1 };
   const meta = { ...vista };
   // a esfera em volta da caixa sobra nos cantos: um pouco mais perto que ela
-  const distanciaBase = (raio / Math.sin(((camera.fov / 2) * Math.PI) / 180)) * 0.88;
+  // a esfera em volta da caixa cabe na tela pelo lado mais apertado (no celular
+  // em pé, a largura): uma máquina comprida não sai cortada dos lados
+  function distanciaBase() {
+    const meiaV = ((camera.fov / 2) * Math.PI) / 180;
+    const meiaH = Math.atan(Math.tan(meiaV) * camera.aspect);
+    return (raio / Math.sin(Math.min(meiaV, meiaH))) * 0.88;
+  }
   let sozinho = true; // gira devagar até a pessoa mexer
   let parado = 0;
   let sujo = true;
   let rodando = false;
   let visivel = true;
   let anterior = 0;
+  let solto = false;
 
   function posicionar() {
-    const d = distanciaBase * vista.perto * (camera.aspect < 1 ? 1.25 : 1);
+    const d = distanciaBase() * vista.perto;
     camera.position.set(
       alvo.x + Math.sin(vista.giro) * Math.cos(vista.inclinacao) * d,
       alvo.y + Math.sin(vista.inclinacao) * d,
@@ -139,7 +150,7 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
   }
 
   function passo(agora) {
-    if (visor.hidden || !visivel || document.hidden) {
+    if (solto || visor.hidden || !visivel || document.hidden) {
       rodando = false;
       return;
     }
@@ -162,6 +173,7 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
   }
 
   function acordar() {
+    if (solto) return;
     medir();
     if (rodando) return;
     rodando = true;
@@ -224,12 +236,33 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
     mexeu();
   });
 
-  new ResizeObserver(medir).observe(tela);
-  new IntersectionObserver((entradas) => {
+  const observaTamanho = new ResizeObserver(medir);
+  observaTamanho.observe(tela);
+  const observaTela = new IntersectionObserver((entradas) => {
     visivel = entradas.some((x) => x.isIntersecting);
     if (visivel) acordar();
-  }).observe(tela);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) acordar(); });
+  });
+  observaTela.observe(tela);
+  const aoVoltar = () => { if (!document.hidden) acordar(); };
+  document.addEventListener("visibilitychange", aoVoltar);
+
+  // fechar de vez (a janela da proposta troca de item): o WebGL e a memória voltam
+  function desligar() {
+    if (solto) return;
+    solto = true;
+    observaTamanho.disconnect();
+    observaTela.disconnect();
+    document.removeEventListener("visibilitychange", aoVoltar);
+    cena.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      for (const m of [].concat(o.material || [])) {
+        for (const valor of Object.values(m)) if (valor && valor.isTexture) valor.dispose();
+        m.dispose();
+      }
+    });
+    renderer.dispose();
+    renderer.forceContextLoss();
+  }
 
   // ---- as cores ----
   const cores = cores3d.coresDoObjeto(gltf);
@@ -270,7 +303,7 @@ async function iniciar(visor, tela, aviso, coresCaixa) {
 
   aviso.hidden = true;
   visor.classList.add("produto-visor3d--pronto");
-  return { acordar };
+  return { acordar, soltar: desligar };
 }
 
 function limitar(valor, menor, maior) {

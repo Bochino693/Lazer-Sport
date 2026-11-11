@@ -32,7 +32,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
+from . import arena
 from .impressao import densidade, peso_do_documento
+from .objetos_3d import tabela_pronta
+from sistema_interno.templatetags.interno_extras import estatico
 from core.models import EnderecoEmpresa
 from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import Orcamento
@@ -60,6 +63,9 @@ def carregar_orcamento_exibicao(*, bloquear=False, **filtros):
             "itens__brinquedo__imagens_brinquedo",
             "itens__produto",
             "itens__peca__imagem_peca_reposicao",
+            # O objeto 3D do brinquedo (o "Ver em 3D" da linha): trazido
+            # junto, e só quando a tabela existe (ver `objetos_3d`).
+            *(("itens__brinquedo__objeto_3d",) if tabela_pronta() else ()),
         )
     )
     if bloquear:
@@ -71,9 +77,55 @@ def _carregar(token):
     return carregar_orcamento_exibicao(token=token)
 
 
+def modelo_3d_do_item(item):
+    """O endereço do .glb da linha da proposta ("" quando ela não tem 3D).
+
+    O CLIENTE VÊ O QUE ESTÁ COMPRANDO, NÃO SÓ A FOTO. A linha que tem objeto
+    3D ganha o "Ver em 3D": girar, aproximar e trocar as cores, como na
+    página do brinquedo -- a conversa sai de "é parecido com a foto" para
+    "é isto aqui".
+
+    A regra é a da página do brinquedo (`views.modelo_3d_da_vitrine`): o
+    objeto do cadastro vence, tirado no painel não aparece, e sem cadastro
+    vale o objeto que o site fez para a máquina, pelo nome. Linha de
+    produção ou escrita à mão acha o 3D pelo nome da descrição; peça de
+    reposição não tem. Nunca derruba a proposta: sem 3D, segue a foto.
+    """
+    try:
+        if item.brinquedo_id and item.brinquedo:
+            from .views import modelo_3d_da_vitrine
+
+            return modelo_3d_da_vitrine(item.brinquedo)
+        if item.peca_id:
+            return ""
+        modelo = arena.modelo_da_maquina(item.descricao or "")
+        return estatico(modelo["arquivo"]) if modelo else ""
+    except Exception:
+        logging.getLogger(__name__).exception("Proposta %s: o 3D do item %s não abriu", item.orcamento_id, item.pk)
+        return ""
+
+
+def itens_em_3d(orcamento):
+    """Quantas linhas da proposta abrem em 3D (a mensagem do WhatsApp avisa).
+
+    Consulta própria, com o objeto 3D trazido junto: quem monta a mensagem
+    não carregou os itens assim.
+    """
+    from sistema_interno.models import ItemOrcamento
+
+    itens = (
+        ItemOrcamento.objects.filter(orcamento=orcamento)
+        .select_related("brinquedo")
+        .prefetch_related(*(("brinquedo__objeto_3d",) if tabela_pronta() else ()))
+    )
+    return sum(1 for item in itens if modelo_3d_do_item(item))
+
+
 def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     """Dados compartilhados pela página pública e pela prévia interna."""
     itens = list(orcamento.itens.all())
+    for item in itens:
+        item.modelo_3d = modelo_3d_do_item(item)
     endereco_cliente = (
         orcamento.cliente.endereco_principal
         if orcamento.cliente_id and orcamento.cliente else None
@@ -171,6 +223,8 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         "responsavel_nome": responsavel,
         "previsualizacao": previsualizacao,
         "quantidade_itens": sum(item.quantidade for item in itens),
+        # quantas linhas abrem em 3D: o aviso no topo dos itens e a janela do visor
+        "itens_3d": sum(1 for item in itens if item.modelo_3d),
         "subtotal": orcamento.subtotal,
         "total": orcamento.total,
         "vencido": orcamento.vencido,

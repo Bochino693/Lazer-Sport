@@ -1814,3 +1814,32 @@ Dependência nova: rjsmin (requirements.txt).
        python manage.py cadastrar_variantes_adesivo --so air-game-kids-alienigenas --fotos
        python manage.py atualizar_capas_categorias
    Testes: core/tests_variantes_adesivo.py (SemTabuaTests).
+
+56) ORÇAMENTO: O ITEM COM OBJETO 3D ABRE EM 3D NA PROPOSTA DO CLIENTE
+   O pedido do cliente: "nos orçamentos, se o item posto nele tiver um
+   objeto 3D, o cliente também deve ser capaz de visualizar, fazendo assim
+   uma interação melhor e mais concreta com o cliente."
+   NA PROPOSTA (a página /orcamento/<token>/ que o cliente abre, e a prévia
+   do painel): cada linha que tem objeto 3D ganha o selo "3D" na foto e o
+   botão "Ver em 3D"; em cima dos itens, o aviso de quantos itens abrem em
+   3D. O toque abre uma janela com o visor da página do brinquedo
+   (site/arena/visor3d.js): girar com o dedo ou o mouse, aproximar, toque
+   duplo volta, e as cores do objeto. Com mais de um item em 3D, as setas
+   passam de um para o outro ("2 de 3"). No celular, a janela é a tela
+   inteira. Nada do 3D é baixado antes do toque, um visor por vez (o de
+   antes solta o WebGL e a memória), e a folha impressa não leva nem o
+   aviso nem os botões.
+   QUAL 3D (core/views_orcamento.py, modelo_3d_do_item): a regra da página
+   do brinquedo -- o objeto do cadastro vence; tirado no painel, não
+   aparece (nem pelo nome); sem cadastro, vale o objeto que o site fez
+   para a máquina, pelo nome. A linha de produção ou escrita à mão acha
+   o 3D pelo nome da descrição ("Brinquedão Modelo 2 (5 x 3 m)"); peça de
+   reposição não tem. Se algo der errado, a linha segue com a foto.
+   A MENSAGEM DO WHATSAPP (OrcamentosInnerView.mensagem_da_proposta) avisa
+   quando há item em 3D: "Dá para ver *em 3D* ...".
+   O visor da página do brinquedo agora enquadra pelo lado mais apertado da
+   tela: no celular em pé, uma máquina comprida não sai cortada dos lados.
+   Código: core/views_orcamento.py (modelo_3d_do_item, itens_em_3d),
+   core/templates/orcamento_publico.html, site/paginas/orcamento-3d.js,
+   site/paginas/orcamento_publico.css, site/arena/visor3d.js (iniciar
+   exportado; soltar). Testes: core/tests_orcamento.py (Orcamento3DTests).

@@ -466,3 +466,140 @@ class OrcamentoModeloTests(TestCase):
 
         with self.assertRaises(ValidationError):
             item.clean()
+
+
+class Orcamento3DTests(TestCase):
+    """O item da proposta que tem objeto 3D abre em 3D para o cliente.
+
+    A regra é a da página do brinquedo: o objeto do cadastro vence; tirado
+    no painel, não aparece (nem pelo nome); sem cadastro, vale o objeto que
+    o site fez para a máquina, pelo nome -- também para a linha escrita à
+    mão ou de produção. Peça de reposição não tem. Nada disso vai para a
+    folha impressa, e a mensagem do WhatsApp avisa que há 3D.
+    """
+
+    GLB = "site/arena/modelos/brinquedao-modelo-2.glb"
+
+    def setUp(self):
+        from .models import ObjetoTresD
+
+        self.ObjetoTresD = ObjetoTresD
+        self.orcamento = Orcamento.objects.create(
+            nome_cliente="Buffet Alegria",
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
+            validade=timezone.localdate() + timedelta(days=7),
+        )
+
+    def _brinquedo(self, nome):
+        return Brinquedos.objects.create(
+            nome_brinquedo=nome, descricao="x", valor_brinquedo=Decimal("100.00"),
+            avaliacao=Decimal("5.00"), voltz="220",
+        )
+
+    def _item(self, descricao, **origem):
+        return ItemOrcamento.objects.create(
+            orcamento=self.orcamento, descricao=descricao, quantidade=1,
+            valor_unitario=Decimal("100.00"), **origem,
+        )
+
+    def _pagina(self):
+        resposta = self.client.get(reverse("orcamento_publico", args=[self.orcamento.token]))
+        self.assertEqual(resposta.status_code, 200)
+        return resposta
+
+    def test_o_item_com_objeto_3d_do_cadastro_abre_em_3d(self):
+        brinquedo = self._brinquedo("Piscina de bolinhas grande")
+        self.ObjetoTresD.objects.create(brinquedo=brinquedo, arquivo_estatico=self.GLB, codigo="piscina")
+        self._item("Piscina de bolinhas grande", brinquedo=brinquedo)
+        self._item("Tobogã inflável", brinquedo=self._brinquedo("Tobogã inflável"))
+        resposta = self._pagina()
+        itens = resposta.context["itens"]
+        self.assertIn("brinquedao-modelo-2.glb", itens[0].modelo_3d)
+        self.assertEqual(itens[1].modelo_3d, "")
+        self.assertEqual(resposta.context["itens_3d"], 1)
+        html = resposta.content.decode()
+        self.assertEqual(html.count("data-orc3d-abrir"), 1)
+        self.assertIn(f'data-modelo="{itens[0].modelo_3d}"', html)
+        self.assertIn("1 item desta proposta pode ser visto em 3D", html)
+        self.assertIn('id="orc3d"', html)
+        self.assertIn("orcamento-3d", html)
+        self.assertIn("visor3d", html)
+
+    def test_sem_3d_a_proposta_fica_como_era(self):
+        self._item("Tobogã inflável", brinquedo=self._brinquedo("Tobogã inflável"))
+        self._item("Montagem e frete")
+        html = self._pagina().content.decode()
+        self.assertNotIn("data-orc3d-abrir", html)
+        self.assertNotIn('id="orc3d"', html)
+        self.assertNotIn("orcamento-3d", html)
+
+    def test_pelo_nome_da_maquina_na_linha_escrita_a_mao(self):
+        # a linha sem cadastro acha o objeto que o site fez para a máquina
+        self._item("Brinquedão Modelo 2 (5 x 3 m)")
+        self._item("Brinquedão Ninja", brinquedo=self._brinquedo("Brinquedão Ninja"))
+        resposta = self._pagina()
+        modelos = [item.modelo_3d for item in resposta.context["itens"]]
+        self.assertIn("brinquedao-modelo-2.glb", modelos[0])
+        self.assertIn("brinquedao-ninja.glb", modelos[1])
+        html = resposta.content.decode()
+        self.assertIn("2 itens desta proposta podem ser vistos em 3D", html)
+        self.assertIn("data-orc3d-proximo", html)  # as setas passam de um para o outro
+
+    def test_tirado_no_painel_nao_aparece_nem_pelo_nome(self):
+        brinquedo = self._brinquedo("Brinquedão Modelo 2")
+        self.ObjetoTresD.objects.create(brinquedo=brinquedo, arquivo_estatico=self.GLB, codigo="b2", ativo=False)
+        self._item("Brinquedão Modelo 2", brinquedo=brinquedo)
+        self.assertEqual(self._pagina().context["itens_3d"], 0)
+
+    def test_peca_de_reposicao_nao_tem_3d(self):
+        from .models import PecasReposicao
+
+        peca = PecasReposicao.objects.create(nome="Brinquedão Modelo 2 - rede de proteção", descricao_peca="Rede")
+        self._item("Brinquedão Modelo 2 - rede de proteção", peca=peca)
+        self.assertEqual(self._pagina().context["itens_3d"], 0)
+
+    def test_a_folha_impressa_nao_leva_o_3d(self):
+        from django.contrib.staticfiles import finders
+
+        with open(finders.find("site/paginas/orcamento_publico.css"), encoding="utf-8") as arquivo:
+            css = arquivo.read()
+        impressao = css[css.index("@media print"):]
+        self.assertIn(".aviso-3d,.item-ver3d,.item-selo-3d,.orc3d{display:none!important}", impressao)
+
+    def test_a_mensagem_do_whatsapp_avisa_do_3d(self):
+        from sistema_interno.views_gestao import OrcamentosInnerView
+
+        self._item("Tobogã inflável", brinquedo=self._brinquedo("Tobogã inflável"))
+        sem = OrcamentosInnerView.mensagem_da_proposta(self.orcamento, "https://exemplo/link")
+        self.assertNotIn("3D", sem)
+        self._item("Brinquedão Modelo 3")
+        com = OrcamentosInnerView.mensagem_da_proposta(self.orcamento, "https://exemplo/link")
+        self.assertIn("Dá para ver *em 3D* o item da proposta", com)
+        self._item("Air Game Kids Alienígenas")
+        com = OrcamentosInnerView.mensagem_da_proposta(self.orcamento, "https://exemplo/link")
+        self.assertIn("Dá para ver *em 3D* 2 itens da proposta", com)
+
+    def test_os_scripts_do_3d_compilam(self):
+        # Os dois são módulos: um nome repetido (já houve um `soltar` duplo)
+        # derruba o 3D da proposta E o da página do brinquedo. O `node
+        # --check` só confere módulo com a extensão .mjs.
+        import shutil
+        import subprocess
+        import tempfile
+        from pathlib import Path
+
+        from django.contrib.staticfiles import finders
+
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("sem o node")
+        for caminho in ("site/arena/visor3d.js", "site/paginas/orcamento-3d.js"):
+            with self.subTest(caminho), tempfile.TemporaryDirectory() as pasta:
+                destino = Path(pasta) / "modulo.mjs"
+                destino.write_bytes(Path(finders.find(caminho)).read_bytes())
+                resultado = subprocess.run([node, "--check", str(destino)], capture_output=True, text=True)
+                self.assertEqual(resultado.returncode, 0, f"{caminho}: {resultado.stderr}")
+        with open(finders.find("site/arena/visor3d.js"), encoding="utf-8") as arquivo:
+            visor = arquivo.read()
+        self.assertIn("export async function iniciar", visor)
+        self.assertIn("return { acordar, soltar: desligar }", visor)

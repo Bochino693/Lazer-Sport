@@ -179,6 +179,91 @@ body{
 .item-unitario,.item-valor{justify-content:flex-end;font-weight:750;white-space:nowrap;text-align:right}
 .item-valor{font-size:1rem;color:var(--marca)}
 
+/* ------------------------------------------- os itens em 3D (orcamento-3d.js)
+   A linha com objeto 3D abre o visor da página do brinquedo numa janela:
+   o cliente gira, aproxima e troca as cores do que está comprando. Nada
+   disto vai para a folha impressa (`.nao-imprime`). */
+.aviso-3d{
+  display:flex;align-items:flex-start;gap:11px;margin:0 0 14px;padding:12px 15px;
+  border-radius:14px;border:1px solid #cfd8ff;
+  background:linear-gradient(120deg,#eef0ff 0%,#f4f0ff 55%,#eafaf6 100%);
+  color:var(--tinta-2);font-size:.88rem;line-height:1.45
+}
+.aviso-3d>i{font-size:1.45rem;color:#4f46e5;line-height:1;margin-top:1px}
+.aviso-3d strong{color:var(--marca);display:block}
+.item-foto{position:relative}
+.item-foto--3d{cursor:pointer;border-color:#c7cdfd;box-shadow:0 0 0 3px rgba(79,70,229,.08)}
+.item-foto--3d:focus-visible{outline:3px solid #4f46e5;outline-offset:2px}
+.item-foto--3d .sem-foto{color:#4f46e5}
+.item-selo-3d{
+  position:absolute;right:4px;bottom:4px;padding:1px 6px;border-radius:999px;
+  background:#4f46e5;color:#fff;font-size:.62rem;font-weight:850;letter-spacing:.4px;
+  box-shadow:0 2px 6px rgba(79,70,229,.35)
+}
+.item-ver3d{
+  display:flex;width:max-content;max-width:100%;align-items:center;gap:6px;margin-top:8px;padding:6px 12px;
+  border:0;border-radius:999px;cursor:pointer;font:inherit;font-size:.8rem;font-weight:800;
+  color:#fff;background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  box-shadow:0 6px 16px rgba(79,70,229,.28);transition:transform .15s,box-shadow .15s
+}
+.item-ver3d:hover{transform:translateY(-1px);box-shadow:0 9px 20px rgba(79,70,229,.34)}
+.item-ver3d:focus-visible{outline:3px solid #ffb703;outline-offset:2px}
+.item-ver3d i{font-size:1rem}
+
+.orc3d{
+  width:min(960px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:0;
+  border-radius:var(--raio-g);overflow:hidden;color:#fff;
+  background:radial-gradient(120% 90% at 50% 18%,#1d2b7a 0%,#0b1446 58%,#070d33 100%);
+  box-shadow:0 30px 90px rgba(5,10,40,.55)
+}
+.orc3d[open]{display:flex;flex-direction:column}
+.orc3d::backdrop{background:rgba(6,10,35,.72);backdrop-filter:blur(3px)}
+.orc3d-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px 6px}
+.orc3d-titulo{min-width:0}
+.orc3d-kicker{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#a5b4fc}
+.orc3d-titulo h2{margin:3px 0 0;font-size:1.25rem;font-weight:800;letter-spacing:-.3px;overflow-wrap:anywhere}
+.orc3d-titulo p{margin:3px 0 0;font-size:.84rem;color:#c7d2fe}
+.orc3d-fechar{
+  flex:0 0 auto;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.08);color:#fff;font-size:1rem;cursor:pointer;display:grid;place-items:center
+}
+.orc3d-fechar:hover{background:rgba(255,255,255,.18)}
+.orc3d-palco{position:relative;flex:1 1 auto;height:min(62dvh,560px);min-height:260px}
+.orc3d-visor,.orc3d-visor canvas{position:absolute;inset:0;width:100%;height:100%}
+.orc3d-visor canvas{display:block;touch-action:none;cursor:grab;outline:none}
+.orc3d-visor canvas:active{cursor:grabbing}
+.orc3d-aviso{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;padding:10px 16px;
+  border-radius:12px;background:rgba(10,16,60,.75);color:#e0e7ff;font-size:.88rem;font-weight:700;text-align:center
+}
+.orc3d-aviso[hidden]{display:none}
+.orc3d-cores{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 20px 0}
+.orc3d-cores[hidden]{display:none}
+.orc3d-cores .produto-cores-rotulo{display:inline-flex;align-items:center;gap:6px;color:#ffd23f;font-size:.76rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.orc3d-cores .produto-cor3d{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 6px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:.8rem;font-weight:800
+}
+.orc3d-cores .produto-cor3d i{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.5);background:var(--amostra,conic-gradient(#e63946,#ffb703,#2a9d8f,#3a86ff,#e63946))}
+.orc3d-cores .produto-cor3d[aria-pressed="true"]{border-color:#ffd23f;box-shadow:0 0 0 2px rgba(255,210,63,.3)}
+.orc3d-pe{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px 16px}
+.orc3d-dica{font-size:.8rem;color:#c7d2fe}
+.orc3d-navegar{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:.86rem}
+.orc3d-navegar button{
+  width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);
+  color:#fff;cursor:pointer;display:grid;place-items:center
+}
+.orc3d-navegar button:hover{background:rgba(255,255,255,.2)}
+.orc3d button:focus-visible{outline:3px solid #ffb703;outline-offset:2px}
+@media (max-width:680px){
+  .orc3d{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+  .orc3d-palco{height:auto;flex:1 1 auto}
+  .orc3d-topo{padding:14px 16px 4px}.orc3d-cores{padding:4px 16px 0}.orc3d-pe{padding:10px 16px 14px}
+  .orc3d-titulo h2{font-size:1.08rem}
+  .orc3d-dica{flex:1 1 100%;order:2;text-align:center}
+  .orc3d-navegar{flex:1 1 100%;justify-content:center}
+}
+
 /* ---------------------------------------------------------- somatório */
 .soma{margin-top:20px;border-top:2px solid var(--linha-forte);padding-top:16px}
 .soma-linha{
@@ -377,6 +462,9 @@ body{
   @page{size:A4 portrait;margin:9mm}
   html,body{width:192mm;min-height:0;background:#fff;font-size:9.5pt;line-height:1.35}
   .decisao,.rodape .nao-imprime,.previa-bar,.documento-acoes{display:none!important}
+  /* o 3D é da tela: na folha, a linha fica só com a foto e os dados */
+  .aviso-3d,.item-ver3d,.item-selo-3d,.orc3d{display:none!important}
+  .item-foto--3d{box-shadow:none;border-color:var(--linha)}
   .entra{animation:none;opacity:1;transform:none}
 
   /* `min-height` e não `height`: se a proposta passar da folha ela

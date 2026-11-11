@@ -213,6 +213,23 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
       <span>{{ itens|length }} {% if itens|length == 1 %}linha{% else %}linhas{% endif %}</span>
     </div>
 
+    {% if itens_3d %}
+      {% comment %}
+        O 3D DO QUE ESTÁ NA PROPOSTA. A linha que tem objeto 3D (o mesmo
+        da página do brinquedo) abre numa janela para girar, aproximar e
+        trocar as cores: o cliente decide olhando a máquina, e não só uma
+        foto. Nada do 3D é baixado antes do toque; a folha impressa não
+        leva o aviso nem os botões.
+      {% endcomment %}
+      <div class="aviso-3d nao-imprime">
+        <i class="bi bi-badge-3d-fill" aria-hidden="true"></i>
+        <span>
+          <strong>{% if itens_3d == 1 %}1 item desta proposta pode ser visto em 3D.{% else %}{{ itens_3d }} itens desta proposta podem ser vistos em 3D.{% endif %}</strong>
+          Toque em <b>Ver em 3D</b> para girar, aproximar e conferir as cores antes de decidir.
+        </span>
+      </div>
+    {% endif %}
+
     {% if itens %}
       <div class="item-cabecalho" aria-hidden="true">
         <span>Descrição</span>
@@ -225,12 +242,15 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
     {% for item in itens %}
       <div class="item">
         <span class="item-descricao">
-          <span class="item-foto">
+          <span class="item-foto{% if item.modelo_3d %} item-foto--3d{% endif %}">
             {% if item.imagem %}
               <img src="{{ item.imagem.url }}" alt="{{ item.descricao }}" loading="lazy">
+            {% elif item.modelo_3d %}
+              <i class="bi bi-box-seam sem-foto" aria-hidden="true"></i>
             {% else %}
               <span class="sem-foto" aria-hidden="true">◎</span>
             {% endif %}
+            {% if item.modelo_3d %}<span class="item-selo-3d nao-imprime" aria-hidden="true">3D</span>{% endif %}
           </span>
           <span class="item-texto">
             <span class="item-nome">{{ item.descricao }}</span>
@@ -244,6 +264,14 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
             {% for linha in item.ficha %}
               <span class="item-medidas">{{ linha }}</span>
             {% endfor %}
+            {% if item.modelo_3d %}
+              <button class="item-ver3d nao-imprime" type="button" data-orc3d-abrir
+                      data-modelo="{{ item.modelo_3d }}"
+                      data-nome="{{ item.descricao }}"
+                      data-ficha="{{ item.ficha|join:' · ' }}">
+                <i class="bi bi-badge-3d" aria-hidden="true"></i> Ver em 3D
+              </button>
+            {% endif %}
           </span>
         </span>
         <span class="item-quantidade">{{ item.quantidade }}</span>
@@ -458,6 +486,44 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
     <span class="nao-imprime">Esta página é sua — guarde o link para consultar a proposta quando quiser.</span>
   </p>
 </div>
+
+{% if itens_3d %}
+  {% comment %}
+    A JANELA DO 3D: um visor por vez (o da linha tocada), com as setas
+    para passar pelos outros itens em 3D da proposta. O visor é o da página
+    do brinquedo (site/arena/visor3d.js); o three.js e o .glb só chegam no
+    primeiro toque.
+  {% endcomment %}
+  <dialog class="orc3d" id="orc3d" aria-labelledby="orc3dNome"
+          data-visor="{% estatico 'site/arena/visor3d.js' %}"
+          data-three="{% static 'vendor/three/three.module.min.js' %}"
+          data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+          data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
+    <div class="orc3d-topo">
+      <div class="orc3d-titulo">
+        <span class="orc3d-kicker"><i class="bi bi-badge-3d" aria-hidden="true"></i> Proposta nº {{ orcamento.pk }} em 3D</span>
+        <h2 id="orc3dNome"></h2>
+        <p id="orc3dFicha" hidden></p>
+      </div>
+      <button class="orc3d-fechar" type="button" data-orc3d-fechar aria-label="Fechar o 3D">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="orc3d-palco" data-orc3d-palco></div>
+    <div class="orc3d-cores" data-orc3d-cores role="group" aria-label="Cores do item" hidden></div>
+    <div class="orc3d-pe">
+      <span class="orc3d-dica"><i class="bi bi-hand-index" aria-hidden="true"></i> Arraste para girar · pince ou role para aproximar · toque duplo volta</span>
+      {% if itens_3d > 1 %}
+        <span class="orc3d-navegar">
+          <button type="button" data-orc3d-anterior aria-label="Item anterior em 3D"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+          <span data-orc3d-contador aria-live="polite"></span>
+          <button type="button" data-orc3d-proximo aria-label="Próximo item em 3D"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+        </span>
+      {% endif %}
+    </div>
+  </dialog>
+  <script type="module" src="{% estatico 'site/paginas/orcamento-3d.js' %}"></script>
+{% endif %}
 
 <script>
 (function () {
