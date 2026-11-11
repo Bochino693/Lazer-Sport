@@ -108,16 +108,22 @@ def modelo_3d_do_item(item):
 def itens_em_3d(orcamento):
     """Quantas linhas da proposta abrem em 3D (a mensagem do WhatsApp avisa).
 
-    Consulta própria, com o objeto 3D trazido junto: quem monta a mensagem
-    não carregou os itens assim.
+    NA LISTA, NENHUMA CONSULTA A MAIS. A lista do painel monta a mensagem de
+    cada proposta e já traz os itens por prefetch (com o brinquedo e o
+    objeto 3D dele): aqui se usa esse cache, e não uma consulta por linha.
+    Fora dela (a janela de envio de uma proposta só), consulta própria, com
+    o objeto 3D junto.
     """
-    from sistema_interno.models import ItemOrcamento
+    if "itens" in getattr(orcamento, "_prefetched_objects_cache", {}):
+        itens = orcamento.itens.all()
+    else:
+        from sistema_interno.models import ItemOrcamento
 
-    itens = (
-        ItemOrcamento.objects.filter(orcamento=orcamento)
-        .select_related("brinquedo")
-        .prefetch_related(*(("brinquedo__objeto_3d",) if tabela_pronta() else ()))
-    )
+        itens = (
+            ItemOrcamento.objects.filter(orcamento=orcamento)
+            .select_related("brinquedo")
+            .prefetch_related(*(("brinquedo__objeto_3d",) if tabela_pronta() else ()))
+        )
     return sum(1 for item in itens if modelo_3d_do_item(item))
 
 

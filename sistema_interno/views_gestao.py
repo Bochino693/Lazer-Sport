@@ -68,6 +68,7 @@ from . import etapas_padrao
 from . import fragmento
 from .sincronia import revisao_modulo
 from . import financeiro as fin
+from core.objetos_3d import tabela_pronta
 from .models import (
     AtividadeOrcamento,
     Cliente,
@@ -363,7 +364,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     "itens",
                     queryset=ItemOrcamento.objects
                     .select_related("brinquedo", "produto__brinquedo", "peca")
-                    .prefetch_related("peca__imagem_peca_reposicao"),
+                    .prefetch_related(
+                        "peca__imagem_peca_reposicao",
+                        # o "Ver em 3D" da mensagem do WhatsApp (core.views_orcamento.itens_em_3d)
+                        *(("brinquedo__objeto_3d",) if tabela_pronta() else ()),
+                    ),
                 )
             )
         ))
