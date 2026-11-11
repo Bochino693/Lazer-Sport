@@ -96,11 +96,32 @@
     caixa.querySelector('.ls-onde-reserva')?.remove();
     secao.classList.add('ls-onde--pronto');
 
+    // Um mundo só: o mapa não se repete para os lados (arrastando muito,
+    // aparecia outra América, sem nenhum alfinete). O arrasto para na beira
+    // do mundo, e o zoom mínimo é o que ainda enche a caixa do mapa.
+    const MUNDO = L.latLngBounds([[-85.05112878, -180], [85.05112878, 180]]);
+
     const mapa = L.map(caixa, {
         scrollWheelZoom: false,
         maxZoom: ZOOM_MAXIMO,
         zoomSnap: 1,
+        maxBounds: MUNDO,
+        maxBoundsViscosity: 1,
+        worldCopyJump: false,
     });
+
+    function zoomQueEncheACaixa() {
+        const tamanho = mapa.getSize();
+        const lado = Math.max(tamanho.x, tamanho.y, 1);
+        return Math.max(0, Math.ceil(Math.log2(lado / 256)));
+    }
+
+    function ajustarZoomMinimo() {
+        const minimo = zoomQueEncheACaixa();
+        if (mapa.getMinZoom() !== minimo) mapa.setMinZoom(minimo);
+    }
+    ajustarZoomMinimo();
+    mapa.on('resize', ajustarZoomMinimo);
 
     /* O servidor de mapas do OpenStreetMap recusa (o quadro "Access
        blocked") quem pede o mapa sem dizer de que site vem. O site manda
@@ -109,6 +130,8 @@
        endereço do site (sem a página), como pede a regra de uso. */
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: ZOOM_MAXIMO,
+        noWrap: true,
+        bounds: MUNDO,
         referrerPolicy: 'strict-origin-when-cross-origin',
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
     }).addTo(mapa);
