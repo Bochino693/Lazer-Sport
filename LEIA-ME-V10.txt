@@ -3202,3 +3202,52 @@ Dependência nova: rjsmin (requirements.txt).
    Conferido no navegador (PC e celular): escolher 2 brinquedos, -15%,
    digitar 25000, salvar, ligar/desligar; o slide da promoção no topo.
    Testes: core/tests_promocoes_varios.py.
+
+75) TELA DE BRINQUEDOS DO PAINEL E AS CORES DE TODAS AS TELAS DE GESTÃO
+   Pedidos: "refaça a maioria das coisas da tela de brinquedo, modernize e
+   arrume as cores ... não segue as cores do sistema ... o amarronzado
+   feio"; "MUITAS PARTES MARRONS EM TODO LADO" (telas site/... do painel).
+   BRINQUEDOS (gestao/brinquedos_adm.html + site/paginas/
+   gestao-brinquedos_adm.css/.js), só com as variáveis do tema:
+     * topo, quatro números e a busca ("nome ou #número"); filtros em chips
+       com a contagem -- loja (todos / na loja / fora), capa (com / sem) e
+       categorias ("ver todas" quando passam de duas linhas). Nenhum
+       <select>. Os chips são links e guardam os outros filtros;
+     * a lista em cartões: foto, selos (na loja / só catálogo / na loja sem
+       preço, 3D, fotos x/3), nome, #número, voltagem, medidas (ou "Sem
+       medidas -- a proposta sai sem o tamanho"), preço ou "Sob consulta",
+       categorias; Editar, Ver no site (o endereço do SITE, e não do
+       painel) e Excluir. No celular o cartão deita, foto ao lado;
+     * o cadastro num <dialog> em duas colunas: as 4 vistas (PERFIL
+       obrigatória, no máximo 3, trocar/descartar/remover/manter, foto
+       inteira ao tocar, arrastar o arquivo para o quadro), o objeto 3D,
+       nome e descrição (contador), preço em reais inteiros (6990 vira R$
+       6.990,00; o recado mostra como fica), a chave "Mostrar na loja"
+       (avisa quando não há preço), voltagem em chips (valor antigo fora da
+       lista vira um chip a mais, já marcado), medidas, avaliação,
+       categorias e tags em chips com filtro, contador, limpar e "nova"
+       sem fechar o cadastro. Esc com coisa digitada pergunta antes;
+     * excluir: basta digitar o nome (sem acento/maiúscula vale); o
+       servidor continua recebendo a frase "CONFIRMAR EXCLUSÃO <nome>";
+     * o JavaScript foi para o bloco `scripts`: dentro do conteúdo ele não
+       rodava de novo quando o filtro trocava a lista pela navegação suave,
+       e Editar/Excluir paravam de responder.
+   Na view (BrinquedoAdmin): filtros loja/capa e #número na busca;
+   categoria que não é número não derruba mais a tela (era 500); preço
+   "18.000" é dezoito mil (Enter sem sair do campo virava R$ 18,00);
+   "Não se aplica" (13 letras num campo de 10: DataError no Postgres) grava
+   a voltagem vazia. Os name= e ids do formulário são os de antes.
+   TODAS AS TELAS DE GESTÃO: as ~700 cores fixas da paleta do /adm antigo
+   (#1E1913, #231D16, #E7DDCB, #F2A93B, rgba(44,37,27,...)...) nos CSS
+   gestao-*.css e nos <style> dos templates viraram variáveis do tema. Na
+   camada comum (sistema_interno/static/interno/gestao_integrada.css): o
+   topo "-hero" deixa de ser caixa café com brilho âmbar (é olho, título e
+   frase no fundo da página, como Orçamentos; o botão quebra a linha e no
+   celular ocupa a largura); os números ficam dois a dois no celular; o
+   cabeçalho de tabela usa a tinta do tema; a lupa da busca não fica mais
+   em cima do texto. Banners não redefine mais --shadow/--card do painel
+   nem pinta todo botão (o sino saía da tela no celular).
+   Conferido no navegador (1366, 1920, tablet 820, celular 390; claro e
+   escuro): lista, filtro, cadastro aberto, salvar/editar/excluir.
+   Testes: core/tests_brinquedos_adm_tela.py, core/tests_gestao_cores.py
+   (cores proibidas, tela que não reescreve o painel, camada comum).

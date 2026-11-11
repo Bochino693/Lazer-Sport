@@ -29,6 +29,12 @@
 
 .gestao-integrada .ls-content{color:var(--text)}
 
+/* A onda do sino (o anel que cresce 1,55x quando há aviso) passava da
+   borda direita no celular, e a tela ganhava de 1 a 3px de rolagem de
+   lado. A barra corta só na horizontal: os painéis que descem dela
+   (avisos, aparência) continuam inteiros, e o sticky continua valendo. */
+.gestao-integrada .ls-topbar{overflow-x:clip}
+
 /* O conteúdo herdado usava a largura do painel antigo. Aqui quem decide a
    margem é a área de trabalho do aplicativo. */
 .gestao-integrada .ls-content .content,

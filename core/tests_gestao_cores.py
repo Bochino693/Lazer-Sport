@@ -211,6 +211,10 @@ class CamadaComumTests(SimpleTestCase):
                 with self.subTest(tela=arquivo.name, classe=classe):
                     self.assertRegex(classe, r"-hero$")
 
+    def test_a_onda_do_sino_nao_faz_a_tela_rolar_de_lado(self):
+        """O anel do sino cresce 1,55x e passava da borda no celular."""
+        self.assertIn(".gestao-integrada .ls-topbar{overflow-x:clip}", self.css)
+
     def test_os_numeros_sem_o_sufixo_kpi_tambem_sao_cartao(self):
         for classe in (".ekpi", ".pkpi", ".okpi", ".kpi-box"):
             with self.subTest(classe=classe):
