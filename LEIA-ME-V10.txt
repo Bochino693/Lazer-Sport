@@ -1920,3 +1920,19 @@ Dependência nova: rjsmin (requirements.txt).
    core/templates/orcamento_publico.html, site/paginas/orcamento-3d.js,
    site/paginas/orcamento_publico.css, site/arena/visor3d.js (iniciar
    exportado; soltar). Testes: core/tests_orcamento.py (Orcamento3DTests).
+
+57) BASQUETE STREET QUADRINHOS: NO SITE, AS FOTOS DA ARTE DE VERDADE
+   O cliente viu no card do site uma máquina que não é a dele (a rede em
+   cima, os bonecos com 7 e 10). A causa: a 0145 subiu ao site junto com a
+   PRIMEIRA versão do objeto, de arte provisória; logo depois ele foi
+   refeito com a folha de adesivos da fábrica (a forma e a arte de verdade:
+   o BOOM no fundo da cesta, o POW no teto, a quadra na prancha, as
+   crianças e a bola nas laterais), mas no Render a 0145 já tinha rodado e
+   o cadastro ficou com as fotos da versão provisória (a 0146 só refez as
+   do Air Game).
+   A 0150_basquete_quadrinhos_fotos, SÓ NO RENDER, troca a galeria (se é a
+   que o cadastro subiu, e não fotos do painel) pelas vistas do 3D de hoje;
+   em todo lugar, religa o objeto 3D ao .glb de hoje (cores e medidas). Se
+   a subida falhar, o deploy segue; no servidor:
+       python manage.py cadastrar_variantes_adesivo --so basquete-street-quadrinhos --fotos
+   Testes: core/tests_variantes_adesivo.py (BasqueteFotosDeVerdadeTests).
