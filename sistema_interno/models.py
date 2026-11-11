@@ -1655,6 +1655,25 @@ class Orcamento(Prime):
     )
     desconto = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     frete = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    # O VALOR FECHADO NO TELEFONE.
+    #
+    # "Fica R$ 18.000 tudo" é como a venda fecha, e chegar nesse número
+    # pelo desconto pedia conta de cabeça -- que ainda mudava sozinha quando
+    # um item era trocado depois. Preenchido, este é o total da proposta,
+    # seja qual for a soma dos itens e do frete; a diferença aparece para o
+    # cliente como desconto (ou ajuste, se ficar acima da soma). Vazio, o
+    # total é a conta de sempre: itens + frete − desconto.
+    valor_final = models.DecimalField(
+        "Valor final combinado",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=(
+            "Quando preenchido, é o total da proposta, seja qual for a soma "
+            "dos itens, do frete e do desconto."
+        ),
+    )
     forma_pagamento = models.CharField(
         "Forma de pagamento",
         max_length=120,
@@ -1763,11 +1782,33 @@ class Orcamento(Prime):
         ).quantize(Decimal("0.01"))
 
     @property
+    def bruto(self):
+        """Itens + frete, antes de qualquer desconto."""
+        return (self.subtotal + (self.frete or Decimal("0.00"))).quantize(Decimal("0.01"))
+
+    @property
     def total(self):
-        bruto = self.subtotal + (self.frete or Decimal("0.00"))
-        liquido = bruto - (self.desconto or Decimal("0.00"))
+        if self.valor_final is not None:
+            return Decimal(self.valor_final).quantize(Decimal("0.01"))
+        liquido = self.bruto - (self.desconto or Decimal("0.00"))
         # Desconto maior que o total viraria um orçamento negativo.
         return max(liquido, Decimal("0.00")).quantize(Decimal("0.01"))
+
+    @property
+    def valor_final_fixo(self):
+        return self.valor_final is not None
+
+    @property
+    def desconto_aplicado(self):
+        """O que sai da soma até o total: o desconto digitado ou, com o
+        valor final combinado, a diferença até ele."""
+        return max(self.bruto - self.total, Decimal("0.00"))
+
+    @property
+    def acrescimo_aplicado(self):
+        """Só com o valor final combinado ACIMA da soma (instalação,
+        montagem ou o que mais entrou na conversa sem virar item)."""
+        return max(self.total - self.bruto, Decimal("0.00"))
 
     #: Prazo com que uma proposta nova nasce, em dias corridos.
     #:
