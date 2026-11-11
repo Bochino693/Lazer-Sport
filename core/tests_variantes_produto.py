@@ -239,6 +239,24 @@ class MigracaoTests(TestCase):
         self.assertEqual(base_air.valor_brinquedo, Decimal("4990.00"))
 
 
+class MedidasDoBasqueteTests(TestCase):
+    def test_sem_medidas_na_ficha_valem_as_do_3d_dela(self):
+        # o Basquete Home e o Quadrinhos sem medidas no cadastro: o Basquete Home fica com as do 3D
+        # do Quadrinhos (2,70 x 1,00 x 2,40 m, core/cadastro_modelos.py); as que ele tem, ficam
+        base = _produto("Basquete Home", "basquete-home")
+        _produto("Basquete Home Quadrinhos", "quadrinhos")
+        variantes.juntar("Basquete Home", ("Azul", "azul"), [("Basquete Home Quadrinhos", "Quadrinhos", "quadrinhos")],
+                         Brinquedos, VarianteAdesivo, avisar=_calado)
+        variantes.unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, avisar=_calado)
+        base.refresh_from_db()
+        self.assertEqual((base.altura_m, base.largura_m, base.profundidade_m),
+                         (Decimal("2.70"), Decimal("1.00"), Decimal("2.40")))
+        Brinquedos.objects.filter(pk=base.pk).update(altura_m=Decimal("2.10"))
+        variantes.unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, avisar=_calado)
+        base.refresh_from_db()
+        self.assertEqual(base.altura_m, Decimal("2.10"))
+
+
 class RedirecionamentoTests(_ComPar):
     def test_o_endereco_da_ficha_vai_para_o_produto(self):
         resposta = self.client.get(reverse("brinquedo_detalhe", args=[self.ficha.pk]))

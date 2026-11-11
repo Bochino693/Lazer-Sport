@@ -171,9 +171,10 @@ def unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, av
     fichas = [v.origem for v in VarianteAdesivo.objects.filter(brinquedo=base, origem__isnull=False).select_related("origem").order_by("ordem", "id")]
     with transaction.atomic():
         mudou = []
-        for campo in MEDIDAS:
+        medidas_das_fichas = [_medidas_da_ficha(f) for f in fichas]
+        for i, campo in enumerate(MEDIDAS):
             if getattr(base, campo) in (None, ""):
-                valor = next((getattr(f, campo) for f in fichas if getattr(f, campo) not in (None, "")), None)
+                valor = next((m[i] for m in medidas_das_fichas if m and m[i] not in (None, "")), None)
                 if valor is not None:
                     setattr(base, campo, valor)
                     mudou.append(campo)
@@ -209,6 +210,23 @@ def unificar(base, Brinquedos, ImagemBrinquedo, ObjetoTresD, VarianteAdesivo, av
                 )
                 avisar(f"{base.nome_brinquedo}: ganhou o 3D próprio ({caminho}).")
     return base
+
+
+def _medidas_da_ficha(ficha):
+    """(altura, largura, profundidade) da ficha; sem elas no cadastro, as do 3D dela (core/cadastro_modelos.py)."""
+    medidas = tuple(getattr(ficha, campo) for campo in MEDIDAS)
+    if None not in medidas:
+        return medidas
+    from decimal import Decimal
+
+    from .cadastro_modelos import CADASTROS
+
+    alvo = _normalizar(ficha.nome_brinquedo)
+    for dados in CADASTROS.values():
+        nomes = {_normalizar(n) for n in (dados.get("nomes") or ()) + (dados["nome"],)}
+        if alvo in nomes and dados.get("medidas"):
+            return tuple(Decimal(v) for v in dados["medidas"])
+    return medidas
 
 
 def _nome_da_lista(nome):
