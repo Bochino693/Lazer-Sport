@@ -1083,8 +1083,10 @@ export function criarLugares(T, P, extra = {}) {
       const c = m.centro;
       const lado = m.ladoEsq ? 1 : -1; // a câmera vem da direita: o que fica à esquerda aparece ao lado do produto
       // a placa do logo na medida do produto (inteira na foto, ao lado dele e na altura dele)
+      // (o alto da placa fica pouco acima do alto do produto: inteira na foto, nunca cortada em cima)
       const lp = Math.min(2.0, Math.max(0.9, m.tam.y * 0.7));
-      const yPlaca = Math.min(2.2, Math.max(1.05, m.tam.y * 0.7));
+      const ap0 = extra.placa ? (lp * extra.placa.image.height) / extra.placa.image.width : lp * 0.66;
+      const yPlaca = Math.min(2.2, Math.max(0.55 + ap0 / 2 + 0.05, m.tam.y + 0.25 - ap0 / 2));
       // (no "logo", a placa fica logo atrás e ao lado do produto)
       const meio = { logo: -lado * (m.tam.x / 2 + lp * 0.55 + 0.15), plantas: 0, fliperama: 7.2, vitrine: -7.2 }[op.cenario || "logo"] ?? 0;
       const xL = c.x + meio + (op.deslocar ?? 0); // o meio do nicho do logo
@@ -1160,8 +1162,9 @@ export function criarLugares(T, P, extra = {}) {
         const facho = malha(new T.PlaneGeometry(1.3, 1.9), new T.MeshBasicMaterial({ map: tCone, transparent: true, opacity: 0.38, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false }), x, H - sanca - 0.95, z + 0.015);
         g.add(facho);
       }
-      // a placa do logo, acesa (o logo oficial: ferramentas/categorias/placa.py)
-      if (extra.placa) {
+      // a placa do logo, acesa (o logo oficial: ferramentas/categorias/placa.py); com o produto
+      // baixo (as mesas), a foto mostra pouco da parede e a placa sairia cortada: fica o canteiro
+      if (extra.placa && m.tam.y >= 1.3) {
         const ap = lp * extra.placa.image.height / extra.placa.image.width;
         const placa = malha(new T.PlaneGeometry(lp, ap), new T.MeshStandardMaterial({ map: extra.placa, emissiveMap: extra.placa, emissive: "#ffffff", emissiveIntensity: 1.25, transparent: true, alphaTest: 0.05, roughness: 0.4 }), xL, Math.min(H - sanca - 0.3 - ap / 2, yPlaca), z + 0.02);
         g.add(placa);
