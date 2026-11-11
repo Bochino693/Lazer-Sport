@@ -16,7 +16,9 @@ O que estes testes protegem:
   * a fábrica e os clientes ficam numa seção só (#contato), com UM mapa:
     sem cliente publicado, o mapa mostra só a fábrica (sem lista, sem
     filtro, sem a âncora "Mapa de Clientes"); com cliente, a lista sai no
-    HTML para o Google ler e a âncora #clientes-section cai no mapa.
+    HTML para o Google ler e a âncora #clientes-section cai no mapa; o
+    script do mapa (que espalha os alfinetes antes de juntar num número) é
+    JavaScript válido.
 """
 
 from decimal import Decimal
@@ -305,6 +307,24 @@ class MapaUnicoTests(HomeBase):
         self.assertNotContains(resposta, '"logo": "/static/images/logoofi.png"')
         # o comportamento do mapa vem do arquivo próprio, carregado sob demanda
         self.assertContains(resposta, "site/paginas/home-mapa.js")
+
+    def test_o_script_do_mapa_e_javascript_valido(self):
+        # Um erro de sintaxe no home-mapa.js apaga o mapa inteiro (sem
+        # alfinete nenhum) sem quebrar mais nada da página: só o node vê.
+        import shutil
+        import subprocess
+        from pathlib import Path
+
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("sem o node")
+        arquivo = Path(__file__).resolve().parent / "static" / "site" / "paginas" / "home-mapa.js"
+        resultado = subprocess.run([node, "--check", str(arquivo)], capture_output=True, text=True)
+        self.assertEqual(resultado.returncode, 0, resultado.stderr)
+        codigo = arquivo.read_text(encoding="utf-8")
+        # espalha antes de juntar: o número só onde não cabe
+        self.assertIn("function espalhar(", codigo)
+        self.assertIn("DESLOCAMENTO_MAXIMO_KM", codigo)
 
 
 class CardInteiroAbreOItemTests(HomeBase):

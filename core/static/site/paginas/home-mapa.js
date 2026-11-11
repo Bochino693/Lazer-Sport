@@ -12,21 +12,21 @@
  *   * clicar num nome da lista leva até o alfinete dele; "Ver no mapa", no
  *     cartão da fábrica, aproxima até a rua da fábrica.
  *
- * ALFINETE NO LUGAR DELE
- *   O agrupamento antigo juntava tudo o que estivesse a 48 px de distância
- *   e punha a bolha na MÉDIA das posições: com o Brasil inteiro na tela,
- *   três clientes da Bahia viravam um "3" no meio do caminho, embora
- *   coubessem lado a lado, e no zoom seguinte cada um "pulava" para o seu
- *   lugar. Agora:
- *     * só se junta o que se SOBREPÕE de verdade na tela (o desenho de um
- *       alfinete cobrindo o do outro), medido em pixels no zoom atual e
- *       refeito a cada zoom;
- *     * o grupo aparece em cima de um dos alfinetes dele, na coordenada real
- *       desse cliente -- nunca num ponto médio onde não há ninguém;
- *     * cliente escondido debaixo da fábrica vira um selo "+N" na própria
- *       fábrica, em vez de uma bolha que a fábrica cobria;
- *     * clicar num grupo aproxima só o necessário para separá-lo; se nem o
- *       zoom máximo separa (dois clientes no mesmo endereço), os alfinetes
+ * ALFINETE NO LUGAR DELE, E O NÚMERO SÓ QUANDO NÃO CABE
+ *   O agrupamento antigo juntava num número tudo o que se encostasse na
+ *   tela: com o Brasil inteiro aparecendo, os clientes de São Paulo viravam
+ *   um "9" logo de cara. Agora:
+ *     * quem se cobre primeiro SE ESPALHA: sai um pouco do lugar (até 66 px,
+ *       e nunca mais que ~650 km), em volta do ponto de verdade, com uma
+ *       linha fininha e uma bolinha marcando onde ele fica de fato;
+ *     * o número (o grupo) só aparece onde nem espalhando cabe: muitos
+ *       clientes num pedaço pequeno do mapa, ou o mapa visto bem de longe.
+ *       São poucos grupos, cada um de gente vizinha de verdade, em cima de
+ *       um dos clientes dele;
+ *     * cliente preso debaixo da fábrica vira um selo "+N" na própria
+ *       fábrica;
+ *     * clicar num grupo aproxima só o necessário para soltar quem dá; se
+ *       nem o zoom máximo solta (muitos no mesmo endereço), os alfinetes
  *       abrem em leque, cada um com uma linha até o ponto real.
  */
 (function () {
@@ -508,30 +508,6 @@
     });
     mapa.on('popupclose', () => secao.classList.remove('ls-onde--cartao-aberto'));
 
-    /* ------------------------------------------------------------------
-       Quem se sobrepõe a quem
-       ------------------------------------------------------------------ */
-    // Dois alfinetes se sobrepõem quando a ponta de um cai dentro de uma
-    // elipse em volta da ponta do outro, do tamanho dos dois desenhos:
-    // ~28 px de lado e ~35 px de altura para dois clientes. Lado a lado a
-    // 30 px, as duas logos aparecem inteiras -- e aí não se junta nada.
-    function sobrepoem(a, b) {
-        const rx = ((a.largura + b.largura) / 2) * 0.74;
-        const ry = ((a.altura + b.altura) / 2) * 0.68;
-        const dx = (a.px.x - b.px.x) / rx;
-        const dy = (a.px.y - b.px.y) / ry;
-        return dx * dx + dy * dy < 1;
-    }
-
-    function itemNoZoom(ponto, zoom, pino = PINO_CLIENTE) {
-        return {
-            ponto,
-            px: mapa.project([ponto.lat, ponto.lng], zoom),
-            largura: pino.largura,
-            altura: pino.altura,
-        };
-    }
-
     function clientesVisiveis() {
         if (!estado.clientes) return [];
         return estado.cidade === 'todas'
@@ -539,53 +515,229 @@
             : clientes.filter((c) => c.cidade === estado.cidade);
     }
 
-    // Agrupa em pixels do zoom pedido (e não da tela atual): o resultado não
-    // muda ao arrastar o mapa, só ao mudar o zoom. Começa pelos alfinetes
-    // com mais vizinhos; cada um leva junto só quem encosta NELE. Assim
-    // dois desenhos que sobram na tela nunca se cobrem.
-    function agrupar(zoom) {
-        const itens = clientesVisiveis().map((c) => itemNoZoom(c, zoom));
-        const usados = new Set();
-        const debaixoDaFabrica = [];
+    /* ------------------------------------------------------------------
+       Espalhar antes de juntar
+       ------------------------------------------------------------------ */
+    // Alfinetes que se cobrem saem um pouco do lugar, em volta do ponto de
+    // verdade (com uma linha fininha até ele), em vez de virar um número.
+    // O número (o grupo) só aparece quando nem espalhando dá: muitos
+    // clientes num pedaço pequeno do mapa. Tudo em pixels do zoom pedido (e
+    // não da tela atual): o resultado não muda ao arrastar o mapa.
+    // Quanto um alfinete pode sair do lugar: até 66 px, e nunca mais que
+    // ~650 km. Bem de longe (o mapa do mundo) 66 px seriam milhares de km e
+    // o alfinete já não diria onde fica: aí o grupo (o número) volta.
+    const DESLOCAMENTO_MAXIMO = 66;
+    const DESLOCAMENTO_MAXIMO_KM = 650;
+    const FOLGA_ALVO = 1.06;          // espalha até um pouco além de só encostar
+    const FOLGA_ACEITA = 0.94;        // abaixo disso, depois de espalhar, ainda cobre
+    const PERNA_MINIMA = 7;           // a partir daqui (px) desenha a linha até o ponto
+    const ANGULO_DOURADO = Math.PI * (3 - Math.sqrt(5));
 
-        if (fabrica && estado.fabrica) {
-            const f = itemNoZoom(fabrica, zoom, PINO_FABRICA);
-            itens.forEach((it) => {
-                if (sobrepoem(f, it)) {
-                    usados.add(it);
-                    debaixoDaFabrica.push(it.ponto);
-                }
-            });
-        }
+    function distanciaEliptica(a, b) {
+        const rx = ((a.largura + b.largura) / 2) * 0.74;
+        const ry = ((a.altura + b.altura) / 2) * 0.68;
+        const dx = (b.x - a.x) / rx;
+        const dy = (b.y - a.y) / ry;
+        return { d: Math.hypot(dx, dy), dx, dy, rx, ry };
+    }
 
-        const vizinhos = new Map(itens.map((it) => [
-            it,
-            itens.filter((outro) => outro !== it && sobrepoem(it, outro)),
-        ]));
-        const ordem = itens
-            .filter((it) => !usados.has(it))
-            .sort((a, b) => (vizinhos.get(b).length - vizinhos.get(a).length) || (a.ponto.indice - b.ponto.indice));
+    function novoNo(membros, zoom, { pino = PINO_CLIENTE, fixo = false, eFabrica = false } = {}) {
+        // A âncora é um membro de verdade: o mais perto do meio do grupo.
+        const pontos = membros.map((c) => mapa.project([c.lat, c.lng], zoom));
+        const mx = pontos.reduce((t, q) => t + q.x, 0) / pontos.length;
+        const my = pontos.reduce((t, q) => t + q.y, 0) / pontos.length;
+        let k = 0;
+        pontos.forEach((q, i) => {
+            if (Math.hypot(q.x - mx, q.y - my) < Math.hypot(pontos[k].x - mx, pontos[k].y - my)) k = i;
+        });
+        const ancora = membros[k];
+        const o = pontos[k];
+        // Um empurrãozinho diferente para cada um: quem divide o mesmo
+        // endereço sai para lados diferentes (e sempre os mesmos).
+        const semente = (ancora.indice ?? -1) + 1;
+        const jx = fixo ? 0 : Math.cos(semente * ANGULO_DOURADO) * 0.35;
+        const jy = fixo ? 0 : Math.sin(semente * ANGULO_DOURADO) * 0.35;
+        const kmPorPixel = (40075.016686 * Math.cos((ancora.lat * Math.PI) / 180)) / (256 * 2 ** zoom);
+        return {
+            membros, ancora, fixo, eFabrica,
+            ox: o.x, oy: o.y, x: o.x + jx, y: o.y + jy,
+            largura: pino.largura, altura: pino.altura,
+            limite: fixo ? 0 : Math.min(DESLOCAMENTO_MAXIMO, DESLOCAMENTO_MAXIMO_KM / Math.max(kmPorPixel, 1e-6)),
+        };
+    }
 
-        const grupos = [];
-        for (const it of ordem) {
-            if (usados.has(it)) continue;
-            usados.add(it);
-            const membros = [it.ponto];
-            for (const v of vizinhos.get(it)) {
-                if (!usados.has(v)) {
-                    usados.add(v);
-                    membros.push(v.ponto);
+    // Só os pares que podem se encostar (cada um sai no máximo o seu
+    // `limite` do lugar) entram na conta.
+    function paresPossiveis(nos) {
+        const pares = [];
+        for (let i = 0; i < nos.length; i++) {
+            for (let j = i + 1; j < nos.length; j++) {
+                const a = nos[i];
+                const b = nos[j];
+                if (a.fixo && b.fixo) continue;
+                const alcance = a.limite + b.limite;
+                const rx = ((a.largura + b.largura) / 2) * 0.74 * FOLGA_ALVO;
+                const ry = ((a.altura + b.altura) / 2) * 0.68 * FOLGA_ALVO;
+                if (Math.abs(a.ox - b.ox) < rx + alcance && Math.abs(a.oy - b.oy) < ry + alcance) {
+                    pares.push([a, b]);
                 }
             }
-            grupos.push({ ancora: it.ponto, membros });
+        }
+        return pares;
+    }
+
+    function prender(n) {
+        const dx = n.x - n.ox;
+        const dy = n.y - n.oy;
+        const dist = Math.hypot(dx, dy);
+        if (dist > n.limite) {
+            n.x = n.ox + (dx / dist) * n.limite;
+            n.y = n.oy + (dy / dist) * n.limite;
+        }
+    }
+
+    // Afasta quem se cobre e puxa cada um de volta para o seu ponto; a
+    // puxada some nas últimas voltas, para terminar sem ninguém por cima.
+    function espalhar(nos, pares, voltas) {
+        for (let volta = 0; volta < voltas; volta++) {
+            const puxada = 0.14 * Math.max(0, 1 - volta / (voltas * 0.7));
+            if (puxada > 0) {
+                nos.forEach((n) => {
+                    if (n.fixo) return;
+                    n.x += (n.ox - n.x) * puxada;
+                    n.y += (n.oy - n.y) * puxada;
+                });
+            }
+            for (const [a, b] of pares) {
+                const { d, dx, dy, rx, ry } = distanciaEliptica(a, b);
+                if (d >= FOLGA_ALVO) continue;
+                let ux = dx;
+                let uy = dy;
+                if (d < 1e-9) {
+                    const ang = ((a.ancora.indice ?? 0) * 7 + (b.ancora.indice ?? 0) * 13) * ANGULO_DOURADO;
+                    ux = Math.cos(ang);
+                    uy = Math.sin(ang);
+                } else {
+                    ux /= d;
+                    uy /= d;
+                }
+                const falta = FOLGA_ALVO - d;
+                const pesoA = a.fixo ? 0 : (b.fixo ? 1 : 0.5);
+                const pesoB = 1 - pesoA;
+                a.x -= ux * rx * falta * pesoA;
+                a.y -= uy * ry * falta * pesoA;
+                b.x += ux * rx * falta * pesoB;
+                b.y += uy * ry * falta * pesoB;
+            }
+            nos.forEach((n) => { if (!n.fixo) prender(n); });
+        }
+    }
+
+    const montagens = new Map();   // "zoom|camadas|cidade" -> resultado
+
+    function montar(zoom) {
+        const chave = `${zoom}|${estado.clientes}|${estado.fabrica}|${estado.cidade}`;
+        if (montagens.has(chave)) return montagens.get(chave);
+
+        let nos = clientesVisiveis().map((c) => novoNo([c], zoom));
+        const noFabrica = fabrica && estado.fabrica
+            ? novoNo([fabrica], zoom, { pino: PINO_FABRICA, fixo: true, eFabrica: true })
+            : null;
+        const debaixoDaFabrica = [];
+
+        for (let rodada = 0; rodada < 400; rodada++) {
+            const todos = noFabrica ? [noFabrica, ...nos] : nos;
+            const pares = paresPossiveis(todos);
+            espalhar(todos, pares, rodada === 0 ? 90 : 50);
+
+            const cobertos = new Map();
+            for (const [a, b] of pares) {
+                if (distanciaEliptica(a, b).d >= FOLGA_ACEITA) continue;
+                if (!cobertos.has(a)) cobertos.set(a, []);
+                if (!cobertos.has(b)) cobertos.set(b, []);
+                cobertos.get(a).push(b);
+                cobertos.get(b).push(a);
+            }
+            if (!cobertos.size) break;
+
+            // Primeiro juntam os clientes entre si: em cada região, o mais
+            // disputado leva quem ainda o cobre e quem, no mapa de verdade,
+            // fica no meio deles. Assim saem poucos grupos, cada um de gente
+            // vizinha de verdade; regiões longe uma da outra juntam na mesma
+            // rodada.
+            const entreClientes = [...cobertos.entries()]
+                .filter(([n]) => !n.fixo)
+                .map(([n, vizinhos]) => [n, vizinhos.filter((v) => !v.fixo)])
+                .filter(([, vizinhos]) => vizinhos.length)
+                .sort(([a, va], [b, vb]) =>
+                    (vb.length - va.length) ||
+                    (b.membros.length - a.membros.length) ||
+                    (a.ancora.indice - b.ancora.indice));
+            if (entreClientes.length) {
+                const usados = new Set();
+                const centros = [];
+                const novos = [];
+                for (const [n, vizinhos] of entreClientes) {
+                    if (usados.has(n)) continue;
+                    const regiao = 2 * DESLOCAMENTO_MAXIMO + n.largura;
+                    if (centros.some((c) => Math.abs(c.x - n.ox) < regiao && Math.abs(c.y - n.oy) < regiao)) continue;
+                    const juntos = new Set([n, ...vizinhos.filter((v) => !usados.has(v))]);
+                    if (juntos.size < 2) continue;
+                    const lista = [...juntos];
+                    const cx = lista.reduce((t, j) => t + j.ox, 0) / lista.length;
+                    const cy = lista.reduce((t, j) => t + j.oy, 0) / lista.length;
+                    const raio = Math.max(...lista.map((j) => Math.hypot(j.ox - cx, j.oy - cy))) + 2;
+                    nos.forEach((o) => {
+                        if (!usados.has(o) && Math.hypot(o.ox - cx, o.oy - cy) <= raio) juntos.add(o);
+                    });
+                    juntos.forEach((j) => usados.add(j));
+                    centros.push({ x: cx, y: cy });
+                    const membros = [...juntos].flatMap((j) => j.membros).sort((a, b) => a.indice - b.indice);
+                    novos.push(novoNo(membros, zoom));
+                }
+                nos = nos.filter((n) => !usados.has(n)).concat(novos);
+                continue;
+            }
+
+            // Só sobrou quem não consegue sair de baixo da fábrica: fica no
+            // "+N" dela.
+            const engolidos = new Set(cobertos.get(noFabrica) || []);
+            engolidos.forEach((n) => debaixoDaFabrica.push(...n.membros));
+            nos = nos.filter((n) => !engolidos.has(n));
+            if (!engolidos.size) break;
         }
 
-        return { grupos, debaixoDaFabrica };
+        const resultado = {
+            grupos: nos.map((n) => ({
+                ancora: n.ancora,
+                membros: n.membros,
+                deslocado: Math.hypot(n.x - n.ox, n.y - n.oy) >= PERNA_MINIMA,
+                posicao: mapa.unproject(L.point(n.x, n.y), zoom),
+            })),
+            debaixoDaFabrica,
+        };
+        montagens.set(chave, resultado);
+        return resultado;
+    }
+
+    // Como os `membros` aparecem no zoom `z`: soltos, num grupo (quais) ou
+    // debaixo da fábrica. Serve para achar o zoom que já mostra o que dá.
+    function retrato(membros, z) {
+        const { grupos, debaixoDaFabrica } = montar(z);
+        return membros.map((c) => {
+            if (debaixoDaFabrica.includes(c)) return 'F';
+            const g = grupos.find((gr) => gr.membros.includes(c));
+            if (!g || g.membros.length === 1) return 's';
+            return g.membros.map((m) => m.indice).join(',');
+        }).join('|');
     }
 
     /* ------------------------------------------------------------------
        Desenho dos clientes, refeito a cada zoom
        ------------------------------------------------------------------ */
+    // As linhas (de quem saiu do lugar até o ponto de verdade) ficam no
+    // painel de baixo do Leaflet: nunca passam por cima de um alfinete.
+    const camadaPernas = L.layerGroup().addTo(mapa);
     const camadaClientes = L.layerGroup().addTo(mapa);
     const marcadoresCliente = new Map();   // indice -> marcador do cliente
     let desenhados = new Map();            // chave -> marcador na tela
@@ -618,7 +770,7 @@
 
     function criarMarcadorGrupo(grupo) {
         const n = grupo.membros.length;
-        const m = L.marker([grupo.ancora.lat, grupo.ancora.lng], {
+        const m = L.marker(grupo.posicao || [grupo.ancora.lat, grupo.ancora.lng], {
             icon: iconeGrupo(n),
             zIndexOffset: 500,
             keyboard: true,
@@ -646,19 +798,45 @@
         return `g${g.ancora.indice}:` + g.membros.map((c) => c.indice).sort((a, b) => a - b).join(',');
     }
 
+    // A linha fininha do ponto de verdade até a ponta do alfinete que saiu
+    // do lugar, com uma bolinha no ponto: dá para ver onde é cada um.
+    function desenharPerna(c, posicao) {
+        const real = L.latLng(c.lat, c.lng);
+        L.polyline([real, posicao], {
+            className: 'mapa-perna',
+            color: '#004AAD',
+            weight: 1.6,
+            opacity: 0.85,
+            interactive: false,
+        }).addTo(camadaPernas);
+        L.circleMarker(real, {
+            className: 'mapa-perna-ponto',
+            radius: 3.5,
+            color: '#ffffff',
+            weight: 1.5,
+            fillColor: '#004AAD',
+            fillOpacity: 1,
+            interactive: false,
+        }).addTo(camadaPernas);
+    }
+
     function desenhar() {
         fecharLeque();
-        const { grupos, debaixoDaFabrica } = agrupar(mapa.getZoom());
+        const { grupos, debaixoDaFabrica } = montar(mapa.getZoom());
         const novos = new Map();
         grupoDoCliente = new Map();
+        camadaPernas.clearLayers();
 
         for (const g of grupos) {
             const chave = chaveDoGrupo(g);
+            const sozinho = g.membros.length === 1;
             let m = desenhados.get(chave);
-            if (!m) m = g.membros.length === 1 ? marcadorDoCliente(g.ancora) : criarMarcadorGrupo(g);
+            if (!m) m = sozinho ? marcadorDoCliente(g.ancora) : criarMarcadorGrupo(g);
             if (m._grupoLS) m._grupoLS = g;
+            if (!m.getLatLng().equals(g.posicao)) m.setLatLng(g.posicao);
             novos.set(chave, m);
             g.membros.forEach((c) => grupoDoCliente.set(c.indice, { grupo: g, marcador: m }));
+            if (sozinho && g.deslocado) desenharPerna(g.ancora, g.posicao);
         }
 
         for (const [chave, m] of desenhados) {
@@ -734,32 +912,19 @@
         fecharPopups();
         const zAtual = mapa.getZoom();
         const zMax = mapa.getMaxZoom();
-        const comoItens = (z) => {
-            const its = membros.map((c) => itemNoZoom(c, z));
-            if (comFabrica && fabrica) its.push(itemNoZoom(fabrica, z, PINO_FABRICA));
-            return its;
-        };
 
-        // Pares que o zoom máximo separa. Os que nem ele separa (mesmo
-        // endereço) ficam para o leque.
-        const noMaximo = comoItens(zMax);
-        const pares = [];
-        for (let i = 0; i < noMaximo.length; i++) {
-            for (let j = i + 1; j < noMaximo.length; j++) {
-                if (!sobrepoem(noMaximo[i], noMaximo[j])) pares.push([i, j]);
-            }
-        }
-
-        if (!pares.length) {
+        // Nem o zoom máximo solta mais nenhum (mesmo endereço): leque.
+        const noMaximo = retrato(membros, zMax);
+        if (retrato(membros, zAtual) === noMaximo) {
             if (marcador) abrirEmLeque(membros, marcador);
             else if (comFabrica) abrirEmLeque(membros, marcadorFabrica);
             return;
         }
 
+        // O menor zoom que já solta tudo o que dá para soltar.
         let alvo = zMax;
-        for (let z = zAtual + 1; z <= zMax; z++) {
-            const its = comoItens(z);
-            if (pares.every(([i, j]) => !sobrepoem(its[i], its[j]))) {
+        for (let z = zAtual + 1; z < zMax; z++) {
+            if (retrato(membros, z) === noMaximo) {
                 alvo = z;
                 break;
             }
@@ -1003,15 +1168,15 @@
 
     function zoomParaVerSozinho(c) {
         const zMax = mapa.getMaxZoom();
-        const eu = itemNoZoom(c, zMax);
-        const inseparavel = (outro) => sobrepoem(eu, itemNoZoom(outro, zMax));
+        const noMaximo = montar(zMax).grupos.find((gr) => gr.membros.includes(c));
+        const juntosNoMaximo = noMaximo ? noMaximo.membros.map((m) => m.indice).join(',') : '';
         for (let z = Math.max(mapa.getZoom(), ZOOM_DA_CIDADE); z <= zMax; z++) {
-            const { grupos, debaixoDaFabrica } = agrupar(z);
+            const { grupos, debaixoDaFabrica } = montar(z);
             if (debaixoDaFabrica.includes(c)) continue;
             const g = grupos.find((gr) => gr.membros.includes(c));
             if (!g) continue;
             if (g.membros.length === 1) return { zoom: z, sozinho: true };
-            if (g.membros.every((outro) => outro === c || inseparavel(outro))) return { zoom: z, sozinho: false };
+            if (g.membros.map((m) => m.indice).join(',') === juntosNoMaximo) return { zoom: z, sozinho: false };
         }
         return { zoom: zMax, sozinho: false };
     }
