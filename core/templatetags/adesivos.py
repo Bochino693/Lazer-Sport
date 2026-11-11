@@ -34,6 +34,6 @@ def adesivos_do_card(alvo):
     nomes = " · ".join(c["nome"] for c in dados["capas"])
     return format_html(
         '<span class="card-adesivos" data-adesivos-capas="{}" title="Adesivos: {}">'
-        '<i class="fa-solid fa-note-sticky" aria-hidden="true"></i> {} adesivos</span>',
+        '<i class="fa-solid fa-layer-group" aria-hidden="true"></i> {} adesivos</span>',
         dados["json"], nomes, dados["total"],
     )
