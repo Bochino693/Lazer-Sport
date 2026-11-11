@@ -30,8 +30,8 @@ O que estes testes protegem:
     Render, as fotos que o cadastro subiu são refeitas; fora isso, como a
     0145; rodar de novo não faz nada. A chave antiga ainda vale no comando;
   * o que a cliente pediu, conferido com as máquinas de verdade: no basquete,
-    a bola das laterais VAZADA (os gomos brancos da folha são furos, com a
-    rede atrás), a PRANCHA inclinada que devolve a bola até a chapa de parada
+    a bola das laterais VAZADA (os gomos brancos da folha são furos abertos,
+    sem grade), a PRANCHA inclinada que devolve a bola até a chapa de parada
     na frente, com as bolas, sem a caixa preta em cima do teto, e as peças de
     máquina da foto (o moedeiro, o neon, o placar, o Start, a estrutura de
     tubo e os pés); no Air Game, a fita de LED na borda, a régua e a borda
@@ -181,7 +181,7 @@ class PecasDeVerdadeTests(TestCase):
                 # (o balão BASKETBALL, branco, embaixo, não é furo)
                 self.assertLess(max(v for f in furos for _, v in f), 0.6)
         materiais = {m["name"] for m in _glb_do_site(BASQUETE)["materials"]}
-        self.assertIn("rede-de-protecao", materiais)  # a rede atrás dos furos
+        self.assertNotIn("rede-de-protecao", materiais)  # os furos ficam abertos, sem grade (pedido da cliente)
 
     def test_a_prancha_do_basquete_e_a_rampa_que_devolve_a_bola(self):
         dados = _glb_do_site(BASQUETE)

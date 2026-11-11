@@ -15,12 +15,12 @@
 // com o placar, o teto interno e o console da frente. Do Basquete Street
 // (a foto do catálogo) vêm as peças de máquina de ponto comercial que a folha
 // não desenha: o moedeiro na frente, o neon nas bordas, os pés niveladores,
-// a estrutura de tubo preto atrás e a rede de proteção atrás da bola vazada.
+// e a estrutura de tubo preto atrás.
 //
 // O que a cliente apontou na primeira versão (e que mudou aqui):
 //  - a bola grande das laterais de fora é VAZADA: os gomos brancos da folha
 //    são furos de verdade na chapa (atravessam a lateral, com a parede de
-//    dentro): por eles se vê a pista; atrás, a rede de proteção;
+//    dentro), abertos, sem grade: por eles se vê o lado de dentro;
 //  - a PRANCHA (a chapa que devolve a bola) não fica no fundo: é a rampa,
 //    inclinada, do pé do fundo da cesta até o console; a bola desce e para
 //    na chapa de parada, logo atrás da tampa do console, ao alcance de quem
@@ -223,13 +223,6 @@ const texRede = tela(64, 64, (g, w, h) => {
     g.beginPath(); g.moveTo(k, h); g.lineTo(k + h, 0); g.stroke();
   }
 });
-// a rede de proteção atrás da bola vazada: fio preto fino em quadrados (quase tudo vazado)
-const texProtecao = tela(64, 64, (g, w, h) => {
-  g.clearRect(0, 0, w, h);
-  g.fillStyle = "#141414";
-  g.fillRect(w / 2 - 3, 0, 6, h);
-  g.fillRect(0, h / 2 - 3, w, 6);
-});
 // a bola de basquete: laranja com os gomos pretos
 const texBola = tela(128, 64, (g, w, h) => {
   g.fillStyle = "#e8711f";
@@ -263,7 +256,6 @@ const M = {
   aro: material("aro", { color: "#ef4b1f", roughness: 0.4, metalness: 0.45 }),
   suporte: material("suporte-da-cesta", { color: "#c9ced6", roughness: 0.35, metalness: 0.6 }),
   redeCesta: material("rede-da-cesta", { color: "#ffffff", map: texRede, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8 }),
-  protecao: material("rede-de-protecao", { color: "#ffffff", map: texProtecao, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 }),
   bolas: material("bolas", { map: texBola, roughness: 0.75 }),
   neon: material("neon-roxo", { color: "#a764ff", emissive: "#8a2be2", emissiveIntensity: 1.3, roughness: 0.3 }),
   placar: material("placar", { color: "#ffffff", map: texPlacar, emissive: "#ffffff", emissiveMap: texPlacar, emissiveIntensity: 0.9, roughness: 0.3 }),
@@ -383,7 +375,7 @@ async function retanguloColado(peca, b, largura, altura, onde, opcoes = {}) {
    1. AS LATERAIS: uma chapa de cada lado, com o contorno da lateral de fora
    (e, atrás dela, até as costas); por fora o adesivo de fora, por dentro o
    L de dentro (até onde a chapa vai). Os gomos brancos da bola são FUROS:
-   atravessam a chapa e os dois adesivos; dentro de cada furo, a rede de proteção.
+   atravessam a chapa e os dois adesivos, abertos (sem grade).
    ====================================================================== */
 for (const s of [-1, 1]) {
   const lado = s < 0 ? "esquerda" : "direita";
@@ -403,20 +395,27 @@ for (const s of [-1, 1]) {
     const longe = f.reduce((m, q, k) => (d(q) > d(f[m]) ? k : m), 0);
     return [...simplificar(f.slice(0, longe + 1), 4).slice(0, -1), ...simplificar([...f.slice(longe), f[0]], 4).slice(0, -1)];
   };
-  const furosChapa = ext.furos.map(fechado);
-  placa(M.preto, fechado(ptsChapa), fora, ESP, furosChapa);
+  // os furos (os gomos vazados, abertos: sem grade): o contorno dos pixels
+  // suavizado (Chaikin, duas vezes) e enxugado, o MESMO no adesivo de fora, na
+  // chapa e no L de dentro, para a borda do furo sair limpa; a parede do furo,
+  // na espessura da chapa, é a chapa preta (o preto do adesivo)
+  const suavizar = (f) => {
+    let q = f;
+    for (let k = 0; k < 2; k++) {
+      q = q.flatMap((p, i) => {
+        const r = q[(i + 1) % q.length];
+        return [[0.75 * p[0] + 0.25 * r[0], 0.75 * p[1] + 0.25 * r[1]], [0.25 * p[0] + 0.75 * r[0], 0.25 * p[1] + 0.75 * r[1]]];
+      });
+    }
+    const d = (p) => Math.hypot(p[0] - q[0][0], p[1] - q[0][1]);
+    const longe = q.reduce((m, p, k) => (d(p) > d(q[m]) ? k : m), 0);
+    return [...simplificar(q.slice(0, longe + 1), 1.5).slice(0, -1), ...simplificar([...q.slice(longe), q[0]], 1.5).slice(0, -1)];
+  };
+  const furos = ext.furos.map(suavizar);
+  placa(M.preto, fechado(ptsChapa), fora, ESP, furos);
   const mExt = await adesivo(`lateral-externa-${lado}`, [ext.ret[2] - ext.ret[0], ext.ret[3] - ext.ret[1]],
     `o lado de fora da ${lado}, com o contorno da folha e a bola vazada (vista de fora)`);
-  colar(mExt, ext.pontos, fora, ext.ret, 0, 1, ext.furos);
-  // a rede de proteção dentro de cada furo, no meio da chapa
-  for (const furo of furosChapa) {
-    const g = new THREE.ShapeGeometry(forma(furo), 1);
-    const pos = g.attributes.position;
-    const uv = g.attributes.uv;
-    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 70, pos.getY(i) / 70);
-    g.translate(0, 0, -PELE - ESP / 2);
-    por(M.protecao, g, fora.matriz());
-  }
+  colar(mExt, ext.pontos, fora, ext.ret, 0, 1, furos);
   // de dentro (de quem está na pista): na esquerda, a frente fica à esquerda da imagem
   const dentro = s < 0
     ? base(V(-XI, PISO_L, ZF - PELE - ESP), V(0, 0, -1), V(0, 1, 0))
@@ -436,7 +435,7 @@ for (const s of [-1, 1]) {
   // que passa do alto do L (a bola sobe acima da parede de dentro) vira um
   // recorte na borda de cima dele; o que fica todo acima, só na chapa
   const furosInt = [];
-  for (const furo of ext.furos.map((f) => f.map(([a, b]) => [aDe(zDeFora(a)), b + PE - PISO_L]))) {
+  for (const furo of furos.map((f) => f.map(([a, b]) => [aDe(zDeFora(a)), b + PE - PISO_L]))) {
     const alto = ([a, b]) => b > altoEm(topo, a) - 0.5;
     const acima = furo.map(alto);
     if (acima.every(Boolean)) continue;

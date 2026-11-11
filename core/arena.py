@@ -755,7 +755,7 @@ MODELOS_3D = (
     {
         # o Basquete Street em quadrinhos: fundo preto, formas arredondadas,
         # POW!, BOOM!, WOW!, o BASKETBALL, as crianças e a quadra na rampa; a
-        # bola das laterais vazada (com a rede atrás), a rampa que devolve a
+        # bola das laterais vazada (os gomos abertos), a rampa que devolve a
         # bola até a frente, o moedeiro, o placar e o neon roxo
         "id": "basquete-street-quadrinhos",
         "titulo": "Basquete Street Quadrinhos",

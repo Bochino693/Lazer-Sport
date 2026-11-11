@@ -30,8 +30,12 @@ O que a cliente apontou na versão de antes, e como ficou:
   `recortes.json`: os pedaços quase brancos dentro de uma caixa em volta da
   bola; o balão BASKETBALL, embaixo, fica de fora) e grava os polígonos no
   `formas.json`; no 3D eles furam a chapa, o adesivo de fora e o L de dentro
-  (onde a bola passa do alto do L, ele ganha o recorte na borda). Por eles se
-  vê a pista; em cada furo, a rede de proteção (fio preto em quadrados de 7 cm);
+  (onde a bola passa do alto do L, ele ganha o recorte na borda). Os furos
+  ficam **abertos, sem grade** (a cliente: "ao invés das grades, só deixe o
+  furado mesmo"): por eles se vê o lado de dentro. O contorno de cada furo é
+  o dos pixels suavizado (Chaikin, duas vezes, e enxugado em 1,5 mm), o mesmo
+  no adesivo, na chapa e no L, e a parede do furo, na espessura da chapa, é
+  preta: a borda sai limpa;
 - **a chapa que devolve a bola é a prancha**, inclinada (10°), do pé do fundo
   da cesta (logo abaixo do BOOM!) até o console; a bola desce e para na
   **chapa de parada**, logo atrás da tampa do console (a tampa fica a 13 cm da
@@ -102,10 +106,10 @@ Fora da folha, só o que a máquina tem: a cesta, o placar (o visor com os
 dígitos na janela branca do fundo), a chapa de parada e as bolas, o botão
 Start, a porta do moedeiro (na face de pé, à esquerda do POW!), o neon roxo
 (o contorno de cima das laterais, da tampa até a testeira; a borda da tampa;
-a luz do pé), a rede de proteção nos furos, a estrutura de tubo das costas e
+a luz do pé), a estrutura de tubo das costas e
 os seis pés niveladores. Tudo dentro de 1,00 × 2,70 × 2,40 m.
 
-~12 mil triângulos; ~740 KB depois do `gltfpack` (os 15 adesivos em JPEG,
+~12,8 mil triângulos; ~760 KB depois do `gltfpack` (os 15 adesivos em JPEG,
 ampliados com suavização: a folha tem ~400 px nas peças grandes; as chapas
 com o contorno simplificado em 4 mm, embaixo do adesivo, que fica com o de
 verdade).

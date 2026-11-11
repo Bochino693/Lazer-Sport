@@ -2244,8 +2244,11 @@ Dependência nova: rjsmin (requirements.txt).
        furos de verdade na chapa (atravessam o adesivo de fora, a chapa e o L
        de dentro). O recorte acha os brancos dentro de uma caixa em volta da
        bola ("furos" no recortes.json; os polígonos vão para o formas.json; o
-       balão BASKETBALL, branco, fica de fora); em cada furo, a rede de
-       proteção (fio preto). Por eles se vê a pista;
+       balão BASKETBALL, branco, fica de fora). Os furos ficam ABERTOS, sem
+       grade (pedido da cliente: "ao invés das grades, só deixe o furado
+       mesmo"): por eles se vê o lado de dentro. A borda do furo é o mesmo
+       contorno suavizado no adesivo, na chapa e no L de dentro (sem
+       serrilhado), e a parede dele, na espessura da chapa, é preta;
      * a PRANCHA é a rampa que devolve a bola: inclinada (10°), do pé do
        fundo da cesta (abaixo do BOOM!) até o console; a bola desce e para na
        CHAPA DE PARADA, logo atrás da tampa do console, ao alcance de quem
@@ -2262,9 +2265,9 @@ Dependência nova: rjsmin (requirements.txt).
        o botão Start na marca tracejada da tampa e os pés niveladores. A
        estrutura aberta, as torres de tubo e a rede alta do Basquete Street
        não entram: neste gabinete as laterais são chapas inteiras (a folha
-       cobre o lado todo, do chão ao alto), e a rede fica nos furos da bola;
+       cobre o lado todo, do chão ao alto), e os furos da bola ficam abertos;
      * medidas: 2,70 x 1,00 x 2,40 m (o neon e o moedeiro ficam dentro);
-       ~740 KB.
+       ~760 KB.
    AIR GAME KIDS ALIENÍGENAS (ferramentas/modelos3d/air-game-kids-alienigenas/):
      a forma das laterais, os pés e o tampo batem com a foto; entrou o que a
      mesa tem e a folha não desenha: a fita de LED colorida na borda das
