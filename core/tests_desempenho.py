@@ -565,3 +565,51 @@ class MemoriaDoProcessoTests(TestCase):
         self.assertEqual(arena.modelo_3d("Trampolim de Enterrada"), "cama_elastica")
         self.assertEqual(arena.modelo_3d("Uiii", ["Eletrônicos"]), "fliperama")
         self.assertEqual(arena.jogo_da_maquina("Dragon Bowling Rosa"), "dragon-bowling")
+
+
+class NumerosVivosRenovadosPorTrasTests(TestCase):
+    """Vencido o prazo do ranking, das partidas e do painel, quem chega não espera a conta nova."""
+
+    def setUp(self):
+        cache.clear()
+        self.montagens = []
+
+    def montar(self):
+        self.montagens.append(1)
+        return len(self.montagens)
+
+    def vencer(self, chave):
+        _, dados = cache.get(chave)
+        cache.set(chave, (0, dados), 600)  # o prazo venceu, o valor continua lá
+
+    def test_na_hora_fora_da_producao(self):
+        from . import renovar
+
+        self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 1)
+        self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 1)
+        self.vencer("teste:vivo")
+        self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 2)
+
+    @override_settings(RENOVAR_EM_SEGUNDO_PLANO=True)
+    def test_em_producao_o_vencido_serve_e_o_novo_e_montado_por_tras(self):
+        from . import renovar
+
+        self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 1)  # nada guardado: na hora
+        self.vencer("teste:vivo")
+        linhas = []
+        with mock.patch.object(renovar.threading, "Thread", side_effect=lambda **kw: linhas.append(kw) or mock.Mock()):
+            self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 1)  # o de antes, sem esperar
+            self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 1)
+        self.assertEqual(len(linhas), 1, "uma renovação por chave, por mais visitas que cheguem")
+        self.assertEqual(len(self.montagens), 1, "a visita não montou nada")
+        with mock.patch("django.db.connections.close_all"):
+            linhas[0]["target"]()  # a linha de fundo roda
+        self.assertEqual(renovar.valor("teste:vivo", self.montar, 60), 2)
+
+    @override_settings(RENOVAR_EM_SEGUNDO_PLANO=True)
+    def test_recorde_novo_aparece_na_hora_mesmo_em_producao(self):
+        pessoa = User.objects.create_user("rui", "rui@exemplo.com", "x", first_name="Rui", last_name="Lima")
+        self.assertEqual(ranking.ranking_do_jogo("strike-kids"), [])
+        ranking._gravar(pessoa, "strike-kids", 250)  # apaga a chave: a próxima leitura monta na hora
+        self.assertEqual([r["pontos"] for r in ranking.ranking_do_jogo("strike-kids")], [250])
+        self.assertEqual(ranking.campeoes()["strike-kids"]["usuario"], pessoa.pk)

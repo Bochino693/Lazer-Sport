@@ -209,20 +209,22 @@ def ranking_do_jogo(jogo, tamanho=TAMANHO) -> list[dict]:
     # ficava guardada e o ranking do jogo aparecia com uma linha só por até
     # um minuto. O portal agora usa `campeoes()`; esta conta continua certa
     # para quem pedir um pedaço.
-    chave = CHAVE_CACHE_JOGO.format(jogo)
-    lista = cache.get(chave)
-    if lista is None or (len(lista) < tamanho and len(lista) == TAMANHO):
+    def montar(quantos=TAMANHO):
         recordes = _linhas(
             RecordeJogo.objects.filter(jogo=jogo, pontos__gt=0)
             .select_related("usuario", "usuario__perfil")
-            .order_by("-pontos", "atualizado_em")[:max(tamanho, TAMANHO)]
+            .order_by("-pontos", "atualizado_em")[:quantos]
         )
-        lista = [
+        return [
             {"posicao": i, "nome": nome_publico(r.usuario), "pontos": r.pontos, "usuario": r.usuario_id}
             for i, r in enumerate(recordes, start=1)
         ]
-        cache.set(chave, lista, CACHE_SEGUNDOS)
-    return lista[:tamanho]
+
+    if tamanho > TAMANHO:  # mais do que o cache guarda: direto do banco
+        return montar(tamanho)
+    from .renovar import valor
+
+    return valor(CHAVE_CACHE_JOGO.format(jogo), montar, CACHE_SEGUNDOS)[:tamanho]
 
 
 def _apurar_geral() -> dict:
@@ -234,9 +236,12 @@ def _apurar_geral() -> dict:
     63). As linhas que o geral já lê bastam para o campeão: o maior placar
     do jogo e, empatado, o mais antigo -- a mesma ordem de `ranking_do_jogo`.
     """
-    dados = cache.get(CHAVE_CACHE_GERAL)
-    if dados is not None:
-        return dados
+    from .renovar import valor
+
+    return valor(CHAVE_CACHE_GERAL, _montar_geral, CACHE_SEGUNDOS)
+
+
+def _montar_geral() -> dict:
     linhas = _linhas(
         RecordeJogo.objects.filter(pontos__gt=0, jogo__in=list(arena.JOGOS_POR_SLUG))
         .values_list("usuario_id", "jogo", "pontos", "atualizado_em")
@@ -269,9 +274,7 @@ def _apurar_geral() -> dict:
         jogo: {"posicao": 1, "nome": nomes.get(usuario_id, ""), "pontos": pontos, "usuario": usuario_id}
         for jogo, (pontos, _, usuario_id) in primeiro.items()
     }
-    dados = {"tabela": tabela, "campeoes": campeoes}
-    cache.set(CHAVE_CACHE_GERAL, dados, CACHE_SEGUNDOS)
-    return dados
+    return {"tabela": tabela, "campeoes": campeoes}
 
 
 def _tabela_geral() -> list[dict]:

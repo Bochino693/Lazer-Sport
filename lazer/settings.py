@@ -416,6 +416,13 @@ AQUECER_HOST = os.getenv("AQUECER_HOST", "www.lazersport.com.br").strip()
 CLIQUES_EM_SEGUNDO_PLANO = os.getenv(
     "CLIQUES_EM_SEGUNDO_PLANO", "1" if (IS_RENDER or ENVIRONMENT == "production") else "0",
 ).strip().lower() in ("1", "true", "yes", "on")
+# Os números "ao vivo" (ranking dos jogos, partidas e anúncios do portal, painel
+# da home) vencem em um ou dois minutos; vencidos, o de antes continua servindo
+# enquanto o novo é montado por trás (core/renovar.py), em vez de o visitante
+# daquele minuto esperar as consultas. Ligado em produção; nos testes, na hora.
+RENOVAR_EM_SEGUNDO_PLANO = os.getenv(
+    "RENOVAR_EM_SEGUNDO_PLANO", "1" if (IS_RENDER or ENVIRONMENT == "production") else "0",
+).strip().lower() in ("1", "true", "yes", "on")
 
 # ============================================================
 # CONTATO DA EMPRESA

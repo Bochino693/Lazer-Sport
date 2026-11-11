@@ -251,20 +251,28 @@ def _jogadores_de_hoje():
     return RecordeJogo.objects.filter(atualizado_em__gte=inicio).values("usuario_id").distinct().count()
 
 
-def vivo():
-    """O que muda com o uso (partidas, anúncios e quem jogou hoje), num cache curto."""
-    dados = cache.get(CHAVE_VIVO)
-    if dados is None:
-        try:
-            dados = {"partidas": _partidas(), "anuncios": _anuncios_no_ar()}
-        except DatabaseError:
-            dados = {"partidas": {}, "anuncios": []}
-        try:
-            dados["jogadores_hoje"] = _jogadores_de_hoje()
-        except DatabaseError:
-            dados["jogadores_hoje"] = 0
-        cache.set(CHAVE_VIVO, dados, VIVO_SEGUNDOS)
+def _montar_vivo():
+    try:
+        dados = {"partidas": _partidas(), "anuncios": _anuncios_no_ar()}
+    except DatabaseError:
+        dados = {"partidas": {}, "anuncios": []}
+    try:
+        dados["jogadores_hoje"] = _jogadores_de_hoje()
+    except DatabaseError:
+        dados["jogadores_hoje"] = 0
     return dados
+
+
+def vivo():
+    """O que muda com o uso (partidas, anúncios e quem jogou hoje), num cache curto.
+
+    Vencido o prazo, em produção, o número de antes continua servindo
+    enquanto o novo é montado por trás (core/renovar.py): eram três
+    consultas na conta de quem chegava naquele minuto.
+    """
+    from .renovar import valor
+
+    return valor(CHAVE_VIVO, _montar_vivo, VIVO_SEGUNDOS)
 
 
 def contagens():

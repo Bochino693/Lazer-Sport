@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import logging
 
-from django.core.cache import cache
 from django.db.models import Avg, Count, Q, Sum
 from django.urls import reverse
 from django.utils import timezone
@@ -157,9 +156,13 @@ def calcular():
 
 
 def numeros():
-    """Os números do painel, guardados por um minuto."""
-    dados = cache.get(CHAVE_CACHE)
-    if dados is None:
-        dados = calcular()
-        cache.set(CHAVE_CACHE, dados, VALIDADE)
-    return dados
+    """Os números do painel, guardados por um minuto.
+
+    Vencido o minuto, em produção, os números de antes continuam servindo
+    enquanto os novos são contados por trás (core/renovar.py): o painel é
+    pedido a cada minuto por quem está na home, e eram dez consultas na
+    conta de quem pedia naquele instante.
+    """
+    from .renovar import valor
+
+    return valor(CHAVE_CACHE, calcular, VALIDADE)
