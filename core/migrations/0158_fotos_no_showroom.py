@@ -1,4 +1,4 @@
-"""As fotos dos nossos 3D no showroom e as categorias de hoje (a 0157; LEIA-ME, seção 64).
+"""As fotos dos nossos 3D no showroom e as categorias de hoje (a 0158; LEIA-ME, seção 64).
 
 O cliente: "faça padrão para todas as imagens 2D". As capas e as vistas da
 galeria dos nossos produtos em 3D (frente, lados, verso, tampo, jogador...)
@@ -67,7 +67,7 @@ def refazer(apps, schema_editor, avisar=print):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0156_capas_em_cena_do_catalogo"),
+        ("core", "0157_capas_em_cena_do_catalogo"),
     ]
 
     operations = [

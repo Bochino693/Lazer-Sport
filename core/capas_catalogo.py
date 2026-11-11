@@ -243,7 +243,7 @@ def rodar(Brinquedos, ImagemBrinquedo, so=(), simular=False, desfazer=False, avi
 
 
 def subir_no_deploy(apps, schema_editor, avisar=print):
-    """A migração (a 0156): só no Render (o Cloudinary só está lá); se algo falhar, o deploy segue."""
+    """A migração (a 0157): só no Render (o Cloudinary só está lá); se algo falhar, o deploy segue."""
     from django.conf import settings
 
     if not getattr(settings, "IS_RENDER", False):

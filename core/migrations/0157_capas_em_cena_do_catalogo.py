@@ -1,12 +1,12 @@
-"""As capas em cena dos produtos do catálogo (a 0156; LEIA-ME, seção 64).
+"""As capas em cena dos produtos do catálogo (a 0157; LEIA-ME, seção 64).
 
 Os produtos do site cuja capa é a máquina no fundo branco ganham a capa em
 cena: a foto da máquina inteira no showroom da Lazer & Sport, quadrada
 (core/capas_catalogo.py; as fotos em core/static/site/capas_catalogo/).
 
-Em todo lugar: o campo `ImagemBrinquedo.papel_na_capa` (a capa em cena e a
-capa de antes dela, que continua na galeria e é a que o `--desfazer` põe de
-volta).
+O campo `ImagemBrinquedo.papel_na_capa` vem da 0156, num arquivo à parte:
+no Postgres, esquema e dados na mesma migração estouram com "pending
+trigger events" (sistema_interno/tests_migracoes.py).
 
 SÓ NO RENDER (o Cloudinary só está lá): cada produto da lista cuja capa
 ainda é a foto da lista (o public id do Cloudinary) ganha a capa em cena; o
@@ -16,7 +16,7 @@ segue e o aviso diz o comando:
 Para voltar: python manage.py capas_em_cena --desfazer
 """
 
-from django.db import migrations, models
+from django.db import migrations
 
 
 def subir(apps, schema_editor):
@@ -28,21 +28,9 @@ def subir(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0155_imagens_em_alta"),
+        ("core", "0156_papel_na_capa"),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="imagembrinquedo",
-            name="papel_na_capa",
-            field=models.CharField(
-                blank=True,
-                choices=[("cena", "A capa em cena"), ("original", "A capa de antes da cena")],
-                default="",
-                help_text="Preenchido pelo comando capas_em_cena: a capa em cena e a capa de antes dela.",
-                max_length=10,
-                verbose_name="Papel na capa em cena",
-            ),
-        ),
         migrations.RunPython(subir, migrations.RunPython.noop),
     ]

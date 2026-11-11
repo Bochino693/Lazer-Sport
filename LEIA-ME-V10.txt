@@ -2682,11 +2682,13 @@ Dependência nova: rjsmin (requirements.txt).
       sobre ela mesma desfocada e escurecida (`foto-encaixada`), como as
       vitrines do quadro inicial.
    A SUBIDA (no Render, o Cloudinary só está lá):
-     * 0156_capas_em_cena_do_catalogo (depois da 0155): o campo papel_na_capa
-       (em todo lugar) e as capas em cena do catálogo (só no Render; se a
-       subida de um falhar, o deploy segue e o aviso diz
-       `python manage.py capas_em_cena --so <id>`);
-     * 0157_fotos_no_showroom (depois da 0156): refaz À FORÇA a galeria dos
+     * 0156_papel_na_capa (depois da 0155): só o campo papel_na_capa, em
+       todo lugar (esquema e dados em arquivos separados: no Postgres,
+       juntos estouram com "pending trigger events");
+     * 0157_capas_em_cena_do_catalogo (depois da 0156): as capas em cena do
+       catálogo (só no Render; se a subida de um falhar, o deploy segue e o
+       aviso diz `python manage.py capas_em_cena --so <id>`);
+     * 0158_fotos_no_showroom (depois da 0157): refaz À FORÇA a galeria dos
        nossos 3D que o cadastro subiu (o nome do arquivo é o mesmo) e sobe as
        fotos das categorias que mudaram; se falhar, o deploy segue e o aviso
        diz o comando (cadastrar_modelo_3d <chave> --fotos;
@@ -2699,8 +2701,9 @@ Dependência nova: rjsmin (requirements.txt).
        node ferramentas/categorias/gerar.cjs --compor       (as categorias)
    Código: core/capas_catalogo.py, core/management/commands/capas_em_cena.py,
    core/models.py (papel_na_capa, imagens_ordenadas), core/static/site/
-   ls-fotos.js, core/static/site/ls-tema.css, core/migrations/0156_capas_em_
-   cena_do_catalogo.py e 0157_fotos_no_showroom.py, ferramentas/categorias/
+   ls-fotos.js, core/static/site/ls-tema.css, core/migrations/0156_papel_na_
+   capa.py, 0157_capas_em_cena_do_catalogo.py e 0158_fotos_no_showroom.py,
+   ferramentas/categorias/
    (cenas.js: CATALOGO, VISTAS e a luz de estúdio; lugares.js: showroom;
    placa.py; recortar.py; compor.py; maquinas-alta/; showroom/).
    Testes: core/tests_capas_catalogo.py.

@@ -13,7 +13,7 @@ O que estes testes protegem:
     e deixa a de antes na galeria (marcada, visível); rodar de novo não
     duplica; --desfazer volta a de antes; a capa trocada pela equipe no painel
     fica; um erro de subida não para os outros;
-  * a 0156 (o campo e as capas, só no Render, sem derrubar o deploy) e a 0157
+  * a 0156 (o campo), a 0157 (as capas, só no Render, sem derrubar o deploy) e a 0158
     (a galeria dos nossos 3D refeita à força e as categorias, só no Render);
   * as vistas da galeria dos nossos 3D no showroom (o mesmo nome e tamanho);
   * o card nunca corta o brinquedo (ls-fotos.js e ls-tema.css).
@@ -38,8 +38,9 @@ from . import capas_catalogo, categorias_capas
 from .cadastro_modelos import CADASTROS
 from .models import Brinquedos, ImagemBrinquedo
 
-migracao_0156 = importlib.import_module("core.migrations.0156_capas_em_cena_do_catalogo")
-migracao_0157 = importlib.import_module("core.migrations.0157_fotos_no_showroom")
+migracao_0156 = importlib.import_module("core.migrations.0156_papel_na_capa")
+migracao_0157_capas = importlib.import_module("core.migrations.0157_capas_em_cena_do_catalogo")
+migracao_0157 = importlib.import_module("core.migrations.0158_fotos_no_showroom")
 
 RAIZ = Path(__file__).resolve().parent.parent
 FERRAMENTA = RAIZ / "ferramentas" / "categorias"
@@ -291,6 +292,10 @@ class ComandoTests(TestCase):
 class MigracoesTests(TestCase):
     def test_a_0156_depois_da_0155_e_so_no_render(self):
         self.assertEqual(migracao_0156.Migration.dependencies, [("core", "0155_imagens_em_alta")])
+        # esquema e dados em arquivos separados (Postgres: "pending trigger events")
+        self.assertEqual([type(op).__name__ for op in migracao_0156.Migration.operations], ["AddField"])
+        self.assertEqual(migracao_0157_capas.Migration.dependencies, [("core", "0156_papel_na_capa")])
+        self.assertEqual([type(op).__name__ for op in migracao_0157_capas.Migration.operations], ["RunPython"])
         brinquedo = _do_painel(ComandoTests.ITEM)
         self.assertIsNone(capas_catalogo.subir_no_deploy(apps_reais, None, avisar=lambda *_: None))
         self.assertFalse(brinquedo.imagens_brinquedo.filter(papel_na_capa="cena").exists())
@@ -312,7 +317,7 @@ class MigracoesTests(TestCase):
         self.assertIn("python manage.py capas_em_cena", " ".join(avisos))
 
     def test_a_0157_refaz_a_forca_os_nossos_3d_e_sobe_as_categorias(self):
-        self.assertEqual(migracao_0157.Migration.dependencies, [("core", "0156_capas_em_cena_do_catalogo")])
+        self.assertEqual(migracao_0157.Migration.dependencies, [("core", "0157_capas_em_cena_do_catalogo")])
         dados = CADASTROS["air-game-kids-alienigenas"]
         brinquedo = Brinquedos.objects.create(nome_brinquedo=dados["nome"], descricao="x", avaliacao=5,
                                               imagem_brinquedo="imagens_brinquedos/air-game-kids-alienigenas-capa.webp")

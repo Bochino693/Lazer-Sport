@@ -5,7 +5,7 @@
     python manage.py capas_em_cena --so 13 "Sonic Kids"  (só estes: o id no site ou o nome)
     python manage.py capas_em_cena --desfazer [--so 13]  (a capa de antes volta)
 
-Normalmente nem é preciso: a migração 0156 faz isso no deploy. A foto em cena
+Normalmente nem é preciso: a migração 0157 faz isso no deploy. A foto em cena
 vira a capa; a de antes continua na galeria. Um produto cuja capa a equipe já
 trocou no painel fica como está. Rodar de novo não duplica.
 """
