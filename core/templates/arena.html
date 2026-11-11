@@ -295,35 +295,70 @@
 </section>
 
 <!-- ================= MONTE O SEU ESPAÇO (core/projeto3d.py) ================= -->
+{% comment %}
+  O MONTE SEU ESPAÇO É UM APP DE TELA CHEIA, como o launcher de jogos
+  (site/projeto3d/launcher.js). Aqui fica a CHAMADA: a prévia, o título e o
+  "Abrir o montador". O app abre por cima de tudo, com a página parada
+  embaixo, e fecha no X, no Esc e no voltar do celular. O endereço
+  #monte-seu-espaco e o link de um projeto (#p=...) abrem o app direto. O
+  3D (projeto3d.js) só é baixado e montado quando o app abre.
+  Sem JavaScript, o "Abrir o montador" leva à lista das áreas e das máquinas
+  com as medidas (partials/projeto3d_pedido.html).
+{% endcomment %}
 <section class="arena-secao arena-secao--monte" id="monte-seu-espaco" aria-labelledby="titulo-monte">
-    <div class="arena-secao-head">
-        <span class="arena-kicker"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Monte o seu espaço</span>
-        <h2 id="titulo-monte">Diga a medida do lugar: a gente arruma tudo em 3D</h2>
-        <p>
-            Escolha o modelo do espaço (esportivo kids, brinquedão, área baby, trampolim park, área ninja),
-            as outras áreas e as máquinas. O site arruma tudo na planta, com corredor e área de quem joga,
-            mostra o que cabe e o que fica de fora, e você manda o projeto para a nossa equipe.
-        </p>
+    <link rel="stylesheet" href="{% estatico 'site/projeto3d/projeto3d.css' %}">
+    <div class="p3d-chamada">
+        <div class="p3d-chamada-texto">
+            <span class="arena-kicker"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Monte o seu espaço</span>
+            <h2 id="titulo-monte">Diga a medida do lugar: a gente arruma tudo em 3D</h2>
+            <p>
+                Um app só para o seu projeto, em tela cheia. Escolha o modelo do espaço (esportivo kids,
+                brinquedão, área baby, trampolim park, área ninja), as outras áreas e as máquinas: o site
+                arruma tudo na planta, com corredor e área de quem joga, mostra o que cabe e o que fica de
+                fora, e você manda o projeto para a nossa equipe.
+            </p>
+            <ol class="p3d-chamada-passos">
+                <li><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i><span><b>Espaço</b> a medida do lugar e as ideias prontas para ela</span></li>
+                <li><i class="fa-solid fa-shapes" aria-hidden="true"></i><span><b>Modelo</b> o espaço principal, o estilo e a cor</span></li>
+                <li><i class="fa-solid fa-gamepad" aria-hidden="true"></i><span><b>Máquinas</b> e brinquedos grandes, com busca</span></li>
+                <li><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span><b>Pedido</b> com o 3D e as fotos do seu espaço</span></li>
+            </ol>
+            <div class="p3d-chamada-acoes">
+                <a class="ls-botao p3d-chamada-abrir" href="#p3dSemJs" data-abrir-montador><i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i> Abrir o montador</a>
+                <a class="ls-botao ls-botao--fantasma" href="https://wa.me/{{ whatsapp }}?text=Ol%C3%A1!%20Quero%20montar%20um%20espa%C3%A7o%20com%20a%20Lazer%20%26%20Sport." target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar com a equipe</a>
+            </div>
+        </div>
+        {# a prévia: o próprio montador aberto (a imagem é uma captura dele) #}
+        <a class="p3d-chamada-previa" href="#p3dSemJs" data-abrir-montador aria-label="Abrir o montador em tela cheia">
+            <img src="{% estatico 'site/projeto3d/previa-montador.webp' %}" alt="" width="1200" height="750" loading="lazy" decoding="async">
+            <span class="p3d-chamada-tela" aria-hidden="true"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Abrir em tela cheia</span>
+        </a>
     </div>
 
-    <link rel="stylesheet" href="{% estatico 'site/projeto3d/projeto3d.css' %}">
-    <div class="p3d-pagina p3d-pagina--arena">
-    <div class="p3d" id="p3d" data-modo="cliente" data-preguica="1"
-         data-three="{% static 'vendor/three/three.module.min.js' %}"
-         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
-         data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
-         data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
-         data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
-         data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
-         data-foto="{% estatico 'site/projeto3d/foto3d.js' %}"
-         data-sugestoes="{% estatico 'site/projeto3d/sugestoes.js' %}"
-         data-url-pedido="{% url 'monte_seu_projeto_pedir' %}">
-      {{ projeto_dados|json_script:"p3dDados" }}
-      {# com JavaScript, o app; sem, a lista do fim (projeto3d.css: .p3d--js) #}
-      <script>document.getElementById("p3d").classList.add("p3d--js");</script>
-      {% include "partials/projeto3d_app.html" with modo="cliente" %}
-      {% include "partials/projeto3d_pedido.html" %}
-    </div>
+    {% comment %}
+      O APP. Com JavaScript ele fica guardado até abrir (launcher.js o leva
+      para o fim do <body>); o endereço com #monte-seu-espaco ou #p= já abre
+      aqui mesmo, antes de o script chegar. Sem JavaScript, fica a lista.
+    {% endcomment %}
+    <div class="p3dl p3d-pagina p3d-pagina--arena" id="p3dLauncher" data-p3d-launcher
+         data-app-js="{% estatico 'site/projeto3d/projeto3d.js' %}">
+      <script>(function (l) { l.classList.add("p3dl--js"); if (/^#(p=|monte-seu-espaco$)/.test(location.hash)) { l.classList.add("p3dl--aberto"); document.documentElement.classList.add("p3dl-trava"); } })(document.getElementById("p3dLauncher"));</script>
+      <div class="p3d p3d--tela-cheia" id="p3d" data-modo="cliente" data-preguica="1"
+           data-three="{% static 'vendor/three/three.module.min.js' %}"
+           data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+           data-pecas="{% estatico 'interno/montar3d-pecas.js' %}"
+           data-gerador="{% estatico 'interno/montar3d-gerador.js' %}"
+           data-arrumador="{% estatico 'site/projeto3d/arrumador.js' %}"
+           data-maquinas="{% estatico 'site/projeto3d/maquinas3d.js' %}"
+           data-foto="{% estatico 'site/projeto3d/foto3d.js' %}"
+           data-sugestoes="{% estatico 'site/projeto3d/sugestoes.js' %}"
+           data-url-pedido="{% url 'monte_seu_projeto_pedir' %}">
+        {{ projeto_dados|json_script:"p3dDados" }}
+        {# com JavaScript, o app; sem, a lista do fim (projeto3d.css: .p3d--js) #}
+        <script>document.getElementById("p3d").classList.add("p3d--js");</script>
+        {% include "partials/projeto3d_app.html" with modo="cliente" %}
+        {% include "partials/projeto3d_pedido.html" %}
+      </div>
     </div>
 </section>
 
@@ -435,6 +470,6 @@
 <script type="module" src="{% estatico 'site/arena/arena3d.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/vitrine.js' %}"></script>
 <script type="module" src="{% estatico 'site/arena/vitrine3d.js' %}"></script>
-<script type="module" src="{% estatico 'site/projeto3d/projeto3d.js' %}"></script>
+<script type="module" src="{% estatico 'site/projeto3d/launcher.js' %}"></script>
 
 {% endblock %}

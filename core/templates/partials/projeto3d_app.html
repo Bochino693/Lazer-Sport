@@ -1,97 +1,210 @@
 {% comment %}
-  O APP DO "MONTE SEU PROJETO" (static/site/projeto3d/projeto3d.js): o 3D e as
+  O APP DO "MONTE SEU ESPAÇO" (static/site/projeto3d/projeto3d.js): o 3D e as
   escolhas. O mesmo no site (a Arena 3D, arena.html, modo "cliente", com o
   "Pedir este projeto") e na ficha do pedido no painel (modo "painel": a
   equipe vê e mexe no projeto do cliente, sem gravar por cima).
+
+  ARRUMADO COMO UM LAUNCHER DE JOGOS (launcher.js, projeto3d.css): nada de
+  lista sem fim, tudo à vista.
+    * a BARRA DO TOPO: o nome, o resumo vivo (metros, uso, itens), a vista do
+      3D e, no site, o pedido, o WhatsApp e o fechar;
+    * as ABAS, uma por passo (Espaço, Modelo, Áreas, Máquinas, O que coube e,
+      no site, Fotos), com o número e o sinal de pronto: no computador, o
+      trilho da esquerda; no celular, a barra de baixo;
+    * o 3D no meio, grande;
+    * o passo aberto num painel (à direita no computador; no celular, a folha
+      embaixo do 3D, que arrasta para crescer), que rola sozinho -- a página
+      não rola. "Voltar" e "Próximo" andam entre os passos.
+  Os ids e data-atributos são os que o projeto3d.js procura: mude o lugar
+  de um bloco, nunca o nome dele.
 {% endcomment %}
-  <div class="p3d-app">
-    <div class="p3d-visor">
-      <canvas id="p3dTela" class="p3d-tela" aria-label="O seu espaço em 3D: arraste para girar, use a rodinha ou a pinça para aproximar"></canvas>
-      <div class="p3d-nomes" id="p3dNomesCamada" aria-hidden="true"></div>
-      <div class="p3d-carregando" aria-hidden="true"><i class="fa-solid fa-cube fa-spin"></i> Montando o 3D…</div>
-      <div class="p3d-sem3d">Este aparelho não mostra 3D, mas a conta do que cabe vale do mesmo jeito: veja ao lado.</div>
+  <div class="p3d-app" data-p3d-app data-folha="media">
+
+    <header class="p3d-topo">
+      <div class="p3d-topo-nome">
+        <span class="p3d-topo-icone" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+        <div class="p3d-topo-texto">
+          <strong id="p3dTitulo">{% if modo == "cliente" %}Monte seu espaço{% else %}O projeto do cliente{% endif %}</strong>
+          <span class="p3d-resumo" id="p3dResumo" aria-live="polite">
+            <span data-resumo="metros">Montando…</span><span data-resumo="uso"></span><span data-resumo="itens"></span>
+          </span>
+        </div>
+      </div>
       <div class="p3d-barra" role="toolbar" aria-label="Vista do 3D">
         <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dOutra" title="Outra arrumação (e outra ideia para as áreas sob medida)"><i class="fa-solid fa-shuffle" aria-hidden="true"></i><span>Outra ideia</span></button>
         <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dVista" aria-pressed="false" title="Ver de cima (a planta)"><i class="fa-solid fa-map" aria-hidden="true"></i><span>Planta</span></button>
         <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dNomes" aria-pressed="true" title="Mostrar os nomes"><i class="fa-solid fa-tag" aria-hidden="true"></i><span>Nomes</span></button>
         <button type="button" class="p3d-botao p3d-botao--vidro" id="p3dImagem" title="Baixar a imagem"><i class="fa-solid fa-camera" aria-hidden="true"></i><span>Imagem</span></button>
       </div>
+      {% if modo == "cliente" %}
+      <div class="p3d-topo-acoes">
+        <button type="button" class="p3d-botao p3d-botao--forte p3d-topo-pedir" data-pedir title="Pedir este projeto"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>Pedir <span class="p3d-so-largo">este projeto</span></span></button>
+        <a class="p3d-botao p3d-botao--zap" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" title="Falar no WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+        <button type="button" class="p3d-botao p3d-topo-fechar" data-fechar-app aria-label="Fechar o montador" title="Fechar (Esc)"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      {% endif %}
+    </header>
+
+    {# os passos: o trilho da esquerda no computador, a barra de baixo no celular #}
+    <div class="p3d-trilho">
+      <div class="p3d-abas" role="tablist" aria-label="Os passos do projeto">
+        <button type="button" class="p3d-aba" role="tab" id="p3dAba-espaco" data-aba="espaco" aria-controls="p3dPainel-espaco" aria-selected="true">
+          <span class="p3d-aba-icone" aria-hidden="true"><i class="fa-solid fa-ruler-combined"></i></span>
+          <span class="p3d-aba-texto"><b>Espaço</b><small data-aba-sub>O tamanho e as ideias</small></span>
+          <span class="p3d-aba-num" data-aba-num aria-hidden="true">1</span>
+        </button>
+        <button type="button" class="p3d-aba" role="tab" id="p3dAba-modelo" data-aba="modelo" aria-controls="p3dPainel-modelo" aria-selected="false" tabindex="-1">
+          <span class="p3d-aba-icone" aria-hidden="true"><i class="fa-solid fa-shapes"></i></span>
+          <span class="p3d-aba-texto"><b>Modelo</b><small data-aba-sub>O espaço, o estilo e a cor</small></span>
+          <span class="p3d-aba-num" data-aba-num aria-hidden="true">2</span>
+        </button>
+        <button type="button" class="p3d-aba" role="tab" id="p3dAba-areas" data-aba="areas" aria-controls="p3dPainel-areas" aria-selected="false" tabindex="-1">
+          <span class="p3d-aba-icone" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
+          <span class="p3d-aba-texto"><b>Áreas</b><small data-aba-sub>Mais áreas e brinquedos</small></span>
+          <span class="p3d-aba-num" data-aba-num aria-hidden="true">3</span>
+        </button>
+        <button type="button" class="p3d-aba" role="tab" id="p3dAba-maquinas" data-aba="maquinas" aria-controls="p3dPainel-maquinas" aria-selected="false" tabindex="-1">
+          <span class="p3d-aba-icone" aria-hidden="true"><i class="fa-solid fa-gamepad"></i></span>
+          <span class="p3d-aba-texto"><b>Máquinas</b><small data-aba-sub>Os jogos nas paredes</small></span>
+          <span class="p3d-aba-num" data-aba-num aria-hidden="true">4</span>
+        </button>
+        <button type="button" class="p3d-aba" role="tab" id="p3dAba-coube" data-aba="coube" aria-controls="p3dPainel-coube" aria-selected="false" tabindex="-1">
+          <span class="p3d-aba-icone" aria-hidden="true"><i class="fa-solid fa-clipboard-check"></i></span>
+          <span class="p3d-aba-texto"><b><span class="p3d-aba-longo">O que coube</span><span class="p3d-aba-curto" aria-hidden="true">Coube</span></b><small data-aba-sub>O resultado da arrumação</small></span>
+          <span class="p3d-aba-num" data-aba-num aria-hidden="true">5</span>
+        </button>
+        {% if modo == "cliente" or projeto_fotos %}
+        <button type="button" class="p3d-aba" role="tab" id="p3dAba-fotos" data-aba="fotos" aria-controls="p3dPainel-fotos" aria-selected="false" tabindex="-1">
+          <span class="p3d-aba-icone" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
+          <span class="p3d-aba-texto"><b>Fotos</b><small data-aba-sub>{% if modo == "cliente" %}Veja no seu espaço{% else %}As fotos do cliente{% endif %}</small></span>
+          <span class="p3d-aba-num" data-aba-num aria-hidden="true">6</span>
+        </button>
+        {% endif %}
+      </div>
+      <div class="p3d-progresso" aria-hidden="true">
+        <span class="p3d-progresso-texto"><b data-progresso-n>0</b> de <span data-progresso-total>6</span> passos prontos</span>
+        <span class="p3d-progresso-barra"><span data-progresso-barra></span></span>
+      </div>
+    </div>
+
+    <div class="p3d-visor">
+      <canvas id="p3dTela" class="p3d-tela" aria-label="O seu espaço em 3D: arraste para girar, use a rodinha ou a pinça para aproximar"></canvas>
+      <div class="p3d-nomes" id="p3dNomesCamada" aria-hidden="true"></div>
+      <div class="p3d-carregando" aria-hidden="true"><i class="fa-solid fa-cube fa-spin"></i> Montando o 3D…</div>
+      <div class="p3d-sem3d">Este aparelho não mostra 3D, mas a conta do que cabe vale do mesmo jeito: veja em “O que coube”.</div>
       <button type="button" class="p3d-pilula" id="p3dPilula" aria-label="Ver o que coube"></button>
       <div class="p3d-ficha" id="p3dFicha" hidden></div>
       <p class="p3d-dica"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Arraste para girar · pinça ou rodinha aproxima · dois dedos arrastam</p>
     </div>
 
-    <aside class="p3d-painel" aria-label="Monte o seu projeto">
-      <section class="p3d-passo">
-        <h2><span class="p3d-num">1</span> O tamanho do lugar</h2>
-        <div class="p3d-medidas">
-          <label>Largura <span><input name="largura" inputmode="decimal" autocomplete="off" aria-describedby="p3dMetros"> m</span></label>
-          <label>Comprimento <span><input name="comprimento" inputmode="decimal" autocomplete="off"> m</span></label>
-          <label>Pé-direito <span><input name="pe_direito" inputmode="decimal" autocomplete="off"> m</span></label>
-        </div>
-        <p class="p3d-nota" id="p3dMetros">A entrada fica no meio da parede da frente (a de baixo na planta).</p>
-        <div class="p3d-chips" aria-label="Medidas comuns">
-          <button type="button" class="p3d-chip" data-medida="10x8">10 × 8 m</button>
-          <button type="button" class="p3d-chip" data-medida="15x12">15 × 12 m</button>
-          <button type="button" class="p3d-chip" data-medida="20x15">20 × 15 m</button>
-          <button type="button" class="p3d-chip" data-medida="30x20">30 × 20 m</button>
-        </div>
-        {# as melhores combinações para ESTE espaço (sugestoes.js): um toque aplica e o cliente segue ajustando #}
-        <div class="p3d-propostas" id="p3dPropostas" hidden>
-          <p class="p3d-rotulo"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ideias para o seu espaço <span id="p3dPropostasTamanho"></span></p>
-          <div class="p3d-propostas-lista" id="p3dPropostasLista" aria-live="polite"></div>
-        </div>
-      </section>
+    <div class="p3d-painel" role="region" aria-label="O passo aberto">
+      {# no celular: a alça da folha (arraste para cima e ela cresce; um toque alterna) #}
+      <button type="button" class="p3d-folha-alca" data-folha-alca aria-label="Aumentar o painel" aria-expanded="false"><span aria-hidden="true"></span></button>
+      <div class="p3d-paineis" data-paineis>
 
-      <section class="p3d-passo">
-        <h2><span class="p3d-num">2</span> O modelo do espaço</h2>
-        <div class="p3d-modelos" id="p3dModelos"></div>
-        <div class="p3d-prontos" id="p3dProntos" hidden></div>
-        <div class="p3d-opcoes" id="p3dOpcoes" hidden></div>
-        <p class="p3d-rotulo">Estilo e cor das áreas</p>
-        <div class="p3d-chips" id="p3dEstilos"></div>
-        <div class="p3d-cores" id="p3dCores"></div>
-      </section>
+        <section class="p3d-aba-painel" id="p3dPainel-espaco" role="tabpanel" aria-labelledby="p3dAba-espaco" data-aba-painel="espaco">
+          <div class="p3d-passo">
+            <h2><span class="p3d-num">1</span> O tamanho do lugar</h2>
+            <div class="p3d-medidas">
+              <label>Largura <span><input name="largura" inputmode="decimal" autocomplete="off" aria-describedby="p3dMetros"> m</span></label>
+              <label>Comprimento <span><input name="comprimento" inputmode="decimal" autocomplete="off"> m</span></label>
+              <label>Pé-direito <span><input name="pe_direito" inputmode="decimal" autocomplete="off"> m</span></label>
+            </div>
+            <p class="p3d-nota" id="p3dMetros">A entrada fica no meio da parede da frente (a de baixo na planta).</p>
+            <div class="p3d-chips" aria-label="Medidas comuns">
+              <button type="button" class="p3d-chip" data-medida="10x8">10 × 8 m</button>
+              <button type="button" class="p3d-chip" data-medida="15x12">15 × 12 m</button>
+              <button type="button" class="p3d-chip" data-medida="20x15">20 × 15 m</button>
+              <button type="button" class="p3d-chip" data-medida="30x20">30 × 20 m</button>
+            </div>
+            {# as melhores combinações para ESTE espaço (sugestoes.js): um toque aplica e o cliente segue ajustando #}
+            <div class="p3d-propostas" id="p3dPropostas" hidden>
+              <p class="p3d-rotulo"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Ideias para o seu espaço <span id="p3dPropostasTamanho"></span></p>
+              <div class="p3d-propostas-lista" id="p3dPropostasLista" aria-live="polite"></div>
+            </div>
+          </div>
+        </section>
 
-      <section class="p3d-passo">
-        <h2><span class="p3d-num">3</span> Mais áreas e brinquedos grandes</h2>
-        <div class="p3d-chips" id="p3dAreas"></div>
-        <div class="p3d-opcoes" id="p3dOpcoesMais" hidden></div>
-        <ul class="p3d-itens" id="p3dGrandes"></ul>
-      </section>
+        <section class="p3d-aba-painel" id="p3dPainel-modelo" role="tabpanel" aria-labelledby="p3dAba-modelo" data-aba-painel="modelo" hidden>
+          <div class="p3d-passo">
+            <h2><span class="p3d-num">2</span> O modelo do espaço</h2>
+            <div class="p3d-modelos" id="p3dModelos"></div>
+            <div class="p3d-prontos" id="p3dProntos" hidden></div>
+            <div class="p3d-opcoes" id="p3dOpcoes" hidden></div>
+            <p class="p3d-rotulo">Estilo e cor das áreas</p>
+            <div class="p3d-chips" id="p3dEstilos"></div>
+            <div class="p3d-cores" id="p3dCores"></div>
+          </div>
+        </section>
 
-      <section class="p3d-passo">
-        <h2><span class="p3d-num">4</span> As máquinas</h2>
-        <label class="p3d-busca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="p3dBusca" type="search" placeholder="Buscar máquina (boliche, basquete, tiro…)" aria-label="Buscar máquina"></label>
-        <ul class="p3d-itens" id="p3dMaquinas"></ul>
-      </section>
+        <section class="p3d-aba-painel" id="p3dPainel-areas" role="tabpanel" aria-labelledby="p3dAba-areas" data-aba-painel="areas" hidden>
+          <div class="p3d-passo">
+            <h2><span class="p3d-num">3</span> Mais áreas e brinquedos grandes</h2>
+            <p class="p3d-rotulo">Mais áreas sob medida</p>
+            <div class="p3d-chips" id="p3dAreas"></div>
+            <div class="p3d-opcoes" id="p3dOpcoesMais" hidden></div>
+            <p class="p3d-rotulo">Brinquedos grandes</p>
+            <ul class="p3d-itens p3d-itens--grade" id="p3dGrandes"></ul>
+          </div>
+        </section>
 
-      <section class="p3d-passo p3d-passo--resultado">
-        <h2><span class="p3d-num"><i class="fa-solid fa-check" aria-hidden="true"></i></span> O que coube</h2>
-        <div id="p3dResultado" aria-live="polite"></div>
-      </section>
+        <section class="p3d-aba-painel p3d-aba-painel--maquinas" id="p3dPainel-maquinas" role="tabpanel" aria-labelledby="p3dAba-maquinas" data-aba-painel="maquinas" hidden>
+          <div class="p3d-passo">
+            {# a busca fica presa no alto; a grade rola embaixo dela #}
+            <div class="p3d-maquinas-topo">
+              <h2><span class="p3d-num">4</span> As máquinas</h2>
+              <label class="p3d-busca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="p3dBusca" type="search" placeholder="Buscar máquina (boliche, basquete, tiro…)" aria-label="Buscar máquina" autocomplete="off" enterkeyhint="search"></label>
+              <p class="p3d-nota p3d-maquinas-conta" data-maquinas-conta aria-live="polite"></p>
+            </div>
+            <ul class="p3d-itens p3d-itens--grade" id="p3dMaquinas" data-vazio="Nenhuma máquina com esse nome."></ul>
+          </div>
+        </section>
 
-      {% if modo == "cliente" or projeto_fotos %}
-      <section class="p3d-passo p3d-passo--fotos" id="p3dFotosPasso">
-        <h2><span class="p3d-num"><i class="fa-solid fa-camera" aria-hidden="true"></i></span> Veja no seu espaço</h2>
-        {% if modo == "cliente" %}
-        <p class="p3d-nota">Mande até 3 fotos do lugar. Você marca os cantos do chão e o projeto aparece dentro da foto, do ângulo em que ela foi tirada. As fotos vão junto do pedido.</p>
-        <label class="p3d-botao p3d-botao--foto"><i class="fa-solid fa-image" aria-hidden="true"></i> Escolher fotos<input type="file" id="p3dFotosEntrada" accept="image/jpeg,image/png,image/webp,image/*" multiple hidden></label>
-        {% else %}
-        <p class="p3d-nota">As fotos que o cliente mandou, com os cantos que ele marcou. Abra uma para ver dentro dela o projeto que estiver montado aqui.</p>
+        <section class="p3d-aba-painel" id="p3dPainel-coube" role="tabpanel" aria-labelledby="p3dAba-coube" data-aba-painel="coube" hidden>
+          <div class="p3d-passo p3d-passo--resultado">
+            <h2><span class="p3d-num"><i class="fa-solid fa-check" aria-hidden="true"></i></span> O que coube</h2>
+            <div id="p3dResultado" aria-live="polite"></div>
+            {% if modo == "cliente" %}
+            <div class="p3d-pedir">
+              <button type="button" class="p3d-botao p3d-botao--forte" data-pedir><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Pedir este projeto</button>
+              <a class="p3d-botao p3d-botao--zap" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" title="Falar no WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+            </div>
+            {% endif %}
+          </div>
+        </section>
+
+        {% if modo == "cliente" or projeto_fotos %}
+        <section class="p3d-aba-painel" id="p3dPainel-fotos" role="tabpanel" aria-labelledby="p3dAba-fotos" data-aba-painel="fotos" hidden>
+          <div class="p3d-passo p3d-passo--fotos" id="p3dFotosPasso">
+            <h2><span class="p3d-num"><i class="fa-solid fa-camera" aria-hidden="true"></i></span> Veja no seu espaço</h2>
+            {% if modo == "cliente" %}
+            <p class="p3d-nota">Mande até 3 fotos do lugar. Você marca os cantos do chão e o projeto aparece dentro da foto, do ângulo em que ela foi tirada. As fotos vão junto do pedido.</p>
+            <label class="p3d-botao p3d-botao--foto"><i class="fa-solid fa-image" aria-hidden="true"></i> Escolher fotos<input type="file" id="p3dFotosEntrada" accept="image/jpeg,image/png,image/webp,image/*" multiple hidden></label>
+            <ol class="p3d-fotos-dicas">
+              <li><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> Fique num canto do lugar, com o celular deitado, e pegue o chão até a parede do fundo.</li>
+              <li><i class="fa-solid fa-crosshairs" aria-hidden="true"></i> Depois, arraste os 4 pontos até os cantos do chão: o projeto aparece na foto.</li>
+              <li><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> As fotos e o projeto montado nelas vão junto do pedido para a equipe.</li>
+            </ol>
+            {% else %}
+            <p class="p3d-nota">As fotos que o cliente mandou, com os cantos que ele marcou. Abra uma para ver dentro dela o projeto que estiver montado aqui.</p>
+            {% endif %}
+            <ul class="p3d-fotos" id="p3dFotos"></ul>
+            <p class="p3d-erro" id="p3dFotosErro" role="alert" hidden></p>
+          </div>
+        </section>
         {% endif %}
-        <ul class="p3d-fotos" id="p3dFotos"></ul>
-        <p class="p3d-erro" id="p3dFotosErro" role="alert" hidden></p>
-      </section>
-      {% endif %}
-
-      {% if modo == "cliente" %}
-      <div class="p3d-pedir">
-        <button type="button" class="p3d-botao p3d-botao--forte" data-pedir><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Pedir este projeto</button>
-        <a class="p3d-botao p3d-botao--zap" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" title="Falar no WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
       </div>
-      {% endif %}
-    </aside>
+
+      {# andar entre os passos; no último, no site, o pedido #}
+      <div class="p3d-painel-pe">
+        <button type="button" class="p3d-botao p3d-botao--leve p3d-voltar" data-aba-voltar disabled><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Voltar</span></button>
+        <span class="p3d-painel-onde" data-aba-onde>Passo 1 de {% if modo == "cliente" or projeto_fotos %}6{% else %}5{% endif %}</span>
+        <button type="button" class="p3d-botao p3d-proximo" data-aba-proximo><span>Próximo<span class="p3d-proximo-nome" data-aba-proximo-nome>: Modelo</span></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+        {% if modo == "cliente" %}
+        <button type="button" class="p3d-botao p3d-botao--forte p3d-fim" data-pedir data-aba-fim hidden><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Pedir este projeto</button>
+        {% endif %}
+      </div>
+    </div>
   </div>
 
   {# o projeto na foto do espaço: os pontos vão nos cantos do chão e o 3D aparece do ângulo da foto (foto3d.js) #}
@@ -120,4 +233,3 @@
       <button type="button" class="p3d-botao p3d-botao--forte" data-fechar-foto><i class="fa-solid fa-check" aria-hidden="true"></i> Pronto</button>
     </div>
   </dialog>
-

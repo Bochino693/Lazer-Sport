@@ -96,5 +96,7 @@
   {% include "partials/projeto3d_app.html" with modo="painel" %}
 </section>
 </div>
+{# as abas do app (os passos, o resumo, o "Próximo"), aqui sem a tela cheia; depois, o 3D #}
+<script type="module" src="{% estatico 'site/projeto3d/launcher.js' %}" data-ls-tela="1"></script>
 <script type="module" src="{% estatico 'site/projeto3d/projeto3d.js' %}" data-ls-tela="1"></script>
 {% endblock %}

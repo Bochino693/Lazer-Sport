@@ -430,8 +430,15 @@ export async function iniciar(raiz) {
     if (cena) cena.desenhar(resultado, estado);
     if (modo === "cliente") {
       const hash = "#p=" + codificar({ espaco: estado.espaco, ...escolha() });
-      if (location.hash !== hash) history.replaceState(null, "", hash);
+      // o app de tela cheia (launcher.js) reabre com este endereço; fechado, ele não mexe no endereço.
+      // O history.state fica: é ele que diz ao launcher que esta entrada do histórico é a do app.
+      raiz.dataset.endereco = hash;
+      if (raiz.dataset.fechado !== "1" && location.hash !== hash) history.replaceState(history.state, "", hash);
     }
+    // o resumo e os passos do launcher (launcher.js): metros, uso, quantos no projeto
+    raiz.dispatchEvent(new CustomEvent("p3d:mudou", {
+      detail: { espaco: { ...estado.espaco }, numeros: resultado.numeros, noProjeto: resultado.itens.length, deFora: resultado.recusados.length },
+    }));
     // a medida que caberia tudo: só quando algo ficou de fora (por falta de lugar), sem pressa
     clearTimeout(esperaSugestao);
     if (resultado.recusados.some((x) => x.codigo !== "altura")) {
@@ -544,8 +551,8 @@ export async function iniciar(raiz) {
     desenharModelos(); desenharAreas();
     refazer();
     desenharOpcoes();
-    // no celular, o 3D está acima: leva até ele para ver a ideia montada
-    if (window.matchMedia("(max-width: 960px)").matches) $(".p3d-visor", raiz)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // no celular, o 3D está acima: leva até ele para ver a ideia montada (no app de tela cheia ele já está à vista)
+    if (window.matchMedia("(max-width: 960px)").matches && !raiz.closest("[data-p3d-launcher]")) $(".p3d-visor", raiz)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   /* ---------------------------------------------------------------- o 3D */
@@ -1111,6 +1118,10 @@ async function criarCena(raiz, dados, geradorMod) {
   const fotoRenderers = new Map();
   const vista = { alvo: new T.Vector3(), giro: 0.55, inclinacao: 0.78, distancia: 30 };
   let alvoVista = null; // a vista para onde a câmera desliza (planta, foco)
+  // a distância que mostra a sala inteira: a tela em pé (o 3D entre as abas e o painel do launcher) pede mais longe
+  let salaMaior = 0;
+  let vistaMexida = false; // a pessoa girou ou aproximou: daí a mudança de tamanho da tela não mexe mais na câmera
+  const distanciaDaSala = () => (salaMaior * 1.35 + 4) * Math.max(1, 1.3 / (camera.aspect || 1.3));
   let planta = false;
   let sujo = true;
   function posicionarCamera() {
@@ -1128,6 +1139,7 @@ async function criarCena(raiz, dados, geradorMod) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    if (salaMaior && !vistaMexida && !alvoVista) vista.distancia = distanciaDaSala();
     sujo = true;
   }
   new ResizeObserver(ajustarTamanho).observe(tela);
@@ -1146,7 +1158,7 @@ async function criarCena(raiz, dados, geradorMod) {
     const antes = toques.get(e.pointerId);
     if (!antes) return;
     const dx = e.clientX - antes.x, dy = e.clientY - antes.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3) arrastou = true;
+    if (Math.abs(dx) + Math.abs(dy) > 3) { arrastou = true; vistaMexida = true; }
     if (toques.size === 2) {
       // a pinça aproxima; os dois dedos juntos arrastam a vista
       const outro = [...toques.entries()].find(([id]) => id !== e.pointerId)[1];
@@ -1171,6 +1183,7 @@ async function criarCena(raiz, dados, geradorMod) {
     e.preventDefault();
     vista.distancia = Math.min(250, Math.max(3, vista.distancia * Math.exp(e.deltaY * 0.0012)));
     alvoVista = null;
+    vistaMexida = true;
     sujo = true;
   }, { passive: false });
   function arrastar(dx, dy) {
@@ -1396,7 +1409,9 @@ async function criarCena(raiz, dados, geradorMod) {
     if (tamanho !== ultimoTamanho) {
       ultimoTamanho = tamanho;
       vista.alvo.set(0, 0, 0);
-      vista.distancia = maior * 1.35 + 4;
+      salaMaior = maior;
+      vistaMexida = false;
+      vista.distancia = distanciaDaSala();
     }
 
     const paleta = geradorMod.paletaDaCor(estado.cor, estado.estilo);
@@ -1577,11 +1592,14 @@ async function criarCena(raiz, dados, geradorMod) {
 const raiz = document.getElementById("p3d");
 if (raiz) {
   const comecar = () => iniciar(raiz).catch((erro) => console.error("Monte seu projeto", erro));
-  // na Arena 3D o app só acorda perto da tela (a roda 3D já está ocupando a placa de vídeo);
+  // na Arena 3D o app é de tela cheia (launcher.js): este arquivo só é baixado quando o app abre,
+  // então o 3D monta na hora (a preguiça já foi o launcher)
+  const noLauncher = Boolean(raiz.closest("[data-p3d-launcher]"));
+  // fora dele, o app só acorda perto da tela (a roda 3D já está ocupando a placa de vídeo);
   // o link de um projeto (#p=...) acorda na hora e leva até ele
   const doLink = /^#p=/.test(location.hash);
-  if (doLink) requestAnimationFrame(() => raiz.scrollIntoView({ block: "start" }));
-  if (raiz.dataset.preguica && !doLink && "IntersectionObserver" in window) {
+  if (doLink && !noLauncher) requestAnimationFrame(() => raiz.scrollIntoView({ block: "start" }));
+  if (raiz.dataset.preguica && !doLink && !noLauncher && "IntersectionObserver" in window) {
     const vigia = new IntersectionObserver((vistos) => {
       if (vistos.some((v) => v.isIntersecting)) { vigia.disconnect(); comecar(); }
     }, { rootMargin: "600px 0px" });

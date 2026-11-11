@@ -28,8 +28,8 @@
     </div>
   </dialog>
 
-  {# sem JavaScript: o que dá para montar, com as medidas (o app esconde esta lista) #}
-  <div class="p3d-semjs">
+  {# sem JavaScript: o que dá para montar, com as medidas (o app esconde esta lista; o "Abrir o montador" da Arena leva até ela) #}
+  <div class="p3d-semjs" id="p3dSemJs">
     <h2>As áreas que a fábrica monta sob medida</h2>
     <ul>
       {% for a in areas %}<li><b>{{ a.nome }}</b> — {{ a.sub }} A partir de {{ a.min.0|floatformat:"-1" }} × {{ a.min.1|floatformat:"-1" }} m; pé-direito de {{ a.pe_direito_minimo|floatformat:"-1" }} m.</li>{% endfor %}

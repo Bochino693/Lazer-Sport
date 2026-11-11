@@ -1,11 +1,22 @@
 /* ======================================================================
-   MONTE SEU PROJETO (monte_seu_projeto.html): o 3D de um lado, as
-   escolhas do outro. No computador o 3D fica preso na tela enquanto as
-   escolhas rolam; no celular, o 3D vem em cima e as escolhas embaixo,
-   com o "Pedir este projeto" sempre à mão no rodapé.
+   MONTE SEU ESPAÇO: o app do 3D e das escolhas, ARRUMADO COMO UM LAUNCHER
+   DE JOGOS (o mesmo jeito do Lazer & Sport Games, portal-jogos.css).
+
+     * a barra do topo: o nome, o resumo vivo, a vista do 3D e o pedido;
+     * as abas dos passos: o trilho da esquerda no computador, a barra de
+       abas embaixo no celular (como num aplicativo);
+     * o 3D no meio, grande;
+     * o passo aberto num painel que rola sozinho: à direita no computador;
+       no celular, a folha embaixo do 3D (arrasta para crescer).
+
+   Na Arena 3D (arena.html) o app é de TELA CHEIA (.p3dl, launcher.js): abre
+   por cima de tudo com a página parada embaixo. Na ficha do pedido no painel
+   ele fica dentro da ficha, com as mesmas abas. A grade escolhe pela largura
+   do próprio app (@container p3d), não da janela: a ficha do painel, com o
+   menu do lado, é mais estreita que a tela.
    ====================================================================== */
 
-.p3d-pagina {
+.p3d-pagina, .p3d-chamada {
   --p3d-fundo: var(--ls-fundo, #050b1f);
   --p3d-cartao: var(--ls-superficie, rgba(255, 255, 255, .055));
   --p3d-borda: var(--ls-borda, rgba(255, 255, 255, .1));
@@ -17,42 +28,265 @@
   --p3d-amarelo: var(--ls-amarelo-neon, #ffd23f);
   --p3d-vermelho: var(--ls-vermelho-neon, #ff4757);
   --p3d-verde: #22c55e;
+  /* o app: a noite azul do launcher */
+  --p3d-app-fundo: #060d24;
+  --p3d-topo-fundo: rgba(5, 10, 28, .96);
+  --p3d-painel-fundo: #0a1431;
+  --p3d-trilho-fundo: rgba(255, 255, 255, .025);
 }
-
-.p3d-hero { padding-bottom: 46px; }
 
 /* o que está escondido fica escondido (as regras de display abaixo não passam por cima) */
 .p3d [hidden] { display: none !important; }
 
 .p3d {
   position: relative;
-  padding: 18px 16px 40px;
+  container: p3d / inline-size;
   color: var(--p3d-texto);
 }
 
+/* ======================================================================
+   A GRADE DO APP
+   ====================================================================== */
 .p3d-app {
+  position: relative;
   display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "topo" "abas" "visor" "painel";
   max-width: 1800px;
   margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--p3d-borda);
+  border-radius: 22px;
+  background: var(--p3d-app-fundo);
+  box-shadow: var(--ls-sombra, 0 18px 44px rgba(0, 0, 0, .42));
+  isolation: isolate;
+}
+.p3d-topo { grid-area: topo; }
+.p3d-trilho { grid-area: abas; }
+.p3d-visor { grid-area: visor; }
+.p3d-painel { grid-area: painel; }
+
+/* computador (e a ficha larga do painel): o trilho, o 3D e o painel lado a lado, sem rolar a página */
+@container p3d (min-width: 900px) {
+  .p3d-app {
+    grid-template-columns: var(--p3d-trilho-largura, 236px) minmax(0, 1fr) var(--p3d-lado, clamp(340px, 31cqw, 460px));
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "topo topo topo" "abas visor painel";
+    height: var(--p3d-altura, min(880px, calc(100vh - 120px)));
+    min-height: 520px;
+  }
+}
+
+/* ---------------------------------------------------------------- a barra do topo */
+.p3d-topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--p3d-borda);
+  background: var(--p3d-topo-fundo);
+}
+.p3d-topo-nome { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; }
+.p3d-topo-icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  font-size: 18px;
+  color: #04121f;
+  background: linear-gradient(135deg, var(--p3d-ciano), #8a5cff);
+  box-shadow: 0 0 22px rgba(63, 208, 255, .3);
+}
+.p3d-topo-texto { display: grid; gap: 3px; min-width: 0; }
+.p3d-topo-texto strong {
+  overflow: hidden;
+  font: 800 1.08rem/1.15 "Poppins", system-ui, sans-serif;
+  color: #fff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* o resumo vivo: "20 × 15 m · 61% em uso · 8 itens" */
+.p3d-resumo {
+  display: block;
+  overflow: hidden;
+  font: 600 12.5px/1.3 system-ui, sans-serif;
+  color: var(--p3d-suave);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.p3d-resumo > span:empty { display: none; }
+.p3d-resumo > span + span:not(:empty)::before { content: "·"; margin: 0 7px; opacity: .55; }
+.p3d-resumo [data-resumo="metros"] { color: #fff; font-weight: 800; }
+.p3d-resumo [data-resumo="uso"] b { color: var(--p3d-ciano); }
+.p3d-resumo-fora { color: #fca5a5; font-weight: 800; }
+
+/* a vista do 3D (Outra ideia, Planta, Nomes, Imagem) */
+.p3d-barra { display: flex; flex: none; gap: 6px; }
+.p3d-topo-acoes { display: flex; flex: none; align-items: center; gap: 8px; }
+.p3d-topo-pedir { min-height: 42px; }
+.p3d-topo-acoes .p3d-botao--zap { width: 42px; min-height: 42px; font-size: 20px; }
+.p3d-topo-fechar { width: 42px; padding: 0; font-size: 18px; }
+.p3d-topo-fechar:hover { border-color: var(--p3d-vermelho); background: rgba(255, 71, 87, .16); }
+/* nas larguras médias a vista fica só com os ícones (o nome vai no title) */
+@container p3d (max-width: 1279.98px) {
+  .p3d-barra .p3d-botao--vidro { width: 40px; padding: 0; }
+  .p3d-barra .p3d-botao--vidro span { display: none; }
+}
+@container p3d (max-width: 1099.98px) {
+  .p3d-so-largo { display: none; }
+}
+
+/* ---------------------------------------------------------------- o trilho das abas */
+.p3d-trilho {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  padding: 14px 10px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-right: 1px solid var(--p3d-borda);
+  background: var(--p3d-trilho-fundo);
+  scrollbar-width: thin;
+}
+.p3d-abas { display: grid; gap: 4px; }
+.p3d-aba {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  text-align: left;
+  color: #cfdcf2;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.p3d-aba:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.p3d-aba:focus-visible { outline: 3px solid var(--p3d-amarelo); outline-offset: -3px; }
+.p3d-aba-icone {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--p3d-ciano);
+  background: rgba(255, 255, 255, .06);
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.p3d-aba-texto { display: grid; gap: 2px; min-width: 0; }
+.p3d-aba-texto b { font: 800 14px/1.2 "Poppins", system-ui, sans-serif; color: #fff; }
+.p3d-aba-texto small {
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--p3d-suave);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.p3d-aba-curto { display: none; }
+.p3d-aba-num {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font: 800 11px/1 system-ui, sans-serif;
+  color: #93a7c7;
+  background: rgba(255, 255, 255, .07);
+}
+.p3d-aba[aria-selected="true"] {
+  color: #fff;
+  background: rgba(63, 208, 255, .14);
+  box-shadow: inset 3px 0 0 var(--p3d-ciano);
+}
+.p3d-aba[aria-selected="true"] .p3d-aba-icone { color: #04121f; background: var(--p3d-ciano); box-shadow: 0 0 18px rgba(63, 208, 255, .4); }
+.p3d-aba[aria-selected="true"] .p3d-aba-num { color: #fff; background: rgba(63, 208, 255, .35); }
+/* o passo pronto: o número vira o sinal verde */
+.p3d-aba--feita .p3d-aba-num,
+.p3d-aba--feita[aria-selected="true"] .p3d-aba-num { color: #052e16; background: #86efac; }
+/* algo ficou de fora: o ponto vermelho no "O que coube" */
+.p3d-aba--alerta .p3d-aba-icone { position: relative; }
+.p3d-aba--alerta .p3d-aba-icone::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--p3d-app-fundo);
+  border-radius: 50%;
+  background: var(--p3d-vermelho);
+}
+
+/* o progresso: quantos passos já estão prontos */
+.p3d-progresso {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  color: var(--p3d-suave);
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--p3d-borda);
+}
+.p3d-progresso b { color: #fff; }
+.p3d-progresso-barra { display: block; height: 6px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .1); }
+.p3d-progresso-barra span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--p3d-ciano), #86efac);
+  transition: width .3s ease;
+}
+
+/* no computador menor o trilho fica só com o ícone e o nome embaixo */
+@container p3d (min-width: 900px) and (max-width: 1239.98px) {
+  .p3d-app { --p3d-trilho-largura: 92px; }
+  .p3d-trilho { padding: 10px 6px; }
+  .p3d-aba { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 4px; min-height: 70px; padding: 8px 4px; text-align: center; }
+  .p3d-aba-texto b { font-size: 11.5px; }
+  .p3d-aba-texto small { display: none; }
+  .p3d-aba-longo { display: none; }
+  .p3d-aba-curto { display: inline; }
+  .p3d-aba-num { position: absolute; top: 5px; right: 8px; width: 18px; height: 18px; font-size: 9.5px; }
+  .p3d-aba[aria-selected="true"] { box-shadow: inset 3px 0 0 var(--p3d-ciano); }
+  .p3d-progresso { padding: 8px; }
+  .p3d-progresso-texto { display: none; }
+}
+/* tela baixa (o celular deitado, a janela pequena): o trilho mais curto */
+@media (max-height: 620px) {
+  .p3d-aba { min-height: 48px; padding-top: 5px; padding-bottom: 5px; }
+  .p3d-aba-texto small { display: none; }
+  .p3d-progresso { display: none; }
 }
 
 /* ---------------------------------------------------------------- o 3D */
 .p3d-visor {
-  position: sticky;
-  top: calc(var(--ls-ancora-offset, 96px) - 8px);
-  height: calc(100vh - var(--ls-ancora-offset, 96px) - 24px);
-  min-height: 420px;
-  border-radius: 22px;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 56vh;
+  min-height: 320px;
   overflow: hidden;
   background: radial-gradient(circle at 50% 30%, #18295a, #0a1430 70%);
-  border: 1px solid var(--p3d-borda);
-  box-shadow: var(--ls-sombra, 0 18px 44px rgba(0, 0, 0, .42));
   isolation: isolate;
+  container-type: inline-size;
 }
-.p3d-visor { container-type: inline-size; }
+@container p3d (min-width: 900px) {
+  .p3d-visor { height: auto; min-height: 0; }
+}
 @container (max-width: 980px) { .p3d-dica { display: none; } }
 .p3d-tela {
   display: block;
@@ -95,18 +329,6 @@
 .p3d--pronto .p3d-carregando { display: none; }
 .p3d--sem-3d .p3d-sem3d { display: grid; }
 .p3d--sem-3d .p3d-carregando, .p3d--sem-3d .p3d-barra, .p3d--sem-3d .p3d-dica { display: none; }
-
-.p3d-barra {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  pointer-events: none;
-}
-.p3d-barra > * { pointer-events: auto; }
 
 .p3d-pilula {
   position: absolute;
@@ -203,22 +425,40 @@
 .p3d-botao--zap { width: 48px; padding: 0; font-size: 22px; }
 .p3d-botao--zap:hover, .p3d-botao--zap-largo:hover { color: #fff; }
 
-/* ---------------------------------------------------------------- o painel */
-.p3d-painel { display: grid; gap: 14px; min-width: 0; }
-
-.p3d-passo {
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px solid var(--p3d-borda);
-  background: var(--p3d-cartao);
+/* ---------------------------------------------------------------- o painel do passo aberto */
+/* rola sozinho (a página não rola); embaixo, o "Voltar" e o "Próximo" */
+.p3d-painel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  max-height: 78vh;
+  background: var(--p3d-painel-fundo);
+  container: painel / inline-size;
 }
+@container p3d (min-width: 900px) {
+  .p3d-painel { max-height: none; border-left: 1px solid var(--p3d-borda); }
+}
+.p3d-paineis {
+  --p3d-paineis-topo: 18px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--p3d-paineis-topo) 18px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .22) transparent;
+}
+.p3d-folha-alca { display: none; }
+
+.p3d-passo { min-width: 0; }
 .p3d-passo h2 {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 12px;
-  font-size: 1.02rem;
-  font-weight: 800;
+  margin: 0 0 14px;
+  font: 800 1.1rem/1.25 "Poppins", system-ui, sans-serif;
   color: var(--p3d-texto);
 }
 .p3d-num {
@@ -442,19 +682,17 @@
 .p3d-sugestao i { color: var(--p3d-amarelo); }
 .p3d-sugestao span { flex: 1 1 180px; }
 
+/* o pedido no fim do "O que coube" */
 .p3d-pedir {
-  position: sticky;
-  bottom: 12px;
-  z-index: 3;
   display: flex;
   gap: 8px;
-  padding: 10px;
-  border-radius: 18px;
-  border: 1px solid var(--p3d-borda-forte);
-  background: rgba(5, 11, 31, .9);
-  backdrop-filter: blur(10px);
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 210, 63, .3);
+  background: rgba(255, 210, 63, .07);
 }
-.p3d-pedir .p3d-botao--forte { flex: 1; min-height: 48px; font-size: 15px; }
+.p3d-pedir .p3d-botao--forte { flex: 1; min-height: 46px; font-size: 15px; }
 
 /* ---------------------------------------------------------------- o pedido */
 .p3d-dialogo {
@@ -506,32 +744,49 @@
 .p3d-botao--zap-largo { width: 100%; min-height: 48px; }
 
 /* ---------------------------------------------------------------- as ideias para o espaço (sugestoes.js) */
-.p3d-propostas { margin-top: 14px; }
+/* em destaque na aba Espaço: cartões numa grade, a melhor ideia na largura toda */
+.p3d-propostas {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 210, 63, .28);
+  background: linear-gradient(160deg, rgba(255, 210, 63, .09), rgba(63, 208, 255, .04) 62%);
+}
+.p3d-propostas .p3d-rotulo { margin-top: 0; color: #ffe38a; }
 .p3d-propostas .p3d-rotulo i { color: var(--p3d-amarelo); }
 .p3d-propostas .p3d-rotulo span { font-weight: 700; letter-spacing: 0; text-transform: none; }
-.p3d-propostas-lista { display: grid; gap: 8px; }
+.p3d-propostas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; }
 .p3d-proposta {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   padding: 10px;
   border: 1px solid var(--p3d-borda-forte);
   border-radius: 14px;
-  background: rgba(0, 0, 0, .14);
+  background: rgba(0, 0, 0, .18);
   color: var(--p3d-texto);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
+.p3d-proposta:first-child { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr); }
 .p3d-proposta:hover { border-color: var(--p3d-ciano); }
 .p3d-proposta:focus-visible { outline: 3px solid var(--p3d-amarelo); outline-offset: 2px; }
 .p3d-proposta[aria-pressed="true"] { border-color: var(--p3d-amarelo); box-shadow: inset 0 0 0 1px var(--p3d-amarelo); background: rgba(255, 210, 63, .07); }
-.p3d-proposta-planta { display: block; border-radius: 8px; background: #0b1636; }
+.p3d-proposta-planta { display: block; justify-self: center; max-width: 100%; border-radius: 8px; background: #0b1636; }
 .p3d-proposta-texto { display: grid; gap: 3px; min-width: 0; }
 .p3d-proposta-texto b { font-size: 13.5px; font-weight: 800; line-height: 1.3; }
-.p3d-proposta-texto small { font-size: 11.5px; line-height: 1.35; color: var(--p3d-suave); }
+.p3d-proposta-texto small {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--p3d-suave);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
 .p3d-proposta-selo { display: inline-block; margin-right: 2px; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-style: normal; font-weight: 900; color: #0b1220; background: var(--p3d-amarelo); vertical-align: 1px; }
 .p3d-proposta-usar { margin-top: 4px; font-size: 12px; font-weight: 800; color: var(--p3d-ciano); }
 .p3d-proposta[aria-pressed="true"] .p3d-proposta-usar { color: var(--p3d-amarelo); }
@@ -549,6 +804,11 @@
 .p3d-botao--esperando { opacity: .6; pointer-events: none; }
 .p3d-fotos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
 .p3d-fotos:empty { display: none; }
+/* como tirar a foto (some quando a primeira chega) */
+.p3d-fotos-dicas { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.p3d-fotos-dicas li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.45; color: var(--p3d-suave); background: rgba(255, 255, 255, .04); border: 1px solid var(--p3d-borda); }
+.p3d-fotos-dicas i { flex: none; width: 18px; margin-top: 2px; text-align: center; color: var(--p3d-ciano); }
+.p3d-fotos-dicas:has(~ .p3d-fotos:not(:empty)) { display: none; }
 .p3d-foto { position: relative; }
 .p3d-foto-abrir {
   display: block;
@@ -677,42 +937,418 @@ polyline.p3d-foto-marca { fill: none; }
   .p3d-foto-acoes .p3d-botao { flex: 1 1 calc(50% - 8px); justify-content: center; }
 }
 
-/* ---------------------------------------------------------------- no painel (a ficha do pedido) */
-.p3d-pagina--painel .p3d {
-  border-radius: 22px;
-  background: var(--p3d-fundo);
+
+/* o pé do painel: andar entre os passos */
+.p3d-painel-pe {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--p3d-borda);
+  background: rgba(5, 10, 28, .6);
 }
-.p3d-pagina--painel .p3d-visor { top: 76px; height: calc(100vh - 100px); }
+.p3d-painel-onde {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--p3d-suave);
+}
+.p3d-voltar:disabled { opacity: .38; cursor: default; transform: none; border-color: var(--p3d-borda-forte); }
+.p3d-proximo {
+  min-height: 40px;
+  border: 0;
+  color: #04121f;
+  background: var(--p3d-ciano);
+  box-shadow: 0 6px 18px rgba(63, 208, 255, .25);
+}
+.p3d-proximo:hover { color: #04121f; }
+.p3d-fim { min-height: 42px; }
+@container painel (max-width: 439.98px) {
+  .p3d-voltar { width: 40px; padding: 0; }
+  .p3d-voltar span { display: none; }
+}
+@container painel (max-width: 359.98px) {
+  .p3d-proximo-nome { display: none; }
+}
+
+/* ---------------------------------------------------------------- celular e tablet em pé: a folha e a barra de abas */
+/* a ficha do painel estreita: as abas numa fila que rola de lado, o 3D e o painel embaixo */
+@container p3d (max-width: 899.98px) {
+  .p3d-topo { flex-wrap: wrap; }
+  .p3d-trilho {
+    flex-direction: row;
+    padding: 8px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--p3d-borda);
+  }
+  .p3d-abas { display: flex; gap: 6px; }
+  .p3d-aba { flex: none; grid-template-columns: 30px auto auto; gap: 8px; min-height: 46px; padding: 6px 10px 6px 6px; }
+  .p3d-aba-icone { width: 30px; height: 30px; font-size: 14px; border-radius: 10px; }
+  .p3d-aba-texto small { display: none; }
+  .p3d-aba[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--p3d-ciano); }
+  .p3d-progresso { display: none; }
+}
+
+/* NO APP DE TELA CHEIA (a Arena 3D): o 3D em cima, a folha embaixo dele, a barra de abas no pé */
+@container p3d (max-width: 899.98px) {
+  .p3d--tela-cheia .p3d-app {
+    grid-template-rows: auto minmax(0, 1fr) var(--p3d-folha, 45%) auto;
+    grid-template-areas: "topo" "visor" "painel" "abas";
+  }
+  /* a folha: recolhida (só a alça e o pé), na metade (o normal) ou alta */
+  .p3d--tela-cheia .p3d-app[data-folha="mini"] { --p3d-folha: 118px; }
+  .p3d--tela-cheia .p3d-app[data-folha="alta"] { --p3d-folha: 68%; }
+
+  /* a barra do topo, enxuta; a vista do 3D desce para cima do 3D */
+  .p3d--tela-cheia .p3d-topo { flex-wrap: nowrap; height: 58px; padding: 8px 10px; gap: 8px; }
+  .p3d--tela-cheia .p3d-topo-icone { width: 34px; height: 34px; font-size: 15px; border-radius: 11px; }
+  .p3d--tela-cheia .p3d-topo-texto strong { font-size: .98rem; }
+  .p3d--tela-cheia .p3d-resumo { font-size: 11.5px; }
+  .p3d--tela-cheia .p3d-barra { position: absolute; z-index: 3; top: 66px; right: 10px; }
+  .p3d--tela-cheia .p3d-topo-acoes { gap: 6px; }
+  .p3d--tela-cheia .p3d-topo-acoes .p3d-botao { min-height: 40px; }
+  .p3d--tela-cheia .p3d-topo-pedir { padding: 0 12px; }
+  .p3d--tela-cheia .p3d-topo-acoes .p3d-botao--zap,
+  .p3d--tela-cheia .p3d-topo-fechar { width: 40px; }
+
+  /* o 3D passa um pouco por baixo da folha (a borda redonda dela fica por cima do 3D) */
+  .p3d--tela-cheia .p3d-visor { height: auto; min-height: 0; margin-bottom: -18px; }
+  .p3d--tela-cheia .p3d-pilula, .p3d--tela-cheia .p3d-ficha { bottom: 30px; }
+
+  .p3d--tela-cheia .p3d-painel {
+    z-index: 2;
+    max-height: none;
+    border-top: 1px solid var(--p3d-borda-forte);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 30px rgba(0, 0, 0, .45);
+  }
+  /* ao arrastar para cima, o fundo da folha continua até a barra de abas */
+  .p3d--tela-cheia .p3d-painel::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 100vh;
+    background: var(--p3d-painel-fundo);
+  }
+  .p3d--tela-cheia .p3d-folha-alca {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 100%;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+  }
+  .p3d--tela-cheia .p3d-folha-alca span { width: 46px; height: 5px; border-radius: 999px; background: rgba(255, 255, 255, .32); }
+  .p3d--tela-cheia .p3d-folha-alca:focus-visible { outline: 3px solid var(--p3d-amarelo); outline-offset: -3px; }
+  .p3d--tela-cheia .p3d-paineis { --p3d-paineis-topo: 2px; padding: var(--p3d-paineis-topo) 14px 16px; }
+  .p3d--tela-cheia .p3d-painel-pe { padding: 8px 12px; }
+  .p3d--tela-cheia .p3d-passo h2 { font-size: 1.02rem; margin-bottom: 12px; }
+
+  /* a barra de abas no pé da tela, como num aplicativo */
+  .p3d--tela-cheia .p3d-trilho {
+    position: relative;
+    z-index: 3;
+    flex-direction: row;
+    padding: 4px 4px max(4px, env(safe-area-inset-bottom));
+    overflow: visible;
+    border-bottom: 0;
+    border-top: 1px solid var(--p3d-borda);
+    background: rgba(5, 10, 28, .98);
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, .35);
+  }
+  .p3d--tela-cheia .p3d-abas { width: 100%; gap: 0; }
+  .p3d--tela-cheia .p3d-aba {
+    flex: 1 1 0;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 2px;
+    min-height: 54px;
+    padding: 6px 1px 4px;
+    border-radius: 12px;
+    text-align: center;
+  }
+  .p3d--tela-cheia .p3d-aba-icone { width: 36px; height: 26px; font-size: 17px; background: none; border-radius: 9px; }
+  .p3d--tela-cheia .p3d-aba-texto { justify-items: center; }
+  .p3d--tela-cheia .p3d-aba-texto b { font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+  .p3d--tela-cheia .p3d-aba-longo { display: none; }
+  .p3d--tela-cheia .p3d-aba-curto { display: inline; }
+  .p3d--tela-cheia .p3d-aba-num {
+    position: absolute;
+    top: 2px;
+    left: calc(50% + 9px);
+    width: 17px;
+    height: 17px;
+    font-size: 9.5px;
+    box-shadow: 0 0 0 2px rgba(5, 10, 28, .98);
+  }
+  .p3d--tela-cheia .p3d-aba[aria-selected="true"] { color: var(--p3d-ciano); background: none; box-shadow: none; }
+  .p3d--tela-cheia .p3d-aba[aria-selected="true"] .p3d-aba-icone { color: var(--p3d-ciano); background: rgba(63, 208, 255, .15); box-shadow: none; }
+  .p3d--tela-cheia .p3d-aba[aria-selected="true"] .p3d-aba-texto b { color: var(--p3d-ciano); }
+  .p3d--tela-cheia .p3d-aba[aria-selected="true"]::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 26%;
+    right: 26%;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+    background: var(--p3d-ciano);
+    box-shadow: 0 0 12px var(--p3d-ciano);
+  }
+  .p3d--tela-cheia .p3d-aba--alerta .p3d-aba-icone::after { top: 0; right: 2px; }
+  /* o progresso vira o fio de cima da barra */
+  .p3d--tela-cheia .p3d-progresso {
+    display: block;
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .p3d--tela-cheia .p3d-progresso-texto { display: none; }
+  .p3d--tela-cheia .p3d-progresso-barra { height: 2px; border-radius: 0; background: transparent; }
+}
+@container p3d (max-width: 419.98px) {
+  .p3d--tela-cheia .p3d-topo-icone { display: none; }
+  .p3d--tela-cheia .p3d-topo-pedir { gap: 6px; padding: 0 10px; }
+  .p3d--tela-cheia .p3d-barra { gap: 5px; }
+}
+
+/* as máquinas (e os brinquedos grandes) numa grade compacta: a foto, o nome, a medida e a quantidade */
+.p3d-itens--grade { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 8px; }
+.p3d-itens--grade .p3d-item {
+  position: relative;
+  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-areas: "foto texto" "qtd qtd";
+  align-items: start;
+  gap: 8px;
+  padding: 8px;
+}
+.p3d-itens--grade .p3d-item-foto { grid-area: foto; width: 46px; height: 46px; }
+.p3d-itens--grade .p3d-item-texto { grid-area: texto; align-content: start; }
+.p3d-itens--grade .p3d-item-texto b {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12.5px;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.p3d-itens--grade .p3d-item-texto small { font-size: 10.5px; line-height: 1.3; }
+/* o selo "3D" vai no canto da foto (não gasta uma linha) */
+.p3d-itens--grade .p3d-selo { position: absolute; top: 40px; left: 6px; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+.p3d-itens--grade .p3d-qtd {
+  grid-area: qtd;
+  justify-content: space-between;
+  padding: 2px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, .22);
+}
+.p3d-itens--grade .p3d-qtd button { width: 38px; height: 30px; border-color: transparent; background: rgba(255, 255, 255, .06); }
+.p3d-itens--grade .p3d-item--com .p3d-qtd output { color: var(--p3d-ciano); }
+.p3d-itens--grade > .p3d-vazio { grid-column: 1 / -1; }
+/* a busca que não achou nada */
+.p3d-itens--grade:has(> li):not(:has(> li:not([hidden])))::after {
+  content: attr(data-vazio);
+  grid-column: 1 / -1;
+  padding: 18px 12px;
+  border: 1px dashed var(--p3d-borda-forte);
+  border-radius: 14px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--p3d-suave);
+}
+
+/* a aba das máquinas: o título, a busca e a conta ficam presos no alto; a grade rola embaixo deles */
+.p3d-maquinas-topo {
+  position: sticky;
+  top: calc(-1 * var(--p3d-paineis-topo, 18px));
+  z-index: 2;
+  margin: calc(-1 * var(--p3d-paineis-topo, 18px)) -18px 10px;
+  padding: var(--p3d-paineis-topo, 18px) 18px 10px;
+  background: var(--p3d-painel-fundo);
+  box-shadow: 0 10px 14px -10px rgba(0, 0, 0, .6);
+}
+.p3d--tela-cheia .p3d-maquinas-topo { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
+/* na folha do celular o nome do passo já está na barra de abas: a busca sobe */
+@container p3d (max-width: 899.98px) {
+  .p3d--tela-cheia .p3d-maquinas-topo { padding-top: 6px; padding-bottom: 8px; }
+  .p3d--tela-cheia .p3d-maquinas-topo h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .p3d--tela-cheia .p3d-maquinas-conta { margin-top: 4px; font-size: 11.5px; }
+}
+.p3d-maquinas-topo h2 { margin-bottom: 10px; }
+.p3d-maquinas-topo .p3d-busca { margin-bottom: 0; }
+.p3d-maquinas-conta { margin-top: 6px; }
+.p3d-maquinas-conta:empty { display: none; }
+.p3d-maquinas-conta b { color: var(--p3d-ciano); }
+
+/* ======================================================================
+   A CHAMADA NA ARENA 3D (arena.html, #monte-seu-espaco): a prévia do app,
+   o título e o "Abrir o montador"
+   ====================================================================== */
+.p3d-chamada {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  align-items: center;
+  gap: clamp(22px, 4vw, 56px);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(20px, 3.4vw, 44px);
+  border: 1px solid var(--p3d-borda);
+  border-radius: 30px;
+  color: var(--p3d-texto);
+  background:
+    radial-gradient(70% 90% at 100% 0%, rgba(63, 208, 255, .14), transparent 60%),
+    radial-gradient(60% 80% at 0% 100%, rgba(255, 210, 63, .1), transparent 60%),
+    rgba(255, 255, 255, .03);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .4);
+}
+.p3d-chamada-texto { min-width: 0; }
+.p3d-chamada-texto h2 {
+  margin: 14px 0 10px;
+  font: 800 clamp(1.6rem, 3vw, 2.45rem)/1.12 "Poppins", system-ui, sans-serif;
+  color: #fff;
+}
+.p3d-chamada-texto > p { max-width: 58ch; margin: 0; font-size: 1rem; line-height: 1.65; color: var(--p3d-suave); }
+.p3d-chamada-passos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; }
+.p3d-chamada-passos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--p3d-borda);
+  border-radius: 14px;
+  font-size: .86rem;
+  line-height: 1.4;
+  color: var(--p3d-suave);
+  background: rgba(255, 255, 255, .04);
+}
+.p3d-chamada-passos i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: #04121f;
+  background: var(--p3d-ciano);
+}
+.p3d-chamada-passos b { display: block; font-family: "Poppins", system-ui, sans-serif; color: #fff; }
+.p3d-chamada-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.p3d-chamada-abrir { min-height: 52px; padding-inline: 26px; font-size: 1.05rem; }
+.p3d-chamada-previa {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 20px;
+  background: #0a1430;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .55), 0 0 0 6px rgba(255, 255, 255, .03);
+  transform: perspective(1400px) rotateY(-7deg) rotateX(2deg);
+  transition: transform .35s ease, box-shadow .35s ease;
+}
+.p3d-chamada-previa:hover, .p3d-chamada-previa:focus-visible {
+  transform: none;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .55), 0 0 0 3px var(--p3d-ciano), 0 0 40px rgba(63, 208, 255, .35);
+}
+.p3d-chamada-previa:focus-visible { outline: none; }
+.p3d-chamada-previa img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: left top; }
+.p3d-chamada-tela {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font: 800 .86rem/1 "Poppins", system-ui, sans-serif;
+  color: #04121f;
+  background: var(--p3d-amarelo);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .45);
+}
+@media (max-width: 900px) {
+  .p3d-chamada { grid-template-columns: minmax(0, 1fr); }
+  .p3d-chamada-previa { order: -1; transform: none; }
+}
+@media (max-width: 575.98px) {
+  .p3d-chamada { padding: 14px 14px 18px; border-radius: 22px; }
+  .p3d-chamada-passos { grid-template-columns: minmax(0, 1fr); }
+  .p3d-chamada-acoes .ls-botao { flex: 1 1 100%; justify-content: center; }
+}
+
+/* ======================================================================
+   O APP DE TELA CHEIA (launcher.js): por cima de tudo, a altura da tela
+   (100dvh: a barra do navegador do celular não corta o pé), com a página
+   parada e escondida embaixo -- nada rola atrás e a roda 3D da arena para
+   ====================================================================== */
+.p3dl--js { display: none; }
+.p3dl--js.p3dl--aberto {
+  display: block;
+  position: fixed;
+  z-index: 2600;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: var(--p3d-app-fundo);
+}
+.p3dl--aberto .p3d { height: 100%; }
+.p3dl--aberto .p3d-app {
+  --p3d-altura: 100%;
+  height: 100%;
+  max-width: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+html.p3dl-trava, html.p3dl-trava body { overflow: hidden !important; overscroll-behavior: none; }
+html.p3dl-so-app body > :not(.p3dl) { display: none !important; }
+
+/* ---------------------------------------------------------------- no painel (a ficha do pedido) */
+.p3d-pagina--painel .p3d-app { --p3d-altura: max(620px, calc(100vh - 150px)); }
 
 /* ---------------------------------------------------------------- sem JavaScript */
+.p3d:not(.p3d--js) { padding: 0 16px; }
 .p3d:not(.p3d--js) .p3d-app { display: none; }
 .p3d--js .p3d-semjs { display: none; }
 .p3d-semjs { max-width: 900px; margin: 24px auto 0; color: var(--p3d-suave); }
 .p3d-semjs h2 { margin: 18px 0 8px; font-size: 1.05rem; color: var(--p3d-texto); }
 
-/* ---------------------------------------------------------------- tablet e celular */
-@media (max-width: 991.98px) {
-  .p3d-app { grid-template-columns: minmax(0, 1fr); }
-  .p3d-visor { position: relative; top: auto; height: 58vh; min-height: 340px; }
-  .p3d-dica { display: none; }
-}
-@media (max-width: 768px) {
-  /* acima da barra de baixo do celular (ls-tema.css, .ls-barra-app) */
-  .p3d-pedir { bottom: calc(76px + env(safe-area-inset-bottom)); }
-}
+/* ---------------------------------------------------------------- telas pequenas */
+.p3d-busca input { font-size: 16px; } /* 16 px: o iPhone não dá zoom ao tocar na busca */
 @media (max-width: 575.98px) {
-  .p3d { padding: 12px 10px 28px; }
   .p3d-nome { font-size: 10px; padding: 2px 6px; }
   .p3d-nome--area { font-size: 11px; }
-  .p3d-visor { height: 52vh; border-radius: 18px; }
-  .p3d-barra { gap: 6px; }
-  .p3d-botao--vidro span { display: none; }
-  .p3d-botao--vidro { width: 40px; padding: 0; }
-  .p3d-modelos { grid-template-columns: minmax(0, 1fr); }
   .p3d-medidas { gap: 6px; }
   .p3d-medidas input { font-size: 16px; }
   .p3d-ficha { left: 12px; right: 12px; bottom: 56px; max-width: none; }
+  .p3d--tela-cheia .p3d-ficha { bottom: 74px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .p3d-botao { transition: none; }
+  .p3d-botao, .p3d-aba, .p3d-aba-icone, .p3d-progresso-barra span, .p3d-chamada-previa { transition: none; }
+  .p3d-chamada-previa { transform: none; }
 }
