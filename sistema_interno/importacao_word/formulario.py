@@ -527,6 +527,21 @@ def validar(proposta, envio, *, hoje=None) -> dict:
         if not any(p["campo"] == f"alerta.{alerta['id']}" for p in pendencias):
             _pendencia(pendencias, f"alerta.{alerta['id']}", alerta["titulo"],
                        "corrija o valor ou aceite o alerta com uma justificativa")
+    # O valor negociado ESCRITO no documento é o preço combinado com o
+    # cliente. Deixá-lo de lado pela soma (mais cara, em geral) pode ser
+    # certo -- mas é decisão de dinheiro, e fica escrita no histórico.
+    if oferta.get("explicito") and envio.get("total_escolha") == "soma":
+        texto = envio["justificativas"].get("soma_total", "")
+        if len(texto) < JUSTIFICATIVA_MINIMA:
+            _pendencia(pendencias, "valores.valor_final", "Qual total vale?",
+                       f"escreva por que fica a soma das linhas, e não o valor negociado de "
+                       f"R$ {oferta.get('valor')} (pelo menos {JUSTIFICATIVA_MINIMA} letras)")
+        elif not any(a["alerta"]["id"] == "soma_total" for a in aceitos):
+            aceitos.append({
+                "alerta": {"id": "valor_negociado",
+                           "titulo": f"valor negociado de R$ {oferta.get('valor')} deixado de lado"},
+                "justificativa": texto,
+            })
     limpo["aceitos"] = aceitos
     limpo["amarelos"] = [a for a in estado["alertas"] if a["nivel"] != NIVEL_VERMELHO]
 

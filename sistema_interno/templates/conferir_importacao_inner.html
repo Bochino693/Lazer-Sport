@@ -307,7 +307,7 @@
             <label class="ls-imp-escolha">
               <input type="radio" name="total_escolha" value="soma"{% if envio.total_escolha == "soma" %} checked{% endif %}>
               <span><strong>Manter a soma das linhas</strong>
-                <small>{% if proposta.valor_final.explicito %}O valor negociado fica de lado; vale a conta das linhas, com frete e desconto.{% else %}O total do documento fica de lado. Escreva por quê (vai para o histórico).{% endif %}</small></span>
+                <small>{% if proposta.valor_final.explicito %}O valor negociado fica de lado e vale a conta das linhas. Escreva por quê (vai para o histórico).{% else %}O total do documento fica de lado. Escreva por quê (vai para o histórico).{% endif %}</small></span>
             </label>
             <textarea class="form-control ls-imp-justificativa" name="justificativa-soma_total" maxlength="160" rows="2"
                       data-justificativa="soma_total" id="justificativaSoma"

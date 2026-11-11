@@ -525,7 +525,7 @@ LSTela.pronto(function () {
       var soma = document.getElementById("valorFinalSoma");
       if (soma) soma.textContent = moeda(conta.total);
       var justificativa = document.getElementById("justificativaSoma");
-      if (justificativa) justificativa.hidden = !(escolhaDoTotal() === "soma" && diferem);
+      if (justificativa) justificativa.hidden = !(escolhaDoTotal() === "soma" && (diferem || dados.valorFinalExplicito));
     }
   }
 
@@ -643,6 +643,11 @@ LSTela.pronto(function () {
       } else if (escolhida === "soma" && textoSoma.length < dados.justificativaMinima) {
         falta("justificativaSoma", "Qual total vale?", "escreva por que fica a soma (pelo menos " + dados.justificativaMinima + " letras)");
       }
+    }
+    if (dados.valorFinalExplicito && escolhaDoTotal() === "soma" && !(totalWord !== null && conta.total !== totalWord)
+        && valorDe("justificativaSoma").length < dados.justificativaMinima) {
+      falta("justificativaSoma", "Qual total vale?",
+            "escreva por que fica a soma das linhas, e não o valor negociado (pelo menos " + dados.justificativaMinima + " letras)");
     }
     var validade = valorDe("campoValidade");
     var notaValidade = document.getElementById("notaValidade");

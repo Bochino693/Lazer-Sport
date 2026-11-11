@@ -431,7 +431,12 @@ class OrcamentoInternoTests(TestCase):
 
         self.assertContains(resposta, 'data-mascara="cep"')
         self.assertContains(resposta, 'data-mascara="telefone"')
-        self.assertContains(resposta, 'data-mascara="moeda"')
+        # Dinheiro do orçamento se digita em reais inteiros: 18000 é dezoito
+        # mil (e não R$ 180,00, como na digitação de maquininha).
+        self.assertContains(resposta, 'data-mascara="moeda-valor"')
+        self.assertNotContains(resposta, 'data-mascara="moeda"')
+        self.assertContains(resposta, 'ls-item-valor" inputmode="decimal" data-mascara="moeda-valor"')
+        self.assertContains(resposta, '"percentual" : "moeda-valor"')
         self.assertContains(resposta, 'type="number" class="form-control form-control-sm text-end ls-item-quantidade"')
 
     def test_aceite_eletronico_tem_uma_unica_classe_de_modelo(self):

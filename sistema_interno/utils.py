@@ -70,11 +70,12 @@ def decimal_br(valor, rotulo, obrigatorio=False, limite=None):
 
     if "," in normalizado:
         normalizado = normalizado.replace(".", "").replace(",", ".")
-    elif normalizado.count(".") > 1 or re.fullmatch(r"\d{1,3}\.\d{3}", normalizado):
+    elif normalizado.count(".") > 1 or re.fullmatch(r"[1-9]\d{0,2}\.\d{3}", normalizado):
         # "18.000" é dezoito mil, como se escreve no Brasil -- e é o que o
         # campo de reais inteiros (máscara `moeda-valor`) deixa passar
         # quando a pessoa digita o ponto do milhar. Lido como 18.000 em
-        # inglês, virava R$ 18,00 sem ninguém perceber.
+        # inglês, virava R$ 18,00 sem ninguém perceber. ("0.125" não tem
+        # milhar nenhum: começa em zero, e fica como está.)
         normalizado = normalizado.replace(".", "")
 
     try:

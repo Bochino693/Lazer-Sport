@@ -466,7 +466,7 @@
     if (!limpo) return null;
     if (limpo.indexOf(",") >= 0) {
       limpo = limpo.replace(/\./g, "").replace(",", ".");
-    } else if ((limpo.match(/\./g) || []).length > 1 || /^\d{1,3}\.\d{3}$/.test(limpo)) {
+    } else if ((limpo.match(/\./g) || []).length > 1 || /^[1-9]\d{0,2}\.\d{3}$/.test(limpo)) {
       /* "18.000" sem vírgula é milhar, e não dezoito: é a mesma regra do
          servidor (`decimal_br`). */
       limpo = limpo.replace(/\./g, "");
