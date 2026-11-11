@@ -2,37 +2,39 @@
  "lateral-externa-esquerda": {
   "arquivo": "adesivos/lateral-externa-esquerda.png",
   "mm": [
-   2318,
-   2444
+   2294,
+   2419
   ],
-  "onde": "o lado de fora da esquerda, com o contorno da folha (vista de fora)",
-  "contorno": true
+  "onde": "o lado de fora da esquerda, com o contorno da folha e a bola vazada (vista de fora)",
+  "contorno": true,
+  "furos": 8
  },
  "lateral-interna-esquerda": {
   "arquivo": "adesivos/lateral-interna-esquerda.png",
   "mm": [
-   2374,
-   1884
+   2334,
+   1852
   ],
-  "onde": "o lado de dentro da esquerda, em L, da prancha para cima (visto da pista; a quina da frente fica sob o console)",
+  "onde": "o lado de dentro da esquerda, em L, vista da pista (até onde a chapa vai; a bola vazada atravessa)",
   "contorno": true
  },
  "lateral-externa-direita": {
   "arquivo": "adesivos/lateral-externa-direita.png",
   "mm": [
-   2318,
-   2444
+   2294,
+   2419
   ],
-  "onde": "o lado de fora da direita, com o contorno da folha (vista de fora)",
-  "contorno": true
+  "onde": "o lado de fora da direita, com o contorno da folha e a bola vazada (vista de fora)",
+  "contorno": true,
+  "furos": 8
  },
  "lateral-interna-direita": {
   "arquivo": "adesivos/lateral-interna-direita.png",
   "mm": [
-   2379,
-   1884
+   2339,
+   1852
   ],
-  "onde": "o lado de dentro da direita, em L, da prancha para cima (visto da pista; a quina da frente fica sob o console)",
+  "onde": "o lado de dentro da direita, em L, vista da pista (até onde a chapa vai; a bola vazada atravessa)",
   "contorno": true
  },
  "fundo-cesta": {
@@ -41,7 +43,7 @@
    960,
    1640
   ],
-  "onde": "o painel do fundo, atrás da cesta, até o teto interno (o placar no alto)"
+  "onde": "o painel do fundo, atrás da cesta, do teto até a rampa (o placar no alto)"
  },
  "teto-interno": {
   "arquivo": "adesivos/teto-interno.png",
@@ -115,7 +117,7 @@
    960,
    2198
   ],
-  "onde": "o chão da pista, visto de cima por quem joga (a cesta no alto da imagem)"
+  "onde": "a rampa que devolve a bola, vista de cima por quem joga (a cesta no alto da imagem); a ponta da frente passa embaixo da tampa do console"
  },
  "frente": {
   "arquivo": "adesivos/frente.png",
@@ -123,6 +125,6 @@
    1000,
    1235
   ],
-  "onde": "a frente do console, dobrada em três: a faixa de baixo de pé, a do meio inclinada e a de cima deitada"
+  "onde": "a frente do console, dobrada em três: a faixa de baixo de pé, a do meio inclinada e a de cima deitada (a tampa, com o Start)"
  }
 }

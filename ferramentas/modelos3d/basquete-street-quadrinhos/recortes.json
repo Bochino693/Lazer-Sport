@@ -4,13 +4,14 @@
   "caixa: [x0, y0, x1, y1] aproximada, em px da folha; o recorte acha a peça de verdade dentro dela (o maior pedaço não branco, sem o nome escrito em cima).",
   "forma: 'contorno' na peça recortada (o contorno de verdade vai para o formas.json e vira o contorno no 3D); 'retangulo' na peça reta.",
   "angulo: a peça desenhada torta na folha é endireitada (graus, anti-horário); dobras: onde a peça dobra (frações da altura, de cima).",
+  "furos: a bola das laterais de fora é VAZADA (os gomos brancos são recortes na chapa): os brancos dentro desta caixa (frações da peça) viram furos de verdade no 3D.",
   "As três peças soltas ao lado da Lateral Externa Esquerda (a tira de pé, a faixa BASKETBALL inclinada e o retângulo do POW!) são as três faixas da Frente, desenhadas de lado: não são adesivos à parte (ver o README).",
   "Se a folha mudar: ajuste as caixas, rode python3 recortar_adesivos.py --previa e confira previa-recortes.png."
  ],
  "folha": "folha-adesivos.webp",
  "pecas": {
-  "lateral-externa-esquerda": {"caixa": [0, 885, 423, 1331], "forma": "contorno"},
-  "lateral-externa-direita": {"caixa": [907, 852, 1330, 1298], "forma": "contorno"},
+  "lateral-externa-esquerda": {"caixa": [0, 885, 423, 1331], "forma": "contorno", "furos": {"caixa": [0.02, 0.06, 0.56, 0.58]}},
+  "lateral-externa-direita": {"caixa": [907, 852, 1330, 1298], "forma": "contorno", "furos": {"caixa": [0.44, 0.06, 0.985, 0.58]}},
   "lateral-interna-esquerda": {"caixa": [75, 374, 516, 724], "forma": "contorno"},
   "lateral-interna-direita": {"caixa": [930, 371, 1372, 721], "forma": "contorno"},
   "prancha": {"caixa": [632, 911, 815, 1330], "forma": "retangulo"},
