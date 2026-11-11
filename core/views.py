@@ -1538,6 +1538,7 @@ class EstabelecimentosListView(ListView):
         # brinquedos para o carrossel (limite para não pesar)
         context["brinquedos_carrossel"] = (
             Brinquedos.objects
+            .filter(ativo=True)  # a ficha desativada (um adesivo, LEIA-ME 72) não volta por aqui
             .exclude(imagem_brinquedo="")
             [:8]
         )

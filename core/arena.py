@@ -845,6 +845,8 @@ def modelos_fora_do_catalogo(catalogo):
     brinquedo é cadastrado (com o nome), o do catálogo toma o lugar.
     """
     no_catalogo = {b.get("modelo_id") for b in catalogo}
+    # o .glb de um adesivo (core/variantes.py) é do produto dele: não aparece à parte
+    no_catalogo |= {codigo for b in catalogo for codigo in b.get("modelos_variantes", ())}
     saida = []
     for modelo in MODELOS_3D:
         if modelo["id"] in no_catalogo:

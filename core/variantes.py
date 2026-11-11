@@ -249,3 +249,33 @@ def modelos_das_variantes():
         if objeto:
             saida.setdefault(variante.brinquedo_id, []).append({**objeto, "adesivo": variante.nome})
     return saida
+
+
+def completar_na_arena(dados):
+    """Na Arena (core/views_arena.py): o produto com adesivos leva o 3D dos adesivos.
+
+    `modelos_variantes`: os códigos dos .glb dos adesivos (a Arena não os põe à
+    parte, como objetos fora do catálogo); sem 3D próprio, o produto fica com o
+    do primeiro adesivo que tem (e entra na roda).
+    """
+    from . import arena
+
+    por_produto = modelos_das_variantes()
+    for item in dados:
+        extras = por_produto.get(item.get("id"))
+        if not extras:
+            continue
+        item["modelos_variantes"] = [e["codigo"] for e in extras if e["codigo"]]
+        item["adesivos"] = [e["adesivo"] for e in extras]
+        if item.get("modelo"):
+            continue
+        primeiro = extras[0]
+        modelo = next((m for m in arena.MODELOS_3D if m["id"] == primeiro["codigo"]), None)
+        item["modelo"] = primeiro["url"]
+        item["modelo_id"] = primeiro["codigo"]
+        item["cores_modelo"] = primeiro["cores"]
+        if modelo:
+            item["medidas_modelo"] = list(modelo["medidas"])
+            item["grupo"] = modelo.get("grupo", item.get("grupo"))
+            item["reino"] = bool(modelo.get("reino"))
+            item["jogos_no_espaco"] = arena.jogos_do_modelo(modelo)

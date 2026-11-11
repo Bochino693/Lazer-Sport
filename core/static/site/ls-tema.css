@@ -2794,3 +2794,33 @@ body.ls-modo-app main.content-section { padding-top: 0; margin-top: 0; }
 
 /* o card que abre o item ao toque (site/ls-card-clicavel.js): a mãozinha no card todo */
 [data-card-link] { cursor: pointer; }
+
+
+/* =========================================================
+   OS ADESIVOS NOS CARDS (LEIA-ME, seção 72): o produto com adesivos
+   aparece uma vez, com o selo "2 adesivos" e as capas se revezando
+   (ls-adesivos.js).
+========================================================= */
+.card-adesivos {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(5, 11, 31, .78);
+    color: #fde68a;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    line-height: 1;
+    pointer-events: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+
+.card-adesivos i { color: #facc15; }
+
+.card-adesivos-troca { opacity: .15; }
