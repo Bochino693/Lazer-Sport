@@ -178,6 +178,12 @@ def pontuar(texto_item: str, nome_catalogo: str) -> tuple[float, str]:
             motivo = "falta o número que o catálogo tem no nome"
         else:
             motivo = "palavras e números conferem"
+    if retorno < 0.85 and pontos >= LIMITE_ALTO:
+        # "Cama elástica 3 m com rede" cobre o nome do catálogo inteiro, mas
+        # diz mais do que ele: pode ser o mesmo produto ou uma versão dele
+        # que o catálogo não tem. Vínculo automático, não; sugestão, sim.
+        pontos = LIMITE_ALTO - 0.01
+        motivo = "o Word descreve mais do que o nome do catálogo; confirme"
     return round(min(pontos, 0.99), 3), motivo
 
 
@@ -368,9 +374,15 @@ def casar_cliente(*, documento="", email="", telefone="", nome="") -> dict:
     nome_normalizado = _normalizar(nome)
     por_nome = []
     if nome_normalizado:
-        primeira = nome_normalizado.split()[0]
+        from ..views_gestao import BuscaItensOrcamentoView
+
+        # A palavra mais longa do nome, sem acento dos dois lados: "Condomínio"
+        # no cadastro e "Condominio" no Word são o mesmo nome, e um
+        # `icontains` simples não os juntaria.
+        palavra = max(nome_normalizado.split(), key=len)
+        padrao = BuscaItensOrcamentoView._padrao_sem_acento(palavra)
         for cliente in Cliente.objects.filter(
-            Q(nome_cliente__icontains=primeira) | Q(nome_estabelecimento__icontains=primeira)
+            Q(nome_cliente__iregex=padrao) | Q(nome_estabelecimento__iregex=padrao)
         )[:60]:
             if nome_normalizado in (_normalizar(cliente.nome_cliente), _normalizar(cliente.nome_estabelecimento)):
                 por_nome.append(cliente)
