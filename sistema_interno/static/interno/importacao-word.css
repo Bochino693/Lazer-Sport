@@ -1,0 +1,265 @@
+/* ======================================================================
+   IMPORTAÇÃO DO WORD — a tela de subir o .docx e a de conferir.
+
+   SÓ PAPÉIS DE COR DO TEMA. Nenhuma cor é escrita à mão aqui: tudo vem
+   dos papéis de `interno_modern.css` (superfície, tinta e as quatro
+   versões de cada acento), e por isso a tela funciona igual no Sol, na
+   Lua e no Eclipse sem uma linha a mais.
+
+   O QUE A TELA PRECISA DIZER DE LONGE, NESTA ORDEM: o que falta (lateral,
+   sempre à vista no computador; no topo, no celular), o que está errado
+   (alerta vermelho), de onde veio cada valor (a "fonte" ao pé do campo)
+   e quanto confiar nele (o selo).
+   ====================================================================== */
+
+/* ---------------------------------------------------------------- envio */
+.ls-imp-envio{max-width:860px}
+.ls-imp-soltar{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:190px;padding:26px 18px;text-align:center;cursor:pointer;
+  border:2px dashed var(--line-forte);border-radius:var(--radius-lg);
+  background:rgba(var(--acento-rgb),.05);color:var(--text);
+  transition:border-color .15s ease,background .15s ease;
+}
+.ls-imp-soltar i{font-size:2.4rem;color:var(--info-texto)}
+.ls-imp-soltar strong{font-size:1.02rem}
+.ls-imp-soltar span{color:var(--text-2);word-break:break-word}
+.ls-imp-soltar small{color:var(--muted)}
+.ls-imp-soltar:hover,.ls-imp-soltar.arrastando{border-color:var(--acento);background:rgba(var(--acento-rgb),.10)}
+.ls-imp-soltar.escolhido{border-style:solid;border-color:var(--green-linha);background:rgba(var(--green-rgb),.08)}
+.ls-imp-soltar.escolhido i{color:var(--green-texto)}
+/* O campo de arquivo de verdade fica disponível para o leitor de tela e
+   para o teclado; quem enxerga toca na área tracejada, que é o rótulo. */
+.ls-imp-arquivo{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.ls-imp-arquivo:focus-visible + .ls-imp-envio-acoes .btn{outline:2px solid var(--acento)}
+.ls-imp-envio-acoes{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.ls-imp-ia-estado{font-size:.82rem;color:var(--muted)}
+.ls-imp-ia-estado.ligada i{color:var(--apoio-texto)}
+.ls-imp-ia-estado.desligada i{color:var(--acento-texto)}
+.ls-imp-passos{margin:20px 0 0;padding-left:1.2rem;color:var(--text-2);font-size:.86rem;line-height:1.55}
+.ls-imp-passos li+li{margin-top:4px}
+.ls-imp-negado{margin:0;color:var(--text-2)}
+.ls-imp-negado i{color:var(--acento-texto);margin-right:6px}
+
+/* A linha da privacidade é discreta de propósito: precisa estar lá, e
+   não pode competir com o que se confere. */
+.ls-imp-privacidade{margin:10px 0 16px;color:var(--muted);font-size:.76rem;line-height:1.45}
+.ls-imp-privacidade i{margin-right:4px}
+
+/* -------------------------------------------------- aviso sem IA */
+.ls-imp-aviso{
+  display:flex;gap:12px;align-items:flex-start;margin-bottom:8px;padding:12px 14px;
+  border:1px solid var(--acento-linha);border-radius:var(--radius-md);
+  background:var(--acento-fundo-2);color:var(--text);
+}
+.ls-imp-aviso i{color:var(--acento-texto);font-size:1.2rem;line-height:1.2}
+.ls-imp-aviso strong{display:block}
+.ls-imp-aviso span{display:block;color:var(--muted);font-size:.82rem;margin-top:2px}
+
+/* ------------------------------------------------------------ grade */
+.ls-imp-grade{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.ls-imp-principal{display:grid;gap:16px;min-width:0}
+.ls-imp-lateral{
+  position:sticky;top:calc(var(--topbar-h) + 14px);display:grid;gap:12px;
+  max-height:calc(100vh - var(--topbar-h) - 28px);overflow:auto;
+}
+.ls-imp-bloco .ls-panel-header h2 i{margin-right:6px;color:var(--acento-texto)}
+.ls-imp-bloco .ls-panel-header{min-height:0;flex-wrap:wrap}
+
+.ls-imp-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px 16px}
+.ls-imp-campo{min-width:0}
+.ls-imp-campo-largo{grid-column:1 / -1}
+.ls-imp-obrig{color:var(--red-texto);font-weight:900}
+.ls-imp-subtitulo{margin:20px 0 10px;font-size:.92rem;font-weight:900;color:var(--text-2)}
+.ls-imp-margem{margin:0 20px 16px}
+
+/* Campo que falta: a borda acende, e o motivo aparece logo embaixo. */
+.ls-imp-falta .form-control,.ls-imp-falta .form-select,
+.ls-imp-campo:has(> .ls-imp-falta-motivo:not([hidden])) .form-control,
+.ls-imp-campo:has(> .ls-imp-falta-motivo:not([hidden])) .form-select{
+  border-color:var(--red-linha);box-shadow:0 0 0 3px rgba(var(--red-rgb),.12)!important;
+}
+.ls-imp-falta-motivo{margin:6px 0 0;color:var(--red-texto);font-size:.78rem;font-weight:800;line-height:1.35}
+.ls-imp-falta-motivo i{margin-right:3px}
+
+/* --------------------------------------------- fonte, selo, nota */
+.ls-imp-origem{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}
+.ls-imp-selo,.ls-imp-tag{
+  display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border-radius:999px;
+  font-size:.7rem;font-weight:900;line-height:1.1;border:1px solid transparent;
+}
+.ls-imp-selo.alta{color:var(--green-claro);border-color:rgba(var(--green-rgb),.25);background:rgba(var(--green-rgb),.10)}
+.ls-imp-selo.media{color:var(--acento-claro);border-color:rgba(var(--acento-rgb),.28);background:rgba(var(--acento-rgb),.10)}
+.ls-imp-selo.baixa{color:var(--red-claro);border-color:rgba(var(--red-rgb),.28);background:rgba(var(--red-rgb),.10)}
+.ls-imp-selo.vazio{color:var(--muted);border-color:var(--line);background:rgba(var(--muted-rgb),.06)}
+.ls-imp-tag{color:var(--text-2);background:rgba(var(--muted-rgb),.08);font-weight:800}
+.ls-imp-tag.amarelo{color:var(--acento-claro);background:rgba(var(--acento-rgb),.10)}
+.ls-imp-tag.vermelho{color:var(--red-claro);background:rgba(var(--red-rgb),.10)}
+
+.ls-imp-fonte{
+  display:inline-flex;align-items:center;gap:5px;max-width:100%;min-height:24px;padding:2px 8px;
+  border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--text-2);
+  font-size:.72rem;line-height:1.25;text-align:left;cursor:pointer;
+}
+.ls-imp-fonte b{color:var(--info-texto);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:800}
+.ls-imp-fonte span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ls-imp-fonte:hover{border-color:var(--line-forte);color:var(--text)}
+.ls-imp-fonte.mini{min-height:20px;padding:0 6px}
+
+.ls-imp-normal{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;padding:6px 9px;
+  border-radius:9px;background:rgba(var(--info-rgb),.07);font-size:.78rem;color:var(--text);
+}
+.ls-imp-normal small{display:block;color:var(--muted);font-size:.66rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+.ls-imp-normal i{color:var(--info-texto)}
+.ls-imp-normal-word{color:var(--text-2)}
+.ls-imp-normal-sistema{font-weight:800}
+.ls-imp-nota{margin:6px 0 0;color:var(--muted);font-size:.76rem;line-height:1.4}
+.ls-imp-nota small{font-weight:900;color:var(--text-2)}
+.ls-imp-no-word{color:var(--text-2)}
+
+.ls-imp-opcoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.ls-imp-opcoes > span{font-size:.74rem;color:var(--muted);font-weight:800}
+.ls-imp-opcoes .ls-chip small,.ls-imp-sugestao .ls-chip small{color:var(--muted);font-weight:700;margin-left:3px}
+.ls-imp-sugestao{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin-top:8px}
+.ls-imp-sugestao small{color:var(--muted);font-size:.74rem}
+.ls-imp-sugestao .ls-chip i{color:var(--yellow-texto)}
+
+.ls-imp-marca{display:flex;gap:8px;align-items:flex-start;margin-top:9px;font-size:.84rem;color:var(--text-2);cursor:pointer}
+.ls-imp-marca input{width:18px;height:18px;margin-top:1px;flex:0 0 18px;accent-color:var(--acento)}
+
+/* -------------------------------------------------------- cliente */
+.ls-imp-modo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.ls-imp-modo-opcao{cursor:pointer}
+.ls-imp-modo-opcao input{position:absolute;opacity:0;pointer-events:none}
+.ls-imp-modo-opcao span{
+  display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:8px 14px;border-radius:11px;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);font-weight:900;font-size:.86rem;
+}
+.ls-imp-modo-opcao input:checked + span{border-color:var(--acento);color:var(--text);background:rgba(var(--acento-rgb),.13)}
+.ls-imp-modo-opcao input:focus-visible + span{outline:2px solid var(--acento);outline-offset:2px}
+.ls-imp-secao{margin-bottom:6px}
+.ls-imp-comparar{display:grid;gap:6px;margin:12px 0 0}
+.ls-imp-comparar div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;font-size:.84rem}
+.ls-imp-comparar dt{color:var(--muted);font-weight:900}
+.ls-imp-comparar dd{margin:0;color:var(--text);word-break:break-word}
+.ls-imp-endereco{border:1px solid var(--line-soft);border-radius:var(--radius-md);padding:10px 12px 12px;margin:0}
+.ls-imp-endereco legend{float:none;width:auto;margin:0 0 4px;padding:0 4px;font-size:.86rem;font-weight:900;color:var(--text-2)}
+.ls-imp-endereco legend small{font-weight:700;color:var(--muted)}
+.ls-imp-endereco-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.ls-imp-endereco-grade .largo{grid-column:span 2}
+
+/* ---------------------------------------------------------- itens */
+.ls-imp-itens{display:grid;gap:14px}
+.ls-imp-item{
+  border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel-soft);
+  padding:14px;min-width:0;
+}
+.ls-imp-item-topo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.ls-imp-item-topo strong{font-size:.95rem;color:var(--text)}
+.ls-imp-remover{margin-left:auto;min-height:34px!important;padding:.3rem .65rem!important}
+.ls-imp-remover span{margin-left:4px}
+.ls-imp-item-produto{padding-bottom:12px;margin-bottom:12px;border-bottom:1px dashed var(--line-soft)}
+.ls-imp-item-campos{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.1fr) minmax(0,1fr);gap:12px 14px}
+.ls-imp-item-campos .ls-imp-campo-largo{grid-column:auto}
+.ls-imp-conta .form-label{display:block}
+.ls-imp-dinheiro{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums;color:var(--text)}
+.ls-imp-conta-estado{margin:6px 0 0;font-size:.76rem;font-weight:900}
+.ls-imp-conta-estado.bate{color:var(--green-texto)}
+.ls-imp-conta-estado.nao-bate{color:var(--red-texto)}
+.ls-imp-item.removendo{opacity:.4}
+
+/* -------------------------------------------------------- totais */
+.ls-imp-totais{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
+  padding:12px;border-radius:var(--radius-md);background:var(--panel-2);border:1px solid var(--line-soft);
+}
+.ls-imp-totais div{display:flex;flex-direction:column;gap:2px}
+.ls-imp-totais span{color:var(--muted);font-size:.74rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+.ls-imp-totais strong{font-size:1.08rem;font-variant-numeric:tabular-nums;color:var(--text)}
+.ls-imp-totais small{color:var(--muted);font-size:.74rem}
+.ls-imp-totais .final strong{font-size:1.3rem;color:var(--green-texto)}
+
+/* -------------------------------------------------------- alertas */
+.ls-imp-alertas{display:grid;gap:10px}
+.ls-imp-alerta{
+  display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-md);
+  border:1px solid var(--line);background:var(--panel-2);
+}
+.ls-imp-alerta > i{font-size:1.2rem;line-height:1.2}
+.ls-imp-alerta.vermelho{border-color:var(--red-linha);background:var(--red-fundo)}
+.ls-imp-alerta.vermelho > i{color:var(--red-texto)}
+.ls-imp-alerta.amarelo{border-color:var(--acento-linha);background:var(--acento-fundo)}
+.ls-imp-alerta.amarelo > i{color:var(--acento-texto)}
+.ls-imp-alerta.resolvido{border-color:var(--green-linha);background:var(--green-fundo)}
+.ls-imp-alerta.resolvido > i{color:var(--green-texto)}
+.ls-imp-alerta-corpo{min-width:0;flex:1}
+.ls-imp-alerta-corpo strong{display:block;color:var(--text)}
+.ls-imp-alerta-corpo p{margin:4px 0 0;color:var(--text-2);font-size:.84rem;line-height:1.45;word-break:break-word}
+.ls-imp-alerta-resolvido{color:var(--green-texto)!important;font-weight:900}
+.ls-imp-justificativa{margin-top:8px}
+.ls-imp-tudo-certo{margin:0;color:var(--green-texto);font-weight:800}
+
+/* ------------------------------------------------------ documento */
+.ls-imp-documento summary{padding:14px 18px;cursor:pointer;font-weight:900;color:var(--text)}
+.ls-imp-documento summary small{color:var(--muted);font-weight:700}
+.ls-imp-linhas{list-style:none;margin:0;padding:0 12px 14px;max-height:460px;overflow:auto}
+.ls-imp-linhas li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:5px 8px;border-radius:7px;font-size:.82rem}
+.ls-imp-linhas li code{color:var(--info-texto);font-weight:800;background:none;padding:0}
+.ls-imp-linhas li span{color:var(--text-2);word-break:break-word}
+.ls-imp-linhas li.parte-cabecalho span,.ls-imp-linhas li.parte-rodape span{color:var(--muted)}
+.ls-imp-linhas li.destaque{background:rgba(var(--yellow-rgb),.18);outline:1px solid rgba(var(--yellow-rgb),.45)}
+
+/* -------------------------------------------------------- lateral */
+.ls-imp-pendencias{padding:14px 16px}
+.ls-imp-pendencias h2{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.98rem;font-weight:950;color:var(--text)}
+.ls-imp-contagem{
+  min-width:26px;height:26px;padding:0 7px;display:inline-grid;place-items:center;border-radius:999px;
+  background:var(--red);color:var(--red-tinta);font-size:.78rem;font-weight:950;
+}
+.ls-imp-contagem.zero{background:var(--green);color:var(--green-tinta)}
+.ls-imp-pendencias ol{margin:0;padding-left:1.15rem;display:grid;gap:6px;font-size:.82rem;color:var(--text-2)}
+.ls-imp-pendencias ol a{color:inherit;text-decoration:none}
+.ls-imp-pendencias ol a:hover strong{text-decoration:underline}
+.ls-imp-pendencias strong{color:var(--text)}
+.ls-imp-recomendado{margin-top:10px;font-size:.8rem;color:var(--muted)}
+.ls-imp-recomendado summary{cursor:pointer;font-weight:900}
+.ls-imp-recomendado ul{margin:6px 0 0;padding-left:1.1rem;display:grid;gap:4px}
+.ls-imp-criar{padding:14px 16px;display:grid;gap:8px}
+.ls-imp-criar .btn{width:100%}
+.ls-imp-criar small{color:var(--muted);font-size:.76rem;line-height:1.4}
+.ls-imp-criar-total{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ls-imp-criar-total span{color:var(--muted);font-weight:900;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+.ls-imp-criar-total strong{font-size:1.25rem;color:var(--green-texto);font-variant-numeric:tabular-nums}
+
+/* ======================================================= tablet e celular */
+@media (max-width:1100px){
+  .ls-imp-grade{grid-template-columns:minmax(0,1fr)}
+  /* A lateral se desfaz e cada painel vai para onde serve: o "falta
+     preencher" no topo, antes de tudo, e o botão de criar preso embaixo,
+     sempre à mão, acima das abas do celular. */
+  .ls-imp-lateral{display:contents}
+  .ls-imp-pendencias{order:-1}
+  .ls-imp-criar{
+    order:99;position:sticky;bottom:12px;z-index:20;
+    grid-template-columns:auto minmax(0,1fr);align-items:center;
+    box-shadow:0 -10px 30px rgba(var(--sombra-rgb),.28);
+  }
+  .ls-imp-criar small{grid-column:1 / -1}
+  .ls-imp-item-campos{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ls-imp-item-campos .ls-imp-campo-largo{grid-column:1 / -1}
+}
+@media (max-width:760px){
+  .ls-imp-criar{bottom:calc(66px + env(safe-area-inset-bottom,0px))}
+  .ls-imp-campos{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-item{padding:12px}
+  .ls-imp-item-campos{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .ls-imp-remover span{display:none}
+  .ls-imp-linhas li{grid-template-columns:74px minmax(0,1fr)}
+  .ls-imp-comparar div{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-endereco-grade .largo{grid-column:1 / -1}
+}
+@media (max-width:420px){
+  .ls-imp-item-campos{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-criar{grid-template-columns:minmax(0,1fr)}
+}

@@ -249,7 +249,11 @@ def validar(proposta, envio, *, hoje=None) -> dict:
             _pendencia(recomendacoes, "cliente.endereco", "Endereço",
                        "o endereço serve à entrega, à montagem e ao mapa do site", "recomendado")
 
-    documento = envio["documento"]
+    # O documento só é gravado no cadastro NOVO. Com o cliente já
+    # cadastrado o cadastro não é tocado pela importação (quem muda
+    # cadastro é a aba Clientes), então o CPF do Word ali só serviu para
+    # achar a pessoa.
+    documento = envio["documento"] if modo == "novo" else ""
     if documento:
         if not documento_valido(documento):
             _pendencia(pendencias, "cliente.documento", "CPF/CNPJ",
@@ -452,7 +456,11 @@ def _resolvido(alerta, envio, limpo, proposta) -> bool:
     """
     tipo = alerta["tipo"]
     if tipo == "documento_invalido":
-        return not envio["documento"] or documento_valido(envio["documento"])
+        return (
+            envio["cliente_modo"] == "existente"
+            or not envio["documento"]
+            or documento_valido(envio["documento"])
+        )
     if tipo == "cliente_conflito":
         vinculo = proposta["cliente"]["vinculo"]
         return (envio["cliente_modo"] != vinculo["modo"]) or (
