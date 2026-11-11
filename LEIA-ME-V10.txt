@@ -2289,3 +2289,94 @@ Dependência nova: rjsmin (requirements.txt).
        python manage.py cadastrar_variantes_adesivo --fotos
        python manage.py atualizar_capas_categorias
    Testes: core/tests_variantes_adesivo.py (PecasDeVerdadeTests).
+
+62) O MONTE SEU ESPAÇO VIRA UM APP DE TELA CHEIA, COMO O LAUNCHER DE JOGOS
+   O cliente: "na página de objetos 3D para o cliente, você deve organizar
+   melhor o esquema de montagem de brinquedo do cliente, está uma lista
+   infinita para baixo, você podia isolar ela como launcher de jogos para
+   organizar melhor os espaços e posicionamentos para todas as opções e
+   situações serem visíveis." Antes, o 3D ficava de um lado e as seis seções
+   (o tamanho, o modelo, as áreas, as máquinas, o que coube e as fotos)
+   empilhadas do outro: uns 5.400 px de painel no computador, quase 6.000 no
+   celular, rolando a página inteira. Agora é um app à parte, no jeito do
+   Lazer & Sport Games (/jogos/: o trilho lateral de abas e a barra de abas
+   do celular).
+   NA ARENA 3D (arena.html, #monte-seu-espaco) fica só a CHAMADA: a prévia (a
+   captura do próprio montador, site/projeto3d/previa-montador.webp, 1200 x
+   750, ~70 KB), o título, os quatro passos e o "Abrir o montador" (no
+   celular ele vem logo depois do texto). O APP (site/projeto3d/launcher.js):
+     * abre por cima de tudo, em TELA CHEIA (100dvh: a barra do navegador do
+       celular não corta o pé); a página fica parada e escondida embaixo (o
+       app vai para o fim do <body> e o resto some com display: none: nada
+       rola atrás, e a roda 3D da arena e as vitrines 3D param de desenhar,
+       porque o observador delas deixa de ver a tela); ao fechar, a página
+       volta para onde estava;
+     * fecha no X, no Esc (que antes fecha o diálogo aberto e limpa a busca)
+       e no VOLTAR do celular: abrir faz history.pushState({p3dApp: true}) e
+       o popstate fecha; o avançar reabre;
+     * o endereço #monte-seu-espaco e o link de um projeto (#p=...) abrem o
+       app direto (um script na própria página já o mostra antes de o
+       JavaScript chegar); quem chega assim tem a página sem o app atrás dele
+       no histórico, então o primeiro voltar fecha o app e cai na chamada.
+       Todo link desta página para #monte-seu-espaco (o "Monte o seu espaço"
+       do topo, o do fim, o do menu) abre o app;
+     * o projeto3d.js (e com ele o three.js e o 3D) só é BAIXADO quando o app
+       abre pela primeira vez (data-app-js no #p3dLauncher; antes era o
+       data-preguica, que acordava o app perto da tela).
+   O LAYOUT DO APP (partials/projeto3d_app.html, projeto3d.css):
+     * a BARRA DO TOPO: o nome, o RESUMO VIVO ("20 x 15 m · 61% em uso · 8
+       itens · 1 de fora"), a vista do 3D (Outra ideia, Planta, Nomes,
+       Imagem), "Pedir este projeto", o WhatsApp e o fechar;
+     * as ABAS, uma por passo, com o ícone, o número e, embaixo do nome, o
+       que já foi escolhido ("Área ninja", "3 máquinas", "7 no projeto · 1 de
+       fora"): Espaço, Modelo, Áreas, Máquinas, O que coube e Fotos (a de
+       Fotos só no site; no painel, só com as fotos do cliente). O passo
+       PRONTO troca o número pelo sinal verde (o espaço com a medida e o
+       modelo escolhido quando a pessoa mexeu neles ou passou adiante; as
+       áreas e as máquinas, que são opcionais, quando têm algo ou ficaram
+       para trás; o "O que coube" depois de visto; as fotos com uma foto); o
+       "O que coube" ganha um ponto vermelho quando algo ficou de fora, e o
+       trilho, a barra "N de 6 passos prontos". As setas do teclado, Home e
+       End andam entre as abas;
+     * no COMPUTADOR (o app com 900 px ou mais), o trilho à esquerda (236 px;
+       até 1.240 px, só o ícone e o nome embaixo), o 3D no meio, grande, e o
+       passo aberto num painel à direita (de 340 a 460 px) que ROLA SOZINHO;
+       embaixo dele, "Voltar", "Passo 2 de 6" e "Próximo: Áreas" (no último
+       passo do site, o "Pedir este projeto");
+     * no CELULAR, o 3D em cima (a vista do 3D vira os botões redondos sobre
+       ele), o passo numa FOLHA embaixo do 3D (45% da altura) e a barra de
+       abas no pé da tela, como num aplicativo, com o fio do progresso em
+       cima dela. A folha arrasta pela alça (para cima ela cresce até 68%,
+       para baixo fica só a alça e o pé; um toque alterna); o 3D só muda de
+       tamanho quando ela assenta;
+     * as IDEIAS para o espaço (sugestoes.js) ficam em destaque na aba
+       Espaço, em cartões numa grade (a melhor na largura toda); na aba
+       MÁQUINAS, o título, a busca e a conta ("26 máquinas · 3 escolhidas",
+       "1 de 26 na busca") ficam presos no alto, e as máquinas numa grade
+       compacta de duas colunas, com o "nenhuma máquina com esse nome"; os
+       brinquedos grandes, na aba Áreas, na mesma grade; na aba Fotos, o
+       como tirar a foto.
+   O projeto3d.js continua o mesmo: os mesmos ids e data-atributos (o teste
+   confere cada id que ele procura). Ganhou só o evento "p3d:mudou" (o
+   resumo e os passos do launcher), o endereço #p= que respeita o estado do
+   histórico (history.replaceState(history.state, ...): é ele que diz que
+   aquela entrada é a do app) e não é escrito com o app fechado, a pílula do
+   3D que, com as abas, abre o "O que coube" em vez de rolar, e a câmera que
+   enquadra a sala pela PROPORÇÃO do 3D (a tela em pé, entre o trilho e o
+   painel, pede mais longe; até a pessoa girar ou aproximar, a câmera
+   reenquadra quando o 3D muda de tamanho).
+   NO PAINEL (a ficha do pedido, pedido_projeto3d_inner.html) é o mesmo
+   partial, com as mesmas abas, dentro da ficha e sem tela cheia (o
+   launcher.js vem antes do projeto3d.js); sem o "Pedir" e sem o fechar.
+   Sem JavaScript, a chamada continua e o "Abrir o montador" leva à lista das
+   áreas e das máquinas com as medidas (#p3dSemJs).
+   Conferido no Chromium (swiftshader) em 1366 x 860, 1920 x 1080, 1280 x
+   720, 1024 x 768, 768 x 1024, 915 x 412 (o celular deitado), Pixel 7,
+   iPhone 14 e iPhone SE: abrir, trocar as abas, a medida, a ideia, o
+   modelo, a área, a busca e as máquinas (o 3D muda a cada uma), o diálogo
+   da foto, o pedido chegando ao servidor (com a foto), fechar no X, no Esc
+   e no voltar, o link #p= e o #monte-seu-espaco vindos de fora; nada fora
+   da tela e a página sem rolar com o app aberto. E a ficha do painel, no
+   computador e no celular.
+   Testes: core/tests_projeto3d.py (MontadorComoLauncherTests e
+   PainelTests.test_a_ficha_tem_as_abas_sem_a_tela_cheia).
