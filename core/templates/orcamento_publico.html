@@ -293,10 +293,21 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
           <span>R$ {{ orcamento.frete|moeda }}</span>
         </div>
       {% endif %}
-      {% if orcamento.desconto %}
+      {% comment %}
+        Com o valor final combinado, a diferença até ele é o desconto (ou o
+        ajuste, se ficou acima da soma); sem ele, o desconto digitado.
+        `desconto_aplicado` cobre os dois casos.
+      {% endcomment %}
+      {% if desconto_aplicado %}
         <div class="soma-linha desconto">
-          <span>Desconto</span>
-          <span>− R$ {{ orcamento.desconto|moeda }}</span>
+          <span>{% if orcamento.valor_final_fixo %}Desconto especial{% else %}Desconto{% endif %}</span>
+          <span>− R$ {{ desconto_aplicado|moeda }}</span>
+        </div>
+      {% endif %}
+      {% if acrescimo_aplicado %}
+        <div class="soma-linha">
+          <span>Ajuste do valor combinado</span>
+          <span>+ R$ {{ acrescimo_aplicado|moeda }}</span>
         </div>
       {% endif %}
       <div class="soma-total">

@@ -254,11 +254,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             consulta
             .annotate(_subtotal=Coalesce(cls._subtotal_por_proposta(), zero))
             .annotate(
-                _total=Greatest(
-                    F("_subtotal")
-                    + Coalesce(F("frete"), zero)
-                    - Coalesce(F("desconto"), zero),
-                    zero,
+                # O valor final combinado, quando há, vale no lugar da conta.
+                _total=Coalesce(
+                    F("valor_final"),
+                    Greatest(
+                        F("_subtotal")
+                        + Coalesce(F("frete"), zero)
+                        - Coalesce(F("desconto"), zero),
+                        zero,
+                        output_field=DecimalField(max_digits=12, decimal_places=2),
+                    ),
                     output_field=DecimalField(max_digits=12, decimal_places=2),
                 )
             )
@@ -675,6 +680,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "validade": orcamento.validade.isoformat() if orcamento.validade else "",
             "desconto": f"{orcamento.desconto:.2f}".replace(".", ","),
             "frete": f"{orcamento.frete:.2f}".replace(".", ","),
+            "valor_final": (
+                f"{orcamento.valor_final:.2f}".replace(".", ",")
+                if orcamento.valor_final is not None else ""
+            ),
+            "soma_itens": f"{orcamento.bruto:.2f}".replace(".", ","),
             "forma_pagamento": orcamento.forma_pagamento,
             "forma_envio": orcamento.forma_envio,
             "observacoes": orcamento.observacoes,
@@ -927,6 +937,15 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 request.POST.get("frete"), "Frete",
                 limite=Decimal("9999999999.99"),
             ) or ZERO
+            # Com o valor final combinado, ele é o total: o desconto vira a
+            # diferença até ele e não é guardado à parte (senão contaria
+            # duas vezes em quem ainda lê o campo).
+            orcamento.valor_final = decimal_br(
+                request.POST.get("valor_final"), "Valor final",
+                limite=Decimal("9999999999.99"),
+            )
+            if orcamento.valor_final is not None:
+                orcamento.desconto = ZERO
             orcamento.forma_pagamento = texto(
                 request, "forma_pagamento", limite=120,
             )
@@ -1029,7 +1048,10 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
     def _assinatura_financeira(orcamento):
         if not orcamento.pk:
             return None
-        return orcamento.desconto, orcamento.frete, orcamento.forma_pagamento
+        return (
+            orcamento.desconto, orcamento.frete, orcamento.valor_final,
+            orcamento.forma_pagamento,
+        )
 
     @staticmethod
     def _reabrir_bloco(orcamento, bloco):
@@ -1313,6 +1335,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 validade=Orcamento.validade_padrao(),
                 desconto=anterior.desconto,
                 frete=anterior.frete,
+                valor_final=anterior.valor_final,
                 forma_pagamento=anterior.forma_pagamento,
                 forma_envio=anterior.forma_envio,
                 observacoes=anterior.observacoes,

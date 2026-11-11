@@ -240,8 +240,38 @@
         <div class="ls-orcamento-total">
           <div><span>Subtotal dos itens</span><strong id="resumoSubtotal">R$ 0,00</strong></div>
           <div><span>Frete</span><strong id="resumoFrete">R$ 0,00</strong></div>
-          <div><span>Desconto</span><strong id="resumoDesconto">− R$ 0,00</strong></div>
+          <div><span id="resumoDescontoRotulo">Desconto</span><strong id="resumoDesconto">− R$ 0,00</strong></div>
           <div class="ls-orcamento-final"><span>Total do orçamento</span><strong id="resumoTotal">R$ 0,00</strong></div>
+        </div>
+
+        {% comment %}
+          VALOR FINAL À MÃO.
+
+          A venda fecha em "fica R$ 18.000 tudo". Antes, chegar nesse
+          número era fazer a conta do desconto de cabeça -- e ela mudava
+          sozinha quando um item era trocado depois. Ligado, o valor
+          digitado é o total da proposta, seja qual for a soma dos itens;
+          o desconto some do formulário e a diferença aparece para o
+          cliente como desconto (ou ajuste, acima da soma).
+        {% endcomment %}
+        <div class="ls-valor-final" id="valorFinalBloco">
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input" type="checkbox" role="switch" id="valorFinalFixar">
+            <label class="form-check-label" for="valorFinalFixar">
+              <strong>Definir o valor final à mão</strong>
+              <small>O total fica neste valor, sem depender da soma dos itens.</small>
+            </label>
+          </div>
+          <div class="ls-valor-final-campo" id="valorFinalCaixa" hidden>
+            <label class="form-label" for="orcamentoValorFinal">Valor final do orçamento</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control ls-recalcula" id="orcamentoValorFinal" name="valor_final"
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00" disabled>
+            </div>
+            <span class="form-text" id="valorFinalExplicacao"></span>
+          </div>
         </div>
 
         {% comment %}
@@ -1720,6 +1750,78 @@ LSTela.pronto(function () {
   });
 
   /* ------------------------------------------------------------------
+     Valor final à mão: o total fica no valor digitado
+     ------------------------------------------------------------------ */
+  var chaveValorFinal = document.getElementById("valorFinalFixar");
+  var campoValorFinal = document.getElementById("orcamentoValorFinal");
+  var caixaValorFinal = document.getElementById("valorFinalCaixa");
+  var explicacaoValorFinal = document.getElementById("valorFinalExplicacao");
+  var CONTROLES_DO_DESCONTO = ["orcamentoDesconto", "descontoUnidade", "descontoRedondo", "descontoZerar"];
+
+  function valorFinalLigado() {
+    return chaveValorFinal.checked;
+  }
+
+  /* O que o desconto pode mexer depende de duas coisas: a permissão (e a
+     proposta ainda editável) e o valor final, que tira o desconto de
+     cena. `podeMexerNoFinanceiro` guarda a primeira. */
+  var podeMexerNoFinanceiro = true;
+
+  function aplicarValorFinalNaTela() {
+    var ligado = valorFinalLigado();
+    caixaValorFinal.hidden = !ligado;
+    campoValorFinal.disabled = !ligado || !podeMexerNoFinanceiro;
+    chaveValorFinal.disabled = !podeMexerNoFinanceiro;
+    CONTROLES_DO_DESCONTO.forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (campo) campo.disabled = ligado || !podeMexerNoFinanceiro;
+    });
+    document.querySelectorAll("[data-desconto-pct]").forEach(function (chip) {
+      chip.disabled = ligado || !podeMexerNoFinanceiro;
+    });
+    if (ligado) explicacao.textContent = "";
+    else explicacaoValorFinal.textContent = "";
+  }
+
+  function explicarValorFinal(bruto, total) {
+    if (!campoValorFinal.value) {
+      explicacaoValorFinal.textContent =
+        "Digite o valor fechado com o cliente. A soma hoje é " + moeda(bruto) + ".";
+      return;
+    }
+    var diferenca = Math.round((bruto - total) * 100) / 100;
+    if (!diferenca) {
+      explicacaoValorFinal.textContent = "Igual à soma dos itens e do frete.";
+    } else if (diferenca > 0) {
+      explicacaoValorFinal.textContent =
+        moeda(diferenca) + " abaixo da soma (" + moeda(bruto) + ")" +
+        (bruto > 0 ? " = " + (Math.round((diferenca / bruto) * 1000) / 10).toLocaleString("pt-BR") + "% de desconto" : "") +
+        ". Trocar os itens não muda o total.";
+    } else {
+      explicacaoValorFinal.textContent =
+        moeda(-diferenca) + " acima da soma (" + moeda(bruto) + "). Trocar os itens não muda o total.";
+    }
+  }
+
+  chaveValorFinal.addEventListener("change", function () {
+    if (valorFinalLigado() && !campoValorFinal.value) {
+      /* Começa no total que já estava na tela: é dele que se negocia. */
+      var subtotal = somaDosItens();
+      var frete = paraNumero(document.getElementById("orcamentoFrete").value);
+      var desconto = Math.min(descontoAtual(subtotal), subtotal + frete);
+      var atual = Math.max(subtotal + frete - desconto, 0);
+      campoValorFinal.value = atual > 0 ? moedaSimples(atual) : "";
+    }
+    if (!valorFinalLigado()) campoValorFinal.value = "";
+    aplicarValorFinalNaTela();
+    recalcular();
+    if (valorFinalLigado()) {
+      campoValorFinal.focus();
+      campoValorFinal.select();
+    }
+  });
+
+  /* ------------------------------------------------------------------
      Totais
      ------------------------------------------------------------------ */
   function recalcular() {
@@ -1735,16 +1837,31 @@ LSTela.pronto(function () {
     });
 
     var frete = paraNumero(document.getElementById("orcamentoFrete").value);
-    var desconto = Math.min(descontoAtual(subtotal), subtotal + frete);
-    var total = Math.max(subtotal + frete - desconto, 0);
+    var bruto = Math.round((subtotal + frete) * 100) / 100;
+    var fixo = valorFinalLigado();
+    var desconto = fixo ? 0 : Math.min(descontoAtual(subtotal), subtotal + frete);
+    var total = fixo
+      ? paraNumero(campoValorFinal.value)
+      : Math.max(subtotal + frete - desconto, 0);
 
     /* O servidor recebe reais, sempre -- inclusive quando a tela está em
-       porcentagem. */
+       porcentagem. Com o valor final à mão, o desconto não vai: o total é
+       o valor digitado. */
     descontoEmReais.value = desconto > 0 ? moedaSimples(desconto) : "";
 
     document.getElementById("resumoSubtotal").textContent = moeda(subtotal);
     document.getElementById("resumoFrete").textContent = moeda(frete);
-    document.getElementById("resumoDesconto").textContent = "− " + moeda(desconto);
+    var rotuloDesconto = document.getElementById("resumoDescontoRotulo");
+    if (fixo) {
+      var diferenca = Math.round((bruto - total) * 100) / 100;
+      rotuloDesconto.textContent = diferenca < 0 ? "Ajuste (acima da soma)" : "Desconto (até o valor final)";
+      document.getElementById("resumoDesconto").textContent =
+        (diferenca < 0 ? "+ " : "− ") + moeda(Math.abs(diferenca));
+      explicarValorFinal(bruto, total);
+    } else {
+      rotuloDesconto.textContent = "Desconto";
+      document.getElementById("resumoDesconto").textContent = "− " + moeda(desconto);
+    }
     document.getElementById("resumoTotal").textContent = moeda(total);
 
     if (!desconto) {
@@ -1859,6 +1976,8 @@ LSTela.pronto(function () {
       Painel.valor("orcamentoFrete", orcamento.frete);
       trocarUnidade("valor", false);
       Painel.valor("orcamentoDesconto", orcamento.desconto);
+      chaveValorFinal.checked = Boolean(orcamento.valor_final);
+      Painel.valor("orcamentoValorFinal", orcamento.valor_final || "");
       Painel.valor("orcamentoPagamento", orcamento.forma_pagamento);
       Painel.valor("orcamentoEnvio", orcamento.forma_envio);
       Painel.valor("orcamentoObs", orcamento.observacoes);
@@ -1903,6 +2022,8 @@ LSTela.pronto(function () {
     document.querySelectorAll("[data-desconto-pct]").forEach(function (campo) {
       campo.disabled = !mutavel || !podeEditarFinanceiro;
     });
+    podeMexerNoFinanceiro = mutavel && podeEditarFinanceiro;
+    aplicarValorFinalNaTela();
     corpo.querySelectorAll("input, button").forEach(function (campo) {
       campo.disabled = !mutavel || !podeEditarComercial;
     });
@@ -2862,7 +2983,7 @@ LSTela.pronto(function () {
   var CAMPOS_DO_RASCUNHO = [
     "orcamentoNome", "orcamentoContato", "orcamentoWhatsapp", "orcamentoEmail",
     "orcamentoStatus", "orcamentoValidade", "orcamentoFrete", "orcamentoDesconto",
-    "orcamentoPagamento", "orcamentoEnvio", "orcamentoObs"
+    "orcamentoValorFinal", "orcamentoPagamento", "orcamentoEnvio", "orcamentoObs"
   ];
 
   function coletarRascunhoOrcamento() {
@@ -2890,6 +3011,7 @@ LSTela.pronto(function () {
       cliente: buscaCliente.valor(),
       clienteOpcao: buscaCliente.opcaoAtual(),
       descontoModo: botaoUnidade.dataset.modo === "porcentagem" ? "porcentagem" : "valor",
+      valorFinalFixo: valorFinalLigado(),
       campos: campos,
       itens: itens
     };
@@ -2915,6 +3037,8 @@ LSTela.pronto(function () {
     CAMPOS_DO_RASCUNHO.forEach(function (id) {
       Painel.valor(id, (dados.campos || {})[id] || "");
     });
+    chaveValorFinal.checked = Boolean(dados.valorFinalFixo);
+    aplicarValorFinalNaTela();
 
     corpo.querySelectorAll("tr").forEach(function (linha) {
       var indice = buscasDeItem.indexOf(linha.buscaItem);

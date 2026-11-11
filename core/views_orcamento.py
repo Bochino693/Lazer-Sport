@@ -233,6 +233,9 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         "itens_3d": sum(1 for item in itens if item.modelo_3d),
         "subtotal": orcamento.subtotal,
         "total": orcamento.total,
+        # o desconto digitado, ou a diferença até o valor final combinado
+        "desconto_aplicado": orcamento.desconto_aplicado,
+        "acrescimo_aplicado": orcamento.acrescimo_aplicado,
         "vencido": orcamento.vencido,
         "respondido": orcamento.respondido,
         "aceite": aceite,

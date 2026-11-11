@@ -2596,3 +2596,60 @@ Dependência nova: rjsmin (requirements.txt).
    antigos passaram a gravar como o painel grava (save(), que avisa o
    cache) e a comparar montagem com montagem: core/tests_objetos_3d.py e
    core/tests_telas_do_site.py.
+
+66) O MAPA DA HOME: ALFINETES ESPALHADOS E UM MUNDO SÓ
+   O QUE INCOMODAVA. Com o Brasil inteiro na tela, os clientes de São
+   Paulo viravam um "9" logo de cara, os de Aracaju um "2", os do
+   Maranhão outro "2": o número aparecia cedo demais, e o mapa mostrava
+   poucos alfinetes. E arrastando para o lado aparecia outra América,
+   sem alfinete nenhum.
+   AGORA (core/static/site/paginas/home-mapa.js):
+     * quem se cobre primeiro SE ESPALHA: sai um pouco do lugar, em volta
+       do ponto de verdade, com uma linha fina e uma bolinha marcando onde
+       ele fica de fato. Sai no máximo 66 px e nunca mais que ~650 km
+       (bem de longe, 66 px seriam milhares de km e o alfinete já não
+       diria onde fica);
+     * o número só aparece onde nem espalhando cabe -- muitos clientes
+       num pedaço pequeno do mapa, ou o mapa visto bem de longe. Em cada
+       região junta o mais disputado com quem ainda o cobre e com quem,
+       no mapa de verdade, fica no meio deles: poucos grupos, cada um de
+       gente vizinha de verdade;
+     * a fábrica só fica com o "+N" de quem sobrar preso embaixo dela;
+     * clicar no grupo aproxima até o zoom que já solta quem dá; muitos no
+       mesmo endereço abrem em leque;
+     * um mundo só: os quadros do mapa não se repetem, o arrasto para na
+       beira do mundo e o zoom mínimo é o que ainda enche a caixa.
+   CONFERIDO no navegador com os 17 pontos do ar: no zoom do Brasil, os 16
+   clientes soltos (antes "9", "3", "2"); um zoom mais longe, um "5" e 11
+   soltos; o mundo inteiro, o "+N" na fábrica. Com 305 pontos inventados
+   (120 em São Paulo, 60 no Rio, 8 no mesmo shopping): 2 a 3 grupos por
+   zoom e o resto solto; ~10-56 ms por zoom. 40 no mesmo endereço: o
+   grupo aproxima e abre em leque. A lista leva ao cliente e abre o
+   cartão. Arrastando para os lados, nenhum quadro fora do mundo é pedido.
+   Teste: core/tests_home_vitrine.py (o script é JavaScript válido).
+
+67) ORÇAMENTO: VALOR FINAL À MÃO (O TOTAL IGNORA A SOMA)
+   A venda fecha em "fica R$ 18.000 tudo". O desconto em R$ ou % já
+   existia (Bloco Financeiro), mas chegar no número fechado era conta de
+   cabeça, e ela mudava sozinha quando um item era trocado depois.
+   AGORA, embaixo do total do formulário, a chave "Definir o valor final
+   à mão": ligada, o campo começa no total da tela e o valor digitado é o
+   total da proposta, seja qual for a soma dos itens e do frete. O
+   desconto sai de cena (travado), e o resumo mostra a diferença:
+   "Desconto (até o valor final) − R$ 500,00 ... = 2,7% de desconto.
+   Trocar os itens não muda o total." Acima da soma vira "Ajuste".
+     * banco: Orcamento.valor_final (vazio = a conta de sempre), migração
+       sistema_interno/0057_orcamento_valor_final. Com ele preenchido o
+       desconto é guardado como zero (senão contaria duas vezes);
+     * Orcamento.total devolve o valor final quando há; bruto,
+       desconto_aplicado e acrescimo_aplicado dão a diferença;
+     * as somas em SQL (topo da lista de orçamentos, ficha do cliente)
+       usam o valor final igual ao Orcamento.total;
+     * a página do cliente mostra "Desconto especial − R$ ..." (ou "Ajuste
+       do valor combinado + R$ ...") e o total combinado; o WhatsApp e o
+       e-mail já usam o total;
+     * nova versão da proposta leva o valor final junto; mudar o valor
+       final reabre a aprovação do Bloco Financeiro, como o desconto;
+     * o retrato assinado do aceite só ganha "valor_final" quando ele
+       existe: os aceites de antes têm o mesmo hash.
+   Testes: sistema_interno/tests_valor_final.py.

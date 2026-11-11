@@ -195,19 +195,24 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         )
         return (
             Orcamento.objects
-            .only("id", "cliente_id", "status", "criacao", "desconto", "frete")
+            .only("id", "cliente_id", "status", "criacao", "desconto", "frete", "valor_final")
             .annotate(
                 _subtotal_calculado=Coalesce(
                     Sum(linha), Value(ZERO), output_field=dinheiro
                 )
             )
             .annotate(
-                _total_calculado=Greatest(
-                    ExpressionWrapper(
-                        F("_subtotal_calculado") + F("frete") - F("desconto"),
-                        output_field=dinheiro,
+                # O valor final combinado, quando há, vale no lugar da conta.
+                _total_calculado=Coalesce(
+                    F("valor_final"),
+                    Greatest(
+                        ExpressionWrapper(
+                            F("_subtotal_calculado") + F("frete") - F("desconto"),
+                            output_field=dinheiro,
+                        ),
+                        Value(ZERO),
                     ),
-                    Value(ZERO),
+                    output_field=dinheiro,
                 )
             )
         )

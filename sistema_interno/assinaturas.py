@@ -37,6 +37,12 @@ def conteudo_canonico(orcamento) -> dict:
         "desconto": _dinheiro(orcamento.desconto),
         "frete": _dinheiro(orcamento.frete),
         "total": _dinheiro(orcamento.total),
+        **(
+            # Só entra quando existe: os aceites de antes do campo continuam
+            # com o mesmo retrato (e o mesmo hash).
+            {"valor_final": _dinheiro(orcamento.valor_final)}
+            if orcamento.valor_final is not None else {}
+        ),
         "itens": [
             {
                 "descricao": item.descricao,
