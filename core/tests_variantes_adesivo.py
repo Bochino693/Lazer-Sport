@@ -28,7 +28,14 @@ O que estes testes protegem:
     Kids Alienígenas (o nome, a descrição, os campos do Air Game Kids, as
     descrições das fotos e o objeto 3D no .glb novo), em todo lugar; no
     Render, as fotos que o cadastro subiu são refeitas; fora isso, como a
-    0145; rodar de novo não faz nada. A chave antiga ainda vale no comando.
+    0145; rodar de novo não faz nada. A chave antiga ainda vale no comando;
+  * o que a cliente pediu, conferido com as máquinas de verdade: no basquete,
+    a bola das laterais VAZADA (os gomos brancos da folha são furos, com a
+    rede atrás), a PRANCHA inclinada que devolve a bola até a chapa de parada
+    na frente, com as bolas, sem a caixa preta em cima do teto, e as peças de
+    máquina da foto (o moedeiro, o neon, o placar, o Start, a estrutura de
+    tubo e os pés); no Air Game, a fita de LED na borda, a régua e a borda
+    pretas e o placar.
 """
 
 import importlib
@@ -51,7 +58,7 @@ from django.urls import reverse
 from . import arena, projeto3d
 from .cadastro_modelos import APELIDOS, CADASTROS, VARIANTES_DE_ADESIVO
 from .models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, ObjetoTresD, TagsBrinquedos
-from .objetos_3d import ler_glb_do_site, ler_json_do_glb
+from .objetos_3d import ler_glb_do_site, ler_json_do_glb, medidas_do_glb
 
 migracao = importlib.import_module("core.migrations.0145_variantes_de_adesivo")
 migracao_0146 = importlib.import_module("core.migrations.0146_air_game_kids_alienigenas")
@@ -140,6 +147,75 @@ def _da_0145(base_antiga, prefixo=HOCKEY_ANTES):
     ObjetoTresD.objects.create(brinquedo=velho, arquivo_estatico=_glb(HOCKEY_ANTES), codigo=HOCKEY_ANTES,
                                medidas=[1.0, 0.92, 1.67])
     return velho
+
+
+def _glb_do_site(chave):
+    with open(finders.find(_glb(chave)), "rb") as arquivo:
+        return ler_json_do_glb(arquivo)
+
+
+def _medidas_do_material(dados, material):
+    """[altura, largura, profundidade] só das malhas de um material do .glb (o resto sai do JSON)."""
+    indice = next(i for i, m in enumerate(dados["materials"]) if m.get("name") == material)
+    copia = json.loads(json.dumps(dados))
+    for malha in copia["meshes"]:
+        malha["primitives"] = [p for p in malha["primitives"] if p.get("material") == indice]
+    return medidas_do_glb(copia)
+
+
+class PecasDeVerdadeTests(TestCase):
+    """O que a cliente apontou no 3D, conferido com as máquinas de verdade (as fotos do catálogo)."""
+
+    def test_a_bola_das_laterais_do_basquete_e_vazada(self):
+        formas = json.loads((FERRAMENTAS / BASQUETE / "formas.json").read_text(encoding="utf-8"))
+        recortes = json.loads((FERRAMENTAS / BASQUETE / "recortes.json").read_text(encoding="utf-8"))["pecas"]
+        for lado in ("esquerda", "direita"):
+            with self.subTest(lado):
+                peca = f"lateral-externa-{lado}"
+                furos = formas[peca].get("furos", [])
+                self.assertEqual(len(furos), 8)  # os oito gomos brancos da bola
+                x0, y0, x1, y1 = recortes[peca]["furos"]["caixa"]
+                for furo in furos:
+                    self.assertGreaterEqual(len(furo), 6)
+                    self.assertTrue(all(x0 <= u <= x1 and y0 <= v <= y1 for u, v in furo))
+                # (o balão BASKETBALL, branco, embaixo, não é furo)
+                self.assertLess(max(v for f in furos for _, v in f), 0.6)
+        materiais = {m["name"] for m in _glb_do_site(BASQUETE)["materials"]}
+        self.assertIn("rede-de-protecao", materiais)  # a rede atrás dos furos
+
+    def test_a_prancha_do_basquete_e_a_rampa_que_devolve_a_bola(self):
+        dados = _glb_do_site(BASQUETE)
+        altura, largura, comprimento = _medidas_do_material(dados, "adesivo-prancha")
+        # inclinada: sobe uns 40 cm do console ao fundo da cesta (no chão, deitada, seria 0)
+        self.assertGreater(altura, 0.3)
+        self.assertLess(altura, 0.6)
+        self.assertAlmostEqual(largura, 0.96, delta=0.01)
+        self.assertGreater(comprimento, 2.0)
+        materiais = {m["name"] for m in dados["materials"]}
+        self.assertIn("chapa-de-parada", materiais)  # onde a bola para, ao alcance de quem joga
+        self.assertIn("bolas", materiais)
+
+    def test_o_basquete_tem_as_pecas_de_maquina_da_foto(self):
+        materiais = {m["name"] for m in _glb_do_site(BASQUETE)["materials"]}
+        for nome in ("porta-do-moedeiro", "moedeiro", "neon-roxo", "placar", "botao-start", "estrutura-tubo-preto",
+                     "pes-niveladores", "aro", "rede-da-cesta"):
+            self.assertIn(nome, materiais)
+        # nada de caixa preta: as peças pretas são as chapas, sem a caixa de cima entre o teto e a testeira
+        montar = (FERRAMENTAS / BASQUETE / "montar.js").read_text(encoding="utf-8")
+        self.assertNotIn("a caixa de cima", montar)
+
+    def test_o_air_game_tem_o_led_a_regua_e_o_placar(self):
+        dados = _glb_do_site(HOCKEY)
+        materiais = {m["name"]: m for m in dados["materials"]}
+        for nome in ("fita-de-led", "placar", "digitos-do-placar", "borda"):
+            self.assertIn(nome, materiais)
+        # a régua e a borda são pretas, como na mesa
+        cor = materiais["borda"]["pbrMetallicRoughness"].get("baseColorFactor", [1, 1, 1, 1])
+        self.assertLess(max(cor[:3]), 0.05)
+        # a fita de LED corre pela borda das laterais inteiras (o comprimento e a altura da mesa)
+        altura, _largura, comprimento = _medidas_do_material(dados, "fita-de-led")
+        self.assertGreater(altura, 0.8)
+        self.assertGreater(comprimento, 1.45)
 
 
 class ObjetoNaArenaTests(TestCase):
@@ -618,7 +694,8 @@ class SemTabuaTests(TestCase):
                     self.assertGreater(len(cores), 8)
                 # no 3D, a cabeceira é a faixa da arte (~0,40 m), e não do chão ao campo (~0,75 m)
                 largura, altura = pecas[peca]["mm"]
-                self.assertEqual(largura, 808)
+                self.assertEqual(largura, pecas["tampo"]["mm"][1])  # entre as laterais: a largura do tampo
+                self.assertAlmostEqual(largura, 805, delta=10)  # (a fita de LED da borda conta na altura da mesa)
                 self.assertLess(altura, 450)
 
     def test_vem_depois_da_0147(self):

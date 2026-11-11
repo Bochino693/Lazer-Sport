@@ -9,15 +9,17 @@ Cada máquina com adesivos tem, na pasta dela (ferramentas/modelos3d/<id>/):
     dela), e, se precisar, `angulo` (endireita a peça desenhada torta, em
     graus, anti-horário), `girar` (0/90/180/270), `espelhar`, `apagar`
     (caixas de outras peças que encostam nela), `forma` ("contorno" para a
-    peça recortada; "retangulo" para a reta) e `dobras` (onde a peça dobra,
-    em frações da altura);
+    peça recortada; "retangulo" para a reta), `dobras` (onde a peça dobra,
+    em frações da altura) e `furos` (os brancos que são recortes VAZADOS na
+    chapa, dentro de uma caixa: os gomos da bola da lateral do basquete);
   * recortar_adesivos.py -- roda o `recortar` daqui e grava:
       - adesivos/<peça>.png: a peça recortada no limite dela, sem margem
         branca, exatamente como está na folha;
       - formas.json: o tamanho de cada peça em px e, na peça recortada, o
         CONTORNO de verdade (o polígono da máscara não-branca, simplificado,
         em frações da imagem, a partir do canto de cima à esquerda). É ele que
-        o montar.js usa como contorno da placa no 3D.
+        o montar.js usa como contorno da placa no 3D. Com `furos`, também os
+        polígonos dos vazados (os furos de verdade na placa).
 
 A arte é usada como está na folha: o recorte não redesenha, não recolore e não
 tira nada. Só precisa do Pillow (pip install pillow).
@@ -273,6 +275,56 @@ def _sem_faixa_lisa(peca, tolerancia=28, fracao=0.97, sobra=6):
     return peca.crop((0, 0, w, y)), h - y
 
 
+def _furos(peca, dados):
+    """Os recortes VAZADOS da peça: os brancos de dentro da `caixa` de `furos` (em frações da peça).
+
+    A bola da lateral de fora do Basquete Street Quadrinhos é vazada: os gomos
+    brancos da folha são recortes que atravessam a chapa. Cada furo é um pedaço
+    ligado de pixels quase brancos (todos os canais acima de `branco`) que fica
+    inteiro dentro da caixa e tem pelo menos `area` px (as letras brancas e os
+    brilhos pequenos ficam de fora). O furo cresce 1 px (o branco esfumado da
+    borda sai junto) e vira um polígono em frações da imagem, como o contorno.
+    """
+    cfg = dados["furos"]
+    w, h = peca.size
+    fx0, fy0, fx1, fy1 = cfg["caixa"]
+    bx0, by0, bx1, by1 = int(fx0 * w), int(fy0 * h), int(math.ceil(fx1 * w)), int(math.ceil(fy1 * h))
+    limite = cfg.get("branco", 215)
+    px = peca.convert("RGB").load()
+    branco = bytearray(1 if bx0 <= i % w < bx1 and by0 <= i // w < by1 and min(px[i % w, i // w]) > limite else 0
+                       for i in range(w * h))
+    visto = bytearray(len(branco))
+    furos = []
+    for inicio in range(len(branco)):
+        if not branco[inicio] or visto[inicio]:
+            continue
+        visto[inicio] = 1
+        fila, pedaco = deque([inicio]), [inicio]
+        while fila:
+            i = fila.popleft()
+            for j in _vizinhos(i, w, h):
+                if branco[j] and not visto[j]:
+                    visto[j] = 1
+                    fila.append(j)
+                    pedaco.append(j)
+        xs = [i % w for i in pedaco]
+        ys = [i // w for i in pedaco]
+        encosta = min(xs) <= bx0 or max(xs) >= bx1 - 1 or min(ys) <= by0 or max(ys) >= by1 - 1
+        if len(pedaco) < cfg.get("area", 200) or encosta:
+            continue
+        m = bytearray(w * h)
+        for i in pedaco:
+            m[i] = 1
+        crescido = bytearray(m)
+        for i in pedaco:
+            for j in _vizinhos(i, w, h):
+                crescido[j] = 1
+        pontos = _simplificar(_borda(crescido, w, h), TOLERANCIA)
+        furos.append([[round(x / w, 5), round(y / h, 5)] for x, y in pontos])
+    furos.sort(key=lambda f: (min(p[1] for p in f), min(p[0] for p in f)))
+    return furos
+
+
 def recortar_peca(folha, dados, limiar=LIMIAR):
     """Uma peça da folha: (a imagem recortada, a caixa na folha, o contorno em frações ou None).
 
@@ -367,14 +419,22 @@ def recortar(pasta, argumentos=None):
         if dados.get("_faixa_lisa_px"):
             # a altura da faixa lisa tirada do pé (px): a peça inteira, em escala na folha, é px[1] + esta
             forma["faixa_lisa_px"] = dados.pop("_faixa_lisa_px")
+        furos = _furos(imagem, dados) if dados.get("furos") else []
+        if furos:
+            forma["furos"] = furos
         formas[peca] = forma
-        print(f"{peca}: {imagem.width} x {imagem.height} px" + (f", contorno com {len(contorno)} pontos" if contorno else ""))
+        print(f"{peca}: {imagem.width} x {imagem.height} px" + (f", contorno com {len(contorno)} pontos" if contorno else "")
+              + (f", {len(furos)} furos (vazados)" if furos else ""))
         if desenho:
             desenho.rectangle(caixa, outline="#ff2bd6", width=2)
             if contorno and not (dados.get("angulo") or dados.get("girar")):
                 x0, y0 = caixa[0], caixa[1]
                 desenho.line([(x0 + u * imagem.width, y0 + v * imagem.height) for u, v in contorno + contorno[:1]],
                              fill="#00c853", width=1)
+            for furo in furos:
+                x0, y0 = caixa[0], caixa[1]
+                desenho.line([(x0 + u * imagem.width, y0 + v * imagem.height) for u, v in furo + furo[:1]],
+                             fill="#2962ff", width=1)
             try:
                 letra = ImageFont.truetype("DejaVuSans-Bold.ttf", 12)
             except OSError:

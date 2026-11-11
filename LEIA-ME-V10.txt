@@ -2208,3 +2208,63 @@ Dependência nova: rjsmin (requirements.txt).
    core/migrations/0153_capas_em_cena.py.
    Testes: core/tests_capas_em_cena.py (e os testes de cada modelo, que
    conferem as fotos do cadastro).
+
+61) BASQUETE STREET QUADRINHOS E AIR GAME KIDS ALIENÍGENAS IGUAIS ÀS MÁQUINAS DE VERDADE
+   A cliente olhou o 3D do basquete: "essas madeiras quadradas não existem, a
+   bola da lateral é vazada e olha a chapa pra voltar a bola como está
+   embaixo" (e: "até o 2D você vai ter que mudar"). Cada peça foi conferida
+   com as fotos de verdade do catálogo:
+     * o Basquete Street (/brinquedo/8/: a máquina de base, no cadastro);
+     * o Basquete Home (/brinquedo/3/; ferramentas/categorias/maquinas/
+       basquete-home.webp): é o MESMO gabinete da folha de adesivos do
+       Quadrinhos (a testeira em hexágono, o console com o POW! e o BASKETBALL
+       no chanfro, a tampa com o Start, a lateral subindo atrás do console, o
+       BOOM! no fundo até a testeira e a quadra subindo do console ao fundo),
+       a mesma arte em quadrinhos em azul; o Quadrinhos é esse gabinete no
+       tamanho do Basquete Street (2,70 x 1,00 x 2,40 m);
+     * o Air Game Kids (/brinquedo/40/).
+   BASQUETE STREET QUADRINHOS (ferramentas/modelos3d/basquete-street-quadrinhos/):
+     * a BOLA DAS LATERAIS É VAZADA: os gomos brancos da bola, na folha, são
+       furos de verdade na chapa (atravessam o adesivo de fora, a chapa e o L
+       de dentro). O recorte acha os brancos dentro de uma caixa em volta da
+       bola ("furos" no recortes.json; os polígonos vão para o formas.json; o
+       balão BASKETBALL, branco, fica de fora); em cada furo, a rede de
+       proteção (fio preto). Por eles se vê a pista;
+     * a PRANCHA é a rampa que devolve a bola: inclinada (10°), do pé do
+       fundo da cesta (abaixo do BOOM!) até o console; a bola desce e para na
+       CHAPA DE PARADA, logo atrás da tampa do console, ao alcance de quem
+       joga, com as bolas (quatro paradas, duas descendo). Antes ela era o
+       chão de um poço lá embaixo, escondida atrás do console;
+     * SEM MADEIRAS QUADRADAS: saiu a caixa preta entre o teto e a testeira
+       (o fundo da cesta e o teto interno vão até a testeira) e os tacos
+       pretos atrás das laterais; as costas são a estrutura de tubo preto (os
+       montantes e as travessas) com a chapa recuada;
+     * do Basquete Street, o que a folha não desenha e a máquina tem: a porta
+       do moedeiro (na face de pé, à esquerda do POW!), o neon roxo (o
+       contorno de cima das laterais, da tampa até a testeira; a borda da
+       tampa; a luz do pé), o placar com os dígitos na janela branca do fundo,
+       o botão Start na marca tracejada da tampa e os pés niveladores. A
+       estrutura aberta, as torres de tubo e a rede alta do Basquete Street
+       não entram: neste gabinete as laterais são chapas inteiras (a folha
+       cobre o lado todo, do chão ao alto), e a rede fica nos furos da bola;
+     * medidas: 2,70 x 1,00 x 2,40 m (o neon e o moedeiro ficam dentro);
+       ~740 KB.
+   AIR GAME KIDS ALIENÍGENAS (ferramentas/modelos3d/air-game-kids-alienigenas/):
+     a forma das laterais, os pés e o tampo batem com a foto; entrou o que a
+     mesa tem e a folha não desenha: a fita de LED colorida na borda das
+     laterais (o contorno inteiro, menos o pé no chão), a régua das pontas
+     preta (era azul), a borda preta dos lados em cima do tampo e o placar
+     branco no alto da corcova, por dentro da lateral direita. A tábua azul
+     embaixo das cabeceiras continua fora (seção 54). A mesa continua em 0,90 x
+     0,83 x 1,51 m (a fita conta na altura); ~565 KB.
+   O 2D, refeito da forma nova: as fotos do cadastro (basquete: frente, lados,
+   verso, jogador; Air Game: frente, lados, verso, tampo, em core/static/site/
+   arena/modelos/<id>/), que são também a capa e as fotos da Arena 3D, e as
+   vistas de conferência (v-*.jpg, fora do repositório). O "Monte seu espaço"
+   usa o próprio .glb e a pegada das medidas (1,00 x 2,40 m; 0,83 x 1,51 m):
+   não tem desenho 2D próprio dessas máquinas. NÃO há migração nesta
+   entrega: a que refaz no Render as capas e as galerias destes produtos é a
+   0153 (outro trabalho). As fotos das categorias (ferramentas/categorias/,
+   que usam estes .glb) ficam com quem cuida delas. Até lá, no servidor:
+       python manage.py cadastrar_variantes_adesivo --fotos
+   Testes: core/tests_variantes_adesivo.py (PecasDeVerdadeTests).

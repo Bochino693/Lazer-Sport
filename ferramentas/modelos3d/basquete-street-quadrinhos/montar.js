@@ -1,34 +1,37 @@
 // Monta o Basquete Street Quadrinhos em three.js e exporta um .glb.
 //
-// O basquete de arcade com os adesivos em quadrinhos. TUDO sai da folha de
-// adesivos da fábrica (folha-adesivos.webp, a 26567-2): a arte de cada peça
-// (adesivos/<peça>.png) e o desenho dela (formas.json: o tamanho em px e, nas
-// peças recortadas, o CONTORNO de verdade), que o recortar_adesivos.py tira
-// da folha. Nada da arte é redesenhado: cada imagem vai inteira na sua face, e
-// a face tem a forma e a proporção da peça.
+// O basquete de arcade com os adesivos em quadrinhos. TUDO o que é adesivo sai
+// da folha da fábrica (folha-adesivos.webp, a 26567-2): a arte de cada peça
+// (adesivos/<peça>.png) e o desenho dela (formas.json: o tamanho em px, nas
+// peças recortadas o CONTORNO de verdade e, nas laterais de fora, os FUROS da
+// bola vazada), que o recortar_adesivos.py tira da folha. Nada da arte é
+// redesenhado: cada imagem vai inteira na sua face.
+//
+// O GABINETE é o da folha, que é o do Basquete Home do catálogo (a mesma
+// família de arte, em azul: ferramentas/categorias/maquinas/basquete-home.webp)
+// no tamanho do Basquete Street (2,70 x 1,00 x 2,40 m, o cadastro): as
+// laterais de chapa com o contorno da folha (a parte alta atrás, a curva e a
+// diagonal, a parte baixa do console), a testeira em cima, o fundo da cesta
+// com o placar, o teto interno e o console da frente. Do Basquete Street
+// (a foto do catálogo) vêm as peças de máquina de ponto comercial que a folha
+// não desenha: o moedeiro na frente, o neon nas bordas, os pés niveladores,
+// a estrutura de tubo preto atrás e a rede de proteção atrás da bola vazada.
+//
+// O que a cliente apontou na primeira versão (e que mudou aqui):
+//  - a bola grande das laterais de fora é VAZADA: os gomos brancos da folha
+//    são furos de verdade na chapa (atravessam a lateral, com a parede de
+//    dentro): por eles se vê a pista; atrás, a rede de proteção;
+//  - a PRANCHA (a chapa que devolve a bola) não fica no fundo: é a rampa,
+//    inclinada, do pé do fundo da cesta até o console; a bola desce e para
+//    na chapa de parada, logo atrás da tampa do console, ao alcance de quem
+//    joga (as bolas ficam ali, como na máquina);
+//  - nada de "madeiras quadradas": sem a caixa preta em cima do teto, sem os
+//    tacos pretos atrás das laterais; as costas são a estrutura de tubo e uma
+//    chapa recuada.
 //
 // A folha é desenhada em ESCALA: a testeira, a frente, a prancha, o fundo e o
 // teto têm a mesma largura (182 px = 1,00 m) e a lateral de fora mais a
-// testeira dão os 2,70 m de altura. Daí a máquina, de trás para a frente
-// (o jogador fica em +z):
-//  - a TESTEIRA em cima (a "frente testeira" é um hexágono: os lados retos
-//    embaixo e os chanfros em cima): a frente com o BASKETBALL, o fundo, o
-//    teto, os dois chanfros ("superior") e os dois lados retos, cada um a sua
-//    peça; 1,00 m x 0,27 m, 0,58 m de fundo;
-//  - as LATERAIS DE FORA com o contorno da folha: a parte alta atrás (até a
-//    testeira), a curva e a diagonal até a parte baixa, e na frente o chanfro
-//    do console; 2,30 m de comprido;
-//  - as LATERAIS DE DENTRO em L (a parte alta atrás, a baixa na frente): na
-//    mesma escala, 2,40 m -- a profundidade da máquina; elas vão do fundo até
-//    a frente, e a parte alta delas, onde passa da diagonal da lateral de
-//    fora, aparece por fora em preto (é a parede da pista);
-//  - dentro: o FUNDO DA CESTA (com o placar e o BOOM!), o TETO INTERNO em
-//    cima dele, a cesta e a PRANCHA com a quadra no chão da pista;
-//  - na frente, o console: a FRENTE dobra em três faixas (as linhas da folha):
-//    o POW! na face de pé, o BASKETBALL na face inclinada (o chanfro da
-//    lateral) e a de cima, deitada, com a marca do botão.
-// As três peças soltas ao lado da Lateral Externa Esquerda, na folha, são as
-// três faixas da Frente desenhadas de lado (mesma arte): não são outros adesivos.
+// testeira (e os pés) dão os 2,70 m.
 //
 // Coordenadas: as do three.js, em milímetros: x na largura (da esquerda para a
 // direita de quem joga), y para cima, z no comprimento (a frente, o jogador,
@@ -42,16 +45,22 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const FORMAS = await (await fetch(`formas.json?v=${Date.now()}`)).json();
 
 // uma peça da folha em mm, na escala `s`: o contorno de verdade (ou o retângulo
-// da peça), com o canto de baixo à esquerda em (0, 0), e o retângulo da imagem
-// (o contorno fica 1 px para dentro da arte: no 3D não aparece o branco da folha)
+// da peça), com o canto de baixo à esquerda em (0, 0), o retângulo da imagem
+// (o contorno fica 1 px para dentro da arte: no 3D não aparece o branco da
+// folha) e os furos (os vazados), no mesmo sistema
 function emMm(nome, s) {
-  const { px: [w, h], contorno } = FORMAS[nome];
-  const pts = (contorno || [[0, 0], [1, 0], [1, 1], [0, 1]]).map(([u, v]) => [u * w * s, (1 - v) * h * s]);
+  const { px: [w, h], contorno, furos = [] } = FORMAS[nome];
+  const mm = ([u, v]) => [u * w * s, (1 - v) * h * s];
+  const pts = (contorno || [[0, 0], [1, 0], [1, 1], [0, 1]]).map(mm);
   const a0 = Math.min(...pts.map((p) => p[0]));
   const b0 = Math.min(...pts.map((p) => p[1]));
   const largura = Math.max(...pts.map((p) => p[0])) - a0;
   const altura = Math.max(...pts.map((p) => p[1])) - b0;
-  return { pontos: pts.map(([a, b]) => [a - a0, b - b0]), ret: [-a0, -b0, w * s - a0, h * s - b0], largura, altura };
+  const mover = ([a, b]) => [a - a0, b - b0];
+  return {
+    pontos: pts.map(mover), ret: [-a0, -b0, w * s - a0, h * s - b0], largura, altura,
+    furos: furos.map((f) => f.map(mm).map(mover)),
+  };
 }
 // a altura do contorno numa abscissa: o maior b das arestas que cruzam a
 const altoEm = (pontos, a) => {
@@ -63,18 +72,35 @@ const altoEm = (pontos, a) => {
   }
   return alto;
 };
+// Ramer-Douglas-Peucker numa linha aberta (o neon segue o contorno sem os degraus dos pixels)
+function simplificar(pontos, tol) {
+  if (pontos.length < 3) return pontos;
+  const [a, b] = [pontos[0], pontos[pontos.length - 1]];
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const L = Math.hypot(dx, dy) || 1e-9;
+  let pior = 0, k = 0;
+  for (let i = 1; i < pontos.length - 1; i++) {
+    const d = Math.abs(dy * (pontos[i][0] - a[0]) - dx * (pontos[i][1] - a[1])) / L;
+    if (d > pior) { pior = d; k = i; }
+  }
+  if (pior <= tol) return [a, b];
+  return simplificar(pontos.slice(0, k + 1), tol).slice(0, -1).concat(simplificar(pontos.slice(k), tol));
+}
 
 // ---------- as medidas (mm) ----------
 const ALT = 2700; // a altura, no alto da testeira
+const PE = 25; // os pés niveladores: a chapa começa 25 mm acima do chão
 const XF = 500; // a face de fora (o adesivo): 1,00 m de largura
-const D = 2400; // a profundidade: a das laterais de dentro (na escala da folha, 2,40 m)
+const D = 2400; // a profundidade (as costas da estrutura até a frente do console)
 const ZB = -D / 2; // as costas
 const ZF = D / 2; // a frente (o adesivo da Frente)
-const ESP = 18; // o MDF
+const ESP = 18; // a chapa (MDF)
 const PELE = 1; // o adesivo fica 1 mm fora da madeira
 const XM = XF - PELE - ESP; // 481: a face de dentro das laterais
 const XI = XM - PELE; // 480: o adesivo de dentro (a pista tem 960 mm)
 const PISTA = 2 * XI;
+const TUBO = 40; // o tubo preto da estrutura de trás (40 x 40)
+const Z_COSTAS = ZB + TUBO; // a chapa das costas, na frente dos tubos
 
 // a testeira: a frente dela é a largura da máquina (a escala de cima)
 const S_T = 2 * XF / emMm("testeira-frente", 1).largura;
@@ -90,18 +116,20 @@ const T = (() => {
   const cx = (Math.min(...cima) + (W - Math.max(...cima))) / 2;
   return { lado, chanfro: [cx, H_T - lado], topo: W - 2 * cx, fundo: FORMAS["testeira-teto"].px[1] * S_T };
 })();
-const ALTO = ALT - H_T; // o alto das laterais (embaixo da testeira)
+const TOPO = ALT - H_T; // o alto das laterais (embaixo da testeira)
 
-// as laterais de fora: o contorno de cada uma, na altura até a testeira
-const S_E = ALTO / emMm("lateral-externa-esquerda", 1).altura; // ~5,44 mm por px
+// as laterais de fora: o contorno de cada uma, dos pés até a testeira
+const S_E = (TOPO - PE) / emMm("lateral-externa-esquerda", 1).altura; // ~5,38 mm por px
 const EXT = { esquerda: emMm("lateral-externa-esquerda", S_E), direita: emMm("lateral-externa-direita", S_E) };
-const D_E = EXT.esquerda.largura; // ~2300: a lateral de fora vai da frente até 10 cm do fundo
+const D_E = EXT.esquerda.largura; // ~2280: a lateral de fora vai da frente até 12 cm das costas
 const Z_EXT = ZF - D_E; // onde ela começa (o fundo dela)
 const ZT0 = Z_EXT; // a testeira, em cima da parte alta da lateral de fora
 const ZT1 = Z_EXT + T.fundo;
+// o alto da chapa da lateral num z (a de fora; atrás dela, a chapa vai até o alto)
+const chapaEm = (z) => (z < Z_EXT + 1 ? TOPO : PE + altoEm(EXT.esquerda.pontos, z - Z_EXT));
 
-// as laterais de dentro: o L entre o fundo e a frente (a placa da frente do console)
-const L_DENTRO = D - 2 * ESP - PELE;
+// as laterais de dentro: o L entre a placa da frente do console e a chapa das costas
+const L_DENTRO = (ZF - PELE - ESP) - (Z_COSTAS + ESP);
 const S_I = L_DENTRO / emMm("lateral-interna-esquerda", 1).largura;
 const INT = { esquerda: emMm("lateral-interna-esquerda", S_I), direita: emMm("lateral-interna-direita", S_I) };
 
@@ -123,45 +151,45 @@ const CONSOLE = (() => {
   while (recuo < 600 && altoEm(p, D_E - recuo) < baixa - 3) recuo += 1;
   const ang = Math.atan2(baixa - quina, recuo); // a inclinação do chanfro
   const zInclinada = ZF - FAIXA.meio * Math.cos(ang); // onde acaba a face inclinada
-  const yCima = FAIXA.baixo + FAIXA.meio * Math.sin(ang); // a altura da face de cima
-  return { ang, baixa, zInclinada, yCima, zFimCima: zInclinada - FAIXA.cima };
+  const yCima = PE + FAIXA.baixo + FAIXA.meio * Math.sin(ang); // a altura da tampa (a faixa de cima, deitada)
+  // onde a parte baixa da lateral acaba (começa a diagonal): o fim da boca das bolas
+  let fim = 400;
+  while (fim < D_E && altoEm(p, D_E - fim) < baixa + 3) fim += 1;
+  return { ang, baixa: PE + baixa, zInclinada, yCima, zFimCima: zInclinada - FAIXA.cima, zBoca: ZF - fim };
 })();
-// a pista: o chão na altura em que a parte baixa da parede de dentro encontra a de fora
-const PISO = CONSOLE.baixa - altoEm(INT.esquerda.pontos, 0.15 * INT.esquerda.largura); // de dentro, na esquerda, a frente é a = 0
-// a quina da frente da parede de dentro (reta, na folha) fica embaixo da face
-// inclinada do console: o que passaria dela é cortado (fica escondido no console)
-const abaixoDoConsole = (z) => FAIXA.baixo + (ZF - z) * Math.tan(CONSOLE.ang) - ESP / Math.cos(CONSOLE.ang) - 2;
-function cortarNoConsole(pontos, zDe) {
-  // Sutherland-Hodgman contra o plano inclinado: fica o que está embaixo dele
-  const dentro = ([a, b]) => b + PISO <= abaixoDoConsole(zDe(a));
-  const saida = [];
-  for (let i = 0; i < pontos.length; i++) {
-    const p = pontos[i];
-    const q = pontos[(i + 1) % pontos.length];
-    if (dentro(p)) saida.push(p);
-    if (dentro(p) !== dentro(q)) {
-      let lo = 0, hi = 1; // o cruzamento, por bisseção (a linha é reta, mas o z depende do lado)
-      for (let k = 0; k < 40; k++) {
-        const t = (lo + hi) / 2;
-        const m = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
-        if (dentro(m) === dentro(p)) lo = t; else hi = t;
-      }
-      saida.push([p[0] + (q[0] - p[0]) * lo, p[1] + (q[1] - p[1]) * lo]);
-    }
-  }
-  return saida;
-}
-const TETO = PISO + INT.esquerda.altura; // o teto interno: no alto das paredes de dentro
-const ARO = { y: TETO - 400, raio: 150 };
-const BOLA = 92; // o raio das bolas
+// as paredes de dentro: a parte baixa delas encontra a parte baixa da lateral de fora
+const PISO_L = CONSOLE.baixa - altoEm(INT.esquerda.pontos, 0.15 * INT.esquerda.largura); // de dentro, na esquerda, a frente é a = 0
+const TETO = TOPO - ESP - PELE; // o adesivo do teto interno (a placa do teto encosta embaixo da testeira)
+const Z_FUNDO = Z_COSTAS + ESP + PELE; // o adesivo do fundo da cesta
+const Y_FUNDO = TETO - FUNDO.altura; // o pé do fundo da cesta
+// a PRANCHA: a rampa que devolve a bola. Atrás, ela encosta no fundo logo
+// abaixo do BOOM! (as nuvens dele vão até 72% da altura do fundo); na frente,
+// passa embaixo da tampa do console, que segura a bola: a 13 cm da tampa, a
+// bola (24 cm) não passa e para na chapa de parada, ao alcance de quem joga
+const BOLA = 105; // o raio das bolas
+const RAMPA = (() => {
+  const yAtras = TETO - 0.74 * FUNDO.altura;
+  const yParada = CONSOLE.yCima - ESP - PELE - 130;
+  const ang = Math.atan2(yAtras - yParada, CONSOLE.zFimCima - Z_FUNDO);
+  const y = (z) => yParada + (CONSOLE.zFimCima - z) * Math.tan(ang); // a altura da rampa num z
+  const zFrente = Z_FUNDO + PRANCHA.altura * Math.cos(ang); // a ponta da frente da prancha (embaixo da tampa)
+  return { ang, yAtras, yParada, y, zFrente };
+})();
+// a cesta: embaixo do placar (a janela branca do fundo, de 11% a 19% da altura, de cima)
+const JANELA = { u0: 0.648, u1: 0.868, v0: 0.109, v1: 0.193 }; // a janela do placar no fundo-cesta.png
+const ARO = { y: TETO - 0.27 * FUNDO.altura, raio: 150 };
+// o botão Start: a marca tracejada na faixa de cima da Frente (frações da imagem, de cima)
+const START = { u0: 0.79, u1: 0.97, v0: 0.044, v1: 0.1 };
+// a porta do moedeiro: na face de pé, à esquerda do POW! (onde a arte é só faixa colorida)
+const PORTA = { x0: -XF + 30, x1: -XF + 230, y0: PE + 110, y1: PE + 490 };
 // a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/2)
 const RESOLUCAO = {
-  "lateral-externa-esquerda": 1024, "lateral-externa-direita": 1024, "lateral-interna-esquerda": 896, "lateral-interna-direita": 896,
+  "lateral-externa-esquerda": 1024, "lateral-externa-direita": 1024, "lateral-interna-esquerda": 768, "lateral-interna-direita": 768,
   prancha: 896, "fundo-cesta": 768, "teto-interno": 512, frente: 768, "testeira-frente": 768, "testeira-fundo": 256,
   "testeira-teto": 384, "testeira-superior-esquerda": 384, "testeira-superior-direita": 384,
   "testeira-lateral-esquerda": 384, "testeira-lateral-direita": 384,
 };
-const QUALIDADE_JPEG = 0.82;
+const QUALIDADE_JPEG = 0.8;
 
 // ---------- materiais e o acúmulo de peças por material ----------
 const pecas = new Map(); // nome -> { material, geometrias: [] }
@@ -195,6 +223,13 @@ const texRede = tela(64, 64, (g, w, h) => {
     g.beginPath(); g.moveTo(k, h); g.lineTo(k + h, 0); g.stroke();
   }
 });
+// a rede de proteção atrás da bola vazada: fio preto fino em quadrados (quase tudo vazado)
+const texProtecao = tela(64, 64, (g, w, h) => {
+  g.clearRect(0, 0, w, h);
+  g.fillStyle = "#141414";
+  g.fillRect(w / 2 - 3, 0, 6, h);
+  g.fillRect(0, h / 2 - 3, w, 6);
+});
 // a bola de basquete: laranja com os gomos pretos
 const texBola = tela(128, 64, (g, w, h) => {
   g.fillStyle = "#e8711f";
@@ -205,13 +240,37 @@ const texBola = tela(128, 64, (g, w, h) => {
   g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
 });
 texBola.wrapT = THREE.ClampToEdgeWrapping;
+// o placar: o visor preto com os dois dígitos vermelhos (o 88 apagado por baixo)
+const texPlacar = tela(256, 128, (g, w, h) => {
+  g.fillStyle = "#0a0a0c";
+  g.fillRect(0, 0, w, h);
+  const digito = (x0, cor, segs) => {
+    g.fillStyle = cor;
+    const [L, E, y0] = [42, 11, 10];
+    const P = { a: [x0 + E, y0, L, E], b: [x0 + L + E, y0 + E, E, L], c: [x0 + L + E, y0 + 2 * E + L, E, L], d: [x0 + E, y0 + 2 * L + 2 * E, L, E],
+      e: [x0, y0 + 2 * E + L, E, L], f: [x0, y0 + E, E, L], g: [x0 + E, y0 + L + E, L, E] };
+    for (const s of segs) g.fillRect(...P[s]);
+  };
+  for (const x of [58, 138]) { digito(x, "#3a0d0d", "abcdefg"); digito(x, "#ff2a2a", "abcdef"); }
+});
+texPlacar.wrapS = texPlacar.wrapT = THREE.ClampToEdgeWrapping;
 
 const M = {
   preto: material("mdf-preto", { color: "#2b2c30", roughness: 0.55 }), // o preto dos adesivos (#333)
+  estrutura: material("estrutura-tubo-preto", { color: "#17181b", roughness: 0.45, metalness: 0.55 }),
+  pes: material("pes-niveladores", { color: "#111214", roughness: 0.8 }),
+  parada: material("chapa-de-parada", { color: "#a7aeb6", roughness: 0.35, metalness: 0.75 }),
   aro: material("aro", { color: "#ef4b1f", roughness: 0.4, metalness: 0.45 }),
   suporte: material("suporte-da-cesta", { color: "#c9ced6", roughness: 0.35, metalness: 0.6 }),
   redeCesta: material("rede-da-cesta", { color: "#ffffff", map: texRede, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8 }),
+  protecao: material("rede-de-protecao", { color: "#ffffff", map: texProtecao, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 }),
   bolas: material("bolas", { map: texBola, roughness: 0.75 }),
+  neon: material("neon-roxo", { color: "#a764ff", emissive: "#8a2be2", emissiveIntensity: 1.3, roughness: 0.3 }),
+  placar: material("placar", { color: "#ffffff", map: texPlacar, emissive: "#ffffff", emissiveMap: texPlacar, emissiveIntensity: 0.9, roughness: 0.3 }),
+  moldura: material("moldura-do-placar", { color: "#101113", roughness: 0.5, metalness: 0.3 }),
+  porta: material("porta-do-moedeiro", { color: "#16171a", roughness: 0.5, metalness: 0.4 }),
+  moedeiro: material("moedeiro", { color: "#c7ccd3", roughness: 0.25, metalness: 0.85 }),
+  start: material("botao-start", { color: "#ffd21f", emissive: "#ffb800", emissiveIntensity: 0.8, roughness: 0.3 }),
 };
 
 // ---------- os adesivos: a imagem da peça, inteira, na sua face ----------
@@ -230,7 +289,10 @@ function imagem(arquivo) {
 // retângulo da imagem no 3D (avisa se a proporção não bate)
 async function adesivo(peca, mm, onde, { brilho = 0 } = {}) {
   const arquivo = `adesivos/${peca}.png`;
-  PECAS[peca] = { arquivo, mm: mm.map((v) => Math.round(v)), onde, ...(FORMAS[peca].contorno ? { contorno: true } : {}) };
+  PECAS[peca] = {
+    arquivo, mm: mm.map((v) => Math.round(v)), onde,
+    ...(FORMAS[peca].contorno ? { contorno: true } : {}), ...(FORMAS[peca].furos ? { furos: FORMAS[peca].furos.length } : {}),
+  };
   const [w, h] = FORMAS[peca].px;
   const escala = (RESOLUCAO[peca] || 512) / Math.max(w, h);
   const c = document.createElement("canvas");
@@ -268,28 +330,41 @@ function cilindro(nome, a, b, r, lados = 16) {
   const q = new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), dir.clone().normalize());
   por(nome, g, new THREE.Matrix4().compose(a.clone().add(b).multiplyScalar(0.5), q, V(1, 1, 1)));
 }
-// uma forma (pontos [a, b] no plano de uma face), no sentido anti-horário
-function forma(pontos) {
+// um tubo (o neon) por uma linha de pontos 3D
+function tubo(nome, pontos, r, lados = 6) {
+  const caminho = new THREE.CurvePath();
+  for (let i = 0; i < pontos.length - 1; i++) caminho.add(new THREE.LineCurve3(pontos[i], pontos[i + 1]));
+  por(nome, new THREE.TubeGeometry(caminho, Math.max(1, pontos.length - 1), r, lados, false));
+}
+// uma forma (pontos [a, b] no plano de uma face), no sentido anti-horário, com furos
+function forma(pontos, furos = []) {
   const p = pontos.map(([a, b]) => new THREE.Vector2(a, b));
   if (THREE.ShapeUtils.isClockWise(p)) p.reverse();
-  return new THREE.Shape(p);
+  const s = new THREE.Shape(p);
+  for (const f of furos) {
+    const q = f.map(([a, b]) => new THREE.Vector2(a, b));
+    if (!THREE.ShapeUtils.isClockWise(q)) q.reverse();
+    s.holes.push(new THREE.Path(q));
+  }
+  return s;
 }
 // a base de uma face: a origem (na superfície do adesivo) e os eixos de quem
 // olha DE FORA (U para a direita, W para cima); a normal (U x W) aponta para fora
 function base(origem, U, W) {
   const N = new THREE.Vector3().crossVectors(U, W).normalize();
-  return { origem, U, W, N, matriz: () => new THREE.Matrix4().makeBasis(U, W, N).setPosition(origem) };
+  return { origem, U, W, N, matriz: () => new THREE.Matrix4().makeBasis(U, W, N).setPosition(origem),
+    ponto: (a, b, n = 0) => origem.clone().addScaledVector(U, a).addScaledVector(W, b).addScaledVector(N, n) };
 }
 // uma placa: o contorno extrudado para DENTRO (a espessura), atrás do adesivo
-function placa(nome, pontos, b, espessura) {
-  const g = new THREE.ExtrudeGeometry(forma(pontos), { depth: espessura, bevelEnabled: false });
+function placa(nome, pontos, b, espessura, furos = []) {
+  const g = new THREE.ExtrudeGeometry(forma(pontos, furos), { depth: espessura, bevelEnabled: false, curveSegments: 1 });
   g.translate(0, 0, -espessura - PELE);
   por(nome, g, b.matriz());
 }
 // o adesivo de uma face: o contorno da peça; a imagem cobre o retângulo `ret`
 // [a0, b0, a1, b1] (o da peça inteira, ou a faixa dela entre v0 e v1) e o contorno corta o resto
-function colar(nome, pontos, b, ret, v0 = 0, v1 = 1) {
-  const g = new THREE.ShapeGeometry(forma(pontos));
+function colar(nome, pontos, b, ret, v0 = 0, v1 = 1, furos = []) {
+  const g = new THREE.ShapeGeometry(forma(pontos, furos), 1);
   const pos = g.attributes.position;
   const uv = g.attributes.uv;
   for (let i = 0; i < pos.count; i++) {
@@ -305,89 +380,177 @@ async function retanguloColado(peca, b, largura, altura, onde, opcoes = {}) {
 }
 
 /* ======================================================================
-   1. AS LATERAIS: a de fora (o contorno da folha) e a de dentro (o L), cada
-   uma numa placa de 9 mm, uma encostada na outra
+   1. AS LATERAIS: uma chapa de cada lado, com o contorno da lateral de fora
+   (e, atrás dela, até as costas); por fora o adesivo de fora, por dentro o
+   L de dentro (até onde a chapa vai). Os gomos brancos da bola são FUROS:
+   atravessam a chapa e os dois adesivos; dentro de cada furo, a rede de proteção.
    ====================================================================== */
 for (const s of [-1, 1]) {
   const lado = s < 0 ? "esquerda" : "direita";
   // de fora: na esquerda (-x), a frente fica à direita da imagem; na direita, à esquerda
-  const fora = s < 0 ? base(V(-XF, 0, Z_EXT), V(0, 0, 1), V(0, 1, 0)) : base(V(XF, 0, ZF), V(0, 0, -1), V(0, 1, 0));
+  const fora = s < 0 ? base(V(-XF, PE, Z_EXT), V(0, 0, 1), V(0, 1, 0)) : base(V(XF, PE, ZF), V(0, 0, -1), V(0, 1, 0));
+  const zDeFora = s < 0 ? (a) => Z_EXT + a : (a) => ZF - a;
+  const aDeFora = s < 0 ? (z) => z - Z_EXT : (z) => ZF - z;
   const ext = EXT[lado];
-  // na direita a imagem começa pela frente: o contorno dela já vem assim (a parte alta à direita)
-  placa(M.preto, ext.pontos, fora, ESP / 2);
+  // a chapa: o contorno da lateral de fora, com o pé de trás levado até as costas
+  const aCostas = aDeFora(ZB);
+  const atras = s < 0 ? Math.min(...ext.pontos.map(([a]) => a)) : Math.max(...ext.pontos.map(([a]) => a));
+  const ptsChapa = ext.pontos.map(([a, b]) => [Math.abs(a - atras) < 2 ? aCostas : a, b]);
+  // (a chapa, embaixo do adesivo, com o contorno e os furos simplificados: menos triângulos, a mesma forma)
+  const fechado = (f) => {
+    // o polígono fechado: partido no ponto mais longe do primeiro, cada metade simplificada
+    const d = (q) => Math.hypot(q[0] - f[0][0], q[1] - f[0][1]);
+    const longe = f.reduce((m, q, k) => (d(q) > d(f[m]) ? k : m), 0);
+    return [...simplificar(f.slice(0, longe + 1), 4).slice(0, -1), ...simplificar([...f.slice(longe), f[0]], 4).slice(0, -1)];
+  };
+  const furosChapa = ext.furos.map(fechado);
+  placa(M.preto, fechado(ptsChapa), fora, ESP, furosChapa);
   const mExt = await adesivo(`lateral-externa-${lado}`, [ext.ret[2] - ext.ret[0], ext.ret[3] - ext.ret[1]],
-    `o lado de fora da ${lado}, com o contorno da folha (vista de fora)`);
-  colar(mExt, ext.pontos, fora, ext.ret);
+    `o lado de fora da ${lado}, com o contorno da folha e a bola vazada (vista de fora)`);
+  colar(mExt, ext.pontos, fora, ext.ret, 0, 1, ext.furos);
+  // a rede de proteção dentro de cada furo, no meio da chapa
+  for (const furo of furosChapa) {
+    const g = new THREE.ShapeGeometry(forma(furo), 1);
+    const pos = g.attributes.position;
+    const uv = g.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 70, pos.getY(i) / 70);
+    g.translate(0, 0, -PELE - ESP / 2);
+    por(M.protecao, g, fora.matriz());
+  }
   // de dentro (de quem está na pista): na esquerda, a frente fica à esquerda da imagem
   const dentro = s < 0
-    ? base(V(-XI, PISO, ZF - PELE - ESP), V(0, 0, -1), V(0, 1, 0))
-    : base(V(XI, PISO, ZB + ESP), V(0, 0, 1), V(0, 1, 0));
+    ? base(V(-XI, PISO_L, ZF - PELE - ESP), V(0, 0, -1), V(0, 1, 0))
+    : base(V(XI, PISO_L, Z_COSTAS + ESP), V(0, 0, 1), V(0, 1, 0));
+  const zDe = s < 0 ? (a) => ZF - PELE - ESP - a : (a) => Z_COSTAS + ESP + a;
+  const aDe = s < 0 ? (z) => ZF - PELE - ESP - z : (z) => z - Z_COSTAS - ESP;
   const int = INT[lado];
-  const zDe = s < 0 ? (a) => ZF - PELE - ESP - a : (a) => ZB + ESP + a;
-  const ptsInt = cortarNoConsole(int.pontos, zDe);
-  placa(M.preto, ptsInt, dentro, ESP / 2);
+  // o L de dentro só vai até onde a chapa vai (o que passaria do contorno da
+  // lateral de fora, no alto da frente da parte alta, fica cortado): por cima,
+  // o menor entre o L e a chapa, ponto a ponto
+  const cortes = new Set();
+  for (const [a] of int.pontos) for (const d of [-0.05, 0.05]) cortes.add(Math.min(int.largura, Math.max(0, a + d)));
+  for (const [a] of ext.pontos) cortes.add(aDe(zDeFora(a)));
+  const as = [...cortes].filter((a) => a >= 0 && a <= int.largura).sort((p, q) => p - q);
+  let topo = as.map((a) => [a, Math.min(altoEm(int.pontos, a), chapaEm(zDe(a)) - PISO_L)]).reverse(); // de trás para a frente
+  // os furos da bola, no plano de dentro: o que fica todo dentro do L é furo; o
+  // que passa do alto do L (a bola sobe acima da parede de dentro) vira um
+  // recorte na borda de cima dele; o que fica todo acima, só na chapa
+  const furosInt = [];
+  for (const furo of ext.furos.map((f) => f.map(([a, b]) => [aDe(zDeFora(a)), b + PE - PISO_L]))) {
+    const alto = ([a, b]) => b > altoEm(topo, a) - 0.5;
+    const acima = furo.map(alto);
+    if (acima.every(Boolean)) continue;
+    if (!acima.some(Boolean)) { furosInt.push(furo); continue; }
+    const H = int.altura; // a bola fica na parte alta, de borda reta
+    const cruz = [];
+    for (let i = 0; i < furo.length; i++) {
+      const [pa, pb] = furo[i];
+      const [qa, qb] = furo[(i + 1) % furo.length];
+      if ((pb > H) !== (qb > H)) cruz.push({ i, ponto: [pa + ((H - pb) / (qb - pb)) * (qa - pa), H], desce: pb > H });
+    }
+    if (cruz.length !== 2) { avisos.push(`lateral-interna-${lado}: um furo cruza a borda ${cruz.length} vezes (ficou só na chapa)`); continue; }
+    const [c1, c2] = cruz[0].desce ? cruz : [cruz[1], cruz[0]];
+    let arco = [c1.ponto];
+    for (let k = (c1.i + 1) % furo.length; ; k = (k + 1) % furo.length) {
+      arco.push(furo[k]);
+      if (k === c2.i) break;
+    }
+    arco.push(c2.ponto);
+    if (arco[0][0] < arco[arco.length - 1][0]) arco = arco.reverse();
+    const [aHi, aLo] = [arco[0][0], arco[arco.length - 1][0]];
+    topo = [...topo.filter(([a]) => a > aHi), ...arco, ...topo.filter(([a]) => a < aLo)];
+  }
+  const ptsInt = [[as[0], 0], [as[as.length - 1], 0], ...topo];
   const mInt = await adesivo(`lateral-interna-${lado}`, [int.ret[2] - int.ret[0], int.ret[3] - int.ret[1]],
-    `o lado de dentro da ${lado}, em L, da prancha para cima (visto da pista; a quina da frente fica sob o console)`);
-  colar(mInt, ptsInt, dentro, int.ret);
-  // atrás da lateral de fora (os 10 cm do fundo), a lateral fecha em preto até o alto
-  caixa(M.preto, s * XM, s * (XF - PELE), 0, ALTO, ZB, Z_EXT + 2);
+    `o lado de dentro da ${lado}, em L, vista da pista (até onde a chapa vai; a bola vazada atravessa)`);
+  colar(mInt, ptsInt, dentro, int.ret, 0, 1, furosInt);
+  // o neon da borda: pelo contorno de cima da lateral, da quina da frente do console até as costas da testeira
+  {
+    const p = ext.pontos;
+    const alto = (k) => p[k][1] > 0.25 * ext.altura;
+    let ini = p.findIndex((_, k) => alto(k) && !alto((k - 1 + p.length) % p.length));
+    const trecho = [];
+    for (let k = ini; alto(k) && trecho.length < p.length; k = (k + 1) % p.length) trecho.push(p[k]);
+    // a quina de baixo da face de pé do console fica de fora: o neon começa no alto dela
+    // do alto do chanfro do console (a borda da tampa tem o seu) até a frente da testeira (embaixo dela, não)
+    const linha = simplificar(trecho, 8).filter(([a]) => zDeFora(a) > ZT1 + 4 && zDeFora(a) < CONSOLE.zInclinada - 5);
+    // por fora da chapa, rente à borda: a normal para fora do contorno (o contorno anda no sentido dos pontos)
+    const area = p.reduce((s2, [a, b], k) => s2 + a * p[(k + 1) % p.length][1] - p[(k + 1) % p.length][0] * b, 0);
+    const r = 11;
+    const pts3 = linha.map(([a, b], k) => {
+      const [pa, pb] = linha[Math.max(0, k - 1)];
+      const [qa, qb] = linha[Math.min(linha.length - 1, k + 1)];
+      let na = qb - pb, nb = -(qa - pa);
+      if (area < 0) { na = -na; nb = -nb; }
+      const L = Math.hypot(na, nb) || 1;
+      return fora.ponto(a + (na / L) * (r + 1), b + (nb / L) * (r + 1), -PELE - ESP / 2);
+    });
+    tubo(M.neon, pts3, r);
+  }
 }
 
 /* ======================================================================
-   2. A PARTE ALTA: as costas, o fundo da cesta, o teto interno, a caixa de
-   cima e a testeira (o hexágono da folha)
+   2. AS COSTAS: a estrutura de tubo preto (os dois montantes, as travessas de
+   cima e de baixo) e a chapa das costas, recuada, com o fundo da cesta na frente
    ====================================================================== */
-caixa(M.preto, -XM, XM, 0, ALTO - ESP, ZB, ZB + ESP); // as costas
-const Z_FUNDO = ZB + ESP + PELE; // o adesivo do fundo da cesta
-await retanguloColado("fundo-cesta", base(V(-XI, TETO - FUNDO.altura, Z_FUNDO), V(1, 0, 0), V(0, 1, 0)), PISTA, FUNDO.altura,
-  "o painel do fundo, atrás da cesta, até o teto interno (o placar no alto)");
-// o teto interno, visto de baixo por quem joga: a frente no alto da imagem
-caixa(M.preto, -XM, XM, TETO + PELE, TETO + PELE + ESP, ZB + ESP, Z_FUNDO + TETO_INT.altura);
+for (const s of [-1, 1]) caixa(M.estrutura, s * (XM - TUBO), s * XM, PE, TOPO, ZB, ZB + TUBO);
+caixa(M.estrutura, -XM + TUBO, XM - TUBO, TOPO - TUBO, TOPO, ZB, ZB + TUBO);
+caixa(M.estrutura, -XM + TUBO, XM - TUBO, PE, PE + TUBO, ZB, ZB + TUBO);
+caixa(M.estrutura, -XM + TUBO, XM - TUBO, PE + 1100, PE + 1100 + TUBO, ZB, ZB + TUBO);
+caixa(M.preto, -XM, XM, PE, TOPO, Z_COSTAS, Z_COSTAS + ESP);
+await retanguloColado("fundo-cesta", base(V(-XI, Y_FUNDO, Z_FUNDO), V(1, 0, 0), V(0, 1, 0)), PISTA, FUNDO.altura,
+  "o painel do fundo, atrás da cesta, do teto até a rampa (o placar no alto)");
+// o placar na janela branca do fundo: a moldura preta e o visor com os dígitos
+{
+  const x0 = -XI + JANELA.u0 * PISTA, x1 = -XI + JANELA.u1 * PISTA;
+  const y1 = TETO - JANELA.v0 * FUNDO.altura, y0 = TETO - JANELA.v1 * FUNDO.altura;
+  caixa(M.moldura, x0 - 8, x1 + 8, y0 - 8, y1 + 8, Z_FUNDO, Z_FUNDO + 30);
+  const g = new THREE.PlaneGeometry(x1 - x0, y1 - y0);
+  por(M.placar, g, new THREE.Matrix4().makeTranslation((x0 + x1) / 2, (y0 + y1) / 2, Z_FUNDO + 31));
+}
+// o teto interno, visto de baixo por quem joga: a frente no alto da imagem; a placa dele encosta na testeira
+caixa(M.preto, -XM, XM, TETO + PELE, TOPO, Z_COSTAS + ESP, Z_FUNDO + TETO_INT.altura);
 await retanguloColado("teto-interno", base(V(-XI, TETO, Z_FUNDO), V(1, 0, 0), V(0, 0, 1)), PISTA, TETO_INT.altura,
   "o teto da parte alta, visto de baixo (a frente no alto da imagem)");
-// a caixa de cima (do teto interno até o alto das laterais): a frente e o tampo
-{
-  const zFrente = Z_FUNDO + TETO_INT.altura;
-  const alto = altoEm(EXT.esquerda.pontos, zFrente - Z_EXT);
-  caixa(M.preto, -XM, XM, TETO + PELE, alto - 2, zFrente, zFrente + ESP);
-  caixa(M.preto, -XM, XM, ALTO - ESP, ALTO, ZB, zFrente + ESP);
-}
-// a testeira: o hexágono (os lados retos embaixo, os chanfros, o teto) extrudado na profundidade
+
+/* ======================================================================
+   3. A TESTEIRA: o hexágono da folha, em cima da parte alta das laterais
+   ====================================================================== */
 {
   const [cx, cy] = T.chanfro;
-  const hexagono = [[-XF, ALTO], [XF, ALTO], [XF, ALTO + T.lado], [XF - cx, ALT], [-XF + cx, ALT], [-XF, ALTO + T.lado]];
+  const hexagono = [[-XF, TOPO], [XF, TOPO], [XF, TOPO + T.lado], [XF - cx, ALT], [-XF + cx, ALT], [-XF, TOPO + T.lado]];
   // o corpo, 1 mm para dentro de cada face (os adesivos ficam na medida de fora)
-  const corpo = hexagono.map(([x, y]) => [x * (1 - 2 * PELE / (2 * XF)), ALTO + (y - ALTO) * (1 - PELE / H_T)]);
+  const corpo = hexagono.map(([x, y]) => [x * (1 - 2 * PELE / (2 * XF)), TOPO + (y - TOPO) * (1 - PELE / H_T)]);
   const g = new THREE.ExtrudeGeometry(forma(corpo), { depth: ZT1 - ZT0 - 2 * PELE, bevelEnabled: false });
   por(M.preto, g, new THREE.Matrix4().makeTranslation(0, 0, ZT0 + PELE));
   // a frente (o contorno da folha) e o fundo
   const mFrente = await adesivo("testeira-frente", [T_FRENTE.ret[2] - T_FRENTE.ret[0], T_FRENTE.ret[3] - T_FRENTE.ret[1]],
     "a frente da testeira (o letreiro, aceso), com o contorno da folha", { brilho: 0.3 });
-  colar(mFrente, T_FRENTE.pontos, base(V(-XF, ALTO, ZT1), V(1, 0, 0), V(0, 1, 0)), T_FRENTE.ret);
+  colar(mFrente, T_FRENTE.pontos, base(V(-XF, TOPO, ZT1), V(1, 0, 0), V(0, 1, 0)), T_FRENTE.ret);
   const fundo = emMm("testeira-fundo", S_T);
   const desloca = (2 * XF - fundo.largura) / 2;
   const ptsFundo = fundo.pontos.map(([a, b]) => [a + desloca, b]);
   const retFundo = [fundo.ret[0] + desloca, fundo.ret[1], fundo.ret[2] + desloca, fundo.ret[3]];
   const mFundo = await adesivo("testeira-fundo", [retFundo[2] - retFundo[0], retFundo[3] - retFundo[1]], "o fundo da testeira, visto de trás");
-  colar(mFundo, ptsFundo, base(V(XF, ALTO, ZT0), V(-1, 0, 0), V(0, 1, 0)), retFundo);
+  colar(mFundo, ptsFundo, base(V(XF, TOPO, ZT0), V(-1, 0, 0), V(0, 1, 0)), retFundo);
   // o teto (visto de cima, a frente embaixo da imagem)
   await retanguloColado("testeira-teto", base(V(-XF + cx, ALT, ZT1), V(1, 0, 0), V(0, 0, -1)), 2 * XF - 2 * cx, ZT1 - ZT0,
     "o alto da testeira, visto de cima (a frente embaixo da imagem)");
   // os chanfros: a ponta da frente da peça (endireitada) vai na frente; o lado de cima, no teto
   const chanfro = Math.hypot(cx, cy);
-  await retanguloColado("testeira-superior-esquerda", base(V(-XF, ALTO + T.lado, ZT0), V(0, 0, 1), V(cx / chanfro, cy / chanfro, 0)),
+  await retanguloColado("testeira-superior-esquerda", base(V(-XF, TOPO + T.lado, ZT0), V(0, 0, 1), V(cx / chanfro, cy / chanfro, 0)),
     ZT1 - ZT0, chanfro, "o chanfro da esquerda da testeira (a frente à direita, o teto em cima)");
-  await retanguloColado("testeira-superior-direita", base(V(XF, ALTO + T.lado, ZT1), V(0, 0, -1), V(-cx / chanfro, cy / chanfro, 0)),
+  await retanguloColado("testeira-superior-direita", base(V(XF, TOPO + T.lado, ZT1), V(0, 0, -1), V(-cx / chanfro, cy / chanfro, 0)),
     ZT1 - ZT0, chanfro, "o chanfro da direita da testeira (a frente à esquerda, o teto em cima)");
   // os lados retos, embaixo dos chanfros
-  await retanguloColado("testeira-lateral-esquerda", base(V(-XF, ALTO, ZT0), V(0, 0, 1), V(0, 1, 0)), ZT1 - ZT0, T.lado,
+  await retanguloColado("testeira-lateral-esquerda", base(V(-XF, TOPO, ZT0), V(0, 0, 1), V(0, 1, 0)), ZT1 - ZT0, T.lado,
     "o lado reto da esquerda da testeira, visto de fora");
-  await retanguloColado("testeira-lateral-direita", base(V(XF, ALTO, ZT1), V(0, 0, -1), V(0, 1, 0)), ZT1 - ZT0, T.lado,
+  await retanguloColado("testeira-lateral-direita", base(V(XF, TOPO, ZT1), V(0, 0, -1), V(0, 1, 0)), ZT1 - ZT0, T.lado,
     "o lado reto da direita da testeira, visto de fora");
 }
 
 /* ======================================================================
-   3. A CESTA: o suporte, o aro e a rede, no fundo
+   4. A CESTA: o suporte, o aro e a rede, no fundo, embaixo do placar
    ====================================================================== */
 {
   const { y, raio } = ARO;
@@ -408,42 +571,94 @@ await retanguloColado("teto-interno", base(V(-XI, TETO, Z_FUNDO), V(1, 0, 0), V(
 }
 
 /* ======================================================================
-   4. A PISTA: o chão (a prancha com a quadra, a cesta no alto da imagem) e as bolas
+   5. A RAMPA (a prancha com a quadra, a cesta no alto da imagem), a chapa
+   de parada embaixo da tampa do console e as bolas
    ====================================================================== */
-caixa(M.preto, -XM, XM, PISO - PELE - ESP, PISO - PELE, ZB + ESP, ZF - PELE - ESP);
-await retanguloColado("prancha", base(V(-XI, PISO, Z_FUNDO + PRANCHA.altura), V(1, 0, 0), V(0, 0, -1)), PISTA, PRANCHA.altura,
-  "o chão da pista, visto de cima por quem joga (a cesta no alto da imagem)");
-for (const x of [-300, -100, 100, 300]) {
-  por(M.bolas, new THREE.SphereGeometry(BOLA, 16, 12), new THREE.Matrix4().makeTranslation(x, PISO + BOLA, CONSOLE.zFimCima - BOLA - 30));
-}
-for (const [x, z] of [[-150, -200], [220, 250]]) {
-  por(M.bolas, new THREE.SphereGeometry(BOLA, 16, 12), new THREE.Matrix4().makeTranslation(x, PISO + BOLA, z));
+{
+  const { ang, y, zFrente } = RAMPA;
+  const sobe = V(0, Math.sin(ang), -Math.cos(ang)); // da frente para o fundo, subindo
+  const b = base(V(-XI, y(zFrente), zFrente), V(1, 0, 0), sobe);
+  placa(M.preto, retangulo(0, 0, PISTA, PRANCHA.altura), b, ESP);
+  await retanguloColado("prancha", b, PISTA, PRANCHA.altura,
+    "a rampa que devolve a bola, vista de cima por quem joga (a cesta no alto da imagem); a ponta da frente passa embaixo da tampa do console");
+  // a chapa de parada: de pé, da rampa até a tampa, logo atrás da faixa de cima da Frente
+  const zP = CONSOLE.zFimCima;
+  caixa(M.parada, -XI, XI, y(zP) - 10, CONSOLE.yCima - PELE - ESP, zP, zP + 3);
+  // as bolas: quatro paradas na chapa e duas descendo a rampa
+  const N = V(0, Math.cos(ang), Math.sin(ang)); // a normal da rampa
+  // a bola com o centro em z, apoiada na rampa
+  const bola = (x, zc) => {
+    const zr = zc - N.z * (BOLA + 1);
+    const c = V(x, y(zr), zr).addScaledVector(N, BOLA + 1);
+    por(M.bolas, new THREE.SphereGeometry(BOLA, 14, 10), new THREE.Matrix4().makeTranslation(c.x, c.y, c.z));
+  };
+  for (const x of [-354, -118, 118, 354]) bola(x, zP - BOLA - 2);
+  bola(-160, -150);
+  bola(200, 220);
 }
 
 /* ======================================================================
-   5. O CONSOLE DA FRENTE: as três faces, cada uma com a sua faixa da Frente
+   6. O CONSOLE DA FRENTE: as três faces, cada uma com a sua faixa da Frente
+   (o POW! de pé, o BASKETBALL inclinado, a tampa com o botão Start), a
+   porta do moedeiro e o neon
    ====================================================================== */
 {
   const { ang, zInclinada, yCima, zFimCima } = CONSOLE;
   const largura = 2 * XF;
   const W = FRENTE.largura;
   // as placas: a de pé, a inclinada e a de cima (1 mm atrás de cada adesivo)
-  caixa(M.preto, -XM, XM, 0, FAIXA.baixo, ZF - PELE - ESP, ZF - PELE);
+  caixa(M.preto, -XM, XM, PE, PE + FAIXA.baixo, ZF - PELE - ESP, ZF - PELE);
   {
     const g = new THREE.BoxGeometry(2 * XM, FAIXA.meio, ESP);
     const sobe = V(0, Math.sin(ang), -Math.cos(ang));
     const normal = V(0, Math.cos(ang), Math.sin(ang));
-    const meio = V(0, FAIXA.baixo, ZF).addScaledVector(sobe, FAIXA.meio / 2).addScaledVector(normal, -PELE - ESP / 2);
+    const meio = V(0, PE + FAIXA.baixo, ZF).addScaledVector(sobe, FAIXA.meio / 2).addScaledVector(normal, -PELE - ESP / 2);
     por(M.preto, g, new THREE.Matrix4().makeBasis(V(1, 0, 0), sobe, normal).setPosition(meio));
   }
   caixa(M.preto, -XM, XM, yCima - PELE - ESP, yCima - PELE, zFimCima, zInclinada);
-  const m = await adesivo("frente", [W, FRENTE.altura], "a frente do console, dobrada em três: a faixa de baixo de pé, a do meio inclinada e a de cima deitada");
+  const m = await adesivo("frente", [W, FRENTE.altura], "a frente do console, dobrada em três: a faixa de baixo de pé, a do meio inclinada e a de cima deitada (a tampa, com o Start)");
   // a imagem: a faixa de cima (v de 1-D1 a 1), a do meio, a de baixo (v de 0 a 1-D2)
-  colar(m, retangulo(0, 0, largura, FAIXA.baixo), base(V(-XF, 0, ZF), V(1, 0, 0), V(0, 1, 0)), [0, 0, largura, FAIXA.baixo], 0, 1 - D2);
-  colar(m, retangulo(0, 0, largura, FAIXA.meio), base(V(-XF, FAIXA.baixo, ZF), V(1, 0, 0), V(0, Math.sin(ang), -Math.cos(ang))),
+  colar(m, retangulo(0, 0, largura, FAIXA.baixo), base(V(-XF, PE, ZF), V(1, 0, 0), V(0, 1, 0)), [0, 0, largura, FAIXA.baixo], 0, 1 - D2);
+  colar(m, retangulo(0, 0, largura, FAIXA.meio), base(V(-XF, PE + FAIXA.baixo, ZF), V(1, 0, 0), V(0, Math.sin(ang), -Math.cos(ang))),
     [0, 0, largura, FAIXA.meio], 1 - D2, 1 - D1);
   colar(m, retangulo(0, 0, largura, FAIXA.cima), base(V(-XF, yCima, zInclinada), V(1, 0, 0), V(0, 0, -1)),
     [0, 0, largura, FAIXA.cima], 1 - D1, 1);
+  // o botão Start, na marca tracejada da tampa
+  {
+    const x0 = -XF + START.u0 * largura + 12, x1 = -XF + START.u1 * largura - 12;
+    const b0 = ((D1 - START.v1) / D1) * FAIXA.cima + 6, b1 = ((D1 - START.v0) / D1) * FAIXA.cima - 6;
+    const g = new THREE.CapsuleGeometry((b1 - b0) / 2, x1 - x0 - (b1 - b0), 3, 12);
+    g.rotateZ(PI / 2);
+    g.scale(1, 1, 0.25);
+    g.rotateX(PI / 2);
+    por(M.start, g, new THREE.Matrix4().makeTranslation((x0 + x1) / 2, yCima + 4, zInclinada - (b0 + b1) / 2));
+  }
+  // a porta do moedeiro: a porta preta, o moedeiro cromado (com a fenda) e a fechadura
+  {
+    // (rentes à face: a máquina fica nos 2,40 m)
+    const { x0, x1, y0, y1 } = PORTA;
+    caixa(M.porta, x0, x1, y0, y1, ZF, ZF + 1.5);
+    const xm = (x0 + x1) / 2;
+    caixa(M.moedeiro, xm - 38, xm + 38, y0 + 170, y0 + 300, ZF + 1.5, ZF + 3.5);
+    caixa(M.porta, xm - 3, xm + 3, y0 + 245, y0 + 285, ZF + 3.5, ZF + 4); // a fenda da moeda
+    caixa(M.porta, xm - 22, xm + 22, y0 + 190, y0 + 205, ZF + 3.5, ZF + 4); // o retorno da moeda
+    cilindro(M.moedeiro, V(x1 - 35, y0 + 120, ZF + 1.5), V(x1 - 35, y0 + 120, ZF + 4), 12, 16); // a fechadura
+  }
+  // o neon: a borda da tampa, na quina com o chanfro, e a luz do pé, embaixo da
+  // frente e dos lados do console (dentro da medida: a máquina fica nos 1,00 x 2,40 m)
+  const r = 9;
+  tubo(M.neon, [V(-XF + r, yCima + r, zInclinada), V(XF - r, yCima + r, zInclinada)], r);
+  tubo(M.neon, [V(-XF + 12, PE / 2, CONSOLE.zBoca), V(-XF + 12, PE / 2, ZF - 12), V(XF - 12, PE / 2, ZF - 12), V(XF - 12, PE / 2, CONSOLE.zBoca)], 8);
+}
+
+/* ======================================================================
+   7. OS PÉS NIVELADORES: embaixo das chapas das laterais e da frente
+   ====================================================================== */
+for (const s of [-1, 1]) {
+  for (const z of [ZF - 70, 0, ZB + 70]) {
+    cilindro(M.pes, V(s * (XF - 30), 0, z), V(s * (XF - 30), 8, z), 32, 12); // a sapata
+    cilindro(M.estrutura, V(s * (XF - 30), 8, z), V(s * (XF - 30), PE + 1, z), 9, 8); // a rosca
+  }
 }
 
 /* ======================================================================
@@ -481,8 +696,12 @@ window.pecas = PECAS;
 window.avisos = avisos;
 window.escala = {
   testeira_mm_por_px: +S_T.toFixed(3), laterais_de_fora: +S_E.toFixed(3), laterais_de_dentro: +S_I.toFixed(3),
-  lateral_de_fora_comprimento: Math.round(D_E), parede_de_dentro_alto: Math.round(TETO), piso_da_pista: Math.round(PISO),
-  console: { chanfro_graus: +(CONSOLE.ang * 180 / PI).toFixed(1), alto: Math.round(CONSOLE.yCima) }, aro: Math.round(ARO.y),
+  lateral_de_fora_comprimento: Math.round(D_E), paredes_de_dentro: [Math.round(PISO_L), Math.round(PISO_L + INT.esquerda.altura)],
+  teto: Math.round(TETO), fundo_da_cesta: [Math.round(Y_FUNDO), Math.round(TETO)],
+  rampa: { graus: +(RAMPA.ang * 180 / PI).toFixed(1), na_parada: Math.round(RAMPA.yParada), atras: Math.round(RAMPA.yAtras),
+    embaixo_da_tampa_mm: Math.round(RAMPA.zFrente - CONSOLE.zFimCima) },
+  console: { chanfro_graus: +(CONSOLE.ang * 180 / PI).toFixed(1), tampa: Math.round(CONSOLE.yCima), boca_mm: Math.round(CONSOLE.zFimCima - CONSOLE.zBoca) },
+  aro: Math.round(ARO.y), furos: Object.fromEntries(Object.entries(EXT).map(([k, e]) => [k, e.furos.length])),
 };
 
 // ---------- vistas para conferir e as fotos do cadastro ----------
@@ -502,7 +721,7 @@ sol.shadow.mapSize.set(2048, 2048);
 Object.assign(sol.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 30 });
 sol.shadow.bias = -0.0004;
 cena.add(sol);
-// a rede da cesta não faz sombra cheia
+// as redes não fazem sombra cheia
 raiz.traverse((o) => { if (o.isMesh) { o.castShadow = !o.name.startsWith("rede"); o.receiveShadow = true; } });
 // o chão só das vistas (não vai para o .glb): recebe a sombra
 const chao = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.2 }));
@@ -562,7 +781,7 @@ window.recortar = (margem = 0.05, qualidade = 0.86) => {
 window.exportar = async () => {
   // os adesivos vão em JPEG: o exportador usa o toBlob do canvas, sem dizer a
   // qualidade (a do Chromium é 0,92); aqui ela fica na QUALIDADE_JPEG. As
-  // texturas desenhadas aqui (a rede da cesta, a bola) seguem em PNG.
+  // texturas desenhadas aqui (as redes, a bola, o placar) seguem em PNG.
   const toBlob = HTMLCanvasElement.prototype.toBlob;
   HTMLCanvasElement.prototype.toBlob = function (feito, tipo, qualidade) {
     return toBlob.call(this, feito, tipo, tipo === "image/jpeg" ? QUALIDADE_JPEG : qualidade);

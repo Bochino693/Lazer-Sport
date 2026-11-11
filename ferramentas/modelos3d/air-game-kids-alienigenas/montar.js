@@ -12,10 +12,10 @@
 // A folha é desenhada em ESCALA (as peças encaixam umas nas outras: as
 // laterais são 33 px mais compridas que o tampo, a cabeceira 7 px mais larga):
 // uma escala só (mm por px da folha) dá a mesa inteira. Ela sai da altura do
-// Air Game Kids, 0,90 m, que é a das laterais (o alto da corcova do meio).
-// Daí: 1,50 m de comprimento (o do Air Game Kids), o tampo de 1,41 m x
-// 0,81 m, o campo a 0,75 m do chão e 0,83 m de largura (os 0,86 m do
-// catálogo contam a borda).
+// Air Game Kids, 0,90 m (com a fita de LED), que é a das laterais (o alto da
+// corcova do meio). Daí: 1,51 m de comprimento (o 1,50 m do Air Game Kids), o
+// tampo de 1,40 m x 0,80 m, o campo a 0,75 m do chão e 0,83 m de largura (os
+// 0,86 m do catálogo contam a borda).
 //
 // As peças (cada uma vista DE FORA, em pé, como na folha):
 //   tampo               o tampo, deitado: a cabeceira do "Jogador 02" (a de
@@ -25,6 +25,13 @@
 //   lateral-direita     (a corcova em cima, os dois pés embaixo)
 //   lateral-esquerda-2  a cabeceira de trás (a da esquerda do tampo, na folha)
 //   lateral-direita-2   a cabeceira da frente
+//
+// Conferido com a foto do Air Game Kids do catálogo (lazersport.com.br/brinquedo/40):
+// a forma das laterais, os pés (os da própria lateral), o tampo entre elas e,
+// o que a folha não desenha e a mesa tem: a fita de LED colorida na borda das
+// laterais (o contorno inteiro, menos onde pisa no chão), a régua preta das
+// pontas e a borda preta dos lados, em cima do tampo, e o placar branco no
+// alto da corcova, por dentro da lateral direita.
 //
 // Coordenadas: as do three.js, em milímetros: x na largura (da esquerda para a
 // direita de quem joga na frente), y para cima, z no comprimento (a frente, a
@@ -38,7 +45,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const FORMAS = await (await fetch(`formas.json?v=${Date.now()}`)).json();
 
 // ---------- a escala da folha e as medidas (mm) ----------
-const ALT = 900; // a altura do Air Game Kids: o alto das laterais
+const LED = 6; // a fita de LED na borda das laterais (mm para fora do contorno)
+const ALT = 900 - LED; // a altura do Air Game Kids (0,90 m): o alto das laterais, mais a fita de LED
 const ESP = 18; // o MDF das cabeceiras e do tampo
 const PELE = 1; // o adesivo fica 1 mm fora da madeira
 // uma peça da folha em mm, na escala `s`: o contorno de verdade (ou o retângulo
@@ -71,7 +79,8 @@ const [CW, CH] = FORMAS["lateral-esquerda-2"].px;
 const CAMPO = (2 * XD * (CH + (FORMAS["lateral-esquerda-2"].faixa_lisa_px || 0))) / CW; // a superfície de jogo
 const alturaDaCabeceira = (peca) => (2 * XD * FORMAS[peca].px[1]) / FORMAS[peca].px[0]; // só a arte
 const ZC = ZT + ESP + PELE; // o adesivo das cabeceiras
-const BORDA = { altura: 27, largura: 20, gol: 200 }; // a régua das pontas, com o gol no meio
+const BORDA = { altura: 27, largura: 20, gol: 200 }; // a régua das pontas, com o gol no meio (preta, como na mesa)
+const BORDA_LADO = { altura: 22, largura: 14 }; // a borda preta dos lados, em cima do tampo, encostada nas laterais
 // a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/3)
 const RESOLUCAO = { tampo: 1024, "lateral-esquerda": 1024, "lateral-direita": 1024, "lateral-esquerda-2": 640, "lateral-direita-2": 640 };
 const QUALIDADE_JPEG = 0.85;
@@ -91,7 +100,7 @@ function por(nome, geometria, matriz) {
 
 const COR = {
   azul: "#1d4f8f", // a pintura da mesa (a madeira atrás dos adesivos)
-  borda: "#1e56b0", // a régua das pontas (o azul da moldura do tampo)
+  borda: "#141519", // a régua das pontas e a borda dos lados (pretas, como na foto da mesa)
   boca: "#0d1420",
   soprador: "#3a3f48",
   grade: "#15181d",
@@ -108,6 +117,21 @@ const M = {
   rebatedorVermelho: material("rebatedor-vermelho", { color: COR.vermelho, roughness: 0.3 }),
   rebatedorVerde: material("rebatedor-verde", { color: COR.verde, roughness: 0.3 }),
   disco: material("disco", { color: COR.disco, roughness: 0.35 }),
+  // a fita de LED da borda das laterais: as cores correndo pelo contorno (a da mesa é RGB)
+  led: material("fita-de-led", (() => {
+    const c = document.createElement("canvas");
+    c.width = 256; c.height = 4;
+    const g = c.getContext("2d");
+    const grad = g.createLinearGradient(0, 0, 256, 0);
+    ["#ff3fd8", "#9b4dff", "#3d6bff", "#29d3ff", "#3dff8a", "#d6ff3d", "#ff9f2e", "#ff3fd8"].forEach((cor, i, l) => grad.addColorStop(i / (l.length - 1), cor));
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 4);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return { color: "#ffffff", map: t, emissive: "#ffffff", emissiveMap: t, emissiveIntensity: 2.4, roughness: 0.3, side: THREE.DoubleSide };
+  })()),
+  placar: material("placar", { color: "#f4f5f7", roughness: 0.4 }),
+  digitos: material("digitos-do-placar", { color: "#ff3030", emissive: "#ff1a1a", emissiveIntensity: 1.2, roughness: 0.4 }),
 };
 
 // ---------- os adesivos: a imagem da peça, inteira, na sua face ----------
@@ -201,10 +225,87 @@ for (const [lado, b] of Object.entries(LADOS)) {
   const { pontos, ret, largura } = LATERAIS[lado];
   // centralizada no comprimento: a vai de -largura/2 a largura/2
   const pts = pontos.map(([a, y]) => [a - largura / 2, y]);
+  const pts0 = pts;
   const r = [ret[0] - largura / 2, ret[1], ret[2] - largura / 2, ret[3]];
-  placa(M.pintura, pts, b, ESP_LAT);
+  {
+    // a placa (embaixo do adesivo): o contorno sem os degraus dos pixels (o adesivo fica com o de verdade)
+    const r = (linha, tol) => {
+      if (linha.length < 3) return linha;
+      const [a, z] = [linha[0], linha[linha.length - 1]];
+      const [dx, dy] = [z[0] - a[0], z[1] - a[1]];
+      const L = Math.hypot(dx, dy) || 1e-9;
+      let pior = 0, k = 0;
+      for (let i = 1; i < linha.length - 1; i++) {
+        const d = Math.abs(dy * (linha[i][0] - a[0]) - dx * (linha[i][1] - a[1])) / L;
+        if (d > pior) { pior = d; k = i; }
+      }
+      return pior <= tol ? [a, z] : r(linha.slice(0, k + 1), tol).slice(0, -1).concat(r(linha.slice(k), tol));
+    };
+    const d = (q) => Math.hypot(q[0] - pts[0][0], q[1] - pts[0][1]);
+    const longe = pts.reduce((m, q, k) => (d(q) > d(pts[m]) ? k : m), 0);
+    placa(M.pintura, [...r(pts.slice(0, longe + 1), 2).slice(0, -1), ...r([...pts.slice(longe), pts[0]], 2).slice(0, -1)], b, ESP_LAT);
+  }
   const m = await adesivo(`lateral-${lado}`, [r[2] - r[0], r[3] - r[1]], `a lateral comprida da ${lado}, vista de fora (o contorno da folha)`);
   colar(m, pts, b, r);
+  // a fita de LED: na face da borda (a espessura da lateral), pelo contorno
+  // inteiro (sem os degraus dos pixels), menos o pé que pisa no chão; a mesa
+  // fica na medida (a altura conta a fita)
+  {
+    const simplificar = (linha, tol) => {
+      if (linha.length < 3) return linha;
+      const [a, z] = [linha[0], linha[linha.length - 1]];
+      const [dx, dy] = [z[0] - a[0], z[1] - a[1]];
+      const L = Math.hypot(dx, dy) || 1e-9;
+      let pior = 0, k = 0;
+      for (let i = 1; i < linha.length - 1; i++) {
+        const d = Math.abs(dy * (linha[i][0] - a[0]) - dx * (linha[i][1] - a[1])) / L;
+        if (d > pior) { pior = d; k = i; }
+      }
+      return pior <= tol ? [a, z] : simplificar(linha.slice(0, k + 1), tol).slice(0, -1).concat(simplificar(linha.slice(k), tol));
+    };
+    // o polígono fechado: partido no ponto mais longe do primeiro, cada metade simplificada
+    const longe = pts0.reduce((m, q, k) => (Math.hypot(q[0] - pts0[0][0], q[1] - pts0[0][1]) > Math.hypot(pts0[m][0] - pts0[0][0], pts0[m][1] - pts0[0][1]) ? k : m), 0);
+    const pts = [...simplificar(pts0.slice(0, longe + 1), 3.5).slice(0, -1), ...simplificar([...pts0.slice(longe), pts0[0]], 3.5).slice(0, -1)];
+    const n = pts.length;
+    const area = pts.reduce((s, [a, y], k) => s + a * pts[(k + 1) % n][1] - pts[(k + 1) % n][0] * y, 0);
+    const comp = pts.map(([a, y], k) => Math.hypot(pts[(k + 1) % n][0] - a, pts[(k + 1) % n][1] - y));
+    const total = comp.reduce((s, c) => s + c, 0);
+    const pos = [], uv = [], idx = [];
+    let feito = 0;
+    for (let k = 0; k < n; k++) {
+      const [a0, y0] = pts[k];
+      const [a1, y1] = pts[(k + 1) % n];
+      const u0 = feito / total;
+      feito += comp[k];
+      if (Math.max(y0, y1) < 8) continue; // o pé no chão
+      // a fita de LED, LED mm para fora da borda (a normal para fora do contorno),
+      // na espessura da lateral
+      let na = y1 - y0, nb = -(a1 - a0);
+      if (area < 0) { na = -na; nb = -nb; }
+      const L = Math.hypot(na, nb) || 1;
+      const ponto = (a, y, fora, d) => b.origem.clone()
+        .addScaledVector(b.U, a + (na / L) * fora).addScaledVector(b.W, Math.max(0.5, y + (nb / L) * fora)).addScaledVector(b.N, d);
+      const [dFora, dDentro] = [-0.2, -PELE - ESP_LAT + 0.2];
+      const u1 = feito / total;
+      for (const [f0, d0, f1, d1] of [[LED, dFora, LED, dDentro]]) { // a face de fora da fita (a que acende)
+        const i0 = pos.length / 3;
+        for (const [a, y, u] of [[a0, y0, u0], [a1, y1, u1]]) {
+          for (const [f, d] of [[f0, d0], [f1, d1]]) {
+            const q = ponto(a, y, f, d);
+            pos.push(q.x, q.y, q.z);
+            uv.push(u, 0.5);
+          }
+        }
+        idx.push(i0, i0 + 1, i0 + 2, i0 + 1, i0 + 3, i0 + 2);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    por(M.led, g);
+  }
 }
 
 /* ======================================================================
@@ -248,6 +349,16 @@ cilindro(M.grade, 0, CAMPO - 280, CAMPO - 270, 0, 130, 40);
     caixa(M.borda, gol / 2, XD, CAMPO, CAMPO + altura, zDentro, zFora);
     caixa(M.boca, -gol / 2, gol / 2, CAMPO, CAMPO + 1.5, zDentro, zFora);
   }
+  // a borda dos lados: encostada nas laterais, de ponta a ponta, entre as réguas
+  for (const s of [-1, 1]) {
+    caixa(M.borda, s * (XD - BORDA_LADO.largura), s * XD, CAMPO, CAMPO + BORDA_LADO.altura, -ZT + largura, ZT - largura);
+  }
+}
+// o placar: a caixinha branca no alto da corcova, por dentro da lateral direita, com os dois pontos acesos
+{
+  const alto = ALT - 30; // logo abaixo do alto da corcova
+  caixa(M.placar, XD - 36, XD, alto - 60, alto, -70, 70);
+  for (const z of [-38, 8]) caixa(M.digitos, XD - 37, XD - 36, alto - 45, alto - 15, z, z + 30);
 }
 
 /* ======================================================================
