@@ -1092,6 +1092,10 @@ class BrinquedoInfoView(View):
         imagens_brinquedo = list(brinquedo.imagens_ordenadas)
         imagem_catalogo = brinquedo.imagem_catalogo
         componentes, faz_parte_de = _composicao_do_brinquedo(brinquedo)
+        # os adesivos (a mesma máquina com outra arte: core/variantes.py), com as fotos e o 3D de cada um
+        from . import variantes as variantes_de_adesivo
+
+        variantes = variantes_de_adesivo.variantes_do_produto(brinquedo)
 
         return {
             "contexto": {
@@ -1105,6 +1109,7 @@ class BrinquedoInfoView(View):
                 "imagens_brinquedo": imagens_brinquedo,
                 "permite_sob_medida": permite_sob_medida,
                 "objeto_3d": objeto_3d,
+                "variantes": variantes,
             },
             # As linhas da mensagem do WhatsApp, sem a última (o endereço
             # da página, que depende do host da requisição).
@@ -1116,8 +1121,37 @@ class BrinquedoInfoView(View):
     def get(self, request, id):
         from urllib.parse import quote
 
-        dados = get_cached_catalog_page("brinquedo", (id,), lambda: self._montar(id))
+        from . import variantes as variantes_de_adesivo
+
+        try:
+            dados = get_cached_catalog_page("brinquedo", (id,), lambda: self._montar(id))
+        except Http404:
+            # a ficha que virou o adesivo de outro produto: o endereço antigo (links,
+            # favoritos, orçamentos, pedidos) vai, para sempre, para o produto no adesivo dela
+            destino = variantes_de_adesivo.redirecionamento(id)
+            if destino is None:
+                raise
+            return redirect(f"{reverse('brinquedo_detalhe', args=[destino[0]])}?adesivo={destino[1]}", permanent=True)
         brinquedo = dados["contexto"]["brinquedo"]
+
+        # O adesivo escolhido (?adesivo=<slug>): as fotos e o 3D dele, e ele na mensagem do orçamento.
+        variantes = dados["contexto"].get("variantes") or []
+        adesivo = variantes_de_adesivo.escolhida(variantes, request.GET.get("adesivo", ""))
+        extra = {}
+        mensagem = list(dados["mensagem"])
+        if adesivo:
+            outro_3d = next((v for v in variantes if v["objeto_3d"] and v is not adesivo), None)
+            extra = {
+                "adesivo": adesivo,
+                "adesivo_sem_3d": not adesivo["objeto_3d"],
+                "adesivo_com_3d": outro_3d if not adesivo["objeto_3d"] else None,
+            }
+            if not adesivo["padrao"] or not dados["contexto"]["imagens_brinquedo"]:
+                extra["imagens_brinquedo"] = adesivo["imagens"]
+            extra["objeto_3d"] = (
+                (dados["contexto"]["objeto_3d"] if adesivo["padrao"] else None) or adesivo["objeto_3d"]
+            )
+            mensagem.insert(3, f"Adesivo: {adesivo['nome']}")
 
         # O contador de cliques é por visita: um UPDATE, fora do cache.
         _registrar_clique(BrinquedoClick, {"brinquedo_clicado_id": brinquedo.pk})
@@ -1126,7 +1160,7 @@ class BrinquedoInfoView(View):
         produto_url = request.build_absolute_uri()
         whatsapp_url = (
             "https://wa.me/5511960563135?text="
-            f"{quote(chr(10).join([*dados['mensagem'], '', f'Página do produto: {produto_url}']))}"
+            f"{quote(chr(10).join([*mensagem, '', f'Página do produto: {produto_url}']))}"
         )
         imagem_url = ""
         if dados["imagem_catalogo_url"]:
@@ -1134,6 +1168,7 @@ class BrinquedoInfoView(View):
 
         context = {
             **dados["contexto"],
+            **extra,
             "produto_url": produto_url,
             "imagem_url": imagem_url,
             "whatsapp_url": whatsapp_url,
@@ -4962,10 +4997,19 @@ def adicionar_ao_carrinho(request, tipo, object_id):
         objeto = get_object_or_404(model, id=object_id)
     content_type = ContentType.objects.get_for_model(objeto)
 
+    # o adesivo escolhido na página (só um dos adesivos do produto vale): a equipe sabe qual foi
+    # pedido, e o mesmo produto com outro adesivo é outra linha do carrinho
+    adesivo = ""
+    if tipo == 'brinquedo':
+        pedido = (request.POST.get('adesivo') or "").strip()
+        if pedido:
+            adesivo = objeto.variantes_adesivo.filter(ativo=True, nome=pedido).values_list("nome", flat=True).first() or ""
+
     item, created = ItemCarrinho.objects.get_or_create(
         carrinho=carrinho,
         content_type=content_type,
         object_id=objeto.id,
+        adesivo=adesivo,
         defaults={'quantidade': quantidade}
     )
 
