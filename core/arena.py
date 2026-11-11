@@ -693,6 +693,30 @@ MODELOS_3D = (
             "três barraquinhas de faz-de-conta e dois fliperamas; tobogã em espiral até a piscina de bolinhas."
         ),
     },
+    # ---- Brinquedão Modelo 5 ----
+    {
+        # Sem .3ds: o objeto sai das quatro imagens do projeto (a planta, a
+        # perspectiva -- com a câmera calibrada -- e as duas vistas do salão),
+        # nas medidas delas: o L de tubos cor de madeira, a barra de 3,70 m ×
+        # 1 m com o piso a 1 m e a perna com o escorregador na frente (2,48 m
+        # de fundo com ele), 2 m de altura. A foto principal é a perspectiva da
+        # fábrica; os lados são vistas do próprio objeto.
+        "id": "brinquedao-modelo-5",
+        "titulo": "Brinquedão Modelo 5",
+        "nomes": ("Brinquedão Modelo 5",),
+        "arquivo": "site/arena/modelos/brinquedao-modelo-5.glb",
+        "medidas": (2.0, 3.7, 2.48),
+        "grupo": "brinquedoes",
+        "pasta": "site/arena/modelos/brinquedao-modelo-5/",
+        "fotos": (("perfil", "perspectiva.webp"), ("lado_esquerdo", "lado_esquerdo.webp"), ("lado_direito", "lado_direito.webp")),
+        "medidas_texto": "2 m × 3,70 m × 2,48 m",
+        "categorias": ("Brinquedões",),
+        "descricao": (
+            "Brinquedão de tubos cor de madeira em L, com o piso a 1 m: casinhas rosa e azul-clara com janela "
+            "em arco, cunha de espuma, dois sacos de pancada, quatro rolos coloridos pendurados, degrau triangular "
+            "de entrada e escorregador amarelo largo saindo da perna da frente."
+        ),
+    },
     # ---- As máquinas de sempre com os adesivos novos ----
     # A MESMA máquina de um brinquedo do catálogo, só com outra adesivagem. O
     # objeto 3D sai inteiro da folha de adesivos da fábrica (a arte de cada

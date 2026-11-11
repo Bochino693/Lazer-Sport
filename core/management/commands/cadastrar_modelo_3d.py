@@ -4,6 +4,7 @@
     python manage.py cadastrar_modelo_3d brinquedao-modelo-2
     python manage.py cadastrar_modelo_3d brinquedao-ninja
     python manage.py cadastrar_modelo_3d brinquedao-modelo-4
+    python manage.py cadastrar_modelo_3d brinquedao-modelo-5
     python manage.py cadastrar_modelo_3d strike-kids
     python manage.py cadastrar_modelo_3d air-game-kids-alienigenas    # copia o Air Game Kids
     python manage.py cadastrar_modelo_3d basquete-street-quadrinhos   # copia o Basquete Street
