@@ -726,9 +726,11 @@ MODELOS_3D = (
     {
         # o Air Game Kids (a mesa infantil de formato recortado) com os
         # alienígenas: HOCKEY KIDS, os alienígenas astronautas, o disco voador e
-        # o chão lunar laranja. As medidas são as da folha na altura do Air Game
-        # Kids, 0,90 m (o tampo de 1,41 m x 0,81 m; o catálogo diz 0,86 m de
-        # largura, com a borda). Até a 0146 era o "air-game-hockey-espacial"
+        # o chão lunar laranja; a fita de LED colorida na borda das laterais, a
+        # régua preta e o placar, como na mesa da foto do catálogo. As medidas
+        # são as da folha na altura do Air Game Kids, 0,90 m (o tampo de 1,40 m
+        # x 0,80 m; o catálogo diz 0,86 m de largura, com a borda). Até a 0146
+        # era o "air-game-hockey-espacial"
         "id": "air-game-kids-alienigenas",
         "titulo": "Air Game Kids Alienígenas",
         # (o nome de antes ainda liga: o que a 0145 ligou pelo nome segue ligado)
@@ -746,12 +748,15 @@ MODELOS_3D = (
         "descricao": (
             "Air Game Kids Alienígenas: a mesa de air hockey infantil do Air Game Kids com os adesivos dos "
             "alienígenas -- o HOCKEY KIDS no tampo e nas laterais recortadas, os alienígenas astronautas jogando "
-            "hóquei, o disco voador, planetas, estrelas e o chão lunar laranja."
+            "hóquei, o disco voador, planetas, estrelas e o chão lunar laranja -- e a fita de LED colorida na "
+            "borda das laterais."
         ),
     },
     {
         # o Basquete Street em quadrinhos: fundo preto, formas arredondadas,
-        # POW!, BOOM!, WOW!, o BASKETBALL, as crianças e a quadra na prancha
+        # POW!, BOOM!, WOW!, o BASKETBALL, as crianças e a quadra na rampa; a
+        # bola das laterais vazada (com a rede atrás), a rampa que devolve a
+        # bola até a frente, o moedeiro, o placar e o neon roxo
         "id": "basquete-street-quadrinhos",
         "titulo": "Basquete Street Quadrinhos",
         "nomes": ("Basquete Street Quadrinhos",),
@@ -768,7 +773,8 @@ MODELOS_3D = (
         "descricao": (
             "Basquete Street Quadrinhos: o basquete de arcade do Basquete Street com os adesivos em quadrinhos -- "
             "fundo preto com formas amarelas, laranja, vermelhas e rosa, os balões POW!, BOOM! e WOW!, o letreiro "
-            "BASKETBALL, duas crianças jogando e a quadra vermelha na prancha."
+            "BASKETBALL, duas crianças jogando, a bola vazada nas laterais e a quadra vermelha na rampa que "
+            "devolve a bola até quem joga."
         ),
     },
 )

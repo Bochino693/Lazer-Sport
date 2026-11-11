@@ -12,10 +12,10 @@
 // A folha é desenhada em ESCALA (as peças encaixam umas nas outras: as
 // laterais são 33 px mais compridas que o tampo, a cabeceira 7 px mais larga):
 // uma escala só (mm por px da folha) dá a mesa inteira. Ela sai da altura do
-// Air Game Kids, 0,90 m, que é a das laterais (o alto da corcova do meio).
-// Daí: 1,50 m de comprimento (o do Air Game Kids), o tampo de 1,41 m x
-// 0,81 m, o campo a 0,75 m do chão e 0,83 m de largura (os 0,86 m do
-// catálogo contam a borda).
+// Air Game Kids, 0,90 m (com a fita de LED), que é a das laterais (o alto da
+// corcova do meio). Daí: 1,51 m de comprimento (o 1,50 m do Air Game Kids), o
+// tampo de 1,40 m x 0,80 m, o campo a 0,75 m do chão e 0,83 m de largura (os
+// 0,86 m do catálogo contam a borda).
 //
 // As peças (cada uma vista DE FORA, em pé, como na folha):
 //   tampo               o tampo, deitado: a cabeceira do "Jogador 02" (a de
