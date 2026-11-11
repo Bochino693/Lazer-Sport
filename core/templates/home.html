@@ -611,7 +611,7 @@
       {% for categoria in categorias_brinquedos %}
         <a href="{% url 'categoria_detalhe' categoria.id %}#produtos" class="categoria-link">
           <div class="categoria-card">
-            <div class="categoria-media">
+            <div class="categoria-media{% if categoria.imagem_categoria %} categoria-media--cheia{% endif %}">
               <span class="categoria-card-tag">
                 <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
                 Categoria

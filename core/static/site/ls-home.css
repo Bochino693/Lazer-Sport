@@ -6566,3 +6566,26 @@ html.ls-escuro #promocoes-section .oferta-precos .preco-promocao strong {
    todos os outros blocos. O respiro agora é só o do `.espacador`. (O
    `:not(#_):not(#__)` é o mesmo peso da regra do ls-tema.css, mais o id.) */
 html.ls-escuro:not(#_):not(#__) #manutencao.ls-manut { padding-block: 0; }
+
+/* A FOTO DA CATEGORIA OCUPA O QUADRO INTEIRO.
+   As fotos das categorias são cenas (o lugar, as máquinas de verdade, as
+   crianças): elas são o fundo do card, de ponta a ponta, sem a moldura
+   branca e a grade que servem às fotos de produto recortadas. O 4:3 delas
+   cobre o quadro quase sem corte. */
+.categoria-media.categoria-media--cheia {
+  padding: 0;
+  background: #0b1446;
+}
+
+.categoria-media.categoria-media--cheia > img {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  object-fit: cover !important;
+  filter: none;
+}
+
+.categoria-card:hover .categoria-media.categoria-media--cheia > img {
+  transform: scale(1.04);
+  filter: none;
+}
