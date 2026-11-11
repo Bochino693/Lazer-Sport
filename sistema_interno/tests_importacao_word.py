@@ -25,14 +25,23 @@ from unittest import mock
 from xml.sax.saxutils import escape
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 from core.models import Brinquedos, PecasReposicao
 
-from .importacao_word import catalogo, conferencia, deterministica as det, formulario, ia, leitor
-from .models import AtividadeOrcamento, AvaliacaoBlocoOrcamento, Cliente, ItemOrcamento, Orcamento, ProdutoInterno
+from .importacao_word import catalogo, conferencia, deterministica as det, formulario, ia, leitor, mapa
+from .models import (
+    AtividadeOrcamento,
+    AvaliacaoBlocoOrcamento,
+    Cliente,
+    EnderecoCliente,
+    ItemOrcamento,
+    Orcamento,
+    ProdutoInterno,
+)
 from .permissoes import atribuir_funcoes
 
 HOST = {"HTTP_HOST": "interno.testserver"}
@@ -814,6 +823,8 @@ def formulario_de(envio, **mudancas):
         dados[chave] = envio.get(chave) or ""
     if envio.get("cliente_confirmado"):
         dados["cliente_confirmado"] = "1"
+    if envio.get("publicar_no_mapa"):
+        dados["publicar_no_mapa"] = "1"
     for item in envio["itens"]:
         prefixo = f"item-{item['uid']}-"
         dados[prefixo + "descricao"] = item["descricao"]
@@ -844,17 +855,33 @@ class _ComUsuario(TestCase):
         ambiente = mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""})
         ambiente.start()
         self.addCleanup(ambiente.stop)
+        # Nem a busca da coordenada do mapa sai para a rede: o ponto vem
+        # daqui (o centro de São Paulo), e cada teste do mapa troca.
+        localizar = mock.patch.object(
+            mapa, "procurar_coordenadas", return_value=(Decimal("-23.5505"), Decimal("-46.6333"), ""),
+        )
+        self.procurar_coordenadas = localizar.start()
+        self.addCleanup(localizar.stop)
         self.client.force_login(self.vendedor)
 
-    def importar(self, conteudo, nome="orcamento.docx"):
-        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile(nome, conteudo)}, **HOST)
+    def importar(self, conteudo, nome="orcamento.docx", para=""):
+        dados = {"arquivo": SimpleUploadedFile(nome, conteudo)}
+        if para:
+            dados["para"] = para
+        resposta = self.client.post(URL_IMPORTAR, dados, **HOST)
         self.assertEqual(resposta.status_code, 302, getattr(resposta, "content", b"")[:400])
         return resposta["Location"]
 
-    def proposta_e_envio(self, url):
+    def proposta_e_envio(self, url, modo="orcamento"):
+        """A tela de conferência como abre -- e, por padrão, com "Criar o
+        orçamento também" ligado, que é o que a maioria dos testes daqui
+        confere. `modo=None` devolve a tela exatamente como abriu."""
         resposta = self.client.get(url, **HOST)
         self.assertEqual(resposta.status_code, 200)
-        return resposta.context["proposta"], resposta.context["envio"]
+        envio = resposta.context["envio"]
+        if modo:
+            envio["modo"] = modo
+        return resposta.context["proposta"], envio
 
 
 class PermissoesTests(_ComUsuario):
@@ -945,7 +972,8 @@ class EnvioDoArquivoTests(_ComUsuario):
         url = self.importar(docx_com_tabela())
         token = url.rstrip("/").split("/")[-1]
         guardado = self.client.session["importacoes_orcamento_word"][token]
-        self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "criado_em", "autor"})
+        self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "para", "criado_em",
+                                         "autor"})
         self.assertNotIn("PK", json.dumps(guardado))
 
     def test_token_inventado_volta_para_o_envio(self):
@@ -1277,7 +1305,7 @@ class CriacaoTests(_ComUsuario):
 
     def test_so_cadastrar_o_cliente_nao_pede_nada_do_orcamento(self):
         url = self.importar(docx_com_tabela())
-        _, envio = self.proposta_e_envio(url)
+        _, envio = self.proposta_e_envio(url, modo=None)
         # Nada do orçamento conferido: nem produto, nem frete, nem total.
         resposta = self.client.post(url, formulario_de(envio, modo="cliente", frete="", forma_envio=""), **HOST)
         self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
@@ -1288,9 +1316,11 @@ class CriacaoTests(_ComUsuario):
         self.assertEqual(cliente.telefone, "(11) 98765-4321")
         self.assertEqual(cliente.canal_telefone, Cliente.CanalTelefone.WHATSAPP)
         self.assertEqual(cliente.email, "contato@buffetalegria.com.br")
-        self.assertEqual(resposta["Location"], f"/clientes/?q=Buffet+Alegria+Ltda&abrir={cliente.pk}")
+        self.assertEqual(resposta["Location"], f"/orcamentos/importar/cliente/{cliente.pk}/")
         pagina = self.client.get(resposta["Location"], **HOST)
-        self.assertContains(pagina, "Cliente “Buffet Alegria Ltda” cadastrado a partir de “orcamento.docx”.")
+        self.assertContains(pagina, "Cliente cadastrado")
+        self.assertContains(pagina, "nenhum orçamento foi criado")
+        self.assertContains(pagina, f"/clientes/?q=Buffet+Alegria+Ltda&amp;abrir={cliente.pk}")
         self.assertEqual(self.client.session.get("importacoes_orcamento_word"), {})
 
     def test_documento_sem_itens_abre_em_so_o_cliente(self):
@@ -1301,7 +1331,7 @@ class CriacaoTests(_ComUsuario):
                      ["Número", "1000"], ["Bairro", "Bela Vista"], ["Cidade", "São Paulo"], ["UF", "SP"]),
         )
         url = self.importar(ficha)
-        proposta, envio = self.proposta_e_envio(url)
+        proposta, envio = self.proposta_e_envio(url, modo=None)
         self.assertEqual(envio["modo"], "cliente")
         self.assertEqual((envio["nome"], envio["documento"], envio["telefone"], envio["cep"]),
                          ("Marina Souza", "529.982.247-25", "(11) 97777-6655", "01310-100"))
@@ -1316,7 +1346,7 @@ class CriacaoTests(_ComUsuario):
     def test_so_o_cliente_que_ja_existe_atualiza_o_cadastro_sem_duplicar(self):
         existente = Cliente.objects.create(nome_cliente="Buffet Alegria Ltda", email="contato@buffetalegria.com.br")
         url = self.importar(docx_com_tabela())
-        _, envio = self.proposta_e_envio(url)
+        _, envio = self.proposta_e_envio(url, modo=None)
         self.assertEqual(envio["cliente_modo"], "existente")
         resposta = self.client.post(url, formulario_de(envio, modo="cliente"), **HOST)
         self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
@@ -1324,7 +1354,7 @@ class CriacaoTests(_ComUsuario):
         existente.refresh_from_db()
         self.assertEqual(existente.documento, "11.222.333/0001-81")
         self.assertEqual(existente.telefone, "(11) 98765-4321")
-        self.assertIn(f"abrir={existente.pk}", resposta["Location"])
+        self.assertEqual(resposta["Location"], f"/orcamentos/importar/cliente/{existente.pk}/")
 
     def test_cliente_que_ja_existe_e_completado_e_nao_sobrescrito(self):
         existente = Cliente.objects.create(
@@ -1611,6 +1641,215 @@ class PdfTests(IATests):
         self.assertContains(resposta, "Este PDF é uma imagem", status_code=400)
         for termo in JARGAO + ("recusou",):
             self.assertNotIn(termo, texto_visivel(resposta))
+
+
+# ======================================================================
+# 7b. O CLIENTE PRIMEIRO, E NO MAPA DA HOME
+# ======================================================================
+def docx_ficha_com_endereco():
+    """Uma ficha de cadastro com endereço: o caso de quem povoa o mapa."""
+    return montar_docx(
+        par("FICHA DE CADASTRO")
+        + tabela(["Nome", "Parque da Alegria"], ["CNPJ", "11.444.777/0001-61"], ["Celular", "11 97777-6655"],
+                 ["CEP", "01310-100"], ["Rua", "Avenida Paulista"], ["Número", "1000"],
+                 ["Bairro", "Bela Vista"], ["Cidade", "São Paulo"], ["UF", "SP"]),
+    )
+
+
+class ClientePrimeiroTests(_ComUsuario):
+    """ "vc deve deixar facil acesso só o cadastro de cliente, ai é opcional
+    o orçamento e deixe ligado a questão de aparecer no mapa". """
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def criar_so_cliente(self, url, **mudancas):
+        _, envio = self.proposta_e_envio(url, modo=None)
+        envio.update(mudancas)
+        return self.client.post(url, formulario_de(envio), **HOST)
+
+    def test_a_conferencia_abre_em_so_o_cliente_com_o_mapa_ligado(self):
+        url = self.importar(docx_com_tabela())
+        resposta = self.client.get(url, **HOST)
+        envio = resposta.context["envio"]
+        self.assertEqual(envio["modo"], "cliente")
+        self.assertTrue(envio["publicar_no_mapa"])
+        self.assertContains(resposta, 'name="modo" value="orcamento" id="modoOrcamento" role="switch">')
+        self.assertContains(resposta, 'name="publicar_no_mapa" value="1" id="campoMapa" role="switch" checked>')
+        # O orçamento é opção -- e a opção diz o que o documento traz.
+        self.assertContains(resposta, "Criar o orçamento também")
+        self.assertContains(resposta, "O documento tem <b>3 itens</b>, <b>R$ 1.919,00</b>")
+        self.assertEqual(resposta.context["oferta_orcamento"], {"itens": 3, "total": "1.919,00"})
+        # As partes do orçamento abrem escondidas, e o botão é de cadastro.
+        self.assertContains(resposta, 'id="blocoItens" data-so-orcamento hidden')
+        self.assertContains(resposta, '<span data-rotulo-modo="cliente">Cadastrar cliente</span>')
+
+    def test_ligar_o_orcamento_cria_os_dois_como_antes(self):
+        url = self.importar(docx_com_tabela())
+        _, envio = self.proposta_e_envio(url, modo=None)
+        for item in envio["itens"]:
+            item["conferido"] = True
+        resposta = self.client.post(url, formulario_de(envio, modo="orcamento"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.total, Decimal("1919.00"))
+        self.assertTrue(orcamento.cliente.publicar_no_mapa)
+
+    def test_a_tela_de_clientes_leva_ao_cadastro_pelo_documento(self):
+        clientes = self.client.get("/clientes/", **HOST)
+        self.assertContains(clientes, 'href="/orcamentos/importar/?para=cliente"')
+        self.assertContains(clientes, "Cadastrar pelo Word ou PDF")
+        envio = self.client.get(URL_IMPORTAR + "?para=cliente", **HOST)
+        self.assertContains(envio, "Cadastrar cliente pelo Word ou PDF")
+        self.assertContains(envio, '<input type="hidden" name="para" value="cliente">')
+        url = self.importar(docx_ficha_com_endereco(), para="cliente")
+        self.assertEqual(self.client.get(url, **HOST).context["envio"]["modo"], "cliente")
+        # Descartar devolve para a aba de onde a pessoa veio.
+        self.assertEqual(self.client.post(url, {"action": "descartar"}, **HOST)["Location"], "/clientes/")
+
+    def test_quem_nao_cria_proposta_nao_ve_o_botao(self):
+        financeiro = User.objects.create_user("fin", "fin@exemplo.com", "senha")
+        atribuir_funcoes(financeiro, ["financeiro"])
+        self.client.force_login(financeiro)
+        resposta = self.client.get("/clientes/", **HOST)
+        if resposta.status_code == 200:
+            self.assertNotContains(resposta, "Cadastrar pelo Word ou PDF")
+
+    def test_o_cliente_importado_vira_alfinete_no_mapa_da_home(self):
+        url = self.importar(docx_ficha_com_endereco(), para="cliente")
+        resposta = self.criar_so_cliente(url)
+        cliente = Cliente.objects.get()
+        self.assertEqual(resposta["Location"], f"/orcamentos/importar/cliente/{cliente.pk}/")
+        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertTrue(cliente.no_mapa)
+        endereco = cliente.endereco_principal
+        self.assertEqual((endereco.latitude, endereco.longitude), (Decimal("-23.5505"), Decimal("-46.6333")))
+        # A coordenada foi procurada para o endereço salvo, depois de salvar.
+        self.assertEqual(self.procurar_coordenadas.call_args.args[0].pk, endereco.pk)
+
+        pronto = self.client.get(resposta["Location"], **HOST)
+        self.assertContains(pronto, "Entrou no mapa do site")
+        self.assertContains(pronto, "São Paulo/SP")
+        self.assertContains(pronto, "Criar um orçamento para ele")
+        self.assertNotContains(pronto, "Orçamento #")
+
+        home = self.client.get("/")
+        self.assertIn(("Parque da Alegria", "São Paulo"),
+                      {(p["nome"], p["cidade"]) for p in home.context["clientes_mapa"]})
+
+    def test_sem_achar_o_endereco_o_cliente_fica_e_a_tela_diz_onde_conferir(self):
+        self.procurar_coordenadas.return_value = (None, None, "")
+        url = self.importar(docx_ficha_com_endereco())
+        resposta = self.criar_so_cliente(url)
+        cliente = Cliente.objects.get()
+        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertFalse(cliente.no_mapa)
+        pronto = self.client.get(resposta["Location"], **HOST)
+        self.assertContains(pronto, "Ainda não está no mapa")
+        self.assertContains(pronto, "não achei o endereço no mapa: confira")
+        self.assertContains(pronto, f"/clientes/?q=Parque+da+Alegria&amp;editar={cliente.pk}")
+        # A ficha abre o cadastro para editar quando chega com ?editar=.
+        self.assertContains(self.client.get(f"/clientes/?editar={cliente.pk}", **HOST), 'get("editar")')
+        self.assertNotIn("Parque da Alegria", {p["nome"] for p in self.client.get("/").context["clientes_mapa"]})
+
+    def test_erro_na_busca_da_coordenada_nao_desfaz_o_cadastro(self):
+        self.procurar_coordenadas.side_effect = RuntimeError("Nominatim fora do ar")
+        url = self.importar(docx_ficha_com_endereco())
+        with self.assertLogs("sistema_interno.importacao_word.mapa", "ERROR"):
+            resposta = self.criar_so_cliente(url)
+        self.assertEqual(resposta.status_code, 302)
+        cliente = Cliente.objects.get()
+        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertContains(self.client.get(resposta["Location"], **HOST), "não achei o endereço no mapa")
+
+    def test_sem_endereco_no_documento_a_tela_diz_por_que_nao_ha_alfinete(self):
+        url = self.importar(docx_com_tabela())
+        resposta = self.criar_so_cliente(url)
+        self.procurar_coordenadas.assert_not_called()
+        self.assertContains(self.client.get(resposta["Location"], **HOST), "o documento não traz o endereço")
+
+    def test_desligar_o_mapa_nao_publica(self):
+        url = self.importar(docx_ficha_com_endereco())
+        resposta = self.criar_so_cliente(url, publicar_no_mapa=False)
+        cliente = Cliente.objects.get()
+        self.assertFalse(cliente.publicar_no_mapa)
+        self.procurar_coordenadas.assert_not_called()
+        self.assertContains(self.client.get(resposta["Location"], **HOST), "Fora do mapa do site")
+
+    def test_cliente_que_ja_existe_e_completado_e_entra_no_mapa(self):
+        existente = Cliente.objects.create(nome_cliente="Parque da Alegria", telefone="(11) 97777-6655",
+                                           canal_telefone=Cliente.CanalTelefone.WHATSAPP)
+        url = self.importar(docx_ficha_com_endereco())
+        _, envio = self.proposta_e_envio(url, modo=None)
+        self.assertEqual(envio["cliente_modo"], "existente")
+        resposta = self.client.post(url, formulario_de(envio, cliente_confirmado=True), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        existente.refresh_from_db()
+        self.assertEqual(Cliente.objects.count(), 1)
+        self.assertTrue(existente.publicar_no_mapa)
+        self.assertTrue(existente.no_mapa)
+        self.assertEqual(existente.documento, "11.444.777/0001-61")
+
+    def test_desligar_o_mapa_nao_tira_do_mapa_quem_ja_estava(self):
+        existente = Cliente.objects.create(nome_cliente="Parque da Alegria", telefone="(11) 97777-6655",
+                                           canal_telefone=Cliente.CanalTelefone.WHATSAPP, publicar_no_mapa=True)
+        url = self.importar(docx_ficha_com_endereco())
+        _, envio = self.proposta_e_envio(url, modo=None)
+        self.client.post(url, formulario_de(envio, cliente_confirmado=True, publicar_no_mapa=False), **HOST)
+        existente.refresh_from_db()
+        self.assertTrue(existente.publicar_no_mapa)
+
+    def test_a_tela_final_do_orcamento_tambem_diz_do_mapa(self):
+        url = self.importar(docx_ficha_com_endereco())
+        _, envio = self.proposta_e_envio(url)  # com o orçamento ligado
+        envio["itens"] = [{"uid": "n1", "descricao": "Montagem", "produto": "", "avulsa": True,
+                           "conferido": False, "quantidade": "1", "valor_unitario": "500,00"}]
+        resposta = self.client.post(url, formulario_de(envio, frete="0,00"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        pronto = self.client.get(resposta["Location"], **HOST)
+        self.assertContains(pronto, "Orçamento #")
+        self.assertContains(pronto, "Entrou no mapa do site")
+
+
+class MapaDoClienteImportadoTests(TestCase):
+    """Onde a coordenada é procurada: o caminho do cadastro à mão, e depois o do painel."""
+
+    def setUp(self):
+        self.cliente = Cliente.objects.create(nome_cliente="Escola X", telefone="(11) 98888-7777",
+                                              publicar_no_mapa=True)
+        self.endereco = EnderecoCliente.objects.create(cliente=self.cliente, cep="01310-100",
+                                                       endereco="Avenida Paulista", numero="1000",
+                                                       cidade="São Paulo", estado="SP")
+
+    def test_primeiro_a_consulta_rapida_do_cep(self):
+        with mock.patch.object(mapa, "buscar_coordenadas_cep_rapido", return_value=(-23.56, -46.65)) as rapido, \
+                mock.patch.object(EnderecoCliente, "localizar") as completo:
+            self.assertEqual(mapa.procurar_coordenadas(self.endereco), (-23.56, -46.65, ""))
+        rapido.assert_called_once_with("01310-100")
+        completo.assert_not_called()
+
+    def test_sem_resposta_rapida_vale_o_localizar_do_painel(self):
+        def localizar(endereco):
+            endereco.latitude, endereco.longitude, endereco.precisao = Decimal("-23.5"), Decimal("-46.6"), "rua"
+            return True
+
+        with mock.patch.object(mapa, "buscar_coordenadas_cep_rapido", return_value=(None, None)), \
+                mock.patch.object(EnderecoCliente, "localizar", autospec=True, side_effect=localizar):
+            resultado = mapa.colocar_no_mapa(self.cliente)
+        self.assertEqual(resultado["no_mapa"], True)
+        self.endereco.refresh_from_db()
+        self.assertEqual((self.endereco.latitude, self.endereco.precisao), (Decimal("-23.5"), "rua"))
+
+    def test_cadastro_arquivado_nao_vai_ao_mapa(self):
+        self.cliente.ativo = False
+        self.cliente.save()
+        with mock.patch.object(mapa, "procurar_coordenadas") as procurar:
+            resultado = mapa.colocar_no_mapa(self.cliente)
+        procurar.assert_not_called()
+        self.assertFalse(resultado["no_mapa"])
+        self.assertEqual(resultado["motivo"], mapa.ARQUIVADO)
 
 
 # ======================================================================

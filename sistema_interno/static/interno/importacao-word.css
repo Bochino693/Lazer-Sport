@@ -132,23 +132,41 @@
    cliente" têm display próprio (grid, flex), que venceria o do navegador. */
 .ls-imp-body [hidden]{display:none!important}
 
-/* ----------------------------------- orçamento, ou só o cliente */
-/* As duas saídas da importação, lado a lado e grandes: é a primeira
-   decisão da tela, e a que muda tudo o que vem abaixo. */
-.ls-imp-pergunta{font-size:1rem;font-weight:900;margin:0 0 10px;color:var(--text)}
-.ls-imp-caminhos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.ls-imp-caminho{cursor:pointer;position:relative;display:block;margin:0}
-.ls-imp-caminho input{position:absolute;opacity:0;pointer-events:none}
-.ls-imp-caminho span{
-  display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start;height:100%;
-  padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);
+/* ------------------------------- o cliente primeiro; orçamento é opção */
+/* "Cadastrar o cliente" é o título; "Criar o orçamento também" e
+   "Aparecer no mapa do site" são chaves (checkbox com cara de switch),
+   grandes o bastante para o polegar. */
+.ls-imp-pergunta{display:flex;align-items:center;gap:8px;font-size:1.05rem;font-weight:900;margin:0 0 4px;color:var(--text)}
+.ls-imp-pergunta i{color:var(--acento)}
+.ls-imp-modo-nota{margin:0 0 12px}
+.ls-imp-tambem,.ls-imp-mapa{
+  position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:start;
+  margin:0;padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel-2);cursor:pointer;
 }
-.ls-imp-caminho i{grid-row:span 2;font-size:1.35rem;line-height:1.2;color:var(--muted)}
-.ls-imp-caminho strong{font-size:.92rem;font-weight:900;color:var(--text)}
-.ls-imp-caminho small{font-size:.78rem;line-height:1.35;color:var(--muted)}
-.ls-imp-caminho input:checked + span{border-color:var(--acento);background:rgba(var(--acento-rgb),.13);box-shadow:inset 0 0 0 1px var(--acento)}
-.ls-imp-caminho input:checked + span i{color:var(--acento)}
-.ls-imp-caminho input:focus-visible + span{outline:2px solid var(--acento);outline-offset:2px}
+.ls-imp-mapa{margin:4px 0 14px}
+.ls-imp-tambem input,.ls-imp-mapa input{position:absolute;opacity:0;pointer-events:none}
+.ls-imp-interruptor{
+  position:relative;width:44px;height:26px;margin-top:1px;border-radius:999px;
+  background:var(--line);border:1px solid var(--line);transition:background .15s ease,border-color .15s ease;
+}
+.ls-imp-interruptor::after{
+  content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+  background:var(--panel);box-shadow:0 1px 3px rgba(var(--sombra-rgb),.35);transition:transform .15s ease;
+}
+.ls-imp-tambem input:checked ~ .ls-imp-interruptor,
+.ls-imp-mapa input:checked ~ .ls-imp-interruptor{background:var(--acento);border-color:var(--acento)}
+.ls-imp-tambem input:checked ~ .ls-imp-interruptor::after,
+.ls-imp-mapa input:checked ~ .ls-imp-interruptor::after{transform:translateX(18px)}
+.ls-imp-tambem input:focus-visible ~ .ls-imp-interruptor,
+.ls-imp-mapa input:focus-visible ~ .ls-imp-interruptor{outline:2px solid var(--acento);outline-offset:2px}
+.ls-imp-tambem-texto{display:grid;gap:2px;min-width:0}
+.ls-imp-tambem-texto strong{font-size:.92rem;font-weight:900;color:var(--text)}
+.ls-imp-tambem-texto strong i{color:var(--acento)}
+.ls-imp-tambem-texto small{font-size:.8rem;line-height:1.4;color:var(--muted)}
+.ls-imp-tambem-texto small b{color:var(--text);font-weight:900}
+.ls-imp-tambem.tem-oferta{border-color:var(--acento)}
+.ls-imp-tambem:has(input:checked),.ls-imp-mapa:has(input:checked){background:rgba(var(--acento-rgb),.1);border-color:var(--acento)}
+.ls-imp-mapa-aviso{color:var(--yellow-texto)!important;font-weight:800}
 
 /* -------------------------------------------------------- cliente */
 .ls-imp-modo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
@@ -293,7 +311,6 @@
   .ls-imp-item-campos .ls-imp-campo-largo{grid-column:1 / -1}
 }
 @media (max-width:760px){
-  .ls-imp-caminhos{grid-template-columns:minmax(0,1fr)}
   .ls-imp-criar{bottom:calc(66px + env(safe-area-inset-bottom,0px))}
   .ls-imp-campos{grid-template-columns:minmax(0,1fr)}
   .ls-imp-item{padding:12px}
@@ -331,6 +348,21 @@
 .ls-imp-pronto-itens li.total{border-top:1px solid var(--line);padding-top:8px;font-weight:900}
 .ls-imp-pronto-itens li.total strong{color:var(--green-texto);font-size:1.1rem}
 .ls-imp-pronto-acoes{display:flex;flex-wrap:wrap;gap:8px}
+/* Só o cliente: um cartão, sem o vazio da segunda coluna. */
+.ls-imp-pronto.so-cliente{grid-template-columns:minmax(0,640px)}
+/* Se o cliente entrou no mapa da home -- a razão do cadastro pelo
+   documento -- ou por que não, com o caminho para acertar. */
+.ls-imp-pronto-mapa{
+  display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:10px 12px;border-radius:var(--radius-md);
+  border:1px solid var(--line);background:var(--panel-2);font-size:.88rem;line-height:1.45;color:var(--text-2);
+}
+.ls-imp-pronto-mapa i{font-size:1.15rem;line-height:1.2}
+.ls-imp-pronto-mapa strong{color:var(--text)}
+.ls-imp-pronto-mapa.sim{border-color:var(--green-texto)}
+.ls-imp-pronto-mapa.sim i{color:var(--green-texto)}
+.ls-imp-pronto-mapa.nao{border-color:var(--yellow-texto)}
+.ls-imp-pronto-mapa.nao i{color:var(--yellow-texto)}
+.ls-imp-pronto-mapa a{font-weight:900;margin-left:4px;white-space:nowrap}
 @media (max-width:760px){
   .ls-imp-pronto{grid-template-columns:minmax(0,1fr)}
   .ls-imp-pronto-dados div{grid-template-columns:minmax(0,1fr);gap:0}

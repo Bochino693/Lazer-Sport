@@ -1,9 +1,9 @@
 /* ======================================================================
    CONFERÊNCIA DA IMPORTAÇÃO (WORD OU PDF)
 
-   O QUE ESTE ARQUIVO FAZ. Liga a tela de conferência: a escolha entre
-   "Cadastrar cliente e criar orçamento" e "Só cadastrar o cliente", a
-   busca de produto em cada item (a mesma do orçamento), a busca de
+   O QUE ESTE ARQUIVO FAZ. Liga a tela de conferência: a chave "Criar o
+   orçamento também" (o padrão é só o cliente), a chave "Aparecer no mapa
+   do site", a busca de produto em cada item (a mesma do orçamento), a busca de
    cliente, os botões de leitura e de sugestão, as contas refeitas a cada
    tecla, a lista do que falta e o botão "Criar", que só acende com tudo
    completo.
@@ -140,10 +140,12 @@ LSTela.pronto(function () {
     alvo.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
-  /* ------------------------------------- orçamento, ou só o cliente */
-  var caminho = (form.querySelector('[name="modo"]:checked') || {}).value || "orcamento";
+  /* --------------------------- o cliente primeiro; orçamento é opção */
+  /* "Criar o orçamento também" é uma chave: desligada, é só o cliente. */
+  var chaveOrcamento = document.getElementById("modoOrcamento");
+  var caminho = chaveOrcamento && chaveOrcamento.checked ? "orcamento" : "cliente";
   function aplicarCaminho() {
-    caminho = (form.querySelector('[name="modo"]:checked') || {}).value || "orcamento";
+    caminho = chaveOrcamento && chaveOrcamento.checked ? "orcamento" : "cliente";
     /* As partes do orçamento SOMEM no "só o cliente", mas não perdem o
        que já foi conferido: quem volta para "criar orçamento" acha tudo
        como deixou. O servidor ignora esses campos no "só o cliente". */
@@ -155,8 +157,22 @@ LSTela.pronto(function () {
     });
     atualizar();
   }
-  form.querySelectorAll('[name="modo"]').forEach(function (radio) {
-    radio.addEventListener("change", aplicarCaminho);
+  if (chaveOrcamento) chaveOrcamento.addEventListener("change", aplicarCaminho);
+
+  /* APARECER NO MAPA: sem endereço não há alfinete. A chave não trava
+     nada (o cliente é cadastrado do mesmo jeito); o aviso só diz o que
+     vai faltar para o alfinete aparecer. */
+  var chaveMapa = document.getElementById("campoMapa");
+  function avisarMapa() {
+    var aviso = document.getElementById("avisoMapaSemEndereco");
+    if (!aviso || !chaveMapa) return;
+    var temLugar = !!(valorDe("campoCep") || valorDe("campoCidade"));
+    aviso.hidden = !(chaveMapa.checked && !temLugar);
+  }
+  if (chaveMapa) chaveMapa.addEventListener("change", avisarMapa);
+  ["campoCep", "campoCidade"].forEach(function (id) {
+    var campo = document.getElementById(id);
+    if (campo) campo.addEventListener("input", avisarMapa);
   });
 
   /* ----------------------------------------------------- cliente */
@@ -749,5 +765,6 @@ LSTela.pronto(function () {
 
   aplicarModo();
   aplicarCaminho();
+  avisarMapa();
   renumerar();
 });

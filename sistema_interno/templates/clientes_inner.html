@@ -18,6 +18,19 @@
     </p>
   </div>
   <div class="ls-page-hero-actions">
+    {% comment %}
+      CADASTRAR PELO DOCUMENTO. "vc deve deixar facil acesso só o cadastro
+      de cliente": o orçamento, a proposta ou a ficha em Word ou PDF vira
+      cliente cadastrado -- e alfinete no mapa da página inicial -- sem
+      digitar de novo. A conferência abre em "Só cadastrar o cliente"; o
+      orçamento é opcional. Quem importa é quem pode criar proposta (a
+      mesma porta da importação).
+    {% endcomment %}
+    {% if permissoes_interno.orcamentos_criar %}
+    <a href="{% url 'importar_orcamento_word' %}?para=cliente" class="btn btn-outline-success" id="cadastrarPeloDocumento">
+      <i class="bi bi-file-earmark-person me-1" aria-hidden="true"></i> Cadastrar pelo Word ou PDF
+    </a>
+    {% endif %}
     <button type="button" class="btn btn-success" id="novoCliente">
       <i class="bi bi-person-plus me-1"></i> Novo cliente
     </button>
@@ -904,15 +917,6 @@ LSTela.pronto(function () {
     });
   });
 
-  /* ?abrir=<id>: quem acabou de cadastrar o cliente (pela importação do
-     documento, por exemplo) chega com a ficha dele já aberta, e não numa
-     lista onde ainda teria de procurar. */
-  (function () {
-    var abrir = new URLSearchParams(window.location.search).get("abrir");
-    if (!abrir || !/^\d+$/.test(abrir)) return;
-    var botao = document.querySelector('[data-dossie="' + abrir + '"]');
-    abrirDossie(abrir, botao ? botao.dataset.nome : "");
-  })();
 
   /* ------------------------------------------------- mandar uma oferta */
   var tipoOferta = document.getElementById("dossieOfertaTipo");
@@ -1276,6 +1280,24 @@ LSTela.pronto(function () {
   });
 
   Painel.ligarExclusao();
+
+  /* ?abrir=<id>: quem acabou de cadastrar o cliente (pela importação do
+     documento, por exemplo) chega com a ficha dele já aberta, e não numa
+     lista onde ainda teria de procurar. ?editar=<id> abre o cadastro para
+     editar -- é por onde se acerta o endereço que o mapa não achou. Fica
+     no fim: a lista de clientes e o formulário já estão prontos. */
+  (function () {
+    var parametros = new URLSearchParams(window.location.search);
+    var editar = parametros.get("editar");
+    if (editar && /^\d+$/.test(editar) && achar(editar)) {
+      abrir(editar);
+      return;
+    }
+    var aberto = parametros.get("abrir");
+    if (!aberto || !/^\d+$/.test(aberto)) return;
+    var botao = document.querySelector('[data-dossie="' + aberto + '"]');
+    abrirDossie(aberto, botao ? botao.dataset.nome : "");
+  })();
 });
 </script>
 {% endblock %}

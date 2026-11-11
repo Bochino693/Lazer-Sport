@@ -10,7 +10,15 @@ DUAS TELAS, NESTA ORDEM, E NENHUM ATALHO ENTRE ELAS.
      de dinheiro. A pessoa escolhe "Cadastrar cliente e criar orçamento"
      ou "Só cadastrar o cliente". O orçamento nasce RASCUNHO; nada é
      enviado ao cliente.
-  3. `ImportacaoConcluidaView` diz o que foi criado, com os links.
+  3. `ImportacaoConcluidaView` (com orçamento) e `ClienteImportadoView`
+     (só o cliente) dizem o que foi criado -- e se o cliente entrou no
+     mapa da home --, com os links.
+
+O CLIENTE PRIMEIRO. A conferência abre sempre em "Só cadastrar o
+cliente", com "Aparecer no mapa do site" ligado; o orçamento é uma chave.
+Da aba Clientes, o botão "Cadastrar pelo Word ou PDF" chega aqui com
+`?para=cliente`: a mesma importação, com os textos e a volta da aba
+Clientes.
 
 A LEITURA É POR REGRA; A IA É REFORÇO. O Word é lido pelas tabelas e
 pelos textos; o PDF com texto, pelo texto de cada página (pypdf, aqui
@@ -39,8 +47,8 @@ from django.utils import timezone
 from django.views.generic import View
 
 from .context_processors import invalidar_avisos
-from .importacao_word import conferencia, formulario, ia, leitor, sessao
-from .models import Orcamento
+from .importacao_word import conferencia, formulario, ia, leitor, mapa, sessao
+from .models import Cliente, Orcamento
 from .permissoes import capacidades
 from .utils import ErroDeFormulario
 from .views import OrcamentoInternoRequiredMixin
@@ -63,6 +71,7 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
 
     def contexto(self, **extras):
         contexto = {
+            "para_cliente": self.para_cliente,
             "ia_ligada": ia.chave_configurada(),
             "modelo_ia": ia.modelo_configurado(),
             "tamanho_maximo_mb": leitor.TAMANHO_MAXIMO // (1024 * 1024),
@@ -70,18 +79,25 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
         contexto.update(extras)
         return contexto
 
+    @staticmethod
+    def _para_cliente(request) -> bool:
+        """Veio da aba Clientes ("Cadastrar pelo Word ou PDF")?"""
+        return (request.GET.get("para") or request.POST.get("para") or "") == "cliente"
+
     def get(self, request):
+        self.para_cliente = self._para_cliente(request)
         if not self.pode_criar(request):
             return self.negar(request)
         return render(request, self.template_name, self.contexto())
 
     def post(self, request):
+        self.para_cliente = self._para_cliente(request)
         if not self.pode_criar(request):
             return self.negar(request)
         arquivo = request.FILES.get("arquivo")
         if arquivo is None:
             return render(request, self.template_name, self.contexto(
-                erro="Escolha o arquivo do orçamento: Word (.docx) ou PDF.",
+                erro="Escolha o documento: Word (.docx) ou PDF.",
             ), status=400)
         nome = (arquivo.name or "documento.docx")[:120]
         # O tamanho é conferido ANTES de ler: o arquivo de 200 MB não chega
@@ -129,6 +145,8 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
             if perguntas:
                 leitura["escolhas"] = {str(k): v for k, v in ia.escolher_produtos(perguntas).items()}
 
+        # De onde a pessoa veio: é para lá que o "Descartar" a devolve.
+        leitura["para"] = "cliente" if self.para_cliente else "orcamento"
         token = sessao.guardar(request, leitura)
         return redirect("conferir_importacao_word", token=token)
 
@@ -251,7 +269,7 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         if request.POST.get("action") == "descartar":
             sessao.descartar(request, token)
             messages.info(request, f"A importação de “{leitura['arquivo']}” foi descartada.")
-            return redirect("orcamentos_inner")
+            return redirect("clientes_inner" if leitura.get("para") == "cliente" else "orcamentos_inner")
 
         proposta = conferencia.montar_proposta(leitura)
         envio = formulario.ler_envio(request.POST)
@@ -279,22 +297,23 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         invalidar_avisos(request.user)
         cliente = criado["cliente"]
         orcamento = criado["orcamento"]
-        if orcamento is None:
-            # Só o cliente: a pessoa chega na ficha dele, já aberta.
-            if criado["cliente_novo"]:
-                texto = f"Cliente “{cliente.nome_cliente}” cadastrado a partir de “{leitura['arquivo']}”."
-            elif criado["completados"]:
-                texto = (f"Cadastro de “{cliente.nome_cliente}” atualizado a partir de "
-                         f"“{leitura['arquivo']}”: {', '.join(criado['completados'])}.")
-            else:
-                texto = f"Cadastro de “{cliente.nome_cliente}” conferido: nada mudou."
-            messages.success(request, texto)
-            return redirect(f"{reverse('clientes_inner')}?{urlencode({'q': cliente.nome_cliente, 'abrir': cliente.pk})}")
-        sessao.guardar_conclusao(request, orcamento.pk, {
+        # O alfinete: depois de salvar e fora da transação (ver mapa.py).
+        # Achando ou não o endereço, o cliente já está cadastrado.
+        no_mapa = mapa.colocar_no_mapa(cliente) if criado["mapa_pedido"] else {
+            "marcado": cliente.publicar_no_mapa, "no_mapa": cliente.no_mapa, "onde": "", "motivo": "",
+            "ja_estava": cliente.no_mapa,
+        }
+        resumo = {
             "arquivo": leitura["arquivo"],
             "cliente_novo": criado["cliente_novo"],
             "completados": criado["completados"],
-        })
+            "mapa": no_mapa,
+            "para": leitura.get("para", ""),
+        }
+        if orcamento is None:
+            sessao.guardar_conclusao(request, f"c{cliente.pk}", resumo)
+            return redirect("cliente_importado", pk=cliente.pk)
+        sessao.guardar_conclusao(request, orcamento.pk, resumo)
         return redirect("importacao_concluida", pk=orcamento.pk)
 
     def desenhar(self, request, token, leitura, proposta, envio, *, validado=None, status=200, erro=""):
@@ -311,6 +330,10 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
                 alerta["aceito"] = True
                 alerta["justificativa"] = envio["justificativas"][alerta["id"]]
         vermelhos = [a for a in alertas if a["nivel"] == conferencia.NIVEL_VERMELHO]
+        # O cliente que a leitura achou no cadastro: se ele já está no mapa,
+        # a chave do mapa diz isso em vez de prometer um alfinete novo.
+        vinculo_id = proposta["cliente"]["vinculo"]["cliente_id"]
+        ligado = Cliente.objects.filter(pk=vinculo_id).first() if vinculo_id else None
 
         # O motivo de cada pendência vai para junto do campo, além da
         # lista do topo: quem rola até o frete vê ali mesmo o que falta.
@@ -345,6 +368,8 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             "linhas": leitura["linhas"],
             "hoje": timezone.localdate(),
             "validade_padrao": Orcamento.validade_padrao(),
+            "oferta_orcamento": formulario.oferta_de_orcamento(proposta),
+            "ja_no_mapa": bool(ligado and ligado.no_mapa),
             "contas": do_orcamento["contas"],
             "tipos_cliente": formulario.Cliente.Tipo.choices,
             "dados_tela": {
@@ -383,12 +408,23 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         return render(request, self.template_name, contexto, status=status)
 
 
+def _links_do_cliente(cliente) -> dict:
+    busca = {"q": cliente.nome_cliente}
+    return {
+        # A ficha (histórico) aberta na lista de clientes.
+        "link_cliente": f"{reverse('clientes_inner')}?{urlencode(dict(busca, abrir=cliente.pk))}",
+        # O cadastro aberto para editar: é onde se acerta o endereço.
+        "link_editar_cliente": f"{reverse('clientes_inner')}?{urlencode(dict(busca, editar=cliente.pk))}",
+    }
+
+
 class ImportacaoConcluidaView(_SoQuemCriaProposta, View):
     """O que a importação criou, com o caminho para cada coisa.
 
     Abrir direto a edição do orçamento escondia a outra metade: que o
     cliente também foi cadastrado (ou ligado ao que já existia, e
-    completado). Esta tela diz as duas coisas e leva a cada uma.
+    completado) -- e se ele entrou no mapa. Esta tela diz tudo e leva a
+    cada coisa.
 
     Só quem importou vê: o orçamento é dele (`responsavel`), e o resumo
     do que mudou no cliente vem da sessão dele.
@@ -410,10 +446,44 @@ class ImportacaoConcluidaView(_SoQuemCriaProposta, View):
             "cliente": cliente,
             "itens": itens,
             "resumo": resumo,
+            "mapa": resumo.get("mapa") or {},
             "link_orcamento": f"{reverse('orcamentos_inner')}?editar={orcamento.pk}",
-            "link_cliente": (
-                f"{reverse('clientes_inner')}?{urlencode({'q': cliente.nome_cliente, 'abrir': cliente.pk})}"
-                if cliente else ""
-            ),
+            **(_links_do_cliente(cliente) if cliente else {"link_cliente": "", "link_editar_cliente": ""}),
+        }
+        return render(request, self.template_name, contexto)
+
+
+class ClienteImportadoView(_SoQuemCriaProposta, View):
+    """A tela final do "Só cadastrar o cliente": quem é, e se está no mapa.
+
+    O cadastro pelo documento existe para povoar o mapa da home. Então a
+    tela diz, com todas as letras, se o alfinete foi desenhado (e onde) ou
+    por que não -- com o caminho para acertar o endereço na ficha.
+
+    Só quem importou vê: o resumo vem da sessão dele.
+    """
+
+    template_name = "importacao_concluida_inner.html"
+
+    def get(self, request, pk):
+        if not self.pode_criar(request):
+            return self.negar(request)
+        resumo = sessao.conclusao(request, f"c{pk}")
+        if resumo is None:
+            return redirect(f"{reverse('clientes_inner')}?{urlencode({'abrir': pk})}")
+        cliente = get_object_or_404(Cliente, pk=pk)
+        mapa_agora = dict(resumo.get("mapa") or {})
+        # O endereço pode ter sido acertado na ficha depois: vale o de agora.
+        if mapa_agora.get("marcado") and cliente.no_mapa:
+            mapa_agora.update(no_mapa=True, motivo="")
+        contexto = {
+            "orcamento": None,
+            "cliente": cliente,
+            "itens": [],
+            "resumo": resumo,
+            "mapa": mapa_agora,
+            "link_orcamento": "",
+            "link_novo_orcamento": f"{reverse('orcamentos_inner')}?{urlencode({'novo': 1, 'cliente': cliente.pk})}",
+            **_links_do_cliente(cliente),
         }
         return render(request, self.template_name, contexto)

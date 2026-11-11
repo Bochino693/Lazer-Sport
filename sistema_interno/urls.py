@@ -68,7 +68,12 @@ from .views_gestao import (
     OrdensProducaoView,
     ProdutosProducaoView,
 )
-from .views_importacao import ConferirImportacaoView, ImportacaoConcluidaView, ImportarOrcamentoWordView
+from .views_importacao import (
+    ClienteImportadoView,
+    ConferirImportacaoView,
+    ImportacaoConcluidaView,
+    ImportarOrcamentoWordView,
+)
 from .views_jogos import JogoGerarApkView, JogoGerarExeView, JogosInnerView
 from .views_jogos_vivo import JogosAoVivoView
 from .views_objetos_3d import Objetos3DInnerView
@@ -225,6 +230,11 @@ urlpatterns = [
         'orcamentos/importar/concluido/<int:pk>/',
         ImportacaoConcluidaView.as_view(),
         name='importacao_concluida',
+    ),
+    path(
+        'orcamentos/importar/cliente/<int:pk>/',
+        ClienteImportadoView.as_view(),
+        name='cliente_importado',
     ),
     path(
         'orcamentos/importar/<str:token>/',

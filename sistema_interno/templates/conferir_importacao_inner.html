@@ -53,32 +53,29 @@
 
       <!-- ======================================== O QUE FAZER COM ELE -->
       {% comment %}
-        "Pode ter vezes que não quero o orçamento junto, apenas cadastrar o
-        cliente." A escolha vem marcada pelo documento -- com itens ou
-        valores, orçamento; sem eles (uma ficha de cadastro), só o
-        cliente -- e a pessoa troca com um toque.
+        O CLIENTE PRIMEIRO; O ORÇAMENTO É OPÇÃO. "vc deve deixar facil
+        acesso só o cadastro de cliente, ai é opcional o orçamento." A
+        conferência abre sempre em "Cadastrar o cliente"; quando o
+        documento tem itens ou valores, a chave diz quantos e quanto, para
+        a pessoa ligar o orçamento com um toque. Desligada, o formulário
+        nem manda o campo `modo` -- e o servidor lê "só o cliente".
       {% endcomment %}
       <section class="ls-panel ls-imp-bloco" id="blocoModo" aria-labelledby="tituloModo">
         <div class="ls-panel-body">
-          <h2 class="ls-imp-pergunta" id="tituloModo">O que fazer com este documento?</h2>
-          <div class="ls-imp-caminhos" role="radiogroup" aria-labelledby="tituloModo">
-            <label class="ls-imp-caminho">
-              <input type="radio" name="modo" value="orcamento" id="modoOrcamento"{% if envio.modo == "orcamento" %} checked{% endif %}>
-              <span>
-                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
-                <strong>Cadastrar cliente e criar orçamento</strong>
-                <small>O cliente é cadastrado (ou ligado ao cadastro que já existe) e o orçamento nasce como rascunho.</small>
-              </span>
-            </label>
-            <label class="ls-imp-caminho">
-              <input type="radio" name="modo" value="cliente" id="modoCliente"{% if envio.modo == "cliente" %} checked{% endif %}>
-              <span>
-                <i class="bi bi-person-plus" aria-hidden="true"></i>
-                <strong>Só cadastrar o cliente</strong>
-                <small>Sem orçamento: o cliente é cadastrado, ou o cadastro dele é atualizado, com os dados abaixo.</small>
-              </span>
-            </label>
-          </div>
+          <h2 class="ls-imp-pergunta" id="tituloModo"><i class="bi bi-person-plus" aria-hidden="true"></i> Cadastrar o cliente</h2>
+          <p class="ls-imp-nota ls-imp-modo-nota">Confira os dados abaixo: o cliente é cadastrado, ou o cadastro que já existe é completado.</p>
+          <label class="ls-imp-tambem{% if oferta_orcamento %} tem-oferta{% endif %}" for="modoOrcamento">
+            <input type="checkbox" name="modo" value="orcamento" id="modoOrcamento" role="switch"{% if envio.modo == "orcamento" %} checked{% endif %}>
+            <span class="ls-imp-interruptor" aria-hidden="true"></span>
+            <span class="ls-imp-tambem-texto">
+              <strong>Criar o orçamento também</strong>
+              {% if oferta_orcamento %}
+              <small id="ofertaOrcamento">O documento tem {% if oferta_orcamento.itens %}<b>{{ oferta_orcamento.itens }} {% if oferta_orcamento.itens == 1 %}item{% else %}itens{% endif %}</b>{% else %}valores{% endif %}{% if oferta_orcamento.total %}, <b>R$ {{ oferta_orcamento.total }}</b>{% endif %}: ligue para conferir e criar o orçamento junto, como rascunho.</small>
+              {% else %}
+              <small id="ofertaOrcamento">O documento não traz itens nem valores. Ligue se quiser montar o orçamento aqui mesmo.</small>
+              {% endif %}
+            </span>
+          </label>
         </div>
       </section>
 
@@ -201,6 +198,23 @@
           <p class="ls-imp-falta-motivo" data-falta-de="cliente-contato_envio"{% if not faltas.cliente_contato_envio %} hidden{% endif %}>
             <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ faltas.cliente_contato_envio|capfirst }}</span>
           </p>
+
+          {% comment %}
+            APARECER NO MAPA: ligado por padrão. É para povoar o mapa da
+            home que o cadastro pelo documento existe. O alfinete precisa
+            do endereço: depois de salvar, o painel procura a coordenada
+            (ver importacao_word/mapa.py) e a tela final diz se achou.
+            Desligado, o campo não vai -- e quem já estava no mapa fica.
+          {% endcomment %}
+          <label class="ls-imp-mapa" for="campoMapa">
+            <input type="checkbox" name="publicar_no_mapa" value="1" id="campoMapa" role="switch"{% if envio.publicar_no_mapa %} checked{% endif %}>
+            <span class="ls-imp-interruptor" aria-hidden="true"></span>
+            <span class="ls-imp-tambem-texto">
+              <strong><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> Aparecer no mapa do site</strong>
+              <small id="notaMapa">{% if ja_no_mapa %}Este cliente já está no mapa da página inicial.{% else %}O alfinete vai para o endereço abaixo, no mapa da página inicial.{% endif %}</small>
+              <small class="ls-imp-mapa-aviso" id="avisoMapaSemEndereco" hidden>Sem endereço não há alfinete: preencha pelo menos a cidade (o cliente é cadastrado do mesmo jeito).</small>
+            </span>
+          </label>
 
           <fieldset class="ls-imp-endereco">
             <legend>Endereço <small>(serve à entrega, à montagem e ao mapa)</small></legend>
@@ -437,11 +451,11 @@
         <div class="ls-imp-criar-total" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %}><span>Total</span><strong id="contaTotalLateral">R$ {{ contas.total }}</strong></div>
         <button type="submit" class="btn btn-success" id="criarOrcamento"{% if not validado.pronto %} disabled{% endif %}>
           <i class="bi bi-check2-all me-1" aria-hidden="true"></i>
-          <span data-rotulo-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>Criar cliente e orçamento</span>
+          <span data-rotulo-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>Cadastrar cliente e criar orçamento</span>
           <span data-rotulo-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>Cadastrar cliente</span>
         </button>
         <small data-rotulo-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>O orçamento nasce como <strong>rascunho</strong>. Nada é enviado ao cliente.</small>
-        <small data-rotulo-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>Nenhum orçamento é criado. Você vai para a ficha do cliente.</small>
+        <small data-rotulo-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>Sem orçamento. Para criar um junto, ligue “Criar o orçamento também”.</small>
         <a href="#painelPendencias" class="ls-imp-criar-falta" id="criarFalta"{% if validado.pronto %} hidden{% endif %}>Falta preencher: <span>{{ validado.pendencias|length }}</span></a>
       </div>
     </aside>
