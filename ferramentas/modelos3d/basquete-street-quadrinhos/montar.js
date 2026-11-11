@@ -184,12 +184,12 @@ const START = { u0: 0.79, u1: 0.97, v0: 0.044, v1: 0.1 };
 const PORTA = { x0: -XF + 30, x1: -XF + 230, y0: PE + 110, y1: PE + 490 };
 // a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/2)
 const RESOLUCAO = {
-  "lateral-externa-esquerda": 1024, "lateral-externa-direita": 1024, "lateral-interna-esquerda": 896, "lateral-interna-direita": 896,
+  "lateral-externa-esquerda": 1024, "lateral-externa-direita": 1024, "lateral-interna-esquerda": 768, "lateral-interna-direita": 768,
   prancha: 896, "fundo-cesta": 768, "teto-interno": 512, frente: 768, "testeira-frente": 768, "testeira-fundo": 256,
   "testeira-teto": 384, "testeira-superior-esquerda": 384, "testeira-superior-direita": 384,
   "testeira-lateral-esquerda": 384, "testeira-lateral-direita": 384,
 };
-const QUALIDADE_JPEG = 0.82;
+const QUALIDADE_JPEG = 0.8;
 
 // ---------- materiais e o acúmulo de peças por material ----------
 const pecas = new Map(); // nome -> { material, geometrias: [] }
@@ -397,13 +397,19 @@ for (const s of [-1, 1]) {
   const atras = s < 0 ? Math.min(...ext.pontos.map(([a]) => a)) : Math.max(...ext.pontos.map(([a]) => a));
   const ptsChapa = ext.pontos.map(([a, b]) => [Math.abs(a - atras) < 2 ? aCostas : a, b]);
   // (a chapa, embaixo do adesivo, com o contorno e os furos simplificados: menos triângulos, a mesma forma)
-  const fechado = (f) => simplificar([...f, f[0]], 2.5).slice(0, -1);
-  placa(M.preto, fechado(ptsChapa), fora, ESP, ext.furos.map(fechado));
+  const fechado = (f) => {
+    // o polígono fechado: partido no ponto mais longe do primeiro, cada metade simplificada
+    const d = (q) => Math.hypot(q[0] - f[0][0], q[1] - f[0][1]);
+    const longe = f.reduce((m, q, k) => (d(q) > d(f[m]) ? k : m), 0);
+    return [...simplificar(f.slice(0, longe + 1), 4).slice(0, -1), ...simplificar([...f.slice(longe), f[0]], 4).slice(0, -1)];
+  };
+  const furosChapa = ext.furos.map(fechado);
+  placa(M.preto, fechado(ptsChapa), fora, ESP, furosChapa);
   const mExt = await adesivo(`lateral-externa-${lado}`, [ext.ret[2] - ext.ret[0], ext.ret[3] - ext.ret[1]],
     `o lado de fora da ${lado}, com o contorno da folha e a bola vazada (vista de fora)`);
   colar(mExt, ext.pontos, fora, ext.ret, 0, 1, ext.furos);
   // a rede de proteção dentro de cada furo, no meio da chapa
-  for (const furo of ext.furos) {
+  for (const furo of furosChapa) {
     const g = new THREE.ShapeGeometry(forma(furo), 1);
     const pos = g.attributes.position;
     const uv = g.attributes.uv;

@@ -617,7 +617,8 @@ class SemTabuaTests(TestCase):
                     self.assertGreater(len(cores), 8)
                 # no 3D, a cabeceira é a faixa da arte (~0,40 m), e não do chão ao campo (~0,75 m)
                 largura, altura = pecas[peca]["mm"]
-                self.assertEqual(largura, 808)
+                self.assertEqual(largura, pecas["tampo"]["mm"][1])  # entre as laterais: a largura do tampo
+                self.assertAlmostEqual(largura, 805, delta=10)  # (a fita de LED da borda conta na altura da mesa)
                 self.assertLess(altura, 450)
 
     def test_vem_depois_da_0147(self):
