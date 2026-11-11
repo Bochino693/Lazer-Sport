@@ -3514,25 +3514,27 @@
  "lateral-esquerda-2": {
   "px": [
    271,
-   252
+   135
   ],
   "caixa": [
    0,
    424,
    271,
    676
-  ]
+  ],
+  "faixa_lisa_px": 117
  },
  "lateral-direita-2": {
   "px": [
    271,
-   252
+   135
   ],
   "caixa": [
    1329,
    424,
    1600,
    676
-  ]
+  ],
+  "faixa_lisa_px": 117
  }
 }

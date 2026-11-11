@@ -44,7 +44,12 @@ sai da folha: **1,51 m de comprimento** (o 1,50 m do Air Game Kids) e **0,83 m
 de largura** (o catálogo diz 0,86 m: conta a borda), o tampo de 1,41 m ×
 0,81 m e o campo a 0,75 m do chão (as laterais sobem 7 a 15 cm acima dele).
 As cabeceiras ficam entre as laterais, na largura do tampo (as laterais passam
-3 cm de cada ponta). Se a mesa de verdade for outra, é mudar `ALT` (a escala
+3 cm de cada ponta). Na folha, cada cabeceira vem com um retângulo **azul
+liso** embaixo da arte: essa tábua **não existe na mesa**. O recorte a tira
+(`"sem_faixa_lisa": true` no `recortes.json`; a altura tirada fica em
+`faixa_lisa_px` no `formas.json`), a cabeceira é só a faixa da arte (~0,40 m)
+logo abaixo do tampo, e embaixo dela a mesa é aberta entre os pés das
+laterais. A altura do campo continua saindo da peça inteira da folha. Se a mesa de verdade for outra, é mudar `ALT` (a escala
 sai dele) e as medidas no `core/arena.py` e no `core/cadastro_modelos.py`.
 
 O resto da mesa não está na folha e é o mínimo para ela funcionar: a régua

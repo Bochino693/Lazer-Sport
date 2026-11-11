@@ -1794,3 +1794,23 @@ Dependência nova: rjsmin (requirements.txt).
    (CategoriasInfoView.VITRINES), ferramentas/categorias/ (cenas.js,
    pecas.js, gerar.cjs, compor.py, index.html).
    Testes: core/tests_categorias_capas.py.
+
+54) AIR GAME KIDS ALIENÍGENAS SEM A TÁBUA AZUL EMBAIXO DAS CABECEIRAS
+   Na folha de adesivos, as cabeceiras ("Lateral Esquerda 2" e "Lateral
+   Direita 2") vêm com um retângulo azul liso embaixo da arte. Essa tábua não
+   existe na mesa: a cabeceira é só a faixa da arte (~0,40 m), logo abaixo do
+   tampo, e embaixo dela a mesa é aberta entre os pés das laterais. O campo
+   continua a 0,75 m e a mesa, 0,90 × 0,83 × 1,51 m.
+   O recorte tira a faixa ("sem_faixa_lisa": true no recortes.json; a altura
+   tirada vai para faixa_lisa_px no formas.json; o código é o
+   _sem_faixa_lisa de ferramentas/modelos3d/adesivos_comum.py), e foram
+   refeitos o .glb, as fotos do cadastro e as seis fotos de categoria em que
+   a mesa aparece (Espaço Kids Play, Eletrônicos, Jogos de Mesa,
+   Competitivos, Famosos e Kids).
+   PRODUÇÃO: a migração 0148_air_game_kids_sem_tabua, só no Render, troca a
+   galeria do Air Game Kids Alienígenas (se é a que o cadastro subiu, e não
+   fotos do painel) e sobe as fotos de categoria que mudaram. Se a subida
+   falhar, o deploy segue; no servidor:
+       python manage.py cadastrar_variantes_adesivo --so air-game-kids-alienigenas --fotos
+       python manage.py atualizar_capas_categorias
+   Testes: core/tests_variantes_adesivo.py (SemTabuaTests).

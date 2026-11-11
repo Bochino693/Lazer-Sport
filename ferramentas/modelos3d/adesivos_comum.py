@@ -247,6 +247,32 @@ def _menor_retangulo(m, w, h):
     return centro, math.degrees(ang), du, dv
 
 
+def _sem_faixa_lisa(peca, tolerancia=28, fracao=0.97, sobra=6):
+    """Tira a faixa lisa (uma cor só, sem arte) do pé da peça: (a peça sem ela, quantas linhas saíram).
+
+    Na folha da gráfica, a cabeceira do Air Game Kids vem com um retângulo azul
+    liso embaixo da arte; essa tábua não existe na mesa (a cabeceira é só a
+    faixa da arte, logo abaixo do tampo, e embaixo dela a mesa é aberta). A
+    faixa é a sequência de linhas, a partir do pé, em que quase todo pixel tem
+    a cor dela; as `sobra` últimas linhas (a borda do recorte, esfumada na
+    folha) não contam e saem junto.
+    """
+    w, h = peca.size
+    px = peca.load()
+    cor = px[w // 2, h - 1 - sobra]
+
+    def lisa(y):
+        iguais = sum(1 for x in range(w) if all(abs(a - b) <= tolerancia for a, b in zip(px[x, y], cor)))
+        return iguais >= fracao * w
+
+    y = h - sobra
+    while y > 0 and lisa(y - 1):
+        y -= 1
+    if y >= h - sobra:  # não há faixa
+        return peca, 0
+    return peca.crop((0, 0, w, y)), h - y
+
+
 def recortar_peca(folha, dados, limiar=LIMIAR):
     """Uma peça da folha: (a imagem recortada, a caixa na folha, o contorno em frações ou None).
 
@@ -291,6 +317,10 @@ def recortar_peca(folha, dados, limiar=LIMIAR):
         peca = peca.rotate(girar, expand=True)
     if dados.get("espelhar"):
         peca = peca.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    faixa = 0
+    if dados.get("sem_faixa_lisa"):
+        peca, faixa = _sem_faixa_lisa(peca)
+        dados["_faixa_lisa_px"] = faixa
     contorno = None
     if dados.get("forma", "retangulo") == "contorno":
         if girar or dados.get("espelhar") or dados.get("angulo") is not None:
@@ -334,6 +364,9 @@ def recortar(pasta, argumentos=None):
             forma["contorno"] = contorno
         if dados.get("dobras"):
             forma["dobras"] = dados["dobras"]
+        if dados.get("_faixa_lisa_px"):
+            # a altura da faixa lisa tirada do pé (px): a peça inteira, em escala na folha, é px[1] + esta
+            forma["faixa_lisa_px"] = dados.pop("_faixa_lisa_px")
         formas[peca] = forma
         print(f"{peca}: {imagem.width} x {imagem.height} px" + (f", contorno com {len(contorno)} pontos" if contorno else ""))
         if desenho:

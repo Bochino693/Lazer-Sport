@@ -583,3 +583,91 @@ class Migracao0146Tests(TestCase):
             self._rodar(render=True, pasta=pasta)
         self.assertEqual(Brinquedos.objects.filter(nome_brinquedo=self.NOME).count(), 1)
         self.assertFalse(Brinquedos.objects.filter(nome_brinquedo=NOME_ANTES).exists())
+
+
+migracao_0148 = importlib.import_module("core.migrations.0148_air_game_kids_sem_tabua")
+
+
+class SemTabuaTests(TestCase):
+    """O Air Game Kids Alienígenas sem a tábua azul embaixo das cabeceiras (a 0148).
+
+    A folha põe um retângulo azul liso embaixo da arte das cabeceiras; essa
+    tábua não existe na mesa. O recorte a tira, a cabeceira é só a faixa da
+    arte logo abaixo do tampo, e o campo continua na altura de sempre.
+    """
+
+    CABECEIRAS = ("lateral-esquerda-2", "lateral-direita-2")
+
+    def test_o_adesivo_da_cabeceira_e_so_a_arte(self):
+        from PIL import Image
+
+        pasta = FERRAMENTAS / HOCKEY
+        recortes = json.loads((pasta / "recortes.json").read_text(encoding="utf-8"))["pecas"]
+        formas = json.loads((pasta / "formas.json").read_text(encoding="utf-8"))
+        pecas = json.loads((pasta / "pecas.json").read_text(encoding="utf-8"))
+        for peca in self.CABECEIRAS:
+            with self.subTest(peca):
+                self.assertTrue(recortes[peca].get("sem_faixa_lisa"))
+                self.assertGreater(formas[peca].get("faixa_lisa_px", 0), 80)  # a faixa saiu
+                with Image.open(pasta / "adesivos" / f"{peca}.png") as imagem:
+                    imagem = imagem.convert("RGB")
+                    w, h = imagem.size
+                    # o pé do adesivo ainda é arte (o chão lunar, de muitas cores), e não o azul liso
+                    cores = {tuple(c // 16 for c in imagem.getpixel((x, h - 4))) for x in range(0, w, 3)}
+                    self.assertGreater(len(cores), 8)
+                # no 3D, a cabeceira é a faixa da arte (~0,40 m), e não do chão ao campo (~0,75 m)
+                largura, altura = pecas[peca]["mm"]
+                self.assertEqual(largura, 808)
+                self.assertLess(altura, 450)
+
+    def test_vem_depois_da_0147(self):
+        self.assertEqual(migracao_0148.Migration.dependencies, [("core", "0147_categorias_capas_e_nomes")])
+
+    def _rodar(self, render, pasta=None):
+        with mock.patch("core.categorias_capas.atualizar_capas") as capas, mock.patch("builtins.print") as aviso:
+            if render:
+                a, b = _disco(pasta)
+                with a, b, override_settings(IS_RENDER=True):
+                    migracao_0148.Migration.operations[0].code(apps_reais, None)
+            else:
+                migracao_0148.Migration.operations[0].code(apps_reais, None)
+        return capas, " ".join(str(chamada[0][0]) for chamada in aviso.call_args_list)
+
+    def _no_catalogo(self, foto):
+        return Brinquedos.objects.create(
+            nome_brinquedo="Air Game Kids Alienígenas", descricao="x", avaliacao=5, voltz="220v",
+            imagem_brinquedo=f"brinquedos/{foto}",
+        )
+
+    def test_fora_do_render_nao_faz_nada(self):
+        brinquedo = self._no_catalogo(f"{HOCKEY}-frente.webp")
+        capas, _ = self._rodar(render=False)
+        capas.assert_not_called()
+        brinquedo.refresh_from_db()
+        self.assertEqual(brinquedo.imagem_brinquedo.name, f"brinquedos/{HOCKEY}-frente.webp")
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), 0)
+
+    def test_no_render_refaz_as_fotos_do_cadastro_e_as_capas(self):
+        brinquedo = self._no_catalogo(f"{HOCKEY}-frente.webp")
+        with tempfile.TemporaryDirectory() as pasta:
+            capas, _ = self._rodar(render=True, pasta=pasta)
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), len(CADASTROS[HOCKEY]["fotos"]))
+        capas.assert_called_once()
+        self.assertEqual(set(capas.call_args.kwargs["so"]),
+                         {"espaco-kids-play", "eletronicos", "jogos-de-mesa", "competitivos", "famosos", "kids"})
+
+    def test_no_render_as_fotos_do_painel_ficam(self):
+        brinquedo = self._no_catalogo("foto-da-loja.webp")
+        with tempfile.TemporaryDirectory() as pasta:
+            capas, _ = self._rodar(render=True, pasta=pasta)
+        brinquedo.refresh_from_db()
+        self.assertEqual(brinquedo.imagem_brinquedo.name, "brinquedos/foto-da-loja.webp")
+        self.assertEqual(brinquedo.imagens_brinquedo.count(), 0)
+        capas.assert_called_once()
+
+    def test_no_render_com_o_cloudinary_fora_avisa_e_segue(self):
+        self._no_catalogo(f"{HOCKEY}-frente.webp")
+        with tempfile.TemporaryDirectory() as pasta, \
+                mock.patch.object(FileSystemStorage, "save", side_effect=OSError("sem rede")):
+            _, avisos = self._rodar(render=True, pasta=pasta)
+        self.assertIn(f"cadastrar_variantes_adesivo --so {HOCKEY} --fotos", avisos)

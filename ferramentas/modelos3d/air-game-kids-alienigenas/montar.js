@@ -63,10 +63,13 @@ const XD = TAMPO.altura / 2; // a face de dentro das laterais: o tampo vai de um
 const XF = XD + ESP_LAT + PELE; // o adesivo de fora das laterais
 const ZT = TAMPO.largura / 2; // as pontas do tampo
 // a cabeceira fica entre as laterais (as laterais passam dela): na largura do tampo,
-// com a proporção da peça
+// com a proporção da peça. Na folha ela vem com uma faixa azul lisa embaixo da arte
+// (o recorte a tira: faixa_lisa_px); essa tábua não existe na mesa: a cabeceira é só
+// a faixa da arte, logo abaixo do tampo, e embaixo dela a mesa é aberta entre os pés
+// das laterais. A peça inteira da folha (com a faixa), em escala, dá a altura do campo.
 const [CW, CH] = FORMAS["lateral-esquerda-2"].px;
-const CABECEIRA = (2 * XD * CH) / CW;
-const CAMPO = CABECEIRA; // a superfície de jogo: o alto das cabeceiras
+const CAMPO = (2 * XD * (CH + (FORMAS["lateral-esquerda-2"].faixa_lisa_px || 0))) / CW; // a superfície de jogo
+const alturaDaCabeceira = (peca) => (2 * XD * FORMAS[peca].px[1]) / FORMAS[peca].px[0]; // só a arte
 const ZC = ZT + ESP + PELE; // o adesivo das cabeceiras
 const BORDA = { altura: 27, largura: 20, gol: 200 }; // a régua das pontas, com o gol no meio
 // a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/3)
@@ -87,7 +90,7 @@ function por(nome, geometria, matriz) {
 }
 
 const COR = {
-  azul: "#1d4f8f", // a pintura da mesa (o azul de baixo das cabeceiras)
+  azul: "#1d4f8f", // a pintura da mesa (a madeira atrás dos adesivos)
   borda: "#1e56b0", // a régua das pontas (o azul da moldura do tampo)
   boca: "#0d1420",
   soprador: "#3a3f48",
@@ -205,7 +208,8 @@ for (const [lado, b] of Object.entries(LADOS)) {
 }
 
 /* ======================================================================
-   2. AS CABECEIRAS: entre as laterais, do chão até o campo
+   2. AS CABECEIRAS: entre as laterais, a faixa da arte logo abaixo do campo
+      (embaixo, a mesa é aberta: nada de tábua até o chão)
    ====================================================================== */
 // a de trás é a "lateral esquerda 2" (à esquerda do tampo, na folha); a da frente, a "direita 2"
 const CABECEIRAS = {
@@ -213,9 +217,10 @@ const CABECEIRAS = {
   "lateral-direita-2": { z: ZC, b: base(V(-XD, 0, ZC), V(1, 0, 0), V(0, 1, 0)), onde: "a cabeceira da frente (a do Jogador 01), vista de fora" },
 };
 for (const [peca, { z, b, onde }] of Object.entries(CABECEIRAS)) {
-  caixa(M.pintura, -XD, XD, 0, CAMPO - PELE, z - Math.sign(z) * (ESP + PELE), z - Math.sign(z) * PELE);
-  const m = await adesivo(peca, [2 * XD, CABECEIRA], onde);
-  colar(m, retangulo(0, 0, 2 * XD, CABECEIRA), b, [0, 0, 2 * XD, CABECEIRA]);
+  const baixo = CAMPO - alturaDaCabeceira(peca);
+  caixa(M.pintura, -XD, XD, baixo, CAMPO - PELE, z - Math.sign(z) * (ESP + PELE), z - Math.sign(z) * PELE);
+  const m = await adesivo(peca, [2 * XD, CAMPO - baixo], onde);
+  colar(m, retangulo(0, baixo, 2 * XD, CAMPO), b, [0, baixo, 2 * XD, CAMPO]);
 }
 
 /* ======================================================================
