@@ -28,6 +28,7 @@ O QUE É OBRIGATÓRIO, E POR QUÊ:
 from __future__ import annotations
 
 import copy
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -65,10 +66,15 @@ def ler_envio(post) -> dict:
         valor = (post.get(nome) or "").strip()
         return valor[:limite] if limite else valor
 
-    ordem = [uid for uid in (post.get("itens_ordem") or "").split(",") if uid.strip()]
+    # O uid do item volta para o HTML e para seletores do JavaScript: só o
+    # formato que a própria tela gera ("i3" da leitura, "n2" acrescentado).
+    ordem = []
+    for uid in (post.get("itens_ordem") or "").split(","):
+        uid = uid.strip()
+        if re.fullmatch(r"[in]\d{1,4}", uid) and uid not in ordem:
+            ordem.append(uid)
     itens = []
     for uid in ordem[:60]:
-        uid = uid.strip()
         prefixo = f"item-{uid}-"
         itens.append({
             "uid": uid,
