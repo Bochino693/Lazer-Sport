@@ -369,3 +369,76 @@ class CarrinhoTests(_ComAdesivos):
         pedido.save(update_fields=["status", "carrinho_origem"])
         pedido.devolver_ao_carrinho()
         self.assertEqual(ItemCarrinho.objects.get().adesivo, "Alienígenas")
+
+
+class PainelTests(_ComAdesivos):
+    """O painel (Gestão de Brinquedos): um objeto só, o selo "2 adesivos" e a seção "Adesivos" do cadastro."""
+
+    INTERNO = {"HTTP_HOST": "interno.testserver"}
+    AJAX = {**INTERNO, "HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+    ROTA = "/site/brinquedos/"
+
+    def setUp(self):
+        super().setUp()
+        import tempfile
+        from unittest import mock
+
+        from django.core.files.storage import FileSystemStorage
+
+        self.gestor = User.objects.create_superuser("catalogo-adesivos", "c@exemplo.com", "x")
+        self.client.force_login(self.gestor)
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        disco = FileSystemStorage(location=pasta.name)
+        for campo in (Brinquedos._meta.get_field("imagem_brinquedo"), ImagemBrinquedo._meta.get_field("imagem"),
+                      VarianteAdesivo._meta.get_field("arquivo_3d")):
+            troca = mock.patch.object(campo, "storage", disco)
+            troca.start()
+            self.addCleanup(troca.stop)
+
+    def _foto(self, nome):
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        arquivo = BytesIO()
+        Image.new("RGB", (4, 3), "red").save(arquivo, "PNG")
+        return SimpleUploadedFile(nome, arquivo.getvalue(), content_type="image/png")
+
+    def test_um_objeto_com_o_selo_e_os_adesivos_no_cadastro(self):
+        resposta = self.client.get(self.ROTA, **self.INTERNO)
+        self.assertEqual(resposta.status_code, 200)
+        html = resposta.content.decode()
+        self.assertEqual(html.count('class="bq-nome">Air Game Kids<'), 1)
+        self.assertNotIn("Air Game Kids Alienígenas", html)
+        self.assertIn("2 adesivos", html)
+        self.assertIn("data-adesivos", html)
+        dados = json.loads(re.search(r'id="toysAdminData"[^>]*>(.*?)</script>', html, re.S).group(1))
+        adesivos = next(d for d in dados if d["id"] == self.base.pk)["adesivos"]
+        self.assertEqual([(a["nome"], a["padrao"]) for a in adesivos], [("Astronautas", True), ("Alienígenas", False)])
+        self.assertEqual(adesivos[1]["arquivo_3d"], "air-game-kids-alienigenas.glb")
+        self.assertEqual(len(adesivos[1]["fotos"]), 2)
+
+    def test_incluir_e_tirar_um_adesivo(self):
+        pebolim = _produto("Pebolim", "pebolim")
+        resposta = self.client.post(self.ROTA, {
+            "action": "adesivo_incluir", "id": pebolim.pk, "adesivo_nome": "Copa",
+            "adesivo_padrao_nome": "Clássico", "adesivo_fotos": [self._foto("copa-1.png"), self._foto("copa-2.png")],
+        }, **self.AJAX)
+        dados = json.loads(resposta.content)
+        self.assertEqual(dados["status"], "sucesso", dados)
+        self.assertEqual([(a["nome"], a["padrao"], len(a["fotos"])) for a in dados["adesivos"]],
+                         [("Clássico", True, 0), ("Copa", False, 2)])
+        self.assertEqual(Brinquedos.objects.filter(nome_brinquedo__startswith="Pebolim").count(), 1)
+        copa = VarianteAdesivo.objects.get(brinquedo=pebolim, slug="copa")
+        self.assertEqual(copa.fotos.count(), 2)
+        # tirar: as fotos saem junto; sem outro adesivo, o padrão sai também
+        resposta = self.client.post(self.ROTA, {"action": "adesivo_tirar", "id": pebolim.pk, "adesivo_id": copa.pk}, **self.AJAX)
+        self.assertEqual(json.loads(resposta.content)["adesivos"], [])
+        self.assertFalse(VarianteAdesivo.objects.filter(brinquedo=pebolim).exists())
+        self.assertEqual(ImagemBrinquedo.objects.filter(brinquedo=pebolim).count(), 1)
+        # o padrão não sai pela seção (é o próprio brinquedo)
+        padrao = VarianteAdesivo.objects.get(brinquedo=self.base, padrao=True)
+        resposta = self.client.post(self.ROTA, {"action": "adesivo_tirar", "id": self.base.pk, "adesivo_id": padrao.pk}, **self.AJAX)
+        self.assertEqual(resposta.status_code, 400)

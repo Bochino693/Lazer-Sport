@@ -577,6 +577,7 @@
 
         zerarFotos(brinquedo);
         mostrarObjeto3d(brinquedo);
+        pintarAdesivos(brinquedo);
         pintarPreco();
         pintarDescricao();
         form.querySelector('.bq-janela-corpo').scrollTop = 0;
@@ -587,9 +588,145 @@
         }
     }
 
+    /* ------------------------------------------------------------------
+       OS ADESIVOS (LEIA-ME 72): o mesmo brinquedo com outra arte, com as
+       fotos e o 3D de cada um. Incluir e tirar vão à parte (action
+       "adesivo_incluir" / "adesivo_tirar"), e a seção se redesenha com o que
+       o servidor devolve.
+       ------------------------------------------------------------------ */
+    const secaoAdesivos = form.querySelector('[data-adesivos]');
+    let brinquedoDosAdesivos = null;
+
+    function pintarAdesivos(brinquedo) {
+        if (!secaoAdesivos) return;
+        brinquedoDosAdesivos = brinquedo;
+        const lista = secaoAdesivos.querySelector('[data-adesivos-lista]');
+        const adesivos = (brinquedo && brinquedo.adesivos) || [];
+        lista.replaceChildren(...adesivos.map((adesivo) => {
+            const item = document.createElement('li');
+            item.className = 'bq-adesivo' + (adesivo.padrao ? ' is-padrao' : '');
+            const topo = document.createElement('div');
+            topo.className = 'bq-adesivo-topo';
+            const nome = document.createElement('strong');
+            nome.textContent = adesivo.nome;
+            topo.append(nome);
+            if (adesivo.padrao) {
+                const selo = document.createElement('span');
+                selo.className = 'bq-adesivo-selo';
+                selo.textContent = 'Padrão · as fotos e o 3D acima';
+                topo.append(selo);
+            }
+            const tres = document.createElement('span');
+            tres.className = 'bq-adesivo-3d';
+            tres.innerHTML = '<i class="bi bi-badge-3d" aria-hidden="true"></i> ';
+            tres.append(document.createTextNode(adesivo.arquivo_3d || 'sem 3D'));
+            topo.append(tres);
+            if (!adesivo.padrao) {
+                const tirar = document.createElement('button');
+                tirar.type = 'button';
+                tirar.className = 'bq-adesivo-tirar';
+                tirar.innerHTML = '<i class="bi bi-trash3" aria-hidden="true"></i> Tirar';
+                tirar.addEventListener('click', () => tirarAdesivo(adesivo));
+                topo.append(tirar);
+            }
+            item.append(topo);
+            if ((adesivo.fotos || []).length) {
+                const fotos = document.createElement('div');
+                fotos.className = 'bq-adesivo-fotos';
+                adesivo.fotos.forEach((foto) => {
+                    const img = document.createElement('img');
+                    img.src = foto.url;
+                    img.alt = adesivo.nome;
+                    img.loading = 'lazy';
+                    fotos.append(img);
+                });
+                item.append(fotos);
+            }
+            return item;
+        }));
+        secaoAdesivos.querySelector('[data-adesivos-vazio]').hidden = Boolean(adesivos.length) || !brinquedo;
+        secaoAdesivos.querySelector('[data-adesivos-salvar]').hidden = Boolean(brinquedo);
+        secaoAdesivos.querySelector('[data-adesivos-novo]').hidden = !brinquedo;
+        // o nome da arte atual só se pede no primeiro adesivo (depois ela já é o padrão)
+        secaoAdesivos.querySelector('[data-adesivo-padrao]').hidden = adesivos.some((a) => a.padrao);
+        secaoAdesivos.querySelector('[data-adesivo-msg]').textContent = '';
+    }
+
+    async function pedirAdesivo(campos) {
+        const dados = new FormData();
+        dados.append('csrfmiddlewaretoken', form.querySelector('[name=csrfmiddlewaretoken]').value);
+        dados.append('id', brinquedoDosAdesivos.id);
+        Object.entries(campos).forEach(([k, v]) => {
+            if (Array.isArray(v)) v.forEach((x) => dados.append(k, x));
+            else if (v !== undefined && v !== null) dados.append(k, v);
+        });
+        const msg = secaoAdesivos.querySelector('[data-adesivo-msg]');
+        msg.textContent = 'Enviando…';
+        try {
+            const resposta = await fetch(form.getAttribute('action'), {
+                method: 'POST', body: dados, credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const json = await resposta.json().catch(() => null);
+            if (!resposta.ok || !json || json.status !== 'sucesso') throw new Error((json && json.msg) || 'Não deu certo. Tente de novo.');
+            brinquedoDosAdesivos.adesivos = json.adesivos;
+            pintarAdesivos(brinquedoDosAdesivos);
+            secaoAdesivos.querySelector('[data-adesivo-msg]').textContent = json.msg;
+            mudouAdesivos = true;
+        } catch (falha) {
+            msg.textContent = falha.message;
+        }
+    }
+
+    let mudouAdesivos = false;
+
+    function tirarAdesivo(adesivo) {
+        if (!window.confirm(`Tirar o adesivo ${adesivo.nome}? As fotos dele saem junto.`)) return;
+        pedirAdesivo({ action: 'adesivo_tirar', adesivo_id: adesivo.id });
+    }
+
+    if (secaoAdesivos) {
+        const nome = secaoAdesivos.querySelector('[data-adesivo-nome]');
+        const padrao = secaoAdesivos.querySelector('[data-adesivo-padrao]');
+        const glb = secaoAdesivos.querySelector('[data-adesivo-3d]');
+        const fotos = secaoAdesivos.querySelector('[data-adesivo-fotos]');
+        glb.addEventListener('change', () => {
+            secaoAdesivos.querySelector('[data-adesivo-3d-rotulo]').textContent = glb.files[0] ? glb.files[0].name : '.glb do adesivo';
+        });
+        fotos.addEventListener('change', () => {
+            secaoAdesivos.querySelector('[data-adesivo-fotos-rotulo]').textContent = fotos.files.length
+                ? `${fotos.files.length} foto${fotos.files.length > 1 ? 's' : ''}` : 'Fotos do adesivo';
+        });
+        secaoAdesivos.querySelector('[data-adesivo-incluir]').addEventListener('click', async () => {
+            if (!brinquedoDosAdesivos) return;
+            if (!nome.value.trim()) {
+                secaoAdesivos.querySelector('[data-adesivo-msg]').textContent = 'Diga o nome do adesivo (ex.: Alienígenas).';
+                nome.focus();
+                return;
+            }
+            await pedirAdesivo({
+                action: 'adesivo_incluir',
+                adesivo_nome: nome.value.trim(),
+                adesivo_padrao_nome: padrao.hidden ? '' : padrao.value.trim(),
+                adesivo_3d: glb.files[0] || null,
+                adesivo_fotos: [...fotos.files],
+            });
+            nome.value = '';
+            glb.value = '';
+            fotos.value = '';
+            glb.dispatchEvent(new Event('change'));
+            fotos.dispatchEvent(new Event('change'));
+        });
+    }
+
     function fecharBrinquedo() {
         TIPOS.forEach(descartarPrevia);
         fechar(toyDialog);
+        // incluiu ou tirou um adesivo: a lista (o selo "N adesivos") vem de novo
+        if (mudouAdesivos) {
+            mudouAdesivos = false;
+            atualizarLista();
+        }
     }
 
     $('newToy').addEventListener('click', () => abrirBrinquedo(null));
