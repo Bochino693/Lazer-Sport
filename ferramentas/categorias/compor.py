@@ -120,11 +120,30 @@ def salvar(foto, saida, teto_kb=TETO_KB):
     return saida
 
 
+#: A caixa do produto em cada foto de produto (a da máscara, em fração da foto): o teste mede
+#: ali o contraste, a saturação e a nitidez ("nenhum pode ficar apagado").
+AREAS = PASTA / "areas-dos-produtos.json"
+
+
+def anotar_area(chave, mascara):
+    import json
+
+    caixa = mascara.point(lambda v: 255 if v > 128 else 0).getbbox()
+    if not caixa or not chave.startswith(("produto_", "capa_", "vista_")):
+        return
+    w, h = mascara.size
+    areas = json.loads(AREAS.read_text(encoding="utf-8")) if AREAS.exists() else {}
+    areas[chave.split("~")[0]] = [round(caixa[0] / w, 3), round(caixa[1] / h, 3), round(caixa[2] / w, 3), round(caixa[3] / h, 3)]
+    AREAS.write_text(json.dumps(dict(sorted(areas.items())), indent=1) + "\n", encoding="utf-8")
+
+
 def compor_no_lugar(chave):
     """A foto no lugar: o lugar desfocado pelo peso e os brinquedos nítidos por cima."""
     cor = Image.open(RENDERS / f"{chave}.png").convert("RGB")
     peso = Image.open(RENDERS / f"{chave}-peso.png").convert("L")
     mascara = Image.open(RENDERS / f"{chave}-mascara.png").getchannel("A")
+    if "~" not in chave:
+        anotar_area(chave, mascara)
     capa = chave.startswith("capa_")
     produto = chave.startswith(("produto_", "vista_"))
     padrao = DESFOQUE_PRODUTO if produto else DESFOQUE_CAPA if capa else DESFOQUE
@@ -139,6 +158,10 @@ def compor_no_lugar(chave):
     largura = cor.width // 2 if chave.startswith("vista_") else LARGURA
     foto = foto.resize((largura, round(largura * cor.height / cor.width)), Image.LANCZOS)
     foto = foto.filter(ImageFilter.UnsharpMask(radius=1.0, percent=40, threshold=2))
+    if produto or capa:
+        # a foto de produto: o produto bem nítido (a arte dos adesivos se lê; o fundo já está desfocado)
+        nitido = foto.filter(ImageFilter.UnsharpMask(radius=1.8, percent=90, threshold=2))
+        foto = Image.composite(nitido, foto, mascara.resize(foto.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(2)))
     if produto:
         # a capa do catálogo, como uma foto: a cor como está (nada de saturar), o brilho só
         # nas lâmpadas, a vinheta leve e um grão bem fino

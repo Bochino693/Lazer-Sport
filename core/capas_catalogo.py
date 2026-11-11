@@ -159,8 +159,8 @@ def aplicar_um(item, Brinquedos, ImagemBrinquedo, simular=False):
         return f"{nome}: não está no catálogo."
     perfil = _perfil(brinquedo, ImagemBrinquedo)
     capa = (perfil.imagem.name if perfil and perfil.imagem else "") or (brinquedo.imagem_brinquedo.name or "")
-    novo = nome_no_cadastro(chave)
     if perfil is not None and perfil.papel_na_capa == CENA:
+        novo = nome_no_cadastro(chave)
         if Path(novo).stem in capa:
             return f"{nome}: já está com a capa em cena."
         if simular:
@@ -175,6 +175,7 @@ def aplicar_um(item, Brinquedos, ImagemBrinquedo, simular=False):
         return f"{nome}: a capa foi trocada no painel ({capa or 'sem foto'}); fica como está."
     if simular:
         return f"{nome}: poria a capa em cena (a de antes fica na galeria)."
+    novo = nome_no_cadastro(chave)
     with transaction.atomic():
         fotos = list(ImagemBrinquedo.objects.filter(brinquedo=brinquedo).order_by("ordem", "id"))
         for foto in fotos:
