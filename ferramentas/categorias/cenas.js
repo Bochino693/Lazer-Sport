@@ -646,8 +646,8 @@ const CAPAS = {
   // o Strike Kids, quase de frente (a pista, a tela e a testeira)
   "strike-kids": {
     maquinas: async () => glb("strike-kids"),
-    lugar: "showroom", lente: 40, giro: 26, altura: 6, ocupa: 0.82,
-    lugarOp: { cenario: "logo", semente: 89 },
+    lugar: "showroom", lente: 40, giro: 30, altura: 6, ocupa: 0.82,
+    lugarOp: { cenario: "vitrine", semente: 89 },
   },
   // o Air Game Kids Alienígenas, um tanto de cima (o tampo e a lateral)
   "air-game-kids-alienigenas": {
@@ -1236,7 +1236,8 @@ window.renderizar = async (chave, ajustes = {}) => {
     luzEstudio.position.set(centro.x + Math.sin(a) * Math.cos(e) * d, centro.y + Math.sin(e) * d, centro.z + Math.cos(a) * Math.cos(e) * d);
     luzEstudio.target.position.copy(centro);
     luzEstudio.angle = Math.min(1.2, Math.atan((raioDoProduto * 1.6) / d) + 0.15);
-    luzEstudio.intensity = forca * (c.luzEstudio ?? 3.2) * d * d;
+    // (os nossos .glb pedem mais luz que as fotos do catálogo, que já vêm iluminadas: a arte sai viva)
+    luzEstudio.intensity = forca * (c.luzEstudio ?? (chave.startsWith("produto:") ? 3.2 : 4.8)) * d * d;
     luzEstudio.shadow.camera.near = 0.5;
     luzEstudio.shadow.camera.far = d * 3;
   }
