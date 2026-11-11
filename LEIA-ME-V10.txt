@@ -2423,3 +2423,163 @@ Dependência nova: rjsmin (requirements.txt).
    e as abas à vista. E a ficha do painel, no computador e no celular.
    Testes: core/tests_projeto3d.py (MontadorComoLauncherTests e
    PainelTests.test_a_ficha_tem_as_abas_sem_a_tela_cheia).
+
+65) IMPORTAR ORÇAMENTO DO WORD OU DO PDF (A IA LÊ, A CONFERÊNCIA GARANTE)
+   O pedido do cliente: "no sistema interno, você deve criar uma nova
+   espécie de IA também, para ler o documento Word e gerar um orçamento em
+   forma de objeto no sistema interno, para facilitar e evitar
+   retrabalhos... deve identificar os pontos de forma bem lógica e coerente
+   para nunca haver falha de identificação, principalmente de valores e
+   produtos". E depois: "obviamente, deve requisitar as informações
+   faltantes prevenindo erros e a uniformidade de informações nos
+   orçamentos" e "pode ser word ou pode ser pdf".
+   O QUE É: o orçamento escrito no Word (.docx) ou em PDF vira um RASCUNHO
+   de orçamento do painel, com cliente, itens ligados ao catálogo, valores
+   e condições -- depois de a pessoa conferir campo por campo. Nada é
+   enviado ao cliente: o rascunho abre na tela normal de edição, e dali
+   segue o caminho de sempre (salvar, avaliar, enviar).
+   COMO USAR: interno > Orçamentos > "Importar Word ou PDF (IA)" (só quem
+   pode criar orçamento: Vendas, Vendedor ambulante e Gestão; o Financeiro
+   não vê o botão e a tela responde 403). Escolha o .docx ou o PDF (até
+   10 MB) e toque em "Ler documento". .doc antigo (Word 97-2003), RTF e
+   arquivo com extensão que não bate com o conteúdo voltam com a frase do
+   que fazer (por exemplo: "abra no Word e salve como .docx"). A tela de
+   conferência mostra:
+     * no topo, "Falta preencher", com o motivo de cada item; o mesmo
+       motivo aparece em vermelho junto do campo;
+     * cada campo com o valor como vai ficar, o selo de confiança (alta,
+       média, confira, sem fonte), a FONTE (o id da linha ou célula do
+       documento e o trecho, ex.: "T1L3C4 · R$ 1.234,00" -- o toque abre o
+       "Documento lido" naquela linha) e, quando o painel padronizou,
+       "No documento" ao lado de "No orçamento" (PIX -> Pix, "Pula pula"
+       -> Pula-pula do catálogo, "15 dias" -> 24/11/2026, telefone e
+       CPF/CNPJ com a máscara do painel);
+     * os itens como cards, com a busca de produto do orçamento (a mesma),
+       os produtos parecidos, "Conferi: é este o produto" quando o vínculo
+       é só sugestão, e "Linha avulsa" para o que não é do catálogo;
+     * as contas refeitas a cada tecla (em centavos inteiros) e os alertas.
+   "Criar orçamento" só acende com tudo preenchido e todo alerta vermelho
+   resolvido -- e o servidor confere de novo (um POST montado à mão volta
+   com a mesma lista).
+   O QUE É OBRIGATÓRIO (o mesmo padrão para todo orçamento importado):
+   cliente cadastrado (confirmado, quando o vínculo veio só pelo nome) ou
+   cadastrado ali, com as regras da aba Clientes (nome não repetido, CPF/
+   CNPJ válido e não usado por outro, e-mail não usado por outro); WhatsApp
+   confirmado ou e-mail; cada item com produto do catálogo ou marcado como
+   linha avulsa, quantidade inteira maior que zero e valor unitário;
+   validade a partir de hoje; forma de pagamento; frete (zero vale, mas
+   escolhido: "Sem frete (R$ 0,00)"); forma de envio. Prazo de entrega,
+   pessoa de contato, endereço e documento do cliente novo são
+   recomendados (o prazo entra no começo das observações, porque o painel
+   não tem campo de prazo). Os padrões do painel (validade de 5 dias, frete
+   zero, preço do catálogo) aparecem como SUGESTÃO em botão, nunca
+   preenchidos sozinhos.
+   COMO LÊ, EM CAMADAS (sistema_interno/importacao_word/):
+     * leitor.py -- o .docx é aberto com zipfile + xml.etree (nenhuma
+       biblioteca nova): parágrafos e tabelas na ordem, célula a célula,
+       cabeçalho, rodapé e caixas de texto; texto riscado (controle de
+       alterações) e texto oculto ficam de fora; cada linha ganha um id
+       (P12, T1L3C4, CAB-P1, ROD-P1, CX-P1). XML com DOCTYPE/ENTITY e zip
+       que se expande demais são recusados.
+     * deterministica.py -- roda SEMPRE, sem IA: dinheiro em reais com
+       Decimal (R$ 1.234,56 / 1234,56 / R$ 1.234 = mil duzentos e trinta e
+       quatro; "mil e duzentos", "R$ 1,2 mil", "1,234" e "12,345" NÃO viram
+       número), quantidade inteira (fracionária é recusada), CPF/CNPJ com
+       os dígitos verificadores (o CNPJ da Lazer & Sport do cabeçalho não
+       vira do cliente), telefone, e-mail, datas, validade ("15 dias"
+       conta da data do documento), frete ("grátis", "por conta do
+       cliente", "a combinar"), desconto (em R$ ou em %), subtotal e total,
+       e as tabelas de itens pelo CABEÇALHO (Descrição/Qtd/Unitário/Total),
+       com as linhas Subtotal/Frete/Desconto/Total separadas dos itens.
+     * ia.py -- o Claude (SDK oficial `anthropic`, modelo do setting
+       ORCAMENTO_IA_MODELO, padrão claude-opus-5-5, esforço alto, saída
+       estruturada com Pydantic e fallback do lado do servidor) entende o
+       documento e devolve o orçamento num esquema fixo: para CADA valor e
+       CADA item, o texto como está escrito e a fonte (id + trecho). Ela
+       não calcula nem converte. Recusa, resposta cortada, limite de uso,
+       erro da API e falta de rede viram "IA indisponível" com o motivo.
+     * catalogo.py -- cada item com o catálogo (brinquedos, produtos de
+       produção e peças): nome exato sem acento e sem caixa primeiro;
+       depois semelhança, com os NÚMEROS pesando à parte ("Modelo 3" não é
+       "Modelo 5", "3 m" não é "4 m"). Vínculo automático só com confiança
+       alta; no meio do caminho fica sugerido e pede "Conferi"; abaixo
+       fica sem vínculo. Nos itens em dúvida a IA pode escolher entre os
+       candidatos -- só um id da lista ou "nenhum" -- e mesmo assim a
+       pessoa confirma. O cliente casa por CPF/CNPJ, depois e-mail, depois
+       telefone, depois nome (o nome sempre pede confirmação); sem nada,
+       a tela propõe cadastrar.
+   O QUE A CONFERÊNCIA GARANTE (conferencia.py e formulario.py):
+     * todo valor da IA está escrito na linha que ela citou (para dinheiro,
+       o mesmo número na célula); se não está, vira alerta e NÃO entra;
+       item que a IA "inventou" (texto que não está no documento) não
+       entra;
+     * quantidade x unitário = total da linha escrito no documento;
+     * soma das linhas = subtotal do documento; soma + frete - desconto =
+       total do documento;
+     * tabelas e IA leram números diferentes (valor, quantidade, CPF,
+       telefone, e-mail, validade): alerta VERMELHO, o campo abre VAZIO com
+       as duas leituras como botão, e a pessoa escolhe;
+     * o mesmo total escrito duas vezes com valores diferentes: vermelho;
+     * todo valor em reais do documento que não entrou em campo nenhum é
+       listado (pega o item que as duas leituras deixaram passar);
+     * o que não tem fonte fica vazio e marcado "Sem fonte no documento".
+   Alerta vermelho se resolve corrigindo (a conta volta a bater e o
+   alerta some sozinho) ou aceitando com justificativa escrita (mínimo de
+   10 letras), que vai para o histórico do orçamento.
+   VALOR FINAL COMBINADO (o campo Orcamento.valor_final, migração 0057):
+   quando o documento diz um total diferente da soma ("Valor total
+   negociado: R$ 18.000,00"), a tela mostra os dois e pergunta "Qual total
+   vale?": usar o total do documento como valor final combinado (o total
+   fica fixo, o desconto é gravado zero e a diferença aparece ao cliente
+   como desconto ou ajuste) ou manter a soma, com justificativa. Nenhuma
+   das duas vem marcada.
+   PDF: o PDF vai inteiro para o Claude (bloco de documento, base64) e
+   volta TRANSCRITO, com os mesmos ids, e lido no mesmo esquema; inclusive
+   PDF digitalizado. A conferência roda sobre a transcrição (fonte, contas,
+   releitura por regra), e como a transcrição também é da IA, nenhum valor
+   de PDF passa de confiança média -- confira com o PDF aberto ao lado.
+   Não há leitor de PDF no servidor: sem a chave, ou quando a leitura volta
+   sem texto ou sem orçamento, a tela PEDE o .docx (ou um PDF nítido) em
+   vez de adivinhar. Teto de 100 páginas.
+   SEM A CHAVE DA IA: o Word continua funcionando só com a leitura das
+   tabelas, e a conferência avisa "IA indisponível: leitura pelas tabelas
+   do documento; confira com atenção." (itens escritos em parágrafo, sem
+   tabela, entram com confiança baixa). O PDF pede o .docx.
+   COMO LIGAR A IA NO RENDER: no painel do Render, serviço web > Environment
+   > Add Environment Variable: ANTHROPIC_API_KEY = a chave da Anthropic
+   (console.anthropic.com > API Keys; começa com "sk-ant-"). Salvar e
+   publicar de novo (o Render reinicia o serviço). A chave NUNCA vai para o
+   código nem para o repositório. Opcionais: ORCAMENTO_IA_MODELO (padrão
+   claude-opus-5-5) e ORCAMENTO_IA_TIMEOUT (segundos por tentativa, padrão
+   90; o SDK tenta mais duas vezes em erro de rede, 429 ou 5xx). O pacote
+   `anthropic==2.8.0` entrou no requirements.txt: o build do Render instala.
+   A tela de envio diz se a IA está ligada.
+   PRIVACIDADE: com a IA ligada, o TEXTO do Word (ou o PDF inteiro) vai para
+   a API da Anthropic -- as duas telas dizem isso numa linha discreta. O
+   arquivo não é guardado: ele é lido da memória do pedido; as linhas de
+   texto e a leitura ficam na sessão de quem importou (no máximo 12 horas,
+   três importações por vez) e somem quando o orçamento é criado ou
+   descartado. Do arquivo, fica só o nome, no histórico.
+   O HISTÓRICO (AtividadeOrcamento, o mesmo do sino): "Importado do Word
+   «arquivo.docx»; lido com IA; 1 alerta(s) aceito(s) com justificativa;
+   ...; rascunho, nada enviado ao cliente." -- quem e quando são o autor e
+   a data do registro. Cada alerta aceito ganha uma linha com a
+   justificativa; as trocas de nome pelo catálogo ("«Pula pula» ->
+   Pula-pula") e o valor final combinado também. (O campo de resumo tem
+   240 caracteres; por isso são linhas separadas, e nenhuma tabela nova
+   foi criada.)
+   Código: sistema_interno/importacao_word/ (leitor, deterministica, ia,
+   catalogo, conferencia, formulario, sessao), sistema_interno/
+   views_importacao.py, templates importar_orcamento_inner.html,
+   conferir_importacao_inner.html, partes/importacao_item.html e
+   partes/importacao_origem.html, static/interno/importacao-word.css e
+   .js; rotas /orcamentos/importar/ e /orcamentos/importar/<token>/.
+   Testes: sistema_interno/tests_importacao_word.py (100 testes; os .docx e
+   o PDF de exemplo são montados no próprio teste -- tabela de itens, itens
+   em parágrafo, frete e desconto, total errado de propósito, produto que
+   não existe, valor negociado -- e a IA é um cliente falso, sem rede).
+   Conferido no Chromium, no computador (1440 x 900) e no celular (iPhone
+   13 e Pixel 7), nos temas Lua, Sol e Eclipse: importar o Word e o PDF,
+   conferir, escolher o valor final, resolver o que faltava, ver o botão
+   acender e o rascunho abrir na edição; sem erro de JavaScript e sem nada
+   fora da tela.
