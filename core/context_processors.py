@@ -140,6 +140,94 @@ def clientes_rodape(request):
 # POR USUÁRIO -- lazy, só consulta se o template usar
 # ============================================================
 
+def _selos_da_conta(request):
+    """Os números do cabeçalho de quem está logado, numa consulta só.
+
+    O cabeçalho mostra, para todo cliente logado e em toda página, quatro
+    números: itens no carrinho, manutenções abertas, lista de desejos e
+    pedidos em andamento. Eram quatro idas ao banco (cinco com o carrinho
+    cheio) -- com o Supabase pela rede, mais de meio segundo por página só
+    para os selos (LEIA-ME-V10, seção 63). Agora são subconsultas de um
+    SELECT só, com as MESMAS regras de antes: o primeiro carrinho do
+    perfil, as manutenções pendentes e em andamento, os desejos da conta e
+    os pedidos que não foram cancelados nem finalizados.
+
+    Memorizado na requisição: os quatro processadores leem daqui, e quem
+    não imprime nenhum número (a página que não usa o base.html) não paga
+    nada, porque continua tudo preguiçoso.
+    """
+    guardado = getattr(request, "_ls_selos_da_conta", None)
+    if guardado is not None:
+        return guardado
+
+    from django.db.models import IntegerField, OuterRef, Subquery, Value
+    from django.db.models.functions import Coalesce
+
+    from .models import ClientePerfil, Favorito, ItemCarrinho
+
+    def contagem(consulta, campo):
+        # COUNT agrupado pelo dono: uma linha (ou nenhuma, que vira zero)
+        return Coalesce(
+            Subquery(
+                consulta.order_by().values(campo).annotate(n=Count("id")).values("n")[:1],
+                output_field=IntegerField(),
+            ),
+            Value(0),
+        )
+
+    selos = {"perfil": False, "carrinho": 0, "pendentes": 0, "andamento": 0, "desejos": 0, "pedidos": 0}
+    perfil = getattr(request.user, "perfil", None)
+    if perfil is None:
+        # sem perfil, só a lista de desejos (que é da conta, não do perfil)
+        from .favoritos import meus_favoritos
+
+        selos["desejos"] = meus_favoritos(request, Favorito.Tipo.DESEJO).count()
+        request._ls_selos_da_conta = selos
+        return selos
+
+    primeiro_carrinho = (
+        Carrinho.objects.filter(cliente=OuterRef(OuterRef("pk"))).order_by("id").values("id")[:1]
+    )
+    itens_no_carrinho = Coalesce(
+        Subquery(
+            ItemCarrinho.objects
+            .filter(carrinho=Subquery(primeiro_carrinho))
+            .order_by().values("carrinho").annotate(total=Sum("quantidade")).values("total")[:1],
+            output_field=IntegerField(),
+        ),
+        Value(0),
+    )
+    linha = (
+        ClientePerfil.objects
+        .filter(pk=perfil.pk)
+        .annotate(
+            selo_carrinho=itens_no_carrinho,
+            selo_pendentes=contagem(Manutencao.objects.filter(usuario=OuterRef("pk"), status="P"), "usuario"),
+            selo_andamento=contagem(Manutencao.objects.filter(usuario=OuterRef("pk"), status="A"), "usuario"),
+            selo_desejos=contagem(
+                Favorito.objects.filter(usuario=OuterRef("user_id"), tipo=Favorito.Tipo.DESEJO), "usuario",
+            ),
+            selo_pedidos=contagem(
+                Pedido.objects.filter(cliente=OuterRef("pk")).exclude(status__in=["cancelado", "finalizado"]),
+                "cliente",
+            ),
+        )
+        .values("selo_carrinho", "selo_pendentes", "selo_andamento", "selo_desejos", "selo_pedidos")
+        .first()
+    )
+    selos["perfil"] = True
+    if linha:
+        selos.update({
+            "carrinho": linha["selo_carrinho"] or 0,
+            "pendentes": linha["selo_pendentes"] or 0,
+            "andamento": linha["selo_andamento"] or 0,
+            "desejos": linha["selo_desejos"] or 0,
+            "pedidos": linha["selo_pedidos"] or 0,
+        })
+    request._ls_selos_da_conta = selos
+    return selos
+
+
 def manutencao_notificacao(request):
     # Alertas pessoais do cliente não pertencem ao painel da fábrica.
     if getattr(request, "is_interno", False) or not request.user.is_authenticated:
@@ -153,17 +241,13 @@ def manutencao_notificacao(request):
     }
 
     def _contar():
-        perfil = getattr(request.user, "perfil", None)
-        if not perfil:
+        selos = _selos_da_conta(request)
+        if not selos["perfil"]:
             return vazio
 
-        # Uma query só, em vez de dois .count() separados.
-        agg = Manutencao.objects.filter(usuario=perfil).aggregate(
-            pendentes=Count("id", filter=Q(status="P")),
-            andamento=Count("id", filter=Q(status="A")),
-        )
-        pendentes = agg["pendentes"] or 0
-        andamento = agg["andamento"] or 0
+        # Do SELECT único dos selos do cabeçalho (`_selos_da_conta`).
+        pendentes = selos["pendentes"]
+        andamento = selos["andamento"]
         total = pendentes + andamento
 
         return {
@@ -210,22 +294,8 @@ def carrinho_context(request):
         }
 
     def _total():
-        perfil = getattr(request.user, "perfil", None)
-        if not perfil:
-            return 0
-
-        carrinho = (
-            Carrinho.objects
-            .filter(cliente=perfil)
-            .only("id")
-            .first()
-        )
-        if not carrinho:
-            return 0
-
-        return carrinho.itens.aggregate(
-            total=Sum("quantidade")
-        )["total"] or 0
+        # o primeiro carrinho do perfil, somado no SELECT dos selos
+        return _selos_da_conta(request)["carrinho"]
 
     total = SimpleLazyObject(_total)
 
@@ -240,17 +310,9 @@ def pedidos_ativos_context(request):
         return {}
 
     def _contar():
-        perfil = getattr(request.user, "perfil", None)
-        if not perfil:
-            return 0
-
-        # Antes: .exists() + .count() = 2 queries. Agora 1.
-        return (
-            Pedido.objects
-            .filter(cliente=perfil)
-            .exclude(status__in=["cancelado", "finalizado"])
-            .count()
-        )
+        # Antes: .exists() + .count() = 2 queries. Depois 1. Agora vem do
+        # SELECT único dos selos do cabeçalho (`_selos_da_conta`).
+        return _selos_da_conta(request)["pedidos"]
 
     total = SimpleLazyObject(_contar)
 
@@ -383,6 +445,10 @@ def favoritos_context(request):
         return {"total_lista_desejos": 0, "tem_lista_desejos": False}
 
     def _contar():
+        # Logado: do SELECT único dos selos do cabeçalho. Só o aparelho
+        # (cookie, sem conta): a contagem das marcações dele.
+        if logado:
+            return _selos_da_conta(request)["desejos"]
         return meus_favoritos(request, Favorito.Tipo.DESEJO).count()
 
     total = SimpleLazyObject(_contar)
