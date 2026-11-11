@@ -825,12 +825,26 @@ LOGGING = {
 # Antes de subir os workers, troque este backend por um compartilhado
 # (Redis: `django.core.cache.backends.redis.RedisCache`, `LOCATION` com a
 # URL do serviço) -- ver docs/TESTE_DE_CARGA.md, "Depois do cache".
-# Guarda até 300 chaves (padrão); por isso a busca livre e a faixa de
-# preço do catálogo não entram no cache (core/views.py, BrinquedosView).
+#
+# QUANTAS CHAVES. O padrão do Django é 300, e quando enche ele joga fora um
+# terço de uma vez (as menos usadas). Com a Arena, a Loja, os combos, as
+# promoções, os eventos e os projetos também no cache (LEIA-ME-V10, seção
+# 63), mais uma chave por ficha de brinquedo e por página de categoria, e
+# as do sino do painel, 300 enchia rápido -- e cada limpeza devolvia telas
+# populares ao banco. Medido: uma tela do catálogo ocupa de 2 a 30 KB no
+# cache (a Arena ~80 KB, a home ~550 KB): mil chaves cabem em ~10-20 MB.
+# A busca livre e a faixa de preço continuam fora do cache (core/views.py,
+# BrinquedosView): entradas sem limite esgotariam qualquer teto.
+try:
+    CACHE_MAX_ENTRIES = max(300, int(os.getenv("CACHE_MAX_ENTRIES", "1000")))
+except ValueError:
+    CACHE_MAX_ENTRIES = 1000
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "lazersport",
+        "OPTIONS": {"MAX_ENTRIES": CACHE_MAX_ENTRIES},
     }
 }
 
