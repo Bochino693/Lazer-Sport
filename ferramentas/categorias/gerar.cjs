@@ -42,6 +42,7 @@ const servidor = http.createServer((req, res) => {
   const pedidas = process.argv.slice(2);
   const chaves = pedidas.length ? pedidas : await page.evaluate(() => window.CENAS);
   // "chave@giro,altura,lente" experimenta outro ângulo (e grava com esse nome)
+  const lista = {};
   for (const pedido of chaves) {
     const inicio = Date.now();
     const [chave, angulo] = pedido.split("@");
@@ -54,8 +55,12 @@ const servidor = http.createServer((req, res) => {
       const sufixo = tipo === "cor" ? "" : `-${tipo}`;
       fs.writeFileSync(path.join(SAIDA, `${nome}${sufixo}.png`), Buffer.from(url.split(",")[1], "base64"));
     }
-    console.log(`${pedido}: ${((Date.now() - inicio) / 1000).toFixed(1)} s`, JSON.stringify(await page.evaluate(() => window.ultimaCaixa || "")));
+    const maquinas = await page.evaluate((c) => (window.MAQUINAS_DAS_CENAS || {})[c] || [], chave);
+    console.log(`${pedido}: ${((Date.now() - inicio) / 1000).toFixed(1)} s -- ${maquinas.join(", ")}`);
+    lista[chave] = maquinas;
   }
+  // as máquinas de cada foto (o LEIA-ME e os testes conferem: só itens do catálogo)
+  fs.writeFileSync(path.join(SAIDA, "maquinas-das-fotos.json"), JSON.stringify(lista, null, 1));
   await browser.close();
   servidor.close();
 })().catch((erro) => {

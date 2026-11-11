@@ -42,7 +42,7 @@ function sorteio(semente) {
   };
 }
 
-export function criarLugares(T, P) {
+export function criarLugares(T, P, extra = {}) {
   const GRAU = Math.PI / 180;
   // os materiais do lugar são só dele (a máscara dos brinquedos não pode pegar um material do lugar)
   const mats = new Map();
@@ -317,6 +317,91 @@ export function criarLugares(T, P) {
     return v;
   }
 
+  /* ---------------------------------------------------------------- a vida */
+  /** O confete parado no ar: os papeizinhos coloridos, fora do volume das máquinas. */
+  function confete(g, caixaDos, n = 160, semente = 1, altura = 4.5) {
+    const r = sorteio(semente);
+    const min = caixaDos.min, max = caixaDos.max;
+    const cores = ["#ef4444", "#facc15", "#22c55e", "#3b82f6", "#ec4899", "#f97316", "#a855f7", "#ffffff"];
+    const geo = new T.PlaneGeometry(0.07, 0.11);
+    let feitos = 0;
+    for (let i = 0; feitos < n && i < n * 6; i++) {
+      const x = min.x - 4 + r() * (max.x - min.x + 8), y = 0.4 + r() * altura, z = min.z - 3 + r() * (max.z - min.z + 6);
+      // não cobre as máquinas: só atrás delas, acima delas ou dos lados
+      const dentro = x > min.x - 0.2 && x < max.x + 0.2 && y < max.y + 0.5 && z > min.z - 0.3;
+      if (dentro) continue;
+      const o = malha(geo, mat(cores[i % cores.length], { side: T.DoubleSide, roughness: 0.5, emissive: cores[i % cores.length], emissiveIntensity: 0.15 }), x, y, z);
+      o.rotation.set(r() * 6, r() * 6, r() * 6);
+      g.add(o);
+      feitos++;
+    }
+  }
+  /** O cordão de lâmpadas (as luzinhas de festa) de (x0, z0) a (x1, z1), caindo no meio. */
+  function luzinhas(g, x0, z0, x1, z1, y, cores = ["#fde68a", "#fbcfe8", "#bae6fd", "#bbf7d0"]) {
+    const n = Math.max(6, Math.round(Math.hypot(x1 - x0, z1 - z0) / 0.45));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const yy = y - Math.sin(t * Math.PI) * 0.6;
+      esf(g, 0.06, luz(cores[i % cores.length], 2.6), x0 + (x1 - x0) * t, yy, z0 + (z1 - z0) * t, 10);
+    }
+  }
+  /** A luminária pendente redonda (a de papel do buffet), acesa. */
+  function pendente(g, x, y, z, cor = "#fff7ed", r = 0.32) {
+    cil(g, 0.006, 3, mat("#e5e7eb"), x, y + r, z, 4);
+    esf(g, r, luz(cor, 1.6), x, y, z, 24);
+  }
+  /** A mancha do sol que entra pela janela, no chão (um quadro de luz, macio nas bordas). */
+  function solNoChao(g, x, z, l, p, ry = 0, forca = 0.5) {
+    const t = tex("sol-no-chao", 256, 256, (c, w, h) => {
+      const gr = c.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.55);
+      gr.addColorStop(0, "rgba(255,244,214,1)");
+      gr.addColorStop(0.6, "rgba(255,240,200,.75)");
+      gr.addColorStop(1, "rgba(255,240,200,0)");
+      c.fillStyle = gr;
+      c.fillRect(0, 0, w, h);
+    });
+    const o = malha(new T.PlaneGeometry(l, p), new T.MeshBasicMaterial({ map: t, transparent: true, opacity: forca, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false }), x, 0.006, z);
+    o.rotation.x = -Math.PI / 2;
+    o.rotation.z = ry;
+    g.add(o);
+  }
+  /** O piso que reflete: fica um tanto transparente, e o espelho das máquinas aparece embaixo. */
+  function refletir(g, piso, quanto, corDeBaixo, m) {
+    piso.material.transparent = true;
+    piso.material.opacity = 1 - quanto;
+    const baixo = malha(new T.PlaneGeometry(300, 300), new T.MeshBasicMaterial({ color: corDeBaixo, fog: false }), m.centro.x, -12, m.centro.z);
+    baixo.rotation.x = -Math.PI / 2;
+    g.add(baixo);
+  }
+  /**
+   * As máquinas do fundo: outros itens de verdade da mesma categoria (as fotos do
+   * catálogo, `extra.maquina`), encostados no fundo e no lado, longe das da frente.
+   */
+  function maquinasAoFundo(g, lista, m, { folga = 0.9, distanciaDoFundo = 0.6 } = {}) {
+    if (!lista || !lista.length || !extra.maquina) return;
+    const r = sorteio(lista.length * 7);
+    let k = 0;
+    // no fundo: dos dois lados das máquinas da frente
+    const xs = [];
+    for (let d = 0; d < 8; d++) {
+      xs.push(m.max.x + folga + d * 1.15, m.min.x - folga - d * 1.15);
+    }
+    for (const x of xs) {
+      if (k >= lista.length) break;
+      g.add(extra.maquina(lista[k++], { x, z: m.zFundo + distanciaDoFundo + r() * 0.3, r: (r() - 0.5) * 10 }));
+    }
+    // e encostadas na parede do lado, vindo para a frente
+    const lado = m.ladoEsq ? 1 : -1;
+    for (let z = m.zFundo + 1.6; k < lista.length && z < m.centro.z + 8; z += 1.3) {
+      g.add(extra.maquina(lista[k++], { x: m.xLado + lado * 0.55, z, r: (r() - 0.5) * 10 }));
+    }
+  }
+  /** As crianças do fundo (as da Arena 3D), andando e correndo, longe. */
+  function criancasAoFundo(g, pontos) {
+    if (!extra.crianca) return;
+    pontos.forEach(([x, z, pose, r], i) => g.add(extra.crianca(10 + i, pose, { x, z, r })));
+  }
+
   /* ================================================================ OS LUGARES */
   const LUGARES = {
     /* ------------------------------------------------------------ o buffet infantil */
@@ -324,7 +409,8 @@ export function criarLugares(T, P) {
       const g = new T.Group();
       const m = medidas(caixaDos, giro, op.atras, op.lado);
       const H = Math.max(6.5, m.tam.y * 2.2);
-      chao(g, 160, 160, matTex("piso-buffet", 160, 160, 1.6, tacos(205, 150, 98), { roughness: 0.38 }), m.centro.x, m.centro.z);
+      const piso = chao(g, 160, 160, matTex("piso-buffet", 160, 160, 1.6, tacos(205, 150, 98), { roughness: 0.3 }), m.centro.x, m.centro.z);
+      refletir(g, piso, 0.12, "#7a5230", m);
       // a parede de bolinhas com o rodapé branco alto
       const corParede = op.parede || "#f9a8d4";
       for (const [l, x, z, ry] of [[160, m.centro.x, m.zFundo, 0], [160, m.xLado, m.centro.z, m.giroLado]]) {
@@ -358,14 +444,27 @@ export function criarLugares(T, P) {
       for (let i = 0; i < 3; i++) bandeirinhas(g, m.min.x - 6, m.max.x + 6, H - 0.8 - i * 0.55, m.zFundo + 0.4 + i * 0.9);
       cachoDeBaloes(g, m.xLado + lado * 0.6, m.zFundo + 0.7, 2.1, 2);
       cachoDeBaloes(g, op.cachoX ?? (m.ladoEsq ? m.max.x + 2.4 : m.min.x - 2.4), m.zFundo + 0.9, 1.9, 5);
-      return { grupo: g, fundo: "#fde4ef", neblina: ["#fde4ef", m.maior * 5 + 20, m.maior * 10 + 80], luz: { ceu: "#fff7ed", chao: "#d4a373", hemi: 1.0, sol: 2.0, amb: 0.45, exposicao: 1.0 } };
+      // a festa acesa: as luminárias de papel, as luzinhas e o confete no ar
+      for (let i = -4; i <= 4; i++) pendente(g, m.centro.x + i * Math.max(1.6, m.tam.x / 6), H - 1.6 - (i % 2) * 0.4, m.zFundo + 1.6 + (i % 3) * 0.6, ["#fff7ed", "#fde68a", "#fbcfe8"][(i + 9) % 3]);
+      luzinhas(g, m.min.x - 4, m.zFundo + 0.3, m.max.x + 4, m.zFundo + 0.3, H - 0.4);
+      luzinhas(g, m.xLado + lado * 0.3, m.zFundo, m.xLado + lado * 0.3, m.centro.z + 8, H - 0.6);
+      confete(g, caixaDos, 140, 3, Math.min(5, H - 1.5));
+      maquinasAoFundo(g, op.fundo, m);
+      criancasAoFundo(g, [[m.xLado + lado * 2.4, m.zFundo + 1.6, "andando", 60 * lado], [m.max.x + 3.6, m.zFundo + 2.0, "comemorando", -30]]);
+      const frente = (naTela) => {
+        const f = new T.Group();
+        const q = naTela(1.08, -1.04);
+        if (q) cachoDeBaloes(f, q.x, q.z, 0.85, 11);
+        return f;
+      };
+      return { grupo: g, frente, fundo: "#fde4ef", neblina: ["#fde4ef", m.maior * 5 + 20, m.maior * 10 + 80], luz: { ceu: "#fff7ed", chao: "#d4a373", hemi: 1.0, sol: 2.0, amb: 0.45, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ o corredor do shopping */
     shopping(caixaDos, giro, op = {}) {
       const g = new T.Group();
       const m = medidas(caixaDos, giro, op.atras ?? Math.max(2.2, m0(caixaDos) * 0.3), op.lado ?? Math.max(3.5, m0(caixaDos) * 0.3));
-      chao(g, 200, 200, matTex("piso-shopping", 200, 200, 2.4, (c, l, a) => {
+      const piso = chao(g, 200, 200, matTex("piso-shopping", 200, 200, 2.4, (c, l, a) => {
         for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
           c.fillStyle = (i + j) % 2 ? "#cbbfae" : "#a8998a";
           c.fillRect((i * l) / 2, (j * a) / 2, l / 2, a / 2);
@@ -374,6 +473,7 @@ export function criarLugares(T, P) {
         c.lineWidth = 3;
         c.strokeRect(0, 0, l, a);
       }, { roughness: 0.12, metalness: 0.05, envMapIntensity: 1.5 }), m.centro.x, m.centro.z);
+      refletir(g, piso, 0.26, "#6b5e52", m);
       // uma faixa escura no piso, de borda (o desenho do piso do corredor)
       const faixa = chao(g, 200, 0.5, mat("#9ca3af", { roughness: 0.12 }), m.centro.x, m.zFundo + 1.0, 0.0);
       faixa.position.y = -0.001;
@@ -408,7 +508,17 @@ export function criarLugares(T, P) {
       planta(g, m.min.x - 1.8, m.zFundo + 1.1, 2.0, "#f8fafc", 3);
       planta(g, m.max.x + 1.8, m.zFundo + 1.1, 1.8, "#f8fafc", 7);
       banco(g, m.xLado + lado * 0.8, m.centro.z + m.tam.z * 0.6 + 1.5, lado * Math.PI / 2);
-      return { grupo: g, fundo: "#e2e8f0", neblina: ["#e2e8f0", m.maior * 5 + 24, m.maior * 10 + 90], luz: { ceu: "#ffffff", chao: "#a8998a", hemi: 1.05, sol: 2.1, amb: 0.55, exposicao: 1.0 } };
+      // as máquinas do fundo (da mesma categoria), o movimento do corredor e, se pedido, o confete
+      maquinasAoFundo(g, op.fundo, m, { distanciaDoFundo: 0.9 });
+      criancasAoFundo(g, [[m.min.x - 3.6, m.zFundo + 1.8, "andando", 90], [m.max.x + 4.2, m.zFundo + 2.4, "correndo", -80], [m.xLado + lado * 1.8, m.centro.z + 2, "andando", 150]]);
+      if (op.confete) confete(g, caixaDos, 150, 5, 4.2);
+      const frente = (naTela) => {
+        const f = new T.Group();
+        const p = naTela(1.06, -1.0);
+        if (p) planta(f, p.x, p.z, 1.6, "#f8fafc", 13);
+        return f;
+      };
+      return { grupo: g, frente, fundo: "#e2e8f0", neblina: ["#e2e8f0", m.maior * 5 + 24, m.maior * 10 + 90], luz: { ceu: "#ffffff", chao: "#a8998a", hemi: 1.05, sol: 2.1, amb: 0.55, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ a game zone */
@@ -465,25 +575,30 @@ export function criarLugares(T, P) {
       for (const [dx, y, r, c] of [[-2.4, 4.0, 0.55, "#22d3ee"], [-1.5, 4.5, 0.35, "#f472b6"], [2.2, 4.2, 0.5, "#a3e635"]]) {
         g.add(malha(new T.TorusGeometry(r, 0.05, 10, 40), luz(c, 2.4), nx + dx, y, m.zFundo + 0.06));
       }
-      // as outras máquinas, encostadas no fundo e no lado (desfocadas na foto)
-      const cores = [["#7c3aed", "espaco"], ["#0ea5e9", "blocos"], ["#db2777", "ritmo"], ["#16a34a", "corrida"], ["#f59e0b", "tiro"]];
-      let k = 0;
-      for (let x = m.centro.x - 16; x <= m.centro.x + 16; x += 1.0) {
-        if (x > m.min.x - 0.8 && x < m.max.x + 0.8 && Math.abs(nx - x) > 3) continue;
-        if (Math.abs(nx - x) < 3) continue;
-        const [cor, arte] = cores[k++ % cores.length];
-        const gab = P.gabinete({ cor, cores: [cor, "#facc15", "#22d3ee", "#f472b6"], arte, letreiro: [cor, "#f472b6"] });
-        gab.position.set(x, 0, m.zFundo + 0.5);
-        g.add(gab);
+      // os hexágonos de neon no alto do fundo (o desenho de game zone)
+      const hexa = (r) => {
+        const pts = [];
+        for (let i = 0; i <= 6; i++) pts.push(new T.Vector3(Math.cos((i / 6) * Math.PI * 2) * r, Math.sin((i / 6) * Math.PI * 2) * r, 0));
+        return new T.TubeGeometry(new T.CatmullRomCurve3(pts, false, "catmullrom", 0), 36, 0.035, 6, false);
+      };
+      const rh = sorteio(21);
+      for (let i = 0; i < 26; i++) {
+        const c = ["#22d3ee", "#f472b6", "#a3e635", "#facc15", "#a78bfa"][i % 5];
+        const hx = m.centro.x - 13 + (i % 13) * 2.0 + (Math.floor(i / 13) % 2) * 1.0;
+        const hy = 3.5 + Math.floor(i / 13) * 1.6 + rh() * 0.2;
+        g.add(malha(hexa(0.5 + rh() * 0.25), luz(c, 2.2), hx, hy, m.zFundo + 0.08));
       }
-      const lado = m.ladoEsq ? 1 : -1;
-      for (let z = m.zFundo + 1.6; z <= m.centro.z + 10; z += 1.0) {
-        const [cor, arte] = cores[k++ % cores.length];
-        const gab = P.gabinete({ cor, cores: [cor, "#facc15", "#22d3ee", "#f472b6"], arte, letreiro: [cor, "#a78bfa"] });
-        gab.position.set(m.xLado + lado * 0.5, 0, z);
-        gab.rotation.y = m.giroLado;
-        g.add(gab);
+      // as outras máquinas, encostadas no fundo e no lado (desfocadas na foto): itens de
+      // verdade da mesma categoria, nunca um gabinete inventado
+      maquinasAoFundo(g, op.fundo, m, { folga: 1.0, distanciaDoFundo: 0.5 });
+      // os spots do teto e o movimento
+      for (let i = -8; i <= 8; i++) {
+        const spot = malha(new T.CircleGeometry(0.14, 18), luz("#fffbeb", 3), m.centro.x + i * 1.6, H - 0.05, m.zFundo + 1.2 + (i % 2) * 1.4);
+        spot.rotation.x = Math.PI / 2;
+        g.add(spot);
       }
+      criancasAoFundo(g, [[m.max.x + 2.4, m.zFundo + 2.2, "andando", -60], [m.min.x - 2.8, m.zFundo + 2.6, "correndo", 70]]);
+      confete(g, caixaDos, 70, 8, 3.5);
       return {
         grupo: g, fundo: "#1b1650", neblina: ["#2a2068", m.maior * 2.5 + 8, m.maior * 6 + 30],
         luz: { ceu: "#c4b5fd", chao: "#2a1f6b", hemi: 1.0, sol: 2.6, amb: 0.35, exposicao: 1.05, cores: [["#f472b6", -1], ["#22d3ee", 1]] },
@@ -558,7 +673,18 @@ export function criarLugares(T, P) {
         lamp.rotation.x = Math.PI / 2;
         g.add(lamp);
       }
-      return { grupo: g, fundo: "#b8c6d6", neblina: ["#c7d3e0", m.maior * 4 + 20, m.maior * 9 + 90], luz: { ceu: "#f8fafc", chao: "#64748b", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
+      for (let i = -3; i <= 3; i++) solNoChao(g, m.centro.x + i * 4.2 + 1.5, m.max.z + 1.8 + (i % 2) * 1.2, 2.6, 4.2, 0.35, 0.32);
+      criancasAoFundo(g, [[m.max.x + 2.2, m.zFundo + 2.2, "correndo", -70], [m.min.x - 2.4, m.zFundo + 3.0, "andando", 80], [m.max.x + 4.2, m.centro.z + 2.0, "comemorando", -30]]);
+      const frente = (naTela) => {
+        const f = new T.Group();
+        const p = naTela(-1.02, -0.98);
+        if (p) {
+          const cores = ["#f97316", "#facc15", "#22c55e", "#3b82f6"];
+          [[0, 0, 0], [0.62, 0, 0.1], [0.3, 0.6, 0.05], [-0.5, 0, 0.5]].forEach(([dx, dy, dz], i) => caixa(f, 0.6, 0.6, 0.6, mat(cores[i], { roughness: 0.8 }), p.x + dx, dy, p.z + dz, i * 0.4));
+        }
+        return f;
+      };
+      return { grupo: g, frente, fundo: "#b8c6d6", neblina: ["#c7d3e0", m.maior * 4 + 20, m.maior * 9 + 90], luz: { ceu: "#f8fafc", chao: "#64748b", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ a brinquedoteca */
@@ -702,7 +828,20 @@ export function criarLugares(T, P) {
         cil(g, 0.9, 0.3, mat("#a8a29e"), x, 0, z, 24);
         for (let k = 0; k < 18; k++) esf(g, 0.12, mat(["#f43f5e", "#facc15", "#ffffff", "#c084fc"][k % 4]), x + (r() - 0.5) * 1.4, 0.38, z + (r() - 0.5) * 1.4, 8);
       }
-      return { grupo: g, fundo: "#7dd3fc", neblina: ["#cfe8fb", 60, 240], luz: { ceu: "#e0f2fe", chao: "#4ade80", hemi: 1.1, sol: 2.4, amb: 0.5, exposicao: 1.0 } };
+      maquinasAoFundo(g, op.fundo, m, { folga: 1.6, distanciaDoFundo: 0.4 });
+      cachoDeBaloes(g, m.centro.x - raio - 1.2, m.centro.z - 1.5, 2.4, 3);
+      cachoDeBaloes(g, m.centro.x + raio + 0.8, m.centro.z - 2.5, 2.2, 6);
+      criancasAoFundo(g, [[m.centro.x - raio - 2.4, m.centro.z - 3, "correndo", 70], [m.centro.x + raio + 2.6, m.centro.z - 4, "andando", -100], [m.centro.x + 1.5, m.centro.z - raio - 3, "comemorando", 10]]);
+      const frente = (naTela) => {
+        const f = new T.Group();
+        const p = naTela(1.04, -0.98);
+        if (p) {
+          for (let k = 0; k < 7; k++) esf(f, 0.32 + (k % 3) * 0.08, mat(["#15803d", "#16a34a", "#22c55e"][k % 3], { roughness: 0.85 }), p.x + (k % 4) * 0.35 - 0.5, 0.3 + (k % 2) * 0.25, p.z + Math.floor(k / 4) * 0.4, 14);
+          for (let k = 0; k < 14; k++) esf(f, 0.07, mat(["#f43f5e", "#facc15", "#ffffff", "#c084fc"][k % 4]), p.x + (k % 5) * 0.28 - 0.6, 0.62 + (k % 3) * 0.12, p.z + (k % 2) * 0.3, 8);
+        }
+        return f;
+      };
+      return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#cfe8fb", 60, 240], luz: { ceu: "#e0f2fe", chao: "#4ade80", hemi: 1.1, sol: 2.4, amb: 0.5, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ o salão de festas do condomínio */
@@ -710,7 +849,8 @@ export function criarLugares(T, P) {
       const g = new T.Group();
       const m = medidas(caixaDos, giro, op.atras ?? 1.6, op.lado ?? 1.6);
       const H = 5.5;
-      chao(g, 120, 120, matTex("tacos-salao", 120, 120, 1.6, tacos(170, 112, 68), { roughness: 0.4 }), m.centro.x, m.centro.z);
+      const piso = chao(g, 120, 120, matTex("tacos-salao", 120, 120, 1.6, tacos(170, 112, 68), { roughness: 0.3 }), m.centro.x, m.centro.z);
+      refletir(g, piso, 0.16, "#5c3a1e", m);
       // o fundo de vidro: os caixilhos e, lá fora, o jardim e a piscina
       const fora = tex("jardim-piscina", 1024, 512, (c, l, a) => {
         const ceu = c.createLinearGradient(0, 0, 0, a * 0.45);
@@ -770,7 +910,15 @@ export function criarLugares(T, P) {
         g.add(cupula);
         esf(g, 0.1, luz("#fffbeb", 2.5), x, 2.58, z);
       }
-      return { grupo: g, fundo: "#f5efe6", neblina: ["#f5efe6", 26, 90], luz: { ceu: "#fffbeb", chao: "#b98455", hemi: 1.15, sol: 2.3, amb: 0.55, exposicao: 1.0 } };
+      for (let i = -3; i <= 3; i++) solNoChao(g, m.centro.x + i * 2.0 + 0.6, m.zFundo + 1.4, 1.5, 2.2, 0.25, 0.45);
+      criancasAoFundo(g, [[m.max.x + 2.4, m.zFundo + 1.2, "andando", -70]]);
+      const frente = (naTela) => {
+        const f = new T.Group();
+        const p = naTela(-1.04, -0.98);
+        if (p) planta(f, p.x, p.z, 1.4, "#d6d3d1", 17);
+        return f;
+      };
+      return { grupo: g, frente, fundo: "#f5efe6", neblina: ["#f5efe6", 26, 90], luz: { ceu: "#fffbeb", chao: "#b98455", hemi: 1.15, sol: 2.3, amb: 0.55, exposicao: 1.0 } };
     },
 
     /* ------------------------------------------------------------ a quadra da escola */
@@ -810,6 +958,7 @@ export function criarLugares(T, P) {
         }),
       }), m.centro.x, m.zFundo + P / 2 + 3.2, -0.001);
       quadra.receiveShadow = true;
+      refletir(g, quadra, 0.14, "#1e3a8a", m);
       // o fundo: a arquibancada colorida, o muro e as janelas altas
       parede(g, 160, H, mat("#7dd3fc", { roughness: 0.9 }), m.centro.x, m.zFundo - 3.2, 0);
       const janelas = parede(g, 160, 1.6, luz("#f0f9ff", 0.9), m.centro.x, m.zFundo - 3.18, 0, H - 2.6);
@@ -834,7 +983,15 @@ export function criarLugares(T, P) {
       for (let i = -4; i <= 4; i++) {
         caixa(g, 1.0, 2.2, 0.03, mat(["#ef4444", "#facc15", "#22c55e", "#3b82f6"][(i + 8) % 4], { roughness: 0.8 }), m.centro.x + i * 3.2, H - 4.4, m.zFundo - 3.1);
       }
-      return { grupo: g, fundo: "#7dd3fc", neblina: ["#bfe3fb", 40, 140], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
+      for (let i = -3; i <= 3; i++) solNoChao(g, m.centro.x + i * 3.2, m.zFundo + 3.6 + (i % 2) * 0.8, 1.6, 2.8, -0.3, 0.3);
+      criancasAoFundo(g, [[m.max.x + 3.0, m.zFundo + 1.5, "correndo", -80], [m.min.x - 3.2, m.zFundo + 2.0, "comemorando", 40]]);
+      const frente = (naTela) => {
+        const f = new T.Group();
+        const p = naTela(1.03, -0.97);
+        if (p) for (let k = 0; k < 3; k++) cil(f, 0.16, 0.42, mat(k % 2 ? "#ffffff" : "#f97316", { roughness: 0.5 }), p.x + k * 0.5 - 0.5, 0, p.z + (k % 2) * 0.3, 20, 0.03);
+        return f;
+      };
+      return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#bfe3fb", 40, 140], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
     },
   };
 

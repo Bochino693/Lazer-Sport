@@ -1,0 +1,182 @@
+{
+ "air-game-premium": {
+  "id": 1,
+  "nome": "Air Game Premium",
+  "altura": 1.9
+ },
+ "basquete-home": {
+  "id": 3,
+  "nome": "Basquete Home",
+  "altura": 2.1
+ },
+ "mundo-zumbi": {
+  "id": 4,
+  "nome": "Mundo Zumbi",
+  "altura": 1.94
+ },
+ "porsche-simulador": {
+  "id": 5,
+  "nome": "Porsche Simulador",
+  "altura": 1.7
+ },
+ "simulador-mario-kart": {
+  "id": 6,
+  "nome": "Simulador Mario Kart",
+  "altura": 2.14
+ },
+ "pac-man": {
+  "id": 7,
+  "nome": "Pac Man",
+  "altura": 1.1
+ },
+ "basquete-street": {
+  "id": 8,
+  "nome": "Basquete Street",
+  "altura": 2.7
+ },
+ "show-de-bola": {
+  "id": 9,
+  "nome": "Show de Bola",
+  "altura": 2.4
+ },
+ "homem-aranha-kids": {
+  "id": 10,
+  "nome": "Homem Aranha Kids",
+  "altura": 1.5
+ },
+ "tomb-raider-kids": {
+  "id": 11,
+  "nome": "Tomb Raider Kids",
+  "altura": 1.5
+ },
+ "corrida-dos-minions": {
+  "id": 12,
+  "nome": "Corrida dos Minions",
+  "altura": 2.1
+ },
+ "pega-toupeira": {
+  "id": 13,
+  "nome": "Pega Toupeira",
+  "altura": 1.23
+ },
+ "matrix": {
+  "id": 14,
+  "nome": "Matrix",
+  "altura": 0.9
+ },
+ "multi-jogos-retro": {
+  "id": 15,
+  "nome": "Multi Jogos Retro",
+  "altura": 1.86
+ },
+ "gabinete-games": {
+  "id": 17,
+  "nome": "Gabinete Games",
+  "altura": 1.9
+ },
+ "pinball-32": {
+  "id": 18,
+  "nome": "Pinball 32 Polegadas",
+  "altura": 1.73
+ },
+ "pinball-40": {
+  "id": 19,
+  "nome": "Pinball 40 Polegadas",
+  "altura": 1.75
+ },
+ "pebolim-eletronico": {
+  "id": 20,
+  "nome": "Pebolim Eletrônico",
+  "altura": 2.3
+ },
+ "homem-aranha": {
+  "id": 21,
+  "nome": "Homem Aranha",
+  "altura": 2.1
+ },
+ "sonic-dash": {
+  "id": 22,
+  "nome": "Sonic Dash",
+  "altura": 2.1
+ },
+ "subway-surfers": {
+  "id": 23,
+  "nome": "Subway Surfers",
+  "altura": 2.1
+ },
+ "flappy-bird": {
+  "id": 24,
+  "nome": "Flappy Bird",
+  "altura": 2.1
+ },
+ "speed-turbo": {
+  "id": 25,
+  "nome": "Speed Turbo",
+  "altura": 2.1
+ },
+ "pantera-kids": {
+  "id": 26,
+  "nome": "Pantera Cor de Rosa Kids",
+  "altura": 1.5
+ },
+ "sonic-kids": {
+  "id": 27,
+  "nome": "Sonic Kids",
+  "altura": 1.5
+ },
+ "minions-kids": {
+  "id": 28,
+  "nome": "Minions Kids",
+  "altura": 1.5
+ },
+ "labamba": {
+  "id": 29,
+  "nome": "Labamba",
+  "altura": 2.3
+ },
+ "carrossel-sorvetinho": {
+  "id": 30,
+  "nome": "Carrossel Sorvetinho",
+  "altura": 1.95
+ },
+ "mini-roda-sorvete": {
+  "id": 31,
+  "nome": "Mini Roda Sorvete",
+  "altura": 2.7
+ },
+ "nervo-teste": {
+  "id": 32,
+  "nome": "Nervo Teste",
+  "altura": 2.19
+ },
+ "brinquedao-modelo-1": {
+  "id": 33,
+  "nome": "Brinquedão Modelo 1",
+  "altura": 2.6
+ },
+ "boliche-virtual": {
+  "id": 34,
+  "nome": "Boliche Virtual",
+  "altura": 2.4
+ },
+ "lazer-shot": {
+  "id": 35,
+  "nome": "Lazer Shot",
+  "altura": 2.3
+ },
+ "sonic-racing": {
+  "id": 37,
+  "nome": "Sonic Racing All-Stars",
+  "altura": 2.1
+ },
+ "top-racer": {
+  "id": 38,
+  "nome": "Simulador de Corrida Top Racer",
+  "altura": 1.5
+ },
+ "bob-esponja-kids": {
+  "id": 39,
+  "nome": "Bob Esponja Hammer Kids",
+  "altura": 1.47
+ }
+}

@@ -26,7 +26,7 @@ O ARQUIVO fica abaixo de ~150 KB: a qualidade do WebP desce até caber.
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter
 
 PASTA = Path(__file__).resolve().parent
 RENDERS = PASTA / "render"
@@ -102,7 +102,35 @@ def compor_no_lugar(chave):
     lugar = Image.composite(desfocado, cor, peso.filter(ImageFilter.GaussianBlur(3)))
     foto = Image.composite(cor, lugar, mascara)
     foto = foto.resize((LARGURA, ALTURA), Image.LANCZOS)
-    return foto.filter(ImageFilter.UnsharpMask(radius=1.1, percent=50, threshold=2))
+    foto = foto.filter(ImageFilter.UnsharpMask(radius=1.1, percent=50, threshold=2))
+    return vinheta(brilho(vida(foto)))
+
+
+def vida(foto):
+    """As cores um tanto mais vivas e com mais contraste."""
+    foto = ImageEnhance.Color(foto).enhance(1.12)
+    return ImageEnhance.Contrast(foto).enhance(1.05)
+
+
+def brilho(foto, limite=228, forca=0.7):
+    """O brilho das luzes (bloom): o que está quase branco (as lâmpadas, o neon, as telas) se espalha."""
+    claro = ImageChops.lighter(ImageChops.lighter(*foto.split()[:2]), foto.split()[2])
+    mascara = claro.point(lambda v: 0 if v < limite else min(255, (v - limite) * 9))
+    luzes = Image.composite(foto, Image.new("RGB", foto.size, 0), mascara)
+    perto = luzes.filter(ImageFilter.GaussianBlur(10))
+    longe = luzes.filter(ImageFilter.GaussianBlur(34))
+    halo = ImageChops.add(ImageEnhance.Brightness(perto).enhance(forca), ImageEnhance.Brightness(longe).enhance(forca * 0.8))
+    return ImageChops.screen(foto, halo)
+
+
+def vinheta(foto, forca=0.18):
+    """A vinheta leve: as bordas um tico mais escuras levam o olho para o meio."""
+    w, h = foto.size
+    m = Image.new("L", (w // 8, h // 8), 0)
+    ImageDraw.Draw(m).ellipse((-w // 40, -h // 40, w // 8 + w // 40, h // 8 + h // 40), fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(w // 50)).resize((w, h), Image.BILINEAR)
+    escura = ImageEnhance.Brightness(foto).enhance(1 - forca)
+    return Image.composite(foto, escura, m)
 
 
 def compor_no_estudio(chave):
