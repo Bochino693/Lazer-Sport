@@ -11,6 +11,7 @@ com o catálogo de verdade.
 
 import io
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -98,6 +99,82 @@ class PaginaTests(TestCase):
         resposta = self.client.get("/monte-seu-projeto/")
         self.assertEqual((resposta.status_code, resposta["Location"]), (301, "/arena/#monte-seu-espaco"))
         self.assertContains(self.client.get("/arena/"), 'href="/arena/#monte-seu-espaco"')
+
+
+class MontadorComoLauncherTests(TestCase):
+    """O "Monte seu espaço" como um app de tela cheia, arrumado como o launcher de jogos.
+
+    Na Arena fica a CHAMADA (a prévia e o "Abrir o montador"); o app abre por
+    cima de tudo (site/projeto3d/launcher.js) e só então baixa o projeto3d.js.
+    Dentro dele, uma ABA por passo, e o projeto3d.js continua achando cada
+    peça pelo mesmo id e data-atributo de antes: o markup mudou de lugar,
+    não de nome.
+    """
+
+    ABAS = ["espaco", "modelo", "areas", "maquinas", "coube", "fotos"]
+    #: os ids que o projeto3d.js procura e que não vêm do partial do site:
+    #: o estado e as fotos do pedido (só na ficha do painel) e a caixa que ele mesmo desenha
+    FORA_DO_SITE = {"p3dEstado", "p3dFotosDados", "p3dSugestao"}
+
+    def setUp(self):
+        cache.clear()
+        self.html = self.client.get("/arena/").content.decode()
+
+    def test_a_arena_chama_o_montador_e_o_app_espera_abrir(self):
+        html = self.html
+        self.assertIn('class="p3d-chamada"', html)
+        self.assertIn("Abrir o montador", html)
+        self.assertEqual(html.count("data-abrir-montador"), 2)  # o botão e a prévia
+        self.assertIn("site/projeto3d/previa-montador.webp", html)
+        self.assertIn('id="p3dLauncher" data-p3d-launcher', html)
+        self.assertIn('class="p3d p3d--tela-cheia" id="p3d" data-modo="cliente"', html)
+        # o app guardado até abrir; o endereço #monte-seu-espaco ou #p= já abre antes do script chegar
+        self.assertIn('l.classList.add("p3dl--js")', html)
+        self.assertIn("/^#(p=|monte-seu-espaco$)/", html)
+        # quem carrega é o launcher; o projeto3d.js (e o 3D) só quando o app abre
+        self.assertRegex(html, r'<script type="module" src="[^"]*site/projeto3d/launcher\.js[^"]*"></script>')
+        self.assertNotRegex(html, r'<script[^>]+src="[^"]*site/projeto3d/projeto3d\.js')
+        self.assertRegex(html, r'data-app-js="[^"]*site/projeto3d/projeto3d\.js[^"]*"')
+        # sem JavaScript, o "Abrir o montador" leva à lista com as medidas
+        self.assertIn('href="#p3dSemJs" data-abrir-montador', html)
+        self.assertIn('id="p3dSemJs"', html)
+
+    def test_uma_aba_por_passo_com_o_painel_dela(self):
+        html = self.html
+        self.assertIn('role="tablist" aria-label="Os passos do projeto"', html)
+        self.assertEqual(re.findall(r'role="tab" id="p3dAba-(\w+)" data-aba="(\w+)"', html), [(a, a) for a in self.ABAS])
+        for aba in self.ABAS:
+            self.assertIn(f'aria-controls="p3dPainel-{aba}"', html)
+            self.assertIn(f'id="p3dPainel-{aba}" role="tabpanel" aria-labelledby="p3dAba-{aba}" data-aba-painel="{aba}"', html)
+        # só a primeira aberta
+        self.assertEqual(html.count('aria-selected="true"'), 1)
+        self.assertEqual(len(re.findall(r'data-aba-painel="\w+" hidden>', html)), len(self.ABAS) - 1)
+        # andar entre os passos, o pedido no último, a folha do celular, o resumo vivo e o fechar
+        for marca in ("data-aba-voltar", "data-aba-proximo", "data-aba-onde", 'data-pedir data-aba-fim hidden',
+                      "data-folha-alca", 'id="p3dResumo"', "data-fechar-app", "data-progresso-barra", "data-maquinas-conta"):
+            self.assertIn(marca, html)
+        # a busca das máquinas presa no alto, a grade compacta
+        self.assertIn('class="p3d-maquinas-topo"', html)
+        self.assertIn('class="p3d-itens p3d-itens--grade" id="p3dMaquinas"', html)
+        # o pedido: na barra do topo, no fim do "O que coube" e no último passo
+        self.assertEqual(html.count("data-pedir"), 3)
+
+    def test_os_ids_e_data_atributos_do_projeto3d_continuam(self):
+        js = (RAIZ / "static" / "site" / "projeto3d" / "projeto3d.js").read_text(encoding="utf-8")
+        ids = set(re.findall(r'\$\("#(\w+)"', js)) - self.FORA_DO_SITE
+        self.assertGreater(len(ids), 30)
+        faltando = sorted(i for i in ids if f'id="{i}"' not in self.html)
+        self.assertEqual(faltando, [], "o projeto3d.js procura e a página não tem")
+        for atributo in ("data-pedir", 'data-medida="10x8"', "data-fechar", "data-fechar-foto", 'data-frente="1"', 'data-canto="0"', 'name="largura"', 'name="pe_direito"'):
+            self.assertIn(atributo, self.html)
+
+    def test_o_launcher_e_o_projeto3d_sao_javascript_valido(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Sem node para conferir o JavaScript")
+        for nome in ("launcher.js", "projeto3d.js"):
+            resultado = subprocess.run([node, "--check", str(RAIZ / "static" / "site" / "projeto3d" / nome)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(resultado.returncode, 0, nome + resultado.stderr)
 
 
 class ValidarPedidoTests(TestCase):
@@ -379,8 +456,23 @@ class PainelTests(TestCase):
         self.assertContains(ficha, montagem.imagem.url)
         self.assertContains(ficha, 'id="p3dFotosDados"')
         self.assertContains(ficha, 'id="p3dFotosPasso"')
+        self.assertContains(ficha, 'data-aba="fotos"')
         self.assertEqual(ficha.context["projeto_fotos"], [{"url": foto.imagem.url, "cantos": CANTOS}])
         self.assertEqual(ficha.context["fotos"][0]["montagem"], montagem)
+
+    def test_a_ficha_tem_as_abas_sem_a_tela_cheia(self):
+        self.client.force_login(self.vendas)
+        ficha = self.client.get(f"/site/projetos-3d/{self.pedido.pk}/", HTTP_HOST=HOST).content.decode()
+        self.assertIn('role="tablist"', ficha)
+        self.assertIn("site/projeto3d/launcher.js", ficha)
+        self.assertIn("O projeto do cliente", ficha)
+        # sem a tela cheia, sem o fechar do app; sem fotos do cliente, sem a aba Fotos
+        self.assertNotIn("data-p3d-launcher", ficha)
+        self.assertNotIn("data-fechar-app", ficha)
+        self.assertNotIn('data-aba="fotos"', ficha)
+        self.assertIn("Passo 1 de 5", ficha)
+        # o launcher vem antes do 3D: ele já ouve o primeiro "p3d:mudou"
+        self.assertLess(ficha.index("site/projeto3d/launcher.js"), ficha.rindex("site/projeto3d/projeto3d.js"))
 
     def test_muda_a_situacao_e_anota(self):
         self.client.force_login(self.vendas)

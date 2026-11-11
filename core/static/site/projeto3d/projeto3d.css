@@ -267,11 +267,18 @@
   .p3d-progresso { padding: 8px; }
   .p3d-progresso-texto { display: none; }
 }
-/* tela baixa (o celular deitado, a janela pequena): o trilho mais curto */
+/* tela baixa (o celular deitado, a janela pequena): o trilho mais curto, as seis abas cabem sem rolar */
 @media (max-height: 620px) {
   .p3d-aba { min-height: 48px; padding-top: 5px; padding-bottom: 5px; }
   .p3d-aba-texto small { display: none; }
   .p3d-progresso { display: none; }
+  @container p3d (min-width: 900px) and (max-width: 1239.98px) {
+    .p3d-trilho { gap: 0; padding-top: 6px; padding-bottom: 6px; }
+    .p3d-abas { gap: 2px; }
+    .p3d-aba { gap: 2px; min-height: 0; padding: 4px 4px 3px; }
+    .p3d-aba-icone { width: 30px; height: 30px; font-size: 14px; border-radius: 10px; }
+    .p3d-aba-num { top: 2px; }
+  }
 }
 
 /* ---------------------------------------------------------------- o 3D */
@@ -1130,6 +1137,10 @@ polyline.p3d-foto-marca { fill: none; }
   }
   .p3d--tela-cheia .p3d-progresso-texto { display: none; }
   .p3d--tela-cheia .p3d-progresso-barra { height: 2px; border-radius: 0; background: transparent; }
+}
+@container p3d (max-width: 359.98px) {
+  /* o celular estreito: o WhatsApp fica no fim do "O que coube", e o nome do app cabe inteiro */
+  .p3d--tela-cheia .p3d-topo-acoes .p3d-botao--zap { display: none; }
 }
 @container p3d (max-width: 419.98px) {
   .p3d--tela-cheia .p3d-topo-icone { display: none; }
