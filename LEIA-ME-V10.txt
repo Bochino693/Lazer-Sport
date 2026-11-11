@@ -3150,6 +3150,45 @@ Dependência nova: rjsmin (requirements.txt).
    preenchido, na conferência e no formulário de orçamento (com o
    Arredondar, a troca para % e de volta, o valor final e o rascunho
    retomado).
+   AJUSTE: O CLIENTE PRIMEIRO, E NO MAPA DA HOME. Pedido: "vc deve deixar
+   facil acesso só o cadastro de cliente, ai é opcional o orçamento e deixe
+   ligado a questão de aparecer no mapa, pois para preencher rapido o mapa
+   e ficar bem povoado que vamos fazer essa função". Agora:
+     * ACESSO: interno > Clientes > "Cadastrar pelo Word ou PDF" (para quem
+       pode criar proposta; o botão de Orçamentos continua). Vindo de
+       Clientes (/orcamentos/importar/?para=cliente), os textos e o
+       "Descartar" são da aba Clientes.
+     * A conferência abre SEMPRE em "Cadastrar o cliente". O orçamento é a
+       chave "Criar o orçamento também", que diz o que o documento traz
+       ("O documento tem 3 itens, R$ 25.284,00") -- ligada, tudo do
+       orçamento funciona como antes (itens, contas, valor final, "Criar").
+     * "APARECER NO MAPA DO SITE" vem LIGADO, para cliente novo e para o
+       que já existe (ligar nunca tira ninguém do mapa; desligada, quem já
+       estava fica). O mapa da home desenha quem tem publicar_no_mapa,
+       cadastro ativo e endereço com coordenada (core/views.py, HomeView).
+       Depois de salvar, e FORA da transação, importacao_word/mapa.py
+       procura a coordenada pelo mesmo caminho do cadastro à mão (a
+       consulta rápida do CEP, BrasilAPI) e, sem resposta, pelo localizar()
+       do painel (CEP e número no Nominatim, e por fim a cidade) -- nada
+       novo e nada pago. Achou: grava, limpa o cache da home e o alfinete
+       aparece na hora. Não achou (ou a rede falhou): o cliente fica
+       cadastrado e marcado, e a tela final diz "Ainda não está no mapa:
+       não achei o endereço no mapa: confira o CEP e a cidade" com
+       "Conferir o endereço na ficha" (/clientes/?editar=id abre o cadastro
+       para editar). Sem endereço no documento, ela diz isso.
+     * A TELA FINAL do só o cliente (/orcamentos/importar/cliente/<id>/)
+       mostra "Entrou no mapa do site · Cidade/UF" (ou "Já está no mapa"),
+       os dados, "Ver o cliente" e "Criar um orçamento para ele". A do
+       orçamento mostra o mesmo no cartão do cliente.
+   Testes: tests_importacao_word.py (ClientePrimeiroTests e
+   MapaDoClienteImportadoTests: o padrão só o cliente, a entrada pela aba
+   Clientes, o mapa ligado e efetivo -- o cliente aparece em clientes_mapa
+   da home --, o endereço não achado, o erro de rede, o mapa desligado, o
+   cliente que já existia, o orçamento opcional) e
+   tests_importacao_corpus.py (os seis documentos abrem em só o cliente,
+   com a oferta certa do orçamento, e os cinco clientes viram alfinete na
+   home). Conferido no Chromium (PC e iPhone 13), com a resposta da
+   BrasilAPI simulada porque a rede da máquina de teste não a alcança.
    Código: importacao_word/leitor.py (ler_pdf_local, PdfSemTexto),
    deterministica.py (ler_endereco, linha_da_empresa, valor_final),
    conferencia.py, formulario.py (criar, whatsapp_padrao, modo_padrao),

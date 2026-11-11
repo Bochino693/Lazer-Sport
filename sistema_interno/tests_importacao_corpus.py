@@ -27,13 +27,14 @@ from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
 
 from core.models import Brinquedos
 
-from .importacao_word import conferencia, formulario, leitor
+from .importacao_word import conferencia, formulario, leitor, mapa
 from .models import Cliente, ItemOrcamento, Orcamento
 from .permissoes import atribuir_funcoes
 
@@ -52,6 +53,19 @@ CATALOGO = (
     ("Brinquedão Modelo 3", "9000.00"),
     ("Brinquedão Modelo 5", "12000.00"),
 )
+
+
+PONTOS = {
+    "Guarulhos": (Decimal("-23.4628"), Decimal("-46.5333")),
+    "São Paulo": (Decimal("-23.5505"), Decimal("-46.6333")),
+    "Santo André": (Decimal("-23.6639"), Decimal("-46.5383")),
+    "Rio de Janeiro": (Decimal("-22.9068"), Decimal("-43.1729")),
+}
+
+
+def ponto_da_cidade(endereco):
+    latitude, longitude = PONTOS.get(endereco.cidade, (None, None))
+    return latitude, longitude, "cidade" if latitude is not None else ""
 
 
 def esperado_de(nome):
@@ -91,6 +105,8 @@ def campos_da_tela(proposta, envio):
         valor_final = proposta["valor_final"]["valor"]
     return {
         "modo": envio["modo"],
+        "mapa": envio["publicar_no_mapa"],
+        "oferta": formulario.oferta_de_orcamento(proposta),
         "cliente_existente": envio["cliente_modo"] == "existente",
         "cliente": {
             "nome": envio["nome"], "estabelecimento": envio["estabelecimento"],
@@ -128,6 +144,11 @@ class _SemChave(TestCase):
         hoje = mock.patch("django.utils.timezone.localdate", return_value=HOJE)
         hoje.start()
         self.addCleanup(hoje.stop)
+        # A coordenada do alfinete não sai para a rede: o "centro da
+        # cidade" de cada documento vem desta tabela.
+        localizar = mock.patch.object(mapa, "procurar_coordenadas", side_effect=ponto_da_cidade)
+        localizar.start()
+        self.addCleanup(localizar.stop)
 
 
 class LeituraDoCorpusTests(_SemChave):
@@ -145,8 +166,17 @@ class LeituraDoCorpusTests(_SemChave):
                            "linhas": linhas_do_arquivo(nome), "ia": {"usada": False}, "escolhas": {}}
                 proposta = conferencia.montar_proposta(leitura, hoje=HOJE)
                 tela = campos_da_tela(proposta, formulario.envio_inicial(proposta))
-                for chave in ("modo", "cliente_existente"):
-                    self.assertEqual(tela[chave], esperado[chave], f"{nome}: {chave}")
+                # O cliente primeiro: a tela abre sempre em "Só cadastrar o
+                # cliente", com "Aparecer no mapa" ligado. Quando o documento
+                # tem itens, a chave do orçamento diz quantos e quanto.
+                self.assertEqual(tela["modo"], "cliente", f"{nome}: modo")
+                self.assertTrue(tela["mapa"], f"{nome}: mapa")
+                if esperado["modo"] == "orcamento":
+                    total = f"{Decimal(esperado['salvo']['total']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    self.assertEqual(tela["oferta"], {"itens": len(esperado["itens"]), "total": total}, f"{nome}: oferta")
+                else:
+                    self.assertIsNone(tela["oferta"], f"{nome}: oferta")
+                self.assertEqual(tela["cliente_existente"], esperado["cliente_existente"], f"{nome}: cliente_existente")
                 for grupo in ("cliente", "endereco"):
                     for campo, valor in esperado[grupo].items():
                         self.assertEqual(tela[grupo][campo], valor, f"{nome}: {grupo}.{campo}")
@@ -211,8 +241,13 @@ class GravacaoDoCorpusTests(_SemChave):
         envio = tela.context["envio"]
         dados = {"action": "criar", "itens_ordem": ",".join(i["uid"] for i in envio["itens"])}
         for chave, valor in envio.items():
-            if isinstance(valor, (str, int)) and chave not in ("itens", "justificativas"):
+            if isinstance(valor, str) and chave not in ("itens", "justificativas"):
                 dados[chave] = valor
+        # O que a pessoa liga: o orçamento, quando o documento é um orçamento.
+        # "Aparecer no mapa" já vem ligado.
+        dados["modo"] = esperado_de(nome)["modo"]
+        if envio["publicar_no_mapa"]:
+            dados["publicar_no_mapa"] = "1"
         if envio["cliente_confirmado"]:
             dados["cliente_confirmado"] = "1"
         for item in envio["itens"]:
@@ -245,6 +280,10 @@ class GravacaoDoCorpusTests(_SemChave):
         endereco = cliente.endereco_principal
         certo = esperado["endereco"]
         self.assertIsNotNone(endereco, f"{nome}: endereço")
+        # No mapa da home: marcado, ativo e com a coordenada da cidade.
+        self.assertTrue(cliente.publicar_no_mapa, f"{nome}: marcado para o mapa")
+        self.assertEqual((endereco.latitude, endereco.longitude), PONTOS[certo["cidade"]], f"{nome}: alfinete")
+        self.assertTrue(cliente.no_mapa, f"{nome}: no mapa")
         self.assertEqual(
             (endereco.cep, endereco.endereco, endereco.numero, endereco.complemento,
              endereco.bairro, endereco.cidade, endereco.estado),
@@ -265,8 +304,7 @@ class GravacaoDoCorpusTests(_SemChave):
                 if esperado["modo"] == "cliente":
                     self.assertFalse(novos.exists(), f"{nome}: criou orçamento no modo só cliente")
                     cliente = Cliente.objects.get(nome_cliente=esperado["cliente"]["nome"])
-                    self.assertIn("/clientes/", resposta["Location"])
-                    self.assertIn(f"abrir={cliente.pk}", resposta["Location"])
+                    self.assertEqual(resposta["Location"], f"/orcamentos/importar/cliente/{cliente.pk}/")
                     self.conferir_cliente(nome, cliente)
                     continue
                 orcamento = novos.get()
@@ -314,3 +352,22 @@ class GravacaoDoCorpusTests(_SemChave):
         )
         # O cliente que já existia foi LIGADO e completado -- não duplicado.
         self.assertEqual(Cliente.objects.filter(nome_cliente="Buffet Alegria").count(), 1)
+
+    def test_os_clientes_importados_aparecem_no_mapa_da_home(self):
+        for nome in DOCUMENTOS:
+            if not nome.endswith(".pdf"):
+                self.importar_e_criar(nome)
+        cache.clear()
+        resposta = self.client.get("/")
+        self.assertEqual(resposta.status_code, 200)
+        no_mapa = {(p["nome"], p["cidade"]) for p in resposta.context["clientes_mapa"]}
+        # O nome do alfinete é o do estabelecimento, quando há (nome_publico).
+        self.assertEqual(no_mapa, {
+            ("Buffet Alegria", "Guarulhos"),
+            ("Escola Pequeno Príncipe", "São Paulo"),
+            ("Condomínio Jardim das Flores", "Santo André"),
+            ("Festas da Marina", "São Paulo"),
+            ("Arena Kids Diversões", "Rio de Janeiro"),
+        })
+        # E nada da Lazer & Sport virou alfinete de cliente.
+        self.assertFalse(any("Lazer" in nome for nome, _ in no_mapa))

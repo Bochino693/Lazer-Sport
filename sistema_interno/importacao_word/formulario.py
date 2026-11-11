@@ -6,13 +6,17 @@ orçamentos." E depois, testando de verdade: "o sistema não cadastra o
 usuário e um orçamento se houver... pode ter vezes que não quero o
 orçamento junto, apenas cadastrar o cliente."
 
-DOIS CAMINHOS, ESCOLHIDOS NA TELA:
-  * "Cadastrar cliente e criar orçamento" (o padrão quando o documento
-    tem itens ou valores): o cliente é cadastrado -- ou, se já existe, é
-    ligado e o que falta no cadastro é completado -- e o orçamento nasce
-    como rascunho;
-  * "Só cadastrar o cliente" (o padrão quando o documento não tem itens):
-    nenhum campo de orçamento é pedido; o cliente é criado ou atualizado.
+O CLIENTE PRIMEIRO; O ORÇAMENTO É OPÇÃO. Depois, nas palavras dele: "vc
+deve deixar facil acesso só o cadastro de cliente, ai é opcional o
+orçamento e deixe ligado a questão de aparecer no mapa". Então:
+  * o padrão é SEMPRE "Só cadastrar o cliente": nenhum campo de orçamento
+    é pedido; o cliente é criado ou atualizado -- e, com a chave "Aparecer
+    no mapa do site" (ligada por padrão), marcado para o mapa da home (a
+    coordenada é procurada depois de salvar: ver `mapa.py`);
+  * "Criar o orçamento também" é uma chave, que diz quantos itens e
+    quanto o documento traz: ligada, o cliente é cadastrado -- ou, se já
+    existe, é ligado e o que falta no cadastro é completado -- e o
+    orçamento nasce como rascunho, com tudo o que vem abaixo.
 
 O QUE BLOQUEIA, E SÓ ISTO -- é a segurança do dinheiro e do produto, não
 burocracia:
@@ -107,9 +111,11 @@ def ler_envio(post) -> dict:
     total_escolha = campo("total_escolha")
     if total_escolha == "soma":
         justificativas["soma_total"] = (post.get("justificativa-soma_total") or "").strip()[:JUSTIFICATIVA_MAXIMA]
-    modo = campo("modo")
     return {
-        "modo": modo if modo in ("orcamento", "cliente") else "orcamento",
+        # A chave "Criar o orçamento também": desligada, o formulário nem
+        # manda o campo -- e o que não veio é "só o cliente".
+        "modo": "orcamento" if campo("modo") == "orcamento" else "cliente",
+        "publicar_no_mapa": campo("publicar_no_mapa") == "1",
         "cliente_modo": campo("cliente_modo") or "novo",
         "cliente_id": campo("cliente_id"),
         "cliente_confirmado": campo("cliente_confirmado") == "1",
@@ -159,13 +165,27 @@ def whatsapp_padrao(telefone: str, *, escrito=False, cadastro=None) -> str:
     return "sim" if len(digitos) == 11 and digitos[2] == "9" else "nao"
 
 
-def modo_padrao(proposta) -> str:
-    """Com itens ou valores no documento, orçamento; sem eles, só o cliente."""
+def oferta_de_orcamento(proposta) -> dict | None:
+    """O que o documento traz de orçamento, para a chave "Criar o orçamento também".
+
+    {"itens": 3, "total": "25.284,00"} -- o total é o que o documento
+    escreve (o valor negociado, quando há; senão o total; senão a conta
+    das linhas). None quando o documento não traz item nem valor: uma
+    ficha de cadastro.
+    """
+    valores = proposta["valores"]
     tem_valores = any(
-        proposta["valores"][nome]["valor"] or proposta["valores"][nome].get("opcoes")
-        for nome in ("subtotal", "total", "valor_final")
+        valores[nome]["valor"] or valores[nome].get("opcoes") for nome in ("subtotal", "total", "valor_final")
     )
-    return "orcamento" if proposta["itens"] or tem_valores else "cliente"
+    if not proposta["itens"] and not tem_valores:
+        return None
+    oferta_final = proposta.get("valor_final") or {}
+    total = (
+        (oferta_final.get("valor") if oferta_final.get("explicito") else "")
+        or valores["total"]["valor"]
+        or (proposta.get("contas") or {}).get("total", "")
+    )
+    return {"itens": len(proposta["itens"]), "total": total}
 
 
 def envio_inicial(proposta) -> dict:
@@ -184,7 +204,11 @@ def envio_inicial(proposta) -> dict:
     if telefone:
         telefone = det.formatar_telefone(telefone)
     return {
-        "modo": modo_padrao(proposta),
+        # O cliente primeiro: o orçamento é uma chave que a pessoa liga.
+        "modo": "cliente",
+        # O mapa da home povoado é a razão de ser do cadastro pelo
+        # documento: a chave vem ligada (e a pessoa desliga se quiser).
+        "publicar_no_mapa": True,
         "cliente_modo": vinculo["modo"],
         "cliente_id": str(vinculo["cliente_id"] or ""),
         "cliente_confirmado": False,
@@ -260,7 +284,10 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     hoje = hoje or timezone.localdate()
     pendencias: list[dict] = []
     recomendacoes: list[dict] = []
-    limpo: dict = {"modo_importacao": envio.get("modo") or "orcamento"}
+    limpo: dict = {
+        "modo_importacao": envio.get("modo") or "cliente",
+        "publicar_no_mapa": bool(envio.get("publicar_no_mapa")),
+    }
     so_cliente = limpo["modo_importacao"] == "cliente"
     vinculo = proposta["cliente"]["vinculo"]
 
@@ -679,6 +706,11 @@ def _dados_do_cliente(cliente: Cliente | None, limpo: dict, *, completar: bool) 
         "canal_telefone": canal,
         "email": limpo["email"],
     }
+    # A chave do mapa só LIGA: desligada na tela, o campo não vai, e o
+    # cliente que já estava no mapa continua lá (salvar_cliente só lê o
+    # campo quando ele vem).
+    if limpo.get("publicar_no_mapa"):
+        novo["publicar_no_mapa"] = "1"
     if cliente is None:
         return dict(novo, tipo=limpo["tipo"], observacoes="")
     atual = {
@@ -708,6 +740,8 @@ def _dados_do_cliente(cliente: Cliente | None, limpo: dict, *, completar: bool) 
         observacoes=cliente.observacoes,
         parceiro=str(cliente.parceiro_id or ""),
     )
+    if limpo.get("publicar_no_mapa"):
+        dados["publicar_no_mapa"] = "1"
     return dados
 
 
@@ -760,6 +794,7 @@ def criar(request, proposta, validado, *, arquivo: str) -> dict:
         completados = [nome for nome, valor in depois.items() if valor and valor != antes.get(nome)]
 
     resultado = {"cliente": cliente, "cliente_novo": existente is None, "completados": completados,
+                 "mapa_pedido": bool(limpo.get("publicar_no_mapa")),
                  "orcamento": None}
     if so_cliente:
         return resultado
