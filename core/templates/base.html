@@ -186,6 +186,8 @@
   <link rel="stylesheet" href="{% estatico 'site/ls-tema.css' %}">
   <script src="{% estatico 'site/ls-topo.js' %}" defer></script>
   <script src="{% estatico 'site/ls-fotos.js' %}" defer></script>
+  {# o card inteiro abre o item (combos, promoções, loja): ver o próprio arquivo #}
+  <script src="{% estatico 'site/ls-card-clicavel.js' %}" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}{% if request.GET.app == '1' %} ls-modo-app{% endif %}">

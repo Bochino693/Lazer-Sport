@@ -106,7 +106,7 @@
             <div class="loja-grid-wrap">
                 <div class="loja-grid" id="loja-grid">
                     {% for item in itens_loja %}
-                    <article class="loja-card" data-tipo="{{ item.tipo }}">
+                    <article class="loja-card" data-tipo="{{ item.tipo }}" data-card-link="{{ item.url }}">
                         <a href="{{ item.url }}"
                            class="loja-card-media-link"
                            aria-label="Ver detalhes de {{ item.titulo }}">

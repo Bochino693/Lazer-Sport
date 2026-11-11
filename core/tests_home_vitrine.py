@@ -305,3 +305,50 @@ class MapaUnicoTests(HomeBase):
         self.assertNotContains(resposta, '"logo": "/static/images/logoofi.png"')
         # o comportamento do mapa vem do arquivo próprio, carregado sob demanda
         self.assertContains(resposta, "site/paginas/home-mapa.js")
+
+
+class CardInteiroAbreOItemTests(HomeBase):
+    """Combos, promoções e cards da loja: tocar em qualquer lugar do card abre a página do item.
+
+    O card leva `data-card-link` com o endereço da página (a mesma do
+    "Detalhes"); o site/ls-card-clicavel.js, carregado em toda página, faz o
+    resto e deixa os controles de dentro (o "Adicionar", a estrela) com o
+    clique deles.
+    """
+
+    def _ofertas(self):
+        alvo = brinquedo("Air Game Hockey", valor_brinquedo=Decimal("9800.00"), exibir_na_loja=True)
+        promo = Promocoes.objects.create(descricao="Air game em oferta", brinquedos=alvo, preco_promocao=Decimal("8800.00"))
+        combo = Combos.objects.create(descricao="Combo quiosque", valor_combo=Decimal("12000.00"))
+        combo.brinquedos.add(alvo)
+        return promo, combo
+
+    def test_na_home_o_card_do_combo_e_da_promocao_abre_a_pagina_deles(self):
+        promo, combo = self._ofertas()
+        resposta = self.home()
+        self.assertContains(resposta, f'data-card-link="{reverse("promocao", args=[promo.pk])}#promocao-pagina"')
+        self.assertContains(resposta, f'data-card-link="{reverse("combo", args=[combo.pk])}#combo-pagina"')
+        self.assertContains(resposta, "ls-card-clicavel.js")
+        # o "Adicionar" continua sendo um botão (o clique dele não abre a página)
+        self.assertContains(resposta, "adicionarAoCarrinho('combo', %d)" % combo.pk)
+        # as páginas existem e abrem, como as de um produto
+        self.assertEqual(self.client.get(reverse("promocao", args=[promo.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("combo", args=[combo.pk])).status_code, 200)
+
+    def test_na_loja_todo_card_abre_o_item(self):
+        promo, combo = self._ofertas()
+        cache.clear()
+        resposta = self.client.get(reverse("loja"))
+        self.assertEqual(resposta.status_code, 200)
+        html = resposta.content.decode()
+        self.assertEqual(html.count("data-card-link="), html.count('class="loja-card"'))
+        self.assertIn(f'data-card-link="{reverse("combo", args=[combo.pk])}', html)
+
+    def test_o_script_deixa_os_controles_com_o_clique_deles(self):
+        from django.contrib.staticfiles import finders
+
+        with open(finders.find("site/ls-card-clicavel.js"), encoding="utf-8") as arquivo:
+            script = arquivo.read()
+        for controle in ("a,", "button", "input", "[data-card-ignorar]"):
+            self.assertIn(controle, script)
+        self.assertIn("auxclick", script)  # o botão do meio abre em outra aba

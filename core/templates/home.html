@@ -693,7 +693,7 @@
     <div class="scroll-container" id="scroll-container-promocoes">
       {% for promo in promocoes %}
       <div class="oferta-card-link">
-        <article class="oferta-card promocao-card">
+        <article class="oferta-card promocao-card" data-card-link="{% url 'promocao' promo.id %}#promocao-pagina">
 
           <!-- IMAGEM -->
           <div class="oferta-card-media">
@@ -949,7 +949,7 @@
     <div class="scroll-container" id="scroll-container-combos">
       {% for combo in combos %}
       <div class="oferta-card-link">
-        <article class="oferta-card combo-card">
+        <article class="oferta-card combo-card" data-card-link="{% url 'combo' combo.id %}#combo-pagina">
 
           <!-- IMAGEM -->
           <div class="oferta-card-media">

@@ -589,21 +589,28 @@ function inicializarCarrosselOfertas(trilhoId, anteriorId, proximoId) {
     proximo.addEventListener('click', () => rolar(1));
     trilho.addEventListener('scroll', solicitarAtualizacao, { passive: true });
 
-    /* Arraste com mouse no computador; toque continua nativo no celular. */
+    /* Arraste com mouse no computador; toque continua nativo no celular.
+
+       O mouse só é "preso" ao trilho quando o arraste começa de verdade
+       (passou de 6 px). Preso já no aperto, o clique simples ia para o
+       trilho e não para o que estava embaixo do dedo: o card do combo não
+       abria, e os botões e links dos cards também não respondiam. */
     trilho.addEventListener('pointerdown', event => {
         if (event.pointerType !== 'mouse' || event.button !== 0) return;
         arrastando = true;
         arrastou = false;
         inicioX = event.clientX;
         scrollInicial = trilho.scrollLeft;
-        trilho.classList.add('is-dragging');
-        trilho.setPointerCapture(event.pointerId);
     });
 
     trilho.addEventListener('pointermove', event => {
         if (!arrastando) return;
         const deslocamento = inicioX - event.clientX;
-        if (Math.abs(deslocamento) > 6) arrastou = true;
+        if (!arrastou && Math.abs(deslocamento) > 6) {
+            arrastou = true;
+            trilho.classList.add('is-dragging');
+            trilho.setPointerCapture(event.pointerId);
+        }
         if (!arrastou) return;
         event.preventDefault();
         trilho.scrollLeft = scrollInicial + deslocamento;
