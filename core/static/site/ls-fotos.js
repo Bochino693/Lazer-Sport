@@ -14,6 +14,13 @@
        transparência. Sem transparência nos cantos, a foto tem fundo.
    O cartão com fundo ganha a classe `foto-cheia` (ls-tema.css). Se a
    conferência não puder ser feita (rede, CORS), nada muda: fica como era.
+
+   NUNCA CORTAR O BRINQUEDO (o Pega Toupeira saía cortado, com zoom: a foto
+   em pé, com fundo, preenchia o cartão quadrado). Se o formato da foto não é
+   o da caixa (mais de ~10% de diferença), ela fica INTEIRA ("contain") sobre
+   ela mesma desfocada (`foto-encaixada`), como nas vitrines do quadro
+   inicial; só a foto do mesmo formato (as capas em cena, quadradas) preenche
+   a caixa de ponta a ponta.
    ====================================================================== */
 (function () {
   "use strict";
@@ -33,11 +40,11 @@
   ].join(",");
 
   const SEM_TRANSPARENCIA = /\.(jpe?g|jfif)$/i;
-  const MEMORIA = "ls-foto-cheia:";
+  const MEMORIA = "ls-foto-cheia2:";
   const decididos = new WeakSet();
 
   const lembrar = (url, valor) => {
-    try { window.sessionStorage.setItem(MEMORIA + url, valor ? "1" : "0"); } catch (erro) { /* aba anônima */ }
+    try { window.sessionStorage.setItem(MEMORIA + url, valor); } catch (erro) { /* aba anônima */ }
   };
   const lembrado = (url) => {
     try { return window.sessionStorage.getItem(MEMORIA + url); } catch (erro) { return null; }
@@ -49,7 +56,7 @@
     return url.includes("res.cloudinary.com") && partes ? `${partes[1]}c_scale,w_24,f_png/${partes[2]}` : url;
   };
 
-  /** true = a foto tem fundo; false = é recorte; null = não deu para saber. */
+  /** { cheia: a foto tem fundo?, proporcao: largura / altura } ou null (não deu para saber). */
   const sondar = (url) => new Promise((pronto) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -67,9 +74,9 @@
         // os quatro cantos e o meio de cada lado
         const pontos = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1],
           [w >> 1, 0], [w >> 1, h - 1], [0, h >> 1], [w - 1, h >> 1]];
-        pronto(pontos.every(([x, y]) => alfa[(y * w + x) * 4 + 3] > 245));
+        pronto({ cheia: pontos.every(([x, y]) => alfa[(y * w + x) * 4 + 3] > 245), proporcao: img.naturalWidth / img.naturalHeight });
       } catch (erro) {
-        pronto(null);
+        pronto({ cheia: null, proporcao: img.naturalWidth / img.naturalHeight || 0 });
       }
     };
     img.onerror = () => pronto(null);
@@ -83,12 +90,22 @@
     return url.includes("res.cloudinary.com") && partes ? `${partes[1]}c_scale,w_96,e_blur:400,q_auto,f_auto/${partes[2]}` : url;
   };
 
-  const marcar = (caixa, cheia) => {
+  // a foto de outro formato que o da caixa (mais de ~10%): inteira, sobre ela mesma desfocada
+  const outroFormato = (caixa, proporcao) => {
+    const w = caixa.clientWidth, h = caixa.clientHeight;
+    return Boolean(proporcao && w && h) && Math.abs(Math.log(proporcao / (w / h))) > 0.1;
+  };
+
+  const marcar = (caixa, cheia, proporcao) => {
     if (!cheia) return;
     caixa.classList.add("foto-cheia");
+    const foto = caixa.querySelector("img");
+    const fundo = () => caixa.style.setProperty("--foto-fundo", `url("${desfocada(foto.getAttribute("src") || "")}")`);
     if (caixa.matches(".ls-vitrine-foto")) {
-      const foto = caixa.querySelector("img");
-      caixa.style.setProperty("--foto-fundo", `url("${desfocada(foto.getAttribute("src") || "")}")`);
+      fundo();
+    } else if (outroFormato(caixa, proporcao || (foto.naturalWidth / foto.naturalHeight))) {
+      caixa.classList.add("foto-encaixada");
+      fundo();
     }
   };
 
@@ -100,19 +117,22 @@
     const url = foto.getAttribute("src") || "";
     if (!url || url.startsWith("data:") || /\.svg($|\?)/i.test(url)) return;
     const caminho = url.split("?")[0].split("#")[0];
-    if (SEM_TRANSPARENCIA.test(caminho)) {
-      marcar(caixa, true);
-      return;
-    }
     const memoria = lembrado(url);
     if (memoria !== null) {
-      marcar(caixa, memoria === "1");
+      const [cheia, proporcao] = memoria.split(":");
+      marcar(caixa, cheia === "1", Number(proporcao) || 0);
       return;
     }
-    sondar(url).then((cheia) => {
+    sondar(url).then((sonda) => {
+      if (sonda === null) {
+        // a sonda não carregou: o JPG tem fundo de todo jeito (o formato vem da própria foto)
+        if (SEM_TRANSPARENCIA.test(caminho)) marcar(caixa, true, 0);
+        return;
+      }
+      const cheia = SEM_TRANSPARENCIA.test(caminho) ? true : sonda.cheia;
       if (cheia === null) return;
-      lembrar(url, cheia);
-      marcar(caixa, cheia);
+      lembrar(url, `${cheia ? 1 : 0}:${sonda.proporcao.toFixed(3)}`);
+      marcar(caixa, cheia, sonda.proporcao);
     });
   };
 

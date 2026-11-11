@@ -2187,6 +2187,35 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia img {
     filter: none;
 }
 
+/* A foto com fundo de outro formato que o da caixa (a foto em pé no card
+   quadrado): o brinquedo NUNCA é cortado. Ela fica inteira ("contain") e as
+   sobras são ela mesma, desfocada e escurecida (ls-fotos.js põe a classe e
+   a `--foto-fundo`). */
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-encaixada {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-encaixada::before {
+    content: "";
+    display: block;
+    position: absolute;
+    inset: -24px;
+    z-index: 0;
+    background: var(--foto-fundo, none) center / cover no-repeat;
+    filter: blur(22px) brightness(.62) saturate(1.1);
+    transform: scale(1.08);
+    pointer-events: none;
+}
+
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-encaixada img {
+    position: relative;
+    z-index: 1;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .4));
+}
+
 /* =========================================================
    DESEMPENHO
 

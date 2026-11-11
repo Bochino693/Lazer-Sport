@@ -81,6 +81,18 @@ const contra = new T.DirectionalLight("#ffffff", 0.9);
 cena.add(contra, contra.target);
 // as luzes coloridas do lugar (as da game zone), trocadas a cada cena
 const coloridas = [new T.PointLight("#ffffff", 0, 0, 2), new T.PointLight("#ffffff", 0, 0, 2)];
+// A LUZ DE ESTÚDIO das fotos de produto (as capas, as capas do catálogo, as vistas da galeria):
+// como numa foto comercial -- a principal macia de 3/4 pela frente, o preenchimento do outro
+// lado, o recorte por trás (separa a máquina do fundo); o produto é a parte mais clara da foto
+// e o lugar fica mais escuro (os spots caem com a distância)
+const principal = new T.SpotLight("#fff6ea", 0, 0, 0.5, 0.7, 2);
+principal.castShadow = true;
+principal.shadow.mapSize.set(4096, 4096);
+principal.shadow.bias = -0.0002;
+principal.shadow.normalBias = 0.02;
+const preenchimento = new T.SpotLight("#eef3ff", 0, 0, 0.7, 0.9, 2);
+const recorte = new T.SpotLight("#ffffff", 0, 0, 0.6, 0.8, 2);
+for (const luzEstudio of [principal, preenchimento, recorte]) cena.add(luzEstudio, luzEstudio.target);
 coloridas.forEach((l) => cena.add(l));
 const camera = new T.PerspectiveCamera(28, LARGURA / ALTURA, 0.05, 600);
 
@@ -258,7 +270,11 @@ function crianca(i, pose, { x = 0, y = 0, z = 0, r = 0, escala = 1 } = {}) {
   return g;
 }
 
-const LUGARES = criarLugares(T, P, { maquina: maquinaPronta, crianca, peca: pecaPronta });
+// a placa do logo do showroom (ferramentas/categorias/placa.py, do logo oficial do repositório)
+const placaDoLogo = await leitorTextura.loadAsync("showroom/placa-lazer-sport.png");
+placaDoLogo.colorSpace = T.SRGBColorSpace;
+placaDoLogo.anisotropy = 16;
+const LUGARES = criarLugares(T, P, { maquina: maquinaPronta, crianca, peca: pecaPronta, placa: placaDoLogo });
 
 /** Uma área do projetista do painel (o mesmo do "Monte seu espaço"), pela medida e pela cor. */
 function area(tipo, medidas, cor, semente, opcoes = {}) {
@@ -443,8 +459,8 @@ const CENAS = {
       crianca(2, "jogando", { x: 3.05, z: -0.4, r: -14 }),
     ),
     naTela: naFrente([[-0.86, -0.82, 6, "comemorando", 30]]),
-    lugar: "gamezone", lente: 40, giro: 12, altura: 10, ocupa: 0.72,
-    lugarOp: { fundo: [] },
+    lugar: "showroom", lente: 40, giro: 12, altura: 10, ocupa: 0.72,
+    lugarOp: { fundo: [], cenario: "fliperama", deslocar: -1.5 },
   },
   // Fliperama: o Multi Jogos Retro, o Gabinete Games, o Pinball 40 Polegadas e o Subway Surfers (fotos), em fila, de frente
   fliperama: {
@@ -455,8 +471,8 @@ const CENAS = {
       await maquina("subway-surfers", { x: 2.3, z: -0.05, r: 0 }),
     ),
     naTela: naFrente([[-0.86, -0.8, 3, "apontando", 30], [0.86, -0.82, 0, "comemorando", -30]]),
-    lugar: "gamezone", lente: 40, giro: 6, altura: 8, ocupa: 0.66,
-    lugarOp: { fundo: [] },
+    lugar: "showroom", lente: 40, giro: 6, altura: 8, ocupa: 0.66,
+    lugarOp: { fundo: [], cenario: "logo" },
   },
   // Simuladores: o Simulador Mario Kart, o Top Racer e o Porsche Simulador (fotos), em fila, de frente, no shopping
   simuladores: {
@@ -586,8 +602,10 @@ CENAS["pecas-e-acessorios"] = {
    o mural pintado, o piso de madeira com o reflexo suave, o teto claro, a
    luz difusa, o produto grande e nítido) -- e "nas fotos individuais não
    coloque as crianças". Então a capa é o produto SOZINHO, inteiro, grande e
-   nítido, no salão do mural (lugares.js, `mural`), sem gente e sem outra
-   máquina. QUADRADA: o card de produto é quadrado (ls-tema.css, `.card-mini
+   nítido, sem gente e sem outra máquina, no SHOWROOM DA LAZER & SPORT (lugares.js,
+   `showroom`: o padrão de todas as fotos de produto, o da foto de verdade do
+   Boliche Virtual), com a luz de estúdio; o Espaço Esportivo Modelo 1 (39 x 23 m),
+   do alto, no galpão. QUADRADA: o card de produto é quadrado (ls-tema.css, `.card-mini
    .img-area`), e a galeria da página do produto também, no computador.
    As mesmas chaves de `core/cadastro_modelos.py` (CADASTROS): o compor.py
    grava em core/static/site/arena/modelos/<chave>/capa.webp. */
@@ -603,17 +621,17 @@ const CAPAS = {
   // o Brinquedão Modelo 2 (o da selva)
   "brinquedao-modelo-2": {
     maquinas: async () => glb("brinquedao-modelo-2"),
-    lugar: "mural", lente: 40, giro: 36, altura: 6,
+    lugar: "showroom", lente: 40, giro: 36, altura: 6, lugarOp: { cenario: "plantas", semente: 81 },
   },
   // o Brinquedão Modelo 3 (a lojinha e o fliperama na frente)
   "brinquedao-modelo-3": {
     maquinas: async () => glb("brinquedao-modelo-3"),
-    lugar: "mural", lente: 40, giro: 32, altura: 6,
+    lugar: "showroom", lente: 40, giro: 32, altura: 6, lugarOp: { cenario: "fliperama", deslocar: -2.0, semente: 83 },
   },
   // o Brinquedão Ninja, visto pela ponta da entrada (a câmera pela esquerda)
   "brinquedao-ninja": {
     maquinas: async () => glb("brinquedao-ninja"),
-    lugar: "mural", lente: 40, giro: -38, altura: 6,
+    lugar: "showroom", lente: 40, giro: -38, altura: 6, lugarOp: { cenario: "plantas", deslocar: 1.5, semente: 85 },
   },
   // o Espaço Esportivo Modelo 1, do alto (o salão inteiro: as quadras, as camas, o circuito), no galpão
   "espaco-esportivo-modelo-1": {
@@ -623,25 +641,220 @@ const CAPAS = {
   // o Trampolim de Enterrada
   "trampolim-enterrada": {
     maquinas: async () => glb("trampolim-enterrada"),
-    lugar: "mural", lente: 40, giro: 30, altura: 6,
+    lugar: "showroom", lente: 40, giro: 30, altura: 7, lugarOp: { cenario: "logo", semente: 87 },
   },
   // o Strike Kids, quase de frente (a pista, a tela e a testeira)
   "strike-kids": {
     maquinas: async () => glb("strike-kids"),
-    lugar: "mural", lente: 40, giro: 26, altura: 6, ocupa: 0.82,
-    lugarOp: { mesa: false },
+    lugar: "showroom", lente: 40, giro: 30, altura: 6, ocupa: 0.82,
+    lugarOp: { cenario: "vitrine", semente: 89 },
   },
   // o Air Game Kids Alienígenas, um tanto de cima (o tampo e a lateral)
   "air-game-kids-alienigenas": {
     maquinas: async () => glb("air-game-kids-alienigenas"),
-    lugar: "mural", lente: 40, giro: 30, altura: 16, ocupa: 0.78,
-    lugarOp: { mesa: false },
+    lugar: "showroom", lente: 40, giro: 30, altura: 16, ocupa: 0.78,
+    lugarOp: { cenario: "plantas", deslocar: 0.6, semente: 91 },
   },
   // o Basquete Street Quadrinhos, de 3/4 (o console, a rampa e a lateral)
   "basquete-street-quadrinhos": {
     maquinas: async () => glb("basquete-street-quadrinhos"),
-    lugar: "mural", lente: 40, giro: 26, altura: 6, ocupa: 0.82,
-    lugarOp: { mesa: false },
+    lugar: "showroom", lente: 40, giro: 26, altura: 6, ocupa: 0.82,
+    lugarOp: { cenario: "vitrine", deslocar: -1.0, semente: 93 },
+  },
+};
+
+/* ---------------------------------------------------------------- as capas do catálogo
+   O cliente, sobre as capas dos produtos do catálogo que são a foto da máquina no
+   fundo branco: "você deve criar o fundo para todos que tem fundo branco, tirando
+   sempre o zoom e mostrando todo o brinquedo, com fundos originais, com vida e com
+   os estabelecimentos coerentes, não com cara muito de IA, parecendo mais bonito e
+   vivo, é para vender!!!". Então cada uma vira uma FOTO no lugar onde a máquina fica
+   de verdade: o SHOWROOM DA LAZER & SPORT, o padrão das fotos de produto (a foto
+   de verdade do Boliche Virtual no catálogo: o painel preto com a placa do logo, o
+   canteiro, os perfis de LED, o porcelanato que reflete) --, QUADRADA (1600 x 1600, o
+   card) e com a máquina INTEIRA e grande, com folga em volta. Sem gente (são fotos
+   individuais). A luz é a de estúdio (a principal de 3/4, o preenchimento, o recorte)
+   e o tone mapping é o neutro: a arte sai viva, como na foto do produto.
+   A máquina é a FOTO DO CATÁLOGO recortada (recortar.py --alta, maquinas-alta/), em
+   pé no chão, de frente para a câmera; a câmera fica na altura e no lado da foto
+   (a maioria é de 3/4, na altura dos olhos: `giro` é o lado que a foto mostra, `altura`
+   o quanto ela é de cima), e o lugar gira com ela -- as linhas do chão e das paredes
+   casam com as da máquina. O recorte recebe a luz do lugar (um tanto: a cor dele casa
+   com a da sala), a sombra de contato embaixo e a sombra projetada macia; no piso que
+   brilha, o reflexo suave. O compor.py desfoca o fundo (a profundidade de campo) e põe
+   um grão bem leve.
+   As variações (o que fica atrás, o quanto o nicho anda, o lado da câmera) não deixam as fotos iguais. */
+// o showroom em cada capa: o que fica atrás do produto (o logo ao lado, o canteiro, a parede de
+// fliperama, a vitrine) e o quanto o nicho anda, para não repetir a mesma foto
+const v = (cenario, deslocar = 0, semente = 19, extra = {}) => ({ lugar: "showroom", lugarOp: Object.assign({ cenario, deslocar: cenario === "logo" ? 0 : deslocar, semente }, extra) });
+const CATALOGO = {
+  // fliperama, simulador, basquete
+  "mundo-zumbi": { ...v("logo", 0.2, 3), giro: -24, altura: 8 },
+  "simulador-mario-kart": { ...v("fliperama", -1.0, 5), giro: -24, altura: 8 },
+  "basquete-street": { ...v("vitrine", 1.2, 7), giro: 24, altura: 7 },
+  "basquete-home": { ...v("logo", -0.3, 9), giro: 20, altura: 8 },
+  "show-de-bola": { ...v("plantas", 1.4, 11), giro: -24, altura: 9 },
+  "multi-jogos-retro": { ...v("fliperama", 1.6, 13), giro: 22, altura: 7 },
+  "gabinete-games": { ...v("logo", 0.4, 15), giro: 22, altura: 8 },
+  "pinball-32": { ...v("vitrine", -1.5, 17), giro: -24, altura: 12 },
+  "pinball-40": { ...v("plantas", -1.2, 19), giro: 24, altura: 12 },
+  "homem-aranha": { ...v("fliperama", 0.8, 21), giro: -22, altura: 7 },
+  "sonic-dash": { ...v("logo", 0, 23), giro: 22, altura: 7 },
+  "subway-surfers": { ...v("vitrine", 0.6, 25), giro: 22, altura: 7 },
+  "flappy-bird": { ...v("plantas", 1.8, 27), giro: 22, altura: 7 },
+  "speed-turbo": { ...v("logo", 0.5, 29), giro: -22, altura: 7 },
+  "nervo-teste": { ...v("logo", 0.9, 31), giro: 8, altura: 6 },
+  "lazer-shot": { ...v("fliperama", -0.6, 33), giro: 6, altura: 6 },
+  "top-racer": { ...v("vitrine", -0.8, 35), giro: 22, altura: 8 },
+  "matrix-one-piece": { ...v("plantas", -1.6, 37), giro: 6, altura: 6 },
+  // os kids
+  "homem-aranha-kids": { ...v("logo", -0.4, 39), giro: -12, altura: 7 },
+  "tomb-raider-kids": { ...v("plantas", 1.0, 41), giro: -8, altura: 7 },
+  "corrida-dos-minions": { ...v("fliperama", 1.2, 43), giro: 22, altura: 9 },
+  "pega-toupeira": { ...v("logo", 0.6, 45), giro: 10, altura: 10 },
+  "pantera-kids": { ...v("vitrine", -0.4, 47), giro: 8, altura: 7 },
+  "sonic-kids": { ...v("logo", -0.8, 49), giro: -8, altura: 7 },
+  "minions-kids": { ...v("plantas", -0.9, 51), giro: 8, altura: 7 },
+  "bob-esponja-kids": { ...v("fliperama", -1.4, 53), giro: -6, altura: 7 },
+  "air-game-kids": { ...v("plantas", 0.4, 55), giro: 4, altura: 16 },
+  "brinquedao-modelo-1": { ...v("logo", -1.0, 57), giro: -12, altura: 10, ocupa: 0.86 },
+  // os jogos de mesa
+  "air-game-premium": { ...v("plantas", 0.8, 59), giro: 22, altura: 22 },
+  "air-game-home": { ...v("logo", 0.3, 61), giro: 20, altura: 22 },
+  "pebolim-eletronico": { ...v("vitrine", 0.5, 63), giro: 18, altura: 18 },
+  "pac-man": { ...v("plantas", -0.7, 65), giro: 24, altura: 22 },
+  "matrix": { ...v("logo", -0.5, 67), giro: 24, altura: 24 },
+  "multi-jogos": { ...v("fliperama", 0.3, 69), giro: -22, altura: 12 },
+  // os mecânicos e os carrinhos
+  "labamba": { ...v("vitrine", -1.0, 71), giro: -24, altura: 22 },
+  "carrossel-sorvetinho": { ...v("plantas", 0.6, 73), giro: 10, altura: 14 },
+  "mini-roda-sorvete": { ...v("logo", 0.8, 75), giro: 15, altura: 16 },
+  "sonic-racing": { ...v("fliperama", -0.9, 77), giro: 22, altura: 10 },
+  "porsche-simulador": { ...v("vitrine", 1.4, 79), giro: 24, altura: 10 },
+};
+
+// os recortes em alta (maquinas-alta/<chave>.webp), carregados quando a capa pede
+const altas = new Map();
+async function carregarAlta(chave) {
+  if (altas.has(chave)) return;
+  const t = await leitorTextura.loadAsync(`maquinas-alta/${chave}.webp`);
+  t.colorSpace = T.SRGBColorSpace;
+  t.anisotropy = 16;
+  altas.set(chave, t);
+}
+const matContatoForte = new T.MeshBasicMaterial({ map: texturaContato, transparent: true, depthWrite: false, toneMapped: false, opacity: 1 });
+
+/** A máquina do catálogo em foto, em alta, de pé no chão e de frente para a câmera (as capas do catálogo). */
+function maquinaAlta(chave) {
+  const t = altas.get(chave);
+  const ficha = FICHA[chave];
+  const a = ficha.altura;
+  const l = (a * t.image.width) / t.image.height;
+  // a cor da foto, com um tanto da luz do lugar (casa com a sala sem perder a foto)
+  const mat = new T.MeshStandardMaterial({
+    map: t, emissiveMap: t, emissive: "#ffffff", emissiveIntensity: 0.3, alphaTest: 0.5,
+    roughness: 0.85, metalness: 0, side: T.DoubleSide, envMapIntensity: 0.25,
+  });
+  const plano = new T.Mesh(new T.PlaneGeometry(l, a), mat);
+  plano.position.y = a / 2;
+  plano.castShadow = true;
+  plano.customDepthMaterial = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking, map: t, alphaTest: 0.5 });
+  plano.userData.recorte = t;
+  const g = new T.Group();
+  g.add(plano);
+  // a sombra de contato: a justa e escura bem embaixo, e a larga e macia em volta
+  for (const [largura, fundo, z, material] of [[l * 0.92, Math.max(0.22, l * 0.22), -l * 0.06, matContatoForte], [l * 1.35, Math.max(0.5, l * 0.7), -l * 0.22, matContato]]) {
+    const contato = new T.Mesh(new T.PlaneGeometry(largura, fundo), material);
+    contato.rotation.x = -Math.PI / 2;
+    contato.position.set(0, 0.004, z);
+    contato.userData.sombraContato = true;
+    g.add(contato);
+  }
+  g.rotation.y = giroDaCena * GRAU;
+  g.userData.maquina = ficha.nome;
+  return g;
+}
+
+/* ---------------------------------------------------------------- as vistas da galeria dos nossos 3D
+   O cliente: "faça padrão para todas as imagens 2D". As fotos da galeria que saem dos
+   nossos .glb (frente, lados, verso, tampo, jogador...) eram o objeto num fundo claro;
+   agora são fotos no showroom, como as capas: a mesma luz de estúdio e o mesmo piso, cada
+   vista do lado dela (a câmera das ferramentas de cada modelo, ferramentas/modelos3d/
+   <modelo>/gerar.cjs, vira o giro e a altura daqui), o objeto inteiro e sem gente. O
+   compor.py grava por cima do mesmo arquivo (core/static/site/arena/modelos/<chave>/
+   <vista>.webp), no mesmo tamanho: o cadastro (CADASTROS) e a Arena não mudam. Ficam
+   como estão: as fotos de verdade, as imagens da fábrica (os Brinquedões Modelo 2, 4, 5 e
+   Ninja têm as da fábrica), as plantas (o desenho de cima) e as cores do Strike Kids. */
+const vista = (pos, alvo, extra = {}) => {
+  const d = [pos[0] - alvo[0], pos[1] - alvo[1], pos[2] - alvo[2]];
+  const giro = Math.atan2(d[0], d[2]) / GRAU, altura = Math.atan2(d[1], Math.hypot(d[0], d[2])) / GRAU;
+  return Object.assign({ giro: Math.round(giro * 10) / 10, altura: Math.round(altura * 10) / 10 }, extra);
+};
+const VISTAS = {
+  "air-game-kids-alienigenas": {
+    tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama", "plantas"],
+    vistas: {
+      frente: vista([2.3, 1.85, 2.9], [0, 0.55, 0]),
+      lado_esquerdo: vista([-3.3, 1.35, 1.1], [0, 0.55, 0]),
+      lado_direito: vista([3.3, 1.35, -1.1], [0, 0.55, 0]),
+      verso: vista([-1.6, 1.7, -3.0], [0, 0.55, 0]),
+      tampo: { giro: 0, altura: 62 },
+    },
+  },
+  "basquete-street-quadrinhos": {
+    tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama", "logo"],
+    vistas: {
+      frente: vista([3.7, 2.5, 4.9], [0, 1.25, 0]),
+      lado_esquerdo: vista([-6.0, 1.7, 1.6], [0, 1.3, 0]),
+      lado_direito: vista([6.0, 1.7, -1.6], [0, 1.3, 0]),
+      verso: vista([-3.4, 2.4, -5.4], [0, 1.3, 0]),
+      jogador: vista([0.4, 2.1, 6.2], [0, 1.3, -0.4]),
+    },
+  },
+  "brinquedao-modelo-3": {
+    tamanho: [1600, 1000], cenario: ["plantas", "logo", "fliperama"],
+    vistas: {
+      frente: vista([7.8, 4.4, 11.2], [0.4, 1.5, 0]),
+      lado_esquerdo: vista([-11, 4.2, 7.2], [-0.8, 1.5, 0]),
+      lado_direito: vista([11.6, 4.0, 4.4], [1.2, 1.4, 0]),
+    },
+  },
+  "brinquedao-modelo-5": {
+    tamanho: [1600, 1000], cenario: ["plantas", "logo", "fliperama", "vitrine"],
+    vistas: {
+      frente: vista([1.2, 1.9, 7.6], [0.05, 0.95, 0]),
+      lado_esquerdo: vista([-6.4, 2.3, 4.4], [-0.2, 0.9, 0]),
+      lado_direito: vista([6.6, 2.3, 3.6], [0.3, 0.9, 0]),
+      perspectiva_3d: { giro: 42, altura: 24 },
+    },
+  },
+  "espaco-esportivo-modelo-1": {
+    tamanho: [1600, 1000], lugar: "galpao",
+    vistas: {
+      frente: vista([0, 25, 52], [0, 0, 0]),
+      lado_direito: vista([39, 22, 35], [0, 0, 0]),
+      lado_esquerdo: vista([-39, 22, 35], [0, 0, 0]),
+    },
+  },
+  "strike-kids": {
+    tamanho: [1080, 1080], cenario: ["logo", "plantas", "vitrine", "fliperama", "logo", "plantas"],
+    vistas: {
+      frente: { giro: 0, altura: 14 },
+      lado_direito: { giro: 90, altura: 10 },
+      lado_esquerdo: { giro: -90, altura: 10 },
+      verso: { giro: 180, altura: 12 },
+      tres_quartos_esquerda: { giro: -40, altura: 12 },
+      de_cima: { giro: 20, altura: 48 },
+    },
+  },
+  "trampolim-enterrada": {
+    tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama"],
+    vistas: {
+      frente: vista([6.6, 3.5, 8.0], [0, 1.3, 0]),
+      lado_esquerdo: vista([-7.6, 3.5, 8.0], [-0.6, 1.3, 0]),
+      lado_direito: vista([9.6, 3.3, 2.6], [0, 1.3, 0]),
+      espuma: vista([6.6, 3.5, 8.0], [0, 1.3, 0], { glb: "trampolim-enterrada-espuma" }),
+    },
   },
 };
 
@@ -923,6 +1136,8 @@ let atual = null, atualLugar = null;
 window.CENAS = Object.keys(CENAS).filter((chave) => !CENAS[chave].manter);
 window.TODAS = Object.keys(CENAS);
 window.CAPAS = Object.keys(CAPAS).map((chave) => "capa:" + chave);
+window.PRODUTOS = Object.keys(CATALOGO).map((chave) => "produto:" + chave);
+window.VISTAS = Object.entries(VISTAS).flatMap(([chave, m]) => Object.keys(m.vistas).map((nome) => `vista:${chave}:${nome}`));
 window.MAQUINAS_DAS_CENAS = {};
 
 /**
@@ -944,18 +1159,49 @@ window.renderizar = async (chave, ajustes = {}) => {
     const [largura, profundidade, altura] = medidas.split("x").map(Number);
     c = { maquinas: () => area(tipo, { largura, profundidade, altura }, "#" + cor, Number(semente), { porte, estilo }), giro: 30, altura: 30, lente: 26 };
   }
+  // "produto:<chave>", a capa do catálogo (a foto da máquina no lugar dela: quadrada, sem gente)
+  if (chave.startsWith("produto:") && CATALOGO[chave.slice(8)]) {
+    const qual = chave.slice(8);
+    c = Object.assign({ quadrado: true, ocupa: 0.8, desce: 0.05, rampa: 2.2, lente: 38 }, CATALOGO[qual], {
+      maquinas: async () => {
+        await carregarAlta(qual);
+        return maquinaAlta(qual);
+      },
+    });
+  }
+  // "vista:<chave>:<nome>", uma foto da galeria de um 3D nosso (no showroom, do lado da vista)
+  if (chave.startsWith("vista:")) {
+    const [, qual, nome] = chave.split(":");
+    const modelo = VISTAS[qual], v = modelo && modelo.vistas[nome];
+    if (v) {
+      const k = Object.keys(modelo.vistas).indexOf(nome);
+      const lugar = modelo.lugar || "showroom";
+      // a vista de trás (ou quase): quem gira é o objeto, e não a câmera -- a câmera atrás
+      // dele ficaria atrás da parede do fundo do lugar
+      const virar = Math.abs(v.giro) > 95;
+      const giro = virar ? v.giro - Math.sign(v.giro) * 180 : v.giro;
+      c = Object.assign({ lugar, lente: 36, ocupa: 0.8, desce: 0.04, rampa: 3, formato: modelo.tamanho }, v, {
+        giro,
+        lugarOp: lugar === "showroom" ? { cenario: (modelo.cenario || ["logo"])[k % (modelo.cenario || ["logo"]).length], semente: 101 + k } : {},
+        maquinas: async () => glb(v.glb || qual, { r: virar ? 180 : 0 }),
+      });
+    }
+  }
   // "capa:<chave>", a capa do produto (quadrada, o produto grande)
   if (chave.startsWith("capa:")) c = CAPAS[chave.slice(5)] && Object.assign({ quadrado: true, ocupa: 0.86, desce: 0.04 }, CAPAS[chave.slice(5)]);
   c = Object.assign({}, c, ajustes);
   if (!c.maquinas) throw new Error("cena desconhecida: " + chave);
   // `previa`: a metade do tamanho (para acertar o ângulo depressa)
-  const [largura, altura] = c.quadrado ? [3200, 3200] : [3200, 2400];
+  // (a vista da galeria: o tamanho do arquivo de antes, no dobro -- até 3200 de largura)
+  const [largura, altura] = c.formato
+    ? [Math.min(3200, c.formato[0] * 2), Math.round((Math.min(3200, c.formato[0] * 2) * c.formato[1]) / c.formato[0])]
+    : c.quadrado ? [3200, 3200] : [3200, 2400];
   formato(c.previa ? largura / 2 : largura, c.previa ? altura / 2 : altura);
   if (atual) cena.remove(atual);
   if (atualLugar) cena.remove(atualLugar);
   giroDaCena = c.giro;
   const op = c.lugarOp || {};
-  await carregarFotos(op.fundo || []);
+  await carregarFotos([...(Array.isArray(op.fundo) ? op.fundo : []), ...(op.vizinhas || [])]);
   atual = await c.maquinas();
   cena.add(atual);
   atual.updateMatrixWorld(true);
@@ -974,6 +1220,27 @@ window.renderizar = async (chave, ajustes = {}) => {
   const ocupa = c.ocupa ?? (c.lugar ? 0.76 : 0.86), desce = c.desce ?? (c.lugar ? 0.1 : 0);
   const quadro = enquadrar(caixa, c.giro, c.altura, c.lente, ocupa, desce);
   if (c.lugar) acertarPelaSilhueta(quadro, atual, null, ocupa, desce);
+  // a foto de produto: o tone mapping neutro (o ACES desbota e escurece as cores fortes da arte)
+  // e a luz de estúdio na medida do produto, a partir do lado da câmera
+  const estudio = c.estudio ?? (chave.startsWith("produto:") || chave.startsWith("capa:") || chave.startsWith("vista:"));
+  // (as categorias também: o neutro mantém as cores das máquinas fiéis às fotos)
+  renderer.toneMapping = T.NeutralToneMapping;
+  const raioDoProduto = caixa.getBoundingSphere(new T.Sphere()).radius;
+  for (const [luzEstudio, giroDaLuz, alturaDaLuz, forca] of [[principal, 38, 38, 1], [preenchimento, -55, 18, 0.32], [recorte, 165, 50, 0.9]]) {
+    if (!estudio) {
+      luzEstudio.intensity = 0;
+      continue;
+    }
+    const a = (c.giro + (c.giro >= 0 ? giroDaLuz : -giroDaLuz)) * GRAU, e = alturaDaLuz * GRAU;
+    const d = Math.max(3.5, raioDoProduto * 3.2);
+    luzEstudio.position.set(centro.x + Math.sin(a) * Math.cos(e) * d, centro.y + Math.sin(e) * d, centro.z + Math.cos(a) * Math.cos(e) * d);
+    luzEstudio.target.position.copy(centro);
+    luzEstudio.angle = Math.min(1.2, Math.atan((raioDoProduto * 1.6) / d) + 0.15);
+    // (os nossos .glb pedem mais luz que as fotos do catálogo, que já vêm iluminadas: a arte sai viva)
+    luzEstudio.intensity = forca * (c.luzEstudio ?? (chave.startsWith("produto:") ? 3.2 : 4.8)) * d * d;
+    luzEstudio.shadow.camera.near = 0.5;
+    luzEstudio.shadow.camera.far = d * 3;
+  }
   // o lugar em volta (e a luz dele) e a vida (as crianças, o que está no ar)
   const lugar = c.lugar ? LUGARES[c.lugar](caixa, c.giro, Object.assign({ alturaDaCamera: camera.position.y }, op)) : null;
   const l = (lugar && lugar.luz) || {};
@@ -992,6 +1259,11 @@ window.renderizar = async (chave, ajustes = {}) => {
   sol.intensity = l.sol ?? 2.4;
   cena.environmentIntensity = l.amb ?? 0.55;
   renderer.toneMappingExposure = l.exposicao ?? 1.0;
+  if (estudio) {
+    // o sol vira só a luz geral do lugar (a do produto é a de estúdio), e o lugar fica mais escuro que ele
+    sol.intensity = (l.sol ?? 2.4) * 0.35;
+    hemi.intensity = (l.hemi ?? 1.25) * 0.6;
+  }
   coloridas.forEach((luzColorida, i) => {
     const [cor, lado] = (l.cores || [])[i] || ["#ffffff", 0];
     luzColorida.color.set(cor);
@@ -1014,7 +1286,13 @@ window.renderizar = async (chave, ajustes = {}) => {
   if (lugar && c.naTela) atualLugar.add(c.naTela(chaoNaTela));
   if (lugar && lugar.reflexo) {
     const espelho = atual.clone(true);
+    // (o clone copia o userData em JSON: a textura do recorte volta a ser a de verdade)
+    const originais = [];
+    atual.traverse((o) => originais.push(o));
+    let k = 0;
     espelho.traverse((o) => {
+      const original = originais[k++];
+      if (original && original.userData.recorte) o.userData.recorte = original.userData.recorte;
       o.castShadow = false;
       if (o.userData.sombraContato) o.visible = false;
     });

@@ -26,6 +26,7 @@ A foto vai como é: nada redesenhado, nenhum logo acrescentado.
     python ferramentas/categorias/recortar.py mundo-zumbi  (só esta)
     python ferramentas/categorias/recortar.py --catalogo   (só o catalogo.json: as categorias de cada produto)
     python ferramentas/categorias/recortar.py --pecas      (as peças de reposição: reposicao/)
+    python ferramentas/categorias/recortar.py --alta [chaves] (o recorte em alta: maquinas-alta/)
 
 `altura` é a do cadastro (altura_m, em metros): a escala da máquina na cena.
 
@@ -49,6 +50,10 @@ PASTA = Path(__file__).resolve().parent / "maquinas"
 CLOUDINARY = "https://res.cloudinary.com/dgikjmki8/image/upload/c_limit,w_1600,f_png/v1/"
 #: O lado maior do arquivo gravado (a máquina ocupa no máximo ~1000 px no render de 2400).
 LADO = 900
+#: As capas do catálogo (seção 64): o recorte em alta, do tamanho da foto do site (até 1600 px),
+#: em maquinas-alta/ -- a máquina ocupa a foto quase inteira.
+PASTA_ALTA = Path(__file__).resolve().parent / "maquinas-alta"
+LADO_ALTO = 1600
 
 #: O contorno do Boliche Virtual na foto rosa da galeria (1086 x 1448), à mão.
 CONTORNO_BOLICHE = [
@@ -98,6 +103,11 @@ MAQUINAS = {
     "sonic-racing": (37, "Sonic Racing All-Stars", "imagens_brinquedos/SONIC_k6bpj7", 2.10, "branco"),
     "top-racer": (38, "Simulador de Corrida Top Racer", "imagens_brinquedos/ChatGPT_Image_24_de_jul._de_2026__15_31_31-removebg-preview_t3qcnh", 1.50, "pronto"),
     "bob-esponja-kids": (39, "Bob Esponja Hammer Kids", "imagens_brinquedos/WhatsApp_Image_2026-07-24_at_16.01.53-removebg-preview_mdy0ek", 1.47, "pronto"),
+    # (os que faltavam para as capas do catálogo, a seção 64)
+    "air-game-home": (2, "Air Game Home", "imagens_brinquedos/airhokey_lpyk86", 0.80, "cinza"),
+    "multi-jogos": (16, "Multi Jogos", "imagens_brinquedos/Multi_jogos_Mesa_foocks", 1.52, "branco+buracos"),
+    "matrix-one-piece": (36, "Matrix One Piece", "imagens_brinquedos/matrix_oqoacy", 2.30, "pronto"),
+    "air-game-kids": (40, "Air Game Kids", "imagens_brinquedos/WhatsApp_Image_2026-07-24_at_16.10.57-removebg-preview_hcfnmt", 0.90, "pronto"),
 }
 
 
@@ -160,6 +170,8 @@ def sem_fundo_branco(imagem, limite=232, buracos=False, buraco_minimo=0.015):
                     area = fundo.histogram()[200]
                     ImageDraw.floodfill(fundo, (x, y), 128 if area > buraco_minimo * w * h else 100)
     alfa = fundo.point(lambda v: 0 if v == 128 else 255)
+    # (a foto que já vem com parte transparente: o transparente dela continua transparente)
+    alfa = ImageChops.multiply(alfa, imagem.getchannel("A"))
     # a borda do recorte: um tico para dentro e macia
     alfa = alfa.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
     imagem.putalpha(alfa)
@@ -192,13 +204,16 @@ def pelo_contorno(imagem, pontos):
     return imagem
 
 
-def recortar(chave, lista=None, pasta=PASTA):
+def recortar(chave, lista=None, pasta=PASTA, lado=LADO, largura_da_foto=1600, qualidade=80):
     _id, nome, foto, altura, recorte = (lista or MAQUINAS)[chave]
     imagem = baixar(foto)
     if recorte in ("branco", "branco+buracos"):
         imagem = sem_fundo_branco(imagem, buracos=recorte == "branco+buracos")
     elif recorte == "branco+furinhos":
         imagem = sem_fundo_branco(imagem, buracos=True, buraco_minimo=0.0008)
+    elif recorte == "cinza":
+        # a foto com a sombra cinza do estúdio embaixo (o Air Game Home): some até o cinza claro
+        imagem = sem_fundo_branco(imagem, limite=165, buracos=True, buraco_minimo=0.0008)
     elif recorte == "escuro":
         # a peça escura no branco: some também a sombra cinza-clara da foto em volta
         imagem = sem_fundo_branco(imagem, limite=200, buracos=True, buraco_minimo=0.0008)
@@ -212,10 +227,10 @@ def recortar(chave, lista=None, pasta=PASTA):
     # apara a sobra transparente: a base da máquina fica na borda de baixo (no chão)
     caixa = imagem.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox()
     imagem = imagem.crop(caixa)
-    imagem.thumbnail((LADO, LADO), Image.LANCZOS)
+    imagem.thumbnail((lado, lado), Image.LANCZOS)
     pasta.mkdir(exist_ok=True)
     saida = pasta / f"{chave}.webp"
-    imagem.save(saida, "WEBP", quality=80, method=6)
+    imagem.save(saida, "WEBP", quality=qualidade, method=6)
     return saida, imagem.size
 
 
@@ -277,7 +292,18 @@ def pecas():
     (REPOSICAO / "pecas.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+def alta(chaves):
+    """maquinas-alta/: o recorte de cada máquina do catálogo no tamanho da foto do site (as capas em cena)."""
+    for chave in chaves or MAQUINAS:
+        saida, tamanho = recortar(chave, MAQUINAS, PASTA_ALTA, LADO_ALTO, qualidade=90)
+        print(f"{chave}: {saida.name} {tamanho[0]}x{tamanho[1]} ({saida.stat().st_size // 1024} KB)")
+    ficha()
+
+
 def main(chaves):
+    if chaves[:1] == ["--alta"]:
+        alta(chaves[1:])
+        return
     if chaves == ["--catalogo"]:
         print(f"{len(catalogo())} produtos em maquinas/catalogo.json")
         return

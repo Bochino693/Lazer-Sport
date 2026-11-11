@@ -2597,6 +2597,117 @@ Dependência nova: rjsmin (requirements.txt).
    cache) e a comparar montagem com montagem: core/tests_objetos_3d.py e
    core/tests_telas_do_site.py.
 
+64) TODAS AS FOTOS DE PRODUTO NO SHOWROOM DA LAZER & SPORT (E O CARD NUNCA CORTA O BRINQUEDO)
+   O pedido do cliente (com o print de uma página de categoria: o Simulador de
+   Corrida Top Racer e o Air Game Kids no fundo branco, o Pega Toupeira cortado,
+   com zoom): "você deve criar o fundo para todos que tem fundo branco, tirando
+   sempre o zoom e mostrando todo o brinquedo, com fundos originais, com vida e
+   com os estabelecimentos coerentes, não com cara muito de IA, parecendo mais
+   bonito e vivo, é para vender!!!". Depois, mostrando o card do Boliche Virtual
+   (a foto de verdade, tirada no showroom da empresa): "veja o Dragon Bowling,
+   como ficou bonito o fundo..." e "faça padrão para todas as imagens 2D". E,
+   sobre a capa do Strike Kids no salão do mural: "veja como ficou apagado o
+   boliche kids, assim não vai vender, nenhum pode ficar assim".
+   O PADRÃO: O SHOWROOM DA LAZER & SPORT (ferramentas/categorias/lugares.js,
+   `showroom`), fiel à foto do Boliche Virtual: o painel preto texturizado num
+   nicho de moldura branca com a PLACA DO LOGO acesa (o logo oficial do
+   repositório, core/static/images/logoofi.png, como placa: ferramentas/
+   categorias/placa.py -- aqui o logo pode aparecer, é a loja da empresa), o
+   canteiro branco com as plantas tropicais e as luzes de baixo, a sanca preta
+   com os perfis de LED e os spots, o porcelanato claro polido (o rejunte, o
+   reflexo suave), a parede com adesivos de fliperama GENÉRICOS (desenhos em
+   pixel: estrela, coração, moeda, controle -- nada de personagem de ninguém) e
+   a vitrine de vidro escuro com os frisos de LED azul. Cada foto muda o que
+   fica atrás do produto (a placa, o canteiro, a parede de fliperama, a
+   vitrine), o lugar na sala e o lado da câmera, para não repetir.
+   A FOTO DE PRODUTO, COMO FOTO COMERCIAL (o "apagado" do Strike Kids):
+     * o tone mapping NEUTRO (THREE.NeutralToneMapping), e não o ACES: o ACES
+       desbotava e escurecia as cores fortes dos adesivos; as texturas de cor
+       em sRGB, a saída em sRGB;
+     * a LUZ DE ESTÚDIO na medida do produto: a principal macia de 3/4 pela
+       frente (com sombra), o preenchimento do outro lado e o recorte por trás
+       (separa a máquina do fundo); o lugar fica mais escuro que o produto (o
+       sol da cena vira só a luz geral) e o reflexo do ambiente dá brilho;
+     * o render no dobro do tamanho (supersampling), a anisotropia no máximo,
+       a oclusão de ambiente, o fundo um tanto desfocado (a profundidade de
+       campo), o grão bem leve e a cor sem saturar demais.
+     O teste mede a área do produto de cada foto (o contraste e a saturação) e
+     reprova a que ficar abaixo do limite tirado da foto de verdade do Boliche
+     Virtual.
+   1. AS CAPAS DOS PRODUTOS DO CATÁLOGO DE FUNDO BRANCO (core/capas_catalogo.py,
+      LISTA: 39 produtos do site no ar cuja capa é a máquina no fundo branco ou
+      transparente, achados pela borda da foto e conferidos no olho). Cada uma
+      vira a FOTO DA MÁQUINA NO SHOWROOM, quadrada (1600 x 1600, o card) e com a
+      máquina INTEIRA, grande, com folga em volta; sem gente. A máquina é a foto
+      do próprio catálogo recortada do fundo (ferramentas/categorias/
+      recortar.py --alta: maquinas-alta/, no tamanho da foto do site), em pé no
+      chão, com a câmera no lado e na altura da foto (a maioria é de 3/4), a
+      sombra de contato e a projetada macias e o reflexo no porcelanato. As
+      fotos: core/static/site/capas_catalogo/<chave>.webp.
+      FICAM DE FORA (capas_catalogo.FORA): o Boliche Virtual (a foto já é de
+      verdade, a referência); os nossos 3D (a capa deles é a cena, abaixo); os
+      Brinquedões Modelo 4 e 5 (as imagens da fábrica).
+      O CADASTRO DESSES PRODUTOS É DO PAINEL, então a troca é reversível: a foto
+      em cena sobe e vira a CAPA (a "perfil", a primeira da galeria, e o
+      `imagem_brinquedo`), marcada `ImagemBrinquedo.papel_na_capa = "cena"`; a
+      capa de antes continua na galeria, logo depois, sem tipo e marcada
+      "original" (a galeria pública a mostra: Brinquedos.imagens_ordenadas).
+      Um campo novo, e não um tipo novo, porque os tipos são as posições do
+      formulário de fotos do painel e a restrição única (brinquedo, tipo) vale
+      para eles.
+          python manage.py capas_em_cena --simular            (lista o que faria)
+          python manage.py capas_em_cena [--so 13 "Sonic Kids"]
+          python manage.py capas_em_cena --desfazer [--so 13] (a capa de antes volta)
+      Só toca no produto cuja capa ainda é a foto da lista (o public id do
+      Cloudinary em LISTA): se a equipe já trocou a foto no painel, não mexe.
+      Rodar de novo não duplica; a foto em cena que mudou sobe de novo (a
+      assinatura no nome do arquivo).
+   2. AS CAPAS E AS VISTAS DA GALERIA DOS NOSSOS 3D no showroom: as capas
+      (capa.webp) e as vistas que saem dos .glb (frente, lados, verso, tampo,
+      jogador, a perspectiva 3D, a de cima, a de 3/4 e a variante de espuma do
+      Trampolim), cada uma do lado dela (a câmera das ferramentas de cada
+      modelo, ferramentas/modelos3d/<modelo>/gerar.cjs), com o mesmo nome e o
+      mesmo tamanho de arquivo (o cadastro e a Arena não mudam). O Espaço
+      Esportivo Modelo 1 (39 x 23 m) não cabe no showroom: do alto, no galpão,
+      com o mesmo acabamento. Ficam como estão: as fotos de verdade (a foto sem
+      fundo do Strike Kids, a capa da Arena), as imagens da fábrica (as dos
+      Brinquedões Modelo 2, 4, 5 e Ninja), as plantas e as cores do Strike Kids.
+   3. AS CATEGORIAS continuam nos lugares e com as crianças, com o mesmo
+      acabamento (o tone mapping neutro); Eletrônicos e Fliperama, no showroom.
+   4. O CARD NUNCA CORTA O BRINQUEDO (core/static/site/ls-fotos.js e
+      ls-tema.css, em todos os cards de produto: a home, as categorias,
+      /brinquedos/, a loja, a busca): a foto com fundo do mesmo formato da
+      caixa preenche o card ("cover": as capas em cena são quadradas); a de
+      outro formato (a foto em pé no card quadrado) fica INTEIRA ("contain")
+      sobre ela mesma desfocada e escurecida (`foto-encaixada`), como as
+      vitrines do quadro inicial.
+   A SUBIDA (no Render, o Cloudinary só está lá):
+     * 0156_papel_na_capa (depois da 0155): só o campo papel_na_capa, em
+       todo lugar (esquema e dados em arquivos separados: no Postgres,
+       juntos estouram com "pending trigger events");
+     * 0157_capas_em_cena_do_catalogo (depois da 0156): as capas em cena do
+       catálogo (só no Render; se a subida de um falhar, o deploy segue e o
+       aviso diz `python manage.py capas_em_cena --so <id>`);
+     * 0158_fotos_no_showroom (depois da 0157): refaz À FORÇA a galeria dos
+       nossos 3D que o cadastro subiu (o nome do arquivo é o mesmo) e sobe as
+       fotos das categorias que mudaram; se falhar, o deploy segue e o aviso
+       diz o comando (cadastrar_modelo_3d <chave> --fotos;
+       atualizar_capas_categorias).
+   REFAZER AS IMAGENS (ferramentas/categorias/):
+       python ferramentas/categorias/placa.py               (a placa do logo)
+       python ferramentas/categorias/recortar.py --alta     (os recortes em alta; precisa de rede)
+       node ferramentas/categorias/gerar.cjs produtos --compor   (as capas do catálogo)
+       node ferramentas/categorias/gerar.cjs capas vistas --compor (as capas e as vistas dos nossos 3D)
+       node ferramentas/categorias/gerar.cjs --compor       (as categorias)
+   Código: core/capas_catalogo.py, core/management/commands/capas_em_cena.py,
+   core/models.py (papel_na_capa, imagens_ordenadas), core/static/site/
+   ls-fotos.js, core/static/site/ls-tema.css, core/migrations/0156_papel_na_
+   capa.py, 0157_capas_em_cena_do_catalogo.py e 0158_fotos_no_showroom.py,
+   ferramentas/categorias/
+   (cenas.js: CATALOGO, VISTAS e a luz de estúdio; lugares.js: showroom;
+   placa.py; recortar.py; compor.py; maquinas-alta/; showroom/).
+   Testes: core/tests_capas_catalogo.py.
+
 65) IMPORTAR ORÇAMENTO DO WORD OU DO PDF (A IA LÊ, A CONFERÊNCIA GARANTE)
    O pedido do cliente: "no sistema interno, você deve criar uma nova
    espécie de IA também, para ler o documento Word e gerar um orçamento em
