@@ -6589,3 +6589,145 @@ html.ls-escuro:not(#_):not(#__) #manutencao.ls-manut { padding-block: 0; }
   transform: scale(1.04);
   filter: none;
 }
+
+/* ---- Mapa: estados pelo nível de pedidos, legenda e logo de fundo ---- */
+.ls-onde-camada--estados .ls-onde-ponto {
+    color: #f0894d;
+}
+
+.ls-onde-camada--estados[aria-pressed="true"] {
+    border-color: rgba(240, 137, 77, .6);
+    background: rgba(226, 103, 43, .16);
+}
+
+/* A legenda fica dentro do mapa, no canto de baixo, no mesmo azul-noite
+   dos botões do mapa. Texto em branco/cinza (nunca na cor da faixa): a
+   cor fica no quadradinho ao lado. */
+#mapa-onde .ls-onde-legenda {
+    margin: 0 10px 8px 0;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 12px;
+    color: #eaf2ff;
+    background: rgba(8, 20, 48, .9);
+    box-shadow: 0 10px 25px rgba(13, 27, 46, .28);
+    font: 750 .68rem/1.25 inherit;
+    max-width: 190px;
+}
+
+#mapa-onde .ls-onde-legenda[hidden] {
+    display: none;
+}
+
+#mapa-onde .ls-onde-legenda summary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+#mapa-onde .ls-onde-legenda summary::-webkit-details-marker {
+    display: none;
+}
+
+#mapa-onde .ls-onde-legenda summary::after {
+    content: "\25B4";
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: rgba(234, 242, 255, .6);
+    font-size: .7rem;
+}
+
+#mapa-onde .ls-onde-legenda details:not([open]) summary::after {
+    content: "\25BE";
+}
+
+.ls-onde-legenda-escala {
+    display: inline-flex;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.ls-onde-legenda-escala i {
+    width: 9px;
+    height: 12px;
+}
+
+#mapa-onde .ls-onde-legenda ul {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding: 0 10px 8px;
+    list-style: none;
+}
+
+#mapa-onde .ls-onde-legenda li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #dbe6f7;
+    font-weight: 700;
+}
+
+#mapa-onde .ls-onde-legenda li i {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 10px;
+    border: 1px solid rgba(255, 255, 255, .55);
+    border-radius: 3px;
+}
+
+#mapa-onde .ls-onde-legenda .ls-onde-legenda-sem {
+    color: rgba(219, 230, 247, .72);
+}
+
+#mapa-onde .ls-onde-legenda .ls-onde-legenda-sem i {
+    opacity: .45;
+}
+
+/* O cartãozinho do estado (passar o mouse ou tocar). */
+.leaflet-tooltip.ls-onde-estado-dica {
+    display: grid;
+    gap: 2px;
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, .45);
+    border-radius: 10px;
+    color: #fff;
+    background: rgba(8, 27, 54, .92);
+    box-shadow: 0 8px 20px rgba(13, 27, 46, .25);
+    font-size: .74rem;
+    line-height: 1.25;
+}
+
+.leaflet-tooltip.ls-onde-estado-dica strong {
+    font-weight: 800;
+}
+
+.leaflet-tooltip.ls-onde-estado-dica span {
+    color: #ffc49e;
+    font-weight: 700;
+}
+
+.leaflet-tooltip.ls-onde-estado-dica::before {
+    border-top-color: rgba(8, 27, 54, .92);
+}
+
+/* A logo de fundo: marca d'água que se mistura ao mapa, nunca um adesivo
+   por cima dele. */
+#mapa-onde .ls-onde-marca {
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    transition: opacity .35s ease;
+}
+
+@media (max-width: 575px) {
+    #mapa-onde .ls-onde-legenda {
+        margin: 0 8px 6px 0;
+        max-width: none;
+        font-size: .66rem;
+    }
+}

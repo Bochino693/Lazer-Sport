@@ -84,6 +84,7 @@
     const estado = {
         fabrica: Boolean(fabrica),
         clientes: true,
+        estados: true,
         cidade: 'todas',
     };
 
@@ -135,6 +136,168 @@
         referrerPolicy: 'strict-origin-when-cross-origin',
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
     }).addTo(mapa);
+
+    /* ------------------------------------------------------------------
+       Os estados, coloridos pelo nível de pedidos, e a legenda no mapa
+       ------------------------------------------------------------------ */
+    // Uma cor só, do claro ao escuro (laranja: não briga com os alfinetes
+    // azuis). Conferida no validador de paleta (ordinal, monotônica, a
+    // mais clara ainda 2:1 contra o fundo do mapa). O servidor manda só o
+    // NÍVEL de cada estado (1 a 5), nunca o número de pedidos.
+    const CORES_DOS_NIVEIS = ['#f0894d', '#e2672b', '#c4501b', '#9a3c13', '#6b290c'];
+    const COR_SEM_PEDIDO = '#b9b4a8';
+    let dadosEstados = null;
+    try {
+        dadosEstados = JSON.parse(document.getElementById('dados-estados-onde')?.textContent || 'null');
+    } catch (erro) {
+        dadosEstados = null;
+    }
+    const temEstados = Boolean(caixa.dataset.estados && dadosEstados && (dadosEstados.faixas || []).length);
+    const nivelDoEstado = (uf) => Number((dadosEstados?.niveis || {})[uf] || 0);
+    const rotuloDoNivel = (nivel) => (dadosEstados?.faixas || []).find((f) => f.nivel === nivel)?.rotulo || '';
+
+    // Os painéis em ordem: o mapa, os estados, a marca d'água, as linhas
+    // dos alfinetes e os alfinetes por cima de tudo.
+    mapa.createPane('lsEstados').style.zIndex = 360;
+    mapa.createPane('lsMarca').style.zIndex = 390;
+    mapa.getPane('lsMarca').style.pointerEvents = 'none';
+
+    // De longe a cor é o assunto; de perto ela clareia para a rua aparecer.
+    function opacidadeDosEstados(zoom) {
+        if (zoom <= 6) return 0.8;
+        if (zoom <= 8) return 0.48;
+        if (zoom <= 10) return 0.24;
+        return 0.1;
+    }
+
+    function estiloDoEstado(feature) {
+        const nivel = nivelDoEstado(feature.id);
+        const opacidade = opacidadeDosEstados(mapa.getZoom() ?? 4);
+        return {
+            pane: 'lsEstados',
+            color: '#ffffff',
+            weight: nivel ? 1.2 : 0.8,
+            opacity: 0.9,
+            fillColor: nivel ? CORES_DOS_NIVEIS[nivel - 1] : COR_SEM_PEDIDO,
+            fillOpacity: nivel ? opacidade : opacidade * 0.22,
+        };
+    }
+
+    function textoDoEstado(feature) {
+        const nivel = nivelDoEstado(feature.id);
+        const nome = escapeHTML((dadosEstados?.nomes || {})[feature.id] || feature.properties?.nome || feature.id);
+        const faixa = nivel ? escapeHTML(rotuloDoNivel(nivel)) : 'Ainda sem pedidos';
+        return `<strong>${nome}</strong><span>${faixa}</span>`;
+    }
+
+    let camadaEstados = null;
+    let legendaEstados = null;
+
+    function aplicarEstados() {
+        if (!camadaEstados) return;
+        const ligado = estado.estados;
+        if (ligado && !mapa.hasLayer(camadaEstados)) camadaEstados.addTo(mapa);
+        if (!ligado && mapa.hasLayer(camadaEstados)) mapa.removeLayer(camadaEstados);
+        legendaEstados?.getContainer()?.toggleAttribute('hidden', !ligado);
+    }
+
+    const LegendaEstados = L.Control.extend({
+        options: { position: 'bottomright' },
+        onAdd() {
+            const caixaLegenda = L.DomUtil.create('div', 'ls-onde-legenda');
+            const faixas = (dadosEstados.faixas || []).map((f) => `
+                <li><i style="background:${CORES_DOS_NIVEIS[f.nivel - 1]}"></i>${escapeHTML(f.rotulo)}</li>`).join('');
+            // No celular a legenda começa fechada (o mapa é pequeno); um
+            // toque abre. No computador ela já vem aberta.
+            caixaLegenda.innerHTML = `
+                <details ${dispositivoCompacto ? '' : 'open'}>
+                    <summary>
+                        <span class="ls-onde-legenda-escala" aria-hidden="true">
+                            ${CORES_DOS_NIVEIS.map((cor) => `<i style="background:${cor}"></i>`).join('')}
+                        </span>
+                        Pedidos por estado
+                    </summary>
+                    <ul>
+                        ${faixas}
+                        <li class="ls-onde-legenda-sem"><i style="background:${COR_SEM_PEDIDO}"></i>Ainda sem pedidos</li>
+                    </ul>
+                </details>`;
+            L.DomEvent.disableClickPropagation(caixaLegenda);
+            L.DomEvent.disableScrollPropagation(caixaLegenda);
+            return caixaLegenda;
+        },
+    });
+
+    if (temEstados) {
+        fetch(caixa.dataset.estados, { credentials: 'omit' })
+            .then((resposta) => (resposta.ok ? resposta.json() : Promise.reject(resposta.status)))
+            .then((geo) => {
+                camadaEstados = L.geoJSON(geo, {
+                    pane: 'lsEstados',
+                    style: estiloDoEstado,
+                    onEachFeature(feature, camada) {
+                        camada.bindTooltip(textoDoEstado(feature), {
+                            className: 'ls-onde-estado-dica',
+                            direction: 'top',
+                            sticky: dispositivoComHover,
+                            opacity: 1,
+                        });
+                        if (dispositivoComHover) {
+                            camada.on('mouseover', () => camada.setStyle({ weight: 2.4, color: '#081b36' }));
+                            camada.on('mouseout', () => camadaEstados.resetStyle(camada));
+                        }
+                    },
+                });
+                legendaEstados = new LegendaEstados().addTo(mapa);
+                aplicarEstados();
+            })
+            .catch(() => {
+                // Sem a malha dos estados o mapa segue igual, só sem as cores.
+                secao.querySelector('[data-onde-camada="estados"]')?.setAttribute('hidden', '');
+            });
+        mapa.on('zoomend', () => camadaEstados?.setStyle(estiloDoEstado));
+    }
+
+    /* ------------------------------------------------------------------
+       A logo da casa de fundo, sobre a América do Sul
+       ------------------------------------------------------------------ */
+    // Presa ao mapa (cresce com o zoom, no mesmo lugar): bem de longe é a
+    // marca de quem atende o continente; chegando perto ela some aos
+    // poucos, para não ficar por cima das ruas.
+    const LOGO_NO_MAPA = { centro: [-13, -59], largura: 32, proporcao: 512 / 340 };
+    let marcaDagua = null;
+    if (caixa.dataset.marca) {
+        const meio = L.CRS.EPSG3857.latLngToPoint(L.latLng(LOGO_NO_MAPA.centro), 0);
+        const largura = (LOGO_NO_MAPA.largura / 360) * 256;
+        const altura = largura / LOGO_NO_MAPA.proporcao;
+        const canto1 = L.CRS.EPSG3857.pointToLatLng(meio.subtract(L.point(largura / 2, altura / 2)), 0);
+        const canto2 = L.CRS.EPSG3857.pointToLatLng(meio.add(L.point(largura / 2, altura / 2)), 0);
+        marcaDagua = L.imageOverlay(caixa.dataset.marca, L.latLngBounds(canto1, canto2), {
+            pane: 'lsMarca',
+            interactive: false,
+            className: 'ls-onde-marca',
+            alt: '',
+        });
+    }
+
+    function opacidadeDaMarca(zoom) {
+        if (zoom <= 3) return 0.2;
+        if (zoom === 4) return 0.15;
+        if (zoom === 5) return 0.09;
+        return 0;
+    }
+
+    function aplicarMarca() {
+        if (!marcaDagua) return;
+        const opacidade = opacidadeDaMarca(mapa.getZoom());
+        if (!opacidade) {
+            if (mapa.hasLayer(marcaDagua)) mapa.removeLayer(marcaDagua);
+            return;
+        }
+        marcaDagua.setOpacity(opacidade);
+        if (!mapa.hasLayer(marcaDagua)) marcaDagua.addTo(mapa);
+    }
+    mapa.on('zoomend', aplicarMarca);
 
     /* ------------------------------------------------------------------
        Textos e desenhos
@@ -1155,9 +1318,17 @@
             botao.hidden = true;
             return;
         }
+        if (camada === 'estados' && !temEstados) {
+            botao.hidden = true;
+            return;
+        }
         botao.addEventListener('click', () => {
             estado[camada] = !estado[camada];
             botao.setAttribute('aria-pressed', String(estado[camada]));
+            if (camada === 'estados') {
+                aplicarEstados();
+                return;
+            }
             fecharPopups();
             if (camada === 'clientes') atualizarLista();
             desenhar();
@@ -1314,4 +1485,5 @@
     atualizarLista();
     enquadrar();
     desenhar();
+    aplicarMarca();
 })();

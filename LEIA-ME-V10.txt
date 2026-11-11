@@ -2653,3 +2653,40 @@ Dependência nova: rjsmin (requirements.txt).
      * o retrato assinado do aceite só ganha "valor_final" quando ele
        existe: os aceites de antes têm o mesmo hash.
    Testes: sistema_interno/tests_valor_final.py.
+
+68) O MAPA DA HOME: ESTADOS PELO NÍVEL DE PEDIDOS E A LOGO DE FUNDO
+   Os estados vêm coloridos pelo nível de pedidos de brinquedos, com a
+   legenda dentro do mapa (canto de baixo), e a logo da casa fica de
+   fundo sobre a América do Sul.
+   O QUE CONTA (core/mapa_estados.py), por estado (UF):
+     * proposta APROVADA no painel, no estado do primeiro endereço do
+       cliente (o mesmo do alfinete);
+     * pedido da loja pago ou adiante (pago, em preparação, saiu para
+       entrega, finalizado), no estado de entrega;
+     * cliente publicado no mapa sem proposta aprovada registrada conta 1
+       (comprou antes do painel existir): todo estado com alfinete sai
+       colorido.
+     O estado é lido de "SP", "sp", "São Paulo" ou "Sao Paulo".
+   SÓ A FAIXA VAI PARA A PÁGINA, NUNCA O NÚMERO: 1 a 2, 3 a 5, 6 a 10,
+   11 a 20, 21 ou mais pedidos (FAIXAS, no mesmo arquivo). A conta roda ao
+   montar o cache da home; um erro nela não derruba a página (o mapa fica
+   sem as cores e sem o botão).
+   AS CORES: uma cor só, do laranja claro ao marrom (não briga com os
+   alfinetes azuis nem com a fábrica vermelha), conferidas no validador
+   de paleta: ordinal, clareza sempre caindo, a mais clara 2:1 contra o
+   fundo do mapa. Estado sem pedido fica cinza clarinho. De perto (zoom
+   de cidade) a cor clareia para a rua aparecer.
+   A LEGENDA: "Pedidos por estado", no azul-noite dos botões do mapa; no
+   computador aberta, no celular fechada (um toque abre). Passar o mouse
+   (ou tocar) num estado mostra o nome e a faixa. O botão "Pedidos por
+   estado", ao lado de Fábrica e Clientes, liga e desliga as cores e a
+   legenda.
+   A MALHA: core/static/site/dados/estados-br.json -- os 27 estados do
+   Natural Earth (domínio público), do pacote datamaps (MIT), com as
+   bordas simplificadas em ~2 km sem abrir fresta entre vizinhos (cada
+   borda é simplificada uma vez só e serve aos dois estados): 96 KB, 29 KB
+   comprimido, baixada só quando o mapa abre.
+   A LOGO DE FUNDO: images/logoofi-512.webp, presa ao mapa sobre o meio
+   da América do Sul, misturada ao mapa (multiply). Bem de longe 20%;
+   no zoom do Brasil 15%; um zoom mais perto 9%; mais perto some.
+   Testes: core/tests_mapa_estados.py.

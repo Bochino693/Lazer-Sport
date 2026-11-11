@@ -33,7 +33,7 @@ from django.templatetags.static import static
 
 # Ciclo carrinho -> pedido reservado -> pedido pago.
 from . import checkout
-from . import arena, painel_publico
+from . import arena, mapa_estados, painel_publico
 from . import objetos_3d
 from .objetos_3d import objeto_do_brinquedo, prefetch_do_3d_dos_projetos, prefetch_do_objeto
 from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
@@ -437,6 +437,17 @@ class HomeView(View):
             for e in enderecos_no_mapa
         ]
 
+        # Os estados coloridos pelo nível de pedidos de brinquedos (só a
+        # faixa vai para a página, nunca o número: ver core/mapa_estados.py).
+        # Um erro aqui nunca derruba a home: o mapa fica sem as cores.
+        try:
+            estados_mapa = mapa_estados.dados_do_mapa(
+                [(e.cliente_id, e.estado) for e in enderecos_no_mapa]
+            )
+        except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).exception("Mapa: não deu para contar os pedidos por estado")
+            estados_mapa = {"niveis": {}, "nomes": mapa_estados.UFS, "faixas": []}
+
         # Pino especial da fábrica. EnderecoEmpresa continua editável pelo
         # admin. Se não houver cadastro, a home usa as coordenadas fixas já
         # validadas; geocodificação externa nunca deve bloquear a vitrine.
@@ -508,6 +519,7 @@ class HomeView(View):
             "imagens_site": imagens_site,
             "clientes_mapa": clientes_mapa,
             "pontos_mapa": pontos_mapa,
+            "estados_mapa": estados_mapa,
             "cidades_atendidas": cidades_atendidas,
             # O quadro inicial: a vitrine que gira e o painel ao vivo.
             "vitrine_quadro": vitrine_quadro,
