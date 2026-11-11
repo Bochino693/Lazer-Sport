@@ -675,7 +675,7 @@ export function criarLugares(T, P, extra = {}) {
       if (op.confete) confete(g, caixaDos, 70, 8, 3.5);
       return {
         grupo: g, fundo: "#1b1650", neblina: ["#2a2068", m.maior * 2.5 + 8, m.maior * 6 + 30],
-        luz: { ceu: "#c4b5fd", chao: "#2a1f6b", hemi: 1.0, sol: 2.6, amb: 0.35, exposicao: 1.05, cores: [["#f472b6", -1], ["#22d3ee", 1]] },
+        luz: { ceu: "#c4b5fd", chao: "#2a1f6b", hemi: 1.1, sol: 2.8, amb: 0.4, exposicao: 1.3, cores: [["#f472b6", -1], ["#22d3ee", 1]] },
       };
     },
 

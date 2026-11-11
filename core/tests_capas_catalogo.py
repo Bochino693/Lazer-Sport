@@ -62,6 +62,10 @@ VISTAS = {
 CONTRASTE_MINIMO = 45
 SATURACAO_MINIMA = 55
 NITIDEZ_MINIMA = 19.5
+#: Nas vistas da galeria, o limite é mais baixo e a nitidez não conta: há vista que é, de verdade,
+#: uma chapa lisa (as costas verdes do Strike Kids) ou o parque inteiro visto do alto (o Espaço Esportivo).
+CONTRASTE_MINIMO_VISTA = 40
+SATURACAO_MINIMA_VISTA = 45
 
 
 def vida(foto, caixa=(0.2, 0.15, 0.8, 0.9)):
@@ -139,6 +143,11 @@ class FotosDoCatalogoTests(TestCase):
         for nome, arquivo in fotos.items():
             with self.subTest(nome), Image.open(arquivo) as foto:
                 contraste, saturacao, nitidez = vida(foto, areas[nome])
+                if nome.startswith("vista_"):
+                    self.assertGreaterEqual(contraste, CONTRASTE_MINIMO_VISTA)
+                    self.assertGreaterEqual(saturacao, SATURACAO_MINIMA_VISTA)
+                    continue
+                # as capas (a foto do card): o contraste, a cor e a nitidez da foto de verdade
                 self.assertGreaterEqual(contraste, CONTRASTE_MINIMO)
                 self.assertGreaterEqual(saturacao, SATURACAO_MINIMA)
                 self.assertGreaterEqual(nitidez, NITIDEZ_MINIMA)
@@ -160,7 +169,9 @@ class FotosDoCatalogoTests(TestCase):
         # a placa é o logo oficial da empresa; os adesivos são genéricos (nada de personagem de ninguém)
         self.assertIn("logoofi.png", (FERRAMENTA / "placa.py").read_text(encoding="utf-8"))
         self.assertTrue((FERRAMENTA / "showroom" / "placa-lazer-sport.png").exists())
-        self.assertNotIn("pac", lugares.lower().split("showroom(caixados")[1].split("fliperama(caixados")[0])
+        showroom = lugares.lower().split("showroom(caixados")[1].split("fliperama(caixados")[0]
+        for terceiro in ("pac-man", "pacman", "fantasminha", "mario", "sonic"):
+            self.assertNotIn(terceiro, showroom)
 
     def test_as_vistas_dos_nossos_3d_no_showroom(self):
         for chave, vistas in VISTAS.items():

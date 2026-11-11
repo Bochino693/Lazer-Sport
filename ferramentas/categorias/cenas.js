@@ -1176,9 +1176,14 @@ window.renderizar = async (chave, ajustes = {}) => {
     if (v) {
       const k = Object.keys(modelo.vistas).indexOf(nome);
       const lugar = modelo.lugar || "showroom";
+      // a vista de trás (ou quase): quem gira é o objeto, e não a câmera -- a câmera atrás
+      // dele ficaria atrás da parede do fundo do lugar
+      const virar = Math.abs(v.giro) > 95;
+      const giro = virar ? v.giro - Math.sign(v.giro) * 180 : v.giro;
       c = Object.assign({ lugar, lente: 36, ocupa: 0.8, desce: 0.04, rampa: 3, formato: modelo.tamanho }, v, {
+        giro,
         lugarOp: lugar === "showroom" ? { cenario: (modelo.cenario || ["logo"])[k % (modelo.cenario || ["logo"]).length], semente: 101 + k } : {},
-        maquinas: async () => glb(v.glb || qual),
+        maquinas: async () => glb(v.glb || qual, { r: virar ? 180 : 0 }),
       });
     }
   }
