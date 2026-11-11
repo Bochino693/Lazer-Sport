@@ -69,32 +69,33 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
         arquivo = request.FILES.get("arquivo")
         if arquivo is None:
             return render(request, self.template_name, self.contexto(
-                erro="Escolha o arquivo .docx do orçamento.",
+                erro="Escolha o arquivo do orçamento: Word (.docx) ou PDF.",
             ), status=400)
         nome = (arquivo.name or "documento.docx")[:120]
         # O tamanho é conferido ANTES de ler: o arquivo de 200 MB não chega
         # a ocupar a memória do servidor só para ser recusado depois.
         if arquivo.size > leitor.TAMANHO_MAXIMO:
-            return render(request, self.template_name, self.contexto(
-                erro=f"O arquivo passa de {leitor.TAMANHO_MAXIMO // (1024 * 1024)} MB. Salve uma "
-                     "cópia sem as fotos (ou com as fotos compactadas) e importe de novo.",
-            ), status=400)
+            return self.recusar(
+                request,
+                f"O arquivo passa de {leitor.TAMANHO_MAXIMO // (1024 * 1024)} MB. Salve uma "
+                "cópia sem as fotos (ou com as fotos compactadas) e importe de novo.",
+            )
         try:
-            linhas = leitor.ler_docx(arquivo.read(), nome)
-        except leitor.ArquivoRecusado as exc:
-            return render(request, self.template_name, self.contexto(erro=str(exc)), status=400)
+            conteudo = arquivo.read()
         finally:
             arquivo.close()
-
-        leitura = {"arquivo": nome, "linhas": linhas, "ia": {"usada": False}, "escolhas": {}}
-        if ia.chave_configurada():
-            try:
-                dados, modelo = ia.ler_orcamento(leitor.texto_numerado(linhas))
-                leitura["ia"] = {"usada": True, "modelo": modelo, "dados": dados}
-            except ia.IAIndisponivel as exc:
-                leitura["ia"] = {"usada": False, "motivo": str(exc)}
-        else:
-            leitura["ia"] = {"usada": False, "motivo": "a chave da IA (ANTHROPIC_API_KEY) não está configurada"}
+        try:
+            formato = leitor.conferir_arquivo(nome, conteudo)
+            if formato == "pdf":
+                leitura = self.ler_pdf(nome, conteudo)
+            else:
+                leitura = self.ler_docx(nome, conteudo)
+        except leitor.ArquivoRecusado as exc:
+            return self.recusar(request, str(exc))
+        finally:
+            # O conteúdo do arquivo não passa deste ponto: dali em diante só
+            # existem as linhas de texto e a leitura.
+            del conteudo
 
         if leitura["ia"]["usada"]:
             # A IA escolhe entre os candidatos só dos itens que ficaram em
@@ -118,6 +119,70 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
 
         token = sessao.guardar(request, leitura)
         return redirect("conferir_importacao_word", token=token)
+
+
+    def recusar(self, request, mensagem):
+        return render(request, self.template_name, self.contexto(erro=mensagem), status=400)
+
+    def ler_docx(self, nome, conteudo):
+        linhas = leitor.ler_docx(conteudo, nome)
+        leitura = {"arquivo": nome, "formato": "docx", "linhas": linhas, "ia": {"usada": False}, "escolhas": {}}
+        if ia.chave_configurada():
+            try:
+                dados, modelo = ia.ler_orcamento(leitor.texto_numerado(linhas))
+                leitura["ia"] = {"usada": True, "modelo": modelo, "dados": dados}
+            except ia.IAIndisponivel as exc:
+                leitura["ia"] = {"usada": False, "motivo": str(exc)}
+        else:
+            leitura["ia"] = {"usada": False, "motivo": "a chave da IA (ANTHROPIC_API_KEY) não está configurada"}
+        return leitura
+
+    def ler_pdf(self, nome, conteudo):
+        """O PDF só é lido pela IA; sem ela, a pessoa é PERGUNTADA, não adivinhada.
+
+        Não há leitor de PDF no servidor (e o PDF digitalizado nem texto
+        tem). Sem a chave, ou quando a leitura volta vazia, a tela diz o
+        que fazer -- importar o .docx, ou um PDF com texto nítido -- em vez
+        de montar um orçamento a partir de nada.
+        """
+        leitor.conferir_pdf(nome, conteudo)
+        if not ia.chave_configurada():
+            raise leitor.ArquivoRecusado(
+                "PDF é lido pela IA, e a chave dela (ANTHROPIC_API_KEY) não está configurada "
+                "neste servidor. Abra o orçamento no Word e importe o .docx -- a leitura pelas "
+                "tabelas do Word funciona sem a IA."
+            )
+        try:
+            transcricao, dados, modelo = ia.ler_pdf(conteudo)
+        except ia.IAIndisponivel as exc:
+            raise leitor.ArquivoRecusado(
+                f"Não consegui ler o PDF: {exc}. Tente de novo em instantes ou importe o .docx original."
+            ) from exc
+        linhas = leitor.linhas_transcritas(transcricao)
+        if not any(l["parte"] in ("corpo", "caixa") for l in linhas):
+            raise leitor.ArquivoRecusado(
+                "O PDF voltou sem texto legível (digitalização apagada, foto torta ou arquivo "
+                "protegido). Envie o .docx original ou um PDF com o texto nítido."
+            )
+        if not _tem_orcamento(dados):
+            raise leitor.ArquivoRecusado(
+                "Li o PDF, mas não encontrei nele um orçamento: nem cliente, nem itens, nem "
+                "valores. Confira se é o arquivo certo -- ou importe o .docx original."
+            )
+        return {
+            "arquivo": nome, "formato": "pdf", "linhas": linhas, "escolhas": {},
+            "ia": {"usada": True, "modelo": modelo, "dados": dados},
+        }
+
+
+def _tem_orcamento(dados: dict) -> bool:
+    """Algo que se possa conferir: um item, um valor, ou o cliente."""
+    if any((item.get("descricao") or {}).get("texto") for item in dados.get("itens") or []):
+        return True
+    for nome in ("total_geral", "subtotal"):
+        if (dados.get(nome) or {}).get("texto"):
+            return True
+    return bool(((dados.get("cliente") or {}).get("nome") or {}).get("texto"))
 
 
 class ConferirImportacaoView(_SoQuemCriaProposta, View):

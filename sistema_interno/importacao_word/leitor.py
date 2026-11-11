@@ -71,21 +71,24 @@ def _ligado(elemento) -> bool:
     return elemento.get(_w("val"), "true").lower() not in ("0", "false", "off")
 
 
-def conferir_arquivo(nome: str, conteudo: bytes) -> None:
-    """Recusa o que não é .docx com uma frase que diz o que fazer.
+def conferir_arquivo(nome: str, conteudo: bytes) -> str:
+    """"docx" ou "pdf" -- ou a recusa, com uma frase que diz o que fazer.
 
-    A assinatura dos primeiros bytes decide, e não a extensão: um .doc
-    renomeado para .docx continua sendo o formato antigo, e um .docx
-    renomeado para .doc continua dando para ler.
+    EXTENSÃO E CONTEÚDO TÊM DE CONCORDAR. A extensão diz o que a pessoa
+    acha que enviou; os primeiros bytes dizem o que o arquivo é. Um .doc
+    antigo renomeado para .docx continua sendo o formato antigo, e um
+    "orçamento.pdf" que não começa com %PDF- não é PDF -- é outra coisa
+    com nome de PDF, e não vai para a IA nem para o leitor.
     """
     if not conteudo:
-        raise ArquivoRecusado("O arquivo chegou vazio. Escolha o .docx de novo.")
+        raise ArquivoRecusado("O arquivo chegou vazio. Escolha o .docx ou o PDF de novo.")
     if len(conteudo) > TAMANHO_MAXIMO:
         raise ArquivoRecusado(
             "O arquivo passa de 10 MB. Salve uma cópia sem as fotos (ou com "
             "as fotos compactadas) e importe de novo."
         )
 
+    extensao = (nome or "").rsplit(".", 1)[-1].lower() if "." in (nome or "") else ""
     inicio = conteudo[:8]
     if inicio.startswith(b"\xd0\xcf\x11\xe0"):
         raise ArquivoRecusado(
@@ -93,22 +96,39 @@ def conferir_arquivo(nome: str, conteudo: bytes) -> None:
             "Abra no Word, vá em Arquivo > Salvar como e escolha "
             "\"Documento do Word (.docx)\"; depois importe o .docx."
         )
-    if inicio.startswith(b"%PDF"):
-        raise ArquivoRecusado(
-            "Este é um PDF. Abra o orçamento original no Word e salve como "
-            ".docx (Arquivo > Salvar como > Documento do Word). Se só existe "
-            "o PDF, o Word também abre PDF e salva como .docx -- confira o "
-            "texto depois, porque a conversão às vezes troca a ordem."
-        )
     if inicio.startswith(b"{\\rtf"):
         raise ArquivoRecusado(
-            "Este é um arquivo RTF. Abra no Word e salve como .docx."
+            "Este é um arquivo RTF. Abra no Word e salve como .docx (ou como PDF)."
         )
-    if not inicio.startswith(b"PK"):
+    if extensao == "pdf":
+        if not inicio.startswith(b"%PDF-"):
+            raise ArquivoRecusado(
+                f"“{nome}” tem nome de PDF, mas o conteúdo não é de um PDF. Gere o PDF "
+                "de novo (no Word: Arquivo > Salvar como > PDF) ou importe o .docx."
+            )
+        return "pdf"
+    if extensao == "docx":
+        if inicio.startswith(b"%PDF-"):
+            raise ArquivoRecusado(
+                f"“{nome}” tem nome de .docx, mas é um PDF. Renomeie para .pdf "
+                "ou importe o .docx original."
+            )
+        if not inicio.startswith(b"PK"):
+            raise ArquivoRecusado(
+                f"“{nome}” não é um documento do Word (.docx) de verdade. Abra no Word, "
+                "salve como .docx e importe de novo."
+            )
+        return "docx"
+    if extensao == "doc":
         raise ArquivoRecusado(
-            f"“{nome}” não é um documento do Word (.docx). Salve o orçamento "
-            "como .docx e importe de novo."
+            "Este é um .doc antigo (Word 97-2003), que não dá para ler aqui. "
+            "Abra no Word, vá em Arquivo > Salvar como e escolha "
+            "\"Documento do Word (.docx)\"; depois importe o .docx."
         )
+    raise ArquivoRecusado(
+        f"“{nome}” não é Word (.docx) nem PDF. Salve o orçamento num dos dois "
+        "formatos e importe de novo."
+    )
 
 
 def _ler_parte(arquivo: zipfile.ZipFile, nome: str):
@@ -342,7 +362,8 @@ class _Leitor:
 
 def ler_docx(conteudo: bytes, nome: str = "documento.docx") -> list[dict]:
     """As linhas numeradas do documento, na ordem de leitura."""
-    conferir_arquivo(nome, conteudo)
+    if conferir_arquivo(nome, conteudo) != "docx":
+        raise ArquivoRecusado(f"“{nome}” não é um .docx.")
     try:
         arquivo = zipfile.ZipFile(BytesIO(conteudo))
     except zipfile.BadZipFile as exc:
@@ -410,6 +431,77 @@ def ler_docx(conteudo: bytes, nome: str = "documento.docx") -> list[dict]:
             "O documento é longo demais para um orçamento (mais de "
             f"{CARACTERES_MAXIMOS // 1000} mil caracteres). Importe só a "
             "parte do orçamento, sem anexos e catálogos."
+        )
+    return linhas
+
+
+# ======================================================================
+# PDF: o texto vem da transcrição da IA, no mesmo formato de linhas
+# ======================================================================
+#: Teto de páginas de um PDF de orçamento. A API aceita muito mais; um
+#: orçamento de cem páginas é catálogo, e o custo e a espera crescem com
+#: cada página.
+PAGINAS_MAXIMAS_PDF = 100
+_ID_TRANSCRITO = re.compile(r"^(CAB-|ROD-|CX-)?(?:P(\d+)|T(\d+)L(\d+)C(\d+))$")
+
+
+def paginas_do_pdf(conteudo: bytes) -> int:
+    """Quantas páginas o PDF declara (0 quando não dá para contar sem abrir).
+
+    Conta os objetos "/Type /Page" -- e não "/Pages", que é a árvore. PDF
+    com páginas dentro de fluxo comprimido devolve 0, e aí o limite fica
+    por conta do tamanho do arquivo.
+    """
+    return len(re.findall(rb"/Type\s*/Page(?![s\w])", conteudo or b""))
+
+
+def conferir_pdf(nome: str, conteudo: bytes) -> None:
+    if conferir_arquivo(nome, conteudo) != "pdf":
+        raise ArquivoRecusado(f"“{nome}” não é um PDF.")
+    if b"%%EOF" not in conteudo:
+        raise ArquivoRecusado(
+            f"“{nome}” parece um PDF cortado (o arquivo não termina). Baixe ou gere "
+            "o PDF de novo e importe outra vez."
+        )
+    if paginas_do_pdf(conteudo) > PAGINAS_MAXIMAS_PDF:
+        raise ArquivoRecusado(
+            f"O PDF tem mais de {PAGINAS_MAXIMAS_PDF} páginas. Importe só as páginas do "
+            "orçamento, sem catálogo e anexos."
+        )
+
+
+def linhas_transcritas(transcricao: list[dict]) -> list[dict]:
+    """A transcrição do PDF feita pela IA, no formato das linhas do .docx.
+
+    O PDF não tem as tags do Word que dizem "isto é uma célula": quem lê a
+    página e separa parágrafo de célula é a IA, com os mesmos ids (P12,
+    T1L3C4, CAB-P1). Aqui só passa o que tem id no formato certo e texto,
+    e cada id uma vez -- citação a um id que não passou não acha a fonte,
+    e o valor citado não entra.
+    """
+    linhas: list[dict] = []
+    vistos: set[str] = set()
+    for item in transcricao or []:
+        identificador = str(item.get("id") or "").strip().strip("[]").upper()
+        texto = _Leitor._limpar(str(item.get("texto") or "").replace("\n", " / "))
+        achado = _ID_TRANSCRITO.match(identificador)
+        if not achado or not texto or identificador in vistos:
+            continue
+        vistos.add(identificador)
+        prefixo = achado.group(1) or ""
+        linha = {
+            "id": identificador,
+            "texto": texto,
+            "parte": {"CAB-": "cabecalho", "ROD-": "rodape", "CX-": "caixa"}.get(prefixo, "corpo"),
+            "tabela": "", "linha": 0, "coluna": 0,
+        }
+        if achado.group(3):
+            linha.update(tabela=f"{prefixo}T{achado.group(3)}", linha=int(achado.group(4)),
+                         coluna=int(achado.group(5)))
+        linhas.append(linha)
+    if len(linhas) > LINHAS_MAXIMAS or sum(len(l["texto"]) for l in linhas) > CARACTERES_MAXIMOS:
+        raise ArquivoRecusado(
+            "O PDF é longo demais para um orçamento. Importe só as páginas do orçamento."
         )
     return linhas
 

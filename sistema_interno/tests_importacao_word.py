@@ -13,6 +13,7 @@ esforço, fallback e esquema.
 
 from __future__ import annotations
 
+import base64
 import io
 import json
 import os
@@ -110,6 +111,38 @@ def montar_docx(corpo, *, cabecalho="", rodape="", cabecalhos_extras=0):
     return memoria.getvalue()
 
 
+def montar_pdf(linhas=("Orcamento 2026/041", "Cliente: Buffet Alegria Ltda", "Total: R$ 1.919,00")):
+    """Um PDF de verdade, pequeno: uma página com texto em Helvetica.
+
+    Feito à mão (cabeçalho, objetos, tabela xref e %%EOF) para o teste não
+    depender de biblioteca nem de arquivo guardado. O conteúdo vai para a
+    IA falsa; o que se testa aqui é o caminho, a forma do pedido e as
+    recusas.
+    """
+    texto = "BT /F1 12 Tf 72 760 Td 16 TL " + " ".join(
+        "(" + linha.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") + ") '" for linha in linhas
+    ) + " ET"
+    objetos = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R "
+        "/Resources << /Font << /F1 5 0 R >> >> >>",
+        f"<< /Length {len(texto)} >>\nstream\n{texto}\nendstream",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    ]
+    saida = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
+    posicoes = []
+    for numero, objeto in enumerate(objetos, start=1):
+        posicoes.append(len(saida))
+        saida += f"{numero} 0 obj\n{objeto}\nendobj\n".encode("latin-1")
+    inicio_xref = len(saida)
+    saida += f"xref\n0 {len(objetos) + 1}\n0000000000 65535 f \n".encode()
+    for posicao in posicoes:
+        saida += f"{posicao:010d} 00000 n \n".encode()
+    saida += f"trailer\n<< /Size {len(objetos) + 1} /Root 1 0 R >>\nstartxref\n{inicio_xref}\n%%EOF\n".encode()
+    return saida
+
+
 CABECALHO_DA_EMPRESA = par("Lazer & Sport Brinquedos — CNPJ 54.486.908/0001-86 — (11) 96056-3135")
 RODAPE_DA_EMPRESA = par("contato@lazersport.com · www.lazersport.com.br")
 
@@ -201,6 +234,23 @@ def docx_com_produto_inexistente():
             ["Tobogã gigante inflável 8 m", "1", "R$ 3.500,00", "R$ 3.500,00"],
         )
         + par("Total: R$ 3.500,00"),
+    )
+
+
+def docx_com_valor_negociado():
+    """A soma das linhas dá R$ 10.200,00; a venda fechou em R$ 9.800,00."""
+    return montar_docx(
+        par("Cliente: Buffet Alegria Ltda")
+        + par("E-mail: contato@buffetalegria.com.br")
+        + tabela(
+            ["Descrição", "Qtd", "Valor unitário", "Total"],
+            ["Brinquedão Modelo 3", "1", "R$ 9.000,00", "R$ 9.000,00"],
+            ["Air Game Kids", "1", "R$ 1.200,00", "R$ 1.200,00"],
+        )
+        + par("Valor total negociado: R$ 9.800,00")
+        + par("Validade: 10 dias")
+        + par("Pagamento: Pix")
+        + par("Frete: grátis"),
     )
 
 
@@ -307,17 +357,42 @@ class LeitorDocxTests(SimpleTestCase):
     def test_doc_antigo_e_pdf_pedem_para_salvar_como_docx(self):
         with self.assertRaisesMessage(leitor.ArquivoRecusado, "Salvar como"):
             leitor.ler_docx(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"0" * 100, "velho.doc")
-        with self.assertRaisesMessage(leitor.ArquivoRecusado, "salve como .docx"):
-            leitor.ler_docx(b"%PDF-1.7 ...", "orcamento.pdf")
-        with self.assertRaisesMessage(leitor.ArquivoRecusado, "não é um documento do Word"):
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "Salvar como"):
+            leitor.ler_docx(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"0" * 100, "renomeado.docx")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "não é Word (.docx) nem PDF"):
             leitor.ler_docx(b"texto qualquer", "orcamento.txt")
+
+    def test_extensao_e_conteudo_tem_de_concordar(self):
+        self.assertEqual(leitor.conferir_arquivo("a.docx", docx_com_tabela()), "docx")
+        self.assertEqual(leitor.conferir_arquivo("a.PDF", montar_pdf()), "pdf")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "tem nome de PDF, mas o conteúdo não é"):
+            leitor.conferir_arquivo("falso.pdf", b"PK\x03\x04 nao sou pdf")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "tem nome de .docx, mas é um PDF"):
+            leitor.conferir_arquivo("trocado.docx", montar_pdf())
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "não é um documento do Word (.docx) de verdade"):
+            leitor.conferir_arquivo("falso.docx", b"<html>orcamento</html>")
+        with self.assertRaisesMessage(leitor.ArquivoRecusado, "cortado"):
+            leitor.conferir_pdf("cortado.pdf", montar_pdf()[:60])
+
+    def test_a_transcricao_do_pdf_so_aceita_id_valido_e_uma_vez(self):
+        linhas = leitor.linhas_transcritas([
+            {"id": "P1", "texto": "Cliente: Marina"},
+            {"id": "[T1L2C3]", "texto": "R$ 280,00"},
+            {"id": "P1", "texto": "repetido"},
+            {"id": "linha 7", "texto": "id inventado"},
+            {"id": "CAB-P1", "texto": "Lazer & Sport"},
+            {"id": "P2", "texto": "   "},
+        ])
+        self.assertEqual([l["id"] for l in linhas], ["P1", "T1L2C3", "CAB-P1"])
+        self.assertEqual((linhas[1]["tabela"], linhas[1]["linha"], linhas[1]["coluna"]), ("T1", 2, 3))
+        self.assertEqual(linhas[2]["parte"], "cabecalho")
 
     def test_zip_sem_documento_e_xml_com_entidade_sao_recusados(self):
         memoria = io.BytesIO()
         with zipfile.ZipFile(memoria, "w") as arquivo:
             arquivo.writestr("xl/workbook.xml", "<x/>")
         with self.assertRaisesMessage(leitor.ArquivoRecusado, "não tem o conteúdo"):
-            leitor.ler_docx(memoria.getvalue(), "planilha.xlsx")
+            leitor.ler_docx(memoria.getvalue(), "planilha-renomeada.docx")
 
         memoria = io.BytesIO()
         with zipfile.ZipFile(memoria, "w") as arquivo:
@@ -692,7 +767,8 @@ def formulario_de(envio, **mudancas):
     dados = {"action": "criar", "itens_ordem": ",".join(i["uid"] for i in envio["itens"])}
     for chave in ("cliente_modo", "cliente_id", "nome", "documento", "tipo", "contato", "telefone",
                   "whatsapp", "email", "cep", "endereco", "numero", "bairro", "cidade", "estado",
-                  "frete", "desconto", "validade", "forma_pagamento", "forma_envio", "prazo", "observacoes"):
+                  "frete", "desconto", "validade", "forma_pagamento", "forma_envio", "prazo", "observacoes",
+                  "total_escolha"):
         dados[chave] = envio.get(chave) or ""
     if envio.get("cliente_confirmado"):
         dados["cliente_confirmado"] = "1"
@@ -759,7 +835,7 @@ class PermissoesTests(_ComUsuario):
         resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("a.docx", docx_com_tabela())}, **HOST)
         self.assertEqual(resposta.status_code, 403)
         # Nem o botão aparece na lista de orçamentos.
-        self.assertNotContains(self.client.get("/orcamentos/", **HOST), "Importar do Word")
+        self.assertNotContains(self.client.get("/orcamentos/", **HOST), "Importar Word ou PDF")
 
     def test_producao_nao_entra(self):
         producao = User.objects.create_user("producao", "p@exemplo.com", "senha")
@@ -768,7 +844,7 @@ class PermissoesTests(_ComUsuario):
         self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 302)
 
     def test_vendas_ve_o_botao_e_a_tela(self):
-        self.assertContains(self.client.get("/orcamentos/", **HOST), "Importar do Word (IA)")
+        self.assertContains(self.client.get("/orcamentos/", **HOST), "Importar Word ou PDF (IA)")
         self.assertEqual(self.client.get(URL_IMPORTAR, **HOST).status_code, 200)
 
     def test_a_leitura_de_um_nao_abre_para_outro(self):
@@ -788,9 +864,21 @@ class EnvioDoArquivoTests(_ComUsuario):
         self.assertEqual(resposta.status_code, 400)
         self.assertContains(resposta, "Salvar como", status_code=400)
 
-    def test_pdf_volta_com_a_instrucao(self):
-        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", b"%PDF-1.4")}, **HOST)
-        self.assertContains(resposta, "Este é um PDF", status_code=400)
+    def test_pdf_falso_e_recusado(self):
+        resposta = self.client.post(
+            URL_IMPORTAR, {"arquivo": SimpleUploadedFile("orcamento.pdf", b"isto nao e um pdf")}, **HOST,
+        )
+        self.assertContains(resposta, "tem nome de PDF, mas o conteúdo não é de um PDF", status_code=400)
+
+    def test_pdf_sem_a_chave_pede_o_docx_em_vez_de_adivinhar(self):
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "PDF é lido pela IA", status_code=400)
+        self.assertContains(resposta, "importe o .docx", status_code=400)
+
+    def test_o_campo_aceita_word_e_pdf(self):
+        resposta = self.client.get(URL_IMPORTAR, **HOST)
+        self.assertContains(resposta, 'accept=".docx,.pdf,')
+        self.assertContains(resposta, "Word (.docx) ou PDF")
 
     def test_sem_arquivo(self):
         self.assertEqual(self.client.post(URL_IMPORTAR, {}, **HOST).status_code, 400)
@@ -799,7 +887,7 @@ class EnvioDoArquivoTests(_ComUsuario):
         url = self.importar(docx_com_tabela())
         token = url.rstrip("/").split("/")[-1]
         guardado = self.client.session["importacoes_orcamento_word"][token]
-        self.assertEqual(set(guardado), {"arquivo", "linhas", "ia", "escolhas", "criado_em", "autor"})
+        self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "criado_em", "autor"})
         self.assertNotIn("PK", json.dumps(guardado))
 
     def test_token_inventado_volta_para_o_envio(self):
@@ -1027,6 +1115,41 @@ class CriacaoTests(_ComUsuario):
         self.assertEqual(self.client.post(url, formulario_de(envio, desconto="100,00"), **HOST).status_code, 302)
         self.assertEqual(Orcamento.objects.get().total, Decimal("900.00"))
 
+    def test_total_negociado_oferece_o_valor_final_e_nao_escolhe_sozinho(self):
+        url = self.importar(docx_com_valor_negociado())
+        proposta, envio = self.envio_completo(url, forma_envio="Transportadora")
+        self.assertTrue(proposta["valor_final"]["oferecido"])
+        self.assertEqual(proposta["valor_final"]["valor"], "9.800,00")
+        self.assertEqual(proposta["valor_final"]["soma"], "10.200,00")
+        self.assertEqual(envio["total_escolha"], "")
+
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("alerta.soma_total", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+        self.assertContains(resposta, "Qual total vale?", status_code=400)
+
+        resposta = self.client.post(url, formulario_de(envio, total_escolha="valor_final", desconto="50,00"), **HOST)
+        self.assertEqual(resposta.status_code, 302)
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.valor_final, Decimal("9800.00"))
+        self.assertEqual(orcamento.desconto, Decimal("0.00"))
+        self.assertEqual(orcamento.total, Decimal("9800.00"))
+        registro = AtividadeOrcamento.objects.get(orcamento=orcamento, resumo__contains="valor final combinado")
+        self.assertIn("R$ 9.800,00", registro.resumo)
+        self.assertIn("R$ 10.200,00", registro.resumo)
+
+    def test_manter_a_soma_pede_justificativa(self):
+        url = self.importar(docx_com_valor_negociado())
+        _, envio = self.envio_completo(url, forma_envio="Transportadora", total_escolha="soma")
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 400)
+        envio["justificativas"] = {"soma_total": "O cliente pediu a proposta cheia, sem o valor fechado."}
+        self.assertEqual(self.client.post(url, formulario_de(envio), **HOST).status_code, 302)
+        orcamento = Orcamento.objects.get()
+        self.assertIsNone(orcamento.valor_final)
+        self.assertEqual(orcamento.total, Decimal("10200.00"))
+        self.assertTrue(AtividadeOrcamento.objects.filter(
+            orcamento=orcamento, resumo__contains="O cliente pediu a proposta cheia").exists())
+
     def test_descartar_apaga_a_leitura(self):
         url = self.importar(docx_com_tabela())
         resposta = self.client.post(url, {"action": "descartar"}, **HOST)
@@ -1051,8 +1174,10 @@ class CriacaoTests(_ComUsuario):
 class ClienteFalso:
     """Faz o papel de `anthropic.Anthropic()` sem rede nenhuma."""
 
-    def __init__(self, leitura=None, escolhas=None, *, parar="end_turn", erro=None, sem_fallback=False):
+    def __init__(self, leitura=None, escolhas=None, *, parar="end_turn", erro=None, sem_fallback=False,
+                 transcricao=None):
         self.leitura = leitura
+        self.transcricao = transcricao
         self.escolhas = escolhas or []
         self.parar = parar
         self.erro = erro
@@ -1069,6 +1194,8 @@ class ClienteFalso:
         formato = argumentos["output_format"]
         if formato is ia.EscolhasDeProdutos:
             dados = ia.EscolhasDeProdutos(escolhas=self.escolhas)
+        elif formato is ia.PdfLido:
+            dados = ia.PdfLido.model_validate({"linhas": self.transcricao or [], "orcamento": self.leitura})
         else:
             dados = ia.OrcamentoLido.model_validate(self.leitura)
         return SimpleNamespace(stop_reason=self.parar, parsed_output=dados, model="claude-opus-5-5",
@@ -1202,6 +1329,72 @@ class IATests(_ComUsuario):
         self.assertContains(resposta, "IA indisponível: leitura pelas tabelas do documento; confira com atenção.")
         self.assertContains(resposta, "a IA recusou ler este documento")
         self.assertEqual(len(resposta.context["proposta"]["itens"]), 3)
+
+
+class PdfTests(IATests):
+    """O PDF vai inteiro para o Claude, e volta transcrito e lido."""
+
+    def transcricao(self):
+        # A mesma transcrição que a IA faria do PDF gerado a partir do
+        # orçamento de exemplo: as linhas do .docx, com os mesmos ids.
+        return [{"id": linha["id"], "texto": linha["texto"]} for linha in linhas_de(docx_com_tabela())]
+
+    def test_o_pdf_vai_como_documento_e_volta_para_a_conferencia(self):
+        falso = self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
+        url = self.importar(montar_pdf(), nome="Orcamento Buffet.pdf")
+        _, argumentos = falso.chamadas[0]
+        self.assertIs(argumentos["output_format"], ia.PdfLido)
+        documento, pergunta = argumentos["messages"][0]["content"]
+        self.assertEqual(documento["type"], "document")
+        self.assertEqual(documento["source"]["type"], "base64")
+        self.assertEqual(documento["source"]["media_type"], "application/pdf")
+        self.assertEqual(base64.b64decode(documento["source"]["data"]), montar_pdf())
+        self.assertNotIn("\n", documento["source"]["data"])
+        self.assertEqual(pergunta["type"], "text")
+        self.assertEqual(argumentos["fallbacks"], "default")
+
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, "PDF lido pela IA")
+        self.assertContains(resposta, "O PDF foi enviado à Anthropic")
+        proposta = resposta.context["proposta"]
+        self.assertEqual(proposta["formato"], "pdf")
+        self.assertEqual(len(proposta["itens"]), 3)
+        # Concordância dentro da mesma transcrição não é prova independente.
+        self.assertEqual(proposta["itens"][1]["valor_unitario"]["origem"], "ambas")
+        self.assertEqual(proposta["itens"][1]["valor_unitario"]["confianca"], "media")
+        self.assertIn("transcrito do PDF", proposta["itens"][1]["valor_unitario"]["nota"])
+
+    def test_do_pdf_ao_rascunho_com_o_mesmo_padrao(self):
+        self.com_cliente(ClienteFalso(leitura_ia_do_exemplo_com_tabela(), transcricao=self.transcricao()))
+        url = self.importar(montar_pdf(), nome="Orcamento Buffet.pdf")
+        _, envio = self.proposta_e_envio(url)
+        for item in envio["itens"]:
+            item["conferido"] = True
+        envio.update(whatsapp="sim", forma_envio="Entrega Lazer & Sport")
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.status, Orcamento.Status.RASCUNHO)
+        self.assertEqual(orcamento.total, Decimal("1919.00"))
+        self.assertEqual(orcamento.forma_pagamento, "Pix")
+        principal = AtividadeOrcamento.objects.filter(orcamento=orcamento).order_by("-id").first()
+        self.assertIn("Importado do PDF «Orcamento Buffet.pdf»", principal.resumo)
+
+    def test_pdf_que_volta_sem_texto_pede_outro_arquivo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[]))
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("scan.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "sem texto legível", status_code=400)
+        self.assertNotIn("importacoes_orcamento_word", self.client.session)
+
+    def test_pdf_sem_orcamento_dentro_pergunta_se_e_o_arquivo_certo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[{"id": "P1", "texto": "Ata da reunião"}]))
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("ata.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "não encontrei nele um orçamento", status_code=400)
+
+    def test_pdf_que_a_ia_nao_leu_diz_o_motivo(self):
+        self.com_cliente(ClienteFalso(leitura_ia_vazia(), transcricao=[], parar="refusal"))
+        resposta = self.client.post(URL_IMPORTAR, {"arquivo": SimpleUploadedFile("o.pdf", montar_pdf())}, **HOST)
+        self.assertContains(resposta, "Não consegui ler o PDF: a IA recusou", status_code=400)
 
 
 # ======================================================================

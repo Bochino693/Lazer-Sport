@@ -310,7 +310,7 @@ LSTela.pronto(function () {
     botao.innerHTML = '<i class="bi bi-tag" aria-hidden="true"></i> ';
     botao.appendChild(document.createTextNode("Preço do catálogo: R$ " + opcao.preco));
     var nota = document.createElement("small");
-    nota.textContent = campo.value ? "o Word diz outro valor; confira antes de trocar" : "o Word não traz o unitário";
+    nota.textContent = campo.value ? "o documento diz outro valor; confira antes de trocar" : "o documento não traz o unitário";
     linha.appendChild(botao);
     linha.appendChild(nota);
     campo.closest(".ls-imp-campo").appendChild(linha);
@@ -403,7 +403,17 @@ LSTela.pronto(function () {
     var desconto = centavos(valorDe("campoDesconto"));
     var total = subtotal + (frete || 0n) - (desconto || 0n);
     if (total < 0n) total = 0n;
-    return { linhas: linhas, subtotal: subtotal, frete: frete, desconto: desconto, total: total, completos: completos };
+    /* Com o valor final combinado, o total é o do documento e o desconto
+       digitado não entra (o servidor grava zero). */
+    var valorFinal = escolhaDoTotal() === "valor_final" ? centavos(dados.totalWord) : null;
+    return { linhas: linhas, subtotal: subtotal, frete: frete, desconto: desconto, total: total,
+             completos: completos, valorFinal: valorFinal,
+             final: valorFinal !== null ? valorFinal : total };
+  }
+
+  function escolhaDoTotal() {
+    var marcada = form.querySelector('[name="total_escolha"]:checked');
+    return marcada ? marcada.value : "";
   }
 
   function desenharContas(conta) {
@@ -419,13 +429,38 @@ LSTela.pronto(function () {
       var bate = linha.total === word;
       estado.hidden = false;
       estado.className = "ls-imp-conta-estado " + (bate ? "bate" : "nao-bate");
-      estado.textContent = bate ? "Confere com o Word." : "Não bate com o Word (" + moeda(word) + ").";
+      estado.textContent = bate ? "Confere com o documento." : "Não bate com o documento (" + moeda(word) + ").";
     });
     document.getElementById("contaSubtotal").textContent = moeda(conta.subtotal);
     document.getElementById("contaFrete").textContent = moeda(conta.frete || 0n);
     document.getElementById("contaDesconto").textContent = moeda(conta.desconto || 0n);
-    document.getElementById("contaTotal").textContent = moeda(conta.total);
-    document.getElementById("contaTotalLateral").textContent = moeda(conta.total);
+    document.getElementById("contaTotal").textContent = moeda(conta.final);
+    document.getElementById("contaTotalLateral").textContent = moeda(conta.final);
+    var fixo = document.getElementById("totalFixo");
+    if (!fixo) {
+      fixo = document.createElement("small");
+      fixo.id = "totalFixo";
+      fixo.className = "ls-imp-fixo";
+      document.getElementById("contaTotal").insertAdjacentElement("afterend", fixo);
+    }
+    fixo.hidden = conta.valorFinal === null;
+    fixo.textContent = conta.valorFinal === null ? "" : "Valor final combinado (a soma dá " + moeda(conta.total) + ").";
+
+    /* A escolha entre a soma e o total do documento só aparece quando os
+       dois diferem -- e some (desmarcada) quando a pessoa acerta a conta. */
+    var escolha = document.getElementById("escolhaTotal");
+    var word = centavos(dados.totalWord);
+    if (escolha) {
+      var diferem = word !== null && conta.total !== word;
+      escolha.hidden = !diferem;
+      if (!diferem) {
+        form.querySelectorAll('[name="total_escolha"]').forEach(function (r) { r.checked = false; });
+      }
+      var soma = document.getElementById("valorFinalSoma");
+      if (soma) soma.textContent = moeda(conta.total);
+      var justificativa = document.getElementById("justificativaSoma");
+      if (justificativa) justificativa.hidden = escolhaDoTotal() !== "soma";
+    }
   }
 
   /* O alerta vermelho está resolvido com o que está na tela agora? */
@@ -444,6 +479,7 @@ LSTela.pronto(function () {
     }
     if (tipo === "soma_total") {
       var tot = centavos(dados.totalWord);
+      if (escolhaDoTotal() === "valor_final" && tot !== null) return true;
       return conta.completos && tot !== null && conta.total === tot;
     }
     if (tipo === "documento_invalido") {
@@ -473,7 +509,7 @@ LSTela.pronto(function () {
       if (!campoClienteId.value) falta("clienteBusca", "Cliente", "escolha o cliente cadastrado na busca (ou cadastre um novo)");
       else if (campoClienteId.value === dados.cliente.id && dados.cliente.confianca !== "alta"
                && !marcado("#clienteConfirmado")) {
-        falta("clienteConfirmado", "Cliente", "confirme que é o cliente do Word");
+        falta("clienteConfirmado", "Cliente", "confirme que é o cliente do documento");
       }
     } else {
       if (!valorDe("campoNome")) falta("campoNome", "Nome do cliente", "o orçamento precisa dizer para quem é");
@@ -519,11 +555,21 @@ LSTela.pronto(function () {
     if (!valorDe("campoFrete")) falta("campoFrete", "Frete", "informe o frete; se não houver, use “Sem frete (R$ 0,00)”");
     else if (conta.frete === null) falta("campoFrete", "Frete", "valor do frete ilegível");
     if (valorDe("campoDesconto") && conta.desconto === null) falta("campoDesconto", "Desconto", "valor do desconto ilegível");
-    if (dados.descontoExigido && !valorDe("campoDesconto")) {
-      falta("campoDesconto", "Desconto", "o Word dá desconto em porcentagem: confirme o valor em reais");
+    if (dados.descontoExigido && !valorDe("campoDesconto") && conta.valorFinal === null) {
+      falta("campoDesconto", "Desconto", "o documento dá desconto em porcentagem: confirme o valor em reais");
     }
-    if (conta.desconto !== null && conta.desconto > conta.subtotal + (conta.frete || 0n)) {
+    if (conta.valorFinal === null && conta.desconto !== null && conta.desconto > conta.subtotal + (conta.frete || 0n)) {
       falta("campoDesconto", "Desconto", "o desconto é maior que o total");
+    }
+    var totalWord = centavos(dados.totalWord);
+    if (document.getElementById("escolhaTotal") && totalWord !== null && conta.total !== totalWord) {
+      var escolhida = escolhaDoTotal();
+      var textoSoma = valorDe("justificativaSoma");
+      if (!escolhida) {
+        falta("escolhaTotal", "Qual total vale?", "o documento diz " + moeda(totalWord) + " e a soma dá " + moeda(conta.total) + ": escolha");
+      } else if (escolhida === "soma" && textoSoma.length < dados.justificativaMinima) {
+        falta("justificativaSoma", "Qual total vale?", "escreva por que fica a soma (pelo menos " + dados.justificativaMinima + " letras)");
+      }
     }
     var validade = valorDe("campoValidade");
     if (!validade) falta("campoValidade", "Validade", "escolha até quando a proposta vale");
@@ -540,6 +586,8 @@ LSTela.pronto(function () {
       if (aceite) aceite.hidden = resolvido;
       if (resolvido) return;
       var id = alerta.dataset.alerta;
+      /* O total que não bate se resolve no quadro "Qual total vale?". */
+      if (id === "soma_total" && document.getElementById("escolhaTotal")) return;
       var caixa = form.querySelector('[data-aceite="' + id + '"]');
       var texto = form.querySelector('[data-justificativa="' + id + '"]');
       var titulo = (alerta.querySelector("strong") || {}).textContent || "Alerta";

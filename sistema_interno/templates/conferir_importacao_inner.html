@@ -12,11 +12,11 @@
 {% block content %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Importação do Word · conferência</span>
+    <span class="ls-page-kicker">Importação {% if proposta.formato == "pdf" %}do PDF{% else %}do Word{% endif %} · conferência</span>
     <h1>Conferir o orçamento lido</h1>
     <p>
-      <i class="bi bi-file-earmark-word" aria-hidden="true"></i> {{ proposta.arquivo }}
-      · {% if proposta.ia.usada %}lido com IA ({{ proposta.ia.modelo }}) e conferido pelas tabelas{% else %}lido pelas tabelas do documento{% endif %}
+      <i class="bi {% if proposta.formato == "pdf" %}bi-file-earmark-pdf{% else %}bi-file-earmark-word{% endif %}" aria-hidden="true"></i> {{ proposta.arquivo }}
+      · {% if proposta.formato == "pdf" %}PDF transcrito e lido com IA ({{ proposta.ia.modelo }}), conferido nas contas{% elif proposta.ia.usada %}lido com IA ({{ proposta.ia.modelo }}) e conferido pelas tabelas{% else %}lido pelas tabelas do documento{% endif %}
     </p>
   </div>
   <div class="ls-page-hero-actions">
@@ -30,7 +30,7 @@
   </div>
 </section>
 
-{% if not proposta.ia.usada %}
+{% if proposta.ia.aviso %}
 <div class="ls-imp-aviso" role="status">
   <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
   <div>
@@ -41,7 +41,7 @@
 {% endif %}
 <p class="ls-imp-privacidade">
   <i class="bi bi-shield-lock" aria-hidden="true"></i>
-  {% if proposta.ia.usada %}O texto do documento foi enviado à Anthropic (Claude) para a leitura. {% endif %}O arquivo não ficou guardado; do documento, o orçamento guarda só o nome.
+  {% if proposta.formato == "pdf" %}O PDF foi enviado à Anthropic (Claude) para a leitura. {% elif proposta.ia.usada %}O texto do documento foi enviado à Anthropic (Claude) para a leitura. {% endif %}O arquivo não ficou guardado; do documento, o orçamento guarda só o nome.
 </p>
 
 {% if erro %}<div class="alert alert-danger" role="alert" id="conferenciaErro">{{ erro }}</div>{% endif %}
@@ -96,12 +96,12 @@
             {% endif %}
             <label class="ls-imp-marca" id="clienteConfirmarBox"{% if proposta.cliente.vinculo.confianca == "alta" or not proposta.cliente.vinculo.cliente_id %} hidden{% endif %}>
               <input type="checkbox" name="cliente_confirmado" value="1" id="clienteConfirmado"{% if envio.cliente_confirmado %} checked{% endif %}>
-              <span>Conferi: é este o cliente do Word</span>
+              <span>Conferi: é este o cliente do documento</span>
             </label>
             {% if proposta.cliente.vinculo.cadastro %}
             <dl class="ls-imp-comparar">
               <div><dt>No cadastro</dt><dd>{{ proposta.cliente.vinculo.cadastro.nome }}{% if proposta.cliente.vinculo.cadastro.documento %} · {{ proposta.cliente.vinculo.cadastro.documento }}{% endif %}{% if proposta.cliente.vinculo.cadastro.telefone %} · {{ proposta.cliente.vinculo.cadastro.telefone }}{% endif %}{% if proposta.cliente.vinculo.cadastro.email %} · {{ proposta.cliente.vinculo.cadastro.email }}{% endif %}</dd></div>
-              <div><dt>No Word</dt><dd>{{ proposta.cliente.nome.valor|default:"—" }}{% if proposta.cliente.documento.valor %} · {{ proposta.cliente.documento.valor }}{% endif %}{% if proposta.cliente.telefone.valor %} · {{ proposta.cliente.telefone.valor }}{% endif %}{% if proposta.cliente.email.valor %} · {{ proposta.cliente.email.valor }}{% endif %}</dd></div>
+              <div><dt>No documento</dt><dd>{{ proposta.cliente.nome.valor|default:"—" }}{% if proposta.cliente.documento.valor %} · {{ proposta.cliente.documento.valor }}{% endif %}{% if proposta.cliente.telefone.valor %} · {{ proposta.cliente.telefone.valor }}{% endif %}{% if proposta.cliente.email.valor %} · {{ proposta.cliente.email.valor }}{% endif %}</dd></div>
             </dl>
             <p class="ls-imp-nota">O cadastro não é alterado pela importação; o que muda é só o contato deste orçamento.</p>
             {% endif %}
@@ -129,7 +129,7 @@
             <fieldset class="ls-imp-endereco ls-imp-campo-largo">
               <legend>Endereço <small>(opcional; serve à entrega, à montagem e ao mapa)</small></legend>
               {% if proposta.cliente.endereco.valor %}
-              <p class="ls-imp-nota"><small>No Word:</small> “{{ proposta.cliente.endereco.valor }}”
+              <p class="ls-imp-nota"><small>No documento:</small> “{{ proposta.cliente.endereco.valor }}”
                 {% if proposta.cliente.endereco.fonte %}<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.cliente.endereco.fonte.id }}"><b>{{ proposta.cliente.endereco.fonte.id }}</b></button>{% endif %}</p>
               {% endif %}
               <div class="ls-imp-endereco-grade">
@@ -188,7 +188,7 @@
         <header class="ls-panel-header">
           <div>
             <h2 id="tituloItens"><i class="bi bi-box-seam" aria-hidden="true"></i> Itens</h2>
-            <p>Cada item ligado ao catálogo, ou marcado como linha avulsa. A descrição fica com o nome do catálogo; o texto do Word aparece embaixo.</p>
+            <p>Cada item ligado ao catálogo, ou marcado como linha avulsa. A descrição fica com o nome do catálogo; o texto do documento aparece embaixo.</p>
           </div>
           <button type="button" class="btn btn-sm btn-outline-secondary" id="acrescentarItem">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Item
@@ -209,7 +209,7 @@
         <header class="ls-panel-header">
           <div>
             <h2 id="tituloValores"><i class="bi bi-cash-stack" aria-hidden="true"></i> Frete, desconto e total</h2>
-            <p>O total do orçamento é sempre a conta das linhas; o total do Word serve para conferir.</p>
+            <p>O total do orçamento é a conta das linhas, a menos que você escolha o total do documento como valor final combinado.</p>
           </div>
         </header>
         <div class="ls-panel-body ls-imp-campos">
@@ -234,17 +234,46 @@
           <div class="ls-imp-campo ls-imp-campo-largo">
             <div class="ls-imp-totais" aria-live="polite">
               <div><span>Soma das linhas</span><strong id="contaSubtotal">R$ {{ validado.contas.subtotal }}</strong>
-                {% if proposta.valores.subtotal.valor %}<small>Word: R$ {{ proposta.valores.subtotal.valor }}{% if proposta.valores.subtotal.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valores.subtotal.fonte.id }}"><b>{{ proposta.valores.subtotal.fonte.id }}</b></button>{% endif %}</small>{% endif %}
+                {% if proposta.valores.subtotal.valor %}<small>Documento: R$ {{ proposta.valores.subtotal.valor }}{% if proposta.valores.subtotal.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valores.subtotal.fonte.id }}"><b>{{ proposta.valores.subtotal.fonte.id }}</b></button>{% endif %}</small>{% endif %}
               </div>
               <div><span>+ Frete</span><strong id="contaFrete">R$ 0,00</strong></div>
               <div><span>− Desconto</span><strong id="contaDesconto">R$ 0,00</strong></div>
               <div class="final"><span>Total do orçamento</span><strong id="contaTotal">R$ {{ validado.contas.total }}</strong>
-                {% if proposta.valores.total.valor %}<small>Word: R$ {{ proposta.valores.total.valor }}{% if proposta.valores.total.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valores.total.fonte.id }}"><b>{{ proposta.valores.total.fonte.id }}</b></button>{% endif %}</small>
-                {% elif proposta.valores.total.opcoes %}<small>Word: {% for opcao in proposta.valores.total.opcoes %}{{ opcao.rotulo }}{% if not forloop.last %} ou {% endif %}{% endfor %}</small>
-                {% else %}<small>O Word não traz total.</small>{% endif %}
+                {% if proposta.valores.total.valor %}<small>Documento: R$ {{ proposta.valores.total.valor }}{% if proposta.valores.total.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valores.total.fonte.id }}"><b>{{ proposta.valores.total.fonte.id }}</b></button>{% endif %}</small>
+                {% elif proposta.valores.total.opcoes %}<small>Documento: {% for opcao in proposta.valores.total.opcoes %}{{ opcao.rotulo }}{% if not forloop.last %} ou {% endif %}{% endfor %}</small>
+                {% else %}<small>O documento não traz total.</small>{% endif %}
               </div>
             </div>
           </div>
+          {% comment %}
+            O TOTAL DO DOCUMENTO DIFERENTE DA SOMA: A PESSOA ESCOLHE.
+
+            "Valor total negociado R$ 18.000" num orçamento cujas linhas
+            somam R$ 18.950 é venda fechada por um valor, e não erro de
+            conta -- ou é erro de conta. Só quem fez a venda sabe. As duas
+            saídas ficam lado a lado, e nenhuma vem marcada.
+          {% endcomment %}
+          {% if proposta.valor_final.valor %}
+          <fieldset class="ls-imp-campo ls-imp-campo-largo ls-imp-valor-final" id="escolhaTotal"
+                    {% if not proposta.valor_final.oferecido %}hidden{% endif %}>
+            <legend>Qual total vale? <span class="ls-imp-obrig" aria-hidden="true">*</span></legend>
+            <p class="ls-imp-nota">O documento diz <strong>R$ {{ proposta.valor_final.valor }}</strong>{% if proposta.valor_final.fonte %} (<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.valor_final.fonte.id }}"><b>{{ proposta.valor_final.fonte.id }}</b></button>){% endif %}, e a conta das linhas dá <strong id="valorFinalSoma">R$ {{ proposta.valor_final.soma }}</strong>.</p>
+            <label class="ls-imp-escolha">
+              <input type="radio" name="total_escolha" value="valor_final"{% if envio.total_escolha == "valor_final" %} checked{% endif %}>
+              <span><strong>Usar R$ {{ proposta.valor_final.valor }} como valor final combinado</strong>
+                <small>O total da proposta fica fixo neste valor; a diferença aparece ao cliente como desconto (ou ajuste) e o desconto digitado não é usado.</small></span>
+            </label>
+            <label class="ls-imp-escolha">
+              <input type="radio" name="total_escolha" value="soma"{% if envio.total_escolha == "soma" %} checked{% endif %}>
+              <span><strong>Manter a soma das linhas</strong>
+                <small>O total do documento fica de lado. Escreva por quê (vai para o histórico).</small></span>
+            </label>
+            <textarea class="form-control ls-imp-justificativa" name="justificativa-soma_total" maxlength="160" rows="2"
+                      data-justificativa="soma_total" id="justificativaSoma"
+                      placeholder="Ex.: o total do documento somou errado; as linhas conferem com a tabela de preços."
+                      {% if envio.total_escolha != "soma" %}hidden{% endif %}>{{ envio.justificativas.soma_total }}</textarea>
+          </fieldset>
+          {% endif %}
         </div>
       </section>
 
@@ -308,14 +337,18 @@
               <strong>{{ alerta.titulo }}</strong>
               <p data-alerta-detalhe>{{ alerta.detalhe }}</p>
               {% if alerta.fonte %}<button type="button" class="ls-imp-fonte" data-fonte="{{ alerta.fonte.id }}"><i class="bi bi-quote" aria-hidden="true"></i><b>{{ alerta.fonte.id }}</b><span>{{ alerta.fonte.texto|truncatechars:90 }}</span></button>{% endif %}
-              <p class="ls-imp-alerta-resolvido" hidden><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Resolvido com o valor corrigido.</p>
+              <p class="ls-imp-alerta-resolvido" hidden><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Resolvido.</p>
+              {% if alerta.id == "soma_total" and proposta.valor_final.valor %}
+              <p class="ls-imp-nota"><a href="#escolhaTotal">Escolha qual total vale</a>: o do documento, como valor final combinado, ou a soma das linhas, com justificativa.</p>
+              {% else %}
               <label class="ls-imp-marca ls-imp-aceite">
                 <input type="checkbox" name="aceite-{{ alerta.id }}" value="1" data-aceite="{{ alerta.id }}"{% if alerta.aceito %} checked{% endif %}>
                 <span>Aceitar assim mesmo, com justificativa</span>
               </label>
               <textarea class="form-control ls-imp-justificativa" name="justificativa-{{ alerta.id }}" maxlength="160" rows="2"
-                        data-justificativa="{{ alerta.id }}" placeholder="Por que está certo assim? Ex.: o total do Word estava errado; o unitário confere com a tabela de preços."
+                        data-justificativa="{{ alerta.id }}" placeholder="Por que está certo assim? Ex.: o total do documento estava errado; o unitário confere com a tabela de preços."
                         {% if not alerta.aceito %}hidden{% endif %}>{{ alerta.justificativa }}</textarea>
+              {% endif %}
             </div>
           </div>
           {% endfor %}

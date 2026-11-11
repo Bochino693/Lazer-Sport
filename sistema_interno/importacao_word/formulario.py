@@ -84,6 +84,12 @@ def ler_envio(post) -> dict:
         if chave.startswith("aceite-") and post.get(chave) == "1":
             alerta = chave[len("aceite-"):]
             justificativas[alerta] = (post.get(f"justificativa-{alerta}") or "").strip()[:JUSTIFICATIVA_MAXIMA]
+    # O total do Word diferente da soma tem duas saídas, e as duas são
+    # escolha explícita: "manter a soma" é aceitar o alerta (com a
+    # justificativa ao lado), "valor final" grava o total do Word.
+    total_escolha = campo("total_escolha")
+    if total_escolha == "soma":
+        justificativas["soma_total"] = (post.get("justificativa-soma_total") or "").strip()[:JUSTIFICATIVA_MAXIMA]
     return {
         "cliente_modo": campo("cliente_modo") or "novo",
         "cliente_id": campo("cliente_id"),
@@ -109,6 +115,7 @@ def ler_envio(post) -> dict:
         "forma_envio": campo("forma_envio", 300),
         "prazo": campo("prazo", 300),
         "observacoes": campo("observacoes", 4000),
+        "total_escolha": total_escolha if total_escolha in ("soma", "valor_final") else "",
         "justificativas": justificativas,
     }
 
@@ -169,6 +176,9 @@ def envio_inicial(proposta) -> dict:
         "forma_envio": proposta["condicoes"]["forma_envio"]["valor"],
         "prazo": proposta["condicoes"]["prazo"]["valor"],
         "observacoes": proposta["condicoes"]["observacoes"]["valor"],
+        # Nunca vem escolhido: entre a soma e o total do Word quem decide
+        # é a pessoa (ver `recalcular_alertas`).
+        "total_escolha": "",
         "justificativas": {},
     }
 
@@ -216,7 +226,7 @@ def validar(proposta, envio, *, hoje=None) -> dict:
             and not envio["cliente_confirmado"]
         ):
             _pendencia(pendencias, "cliente.vinculo", "Cliente",
-                       f"confirme que “{cliente.nome_cliente}” é o cliente do Word "
+                       f"confirme que “{cliente.nome_cliente}” é o cliente do documento "
                        f"({vinculo['motivo'] or 'vínculo pelo nome'})")
         limpo["cliente"] = cliente
         limpo["nome"] = cliente.nome_cliente if cliente else ""
@@ -238,7 +248,7 @@ def validar(proposta, envio, *, hoje=None) -> dict:
         limpo["tipo"] = envio["tipo"]
         if not envio["documento"]:
             _pendencia(recomendacoes, "cliente.documento", "CPF/CNPJ",
-                       "o Word não traz documento; ele vai para a nota e o contrato", "recomendado")
+                       "o documento importado não traz CPF/CNPJ; ele vai para a nota e o contrato", "recomendado")
         campos_endereco = ("cep", "endereco", "numero", "bairro", "cidade", "estado")
         if any(envio[c] for c in campos_endereco):
             if not (envio["endereco"] and envio["cidade"]):
@@ -362,6 +372,10 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     limpo["itens"] = itens_limpos
 
     # ------------------------------------------------------- valores
+    total_word = det.valor_do_campo(proposta["valores"]["total"]["valor"])
+    limpo["valor_final"] = (
+        total_word if envio.get("total_escolha") == "valor_final" and total_word is not None else None
+    )
     frete = det.valor_do_campo(envio["frete"])
     if not envio["frete"]:
         _pendencia(pendencias, "valores.frete", "Frete",
@@ -371,16 +385,19 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     desconto = det.valor_do_campo(envio["desconto"]) if envio["desconto"] else Decimal("0.00")
     if envio["desconto"] and desconto is None:
         _pendencia(pendencias, "valores.desconto", "Desconto", "valor do desconto ilegível")
-    if proposta["valores"]["desconto"].get("exigir") and not envio["desconto"]:
+    com_valor_final = limpo["valor_final"] is not None
+    if proposta["valores"]["desconto"].get("exigir") and not envio["desconto"] and not com_valor_final:
         _pendencia(pendencias, "valores.desconto", "Desconto",
-                   "o Word dá desconto em porcentagem: confirme o valor em reais")
+                   "o documento dá desconto em porcentagem: confirme o valor em reais")
     limpo["frete"] = frete or Decimal("0.00")
-    limpo["desconto"] = desconto or Decimal("0.00")
+    # Com o valor final combinado o desconto não entra na conta: o painel
+    # grava zero e mostra ao cliente a diferença até o valor final.
+    limpo["desconto"] = Decimal("0.00") if com_valor_final else (desconto or Decimal("0.00"))
     subtotal = sum(
         ((u * q).quantize(Decimal("0.01")) for q, u in valores_itens.values() if q is not None and u is not None),
         Decimal("0.00"),
     )
-    if desconto and desconto > subtotal + limpo["frete"]:
+    if desconto and not com_valor_final and desconto > subtotal + limpo["frete"]:
         _pendencia(pendencias, "valores.desconto", "Desconto", "o desconto é maior que o total")
 
     # ------------------------------------------------------ condições
@@ -455,6 +472,8 @@ def _resolvido(alerta, envio, limpo, proposta) -> bool:
     abre VAZIO de propósito, então qualquer valor ali foi escolha dela.
     """
     tipo = alerta["tipo"]
+    if tipo == "soma_total" and envio.get("total_escolha") == "valor_final":
+        return limpo.get("valor_final") is not None
     if tipo == "documento_invalido":
         return (
             envio["cliente_modo"] == "existente"
@@ -515,7 +534,7 @@ def item_em_branco(uid, posicao) -> dict:
         "descricao": campo("descricao", "texto", "descrição"),
         "quantidade": campo("quantidade", "quantidade", "quantidade"),
         "valor_unitario": campo("valor_unitario", "dinheiro", "valor unitário"),
-        "total_linha": campo("total_linha", "dinheiro", "total da linha no Word", True),
+        "total_linha": campo("total_linha", "dinheiro", "total da linha no documento", True),
         "produto": {"escolhido": None, "confianca": "baixa", "motivo": "linha acrescentada na conferência",
                     "pontos": 0, "candidatos": [], "por_ia": False, "opcao": None},
         "original": "",
@@ -567,7 +586,7 @@ def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
                 Cliente.CanalTelefone.WHATSAPP if limpo["whatsapp"] else Cliente.CanalTelefone.TELEFONE
             ) if limpo["telefone"] else Cliente.CanalTelefone.NAO_CONFIRMADO,
             "email": limpo["email"],
-            "observacoes": f"Cadastrado pela importação do orçamento do Word “{arquivo}”.",
+            "observacoes": f"Cadastrado pela importação do orçamento “{arquivo}”.",
         })
         cliente = svc_clientes.salvar_cliente(pedido)
         envio_endereco = limpo.get("endereco") or {}
@@ -590,6 +609,7 @@ def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
         validade=limpo["validade"],
         frete=limpo["frete"],
         desconto=limpo["desconto"],
+        valor_final=limpo.get("valor_final"),
         forma_pagamento=limpo["forma_pagamento"],
         forma_envio=limpo["forma_envio"],
         observacoes=observacoes,
@@ -634,11 +654,13 @@ def registrar_importacao(orcamento, usuario, limpo, *, arquivo, ia, amarelos):
     por último. Quem e quando já são do próprio registro (autor e
     criação). Do arquivo, só o nome: ele não fica guardado.
     """
+    do_pdf = (arquivo or "").lower().endswith(".pdf")
+    fonte = "PDF" if do_pdf else "Word"
     for aceito in limpo["aceitos"]:
         AtividadeOrcamento.registrar(
             orcamento, usuario, AtividadeOrcamento.Tipo.CRIADO,
             resumo=(
-                f"Importação do Word: alerta aceito — {aceito['alerta']['titulo']}. "
+                f"Importação do {fonte}: alerta aceito — {aceito['alerta']['titulo']}. "
                 f"Justificativa: {aceito['justificativa']}"
             ),
         )
@@ -651,10 +673,22 @@ def registrar_importacao(orcamento, usuario, limpo, *, arquivo, ia, amarelos):
     if trocas:
         AtividadeOrcamento.registrar(
             orcamento, usuario, AtividadeOrcamento.Tipo.CRIADO,
-            resumo="Importação do Word: nomes pelo catálogo — " + "; ".join(trocas),
+            resumo=f"Importação do {fonte}: nomes pelo catálogo — " + "; ".join(trocas),
+        )
+    if limpo.get("valor_final") is not None:
+        soma = sum(
+            ((i["valor_unitario"] * i["quantidade"]).quantize(Decimal("0.01")) for i in limpo["itens"]),
+            Decimal("0.00"),
+        ) + limpo["frete"]
+        AtividadeOrcamento.registrar(
+            orcamento, usuario, AtividadeOrcamento.Tipo.CRIADO,
+            resumo=(
+                f"Importação do {fonte}: valor final combinado R$ {det.moeda(limpo['valor_final'])}, "
+                f"o total escrito no documento; a soma das linhas e do frete dá R$ {det.moeda(soma)}."
+            ),
         )
     avulsas = sum(1 for item in limpo["itens"] if item["avulsa"])
-    partes = [f"Importado do Word «{arquivo[:60]}»"]
+    partes = [f"Importado do {fonte} «{arquivo[:60]}»"]
     partes.append("lido com IA" if ia.get("usada") else "lido só pelas tabelas (IA indisponível)")
     if limpo["aceitos"]:
         partes.append(f"{len(limpo['aceitos'])} alerta(s) aceito(s) com justificativa")

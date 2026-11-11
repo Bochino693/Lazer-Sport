@@ -43,6 +43,10 @@ NIVEL_VERMELHO = "vermelho"
 NIVEL_AMARELO = "amarelo"
 
 AVISO_SEM_IA = "IA indisponível: leitura pelas tabelas do documento; confira com atenção."
+AVISO_PDF = (
+    "PDF lido pela IA: o texto foi transcrito por ela, e cada valor foi conferido "
+    "nessa transcrição e nas contas. Confira com o PDF aberto ao lado."
+)
 
 
 def identidade_da_empresa() -> dict:
@@ -311,7 +315,7 @@ def fundir(chave, rotulo, tipo, lido_det, lido_ia, *, ia_usada, alertas, referen
                 "detalhe": (
                     f"Pelas tabelas: {opcoes[0]['rotulo']} ({lido_det[1]['id']}); pela IA: "
                     f"{opcoes[1]['rotulo']} ({lido_ia[1]['id']}). "
-                    + ("Confira no Word e escreva qual vale." if referencia
+                    + ("Confira no documento e escreva qual vale." if referencia
                        else "Escolha a certa (ou corrija) no campo.")
                 ),
                 "fonte": lido_det[1],
@@ -430,7 +434,7 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     for alerta in casamento["alertas"]:
         alertas.append({
             "id": "cliente_conflito", "nivel": NIVEL_VERMELHO, "tipo": "cliente_conflito",
-            "campo": "cliente.vinculo", "titulo": "O cliente do Word bate com mais de um cadastro",
+            "campo": "cliente.vinculo", "titulo": "O cliente do documento bate com mais de um cadastro",
             "detalhe": alerta["detalhe"], "fonte": None,
         })
         break
@@ -469,10 +473,10 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
 
     # ---------------------------------------------------------- valores
     valores = {
-        "subtotal": campo("valores.subtotal", "Subtotal do Word", "dinheiro", "subtotal", "subtotal", referencia=True),
+        "subtotal": campo("valores.subtotal", "Subtotal do documento", "dinheiro", "subtotal", "subtotal", referencia=True),
         "frete": campo("valores.frete", "Frete", "dinheiro", "frete", "frete"),
         "desconto": campo("valores.desconto", "Desconto", "dinheiro", "desconto", "desconto"),
-        "total": campo("valores.total", "Total do Word", "dinheiro", "total", "total_geral", referencia=True),
+        "total": campo("valores.total", "Total do documento", "dinheiro", "total", "total_geral", referencia=True),
     }
     for chave_valor in ("subtotal", "total", "frete", "desconto"):
         conflitos = (campos_det.get(chave_valor) or {}).get("conflitos")
@@ -480,11 +484,11 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
             alertas.append({
                 "id": f"repetido:{chave_valor}", "nivel": NIVEL_VERMELHO, "tipo": "repetido",
                 "campo": f"valores.{chave_valor}",
-                "titulo": f"O Word traz dois valores para “{valores[chave_valor]['rotulo']}”",
+                "titulo": f"O documento traz dois valores para “{valores[chave_valor]['rotulo']}”",
                 "detalhe": "Aparece " + " e também ".join(
                     f"R$ {det.moeda(c['valor'])} ({c['fonte']['id']})"
                     for c in [campos_det[chave_valor]] + conflitos
-                ) + ". Confira no Word qual vale.",
+                ) + ". Confira no documento qual vale.",
                 "fonte": campos_det[chave_valor]["fonte"],
             })
 
@@ -492,8 +496,8 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     frete = valores["frete"]
     if not frete["valor"] and not frete["opcoes"]:
         frete["sugestoes"] = [{"valor": "0,00", "rotulo": "Sem frete (R$ 0,00)",
-                               "motivo": "o Word não fala de frete: confirme que não há"}]
-        frete["nota"] = frete["nota"] or "o Word não traz frete; escolha de propósito, mesmo que seja zero"
+                               "motivo": "o documento não fala de frete: confirme que não há"}]
+        frete["nota"] = frete["nota"] or "o documento não traz frete; escolha de propósito, mesmo que seja zero"
     if campos_det.get("frete", {}).get("motivo") and frete["origem"] in ("tabelas", "ambas"):
         frete["nota"] = campos_det["frete"]["motivo"]
 
@@ -534,23 +538,25 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     for recusa in lido["recusas"]:
         alertas.append({
             "id": f"recusa:{len(alertas)}", "nivel": NIVEL_AMARELO, "tipo": "recusa",
-            "campo": "", "titulo": "Valor do Word que não deu para ler",
+            "campo": "", "titulo": "Valor do documento que não deu para ler",
             "detalhe": f"{recusa['motivo'][:1].upper()}{recusa['motivo'][1:]}. Preencha o campo à mão.",
             "fonte": recusa.get("fonte"),
         })
     for alerta in lido["alertas"]:
         alertas.append({
             "id": f"leitura:{len(alertas)}", "nivel": NIVEL_AMARELO, "tipo": alerta["tipo"],
-            "campo": "", "titulo": "Confira no Word", "detalhe": alerta["detalhe"],
+            "campo": "", "titulo": "Confira no documento", "detalhe": alerta["detalhe"],
             "fonte": alerta.get("fonte"),
         })
 
+    formato = leitura.get("formato") or "docx"
     proposta = {
         "arquivo": leitura.get("arquivo", ""),
+        "formato": formato,
         "ia": {
             "usada": ia_usada,
             "modelo": ia_info.get("modelo", "") if ia_usada else "",
-            "aviso": "" if ia_usada else AVISO_SEM_IA,
+            "aviso": AVISO_PDF if formato == "pdf" else ("" if ia_usada else AVISO_SEM_IA),
             "motivo": ia_info.get("motivo", ""),
         },
         "cliente": cliente,
@@ -564,9 +570,37 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         "data_documento": lido["data_documento"].isoformat() if lido["data_documento"] else "",
     }
     _valores_nao_usados(proposta, linhas, alertas)
+    if formato == "pdf":
+        _rebaixar_confianca_do_pdf(proposta)
     proposta["alertas"] = alertas
     recalcular_alertas(proposta)
     return proposta
+
+
+def _rebaixar_confianca_do_pdf(proposta):
+    """No PDF, "as duas leituras concordam" não é prova independente.
+
+    A leitura por regra roda sobre a TRANSCRIÇÃO que a própria IA fez do
+    PDF: se a IA leu um 8 onde estava um 3, as duas leem o mesmo 8. A
+    concordância ainda pega o erro de cópia entre a transcrição e o
+    esquema, e as contas continuam valendo -- mas nenhum valor de PDF
+    passa de confiança média, e a pessoa confere com o PDF aberto.
+    """
+    def rebaixar(campo):
+        if isinstance(campo, dict) and campo.get("confianca") == "alta":
+            campo["confianca"] = "media"
+            campo["nota"] = (campo.get("nota") + " · " if campo.get("nota") else "") + "transcrito do PDF pela IA"
+
+    cliente = proposta["cliente"]
+    for nome, campo in cliente.items():
+        if nome not in ("vinculo", "tipo_sugerido", "tipo_motivo", "whatsapp_confirmado"):
+            rebaixar(campo)
+    for item in proposta["itens"]:
+        for nome in ("descricao", "quantidade", "valor_unitario", "total_linha"):
+            rebaixar(item[nome])
+    for grupo in ("valores", "condicoes"):
+        for campo in proposta[grupo].values():
+            rebaixar(campo)
 
 
 def _tipo_sugerido(nome: str, documento: str):
@@ -618,7 +652,7 @@ def _sugerir_validade(validade: dict, hoje: date):
         escolhida = date.fromisoformat(validade["valor"])
         if escolhida < hoje:
             validade["nota"] = (
-                f"a validade do Word ({escolhida:%d/%m/%Y}) já passou: a proposta sairia vencida"
+                f"a validade do documento ({escolhida:%d/%m/%Y}) já passou: a proposta sairia vencida"
             )
             validade["valor"] = ""
             validade["confianca"] = "baixa"
@@ -630,13 +664,13 @@ def _sugerir_validade(validade: dict, hoje: date):
                 nova = det.somar_dias_uteis(hoje, dias) if prazo.group(2) else hoje + timedelta(days=dias)
                 validade["sugestoes"].insert(0, {
                     "valor": nova.isoformat(),
-                    "rotulo": f"o mesmo prazo do Word a partir de hoje: {nova:%d/%m/%Y}",
+                    "rotulo": f"o mesmo prazo do documento a partir de hoje: {nova:%d/%m/%Y}",
                     "motivo": validade["original"],
                 })
         return
     if not validade["opcoes"]:
         validade["sugestoes"] = [sugestao_padrao]
-        validade["nota"] = "o Word não traz validade"
+        validade["nota"] = "o documento não traz validade"
 
 
 def _tratar_percentual(valores, campos_det, percentual_ia):
@@ -661,7 +695,7 @@ def _tratar_percentual(valores, campos_det, percentual_ia):
     desconto["original"] = original
     desconto["percentual"] = str(percentual)
     desconto["nota"] = (
-        f"o Word dá {original} de desconto, sem o valor em reais: confirme o valor "
+        f"o documento dá {original} de desconto, sem o valor em reais: confirme o valor "
         "(a sugestão é a conta sobre o subtotal dos itens)"
     )
 
@@ -689,7 +723,7 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
             if texto:
                 alertas.append({
                     "id": f"item_descartado:{posicao}", "nivel": NIVEL_AMARELO, "tipo": "item_descartado",
-                    "campo": "", "titulo": "Item da IA que não está no Word",
+                    "campo": "", "titulo": "Item da IA que não está no documento",
                     "detalhe": f"A IA listou “{texto}”, mas esse texto não está no documento. O item não entrou.",
                     "fonte": None,
                 })
@@ -740,7 +774,7 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
             ("descricao", "texto", "descrição", False),
             ("quantidade", "quantidade", "quantidade", False),
             ("valor_unitario", "dinheiro", "valor unitário", False),
-            ("total_linha", "dinheiro", "total da linha no Word", True),
+            ("total_linha", "dinheiro", "total da linha no documento", True),
         ):
             de_tabela, de_ia = bruto[nome]
             item[nome] = fundir(
@@ -773,7 +807,7 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
             alertas.append({
                 "id": f"so_tabelas:{uid}", "nivel": NIVEL_AMARELO, "tipo": "so_tabelas",
                 "campo": f"{chave}.descricao", "titulo": f"{rotulo}: a IA não listou esta linha",
-                "detalhe": "A linha está na tabela de itens do Word e entrou pela leitura da tabela. "
+                "detalhe": "A linha está na tabela de itens do documento e entrou pela leitura da tabela. "
                            "Confira se é mesmo um item cobrado.",
                 "fonte": item["descricao"]["fonte"],
             })
@@ -836,7 +870,7 @@ def _sugerir_valores_da_linha(item):
                 }]
         elif valor_total is not None and not unitario["valor"]:
             quantidade["sugestoes"] = [{"valor": "1", "rotulo": "1",
-                                        "motivo": "o Word traz só o valor da linha"}]
+                                        "motivo": "o documento traz só o valor da linha"}]
     valor_quantidade = int(quantidade["valor"]) if quantidade["valor"].isdigit() else None
     if not unitario["valor"] and not unitario["opcoes"] and valor_total is not None:
         base = valor_quantidade or (1 if not quantidade["valor"] else None)
@@ -850,7 +884,7 @@ def _sugerir_valores_da_linha(item):
 
 
 def _valores_nao_usados(proposta, linhas, alertas):
-    """Todo valor em reais do Word precisa ter entrado em algum lugar.
+    """Todo valor em reais do documento precisa ter entrado em algum lugar.
 
     É a rede que pega o item que as duas leituras deixaram passar: um
     "R$ 350,00" escrito no documento e que não virou unitário, total,
@@ -896,7 +930,7 @@ def _valores_nao_usados(proposta, linhas, alertas):
     if soltos:
         alertas.append({
             "id": "valores_nao_usados", "nivel": NIVEL_AMARELO, "tipo": "valores_nao_usados",
-            "campo": "", "titulo": "Valores do Word que não entraram em nenhum campo",
+            "campo": "", "titulo": "Valores do documento que não entraram em nenhum campo",
             "detalhe": "; ".join(soltos[:6]) + (f"; e mais {len(soltos) - 6}" if len(soltos) > 6 else "")
             + ". Confira se falta algum item.",
             "fonte": None,
@@ -960,7 +994,7 @@ def recalcular_alertas(proposta, valores_atuais=None):
                 "campo": f"itens.{uid}.valor_unitario",
                 "titulo": f"Item {item['posicao']}: a conta da linha não bate",
                 "detalhe": (
-                    f"{quantidade} × R$ {det.moeda(unitario)} = R$ {det.moeda(calculado)}, mas o Word "
+                    f"{quantidade} × R$ {det.moeda(unitario)} = R$ {det.moeda(calculado)}, mas o documento "
                     f"diz R$ {det.moeda(total_word)} ({item['total_linha']['fonte']['id']}). "
                     "Corrija a quantidade ou o unitário, ou aceite escrevendo por quê."
                 ),
@@ -973,9 +1007,9 @@ def recalcular_alertas(proposta, valores_atuais=None):
     if subtotal_word is not None and resultado["subtotal"] != subtotal_word:
         alertas.append({
             "id": "soma_subtotal", "nivel": NIVEL_VERMELHO, "tipo": "soma_subtotal", "verificavel": True,
-            "campo": "valores.subtotal", "titulo": "A soma das linhas não bate com o subtotal do Word",
+            "campo": "valores.subtotal", "titulo": "A soma das linhas não bate com o subtotal do documento",
             "detalhe": (
-                f"Soma das linhas: R$ {det.moeda(resultado['subtotal'])}; subtotal no Word: "
+                f"Soma das linhas: R$ {det.moeda(resultado['subtotal'])}; subtotal no documento: "
                 f"R$ {det.moeda(subtotal_word)} ({proposta['valores']['subtotal']['fonte']['id']})."
                 + ("" if resultado["completos"] else " Há linhas sem quantidade ou unitário.")
             ),
@@ -984,22 +1018,34 @@ def recalcular_alertas(proposta, valores_atuais=None):
     if total_word is not None and resultado["total"] != total_word:
         alertas.append({
             "id": "soma_total", "nivel": NIVEL_VERMELHO, "tipo": "soma_total", "verificavel": True,
-            "campo": "valores.total", "titulo": "O total calculado não bate com o total do Word",
+            "campo": "valores.total", "titulo": "O total calculado não bate com o total do documento",
             "detalhe": (
                 f"Linhas R$ {det.moeda(resultado['subtotal'])} + frete "
                 f"R$ {det.moeda(valores_atuais['frete'] or 0)} − desconto "
                 f"R$ {det.moeda(valores_atuais['desconto'] or 0)} = R$ {det.moeda(resultado['total'])}; "
-                f"o Word diz R$ {det.moeda(total_word)} ({proposta['valores']['total']['fonte']['id']})."
+                f"o documento diz R$ {det.moeda(total_word)} ({proposta['valores']['total']['fonte']['id']})."
             ),
             "fonte": proposta["valores"]["total"]["fonte"],
         })
     if total_word is None and subtotal_word is None and proposta["itens"]:
         alertas.append({
             "id": "sem_total", "nivel": NIVEL_AMARELO, "tipo": "sem_total", "campo": "valores.total",
-            "titulo": "O Word não traz total para conferir",
+            "titulo": "O documento não traz total para conferir",
             "detalhe": "Sem total escrito, a conta não tem com o que ser comparada. Confira o total calculado.",
             "fonte": None,
         })
+    # O VALOR FINAL COMBINADO. O Word diz um total, a conta das linhas dá
+    # outro -- erro de digitação ou "fechamos em R$ 18.000". Ninguém
+    # escolhe pela pessoa: a tela mostra os dois e oferece gravar o total
+    # do Word como `valor_final` (o painel passa a mostrar a diferença
+    # como desconto ou ajuste), ou manter a soma, com justificativa.
+    proposta["valor_final"] = {
+        "oferecido": total_word is not None and resultado["total"] != total_word,
+        "valor": det.moeda(total_word) if total_word is not None else "",
+        "soma": det.moeda(resultado["total"]),
+        "fonte": proposta["valores"]["total"]["fonte"],
+        "original": proposta["valores"]["total"].get("original", ""),
+    }
     desconto = proposta["valores"]["desconto"]
     if desconto.get("percentual"):
         base = resultado["subtotal"]

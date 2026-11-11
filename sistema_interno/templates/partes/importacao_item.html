@@ -12,8 +12,8 @@
 <article class="ls-imp-item" data-uid="{{ item.uid }}" id="item-{{ item.uid }}">
   <header class="ls-imp-item-topo">
     <strong>Item <span data-posicao>{{ item.posicao }}</span></strong>
-    {% if item.contexto == "tabela" %}<span class="ls-imp-tag">tabela do Word · {{ item.linha_fonte }}</span>
-    {% elif item.contexto == "paragrafo" %}<span class="ls-imp-tag amarelo">parágrafo do Word · {{ item.linha_fonte }}</span>
+    {% if item.contexto == "tabela" %}<span class="ls-imp-tag">tabela do documento · {{ item.linha_fonte }}</span>
+    {% elif item.contexto == "paragrafo" %}<span class="ls-imp-tag amarelo">parágrafo do documento · {{ item.linha_fonte }}</span>
     {% elif item.contexto == "ia" %}<span class="ls-imp-tag">lido pela IA · {{ item.linha_fonte }}</span>
     {% else %}<span class="ls-imp-tag">acrescentado aqui</span>{% endif %}
     <button type="button" class="btn btn-sm btn-outline-secondary ls-imp-remover" data-remover="{{ item.uid }}"
@@ -45,7 +45,7 @@
     {% endif %}
     <label class="ls-imp-marca" data-conferir-de="{{ item.uid }}"{% if item.produto.confianca != "media" %} hidden{% endif %}>
       <input type="checkbox" name="item-{{ item.uid }}-conferido" value="1"{% if env.conferido %} checked{% endif %}>
-      <span>Conferi: é este o produto do Word</span>
+      <span>Conferi: é este o produto do documento</span>
     </label>
     <label class="ls-imp-marca">
       <input type="checkbox" name="item-{{ item.uid }}-avulsa" value="1" data-avulsa="{{ item.uid }}"{% if env.avulsa %} checked{% endif %}>
@@ -61,14 +61,14 @@
       <label class="form-label" for="item-{{ item.uid }}-descricao">Descrição na proposta <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
       <input class="form-control" id="item-{{ item.uid }}-descricao" name="item-{{ item.uid }}-descricao"
              maxlength="180" value="{{ env.descricao }}" data-original="{{ item.original }}">
-      {% if item.original %}<p class="ls-imp-nota ls-imp-no-word"><small>No Word:</small> “{{ item.original }}”</p>{% endif %}
+      {% if item.original %}<p class="ls-imp-nota ls-imp-no-word"><small>No documento:</small> “{{ item.original }}”</p>{% endif %}
       {% include "partes/importacao_origem.html" with campo=item.descricao alvo="item-"|add:item.uid|add:"-descricao" falta=item.faltas.descricao %}
     </div>
     <div class="ls-imp-campo">
       <label class="form-label" for="item-{{ item.uid }}-quantidade">Quantidade <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
       <input class="form-control ls-imp-recalcula" id="item-{{ item.uid }}-quantidade" name="item-{{ item.uid }}-quantidade"
              inputmode="numeric" autocomplete="off" value="{{ env.quantidade }}"{% if item.unidade %} aria-describedby="item-{{ item.uid }}-unidade"{% endif %}>
-      {% if item.unidade %}<p class="ls-imp-nota" id="item-{{ item.uid }}-unidade"><small>Unidade no Word:</small> {{ item.unidade }}</p>{% endif %}
+      {% if item.unidade %}<p class="ls-imp-nota" id="item-{{ item.uid }}-unidade"><small>Unidade no documento:</small> {{ item.unidade }}</p>{% endif %}
       {% include "partes/importacao_origem.html" with campo=item.quantidade alvo="item-"|add:item.uid|add:"-quantidade" falta=item.faltas.quantidade %}
     </div>
     <div class="ls-imp-campo">
@@ -84,11 +84,11 @@
       <span class="form-label">Total da linha</span>
       <strong class="ls-imp-dinheiro" data-subtotal-de="{{ item.uid }}">—</strong>
       {% if item.total_linha.valor %}
-      <p class="ls-imp-nota"><small>No Word:</small> R$ {{ item.total_linha.valor }}
+      <p class="ls-imp-nota"><small>No documento:</small> R$ {{ item.total_linha.valor }}
         {% if item.total_linha.fonte %}<button type="button" class="ls-imp-fonte mini" data-fonte="{{ item.total_linha.fonte.id }}"><b>{{ item.total_linha.fonte.id }}</b></button>{% endif %}
       </p>
       {% elif item.total_linha.opcoes %}
-      <p class="ls-imp-nota"><small>No Word:</small> {% for opcao in item.total_linha.opcoes %}{{ opcao.rotulo }} ({% if opcao.origem == "ia" %}IA{% else %}tabelas{% endif %}){% if not forloop.last %} ou {% endif %}{% endfor %}</p>
+      <p class="ls-imp-nota"><small>No documento:</small> {% for opcao in item.total_linha.opcoes %}{{ opcao.rotulo }} ({% if opcao.origem == "ia" %}IA{% else %}tabelas{% endif %}){% if not forloop.last %} ou {% endif %}{% endfor %}</p>
       {% endif %}
       <p class="ls-imp-conta-estado" data-conta-de="{{ item.uid }}" hidden></p>
     </div>

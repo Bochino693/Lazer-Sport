@@ -10,9 +10,9 @@
   {% if campo.confianca == "alta" %}<span class="ls-imp-selo alta" title="As duas leituras concordam, ou a regra leu sem dúvida">Confiança alta</span>
   {% elif campo.confianca == "media" %}<span class="ls-imp-selo media" title="Só uma leitura achou, e o valor está na fonte citada">Confiança média</span>
   {% elif campo.confianca == "baixa" %}<span class="ls-imp-selo baixa" title="As leituras discordam ou o valor não deu para usar">Confira</span>
-  {% else %}<span class="ls-imp-selo vazio" title="O documento não traz este dado">Sem fonte no Word</span>{% endif %}
-  {% if campo.origem == "ambas" %}<span class="ls-imp-tag">tabelas e IA concordam</span>
-  {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">leitura das tabelas</span>
+  {% else %}<span class="ls-imp-selo vazio" title="O documento não traz este dado">Sem fonte no documento</span>{% endif %}
+  {% if campo.origem == "ambas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf" %}transcrição e IA concordam{% else %}tabelas e IA concordam{% endif %}</span>
+  {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf" %}releitura da transcrição{% else %}leitura das tabelas{% endif %}</span>
   {% elif campo.origem == "ia" %}<span class="ls-imp-tag">IA, conferida na fonte</span>
   {% elif campo.origem == "divergente" %}<span class="ls-imp-tag vermelho">leituras diferentes</span>{% endif %}
   {% if campo.fonte %}
@@ -23,7 +23,7 @@
 </div>
 {% if campo.normalizado %}
 <div class="ls-imp-normal">
-  <span class="ls-imp-normal-word"><small>No Word</small>{{ campo.original }}</span>
+  <span class="ls-imp-normal-word"><small>No documento</small>{{ campo.original }}</span>
   <i class="bi bi-arrow-right" aria-hidden="true"></i>
   <span class="ls-imp-normal-sistema"><small>No orçamento</small>{{ campo.exibir }}</span>
 </div>

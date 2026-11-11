@@ -531,7 +531,9 @@ ROTULOS = {
                  "valor dos itens", "total parcial", "soma dos itens"),
     "total": ("total", "total geral", "valor total", "total do orcamento",
               "total da proposta", "valor final", "total a pagar", "investimento",
-              "investimento total", "valor total da proposta", "total final"),
+              "investimento total", "valor total da proposta", "total final",
+              "valor total negociado", "total negociado", "valor negociado", "valor fechado",
+              "valor combinado", "valor final combinado", "valor final negociado"),
     "data": ("data", "data do orcamento", "data de emissao", "emissao", "emitido em"),
     "observacoes": ("observacoes", "observacao", "obs", "garantia", "condicoes gerais",
                     "informacoes adicionais"),
@@ -542,8 +544,9 @@ _ROTULO_POR_TEXTO = {
 #: Campos de dinheiro que um rótulo pode abrir no meio de uma linha corrida:
 #: "Subtotal R$ 1.200,00 | Frete R$ 50,00 | Total R$ 1.250,00".
 _ROTULO_DINHEIRO = re.compile(
-    r"\b(sub\s*-?\s*total|total\s+geral|valor\s+total|total\s+do\s+orcamento|"
-    r"total\s+da\s+proposta|total\s+a\s+pagar|valor\s+final|total|frete|desconto)\b"
+    r"\b(sub\s*-?\s*total|total\s+geral|valor\s+total(?:\s+negociado)?|total\s+do\s+orcamento|"
+    r"total\s+da\s+proposta|total\s+a\s+pagar|valor\s+final(?:\s+(?:combinado|negociado))?|"
+    r"total\s+negociado|valor\s+(?:negociado|fechado|combinado)|total|frete|desconto)\b"
 )
 _CAMPO_DO_ROTULO_DINHEIRO = {
     "frete": "frete", "desconto": "desconto",
