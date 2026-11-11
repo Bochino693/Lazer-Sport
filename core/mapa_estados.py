@@ -1,4 +1,8 @@
-"""Os estados do mapa da home, coloridos pelo nível de pedidos de brinquedos.
+"""Os estados (e os países) do mapa da home, coloridos pelo nível de pedidos.
+
+O Brasil vai pelos estados; fora dele, cada país inteiro (o cliente de
+fora do Brasil tem o país no endereço). Os países só contam propostas
+aprovadas e clientes do mapa -- a loja online só entrega no Brasil.
 
 O QUE CONTA COMO PEDIDO, POR ESTADO (UF):
   * proposta APROVADA no painel (sistema_interno.Orcamento), no estado do
@@ -75,37 +79,60 @@ def rotulo_da_faixa(minimo: int, maximo) -> str:
     return f"{minimo} a {maximo} pedidos"
 
 
-def pedidos_por_estado(clientes_no_mapa=()) -> Counter:
-    """Quantos pedidos de brinquedos cada estado (UF) já fez.
+#: Os jeitos de escrever "Brasil" no endereço: esses vão pelos estados.
+_BRASIL = {"brasil", "brazil", "br", "bra", "republica federativa do brasil"}
 
-    `clientes_no_mapa`: pares (cliente_id, estado) dos clientes publicados
-    no mapa -- os que ainda não têm proposta aprovada contam 1.
-    """
+#: Abreviações comuns que o nome do país no mapa não traz.
+_APELIDOS_DE_PAIS = {
+    "eua": "estados unidos", "usa": "estados unidos", "us": "estados unidos",
+    "estados unidos da america": "estados unidos", "uk": "reino unido",
+    "inglaterra": "reino unido",
+}
+
+
+def pais_de(valor) -> str:
+    """O país do endereço, normalizado (sem acento, minúsculo); '' para o
+    Brasil ou vazio -- o Brasil vai pelos estados."""
+    texto = _sem_acento(valor or "")
+    if not texto or texto in _BRASIL:
+        return ""
+    return _APELIDOS_DE_PAIS.get(texto, texto)
+
+
+def _contar(clientes_no_mapa):
+    """(por estado, por país) -- ver o topo do arquivo."""
     from django.db.models import OuterRef, Subquery
 
     from core.models import Pedido
     from sistema_interno.models import EnderecoCliente, Orcamento
 
-    contagem: Counter = Counter()
+    por_uf: Counter = Counter()
+    por_pais: Counter = Counter()
 
-    primeiro_endereco = (
-        EnderecoCliente.objects
-        .filter(cliente_id=OuterRef("cliente_id"))
-        .order_by("id")
-        .values("estado")[:1]
-    )
+    def primeiro_endereco(campo):
+        return Subquery(
+            EnderecoCliente.objects
+            .filter(cliente_id=OuterRef("cliente_id"))
+            .order_by("id")
+            .values(campo)[:1]
+        )
+
     clientes_com_pedido = set()
     aprovadas = (
         Orcamento.objects
         .filter(status=Orcamento.Status.APROVADO, cliente__isnull=False)
-        .annotate(_uf=Subquery(primeiro_endereco))
-        .values_list("cliente_id", "_uf")
+        .annotate(_uf=primeiro_endereco("estado"), _pais=primeiro_endereco("pais"))
+        .values_list("cliente_id", "_uf", "_pais")
     )
-    for cliente_id, estado in aprovadas:
+    for cliente_id, estado, pais in aprovadas:
         clientes_com_pedido.add(cliente_id)
+        fora = pais_de(pais)
+        if fora:
+            por_pais[fora] += 1
+            continue
         uf = uf_de(estado)
         if uf:
-            contagem[uf] += 1
+            por_uf[uf] += 1
 
     da_loja = (
         Pedido.objects
@@ -115,23 +142,43 @@ def pedidos_por_estado(clientes_no_mapa=()) -> Counter:
     for estado in da_loja:
         uf = uf_de(estado)
         if uf:
-            contagem[uf] += 1
+            por_uf[uf] += 1
 
-    for cliente_id, estado in clientes_no_mapa:
+    for cliente in clientes_no_mapa:
+        cliente_id, estado, pais = (tuple(cliente) + ("",))[:3]
         if cliente_id in clientes_com_pedido:
+            continue
+        fora = pais_de(pais)
+        if fora:
+            por_pais[fora] += 1
             continue
         uf = uf_de(estado)
         if uf:
-            contagem[uf] += 1
+            por_uf[uf] += 1
 
-    return contagem
+    return por_uf, por_pais
+
+
+def pedidos_por_estado(clientes_no_mapa=()) -> Counter:
+    """Quantos pedidos de brinquedos cada estado (UF) já fez.
+
+    `clientes_no_mapa`: (cliente_id, estado[, país]) dos clientes publicados
+    no mapa -- os que ainda não têm proposta aprovada contam 1.
+    """
+    return _contar(clientes_no_mapa)[0]
+
+
+def pedidos_por_pais(clientes_no_mapa=()) -> Counter:
+    """O mesmo para os países fora do Brasil (chave: o nome normalizado)."""
+    return _contar(clientes_no_mapa)[1]
 
 
 def dados_do_mapa(clientes_no_mapa=()) -> dict:
-    """O que a página recebe: só o nível de cada estado e a legenda."""
-    contagem = pedidos_por_estado(clientes_no_mapa)
+    """O que a página recebe: só o nível de cada estado e país e a legenda."""
+    por_uf, por_pais = _contar(clientes_no_mapa)
     return {
-        "niveis": {uf: nivel_de(n) for uf, n in sorted(contagem.items()) if n > 0},
+        "niveis": {uf: nivel_de(n) for uf, n in sorted(por_uf.items()) if n > 0},
+        "paises": {nome: nivel_de(n) for nome, n in sorted(por_pais.items()) if n > 0},
         "nomes": UFS,
         "faixas": [
             {"nivel": i, "rotulo": rotulo_da_faixa(minimo, maximo)}

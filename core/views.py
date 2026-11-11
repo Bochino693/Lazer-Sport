@@ -433,6 +433,9 @@ class HomeView(View):
                 "lat": float(e.latitude),
                 "lng": float(e.longitude),
                 "site": e.cliente.site_cliente or "",
+                # o estado em sigla (ou "" fora do Brasil): é por ele que o
+                # cartão do estado lista os clientes de lá
+                "uf": "" if mapa_estados.pais_de(e.pais) else mapa_estados.uf_de(e.estado),
             }
             for e in enderecos_no_mapa
         ]
@@ -442,11 +445,11 @@ class HomeView(View):
         # Um erro aqui nunca derruba a home: o mapa fica sem as cores.
         try:
             estados_mapa = mapa_estados.dados_do_mapa(
-                [(e.cliente_id, e.estado) for e in enderecos_no_mapa]
+                [(e.cliente_id, e.estado, e.pais) for e in enderecos_no_mapa]
             )
         except Exception:  # noqa: BLE001
             logging.getLogger(__name__).exception("Mapa: não deu para contar os pedidos por estado")
-            estados_mapa = {"niveis": {}, "nomes": mapa_estados.UFS, "faixas": []}
+            estados_mapa = {"niveis": {}, "paises": {}, "nomes": mapa_estados.UFS, "faixas": []}
 
         # Pino especial da fábrica. EnderecoEmpresa continua editável pelo
         # admin. Se não houver cadastro, a home usa as coordenadas fixas já

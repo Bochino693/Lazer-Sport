@@ -1356,7 +1356,7 @@
                     {% endif %}
                     {% if estados_mapa.faixas %}
                     <button type="button" class="ls-onde-camada ls-onde-camada--estados" data-onde-camada="estados" aria-pressed="true">
-                        <i class="fa-solid fa-map ls-onde-ponto" aria-hidden="true"></i> Pedidos por estado
+                        <i class="fa-solid fa-map ls-onde-ponto" aria-hidden="true"></i> Pedidos por região
                     </button>
                     {% endif %}
                 </div>
@@ -1377,7 +1377,7 @@
                     <span class="ls-onde-dica-pc">Passe o mouse para visualizar · clique para manter aberto</span>
                     <span class="ls-onde-dica-toque">Toque em um alfinete para ver {% if clientes_mapa %}o cliente{% else %}a fábrica{% endif %}</span>
                 </div>
-                <div id="mapa-onde" class="ls-onde-mapa-caixa" data-logo="{% estatico 'images/logo-96.png' %}" data-estados="{% estatico 'site/dados/estados-br.json' %}" data-marca="{% estatico 'images/logoofi-512.webp' %}">
+                <div id="mapa-onde" class="ls-onde-mapa-caixa" data-logo="{% estatico 'images/logo-96.png' %}" data-estados="{% estatico 'site/dados/estados-br.json' %}" data-paises="{% estatico 'site/dados/paises.json' %}" data-marca="{% estatico 'images/logoofi-512.webp' %}" data-zap="5511960563135">
                     {# Some quando o mapa monta. Se o mapa não carregar (rede bloqueada, script desligado), fica o caminho até a fábrica. #}
                     <div class="ls-onde-reserva">
                         <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>

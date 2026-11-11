@@ -75,6 +75,22 @@ class ContagemTests(TestCase):
 
         self.assertEqual(contagem, {"SP": 3, "RJ": 1, "MG": 2, "BA": 1})
 
+    def test_fora_do_brasil_conta_no_pais(self):
+        py = Cliente.objects.create(nome_cliente="Parque Asunción")
+        EnderecoCliente.objects.create(cliente=py, cidade="Asunción", estado="Central", pais="Paraguai")
+        us = Cliente.objects.create(nome_cliente="Mall Miami")
+        EnderecoCliente.objects.create(cliente=us, cidade="Miami", estado="FL", pais="EUA")
+        Orcamento.objects.create(cliente=py, status=Orcamento.Status.APROVADO)
+        Orcamento.objects.create(cliente=py, status=Orcamento.Status.APROVADO)
+
+        dados = mapa_estados.dados_do_mapa([(us.pk, "FL", "EUA"), (py.pk, "Central", "Paraguai")])
+
+        self.assertEqual(dados["paises"], {"paraguai": 1, "estados unidos": 1})
+        # "FL" não vira estado brasileiro, nem "Central"
+        self.assertEqual(dados["niveis"], {})
+        self.assertEqual(mapa_estados.pais_de("Brasil"), "")
+        self.assertEqual(mapa_estados.pais_de("Paraguay"), "paraguay")
+
     def test_pagina_recebe_so_o_nivel_nunca_o_numero(self):
         cliente = self.cliente("Buffet SP", "SP")
         for _ in range(7):
@@ -101,11 +117,12 @@ class HomeComEstadosTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, 'id="dados-estados-onde"')
         self.assertContains(resposta, "site/dados/estados-br.json")
+        self.assertContains(resposta, "site/dados/paises.json")
         self.assertContains(resposta, "images/logoofi-512.webp")
         self.assertContains(resposta, 'data-onde-camada="estados"')
 
     def test_erro_na_contagem_nao_derruba_a_home(self):
-        with mock.patch.object(mapa_estados, "pedidos_por_estado", side_effect=RuntimeError("banco fora")):
+        with mock.patch.object(mapa_estados, "_contar", side_effect=RuntimeError("banco fora")):
             resposta = self.client.get("/")
 
         self.assertEqual(resposta.status_code, 200)
@@ -115,9 +132,24 @@ class HomeComEstadosTests(TestCase):
 
 
 class MalhaDosEstadosTests(TestCase):
+    DADOS = Path(__file__).resolve().parent / "static" / "site" / "dados"
+
     def test_27_estados_e_leve(self):
-        arquivo = Path(__file__).resolve().parent / "static" / "site" / "dados" / "estados-br.json"
+        arquivo = self.DADOS / "estados-br.json"
         geo = json.loads(arquivo.read_text(encoding="utf-8"))
 
         self.assertEqual(sorted(f["id"] for f in geo["features"]), sorted(mapa_estados.UFS))
         self.assertLess(arquivo.stat().st_size, 150_000)
+
+    def test_paises_sem_o_brasil_com_nome_em_portugues(self):
+        arquivo = self.DADOS / "paises.json"
+        geo = json.loads(arquivo.read_text(encoding="utf-8"))
+        por_id = {f["id"]: f for f in geo["features"]}
+
+        # o Brasil vai pelos estados: nenhum país "Brasil" por cima deles
+        self.assertNotIn("BR", por_id)
+        self.assertEqual(por_id["PY"]["properties"]["nome"], "Paraguai")
+        self.assertEqual(por_id["US"]["properties"]["nome"], "Estados Unidos")
+        self.assertIn("Paraguay", por_id["PY"]["properties"]["apelidos"])
+        self.assertGreater(len(por_id), 150)
+        self.assertLess(arquivo.stat().st_size, 250_000)

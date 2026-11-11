@@ -6592,12 +6592,12 @@ html.ls-escuro:not(#_):not(#__) #manutencao.ls-manut { padding-block: 0; }
 
 /* ---- Mapa: estados pelo nível de pedidos, legenda e logo de fundo ---- */
 .ls-onde-camada--estados .ls-onde-ponto {
-    color: #f0894d;
+    color: #6da7ec;
 }
 
 .ls-onde-camada--estados[aria-pressed="true"] {
-    border-color: rgba(240, 137, 77, .6);
-    background: rgba(226, 103, 43, .16);
+    border-color: rgba(109, 167, 236, .6);
+    background: rgba(57, 135, 229, .16);
 }
 
 /* A legenda fica dentro do mapa, no canto de baixo, no mesmo azul-noite
@@ -6708,7 +6708,7 @@ html.ls-escuro:not(#_):not(#__) #manutencao.ls-manut { padding-block: 0; }
 }
 
 .leaflet-tooltip.ls-onde-estado-dica span {
-    color: #ffc49e;
+    color: #9ec5f4;
     font-weight: 700;
 }
 
@@ -6730,4 +6730,155 @@ html.ls-escuro:not(#_):not(#__) #manutencao.ls-manut { padding-block: 0; }
         max-width: none;
         font-size: .66rem;
     }
+}
+
+/* ---- Estados e países: subir, escolher e o cartão ---- */
+
+/* O clique não desenha mais o retângulo de foco do navegador em volta do
+   estado: quem marca a escolha é a borda do próprio estado. */
+#mapa-onde .leaflet-lsEstados-pane path.leaflet-interactive:focus,
+#mapa-onde .leaflet-lsPaises-pane path.leaflet-interactive:focus {
+    outline: none;
+}
+
+#mapa-onde .leaflet-lsEstados-pane path,
+#mapa-onde .leaflet-lsPaises-pane path {
+    transition: transform .24s cubic-bezier(.2, .8, .2, 1), filter .24s ease, stroke-width .2s ease;
+}
+
+/* SUBIR: o estado sai um pouco do mapa, com a sombra no chão. */
+#mapa-onde path.ls-regiao--alta {
+    transform: translateY(-5px);
+    stroke: #ffffff;
+    stroke-width: 2px;
+    filter: drop-shadow(0 9px 7px rgba(8, 27, 54, .55));
+}
+
+/* ESCOLHIDO (cartão aberto): mais alto e com a borda em volta dele. */
+#mapa-onde path.ls-regiao--escolhida {
+    transform: translateY(-8px);
+    stroke: #ffffff;
+    stroke-width: 3px;
+    filter:
+        drop-shadow(0 0 4px rgba(158, 197, 244, .9))
+        drop-shadow(0 12px 9px rgba(8, 27, 54, .5));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #mapa-onde .leaflet-lsEstados-pane path,
+    #mapa-onde .leaflet-lsPaises-pane path {
+        transition: none;
+    }
+    #mapa-onde path.ls-regiao--alta,
+    #mapa-onde path.ls-regiao--escolhida {
+        transform: none;
+    }
+}
+
+/* Os alfinetes ganham um contorno branco: sobre o azul dos estados eles
+   não se perdem. */
+.cliente-marker .pino-gota__corpo,
+.grupo-marker .pino-gota__corpo,
+.fabrica-marker .pino-gota__corpo {
+    filter:
+        drop-shadow(0 0 1px #ffffff)
+        drop-shadow(0 0 1px #ffffff)
+        drop-shadow(0 4px 5px rgba(13, 27, 46, .38));
+}
+
+#mapa-onde .ls-onde-legenda-nota {
+    margin: 0;
+    padding: 0 10px 9px;
+    color: rgba(219, 230, 247, .7);
+    font-size: .64rem;
+    font-weight: 700;
+}
+
+/* O cartão do estado ou país. */
+.cliente-popup--regiao .regiao-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-right: 28px;
+}
+
+.cliente-popup--regiao .regiao-selo {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, .9);
+    border-radius: 15px;
+    color: #fff;
+    background: var(--cor-regiao, #3987e5);
+    box-shadow: 0 10px 20px rgba(8, 27, 54, .35), inset 0 -6px 12px rgba(0, 0, 0, .18);
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: .02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+
+.cliente-popup--regiao .regiao-nivel {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 11px;
+    padding: 9px 11px;
+    border: 1px solid rgba(109, 167, 236, .35);
+    border-radius: 12px;
+    color: #dbe6f7;
+    background: rgba(57, 135, 229, .14);
+    font-size: .76rem;
+    line-height: 1.3;
+}
+
+.cliente-popup--regiao .regiao-nivel strong {
+    color: #ffffff;
+    font-weight: 850;
+}
+
+.cliente-popup--regiao .regiao-nivel i {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, .8);
+    border-radius: 4px;
+}
+
+.cliente-popup--regiao .regiao-nivel--sem {
+    border-color: rgba(185, 180, 168, .35);
+    background: rgba(185, 180, 168, .1);
+}
+
+.cliente-popup--regiao .regiao-numeros {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 9px;
+}
+
+.cliente-popup--regiao .regiao-numeros div {
+    display: grid;
+    gap: 1px;
+    padding: 8px 10px;
+    border-radius: 11px;
+    color: #dbe6f7;
+    background: rgba(255, 255, 255, .07);
+}
+
+.cliente-popup--regiao .regiao-numeros b {
+    color: #ffffff;
+    font-size: 1.15rem;
+    line-height: 1.1;
+}
+
+.cliente-popup--regiao .regiao-numeros span {
+    font-size: .68rem;
+    opacity: .78;
+}
+
+.cliente-popup--regiao button.cliente-popup__action {
+    font-family: inherit;
+    cursor: pointer;
 }

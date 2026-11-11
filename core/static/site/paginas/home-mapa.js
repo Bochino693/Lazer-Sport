@@ -138,13 +138,14 @@
     }).addTo(mapa);
 
     /* ------------------------------------------------------------------
-       Os estados, coloridos pelo nível de pedidos, e a legenda no mapa
+       Estados e países, coloridos pelo nível de pedidos
        ------------------------------------------------------------------ */
-    // Uma cor só, do claro ao escuro (laranja: não briga com os alfinetes
-    // azuis). Conferida no validador de paleta (ordinal, monotônica, a
-    // mais clara ainda 2:1 contra o fundo do mapa). O servidor manda só o
-    // NÍVEL de cada estado (1 a 5), nunca o número de pedidos.
-    const CORES_DOS_NIVEIS = ['#f0894d', '#e2672b', '#c4501b', '#9a3c13', '#6b290c'];
+    // O Brasil vai pelos ESTADOS; fora dele, cada PAÍS inteiro (o Brasil não
+    // tem um país clicável por cima dos estados). Uma cor só, o azul da
+    // marca, do claro ao escuro -- conferida no validador de paleta
+    // (ordinal, clareza sempre caindo, a mais clara 2:1 contra o fundo do
+    // mapa). O servidor manda só o NÍVEL (1 a 5), nunca o número.
+    const CORES_DOS_NIVEIS = ['#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
     const COR_SEM_PEDIDO = '#b9b4a8';
     let dadosEstados = null;
     try {
@@ -153,51 +154,213 @@
         dadosEstados = null;
     }
     const temEstados = Boolean(caixa.dataset.estados && dadosEstados && (dadosEstados.faixas || []).length);
-    const nivelDoEstado = (uf) => Number((dadosEstados?.niveis || {})[uf] || 0);
     const rotuloDoNivel = (nivel) => (dadosEstados?.faixas || []).find((f) => f.nivel === nivel)?.rotulo || '';
 
-    // Os painéis em ordem: o mapa, os estados, a marca d'água, as linhas
-    // dos alfinetes e os alfinetes por cima de tudo.
+    function semAcento(texto) {
+        return String(texto || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    }
+
+    // Quem é cada região: estado (pela sigla) ou país (por qualquer um dos
+    // nomes dele -- português, inglês, sigla de 2 e de 3 letras).
+    function regiaoDe(feature, tipo) {
+        if (tipo === 'estado') {
+            const uf = feature.id;
+            return {
+                tipo,
+                chave: uf,
+                sigla: uf,
+                nome: (dadosEstados?.nomes || {})[uf] || feature.properties?.nome || uf,
+                nivel: Number((dadosEstados?.niveis || {})[uf] || 0),
+                clientes: clientes.filter((c) => c.uf === uf),
+            };
+        }
+        const apelidos = new Set((feature.properties?.apelidos || []).concat(feature.properties?.nome || '').map(semAcento));
+        const nivelPais = Object.entries(dadosEstados?.paises || {})
+            .find(([nome]) => apelidos.has(semAcento(nome)));
+        return {
+            tipo,
+            chave: feature.id,
+            sigla: String(feature.id || '').length === 2 ? feature.id : '',
+            nome: feature.properties?.nome || feature.id,
+            nivel: nivelPais ? Number(nivelPais[1]) : 0,
+            clientes: clientes.filter((c) => c.pais && apelidos.has(semAcento(c.pais))),
+        };
+    }
+
+    // Os painéis em ordem: o mapa, os países, os estados, a marca d'água,
+    // as linhas dos alfinetes e os alfinetes por cima de tudo.
+    mapa.createPane('lsPaises').style.zIndex = 355;
     mapa.createPane('lsEstados').style.zIndex = 360;
     mapa.createPane('lsMarca').style.zIndex = 390;
     mapa.getPane('lsMarca').style.pointerEvents = 'none';
 
     // De longe a cor é o assunto; de perto ela clareia para a rua aparecer.
-    function opacidadeDosEstados(zoom) {
+    function opacidadeDasRegioes(zoom) {
         if (zoom <= 6) return 0.8;
         if (zoom <= 8) return 0.48;
         if (zoom <= 10) return 0.24;
         return 0.1;
     }
 
-    function estiloDoEstado(feature) {
-        const nivel = nivelDoEstado(feature.id);
-        const opacidade = opacidadeDosEstados(mapa.getZoom() ?? 4);
+    function estiloDaRegiao(regiao) {
+        const opacidade = opacidadeDasRegioes(mapa.getZoom() ?? 4);
+        const pais = regiao.tipo === 'pais';
         return {
-            pane: 'lsEstados',
             color: '#ffffff',
-            weight: nivel ? 1.2 : 0.8,
-            opacity: 0.9,
-            fillColor: nivel ? CORES_DOS_NIVEIS[nivel - 1] : COR_SEM_PEDIDO,
-            fillOpacity: nivel ? opacidade : opacidade * 0.22,
+            weight: regiao.nivel ? 1.2 : (pais ? 0.6 : 0.8),
+            opacity: pais && !regiao.nivel ? 0.55 : 0.9,
+            fillColor: regiao.nivel ? CORES_DOS_NIVEIS[regiao.nivel - 1] : COR_SEM_PEDIDO,
+            // País sem pedido quase some (é o mapa de fundo); estado sem
+            // pedido fica com um cinza leve, para o Brasil ler inteiro.
+            fillOpacity: regiao.nivel ? opacidade : opacidade * (pais ? 0.06 : 0.22),
         };
     }
 
-    function textoDoEstado(feature) {
-        const nivel = nivelDoEstado(feature.id);
-        const nome = escapeHTML((dadosEstados?.nomes || {})[feature.id] || feature.properties?.nome || feature.id);
-        const faixa = nivel ? escapeHTML(rotuloDoNivel(nivel)) : 'Ainda sem pedidos';
-        return `<strong>${nome}</strong><span>${faixa}</span>`;
+    function textoDaDica(regiao) {
+        const faixa = regiao.nivel ? escapeHTML(rotuloDoNivel(regiao.nivel)) : 'Ainda sem pedidos';
+        return `<strong>${escapeHTML(regiao.nome)}</strong><span>${faixa}</span>`;
+    }
+
+    // O cartão da região: o nível de pedidos, os clientes de lá e as
+    // cidades, e dois caminhos -- ver de perto ou pedir orçamento.
+    function cartaoDaRegiao(regiao) {
+        const cor = regiao.nivel ? CORES_DOS_NIVEIS[regiao.nivel - 1] : COR_SEM_PEDIDO;
+        const cidades = [...new Set(regiao.clientes.map((c) => c.cidade).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const tipo = regiao.tipo === 'estado' ? 'Estado' : 'País';
+        const icone = regiao.tipo === 'estado' ? 'fa-map' : 'fa-earth-americas';
+        const nivel = regiao.nivel
+            ? `<div class="regiao-nivel"><i style="background:${cor}"></i><span><strong>${escapeHTML(rotuloDoNivel(regiao.nivel))}</strong> de brinquedos</span></div>`
+            : `<div class="regiao-nivel regiao-nivel--sem"><i style="background:${cor}"></i><span><strong>Ainda sem pedidos</strong> — leve a Lazer &amp; Sport para cá</span></div>`;
+        const numeros = regiao.clientes.length
+            ? `<div class="regiao-numeros">
+                   <div><b>${regiao.clientes.length}</b><span>cliente${regiao.clientes.length === 1 ? '' : 's'} no mapa</span></div>
+                   <div><b>${cidades.length}</b><span>cidade${cidades.length === 1 ? '' : 's'}</span></div>
+               </div>
+               <div class="cliente-popup-tags">${cidades.slice(0, 6).map((c) => `<span>${escapeHTML(c)}</span>`).join('')}${cidades.length > 6 ? `<span>+${cidades.length - 6}</span>` : ''}</div>`
+            : '';
+        const texto = encodeURIComponent(`Olá! Vim pelo mapa do site da Lazer & Sport e gostaria de um orçamento para ${regiao.nome}.`);
+        const zap = caixa.dataset.zap ? `https://wa.me/${caixa.dataset.zap}?text=${texto}` : '';
+        return `
+            <div class="cliente-popup cliente-popup--regiao">
+                <div class="regiao-topo">
+                    <span class="regiao-selo" style="--cor-regiao:${cor}">${escapeHTML(regiao.sigla || regiao.nome.slice(0, 2).toUpperCase())}</span>
+                    <div class="cliente-popup__copy">
+                        <span class="cliente-popup__kicker"><i class="fa-solid ${icone}"></i> ${tipo}</span>
+                        <h4>${escapeHTML(regiao.nome)}</h4>
+                    </div>
+                </div>
+                ${nivel}
+                ${numeros}
+                <div class="cliente-popup__actions ${zap ? '' : 'cliente-popup__actions--single'}">
+                    <button type="button" class="cliente-popup__action" data-regiao-ver>
+                        <i class="fa-solid fa-expand"></i> Ver de perto
+                    </button>
+                    ${zap ? `<a class="cliente-popup__action cliente-popup__action--route" href="${zap}" target="_blank" rel="noopener">
+                        <i class="fa-brands fa-whatsapp"></i> Pedir orçamento</a>` : ''}
+                </div>
+            </div>`;
     }
 
     let camadaEstados = null;
+    let camadaPaises = null;
     let legendaEstados = null;
+    let regiaoEscolhida = null;   // a camada (estado ou país) com o cartão aberto
+    const popupDaRegiao = L.popup({
+        autoPan: true,
+        // à esquerda ficam os botões de zoom: o cartão não encosta neles
+        autoPanPaddingTopLeft: L.point(dispositivoCompacto ? 58 : 64, dispositivoCompacto ? 56 : 86),
+        autoPanPaddingBottomRight: L.point(12, 20),
+        closeButton: true,
+        className: 'popup-cliente-lazer-sport popup-regiao',
+        maxWidth: dispositivoCompacto ? 252 : 300,
+        minWidth: 0,
+    });
+
+    // SUBIR: o estado (ou país) sai um pouco do mapa, com sombra embaixo --
+    // no passar do mouse e enquanto o cartão dele está aberto.
+    function subir(camada, alto) {
+        const el = camada.getElement?.();
+        if (!el) return;
+        if (alto) camada.bringToFront();
+        el.classList.toggle('ls-regiao--alta', alto);
+    }
+
+    function escolherRegiao(camada) {
+        if (regiaoEscolhida && regiaoEscolhida !== camada) {
+            regiaoEscolhida.getElement?.()?.classList.remove('ls-regiao--escolhida');
+            subir(regiaoEscolhida, false);
+        }
+        regiaoEscolhida = camada;
+        if (camada) {
+            subir(camada, true);
+            camada.getElement?.()?.classList.add('ls-regiao--escolhida');
+        }
+    }
+
+    popupDaRegiao.on('remove', () => escolherRegiao(null));
+    popupDaRegiao.on('add', () => {
+        const el = popupDaRegiao.getElement();
+        el?.setAttribute('role', 'dialog');
+        el?.querySelector('.leaflet-popup-close-button')?.setAttribute('aria-label', 'Fechar informações');
+        el?.querySelector('[data-regiao-ver]')?.addEventListener('click', () => {
+            const camada = regiaoEscolhida;
+            if (!camada) return;
+            const limites = camada.getBounds();
+            mapa.closePopup(popupDaRegiao);
+            mapa.flyToBounds(limites, {
+                paddingTopLeft: L.point(30, dispositivoCompacto ? 90 : 100),
+                paddingBottomRight: L.point(30, 30),
+                maxZoom: 9,
+                duration: 0.7,
+            });
+        });
+    });
+
+    function ligarRegiao(tipo) {
+        return (feature, camada) => {
+            const regiao = regiaoDe(feature, tipo);
+            camada._regiaoLS = regiao;
+            camada.setStyle(estiloDaRegiao(regiao));
+            if (dispositivoComHover) {
+                camada.bindTooltip(textoDaDica(regiao), {
+                    className: 'ls-onde-estado-dica',
+                    direction: 'top',
+                    sticky: true,
+                    opacity: 1,
+                    offset: L.point(0, -10),
+                });
+                camada.on('mouseover', () => subir(camada, true));
+                camada.on('mouseout', () => { if (camada !== regiaoEscolhida) subir(camada, false); });
+            }
+            camada.on('click', (e) => {
+                sequenciaVoo += 1;
+                fecharLeque();
+                if (marcadorPopupFixado) fecharPopups();
+                camada.closeTooltip?.();
+                escolherRegiao(camada);
+                popupDaRegiao
+                    .setLatLng(e.latlng)
+                    .setContent(cartaoDaRegiao(regiao))
+                    .openOn(mapa);
+            });
+        };
+    }
+
+    function restilizarRegioes() {
+        [camadaEstados, camadaPaises].forEach((grupo) => grupo?.eachLayer((camada) => {
+            camada.setStyle(estiloDaRegiao(camada._regiaoLS));
+        }));
+    }
 
     function aplicarEstados() {
-        if (!camadaEstados) return;
         const ligado = estado.estados;
-        if (ligado && !mapa.hasLayer(camadaEstados)) camadaEstados.addTo(mapa);
-        if (!ligado && mapa.hasLayer(camadaEstados)) mapa.removeLayer(camadaEstados);
+        [camadaPaises, camadaEstados].forEach((grupo) => {
+            if (!grupo) return;
+            if (ligado && !mapa.hasLayer(grupo)) grupo.addTo(mapa);
+            if (!ligado && mapa.hasLayer(grupo)) mapa.removeLayer(grupo);
+        });
+        if (!ligado) mapa.closePopup(popupDaRegiao);
         legendaEstados?.getContainer()?.toggleAttribute('hidden', !ligado);
     }
 
@@ -215,12 +378,13 @@
                         <span class="ls-onde-legenda-escala" aria-hidden="true">
                             ${CORES_DOS_NIVEIS.map((cor) => `<i style="background:${cor}"></i>`).join('')}
                         </span>
-                        Pedidos por estado
+                        Pedidos por região
                     </summary>
                     <ul>
                         ${faixas}
                         <li class="ls-onde-legenda-sem"><i style="background:${COR_SEM_PEDIDO}"></i>Ainda sem pedidos</li>
                     </ul>
+                    <p class="ls-onde-legenda-nota">Toque num estado ou país para ver mais.</p>
                 </details>`;
             L.DomEvent.disableClickPropagation(caixaLegenda);
             L.DomEvent.disableScrollPropagation(caixaLegenda);
@@ -228,25 +392,18 @@
         },
     });
 
+    function baixar(url) {
+        return fetch(url, { credentials: 'omit' })
+            .then((resposta) => (resposta.ok ? resposta.json() : Promise.reject(resposta.status)));
+    }
+
     if (temEstados) {
-        fetch(caixa.dataset.estados, { credentials: 'omit' })
-            .then((resposta) => (resposta.ok ? resposta.json() : Promise.reject(resposta.status)))
+        baixar(caixa.dataset.estados)
             .then((geo) => {
                 camadaEstados = L.geoJSON(geo, {
                     pane: 'lsEstados',
-                    style: estiloDoEstado,
-                    onEachFeature(feature, camada) {
-                        camada.bindTooltip(textoDoEstado(feature), {
-                            className: 'ls-onde-estado-dica',
-                            direction: 'top',
-                            sticky: dispositivoComHover,
-                            opacity: 1,
-                        });
-                        if (dispositivoComHover) {
-                            camada.on('mouseover', () => camada.setStyle({ weight: 2.4, color: '#081b36' }));
-                            camada.on('mouseout', () => camadaEstados.resetStyle(camada));
-                        }
-                    },
+                    bubblingMouseEvents: false,
+                    onEachFeature: ligarRegiao('estado'),
                 });
                 legendaEstados = new LegendaEstados().addTo(mapa);
                 aplicarEstados();
@@ -255,7 +412,19 @@
                 // Sem a malha dos estados o mapa segue igual, só sem as cores.
                 secao.querySelector('[data-onde-camada="estados"]')?.setAttribute('hidden', '');
             });
-        mapa.on('zoomend', () => camadaEstados?.setStyle(estiloDoEstado));
+        if (caixa.dataset.paises) {
+            baixar(caixa.dataset.paises)
+                .then((geo) => {
+                    camadaPaises = L.geoJSON(geo, {
+                        pane: 'lsPaises',
+                        bubblingMouseEvents: false,
+                        onEachFeature: ligarRegiao('pais'),
+                    });
+                    aplicarEstados();
+                })
+                .catch(() => { /* sem os países, ficam só os estados */ });
+        }
+        mapa.on('zoomend', restilizarRegioes);
     }
 
     /* ------------------------------------------------------------------

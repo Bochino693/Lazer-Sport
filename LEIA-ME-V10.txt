@@ -2850,3 +2850,38 @@ Dependência nova: rjsmin (requirements.txt).
    da América do Sul, misturada ao mapa (multiply). Bem de longe 20%;
    no zoom do Brasil 15%; um zoom mais perto 9%; mais perto some.
    Testes: core/tests_mapa_estados.py.
+
+69) O MAPA: ESTADOS E PAÍSES CLICÁVEIS, QUE SOBEM, EM AZUL
+   Pedido: "as bordas de click devem ser em volta do próprio estado,
+   trazendo as informações deles"; "laranja não é uma cor boa, ponha uma
+   mais azul"; "os países também podem e devem ser clicáveis, mas não em
+   estados como o Brasil"; "um efeito de subida no estado".
+     * O RETÂNGULO DO CLIQUE: o navegador desenhava o contorno de foco
+       (um retângulo) em volta do estado clicado. Saiu; quem marca a
+       escolha é a borda do próprio estado (branca, com um brilho azul).
+     * SUBIR: passar o mouse levanta o estado 5 px, com a borda branca e a
+       sombra no chão; com o cartão aberto ele fica 8 px acima. Quem pediu
+       menos movimento no sistema (prefers-reduced-motion) não vê subir.
+     * O CARTÃO (clique ou toque): sigla, "Estado" ou "País", o nome, a
+       faixa de pedidos (ou "Ainda sem pedidos — leve a Lazer & Sport para
+       cá"), quantos clientes do mapa e quantas cidades, as cidades, e dois
+       botões: "Ver de perto" (aproxima até caber o estado inteiro) e
+       "Pedir orçamento" (WhatsApp já com o nome do lugar).
+     * AZUL: as cinco faixas vão do azul claro ao azul-marinho (passos 300
+       a 700 da escala azul; o validador passa: ordinal, clareza caindo, a
+       mais clara 2:1 contra o fundo). Os alfinetes ganharam um contorno
+       branco para não sumir sobre o azul.
+     * PAÍSES: core/static/site/dados/paises.json -- os países do Natural
+       Earth (world-atlas, ISC; os dados são de domínio público) com o nome
+       em português (Babel) e os outros nomes de cada um (inglês, siglas),
+       SEM o Brasil (ele vai pelos estados) e sem a Antártida. Borda fina
+       perto do Brasil (~5 km) e mais grossa no resto do mundo, visto
+       sempre de longe: 175 KB, 56 KB comprimido.
+     * O QUE CONTA POR PAÍS: proposta aprovada de cliente com endereço fora
+       do Brasil e cliente do mapa de fora (ver mapa_estados.pais_de: "EUA",
+       "USA" e "Inglaterra" viram o nome do mapa). A loja online só entrega
+       no Brasil. Cada cliente do mapa agora leva a sigla do estado ("uf"),
+       que é por onde o cartão do estado acha os clientes de lá.
+   No celular o toque perto de um alfinete abre o alfinete (é o celular que
+   puxa o toque para o mais próximo); longe dele, abre o estado.
+   Testes: core/tests_mapa_estados.py (países, nomes, sem o Brasil).
