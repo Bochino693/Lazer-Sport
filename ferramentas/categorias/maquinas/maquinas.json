@@ -178,5 +178,25 @@
   "id": 39,
   "nome": "Bob Esponja Hammer Kids",
   "altura": 1.47
+ },
+ "air-game-home": {
+  "id": 2,
+  "nome": "Air Game Home",
+  "altura": 0.8
+ },
+ "multi-jogos": {
+  "id": 16,
+  "nome": "Multi Jogos",
+  "altura": 1.52
+ },
+ "matrix-one-piece": {
+  "id": 36,
+  "nome": "Matrix One Piece",
+  "altura": 2.3
+ },
+ "air-game-kids": {
+  "id": 40,
+  "nome": "Air Game Kids",
+  "altura": 0.9
  }
 }
