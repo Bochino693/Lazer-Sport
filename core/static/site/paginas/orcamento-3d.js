@@ -52,6 +52,11 @@ function ligar(dialogo) {
     visor.dataset.three = dialogo.dataset.three;
     visor.dataset.gltf = dialogo.dataset.gltf;
     visor.dataset.cores3d = dialogo.dataset.cores3d;
+    // os adesivos do item (LEIA-ME 72): o controle "Adesivo: A · B" troca o 3D aqui mesmo
+    if (botao.dataset.adesivos3d) {
+      visor.dataset.adesivos3d = botao.dataset.adesivos3d;
+      visor.dataset.adesivos3dModulo = dialogo.dataset.adesivos3dModulo;
+    }
     const tela = document.createElement("canvas");
     tela.tabIndex = 0;
     tela.setAttribute("aria-label", `${botao.dataset.nome || "Item"} em 3D: arraste para girar, role ou pince para aproximar`);

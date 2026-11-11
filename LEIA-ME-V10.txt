@@ -3197,76 +3197,84 @@ Dependência nova: rjsmin (requirements.txt).
    importacao_concluida_inner.html, clientes_inner.html (?abrir=),
    orcamentos_inner.html, static/interno/painel.js e importacao-word.js.
 
-72) OS ADESIVOS: UM PRODUTO, VÁRIAS ARTES (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
-   Pedido (com os cards "Air Game Kids" e "Air Game Kids Alienígenas" lado a
-   lado): "os dois devem se tornar o mesmo objeto, como um adesivo
-   diferente, ele quem deve ser o diferencial, rodando as duas imagens em
-   todo objeto também canalizando os dois objetos 3d ... vamos ter mais
-   exemplos assim então se atente em como fazer". Depois: "na verdade vc
-   deve juntar o basquete home com o street quadrinhos, que deveria na
-   verdade ser home quadrinhos. o street não".
-   O MECANISMO (core/variantes.py; o modelo core.models.VarianteAdesivo):
-     * o produto é um só; cada ADESIVO tem nome, slug, ordem e "padrão" e
-       mostra as fotos e o 3D de uma ficha do cadastro (`origem`; o padrão,
-       as do próprio produto). Nada é copiado: o painel continua editando
-       cada ficha;
-     * a ficha que vira adesivo fica DESATIVADA (sai de todas as listas) e
-       nada é apagado: pedidos, orçamentos e favoritos continuam apontando
-       para ela. O endereço dela redireciona (301) para o produto com
-       ?adesivo=<slug>;
-     * na página do produto, as fichas "Adesivo: Astronautas · Alienígenas"
-       (com a capa de cada um e um cubo em quem tem 3D) são links: o
-       ?adesivo= troca as fotos da galeria, o 3D (o .glb da ficha) e o
-       endereço, que pode ser compartilhado. O adesivo sem 3D mostra só as
-       fotos, e o botão diz "3D no adesivo Alienígenas" (leva até ele);
-     * o adesivo vai junto no pedido: no carrinho ("· adesivo Alienígenas";
-       o mesmo produto com outro adesivo é outra linha), no pedido (o nome do
-       item: "Air Game Kids — adesivo Alienígenas"; se o pagamento não sai,
-       volta para o carrinho com o adesivo), na mensagem do orçamento pelo
-       WhatsApp ("Adesivo: X") e no sob medida;
-     * nos cards (a home, as categorias, /brinquedos/, a loja e a busca) o
-       produto aparece UMA vez, com o selo "2 adesivos" e a foto revezando
-       as capas dos adesivos (site/ls-adesivos.js: só com o card na tela e a
-       aba à vista; com "reduzir movimento", parado). O selo vem da tag
-       {% adesivos_do_card %} (core/templatetags/adesivos.py), com o mapa dos
-       adesivos em cache (cai quando um adesivo, uma foto ou um produto
-       muda: core/signals.py);
-     * na Arena, uma vez, com o 3D do adesivo que tem (o .glb do adesivo não
-       aparece à parte, como objeto fora do catálogo).
-   OS PARES (a 0161, só dados; o esquema é a 0160):
-     * AIR GAME KIDS: o produto (os astronautas, adesivo padrão
-       "Astronautas") + o Air Game Kids Alienígenas (adesivo "Alienígenas",
-       com o .glb e as fotos dele). O preço é o do produto que fica: "estes
-       dois precisam estar juntos urgentemente, com o valor de 6990,00" -- a
-       junção não copia nada da ficha para o produto (o preço do painel
-       fica) e, se o Air Game Kids estiver sem preço, ele fica com
-       R$ 6.990,00 (core/variantes.py, PRECO_SE_VAZIO);
-     * BASQUETE HOME: o produto (o gabinete azul, adesivo padrão "Azul") + o
-       Quadrinhos. O "Basquete Street Quadrinhos" era o gabinete do Basquete
-       Home com a folha em quadrinhos (seção 61: a testeira em hexágono, o
-       console com o POW!, a lateral subindo atrás dele) e não o Basquete
-       Street: virou o "BASQUETE HOME QUADRINHOS" (o nome, a descrição, as
-       descrições das fotos, a Arena, as ferramentas e este LEIA-ME; a 0161
-       renomeia a ficha no site antes de juntar). A chave e os arquivos
-       (basquete-street-quadrinhos.glb, a pasta das fotos) ficaram com o nome
-       de antes. O 3D é o desse gabinete; o tamanho (2,70 x 1,00 x 2,40 m)
-       continua o do Basquete Street, porque o Basquete Home não tem medidas
-       no cadastro: com a altura de verdade, é mudar o ALT do montar.js e as
-       medidas no core/arena.py e no core/cadastro_modelos.py;
+72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
+   Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um
+   adesivo diferente"; "na verdade vc deve juntar o basquete home com o
+   street quadrinhos, que deveria na verdade ser home quadrinhos. o street
+   não"; "vc deve deixar apenas um objeto ... como no boliche, e quando o
+   brinquedo tiver mais que uma, no card de apresentação em home ou em
+   brinquedos, deve ficar rodando as fotos, além de que o basquete home não
+   tem medidas, copie as medidas do outro"; "EU QUERO OS DOIS OBJETOS 3D, NO
+   MESMO BRINQUEDO"; "TUDO DEVE AFUNILAR PARA UM OBJETO SÓ, PODENDO
+   VISUALIZAR, EM ÁREAS 3D E ETC, TAMBÉM DEVE SER POSSÍVEL MUDAR PARA VER
+   OS ADESIVOS".
+   COMO FICOU (core/variantes.py; core.models.VarianteAdesivo guarda o par):
+     * UM PRODUTO, em todo lugar: uma página, um card (home, categorias,
+       /brinquedos/, loja, busca), um item no carrinho e no orçamento, uma
+       máquina na Arena. Sem as fichas "Adesivo:" que trocavam a página e
+       sem ?adesivo= no endereço. A ficha da outra arte (o Air Game Kids
+       Alienígenas, o Basquete Home Quadrinhos) fica DESATIVADA, sem apagar
+       nada (pedidos, orçamentos e favoritos continuam apontando para ela),
+       e o endereço dela redireciona (301) para o produto;
+     * A GALERIA tem as fotos das duas artes: as da ficha entram depois das
+       do produto (`ImagemBrinquedo.papel_na_capa = "outra_arte"`, até três),
+       apontando para os MESMOS arquivos do Cloudinary (nada subiu);
+     * OS DOIS 3D NO MESMO PRODUTO: em toda área 3D -- a página do produto,
+       a Arena (na ficha da máquina) e o "Ver em 3D" da proposta -- o
+       controle "Adesivo: Astronautas · Alienígenas" (site/arena/
+       adesivos3d.js, um só para todas) troca o .glb ali mesmo, com a
+       câmera onde estava; o outro modelo só baixa quando é pedido. O
+       adesivo escolhido segue para o carrinho como observação ("· adesivo
+       X"; o pedido o leva no nome). O Basquete Home tem um 3D só, o do
+       Quadrinhos (o azul não tem 3D): o controle mostra "Adesivo:
+       Quadrinhos", para ninguém achar que o preto é o azul;
+     * AS MEDIDAS que faltam no produto vêm da ficha; sem elas no cadastro
+       da ficha, as do 3D dela (core/cadastro_modelos.py). O Basquete Home
+       ficou com 2,70 x 1,00 x 2,40 m (as do Quadrinhos); as que o produto
+       já tem nunca mudam, nem o preço (o Air Game Kids fica com os R$
+       6.990,00 do painel; sem preço, PRECO_SE_VAZIO);
+     * OS CARDS GIRAM AS FOTOS de TODO brinquedo com mais de uma foto na
+       galeria (core/fotos_dos_cards.py e {% fotos_do_card %}: a capa e até
+       mais três; site/ls-giro.js): a próxima aparece por cima, aos poucos,
+       a cada ~3 s, só com o card na tela e a aba à vista; para com o mouse
+       em cima ou o foco do teclado; com "reduzir movimento", parado. Cada
+       foto passa pelo MESMO tratamento da foto do card (ls-fotos.js, agora
+       com `window.LSFotos.preparar`): a que tem fundo enche a caixa,
+       recortada pelo conteúdo (Cloudinary c_fill,g_auto) no formato dela;
+       a próxima só baixa pouco antes da troca e só com o card na tela.
+   OS PARES (a 0161 juntou; a 0166 unificou):
+     * AIR GAME KIDS: Astronautas (o produto) + Alienígenas (a ficha);
+     * BASQUETE HOME: Azul (o produto) + Quadrinhos (a ficha: o "Basquete
+       Street Quadrinhos" de antes era o gabinete do Basquete Home com a
+       folha em quadrinhos -- seção 61 --, e virou "Basquete Home
+       Quadrinhos"; a chave e os arquivos ficaram com o nome de antes);
      * o BASQUETE STREET (a estrutura aberta com a rede) fica sozinho.
-   JUNTAR UM PAR NOVO: um item em core/variantes.py (PARES: o produto, o
-   adesivo padrão e as fichas) e uma migração de dados que chame
-   `variantes.migrar` (como a 0161). Desfazer: `variantes.separar`.
-   O 3D DOS ASTRONAUTAS: NÃO FOI FEITO. O Air Game Kids tem UMA foto no
-   catálogo (433 x 577, de 3/4). A lateral da frente sai boa dela: o
-   contorno da lateral dos alienígenas (a mesma mesa) encaixa na foto com
-   0,7 px de erro e a perspectiva desentorta limpa. Mas o 3D tem cinco
-   peças de adesivo e a foto não mostra a outra lateral, o tampo nem as
-   cabeceiras (de uma, uma tira de 15 px): seria inventar a arte delas, ou
-   deixá-las lisas. O adesivo Astronautas fica só com as fotos e o botão
-   leva ao 3D do Alienígenas. Com a folha de adesivos da fábrica dos
-   astronautas (ou fotos do tampo, do outro lado e das cabeceiras), o 3D
-   sai pelo mesmo caminho do Alienígenas (ferramentas/modelos3d/).
+   O 3D DOS ASTRONAUTAS (ferramentas/modelos3d/air-game-kids-astronautas/):
+   o mesmo móvel do Alienígenas (o montar.js dele), com os adesivos tirados
+   da única foto do Air Game Kids no catálogo (433 x 577, de 3/4):
+     * as laterais: a que a foto mostra, desentortada pela perspectiva (o
+       contorno da lateral da folha dos Alienígenas encaixa na silhueta da
+       foto com 0,7 px de erro médio); a do outro lado é a mesma arte (as
+       laterais da folha da fábrica são iguais) -- vista de fora, o espelho
+       da primeira;
+     * as cabeceiras: o azul do espaço da foto, os dois planetas dos cantos
+       dela e o logotipo do produto ("Air Hockey Espacial Kids");
+     * o tampo: o campo, as linhas e os gols da mesa, com os planetas da
+       foto nos cantos e o logotipo do produto no meio.
+     Nenhum personagem novo: só pedaços da foto. As laterais ficam iguais à
+     foto; as cabeceiras e o tampo são um padrão coerente com a arte, e não
+     a arte de verdade (que nenhuma foto mostra) -- com a folha de adesivos
+     dos astronautas, ou fotos do tampo e das cabeceiras, refaça pelo
+     caminho do Alienígenas. A 0166 liga o .glb ao Air Game Kids.
+   AS MIGRAÇÕES: 0160 (esquema) e 0161 (dados: juntar os pares e subir as
+   fotos mais vivas), 0165 (esquema: o papel "outra_arte") e 0166 (dados:
+   as fotos da outra arte na galeria, as medidas que faltam e o 3D dos
+   Astronautas; em todo lugar, pode rodar de novo). JUNTAR UM PAR NOVO: um
+   item em PARES (core/variantes.py) e uma migração de dados que chame
+   `variantes.migrar` e `variantes.unificar_todos`.
+   FICA PARA DEPOIS: o 3D do Basquete Home azul (a mesma conta do
+   Astronautas, com a foto dele) e o controle dos adesivos na vitrine 3D da
+   home e no "Monte seu espaço" (lá entra o 3D principal do produto).
    OS FUROS DE VERDADE (ferramentas/categorias/recortar.py). "recorte bem
    também o basquete home pq no braço é furado, aquela parte branca deve
    ser furada, se atente nisso em outros também": o vão é o fundo da foto
@@ -3315,9 +3323,10 @@ Dependência nova: rjsmin (requirements.txt).
        python manage.py capas_em_cena
        python manage.py cadastrar_modelo_3d <chave> --fotos
        python manage.py atualizar_capas_categorias
-   Testes: core/tests_variantes_produto.py (o modelo, as migrações, o
-   endereço antigo, as listas, a página, o carrinho e o pedido),
-   core/tests_variantes_adesivo.py e core/tests_capas_catalogo.py.
+   Testes: core/tests_variantes_produto.py (um objeto só, a galeria com as
+   duas artes, os dois 3D, as medidas, o endereço antigo, os cards girando,
+   a Arena, a proposta, o carrinho e as migrações), core/tests_variantes_
+   adesivo.py e core/tests_capas_catalogo.py.
 
 73) PROMOÇÕES: VÁRIOS BRINQUEDOS, A TELA DO PAINEL COMO APP E O QUADRO DA HOME
    Pedidos: "está bem difícil achar o brinquedo a aplicar a promo ...

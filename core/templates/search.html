@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
-{% load fotos adesivos %}
+{% load fotos giro %}
 
 {% block title %}Pesquisa{% if termo %}: {{ termo }}{% endif %} | Lazer & Sport{% endblock %}
 {% block meta_description %}Encontre brinquedos, peças de reposição, combos, projetos e eventos da Lazer & Sport.{% endblock %}
@@ -43,7 +43,7 @@
                   <div class="ls-placeholder"><i class="fas fa-shapes"></i></div>
                 {% endif %}
                 <span class="ls-score">{{ resultado.similaridade }}%</span>
-                {% adesivos_do_card resultado.url %}
+                {% fotos_do_card resultado.url %}
               </div>
               <div class="ls-result-body">
                 <span class="ls-type">{{ resultado.tipo }}</span>

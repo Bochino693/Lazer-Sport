@@ -79,8 +79,8 @@ def _invalidar_home(sender, **kwargs):
     # custa nada; servir o cadastro velho custa uma venda.
     invalidate_public_catalog_caches()
     transaction.on_commit(invalidate_public_catalog_caches)
-    # os adesivos dos cards (core/variantes.py): as capas saem das fotos e dos produtos
-    from .variantes import limpar_cache
+    # as fotos que giram nos cards (core/fotos_dos_cards.py): saem das fotos e dos brinquedos
+    from .fotos_dos_cards import limpar_cache
 
     limpar_cache()
     transaction.on_commit(limpar_cache)

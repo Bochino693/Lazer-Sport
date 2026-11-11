@@ -325,34 +325,21 @@ class Brinquedos(Prime):
 
     @property
     def imagens_ordenadas(self):
-        """Galeria pública tipada, limitada a três imagens.
+        """Galeria pública tipada, limitada a três imagens (mais as da outra arte).
 
         Entra também a foto que era a capa antes da capa em cena (a seção 64
         do LEIA-ME: `papel_na_capa = "original"`, sem tipo, para o "perfil"
         ficar com a cena): a foto da equipe continua na galeria, logo depois.
+        Depois delas, até três fotos da OUTRA ARTE do mesmo brinquedo
+        (`papel_na_capa = "outra_arte"`, seção 72: os Alienígenas no Air Game
+        Kids, os Quadrinhos no Basquete Home).
 
         Com a galeria já trazida (`prefetch_related("imagens_brinquedo")`,
         como a página do brinquedo faz), a conta é feita na memória: o
         `.filter()` sobre o related manager montava uma consulta nova e
         jogava o prefetch fora. Mesma regra, mesma ordem.
         """
-        fotos_cache = getattr(self, "_prefetched_objects_cache", {}).get("imagens_brinquedo")
-        if fotos_cache is not None:
-            return sorted(
-                (
-                    foto for foto in fotos_cache
-                    if foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL
-                ),
-                key=lambda foto: (foto.ordem, foto.id),
-            )[:3]
-        return (
-            self.imagens_brinquedo
-            .filter(
-                (models.Q(tipo__isnull=False) & ~models.Q(tipo=""))
-                | models.Q(papel_na_capa=ImagemBrinquedo.PAPEL_ORIGINAL)
-            )
-            .order_by("ordem", "id")[:3]
-        )
+        return galeria_publica(self.imagens_brinquedo.all())
 
     @property
     def imagem_perfil(self):
@@ -492,12 +479,17 @@ class ImagemBrinquedo(Prime):
     # A capa em cena dos produtos do catálogo (core/capas_catalogo.py, o comando
     # `capas_em_cena`): a foto em cena vira a capa ("perfil") e a capa de antes
     # fica na galeria, sem tipo, marcada como a original -- é ela que o
-    # `--desfazer` põe de volta. Fora disso, vazio.
+    # `--desfazer` põe de volta. A OUTRA ARTE do mesmo brinquedo (LEIA-ME 72:
+    # o Air Game Kids com os Alienígenas, o Basquete Home com os Quadrinhos):
+    # as fotos da ficha que foi juntada a ele, na galeria depois das dele.
+    # Fora disso, vazio.
     PAPEL_CENA = "cena"
     PAPEL_ORIGINAL = "original"
+    PAPEL_OUTRA_ARTE = "outra_arte"
     PAPEL_CHOICES = (
         (PAPEL_CENA, "A capa em cena"),
         (PAPEL_ORIGINAL, "A capa de antes da cena"),
+        (PAPEL_OUTRA_ARTE, "Outra arte do mesmo brinquedo"),
     )
 
     brinquedo = models.ForeignKey(
@@ -564,23 +556,37 @@ class ImagemBrinquedo(Prime):
 
 
 
+def galeria_publica(fotos):
+    """A galeria pública a partir das fotos do brinquedo (já na memória ou um queryset).
+
+    As tipadas e a "original" (as três primeiras, pela ordem) e, depois, até
+    três da outra arte do mesmo brinquedo (seção 72).
+    """
+    fotos = sorted(fotos, key=lambda foto: (foto.ordem, foto.id))
+    proprias = [
+        foto for foto in fotos
+        if foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL
+    ][:3]
+    outra_arte = [
+        foto for foto in fotos
+        if not foto.tipo and getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_OUTRA_ARTE
+    ][:3]
+    return proprias + outra_arte
+
+
 class VarianteAdesivo(Prime):
-    """Um ADESIVO de um produto: a mesma máquina com outra arte (LEIA-ME, seção 72).
+    """A outra arte de um produto: a ficha que foi juntada a ele (LEIA-ME, seção 72).
 
-    O cliente: "os dois devem se tornar o mesmo objeto, como um adesivo
-    diferente, ele quem deve ser o diferencial". O produto é um só (o card, a
-    página, o carrinho); o adesivo é a escolha dentro dele -- as fotos e o 3D
-    de cada um.
-
-    AS FOTOS E O 3D DE CADA ADESIVO são os de um produto do cadastro, a
-    `origem`: o adesivo padrão é o próprio produto (`origem` vazia: as fotos e
-    o objeto 3D dele); o outro adesivo aponta para a ficha que tinha as fotos
-    e o .glb dele -- a que era um produto à parte, agora DESATIVADA (sai das
-    listas) e redirecionada para cá (`?adesivo=<slug>`). Nada é copiado nem
-    apagado: pedidos, orçamentos e favoritos que apontam para ela continuam
-    valendo, e o painel continua editando as fotos de cada adesivo na ficha
-    dele. Para juntar outro par: um adesivo para cada ficha e a de fora
-    desativada (core/variantes.py, `juntar`).
+    O cliente: "vc deve deixar apenas um objeto ... como no boliche". O
+    produto é UM objeto, com uma página, um 3D e uma galeria; a ficha da
+    outra arte (a `origem`: o Air Game Kids Alienígenas, o Basquete Home
+    Quadrinhos) fica DESATIVADA, sem apagar nada (pedidos, orçamentos e
+    favoritos continuam apontando para ela), e o endereço dela redireciona
+    para o produto. As fotos dela entram na galeria do produto, depois das
+    dele (`ImagemBrinquedo.PAPEL_OUTRA_ARTE`, os mesmos arquivos); sem 3D
+    próprio, o produto fica com o dela (core/variantes.py, `unificar`).
+    Este registro guarda o par (quem foi juntado a quem); o padrão é o
+    próprio produto (`origem` vazia). Não há mais escolha de adesivo.
     """
 
     brinquedo = models.ForeignKey(

@@ -266,7 +266,8 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
             {% endfor %}
             {% if item.modelo_3d %}
               <button class="item-ver3d nao-imprime" type="button" data-orc3d-abrir
-                      data-modelo="{{ item.modelo_3d }}"
+                      data-modelo="{{ item.modelo_3d }}"{% if item.adesivos3d %}
+                      data-adesivos3d="{{ item.adesivos3d }}"{% endif %}
                       data-nome="{{ item.descricao }}"
                       data-ficha="{{ item.ficha|join:' · ' }}">
                 <i class="bi bi-badge-3d" aria-hidden="true"></i> Ver em 3D
@@ -507,6 +508,7 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
   {% endcomment %}
   <dialog class="orc3d" id="orc3d" aria-labelledby="orc3dNome"
           data-visor="{% estatico 'site/arena/visor3d.js' %}"
+          data-adesivos3d-modulo="{% estatico 'site/arena/adesivos3d.js' %}"
           data-three="{% static 'vendor/three/three.module.min.js' %}"
           data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
           data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
