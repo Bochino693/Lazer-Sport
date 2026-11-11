@@ -1,0 +1,7 @@
+# o three e o gltfpack (npm install, ou um link para um node_modules que já
+# existe: sem a barra no fim, o link também fica de fora), o .glb antes do
+# gltfpack e as vistas de conferência: só o que refaz o objeto vai para o git
+node_modules
+*.glb
+v-*.jpg
+foto-*.jpg
