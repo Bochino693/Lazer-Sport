@@ -904,6 +904,16 @@ LSTela.pronto(function () {
     });
   });
 
+  /* ?abrir=<id>: quem acabou de cadastrar o cliente (pela importação do
+     documento, por exemplo) chega com a ficha dele já aberta, e não numa
+     lista onde ainda teria de procurar. */
+  (function () {
+    var abrir = new URLSearchParams(window.location.search).get("abrir");
+    if (!abrir || !/^\d+$/.test(abrir)) return;
+    var botao = document.querySelector('[data-dossie="' + abrir + '"]');
+    abrirDossie(abrir, botao ? botao.dataset.nome : "");
+  })();
+
   /* ------------------------------------------------- mandar uma oferta */
   var tipoOferta = document.getElementById("dossieOfertaTipo");
   var objetoOferta = document.getElementById("dossieOfertaObjeto");

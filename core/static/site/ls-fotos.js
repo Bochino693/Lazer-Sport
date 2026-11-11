@@ -15,12 +15,15 @@
    O cartão com fundo ganha a classe `foto-cheia` (ls-tema.css). Se a
    conferência não puder ser feita (rede, CORS), nada muda: fica como era.
 
-   NUNCA CORTAR O BRINQUEDO (o Pega Toupeira saía cortado, com zoom: a foto
-   em pé, com fundo, preenchia o cartão quadrado). Se o formato da foto não é
-   o da caixa (mais de ~10% de diferença), ela fica INTEIRA ("contain") sobre
-   ela mesma desfocada (`foto-encaixada`), como nas vitrines do quadro
-   inicial; só a foto do mesmo formato (as capas em cena, quadradas) preenche
-   a caixa de ponta a ponta.
+   A FOTO ENCHE A CAIXA, BEM ENQUADRADA (sem as faixas desfocadas dos
+   lados). Se o formato da foto não é o da caixa (mais de ~10% de
+   diferença), o Cloudinary recorta a foto no formato exato da caixa pelo
+   conteúdo (`c_fill,g_auto`: o brinquedo, o que chama a atenção, fica no
+   centro do recorte) e ela preenche a caixa de ponta a ponta
+   (`foto-enquadrada`). A foto do mesmo formato (as capas em cena) só
+   preenche. Fora do Cloudinary, ou se o recorte não carregar, a foto
+   original preenche a caixa ("cover") centrada um pouco acima do meio.
+   Vale para todos os cartões e para a vitrine do quadro inicial.
    ====================================================================== */
 (function () {
   "use strict";
@@ -83,30 +86,41 @@
     img.src = miniatura(url);
   });
 
-  // A cópia desfocada que preenche as sobras da vitrine do quadro inicial
-  // (a foto fica inteira; o resto do quadro é ela mesma, sem foco).
-  const desfocada = (url) => {
-    const partes = url.match(/^(.*\/upload\/)(?:[a-z]_[^/]*\/)?(.*)$/);
-    return url.includes("res.cloudinary.com") && partes ? `${partes[1]}c_scale,w_96,e_blur:400,q_auto,f_auto/${partes[2]}` : url;
-  };
-
-  // a foto de outro formato que o da caixa (mais de ~10%): inteira, sobre ela mesma desfocada
+  // a foto de outro formato que o da caixa (mais de ~10%)
   const outroFormato = (caixa, proporcao) => {
     const w = caixa.clientWidth, h = caixa.clientHeight;
     return Boolean(proporcao && w && h) && Math.abs(Math.log(proporcao / (w / h))) > 0.1;
+  };
+
+  // O recorte da foto no formato da caixa, pelo conteúdo (Cloudinary
+  // g_auto). Proporção e largura arredondadas: poucas versões de cada foto.
+  const enquadrada = (url, caixa) => {
+    const partes = url.match(/^(.*\/upload\/)(?:[a-z]_[^/]*\/)?(.*)$/);
+    if (!url.includes("res.cloudinary.com") || !partes) return "";
+    const w = caixa.clientWidth, h = caixa.clientHeight;
+    if (!w || !h) return "";
+    const proporcao = Math.min(3, Math.max(0.4, Math.round((w / h) * 10) / 10));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const largura = Math.min(1600, Math.max(400, Math.ceil((w * dpr) / 200) * 200));
+    return `${partes[1]}c_fill,g_auto,ar_${proporcao},w_${largura},q_auto,f_auto/${partes[2]}`;
   };
 
   const marcar = (caixa, cheia, proporcao) => {
     if (!cheia) return;
     caixa.classList.add("foto-cheia");
     const foto = caixa.querySelector("img");
-    const fundo = () => caixa.style.setProperty("--foto-fundo", `url("${desfocada(foto.getAttribute("src") || "")}")`);
-    if (caixa.matches(".ls-vitrine-foto")) {
-      fundo();
-    } else if (outroFormato(caixa, proporcao || (foto.naturalWidth / foto.naturalHeight))) {
-      caixa.classList.add("foto-encaixada");
-      fundo();
-    }
+    if (!outroFormato(caixa, proporcao || (foto.naturalWidth / foto.naturalHeight))) return;
+    caixa.classList.add("foto-enquadrada");
+    const original = foto.getAttribute("src") || "";
+    const recorte = enquadrada(original, caixa);
+    if (!recorte || recorte === original) return;
+    // se o recorte não vier, volta a original (que já preenche a caixa)
+    foto.addEventListener("error", () => {
+      if (foto.getAttribute("src") === recorte) foto.setAttribute("src", original);
+    }, { once: true });
+    foto.removeAttribute("srcset");
+    foto.removeAttribute("sizes");
+    foto.setAttribute("src", recorte);
   };
 
   const decidir = (caixa) => {

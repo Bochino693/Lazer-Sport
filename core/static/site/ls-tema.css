@@ -1887,6 +1887,17 @@ html.ls-escuro:not(#_):not(#__) .loja-card-img {
     background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
 }
 
+/* A caixa da foto do catálogo e da loja é quadrada, como as capas dos
+   produtos (a máquina inteira em cena, quadrada): a foto enche a caixa de
+   ponta a ponta sem cortar a máquina e sem faixas dos lados. A foto de
+   outro formato é recortada no quadrado pelo conteúdo (ls-fotos.js). */
+html.ls-escuro:not(#_):not(#__) .catalogo-card-media,
+html.ls-escuro:not(#_):not(#__) .loja-card-img {
+    height: auto;
+    flex: 0 0 auto;
+    aspect-ratio: 1 / 1;
+}
+
 html.ls-escuro:not(#_):not(#__) .catalogo-card-title h3,
 html.ls-escuro:not(#_):not(#__) .loja-card h3 { color: #fff; }
 
@@ -2160,20 +2171,12 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia {
 html.ls-escuro:not(#_):not(#__) .foto-cheia::before,
 html.ls-escuro:not(#_):not(#__) .foto-cheia::after { display: none; }
 
-/* Na vitrine do quadro inicial a foto com fundo vai de cima a baixo,
-   inteira, e as sobras dos lados são ela mesma, desfocada: o quadro fica
-   cheio sem cortar a máquina (a foto em pé num quadro deitado). */
-html.ls-escuro:not(#_):not(#__) .ls-vitrine-foto.foto-cheia {
-    background:
-        linear-gradient(rgba(4, 10, 26, .3), rgba(4, 10, 26, .3)),
-        var(--foto-fundo, none) center / cover no-repeat,
-        #0b1532;
-}
+/* Na vitrine do quadro inicial a foto com fundo também enche o quadro
+   (recortada no formato dele pelo conteúdo, ls-fotos.js), sem moldura. */
+html.ls-escuro:not(#_):not(#__) .ls-vitrine-foto.foto-cheia::before { display: none; }
 
 html.ls-escuro:not(#_):not(#__) .ls-vitrine-foto.foto-cheia img {
-    object-fit: contain;
-    filter: drop-shadow(0 0 24px rgba(0, 0, 0, .45));
-    transform: none;
+    filter: none;
 }
 
 html.ls-escuro:not(#_):not(#__) .foto-cheia img {
@@ -2188,32 +2191,13 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia img {
 }
 
 /* A foto com fundo de outro formato que o da caixa (a foto em pé no card
-   quadrado): o brinquedo NUNCA é cortado. Ela fica inteira ("contain") e as
-   sobras são ela mesma, desfocada e escurecida (ls-fotos.js põe a classe e
-   a `--foto-fundo`). */
-html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-encaixada {
-    position: relative;
-    overflow: hidden;
-    isolation: isolate;
-}
-
-html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-encaixada::before {
-    content: "";
-    display: block;
-    position: absolute;
-    inset: -24px;
-    z-index: 0;
-    background: var(--foto-fundo, none) center / cover no-repeat;
-    filter: blur(22px) brightness(.62) saturate(1.1);
-    transform: scale(1.08);
-    pointer-events: none;
-}
-
-html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-encaixada img {
-    position: relative;
-    z-index: 1;
-    object-fit: contain;
-    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .4));
+   deitado): ela ENCHE a caixa, sem faixas desfocadas dos lados. O
+   ls-fotos.js troca a foto pelo recorte no formato da caixa feito pelo
+   conteúdo (Cloudinary g_auto); sem o recorte, a original preenche,
+   centrada um pouco acima do meio (onde fica o brinquedo). */
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-enquadrada img {
+    object-fit: cover;
+    object-position: 50% 42%;
 }
 
 /* =========================================================

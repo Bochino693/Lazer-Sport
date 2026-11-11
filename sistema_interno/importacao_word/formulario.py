@@ -1,28 +1,39 @@
-"""O que falta preencher, a conferência do envio, e o rascunho criado.
+"""O que falta preencher, a conferência do envio, e o que é criado.
 
 O PEDIDO DO CLIENTE, NAS PALAVRAS DELE: "deve requisitar as informações
 faltantes prevenindo erros e a uniformidade de informações nos
-orçamentos." Então a importação não cria orçamento pela metade. A lista
-de pendências abaixo é a MESMA que a tela mostra (o JavaScript repete as
-regras para o botão acender na hora), e é ela que decide no servidor --
-a tela é só sugestão, e um POST montado à mão passa por aqui igual.
+orçamentos." E depois, testando de verdade: "o sistema não cadastra o
+usuário e um orçamento se houver... pode ter vezes que não quero o
+orçamento junto, apenas cadastrar o cliente."
 
-O QUE É OBRIGATÓRIO, E POR QUÊ:
-  * cliente identificado: cadastrado (e confirmado, quando o vínculo veio
-    só pelo nome) ou cadastrado agora, com as regras do cadastro de
-    clientes (`clientes.salvar_cliente`) -- cadastro feito pela
-    importação não pode nascer mais frouxo que o feito à mão;
-  * documento, quando houver, válido -- CPF/CNPJ errado vai para a nota;
-  * WhatsApp ou e-mail no orçamento -- sem isso a proposta não tem por
-    onde ser enviada;
-  * cada item com produto do catálogo OU marcado, de propósito, como
-    linha avulsa; quantidade inteira maior que zero; valor unitário;
-  * validade a partir de hoje, forma de pagamento, frete (zero vale, se
-    for escolhido) e forma de envio -- os campos de condição que o painel
-    tem. O prazo de entrega não tem campo próprio no painel: entra nas
-    observações, e por isso é recomendado, não obrigatório;
-  * todo alerta vermelho resolvido: corrigido (a conta volta a bater) ou
-    aceito com justificativa escrita, que vai para a atividade.
+DOIS CAMINHOS, ESCOLHIDOS NA TELA:
+  * "Cadastrar cliente e criar orçamento" (o padrão quando o documento
+    tem itens ou valores): o cliente é cadastrado -- ou, se já existe, é
+    ligado e o que falta no cadastro é completado -- e o orçamento nasce
+    como rascunho;
+  * "Só cadastrar o cliente" (o padrão quando o documento não tem itens):
+    nenhum campo de orçamento é pedido; o cliente é criado ou atualizado.
+
+O QUE BLOQUEIA, E SÓ ISTO -- é a segurança do dinheiro e do produto, não
+burocracia:
+  * o cliente: identificado (confirmado, quando o vínculo veio só pelo
+    nome) ou cadastrado com as regras da aba Clientes (`salvar_cliente`):
+    nome não repetido, CPF/CNPJ válido e de ninguém mais, um telefone ou
+    um e-mail;
+  * no orçamento: cada item com produto do catálogo OU marcado como linha
+    avulsa (o vínculo sugerido pede um "conferi"), quantidade inteira,
+    valor unitário, frete (zero vale), validade a partir de hoje, e todo
+    alerta vermelho resolvido ou aceito com justificativa escrita.
+
+O QUE NÃO BLOQUEIA MAIS (e bloqueava): "Este número tem WhatsApp?" vem
+respondido pela regra (celular de nove dígitos ou "WhatsApp" escrito no
+documento é sim) e a pessoa troca se quiser; forma de pagamento, de envio
+e prazo são recomendados; a validade vem com o padrão do painel quando o
+documento não diz, à vista no campo.
+
+A lista de pendências abaixo é a MESMA que a tela mostra (o JavaScript
+repete as regras para o botão acender na hora), e é ela que decide no
+servidor -- um POST montado à mão passa por aqui igual.
 """
 
 from __future__ import annotations
@@ -96,11 +107,14 @@ def ler_envio(post) -> dict:
     total_escolha = campo("total_escolha")
     if total_escolha == "soma":
         justificativas["soma_total"] = (post.get("justificativa-soma_total") or "").strip()[:JUSTIFICATIVA_MAXIMA]
+    modo = campo("modo")
     return {
+        "modo": modo if modo in ("orcamento", "cliente") else "orcamento",
         "cliente_modo": campo("cliente_modo") or "novo",
         "cliente_id": campo("cliente_id"),
         "cliente_confirmado": campo("cliente_confirmado") == "1",
         "nome": campo("nome", 200),
+        "estabelecimento": campo("estabelecimento", 200),
         "documento": campo("documento", 40),
         "tipo": campo("tipo", 20),
         "contato": campo("contato", 200),
@@ -110,6 +124,7 @@ def ler_envio(post) -> dict:
         "cep": campo("cep", 18),
         "endereco": campo("endereco", 200),
         "numero": campo("numero", 20),
+        "complemento": campo("complemento", 80),
         "bairro": campo("bairro", 80),
         "cidade": campo("cidade", 80),
         "estado": campo("estado", 30),
@@ -126,40 +141,70 @@ def ler_envio(post) -> dict:
     }
 
 
+def whatsapp_padrao(telefone: str, *, escrito=False, cadastro=None) -> str:
+    """"sim" ou "nao" -- a resposta mais provável, para a pessoa só trocar se precisar.
+
+    O documento disse "WhatsApp" ao lado do número: sim. O cadastro já
+    confirmou este número: o que o cadastro diz. Celular (nove dígitos
+    depois do DDD): sim, que é o caso de quase todo celular no Brasil.
+    Fixo: não.
+    """
+    digitos = det.digitos_do_telefone(telefone)
+    if not digitos:
+        return ""
+    if cadastro and cadastro.get("telefone") and det.digitos_do_telefone(cadastro["telefone"]) == digitos:
+        return "sim" if cadastro.get("whatsapp") else "nao"
+    if escrito:
+        return "sim"
+    return "sim" if len(digitos) == 11 and digitos[2] == "9" else "nao"
+
+
+def modo_padrao(proposta) -> str:
+    """Com itens ou valores no documento, orçamento; sem eles, só o cliente."""
+    tem_valores = any(
+        proposta["valores"][nome]["valor"] or proposta["valores"][nome].get("opcoes")
+        for nome in ("subtotal", "total", "valor_final")
+    )
+    return "orcamento" if proposta["itens"] or tem_valores else "cliente"
+
+
 def envio_inicial(proposta) -> dict:
     """O formulário como a tela abre, a partir da proposta."""
     cliente = proposta["cliente"]
     vinculo = cliente["vinculo"]
     cadastro = vinculo.get("cadastro") or {}
-    telefone = cliente["telefone"]["valor"]
-    email = cliente["email"]["valor"]
-    if vinculo["modo"] == "existente":
-        # Sem telefone ou e-mail no Word, o contato do orçamento é o do
-        # cadastro -- é o mesmo que o formulário normal faz ao escolher o
-        # cliente na busca.
-        if not telefone and cadastro.get("telefone"):
-            telefone = det.formatar_telefone(cadastro["telefone"])
-        if not email and cadastro.get("email"):
-            email = cadastro["email"]
-    whatsapp = ""
-    if telefone and vinculo["modo"] == "existente" and cadastro.get("whatsapp") and (
-        det.digitos_do_telefone(telefone) == det.digitos_do_telefone(cadastro.get("telefone", ""))
-    ):
-        whatsapp = "sim"
+
+    def do_documento_ou_cadastro(nome, chave_cadastro=None):
+        valor = cliente[nome]["valor"]
+        if not valor and vinculo["modo"] == "existente":
+            valor = cadastro.get(chave_cadastro or nome) or ""
+        return valor
+
+    telefone = do_documento_ou_cadastro("telefone")
+    if telefone:
+        telefone = det.formatar_telefone(telefone)
     return {
+        "modo": modo_padrao(proposta),
         "cliente_modo": vinculo["modo"],
         "cliente_id": str(vinculo["cliente_id"] or ""),
         "cliente_confirmado": False,
         "nome": cadastro.get("nome") or cliente["nome"]["valor"],
-        "documento": cliente["documento"]["valor"],
+        "estabelecimento": do_documento_ou_cadastro("estabelecimento"),
+        "documento": do_documento_ou_cadastro("documento"),
         "tipo": cliente["tipo_sugerido"],
         "contato": cliente["contato"]["valor"],
         "telefone": telefone,
-        "whatsapp": whatsapp,
-        "email": email,
+        "whatsapp": whatsapp_padrao(
+            telefone, escrito=cliente["telefone"].get("whatsapp_escrito"),
+            cadastro=cadastro if vinculo["modo"] == "existente" else None,
+        ),
+        "email": do_documento_ou_cadastro("email"),
         "cep": cliente["cep"]["valor"],
-        "endereco": cliente["logradouro"]["valor"] or cliente["endereco"]["valor"],
+        "endereco": cliente["logradouro"]["valor"] or (
+            "" if cliente["cidade"]["valor"] else cliente["endereco"]["valor"]
+        ),
         "numero": cliente["numero"]["valor"],
+        "complemento": cliente["complemento"]["valor"],
         "bairro": cliente["bairro"]["valor"],
         "cidade": cliente["cidade"]["valor"],
         "estado": cliente["uf"]["valor"],
@@ -182,9 +227,11 @@ def envio_inicial(proposta) -> dict:
         "forma_envio": proposta["condicoes"]["forma_envio"]["valor"],
         "prazo": proposta["condicoes"]["prazo"]["valor"],
         "observacoes": proposta["condicoes"]["observacoes"]["valor"],
-        # Nunca vem escolhido: entre a soma e o total do Word quem decide
-        # é a pessoa (ver `recalcular_alertas`).
-        "total_escolha": "",
+        # O valor negociado ESCRITO no documento já vem escolhido (a pessoa
+        # troca se quiser). O total que só não bate com a conta, não: entre
+        # erro de digitação e venda fechada por outro valor, quem decide é
+        # a pessoa (ver `recalcular_alertas`).
+        "total_escolha": "valor_final" if (proposta.get("valor_final") or {}).get("explicito") else "",
         "justificativas": {},
     }
 
@@ -213,14 +260,15 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     hoje = hoje or timezone.localdate()
     pendencias: list[dict] = []
     recomendacoes: list[dict] = []
-    limpo: dict = {}
+    limpo: dict = {"modo_importacao": envio.get("modo") or "orcamento"}
+    so_cliente = limpo["modo_importacao"] == "cliente"
     vinculo = proposta["cliente"]["vinculo"]
 
     # ------------------------------------------------------- cliente
     modo = envio["cliente_modo"] if envio["cliente_modo"] in ("existente", "novo") else "novo"
     limpo["modo"] = modo
+    cliente = None
     if modo == "existente":
-        cliente = None
         if envio["cliente_id"].isdigit():
             cliente = Cliente.objects.filter(pk=int(envio["cliente_id"])).first()
         if cliente is None:
@@ -234,51 +282,38 @@ def validar(proposta, envio, *, hoje=None) -> dict:
             _pendencia(pendencias, "cliente.vinculo", "Cliente",
                        f"confirme que “{cliente.nome_cliente}” é o cliente do documento "
                        f"({vinculo['motivo'] or 'vínculo pelo nome'})")
-        limpo["cliente"] = cliente
-        limpo["nome"] = cliente.nome_cliente if cliente else ""
-    else:
-        limpo["cliente"] = None
-        nome = det.espacos(envio["nome"])
-        if not nome:
-            _pendencia(pendencias, "cliente.nome", "Nome do cliente",
-                       "o orçamento precisa dizer para quem é")
-        elif len(nome) > 90:
-            _pendencia(pendencias, "cliente.nome", "Nome do cliente",
-                       "use no máximo 90 caracteres (é o limite do cadastro)")
-        elif Cliente.objects.filter(nome_cliente__iexact=nome).exists():
-            _pendencia(pendencias, "cliente.nome", "Nome do cliente",
-                       f"já existe um cliente chamado “{nome}”: escolha-o em “Cliente cadastrado”")
-        limpo["nome"] = nome
-        if envio["tipo"] not in Cliente.Tipo.values:
-            _pendencia(pendencias, "cliente.tipo", "Tipo de cadastro", "escolha o tipo do cliente")
-        limpo["tipo"] = envio["tipo"]
-        if not envio["documento"]:
-            _pendencia(recomendacoes, "cliente.documento", "CPF/CNPJ",
-                       "o documento importado não traz CPF/CNPJ; ele vai para a nota e o contrato", "recomendado")
-        campos_endereco = ("cep", "endereco", "numero", "bairro", "cidade", "estado")
-        if any(envio[c] for c in campos_endereco):
-            if not (envio["endereco"] and envio["cidade"]):
-                _pendencia(pendencias, "cliente.endereco", "Endereço",
-                           "para guardar o endereço, informe pelo menos a rua e a cidade")
-            limpo["endereco"] = {c: det.espacos(envio[c]) for c in campos_endereco}
-        else:
-            _pendencia(recomendacoes, "cliente.endereco", "Endereço",
-                       "o endereço serve à entrega, à montagem e ao mapa do site", "recomendado")
+    limpo["cliente"] = cliente
+    outros_clientes = Cliente.objects.exclude(pk=cliente.pk) if cliente else Cliente.objects.all()
 
-    # O documento só é gravado no cadastro NOVO. Com o cliente já
-    # cadastrado o cadastro não é tocado pela importação (quem muda
-    # cadastro é a aba Clientes), então o CPF do Word ali só serviu para
-    # achar a pessoa.
-    documento = envio["documento"] if modo == "novo" else ""
+    nome = det.espacos(envio["nome"])
+    if not nome:
+        _pendencia(pendencias, "cliente.nome", "Nome do cliente", "escreva o nome do cliente")
+    elif len(nome) > 90:
+        _pendencia(pendencias, "cliente.nome", "Nome do cliente",
+                   "use no máximo 90 caracteres (é o limite do cadastro)")
+    elif modo == "novo" and outros_clientes.filter(nome_cliente__iexact=nome).exists():
+        _pendencia(pendencias, "cliente.nome", "Nome do cliente",
+                   f"já existe um cliente chamado “{nome}”: escolha-o em “Cliente cadastrado”")
+    limpo["nome"] = nome
+    estabelecimento = det.espacos(envio.get("estabelecimento", ""))
+    if len(estabelecimento) > 150:
+        _pendencia(pendencias, "cliente.estabelecimento", "Estabelecimento", "use no máximo 150 caracteres")
+    limpo["estabelecimento"] = estabelecimento
+    if modo == "novo" and envio["tipo"] not in Cliente.Tipo.values:
+        _pendencia(pendencias, "cliente.tipo", "Tipo de cadastro", "escolha o tipo do cliente")
+    limpo["tipo"] = envio["tipo"]
+
+    documento = envio["documento"]
     if documento:
         if not documento_valido(documento):
             _pendencia(pendencias, "cliente.documento", "CPF/CNPJ",
                        f"{tipo_documento(documento)} inválido: corrija pelo documento do cliente ou apague")
-        elif modo == "novo" and Cliente.objects.filter(
-            documento_chave=det.chave_documento(documento)
-        ).exists():
+        elif outros_clientes.filter(documento_chave=det.chave_documento(documento)).exists():
             _pendencia(pendencias, "cliente.documento", "CPF/CNPJ",
                        "este CPF/CNPJ já está em outro cliente: escolha o cadastro existente")
+    elif modo == "novo":
+        _pendencia(recomendacoes, "cliente.documento", "CPF/CNPJ",
+                   "o documento importado não traz CPF/CNPJ; ele vai para a nota e o contrato", "recomendado")
     limpo["documento"] = det.formatar_documento(documento) if documento else ""
 
     telefone = envio["telefone"]
@@ -290,10 +325,8 @@ def validar(proposta, envio, *, hoje=None) -> dict:
                        "telefone incompleto: informe DDD e número, como (11) 99999-9999")
         else:
             limpo["telefone"] = det.formatar_telefone(telefone)
-            if envio["whatsapp"] not in ("sim", "nao"):
-                _pendencia(pendencias, "cliente.whatsapp", "Este número tem WhatsApp?",
-                           "confirme se o número tem WhatsApp (a proposta é enviada por ele)")
-            limpo["whatsapp"] = envio["whatsapp"] == "sim"
+            resposta = envio["whatsapp"] if envio["whatsapp"] in ("sim", "nao") else whatsapp_padrao(telefone)
+            limpo["whatsapp"] = resposta == "sim"
     email = envio["email"].lower()
     limpo["email"] = ""
     if email:
@@ -302,26 +335,63 @@ def validar(proposta, envio, *, hoje=None) -> dict:
             limpo["email"] = email
         except ValidationError:
             _pendencia(pendencias, "cliente.email", "E-mail", "e-mail inválido")
-        if modo == "novo" and Cliente.objects.filter(email__iexact=email).exists():
+        if outros_clientes.filter(email__iexact=email).exists():
             _pendencia(pendencias, "cliente.email", "E-mail",
                        "este e-mail já está em outro cliente: escolha o cadastro existente")
-    if not (limpo["whatsapp"] and limpo["telefone"]) and not limpo["email"]:
-        _pendencia(pendencias, "cliente.contato_envio", "WhatsApp ou e-mail",
-                   "informe um WhatsApp confirmado ou um e-mail: é por onde a proposta vai")
+    # A regra do cadastro de clientes: cadastro sem telefone nem e-mail é
+    # cadastro que ninguém consegue usar depois.
+    tem_contato = bool(limpo["telefone"] or limpo["email"])
+    if not tem_contato and not (cliente and (cliente.telefone or cliente.email)):
+        _pendencia(pendencias, "cliente.contato_envio", "Telefone ou e-mail",
+                   "informe ao menos um contato: telefone/WhatsApp ou e-mail")
     contato = det.espacos(envio["contato"])
     if len(contato) > 120:
         _pendencia(pendencias, "cliente.contato", "Pessoa de contato", "use no máximo 120 caracteres")
-    elif not contato:
-        _pendencia(recomendacoes, "cliente.contato", "Pessoa de contato",
-                   "quem atende do lado do cliente ajuda no envio e na cobrança", "recomendado")
     limpo["contato"] = contato
+
+    campos_endereco = ("cep", "endereco", "numero", "complemento", "bairro", "cidade", "estado")
+    limites = {"cep": 18, "endereco": 120, "numero": 10, "complemento": 60, "bairro": 50,
+               "cidade": 60, "estado": 20}
+    if any(envio.get(c) for c in campos_endereco):
+        if not (envio["endereco"] and envio["cidade"]):
+            _pendencia(pendencias, "cliente.endereco", "Endereço",
+                       "para guardar o endereço, informe pelo menos a rua e a cidade")
+        for nome_campo in campos_endereco:
+            if len(det.espacos(envio.get(nome_campo, ""))) > limites[nome_campo]:
+                _pendencia(pendencias, "cliente.endereco", "Endereço",
+                           f"{nome_campo}: use no máximo {limites[nome_campo]} caracteres")
+        limpo["endereco"] = {c: det.espacos(envio.get(c, "")) for c in campos_endereco}
+        if limpo["endereco"]["cep"]:
+            limpo["endereco"]["cep"] = det.formatar_cep(limpo["endereco"]["cep"])
+    elif modo == "novo":
+        _pendencia(recomendacoes, "cliente.endereco", "Endereço",
+                   "o endereço serve à entrega, à montagem e ao mapa do site", "recomendado")
+
+    if so_cliente:
+        # Só o cliente: nenhum campo de orçamento é pedido.
+        limpo.update(itens=[], aceitos=[], amarelos=[], valor_final=None)
+        return {
+            "pendencias": pendencias,
+            "recomendacoes": recomendacoes,
+            "alertas": [],
+            "alertas_abertos": [],
+            "contas": proposta.get("contas") or {"subtotal": "0,00", "total": "0,00"},
+            "limpo": limpo,
+            "pronto": not pendencias,
+        }
+
+    if tem_contato and not (limpo["whatsapp"] or limpo["email"]):
+        _pendencia(recomendacoes, "cliente.contato_envio", "WhatsApp ou e-mail",
+                   "a proposta é enviada por WhatsApp ou e-mail; sem eles, o envio fica para depois",
+                   "recomendado")
 
     # --------------------------------------------------------- itens
     por_uid = {item["uid"]: item for item in proposta["itens"]}
     itens_limpos = []
     valores_itens = {}
     if not envio["itens"]:
-        _pendencia(pendencias, "itens", "Itens", "o orçamento precisa de pelo menos um item")
+        _pendencia(pendencias, "itens", "Itens",
+                   "o orçamento precisa de pelo menos um item (ou escolha “Só cadastrar o cliente”)")
     for posicao, item in enumerate(envio["itens"], start=1):
         rotulo = f"Item {posicao}"
         chave = f"itens.{item['uid']}"
@@ -378,10 +448,12 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     limpo["itens"] = itens_limpos
 
     # ------------------------------------------------------- valores
-    total_word = det.valor_do_campo(proposta["valores"]["total"]["valor"])
+    oferta = proposta.get("valor_final") or {}
+    valor_oferecido = det.valor_do_campo(oferta.get("valor", "")) if oferta.get("oferecido") else None
     limpo["valor_final"] = (
-        total_word if envio.get("total_escolha") == "valor_final" and total_word is not None else None
+        valor_oferecido if envio.get("total_escolha") == "valor_final" and valor_oferecido is not None else None
     )
+    limpo["valor_final_explicito"] = bool(oferta.get("explicito"))
     frete = det.valor_do_campo(envio["frete"])
     if not envio["frete"]:
         _pendencia(pendencias, "valores.frete", "Frete",
@@ -409,24 +481,24 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     # ------------------------------------------------------ condições
     validade = _data(envio["validade"])
     if not envio["validade"]:
-        _pendencia(pendencias, "condicoes.validade", "Validade",
-                   "escolha até quando a proposta vale (a sugestão do painel é de "
-                   f"{Orcamento.DIAS_DE_VALIDADE_PADRAO} dias)")
+        # Igual ao formulário normal: proposta nova sem prazo nasce com o
+        # padrão do painel. A tela já mostra esse padrão no campo.
+        validade = Orcamento.validade_padrao()
     elif validade is None:
         _pendencia(pendencias, "condicoes.validade", "Validade", "data inválida")
     elif validade < hoje:
         _pendencia(pendencias, "condicoes.validade", "Validade",
                    "a validade não pode ser anterior a hoje: a proposta sairia vencida")
     limpo["validade"] = validade
-    for nome, rotulo in (("forma_pagamento", "Forma de pagamento"), ("forma_envio", "Forma de envio")):
-        texto = det.espacos(envio[nome])
+    for nome_campo, rotulo in (("forma_pagamento", "Forma de pagamento"), ("forma_envio", "Forma de envio")):
+        texto = det.espacos(envio[nome_campo])
         if not texto:
-            _pendencia(pendencias, f"condicoes.{nome}", rotulo,
-                       "escolha uma das opções ou escreva a condição combinada")
+            _pendencia(recomendacoes, f"condicoes.{nome_campo}", rotulo,
+                       "o documento não diz; dá para completar depois, na edição", "recomendado")
         elif len(texto) > 120:
-            _pendencia(pendencias, f"condicoes.{nome}", rotulo,
+            _pendencia(pendencias, f"condicoes.{nome_campo}", rotulo,
                        "use no máximo 120 caracteres; o detalhe pode ir para as observações")
-        limpo[nome] = texto
+        limpo[nome_campo] = texto
     limpo["prazo"] = det.espacos(envio["prazo"])
     if not limpo["prazo"]:
         _pendencia(recomendacoes, "condicoes.prazo", "Prazo de entrega",
@@ -455,6 +527,21 @@ def validar(proposta, envio, *, hoje=None) -> dict:
         if not any(p["campo"] == f"alerta.{alerta['id']}" for p in pendencias):
             _pendencia(pendencias, f"alerta.{alerta['id']}", alerta["titulo"],
                        "corrija o valor ou aceite o alerta com uma justificativa")
+    # O valor negociado ESCRITO no documento é o preço combinado com o
+    # cliente. Deixá-lo de lado pela soma (mais cara, em geral) pode ser
+    # certo -- mas é decisão de dinheiro, e fica escrita no histórico.
+    if oferta.get("explicito") and envio.get("total_escolha") == "soma":
+        texto = envio["justificativas"].get("soma_total", "")
+        if len(texto) < JUSTIFICATIVA_MINIMA:
+            _pendencia(pendencias, "valores.valor_final", "Qual total vale?",
+                       f"escreva por que fica a soma das linhas, e não o valor negociado de "
+                       f"R$ {oferta.get('valor')} (pelo menos {JUSTIFICATIVA_MINIMA} letras)")
+        elif not any(a["alerta"]["id"] == "soma_total" for a in aceitos):
+            aceitos.append({
+                "alerta": {"id": "valor_negociado",
+                           "titulo": f"valor negociado de R$ {oferta.get('valor')} deixado de lado"},
+                "justificativa": texto,
+            })
     limpo["aceitos"] = aceitos
     limpo["amarelos"] = [a for a in estado["alertas"] if a["nivel"] != NIVEL_VERMELHO]
 
@@ -479,7 +566,10 @@ def _resolvido(alerta, envio, limpo, proposta) -> bool:
     """
     tipo = alerta["tipo"]
     if tipo == "soma_total" and envio.get("total_escolha") == "valor_final":
-        return limpo.get("valor_final") is not None
+        # O total escrito vira o valor final: a diferença deixa de ser erro
+        # e passa a ser a negociação. (O valor negociado com rótulo próprio
+        # não apaga um total errado: esse continua precisando de conta.)
+        return limpo.get("valor_final") is not None and not limpo.get("valor_final_explicito")
     if tipo == "documento_invalido":
         return (
             envio["cliente_modo"] == "existente"
@@ -565,12 +655,70 @@ def _pedido_para_o_cadastro(request, dados: dict):
     return falso
 
 
-@transaction.atomic
-def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
-    """Cliente (quando novo), orçamento em RASCUNHO, itens, blocos e atividade.
+def _dados_do_cliente(cliente: Cliente | None, limpo: dict, *, completar: bool) -> dict:
+    """O que vai para `salvar_cliente`: o cadastro de agora mais o documento.
 
-    Nada é enviado ao cliente: o rascunho abre na tela normal de edição, e
-    é de lá que a proposta segue o caminho de sempre.
+    `completar=True` (orçamento com cliente que já existia): só o que está
+    VAZIO no cadastro é preenchido -- o orçamento não é lugar de trocar o
+    telefone de ninguém. `completar=False` (cliente novo, ou "Só cadastrar
+    o cliente"): o que veio na tela vale.
+
+    O que a tela não mostra (tipo, observações, buffet responsável) segue
+    como está no cadastro: `salvar_cliente` lê o formulário inteiro, e
+    vazio ali apagaria o que existe.
+    """
+    if limpo["telefone"]:
+        canal = Cliente.CanalTelefone.WHATSAPP if limpo["whatsapp"] else Cliente.CanalTelefone.TELEFONE
+    else:
+        canal = Cliente.CanalTelefone.NAO_CONFIRMADO
+    novo = {
+        "nome_cliente": limpo["nome"],
+        "nome_estabelecimento": limpo["estabelecimento"],
+        "documento": limpo["documento"],
+        "telefone": limpo["telefone"],
+        "canal_telefone": canal,
+        "email": limpo["email"],
+    }
+    if cliente is None:
+        return dict(novo, tipo=limpo["tipo"], observacoes="")
+    atual = {
+        "nome_cliente": cliente.nome_cliente,
+        "nome_estabelecimento": cliente.nome_estabelecimento,
+        "documento": cliente.documento,
+        "telefone": cliente.telefone,
+        "canal_telefone": cliente.canal_telefone,
+        "email": cliente.email or "",
+    }
+    dados = {}
+    for chave, valor_atual in atual.items():
+        if chave == "canal_telefone":
+            continue
+        valor_novo = novo[chave]
+        if completar:
+            dados[chave] = valor_atual or valor_novo
+        else:
+            dados[chave] = valor_novo or valor_atual
+    if dados["telefone"] == (cliente.telefone or "") and cliente.telefone:
+        mesmo = det.digitos_do_telefone(dados["telefone"]) == det.digitos_do_telefone(limpo["telefone"])
+        dados["canal_telefone"] = canal if (mesmo and not completar) else cliente.canal_telefone
+    else:
+        dados["canal_telefone"] = canal if dados["telefone"] else Cliente.CanalTelefone.NAO_CONFIRMADO
+    dados.update(
+        tipo=cliente.tipo,
+        observacoes=cliente.observacoes,
+        parceiro=str(cliente.parceiro_id or ""),
+    )
+    return dados
+
+
+@transaction.atomic
+def criar(request, proposta, validado, *, arquivo: str) -> dict:
+    """Cria (ou liga e completa) o cliente e, no modo orçamento, o rascunho.
+
+    Devolve {"cliente", "cliente_novo", "completados", "orcamento"} -- o
+    que a tela de conclusão mostra. Nada é enviado ao cliente: o rascunho
+    abre na edição normal, e é de lá que a proposta segue o caminho de
+    sempre.
     """
     from .. import clientes as svc_clientes
 
@@ -580,24 +728,41 @@ def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
         ))
     limpo = validado["limpo"]
     usuario = request.user
+    so_cliente = limpo["modo_importacao"] == "cliente"
 
-    cliente = limpo["cliente"]
-    if limpo["modo"] == "novo":
-        pedido = _pedido_para_o_cadastro(request, {
-            "nome_cliente": limpo["nome"],
-            "tipo": limpo["tipo"],
-            "documento": limpo["documento"],
-            "telefone": limpo["telefone"],
-            "canal_telefone": (
-                Cliente.CanalTelefone.WHATSAPP if limpo["whatsapp"] else Cliente.CanalTelefone.TELEFONE
-            ) if limpo["telefone"] else Cliente.CanalTelefone.NAO_CONFIRMADO,
-            "email": limpo["email"],
-            "observacoes": f"Cadastrado pela importação do orçamento “{arquivo}”.",
-        })
-        cliente = svc_clientes.salvar_cliente(pedido)
-        envio_endereco = limpo.get("endereco") or {}
-        if envio_endereco:
-            svc_clientes.salvar_endereco(_pedido_para_o_cadastro(request, envio_endereco), cliente)
+    existente = limpo["cliente"]
+    antes = {}
+    if existente:
+        antes = {
+            "CPF/CNPJ": existente.documento, "telefone": existente.telefone,
+            "e-mail": existente.email or "", "estabelecimento": existente.nome_estabelecimento,
+            "endereço": bool(existente.endereco_principal), "nome": existente.nome_cliente,
+        }
+    dados = _dados_do_cliente(existente, limpo, completar=bool(existente) and not so_cliente)
+    if not existente:
+        dados["observacoes"] = f"Cadastrado pela importação do documento “{arquivo}”."
+    cliente = svc_clientes.salvar_cliente(_pedido_para_o_cadastro(request, dados), existente)
+
+    endereco = limpo.get("endereco") or {}
+    # Endereço: cliente novo e "Só cadastrar" gravam o da tela; orçamento
+    # de cliente que já existia só preenche o endereço que faltava.
+    if endereco and (not existente or so_cliente or not antes.get("endereço")):
+        svc_clientes.salvar_endereco(_pedido_para_o_cadastro(request, endereco), cliente)
+
+    completados = []
+    if existente:
+        cliente.refresh_from_db()
+        depois = {
+            "CPF/CNPJ": cliente.documento, "telefone": cliente.telefone,
+            "e-mail": cliente.email or "", "estabelecimento": cliente.nome_estabelecimento,
+            "endereço": bool(cliente.endereco_principal), "nome": cliente.nome_cliente,
+        }
+        completados = [nome for nome, valor in depois.items() if valor and valor != antes.get(nome)]
+
+    resultado = {"cliente": cliente, "cliente_novo": existente is None, "completados": completados,
+                 "orcamento": None}
+    if so_cliente:
+        return resultado
 
     observacoes = limpo["observacoes"]
     if limpo["prazo"]:
@@ -606,7 +771,7 @@ def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
 
     orcamento = Orcamento.objects.create(
         cliente=cliente,
-        nome_cliente=(cliente.nome_cliente if cliente else limpo["nome"])[:120],
+        nome_cliente=cliente.nome_cliente[:120],
         contato=limpo["contato"][:120],
         whatsapp_cliente=limpo["telefone"] if limpo["whatsapp"] else "",
         email_cliente=limpo["email"],
@@ -647,7 +812,13 @@ def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
 
     registrar_importacao(orcamento, usuario, limpo, arquivo=arquivo,
                          ia=proposta["ia"], amarelos=limpo["amarelos"])
-    return orcamento
+    resultado["orcamento"] = orcamento
+    return resultado
+
+
+def criar_rascunho(request, proposta, validado, *, arquivo: str) -> Orcamento:
+    """Compatibilidade: o orçamento criado por `criar`."""
+    return criar(request, proposta, validado, arquivo=arquivo)["orcamento"]
 
 
 def registrar_importacao(orcamento, usuario, limpo, *, arquivo, ia, amarelos):
@@ -686,16 +857,20 @@ def registrar_importacao(orcamento, usuario, limpo, *, arquivo, ia, amarelos):
             ((i["valor_unitario"] * i["quantidade"]).quantize(Decimal("0.01")) for i in limpo["itens"]),
             Decimal("0.00"),
         ) + limpo["frete"]
+        de_onde = (
+            "o valor negociado escrito no documento" if limpo.get("valor_final_explicito")
+            else "o total escrito no documento"
+        )
         AtividadeOrcamento.registrar(
             orcamento, usuario, AtividadeOrcamento.Tipo.CRIADO,
             resumo=(
                 f"Importação do {fonte}: valor final combinado R$ {det.moeda(limpo['valor_final'])}, "
-                f"o total escrito no documento; a soma das linhas e do frete dá R$ {det.moeda(soma)}."
+                f"{de_onde}; a soma das linhas e do frete dá R$ {det.moeda(soma)}."
             ),
         )
     avulsas = sum(1 for item in limpo["itens"] if item["avulsa"])
     partes = [f"Importado do {fonte} «{arquivo[:60]}»"]
-    partes.append("lido com IA" if ia.get("usada") else "lido só pelas tabelas (IA indisponível)")
+    partes.append("lido com IA" if ia.get("usada") else "lido pelas tabelas e textos do documento")
     if limpo["aceitos"]:
         partes.append(f"{len(limpo['aceitos'])} alerta(s) aceito(s) com justificativa")
     if amarelos:

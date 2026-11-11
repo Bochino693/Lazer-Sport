@@ -1,4 +1,4 @@
-"""Os pares de adesivos viram um produto só (a 0160; LEIA-ME, seção 72).
+"""Os pares de adesivos viram um produto só (a 0161; LEIA-ME, seção 72).
 
 O cliente: "os dois devem se tornar o mesmo objeto, como um adesivo
 diferente". Cada par (core.variantes.PARES):
@@ -38,7 +38,7 @@ def separar(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0159_variantes_de_adesivo"),
+        ("core", "0160_variantes_de_adesivo"),
     ]
 
     operations = [

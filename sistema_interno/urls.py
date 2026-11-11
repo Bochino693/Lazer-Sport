@@ -68,7 +68,7 @@ from .views_gestao import (
     OrdensProducaoView,
     ProdutosProducaoView,
 )
-from .views_importacao import ConferirImportacaoView, ImportarOrcamentoWordView
+from .views_importacao import ConferirImportacaoView, ImportacaoConcluidaView, ImportarOrcamentoWordView
 from .views_jogos import JogoGerarApkView, JogoGerarExeView, JogosInnerView
 from .views_jogos_vivo import JogosAoVivoView
 from .views_objetos_3d import Objetos3DInnerView
@@ -220,6 +220,11 @@ urlpatterns = [
         'orcamentos/importar/',
         ImportarOrcamentoWordView.as_view(),
         name='importar_orcamento_word',
+    ),
+    path(
+        'orcamentos/importar/concluido/<int:pk>/',
+        ImportacaoConcluidaView.as_view(),
+        name='importacao_concluida',
     ),
     path(
         'orcamentos/importar/<str:token>/',

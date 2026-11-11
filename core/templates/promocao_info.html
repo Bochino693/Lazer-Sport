@@ -65,17 +65,43 @@
                 <span><i class="fa-solid fa-industry" aria-hidden="true"></i> Direto da fábrica</span>
             </div>
 
+            {% with brinquedos=promocao.todos_brinquedos %}
+            {% if brinquedos|length > 1 %}
+            {# Promoção de vários brinquedos: o preço vale para o conjunto. #}
+            <div class="brinquedo-info brinquedo-info--varios">
+                <h2>{{ brinquedos|length }} brinquedos nesta promoção</h2>
+                <ul class="promo-itens">
+                    {% for brinquedo in brinquedos %}
+                    <li>
+                        <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread">
+                            {% if brinquedo.imagem_brinquedo %}
+                                <img src="{{ brinquedo.imagem_brinquedo|foto:160 }}" alt="" width="64" height="64" loading="lazy" decoding="async">
+                            {% endif %}
+                            <span>
+                                <strong>{{ brinquedo.nome_brinquedo }}</strong>
+                                {% if brinquedo.valor_brinquedo %}<small>Preço de tabela: R$ {{ brinquedo.valor_brinquedo|moeda }}</small>{% endif %}
+                            </span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
             <div class="brinquedo-info">
                 <h2>Produto da promoção</h2>
                 <h3>{{ promocao.brinquedos.nome_brinquedo }}</h3>
                 <p>{{ promocao.brinquedos.descricao }}</p>
             </div>
+            {% endif %}
+            {% endwith %}
 
             <div class="promo-precos">
+                {% if promocao.preco_tabela %}
                 <div class="promo-price-row">
-                    <span>Preço normal</span>
-                    <span class="preco-normal money">R$ {{ promocao.brinquedos.valor_brinquedo|moeda }}</span>
+                    <span>Preço normal{% if promocao.brinquedos_extras.all %} (o conjunto){% endif %}</span>
+                    <span class="preco-normal money">R$ {{ promocao.preco_tabela|moeda }}</span>
                 </div>
+                {% endif %}
 
                 <div class="promo-price-row">
                     <span>Preço promocional</span>
@@ -84,7 +110,7 @@
 
                 <div class="promo-economia">
                     <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                    Condição especial por tempo limitado
+                    {% if promocao.desconto_percentual %}{{ promocao.desconto_percentual }}% de desconto · {% endif %}Condição especial por tempo limitado
                 </div>
             </div>
 

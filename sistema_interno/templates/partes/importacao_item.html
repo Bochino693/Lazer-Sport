@@ -76,7 +76,7 @@
       <div class="input-group">
         <span class="input-group-text">R$</span>
         <input class="form-control ls-imp-recalcula" id="item-{{ item.uid }}-valor_unitario" name="item-{{ item.uid }}-valor_unitario"
-               inputmode="decimal" data-mascara="moeda" autocomplete="off" placeholder="0,00" value="{{ env.valor_unitario }}">
+               inputmode="decimal" data-mascara="moeda-valor" autocomplete="off" placeholder="0,00" value="{{ env.valor_unitario }}">
       </div>
       {% include "partes/importacao_origem.html" with campo=item.valor_unitario alvo="item-"|add:item.uid|add:"-valor_unitario" falta=item.faltas.valor_unitario %}
     </div>
@@ -88,7 +88,7 @@
         {% if item.total_linha.fonte %}<button type="button" class="ls-imp-fonte mini" data-fonte="{{ item.total_linha.fonte.id }}"><b>{{ item.total_linha.fonte.id }}</b></button>{% endif %}
       </p>
       {% elif item.total_linha.opcoes %}
-      <p class="ls-imp-nota"><small>No documento:</small> {% for opcao in item.total_linha.opcoes %}{{ opcao.rotulo }} ({% if opcao.origem == "ia" %}IA{% else %}tabelas{% endif %}){% if not forloop.last %} ou {% endif %}{% endfor %}</p>
+      <p class="ls-imp-nota"><small>No documento:</small> {% for opcao in item.total_linha.opcoes %}{{ opcao.rotulo }} ({% if opcao.origem == "ia" %}IA{% else %}documento{% endif %}){% if not forloop.last %} ou {% endif %}{% endfor %}</p>
       {% endif %}
       <p class="ls-imp-conta-estado" data-conta-de="{{ item.uid }}" hidden></p>
     </div>

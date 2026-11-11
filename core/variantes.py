@@ -22,7 +22,7 @@ O MECANISMO (para este par e os próximos):
     "2 adesivos"; na Arena, uma vez, com o 3D do adesivo que tem.
 
 JUNTAR UM PAR NOVO: um item em PARES e uma migração de dados que chame
-`juntar` (como a 0160). Fora das migrações, o painel (o admin dos adesivos)
+`juntar` (como a 0161). Fora das migrações, o painel (o admin dos adesivos)
 faz o mesmo à mão.
 """
 
@@ -110,7 +110,7 @@ def separar(produto, Brinquedos, VarianteAdesivo, avisar=print):
 
 
 def migrar(apps, schema_editor, avisar=print):
-    """A migração de dados (a 0160): junta os PARES em todo lugar (só o banco: nada sobe).
+    """A migração de dados (a 0161): junta os PARES em todo lugar (só o banco: nada sobe).
 
     Antes, as fichas de RENOMEADAS ganham o nome de hoje (o "Basquete Street
     Quadrinhos" vira o "Basquete Home Quadrinhos", com as descrições das fotos).

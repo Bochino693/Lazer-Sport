@@ -128,6 +128,28 @@
 .ls-imp-marca{display:flex;gap:8px;align-items:flex-start;margin-top:9px;font-size:.84rem;color:var(--text-2);cursor:pointer}
 .ls-imp-marca input{width:18px;height:18px;margin-top:1px;flex:0 0 18px;accent-color:var(--acento)}
 
+/* O atributo hidden manda: as partes que somem no "Só cadastrar o
+   cliente" têm display próprio (grid, flex), que venceria o do navegador. */
+.ls-imp-body [hidden]{display:none!important}
+
+/* ----------------------------------- orçamento, ou só o cliente */
+/* As duas saídas da importação, lado a lado e grandes: é a primeira
+   decisão da tela, e a que muda tudo o que vem abaixo. */
+.ls-imp-pergunta{font-size:1rem;font-weight:900;margin:0 0 10px;color:var(--text)}
+.ls-imp-caminhos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ls-imp-caminho{cursor:pointer;position:relative;display:block;margin:0}
+.ls-imp-caminho input{position:absolute;opacity:0;pointer-events:none}
+.ls-imp-caminho span{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:start;height:100%;
+  padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);
+}
+.ls-imp-caminho i{grid-row:span 2;font-size:1.35rem;line-height:1.2;color:var(--muted)}
+.ls-imp-caminho strong{font-size:.92rem;font-weight:900;color:var(--text)}
+.ls-imp-caminho small{font-size:.78rem;line-height:1.35;color:var(--muted)}
+.ls-imp-caminho input:checked + span{border-color:var(--acento);background:rgba(var(--acento-rgb),.13);box-shadow:inset 0 0 0 1px var(--acento)}
+.ls-imp-caminho input:checked + span i{color:var(--acento)}
+.ls-imp-caminho input:focus-visible + span{outline:2px solid var(--acento);outline-offset:2px}
+
 /* -------------------------------------------------------- cliente */
 .ls-imp-modo{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .ls-imp-modo-opcao{cursor:pointer}
@@ -271,6 +293,7 @@
   .ls-imp-item-campos .ls-imp-campo-largo{grid-column:1 / -1}
 }
 @media (max-width:760px){
+  .ls-imp-caminhos{grid-template-columns:minmax(0,1fr)}
   .ls-imp-criar{bottom:calc(66px + env(safe-area-inset-bottom,0px))}
   .ls-imp-campos{grid-template-columns:minmax(0,1fr)}
   .ls-imp-item{padding:12px}
@@ -283,4 +306,32 @@
 @media (max-width:420px){
   .ls-imp-item-campos{grid-template-columns:minmax(0,1fr)}
   .ls-imp-criar .btn{padding-inline:.8rem!important}
+}
+
+/* ------------------------------------------------ importação pronta */
+/* Cliente e orçamento lado a lado: o que foi criado, e o caminho para
+   cada um. No celular, um embaixo do outro. */
+.ls-imp-pronto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.ls-imp-pronto-cartao h2{font-size:1.15rem;font-weight:900;margin:6px 0 2px;color:var(--text)}
+.ls-imp-pronto-cartao header p{margin:0;color:var(--muted);font-size:.84rem}
+.ls-imp-pronto-selo{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:900;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);
+}
+.ls-imp-pronto-selo.novo{border-color:var(--green-texto);color:var(--green-texto)}
+.ls-imp-pronto-selo.ligado{border-color:var(--acento);color:var(--acento)}
+.ls-imp-pronto-dados{display:grid;gap:6px;margin:0 0 14px}
+.ls-imp-pronto-dados div{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;font-size:.88rem}
+.ls-imp-pronto-dados dt{color:var(--muted);font-weight:900}
+.ls-imp-pronto-dados dd{margin:0;color:var(--text);word-break:break-word}
+.ls-imp-pronto-itens{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:6px}
+.ls-imp-pronto-itens li{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;color:var(--text)}
+.ls-imp-pronto-itens li strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ls-imp-pronto-itens li.extra{color:var(--text-2)}
+.ls-imp-pronto-itens li.total{border-top:1px solid var(--line);padding-top:8px;font-weight:900}
+.ls-imp-pronto-itens li.total strong{color:var(--green-texto);font-size:1.1rem}
+.ls-imp-pronto-acoes{display:flex;flex-wrap:wrap;gap:8px}
+@media (max-width:760px){
+  .ls-imp-pronto{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-pronto-dados div{grid-template-columns:minmax(0,1fr);gap:0}
 }

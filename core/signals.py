@@ -144,6 +144,7 @@ _RELACOES_DA_HOME = (
     Brinquedos.estabelecimentos.through,
     PecasReposicao.categoria_peca.through,
     Combos.brinquedos.through,
+    Promocoes.brinquedos_extras.through,
     Eventos.brinquedos.through,
 )
 

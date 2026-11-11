@@ -360,7 +360,7 @@ CADASTROS = {
         # Basquete Street de base; a chave (os arquivos) ficou a mesma
         "nome": "Basquete Home Quadrinhos",
         "base": ("Basquete Home",),
-        # o nome de antes também acha o brinquedo (a 0160 o renomeia: core.variantes.RENOMEADAS)
+        # o nome de antes também acha o brinquedo (a 0161 o renomeia: core.variantes.RENOMEADAS)
         "nomes": ("Basquete Home Quadrinhos", "Basquete Street Quadrinhos"),
         "pasta": MODELOS / "basquete-street-quadrinhos",
         "objeto_3d": "site/arena/modelos/basquete-street-quadrinhos.glb",

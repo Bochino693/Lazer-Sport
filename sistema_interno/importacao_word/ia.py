@@ -40,7 +40,13 @@ def modelo_configurado() -> str:
 
 
 class IAIndisponivel(Exception):
-    """A leitura pela IA não aconteceu. A mensagem vai para a tela."""
+    """A leitura pela IA não aconteceu.
+
+    A mensagem vai para o LOG do servidor, e não para a tela: para quem
+    importa, a IA é só um reforço da leitura por regra, que segue sozinha.
+    "Chave recusada" ou "limite de uso" é assunto de quem cuida do
+    servidor (ver LEIA-ME, seções 65 e 71).
+    """
 
 
 # ======================================================================
@@ -70,6 +76,10 @@ class Campo(BaseModel):
 
 class ClienteLido(BaseModel):
     nome: Campo = Field(description="Nome do cliente (pessoa ou empresa) a quem o orçamento é dirigido.")
+    estabelecimento: Campo = Field(
+        description="Nome do estabelecimento ou da empresa do cliente, quando o documento traz "
+        "os dois (a pessoa e o negócio dela)."
+    )
     documento: Campo = Field(description="CPF ou CNPJ do cliente (nunca o da Lazer & Sport).")
     contato: Campo = Field(description="Pessoa de contato no cliente, quando diferente do nome.")
     telefone: Campo = Field(description="Telefone ou WhatsApp do cliente.")
@@ -78,6 +88,7 @@ class ClienteLido(BaseModel):
     cep: Campo
     logradouro: Campo = Field(description="Rua/avenida, sem o número.")
     numero: Campo
+    complemento: Campo = Field(description="Sala, apto, bloco, conjunto, quando escrito.")
     bairro: Campo
     cidade: Campo
     uf: Campo
@@ -100,8 +111,11 @@ class OrcamentoLido(BaseModel):
     frete: Campo = Field(description="Valor do frete/entrega, ou a frase sobre ele (\"frete grátis\").")
     desconto: Campo = Field(description="Desconto como está escrito, em R$ ou em %.")
     total_geral: Campo = Field(
-        description="Total final do orçamento escrito no documento -- inclusive quando é um "
-        "valor negociado, fechado ou combinado que difere da soma dos itens."
+        description="Total do orçamento escrito no documento (a linha \"Total\")."
+    )
+    valor_negociado: Campo = Field(
+        description="Valor final negociado, fechado ou combinado, quando o documento o escreve "
+        "à parte do total (\"Valor final negociado: R$ 9.500,00\"). null quando não há."
     )
     validade: Campo = Field(description="Validade da proposta como está escrita (\"15 dias\", \"30/11/2026\").")
     forma_pagamento: Campo = Field(description="Forma ou condições de pagamento.")

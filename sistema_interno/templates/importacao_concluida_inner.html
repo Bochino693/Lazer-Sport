@@ -1,0 +1,99 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Importação concluída | Lazer & Sport{% endblock %}
+{% block top_title %}Importação concluída{% endblock %}
+{% block body_class %}ls-orcamentos-body ls-commercial-body ls-imp-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="importacao-word" href="{% estatico 'interno/importacao-word.css' %}">
+{% endblock %}
+
+{% comment %}
+  O QUE A IMPORTAÇÃO CRIOU, E O CAMINHO PARA CADA COISA.
+
+  Antes, "Criar" abria direto a edição do orçamento -- e a outra metade
+  do que aconteceu (o cliente cadastrado, ou ligado ao cadastro que já
+  existia e completado) ficava invisível. Aqui as duas aparecem lado a
+  lado, cada uma com o seu link.
+{% endcomment %}
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Importação · pronto</span>
+    <h1>{% if resumo.cliente_novo %}Cliente cadastrado e orçamento criado{% else %}Orçamento criado{% endif %}</h1>
+    <p>
+      {% if resumo.arquivo %}<i class="bi bi-file-earmark-check" aria-hidden="true"></i> {{ resumo.arquivo }} · {% endif %}
+      o orçamento é um rascunho; nada foi enviado ao cliente.
+    </p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'importar_orcamento_word' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i> Importar outro
+    </a>
+  </div>
+</section>
+
+<div class="ls-imp-pronto" id="importacaoConcluida">
+  <section class="ls-panel ls-imp-pronto-cartao" id="prontoCliente" aria-labelledby="tituloProntoCliente">
+    <header class="ls-panel-header">
+      <div>
+        <span class="ls-imp-pronto-selo {% if resumo.cliente_novo %}novo{% else %}ligado{% endif %}">
+          {% if resumo.cliente_novo %}<i class="bi bi-person-plus-fill" aria-hidden="true"></i> Cliente novo
+          {% else %}<i class="bi bi-person-check-fill" aria-hidden="true"></i> Cliente já cadastrado{% endif %}
+        </span>
+        <h2 id="tituloProntoCliente">{{ cliente.nome_cliente|default:orcamento.nome_cliente }}</h2>
+        {% if cliente.nome_estabelecimento %}<p>{{ cliente.nome_estabelecimento }}</p>{% endif %}
+      </div>
+    </header>
+    <div class="ls-panel-body">
+      {% if not resumo.cliente_novo and resumo.completados %}
+      <p class="ls-imp-nota"><i class="bi bi-plus-circle" aria-hidden="true"></i> Completado no cadastro com o documento: {{ resumo.completados|join:", " }}.</p>
+      {% elif not resumo.cliente_novo and resumo %}
+      <p class="ls-imp-nota"><i class="bi bi-link-45deg" aria-hidden="true"></i> Ligado ao cadastro que já existia; nada nele precisou mudar.</p>
+      {% endif %}
+      {% if cliente %}
+      <dl class="ls-imp-pronto-dados">
+        {% if cliente.documento %}<div><dt>CPF/CNPJ</dt><dd>{{ cliente.documento }}</dd></div>{% endif %}
+        {% if cliente.telefone %}<div><dt>Telefone</dt><dd>{{ cliente.telefone }}{% if cliente.canal_telefone == "whatsapp" %} <span class="ls-imp-tag">WhatsApp</span>{% endif %}</dd></div>{% endif %}
+        {% if cliente.email %}<div><dt>E-mail</dt><dd>{{ cliente.email }}</dd></div>{% endif %}
+        {% with endereco=cliente.endereco_principal %}{% if endereco %}
+        <div><dt>Endereço</dt><dd>{{ endereco.endereco }}{% if endereco.numero %}, {{ endereco.numero }}{% endif %}{% if endereco.complemento %} – {{ endereco.complemento }}{% endif %}{% if endereco.bairro %} – {{ endereco.bairro }}{% endif %}{% if endereco.cidade %} – {{ endereco.cidade }}{% if endereco.estado %}/{{ endereco.estado }}{% endif %}{% endif %}{% if endereco.cep %} – CEP {{ endereco.cep }}{% endif %}</dd></div>
+        {% endif %}{% endwith %}
+      </dl>
+      <a href="{{ link_cliente }}" class="btn btn-outline-primary" id="linkCliente">
+        <i class="bi bi-person-vcard me-1" aria-hidden="true"></i> Ver o cliente
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="ls-panel ls-imp-pronto-cartao" id="prontoOrcamento" aria-labelledby="tituloProntoOrcamento">
+    <header class="ls-panel-header">
+      <div>
+        <span class="ls-imp-pronto-selo rascunho"><i class="bi bi-pencil-square" aria-hidden="true"></i> {{ orcamento.get_status_display }}</span>
+        <h2 id="tituloProntoOrcamento">Orçamento #{{ orcamento.pk }}</h2>
+        <p>Válido até {{ orcamento.validade|date:"d/m/Y" }}{% if orcamento.forma_pagamento %} · {{ orcamento.forma_pagamento }}{% endif %}</p>
+      </div>
+    </header>
+    <div class="ls-panel-body">
+      <ul class="ls-imp-pronto-itens">
+        {% for item in itens %}
+        <li><span>{{ item.quantidade }} × {{ item.descricao }}</span><strong>{{ item.subtotal|reais }}</strong></li>
+        {% endfor %}
+        {% if orcamento.frete %}<li class="extra"><span>Frete</span><strong>{{ orcamento.frete|reais }}</strong></li>{% endif %}
+        {% if orcamento.desconto %}<li class="extra"><span>Desconto</span><strong>− {{ orcamento.desconto|reais }}</strong></li>{% endif %}
+        <li class="total"><span>{% if orcamento.valor_final_fixo %}Valor final combinado{% else %}Total{% endif %}</span><strong id="prontoTotal">{{ orcamento.total|reais }}</strong></li>
+      </ul>
+      <div class="ls-imp-pronto-acoes">
+        <a href="{{ link_orcamento }}" class="btn btn-success" id="linkOrcamento">
+          <i class="bi bi-pencil me-1" aria-hidden="true"></i> Abrir o orçamento
+        </a>
+        <a href="{% url 'orcamento_previa_inner' orcamento.pk %}" class="btn btn-outline-secondary" target="_blank" rel="noopener">
+          <i class="bi bi-eye me-1" aria-hidden="true"></i> Prévia
+        </a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

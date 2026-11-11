@@ -798,7 +798,9 @@
     .ls-quadro-categorias { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin-inline: -14px; padding: 0 14px 4px; scrollbar-width: none; }
     .ls-quadro-categorias::-webkit-scrollbar { display: none; }
     .ls-quadro-categoria { flex: none; }
-    .ls-vitrine-palco { aspect-ratio: 1 / 1.18; }
+    /* mais alto no celular: a foto (quadrada, a máquina em pé) enche o
+       quadro quase sem recorte, e o painel de baixo continua inteiro */
+    .ls-vitrine-palco { aspect-ratio: 1 / 1.45; }
     .ls-vitrine-slide { border-radius: 24px; }
     .ls-vitrine-ficha { padding: 14px 16px 16px; }
     /* Uma fileira só: com 8 brinquedos as miniaturas quebravam em 6 + 2.
@@ -1116,4 +1118,68 @@
 @media (prefers-reduced-motion: reduce) {
     .ls-ponte-rotulo i,
     .ls-ponte-descer i { animation: none; }
+}
+
+/* ---- Promoções no quadro inicial (entre os brinquedos em destaque) ---- */
+.ls-vitrine-selo-promo {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff3d6e, #ff7a3d);
+    color: #fff;
+    font-size: .86rem;
+    font-weight: 900;
+    letter-spacing: .02em;
+    line-height: 1;
+    box-shadow: 0 10px 24px rgba(255, 61, 110, .4);
+}
+
+.ls-vitrine-slide--promo .ls-vitrine-categoria {
+    color: #ff7a9a;
+}
+
+.ls-vitrine-preco-de {
+    margin-right: 4px;
+    color: rgba(255, 255, 255, .55);
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.ls-vitrine-itens {
+    display: -webkit-box;
+    overflow: hidden;
+    max-width: 100%;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.ls-vitrine-mini--promo {
+    position: relative;
+}
+
+.ls-vitrine-mini--promo::before {
+    content: "%";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ff3d6e;
+    color: #fff;
+    font-size: .62rem;
+    font-weight: 900;
+}
+
+@media (max-width: 600px) {
+    .ls-vitrine-selo-promo { top: 12px; right: 12px; font-size: .78rem; }
 }

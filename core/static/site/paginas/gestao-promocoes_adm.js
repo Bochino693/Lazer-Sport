@@ -1,202 +1,509 @@
-/* Comportamento de gestao / promocoes_adm.
- *
- * NASCEU DE DENTRO DO HTML. Eram 7 KB de <script> no template --
- * peso repetido a cada abertura da página, que o navegador não tinha
- * como guardar: script dentro do HTML não tem endereço para cachear.
- *
- * O <script src> ficou na MESMA posição do bloco antigo, e sem `defer`
- * de propósito: script clássico externo executa na ordem do documento,
- * igual ao inline. Com `defer` ele passaria para depois da análise da
- * página, e qualquer trecho que dependesse dele antes disso quebraria
- * sem aviso.
+/* Promoções (painel): escolher o brinquedo em grade, dar o desconto, ligar
+ * e desligar no cartão. Ver o comentário do topo de promocoes_adm.html.
  */
+(function () {
+    'use strict';
 
-(() => {
-    const promotionModal = document.getElementById("promotionModal");
-    const deleteModal = document.getElementById("deleteModal");
-    const promotionForm = document.getElementById("promotionForm");
-    const formAction = document.getElementById("formAction");
-    const promotionId = document.getElementById("promotionId");
-    const description = document.getElementById("description");
-    const toy = document.getElementById("toy");
-    const priceDisplay = document.getElementById("priceDisplay");
-    const normalizedPrice = document.getElementById("normalizedPrice");
-    const activePromotion = document.getElementById("activePromotion");
-    const promotionImage = document.getElementById("promotionImage");
-    const imagePreview = document.getElementById("imagePreview");
-    const removeImageRow = document.getElementById("removeImageRow");
-    const removeImage = document.getElementById("removeImage");
-    const modalTitle = document.getElementById("promotionModalTitle");
-    const modalSubtitle = document.getElementById("promotionModalSubtitle");
-    const saveButton = document.getElementById("saveButton");
-    const deletePromotionId = document.getElementById("deletePromotionId");
-    const deletePromotionName = document.getElementById("deletePromotionName");
-    const deleteConfirmation = document.getElementById("deleteConfirmation");
-    const deleteButton = document.getElementById("deleteButton");
+    let brinquedos = [];
+    try {
+        brinquedos = JSON.parse(document.getElementById('pr-brinquedos')?.textContent || '[]') || [];
+    } catch (erro) {
+        brinquedos = [];
+    }
+    const porId = new Map(brinquedos.map((b) => [String(b.id), b]));
 
-    const setPageLock = () => {
-        const anyOpen = document.querySelector(".promo-modal.is-open");
-        document.body.classList.toggle("promo-modal-open", Boolean(anyOpen));
+    const csrf = document.querySelector('[data-pr-form] input[name="csrfmiddlewaretoken"]')?.value
+        || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+    /* ------------------------------------------------------------------
+       Dinheiro: digitado em reais inteiros ("18000" é dezoito mil), com a
+       vírgula opcional para os centavos. Colar "R$ 1.234,56" também vale.
+       ------------------------------------------------------------------ */
+    function numero(texto) {
+        let limpo = String(texto || '').replace(/[^\d.,]/g, '');
+        if (!limpo) return NaN;
+        const virgula = limpo.lastIndexOf(',');
+        if (virgula >= 0) {
+            limpo = limpo.slice(0, virgula).replace(/[.,]/g, '') + '.' + limpo.slice(virgula + 1).replace(/\D/g, '');
+        } else if ((limpo.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(limpo)) {
+            // "18.000" é dezoito mil, não dezoito vírgula zero
+            limpo = limpo.replace(/\./g, '');
+        }
+        const valor = Number(limpo);
+        return Number.isFinite(valor) ? valor : NaN;
+    }
+
+    function reais(valor) {
+        return 'R$ ' + Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function semMoeda(valor) {
+        return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function semAcento(texto) {
+        return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    function desconto(preco, promo) {
+        if (!(preco > 0) || !(promo > 0) || promo >= preco) return 0;
+        return Math.round((1 - promo / preco) * 100);
+    }
+
+    /* ------------------------------------------------------------------
+       Os cartões: "de R$ X" riscado e o selo do desconto, a busca na página
+       e a chave liga/desliga.
+       ------------------------------------------------------------------ */
+    const cartoes = [...document.querySelectorAll('[data-pr-oferta]')];
+    // A soma dos preços de tabela de um conjunto (NaN se algum não tem preço).
+    function somaTabela(ids) {
+        if (!ids.length) return NaN;
+        let total = 0;
+        for (const id of ids) {
+            const preco = Number(porId.get(String(id))?.preco);
+            if (!(preco > 0)) return NaN;
+            total += preco;
+        }
+        return total;
+    }
+
+    cartoes.forEach((cartao) => {
+        const ids = (cartao.dataset.brinquedos || '').split(',').filter(Boolean);
+        const tabela = somaTabela(ids);
+        const promo = Number(cartao.dataset.preco);
+        const pct = desconto(tabela, promo);
+        if (pct > 0) {
+            const de = cartao.querySelector('[data-pr-de]');
+            de.textContent = reais(tabela);
+            de.hidden = false;
+            const selo = cartao.querySelector('[data-pr-desconto]');
+            selo.textContent = `-${pct}%`;
+            selo.hidden = false;
+        }
+    });
+
+    const buscaPagina = document.querySelector('[data-pr-busca]');
+    const semResultado = document.querySelector('[data-pr-sem-resultado]');
+    buscaPagina?.addEventListener('input', () => {
+        const termo = semAcento(buscaPagina.value.trim());
+        let visiveis = 0;
+        cartoes.forEach((cartao) => {
+            const ok = !termo || semAcento(cartao.dataset.busca).includes(termo);
+            cartao.hidden = !ok;
+            if (ok) visiveis += 1;
+        });
+        if (semResultado) semResultado.hidden = !(cartoes.length && termo && !visiveis);
+    });
+
+    document.querySelectorAll('[data-pr-alternar]').forEach((chave) => {
+        chave.addEventListener('change', async () => {
+            const cartao = chave.closest('[data-pr-oferta]');
+            const rotulo = chave.closest('.pr-chave');
+            const texto = cartao.querySelector('[data-pr-chave-texto]');
+            const queria = chave.checked;
+            rotulo.classList.add('is-ocupada');
+            try {
+                const dados = new FormData();
+                dados.append('csrfmiddlewaretoken', csrf);
+                dados.append('acao', 'alternar');
+                dados.append('promocao_id', cartao.dataset.id);
+                const resposta = await fetch(window.location.pathname, {
+                    method: 'POST',
+                    body: dados,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                const json = resposta.ok ? await resposta.json() : null;
+                if (!json || !json.ok) throw new Error('falhou');
+                chave.checked = Boolean(json.ativo);
+                cartao.dataset.ativo = json.ativo ? '1' : '0';
+                cartao.classList.toggle('is-off', !json.ativo);
+                texto.textContent = json.ativo ? 'No site' : 'Desligada';
+                const divulgar = cartao.querySelector('[data-campanha-tipo]');
+                if (divulgar) {
+                    divulgar.disabled = !json.ativo;
+                    divulgar.title = json.ativo ? '' : 'Ligue a promoção para divulgar';
+                }
+            } catch (erro) {
+                chave.checked = !queria;
+                window.alert('Não deu para mudar agora. Confira a conexão e tente de novo.');
+            } finally {
+                rotulo.classList.remove('is-ocupada');
+            }
+        });
+    });
+
+    /* ------------------------------------------------------------------
+       O editor
+       ------------------------------------------------------------------ */
+    const editor = document.getElementById('prEditor');
+    const form = editor?.querySelector('[data-pr-form]');
+    if (!editor || !form) return;
+
+    const $ = (seletor) => form.querySelector(seletor);
+    const campo = {
+        acao: $('[data-pr-acao]'),
+        id: $('[data-pr-id]'),
+        enviados: $('[data-pr-brinquedos-enviados]'),
+        precoEnviado: $('[data-pr-preco-enviado]'),
+        preco: $('[data-pr-preco]'),
+        titulo: $('[data-pr-titulo]'),
+        imagem: $('[data-pr-imagem]'),
+        remover: $('[data-pr-remover]'),
+        ativo: $('[data-pr-ativo]'),
+    };
+    const tituloJanela = $('[data-pr-titulo-janela]');
+    const listaEscolhidos = $('[data-pr-escolhidos]');
+    const grade = $('[data-pr-brinquedos]');
+    const buscaCatalogo = $('[data-pr-cat-busca]');
+    const vazio = $('[data-pr-cat-vazio]');
+    const ajuda = $('[data-pr-preco-ajuda]');
+    const erro = $('[data-pr-erro]');
+    const salvar = $('[data-pr-salvar]');
+    const sugestoes = $('[data-pr-sugestoes]');
+    const imagemPrevia = $('[data-pr-imagem-previa]');
+    const imagemTexto = $('[data-pr-imagem-texto]');
+    const removerLinha = $('[data-pr-remover-linha]');
+    const previa = {
+        foto: $('[data-pr-previa-foto]'),
+        selo: $('[data-pr-previa-selo]'),
+        titulo: $('[data-pr-previa-titulo]'),
+        de: $('[data-pr-previa-de]'),
+        por: $('[data-pr-previa-por]'),
     };
 
-    const openModal = modal => {
-        modal.classList.add("is-open");
-        modal.setAttribute("aria-hidden", "false");
-        setPageLock();
-    };
+    let escolhidos = [];         // ids, na ordem escolhida: o primeiro é o principal
+    let imagemAtual = '';        // a arte que a promoção já tem (ao editar)
+    let tituloAutomatico = '';   // o título que a tela sugeriu (troca junto com o brinquedo)
+    let urlTemporaria = '';
 
-    const closeModal = modal => {
-        modal.classList.remove("is-open");
-        modal.setAttribute("aria-hidden", "true");
-        setPageLock();
-    };
+    // A grade dos brinquedos é montada uma vez; a busca e a categoria só
+    // escondem e mostram.
+    const tiles = brinquedos.map((b) => {
+        const tile = document.createElement('label');
+        tile.className = 'pr-tile';
+        tile.dataset.busca = semAcento(b.nome);
+        tile.dataset.categorias = JSON.stringify(b.categorias || []);
+        const foto = b.foto
+            ? `<img src="${b.foto}" alt="" loading="lazy" decoding="async">`
+            : '<span class="pr-tile-sem-foto"><i class="bi bi-image"></i></span>';
+        const nome = document.createElement('span');
+        nome.textContent = b.nome;
+        tile.innerHTML = `
+            <input type="checkbox" value="${b.id}">
+            ${foto}
+            ${b.em_promocao ? '<span class="pr-tile-marca">Já em promoção</span>' : ''}
+            <span class="pr-tile-texto">
+                <strong>${nome.innerHTML}</strong>
+                <span>${b.preco ? reais(Number(b.preco)) : 'Sem preço de tabela'}</span>
+            </span>`;
+        tile.querySelector('input').addEventListener('change', (e) => alternar(String(b.id), e.target.checked));
+        grade.appendChild(tile);
+        return tile;
+    });
 
-    const setPreview = imageUrl => {
-        imagePreview.replaceChildren();
-        if (imageUrl) {
-            const image = document.createElement("img");
-            image.src = imageUrl;
-            image.alt = "Prévia da promoção";
-            imagePreview.appendChild(image);
+    function filtrarCatalogo() {
+        const termo = semAcento(buscaCatalogo.value.trim());
+        const categoria = form.querySelector('input[name="pr_categoria"]:checked')?.value || '';
+        let visiveis = 0;
+        tiles.forEach((tile) => {
+            const ok = (!termo || tile.dataset.busca.includes(termo))
+                && (!categoria || JSON.parse(tile.dataset.categorias).includes(categoria));
+            tile.hidden = !ok;
+            if (ok) visiveis += 1;
+        });
+        vazio.hidden = visiveis > 0;
+    }
+
+    buscaCatalogo.addEventListener('input', filtrarCatalogo);
+    form.querySelectorAll('input[name="pr_categoria"]').forEach((r) => r.addEventListener('change', filtrarCatalogo));
+    // Enter na busca do catálogo não manda o formulário
+    buscaCatalogo.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const primeiro = tiles.find((t) => !t.hidden && !t.querySelector('input').checked);
+        primeiro?.querySelector('input').click();
+    });
+
+    function principal() {
+        return porId.get(escolhidos[0]) || null;
+    }
+
+    function tituloSugerido() {
+        const nomes = escolhidos.map((id) => porId.get(id)?.nome).filter(Boolean);
+        if (!nomes.length) return '';
+        if (nomes.length === 1) return `${nomes[0]} em oferta`;
+        if (nomes.length === 2) return `${nomes[0]} + ${nomes[1]} em oferta`;
+        return `${nomes[0]} e mais ${nomes.length - 1} em oferta`;
+    }
+
+    // A lista dos escolhidos, em cima da grade: o principal com a marca, e
+    // cada um com o x para tirar. Tocar no nome de um faz dele o principal.
+    function desenharEscolhidos() {
+        listaEscolhidos.innerHTML = '';
+        campo.enviados.innerHTML = '';
+        escolhidos.forEach((id, posicao) => {
+            const b = porId.get(id);
+            if (!b) return;
+            const enviado = document.createElement('input');
+            enviado.type = 'hidden';
+            enviado.name = 'brinquedos';
+            enviado.value = id;
+            campo.enviados.appendChild(enviado);
+
+            const item = document.createElement('li');
+            item.classList.toggle('is-principal', posicao === 0);
+            const foto = b.foto ? document.createElement('img') : document.createElement('span');
+            if (b.foto) { foto.src = b.foto; foto.alt = ''; } else { foto.className = 'pr-mini-sem-foto'; }
+            const nome = document.createElement('span');
+            nome.className = 'pr-escolhido-nome';
+            nome.textContent = b.nome;
+            nome.title = posicao === 0 ? 'Principal' : 'Tocar para fazer deste o principal';
+            nome.style.cursor = posicao === 0 ? 'default' : 'pointer';
+            nome.addEventListener('click', () => {
+                if (posicao === 0) return;
+                escolhidos = [id, ...escolhidos.filter((x) => x !== id)];
+                depoisDeMudar();
+            });
+            item.append(foto, nome);
+            if (posicao === 0 && escolhidos.length > 1) {
+                const marca = document.createElement('span');
+                marca.className = 'pr-escolhido-marca';
+                marca.textContent = 'Principal';
+                item.appendChild(marca);
+            }
+            const tirar = document.createElement('button');
+            tirar.type = 'button';
+            tirar.setAttribute('aria-label', `Tirar ${b.nome}`);
+            tirar.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+            tirar.addEventListener('click', () => alternar(id, false));
+            item.appendChild(tirar);
+            listaEscolhidos.appendChild(item);
+        });
+        grade.querySelectorAll('input').forEach((caixa) => {
+            caixa.checked = escolhidos.includes(caixa.value);
+        });
+    }
+
+    function depoisDeMudar() {
+        const sugerido = tituloSugerido();
+        if (!campo.titulo.value.trim() || campo.titulo.value === tituloAutomatico) {
+            campo.titulo.value = sugerido;
+            tituloAutomatico = sugerido;
+        }
+        desenharEscolhidos();
+        montarSugestoes();
+        atualizar();
+    }
+
+    function alternar(id, marcar) {
+        escolhidos = escolhidos.filter((x) => x !== id);
+        if (marcar && porId.has(id)) escolhidos.push(id);
+        depoisDeMudar();
+    }
+
+    function montarSugestoes() {
+        sugestoes.innerHTML = '';
+        const b = principal();
+        if (!b) return;
+        const varios = escolhidos.length > 1;
+        const nomes = varios
+            ? [tituloSugerido(), `Pacote promocional: ${escolhidos.length} brinquedos`, `Leve ${escolhidos.length} com desconto`, `Oferta especial: ${b.nome} e mais`]
+            : [`${b.nome} em oferta`, `Oferta especial: ${b.nome}`, `${b.nome} com desconto`, `Queima de estoque: ${b.nome}`];
+        nomes.forEach((nome) => {
+            if (!nome || nome.length > 120) return;
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.textContent = nome;
+            botao.addEventListener('click', () => {
+                campo.titulo.value = nome;
+                tituloAutomatico = nome;
+                atualizar();
+            });
+            sugestoes.appendChild(botao);
+        });
+    }
+
+    // Preço: só número e vírgula na digitação; formatado ao sair do campo.
+    campo.preco.addEventListener('input', () => {
+        const limpo = campo.preco.value.replace(/[^\d.,]/g, '');
+        if (limpo !== campo.preco.value) campo.preco.value = limpo;
+        atualizar();
+    });
+    campo.preco.addEventListener('blur', () => {
+        const valor = numero(campo.preco.value);
+        if (valor > 0) campo.preco.value = semMoeda(valor);
+        atualizar();
+    });
+
+    form.querySelectorAll('[data-pr-pct]').forEach((botao) => {
+        botao.addEventListener('click', () => {
+            const tabela = somaTabela(escolhidos);
+            if (!(tabela > 0)) return;
+            const valor = Math.round(tabela * (1 - Number(botao.dataset.prPct) / 100));
+            campo.preco.value = semMoeda(valor);
+            atualizar();
+        });
+    });
+
+    campo.titulo.addEventListener('input', atualizar);
+    campo.remover.addEventListener('change', atualizarImagem);
+    campo.imagem.addEventListener('change', () => {
+        if (urlTemporaria) URL.revokeObjectURL(urlTemporaria);
+        const arquivo = campo.imagem.files?.[0];
+        urlTemporaria = arquivo ? URL.createObjectURL(arquivo) : '';
+        if (arquivo) campo.remover.checked = false;
+        atualizarImagem();
+    });
+
+    function fotoDaOferta() {
+        if (urlTemporaria) return urlTemporaria;
+        if (imagemAtual && !campo.remover.checked) return imagemAtual;
+        return principal()?.foto || '';
+    }
+
+    function atualizarImagem() {
+        const propria = urlTemporaria || (imagemAtual && !campo.remover.checked);
+        const foto = fotoDaOferta();
+        imagemPrevia.src = foto || '';
+        imagemPrevia.hidden = !foto;
+        imagemTexto.querySelector('span').innerHTML = propria
+            ? 'Arte da promoção. <b>Toque para trocar.</b>'
+            : 'Sem arte própria, vai a foto do brinquedo. <b>Toque para enviar uma arte</b> (PNG, JPG ou WEBP).';
+        removerLinha.hidden = !imagemAtual;
+        previa.foto.src = foto || '';
+        previa.foto.hidden = !foto;
+    }
+
+    function atualizar() {
+        const b = principal();
+        const varios = escolhidos.length > 1;
+        const tabela = somaTabela(escolhidos);
+        const promo = numero(campo.preco.value);
+        const pct = desconto(tabela, promo);
+        const deTabela = varios ? 'a soma dos preços de tabela' : 'o preço de tabela';
+
+        form.querySelectorAll('[data-pr-pct]').forEach((botao) => { botao.disabled = !(tabela > 0); });
+
+        previa.titulo.textContent = campo.titulo.value.trim() || 'Título da promoção';
+        previa.por.textContent = promo > 0 ? reais(promo) : 'R$ 0,00';
+        previa.de.hidden = !(pct > 0);
+        previa.de.textContent = pct > 0 ? reais(tabela) : '';
+        previa.selo.hidden = !(pct > 0);
+        previa.selo.textContent = pct > 0 ? `-${pct}%` : '';
+
+        let problema = '';
+        ajuda.classList.remove('is-bom', 'is-ruim');
+        if (!b) {
+            ajuda.textContent = 'Escolha os brinquedos para ver o preço de tabela.';
+        } else if (!(tabela > 0)) {
+            ajuda.textContent = varios
+                ? 'Algum brinquedo escolhido não tem preço de tabela no cadastro: confira o valor da oferta.'
+                : 'Este brinquedo não tem preço de tabela no cadastro: confira o valor da oferta.';
+        } else if (!(promo > 0)) {
+            ajuda.textContent = varios
+                ? `Os ${escolhidos.length} juntos somam ${reais(tabela)}. Digite o valor da oferta para o conjunto ou use um atalho.`
+                : `Preço de tabela: ${reais(tabela)}. Digite o valor da oferta ou use um atalho.`;
+        } else if (promo >= tabela) {
+            ajuda.textContent = `A oferta precisa ser menor que ${deTabela} (${reais(tabela)}).`;
+            ajuda.classList.add('is-ruim');
+            problema = `O preço da oferta não está abaixo d${varios ? 'a soma dos preços' : 'o preço'} de tabela.`;
         } else {
-            const placeholder = document.createElement("span");
-            placeholder.textContent = "🖼️";
-            imagePreview.appendChild(placeholder);
+            ajuda.textContent = `De ${reais(tabela)} por ${reais(promo)}${varios ? ' (o conjunto)' : ''}: ${pct}% de desconto (economia de ${reais(tabela - promo)}).`;
+            ajuda.classList.add('is-bom');
         }
-    };
+        erro.textContent = '';
+        salvar.disabled = Boolean(problema);
+        atualizarImagem();
+        return problema;
+    }
 
-    const formatCurrency = rawValue => {
-        const digits = String(rawValue || "").replace(/\D/g, "");
-        const cents = Number(digits || "0") / 100;
-        return cents.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-        });
-    };
+    function abrir(cartao) {
+        form.reset();
+        if (urlTemporaria) URL.revokeObjectURL(urlTemporaria);
+        urlTemporaria = '';
+        buscaCatalogo.value = '';
+        form.querySelector('input[name="pr_categoria"][value=""]').checked = true;
+        escolhidos = [];
+        filtrarCatalogo();
+        tituloAutomatico = '';
+        erro.textContent = '';
 
-    const decimalToCurrency = value => {
-        const normalized = String(value || "0").replace(",", ".");
-        const number = Number.parseFloat(normalized);
-        return Number.isFinite(number)
-            ? number.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL"
-            })
-            : "R$ 0,00";
-    };
-
-    const currencyToDecimal = value => {
-        const clean = String(value || "")
-            .replace(/\s/g, "")
-            .replace("R$", "")
-            .replace(/\./g, "")
-            .replace(",", ".");
-        return clean;
-    };
-
-    const resetForm = () => {
-        promotionForm.reset();
-        formAction.value = "criar";
-        promotionId.value = "";
-        activePromotion.checked = true;
-        removeImage.checked = false;
-        removeImageRow.hidden = true;
-        priceDisplay.value = "";
-        normalizedPrice.value = "";
-        setPreview("");
-    };
-
-    document.querySelector("[data-open-create]").addEventListener("click", () => {
-        resetForm();
-        modalTitle.textContent = "Nova promoção";
-        modalSubtitle.textContent = "Preencha os dados para publicar uma nova oferta.";
-        saveButton.textContent = "Criar promoção";
-        openModal(promotionModal);
-        window.setTimeout(() => description.focus(), 120);
-    });
-
-    document.querySelectorAll("[data-open-edit]").forEach(button => {
-        button.addEventListener("click", () => {
-            const card = button.closest(".promo-card");
-            resetForm();
-
-            formAction.value = "editar";
-            promotionId.value = card.dataset.promoId;
-            description.value = card.dataset.description;
-            toy.value = card.dataset.toyId;
-            priceDisplay.value = decimalToCurrency(card.dataset.price);
-            activePromotion.checked = card.dataset.active === "true";
-            removeImageRow.hidden = !card.dataset.image;
-            setPreview(card.dataset.image);
-
-            modalTitle.textContent = "Editar promoção";
-            modalSubtitle.textContent = "Atualize os dados e salve suas alterações.";
-            saveButton.textContent = "Salvar alterações";
-            openModal(promotionModal);
-            window.setTimeout(() => description.focus(), 120);
-        });
-    });
-
-    document.querySelectorAll("[data-open-delete]").forEach(button => {
-        button.addEventListener("click", () => {
-            const card = button.closest(".promo-card");
-            deletePromotionId.value = card.dataset.promoId;
-            deletePromotionName.textContent = card.dataset.description;
-            deleteConfirmation.value = "";
-            deleteButton.disabled = true;
-            openModal(deleteModal);
-            window.setTimeout(() => deleteConfirmation.focus(), 120);
-        });
-    });
-
-    document.querySelectorAll("[data-close-modal]").forEach(button => {
-        button.addEventListener("click", () => closeModal(promotionModal));
-    });
-
-    document.querySelectorAll("[data-close-delete]").forEach(button => {
-        button.addEventListener("click", () => closeModal(deleteModal));
-    });
-
-    priceDisplay.addEventListener("input", event => {
-        event.target.value = formatCurrency(event.target.value);
-    });
-
-    promotionImage.addEventListener("change", event => {
-        const [file] = event.target.files;
-        if (!file) return;
-        setPreview(URL.createObjectURL(file));
-        removeImage.checked = false;
-    });
-
-    removeImage.addEventListener("change", () => {
-        if (removeImage.checked) {
-            promotionImage.value = "";
-            setPreview("");
+        if (cartao) {
+            campo.acao.value = 'editar';
+            campo.id.value = cartao.dataset.id;
+            tituloJanela.textContent = 'Editar promoção';
+            campo.titulo.value = cartao.dataset.descricao || '';
+            const preco = Number(cartao.dataset.preco);
+            campo.preco.value = preco > 0 ? semMoeda(preco) : '';
+            campo.ativo.checked = cartao.dataset.ativo === '1';
+            imagemAtual = cartao.dataset.imagem || '';
+            escolhidos = (cartao.dataset.brinquedos || '').split(',').filter((id) => porId.has(id));
+            tituloAutomatico = '';
+            desenharEscolhidos();
+            montarSugestoes();
+            atualizar();
+        } else {
+            campo.acao.value = 'criar';
+            campo.id.value = '';
+            tituloJanela.textContent = 'Nova promoção';
+            campo.ativo.checked = true;
+            imagemAtual = '';
+            desenharEscolhidos();
+            sugestoes.innerHTML = '';
+            atualizar();
         }
+        editor.showModal();
+        if (!cartao) buscaCatalogo.focus();
+    }
+
+    function fechar(dialogo) {
+        dialogo.close();
+    }
+
+    document.querySelectorAll('[data-pr-nova]').forEach((b) => b.addEventListener('click', () => abrir(null)));
+    document.querySelectorAll('[data-pr-editar]').forEach((b) => {
+        b.addEventListener('click', () => abrir(b.closest('[data-pr-oferta]')));
     });
 
-    promotionForm.addEventListener("submit", event => {
-        const decimal = currencyToDecimal(priceDisplay.value);
-        if (!decimal || Number(decimal) < 0) {
-            event.preventDefault();
-            priceDisplay.focus();
+    form.addEventListener('submit', (e) => {
+        const problema = atualizar();
+        const b = principal();
+        const promo = numero(campo.preco.value);
+        let mensagem = problema;
+        if (!b) mensagem = 'Escolha pelo menos um brinquedo para a promoção.';
+        else if (!(promo > 0)) mensagem = 'Digite o preço da oferta.';
+        else if (!campo.titulo.value.trim()) mensagem = 'Dê um título para a promoção.';
+        if (mensagem) {
+            e.preventDefault();
+            erro.textContent = mensagem;
+            if (!b) buscaCatalogo.focus();
             return;
         }
-        normalizedPrice.value = decimal;
-        saveButton.disabled = true;
-        saveButton.textContent = "Salvando...";
+        campo.precoEnviado.value = promo.toFixed(2);
+        salvar.disabled = true;
+        salvar.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
     });
 
-    deleteConfirmation.addEventListener("input", event => {
-        deleteButton.disabled = event.target.value.trim().toUpperCase() !== "EXCLUIR";
+    /* ------------------------------------------------------------------
+       Excluir
+       ------------------------------------------------------------------ */
+    const janelaExcluir = document.getElementById('prExcluir');
+    document.querySelectorAll('[data-pr-excluir]').forEach((botao) => {
+        botao.addEventListener('click', () => {
+            const cartao = botao.closest('[data-pr-oferta]');
+            janelaExcluir.querySelector('[data-pr-excluir-id]').value = cartao.dataset.id;
+            janelaExcluir.querySelector('[data-pr-excluir-nome]').textContent = cartao.dataset.descricao;
+            janelaExcluir.showModal();
+        });
     });
 
-    document.addEventListener("keydown", event => {
-        if (event.key !== "Escape") return;
-        if (deleteModal.classList.contains("is-open")) {
-            closeModal(deleteModal);
-        } else if (promotionModal.classList.contains("is-open")) {
-            closeModal(promotionModal);
-        }
+    [editor, janelaExcluir].forEach((dialogo) => {
+        if (!dialogo) return;
+        dialogo.querySelectorAll('[data-pr-fechar]').forEach((b) => b.addEventListener('click', () => fechar(dialogo)));
+        // clicar fora da janela fecha
+        dialogo.addEventListener('click', (e) => {
+            if (e.target === dialogo) fechar(dialogo);
+        });
     });
 })();

@@ -188,14 +188,18 @@ class FotosDoCatalogoTests(TestCase):
         with Image.open(MODELOS / "strike-kids" / "foto.webp") as foto:
             self.assertEqual(foto.mode, "RGBA")
 
-    def test_o_card_nunca_corta_o_brinquedo(self):
+    def test_o_card_enche_a_caixa_bem_enquadrado(self):
+        """Sem faixas desfocadas dos lados: a foto de outro formato vira o
+        recorte no formato da caixa, feito pelo conteúdo (Cloudinary g_auto)."""
         js = (RAIZ / "core" / "static" / "site" / "ls-fotos.js").read_text(encoding="utf-8")
         css = (RAIZ / "core" / "static" / "site" / "ls-tema.css").read_text(encoding="utf-8")
-        self.assertIn("foto-encaixada", js)
         self.assertIn("outroFormato", js)
-        bloco = css[css.index(".foto-cheia.foto-encaixada img {"):]
-        self.assertIn("object-fit: contain", bloco[:bloco.index("}")])
-        self.assertIn("var(--foto-fundo", css[css.index(".foto-cheia.foto-encaixada::before"):])
+        self.assertIn("foto-enquadrada", js)
+        self.assertIn("c_fill,g_auto,ar_", js)
+        self.assertNotIn("foto-encaixada", js + css)
+        self.assertNotIn("--foto-fundo", js + css)
+        bloco = css[css.index(".foto-cheia.foto-enquadrada img {"):]
+        self.assertIn("object-fit: cover", bloco[:bloco.index("}")])
 
 
 @override_settings(IS_RENDER=False)

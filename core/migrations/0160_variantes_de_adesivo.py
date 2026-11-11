@@ -2,7 +2,7 @@
 
 O produto passa a ter adesivos (a mesma máquina com outra arte), cada um com
 as fotos e o 3D de uma ficha do cadastro. Só o esquema: o Air Game Kids e o
-Air Game Kids Alienígenas viram um produto só na 0160, num arquivo à parte
+Air Game Kids Alienígenas viram um produto só na 0161, num arquivo à parte
 (esquema e dados não andam juntos: sistema_interno/tests_migracoes.py).
 """
 
@@ -13,7 +13,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0158_fotos_no_showroom"),
+        ("core", "0159_promocoes_brinquedos_extras"),
     ]
 
     operations = [

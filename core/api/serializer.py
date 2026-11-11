@@ -271,10 +271,15 @@ class PromocaoSerializer(serializers.ModelSerializer):
     preco = serializers.SerializerMethodField()
     imagem = serializers.SerializerMethodField()
     brinquedo_id = serializers.IntegerField(source="brinquedos_id", read_only=True)
+    # todos os brinquedos da promoção (o principal primeiro)
+    brinquedo_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Promocoes
-        fields = ["id", "descricao", "imagem", "preco", "brinquedo_id"]
+        fields = ["id", "descricao", "imagem", "preco", "brinquedo_id", "brinquedo_ids"]
+
+    def get_brinquedo_ids(self, obj):
+        return [b.pk for b in obj.todos_brinquedos]
 
     def get_preco(self, obj):
         return _texto(obj.preco_promocao)

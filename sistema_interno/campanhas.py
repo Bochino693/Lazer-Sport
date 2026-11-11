@@ -73,11 +73,19 @@ def conteudo_do_objeto(tipo, objeto_id, *, perfil_cupom=None):
         if not objeto.ativo:
             raise ErroCampanha("Ative a promoção antes de divulgá-la.")
         titulo = objeto.descricao
-        mensagem = (
-            f"Oferta especial da Lazer & Sport: {objeto.descricao}. "
-            f"{objeto.brinquedos.nome_brinquedo} por R$ "
-            f"{_moeda(objeto.preco_promocao)}."
-        )
+        nomes = [b.nome_brinquedo for b in objeto.todos_brinquedos]
+        if len(nomes) > 1:
+            lista = ", ".join(nomes[:-1]) + f" e {nomes[-1]}"
+            mensagem = (
+                f"Oferta especial da Lazer & Sport: {objeto.descricao}. "
+                f"{lista}: os {len(nomes)} por R$ {_moeda(objeto.preco_promocao)}."
+            )
+        else:
+            mensagem = (
+                f"Oferta especial da Lazer & Sport: {objeto.descricao}. "
+                f"{objeto.brinquedos.nome_brinquedo} por R$ "
+                f"{_moeda(objeto.preco_promocao)}."
+            )
         imagem = _url_imagem(objeto.imagem_promocao or objeto.brinquedos.imagem_brinquedo)
         destino = _site_url(reverse(
             "promocao", args=[objeto.pk], urlconf=settings.ROOT_URLCONF,

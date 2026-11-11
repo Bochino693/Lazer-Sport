@@ -11,8 +11,8 @@
   {% elif campo.confianca == "media" %}<span class="ls-imp-selo media" title="Só uma leitura achou, e o valor está na fonte citada">Confiança média</span>
   {% elif campo.confianca == "baixa" %}<span class="ls-imp-selo baixa" title="As leituras discordam ou o valor não deu para usar">Confira</span>
   {% else %}<span class="ls-imp-selo vazio" title="O documento não traz este dado">Sem fonte no documento</span>{% endif %}
-  {% if campo.origem == "ambas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf" %}transcrição e IA concordam{% else %}tabelas e IA concordam{% endif %}</span>
-  {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf" %}releitura da transcrição{% else %}leitura das tabelas{% endif %}</span>
+  {% if campo.origem == "ambas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf_ia" %}transcrição e IA concordam{% else %}regras e IA concordam{% endif %}</span>
+  {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf_ia" %}releitura da transcrição{% elif proposta.formato == "pdf" %}lido no texto do PDF{% else %}lido no documento{% endif %}</span>
   {% elif campo.origem == "ia" %}<span class="ls-imp-tag">IA, conferida na fonte</span>
   {% elif campo.origem == "divergente" %}<span class="ls-imp-tag vermelho">leituras diferentes</span>{% endif %}
   {% if campo.fonte %}
@@ -34,7 +34,7 @@
   {% for opcao in campo.opcoes %}
   <button type="button" class="ls-chip" data-preencher="{{ alvo }}" data-valor="{{ opcao.valor }}">
     {{ opcao.rotulo }}
-    <small>{% if opcao.origem == "ia" %}IA{% else %}tabelas{% endif %}{% if opcao.fonte %} · {{ opcao.fonte.id }}{% endif %}</small>
+    <small>{% if opcao.origem == "ia" %}IA{% else %}documento{% endif %}{% if opcao.fonte %} · {{ opcao.fonte.id }}{% endif %}</small>
   </button>
   {% endfor %}
 </div>

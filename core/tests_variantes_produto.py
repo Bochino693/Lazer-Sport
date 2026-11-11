@@ -7,8 +7,8 @@ objeto também canalizando os dois objetos 3d". O que estes testes protegem:
   * o modelo (core.models.VarianteAdesivo) e o `juntar`/`separar` de
     core/variantes.py: a ficha que vira adesivo fica desativada (nada é
     apagado) e rodar de novo não duplica;
-  * as migrações: a 0159 só com o esquema e a 0160 só com os dados (o
-    Postgres não aceita os dois juntos); a 0160 junta os dois pares (o
+  * as migrações: a 0160 só com o esquema e a 0161 só com os dados (o
+    Postgres não aceita os dois juntos); a 0161 junta os dois pares (o
     Basquete Street Quadrinhos antes vira o Basquete Home Quadrinhos) e deixa
     o Basquete Street sozinho;
   * o endereço antigo da ficha vai, permanente, para o produto com ?adesivo=;
@@ -44,8 +44,8 @@ from .models import (
 from .services import criar_pedido_a_partir_do_carrinho
 from .views_arena import dados_publicos_da_arena
 
-migracao_0159 = importlib.import_module("core.migrations.0159_variantes_de_adesivo")
-migracao_0160 = importlib.import_module("core.migrations.0160_juntar_variantes_de_adesivo")
+migracao_0160 = importlib.import_module("core.migrations.0160_variantes_de_adesivo")
+migracao_0161 = importlib.import_module("core.migrations.0161_juntar_variantes_de_adesivo")
 
 PAR = ("Air Game Kids", ("Astronautas", "astronautas"), [("Air Game Kids Alienígenas", "Alienígenas", "alienigenas")])
 
@@ -126,13 +126,13 @@ class ModeloTests(_ComPar):
 
 class MigracaoTests(TestCase):
     def test_esquema_e_dados_em_arquivos_separados(self):
-        esquema = migracao_0159.Migration.operations
-        dados = migracao_0160.Migration.operations
+        esquema = migracao_0160.Migration.operations
+        dados = migracao_0161.Migration.operations
         self.assertTrue(esquema and all(isinstance(op, (AddField, CreateModel)) for op in esquema))
         self.assertTrue(dados and all(isinstance(op, RunPython) for op in dados))
-        self.assertIn(("core", "0159_variantes_de_adesivo"), migracao_0160.Migration.dependencies)
+        self.assertIn(("core", "0160_variantes_de_adesivo"), migracao_0161.Migration.dependencies)
 
-    def test_a_0160_junta_os_dois_pares_e_o_street_fica_sozinho(self):
+    def test_a_0161_junta_os_dois_pares_e_o_street_fica_sozinho(self):
         cache.clear()
         base_air = _produto("AIR GAME KIDS", "astronautas")
         ficha_air = _produto("Air Game Kids Alienígenas", "alienigenas")

@@ -4,350 +4,259 @@
 {% block title %}Promoções{% endblock %}
 
 {% block content %}
-  <link rel="stylesheet" href="{% estatico 'site/paginas/gestao-promocoes_adm.css' %}">
+{% comment %}
+  PROMOÇÕES, COMO UM APP.
 
-<main class="promo-page">
-    {% if messages %}
-        <div class="promo-toast-stack" aria-live="polite">
-            {% for message in messages %}
-                <div class="promo-toast {{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-    {% endif %}
+  Era um formulário com um <select> de dezenas de brinquedos em ordem
+  alfabética: achar o brinquedo pedia rolar a lista inteira, sem foto e sem
+  preço, e o desconto era conta de cabeça. Agora:
+    * o brinquedo se escolhe numa grade com foto, nome e preço, com busca e
+      filtro por categoria;
+    * o preço tem atalhos (-5%, -10%...) a partir do preço de tabela, e a
+      tela mostra "de R$ X por R$ Y" e o desconto enquanto se digita;
+    * cada promoção liga e desliga no próprio cartão;
+    * excluir pede só a confirmação, sem digitar nada.
+  Os campos enviados são os mesmos de antes (descricao, brinquedos,
+  preco_promocao, ativo, imagem_promocao), e a view continua a mesma.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/gestao-promocoes_adm.css' %}">
 
-    <section class="promo-hero">
+<main class="pr-tela">
+    {# Os avisos ("Promoção criada...") saem no topo do painel (base_adm). #}
+    <header class="pr-topo">
         <div>
-            <span class="promo-eyebrow">◆ Gestão comercial</span>
+            <span class="pr-olho"><i class="bi bi-tags-fill" aria-hidden="true"></i> Gestão comercial</span>
             <h1>Promoções</h1>
-            <p>
-                Crie ofertas, ajuste valores e controle o que aparece para seus
-                clientes em uma única tela.
-            </p>
+            <p>Escolha o brinquedo, dê o desconto e publique — tudo nesta tela.</p>
         </div>
-        <button class="promo-primary-btn" type="button" data-open-create>
-            <span>＋</span> Nova promoção
+        <button class="pr-nova promo-primary-btn" type="button" data-pr-nova>
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova promoção
         </button>
-    </section>
+    </header>
 
-    <section class="promo-kpis" aria-label="Resumo das promoções">
-        <article class="promo-kpi">
-            <span class="promo-kpi-icon">🏷️</span>
-            <div>
-                <strong>{{ total_promocoes }}</strong>
-                <span>Total cadastradas</span>
-            </div>
-        </article>
-        <article class="promo-kpi">
-            <span class="promo-kpi-icon">⚡</span>
-            <div>
-                <strong>{{ total_ativas }}</strong>
-                <span>Ativas no site</span>
-            </div>
-        </article>
-        <article class="promo-kpi">
-            <span class="promo-kpi-icon">◷</span>
-            <div>
-                <strong>{{ total_inativas }}</strong>
-                <span>Inativas</span>
-            </div>
-        </article>
-    </section>
-
-    <form class="promo-toolbar" method="get">
-        <div class="promo-search">
-            <span>⌕</span>
-            <input
-                type="search"
-                name="q"
-                value="{{ busca }}"
-                placeholder="Buscar por promoção ou brinquedo..."
-                aria-label="Buscar promoções"
-            >
-        </div>
-        <select name="status" aria-label="Filtrar por status">
-            <option value="todos" {% if status_atual == "todos" %}selected{% endif %}>
-                Todos os status
-            </option>
-            <option value="ativas" {% if status_atual == "ativas" %}selected{% endif %}>
-                Somente ativas
-            </option>
-            <option value="inativas" {% if status_atual == "inativas" %}selected{% endif %}>
-                Somente inativas
-            </option>
-        </select>
-        <button class="promo-secondary-btn" type="submit">Filtrar</button>
-        {% if busca or status_atual != "todos" %}
-            <a class="promo-secondary-btn" href="{% url 'promocoes_admin' %}">
-                Limpar
+    <div class="pr-barra">
+        <nav class="pr-filtros" aria-label="Mostrar promoções">
+            <a class="pr-filtro {% if status_atual == 'todos' %}is-on{% endif %}"
+               href="?status=todos{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+               {% if status_atual == 'todos' %}aria-current="page"{% endif %}>
+                Todas <b>{{ total_promocoes }}</b>
             </a>
-        {% endif %}
-    </form>
+            <a class="pr-filtro {% if status_atual == 'ativas' %}is-on{% endif %}"
+               href="?status=ativas{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+               {% if status_atual == 'ativas' %}aria-current="page"{% endif %}>
+                <i class="bi bi-circle-fill pr-ponto-on" aria-hidden="true"></i> No site <b>{{ total_ativas }}</b>
+            </a>
+            <a class="pr-filtro {% if status_atual == 'inativas' %}is-on{% endif %}"
+               href="?status=inativas{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+               {% if status_atual == 'inativas' %}aria-current="page"{% endif %}>
+                <i class="bi bi-circle pr-ponto-off" aria-hidden="true"></i> Desligadas <b>{{ total_inativas }}</b>
+            </a>
+        </nav>
 
-    <section class="promo-grid">
+        <form class="pr-busca" method="get" role="search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" name="q" value="{{ busca }}" autocomplete="off"
+                   placeholder="Buscar promoção ou brinquedo" aria-label="Buscar promoções" data-pr-busca>
+            <input type="hidden" name="status" value="{{ status_atual }}">
+        </form>
+    </div>
+
+    <section class="pr-grade" data-pr-lista aria-label="Promoções">
         {% for promo in promocoes %}
             <article
-                class="promo-card"
-                data-promo-id="{{ promo.id }}"
-                data-description="{{ promo.descricao|escape }}"
-                data-price="{{ promo.preco_promocao|unlocalize }}"
-                data-toy-id="{{ promo.brinquedos_id }}"
-                data-active="{{ promo.ativo|yesno:'true,false' }}"
-                data-image="{% if promo.imagem_promocao %}{{ promo.imagem_promocao.url }}{% endif %}"
+                class="pr-oferta {% if not promo.ativo %}is-off{% endif %}"
+                data-pr-oferta
+                data-id="{{ promo.id }}"
+                data-descricao="{{ promo.descricao }}"
+                data-preco="{{ promo.preco_promocao|unlocalize }}"
+                data-brinquedos="{{ promo.brinquedos_id }}{% for extra in promo.brinquedos_extras.all %},{{ extra.id }}{% endfor %}"
+                data-ativo="{{ promo.ativo|yesno:'1,0' }}"
+                data-imagem="{% if promo.imagem_promocao %}{{ promo.imagem_promocao.url }}{% endif %}"
+                data-busca="{{ promo.descricao|lower }} {{ promo.brinquedos.nome_brinquedo|lower }}{% for extra in promo.brinquedos_extras.all %} {{ extra.nome_brinquedo|lower }}{% endfor %}"
             >
-                <div class="promo-card-media">
+                <div class="pr-oferta-foto">
                     {% if promo.imagem_promocao %}
-                        <img
-                            src="{{ promo.imagem_promocao.url }}"
-                            alt="{{ promo.descricao }}"
-                            loading="lazy"
-                            decoding="async"
-                        >
+                        <img src="{{ promo.imagem_promocao.url }}" alt="{{ promo.descricao }}" loading="lazy" decoding="async">
                     {% elif promo.brinquedos.imagem_brinquedo %}
-                        <img
-                            src="{{ promo.brinquedos.imagem_brinquedo.url }}"
-                            alt="{{ promo.brinquedos.nome_brinquedo }}"
-                            loading="lazy"
-                            decoding="async"
-                        >
+                        <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.brinquedos.nome_brinquedo }}" loading="lazy" decoding="async">
                     {% else %}
-                        <div class="promo-placeholder" aria-hidden="true">🏷️</div>
+                        <span class="pr-sem-foto" aria-hidden="true"><i class="bi bi-image"></i></span>
                     {% endif %}
-
-                    <span class="promo-status {% if not promo.ativo %}is-off{% endif %}">
-                        {% if promo.ativo %}● Ativa{% else %}● Inativa{% endif %}
-                    </span>
+                    <span class="pr-selo-desconto" data-pr-desconto hidden></span>
                 </div>
 
-                <div class="promo-card-body">
+                <div class="pr-oferta-corpo">
                     <h3>{{ promo.descricao }}</h3>
-                    <div class="promo-toy">
-                        <span>🧸</span>
-                        <span>{{ promo.brinquedos.nome_brinquedo }}</span>
+                    <p class="pr-oferta-brinquedo"><i class="bi bi-joystick" aria-hidden="true"></i>
+                        <span>{{ promo.brinquedos.nome_brinquedo }}{% for extra in promo.brinquedos_extras.all %} · {{ extra.nome_brinquedo }}{% endfor %}</span>
+                    </p>
+                    <div class="pr-precos">
+                        <s data-pr-de hidden></s>
+                        <strong>R$ {{ promo.preco_promocao|moeda }}</strong>
                     </div>
-                    <div class="promo-price">
-                        R$ {{ promo.preco_promocao|moeda }}
-                    </div>
-                    <div class="promo-actions">
-                        <button
-                            class="ls-campaign-card-button"
-                            type="button"
-                            data-campanha-tipo="promocao"
-                            data-campanha-objeto="{{ promo.id }}"
-                            data-campanha-titulo="{{ promo.descricao|escape }}"
-                            {% if not promo.ativo %}disabled title="Ative a promoção para divulgar"{% endif %}
-                        >
-                            <i class="bi bi-megaphone-fill"></i> Divulgar aos clientes
+
+                    <label class="pr-chave">
+                        <input type="checkbox" data-pr-alternar {% if promo.ativo %}checked{% endif %}
+                               aria-label="Mostrar {{ promo.descricao }} no site">
+                        <span class="pr-chave-trilho" aria-hidden="true"></span>
+                        <span class="pr-chave-texto" data-pr-chave-texto>{% if promo.ativo %}No site{% else %}Desligada{% endif %}</span>
+                    </label>
+
+                    <div class="pr-oferta-acoes">
+                        <button class="ls-campaign-card-button" type="button"
+                                data-campanha-tipo="promocao"
+                                data-campanha-objeto="{{ promo.id }}"
+                                data-campanha-titulo="{{ promo.descricao }}"
+                                {% if not promo.ativo %}disabled title="Ligue a promoção para divulgar"{% endif %}>
+                            <i class="bi bi-megaphone-fill" aria-hidden="true"></i> Divulgar
                         </button>
-                        <button
-                            class="promo-secondary-btn"
-                            type="button"
-                            data-open-edit
-                        >
-                            Editar promoção
+                        <button class="promo-secondary-btn" type="button" data-pr-editar>
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i> Editar
                         </button>
-                        <button
-                            class="promo-icon-btn"
-                            type="button"
-                            data-open-delete
-                            aria-label="Excluir {{ promo.descricao }}"
-                            title="Excluir"
-                        >
-                            🗑️
+                        <button class="pr-excluir promo-icon-btn" type="button" data-pr-excluir
+                                aria-label="Excluir {{ promo.descricao }}" title="Excluir">
+                            <i class="bi bi-trash3" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
             </article>
         {% empty %}
-            <div class="promo-empty">
-                <span>🏷️</span>
-                <h3>Nenhuma promoção encontrada</h3>
-                <p>Altere os filtros ou cadastre sua primeira promoção.</p>
+            <div class="pr-vazio-grande">
+                <i class="bi bi-tags" aria-hidden="true"></i>
+                <h3>Nenhuma promoção por aqui</h3>
+                <p>{% if busca or status_atual != "todos" %}Mude o filtro ou a busca.{% else %}Crie a primeira: escolha um brinquedo e dê o desconto.{% endif %}</p>
+                <button class="promo-primary-btn" type="button" data-pr-nova><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova promoção</button>
             </div>
         {% endfor %}
+        <p class="pr-sem-resultado" data-pr-sem-resultado hidden>Nenhuma promoção desta página bate com a busca. Aperte Enter para buscar em todas.</p>
     </section>
     {% include "includes/paginacao.html" with pagina=pagina query_sem_pagina=query_sem_pagina %}
 </main>
 
 {% include "gestao/includes/campanha_modal.html" %}
 
-<div class="promo-modal" id="promotionModal" aria-hidden="true">
-    <div class="promo-modal-backdrop" data-close-modal></div>
-    <div
-        class="promo-modal-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="promotionModalTitle"
-    >
-        <form
-            id="promotionForm"
-            method="post"
-            enctype="multipart/form-data"
-            action="{% url 'promocoes_admin' %}"
-        >
-            {% csrf_token %}
-            <input type="hidden" name="acao" id="formAction" value="criar">
-            <input type="hidden" name="promocao_id" id="promotionId">
-            <input type="hidden" name="preco_promocao" id="normalizedPrice">
+{{ brinquedos_escolha|json_script:"pr-brinquedos" }}
 
-            <header class="promo-modal-header">
-                <div>
-                    <h2 id="promotionModalTitle">Nova promoção</h2>
-                    <p id="promotionModalSubtitle">
-                        Preencha os dados para publicar uma nova oferta.
-                    </p>
-                </div>
-                <button
-                    class="promo-close"
-                    type="button"
-                    data-close-modal
-                    aria-label="Fechar"
-                >
-                    ✕
-                </button>
-            </header>
+<dialog class="pr-editor" id="prEditor" aria-labelledby="prEditorTitulo">
+    <form method="post" enctype="multipart/form-data" action="{% url 'promocoes_admin' %}" data-pr-form novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="criar" data-pr-acao>
+        <input type="hidden" name="promocao_id" data-pr-id>
+        <div hidden data-pr-brinquedos-enviados></div>
+        <input type="hidden" name="preco_promocao" data-pr-preco-enviado>
 
-            <div class="promo-form-body">
-                <div class="promo-form-grid">
-                    <div class="promo-field is-full">
-                        <label for="description">Título da promoção</label>
-                        <input
-                            id="description"
-                            name="descricao"
-                            type="text"
-                            maxlength="200"
-                            placeholder="Ex.: Oferta especial de férias"
-                            required
-                        >
-                    </div>
-
-                    <div class="promo-field">
-                        <label for="toy">Brinquedo relacionado</label>
-                        <select id="toy" name="brinquedos" required>
-                            <option value="">Selecione um brinquedo</option>
-                            {% for brinquedo in brinquedos %}
-                                <option value="{{ brinquedo.id }}">
-                                    {{ brinquedo.nome_brinquedo }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="promo-field">
-                        <label for="priceDisplay">Preço promocional</label>
-                        <input
-                            id="priceDisplay"
-                            type="text"
-                            inputmode="numeric"
-                            autocomplete="off"
-                            placeholder="R$ 0,00"
-                            required
-                        >
-                        <small>Exemplo: R$ 10.990,00</small>
-                    </div>
-
-                    <div class="promo-field is-full">
-                        <label>Imagem da promoção</label>
-                        <div class="promo-upload">
-                            <div class="promo-image-preview" id="imagePreview">
-                                <span>🖼️</span>
-                            </div>
-                            <div>
-                                <input
-                                    id="promotionImage"
-                                    name="imagem_promocao"
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/webp"
-                                >
-                                <small>
-                                    PNG, JPG ou WEBP. Ao editar, deixe vazio para
-                                    manter a imagem atual.
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <label class="promo-check">
-                        <input id="activePromotion" name="ativo" type="checkbox" checked>
-                        <span>Promoção ativa e visível no site</span>
-                    </label>
-
-                    <label class="promo-check" id="removeImageRow" hidden>
-                        <input id="removeImage" name="remover_imagem" type="checkbox">
-                        <span>Remover a imagem atual</span>
-                    </label>
-                </div>
+        <header class="pr-editor-topo">
+            <div>
+                <h2 id="prEditorTitulo" data-pr-titulo-janela>Nova promoção</h2>
+                <p>Escolha o brinquedo e dê o desconto.</p>
             </div>
+            <button class="pr-fechar" type="button" data-pr-fechar aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </header>
 
-            <footer class="promo-modal-footer">
-                <button class="promo-secondary-btn" type="button" data-close-modal>
-                    Cancelar
-                </button>
-                <button class="promo-primary-btn" type="submit" id="saveButton">
-                    Salvar promoção
-                </button>
-            </footer>
-        </form>
-    </div>
-</div>
+        <div class="pr-editor-corpo">
+            <section class="pr-passo" aria-labelledby="prPasso1">
+                <h3 id="prPasso1"><span>1</span> Quais brinquedos?</h3>
+                <p class="pr-dica">Toque para escolher um ou mais. O <b>principal</b> é o primeiro: a foto dele vai na promoção.</p>
 
-<div class="promo-modal" id="deleteModal" aria-hidden="true">
-    <div class="promo-modal-backdrop" data-close-delete></div>
-    <div
-        class="promo-modal-dialog is-small"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deleteModalTitle"
-    >
-        <form method="post" action="{% url 'promocoes_admin' %}">
-            {% csrf_token %}
-            <input type="hidden" name="acao" value="excluir">
-            <input type="hidden" name="promocao_id" id="deletePromotionId">
+                <ul class="pr-escolhidos" data-pr-escolhidos aria-live="polite"></ul>
 
-            <header class="promo-modal-header">
-                <div>
-                    <h2 id="deleteModalTitle">Excluir promoção?</h2>
-                    <p>Esta ação não poderá ser desfeita.</p>
+                <div class="pr-catalogo" data-pr-catalogo>
+                    <div class="pr-busca pr-busca--catalogo">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input type="search" autocomplete="off" placeholder="Buscar brinquedo pelo nome"
+                               aria-label="Buscar brinquedo" data-pr-cat-busca>
+                    </div>
+                    <div class="pr-chips" role="radiogroup" aria-label="Categoria">
+                        <label class="pr-chip"><input type="radio" name="pr_categoria" value="" checked> Todas</label>
+                        {% for categoria in categorias_escolha %}
+                            <label class="pr-chip"><input type="radio" name="pr_categoria" value="{{ categoria }}"> {{ categoria }}</label>
+                        {% endfor %}
+                    </div>
+                    <div class="pr-brinquedos" role="radiogroup" aria-label="Brinquedos" data-pr-brinquedos></div>
+                    <p class="pr-vazio" data-pr-cat-vazio hidden>Nenhum brinquedo com esse nome nesta categoria.</p>
                 </div>
-                <button
-                    class="promo-close"
-                    type="button"
-                    data-close-delete
-                    aria-label="Fechar"
-                >
-                    ✕
-                </button>
-            </header>
+            </section>
 
-            <div class="promo-delete-copy">
-                Você está excluindo:
-                <strong class="promo-delete-name" id="deletePromotionName"></strong>
+            <section class="pr-passo" aria-labelledby="prPasso2">
+                <h3 id="prPasso2"><span>2</span> A oferta</h3>
 
-                <div class="promo-field">
-                    <label for="deleteConfirmation">
-                        Digite EXCLUIR para confirmar
-                    </label>
-                    <input
-                        id="deleteConfirmation"
-                        name="confirmacao"
-                        type="text"
-                        autocomplete="off"
-                        placeholder="EXCLUIR"
-                        required
-                    >
+                <div class="pr-previa" data-pr-previa>
+                    <div class="pr-previa-foto"><img alt="" data-pr-previa-foto hidden><span class="pr-selo-desconto" data-pr-previa-selo hidden></span></div>
+                    <div class="pr-previa-texto">
+                        <strong data-pr-previa-titulo>Título da promoção</strong>
+                        <span><s data-pr-previa-de hidden></s> <b data-pr-previa-por>R$ 0,00</b></span>
+                    </div>
                 </div>
+
+                <label class="pr-rotulo" for="prPreco">Preço promocional</label>
+                <div class="pr-preco">
+                    <span>R$</span>
+                    <input id="prPreco" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" data-pr-preco>
+                </div>
+                <div class="pr-atalhos" data-pr-atalhos aria-label="Desconto rápido sobre o preço de tabela">
+                    <button type="button" data-pr-pct="5">-5%</button>
+                    <button type="button" data-pr-pct="10">-10%</button>
+                    <button type="button" data-pr-pct="15">-15%</button>
+                    <button type="button" data-pr-pct="20">-20%</button>
+                    <button type="button" data-pr-pct="25">-25%</button>
+                    <button type="button" data-pr-pct="30">-30%</button>
+                </div>
+                <p class="pr-ajuda" data-pr-preco-ajuda aria-live="polite">Escolha o brinquedo para ver o preço de tabela.</p>
+
+                <label class="pr-rotulo" for="prTitulo">Título</label>
+                <input id="prTitulo" name="descricao" type="text" maxlength="120" autocomplete="off"
+                       placeholder="Ex.: Air Game em oferta" data-pr-titulo>
+                <div class="pr-sugestoes" data-pr-sugestoes></div>
+
+                <span class="pr-rotulo">Imagem</span>
+                <label class="pr-imagem" data-pr-imagem-area>
+                    <img alt="" data-pr-imagem-previa hidden>
+                    <span class="pr-imagem-texto" data-pr-imagem-texto>
+                        <i class="bi bi-image" aria-hidden="true"></i>
+                        <span>Sem arte própria, vai a foto do brinquedo. <b>Toque para enviar uma arte</b> (PNG, JPG ou WEBP).</span>
+                    </span>
+                    <input type="file" name="imagem_promocao" accept="image/png,image/jpeg,image/webp" data-pr-imagem>
+                </label>
+                <label class="pr-marcar" data-pr-remover-linha hidden>
+                    <input type="checkbox" name="remover_imagem" data-pr-remover> Voltar para a foto do brinquedo
+                </label>
+
+                <label class="pr-chave pr-chave--grande">
+                    <input type="checkbox" name="ativo" checked data-pr-ativo>
+                    <span class="pr-chave-trilho" aria-hidden="true"></span>
+                    <span class="pr-chave-texto">Mostrar no site</span>
+                </label>
+            </section>
+        </div>
+
+        <footer class="pr-editor-rodape">
+            <p class="pr-erro" data-pr-erro aria-live="assertive"></p>
+            <button class="promo-secondary-btn" type="button" data-pr-fechar>Cancelar</button>
+            <button class="promo-primary-btn" type="submit" data-pr-salvar>
+                <i class="bi bi-check2" aria-hidden="true"></i> Salvar promoção
+            </button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog class="pr-editor pr-editor--pequeno" id="prExcluir" aria-labelledby="prExcluirTitulo">
+    <form method="post" action="{% url 'promocoes_admin' %}">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="excluir">
+        <input type="hidden" name="promocao_id" data-pr-excluir-id>
+        <input type="hidden" name="confirmacao" value="EXCLUIR">
+        <header class="pr-editor-topo">
+            <div>
+                <h2 id="prExcluirTitulo">Excluir esta promoção?</h2>
+                <p><strong data-pr-excluir-nome></strong> sai do site e não volta. Para só tirar do ar, desligue no cartão.</p>
             </div>
+        </header>
+        <footer class="pr-editor-rodape">
+            <button class="promo-secondary-btn" type="button" data-pr-fechar>Cancelar</button>
+            <button class="promo-danger-btn" type="submit"><i class="bi bi-trash3" aria-hidden="true"></i> Excluir</button>
+        </footer>
+    </form>
+</dialog>
 
-            <footer class="promo-modal-footer">
-                <button class="promo-secondary-btn" type="button" data-close-delete>
-                    Cancelar
-                </button>
-                <button class="promo-danger-btn" type="submit" id="deleteButton" disabled>
-                    Excluir definitivamente
-                </button>
-            </footer>
-        </form>
-    </div>
-</div>
-
-  <script src="{% estatico 'site/paginas/gestao-promocoes_adm.js' %}"></script>
+<script src="{% estatico 'site/paginas/gestao-promocoes_adm.js' %}"></script>
 {% endblock %}
