@@ -1085,7 +1085,7 @@
     width: 62px;
     height: 92px;
     object-fit: contain;
-    background: #0b0d18;
+    background: var(--bg-2);
 }
 
 .pr-validade {
