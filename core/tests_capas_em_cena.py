@@ -18,7 +18,7 @@ protegem:
     do catálogo, de ponta a ponta (sem o carrossel de antes);
   * a 0153 refaz, só no Render, a galeria que o cadastro subiu (uma vez), e
     nunca derruba o deploy;
-  * a 0154 (o 3D novo do Basquete Street Quadrinhos e do Air Game Kids
+  * a 0154 (o 3D novo do Basquete Home Quadrinhos e do Air Game Kids
     Alienígenas, seção 61): no Render, refaz à força a galeria dos dois que o
     cadastro subiu (mesmo com a capa em cena da 0153) e sobe as fotos das
     categorias que mudaram; em todo lugar, religa o objeto 3D ao .glb de
@@ -405,7 +405,7 @@ class BasqueteEAirGameReaisTests(TestCase):
         # dos dois e as fotos das categorias onde eles aparecem -- e só estas sobem na 0154
         lista = json.loads((FERRAMENTA / "maquinas-das-fotos.json").read_text(encoding="utf-8"))
         com_os_dois = {chave for chave, maquinas in lista.items()
-                       if {"Basquete Street Quadrinhos (3D)", "Air Game Kids Alienígenas (3D)"} & set(maquinas)}
+                       if {"Basquete Home Quadrinhos (3D)", "Air Game Kids Alienígenas (3D)"} & set(maquinas)}
         self.assertEqual(com_os_dois, {"espaco-kids-play", "eletronicos", "jogos-de-mesa", "competitivos", "famosos",
                                        "esportivos", "kids"})
         capas = json.loads((FERRAMENTA / "maquinas-das-capas.json").read_text(encoding="utf-8"))

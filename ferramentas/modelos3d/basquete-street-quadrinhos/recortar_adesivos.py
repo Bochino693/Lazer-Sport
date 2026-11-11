@@ -1,4 +1,4 @@
-"""Recorta a folha de adesivos da fábrica nas peças do Basquete Street Quadrinhos (adesivos/<peça>.png).
+"""Recorta a folha de adesivos da fábrica nas peças do Basquete Home Quadrinhos (adesivos/<peça>.png).
 
     python3 recortar_adesivos.py folha-adesivos.jpg --previa   # desenha as caixas na folha (previa-recortes.jpg)
     python3 recortar_adesivos.py folha-adesivos.jpg            # recorta as peças

@@ -111,7 +111,7 @@ NOMES_DO_SITE = {
 JA_BONS = (
     "Brinquedão", "Espaço Esportivo Kids", "Jogos de Mesa", "Mecânicos", "Trampolins",
     "Brinquedão Modelo 2", "Espaço Esportivo Modelo 1", "Strike Kids", "Trampolim de Enterrada",
-    "Brinquedão Ninja", "Air Game Kids Alienígenas", "Basquete Street Quadrinhos",
+    "Brinquedão Ninja", "Air Game Kids Alienígenas", "Basquete Home Quadrinhos",
     "Cabo de Fonte para Computador – Energia Segura e Confiável", "JoySticks", "Caixas de Som",
     "Reposição Brinquedos",
 )

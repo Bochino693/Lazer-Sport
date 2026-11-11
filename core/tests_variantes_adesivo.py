@@ -1,10 +1,10 @@
-"""O Air Game Kids Alienígenas e o Basquete Street Quadrinhos: as máquinas de sempre com os adesivos novos.
+"""O Air Game Kids Alienígenas e o Basquete Home Quadrinhos: as máquinas de sempre com os adesivos novos.
 
 O que estes testes protegem:
 
   * cada uma leva o SEU .glb para a Arena 3D e para a página do produto, pelo
-    nome inteiro: o "Air Game Kids" e o "Basquete Street" de antes (nem o Air
-    Game Hockey) não pegam o objeto novo; o .glb tem as medidas que a folha de
+    nome inteiro: o "Air Game Kids" e o "Basquete Home" de antes (nem o Air
+    Game Hockey nem o Basquete Street) não pegam o objeto novo; o .glb tem as medidas que a folha de
     adesivos dá na altura da máquina (0,90 × 0,83 × 1,51 m e 2,70 × 1,00 ×
     2,40 m) e é leve; as fotos existem;
   * cada adesivo é a peça recortada da folha da fábrica: toda peça do
@@ -70,7 +70,7 @@ HOCKEY_ANTES, NOME_ANTES = "air-game-hockey-espacial", "Air Game Hockey Espacial
 #: id -> (nome, nome da máquina de antes, desenho, medidas do .glb: altura, largura, profundidade)
 VARIANTES = {
     HOCKEY: ("Air Game Kids Alienígenas", "Air Game Kids", "hockey", [0.9, 0.83, 1.51]),
-    BASQUETE: ("Basquete Street Quadrinhos", "Basquete Street", "basquete", [2.7, 1.0, 2.4]),
+    BASQUETE: ("Basquete Home Quadrinhos", "Basquete Home", "basquete", [2.7, 1.0, 2.4]),
 }
 FERRAMENTAS = Path(settings.BASE_DIR) / "ferramentas" / "modelos3d"
 
@@ -93,7 +93,7 @@ def _categoria(nome):
 
 
 def _maquinas_de_antes():
-    """O Air Game Kids e o Basquete Street do catálogo (com nomes escritos de outro jeito, como no site)."""
+    """O Air Game Kids e o Basquete Home do catálogo (com nomes escritos de outro jeito, como no site)."""
     mesas, esportes, eletronicos = _categoria("Mesas de jogo"), _categoria("Esportes"), _categoria("Eletrônicos")
     hockey = Brinquedos.objects.create(
         nome_brinquedo="AIR GAME KIDS", descricao="A mesa de air hockey infantil.", valor_brinquedo=Decimal("2800.00"),
@@ -103,7 +103,7 @@ def _maquinas_de_antes():
     hockey.categorias_brinquedos.set([mesas, eletronicos])
     hockey.tags.set([TagsBrinquedos.objects.create(nome_tags="air hockey kids")])
     basquete = Brinquedos.objects.create(
-        nome_brinquedo="Basquete Street", descricao="O basquete de arcade.", valor_brinquedo=Decimal("9000.00"),
+        nome_brinquedo="Basquete Home", descricao="O basquete de arcade.", valor_brinquedo=Decimal("9000.00"),
         avaliacao=Decimal("4.90"), exibir_na_loja=False, voltz="127v",
         altura_m=Decimal("2.70"), largura_m=Decimal("1.00"), profundidade_m=Decimal("2.40"),
     )
@@ -230,8 +230,11 @@ class ObjetoNaArenaTests(TestCase):
                 # a máquina de antes continua sem objeto 3D (o adesivo dela é outro)
                 self.assertIsNone(arena.modelo_da_maquina(antes))
                 self.assertIsNone(arena.modelo_da_maquina(antes.upper()))
-        # nem o Air Game Hockey (a mesa grande); o nome de antes (o da 0145) ainda liga o novo
+        # nem o Air Game Hockey (a mesa grande) nem o Basquete Street (a estrutura aberta com a rede);
+        # o nome de antes (o da 0145; o do basquete até a seção 72) ainda liga o novo
         self.assertIsNone(arena.modelo_da_maquina("AIR GAME HOCKEY"))
+        self.assertIsNone(arena.modelo_da_maquina("Basquete Street"))
+        self.assertEqual(arena.modelo_da_maquina("Basquete Street Quadrinhos")["id"], BASQUETE)
         self.assertEqual(arena.modelo_da_maquina(NOME_ANTES)["id"], HOCKEY)
         self.assertFalse(finders.find(_glb(HOCKEY_ANTES)))  # o .glb de antes não existe mais
 
@@ -368,7 +371,7 @@ class CadastroTests(TestCase):
         antes = _maquinas_de_antes()
         saida = self._cadastrar()
         self.assertIn("Copiado de AIR GAME KIDS", saida)
-        self.assertIn("Copiado de Basquete Street", saida)
+        self.assertIn("Copiado de Basquete Home", saida)
         for chave, (nome, _antes, _desenho, _medidas) in VARIANTES.items():
             with self.subTest(chave):
                 base = antes[chave]
@@ -394,7 +397,7 @@ class CadastroTests(TestCase):
                 self.assertFalse(ObjetoTresD.objects.filter(brinquedo=base).exists())
                 self.assertEqual(base.imagens_brinquedo.count(), 0)
         self.assertIn("HOCKEY KIDS", Brinquedos.objects.get(nome_brinquedo="Air Game Kids Alienígenas").descricao)
-        self.assertIn("quadrinhos", Brinquedos.objects.get(nome_brinquedo="Basquete Street Quadrinhos").descricao)
+        self.assertIn("quadrinhos", Brinquedos.objects.get(nome_brinquedo="Basquete Home Quadrinhos").descricao)
 
     def test_rodar_de_novo_nao_duplica_e_fotos_refaz_a_galeria(self):
         _maquinas_de_antes()
@@ -411,20 +414,20 @@ class CadastroTests(TestCase):
         _categoria("Eletrônicos")
         _categoria("Brinquedões")
         saida = self._cadastrar("--so", BASQUETE)
-        self.assertIn("Basquete Street não está no catálogo", saida)
-        novo = Brinquedos.objects.get(nome_brinquedo="Basquete Street Quadrinhos")
+        self.assertIn("Basquete Home não está no catálogo", saida)
+        novo = Brinquedos.objects.get(nome_brinquedo="Basquete Home Quadrinhos")
         self.assertEqual((novo.altura_m, novo.largura_m, novo.profundidade_m), (Decimal("2.70"), Decimal("1.00"), Decimal("2.40")))
         self.assertEqual([c.nome_categoria for c in novo.categorias_brinquedos.all()], ["Eletrônicos"])
         self.assertEqual((novo.valor_brinquedo, novo.exibir_na_loja, novo.voltz), (None, False, ""))
         self.assertFalse(Brinquedos.objects.filter(nome_brinquedo="Air Game Kids Alienígenas").exists())
 
     def test_a_maquina_de_antes_ativa_vem_antes_da_desativada(self):
-        Brinquedos.objects.create(nome_brinquedo="Basquete Street", descricao="velho", avaliacao=3, voltz="110v",
+        Brinquedos.objects.create(nome_brinquedo="Basquete Home", descricao="velho", avaliacao=3, voltz="110v",
                                   valor_brinquedo=Decimal("1.00"), ativo=False)
-        Brinquedos.objects.create(nome_brinquedo="BASQUETE STREET", descricao="o do site", avaliacao=5, voltz="220v",
+        Brinquedos.objects.create(nome_brinquedo="BASQUETE HOME", descricao="o do site", avaliacao=5, voltz="220v",
                                   valor_brinquedo=Decimal("9000.00"))
         self._cadastrar("--so", BASQUETE)
-        novo = Brinquedos.objects.get(nome_brinquedo="Basquete Street Quadrinhos")
+        novo = Brinquedos.objects.get(nome_brinquedo="Basquete Home Quadrinhos")
         self.assertEqual((novo.valor_brinquedo, novo.voltz), (Decimal("9000.00"), "220v"))
 
     def test_ja_no_catalogo_so_ganha_o_objeto(self):
@@ -502,7 +505,7 @@ class MigracaoTests(TestCase):
             self.assertEqual((novo.valor_brinquedo, novo.voltz), (antes[chave].valor_brinquedo, antes[chave].voltz))
 
     def test_liga_o_que_ja_esta_no_catalogo_em_todo_lugar(self):
-        ja = Brinquedos.objects.create(nome_brinquedo="Basquete Street Quadrinhos", descricao="x", avaliacao=5, voltz="")
+        ja = Brinquedos.objects.create(nome_brinquedo="Basquete Home Quadrinhos", descricao="x", avaliacao=5, voltz="")
         self._rodar()
         self.assertEqual(ja.objeto_3d.codigo, BASQUETE)
         self.assertEqual(Brinquedos.objects.count(), 1)
@@ -755,14 +758,14 @@ migracao_0150 = importlib.import_module("core.migrations.0150_basquete_quadrinho
 
 
 class BasqueteFotosDeVerdadeTests(TestCase):
-    """A 0150: o Basquete Street Quadrinhos que a 0145 cadastrou com as fotos da arte provisória.
+    """A 0150: o Basquete Home Quadrinhos que a 0145 cadastrou com as fotos da arte provisória.
 
     No Render, a galeria que o cadastro subiu vira a do 3D de hoje (a da
     folha de adesivos); a que veio do painel fica. Em todo lugar, o objeto 3D
     é religado ao .glb de hoje.
     """
 
-    NOME = "Basquete Street Quadrinhos"
+    NOME = "Basquete Home Quadrinhos"
 
     def _rodar(self, render=False, pasta=None):
         with mock.patch("builtins.print") as aviso:

@@ -1,4 +1,4 @@
-"""Cadastra as máquinas com os adesivos novos: o Air Game Kids Alienígenas e o Basquete Street Quadrinhos.
+"""Cadastra as máquinas com os adesivos novos: o Air Game Kids Alienígenas e o Basquete Home Quadrinhos.
 
     python manage.py cadastrar_variantes_adesivo
     python manage.py cadastrar_variantes_adesivo --so air-game-kids-alienigenas
@@ -29,7 +29,7 @@ from core.models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, Objet
 
 
 class Command(BaseCommand):
-    help = "Cadastra o Air Game Kids Alienígenas e o Basquete Street Quadrinhos (copiando a máquina de antes) com o objeto 3D."
+    help = "Cadastra o Air Game Kids Alienígenas e o Basquete Home Quadrinhos (copiando a máquina de antes) com o objeto 3D."
 
     def add_arguments(self, parser):
         parser.add_argument("--so", nargs="+", choices=VARIANTES_DE_ADESIVO + tuple(APELIDOS), help="só estas")

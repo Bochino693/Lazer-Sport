@@ -770,13 +770,14 @@ MODELOS_3D = (
         ),
     },
     {
-        # o Basquete Street em quadrinhos: fundo preto, formas arredondadas,
+        # o Basquete Home em quadrinhos (o "Basquete Street Quadrinhos" até a
+        # seção 72; o id e os arquivos ficaram): fundo preto, formas arredondadas,
         # POW!, BOOM!, WOW!, o BASKETBALL, as crianças e a quadra na rampa; a
         # bola das laterais vazada (os gomos abertos), a rampa que devolve a
         # bola até a frente, o moedeiro, o placar e o neon roxo
         "id": "basquete-street-quadrinhos",
-        "titulo": "Basquete Street Quadrinhos",
-        "nomes": ("Basquete Street Quadrinhos",),
+        "titulo": "Basquete Home Quadrinhos",
+        "nomes": ("Basquete Home Quadrinhos", "Basquete Street Quadrinhos"),
         "arquivo": "site/arena/modelos/basquete-street-quadrinhos.glb",
         "medidas": (2.7, 1.0, 2.4),
         "grupo": "maquinas",
@@ -788,7 +789,7 @@ MODELOS_3D = (
         "medidas_texto": "2,7 m × 1 m × 2,4 m",
         "categorias": ("Eletrônicos",),
         "descricao": (
-            "Basquete Street Quadrinhos: o basquete de arcade do Basquete Street com os adesivos em quadrinhos -- "
+            "Basquete Home Quadrinhos: o basquete de arcade do Basquete Home com os adesivos em quadrinhos -- "
             "fundo preto com formas amarelas, laranja, vermelhas e rosa, os balões POW!, BOOM! e WOW!, o letreiro "
             "BASKETBALL, duas crianças jogando, a bola vazada nas laterais e a quadra vermelha na rampa que "
             "devolve a bola até quem joga."

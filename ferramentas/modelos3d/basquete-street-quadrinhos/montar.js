@@ -1,4 +1,4 @@
-// Monta o Basquete Street Quadrinhos em three.js e exporta um .glb.
+// Monta o Basquete Home Quadrinhos em three.js e exporta um .glb.
 //
 // O basquete de arcade com os adesivos em quadrinhos. TUDO o que é adesivo sai
 // da folha da fábrica (folha-adesivos.webp, a 26567-2): a arte de cada peça

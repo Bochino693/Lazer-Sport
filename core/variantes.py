@@ -37,7 +37,15 @@ from django.db import transaction
 PARES = (
     (("Air Game Kids", ("Astronautas", "astronautas")),
      [("Air Game Kids Alienígenas", "Alienígenas", "alienigenas")]),
+    # o gabinete do Basquete Home (o azul) e o mesmo gabinete com os adesivos em quadrinhos (o
+    # "Basquete Street Quadrinhos" de antes: a folha é a do Basquete Home, LEIA-ME 61). O
+    # Basquete Street (a estrutura aberta com a rede) fica sozinho.
+    (("Basquete Home", ("Azul", "azul")),
+     [("Basquete Home Quadrinhos", "Quadrinhos", "quadrinhos")]),
 )
+
+#: As fichas renomeadas antes de virar adesivo: (a chave do cadastro, o nome de antes).
+RENOMEADAS = (("basquete-street-quadrinhos", "Basquete Street Quadrinhos"),)
 
 #: A chave do cache do mapa dos cards (a versão muda quando um adesivo, uma foto ou um produto muda).
 CHAVE_DO_MAPA = "variantes-adesivo:mapa"
@@ -102,9 +110,20 @@ def separar(produto, Brinquedos, VarianteAdesivo, avisar=print):
 
 
 def migrar(apps, schema_editor, avisar=print):
-    """A migração de dados (a 0160): junta os PARES em todo lugar (só o banco: nada sobe)."""
+    """A migração de dados (a 0160): junta os PARES em todo lugar (só o banco: nada sobe).
+
+    Antes, as fichas de RENOMEADAS ganham o nome de hoje (o "Basquete Street
+    Quadrinhos" vira o "Basquete Home Quadrinhos", com as descrições das fotos).
+    """
+    from .cadastro_modelos import renomear_variante
+
     Brinquedos = apps.get_model("core", "Brinquedos")
     VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    for chave, nome_antigo in RENOMEADAS:
+        renomear_variante(
+            chave, nome_antigo, Brinquedos, apps.get_model("core", "CategoriasBrinquedos"),
+            apps.get_model("core", "ImagemBrinquedo"), apps.get_model("core", "ObjetoTresD"), avisar=avisar,
+        )
     for (produto, padrao), fichas in PARES:
         juntar(produto, padrao, fichas, Brinquedos, VarianteAdesivo, avisar=avisar)
 
