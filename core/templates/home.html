@@ -564,31 +564,27 @@
     <div class="scroll-container" id="scroll-container">
 
       <!-- Categoria fixa: peças e produtos em geral (só com peça na loja). -->
+      {% comment %}
+        A foto ocupa o card inteiro, como as das categorias (`categoria-media--cheia`):
+        as peças de verdade do catálogo no balcão da loja, com o estoque atrás
+        (ferramentas/categorias: a cena "pecas-e-acessorios"). É estática: vem com o site.
+      {% endcomment %}
       {% if pecas_count %}
       <a href="{% url 'pecas_reposicao' %}#breadcrumb"
          class="categoria-link categoria-link-featured">
         <div class="categoria-card">
-          <div class="categoria-media">
+          <div class="categoria-media categoria-media--cheia">
             <span class="categoria-card-tag">
               <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
               Peças e acessórios
             </span>
 
-            <div class="pecas-slider premium" id="pecasSlider">
-              {% for peca in pecas_preview %}
-                {% if peca.imagem_principal %}
-                  <img class="peca-slide"
-                       src="{{ peca.imagem_principal.imagem|foto:720 }}"
-                       alt="{{ peca.nome }}"
-                       loading="lazy"
-                       decoding="async">
-                {% endif %}
-              {% empty %}
-                <span class="categoria-media-fallback">
-                  <i class="fa-solid fa-gears" aria-hidden="true"></i>
-                </span>
-              {% endfor %}
-            </div>
+            <img src="{% static 'site/categorias/pecas-e-acessorios.webp' %}"
+                 alt="Peças de reposição no balcão da loja: cabo HDMI, bonecos de pebolim, maneta e disco de air game e caixinhas de som"
+                 width="1200"
+                 height="900"
+                 loading="lazy"
+                 decoding="async">
           </div>
 
           <div class="categoria-info">

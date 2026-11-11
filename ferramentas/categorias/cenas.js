@@ -33,7 +33,9 @@ import { criarPecas } from "./pecas.js";
 import { criarLugares } from "./lugares.js";
 import { criarPessoas } from "./pessoas.js";
 
-const LARGURA = 2400, ALTURA = 1800;
+// o tamanho do render: 4:3 nas categorias (o card da home), quadrado nas capas dos produtos
+// (o card de produto e a galeria): `formato` troca antes de cada foto
+let LARGURA = 2400, ALTURA = 1800;
 const GRAU = Math.PI / 180;
 
 const renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -100,8 +102,12 @@ const GLB_DO_PRODUTO = {
   "trampolim-enterrada": "Trampolim de Enterrada", "trampolim-enterrada-espuma": "Trampolim de Enterrada",
 };
 
+// os objetos 3D que uma cena usa (`cenasComGlb` anota aqui)
+let anotarGlb = null;
+
 /** O objeto 3D da fábrica (core/static/site/arena/modelos/<nome>.glb), no chão e no meio. */
 async function glb(nome, { x = 0, y = 0, z = 0, r = 0, escala = 1 } = {}) {
+  if (anotarGlb) anotarGlb.add(nome);
   const url = `../../core/static/site/arena/modelos/${nome}.glb`;
   if (!glbs.has(url)) glbs.set(url, leitor.loadAsync(url));
   const objeto = (await glbs.get(url)).scene.clone(true);
@@ -179,6 +185,49 @@ async function maquina(chave, opcoes) {
   return maquinaPronta(chave, opcoes);
 }
 
+/* ---------------------------------------------------------------- as peças de reposição
+   O card "Peças e acessórios" da home: as peças DO CATÁLOGO (a página
+   /pecas-reposicao/), cada uma a foto dela recortada (recortar.py --pecas,
+   reposicao/<chave>.webp), em pé no balcão ou na prateleira, na altura de
+   verdade (reposicao/pecas.json) -- como as máquinas em foto. */
+const PECAS = await (await fetch("reposicao/pecas.json")).json();
+await Promise.all(Object.keys(PECAS).map(async (c) => {
+  const t = await leitorTextura.loadAsync(`reposicao/${c}.webp`);
+  t.colorSpace = T.SRGBColorSpace;
+  t.anisotropy = 8;
+  fotos.set("peca:" + c, t);
+}));
+
+/** A peça `chave` em foto: `deita` inclina para trás (a peça que está deitada no balcão). */
+function pecaPronta(chave, { x = 0, y = 0, z = 0, r = 0, escala = 1, deita = 0, semContato: sem = false } = {}) {
+  const t = fotos.get("peca:" + chave);
+  if (!t || !PECAS[chave]) throw new Error("peça sem foto ou sem ficha: " + chave);
+  const a = PECAS[chave].altura * escala;
+  const l = (a * t.image.width) / t.image.height;
+  const mat = new T.MeshStandardMaterial({ map: t, alphaTest: 0.5, roughness: 0.55, metalness: 0, side: T.DoubleSide, envMapIntensity: 0.5 });
+  const plano = new T.Mesh(new T.PlaneGeometry(l, a), mat);
+  plano.position.y = a / 2;
+  plano.castShadow = true;
+  plano.customDepthMaterial = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking, map: t, alphaTest: 0.5 });
+  plano.userData.recorte = t;
+  const pe = new T.Group();
+  pe.add(plano);
+  pe.rotation.x = -deita * GRAU;
+  const g = new T.Group();
+  g.add(pe);
+  if (!sem) {
+    const contato = new T.Mesh(new T.PlaneGeometry(l * 1.05, Math.max(0.02, l * 0.4)), matContato);
+    contato.rotation.x = -Math.PI / 2;
+    contato.position.set(0, 0.002, -a * Math.sin(deita * GRAU) * 0.4);
+    contato.userData.sombraContato = true;
+    g.add(contato);
+  }
+  g.position.set(x, y, z);
+  g.rotation.y = (giroDaCena + r) * GRAU;
+  g.userData.maquina = PECAS[chave].nome + " (peça)";
+  return g;
+}
+
 /** Uma criança (pessoas.js) em (x, z), virada `r` graus a partir da câmera (0 = de frente para ela). */
 function crianca(i, pose, { x = 0, y = 0, z = 0, r = 0, escala = 1 } = {}) {
   const k = pessoas.crianca(i, pose, escala);
@@ -190,7 +239,7 @@ function crianca(i, pose, { x = 0, y = 0, z = 0, r = 0, escala = 1 } = {}) {
   return g;
 }
 
-const LUGARES = criarLugares(T, P, { maquina: maquinaPronta, crianca });
+const LUGARES = criarLugares(T, P, { maquina: maquinaPronta, crianca, peca: pecaPronta });
 
 /** Uma área do projetista do painel (o mesmo do "Monte seu espaço"), pela medida e pela cor. */
 function area(tipo, medidas, cor, semente, opcoes = {}) {
@@ -523,6 +572,129 @@ const CENAS = {
   },
 };
 
+// O card fixo "Peças e acessórios" da home (não é categoria: core/templates/home.html o
+// mostra direto, de core/static/site/categorias/pecas-e-acessorios.webp): as peças de
+// verdade do catálogo no balcão da loja, com o estoque atrás, desfocado, e a luz quente.
+CENAS["pecas-e-acessorios"] = {
+  maquinas: async () => grupo(
+    pecaPronta("cabo-hdmi", { x: -0.21, z: -0.1, r: 8 }),
+    pecaPronta("mini-caixa-de-som-frente", { x: 0.2, z: -0.09, r: -8 }),
+    pecaPronta("boneco-pebolim-vermelho", { x: -0.035, z: -0.01, r: 6 }),
+    pecaPronta("boneco-pebolim-amarelo", { x: 0.035, z: 0.0, r: -4 }),
+    pecaPronta("mini-caixa-de-som", { x: 0.15, z: 0.07, r: -6 }),
+    pecaPronta("maneta-air-game", { x: -0.15, z: 0.07, r: 6 }),
+    pecaPronta("disco-air-game", { x: -0.04, z: 0.13, r: 2, deita: 40 }),
+  ),
+  lugar: "loja", lente: 32, giro: 6, altura: 8, ocupa: 0.74, desce: 0.34, rampa: 0.22,
+};
+
+/* ---------------------------------------------------------------- as capas dos produtos
+   A CAPA de cada produto nosso em 3D: a foto que vai no card de produto (a
+   `imagem_brinquedo`) e a primeira da galeria. O cliente: "as fotos nas
+   categorias devem ficar full ali, sem as bordas brancas". Então a capa é
+   uma cena cheia, como as fotos das categorias: o produto SOZINHO no
+   destaque, inteiro, grande e nítido, num lugar que combina com ele, com
+   a criançada em volta (sem tapar o produto) e a luz do lugar. Companhia,
+   só máquina de verdade do catálogo, ao fundo e desfocada (`lugarOp.fundo`).
+   QUADRADA: o card de produto é quadrado (ls-tema.css, `.card-mini
+   .img-area`), e a galeria da página do produto também, no computador.
+   As mesmas chaves de `core/cadastro_modelos.py` (CADASTROS): o compor.py
+   grava em core/static/site/arena/modelos/<chave>/capa.webp. */
+/** As crianças da frente, pelo lugar na TELA ([x, y] de -1 a 1, depois do enquadramento): no chão livre da foto. */
+function naFrente(lista) {
+  return (naTela) => grupo(...lista.map(([x, y, i, pose, r = 0, escala = 1]) => {
+    const p = naTela(x, y);
+    return p ? crianca(i, pose, { x: p.x, z: p.z, r, escala }) : new T.Group();
+  }));
+}
+
+const CAPAS = {
+  // o Brinquedão Modelo 2 (o da selva) no buffet, com a parede verde
+  "brinquedao-modelo-2": {
+    maquinas: async () => glb("brinquedao-modelo-2"),
+    vida: () => grupo(
+      crianca(1, "comemorando", { x: -6.6, z: 1.0, r: 20 }),
+      crianca(5, "andando", { x: 7.4, z: -0.4, r: 80, escala: 0.95 }),
+      noAr(16, -3.6, 2.2, 0.2, 0.8, "bola", 4),
+    ),
+    naTela: naFrente([[-0.7, -0.93, 3, "correndo", 60], [0.5, -0.96, 6, "comemorando", -20]]),
+    lugar: "buffet", lente: 46, giro: 46, altura: 14, desce: 0,
+    lugarOp: { parede: "#86efac" },
+  },
+  // o Brinquedão Modelo 3 (a lojinha e o fliperama na frente) na game zone, com o neon e as máquinas kids ao fundo
+  "brinquedao-modelo-3": {
+    maquinas: async () => glb("brinquedao-modelo-3"),
+    vida: () => grupo(
+      crianca(2, "apontando", { x: 6.6, z: 0.4, r: -70, escala: 0.95 }),
+    ),
+    naTela: naFrente([[-0.62, -0.92, 0, "correndo", 60], [0.7, -0.9, 4, "comemorando", -30]]),
+    lugar: "gamezone", lente: 40, giro: 30, altura: 12, desce: 0.04,
+    lugarOp: { fundo: ["sonic-kids", "minions-kids"] },
+  },
+  // o Brinquedão Ninja no galpão do parque, visto pela ponta das camas elásticas, com a criançada em volta
+  "brinquedao-ninja": {
+    maquinas: async () => glb("brinquedao-ninja"),
+    vida: () => grupo(
+      crianca(1, "comemorando", { x: -8.6, z: -0.6, r: -20, escala: 0.95 }),
+      noAr(14, 2.0, 0.6, 0.0, 0.9, "cubo", 5),
+    ),
+    naTela: naFrente([[-0.66, -0.92, 4, "correndo", -40], [0.62, -0.9, 6, "apontando", -60]]),
+    lugar: "galpao", lente: 48, giro: -56, altura: 13, desce: 0,
+  },
+  // o Espaço Esportivo Modelo 1, de cima, com a criançada nas quadras e nas camas
+  "espaco-esportivo-modelo-1": {
+    maquinas: async () => glb("espaco-esportivo-modelo-1"),
+    vida: () => grupo(
+      ...[[-8, 8, "correndo"], [-4, 9.5, "comemorando"], [2, 9, "correndo"], [6, 10, "andando"], [10, 7, "pulando"], [-12, 6, "andando"],
+        [4, 2, "pulando"], [8, 1, "pulando"], [-6, -2, "correndo"], [13, -3, "comemorando"], [0, 12, "apontando"]].map(([x, z, pose], i) =>
+        crianca(i, pose, { x, z, r: (i * 47) % 360, y: pose === "pulando" ? 0.9 : 0, escala: 1.15 })),
+    ),
+    lugar: "galpao", lente: 40, giro: 28, altura: 42, ocupa: 0.86, desce: 0.02,
+  },
+  // o Trampolim de Enterrada na quadra: dois pulando nas camas e um torcendo do lado
+  "trampolim-enterrada": {
+    maquinas: async () => glb("trampolim-enterrada"),
+    vida: () => grupo(
+      crianca(2, "pulando", { x: 1.2, y: 0.8, z: 0.1, r: -10, escala: 0.9 }),
+      crianca(5, "pulando", { x: -1.5, y: 0.7, z: 0.2, r: 20, escala: 0.9 }),
+      colocar(P.bolaBasquete(0.12), { x: 2.3, y: 2.3, z: 0.0 }),
+    ),
+    naTela: naFrente([[-0.7, -0.9, 3, "correndo", 50], [0.68, -0.92, 0, "comemorando", -30]]),
+    lugar: "quadra", lente: 44, giro: 30, altura: 12, desce: 0.02,
+  },
+  // o Strike Kids na game zone: os pinos e a bola no chão, outras máquinas do catálogo ao fundo
+  "strike-kids": {
+    maquinas: async () => glb("strike-kids"),
+    vida: () => grupo(
+      crianca(1, "comemorando", { x: 0.8, z: -0.65, r: -30 }),
+      pinos(-0.95, 0.75, 3, 0.17, -12, 1.25),
+      colocar(P.bolaBoliche("#7c3aed", 0.15), { x: 1.6, z: 1.1 }),
+    ),
+    lugar: "gamezone", lente: 40, giro: 28, altura: 9, ocupa: 0.8,
+    lugarOp: { atras: 2.6, fundo: ["boliche-virtual", "sonic-kids", "minions-kids", "pac-man"] },
+  },
+  // o Air Game Kids Alienígenas no buffet: um jogando do outro lado da mesa, um torcendo; as máquinas kids ao fundo
+  "air-game-kids-alienigenas": {
+    maquinas: async () => glb("air-game-kids-alienigenas"),
+    vida: () => grupo(
+      crianca(2, "jogando", { x: 0.05, z: -1.2, r: -34, escala: 0.9 }),
+      crianca(6, "comemorando", { x: 1.3, z: -0.5, r: -40, escala: 0.85 }),
+    ),
+    lugar: "buffet", lente: 40, giro: 34, altura: 20, ocupa: 0.78, desce: 0.14, frente: false,
+    lugarOp: { atras: 3.0, lado: 3.4, mesaX: -3.4, mesaZ: -2.6, parede: "#93c5fd", fundo: ["sonic-kids", "minions-kids", "pantera-kids", "homem-aranha-kids"] },
+  },
+  // o Basquete Street Quadrinhos na game zone: um torcendo do lado, outras máquinas do catálogo ao fundo
+  "basquete-street-quadrinhos": {
+    maquinas: async () => glb("basquete-street-quadrinhos"),
+    vida: () => grupo(
+      crianca(0, "comemorando", { x: 1.6, z: 0.4, r: -30 }),
+      crianca(3, "apontando", { x: -1.0, z: 1.15, r: 40 }),
+    ),
+    lugar: "gamezone", lente: 40, giro: 28, altura: 10, ocupa: 0.8,
+    lugarOp: { atras: 2.6, fundo: ["basquete-street", "nervo-teste", "pinball-40", "sonic-dash"] },
+  },
+};
+
 /* ---------------------------------------------------------------- o enquadramento */
 function cantos(caixa) {
   const { min, max } = caixa;
@@ -610,6 +782,7 @@ function semContato(raiz) {
  */
 const alvoSilhueta = new T.WebGLRenderTarget(480, 360);
 function acertarPelaSilhueta(quadro, maquinas, lugar, ocupa, desce) {
+  const SL = alvoSilhueta.width, SA = alvoSilhueta.height;
   const { alvo, dir } = quadro;
   for (let volta = 0; volta < 3; volta++) {
     if (lugar) lugar.visible = false;
@@ -620,17 +793,17 @@ function acertarPelaSilhueta(quadro, maquinas, lugar, ocupa, desce) {
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
     renderer.render(cena, camera);
-    const px = new Uint8Array(480 * 360 * 4);
-    renderer.readRenderTargetPixels(alvoSilhueta, 0, 0, 480, 360, px);
+    const px = new Uint8Array(SL * SA * 4);
+    renderer.readRenderTargetPixels(alvoSilhueta, 0, 0, SL, SA, px);
     renderer.setRenderTarget(null);
     cena.background = fundo;
     devolver();
     if (lugar) lugar.visible = true;
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (let y = 0; y < 360; y++) {
-      for (let x = 0; x < 480; x++) {
-        if (px[(y * 480 + x) * 4 + 3] > 40) {
-          const nx = ((x + 0.5) / 480) * 2 - 1, ny = ((y + 0.5) / 360) * 2 - 1; // de baixo para cima, como o NDC
+    for (let y = 0; y < SA; y++) {
+      for (let x = 0; x < SL; x++) {
+        if (px[(y * SL + x) * 4 + 3] > 40) {
+          const nx = ((x + 0.5) / SL) * 2 - 1, ny = ((y + 0.5) / SA) * 2 - 1; // de baixo para cima, como o NDC
           x0 = Math.min(x0, nx); x1 = Math.max(x1, nx); y0 = Math.min(y0, ny); y1 = Math.max(y1, ny);
         }
       }
@@ -704,8 +877,20 @@ function matSoProfundidade(o) {
 }
 const alvoProfundidade = new T.WebGLRenderTarget(LARGURA, ALTURA);
 
+/** O tamanho da foto: 4:3 (as categorias) ou quadrada (as capas dos produtos). */
+function formato(largura, altura) {
+  if (largura === LARGURA && altura === ALTURA) return;
+  LARGURA = largura;
+  ALTURA = altura;
+  renderer.setSize(LARGURA, ALTURA);
+  camera.aspect = LARGURA / ALTURA;
+  camera.updateProjectionMatrix();
+  alvoProfundidade.setSize(LARGURA, ALTURA);
+  alvoSilhueta.setSize(480, Math.round((480 * ALTURA) / LARGURA));
+}
+
 /** O quanto cada ponto da foto é desfocado (0 = nítido): longe das máquinas, mais. */
-function pesoDoDesfoque(caixa, maximo) {
+function pesoDoDesfoque(caixa, maximo, rampaDaCena) {
   const fundo = cena.background;
   cena.background = null;
   const devolver = trocarMateriais(cena, (o) => {
@@ -734,7 +919,8 @@ function pesoDoDesfoque(caixa, maximo) {
     perto = Math.min(perto, z);
     longe = Math.max(longe, z);
   }
-  const rampa = Math.max(4, (longe + perto) * 0.55);
+  // (`rampa` da cena: a cena de perto, a das peças, desfoca o fundo mais depressa)
+  const rampa = rampaDaCena ?? Math.max(4, (longe + perto) * 0.55);
   const tela = document.createElement("canvas");
   tela.width = LARGURA;
   tela.height = ALTURA;
@@ -785,6 +971,7 @@ function mascara(maquinas, lugar) {
 let atual = null, atualLugar = null;
 window.CENAS = Object.keys(CENAS).filter((chave) => !CENAS[chave].manter);
 window.TODAS = Object.keys(CENAS);
+window.CAPAS = Object.keys(CAPAS).map((chave) => "capa:" + chave);
 window.MAQUINAS_DAS_CENAS = {};
 
 /**
@@ -801,8 +988,13 @@ window.renderizar = async (chave, ajustes = {}) => {
     const [largura, profundidade, altura] = medidas.split("x").map(Number);
     c = { maquinas: () => area(tipo, { largura, profundidade, altura }, "#" + cor, Number(semente), { porte, estilo }), giro: 30, altura: 30, lente: 26 };
   }
+  // "capa:<chave>", a capa do produto (quadrada, o produto grande)
+  if (chave.startsWith("capa:")) c = CAPAS[chave.slice(5)] && Object.assign({ quadrado: true, ocupa: 0.84, desce: 0.06 }, CAPAS[chave.slice(5)]);
   c = Object.assign({}, c, ajustes);
   if (!c.maquinas) throw new Error("cena desconhecida: " + chave);
+  // `previa`: a metade do tamanho (para acertar o ângulo depressa)
+  const [largura, altura] = c.quadrado ? [2000, 2000] : [2400, 1800];
+  formato(c.previa ? largura / 2 : largura, c.previa ? altura / 2 : altura);
   if (atual) cena.remove(atual);
   if (atualLugar) cena.remove(atualLugar);
   giroDaCena = c.giro;
@@ -858,7 +1050,9 @@ window.renderizar = async (chave, ajustes = {}) => {
   const quadro = enquadrar(caixa, c.giro, c.altura, c.lente, ocupa, desce);
   if (lugar) acertarPelaSilhueta(quadro, atual, atualLugar, ocupa, desce);
   // o que fica na frente, desfocado (nos cantos de baixo), e o reflexo das máquinas no piso
-  if (lugar && lugar.frente) atualLugar.add(lugar.frente(chaoNaTela, camera));
+  if (lugar && lugar.frente && c.frente !== false) atualLugar.add(lugar.frente(chaoNaTela, camera));
+  // as crianças da frente (as capas): no chão livre da foto, já enquadrada
+  if (lugar && c.naTela) atualLugar.add(c.naTela(chaoNaTela));
   if (lugar && lugar.reflexo) {
     const espelho = atual.clone(true);
     espelho.traverse((o) => {
@@ -871,8 +1065,33 @@ window.renderizar = async (chave, ajustes = {}) => {
   renderer.render(cena, camera);
   const cor = renderer.domElement.toDataURL("image/png");
   if (!lugar) return { cor };
-  const peso = pesoDoDesfoque(caixa, camera.position.distanceTo(centro) * 6 + 40);
+  const peso = pesoDoDesfoque(caixa, camera.position.distanceTo(centro) * 6 + 40, c.rampa);
   window.ultimaCaixa = [caixa.min.toArray(), caixa.max.toArray()].map((v) => v.map((n) => +n.toFixed(2)));
   return { cor, mascara: mascara(atual, atualLugar), peso };
+};
+/**
+ * As cenas (as fotos das categorias e as capas dos produtos) que usam algum dos
+ * objetos 3D `nomes`: quando um .glb é refeito, o gerar.cjs (--glb <nome>) refaz
+ * só elas. Monta as máquinas de cada cena (sem renderizar) e vê quais .glb entraram.
+ */
+window.cenasComGlb = async (...nomes) => {
+  const todas = [...window.CENAS.map((k) => [k, CENAS[k]]), ...Object.keys(CAPAS).map((k) => ["capa:" + k, CAPAS[k]])];
+  const lista = [];
+  try {
+    for (const [chave, c] of todas) {
+      anotarGlb = new Set();
+      await c.maquinas();
+      if (nomes.some((nome) => anotarGlb.has(nome))) lista.push(chave);
+    }
+  } finally {
+    anotarGlb = null;
+  }
+  return lista;
+};
+
+/** As medidas de um objeto 3D nosso (largura, altura, fundo), para montar uma cena nova. */
+window.medir = async (nome) => {
+  const caixa = new T.Box3().setFromObject(await glb(nome), true);
+  return caixa.getSize(new T.Vector3()).toArray().map((n) => +n.toFixed(2));
 };
 window.pronto = true;

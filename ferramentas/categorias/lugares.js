@@ -26,7 +26,11 @@
                     parede de vidro para o jardim e a piscina, o painel de
                     ripas, o sofá e os pendentes;
      quadra         a quadra da escola: o piso com as linhas, a arquibancada,
-                    a tabela de basquete e as janelas altas.
+                    a tabela de basquete e as janelas altas;
+     loja           a loja de peças (o card "Peças e acessórios" da home): o
+                    balcão de madeira, o painel perfurado com os ganchos, as
+                    prateleiras com o estoque (as fotos das peças do
+                    catálogo), a fita de LED quente e as luzinhas.
 
    Cada lugar se arma em volta da caixa dos brinquedos: o fundo atrás, a
    parede do lado oposto ao da câmera, o chão até a borda da foto. Devolve
@@ -992,6 +996,92 @@ export function criarLugares(T, P, extra = {}) {
         return f;
       };
       return { grupo: g, frente, fundo: "#7dd3fc", neblina: ["#bfe3fb", 40, 140], luz: { ceu: "#ffffff", chao: "#1d4ed8", hemi: 1.05, sol: 2.2, amb: 0.5, exposicao: 1.0 } };
+    },
+
+    /* ------------------------------------------------------------ a loja de peças */
+    // De perto, no balcão: as peças da frente são as `maquinas` da cena (nítidas);
+    // aqui, o balcão embaixo delas, e atrás, desfocados, o painel perfurado com as
+    // peças nos ganchos, as prateleiras com o estoque (as fotos das peças do
+    // catálogo, `extra.peca`), a fita de LED quente e as luzinhas.
+    loja(caixaDos, giro, op = {}) {
+      const g = new T.Group();
+      const c = caixaDos.getCenter(new T.Vector3());
+      const topo = caixaDos.min.y;
+      const zf = caixaDos.min.z - (op.atras ?? 0.75);
+      const r = sorteio(17);
+      const peca = (chave, x, y, z, opcoes = {}) => extra.peca && g.add(extra.peca(chave, Object.assign({ x, y, z, r: (r() - 0.5) * 8 }, opcoes)));
+      // o chão, a parede atrás (escura: as peças e as luzes saltam) e o balcão de madeira
+      chao(g, 40, 40, mat("#3f2a1c", { roughness: 0.5 }), c.x, c.z);
+      parede(g, 30, 6, mat(op.parede || "#0f3d3e", { roughness: 0.85 }), c.x, zf - 0.03);
+      const veio = (base) => (ctx, l, a) => {
+        ctx.fillStyle = base;
+        ctx.fillRect(0, 0, l, a);
+        const rr = sorteio(31);
+        for (let i = 0; i < 70; i++) {
+          ctx.fillStyle = `rgba(${70 + rr() * 40},${42 + rr() * 25},${22 + rr() * 15},${0.1 + rr() * 0.16})`;
+          ctx.fillRect(0, rr() * a, l, 1 + rr() * 4);
+        }
+      };
+      const fundoBalcao = caixaDos.max.z + 0.3;
+      caixa(g, 6, 0.045, fundoBalcao - zf + 0.2, matTex("tampo-loja", 6, 1, 0.9, veio("#9a6a40"), { roughness: 0.36, envMapIntensity: 0.6 }), c.x, topo - 0.045, (fundoBalcao + zf - 0.2) / 2);
+      caixa(g, 6, topo - 0.045, 0.04, mat(op.balcao || "#ea580c", { roughness: 0.5 }), c.x, 0, fundoBalcao - 0.05);
+      // o painel perfurado azul na parede, com as peças nos ganchos
+      const furos = (ctx, l, a) => {
+        ctx.fillStyle = "#0e7490";
+        ctx.fillRect(0, 0, l, a);
+        ctx.fillStyle = "#083344";
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+          ctx.beginPath();
+          ctx.arc(((i + 0.5) * l) / 4, ((j + 0.5) * a) / 4, l / 30, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      };
+      parede(g, 3.2, 1.2, matTex("painel-furos", 3.2, 1.2, 0.1, furos, { roughness: 0.8 }), c.x, zf, 0, topo);
+      for (const [chave, x, y] of [
+        ["cabo-hdmi", -1.0, 0.5], ["boneco-pebolim", -0.72, 0.48], ["cabo-hdmi", -0.44, 0.5], ["maneta-air-game", -0.2, 0.46],
+        ["boneco-pebolim", 0.06, 0.48], ["cabo-hdmi", 0.34, 0.5], ["maneta-air-game", 0.58, 0.46], ["boneco-pebolim", 0.82, 0.48], ["cabo-hdmi", 1.1, 0.5],
+      ]) {
+        cil(g, 0.005, 0.08, mat("#e5e7eb", { metalness: 0.8, roughness: 0.3 }), c.x + x, topo + y, zf + 0.04, 6).rotation.x = Math.PI / 2;
+        peca(chave, c.x + x, topo + y - 0.15, zf + 0.06, { semContato: true });
+      }
+      // a prateleira do estoque (as peças e as caixas lisas, sem marca), com a fita de LED quente
+      const prateleira = 0.1;
+      caixa(g, 3.2, 0.03, 0.3, matTex("prateleira", 3.2, 0.3, 0.9, veio("#b98552"), { roughness: 0.4 }), c.x, topo + prateleira - 0.03, zf + 0.15);
+      caixa(g, 3.2, 0.012, 0.02, luz("#ffcf8a", 2.4), c.x, topo + 0.6, zf + 0.06);
+      const cores = ["#c8a26b", "#ef4444", "#3b82f6", "#facc15", "#22c55e", "#d6b07a", "#ec4899"];
+      let x = c.x - 1.5;
+      let k = 0;
+      while (x < c.x + 1.5) {
+        const tipo = k % 5;
+        if (tipo === 0 || tipo === 3) { peca("cabo-flexivel", x + 0.15, topo + prateleira, zf + 0.15, { escala: 0.75 }); x += 0.26; }
+        else if (tipo === 1) { peca("mini-caixa-de-som", x + 0.05, topo + prateleira, zf + 0.18); peca("mini-caixa-de-som", x + 0.14, topo + prateleira, zf + 0.2); x += 0.22; }
+        else {
+          for (let n = 0; n < 2; n++) {
+            const la = 0.09 + r() * 0.07;
+            caixa(g, 0.1 + r() * 0.04, la, 0.12, mat(cores[(k * 2 + n) % cores.length], { roughness: 0.7 }), x + 0.06 + n * 0.13, topo + prateleira, zf + 0.15, (r() - 0.5) * 0.3);
+          }
+          x += 0.28;
+        }
+        k++;
+      }
+      // os pendentes quentes, as luzinhas e, no balcão, as caixas lisas e o vasinho
+      for (const px of [-0.42, 0.42]) {
+        cil(g, 0.004, 1.2, mat("#1f2937"), c.x + px, topo + 0.62, c.z - 0.42, 4);
+        cil(g, 0.08, 0.07, mat("#1f2937", { roughness: 0.4, metalness: 0.5 }), c.x + px, topo + 0.55, c.z - 0.42, 24, 0.025);
+        esf(g, 0.035, luz("#ffe2b0", 3.2), c.x + px, topo + 0.55, c.z - 0.42, 14);
+      }
+      for (let i = 0; i <= 30; i++) {
+        const t = i / 30;
+        esf(g, 0.014, luz(["#ffd59a", "#fde68a", "#fbcfe8", "#fed7aa"][i % 4], 3.4), c.x - 1.5 + 3.0 * t, topo + 0.56 - Math.sin(t * Math.PI * 4) ** 2 * 0.05, zf + 0.09, 10);
+      }
+      caixa(g, 0.2, 0.11, 0.15, mat("#c8a26b", { roughness: 0.75 }), c.x - 0.52, topo, c.z - 0.2, 0.2);
+      caixa(g, 0.16, 0.09, 0.12, mat("#d6b07a", { roughness: 0.75 }), c.x - 0.51, topo + 0.11, c.z - 0.21, 0.1);
+      cil(g, 0.05, 0.09, mat("#f8fafc", { roughness: 0.35 }), c.x + 0.5, topo, c.z - 0.24, 20, 0.06);
+      for (let i = 0; i < 7; i++) esf(g, 0.035 + r() * 0.02, mat(["#15803d", "#16a34a", "#22c55e"][i % 3], { roughness: 0.8 }), c.x + 0.5 + (r() - 0.5) * 0.1, topo + 0.13 + r() * 0.08, c.z - 0.24 + (r() - 0.5) * 0.08, 12);
+      return {
+        grupo: g, fundo: "#0f3d3e", neblina: null,
+        luz: { ceu: "#ffdcae", chao: "#5b3a22", hemi: 0.8, sol: 1.6, amb: 0.45, exposicao: 0.97 },
+      };
     },
   };
 

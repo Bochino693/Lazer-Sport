@@ -13,7 +13,11 @@ O RECORTE:
     "Photoroom"): só se apara a sobra transparente;
   * "branco": o fundo é branco liso: some o branco que encosta na borda
     (o branco de dentro da máquina fica); "branco+buracos": também o branco
-    grande cercado pela máquina (o vão de um arco);
+    grande cercado pela máquina (o vão de um arco); "branco+furinhos": também
+    o branco pequeno cercado (o miolo de um cabo enrolado); "branco-claro": só
+    o branco quase puro (a bobina branca dos cabos fica); "escuro": a peça
+    escura no branco (some também a sombra cinza-clara em volta); ("figura",
+    n, giro): a figura n de uma foto com várias, sozinha e de pé;
   * uma lista de pontos: o contorno da máquina, desenhado à mão sobre a
     foto (o Boliche Virtual só tem fotos na loja, com o fundo da loja).
 A foto vai como é: nada redesenhado, nenhum logo acrescentado.
@@ -21,8 +25,16 @@ A foto vai como é: nada redesenhado, nenhum logo acrescentado.
     python ferramentas/categorias/recortar.py              (todas, e o catalogo.json)
     python ferramentas/categorias/recortar.py mundo-zumbi  (só esta)
     python ferramentas/categorias/recortar.py --catalogo   (só o catalogo.json: as categorias de cada produto)
+    python ferramentas/categorias/recortar.py --pecas      (as peças de reposição: reposicao/)
 
 `altura` é a do cadastro (altura_m, em metros): a escala da máquina na cena.
+
+AS PEÇAS DE REPOSIÇÃO (o card "Peças e acessórios" da home): a foto de cada
+peça do catálogo (a página /pecas-reposicao/, a API /api/v1/pecas/), com o
+mesmo recorte, em `reposicao/<chave>.webp`, e a ficha em
+`reposicao/pecas.json` (o nome e o id no site, a altura de verdade em
+metros). Ficam de fora as fotos que são a caixa de outra marca (o controle
+e a caixa de som multimídia): a cena não mostra marca de ninguém.
 """
 
 import io
@@ -89,16 +101,42 @@ MAQUINAS = {
 }
 
 
+REPOSICAO = Path(__file__).resolve().parent / "reposicao"
+
+#: chave -> (id no site, nome, foto no Cloudinary, altura em m, recorte)
+PECAS = {
+    "boneco-pebolim": (1, "Boneco para Mesa de Pebolim",
+                       "pecas_reposicao/bonecos-pebolim-frente-ee78cafb65abff265417508856803055-1024-1024_nx4yyc", 0.13, "pronto"),
+    # os dois bonecos da mesma foto, cada um sozinho e de pé (a foto os mostra inclinados)
+    "boneco-pebolim-vermelho": (1, "Boneco para Mesa de Pebolim",
+                                "pecas_reposicao/bonecos-pebolim-frente-ee78cafb65abff265417508856803055-1024-1024_nx4yyc",
+                                0.12, ("figura", 0, 17)),
+    "boneco-pebolim-amarelo": (1, "Boneco para Mesa de Pebolim",
+                               "pecas_reposicao/bonecos-pebolim-frente-ee78cafb65abff265417508856803055-1024-1024_nx4yyc",
+                               0.12, ("figura", 1, 17)),
+    "cabo-flexivel": (7, "Cabo Flexível", "pecas_reposicao/CABOS_kxa6pt", 0.36, "branco-claro"),
+    "cabo-hdmi": (5, "Cabo HDMI", "pecas_reposicao/cabo-hdmi_ci5liw", 0.17, "escuro"),
+    "disco-air-game": (12, "Disco Air Game", "pecas_reposicao/BOTAO-REBATE-removebg-preview_fun5iv", 0.045, "branco"),
+    "maneta-air-game": (11, "Maneta Air Game", "pecas_reposicao/MANETA-removebg-preview_zcqczy", 0.075, "escuro"),
+    "mini-caixa-de-som": (8, "Mini Caixa de Som Bluethoot Xtrad Pocket", "pecas_reposicao/caixa_portatil_melhorada_2_mrd6in",
+                          0.075, "escuro"),
+    "mini-caixa-de-som-frente": (8, "Mini Caixa de Som Bluethoot Xtrad Pocket",
+                                 "pecas_reposicao/caixa_portatil_melhorada_1_yqrrr0", 0.1, "escuro"),
+}
+
+
 def baixar(foto):
     with urllib.request.urlopen(CLOUDINARY + foto, timeout=60) as resposta:
         return Image.open(io.BytesIO(resposta.read())).convert("RGBA")
 
 
-def sem_fundo_branco(imagem, limite=232, buracos=False):
+def sem_fundo_branco(imagem, limite=232, buracos=False, buraco_minimo=0.015):
     """Tira o branco liso que encosta na borda (o de dentro da máquina fica).
 
     `buracos`: também o branco grande cercado pela máquina (o vão do arco do
-    Air Game Premium e do Pebolim Eletrônico, onde se vê a parede do estúdio).
+    Air Game Premium e do Pebolim Eletrônico, onde se vê a parede do estúdio):
+    a mancha com mais de `buraco_minimo` da foto (nas peças, o miolo do cabo
+    enrolado e da alça, bem menor).
     """
     # "branco" só onde os três canais são claros
     r, g, b = imagem.convert("RGB").split()
@@ -120,12 +158,31 @@ def sem_fundo_branco(imagem, limite=232, buracos=False):
                 if fundo.getpixel((x, y)) == 255:
                     ImageDraw.floodfill(fundo, (x, y), 200)
                     area = fundo.histogram()[200]
-                    ImageDraw.floodfill(fundo, (x, y), 128 if area > 0.015 * w * h else 100)
+                    ImageDraw.floodfill(fundo, (x, y), 128 if area > buraco_minimo * w * h else 100)
     alfa = fundo.point(lambda v: 0 if v == 128 else 255)
     # a borda do recorte: um tico para dentro e macia
     alfa = alfa.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
     imagem.putalpha(alfa)
     return imagem
+
+
+def figura(imagem, qual, giro):
+    """A figura `qual` (da esquerda para a direita) de uma foto recortada com várias, de pé (`giro` graus)."""
+    alfa = imagem.getchannel("A").point(lambda v: 255 if v > 128 else 0)
+    w, h = alfa.size
+    manchas = []
+    for x in range(0, w, 3):
+        for y in range(0, h, 3):
+            if alfa.getpixel((x, y)) == 255:
+                ImageDraw.floodfill(alfa, (x, y), 100)
+                mancha = alfa.point(lambda v: 255 if v == 100 else 0)
+                if mancha.histogram()[255] > 0.01 * w * h:
+                    manchas.append((x, mancha))
+                alfa = alfa.point(lambda v: 0 if v == 100 else v)
+    _x, mancha = sorted(manchas, key=lambda m: m[0])[qual]
+    sozinha = imagem.copy()
+    sozinha.putalpha(ImageChops.multiply(imagem.getchannel("A"), mancha.filter(ImageFilter.MaxFilter(5))))
+    return sozinha.rotate(giro, resample=Image.BICUBIC, expand=True)
 
 
 def pelo_contorno(imagem, pontos):
@@ -135,19 +192,29 @@ def pelo_contorno(imagem, pontos):
     return imagem
 
 
-def recortar(chave):
-    _id, nome, foto, altura, recorte = MAQUINAS[chave]
+def recortar(chave, lista=None, pasta=PASTA):
+    _id, nome, foto, altura, recorte = (lista or MAQUINAS)[chave]
     imagem = baixar(foto)
     if recorte in ("branco", "branco+buracos"):
         imagem = sem_fundo_branco(imagem, buracos=recorte == "branco+buracos")
+    elif recorte == "branco+furinhos":
+        imagem = sem_fundo_branco(imagem, buracos=True, buraco_minimo=0.0008)
+    elif recorte == "escuro":
+        # a peça escura no branco: some também a sombra cinza-clara da foto em volta
+        imagem = sem_fundo_branco(imagem, limite=200, buracos=True, buraco_minimo=0.0008)
+    elif isinstance(recorte, tuple) and recorte[0] == "figura":
+        imagem = figura(imagem, recorte[1], recorte[2])
+    elif recorte == "branco-claro":
+        # o branco quase puro só (a bobina branca dos cabos fica: o sombreado dela é cinza)
+        imagem = sem_fundo_branco(imagem, limite=248)
     elif isinstance(recorte, list):
         imagem = pelo_contorno(imagem, recorte)
     # apara a sobra transparente: a base da máquina fica na borda de baixo (no chão)
     caixa = imagem.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox()
     imagem = imagem.crop(caixa)
     imagem.thumbnail((LADO, LADO), Image.LANCZOS)
-    PASTA.mkdir(exist_ok=True)
-    saida = PASTA / f"{chave}.webp"
+    pasta.mkdir(exist_ok=True)
+    saida = pasta / f"{chave}.webp"
     imagem.save(saida, "WEBP", quality=80, method=6)
     return saida, imagem.size
 
@@ -185,9 +252,37 @@ def ficha():
     (PASTA / "maquinas.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+SITE_PECAS = "https://www.lazersport.com.br/api/v1/pecas/"
+
+
+def catalogo_pecas():
+    """reposicao/catalogo.json: cada peça do site no ar (o nome e o id), a prova de que são do catálogo."""
+    pecas_do_site, url = [], SITE_PECAS
+    while url:
+        pagina = _json(url)
+        pecas_do_site += pagina["results"]
+        url = pagina["next"]
+    dados = {p["nome"]: {"id": p["id"]} for p in sorted(pecas_do_site, key=lambda p: p["id"])}
+    (REPOSICAO / "catalogo.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return dados
+
+
+def pecas():
+    """reposicao/: o recorte de cada peça e a ficha (reposicao/pecas.json, o cenas.js lê)."""
+    catalogo_pecas()
+    for chave in PECAS:
+        saida, tamanho = recortar(chave, PECAS, REPOSICAO)
+        print(f"{chave}: {saida.name} {tamanho[0]}x{tamanho[1]} ({saida.stat().st_size // 1024} KB)")
+    dados = {chave: {"id": i, "nome": nome, "altura": altura} for chave, (i, nome, _foto, altura, _r) in PECAS.items()}
+    (REPOSICAO / "pecas.json").write_text(json.dumps(dados, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
 def main(chaves):
     if chaves == ["--catalogo"]:
         print(f"{len(catalogo())} produtos em maquinas/catalogo.json")
+        return
+    if chaves == ["--pecas"]:
+        pecas()
         return
     for chave in chaves or MAQUINAS:
         saida, tamanho = recortar(chave)

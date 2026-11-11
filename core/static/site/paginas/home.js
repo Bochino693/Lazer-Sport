@@ -938,21 +938,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    const slider = document.getElementById("pecasSlider");
-    if (slider) {
-        const slides = slider.querySelectorAll(".peca-slide");
-
-        if (slides.length) {
-            let current = Math.floor(Math.random() * slides.length);
-            slides[current].classList.add("active");
-
-            setInterval(() => {
-                slides[current].classList.remove("active");
-                current = (current + 1) % slides.length;
-                slides[current].classList.add("active");
-            }, 3000);
-        }
-    }
 });
 
 /* ======================================================
