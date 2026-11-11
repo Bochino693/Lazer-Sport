@@ -112,6 +112,22 @@ class ModeloTests(_ComPar):
         self.assertTrue(self.ficha.ativo)
         self.assertEqual(VarianteAdesivo.objects.count(), 0)
 
+    def test_o_preco_do_produto_que_fica_nao_muda(self):
+        # o Air Game Kids com R$ 6.990,00 (o painel); a ficha com outro preço: o produto fica com o dele
+        self.base.refresh_from_db()
+        self.assertEqual(self.base.valor_brinquedo, Decimal("4990.00"))
+        VarianteAdesivo.objects.all().delete()
+        Brinquedos.objects.filter(pk=self.base.pk).update(valor_brinquedo=Decimal("6990.00"))
+        Brinquedos.objects.filter(pk=self.ficha.pk).update(valor_brinquedo=Decimal("1234.00"), ativo=True)
+        variantes.juntar(*PAR[:2], PAR[2], Brinquedos, VarianteAdesivo, avisar=_calado)
+        self.base.refresh_from_db()
+        self.assertEqual(self.base.valor_brinquedo, Decimal("6990.00"))
+        # sem preço, o Air Game Kids fica com R$ 6.990,00
+        Brinquedos.objects.filter(pk=self.base.pk).update(valor_brinquedo=None)
+        variantes.juntar(*PAR[:2], PAR[2], Brinquedos, VarianteAdesivo, avisar=_calado)
+        self.base.refresh_from_db()
+        self.assertEqual(self.base.valor_brinquedo, Decimal("6990.00"))
+
     def test_sem_o_produto_nao_faz_nada(self):
         VarianteAdesivo.objects.all().delete()
         self.base.delete()
@@ -129,6 +145,8 @@ class MigracaoTests(TestCase):
         esquema = migracao_0160.Migration.operations
         dados = migracao_0161.Migration.operations
         self.assertTrue(esquema and all(isinstance(op, (AddField, CreateModel)) for op in esquema))
+        # e nada nosso depois da 0161 (o coordenador numera as próximas)
+        self.assertEqual(len(dados), 2)
         self.assertTrue(dados and all(isinstance(op, RunPython) for op in dados))
         self.assertIn(("core", "0160_variantes_de_adesivo"), migracao_0161.Migration.dependencies)
 

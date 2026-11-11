@@ -44,6 +44,11 @@ PARES = (
      [("Basquete Home Quadrinhos", "Quadrinhos", "quadrinhos")]),
 )
 
+#: O preço do produto que fica, quando ele está sem preço (o cliente: "estes dois precisam estar
+#: juntos urgentemente, com o valor de 6990,00"). O preço que já está no produto nunca é trocado,
+#: e o da ficha que vira adesivo é ignorado (juntar não copia nada da ficha para o produto).
+PRECO_SE_VAZIO = {"Air Game Kids": "6990.00"}
+
 #: As fichas renomeadas antes de virar adesivo: (a chave do cadastro, o nome de antes).
 RENOMEADAS = (("basquete-street-quadrinhos", "Basquete Street Quadrinhos"),)
 
@@ -74,6 +79,13 @@ def juntar(produto, padrao, fichas, Brinquedos, VarianteAdesivo, avisar=print):
         avisar(f"{produto}: não está no catálogo; nada a juntar.")
         return None
     with transaction.atomic():
+        preco = PRECO_SE_VAZIO.get(produto)
+        if preco and not base.valor_brinquedo:
+            from decimal import Decimal
+
+            base.valor_brinquedo = Decimal(preco)
+            base.save(update_fields=["valor_brinquedo"])
+            avisar(f"{base.nome_brinquedo}: estava sem preço; agora R$ {preco}.")
         VarianteAdesivo.objects.update_or_create(
             brinquedo=base, slug=padrao[1],
             defaults={"nome": padrao[0], "ordem": 1, "padrao": True, "origem": None},
