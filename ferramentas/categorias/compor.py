@@ -1,19 +1,23 @@
-"""As fotos das categorias: o fundo claro e o corte 4:3 do card.
+"""As fotos das categorias: o lugar desfocado, os brinquedos nítidos, o corte 4:3 do card.
 
-Lê os renders de `render/<chave>.png` (o gerar.cjs: o objeto e a sombra,
-com o fundo transparente) e grava `core/static/site/categorias/<chave>.webp`,
-1200 × 900, que é o que o cadastro sobe para a categoria (ver
-core/categorias_capas.py e `python manage.py atualizar_capas_categorias`).
+Lê os renders do gerar.cjs em `render/` e grava
+`core/static/site/categorias/<chave>.webp`, 1200 × 900, que é o que o
+cadastro sobe para a categoria (ver core/categorias_capas.py e
+`python manage.py atualizar_capas_categorias`).
 
-O CORTE. O card da home (.categoria-media, ls-home.css) é uma caixa de
-~237 × 176 px com `object-fit: contain`: a foto 4:3 enche a caixa sem
-faixa vazia. O objeto fica no meio, com folga dos lados e embaixo e uma
-folga maior em cima, onde o card põe a etiqueta "Categoria" (no canto de
-cima à esquerda) -- nada importante encosta na borda.
+NO LUGAR (as 16 fotos: o buffet, o shopping, a game zone...). O render já
+vem enquadrado em 4:3 (cenas.js, `enquadrar`): os brinquedos no meio, com
+folga dos lados e embaixo e uma folga maior em cima, onde o card põe a
+etiqueta "Categoria". Junto vêm a máscara dos brinquedos e o peso do
+desfoque (pela profundidade: o que está longe deles). Aqui o lugar é
+desfocado na medida do peso e os brinquedos voltam por cima, nítidos --
+como numa foto com o fundo fora de foco: eles saltam, e o lugar se lê.
 
-O FUNDO. O mesmo claro do card (branco no meio, azul-acinzentado bem leve
-nas bordas), com um brilho bem fraco da cor da categoria atrás do objeto:
-as fotos ficam da mesma família, e cada uma com a sua cor.
+NO ESTÚDIO (sem lugar: as provas de ângulo, "glb:<nome>"). O render vem
+com o fundo transparente; aqui entram o fundo claro do card e o corte em
+volta do objeto.
+
+O ARQUIVO fica abaixo de ~150 KB: a qualidade do WebP desce até caber.
 
     python ferramentas/categorias/compor.py            (todas as que têm render)
     python ferramentas/categorias/compor.py kids       (só esta)
@@ -22,13 +26,17 @@ as fotos ficam da mesma família, e cada uma com a sua cor.
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 PASTA = Path(__file__).resolve().parent
 RENDERS = PASTA / "render"
 DESTINO = PASTA.parent.parent / "core" / "static" / "site" / "categorias"
 
 LARGURA, ALTURA = 1200, 900
+#: O teto do arquivo (o card baixa a foto inteira).
+TETO_KB = 150
+#: O desfoque do lugar onde o peso é 1 (em pixels do render, que tem o dobro da foto).
+DESFOQUE = 6
 #: As folgas, em fração da foto final: (esquerda, cima, direita, baixo).
 FOLGAS = (0.065, 0.13, 0.065, 0.075)
 
@@ -74,7 +82,31 @@ def fundo(cor, centro):
     return Image.composite(Image.new("RGB", base.size, _hex(cor)), base, brilho)
 
 
-def compor(chave, destino=DESTINO):
+def salvar(foto, saida):
+    """O WebP com a melhor qualidade que cabe no teto."""
+    for qualidade in (86, 82, 78, 74, 70, 66, 62, 58):
+        foto.save(saida, "WEBP", quality=qualidade, method=6)
+        if saida.stat().st_size <= TETO_KB * 1024:
+            break
+    return saida
+
+
+def compor_no_lugar(chave):
+    """A foto no lugar: o lugar desfocado pelo peso e os brinquedos nítidos por cima."""
+    cor = Image.open(RENDERS / f"{chave}.png").convert("RGB")
+    peso = Image.open(RENDERS / f"{chave}-peso.png").convert("L")
+    mascara = Image.open(RENDERS / f"{chave}-mascara.png").getchannel("A")
+    desfocado = cor.filter(ImageFilter.GaussianBlur(DESFOQUE))
+    # o lugar desfocado perde um tico de cor: os brinquedos saltam (sem ficar lavado)
+    desfocado = ImageEnhance.Color(desfocado).enhance(0.95)
+    lugar = Image.composite(desfocado, cor, peso.filter(ImageFilter.GaussianBlur(3)))
+    foto = Image.composite(cor, lugar, mascara)
+    foto = foto.resize((LARGURA, ALTURA), Image.LANCZOS)
+    return foto.filter(ImageFilter.UnsharpMask(radius=1.1, percent=50, threshold=2))
+
+
+def compor_no_estudio(chave):
+    """A foto de estúdio: o fundo claro do card e o corte em volta do objeto."""
     render = Image.open(RENDERS / f"{chave}.png").convert("RGBA")
     alfa = render.getchannel("A")
     # o objeto (a sombra do chão é transparente: fica de fora da conta)
@@ -102,11 +134,14 @@ def compor(chave, destino=DESTINO):
     centro = ((cx - caixa_corte[0]) * escala, ((y0 + y1) / 2 - caixa_corte[1]) * escala)
     foto = fundo(CORES.get(chave.split("@")[0], "#0878f9"), centro).convert("RGBA")
     foto.alpha_composite(recorte)
-    foto = foto.convert("RGB").filter(ImageFilter.UnsharpMask(radius=1.2, percent=45, threshold=2))
+    return foto.convert("RGB").filter(ImageFilter.UnsharpMask(radius=1.2, percent=45, threshold=2))
+
+
+def compor(chave, destino=DESTINO):
+    no_lugar = (RENDERS / f"{chave}-mascara.png").exists()
+    foto = compor_no_lugar(chave) if no_lugar else compor_no_estudio(chave)
     destino.mkdir(parents=True, exist_ok=True)
-    saida = destino / f"{chave}.webp"
-    foto.save(saida, "WEBP", quality=84, method=6)
-    return saida
+    return salvar(foto, destino / f"{chave}.webp")
 
 
 def main(argumentos):

@@ -36,7 +36,7 @@ from django.core.files.storage import FileSystemStorage
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from PIL import Image
+from PIL import Image, ImageStat
 
 from . import arena, categorias_capas
 from .models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
@@ -44,6 +44,7 @@ from .nomes import nome_bonito, precisa_arrumar
 from .views import CategoriasInfoView
 
 migracao = importlib.import_module("core.migrations.0147_categorias_capas_e_nomes")
+migracao_lugares = importlib.import_module("core.migrations.0149_categorias_nos_lugares")
 
 #: Os nomes do site no ar (novembro de 2026) e como eles ficam.
 NOMES_DO_SITE = {
@@ -321,10 +322,70 @@ class FotosTests(TestCase):
             with self.subTest(arquivo.name), Image.open(arquivo) as foto:
                 self.assertEqual(foto.format, "WEBP")
                 self.assertEqual(foto.size, (1200, 900))
-                self.assertLess(arquivo.stat().st_size, 200 * 1024)
-                # a borda é o fundo claro: nada encosta no corte
-                borda = [foto.convert("L").getpixel((x, y)) for x in range(0, 1200, 40) for y in (2, 897)]
-                self.assertGreater(min(borda), 200)
+                # o card baixa a foto inteira: até ~150 KB
+                self.assertLessEqual(arquivo.stat().st_size, 150 * 1024)
+
+    def test_as_fotos_estao_num_lugar_e_nao_no_branco(self):
+        # "estão muito brancas, ponha em lugares": a foto tem cor (saturação
+        # média), quase nada de branco estourado, e a borda não é um fundo liso
+        for arquivo in sorted(categorias_capas.PASTA.glob("*.webp")):
+            with self.subTest(arquivo.name), Image.open(arquivo) as foto:
+                rgb = foto.convert("RGB")
+                saturacao = ImageStat.Stat(rgb.convert("HSV").getchannel("S")).mean[0]
+                self.assertGreater(saturacao, 55)
+                brancos = sum(1 for p in rgb.resize((120, 90)).getdata() if min(p) > 235)
+                self.assertLess(brancos / (120 * 90), 0.12)
+                borda = [rgb.getpixel((x, y)) for x in range(0, 1200, 24) for y in (6, 893)]
+                borda += [rgb.getpixel((x, y)) for y in range(0, 900, 24) for x in (6, 1193)]
+                desvio = ImageStat.Stat(_imagem(borda)).stddev
+                self.assertGreater(max(desvio), 12)
+                # nem escura demais
+                self.assertGreater(ImageStat.Stat(rgb.convert("L")).mean[0], 70)
+
+
+def _imagem(pixels):
+    """Uma imagem de uma linha com estes pixels (para a estatística da borda)."""
+    imagem = Image.new("RGB", (len(pixels), 1))
+    imagem.putdata(pixels)
+    return imagem
+
+
+@override_settings(IS_RENDER=False)
+class MigracaoDosLugaresTests(TestCase):
+    """A 0149: as fotos nos lugares sobem no Render, só as que mudaram."""
+
+    def setUp(self):
+        self.kids = CategoriasBrinquedos.objects.create(nome_categoria="Kids", imagem_categoria="categorias/kids_antiga")
+        # a do Fliperama já está com a foto de hoje (a mesma assinatura): não sobe de novo
+        self.fliper = CategoriasBrinquedos.objects.create(
+            nome_categoria="Fliperama", imagem_categoria=f"categorias/{categorias_capas.nome_no_cadastro('fliperama')}_abc123",
+        )
+
+    def test_depende_da_0148(self):
+        self.assertEqual(migracao_lugares.Migration.dependencies, [("core", "0148_air_game_kids_sem_tabua")])
+
+    def test_fora_do_render_nao_faz_nada(self):
+        self.assertIsNone(migracao_lugares.subir_fotos_no_deploy(apps_reais, None, avisar=_mudo))
+        self.kids.refresh_from_db()
+        self.assertEqual(self.kids.imagem_categoria.name, "categorias/kids_antiga")
+
+    def test_no_render_sobe_so_o_que_mudou(self):
+        with tempfile.TemporaryDirectory() as pasta, _disco(pasta), override_settings(IS_RENDER=True):
+            resultado = migracao_lugares.subir_fotos_no_deploy(apps_reais, None, avisar=_mudo)
+        self.assertEqual(resultado["trocadas"], ["Kids"])
+        self.assertEqual(resultado["iguais"], ["Fliperama"])
+        self.kids.refresh_from_db()
+        self.fliper.refresh_from_db()
+        self.assertIn(categorias_capas.nome_no_cadastro("kids"), self.kids.imagem_categoria.name)
+        self.assertTrue(self.fliper.imagem_categoria.name.endswith("_abc123"))
+
+    def test_no_render_a_subida_que_falha_nao_derruba_o_deploy(self):
+        avisos = []
+        with override_settings(IS_RENDER=True), mock.patch.object(categorias_capas, "atualizar_capas", side_effect=OSError("sem rede")):
+            self.assertIsNone(migracao_lugares.subir_fotos_no_deploy(apps_reais, None, avisar=avisos.append))
+        self.assertIn("atualizar_capas_categorias", avisos[-1])
+        self.kids.refresh_from_db()
+        self.assertEqual(self.kids.imagem_categoria.name, "categorias/kids_antiga")
 
 
 class ComandoTests(TestCase):

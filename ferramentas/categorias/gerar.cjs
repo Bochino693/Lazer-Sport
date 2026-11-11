@@ -1,6 +1,7 @@
 // As fotos das categorias: abre o index.html (que roda o cenas.js) num Chromium
-// sem tela e grava, para cada categoria, o render com o fundo transparente em
-// render/<chave>.png. Depois o compor.py põe o fundo e faz o corte 4:3:
+// sem tela e grava, para cada categoria, a foto no lugar (render/<chave>.png),
+// a máscara dos brinquedos (<chave>-mascara.png) e o peso do desfoque
+// (<chave>-peso.png). Depois o compor.py desfoca o lugar e grava o .webp:
 //
 //   node ferramentas/categorias/gerar.cjs                 (todas)
 //   node ferramentas/categorias/gerar.cjs fliperama kids  (só estas)
@@ -46,9 +47,14 @@ const servidor = http.createServer((req, res) => {
     const [chave, angulo] = pedido.split("@");
     const [giro, altura, lente] = (angulo || "").split(",").map(Number);
     const ajustes = angulo ? { giro, altura, lente: lente || 26 } : {};
-    const url = await page.evaluate(([c, a]) => window.renderizar(c, a), [chave, ajustes]);
-    fs.writeFileSync(path.join(SAIDA, `${pedido.replace(":", "_")}.png`), Buffer.from(url.split(",")[1], "base64"));
-    console.log(`${pedido}: ${((Date.now() - inicio) / 1000).toFixed(1)} s`);
+    // a foto, a máscara dos brinquedos e o peso do desfoque (as duas últimas só com lugar)
+    const imagens = await page.evaluate(([c, a]) => window.renderizar(c, a), [chave, ajustes]);
+    const nome = pedido.replace(":", "_");
+    for (const [tipo, url] of Object.entries(imagens)) {
+      const sufixo = tipo === "cor" ? "" : `-${tipo}`;
+      fs.writeFileSync(path.join(SAIDA, `${nome}${sufixo}.png`), Buffer.from(url.split(",")[1], "base64"));
+    }
+    console.log(`${pedido}: ${((Date.now() - inicio) / 1000).toFixed(1)} s`, JSON.stringify(await page.evaluate(() => window.ultimaCaixa || "")));
   }
   await browser.close();
   servidor.close();
