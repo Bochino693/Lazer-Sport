@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone as django_timezone
 from django.contrib.auth.models import User
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -2645,6 +2646,46 @@ class PartidasDoJogo(models.Model):
 
     def __str__(self):
         return f"{self.slug}: {self.partidas}"
+
+
+class JogadaRegistrada(models.Model):
+    """Cada Jogar de verdade, com data: a base das contas por período do painel.
+
+    `PartidasDoJogo` guarda só o total de cada jogo (o "Mais jogados" do
+    portal, no máximo uma vez a cada 30 min por visitante). Aqui fica CADA
+    jogada -- quando, qual jogo, de quem (a conta, se tinha) e por onde (a
+    página do jogo, o emulador, o app do portal, os jogos da casa) --, para o
+    painel contar hoje, a semana, o mês... e saber quem jogou com conta,
+    inclusive nos jogos de console, que não têm pontuação nem ranking.
+
+    A mesma pessoa no mesmo jogo dentro de `core.jogadas.REPETIDA_SEGUNDOS`
+    é a mesma jogada (o Jogar da página e o do emulador logo em seguida; o
+    recarregar da página). A equipe (staff) conta, marcada em `equipe`, para
+    o painel poder mostrar com ou sem ela.
+    """
+
+    jogo = models.SlugField(max_length=80)
+    usuario = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="jogadas_registradas",
+    )
+    equipe = models.BooleanField(default=False)
+    # quem não tem conta: um número tirado da sessão (não diz quem é; serve para contar pessoas)
+    visitante = models.CharField(max_length=16, blank=True, default="")
+    origem = models.CharField(max_length=12, blank=True, default="")
+    quando = models.DateTimeField(default=django_timezone.now)
+
+    class Meta:
+        verbose_name = "Jogada registrada"
+        verbose_name_plural = "Jogadas registradas"
+        ordering = ("-quando",)
+        indexes = [
+            models.Index(fields=("jogo", "-quando"), name="jogada_jogo_quando"),
+            models.Index(fields=("-quando",), name="jogada_quando"),
+            models.Index(fields=("usuario", "-quando"), name="jogada_usuario_quando"),
+        ]
+
+    def __str__(self):
+        return f"{self.jogo} · {self.quando:%d/%m %H:%M}"
 
 
 class AnuncioJogos(Prime):

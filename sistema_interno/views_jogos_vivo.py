@@ -7,7 +7,10 @@ trazendo cadastro:
   do portal, na memória do site -- por isso o número zera quando o site é publicado de novo);
 * as PARTIDAS contadas de cada jogo (o "Mais jogados" do portal, PartidasDoJogo);
 * quem jogou HOJE com conta, o RANKING geral e o campeão de cada jogo da casa;
-* as CONTAS NOVAS (hoje e nos últimos 7 dias): o convite das 2 jogadas grátis existe para isto.
+* as CONTAS NOVAS (hoje e nos últimos 7 dias): o convite das 2 jogadas grátis existe para isto;
+* as JOGADAS POR PERÍODO (hoje, 7 dias, 30 dias, 3 meses, semestre, ano), de cada Jogar com
+  data (core/jogadas.py): quantas, quantas pessoas com conta e sem, de cada jogo e quem jogou
+  -- inclusive os jogos de console --, com ou sem a equipe (?periodo=…&equipe=0).
 
 A tela atualiza sozinha a cada 15 s pelo mesmo endereço com ``?formato=json``.
 Só o superadministrador, como a tela dos jogos.
@@ -25,7 +28,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views import View
 
-from core import arena, portal_jogos, presenca_jogos, ranking as ranking_dos_jogos
+from core import arena, jogadas as jogadas_registro, portal_jogos, presenca_jogos, ranking as ranking_dos_jogos
 from core.models import JogoCadastrado
 from core.objetos_3d import tabela_pronta
 
@@ -60,7 +63,28 @@ def _contas_novas():
         return {"hoje": 0, "semana": 0}
 
 
-def painel_ao_vivo():
+def _jogadas_do_periodo(periodo, com_equipe, nomes, jogo):
+    """As jogadas com data (core/jogadas.py) do período: totais, por jogo e quem jogou com conta."""
+    dados = jogadas_registro.resumo(periodo, com_equipe=com_equipe)
+    por_jogo = sorted(
+        (jogo(s, n) for s, n in dados["por_jogo"].items() if n > 0 and s in nomes),
+        key=lambda j: (-j["n"], j["nome"]),
+    )[:12]
+    return {
+        "periodo": periodo,
+        "rotulo": jogadas_registro.PERIODOS[periodo][0],
+        "com_equipe": com_equipe,
+        "jogadas": dados["jogadas"],
+        "com_conta": dados["com_conta"],
+        "visitantes": dados["visitantes"],
+        "equipe": dados["equipe"],
+        "por_jogo": por_jogo,
+        "maior": por_jogo[0]["n"] if por_jogo else 0,
+        "quem": dados["quem"],
+    }
+
+
+def painel_ao_vivo(periodo="hoje", com_equipe=True):
     """Os números da tela, prontos para o template e para o JSON."""
     nomes = _nomes_dos_jogos()
 
@@ -100,6 +124,7 @@ def painel_ao_vivo():
                     for r in geral],
         "campeoes": [{"jogo": c["jogo"], "cor": c["cor"], "nome": c["nome"], "pontos": c["pontos"]} for c in campeoes],
         "hora": timezone.localtime().strftime("%H:%M:%S"),
+        "jogadas": _jogadas_do_periodo(periodo, com_equipe, nomes, jogo),
     }
 
 
@@ -108,9 +133,16 @@ class JogosAoVivoView(SuperusuarioInternoRequiredMixin, View):
     template_name = "jogos_ao_vivo_inner.html"
 
     def get(self, request):
-        dados = painel_ao_vivo()
+        periodo = request.GET.get("periodo") or "hoje"
+        if periodo not in jogadas_registro.PERIODOS:
+            periodo = "hoje"
+        com_equipe = request.GET.get("equipe") != "0"
+        dados = painel_ao_vivo(periodo, com_equipe)
         if request.GET.get("formato") == "json":
             resposta = JsonResponse(dados)
             resposta["Cache-Control"] = "no-store"
             return resposta
-        return render(request, self.template_name, {"vivo": dados, "atualiza": ATUALIZA_SEGUNDOS})
+        return render(request, self.template_name, {
+            "vivo": dados, "atualiza": ATUALIZA_SEGUNDOS,
+            "periodos": [(chave, rotulo) for chave, (rotulo, _dias) in jogadas_registro.PERIODOS.items()],
+        })

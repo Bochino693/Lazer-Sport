@@ -244,11 +244,24 @@ def _partidas():
 
 
 def _jogadores_de_hoje():
-    """Quantos cadastrados jogaram hoje um jogo com ranking (a linha do recorde de cada um é tocada a cada partida)."""
-    from .models import RecordeJogo
+    """Quantos cadastrados jogaram hoje -- QUALQUER jogo, inclusive os de console (core/jogadas.py).
+
+    Antes saía só dos recordes, que só os jogos da casa (com pontuação) tocam: quem jogava um
+    jogo de console com a conta aberta não entrava na conta. Os recordes de hoje continuam
+    somando (as partidas da casa de antes do registro das jogadas).
+    """
+    from .jogadas import inicio_do_periodo
+    from .models import JogadaRegistrada, RecordeJogo
+    from .objetos_3d import tabela_pronta
 
     inicio = timezone.make_aware(dt.datetime.combine(timezone.localdate(), dt.time.min))
-    return RecordeJogo.objects.filter(atualizado_em__gte=inicio).values("usuario_id").distinct().count()
+    pessoas = set(RecordeJogo.objects.filter(atualizado_em__gte=inicio).values_list("usuario_id", flat=True))
+    if tabela_pronta(JogadaRegistrada):
+        pessoas |= set(
+            JogadaRegistrada.objects.filter(quando__gte=inicio_do_periodo("hoje"), usuario__isnull=False)
+            .values_list("usuario_id", flat=True)
+        )
+    return len(pessoas)
 
 
 def _montar_vivo():

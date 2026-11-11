@@ -461,6 +461,8 @@ class JogoEmuladorView(View):
         config = config_publica(config_do_emulador(jogo), request, jogo.slug)
         # a jogada grátis do visitante: o Jogar daqui gasta uma (e ela dura o tempo do site).
         # Só nesta página do site: o APK e o .exe montam o reprodutor sem isto (jogo comprado é livre)
+        # todo Jogar daqui avisa o site (a jogada com data, core/jogadas.py), com conta ou sem
+        config = {**config, "registro": reverse("jogos_abriu")}
         gratis = situacao_gratis(request)
         if gratis is not None:
             volta = reverse("jogo", args=[jogo.slug])
@@ -607,6 +609,9 @@ def _contar_partida(slug):
         log_jogos.warning("Portal: não deu para contar a partida de %s", slug)
 
 
+from . import jogadas as jogadas_registro  # noqa: E402
+
+
 class AbriuJogoView(View):
     """O toque em Jogar: conta a partida e diz se o visitante pode jogar.
 
@@ -631,6 +636,7 @@ class AbriuJogoView(View):
         except (ValueError, AttributeError):
             return JsonResponse({"erro": "corpo inválido"}, status=400)
         gastar = corpo.get("gastar") is True
+        origem = str(corpo.get("origem") or "")[:12]
         da_casa = slug in arena.JOGOS_POR_SLUG
         if not da_casa:
             dados = get_cached_catalog_page("jogos", (), dados_do_simulador)
@@ -643,6 +649,8 @@ class AbriuJogoView(View):
             abertos[slug] = agora
             request.session[SESSAO_ABERTOS] = abertos
         if request.user.is_authenticated:
+            # com conta (a equipe também, marcada): a jogada fica anotada com a data (core/jogadas.py)
+            jogadas_registro.registrar(request, slug, origem or ("casa" if da_casa else ""))
             return JsonResponse({"liberado": True, "visitante": False, "ultima_gratis": False})
         jogadas = list(request.session.get(SESSAO_GRATIS, []))
         if len(jogadas) >= JOGADAS_GRATIS:
@@ -658,6 +666,9 @@ class AbriuJogoView(View):
         if gastar:
             jogadas.append([slug, int(agora)])
             request.session[SESSAO_GRATIS] = jogadas
+        # o visitante liberado: a jogada fica anotada (a pergunta da página e o Jogar do
+        # emulador em seguida são uma jogada só: core/jogadas.REPETIDA_SEGUNDOS)
+        jogadas_registro.registrar(request, slug, origem or ("casa" if da_casa else ""))
         restantes = JOGADAS_GRATIS - len(jogadas)
         return JsonResponse({
             "liberado": True,

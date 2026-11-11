@@ -207,7 +207,7 @@ if (raiz && dadosDoJogador) {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-      body: JSON.stringify({ jogo: slug, gastar: !logado }),
+      body: JSON.stringify({ jogo: slug, gastar: !logado, origem: "casa" }),
     })
       .then((resposta) => (resposta.ok ? resposta.json() : null))
       .then((dados) => {

@@ -3475,3 +3475,38 @@ Dependência nova: rjsmin (requirements.txt).
    escuro): lista, filtro, cadastro aberto, salvar/editar/excluir.
    Testes: core/tests_brinquedos_adm_tela.py, core/tests_gestao_cores.py
    (cores proibidas, tela que não reescreve o painel, camada comum).
+
+77) JOGOS: A COLETA DAS JOGADAS (QUEM, QUANDO, O QUÊ) E O PAINEL POR PERÍODO
+   Pergunta: "joguei mais uma vez o Super Mario 64, veja se é porque sou
+   admin ou realmente não está precisa a coleta de dados de jogos".
+   A RESPOSTA: não era por ser admin (a equipe sempre contou igual). Eram três
+   falhas da coleta:
+     1. o emulador (a página que roda o jogo de console) só avisava o site
+        do Jogar de quem NÃO tinha conta (para gastar a jogada grátis): quem
+        jogava logado direto no emulador (o "Continuar", o histórico, um
+        link) não entrava em conta nenhuma;
+     2. o "Mais jogados" conta no máximo uma vez a cada 30 min por pessoa e
+        jogo (de propósito, contra inflar): jogar de novo logo em seguida
+        não somava;
+     3. "jogaram hoje com conta" saía só dos recordes, que só os jogos da casa
+        (com pontuação) tocam: os de console nunca contavam.
+   O QUE MUDOU (core/jogadas.py, modelo JogadaRegistrada, migração 0167, só
+   esquema):
+     * toda entrada de jogo avisa o site (/jogos/abriu/) com a origem: a
+       página do jogo, o emulador (agora com conta também: config.registro),
+       o app do portal e os jogos da casa;
+     * cada Jogar vira uma linha com a data, o jogo, a conta (ou um número
+       tirado da sessão do visitante, que não diz quem é), se é da equipe e a
+       origem; a mesma pessoa no mesmo jogo em até 3 min é a mesma jogada (a
+       página e o emulador em seguida, o recarregar); o visitante barrado
+       (sem jogadas grátis) não conta;
+     * "jogaram hoje com conta" passa a contar qualquer jogo;
+     * o painel AO VIVO dos jogos (/site/jogos/ao-vivo/) ganhou "Jogadas por
+       período": Hoje · 7 dias · 30 dias · 3 meses · Semestre · Ano, com as
+       jogadas, as pessoas com conta, os visitantes, a equipe, os jogos mais
+       jogados do período e quem jogou com conta (a equipe marcada), com o
+       botão "Tirar a equipe". Atualiza sozinho com o resto da tela.
+   O "Mais jogados" do portal continua com a regra dos 30 min (é a vitrine).
+   As jogadas de antes desta versão não têm data: o painel por período
+   começa a contar a partir do deploy.
+   Testes: core/tests_jogadas.py; core/tests_jogos_emulador.py (config.registro).

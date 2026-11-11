@@ -315,7 +315,10 @@ class EmuladorNoSiteTests(TestCase):
         self.assertIn("next=" + reverse("jogo", args=["disco-teste"]), gratis["cadastro"])
         from .tests_ranking import _cliente
         self.client.force_login(_cliente("ana", "ana@exemplo.com"))
-        self.assertNotIn("gratis", self.config(self.client.get(reverse("jogo_emulador", args=["disco-teste"]))))
+        config = self.config(self.client.get(reverse("jogo_emulador", args=["disco-teste"])))
+        self.assertNotIn("gratis", config)
+        # com conta, o Jogar do emulador também avisa o site (a jogada com data: core/jogadas.py)
+        self.assertEqual(config["registro"], reverse("jogos_abriu"))
 
     def test_a_pagina_do_quadro_entrega_cada_arquivo_com_o_nome_exato(self):
         resposta = self.client.get(reverse("jogo_emulador", args=["disco-teste"]))
