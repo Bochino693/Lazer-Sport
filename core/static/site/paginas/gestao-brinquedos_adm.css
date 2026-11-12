@@ -1956,6 +1956,37 @@ body:has(dialog.bq-janela[open]) {
 
 .bq-adesivo-posicao:hover { border-color: var(--acento); color: var(--text); }
 
+/* O botão genérico do painel (.gestao-integrada .ls-content button: em linha,
+   com altura fixa) vencia a vaga da posição: a miniatura e o nome ("Lado
+   direito") ficavam um por cima do outro numa pílula. A vaga é um bloco: a
+   foto quadrada em cima e o nome inteiro embaixo. */
+.gestao-integrada .ls-content button.bq-adesivo-posicao {
+    display: grid;
+    grid-template-rows: auto auto;
+    align-content: start;
+    justify-items: center;
+    gap: 5px;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 6px 6px 7px;
+    border: 1px dashed var(--line-forte);
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-2);
+    font-size: .74rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+}
+
+.gestao-integrada .ls-content button.bq-adesivo-posicao.is-vazia { min-height: 92px; align-content: center; }
+.gestao-integrada .ls-content button.bq-adesivo-posicao:hover { border-color: var(--acento); color: var(--text); }
+.gestao-integrada .ls-content button.bq-adesivo-posicao img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.gestao-integrada .ls-content button.bq-adesivo-posicao span { display: block; max-width: 100%; overflow-wrap: anywhere; }
+
 .bq-adesivo-3d {
     display: flex;
     flex-wrap: wrap;
