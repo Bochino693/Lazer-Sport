@@ -13,6 +13,9 @@
   {% else %}<span class="ls-imp-selo vazio" title="O documento não traz este dado">Sem fonte no documento</span>{% endif %}
   {% if campo.origem == "ambas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf_ia" %}transcrição e IA concordam{% else %}regras e IA concordam{% endif %}</span>
   {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf_ia" %}releitura da transcrição{% elif proposta.formato == "pdf" %}lido no texto do PDF{% else %}lido no documento{% endif %}</span>
+  {% elif campo.origem == "texto" %}<span class="ls-imp-tag">lido do texto</span>
+  {% elif campo.origem == "cep" %}<span class="ls-imp-tag">pela consulta do CEP</span>
+  {% elif campo.origem == "catalogo" %}<span class="ls-imp-tag amarelo">preço do catálogo</span>
   {% elif campo.origem == "ia" %}<span class="ls-imp-tag">IA, conferida na fonte</span>
   {% elif campo.origem == "divergente" %}<span class="ls-imp-tag vermelho">leituras diferentes</span>{% endif %}
   {% if campo.fonte %}
@@ -50,3 +53,17 @@
 <p class="ls-imp-falta-motivo" data-falta-de="{{ alvo }}"{% if not falta %} hidden{% endif %}>
   <i class="bi bi-exclamation-circle" aria-hidden="true"></i> <span>{{ falta|capfirst }}</span>
 </p>
+{% comment %}
+  OUTRAS LEITURAS: os outros nomes, telefones e documentos que a leitura
+  do texto achou (identificar.py). Um toque troca o valor do campo.
+{% endcomment %}
+{% if campo.alternativas %}
+<div class="ls-imp-opcoes" role="group" aria-label="Outras leituras do documento">
+  <span>Outras leituras:</span>
+  {% for opcao in campo.alternativas %}
+  <button type="button" class="ls-chip" data-preencher="{{ alvo }}" data-valor="{{ opcao.valor }}" title="{{ opcao.motivo|capfirst }}">
+    {{ opcao.rotulo }}{% if opcao.fonte %} <small>{{ opcao.fonte.id }}</small>{% endif %}
+  </button>
+  {% endfor %}
+</div>
+{% endif %}

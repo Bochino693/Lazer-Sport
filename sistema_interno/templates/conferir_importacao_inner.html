@@ -51,6 +51,34 @@
   <div class="ls-imp-grade">
     <div class="ls-imp-principal">
 
+      <!-- ================================ BRINQUEDOS NO DOCUMENTO: PERGUNTA -->
+      {% comment %}
+        "Em caso de indentificar brinquedos, perguntar se deseja criar um
+        orçamento a partir do documento." A pergunta vem no topo, com os
+        nomes do catálogo; a resposta liga (ou não) a chave "Criar o
+        orçamento também" logo abaixo. Sem resposta, fica só o cliente.
+      {% endcomment %}
+      {% if pergunta_orcamento %}
+      <section class="ls-panel ls-imp-pergunta-orcamento" id="perguntaOrcamento" aria-labelledby="textoPergunta">
+        <div class="ls-panel-body">
+          <p class="ls-imp-pergunta-texto" id="textoPergunta">
+            <i class="bi bi-stars" aria-hidden="true"></i>
+            <span>{% if pergunta_orcamento.brinquedos %}Encontrei {{ pergunta_orcamento.brinquedos|length }} brinquedo{{ pergunta_orcamento.brinquedos|length|pluralize }} no documento ({{ pergunta_orcamento.brinquedos|join:", " }}){% if pergunta_orcamento.fora_do_catalogo %} e mais {{ pergunta_orcamento.fora_do_catalogo }} ite{{ pergunta_orcamento.fora_do_catalogo|pluralize:"m,ns" }} fora do catálogo{% endif %}.{% else %}Encontrei {{ pergunta_orcamento.itens }} ite{{ pergunta_orcamento.itens|pluralize:"m,ns" }} no documento.{% endif %}
+            <strong>Deseja criar um orçamento a partir do documento?</strong></span>
+          </p>
+          <div class="ls-imp-pergunta-botoes">
+            <button type="button" class="btn btn-success" data-resposta-orcamento="sim" id="respostaSim">
+              <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> Sim, criar o orçamento
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-resposta-orcamento="nao" id="respostaNao">
+              Não, só o cliente
+            </button>
+          </div>
+          <p class="ls-imp-nota" id="respostaOrcamento" aria-live="polite" hidden></p>
+        </div>
+      </section>
+      {% endif %}
+
       <!-- ======================================== O QUE FAZER COM ELE -->
       {% comment %}
         O CLIENTE PRIMEIRO; O ORÇAMENTO É OPÇÃO. "vc deve deixar facil
@@ -103,6 +131,17 @@
           </p>
 
           <div class="ls-imp-secao" data-modo="existente"{% if envio.cliente_modo != "existente" %} hidden{% endif %}>
+            {% comment %}
+              "Confira também os atuais para não repetir os dados": achado
+              pelo CPF/CNPJ, e-mail, telefone ou nome (e cidade), o cliente
+              é LIGADO ao cadastro que já existe, e não cadastrado de novo.
+            {% endcomment %}
+            {% if proposta.cliente.vinculo.cliente_id %}
+            <p class="ls-imp-ja-cadastrado" id="jaCadastrado">
+              <i class="bi bi-person-check-fill" aria-hidden="true"></i>
+              <span>Este cliente já está cadastrado: <strong>{{ proposta.cliente.vinculo.opcao.rotulo }}</strong> (#{{ proposta.cliente.vinculo.cliente_id }}){% if proposta.cliente.vinculo.motivo %} — {{ proposta.cliente.vinculo.motivo }}{% endif %}.</span>
+            </p>
+            {% endif %}
             <label class="form-label" for="clienteBusca">Cliente cadastrado <span class="ls-imp-obrig" aria-hidden="true">*</span></label>
             <div id="clienteBuscaBox"></div>
             <input type="hidden" name="cliente_id" id="clienteId" value="{{ envio.cliente_id }}">
@@ -129,13 +168,9 @@
               <div><dt>No documento</dt><dd>{{ proposta.cliente.nome.valor|default:"—" }}{% if proposta.cliente.documento.valor %} · {{ proposta.cliente.documento.valor }}{% endif %}{% if proposta.cliente.telefone.valor %} · {{ proposta.cliente.telefone.valor }}{% endif %}{% if proposta.cliente.email.valor %} · {{ proposta.cliente.email.valor }}{% endif %}</dd></div>
             </dl>
             {% endif %}
-            <p class="ls-imp-nota" data-nota-modo="orcamento"{% if envio.modo != "orcamento" %} hidden{% endif %}>
+            <p class="ls-imp-nota">
               <i class="bi bi-info-circle" aria-hidden="true"></i>
               O que estiver vazio no cadastro é completado com os dados abaixo; o que o cadastro já tem não muda.
-            </p>
-            <p class="ls-imp-nota" data-nota-modo="cliente"{% if envio.modo != "cliente" %} hidden{% endif %}>
-              <i class="bi bi-info-circle" aria-hidden="true"></i>
-              O cadastro é atualizado com os dados abaixo (campo vazio aqui não apaga o que já existe).
             </p>
           </div>
 
@@ -221,6 +256,19 @@
             {% if proposta.cliente.endereco.valor %}
             <p class="ls-imp-nota"><small>No documento:</small> “{{ proposta.cliente.endereco.valor }}”
               {% if proposta.cliente.endereco.fonte %}<button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.cliente.endereco.fonte.id }}"><b>{{ proposta.cliente.endereco.fonte.id }}</b></button>{% endif %}</p>
+            {% elif proposta.cliente.logradouro.origem == "texto" %}
+            <p class="ls-imp-nota"><i class="bi bi-magic" aria-hidden="true"></i> Lido do texto do documento{% if proposta.cliente.logradouro.fonte %} <button type="button" class="ls-imp-fonte mini" data-fonte="{{ proposta.cliente.logradouro.fonte.id }}"><b>{{ proposta.cliente.logradouro.fonte.id }}</b></button>{% endif %}{% if proposta.cliente.bairro.origem == "cep" or proposta.cliente.cidade.origem == "cep" %}; o que faltava veio da consulta do CEP{% endif %}.</p>
+            {% endif %}
+            {% if proposta.cliente.enderecos_alternativos %}
+            <div class="ls-imp-opcoes" role="group" aria-label="Outros endereços no documento">
+              <span>Outros endereços no documento:</span>
+              {% for outro in proposta.cliente.enderecos_alternativos %}
+              <button type="button" class="ls-chip" data-endereco-alternativo="1"
+                      data-cep="{{ outro.valor.cep }}" data-rua="{{ outro.valor.rua }}" data-numero="{{ outro.valor.numero }}"
+                      data-complemento="{{ outro.valor.complemento }}" data-bairro="{{ outro.valor.bairro }}"
+                      data-cidade="{{ outro.valor.cidade }}" data-uf="{{ outro.valor.uf }}">{{ outro.rotulo }} <small>{{ outro.fonte.id }}</small></button>
+              {% endfor %}
+            </div>
             {% endif %}
             <div class="ls-imp-endereco-grade">
               <div><label class="form-label" for="campoCep">CEP</label><input class="form-control" id="campoCep" name="cep" maxlength="9" data-mascara="cep" inputmode="numeric" value="{{ envio.cep }}"></div>
@@ -249,6 +297,24 @@
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Item
           </button>
         </header>
+        {% if repetido %}
+        <div class="ls-imp-repetido" id="avisoRepetido" role="alert">
+          <i class="bi bi-files" aria-hidden="true"></i>
+          <div>
+            <strong>Já existe o orçamento #{{ repetido.pk }} com os mesmos itens ({{ repetido.data }}).</strong>
+            <span>Para não repetir a proposta, abra o que já existe — ou crie outro mesmo assim.</span>
+            <div class="ls-imp-repetido-acoes">
+              <a href="{% url 'orcamentos_inner' %}?editar={{ repetido.pk }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" id="abrirExistente">
+                <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i> Abrir o existente
+              </a>
+              <label class="ls-imp-marca">
+                <input type="checkbox" name="criar_mesmo_assim" value="1" id="criarMesmoAssim"{% if envio.criar_mesmo_assim %} checked{% endif %}>
+                <span>Criar mesmo assim</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        {% endif %}
         <div class="ls-panel-body ls-imp-itens" id="listaItens">
           {% for linha in itens_tela %}
             {% include "partes/importacao_item.html" with item=linha.item env=linha.env %}

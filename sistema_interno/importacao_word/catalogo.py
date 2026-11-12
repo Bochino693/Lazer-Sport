@@ -31,7 +31,7 @@ from core.models import Brinquedos, PecasReposicao
 
 from ..models import Cliente, ProdutoInterno
 from ..validacoes import chave_documento
-from .deterministica import digitos_do_telefone, moeda, sem_acento
+from .deterministica import digitos_do_telefone, moeda, sem_acento, valores_em_reais
 
 #: A partir daqui o vínculo é automático (e ainda assim mostrado).
 LIMITE_ALTO = 0.93
@@ -338,12 +338,33 @@ def preco_do_produto(objeto):
 # ======================================================================
 # O CLIENTE
 # ======================================================================
-def casar_cliente(*, documento="", email="", telefone="", nome="") -> dict:
+_SUFIXOS_NO_NOME = {"ltda", "me", "eireli", "epp", "sa", "s a", "mei"}
+
+
+def _nome_para_comparar(nome: str) -> str:
+    """"Buffet Alegria Ltda" e "BUFFET ALEGRIA" são o mesmo nome para o cadastro."""
+    partes = _normalizar(nome).split()
+    while partes and partes[-1] in _SUFIXOS_NO_NOME:
+        partes.pop()
+    return " ".join(partes)
+
+
+def _mesmo_nome(a: str, b: str) -> bool:
+    a, b = _nome_para_comparar(a), _nome_para_comparar(b)
+    if not a or not b:
+        return False
+    return a == b or (min(len(a), len(b)) >= 8 and SequenceMatcher(None, a, b).ratio() >= 0.92)
+
+
+def casar_cliente(*, documento="", email="", telefone="", nome="", estabelecimento="", cidade="") -> dict:
     """O cliente do cadastro, na ordem do que menos erra.
 
     CPF/CNPJ é a pessoa; e-mail e telefone quase sempre são; nome é só um
     palpite (há três "Buffet Alegria" em São Paulo) e por isso nunca vira
-    vínculo sem a pessoa confirmar. Quando dois dados apontam para
+    vínculo sem a pessoa confirmar. O nome conta o do cliente E o do
+    estabelecimento, sem acento, sem "Ltda" e com um erro de digitação de
+    folga; com dois cadastros de mesmo nome, a cidade do endereço desempata
+    -- e sem ela a pessoa escolhe. Quando dois dados apontam para
     cadastros diferentes, isso vira alerta -- não escolha.
     """
     alertas = []
@@ -371,9 +392,11 @@ def casar_cliente(*, documento="", email="", telefone="", nome="") -> dict:
             por_telefone = achados[0]
         candidatos += achados
 
-    nome_normalizado = _normalizar(nome)
     por_nome = []
-    if nome_normalizado:
+    for valor in (nome, estabelecimento):
+        nome_normalizado = _nome_para_comparar(valor)
+        if not nome_normalizado:
+            continue
         from ..views_gestao import BuscaItensOrcamentoView
 
         # A palavra mais longa do nome, sem acento dos dois lados: "Condomínio"
@@ -383,10 +406,16 @@ def casar_cliente(*, documento="", email="", telefone="", nome="") -> dict:
         padrao = BuscaItensOrcamentoView._padrao_sem_acento(palavra)
         for cliente in Cliente.objects.filter(
             Q(nome_cliente__iregex=padrao) | Q(nome_estabelecimento__iregex=padrao)
-        )[:60]:
-            if nome_normalizado in (_normalizar(cliente.nome_cliente), _normalizar(cliente.nome_estabelecimento)):
-                por_nome.append(cliente)
-        candidatos += por_nome
+        ).prefetch_related("enderecos")[:60]:
+            if any(_mesmo_nome(valor, cadastrado) for cadastrado in (cliente.nome_cliente, cliente.nome_estabelecimento)):
+                if all(c.pk != cliente.pk for c in por_nome):
+                    por_nome.append(cliente)
+    cidade_normalizada = _normalizar(cidade)
+    mesma_cidade = [
+        c for c in por_nome
+        if cidade_normalizada and c.endereco_principal and _normalizar(c.endereco_principal.cidade) == cidade_normalizada
+    ]
+    candidatos += por_nome
 
     escolhido, confianca, motivo = None, "baixa", ""
     if por_documento:
@@ -396,7 +425,11 @@ def casar_cliente(*, documento="", email="", telefone="", nome="") -> dict:
     elif por_telefone:
         escolhido, confianca, motivo = por_telefone, "alta", "mesmo telefone do cadastro"
     elif len(por_nome) == 1:
-        escolhido, confianca, motivo = por_nome[0], "media", "mesmo nome; confirme se é a mesma pessoa"
+        escolhido, confianca = por_nome[0], "media"
+        motivo = ("mesmo nome e mesma cidade; confirme se é o mesmo cliente" if mesma_cidade
+                  else "mesmo nome; confirme se é a mesma pessoa")
+    elif len(mesma_cidade) == 1:
+        escolhido, confianca, motivo = mesma_cidade[0], "media", "mesmo nome e mesma cidade; confirme se é o mesmo cliente"
     elif len(por_nome) > 1:
         motivo = "há mais de um cliente com este nome; escolha o certo"
 
@@ -431,3 +464,149 @@ def casar_cliente(*, documento="", email="", telefone="", nome="") -> dict:
         "candidatos": unicos[:5],
         "alertas": alertas,
     }
+
+
+# ======================================================================
+# BRINQUEDOS CITADOS NO TEXTO
+# ======================================================================
+#: "duas camas elásticas", "um Air Game Kids": a quantidade por extenso.
+POR_EXTENSO = {"um": 1, "uma": 1, "dois": 2, "duas": 2, "tres": 3, "quatro": 4, "cinco": 5, "seis": 6,
+               "sete": 7, "oito": 8, "nove": 9, "dez": 10}
+_QUANTIDADE_ANTES = re.compile(
+    r"(?:(\d{1,3})\s*(?:\([^)]{0,12}\)\s*)?(?:x\s*|un\.?\s*|unidades?\s*|pcs?\.?\s*)?"
+    r"|\b(" + "|".join(POR_EXTENSO) + r")\s+)(?:de\s+)?(?:[ao]s?\s+)?$"
+)
+_CADA = re.compile(r"\b(cada|unitario|unit\.?|/\s*un|por unidade|a unidade)\b")
+
+
+def _palavras_com_lugar(texto: str) -> list[tuple[str, int, int]]:
+    """As palavras de `palavras()`, com onde cada uma está no texto."""
+    base = sem_acento(texto or "")
+    saida = []
+    for achado in re.finditer(r"\d+(?:[.,]\d+)?|[a-z]+", base):
+        normalizada = palavras(achado.group(0))
+        if normalizada:
+            saida.append((normalizada[0], achado.start(), achado.end()))
+    return saida
+
+
+def _mesma_palavra(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if a[0].isdigit() or b[0].isdigit() or len(a) < 4 or len(b) < 4:
+        return False
+    return SequenceMatcher(None, a, b).ratio() >= 0.84
+
+
+def brinquedos_citados(linhas: list[dict], catalogo: list[dict], *, fora=frozenset()) -> list[dict]:
+    """Os produtos do catálogo citados no texto corrido, como linhas de item.
+
+    "Gostaria de alugar duas camas elásticas de 3 metros, um Air Game Kids
+    e o Strike Kids" -> três itens, com a quantidade quando escrita (em
+    número ou por extenso) e o valor quando há um na mesma frase. O nome
+    tem de aparecer inteiro e na ordem (no plural, sem acento, com uma
+    palavra pequena no meio); o número do produto ("3 m", "Modelo 5"),
+    quando o texto o traz, tem de ser o mesmo. Peça de reposição não entra
+    aqui: "mola" e "lona" aparecem em todo texto.
+
+    Volta no formato dos itens da leitura por regra, com contexto
+    "mencao": a conferência casa cada um com o catálogo como faz com a
+    linha de uma tabela.
+    """
+    produtos = []
+    for produto in catalogo:
+        if produto["id"][0] not in ("b", "p"):
+            continue
+        nome = palavras(produto["nome"])
+        if not nome or not any(not p[0].isdigit() and len(p) >= 3 for p in nome):
+            continue
+        produtos.append((produto, nome))
+    itens = []
+    for linha in linhas:
+        if linha["id"] in fora or linha.get("tabela"):
+            continue
+        texto = linha["texto"]
+        lugares = _palavras_com_lugar(texto)
+        if not lugares:
+            continue
+        achados = []
+        for produto, nome in produtos:
+            palavras_texto = [p for p, _, _ in lugares]
+            for inicio in range(len(lugares)):
+                if not _mesma_palavra(palavras_texto[inicio], nome[0]):
+                    continue
+                posicao, casadas, numeros_faltando = inicio, 1, 0
+                fim = inicio
+                for parte in nome[1:]:
+                    proxima = None
+                    for salto in (1, 2):
+                        candidata = posicao + salto
+                        if candidata < len(lugares) and _mesma_palavra(palavras_texto[candidata], parte):
+                            proxima = candidata
+                            break
+                    if proxima is None:
+                        if parte[0].isdigit() or parte in UNIDADES_DE_NUMERO:
+                            numeros_faltando += 1
+                            continue
+                        break
+                    posicao = fim = proxima
+                    casadas += 1
+                else:
+                    # Um número DIFERENTE logo depois do nome derruba ("Modelo 5" não é "Modelo 3").
+                    seguinte = palavras_texto[fim + 1] if fim + 1 < len(palavras_texto) else ""
+                    numeros_do_nome = {p for p in nome if p[0].isdigit()}
+                    if seguinte[:1].isdigit() and numeros_do_nome and seguinte not in numeros_do_nome:
+                        continue
+                    achados.append({
+                        "produto": produto, "inicio": lugares[inicio][1], "fim": lugares[fim][2],
+                        "completo": numeros_faltando == 0, "tamanho": casadas,
+                    })
+        # Sobrepostos: fica o nome inteiro (com o número) e o mais longo.
+        achados.sort(key=lambda a: (not a["completo"], -a["tamanho"], a["inicio"]))
+        escolhidos = []
+        for achado in achados:
+            if any(not (achado["fim"] <= e["inicio"] or achado["inicio"] >= e["fim"]) for e in escolhidos):
+                # O mesmo trecho com outro produto parecido (3 m e 4 m sem
+                # número no texto): vira candidato do mesmo item.
+                for e in escolhidos:
+                    if e["inicio"] == achado["inicio"] and not e["completo"] and not achado["completo"]:
+                        e.setdefault("parecidos", []).append(achado["produto"])
+                continue
+            escolhidos.append(achado)
+        escolhidos.sort(key=lambda a: a["inicio"])
+        for posicao, achado in enumerate(escolhidos):
+            antes = sem_acento(texto[:achado["inicio"]])[-30:]
+            quantidade = None
+            achado_qtd = _QUANTIDADE_ANTES.search(antes)
+            if achado_qtd:
+                quantidade = int(achado_qtd.group(1)) if achado_qtd.group(1) else POR_EXTENSO[achado_qtd.group(2)]
+            limite = escolhidos[posicao + 1]["inicio"] if posicao + 1 < len(escolhidos) else len(texto)
+            depois = texto[achado["fim"]:limite]
+            valores = [v for v in valores_em_reais(depois) if v["valor"] is not None]
+            unitario = total = None
+            if valores:
+                if _CADA.search(sem_acento(depois)) or (quantidade or 1) == 1:
+                    unitario = valores[0]
+                else:
+                    total = valores[0]
+            original = texto[achado["inicio"]:achado["fim"]]
+            produto = achado["produto"]
+            fonte = {"id": linha["id"], "texto": linha["texto"]}
+
+            def campo(valor, texto_original, motivo=""):
+                return {"valor": valor, "original": texto_original, "fonte": fonte, "motivo": motivo}
+
+            itens.append({
+                "linha_fonte": linha["id"],
+                # Nome inteiro achado: a linha leva o nome do catálogo, e o
+                # texto do documento fica ao lado ("No documento").
+                "descricao": campo(produto["nome"] if achado["completo"] else original, original),
+                "quantidade": campo(quantidade, str(quantidade)) if quantidade else None,
+                "valor_unitario": campo(unitario["valor"], unitario["texto"]) if unitario else None,
+                "total_linha": campo(total["valor"], total["texto"]) if total else None,
+                "unidade": "",
+                "recusas": [],
+                "contexto": "mencao",
+                "produto_citado": produto["id"] if achado["completo"] else "",
+            })
+    return itens

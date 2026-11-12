@@ -20,6 +20,13 @@ COMO RODAR (fora do servidor; nada disto é dependência do projeto):
 
 O valor esperado de cada campo está em `esperado.json`, escrito à mão --
 não gerado a partir da leitura, que é justamente o que se quer conferir.
+
+Os documentos 07 a 13 (AJUSTE 2 do LEIA-ME, item 71) não têm rótulos: um
+contrato, um e-mail assinado por alguém da equipe, uma proposta com o
+endereço da fábrica e o do cliente, um pedido que só cita os brinquedos, o
+cliente que já está cadastrado, o orçamento repetido e uma conversa de
+WhatsApp colada no Word. Rodar o script inteiro refaz todos (o conteúdo é
+o mesmo; muda só a data dentro do zip).
 """
 
 from pathlib import Path
@@ -200,5 +207,127 @@ paragrafos(
     "Observações: inclui treinamento da equipe do cliente.",
 )
 d.save(PASTA / "05-desconto-valor-final.docx")
+
+# ======================================================================
+# AJUSTE 2: DOCUMENTOS SEM RÓTULOS -- contrato, carta, conversa
+# ======================================================================
+# ---------------------------------------------------------------- 07
+d = novo(rodape=())
+paragrafos(
+    d,
+    "CONTRATO DE LOCAÇÃO DE BRINQUEDOS Nº 045/2026",
+    "CONTRATANTE: BUFFET SONHO MÁGICO LTDA, pessoa jurídica de direito privado, inscrita no CNPJ sob o "
+    "nº 45.678.901/0001-75, com sede na Rua Doutor Arnaldo, nº 1500, Sala 2, bairro Sumaré, na cidade de "
+    "São Paulo/SP, CEP 01255-000, neste ato representada por sua sócia administradora, Patrícia Gomes "
+    "Ribeiro, brasileira, empresária, telefone (11) 99123-4567, e-mail patricia@sonhomagico.com.br.",
+    "CONTRATADA: LAZER & SPORT BRINQUEDOS LTDA, inscrita no CNPJ sob o nº 54.486.908/0001-86, com sede na "
+    "Av. Industrial, 900, Cumbica, Guarulhos/SP, CEP 07220-000.",
+    "CLÁUSULA PRIMEIRA – DO OBJETO",
+    "O presente contrato tem por objeto a locação de 1 (um) Pula-pula e 2 (duas) Piscinas de bolinhas "
+    "para o evento do dia 20/11/2026.",
+    "CLÁUSULA SEGUNDA – DO VALOR",
+    "Pelo objeto deste contrato, a CONTRATANTE pagará o valor combinado em proposta, via Pix.",
+    "São Paulo, 10 de novembro de 2026.",
+    "_______________________________",
+    "Patrícia Gomes Ribeiro",
+    "Buffet Sonho Mágico Ltda",
+    "_______________________________",
+    "Carlos Pereira",
+    "Lazer & Sport Brinquedos",
+)
+d.save(PASTA / "07-contrato-buffet.docx")
+
+# ---------------------------------------------------------------- 08
+d = novo(rodape=())
+paragrafos(
+    d,
+    "De: Marina Costa <marina.costa@lazersport.com.br>",
+    "Para: Ana Paula Ferreira <anapaula@espacoalegria.com.br>",
+    "Assunto: Cadastro – Espaço Alegria Festas",
+    "Prezada Sra. Ana Paula Ferreira,",
+    "Conforme conversamos, vou cadastrar o Espaço Alegria Festas, na Rua Maria Antônia, 300, Vila Buarque, "
+    "São Paulo - SP, CEP 01222-010.",
+    "Anotei o seu CPF 390.533.447-05 e o telefone (11) 98123-4567 para o contato.",
+    "Atenciosamente,",
+    "Marina Costa",
+    "Consultora Comercial",
+    "(11) 97777-1111",
+)
+d.save(PASTA / "08-email-assinatura-interna.docx")
+
+# ---------------------------------------------------------------- 09
+d = novo(cabecalho=(
+    "LAZER & SPORT BRINQUEDOS",
+    "Rua São Roque de Minas, 104 – Jardim Peri – São Paulo/SP – CEP 02679-110",
+), rodape=())
+paragrafos(
+    d,
+    "Proposta 077/2026",
+    "Escola Infantil Pequenos Passos",
+    "CNPJ: 98.765.432/0001-98",
+    "Responsável: Fernanda Lima Duarte",
+    "Celular: 11 9 8456-1234",
+    "Retirada e devolução na fábrica: Rua São Roque de Minas, 104 – Jardim Peri – São Paulo/SP.",
+    "Local do evento: Avenida Brigadeiro Faria Lima, 2000, 5º andar – Jardim Paulistano – São Paulo/SP – "
+    "CEP 01452-000",
+    "1x Cama elástica 3m – R$ 2.800,00",
+    "Total: R$ 2.800,00",
+)
+d.save(PASTA / "09-fabrica-e-cliente.docx")
+
+# ---------------------------------------------------------------- 10
+d = novo(rodape=())
+paragrafos(
+    d,
+    "Pedido de orçamento",
+    "Olá! Sou o Ricardo Nunes, do Clube Recreativo Vila Nova.",
+    "Gostaria de um orçamento para alugar duas camas elásticas de 3 metros, um Air Game Kids e o Strike "
+    "Kids para a festa de fim de ano do clube.",
+    "Nosso endereço é Rua Coronel Oscar Porto, 800 – Paraíso, São Paulo/SP, CEP 04003-004.",
+    "Meu WhatsApp: (11) 99555-8888.",
+    "Obrigado,",
+    "Ricardo Nunes",
+    "Clube Recreativo Vila Nova",
+)
+d.save(PASTA / "10-brinquedos-sem-preco.docx")
+
+# ---------------------------------------------------------------- 11
+d = novo(rodape=())
+paragrafos(
+    d,
+    "Condomínio Parque das Árvores — Administração",
+    "Aos cuidados de: Sr. Roberto Almeida (síndico)",
+    "Telefone: 11 3456 7890",
+    "E-mail: administracao@parquedasarvores.com.br",
+    "Av. das Árvores, 500 – Morumbi – São Paulo/SP – CEP 05650-000",
+    "Solicitamos a visita técnica para avaliação do playground do condomínio.",
+)
+d.save(PASTA / "11-cliente-ja-cadastrado.docx")
+
+# ---------------------------------------------------------------- 12
+d = novo()
+paragrafos(d, "ORÇAMENTO 130/2026", "Cliente: Buffet Alegria", "E-mail: contato@buffetalegria.com.br")
+tabela(d, [
+    ("Descrição", "Qtd", "Valor unitário", "Total"),
+    ("Pula-pula", "1", "R$ 1.234,00", "R$ 1.234,00"),
+    ("Air Game Kids", "1", "R$ 18.000,00", "R$ 18.000,00"),
+    ("Total", "R$ 19.234,00"),
+])
+paragrafos(d, "Frete: grátis", "Pagamento: Pix")
+d.save(PASTA / "12-orcamento-repetido.docx")
+
+# ---------------------------------------------------------------- 13
+d = novo(rodape=())
+paragrafos(
+    d,
+    "[11/11/2026 09:14] Juliana Martins: Bom dia! Vi o Instagram de vocês",
+    "[11/11/2026 09:15] Juliana Martins: Quero fazer orçamento de 1 pula pula e 2 piscinas de bolinha pra festa da minha filha",
+    "[11/11/2026 09:20] Carlos Pereira: Bom dia, Juliana! Claro. Me passa seu nome completo, CPF e endereço?",
+    "[11/11/2026 09:31] Juliana Martins: Juliana Martins Rocha, CPF 714.602.380-01",
+    "[11/11/2026 09:32] Juliana Martins: Rua Aurora, 155 apto 34, Santa Ifigênia, São Paulo SP, 01209-001",
+    "[11/11/2026 09:33] Juliana Martins: meu email é ju.martins@gmail.com",
+    "[11/11/2026 09:35] Carlos Pereira: Perfeito! Te mando já. Qualquer coisa meu número é (11) 97777-2222",
+)
+d.save(PASTA / "13-conversa-whatsapp.docx")
 
 print("ok")
