@@ -3196,6 +3196,91 @@ Dependência nova: rjsmin (requirements.txt).
    (ImportacaoConcluidaView), templates conferir_importacao_inner.html e
    importacao_concluida_inner.html, clientes_inner.html (?abrir=),
    orcamentos_inner.html, static/interno/painel.js e importacao-word.js.
+   AJUSTE 2: O DOCUMENTO SEM RÓTULO TAMBÉM PREENCHE, COMO UMA IA (SEM A IA).
+   Pedido: "vc deve auto preencher os campos, indentificando nomes,
+   endereços, que nao sejam da fabrica e nomes que nao sejam dos usuarios
+   internos, isso é como uma ia ... em caso de indentificar brinquedos,
+   perguntar se deseja criar um orçamento a partir do documento,
+   obviamente confira tambem os atuais para nao repetir os dados".
+   Produção não tem a chave da IA; então a leitura local faz o papel dela
+   (importacao_word/identificar.py), sem rede e sem custo. A IA, quando a
+   chave existir, continua como reforço.
+     * O QUE LÊ: contrato ("CONTRATANTE: FULANA DE TAL, brasileira, CPF...,
+       residente à Rua..."), carta e e-mail colados no Word ("Prezada Sra.
+       Ana Paula..."), ficha, proposta com o nome solto no topo e conversa
+       de WhatsApp colada ("[11/11/2026 09:14] Juliana: ..."). Cada dado vira
+       candidato com pontos: o nome de pessoa começa por um primeiro nome
+       brasileiro (importacao_word/dados/primeiros_nomes.txt, base IBGE,
+       com "da/de/dos" no meio e o nome TODO EM MAIÚSCULAS do contrato
+       refeito: "BUFFET SONHO MÁGICO LTDA" -> "Buffet Sonho Mágico Ltda");
+       a empresa tem "Buffet/Espaço/Escola/Clube/Condomínio/Parque..." no
+       começo ou "Ltda/ME/Eireli/S.A." no fim; o endereço começa por
+       "Rua/Av./Alameda/Estrada/Rod./Travessa/Praça..." e é separado em
+       CEP, rua, número, complemento, bairro, cidade e UF (com vírgula,
+       "nº", "bairro X", "na cidade de", "São Paulo/SP", "São Paulo SP");
+       CPF/CNPJ, telefone e e-mail pelas regras de sempre. Pesam a pista
+       ao lado (Contratante, Cliente, Sr./Sra., Prezada, A/C, Aos
+       cuidados, Responsável, Razão social, Nome fantasia, "meu nome é",
+       "sou o", "representada por", "residente à", "local do evento"), o
+       começo do documento, a repetição, o CPF na mesma frase e, na
+       conversa, quem escreve. "Juliana Martins" e "Juliana Martins Rocha"
+       viram um nome só (o maior). O melhor candidato preenche (selo
+       "lido do texto", confiança média, com a pista ao lado: "Lido do
+       texto: perto de “Contratante”"); os outros viram botão "Outras
+       leituras" no campo, e "Outros endereços no documento" troca o
+       endereço inteiro com um toque. Só o CEP (ou CEP e número) no
+       documento: o resto vem da consulta do CEP (a mesma do cadastro à
+       mão), feita uma vez na importação ("pela consulta do CEP").
+     * O QUE NUNCA É O CLIENTE: a Lazer & Sport (CNPJ, telefones, e-mails,
+       site, nome, os endereços de "Dados da empresa" e o CEP da fábrica;
+       sem cadastro, o endereço da fábrica que a home mostra) e a EQUIPE:
+       todo usuário com função de equipe no painel, staff ou
+       superusuário, e os colaboradores da fábrica -- nome, nome completo,
+       usuário e e-mail. A assinatura de quem é da casa ("Atenciosamente,
+       / Marina Costa / Consultora Comercial / (11) 9...") sai inteira, com
+       o celular de quem assina; "Vendedor: Carlos" sai; na conversa, as
+       falas de quem é da casa saem. A pista contrária (Vendedor,
+       Consultora, Atendente, Contratada, Locadora, Elaborado por, Equipe)
+       também tira o nome. O endereço "Retirada na fábrica: Rua São Roque
+       de Minas, 104" não contamina as linhas vizinhas (que costumam ser
+       do cliente).
+     * BRINQUEDOS: produto do catálogo citado no texto ("duas camas
+       elásticas de 3 metros, um Air Game Kids e o Strike Kids"; plural,
+       sem acento, quantidade em número ou por extenso, "Modelo 5" nunca
+       vira "Modelo 3") vira item. No topo da conferência: "Encontrei 3
+       brinquedos no documento (Cama elástica 3 m, Air Game Kids, Strike
+       Kids). Deseja criar um orçamento a partir do documento?" com "Sim,
+       criar o orçamento" e "Não, só o cliente". O padrão continua sendo
+       só o cliente; Sim liga "Criar o orçamento também" e leva aos itens,
+       já com a quantidade e o valor escritos -- ou, sem valor, o PREÇO DO
+       CATÁLOGO, marcado assim ("preço do catálogo: o documento não traz
+       o valor"); sem quantidade, um.
+     * NÃO REPETIR OS DADOS: o cliente é procurado pelo CPF/CNPJ, e-mail,
+       telefone (os dígitos, como quer que esteja escrito) e nome -- do
+       cliente e do estabelecimento, sem acento, sem "Ltda", com um erro
+       de digitação de folga --, e com dois cadastros de mesmo nome a
+       cidade do endereço desempata; sem ela, a tela mostra os dois para a
+       pessoa escolher. Achado, a tela diz "Este cliente já está
+       cadastrado: Nome (#id) -- mesmo telefone do cadastro" e LIGA, sem
+       criar outro; nos dois caminhos (só cliente e com orçamento) só o que
+       está VAZIO no cadastro é completado, e o endereço só entra se o
+       cliente não tinha um (nunca um segundo endereço). O orçamento com
+       os MESMOS itens (produto e quantidade) do mesmo cliente nos últimos
+       30 dias trava o "Criar": "Já existe o orçamento #N com os mesmos
+       itens (dd/mm)", com "Abrir o existente" e "Criar mesmo assim".
+   Corpus (tests_importacao_corpus/, esperado.json escrito à mão): 07 o
+   contrato (empresa contratante, sócia como contato, endereço em frase,
+   dois brinquedos sem preço, a Lazer & Sport como contratada e o
+   vendedor na assinatura); 08 o e-mail com a assinatura de uma
+   consultora da casa (nome, cargo e celular dela fora); 09 a proposta com
+   o endereço da fábrica e o do evento; 10 o pedido que só cita os
+   brinquedos; 11 o cliente que já está cadastrado (achado pelo telefone
+   escrito de outro jeito); 12 o orçamento repetido; 13 a conversa de
+   WhatsApp com a fala do vendedor. Testes: tests_importacao_corpus.py
+   (cada campo dos treze documentos, a pergunta dos brinquedos, o que
+   fica no banco, o aviso de repetido, os alfinetes na home) e
+   tests_importacao_word.py (TextoLivreTests). Conferido no Chromium (PC
+   e iPhone 13) importando os documentos pela tela, sem a chave.
 
 72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
    Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um
@@ -3443,8 +3528,8 @@ Dependência nova: rjsmin (requirements.txt).
        não estiver no catálogo;
      * as 11 promoções, até 13/11/2026: 3 brinquedos por 31.970; Air Game
        Kids 4.990 no PIX; Kit Boliche Kids + Air Game Kids + Basquete Kids
-       de 22.990 por 19.990; Kit Sucesso e Inovação (Air Game Home + Nervo
-       Teste + Boliche Kids) de 27.990 por 23.990; Basquete Duplo 16.990; Air
+       de 22.990 por 19.990; Kit Sucesso e Inovação (Air Game Home + MATRIX +
+       Boliche Kids) de 27.990 por 23.990; Basquete Duplo 16.990; Air
        Rock de 14.990 por 12.990; Dragon Bowling (Boliche Virtual) 12.990;
        Nervo Teste 7.990 (prazo, frete, garantia e validade da proposta);
        playground 12x de 1.000; 3 cenográficos leve 4; Kid Play + kit de
@@ -3453,6 +3538,16 @@ Dependência nova: rjsmin (requirements.txt).
        cartaz guardado é só o meio. Cada card é a arte em quadrado (a janela
        com os produtos e o preço, completada com o fundo dela).
      * Rodar de novo não duplica; depois de 13/11 só os produtos são criados.
+     * O KIT SUCESSO É COM O MATRIX ("arrume a nomenclatura, não é o nervo
+       teste, é o matrix"): a máquina das luzes da arte 11 ("Quantas luzes
+       você consegue apagar?") é o Matrix. O rótulo do meio da arte e do card
+       foi refeito ("MATRIX", Barlow Condensed Black Italic, com o fundo da
+       pílula retocado); a promoção é "Kit Sucesso e Inovação: Air Game +
+       Matrix + Boliche Kids", com o Matrix ligado. A que já existe com o
+       nome antigo (PROMOCOES[...]["antes"]) é ACERTADA, não duplicada: a
+       migração 0175_kit_sucesso_com_matrix troca o nome e o Nervo Teste
+       pelo Matrix em todo lugar e, no Render, sobe a arte e o card novos.
+       A arte 8 (o Nervo Teste sozinho, 7.990, o jogo do fio) está certa.
    O STRIKE KIDS MAIS VIVO ("olha como está escuro o brinquedo, faça bem
    vivo e nítido"): a capa e as vistas (arena/modelos/strike-kids/) com os
    meios-tons da máquina mais claros (gama 0,6), cor 1,2x, volume e nitidez,
@@ -3510,6 +3605,36 @@ Dependência nova: rjsmin (requirements.txt).
    escuro): lista, filtro, cadastro aberto, salvar/editar/excluir.
    Testes: core/tests_brinquedos_adm_tela.py, core/tests_gestao_cores.py
    (cores proibidas, tela que não reescreve o painel, camada comum).
+   LISTA · CARDS EM TODAS AS LISTAS ("padrão vem lista, podendo mudar
+   para o card"): Brinquedos, Promoções, Combos, Cupons, Peças, Projetos,
+   Eventos, Banners, Usuários, Clientes no mapa e, no painel, Orçamentos,
+   Clientes, O.S. e Pedidos. Um componente só:
+     * o seletor includes/lista_ou_cards.html (rádios dentro de <label>,
+       fora de qualquer <form>; nenhum <select>);
+     * interno/ls-listas.js, carregado uma vez no corpo do painel: guarda a
+       escolha por tela no aparelho (localStorage `ls-visao:<tela>`, com
+       try/catch) e a reaplica a cada Painel.montarTela -- tela que chega
+       pela navegação suave ou trecho da lista trocado pelo filtro;
+     * o CSS comum "LISTA OU CARDS" em interno_modern.css, só com as
+       variáveis do tema. É o MESMO item nos dois modos: o cartão vira
+       linha pelas partes marcadas (`data-visao-item`, `data-v="foto|
+       titulo|info|valor|estado|selos|acoes|extra"`, colunas por tela em
+       --lv-colunas/--lv-areas) e a tabela vira cartões (cada <tr>, com o
+       rótulo da coluna em cima). O que outra frente pendurar no item
+       (detalhes, adesivos) vale nos dois. No celular a lista é de linhas
+       compactas; cards um por linha, dois no tablet.
+   TABELAS SEM PALAVRA QUEBRADA (o print de Orçamentos: "AÇÕ / ES",
+   "CLIENTE" deslocado, o cliente espremido): o cabeçalho de toda tabela
+   do painel não quebra (nowrap, sem hifenização) e anda com a sua coluna
+   (`data-coluna` no <th>; à esquerda, números e ações à direita); ID e
+   ações encolhem até caber e o cliente fica com o resto. Orçamentos e
+   O.S. largaram as porcentagens fixas; em tela média (1200-1599px) a
+   Origem do orçamento vira linha dentro do cliente; títulos longos ficam
+   abreviados com o nome inteiro na dica ("Revisão", "Fornecedor").
+   Clientes: 88px para as ações. A onda do sino não faz mais a tela rolar
+   de lado. O JS de Promoções foi para o bloco de scripts (no conteúdo
+   ele morria depois do primeiro filtro, como o de Brinquedos).
+   Testes: core/tests_lista_cards.py.
 
 76) ANÁLISES GRÁFICAS NO PAINEL: DESEMPENHO POR PERÍODO, FICHA DE CADA OBJETO E QUEM ESTÁ ONLINE
    Pedidos: "inclua os gráficos para cada objeto, de acordo com seus dados,
@@ -3671,3 +3796,42 @@ Dependência nova: rjsmin (requirements.txt).
    As jogadas de antes desta versão não têm data: o painel por período
    começa a contar a partir do deploy.
    Testes: core/tests_jogadas.py; core/tests_jogos_emulador.py (config.registro).
+
+79) AS REDES COMO ÍCONES DE APLICATIVO E O CARD SEM ZOOM
+   Pedidos: "melhores estes ícones, está muito feio ... faça um app moderno
+   e os ícones clicáveis" (o "Siga a Lazer & Sport" da home) e, com o print
+   do card do Air Rock, "valide para não ter fotos assim com zoom pois
+   estraga".
+   AS REDES (core/templates/partials/redes_sociais.html; CSS no fim de
+   core/static/site/ls-base-fim.css): cada rede é o ícone do aplicativo
+   dela, como na tela do celular -- o quadrado arredondado com a cor
+   oficial (o degradê do Instagram, o verde do WhatsApp, o azul do Facebook
+   e do LinkedIn, o preto do Threads), um brilho de vidro em cima, o
+   símbolo oficial em SVG (Simple Icons, CC0; o "f" e o "in" do Font Awesome
+   Free, CC BY 4.0) e o nome embaixo. O link é o ícone E o nome (alvo de 58 x
+   67 px; no toque, pelo menos 48 px). No rodapé (base.html) vai a versão
+   `compacto=True`, só os ícones, com o nome na dica. As cinco redes estão
+   nos dois lugares (o rodapé tinha só três).
+   SEM ZOOM (core/static/site/ls-fotos.js, `zoomDemais`): o recorte da
+   foto no formato da caixa só vale até 1,4 x de diferença de formato (some
+   no máximo ~30% de um lado). A foto muito mais larga ou mais alta (a
+   panorâmica 2 x 1 do Air Rock no card quadrado) é recortada só até esse
+   limite, pelo conteúdo, e fica INTEIRA no meio da caixa (`foto-inteira`);
+   as faixas que sobram são a cor da beirada da própria foto daquele lado
+   (`--foto-faixas`: a de cima em cima, a de baixo embaixo). Vale também
+   para as fotos que giram (ls-giro.js troca com o "some e volta" quando a
+   caixa muda de jeito). A foto certa para o card continua sendo a quadrada
+   (as capas em cena, 1600 x 1600): as panorâmicas do Black Friday (Air
+   Rock, Kid Play) ganham a capa no showroom na seção 78.
+   A FILEIRA SEM FIM (o quadro do topo da home; "ajeite melhor para poder
+   ir passando e não ter o fim"): as miniaturas rolam de lado em qualquer
+   tela, com setas ‹ › dos dois lados (Brinquedo anterior / Próximo
+   brinquedo) e as pontas esmaecendo. Quando não cabem, a fileira ganha uma
+   cópia delas antes e outra depois (aria-hidden, fora do Tab; o clique numa
+   cópia vale como o da original) e a rolagem fica sempre na do meio: passou
+   do fim, volta em silêncio para o mesmo ponto da do meio, que é idêntico.
+   A troca automática do último para o primeiro anda para a frente (a
+   miniatura centrada é a cópia mais perto de onde a fileira está).
+   Código: core/static/site/paginas/home-quadro.js (prepararSemFim,
+   prepararSetas, mostrarMiniatura) e home-quadro.css (.ls-vitrine-trilho,
+   .ls-vitrine-miniaturas--sem-fim, .ls-vitrine-seta).

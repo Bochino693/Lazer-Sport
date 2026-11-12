@@ -481,3 +481,33 @@
   @media (max-width: 600px) {
     .cup-kpis { grid-template-columns: 1fr; }
   }
+
+/* ---- Lista · Cards ----
+   O mesmo <article> é a linha da lista (o padrão) e o cartão; aqui só as
+   colunas da lista ("LISTA OU CARDS" em interno_modern.css). Cupom não
+   tem foto: a linha começa no código. */
+.ls-visao-barra .cup-contagem {
+    margin: 0;
+    color: var(--muted);
+    font-size: .86rem;
+    font-weight: 750;
+}
+
+#cupLista {
+    --lv-colunas: minmax(130px, 1fr) minmax(0, 2fr) 110px 100px 380px;
+    --lv-areas: "titulo info valor estado acoes";
+    --lv-colunas-tab: minmax(0, 1fr) auto auto;
+    --lv-areas-tab: "titulo valor estado" "info info info" "acoes acoes acoes";
+    --lv-colunas-cel: minmax(0, 1fr) auto;
+    --lv-areas-cel: "titulo valor" "estado estado" "info info" "acoes acoes";
+}
+
+.cup-grid[data-visao="lista"] .cup-discount {
+    font-size: 1.15rem;
+}
+
+.cup-grid[data-visao="lista"] .cup-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+}

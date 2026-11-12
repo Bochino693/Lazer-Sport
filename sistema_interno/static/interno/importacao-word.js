@@ -159,6 +159,50 @@ LSTela.pronto(function () {
   }
   if (chaveOrcamento) chaveOrcamento.addEventListener("change", aplicarCaminho);
 
+  /* A PERGUNTA DO TOPO: "Encontrei 3 brinquedos no documento (...).
+     Deseja criar um orçamento a partir do documento?" Sim liga a chave do
+     orçamento e leva aos itens; Não deixa só o cliente. A pergunta só
+     opera a chave -- quem decide no envio é ela. */
+  form.addEventListener("click", function (evento) {
+    var botao = evento.target.closest("[data-resposta-orcamento]");
+    if (!botao || !chaveOrcamento) return;
+    var sim = botao.dataset.respostaOrcamento === "sim";
+    chaveOrcamento.checked = sim;
+    aplicarCaminho();
+    var resposta = document.getElementById("respostaOrcamento");
+    if (resposta) {
+      resposta.hidden = false;
+      resposta.textContent = sim
+        ? "Orçamento ligado: confira os itens, o frete e as condições abaixo."
+        : "Só o cliente. Se mudar de ideia, ligue “Criar o orçamento também”.";
+    }
+    form.querySelectorAll("[data-resposta-orcamento]").forEach(function (b) {
+      b.classList.toggle("ativa", b === botao);
+    });
+    if (sim) {
+      var itens = document.getElementById("blocoItens");
+      if (itens) itens.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+
+  /* OUTRO ENDEREÇO DO DOCUMENTO: um toque troca o endereço inteiro. */
+  form.addEventListener("click", function (evento) {
+    var botao = evento.target.closest("[data-endereco-alternativo]");
+    if (!botao) return;
+    var campos = {
+      campoCep: botao.dataset.cep, campoEndereco: botao.dataset.rua, campoNumero: botao.dataset.numero,
+      campoComplemento: botao.dataset.complemento, campoBairro: botao.dataset.bairro,
+      campoCidade: botao.dataset.cidade, campoEstado: botao.dataset.uf
+    };
+    Object.keys(campos).forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (!campo) return;
+      if (window.Painel && Painel.valor) Painel.valor(id, campos[id] || "");
+      else campo.value = campos[id] || "";
+      campo.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+
   /* APARECER NO MAPA: sem endereço não há alfinete. A chave não trava
      nada (o cliente é cadastrado do mesmo jeito); o aviso só diz o que
      vai faltar para o alfinete aparecer. */
@@ -664,6 +708,12 @@ LSTela.pronto(function () {
         && valorDe("justificativaSoma").length < dados.justificativaMinima) {
       falta("justificativaSoma", "Qual total vale?",
             "escreva por que fica a soma das linhas, e não o valor negociado (pelo menos " + dados.justificativaMinima + " letras)");
+    }
+    /* O mesmo pedido já lançado para este cliente (o servidor achou). */
+    var repetido = document.getElementById("criarMesmoAssim");
+    if (repetido && !repetido.checked) {
+      falta("criarMesmoAssim", "Orçamento repetido",
+            "já existe um orçamento com os mesmos itens: abra o existente ou marque “Criar mesmo assim”");
     }
     var validade = valorDe("campoValidade");
     var notaValidade = document.getElementById("notaValidade");

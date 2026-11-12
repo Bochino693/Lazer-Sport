@@ -48,14 +48,16 @@
       <h2>Fila de pedidos</h2>
       <p>Cliente, itens, valor e situação — na ordem de chegada.</p>
     </div>
+    {# Lista · Cards: a tabela é a lista (padrão); os cartões saem dela pelo CSS (interno_modern.css). #}
+    {% include "includes/lista_ou_cards.html" with alvo="pedidosLista" chave="pedidos" %}
   </div>
   <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap">
-      <table class="ls-table ls-commercial-table ls-pedidos-table">
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="pedidosLista" data-visao="lista">
+      <table class="ls-table ls-commercial-table ls-pedidos-table ls-visao-tabela">
         <thead>
           <tr>
-            <th>#</th><th>Cliente</th><th>Itens</th>
-            <th class="text-end">Total</th><th>Entrega</th><th>Situação</th><th>Feito em</th>
+            <th data-coluna="Nº">#</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Itens">Itens</th>
+            <th data-coluna="Total" class="text-end">Total</th><th data-coluna="Entrega">Entrega</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Feito em</th>
           </tr>
         </thead>
         <tbody>

@@ -794,6 +794,13 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 {% endcomment %}
 <script src="{% estatico 'interno/ls-filtro-local.js' %}"></script>
 {% comment %}
+  Lista ou cards: o seletor das listas (ver includes/lista_ou_cards.html).
+  Uma vez só, aqui, e não no bloco de scripts de cada tela: a escolha
+  precisa valer também na tela que chega pela navegação suave e no trecho
+  da lista que o filtro troca sem recarregar.
+{% endcomment %}
+<script src="{% estatico 'interno/ls-listas.js' %}"></script>
+{% comment %}
   Rascunhos das janelas de montagem (orçamento, O.S.). Carrega em toda
   tela, e não só nas duas que os produzem, porque o botão flutuante
   precisa continuar visível DEPOIS de sair delas -- é justamente quem

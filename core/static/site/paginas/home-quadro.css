@@ -568,6 +568,69 @@
 .ls-vitrine-mini:first-child { margin-left: auto; }
 .ls-vitrine-mini:last-child { margin-right: auto; }
 
+/* A FILEIRA SEM FIM (home-quadro.js): as setas ‹ › dos lados e a fileira no
+   meio; ela rola de lado em qualquer tela (sem barra), com as pontas
+   esmaecendo, e, quando não cabe, as cópias antes e depois fazem a volta
+   não ter fim. */
+.ls-vitrine-trilho {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: min(100%, 620px);
+}
+
+.ls-vitrine-trilho .ls-vitrine-miniaturas {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+}
+
+.ls-vitrine-miniaturas--rola {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    padding-top: 7px;
+    padding-bottom: 5px;
+}
+
+.ls-vitrine-miniaturas--rola::-webkit-scrollbar { display: none; }
+.ls-vitrine-miniaturas--rola .ls-vitrine-mini { scroll-snap-align: center; }
+
+.ls-vitrine-miniaturas--sem-fim {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+}
+
+.ls-vitrine-miniaturas--sem-fim .ls-vitrine-mini:first-child,
+.ls-vitrine-miniaturas--sem-fim .ls-vitrine-mini:last-child { margin: 0; }
+
+.ls-vitrine-seta {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid rgba(127, 220, 255, .22);
+    border-radius: 50%;
+    background: rgba(10, 26, 56, .78);
+    color: #cfe9ff;
+    font-size: .8rem;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease, color .2s ease;
+}
+
+.ls-vitrine-seta:hover {
+    border-color: #3fd0ff;
+    background: rgba(18, 55, 107, .95);
+    color: #fff;
+    transform: scale(1.06);
+}
+
+.ls-vitrine-seta:active { transform: scale(.94); }
+.ls-vitrine-seta:focus-visible { outline: 2px solid #3fd0ff; outline-offset: 2px; }
+
 .ls-vitrine-mini {
     position: relative;
     flex: none;
@@ -814,6 +877,8 @@
     }
     .ls-vitrine-miniaturas::-webkit-scrollbar { display: none; }
     .ls-vitrine-mini { width: 40px; height: 40px; border-radius: 11px; scroll-snap-align: center; }
+    .ls-vitrine-seta { width: 30px; height: 30px; font-size: .72rem; }
+    .ls-vitrine-trilho { gap: 4px; }
     .ls-vitrine-mini img { padding: 3px; }
     .ls-vitrine-chip3d { top: 12px; left: 12px; }
     .ls-painel-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }

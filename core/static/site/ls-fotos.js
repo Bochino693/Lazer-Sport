@@ -25,6 +25,16 @@
    original preenche a caixa ("cover") centrada um pouco acima do meio.
    Vale para todos os cartões e para a vitrine do quadro inicial.
 
+   NUNCA COM ZOOM. O cliente, com o print do card do Air Rock (a foto
+   panorâmica, 2 x 1, recortada no quadrado: a máquina de perto, cortada):
+   "valide para não ter fotos assim com zoom pois estraga". O recorte só
+   vale enquanto ele guarda a maior parte da foto (a diferença de formato
+   até 1,4 x: some no máximo ~30% de um lado). A foto MUITO mais larga ou
+   mais alta que a caixa fica INTEIRA ("contain"), e o resto da caixa é a
+   cor da borda da própria foto (`foto-inteira`, como a arte do quadro do
+   topo) -- nada de zoom. A foto certa para o card é a quadrada (as capas
+   em cena, 1600 x 1600).
+
    AS FOTOS QUE GIRAM (ls-giro.js, LEIA-ME 72) passam pelas mesmas regras:
    `window.LSFotos.preparar` e `vestirCaixa`.
    ====================================================================== */
@@ -50,7 +60,7 @@
   const fotoDa = (caixa) => caixa.querySelector("img:not([aria-hidden='true'])") || caixa.querySelector("img");
 
   const SEM_TRANSPARENCIA = /\.(jpe?g|jfif)$/i;
-  const MEMORIA = "ls-foto-cheia3:";
+  const MEMORIA = "ls-foto-cheia4:";
   const decididos = new WeakSet();
 
   const lembrar = (url, valor) => {
@@ -88,7 +98,19 @@
         let r = 0, gg = 0, b = 0, n = 0;
         for (let x = 0; x < w; x += 1) for (const y of [0, h - 1]) { const i = (y * w + x) * 4; r += alfa[i]; gg += alfa[i + 1]; b += alfa[i + 2]; n += 1; }
         for (let y = 1; y < h - 1; y += 1) for (const x of [0, w - 1]) { const i = (y * w + x) * 4; r += alfa[i]; gg += alfa[i + 1]; b += alfa[i + 2]; n += 1; }
-        const borda = n ? [r, gg, b].map((v) => Math.round(v / n)).join(",") : "";
+        const media = (lista) => {
+          let rr = 0, g2 = 0, bb = 0;
+          lista.forEach(([x, y]) => { const i = (y * w + x) * 4; rr += alfa[i]; g2 += alfa[i + 1]; bb += alfa[i + 2]; });
+          return lista.length ? [rr, g2, bb].map((v) => Math.round(v / lista.length)).join(",") : "";
+        };
+        const linha = (y) => Array.from({ length: w }, (_, x) => [x, y]);
+        const coluna = (x) => Array.from({ length: h }, (_, y) => [x, y]);
+        // a borda inteira e cada beirada (em cima, embaixo, esquerda, direita), separadas
+        // por ";": a foto inteira continua na cor da beirada do lado de cada faixa
+        const borda = n ? [
+          [r, gg, b].map((v) => Math.round(v / n)).join(","),
+          media(linha(0)), media(linha(h - 1)), media(coluna(0)), media(coluna(w - 1)),
+        ].join(";") : "";
         pronto({ cheia: pontos.every(([x, y]) => alfa[(y * w + x) * 4 + 3] > 245), proporcao: img.naturalWidth / img.naturalHeight, borda });
       } catch (erro) {
         pronto({ cheia: null, proporcao: img.naturalWidth / img.naturalHeight || 0 });
@@ -102,6 +124,51 @@
   const outroFormato = (caixa, proporcao) => {
     const w = caixa.clientWidth, h = caixa.clientHeight;
     return Boolean(proporcao && w && h) && Math.abs(Math.log(proporcao / (w / h))) > 0.1;
+  };
+
+  // a foto que o recorte deixaria com zoom (perderia mais de ~30% de um lado):
+  // essa fica inteira, sem recorte
+  const ZOOM_MAXIMO = Math.log(1.4);
+  const zoomDemais = (caixa, proporcao) => {
+    const w = caixa.clientWidth, h = caixa.clientHeight;
+    return Boolean(proporcao && w && h) && Math.abs(Math.log(proporcao / (w / h))) > ZOOM_MAXIMO;
+  };
+
+  // a caixa que mostra a foto inteira: o resto dela é a cor da beirada da foto do
+  // lado de cada faixa (a de cima em cima, a de baixo embaixo), e a foto parece continuar
+  const pintarFundo = (caixa, borda, proporcao) => {
+    if (!borda) return;
+    const [toda, cima, baixo, esquerda, direita] = borda.split(";");
+    caixa.style.setProperty("--foto-borda", `rgb(${toda})`);
+    const w = caixa.clientWidth, h = caixa.clientHeight;
+    const deitada = !(proporcao && w && h) || proporcao >= w / h;
+    const [a, b2] = deitada ? [cima, baixo] : [esquerda, direita];
+    if (a && b2) {
+      caixa.style.setProperty("--foto-faixas",
+        `linear-gradient(${deitada ? 180 : 90}deg, rgb(${a}) 0%, rgb(${a}) 34%, rgb(${b2}) 66%, rgb(${b2}) 100%)`);
+    }
+  };
+
+  const deixarInteira = (caixa, borda, proporcao) => {
+    caixa.classList.add("foto-inteira");
+    caixa.classList.remove("foto-enquadrada");
+    pintarFundo(caixa, borda, proporcao);
+  };
+
+  // A foto de formato muito diferente perde só o que não pesa: o recorte vai até
+  // 1,4 x do formato da caixa (o brinquedo no meio, pelo conteúdo) e o resto fica
+  // inteiro. Assim a faixa que sobra é pequena e a máquina nunca fica de perto.
+  const recorteLimitado = (url, caixa, proporcao) => {
+    const partes = url.match(/^(.*\/upload\/)(?:[a-z]_[^/]*\/)?(.*)$/);
+    if (!url.includes("res.cloudinary.com") || !partes || !proporcao) return "";
+    const w = caixa.clientWidth, h = caixa.clientHeight;
+    if (!w || !h) return "";
+    const daCaixa = w / h;
+    const alvo = proporcao > daCaixa ? daCaixa * 1.4 : daCaixa / 1.4;
+    const formato = Math.min(3, Math.max(0.4, Math.round(alvo * 100) / 100));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const largura = Math.min(1600, Math.max(400, Math.ceil((w * dpr) / 200) * 200));
+    return { src: `${partes[1]}c_fill,g_auto,ar_${formato},w_${largura},q_auto,f_auto/${partes[2]}`, formato };
   };
 
   // O recorte da foto no formato da caixa, pelo conteúdo (Cloudinary
@@ -124,12 +191,26 @@
     // A caixa que mostra a foto INTEIRA (a arte da promoção no quadro do topo da home:
     // o texto dela não pode ser cortado). Sem recorte: a foto inteira, e o que sobra da
     // caixa é a cor da própria borda da foto (a arte continua, sem faixa nem desfoque).
+    const formato = proporcao || (foto.naturalWidth / foto.naturalHeight);
     if (caixa.hasAttribute("data-foto-inteira")) {
-      caixa.classList.add("foto-inteira");
-      if (borda) caixa.style.setProperty("--foto-borda", `rgb(${borda})`);
+      deixarInteira(caixa, borda, formato);
       return;
     }
-    if (!outroFormato(caixa, proporcao || (foto.naturalWidth / foto.naturalHeight))) return;
+    if (zoomDemais(caixa, formato)) {
+      const limitado = recorteLimitado(foto.getAttribute("src") || "", caixa, formato);
+      deixarInteira(caixa, borda, limitado ? limitado.formato : formato);
+      if (limitado) {
+        const original = foto.getAttribute("src") || "";
+        foto.addEventListener("error", () => {
+          if (foto.getAttribute("src") === limitado.src) foto.setAttribute("src", original);
+        }, { once: true });
+        foto.removeAttribute("srcset");
+        foto.removeAttribute("sizes");
+        foto.setAttribute("src", limitado.src);
+      }
+      return;
+    }
+    if (!outroFormato(caixa, formato)) return;
     caixa.classList.add("foto-enquadrada");
     const original = foto.getAttribute("src") || "";
     const recorte = enquadrada(original, caixa);
@@ -147,39 +228,56 @@
    * A foto `url` pronta para a `caixa`, pelas mesmas regras do cartão (para
    * o ls-giro.js, que reveza as fotos do card): { src, cheia, enquadrada }.
    * `cheia`: a foto tem fundo (vai de ponta a ponta); `enquadrada`: é o
-   * recorte no formato da caixa pelo conteúdo (o `src` já é o recorte).
+   * recorte no formato da caixa pelo conteúdo (o `src` já é o recorte);
+   * `inteira`: a foto de formato muito diferente, sem recorte (sem zoom),
+   * com a cor da borda dela (`borda`) no resto da caixa.
    */
   const preparar = async (url, caixa) => {
     const caminho = url.split("?")[0].split("#")[0];
     let cheia = null;
     let proporcao = 0;
+    let borda = "";
     const memoria = lembrado(url);
     if (memoria !== null) {
-      const [c, p] = memoria.split(":");
+      const [c, p, b] = memoria.split(":");
       cheia = c === "1";
       proporcao = Number(p) || 0;
+      borda = b || "";
     } else {
       const sonda = await sondar(url);
       if (sonda) {
         cheia = SEM_TRANSPARENCIA.test(caminho) ? true : sonda.cheia;
         proporcao = sonda.proporcao || 0;
+        borda = sonda.borda || "";
         if (cheia !== null) lembrar(url, `${cheia ? 1 : 0}:${proporcao.toFixed(3)}:${sonda.borda || ""}`);
       } else if (SEM_TRANSPARENCIA.test(caminho)) {
         cheia = true;
       }
     }
     if (cheia === null) cheia = caixa.classList.contains("foto-cheia");
+    if (cheia && caixa.hasAttribute("data-foto-inteira")) {
+      return { src: url, cheia: true, enquadrada: false, inteira: true, borda, formato: proporcao };
+    }
+    if (cheia && zoomDemais(caixa, proporcao)) {
+      const limitado = recorteLimitado(url, caixa, proporcao);
+      return {
+        src: limitado ? limitado.src : url, cheia: true, enquadrada: false, inteira: true, borda,
+        formato: limitado ? limitado.formato : proporcao,
+      };
+    }
     if (cheia && outroFormato(caixa, proporcao)) {
       const recorte = enquadrada(url, caixa);
-      return { src: recorte || url, cheia: true, enquadrada: true };
+      return { src: recorte || url, cheia: true, enquadrada: true, inteira: false, borda };
     }
-    return { src: url, cheia, enquadrada: false };
+    return { src: url, cheia, enquadrada: false, inteira: false, borda };
   };
 
   /** As classes da caixa para a foto que ela mostra (o que `marcar` faz no cartão). */
   const vestirCaixa = (caixa, pronta) => {
     caixa.classList.toggle("foto-cheia", Boolean(pronta.cheia));
     caixa.classList.toggle("foto-enquadrada", Boolean(pronta.cheia && pronta.enquadrada));
+    caixa.classList.toggle("foto-inteira", Boolean(pronta.cheia && pronta.inteira));
+    if (pronta.inteira) pintarFundo(caixa, pronta.borda, pronta.formato);
   };
 
   // para o ls-giro.js: as mesmas caixas, a mesma foto, as mesmas regras (sem duplicar)

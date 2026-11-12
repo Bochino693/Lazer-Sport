@@ -179,8 +179,12 @@ PROMOCOES = [
     },
     {
         "arte": 11,
-        "descricao": "Kit Sucesso e Inovação: Air Game + Nervo Teste + Boliche Kids",
-        "brinquedos": ["Air Game Home", "Nervo Teste", "Strike Kids"],
+        # A máquina das luzes da arte é o MATRIX, não o Nervo Teste (o cliente: "arrume a
+        # nomenclatura, não é o nervo teste, é o matrix"); a arte e o card foram corrigidos
+        # e a promoção que já existe com o nome antigo é acertada (`antes`, migração 0175).
+        "descricao": "Kit Sucesso e Inovação: Air Game + Matrix + Boliche Kids",
+        "antes": ["Kit Sucesso e Inovação: Air Game + Nervo Teste + Boliche Kids"],
+        "brinquedos": ["Air Game Home", "Matrix", "Strike Kids"],
         "preco": "23990.00",
         "preco_de": "27990.00",
         "condicoes": [DEZ_X],
@@ -326,8 +330,12 @@ def cadastrar_promocao(dados, Brinquedos, Promocoes, simular=False, avisar=print
     if simular:
         avisar(f"{dados['descricao']}: seria criada/acertada ({', '.join(b.nome_brinquedo for b in brinquedos)}).")
         return None
-    promocao = Promocoes.objects.filter(descricao=dados["descricao"]).first() or Promocoes(descricao=dados["descricao"])
+    nomes = [dados["descricao"], *dados.get("antes", [])]
+    promocao = (Promocoes.objects.filter(descricao=dados["descricao"]).first()
+                or Promocoes.objects.filter(descricao__in=nomes).first()
+                or Promocoes(descricao=dados["descricao"]))
     nova = promocao.pk is None
+    promocao.descricao = dados["descricao"]  # o nome antigo (ex.: o Nervo Teste no Kit Sucesso) é acertado
     promocao.brinquedos = brinquedos[0]
     promocao.preco_promocao = Decimal(dados["preco"]) if dados.get("preco") else None
     promocao.preco_de = Decimal(dados["preco_de"]) if dados.get("preco_de") else None
@@ -364,6 +372,46 @@ def rodar(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, Promocoes, simular=
     # de trás para a frente: a primeira da lista fica com o id maior (o site mostra as mais novas antes)
     for dados in reversed(PROMOCOES):
         cadastrar_promocao(dados, Brinquedos, Promocoes, simular=simular, avisar=avisar)
+
+
+def kit_sucesso_com_matrix(apps, schema_editor, avisar=print):
+    """A migração 0175: o Kit Sucesso é Air Game + MATRIX + Boliche Kids (não o Nervo Teste).
+
+    Em todo lugar: a promoção que já existe com o nome antigo ganha o nome certo e o Matrix
+    no lugar do Nervo Teste. Só no Render (o Cloudinary só está lá): a arte e o card
+    corrigidos sobem. Sem a promoção (nunca criada) ou sem o Matrix no catálogo, nada muda.
+    """
+    from django.conf import settings
+
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    Promocoes = apps.get_model("core", "Promocoes")
+    dados = next(d for d in PROMOCOES if d["arte"] == 11)
+    nomes = [dados["descricao"], *dados["antes"]]
+    promocao = Promocoes.objects.filter(descricao__in=nomes).first()
+    if promocao is None:
+        return
+    if getattr(settings, "IS_RENDER", False):
+        try:
+            cadastrar_promocao(dados, Brinquedos, Promocoes, avisar=avisar)
+        except Exception as erro:  # noqa: BLE001 -- o deploy segue
+            avisar(f"O Kit Sucesso não foi acertado agora ({erro!r}). Rode: python manage.py black_friday_2026 --forcar")
+            return
+        try:
+            from django.core.cache import cache
+
+            cache.clear()
+        except Exception:  # noqa: BLE001
+            pass
+        return
+    brinquedos = [achar(nome, Brinquedos) for nome in dados["brinquedos"]]
+    if any(b is None for b in brinquedos):
+        avisar(f"{dados['descricao']}: falta no catálogo o Matrix; a promoção fica como está.")
+        return
+    with transaction.atomic():
+        promocao.descricao = dados["descricao"]
+        promocao.brinquedos = brinquedos[0]
+        promocao.save()
+        promocao.brinquedos_extras.set(brinquedos[1:])
 
 
 def subir_no_deploy(apps, schema_editor, avisar=print):

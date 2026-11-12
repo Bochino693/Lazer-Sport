@@ -100,7 +100,7 @@ class TelaTests(Base):
     def test_a_tela_abre_com_o_desenho_novo(self):
         html = self.abrir().content.decode()
         for trecho in (
-            'class="bq-tela"', 'class="bq-numeros"', 'class="bq-grade"', 'data-bq-item',
+            'class="bq-tela"', 'class="bq-numeros"', 'class="bq-grade', 'data-bq-item',
             '<dialog id="toyDialog"', '<dialog id="deleteDialog"', '<dialog id="categoryDialog"',
             '<dialog id="tagDialog"', '<dialog id="lightbox"', "toysAdminData",
             "site/paginas/gestao-brinquedos_adm.css",

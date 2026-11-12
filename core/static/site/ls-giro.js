@@ -80,7 +80,11 @@
     const { caixa } = estado;
     const foto = fotoDa(caixa);
     if (!foto) return;
-    const mesmaCaixa = !fotos || pronta.cheia === null || pronta.cheia === caixa.classList.contains("foto-cheia");
+    // a caixa muda de jeito quando a próxima tem (ou não) fundo, ou quando uma fica
+    // inteira (a de formato muito diferente, sem zoom) e a outra enche a caixa
+    const mesmaCaixa = !fotos || pronta.cheia === null || (
+      pronta.cheia === caixa.classList.contains("foto-cheia")
+      && Boolean(pronta.inteira) === caixa.classList.contains("foto-inteira"));
     if (mesmaCaixa && foto.offsetWidth) {
       // a troca suave: a próxima por cima, aparecendo; depois ela vira a foto do card
       if (window.getComputedStyle(caixa).position === "static") caixa.style.position = "relative";

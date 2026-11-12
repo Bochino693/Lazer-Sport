@@ -1,129 +1,618 @@
 {
-  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11.",
+  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11. Do 07 em diante (AJUSTE 2): 'pergunta' são os brinquedos que a tela pergunta se viram orçamento (null quando não há); 'frete_na_tela' é o frete que a pessoa escolhe quando o documento não diz; 'orcamento_anterior' é o orçamento que já existia (o teste o cria antes) e 'repetido' diz que a tela tem de avisar e pedir 'Criar mesmo assim'.",
   "01-tabela-buffet-alegria.docx": {
     "modo": "orcamento",
     "cliente_existente": true,
     "cliente": {
-      "nome": "Buffet Alegria", "estabelecimento": "", "documento": "11.444.777/0001-61",
-      "telefone": "(11) 98765-4321", "whatsapp": "sim", "email": "contato@buffetalegria.com.br",
+      "nome": "Buffet Alegria",
+      "estabelecimento": "",
+      "documento": "11.444.777/0001-61",
+      "telefone": "(11) 98765-4321",
+      "whatsapp": "sim",
+      "email": "contato@buffetalegria.com.br",
       "contato": "Marina Souza"
     },
     "endereco": {
-      "cep": "07010-020", "rua": "Rua das Palmeiras", "numero": "45", "complemento": "Sala 3",
-      "bairro": "Centro", "cidade": "Guarulhos", "uf": "SP"
+      "cep": "07010-020",
+      "rua": "Rua das Palmeiras",
+      "numero": "45",
+      "complemento": "Sala 3",
+      "bairro": "Centro",
+      "cidade": "Guarulhos",
+      "uf": "SP"
     },
     "itens": [
-      {"descricao": "Cama elástica 3 m", "original": "Cama elástica 3 m com rede de proteção", "produto": "Cama elástica 3 m", "quantidade": "2", "valor_unitario": "2.800,00"},
-      {"descricao": "Pula-pula", "original": "Pula-pula", "produto": "Pula-pula", "quantidade": "1", "valor_unitario": "1.234,00"},
-      {"descricao": "Air Game Kids", "original": "Air Game Kids", "produto": "Air Game Kids", "quantidade": "1", "valor_unitario": "18.000,00"}
+      {
+        "descricao": "Cama elástica 3 m",
+        "original": "Cama elástica 3 m com rede de proteção",
+        "produto": "Cama elástica 3 m",
+        "quantidade": "2",
+        "valor_unitario": "2.800,00"
+      },
+      {
+        "descricao": "Pula-pula",
+        "original": "Pula-pula",
+        "produto": "Pula-pula",
+        "quantidade": "1",
+        "valor_unitario": "1.234,00"
+      },
+      {
+        "descricao": "Air Game Kids",
+        "original": "Air Game Kids",
+        "produto": "Air Game Kids",
+        "quantidade": "1",
+        "valor_unitario": "18.000,00"
+      }
     ],
-    "frete": "450,00", "desconto": "", "valor_final": "",
+    "frete": "450,00",
+    "desconto": "",
+    "valor_final": "",
     "validade": "2026-11-24",
     "forma_pagamento": "50% na aprovação e 50% na entrega, via Pix",
     "forma_envio": "Entrega e montagem pela equipe Lazer & Sport",
     "prazo": "25 dias úteis após a aprovação",
     "observacoes": "Garantia: 12 meses contra defeitos de fabricação.",
     "salvo": {
-      "total": "25284.00", "desconto": "0.00", "valor_final": null,
+      "total": "25284.00",
+      "desconto": "0.00",
+      "valor_final": null,
       "observacoes": "Prazo de entrega: 25 dias úteis após a aprovação.\nGarantia: 12 meses contra defeitos de fabricação."
-    }
+    },
+    "pergunta": [
+      "Cama elástica 3 m",
+      "Pula-pula",
+      "Air Game Kids"
+    ]
   },
   "02-texto-livre-escola.docx": {
     "modo": "orcamento",
     "cliente_existente": false,
     "cliente": {
-      "nome": "Escola Pequeno Príncipe", "estabelecimento": "", "documento": "11.222.333/0001-81",
-      "telefone": "(11) 98877-6655", "whatsapp": "sim", "email": "compras@pequenoprincipe.com.br",
+      "nome": "Escola Pequeno Príncipe",
+      "estabelecimento": "",
+      "documento": "11.222.333/0001-81",
+      "telefone": "(11) 98877-6655",
+      "whatsapp": "sim",
+      "email": "compras@pequenoprincipe.com.br",
       "contato": "Juliana Ramos"
     },
     "endereco": {
-      "cep": "04101-000", "rua": "Rua das Flores", "numero": "120", "complemento": "apto 12",
-      "bairro": "Vila Mariana", "cidade": "São Paulo", "uf": "SP"
+      "cep": "04101-000",
+      "rua": "Rua das Flores",
+      "numero": "120",
+      "complemento": "apto 12",
+      "bairro": "Vila Mariana",
+      "cidade": "São Paulo",
+      "uf": "SP"
     },
     "itens": [
-      {"descricao": "Cama elástica 3 m", "original": "Cama elástica 3m", "produto": "Cama elástica 3 m", "quantidade": "2", "valor_unitario": "2.800,00"},
-      {"descricao": "Pula-pula", "original": "Pula-pula", "produto": "Pula-pula", "quantidade": "1", "valor_unitario": "1.234,00"},
-      {"descricao": "Piscina de bolinhas", "original": "Piscina de bolinhas", "produto": "Piscina de bolinhas", "quantidade": "3", "valor_unitario": "450,00"}
+      {
+        "descricao": "Cama elástica 3 m",
+        "original": "Cama elástica 3m",
+        "produto": "Cama elástica 3 m",
+        "quantidade": "2",
+        "valor_unitario": "2.800,00"
+      },
+      {
+        "descricao": "Pula-pula",
+        "original": "Pula-pula",
+        "produto": "Pula-pula",
+        "quantidade": "1",
+        "valor_unitario": "1.234,00"
+      },
+      {
+        "descricao": "Piscina de bolinhas",
+        "original": "Piscina de bolinhas",
+        "produto": "Piscina de bolinhas",
+        "quantidade": "3",
+        "valor_unitario": "450,00"
+      }
     ],
-    "frete": "350,00", "desconto": "", "valor_final": "",
+    "frete": "350,00",
+    "desconto": "",
+    "valor_final": "",
     "validade": "2026-11-19",
     "forma_pagamento": "Boleto em 3 parcelas",
     "forma_envio": "Transportadora",
     "prazo": "",
     "observacoes": "Montagem inclusa no local do evento.",
     "salvo": {
-      "total": "8534.00", "desconto": "0.00", "valor_final": null,
+      "total": "8534.00",
+      "desconto": "0.00",
+      "valor_final": null,
       "observacoes": "Montagem inclusa no local do evento."
-    }
+    },
+    "pergunta": [
+      "Cama elástica 3 m",
+      "Pula-pula",
+      "Piscina de bolinhas"
+    ]
   },
   "03-cabecalho-condominio.docx": {
     "modo": "orcamento",
     "cliente_existente": false,
     "cliente": {
-      "nome": "Condomínio Jardim das Flores", "estabelecimento": "", "documento": "33.000.167/0001-01",
-      "telefone": "(11) 3333-4444", "whatsapp": "nao", "email": "sindico@jardimdasflores.com.br",
+      "nome": "Condomínio Jardim das Flores",
+      "estabelecimento": "",
+      "documento": "33.000.167/0001-01",
+      "telefone": "(11) 3333-4444",
+      "whatsapp": "nao",
+      "email": "sindico@jardimdasflores.com.br",
       "contato": "Paulo Mendes"
     },
     "endereco": {
-      "cep": "09040-200", "rua": "Av. das Acácias", "numero": "300", "complemento": "",
-      "bairro": "Jardim Bela Vista", "cidade": "Santo André", "uf": "SP"
+      "cep": "09040-200",
+      "rua": "Av. das Acácias",
+      "numero": "300",
+      "complemento": "",
+      "bairro": "Jardim Bela Vista",
+      "cidade": "Santo André",
+      "uf": "SP"
     },
     "itens": [
-      {"descricao": "Brinquedão Modelo 3", "original": "Brinquedão Modelo 3", "produto": "Brinquedão Modelo 3", "quantidade": "1", "valor_unitario": "9.000,00"},
-      {"descricao": "Tobogã inflável 6 m", "original": "Tobogã inflável 6 m", "produto": null, "quantidade": "1", "valor_unitario": "3.500,00"}
+      {
+        "descricao": "Brinquedão Modelo 3",
+        "original": "Brinquedão Modelo 3",
+        "produto": "Brinquedão Modelo 3",
+        "quantidade": "1",
+        "valor_unitario": "9.000,00"
+      },
+      {
+        "descricao": "Tobogã inflável 6 m",
+        "original": "Tobogã inflável 6 m",
+        "produto": null,
+        "quantidade": "1",
+        "valor_unitario": "3.500,00"
+      }
     ],
-    "frete": "0,00", "desconto": "", "valor_final": "",
+    "frete": "0,00",
+    "desconto": "",
+    "valor_final": "",
     "validade": "2026-11-30",
     "forma_pagamento": "Pix",
     "forma_envio": "",
     "prazo": "",
     "observacoes": "",
     "salvo": {
-      "total": "12500.00", "desconto": "0.00", "valor_final": null, "observacoes": ""
-    }
+      "total": "12500.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": ""
+    },
+    "pergunta": [
+      "Brinquedão Modelo 3"
+    ]
   },
   "04-ficha-cadastro-marina.docx": {
     "modo": "cliente",
     "cliente_existente": false,
     "cliente": {
-      "nome": "Marina Souza", "estabelecimento": "Festas da Marina", "documento": "529.982.247-25",
-      "telefone": "(11) 97777-6655", "whatsapp": "sim", "email": "marina@festasdamarina.com.br",
+      "nome": "Marina Souza",
+      "estabelecimento": "Festas da Marina",
+      "documento": "529.982.247-25",
+      "telefone": "(11) 97777-6655",
+      "whatsapp": "sim",
+      "email": "marina@festasdamarina.com.br",
       "contato": ""
     },
     "endereco": {
-      "cep": "01310-100", "rua": "Avenida Paulista", "numero": "1000", "complemento": "Conjunto 42",
-      "bairro": "Bela Vista", "cidade": "São Paulo", "uf": "SP"
+      "cep": "01310-100",
+      "rua": "Avenida Paulista",
+      "numero": "1000",
+      "complemento": "Conjunto 42",
+      "bairro": "Bela Vista",
+      "cidade": "São Paulo",
+      "uf": "SP"
     },
-    "itens": []
+    "itens": [],
+    "pergunta": null
   },
   "05-desconto-valor-final.docx": {
     "modo": "orcamento",
     "cliente_existente": false,
     "cliente": {
-      "nome": "Ricardo Alves", "estabelecimento": "Arena Kids Diversões", "documento": "111.444.777-35",
-      "telefone": "(21) 99876-5432", "whatsapp": "sim", "email": "ricardo@arenakids.com.br",
+      "nome": "Ricardo Alves",
+      "estabelecimento": "Arena Kids Diversões",
+      "documento": "111.444.777-35",
+      "telefone": "(21) 99876-5432",
+      "whatsapp": "sim",
+      "email": "ricardo@arenakids.com.br",
       "contato": ""
     },
     "endereco": {
-      "cep": "22270-010", "rua": "Rua Voluntários da Pátria", "numero": "190", "complemento": "",
-      "bairro": "Botafogo", "cidade": "Rio de Janeiro", "uf": "RJ"
+      "cep": "22270-010",
+      "rua": "Rua Voluntários da Pátria",
+      "numero": "190",
+      "complemento": "",
+      "bairro": "Botafogo",
+      "cidade": "Rio de Janeiro",
+      "uf": "RJ"
     },
     "itens": [
-      {"descricao": "Brinquedão Modelo 3", "original": "Brinquedão Modelo 3", "produto": "Brinquedão Modelo 3", "quantidade": "1", "valor_unitario": "9.300,00"},
-      {"descricao": "Piscina de bolinhas", "original": "Piscina de bolinhas", "produto": "Piscina de bolinhas", "quantidade": "2", "valor_unitario": "450,00"}
+      {
+        "descricao": "Brinquedão Modelo 3",
+        "original": "Brinquedão Modelo 3",
+        "produto": "Brinquedão Modelo 3",
+        "quantidade": "1",
+        "valor_unitario": "9.300,00"
+      },
+      {
+        "descricao": "Piscina de bolinhas",
+        "original": "Piscina de bolinhas",
+        "produto": "Piscina de bolinhas",
+        "quantidade": "2",
+        "valor_unitario": "450,00"
+      }
     ],
-    "frete": "0,00", "desconto": "500,00", "valor_final": "9.500,00",
+    "frete": "0,00",
+    "desconto": "500,00",
+    "valor_final": "9.500,00",
     "validade": "2026-11-30",
     "forma_pagamento": "50% de entrada e 50% na entrega",
     "forma_envio": "Transportadora",
     "prazo": "",
     "observacoes": "Inclui treinamento da equipe do cliente.",
     "salvo": {
-      "total": "9500.00", "desconto": "0.00", "valor_final": "9500.00",
+      "total": "9500.00",
+      "desconto": "0.00",
+      "valor_final": "9500.00",
       "observacoes": "Inclui treinamento da equipe do cliente."
-    }
+    },
+    "pergunta": [
+      "Brinquedão Modelo 3",
+      "Piscina de bolinhas"
+    ]
   },
   "06-pdf-tabela-buffet-alegria.pdf": {
     "igual_a": "01-tabela-buffet-alegria.docx"
+  },
+  "07-contrato-buffet.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Buffet Sonho Mágico Ltda",
+      "estabelecimento": "",
+      "documento": "45.678.901/0001-75",
+      "telefone": "(11) 99123-4567",
+      "whatsapp": "sim",
+      "email": "patricia@sonhomagico.com.br",
+      "contato": "Patrícia Gomes Ribeiro"
+    },
+    "endereco": {
+      "cep": "01255-000",
+      "rua": "Rua Doutor Arnaldo",
+      "numero": "1500",
+      "complemento": "Sala 2",
+      "bairro": "Sumaré",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Pula-pula",
+        "original": "Pula-pula",
+        "produto": "Pula-pula",
+        "quantidade": "1",
+        "valor_unitario": "1.234,00"
+      },
+      {
+        "descricao": "Piscina de bolinhas",
+        "original": "Piscinas de bolinhas",
+        "produto": "Piscina de bolinhas",
+        "quantidade": "2",
+        "valor_unitario": "450,00"
+      }
+    ],
+    "pergunta": [
+      "Pula-pula",
+      "Piscina de bolinhas"
+    ],
+    "frete_na_tela": "0,00",
+    "frete": "",
+    "desconto": "",
+    "valor_final": "",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "2134.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": "",
+      "validade": "2026-11-16"
+    }
+  },
+  "08-email-assinatura-interna.docx": {
+    "modo": "cliente",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Ana Paula Ferreira",
+      "estabelecimento": "Espaço Alegria Festas",
+      "documento": "390.533.447-05",
+      "telefone": "(11) 98123-4567",
+      "whatsapp": "sim",
+      "email": "anapaula@espacoalegria.com.br",
+      "contato": ""
+    },
+    "endereco": {
+      "cep": "01222-010",
+      "rua": "Rua Maria Antônia",
+      "numero": "300",
+      "complemento": "",
+      "bairro": "Vila Buarque",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [],
+    "pergunta": null
+  },
+  "09-fabrica-e-cliente.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Escola Infantil Pequenos Passos",
+      "estabelecimento": "",
+      "documento": "98.765.432/0001-98",
+      "telefone": "(11) 98456-1234",
+      "whatsapp": "sim",
+      "email": "",
+      "contato": "Fernanda Lima Duarte"
+    },
+    "endereco": {
+      "cep": "01452-000",
+      "rua": "Avenida Brigadeiro Faria Lima",
+      "numero": "2000",
+      "complemento": "5º andar",
+      "bairro": "Jardim Paulistano",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Cama elástica 3 m",
+        "original": "Cama elástica 3m",
+        "produto": "Cama elástica 3 m",
+        "quantidade": "1",
+        "valor_unitario": "2.800,00"
+      }
+    ],
+    "pergunta": [
+      "Cama elástica 3 m"
+    ],
+    "frete": "0,00",
+    "desconto": "",
+    "valor_final": "",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "2800.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": "",
+      "validade": "2026-11-16"
+    }
+  },
+  "10-brinquedos-sem-preco.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Ricardo Nunes",
+      "estabelecimento": "Clube Recreativo Vila Nova",
+      "documento": "",
+      "telefone": "(11) 99555-8888",
+      "whatsapp": "sim",
+      "email": "",
+      "contato": ""
+    },
+    "endereco": {
+      "cep": "04003-004",
+      "rua": "Rua Coronel Oscar Porto",
+      "numero": "800",
+      "complemento": "",
+      "bairro": "Paraíso",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Cama elástica 3 m",
+        "original": "camas elásticas de 3 metros",
+        "produto": "Cama elástica 3 m",
+        "quantidade": "2",
+        "valor_unitario": "2.800,00"
+      },
+      {
+        "descricao": "Air Game Kids",
+        "original": "Air Game Kids",
+        "produto": "Air Game Kids",
+        "quantidade": "1",
+        "valor_unitario": "18.000,00"
+      },
+      {
+        "descricao": "Strike Kids",
+        "original": "Strike Kids",
+        "produto": "Strike Kids",
+        "quantidade": "1",
+        "valor_unitario": "15.000,00"
+      }
+    ],
+    "pergunta": [
+      "Cama elástica 3 m",
+      "Air Game Kids",
+      "Strike Kids"
+    ],
+    "frete_na_tela": "0,00",
+    "frete": "",
+    "desconto": "",
+    "valor_final": "",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "38600.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": "",
+      "validade": "2026-11-16"
+    }
+  },
+  "11-cliente-ja-cadastrado.docx": {
+    "modo": "cliente",
+    "cliente_existente": true,
+    "cliente": {
+      "nome": "Condomínio Parque das Árvores",
+      "estabelecimento": "",
+      "documento": "",
+      "telefone": "(11) 3456-7890",
+      "whatsapp": "nao",
+      "email": "administracao@parquedasarvores.com.br",
+      "contato": "Roberto Almeida"
+    },
+    "endereco": {
+      "cep": "05650-000",
+      "rua": "Av. das Árvores",
+      "numero": "500",
+      "complemento": "",
+      "bairro": "Morumbi",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [],
+    "pergunta": null
+  },
+  "12-orcamento-repetido.docx": {
+    "modo": "orcamento",
+    "cliente_existente": true,
+    "cliente": {
+      "nome": "Buffet Alegria",
+      "estabelecimento": "",
+      "documento": "",
+      "telefone": "",
+      "whatsapp": "",
+      "email": "contato@buffetalegria.com.br",
+      "contato": ""
+    },
+    "endereco": {
+      "cep": "",
+      "rua": "",
+      "numero": "",
+      "complemento": "",
+      "bairro": "",
+      "cidade": "",
+      "uf": ""
+    },
+    "itens": [
+      {
+        "descricao": "Pula-pula",
+        "original": "Pula-pula",
+        "produto": "Pula-pula",
+        "quantidade": "1",
+        "valor_unitario": "1.234,00"
+      },
+      {
+        "descricao": "Air Game Kids",
+        "original": "Air Game Kids",
+        "produto": "Air Game Kids",
+        "quantidade": "1",
+        "valor_unitario": "18.000,00"
+      }
+    ],
+    "pergunta": [
+      "Pula-pula",
+      "Air Game Kids"
+    ],
+    "orcamento_anterior": [
+      [
+        "Pula-pula",
+        1,
+        "1234.00"
+      ],
+      [
+        "Air Game Kids",
+        1,
+        "18000.00"
+      ]
+    ],
+    "repetido": true,
+    "frete": "0,00",
+    "desconto": "",
+    "valor_final": "",
+    "validade": "",
+    "forma_pagamento": "Pix",
+    "forma_envio": "",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "19234.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": "",
+      "validade": "2026-11-16"
+    }
+  },
+  "13-conversa-whatsapp.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "cliente": {
+      "nome": "Juliana Martins Rocha",
+      "estabelecimento": "",
+      "documento": "714.602.380-01",
+      "telefone": "",
+      "whatsapp": "",
+      "email": "ju.martins@gmail.com",
+      "contato": ""
+    },
+    "endereco": {
+      "cep": "01209-001",
+      "rua": "Rua Aurora",
+      "numero": "155",
+      "complemento": "apto 34",
+      "bairro": "Santa Ifigênia",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Pula-pula",
+        "original": "pula pula",
+        "produto": "Pula-pula",
+        "quantidade": "1",
+        "valor_unitario": "1.234,00"
+      },
+      {
+        "descricao": "Piscina de bolinhas",
+        "original": "piscinas de bolinha",
+        "produto": "Piscina de bolinhas",
+        "quantidade": "2",
+        "valor_unitario": "450,00"
+      }
+    ],
+    "pergunta": [
+      "Pula-pula",
+      "Piscina de bolinhas"
+    ],
+    "frete_na_tela": "0,00",
+    "frete": "",
+    "desconto": "",
+    "valor_final": "",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "2134.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": "",
+      "validade": "2026-11-16"
+    }
   }
 }

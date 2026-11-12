@@ -203,6 +203,23 @@ class FotosDoCatalogoTests(TestCase):
         bloco = css[css.index(".foto-cheia.foto-enquadrada img {"):]
         self.assertIn("object-fit: cover", bloco[:bloco.index("}")])
 
+    def test_o_card_nunca_da_zoom(self):
+        """"valide para não ter fotos assim com zoom pois estraga" (o Air Rock
+        panorâmico no card quadrado): o recorte vai só até 1,4 x de diferença
+        de formato; a foto muito diferente fica inteira, no meio da caixa,
+        com as faixas na cor da beirada dela -- nada de cópia desfocada."""
+        js = (RAIZ / "core" / "static" / "site" / "ls-fotos.js").read_text(encoding="utf-8")
+        css = (RAIZ / "core" / "static" / "site" / "ls-tema.css").read_text(encoding="utf-8")
+        self.assertIn("const ZOOM_MAXIMO = Math.log(1.4);", js)
+        self.assertIn("zoomDemais(caixa, formato)", js)
+        self.assertIn("recorteLimitado", js)
+        self.assertIn("daCaixa * 1.4", js)
+        bloco = css[css.index(".foto-cheia.foto-inteira {"):]
+        self.assertIn("var(--foto-faixas, var(--foto-borda", bloco[:bloco.index("}")])
+        bloco = css[css.index(".foto-cheia.foto-inteira:not(.ls-vitrine-foto) {"):]
+        self.assertIn("place-items: center", bloco[:bloco.index("}")])
+        self.assertNotIn("blur(", css[css.index(".foto-cheia.foto-inteira {"):css.index(".foto-cheia.foto-enquadrada img {")])
+
 
 @override_settings(IS_RENDER=False)
 class ComandoTests(TestCase):

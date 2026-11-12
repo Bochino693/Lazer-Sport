@@ -743,3 +743,41 @@
             width: 100%;
         }
     }
+
+/* ---- Lista · Cards ----
+   O mesmo <article> é a linha da lista (o padrão) e o cartão; aqui só as
+   colunas da lista ("LISTA OU CARDS" em interno_modern.css). */
+.combo-page .ls-visao-barra .combo-contagem {
+    margin: 0;
+    color: var(--muted);
+    font-size: .86rem;
+    font-weight: 750;
+}
+
+#comboLista {
+    --lv-colunas: 56px minmax(180px, 1.5fr) minmax(0, 2fr) 120px 96px 400px;
+    --lv-areas: "foto titulo info valor estado acoes";
+    --lv-colunas-tab: 56px minmax(0, 1fr) auto;
+    --lv-areas-tab: "foto titulo valor" "foto info estado" "acoes acoes acoes";
+    --lv-colunas-cel: 48px minmax(0, 1fr) auto;
+    --lv-areas-cel: "foto titulo titulo" "foto valor estado" "foto info info" "acoes acoes acoes";
+}
+
+.combo-grid[data-visao="lista"] h3 {
+    font-size: .95rem;
+}
+
+.combo-grid[data-visao="lista"] .combo-products {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    font-size: .78rem;
+}
+
+.combo-grid[data-visao="lista"] .combo-price {
+    font-size: 1.02rem;
+}
+
+.combo-grid[data-visao="lista"] .combo-status {
+    position: static;
+}

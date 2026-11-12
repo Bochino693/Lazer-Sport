@@ -49,7 +49,7 @@
     <div class="table-responsive ls-commercial-table-wrap">
       <table class="ls-table ls-commercial-table ls-vendas-table">
         <thead>
-          <tr><th>#</th><th>Pedido</th><th>Cliente</th><th class="text-end">Valor</th><th>Pagamento</th><th>Situação</th><th>Data</th></tr>
+          <tr><th data-coluna="Nº">#</th><th data-coluna="Pedido">Pedido</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Valor" class="text-end">Valor</th><th data-coluna="Pagamento">Pagamento</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Data</th></tr>
         </thead>
         <tbody>
           {% for venda in vendas %}

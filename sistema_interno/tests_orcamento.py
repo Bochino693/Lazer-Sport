@@ -398,8 +398,10 @@ class OrcamentoInternoTests(TestCase):
             "sistema_interno/static/interno/interno_modern.css"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("<th>Proposta</th>", template)
-        self.assertIn("<th>Acompanhamento</th>", template)
+        # o <th> leva o nome da coluna (`data-coluna`), que alinha o título
+        # com o conteúdo -- ver core/tests_lista_cards.py
+        self.assertRegex(template, r"<th[^>]*>Proposta</th>")
+        self.assertRegex(template, r"<th[^>]*>Acompanhamento</th>")
         self.assertIn('class="ls-review-item', template)
         self.assertIn("grid-template-columns:repeat(2,minmax(0,1fr))", css)
         self.assertIn("white-space:nowrap", css)

@@ -76,29 +76,125 @@
     if (seguinte) seguinte.loading = "eager";
 
     minis.forEach(function (botao, i) {
-      botao.classList.toggle("ativo", i === atual);
       botao.setAttribute("aria-pressed", i === atual ? "true" : "false");
     });
-    mostrarMiniatura(minis[atual]);
+    todas().forEach(function (botao) {
+      botao.classList.toggle("ativo", Number(botao.dataset.ir) === atual);
+    });
+    mostrarMiniatura(atual);
     correr();
     vitrine.dispatchEvent(new CustomEvent("vitrine:troca", { detail: { indice: atual, slide: novo } }));
   }
 
-  // No celular a fileira de miniaturas rola de lado: a do brinquedo da vez
-  // fica à vista. Só a fileira rola (scrollTo nela), nunca a página -- o
-  // scrollIntoView puxaria a página de volta para o quadro no meio da
-  // leitura lá embaixo.
-  function mostrarMiniatura(botao) {
-    var fileira = botao && botao.parentElement;
+  /* A FILEIRA SEM FIM. O cliente: "ajeite melhor para poder ir passando e
+     não ter o fim". Quando as miniaturas não cabem, a fileira ganha uma cópia
+     delas antes e outra depois (só para o olho: `aria-hidden`, fora do Tab),
+     e a rolagem fica sempre na do meio -- passou do fim, volta em silêncio
+     para o mesmo ponto da do meio, que é idêntico. Assim dá para ir passando
+     com o dedo (ou com as setas ‹ ›) para sempre, nos dois sentidos, e a
+     troca automática do último para o primeiro segue PARA A FRENTE. Só a
+     fileira rola (scrollTo nela), nunca a página -- o scrollIntoView puxaria
+     a página de volta para o quadro no meio da leitura lá embaixo. */
+  var fileira = minis.length ? minis[0].parentElement : null;
+  var semFim = false;
+  var copias = [];
+
+  function todas() {
+    return fileira ? Array.prototype.slice.call(fileira.querySelectorAll("[data-ir]")) : minis;
+  }
+
+  // a largura de uma volta inteira (do 1º original ao 1º da cópia de depois)
+  function larguraDaVolta() {
+    var depois = copias[minis.length];
+    return depois ? depois.offsetLeft - minis[0].offsetLeft : 0;
+  }
+
+  function prepararSemFim() {
+    if (!fileira || minis.length < 2) return;
+    fileira.classList.add("ls-vitrine-miniaturas--rola");
+    if (fileira.scrollWidth <= fileira.clientWidth + 1) return;
+    semFim = true;
+    fileira.classList.add("ls-vitrine-miniaturas--sem-fim");
+    var copiar = function (botao) {
+      var copia = botao.cloneNode(true);
+      copia.setAttribute("aria-hidden", "true");
+      copia.removeAttribute("aria-pressed");
+      copia.removeAttribute("aria-label");
+      copia.tabIndex = -1;
+      copia.classList.add("ls-vitrine-mini--copia");
+      return copia;
+    };
+    var antes = minis.map(copiar);
+    var depois = minis.map(copiar);
+    antes.forEach(function (copia) { fileira.insertBefore(copia, minis[0]); });
+    depois.forEach(function (copia) { fileira.appendChild(copia); });
+    copias = antes.concat(depois);
+    // começa no meio: a 1ª miniatura original no centro
+    var botao = minis[atual];
+    fileira.scrollLeft = botao.offsetLeft - (fileira.clientWidth - botao.offsetWidth) / 2;
+    var espera = 0;
+    var recentrar = function () {
+      espera = 0;
+      var volta = larguraDaVolta();
+      if (!volta) return;
+      var meio = fileira.scrollLeft + fileira.clientWidth / 2;
+      var ini = minis[0].offsetLeft;
+      if (meio < ini) fileira.scrollLeft += volta;
+      else if (meio > ini + volta) fileira.scrollLeft -= volta;
+    };
+    fileira.addEventListener("scroll", function () {
+      window.clearTimeout(espera);
+      espera = window.setTimeout(recentrar, 140);
+    }, { passive: true });
+  }
+
+  // a miniatura da vez no meio da fileira: entre as cópias dela, a mais perto
+  // de onde a fileira está (do último para o primeiro, anda para a frente)
+  function mostrarMiniatura(indice) {
     if (!fileira || fileira.scrollWidth <= fileira.clientWidth + 1) return;
-    var esquerda = botao.offsetLeft - (fileira.clientWidth - botao.offsetWidth) / 2;
-    fileira.scrollTo({ left: Math.max(0, esquerda), behavior: reduzido ? "auto" : "smooth" });
+    var meio = fileira.scrollLeft + fileira.clientWidth / 2;
+    var melhor = null;
+    var distancia = Infinity;
+    todas().forEach(function (botao) {
+      if (Number(botao.dataset.ir) !== indice) return;
+      var d = Math.abs(botao.offsetLeft + botao.offsetWidth / 2 - meio);
+      if (d < distancia) { distancia = d; melhor = botao; }
+    });
+    if (!melhor) return;
+    var esquerda = melhor.offsetLeft - (fileira.clientWidth - melhor.offsetWidth) / 2;
+    fileira.scrollTo({ left: semFim ? esquerda : Math.max(0, esquerda), behavior: reduzido ? "auto" : "smooth" });
+  }
+
+  // as setas ‹ › dos dois lados da fileira (no PC não há dedo para arrastar)
+  function prepararSetas() {
+    if (!fileira || minis.length < 2) return;
+    var trilho = document.createElement("div");
+    trilho.className = "ls-vitrine-trilho";
+    fileira.parentElement.insertBefore(trilho, fileira);
+    var seta = function (lado, rotulo, passo) {
+      var botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = "ls-vitrine-seta ls-vitrine-seta--" + lado;
+      botao.setAttribute("aria-label", rotulo);
+      botao.innerHTML = '<i class="fa-solid ' + (lado === "antes" ? "fa-chevron-left" : "fa-chevron-right") + '" aria-hidden="true"></i>';
+      botao.addEventListener("click", function () { mostrar(atual + passo); });
+      return botao;
+    };
+    trilho.appendChild(seta("antes", "Brinquedo anterior", -1));
+    trilho.appendChild(fileira);
+    trilho.appendChild(seta("depois", "Próximo brinquedo", 1));
   }
 
   if (slides.length > 1) {
-    minis.forEach(function (botao) {
-      botao.addEventListener("click", function () { mostrar(Number(botao.dataset.ir)); });
-    });
+    prepararSetas();
+    prepararSemFim();
+    // um ouvinte só, na fileira: vale para as miniaturas e para as cópias delas
+    if (fileira) {
+      fileira.addEventListener("click", function (e) {
+        var botao = e.target.closest("[data-ir]");
+        if (botao && fileira.contains(botao)) mostrar(Number(botao.dataset.ir));
+      });
+    }
 
     vitrine.addEventListener("mouseenter", function () { parar(true); });
     vitrine.addEventListener("mouseleave", function () { parar(false); });
