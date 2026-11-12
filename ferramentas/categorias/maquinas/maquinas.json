@@ -198,5 +198,40 @@
   "id": 40,
   "nome": "Air Game Kids",
   "altura": 0.9
+ },
+ "basquete-duplo": {
+  "id": 58,
+  "nome": "Basquete Duplo",
+  "altura": 2.7
+ },
+ "basquete-kids": {
+  "id": 59,
+  "nome": "Basquete Kids",
+  "altura": 1.9
+ },
+ "air-rock": {
+  "id": 60,
+  "nome": "Air Rock",
+  "altura": 2.1
+ },
+ "kid-play": {
+  "id": 61,
+  "nome": "Kid Play",
+  "altura": 3.5
+ },
+ "cozinha-infantil": {
+  "id": 62,
+  "nome": "Cozinha Infantil",
+  "altura": 1.7
+ },
+ "oficina-de-engenharia": {
+  "id": 63,
+  "nome": "Oficina de Engenharia",
+  "altura": 1.7
+ },
+ "salao-de-beleza": {
+  "id": 64,
+  "nome": "Salão de Beleza",
+  "altura": 1.7
  }
 }

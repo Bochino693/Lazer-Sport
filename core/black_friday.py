@@ -6,9 +6,14 @@ As artes vieram da equipe (LEIA-ME, seção 74). Daqui saem:
     Duplo, Basquete Kids, Air Rock, Kid Play e as três casinhas cenográficas
     (Cozinha Infantil, Oficina de Engenharia e Salão de Beleza, numa
     categoria nova "Casinhas Cenográficas"). Entram fora da loja ("sob
-    consulta"), com a foto recortada da própria arte (sem texto, o fundo
-    completado com a cor dela). O Brinquedão Modelo 5 (o playground da arte
-    7) entra assim também se ainda não estiver no catálogo;
+    consulta"). A CAPA é a foto da máquina inteira no showroom (a seção 78:
+    o recorte da própria arte tinha o fundo de neon vermelho do cartaz, ou
+    era panorâmico, e o card quadrado cortava): a de core/static/site/
+    capas_catalogo/<chave>.webp, marcada como a capa em cena
+    (core/capas_catalogo.py, VERMELHAS). O recorte do cartaz (`fotos`) fica
+    no repositório e não sobe mais; a categoria nova nasce com a foto das
+    casinhas na brinquedoteca. O Brinquedão Modelo 5 (o playground da arte
+    7) entra com a imagem da fábrica, se ainda não estiver no catálogo;
   * as 11 PROMOÇÕES, com o preço (ou sem preço, quando a oferta é um brinde
     ou "leve 4"), o preço "de" da arte, as condições (10x, PIX, à vista com
     desconto), válidas até 13/11/2026 (no dia 14 somem sozinhas do site), a
@@ -52,11 +57,14 @@ def _nome_do_arquivo(arquivo):
 
 
 PERFIL = "perfil"
+#: A capa em cena (core/capas_catalogo.py): o produto já nasce com ela.
+CENA = "cena"
 
 PRODUTOS = [
     {
         "nome": "Basquete Duplo",
         "fotos": ["produto-basquete-duplo.webp"],
+        "cena": "basquete-duplo",
         "voltz": "220V",
         "categorias": ["Competitivos", "Eletrônicos", "Esportivos"],
         "descricao": (
@@ -69,6 +77,7 @@ PRODUTOS = [
     {
         "nome": "Basquete Kids",
         "fotos": ["produto-basquete-kids.webp"],
+        "cena": "basquete-kids",
         "voltz": "220V",
         "categorias": ["Kids", "Competitivos", "Eletrônicos", "Espaço Esportivo Kids"],
         "descricao": (
@@ -80,6 +89,7 @@ PRODUTOS = [
     {
         "nome": "Air Rock",
         "fotos": ["produto-air-rock.webp"],
+        "cena": "air-rock",
         "voltz": "220V",
         "categorias": ["Competitivos", "Jogos de Mesa"],
         "descricao": (
@@ -91,6 +101,7 @@ PRODUTOS = [
     {
         "nome": "Kid Play",
         "fotos": ["produto-kid-play.webp"],
+        "cena": "kid-play",
         "voltz": "",
         "categorias": ["Brinquedão", "Espaço Kids Play"],
         "descricao": (
@@ -103,6 +114,7 @@ PRODUTOS = [
     {
         "nome": "Cozinha Infantil",
         "fotos": ["produto-cozinha-infantil.webp", "produto-casinhas-cenograficas.webp"],
+        "cena": "cozinha-infantil",
         "voltz": "",
         "categorias": [CATEGORIA_CASINHAS, "Kids", "Espaço Kids Play"],
         "descricao": (
@@ -114,6 +126,7 @@ PRODUTOS = [
     {
         "nome": "Oficina de Engenharia",
         "fotos": ["produto-oficina-de-engenharia.webp", "produto-casinhas-cenograficas.webp"],
+        "cena": "oficina-de-engenharia",
         "voltz": "",
         "categorias": [CATEGORIA_CASINHAS, "Kids", "Espaço Kids Play"],
         "descricao": (
@@ -125,6 +138,7 @@ PRODUTOS = [
     {
         "nome": "Salão de Beleza",
         "fotos": ["produto-salao-de-beleza.webp", "produto-casinhas-cenograficas.webp"],
+        "cena": "salao-de-beleza",
         "voltz": "",
         "categorias": [CATEGORIA_CASINHAS, "Kids", "Espaço Kids Play"],
         "descricao": (
@@ -269,12 +283,13 @@ def _categorias(nomes, CategoriasBrinquedos, avisar):
     for nome in nomes:
         categoria = todas.get(_normalizar(nome))
         if categoria is None and nome == CATEGORIA_CASINHAS:
+            # a foto da categoria: as três casinhas na brinquedoteca, com as crianças (seção 78), com o
+            # nome que o `atualizar_capas_categorias` reconhece (a chave e a assinatura)
+            from .categorias_capas import arquivo_da_capa, nome_no_cadastro
+
             categoria = CategoriasBrinquedos(nome_categoria=CATEGORIA_CASINHAS)
-            with open(PASTA / "produto-casinhas-cenograficas.webp", "rb") as origem:
-                categoria.imagem_categoria.save(
-                    _nome_do_arquivo("produto-casinhas-cenograficas.webp").replace("black-friday-2026-", "categoria-"),
-                    File(origem), save=True,
-                )
+            with open(arquivo_da_capa("casinhas-cenograficas"), "rb") as origem:
+                categoria.imagem_categoria.save(f"{nome_no_cadastro('casinhas-cenograficas')}.webp", File(origem), save=True)
             todas[_normalizar(nome)] = categoria
             avisar(f"Categoria nova: {CATEGORIA_CASINHAS}.")
         if categoria is not None:
@@ -282,19 +297,42 @@ def _categorias(nomes, CategoriasBrinquedos, avisar):
     return escolhidas
 
 
+def _capa_em_cena(brinquedo, chave, ImagemBrinquedo):
+    """A capa do produto novo: a foto dele no showroom (core/capas_catalogo.py), marcada como a capa em cena."""
+    from . import capas_catalogo
+
+    foto = ImagemBrinquedo(
+        brinquedo=brinquedo, tipo=PERFIL, ordem=1, papel_na_capa=CENA,
+        texto_alternativo=f"{brinquedo.nome_brinquedo} no showroom da Lazer & Sport"[:180],
+    )
+    with open(capas_catalogo.arquivo(chave), "rb") as origem:
+        foto.imagem.save(capas_catalogo.nome_no_cadastro(chave), File(origem), save=True)
+    brinquedo.imagem_brinquedo = foto.imagem.name
+    brinquedo.save(update_fields=["imagem_brinquedo"])
+    return foto
+
+
 def cadastrar_produto(dados, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, simular=False, avisar=print):
-    """Cria o produto (com as fotos) se ainda não está no catálogo. Devolve o brinquedo (ou None ao simular)."""
+    """Cria o produto (com as fotos) se ainda não está no catálogo. Devolve o brinquedo (ou None ao simular).
+
+    Com `cena` (seção 78), a capa é a foto no showroom (a capa em cena) e o recorte do cartaz não sobe.
+    """
     existente = achar(dados["nome"], Brinquedos)
     if existente is not None:
         if not existente.imagem_brinquedo and not simular:
-            with open(PASTA / dados["fotos"][0], "rb") as origem:
-                existente.imagem_brinquedo.save(_nome_do_arquivo(dados["fotos"][0]), File(origem), save=True)
+            if dados.get("cena") and not ImagemBrinquedo.objects.filter(brinquedo=existente, tipo=PERFIL).exists():
+                with transaction.atomic():
+                    _capa_em_cena(existente, dados["cena"], ImagemBrinquedo)
+            else:
+                with open(PASTA / dados["fotos"][0], "rb") as origem:
+                    existente.imagem_brinquedo.save(_nome_do_arquivo(dados["fotos"][0]), File(origem), save=True)
             avisar(f"{dados['nome']}: já estava no catálogo (id {existente.pk}); ganhou a foto.")
         else:
             avisar(f"{dados['nome']}: já está no catálogo (id {existente.pk}).")
         return existente
     if simular:
-        avisar(f"{dados['nome']}: seria criado, fora da loja, com {len(dados['fotos'])} foto(s).")
+        quantas = "a capa em cena (o showroom)" if dados.get("cena") else f"{len(dados['fotos'])} foto(s)"
+        avisar(f"{dados['nome']}: seria criado, fora da loja, com {quantas}.")
         return None
     with transaction.atomic():
         brinquedo = Brinquedos.objects.create(
@@ -306,7 +344,10 @@ def cadastrar_produto(dados, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, 
             voltz=dados["voltz"],
         )
         brinquedo.categorias_brinquedos.set(_categorias(dados["categorias"], CategoriasBrinquedos, avisar))
-        for ordem, arquivo in enumerate(dados["fotos"], start=1):
+        if dados.get("cena"):
+            # a foto no showroom é a capa; o recorte do cartaz (o fundo vermelho, a panorâmica) fica no repositório
+            _capa_em_cena(brinquedo, dados["cena"], ImagemBrinquedo)
+        for ordem, arquivo in enumerate([] if dados.get("cena") else dados["fotos"], start=1):
             with open(PASTA / arquivo, "rb") as origem:
                 foto = ImagemBrinquedo(
                     brinquedo=brinquedo, tipo=PERFIL if ordem == 1 else None, ordem=ordem,

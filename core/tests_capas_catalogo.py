@@ -139,7 +139,8 @@ class FotosDoCatalogoTests(TestCase):
         # "veja como ficou apagado o boliche kids, assim não vai vender, nenhum pode ficar assim":
         # as capas do catálogo, as capas dos nossos 3D e as vistas da galeria
         areas = json.loads((FERRAMENTA / "areas-dos-produtos.json").read_text(encoding="utf-8"))
-        fotos = {f"produto_{chave}": capas_catalogo.arquivo(chave) for chave, *_ in capas_catalogo.LISTA}
+        # (e as da Black Friday tiradas do fundo vermelho, seção 78)
+        fotos = {f"produto_{chave}": capas_catalogo.arquivo(chave) for chave, *_ in capas_catalogo.LISTA + capas_catalogo.VERMELHAS}
         fotos.update({f"capa_{chave}": MODELOS / chave / "capa.webp" for chave in CADASTROS if (MODELOS / chave / "capa.webp").exists()})
         fotos.update({f"vista_{chave}_{vista}": MODELOS / chave / f"{vista}.webp" for chave, vistas in VISTAS.items() for vista in vistas})
         self.assertEqual(set(fotos) - set(areas), set())
@@ -159,7 +160,8 @@ class FotosDoCatalogoTests(TestCase):
         codigo = (FERRAMENTA / "cenas.js").read_text(encoding="utf-8")
         inicio = codigo.index("const CATALOGO = {")
         catalogo = codigo[inicio:codigo.index("\n};\n", inicio)]
-        self.assertEqual(catalogo.count('...v("'), 39)
+        # as 39 de fundo branco e as 7 da Black Friday (o fundo vermelho e as panorâmicas, seção 78)
+        self.assertEqual(catalogo.count('...v("'), 39 + len(capas_catalogo.VERMELHAS))
         for cenario in ("logo", "plantas", "fliperama", "vitrine"):
             self.assertGreaterEqual(catalogo.count(f'...v("{cenario}"'), 5)  # variam: não fica igual em todos
         inicio = codigo.index("const CAPAS = {")
@@ -213,7 +215,10 @@ class FotosDoCatalogoTests(TestCase):
         self.assertIn("const ZOOM_MAXIMO = Math.log(1.4);", js)
         self.assertIn("zoomDemais(caixa, formato)", js)
         self.assertIn("recorteLimitado", js)
-        self.assertIn("daCaixa * 1.4", js)
+        # o recorte limitado parte da FOTO: some no máximo ~10% dela (nunca a máquina cortada)
+        self.assertIn("const APARA_NO_MAXIMO = 1.12;", js)
+        self.assertIn("Math.max(daCaixa, proporcao / APARA_NO_MAXIMO)", js)
+        self.assertNotIn("daCaixa * 1.4", js)
         bloco = css[css.index(".foto-cheia.foto-inteira {"):]
         self.assertIn("var(--foto-faixas, var(--foto-borda", bloco[:bloco.index("}")])
         bloco = css[css.index(".foto-cheia.foto-inteira:not(.ls-vitrine-foto) {"):]

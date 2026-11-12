@@ -494,5 +494,67 @@
    "Esportivos",
    "Famosos"
   ]
+ },
+ "Basquete Duplo": {
+  "id": 58,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Esportivos"
+  ]
+ },
+ "Basquete Kids": {
+  "id": 59,
+  "categorias": [
+   "Competitivos",
+   "Eletrônicos",
+   "Espaço Esportivo Kids",
+   "Kids"
+  ]
+ },
+ "Air Rock": {
+  "id": 60,
+  "categorias": [
+   "Competitivos",
+   "Jogos de Mesa"
+  ]
+ },
+ "Kid Play": {
+  "id": 61,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Kids Play"
+  ]
+ },
+ "Cozinha Infantil": {
+  "id": 62,
+  "categorias": [
+   "Casinhas Cenográficas",
+   "Espaço Kids Play",
+   "Kids"
+  ]
+ },
+ "Oficina de Engenharia": {
+  "id": 63,
+  "categorias": [
+   "Casinhas Cenográficas",
+   "Espaço Kids Play",
+   "Kids"
+  ]
+ },
+ "Salão de Beleza": {
+  "id": 64,
+  "categorias": [
+   "Casinhas Cenográficas",
+   "Espaço Kids Play",
+   "Kids"
+  ]
+ },
+ "Brinquedão Modelo 5": {
+  "id": 65,
+  "categorias": [
+   "Brinquedão",
+   "Espaço Kids Play"
+  ]
  }
 }

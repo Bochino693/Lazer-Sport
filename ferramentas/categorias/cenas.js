@@ -578,6 +578,19 @@ const CENAS = {
     lugar: "buffet", lente: 40, giro: 10, altura: 12,
     lugarOp: { parede: "#93c5fd", fundo: ["bob-esponja-kids"], lado: 2.8, painel: false },
   },
+  // Casinhas Cenográficas (a categoria nova da Black Friday, seção 78): a Cozinha Infantil, a Oficina de
+  // Engenharia e o Salão de Beleza (fotos, tiradas do fundo de neon vermelho do cartaz), lado a lado, na
+  // brinquedoteca -- o lugar do faz de conta --, com a criançada
+  "casinhas-cenograficas": {
+    maquinas: async () => grupo(
+      await maquina("cozinha-infantil", { x: -1.72, z: 0.15, r: 8 }),
+      await maquina("oficina-de-engenharia", { x: 0, z: -0.15, r: 0 }),
+      await maquina("salao-de-beleza", { x: 1.72, z: 0.15, r: -8 }),
+    ),
+    // (as crianças no chão livre da frente, pelo lugar na tela: inteiras na foto, nenhuma cortada na borda)
+    naTela: naFrente([[-0.62, -0.86, 4, "comemorando", 30], [0.1, -0.9, 0, "correndo", -60], [0.66, -0.86, 1, "apontando", -40]]),
+    lugar: "brinquedoteca", lente: 40, giro: 8, altura: 8, ocupa: 0.84,
+  },
 };
 
 // O card fixo "Peças e acessórios" da home (não é categoria: core/templates/home.html o
@@ -732,6 +745,15 @@ const CATALOGO = {
   "mini-roda-sorvete": { ...v("logo", 0.8, 75), giro: 15, altura: 16 },
   "sonic-racing": { ...v("fliperama", -0.9, 77), giro: 22, altura: 10 },
   "porsche-simulador": { ...v("vitrine", 1.4, 79), giro: 24, altura: 10 },
+  // os da Black Friday (seção 78): a máquina tirada do fundo de neon vermelho do cartaz ou da foto
+  // panorâmica (recortar_vermelho.py), cada uma num canto do showroom e do lado que a foto mostra
+  "basquete-duplo": { ...v("fliperama", 0.6, 95), giro: -20, altura: 8 },
+  "basquete-kids": { ...v("vitrine", -0.5, 97), giro: -18, altura: 10 },
+  "cozinha-infantil": { ...v("plantas", 1.0, 99), giro: -14, altura: 9 },
+  "oficina-de-engenharia": { ...v("logo", 0, 101), giro: -14, altura: 9 },
+  "salao-de-beleza": { ...v("fliperama", -1.3, 103), giro: -14, altura: 9 },
+  "air-rock": { ...v("plantas", 0.6, 105), giro: -24, altura: 24 },
+  "kid-play": { ...v("vitrine", 0.8, 107), giro: 10, altura: 14, ocupa: 0.86 },
 };
 
 // os recortes em alta (maquinas-alta/<chave>.webp), carregados quando a capa pede
