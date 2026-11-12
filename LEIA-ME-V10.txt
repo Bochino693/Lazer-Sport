@@ -3438,6 +3438,83 @@ Dependência nova: rjsmin (requirements.txt).
    duas artes, os dois 3D, as medidas, o endereço antigo, os cards girando,
    a Arena, a proposta, o carrinho e as migrações), core/tests_variantes_
    adesivo.py e core/tests_capas_catalogo.py.
+   A ESTRUTURA PADRONIZADA (0181 esquema, 0182 dados, 0183 as vistas). O
+   cliente: "cada adesivo deve ter fotos das posições e um objeto 3d, um
+   outro adesivo, mesmas fotos das posições e referente a ele um objeto 3d,
+   padronize isso para todos", "de forma alguma use as fotos de fundo
+   branco" e "veja se não se perdeu".
+     * TODO brinquedo: Brinquedo -> adesivos (1 ou mais). O primeiro é o
+       PADRÃO (`Brinquedos.adesivo_padrao`; sem nome, "Padrão"; o Air Game
+       Kids é o Astronautas e o Basquete Home é o Azul). Cada adesivo tem as
+       fotos das POSIÇÕES (`ImagemBrinquedo.tipo`: a frente, em 3/4, o lado
+       direito, o lado esquerdo, o verso, de cima; uma foto por posição em
+       cada adesivo) e UM 3D (o do padrão é também o `ObjetoTresD`, para a
+       Arena). O produto guarda o comercial; a capa e o card são do padrão.
+     * A GALERIA (`galeria_publica`): as posições do adesivo, uma por
+       posição, na ordem. A foto sem posição fica guardada (o painel mostra).
+     * A 0182 (idempotente, com volta: `variantes.padronizar` /
+       `despadronizar`): cria o padrão que falta, passa para ele as fotos do
+       produto e o 3D (só se ele não tem um: o 3D que um adesivo já tem nunca
+       é trocado), devolve a posição às fotos do Alienígenas e do Quadrinhos
+       pelo nome do arquivo e guarda como recorte as fotos sem fundo que já
+       se sabe (a cópia da foto de estúdio, as do remove.bg/Photoroom e as
+       vistas sem fundo dos nossos 3D, VISTAS_SEM_FUNDO). Nada é apagado; a
+       Black Friday só ganha o padrão.
+     * A 0183 (só no Render; de novo: `python manage.py posicoes_dos_adesivos`):
+       sobem as vistas do 3D de cada adesivo (core.variantes.POSICOES_DO_3D):
+       as cinco dos Astronautas; o lado esquerdo e a cabeceira refeitos do
+       Alienígenas (a mesa é simétrica: o lado esquerdo era o direito de
+       novo, e o verso, a frente); o lado direito refeito do Quadrinhos; os
+       dois lados do Brinquedão Modelo 2 (os de antes eram a folha da fábrica,
+       de fundo branco). A vista de antes sai da posição e fica guardada; a
+       foto que alguém pôs numa posição nunca é trocada.
+     * NADA QUASE IGUAL NO MESMO ADESIVO (core/conferir_fotos.py): a
+       assinatura dHash 16x16 (também contra a espelhada); no painel (a foto
+       nova de uma posição), na subida das vistas e no teste das vistas.
+     * A PÁGINA DO PRODUTO: o seletor grande junto da galeria ("Adesivo:
+       Astronautas", cada opção com a foto e o nome, a escolhida em
+       destaque); escolher troca ali mesmo as fotos (a primeira entra com a
+       transição da vitrine), a galeria em tela cheia, o 3D (o evento
+       `ls:adesivo`, o visor ouve), o carrinho (a observação), o WhatsApp e
+       o endereço (?adesivo=). O controle sobre o 3D faz o mesmo. Também na
+       vitrine 3D da home e da Arena (o cartão), na ficha da Arena (o
+       adesivo vai no WhatsApp) e no "Monte seu espaço" (vai no pedido).
+     * O PAINEL (seção Adesivos do cadastro): cada adesivo com as seis
+       posições (incluir/trocar cada uma) e o .glb; o padrão não sai; os
+       recortes para artes, para baixar.
+   AS FOTOS SEM FUNDO FORA DO SITE (0184 esquema, 0185 dados, só no Render).
+   O cliente: "me diga sobre as imagens de fundo branco dos brinquedos, por
+   que ainda aparecem? elas devem ficar de fora dos carrosseis e cards,
+   ficando somente para outras finalidades."
+     * O RECORTE PARA ARTES (`papel_na_capa = "recorte"`): a foto branca ou
+       transparente fica guardada (com a posição dela) e só o painel a
+       mostra, para baixar. A de estúdio de antes da capa em cena
+       ("original") também não aparece mais.
+     * SOZINHO, NO PAINEL: a foto enviada no cadastro (a frente, os lados) e
+       nas posições dos adesivos é conferida (`conferir_fotos.sem_fundo`: a
+       moldura transparente ou branca); a sem fundo vira recorte. A capa sem
+       fundo dá lugar à primeira foto com fundo do padrão (a de antes fica
+       em `Brinquedos.capa_sem_fundo`); a frente nova com fundo volta a ser
+       a capa.
+     * A VARREDURA (a 0185 no Render, com prazo de 4 minutos; o resto com o
+       comando): `python manage.py fotos_sem_fundo [--simular]
+       [--com-black-friday]`. Baixa cada foto ainda não conferida pequena do
+       Cloudinary (240 px, no formato dela) e marca `fundo` ("com"/"sem");
+       a que a rede não trouxe fica para a próxima, com aviso. Rodar de novo
+       não baixa nada de novo; nunca apaga; não toca a capa em cena; a
+       Black Friday fica de fora por padrão; a volta devolve as capas e as
+       fotos.
+     * SEM NENHUMA FOTO COM FUNDO: o site mostra o que tem (o card não fica
+       vazio) e o painel avisa "Precisa de foto com fundo" (o selo no card e
+       o aviso no adesivo). Conferido no site no ar (só leitura, 55
+       brinquedos): nenhum ficou sem foto com fundo; as que saem são a foto
+       de estúdio de 40 brinquedos (a segunda miniatura da galeria) e os dois
+       lados de fundo branco do Brinquedão Modelo 2.
+   Testes: core/tests_variantes_produto.py (a estrutura de todo brinquedo,
+   as posições, a troca, as migrações rodadas duas vezes com dois adesivos
+   sem perder foto nem 3D, a volta, as vistas diferentes e com fundo, o
+   painel) e core/tests_fotos_sem_fundo.py (o painel, a varredura, a rede
+   que falha, a volta, o --simular, o site e a reserva sem foto com fundo).
 
 73) PROMOÇÕES: VÁRIOS BRINQUEDOS, A TELA DO PAINEL COMO APP E O QUADRO DA HOME
    Pedidos: "está bem difícil achar o brinquedo a aplicar a promo ...
