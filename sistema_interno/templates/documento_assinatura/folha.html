@@ -1,0 +1,145 @@
+{% load static interno_extras %}
+{% comment %}
+  A FOLHA DO TERMO DE COMPRA -- o documento que o cliente assina.
+
+  Uma folha só para as três telas que a mostram: a página do link (no
+  telefone do cliente), a cópia assinada que ele baixa e a via do painel.
+  Tudo sai do RETRATO (`doc`, o JSON congelado ao gerar), nunca do
+  orçamento vivo: editar o orçamento depois não muda o que foi assinado.
+
+  `cliente_documento` chega mascarado fora do painel (ver
+  `core.views_assinatura.contexto_da_folha`). Na impressão a folha é a
+  única coisa que sai: o resto da página leva `nao-imprime`.
+{% endcomment %}
+<article class="folha" aria-label="{{ doc.titulo }}">
+  <header class="folha-topo">
+    <div class="folha-marca">
+      <img src="{% static 'images/logoofi.png' %}" alt="" width="56" height="56">
+      <div>
+        <strong>{{ doc.empresa.nome }}</strong>
+        <span>CNPJ {{ doc.empresa.cnpj }}</span>
+        {% if doc.empresa.endereco %}<span>{{ doc.empresa.endereco }}</span>{% endif %}
+        {% if doc.empresa.telefone or doc.empresa.email %}<span>{{ doc.empresa.telefone }}{% if doc.empresa.telefone and doc.empresa.email %} · {% endif %}{{ doc.empresa.email }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="folha-titulo">
+      <span class="folha-kicker">Documento nº {{ doc.orcamento.numero }}</span>
+      <h2>{{ doc.titulo }}</h2>
+      <dl>
+        <div><dt>Orçamento</dt><dd>{{ doc.orcamento.numero }} · versão {{ doc.orcamento.versao }}</dd></div>
+        {% if doc.orcamento.data %}<div><dt>Data do orçamento</dt><dd>{{ doc.orcamento.data }}</dd></div>{% endif %}
+        <div><dt>Emitido em</dt><dd>{{ doc.emitido_em_texto }}</dd></div>
+        <div><dt>Atendimento</dt><dd>{{ doc.orcamento.responsavel }}</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="folha-partes">
+    <div class="folha-parte">
+      <h3>Vendedor</h3>
+      <strong>{{ doc.empresa.nome }}</strong>
+      <span>CNPJ {{ doc.empresa.cnpj }}</span>
+    </div>
+    <div class="folha-parte">
+      <h3>Comprador</h3>
+      <strong>{{ doc.cliente.nome }}</strong>
+      {% if cliente_documento %}<span>CPF/CNPJ {{ cliente_documento }}</span>{% endif %}
+      {% if doc.cliente.telefone %}<span>{{ doc.cliente.telefone }}</span>{% endif %}
+      {% if doc.cliente.email %}<span>{{ doc.cliente.email }}</span>{% endif %}
+      {% if doc.cliente.endereco %}<span>{{ doc.cliente.endereco }}</span>{% endif %}
+    </div>
+  </section>
+
+  <section class="folha-bloco">
+    <h3>Itens comprados</h3>
+    <div class="folha-itens" role="table" aria-label="Itens comprados">
+      <div class="folha-item folha-item-cabeca" role="row">
+        <span role="columnheader">Descrição</span>
+        <span role="columnheader">Qtd.</span>
+        <span role="columnheader">Unitário</span>
+        <span role="columnheader">Total</span>
+      </div>
+      {% for item in doc.itens %}
+        <div class="folha-item" role="row">
+          <span class="folha-item-nome" role="cell">
+            <strong>{{ item.descricao }}</strong>
+            {% for linha in item.detalhes %}<small>{{ linha }}</small>{% endfor %}
+          </span>
+          <span role="cell" data-rotulo="Qtd.">{{ item.quantidade }}</span>
+          <span role="cell" data-rotulo="Unitário">{{ item.valor_unitario|reais }}</span>
+          <span role="cell" data-rotulo="Total" class="folha-item-total">{{ item.subtotal|reais }}</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <dl class="folha-contas">
+      <div><dt>Soma dos itens</dt><dd>{{ doc.valores.subtotal|reais }}</dd></div>
+      {% if doc.valores.frete != "0.00" %}<div><dt>Frete</dt><dd>{{ doc.valores.frete|reais }}</dd></div>{% endif %}
+      {% if doc.valores.desconto != "0.00" %}<div><dt>Desconto</dt><dd>− {{ doc.valores.desconto|reais }}</dd></div>{% endif %}
+      {% if doc.valores.acrescimo != "0.00" %}<div><dt>Ajuste do valor combinado</dt><dd>+ {{ doc.valores.acrescimo|reais }}</dd></div>{% endif %}
+      <div class="folha-total"><dt>Total da compra</dt><dd>{{ doc.valores.total|reais }}</dd></div>
+      <div class="folha-pago">
+        <dt>Pago{% if doc.pagamento.pago_em %} em {{ doc.pagamento.pago_em }}{% endif %}</dt>
+        <dd>{{ doc.valores.pago|reais }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="folha-bloco folha-condicoes">
+    <h3>Pagamento e entrega</h3>
+    <dl>
+      <div><dt>Situação</dt><dd><span class="folha-selo">✓ {{ doc.pagamento.situacao }}</span></dd></div>
+      {% if doc.pagamento.forma %}<div><dt>Forma de pagamento</dt><dd>{{ doc.pagamento.forma }}</dd></div>{% endif %}
+      {% if doc.pagamento.observacao %}<div><dt>Observação do pagamento</dt><dd>{{ doc.pagamento.observacao }}</dd></div>{% endif %}
+      {% if doc.condicoes.forma_envio %}<div><dt>Forma de envio</dt><dd>{{ doc.condicoes.forma_envio }}</dd></div>{% endif %}
+      {% if doc.condicoes.observacoes %}<div class="largo"><dt>Prazo, produção e garantia</dt><dd>{{ doc.condicoes.observacoes|linebreaksbr }}</dd></div>{% endif %}
+    </dl>
+  </section>
+
+  <section class="folha-bloco folha-declaracao">
+    <h3>Declaração</h3>
+    {% for paragrafo in doc.declaracao %}<p>{{ paragrafo }}</p>{% endfor %}
+  </section>
+
+  <section class="folha-assinatura{% if documento.assinado %} assinada{% endif %}">
+    <div class="folha-assinatura-traco">
+      {% if assinatura_img %}<img src="{{ assinatura_img }}" alt="Assinatura de {{ documento.assinante_nome }}">{% endif %}
+    </div>
+    <div class="folha-assinatura-nome">
+      {% if documento.assinado %}
+        <strong>{{ documento.assinante_nome }}</strong>
+        <span>CPF/CNPJ {{ assinante_documento }} · assinado eletronicamente em {{ documento.assinado_em|date:"d/m/Y \à\s H:i" }}</span>
+      {% else %}
+        <strong>Assinatura do comprador</strong>
+        <span>{{ doc.cliente.nome }}</span>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if documento.assinado %}
+    {% comment %}
+      A TRILHA DA ASSINATURA. É o que dá para conferir depois: o código do
+      documento, o hash do retrato (quem recalcular o SHA-256 do JSON
+      guardado chega ao mesmo número), a hora com o fuso, o IP e o
+      navegador que assinaram, e quantos links a equipe gerou.
+    {% endcomment %}
+    <section class="folha-auditoria" aria-label="Registro da assinatura eletrônica">
+      <h3>Registro da assinatura eletrônica</h3>
+      <dl>
+        <div><dt>Documento</dt><dd>{{ documento.codigo_publico }}</dd></div>
+        <div><dt>Orçamento</dt><dd>nº {{ doc.orcamento.numero }} · versão {{ doc.orcamento.versao }}</dd></div>
+        <div><dt>Assinado em</dt><dd>{{ documento.assinado_em|date:"d/m/Y H:i:s O" }}</dd></div>
+        <div><dt>Assinante</dt><dd>{{ documento.assinante_nome }} · {{ assinante_documento }}</dd></div>
+        <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"não informado" }}</dd></div>
+        <div class="largo"><dt>Aparelho (navegador)</dt><dd>{{ documento.assinatura_navegador|default:"não informado" }}</dd></div>
+        <div class="largo"><dt>SHA-256 do documento</dt><dd class="hash">{{ documento.hash_conteudo }}</dd></div>
+        <div class="largo"><dt>SHA-256 conferido na assinatura</dt><dd class="hash">{{ documento.hash_assinado }}</dd></div>
+        <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }} (cada um válido por 5 minutos)</dd></div>
+      </dl>
+    </section>
+  {% endif %}
+
+  <footer class="folha-rodape">
+    {{ doc.empresa.nome }} · CNPJ {{ doc.empresa.cnpj }} · lazersport.com.br · modelo {{ doc.modelo }}
+  </footer>
+</article>

@@ -192,6 +192,26 @@ def avisar_resposta_do_cliente(orcamento):
     )
 
 
+def avisar_documento_assinado(documento):
+    """O cliente assinou no celular o termo de compra do orçamento pago.
+
+    Mesma regra do aviso de resposta: o número no título, o nome do
+    cliente fora da tela de bloqueio. Não vibra -- é um fecho, não uma
+    urgência.
+    """
+    orcamento = documento.orcamento
+    return _entregar(
+        _quem_cuida_de_orcamento(orcamento),
+        {
+            "titulo": f"Orçamento #{orcamento.pk}: termo assinado",
+            "corpo": "O cliente assinou o termo de compra. O PDF está no cartão do documento.",
+            "url": f"/orcamentos/{orcamento.pk}/documento/",
+            "marca": _marca(f"documento-assinatura:{documento.pk}"),
+            "urgente": False,
+        },
+    )
+
+
 def avisar_ciencia_ordem_servico(ordem):
     """Cliente confirmou o recebimento de uma O.S. concluída."""
     pessoas = {}

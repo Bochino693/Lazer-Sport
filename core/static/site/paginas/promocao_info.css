@@ -548,3 +548,126 @@
     color: var(--promo-muted);
     font-size: .78rem;
 }
+
+/* =========================================================
+   NO TEMA ESCURO DO SITE (o cliente: "veja minha área de promoções como
+   está branca"). A página da promoção era o único cartão branco do site:
+   agora ela segue a página do produto -- o vidro azul-noite, o texto
+   claro, os chips e as linhas em vidro, o preço em verde vivo -- e a arte
+   da campanha continua inteira, à esquerda, sem moldura.
+========================================================= */
+html.ls-escuro #promocao-pagina {
+    --promo-blue: #3fa4ff;
+    --promo-blue-light: #3fd0ff;
+    --promo-red: #ff5a6a;
+    --promo-green: #34e08a;
+    --promo-ink: #eef4ff;
+    --promo-muted: #a6b6d2;
+    color: var(--promo-ink);
+}
+
+html.ls-escuro #promocao-pagina .promo-breadcrumb { color: #8ea3c4; }
+html.ls-escuro #promocao-pagina .promo-breadcrumb a { color: #7cc7ff; }
+
+html.ls-escuro #promocao-pagina .promo-grid {
+    border: 1px solid rgba(127, 200, 255, .14);
+    background:
+        radial-gradient(120% 80% at 100% 0%, rgba(63, 164, 255, .10), transparent 60%),
+        linear-gradient(160deg, rgba(17, 32, 66, .96), rgba(8, 15, 34, .98));
+    box-shadow: 0 30px 70px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+html.ls-escuro #promocao-pagina .promo-grid::before { border-color: rgba(255, 90, 106, .06); }
+
+html.ls-escuro #promocao-pagina .promo-gallery {
+    background: linear-gradient(145deg, #0f1d3d, #0a1430 52%, #0c1938);
+}
+
+html.ls-escuro #promocao-pagina .promo-gallery::after {
+    background:
+        radial-gradient(circle at 20% 55%, rgba(255, 90, 106, .16) 0 4px, transparent 5px) 0 0 / 24px 24px,
+        linear-gradient(to top, rgba(63, 164, 255, .14), transparent);
+}
+
+html.ls-escuro #promocao-pagina .promo-gallery-bg { opacity: .32; }
+html.ls-escuro #promocao-pagina .promo-gallery-product { filter: drop-shadow(0 26px 28px rgba(0, 0, 0, .5)); }
+
+html.ls-escuro #promocao-pagina .promo-trust span {
+    border-color: rgba(255, 255, 255, .10);
+    color: #d6e4f7;
+    background: rgba(255, 255, 255, .05);
+}
+
+html.ls-escuro #promocao-pagina .brinquedo-info {
+    border-color: rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, .035);
+}
+
+html.ls-escuro #promocao-pagina .brinquedo-info h2 { color: #9fb6d6; }
+
+html.ls-escuro #promocao-pagina .promo-itens a {
+    border-color: rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, .045);
+    color: var(--promo-ink);
+}
+
+html.ls-escuro #promocao-pagina .promo-itens a:hover {
+    border-color: rgba(63, 208, 255, .45);
+    background: rgba(63, 164, 255, .08);
+}
+
+html.ls-escuro #promocao-pagina .promo-itens img { background: #0d1a36; }
+
+html.ls-escuro #promocao-pagina .promo-precos {
+    border-color: rgba(52, 224, 138, .18);
+    background: linear-gradient(145deg, rgba(52, 224, 138, .07), rgba(63, 164, 255, .05));
+}
+
+html.ls-escuro #promocao-pagina .preco-normal { color: #8696b2; }
+
+html.ls-escuro #promocao-pagina .promo-economia {
+    color: #a8f5c9;
+    background: rgba(52, 224, 138, .12);
+}
+
+html.ls-escuro #promocao-pagina .promo-condicoes li { color: #e2ecfa; }
+html.ls-escuro #promocao-pagina .promo-condicoes li i { color: #34e08a; }
+
+html.ls-escuro #promocao-pagina .promo-validade {
+    border: 1px solid rgba(255, 196, 64, .28);
+    background: rgba(255, 196, 64, .12);
+    color: #ffd27a;
+}
+
+html.ls-escuro #promocao-pagina .promo-validade--fim {
+    border-color: rgba(255, 90, 106, .3);
+    background: rgba(255, 90, 106, .12);
+    color: #ffa3ae;
+}
+
+html.ls-escuro #promocao-pagina .btn-voltar {
+    color: #d6e4f7;
+    border-color: rgba(255, 255, 255, .16);
+    background: rgba(255, 255, 255, .03);
+}
+
+html.ls-escuro #promocao-pagina .btn-voltar:hover { border-color: rgba(63, 208, 255, .45); }
+
+/* o botão do carrinho no azul firme (o texto branco lê bem) */
+html.ls-escuro #promocao-pagina .btn-carrinho {
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 10px 24px rgba(20, 96, 214, .32);
+}
+
+/* No computador a arte acompanha a rolagem da coluna de informações: a
+   coluna da direita é mais alta, e a arte não deixa um vão vazio embaixo. */
+@media (min-width: 901px) {
+    /* `clip` e não `hidden`: o hidden faria do cartão uma caixa de rolagem e a arte
+       ficaria "grudada" nele, e não na tela */
+    html.ls-escuro #promocao-pagina .promo-grid:has(.promo-arte) { overflow: clip; }
+
+    html.ls-escuro #promocao-pagina .promo-gallery:has(.promo-arte) {
+        position: sticky;
+        top: 96px;
+    }
+}
