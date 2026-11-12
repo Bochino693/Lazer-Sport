@@ -40,14 +40,27 @@
     img.src = src;
   });
 
-  // a próxima foto, pronta e já baixada (só com o card na tela)
+  // a próxima foto, pronta e já baixada (só com o card na tela). A foto de formato
+  // muito diferente do card (a vista 16:10 no card quadrado) NÃO entra no giro: ela
+  // apareceria inteira com faixas, menor que as outras -- o cliente: "não quero fotos
+  // cortadas menores, deve seguir o mesmo padrão". Ela é pulada (e lembrada) e o giro
+  // segue só com as fotos que enchem o card.
   const adiantar = (estado) => {
     if (estado.vindo) return;
-    const indice = (estado.indice + 1) % estado.lista.length;
-    estado.vindo = preparar(estado.lista[indice], estado.caixa).then(async (pronta) => {
-      const ok = await baixar(pronta.src);
-      return ok ? { ...pronta, indice } : null;
-    }).catch(() => null);
+    estado.vindo = (async () => {
+      for (let passo = 1; passo < estado.lista.length; passo += 1) {
+        const indice = (estado.indice + passo) % estado.lista.length;
+        if (estado.puladas.has(indice)) continue;
+        const pronta = await preparar(estado.lista[indice], estado.caixa).catch(() => null);
+        if (!pronta) continue;
+        if (pronta.inteira && !estado.caixa.hasAttribute("data-foto-inteira")) {
+          estado.puladas.add(indice);
+          continue;
+        }
+        if (await baixar(pronta.src)) return { ...pronta, indice };
+      }
+      return null;
+    })().catch(() => null);
   };
 
   // a camada por cima: no lugar e do jeito da foto do card
@@ -134,7 +147,7 @@
       const caixa = caixaDe(marca);
       if (!caixa || !fotoDa(caixa) || lista.length < 2 || estados.has(caixa)) return;
       const estado = {
-        caixa, lista, indice: 0, visivel: !vigia, pausado: false, vindo: null, trocando: false,
+        caixa, lista, indice: 0, visivel: !vigia, pausado: false, vindo: null, trocando: false, puladas: new Set(),
         // os cards não trocam todos juntos: cada um começa um pouco depois
         proxima: Date.now() + INTERVALO + (estados.size % 5) * 450,
       };
