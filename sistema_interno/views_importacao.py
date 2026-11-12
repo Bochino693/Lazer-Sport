@@ -49,7 +49,7 @@ from django.views.generic import View
 from core.utils import buscar_dados_cep
 
 from .context_processors import invalidar_avisos
-from .importacao_word import conferencia, formulario, ia, leitor, mapa, sessao
+from .importacao_word import conferencia, formulario, ia, leitor, mapa, sessao, tela
 from .models import Cliente, Orcamento
 from .permissoes import capacidades
 from .utils import ErroDeFormulario
@@ -275,7 +275,9 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             return redirect("importar_orcamento_word")
         proposta = conferencia.montar_proposta(leitura)
         envio = formulario.envio_inicial(proposta)
-        return self.desenhar(request, token, leitura, proposta, envio)
+        # Logo depois da leitura, a tela abre com a decisão (o modal); de
+        # volta de um envio recusado, não -- a pessoa já decidiu.
+        return self.desenhar(request, token, leitura, proposta, envio, decidir=True)
 
     def post(self, request, token):
         if not self.pode_criar(request):
@@ -334,7 +336,8 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         sessao.guardar_conclusao(request, orcamento.pk, resumo)
         return redirect("importacao_concluida", pk=orcamento.pk)
 
-    def desenhar(self, request, token, leitura, proposta, envio, *, validado=None, status=200, erro=""):
+    def desenhar(self, request, token, leitura, proposta, envio, *, validado=None, status=200, erro="",
+                 decidir=False):
         validado = validado or formulario.validar(proposta, envio)
         # No "Só cadastrar o cliente" os alertas de dinheiro não contam --
         # mas a tela tem de tê-los prontos, para quem troca para "criar
@@ -342,6 +345,11 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         do_orcamento = validado if envio["modo"] == "orcamento" else formulario.validar(
             proposta, dict(envio, modo="orcamento"),
         )
+        do_cliente = validado if envio["modo"] == "cliente" else formulario.validar(
+            proposta, dict(envio, modo="cliente"),
+        )
+        pergunta = formulario.pergunta_de_orcamento(proposta)
+        oferta = formulario.oferta_de_orcamento(proposta)
         alertas = do_orcamento["alertas"]
         for alerta in alertas:
             if alerta["id"] in envio["justificativas"]:
@@ -386,8 +394,14 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             "linhas": leitura["linhas"],
             "hoje": timezone.localdate(),
             "validade_padrao": Orcamento.validade_padrao(),
-            "oferta_orcamento": formulario.oferta_de_orcamento(proposta),
-            "pergunta_orcamento": formulario.pergunta_de_orcamento(proposta),
+            "oferta_orcamento": oferta,
+            "pergunta_orcamento": pergunta,
+            # A decisão (o modal que abre logo depois da leitura) e os
+            # painéis da tela guiada: ver importacao_word/tela.py.
+            "decidir": decidir,
+            "decisao": tela.decisao(proposta, envio, do_cliente=do_cliente, do_orcamento=do_orcamento,
+                                    pergunta=pergunta, oferta=oferta),
+            "paineis": tela.paineis(proposta, envio, validado, do_orcamento),
             "repetido": do_orcamento.get("repetido"),
             "ja_no_mapa": bool(ligado and ligado.no_mapa),
             "contas": do_orcamento["contas"],

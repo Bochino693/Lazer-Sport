@@ -29,6 +29,7 @@ LSTela.pronto(function () {
   var botaoCriar = document.getElementById("criarOrcamento");
   var buscas = {};
   var novos = 0;
+  var iniciado = false;
 
   /* -------------------------------------------------------- números */
   /* A mesma leitura do servidor (deterministica.ler_dinheiro) e do campo
@@ -155,35 +156,10 @@ LSTela.pronto(function () {
     document.querySelectorAll("[data-nota-modo], [data-rotulo-modo]").forEach(function (el) {
       el.hidden = (el.dataset.notaModo || el.dataset.rotuloModo) !== caminho;
     });
+    if (typeof ajustarPaineis === "function" && iniciado) ajustarPaineis(true);
     atualizar();
   }
   if (chaveOrcamento) chaveOrcamento.addEventListener("change", aplicarCaminho);
-
-  /* A PERGUNTA DO TOPO: "Encontrei 3 brinquedos no documento (...).
-     Deseja criar um orçamento a partir do documento?" Sim liga a chave do
-     orçamento e leva aos itens; Não deixa só o cliente. A pergunta só
-     opera a chave -- quem decide no envio é ela. */
-  form.addEventListener("click", function (evento) {
-    var botao = evento.target.closest("[data-resposta-orcamento]");
-    if (!botao || !chaveOrcamento) return;
-    var sim = botao.dataset.respostaOrcamento === "sim";
-    chaveOrcamento.checked = sim;
-    aplicarCaminho();
-    var resposta = document.getElementById("respostaOrcamento");
-    if (resposta) {
-      resposta.hidden = false;
-      resposta.textContent = sim
-        ? "Orçamento ligado: confira os itens, o frete e as condições abaixo."
-        : "Só o cliente. Se mudar de ideia, ligue “Criar o orçamento também”.";
-    }
-    form.querySelectorAll("[data-resposta-orcamento]").forEach(function (b) {
-      b.classList.toggle("ativa", b === botao);
-    });
-    if (sim) {
-      var itens = document.getElementById("blocoItens");
-      if (itens) itens.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  });
 
   /* OUTRO ENDEREÇO DO DOCUMENTO: um toque troca o endereço inteiro. */
   form.addEventListener("click", function (evento) {
@@ -737,13 +713,33 @@ LSTela.pronto(function () {
       var caixa = form.querySelector('[data-aceite="' + id + '"]');
       var texto = form.querySelector('[data-justificativa="' + id + '"]');
       var titulo = (alerta.querySelector("strong") || {}).textContent || "Alerta";
-      if (!caixa || !caixa.checked) falta(caixa ? caixa.id || "" : "", titulo, "corrija o valor ou aceite com uma justificativa");
+      if (!caixa || !caixa.checked) falta(alerta.id || "", titulo, "corrija o valor ou aceite com uma justificativa");
       else if (!texto || texto.value.trim().length < dados.justificativaMinima) {
-        falta("", titulo, "escreva por que o alerta pode ser aceito (pelo menos " + dados.justificativaMinima + " letras)");
+        falta(alerta.id || "", titulo, "escreva por que o alerta pode ser aceito (pelo menos " + dados.justificativaMinima + " letras)");
       }
     });
     return lista_;
   }
+
+  /* ------------------------------------------- a tela guiada */
+  /* QUANTAS VERIFICAÇÕES HÁ, para o anel do progresso: o cliente (nome e
+     um contato, e o vínculo quando é o cadastro que já existe) e, com o
+     orçamento, cada item (produto, quantidade, unitário), o frete, a
+     escolha do total, o repetido e cada alerta vermelho. */
+  function verificacoes() {
+    var total = 2 + (modoAtual === "existente" ? 1 : 0);
+    if (caminho === "orcamento") {
+      total += Math.max(cartoes().length, 1) * 3 + 1;
+      if (document.getElementById("escolhaTotal")) total += 1;
+      if (document.getElementById("criarMesmoAssim")) total += 1;
+      total += form.querySelectorAll(".ls-imp-alerta.vermelho").length;
+    }
+    return total;
+  }
+
+  var reduzirMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var painelProgresso = document.getElementById("painelPendencias");
+  var faltavaAntes = null;
 
   function desenharPendencias(lista_) {
     var ol = document.getElementById("listaPendencias");
@@ -765,25 +761,315 @@ LSTela.pronto(function () {
     contagem.classList.toggle("zero", !lista_.length);
     document.getElementById("semPendencias").hidden = !!lista_.length;
     botaoCriar.disabled = !!lista_.length;
-    var falta = document.getElementById("criarFalta");
-    if (falta) {
-      falta.hidden = !lista_.length;
-      falta.querySelector("span").textContent = String(lista_.length);
+
+    /* "Faltam 2: CPF/CNPJ · Frete", o anel, e -- sem falta nenhuma -- a
+       ação verde no lugar, com um pulso só. */
+    var total = Math.max(verificacoes(), lista_.length);
+    var feito = Math.round(((total - lista_.length) / total) * 100);
+    var anel = document.getElementById("anelFeito");
+    if (anel) anel.setAttribute("stroke-dasharray", feito + " 100");
+    document.getElementById("progressoPorcento").textContent = feito + "%";
+    var rotulos = [];
+    lista_.forEach(function (p) { if (rotulos.indexOf(p.rotulo) < 0) rotulos.push(p.rotulo); });
+    document.getElementById("progressoTitulo").textContent = lista_.length
+      ? "Faltam " + lista_.length : "Tudo pronto";
+    document.getElementById("progressoLista").textContent = rotulos.slice(0, 3).join(" · ")
+      + (rotulos.length > 3 ? " · e mais" : "");
+    painelProgresso.classList.toggle("pronto", !lista_.length);
+    if (!lista_.length && faltavaAntes && !reduzirMovimento) {
+      painelProgresso.classList.remove("pulsar");
+      void painelProgresso.offsetWidth;
+      painelProgresso.classList.add("pulsar");
     }
+    faltavaAntes = lista_.length > 0;
+    ajustarPaineis(false, lista_);
   }
+
+  /* OS PAINÉIS: cada um diz quantas faltas tem e o resumo de agora. Abrir
+     sozinho só no começo e quando o caminho muda (ou para levar ao campo
+     que falta); depois, quem abre e fecha é a pessoa. */
+  function painelDe(elemento) {
+    return elemento ? elemento.closest("[data-painel]") : null;
+  }
+
+  function texto(id) { return valorDe(id); }
+
+  function resumoCliente() {
+    var partes = [texto("campoNome") || "sem nome"];
+    if (texto("campoEstabelecimento")) partes.push(texto("campoEstabelecimento"));
+    var documento = texto("campoDocumento").replace(/\D/g, "");
+    partes.push(documento ? (documento.length === 14 ? "CNPJ ✓" : "CPF ✓") : "sem CPF/CNPJ");
+    if (texto("campoTelefone")) partes.push(texto("campoWhatsapp") === "sim" ? "WhatsApp ✓" : "Telefone ✓");
+    if (texto("campoEmail")) partes.push("E-mail ✓");
+    if (!texto("campoTelefone") && !texto("campoEmail")) partes.push("sem contato");
+    return partes.join(" · ");
+  }
+
+  function resumoEndereco() {
+    if (!texto("campoEndereco") && !texto("campoCidade") && !texto("campoCep")) {
+      return "Sem endereço (opcional; sem ele não há alfinete no mapa)";
+    }
+    var rua = [texto("campoEndereco"), texto("campoNumero")].filter(Boolean).join(", ");
+    var cidade = [texto("campoCidade"), texto("campoEstado")].filter(Boolean).join("/");
+    var partes = [rua, texto("campoBairro"), cidade].filter(Boolean);
+    if (texto("campoCep")) partes.push("CEP ✓");
+    if (chaveMapa && chaveMapa.checked) partes.push("no mapa ✓");
+    return partes.join(" · ");
+  }
+
+  function resumos(conta) {
+    var quantos = cartoes().length;
+    return {
+      cliente: resumoCliente(),
+      endereco: resumoEndereco(),
+      itens: quantos ? quantos + (quantos === 1 ? " item" : " itens") + " · " + moeda(conta.subtotal) : "Nenhum item",
+      valores: [
+        texto("campoFrete") ? "Frete R$ " + texto("campoFrete") : "Frete a preencher",
+        "Total " + moeda(conta.final),
+        texto("campoPagamento")
+      ].filter(Boolean).join(" · ")
+    };
+  }
+
+  function ajustarPaineis(abrir, lista_) {
+    lista_ = lista_ || pendencias(contas());
+    var faltas = {};
+    lista_.forEach(function (p) {
+      var alvo = p.alvo ? document.getElementById(p.alvo) : null;
+      var painel = painelDe(alvo);
+      var nome = painel ? painel.dataset.painel : "valores";
+      faltas[nome] = (faltas[nome] || 0) + 1;
+    });
+    var textos = resumos(contas());
+    form.querySelectorAll("[data-painel]").forEach(function (painel) {
+      var nome = painel.dataset.painel;
+      var quantas = faltas[nome] || 0;
+      var estado = painel.querySelector("[data-estado]");
+      if (estado) {
+        estado.textContent = quantas ? "Falta " + quantas : "✓";
+        estado.classList.toggle("falta", !!quantas);
+      }
+      var resumo = painel.querySelector("[data-resumo]");
+      if (resumo && textos[nome] !== undefined) resumo.textContent = textos[nome];
+      painel.classList.toggle("com-falta", !!quantas);
+      if (abrir && !painel.hidden) {
+        var baixa = !!painel.querySelector(".ls-imp-selo.baixa");
+        painel.open = !!quantas || baixa;
+      }
+    });
+  }
+
+  /* PRÓXIMO CAMPO: abre o painel, rola até o campo, põe o foco e
+     destaca, com a dica do que se espera. */
+  var destacado = null;
+  function limparDestaque() {
+    if (!destacado) return;
+    destacado.caixa.classList.remove("ls-imp-alvo");
+    if (destacado.dica && destacado.dica.parentNode) destacado.dica.parentNode.removeChild(destacado.dica);
+    destacado = null;
+  }
+
+  function destacar(alvo, motivo) {
+    limparDestaque();
+    var caixa = alvo.closest(".ls-imp-campo, .ls-imp-item-produto, .ls-imp-alerta, .ls-imp-repetido, .ls-imp-endereco, .ls-imp-secao") || alvo;
+    caixa.classList.add("ls-imp-alvo");
+    var dica = document.createElement("p");
+    dica.className = "ls-imp-dica";
+    dica.setAttribute("role", "status");
+    var icone = document.createElement("i");
+    icone.className = "bi bi-arrow-return-right";
+    icone.setAttribute("aria-hidden", "true");
+    dica.appendChild(icone);
+    dica.appendChild(document.createTextNode(" " + motivo.charAt(0).toUpperCase() + motivo.slice(1) + "."));
+    caixa.appendChild(dica);
+    destacado = { caixa: caixa, dica: dica, alvo: alvo.id };
+  }
+
+  function irPara(pendencia) {
+    var alvo = pendencia.alvo ? document.getElementById(pendencia.alvo) : null;
+    if (!alvo || alvo.closest("[hidden]")) alvo = document.getElementById("blocoAlertas") || painelProgresso;
+    var painel = painelDe(alvo);
+    if (painel && !painel.open) painel.open = true;
+    alvo.scrollIntoView({ behavior: reduzirMovimento ? "auto" : "smooth", block: "center" });
+    window.setTimeout(function () {
+      var focavel = alvo.matches("input, select, textarea, button")
+        ? alvo : alvo.querySelector("input:not([type=hidden]), select, textarea, button");
+      if (focavel) { try { focavel.focus({ preventScroll: true }); } catch (e) { focavel.focus(); } }
+      destacar(alvo, pendencia.motivo);
+      guiando = focavel ? focavel.id : null;
+    }, reduzirMovimento ? 0 : 320);
+  }
+
+  function proximoCampo() {
+    var lista_ = pendencias(contas());
+    desenharPendencias(lista_);
+    if (!lista_.length) {
+      limparDestaque();
+      botaoCriar.focus();
+      return;
+    }
+    irPara(lista_[0]);
+  }
+  document.getElementById("proximoCampo").addEventListener("click", proximoCampo);
 
   document.getElementById("listaPendencias").addEventListener("click", function (evento) {
     var link = evento.target.closest("a[data-alvo]");
     if (!link) return;
-    var alvo = link.dataset.alvo ? document.getElementById(link.dataset.alvo) : null;
-    if (!alvo) {
-      evento.preventDefault();
-      document.getElementById("blocoAlertas").scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
     evento.preventDefault();
-    alvo.scrollIntoView({ behavior: "smooth", block: "center" });
-    window.setTimeout(function () { try { alvo.focus({ preventScroll: true }); } catch (e) {} }, 350);
+    var lista_ = pendencias(contas());
+    var achada = lista_.filter(function (p) { return p.alvo === link.dataset.alvo; })[0];
+    irPara(achada || { alvo: link.dataset.alvo, motivo: link.textContent.split(" — ").slice(1).join(" — ") });
+  });
+
+  /* AVANÇAR SOZINHO, mas só quando a pessoa termina: Enter, ou saindo do
+     campo para lugar nenhum -- nunca no meio da digitação, e nunca
+     roubando o clique que ela deu em outro campo. */
+  var guiando = null;
+  form.addEventListener("focusin", function (evento) {
+    var id = evento.target.id;
+    if (!id) return;
+    var faltando = pendencias(contas()).some(function (p) { return p.alvo === id; });
+    if (faltando) guiando = id;
+  });
+
+  function aoTerminar(campo, levarFoco) {
+    if (!guiando || campo.id !== guiando) return false;
+    var lista_ = pendencias(contas());
+    if (lista_.some(function (p) { return p.alvo === guiando; })) return false;
+    guiando = null;
+    limparDestaque();
+    desenharPendencias(lista_);
+    if (!levarFoco) return true;
+    if (!lista_.length) botaoCriar.focus();
+    else irPara(lista_[0]);
+    return true;
+  }
+
+  form.addEventListener("keydown", function (evento) {
+    if (evento.key !== "Enter") return;
+    var campo = evento.target;
+    if (!campo.matches("input") || /^(checkbox|radio|submit|button)$/.test(campo.type)) return;
+    if (campo.closest("#clienteBuscaBox, [data-busca-item]")) return;
+    // Enter não envia o formulário pela metade: leva ao próximo que falta.
+    evento.preventDefault();
+    if (!aoTerminar(campo, true)) {
+      var lista_ = pendencias(contas());
+      if (lista_.length) irPara(lista_[0]);
+    }
+  });
+
+  form.addEventListener("focusout", function (evento) {
+    var campo = evento.target;
+    var destino = evento.relatedTarget;
+    window.setTimeout(function () { aoTerminar(campo, !destino); }, 0);
+  });
+
+  form.addEventListener("change", function (evento) {
+    // Caixa de "Conferi", "Criar mesmo assim", "Aceitar": resolvido o
+    // destacado, segue para o próximo.
+    var campo = evento.target;
+    if (!destacado || !campo.matches("input[type=checkbox], input[type=radio], select")) return;
+    if (!destacado.caixa.contains(campo)) return;
+    window.setTimeout(function () {
+      var lista_ = pendencias(contas());
+      if (lista_.some(function (p) { return p.alvo === destacado.alvo; })) return;
+      limparDestaque();
+      desenharPendencias(lista_);
+      if (lista_.length) irPara(lista_[0]); else botaoCriar.focus();
+    }, 0);
+  });
+
+  /* ------------------------------------------ o modal da decisão */
+  var decisao = document.getElementById("decisaoImportacao");
+  var cartaoDecisao = decisao ? decisao.querySelector(".ls-imp-decisao-cartao") : null;
+  var chaveDecidido = "ls-imp-decidido:" + window.location.pathname;
+  var focoAntesDoModal = null;
+
+  function focaveis() {
+    return Array.prototype.slice.call(cartaoDecisao.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(function (el) { return el.offsetParent !== null; });
+  }
+
+  function abrirDecisao() {
+    if (!decisao) return;
+    focoAntesDoModal = document.activeElement;
+    decisao.hidden = false;
+    document.documentElement.classList.add("ls-imp-modal-aberto");
+    window.requestAnimationFrame(function () { decisao.classList.add("aberto"); });
+    var primeiro = cartaoDecisao.querySelector(".recomendado .ls-imp-caminho-botao") || focaveis()[0];
+    window.setTimeout(function () { (primeiro || cartaoDecisao).focus(); }, reduzirMovimento ? 0 : 60);
+  }
+
+  function fecharDecisao(paraGuiada) {
+    if (!decisao || decisao.hidden) return;
+    decisao.classList.remove("aberto");
+    cartaoDecisao.style.transform = "";
+    document.documentElement.classList.remove("ls-imp-modal-aberto");
+    try { window.sessionStorage.setItem(chaveDecidido, "1"); } catch (e) { /* sem armazenamento: tudo bem */ }
+    window.setTimeout(function () { decisao.hidden = true; }, reduzirMovimento ? 0 : 200);
+    if (paraGuiada) {
+      ajustarPaineis(true);
+      window.setTimeout(proximoCampo, reduzirMovimento ? 0 : 220);
+    } else if (focoAntesDoModal && focoAntesDoModal.focus) {
+      focoAntesDoModal.focus();
+    }
+  }
+
+  function enviar() {
+    var lista_ = pendencias(contas());
+    desenharPendencias(lista_);
+    if (lista_.length) { fecharDecisao(true); return; }
+    fecharDecisao(false);
+    if (form.requestSubmit) form.requestSubmit(botaoCriar);
+    else botaoCriar.click();
+  }
+
+  if (decisao) {
+    decisao.addEventListener("click", function (evento) {
+      if (evento.target.closest("[data-fechar-decisao]")) { fecharDecisao(true); return; }
+      var botao = evento.target.closest("[data-decidir]");
+      if (!botao) return;
+      if (chaveOrcamento) chaveOrcamento.checked = botao.dataset.decidir === "orcamento";
+      aplicarCaminho();
+      if (botao.dataset.acao === "criar") enviar();
+      else fecharDecisao(true);
+    });
+    decisao.addEventListener("keydown", function (evento) {
+      if (evento.key === "Escape") { evento.preventDefault(); fecharDecisao(true); return; }
+      if (evento.key !== "Tab") return;
+      var lista_ = focaveis();
+      if (!lista_.length) return;
+      var primeiro = lista_[0];
+      var ultimo = lista_[lista_.length - 1];
+      if (evento.shiftKey && document.activeElement === primeiro) { evento.preventDefault(); ultimo.focus(); }
+      else if (!evento.shiftKey && document.activeElement === ultimo) { evento.preventDefault(); primeiro.focus(); }
+    });
+    /* A folha do celular desce com o dedo: puxada mais de 90 px, fecha e
+       leva à tela guiada. */
+    var alca = document.getElementById("decisaoAlca");
+    var inicioY = null;
+    if (alca) {
+      alca.addEventListener("pointerdown", function (evento) {
+        inicioY = evento.clientY;
+        alca.setPointerCapture(evento.pointerId);
+      });
+      alca.addEventListener("pointermove", function (evento) {
+        if (inicioY === null) return;
+        var desceu = Math.max(0, evento.clientY - inicioY);
+        cartaoDecisao.style.transform = "translateY(" + desceu + "px)";
+      });
+      alca.addEventListener("pointerup", function (evento) {
+        if (inicioY === null) return;
+        var desceu = evento.clientY - inicioY;
+        inicioY = null;
+        if (desceu > 90) fecharDecisao(true);
+        else cartaoDecisao.style.transform = "";
+      });
+    }
+  }
+  document.querySelectorAll("[data-abrir-decisao]").forEach(function (botao) {
+    botao.addEventListener("click", abrirDecisao);
   });
 
   var agendado = null;
@@ -804,7 +1090,7 @@ LSTela.pronto(function () {
     if (lista_.length) {
       evento.preventDefault();
       desenharPendencias(lista_);
-      document.getElementById("painelPendencias").scrollIntoView({ behavior: "smooth", block: "start" });
+      irPara(lista_[0]);
       return;
     }
     botaoCriar.disabled = true;
@@ -817,4 +1103,11 @@ LSTela.pronto(function () {
   aplicarCaminho();
   avisarMapa();
   renumerar();
+  iniciado = true;
+  desenharPendencias(pendencias(contas()));
+  /* A decisão abre logo depois da leitura -- uma vez por importação: ao
+     recarregar a tela, a pessoa já decidiu. */
+  var jaDecidiu = false;
+  try { jaDecidiu = window.sessionStorage.getItem(chaveDecidido) === "1"; } catch (e) { jaDecidiu = false; }
+  if (decisao && decisao.dataset.abrir === "1" && !jaDecidiu) abrirDecisao();
 });
