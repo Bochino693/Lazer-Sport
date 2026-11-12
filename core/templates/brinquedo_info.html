@@ -190,8 +190,7 @@
                                    data-adesivo-slug="{{ item.slug }}"
                                    {% if item.slug == adesivo.slug %}aria-current="true"{% endif %}>
                                     {% with capa=item.fotos.0 %}{% if capa %}<img src="{{ capa.imagem|foto:160 }}" alt="" width="64" height="64" loading="lazy">{% endif %}{% endwith %}
-                                    <span class="produto-adesivo-nome">{{ item.nome }}</span>
-                                    {% if item.padrao %}<small>padrão</small>{% endif %}
+                                    <span class="produto-adesivo-texto"><span class="produto-adesivo-nome">{{ item.nome }}</span>{% if item.padrao %}<small>padrão</small>{% endif %}</span>
                                 </a>
                             {% endfor %}
                         </div>
