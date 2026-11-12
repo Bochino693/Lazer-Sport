@@ -3515,6 +3515,45 @@ Dependência nova: rjsmin (requirements.txt).
    sem perder foto nem 3D, a volta, as vistas diferentes e com fundo, o
    painel) e core/tests_fotos_sem_fundo.py (o painel, a varredura, a rede
    que falha, a volta, o --simular, o site e a reserva sem foto com fundo).
+   O AIR ROCK É UM ADESIVO DO AIR GAME PREMIUM (a 0190, só dados). O
+   cliente: "vc não percebeu que o air game premium e o air game rock são o
+   mesmo, só é um adesivo? e que eles deveriam estar juntos".
+     * A regra da 0169 com a estrutura de hoje (core.variantes,
+       JUNTADOS_DEPOIS e `juntar_os_achados_depois`): o Air Game Premium é o
+       produto, com o adesivo padrão "Premium" (a arte dele) e o "Air Rock".
+       O adesivo padrão da ficha do Air Rock muda de dono e de nome, com as
+       fotos (a capa em cena do showroom da 0180, as posições e o recorte do
+       cartaz, sem tipo e sem papel, fora do site) e o 3D (se houver).
+     * TODAS as referências vão para o Air Game Premium (`_repontar`, a mesma
+       da 0169): o carrinho (com o adesivo "Air Rock"), o orçamento, o pedido,
+       o favorito (o repetido vira um), a lista de desejos, as promoções e os
+       extras (a "Black Friday: Air Rock" fica com a arte, o preço e o nome; o
+       produto principal de uma promoção não repete nos extras), os combos,
+       os cliques e as interações por hora das análises (somadas na mesma
+       hora). A ficha é APAGADA; o endereço antigo vai (301) para o produto.
+       Rodar de novo não faz nada; a volta não recria a ficha (como a 0169).
+     * core/black_friday.py: o Air Rock tem `adesivo_de = "Air Game Premium"`
+       -- uma rodada nova cria o ADESIVO (com a capa em cena dele), e não um
+       produto; a promoção aponta para o Air Game Premium.
+   O CARD GIRA POR ADESIVO. O cliente: "o carrossel não deve ser por posição
+   e sim por adesivos, entendeu? com uma transição suave e legal".
+     * core/fotos_dos_cards.py e core/templatetags/giro.py: `data-fotos-card`
+       é [{src, adesivo}], UMA foto por adesivo -- a capa quadrada dele no
+       showroom (a `ImagemBrinquedo` do adesivo com `papel_na_capa = "cena"`;
+       sem ela, a primeira posição com fundo) --, o padrão primeiro. Com um
+       adesivo só, o card não gira. Duas consultas para o catálogo inteiro.
+     * site/ls-giro.js e ls-tema.css: a próxima foto entra por cima,
+       deslizando um pouco de lado (5%) e com um zoom leve que assenta
+       (1,07 -> 1), enquanto a de antes recua para o outro lado; o nome do
+       adesivo ("Adesivo: Alienígenas") no canto do card troca junto. A foto
+       que ficaria com faixas continua pulada; só os cards na tela; para no
+       mouse; com "reduzir movimento", não gira. A camada da troca fica fora
+       do esqueleto das imagens (ls-reveal.js punha a foto à vista na hora) e
+       os seletores dela são reforçados (a regra da foto de cada card não
+       apaga a transição).
+   Testes: core/tests_air_rock_adesivo.py (a 0190 com o banco como no ar e
+   referências de verdade, duas vezes; o card por adesivo) e core/tests_black_
+   friday.py (o Air Rock como adesivo numa rodada nova).
 
 73) PROMOÇÕES: VÁRIOS BRINQUEDOS, A TELA DO PAINEL COMO APP E O QUADRO DA HOME
    Pedidos: "está bem difícil achar o brinquedo a aplicar a promo ...
