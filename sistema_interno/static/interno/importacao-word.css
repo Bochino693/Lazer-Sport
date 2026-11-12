@@ -263,55 +263,28 @@
 .ls-imp-linhas li.destaque{background:rgba(var(--yellow-rgb),.18);outline:1px solid rgba(var(--yellow-rgb),.45)}
 
 /* -------------------------------------------------------- lateral */
-.ls-imp-pendencias{padding:14px 16px}
-.ls-imp-pendencias h2{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.98rem;font-weight:950;color:var(--text)}
+/* (O "falta preencher" virou o progresso: ver AJUSTE 3, no fim.) */
 .ls-imp-contagem{
   min-width:26px;height:26px;padding:0 7px;display:inline-grid;place-items:center;border-radius:999px;
   background:var(--red);color:var(--red-tinta);font-size:.78rem;font-weight:950;
 }
 .ls-imp-contagem.zero{background:var(--green);color:var(--green-tinta)}
-.ls-imp-pendencias ol{margin:0;padding-left:1.15rem;display:grid;gap:6px;font-size:.82rem;color:var(--text-2)}
-.ls-imp-pendencias ol a{color:inherit;text-decoration:none}
-.ls-imp-pendencias ol a:hover strong{text-decoration:underline}
-.ls-imp-pendencias strong{color:var(--text)}
-.ls-imp-recomendado{margin-top:10px;font-size:.8rem;color:var(--muted)}
-.ls-imp-recomendado summary{cursor:pointer;font-weight:900}
-.ls-imp-recomendado ul{margin:6px 0 0;padding-left:1.1rem;display:grid;gap:4px}
-.ls-imp-criar{padding:14px 16px;display:grid;gap:8px}
-.ls-imp-criar .btn{width:100%}
-.ls-imp-criar small{color:var(--muted);font-size:.76rem;line-height:1.4}
-.ls-imp-criar-total{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.ls-imp-criar-total span{color:var(--muted);font-weight:900;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
-.ls-imp-criar-total strong{font-size:1.25rem;color:var(--green-texto);font-variant-numeric:tabular-nums}
-.ls-imp-criar-falta{font-size:.78rem;font-weight:900;color:var(--red-texto);text-decoration:none}
-.ls-imp-criar-falta:hover{text-decoration:underline;color:var(--red-texto)}
 
 /* ======================================================= tablet e celular */
 @media (max-width:1100px){
   .ls-imp-grade{grid-template-columns:minmax(0,1fr)}
-  /* A lateral se desfaz e cada painel vai para onde serve: o "falta
-     preencher" no topo, antes de tudo, e o botão de criar preso embaixo,
-     sempre à mão, acima das abas do celular. */
-  .ls-imp-lateral{display:contents}
-  .ls-imp-pendencias{order:-1}
-  /* Uma faixa só: total e o que falta à esquerda, o botão à direita. A
-     frase de "nada é enviado" já está no topo e no botão de cima; na
-     faixa presa ela só roubaria a tela de quem está conferindo. */
-  .ls-imp-criar{
-    order:99;position:sticky;bottom:12px;z-index:20;padding:10px 12px;gap:2px 12px;
-    grid-template-columns:minmax(0,1fr) auto;align-items:center;
-    box-shadow:0 -10px 30px rgba(var(--sombra-rgb),.28);
+  /* O progresso desce e fica preso embaixo, sempre à mão, acima das abas
+     do celular: "Faltam 2" e "Próximo campo" -- ou a ação verde. */
+  .ls-imp-lateral{
+    position:sticky;top:auto;bottom:12px;z-index:30;max-height:none;overflow:visible;order:99;
   }
-  .ls-imp-criar small{display:none}
-  .ls-imp-criar-total{flex-direction:column;align-items:flex-start;gap:0}
-  .ls-imp-criar-total strong{font-size:1.08rem}
-  .ls-imp-criar .btn{width:auto;grid-column:2;grid-row:1 / span 2}
-  .ls-imp-criar-falta{grid-column:1;grid-row:2}
+  .ls-imp-progresso{box-shadow:0 -10px 30px rgba(var(--sombra-rgb),.28)}
+  .ls-imp-progresso-detalhe,.ls-imp-progresso-nota{display:none}
   .ls-imp-item-campos{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ls-imp-item-campos .ls-imp-campo-largo{grid-column:1 / -1}
 }
 @media (max-width:760px){
-  .ls-imp-criar{bottom:calc(66px + env(safe-area-inset-bottom,0px))}
+  .ls-imp-lateral{bottom:calc(66px + env(safe-area-inset-bottom,0px))}
   .ls-imp-campos{grid-template-columns:minmax(0,1fr)}
   .ls-imp-item{padding:12px}
   .ls-imp-item-campos{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -322,7 +295,7 @@
 }
 @media (max-width:420px){
   .ls-imp-item-campos{grid-template-columns:minmax(0,1fr)}
-  .ls-imp-criar .btn{padding-inline:.8rem!important}
+  .ls-imp-proximo{padding-inline:.7rem!important}
 }
 
 /* ------------------------------------------------ importação pronta */
@@ -368,15 +341,6 @@
   .ls-imp-pronto-dados div{grid-template-columns:minmax(0,1fr);gap:0}
 }
 
-/* ------------------------------------- brinquedos no documento: pergunta */
-/* A primeira coisa da tela quando o documento cita brinquedos: a pergunta
-   e as duas respostas, grandes o bastante para o polegar. */
-.ls-imp-pergunta-orcamento{border:1px solid var(--acento);background:rgba(var(--acento-rgb),.08)}
-.ls-imp-pergunta-texto{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;font-size:.95rem;line-height:1.45;color:var(--text)}
-.ls-imp-pergunta-texto i{color:var(--acento);font-size:1.2rem;line-height:1.2}
-.ls-imp-pergunta-texto strong{display:block;margin-top:2px}
-.ls-imp-pergunta-botoes{display:flex;flex-wrap:wrap;gap:8px}
-.ls-imp-pergunta-botoes .ativa{box-shadow:0 0 0 2px var(--acento)}
 
 /* "Este cliente já está cadastrado: Fulano (#12)" */
 .ls-imp-ja-cadastrado{
@@ -395,3 +359,196 @@
 .ls-imp-repetido strong{display:block;color:var(--text)}
 .ls-imp-repetido-acoes{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
 .ls-imp-repetido-acoes .ls-imp-marca{margin-top:0}
+
+/* =================================================== AJUSTE 3: guiada */
+/* "Vc pôs uma tela de muita descida": cada parte dobra. O resumo de uma
+   linha fica no topo do painel fechado, com o ✓ ou o "Falta N". */
+.ls-imp-dobra > summary{list-style:none}
+.ls-imp-dobra > summary::-webkit-details-marker{display:none}
+.ls-imp-dobra-topo{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;
+  padding:14px 18px;cursor:pointer;border-radius:inherit;
+}
+.ls-imp-dobra-topo:focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
+.ls-imp-dobra-icone{font-size:1.15rem;color:var(--acento-texto)}
+.ls-imp-dobra-titulo{display:grid;gap:2px;min-width:0}
+.ls-imp-dobra-titulo h2{margin:0;font-size:1rem;font-weight:950;color:var(--text)}
+.ls-imp-dobra-resumo{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-imp-dobra[open] .ls-imp-dobra-resumo{white-space:normal}
+.ls-imp-dobra-estado{
+  padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:950;white-space:nowrap;
+  color:var(--green-texto);background:rgba(var(--green-rgb),.12);border:1px solid rgba(var(--green-rgb),.35);
+}
+.ls-imp-dobra-estado.falta{color:var(--red-texto);background:rgba(var(--red-rgb),.12);border-color:rgba(var(--red-rgb),.4)}
+.ls-imp-dobra-seta{color:var(--muted);transition:transform .18s ease}
+.ls-imp-dobra[open] .ls-imp-dobra-seta{transform:rotate(180deg)}
+.ls-imp-dobra.com-falta{border-color:rgba(var(--red-rgb),.45)}
+.ls-imp-dobra[open] > .ls-imp-dobra-topo{border-bottom:1px solid var(--line-soft);border-radius:inherit inherit 0 0}
+/* Dobra de dentro de um painel (as condições, opcionais). */
+.ls-imp-sub{margin:4px 20px 16px;border:1px solid var(--line-soft);border-radius:var(--radius-md);background:var(--panel-2)}
+.ls-imp-sub > summary{list-style:none}
+.ls-imp-sub > summary::-webkit-details-marker{display:none}
+.ls-imp-sub-topo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 14px;cursor:pointer;border-radius:inherit}
+.ls-imp-sub-topo:focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
+.ls-imp-sub-titulo{display:grid;gap:2px;min-width:0;font-size:.9rem;color:var(--text)}
+.ls-imp-sub-titulo b{font-weight:950}
+.ls-imp-sub-titulo small{font-weight:700;color:var(--muted)}
+.ls-imp-sub-resumo{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-imp-sub-seta{color:var(--muted);transition:transform .18s ease}
+.ls-imp-sub[open] .ls-imp-sub-seta{transform:rotate(180deg)}
+.ls-imp-sub[open] > .ls-imp-sub-topo{border-bottom:1px solid var(--line-soft);border-radius:var(--radius-md) var(--radius-md) 0 0}
+.ls-imp-sub > .ls-panel-body{padding:14px}
+.ls-imp-dobra-acoes{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 20px 0}
+.ls-imp-dobra-acoes .ls-imp-nota{margin:0;flex:1 1 260px}
+.ls-imp-subtitulo small{font-weight:700;color:var(--muted)}
+.ls-imp-vinculo-motivo{margin-top:0}
+.ls-imp-caminho-barra .ls-panel-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center}
+.ls-imp-caminho-barra .ls-imp-pergunta{margin:0}
+.ls-imp-caminho-barra .ls-imp-tambem{grid-column:1 / -1}
+.ls-imp-reabrir{
+  border:0;background:none;padding:4px 0;color:var(--acento-texto);font-weight:900;font-size:.82rem;cursor:pointer;
+}
+.ls-imp-reabrir:hover{text-decoration:underline}
+
+/* O PROGRESSO: anel, "Faltam 2: ...", "Próximo campo"; sem falta, a ação. */
+.ls-imp-progresso{padding:12px 14px;display:grid;gap:10px}
+/* No PC o progresso mora na coluna da direita, estreita: anel e texto numa
+   linha, "Próximo campo" na largura toda embaixo. Na barra presa embaixo
+   (tablet e celular) tudo cabe numa linha só. */
+.ls-imp-progresso-linha{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 12px;align-items:center}
+.ls-imp-progresso-linha .ls-imp-proximo{grid-column:1 / -1;width:100%;min-height:44px}
+.ls-imp-anel{position:relative;width:48px;height:48px}
+.ls-imp-anel svg{width:48px;height:48px;transform:rotate(-90deg)}
+.ls-imp-anel circle{fill:none;stroke-width:4}
+.ls-imp-anel .trilho{stroke:var(--line)}
+.ls-imp-anel .feito{stroke:var(--acento);stroke-linecap:round;transition:stroke-dasharray .3s ease}
+.ls-imp-anel span{position:absolute;inset:0;display:grid;place-items:center;font-size:.7rem;font-weight:950;color:var(--text)}
+.ls-imp-progresso-texto{display:grid;gap:2px;min-width:0}
+.ls-imp-progresso-texto strong{font-size:.98rem;font-weight:950;color:var(--red-texto);white-space:nowrap}
+.ls-imp-progresso-total{font-size:.76rem;color:var(--muted);font-weight:800}
+.ls-imp-progresso-total b{color:var(--green-texto);font-variant-numeric:tabular-nums}
+.ls-imp-progresso-texto span{font-size:.8rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-imp-progresso .ls-imp-acao-final{width:100%;min-height:48px;font-weight:950}
+.ls-imp-progresso:not(.pronto) .ls-imp-acao-final{display:none}
+.ls-imp-progresso.pronto .ls-imp-progresso-linha{display:none}
+.ls-imp-progresso.pulsar .ls-imp-acao-final{animation:ls-imp-pulso-uma-vez .9s ease-out 1}
+@media (max-width:1100px){
+  .ls-imp-progresso-linha{grid-template-columns:auto minmax(0,1fr) auto}
+  .ls-imp-progresso-linha .ls-imp-proximo{grid-column:auto;width:auto;white-space:nowrap}
+}
+@media (max-width:760px){
+  .ls-imp-progresso-linha{gap:8px 10px}
+  .ls-imp-progresso-linha .ls-imp-proximo{padding:8px 12px;font-size:.88rem;min-height:44px}
+}
+.ls-imp-progresso-detalhe{font-size:.82rem;color:var(--text-2)}
+.ls-imp-progresso-detalhe summary{cursor:pointer;font-weight:900;color:var(--text);display:flex;align-items:center;gap:8px}
+.ls-imp-progresso-detalhe ol{margin:8px 0 0;padding-left:1.15rem;display:grid;gap:6px}
+.ls-imp-progresso-detalhe ol a{color:inherit;text-decoration:none}
+.ls-imp-progresso-detalhe ol a:hover strong{text-decoration:underline}
+.ls-imp-progresso-detalhe strong{color:var(--text)}
+.ls-imp-progresso-nota{color:var(--muted);font-size:.76rem;line-height:1.4}
+@keyframes ls-imp-pulso-uma-vez{
+  0%{box-shadow:0 0 0 0 rgba(var(--green-rgb),.55);transform:scale(1)}
+  50%{transform:scale(1.03)}
+  100%{box-shadow:0 0 0 16px rgba(var(--green-rgb),0);transform:scale(1)}
+}
+
+/* O CAMPO QUE FALTA, destacado: anel que pulsa e a dica do que se espera. */
+.ls-imp-alvo{border-radius:var(--radius-md);animation:ls-imp-anel-alvo 1.1s ease-out 3;outline:2px solid var(--acento);outline-offset:4px}
+.ls-imp-dica{
+  margin:8px 0 0;padding:8px 10px;border-radius:10px;font-size:.82rem;font-weight:800;line-height:1.35;
+  color:var(--text);background:rgba(var(--acento-rgb),.14);border:1px solid rgba(var(--acento-rgb),.45);
+}
+.ls-imp-dica i{color:var(--acento-texto)}
+@keyframes ls-imp-anel-alvo{
+  0%{box-shadow:0 0 0 0 rgba(var(--acento-rgb),.5)}
+  100%{box-shadow:0 0 0 14px rgba(var(--acento-rgb),0)}
+}
+
+/* ============================================== AJUSTE 3: a decisão */
+/* Cartão no centro (computador e tablet); folha que sobe (celular). */
+html.ls-imp-modal-aberto{overflow:hidden}
+/* Como nas outras janelas do painel: com o modal aberto, as abas de baixo
+   do celular saem (senão cobrem o pé da folha e o "Revisar antes"). */
+html.ls-imp-modal-aberto .ls-abas{display:none!important}
+.ls-imp-decisao{position:fixed;inset:0;z-index:1080;display:grid;place-items:center;padding:24px 16px}
+.ls-imp-decisao-fundo{position:absolute;inset:0;background:rgba(var(--sombra-rgb),.58);backdrop-filter:blur(3px);opacity:0;transition:opacity .2s ease}
+.ls-imp-decisao-cartao{
+  position:relative;width:min(760px,100%);max-height:calc(100vh - 48px);overflow:auto;overscroll-behavior:contain;
+  padding:20px 22px 22px;border-radius:22px;background:var(--panel);color:var(--text);
+  border:1px solid var(--line);box-shadow:var(--shadow);
+  opacity:0;transform:translateY(14px) scale(.98);transition:opacity .2s ease,transform .22s ease;
+}
+.ls-imp-decisao.aberto .ls-imp-decisao-fundo{opacity:1}
+.ls-imp-decisao.aberto .ls-imp-decisao-cartao{opacity:1;transform:none}
+.ls-imp-decisao-cartao:focus{outline:none}
+.ls-imp-folha-alca{display:none}
+.ls-imp-decisao-topo{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.ls-imp-decisao-topo h2{margin:2px 0 0;font-size:1.3rem;font-weight:950;color:var(--text)}
+.ls-imp-decisao-kicker{font-size:.76rem;font-weight:900;color:var(--muted);word-break:break-word}
+.ls-imp-decisao-fechar{
+  flex:0 0 40px;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);
+  color:var(--text-2);display:grid;place-items:center;cursor:pointer;
+}
+.ls-imp-decisao-fechar:focus-visible,.ls-imp-caminho-revisar:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-imp-decisao-lido{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:2px;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden}
+.ls-imp-decisao-lido li{
+  display:grid;grid-template-columns:20px 120px minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:8px 12px;font-size:.88rem;background:var(--panel-2);
+}
+.ls-imp-decisao-lido li i{font-size:1rem}
+.ls-imp-decisao-lido li.ok i{color:var(--green-texto)}
+.ls-imp-decisao-lido li.falta i{color:var(--yellow-texto)}
+.ls-imp-decisao-lido li.falta.obrigatorio i{color:var(--red-texto)}
+.ls-imp-decisao-rotulo{font-weight:900;color:var(--text-2)}
+.ls-imp-decisao-valor{color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-imp-chip-falta{
+  padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:950;white-space:nowrap;
+  color:var(--yellow-texto);background:rgba(var(--yellow-rgb),.16);border:1px solid rgba(var(--yellow-rgb),.5);
+}
+li.obrigatorio .ls-imp-chip-falta{color:var(--red-texto);background:rgba(var(--red-rgb),.12);border-color:rgba(var(--red-rgb),.45)}
+.ls-imp-decisao-aviso{display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;padding:9px 12px;border-radius:12px;font-size:.86rem;color:var(--text-2)}
+.ls-imp-decisao-aviso strong{color:var(--text)}
+.ls-imp-decisao-aviso.cadastrado{background:rgba(var(--green-rgb),.1);border:1px solid rgba(var(--green-rgb),.4)}
+.ls-imp-decisao-aviso.cadastrado i{color:var(--green-texto)}
+.ls-imp-decisao-aviso.repetido{background:rgba(var(--yellow-rgb),.12);border:1px solid rgba(var(--yellow-rgb),.5)}
+.ls-imp-decisao-aviso.repetido i{color:var(--yellow-texto)}
+.ls-imp-decisao-aviso a{font-weight:900;color:var(--acento-texto)}
+.ls-imp-decisao-caminhos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:4px}
+.ls-imp-caminho-cartao{
+  position:relative;display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:16px;
+  border:1px solid var(--line);background:var(--panel-2);
+}
+.ls-imp-caminho-cartao.recomendado{border:2px solid var(--acento);background:rgba(var(--acento-rgb),.08)}
+.ls-imp-caminho-cartao h3{margin:0;font-size:1rem;font-weight:950;color:var(--text)}
+.ls-imp-caminho-cartao h3 i{color:var(--acento-texto);margin-right:4px}
+.ls-imp-selo-recomendado{
+  order:-1;align-self:flex-start;padding:3px 10px;border-radius:999px;font-size:.7rem;font-weight:950;
+  letter-spacing:.04em;text-transform:uppercase;background:var(--acento);color:var(--panel);
+}
+.ls-imp-caminho-texto{margin:0;font-size:.86rem;line-height:1.45;color:var(--text-2)}
+.ls-imp-caminho-numeros{margin:0;font-size:.9rem;color:var(--text)}
+.ls-imp-caminho-faltam{margin:0;font-size:.82rem;font-weight:800;color:var(--red-texto)}
+.ls-imp-caminho-botao{margin-top:auto;min-height:48px;font-weight:950;width:100%}
+.ls-imp-caminho-revisar{align-self:center;border:0;background:none;padding:2px 6px;font-size:.84rem;font-weight:900;color:var(--acento-texto);cursor:pointer}
+.ls-imp-caminho-revisar:hover{text-decoration:underline}
+
+@media (max-width:760px){
+  .ls-imp-decisao{place-items:end stretch;padding:0}
+  .ls-imp-decisao-cartao{
+    width:100%;max-height:92vh;border-radius:22px 22px 0 0;padding:6px 16px calc(18px + env(safe-area-inset-bottom,0px));
+    transform:translateY(100%);
+  }
+  .ls-imp-decisao.aberto .ls-imp-decisao-cartao{transform:translateY(0)}
+  .ls-imp-folha-alca{display:flex;justify-content:center;padding:6px 0 10px;cursor:grab;touch-action:none}
+  .ls-imp-folha-alca span{width:44px;height:5px;border-radius:999px;background:var(--line)}
+  .ls-imp-decisao-caminhos{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-decisao-lido li{grid-template-columns:18px 92px minmax(0,1fr);row-gap:2px}
+  .ls-imp-decisao-lido li .ls-imp-chip-falta,.ls-imp-decisao-lido li .ls-imp-tag{grid-column:2 / -1;justify-self:start}
+  .ls-imp-dobra-topo{gap:4px 10px;padding:12px 14px}
+  .ls-imp-caminho-barra .ls-panel-body{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  .ls-imp-decisao-fundo,.ls-imp-decisao-cartao,.ls-imp-dobra-seta,.ls-imp-sub-seta,.ls-imp-anel .feito{transition:none}
+  .ls-imp-alvo,.ls-imp-progresso.pulsar .ls-imp-acao-final{animation:none}
+}

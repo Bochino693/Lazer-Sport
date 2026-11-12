@@ -1688,7 +1688,7 @@ class ClientePrimeiroTests(_ComUsuario):
         self.assertContains(resposta, "O documento tem <b>3 itens</b>, <b>R$ 1.919,00</b>")
         self.assertEqual(resposta.context["oferta_orcamento"], {"itens": 3, "total": "1.919,00"})
         # As partes do orçamento abrem escondidas, e o botão é de cadastro.
-        self.assertContains(resposta, 'id="blocoItens" data-so-orcamento hidden')
+        self.assertContains(resposta, 'data-painel="itens" data-so-orcamento hidden')
         self.assertContains(resposta, '<span data-rotulo-modo="cliente">Cadastrar cliente</span>')
 
     def test_ligar_o_orcamento_cria_os_dois_como_antes(self):
@@ -2051,6 +2051,132 @@ class TextoLivreTests(_ComUsuario):
         self.assertEqual(envio["nome"], "Helena Duarte")
         self.assertEqual(envio["telefone"], "")
         self.assertEqual(envio["email"], "helena@exemplo.com.br")
+
+
+# ======================================================================
+# 7d. A DECISÃO (MODAL) E A TELA GUIADA
+# ======================================================================
+def docx_ficha_completa():
+    """Tudo o que o cadastro pede, sem nada de orçamento: dá para criar direto."""
+    return montar_docx(
+        par("FICHA DE CADASTRO")
+        + tabela(["Nome", "Helena Duarte"], ["CPF", "390.533.447-05"], ["Celular", "11 97777-6655"],
+                 ["E-mail", "helena@exemplo.com.br"], ["CEP", "01310-100"], ["Rua", "Avenida Paulista"],
+                 ["Número", "1000"], ["Bairro", "Bela Vista"], ["Cidade", "São Paulo"], ["UF", "SP"]),
+    )
+
+
+class TelaGuiadaTests(_ComUsuario):
+    """ "Ponha um modal moderno estilo app para perguntar se quer ou não gerar
+    o orçamento ou só o cliente, dê ênfase pros campos que ainda faltam". """
+
+    def test_o_modal_abre_depois_da_leitura_com_o_resumo_e_os_dois_caminhos(self):
+        url = self.importar(docx_com_tabela())
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, 'id="decisaoImportacao" hidden data-abrir="1"')
+        self.assertContains(resposta, 'role="dialog" aria-modal="true" aria-labelledby="decisaoTitulo"')
+        self.assertContains(resposta, "O que fazer com este documento?")
+        self.assertContains(resposta, "Cadastrar cliente e criar orçamento")
+        self.assertContains(resposta, "Só cadastrar o cliente")
+        # Com brinquedos no documento, o orçamento é o caminho recomendado e
+        # diz o que achou.
+        decisao = resposta.context["decisao"]
+        self.assertTrue(decisao["orcamento"]["recomendado"])
+        self.assertFalse(decisao["cliente"]["recomendado"])
+        self.assertEqual(decisao["orcamento"]["itens"], 3)
+        self.assertEqual(decisao["orcamento"]["total"], "1.919,00")
+        self.assertContains(resposta, "Deseja criar um orçamento a partir do documento?")
+        self.assertContains(resposta, '<span class="ls-imp-selo-recomendado">Recomendado</span>', count=1)
+        # O resumo: cada dado com ✓ ou "falta", e de onde veio.
+        linhas = {l["chave"]: l for l in decisao["linhas"]}
+        self.assertEqual(linhas["nome"]["valor"], "Buffet Alegria Ltda")
+        self.assertEqual(linhas["nome"]["origem"], "do documento")
+        self.assertTrue(linhas["cidade"]["falta"])
+        self.assertContains(resposta, '<li class="falta" data-linha="cidade">')
+        # O orçamento ainda pede a conferência do produto sugerido: não há
+        # "Criar agora" nele, e sim o que falta.
+        self.assertFalse(decisao["orcamento"]["pronto"])
+        self.assertNotContains(resposta, 'id="criarAgoraOrcamento"')
+        self.assertContains(resposta, 'id="revisarOrcamento"')
+
+    def test_tudo_lido_e_sem_alerta_cria_direto_do_modal(self):
+        url = self.importar(docx_ficha_completa())
+        resposta = self.client.get(url, **HOST)
+        decisao = resposta.context["decisao"]
+        self.assertTrue(decisao["cliente"]["pronto"])
+        self.assertTrue(decisao["cliente"]["recomendado"])
+        self.assertContains(resposta, 'id="criarAgoraCliente"')
+        self.assertContains(resposta, "Revisar antes")
+        # "Criar agora" envia o formulário como a tela abriu -- e o servidor
+        # confere tudo de novo, como sempre.
+        _, envio = self.proposta_e_envio(url, modo=None)
+        criada = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(criada.status_code, 302)
+        self.assertTrue(criada["Location"].startswith("/orcamentos/importar/cliente/"))
+
+    def test_o_servidor_confere_mesmo_o_que_veio_do_modal(self):
+        url = self.importar(docx_ficha_completa())
+        _, envio = self.proposta_e_envio(url, modo=None)
+        resposta = self.client.post(url, formulario_de(envio, nome="", telefone="", email=""), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertEqual(Cliente.objects.count(), 0)
+        # De volta de um envio recusado, a tela não reabre a decisão.
+        self.assertNotContains(resposta, 'data-abrir="1"', status_code=400)
+
+    def test_paineis_completos_fecham_e_o_que_falta_abre(self):
+        url = self.importar(docx_ficha_completa())
+        resposta = self.client.get(url, **HOST)
+        paineis = resposta.context["paineis"]
+        self.assertFalse(paineis["cliente"]["aberto"])
+        self.assertFalse(paineis["endereco"]["aberto"])
+        self.assertContains(resposta, 'id="blocoCliente" data-painel="cliente">')
+        self.assertEqual(paineis["cliente"]["resumo"], "Helena Duarte · CPF ✓ · WhatsApp ✓ · E-mail ✓")
+        self.assertIn("São Paulo/SP", paineis["endereco"]["resumo"])
+        self.assertContains(resposta, "Helena Duarte · CPF ✓ · WhatsApp ✓ · E-mail ✓")
+
+        sem_contato = self.importar(montar_docx(par("Cliente: Helena Duarte")))
+        resposta = self.client.get(sem_contato, **HOST)
+        paineis = resposta.context["paineis"]
+        self.assertTrue(paineis["cliente"]["aberto"])
+        self.assertEqual(paineis["cliente"]["faltas"], 1)
+        self.assertContains(resposta, 'id="blocoCliente" data-painel="cliente" open>')
+        self.assertContains(resposta, "Falta 1")
+
+    def test_o_progresso_lista_o_que_falta(self):
+        url = self.importar(montar_docx(par("Cliente: Helena Duarte")))
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, '<strong id="progressoTitulo">Faltam 1</strong>')
+        self.assertContains(resposta, '<span id="progressoLista">Telefone ou e-mail</span>')
+        self.assertContains(resposta, 'id="proximoCampo"')
+        self.assertContains(resposta, "Falta preencher")
+        # Com tudo preenchido, o progresso já vem como a ação verde.
+        pronta = self.client.get(self.importar(docx_ficha_completa()), **HOST)
+        self.assertContains(pronta, 'class="ls-panel ls-imp-progresso pronto"')
+        self.assertContains(pronta, '<strong id="progressoTitulo">Tudo pronto</strong>')
+
+    def test_cada_falta_tem_o_seu_painel(self):
+        from .importacao_word import tela
+
+        self.assertEqual(tela.painel_da_pendencia("cliente.nome"), "cliente")
+        self.assertEqual(tela.painel_da_pendencia("cliente.endereco"), "endereco")
+        self.assertEqual(tela.painel_da_pendencia("itens.i1.produto"), "itens")
+        self.assertEqual(tela.painel_da_pendencia("orcamento.repetido"), "itens")
+        self.assertEqual(tela.painel_da_pendencia("valores.frete"), "valores")
+        self.assertEqual(tela.painel_da_pendencia("alerta.soma_total"), "valores")
+
+    def test_as_condicoes_opcionais_ficam_dobradas(self):
+        from .importacao_word import tela
+
+        resposta = self.client.get(self.importar(docx_com_tabela()), **HOST)
+        valores = resposta.context["paineis"]["valores"]
+        self.assertFalse(valores["condicoes_abertas"])
+        self.assertContains(resposta, '<details class="ls-imp-sub" id="blocoCondicoes">')
+        self.assertContains(resposta, "data-resumo-condicoes")
+        self.assertEqual(
+            tela.resumo_das_condicoes({"validade": "2026-11-20", "forma_pagamento": "Pix", "prazo": "10 dias"}),
+            "Validade 20/11/2026 · Pix · Prazo ✓",
+        )
+        self.assertEqual(tela.resumo_das_condicoes({}), "Validade padrão · pagamento e entrega em branco")
 
 
 # ======================================================================
