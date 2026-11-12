@@ -144,11 +144,11 @@
     return partes.filter(Boolean).join(" · ");
   }
 
-  /* Quantos avatares cabem na barra: quatro no computador, dois no tablet em
-     pé e no celular, um no celular estreito. O resto vira "+N". */
+  /* Quantos avatares cabem na barra: quatro no computador, três no tablet,
+     dois no celular e um no celular estreito. O resto vira "+N". */
   function maximoNaPilha() {
     var largura = window.innerWidth || 1366;
-    return largura <= 400 ? 1 : (largura <= 760 ? 2 : 4);
+    return largura <= 400 ? 1 : (largura <= 760 ? 2 : (largura <= 1100 ? 3 : 4));
   }
 
   function pintarEquipe(dados) {
@@ -258,7 +258,7 @@
     ligarEquipe();
     /* um instante depois: a tela (script com defer) assina antes, e a
        primeira pergunta já sai sabendo se alguém quer as contas */
-    window.setTimeout(buscar, 60);
+    window.setTimeout(function () { if (!ultimo) buscar(); }, 60);
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "visible" && Date.now() - pedidoEm > 10000) buscar();
     });

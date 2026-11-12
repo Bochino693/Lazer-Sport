@@ -5329,10 +5329,20 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
 
 class UserAdminView(AdminOnlyMixin, View):
     template_name = "gestao/users_adm.html"
+    #: "faça a paginação a cada 18 usuários por página"
+    POR_PAGINA = 18
 
     def get(self, request):
+        from . import presenca
+
         busca = request.GET.get("q", "").strip()
         tipo = request.GET.get("tipo", "todos")
+        # O contador tocado na faixa "Agora" (Online, Ativos hoje, Em 7 dias...):
+        # a MESMA regra dos números do topo, aplicada no banco -- a lista é
+        # paginada, então o filtro não pode ser feito só na página que veio.
+        filtro_presenca = request.GET.get("presenca", "")
+        if filtro_presenca not in presenca.GRUPOS:
+            filtro_presenca = ""
         # `presenca`: o selo "Online agora / Visto há 2 h" de cada linha sai
         # do mesmo SELECT (core/presenca.py), sem uma consulta por conta. E
         # `_tem_funcao` (a conta tem função de equipe no painel?) vai anotado
@@ -5344,7 +5354,7 @@ class UserAdminView(AdminOnlyMixin, View):
         usuarios = (
             User.objects.select_related("perfil", "presenca")
             .annotate(_tem_funcao=tem_funcao_de_equipe())
-            .order_by("-date_joined")
+            .order_by("-date_joined", "-pk")
         )
         if busca:
             usuarios = usuarios.filter(
@@ -5360,6 +5370,20 @@ class UserAdminView(AdminOnlyMixin, View):
             usuarios = usuarios.filter(is_staff=False)
         elif tipo == "inativos":
             usuarios = usuarios.filter(is_active=False)
+        if filtro_presenca:
+            usuarios = usuarios.filter(presenca.filtro_do_grupo(filtro_presenca))
+
+        # 18 por página. `get_page` não levanta: página que não existe (o
+        # link antigo, a lista que encolheu) cai na última; texto no lugar do
+        # número, na primeira. Os filtros viajam em todo link do paginador.
+        pagina = Paginator(usuarios, self.POR_PAGINA).get_page(request.GET.get("page"))
+        query = request.GET.copy()
+        query.pop("page", None)
+        query_sem_presenca = query.copy()
+        query_sem_presenca.pop("presenca", None)
+        achadas = pagina.paginator.count
+        frases = presenca.FRASE_DO_GRUPO.get(filtro_presenca)
+
         # Os quatro números do topo. A tela sempre os desenhou; a view
         # nunca os mandou, e o resumo aparecia com as quatro caixas vazias.
         # A contagem é do cadastro inteiro, e não do filtro: "quantos
@@ -5403,7 +5427,13 @@ class UserAdminView(AdminOnlyMixin, View):
         }
 
         return render(request, self.template_name, {
-            "usuarios": usuarios,
+            "usuarios": pagina.object_list,
+            "pagina": pagina,
+            "paginas": list(pagina.paginator.get_elided_page_range(pagina.number, on_each_side=1, on_ends=1)),
+            "query_sem_pagina": query.urlencode(),
+            "query_sem_presenca": query_sem_presenca.urlencode(),
+            "filtro_presenca": filtro_presenca,
+            "filtro_presenca_frase": (frases[0] if achadas == 1 else frases[1]) if frases else "",
             "busca": busca,
             "tipo": tipo,
             "total_usuarios": contagem["total"],

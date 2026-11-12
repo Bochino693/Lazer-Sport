@@ -5738,6 +5738,10 @@ body.ls-body{
    ====================================================================== */
 .ls-equipe{position:relative;flex:0 0 auto}
 .ls-equipe[hidden]{display:none}
+/* A pilha ocupa uns 110px da barra. No tablet isso espremia o título, e a
+   linha de baixo ("Operação Lazer & Sport") quebrava em três e empurrava o
+   nome da tela para fora da barra: ela fica numa linha só, com reticências. */
+.ls-topbar-copy span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ls-equipe-botao{
   display:inline-flex;align-items:center;min-height:46px;padding:0 10px 0 8px;cursor:pointer;
   border:1px solid var(--line);border-radius:999px;background:rgba(var(--panel-rgb),.8);color:var(--text-2);font:inherit;
@@ -5802,4 +5806,47 @@ body.ls-body{
 }
 @media (prefers-reduced-motion:reduce){
   .ls-equipe-painel{animation:none}
+}
+
+
+/* ======================================================================
+   O PAGINADOR EM ESTILO APP (includes/paginacao_app.html)
+
+   "1–18 de 73" de um lado; do outro, Anterior, as páginas em pílulas e
+   Próxima. A página atual é o acento cheio com a tinta escura (o mesmo
+   aceso dos filtros). No celular as setas ficam só com o ícone, com o alvo
+   de 44px, e as páginas rolam de lado se não couberem.
+   ====================================================================== */
+.ls-pager{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;
+  margin:0;padding:14px 16px;border-top:1px solid var(--line-soft);
+}
+.ls-pager-conta{margin:0;color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
+.ls-pager-conta strong{color:var(--text);font-weight:900}
+.ls-pager-passos{display:flex;align-items:center;gap:6px;min-width:0;margin-left:auto}
+.ls-pager-paginas{display:flex;align-items:center;gap:4px;min-width:0;margin:0;padding:2px;list-style:none;overflow-x:auto;scrollbar-width:none}
+.ls-pager-paginas::-webkit-scrollbar{display:none}
+.ls-pager-paginas li{flex:0 0 auto}
+.ls-pager-pagina,.ls-pager-seta{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:40px;min-height:40px;padding:0 12px;
+  border:1px solid var(--line-soft);border-radius:12px;background:rgba(var(--verniz-rgb),.03);
+  color:var(--text-2)!important;font-size:.82rem;font-weight:800;line-height:1;text-decoration:none!important;font-variant-numeric:tabular-nums;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-pager-pagina{padding:0 6px}
+a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);color:var(--text)!important;background:rgba(var(--verniz-rgb),.07)}
+.ls-pager-pagina:focus-visible,.ls-pager-seta:focus-visible{outline:2px solid rgba(var(--acento-rgb),.75);outline-offset:2px}
+.ls-pager-pagina.is-atual{border-color:var(--acento);background:var(--acento);color:var(--acento-tinta)!important;cursor:default}
+.ls-pager-seta.is-parada{opacity:.42;cursor:default}
+.ls-pager-salto{min-width:18px;color:var(--muted);font-weight:800;text-align:center}
+@media (max-width:640px){
+  .ls-pager{padding:12px}
+  .ls-pager-conta{flex-basis:100%;text-align:center}
+  .ls-pager-passos{width:100%;margin-left:0;justify-content:space-between}
+  .ls-pager-seta{min-width:44px;min-height:44px;padding:0 10px}
+  .ls-pager-seta span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ls-pager-pagina{min-width:44px;min-height:44px}
+}
+@media (prefers-reduced-motion:reduce){
+  .ls-pager-pagina,.ls-pager-seta{transition:none}
 }

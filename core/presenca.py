@@ -223,24 +223,44 @@ def _marcos(agora):
     }
 
 
+def filtro_do_grupo(grupo, agora=None):
+    """O Q de cada contador ("online", "hoje", "semana", "mes", "nunca").
+
+    UMA regra para os três lugares: os números do topo (`resumo`), o filtro
+    da lista de Usuários (?presenca=hoje) e o que cada linha diz de si
+    (`grupos_da_conta`). "Ativa hoje" é ter dado sinal de vida OU entrado
+    com a senha desde a meia-noite.
+    """
+    from django.db.models import Q
+
+    agora = agora or timezone.now()
+    if grupo == "online":
+        return Q(presenca__visto_em__gte=agora - dt.timedelta(minutes=ONLINE_MINUTOS))
+    if grupo == "nunca":
+        return Q(last_login__isnull=True, presenca__isnull=True)
+    marco = _marcos(agora)[grupo]
+    return Q(presenca__visto_em__gte=marco) | Q(last_login__gte=marco)
+
+
+#: Como a lista filtrada se apresenta: (uma conta, várias contas).
+FRASE_DO_GRUPO = {
+    "online": ("online agora", "online agora"),
+    "hoje": ("ativa hoje", "ativas hoje"),
+    "semana": ("ativa nos últimos 7 dias", "ativas nos últimos 7 dias"),
+    "mes": ("ativa nos últimos 30 dias", "ativas nos últimos 30 dias"),
+    "nunca": ("que nunca entrou", "que nunca entraram"),
+}
+
+
 def resumo(agora=None):
     """Os números do topo da tela Usuários, numa consulta só."""
     from django.contrib.auth.models import User
-    from django.db.models import Count, Q
+    from django.db.models import Count
 
     agora = agora or timezone.now()
-    marcos = _marcos(agora)
-
-    def desde(momento):
-        return Q(presenca__visto_em__gte=momento) | Q(last_login__gte=momento)
-
     numeros = User.objects.aggregate(
-        online=Count("pk", filter=Q(presenca__visto_em__gte=agora - dt.timedelta(minutes=ONLINE_MINUTOS))),
-        hoje=Count("pk", filter=desde(marcos["hoje"])),
-        semana=Count("pk", filter=desde(marcos["semana"])),
-        mes=Count("pk", filter=desde(marcos["mes"])),
-        nunca=Count("pk", filter=Q(last_login__isnull=True, presenca__isnull=True)),
         total=Count("pk"),
+        **{grupo: Count("pk", filter=filtro_do_grupo(grupo, agora)) for grupo in GRUPOS},
     )
     return numeros
 
@@ -248,9 +268,10 @@ def resumo(agora=None):
 def grupos_da_conta(usuario, agora=None):
     """Em quais contadores a conta entra: a MESMA regra de `resumo()`.
 
-    É o que a lista de Usuários escreve em cada linha (`data-presenca`),
-    para o toque num contador filtrar a lista sem ir ao servidor. A conta
-    vem com `presenca` já carregada (select_related).
+    É o que a lista de Usuários escreve em cada linha (`data-presenca`): o
+    ponto verde do avatar sai daí, e o gestao-analises.js o atualiza quando a
+    conta entra ou sai do ar com a tela aberta. A conta vem com `presenca`
+    já carregada (select_related).
     """
     agora = agora or timezone.now()
     try:

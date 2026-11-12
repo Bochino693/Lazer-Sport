@@ -171,6 +171,8 @@
   color:var(--lsa-tom-texto);font-size:.74rem;font-weight:900;letter-spacing:.02em;line-height:1;text-transform:uppercase;
 }
 .lsa-avatar.is-pequeno{width:28px;height:28px;font-size:.62rem}
+.lsa-avatar.is-grande{width:100%;height:100%;border-radius:inherit;font-size:1.05rem}
+.lsa-avatar.is-grande.is-online::after{right:4px;bottom:4px}
 /* o ponto verde no canto: online (na faixa, pela classe; na lista de contas, pelo `data-presenca` da linha) */
 .lsa-avatar.is-online::after,
 [data-presenca~="online"] .lsa-avatar::after{
@@ -208,7 +210,7 @@
 .lsa-papel.is-equipe{background:rgba(var(--lsa-t-info-rgb),.2);color:var(--lsa-t-info-texto)}
 .lsa-pessoa-mais{
   display:grid;align-content:center;justify-items:center;gap:1px;min-height:56px;padding:6px 16px;margin:0;
-  border:1px dashed var(--lsa-t-line);border-radius:18px;color:var(--lsa-t-text-2)!important;font-size:.7rem;font-weight:700!important;cursor:pointer;
+  border:1px dashed var(--lsa-t-line);border-radius:18px;color:var(--lsa-t-text-2)!important;font-size:.7rem;font-weight:700!important;text-decoration:none!important;
 }
 .lsa-pessoa-mais strong{color:var(--lsa-t-text);font-size:.98rem;font-weight:900}
 
@@ -217,7 +219,7 @@
 .lsa-vistos-titulo{display:flex;align-items:center;gap:7px;margin:0 0 10px!important;color:var(--lsa-t-text)!important;font-size:.82rem!important;font-weight:900}
 .lsa-vistos-titulo i{color:var(--lsa-t-muted)}
 .lsa-vistos-titulo small{color:var(--lsa-t-muted);font-size:.72rem;font-weight:700}
-.ls-content .lsa-vistos-vazio{margin:0;color:var(--lsa-t-muted);font-size:.8rem}
+.ls-content .lsa-vistos-vazio{display:inline-flex;align-items:center;gap:8px;min-height:40px;margin:0;padding:0 14px;border:1px dashed var(--lsa-t-line);border-radius:999px;color:var(--lsa-t-muted);font-size:.8rem}
 .lsa-pessoa.is-compacta{min-height:44px;padding:5px 12px 5px 6px;border-radius:999px;background:transparent}
 .lsa-pessoa.is-compacta .lsa-pessoa-texto{display:flex;align-items:center;gap:8px}
 .lsa-pessoa.is-compacta .lsa-pessoa-nome{font-size:.8rem}
@@ -225,35 +227,33 @@
 .lsa-pessoa.is-compacta .lsa-papel{display:none}
 .lsa-pessoa-resto{align-self:center;padding:0 6px;color:var(--lsa-t-muted);font-size:.76rem;font-weight:700}
 
-/* os contadores que filtram a lista: rádios dentro de label */
-.lsa-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;margin:14px 0 0;padding:14px 0 0;border:0;border-top:1px solid var(--lsa-t-line-soft)}
-.lsa-filtros legend{float:left;width:auto;margin:0 4px 0 0;padding:0;color:var(--lsa-t-muted);font-size:.72rem;font-weight:800;line-height:40px}
-.ls-content .lsa-filtro{
-  position:relative;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 12px;margin:0;
+/* os contadores que filtram a lista: links, com o desenho das pílulas de período */
+.lsa-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;margin:14px 0 0;padding:14px 0 0;border-top:1px solid var(--lsa-t-line-soft)}
+.lsa-filtros-titulo{margin-right:4px;color:var(--lsa-t-muted);font-size:.72rem;font-weight:800}
+.ls-content a.lsa-filtro{
+  display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 12px;
   border:1px solid var(--lsa-t-line-soft);border-radius:12px;background:var(--lsa-t-panel-2);
-  color:var(--lsa-t-text-2);font-size:.78rem;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer;
+  color:var(--lsa-t-text-2);font-size:.78rem;font-weight:800;line-height:1;white-space:nowrap;text-decoration:none;
   transition:border-color .15s ease,background .15s ease,color .15s ease;
 }
-.lsa-filtro input{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;opacity:0;cursor:pointer}
 .lsa-filtro i{color:var(--lsa-t-muted);font-size:.9rem}
 .lsa-filtro strong{color:var(--lsa-t-text);font-size:.92rem;font-weight:900;font-variant-numeric:tabular-nums}
-.lsa-filtro:hover{border-color:var(--lsa-t-line-forte)}
-.lsa-filtro:has(input:checked){border-color:var(--lsa-t-acento);background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta)}
-.lsa-filtro:has(input:checked) strong,.lsa-filtro:has(input:checked) i{color:inherit}
-.lsa-filtro:has(input:checked) .lsa-ponto-vivo,.lsa-filtro:has(input:checked) .lsa-ponto-vivo::after{background:currentColor}
-.lsa-filtro:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
+.ls-content a.lsa-filtro:hover{border-color:var(--lsa-t-line-forte);color:var(--lsa-t-text)}
+.ls-content a.lsa-filtro[aria-current="true"]{border-color:var(--lsa-t-acento);background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta)}
+.lsa-filtro[aria-current="true"] strong,.lsa-filtro[aria-current="true"] i{color:inherit}
+.lsa-filtro[aria-current="true"] .lsa-ponto-vivo,.lsa-filtro[aria-current="true"] .lsa-ponto-vivo::after{background:currentColor}
+.lsa-filtro:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
 
-/* o aviso do filtro, em cima da lista de contas, e as linhas que ficam de fora */
+/* o aviso do filtro, em cima da lista de contas, e a âncora da lista (fica abaixo da barra de cima) */
+[data-lsa-ancora]{scroll-margin-top:calc(var(--lsa-t-topo, 60px) + 20px)}
 .lsa-filtro-aviso{
   display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px;padding:10px 14px;
   border:1px solid var(--lsa-t-line);border-radius:14px;background:var(--lsa-t-panel-2);
-  color:var(--lsa-t-text-2);font-size:.84rem;scroll-margin-top:calc(var(--lsa-t-topo, 60px) + 16px);
+  color:var(--lsa-t-text-2);font-size:.84rem;
 }
-.lsa-filtro-aviso[hidden]{display:none}
 .lsa-filtro-aviso>i{color:var(--lsa-t-acento)}
 .lsa-filtro-aviso strong{color:var(--lsa-t-text);font-weight:900}
-.lsa-filtro-limpar{margin-left:auto;color:var(--lsa-t-text)!important;font-size:.8rem;font-weight:800;text-decoration:underline;text-underline-offset:3px}
-.lsa-fora-do-filtro{display:none!important}
+.ls-content a.lsa-filtro-limpar{margin-left:auto;color:var(--lsa-t-text);font-size:.8rem;font-weight:800;text-decoration:underline;text-underline-offset:3px}
 
 /* o selo de presença de cada linha da lista: "Online agora" salta aos olhos */
 .lsa-presenca{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:var(--lsa-t-muted);font-size:.74rem;font-weight:700;white-space:nowrap}
@@ -384,6 +384,14 @@
 .lsa-faisca-caixa.is-vazia{visibility:hidden}
 .lsa .lsa-faisca,.lsa-ficha .lsa-faisca{display:block;width:100%!important;height:30px!important;overflow:visible}
 .lsa-faisca-ponto{position:absolute;right:-4px;width:8px;height:8px;margin-top:-2px;border-radius:50%;background:var(--lsa-serie);box-shadow:0 0 0 2px var(--lsa-superficie)}
+
+/* a métrica cuja consulta falhou no servidor: uma linha calma, nunca uma parede de erro */
+.lsa-fora-do-ar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:44px;margin:0 0 12px;padding:8px 14px;
+  border:1px solid rgba(var(--lsa-t-yellow-rgb),.45);border-radius:14px;color:var(--lsa-t-text-2);font-size:.8rem;
+}
+.lsa-fora-do-ar>i{color:var(--lsa-t-yellow-texto)}
+.ls-content a.lsa-fora-do-ar-tentar,.lsa-ficha a.lsa-fora-do-ar-tentar{color:var(--lsa-t-text);font-size:.78rem;font-weight:800;text-decoration:underline;text-underline-offset:3px}
 
 /* UMA linha para as métricas sem número: o motivo de cada uma, a um toque */
 .lsa-vazias{margin:0 0 12px;border:1px dashed var(--lsa-t-line);border-radius:14px;color:var(--lsa-t-muted);font-size:.8rem}
@@ -715,9 +723,9 @@
   .lsa-pessoa{max-width:78vw}
   .lsa-filtros{flex-wrap:nowrap;margin:14px -12px 0;padding:14px 12px 2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
   .lsa-filtros::-webkit-scrollbar{display:none}
-  .lsa-filtros legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .ls-content .lsa-filtro{flex:0 0 auto;min-height:44px}
-  .lsa-filtro-limpar{margin-left:0}
+  .lsa-filtros-titulo{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ls-content a.lsa-filtro{flex:0 0 auto;min-height:44px}
+  .ls-content a.lsa-filtro-limpar{margin-left:0}
 
   /* a linha do tempo: o nome e o horário em cima, a faixa embaixo */
   .lsa-dia-eixo,.lsa-dia-linha{grid-template-columns:28px minmax(0,1fr) auto;gap:2px 10px;padding:0 4px}
@@ -755,7 +763,7 @@
   .lsa-svg-serie{stroke:CanvasText}
   .lsa-svg-barra,.lsa-ranking-barra,.lsa-dia-faixa{fill:CanvasText;background:CanvasText}
   .lsa-periodo:has(input:checked),.lsa-indicador:has(input:checked),.lsa-aba:has(input:checked),
-  .lsa-metrica:has(input:checked),.lsa-filtro:has(input:checked){outline:2px solid Highlight}
+  .lsa-metrica:has(input:checked),.lsa-filtro[aria-current="true"]{outline:2px solid Highlight}
   .lsa-avatar,.lsa-presenca.is-online{border:1px solid CanvasText}
 }
 @media print{

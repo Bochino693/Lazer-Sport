@@ -11,9 +11,23 @@ O que estes testes protegem:
   * a presença: "Online agora", "Visto há 2 h", e o middleware que NÃO grava
     a cada requisição;
   * o painel está nas telas, e o componente não usa <select>.
+
+E, do AJUSTE da seção 76 (no fim do arquivo):
+  * QUEM está online: o nome, o papel (Admin, Equipe, Cliente), onde está, há
+    quanto tempo e quem é "você"; a barra de cima só recebe a equipe (nome de
+    cliente não sai do servidor para quem não abre a tela Usuários); a
+    permissão e a conta de consultas do /presenca/agora/;
+  * o painel sem parede de caixas vazias: a métrica sem número vai marcada
+    `vazia`, com o motivo, e a `principal` é a que tem dado; nenhum gráfico
+    que "não existe" (colunas para pessoas distintas, as pessoas do dia em
+    Hoje); as frases do período; a fonte que falha vira uma linha calma;
+  * a lista de Usuários de 18 em 18, com os contadores de presença filtrando
+    no servidor, os filtros viajando no paginador e nenhuma consulta por linha;
+  * a ficha da conta, que abre pelo que importa: compras, presença, o que quer.
 """
 
 import datetime as dt
+import re
 from decimal import Decimal
 from pathlib import Path
 
@@ -32,6 +46,7 @@ from sistema_interno.permissoes import CRIACAO, FINANCEIRO, VENDAS
 from . import analises, cliques, interacoes, presenca
 from .analises_tipos import tipo as tipo_por_codigo
 from .analises_tipos import tipos
+from .detalhes import reais
 from .models import (
     AcessoDiario,
     BrinquedoClick,
@@ -691,8 +706,13 @@ class PresencaTests(EquipeMixin, TestCase):
         self.assertIn("Nunca entrou", html)
         self.assertFalse([q for q in consultas.captured_queries if 'FROM "core_presencausuario"' in q["sql"]],
                          "o selo consultou a presença conta por conta")
-        destaques = analises.calcular(tipo_por_codigo("usuario"), analises.janela("mes"), usar_cache=False)["destaques"]
-        self.assertEqual({d["codigo"]: d["valor"] for d in destaques}["online"], 1)
+        # os contadores do topo saíram da resposta das análises (que fica 2 min no cache): agora
+        # vêm, com as pessoas, do /presenca/agora/, que a tela pergunta de novo a cada 45 s
+        self.assertNotIn("destaques", analises.calcular(tipo_por_codigo("usuario"), analises.janela("mes"), usar_cache=False))
+        cache.clear()
+        agora_mesmo = self.client.get("/presenca/agora/", {"contas": 1}, **INTERNO).json()
+        self.assertEqual({p["usuario"] for p in agora_mesmo["online"]}, {"online", "chefe"})  # quem olha está online
+        self.assertEqual(agora_mesmo["numeros"]["nunca"], 1)  # o chefe acabou de entrar (force_login)
 
 
 class InteracoesTests(CatalogoDeTeste, TestCase):
@@ -837,3 +857,568 @@ class SementeTests(CatalogoDeTeste, TestCase):
         }
         self.assertEqual(antes, depois)
         self.assertFalse(InteracaoPorHora.objects.exists())
+
+
+# ======================================================================
+# O AJUSTE DA SEÇÃO 76: QUEM ESTÁ ONLINE, O PAINEL EM ESTILO APP, A LISTA
+# DE USUÁRIOS DE 18 EM 18 E A FICHA DA CONTA QUE ABRE PELO QUE IMPORTA
+# ======================================================================
+
+RAIZ_DO_PROJETO = Path(__file__).resolve().parent.parent
+ESTATICOS_DO_PAINEL = RAIZ_DO_PROJETO / "sistema_interno" / "static" / "interno"
+PAGINAS = Path(__file__).resolve().parent / "static" / "site" / "paginas"
+
+
+class QuemEstaOnlineTests(EquipeMixin, TestCase):
+    """"vc deve mostrar qual usuário está logado": quem, o papel, onde e há quanto tempo."""
+
+    def setUp(self):
+        cache.clear()
+        self.agora = timezone.now()
+        self.chefe = self.conta("chefe", super_=True)
+        self.marina = self.conta("marina", VENDAS)                      # equipe pela função, sem is_staff
+        self.caio = User.objects.create_user("caio", is_staff=True)     # equipe pelo staff
+        self.quesia = User.objects.create_user("quesia")                # cliente do site
+        self.quesia.perfil.nome_completo = "Quésia Souza"
+        self.quesia.perfil.save()
+        self.ontem = User.objects.create_user("ontem")
+        User.objects.create_user("nunca")
+
+    def presente(self, usuario, minutos, onde="site"):
+        visto = self.agora - dt.timedelta(minutes=minutos)
+        PresencaUsuario.objects.update_or_create(usuario=usuario, defaults={"visto_em": visto, "onde": onde})
+        return visto
+
+    def pedir(self, usuario, **parametros):
+        self.client.logout()
+        if usuario:
+            self.client.force_login(usuario)
+        cache.clear()
+        return self.client.get("/presenca/agora/", parametros, **INTERNO)
+
+    def test_a_faixa_diz_quem_o_papel_onde_e_quem_e_voce(self):
+        self.presente(self.marina, 1, "painel")
+        self.presente(self.caio, 3, "site")
+        self.presente(self.quesia, 2, "app")
+        self.presente(self.ontem, 60 * 20, "site")
+        manha = timezone.localtime(self.agora).replace(hour=0, minute=7, second=0, microsecond=0)
+        AcessoDiario.objects.create(usuario=self.marina, dia=manha.date(), primeiro=manha, ultimo=self.agora)
+
+        resposta = self.pedir(self.chefe, contas=1)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta["Cache-Control"], "private, no-store")
+        dados = resposta.json()
+        online = {p["usuario"]: p for p in dados["online"]}
+        self.assertEqual(set(online), {"chefe", "marina", "caio", "quesia"})
+        # quem está olhando: sempre online, marcado "você", no painel -- mesmo sem sinal gravado
+        self.assertEqual(
+            (online["chefe"]["voce"], online["chefe"]["papel_rotulo"], online["chefe"]["onde_rotulo"]),
+            (True, "Admin", "Painel"),
+        )
+        self.assertEqual(dados["eu"], self.chefe.pk)
+        self.assertEqual(
+            (online["marina"]["papel"], online["marina"]["papel_rotulo"], online["marina"]["onde_rotulo"], online["marina"]["quando"]),
+            ("equipe", "Equipe", "Painel", "há 1 min"),
+        )
+        self.assertEqual(online["marina"]["desde"], "00:07")  # o primeiro sinal de hoje
+        self.assertEqual((online["caio"]["papel"], online["caio"]["onde_rotulo"]), ("equipe", "Site"))
+        self.assertEqual(
+            (online["quesia"]["papel_rotulo"], online["quesia"]["nome"], online["quesia"]["iniciais"], online["quesia"]["onde_rotulo"]),
+            ("Cliente", "Quésia Souza", "QS", "Aplicativo"),
+        )
+        self.assertFalse(online["quesia"]["voce"])
+        self.assertEqual(online["quesia"]["cor"], self.quesia.pk % presenca.CORES_DE_AVATAR)  # a cor é da conta
+        # vistos por último: quem passou nas últimas 24 h e não está online, com a hora
+        self.assertEqual([p["usuario"] for p in dados["recentes"]], ["ontem"])
+        self.assertTrue(dados["recentes"][0]["quando"].startswith(("ontem às", "há 20 h")), dados["recentes"][0]["quando"])
+        self.assertFalse(dados["recentes"][0]["online"])
+        # os contadores: os mesmos da lista
+        self.assertEqual(dados["numeros"]["online"], 4)
+        self.assertEqual(dados["numeros"]["total"], User.objects.count())
+        self.assertEqual(dados["numeros"]["nunca"], 1)
+        self.assertEqual(dados["intervalo"], 45)
+        # a equipe é um recorte dos online: nenhum cliente
+        self.assertEqual({p["usuario"] for p in dados["equipe"]}, {"chefe", "marina", "caio"})
+
+    def test_a_barra_de_cima_so_recebe_a_equipe(self):
+        self.presente(self.caio, 2, "painel")
+        self.presente(self.quesia, 1, "site")
+        resposta = self.pedir(self.marina)
+        self.assertEqual(resposta.status_code, 200)
+        dados = resposta.json()
+        self.assertEqual([p["usuario"] for p in dados["equipe"]], ["marina", "caio"])  # quem olha vem primeiro
+        self.assertTrue(dados["equipe"][0]["voce"])
+        self.assertEqual(dados["equipe_total"], 2)
+        for chave in ("online", "recentes", "numeros"):
+            self.assertNotIn(chave, dados)
+        # nome de cliente não sai do servidor para quem não abre a tela Usuários
+        self.assertNotIn("quesia", resposta.content.decode().lower())
+        self.assertNotIn("Quésia", resposta.content.decode())
+
+    def test_a_permissao_e_a_da_tela(self):
+        self.assertEqual(self.pedir(None).status_code, 401)
+        self.assertEqual(self.pedir(self.quesia).status_code, 403)           # cliente não vê nem a equipe
+        self.assertEqual(self.pedir(self.marina).status_code, 200)           # a equipe vê a equipe
+        self.assertEqual(self.pedir(self.marina, contas=1).status_code, 403)  # as contas: só quem abre Usuários
+        self.assertEqual(self.pedir(self.caio).status_code, 403)             # staff sem função não entra no painel
+        self.assertEqual(self.pedir(self.chefe, contas=1).status_code, 200)
+        # fora do painel o endereço não existe
+        self.client.force_login(self.chefe)
+        fora = self.client.get("/presenca/agora/")
+        self.assertIn(fora.status_code, (301, 302, 404))
+        self.assertNotEqual(fora.get("Content-Type"), "application/json")
+
+    def test_as_consultas_nao_crescem_com_o_historico(self):
+        def contar():
+            self.client.force_login(self.chefe)
+            cache.clear()
+            with CaptureQueriesContext(connection) as consultas:
+                self.assertEqual(self.client.get("/presenca/agora/", {"contas": 1}, **INTERNO).status_code, 200)
+            return len(consultas)
+
+        self.presente(self.marina, 1, "painel")
+        antes = contar()
+        for i in range(30):
+            conta = User.objects.create_user(f"movimento{i}")
+            self.presente(conta, i % 9, "site")
+            for dia in range(1, 9):
+                quando = self.agora - dt.timedelta(days=dia)
+                AcessoDiario.objects.create(usuario=conta, dia=timezone.localtime(quando).date(), primeiro=quando, ultimo=quando)
+        depois = contar()
+        self.assertEqual(antes, depois)
+        self.assertLess(depois, 10)
+        # dez segundos de cache: a segunda pergunta não refaz as listas
+        self.client.force_login(self.chefe)
+        self.client.get("/presenca/agora/", {"contas": 1}, **INTERNO)
+        with CaptureQueriesContext(connection) as consultas:
+            self.client.get("/presenca/agora/", {"contas": 1}, **INTERNO)
+        self.assertFalse([q["sql"] for q in consultas.captured_queries if "core_acessodiario" in q["sql"]])
+
+    def test_o_que_falhar_vira_frase_e_nao_pagina_de_erro(self):
+        from unittest import mock
+
+        from . import views_analises
+
+        self.client.force_login(self.chefe)
+        with mock.patch.object(presenca, "agora_mesmo", side_effect=RuntimeError("banco fora")), \
+                self.assertLogs("core.views_analises", "ERROR"):
+            resposta = self.client.get("/presenca/agora/", **INTERNO)
+        self.assertEqual(resposta.status_code, 500)
+        self.assertEqual(resposta.json()["erro"], views_analises.FALHA_INESPERADA)
+
+    def test_os_grupos_da_linha_sao_os_dos_contadores(self):
+        self.presente(self.marina, 0)
+        self.presente(self.ontem, 60 * 24 * 3)
+        velho = User.objects.create_user("velho")
+        self.presente(velho, 60 * 24 * 40)
+        numeros = presenca.resumo(self.agora)
+        contas = User.objects.select_related("presenca")
+        for grupo in presenca.GRUPOS:
+            with self.subTest(grupo=grupo):
+                pelo_filtro = set(User.objects.filter(presenca.filtro_do_grupo(grupo, self.agora)).values_list("username", flat=True))
+                pela_linha = {c.username for c in contas if grupo in presenca.grupos_da_conta(c, self.agora)}
+                self.assertEqual(pelo_filtro, pela_linha)
+                self.assertEqual(numeros[grupo], len(pelo_filtro))
+        self.assertEqual(presenca.grupos_da_conta(self.marina, self.agora), ["online", "hoje", "semana", "mes"])
+        self.assertEqual(presenca.grupos_da_conta(velho, self.agora), [])
+        self.assertEqual(presenca.iniciais("Heitor Costa"), "HC")
+        self.assertEqual(presenca.iniciais("teste_orc"), "TO")
+        self.assertEqual(presenca.iniciais("ana"), "AN")
+
+
+class PainelCoerenteTests(EquipeMixin, CatalogoDeTeste, TestCase):
+    """Sem parede de caixas vazias, sem gráfico pedindo desculpa, com as frases que fecham."""
+
+    def setUp(self):
+        self.preparar_catalogo()
+        self.povoar(1)
+        self.brinquedo = Brinquedos.objects.order_by("id").first()
+        self.ana = User.objects.create_user("ana")
+        self.bia = self.conta("bia", VENDAS)
+        # as contas do teste nascem "agora" (o relógio da máquina): aqui, numa data fixa, fora de toda janela
+        User.objects.update(date_joined=local(2026, 1, 5, 10))
+
+    def metrica(self, dados, codigo):
+        return next(m for m in dados["metricas"] if m["codigo"] == codigo)
+
+    def calcular(self, tipo, periodo, **extra):
+        janela = analises.janela(periodo, agora=AGORA, de=extra.pop("de", None), ate=extra.pop("ate", None))
+        return analises.calcular(tipo_por_codigo(tipo), janela, usar_cache=False, **extra)
+
+    def acesso(self, usuario, dia, das=9, ate=10):
+        return AcessoDiario.objects.create(
+            usuario=usuario, dia=dt.date(2026, 11, dia), primeiro=local(2026, 11, dia, das), ultimo=local(2026, 11, dia, ate, 28),
+        )
+
+    def test_a_metrica_sem_numero_dobra_e_a_principal_e_a_que_tem_dado(self):
+        self.acesso(self.ana, 10)
+        self.acesso(self.bia, 9)
+        dados = self.calcular("usuario", "semana")
+        # ninguém se cadastrou na janela nem na anterior (as contas são de janeiro): vazia, com o motivo
+        cadastros = self.metrica(dados, "cadastros")
+        self.assertEqual((cadastros["vazia"], cadastros["sem_dados"]), (True, False))
+        self.assertEqual(cadastros["motivo"], "Sem movimento neste período nem no anterior.")
+        pedidos = self.metrica(dados, "pedidos")
+        self.assertEqual((pedidos["vazia"], pedidos["sem_dados"], pedidos["motivo"]), (True, True, "Nenhum registro até hoje."))
+        ativos = self.metrica(dados, "ativos")
+        self.assertEqual((ativos["vazia"], ativos["motivo"], ativos["total"]), (False, "", 2))
+        # "cadastros" é a principal do tipo, mas está vazia: o gráfico abre na primeira que tem dado
+        self.assertEqual(tipo_por_codigo("usuario").principal, "cadastros")
+        self.assertEqual(dados["principal"], "ativos")
+        # o tom do ícone sai da ordem das métricas, nunca do valor (e não usa verde, vermelho nem o laranja)
+        self.assertTrue(all(m["tom"] in analises.TONS for m in dados["metricas"]))
+        self.assertFalse({"acento", "green", "red"} & set(analises.TONS))
+        # a queda de verdade (zero agora, algo antes) continua com cartão: não é "vazia"
+        antes = self.calcular("usuario", "hoje")
+        self.assertFalse(self.metrica(antes, "ativos")["vazia"])  # 0 hoje, 1 ontem
+        self.assertEqual(self.metrica(antes, "ativos")["direcao"], "desce")
+
+    def test_o_registro_que_comecou_depois_diz_desde_quando(self):
+        interacoes.somar("visita", "brinquedo", self.brinquedo.pk, 7, hora=local(2026, 11, 10, 14))
+        dados = self.calcular("brinquedo", "dias", de="2026-11-01", ate="2026-11-03")
+        visitas = self.metrica(dados, "visitas")
+        self.assertTrue(visitas["vazia"])
+        self.assertEqual(visitas["motivo"], "Registrado desde 10/11/2026: nada neste período.")
+
+    def test_contas_ativas_nunca_pede_um_grafico_que_nao_existe(self):
+        self.acesso(self.ana, 11, das=8, ate=15)
+        self.acesso(self.bia, 11, das=9, ate=9)
+        self.acesso(self.ana, 10)
+        self.acesso(self.ana, 9)
+        # Hoje: o acesso só guarda o dia. No lugar de colunas por hora, as PESSOAS do dia
+        hoje = self.metrica(self.calcular("usuario", "hoje"), "ativos")
+        self.assertIsNone(hoje["serie"])
+        self.assertEqual(hoje["pessoas"]["total"], 2)
+        ana, bia = hoje["pessoas"]["itens"]  # do último sinal para trás
+        self.assertEqual((ana["nome"], ana["de"], ana["ate"], ana["inicio"], ana["fim"]), ("ana", "08:00", "15:28", 480, 928))
+        self.assertEqual((bia["papel_rotulo"], bia["de"], bia["ate"]), ("Equipe", "09:00", "09:28"))
+        self.assertFalse(hoje["pessoas"]["da_conta"])
+        self.assertEqual(hoje["ranking"], [])            # "dias com acesso" num dia só não é ranking
+        self.assertFalse(hoje["tem_ranking"])
+        # Semana: uma coluna por dia (pessoas distintas não se ligam com uma linha) e o ranking "Mais ativos"
+        dados = self.calcular("usuario", "semana")
+        semana = self.metrica(dados, "ativos")
+        self.assertEqual((semana["forma"], semana["distinta"]), ("colunas", True))
+        self.assertEqual(semana["serie"][-3:], [1, 1, 2])
+        self.assertIsNone(semana["pessoas"])
+        self.assertEqual(dados["ranking_titulo"], "Mais ativos")
+        self.assertEqual(semana["ranking_unidade"], ["dia com acesso", "dias com acesso"])
+        primeiro, segundo = semana["ranking"]
+        self.assertEqual((primeiro["nome"], primeiro["valor"]), ("ana", 3))  # dias com acesso de cada conta
+        self.assertEqual((segundo["nome"], segundo["valor"]), ("bia", 1))
+        self.assertEqual(primeiro["avatar"], {"iniciais": "AN", "cor": self.ana.pk % presenca.CORES_DE_AVATAR})
+        self.assertTrue(primeiro["detalhe"].startswith(("Visto", "Entrou", "Nunca", "Online")))
+        self.assertEqual(self.metrica(self.calcular("brinquedo", "semana"), "curtidas")["forma"], "linha")
+
+    def test_pessoas_distintas_por_hora_quando_a_fonte_guarda_a_hora(self):
+        for hora, usuario in ((9, self.ana), (9, self.bia), (9, self.ana), (14, self.ana)):
+            jogada = JogadaRegistrada.objects.create(jogo="corrida", usuario=usuario)
+            JogadaRegistrada.objects.filter(pk=jogada.pk).update(quando=local(2026, 11, 11, hora, 5))
+        com_conta = self.metrica(self.calcular("jogo", "hoje"), "com_conta")
+        self.assertEqual(com_conta["total"], 2)
+        self.assertEqual((com_conta["serie"][9], com_conta["serie"][14], com_conta["serie"][10]), (2, 1, 0))
+        self.assertIsNone(com_conta["serie"][20])  # a hora que ainda não chegou
+        self.assertEqual(com_conta["forma"], "colunas")
+
+    def test_os_cadastros_recentes_entram_no_lugar_do_ranking(self):
+        User.objects.filter(pk=self.ana.pk).update(date_joined=local(2026, 11, 10, 9, 30))
+        User.objects.filter(pk=self.bia.pk).update(date_joined=local(2026, 11, 11, 8, 5))
+        cadastros = self.metrica(self.calcular("usuario", "semana"), "cadastros")
+        self.assertEqual(cadastros["total"], 2)
+        lista = cadastros["lista"]
+        self.assertEqual(lista["titulo"], "Cadastros mais recentes")
+        self.assertEqual([(i["nome"], i["detalhe"], i["quando"]) for i in lista["itens"]],
+                         [("bia", "Equipe", "11/11, 08:05"), ("ana", "Cliente", "10/11, 09:30")])
+        self.assertEqual(lista["itens"][0]["tipo"], "usuario")
+
+    def test_as_frases_do_periodo(self):
+        hoje = analises.janela("hoje", agora=AGORA).textos()
+        self.assertEqual(hoje, {
+            "titulo": "Hoje, 11/11, até 15:30", "comparacao": "comparado com ontem até a mesma hora", "anterior_curto": "ontem",
+        })
+        mes = analises.janela("mes", agora=AGORA).textos()
+        self.assertEqual(mes["titulo"], "Últimos 30 dias (13/10 a 11/11)")
+        self.assertEqual(mes["comparacao"], "comparado com os 30 dias anteriores (13/09 a 12/10)")
+        self.assertEqual(mes["anterior_curto"], "antes")
+        ano = analises.janela("ano", agora=AGORA).textos()
+        self.assertEqual(ano["titulo"], "Últimos 365 dias (12/11/2025 a 11/11/2026)")  # o ano aparece quando muda
+        dias = analises.janela("dias", agora=AGORA, de="2026-10-01", ate="2026-10-10").textos()
+        self.assertEqual(dias["titulo"], "De 01/10 a 10/10 (10 dias)")
+        self.assertEqual(dias["comparacao"], "comparado com os 10 dias anteriores (21/09 a 30/09)")
+        um_dia = analises.janela("dias", agora=AGORA, de="2026-11-03", ate="2026-11-03").textos()
+        self.assertEqual((um_dia["titulo"], um_dia["anterior_curto"]), ("Dia 03/11", "dia anterior"))
+        dados = self.calcular("usuario", "mes")
+        self.assertEqual(dados["periodo"]["descricao"], mes["titulo"] + " · " + mes["comparacao"])
+        self.assertEqual((dados["periodo"]["titulo"], dados["periodo"]["anterior_curto"]), (mes["titulo"], "antes"))
+        # nada de jargão nos avisos nem nas dicas que a tela mostra
+        for tipo in tipos().values():
+            for texto in list(tipo.avisos) + [m.ajuda for m in tipo.metricas]:
+                with self.subTest(texto=texto[:40]):
+                    self.assertNotRegex(texto, r"LEIA-ME|seção \d|core/|\.py")
+
+    def test_a_fonte_que_falha_vira_uma_linha_calma(self):
+        from unittest import mock
+
+        de_verdade = analises._acumular_aditiva
+
+        def quebrada(fonte, *resto):
+            if fonte.chave == "favoritos":
+                raise RuntimeError("a consulta desta fonte falhou")
+            return de_verdade(fonte, *resto)
+
+        self.acesso(self.ana, 10)
+        with mock.patch.object(analises, "_acumular_aditiva", quebrada), self.assertLogs("core.analises", "ERROR"):
+            dados = self.calcular("usuario", "semana")
+        favoritos = self.metrica(dados, "favoritos")
+        self.assertEqual((favoritos["indisponivel"], favoritos["vazia"]), (True, True))
+        self.assertTrue(favoritos["motivo"].startswith("Não deu para carregar agora"))
+        self.assertEqual(dados["principal"], "ativos")  # o gráfico abre numa métrica que veio
+
+    def test_a_tela_nao_tem_mais_as_frases_do_desenho_antigo(self):
+        js = (PAGINAS / "gestao-analises.js").read_text(encoding="utf-8")
+        css = (PAGINAS / "gestao-analises.css").read_text(encoding="utf-8")
+        for frase in ("hora a hora não existe", '"sem dados ainda"', '"estável"', '"sem base anterior"', "Ninguém pontuou"):
+            with self.subTest(frase=frase):
+                self.assertNotIn(frase, js)
+        for frase in ("Ainda sem registro neste período: ", "Não deu para carregar agora: ", "Quem esteve ativo hoje",
+                      "Sem movimento no período", "Ver os números em tabela", "lsa-esqueleto"):
+            with self.subTest(frase=frase):
+                self.assertIn(frase, js)
+        # a tabela continua (o gêmeo acessível de todo gráfico), para a série e para as pessoas do dia
+        self.assertIn("Analise.prototype.tabela = ", js)
+        self.assertIn("Analise.prototype.tabelaDePessoas = ", js)
+        # movimento reduzido respeitado, a régua de períodos gruda, a grade é do contêiner
+        self.assertIn("@media (prefers-reduced-motion:reduce)", css)
+        self.assertRegex(css, r"\.lsa-barra\{\s*position:sticky")
+        self.assertIn("@container lsa (min-width:1040px)", css)
+        self.assertIn("scroll-snap-type:x mandatory", css)
+        # o laranja não entra transparente em fundo (vira marrom sobre o ameixa): só em contorno de foco
+        fundos = re.findall(r"background:[^;}]*rgba\(var\(--lsa-t-acento-rgb\)[^;}]*", css)
+        self.assertEqual(fundos, [])
+
+
+class ListaDeUsuariosTests(EquipeMixin, TestCase):
+    """18 por página, com os filtros de presença no servidor e a mesma pessoa em todo lugar."""
+
+    def setUp(self):
+        cache.clear()
+        self.agora = timezone.now()
+        self.chefe = self.conta("chefe", super_=True)
+        self.contas = [User.objects.create_user(f"conta{i:02d}", email=f"conta{i:02d}@exemplo.com") for i in range(40)]
+        self.client.force_login(self.chefe)
+
+    def abrir(self, **parametros):
+        return self.client.get("/site/contas-clientes/", parametros, **INTERNO)
+
+    def linhas(self, resposta):
+        return re.findall(r'<tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="(\d+)"', resposta.content.decode())
+
+    def test_dezoito_por_pagina(self):
+        primeira = self.abrir()
+        html = primeira.content.decode()
+        self.assertEqual(len(self.linhas(primeira)), 18)
+        self.assertEqual(primeira.context["pagina"].paginator.count, 41)
+        self.assertEqual(primeira.context["pagina"].paginator.num_pages, 3)
+        self.assertIn("Exibindo <strong>1–18</strong> de", html)
+        self.assertIn('<nav class="ls-pager" aria-label="Páginas da lista de contas">', html)
+        self.assertIn("<strong>1–18</strong> de 41", html)
+        self.assertIn('href="?page=2#usrContas"', html)        # a tela chega na lista, não no topo
+        self.assertIn('aria-current="page"', html)
+        self.assertIn('id="usrContas" data-lsa-ancora', html)
+        self.assertNotIn('rel="prev"', html)                   # na primeira, o "Anterior" fica parado
+        segunda = self.abrir(page=2)
+        self.assertEqual(len(self.linhas(segunda)), 18)
+        self.assertIn("<strong>19–36</strong> de 41", segunda.content.decode())
+        self.assertFalse(set(self.linhas(primeira)) & set(self.linhas(segunda)))
+        terceira = self.abrir(page=3)
+        self.assertEqual(len(self.linhas(terceira)), 5)
+        self.assertNotIn('rel="next"', terceira.content.decode())
+        # a página que não existe cai na última; texto no lugar do número, na primeira
+        self.assertEqual(self.abrir(page=99).context["pagina"].number, 3)
+        self.assertEqual(self.abrir(page="abc").context["pagina"].number, 1)
+        # as três páginas, juntas, são todas as contas, cada uma uma vez
+        todas = self.linhas(primeira) + self.linhas(segunda) + self.linhas(terceira)
+        self.assertEqual(sorted(map(int, todas)), sorted(User.objects.values_list("pk", flat=True)))
+
+    def test_os_filtros_viajam_no_paginador(self):
+        resposta = self.abrir(q="conta", tipo="clientes", page=2)
+        self.assertEqual(resposta.context["pagina"].number, 2)
+        self.assertEqual(resposta.context["pagina"].paginator.count, 40)
+        html = resposta.content.decode()
+        self.assertIn('href="?q=conta&amp;tipo=clientes&amp;page=1#usrContas"', html)
+        self.assertIn('href="?q=conta&amp;tipo=clientes&amp;page=3#usrContas"', html)
+        self.assertIn("Exibindo <strong>19–36</strong> de", html)
+        # a busca que não acha nada: o estado vazio de sempre, sem paginador
+        vazio = self.abrir(q="ninguém com este nome").content.decode()
+        self.assertIn("Nenhum usuário encontrado", vazio)
+        self.assertNotIn('class="ls-pager"', vazio)
+
+    def test_o_contador_filtra_no_servidor_e_segue_pelas_paginas(self):
+        for i, conta in enumerate(self.contas[:20]):
+            PresencaUsuario.objects.create(usuario=conta, visto_em=self.agora - dt.timedelta(seconds=10 + i), onde="site")
+        PresencaUsuario.objects.create(usuario=self.contas[25], visto_em=self.agora - dt.timedelta(days=3), onde="app")
+        resposta = self.abrir(presenca="online")
+        html = resposta.content.decode()
+        self.assertEqual(resposta.context["pagina"].paginator.count, 20)
+        self.assertEqual(len(self.linhas(resposta)), 18)
+        self.assertIn('data-lsa-filtro-aviso="online"', html)
+        self.assertIn("<strong>20 contas</strong> online agora", html)
+        self.assertIn('href="?presenca=online&amp;page=2#usrContas"', html)
+        self.assertIn('<a class="lsa-filtro-limpar" href="?#usrContas">Mostrar todas</a>', html)
+        self.assertIn('<input type="hidden" name="presenca" value="online">', html)  # a busca não perde o filtro
+        self.assertEqual(len(self.linhas(self.abrir(presenca="online", page=2))), 2)
+        # cada linha diz em que contadores entra (o ponto verde do avatar sai daí) e o selo salta aos olhos
+        self.assertIn('data-presenca="online hoje semana mes"', html)
+        self.assertIn('class="lsa-presenca is-online" data-lsa-selo', html)
+        # cada contador mostra exatamente as contas que conta
+        numeros = presenca.resumo()
+        for grupo in presenca.GRUPOS:
+            with self.subTest(grupo=grupo):
+                self.assertEqual(self.abrir(presenca=grupo).context["pagina"].paginator.count, numeros[grupo])
+        semana = self.abrir(presenca="semana").content.decode()
+        self.assertIn(f"<strong>{numeros['semana']} contas</strong> ativas nos últimos 7 dias", semana)
+        nunca = self.abrir(presenca="nunca", q="conta39").content.decode()
+        self.assertIn("<strong>1 conta</strong> que nunca entrou na busca", nunca)
+        self.assertIn('href="?q=conta39#usrContas">Mostrar todas</a>', nunca)
+        # o que não é contador é ignorado
+        self.assertEqual(self.abrir(presenca="qualquer").context["pagina"].paginator.count, 41)
+        self.assertNotIn("data-lsa-filtro-aviso", self.abrir(presenca="qualquer").content.decode())
+
+    def test_nenhuma_consulta_por_linha(self):
+        def contar(**parametros):
+            with CaptureQueriesContext(connection) as consultas:
+                self.assertEqual(self.abrir(**parametros).status_code, 200)
+            return consultas
+
+        self.abrir()  # aquece o que é da sessão
+        cheia = contar()
+        curta = contar(page=3)  # 5 linhas no lugar de 18
+        self.assertEqual(len(cheia), len(curta), [q["sql"][:90] for q in cheia.captured_queries])
+        self.assertFalse([q for q in cheia.captured_queries if 'FROM "core_presencausuario"' in q["sql"]])
+        self.assertFalse([q for q in cheia.captured_queries if 'FROM "auth_group"' in q["sql"]],
+                         "o papel de cada linha foi perguntado conta por conta")
+
+    def test_a_linha_usa_as_iniciais_a_cor_e_o_papel_da_faixa(self):
+        marina = self.conta("marina", VENDAS)
+        marina.perfil.nome_completo = "Marina Albuquerque"
+        marina.perfil.save()
+        html = self.abrir(q="marina").content.decode()
+        self.assertIn(f'<span class="usr-avatar lsa-avatar is-c{marina.pk % presenca.CORES_DE_AVATAR}" aria-hidden="true">MA</span>', html)
+        self.assertIn('<span class="usr-chip is-staff">Equipe</span>', html)  # equipe pela função, sem is_staff
+        self.assertIn('<span class="usr-chip is-super">Admin</span>', self.abrir(q="chefe").content.decode())
+        self.assertIn('<span class="usr-chip is-client">Cliente</span>', self.abrir(q="conta00").content.decode())
+
+    def test_a_faixa_agora_so_na_tela_de_usuarios_e_a_pilha_em_todo_o_painel(self):
+        html = self.abrir().content.decode()
+        self.assertIn("data-lsa-agora", html)
+        self.assertIn('aria-label="Quem está online agora"', html)
+        # a pilha da equipe: vazia e escondida no HTML (nenhuma consulta a mais); quem a enche é o ls-presenca.js
+        self.assertIn('<div class="ls-equipe" id="lsEquipe" hidden>', html)
+        self.assertIn('data-presenca="/presenca/agora/"', html)
+        self.assertIn("interno/ls-presenca.js", html)
+        outra = self.client.get("/minha-conta/", **INTERNO).content.decode()
+        self.assertIn('id="lsEquipe"', outra)
+        self.assertIn("interno/ls-presenca.js", outra)
+        self.assertNotIn("data-lsa-agora", outra)
+        relogio = (ESTATICOS_DO_PAINEL / "ls-presenca.js").read_text(encoding="utf-8")
+        self.assertIn("var INTERVALO = 45000;", relogio)
+        self.assertIn('document.visibilityState === "visible"', relogio)   # aba escondida não pergunta
+        self.assertNotIn(".innerHTML", relogio)                           # nome de gente entra como texto
+        self.assertIn("?contas=1", relogio)
+
+
+class FichaDaContaTests(EquipeMixin, CatalogoDeTeste, TestCase):
+    """"eu quero dados realmente interessantes e que precisamos de fato": a conta abre pelo que importa."""
+
+    def setUp(self):
+        self.preparar_catalogo()
+        self.povoar(1)
+        self.chefe = self.conta("chefe", super_=True)
+        self.brinquedo = Brinquedos.objects.order_by("id").first()
+        self.compradora = User.objects.create_user("elisa", email="elisa@exemplo.com")
+        self.compradora.perfil.nome_completo = "Elisa Souza"
+        self.compradora.perfil.save()
+        for valor, quantidade in ((300, 2), (500, 1)):
+            pedido = Pedido.objects.create(status="pago", total_liquido=Decimal(valor), cliente=self.compradora.perfil)
+            ItemPedido.objects.create(pedido=pedido, tipo_item="brinquedo", object_id=self.brinquedo.pk, nome_item="Fliperama",
+                                      preco_unitario=Decimal(valor) / quantidade, quantidade=quantidade, subtotal=valor)
+        Pedido.objects.create(status="aguardando_pagamento", total_liquido=Decimal("90"), cliente=self.compradora.perfil)
+        Favorito.objects.create(tipo="desejo", brinquedo=self.brinquedo, usuario=self.compradora)
+        self.client.force_login(self.chefe)
+
+    def ficha(self, pk):
+        resposta = self.client.get(f"/detalhes/usuario/{pk}/", **INTERNO)
+        self.assertEqual(resposta.status_code, 200, resposta.content[:300])
+        return resposta.json()
+
+    def test_a_ficha_abre_pelas_compras_e_pela_presenca(self):
+        agora = timezone.now()
+        hoje = timezone.localtime(agora)
+        entrou = hoje.replace(hour=0, minute=3, second=0, microsecond=0)
+        AcessoDiario.objects.create(usuario=self.compradora, dia=hoje.date(), primeiro=entrou, ultimo=agora)
+        PresencaUsuario.objects.create(usuario=self.compradora, visto_em=agora, onde="app")
+        ficha = self.ficha(self.compradora.pk)
+        titulos = [s["titulo"] for s in ficha["secoes"]]
+        self.assertEqual(titulos[:3], ["Compras na loja", "Presença", "O que comprou"])
+        self.assertIn("O que quer", titulos)
+        self.assertIn("Curtiu e pôs na lista de desejos", titulos)
+        self.assertEqual(titulos[-1], "Conta")                 # o cadastro vem por último
+        self.assertNotIn("Jogos", titulos)                     # não joga: a seção não aparece
+        self.assertNotIn("Funções na equipe", titulos)         # é cliente
+        self.assertNotIn("Carrinho agora", titulos)            # carrinho vazio
+        secoes = {s["titulo"]: s for s in ficha["secoes"]}
+        compras = {c["rotulo"]: c["valor"] for c in secoes["Compras na loja"]["campos"]}
+        self.assertEqual(compras["Pedidos pagos"], "2")
+        self.assertEqual(compras["Total gasto"], reais(800))
+        self.assertEqual(compras["Ticket médio"], reais(400))
+        self.assertRegex(compras["Último pedido pago"], r"^nº \d+ · \d\d/\d\d/\d{4} · " + re.escape(reais(500)) + "$")
+        self.assertEqual(compras["Aguardando pagamento"], "1 pedido")
+        comprou = secoes["O que comprou"]["lista"]
+        self.assertEqual((comprou[0]["titulo"], comprou[0]["texto"]), ("Fliperama", f"3 unidades · {reais(800)}"))
+        self.assertEqual(comprou[0]["detalhe"], {"tipo": "brinquedo", "id": self.brinquedo.pk})
+        presenca_da_conta = {c["rotulo"]: c["valor"] for c in secoes["Presença"]["campos"]}
+        self.assertEqual(presenca_da_conta["Visto por último"], "Online agora · no aplicativo")
+        if agora - entrou > dt.timedelta(minutes=1):
+            self.assertEqual(presenca_da_conta["Hoje"], f"entrou às 00:03 · último sinal às {hoje:%H:%M}")
+        else:  # o teste rodou no primeiro minuto do dia
+            self.assertTrue(presenca_da_conta["Hoje"].startswith("um sinal só"))
+        self.assertEqual(presenca_da_conta["Dias com acesso (30 dias)"], "1 de 30")
+        quer = {c["rotulo"]: c["valor"] for c in secoes["O que quer"]["campos"]}
+        self.assertEqual((quer["Lista de desejos"], quer["No carrinho agora"]), ("1", "vazio"))
+        self.assertEqual(secoes["Curtiu e pôs na lista de desejos"]["lista"][0]["titulo"], self.brinquedo.nome_brinquedo)
+        self.assertIn(f"Comprou 2 vezes · {reais(800)}", [s["texto"] for s in ficha["selos"]])
+        self.assertEqual(ficha["avatar"], {"iniciais": "ES", "cor": self.compradora.pk % presenca.CORES_DE_AVATAR})
+
+    def test_quem_nunca_comprou_nao_ganha_caixa_vazia(self):
+        visita = User.objects.create_user("visita")
+        ficha = self.ficha(visita.pk)
+        titulos = [s["titulo"] for s in ficha["secoes"]]
+        self.assertEqual(titulos, ["Compras na loja", "Presença", "Conta"])
+        self.assertTrue(all(len(s) > 2 for s in ficha["secoes"]))  # nenhuma seção só com o título
+        compras = {c["rotulo"]: c["valor"] for c in ficha["secoes"][0]["campos"]}
+        self.assertEqual(compras, {"Pedidos pagos": "Nenhum ainda"})
+        presenca_da_conta = {c["rotulo"]: c["valor"] for c in ficha["secoes"][1]["campos"]}
+        self.assertEqual((presenca_da_conta["Hoje"], presenca_da_conta["Dias com acesso (30 dias)"]), ("ainda não apareceu", "0 de 30"))
+        self.assertFalse([s for s in ficha["selos"] if s["texto"].startswith("Comprou")])
+        equipe = self.ficha(self.chefe.pk)
+        self.assertIn("Funções na equipe", [s["titulo"] for s in equipe["secoes"]])
+
+    def test_os_graficos_da_conta_no_hoje_mostram_o_dia_dela(self):
+        agora = timezone.now()
+        hoje = timezone.localtime(agora)
+        entrou = hoje.replace(hour=0, minute=3, second=0, microsecond=0)
+        AcessoDiario.objects.create(usuario=self.compradora, dia=hoje.date(), primeiro=entrou, ultimo=agora)
+        cache.clear()
+        dados = self.client.get("/analises/usuario/", {"periodo": "hoje", "id": self.compradora.pk}, **INTERNO).json()
+        acessos = next(m for m in dados["metricas"] if m["codigo"] == "acessos")
+        self.assertIsNone(acessos["serie"])
+        self.assertEqual((acessos["total"], acessos["vazia"]), (1, False))
+        self.assertTrue(acessos["pessoas"]["da_conta"])
+        self.assertEqual([(p["id"], p["de"]) for p in acessos["pessoas"]["itens"]], [(self.compradora.pk, "00:03")])
+        # nos outros períodos, uma coluna por dia: em cada dia, apareceu ou não
+        cache.clear()
+        mes = self.client.get("/analises/usuario/", {"periodo": "mes", "id": self.compradora.pk}, **INTERNO).json()
+        acessos = next(m for m in mes["metricas"] if m["codigo"] == "acessos")
+        self.assertEqual((acessos["forma"], acessos["serie"][-1]), ("colunas", 1))
+        self.assertEqual(acessos["titulos"]["dia"], "Em que dias apareceu")
+        self.assertIsNone(acessos["pessoas"])

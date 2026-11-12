@@ -381,7 +381,12 @@ ATIVOS = Metrica(
 PEDIDOS_CONTAS = Metrica("pedidos", "Pedidos pagos", "bi-bag-check", ajuda="Pedidos pagos feitos pelas contas.")
 GASTO = Metrica("gasto", "Gasto na loja", "bi-currency-dollar", "dinheiro", ajuda="Total final dos pedidos pagos.")
 FAVORITOS_CONTAS = Metrica("favoritos", "Curtidas e desejos", "bi-heart", ajuda="Curtidas e entradas na lista de desejos feitas com a conta logada.")
-DIAS_DE_ACESSO = Metrica("acessos", "Dias com acesso", "bi-calendar-check", ajuda="Dias em que a conta usou o site, o aplicativo ou o painel.", so_objeto=True)
+DIAS_DE_ACESSO = Metrica(
+    "acessos", "Dias com acesso", "bi-calendar-check", so_objeto=True,
+    ajuda="Dias em que a conta usou o site, o aplicativo ou o painel.",
+    forma="colunas",
+    titulos={"dia": "Em que dias apareceu", "semana": "Dias com acesso em cada semana", "mes": "Dias com acesso em cada mês"},
+)
 PONTOS = Metrica("pontos", "Pontos ganhos", "bi-stars", ajuda="Pontos do programa de fidelidade.", so_objeto=True)
 JOGADAS_CONTAS = Metrica("jogadas", "Jogadas", "bi-controller", ajuda="Cada Jogar no portal de jogos feito com a conta logada.")
 
@@ -447,9 +452,13 @@ def _fontes_usuario(objeto_id):
                 {"n": Count("id"), "gasto": Sum("total_final")}, {(None, "n"): "pedidos", (None, "gasto"): "gasto"},
             ),
             Fonte("favoritos", favoritos.filter(usuario_id=objeto_id), "criacao", {"n": Count("id")}, {(None, "n"): "favoritos"}),
+            # O acesso só guarda o DIA (com o primeiro e o último sinal): em
+            # "Hoje" a ficha mostra o dia da conta -- entrou às 09:12, último
+            # sinal às 11:40 -- no lugar de um gráfico por hora que não existe.
             Fonte(
                 "acessos", AcessoDiario.objects.filter(usuario_id=objeto_id), "dia", {"n": Count("id")},
                 {(None, "n"): "acessos"}, campo_e_data=True,
+                pessoas=lambda jan: _pessoas_do_dia(jan, usuario_id=objeto_id),
             ),
             Fonte(
                 "pontos", PontoGanho.objects.filter(usuario_id=objeto_id, pontos__gt=0), "criacao",
@@ -510,11 +519,12 @@ def _nomes_usuario(ids):
     return nomes
 
 
-def _pessoas_do_dia(jan):
+def _pessoas_do_dia(jan, usuario_id=None):
     """Quem usou o site, o aplicativo ou o painel no dia da janela.
 
     Do último sinal para trás, com o primeiro e o último sinal de cada conta
-    (em minutos desde a meia-noite, para a linha do tempo do painel).
+    (em minutos desde a meia-noite, para a linha do tempo do painel). Com
+    `usuario_id`, só o dia daquela conta (a aba Gráficos da ficha dela).
     """
     from django.utils import timezone
 
@@ -527,6 +537,8 @@ def _pessoas_do_dia(jan):
 
     dia = timezone.localtime(jan.inicio).date()
     acessos = AcessoDiario.objects.filter(dia=dia)
+    if usuario_id is not None:
+        acessos = acessos.filter(usuario_id=usuario_id)
     linhas = list(
         acessos.select_related("usuario__perfil")
         .annotate(_tem_funcao=tem_funcao_de_equipe("usuario_id"))
@@ -543,7 +555,7 @@ def _pessoas_do_dia(jan):
         })
         itens.append(cartao)
     total = len(itens) if len(itens) < PESSOAS_DO_DIA else acessos.count()
-    return {"total": total, "itens": itens}
+    return {"total": total, "itens": itens, "da_conta": usuario_id is not None}
 
 
 def _cadastros_recentes(jan):

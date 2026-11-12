@@ -1,0 +1,42 @@
+{% comment %}
+  O PAGINADOR EM ESTILO APP (LEIA-ME-V10, seção 76, AJUSTE): "1–18 de 73",
+  Anterior / Próxima e as páginas em pílulas, com reticências quando são
+  muitas (1 … 4 5 6 … 12). No celular as setas ficam só com o ícone e as
+  páginas rolam de lado.
+
+      {% include "includes/paginacao_app.html" with pagina=pagina paginas=paginas
+         query_sem_pagina=query_sem_pagina ancora="#usrContas" rotulo="Páginas da lista de contas" %}
+
+  `pagina` é a página do Paginator; `paginas`, o get_elided_page_range dela
+  (números e a reticência); `query_sem_pagina`, os filtros da tela, que
+  viajam em todo link; `ancora`, onde a tela deve chegar depois da troca (a
+  lista, e não o topo). Só aparece quando há mais de uma página.
+{% endcomment %}
+{% if pagina.has_other_pages %}
+<nav class="ls-pager" aria-label="{{ rotulo|default:'Páginas' }}">
+  <p class="ls-pager-conta"><strong>{{ pagina.start_index }}–{{ pagina.end_index }}</strong> de {{ pagina.paginator.count }}</p>
+  <div class="ls-pager-passos">
+    {% if pagina.has_previous %}
+      <a class="ls-pager-seta" rel="prev" href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ pagina.previous_page_number }}{{ ancora }}" aria-label="Página anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span></a>
+    {% else %}
+      <span class="ls-pager-seta is-parada" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span></span>
+    {% endif %}
+    <ol class="ls-pager-paginas">
+      {% for numero in paginas %}
+        {% if numero == pagina.paginator.ELLIPSIS %}
+          <li class="ls-pager-salto" aria-hidden="true">…</li>
+        {% elif numero == pagina.number %}
+          <li><a class="ls-pager-pagina is-atual" aria-current="page" aria-label="Página {{ numero }}, a atual" href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ numero }}{{ ancora }}">{{ numero }}</a></li>
+        {% else %}
+          <li><a class="ls-pager-pagina" aria-label="Página {{ numero }}" href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ numero }}{{ ancora }}">{{ numero }}</a></li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+    {% if pagina.has_next %}
+      <a class="ls-pager-seta" rel="next" href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ pagina.next_page_number }}{{ ancora }}" aria-label="Próxima página"><span>Próxima</span><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    {% else %}
+      <span class="ls-pager-seta is-parada" aria-disabled="true"><span>Próxima</span><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

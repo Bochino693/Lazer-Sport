@@ -365,6 +365,12 @@ class Metrica:
     razao: tuple[str, str] | None = None
     #: como o ranking escreve o valor ("12 dias"): (singular, plural)
     ranking_unidade: tuple[str, str] | None = None
+    #: "colunas" para o que é contado balde a balde e não se liga com uma
+    #: linha (os dias com acesso: em cada dia, apareceu ou não apareceu)
+    forma: str = ""
+    #: o título do gráfico por unidade, quando "<rótulo> por dia" soa torto
+    #: ({"dia": "Em que dias apareceu"})
+    titulos: dict | None = None
 
 
 @dataclass(eq=False)
@@ -808,6 +814,7 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
             "vazia": vazia,
             "motivo": _motivo(sem_dados, None, indisponivel) if vazia else "",
             "forma": "linha",
+            "titulos": None,
             "distinta": False,
             "pessoas": None,
             "lista": None,
@@ -856,7 +863,8 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
         "vazia": vazia,
         "motivo": _motivo(sem_dados, alvo.desde, alvo.indisponivel) if vazia else "",
         # pessoas distintas não se somam de um balde para o outro: colunas, e não uma linha contínua
-        "forma": "colunas" if alvo.distinta else "linha",
+        "forma": metrica.forma or ("colunas" if alvo.distinta else "linha"),
+        "titulos": metrica.titulos,
         "distinta": alvo.distinta,
         "pessoas": alvo.pessoas,
         "lista": alvo.lista,

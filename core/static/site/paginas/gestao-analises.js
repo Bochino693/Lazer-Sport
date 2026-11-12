@@ -489,7 +489,7 @@
   /* ------------------------------------------------------------------
      "Quem esteve ativo hoje": uma faixa por pessoa, do primeiro ao último
      sinal do dia. É o que o banco guarda dos acessos (o dia, o primeiro e
-     o último sinal de cada conta) -- hora a hora não existe, e por isso
+     o último sinal de cada conta) -- a hora de cada acesso não é guardada, e por isso
      este desenho entra no lugar das colunas por hora.
      ------------------------------------------------------------------ */
   function desenharPresencas(tela, pessoas, agoraMinutos) {
@@ -671,6 +671,33 @@
     return { atual: "este período", anterior: "período anterior" };
   }
 
+  /* O AVISO GRANDE: o ícone num quadrado, o título, uma frase e (quando há o
+     que fazer) um botão. É a mesma peça para o erro de carga, o período sem
+     movimento, a ficha que não abriu e a atividade vazia -- nunca uma linha
+     de texto solta no meio da tela. */
+  function avisoGrande(opcoes) {
+    var caixa = el("div", "lsa-aviso-grande" + (opcoes.erro ? " is-erro" : ""));
+    caixa.setAttribute("role", opcoes.erro ? "alert" : "status");
+    var selo = el("span", "lsa-aviso-icone");
+    selo.appendChild(icone(opcoes.icone));
+    caixa.appendChild(selo);
+    caixa.appendChild(el("strong", "", opcoes.titulo));
+    if (opcoes.texto) caixa.appendChild(el("p", "", opcoes.texto));
+    if (opcoes.acao) {
+      var botao = el("button", "lsa-tentar", opcoes.acao);
+      botao.type = "button";
+      botao.addEventListener("click", opcoes.aoTocar);
+      caixa.appendChild(botao);
+    }
+    return caixa;
+  }
+
+  /* O recado que sobe e some (a "tarja" do painel): para o que não deu certo
+     mas não tirou nada da tela. Fora do painel, não há tarja: fica o silêncio. */
+  function recado(mensagem, tipo) {
+    if (window.Painel && window.Painel.aviso) window.Painel.aviso(mensagem, tipo || "");
+  }
+
   /* o esqueleto: as caixas no lugar dos indicadores e do gráfico enquanto os números não chegam */
   function esqueleto(texto) {
     var caixa = el("div", "lsa-esqueleto");
@@ -796,20 +823,29 @@
 
   Analise.prototype.erro = function (mensagem) {
     var eu = this;
-    this.dados = null;
+    if (this.dados) {
+      /* Já havia números na tela: eles ficam (são os do período de antes), o
+         período volta a ser o deles e um recado diz o que houve. Trocar um
+         painel inteiro por um aviso de erro seria tirar da pessoa o que ela
+         estava lendo. */
+      var codigo = this.dados.periodo.codigo;
+      this.periodo = codigo;
+      var radio = this.periodos && this.periodos.querySelector('input[value="' + codigo + '"]');
+      if (radio) radio.checked = true;
+      if (this.dias) this.dias.hidden = codigo !== "dias";
+      if (this.opcoes.aoMudarPeriodo) this.opcoes.aoMudarPeriodo(codigo);
+      recado("Não deu para atualizar os números agora. Ficaram os de antes.", "erro");
+      return;
+    }
     this.corpo.textContent = "";
-    var caixa = el("div", "lsa-aviso-grande is-erro");
-    caixa.setAttribute("role", "alert");
-    var selo = el("span", "lsa-aviso-icone");
-    selo.appendChild(icone("bi-wifi-off"));
-    caixa.appendChild(selo);
-    caixa.appendChild(el("strong", "", "Os números não chegaram"));
-    caixa.appendChild(el("p", "", (mensagem || "Não foi possível falar com o servidor.") + " O resto da tela continua funcionando."));
-    var tentar = el("button", "lsa-tentar", "Tentar de novo");
-    tentar.type = "button";
-    tentar.addEventListener("click", function () { eu.carregar(); });
-    caixa.appendChild(tentar);
-    this.corpo.appendChild(caixa);
+    this.corpo.appendChild(avisoGrande({
+      erro: true,
+      icone: "bi-wifi-off",
+      titulo: "Os números não chegaram",
+      texto: (mensagem || "Não foi possível falar com o servidor.") + " O resto da tela continua funcionando.",
+      acao: "Tentar de novo",
+      aoTocar: function () { eu.carregar(); }
+    }));
     if (this.descricao) this.descricao.textContent = "";
   };
 
@@ -826,7 +862,9 @@
     this.escreverPeriodo(dados.periodo);
     var metricas = dados.metricas || [];
     var comDados = metricas.filter(function (m) { return !m.vazia; });
-    var vazias = metricas.filter(function (m) { return m.vazia; });
+    var vazias = metricas.filter(function (m) { return m.vazia && !m.indisponivel; });
+    /* a fonte que falhou no servidor: uma linha calma, e as outras métricas seguem */
+    var foraDoAr = metricas.filter(function (m) { return m.indisponivel; });
     /* a métrica escolhida continua, se ainda tiver número; senão, a primeira que tem */
     if (!this.metrica || !comDados.some(function (m) { return m.codigo === eu.metrica; })) {
       var principal = comDados.find(function (m) { return m.codigo === dados.principal; });
@@ -838,8 +876,10 @@
     this.abas = null;
 
     if (!comDados.length) {
-      this.corpo.appendChild(this.semMovimento(dados, vazias));
+      if (foraDoAr.length) this.corpo.appendChild(this.linhaDasIndisponiveis(foraDoAr));
+      if (vazias.length || !foraDoAr.length) this.corpo.appendChild(this.semMovimento(dados, vazias));
       this.desenharAvisos(dados);
+      manterAncora();
       return;
     }
 
@@ -877,12 +917,14 @@
     this.corpo.appendChild(grade);
     this.arrumarIndicadores();
 
+    if (foraDoAr.length) this.corpo.appendChild(this.linhaDasIndisponiveis(foraDoAr));
     if (vazias.length) this.corpo.appendChild(this.linhaDasVazias(vazias));
 
     this.graficos = el("div", "lsa-graficos");
     this.corpo.appendChild(this.graficos);
     this.desenharGraficos();
     this.desenharAvisos(dados);
+    manterAncora();
   };
 
   /* Nove cartões numa grade de seis colunas deixam 6 + 3 e um buraco. Aqui as
@@ -933,13 +975,35 @@
     return detalhes;
   };
 
+  /* "Você não pode me gerar uma coisa gerando erros": a métrica cuja consulta
+     falhou no servidor (o erro vai para o log de lá) não vira parede de erro.
+     Uma linha diz quais não vieram, e que as outras estão certas. */
+  Analise.prototype.linhaDasIndisponiveis = function (metricas) {
+    var eu = this;
+    var linha = el("div", "lsa-fora-do-ar");
+    linha.setAttribute("role", "status");
+    linha.appendChild(icone("bi-cloud-slash"));
+    var frase = el("span", "lsa-vazias-frase");
+    frase.appendChild(document.createTextNode("Não deu para carregar agora: "));
+    frase.appendChild(el("strong", "", metricas.map(function (m) { return m.rotulo; }).join(" · ")));
+    frase.appendChild(document.createTextNode(". Os outros números estão certos."));
+    linha.appendChild(frase);
+    var tentar = el("a", "lsa-fora-do-ar-tentar", "Tentar de novo");
+    tentar.href = "#";
+    tentar.addEventListener("click", function (evento) {
+      evento.preventDefault();
+      eu.carregar();
+    });
+    linha.appendChild(tentar);
+    return linha;
+  };
+
   Analise.prototype.semMovimento = function (dados, vazias) {
-    var caixa = el("div", "lsa-aviso-grande");
-    var selo = el("span", "lsa-aviso-icone");
-    selo.appendChild(icone("bi-moon-stars"));
-    caixa.appendChild(selo);
-    caixa.appendChild(el("strong", "", "Sem movimento no período"));
-    caixa.appendChild(el("p", "", "Nenhum indicador teve registro neste período nem no anterior. Escolha um período maior para ver o histórico."));
+    var caixa = avisoGrande({
+      icone: "bi-moon-stars",
+      titulo: "Sem movimento no período",
+      texto: "Nenhum indicador teve registro neste período nem no anterior. Escolha um período maior para ver o histórico."
+    });
     if (vazias.length) {
       var lista = el("ul", "lsa-vazias-lista");
       vazias.forEach(function (metrica) {
@@ -1069,7 +1133,10 @@
     if (metrica.pessoas && metrica.pessoas.itens && metrica.pessoas.itens.length) {
       /* Hoje, contas ativas: quem são, do primeiro ao último sinal */
       var hoje = dados.periodo.anterior_curto === "ontem";
-      topo.appendChild(el("h3", "lsa-bloco-titulo", hoje ? "Quem esteve ativo hoje" : "Quem esteve ativo no dia"));
+      var daConta = !!metrica.pessoas.da_conta;
+      topo.appendChild(el("h3", "lsa-bloco-titulo", daConta
+        ? (hoje ? "O dia de hoje" : "Aquele dia")
+        : (hoje ? "Quem esteve ativo hoje" : "Quem esteve ativo no dia")));
       var total = metrica.pessoas.total || metrica.pessoas.itens.length;
       var agora = hoje && dados.gerado_em ? Number(dados.gerado_em.slice(11, 13)) * 60 + Number(dados.gerado_em.slice(14, 16)) : null;
       var legendaDia = el("ul", "lsa-legenda");
@@ -1083,7 +1150,10 @@
       });
       topo.appendChild(legendaDia);
       bloco.appendChild(topo);
-      bloco.appendChild(el("p", "lsa-bloco-sub lsa-bloco-conta", NUM.format(total) + " " + plural(total, "conta usou", "contas usaram") + " o site, o aplicativo ou o painel"));
+      var umaSo = metrica.pessoas.itens[0];
+      bloco.appendChild(el("p", "lsa-bloco-sub lsa-bloco-conta", daConta
+        ? (umaSo.de === umaSo.ate ? "Um sinal só, às " + umaSo.de + "." : "Entrou às " + umaSo.de + "; o último sinal foi às " + umaSo.ate + ".")
+        : NUM.format(total) + " " + plural(total, "conta usou", "contas usaram") + " o site, o aplicativo ou o painel"));
       bloco.appendChild(telaLinha);
       grade.appendChild(bloco);
       desenharPresencas(telaLinha, metrica.pessoas, agora);
@@ -1103,7 +1173,8 @@
       bloco.appendChild(heroi);
       grade.appendChild(bloco);
     } else {
-      topo.appendChild(el("h3", "lsa-bloco-titulo", metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || "")));
+      var tituloDoGrafico = (metrica.titulos && metrica.titulos[unidade]) || (metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || ""));
+      topo.appendChild(el("h3", "lsa-bloco-titulo", tituloDoGrafico));
       if (metrica.forma !== "colunas" && metrica.serie_anterior) {
         var legenda = el("ul", "lsa-legenda");
         [[nomes.atual, ""], [nomes.anterior, " is-anterior"]].forEach(function (par) {
@@ -1125,7 +1196,7 @@
       if (metrica.forma === "colunas") {
         desenharColunas(telaLinha, dados.rotulos.map(function (rotulo, i) {
           return { curto: rotulo.curto, longo: rotulo.longo, valor: rotulo.futuro ? null : metrica.serie[i] };
-        }), metrica, { altura: telaLinha.clientWidth < 480 ? 204 : 252, larguraDoRotulo: 58, titulo: metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || "") });
+        }), metrica, { altura: telaLinha.clientWidth < 480 ? 204 : 252, larguraDoRotulo: 58, titulo: tituloDoGrafico });
       } else {
         desenharLinha(telaLinha, dados.rotulos, metrica, unidade, nomes);
       }
@@ -1149,13 +1220,19 @@
     topo.appendChild(el("p", "lsa-bloco-sub", semana.media ? "média de cada dia" : "soma do período"));
     bloco.appendChild(topo);
     var valores = semana.valores;
+    var nomes = dados.dias_da_semana;
     var maior = Math.max.apply(null, valores);
     var menor = Math.min.apply(null, valores);
-    var melhor = valores.indexOf(maior);
+    var melhores = [];
+    var parados = [];
+    valores.forEach(function (valor, i) {
+      if (maior > 0 && valor === maior) melhores.push(nomes[i]);
+      if (valor === menor) parados.push(nomes[i]);
+    });
     var lista = el("ol", "lsa-semana");
     valores.forEach(function (valor, i) {
-      var nome = dados.dias_da_semana[i];
-      var item = el("li", "lsa-semana-dia" + (i === melhor && maior > 0 ? " is-melhor" : ""));
+      var nome = nomes[i];
+      var item = el("li", "lsa-semana-dia" + (maior > 0 && valor === maior && melhores.length <= 3 ? " is-melhor" : ""));
       item.setAttribute("aria-label", nome + ": " + formatar(valor, metrica.formato));
       var rotulo = el("span", "lsa-semana-nome", nome.slice(0, 3));
       rotulo.title = nome;
@@ -1174,13 +1251,19 @@
       lista.appendChild(item);
     });
     bloco.appendChild(lista);
-    if (maior > 0) {
+    /* a frase de baixo só diz o que é verdade: com empate de muitos dias, não há "melhor dia" */
+    function juntar(dias) {
+      return dias.length === 1 ? dias[0] : dias.slice(0, -1).join(", ") + " e " + dias[dias.length - 1];
+    }
+    if (melhores.length && melhores.length <= 3) {
       var nota = el("p", "lsa-semana-nota");
-      nota.appendChild(document.createTextNode("Melhor dia: "));
-      nota.appendChild(el("strong", "", dados.dias_da_semana[melhor]));
-      if (menor < maior) {
+      nota.appendChild(document.createTextNode(melhores.length === 1 ? "Melhor dia: " : "Melhores dias: "));
+      nota.appendChild(el("strong", "", juntar(melhores)));
+      if (menor < maior && parados.length === 1) {
         nota.appendChild(document.createTextNode(" · mais parado: "));
-        nota.appendChild(el("strong", "", dados.dias_da_semana[valores.lastIndexOf(menor)]));
+        nota.appendChild(el("strong", "", parados[0]));
+      } else if (menor === 0 && parados.length > 1) {
+        nota.appendChild(document.createTextNode(" · sem movimento em " + parados.length + " dias da semana"));
       }
       bloco.appendChild(nota);
     }
@@ -1317,16 +1400,39 @@
      A faixa não pergunta nada ao servidor: assina o relógio do
      interno/ls-presenca.js, que traz as contas online, as vistas nas
      últimas 24 h e os contadores. Tocar numa pessoa abre a ficha dela;
-     tocar num contador filtra a lista de contas da tela, na hora.
+     tocar num contador filtra a lista de contas da tela.
+
+     O FILTRO É DO SERVIDOR (?presenca=hoje): a lista é paginada, 18 por
+     página, e filtrar só as linhas que vieram deixaria de fora quem está
+     na página 3. Cada contador é um LINK para a mesma tela com o filtro (a
+     busca e o perfil escolhidos continuam valendo, e a página volta para a
+     primeira), com a âncora da lista -- a navegação suave do painel troca
+     a tela sem recarregar e a tela chega na lista, e não no topo.
      ------------------------------------------------------------------ */
   var FILTROS = [
     { codigo: "", rotulo: "Todas", icone: "bi-people", numero: "total" },
-    { codigo: "online", rotulo: "Online", icone: "", numero: "online", um: "online agora", varios: "online agora" },
-    { codigo: "hoje", rotulo: "Ativos hoje", icone: "bi-sun", numero: "hoje", um: "ativa hoje", varios: "ativas hoje" },
-    { codigo: "semana", rotulo: "Em 7 dias", icone: "bi-calendar-week", numero: "semana", um: "ativa nos últimos 7 dias", varios: "ativas nos últimos 7 dias" },
-    { codigo: "mes", rotulo: "Em 30 dias", icone: "bi-calendar3", numero: "mes", um: "ativa nos últimos 30 dias", varios: "ativas nos últimos 30 dias" },
-    { codigo: "nunca", rotulo: "Nunca entraram", icone: "bi-person-dash", numero: "nunca", um: "que nunca entrou", varios: "que nunca entraram" }
+    { codigo: "online", rotulo: "Online", icone: "", numero: "online" },
+    { codigo: "hoje", rotulo: "Ativos hoje", icone: "bi-sun", numero: "hoje" },
+    { codigo: "semana", rotulo: "Em 7 dias", icone: "bi-calendar-week", numero: "semana" },
+    { codigo: "mes", rotulo: "Em 30 dias", icone: "bi-calendar3", numero: "mes" },
+    { codigo: "nunca", rotulo: "Nunca entraram", icone: "bi-person-dash", numero: "nunca" }
   ];
+
+  /* O endereço da mesma tela com o contador escolhido (ou sem nenhum). */
+  function enderecoDoFiltro(codigo) {
+    var parametros = new URLSearchParams(window.location.search);
+    parametros.delete("page");
+    if (codigo) parametros.set("presenca", codigo);
+    else parametros.delete("presenca");
+    var consulta = parametros.toString();
+    var lista = document.querySelector("[data-lsa-ancora]");
+    return window.location.pathname + (consulta ? "?" + consulta : "") + (lista && lista.id ? "#" + lista.id : "");
+  }
+
+  function filtroDaTela() {
+    var codigo = new URLSearchParams(window.location.search).get("presenca") || "";
+    return FILTROS.some(function (f) { return f.codigo === codigo; }) ? codigo : "";
+  }
   var ICONE_DE_ONDE = { painel: "bi-window-sidebar", site: "bi-globe2", app: "bi-phone" };
   var MAXIMO_DE_CARTOES = 12;
 
@@ -1368,7 +1474,6 @@
     this.titulo = faixa.querySelector("[data-lsa-agora-titulo]");
     this.relogio = faixa.querySelector("[data-lsa-agora-relogio]");
     this.corpo = faixa.querySelector("[data-lsa-agora-corpo]");
-    this.filtro = "";
     this.assinatura = "";
     this.dados = null;
     var eu = this;
@@ -1376,8 +1481,6 @@
       faixa.hidden = true;
       return;
     }
-    var pedido = /[#&]presenca=([a-z]+)/.exec(window.location.hash || "");
-    if (pedido && FILTROS.some(function (f) { return f.codigo === pedido[1]; })) this.filtro = pedido[1];
     window.LSPresenca.assinar(function (dados, erro) { eu.receber(dados, erro); }, { contas: true, no: faixa });
   }
 
@@ -1389,16 +1492,22 @@
         this.relogio.textContent = "sem conexão · mostrando o retrato das " + this.dados.agora.slice(11, 16);
       } else {
         this.faixa.removeAttribute("aria-busy");
-        this.titulo.textContent = "Não deu para ver quem está online";
-        this.relogio.textContent = "a tela tenta de novo sozinha";
+        this.titulo.textContent = "Quem está online";
+        this.relogio.textContent = "";
         this.corpo.textContent = "";
+        this.corpo.appendChild(avisoGrande({
+          icone: "bi-wifi-off",
+          titulo: "Não deu para ver quem está online",
+          texto: "A faixa tenta de novo sozinha em instantes; o resto da tela continua funcionando.",
+          acao: "Tentar agora",
+          aoTocar: function () { if (window.LSPresenca) window.LSPresenca.atualizar(); }
+        }));
       }
       return;
     }
     if (!dados.numeros) return;  /* resposta só da equipe (a pergunta das contas vem em seguida) */
     this.faixa.classList.remove("is-sem-rede");
     this.faixa.removeAttribute("aria-busy");
-    var primeira = !this.dados;
     this.dados = dados;
     var online = dados.numeros.online;
     this.titulo.textContent = NUM.format(online) + " online agora";
@@ -1410,14 +1519,14 @@
       this.desenhar(dados);
     }
     atualizarLinhas(dados);
-    this.aplicarFiltro(false, primeira);
   };
 
   Agora.prototype.desenhar = function (dados) {
     var eu = this;
     var foco = document.activeElement && this.corpo.contains(document.activeElement) ? document.activeElement : null;
     var focoId = foco && foco.dataset ? foco.dataset.detalheId : null;
-    var focoFiltro = foco && foco.matches && foco.matches("input[type=radio]") ? foco.value : null;
+    var focoFiltro = foco && foco.dataset && foco.dataset.lsaFiltro !== undefined ? foco.dataset.lsaFiltro : null;
+    var escolhido = filtroDaTela();
     this.corpo.textContent = "";
 
     var online = dados.online || [];
@@ -1432,8 +1541,8 @@
     });
     var resto = Math.max(online.length, dados.numeros.online) - Math.min(online.length, MAXIMO_DE_CARTOES);
     if (resto > 0) {
-      var mais = el("label", "lsa-pessoa-mais");
-      mais.htmlFor = this.idDoFiltro("online");
+      var mais = el("a", "lsa-pessoa-mais");
+      mais.href = enderecoDoFiltro("online");
       mais.appendChild(el("strong", "", "+" + NUM.format(resto)));
       mais.appendChild(el("span", "", "ver na lista"));
       cartoes.appendChild(mais);
@@ -1461,38 +1570,33 @@
       if (fora > 0) lista.appendChild(el("span", "lsa-pessoa-resto", "e mais " + NUM.format(fora)));
       bloco.appendChild(lista);
     } else {
-      bloco.appendChild(el("p", "lsa-vistos-vazio", "Ninguém mais passou por aqui nas últimas " + (dados.recentes_horas || 24) + " horas."));
+      var ninguem = el("p", "lsa-vistos-vazio");
+      ninguem.appendChild(icone("bi-moon-stars"));
+      ninguem.appendChild(el("span", "", "Ninguém mais passou por aqui nas últimas " + (dados.recentes_horas || 24) + " horas."));
+      bloco.appendChild(ninguem);
     }
     this.corpo.appendChild(bloco);
 
-    /* os contadores: rádios dentro de label (o mesmo desenho dos períodos), e não botões */
-    var filtros = el("fieldset", "lsa-filtros");
-    filtros.appendChild(el("legend", "", "Filtrar a lista de contas"));
+    /* os contadores: links (o filtro é do servidor), com o desenho das pílulas de período */
+    var filtros = el("nav", "lsa-filtros");
+    filtros.setAttribute("aria-label", "Filtrar a lista de contas");
+    filtros.appendChild(el("span", "lsa-filtros-titulo", "Filtrar a lista de contas"));
     FILTROS.forEach(function (filtro) {
       var numero = dados.numeros[filtro.numero];
-      var rotulo = el("label", "lsa-filtro" + (filtro.codigo === "online" ? " is-vivo" : ""));
-      var radio = el("input");
-      radio.type = "radio";
-      radio.name = "lsa-filtro-presenca";
-      radio.value = filtro.codigo;
-      radio.id = eu.idDoFiltro(filtro.codigo);
-      radio.checked = filtro.codigo === eu.filtro;
-      rotulo.appendChild(radio);
+      var link = el("a", "lsa-filtro" + (filtro.codigo === "online" ? " is-vivo" : ""));
+      link.href = enderecoDoFiltro(filtro.codigo);
+      link.dataset.lsaFiltro = filtro.codigo;
+      if (filtro.codigo === escolhido) link.setAttribute("aria-current", "true");
       if (filtro.codigo === "online") {
         var ponto = el("span", "lsa-ponto-vivo");
         ponto.setAttribute("aria-hidden", "true");
-        rotulo.appendChild(ponto);
+        link.appendChild(ponto);
       } else {
-        rotulo.appendChild(icone(filtro.icone));
+        link.appendChild(icone(filtro.icone));
       }
-      rotulo.appendChild(el("span", "", filtro.rotulo));
-      if (temValor(numero)) rotulo.appendChild(el("strong", "", NUM.format(numero)));
-      filtros.appendChild(rotulo);
-    });
-    filtros.addEventListener("change", function (evento) {
-      if (!evento.target.matches("input[type=radio]")) return;
-      eu.filtro = evento.target.value;
-      eu.aplicarFiltro(true, false);
+      link.appendChild(el("span", "", filtro.rotulo));
+      if (temValor(numero)) link.appendChild(el("strong", "", NUM.format(numero)));
+      filtros.appendChild(link);
     });
     this.corpo.appendChild(filtros);
 
@@ -1501,65 +1605,10 @@
       var mesmo = this.corpo.querySelector('[data-detalhe-id="' + focoId + '"]');
       if (mesmo) mesmo.focus({ preventScroll: true });
     } else if (focoFiltro !== null) {
-      var radioDeAntes = this.corpo.querySelector('input[name="lsa-filtro-presenca"][value="' + focoFiltro + '"]');
-      if (radioDeAntes) radioDeAntes.focus({ preventScroll: true });
+      var linkDeAntes = this.corpo.querySelector('[data-lsa-filtro="' + focoFiltro + '"]');
+      if (linkDeAntes) linkDeAntes.focus({ preventScroll: true });
     }
-  };
-
-  Agora.prototype.idDoFiltro = function (codigo) {
-    return "lsaFiltroPresenca-" + (codigo || "todas");
-  };
-
-  /* O toque num contador filtra a lista de contas da tela, sem ir ao servidor:
-     cada linha traz em `data-presenca` os grupos em que a conta entra. */
-  Agora.prototype.aplicarFiltro = function (peloDedo, primeira) {
-    var aviso = document.querySelector("[data-lsa-filtro-aviso]");
-    if (!aviso) return;
-    var eu = this;
-    var filtro = FILTROS.find(function (f) { return f.codigo === eu.filtro; }) || FILTROS[0];
-    /* a lista veio cortada por uma busca: o contador vale para todas as contas, então a busca sai */
-    if (filtro.codigo && aviso.dataset.lsaFiltroCompleto === "0") {
-      if (peloDedo) window.location.assign(window.location.pathname + "#presenca=" + filtro.codigo);
-      return;
-    }
-    var linhas = document.querySelectorAll("[data-presenca][data-detalhe-id]");
-    var mostradas = 0;
-    linhas.forEach(function (linha) {
-      var dentro = !filtro.codigo || (" " + linha.dataset.presenca + " ").indexOf(" " + filtro.codigo + " ") !== -1;
-      linha.classList.toggle("lsa-fora-do-filtro", !dentro);
-      if (dentro) mostradas += 1;
-    });
-    aviso.textContent = "";
-    aviso.hidden = !filtro.codigo;
-    if (filtro.codigo) {
-      aviso.appendChild(icone("bi-funnel-fill"));
-      var frase = el("span", "lsa-filtro-aviso-texto");
-      if (mostradas) {
-        frase.appendChild(el("strong", "", NUM.format(mostradas) + " " + plural(mostradas, "conta", "contas")));
-        frase.appendChild(document.createTextNode(" " + plural(mostradas, filtro.um, filtro.varios)));
-      } else {
-        frase.appendChild(document.createTextNode("Nenhuma conta " + filtro.um + "."));
-      }
-      aviso.appendChild(frase);
-      var limpar = el("a", "lsa-filtro-limpar", "Mostrar todas");
-      limpar.href = "#";
-      limpar.addEventListener("click", function (evento) {
-        evento.preventDefault();
-        eu.filtro = "";
-        var todas = document.getElementById(eu.idDoFiltro(""));
-        if (todas) todas.checked = true;
-        eu.aplicarFiltro(false, false);
-        if (todas) todas.focus({ preventScroll: true });
-      });
-      aviso.appendChild(limpar);
-    }
-    if ((peloDedo || (primeira && filtro.codigo)) && filtro.codigo) {
-      var suave = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-      aviso.scrollIntoView({ behavior: suave ? "smooth" : "auto", block: "start" });
-    }
-    if (window.history && window.history.replaceState && (peloDedo || window.location.hash.indexOf("presenca=") !== -1)) {
-      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + (filtro.codigo ? "#presenca=" + filtro.codigo : ""));
-    }
+    manterAncora();
   };
 
   /* O selo de cada linha da lista acompanha a faixa: quem entrou no ar com a
@@ -1602,6 +1651,61 @@
       linha.dataset.presenca = grupos.join(" ");
     });
   }
+
+  /* A ÂNCORA DA LISTA. Os contadores, o paginador e a busca levam
+     "#usrContas": a tela deve chegar na lista, e não no topo. Numa carga
+     normal o navegador cuida disso -- mas o painel de cima ainda vai crescer
+     (os números chegam depois) e empurraria a lista para baixo. E na
+     navegação suave do painel a tela nova sempre começa do topo e o endereço
+     perde o "#" (ela usa o endereço da resposta). Por isso o toque num link
+     com âncora fica anotado, e depois de cada desenho a âncora é mirada de
+     novo, por uns segundos, até a pessoa mexer na tela. */
+  var ancora = null;
+  var ancoraPedida = null;
+
+  function idDaAncora(endereco) {
+    var corte = String(endereco || "").indexOf("#");
+    var id = corte === -1 ? "" : String(endereco).slice(corte + 1);
+    return /^[\w-]+$/.test(id) ? id : "";
+  }
+
+  function mirarAncora() {
+    var pedida = ancoraPedida && Date.now() - ancoraPedida.em < 20000 ? ancoraPedida.id : "";
+    ancoraPedida = null;
+    var id = pedida || idDaAncora(window.location.hash);
+    var alvo = id ? document.getElementById(id) : null;
+    ancora = alvo && alvo.hasAttribute("data-lsa-ancora") ? { alvo: alvo, ate: Date.now() + 6000 } : null;
+    if (ancora && pedida && window.history && window.history.replaceState && !window.location.hash) {
+      /* a âncora volta para o endereço: recarregar a página cai no mesmo lugar */
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + "#" + id);
+    }
+    manterAncora();
+  }
+
+  function manterAncora() {
+    if (!ancora) return;
+    if (Date.now() > ancora.ate || !document.contains(ancora.alvo)) { ancora = null; return; }
+    ancora.alvo.scrollIntoView({ block: "start" });
+  }
+
+  function anotarAncora(endereco) {
+    var id = idDaAncora(endereco);
+    var alvo = id ? document.getElementById(id) : null;
+    if (alvo && alvo.hasAttribute("data-lsa-ancora")) ancoraPedida = { id: id, em: Date.now() };
+  }
+
+  /* na captura: antes de a navegação suave pegar o clique */
+  document.addEventListener("click", function (evento) {
+    var link = evento.target.closest ? evento.target.closest("a[href]") : null;
+    if (link) anotarAncora(link.getAttribute("href"));
+  }, true);
+  document.addEventListener("submit", function (evento) {
+    if (evento.target && evento.target.getAttribute) anotarAncora(evento.target.getAttribute("action"));
+  }, true);
+
+  ["wheel", "touchmove", "keydown"].forEach(function (evento) {
+    window.addEventListener(evento, function () { ancora = null; }, { passive: true });
+  });
 
   function montarAgora(faixa) {
     if (faixa.dataset.lsaPronto) return;
@@ -1730,12 +1834,7 @@
       capa.appendChild(icone("bi-hourglass-split"));
       var resumo = d.querySelector('[data-lsa-parte="resumo"]');
       resumo.textContent = "";
-      var estado = el("div", "lsa-estado");
-      var gira = el("span", "lsa-girando");
-      gira.setAttribute("aria-hidden", "true");
-      estado.appendChild(gira);
-      estado.appendChild(el("span", "", "Buscando a ficha completa…"));
-      resumo.appendChild(estado);
+      resumo.appendChild(esqueleto("Buscando a ficha completa…"));
       d.querySelector('[data-lsa-parte="atividade"]').textContent = "";
       d.querySelector('[data-lsa-parte="graficos"] [data-lsa-corpo]').textContent = "";
     },
@@ -1761,16 +1860,15 @@
       d.querySelector("[data-lsa-ficha-titulo]").textContent = status === 403 ? "Sem acesso" : "Não carregou";
       var resumo = d.querySelector('[data-lsa-parte="resumo"]');
       resumo.textContent = "";
-      var caixa = el("div", "lsa-estado is-erro");
-      caixa.appendChild(icone(status === 403 ? "bi-shield-lock" : "bi-exclamation-triangle"));
-      caixa.appendChild(el("span", "", (mensagem || "Não foi possível buscar a ficha.") + " "));
-      if (status !== 403 && status !== 404) {
-        var tentar = el("button", "lsa-tentar", "Tentar de novo");
-        tentar.type = "button";
-        tentar.addEventListener("click", function () { eu.estadoCarregando(); eu.carregar(); });
-        caixa.appendChild(tentar);
-      }
-      resumo.appendChild(caixa);
+      var podeTentar = status !== 403 && status !== 404;
+      resumo.appendChild(avisoGrande({
+        erro: true,
+        icone: status === 403 ? "bi-shield-lock" : (status === 404 ? "bi-search" : "bi-wifi-off"),
+        titulo: status === 403 ? "Sua conta não abre esta ficha" : (status === 404 ? "Este item não existe mais" : "A ficha não abriu"),
+        texto: mensagem || "Não foi possível buscar a ficha.",
+        acao: podeTentar ? "Tentar de novo" : null,
+        aoTocar: function () { eu.estadoCarregando(); eu.carregar(); }
+      }));
       this.mostrarAba("resumo");
     },
 
@@ -1782,7 +1880,9 @@
       d.querySelector("[data-lsa-ficha-sub]").textContent = ficha.subtitulo || "";
       var capa = d.querySelector("[data-lsa-ficha-capa]");
       capa.textContent = "";
-      if (ficha.imagem) {
+      if (ficha.avatar) {
+        capa.appendChild(avatar(ficha.avatar.iniciais, ficha.avatar.cor, "is-grande" + (ficha.presenca && ficha.presenca.online ? " is-online" : "")));
+      } else if (ficha.imagem) {
         var img = el("img");
         img.alt = "";
         img.loading = "lazy";
@@ -1972,11 +2072,12 @@
       if (anterior) anterior.remove();
       var itens = (atividade && atividade.itens) || [];
       if (!acrescentar && !itens.length) {
-        var vazio = el("div", "lsa-estado");
-        vazio.appendChild(icone("bi-clock-history"));
-        vazio.appendChild(el("span", "", "Nenhuma atividade registrada ainda."));
         parte.textContent = "";
-        parte.appendChild(vazio);
+        parte.appendChild(avisoGrande({
+          icone: "bi-clock-history",
+          titulo: "Nada por aqui ainda",
+          texto: "Quando houver movimento (pedidos, curtidas, acessos), ele aparece nesta linha do tempo, do mais novo para o mais antigo."
+        }));
         return;
       }
       itens.forEach(function (item) {
@@ -2004,8 +2105,8 @@
             eu.desenharAtividade(pagina, true);
           }).catch(function (erro) {
             mais.disabled = false;
-            mais.textContent = "Não carregou. Tentar de novo";
-            mais.title = (erro && erro.message) || "";
+            mais.textContent = "Tentar de novo";
+            recado((erro && erro.message) || "Não deu para buscar mais atividade agora.", "erro");
           });
         });
         caixa.appendChild(mais);
@@ -2098,6 +2199,7 @@
 
   function iniciar() {
     montar(document);
+    mirarAncora();
     /* listas que se redesenham (busca local, paginação por JS) ganham o atalho também */
     if (window.MutationObserver) {
       var espera = null;
@@ -2116,5 +2218,10 @@
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
   else iniciar();
-  document.addEventListener("ls:tela", function () { paineis = []; montar(document); });
+  document.addEventListener("ls:tela", function () {
+    paineis = [];
+    montar(document);
+    /* um instante depois: a navegação suave rola para o topo logo após este aviso */
+    window.setTimeout(mirarAncora, 40);
+  });
 })(window, document);
