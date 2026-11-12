@@ -50,7 +50,7 @@
   const fotoDa = (caixa) => caixa.querySelector("img:not([aria-hidden='true'])") || caixa.querySelector("img");
 
   const SEM_TRANSPARENCIA = /\.(jpe?g|jfif)$/i;
-  const MEMORIA = "ls-foto-cheia2:";
+  const MEMORIA = "ls-foto-cheia3:";
   const decididos = new WeakSet();
 
   const lembrar = (url, valor) => {
@@ -84,7 +84,12 @@
         // os quatro cantos e o meio de cada lado
         const pontos = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1],
           [w >> 1, 0], [w >> 1, h - 1], [0, h >> 1], [w - 1, h >> 1]];
-        pronto({ cheia: pontos.every(([x, y]) => alfa[(y * w + x) * 4 + 3] > 245), proporcao: img.naturalWidth / img.naturalHeight });
+        // a cor média da borda da foto (as 4 beiradas): o fundo da caixa da foto inteira
+        let r = 0, gg = 0, b = 0, n = 0;
+        for (let x = 0; x < w; x += 1) for (const y of [0, h - 1]) { const i = (y * w + x) * 4; r += alfa[i]; gg += alfa[i + 1]; b += alfa[i + 2]; n += 1; }
+        for (let y = 1; y < h - 1; y += 1) for (const x of [0, w - 1]) { const i = (y * w + x) * 4; r += alfa[i]; gg += alfa[i + 1]; b += alfa[i + 2]; n += 1; }
+        const borda = n ? [r, gg, b].map((v) => Math.round(v / n)).join(",") : "";
+        pronto({ cheia: pontos.every(([x, y]) => alfa[(y * w + x) * 4 + 3] > 245), proporcao: img.naturalWidth / img.naturalHeight, borda });
       } catch (erro) {
         pronto({ cheia: null, proporcao: img.naturalWidth / img.naturalHeight || 0 });
       }
@@ -112,10 +117,18 @@
     return `${partes[1]}c_fill,g_auto,ar_${proporcao},w_${largura},q_auto,f_auto/${partes[2]}`;
   };
 
-  const marcar = (caixa, cheia, proporcao) => {
+  const marcar = (caixa, cheia, proporcao, borda) => {
     if (!cheia) return;
     caixa.classList.add("foto-cheia");
     const foto = fotoDa(caixa);
+    // A caixa que mostra a foto INTEIRA (a arte da promoção no quadro do topo da home:
+    // o texto dela não pode ser cortado). Sem recorte: a foto inteira, e o que sobra da
+    // caixa é a cor da própria borda da foto (a arte continua, sem faixa nem desfoque).
+    if (caixa.hasAttribute("data-foto-inteira")) {
+      caixa.classList.add("foto-inteira");
+      if (borda) caixa.style.setProperty("--foto-borda", `rgb(${borda})`);
+      return;
+    }
     if (!outroFormato(caixa, proporcao || (foto.naturalWidth / foto.naturalHeight))) return;
     caixa.classList.add("foto-enquadrada");
     const original = foto.getAttribute("src") || "";
@@ -150,7 +163,7 @@
       if (sonda) {
         cheia = SEM_TRANSPARENCIA.test(caminho) ? true : sonda.cheia;
         proporcao = sonda.proporcao || 0;
-        if (cheia !== null) lembrar(url, `${cheia ? 1 : 0}:${proporcao.toFixed(3)}`);
+        if (cheia !== null) lembrar(url, `${cheia ? 1 : 0}:${proporcao.toFixed(3)}:${sonda.borda || ""}`);
       } else if (SEM_TRANSPARENCIA.test(caminho)) {
         cheia = true;
       }
@@ -182,8 +195,8 @@
     const caminho = url.split("?")[0].split("#")[0];
     const memoria = lembrado(url);
     if (memoria !== null) {
-      const [cheia, proporcao] = memoria.split(":");
-      marcar(caixa, cheia === "1", Number(proporcao) || 0);
+      const [cheia, proporcao, borda] = memoria.split(":");
+      marcar(caixa, cheia === "1", Number(proporcao) || 0, borda || "");
       return;
     }
     sondar(url).then((sonda) => {
@@ -194,8 +207,8 @@
       }
       const cheia = SEM_TRANSPARENCIA.test(caminho) ? true : sonda.cheia;
       if (cheia === null) return;
-      lembrar(url, `${cheia ? 1 : 0}:${sonda.proporcao.toFixed(3)}`);
-      marcar(caixa, cheia, sonda.proporcao);
+      lembrar(url, `${cheia ? 1 : 0}:${sonda.proporcao.toFixed(3)}:${sonda.borda || ""}`);
+      marcar(caixa, cheia, sonda.proporcao, sonda.borda || "");
     });
   };
 

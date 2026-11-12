@@ -20,7 +20,7 @@
 
   const INTERVALO = 3200;   // ms entre uma troca e a próxima
   const ANTES = 1300;       // ms antes da troca em que a próxima começa a vir
-  const TROCA = 620;        // ms da troca suave (a do CSS, .card-giro-camada)
+  const TROCA = 950;        // ms da troca suave (a do CSS, .card-giro-camada)
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const fotos = window.LSFotos || null;
@@ -58,9 +58,13 @@
     camada.setAttribute("aria-hidden", "true");
     camada.decoding = "async";
     const estilo = window.getComputedStyle(foto);
-    for (const prop of ["objectFit", "objectPosition", "padding", "borderRadius", "filter", "boxSizing", "transform"]) {
+    for (const prop of ["objectFit", "objectPosition", "padding", "borderRadius", "boxSizing"]) {
       camada.style[prop] = estilo[prop];
     }
+    // o filtro e o transform da foto do card ficam em variáveis: a troca anima por cima deles
+    // (a próxima entra com um zoom leve e um desfoque que somem -- ls-tema.css)
+    camada.style.setProperty("--giro-filtro", estilo.filter && estilo.filter !== "none" ? estilo.filter : "brightness(1)");
+    camada.style.setProperty("--giro-transform", estilo.transform && estilo.transform !== "none" ? estilo.transform : "translateZ(0)");
     camada.style.left = `${foto.offsetLeft}px`;
     camada.style.top = `${foto.offsetTop}px`;
     camada.style.width = `${foto.offsetWidth}px`;
@@ -94,7 +98,7 @@
       // de uma foto com fundo para uma recortada (ou o contrário): a caixa muda de jeito,
       // então a foto some rapidinho, troca e volta
       foto.classList.add("card-giro-sumindo");
-      await new Promise((r) => window.setTimeout(r, 300));
+      await new Promise((r) => window.setTimeout(r, 380));
       foto.removeAttribute("srcset");
       foto.removeAttribute("sizes");
       foto.src = pronta.src;
