@@ -249,7 +249,7 @@ class RefinamentosDaListaDeOrcamentosTests(TestCase):
             Path(__file__).resolve().parent
             / "templates" / "partes" / "orcamentos_lista.html"
         ).read_text(encoding="utf-8")
-        self.assertIn("<th>ID</th>", texto)
+        self.assertRegex(texto, r"<th[^>]*>ID</th>")
         self.assertIn('data-rotulo="ID"', texto)
         self.assertNotIn("<th>#</th>", texto)
 

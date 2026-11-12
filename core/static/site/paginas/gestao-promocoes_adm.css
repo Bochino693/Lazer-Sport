@@ -1108,3 +1108,68 @@
 @media (max-width: 520px) {
     .pr-dupla { grid-template-columns: 1fr; }
 }
+
+/* ---- Lista · Cards ----
+   O mesmo <article> é a linha da lista (o padrão) e o cartão. Aqui só as
+   colunas da lista; o desenho de linha é o comum do painel ("LISTA OU
+   CARDS" em interno_modern.css). */
+.pr-tela .ls-visao-barra .pr-contagem {
+    margin: 0;
+    color: var(--muted);
+    font-size: .86rem;
+    font-weight: 750;
+}
+
+#prLista {
+    --lv-colunas: 56px minmax(200px, 2fr) minmax(0, 1fr) 170px 140px 72px 258px;
+    --lv-areas: "foto titulo info valor estado selos acoes";
+    --lv-colunas-tab: 56px minmax(0, 1fr) auto auto;
+    --lv-areas-tab: "foto titulo valor acoes" "foto info estado selos";
+}
+
+.pr-oferta-titulo {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.pr-grade[data-visao="lista"] .pr-oferta-titulo h3 {
+    font-size: .95rem;
+}
+
+.pr-grade[data-visao="lista"] .pr-oferta-brinquedo {
+    font-size: .78rem;
+}
+
+.pr-grade[data-visao="lista"] .pr-oferta-brinquedo span {
+    -webkit-line-clamp: 1;
+}
+
+.pr-grade[data-visao="lista"] .pr-precos {
+    justify-content: flex-end;
+    gap: 2px 8px;
+}
+
+.pr-grade[data-visao="lista"] .pr-precos strong {
+    font-size: 1.02rem;
+}
+
+.pr-grade[data-visao="lista"] .pr-validade {
+    font-size: .8rem;
+}
+
+.pr-grade[data-visao="lista"] .pr-selo-desconto {
+    padding: 4px 9px;
+    font-size: .74rem;
+    box-shadow: none;
+}
+
+@media (max-width: 640px) {
+    .pr-grade[data-visao="lista"] .pr-precos {
+        justify-content: flex-start;
+    }
+
+    .gestao-integrada .ls-content .pr-grade[data-visao="lista"] .pr-oferta-acoes button {
+        flex: 1 1 auto;
+    }
+}

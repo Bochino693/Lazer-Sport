@@ -108,26 +108,39 @@
       </button>
     </nav>
 
-    {% if ha_filtro %}
-      <p class="bq-resumo">
-        <span>{{ page_obj.paginator.count }} de {{ total_brinquedos }} brinquedo{{ total_brinquedos|pluralize }}{% if busca %} para “{{ busca }}”{% endif %}</span>
-        <a href="{{ limpar_filtros_url }}"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpar filtros</a>
-      </p>
-    {% endif %}
   </section>
 
-  <section class="bq-grade" aria-label="Brinquedos">
+  {% comment %}
+    LISTA OU CARDS. A lista (padrão) é uma linha por brinquedo: foto
+    pequena, nome, medidas e categorias, preço, loja e as ações. Cards é o
+    cartão com a foto grande e os selos. É o MESMO <article> nos dois
+    modos (ver "LISTA OU CARDS" em interno_modern.css): cada parte leva
+    `data-v` e a tela só diz as colunas (--lv-* em gestao-brinquedos_adm.css).
+  {% endcomment %}
+  <div class="ls-visao-barra">
+    <p class="bq-resumo">
+      <span>{% if ha_filtro %}{{ page_obj.paginator.count }} de {{ total_brinquedos }}{% else %}{{ page_obj.paginator.count }}{% endif %} brinquedo{{ page_obj.paginator.count|pluralize }}{% if busca %} para “{{ busca }}”{% endif %}</span>
+      {% if ha_filtro %}<a href="{{ limpar_filtros_url }}"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpar filtros</a>{% endif %}
+    </p>
+    {% include "includes/lista_ou_cards.html" with alvo="bqLista" chave="brinquedos" %}
+  </div>
+
+  <section class="bq-grade ls-visao-alvo" id="bqLista" data-visao="lista" aria-label="Brinquedos">
+    <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+      <span data-col="titulo">Brinquedo</span><span data-col="info">Medidas e categorias</span>
+      <span data-col="valor">Preço</span><span data-col="estado">Loja</span><span data-col="selos">Selos</span><span data-col="acoes">Ações</span>
+    </div>
     {% for brinquedo in brinquedos %}
-      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-id="{{ brinquedo.id }}" data-detalhe-tipo="brinquedo" data-detalhe-id="{{ brinquedo.id }}">
-        <div class="bq-foto">
+      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-visao-item data-id="{{ brinquedo.id }}" data-detalhe-tipo="brinquedo" data-detalhe-id="{{ brinquedo.id }}">
+        <div class="bq-foto" data-v="midia">
           {% with capa=brinquedo.imagem_catalogo %}
             {% if capa %}
-              <img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async">
+              <img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async" data-v="foto">
             {% else %}
-              <span class="bq-sem-foto"><i class="bi bi-image" aria-hidden="true"></i><small>Sem foto</small></span>
+              <span class="bq-sem-foto" data-v="foto"><i class="bi bi-image" aria-hidden="true"></i><small>Sem foto</small></span>
             {% endif %}
           {% endwith %}
-          <span class="bq-selos">
+          <span class="bq-selos" data-v="estado">
             {% if brinquedo.exibir_na_loja %}
               {% if brinquedo.valor_brinquedo %}
                 <span class="bq-selo bq-selo--loja"><i class="bi bi-bag-check-fill" aria-hidden="true"></i> Na loja</span>
@@ -140,19 +153,22 @@
               <span class="bq-selo">Só catálogo</span>
             {% endif %}
           </span>
-          <span class="bq-selos bq-selos--fim">
+          <span class="bq-selos bq-selos--fim" data-v="selos">
             {% if brinquedo.painel_3d %}<span class="bq-selo" title="Tem objeto 3D"><i class="bi bi-badge-3d" aria-hidden="true"></i></span>{% endif %}
             {% if brinquedo.painel_adesivos > 1 %}<span class="bq-selo bq-selo--adesivos" title="O mesmo brinquedo com outra arte: as fotos e o 3D de cada adesivo"><i class="bi bi-stickies" aria-hidden="true"></i> {{ brinquedo.painel_adesivos }} adesivos</span>{% endif %}
             <span class="bq-selo" title="{{ brinquedo.painel_fotos }} de 3 fotos"><i class="bi bi-images" aria-hidden="true"></i> {{ brinquedo.painel_fotos }}/3</span>
           </span>
         </div>
 
-        <div class="bq-corpo">
-          <h3 class="bq-nome">{{ brinquedo.nome_brinquedo }}</h3>
-          <p class="bq-meta">
-            <span>#{{ brinquedo.id }}</span>
-            <span><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
-          </p>
+        <div class="bq-corpo" data-v="corpo">
+          <div class="bq-titulo" data-v="titulo">
+            <h3 class="bq-nome">{{ brinquedo.nome_brinquedo }}</h3>
+            <p class="bq-meta">
+              <span>#{{ brinquedo.id }}</span>
+              <span><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i> {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
+            </p>
+          </div>
+          <div class="bq-info" data-v="info">
 {% comment %}
   A MEDIDA APARECE AQUI PORQUE A FALTA DELA APARECE NO CLIENTE.
 
@@ -166,13 +182,14 @@
             <i class="bi {% if brinquedo.dimensoes_m %}bi-rulers{% else %}bi-exclamation-triangle-fill{% endif %}" aria-hidden="true"></i>
             <span>{{ brinquedo.dimensoes_m|default:"Sem medidas — a proposta sai sem o tamanho" }}</span>
           </p>
-          <p class="bq-preco">
+            <ul class="bq-cats-item" aria-label="Categorias">
+              {% for cat in brinquedo.categorias_brinquedos.all %}<li>{{ cat.nome_categoria }}</li>{% empty %}<li class="is-vazia">Sem categoria</li>{% endfor %}
+            </ul>
+          </div>
+          <p class="bq-preco" data-v="valor">
             {% if brinquedo.valor_brinquedo != None %}<strong>R$ {{ brinquedo.valor_brinquedo|moeda }}</strong>{% else %}<span class="bq-consulta">Sob consulta</span>{% endif %}
           </p>
-          <ul class="bq-cats-item" aria-label="Categorias">
-            {% for cat in brinquedo.categorias_brinquedos.all %}<li>{{ cat.nome_categoria }}</li>{% empty %}<li class="is-vazia">Sem categoria</li>{% endfor %}
-          </ul>
-          <div class="bq-acoes">
+          <div class="bq-acoes" data-v="acoes">
             <button type="button" class="bq-editar" data-edit="{{ brinquedo.id }}">
               <i class="bi bi-pencil-square" aria-hidden="true"></i> Editar
             </button>

@@ -25,13 +25,14 @@ class ColunasPainelTests(SimpleTestCase):
                 self.assertIn(classe, html)
 
     def test_colunas_clientes_ocupam_exatamente_largura_disponivel(self):
-        # Cada coluna recebe sua fração da largura após reservar 58px de ações.
+        # Cada coluna recebe sua fração da largura após reservar 88px de ações
+        # (em 58px o título "AÇÕES" quebrava ao meio; ver tests_lista_cards).
         import re
         css = (self.raiz / 'static/interno/interno_modern.css').read_text()
         partes = re.findall(r'\.ls-clientes-table \.ls-col-\w+\{width:calc\((\d+)% - ([\d.]+)px\)', css)
         self.assertEqual(len(partes), 6)
         for largura in (900, 1024, 1280, 1520):
-            total = sum(largura * float(p) / 100 - float(px) for p, px in partes) + 58
+            total = sum(largura * float(p) / 100 - float(px) for p, px in partes) + 88
             self.assertAlmostEqual(total, largura)
         self.assertNotIn('td:nth-child(4){min-width:245px}', css)
         self.assertIn('.ls-clientes-table colgroup{display:none}', css)

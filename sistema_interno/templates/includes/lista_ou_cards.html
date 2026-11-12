@@ -1,0 +1,25 @@
+{% comment %}
+  O SELETOR "LISTA · CARDS" DE UMA LISTA DO PAINEL.
+
+  Uso: {% include "includes/lista_ou_cards.html" with alvo="id-do-contêiner" chave="nome-da-tela" %}
+
+  O contêiner da lista leva `id`, a classe `ls-visao-alvo` e
+  `data-visao="lista"` (o padrão: uma linha por item, as colunas mais
+  úteis). "Cards" é a apresentação rica, com foto, selos e mais dados. A
+  escolha fica no aparelho, por tela (`chave`); ver interno/ls-listas.js.
+
+  São rádios dentro de <label>, e não <button>: a folha comum das telas
+  de gestão pinta todo botão de "botão secundário", e o seletor precisa do
+  desenho de chave de duas posições. Fica fora de qualquer <form>, senão
+  a escolha iria junto na busca.
+{% endcomment %}
+<div class="ls-visao" role="radiogroup" aria-label="Ver a lista como" data-visao-seletor data-visao-alvo="{{ alvo }}" data-visao-chave="{{ chave }}">
+  <label class="ls-visao-opcao" title="Lista: uma linha por item, com as colunas mais úteis">
+    <input type="radio" name="ls-visao-{{ chave }}" value="lista" checked>
+    <i class="bi bi-list-ul" aria-hidden="true"></i><span>Lista</span>
+  </label>
+  <label class="ls-visao-opcao" title="Cards: a foto, os selos e mais dados de cada item">
+    <input type="radio" name="ls-visao-{{ chave }}" value="cards">
+    <i class="bi bi-grid-3x2-gap" aria-hidden="true"></i><span>Cards</span>
+  </label>
+</div>

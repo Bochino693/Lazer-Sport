@@ -66,40 +66,50 @@
         {% endif %}
     </form>
 
-    <section class="project-grid">
+    {# Lista · Cards: o mesmo <article> é linha e cartão (ver interno_modern.css). #}
+    <div class="ls-visao-barra">
+        <p class="project-contagem">{{ projetos|length }} projeto{{ projetos|length|pluralize }}</p>
+        {% include "includes/lista_ou_cards.html" with alvo="projetoLista" chave="projetos" %}
+    </div>
+
+    <section class="project-grid ls-visao-alvo" id="projetoLista" data-visao="lista" aria-label="Projetos">
+        <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+            <span data-col="titulo">Projeto</span><span data-col="info">Brinquedo projetado</span><span data-col="selos">Imagens</span><span data-col="acoes">Ações</span>
+        </div>
         {% for projeto in projetos %}
-            <article class="project-card" data-project-id="{{ projeto.id }}" data-detalhe-tipo="projeto" data-detalhe-id="{{ projeto.id }}">
-                <div class="project-card-media">
+            <article class="project-card" data-visao-item data-project-id="{{ projeto.id }}" data-detalhe-tipo="projeto" data-detalhe-id="{{ projeto.id }}">
+                <div class="project-card-media" data-v="midia">
                     {% with imagem=projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
                         {% if imagem %}
                             <img
+                                data-v="foto"
                                 src="{{ imagem.imagem.url }}"
                                 alt="{{ projeto.titulo }}"
                                 loading="lazy"
                                 decoding="async"
                             >
                         {% else %}
-                            <div class="project-placeholder" aria-hidden="true">🧩</div>
+                            <div class="project-placeholder" aria-hidden="true" data-v="foto">🧩</div>
                         {% endif %}
                     {% endwith %}
-                    <span class="project-image-count">
+                    <span class="project-image-count" data-v="selos">
                         {{ projeto.total_imagens }}
                         imag{{ projeto.total_imagens|pluralize:"em,ens" }}
                     </span>
                 </div>
 
-                <div class="project-card-body">
-                    <h3>{{ projeto.titulo }}</h3>
-                    <p class="project-description">
+                <div class="project-card-body" data-v="corpo">
+                    <h3 data-v="titulo">{{ projeto.titulo }}</h3>
+                    <p class="project-description" data-v="extra">
                         {{ projeto.descricao|truncatechars:155 }}
                     </p>
                     {% if projeto.brinquedo_projetado %}
-                        <span class="project-toy">
+                        <span class="project-toy" data-v="info">
                             🎮 {{ projeto.brinquedo_projetado.nome_brinquedo_projeto }}
                         </span>
                     {% endif %}
 
-                    <div class="project-actions">
+                    <div class="project-actions" data-v="acoes">
                         <button
                             class="project-secondary-btn"
                             type="button"

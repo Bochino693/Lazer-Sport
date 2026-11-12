@@ -719,3 +719,10 @@
     .usr-modal { padding: 8px; align-items: flex-end; }
     .usr-modal-card { width: 100%; max-height: 94dvh; border-radius: 20px 20px 0 0; }
   }
+
+/* Lista · Cards: no tablet, a lista perde a coluna de cadastro (a data
+   continua no cartão), em vez de virar tabela larga rolando de lado. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .usr-table-wrap[data-visao="lista"] .usr-table th:nth-child(5),
+  .usr-table-wrap[data-visao="lista"] .usr-table td:nth-child(5) { display: none; }
+}

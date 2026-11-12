@@ -80,13 +80,15 @@
       </form>
     </div>
 
-    <div class="usr-results-line">
-      Exibindo <strong>{{ usuarios|length }}</strong> usuário{{ usuarios|length|pluralize }}
-      {% if busca %} para "<strong>{{ busca }}</strong>"{% endif %}
+    {# Lista · Cards: a mesma tabela é a lista (padrão) e, pelo CSS, os cartões (ver interno_modern.css). #}
+    <div class="usr-results-line ls-visao-barra">
+      <span>Exibindo <strong>{{ usuarios|length }}</strong> usuário{{ usuarios|length|pluralize }}
+      {% if busca %} para "<strong>{{ busca }}</strong>"{% endif %}</span>
+      {% include "includes/lista_ou_cards.html" with alvo="usrLista" chave="usuarios" %}
     </div>
 
-    <div class="usr-table-wrap">
-      <table class="usr-table">
+    <div class="usr-table-wrap ls-visao-alvo" id="usrLista" data-visao="lista">
+      <table class="usr-table ls-visao-tabela">
         <thead>
           <tr>
             <th>Usuário</th>
@@ -94,12 +96,12 @@
             <th>Perfil</th>
             <th>Status</th>
             <th>Cadastro</th>
-            <th style="text-align:right">Ações</th>
+            <th data-coluna="Ações" style="text-align:right">Ações</th>
           </tr>
         </thead>
         <tbody>
           {% for usuario in usuarios %}
-            <tr data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}">
+            <tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}">
               <td data-label="Usuário">
                 <div class="usr-identity">
                   <span class="usr-avatar">{{ usuario.username|slice:":2"|upper }}</span>
