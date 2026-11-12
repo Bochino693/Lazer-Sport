@@ -356,24 +356,6 @@
         margin-top: 16px;
     }
 
-    .ls-footer-social a {
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.08);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-bounce), color 0.25s var(--ease-out);
-    }
-
-    .ls-footer-social a:hover {
-        background: #E63946;
-        color: #fff;
-        transform: translateY(-4px) rotate(6deg);
-    }
-
     .ls-footer-bottom {
         max-width: 1180px;
         margin: 36px auto 0;
@@ -564,3 +546,173 @@
 
     @media (prefers-reduced-motion: reduce) {
     }
+
+
+/* =====================================================================
+   AS REDES COMO ÍCONES DE APLICATIVO (partials/redes_sociais.html;
+   LEIA-ME, seção 79): o "Siga a Lazer & Sport" da home e o rodapé.
+   O quadrado arredondado de cada app com a cor oficial, um brilho de
+   vidro em cima, o símbolo em SVG e o nome embaixo; o link é o ícone E o
+   nome (a área de toque inteira). No toque (celular) o ícone tem 48 px.
+   ===================================================================== */
+.ls-redes {
+    --rede-lado: 44px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ls-redes > li {
+    margin: 0;
+    padding: 0;
+}
+
+.ls-redes .ls-rede {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 58px;
+    padding: 4px 2px 2px;
+    border-radius: 14px;
+    color: inherit;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.ls-redes .ls-rede-app {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--rede-lado);
+    height: var(--rede-lado);
+    border-radius: 28%;
+    background: var(--rede-fundo);
+    color: #fff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .32),
+        inset 0 -3px 8px rgba(0, 0, 0, .16),
+        0 8px 18px -9px var(--rede-brilho);
+    transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), box-shadow .28s ease;
+}
+
+/* o brilho de vidro na metade de cima, como nos ícones do celular */
+.ls-redes .ls-rede-app::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .24) 0%, rgba(255, 255, 255, .06) 46%, rgba(255, 255, 255, 0) 52%);
+    pointer-events: none;
+}
+
+.ls-redes .ls-rede-app svg {
+    position: relative;
+    z-index: 1;
+    width: 54%;
+    height: 54%;
+    fill: currentColor;
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .22));
+}
+
+.ls-redes .ls-rede--facebook .ls-rede-app svg { width: 34%; }
+.ls-redes .ls-rede--linkedin .ls-rede-app svg { width: 46%; transform: translateY(-1px); }
+
+.ls-redes .ls-rede-nome {
+    font-size: .66rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .01em;
+    color: rgba(226, 232, 255, .74);
+    white-space: nowrap;
+    transition: color .2s ease;
+}
+
+.ls-redes .ls-rede:hover .ls-rede-app,
+.ls-redes .ls-rede:focus-visible .ls-rede-app {
+    transform: translateY(-3px) scale(1.07);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .36),
+        inset 0 -3px 8px rgba(0, 0, 0, .14),
+        0 16px 28px -12px var(--rede-brilho);
+}
+
+.ls-redes .ls-rede:hover .ls-rede-nome,
+.ls-redes .ls-rede:focus-visible .ls-rede-nome {
+    color: #fff;
+}
+
+.ls-redes .ls-rede:active .ls-rede-app {
+    transform: scale(.92);
+    transition-duration: .08s;
+}
+
+.ls-redes .ls-rede:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* as cores oficiais de cada app */
+.ls-redes .ls-rede--instagram {
+    --rede-fundo: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
+    --rede-brilho: rgba(214, 36, 159, .75);
+}
+
+.ls-redes .ls-rede--whatsapp {
+    --rede-fundo: linear-gradient(180deg, #5df98a 0%, #25d366 48%, #12b551 100%);
+    --rede-brilho: rgba(37, 211, 102, .7);
+}
+
+.ls-redes .ls-rede--facebook {
+    --rede-fundo: linear-gradient(180deg, #19aefe 0%, #0866ff 62%, #0158e0 100%);
+    --rede-brilho: rgba(8, 102, 255, .75);
+}
+
+.ls-redes .ls-rede--linkedin {
+    --rede-fundo: linear-gradient(180deg, #2a8ae0 0%, #0a66c2 60%, #0857a6 100%);
+    --rede-brilho: rgba(10, 102, 194, .75);
+}
+
+.ls-redes .ls-rede--threads {
+    --rede-fundo: linear-gradient(180deg, #3a3a3e 0%, #111113 55%, #000 100%);
+    --rede-brilho: rgba(255, 255, 255, .28);
+}
+
+.ls-redes .ls-rede--threads .ls-rede-app {
+    outline: 1px solid rgba(255, 255, 255, .16);
+    outline-offset: -1px;
+}
+
+/* o rodapé: só os ícones (o nome vira a dica do mouse) */
+.ls-redes--compacto {
+    --rede-lado: 38px;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.ls-redes--compacto .ls-rede {
+    min-width: 0;
+    padding: 0;
+}
+
+.ls-redes--compacto .ls-rede-nome {
+    display: none;
+}
+
+/* no dedo, o alvo nunca fica menor que 48 px */
+@media (pointer: coarse) {
+    .ls-redes { --rede-lado: 46px; }
+    .ls-redes--compacto { --rede-lado: 46px; }
+    .ls-redes .ls-rede { min-width: 60px; }
+    .ls-redes--compacto .ls-rede { min-width: 48px; min-height: 48px; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-redes .ls-rede-app { transition: none; }
+    .ls-redes .ls-rede:hover .ls-rede-app,
+    .ls-redes .ls-rede:focus-visible .ls-rede-app { transform: none; }
+}

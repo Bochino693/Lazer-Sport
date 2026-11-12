@@ -3701,3 +3701,30 @@ Dependência nova: rjsmin (requirements.txt).
    As jogadas de antes desta versão não têm data: o painel por período
    começa a contar a partir do deploy.
    Testes: core/tests_jogadas.py; core/tests_jogos_emulador.py (config.registro).
+
+79) AS REDES COMO ÍCONES DE APLICATIVO E O CARD SEM ZOOM
+   Pedidos: "melhores estes ícones, está muito feio ... faça um app moderno
+   e os ícones clicáveis" (o "Siga a Lazer & Sport" da home) e, com o print
+   do card do Air Rock, "valide para não ter fotos assim com zoom pois
+   estraga".
+   AS REDES (core/templates/partials/redes_sociais.html; CSS no fim de
+   core/static/site/ls-base-fim.css): cada rede é o ícone do aplicativo
+   dela, como na tela do celular -- o quadrado arredondado com a cor
+   oficial (o degradê do Instagram, o verde do WhatsApp, o azul do Facebook
+   e do LinkedIn, o preto do Threads), um brilho de vidro em cima, o
+   símbolo oficial em SVG (Simple Icons, CC0; o "f" e o "in" do Font Awesome
+   Free, CC BY 4.0) e o nome embaixo. O link é o ícone E o nome (alvo de 58 x
+   67 px; no toque, pelo menos 48 px). No rodapé (base.html) vai a versão
+   `compacto=True`, só os ícones, com o nome na dica. As cinco redes estão
+   nos dois lugares (o rodapé tinha só três).
+   SEM ZOOM (core/static/site/ls-fotos.js, `zoomDemais`): o recorte da
+   foto no formato da caixa só vale até 1,4 x de diferença de formato (some
+   no máximo ~30% de um lado). A foto muito mais larga ou mais alta (a
+   panorâmica 2 x 1 do Air Rock no card quadrado) é recortada só até esse
+   limite, pelo conteúdo, e fica INTEIRA no meio da caixa (`foto-inteira`);
+   as faixas que sobram são a cor da beirada da própria foto daquele lado
+   (`--foto-faixas`: a de cima em cima, a de baixo embaixo). Vale também
+   para as fotos que giram (ls-giro.js troca com o "some e volta" quando a
+   caixa muda de jeito). A foto certa para o card continua sendo a quadrada
+   (as capas em cena, 1600 x 1600): as panorâmicas do Black Friday (Air
+   Rock, Kid Play) ganham a capa no showroom na seção 78.

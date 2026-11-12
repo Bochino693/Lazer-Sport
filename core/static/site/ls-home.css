@@ -4279,22 +4279,22 @@ main.content-section {
     font-weight: 700;
 }
 
-.ls-onde-redes .social-icons {
-    display: flex;
-    flex: none;
-    gap: 6px;
+/* Os ícones de app das redes (partials/redes_sociais.html): numa linha só;
+   no celular a linha ocupa a largura do cartão, com os cinco espalhados. */
+.ls-onde-redes .ls-redes {
+    flex-wrap: nowrap;
+    gap: 2px;
 }
 
-.ls-onde-redes .social-icons a {
-    width: 31px;
-    height: 31px;
-    margin: 0;
-    font-size: 15px;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, .3);
-}
+@media (max-width: 560px) {
+    .ls-onde-redes .ls-redes {
+        flex: 1 1 100%;
+        justify-content: space-between;
+    }
 
-.ls-onde-redes .social-icons a:hover {
-    transform: translateY(-2px) scale(1.06);
+    .ls-onde-redes .ls-redes .ls-rede {
+        min-width: 54px;
+    }
 }
 
 /* ---- Mapa, com as camadas e o filtro em cima ---- */

@@ -2236,7 +2236,20 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia img {
    da home). Nada recortado: a foto inteira, e o resto da caixa é a cor da
    borda da própria foto (ls-fotos.js), então a arte parece continuar. */
 html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-inteira {
-    background: var(--foto-borda, #0b0d18);
+    background: var(--foto-faixas, var(--foto-borda, #0b0d18));
+}
+
+/* No card, a foto inteira (a de formato muito diferente: sem zoom, ls-fotos.js)
+   fica NO MEIO da caixa, e as faixas de cima e de baixo (ou dos lados) são a
+   cor da beirada da própria foto daquele lado. */
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-inteira:not(.ls-vitrine-foto) {
+    display: grid;
+    place-items: center;
+}
+
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-inteira:not(.ls-vitrine-foto) img {
+    grid-area: 1 / 1;
+    max-height: 100%;
 }
 
 html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-inteira img {
