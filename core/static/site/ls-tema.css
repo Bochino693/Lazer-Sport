@@ -32,6 +32,13 @@
     --ls-vermelho-neon: #ff4757;
     --ls-amarelo-neon: #ffd23f;
     --ls-sombra: 0 18px 44px rgba(0, 0, 0, .42);
+    /* Os avisos de aplicativo (ls-aviso.css): o verde do "deu certo", os
+       botões cheios da folha (texto claro com contraste de 5:1) e o véu
+       atrás dela. */
+    --ls-verde-neon: #2ee59d;
+    --ls-azul-botao: #1a63cc;
+    --ls-vermelho-botao: #c8233a;
+    --ls-veu: rgba(2, 6, 20, .72);
     --ls-largura: none; /* a página usa a tela inteira; só o respiro dos lados */
     color-scheme: dark;
 }

@@ -1,0 +1,24 @@
+{% comment %}
+  OS RECADOS DESTA RESPOSTA, COMO DADOS (core/ls_aviso.py).
+
+  O `ls-aviso.js` lê cada cartão pelos `data-*`, mostra como toast (ou
+  folha, com `data-modal`) e tira o bloco da página. Sem JavaScript o bloco
+  fica onde está, no alto do conteúdo, com a cara dos toasts. Com ele, o
+  bloco nasce escondido (`html.ls-recados-js`, posto no <head>) -- e volta a
+  aparecer sozinho se o script não chegar (ver ls-aviso.css).
+{% endcomment %}
+{% if avisos %}
+<div class="ls-recados-servidor" data-ls-recados="{{ chave }}" role="region" aria-label="Avisos">
+  {% for aviso in avisos %}
+  <div class="ls-recado-cartao ls-recado--{{ aviso.nivel }}" data-ls-recado
+       data-nivel="{{ aviso.nivel }}" data-titulo="{{ aviso.titulo }}" data-icone="{{ aviso.icone }}"
+       {% if aviso.modal %}data-modal{% endif %} {% if aviso.fixo %}data-fixo{% endif %}
+       {% if aviso.acao %}data-acao-url="{{ aviso.acao.url }}" data-acao-rotulo="{{ aviso.acao.rotulo }}"{% endif %}
+       role="{% if aviso.nivel == 'erro' %}alert{% else %}status{% endif %}">
+    <strong class="ls-recado-titulo">{{ aviso.titulo }}</strong>
+    <span class="ls-recado-texto">{{ aviso.texto }}</span>
+    {% if aviso.acao %}<a class="ls-recado-acao" href="{{ aviso.acao.url }}">{{ aviso.acao.rotulo }}</a>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

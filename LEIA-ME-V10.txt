@@ -4477,3 +4477,120 @@ Dependência nova: rjsmin (requirements.txt).
    novo mata os links velhos; CPF que não confere; cada campo recusado;
    assinatura grande ou em branco; CSRF; o freio; assinar duas vezes; quem
    pode; o histórico e o sino; o estado que troca o cartão; as vias).
+
+82) OS AVISOS COMO APLICATIVO: TOAST, FOLHA E O FIM DO alert()/confirm()
+   Pedido, sobre a linha "A importação de “CONTRATO OPEN SPICE SUSHI LOUNGE
+   LTDA.docx” foi descartada." no alto de uma tela do painel: "este tipo de
+   mensagem deve virar um modal moderno que aparece estilo app para avisar,
+   eu falei que quero estilo app em tudo".
+   UM SISTEMA SÓ, NO SITE E NO PAINEL (core/static/site/ls-aviso.js e
+   ls-aviso.css, carregados pelo base.html e pelo base_inner.html -- a
+   gestão vem junto, pelo base_adm.html):
+     * TOAST para o recado comum: no alto e no centro no celular (abaixo do
+       entalhe, `safe-area`), no alto à direita no computador (abaixo da
+       barra do topo). Ícone do nível, título e texto, botão de ação
+       opcional ("Importar outro", "Ver carrinho"), X para fechar. Some
+       sozinho (sucesso e info em 5 s, alerta em 7 s; a linha fina embaixo
+       mostra o tempo), e o tempo PARA com o ponteiro ou o foco em cima e
+       com a aba escondida. O de ERRO fica até alguém fechar. Arrastar para
+       o lado (ou para cima, no celular) dispensa. Leitor de tela: duas
+       regiões fixas, a educada (sucesso, info, alerta) e a urgente (erro).
+       No máximo 4 na tela; sai o mais antigo (o erro por último).
+     * FOLHA para o que precisa de atenção: cartão no meio no computador,
+       folha que sobe de baixo no celular (com a alça; puxar para baixo
+       fecha). É um <dialog> aberto com showModal: o resto da página fica
+       inerte, o foco não sai dela, Esc e toque no véu são "não". Um botão
+       principal; na exclusão ele é vermelho e o foco começa no "Cancelar".
+     * Com uma janela <dialog> da gestão aberta, a pilha de toasts entra
+       nela (senão ficaria por cima, mas sem clique) e volta quando ela
+       fecha. Movimento reduzido: sem animação e sem a linha do tempo.
+     * As cores: só variáveis. No painel, sol, lua e eclipse (pela classe
+       `ls-body`); no site, o tema escuro (ls-tema.css ganhou
+       --ls-verde-neon, --ls-azul-botao, --ls-vermelho-botao e --ls-veu).
+     * As classes são `ls-recado*` (`ls-aviso*` já era o item do sino).
+   A API, no JavaScript de qualquer tela:
+       LSAviso.toast({nivel: "sucesso", titulo: "Salvo", texto: "...",
+                      acao: {rotulo: "Ver", url: "/..."}})
+           nivel: sucesso | info | alerta | erro (vale success, warning,
+           error, ok); acao também com {rotulo, aoClicar}; duracao em ms ou
+           fixo: true. Recado curto sem título vira o próprio título.
+       await LSAviso.modal({nivel, titulo, texto, botao, acao})
+       if (!(await LSAviso.confirmar({titulo: "Excluir a etapa?", texto:
+           "...", confirmar: "Excluir", perigo: true}))) return;
+           -> true/false; cancelar: "Voltar" troca o rótulo do "Cancelar";
+           icone: um dos nomes de ICONES (core/ls_aviso.py).
+   E sem escrever JavaScript, no formulário (ou no botão de envio, ou no <a>):
+       <form method="post" data-ls-confirmar="O saldo volta ao de antes."
+             data-ls-confirmar-titulo="Excluir esta movimentação?"
+             data-ls-confirmar-botao="Excluir" data-ls-perigo>
+   (opcionais: data-ls-confirmar-cancelar, data-ls-confirmar-icone). O
+   envio é segurado na captura e refeito com o mesmo botão depois do "sim":
+   quem trata o envio depois (o fetch do painel, a barra de carregamento)
+   só vê o envio aceito.
+   OS RECADOS DO SERVIDOR (`messages`) saem como DADOS: a tag
+   `{% avisos_do_app %}` (core/templatetags/ls_aviso.py,
+   partials/ls_avisos.html) desenha um cartão por recado, com data-nivel,
+   data-titulo, data-icone, data-modal, data-fixo e data-acao-*; o
+   ls-aviso.js os troca por toast (ou folha) ao abrir a página e a cada
+   troca de tela do painel. Sem JavaScript os cartões ficam no alto do
+   conteúdo, com a cara dos toasts; com ele, nascem escondidos (classe
+   `ls-recados-js` no <html>, posta no <head>) e, se o script não chegar em
+   4 s, aparecem. Cada resposta tem uma chave: a mesma página que volta do
+   cache da navegação suave não repete o aviso.
+   A VIEW ESCOLHE PELO `extra_tags` (pedaços separados por ";"):
+       modal                  folha, e não toast (o que precisa de atenção)
+       fixo                   o toast não some sozinho (o erro já não some)
+       titulo:<texto>         o título
+       icone:<nome>           sucesso, info, alerta, erro, lixeira, arquivo,
+                              arquivo-x, salvo, pessoa, carrinho, email,
+                              endereco
+       acao:<url>|<rótulo>    o botão do aviso
+       messages.error(request, "...", extra_tags="modal; titulo:E-mail não configurado; icone:email")
+   ou `core.ls_aviso.avisar(request, texto, nivel=..., titulo=..., icone=...,
+   modal=..., fixo=..., acao=(url, rótulo))`, que escreve a convenção.
+   Sem título, ele sai do verbo do recado de sucesso ou informação
+   ("Cliente “X” excluído." -> "Excluído", com a lixeira; criado, salvo,
+   atualizado, adicionado, cancelado, "e-mail ... enviado"); o erro de
+   campo que falta ("Informe...", "Escolha...", "Digite...") é "Confira";
+   o resto, o do nível (Pronto, Aviso, Atenção, Não foi possível).
+   O QUE MUDOU DE RECADO:
+     * o descarte da importação: "Importação descartada", com o arquivo no
+       texto ("“X.docx” foi descartado. Nada foi cadastrado.") e o botão
+       "Importar outro" (da aba Clientes, a importação de clientes); a
+       importação vencida: "Importação expirada";
+     * o "você voltou para o painel" do endereço antigo (?recuperado=pagina);
+     * o envio comum (sem fetch) das telas do painel que respondem JSON
+       (RespostaJSONMixin) voltava para a lista calado; agora volta com o
+       recado num toast -- a exclusão de movimentação diz "Excluída";
+     * o teste de e-mail sem SMTP e o SMTP que recusa são folha;
+     * o login errado do site: "Não foi possível entrar";
+     * Painel.aviso(...) (o "Salvo." das janelas) e o mostrarToast(...) do
+       site (o carrinho: "No carrinho" com "Ver carrinho"; também o da
+       página do brinquedo) são o toast; a tarja da troca de tema continua
+       a dela.
+   ONDE OS RECADOS ERAM DESENHADOS DE NOVO E NÃO SÃO MAIS: a caixa do
+   base_inner.html; combos_adm.html e campanha_detalhe_inner.html (que
+   repetiam o do base); login, cadastro, completar perfil e perfil do site.
+   A manutenção do site continua com os dela (a janela "Recebemos sua
+   solicitação" e os erros junto do formulário) e tira o toast pelo bloco
+   `avisos_do_app`.
+   O alert()/confirm() DO NAVEGADOR SAIU DE TUDO: excluir movimentação
+   (saidas_estoque.html), remover etapa e imagem do guia (guias_producao),
+   tirar os arquivos de console (jogos_inner), tirar adesivo e "fechar sem
+   salvar" (gestao-brinquedos_adm.js; a janela fica aberta enquanto a folha
+   pergunta), cancelar manutenção (gestão e site), e os alert() da gestão
+   (promoções, banners, eventos), da manutenção do site, de Meus pedidos e
+   da peça de reposição. Ficam os prompt() de "copie o link" (quando a área
+   de transferência é negada) e o da pasta dos arquivos de console: pedem
+   um texto, não um sim ou não.
+   Conferido no Chromium (PC 1366 e iPhone 13, sol e lua): o descarte de
+   uma importação de verdade, a folha da exclusão de movimentação e a
+   exclusão, a folha do e-mail não configurado, a pilha de níveis, o toast
+   por cima da janela de brinquedos (e o X dele), o Esc com coisa digitada,
+   o arrasto, o tempo que para, sem JavaScript, e o carrinho e o login
+   errado no site.
+   Testes: core/tests_ls_aviso.py (a convenção, os títulos, os cartões,
+   nenhuma base com caixa de alerta, nenhum alert()/confirm() no painel, na
+   gestão e no site, os ícones, o CSS só com variável de tema e com dono)
+   e sistema_interno/tests_ls_aviso.py (o descarte de verdade, o endereço
+   antigo, a exclusão e o erro por formulário comum, a folha do e-mail).

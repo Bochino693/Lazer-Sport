@@ -27,14 +27,7 @@
 
         <div class="ls-auth-main">
 
-            {% if messages %}
-                {% for m in messages %}
-                    <div class="ls-msg {% if m.tags %}{{ m.tags }}{% endif %}">
-                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                        <span>{{ m }}</span>
-                    </div>
-                {% endfor %}
-            {% endif %}
+            {# Os recados (messages) viram toast no alto: ver o base.html e core/ls_aviso.py. #}
 
             <div class="ls-conta-identidade">
                 <div class="ls-conta-avatar">

@@ -46,6 +46,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
+from core.ls_aviso import avisar
 from core.utils import buscar_dados_cep
 
 from .context_processors import invalidar_avisos
@@ -260,10 +261,11 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
     def _abrir(self, request, token):
         leitura = sessao.abrir(request, token)
         if leitura is None:
-            messages.info(
+            avisar(
                 request,
                 "Esta importação não está mais aberta (ela vale 12 horas e some quando o "
                 "orçamento é criado). Importe o documento de novo.",
+                titulo="Importação expirada", icone="arquivo",
             )
         return leitura
 
@@ -288,8 +290,18 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
 
         if request.POST.get("action") == "descartar":
             sessao.descartar(request, token)
-            messages.info(request, f"A importação de “{leitura['arquivo']}” foi descartada.")
-            return redirect("clientes_inner" if leitura.get("para") == "cliente" else "orcamentos_inner")
+            # O toast de aplicativo (core/ls_aviso.py), e não mais a caixa
+            # no alto da tela: o título diz o que aconteceu, o texto diz com
+            # qual arquivo, e o botão leva a outra importação.
+            para_cliente = leitura.get("para") == "cliente"
+            importar = reverse("importar_orcamento_word") + ("?para=cliente" if para_cliente else "")
+            avisar(
+                request,
+                f"“{leitura['arquivo']}” foi descartado. Nada foi cadastrado.",
+                nivel=messages.SUCCESS, titulo="Importação descartada", icone="arquivo-x",
+                acao=(importar, "Importar outro"),
+            )
+            return redirect("clientes_inner" if para_cliente else "orcamentos_inner")
 
         proposta = conferencia.montar_proposta(leitura)
         envio = formulario.ler_envio(request.POST)

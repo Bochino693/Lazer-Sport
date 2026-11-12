@@ -406,29 +406,6 @@
         color: var(--combo-muted);
     }
 
-    .combo-message-list {
-        display: grid;
-        gap: 8px;
-        margin: 0 0 18px;
-    }
-
-    .combo-message {
-        padding: 13px 16px;
-        border: 1px solid var(--combo-border);
-        border-radius: 13px;
-        background: var(--combo-surface);
-    }
-
-    .combo-message.success {
-        border-color: rgba(var(--green-rgb),.3);
-        color: var(--green-claro);
-    }
-
-    .combo-message.error {
-        border-color: rgba(var(--red-rgb),.3);
-        color: var(--red-claro);
-    }
-
     body.combo-modal-open {
         overflow: hidden;
     }

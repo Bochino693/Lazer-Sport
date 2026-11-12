@@ -632,7 +632,7 @@ document.getElementById('confirmUpdate').addEventListener('click', function(){
         updateForm.submit();
         closeUpdateModal();
     } else {
-        alert('Selecione uma imagem para atualizar');
+        LSAviso.toast({nivel: 'alerta', titulo: 'Falta a imagem', texto: 'Selecione uma imagem para atualizar.'});
     }
 });
 

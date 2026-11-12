@@ -1192,8 +1192,15 @@ LSTela.pronto(function () {
     if ((estado.console || []).length && envio) envio.conferir().catch(function (erro) { Painel.erro("jogoErro", erro.message); });
   });
   form.querySelectorAll('input[name="proporcao"]').forEach(function (r) { r.addEventListener("change", function () { estado.formatoTocado = true; pintarTela(); }); });
-  el("jogoConsoleTirar").addEventListener("click", function () {
-    if (!jogoAberto || !window.confirm("Tirar os arquivos de console deste jogo? Ele sai do site até receber outros.")) return;
+  el("jogoConsoleTirar").addEventListener("click", async function () {
+    if (!jogoAberto) return;
+    var jogo = jogoAberto;
+    var sim = await LSAviso.confirmar({
+      titulo: "Tirar os arquivos de console?",
+      texto: "O jogo sai do site até receber outros arquivos.",
+      confirmar: "Tirar arquivos", perigo: true
+    });
+    if (!sim || jogoAberto !== jogo) return;
     envio.postarAcao("emulador_remover", { id: jogoAberto.id }).then(function (json) {
       jogoAberto.emulador_arquivos = []; jogoAberto.emulador_resumo = "";
       el("jogoConsoleCaixa").classList.add("d-none");

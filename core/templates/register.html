@@ -64,14 +64,7 @@
                 {% endif %}
             </p>
 
-            {% if messages %}
-                {% for m in messages %}
-                    <div class="ls-msg {% if m.tags %}{{ m.tags }}{% endif %}">
-                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-                        <span>{{ m }}</span>
-                    </div>
-                {% endfor %}
-            {% endif %}
+            {# Os recados (messages) viram toast no alto: ver o base.html e core/ls_aviso.py. #}
 
             {# Social primeiro: é o caminho que não exige digitação. #}
             {% if provedores %}

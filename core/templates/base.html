@@ -1,5 +1,6 @@
 {% load static interno_extras %}
 {% load fotos %}
+{% load ls_aviso %}
 <!DOCTYPE html>
 <html lang="pt-BR" class="ls-escuro">
 <head>
@@ -134,6 +135,12 @@
        marcado como tratado e a barra não correr à toa. -->
   <link rel="stylesheet" href="{% estatico 'site/ls-page-loader.css' %}">
   <script src="{% estatico 'site/ls-page-loader.js' %}" defer></script>
+
+  <!-- Avisos de aplicativo: os recados do servidor viram toast (ou folha),
+       e as perguntas de "tem certeza?" também (LSAviso, ls-aviso.js). O
+       mesmo arquivo do painel; as cores vêm do ls-tema.css. -->
+  <link rel="stylesheet" href="{% estatico 'site/ls-aviso.css' %}">
+  <script src="{% estatico 'site/ls-aviso.js' %}" defer></script>
 {% if user.is_authenticated %}
   <!-- Aviso de pagamento aprovado confirmado fora da aba (webhook). -->
   <link rel="stylesheet" href="{% estatico 'site/ls-confirmacao.css' %}">
@@ -162,6 +169,9 @@
         || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
       raiz.classList.add(android ? "ls-android" : ios ? "ls-ios" : "ls-outro");
+      /* Com JavaScript, os recados do servidor viram toast: o cartão
+         deles nasce escondido (ls-aviso.css), sem piscar antes. */
+      raiz.classList.add("ls-recados-js");
     })();
 
     /* Liga o estado inicial escondido antes da primeira pintura, para o bloco
@@ -531,6 +541,12 @@
 
 <!-- ======= CONTEÚDO DINÂMICO ======= -->
 <main class="content-section{% block main_class %}{% endblock %}" id="conteudo" tabindex="-1">
+  {% comment %}
+    Os recados do servidor (`messages`), como toast: ver core/ls_aviso.py.
+    A tela que mostra os recados do seu jeito (a de manutenção, com a
+    janela de "Recebemos sua solicitação") troca este bloco por nada.
+  {% endcomment %}
+  {% block avisos_do_app %}{% avisos_do_app %}{% endblock %}
   {% block content %}
   {% endblock %}
 </main>
@@ -1298,8 +1314,24 @@ function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
   });
 }
 
-/* ================== TOAST ================== */
+/* ================== TOAST ==================
+   O aviso do carrinho (e de quem mais chamar `mostrarToast`) é o toast de
+   aplicativo do site inteiro (ls-aviso.js). A pílula de antes fica só como
+   reserva, para o caso raro de o script dos avisos não ter chegado. */
 function mostrarToast(msg, erro = false, duracao = 3000) {
+  if (window.LSAviso) {
+    const carrinho = !erro && /carrinho/i.test(msg);
+    window.LSAviso.toast({
+      nivel: erro ? 'erro' : 'sucesso',
+      titulo: erro ? '' : (carrinho ? 'No carrinho' : ''),
+      texto: msg,
+      icone: carrinho ? 'carrinho' : '',
+      acao: carrinho && !/\/carrinho\//.test(window.location.pathname)
+        ? { rotulo: 'Ver carrinho', url: "{% url 'carrinho' %}" }
+        : null
+    });
+    return;
+  }
   let toast = document.getElementById('toast-carrinho');
   if (!toast) {
     toast = document.createElement('div');

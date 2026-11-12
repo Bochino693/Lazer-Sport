@@ -385,7 +385,10 @@
                     </button>
                     <button type="submit" name="status" value="X" class="mnt-btn mnt-btn-danger-ghost"
                             title="Cancela esta solicitação"
-                            data-confirm="Cancelar a manutenção {{ m.protocolo }}?">
+                            data-ls-confirmar="A solicitação sai do andamento. Dá para reabrir depois."
+                            data-ls-confirmar-titulo="Cancelar a manutenção {{ m.protocolo }}?"
+                            data-ls-confirmar-botao="Cancelar manutenção"
+                            data-ls-confirmar-cancelar="Voltar" data-ls-confirmar-icone="erro" data-ls-perigo>
                         <span class="mnt-btn-label"><i class="fa-solid fa-ban"></i> Cancelar</span>
                     </button>
                     {% endif %}
