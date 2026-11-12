@@ -188,7 +188,7 @@ class JuntarTests(_NoAr):
         self.assertEqual([b.nome_brinquedo for b in kit.brinquedos_extras.all()], ["Pebolim"])
 
     def test_a_migracao(self):
-        self.assertEqual(migracao_0190.Migration.dependencies, [("core", "0185_fotos_sem_fundo_fora_do_site")])
+        self.assertEqual(migracao_0190.Migration.dependencies, [("core", "0186_capas_quadradas_dos_adesivos")])
         migracao_0190.juntar(registro, None)
         self.assertFalse(Brinquedos.objects.filter(nome_brinquedo="Air Rock").exists())
         self.assertEqual(variantes.JUNTADOS_DEPOIS[0][0][0], "Air Game Premium")

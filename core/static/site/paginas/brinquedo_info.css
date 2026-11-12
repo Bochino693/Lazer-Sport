@@ -1658,10 +1658,16 @@
 /* A TROCA DA FOTO DA VITRINE (o script da página): a próxima entra por cima,
    deslizando um pouco do lado de onde veio e saindo do desfoque; a de antes
    recua de leve. */
-.produto-troca-camada {
+/* O seletor leva a caixa e o `img` de propósito: a regra geral da vitrine
+   (`.produto-imagem-box img`: position relative, a sombra) e a do carregamento
+   das fotos (ls-reveal.css, `img[data-ls-img]`) venciam a camada -- ela entrava
+   no fluxo, ao lado da foto, e aparecia de uma vez, sem a troca. */
+.produto-imagem-box img.produto-troca-camada {
     position: absolute;
     z-index: 2;
     margin: 0;
+    max-width: none;
+    max-height: none;
     opacity: 0;
     transform: translateX(var(--troca-x, 0%)) scale(1.03);
     filter: var(--troca-filtro, brightness(1)) blur(5px);
@@ -1673,7 +1679,7 @@
     will-change: opacity, transform;
 }
 
-.produto-troca-camada.visivel {
+.produto-imagem-box img.produto-troca-camada.visivel {
     opacity: 1;
     transform: none;
     filter: var(--troca-filtro, brightness(1));
@@ -1689,5 +1695,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .produto-troca-camada, #produto-imagem-principal { transition: none; }
+    .produto-imagem-box img.produto-troca-camada, #produto-imagem-principal { transition: none; }
 }

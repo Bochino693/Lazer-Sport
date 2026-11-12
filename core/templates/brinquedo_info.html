@@ -557,6 +557,8 @@
         const estilo = window.getComputedStyle(imagemPrincipal);
         const camada = document.createElement('img');
         camada.className = 'produto-troca-camada';
+        // fora do "carregando" das fotos (ls-reveal.js): ele mostraria a camada de uma vez
+        camada.dataset.lsSkipSkeleton = 'true';
         camada.alt = '';
         camada.setAttribute('aria-hidden', 'true');
         camada.decoding = 'async';
@@ -571,10 +573,9 @@
         camadaDaTroca = camada;
         camada.src = src;
         caixa.appendChild(camada);
-        imagemPrincipal.classList.add('produto-foto-saindo');
-        const mostrar = () => requestAnimationFrame(() => requestAnimationFrame(() => camada.classList.add('visivel')));
-        (camada.decode ? camada.decode() : Promise.resolve()).then(mostrar, mostrar);
-        window.setTimeout(() => {
+        // a foto de baixo só é trocada DEPOIS de a camada ter entrado inteira: o relógio da
+        // troca começa quando a foto nova já baixou (numa rede lenta a camada não some antes)
+        const assentar = () => {
             if (camadaDaTroca !== camada) return;
             imagemPrincipal.src = src;
             imagemPrincipal.alt = alt;
@@ -588,7 +589,15 @@
                 if (camadaDaTroca === camada) camadaDaTroca = null;
             };
             (imagemPrincipal.decode ? imagemPrincipal.decode() : Promise.resolve()).then(pronto, pronto);
-        }, 620);
+        };
+        const mostrar = () => requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (camadaDaTroca !== camada) return;
+            // a de antes só recua quando a nova já vem (enquanto ela baixa, nada escurece)
+            imagemPrincipal.classList.add('produto-foto-saindo');
+            camada.classList.add('visivel');
+            window.setTimeout(assentar, 660);
+        }));
+        (camada.decode ? camada.decode() : Promise.resolve()).then(mostrar, mostrar);
     }
 
     function exibirFoto(indice, direcao) {

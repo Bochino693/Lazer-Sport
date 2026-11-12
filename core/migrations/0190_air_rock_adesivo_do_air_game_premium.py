@@ -26,7 +26,7 @@ def juntar(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0185_fotos_sem_fundo_fora_do_site"),
+        ("core", "0186_capas_quadradas_dos_adesivos"),
     ]
 
     operations = [
