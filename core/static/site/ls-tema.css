@@ -2232,6 +2232,19 @@ html.ls-escuro:not(#_):not(#__) .foto-cheia img {
     filter: none;
 }
 
+/* A FOTO INTEIRA (`data-foto-inteira`: a arte da promoção no quadro do topo
+   da home). Nada recortado: a foto inteira, e o resto da caixa é a cor da
+   borda da própria foto (ls-fotos.js), então a arte parece continuar. */
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-inteira {
+    background: var(--foto-borda, #0b0d18);
+}
+
+html.ls-escuro:not(#_):not(#__) .foto-cheia.foto-inteira img {
+    object-fit: contain;
+    object-position: center;
+    padding: 0;
+}
+
 /* A foto com fundo de outro formato que o da caixa (a foto em pé no card
    deitado): ela ENCHE a caixa, sem faixas desfocadas dos lados. O
    ls-fotos.js troca a foto pelo recorte no formato da caixa feito pelo
@@ -2832,14 +2845,31 @@ body.ls-modo-app main.content-section { padding-top: 0; margin-top: 0; }
     position: absolute;
     margin: 0;
     opacity: 0;
-    transition: opacity .6s ease;
+    /* a próxima foto entra com um zoom leve e um desfoque que somem: uma
+       troca de vitrine, sem piscar */
+    transform: var(--giro-transform, translateZ(0)) scale(1.06);
+    filter: var(--giro-filtro, brightness(1)) blur(6px) saturate(1.15);
+    transition:
+        opacity .75s cubic-bezier(.22, .61, .36, 1),
+        transform .95s cubic-bezier(.22, .61, .36, 1),
+        filter .75s ease;
+    will-change: opacity, transform;
     pointer-events: none;
     z-index: 1;
 }
 
-.card-giro-camada.card-giro-visivel { opacity: 1; }
+.card-giro-camada.card-giro-visivel {
+    opacity: 1;
+    transform: var(--giro-transform, translateZ(0)) scale(1);
+    filter: var(--giro-filtro, brightness(1));
+}
 
-.card-giro-sumindo { opacity: 0 !important; transition: opacity .3s ease; }
+.card-giro-sumindo {
+    opacity: 0 !important;
+    transform: scale(.98);
+    filter: blur(4px);
+    transition: opacity .38s ease, transform .38s ease, filter .38s ease;
+}
 
 @media (prefers-reduced-motion: reduce) {
     .card-giro-camada, .card-giro-sumindo { transition: none; }

@@ -1,6 +1,6 @@
 {% extends "gestao/base_adm.html" %}
 
-{% load interno_extras %}
+{% load interno_extras analises %}
 {% block title %}Usuários{% endblock %}
 {% block page_heading %}Usuários{% endblock %}
 
@@ -38,6 +38,8 @@
       <svg><use href="#usr-i-plus"/></svg> Novo usuário
     </button>
   </section>
+
+  {% include "gestao/includes/analises.html" with tipo="usuario" rotulo="as contas" %}
 
   <section class="usr-kpis" aria-label="Resumo de usuários">
     <article class="usr-kpi">
@@ -97,7 +99,7 @@
         </thead>
         <tbody>
           {% for usuario in usuarios %}
-            <tr>
+            <tr data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}">
               <td data-label="Usuário">
                 <div class="usr-identity">
                   <span class="usr-avatar">{{ usuario.username|slice:":2"|upper }}</span>
@@ -124,6 +126,7 @@
                 <span class="usr-status {% if usuario.is_active %}is-on{% else %}is-off{% endif %}">
                   {% if usuario.is_active %}● Ativo{% else %}● Inativo{% endif %}
                 </span>
+                {% selo_presenca usuario %}
               </td>
               <td data-label="Cadastro">
                 <span class="usr-date">{{ usuario.date_joined|date:"d/m/Y" }}</span>

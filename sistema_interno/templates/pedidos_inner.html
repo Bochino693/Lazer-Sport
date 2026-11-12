@@ -25,6 +25,8 @@
   </div>
 </section>
 
+{% include "gestao/includes/analises.html" with tipo="pedido" rotulo="as vendas da loja" %}
+
 <section class="ls-metrics">
   {% for chave, rotulo, quantidade, icone, cor in cartoes %}
     <a class="ls-metric-card ls-budget-filter-card {{ cor }} {% if filtro_ativo == chave %}active{% endif %}"
@@ -58,7 +60,7 @@
         </thead>
         <tbody>
           {% for pedido in pedidos %}
-            <tr>
+            <tr data-detalhe-tipo="pedido" data-detalhe-id="{{ pedido.id }}" data-detalhe-atalho="nao" title="Abrir os detalhes do pedido">
               <td data-rotulo="Nº"><strong>#{{ pedido.id }}</strong></td>
               <td data-rotulo="Cliente">
                 <strong>{% firstof pedido.cliente.user.get_full_name pedido.cliente.user.username "Cliente do site" %}</strong>
@@ -99,4 +101,9 @@
     {% include "includes/paginacao.html" with pagina=page_obj %}
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% estatico 'site/paginas/gestao-analises.js' %}" defer></script>
 {% endblock %}

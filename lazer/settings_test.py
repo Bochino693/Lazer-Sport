@@ -86,5 +86,8 @@ TURNSTILE_SECRET_KEY = ""
 AQUECER_CACHE = False
 # e o contador de cliques grava na hora (core/cliques.py): o teste confere o número logo depois da visita
 CLIQUES_EM_SEGUNDO_PLANO = False
+# o "visto por último" das contas fica desligado (core/presenca.py): uma gravação a
+# mais mudaria a conta de consultas de toda tela logada. Os testes dele o ligam.
+PRESENCA_DE_USUARIOS = os.getenv("PRESENCA_DE_USUARIOS", "0").strip().lower() in ("1", "true", "yes", "on")
 # e os números "ao vivo" são montados na hora (core/renovar.py)
 RENOVAR_EM_SEGUNDO_PLANO = False

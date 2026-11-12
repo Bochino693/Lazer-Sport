@@ -773,6 +773,13 @@ class ReposicaoDetalheView(View):
         dados = get_cached_catalog_page("peca", (pk,), lambda: self._montar(pk))
         peca = dados["peca"]
 
+        # A peça nunca teve contador de clique; a visita vai só para o
+        # gráfico do painel, pela linha de fundo (core/interacoes.py).
+        from . import cliques
+        from .interacoes import VISITA, inicio_da_hora, somar
+
+        cliques.depois(somar, VISITA, "peca", peca.pk, 1, inicio_da_hora())
+
         resposta = render(request, 'reposicao_info.html', {
             'peca': peca,
             'imagens_peca': dados["imagens_peca"],
@@ -5156,7 +5163,9 @@ class UserAdminView(AdminOnlyMixin, View):
     def get(self, request):
         busca = request.GET.get("q", "").strip()
         tipo = request.GET.get("tipo", "todos")
-        usuarios = User.objects.select_related("perfil").order_by("-date_joined")
+        # `presenca`: o selo "Online agora / Visto há 2 h" de cada linha sai
+        # do mesmo SELECT (core/presenca.py), sem uma consulta por conta.
+        usuarios = User.objects.select_related("perfil", "presenca").order_by("-date_joined")
         if busca:
             usuarios = usuarios.filter(
                 Q(username__icontains=busca)
@@ -5529,6 +5538,11 @@ def adicionar_ao_carrinho(request, tipo, object_id):
     if not created:
         item.quantidade += quantidade
         item.save(update_fields=["quantidade"])
+
+    # o "quando" da ida ao carrinho, para os gráficos do painel (core/interacoes.py)
+    from .interacoes import ida_ao_carrinho
+
+    ida_ao_carrinho(tipo, objeto.id, quantidade)
 
     _invalidar_pagamento_pendente(carrinho)
 

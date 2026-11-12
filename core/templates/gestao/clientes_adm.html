@@ -40,6 +40,8 @@
     </button>
   </section>
 
+  {% include "gestao/includes/analises.html" with tipo="cliente" rotulo="os clientes" %}
+
   <section class="clients-kpis" aria-label="Resumo dos clientes">
     <article class="clients-kpi">
       <span class="clients-kpi-icon"><svg><use href="#i-users"/></svg></span>
@@ -110,6 +112,7 @@
               {% with cliente=ficha.obj endereco=ficha.endereco %}
               <tr
                 data-client-id="{{ cliente.id }}"
+                data-detalhe-tipo="cliente" data-detalhe-id="{{ cliente.id }}"
                 data-client-name="{{ cliente.nome_estabelecimento|lower }} {{ cliente.nome_cliente|default:''|lower }} {{ cliente.cnpj_estabelecimento }}"
                 data-client-location="{{ endereco.cidade|default:''|lower }} {{ endereco.estado|default:''|lower }} {{ endereco.pais|default:'Brasil'|lower }}"
                 data-active="{% if cliente.ativo %}true{% else %}false{% endif %}"

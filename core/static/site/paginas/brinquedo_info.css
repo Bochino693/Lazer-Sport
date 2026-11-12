@@ -1558,3 +1558,40 @@
 .produto-adesivo:focus-visible { outline: 3px solid #3fd0ff; outline-offset: 2px; }
 
 .item-adesivo { color: #94a3b8; font-weight: 500; }
+
+/* A TROCA DA FOTO DA VITRINE (o script da página): a próxima entra por cima,
+   deslizando um pouco do lado de onde veio e saindo do desfoque; a de antes
+   recua de leve. */
+.produto-troca-camada {
+    position: absolute;
+    z-index: 2;
+    margin: 0;
+    opacity: 0;
+    transform: translateX(var(--troca-x, 0%)) scale(1.03);
+    filter: var(--troca-filtro, brightness(1)) blur(5px);
+    transition:
+        opacity .5s cubic-bezier(.22, .61, .36, 1),
+        transform .62s cubic-bezier(.22, .61, .36, 1),
+        filter .5s ease;
+    pointer-events: none;
+    will-change: opacity, transform;
+}
+
+.produto-troca-camada.visivel {
+    opacity: 1;
+    transform: none;
+    filter: var(--troca-filtro, brightness(1));
+}
+
+#produto-imagem-principal {
+    transition: transform .62s cubic-bezier(.22, .61, .36, 1), opacity .5s ease;
+}
+
+#produto-imagem-principal.produto-foto-saindo {
+    transform: scale(.97);
+    opacity: .35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .produto-troca-camada, #produto-imagem-principal { transition: none; }
+}

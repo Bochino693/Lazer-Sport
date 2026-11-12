@@ -528,13 +528,69 @@
     // os dois abrem na foto que está na vitrine
     const gatilhosAmpliar = Array.from(document.querySelectorAll('[data-ls-galeria="galeria-produto"]'));
     let indiceGaleria = 0;
+    const semMovimento = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let camadaDaTroca = null;
 
-    function exibirFoto(indice) {
+    // A TROCA DA FOTO: a próxima entra por cima, deslizando um pouco do lado de onde
+    // veio (a seta, o dedo, a miniatura) e saindo do desfoque; depois ela vira a foto
+    // da vitrine. Sem movimento (preferência do aparelho), troca direto.
+    function trocarFoto(src, alt, direcao) {
+        if (!imagemPrincipal) return;
+        if (imagemPrincipal.getAttribute('src') === src) { imagemPrincipal.alt = alt; return; }
+        const caixa = imagemPrincipal.parentElement;
+        if (semMovimento || !caixa || !imagemPrincipal.offsetWidth) {
+            imagemPrincipal.src = src;
+            imagemPrincipal.alt = alt;
+            return;
+        }
+        if (camadaDaTroca) camadaDaTroca.remove();
+        const estilo = window.getComputedStyle(imagemPrincipal);
+        const camada = document.createElement('img');
+        camada.className = 'produto-troca-camada';
+        camada.alt = '';
+        camada.setAttribute('aria-hidden', 'true');
+        camada.decoding = 'async';
+        ['objectFit', 'objectPosition', 'padding', 'borderRadius', 'boxSizing'].forEach((prop) => { camada.style[prop] = estilo[prop]; });
+        camada.style.setProperty('--troca-filtro', estilo.filter && estilo.filter !== 'none' ? estilo.filter : 'brightness(1)');
+        camada.style.setProperty('--troca-x', direcao > 0 ? '7%' : direcao < 0 ? '-7%' : '0%');
+        camada.style.left = imagemPrincipal.offsetLeft + 'px';
+        camada.style.top = imagemPrincipal.offsetTop + 'px';
+        camada.style.width = imagemPrincipal.offsetWidth + 'px';
+        camada.style.height = imagemPrincipal.offsetHeight + 'px';
+        if (window.getComputedStyle(caixa).position === 'static') caixa.style.position = 'relative';
+        camadaDaTroca = camada;
+        camada.src = src;
+        caixa.appendChild(camada);
+        imagemPrincipal.classList.add('produto-foto-saindo');
+        const mostrar = () => requestAnimationFrame(() => requestAnimationFrame(() => camada.classList.add('visivel')));
+        (camada.decode ? camada.decode() : Promise.resolve()).then(mostrar, mostrar);
+        window.setTimeout(() => {
+            if (camadaDaTroca !== camada) return;
+            imagemPrincipal.src = src;
+            imagemPrincipal.alt = alt;
+            const pronto = () => {
+                // a foto da vitrine volta ao normal sem animar (a camada ainda cobre)
+                imagemPrincipal.style.transition = 'none';
+                imagemPrincipal.classList.remove('produto-foto-saindo');
+                void imagemPrincipal.offsetWidth;
+                imagemPrincipal.style.transition = '';
+                camada.remove();
+                if (camadaDaTroca === camada) camadaDaTroca = null;
+            };
+            (imagemPrincipal.decode ? imagemPrincipal.decode() : Promise.resolve()).then(pronto, pronto);
+        }, 620);
+    }
+
+    function exibirFoto(indice, direcao) {
         if (!imagemPrincipal || !miniaturas.length) return;
+        const anterior = indiceGaleria;
         indiceGaleria = (indice + miniaturas.length) % miniaturas.length;
         const miniatura = miniaturas[indiceGaleria];
-        imagemPrincipal.src = miniatura.dataset.galeriaSrc;
-        imagemPrincipal.alt = miniatura.dataset.galeriaAlt;
+        trocarFoto(
+            miniatura.dataset.galeriaSrc,
+            miniatura.dataset.galeriaAlt,
+            direcao !== undefined ? direcao : Math.sign(indiceGaleria - anterior),
+        );
         miniaturas.forEach((item, posicao) => {
             const ativa = posicao === indiceGaleria;
             item.classList.toggle('ativa', ativa);
@@ -558,11 +614,11 @@
     });
     document.querySelector('[data-galeria-anterior]')?.addEventListener(
         'click',
-        () => exibirFoto(indiceGaleria - 1)
+        () => exibirFoto(indiceGaleria - 1, -1)
     );
     document.querySelector('[data-galeria-proxima]')?.addEventListener(
         'click',
-        () => exibirFoto(indiceGaleria + 1)
+        () => exibirFoto(indiceGaleria + 1, 1)
     );
 
     // No celular, arrastar a foto de lado passa para a próxima (ou volta),
@@ -583,7 +639,7 @@
             const dy = evento.clientY - inicio.y;
             inicio = null;
             if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3) {
-                exibirFoto(indiceGaleria + (dx < 0 ? 1 : -1));
+                exibirFoto(indiceGaleria + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
                 engolirClique = true;
                 setTimeout(() => { engolirClique = false; }, 0);
             }

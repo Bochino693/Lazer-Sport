@@ -111,7 +111,7 @@
                  {% if item.modelo_3d %}data-modelo3d="{{ item.modelo_3d }}"{% endif %}
                  aria-roledescription="slide" aria-label="{{ forloop.counter }} de {{ vitrine_quadro|length }}"
                  {% if not forloop.first %}aria-hidden="true"{% endif %}>
-          <a class="ls-vitrine-foto" href="{{ item.url }}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">
+          <a class="ls-vitrine-foto" href="{{ item.url }}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"{% if item.tipo == 'promocao' %} data-foto-inteira{% endif %}>
             <img src="{{ item.capa }}" alt="{{ item.nome }}" width="900" height="900" decoding="async"
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
             {% if item.modelo_3d %}<span class="ls-vitrine-chip3d" aria-hidden="true"><i class="fa-solid fa-cube"></i> 3D</span>{% endif %}
