@@ -699,7 +699,7 @@ def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
                  if foto.tipo or getattr(foto, "papel_na_capa", "") in ImagemBrinquedo.PAPEIS_FORA_DO_SITE]
     fotos.sort(key=lambda foto: (ORDEM_DAS_POSICOES.get(foto.tipo, 9), foto.ordem, foto.id))
     vistas, saida = set(), []
-    for foto in fotos:  # uma por posição (a de antes da 0172 e a do adesivo, a primeira)
+    for foto in fotos:  # uma por posição (a de antes da 0181 e a do adesivo, a primeira)
         if not foto.tipo or foto.tipo not in vistas:
             vistas.add(foto.tipo)
             saida.append(foto)

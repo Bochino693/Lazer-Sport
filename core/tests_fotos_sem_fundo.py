@@ -7,7 +7,7 @@ somente para outras finalidades." O que estes testes protegem:
   * o painel: a foto enviada sem fundo (a frente, os lados, a posição de um
     adesivo) vira "recorte para artes" sozinha, fica guardada e some do site;
     a capa sem fundo dá lugar à primeira foto com fundo;
-  * a varredura (a 0177, só no Render, e o comando `fotos_sem_fundo`): marca
+  * a varredura (a 0185, só no Render, e o comando `fotos_sem_fundo`): marca
     as que ninguém marcou, rodar de novo não muda nada nem baixa de novo, a
     falha de rede fica para a próxima, a capa em cena não é tocada, nada é
     apagado, a volta devolve tudo, o --simular não muda nada;
@@ -39,8 +39,8 @@ from . import conferir_fotos, fotos_dos_cards
 from .models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, galeria_publica
 from .views_arena import dados_publicos_da_arena
 
-migracao_0176 = importlib.import_module("core.migrations.0176_conferencia_do_fundo")
-migracao_0177 = importlib.import_module("core.migrations.0177_fotos_sem_fundo_fora_do_site")
+migracao_0184 = importlib.import_module("core.migrations.0184_conferencia_do_fundo")
+migracao_0185 = importlib.import_module("core.migrations.0185_fotos_sem_fundo_fora_do_site")
 
 INTERNO = {"HTTP_HOST": "interno.testserver"}
 AJAX = {**INTERNO, "HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
@@ -101,7 +101,7 @@ class _ComDisco(TestCase):
 
 
 class VarreduraTests(_ComDisco):
-    """A 0177 e o comando: a conferência de verdade (os arquivos no disco)."""
+    """A 0185 e o comando: a conferência de verdade (os arquivos no disco)."""
 
     def setUp(self):
         super().setUp()
@@ -174,7 +174,7 @@ class VarreduraTests(_ComDisco):
     def test_a_volta_devolve_a_capa_e_as_fotos(self):
         antes = self._retrato()
         conferir_fotos.marcar_sem_fundo(Brinquedos, ImagemBrinquedo, avisar=_calado)
-        migracao_0177.desmarcar(registro, None)
+        migracao_0185.desmarcar(registro, None)
         fotos, capas = self._retrato()
         self.assertEqual(capas, antes[1])
         self.assertEqual([f for f in fotos if f[0] in {x[0] for x in antes[0]}], antes[0])
@@ -195,13 +195,12 @@ class VarreduraTests(_ComDisco):
         self.assertEqual(ImagemBrinquedo.objects.filter(papel_na_capa="recorte").count(), 4)
 
     def test_a_migracao_so_roda_no_render(self):
-        self.assertEqual(migracao_0176.Migration.dependencies,
-                         [("core", "0174_posicoes_do_3d_dos_adesivos"), ("core", "0175_kit_sucesso_com_matrix")])
+        self.assertEqual(migracao_0184.Migration.dependencies, [("core", "0183_posicoes_do_3d_dos_adesivos")])
         with self.settings(IS_RENDER=False):
-            migracao_0177.marcar(registro, None)
+            migracao_0185.marcar(registro, None)
         self.assertFalse(ImagemBrinquedo.objects.exclude(fundo="").exists())
         with self.settings(IS_RENDER=True), mock.patch("builtins.print"):
-            migracao_0177.marcar(registro, None)
+            migracao_0185.marcar(registro, None)
         self.assertEqual(ImagemBrinquedo.objects.filter(papel_na_capa="recorte").count(), 4)
 
 

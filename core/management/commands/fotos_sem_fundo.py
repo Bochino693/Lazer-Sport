@@ -1,7 +1,7 @@
 """As fotos sem fundo (branca ou transparente) saem do site e ficam como recorte para artes (LEIA-ME 72).
 
     python manage.py fotos_sem_fundo --simular     # só lista o que marcaria
-    python manage.py fotos_sem_fundo              # marca (a mesma varredura da 0177)
+    python manage.py fotos_sem_fundo              # marca (a mesma varredura da 0185)
     python manage.py fotos_sem_fundo --com-black-friday
 
 Confere só as fotos ainda não conferidas; pode rodar de novo. Nada é apagado.

@@ -12,9 +12,9 @@ use as fotos de fundo branco". O que estes testes protegem:
     por posição, NUNCA a foto sem fundo (a de fundo branco, o recorte);
   * a página do produto: o seletor grande junto da galeria; trocar o adesivo
     troca as fotos e o 3D ali mesmo (e o endereço, o WhatsApp, o carrinho);
-  * as migrações: esquema e dados separados (0172 / 0173 / 0174); a 0169 e a
-    0173 rodadas duas vezes não mudam nada e nenhum adesivo perde foto ou 3D;
-    a volta da 0173 devolve o banco; a 0174 nunca troca a foto de alguém;
+  * as migrações: esquema e dados separados (0181 / 0182 / 0183); a 0169 e a
+    0182 rodadas duas vezes não mudam nada e nenhum adesivo perde foto ou 3D;
+    a volta da 0182 devolve o banco; a 0183 nunca troca a foto de alguém;
   * nada de duas fotos quase iguais no mesmo adesivo, nada de vista sem fundo
     (core.conferir_fotos), no painel e nas vistas tiradas do 3D;
   * o painel: as seis posições e o 3D de cada adesivo, o recorte para baixar.
@@ -58,9 +58,9 @@ from .views_arena import dados_publicos_da_arena
 migracao_0168 = importlib.import_module("core.migrations.0168_variantes_donas_do_3d_e_das_fotos")
 migracao_0169 = importlib.import_module("core.migrations.0169_um_objeto_no_banco")
 migracao_0170 = importlib.import_module("core.migrations.0170_variantes_sem_origem")
-migracao_0172 = importlib.import_module("core.migrations.0172_adesivo_padrao_e_posicoes")
-migracao_0173 = importlib.import_module("core.migrations.0173_adesivo_padrao_de_todo_brinquedo")
-migracao_0174 = importlib.import_module("core.migrations.0174_posicoes_do_3d_dos_adesivos")
+migracao_0181 = importlib.import_module("core.migrations.0181_adesivo_padrao_e_posicoes")
+migracao_0182 = importlib.import_module("core.migrations.0182_adesivo_padrao_de_todo_brinquedo")
+migracao_0183 = importlib.import_module("core.migrations.0183_posicoes_do_3d_dos_adesivos")
 
 GLB_ALIEN = "site/arena/modelos/air-game-kids-alienigenas.glb"
 GLB_ASTRONAUTAS = "site/arena/modelos/air-game-kids-astronautas.glb"
@@ -204,18 +204,18 @@ class MigracoesTests(TestCase):
         self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0169.Migration.operations))
         self.assertTrue(all(isinstance(op, RemoveField) for op in migracao_0170.Migration.operations))
         self.assertTrue(all(isinstance(op, (RemoveConstraint, AddField, AlterField, AddConstraint))
-                            for op in migracao_0172.Migration.operations))
-        self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0173.Migration.operations))
-        self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0174.Migration.operations))
+                            for op in migracao_0181.Migration.operations))
+        self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0182.Migration.operations))
+        self.assertTrue(all(isinstance(op, RunPython) for op in migracao_0183.Migration.operations))
         self.assertIn(("core", "0167_jogadas_registradas"), migracao_0168.Migration.dependencies)
         self.assertIn(ANTES, migracao_0169.Migration.dependencies)
         self.assertIn(("core", "0169_um_objeto_no_banco"), migracao_0170.Migration.dependencies)
-        self.assertIn(("core", "0171_analises_e_presenca"), migracao_0172.Migration.dependencies)
-        self.assertIn(("core", "0172_adesivo_padrao_e_posicoes"), migracao_0173.Migration.dependencies)
-        self.assertIn(("core", "0173_adesivo_padrao_de_todo_brinquedo"), migracao_0174.Migration.dependencies)
-        # a 0173 volta (a 0172 também: só esquema); a 0174 não apaga nada na volta
-        self.assertTrue(migracao_0173.Migration.operations[0].reversible)
-        self.assertEqual(migracao_0173.Migration.operations[0].reverse_code.__name__, "despadronizar")
+        self.assertIn(("core", "0180_maquinas_vermelhas_no_showroom"), migracao_0181.Migration.dependencies)
+        self.assertIn(("core", "0181_adesivo_padrao_e_posicoes"), migracao_0182.Migration.dependencies)
+        self.assertIn(("core", "0182_adesivo_padrao_de_todo_brinquedo"), migracao_0183.Migration.dependencies)
+        # a 0182 volta (a 0181 também: só esquema); a 0183 não apaga nada na volta
+        self.assertTrue(migracao_0182.Migration.operations[0].reversible)
+        self.assertEqual(migracao_0182.Migration.operations[0].reverse_code.__name__, "despadronizar")
 
     def test_a_subida_so_no_render(self):
         with mock.patch.object(variantes, "subir_posicoes") as subir, self.settings(IS_RENDER=False):
@@ -330,9 +330,9 @@ class EstruturarTests(TransactionTestCase):
 
 
 class PadronizarTests(TestCase):
-    """A 0173 (core.variantes.padronizar) num banco como o do ar: rodada DUAS vezes, nenhum adesivo perde nada."""
+    """A 0182 (core.variantes.padronizar) num banco como o do ar: rodada DUAS vezes, nenhum adesivo perde nada."""
 
-    def _como_antes_da_0173(self):
+    def _como_antes_da_0182(self):
         """O Air Game Kids como a 0170 deixou: as fotos do padrão sem adesivo, o 3D só no ObjetoTresD."""
         base = Brinquedos.objects.create(nome_brinquedo="Air Game Kids", descricao="x", avaliacao=5, voltz="220V",
                                          valor_brinquedo=Decimal("6990.00"))
@@ -359,7 +359,7 @@ class PadronizarTests(TestCase):
                                                   papel_na_capa=papel, imagem=nome)
             if variante is None:
                 ImagemBrinquedo.objects.filter(pk=foto.pk).update(variante=None)
-        # um brinquedo sem adesivo nenhum (como todos os outros antes da 0173) e uma máquina da Black Friday
+        # um brinquedo sem adesivo nenhum (como todos os outros antes da 0182) e uma máquina da Black Friday
         pebolim = Brinquedos.objects.create(nome_brinquedo="Pebolim", descricao="x", avaliacao=5, voltz="220V")
         bf = Brinquedos.objects.create(nome_brinquedo="Basquete Kids", descricao="x", avaliacao=5, voltz="220V")
         for brinquedo in (pebolim, bf):
@@ -377,7 +377,7 @@ class PadronizarTests(TestCase):
         return fotos, adesivos, sorted(Brinquedos.objects.values_list("id", "adesivo_padrao_id"))
 
     def test_duas_vezes_com_dois_adesivos_nada_se_perde(self):
-        base, padrao, alien, pebolim, bf = self._como_antes_da_0173()
+        base, padrao, alien, pebolim, bf = self._como_antes_da_0182()
         n_fotos = ImagemBrinquedo.objects.count()
         variantes.padronizar(registro, avisar=_calado)
         primeiro = self._retrato()
@@ -414,7 +414,7 @@ class PadronizarTests(TestCase):
         self.assertEqual(bf.imagens_brinquedo.filter(variante=bf.adesivo_padrao).count(), 2)
 
     def test_o_3d_que_o_adesivo_ja_tem_nunca_e_trocado(self):
-        base, padrao, alien, _pebolim, _bf = self._como_antes_da_0173()
+        base, padrao, alien, _pebolim, _bf = self._como_antes_da_0182()
         VarianteAdesivo.objects.filter(pk=padrao.pk).update(arquivo_estatico_3d="site/arena/modelos/o-meu.glb")
         variantes.padronizar(registro, avisar=_calado)
         variantes.padronizar(registro, avisar=_calado)
@@ -422,13 +422,13 @@ class PadronizarTests(TestCase):
         self.assertEqual(padrao.arquivo_estatico_3d, "site/arena/modelos/o-meu.glb")
 
     def test_a_volta_devolve_o_banco_e_a_ida_de_novo_da_o_mesmo(self):
-        base, *_resto = self._como_antes_da_0173()
+        base, *_resto = self._como_antes_da_0182()
         antes = sorted(ImagemBrinquedo.objects.values_list("id", "variante_id", "tipo", "papel_na_capa"))
         variantes.padronizar(registro, avisar=_calado)
         do_air_game = sorted(ImagemBrinquedo.objects.filter(brinquedo=base).values_list("id", "variante_id", "tipo", "papel_na_capa"))
         variantes.despadronizar(registro)
         self.assertEqual(sorted(ImagemBrinquedo.objects.values_list("id", "variante_id", "tipo", "papel_na_capa")), antes)
-        self.assertFalse(VarianteAdesivo.objects.filter(nome="Padrão").exists())  # os criados pela 0173 saem
+        self.assertFalse(VarianteAdesivo.objects.filter(nome="Padrão").exists())  # os criados pela 0182 saem
         self.assertEqual(VarianteAdesivo.objects.filter(brinquedo=base).count(), 2)  # o Astronautas e o Alienígenas ficam
         variantes.padronizar(registro, avisar=_calado)
         self.assertEqual(sorted(ImagemBrinquedo.objects.filter(brinquedo=base).values_list(
@@ -436,7 +436,7 @@ class PadronizarTests(TestCase):
 
 
 class SubirPosicoesTests(TestCase):
-    """A 0174 (core.variantes.subir_posicoes): as vistas do 3D sobem uma vez, sem trocar a foto de ninguém."""
+    """A 0183 (core.variantes.subir_posicoes): as vistas do 3D sobem uma vez, sem trocar a foto de ninguém."""
 
     def setUp(self):
         pasta = tempfile.TemporaryDirectory()

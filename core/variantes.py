@@ -410,7 +410,7 @@ def estruturar(apps, schema_editor=None, avisar=print):
 
 
 # ----------------------------------------------------------------------
-# A 0173: todo brinquedo com o adesivo padrão (as fotos das posições e o 3D)
+# A 0182: todo brinquedo com o adesivo padrão (as fotos das posições e o 3D)
 # ----------------------------------------------------------------------
 
 #: O nome do adesivo padrão quando o brinquedo não tem um (os pares já têm: Astronautas, Azul).
@@ -423,7 +423,7 @@ BLACK_FRIDAY = ("Basquete Duplo", "Basquete Kids", "Air Rock", "Kid Play", "Cozi
 CATEGORIA_DA_BLACK_FRIDAY = "Casinhas Cenográficas"
 
 #: As vistas dos nossos 3D SEM FUNDO (o recorte transparente, a folha da fábrica de fundo branco, a
-#: planta): `{pasta: (arquivo sem extensão, ...)}` em core/static/site/arena/modelos/. A 0173 marca a
+#: planta): `{pasta: (arquivo sem extensão, ...)}` em core/static/site/arena/modelos/. A 0182 marca a
 #: foto que veio delas (pelo nome do arquivo) como recorte para artes; o teste confere a lista com
 #: core.conferir_fotos.sem_fundo. (A do Brinquedão Modelo 5 é da Black Friday: fica como está.)
 VISTAS_SEM_FUNDO = {
@@ -484,7 +484,7 @@ def _posicao_pelo_arquivo(nome):
 
 
 def padronizar(apps, schema_editor=None, avisar=print):
-    """A 0173, em todo lugar e idempotente: todo brinquedo ganha o adesivo padrão explícito.
+    """A 0182, em todo lugar e idempotente: todo brinquedo ganha o adesivo padrão explícito.
 
       * o adesivo padrão (o que já existe, ou um "Padrão") vira o
         `adesivo_padrao` do brinquedo, e as fotos sem adesivo passam para ele
@@ -499,7 +499,7 @@ def padronizar(apps, schema_editor=None, avisar=print):
         painel): a cópia da foto de fundo branco (a mesma "original", que
         voltava sem tipo), a do remove.bg / Photoroom e as vistas sem fundo
         dos nossos 3D (VISTAS_SEM_FUNDO). Fora as da Black Friday.
-    Nenhuma foto e nenhum 3D é apagado; nada sobe para o Cloudinary (a 0174).
+    Nenhuma foto e nenhum 3D é apagado; nada sobe para o Cloudinary (a 0183).
     """
     Brinquedos = apps.get_model("core", "Brinquedos")
     VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
@@ -565,12 +565,12 @@ def padronizar(apps, schema_editor=None, avisar=print):
 
 
 def despadronizar(apps, schema_editor=None, avisar=print):
-    """O inverso da 0173 (para voltar à 0171): o banco como a 0172 o achou. Nenhuma foto e nenhum 3D é apagado.
+    """O inverso da 0182 (para voltar à 0180): o banco como a 0181 o achou. Nenhuma foto e nenhum 3D é apagado.
 
     As fotos do padrão voltam a ser "do produto" (sem adesivo); as dos outros
     adesivos e as posições novas (em 3/4, de cima) ficam sem posição (a regra
     de antes: uma posição por brinquedo); o recorte volta a ser uma foto sem
-    papel; o "Padrão" criado pela 0173 (sem foto e sem 3D próprio) sai.
+    papel; o "Padrão" criado pela 0182 (sem foto e sem 3D próprio) sai.
     """
     Brinquedos = apps.get_model("core", "Brinquedos")
     VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
@@ -628,7 +628,7 @@ POSICOES_DO_3D = {
         ("lado_direito.webp", "lado_direito", "o lado direito, de perto, com o console", 2),
     )),
     # o padrão (None: o adesivo padrão do brinquedo, qualquer que seja o nome): os lados vinham da folha
-    # da fábrica, de fundo branco (a 0173 os guarda como recorte para artes); estes são do 3D
+    # da fábrica, de fundo branco (a 0182 os guarda como recorte para artes); estes são do 3D
     ("Brinquedão Modelo 2", None): ("brinquedao-modelo-2", (
         ("lado_esquerdo_3d.webp", "lado_esquerdo", "o lado esquerdo", 1),
         ("lado_direito_3d.webp", "lado_direito", "o lado direito, com o tobogã", 1),
@@ -700,7 +700,7 @@ def subir_posicoes(Brinquedos, VarianteAdesivo, ImagemBrinquedo, avisar=print):
 
 
 def subir_posicoes_no_deploy(apps, schema_editor=None, avisar=print):
-    """A 0174: só no Render (o Cloudinary só está lá); se a subida falhar, o deploy segue."""
+    """A 0183: só no Render (o Cloudinary só está lá); se a subida falhar, o deploy segue."""
     from django.conf import settings
 
     if not getattr(settings, "IS_RENDER", False):

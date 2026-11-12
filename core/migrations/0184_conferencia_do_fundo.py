@@ -1,4 +1,4 @@
-"""A conferência do fundo das fotos (a 0176; LEIA-ME 72). Só esquema.
+"""A conferência do fundo das fotos (a 0184; LEIA-ME 72). Só esquema.
 
 O cliente: "me diga sobre as imagens de fundo branco dos brinquedos, por que
 ainda aparecem? elas devem ficar de fora dos carrosseis e cards, ficando
@@ -7,8 +7,7 @@ somente para outras finalidades." Entram:
     (core.conferir_fotos; a varredura só olha as ainda não conferidas);
   * `Brinquedos.capa_sem_fundo`: a capa de antes, quando ela era sem fundo e
     deu lugar a uma foto com fundo (guardada; a volta a põe de novo).
-Os dados vêm na 0177 (só no Render). Junta as duas pontas: a 0174 (os
-adesivos) e a 0175 (o kit da Matrix).
+Os dados vêm na 0185 (só no Render).
 """
 
 from django.db import migrations, models
@@ -17,8 +16,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0174_posicoes_do_3d_dos_adesivos"),
-        ("core", "0175_kit_sucesso_com_matrix"),
+        ("core", "0183_posicoes_do_3d_dos_adesivos"),
     ]
 
     operations = [

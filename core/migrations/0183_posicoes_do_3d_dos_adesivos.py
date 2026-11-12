@@ -1,4 +1,4 @@
-"""As posições tiradas do 3D de cada adesivo (a 0174; LEIA-ME 72). Só dados, só no Render.
+"""As posições tiradas do 3D de cada adesivo (a 0183; LEIA-ME 72). Só dados, só no Render.
 
 Sobem como fotos de cada adesivo as vistas do 3D dele, no showroom (nunca de
 fundo branco; core.variantes.POSICOES_DO_3D, os arquivos em
@@ -13,7 +13,7 @@ core/static/site/arena/modelos/<pasta>/):
     esquerdo), de perto, com o console;
   * Brinquedão Modelo 2 (o padrão): os dois lados, do 3D, no showroom (os de
     antes eram a folha da fábrica, de fundo branco: viraram recorte para
-    artes na 0173).
+    artes na 0182).
 Nunca troca a foto que alguém pôs numa posição; rodar de novo não sobe nada
 outra vez. Só no Render (o Cloudinary só está lá); se a subida falhar, o
 deploy segue e o comando refaz:
@@ -33,7 +33,7 @@ def subir(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0173_adesivo_padrao_de_todo_brinquedo"),
+        ("core", "0182_adesivo_padrao_de_todo_brinquedo"),
     ]
 
     operations = [

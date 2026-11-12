@@ -1,4 +1,4 @@
-"""Todo brinquedo com o adesivo padrão; uma foto por posição em cada adesivo (a 0172; LEIA-ME 72). Só esquema.
+"""Todo brinquedo com o adesivo padrão; uma foto por posição em cada adesivo (a 0181; LEIA-ME 72). Só esquema.
 
 O cliente: "cada adesivo deve ter fotos das posições e um objeto 3d, um outro
 adesivo, mesmas fotos das posições e referente a ele um objeto 3d, padronize
@@ -7,12 +7,12 @@ e 3D o card, a capa e a Arena usam) e, na `ImagemBrinquedo`, a regra "uma foto
 por posição em cada adesivo" (no lugar de "uma por posição no brinquedo": o
 Astronautas e o Alienígenas têm cada um a sua frente). Entram também as
 posições que saem do 3D (em 3/4, de cima) e o papel "recorte para artes" (a
-foto sem fundo, guardada no adesivo e só no painel). Os dados vêm na 0173.
-(Depende da 0171, a das análises.)
+foto sem fundo, guardada no adesivo e só no painel). Os dados vêm na 0182.
+(Depende da 0180, a última da main: as máquinas vermelhas no showroom.)
 
 No ar: só esquema, rápido; a regra nova (por adesivo) aceita todas as fotos
-de antes (ainda sem adesivo). Volta (migrate core 0171) depois da volta da
-0173, que devolve uma posição por brinquedo.
+de antes (ainda sem adesivo). Volta (migrate core 0180) depois da volta da
+0182, que devolve uma posição por brinquedo.
 """
 
 import django.db.models.deletion
@@ -22,7 +22,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0171_analises_e_presenca"),
+        ("core", "0180_maquinas_vermelhas_no_showroom"),
     ]
 
     operations = [

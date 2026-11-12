@@ -199,7 +199,7 @@ def ajustar_capa(brinquedo, Brinquedos, ImagemBrinquedo, conferir=foto_sem_fundo
 
 def marcar_sem_fundo(Brinquedos, ImagemBrinquedo, conferir=foto_sem_fundo, simular=False, avisar=print,
                      com_black_friday=False, prazo=None):
-    """A varredura (a 0177 no Render e o comando `fotos_sem_fundo`). Pode rodar de novo.
+    """A varredura (a 0185 no Render e o comando `fotos_sem_fundo`). Pode rodar de novo.
 
     Confere só as fotos ainda não conferidas (`fundo` vazio), fora a capa em
     cena e as que já estão fora do site; a que falha (a rede) fica para a
@@ -256,7 +256,7 @@ def marcar_sem_fundo(Brinquedos, ImagemBrinquedo, conferir=foto_sem_fundo, simul
 
 
 def desmarcar_sem_fundo(Brinquedos, ImagemBrinquedo):
-    """A volta da 0177: a capa de antes volta; as fotos marcadas pela conferência voltam a ser fotos."""
+    """A volta da 0185: a capa de antes volta; as fotos marcadas pela conferência voltam a ser fotos."""
     for brinquedo in Brinquedos.objects.exclude(capa_sem_fundo=""):
         Brinquedos.objects.filter(pk=brinquedo.pk).update(imagem_brinquedo=brinquedo.capa_sem_fundo, capa_sem_fundo="")
     ImagemBrinquedo.objects.filter(fundo="sem", papel_na_capa="recorte").update(papel_na_capa="")

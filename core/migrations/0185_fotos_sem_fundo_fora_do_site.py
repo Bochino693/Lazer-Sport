@@ -1,4 +1,4 @@
-"""As fotos sem fundo saem do site (a 0177; LEIA-ME 72). Só dados, só no Render.
+"""As fotos sem fundo saem do site (a 0185; LEIA-ME 72). Só dados, só no Render.
 
 A varredura (core.conferir_fotos.marcar_sem_fundo): cada foto ainda não
 conferida é baixada pequena do Cloudinary (240 px); a sem fundo (branca ou
@@ -44,7 +44,7 @@ def desmarcar(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0176_conferencia_do_fundo"),
+        ("core", "0184_conferencia_do_fundo"),
     ]
 
     operations = [
