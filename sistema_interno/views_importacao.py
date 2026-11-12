@@ -46,6 +46,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
+from core.utils import buscar_dados_cep
+
 from .context_processors import invalidar_avisos
 from .importacao_word import conferencia, formulario, ia, leitor, mapa, sessao
 from .models import Cliente, Orcamento
@@ -125,10 +127,13 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
             # existem as linhas de texto e a leitura.
             del conteudo
 
+        proposta = conferencia.montar_proposta(leitura)
+        # O CEP sem a rua (ou sem a cidade): a mesma consulta do cadastro à
+        # mão completa, uma vez só, aqui -- e não a cada abertura da tela.
+        leitura["cep_consultado"] = _consultar_cep(proposta)
         if leitura["ia"]["usada"]:
             # A IA escolhe entre os candidatos só dos itens que ficaram em
             # dúvida, e só pode responder um id da lista ou "nenhum".
-            proposta = conferencia.montar_proposta(leitura)
             perguntas = [
                 {
                     "item": item["posicao"],
@@ -206,6 +211,19 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
             "arquivo": nome, "formato": "pdf_ia", "linhas": linhas, "escolhas": {},
             "ia": {"usada": True, "modelo": modelo, "dados": dados},
         }
+
+
+def _consultar_cep(proposta) -> dict:
+    cliente = proposta["cliente"]
+    cep = cliente["cep"]["valor"]
+    if not cep or all(cliente[nome]["valor"] for nome in ("logradouro", "bairro", "cidade", "uf")):
+        return {}
+    try:
+        dados = buscar_dados_cep(cep)
+    except Exception:  # noqa: BLE001 -- consulta de fora nunca derruba a importação
+        logger.warning("Consulta do CEP %s na importação falhou.", cep, exc_info=True)
+        return {}
+    return dict(dados) if dados else {}
 
 
 def _reforco_da_ia(linhas) -> dict:
@@ -369,6 +387,8 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             "hoje": timezone.localdate(),
             "validade_padrao": Orcamento.validade_padrao(),
             "oferta_orcamento": formulario.oferta_de_orcamento(proposta),
+            "pergunta_orcamento": formulario.pergunta_de_orcamento(proposta),
+            "repetido": do_orcamento.get("repetido"),
             "ja_no_mapa": bool(ligado and ligado.no_mapa),
             "contas": do_orcamento["contas"],
             "tipos_cliente": formulario.Cliente.Tipo.choices,

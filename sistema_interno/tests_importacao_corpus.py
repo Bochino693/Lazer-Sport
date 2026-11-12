@@ -34,6 +34,7 @@ from django.utils import timezone
 
 from core.models import Brinquedos
 
+from . import views_importacao
 from .importacao_word import conferencia, formulario, leitor, mapa
 from .models import Cliente, ItemOrcamento, Orcamento
 from .permissoes import atribuir_funcoes
@@ -52,7 +53,10 @@ CATALOGO = (
     ("Piscina de bolinhas", "450.00"),
     ("Brinquedão Modelo 3", "9000.00"),
     ("Brinquedão Modelo 5", "12000.00"),
+    ("Strike Kids", "15000.00"),
 )
+#: A equipe: quem assina pela casa e quem fala na conversa nunca é o cliente.
+EQUIPE = (("Marina", "Costa", "marina.costa"), ("Carlos", "Pereira", "carlos"))
 
 
 PONTOS = {
@@ -91,7 +95,27 @@ def criar_base():
     # O Buffet Alegria já é cliente (só o e-mail): o orçamento 01 tem de
     # LIGAR a ele e completar o cadastro, e não criar outro.
     Cliente.objects.create(nome_cliente="Buffet Alegria", email="contato@buffetalegria.com.br")
+    # O condomínio do 11 já está cadastrado, só com o telefone: o documento
+    # escreve o número de outro jeito ("11 3456 7890") e tem de achá-lo.
+    Cliente.objects.create(nome_cliente="Condomínio Parque das Árvores", telefone="(11) 3456-7890",
+                           canal_telefone=Cliente.CanalTelefone.TELEFONE)
+    for primeiro, ultimo, usuario in EQUIPE:
+        pessoa = User.objects.create_user(usuario, f"{usuario}@lazersport.com.br", "senha",
+                                          first_name=primeiro, last_name=ultimo)
+        atribuir_funcoes(pessoa, ["vendas"])
     return produtos
+
+
+def criar_orcamento_anterior(nome, itens):
+    """O orçamento que já existia (o mesmo pedido lançado dias antes)."""
+    cliente = Cliente.objects.get(nome_cliente=esperado_de(nome)["cliente"]["nome"])
+    anterior = Orcamento.objects.create(cliente=cliente, nome_cliente=cliente.nome_cliente,
+                                        status=Orcamento.Status.RASCUNHO)
+    for produto, quantidade, valor in itens:
+        ItemOrcamento.objects.create(orcamento=anterior, descricao=produto, quantidade=quantidade,
+                                     valor_unitario=Decimal(valor),
+                                     brinquedo=Brinquedos.objects.get(nome_brinquedo=produto))
+    return anterior
 
 
 def campos_da_tela(proposta, envio):
@@ -149,6 +173,9 @@ class _SemChave(TestCase):
         localizar = mock.patch.object(mapa, "procurar_coordenadas", side_effect=ponto_da_cidade)
         localizar.start()
         self.addCleanup(localizar.stop)
+        cep = mock.patch.object(views_importacao, "buscar_dados_cep", return_value=None)
+        cep.start()
+        self.addCleanup(cep.stop)
 
 
 class LeituraDoCorpusTests(_SemChave):
@@ -177,6 +204,9 @@ class LeituraDoCorpusTests(_SemChave):
                 else:
                     self.assertIsNone(tela["oferta"], f"{nome}: oferta")
                 self.assertEqual(tela["cliente_existente"], esperado["cliente_existente"], f"{nome}: cliente_existente")
+                pergunta = formulario.pergunta_de_orcamento(proposta)
+                self.assertEqual(pergunta["brinquedos"] if pergunta else None, esperado["pergunta"],
+                                 f"{nome}: a pergunta dos brinquedos")
                 for grupo in ("cliente", "endereco"):
                     for campo, valor in esperado[grupo].items():
                         self.assertEqual(tela[grupo][campo], valor, f"{nome}: {grupo}.{campo}")
@@ -250,6 +280,10 @@ class GravacaoDoCorpusTests(_SemChave):
             dados["publicar_no_mapa"] = "1"
         if envio["cliente_confirmado"]:
             dados["cliente_confirmado"] = "1"
+        certo = esperado_de(nome)
+        if certo["modo"] == "orcamento" and not dados.get("frete") and certo.get("frete_na_tela"):
+            # O documento não fala de frete: a pessoa escolhe "Sem frete".
+            dados["frete"] = certo["frete_na_tela"]
         for item in envio["itens"]:
             prefixo = f"item-{item['uid']}-"
             dados[prefixo + "descricao"] = item["descricao"]
@@ -260,6 +294,14 @@ class GravacaoDoCorpusTests(_SemChave):
             if not item["produto"]:
                 dados[prefixo + "avulsa"] = "1"
         resposta = self.client.post(url, dados, **HOST)
+        if certo.get("repetido"):
+            # O mesmo pedido já lançado: a tela avisa e pede "Criar mesmo assim".
+            self.assertEqual(resposta.status_code, 400, f"{nome}: o orçamento repetido passou sem aviso")
+            pendencias = {p["campo"] for p in resposta.context["validado"]["pendencias"]}
+            self.assertIn("orcamento.repetido", pendencias, f"{nome}: sem o aviso de repetido")
+            self.assertContains(resposta, "Já existe o orçamento", status_code=400)
+            dados["criar_mesmo_assim"] = "1"
+            resposta = self.client.post(url, dados, **HOST)
         if resposta.status_code != 302:
             self.fail(f"{nome}: não criou -- {resposta.context['validado']['pendencias']}")
         return resposta
@@ -267,23 +309,33 @@ class GravacaoDoCorpusTests(_SemChave):
     def conferir_cliente(self, nome, cliente):
         esperado = esperado_de(nome)
         dados = esperado["cliente"]
+        # O cliente que já existia guarda o que o cadastro tinha e o documento
+        # não traz (o 12 é o Buffet Alegria, que o 01 já completou).
+        def igual(lido, certo, rotulo):
+            if certo or not esperado["cliente_existente"]:
+                self.assertEqual(lido, certo, f"{nome}: {rotulo}")
         self.assertEqual(cliente.nome_cliente, dados["nome"], f"{nome}: nome")
-        self.assertEqual(cliente.nome_estabelecimento, dados["estabelecimento"], f"{nome}: estabelecimento")
-        self.assertEqual(cliente.documento, dados["documento"], f"{nome}: documento")
-        self.assertEqual(cliente.telefone, dados["telefone"], f"{nome}: telefone")
-        self.assertEqual(
-            cliente.canal_telefone,
-            Cliente.CanalTelefone.WHATSAPP if dados["whatsapp"] == "sim" else Cliente.CanalTelefone.TELEFONE,
-            f"{nome}: WhatsApp",
-        )
-        self.assertEqual(cliente.email, dados["email"], f"{nome}: e-mail")
+        igual(cliente.nome_estabelecimento, dados["estabelecimento"], "estabelecimento")
+        igual(cliente.documento, dados["documento"], "documento")
+        igual(cliente.telefone, dados["telefone"], "telefone")
+        if dados["telefone"]:
+            self.assertEqual(
+                cliente.canal_telefone,
+                Cliente.CanalTelefone.WHATSAPP if dados["whatsapp"] == "sim" else Cliente.CanalTelefone.TELEFONE,
+                f"{nome}: WhatsApp",
+            )
+        igual(cliente.email or "", dados["email"], "e-mail")
         endereco = cliente.endereco_principal
         certo = esperado["endereco"]
         self.assertIsNotNone(endereco, f"{nome}: endereço")
+        # Um endereço só por cliente: importar de novo não duplica.
+        self.assertEqual(cliente.enderecos.count(), 1, f"{nome}: endereço repetido")
         # No mapa da home: marcado, ativo e com a coordenada da cidade.
         self.assertTrue(cliente.publicar_no_mapa, f"{nome}: marcado para o mapa")
-        self.assertEqual((endereco.latitude, endereco.longitude), PONTOS[certo["cidade"]], f"{nome}: alfinete")
         self.assertTrue(cliente.no_mapa, f"{nome}: no mapa")
+        if not certo["cidade"]:
+            return
+        self.assertEqual((endereco.latitude, endereco.longitude), PONTOS[certo["cidade"]], f"{nome}: alfinete")
         self.assertEqual(
             (endereco.cep, endereco.endereco, endereco.numero, endereco.complemento,
              endereco.bairro, endereco.cidade, endereco.estado),
@@ -298,6 +350,8 @@ class GravacaoDoCorpusTests(_SemChave):
                 continue  # o PDF tem o seu teste, num banco sem o 01
             esperado = esperado_de(nome)
             with self.subTest(documento=nome):
+                if esperado.get("orcamento_anterior"):
+                    criar_orcamento_anterior(nome, esperado["orcamento_anterior"])
                 antes = set(Orcamento.objects.values_list("pk", flat=True))
                 resposta = self.importar_e_criar(nome)
                 novos = Orcamento.objects.exclude(pk__in=antes)
@@ -318,8 +372,10 @@ class GravacaoDoCorpusTests(_SemChave):
                     str(orcamento.valor_final) if orcamento.valor_final is not None else None,
                     salvo["valor_final"], f"{nome}: valor final",
                 )
-                self.assertEqual(orcamento.frete, Decimal(esperado["frete"].replace(".", "").replace(",", ".")))
-                self.assertEqual(orcamento.validade.isoformat(), esperado["validade"], f"{nome}: validade")
+                frete = esperado["frete"] or esperado.get("frete_na_tela", "")
+                self.assertEqual(orcamento.frete, Decimal(frete.replace(".", "").replace(",", ".")))
+                self.assertEqual(orcamento.validade.isoformat(), salvo.get("validade") or esperado["validade"],
+                                 f"{nome}: validade")
                 self.assertEqual(orcamento.forma_pagamento, esperado["forma_pagamento"], f"{nome}: pagamento")
                 self.assertEqual(orcamento.forma_envio, esperado["forma_envio"], f"{nome}: envio")
                 self.assertEqual(orcamento.observacoes, salvo["observacoes"], f"{nome}: observações")
@@ -356,6 +412,8 @@ class GravacaoDoCorpusTests(_SemChave):
     def test_os_clientes_importados_aparecem_no_mapa_da_home(self):
         for nome in DOCUMENTOS:
             if not nome.endswith(".pdf"):
+                if esperado_de(nome).get("orcamento_anterior"):
+                    criar_orcamento_anterior(nome, esperado_de(nome)["orcamento_anterior"])
                 self.importar_e_criar(nome)
         cache.clear()
         resposta = self.client.get("/")
@@ -368,6 +426,12 @@ class GravacaoDoCorpusTests(_SemChave):
             ("Condomínio Jardim das Flores", "Santo André"),
             ("Festas da Marina", "São Paulo"),
             ("Arena Kids Diversões", "Rio de Janeiro"),
+            ("Buffet Sonho Mágico Ltda", "São Paulo"),
+            ("Espaço Alegria Festas", "São Paulo"),
+            ("Escola Infantil Pequenos Passos", "São Paulo"),
+            ("Clube Recreativo Vila Nova", "São Paulo"),
+            ("Condomínio Parque das Árvores", "São Paulo"),
+            ("Juliana Martins Rocha", "São Paulo"),
         })
         # E nada da Lazer & Sport virou alfinete de cliente.
         self.assertFalse(any("Lazer" in nome for nome, _ in no_mapa))

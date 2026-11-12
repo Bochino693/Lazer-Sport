@@ -116,6 +116,7 @@ def ler_envio(post) -> dict:
         # manda o campo -- e o que não veio é "só o cliente".
         "modo": "orcamento" if campo("modo") == "orcamento" else "cliente",
         "publicar_no_mapa": campo("publicar_no_mapa") == "1",
+        "criar_mesmo_assim": campo("criar_mesmo_assim") == "1",
         "cliente_modo": campo("cliente_modo") or "novo",
         "cliente_id": campo("cliente_id"),
         "cliente_confirmado": campo("cliente_confirmado") == "1",
@@ -188,6 +189,63 @@ def oferta_de_orcamento(proposta) -> dict | None:
     return {"itens": len(proposta["itens"]), "total": total}
 
 
+def pergunta_de_orcamento(proposta) -> dict | None:
+    """"Encontrei 3 brinquedos no documento (...). Deseja criar um orçamento?"
+
+    Os nomes são os do catálogo (o que a linha vai levar); o que não casou
+    com o catálogo entra só na conta ("e mais 1 item fora do catálogo").
+    None quando o documento não cita item nenhum.
+    """
+    if not proposta["itens"]:
+        return None
+    nomes = []
+    for item in proposta["itens"]:
+        opcao = item["produto"]["opcao"]
+        if opcao and opcao["rotulo"] not in nomes:
+            nomes.append(opcao["rotulo"])
+    fora = sum(1 for item in proposta["itens"] if not item["produto"]["opcao"])
+    return {"brinquedos": nomes, "fora_do_catalogo": fora, "itens": len(proposta["itens"])}
+
+
+def orcamento_repetido(cliente, itens, *, dias=30):
+    """O orçamento recente do mesmo cliente com os MESMOS itens, se houver.
+
+    "Confira também os atuais para não repetir os dados": o mesmo
+    documento importado duas vezes (ou o pedido que já foi lançado à mão)
+    não pode virar duas propostas iguais sem ninguém perceber. Igual é o
+    mesmo produto (ou a mesma descrição, na linha avulsa) com a mesma
+    quantidade, nos últimos `dias`.
+    """
+    if cliente is None or not itens or any(not i.get("quantidade") for i in itens):
+        return None
+    from datetime import timedelta
+
+    from core.arena import _normalizar
+
+    def assinatura_do_envio(item):
+        return (item["chave_produto"] or _normalizar(item["descricao"]), int(item["quantidade"]))
+
+    def assinatura_salva(item):
+        if item.brinquedo_id:
+            chave = f"b:{item.brinquedo_id}"
+        elif item.produto_id:
+            chave = f"p:{item.produto_id}"
+        elif item.peca_id:
+            chave = f"r:{item.peca_id}"
+        else:
+            chave = _normalizar(item.descricao)
+        return chave, int(item.quantidade or 0)
+
+    procurada = sorted(assinatura_do_envio(i) for i in itens)
+    desde = timezone.now() - timedelta(days=dias)
+    recentes = (Orcamento.objects.filter(cliente=cliente, criacao__gte=desde)
+                .prefetch_related("itens").order_by("-criacao")[:20])
+    for orcamento in recentes:
+        if sorted(assinatura_salva(i) for i in orcamento.itens.all()) == procurada:
+            return orcamento
+    return None
+
+
 def envio_inicial(proposta) -> dict:
     """O formulário como a tela abre, a partir da proposta."""
     cliente = proposta["cliente"]
@@ -209,6 +267,7 @@ def envio_inicial(proposta) -> dict:
         # O mapa da home povoado é a razão de ser do cadastro pelo
         # documento: a chave vem ligada (e a pessoa desliga se quiser).
         "publicar_no_mapa": True,
+        "criar_mesmo_assim": False,
         "cliente_modo": vinculo["modo"],
         "cliente_id": str(vinculo["cliente_id"] or ""),
         "cliente_confirmado": False,
@@ -473,6 +532,16 @@ def validar(proposta, envio, *, hoje=None) -> dict:
             "original": original["original"] if original else "",
         })
     limpo["itens"] = itens_limpos
+    # O mesmo pedido já lançado para este cliente nos últimos dias.
+    repetido = orcamento_repetido(cliente, itens_limpos)
+    repetido_info = None
+    if repetido is not None:
+        repetido_info = {"pk": repetido.pk, "data": timezone.localtime(repetido.criacao).strftime("%d/%m")
+                         if repetido.criacao else ""}
+        if not envio.get("criar_mesmo_assim"):
+            _pendencia(pendencias, "orcamento.repetido", "Orçamento repetido",
+                       f"já existe o orçamento #{repetido.pk} com os mesmos itens ({repetido_info['data']}): "
+                       "abra o existente ou marque “Criar mesmo assim”")
 
     # ------------------------------------------------------- valores
     oferta = proposta.get("valor_final") or {}
@@ -579,6 +648,7 @@ def validar(proposta, envio, *, hoje=None) -> dict:
         "alertas_abertos": abertos,
         "contas": estado["contas"],
         "limpo": limpo,
+        "repetido": repetido_info,
         "pronto": not pendencias,
     }
 
@@ -685,10 +755,10 @@ def _pedido_para_o_cadastro(request, dados: dict):
 def _dados_do_cliente(cliente: Cliente | None, limpo: dict, *, completar: bool) -> dict:
     """O que vai para `salvar_cliente`: o cadastro de agora mais o documento.
 
-    `completar=True` (orçamento com cliente que já existia): só o que está
-    VAZIO no cadastro é preenchido -- o orçamento não é lugar de trocar o
-    telefone de ninguém. `completar=False` (cliente novo, ou "Só cadastrar
-    o cliente"): o que veio na tela vale.
+    `completar=True` (cliente que já existia, com ou sem orçamento): só o
+    que está VAZIO no cadastro é preenchido -- o documento não é lugar de
+    trocar o telefone de ninguém. `completar=False` (cliente novo): o que
+    veio na tela vale.
 
     O que a tela não mostra (tipo, observações, buffet responsável) segue
     como está no cadastro: `salvar_cliente` lê o formulário inteiro, e
@@ -772,15 +842,19 @@ def criar(request, proposta, validado, *, arquivo: str) -> dict:
             "e-mail": existente.email or "", "estabelecimento": existente.nome_estabelecimento,
             "endereço": bool(existente.endereco_principal), "nome": existente.nome_cliente,
         }
-    dados = _dados_do_cliente(existente, limpo, completar=bool(existente) and not so_cliente)
+    # Cliente que já existia, nos dois caminhos: só o que está VAZIO no
+    # cadastro é completado ("confira também os atuais para não repetir
+    # os dados") -- o documento não troca o telefone nem o endereço de
+    # ninguém.
+    dados = _dados_do_cliente(existente, limpo, completar=bool(existente))
     if not existente:
         dados["observacoes"] = f"Cadastrado pela importação do documento “{arquivo}”."
     cliente = svc_clientes.salvar_cliente(_pedido_para_o_cadastro(request, dados), existente)
 
     endereco = limpo.get("endereco") or {}
-    # Endereço: cliente novo e "Só cadastrar" gravam o da tela; orçamento
-    # de cliente que já existia só preenche o endereço que faltava.
-    if endereco and (not existente or so_cliente or not antes.get("endereço")):
+    # Endereço: o cliente novo grava o da tela; o que já existia só ganha
+    # o endereço que faltava. Um endereço por cliente -- nunca um segundo.
+    if endereco and (not existente or not antes.get("endereço")):
         svc_clientes.salvar_endereco(_pedido_para_o_cadastro(request, endereco), cliente)
 
     completados = []

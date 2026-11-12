@@ -3196,6 +3196,91 @@ Dependência nova: rjsmin (requirements.txt).
    (ImportacaoConcluidaView), templates conferir_importacao_inner.html e
    importacao_concluida_inner.html, clientes_inner.html (?abrir=),
    orcamentos_inner.html, static/interno/painel.js e importacao-word.js.
+   AJUSTE 2: O DOCUMENTO SEM RÓTULO TAMBÉM PREENCHE, COMO UMA IA (SEM A IA).
+   Pedido: "vc deve auto preencher os campos, indentificando nomes,
+   endereços, que nao sejam da fabrica e nomes que nao sejam dos usuarios
+   internos, isso é como uma ia ... em caso de indentificar brinquedos,
+   perguntar se deseja criar um orçamento a partir do documento,
+   obviamente confira tambem os atuais para nao repetir os dados".
+   Produção não tem a chave da IA; então a leitura local faz o papel dela
+   (importacao_word/identificar.py), sem rede e sem custo. A IA, quando a
+   chave existir, continua como reforço.
+     * O QUE LÊ: contrato ("CONTRATANTE: FULANA DE TAL, brasileira, CPF...,
+       residente à Rua..."), carta e e-mail colados no Word ("Prezada Sra.
+       Ana Paula..."), ficha, proposta com o nome solto no topo e conversa
+       de WhatsApp colada ("[11/11/2026 09:14] Juliana: ..."). Cada dado vira
+       candidato com pontos: o nome de pessoa começa por um primeiro nome
+       brasileiro (importacao_word/dados/primeiros_nomes.txt, base IBGE,
+       com "da/de/dos" no meio e o nome TODO EM MAIÚSCULAS do contrato
+       refeito: "BUFFET SONHO MÁGICO LTDA" -> "Buffet Sonho Mágico Ltda");
+       a empresa tem "Buffet/Espaço/Escola/Clube/Condomínio/Parque..." no
+       começo ou "Ltda/ME/Eireli/S.A." no fim; o endereço começa por
+       "Rua/Av./Alameda/Estrada/Rod./Travessa/Praça..." e é separado em
+       CEP, rua, número, complemento, bairro, cidade e UF (com vírgula,
+       "nº", "bairro X", "na cidade de", "São Paulo/SP", "São Paulo SP");
+       CPF/CNPJ, telefone e e-mail pelas regras de sempre. Pesam a pista
+       ao lado (Contratante, Cliente, Sr./Sra., Prezada, A/C, Aos
+       cuidados, Responsável, Razão social, Nome fantasia, "meu nome é",
+       "sou o", "representada por", "residente à", "local do evento"), o
+       começo do documento, a repetição, o CPF na mesma frase e, na
+       conversa, quem escreve. "Juliana Martins" e "Juliana Martins Rocha"
+       viram um nome só (o maior). O melhor candidato preenche (selo
+       "lido do texto", confiança média, com a pista ao lado: "Lido do
+       texto: perto de “Contratante”"); os outros viram botão "Outras
+       leituras" no campo, e "Outros endereços no documento" troca o
+       endereço inteiro com um toque. Só o CEP (ou CEP e número) no
+       documento: o resto vem da consulta do CEP (a mesma do cadastro à
+       mão), feita uma vez na importação ("pela consulta do CEP").
+     * O QUE NUNCA É O CLIENTE: a Lazer & Sport (CNPJ, telefones, e-mails,
+       site, nome, os endereços de "Dados da empresa" e o CEP da fábrica;
+       sem cadastro, o endereço da fábrica que a home mostra) e a EQUIPE:
+       todo usuário com função de equipe no painel, staff ou
+       superusuário, e os colaboradores da fábrica -- nome, nome completo,
+       usuário e e-mail. A assinatura de quem é da casa ("Atenciosamente,
+       / Marina Costa / Consultora Comercial / (11) 9...") sai inteira, com
+       o celular de quem assina; "Vendedor: Carlos" sai; na conversa, as
+       falas de quem é da casa saem. A pista contrária (Vendedor,
+       Consultora, Atendente, Contratada, Locadora, Elaborado por, Equipe)
+       também tira o nome. O endereço "Retirada na fábrica: Rua São Roque
+       de Minas, 104" não contamina as linhas vizinhas (que costumam ser
+       do cliente).
+     * BRINQUEDOS: produto do catálogo citado no texto ("duas camas
+       elásticas de 3 metros, um Air Game Kids e o Strike Kids"; plural,
+       sem acento, quantidade em número ou por extenso, "Modelo 5" nunca
+       vira "Modelo 3") vira item. No topo da conferência: "Encontrei 3
+       brinquedos no documento (Cama elástica 3 m, Air Game Kids, Strike
+       Kids). Deseja criar um orçamento a partir do documento?" com "Sim,
+       criar o orçamento" e "Não, só o cliente". O padrão continua sendo
+       só o cliente; Sim liga "Criar o orçamento também" e leva aos itens,
+       já com a quantidade e o valor escritos -- ou, sem valor, o PREÇO DO
+       CATÁLOGO, marcado assim ("preço do catálogo: o documento não traz
+       o valor"); sem quantidade, um.
+     * NÃO REPETIR OS DADOS: o cliente é procurado pelo CPF/CNPJ, e-mail,
+       telefone (os dígitos, como quer que esteja escrito) e nome -- do
+       cliente e do estabelecimento, sem acento, sem "Ltda", com um erro
+       de digitação de folga --, e com dois cadastros de mesmo nome a
+       cidade do endereço desempata; sem ela, a tela mostra os dois para a
+       pessoa escolher. Achado, a tela diz "Este cliente já está
+       cadastrado: Nome (#id) -- mesmo telefone do cadastro" e LIGA, sem
+       criar outro; nos dois caminhos (só cliente e com orçamento) só o que
+       está VAZIO no cadastro é completado, e o endereço só entra se o
+       cliente não tinha um (nunca um segundo endereço). O orçamento com
+       os MESMOS itens (produto e quantidade) do mesmo cliente nos últimos
+       30 dias trava o "Criar": "Já existe o orçamento #N com os mesmos
+       itens (dd/mm)", com "Abrir o existente" e "Criar mesmo assim".
+   Corpus (tests_importacao_corpus/, esperado.json escrito à mão): 07 o
+   contrato (empresa contratante, sócia como contato, endereço em frase,
+   dois brinquedos sem preço, a Lazer & Sport como contratada e o
+   vendedor na assinatura); 08 o e-mail com a assinatura de uma
+   consultora da casa (nome, cargo e celular dela fora); 09 a proposta com
+   o endereço da fábrica e o do evento; 10 o pedido que só cita os
+   brinquedos; 11 o cliente que já está cadastrado (achado pelo telefone
+   escrito de outro jeito); 12 o orçamento repetido; 13 a conversa de
+   WhatsApp com a fala do vendedor. Testes: tests_importacao_corpus.py
+   (cada campo dos treze documentos, a pergunta dos brinquedos, o que
+   fica no banco, o aviso de repetido, os alfinetes na home) e
+   tests_importacao_word.py (TextoLivreTests). Conferido no Chromium (PC
+   e iPhone 13) importando os documentos pela tela, sem a chave.
 
 72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
    Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um

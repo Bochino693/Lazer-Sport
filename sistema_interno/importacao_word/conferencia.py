@@ -35,6 +35,7 @@ from ..models import Cliente, Orcamento
 from ..validacoes import chave_documento, documento_valido, tipo_documento
 from . import catalogo as cat
 from . import deterministica as det
+from . import identificar
 from .leitor import mapa_de_linhas
 
 CENTAVO = Decimal("0.01")
@@ -55,19 +56,26 @@ def identidade_da_empresa() -> dict:
         ("EMPRESA_TELEFONE", "EMPRESA_WHATSAPP", "ORCAMENTO_TELEFONE", "ORCAMENTO_WHATSAPP")
     ]
     emails = [getattr(settings, nome, "") for nome in ("EMPRESA_EMAIL", "ORCAMENTO_EMAIL")]
-    enderecos = []
+    enderecos, ceps = [], []
     try:
         from core.models import EnderecoEmpresa
 
         for endereco in EnderecoEmpresa.objects.all()[:5]:
             if endereco.rua:
                 enderecos.append(f"{endereco.rua}, {endereco.numero}".strip(", "))
+            if endereco.cep:
+                ceps.append(det.somente_digitos(endereco.cep))
             if getattr(endereco, "telefone", ""):
                 telefones.append(endereco.telefone)
     except Exception:  # noqa: BLE001 -- banco sem a tabela não pode derrubar a leitura
         pass
+    if not enderecos:
+        # Sem cadastro, a fábrica é a mesma que a home mostra (core/views.py,
+        # `fabrica_endereco_texto`): o endereço dela também nunca é do cliente.
+        enderecos.append("Rua São Roque de Minas, 104")
+        ceps.append("02679110")
     return {"documentos": [cnpj_empresa()], "telefones": telefones, "emails": emails,
-            "enderecos": enderecos}
+            "enderecos": enderecos, "ceps": ceps}
 
 
 # ======================================================================
@@ -85,6 +93,12 @@ def esta_escrito(valor: str, linha: str) -> bool:
     """O texto está na linha, tirando diferença de espaço, aspas e caixa?"""
     alvo = _plano(valor)
     return bool(alvo) and alvo in _plano(linha)
+
+
+def _normalizar_comparacao(valor) -> str:
+    """Para ver se dois palpites são o mesmo dado: sem acento, sem pontuação."""
+    texto = det.sem_acento(str(valor or ""))
+    return re.sub(r"[^a-z0-9@]", "", texto)
 
 
 def _campo_vazio(rotulo="") -> dict:
@@ -371,7 +385,20 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     hoje = hoje or timezone.localdate()
     linhas = leitura["linhas"]
     empresa = identidade_da_empresa()
-    lido = det.ler(linhas, hoje=hoje, empresa=empresa)
+    # Quem é da casa nunca é o cliente: a assinatura de quem é da equipe e
+    # a fala do vendedor numa conversa saem antes de qualquer leitura.
+    internos = identificar.pessoas_internas()
+    fora = identificar.linhas_de_fora(linhas, empresa=empresa, internos=internos)
+    lido = det.ler(linhas, hoje=hoje, empresa=empresa, fora=fora)
+    # O texto livre (contrato, carta, conversa) completa o que os rótulos
+    # não disseram; os outros palpites viram botões na conferência.
+    achados = identificar.identificar(linhas, empresa=empresa, internos=internos, fora=fora)
+    alternativas = identificar.completar(lido["campos"], achados, internos=internos, empresa=empresa)
+    catalogo = cat.carregar_catalogo()
+    if not lido["itens"]:
+        # Sem tabela nem linha de item: os brinquedos citados no texto.
+        da_empresa = {l["id"] for l in linhas if det.linha_da_empresa(l["texto"], empresa)}
+        lido["itens"] = cat.brinquedos_citados(linhas, catalogo, fora=set(fora) | da_empresa)
     campos_det = lido["campos"]
     ia_info = leitura.get("ia") or {}
     dados_ia = ia_info.get("dados") if ia_info.get("usada") else None
@@ -426,6 +453,47 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         "cidade": campo("cliente.cidade", "Cidade", "texto", "cidade", "cliente.cidade"),
         "uf": campo("cliente.uf", "UF", "texto", "uf", "cliente.uf"),
     }
+    # O que veio do texto livre (e não de um rótulo) diz de onde veio, com
+    # confiança média; os outros palpites do texto ficam como botão.
+    for nome_cliente, chave_det in (("nome", "cliente"), ("estabelecimento", "estabelecimento"),
+                                    ("documento", "documento"), ("contato", "contato"),
+                                    ("telefone", "telefone"), ("email", "email"), ("cep", "cep"),
+                                    ("logradouro", "logradouro"), ("numero", "numero"),
+                                    ("complemento", "complemento"), ("bairro", "bairro"),
+                                    ("cidade", "cidade"), ("uf", "uf")):
+        campo_det = campos_det.get(chave_det) or {}
+        alvo = cliente[nome_cliente]
+        if campo_det.get("identificado") and alvo["origem"] == "tabelas":
+            alvo["origem"] = "texto"
+            alvo["confianca"] = "media"
+            alvo["nota"] = campo_det.get("motivo", "")
+    for nome_cliente, chave_alt in (("nome", "cliente"), ("estabelecimento", "estabelecimento"),
+                                    ("contato", "contato"), ("documento", "documento"),
+                                    ("telefone", "telefone"), ("email", "email")):
+        valor_atual = _normalizar_comparacao(cliente[nome_cliente]["valor"])
+        cliente[nome_cliente]["alternativas"] = [
+            dict(a, rotulo=a["valor"]) for a in alternativas.get(chave_alt, [])
+            if _normalizar_comparacao(a["valor"]) != valor_atual
+        ][:4]
+    cliente["enderecos_alternativos"] = [
+        dict(a, rotulo=", ".join(p for p in (a["valor"]["rua"], a["valor"]["numero"], a["valor"]["bairro"],
+                                             "/".join(x for x in (a["valor"]["cidade"], a["valor"]["uf"]) if x))
+                                  if p))
+        for a in alternativas.get("endereco", [])
+    ]
+    # Só o CEP (ou o CEP e o número): o resto vem da consulta do CEP, a
+    # mesma do cadastro à mão, feita uma vez na importação (views).
+    consultado = leitura.get("cep_consultado") or {}
+    if consultado and cliente["cep"]["valor"] and det.somente_digitos(consultado.get("cep", "")) == \
+            det.somente_digitos(cliente["cep"]["valor"]):
+        for nome_cliente, chave_cep in (("logradouro", "rua"), ("bairro", "bairro"), ("cidade", "cidade"),
+                                        ("uf", "estado")):
+            if not cliente[nome_cliente]["valor"] and consultado.get(chave_cep):
+                cliente[nome_cliente].update({
+                    "valor": consultado[chave_cep], "exibir": consultado[chave_cep],
+                    "original": consultado[chave_cep], "origem": "cep", "confianca": "media",
+                    "fonte": cliente["cep"]["fonte"], "nota": "completado pela consulta do CEP",
+                })
     if cliente["cep"]["valor"]:
         cliente["cep"]["valor"] = det.formatar_cep(cliente["cep"]["valor"])
     if cliente["uf"]["valor"]:
@@ -466,6 +534,8 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         email=cliente["email"]["valor"],
         telefone=cliente["telefone"]["valor"],
         nome=cliente["nome"]["valor"],
+        estabelecimento=cliente["estabelecimento"]["valor"],
+        cidade=cliente["cidade"]["valor"],
     )
     for alerta in casamento["alertas"]:
         alertas.append({
@@ -503,7 +573,6 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     )
 
     # ----------------------------------------------------------- itens
-    catalogo = cat.carregar_catalogo()
     itens = _montar_itens(lido, dados_ia, conferente, alertas, ia_usada=ia_usada,
                           catalogo=catalogo, linhas=linhas, escolhas=leitura.get("escolhas") or {})
 
@@ -757,10 +826,13 @@ def _tratar_percentual(valores, campos_det, percentual_ia):
 
 def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, linhas, escolhas):
     ordem = {linha["id"]: posicao for posicao, linha in enumerate(linhas)}
-    itens_det = {
-        item["linha_fonte"]: item for item in lido["itens"]
-        if item["contexto"] == "tabela" or not ia_usada
-    }
+    # Chave por item, e não por linha: uma frase cita vários brinquedos
+    # ("duas camas elásticas, um Air Game Kids e o Strike Kids").
+    itens_det = {}
+    for indice, item in enumerate(lido["itens"]):
+        if item["contexto"] == "tabela" or not ia_usada:
+            chave_item = item["linha_fonte"] if item["linha_fonte"] not in itens_det else f"{item['linha_fonte']}#{indice}"
+            itens_det[chave_item] = dict(item, _ordem=indice)
     usados = set()
     lista = []
 
@@ -801,12 +873,14 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
             "unidade": item_det["unidade"] if item_det else "",
             "recusas": item_det["recusas"] if item_det else [],
         })
-    for linha_fonte, item_det in itens_det.items():
-        if linha_fonte in usados:
+    for chave_item, item_det in itens_det.items():
+        linha_fonte = item_det["linha_fonte"]
+        if chave_item in usados:
             continue
         lista.append({
-            "ordem": ordem.get(item_det["descricao"]["fonte"]["id"], 10**6),
+            "ordem": ordem.get(item_det["descricao"]["fonte"]["id"], 10**6) + item_det.get("_ordem", 0) / 100,
             "linha_fonte": linha_fonte,
+            "produto_citado": item_det.get("produto_citado", ""),
             "contexto": item_det["contexto"],
             "descricao": (lido_det(item_det, "descricao", "texto"), None),
             "quantidade": (lido_det(item_det, "quantidade", "quantidade"), None),
@@ -871,6 +945,11 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
 
         original = item["descricao"]["original"] or item["descricao"]["valor"]
         casamento = cat.casar_item(original, catalogo)
+        if bruto.get("produto_citado"):
+            # O nome inteiro do catálogo está no texto ("um Air Game Kids").
+            casamento = dict(cat.casar_item(item["descricao"]["valor"], catalogo),
+                             escolhido=bruto["produto_citado"], confianca="alta",
+                             motivo="nome do catálogo citado no texto")
         escolha_ia = escolhas.get(str(posicao)) or escolhas.get(posicao)
         if escolha_ia and casamento["confianca"] != "alta":
             if any(c["id"] == escolha_ia for c in casamento["candidatos"]):
@@ -904,6 +983,20 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
                            "ou marque como linha avulsa.",
                 "fonte": item["descricao"]["fonte"],
             })
+        if bruto["contexto"] == "mencao":
+            # Brinquedo citado no texto ("um Air Game Kids"): sem quantidade
+            # escrita é um; sem valor escrito, o preço do catálogo -- os
+            # dois marcados, para a pessoa conferir.
+            if not item["quantidade"]["valor"]:
+                item["quantidade"].update(valor="1", exibir="1", origem="texto", confianca="media",
+                                          nota="o documento não diz a quantidade: um")
+            if not item["valor_unitario"]["valor"] and not item["total_linha"]["valor"] and item["produto"]["escolhido"]:
+                preco = cat.preco_do_produto(cat.produto_por_chave(item["produto"]["escolhido"]))
+                if preco is not None:
+                    item["valor_unitario"].update(
+                        valor=det.moeda(preco), exibir=det.moeda(preco), origem="catalogo", confianca="media",
+                        nota="preço do catálogo: o documento não traz o valor",
+                    )
         itens.append(item)
     return itens
 

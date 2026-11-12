@@ -42,6 +42,7 @@ from .models import (
     Orcamento,
     ProdutoInterno,
 )
+from . import views_importacao
 from .permissoes import atribuir_funcoes
 
 HOST = {"HTTP_HOST": "interno.testserver"}
@@ -862,6 +863,10 @@ class _ComUsuario(TestCase):
         )
         self.procurar_coordenadas = localizar.start()
         self.addCleanup(localizar.stop)
+        # E a consulta do CEP também não: cada teste que precisa dela diz a resposta.
+        cep = mock.patch.object(views_importacao, "buscar_dados_cep", return_value=None)
+        self.buscar_dados_cep = cep.start()
+        self.addCleanup(cep.stop)
         self.client.force_login(self.vendedor)
 
     def importar(self, conteudo, nome="orcamento.docx", para=""):
@@ -972,8 +977,8 @@ class EnvioDoArquivoTests(_ComUsuario):
         url = self.importar(docx_com_tabela())
         token = url.rstrip("/").split("/")[-1]
         guardado = self.client.session["importacoes_orcamento_word"][token]
-        self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "para", "criado_em",
-                                         "autor"})
+        self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "para", "cep_consultado",
+                                         "criado_em", "autor"})
         self.assertNotIn("PK", json.dumps(guardado))
 
     def test_token_inventado_volta_para_o_envio(self):
@@ -1850,6 +1855,202 @@ class MapaDoClienteImportadoTests(TestCase):
         procurar.assert_not_called()
         self.assertFalse(resultado["no_mapa"])
         self.assertEqual(resultado["motivo"], mapa.ARQUIVADO)
+
+
+# ======================================================================
+# 7c. O TEXTO LIVRE: COMO UMA IA, SEM A IA
+# ======================================================================
+def equipe(*nomes):
+    """Usuários internos ("Marina Costa", ...) com função de Vendas."""
+    usuarios = []
+    for nome in nomes:
+        primeiro, _, ultimo = nome.partition(" ")
+        usuario = User.objects.create_user(_normalizar_usuario(nome), f"{_normalizar_usuario(nome)}@lazersport.com.br",
+                                           "senha", first_name=primeiro, last_name=ultimo)
+        atribuir_funcoes(usuario, ["vendas"])
+        usuarios.append(usuario)
+    return usuarios
+
+
+def _normalizar_usuario(nome):
+    return det.sem_acento(nome).replace(" ", ".")
+
+
+class TextoLivreTests(_ComUsuario):
+    """Contrato, carta e conversa: cada dado no campo certo, sem rótulo e sem IA."""
+
+    def setUp(self):
+        super().setUp()
+        equipe("Marina Costa", "Carlos Pereira")
+
+    def tela(self, conteudo):
+        return self.proposta_e_envio(self.importar(conteudo), modo=None)
+
+    def test_a_assinatura_de_quem_e_da_casa_nunca_vira_cliente(self):
+        proposta, envio = self.tela(montar_docx(
+            par("Prezada Sra. Helena Duarte,")
+            + par("Segue o cadastro do Buffet Encantado, na Rua Tabapuã, 1200, Itaim Bibi, São Paulo/SP.")
+            + par("Atenciosamente,") + par("Marina Costa") + par("Consultora Comercial")
+            + par("(11) 97777-1111")
+            + par("Vendedor: Carlos Pereira"),
+        ))
+        self.assertEqual(envio["nome"], "Helena Duarte")
+        self.assertEqual(envio["estabelecimento"], "Buffet Encantado")
+        # O celular de quem assina pela casa não é o do cliente.
+        self.assertEqual(envio["telefone"], "")
+        textos = " ".join(str(v) for v in envio.values())
+        self.assertNotIn("Marina", textos)
+        self.assertNotIn("Carlos", textos)
+        self.assertEqual((envio["endereco"], envio["numero"], envio["bairro"], envio["cidade"], envio["estado"]),
+                         ("Rua Tabapuã", "1200", "Itaim Bibi", "São Paulo", "SP"))
+        # Sem rótulo nenhum: os dois vieram da leitura do texto, e dizem isso.
+        self.assertEqual(proposta["cliente"]["nome"]["origem"], "texto")
+        self.assertIn("Prezada Sra", proposta["cliente"]["nome"]["nota"])
+        self.assertEqual(proposta["cliente"]["estabelecimento"]["origem"], "texto")
+
+    def test_o_endereco_da_fabrica_nunca_e_o_do_cliente(self):
+        _, envio = self.tela(montar_docx(
+            par("Retirada na fábrica: Rua São Roque de Minas, 104 – Jardim Peri – São Paulo/SP")
+            + par("Cliente: Escola Arco-Íris")
+            + par("Entrega na Rua Augusta, 900 – Consolação – São Paulo/SP – CEP 01305-000"),
+        ))
+        self.assertEqual((envio["endereco"], envio["numero"], envio["bairro"], envio["cep"]),
+                         ("Rua Augusta", "900", "Consolação", "01305-000"))
+
+    def test_contrato_tira_a_qualificacao_do_nome(self):
+        _, envio = self.tela(montar_docx(
+            par("CONTRATANTE: HELENA DUARTE SANTOS, brasileira, casada, empresária, portadora do CPF "
+                "nº 390.533.447-05, residente e domiciliada à Rua das Acácias, nº 45, apto 12, bairro "
+                "Jardim Paulista, na cidade de São Paulo/SP, CEP 01427-000."),
+        ))
+        self.assertEqual(envio["nome"], "Helena Duarte Santos")
+        self.assertEqual(envio["documento"], "390.533.447-05")
+        self.assertEqual(
+            (envio["endereco"], envio["numero"], envio["complemento"], envio["bairro"], envio["cidade"],
+             envio["estado"], envio["cep"]),
+            ("Rua das Acácias", "45", "apto 12", "Jardim Paulista", "São Paulo", "SP", "01427-000"),
+        )
+
+    def test_outras_leituras_viram_botao(self):
+        url = self.importar(montar_docx(
+            par("Olá! Sou a Helena Duarte, do Buffet Encantado.")
+            + par("Minha sócia, Beatriz Lima, também pode responder: (11) 98888-1111.")
+            + par("Meu celular: (11) 97777-2222."),
+        ))
+        resposta = self.client.get(url, **HOST)
+        proposta = resposta.context["proposta"]
+        self.assertEqual(resposta.context["envio"]["nome"], "Helena Duarte")
+        outras = [a["valor"] for a in proposta["cliente"]["nome"]["alternativas"]]
+        self.assertIn("Beatriz Lima", outras)
+        self.assertContains(resposta, "Outras leituras:")
+        self.assertContains(resposta, 'data-valor="Beatriz Lima"')
+        telefones = [a["valor"] for a in proposta["cliente"]["telefone"]["alternativas"]]
+        self.assertTrue(telefones)
+
+    def test_so_o_cep_e_o_resto_vem_da_consulta(self):
+        self.buscar_dados_cep.return_value = {"cep": "01310100", "rua": "Avenida Paulista",
+                                              "bairro": "Bela Vista", "cidade": "São Paulo", "estado": "SP"}
+        _, envio = self.tela(montar_docx(
+            par("Cliente: Helena Duarte") + par("Telefone: (11) 97777-2222") + par("CEP: 01310-100") + par("Número: 1000"),
+        ))
+        self.assertEqual((envio["endereco"], envio["numero"], envio["bairro"], envio["cidade"], envio["estado"]),
+                         ("Avenida Paulista", "1000", "Bela Vista", "São Paulo", "SP"))
+        self.buscar_dados_cep.assert_called_once_with("01310-100")
+
+    def test_brinquedos_citados_viram_a_pergunta_e_os_itens(self):
+        url = self.importar(montar_docx(
+            par("Cliente: Helena Duarte") + par("E-mail: helena@exemplo.com.br")
+            + par("Queremos 2 camas elásticas de 3 metros e um pula pula para o sábado."),
+        ))
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, "Encontrei 2 brinquedos no documento (Cama elástica 3 m, Pula-pula).")
+        self.assertContains(resposta, "Deseja criar um orçamento a partir do documento?")
+        # A resposta padrão continua sendo só o cliente.
+        self.assertEqual(resposta.context["envio"]["modo"], "cliente")
+        itens = resposta.context["envio"]["itens"]
+        self.assertEqual([(i["descricao"], i["quantidade"], i["valor_unitario"]) for i in itens],
+                         [("Cama elástica 3 m", "2", "280,00"), ("Pula-pula", "1", "1.234,00")])
+        valor = resposta.context["proposta"]["itens"][0]["valor_unitario"]
+        self.assertEqual(valor["origem"], "catalogo")
+        self.assertIn("preço do catálogo", valor["nota"])
+        # "Sim": o orçamento nasce com os itens citados.
+        _, envio = self.proposta_e_envio(url)
+        for item in envio["itens"]:
+            item["conferido"] = True
+        resposta = self.client.post(url, formulario_de(envio, frete="0,00"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        self.assertEqual(Orcamento.objects.get().total, Decimal("1794.00"))
+
+    def test_mesmo_nome_em_duas_cidades_a_cidade_decide_e_sem_ela_a_pessoa_escolhe(self):
+        campinas = Cliente.objects.create(nome_cliente="Buffet Estrela", telefone="(19) 3333-1111")
+        EnderecoCliente.objects.create(cliente=campinas, endereco="Rua A", cidade="Campinas", estado="SP")
+        santos = Cliente.objects.create(nome_cliente="Buffet Estrela", telefone="(13) 3333-2222")
+        EnderecoCliente.objects.create(cliente=santos, endereco="Rua B", cidade="Santos", estado="SP")
+        proposta, envio = self.tela(montar_docx(
+            par("Cliente: Buffet Estrela") + par("Endereço: Rua do Comércio, 10 – Centro – Santos/SP"),
+        ))
+        self.assertEqual(envio["cliente_id"], str(santos.pk))
+        self.assertIn("mesma cidade", proposta["cliente"]["vinculo"]["motivo"])
+        proposta, envio = self.tela(montar_docx(par("Cliente: Buffet Estrela") + par("E-mail: x@estrela.com.br")))
+        self.assertEqual(envio["cliente_id"], "")
+        self.assertEqual({c["valor"] for c in proposta["cliente"]["vinculo"]["candidatos"]},
+                         {str(campinas.pk), str(santos.pk)})
+
+    def test_cliente_achado_aparece_como_ja_cadastrado_e_so_completa(self):
+        existente = Cliente.objects.create(nome_cliente="Helena Duarte", telefone="(11) 3333-0000",
+                                           canal_telefone=Cliente.CanalTelefone.TELEFONE,
+                                           email="helena@exemplo.com.br")
+        EnderecoCliente.objects.create(cliente=existente, endereco="Rua Antiga", numero="1", cidade="São Paulo",
+                                       estado="SP")
+        url = self.importar(montar_docx(
+            par("Cliente: Helena Duarte") + par("E-mail: helena@exemplo.com.br") + par("CPF: 390.533.447-05")
+            + par("Telefone: (11) 97777-2222")
+            + par("Endereço: Rua Nova, 50 – Centro – Campinas/SP"),
+        ))
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, f"Este cliente já está cadastrado: <strong>Helena Duarte</strong> (#{existente.pk})")
+        _, envio = self.proposta_e_envio(url, modo=None)
+        self.client.post(url, formulario_de(envio), **HOST)
+        existente.refresh_from_db()
+        self.assertEqual(Cliente.objects.count(), 1)
+        self.assertEqual(existente.telefone, "(11) 3333-0000")  # o que o cadastro tinha fica
+        self.assertEqual(existente.documento, "390.533.447-05")  # o que faltava entra
+        self.assertEqual(existente.enderecos.count(), 1)
+        self.assertEqual(existente.endereco_principal.endereco, "Rua Antiga")
+
+    def test_orcamento_repetido_avisa_e_deixa_criar_mesmo_assim(self):
+        cliente = Cliente.objects.create(nome_cliente="Buffet Alegria Ltda", email="contato@buffetalegria.com.br")
+        anterior = Orcamento.objects.create(cliente=cliente, nome_cliente=cliente.nome_cliente)
+        ItemOrcamento.objects.create(orcamento=anterior, descricao="Pula-pula", quantidade=1,
+                                     valor_unitario=Decimal("1234.00"), brinquedo=self.brinquedos["Pula-pula"])
+        url = self.importar(montar_docx(
+            par("Cliente: Buffet Alegria Ltda") + par("E-mail: contato@buffetalegria.com.br")
+            + tabela(["Descrição", "Qtd", "Valor unitário", "Total"], ["Pula-pula", "1", "R$ 1.234,00", "R$ 1.234,00"])
+            + par("Frete: grátis"),
+        ))
+        _, envio = self.proposta_e_envio(url)
+        resposta = self.client.get(url, **HOST)
+        self.assertContains(resposta, f"Já existe o orçamento #{anterior.pk} com os mesmos itens")
+        self.assertContains(resposta, f"/orcamentos/?editar={anterior.pk}")
+        for item in envio["itens"]:
+            item["conferido"] = True
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("orcamento.repetido", {p["campo"] for p in resposta.context["validado"]["pendencias"]})
+        dados = formulario_de(envio)
+        dados["criar_mesmo_assim"] = "1"
+        self.assertEqual(self.client.post(url, dados, **HOST).status_code, 302)
+        self.assertEqual(Orcamento.objects.filter(cliente=cliente).count(), 2)
+
+    def test_conversa_de_whatsapp_tira_a_fala_do_vendedor(self):
+        _, envio = self.tela(montar_docx(
+            par("[11/11/2026 09:14] Helena Duarte: Oi! Quero um orçamento")
+            + par("[11/11/2026 09:20] Carlos Pereira: Claro, Helena! Meu número é (11) 97777-2222")
+            + par("[11/11/2026 09:31] Helena Duarte: Meu e-mail é helena@exemplo.com.br"),
+        ))
+        self.assertEqual(envio["nome"], "Helena Duarte")
+        self.assertEqual(envio["telefone"], "")
+        self.assertEqual(envio["email"], "helena@exemplo.com.br")
 
 
 # ======================================================================

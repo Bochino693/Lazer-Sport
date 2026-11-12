@@ -991,7 +991,7 @@ def ler_endereco(texto: str) -> dict:
 # ======================================================================
 # O QUE É DA LAZER & SPORT NÃO É DO CLIENTE
 # ======================================================================
-def linha_da_empresa(texto: str, empresa: dict) -> bool:
+def linha_da_empresa(texto: str, empresa: dict, *, pelo_endereco: bool = True) -> bool:
     """A linha fala da própria Lazer & Sport (o timbre, o rodapé)?
 
     Quatro sinais: o CNPJ, um telefone, um e-mail ou o nome da casa. O
@@ -1013,6 +1013,11 @@ def linha_da_empresa(texto: str, empresa: dict) -> bool:
             return True
     if re.search(r"\blazer\s*(?:&|e|and)?\s*sport\b|lazersport", sem):
         return True
+    if not pelo_endereco:
+        return False
+    for cep in empresa.get("ceps", ()):
+        if cep and len(cep) == 8 and cep in digitos:
+            return True
     for linha in empresa.get("enderecos", ()):
         if linha and _normalizar(linha) and _normalizar(linha) in _normalizar(texto):
             return True
@@ -1046,12 +1051,62 @@ def _primeira_maiuscula(texto: str) -> str:
     return texto[:1].upper() + texto[1:]
 
 
-def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
+_QUALIFICACAO = re.compile(
+    r"(?i),\s*(?=(?:brasileir|portador|inscrit|residente|domiciliad|pessoa\s+(?:f[ií]sica|jur[ií]dica)|"
+    r"com\s+sede|neste\s+ato|casad|solteir|divorciad|vi[uú]v|empres[aá]ri|maior|natural\s+de|"
+    r"profiss|estado\s+civil|nascid|doravante|representad|sociedade|microempres|[a-zà-ú]))"
+)
+_SUFIXOS_DE_EMPRESA = {"ltda": "Ltda", "ltda.": "Ltda.", "me": "ME", "eireli": "Eireli", "epp": "EPP",
+                       "s.a.": "S.A.", "s/a": "S/A", "sa": "S.A.", "mei": "MEI"}
+_PARTICULAS = {"da", "de", "do", "das", "dos", "e", "d'"}
+
+
+def capitalizar(nome: str) -> str:
+    """"BUFFET SONHO MÁGICO LTDA" -> "Buffet Sonho Mágico Ltda".
+
+    Só o nome escrito TODO em maiúsculas é refeito (contrato costuma vir
+    assim). "McDonald's" e "Arena KIDS" ficam como a pessoa escreveu.
+    """
+    nome = espacos(nome)
+    letras = [c for c in nome if c.isalpha()]
+    if not letras or not all(c.isupper() for c in letras):
+        return nome
+    saida = []
+    for posicao, palavra in enumerate(nome.split(" ")):
+        baixa = palavra.lower()
+        if baixa in _SUFIXOS_DE_EMPRESA and posicao:
+            saida.append(_SUFIXOS_DE_EMPRESA[baixa])
+        elif baixa in _PARTICULAS and posicao:
+            saida.append(baixa)
+        else:
+            saida.append(baixa[:1].upper() + baixa[1:])
+    return " ".join(saida)
+
+
+def limpar_nome(texto: str) -> str:
+    """O nome, sem a qualificação que contrato e e-mail põem atrás dele.
+
+    "FULANA DE TAL, brasileira, casada, portadora do CPF..." -> "Fulana
+    de Tal"; "Ana Paula <ana@x.com>" -> "Ana Paula"; "Sr. João Lima" ->
+    "João Lima".
+    """
+    nome = espacos(texto)
+    achado = _QUALIFICACAO.search(nome)
+    if achado:
+        nome = nome[:achado.start()]
+    nome = re.split(r"\s*[<(\[]", nome)[0]
+    nome = re.sub(r"^(?:sr|sra|srta|dr|dra|ilmo|ilma|exmo|exma)\.?\s+", "", nome, flags=re.IGNORECASE)
+    return capitalizar(nome.strip(" -–—,;/|·•.:"))
+
+
+def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> dict:
     """Tudo o que as regras conseguem tirar do documento.
 
     `empresa` traz CNPJ, telefones, e-mails e endereços da Lazer & Sport:
     o timbre e o rodapé do orçamento estão cheios deles, e nenhum pode ser
-    lido como se fosse do cliente.
+    lido como se fosse do cliente. `fora` são as linhas que a leitura do
+    texto livre (identificar.py) já sabe que não são do cliente: a
+    assinatura de quem é da casa, a fala do vendedor numa conversa.
     """
     campos: dict[str, dict] = {}
     recusas: list[dict] = []
@@ -1076,9 +1131,14 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
     # colada numa dessas (o endereço do timbre, logo abaixo do nome) também
     # -- a não ser que traga um rótulo de cliente.
     da_empresa = {l["id"] for l in linhas if linha_da_empresa(l["texto"], empresa)}
+    # O endereço do timbre é reconhecido por estar colado no nome, no CNPJ
+    # ou no telefone da casa. A linha que JÁ É o endereço da fábrica
+    # ("Retirada na fábrica: Rua São Roque de Minas, 104") não contamina
+    # as vizinhas -- elas costumam ser dados do cliente.
+    marcantes = {l["id"] for l in linhas if linha_da_empresa(l["texto"], empresa, pelo_endereco=False)}
     vizinhas = set()
     for posicao, linha in enumerate(linhas):
-        if linha["id"] not in da_empresa:
+        if linha["id"] not in marcantes:
             continue
         for vizinho in (posicao - 1, posicao + 1):
             if 0 <= vizinho < len(linhas) and linhas[vizinho]["parte"] == linha["parte"]:
@@ -1097,6 +1157,8 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
     }
 
     def serve_ao_cliente(linha):
+        if linha["id"] in fora:
+            return False
         if linha["parte"] in ("cabecalho", "rodape") and linha["parte"] not in partes_com_cliente:
             return False
         if linha["id"] in da_empresa:
@@ -1170,8 +1232,7 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict) -> dict:
             )
             if rotulo_interno:
                 corte = min(corte, rotulo_interno.start())
-            limpo = limpo[:corte].strip(" -–—,;/|·•")
-            limpo = re.sub(r"^(?:sr|sra|srta|dr|dra)\.?\s+", "", limpo, flags=re.IGNORECASE)
+            limpo = limpar_nome(limpo[:corte])
             if limpo:
                 guardar(campo, _campo(limpo, linha, texto_original=limpo))
         elif campo == "endereco":

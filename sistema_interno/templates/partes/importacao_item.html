@@ -14,6 +14,7 @@
     <strong>Item <span data-posicao>{{ item.posicao }}</span></strong>
     {% if item.contexto == "tabela" %}<span class="ls-imp-tag">tabela do documento · {{ item.linha_fonte }}</span>
     {% elif item.contexto == "paragrafo" %}<span class="ls-imp-tag amarelo">parágrafo do documento · {{ item.linha_fonte }}</span>
+    {% elif item.contexto == "mencao" %}<span class="ls-imp-tag">citado no texto · {{ item.linha_fonte }}</span>
     {% elif item.contexto == "ia" %}<span class="ls-imp-tag">lido pela IA · {{ item.linha_fonte }}</span>
     {% else %}<span class="ls-imp-tag">acrescentado aqui</span>{% endif %}
     <button type="button" class="btn btn-sm btn-outline-secondary ls-imp-remover" data-remover="{{ item.uid }}"
