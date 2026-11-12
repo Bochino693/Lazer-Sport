@@ -41,6 +41,12 @@ from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_avisos_app import AvisosDoAplicativoView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_etiquetas import EtiquetasInnerView
+from .views_documento_assinatura import (
+    DocumentoAssinaturaInnerView,
+    EstadoDocumentoAssinaturaView,
+    LinkDocumentoAssinaturaView,
+    ViaDocumentoAssinaturaInnerView,
+)
 from .views_clientes import (
     ClientesInnerView,
     ConsultaCepInnerView,
@@ -228,6 +234,29 @@ urlpatterns = [
         'orcamentos/<int:pk>/previa/',
         OrcamentoPreviaInnerView.as_view(),
         name='orcamento_previa_inner',
+    ),
+    # O documento para assinatura do orçamento pago: o cartão com o QR e o
+    # link de 5 minutos, o link novo, o estado (já assinou?) e a via em PDF.
+    # Ver `views_documento_assinatura.py` e LEIA-ME-V10, seção 81.
+    path(
+        'orcamentos/<int:pk>/documento/',
+        DocumentoAssinaturaInnerView.as_view(),
+        name='documento_assinatura_inner',
+    ),
+    path(
+        'orcamentos/<int:pk>/documento/link/',
+        LinkDocumentoAssinaturaView.as_view(),
+        name='documento_assinatura_link',
+    ),
+    path(
+        'orcamentos/<int:pk>/documento/estado/',
+        EstadoDocumentoAssinaturaView.as_view(),
+        name='documento_assinatura_estado',
+    ),
+    path(
+        'orcamentos/<int:pk>/documento/via/',
+        ViaDocumentoAssinaturaInnerView.as_view(),
+        name='documento_assinatura_via',
     ),
     # O orçamento escrito no Word vira rascunho conferido: sobe o .docx,
     # confere campo por campo (com a fonte de cada valor) e cria. Ver

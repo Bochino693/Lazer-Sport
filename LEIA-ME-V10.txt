@@ -4369,3 +4369,111 @@ Dependência nova: rjsmin (requirements.txt).
    3D e a de cada adesivo --, a máquina inteira, um adesivo uma capa, a rotina,
    a migração e o aviso do painel); core/tests_capas_catalogo.py e
    core/tests_capas_em_cena.py (as capas novas nas cenas, sem gente, vivas).
+
+81) ORÇAMENTO PAGO: O DOCUMENTO PARA O CLIENTE ASSINAR NO TELEFONE (LINK DE 5 MINUTOS)
+   O pedido: "após o orçamento estar como pago, vc deve analisar o seguinte:
+   como já está pago, finalizado, vc deve pôr uma opção de gerar documento,
+   no qual vc gera um documento de assinatura digital para o cliente assinar
+   no telefone dele em um link que vai ser gerado a cada 5 minutos, para o
+   usuário assinar, com validações de tempo e tudo, sem muita burocracia e
+   muita programação." E, como sempre: "eu falei que quero estilo app em
+   tudo".
+   ONDE APARECE (só com o orçamento PAGO, e só para quem edita o orçamento
+   no bloco comercial -- Vendas, Ambulante nos dele, Gestão):
+     * na lista de Orçamentos, nas ações da linha: "Gerar documento para
+       assinatura", "Assinatura pendente" ou "Documento assinado";
+     * na janela do orçamento (Ver/Editar), o quadro "Documento para
+       assinatura" logo abaixo do pagamento, com o mesmo atalho;
+     * a tela do documento: /orcamentos/<id>/documento/ (painel).
+   GERAR. O botão abre uma folha que sobe de baixo ("Gerar o documento para
+   assinatura?"). O documento é o TERMO DE COMPRA E RECIBO montado do
+   orçamento: dados da empresa (os mesmos da proposta: razão social, CNPJ,
+   endereço e contato), dados do cliente, os itens com quantidade e valores,
+   frete, desconto ou ajuste, o total, o valor pago e a data do pagamento,
+   a forma de pagamento, a forma de envio e as observações (prazo,
+   produção, garantia), o número e a versão do orçamento, e a declaração.
+   Tudo isso é CONGELADO num retrato (JSON) com o SHA-256 dele: editar o
+   orçamento depois não muda o que o cliente assina. "Gerar de novo"
+   (quando o orçamento mudou) substitui o documento e mata todos os links
+   dele na hora; depois de assinado não há "gerar de novo".
+   O LINK DE 5 MINUTOS. Não há tabela de links: o link é um
+   TimestampSigner do Django, com sal próprio, sobre "id do documento +
+   começo do hash". Ninguém fabrica um (HMAC com a SECRET_KEY), ele não
+   serve a outro documento nem a outra versão do mesmo (o hash), e morre em
+   5 minutos -- conferido ao ABRIR e de novo ao ENVIAR a assinatura. A
+   assinatura do link sai em letras e números (base 62) e o separador é o
+   ponto: sem "_" nem "-", que o WhatsApp come (ver gerar_token_orcamento).
+   O CARTÃO NO PAINEL: o QR grande, o anel do relógio (5:00 até zerar), o
+   link com "Copiar", "Enviar no WhatsApp" (sempre com um link fresco, na
+   conversa do número do cliente, com a mensagem pronta) e "Gerar novo
+   link". Quando o anel zera, o cartão pede outro link sozinho (com a tela
+   à vista: aba escondida não gera link que ninguém vai mostrar). A cada 10
+   segundos ele pergunta se o cliente já assinou e, quando assina, vira
+   "Assinado por Fulano em dd/mm às hh:mm" com a assinatura, o IP, o hash e
+   "Baixar PDF" -- sem recarregar. O link NÃO vem no HTML da tela (a
+   navegação do painel guarda as telas; um QR guardado seria um link
+   vencido): o cartão o pede ao abrir. Cada link gerado conta no documento.
+   A PÁGINA DO CLIENTE (/assinar/<link>/, no site, sem login), no tema
+   escuro do site, como app: a barra com o relógio do link em cima, o
+   documento em papel (CPF/CNPJ do cadastro mascarado), e o quadro de
+   assinar: nome completo, CPF ou CNPJ (com máscara), "Li e concordo" e a
+   assinatura com o dedo (eventos de ponteiro: dedo, caneta e mouse;
+   Desfazer e Limpar; o traço redesenha quando a tela gira). "Assinar
+   documento" abre a folha "Confirmar a assinatura?" com a imagem e os
+   dados; "Assinar agora" envia. Quando o relógio zera, o botão para e a
+   folha "O tempo do link acabou" sobe (nome e documento continuam
+   preenchidos no aparelho para o link novo).
+     * link vencido: "Este link expirou -- peça um novo ao atendente", com
+       o botão do WhatsApp da empresa ("Pedir um novo link");
+     * link de um documento refeito: "Este link foi trocado";
+     * pagamento desfeito depois de gerar (estorno): "Documento suspenso"
+       (o painel também não gera link);
+     * link cortado ou inventado: "Link inválido";
+     * documento já assinado: o link leva ao comprovante ("Documento já
+       assinado ... em dd/mm/aaaa") com "Baixar PDF" -- mesmo vencido.
+   AS VALIDAÇÕES NO SERVIDOR (no envio, de novo, mesmo com a tela certa):
+   o link dentro dos 5 minutos (fora: nada é salvo, "O tempo do link acabou
+   antes do envio"); nome com sobrenome; CPF/CNPJ válido pelos dígitos e,
+   quando o cadastro do cliente tem documento válido, O MESMO do cadastro
+   ("Este CPF não confere com o do cadastro (529.***.***-25)"); "Li e
+   concordo"; a assinatura um PNG de verdade, com no máximo 300 KB e com
+   traço (quadro em branco é recusado), regravado pelo Pillow. O formulário
+   leva o CSRF do Django, a linha do documento é travada no envio (duas
+   abas, uma grava) e há um freio curto por IP (12 envios em 10 minutos, no
+   cache, só o resumo do IP).
+   O QUE FICA GRAVADO (DocumentoAssinatura): o retrato e o hash, quem gerou
+   e quando, os links gerados, e na assinatura a imagem (PNG no banco),
+   nome, CPF/CNPJ, data e hora, IP, navegador e o hash conferido naquele
+   instante. Assinado, não se assina de novo.
+   O HISTÓRICO DO ORÇAMENTO (o sino da equipe): "gerou o documento para
+   assinatura do orçamento" (e "Documento refeito", com quantos links o
+   anterior teve) e "Fulano (cliente) assinou o documento do orçamento",
+   com quantos links foram gerados até a assinatura. Renovar o link não
+   vira uma linha por link: só conta. A equipe de vendas e a gestão também
+   recebem o aviso no telefone ("Orçamento #N: termo assinado").
+   O PDF. O projeto não tem biblioteca de PDF (requirements.txt: nem
+   weasyprint, nem xhtml2pdf, nem reportlab), e instalar uma seria a "muita
+   programação" que o pedido descarta: a via é uma página pronta para a
+   impressão (A4, só o documento sai) e "Baixar PDF"/"Salvar em PDF" abre a
+   impressão do aparelho, onde se escolhe "Salvar como PDF" -- o mesmo
+   caminho da proposta. Leva o documento, a assinatura e o bloco "Registro
+   da assinatura eletrônica" (código do documento, orçamento, data e hora
+   com fuso, assinante, IP, navegador, os dois SHA-256 e os links gerados).
+   No painel: /orcamentos/<id>/documento/via/ (?imprimir=1 abre a
+   impressão sozinha); para o cliente: /assinado/<código>/.
+   Banco: sistema_interno.DocumentoAssinatura e duas escolhas novas em
+   AtividadeOrcamento.tipo, na migração sistema_interno/0058_documento_de_
+   assinatura (só esquema; depende da 0057_orcamento_valor_final).
+   Código: sistema_interno/documento_assinatura.py (retrato, hash, link,
+   assinatura, freio), sistema_interno/views_documento_assinatura.py (o
+   painel), core/views_assinatura.py (o site), templates
+   documento_assinatura_inner.html, documento_assinatura/{cartao,resumo,
+   folha}.html, core/templates/assinatura_publica.html e assinatura_via.html,
+   static interno/documento-assinatura.{css,js} e
+   site/paginas/assinatura.{css,js}.
+   Testes: sistema_interno/tests_documento_assinatura.py (só pago; o retrato
+   e o hash congelados; o link valendo até 5 minutos e recusado depois,
+   inclusive no envio, sem gravar; link adulterado ou de outro sal; gerar de
+   novo mata os links velhos; CPF que não confere; cada campo recusado;
+   assinatura grande ou em branco; CSRF; o freio; assinar duas vezes; quem
+   pode; o histórico e o sino; o estado que troca o cartão; as vias).

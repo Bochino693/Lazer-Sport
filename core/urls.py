@@ -20,6 +20,7 @@ from .views_jogos import (AbriuJogoView, AnuncioJogosView, ArquivoDoEmuladorView
 from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
+from .views_assinatura import assinar_documento, documento_assinado
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
 from .views_redirects import redirecionar_interno
 from .sitemaps import (
@@ -442,6 +443,19 @@ urlpatterns = [
         "ordem-servico/<str:token>/",
         ordem_servico_publica,
         name="ordem_servico_publica",
+    ),
+    # O termo de compra do orçamento pago, assinado no telefone do cliente
+    # (LEIA-ME-V10, seção 81). O link vale 5 minutos e é gerado pelo painel;
+    # a cópia assinada fica no código aleatório do documento.
+    path(
+        "assinar/<str:token>/",
+        assinar_documento,
+        name="documento_assinatura_publico",
+    ),
+    path(
+        "assinado/<uuid:codigo>/",
+        documento_assinado,
+        name="documento_assinado_publico",
     ),
 
     # O ÍCONE DA ABA, ANTES DO CURINGA.
