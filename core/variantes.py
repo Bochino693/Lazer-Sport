@@ -409,6 +409,124 @@ def estruturar(apps, schema_editor=None, avisar=print):
 
 
 # ----------------------------------------------------------------------
+# A 0173: todo brinquedo com o adesivo padrão (as fotos das posições e o 3D)
+# ----------------------------------------------------------------------
+
+#: O nome do adesivo padrão quando o brinquedo não tem um (os pares já têm: Astronautas, Azul).
+NOME_DO_PADRAO = "Padrão"
+
+
+def _posicao_pelo_arquivo(nome):
+    """A posição (o `tipo`) de uma foto do cadastro dos nossos 3D, pelo nome do arquivo; None se não é."""
+    from .cadastro_modelos import CADASTROS
+
+    for chave, dados in CADASTROS.items():
+        if f"{chave}-" not in nome:
+            continue
+        for arquivo, tipo, _texto in dados.get("fotos", ()):
+            if tipo and f"{chave}-{arquivo.rsplit('.', 1)[0]}" in nome:
+                return tipo
+    return None
+
+
+def padronizar(apps, schema_editor=None, avisar=print):
+    """A 0173, em todo lugar e idempotente: todo brinquedo ganha o adesivo padrão explícito.
+
+      * o adesivo padrão (o que já existe, ou um "Padrão") vira o
+        `adesivo_padrao` do brinquedo, e as fotos sem adesivo passam para ele;
+      * o 3D do brinquedo (o `ObjetoTresD`, ligado e ativo) é copiado para o
+        adesivo padrão (o mesmo arquivo; o `ObjetoTresD` fica, para a Arena);
+      * nas fotos dos outros adesivos, a posição volta pelo nome do arquivo
+        (a 0169 a tinha tirado: a frente, os lados e o verso do Alienígenas).
+    """
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    ImagemBrinquedo = apps.get_model("core", "ImagemBrinquedo")
+    ObjetoTresD = apps.get_model("core", "ObjetoTresD")
+    criados = 0
+    for brinquedo in Brinquedos.objects.order_by("id"):
+        with transaction.atomic():
+            padrao = (VarianteAdesivo.objects.filter(brinquedo=brinquedo, padrao=True).order_by("ordem", "id").first())
+            if padrao is None:
+                slug = "padrao"
+                while VarianteAdesivo.objects.filter(brinquedo=brinquedo, slug=slug).exists():
+                    slug += "-1"
+                padrao = VarianteAdesivo.objects.create(brinquedo=brinquedo, nome=NOME_DO_PADRAO, slug=slug, ordem=1, padrao=True)
+                criados += 1
+            if brinquedo.adesivo_padrao_id != padrao.pk:
+                Brinquedos.objects.filter(pk=brinquedo.pk).update(adesivo_padrao=padrao)
+            ImagemBrinquedo.objects.filter(brinquedo=brinquedo, variante__isnull=True).update(variante=padrao)
+            objeto = ObjetoTresD.objects.filter(brinquedo=brinquedo, ativo=True).first()
+            if objeto is not None and not (padrao.arquivo_3d or padrao.arquivo_estatico_3d):
+                VarianteAdesivo.objects.filter(pk=padrao.pk).update(
+                    arquivo_3d=objeto.arquivo.name if objeto.arquivo else "",
+                    arquivo_estatico_3d=objeto.arquivo_estatico or "",
+                    codigo_3d=objeto.codigo or "", cores_3d=list(objeto.cores or []), medidas_3d=list(objeto.medidas or []),
+                )
+            # as posições das fotos dos outros adesivos
+            for variante in VarianteAdesivo.objects.filter(brinquedo=brinquedo, padrao=False):
+                tomadas = set(ImagemBrinquedo.objects.filter(variante=variante).exclude(tipo=None).values_list("tipo", flat=True))
+                for foto in ImagemBrinquedo.objects.filter(variante=variante, tipo=None).order_by("ordem", "id"):
+                    tipo = _posicao_pelo_arquivo(foto.imagem.name or "")
+                    if tipo and tipo not in tomadas:
+                        ImagemBrinquedo.objects.filter(pk=foto.pk).update(tipo=tipo)
+                        tomadas.add(tipo)
+    avisar(f"Adesivo padrão: {criados} criados; todo brinquedo tem o dele, com as fotos e o 3D.")
+
+
+#: As posições tiradas do 3D (as vistas em core/static/site/arena/modelos/<pasta>/), por produto e adesivo.
+POSICOES_DO_3D = {
+    ("Air Game Kids", "Astronautas"): ("air-game-kids-astronautas", (
+        ("lado_direito.webp", "lado_direito", "lado direito"),
+        ("lado_esquerdo.webp", "lado_esquerdo", "lado esquerdo"),
+        ("verso.webp", "verso", "verso"),
+        ("frente.webp", None, "de frente, em 3/4"),
+        ("tampo.webp", None, "o tampo, de cima"),
+    )),
+}
+
+
+def subir_posicoes(Brinquedos, VarianteAdesivo, ImagemBrinquedo, avisar=print):
+    """As posições que saem do 3D (POSICOES_DO_3D) sobem como fotos do adesivo. Pode rodar de novo."""
+    from django.contrib.staticfiles import finders
+    from django.core.files import File
+
+    for (produto, adesivo), (pasta, fotos) in POSICOES_DO_3D.items():
+        brinquedo = _achar(produto, Brinquedos)
+        variante = VarianteAdesivo.objects.filter(brinquedo=brinquedo, nome=adesivo).first() if brinquedo else None
+        if variante is None:
+            continue
+        ordem = max(ImagemBrinquedo.objects.filter(brinquedo=brinquedo).values_list("ordem", flat=True), default=1)
+        for arquivo, tipo, rotulo in fotos:
+            caminho = finders.find(f"site/arena/modelos/{pasta}/{arquivo}")
+            if not caminho:
+                continue
+            nome = f"{pasta}-{arquivo}"
+            ja = ImagemBrinquedo.objects.filter(variante=variante)
+            if (tipo and ja.filter(tipo=tipo).exists()) or ja.filter(imagem__contains=f"{pasta}-{arquivo.rsplit('.', 1)[0]}").exists():
+                continue
+            ordem += 1
+            foto = ImagemBrinquedo(brinquedo=brinquedo, variante=variante, tipo=tipo, ordem=ordem,
+                                   texto_alternativo=f"{brinquedo.nome_brinquedo} ({adesivo}): {rotulo}"[:180])
+            with open(caminho, "rb") as origem:
+                foto.imagem.save(nome, File(origem), save=True)
+            avisar(f"{brinquedo.nome_brinquedo} ({adesivo}): a foto {rotulo} subiu.")
+
+
+def subir_posicoes_no_deploy(apps, schema_editor=None, avisar=print):
+    """A 0174: só no Render (o Cloudinary só está lá); se a subida falhar, o deploy segue."""
+    from django.conf import settings
+
+    if not getattr(settings, "IS_RENDER", False):
+        return
+    try:
+        subir_posicoes(apps.get_model("core", "Brinquedos"), apps.get_model("core", "VarianteAdesivo"),
+                       apps.get_model("core", "ImagemBrinquedo"), avisar=avisar)
+    except Exception as erro:  # o deploy segue; o comando refaz depois
+        avisar(f"As posições do 3D não subiram agora ({erro!r}). Rode: python manage.py posicoes_dos_adesivos")
+
+
+# ----------------------------------------------------------------------
 # O que as telas usam (a estrutura nova)
 # ----------------------------------------------------------------------
 
@@ -446,14 +564,41 @@ def modelos_3d(brinquedo):
         return []
     saida = []
     for variante in variantes:
-        if variante.padrao:
-            objeto = _objeto_3d_do_produto(brinquedo)
-            url, codigo = (objeto["url"], objeto["codigo"]) if objeto else ("", "")
-        else:
-            url, codigo = variante.url_3d, variante.codigo_3d
+        url, codigo = _tres_d_do_adesivo(brinquedo, variante)
         if url and url not in {m["url"] for m in saida}:
-            saida.append({"nome": variante.nome, "url": url, "codigo": codigo, "padrao": variante.padrao})
+            saida.append({"nome": variante.nome, "slug": variante.slug, "url": url, "codigo": codigo, "padrao": variante.padrao})
     saida.sort(key=lambda m: not m["padrao"])
+    return saida
+
+
+def _tres_d_do_adesivo(brinquedo, variante):
+    """(url, código) do 3D do adesivo: o dele; o padrão sem um, o do produto (o do cadastro ou o do site)."""
+    if variante.url_3d:
+        return variante.url_3d, variante.codigo_3d
+    if variante.padrao:
+        objeto = _objeto_3d_do_produto(brinquedo)
+        if objeto:
+            return objeto["url"], objeto["codigo"]
+    return "", ""
+
+
+def adesivos_da_pagina(brinquedo):
+    """Os adesivos para a página do produto: [{"nome", "slug", "padrao", "fotos", "url_3d"}] (o padrão primeiro).
+
+    `fotos`: as fotos das posições DO adesivo (core.models.galeria_publica:
+    nunca as de fundo branco). Trocar o adesivo troca as fotos e o 3D.
+    """
+    from .models import VarianteAdesivo, galeria_publica
+
+    fotos = list(brinquedo.imagens_brinquedo.all())
+    saida = []
+    for variante in VarianteAdesivo.objects.filter(brinquedo=brinquedo, ativo=True).order_by("-padrao", "ordem", "id"):
+        url, _codigo = _tres_d_do_adesivo(brinquedo, variante)
+        if variante.padrao or variante.pk == brinquedo.adesivo_padrao_id:
+            galeria = galeria_publica(fotos, brinquedo.adesivo_padrao_id or variante.pk)
+        else:
+            galeria = galeria_publica(fotos, adesivo_id=variante.pk)
+        saida.append({"nome": variante.nome, "slug": variante.slug, "padrao": variante.padrao, "fotos": galeria, "url_3d": url})
     return saida
 
 

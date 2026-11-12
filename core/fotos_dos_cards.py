@@ -34,10 +34,11 @@ def mapa():
     dados = cache.get(CHAVE)
     if dados is not None:
         return dados
-    from .models import ImagemBrinquedo, galeria_publica
+    from .models import Brinquedos, ImagemBrinquedo, galeria_publica
 
     por_brinquedo = defaultdict(list)
     try:
+        padroes = dict(Brinquedos.objects.filter(ativo=True).values_list("id", "adesivo_padrao_id"))
         fotos = (
             ImagemBrinquedo.objects.filter(brinquedo__ativo=True)
             .only("id", "brinquedo_id", "imagem", "tipo", "ordem", "papel_na_capa", "variante")
@@ -48,8 +49,8 @@ def mapa():
         return {}
     dados = {}
     for brinquedo_id, lista in por_brinquedo.items():
-        # a capa (a foto "perfil") primeiro; depois a galeria, na ordem da página
-        galeria = sorted(galeria_publica(lista), key=lambda foto: foto.tipo != "perfil")
+        # as fotos do adesivo PADRÃO, a capa (a frente) primeiro; nunca as de fundo branco
+        galeria = galeria_publica(lista, padroes.get(brinquedo_id))
         urls = []
         for foto in galeria:
             url = _url(foto.imagem)

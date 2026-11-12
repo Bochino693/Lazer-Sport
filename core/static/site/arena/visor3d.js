@@ -367,6 +367,11 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
         modelos,
         atual,
         aoEscolher: async (modelo) => {
+          // na página do produto, cada adesivo tem as fotos dele: a página vem no adesivo, com o 3D aberto
+          if (visor.hasAttribute("data-adesivos-navegar") && modelo.slug) {
+            window.location.href = `?adesivo=${encodeURIComponent(modelo.slug)}#ver-3d`;
+            return;
+          }
           await trocar(modelo.url);
           // o adesivo escolhido segue para o carrinho como observação
           if (campo) campo.value = modelo.nome;

@@ -1797,3 +1797,65 @@ body:has(dialog.bq-janela[open]) {
 }
 
 .gestao-integrada .ls-content [data-adesivos] [hidden] { display: none !important; }
+
+.bq-adesivo-posicoes {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.bq-adesivo-posicao {
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+    padding: 6px;
+    border: 1px dashed var(--line-forte);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-size: .74rem;
+    cursor: pointer;
+}
+
+.bq-adesivo-posicao img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.bq-adesivo-posicao.is-vazia {
+    min-height: 92px;
+    align-content: center;
+}
+
+.bq-adesivo-posicao.is-vazia i { font-size: 1.2rem; color: var(--acento-claro); }
+
+.bq-adesivo-posicao:hover { border-color: var(--acento); color: var(--text); }
+
+.bq-adesivo-3d {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.bq-adesivo-trocar3d {
+    padding: 3px 10px;
+    border: 1px solid var(--line-forte);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--acento-claro);
+    font: inherit;
+    font-size: .78rem;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .bq-adesivo-posicoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

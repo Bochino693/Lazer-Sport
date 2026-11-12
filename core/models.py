@@ -226,6 +226,16 @@ class Brinquedos(Prime):
         decimal_places=2,
         max_digits=6,
     )
+    # O ADESIVO PADRÃO (LEIA-ME 72): todo brinquedo tem um, com as fotos das posições e o 3D
+    # (core.models.VarianteAdesivo). O card, a capa, a Arena e o cadastro usam o dele.
+    adesivo_padrao = models.ForeignKey(
+        "VarianteAdesivo",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="Adesivo padrão",
+    )
 
     exibir_na_loja = models.BooleanField(
         default=False,
@@ -339,7 +349,7 @@ class Brinquedos(Prime):
         `.filter()` sobre o related manager montava uma consulta nova e
         jogava o prefetch fora. Mesma regra, mesma ordem.
         """
-        return galeria_publica(self.imagens_brinquedo.all())
+        return galeria_publica(self.imagens_brinquedo.all(), self.adesivo_padrao_id)
 
     @property
     def imagem_perfil(self):
@@ -351,16 +361,19 @@ class Brinquedos(Prime):
             perfil = next(
                 (
                     foto
-                    for foto in fotos_cache
+                    for foto in sorted(fotos_cache, key=lambda item: (item.ordem, item.id))
                     if getattr(foto, "tipo", None) == "perfil"
                     and getattr(foto, "imagem", None)
+                    and self.e_do_padrao(foto)
                 ),
                 None,
             )
         else:
+            # a capa é a frente do adesivo PADRÃO (o Alienígenas também tem a dele)
             perfil = (
                 self.imagens_brinquedo
                 .filter(tipo="perfil")
+                .filter(models.Q(variante__isnull=True) | models.Q(variante_id=self.adesivo_padrao_id))
                 .order_by("ordem", "id")
                 .first()
             )
@@ -404,6 +417,7 @@ class Brinquedos(Prime):
         principal = (
             self.imagens_brinquedo
             .filter(tipo="perfil")
+            .filter(models.Q(variante__isnull=True) | models.Q(variante_id=self.adesivo_padrao_id))
             .order_by("ordem", "id")
             .first()
         )
@@ -457,6 +471,16 @@ class Brinquedos(Prime):
 
     def __str__(self):
         return self.nome_brinquedo
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # todo brinquedo nasce com o adesivo padrão (LEIA-ME 72)
+        if not self.adesivo_padrao_id:
+            adesivo_padrao_de(self)
+
+    def e_do_padrao(self, foto):
+        """A foto é do adesivo padrão? (a sem adesivo, de antes, conta como dele)"""
+        return foto.variante_id in (None, self.adesivo_padrao_id)
 
     class Meta:
         verbose_name = "Brinquedo"
@@ -546,6 +570,12 @@ class ImagemBrinquedo(Prime):
         tipo = self.get_tipo_display() if self.tipo else f"Foto {self.ordem}"
         return f"{self.brinquedo} — {tipo}"
 
+    def save(self, *args, **kwargs):
+        # a foto nova sem adesivo é do adesivo padrão do brinquedo (LEIA-ME 72)
+        if not self.variante_id and self.brinquedo_id:
+            self.variante = adesivo_padrao_de(self.brinquedo)
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = "Imagem de Brinquedo"
         verbose_name_plural = "Imagens de Brinquedos"
@@ -557,9 +587,11 @@ class ImagemBrinquedo(Prime):
             )
         ]
         constraints = [
+            # uma foto por POSIÇÃO em cada adesivo (o Astronautas e o Alienígenas têm a frente deles)
             models.UniqueConstraint(
-                fields=["brinquedo", "tipo"],
-                name="uniq_imagem_brinquedo_tipo",
+                fields=["variante", "tipo"],
+                name="uniq_imagem_adesivo_tipo",
+                condition=models.Q(tipo__isnull=False),
             )
         ]
 
@@ -574,26 +606,46 @@ def _armazenamento_3d():
     return armazenamento()
 
 
-def galeria_publica(fotos):
-    """A galeria pública a partir das fotos do brinquedo (já na memória ou um queryset).
+#: A ordem das posições na galeria (a frente primeiro).
+ORDEM_DAS_POSICOES = {"perfil": 0, "lado_direito": 1, "lado_esquerdo": 2, "verso": 3}
+#: Quantas fotos a galeria de um adesivo mostra (as posições e as outras dele).
+FOTOS_POR_ADESIVO = 6
 
-    As do produto -- as tipadas e a "original", as três primeiras pela ordem
-    -- e, depois, até três de cada um dos outros adesivos (seção 72: as fotos
-    com `variante`, as dos Alienígenas no Air Game Kids).
+
+def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
+    """As fotos de UM adesivo do brinquedo (LEIA-ME 72), na ordem: as posições e depois as outras.
+
+    `adesivo_id`: o adesivo; sem ele, o padrão (`padrao_id`, e a foto de antes,
+    sem adesivo, conta como dele). NUNCA a foto de fundo branco: a "original"
+    (a de estúdio de antes da capa em cena, `papel_na_capa = "original"`) fica
+    guardada no banco, mas não aparece. Funciona com as fotos já na memória.
     """
-    fotos = sorted(fotos, key=lambda foto: (foto.ordem, foto.id))
-    proprias = [
+    if adesivo_id is None:
+        def do_adesivo(foto):
+            return getattr(foto, "variante_id", None) in (None, padrao_id)
+    else:
+        def do_adesivo(foto):
+            return getattr(foto, "variante_id", None) == adesivo_id
+    fotos = [
         foto for foto in fotos
-        if not getattr(foto, "variante_id", None)
-        and (foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL)
-    ][:3]
-    dos_adesivos, por_adesivo = [], {}
-    for foto in fotos:
-        variante = getattr(foto, "variante_id", None)
-        if variante and por_adesivo.get(variante, 0) < 3:
-            por_adesivo[variante] = por_adesivo.get(variante, 0) + 1
-            dos_adesivos.append(foto)
-    return proprias + dos_adesivos
+        if do_adesivo(foto) and getattr(foto, "imagem", None)
+        and getattr(foto, "papel_na_capa", "") != ImagemBrinquedo.PAPEL_ORIGINAL
+    ]
+    fotos.sort(key=lambda foto: (0, ORDEM_DAS_POSICOES.get(foto.tipo, 9), foto.ordem, foto.id) if foto.tipo
+               else (1, 0, foto.ordem, foto.id))
+    return fotos[:FOTOS_POR_ADESIVO]
+
+
+def adesivo_padrao_de(brinquedo):
+    """O adesivo padrão do brinquedo (cria o "Padrão" se ele ainda não tem). Todo brinquedo tem um."""
+    if brinquedo.adesivo_padrao_id:
+        return brinquedo.adesivo_padrao
+    variante = VarianteAdesivo.objects.filter(brinquedo=brinquedo, padrao=True).order_by("ordem", "id").first()
+    if variante is None:
+        variante = VarianteAdesivo.objects.create(brinquedo=brinquedo, nome="Padrão", slug="padrao", ordem=1, padrao=True)
+    Brinquedos.objects.filter(pk=brinquedo.pk).update(adesivo_padrao=variante)
+    brinquedo.adesivo_padrao = variante
+    return variante
 
 
 class VarianteAdesivo(Prime):

@@ -151,6 +151,7 @@ class BrinquedoListAPI(generics.ListAPIView):
                 "id",
                 "nome_brinquedo",
                 "imagem_brinquedo",
+                "adesivo_padrao",  # a capa é a frente do adesivo padrão (LEIA-ME 72)
                 "valor_brinquedo",
                 "avaliacao",
                 "exibir_na_loja",

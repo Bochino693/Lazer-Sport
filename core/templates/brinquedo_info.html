@@ -131,7 +131,8 @@
                         <div class="produto-visor3d" data-visor3d hidden
                              data-modelo="{{ objeto_3d.url }}"{% if adesivos3d %}
                              data-adesivos3d="adesivos3d-dados"
-                             data-adesivos3d-modulo="{% estatico 'site/arena/adesivos3d.js' %}"{% endif %}
+                             data-adesivos3d-modulo="{% estatico 'site/arena/adesivos3d.js' %}"{% endif %}{% if adesivos_pagina %}
+                             data-adesivos-navegar{% endif %}
                              data-three="{% static 'vendor/three/three.module.min.js' %}"
                              data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
                              data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
@@ -192,6 +193,25 @@
             <section class="produto-conteudo" id="produto-informacoes">
                 <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
                 <h1>{{ brinquedo.nome_brinquedo }}</h1>
+
+                {% if adesivos_pagina %}
+                    {% comment %}
+                      OS ADESIVOS (LEIA-ME 72): o mesmo brinquedo com outra arte. Cada adesivo
+                      tem as fotos das posições e o 3D dele: escolher um troca as fotos da
+                      galeria e o 3D juntos (o controle dentro do 3D faz o mesmo).
+                    {% endcomment %}
+                    <div class="produto-adesivos" role="group" aria-label="Escolha o adesivo">
+                        <span class="produto-adesivos-rotulo">Adesivo:</span>
+                        {% for item in adesivos_pagina %}
+                            <a class="produto-adesivo{% if item.slug == adesivo.slug %} ativo{% endif %}"
+                               href="?adesivo={{ item.slug }}#bread"
+                               {% if item.slug == adesivo.slug %}aria-current="true"{% endif %}>
+                                {% with capa=item.fotos.0 %}{% if capa %}<img src="{{ capa.imagem|foto:120 }}" alt="" width="34" height="34" loading="lazy">{% endif %}{% endwith %}
+                                <span>{{ item.nome }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
                 {% if brinquedo.avaliacao %}
                     <div class="produto-avaliacao">
@@ -326,7 +346,7 @@
                     >
                         {% csrf_token %}
                         {# o adesivo escolhido no 3D segue para o carrinho como observação (visor3d.js) #}
-                        {% if adesivos3d %}<input type="hidden" name="adesivo" value="" data-adesivo-escolhido>{% endif %}
+                        {% if adesivos_pagina %}<input type="hidden" name="adesivo" value="{{ adesivo.nome }}" data-adesivo-escolhido>{% elif adesivos3d %}<input type="hidden" name="adesivo" value="" data-adesivo-escolhido>{% endif %}
                         <div class="produto-quantidade-linha">
                             <label for="quantidade-produto">Quantidade</label>
                             <div class="produto-quantidade">

@@ -31,7 +31,7 @@ def brinquedos_da_arena():
         .only(
             "id", "nome_brinquedo", "imagem_brinquedo", "descricao",
             "valor_brinquedo", "exibir_na_loja", "avaliacao", "voltz",
-            "altura_m", "largura_m", "profundidade_m",
+            "altura_m", "largura_m", "profundidade_m", "adesivo_padrao",
         )
         .prefetch_related(
             "categorias_brinquedos",

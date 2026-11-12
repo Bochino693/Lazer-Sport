@@ -493,7 +493,13 @@ def cadastrar(chave, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, refazer_
                 avisar(f"{dados['base'][0]} não está no catálogo: confira preço, voltagem e loja no painel.")
             avisar("Categorias: " + (", ".join(c.nome_categoria for c in categorias) or "nenhuma que sirva; escolha no painel"))
         else:
-            brinquedo.imagens_brinquedo.all().delete()
+            # só as fotos do adesivo padrão (LEIA-ME 72): as dos outros adesivos ficam
+            fotos = brinquedo.imagens_brinquedo.all()
+            if any(f.name == "variante" for f in ImagemBrinquedo._meta.fields) and getattr(brinquedo, "adesivo_padrao_id", None):
+                from django.db.models import Q
+
+                fotos = fotos.filter(Q(variante__isnull=True) | Q(variante_id=brinquedo.adesivo_padrao_id))
+            fotos.delete()
 
         fotos = dados["fotos"]
         for ordem, (arquivo, tipo, texto) in enumerate(fotos, start=1):

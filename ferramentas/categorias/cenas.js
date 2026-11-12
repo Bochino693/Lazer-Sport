@@ -130,6 +130,7 @@ const GLB_DO_PRODUTO = {
   "brinquedao-modelo-5": "Brinquedão Modelo 5",
   "brinquedao-ninja": "Brinquedão Ninja", "espaco-esportivo-modelo-1": "Espaço Esportivo Modelo 1", "strike-kids": "Strike Kids",
   "air-game-kids-alienigenas": "Air Game Kids Alienígenas", "basquete-street-quadrinhos": "Basquete Home Quadrinhos",
+  "air-game-kids-astronautas": "Air Game Kids (Astronautas)",
   "trampolim-enterrada": "Trampolim de Enterrada", "trampolim-enterrada-espuma": "Trampolim de Enterrada",
 };
 
@@ -791,6 +792,17 @@ const vista = (pos, alvo, extra = {}) => {
   return Object.assign({ giro: Math.round(giro * 10) / 10, altura: Math.round(altura * 10) / 10 }, extra);
 };
 const VISTAS = {
+  // o Air Game Kids dos Astronautas (LEIA-ME 72: o adesivo padrão), o mesmo móvel e as mesmas vistas do Alienígenas
+  "air-game-kids-astronautas": {
+    tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama", "plantas"],
+    vistas: {
+      frente: vista([2.3, 1.85, 2.9], [0, 0.55, 0]),
+      lado_esquerdo: vista([-3.3, 1.35, 1.1], [0, 0.55, 0]),
+      lado_direito: vista([3.3, 1.35, -1.1], [0, 0.55, 0]),
+      verso: vista([-1.6, 1.7, -3.0], [0, 0.55, 0]),
+      tampo: { giro: 0, altura: 62 },
+    },
+  },
   "air-game-kids-alienigenas": {
     tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama", "plantas"],
     vistas: {

@@ -597,6 +597,14 @@
     const secaoAdesivos = form.querySelector('[data-adesivos]');
     let brinquedoDosAdesivos = null;
 
+    function escolherArquivo(aceita, aoEscolher) {
+        const entrada = document.createElement('input');
+        entrada.type = 'file';
+        entrada.accept = aceita;
+        entrada.addEventListener('change', () => { if (entrada.files[0]) aoEscolher(entrada.files[0]); });
+        entrada.click();
+    }
+
     function pintarAdesivos(brinquedo) {
         if (!secaoAdesivos) return;
         brinquedoDosAdesivos = brinquedo;
@@ -605,6 +613,7 @@
         lista.replaceChildren(...adesivos.map((adesivo) => {
             const item = document.createElement('li');
             item.className = 'bq-adesivo' + (adesivo.padrao ? ' is-padrao' : '');
+            item.dataset.adesivoId = adesivo.id;
             const topo = document.createElement('div');
             topo.className = 'bq-adesivo-topo';
             const nome = document.createElement('strong');
@@ -613,14 +622,9 @@
             if (adesivo.padrao) {
                 const selo = document.createElement('span');
                 selo.className = 'bq-adesivo-selo';
-                selo.textContent = 'Padrão · as fotos e o 3D acima';
+                selo.textContent = 'Padrão · a capa, o card e a Arena';
                 topo.append(selo);
             }
-            const tres = document.createElement('span');
-            tres.className = 'bq-adesivo-3d';
-            tres.innerHTML = '<i class="bi bi-badge-3d" aria-hidden="true"></i> ';
-            tres.append(document.createTextNode(adesivo.arquivo_3d || 'sem 3D'));
-            topo.append(tres);
             if (!adesivo.padrao) {
                 const tirar = document.createElement('button');
                 tirar.type = 'button';
@@ -630,25 +634,68 @@
                 topo.append(tirar);
             }
             item.append(topo);
-            if ((adesivo.fotos || []).length) {
-                const fotos = document.createElement('div');
-                fotos.className = 'bq-adesivo-fotos';
-                adesivo.fotos.forEach((foto) => {
+            // as fotos das posições: cada uma com o botão de incluir ou trocar
+            const posicoes = document.createElement('div');
+            posicoes.className = 'bq-adesivo-posicoes';
+            (adesivo.posicoes || []).forEach((posicao) => {
+                const vaga = document.createElement('button');
+                vaga.type = 'button';
+                vaga.className = 'bq-adesivo-posicao' + (posicao.url ? '' : ' is-vazia');
+                vaga.dataset.tipo = posicao.tipo;
+                vaga.title = (posicao.url ? 'Trocar a foto: ' : 'Incluir a foto: ') + posicao.rotulo;
+                if (posicao.url) {
+                    const img = document.createElement('img');
+                    img.src = posicao.url;
+                    img.alt = `${adesivo.nome}: ${posicao.rotulo}`;
+                    img.loading = 'lazy';
+                    vaga.append(img);
+                } else {
+                    vaga.innerHTML = '<i class="bi bi-plus-lg" aria-hidden="true"></i>';
+                }
+                const rotulo = document.createElement('span');
+                rotulo.textContent = posicao.rotulo;
+                vaga.append(rotulo);
+                vaga.addEventListener('click', () => escolherArquivo('image/*', (foto) => {
+                    pedirAdesivo({ action: 'adesivo_posicao', adesivo_id: adesivo.id, tipo: posicao.tipo, foto });
+                }));
+                posicoes.append(vaga);
+            });
+            item.append(posicoes);
+            // o 3D do adesivo
+            const tres = document.createElement('div');
+            tres.className = 'bq-adesivo-3d';
+            tres.innerHTML = '<i class="bi bi-badge-3d" aria-hidden="true"></i> ';
+            tres.append(document.createTextNode(adesivo.arquivo_3d || 'Sem 3D'));
+            const trocar3d = document.createElement('button');
+            trocar3d.type = 'button';
+            trocar3d.className = 'bq-adesivo-trocar3d';
+            trocar3d.textContent = adesivo.arquivo_3d ? 'Trocar o .glb' : 'Enviar o .glb';
+            trocar3d.addEventListener('click', () => escolherArquivo('.glb,model/gltf-binary', (glb) => {
+                pedirAdesivo({ action: 'adesivo_posicao', adesivo_id: adesivo.id, adesivo_3d: glb });
+            }));
+            tres.append(trocar3d);
+            item.append(tres);
+            if ((adesivo.outras || []).length) {
+                const outras = document.createElement('div');
+                outras.className = 'bq-adesivo-fotos';
+                adesivo.outras.forEach((foto) => {
                     const img = document.createElement('img');
                     img.src = foto.url;
                     img.alt = adesivo.nome;
                     img.loading = 'lazy';
-                    fotos.append(img);
+                    outras.append(img);
                 });
-                item.append(fotos);
+                item.append(outras);
             }
             return item;
         }));
-        secaoAdesivos.querySelector('[data-adesivos-vazio]').hidden = Boolean(adesivos.length) || !brinquedo;
+        const soPadrao = adesivos.length <= 1;
+        secaoAdesivos.querySelector('[data-adesivos-vazio]').hidden = !soPadrao || !brinquedo;
         secaoAdesivos.querySelector('[data-adesivos-salvar]').hidden = Boolean(brinquedo);
         secaoAdesivos.querySelector('[data-adesivos-novo]').hidden = !brinquedo;
-        // o nome da arte atual só se pede no primeiro adesivo (depois ela já é o padrão)
-        secaoAdesivos.querySelector('[data-adesivo-padrao]').hidden = adesivos.some((a) => a.padrao);
+        // o nome da arte atual só se pede no primeiro adesivo de fora (o padrão ainda se chama "Padrão")
+        const padrao = adesivos.find((a) => a.padrao);
+        secaoAdesivos.querySelector('[data-adesivo-padrao]').hidden = !(soPadrao && padrao && padrao.nome === 'Padrão');
         secaoAdesivos.querySelector('[data-adesivo-msg]').textContent = '';
     }
 

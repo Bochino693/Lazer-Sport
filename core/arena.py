@@ -1016,7 +1016,11 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
         cores_modelo = []
 
     fotos = {}
-    for foto in brinquedo.imagens_brinquedo.all():
+    # as posições do adesivo PADRÃO (o Alienígenas tem as dele; a Arena mostra o padrão)
+    padrao = getattr(brinquedo, "adesivo_padrao_id", None)
+    for foto in sorted(brinquedo.imagens_brinquedo.all(), key=lambda f: (f.ordem, f.id)):
+        if getattr(foto, "variante_id", None) not in (None, padrao):
+            continue
         if foto.tipo in TIPOS_DE_FOTO and foto.tipo not in fotos:
             fotos[foto.tipo] = reduzir_imagem(_url(foto.imagem))
     capa = fotos.get("perfil") or reduzir_imagem(_url(brinquedo.imagem_perfil))
