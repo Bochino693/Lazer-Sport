@@ -3,7 +3,7 @@
 As artes vieram da equipe (LEIA-ME, seção 74). Daqui saem:
 
   * os PRODUTOS NOVOS que as artes mostram e o catálogo não tinha: Basquete
-    Duplo, Basquete Kids, Air Rock, Kid Play e as três casinhas cenográficas
+    Duplo, Basquete Kids, Kid Play e as três casinhas cenográficas
     (Cozinha Infantil, Oficina de Engenharia e Salão de Beleza, numa
     categoria nova "Casinhas Cenográficas"). Entram fora da loja ("sob
     consulta"). A CAPA é a foto da máquina inteira no showroom (a seção 78:
@@ -13,7 +13,10 @@ As artes vieram da equipe (LEIA-ME, seção 74). Daqui saem:
     (core/capas_catalogo.py, VERMELHAS). O recorte do cartaz (`fotos`) fica
     no repositório e não sobe mais; a categoria nova nasce com a foto das
     casinhas na brinquedoteca. O Brinquedão Modelo 5 (o playground da arte
-    7) entra com a imagem da fábrica, se ainda não estiver no catálogo;
+    7) entra com a imagem da fábrica, se ainda não estiver no catálogo. O AIR
+    ROCK não é um produto: é o Air Game Premium com outra adesivagem (LEIA-ME
+    72, a 0190) -- entra como o ADESIVO "Air Rock" dele (`adesivo_de`), com
+    a capa em cena do showroom como a foto do adesivo;
   * as 11 PROMOÇÕES, com o preço (ou sem preço, quando a oferta é um brinde
     ou "leve 4"), o preço "de" da arte, as condições (10x, PIX, à vista com
     desconto), válidas até 13/11/2026 (no dia 14 somem sozinhas do site), a
@@ -88,6 +91,9 @@ PRODUTOS = [
     },
     {
         "nome": "Air Rock",
+        # o mesmo móvel do Air Game Premium, com a adesivagem Air Rock: um adesivo dele (LEIA-ME 72)
+        "adesivo_de": "Air Game Premium",
+        "slug": "air-rock",
         "fotos": ["produto-air-rock.webp"],
         "cena": "air-rock",
         "voltz": "220V",
@@ -213,7 +219,8 @@ PROMOCOES = [
     {
         "arte": 10,
         "descricao": "Black Friday: Air Rock",
-        "brinquedos": ["Air Rock"],
+        # o Air Rock é o adesivo do Air Game Premium (a 0190): a promoção é dele, com a arte do Air Rock
+        "brinquedos": ["Air Game Premium"],
         "preco": "12990.00",
         "preco_de": "14990.00",
         "condicoes": [DEZ_X],
@@ -312,11 +319,54 @@ def _capa_em_cena(brinquedo, chave, ImagemBrinquedo):
     return foto
 
 
+def _campo(modelo, nome):
+    return any(f.name == nome for f in modelo._meta.get_fields())
+
+
+def cadastrar_adesivo(dados, base, ImagemBrinquedo, simular=False, avisar=print):
+    """O ADESIVO `dados["nome"]` do produto `base` (LEIA-ME 72: o Air Rock é o Air Game Premium com outra arte).
+
+    A foto do adesivo é a capa em cena do showroom (a capa quadrada do adesivo: `papel_na_capa`
+    "cena", com a posição "perfil"), se ele ainda não tem. Devolve o adesivo (ou None ao simular).
+    """
+    from . import capas_catalogo
+
+    VarianteAdesivo = ImagemBrinquedo._meta.get_field("variante").related_model
+    variante = (VarianteAdesivo.objects.filter(brinquedo=base, slug=dados["slug"]).first()
+                or VarianteAdesivo.objects.filter(brinquedo=base, nome=dados["nome"]).first())
+    if simular:
+        avisar(f"{dados['nome']}: {'já é' if variante else 'seria'} um adesivo do {base.nome_brinquedo}.")
+        return None
+    with transaction.atomic():
+        if variante is None:
+            ordem = max(VarianteAdesivo.objects.filter(brinquedo=base).values_list("ordem", flat=True), default=1) + 1
+            variante = VarianteAdesivo.objects.create(brinquedo=base, nome=dados["nome"], slug=dados["slug"],
+                                                      ordem=ordem, padrao=False)
+            avisar(f"{dados['nome']}: adesivo novo do {base.nome_brinquedo}.")
+        if dados.get("cena") and not ImagemBrinquedo.objects.filter(variante=variante, papel_na_capa=CENA).exists():
+            ocupada = ImagemBrinquedo.objects.filter(variante=variante, tipo=PERFIL).exists()
+            foto = ImagemBrinquedo(
+                brinquedo=base, variante=variante, tipo=None if ocupada else PERFIL, ordem=1, papel_na_capa=CENA,
+                texto_alternativo=f"{base.nome_brinquedo} ({dados['nome']}) no showroom da Lazer & Sport"[:180],
+            )
+            with open(capas_catalogo.arquivo(dados["cena"]), "rb") as origem:
+                foto.imagem.save(capas_catalogo.nome_no_cadastro(dados["cena"]), File(origem), save=True)
+            avisar(f"{dados['nome']}: a capa do adesivo (o showroom) subiu.")
+    return variante
+
+
 def cadastrar_produto(dados, Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, simular=False, avisar=print):
     """Cria o produto (com as fotos) se ainda não está no catálogo. Devolve o brinquedo (ou None ao simular).
 
     Com `cena` (seção 78), a capa é a foto no showroom (a capa em cena) e o recorte do cartaz não sobe.
+    Com `adesivo_de` (LEIA-ME 72), não é um produto: é um adesivo daquele (`cadastrar_adesivo`); a
+    ficha à parte que já existir (a de antes da 0190) fica como está, e a 0190 a junta ao produto.
     """
+    if dados.get("adesivo_de") and _campo(ImagemBrinquedo, "variante"):
+        base = achar(dados["adesivo_de"], Brinquedos)
+        if base is not None and achar(dados["nome"], Brinquedos) is None:
+            cadastrar_adesivo(dados, base, ImagemBrinquedo, simular=simular, avisar=avisar)
+            return base
     existente = achar(dados["nome"], Brinquedos)
     if existente is not None:
         if not existente.imagem_brinquedo and not simular:

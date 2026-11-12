@@ -205,7 +205,8 @@ def _discos(pasta):
 
 class CadastroTests(TestCase):
     def setUp(self):
-        for nome in ("Air Game Kids", "Strike Kids", "Nervo Teste", "Boliche Virtual", "Air Game Home", "Matrix"):
+        for nome in ("Air Game Kids", "Strike Kids", "Nervo Teste", "Boliche Virtual", "Air Game Home", "Matrix",
+                     "Air Game Premium"):
             _brinquedo(nome)
         CategoriasBrinquedos.objects.create(nome_categoria="Competitivos", imagem_categoria="categorias/c.jpg")
         self.pasta = tempfile.TemporaryDirectory()
@@ -226,7 +227,7 @@ class CadastroTests(TestCase):
 
     def test_cria_os_produtos_e_as_11_promocoes_sem_duplicar(self):
         self.rodar()
-        for nome in ("Basquete Duplo", "Basquete Kids", "Air Rock", "Kid Play", "Cozinha Infantil",
+        for nome in ("Basquete Duplo", "Basquete Kids", "Kid Play", "Cozinha Infantil",
                      "Oficina de Engenharia", "Salão de Beleza", "Brinquedão Modelo 5"):
             brinquedo = Brinquedos.objects.get(nome_brinquedo=nome)
             self.assertTrue(brinquedo.imagem_brinquedo, nome)
@@ -237,6 +238,17 @@ class CadastroTests(TestCase):
         self.assertEqual(Promocoes.objects.count(), 11)
         self.assertTrue(all(p.imagem_promocao and p.arte_promocao for p in Promocoes.objects.all()))
         self.assertTrue(all(p.valida_ate == datetime.date(2026, 11, 13) for p in Promocoes.objects.all()))
+
+        # o Air Rock é um ADESIVO do Air Game Premium (LEIA-ME 72, a 0190), e não um produto: a capa
+        # em cena do showroom é a foto do adesivo, e a promoção aponta para o Air Game Premium
+        self.assertFalse(Brinquedos.objects.filter(nome_brinquedo="Air Rock").exists())
+        premium = Brinquedos.objects.get(nome_brinquedo="Air Game Premium")
+        rock = premium.variantes_adesivo.get(slug="air-rock")
+        self.assertEqual((rock.nome, rock.padrao), ("Air Rock", False))
+        self.assertTrue(rock.fotos.filter(papel_na_capa="cena", imagem__contains="cena-air-rock-").exists())
+        promocao = Promocoes.objects.get(descricao="Black Friday: Air Rock")
+        self.assertEqual(promocao.brinquedos_id, premium.pk)
+        self.assertEqual(promocao.preco_promocao, Decimal("12990.00"))
 
         kit = Promocoes.objects.get(descricao__startswith="Kit Black Friday")
         self.assertEqual([b.nome_brinquedo for b in kit.todos_brinquedos],
@@ -252,13 +264,15 @@ class CadastroTests(TestCase):
         self.assertEqual(Promocoes.objects.count(), 11)
         self.assertEqual(Brinquedos.objects.filter(nome_brinquedo="Basquete Duplo").count(), 1)
         self.assertEqual({p.imagem_promocao.name for p in Promocoes.objects.all()}, arquivos)
+        self.assertEqual(premium.variantes_adesivo.filter(slug="air-rock").count(), 1)  # de novo: o mesmo adesivo
+        self.assertEqual(rock.fotos.filter(papel_na_capa="cena").count(), 1)
 
     def test_depois_da_validade_nao_cria_promocao(self):
         avisos = []
         black_friday.rodar(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, Promocoes,
                            hoje=datetime.date(2026, 11, 14), avisar=avisos.append)
         self.assertFalse(Promocoes.objects.exists())
-        self.assertTrue(Brinquedos.objects.filter(nome_brinquedo="Air Rock").exists())
+        self.assertTrue(Brinquedos.objects.get(nome_brinquedo="Air Game Premium").variantes_adesivo.filter(slug="air-rock").exists())
         self.assertTrue(any("terminou" in a for a in avisos))
 
     def test_brinquedo_que_falta_deixa_a_promocao_para_depois(self):

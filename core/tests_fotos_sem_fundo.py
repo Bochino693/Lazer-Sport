@@ -232,8 +232,18 @@ class SiteTests(_ComDisco):
                 html = self.client.get(url).content.decode()
                 self.assertIn(f"/brinquedo/{self.com_capa_branca.pk}/", html)
                 self.assertNotIn("pebolim-branco", html)
+        # o giro (um por adesivo): o outro adesivo com a frente branca gira com a primeira foto com fundo dele
+        from .models import VarianteAdesivo
+
+        copa = VarianteAdesivo.objects.create(brinquedo=self.com_capa_branca, nome="Copa", slug="copa", ordem=2)
+        for ordem, (tipo, nome, desenho) in enumerate((("perfil", "copa-branca", "branco"), ("lado_direito", "copa-lado", "cena")), 9):
+            ImagemBrinquedo.objects.create(brinquedo=self.com_capa_branca, variante=copa, tipo=tipo, ordem=ordem,
+                                           imagem=self._arquivo(nome, desenho))
+        conferir_fotos.marcar_sem_fundo(Brinquedos, ImagemBrinquedo, avisar=_calado)
+        fotos_dos_cards.limpar_cache()
         giro = fotos_dos_cards.do_card(self.com_capa_branca.pk)
-        self.assertEqual([u.split("/")[-1].split(".")[0].split("_")[0] for u in giro], ["pebolim-lado", "pebolim-verso"])
+        self.assertEqual([(i["src"].split("/")[-1].split(".")[0].split("_")[0], i["adesivo"]) for i in giro],
+                         [("pebolim-lado", "Padrão"), ("copa-lado", "Copa")])
 
     def test_a_pagina_a_vitrine_do_topo_e_a_arena(self):
         resposta = self.client.get(reverse("brinquedo_detalhe", args=[self.com_capa_branca.pk]))

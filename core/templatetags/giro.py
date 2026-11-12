@@ -1,9 +1,11 @@
-"""As fotos que giram no card: `{% fotos_do_card brinquedo.id %}` (LEIA-ME, seção 72).
+"""As fotos que giram no card, uma por adesivo: `{% fotos_do_card brinquedo.id %}` (LEIA-ME, seção 72).
 
-Num brinquedo com mais de uma foto (core/fotos_dos_cards.py), põe dentro da
-caixa da foto do card a lista das fotos (`data-fotos-card`), que o
-site/ls-giro.js reveza. Aceita o id do brinquedo ou o endereço da página dele
-(a loja e a busca só têm o endereço). Com uma foto só, não escreve nada.
+Num brinquedo com mais de um adesivo (core/fotos_dos_cards.py), põe dentro
+da caixa da foto do card a lista (`data-fotos-card`: [{"src", "adesivo"}],
+a capa quadrada de cada adesivo, o padrão primeiro), que o site/ls-giro.js
+reveza com o nome do adesivo. Aceita o id do brinquedo ou o endereço da
+página dele (a loja e a busca só têm o endereço). Com um adesivo só, não
+escreve nada.
 """
 
 import json

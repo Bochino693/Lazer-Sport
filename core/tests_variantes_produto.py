@@ -322,7 +322,8 @@ class EstruturarTests(TransactionTestCase):
         self.assertEqual(BrinquedoClick.objects.get(pk=clique.pk).brinquedo_clicado_id, produto.pk)
         promo = Promocoes.objects.get(pk=promo.pk)
         self.assertEqual(promo.brinquedos_id, produto.pk)
-        self.assertEqual(list(promo.brinquedos_extras.values_list("pk", flat=True)), [produto.pk])
+        # (a ficha era a principal e um extra: o produto fica só como o principal, sem repetir nos extras)
+        self.assertEqual(list(promo.brinquedos_extras.values_list("pk", flat=True)), [])
         self.assertEqual(list(Combos.objects.get(pk=combo.pk).brinquedos.values_list("pk", flat=True)), [produto.pk])
         # o endereço antigo vai para o produto
         resposta = self.client.get(reverse("brinquedo_detalhe", args=[ficha.pk]))
@@ -550,7 +551,7 @@ class RedirecionamentoTests(_ComAdesivos):
 
 
 class ListasTests(_ComAdesivos):
-    def test_o_produto_aparece_uma_vez_e_o_card_gira_as_fotos_do_padrao(self):
+    def test_o_produto_aparece_uma_vez_e_o_card_gira_os_adesivos(self):
         paginas = {
             "home": reverse("home"),
             "categoria": reverse("categoria_detalhe", args=[self.categoria.pk]),
@@ -567,23 +568,22 @@ class ListasTests(_ComAdesivos):
                 self.assertNotIn("Air Game Kids Alienígenas", html)
                 self.assertNotIn("?adesivo=", html)
                 marcas = re.findall(r'data-fotos-card="([^"]*)"', html)
-                fotos = [json.loads(m.replace("&quot;", '"')) for m in marcas]
-                do_air_game = next(f for f in fotos if "astronautas" in f[0])
-                # o card é o do adesivo padrão: a frente primeiro, o lado; nunca a sem fundo, nem o outro adesivo
-                self.assertEqual([u.split("/")[-1].split(".")[0] for u in do_air_game], ["astronautas", "astronautas-lado"])
+                cards = [json.loads(m.replace("&quot;", '"')) for m in marcas]
+                do_air_game = next(c for c in cards if "astronautas" in c[0]["src"])
+                # o card gira POR ADESIVO (o carrossel do cliente): a capa de cada um, o padrão primeiro
+                self.assertEqual([(i["src"].split("/")[-1].split(".")[0], i["adesivo"]) for i in do_air_game],
+                                 [("astronautas", "Astronautas"), ("alienigenas", "Alienígenas")])
                 self.assertNotIn("astronautas-branco", html)
                 self.assertNotIn("astronautas-removebg", html)
 
-    def test_todo_brinquedo_com_mais_de_uma_foto_gira(self):
+    def test_um_adesivo_so_nao_gira(self):
         dois = _produto("Pebolim", "pebolim", self.categoria)
         ImagemBrinquedo.objects.create(brinquedo=dois, tipo="verso", ordem=2, imagem="imagens_brinquedos/pebolim-verso.png")
-        _produto("Pula Pula", "pula", self.categoria)
         cache.clear()
         html = self.client.get(reverse("categoria_detalhe", args=[self.categoria.pk])).content.decode()
         marcas = [json.loads(m.replace("&quot;", '"')) for m in re.findall(r'data-fotos-card="([^"]*)"', html)]
-        fotos = {tuple(sorted(x.split("/")[-1].split(".")[0] for x in m)) for m in marcas}
-        self.assertIn(("pebolim", "pebolim-verso"), fotos)
-        self.assertFalse(any("pula" in f for par in fotos for f in par))
+        self.assertFalse(any("pebolim" in item["src"] for card in marcas for item in card))
+        self.assertTrue(any("alienigenas" in item["src"] for card in marcas for item in card))
 
     def test_o_script_que_gira_as_fotos_esta_em_toda_pagina(self):
         html = self.client.get(reverse("home")).content.decode()

@@ -1,12 +1,14 @@
 /* ======================================================================
-   AS FOTOS QUE GIRAM NOS CARDS (LEIA-ME, seção 72)
+   AS FOTOS QUE GIRAM NOS CARDS: UMA POR ADESIVO (LEIA-ME, seção 72)
 
-   O cliente: "quando o brinquedo tiver mais que uma, no card de
-   apresentação em home ou em brinquedos, deve ficar rodando as fotos". O
-   card de todo brinquedo com mais de uma foto traz a lista delas
-   (`data-fotos-card`, core/templatetags/giro.py: a capa primeiro e até
-   quatro) e aqui elas se revezam a cada ~3 s, com uma troca suave (a
-   próxima aparece por cima, aos poucos).
+   O cliente: "o carrossel não deve ser por posição e sim por adesivos,
+   entendeu? com uma transição suave e legal". O card do brinquedo com mais
+   de um adesivo traz a lista (`data-fotos-card`, core/templatetags/giro.py:
+   [{src, adesivo}], a capa quadrada de cada adesivo, o padrão primeiro) e
+   aqui elas se revezam a cada ~3 s: a próxima entra por cima, deslizando um
+   pouco de lado e com um zoom leve que assenta, enquanto a de antes recua
+   para o outro lado; o nome do adesivo ("Adesivo: Alienígenas") troca junto,
+   no canto do card. (A lista antiga, só de endereços, ainda funciona.)
 
    Cada foto passa pelo MESMO tratamento da foto do card (ls-fotos.js,
    `window.LSFotos`): a que tem fundo enche a caixa, recortada pelo conteúdo
@@ -21,6 +23,7 @@
   const INTERVALO = 3200;   // ms entre uma troca e a próxima
   const ANTES = 1300;       // ms antes da troca em que a próxima começa a vir
   const TROCA = 950;        // ms da troca suave (a do CSS, .card-giro-camada)
+  const NOME = 340;         // ms do nome do adesivo sumindo antes de trocar (o CSS, .card-giro-adesivo)
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const fotos = window.LSFotos || null;
@@ -51,7 +54,7 @@
       for (let passo = 1; passo < estado.lista.length; passo += 1) {
         const indice = (estado.indice + passo) % estado.lista.length;
         if (estado.puladas.has(indice)) continue;
-        const pronta = await preparar(estado.lista[indice], estado.caixa).catch(() => null);
+        const pronta = await preparar(estado.lista[indice].src, estado.caixa).catch(() => null);
         if (!pronta) continue;
         if (pronta.inteira && !estado.caixa.hasAttribute("data-foto-inteira")) {
           estado.puladas.add(indice);
@@ -67,6 +70,8 @@
   const camadaPara = (foto, src) => {
     const camada = document.createElement("img");
     camada.className = "card-giro-camada";
+    // fora do "esqueleto" das imagens (ls-reveal.js): ele poria a camada à vista na hora, sem a troca
+    camada.dataset.lsSkipSkeleton = "true";
     camada.alt = "";
     camada.setAttribute("aria-hidden", "true");
     camada.decoding = "async";
@@ -86,6 +91,18 @@
     return camada;
   };
 
+  // o nome do adesivo no canto do card: some, troca e volta junto com a foto
+  const nomeDoAdesivo = (estado, indice) => {
+    const etiqueta = estado.etiqueta;
+    const nome = estado.lista[indice] && estado.lista[indice].adesivo;
+    if (!etiqueta || !nome) return;
+    etiqueta.classList.add("card-giro-adesivo--trocando");
+    window.setTimeout(() => {
+      etiqueta.querySelector("b").textContent = nome;
+      etiqueta.classList.remove("card-giro-adesivo--trocando");
+    }, NOME);
+  };
+
   const trocar = async (estado) => {
     const pronta = await estado.vindo;
     estado.vindo = null;
@@ -103,18 +120,28 @@
       if (window.getComputedStyle(caixa).position === "static") caixa.style.position = "relative";
       const camada = camadaPara(foto, pronta.src);
       caixa.appendChild(camada);
-      requestAnimationFrame(() => requestAnimationFrame(() => camada.classList.add("card-giro-visivel")));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        camada.classList.add("card-giro-visivel");
+        foto.classList.add("card-giro-saindo"); // a de antes recua para o outro lado
+        nomeDoAdesivo(estado, pronta.indice);
+      }));
       await new Promise((r) => window.setTimeout(r, TROCA + 40));
       foto.removeAttribute("srcset");
       foto.removeAttribute("sizes");
       foto.src = pronta.src;
       if (fotos && pronta.cheia !== null) fotos.vestirCaixa(caixa, pronta);
       await (foto.decode ? foto.decode().catch(() => {}) : Promise.resolve());
+      // a foto do card volta ao lugar sem animar (a camada ainda cobre)
+      foto.style.transition = "none";
+      foto.classList.remove("card-giro-saindo");
+      void foto.offsetWidth;
+      foto.style.transition = "";
       camada.remove();
     } else {
       // de uma foto com fundo para uma recortada (ou o contrário): a caixa muda de jeito,
       // então a foto some rapidinho, troca e volta
       foto.classList.add("card-giro-sumindo");
+      nomeDoAdesivo(estado, pronta.indice);
       await new Promise((r) => window.setTimeout(r, 380));
       foto.removeAttribute("srcset");
       foto.removeAttribute("sizes");
@@ -144,13 +171,29 @@
       vistos.add(marca);
       let lista = [];
       try { lista = JSON.parse(marca.dataset.fotosCard || "[]"); } catch (erro) { lista = []; }
+      // [{src, adesivo}] (um por adesivo); a lista antiga, só de endereços, também serve
+      lista = lista.map((item) => (typeof item === "string" ? { src: item, adesivo: "" } : item)).filter((item) => item && item.src);
       const caixa = caixaDe(marca);
       if (!caixa || !fotoDa(caixa) || lista.length < 2 || estados.has(caixa)) return;
       const estado = {
         caixa, lista, indice: 0, visivel: !vigia, pausado: false, vindo: null, trocando: false, puladas: new Set(),
         // os cards não trocam todos juntos: cada um começa um pouco depois
         proxima: Date.now() + INTERVALO + (estados.size % 5) * 450,
+        etiqueta: null,
       };
+      // o nome do adesivo no canto do card ("Adesivo: Astronautas"), quando a lista é por adesivo
+      if (lista[0].adesivo) {
+        if (window.getComputedStyle(caixa).position === "static") caixa.style.position = "relative";
+        const etiqueta = document.createElement("span");
+        etiqueta.className = "card-giro-adesivo";
+        etiqueta.setAttribute("aria-hidden", "true");
+        etiqueta.append("Adesivo: ");
+        const nome = document.createElement("b");
+        nome.textContent = lista[0].adesivo;
+        etiqueta.append(nome);
+        caixa.appendChild(etiqueta);
+        estado.etiqueta = etiqueta;
+      }
       estados.set(caixa, estado);
       const card = caixa.closest("a, [data-card-link], .card-produto, .catalogo-card, .loja-card, .ls-result") || caixa;
       card.addEventListener("mouseenter", () => { estado.pausado = true; });

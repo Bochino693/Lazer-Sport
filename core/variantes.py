@@ -290,6 +290,88 @@ def _repassar(linhas, campo, base, avisar, nome):
     return n
 
 
+def _repontar(apps, ficha, base, nome_do_adesivo, avisar):
+    """TODAS as referências à ficha passam para o produto (a 0169 e a 0190).
+
+    Pelas relações que apontam para Brinquedos (orçamento, favorito, clique,
+    promoção e extras, combo, cupom, lista de desejos, manutenção...), pelas
+    chaves genéricas (o item do carrinho e do pedido: com o adesivo) e pelas
+    interações por hora das análises (somadas quando o produto já tem a mesma
+    hora). O repetido (o favorito do mesmo usuário) vira um.
+    """
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    ImagemBrinquedo = apps.get_model("core", "ImagemBrinquedo")
+    ObjetoTresD = apps.get_model("core", "ObjetoTresD")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    for relacao in Brinquedos._meta.related_objects:
+        modelo = relacao.related_model
+        if modelo in (ImagemBrinquedo, ObjetoTresD, VarianteAdesivo):
+            continue
+        campo = relacao.field.name
+        if relacao.many_to_many:
+            # (a promoção cujo produto principal já é o produto: a ficha só sai dos extras)
+            principais = [f.attname for f in modelo._meta.fields if f.is_relation and f.related_model is Brinquedos]
+            for obj in modelo.objects.filter(**{campo: ficha}):
+                lista = getattr(obj, campo)
+                if not any(getattr(obj, nome) == base.pk for nome in principais):
+                    lista.add(base)
+                lista.remove(ficha)
+                avisar(f"{modelo._meta.verbose_name} #{obj.pk}: {ficha.nome_brinquedo} -> {base.nome_brinquedo}.")
+            continue
+        linhas = modelo.objects.filter(**{campo: ficha})
+        if relacao.one_to_one:
+            if modelo.objects.filter(**{campo: base}).exists():
+                linhas.delete()
+            else:
+                linhas.update(**{campo: base.pk})
+            continue
+        n = _repassar(linhas, relacao.field.attname, base, avisar, modelo._meta.verbose_name)
+        if n:
+            avisar(f"{modelo._meta.verbose_name}: {n} de {ficha.nome_brinquedo} -> {base.nome_brinquedo}.")
+        # a composição do produto com ele mesmo (o conjunto e o item iguais) não fica
+        outros = [f.name for f in modelo._meta.fields if f.is_relation and f.related_model is Brinquedos and f.name != campo]
+        for outro in outros:
+            modelo.objects.filter(**{campo: base, outro: base}).delete()
+
+    # as chaves genéricas (o item do carrinho, o item do pedido): o produto, com o adesivo
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    tipo = ContentType.objects.filter(app_label="core", model="brinquedos").first()
+    if tipo is not None:
+        for modelo, campo_tipo, campo_id in _modelos_com_tipo_de_conteudo(apps):
+            linhas = modelo.objects.filter(**{campo_tipo: tipo, campo_id: ficha.pk})
+            nomes = {f.name for f in modelo._meta.fields}
+            for linha in list(linhas):
+                igual = None
+                if {"carrinho", "quantidade"} <= nomes:
+                    filtro = {"carrinho_id": linha.carrinho_id, campo_tipo: tipo, campo_id: base.pk}
+                    if "adesivo" in nomes:
+                        filtro["adesivo"] = linha.adesivo or nome_do_adesivo
+                    igual = modelo.objects.filter(**filtro).exclude(pk=linha.pk).first()
+                if igual is not None:  # a mesma linha no carrinho: soma
+                    modelo.objects.filter(pk=igual.pk).update(quantidade=igual.quantidade + linha.quantidade)
+                    modelo.objects.filter(pk=linha.pk).delete()
+                    continue
+                mudar = {campo_id: base.pk}
+                if "adesivo" in nomes and not linha.adesivo:
+                    mudar["adesivo"] = nome_do_adesivo  # o item era da outra arte: o adesivo dela
+                modelo.objects.filter(pk=linha.pk).update(**mudar)
+
+    # as análises: as visitas e as idas ao carrinho por hora (o id solto, sem chave estrangeira)
+    try:
+        InteracaoPorHora = apps.get_model("core", "InteracaoPorHora")
+    except LookupError:  # (antes da 0171)
+        InteracaoPorHora = None
+    if InteracaoPorHora is not None:
+        for linha in list(InteracaoPorHora.objects.filter(alvo="brinquedo", objeto_id=ficha.pk)):
+            igual = InteracaoPorHora.objects.filter(evento=linha.evento, alvo="brinquedo", objeto_id=base.pk,
+                                                    hora=linha.hora, origem=linha.origem).first()
+            if igual is not None:
+                InteracaoPorHora.objects.filter(pk=igual.pk).update(quantidade=igual.quantidade + linha.quantidade)
+                InteracaoPorHora.objects.filter(pk=linha.pk).delete()
+            else:
+                InteracaoPorHora.objects.filter(pk=linha.pk).update(objeto_id=base.pk)
+
+
 def _passar_para_o_produto(apps, variante, avisar):
     """Tudo o que era da ficha à parte (a `origem` do adesivo) passa para o produto; a ficha é apagada."""
     from . import arena
@@ -333,56 +415,7 @@ def _passar_para_o_produto(apps, variante, avisar):
         ImagemBrinquedo.objects.filter(pk=foto.pk).update(
             brinquedo=base, variante=variante, tipo=None, ordem=ordem, papel_na_capa="outra_arte")
 
-    # TODAS as referências à ficha passam para o produto (pelas relações que apontam para Brinquedos)
-    for relacao in Brinquedos._meta.related_objects:
-        modelo = relacao.related_model
-        if modelo in (ImagemBrinquedo, ObjetoTresD, VarianteAdesivo):
-            continue
-        campo = relacao.field.name
-        if relacao.many_to_many:
-            for obj in modelo.objects.filter(**{campo: ficha}):
-                lista = getattr(obj, campo)
-                lista.add(base)
-                lista.remove(ficha)
-                avisar(f"{modelo._meta.verbose_name} #{obj.pk}: {ficha.nome_brinquedo} -> {base.nome_brinquedo}.")
-            continue
-        linhas = modelo.objects.filter(**{campo: ficha})
-        if relacao.one_to_one:
-            if modelo.objects.filter(**{campo: base}).exists():
-                linhas.delete()
-            else:
-                linhas.update(**{campo: base.pk})
-            continue
-        n = _repassar(linhas, relacao.field.attname, base, avisar, modelo._meta.verbose_name)
-        if n:
-            avisar(f"{modelo._meta.verbose_name}: {n} de {ficha.nome_brinquedo} -> {base.nome_brinquedo}.")
-        # a composição do produto com ele mesmo (o conjunto e o item iguais) não fica
-        outros = [f.name for f in modelo._meta.fields if f.is_relation and f.related_model is Brinquedos and f.name != campo]
-        for outro in outros:
-            modelo.objects.filter(**{campo: base, outro: base}).delete()
-
-    # as chaves genéricas (o item do carrinho, o item do pedido): o produto, com o adesivo
-    ContentType = apps.get_model("contenttypes", "ContentType")
-    tipo = ContentType.objects.filter(app_label="core", model="brinquedos").first()
-    if tipo is not None:
-        for modelo, campo_tipo, campo_id in _modelos_com_tipo_de_conteudo(apps):
-            linhas = modelo.objects.filter(**{campo_tipo: tipo, campo_id: ficha.pk})
-            nomes = {f.name for f in modelo._meta.fields}
-            for linha in list(linhas):
-                igual = None
-                if {"carrinho", "quantidade"} <= nomes:
-                    filtro = {"carrinho_id": linha.carrinho_id, campo_tipo: tipo, campo_id: base.pk}
-                    if "adesivo" in nomes:
-                        filtro["adesivo"] = linha.adesivo or variante.nome
-                    igual = modelo.objects.filter(**filtro).exclude(pk=linha.pk).first()
-                if igual is not None:  # a mesma linha no carrinho: soma
-                    modelo.objects.filter(pk=igual.pk).update(quantidade=igual.quantidade + linha.quantidade)
-                    modelo.objects.filter(pk=linha.pk).delete()
-                    continue
-                mudar = {campo_id: base.pk}
-                if "adesivo" in nomes and not linha.adesivo:
-                    mudar["adesivo"] = variante.nome  # o item era da outra arte: o adesivo dela
-                modelo.objects.filter(pk=linha.pk).update(**mudar)
+    _repontar(apps, ficha, base, variante.nome, avisar)
 
     # a ficha sai (nada mais aponta para ela)
     VarianteAdesivo.objects.filter(origem=ficha).update(origem=None)
@@ -407,6 +440,115 @@ def estruturar(apps, schema_editor=None, avisar=print):
             produto.valor_brinquedo = Decimal(preco)
             produto.save(update_fields=["valor_brinquedo"])
             avisar(f"{produto.nome_brinquedo}: o preço agora é R$ {preco}.")
+
+
+# ----------------------------------------------------------------------
+# A 0190: os pares achados depois (o Air Game Premium e o Air Rock)
+# ----------------------------------------------------------------------
+# O cliente: "vc não percebeu que o air game premium e o air game rock são o
+# mesmo, só é um adesivo? e que eles deveriam estar juntos". A mesma regra da
+# 0169 (um objeto só no banco), com a estrutura de hoje: a ficha à parte vira um
+# ADESIVO do produto (o adesivo padrão dela, com as fotos e o 3D, muda de dono),
+# todas as referências vão para o produto (o item do carrinho com o adesivo) e a
+# ficha é APAGADA; o endereço antigo vai (301) para o produto (`id_antigo`).
+
+#: (produto, (nome do adesivo padrão, slug)), [(ficha, nome do adesivo, slug)]. O padrão só ganha o
+#: nome se ainda se chama "Padrão" (o nome que alguém deu no painel fica).
+JUNTADOS_DEPOIS = (
+    (("Air Game Premium", ("Premium", "premium")), [("Air Rock", "Air Rock", "air-rock")]),
+)
+
+
+def _padrao_do(brinquedo, VarianteAdesivo, Brinquedos):
+    padrao = (VarianteAdesivo.objects.filter(pk=brinquedo.adesivo_padrao_id).first()
+              or VarianteAdesivo.objects.filter(brinquedo=brinquedo, padrao=True).order_by("ordem", "id").first())
+    if padrao is None:
+        slug = "padrao"
+        while VarianteAdesivo.objects.filter(brinquedo=brinquedo, slug=slug).exists():
+            slug += "-1"
+        padrao = VarianteAdesivo.objects.create(brinquedo=brinquedo, nome=NOME_DO_PADRAO, slug=slug, ordem=1, padrao=True)
+    if brinquedo.adesivo_padrao_id != padrao.pk:
+        Brinquedos.objects.filter(pk=brinquedo.pk).update(adesivo_padrao=padrao)
+    return padrao
+
+
+def _juntar_ficha(apps, base, ficha, nome, slug, avisar):
+    """A ficha à parte vira o adesivo `nome` do produto e é apagada (as fotos, o 3D e as referências ficam)."""
+    from . import arena
+
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    ImagemBrinquedo = apps.get_model("core", "ImagemBrinquedo")
+    ObjetoTresD = apps.get_model("core", "ObjetoTresD")
+    ordem = max(VarianteAdesivo.objects.filter(brinquedo=base).values_list("ordem", flat=True), default=1) + 1
+    variante = VarianteAdesivo.objects.filter(brinquedo=base, slug=slug).first()
+    da_ficha = (VarianteAdesivo.objects.filter(pk=ficha.adesivo_padrao_id).first()
+                or VarianteAdesivo.objects.filter(brinquedo=ficha, padrao=True).order_by("ordem", "id").first())
+    if variante is None and da_ficha is not None:
+        # o adesivo padrão da ficha (com as fotos e o 3D dela) muda de dono e de nome
+        VarianteAdesivo.objects.filter(pk=da_ficha.pk).update(
+            brinquedo=base, nome=nome, slug=slug, padrao=False, ordem=ordem, id_antigo=ficha.pk, ativo=True)
+        variante = VarianteAdesivo.objects.get(pk=da_ficha.pk)
+    elif variante is None:
+        variante = VarianteAdesivo.objects.create(brinquedo=base, nome=nome, slug=slug, ordem=ordem, padrao=False,
+                                                  id_antigo=ficha.pk)
+    elif not variante.id_antigo:
+        VarianteAdesivo.objects.filter(pk=variante.pk).update(id_antigo=ficha.pk)
+    # o 3D da ficha (o do cadastro, ou o do site pelo nome), se o adesivo ainda não tem um
+    variante.refresh_from_db()
+    if not (variante.arquivo_3d or variante.arquivo_estatico_3d):
+        objeto = ObjetoTresD.objects.filter(brinquedo=ficha, ativo=True).first()
+        modelo = None if objeto is not None else arena.modelo_da_maquina(ficha.nome_brinquedo)
+        if objeto is not None:
+            VarianteAdesivo.objects.filter(pk=variante.pk).update(
+                arquivo_3d=objeto.arquivo.name if objeto.arquivo else "", arquivo_estatico_3d=objeto.arquivo_estatico or "",
+                codigo_3d=objeto.codigo or "", cores_3d=list(objeto.cores or []), medidas_3d=list(objeto.medidas or []))
+        elif modelo:
+            VarianteAdesivo.objects.filter(pk=variante.pk).update(
+                arquivo_estatico_3d=modelo["arquivo"], codigo_3d=modelo["id"], medidas_3d=list(modelo["medidas"]))
+    # as fotos: as do adesivo padrão da ficha já são do adesivo; as sem adesivo entram nele (uma por posição)
+    tomadas = set(ImagemBrinquedo.objects.filter(variante=variante).exclude(tipo=None).values_list("tipo", flat=True))
+    for foto in ImagemBrinquedo.objects.filter(brinquedo=ficha).order_by("ordem", "id"):
+        if foto.variante_id == variante.pk:
+            ImagemBrinquedo.objects.filter(pk=foto.pk).update(brinquedo=base)
+        elif foto.variante_id is None or foto.variante_id == getattr(da_ficha, "pk", None):
+            tipo = foto.tipo if foto.tipo and foto.tipo not in tomadas else None
+            ImagemBrinquedo.objects.filter(pk=foto.pk).update(brinquedo=base, variante=variante, tipo=tipo)
+            if tipo:
+                tomadas.add(tipo)
+        else:  # (a foto de outro adesivo da ficha: vai com ele, abaixo)
+            ImagemBrinquedo.objects.filter(pk=foto.pk).update(brinquedo=base)
+    # os outros adesivos da ficha (se ela tinha): vão para o produto também
+    for outro in VarianteAdesivo.objects.filter(brinquedo=ficha):
+        novo_slug = outro.slug
+        while VarianteAdesivo.objects.filter(brinquedo=base, slug=novo_slug).exists():
+            novo_slug += "-1"
+        ordem += 1
+        VarianteAdesivo.objects.filter(pk=outro.pk).update(brinquedo=base, slug=novo_slug, padrao=False, ordem=ordem)
+    _repontar(apps, ficha, base, nome, avisar)
+    nome_da_ficha = ficha.nome_brinquedo
+    Brinquedos.objects.filter(pk=ficha.pk).delete()
+    avisar(f"{nome_da_ficha} (id {ficha.pk}) agora é o adesivo {nome} do {base.nome_brinquedo}; a ficha à parte foi apagada.")
+
+
+def juntar_os_achados_depois(apps, schema_editor=None, avisar=print):
+    """A 0190, em todo lugar e idempotente (a ficha que já não existe: nada a fazer)."""
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    for (produto, (nome_padrao, slug_padrao)), fichas in JUNTADOS_DEPOIS:
+        base = _achar(produto, Brinquedos)
+        if base is None:
+            continue
+        for nome_ficha, nome, slug in fichas:
+            ficha = _achar(nome_ficha, Brinquedos)
+            if ficha is None or ficha.pk == base.pk:
+                continue
+            with transaction.atomic():
+                padrao = _padrao_do(base, VarianteAdesivo, Brinquedos)
+                if padrao.nome == NOME_DO_PADRAO and not VarianteAdesivo.objects.filter(brinquedo=base, slug=slug_padrao).exists():
+                    VarianteAdesivo.objects.filter(pk=padrao.pk).update(nome=nome_padrao, slug=slug_padrao)
+                base.refresh_from_db()
+                _juntar_ficha(apps, base, ficha, nome, slug, avisar)
 
 
 # ----------------------------------------------------------------------

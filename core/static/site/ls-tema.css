@@ -2849,32 +2849,78 @@ body.ls-modo-app main.content-section { padding-top: 0; margin-top: 0; }
 
 
 /* =========================================================
-   AS FOTOS QUE GIRAM NOS CARDS (LEIA-ME, seção 72; site/ls-giro.js):
-   o brinquedo com mais de uma foto reveza a galeria no card. A próxima
-   foto entra numa camada por cima, do mesmo tamanho e jeito da foto do
-   card, e aparece aos poucos (a troca suave).
+   AS FOTOS QUE GIRAM NOS CARDS, UMA POR ADESIVO (LEIA-ME, seção 72;
+   site/ls-giro.js): o brinquedo com mais de um adesivo reveza a capa de
+   cada um no card. A próxima foto entra numa camada por cima, do mesmo
+   tamanho e jeito da foto do card: aparece aos poucos, deslizando um pouco
+   de lado e com um zoom leve que assenta, enquanto a de antes recua para o
+   outro lado; o nome do adesivo troca junto, no canto. (Os seletores são
+   reforçados de propósito: a foto de cada card tem a regra dela -- a
+   `.catalogo-card-media img`, com a transição do hover -- e ela não pode
+   apagar a da troca.)
 ========================================================= */
-.card-giro-camada {
+html img.card-giro-camada.card-giro-camada {
     position: absolute;
     margin: 0;
     opacity: 0;
-    /* a próxima foto entra com um zoom leve e um desfoque que somem: uma
-       troca de vitrine, sem piscar */
-    transform: var(--giro-transform, translateZ(0)) scale(1.06);
+    /* a próxima foto entra de lado, com um zoom leve e um desfoque que somem:
+       uma troca de vitrine, sem piscar (o `translate` soma com o transform da foto) */
+    translate: 5% 0;
+    transform: var(--giro-transform, translateZ(0)) scale(1.07);
     filter: var(--giro-filtro, brightness(1)) blur(6px) saturate(1.15);
     transition:
         opacity .75s cubic-bezier(.22, .61, .36, 1),
+        translate .95s cubic-bezier(.22, .61, .36, 1),
         transform .95s cubic-bezier(.22, .61, .36, 1),
         filter .75s ease;
-    will-change: opacity, transform;
+    will-change: opacity, transform, translate;
     pointer-events: none;
     z-index: 1;
 }
 
-.card-giro-camada.card-giro-visivel {
+html img.card-giro-camada.card-giro-camada.card-giro-visivel {
     opacity: 1;
+    translate: 0 0;
     transform: var(--giro-transform, translateZ(0)) scale(1);
     filter: var(--giro-filtro, brightness(1));
+}
+
+/* a de antes recua um pouco para o outro lado enquanto a próxima cobre */
+html img.card-giro-saindo.card-giro-saindo {
+    translate: -4% 0;
+    opacity: .55;
+    transition: translate .95s cubic-bezier(.22, .61, .36, 1), opacity .75s ease;
+}
+
+/* o nome do adesivo no canto do card ("Adesivo: Alienígenas"), que troca junto com a foto */
+.card-giro-adesivo {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 2;
+    max-width: calc(100% - 20px);
+    overflow: hidden;
+    padding: 4px 10px;
+    border: 1px solid rgba(148, 163, 184, .35);
+    border-radius: 999px;
+    background: rgba(5, 11, 31, .72);
+    color: #cbd5e1;
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: opacity .34s ease, translate .34s ease;
+}
+
+.card-giro-adesivo b { color: #fff; font-weight: 800; }
+
+.card-giro-adesivo--trocando {
+    opacity: 0;
+    translate: 0 4px;
 }
 
 .card-giro-sumindo {
@@ -2885,5 +2931,6 @@ body.ls-modo-app main.content-section { padding-top: 0; margin-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .card-giro-camada, .card-giro-sumindo { transition: none; }
+    html img.card-giro-camada.card-giro-camada, .card-giro-sumindo, html img.card-giro-saindo.card-giro-saindo,
+    .card-giro-adesivo { transition: none; }
 }
