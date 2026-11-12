@@ -1,0 +1,183 @@
+/* ======================================================================
+   DOCUMENTO PARA ASSINATURA — o cartão do orçamento pago (LEIA-ME-V10, 81).
+
+   SÓ PAPÉIS DE COR DO TEMA, como a importação do Word: nada de cor escrita
+   à mão (a não ser o branco do QR, que precisa ser branco para a câmera
+   ler), e por isso o cartão é o mesmo no Sol, na Lua e no Eclipse.
+
+   Cara de aplicativo: um cartão grande, o QR em destaque, o anel do
+   relógio, botões de dedo (48 px ou mais) e a folha que sobe de baixo
+   para confirmar o que não tem volta.
+   ====================================================================== */
+
+.ls-doc-tela{
+  display:grid;gap:18px;align-items:start;
+  grid-template-columns:minmax(0,1fr) minmax(260px,330px);
+}
+@media (max-width:980px){.ls-doc-tela{grid-template-columns:1fr}}
+
+.ls-doc-cartao,.ls-doc-resumo{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-xl);box-shadow:var(--shadow-soft);
+  padding:22px;min-width:0;
+}
+.ls-doc-cartao{position:relative;overflow:hidden}
+.ls-doc-cartao::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:4px;
+  background:linear-gradient(90deg,var(--acento),var(--magenta));
+}
+.ls-doc-cartao.ls-doc-assinado::before{background:linear-gradient(90deg,var(--green),var(--apoio))}
+.ls-doc-cartao.ls-doc-aguardando::before{background:linear-gradient(90deg,var(--yellow),var(--acento))}
+
+.ls-doc-icone{
+  width:56px;height:56px;flex:none;display:grid;place-items:center;border-radius:18px;font-size:1.6rem;
+  background:rgba(var(--acento-rgb),.14);color:var(--acento-texto);border:1px solid rgba(var(--acento-rgb),.3);
+}
+.ls-doc-icone.verde{background:rgba(var(--green-rgb),.14);color:var(--green-texto);border-color:rgba(var(--green-rgb),.35)}
+.ls-doc-icone.ambar{background:rgba(var(--yellow-rgb),.14);color:var(--yellow-texto);border-color:rgba(var(--yellow-rgb),.35)}
+.ls-doc-icone.neutro{background:rgba(var(--muted-rgb),.12);color:var(--muted);border-color:var(--line)}
+
+/* ------------------------------------------------- sem documento ainda */
+.ls-doc-vazio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 8px 18px}
+.ls-doc-vazio .ls-doc-icone{width:72px;height:72px;border-radius:24px;font-size:2rem}
+.ls-doc-vazio h2{margin:6px 0 0;font-size:1.35rem;font-weight:800;color:var(--text)}
+.ls-doc-vazio p{max-width:520px;margin:0 0 8px;color:var(--text-2)}
+.ls-doc-gerar{min-height:54px;padding-inline:28px;font-weight:800;border-radius:16px}
+
+/* ------------------------------------------------------------ o topo */
+.ls-doc-topo{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
+.ls-doc-topo h2{margin:2px 0 4px;font-size:1.25rem;font-weight:800;color:var(--text);line-height:1.25}
+.ls-doc-topo p{margin:0;color:var(--muted)}
+.ls-doc-kicker{font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--yellow-texto)}
+.ls-doc-cartao.ls-doc-assinado .ls-doc-kicker{color:var(--green-texto)}
+
+/* ------------------------------------------------ o QR e o relógio */
+.ls-doc-corpo{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:720px){.ls-doc-corpo{grid-template-columns:1fr}}
+
+.ls-doc-qr{
+  position:relative;aspect-ratio:1;width:100%;max-width:300px;margin:0 auto;
+  display:grid;place-items:center;padding:14px;border-radius:22px;
+  background:#fff;box-shadow:0 14px 34px rgba(var(--sombra-rgb),.35),0 0 0 1px var(--line);
+  transition:filter .3s ease,opacity .3s ease;
+}
+.ls-doc-qr svg{width:100%;height:100%;display:block}
+.ls-doc-qr.novo{animation:ls-doc-novo .6s cubic-bezier(.16,.84,.44,1)}
+.ls-doc-qr.velho svg{filter:blur(3px);opacity:.35}
+@keyframes ls-doc-novo{from{transform:scale(.94);opacity:.4}to{transform:none;opacity:1}}
+.ls-doc-qr-espera{display:flex;flex-direction:column;align-items:center;gap:10px;color:#475569;font-weight:700;font-size:.9rem}
+.ls-doc-giro{width:34px;height:34px;border-radius:50%;border:3px solid #e2e8f0;border-top-color:#0f172a;animation:ls-doc-gira .8s linear infinite}
+@keyframes ls-doc-gira{to{transform:rotate(360deg)}}
+
+.ls-doc-painel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ls-doc-tempo{display:flex;flex-direction:column;gap:10px}
+.ls-doc-relogio{position:relative;flex:none;width:128px;height:128px;margin:0 auto}
+@media (min-width:721px){.ls-doc-relogio{margin:0}}
+.ls-doc-relogio svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ls-doc-relogio circle{fill:none;stroke-width:9}
+.ls-doc-relogio .fundo{stroke:var(--line)}
+.ls-doc-relogio .arco{
+  stroke:var(--apoio);stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:0;
+  transition:stroke-dashoffset .95s linear,stroke .3s ease;
+  filter:drop-shadow(0 0 6px rgba(var(--apoio-rgb),.45));
+}
+.ls-doc-relogio.pouco .arco{stroke:var(--yellow);filter:drop-shadow(0 0 6px rgba(var(--yellow-rgb),.5))}
+.ls-doc-relogio.acabou .arco{stroke:var(--red)}
+.ls-doc-relogio-texto{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ls-doc-relogio-texto strong{font-size:1.75rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1}
+.ls-doc-relogio-texto span{font-size:.74rem;color:var(--muted);font-weight:700;margin-top:3px}
+.ls-doc-relogio.pouco strong{color:var(--yellow-texto)}
+.ls-doc-relogio.acabou strong{color:var(--red-texto)}
+.ls-doc-link-numero{margin:0;color:var(--muted);font-size:.84rem;font-weight:700;text-align:center}
+@media (min-width:721px){.ls-doc-link-numero{text-align:left}}
+
+.ls-doc-link{display:flex;gap:8px}
+.ls-doc-link .form-control{min-height:48px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;text-overflow:ellipsis}
+.ls-doc-link .btn{min-height:48px;display:inline-flex;align-items:center;gap:6px;font-weight:800;white-space:nowrap}
+
+.ls-doc-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ls-doc-acoes .btn-lg{min-height:54px;border-radius:16px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.ls-doc-acoes.discretas{grid-template-columns:auto auto;justify-content:start}
+.ls-doc-acoes.discretas .btn{min-height:40px;display:inline-flex;align-items:center}
+@media (max-width:480px){
+  .ls-doc-acoes{grid-template-columns:1fr}
+  .ls-doc-acoes.discretas{grid-template-columns:1fr 1fr}
+  .ls-doc-link .btn span{display:none}
+}
+
+.ls-doc-rodape{
+  display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:20px;padding-top:14px;
+  border-top:1px dashed var(--line);color:var(--muted);font-size:.8rem;font-weight:600;
+}
+.ls-doc-rodape i{margin-right:4px}
+
+/* ---------------------------------------------------------- assinado */
+.ls-doc-grade-assinada{display:grid;grid-template-columns:minmax(220px,320px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:720px){.ls-doc-grade-assinada{grid-template-columns:1fr}}
+.ls-doc-traco{margin:0;padding:12px 14px 10px;border-radius:18px;background:#fff;text-align:center;box-shadow:0 0 0 1px var(--line)}
+.ls-doc-traco img{display:block;width:100%;height:130px;object-fit:contain}
+.ls-doc-traco figcaption{margin-top:4px;padding-top:6px;border-top:1.5px solid #0f172a;color:#0f172a;font-weight:800;font-size:.86rem}
+.ls-doc-dados{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.ls-doc-dados dt{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.ls-doc-dados dd{margin:0;font-weight:700;color:var(--text);word-break:break-word}
+.ls-doc-dados .largo{grid-column:1 / -1}
+.ls-doc-hash{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;font-weight:600!important;color:var(--text-2)!important}
+.ls-doc-cartao.ls-doc-assinado > .ls-doc-acoes{margin-top:18px}
+
+/* ------------------------------------------------------------ resumo */
+.ls-doc-resumo h2{display:flex;gap:8px;align-items:center;margin:0 0 6px;font-size:1.02rem;font-weight:800;color:var(--text)}
+.ls-doc-resumo-nota{margin:0 0 12px;color:var(--muted);font-size:.82rem}
+.ls-doc-itens{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column}
+.ls-doc-itens li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);color:var(--text-2);font-size:.9rem}
+.ls-doc-itens li strong{color:var(--text);white-space:nowrap}
+.ls-doc-totais{margin:0;display:grid;gap:6px}
+.ls-doc-totais div{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ls-doc-totais dt{color:var(--muted);font-weight:700;white-space:nowrap}
+.ls-doc-totais dd{margin:0;font-weight:800;color:var(--text);text-align:right}
+.ls-doc-totais .pago dd{white-space:nowrap}
+.ls-doc-totais .pago{padding:8px 10px;border-radius:12px;background:rgba(var(--green-rgb),.1)}
+.ls-doc-totais .pago dt,.ls-doc-totais .pago dd{color:var(--green-texto)}
+
+/* ----------------------------------------- a folha que sobe de baixo */
+.ls-doc-folha{position:fixed;inset:0;z-index:1080;display:flex;align-items:flex-end;justify-content:center}
+.ls-doc-folha[hidden]{display:none}
+.ls-doc-folha-fundo{position:absolute;inset:0;background:rgba(var(--sombra-rgb),.6);opacity:0;transition:opacity .2s ease;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.ls-doc-folha-caixa{
+  position:relative;width:100%;max-width:520px;padding:12px 22px calc(22px + env(safe-area-inset-bottom,0px));
+  background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;
+  box-shadow:0 -24px 60px rgba(var(--sombra-rgb),.45);text-align:center;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.16,.84,.44,1);
+}
+.ls-doc-folha.aberta .ls-doc-folha-fundo{opacity:1}
+.ls-doc-folha.aberta .ls-doc-folha-caixa{transform:none}
+.ls-doc-folha-alca{display:block;width:44px;height:5px;border-radius:5px;background:var(--line-forte);margin:0 auto 16px}
+.ls-doc-folha-caixa .ls-doc-icone{margin:0 auto 8px}
+.ls-doc-folha-caixa h2{margin:6px 0 8px;font-size:1.2rem;font-weight:800;color:var(--text)}
+.ls-doc-folha-caixa p{margin:0 0 18px;color:var(--text-2)}
+.ls-doc-folha-caixa .btn-lg{min-height:54px;border-radius:16px;font-weight:800}
+@media (min-width:721px){
+  .ls-doc-folha{align-items:center}
+  .ls-doc-folha-caixa{border-radius:26px;border-bottom:1px solid var(--line);transform:translateY(24px) scale(.97);opacity:0;transition:transform .24s ease,opacity .2s ease}
+  .ls-doc-folha.aberta .ls-doc-folha-caixa{opacity:1}
+  .ls-doc-folha-alca{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .ls-doc-qr.novo{animation:none}
+  .ls-doc-folha-caixa,.ls-doc-folha-fundo,.ls-doc-relogio .arco{transition:none}
+}
+
+/* ------------------------------------------------ no celular, um app */
+@media (max-width:720px){
+  .ls-doc-cartao,.ls-doc-resumo{padding:16px;border-radius:22px}
+  .ls-doc-topo{gap:12px;margin-bottom:14px}
+  .ls-doc-topo .ls-doc-icone{width:44px;height:44px;border-radius:14px;font-size:1.25rem}
+  .ls-doc-topo h2{font-size:1.06rem}
+  .ls-doc-topo p{font-size:.86rem}
+  .ls-doc-qr{max-width:260px;padding:12px}
+  /* o anel e o número do link lado a lado, como num app de banco */
+  .ls-doc-tempo{flex-direction:row;align-items:center;justify-content:center;gap:14px}
+  .ls-doc-relogio{width:92px;height:92px;margin:0}
+  .ls-doc-relogio-texto strong{font-size:1.3rem}
+  .ls-doc-relogio-texto span{font-size:.66rem}
+  .ls-doc-link-numero{text-align:left;max-width:170px}
+}

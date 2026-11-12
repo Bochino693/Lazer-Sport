@@ -2194,6 +2194,104 @@ class AceiteOrcamento(models.Model):
         return f"Aceite {self.codigo_publico}"
 
 
+class DocumentoAssinatura(Prime):
+    """O termo de compra que o cliente assina no telefone, depois de pagar.
+
+    O pedido do cliente: "após o orçamento estar como pago (...) vc deve
+    pôr uma opção de gerar documento, no qual vc gera um documento de
+    assinatura digital para o cliente assinar no telefone dele em um link
+    que vai ser gerado a cada 5 minutos (...) com validações de tempo e
+    tudo, sem muita burocracia e muita programação."
+
+    O QUE ESTA TABELA GUARDA, E O QUE ELA NÃO GUARDA.
+
+    Guarda o RETRATO do documento (`conteudo`): empresa, cliente, itens,
+    valores, pagamento e condições, copiados do orçamento no instante em
+    que o documento é gerado, e o SHA-256 desse retrato. Editar o
+    orçamento depois não muda uma vírgula do que o cliente assina -- o
+    papel é o retrato, e não o orçamento vivo.
+
+    NÃO guarda o link. O link de 5 minutos é uma assinatura de tempo do
+    Django (`TimestampSigner`) presa ao id e ao hash deste documento: ele
+    se confere sozinho, e por isso não precisa de tabela -- ver
+    `documento_assinatura.py`. Daqui sai só a contagem de quantos links a
+    equipe gerou (`links_gerados`), que entra no histórico.
+
+    Gerar de novo não apaga o anterior: ele vira "substituído" e os links
+    dele deixam de valer na hora. Assinado, o documento não muda mais.
+    """
+
+    class Situacao(models.TextChoices):
+        AGUARDANDO = "aguardando", "Aguardando assinatura"
+        ASSINADO = "assinado", "Assinado"
+        SUBSTITUIDO = "substituido", "Substituído por um documento novo"
+
+    # PROTECT, como o aceite eletrônico: um documento assinado é a prova
+    # do que foi vendido e recebido. Só o superusuário apaga o orçamento
+    # mesmo assim, e a exclusão registrada conta que ele foi junto (ver
+    # `exclusoes.remover`).
+    orcamento = models.ForeignKey(
+        Orcamento,
+        on_delete=models.PROTECT,
+        related_name="documentos_assinatura",
+    )
+    #: A chave da cópia assinada que o cliente baixa depois. Aleatória,
+    #: como o token da proposta: não se chega a um documento chutando outro.
+    codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    situacao = models.CharField(
+        max_length=12,
+        choices=Situacao.choices,
+        default=Situacao.AGUARDANDO,
+        db_index=True,
+    )
+    conteudo = models.JSONField(
+        "Retrato do documento",
+        help_text="O texto congelado no momento em que o documento foi gerado.",
+    )
+    hash_conteudo = models.CharField("SHA-256 do retrato", max_length=64)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="documentos_assinatura_gerados",
+        null=True,
+        blank=True,
+    )
+    links_gerados = models.PositiveIntegerField(default=0)
+    ultimo_link_em = models.DateTimeField(null=True, blank=True)
+
+    # ---------------- a assinatura ----------------
+    assinado_em = models.DateTimeField(null=True, blank=True)
+    assinante_nome = models.CharField(max_length=160, blank=True)
+    assinante_documento = models.CharField(
+        "CPF ou CNPJ do assinante", max_length=14, blank=True,
+    )
+    # A imagem do traço, em PNG, no próprio banco: são poucos KB (o teto
+    # está em `documento_assinatura.TAMANHO_MAXIMO_DA_ASSINATURA`) e assim
+    # ela não depende do armazenamento de fotos para existir.
+    assinatura_png = models.BinaryField(blank=True, null=True, editable=False)
+    assinatura_ip = models.GenericIPAddressField(null=True, blank=True)
+    assinatura_navegador = models.CharField(max_length=400, blank=True)
+    #: O hash conferido NA HORA da assinatura. Igual ao `hash_conteudo`
+    #: por construção; guardado à parte porque é o que a auditoria lê.
+    hash_assinado = models.CharField(max_length=64, blank=True)
+
+    @property
+    def assinado(self):
+        return self.situacao == self.Situacao.ASSINADO
+
+    @property
+    def aguardando(self):
+        return self.situacao == self.Situacao.AGUARDANDO
+
+    def __str__(self):
+        return f"Documento de assinatura #{self.pk} do orçamento #{self.orcamento_id}"
+
+    class Meta:
+        verbose_name = "Documento para assinatura"
+        verbose_name_plural = "Documentos para assinatura"
+        ordering = ("-criacao", "-id")
+
+
 class AvaliacaoBlocoOrcamento(Prime):
     """Decisão do superadministrador sobre cada responsabilidade da proposta."""
 
@@ -2359,6 +2457,10 @@ class AtividadeOrcamento(Prime):
         PAGAMENTO = "pagamento", "atualizou o pagamento de"
         AVALIACAO = "avaliacao", "avaliou"
         ENVIADO = "enviado", "preparou o envio de"
+        # O documento para assinatura do orçamento pago (DocumentoAssinatura):
+        # gerado pela equipe e assinado pelo cliente, no telefone dele.
+        DOCUMENTO = "documento", "gerou o documento para assinatura de"
+        ASSINATURA = "assinatura", "assinou o documento de"
 
     orcamento = models.ForeignKey(
         Orcamento,

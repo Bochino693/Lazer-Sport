@@ -1,0 +1,52 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR" class="ls-assinatura ls-assinatura-via">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#050b1f">
+{% comment %}
+  A VIA DO PAINEL: o termo pronto para "Salvar em PDF".
+
+  O projeto não tem biblioteca de PDF (requirements.txt: nem weasyprint,
+  nem xhtml2pdf, nem reportlab), e instalar uma para isto seria a "muita
+  programação" que o pedido descarta. A folha é feita para a impressão do
+  navegador -- A4, margens, nada além do documento --, e o botão abre a
+  janela em que se escolhe "Salvar como PDF". É o caminho que a proposta
+  já usa ("Imprimir ou salvar em PDF").
+{% endcomment %}
+<title>{{ doc.titulo }} nº {{ doc.orcamento.numero }}{% if documento.assinado %} · assinado{% endif %} | Lazer &amp; Sport</title>
+{% include "partials/icones_da_aba.html" with sem_app=True %}
+<link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
+<link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/assinatura.css' %}">
+</head>
+<body class="estado-via">
+
+<header class="app-barra nao-imprime">
+  {% if voltar_url %}
+    <a class="app-barra-voltar" href="{{ voltar_url }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Voltar</a>
+  {% endif %}
+  <span class="app-barra-marca">
+    <span><strong>{% if documento.assinado %}Documento assinado{% else %}Prévia do documento{% endif %}</strong><small>Orçamento nº {{ doc.orcamento.numero }}</small></span>
+  </span>
+  <button type="button" class="botao-barra" id="baixarPdf" data-imprimir-ao-abrir="{% if imprimir_ao_abrir %}1{% endif %}">
+    <i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Salvar em PDF
+  </button>
+</header>
+
+<main class="app-tela">
+  {% if not documento.assinado %}
+    <div class="faixa-aviso nao-imprime">
+      <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+      {% if documento.situacao == "substituido" %}Esta versão foi substituída por um documento novo e não vale mais para assinar.{% else %}Ainda sem assinatura: é assim que o cliente vê o termo pelo link.{% endif %}
+    </div>
+  {% endif %}
+  <section class="folha-moldura" aria-label="Documento">
+    {% include "documento_assinatura/folha.html" %}
+  </section>
+</main>
+
+<script src="{% estatico 'site/paginas/assinatura.js' %}" defer></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% load interno_extras %}
+{% comment %}
+  O RESUMO AO LADO DO CARTÃO: o que entra (ou entrou) no documento. Com o
+  documento gerado, é o RETRATO congelado; antes, o orçamento de agora.
+  Viaja junto com o cartão no JSON do estado e do "Gerar".
+{% endcomment %}
+<aside class="ls-doc-resumo" id="docAssinaturaResumo" aria-label="O que entra no documento">
+  <h2><i class="bi bi-receipt" aria-hidden="true"></i> O que entra no documento</h2>
+  {% if documento %}
+    <p class="ls-doc-resumo-nota"><i class="bi bi-snow" aria-hidden="true"></i> Congelado em {{ conteudo.emitido_em_texto }}: editar o orçamento não muda o documento.</p>
+    <ul class="ls-doc-itens">
+      {% for item in conteudo.itens %}
+        <li><span><b>{{ item.quantidade }}×</b> {{ item.descricao }}</span><strong>{{ item.subtotal|reais }}</strong></li>
+      {% endfor %}
+    </ul>
+    <dl class="ls-doc-totais">
+      <div><dt>Total</dt><dd>{{ conteudo.valores.total|reais }}</dd></div>
+      <div class="pago"><dt>Pago{% if conteudo.pagamento.pago_em %} em {{ conteudo.pagamento.pago_em }}{% endif %}</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>
+      {% if conteudo.condicoes.forma_envio %}<div><dt>Envio</dt><dd>{{ conteudo.condicoes.forma_envio }}</dd></div>{% endif %}
+    </dl>
+  {% else %}
+    <p class="ls-doc-resumo-nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Ao gerar, isto fica congelado no documento.</p>
+    <ul class="ls-doc-itens">
+      {% for item in itens %}
+        <li><span><b>{{ item.quantidade }}×</b> {{ item.descricao }}</span><strong>{{ item.subtotal|reais }}</strong></li>
+      {% empty %}
+        <li><span>Nenhum item.</span></li>
+      {% endfor %}
+    </ul>
+    <dl class="ls-doc-totais">
+      <div><dt>Total</dt><dd>{{ orcamento.total|reais }}</dd></div>
+      <div class="pago"><dt>Pago{% if orcamento.pago_em %} em {{ orcamento.pago_em|date:"d/m/Y" }}{% endif %}</dt><dd>{{ orcamento.valor_pago|reais }}</dd></div>
+      {% if orcamento.forma_envio %}<div><dt>Envio</dt><dd>{{ orcamento.forma_envio }}</dd></div>{% endif %}
+    </dl>
+  {% endif %}
+</aside>

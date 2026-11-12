@@ -1,0 +1,209 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR" class="ls-assinatura">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#050b1f">
+<meta name="color-scheme" content="dark">
+{% comment %}
+  A PÁGINA DO LINK DE 5 MINUTOS -- onde o cliente assina o termo de compra
+  no telefone dele (LEIA-ME-V10, seção 81).
+
+  "Eu falei que quero estilo app em tudo": a página é uma tela de
+  aplicativo, no tema escuro do site (as cores de site/ls-tema.css), com a
+  barra fixa do relógio em cima, a folha do documento no meio e o quadro
+  de assinar com botões grandes. As confirmações são folhas que sobem de
+  baixo e avisos que aparecem e somem -- nada de linha de texto solta.
+
+  Um template, um estado por vez (`estado`): "assinar" (o link vale), os
+  avisos do link ("expirado", "substituido", "suspenso", "invalido"), o
+  freio ("limite") e "assinado" (o comprovante, com a cópia em PDF).
+{% endcomment %}
+<title>{% if estado == "assinado" %}Documento assinado{% elif estado == "assinar" %}Assinar o termo de compra{% else %}Link de assinatura{% endif %} | Lazer &amp; Sport</title>
+{% include "partials/icones_da_aba.html" %}
+<link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
+<link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/assinatura.css' %}">
+</head>
+<body class="estado-{{ estado }}">
+
+<header class="app-barra nao-imprime">
+  <span class="app-barra-marca">
+    <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport" width="34" height="34">
+    <span><strong>Lazer &amp; Sport</strong><small>{% if estado == "assinado" %}Comprovante{% elif estado == "assinar" %}Termo de compra{% else %}Assinatura{% endif %}</small></span>
+  </span>
+  {% if estado == "assinar" %}
+    <span class="relogio" id="relogio" role="timer" aria-live="off"
+          data-expira="{{ expira_em_ms }}" data-restante="{{ segundos_restantes }}"
+          data-validade="{{ validade_minutos }}"
+          title="Tempo que falta para este link expirar">
+      <svg viewBox="0 0 36 36" aria-hidden="true"><circle class="relogio-fundo" cx="18" cy="18" r="15.5"/><circle class="relogio-arco" id="relogioArco" cx="18" cy="18" r="15.5" pathLength="100"/></svg>
+      <b id="relogioTexto">{{ segundos_restantes|default:0 }}s</b>
+    </span>
+  {% elif estado == "assinado" %}
+    <span class="app-barra-selo"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Assinado</span>
+  {% endif %}
+</header>
+
+<main class="app-tela">
+
+{% if estado == "assinar" %}
+  {# ============================================================ ASSINAR #}
+  <section class="cartao boas-vindas entra">
+    <span class="kicker"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedido nº {{ doc.orcamento.numero }} · pago</span>
+    <h1>Olá{% if doc.cliente.nome %}, {{ doc.cliente.nome }}{% endif %}! Falta só assinar.</h1>
+    <p>Confira o termo de compra abaixo e assine com o dedo. Este link vale por {{ validade_minutos }} minutos.</p>
+    <ol class="passos" aria-label="Como assinar">
+      <li><span>1</span>Confira</li>
+      <li><span>2</span>Seus dados</li>
+      <li><span>3</span>Assine</li>
+    </ol>
+  </section>
+
+  {% if erro %}
+    <div class="faixa-erro entra" role="alert"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i> {{ erro }}</div>
+  {% endif %}
+
+  <section class="folha-moldura entra" aria-label="Documento">
+    {% include "documento_assinatura/folha.html" %}
+  </section>
+
+  <form class="cartao assinar entra" id="formAssinatura" method="post" novalidate
+        data-documento="{{ documento.pk }}" autocomplete="on">
+    {% csrf_token %}
+    <h2 id="assinarTitulo"><i class="bi bi-pen-fill" aria-hidden="true"></i> Assinar</h2>
+
+    <label class="campo{% if erro_campo == 'nome' %} com-erro{% endif %}" data-campo="nome">
+      <span>Nome completo</span>
+      <input type="text" name="nome" id="campoNome" maxlength="160" autocomplete="name"
+             autocapitalize="words" enterkeyhint="next" placeholder="Como no seu documento"
+             value="{{ nome_tentado|default:'' }}" required>
+    </label>
+
+    <label class="campo{% if erro_campo == 'documento' %} com-erro{% endif %}" data-campo="documento">
+      <span>CPF ou CNPJ</span>
+      <input type="text" name="documento" id="campoDocumento" maxlength="20" inputmode="numeric"
+             autocomplete="off" enterkeyhint="done" placeholder="000.000.000-00"
+             value="{{ documento_tentado|default:'' }}" required>
+    </label>
+
+    <label class="concordo{% if erro_campo == 'concordo' %} com-erro{% endif %}" data-campo="concordo">
+      <input type="checkbox" name="concordo" id="campoConcordo" value="1">
+      <span class="concordo-caixa" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
+      <span>Li e concordo com o termo de compra e recibo acima.</span>
+    </label>
+
+    <div class="quadro{% if erro_campo == 'assinatura' %} com-erro{% endif %}" data-campo="assinatura">
+      <div class="quadro-topo">
+        <span>Sua assinatura</span>
+        <span class="quadro-acoes">
+          <button type="button" class="botao-icone" id="desfazerTraco" aria-label="Desfazer o último traço" disabled><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Desfazer</button>
+          <button type="button" class="botao-icone" id="limparQuadro" aria-label="Limpar a assinatura" disabled><i class="bi bi-eraser" aria-hidden="true"></i> Limpar</button>
+        </span>
+      </div>
+      <div class="quadro-area" id="quadroArea">
+        <canvas id="quadroAssinatura" aria-label="Quadro para assinar com o dedo ou o mouse" role="img"></canvas>
+        <span class="quadro-dica" id="quadroDica"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i> Assine aqui com o dedo</span>
+        <span class="quadro-linha" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <button type="submit" class="botao-principal" id="botaoAssinar">
+      <i class="bi bi-pen" aria-hidden="true"></i> Assinar documento
+    </button>
+    <p class="nota"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>Ficam registrados a data e a hora, o IP, o aparelho e o código de integridade do documento.</span></p>
+  </form>
+
+  {# A folha que sobe de baixo: confirmar, enviando, e o tempo que acabou. #}
+  <div class="folha-sobe" id="folhaConfirmar" role="dialog" aria-modal="true" aria-labelledby="confirmarTitulo" hidden>
+    <div class="folha-sobe-fundo" data-fechar></div>
+    <div class="folha-sobe-caixa">
+      <span class="folha-sobe-alca" aria-hidden="true"></span>
+      <div data-passo="confirmar">
+        <h2 id="confirmarTitulo">Confirmar a assinatura?</h2>
+        <div class="confirmar-previa"><img id="confirmarImagem" alt="Sua assinatura"></div>
+        <dl class="confirmar-dados">
+          <div><dt>Nome</dt><dd id="confirmarNome"></dd></div>
+          <div><dt>CPF/CNPJ</dt><dd id="confirmarDocumento"></dd></div>
+        </dl>
+        <button type="button" class="botao-principal" id="confirmarEnviar"><i class="bi bi-check2-circle" aria-hidden="true"></i> Assinar agora</button>
+        <button type="button" class="botao-secundario" data-fechar>Voltar e revisar</button>
+      </div>
+      <div data-passo="enviando" hidden>
+        <span class="girando" aria-hidden="true"></span>
+        <h2>Registrando sua assinatura…</h2>
+        <p>Não feche esta tela.</p>
+      </div>
+      <div data-passo="expirou" hidden>
+        <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
+        <h2>O tempo do link acabou</h2>
+        <p>Por segurança, cada link vale {{ validade_minutos }} minutos. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
+        {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{{ doc.orcamento.numero|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
+        <button type="button" class="botao-secundario" data-fechar>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+{% elif estado == "assinado" %}
+  {# ========================================================== ASSINADO #}
+  <section class="cartao pronto entra{% if acabou_de_assinar %} festa{% endif %}">
+    <span class="icone-grande verde"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
+    <h1>{% if acabou_de_assinar %}Pronto! Documento assinado.{% else %}Documento já assinado{% endif %}</h1>
+    <p>
+      {% if acabou_de_assinar %}Obrigado, {{ documento.assinante_nome }}! Assinado{% else %}Assinado por {{ documento.assinante_nome }}{% endif %}
+      em {{ documento.assinado_em|date:"d/m/Y \à\s H:i" }}. Guarde a sua cópia.
+    </p>
+    <div class="pronto-acoes nao-imprime">
+      <button type="button" class="botao-principal" id="baixarPdf" data-imprimir-ao-abrir="{% if imprimir_ao_abrir %}1{% endif %}"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Baixar PDF</button>
+      <a class="botao-secundario" href="#documento"><i class="bi bi-file-text" aria-hidden="true"></i> Ver o documento</a>
+    </div>
+    <p class="nota nao-imprime"><i class="bi bi-info-circle" aria-hidden="true"></i><span>“Baixar PDF” abre a impressão do aparelho: escolha <b>Salvar como PDF</b>.</span></p>
+  </section>
+
+  <section class="folha-moldura entra" id="documento" aria-label="Documento assinado">
+    {% include "documento_assinatura/folha.html" %}
+  </section>
+
+{% else %}
+  {# ============================================ O LINK NÃO VALE (MAIS) #}
+  <section class="cartao aviso entra" role="alert">
+    {% if estado == "expirado" %}
+      <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
+      <h1>Este link expirou</h1>
+      <p>Peça um novo ao atendente. Por segurança, cada link de assinatura vale só 5 minutos.</p>
+    {% elif estado == "substituido" %}
+      <span class="icone-grande ambar"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
+      <h1>Este link foi trocado</h1>
+      <p>O documento foi atualizado depois que este link saiu. Peça o link novo ao atendente.</p>
+    {% elif estado == "suspenso" %}
+      <span class="icone-grande ambar"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
+      <h1>Documento suspenso</h1>
+      <p>O pagamento deste pedido mudou depois que o documento saiu. Fale com o atendente antes de assinar.</p>
+    {% elif estado == "limite" %}
+      <span class="icone-grande ambar"><i class="bi bi-stopwatch" aria-hidden="true"></i></span>
+      <h1>Muitas tentativas seguidas</h1>
+      <p>Espere alguns minutos e tente de novo. Nada foi salvo.</p>
+    {% else %}
+      <span class="icone-grande vermelho"><i class="bi bi-link-45deg" aria-hidden="true"></i></span>
+      <h1>Link inválido</h1>
+      <p>O endereço pode ter sido cortado ao copiar. Peça o link de novo ao atendente.</p>
+    {% endif %}
+    {% if mensagem_extra %}<p class="nota">{{ mensagem_extra }}</p>{% endif %}
+    {% if whatsapp_empresa %}
+      <a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if numero %}{{ 'Olá! Preciso de um novo link para assinar o termo do pedido nº '|urlencode }}{{ numero|urlencode }}.{% else %}{{ 'Olá! Preciso de um novo link para assinar o termo de compra.'|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link
+      </a>
+    {% endif %}
+    {% if numero %}<p class="nota">Pedido nº {{ numero }}</p>{% endif %}
+  </section>
+{% endif %}
+
+</main>
+
+<div class="avisos-app nao-imprime" id="avisosApp" aria-live="polite"></div>
+
+<script src="{% estatico 'site/paginas/assinatura.js' %}" defer></script>
+</body>
+</html>

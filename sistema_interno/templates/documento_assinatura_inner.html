@@ -1,0 +1,66 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Documento para assinatura · Orçamento #{{ orcamento.pk }} | Lazer & Sport{% endblock %}
+{% block top_title %}Documento para assinatura{% endblock %}
+{% block body_class %}ls-orcamentos-body ls-commercial-body ls-doc-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="documento-assinatura" href="{% estatico 'interno/documento-assinatura.css' %}">
+{% endblock %}
+
+{% comment %}
+  O DOCUMENTO PARA ASSINATURA DO ORÇAMENTO PAGO (LEIA-ME-V10, seção 81).
+
+  O pedido: "como já está pago, finalizado, vc deve pôr uma opção de gerar
+  documento (...) para o cliente assinar no telefone dele em um link que
+  vai ser gerado a cada 5 minutos". A tela é o cartão do documento (ver
+  `documento_assinatura/cartao.html`), ao lado do resumo do que entra no
+  papel. O cartão se vira sozinho: pede o link ao abrir, renova a cada 5
+  minutos e pergunta a cada 10 segundos se o cliente já assinou.
+{% endcomment %}
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Orçamento #{{ orcamento.pk }}{% if orcamento.versao > 1 %} · v{{ orcamento.versao }}{% endif %} · {% if orcamento.quitado %}pago{% else %}{{ orcamento.get_status_pagamento_display|lower }}{% endif %}</span>
+    <h1>Documento para assinatura</h1>
+    <p>{{ orcamento.destinatario }} · termo de compra e recibo, assinado no telefone do cliente.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{{ urls.lista }}?filtro=pagos" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Orçamentos pagos
+    </a>
+  </div>
+</section>
+
+<div class="ls-doc-tela" id="docAssinatura" data-doc-assinatura
+     data-url-pagina="{{ urls.pagina }}"
+     data-url-link="{{ urls.link }}"
+     data-url-estado="{{ urls.estado }}">
+  {% csrf_token %}
+  {% include "documento_assinatura/cartao.html" %}
+
+  {% include "documento_assinatura/resumo.html" %}
+</div>
+
+{% comment %}
+  A FOLHA QUE SOBE DE BAIXO, para o que não tem volta: gerar (e gerar de
+  novo, que mata os links que já saíram). Fora do cartão de propósito: o
+  cartão é trocado inteiro quando o estado muda, a folha fica.
+{% endcomment %}
+<div class="ls-doc-folha" id="docAssinaturaFolha" role="dialog" aria-modal="true" aria-labelledby="docFolhaTitulo" hidden>
+  <div class="ls-doc-folha-fundo" data-doc-fechar></div>
+  <div class="ls-doc-folha-caixa">
+    <span class="ls-doc-folha-alca" aria-hidden="true"></span>
+    <span class="ls-doc-icone acento" data-doc-folha-icone><i class="bi bi-file-earmark-lock2" aria-hidden="true"></i></span>
+    <h2 id="docFolhaTitulo" data-doc-folha-titulo>Gerar o documento?</h2>
+    <p data-doc-folha-texto></p>
+    <button type="button" class="btn btn-success btn-lg w-100" data-doc-confirmar>Gerar documento</button>
+    <button type="button" class="btn btn-outline-secondary btn-lg w-100 mt-2" data-doc-fechar>Cancelar</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/documento-assinatura.js' %}"></script>
+{% endblock %}
