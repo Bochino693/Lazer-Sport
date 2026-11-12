@@ -5420,3 +5420,286 @@ body.ls-body{
 @media (max-width:720px){
   .ls-valor-final{max-width:none}
 }
+
+/* ======================================================================
+   LISTA OU CARDS — as duas apresentações de toda lista do painel
+
+   O pedido: "os dois modelos, tabela e cards, em todas as listas; padrão
+   vem lista, podendo mudar para o card". Cada tela marca o contêiner
+   (`.ls-visao-alvo`, `data-visao="lista|cards"`) e as partes de cada item
+   (`data-visao-item` e `data-v="foto|titulo|info|valor|estado|selos|
+   acoes|extra"`); o seletor é `includes/lista_ou_cards.html` e quem troca
+   o atributo é `ls-listas.js`.
+
+   UM ITEM, DUAS APRESENTAÇÕES. Não há duas listas no HTML: o mesmo
+   <article> (ou a mesma <tr>) vira linha ou cartão pelo CSS. É isso que
+   deixa o que outras partes do painel penduram no item -- detalhes,
+   ouvintes, selos -- valendo nos dois modos.
+
+     * Tela que só tinha cartões (Brinquedos, Promoções, Combos...): no
+       modo LISTA o cartão vira uma linha de grade com as colunas que a
+       tela define em `--lv-colunas` / `--lv-areas`. O que é só do cartão
+       (descrição, galeria) leva `data-v="extra"` e some; `data-v="corpo"`
+       e `data-v="midia"` são embrulhos que se desfazem (`contents`) para
+       as partes de dentro irem para as colunas.
+     * Tela que só tinha tabela (Usuários, Clientes, Orçamentos, O.S.):
+       no modo CARDS cada <tr> vira um cartão, numa grade; as células
+       ganham o rótulo da coluna (`data-label` / `data-rotulo`) em cima.
+
+   No celular a lista é de linhas compactas empilhadas (nada de tabela
+   larga rolando de lado); os cards ficam um por linha, dois no tablet.
+   Peso alto e `!important` porque o desenho de cartão de cada tela vem
+   depois desta folha e com `!important` (gestao_integrada.css).
+   ====================================================================== */
+
+/* ---- o seletor ---- */
+.ls-visao{
+  display:inline-flex;flex:0 0 auto;align-items:center;gap:3px;padding:3px;
+  border:1px solid var(--line);border-radius:13px;background:var(--bg-1);
+}
+.ls-visao-opcao{
+  position:relative;display:inline-flex;align-items:center;gap:7px;
+  min-height:36px;margin:0;padding:0 12px;border-radius:10px;
+  color:var(--text-2);font-size:.8rem;font-weight:850;white-space:nowrap;
+  cursor:pointer;user-select:none;transition:background .15s ease,color .15s ease;
+}
+.ls-content .ls-visao-opcao input[type="radio"]{
+  position:absolute;opacity:0;pointer-events:none;width:1px!important;height:1px!important;margin:0;
+}
+.ls-visao-opcao:hover{color:var(--text);background:rgba(var(--verniz-rgb),.06)}
+.ls-content .ls-visao-opcao:has(input:checked){color:var(--acento-tinta);background:var(--acento)}
+.ls-visao-opcao:has(input:focus-visible){outline:2px solid var(--acento);outline-offset:2px}
+.ls-visao-barra{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;
+  margin:0 0 12px;
+}
+
+/* ---- o que é de um modo só ---- */
+.ls-visao-alvo[data-visao="lista"] [data-visao-so="cards"],
+.ls-visao-alvo[data-visao="cards"] [data-visao-so="lista"]{display:none!important}
+
+/* ---- cartão que vira LINHA ---- */
+.ls-content .ls-visao-alvo[data-visao="lista"]{
+  display:flex!important;flex-direction:column;gap:0!important;
+  padding:0!important;overflow:hidden;
+  border:1px solid var(--line);border-radius:18px;background:var(--bg-1);
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]{
+  display:grid!important;
+  grid-template-columns:var(--lv-colunas,56px minmax(200px,2fr) minmax(0,1.6fr) minmax(96px,auto) auto auto auto)!important;
+  grid-template-areas:var(--lv-areas,"foto titulo info valor estado selos acoes")!important;
+  align-items:center;gap:6px 16px!important;
+  width:auto!important;min-width:0;min-height:0!important;height:auto!important;
+  margin:0!important;padding:10px 16px!important;overflow:visible!important;
+  border:0!important;border-bottom:1px solid var(--line-soft)!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;transform:none!important;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]:last-child{border-bottom:0!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]:hover{background:rgba(var(--verniz-rgb),.035)!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="corpo"],
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="midia"]{display:contents!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="extra"]{display:none!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"]{
+  grid-area:foto;position:relative!important;inset:auto!important;
+  display:grid!important;place-items:center;overflow:hidden;
+  width:56px!important;height:56px!important;min-height:0!important;max-height:none!important;
+  aspect-ratio:1/1!important;margin:0!important;padding:0!important;
+  border:1px solid var(--line-soft);border-radius:12px!important;
+  background:var(--bg-2);color:var(--muted);font-size:1.25rem;line-height:1;
+  object-fit:cover;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"] img{
+  position:static!important;width:100%!important;height:100%!important;padding:0!important;object-fit:cover;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"] small{display:none}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="titulo"]{grid-area:titulo;min-width:0;margin:0!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="info"]{grid-area:info;min-width:0;margin:0!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="valor"]{
+  grid-area:valor;min-width:0;margin:0!important;text-align:right;white-space:nowrap;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="estado"]{
+  grid-area:estado;justify-self:start;position:static!important;inset:auto!important;
+  margin:0!important;white-space:nowrap;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="selos"]{
+  grid-area:selos;position:static!important;inset:auto!important;
+  display:flex!important;flex-wrap:wrap;gap:4px;max-width:none!important;margin:0!important;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="acoes"]{
+  grid-area:acoes;display:flex!important;flex-wrap:nowrap!important;align-items:center;justify-content:flex-end;
+  gap:6px!important;width:auto!important;margin:0!important;padding:0!important;
+  grid-template-columns:none!important;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="acoes"] > *{flex:0 0 auto;width:auto;margin:0!important}
+
+/* o cabeçalho das colunas, só na lista */
+.ls-visao-cabeca{display:none}
+.ls-content .ls-visao-alvo[data-visao="lista"] > .ls-visao-cabeca{
+  display:grid;
+  grid-template-columns:var(--lv-colunas,56px minmax(200px,2fr) minmax(0,1.6fr) minmax(96px,auto) auto auto auto);
+  grid-template-areas:var(--lv-areas,"foto titulo info valor estado selos acoes");
+  gap:6px 16px;padding:9px 16px;border-bottom:1px solid var(--line);
+  color:var(--text-2);background:var(--acento-fundo);
+  font-size:.7rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+}
+.ls-visao-cabeca > [data-col="foto"]{grid-area:foto}
+.ls-visao-cabeca > [data-col="titulo"]{grid-area:titulo}
+.ls-visao-cabeca > [data-col="info"]{grid-area:info}
+.ls-visao-cabeca > [data-col="valor"]{grid-area:valor;text-align:right}
+.ls-visao-cabeca > [data-col="estado"]{grid-area:estado}
+.ls-visao-cabeca > [data-col="selos"]{grid-area:selos}
+.ls-visao-cabeca > [data-col="acoes"]{grid-area:acoes;text-align:right}
+
+/* ---- tabela que vira CARDS ---- */
+.ls-content .ls-visao-alvo[data-visao="cards"]{overflow:visible!important}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela{
+  display:block!important;width:100%!important;min-width:0!important;table-layout:auto!important;
+  border:0!important;background:transparent!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela thead,
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela colgroup{display:none!important}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody{
+  display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));
+  gap:14px;width:100%!important;padding:14px;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody tr{
+  position:relative;display:flex!important;flex-direction:column;gap:0;
+  width:auto!important;min-width:0;margin:0!important;padding:14px!important;
+  border:1px solid var(--line)!important;border-radius:18px!important;
+  background:linear-gradient(180deg,var(--panel),var(--bg-1))!important;
+  box-shadow:0 12px 30px rgba(var(--sombra-rgb),calc(.18 * var(--sombra-forca)))!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody tr:hover{border-color:var(--line-forte)!important}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td{
+  position:static!important;display:block!important;
+  width:auto!important;min-width:0!important;max-width:none!important;height:auto!important;
+  margin:0!important;padding:9px 0!important;
+  border:0!important;border-top:1px solid var(--line-soft)!important;
+  text-align:left!important;white-space:normal!important;background:transparent!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:first-child{
+  padding-top:0!important;border-top:0!important;font-size:.95rem;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td[colspan]{grid-column:1/-1}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:not(:first-child)[data-label]::before{
+  content:attr(data-label);display:block;margin:0 0 4px;
+  color:var(--muted);font-size:.66rem;font-weight:950;letter-spacing:.075em;line-height:1.2;text-transform:uppercase;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:not(:first-child)[data-rotulo]::before{
+  content:attr(data-rotulo);display:block;margin:0 0 4px;
+  color:var(--muted);font-size:.66rem;font-weight:950;letter-spacing:.075em;line-height:1.2;text-transform:uppercase;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:last-child{margin-top:auto!important}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:last-child::before{display:none!important}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:last-child > *{justify-content:flex-start!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] .ls-visao-tabela [data-v="extra"]{display:none!important}
+
+/* ---- tablet: a lista perde as colunas de apoio ---- */
+@media (max-width:1100px){
+  .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]{
+    grid-template-columns:var(--lv-colunas-tab,56px minmax(0,1fr) auto auto)!important;
+    grid-template-areas:var(--lv-areas-tab,"foto titulo valor acoes" "foto info estado selos")!important;
+  }
+  .ls-content .ls-visao-alvo[data-visao="lista"] > .ls-visao-cabeca{display:none!important}
+}
+
+/* ---- celular: linhas compactas empilhadas; cards um por linha ---- */
+@media (max-width:640px){
+  .ls-visao-barra{align-items:stretch}
+  .ls-visao{align-self:flex-start}
+  .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]{
+    grid-template-columns:var(--lv-colunas-cel,48px minmax(0,1fr) auto)!important;
+    grid-template-areas:var(--lv-areas-cel,"foto titulo titulo" "foto valor estado" "foto info selos" "acoes acoes acoes")!important;
+    gap:4px 10px!important;padding:10px 12px!important;
+  }
+  .ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"]{width:48px!important;height:48px!important}
+  .ls-content .ls-visao-alvo[data-visao="lista"] [data-v="valor"]{text-align:left;justify-self:start}
+  .ls-content .ls-visao-alvo[data-visao="lista"] [data-v="acoes"]{justify-content:flex-start;flex-wrap:wrap!important;padding-top:4px!important}
+  .ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody{grid-template-columns:minmax(0,1fr);padding:10px}
+}
+
+/* ======================================================================
+   TABELAS DO PAINEL: CABEÇALHO INTEIRO, COLUNAS PELO CONTEÚDO
+
+   O print da lista de orçamentos: "AÇÕ / ES" quebrado numa coluna de
+   58px, "CLIENTE" centralizado sobre um conteúdo encostado à esquerda, o
+   cliente espremido em 250px e outras colunas sobrando.
+
+     * O CABEÇALHO NUNCA QUEBRA PALAVRA. Título de coluna é de uma a três
+       palavras; o que não cabe é abreviado no próprio template, com o
+       nome inteiro no `title` ("Revisão" -> "Revisão dos blocos").
+     * O cabeçalho anda com a sua coluna: à esquerda como o conteúdo, e à
+       direita nas colunas de número e nas ações (`data-coluna` no <th>,
+       o mesmo nome do `data-rotulo` da célula).
+     * Larguras pelo conteúdo: número e ações encolhem até caber (sem
+       quebrar), e o cliente -- nome e contato -- fica com o resto.
+   ====================================================================== */
+.ls-content table th{
+  white-space:nowrap!important;hyphens:none!important;-webkit-hyphens:none!important;
+  overflow-wrap:normal!important;word-break:keep-all!important;
+}
+/* Só onde ainda é tabela: abaixo de 1200px ela vira ficha, e lá cada
+   valor tem o rótulo em cima e começa na mesma margem. */
+@media (min-width:1200px){
+.ls-content .ls-commercial-table th{text-align:left!important}
+.ls-content .ls-commercial-table td[data-rotulo]{text-align:left}
+/* número: lido pela direita, título junto */
+.ls-content .ls-commercial-table :is(th[data-coluna="Total"],th[data-coluna="Total / pagamento"],th[data-coluna="Valor"],th[data-coluna="Aprovado"],th[data-coluna="Propostas"],th[data-coluna="Quantidade"],th[data-coluna="Mínimo"],th[data-coluna="Custo médio"],th[data-coluna="Valor em estoque"]),
+.ls-content .ls-commercial-table :is(td[data-rotulo="Total"],td[data-rotulo="Total / pagamento"],td[data-rotulo="Valor"],td[data-rotulo="Aprovado"],td[data-rotulo="Propostas"],td[data-rotulo="Quantidade"],td[data-rotulo="Mínimo"],td[data-rotulo="Custo médio"],td[data-rotulo="Valor em estoque"]){
+  text-align:right!important;font-variant-numeric:tabular-nums;
+}
+/* colunas estreitas: número do registro e ações */
+.ls-content .ls-commercial-table :is(th[data-coluna="ID"],th[data-coluna="Nº"],th[data-coluna="O.S."],td[data-rotulo="ID"],td[data-rotulo="Nº"],td[data-rotulo="O.S."]){
+  width:1%;white-space:nowrap!important;
+}
+.ls-content .ls-commercial-table :is(th[data-coluna="Ações"],th[data-coluna="Ação"]),
+.ls-content .ls-commercial-table td:is(.ls-actions,.ls-commercial-actions){
+  width:1%!important;min-width:0!important;white-space:nowrap!important;text-align:right!important;
+}
+.ls-content .ls-commercial-table td:is(.ls-actions,.ls-commercial-actions) .ls-row-actions{justify-content:flex-end!important}
+/* o cliente é a coluna que cresce: nome e contato não se espremem mais */
+.ls-content .ls-commercial-table :is(th[data-coluna="Cliente"],td[data-rotulo="Cliente"],th[data-coluna="Cliente / equipamento"],td[data-rotulo="Cliente / equipamento"]){
+  min-width:220px;max-width:none!important;width:26%;
+}
+/* a origem do orçamento é um selo: uma linha só */
+.ls-content .ls-commercial-table .ls-origin-badge{white-space:nowrap}
+}
+
+/* ORÇAMENTOS: as larguras saem do conteúdo, e não de oito porcentagens
+   fixas -- era o 5% das ações (uns 60px) que quebrava "AÇÕES" ao meio e
+   os 20% do cliente que o espremiam com espaço sobrando nas outras. */
+@media (min-width:1200px){
+  .ls-content .ls-orcamentos-table{table-layout:auto!important}
+  .ls-content .ls-orcamentos-table th[data-coluna]{width:auto}
+  .ls-content .ls-orcamentos-table th[data-coluna="Cliente"]{width:26%}
+  .ls-content .ls-orcamentos-table :is(th[data-coluna="ID"],th[data-coluna="Ações"]){width:1%}
+  .ls-content .ls-orcamentos-table td[data-rotulo="ID"]{white-space:nowrap!important}
+}
+
+/* CLIENTES: a tabela continua fixa (e-mail comprido não redefine a
+   largura de tudo), mas a coluna das ações tem a largura do botão e do
+   título dela, e o cliente fica com a maior fatia. */
+@media (min-width:721px){
+  .ls-content .ls-clientes-table .ls-col-acoes,
+  .ls-content .ls-clientes-table th:last-child{width:88px}
+  .ls-content .ls-clientes-table .ls-col-cliente{width:calc(28% - 24.64px)}
+  .ls-content .ls-clientes-table .ls-col-contato{width:calc(18% - 15.84px)}
+  .ls-content .ls-clientes-table .ls-col-vinculo{width:calc(10% - 8.8px)}
+  .ls-content .ls-clientes-table .ls-col-endereco{width:calc(21% - 18.48px)}
+  .ls-content .ls-clientes-table .ls-col-propostas{width:calc(9% - 7.92px)}
+  .ls-content .ls-clientes-table .ls-col-aprovado{width:calc(14% - 12.32px)}
+  .ls-content .ls-clientes-table th:last-child{text-align:right!important}
+  .ls-content .ls-clientes-table th[data-coluna="Propostas"]{text-align:center!important}
+}
+
+/* A linha de apoio dentro da célula principal: aparece quando a coluna
+   dela some, em tela média. */
+.ls-linha-apoio{display:none}
+
+/* TELA MÉDIA (o PC de 1366 com o menu): a coluna de apoio some e vira
+   uma linha dentro da célula do cliente, em vez de espremer as outras.
+   Abaixo de 1200px a tabela já vira ficha (ver "max-width:1199px"). */
+@media (min-width:1200px) and (max-width:1599px){
+  .ls-content .ls-orcamentos-table :is(th[data-coluna="Origem"],td[data-rotulo="Origem"]){display:none}
+  .ls-content .ls-orcamentos-table td[data-rotulo="Cliente"] .ls-linha-apoio{display:block;margin-top:4px}
+}

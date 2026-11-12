@@ -67,14 +67,14 @@
       <table class="ls-table ls-commercial-table ls-orcamentos-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Cliente</th>
-            <th>Origem</th>
-            <th>Proposta</th>
-            <th>Pagamento</th>
-            <th>Acompanhamento</th>
-            <th>Revisão dos blocos</th>
-            <th class="text-end">Ações</th>
+            <th data-coluna="ID">ID</th>
+            <th data-coluna="Cliente">Cliente</th>
+            <th data-coluna="Origem">Origem</th>
+            <th data-coluna="Proposta">Proposta</th>
+            <th data-coluna="Pagamento">Pagamento</th>
+            <th data-coluna="Acompanhamento">Acompanhamento</th>
+            <th data-coluna="Revisão dos blocos" title="Revisão dos blocos" aria-label="Revisão dos blocos">Revisão</th>
+            <th data-coluna="Ações" class="text-end">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -101,6 +101,8 @@
                     {{ orcamento.responsavel.get_full_name|default:orcamento.responsavel.username }}
                   </span>
                 {% endif %}
+                {# Em tela média a coluna Origem some e ela aparece aqui. #}
+                <span class="ls-linha-apoio material-sub"><i class="bi {% if orcamento.origem == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}" aria-hidden="true"></i> {{ orcamento.get_origem_display }}</span>
               </td>
               <td data-rotulo="Origem">
                 <span class="ls-origin-badge {{ orcamento.origem }}">

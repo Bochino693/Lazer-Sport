@@ -79,7 +79,7 @@
           (é o serviço), o técnico embaixo da agenda (quem vai e quando) e o pagamento embaixo
           do total (quanto e se já entrou).
         {% endcomment %}
-        <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Situação</th><th>Agenda / técnico</th><th class="text-end">Total</th><th class="text-end">Ações</th></tr></thead>
+        <thead><tr><th data-coluna="O.S.">O.S.</th><th data-coluna="Cliente / equipamento">Cliente / equipamento</th><th data-coluna="Situação">Situação</th><th data-coluna="Agenda / técnico">Agenda / técnico</th><th data-coluna="Total / pagamento" class="text-end">Total</th><th data-coluna="Ações" class="text-end">Ações</th></tr></thead>
         <tbody>
         {% for ordem in ordens %}
           <tr data-registro="{{ ordem.id }}">

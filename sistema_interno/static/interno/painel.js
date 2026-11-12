@@ -167,6 +167,9 @@
        este ponto, o campo de busca da segunda tela em diante voltaria a
        recarregar a página. */
     if (global.LSFiltroLocal) global.LSFiltroLocal.ligar(alvo);
+    /* Lista ou cards: a escolha guardada vale também para a lista que
+       chegou agora -- tela inteira ou só o trecho trocado. */
+    if (global.LSVisao) global.LSVisao.montar(alvo);
   };
 
   Painel.fecharAcoesFlutuantes = function (devolverFoco) {

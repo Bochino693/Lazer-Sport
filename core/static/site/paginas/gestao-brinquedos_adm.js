@@ -66,6 +66,7 @@
         if (!caixa) return;
         const marca = document.createElement('span');
         marca.className = 'bq-sem-foto';
+        marca.dataset.v = 'foto'; // a foto pequena da lista (Lista · Cards)
         marca.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i><small>Foto indisponível</small>';
         img.replaceWith(marca);
     }

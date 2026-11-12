@@ -309,6 +309,123 @@
     text-decoration: none;
 }
 
+/* ---- Lista · Cards ----
+   A lista (padrão) e os cards são o mesmo <article>: as colunas da lista
+   saem daqui, e o resto do desenho de linha é o comum do painel ("LISTA
+   OU CARDS" em interno_modern.css). */
+.bq-tela .ls-visao-barra .bq-resumo {
+    margin: 0;
+}
+
+#bqLista {
+    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 112px 64px 176px;
+    --lv-areas: "foto titulo info valor estado selos acoes";
+    /* tablet: duas linhas por brinquedo */
+    --lv-colunas-tab: 56px minmax(0, 1fr) auto auto;
+    --lv-areas-tab: "foto titulo valor acoes" "foto info estado selos";
+    /* celular: linha compacta -- nome e ações em cima, preço e loja
+       embaixo; medidas, categorias e fotos ficam para o cartão */
+    --lv-colunas-cel: 48px minmax(0, 1fr) auto;
+    --lv-areas-cel: "foto titulo acoes" "foto valor estado" "foto info selos";
+}
+
+.bq-grade[data-visao="lista"] .bq-selo {
+    white-space: nowrap !important;
+}
+
+@media (max-width: 640px) {
+    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-info,
+    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-selos--fim {
+        display: none !important;
+    }
+
+    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-acoes {
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+        padding-top: 0 !important;
+    }
+
+    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-acoes :is(button, a) {
+        width: 38px;
+        min-width: 38px;
+        min-height: 38px;
+        padding: 0 !important;
+    }
+
+    .bq-grade[data-visao="lista"] .bq-editar {
+        font-size: 0 !important;
+    }
+
+    .bq-grade[data-visao="lista"] .bq-editar i {
+        font-size: .95rem;
+    }
+}
+
+.bq-titulo,
+.bq-info {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.bq-titulo {
+    gap: 4px;
+}
+
+.bq-grade[data-visao="lista"] .bq-nome {
+    font-size: .93rem;
+}
+
+.bq-grade[data-visao="lista"] .bq-info {
+    gap: 5px;
+}
+
+.bq-grade[data-visao="lista"] .bq-medidas {
+    font-size: .76rem;
+}
+
+.bq-grade[data-visao="lista"] .bq-cats-item li {
+    padding: 2px 7px;
+    font-size: .68rem;
+}
+
+.bq-grade[data-visao="lista"] .bq-preco strong {
+    font-size: 1rem;
+}
+
+.bq-grade[data-visao="lista"] .bq-consulta {
+    font-size: .84rem;
+}
+
+/* os selos foram feitos para ficar SOBRE a foto; na linha, viram chips */
+.bq-grade[data-visao="lista"] .bq-selo {
+    border: 1px solid var(--line);
+    color: var(--text-2);
+    background: rgba(var(--verniz-rgb), .05);
+    backdrop-filter: none;
+}
+
+.bq-grade[data-visao="lista"] .bq-selo--loja {
+    border-color: transparent;
+    color: var(--green-tinta);
+    background: var(--green);
+}
+
+.bq-grade[data-visao="lista"] .bq-selo--alerta {
+    border-color: transparent;
+    color: var(--tinta);
+    background: var(--yellow);
+}
+
+.gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-acoes a.bq-ver {
+    width: 42px;
+    padding: 0;
+}
+
+.bq-grade[data-visao="lista"] .bq-ver span {
+    display: none;
+}
+
 /* ---- a grade de brinquedos ---- */
 .bq-grade {
     display: grid;
