@@ -123,9 +123,18 @@ class SincronizarCarrinhoAPI(APIView):
                 checkout.expirar_reserva(reserva, "carrinho sincronizado pelo app")
                 carrinho.refresh_from_db()
 
+            # O que já estava no carrinho, para o gráfico do painel contar
+            # só o que o cliente ACRESCENTOU: a sincronização reescreve o
+            # carrinho inteiro, e contar tudo de novo a cada envio faria o
+            # mesmo item "entrar no carrinho" dez vezes.
+            antes = {}
+            for linha in carrinho.itens.values("content_type_id", "object_id", "quantidade"):
+                chave = (linha["content_type_id"], linha["object_id"])
+                antes[chave] = antes.get(chave, 0) + linha["quantidade"]
+
             carrinho.itens.all().delete()
 
-            criados, ignorados = self._gravar_itens(carrinho, dados["itens"])
+            criados, ignorados = self._gravar_itens(carrinho, dados["itens"], antes)
 
             if "tipo_envio" in dados:
                 carrinho.tipo_envio = dados["tipo_envio"]
@@ -152,7 +161,7 @@ class SincronizarCarrinhoAPI(APIView):
             ),
         })
 
-    def _gravar_itens(self, carrinho, itens):
+    def _gravar_itens(self, carrinho, itens, antes=None):
         """Grava os itens válidos e devolve (gravados, ignorados).
 
         Produto tirado do catálogo depois de o cliente colocá-lo no
@@ -186,13 +195,21 @@ class SincronizarCarrinhoAPI(APIView):
                 ignorados += 1
                 continue
 
+            tipo_conteudo = ContentType.objects.get_for_model(modelo)
+            quantidade = min(quantidade, LIMITE_QUANTIDADE)
             ItemCarrinho.objects.create(
                 carrinho=carrinho,
-                content_type=ContentType.objects.get_for_model(modelo),
+                content_type=tipo_conteudo,
                 object_id=objeto_id,
-                quantidade=min(quantidade, LIMITE_QUANTIDADE),
+                quantidade=quantidade,
             )
             gravados += 1
+
+            acrescentado = quantidade - (antes or {}).get((tipo_conteudo.pk, objeto_id), 0)
+            if acrescentado > 0:
+                from core.interacoes import ida_ao_carrinho
+
+                ida_ao_carrinho(tipo, objeto_id, acrescentado, origem="app")
 
         return gravados, ignorados
 

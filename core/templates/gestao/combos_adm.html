@@ -29,6 +29,8 @@
         </button>
     </section>
 
+    {% include "gestao/includes/analises.html" with tipo="combo" rotulo="os combos" %}
+
     <section class="combo-kpis" aria-label="Resumo dos combos">
         <article class="combo-kpi">
             <span class="combo-kpi-icon">🎁</span>
@@ -88,6 +90,7 @@
             <article
                 class="combo-card"
                 data-combo-id="{{ combo.id }}"
+                data-detalhe-tipo="combo" data-detalhe-id="{{ combo.id }}"
                 data-description="{{ combo.descricao|escape }}"
                 data-price="{{ combo.valor_combo|unlocalize }}"
                 data-toys="{% for brinquedo in combo.brinquedos.all %}{{ brinquedo.id }}{% if not forloop.last %},{% endif %}{% endfor %}"

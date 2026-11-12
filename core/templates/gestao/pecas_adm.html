@@ -17,6 +17,8 @@
     <button type="button" class="btn-nova" data-nova-peca>+ Nova peça</button>
   </section>
 
+  {% include "gestao/includes/analises.html" with tipo="peca" rotulo="as peças" %}
+
   <section class="pecas-kpis">
     <div class="pkpi"><strong>{{ total_pecas }}</strong><span>Peças cadastradas</span></div>
     <div class="pkpi"><strong>{{ total_ativas }}</strong><span>Publicadas no site</span></div>
@@ -44,7 +46,7 @@
 
   <div class="pecas-grid">
     {% for peca in pecas %}
-      <article class="peca-card" data-peca-id="{{ peca.id }}">
+      <article class="peca-card" data-peca-id="{{ peca.id }}" data-detalhe-tipo="peca" data-detalhe-id="{{ peca.id }}">
         <div class="peca-capa">
           {% if peca.capa %}<img src="{{ peca.capa }}" alt="{{ peca.nome }}" loading="lazy">{% else %}Sem foto cadastrada{% endif %}
         </div>

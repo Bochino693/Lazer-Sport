@@ -21,6 +21,8 @@
         </button>
     </section>
 
+    {% include "gestao/includes/analises.html" with tipo="projeto" rotulo="os projetos" %}
+
     <section class="project-kpis" aria-label="Resumo dos projetos">
         <article class="project-kpi">
             <span class="project-kpi-icon">🧩</span>
@@ -66,7 +68,7 @@
 
     <section class="project-grid">
         {% for projeto in projetos %}
-            <article class="project-card" data-project-id="{{ projeto.id }}">
+            <article class="project-card" data-project-id="{{ projeto.id }}" data-detalhe-tipo="projeto" data-detalhe-id="{{ projeto.id }}">
                 <div class="project-card-media">
                     {% with imagem=projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
                         {% if imagem %}

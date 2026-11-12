@@ -54,6 +54,11 @@ SO_DE_UM_REGISTRO = {
     "jogo_gerar_apk": "gera o APK de um jogo cadastrado (core/tests_jogos_apk_gerar.py testa com um de verdade)",
     "jogo_gerar_exe": "gera o .exe de um jogo cadastrado (core/tests_jogos_exe_gerar.py testa com um de verdade)",
     "pedido_projeto_3d": "a ficha de um pedido do Monte seu projeto (core/tests_projeto3d.py abre um de verdade)",
+    # as fichas e as análises sob demanda: o tipo e o id precisam existir
+    # (core/tests_analises.py abre cada tipo de verdade)
+    "analises_json": "o tipo de objeto precisa existir",
+    "detalhe_json": "a ficha de um objeto cadastrado",
+    "detalhe_atividade_json": "a atividade de um objeto cadastrado",
 }
 
 

@@ -34,6 +34,8 @@
         </button>
     </header>
 
+    {% include "gestao/includes/analises.html" with tipo="promocao" rotulo="as promoções" %}
+
     <div class="pr-barra">
         <nav class="pr-filtros" aria-label="Mostrar promoções">
             <a class="pr-filtro {% if status_atual == 'todos' %}is-on{% endif %}"
@@ -67,6 +69,7 @@
                 class="pr-oferta {% if not promo.ativo %}is-off{% endif %}"
                 data-pr-oferta
                 data-id="{{ promo.id }}"
+                data-detalhe-tipo="promocao" data-detalhe-id="{{ promo.id }}"
                 data-descricao="{{ promo.descricao }}"
                 data-preco="{{ promo.preco_promocao|unlocalize }}"
                 data-brinquedos="{{ promo.brinquedos_id }}{% for extra in promo.brinquedos_extras.all %},{{ extra.id }}{% endfor %}"

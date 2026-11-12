@@ -17,6 +17,7 @@ from core.views import (
     UserAdminView,
 )
 from core.views_gestao_produtos import EngajamentoAdminView, PecaAdminView
+from core.views_analises import AnalisesView, AtividadeView, DetalheView
 
 from .permissoes import CRIACAO, GESTAO, VENDAS
 
@@ -167,6 +168,12 @@ urlpatterns = [
     # os pedidos do "Monte seu projeto" do site (core/projeto3d.py)
     path('site/projetos-3d/', PedidosProjeto3DView.as_view(), name='pedidos_projeto_3d'),
     path('site/projetos-3d/<int:pk>/', PedidoProjeto3DView.as_view(), name='pedido_projeto_3d'),
+    # As análises gráficas e as fichas das telas de gestão (LEIA-ME-V10,
+    # seção 76): JSON sob demanda, cada tipo com a permissão da sua tela
+    # (core/analises_tipos.py).
+    path('analises/<str:tipo>/', AnalisesView.as_view(), name='analises_json'),
+    path('detalhes/<str:tipo>/<int:pk>/', DetalheView.as_view(), name='detalhe_json'),
+    path('detalhes/<str:tipo>/<int:pk>/atividade/', AtividadeView.as_view(), name='detalhe_atividade_json'),
     path('site/indicadores/', por_funcoes(DashboardAdminView, CRIACAO, GESTAO), name='dashboards'),
     path('site/estatisticas/', por_funcoes(EstatisticasGeraisView, CRIACAO, GESTAO), name='estatisticas_gerais'),
 

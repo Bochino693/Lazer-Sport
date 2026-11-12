@@ -12,6 +12,7 @@
     <div><small>Catálogo de produtos</small><h2>Brinquedos</h2><p>Cadastre até 3 vistas por brinquedo. PERFIL / FRENTE é obrigatória e é sempre a imagem de capa usada nas vitrines e requisições.</p></div>
     <button id="newToy" class="primary" type="button">+ Cadastrar brinquedo</button>
   </section>
+  {% include "gestao/includes/analises.html" with tipo="brinquedo" rotulo="os brinquedos" %}
 
   <section class="toy-kpis">
     <div class="tkpi"><strong>{{ total_brinquedos }}</strong><span>Brinquedos</span></div>
@@ -33,7 +34,7 @@
           <thead><tr><th>Brinquedo</th><th>Preço / status</th><th>Categorias</th><th>Ações</th></tr></thead>
           <tbody>
           {% for brinquedo in brinquedos %}
-            <tr>
+            <tr data-detalhe-tipo="brinquedo" data-detalhe-id="{{ brinquedo.id }}">
               <td><div class="toy-row"><span class="cover">{% with capa=brinquedo.imagem_catalogo %}{% if capa %}<img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async">{% else %}SEM FOTO{% endif %}{% endwith %}</span><span><strong class="toy-name">{{ brinquedo.nome_brinquedo }}</strong><span class="toy-sub">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
 {% comment %}
   A MEDIDA APARECE AQUI PORQUE A FALTA DELA APARECE NO CLIENTE.
