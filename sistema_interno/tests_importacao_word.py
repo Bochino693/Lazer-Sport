@@ -2164,6 +2164,20 @@ class TelaGuiadaTests(_ComUsuario):
         self.assertEqual(tela.painel_da_pendencia("valores.frete"), "valores")
         self.assertEqual(tela.painel_da_pendencia("alerta.soma_total"), "valores")
 
+    def test_as_condicoes_opcionais_ficam_dobradas(self):
+        from .importacao_word import tela
+
+        resposta = self.client.get(self.importar(docx_com_tabela()), **HOST)
+        valores = resposta.context["paineis"]["valores"]
+        self.assertFalse(valores["condicoes_abertas"])
+        self.assertContains(resposta, '<details class="ls-imp-sub" id="blocoCondicoes">')
+        self.assertContains(resposta, "data-resumo-condicoes")
+        self.assertEqual(
+            tela.resumo_das_condicoes({"validade": "2026-11-20", "forma_pagamento": "Pix", "prazo": "10 dias"}),
+            "Validade 20/11/2026 · Pix · Prazo ✓",
+        )
+        self.assertEqual(tela.resumo_das_condicoes({}), "Validade padrão · pagamento e entrega em branco")
+
 
 # ======================================================================
 # 8. A TELA SEGUE O TEMA

@@ -396,7 +396,12 @@
           {% endif %}
         </div>
 
-        <h3 class="ls-imp-subtitulo ls-imp-margem" id="blocoCondicoes">Condições <small>(validade, pagamento e entrega)</small></h3>
+        <details class="ls-imp-sub" id="blocoCondicoes"{% if paineis.valores.condicoes_abertas %} open{% endif %}>
+          <summary class="ls-imp-sub-topo">
+            <span class="ls-imp-sub-titulo"><span><b>Condições</b> <small>(validade, pagamento e entrega; opcional)</small></span>
+              <span class="ls-imp-sub-resumo" data-resumo-condicoes>{{ paineis.valores.condicoes }}</span></span>
+            <i class="bi bi-chevron-down ls-imp-sub-seta" aria-hidden="true"></i>
+          </summary>
         <div class="ls-panel-body ls-imp-campos">
           <div class="ls-imp-campo">
             <label class="form-label" for="campoValidade">Válido até</label>
@@ -431,6 +436,7 @@
             {% include "partes/importacao_origem.html" with campo=proposta.condicoes.observacoes alvo="campoObservacoes" falta=faltas.condicoes_observacoes %}
           </div>
         </div>
+        </details>
 
         <h3 class="ls-imp-subtitulo ls-imp-margem" id="tituloAlertas">Alertas da conferência <small>(vermelho bloqueia: corrija ou aceite escrevendo por quê)</small></h3>
         <div class="ls-panel-body ls-imp-alertas" id="blocoAlertas">
@@ -499,6 +505,7 @@
           <div class="ls-imp-progresso-texto">
             <strong id="progressoTitulo">{% if validado.pendencias %}Faltam {{ validado.pendencias|length }}{% else %}Tudo pronto{% endif %}</strong>
             <span id="progressoLista">{% for pendencia in validado.pendencias|slice:":3" %}{{ pendencia.rotulo }}{% if not forloop.last %} · {% endif %}{% endfor %}</span>
+            <span class="ls-imp-progresso-total" data-so-orcamento{% if envio.modo == "cliente" %} hidden{% endif %}>Total <b id="contaTotalLateral">R$ {{ contas.total }}</b></span>
           </div>
           <button type="button" class="btn btn-primary ls-imp-proximo" id="proximoCampo">
             Próximo campo <i class="bi bi-arrow-right-short" aria-hidden="true"></i>

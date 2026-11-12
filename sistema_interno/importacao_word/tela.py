@@ -91,6 +91,23 @@ def resumo_dos_valores(envio: dict, contas: dict) -> str:
     return " · ".join(partes)
 
 
+def resumo_das_condicoes(envio: dict) -> str:
+    """As condições cabem numa linha; o campo só abre se algo nelas faltar."""
+    validade = envio.get("validade") or ""
+    if len(validade) == 10 and validade[4] == "-":
+        partes = [f"Validade {validade[8:]}/{validade[5:7]}/{validade[:4]}"]
+    else:
+        partes = ["Validade padrão"]
+    partes += [p for p in (envio.get("forma_pagamento"), envio.get("forma_envio")) if p]
+    if envio.get("prazo"):
+        partes.append("Prazo ✓")
+    if envio.get("observacoes"):
+        partes.append("Observações ✓")
+    if len(partes) == 1:
+        partes.append("pagamento e entrega em branco")
+    return " · ".join(partes)
+
+
 def paineis(proposta: dict, envio: dict, validado: dict, do_orcamento: dict) -> dict:
     """Cada painel: resumo, quantas faltas, e se abre.
 
@@ -125,10 +142,17 @@ def paineis(proposta: dict, envio: dict, validado: dict, do_orcamento: dict) -> 
         "itens": resumo_dos_itens(envio, contas),
         "valores": resumo_dos_valores(envio, contas),
     }
-    return {
+    resultado = {
         nome: {"faltas": faltas[nome], "aberto": bool(faltas[nome] or baixa[nome]), "resumo": resumos[nome]}
         for nome in PAINEIS
     }
+    # Dentro de "Valores e condições", as condições (opcionais) ficam numa
+    # dobra própria: fechada, a não ser que algo nelas falte.
+    resultado["valores"]["condicoes"] = resumo_das_condicoes(envio)
+    resultado["valores"]["condicoes_abertas"] = any(
+        pendencia["campo"].startswith("condicoes.") for pendencia in do_orcamento["pendencias"]
+    )
+    return resultado
 
 
 def _rotulos(pendencias: list[dict], limite: int = 4) -> list[str]:

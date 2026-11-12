@@ -817,6 +817,18 @@ LSTela.pronto(function () {
     return partes.join(" · ");
   }
 
+  function resumoCondicoes() {
+    var validade = texto("campoValidade");
+    var partes = [/^\d{4}-\d{2}-\d{2}$/.test(validade)
+      ? "Validade " + validade.slice(8) + "/" + validade.slice(5, 7) + "/" + validade.slice(0, 4)
+      : "Validade padrão"];
+    [texto("campoPagamento"), texto("campoEnvio")].forEach(function (valor) { if (valor) partes.push(valor); });
+    if (texto("campoPrazo")) partes.push("Prazo ✓");
+    if (texto("campoObservacoes")) partes.push("Observações ✓");
+    if (partes.length === 1) partes.push("pagamento e entrega em branco");
+    return partes.join(" · ");
+  }
+
   function resumos(conta) {
     var quantos = cartoes().length;
     return {
@@ -857,6 +869,17 @@ LSTela.pronto(function () {
         painel.open = !!quantas || baixa;
       }
     });
+    var condicoes = document.querySelector("[data-resumo-condicoes]");
+    if (condicoes) condicoes.textContent = resumoCondicoes();
+    if (abrir) {
+      /* As dobras de dentro (as condições) abrem só se algo nelas faltar. */
+      form.querySelectorAll("details.ls-imp-sub").forEach(function (dobra) {
+        dobra.open = lista_.some(function (p) {
+          var alvo = p.alvo ? document.getElementById(p.alvo) : null;
+          return !!alvo && dobra.contains(alvo);
+        });
+      });
+    }
   }
 
   /* PRÓXIMO CAMPO: abre o painel, rola até o campo, põe o foco e
@@ -888,8 +911,10 @@ LSTela.pronto(function () {
   function irPara(pendencia) {
     var alvo = pendencia.alvo ? document.getElementById(pendencia.alvo) : null;
     if (!alvo || alvo.closest("[hidden]")) alvo = document.getElementById("blocoAlertas") || painelProgresso;
-    var painel = painelDe(alvo);
-    if (painel && !painel.open) painel.open = true;
+    /* Abre o painel e qualquer dobra de dentro em que o campo esteja. */
+    for (var dobra = alvo.closest("details"); dobra; dobra = dobra.parentElement && dobra.parentElement.closest("details")) {
+      if (!dobra.open) dobra.open = true;
+    }
     alvo.scrollIntoView({ behavior: reduzirMovimento ? "auto" : "smooth", block: "center" });
     window.setTimeout(function () {
       var focavel = alvo.matches("input, select, textarea, button")

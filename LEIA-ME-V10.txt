@@ -3282,6 +3282,54 @@ Dependência nova: rjsmin (requirements.txt).
    tests_importacao_word.py (TextoLivreTests). Conferido no Chromium (PC
    e iPhone 13) importando os documentos pela tela, sem a chave.
 
+   AJUSTE 3: UM MODAL PARA DECIDIR E UMA TELA GUIADA (SÓ A TELA; A LEITURA
+   É A MESMA). Pedido: "vc pôs uma tela de muita descida, ponha um modal
+   moderno estilo app para perguntar se quer ou não gerar o orçamento ou
+   só o cliente, dê ênfase pros campos que ainda faltam direcionando o
+   usuário a ele ... quase uma automação".
+     * O MODAL (logo depois de ler; cartão no PC e no tablet, folha que
+       sobe de baixo, com alça de arrastar, no celular): o resumo do que
+       foi lido -- cliente, estabelecimento, CPF/CNPJ, WhatsApp/telefone,
+       e-mail, cidade/UF --, cada um com ✓ e de onde veio ("lido do
+       texto", "do documento", "do cadastro") ou com a marca "falta";
+       "Já cadastrado: Nome (#id)" e o aviso de orçamento repetido; e os
+       dois caminhos em cartões grandes: "Cadastrar cliente e criar
+       orçamento" (os brinquedos achados, quantos itens, o total) e "Só
+       cadastrar o cliente", com "Recomendado" no que cabe (com
+       brinquedos ou valores, o orçamento). Sem nada obrigatório faltando
+       e sem alerta vermelho, o cartão tem "Criar agora": cria dali mesmo
+       e vai para a tela de pronto de sempre (o servidor valida tudo de
+       novo, como no botão da tela); "Revisar antes" abre a tela guiada.
+       Faltando algo, o cartão diz o quê ("Falta: Frete") e "Completar o
+       que falta" leva direto ao campo. Esc, o X ou arrastar a folha para
+       baixo fecham e levam à tela guiada; o foco fica preso no modal
+       enquanto aberto; "Ver o resumo e os dois caminhos" reabre. Abre uma
+       vez por importação (sessionStorage).
+     * A TELA GUIADA: quatro painéis que dobram -- Cliente, Endereço e
+       mapa, Itens, Valores e condições. Abre só o que tem falta, alerta
+       vermelho ou leitura de confiança baixa; o que está certo fica
+       dobrado, numa linha ("Buffet Sonho Mágico Ltda · CNPJ ✓ · WhatsApp
+       ✓ · E-mail ✓"). Dentro de Valores, as condições (opcionais) também
+       dobram. O antigo cartão "Falta preencher" virou o PROGRESSO (preso
+       embaixo no celular e no tablet, à direita no PC): anel com o
+       percentual, "Faltam 2: CPF/CNPJ · Frete" e "Próximo campo", que
+       abre o painel, rola, põe o foco e destaca o campo com a dica do que
+       se espera. Ao sair do campo (ou Enter) já vai para o próximo --
+       nunca no meio da digitação. Sem falta, o progresso vira o botão
+       verde ("Cadastrar cliente" / "Cadastrar cliente e criar
+       orçamento"), que pulsa uma vez.
+     * As regras são as mesmas (formulario.validar): orçamento repetido
+       com "Criar mesmo assim", equipe e fábrica fora, preço do catálogo.
+       Só cores do tema (claro e escuro). Altura da página, antes ->
+       agora, com o caminho escolhido: PC 07 4310 -> 1549 px, 10 4720 ->
+       1549, 11 1830 -> 900, 01 1912 -> 900; iPhone 13 07 7479 -> 2259,
+       10 8365 -> 2259, 11 3113 -> 941, 01 3370 -> 941.
+   Código: importacao_word/tela.py (resumo do modal, painéis e o que
+   abre), views_importacao.py, conferir_importacao_inner.html,
+   importacao-word.js e .css. Testes: tests_importacao_word.py
+   (TelaGuiadaTests). Conferido no Chromium (PC 1440 e iPhone 13, claro e
+   escuro) com os documentos 07, 10 e 11.
+
 72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
    Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um
    adesivo diferente"; "na verdade vc deve juntar o basquete home com o
