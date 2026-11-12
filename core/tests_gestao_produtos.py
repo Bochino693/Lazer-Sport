@@ -264,7 +264,9 @@ class CatalogoBrinquedosResponsivoTests(GestaoProdutosBaseTests):
 
     def test_modal_formata_dinheiro_metros_e_opcoes(self):
         resposta = self.get(self.url)
-        self.assertContains(resposta, 'data-mascara="moeda"')
+        # O preço se digita em reais inteiros (6990 é R$ 6.990,00), como no
+        # orçamento e nas promoções -- ver core/tests_brinquedos_adm_tela.py.
+        self.assertContains(resposta, 'data-mascara="moeda-valor"')
         self.assertContains(resposta, 'data-mascara="medida"', count=3)
         self.assertContains(resposta, 'data-options-tools="categoryGrid"')
         self.assertContains(resposta, 'data-options-tools="tagGrid"')

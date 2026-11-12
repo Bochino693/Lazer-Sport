@@ -128,7 +128,8 @@
                  data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
                  data-roda="{% estatico 'site/arena/roda.js' %}"
                  data-caminhos="{% estatico 'site/arena/caminhos.js' %}"
-                 data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
+                 data-cores3d="{% estatico 'site/arena/cores3d.js' %}"
+                 data-adesivos3d="{% estatico 'site/arena/adesivos3d.js' %}">
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
                     <strong data-arena-aviso-titulo>Montando a arena…</strong>
@@ -254,6 +255,8 @@
                         <div data-ficha-linha="voltagem"><dt>Voltagem</dt><dd data-ficha-voltagem></dd></div>
                         <div data-ficha-linha="preco"><dt>Preço</dt><dd data-ficha-preco></dd></div>
                     </dl>
+                    {# os adesivos (LEIA-ME 72): o mesmo produto com outra arte; o 3D troca aqui mesmo #}
+                    <div class="arena3d-ficha-adesivos" data-ficha-adesivos hidden></div>
                     <div class="arena3d-ficha-cores" data-ficha-cores role="group" aria-label="Cores do objeto 3D" hidden></div>
                     <div class="arena3d-ficha-jogos" data-ficha-jogos hidden></div>
                     <div class="arena3d-ficha-acoes">

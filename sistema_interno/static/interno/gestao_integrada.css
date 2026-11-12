@@ -29,6 +29,12 @@
 
 .gestao-integrada .ls-content{color:var(--text)}
 
+/* A onda do sino (o anel que cresce 1,55x quando há aviso) passava da
+   borda direita no celular, e a tela ganhava de 1 a 3px de rolagem de
+   lado. A barra corta só na horizontal: os painéis que descem dela
+   (avisos, aparência) continuam inteiros, e o sticky continua valendo. */
+.gestao-integrada .ls-topbar{overflow-x:clip}
+
 /* O conteúdo herdado usava a largura do painel antigo. Aqui quem decide a
    margem é a área de trabalho do aplicativo. */
 .gestao-integrada .ls-content .content,
@@ -67,6 +73,72 @@
 .gestao-integrada .ls-content small,
 .gestao-integrada .ls-content .muted{color:var(--muted)}
 
+/* Os números do topo que não terminam em "-kpi" (ekpi, pkpi, okpi,
+   kpi-box): o mesmo cartão dos outros. */
+.gestao-integrada .ls-content .ekpi,
+.gestao-integrada .ls-content .pkpi,
+.gestao-integrada .ls-content .okpi,
+.gestao-integrada .ls-content .kpi-box{
+  border:1px solid var(--line)!important;
+  border-radius:18px!important;
+  background:linear-gradient(180deg,var(--panel),var(--bg-1))!important;
+  color:var(--text-2)!important;
+  box-shadow:0 12px 32px rgba(var(--sombra-rgb),calc(.22 * var(--sombra-forca)))!important;
+}
+
+
+/* ----------------------------------------------------------------------
+   O TOPO DA TELA ("HERO")
+
+   Cada tela herdada do /adm abria com uma caixa própria: fundo
+   marrom-café, um brilho âmbar no canto e um anel decorativo -- a mesma
+   caixa em Usuários, Clientes, Cupons, Combos, Peças, Projetos,
+   Engajamento e no Dashboard, escrita oito vezes com cor fixa. No tema
+   escuro ela era o "marrom em todo lado"; no claro, uma mancha escura no
+   papel.
+
+   O topo das telas do aplicativo (Orçamentos, Clientes, Estoque) não é
+   caixa: é o olho em acento, o título e a frase, direto no fundo da
+   página, com o botão principal à direita. As telas de gestão passam a
+   abrir igual. A regra pega toda classe que TERMINA em "-hero" (o nome
+   que todas elas usam), então tela nova herdada entra sem lista.
+
+   O botão principal não sai mais da tela: a linha quebra, e no celular
+   ele ocupa a largura inteira, embaixo do texto.
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content [class$="-hero"]{
+  min-height:0!important;
+  margin-bottom:18px!important;
+  padding:2px 0 4px!important;
+  display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 20px;
+  overflow:visible!important;
+  border:0!important;border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+/* Topo sem embrulho (olho, título e frase soltos, como em Engajamento):
+   é um bloco, e não uma linha -- em linha, o título ia para a direita. */
+.gestao-integrada .ls-content [class$="-hero"]:has(> h1, > h2){display:block!important}
+.gestao-integrada .ls-content [class$="-hero"]::before,
+.gestao-integrada .ls-content [class$="-hero"]::after{content:none!important;display:none!important}
+.gestao-integrada .ls-content [class$="-hero"]>*{min-width:0;max-width:100%}
+.gestao-integrada .ls-content [class$="-hero"]>:first-child{flex:1 1 320px}
+.gestao-integrada .ls-content [class$="-hero"] h1,
+.gestao-integrada .ls-content [class$="-hero"] h2{
+  margin:4px 0 2px;color:var(--text)!important;
+  font-size:clamp(1.6rem,3vw,2.1rem);font-weight:900;line-height:1.12;
+}
+.gestao-integrada .ls-content [class$="-hero"] [class*="eyebrow"],
+.gestao-integrada .ls-content [class$="-hero"] small{color:var(--acento-claro)!important}
+.gestao-integrada .ls-content [class$="-hero"] p:not([class*="eyebrow"]){color:var(--muted)!important}
+
+@media (max-width:640px){
+  .gestao-integrada .ls-content [class$="-hero"]{flex-direction:column;align-items:stretch}
+  .gestao-integrada .ls-content [class$="-hero"]>:first-child{flex:0 1 auto}
+  .gestao-integrada .ls-content [class$="-hero"]>button,
+  .gestao-integrada .ls-content [class$="-hero"]>a{width:100%}
+}
+
 
 /* ----------------------------------------------------------------------
    CAMPOS
@@ -99,6 +171,13 @@
 .gestao-integrada .ls-content input[type="checkbox"],
 .gestao-integrada .ls-content input[type="radio"]{accent-color:var(--acento);width:19px;height:19px}
 
+/* Busca com a lupa desenhada DENTRO do campo (Usuários, Clientes,
+   Cupons, Combos, Projetos): o recuo do campo comum (14px) punha o texto
+   em cima da lupa -- "Ɓuscar". O recuo abre espaço para ela. */
+.gestao-integrada .ls-content [class$="-search"]:has(> svg:first-child, > i:first-child, > span:first-child) > input{
+  padding-left:44px!important;
+}
+
 /* Lista de escolha múltipla não leva seta -- ver a regra irmã no
    interno_modern.css. Aqui ela é repetida porque o seletor de select
    abaixo é mais específico e apagaria aquela. */
@@ -115,7 +194,7 @@
 .gestao-integrada .ls-content select{
   appearance:none;-webkit-appearance:none;
   padding-right:40px!important;
-  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23F2A93B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")!important;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23FF8A2A' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")!important;
   background-repeat:no-repeat!important;
   background-position:right 14px center!important;
   background-size:15px 12px!important;
@@ -436,9 +515,12 @@
    TABELAS
    ---------------------------------------------------------------------- */
 .gestao-integrada .ls-content table{width:100%;color:var(--text-2);border-color:var(--line-soft)}
+/* O cabeçalho da tabela é o das tabelas do aplicativo (Orçamentos,
+   Clientes): tinta de leitura sobre o fundo tingido do tema. Em âmbar,
+   como era, a linha de títulos gritava mais que os dados. */
 .gestao-integrada .ls-content th{
   padding:12px 14px;
-  color:var(--acento-texto)!important;background:var(--bg-2)!important;
+  color:var(--text-2)!important;background:var(--acento-fundo)!important;
   font-size:.72rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
   text-align:left;
 }
@@ -459,7 +541,7 @@
    ---------------------------------------------------------------------- */
 .gestao-integrada .ls-content .modal{
   z-index:1600;
-  background:rgba(9,7,4,.72)!important;
+  background:rgba(var(--sombra-rgb),calc(.4 + .32 * var(--sombra-forca)))!important;
   backdrop-filter:blur(6px);
 }
 
@@ -469,7 +551,7 @@
    fundo fica em 0 e o conteúdo em 1. */
 .gestao-integrada .ls-content [class*="modal-backdrop"]{
   z-index:0;
-  background:rgba(9,7,4,.72)!important;
+  background:rgba(var(--sombra-rgb),calc(.4 + .32 * var(--sombra-forca)))!important;
   backdrop-filter:blur(6px);
 }
 
@@ -552,6 +634,17 @@
   .gestao-integrada .ls-content{padding-inline:12px}
   .gestao-integrada .ls-content .summary,
   .gestao-integrada .ls-content .dashboard-grid,
-  .gestao-integrada .ls-content .stats-grid,
-  .gestao-integrada .ls-content [class*="-kpis"]{grid-template-columns:1fr!important}
+  .gestao-integrada .ls-content .stats-grid{grid-template-columns:1fr!important}
+  /* Os números do topo ficam dois a dois, como em Brinquedos e na tela
+     inicial: um embaixo do outro, cada cartão ocupava a altura de meia
+     tela e a lista começava só na terceira rolagem. */
+  .gestao-integrada .ls-content [class*="-kpis"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .gestao-integrada .ls-content [class$="-kpi"],
+  .gestao-integrada .ls-content .ekpi,
+  .gestao-integrada .ls-content .pkpi,
+  .gestao-integrada .ls-content .okpi,
+  .gestao-integrada .ls-content .kpi-box{min-width:0;min-height:0!important;padding:12px!important;gap:8px!important;flex-direction:column;align-items:flex-start!important}
+  /* Em meia largura, o ícone sobe e o rótulo ganha a linha inteira:
+     ao lado do ícone, "TOTAL CADASTRADO" quebrava no meio da palavra. */
+  .gestao-integrada .ls-content [class$="-kpi-icon"]{width:34px!important;height:34px!important;flex:0 0 auto}
 }

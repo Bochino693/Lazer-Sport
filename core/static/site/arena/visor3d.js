@@ -9,7 +9,13 @@
 
    `iniciar` também serve a outras páginas (a proposta do orçamento abre o
    3D de cada item numa janela: site/paginas/orcamento-3d.js): devolve
-   `acordar` e `soltar` (solta o WebGL e a memória ao fechar).
+   `acordar`, `soltar` (solta o WebGL e a memória ao fechar) e `trocar`.
+
+   OS ADESIVOS (LEIA-ME 72): o produto com um 3D para cada adesivo traz a
+   lista (`data-adesivos3d`: o id do JSON na página, ou o próprio JSON) e o
+   controle "Adesivo: A · B" (site/arena/adesivos3d.js, `data-adesivos3d-
+   modulo`) aparece sobre o 3D. Ele troca o .glb no mesmo lugar, com a
+   câmera onde estava; o outro modelo só baixa quando é pedido.
    ====================================================================== */
 
 const raiz = document.querySelector("[data-visor3d]");
@@ -54,6 +60,8 @@ function ligar(visor) {
 }
 
 export async function iniciar(visor, tela, aviso, coresCaixa) {
+  // o controle dos adesivos de outro item (a janela da proposta reaproveita o visor)
+  visor.querySelectorAll("[data-adesivos3d-controle]").forEach((velho) => velho.remove());
   aviso.hidden = false;
   aviso.textContent = "Carregando o 3D…";
   const [T, leitor, cores3d] = await Promise.all([
@@ -79,19 +87,31 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
   cena.add(contra);
 
   const camera = new T.PerspectiveCamera(32, 1, 0.01, 100);
-  const gltf = await new leitor.GLTFLoader().loadAsync(visor.dataset.modelo);
-  const objeto = gltf.scene;
-  const caixa = new T.Box3().setFromObject(objeto);
-  const tamanho = caixa.getSize(new T.Vector3());
-  // a máquina em pé no chão, com o centro no meio da tela
-  objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
-  objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
-  objeto.position.y -= caixa.min.y;
-  cena.add(objeto);
-  const raio = tamanho.length() / 2;
-  const alvo = new T.Vector3(0, tamanho.y / 2, 0);
-  camera.near = raio / 100;
-  camera.far = raio * 30;
+  const carregador = new leitor.GLTFLoader();
+  let gltf = await carregador.loadAsync(visor.dataset.modelo);
+  let objeto = null;
+  let raio = 1;
+  const alvo = new T.Vector3();
+  let sombra = null;
+
+  // a máquina em pé no chão, com o centro no meio da tela (a câmera mira o meio dela)
+  function vestir(novo) {
+    objeto = novo.scene;
+    const caixa = new T.Box3().setFromObject(objeto);
+    const tamanho = caixa.getSize(new T.Vector3());
+    objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
+    objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
+    objeto.position.y -= caixa.min.y;
+    cena.add(objeto);
+    raio = tamanho.length() / 2;
+    alvo.set(0, tamanho.y / 2, 0);
+    camera.near = raio / 100;
+    camera.far = raio * 30;
+    camera.updateProjectionMatrix();
+    if (sombra) sombra.scale.set(tamanho.x * 1.5, tamanho.z * 1.5, 1);
+    return tamanho;
+  }
+  const tamanho = vestir(gltf);
 
   // a sombra macia embaixo (um disco com degradê: leve e sem luz de sombra)
   const pintura = document.createElement("canvas");
@@ -102,7 +122,7 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
   degrade.addColorStop(1, "rgba(10,30,60,0)");
   g.fillStyle = degrade;
   g.fillRect(0, 0, 128, 128);
-  const sombra = new T.Mesh(
+  sombra = new T.Mesh(
     new T.PlaneGeometry(1, 1),
     new T.MeshBasicMaterial({ map: new T.CanvasTexture(pintura), transparent: true, depthWrite: false }),
   );
@@ -265,6 +285,8 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
   }
 
   // ---- as cores ----
+  function montarCores() {
+  if (coresCaixa) { coresCaixa.replaceChildren(); coresCaixa.hidden = true; }
   const cores = cores3d.coresDoObjeto(gltf);
   if (coresCaixa && cores.length > 1) {
     // o rótulo com o ícone da paleta: "Cores do brinquedo"
@@ -300,10 +322,62 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
     coresCaixa.replaceChildren(rotulo, ...botoes);
     coresCaixa.hidden = visor.hidden;
   }
+  }
+  montarCores();
+
+  // ---- trocar o .glb no mesmo visor (o adesivo): a câmera fica onde está ----
+  let vezDaTroca = 0;
+  async function trocar(url) {
+    if (solto || !url) return;
+    const vez = ++vezDaTroca;
+    aviso.hidden = false;
+    aviso.textContent = "Carregando o 3D…";
+    const novo = await carregador.loadAsync(url);
+    if (solto || vez !== vezDaTroca) {
+      novo.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+      return;
+    }
+    const velho = objeto;
+    cena.remove(velho);
+    velho.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      for (const m of [].concat(o.material || [])) {
+        for (const valor of Object.values(m)) if (valor && valor.isTexture) valor.dispose();
+        m.dispose();
+      }
+    });
+    gltf = novo;
+    vestir(novo);
+    visor.dataset.modelo = url;
+    montarCores();
+    aviso.hidden = true;
+    sujo = true;
+    acordar();
+  }
+
+  // ---- o controle dos adesivos sobre o 3D ----
+  if (visor.dataset.adesivos3d && visor.dataset.adesivos3dModulo) {
+    import(visor.dataset.adesivos3dModulo).then((modulo) => {
+      const modelos = modulo.lerModelos(visor.dataset.adesivos3d);
+      if (!modelos.length || solto) return;
+      const atual = Math.max(0, modelos.findIndex((m) => m.url === visor.dataset.modelo));
+      const campo = document.querySelector("[data-adesivo-escolhido]");
+      if (window.getComputedStyle(visor).position === "static") visor.style.position = "relative";
+      visor.appendChild(modulo.chipsDeAdesivo({
+        modelos,
+        atual,
+        aoEscolher: async (modelo) => {
+          await trocar(modelo.url);
+          // o adesivo escolhido segue para o carrinho como observação
+          if (campo) campo.value = modelo.nome;
+        },
+      }));
+    }).catch((erro) => console.error("Visor 3D: o controle dos adesivos não carregou", erro));
+  }
 
   aviso.hidden = true;
   visor.classList.add("produto-visor3d--pronto");
-  return { acordar, soltar: desligar };
+  return { acordar, soltar: desligar, trocar };
 }
 
 function limitar(valor, menor, maior) {

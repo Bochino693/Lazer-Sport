@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("auth", "0012_alter_user_first_name_max_length"),
-        ("core", "0164_strike_kids_mais_vivo"),
+        ("core", "0170_variantes_sem_origem"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

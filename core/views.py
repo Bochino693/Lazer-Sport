@@ -1164,10 +1164,14 @@ class BrinquedoInfoView(View):
         imagens_brinquedo = list(brinquedo.imagens_ordenadas)
         imagem_catalogo = brinquedo.imagem_catalogo
         componentes, faz_parte_de = _composicao_do_brinquedo(brinquedo)
-        # os adesivos (a mesma máquina com outra arte: core/variantes.py), com as fotos e o 3D de cada um
+        # os adesivos (a mesma máquina com outra arte, LEIA-ME 72): um objeto só, com os 3D de
+        # cada adesivo no mesmo visor -- o controle "Adesivo: A · B" troca o .glb ali mesmo
         from . import variantes as variantes_de_adesivo
 
-        variantes = variantes_de_adesivo.variantes_do_produto(brinquedo)
+        modelos_3d = variantes_de_adesivo.modelos_3d(brinquedo)
+        if objeto_3d is None and modelos_3d:
+            objeto_3d = {"url": modelos_3d[0]["url"]}
+        adesivos3d = [{"nome": m["nome"], "url": m["url"]} for m in modelos_3d]
 
         return {
             "contexto": {
@@ -1181,7 +1185,7 @@ class BrinquedoInfoView(View):
                 "imagens_brinquedo": imagens_brinquedo,
                 "permite_sob_medida": permite_sob_medida,
                 "objeto_3d": objeto_3d,
-                "variantes": variantes,
+                "adesivos3d": adesivos3d,
             },
             # As linhas da mensagem do WhatsApp, sem a última (o endereço
             # da página, que depende do host da requisição).
@@ -1198,32 +1202,15 @@ class BrinquedoInfoView(View):
         try:
             dados = get_cached_catalog_page("brinquedo", (id,), lambda: self._montar(id))
         except Http404:
-            # a ficha que virou o adesivo de outro produto: o endereço antigo (links,
-            # favoritos, orçamentos, pedidos) vai, para sempre, para o produto no adesivo dela
+            # a ficha da outra arte, juntada a outro produto (LEIA-ME 72): o endereço antigo
+            # (links, favoritos, orçamentos, pedidos) vai, para sempre, para o produto
             destino = variantes_de_adesivo.redirecionamento(id)
             if destino is None:
                 raise
-            return redirect(f"{reverse('brinquedo_detalhe', args=[destino[0]])}?adesivo={destino[1]}", permanent=True)
+            return redirect(reverse("brinquedo_detalhe", args=[destino]), permanent=True)
         brinquedo = dados["contexto"]["brinquedo"]
-
-        # O adesivo escolhido (?adesivo=<slug>): as fotos e o 3D dele, e ele na mensagem do orçamento.
-        variantes = dados["contexto"].get("variantes") or []
-        adesivo = variantes_de_adesivo.escolhida(variantes, request.GET.get("adesivo", ""))
-        extra = {}
         mensagem = list(dados["mensagem"])
-        if adesivo:
-            outro_3d = next((v for v in variantes if v["objeto_3d"] and v is not adesivo), None)
-            extra = {
-                "adesivo": adesivo,
-                "adesivo_sem_3d": not adesivo["objeto_3d"],
-                "adesivo_com_3d": outro_3d if not adesivo["objeto_3d"] else None,
-            }
-            if not adesivo["padrao"] or not dados["contexto"]["imagens_brinquedo"]:
-                extra["imagens_brinquedo"] = adesivo["imagens"]
-            extra["objeto_3d"] = (
-                (dados["contexto"]["objeto_3d"] if adesivo["padrao"] else None) or adesivo["objeto_3d"]
-            )
-            mensagem.insert(3, f"Adesivo: {adesivo['nome']}")
+        extra = {}
 
         # O contador de cliques é por visita: um UPDATE, fora do cache.
         _registrar_clique(BrinquedoClick, {"brinquedo_clicado_id": brinquedo.pk})
@@ -3342,8 +3329,30 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         if request.headers.get("If-None-Match") == etag:
             return aplicar_cache_condicional(HttpResponseNotModified(), etag)
 
+        from urllib.parse import urlencode
+
+        from sistema_interno.utils import endereco_do_site
+
+        # OS FILTROS DA TELA (chips: categoria, na loja / fora, com capa /
+        # sem capa). Valor desconhecido vale como "todos": a categoria vai
+        # direto para um filtro de número, e "?categoria=abc" derrubava a
+        # tela com ValueError (500) em vez de só mostrar tudo.
         categoria = request.GET.get("categoria", "todas")
+        if not str(categoria).isdigit():
+            categoria = "todas"
+        loja = request.GET.get("loja", "todos")
+        if loja not in ("sim", "nao"):
+            loja = "todos"
+        # (`filtro_capa`, e não `capa`: `capa` é a foto de cada brinquedo
+        # no laço de baixo, e o nome repetido trocava o filtro pela foto.)
+        filtro_capa = request.GET.get("capa", "todas")
+        if filtro_capa not in ("com", "sem"):
+            filtro_capa = "todas"
         busca = request.GET.get("q", "").strip()
+
+        # "Com capa" é a mesma conta do número do topo: o arquivo da capa
+        # (imagem_brinquedo) preenchido.
+        sem_capa = Q(imagem_brinquedo__isnull=True) | Q(imagem_brinquedo="")
 
         brinquedos = (
             Brinquedos.objects
@@ -3351,6 +3360,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "categorias_brinquedos",
                 "tags",
                 "imagens_brinquedo",
+                # os adesivos (LEIA-ME 72): o mesmo brinquedo com outra arte, com as fotos e o 3D de cada um
+                "variantes_adesivo",
                 *prefetch_do_objeto(),
             )
             .order_by("nome_brinquedo", "id")
@@ -3361,20 +3372,46 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 categorias_brinquedos__id=categoria
             ).distinct()
 
+        if loja == "sim":
+            brinquedos = brinquedos.filter(exibir_na_loja=True)
+        elif loja == "nao":
+            brinquedos = brinquedos.filter(exibir_na_loja=False)
+
+        if filtro_capa == "com":
+            brinquedos = brinquedos.exclude(sem_capa)
+        elif filtro_capa == "sem":
+            brinquedos = brinquedos.filter(sem_capa)
+
         if busca:
-            brinquedos = brinquedos.filter(
-                nome_brinquedo__icontains=busca
-            )
+            # O cartão mostra o número (#12): buscar por ele também acha.
+            filtro_busca = Q(nome_brinquedo__icontains=busca)
+            numero = busca.lstrip("#").strip()
+            if numero.isdigit():
+                filtro_busca |= Q(pk=int(numero))
+            brinquedos = brinquedos.filter(filtro_busca)
 
         paginator = Paginator(brinquedos, 18)
         page = request.GET.get("page")
         brinquedos_page = paginator.get_page(page)
 
-        categorias = CategoriasBrinquedos.objects.order_by(
-            "nome_categoria",
-            "id",
+        categorias = list(
+            CategoriasBrinquedos.objects
+            .annotate(total_brinquedos=Count("brinquedos", distinct=True))
+            .order_by("nome_categoria", "id")
         )
         tags = TagsBrinquedos.objects.order_by("nome_tags", "id")
+
+        estado = {"q": busca, "categoria": categoria, "loja": loja, "capa": filtro_capa}
+        padroes = {"", "todas", "todos"}
+
+        def endereco(**trocas):
+            """O endereço desta tela com um filtro trocado (e a página 1)."""
+            pares = [
+                (chave, valor)
+                for chave, valor in {**estado, **trocas}.items()
+                if valor not in padroes
+            ]
+            return request.path + ("?" + urlencode(pares) if pares else "")
 
         def formatar_decimal_br(valor, casas=2, milhares=False):
             if valor is None:
@@ -3406,11 +3443,24 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     "url": foto.imagem.url,
                 }
                 for foto in brinquedo.imagens_brinquedo.all()
-                if foto.tipo and foto.imagem
+                if foto.tipo and foto.imagem and not foto.variante_id
             ][:3]
+            objeto_3d = self._dados_do_objeto_3d(brinquedo)
+            adesivos = self._dados_dos_adesivos(brinquedo)
+            brinquedo.painel_adesivos = len(adesivos)
+
+            # O cartão da lista mostra quantas vistas o brinquedo tem e se
+            # tem objeto 3D (a capa antiga, sem tipo, conta como PERFIL,
+            # como no formulário).
+            vistas = {foto["tipo"] for foto in fotos}
+            if capa:
+                vistas.add("perfil")
+            brinquedo.painel_fotos = len(vistas)
+            brinquedo.painel_3d = bool(objeto_3d)
 
             brinquedos_dados.append({
                 "id": brinquedo.id,
+                "adesivos": adesivos,
                 "nome_brinquedo": brinquedo.nome_brinquedo or "",
                 "descricao": brinquedo.descricao or "",
                 "valor_brinquedo": (
@@ -3444,34 +3494,78 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "exibir_na_loja": brinquedo.exibir_na_loja,
                 "imagem_url": capa.url if capa else "",
                 "imagens": fotos,
-                "objeto_3d": self._dados_do_objeto_3d(brinquedo),
-                "categorias_ids": list(
-                    brinquedo.categorias_brinquedos.values_list(
-                        "id",
-                        flat=True,
-                    )
-                ),
-                "tags_ids": list(
-                    brinquedo.tags.values_list("id", flat=True)
-                ),
+                "objeto_3d": objeto_3d,
+                # Pelo .all(), que usa o prefetch: o values_list fazia duas
+                # consultas por brinquedo da página.
+                "categorias_ids": [
+                    cat.id for cat in brinquedo.categorias_brinquedos.all()
+                ],
+                "tags_ids": [tag.id for tag in brinquedo.tags.all()],
             })
 
-        todos = Brinquedos.objects.all()
+        numeros = Brinquedos.objects.aggregate(
+            total=Count("id"),
+            loja=Count("id", filter=Q(exibir_na_loja=True)),
+            sem_capa=Count("id", filter=sem_capa),
+        )
+        total = numeros["total"]
+        total_com_imagem = total - numeros["sem_capa"]
+
+        def opcoes(chave, lista):
+            return [
+                {
+                    "rotulo": rotulo,
+                    "total": quantos,
+                    "url": endereco(**{chave: valor}),
+                    "ativo": estado[chave] == valor,
+                }
+                for valor, rotulo, quantos in lista
+            ]
+
+        pares_sem_pagina = [
+            (chave, valor) for chave, valor in estado.items()
+            if valor not in padroes
+        ]
 
         context = {
             "brinquedos": brinquedos_page,
             "categorias": categorias,
             "tags": tags,
             "categoria_ativa": categoria,
+            "loja_ativa": loja,
+            "capa_ativa": filtro_capa,
             "busca": busca,
             "page_obj": brinquedos_page,
             "brinquedos_dados": brinquedos_dados,
-            "total_brinquedos": todos.count(),
-            "total_loja": todos.filter(exibir_na_loja=True).count(),
-            "total_com_imagem": todos.exclude(
-                imagem_brinquedo__isnull=True
-            ).exclude(imagem_brinquedo="").count(),
-            "total_categorias": categorias.count(),
+            "total_brinquedos": total,
+            "total_loja": numeros["loja"],
+            "total_com_imagem": total_com_imagem,
+            "total_categorias": len(categorias),
+            "filtros_loja": opcoes("loja", [
+                ("todos", "Todos", total),
+                ("sim", "Na loja", numeros["loja"]),
+                ("nao", "Fora da loja", total - numeros["loja"]),
+            ]),
+            "filtros_capa": opcoes("capa", [
+                ("todas", "Todas", total),
+                ("com", "Com capa", total_com_imagem),
+                ("sem", "Sem capa", numeros["sem_capa"]),
+            ]),
+            "filtros_categoria": opcoes("categoria", [
+                ("todas", "Todas", total),
+                *[
+                    (str(cat.id), cat.nome_categoria or "Sem nome", cat.total_brinquedos)
+                    for cat in categorias
+                ],
+            ]),
+            "ha_filtro": bool(busca) or any(
+                estado[chave] not in padroes
+                for chave in ("categoria", "loja", "capa")
+            ),
+            "limpar_filtros_url": request.path,
+            "query_sem_pagina": urlencode(pares_sem_pagina),
+            # "Ver no site": a página pública mora no site, e não aqui.
+            "site_publico": endereco_do_site(request).rstrip("/"),
         }
 
         response = render(
@@ -3536,6 +3630,100 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
         return redirect("brinquedos_admin")
 
+    @staticmethod
+    def _dados_dos_adesivos(brinquedo):
+        """Os adesivos do brinquedo para o cadastro (LEIA-ME 72): o nome, o padrão, o 3D e as fotos de cada um."""
+        variantes = [v for v in brinquedo.variantes_adesivo.all() if v.ativo]
+        fotos = [f for f in brinquedo.imagens_brinquedo.all() if f.variante_id and f.imagem]
+        saida = []
+        for variante in variantes:
+            if variante.padrao:
+                arquivo_3d = ""
+                registro = objeto_do_brinquedo(brinquedo, so_ativo=True)
+                if registro is not None:
+                    arquivo_3d = (registro.arquivo.name if registro.arquivo else registro.arquivo_estatico or "").split("/")[-1]
+                fotos_dele = []
+            else:
+                arquivo_3d = (variante.arquivo_3d.name if variante.arquivo_3d else variante.arquivo_estatico_3d or "").split("/")[-1]
+                fotos_dele = [{"id": f.id, "url": f.imagem.url} for f in sorted(fotos, key=lambda f: (f.ordem, f.id))
+                              if f.variante_id == variante.id]
+            saida.append({
+                "id": variante.id,
+                "nome": variante.nome,
+                "padrao": variante.padrao,
+                "arquivo_3d": arquivo_3d,
+                "fotos": fotos_dele,
+            })
+        return saida
+
+    def _adesivo_incluir(self, request):
+        """Um adesivo novo no brinquedo: o nome, o .glb dele e as fotos dele (o mesmo objeto, outra arte)."""
+        from django.core.exceptions import ValidationError
+        from django.utils.text import slugify
+
+        from .models import VarianteAdesivo
+        from .objetos_3d import validar_glb
+
+        brinquedo = get_object_or_404(Brinquedos, pk=request.POST.get("id"))
+        nome = (request.POST.get("adesivo_nome") or "").strip()[:60]
+        if not nome:
+            raise ErroDeFormulario("Adesivo: diga o nome (ex.: Alienígenas).")
+        slug = slugify(nome)[:60] or "adesivo"
+        if VarianteAdesivo.objects.filter(brinquedo=brinquedo, slug=slug).exists():
+            raise ErroDeFormulario(f"Adesivo: o {brinquedo.nome_brinquedo} já tem o adesivo {nome}.")
+        arquivo = request.FILES.get("adesivo_3d")
+        lido = {"cores": [], "medidas": []}
+        if arquivo:
+            try:
+                lido = validar_glb(arquivo)
+            except ValidationError as exc:
+                raise ErroDeFormulario(f"Adesivo, objeto 3D: {' '.join(exc.messages)}") from exc
+        fotos = request.FILES.getlist("adesivo_fotos")
+        for foto in fotos:
+            if foto.size > self.MAX_TAMANHO_IMAGEM:
+                raise ErroDeFormulario(f"Adesivo: a foto {foto.name} passa de 15 MB.")
+        # o primeiro adesivo de fora: o próprio brinquedo vira o adesivo padrão (as fotos e o 3D dele)
+        if not VarianteAdesivo.objects.filter(brinquedo=brinquedo, padrao=True).exists():
+            padrao = (request.POST.get("adesivo_padrao_nome") or "").strip()[:60] or "Original"
+            VarianteAdesivo.objects.create(brinquedo=brinquedo, nome=padrao, slug=slugify(padrao)[:60] or "original",
+                                           ordem=1, padrao=True)
+        ordem = max(VarianteAdesivo.objects.filter(brinquedo=brinquedo).values_list("ordem", flat=True), default=1) + 1
+        variante = VarianteAdesivo(brinquedo=brinquedo, nome=nome, slug=slug, ordem=ordem, padrao=False,
+                                   cores_3d=lido["cores"], medidas_3d=lido["medidas"])
+        if arquivo:
+            variante.arquivo_3d.save(arquivo.name, arquivo, save=False)
+        variante.save()
+        posicao = max(ImagemBrinquedo.objects.filter(brinquedo=brinquedo).values_list("ordem", flat=True), default=0)
+        for foto in fotos:
+            posicao += 1
+            imagem = ImagemBrinquedo(brinquedo=brinquedo, variante=variante, tipo=None, ordem=posicao,
+                                     papel_na_capa=ImagemBrinquedo.PAPEL_OUTRA_ARTE,
+                                     texto_alternativo=f"{brinquedo.nome_brinquedo} com o adesivo {nome}"[:180])
+            imagem.imagem.save(foto.name, foto, save=True)
+        return self._responder_adesivos(request, brinquedo, f"Adesivo {nome} incluído no {brinquedo.nome_brinquedo}.")
+
+    def _adesivo_tirar(self, request):
+        """Tira um adesivo (as fotos dele saem junto). O padrão (o próprio brinquedo) não sai."""
+        from .models import VarianteAdesivo
+
+        variante = get_object_or_404(VarianteAdesivo, pk=request.POST.get("adesivo_id"), brinquedo_id=request.POST.get("id"))
+        if variante.padrao:
+            raise ErroDeFormulario("O adesivo padrão é o próprio brinquedo: troque as fotos e o 3D dele acima.")
+        brinquedo, nome = variante.brinquedo, variante.nome
+        variante.delete()
+        # sobrou só o padrão: o brinquedo volta a não ter adesivos
+        if not VarianteAdesivo.objects.filter(brinquedo=brinquedo, padrao=False).exists():
+            VarianteAdesivo.objects.filter(brinquedo=brinquedo).delete()
+        return self._responder_adesivos(request, brinquedo, f"Adesivo {nome} tirado do {brinquedo.nome_brinquedo}.")
+
+    def _responder_adesivos(self, request, brinquedo, mensagem):
+        brinquedo = Brinquedos.objects.prefetch_related("variantes_adesivo", "imagens_brinquedo").get(pk=brinquedo.pk)
+        adesivos = self._dados_dos_adesivos(brinquedo)
+        if self._pede_json(request):
+            return JsonResponse({"status": "sucesso", "msg": mensagem, "id": brinquedo.pk, "adesivos": adesivos})
+        messages.success(request, mensagem)
+        return redirect("brinquedos_admin")
+
     @transaction.atomic
     def post(self, request):
         try:
@@ -3543,6 +3731,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
             if action == "delete":
                 return self._excluir(request)
+
+            if action == "adesivo_incluir":
+                return self._adesivo_incluir(request)
+
+            if action == "adesivo_tirar":
+                return self._adesivo_tirar(request)
 
             if action != "save":
                 raise ErroDeFormulario("Ação inválida.")
@@ -3593,7 +3787,19 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         )
 
     @staticmethod
-    def _parse_decimal(valor, nome_campo, limite=None):
+    def _parse_decimal(valor, nome_campo, limite=None, milhar=False):
+        """Número em português ("1.234,56", "4,7", "1234.5").
+
+        `milhar=True` (o preço): "18.000" sem vírgula é dezoito mil, como
+        se escreve no Brasil e como o campo de reais inteiros deixa passar
+        quando a pessoa digita o ponto do milhar e aperta Enter sem sair do
+        campo. Lido como 18.000 em inglês, virava R$ 18,00 sem ninguém
+        perceber. É a mesma regra de `sistema_interno.utils.decimal_br`.
+        Nas medidas e na avaliação o ponto continua sendo a vírgula ("1.25"
+        é um metro e vinte e cinco).
+        """
+        import re
+
         if valor is None or not str(valor).strip():
             return None
 
@@ -3611,7 +3817,9 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 .replace(".", "")
                 .replace(",", ".")
             )
-        elif normalizado.count(".") > 1:
+        elif normalizado.count(".") > 1 or (
+            milhar and re.fullmatch(r"[1-9]\d{0,2}\.\d{3}", normalizado)
+        ):
             normalizado = normalizado.replace(".", "")
 
         try:
@@ -3807,6 +4015,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             request.POST.get("valor_brinquedo"),
             "Valor",
             Decimal("99999999.99"),
+            milhar=True,
         )
         avaliacao = self._parse_decimal(
             request.POST.get("avaliacao"),
@@ -3829,11 +4038,25 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             Decimal("9999.99"),
         )
 
+        # A VOLTAGEM CABE EM 10 LETRAS (o campo do banco). "Não se aplica",
+        # que a lista oferecia, tem 13: no Postgres o salvar caía com
+        # DataError ("Erro: DataError" no topo do formulário). Brinquedo
+        # sem voltagem é justamente o que não usa energia -- a ficha do site
+        # esconde a linha --, então "Não se aplica" grava vazio.
+        voltz = (request.POST.get("voltz") or "").strip()
+        if voltz.casefold() in {"não se aplica", "nao se aplica"}:
+            voltz = ""
+        limite_voltz = Brinquedos._meta.get_field("voltz").max_length
+        if len(voltz) > limite_voltz:
+            raise ErroDeFormulario(
+                f"Voltagem: use no máximo {limite_voltz} caracteres."
+            )
+
         brinquedo.nome_brinquedo = nome
         brinquedo.descricao = descricao
         brinquedo.valor_brinquedo = preco
         brinquedo.avaliacao = avaliacao if avaliacao is not None else Decimal("0")
-        brinquedo.voltz = request.POST.get("voltz") or ""
+        brinquedo.voltz = voltz
         brinquedo.altura_m = altura
         brinquedo.largura_m = largura
         brinquedo.profundidade_m = profundidade

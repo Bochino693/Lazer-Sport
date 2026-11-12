@@ -36,6 +36,15 @@ class Command(BaseCommand):
     def handle(self, *args, modelo, fotos=False, **opcoes):
         modelo = _chave(modelo)
         dados = CADASTROS[modelo]
+        # a outra arte que já é um ADESIVO de um produto (LEIA-ME 72): um objeto só -- não volta a ser
+        # um produto à parte (as fotos e o 3D dela estão no adesivo; mude pelo painel)
+        from core.models import VarianteAdesivo
+
+        adesivo = VarianteAdesivo.objects.filter(arquivo_estatico_3d=dados.get("objeto_3d") or "-").select_related("brinquedo").first()
+        if adesivo is not None:
+            self.stdout.write(f"{dados['nome']} já é o adesivo {adesivo.nome} do {adesivo.brinquedo.nome_brinquedo} "
+                              f"(id {adesivo.brinquedo_id}): nada a cadastrar.")
+            return
         if modelo == "strike-kids" and not fotos:
             # conta o que achou no banco e deixa ativo, com as fotos e o 3D;
             # um erro (a subida das fotos, por exemplo) aparece aqui na tela

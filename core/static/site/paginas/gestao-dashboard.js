@@ -78,7 +78,7 @@
         ? '<path d="M' + px(0) + ',' + (T + util.y) + ' L' + pontos.join(' L') +
           ' L' + px(valores.length - 1) + ',' + (T + util.y) + ' Z" ' +
           'fill="url(#lsVendasFundo)"/>' +
-          '<polyline points="' + pontos.join(' ') + '" fill="none" stroke="#F2A93B" ' +
+          '<polyline points="' + pontos.join(' ') + '" fill="none" style="stroke:var(--acento)" ' +
           'stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>'
         : "";
 
@@ -88,9 +88,9 @@
         const v = (teto / 4) * n;
         const y = py(v);
         apoio += '<line x1="' + L + '" y1="' + y + '" x2="' + (LARG - R) +
-                 '" y2="' + y + '" stroke="rgba(196,182,160,.09)" stroke-width="1"/>';
+                 '" y2="' + y + '" style="stroke:rgba(var(--muted-rgb),.16)" stroke-width="1"/>';
         escala += '<text x="' + (L - 8) + '" y="' + (y + 4) +
-                  '" text-anchor="end" fill="#A2917A" font-size="11">R$ ' +
+                  '" text-anchor="end" style="fill:var(--muted)" font-size="11">R$ ' +
                   Math.round(v).toLocaleString('pt-BR') + '</text>';
       }
 
@@ -107,14 +107,14 @@
         const ancora = i === 0 ? "start"
           : (i === valores.length - 1 ? "end" : "middle");
         datas += '<text x="' + px(i) + '" y="' + (ALT - 12) +
-                 '" text-anchor="' + ancora + '" fill="#A2917A" font-size="11">' +
+                 '" text-anchor="' + ancora + '" style="fill:var(--muted)" font-size="11">' +
                  String(rotulo).replace(/[<&>]/g, '') + '</text>';
       });
 
       let bolinhas = '';
       valores.forEach(function (v, i) {
         bolinhas += '<circle class="dashboard-chart-ponto" cx="' + px(i) + '" cy="' + py(v) +
-                    '" r="3.4" fill="#FFD08A" stroke="#D98E22" stroke-width="2">' +
+                    '" r="3.4" style="fill:var(--acento-brilho);stroke:var(--acento-2)" stroke-width="2">' +
                     '<title>' + String(rotulos[i] || '').replace(/[<&>]/g, '') +
                     ': ' + dinheiro(v) + '</title></circle>';
       });
@@ -123,8 +123,8 @@
         '<svg viewBox="0 0 ' + LARG + ' ' + ALT + '" preserveAspectRatio="none" ' +
         'role="img" aria-label="Vendas por período" style="width:100%;height:100%">' +
         '<defs><linearGradient id="lsVendasFundo" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0" stop-color="#F2A93B" stop-opacity=".46"/>' +
-        '<stop offset="1" stop-color="#F2A93B" stop-opacity=".035"/>' +
+        '<stop offset="0" style="stop-color:var(--acento)" stop-opacity=".46"/>' +
+        '<stop offset="1" style="stop-color:var(--acento)" stop-opacity=".035"/>' +
         '</linearGradient></defs>' +
         apoio + serie + bolinhas + escala + datas +
         '</svg>';

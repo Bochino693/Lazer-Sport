@@ -1456,7 +1456,7 @@
     var pedido = fetch(gratis.abriu, {
       method: "POST", credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrfDaPagina() },
-      body: JSON.stringify({ jogo: config.jogo, gastar: true }),
+      body: JSON.stringify({ jogo: config.jogo, gastar: true, origem: "emulador" }),
     }).then(function (r) { return r.ok ? r.json() : livre; }).catch(function () { return livre; });
     return Promise.race([pedido, new Promise(function (ok) { setTimeout(function () { ok(livre); }, 2500); })]);
   }
@@ -1509,8 +1509,20 @@
       mostrarConviteGratis(true);
     }, 1000);
   }
+  /* Quem tem conta também avisa o site do Jogar (a jogada com data, para o painel: quem jogou,
+     quando e o quê). Sem esperar resposta: o jogo nunca espera o site. */
+  function avisarJogada() {
+    if (!config.registro || !window.fetch) return;
+    try {
+      fetch(config.registro, {
+        method: "POST", credentials: "same-origin", keepalive: true,
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfDaPagina() },
+        body: JSON.stringify({ jogo: config.jogo, origem: "emulador" }),
+      }).catch(function () { /* sem rede: segue */ });
+    } catch (e) { /* segue */ }
+  }
   function jogar(continuar) {
-    if (!gratis) { jogarDeVez(continuar); return; }
+    if (!gratis) { avisarJogada(); jogarDeVez(continuar); return; }
     if (perguntandoGratis || comecando || !consoleEsperando || gratisAcabou) return;
     perguntandoGratis = true;
     // o toque vale agora (o som e a tela cheia pedem o toque, e a resposta chega depois)

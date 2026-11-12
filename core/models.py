@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone as django_timezone
 from django.contrib.auth.models import User
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -324,34 +325,21 @@ class Brinquedos(Prime):
 
     @property
     def imagens_ordenadas(self):
-        """Galeria pública tipada, limitada a três imagens.
+        """Galeria pública tipada, limitada a três imagens (mais as da outra arte).
 
         Entra também a foto que era a capa antes da capa em cena (a seção 64
         do LEIA-ME: `papel_na_capa = "original"`, sem tipo, para o "perfil"
         ficar com a cena): a foto da equipe continua na galeria, logo depois.
+        Depois delas, até três fotos da OUTRA ARTE do mesmo brinquedo
+        (`papel_na_capa = "outra_arte"`, seção 72: os Alienígenas no Air Game
+        Kids, os Quadrinhos no Basquete Home).
 
         Com a galeria já trazida (`prefetch_related("imagens_brinquedo")`,
         como a página do brinquedo faz), a conta é feita na memória: o
         `.filter()` sobre o related manager montava uma consulta nova e
         jogava o prefetch fora. Mesma regra, mesma ordem.
         """
-        fotos_cache = getattr(self, "_prefetched_objects_cache", {}).get("imagens_brinquedo")
-        if fotos_cache is not None:
-            return sorted(
-                (
-                    foto for foto in fotos_cache
-                    if foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL
-                ),
-                key=lambda foto: (foto.ordem, foto.id),
-            )[:3]
-        return (
-            self.imagens_brinquedo
-            .filter(
-                (models.Q(tipo__isnull=False) & ~models.Q(tipo=""))
-                | models.Q(papel_na_capa=ImagemBrinquedo.PAPEL_ORIGINAL)
-            )
-            .order_by("ordem", "id")[:3]
-        )
+        return galeria_publica(self.imagens_brinquedo.all())
 
     @property
     def imagem_perfil(self):
@@ -491,12 +479,17 @@ class ImagemBrinquedo(Prime):
     # A capa em cena dos produtos do catálogo (core/capas_catalogo.py, o comando
     # `capas_em_cena`): a foto em cena vira a capa ("perfil") e a capa de antes
     # fica na galeria, sem tipo, marcada como a original -- é ela que o
-    # `--desfazer` põe de volta. Fora disso, vazio.
+    # `--desfazer` põe de volta. A OUTRA ARTE do mesmo brinquedo (LEIA-ME 72:
+    # o Air Game Kids com os Alienígenas, o Basquete Home com os Quadrinhos):
+    # as fotos da ficha que foi juntada a ele, na galeria depois das dele.
+    # Fora disso, vazio.
     PAPEL_CENA = "cena"
     PAPEL_ORIGINAL = "original"
+    PAPEL_OUTRA_ARTE = "outra_arte"
     PAPEL_CHOICES = (
         (PAPEL_CENA, "A capa em cena"),
         (PAPEL_ORIGINAL, "A capa de antes da cena"),
+        (PAPEL_OUTRA_ARTE, "Outra arte do mesmo brinquedo"),
     )
 
     brinquedo = models.ForeignKey(
@@ -538,6 +531,16 @@ class ImagemBrinquedo(Prime):
         verbose_name="Papel na capa em cena",
         help_text="Preenchido pelo comando capas_em_cena: a capa em cena e a capa de antes dela.",
     )
+    # a foto de um ADESIVO do produto (LEIA-ME 72: os Alienígenas do Air Game Kids); vazio, do produto
+    variante = models.ForeignKey(
+        "VarianteAdesivo",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="fotos",
+        verbose_name="Adesivo",
+        help_text="A foto de um adesivo do produto (a outra arte); vazio, a foto do próprio produto.",
+    )
 
     def __str__(self):
         tipo = self.get_tipo_display() if self.tipo else f"Foto {self.ordem}"
@@ -563,23 +566,49 @@ class ImagemBrinquedo(Prime):
 
 
 
+def _armazenamento_3d():
+    # chamado pelo campo (e não na hora do import): a escolha acompanha o
+    # settings de cada ambiente, inclusive o dos testes
+    from .objetos_3d import armazenamento
+
+    return armazenamento()
+
+
+def galeria_publica(fotos):
+    """A galeria pública a partir das fotos do brinquedo (já na memória ou um queryset).
+
+    As do produto -- as tipadas e a "original", as três primeiras pela ordem
+    -- e, depois, até três de cada um dos outros adesivos (seção 72: as fotos
+    com `variante`, as dos Alienígenas no Air Game Kids).
+    """
+    fotos = sorted(fotos, key=lambda foto: (foto.ordem, foto.id))
+    proprias = [
+        foto for foto in fotos
+        if not getattr(foto, "variante_id", None)
+        and (foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL)
+    ][:3]
+    dos_adesivos, por_adesivo = [], {}
+    for foto in fotos:
+        variante = getattr(foto, "variante_id", None)
+        if variante and por_adesivo.get(variante, 0) < 3:
+            por_adesivo[variante] = por_adesivo.get(variante, 0) + 1
+            dos_adesivos.append(foto)
+    return proprias + dos_adesivos
+
+
 class VarianteAdesivo(Prime):
-    """Um ADESIVO de um produto: a mesma máquina com outra arte (LEIA-ME, seção 72).
+    """Um ADESIVO do produto: a mesma máquina com outra arte (LEIA-ME, seção 72).
 
-    O cliente: "os dois devem se tornar o mesmo objeto, como um adesivo
-    diferente, ele quem deve ser o diferencial". O produto é um só (o card, a
-    página, o carrinho); o adesivo é a escolha dentro dele -- as fotos e o 3D
-    de cada um.
-
-    AS FOTOS E O 3D DE CADA ADESIVO são os de um produto do cadastro, a
-    `origem`: o adesivo padrão é o próprio produto (`origem` vazia: as fotos e
-    o objeto 3D dele); o outro adesivo aponta para a ficha que tinha as fotos
-    e o .glb dele -- a que era um produto à parte, agora DESATIVADA (sai das
-    listas) e redirecionada para cá (`?adesivo=<slug>`). Nada é copiado nem
-    apagado: pedidos, orçamentos e favoritos que apontam para ela continuam
-    valendo, e o painel continua editando as fotos de cada adesivo na ficha
-    dele. Para juntar outro par: um adesivo para cada ficha e a de fora
-    desativada (core/variantes.py, `juntar`).
+    O cliente: "DEVE MUDAR A ESTRUTURA DOS OBJETOS, DEIXAR SOMENTE UM MAS COM O
+    OUTRO ADESIVO E SEU RESPECTIVO OBJETO 3D". O produto é UM objeto (um
+    `Brinquedos`); cada adesivo é dele, com:
+      * as FOTOS dele: as `ImagemBrinquedo` do produto com `variante` = este;
+      * o 3D dele: o .glb enviado (`arquivo_3d`) ou o do site
+        (`arquivo_estatico_3d`), com o código, as cores e as medidas. O
+        adesivo padrão usa as fotos e o 3D do próprio produto.
+    `id_antigo`: o id do produto à parte que este adesivo era (o Air Game Kids
+    Alienígenas #54...), que foi juntado ao produto e apagado: o endereço
+    antigo redireciona para cá.
     """
 
     brinquedo = models.ForeignKey(
@@ -592,14 +621,27 @@ class VarianteAdesivo(Prime):
     slug = models.SlugField(max_length=60, verbose_name="No endereço", help_text="?adesivo=<este> abre a página neste adesivo.")
     ordem = models.PositiveSmallIntegerField(default=1, verbose_name="Ordem")
     padrao = models.BooleanField(default=False, verbose_name="Padrão", help_text="O adesivo que a página abre.")
-    origem = models.ForeignKey(
-        Brinquedos,
-        on_delete=models.PROTECT,
+    arquivo_3d = models.FileField(
+        upload_to="objetos_3d/",
+        storage=_armazenamento_3d,
+        blank=True,
+        verbose_name="Arquivo 3D (.glb)",
+    )
+    arquivo_estatico_3d = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Objeto 3D do site",
+        help_text="Caminho em static (ex.: site/arena/modelos/air-game-kids-alienigenas.glb), sem arquivo enviado.",
+    )
+    codigo_3d = models.SlugField(max_length=60, blank=True, verbose_name="Código na Arena")
+    cores_3d = models.JSONField(default=list, blank=True, verbose_name="Cores do 3D")
+    medidas_3d = models.JSONField(default=list, blank=True, verbose_name="Medidas do 3D")
+    id_antigo = models.PositiveIntegerField(
         null=True,
         blank=True,
-        related_name="variante_de",
-        verbose_name="Fotos e 3D de",
-        help_text="A ficha com as fotos e o objeto 3D deste adesivo; vazio, as do próprio produto.",
+        db_index=True,
+        verbose_name="Id antigo",
+        help_text="O id do produto à parte que este adesivo era (o endereço antigo redireciona para o produto).",
     )
 
     class Meta:
@@ -614,18 +656,18 @@ class VarianteAdesivo(Prime):
         return f"{self.brinquedo} — adesivo {self.nome}"
 
     @property
-    def ficha(self):
-        """O produto com as fotos e o 3D deste adesivo (a origem, ou o próprio produto)."""
-        return self.origem or self.brinquedo
+    def url_3d(self):
+        """O endereço do .glb deste adesivo (o enviado vence o do site); "" sem nenhum."""
+        if self.arquivo_3d:
+            try:
+                return self.arquivo_3d.url
+            except Exception:
+                return ""
+        if self.arquivo_estatico_3d:
+            from sistema_interno.templatetags.interno_extras import estatico
 
-
-
-def _armazenamento_3d():
-    # chamado pelo campo (e não na hora do import): a escolha acompanha o
-    # settings de cada ambiente, inclusive o dos testes
-    from .objetos_3d import armazenamento
-
-    return armazenamento()
+            return estatico(self.arquivo_estatico_3d)
+        return ""
 
 
 class ObjetoTresD(Prime):
@@ -2645,6 +2687,46 @@ class PartidasDoJogo(models.Model):
 
     def __str__(self):
         return f"{self.slug}: {self.partidas}"
+
+
+class JogadaRegistrada(models.Model):
+    """Cada Jogar de verdade, com data: a base das contas por período do painel.
+
+    `PartidasDoJogo` guarda só o total de cada jogo (o "Mais jogados" do
+    portal, no máximo uma vez a cada 30 min por visitante). Aqui fica CADA
+    jogada -- quando, qual jogo, de quem (a conta, se tinha) e por onde (a
+    página do jogo, o emulador, o app do portal, os jogos da casa) --, para o
+    painel contar hoje, a semana, o mês... e saber quem jogou com conta,
+    inclusive nos jogos de console, que não têm pontuação nem ranking.
+
+    A mesma pessoa no mesmo jogo dentro de `core.jogadas.REPETIDA_SEGUNDOS`
+    é a mesma jogada (o Jogar da página e o do emulador logo em seguida; o
+    recarregar da página). A equipe (staff) conta, marcada em `equipe`, para
+    o painel poder mostrar com ou sem ela.
+    """
+
+    jogo = models.SlugField(max_length=80)
+    usuario = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="jogadas_registradas",
+    )
+    equipe = models.BooleanField(default=False)
+    # quem não tem conta: um número tirado da sessão (não diz quem é; serve para contar pessoas)
+    visitante = models.CharField(max_length=16, blank=True, default="")
+    origem = models.CharField(max_length=12, blank=True, default="")
+    quando = models.DateTimeField(default=django_timezone.now)
+
+    class Meta:
+        verbose_name = "Jogada registrada"
+        verbose_name_plural = "Jogadas registradas"
+        ordering = ("-quando",)
+        indexes = [
+            models.Index(fields=("jogo", "-quando"), name="jogada_jogo_quando"),
+            models.Index(fields=("-quando",), name="jogada_quando"),
+            models.Index(fields=("usuario", "-quando"), name="jogada_usuario_quando"),
+        ]
+
+    def __str__(self):
+        return f"{self.jogo} · {self.quando:%d/%m %H:%M}"
 
 
 class AnuncioJogos(Prime):

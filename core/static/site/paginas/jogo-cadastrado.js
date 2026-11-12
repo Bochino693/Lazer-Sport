@@ -207,7 +207,7 @@
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-      body: JSON.stringify({ jogo: slug, gastar: !doConsole }),
+      body: JSON.stringify({ jogo: slug, gastar: !doConsole, origem: doConsole ? "pagina" : "html" }),
     }).then(function (r) { return r.ok ? r.json() : livre; }).catch(function () { return livre; });
     const espera = new Promise(function (pronto) { setTimeout(function () { pronto(livre); }, ESPERA_MAXIMA); });
     return Promise.race([pedido, espera]);

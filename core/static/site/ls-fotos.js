@@ -24,6 +24,9 @@
    preenche. Fora do Cloudinary, ou se o recorte não carregar, a foto
    original preenche a caixa ("cover") centrada um pouco acima do meio.
    Vale para todos os cartões e para a vitrine do quadro inicial.
+
+   AS FOTOS QUE GIRAM (ls-giro.js, LEIA-ME 72) passam pelas mesmas regras:
+   `window.LSFotos.preparar` e `vestirCaixa`.
    ====================================================================== */
 (function () {
   "use strict";
@@ -126,6 +129,48 @@
     foto.removeAttribute("sizes");
     foto.setAttribute("src", recorte);
   };
+
+  /**
+   * A foto `url` pronta para a `caixa`, pelas mesmas regras do cartão (para
+   * o ls-giro.js, que reveza as fotos do card): { src, cheia, enquadrada }.
+   * `cheia`: a foto tem fundo (vai de ponta a ponta); `enquadrada`: é o
+   * recorte no formato da caixa pelo conteúdo (o `src` já é o recorte).
+   */
+  const preparar = async (url, caixa) => {
+    const caminho = url.split("?")[0].split("#")[0];
+    let cheia = null;
+    let proporcao = 0;
+    const memoria = lembrado(url);
+    if (memoria !== null) {
+      const [c, p] = memoria.split(":");
+      cheia = c === "1";
+      proporcao = Number(p) || 0;
+    } else {
+      const sonda = await sondar(url);
+      if (sonda) {
+        cheia = SEM_TRANSPARENCIA.test(caminho) ? true : sonda.cheia;
+        proporcao = sonda.proporcao || 0;
+        if (cheia !== null) lembrar(url, `${cheia ? 1 : 0}:${proporcao.toFixed(3)}`);
+      } else if (SEM_TRANSPARENCIA.test(caminho)) {
+        cheia = true;
+      }
+    }
+    if (cheia === null) cheia = caixa.classList.contains("foto-cheia");
+    if (cheia && outroFormato(caixa, proporcao)) {
+      const recorte = enquadrada(url, caixa);
+      return { src: recorte || url, cheia: true, enquadrada: true };
+    }
+    return { src: url, cheia, enquadrada: false };
+  };
+
+  /** As classes da caixa para a foto que ela mostra (o que `marcar` faz no cartão). */
+  const vestirCaixa = (caixa, pronta) => {
+    caixa.classList.toggle("foto-cheia", Boolean(pronta.cheia));
+    caixa.classList.toggle("foto-enquadrada", Boolean(pronta.cheia && pronta.enquadrada));
+  };
+
+  // para o ls-giro.js: as mesmas caixas, a mesma foto, as mesmas regras (sem duplicar)
+  window.LSFotos = { CARTOES, fotoDa, preparar, vestirCaixa };
 
   const decidir = (caixa) => {
     if (decididos.has(caixa)) return;

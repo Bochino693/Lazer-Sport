@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div data-vivo data-vivo-url="{% url 'jogos_ao_vivo' %}?formato=json" data-vivo-segundos="{{ atualiza }}">
+<div data-vivo data-vivo-url="{% url 'jogos_ao_vivo' %}?formato=json&periodo={{ vivo.jogadas.periodo }}{% if not vivo.jogadas.com_equipe %}&equipe=0{% endif %}" data-vivo-segundos="{{ atualiza }}">
 
 <section class="ls-games-hero">
   <div class="ls-hero-cabeca">
@@ -48,6 +48,46 @@
     <strong class="ls-metric-value" data-vivo-n="contas_hoje">{{ vivo.contas.hoje }}</strong>
     <span class="ls-metric-note"><span data-vivo-n="contas_semana">{{ vivo.contas.semana }}</span> nos últimos 7 dias · <span data-vivo-n="jogadores_hoje">{{ vivo.jogadores_hoje }}</span> jogaram hoje com conta</span>
   </article>
+</section>
+
+<section class="ls-vivo-caixa ls-vivo-periodo" aria-labelledby="vivoPeriodoTitulo">
+  <div class="ls-vivo-periodo-topo">
+    <h2 id="vivoPeriodoTitulo"><i class="bi bi-calendar3" aria-hidden="true"></i> Jogadas · {{ vivo.jogadas.rotulo }}</h2>
+    <nav class="ls-vivo-chips" aria-label="Período">
+      {% for chave, rotulo in periodos %}
+      <a href="?periodo={{ chave }}{% if not vivo.jogadas.com_equipe %}&equipe=0{% endif %}" class="ls-vivo-chip{% if chave == vivo.jogadas.periodo %} is-ativo{% endif %}"{% if chave == vivo.jogadas.periodo %} aria-current="page"{% endif %}>{{ rotulo }}</a>
+      {% endfor %}
+      <a href="?periodo={{ vivo.jogadas.periodo }}{% if vivo.jogadas.com_equipe %}&equipe=0{% endif %}" class="ls-vivo-chip ls-vivo-chip--equipe{% if not vivo.jogadas.com_equipe %} is-ativo{% endif %}">{% if vivo.jogadas.com_equipe %}Tirar a equipe{% else %}Sem a equipe{% endif %}</a>
+    </nav>
+  </div>
+  <div class="ls-vivo-periodo-numeros">
+    <div><strong data-vivo-n="periodo_jogadas">{{ vivo.jogadas.jogadas }}</strong><span>jogadas</span></div>
+    <div><strong data-vivo-n="periodo_com_conta">{{ vivo.jogadas.com_conta }}</strong><span>pessoas com conta</span></div>
+    <div><strong data-vivo-n="periodo_visitantes">{{ vivo.jogadas.visitantes }}</strong><span>visitantes sem conta</span></div>
+    <div><strong data-vivo-n="periodo_equipe">{{ vivo.jogadas.equipe }}</strong><span>da equipe{% if not vivo.jogadas.com_equipe %} (fora da conta){% endif %}</span></div>
+  </div>
+  <div class="ls-vivo-periodo-listas">
+    <div>
+      <h3>Jogos</h3>
+      <ol class="ls-vivo-barras" data-vivo-lista="periodo_jogos" data-vivo-vazio="Nenhuma jogada neste período.">
+        {% for j in vivo.jogadas.por_jogo %}
+        <li style="--cor: {{ j.cor }}; --p: {% widthratio j.n vivo.jogadas.maior 100 %}%"><span>{{ j.nome }}{% if j.casa %} <em>da casa</em>{% endif %}</span><b>{{ j.n }}</b></li>
+        {% empty %}
+        <li class="ls-vivo-vazio">Nenhuma jogada neste período.</li>
+        {% endfor %}
+      </ol>
+    </div>
+    <div>
+      <h3>Quem jogou com conta</h3>
+      <ol class="ls-vivo-ranking" data-vivo-lista="periodo_quem" data-vivo-vazio="Ninguém com conta jogou neste período.">
+        {% for q in vivo.jogadas.quem %}
+        <li><span>{{ q.nome|default:"(sem nome)" }}{% if q.equipe %} <em>equipe</em>{% endif %}</span><strong>{{ q.jogadas }}</strong></li>
+        {% empty %}
+        <li class="ls-vivo-vazio">Ninguém com conta jogou neste período.</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
 </section>
 
 <div class="ls-vivo-grade">
@@ -97,7 +137,8 @@
 </div>
 
 <p class="ls-vivo-nota"><i class="bi bi-info-circle" aria-hidden="true"></i>
-  Como contamos: cada aba do portal avisa o site a cada 30 segundos (por aparelho, sem guardar login nem IP; robôs não contam). Quem fecha a aba sai na hora; quem some sai em até 75 segundos. O número de agora zera quando o site é publicado de novo e volta em meio minuto. As partidas e o ranking ficam guardados.</p>
+  Como contamos: cada aba do portal avisa o site a cada 30 segundos (por aparelho, sem guardar login nem IP; robôs não contam). Quem fecha a aba sai na hora; quem some sai em até 75 segundos. O número de agora zera quando o site é publicado de novo e volta em meio minuto. As partidas e o ranking ficam guardados.
+  As JOGADAS POR PERÍODO contam cada Jogar (da página do jogo, do emulador, do app do portal e dos jogos da casa), com conta ou sem; a mesma pessoa no mesmo jogo em até 3 minutos é uma jogada só. A equipe conta, marcada, e pode sair da conta. O "Mais jogados" do portal conta no máximo uma vez a cada 30 minutos por pessoa e jogo.</p>
 </div>
 {% endblock %}
 
@@ -145,7 +186,9 @@
   }
   function desenhar(d) {
     var n = { online: d.online, jogando_total: d.jogando_total, partidas_total: d.partidas_total,
-              contas_hoje: d.contas.hoje, contas_semana: d.contas.semana, jogadores_hoje: d.jogadores_hoje };
+              contas_hoje: d.contas.hoje, contas_semana: d.contas.semana, jogadores_hoje: d.jogadores_hoje,
+              periodo_jogadas: d.jogadas.jogadas, periodo_com_conta: d.jogadas.com_conta,
+              periodo_visitantes: d.jogadas.visitantes, periodo_equipe: d.jogadas.equipe };
     Object.keys(n).forEach(function (k) {
       raiz.querySelectorAll('[data-vivo-n="' + k + '"]').forEach(function (el) { el.textContent = String(n[k]); });
     });
@@ -155,6 +198,10 @@
     lista("mais_jogados", barras(d.mais_jogados, d.maior_partidas));
     lista("ranking", d.ranking.map(function (r) {
       return item("", [["b", r.posicao + "º"], ["span", r.nome], ["small", r.jogos + (r.jogos === 1 ? " jogo" : " jogos")], ["strong", String(r.pontos)]]);
+    }));
+    lista("periodo_jogos", barras(d.jogadas.por_jogo, d.jogadas.maior));
+    lista("periodo_quem", d.jogadas.quem.map(function (q) {
+      return item("", [["span", q.nome || "(sem nome)", q.equipe ? "equipe" : ""], ["strong", String(q.jogadas)]]);
     }));
     lista("campeoes", d.campeoes.map(function (c) {
       return item("", [["span", c.jogo], ["b", c.nome], ["strong", String(c.pontos)]], "--cor: " + c.cor);

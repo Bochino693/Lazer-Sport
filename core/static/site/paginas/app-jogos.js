@@ -121,7 +121,7 @@
     var pedido = fetch(URL_ABRIU, {
       method: "POST", credentials: "same-origin",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
-      body: JSON.stringify({ jogo: slug }),
+      body: JSON.stringify({ jogo: slug, origem: "app" }),
     }).then(function (r) { return r.ok ? r.json() : livre; }).catch(function () { return livre; });
     return Promise.race([pedido, new Promise(function (ok) { setTimeout(function () { ok(livre); }, 2500); })]);
   }

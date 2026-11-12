@@ -20,6 +20,7 @@ sustenta isso:
     quem reabre é a equipe, dando nova validade.
 """
 
+import json
 import logging
 
 from django.conf import settings
@@ -32,7 +33,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
-from . import arena
+from . import arena, variantes
 from .impressao import densidade, peso_do_documento
 from .objetos_3d import tabela_pronta
 from sistema_interno.templatetags.interno_extras import estatico
@@ -95,7 +96,9 @@ def modelo_3d_do_item(item):
         if item.brinquedo_id and item.brinquedo:
             from .views import modelo_3d_da_vitrine
 
-            return modelo_3d_da_vitrine(item.brinquedo)
+            # o produto com adesivos sem 3D próprio (o Basquete Home): o 3D do adesivo que tem
+            return modelo_3d_da_vitrine(item.brinquedo) or next(
+                (m["url"] for m in variantes.modelos_do_item(item)), "")
         if item.peca_id:
             return ""
         modelo = arena.modelo_da_maquina(item.descricao or "")
@@ -130,8 +133,14 @@ def itens_em_3d(orcamento):
 def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     """Dados compartilhados pela página pública e pela prévia interna."""
     itens = list(orcamento.itens.all())
+    com_adesivos = variantes.produtos_com_adesivos()
     for item in itens:
         item.modelo_3d = modelo_3d_do_item(item)
+        # os adesivos (LEIA-ME 72): o produto é um só, com um 3D por adesivo para trocar no "Ver em 3D"
+        modelos = variantes.modelos_do_item(item, com_adesivos)
+        item.adesivos3d = json.dumps([{"nome": m["nome"], "url": m["url"]} for m in modelos]) if modelos else ""
+        if not item.modelo_3d and modelos:
+            item.modelo_3d = modelos[0]["url"]
     endereco_cliente = (
         orcamento.cliente.endereco_principal
         if orcamento.cliente_id and orcamento.cliente else None

@@ -1541,61 +1541,8 @@
 
 
 /* =========================================================
-   OS ADESIVOS (LEIA-ME, seção 72): "Adesivo: Astronautas · Alienígenas".
-   Cada ficha é um link para a página no adesivo dela; a escolhida fica
-   acesa. O botão "3D no adesivo X" aparece quando o adesivo da página só
-   tem fotos.
+   OS ADESIVOS (LEIA-ME, seção 72): o produto é um só; o controle
+   "Adesivo: A · B" fica sobre o 3D (site/arena/adesivos3d.js traz o
+   estilo dele). No carrinho, o adesivo escolhido vai ao lado do nome.
 ========================================================= */
-.produto-adesivos {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin: 6px 0 14px;
-}
-
-.produto-adesivos-rotulo {
-    font-weight: 700;
-    color: #cbd5e1;
-    margin-right: 2px;
-}
-
-.produto-adesivo {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 12px 4px 4px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, .35);
-    background: rgba(15, 23, 42, .55);
-    color: #e2e8f0;
-    font-weight: 600;
-    text-decoration: none;
-    line-height: 1;
-    transition: border-color .15s ease, background .15s ease;
-}
-
-.produto-adesivo img {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #0b1532;
-}
-
-.produto-adesivo i { font-size: .8em; opacity: .75; }
-
-.produto-adesivo:hover { border-color: rgba(96, 165, 250, .8); }
-
-.produto-adesivo.ativo {
-    border-color: #3b82f6;
-    background: rgba(37, 99, 235, .28);
-    color: #fff;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, .25);
-}
-
-.produto-adesivo:focus-visible { outline: 3px solid #3fd0ff; outline-offset: 2px; }
-
-.produto-ver-3d--outro { text-decoration: none; }
-
 .item-adesivo { color: #94a3b8; font-weight: 500; }
