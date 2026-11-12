@@ -662,6 +662,14 @@
                 posicoes.append(vaga);
             });
             item.append(posicoes);
+            if (adesivo.precisa_foto_com_fundo) {
+                const aviso = document.createElement('p');
+                aviso.className = 'bq-adesivo-aviso';
+                aviso.innerHTML = '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> ';
+                aviso.append(document.createTextNode(
+                    'Precisa de foto com fundo: as sem fundo ficam como recorte para artes, e até lá o site mostra a que tem.'));
+                item.append(aviso);
+            }
             // o 3D do adesivo
             const tres = document.createElement('div');
             tres.className = 'bq-adesivo-3d';

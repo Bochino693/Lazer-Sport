@@ -3471,6 +3471,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 .replace("X", ".")
             )
 
+        from . import conferir_fotos
+
         brinquedos_dados = []
         for brinquedo in brinquedos_page:
             capa = brinquedo.imagem_catalogo
@@ -3487,6 +3489,10 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             objeto_3d = self._dados_do_objeto_3d(brinquedo)
             adesivos = self._dados_dos_adesivos(brinquedo)
             brinquedo.painel_adesivos = len(adesivos)
+            # sem nenhuma foto com fundo, o site mostra a que tem: o painel avisa (LEIA-ME 72)
+            brinquedo.painel_sem_fundo = conferir_fotos.sem_foto_com_fundo(
+                [f for f in brinquedo.imagens_brinquedo.all() if f.imagem], brinquedo.adesivo_padrao_id
+            ) and any(f.imagem for f in brinquedo.imagens_brinquedo.all())
 
             # O cartão da lista mostra quantas vistas o brinquedo tem e se
             # tem objeto 3D (a capa antiga, sem tipo, conta como PERFIL,
@@ -3705,6 +3711,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "arquivo_3d": arquivo_3d,
                 "posicoes": posicoes,
                 "outras": [{"id": f.id, "url": f.imagem.url} for f in dele if not f.tipo][:6],
+                # nenhuma foto com fundo nas posições: o site mostra a que tem; o painel avisa
+                "precisa_foto_com_fundo": not any(f.tipo for f in dele),
                 # o recorte para artes (sem fundo): só aqui, para baixar; nunca no site
                 "recortes": [
                     {"id": f.id, "url": f.imagem.url, "arquivo": (f.imagem.name or "").split("/")[-1]}
@@ -3777,7 +3785,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         """A foto sem fundo: fica guardada no adesivo como recorte para artes (só no painel)."""
         ordem = max(ImagemBrinquedo.objects.filter(brinquedo=brinquedo).values_list("ordem", flat=True), default=0) + 1
         foto = ImagemBrinquedo(brinquedo=brinquedo, variante=variante, tipo=None, ordem=ordem,
-                               papel_na_capa=ImagemBrinquedo.PAPEL_RECORTE,
+                               papel_na_capa=ImagemBrinquedo.PAPEL_RECORTE, fundo="sem",
                                texto_alternativo=f"{brinquedo.nome_brinquedo} ({variante.nome}): recorte para artes"[:180])
         foto.imagem.save(arquivo.name, arquivo, save=True)
         return foto
@@ -3793,9 +3801,14 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         foto = ImagemBrinquedo.objects.filter(brinquedo=brinquedo, variante=variante, tipo=tipo).first()
         if foto is None and variante.padrao:
             foto = ImagemBrinquedo.objects.filter(brinquedo=brinquedo, variante__isnull=True, tipo=tipo).first()
+        if foto is not None and foto.fora_do_site:
+            # a sem fundo que estava na posição sai dela e fica guardada (o recorte para artes)
+            ImagemBrinquedo.objects.filter(pk=foto.pk).update(tipo=None)
+            foto = None
         if foto is None:
             foto = ImagemBrinquedo(brinquedo=brinquedo, variante=variante, tipo=tipo, ordem=ordem)
         foto.variante = variante
+        foto.fundo = "com"
         foto.texto_alternativo = f"{brinquedo.nome_brinquedo} ({variante.nome}): {dict(self.POSICOES)[tipo].lower()}"[:180]
         foto.imagem.save(arquivo.name, arquivo, save=True)
         if variante.padrao and tipo == "perfil":
@@ -4121,6 +4134,55 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
         return arquivos, remover, tipos_finais
 
+    @staticmethod
+    def _fotos_sem_fundo(arquivos):
+        """As posições cuja foto enviada não tem fundo (core.conferir_fotos.sem_fundo)."""
+        from . import conferir_fotos
+
+        brancas = set()
+        for tipo, arquivo in arquivos.items():
+            if not arquivo:
+                continue
+            try:
+                if conferir_fotos.sem_fundo(arquivo):
+                    brancas.add(tipo)
+            except Exception:  # o Pillow não abriu: o campo de imagem confere depois
+                continue
+        return brancas
+
+    def _marcar_fundo(self, brinquedo, arquivos, brancas):
+        """As fotos enviadas, conferidas: a sem fundo vira recorte para artes (fica, fora do site).
+
+        A capa sem fundo dá lugar à primeira foto com fundo do padrão
+        (core.conferir_fotos.ajustar_capa). Devolve o aviso para a pessoa ("" sem).
+        """
+        from . import conferir_fotos
+        from .models import adesivo_padrao_de
+
+        padrao = adesivo_padrao_de(brinquedo)
+        do_padrao = brinquedo.imagens_brinquedo.filter(Q(variante__isnull=True) | Q(variante=padrao))
+        for tipo, arquivo in arquivos.items():
+            if not arquivo:
+                continue
+            foto = do_padrao.filter(tipo=tipo).order_by("ordem", "id").first()
+            if foto is None:
+                continue
+            if tipo in brancas:
+                ImagemBrinquedo.objects.filter(pk=foto.pk).update(papel_na_capa=ImagemBrinquedo.PAPEL_RECORTE, fundo="sem")
+            else:
+                papel = "" if foto.papel_na_capa == ImagemBrinquedo.PAPEL_RECORTE else foto.papel_na_capa
+                ImagemBrinquedo.objects.filter(pk=foto.pk).update(papel_na_capa=papel, fundo="com")
+        brinquedo.refresh_from_db()
+        conferir_fotos.ajustar_capa(brinquedo, Brinquedos, ImagemBrinquedo, avisar=lambda *_a: None)
+        if not brancas:
+            return ""
+        fotos = list(brinquedo.imagens_brinquedo.all())
+        aviso = (f" {len(brancas)} foto(s) sem fundo ficaram guardadas como recorte para artes (fora do site,"
+                 " dos cards e dos carrosséis).")
+        if conferir_fotos.sem_foto_com_fundo(fotos, brinquedo.adesivo_padrao_id):
+            aviso += " Este brinquedo precisa de uma foto com fundo: até lá, o site mostra a que tem."
+        return aviso
+
     def _gravar_imagens(self, brinquedo, arquivos, remover, tipos_finais):
         # as posições daqui são as do ADESIVO PADRÃO (LEIA-ME 72); as dos outros, na seção Adesivos
         from .models import adesivo_padrao_de
@@ -4239,14 +4301,19 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             request.POST.get("exibir_na_loja") == "on"
         )
 
+        # a foto sem fundo (branca ou transparente) vira recorte para artes sozinha (LEIA-ME 72)
+        brancas = self._fotos_sem_fundo(arquivos)
+
         perfil_novo = arquivos.get("perfil")
         if perfil_novo:
             brinquedo.imagem_brinquedo = perfil_novo
+            brinquedo.capa_sem_fundo = ""  # a capa nova: a conferência começa de novo
 
         criando = not brinquedo.pk
         brinquedo.save()
 
         self._gravar_imagens(brinquedo, arquivos, remover, tipos_finais)
+        aviso_do_fundo = self._marcar_fundo(brinquedo, arquivos, brancas)
         self._gravar_objeto_3d(brinquedo, *objeto_3d)
 
         brinquedo.categorias_brinquedos.set(
@@ -4262,7 +4329,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 if criando else
                 f"Brinquedo '{brinquedo.nome_brinquedo}' atualizado "
                 "com sucesso."
-            ),
+            ) + aviso_do_fundo,
             brinquedo_id=brinquedo.pk,
         )
 

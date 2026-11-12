@@ -236,6 +236,16 @@ class Brinquedos(Prime):
         related_name="+",
         verbose_name="Adesivo padrão",
     )
+    # A CAPA SEM FUNDO (LEIA-ME 72: "de forma alguma use as fotos de fundo branco"): quando a capa
+    # (`imagem_brinquedo`) era uma foto sem fundo e o brinquedo tem uma com fundo, a capa passa a
+    # ser a com fundo e a de antes fica guardada aqui (e como recorte para artes, na galeria).
+    capa_sem_fundo = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Capa de antes, sem fundo",
+        help_text="A capa sem fundo que saiu do site (guardada para as artes; core.conferir_fotos).",
+    )
 
     exibir_na_loja = models.BooleanField(
         default=False,
@@ -364,6 +374,7 @@ class Brinquedos(Prime):
                     if getattr(foto, "tipo", None) == "perfil"
                     and getattr(foto, "imagem", None)
                     and self.e_do_padrao(foto)
+                    and getattr(foto, "papel_na_capa", "") not in ImagemBrinquedo.PAPEIS_FORA_DO_SITE
                 ),
                 None,
             )
@@ -373,6 +384,7 @@ class Brinquedos(Prime):
                 self.imagens_brinquedo
                 .filter(tipo="perfil")
                 .filter(models.Q(variante__isnull=True) | models.Q(variante_id=self.adesivo_padrao_id))
+                .exclude(papel_na_capa__in=ImagemBrinquedo.PAPEIS_FORA_DO_SITE)
                 .order_by("ordem", "id")
                 .first()
             )
@@ -424,6 +436,19 @@ class Brinquedos(Prime):
             .first()
         )
 
+        fora = ImagemBrinquedo.PAPEIS_FORA_DO_SITE
+        if principal is not None and principal.papel_na_capa in fora:
+            # A FRENTE É UMA FOTO SEM FUNDO (o recorte para artes, LEIA-ME 72): ela nunca é
+            # trocada por cima (o arquivo dela continua guardado). A capa é ela mesma (o
+            # brinquedo ainda não tem foto com fundo) ou uma foto com fundo da galeria (a
+            # capa que core.conferir_fotos pôs): nada a fazer. A capa é um arquivo novo (a
+            # pessoa mandou outra frente): a sem fundo sai da posição e a nova entra.
+            capa = self.imagem_brinquedo.name
+            if principal.imagem.name == capa or self.imagens_brinquedo.filter(imagem=capa).exists():
+                return principal
+            ImagemBrinquedo.objects.filter(pk=principal.pk).update(tipo=None)
+            principal = None
+
         if principal is None:
             # Só adota uma foto antiga que ainda não foi classificada.
             # Sem esse filtro, uma galeria sem PERFIL transformava o
@@ -431,6 +456,7 @@ class Brinquedos(Prime):
             principal = (
                 self.imagens_brinquedo
                 .filter(tipo__isnull=True, ordem=1)
+                .exclude(papel_na_capa__in=fora)
                 .first()
             )
 
@@ -562,6 +588,16 @@ class ImagemBrinquedo(Prime):
         verbose_name="Descrição da imagem",
         help_text="Descreva o que aparece na foto para acessibilidade e busca.",
     )
+    # a conferência do fundo (core.conferir_fotos): "" ainda não conferida; "com" ou "sem" fundo
+    FUNDO_CHOICES = (("", "Não conferida"), ("com", "Com fundo"), ("sem", "Sem fundo"))
+    fundo = models.CharField(
+        max_length=3,
+        choices=FUNDO_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Fundo",
+        help_text="Conferido sozinho (core.conferir_fotos): a foto sem fundo vira recorte para artes.",
+    )
     papel_na_capa = models.CharField(
         max_length=10,
         choices=PAPEL_CHOICES,
@@ -639,8 +675,11 @@ def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
     adesivo conta como dele). Só as fotos com posição (`tipo`), como antes ("a
     galeria pública tipada"): as outras ficam guardadas, no painel. NUNCA a
     foto sem fundo: a de fundo branco (`papel_na_capa = "original"`, a de
-    estúdio de antes da capa em cena) e o recorte para artes (`"recorte"`)
-    ficam no banco, mas não aparecem. Funciona com as fotos já na memória.
+    estúdio de antes da capa em cena) e o recorte para artes (`"recorte"`,
+    marcado sozinho por core.conferir_fotos) ficam no banco, mas não
+    aparecem -- a não ser que o adesivo não tenha NENHUMA foto com fundo: aí
+    a galeria mostra o que tem (o card não fica vazio) e o painel avisa
+    "precisa de foto com fundo". Funciona com as fotos já na memória.
     """
     if adesivo_id is None:
         def do_adesivo(foto):
@@ -648,15 +687,20 @@ def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
     else:
         def do_adesivo(foto):
             return getattr(foto, "variante_id", None) == adesivo_id
+    do_adesivo_todas = [foto for foto in fotos if do_adesivo(foto) and getattr(foto, "imagem", None)]
     fotos = [
-        foto for foto in fotos
-        if do_adesivo(foto) and foto.tipo and getattr(foto, "imagem", None)
-        and getattr(foto, "papel_na_capa", "") not in ImagemBrinquedo.PAPEIS_FORA_DO_SITE
+        foto for foto in do_adesivo_todas
+        if foto.tipo and getattr(foto, "papel_na_capa", "") not in ImagemBrinquedo.PAPEIS_FORA_DO_SITE
     ]
+    if not fotos:
+        # NENHUMA FOTO COM FUNDO: mostra o que tem (o card e a página não ficam vazios); o painel
+        # avisa "precisa de foto com fundo" (core.conferir_fotos.sem_foto_com_fundo)
+        fotos = [foto for foto in do_adesivo_todas
+                 if foto.tipo or getattr(foto, "papel_na_capa", "") in ImagemBrinquedo.PAPEIS_FORA_DO_SITE]
     fotos.sort(key=lambda foto: (ORDEM_DAS_POSICOES.get(foto.tipo, 9), foto.ordem, foto.id))
     vistas, saida = set(), []
     for foto in fotos:  # uma por posição (a de antes da 0172 e a do adesivo, a primeira)
-        if foto.tipo not in vistas:
+        if not foto.tipo or foto.tipo not in vistas:
             vistas.add(foto.tipo)
             saida.append(foto)
     return saida[:FOTOS_POR_ADESIVO]

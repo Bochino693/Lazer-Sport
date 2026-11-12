@@ -155,6 +155,7 @@
           </span>
           <span class="bq-selos bq-selos--fim" data-v="selos">
             {% if brinquedo.painel_3d %}<span class="bq-selo" title="Tem objeto 3D"><i class="bi bi-badge-3d" aria-hidden="true"></i></span>{% endif %}
+            {% if brinquedo.painel_sem_fundo %}<span class="bq-selo bq-selo--alerta" title="Nenhuma foto com fundo: o site mostra a que tem. Mande uma foto com cenário (as sem fundo ficam como recorte para artes)."><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Precisa de foto com fundo</span>{% endif %}
             {% if brinquedo.painel_adesivos > 1 %}<span class="bq-selo bq-selo--adesivos" title="O mesmo brinquedo com outra arte: as fotos e o 3D de cada adesivo"><i class="bi bi-stickies" aria-hidden="true"></i> {{ brinquedo.painel_adesivos }} adesivos</span>{% endif %}
             <span class="bq-selo" title="{{ brinquedo.painel_fotos }} de 3 fotos"><i class="bi bi-images" aria-hidden="true"></i> {{ brinquedo.painel_fotos }}/3</span>
           </span>

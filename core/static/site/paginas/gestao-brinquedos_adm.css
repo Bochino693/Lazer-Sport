@@ -1977,6 +1977,13 @@ body:has(dialog.bq-janela[open]) {
     cursor: pointer;
 }
 
+.bq-adesivo-aviso {
+    margin: 8px 0 0;
+    color: var(--yellow);
+    font-size: .8rem;
+    font-weight: 600;
+}
+
 .bq-adesivo-recortes {
     margin-top: 10px;
     color: var(--muted);
