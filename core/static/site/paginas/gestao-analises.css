@@ -736,7 +736,9 @@
   .lsa-dia-trilho{grid-column:2 / 4;grid-row:2;height:8px}
   .lsa-dia.tem-agora .lsa-dia-trilho::after{top:-4px;bottom:-4px}
 
-  .lsa-vazias summary{align-items:flex-start;flex-wrap:wrap}
+  .lsa-vazias summary{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:4px 8px}
+  .lsa-vazias summary>i{margin-top:3px}
+  .lsa-vazias-porque{grid-column:2;justify-self:start;min-height:28px}
   .lsa-vazias-lista li{grid-template-columns:20px minmax(0,1fr)}
   .lsa-vazias-lista li span{grid-column:2}
   .lsa-resumo{gap:8px 20px}

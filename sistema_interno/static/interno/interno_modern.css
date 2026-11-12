@@ -5742,6 +5742,16 @@ body.ls-body{
    linha de baixo ("Operação Lazer & Sport") quebrava em três e empurrava o
    nome da tela para fora da barra: ela fica numa linha só, com reticências. */
 .ls-topbar-copy span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* E no tablet (721 a 1100px) o espaço da pilha sai do botão "Aparência", que
+   fica só com o astro e a setinha (como já fica no celular; o nome do tema
+   continua no rótulo falado e no painel que ele abre). O nome da tela nunca
+   passa de duas linhas. */
+.ls-topbar-copy strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (min-width:721px) and (max-width:1100px){
+  .ls-tema-gatilho>.ls-tema-gatilho-texto{display:none}
+  /* o nome da tela em duas linhas mais a linha de baixo não cabem nos 60px da barra */
+  .ls-topbar-copy span{display:none}
+}
 .ls-equipe-botao{
   display:inline-flex;align-items:center;min-height:46px;padding:0 10px 0 8px;cursor:pointer;
   border:1px solid var(--line);border-radius:999px;background:rgba(var(--panel-rgb),.8);color:var(--text-2);font:inherit;

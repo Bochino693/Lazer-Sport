@@ -135,6 +135,10 @@
       cache: "no-store",
       headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
       signal: sinal
+    }).catch(function (erro) {
+      /* a rede caiu: a frase é nossa, e não o "Failed to fetch" do navegador */
+      if (erro && erro.name === "AbortError") throw erro;
+      throw new Error("Sem conexão com o servidor.");
     }).then(function (resposta) {
       return resposta.json().catch(function () { return {}; }).then(function (dados) {
         if (!resposta.ok) {
@@ -1703,7 +1707,7 @@
     if (evento.target && evento.target.getAttribute) anotarAncora(evento.target.getAttribute("action"));
   }, true);
 
-  ["wheel", "touchmove", "keydown"].forEach(function (evento) {
+  ["wheel", "touchmove", "keydown", "pointerdown"].forEach(function (evento) {
     window.addEventListener(evento, function () { ancora = null; }, { passive: true });
   });
 

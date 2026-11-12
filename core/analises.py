@@ -717,7 +717,16 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
     ids = set()
     for alvo in acc.values():
         ids.update(alvo.ranking)
-    nomes = tipo.nomes(ids) if (ids and tipo.nomes) else {}
+    nomes = {}
+    if ids and tipo.nomes:
+        # o nome de quem está no ranking é enfeite: se a consulta dele falhar, o
+        # ranking sai com "#12" no lugar do nome, e o painel continua inteiro
+        try:
+            with _ponto_de_retorno():
+                nomes = tipo.nomes(ids)
+        except Exception:  # noqa: BLE001 -- o erro vai para o log; os números seguem
+            log.exception("analises: os nomes do ranking falharam (tipo=%s periodo=%s)", tipo.codigo, jan.codigo)
+            houve_falha = True
 
     tons = {m.codigo: TONS[posicao % len(TONS)] for posicao, m in enumerate(tipo.metricas)}
     resultado_metricas = []
