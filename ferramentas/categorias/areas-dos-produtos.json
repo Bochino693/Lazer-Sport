@@ -65,11 +65,29 @@
   0.9,
   0.846
  ],
+ "produto_air-rock": [
+  0.1,
+  0.247,
+  0.901,
+  0.805
+ ],
+ "produto_basquete-duplo": [
+  0.224,
+  0.124,
+  0.777,
+  0.926
+ ],
  "produto_basquete-home": [
   0.188,
   0.125,
   0.813,
   0.925
+ ],
+ "produto_basquete-kids": [
+  0.196,
+  0.126,
+  0.803,
+  0.926
  ],
  "produto_basquete-street": [
   0.166,
@@ -101,6 +119,12 @@
   0.811,
   0.926
  ],
+ "produto_cozinha-infantil": [
+  0.138,
+  0.124,
+  0.863,
+  0.925
+ ],
  "produto_flappy-bird": [
   0.284,
   0.124,
@@ -124,6 +148,12 @@
   0.123,
   0.735,
   0.927
+ ],
+ "produto_kid-play": [
+  0.068,
+  0.357,
+  0.932,
+  0.694
  ],
  "produto_labamba": [
   0.098,
@@ -185,6 +215,12 @@
   0.854,
   0.926
  ],
+ "produto_oficina-de-engenharia": [
+  0.13,
+  0.125,
+  0.869,
+  0.925
+ ],
  "produto_pac-man": [
   0.097,
   0.204,
@@ -226,6 +262,12 @@
   0.124,
   0.867,
   0.926
+ ],
+ "produto_salao-de-beleza": [
+  0.12,
+  0.124,
+  0.88,
+  0.927
  ],
  "produto_show-de-bola": [
   0.188,

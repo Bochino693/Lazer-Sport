@@ -20,7 +20,11 @@ O RECORTE:
     escura no branco (some também a sombra cinza-clara em volta); ("figura",
     n, giro): a figura n de uma foto com várias, sozinha e de pé;
   * uma lista de pontos: o contorno da máquina, desenhado à mão sobre a
-    foto (o Boliche Virtual só tem fotos na loja, com o fundo da loja).
+    foto (o Boliche Virtual só tem fotos na loja, com o fundo da loja);
+  * "vermelho": a máquina da Black Friday no fundo de neon vermelho do cartaz
+    (ou a foto panorâmica do Air Rock e do Kid Play): o recortar_vermelho.py
+    (o contorno à mão + a cor na borda, ou o GrabCut), a partir da foto do
+    repositório (core/static/site/black_friday/), e não do Cloudinary.
 A foto vai como é: nada redesenhado, nenhum logo acrescentado.
 
 OS FUROS DE VERDADE (LEIA-ME, seção 72). O cliente, sobre o card do Basquete
@@ -144,6 +148,15 @@ MAQUINAS = {
     "multi-jogos": (16, "Multi Jogos", "imagens_brinquedos/Multi_jogos_Mesa_foocks", 1.52, "branco+buracos"),
     "matrix-one-piece": (36, "Matrix One Piece", "imagens_brinquedos/matrix_oqoacy", 2.30, "pronto"),
     "air-game-kids": (40, "Air Game Kids", "imagens_brinquedos/WhatsApp_Image_2026-07-24_at_16.10.57-removebg-preview_hcfnmt", 0.90, "pronto"),
+    # (as da Black Friday, seção 78: a foto é o recorte do cartaz, no fundo de neon vermelho ou panorâmica;
+    # o recorte é o do recortar_vermelho.py, que lê a foto do repositório e não do Cloudinary)
+    "basquete-duplo": (58, "Basquete Duplo", "repositorio:black_friday/produto-basquete-duplo.webp", 2.70, "vermelho"),
+    "basquete-kids": (59, "Basquete Kids", "repositorio:black_friday/produto-basquete-kids.webp", 1.90, "vermelho"),
+    "air-rock": (60, "Air Rock", "repositorio:black_friday/arte-10.webp", 2.10, "vermelho"),
+    "kid-play": (61, "Kid Play", "repositorio:black_friday/produto-kid-play.webp", 3.50, "vermelho"),
+    "cozinha-infantil": (62, "Cozinha Infantil", "repositorio:black_friday/produto-cozinha-infantil.webp", 1.70, "vermelho"),
+    "oficina-de-engenharia": (63, "Oficina de Engenharia", "repositorio:black_friday/produto-oficina-de-engenharia.webp", 1.70, "vermelho"),
+    "salao-de-beleza": (64, "Salão de Beleza", "repositorio:black_friday/produto-salao-de-beleza.webp", 1.70, "vermelho"),
 }
 
 
@@ -299,7 +312,15 @@ def pelo_contorno(imagem, pontos):
 
 def recortar(chave, lista=None, pasta=PASTA, lado=LADO, largura_da_foto=1600, qualidade=80):
     _id, nome, foto, altura, recorte = (lista or MAQUINAS)[chave]
-    imagem = baixar(foto)
+    if recorte == "vermelho":
+        # o fundo de neon vermelho (ou a foto panorâmica) da Black Friday: o recortar_vermelho.py tira a
+        # máquina e guarda o recorte para as artes (core/static/site/black_friday/recortes/)
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import recortar_vermelho
+
+        imagem = recortar_vermelho.para_cena(chave, recortar_vermelho.guardar(chave)[1])
+    else:
+        imagem = baixar(foto)
     if recorte in ("branco", "branco+buracos", "branco+buracos+chao"):
         imagem = sem_fundo_branco(imagem, buracos=recorte != "branco", chao=recorte.endswith("+chao"))
     elif recorte == "branco+furinhos":

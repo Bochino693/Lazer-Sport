@@ -3797,6 +3797,135 @@ Dependência nova: rjsmin (requirements.txt).
    começa a contar a partir do deploy.
    Testes: core/tests_jogadas.py; core/tests_jogos_emulador.py (config.registro).
 
+78) AS MÁQUINAS DA BLACK FRIDAY NO SHOWROOM (SEM O FUNDO VERMELHO E SEM ZOOM)
+   Pedidos, com o print do card do Basquete Kids (a máquina no fundo de neon
+   vermelho do cartaz da Black Friday): "veja que o fundo nao ficou uniforme
+   com oq preciso, de paisagens e tal ... indentifique as maquina com o fundo
+   vermelho e ponha elas no padrao". E, com o print do card do Air Rock (a
+   foto panorâmica cortada no card quadrado, a máquina cortada e o logo pela
+   metade): "valide para não ter fotos assim com zoom pois estraga".
+   O PADRÃO é o da seção 64: a máquina INTEIRA, grande, na foto quadrada
+   (1600 x 1600) no showroom da Lazer & Sport, com a luz de foto comercial.
+   OS ACHADOS (a borda de cada foto medida: a fração dos pixels vermelhos no
+   anel de fora, 6% da foto -- o tom até 15 graus do vermelho, com cor e
+   luz; e o formato largura/altura da capa). Os produtos que a Black Friday
+   criou (seção 74) tinham a capa recortada do PRÓPRIO CARTAZ:
+     * no neon vermelho escuro: Basquete Kids (94% da borda vermelha),
+       Cozinha Infantil (93%), Oficina de Engenharia (89%), Basquete Duplo
+       (66%), Salão de Beleza (62%); e a foto da categoria nova "Casinhas
+       Cenográficas" (as três casinhas juntas, 76%), que também era a 2ª foto
+       das três casinhas;
+     * panorâmicas, que o card quadrado cortava (o zoom): Air Rock (2,15 x 1,
+       com o brilho vermelho embaixo: 33%) e Kid Play (2,37 x 1, 18%).
+   O resto do catálogo no ar (as 55 capas e as fotos das galerias, pela API
+   e pela página de cada produto, como o `catalogo()` do recortar.py lê)
+   está abaixo de 5% de vermelho na borda, menos as imagens da fábrica dos
+   Brinquedões, que a seção 64 mantém: o fundo é o rosado claro das
+   perspectivas e das vistas (Modelo 4, 30%; Modelo 2, 19%) ou o salão de
+   madeira (Modelo 5, 13%), e não o neon escuro. As capas fora do quadrado (mais de 1,3 x): as duas de cima e
+   mais três que FICAM como estão, pela seção 64 -- o Brinquedão Modelo 5
+   (1,69 x 1) e o Modelo 4 (1,56 x 1), as imagens da fábrica, e o Boliche
+   Virtual (em pé, 0,75), a foto de verdade que é a referência. O card
+   mostra esses inteiros, sem zoom (seção 79).
+   1. OS RECORTES (ferramentas/categorias/recortar_vermelho.py). O recortar.py
+      só sabe tirar o fundo BRANCO; aqui o fundo é o gradiente de neon
+      vermelho e preto, e a máquina tem peças vermelhas (a GELADEIRA da
+      Cozinha Infantil, os detalhes dos basquetes) e o anel de luz vermelho
+      no chão encostado no Basquete Kids. Dois jeitos:
+        * "contorno" (os dois basquetes e as três casinhas): o contorno da
+          máquina desenhado à mão sobre a foto ampliada com a grade. Por
+          dentro dele (encolhido 5 px) é máquina; por fora (crescido 5 px),
+          fundo; na faixa entre os dois, a COR decide o quanto o pixel é
+          máquina (a cor do fundo ali perto contra a cor da máquina ali
+          perto); onde as duas são parecidas (a máquina preta no fundo
+          preto), vale o contorno. A geladeira vermelha fica inteira porque o
+          contorno diz que é máquina; o anel do chão sai (um `corte` à mão);
+        * "grabcut" (o Air Rock, com o arco de tubos finos e pretos, e o Kid
+          Play, com as redes): o GrabCut do OpenCV com as zonas certas
+          desenhadas (os tubos do arco pelo meio de cada um, a placa, as
+          laterais, os pés de LED, as cores do playground; o fundo entre os
+          tubos e os balões) e a mesma borda pela cor. A borda de baixo da
+          mesa do Air Rock, onde o chão escuro some com a mesa preta, é a
+          reta da aresta da mesa (`corte`). O Air Rock sai da arte 10
+          inteira (a foto do produto de antes era só a faixa de cima, sem os
+          pés).
+      Nos dois, a cor da borda é LIMPA DO FUNDO (o vermelho do neon que
+      vazou no pixel meio transparente sai: cor = (pixel - (1 - alfa) x
+      fundo) / alfa): sem a franja vermelha. O Kid Play: a foto da arte
+      cortava embaixo o canto da frente do tapete de grama; o canto é
+      completado com a grama da própria foto, na continuação das bordas
+      retas do tapete. E, só na foto do showroom, a borda da frente do tapete
+      (inclinada: a foto é de cima e de lado) fica reta, para o playground
+      inteiro ficar no chão (`para_cena`: um cisalhamento vertical; os
+      postes continuam de pé).
+      OS RECORTES FICAM GUARDADOS para fazer artes, transparentes, sem perda,
+      no tamanho da arte: core/static/site/black_friday/recortes/<chave>.webp.
+      O site não os usa em lugar nenhum (o teste confere). O recorte em alta
+      para a foto vai para ferramentas/categorias/maquinas-alta/ como os
+      outros (recortar.py, o recorte "vermelho", lê a foto do repositório e
+      não do Cloudinary).
+   2. AS FOTOS NO SHOWROOM (cenas.js, CATALOGO; gerar.cjs produtos --compor;
+      compor.py com o "vivo" da seção 72), em core/static/site/
+      capas_catalogo/<chave>.webp, cada uma num canto do showroom (a parede
+      de fliperama, a vitrine, o canteiro, a placa) e do lado que a foto
+      mostra, com a sombra de contato e o reflexo no porcelanato. Medidas: a
+      borda de cada foto nova tem 0% de vermelho (as de antes, de 18% a 94%).
+      O Air Rock e o Kid Play, que eram faixas, agora são quadrados com a
+      máquina inteira e folga em volta.
+      A CATEGORIA "Casinhas Cenográficas" (seção 64, item 3: lugares de
+      verdade, com as crianças): as três casinhas lado a lado na
+      brinquedoteca (o arco-íris pintado, o piso de madeira) com a criançada
+      na frente, 4:3, em core/static/site/categorias/casinhas-cenograficas.
+      webp (categorias_capas.CAPAS: o atualizar_capas_categorias a conhece).
+      A borda dela tem 14% de vermelho: é a faixa vermelha do arco-íris
+      pintado na parede (a média da borda é o amarelo claro da parede); a de
+      antes, o neon do cartaz, 76%.
+   3. NO AR, REVERSÍVEL (core/capas_catalogo.py, VERMELHAS; o mesmo jeito
+      das capas em cena da seção 64):
+        * a foto no showroom vira a CAPA (a "perfil", a primeira da galeria, e
+          o `imagem_brinquedo`), marcada `papel_na_capa = "cena"`;
+        * o recorte do cartaz NÃO apaga e NÃO aparece: fica cadastrado no fim
+          da galeria, sem tipo e sem papel. A galeria pública
+          (`galeria_publica`: as fotos com tipo e a "original"), a página do
+          produto, o card (a capa), as fotos que giram no card
+          (fotos_dos_cards), o quadro do topo da home (`imagem_brinquedo`) e
+          a API (a capa) não a mostram. Sem campo novo nem escolha nova no
+          `papel_na_capa`: o modelo das fotos está sendo mexido por outro
+          trabalho (o papel "recorte para artes" dos adesivos), e a "original"
+          aparece na galeria pública -- o que o cliente não quer aqui. O
+          --desfazer acha a foto de antes pelo nome do arquivo que a Black
+          Friday subiu (black-friday-2026-produto-<chave>-<assinatura>);
+        * só mexe no produto cuja capa ainda é o recorte do cartaz (e na
+          categoria cuja foto ainda é a de antes): o que a equipe trocou no
+          painel fica. Rodar de novo não muda nada (a assinatura da foto no
+          nome do arquivo: a foto refeita sobe de novo, a mesma não).
+          python manage.py capas_em_cena --vermelhas --simular
+          python manage.py capas_em_cena --vermelhas            (os 7 e a categoria)
+          python manage.py capas_em_cena --so "Basquete Kids"   (ou o id: 58 a 64)
+          python manage.py capas_em_cena --vermelhas --desfazer (o recorte do cartaz volta)
+      A MIGRAÇÃO 0180_maquinas_vermelhas_no_showroom (só dados, depois da
+      0175): faz o --vermelhas no deploy, SÓ NO RENDER (o Cloudinary só está
+      lá); fora dele não faz nada. Se a subida de um falhar, o deploy segue e
+      o aviso diz `python manage.py capas_em_cena --so <id>` (ou
+      --vermelhas). No fim, limpa o cache (os cards e a home).
+      A BLACK FRIDAY DO ZERO (core/black_friday.py, `cena` em PRODUTOS; o
+      comando black_friday_2026): o produto novo já nasce com a capa em cena
+      (o recorte do cartaz não sobe) e a categoria das casinhas já nasce com
+      a foto da brinquedoteca. O Brinquedão Modelo 5 continua com a imagem
+      da fábrica.
+   REFAZER AS IMAGENS (precisa do numpy e do OpenCV: pip install numpy
+   opencv-python-headless; só para os recortes):
+       python ferramentas/categorias/recortar_vermelho.py [chaves]  (os recortes guardados)
+       python ferramentas/categorias/recortar.py --alta basquete-kids ...  (o recorte em alta)
+       python ferramentas/categorias/recortar.py basquete-kids ...         (o de 900 px)
+       node ferramentas/categorias/gerar.cjs produto:basquete-kids ... --compor
+       node ferramentas/categorias/gerar.cjs casinhas-cenograficas --compor
+   Testes: core/tests_maquinas_vermelhas.py (as fotos quadradas, leves, com a
+   máquina inteira e a borda medida sem o vermelho; os recortes limpos e fora
+   do site; a categoria; o comando, a migração e a Black Friday do zero; o
+   recorte do cartaz que nunca aparece na galeria, no card nem na página);
+   core/tests_capas_catalogo.py (o "vivo" das fotos novas).
+
 79) AS REDES COMO ÍCONES DE APLICATIVO E O CARD SEM ZOOM
    Pedidos: "melhores estes ícones, está muito feio ... faça um app moderno
    e os ícones clicáveis" (o "Siga a Lazer & Sport" da home) e, com o print

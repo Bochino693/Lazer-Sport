@@ -66,6 +66,8 @@ CAPAS = (
     ("famosos", ("famosos",)),
     ("esportivos", ("esportivos",)),
     ("kids", ("kids",)),
+    # a categoria nova da Black Friday (seção 78): as três casinhas na brinquedoteca, com as crianças
+    ("casinhas-cenograficas", ("casinhas cenograficas", "casinhas", "casinha cenografica", "cenograficos")),
 )
 
 #: As áreas da fábrica: (nome da categoria, nomes que já valem como ela, palavras

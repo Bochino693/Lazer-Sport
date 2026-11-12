@@ -96,6 +96,7 @@ CORES = {
     "famosos": "#fbbf24",
     "esportivos": "#ea580c",
     "kids": "#06b6d4",
+    "casinhas-cenograficas": "#f472b6",
     # o card fixo "Peças e acessórios" da home (não é categoria; o mesmo corte 4:3)
     "pecas-e-acessorios": "#ea580c",
 }
