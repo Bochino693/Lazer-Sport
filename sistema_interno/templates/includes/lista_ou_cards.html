@@ -8,6 +8,18 @@
   úteis). "Cards" é a apresentação rica, com foto, selos e mais dados. A
   escolha fica no aparelho, por tela (`chave`); ver interno/ls-listas.js.
 
+  O QUE O CONTÊINER PODE PEDIR A MAIS (tabela que vira cartões; quem não
+  pede fica como está):
+    * `data-visao-acoes="barra"` -- no cartão, o "⋮" vira uma barra no pé
+      com as ações mais usadas (ícone e nome) e "Mais", que abre o resto.
+      A tela marca as principais com `data-acao-cartao="Nome curto"` (e a
+      ordem com `data-acao-ordem`); sem marca, vão as duas primeiras que
+      não apagam nada. `data-visao-nome` no <tr> dá o título da folha.
+    * `data-visao-cartao="perfil"` -- o cartão centrado, com o rosto em
+      cima (`data-v="avatar"`) e as células como partes
+      (`data-v="rosto|elo|contato|local|numeros|total"`). É o da tela de
+      Clientes.
+
   São rádios dentro de <label>, e não <button>: a folha comum das telas
   de gestão pinta todo botão de "botão secundário", e o seletor precisa do
   desenho de chave de duas posições. Fica fora de qualquer <form>, senão

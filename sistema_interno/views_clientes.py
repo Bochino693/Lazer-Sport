@@ -35,6 +35,7 @@ from django.views.generic import View
 
 from core.models import Estabelecimentos
 
+from . import cartao_cliente
 from . import clientes as svc
 from .completude_clientes import filtro_incompletos, pendencias_do_cliente
 from .busca_local import montar_indice
@@ -245,6 +246,12 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         return {
             "obj": cliente,
             "endereco": endereco,
+            # O rosto do cartão (modo Cards): a logo reduzida, ou as
+            # iniciais sobre a cor do nome, e o contato como atalhos de
+            # tocar. Conta local, sem consulta (ver cartao_cliente.py).
+            "logo": cartao_cliente.logo_reduzida(cliente),
+            "avatar": cartao_cliente.avatar(cliente),
+            "atalhos": cartao_cliente.atalhos_de_contato(cliente),
             "pendencias": pendencias_do_cliente(cliente),
             "rota": dados_rota(destino=endereco, origem=origem),
             "orcamentos": len(orcamentos),

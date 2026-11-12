@@ -65,7 +65,8 @@
   </div>
 
   <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="orcamentosLista" data-visao="lista">
+    {# No cartão, as ações viram a barra do pé: Prévia, Editar e Enviar com ícone e nome, e "Mais" (ls-listas.js). #}
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="orcamentosLista" data-visao="lista" data-visao-acoes="barra">
       <table class="ls-table ls-commercial-table ls-orcamentos-table ls-visao-tabela">
         <thead>
           <tr>
@@ -81,7 +82,7 @@
         </thead>
         <tbody>
           {% for orcamento in orcamentos %}
-            <tr data-registro="{{ orcamento.id }}">
+            <tr data-registro="{{ orcamento.id }}" data-visao-nome="Orçamento {{ orcamento.id }} · {{ orcamento.destinatario }}">
               {% comment %}
                 "versão 1" embaixo de todo número era duas coisas ruins de
                 uma vez: quebrava em "vers / ão 1" na coluna estreita, e
@@ -205,18 +206,19 @@
                 <div class="ls-row-actions">
                 <a class="btn btn-sm btn-outline-primary"
                    href="{% url 'orcamento_previa_inner' orcamento.id %}"
-                   target="_blank" rel="noopener"
+                   target="_blank" rel="noopener" data-acao-cartao="Prévia"
                    aria-label="Abrir prévia do orçamento {{ orcamento.id }}"
                    title="Conferir o documento sem alterar a situação">
                   <i class="bi bi-eye"></i><span class="ls-action-label">Prévia</span>
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
-                        data-editar="{{ orcamento.id }}"
+                        data-editar="{{ orcamento.id }}" data-acao-cartao
                         aria-label="{% if orcamento.pode_editar_formulario %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
                         title="{% if orcamento.pode_editar_formulario %}Editar proposta ainda não enviada{% else %}Consultar versão preservada{% endif %}">
                   <i class="bi {% if orcamento.pode_editar_formulario %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar_formulario %}Editar{% else %}Ver{% endif %}</span>
                 </button>
                 {% if pode_editar_comercial and orcamento.pode_enviar %}<button type="button" class="btn btn-sm btn-outline-primary"
+                        data-acao-cartao="{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}"
                         data-enviar="{{ orcamento.id }}"
                         data-orcamento-id="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"
