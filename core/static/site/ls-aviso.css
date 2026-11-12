@@ -124,6 +124,15 @@
     animation: ls-recado-entra-lado .36s cubic-bezier(.2, .9, .3, 1.12);
 }
 
+/* Só o título ("Salvo"): uma linha, no meio da altura do ícone. */
+.ls-recado.so-titulo {
+    align-items: center;
+}
+
+.ls-recado.so-titulo .ls-recado-corpo {
+    padding-top: 0;
+}
+
 .ls-recado.is-arrastando {
     transition: none;
 }

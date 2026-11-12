@@ -266,6 +266,7 @@
         var corpo = criar("div", "ls-recado-corpo");
         corpo.appendChild(criar("strong", "ls-recado-titulo", o.titulo));
         if (o.texto) corpo.appendChild(criar("span", "ls-recado-texto", o.texto));
+        else if (!o.acao) el.classList.add("so-titulo");
         var fechar = criar("button", "ls-recado-fechar");
         fechar.type = "button";
         fechar.setAttribute("aria-label", "Fechar aviso");
