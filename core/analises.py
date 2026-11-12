@@ -35,11 +35,14 @@ from __future__ import annotations
 
 import calendar
 import datetime as dt
+import logging
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Callable
 
 from django.core.cache import cache
+from django.db import connection, transaction
 from django.db.models import (
     Count,
     DateField,
@@ -53,6 +56,24 @@ from django.db.models import (
 )
 from django.db.models.functions import Trunc
 from django.utils import timezone
+
+log = logging.getLogger(__name__)
+
+
+@contextmanager
+def _ponto_de_retorno():
+    """A consulta que falhar não envenena as seguintes.
+
+    Dentro de uma transação (os testes; uma view com transação) o banco recusa tudo depois
+    de um erro, então a fonte roda num ponto de retorno. Fora dela -- o site, em autocommit
+    -- cada consulta já é a sua transação: nada a mais vai ao banco (cada ida e volta ao
+    banco remoto custa dezenas de milissegundos).
+    """
+    if connection.in_atomic_block:
+        with transaction.atomic():
+            yield
+    else:
+        yield
 
 PERIODOS = {
     # código: (rótulo, dias na janela, balde)
@@ -326,6 +347,11 @@ class _Acumulado:
     tem_linhas: bool = False
     ranking: dict = field(default_factory=dict)
     sem_serie: bool = False
+    #: a consulta desta métrica falhou (o erro foi para o log): o painel mostra as outras
+    indisponivel: bool = False
+    #: por que não há série: "distintas" (pessoas distintas não se somam hora a hora) ou
+    #: "por_dia" (o registro só guarda o dia)
+    motivo_sem_serie: str = ""
     fontes: list = field(default_factory=list)
     desde: dt.datetime | None = None
     comparavel: bool = True
@@ -376,7 +402,18 @@ def _cobertura(alvo, eventos):
 
 def _acumular_aditiva(fonte, jan, acc, indice):
     """Uma consulta: série atual, série anterior e dia da semana."""
-    kind = "hour" if jan.unidade == "hora" else "day"
+    # A fonte que só sabe o DIA (um DateField: os dias com acesso) não tem hora a hora. No
+    # "Hoje" ela é somada por dia -- o total e a comparação com ontem ficam certos -- e a
+    # métrica avisa que não tem série (truncar um DateField por hora é um erro do Django:
+    # era o 500 da aba Gráficos da ficha do usuário).
+    so_o_dia = fonte.campo_e_data and jan.unidade == "hora"
+    kind = "hour" if (jan.unidade == "hora" and not so_o_dia) else "day"
+    if so_o_dia:
+        for codigo in set(fonte.metricas.values()):
+            if codigo in acc:
+                acc[codigo].sem_serie = True
+                acc[codigo].motivo_sem_serie = "por_dia"
+                acc[codigo].anterior = None
     valores = [fonte.separar_por] if fonte.separar_por else []
     linhas = (
         fonte.consulta.filter(jan.filtro(fonte.campo_data, campo_e_data=fonte.campo_e_data))
@@ -392,7 +429,7 @@ def _acumular_aditiva(fonte, jan, acc, indice):
             continue
         atual = momento >= inicio
         balde = balde_de(momento if atual else momento + jan.duracao, jan.unidade)
-        posicao = indice.get(balde)
+        posicao = None if so_o_dia else indice.get(balde)
         separador = linha.get(fonte.separar_por) if fonte.separar_por else None
         for apelido in fonte.agregados:
             codigo = fonte.metricas.get((separador, apelido))
@@ -409,7 +446,7 @@ def _acumular_aditiva(fonte, jan, acc, indice):
                     alvo.semana[momento.weekday()] += valor
             else:
                 alvo.total_anterior += valor
-                if posicao is not None:
+                if posicao is not None and alvo.anterior is not None:
                     alvo.anterior[posicao] += valor
 
 
@@ -435,6 +472,7 @@ def _acumular_distinta(fonte, jan, acc, indice):
         kind = {"dia": "day", "semana": "week", "mes": "month"}.get(jan.unidade)
         if kind is None or (jan.unidade == "hora"):
             alvo.sem_serie = True
+            alvo.motivo_sem_serie = alvo.motivo_sem_serie or "distintas"
             continue
         linhas = (
             fonte.consulta.filter(atual)
@@ -522,16 +560,33 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
     acc = {m.codigo: _Acumulado(m, len(baldes)) for m in metricas if not m.razao}
 
     fontes = tipo.fontes(objeto_id)
+    houve_falha = False
     for fonte in fontes:
         for (separador, _apelido), codigo in fonte.metricas.items():
             if codigo in acc and (fonte, separador) not in acc[codigo].fontes:
                 acc[codigo].fontes.append((fonte, separador))
-        if fonte.aditiva:
-            _acumular_aditiva(fonte, jan, acc, indice)
-        else:
-            _acumular_distinta(fonte, jan, acc, indice)
-        if objeto_id is None:
-            _acumular_ranking(fonte, jan, acc)
+        # UMA FONTE COM DEFEITO NÃO DERRUBA O PAINEL. O cliente, com o "O servidor
+        # respondeu 500" na ficha do usuário: "você não pode me gerar uma coisa gerando
+        # erros". Cada fonte roda num ponto de retorno: se a consulta dela falhar, o erro vai
+        # para o log (com o tipo, o objeto e o período), as métricas dela saem como
+        # "indisponível" e as outras continuam certas -- e a resposta não fica em cache.
+        try:
+            with _ponto_de_retorno():
+                if fonte.aditiva:
+                    _acumular_aditiva(fonte, jan, acc, indice)
+                else:
+                    _acumular_distinta(fonte, jan, acc, indice)
+                if objeto_id is None:
+                    _acumular_ranking(fonte, jan, acc)
+        except Exception:  # noqa: BLE001 -- o painel segue com o que deu certo
+            log.exception(
+                "analises: a fonte %s falhou (tipo=%s objeto=%s periodo=%s)",
+                fonte.chave, tipo.codigo, objeto_id, jan.codigo,
+            )
+            houve_falha = True
+            for codigo in set(fonte.metricas.values()):
+                if codigo in acc:
+                    acc[codigo].indisponivel = True
 
     # cobertura da tabela nova de interações e "sem dados" das demais
     existe = {}
@@ -543,7 +598,11 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
             consulta = fonte.consulta
             if separador is not None and fonte.separar_por:
                 consulta = consulta.filter(**{fonte.separar_por: separador})
-            existe[chave_existe] = consulta.exists()
+            try:
+                with _ponto_de_retorno():
+                    existe[chave_existe] = consulta.exists()
+            except Exception:  # noqa: BLE001 -- a fonte com defeito já foi para o log
+                existe[chave_existe] = False
         return existe[chave_existe]
 
     for codigo, alvo in acc.items():
@@ -607,7 +666,7 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
         "destaques": tipo.destaques() if (tipo.destaques and objeto_id is None) else [],
         "gerado_em": timezone.localtime(jan.agora).isoformat(),
     }
-    if chave:
+    if chave and not houve_falha:
         cache.set(chave, resposta, CACHE_SEGUNDOS)
     return resposta
 
@@ -666,7 +725,8 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
         "formato": metrica.formato,
         "ajuda": metrica.ajuda,
         "subir_e_bom": metrica.subir_e_bom,
-        "sem_dados": not alvo.tem_linhas,
+        "sem_dados": not alvo.tem_linhas or alvo.indisponivel,
+        "indisponivel": alvo.indisponivel,
         "comparavel": alvo.comparavel,
         "desde": timezone.localtime(alvo.desde).date().isoformat() if alvo.desde else None,
         "total": _json_numero(alvo.total, metrica.formato),
@@ -676,6 +736,7 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
         "serie": None if alvo.sem_serie else [
             None if futuros[i] else _json_numero(v, metrica.formato) for i, v in enumerate(alvo.serie)
         ],
+        "motivo_sem_serie": (alvo.motivo_sem_serie or "distintas") if alvo.sem_serie else None,
         "serie_anterior": None if alvo.anterior is None else [
             _json_numero(v, metrica.formato) for v in alvo.anterior
         ],

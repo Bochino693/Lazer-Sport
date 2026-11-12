@@ -415,8 +415,10 @@ class EnderecoJsonTests(EquipeMixin, CatalogoDeTeste, TestCase):
         cache.clear()
         with CaptureQueriesContext(connection) as primeira:
             self.client.get("/analises/brinquedo/", {"periodo": "ano"}, **INTERNO)
-        # 5 fontes x (série + semana + ranking) + nomes + cobertura + sessão
-        self.assertLess(len(primeira), 26, [q["sql"][:80] for q in primeira.captured_queries])
+        # 5 fontes x (série + semana + ranking) + nomes + cobertura + sessão. Os pontos de
+        # retorno só existem dentro de uma transação (aqui, a do teste): no site não vão ao banco.
+        consultas = [q["sql"] for q in primeira.captured_queries if "SAVEPOINT" not in q["sql"]]
+        self.assertLess(len(consultas), 26, [sql[:80] for sql in consultas])
         with CaptureQueriesContext(connection) as segunda:
             self.client.get("/analises/brinquedo/", {"periodo": "ano"}, **INTERNO)
         self.assertLess(len(segunda), 6)  # só sessão e conta: o resto veio do cache
@@ -454,6 +456,85 @@ class FichaTests(EquipeMixin, CatalogoDeTeste, TestCase):
             "pedido": Pedido.objects.first().pk, "usuario": self.chefe.pk,
             "jogo": JogoCadastrado.objects.first().pk,
         }
+
+    def test_os_graficos_de_cada_objeto_abrem_em_todo_periodo(self):
+        """O "O servidor respondeu 500" da aba Gráficos da ficha do usuário no "Hoje": os
+        dias com acesso só têm o DIA, e a conta tentava parti-los por hora. Aqui cada tipo
+        com gráfico abre, com o objeto, em TODOS os períodos (era só o "mês")."""
+        from . import views_analises
+        from .models import AcessoDiario
+
+        agora = timezone.now()
+        for dias in (0, 1):
+            AcessoDiario.objects.create(
+                usuario=self.chefe, dia=timezone.localdate() - dt.timedelta(days=dias),
+                primeiro=agora - dt.timedelta(days=dias), ultimo=agora - dt.timedelta(days=dias),
+            )
+        self.client.force_login(self.chefe)
+        periodos = [{"periodo": p} for p in ("hoje", "semana", "mes", "trimestre", "semestre", "ano")]
+        periodos.append({"periodo": "dias", "de": "2026-01-01", "ate": "2026-01-31"})
+        for codigo, pk in self.ids().items():
+            if not tipo_por_codigo(codigo).tem_objeto:
+                continue
+            for parametros in periodos:
+                with self.subTest(tipo=codigo, **parametros):
+                    cache.clear()
+                    resposta = self.client.get(f"/analises/{codigo}/", {**parametros, "id": pk}, **INTERNO)
+                    self.assertEqual(resposta.status_code, 200, resposta.content[:300])
+                    dados = resposta.json()
+                    self.assertEqual(dados["objeto"]["id"], pk)
+                    self.assertFalse([m["codigo"] for m in dados["metricas"] if m.get("indisponivel")])
+        # o usuário no "Hoje": os dias com acesso valem pelo total (1 hoje, 1 ontem), sem hora a hora
+        cache.clear()
+        hoje = self.client.get("/analises/usuario/", {"periodo": "hoje", "id": self.chefe.pk}, **INTERNO).json()
+        acessos = next(m for m in hoje["metricas"] if m["serie"] is None)
+        self.assertEqual(acessos["motivo_sem_serie"], "por_dia")
+        self.assertEqual((acessos["total"], acessos["anterior"]), (1, 1))
+        self.assertFalse(acessos["sem_dados"])
+        self.assertTrue(any(m["serie"] is not None for m in hoje["metricas"]))  # as outras têm a série por hora
+        self.assertNotIn("500", views_analises.FALHA_INESPERADA)
+
+    def test_uma_fonte_com_defeito_nao_derruba_o_painel(self):
+        """"você não pode me gerar uma coisa gerando erros": a fonte que falhar vai para o
+        log e sai como indisponível; as outras continuam; nada fica em cache; e, se o
+        inesperado for geral, a tela recebe uma frase de gente (não a página de erro)."""
+        from unittest import mock
+
+        from . import views_analises
+
+        self.client.force_login(self.chefe)
+        cache.clear()
+        de_verdade = analises._acumular_aditiva
+
+        def quebrada(fonte, *resto):
+            if fonte.chave == "favoritos":
+                raise RuntimeError("a consulta desta fonte falhou")
+            return de_verdade(fonte, *resto)
+
+        with mock.patch.object(analises, "_acumular_aditiva", quebrada), self.assertLogs("core.analises", "ERROR") as registro:
+            resposta = self.client.get("/analises/usuario/", {"periodo": "mes", "id": self.chefe.pk}, **INTERNO)
+        self.assertEqual(resposta.status_code, 200)
+        metricas = resposta.json()["metricas"]
+        fora = [m for m in metricas if m.get("indisponivel")]
+        self.assertEqual(len(fora), 1)
+        self.assertTrue(fora[0]["sem_dados"])
+        self.assertTrue(any(not m.get("indisponivel") for m in metricas))
+        self.assertIn("favoritos", registro.output[0])
+        # não ficou em cache: a consulta seguinte, sã, vem inteira
+        depois = self.client.get("/analises/usuario/", {"periodo": "mes", "id": self.chefe.pk}, **INTERNO).json()
+        self.assertFalse([m for m in depois["metricas"] if m.get("indisponivel")])
+
+        cache.clear()
+        with mock.patch.object(analises, "calcular", side_effect=RuntimeError("geral")), \
+                self.assertLogs("core.views_analises", "ERROR"):
+            geral = self.client.get("/analises/usuario/", {"periodo": "mes"}, **INTERNO)
+        self.assertEqual(geral.status_code, 500)
+        self.assertEqual(geral.json()["erro"], views_analises.FALHA_INESPERADA)
+        with mock.patch("core.detalhes.montar", side_effect=RuntimeError("geral")), \
+                self.assertLogs("core.views_analises", "ERROR"):
+            ficha = self.client.get(f"/detalhes/usuario/{self.chefe.pk}/", **INTERNO)
+        self.assertEqual(ficha.status_code, 500)
+        self.assertEqual(ficha.json()["erro"], views_analises.FALHA_INESPERADA)
 
     def test_cada_tipo_tem_ficha_com_resumo_e_atividade(self):
         for tipo, pk in self.ids().items():

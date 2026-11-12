@@ -741,7 +741,10 @@
     } else if (!metrica.serie) {
       var semSerie = el("div", "lsa-sem-serie");
       semSerie.appendChild(icone("bi-info-circle"));
-      semSerie.appendChild(el("span", "", "Esta métrica conta pessoas distintas: hora a hora não existe. Total do período: " + formatar(metrica.total, metrica.formato) + "."));
+      semSerie.appendChild(el("span", "", (metrica.motivo_sem_serie === "por_dia"
+        ? "Este número é contado por dia, sem hora a hora. Hoje: "
+        : "Aqui contam pessoas diferentes, e a mesma pessoa em duas horas contaria duas vezes. No período: ")
+        + formatar(metrica.total, metrica.formato) + (metrica.anterior ? " (antes " + formatar(metrica.anterior, metrica.formato) + ")" : "") + "."));
       telaLinha.appendChild(semSerie);
     } else {
       desenharLinha(telaLinha, dados.rotulos, metrica, unidade);

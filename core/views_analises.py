@@ -12,11 +12,20 @@ dos fundos para os números de uma tela que a pessoa não vê.
 
 from __future__ import annotations
 
+import logging
+
 from django.http import JsonResponse
 from django.views import View
 
 from . import analises, detalhes
 from .analises_tipos import tipo as tipo_por_codigo
+
+
+log = logging.getLogger(__name__)
+
+#: O que a tela diz quando algo inesperado falha (o erro inteiro vai para o log do
+#: servidor): frase de gente, e não "O servidor respondeu 500".
+FALHA_INESPERADA = "Não deu para montar estes números agora. O erro foi registrado; tente de novo em instantes."
 
 
 def _erro(mensagem, status):
@@ -75,12 +84,16 @@ class AnalisesView(_JsonDaEquipe):
             )
         except analises.PeriodoInvalido as erro_periodo:
             return _erro(str(erro_periodo), 400)
-        dados = analises.calcular(tipo, janela, objeto_id=objeto_id)
-        if objeto_id is not None:
-            nome = (tipo.nomes({objeto_id}) if tipo.nomes else {}).get(objeto_id)
-            if isinstance(nome, dict):
-                nome = nome.get("nome")
-            dados = {**dados, "objeto": {"id": objeto_id, "nome": nome or f"#{objeto_id}"}}
+        try:
+            dados = analises.calcular(tipo, janela, objeto_id=objeto_id)
+            if objeto_id is not None:
+                nome = (tipo.nomes({objeto_id}) if tipo.nomes else {}).get(objeto_id)
+                if isinstance(nome, dict):
+                    nome = nome.get("nome")
+                dados = {**dados, "objeto": {"id": objeto_id, "nome": nome or f"#{objeto_id}"}}
+        except Exception:  # noqa: BLE001 -- a última rede: nada de página de erro crua no painel
+            log.exception("analises: falhou (tipo=%s objeto=%s periodo=%s)", tipo.codigo, objeto_id, janela.codigo)
+            return _erro(FALHA_INESPERADA, 500)
         return self.responder(dados)
 
 
@@ -99,6 +112,9 @@ class DetalheView(_JsonDaEquipe):
             ficha = detalhes.montar(tipo.codigo, pk, request.user, pagina=pagina, so_atividade=self.so_atividade)
         except detalhes.NaoEncontrado:
             return _erro("Não encontrado.", 404)
+        except Exception:  # noqa: BLE001 -- a última rede da ficha
+            log.exception("detalhes: falhou (tipo=%s id=%s pagina=%s)", tipo.codigo, pk, pagina)
+            return _erro(FALHA_INESPERADA, 500)
         if not self.so_atividade:
             ficha["tem_graficos"] = tipo.tem_objeto
             ficha["tipo_rotulo"] = tipo.singular
