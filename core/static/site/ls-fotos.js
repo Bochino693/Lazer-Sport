@@ -27,13 +27,13 @@
 
    NUNCA COM ZOOM. O cliente, com o print do card do Air Rock (a foto
    panorâmica, 2 x 1, recortada no quadrado: a máquina de perto, cortada):
-   "valide para não ter fotos assim com zoom pois estraga". O recorte só
-   vale enquanto ele guarda a maior parte da foto (a diferença de formato
-   até 1,4 x: some no máximo ~30% de um lado). A foto MUITO mais larga ou
-   mais alta que a caixa fica INTEIRA ("contain"), e o resto da caixa é a
-   cor da borda da própria foto (`foto-inteira`, como a arte do quadro do
-   topo) -- nada de zoom. A foto certa para o card é a quadrada (as capas
-   em cena, 1600 x 1600).
+   "valide para não ter fotos assim com zoom pois estraga" e, depois, "ainda
+   com zoom". O recorte que enche a caixa só vale enquanto a diferença de
+   formato é pequena (até 1,4 x). A foto MUITO mais larga ou mais alta que a
+   caixa fica INTEIRA ("contain"): no máximo as beiradas são aparadas (~10%
+   da foto, nunca a máquina), e o resto da caixa é a cor da beirada da
+   própria foto (`foto-inteira`, como a arte do quadro do topo). A foto
+   certa para o card é a quadrada (as capas em cena, 1600 x 1600).
 
    AS FOTOS QUE GIRAM (ls-giro.js, LEIA-ME 72) passam pelas mesmas regras:
    `window.LSFotos.preparar` e `vestirCaixa`.
@@ -155,16 +155,21 @@
     pintarFundo(caixa, borda, proporcao);
   };
 
-  // A foto de formato muito diferente perde só o que não pesa: o recorte vai até
-  // 1,4 x do formato da caixa (o brinquedo no meio, pelo conteúdo) e o resto fica
-  // inteiro. Assim a faixa que sobra é pequena e a máquina nunca fica de perto.
+  // A foto de formato muito diferente fica praticamente inteira: o recorte só
+  // apara as beiradas (some no máximo ~10% da foto, pelo conteúdo) -- nunca a
+  // máquina cortada ou de perto (o Air Rock panorâmico no card quadrado). O resto
+  // da caixa são as faixas na cor da beirada da foto.
+  const APARA_NO_MAXIMO = 1.12;
   const recorteLimitado = (url, caixa, proporcao) => {
     const partes = url.match(/^(.*\/upload\/)(?:[a-z]_[^/]*\/)?(.*)$/);
     if (!url.includes("res.cloudinary.com") || !partes || !proporcao) return "";
     const w = caixa.clientWidth, h = caixa.clientHeight;
     if (!w || !h) return "";
     const daCaixa = w / h;
-    const alvo = proporcao > daCaixa ? daCaixa * 1.4 : daCaixa / 1.4;
+    // o formato do recorte parte da FOTO (e não da caixa): no máximo ~10% a menos dela
+    const alvo = proporcao > daCaixa
+      ? Math.max(daCaixa, proporcao / APARA_NO_MAXIMO)
+      : Math.min(daCaixa, proporcao * APARA_NO_MAXIMO);
     const formato = Math.min(3, Math.max(0.4, Math.round(alvo * 100) / 100));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const largura = Math.min(1600, Math.max(400, Math.ceil((w * dpr) / 200) * 200));

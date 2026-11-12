@@ -3815,8 +3815,10 @@ Dependência nova: rjsmin (requirements.txt).
    SEM ZOOM (core/static/site/ls-fotos.js, `zoomDemais`): o recorte da
    foto no formato da caixa só vale até 1,4 x de diferença de formato (some
    no máximo ~30% de um lado). A foto muito mais larga ou mais alta (a
-   panorâmica 2 x 1 do Air Rock no card quadrado) é recortada só até esse
-   limite, pelo conteúdo, e fica INTEIRA no meio da caixa (`foto-inteira`);
+   panorâmica 2 x 1 do Air Rock no card quadrado) fica INTEIRA no meio da
+   caixa (`foto-inteira`): no máximo as beiradas são aparadas (~10% da
+   foto, pelo conteúdo; APARA_NO_MAXIMO -- a 1ª versão partia do formato
+   da caixa e ainda cortava a máquina: "ainda com zoom");
    as faixas que sobram são a cor da beirada da própria foto daquele lado
    (`--foto-faixas`: a de cima em cima, a de baixo embaixo). Vale também
    para as fotos que giram (ls-giro.js troca com o "some e volta" quando a

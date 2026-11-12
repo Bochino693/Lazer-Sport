@@ -213,7 +213,10 @@ class FotosDoCatalogoTests(TestCase):
         self.assertIn("const ZOOM_MAXIMO = Math.log(1.4);", js)
         self.assertIn("zoomDemais(caixa, formato)", js)
         self.assertIn("recorteLimitado", js)
-        self.assertIn("daCaixa * 1.4", js)
+        # o recorte limitado parte da FOTO: some no máximo ~10% dela (nunca a máquina cortada)
+        self.assertIn("const APARA_NO_MAXIMO = 1.12;", js)
+        self.assertIn("Math.max(daCaixa, proporcao / APARA_NO_MAXIMO)", js)
+        self.assertNotIn("daCaixa * 1.4", js)
         bloco = css[css.index(".foto-cheia.foto-inteira {"):]
         self.assertIn("var(--foto-faixas, var(--foto-borda", bloco[:bloco.index("}")])
         bloco = css[css.index(".foto-cheia.foto-inteira:not(.ls-vitrine-foto) {"):]
