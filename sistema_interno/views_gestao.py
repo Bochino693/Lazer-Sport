@@ -73,6 +73,7 @@ from .models import (
     AtividadeOrcamento,
     Cliente,
     Colaborador,
+    DocumentoAssinatura,
     EnvioOrcamento,
     ItemOrdemServico,
     ExecucaoEtapaProducao,
@@ -503,6 +504,23 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             if not orcamento.pode_excluir and request.user.is_superuser:
                 orcamento.pode_excluir = True
 
+        # O DOCUMENTO PARA ASSINATURA DAS PROPOSTAS PAGAS DESTA PÁGINA, numa
+        # consulta só: o botão da linha diz se falta gerar, se o cliente
+        # ainda vai assinar ou se já assinou. Ver `views_documento_assinatura`.
+        documentos = {}
+        pagas = [orcamento.pk for orcamento in orcamentos if orcamento.quitado]
+        if pagas:
+            for documento in (
+                DocumentoAssinatura.objects
+                .filter(orcamento_id__in=pagas)
+                .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
+                .only("id", "orcamento_id", "situacao")
+                .order_by("id")
+            ):
+                documentos[documento.orcamento_id] = documento
+        for orcamento in orcamentos:
+            orcamento.documento_assinatura = documentos.get(orcamento.pk)
+
         # TROCAR O FILTRO NÃO PRECISA REMONTAR O FORMULÁRIO.
         #
         # Quando o pedido é só a lista (ver `fragmento.py`), o que o
@@ -668,6 +686,20 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "saldo_pagamento": f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
             "total": f"{orcamento.total:.2f}".replace(".", ","),
             "pode_receber_pagamento": orcamento.pode_receber_pagamento,
+            # O documento para assinatura (só existe com o orçamento pago):
+            # a janela do orçamento mostra o atalho para o cartão dele.
+            "documento_assinatura": (
+                {
+                    "url": reverse(
+                        "documento_assinatura_inner", args=[orcamento.pk],
+                        urlconf="sistema_interno.urls",
+                    ),
+                    "situacao": getattr(
+                        getattr(orcamento, "documento_assinatura", None), "situacao", "",
+                    ) or "gerar",
+                }
+                if orcamento.quitado else None
+            ),
             "origem": orcamento.origem,
             "origem_rotulo": orcamento.get_origem_display(),
             "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(

@@ -42,6 +42,7 @@ SO_POST = {
     "campanha_whatsapp": "registra o disparo de WhatsApp",
     "atualizar_etapa_producao": "avança etapa da ordem",
     "logout_inner": "encerra a sessão",
+    "documento_assinatura_link": "gera um link de 5 minutos e conta no documento",
 }
 EXIGEM_PARAMETRO = {
     "campanha_ofertas": "precisa do cliente escolhido",
@@ -99,6 +100,9 @@ class TodasAsTelasAbremTests(TestCase):
         if parametro == "pk":
             return {
                 "orcamento_previa_inner": self.orcamento.pk,
+                "documento_assinatura_inner": self.orcamento.pk,
+                "documento_assinatura_estado": self.orcamento.pk,
+                "documento_assinatura_via": self.orcamento.pk,
                 "ordem_servico_previa_inner": self.ordem.pk,
                 "dossie_cliente": self.cliente_cadastrado.pk,
                 "producao_ordem_detalhe": self.producao.pk,

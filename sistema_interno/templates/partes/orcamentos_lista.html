@@ -280,6 +280,24 @@
                 </button>
                 {% endif %}
                 {% comment %}
+                  PAGO, FINALIZADO: O DOCUMENTO PARA O CLIENTE ASSINAR.
+
+                  "Como já está pago, finalizado, vc deve pôr uma opção de
+                  gerar documento" -- só aparece com o orçamento pago, e diz
+                  em que pé está: falta gerar, o cliente ainda vai assinar
+                  (o link de 5 minutos) ou já assinou (o PDF). A tela do
+                  documento é `views_documento_assinatura.py`.
+                {% endcomment %}
+                {% if pode_editar_comercial and orcamento.quitado %}
+                <a class="btn btn-sm {% if orcamento.documento_assinatura.situacao == 'assinado' %}btn-outline-success{% else %}btn-success{% endif %} ls-doc-acao-lista"
+                   href="{% url 'documento_assinatura_inner' orcamento.id %}"
+                   data-documento-assinatura="{{ orcamento.documento_assinatura.situacao|default:'gerar' }}"
+                   aria-label="{% if orcamento.documento_assinatura.situacao == 'assinado' %}Documento assinado{% elif orcamento.documento_assinatura %}Assinatura pendente{% else %}Gerar documento para assinatura{% endif %} do orçamento {{ orcamento.id }}"
+                   title="{% if orcamento.documento_assinatura.situacao == 'assinado' %}O cliente já assinou: baixar o PDF{% elif orcamento.documento_assinatura %}O QR e o link de 5 minutos para o cliente assinar{% else %}Gerar o termo de compra para o cliente assinar no telefone{% endif %}">
+                  <i class="bi {% if orcamento.documento_assinatura.situacao == 'assinado' %}bi-patch-check-fill{% elif orcamento.documento_assinatura %}bi-hourglass-split{% else %}bi-pen{% endif %}" aria-hidden="true"></i><span class="ls-action-label">{% if orcamento.documento_assinatura.situacao == 'assinado' %}Documento assinado{% elif orcamento.documento_assinatura %}Assinatura pendente{% else %}Gerar documento para assinatura{% endif %}</span>
+                </a>
+                {% endif %}
+                {% comment %}
                   O ORÇAMENTO NÃO GERA MAIS ORDEM DE SERVIÇO.
 
                   Gerava, e o resultado era uma O.S. pela metade: tipo

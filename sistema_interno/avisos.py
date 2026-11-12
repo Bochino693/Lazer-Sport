@@ -422,6 +422,8 @@ def _atividades_orcamento(user):
         AtividadeOrcamento.Tipo.PAGAMENTO: "atualizou o pagamento do orçamento",
         AtividadeOrcamento.Tipo.AVALIACAO: "avaliou o orçamento",
         AtividadeOrcamento.Tipo.ENVIADO: "preparou o envio do orçamento",
+        AtividadeOrcamento.Tipo.DOCUMENTO: "gerou o documento para assinatura do orçamento",
+        AtividadeOrcamento.Tipo.ASSINATURA: "assinou o documento do orçamento",
     }.get(ultima.tipo, "alterou o orçamento")
     detalhe = (
         f"{ultima.autor_nome} {acao} "
