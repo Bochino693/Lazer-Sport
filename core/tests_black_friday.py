@@ -205,7 +205,7 @@ def _discos(pasta):
 
 class CadastroTests(TestCase):
     def setUp(self):
-        for nome in ("Air Game Kids", "Strike Kids", "Nervo Teste", "Boliche Virtual", "Air Game Home"):
+        for nome in ("Air Game Kids", "Strike Kids", "Nervo Teste", "Boliche Virtual", "Air Game Home", "Matrix"):
             _brinquedo(nome)
         CategoriasBrinquedos.objects.create(nome_categoria="Competitivos", imagem_categoria="categorias/c.jpg")
         self.pasta = tempfile.TemporaryDirectory()
@@ -266,7 +266,54 @@ class CadastroTests(TestCase):
         avisos = self.rodar()
         self.assertFalse(Promocoes.objects.filter(descricao="Black Friday: Nervo Teste").exists())
         self.assertTrue(any("Nervo Teste" in a and "falta" in a for a in avisos))
-        self.assertEqual(Promocoes.objects.count(), 9)  # a do Nervo Teste e o Kit Sucesso esperam
+        self.assertEqual(Promocoes.objects.count(), 10)  # só a do Nervo Teste espera (o kit é com o Matrix)
+
+    def test_kit_sucesso_e_com_o_matrix(self):
+        """"não é o nervo teste, é o matrix": a promoção antiga é acertada, sem duplicar."""
+        antiga = Promocoes.objects.create(
+            descricao="Kit Sucesso e Inovação: Air Game + Nervo Teste + Boliche Kids",
+            brinquedos=Brinquedos.objects.get(nome_brinquedo="Air Game Home"), preco_promocao=Decimal("23990.00"),
+        )
+        antiga.brinquedos_extras.set([Brinquedos.objects.get(nome_brinquedo="Nervo Teste"),
+                                      Brinquedos.objects.get(nome_brinquedo="Strike Kids")])
+        self.rodar()
+        kit = Promocoes.objects.get(descricao__startswith="Kit Sucesso")
+        self.assertEqual(kit.pk, antiga.pk)
+        self.assertEqual(kit.descricao, "Kit Sucesso e Inovação: Air Game + Matrix + Boliche Kids")
+        self.assertEqual(sorted(b.nome_brinquedo for b in kit.todos_brinquedos), ["Air Game Home", "Matrix", "Strike Kids"])
+        self.assertEqual(Promocoes.objects.count(), 11)
+
+    @override_settings(IS_RENDER=False)
+    def test_migracao_acerta_o_kit_sem_subir_fotos(self):
+        from django.apps import apps
+
+        antiga = Promocoes.objects.create(
+            descricao="Kit Sucesso e Inovação: Air Game + Nervo Teste + Boliche Kids",
+            brinquedos=Brinquedos.objects.get(nome_brinquedo="Air Game Home"),
+        )
+        antiga.brinquedos_extras.set([Brinquedos.objects.get(nome_brinquedo="Nervo Teste")])
+        for _ in range(2):  # rodar de novo não muda nada
+            black_friday.kit_sucesso_com_matrix(apps, None, avisar=lambda _m: None)
+        antiga.refresh_from_db()
+        self.assertEqual(antiga.descricao, "Kit Sucesso e Inovação: Air Game + Matrix + Boliche Kids")
+        self.assertEqual(antiga.brinquedos.nome_brinquedo, "Air Game Home")
+        self.assertEqual(sorted(b.nome_brinquedo for b in antiga.todos_brinquedos), ["Air Game Home", "Matrix", "Strike Kids"])
+        self.assertFalse(antiga.arte_promocao)
+        self.assertEqual(Promocoes.objects.count(), 1)
+
+    @override_settings(IS_RENDER=False)
+    def test_migracao_sem_a_promocao_nao_cria_nada(self):
+        from django.apps import apps
+
+        black_friday.kit_sucesso_com_matrix(apps, None, avisar=lambda _m: None)
+        self.assertFalse(Promocoes.objects.exists())
+
+    def test_a_arte_do_kit_diz_matrix(self):
+        # o rótulo do meio foi refeito: a faixa clara do texto ficou mais curta que a do NERVOTESTE
+        with Image.open(black_friday.PASTA / "card-11.webp") as card:
+            faixa = card.convert("L").crop((420, 498, 662, 538))
+            claros = [x for x in range(faixa.width) if any(faixa.getpixel((x, y)) > 215 for y in range(faixa.height))]
+            self.assertLess(max(claros) - min(claros), 170)
 
     @override_settings(IS_RENDER=False)
     def test_migracao_nao_faz_nada_fora_do_render(self):

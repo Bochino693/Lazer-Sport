@@ -3443,8 +3443,8 @@ Dependência nova: rjsmin (requirements.txt).
        não estiver no catálogo;
      * as 11 promoções, até 13/11/2026: 3 brinquedos por 31.970; Air Game
        Kids 4.990 no PIX; Kit Boliche Kids + Air Game Kids + Basquete Kids
-       de 22.990 por 19.990; Kit Sucesso e Inovação (Air Game Home + Nervo
-       Teste + Boliche Kids) de 27.990 por 23.990; Basquete Duplo 16.990; Air
+       de 22.990 por 19.990; Kit Sucesso e Inovação (Air Game Home + MATRIX +
+       Boliche Kids) de 27.990 por 23.990; Basquete Duplo 16.990; Air
        Rock de 14.990 por 12.990; Dragon Bowling (Boliche Virtual) 12.990;
        Nervo Teste 7.990 (prazo, frete, garantia e validade da proposta);
        playground 12x de 1.000; 3 cenográficos leve 4; Kid Play + kit de
@@ -3453,6 +3453,16 @@ Dependência nova: rjsmin (requirements.txt).
        cartaz guardado é só o meio. Cada card é a arte em quadrado (a janela
        com os produtos e o preço, completada com o fundo dela).
      * Rodar de novo não duplica; depois de 13/11 só os produtos são criados.
+     * O KIT SUCESSO É COM O MATRIX ("arrume a nomenclatura, não é o nervo
+       teste, é o matrix"): a máquina das luzes da arte 11 ("Quantas luzes
+       você consegue apagar?") é o Matrix. O rótulo do meio da arte e do card
+       foi refeito ("MATRIX", Barlow Condensed Black Italic, com o fundo da
+       pílula retocado); a promoção é "Kit Sucesso e Inovação: Air Game +
+       Matrix + Boliche Kids", com o Matrix ligado. A que já existe com o
+       nome antigo (PROMOCOES[...]["antes"]) é ACERTADA, não duplicada: a
+       migração 0175_kit_sucesso_com_matrix troca o nome e o Nervo Teste
+       pelo Matrix em todo lugar e, no Render, sobe a arte e o card novos.
+       A arte 8 (o Nervo Teste sozinho, 7.990, o jogo do fio) está certa.
    O STRIKE KIDS MAIS VIVO ("olha como está escuro o brinquedo, faça bem
    vivo e nítido"): a capa e as vistas (arena/modelos/strike-kids/) com os
    meios-tons da máquina mais claros (gama 0,6), cor 1,2x, volume e nitidez,
@@ -3728,3 +3738,15 @@ Dependência nova: rjsmin (requirements.txt).
    caixa muda de jeito). A foto certa para o card continua sendo a quadrada
    (as capas em cena, 1600 x 1600): as panorâmicas do Black Friday (Air
    Rock, Kid Play) ganham a capa no showroom na seção 78.
+   A FILEIRA SEM FIM (o quadro do topo da home; "ajeite melhor para poder
+   ir passando e não ter o fim"): as miniaturas rolam de lado em qualquer
+   tela, com setas ‹ › dos dois lados (Brinquedo anterior / Próximo
+   brinquedo) e as pontas esmaecendo. Quando não cabem, a fileira ganha uma
+   cópia delas antes e outra depois (aria-hidden, fora do Tab; o clique numa
+   cópia vale como o da original) e a rolagem fica sempre na do meio: passou
+   do fim, volta em silêncio para o mesmo ponto da do meio, que é idêntico.
+   A troca automática do último para o primeiro anda para a frente (a
+   miniatura centrada é a cópia mais perto de onde a fileira está).
+   Código: core/static/site/paginas/home-quadro.js (prepararSemFim,
+   prepararSetas, mostrarMiniatura) e home-quadro.css (.ls-vitrine-trilho,
+   .ls-vitrine-miniaturas--sem-fim, .ls-vitrine-seta).
