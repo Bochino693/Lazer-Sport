@@ -3510,6 +3510,36 @@ Dependência nova: rjsmin (requirements.txt).
    escuro): lista, filtro, cadastro aberto, salvar/editar/excluir.
    Testes: core/tests_brinquedos_adm_tela.py, core/tests_gestao_cores.py
    (cores proibidas, tela que não reescreve o painel, camada comum).
+   LISTA · CARDS EM TODAS AS LISTAS ("padrão vem lista, podendo mudar
+   para o card"): Brinquedos, Promoções, Combos, Cupons, Peças, Projetos,
+   Eventos, Banners, Usuários, Clientes no mapa e, no painel, Orçamentos,
+   Clientes, O.S. e Pedidos. Um componente só:
+     * o seletor includes/lista_ou_cards.html (rádios dentro de <label>,
+       fora de qualquer <form>; nenhum <select>);
+     * interno/ls-listas.js, carregado uma vez no corpo do painel: guarda a
+       escolha por tela no aparelho (localStorage `ls-visao:<tela>`, com
+       try/catch) e a reaplica a cada Painel.montarTela -- tela que chega
+       pela navegação suave ou trecho da lista trocado pelo filtro;
+     * o CSS comum "LISTA OU CARDS" em interno_modern.css, só com as
+       variáveis do tema. É o MESMO item nos dois modos: o cartão vira
+       linha pelas partes marcadas (`data-visao-item`, `data-v="foto|
+       titulo|info|valor|estado|selos|acoes|extra"`, colunas por tela em
+       --lv-colunas/--lv-areas) e a tabela vira cartões (cada <tr>, com o
+       rótulo da coluna em cima). O que outra frente pendurar no item
+       (detalhes, adesivos) vale nos dois. No celular a lista é de linhas
+       compactas; cards um por linha, dois no tablet.
+   TABELAS SEM PALAVRA QUEBRADA (o print de Orçamentos: "AÇÕ / ES",
+   "CLIENTE" deslocado, o cliente espremido): o cabeçalho de toda tabela
+   do painel não quebra (nowrap, sem hifenização) e anda com a sua coluna
+   (`data-coluna` no <th>; à esquerda, números e ações à direita); ID e
+   ações encolhem até caber e o cliente fica com o resto. Orçamentos e
+   O.S. largaram as porcentagens fixas; em tela média (1200-1599px) a
+   Origem do orçamento vira linha dentro do cliente; títulos longos ficam
+   abreviados com o nome inteiro na dica ("Revisão", "Fornecedor").
+   Clientes: 88px para as ações. A onda do sino não faz mais a tela rolar
+   de lado. O JS de Promoções foi para o bloco de scripts (no conteúdo
+   ele morria depois do primeiro filtro, como o de Brinquedos).
+   Testes: core/tests_lista_cards.py.
 
 77) JOGOS: A COLETA DAS JOGADAS (QUEM, QUANDO, O QUÊ) E O PAINEL POR PERÍODO
    Pergunta: "joguei mais uma vez o Super Mario 64, veja se é porque sou
