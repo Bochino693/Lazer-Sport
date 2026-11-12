@@ -60,11 +60,13 @@
       </div>
     </form>
     {{ indice_busca|json_script:"indiceOrcamentos" }}
+    {# Lista · Cards: a tabela é a lista (padrão); os cartões saem dela pelo CSS (interno_modern.css). #}
+    {% include "includes/lista_ou_cards.html" with alvo="orcamentosLista" chave="orcamentos" %}
   </div>
 
   <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap">
-      <table class="ls-table ls-commercial-table ls-orcamentos-table">
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="orcamentosLista" data-visao="lista">
+      <table class="ls-table ls-commercial-table ls-orcamentos-table ls-visao-tabela">
         <thead>
           <tr>
             <th data-coluna="ID">ID</th>

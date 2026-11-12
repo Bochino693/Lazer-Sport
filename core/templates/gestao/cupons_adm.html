@@ -63,10 +63,21 @@
     {% endif %}
   </form>
 
-  <section class="cup-grid">
+  {# Lista · Cards: o mesmo <article> é linha e cartão (ver interno_modern.css). #}
+  <div class="ls-visao-barra">
+    <p class="cup-contagem">{{ cupons|length }} cupo{{ cupons|length|pluralize:"m,ns" }}</p>
+    {% include "includes/lista_ou_cards.html" with alvo="cupLista" chave="cupons" %}
+  </div>
+
+  <section class="cup-grid ls-visao-alvo" id="cupLista" data-visao="lista" aria-label="Cupons">
+    <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+      <span data-col="titulo">Código</span><span data-col="info">Onde vale</span><span data-col="valor">Desconto</span>
+      <span data-col="estado">Situação</span><span data-col="acoes">Ações</span>
+    </div>
     {% for cupom in cupons %}
       <article
         class="cup-card {% if not cupom.ativo %}is-off{% endif %}"
+        data-visao-item
         data-cupom-id="{{ cupom.id }}"
         data-codigo="{{ cupom.codigo }}"
         data-desconto="{{ cupom.desconto_percentual|unlocalize }}"
@@ -77,16 +88,16 @@
         data-categoria="{{ cupom.categoria_id|default:'' }}"
         data-clientes="{% for c in cupom.cliente.all %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
       >
-        <div class="cup-card-top">
-          <span class="cup-code">{{ cupom.codigo }}</span>
-          <span class="cup-status {% if cupom.ativo %}is-on{% else %}is-off{% endif %}">
+        <div class="cup-card-top" data-v="corpo">
+          <span class="cup-code" data-v="titulo">{{ cupom.codigo }}</span>
+          <span data-v="estado" class="cup-status {% if cupom.ativo %}is-on{% else %}is-off{% endif %}">
             {% if cupom.ativo %}● Ativo{% else %}● Inativo{% endif %}
           </span>
         </div>
 
-        <div class="cup-discount">{{ cupom.desconto_percentual|porcento }}<span> OFF</span></div>
+        <div class="cup-discount" data-v="valor">{{ cupom.desconto_percentual|porcento }}<span> OFF</span></div>
 
-        <div class="cup-meta">
+        <div class="cup-meta" data-v="info">
           <span class="cup-meta-line">
             <svg><use href="#cup-i-tag"/></svg>
             {% if cupom.brinquedo %}
@@ -109,7 +120,7 @@
           {% endif %}
         </div>
 
-        <div class="cup-card-actions">
+        <div class="cup-card-actions" data-v="acoes">
           <button
             class="ls-campaign-card-button"
             type="button"

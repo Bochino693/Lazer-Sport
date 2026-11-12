@@ -318,7 +318,8 @@
 }
 
 #bqLista {
-    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 112px 64px 176px;
+    /* a coluna dos selos cabe o "2 adesivos" (frente dos adesivos) */
+    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 112px 124px 176px;
     --lv-areas: "foto titulo info valor estado selos acoes";
     /* tablet: duas linhas por brinquedo */
     --lv-colunas-tab: 56px minmax(0, 1fr) auto auto;
@@ -334,8 +335,11 @@
 }
 
 @media (max-width: 640px) {
+    /* no celular a linha é compacta: medidas, categorias, 3D e fotos ficam
+       para o cartão -- o selo dos adesivos continua na linha */
     .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-info,
-    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-selos--fim {
+    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-selos--fim:not(:has(.bq-selo--adesivos)),
+    .gestao-integrada .ls-content .bq-grade[data-visao="lista"] .bq-selos--fim > .bq-selo:not(.bq-selo--adesivos) {
         display: none !important;
     }
 

@@ -66,3 +66,47 @@
 .aviso-form{padding:11px 13px;border:1px solid rgba(var(--red-rgb),.25);border-radius:10px;color:var(--red-claro);background:rgba(var(--red-rgb),.1);font-size:.72rem;display:none}
 .aviso-form.on{display:block}
 @media(max-width:950px){.pecas-kpis{grid-template-columns:repeat(2,1fr)}.pecas-filtro{grid-template-columns:1fr}.campo-duplo{grid-template-columns:1fr}}@media(max-width:600px){.pecas-modal{padding:7px 0 0;align-items:flex-end}.pecas-card{max-height:calc(var(--ls-vh, 100dvh) - 7px);border-radius:20px 20px 0 0}.pecas-form{padding:16px}.categorias-box{grid-template-columns:1fr}.pecas-form-acoes{position:sticky;bottom:-16px;margin:2px -16px -16px;padding:12px 16px;background:var(--bg-2)}.pecas-kpis{grid-template-columns:1fr 1fr}.pecas-grid{grid-template-columns:1fr}}
+
+/* ---- Lista · Cards ----
+   O mesmo <article> é a linha da lista (o padrão) e o cartão; aqui só as
+   colunas da lista ("LISTA OU CARDS" em interno_modern.css). */
+.ls-visao-barra .pecas-contagem {
+    margin: 0;
+    color: var(--muted);
+    font-size: .86rem;
+    font-weight: 750;
+}
+
+#pecasLista {
+    --lv-colunas: 56px minmax(180px, 1.4fr) minmax(0, 1.2fr) 250px 300px;
+    --lv-areas: "foto titulo info valor acoes";
+    --lv-colunas-tab: 56px minmax(0, 1fr) auto;
+    --lv-areas-tab: "foto titulo valor" "foto info info" "acoes acoes acoes";
+    --lv-colunas-cel: 48px minmax(0, 1fr);
+    --lv-areas-cel: "foto titulo" "foto valor" "foto info" "acoes acoes";
+}
+
+.pecas-grid[data-visao="lista"] .peca-capa {
+    font-size: 0 !important;
+}
+
+.pecas-grid[data-visao="lista"] .peca-corpo h3 {
+    margin: 0;
+    font-size: .95rem;
+}
+
+.pecas-grid[data-visao="lista"] .peca-linha {
+    justify-content: flex-end;
+    gap: 10px;
+    margin: 0;
+}
+
+.pecas-grid[data-visao="lista"] .peca-acoes {
+    border: 0;
+}
+
+@media (max-width: 640px) {
+    .pecas-grid[data-visao="lista"] .peca-linha {
+        justify-content: flex-start;
+    }
+}

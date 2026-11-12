@@ -68,10 +68,12 @@
       <div class="input-group"><input class="form-control" name="q" type="search" autocomplete="off" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button></div>
     </form>
     {{ indice_busca|json_script:"indiceOrdens" }}
+    {# Lista · Cards: a tabela é a lista (padrão); os cartões saem dela pelo CSS (interno_modern.css). #}
+    {% include "includes/lista_ou_cards.html" with alvo="ordensLista" chave="ordens-servico" %}
   </div>
   <div class="ls-data-body">
-    <div class="table-responsive">
-      <table class="ls-table ls-commercial-table ls-os-tabela">
+    <div class="table-responsive ls-visao-alvo" id="ordensLista" data-visao="lista">
+      <table class="ls-table ls-commercial-table ls-os-tabela ls-visao-tabela">
         {% comment %}
           SEIS COLUNAS, NÃO NOVE. Com nove, cada uma ficava estreita demais: o navegador quebrava
           a palavra no meio ("Manutenç-ão", "AÇÕE-S", "PAGAMENT-O") e o número da O.S. invadia a

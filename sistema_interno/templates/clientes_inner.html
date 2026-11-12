@@ -143,11 +143,13 @@
       <h2>Quem já passou pela Lazer &amp; Sport</h2>
       <p>O valor mostrado é a soma das propostas aprovadas deste cliente.</p>
     </div>
+    {# Lista · Cards: a tabela é a lista (padrão); os cartões saem dela pelo CSS (interno_modern.css). #}
+    {% include "includes/lista_ou_cards.html" with alvo="clientesLista" chave="clientes" %}
   </div>
 
   <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap" tabindex="0" role="region" aria-label="Lista de clientes; role horizontalmente se necessário">
-      <table class="ls-table ls-commercial-table ls-clientes-table">
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="clientesLista" data-visao="lista" tabindex="0" role="region" aria-label="Lista de clientes">
+      <table class="ls-table ls-commercial-table ls-clientes-table ls-visao-tabela">
         <colgroup>
           <col class="ls-col-cliente"><col class="ls-col-contato">
           <col class="ls-col-vinculo"><col class="ls-col-endereco">

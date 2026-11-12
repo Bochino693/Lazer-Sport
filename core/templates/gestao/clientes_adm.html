@@ -95,14 +95,18 @@
     </div>
 
     {% if fichas %}
-      <div class="clients-table-wrap">
-        <table class="clients-table">
+      {# Lista · Cards: a mesma tabela é a lista (padrão) e, pelo CSS, os cartões (ver interno_modern.css). #}
+      <div class="ls-visao-barra clients-visao">
+        {% include "includes/lista_ou_cards.html" with alvo="clientsLista" chave="clientes-mapa" %}
+      </div>
+      <div class="clients-table-wrap ls-visao-alvo" id="clientsLista" data-visao="lista">
+        <table class="clients-table ls-visao-tabela">
           <thead>
             <tr>
-              <th>Cliente</th>
-              <th>Localização</th>
-              <th>Situação</th>
-              <th style="text-align:right">Ações</th>
+              <th data-coluna="Cliente">Cliente</th>
+              <th data-coluna="Localização">Localização</th>
+              <th data-coluna="Situação">Situação</th>
+              <th data-coluna="Ações" style="text-align:right">Ações</th>
             </tr>
           </thead>
           <tbody id="clientsTableBody">
@@ -115,7 +119,7 @@
                 data-active="{% if cliente.ativo %}true{% else %}false{% endif %}"
                 data-published="{% if ficha.no_mapa %}true{% else %}false{% endif %}"
                 data-located="{% if endereco.tem_local %}true{% else %}false{% endif %}">
-                <td>
+                <td data-label="Cliente">
                   <div class="client-identity">
                     <div class="client-logo">
                       {% if cliente.logo %}
@@ -145,7 +149,7 @@
                     </div>
                   </div>
                 </td>
-                <td>
+                <td data-label="Localização">
                   <div class="client-location">
                     <strong>
                       {% if endereco.cidade %}
@@ -157,7 +161,7 @@
                     <span>{{ endereco.pais|default:"Brasil" }}{% if endereco.cep %} · CEP {{ endereco.cep }}{% endif %}</span>
                   </div>
                 </td>
-                <td>
+                <td data-label="Situação">
                   <div class="client-status-stack">
                     {% if cliente.ativo %}
                       <span class="client-status is-success"><i class="client-status-dot"></i>Ativo</span>
@@ -176,7 +180,7 @@
                     {% endif %}
                   </div>
                 </td>
-                <td>
+                <td data-label="Ações">
                   <div class="client-actions">
                     <button type="button" class="client-action" data-edit-client="{{ cliente.id }}" title="Editar cliente" aria-label="Editar {{ cliente.nome_publico }}">
                       <svg><use href="#client-i-edit"/></svg>

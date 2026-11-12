@@ -61,10 +61,25 @@
         </form>
     </div>
 
-    <section class="pr-grade" data-pr-lista aria-label="Promoções">
+    {% comment %}
+      LISTA OU CARDS: o mesmo <article> é a linha da lista (o padrão) e o
+      cartão. As partes levam `data-v`; as colunas da lista estão em
+      gestao-promocoes_adm.css (#prLista) e o resto em interno_modern.css.
+    {% endcomment %}
+    <div class="ls-visao-barra">
+        <p class="pr-contagem">{{ pagina.paginator.count }} promoç{{ pagina.paginator.count|pluralize:"ão,ões" }}</p>
+        {% include "includes/lista_ou_cards.html" with alvo="prLista" chave="promocoes" %}
+    </div>
+
+    <section class="pr-grade ls-visao-alvo" id="prLista" data-visao="lista" data-pr-lista aria-label="Promoções">
+        <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+            <span data-col="titulo">Promoção</span><span data-col="info">Validade</span><span data-col="valor">Preço</span>
+            <span data-col="estado">No site</span><span data-col="selos">Desconto</span><span data-col="acoes">Ações</span>
+        </div>
         {% for promo in promocoes %}
             <article
                 class="pr-oferta {% if not promo.ativo %}is-off{% endif %}"
+                data-visao-item
                 data-pr-oferta
                 data-id="{{ promo.id }}"
                 data-descricao="{{ promo.descricao }}"
@@ -78,39 +93,41 @@
                 data-condicoes="{{ promo.condicoes }}"
                 data-busca="{{ promo.descricao|lower }} {{ promo.brinquedos.nome_brinquedo|lower }}{% for extra in promo.brinquedos_extras.all %} {{ extra.nome_brinquedo|lower }}{% endfor %}"
             >
-                <div class="pr-oferta-foto">
+                <div class="pr-oferta-foto" data-v="midia">
                     {% if promo.imagem_promocao %}
-                        <img src="{{ promo.imagem_promocao.url }}" alt="{{ promo.descricao }}" loading="lazy" decoding="async">
+                        <img src="{{ promo.imagem_promocao.url }}" alt="{{ promo.descricao }}" loading="lazy" decoding="async" data-v="foto">
                     {% elif promo.brinquedos.imagem_brinquedo %}
-                        <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.brinquedos.nome_brinquedo }}" loading="lazy" decoding="async">
+                        <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.brinquedos.nome_brinquedo }}" loading="lazy" decoding="async" data-v="foto">
                     {% else %}
-                        <span class="pr-sem-foto" aria-hidden="true"><i class="bi bi-image"></i></span>
+                        <span class="pr-sem-foto" aria-hidden="true" data-v="foto"><i class="bi bi-image"></i></span>
                     {% endif %}
-                    <span class="pr-selo-desconto" data-pr-desconto hidden></span>
+                    <span class="pr-selo-desconto" data-pr-desconto data-v="selos" hidden></span>
                 </div>
 
-                <div class="pr-oferta-corpo">
-                    <h3>{{ promo.descricao }}</h3>
-                    <p class="pr-oferta-brinquedo"><i class="bi bi-joystick" aria-hidden="true"></i>
-                        <span>{{ promo.brinquedos.nome_brinquedo }}{% for extra in promo.brinquedos_extras.all %} · {{ extra.nome_brinquedo }}{% endfor %}</span>
-                    </p>
-                    <div class="pr-precos">
+                <div class="pr-oferta-corpo" data-v="corpo">
+                    <div class="pr-oferta-titulo" data-v="titulo">
+                        <h3>{{ promo.descricao }}</h3>
+                        <p class="pr-oferta-brinquedo"><i class="bi bi-joystick" aria-hidden="true"></i>
+                            <span>{{ promo.brinquedos.nome_brinquedo }}{% for extra in promo.brinquedos_extras.all %} · {{ extra.nome_brinquedo }}{% endfor %}</span>
+                        </p>
+                    </div>
+                    <div class="pr-precos" data-v="valor">
                         <s data-pr-de hidden></s>
                         {% if promo.preco_promocao %}<strong>R$ {{ promo.preco_promocao|moeda }}</strong>{% else %}<strong class="pr-sem-preco">Sem preço · condição</strong>{% endif %}
                     </div>
                     {% if promo.valida_ate %}
-                    <p class="pr-validade {% if not promo.vigente %}is-fim{% endif %}"><i class="bi bi-calendar-event" aria-hidden="true"></i>
+                    <p class="pr-validade {% if not promo.vigente %}is-fim{% endif %}" data-v="info"><i class="bi bi-calendar-event" aria-hidden="true"></i>
                         {% if promo.vigente %}Até {{ promo.valida_ate|date:"d/m/Y" }}{% else %}Terminou em {{ promo.valida_ate|date:"d/m/Y" }}{% endif %}</p>
                     {% endif %}
 
-                    <label class="pr-chave">
+                    <label class="pr-chave" data-v="estado">
                         <input type="checkbox" data-pr-alternar {% if promo.ativo %}checked{% endif %}
                                aria-label="Mostrar {{ promo.descricao }} no site">
                         <span class="pr-chave-trilho" aria-hidden="true"></span>
                         <span class="pr-chave-texto" data-pr-chave-texto>{% if promo.ativo %}No site{% else %}Desligada{% endif %}</span>
                     </label>
 
-                    <div class="pr-oferta-acoes">
+                    <div class="pr-oferta-acoes" data-v="acoes">
                         <button class="ls-campaign-card-button" type="button"
                                 data-campanha-tipo="promocao"
                                 data-campanha-objeto="{{ promo.id }}"
@@ -304,5 +321,10 @@
     </form>
 </dialog>
 
-<script src="{% estatico 'site/paginas/gestao-promocoes_adm.js' %}"></script>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  {# No bloco de scripts: no conteúdo ele não rodava de novo depois de um filtro (navegação suave). #}
+  <script src="{% estatico 'site/paginas/gestao-promocoes_adm.js' %}"></script>
 {% endblock %}

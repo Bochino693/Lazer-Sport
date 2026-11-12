@@ -83,10 +83,21 @@
         {% endif %}
     </form>
 
-    <section class="combo-grid">
+    {# Lista · Cards: o mesmo <article> é linha e cartão (ver interno_modern.css). #}
+    <div class="ls-visao-barra">
+        <p class="combo-contagem">{{ combos|length }} combo{{ combos|length|pluralize }}{% if pagina.paginator.count > combos|length %} nesta página{% endif %}</p>
+        {% include "includes/lista_ou_cards.html" with alvo="comboLista" chave="combos" %}
+    </div>
+
+    <section class="combo-grid ls-visao-alvo" id="comboLista" data-visao="lista" aria-label="Combos">
+        <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+            <span data-col="titulo">Combo</span><span data-col="info">Brinquedos</span><span data-col="valor">Valor</span>
+            <span data-col="estado">Situação</span><span data-col="acoes">Ações</span>
+        </div>
         {% for combo in combos %}
             <article
                 class="combo-card"
+                data-visao-item
                 data-combo-id="{{ combo.id }}"
                 data-description="{{ combo.descricao|escape }}"
                 data-price="{{ combo.valor_combo|unlocalize }}"
@@ -94,36 +105,37 @@
                 data-active="{{ combo.ativo|yesno:'true,false' }}"
                 data-image="{% if combo.imagem_combo %}{{ combo.imagem_combo.url }}{% endif %}"
             >
-                <div class="combo-card-media">
+                <div class="combo-card-media" data-v="midia">
                     {% if combo.imagem_combo %}
                         <img
+                            data-v="foto"
                             src="{{ combo.imagem_combo.url }}"
                             alt="{{ combo.descricao }}"
                             loading="lazy"
                             decoding="async"
                         >
                     {% else %}
-                        <div class="combo-placeholder" aria-hidden="true">🎁</div>
+                        <div class="combo-placeholder" aria-hidden="true" data-v="foto">🎁</div>
                     {% endif %}
 
-                    <span class="combo-status {% if not combo.ativo %}is-off{% endif %}">
+                    <span class="combo-status {% if not combo.ativo %}is-off{% endif %}" data-v="estado">
                         {% if combo.ativo %}● Ativo{% else %}● Inativo{% endif %}
                     </span>
                 </div>
 
-                <div class="combo-card-body">
-                    <h3>{{ combo.descricao }}</h3>
-                    <ul class="combo-products">
+                <div class="combo-card-body" data-v="corpo">
+                    <h3 data-v="titulo">{{ combo.descricao }}</h3>
+                    <ul class="combo-products" data-v="info">
                         {% for brinquedo in combo.brinquedos.all %}
                             <li>🧸 {{ brinquedo.nome_brinquedo }}</li>
                         {% empty %}
                             <li>Nenhum brinquedo vinculado</li>
                         {% endfor %}
                     </ul>
-                    <div class="combo-price">
+                    <div class="combo-price" data-v="valor">
                         R$ {{ combo.valor_combo|moeda }}
                     </div>
-                    <div class="combo-actions">
+                    <div class="combo-actions" data-v="acoes">
                         <button
                             class="ls-campaign-card-button"
                             type="button"

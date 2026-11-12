@@ -14,6 +14,26 @@
 }
 
 
+/* ===== Lista · Cards: a coluna da imagem é larga (banner é faixa) ===== */
+#bannerLista {
+    --lv-colunas: 168px minmax(0, 1fr) auto;
+    --lv-areas: "foto titulo acoes";
+    --lv-colunas-tab: 168px minmax(0, 1fr) auto;
+    --lv-areas-tab: "foto titulo acoes";
+    --lv-colunas-cel: 120px minmax(0, 1fr);
+    --lv-areas-cel: "foto titulo" "acoes acoes";
+}
+.ls-content #bannerLista[data-visao="lista"] .banner-card {
+    width: 160px !important;
+    height: 60px !important;
+    aspect-ratio: auto !important;
+}
+#bannerLista[data-visao="lista"] .banner-info { text-align: left; }
+.ls-visao-barra h3 { margin: 0; }
+@media (max-width: 640px) {
+    .ls-content #bannerLista[data-visao="lista"] .banner-card { width: 112px !important; height: 48px !important; }
+}
+
 /* ===== Container ===== */
 .page-container {
     max-width: 1200px;
@@ -480,12 +500,19 @@
 
     <!-- Grid de banners -->
     <div class="card">
-        <h3>Banners existentes</h3>
+        {# Lista · Cards: o mesmo item é linha e cartão (ver interno_modern.css). #}
+        <div class="ls-visao-barra">
+            <h3>Banners existentes</h3>
+            {% include "includes/lista_ou_cards.html" with alvo="bannerLista" chave="banners" %}
+        </div>
 
-        <div class="banner-grid">
+        <div class="banner-grid ls-visao-alvo" id="bannerLista" data-visao="lista">
+            <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+                <span data-col="foto">Banner</span><span data-col="titulo">Criado em</span><span data-col="acoes">Ações</span>
+            </div>
             {% for banner in imagens_site %}
-                <div class="banner-wrapper">
-                    <div class="banner-card">
+                <div class="banner-wrapper" data-visao-item>
+                    <div class="banner-card" data-v="foto">
                         {% if banner.imagem %}
                             <img src="{{ banner.imagem.url }}" alt="Banner" loading="lazy" decoding="async">
                         {% else %}
@@ -493,19 +520,19 @@
                         {% endif %}
                     </div>
 
-                    <small class="banner-info">
+                    <small class="banner-info" data-v="titulo">
                         Criado em {{ banner.criacao|date:"d/m/Y" }}<br>
                         {{ banner.status_atualizacao }}
                     </small>
 
-                    <div class="banner-actions">
+                    <div class="banner-actions" data-v="acoes">
                         <button class="btn-edit" onclick="openUpdateModal('{{ banner.id }}')">Alterar</button>
                         <button class="btn-delete" onclick="openDeleteModal('{{ banner.id }}')">Excluir</button>
                     </div>
 
                     <!-- Formulários escondidos -->
-                    <form id="delete-form-{{ banner.id }}" method="post" action="{% url 'banner_delete' banner.id %}">{% csrf_token %}</form>
-                    <form id="update-form-{{ banner.id }}" method="post" enctype="multipart/form-data" action="{% url 'banner_adm' %}">
+                    <form id="delete-form-{{ banner.id }}" data-v="extra" method="post" action="{% url 'banner_delete' banner.id %}">{% csrf_token %}</form>
+                    <form id="update-form-{{ banner.id }}" data-v="extra" method="post" enctype="multipart/form-data" action="{% url 'banner_adm' %}">
                         {% csrf_token %}
                         <input type="file" name="imagem" class="update-input" style="display:none;">
                         <input type="hidden" name="update_id" value="{{ banner.id }}">

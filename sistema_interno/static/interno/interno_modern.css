@@ -3722,21 +3722,23 @@ body.modal-open .ls-rascunhos{display:none!important}
   .ls-commercial-table{min-width:760px}
   .ls-orcamentos-table{min-width:980px}
   .ls-clientes-table{min-width:900px;table-layout:fixed}
-  /* 58px para ações; o restante distribuído conforme o conteúdo.
-     Não deixar e-mail ou endereço redefinir a largura de toda a tabela. */
-  .ls-clientes-table .ls-col-cliente{width:calc(24% - 13.92px)}
-  .ls-clientes-table .ls-col-contato{width:calc(19% - 11.02px)}
-  .ls-clientes-table .ls-col-vinculo{width:calc(11% - 6.38px)}
-  .ls-clientes-table .ls-col-endereco{width:calc(23% - 13.34px)}
-  .ls-clientes-table .ls-col-propostas{width:calc(9% - 5.22px)}
-  .ls-clientes-table .ls-col-aprovado{width:calc(14% - 8.12px)}
-  .ls-clientes-table .ls-col-acoes{width:58px}
+  /* 88px para ações -- a largura do botão E do título "AÇÕES", que em
+     58px quebrava ao meio --; o restante distribuído conforme o conteúdo,
+     com a maior fatia para o cliente. Não deixar e-mail ou endereço
+     redefinir a largura de toda a tabela. */
+  .ls-clientes-table .ls-col-cliente{width:calc(28% - 24.64px)}
+  .ls-clientes-table .ls-col-contato{width:calc(18% - 15.84px)}
+  .ls-clientes-table .ls-col-vinculo{width:calc(10% - 8.8px)}
+  .ls-clientes-table .ls-col-endereco{width:calc(21% - 18.48px)}
+  .ls-clientes-table .ls-col-propostas{width:calc(9% - 7.92px)}
+  .ls-clientes-table .ls-col-aprovado{width:calc(14% - 12.32px)}
+  .ls-clientes-table .ls-col-acoes{width:88px}
   .ls-clientes-table th,.ls-clientes-table td{min-width:0;max-width:none;text-align:left;vertical-align:top}
   .ls-table.ls-clientes-table th,.ls-table.ls-clientes-table td{padding:12px 9px!important}
   .ls-clientes-table th{vertical-align:middle}
   .ls-clientes-table td[data-rotulo="Propostas"],.ls-clientes-table th:nth-child(5){text-align:center!important}
   .ls-clientes-table td[data-rotulo="Aprovado"],.ls-clientes-table th:nth-child(6){text-align:right!important}
-  .ls-clientes-table th:last-child{width:58px;text-align:center!important}
+  .ls-clientes-table th:last-child{width:88px;text-align:center!important}
   .ls-clientes-table .ls-money{font-variant-numeric:tabular-nums;white-space:normal;overflow-wrap:anywhere}
   .ls-clientes-table .material-nome,.ls-clientes-table .material-sub,
   .ls-clientes-table .ls-address-line{max-width:none;white-space:normal;overflow-wrap:anywhere}
@@ -5473,13 +5475,17 @@ body.ls-body{
   display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;
   margin:0 0 12px;
 }
+.ls-visao-barra > .ls-visao:only-child,
+.ls-data-header > .ls-visao{margin-left:auto}
+.ls-content .ls-data-header > .ls-visao{width:auto!important;max-width:100%;flex:0 0 auto}
 
 /* ---- o que é de um modo só ---- */
 .ls-visao-alvo[data-visao="lista"] [data-visao-so="cards"],
 .ls-visao-alvo[data-visao="cards"] [data-visao-so="lista"]{display:none!important}
 
 /* ---- cartão que vira LINHA ---- */
-.ls-content .ls-visao-alvo[data-visao="lista"]{
+/* (o contêiner de TABELA fica como era: quem desenha a lista é a tabela) */
+.ls-content .ls-visao-alvo[data-visao="lista"]:not(:has(> .ls-visao-tabela)){
   display:flex!important;flex-direction:column;gap:0!important;
   padding:0!important;overflow:hidden;
   border:1px solid var(--line);border-radius:18px;background:var(--bg-1);
@@ -5498,8 +5504,9 @@ body.ls-body{
 .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]:hover{background:rgba(var(--verniz-rgb),.035)!important}
 .ls-content .ls-visao-alvo[data-visao="lista"] [data-v="corpo"],
 .ls-content .ls-visao-alvo[data-visao="lista"] [data-v="midia"]{display:contents!important}
-.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="extra"]{display:none!important}
-.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"]{
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="extra"],
+.ls-content .ls-visao-alvo [data-v][hidden]{display:none!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"]:not([hidden]){
   grid-area:foto;position:relative!important;inset:auto!important;
   display:grid!important;place-items:center;overflow:hidden;
   width:56px!important;height:56px!important;min-height:0!important;max-height:none!important;
@@ -5521,11 +5528,13 @@ body.ls-body{
   grid-area:estado;justify-self:start;position:static!important;inset:auto!important;
   margin:0!important;white-space:nowrap;
 }
-.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="selos"]{
-  grid-area:selos;position:static!important;inset:auto!important;
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="selos"]:not([hidden]){
+  grid-area:selos;position:static!important;inset:auto!important;justify-self:start;
   display:flex!important;flex-wrap:wrap;gap:4px;max-width:none!important;margin:0!important;
 }
-.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="acoes"]{
+/* foto que não carregou: nada do texto alternativo espremido no quadrado */
+.ls-content .ls-visao-alvo[data-visao="lista"] img[data-v="foto"]{color:transparent;font-size:0}
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="acoes"]:not([hidden]){
   grid-area:acoes;display:flex!important;flex-wrap:nowrap!important;align-items:center;justify-content:flex-end;
   gap:6px!important;width:auto!important;margin:0!important;padding:0!important;
   grid-template-columns:none!important;
@@ -5562,7 +5571,8 @@ body.ls-body{
   display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));
   gap:14px;width:100%!important;padding:14px;
 }
-.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody tr{
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody tr[hidden]{display:none!important}
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody tr:not([hidden]){
   position:relative;display:flex!important;flex-direction:column;gap:0;
   width:auto!important;min-width:0;margin:0!important;padding:14px!important;
   border:1px solid var(--line)!important;border-radius:18px!important;
@@ -5618,6 +5628,12 @@ body.ls-body{
   .ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody{grid-template-columns:minmax(0,1fr);padding:10px}
 }
 
+/* A onda do sino (o anel que cresce 1,55x quando há aviso) passava da
+   borda direita no celular, e a tela ganhava de 1 a 3px de rolagem de
+   lado. A barra corta só na horizontal: os painéis que descem dela
+   continuam inteiros (ver também gestao_integrada.css). */
+.ls-topbar{overflow-x:clip}
+
 /* ======================================================================
    TABELAS DO PAINEL: CABEÇALHO INTEIRO, COLUNAS PELO CONTEÚDO
 
@@ -5663,6 +5679,8 @@ body.ls-body{
 }
 /* a origem do orçamento é um selo: uma linha só */
 .ls-content .ls-commercial-table .ls-origin-badge{white-space:nowrap}
+/* o selo de situação encosta à esquerda, como o título da coluna */
+.ls-content .ls-commercial-table td[data-rotulo="Situação"] :is(.ls-status,.ls-pago){margin-inline:0}
 }
 
 /* ORÇAMENTOS: as larguras saem do conteúdo, e não de oito porcentagens
@@ -5674,20 +5692,20 @@ body.ls-body{
   .ls-content .ls-orcamentos-table th[data-coluna="Cliente"]{width:26%}
   .ls-content .ls-orcamentos-table :is(th[data-coluna="ID"],th[data-coluna="Ações"]){width:1%}
   .ls-content .ls-orcamentos-table td[data-rotulo="ID"]{white-space:nowrap!important}
+  /* O.S.: o mesmo conserto. As larguras fixas eram de quando a tabela
+     tinha nove colunas; com seis, a das ações ficava com 9% e o número
+     da O.S. passava por cima do cliente. */
+  .ls-content .ls-os-tabela{table-layout:auto!important}
+  .ls-content .ls-os-tabela th[data-coluna]{width:auto}
+  .ls-content .ls-os-tabela th[data-coluna="Cliente / equipamento"]{width:30%}
+  .ls-content .ls-os-tabela :is(th[data-coluna="O.S."],th[data-coluna="Ações"]){width:1%}
 }
 
 /* CLIENTES: a tabela continua fixa (e-mail comprido não redefine a
-   largura de tudo), mas a coluna das ações tem a largura do botão e do
-   título dela, e o cliente fica com a maior fatia. */
+   largura de tudo); as larguras novas (88px de ações, a maior fatia para
+   o cliente) estão na própria regra das colunas, acima. Aqui só o
+   alinhamento dos títulos com as suas colunas. */
 @media (min-width:721px){
-  .ls-content .ls-clientes-table .ls-col-acoes,
-  .ls-content .ls-clientes-table th:last-child{width:88px}
-  .ls-content .ls-clientes-table .ls-col-cliente{width:calc(28% - 24.64px)}
-  .ls-content .ls-clientes-table .ls-col-contato{width:calc(18% - 15.84px)}
-  .ls-content .ls-clientes-table .ls-col-vinculo{width:calc(10% - 8.8px)}
-  .ls-content .ls-clientes-table .ls-col-endereco{width:calc(21% - 18.48px)}
-  .ls-content .ls-clientes-table .ls-col-propostas{width:calc(9% - 7.92px)}
-  .ls-content .ls-clientes-table .ls-col-aprovado{width:calc(14% - 12.32px)}
   .ls-content .ls-clientes-table th:last-child{text-align:right!important}
   .ls-content .ls-clientes-table th[data-coluna="Propostas"]{text-align:center!important}
 }

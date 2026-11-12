@@ -127,7 +127,7 @@
   <section class="bq-grade ls-visao-alvo" id="bqLista" data-visao="lista" aria-label="Brinquedos">
     <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
       <span data-col="titulo">Brinquedo</span><span data-col="info">Medidas e categorias</span>
-      <span data-col="valor">Preço</span><span data-col="estado">Loja</span><span data-col="selos">Fotos</span><span data-col="acoes">Ações</span>
+      <span data-col="valor">Preço</span><span data-col="estado">Loja</span><span data-col="selos">Selos</span><span data-col="acoes">Ações</span>
     </div>
     {% for brinquedo in brinquedos %}
       <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-visao-item data-id="{{ brinquedo.id }}">

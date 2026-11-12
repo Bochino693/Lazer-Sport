@@ -42,34 +42,43 @@
     <button type="submit">Filtrar</button>
   </form>
 
-  <div class="pecas-grid">
+  {# Lista · Cards: o mesmo <article> é linha e cartão (ver interno_modern.css). #}
+  <div class="ls-visao-barra">
+    <p class="pecas-contagem">{{ page_obj.paginator.count }} peça{{ page_obj.paginator.count|pluralize }}</p>
+    {% include "includes/lista_ou_cards.html" with alvo="pecasLista" chave="pecas" %}
+  </div>
+
+  <div class="pecas-grid ls-visao-alvo" id="pecasLista" data-visao="lista">
+    <div class="ls-visao-cabeca" data-visao-so="lista" aria-hidden="true">
+      <span data-col="titulo">Peça</span><span data-col="info">Categorias</span><span data-col="valor">Venda · situação</span><span data-col="acoes">Ações</span>
+    </div>
     {% for peca in pecas %}
-      <article class="peca-card" data-peca-id="{{ peca.id }}">
-        <div class="peca-capa">
+      <article class="peca-card" data-visao-item data-peca-id="{{ peca.id }}">
+        <div class="peca-capa" data-v="foto">
           {% if peca.capa %}<img src="{{ peca.capa }}" alt="{{ peca.nome }}" loading="lazy">{% else %}Sem foto cadastrada{% endif %}
         </div>
-        <div class="peca-corpo">
-          <h3>{{ peca.nome }}</h3>
-          <p>{{ peca.descricao_peca|truncatechars:110 }}</p>
+        <div class="peca-corpo" data-v="corpo">
+          <h3 data-v="titulo">{{ peca.nome }}</h3>
+          <p data-v="extra">{{ peca.descricao_peca|truncatechars:110 }}</p>
           {% if peca.categorias_nomes %}
-            <div class="peca-tags">
+            <div class="peca-tags" data-v="info">
               {% for nome in peca.categorias_nomes %}<span class="peca-tag">{{ nome }}</span>{% endfor %}
             </div>
           {% endif %}
-          <div class="peca-linha">
+          <div class="peca-linha" data-v="valor">
             <span>Venda <strong>{% if peca.preco_venda %}R$ {{ peca.preco_venda|moeda }}{% else %}—{% endif %}</strong></span>
             <span class="peca-status {% if peca.ativo %}on{% else %}off{% endif %}">{% if peca.ativo %}No site{% else %}Fora do site{% endif %}</span>
           </div>
-          <div class="peca-linha">
+          <div class="peca-linha" data-v="extra">
             <span>Fornecedor {% if peca.preco_fornecedor %}R$ {{ peca.preco_fornecedor|moeda }}{% else %}—{% endif %}</span>
             <span>Ganho {% if peca.ganho_potencial %}R$ {{ peca.ganho_potencial|moeda }}{% else %}—{% endif %}</span>
           </div>
-          <div class="peca-linha">
+          <div class="peca-linha" data-v="extra">
             <span>{{ peca.curtidas }} curtida{{ peca.curtidas|pluralize }}</span>
             <span>{{ peca.desejos }} na lista de desejos</span>
           </div>
         </div>
-        <div class="peca-acoes">
+        <div class="peca-acoes" data-v="acoes">
           <button type="button" data-editar>Editar</button>
           <button type="button" data-alternar>{% if peca.ativo %}Tirar do site{% else %}Publicar{% endif %}</button>
           <button type="button" class="perigo" data-excluir>Excluir</button>
