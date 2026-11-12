@@ -1,5 +1,5 @@
 {% load interno_extras %}{% comment %}
-  ANÁLISES E FICHAS DAS TELAS DE GESTÃO (LEIA-ME-V10, seção 76).
+  ANÁLISES E FICHAS DAS TELAS DE GESTÃO (LEIA-ME-V10, seção 76 e o AJUSTE dela).
 
   Uso, uma linha por tela:
       {% include "gestao/includes/analises.html" with tipo="promocao" rotulo="as promoções" %}
@@ -8,11 +8,18 @@
   O atalho "Gráficos" é posto pelo gestao-analises.js no lugar das ações do
   cartão (ou no fim dele); nada mais precisa mudar no template da tela.
 
-  O painel carrega leve: o HTML sai vazio e os números chegam por GET do
-  endereço JSON (core/views_analises.py), com estado de carregando e de erro.
+  O painel carrega leve: o HTML sai com o ESQUELETO (as caixas no lugar dos
+  indicadores e do gráfico) e os números chegam por GET do endereço JSON
+  (core/views_analises.py), com estado de carregando e de erro.
   Os períodos são rádios dentro de label, e não <select> nem <button>: o
   gestao_integrada.css pinta todo botão da tela, e o celular abre o select
   como uma roleta que esconde as opções.
+
+  USUÁRIOS ganha a faixa "Agora" (quem está online, quem passou nas últimas
+  24 h e os contadores que filtram a lista). Ela se enche e se atualiza
+  sozinha pelo /presenca/agora/?contas=1 (interno/ls-presenca.js pergunta;
+  gestao-analises.js desenha) e só existe nesta tela, que é do
+  superadministrador.
 
   O SCRIPT NÃO MORA AQUI: script no conteúdo não roda de novo quando a
   navegação suave troca a tela, e as telas pedem o JS no bloco de scripts.
@@ -23,18 +30,31 @@
 <section class="lsa" data-lsa-painel data-lsa-tipo="{{ tipo }}" data-lsa-url="{% url 'analises_json' tipo %}"
          aria-labelledby="lsaTitulo-{{ tipo }}">
   <header class="lsa-topo">
+    <span class="lsa-emblema" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span>
     <div class="lsa-topo-texto">
-      <span class="lsa-olho"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Desempenho</span>
+      <span class="lsa-olho">Desempenho</span>
       <h2 class="lsa-titulo" id="lsaTitulo-{{ tipo }}">Como estão {{ rotulo|default:"os números" }}</h2>
-      <p class="lsa-descricao" data-lsa-descricao aria-live="polite">Carregando os números…</p>
     </div>
     <label class="lsa-recolher">
       <input class="lsa-oculto" type="checkbox" data-lsa-recolher>
-      <i class="bi bi-chevron-down" aria-hidden="true"></i> <span data-lsa-recolher-texto>Recolher</span>
+      <i class="bi bi-chevron-up" aria-hidden="true"></i> <span data-lsa-recolher-texto>Recolher</span>
     </label>
   </header>
 
-  <div class="lsa-periodos-linha">
+  {% if tipo == "usuario" %}
+  <section class="lsa-agora" data-lsa-agora aria-label="Quem está online agora" aria-busy="true">
+    <div class="lsa-agora-topo">
+      <span class="lsa-pulso" aria-hidden="true"></span>
+      <strong class="lsa-agora-titulo" data-lsa-agora-titulo>Vendo quem está online…</strong>
+      <span class="lsa-agora-relogio" data-lsa-agora-relogio></span>
+    </div>
+    <div class="lsa-agora-corpo" data-lsa-agora-corpo>
+      <div class="lsa-esqueleto lsa-esqueleto-pessoas" aria-hidden="true"><span></span><span></span><span></span></div>
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="lsa-barra" data-lsa-barra>
     <fieldset class="lsa-periodos" data-lsa-periodos>
       <legend class="lsa-oculto">Período</legend>
       <label class="lsa-periodo"><input type="radio" name="lsa-periodo-{{ tipo }}" value="hoje"> Hoje</label>
@@ -49,11 +69,15 @@
       <label>De <input type="date" data-lsa-de></label>
       <label>Até <input type="date" data-lsa-ate></label>
     </div>
+    <p class="lsa-descricao" data-lsa-descricao aria-live="polite"></p>
   </div>
 
-  <div class="lsa-destaques" data-lsa-destaques></div>
-  <div class="lsa-corpo" data-lsa-corpo>
-    <div class="lsa-estado"><span class="lsa-girando" aria-hidden="true"></span> Carregando os números…</div>
+  <div class="lsa-corpo" data-lsa-corpo aria-busy="true">
+    <div class="lsa-esqueleto" role="status">
+      <span class="lsa-oculto">Carregando os números…</span>
+      <div class="lsa-esqueleto-linha" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="lsa-esqueleto-bloco" aria-hidden="true"></div>
+    </div>
   </div>
 </section>
 
@@ -81,7 +105,7 @@
   <div class="lsa-ficha-corpo" data-lsa-ficha-corpo>
     <div class="lsa-ficha-parte" data-lsa-parte="resumo"></div>
     <div class="lsa-ficha-parte" data-lsa-parte="graficos" hidden>
-      <div class="lsa-periodos-linha">
+      <div class="lsa-barra" data-lsa-barra>
         <fieldset class="lsa-periodos" data-lsa-periodos>
           <legend class="lsa-oculto">Período</legend>
           <label class="lsa-periodo"><input type="radio" name="lsa-periodo-ficha" value="hoje"> Hoje</label>
@@ -96,8 +120,8 @@
           <label>De <input type="date" data-lsa-de></label>
           <label>Até <input type="date" data-lsa-ate></label>
         </div>
+        <p class="lsa-descricao" data-lsa-descricao aria-live="polite"></p>
       </div>
-      <p class="lsa-descricao" data-lsa-descricao aria-live="polite"></p>
       <div class="lsa-corpo" data-lsa-corpo></div>
     </div>
     <div class="lsa-ficha-parte" data-lsa-parte="atividade" hidden></div>

@@ -87,6 +87,9 @@
       {% include "includes/lista_ou_cards.html" with alvo="usrLista" chave="usuarios" %}
     </div>
 
+    {# O filtro dos contadores da faixa "Agora" (Online, Ativos hoje...): o gestao-analises.js esconde as linhas de fora e escreve aqui quem ficou. #}
+    <div class="lsa-filtro-aviso" data-lsa-filtro-aviso data-lsa-filtro-completo="{% if busca or tipo != 'todos' %}0{% else %}1{% endif %}" role="status" hidden></div>
+
     <div class="usr-table-wrap ls-visao-alvo" id="usrLista" data-visao="lista">
       <table class="usr-table ls-visao-tabela">
         <thead>
@@ -101,12 +104,14 @@
         </thead>
         <tbody>
           {% for usuario in usuarios %}
-            <tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}">
+            <tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}" data-presenca="{% grupos_presenca usuario %}">
+              {# As iniciais, a cor e o papel são os mesmos da faixa "Agora" e da ficha (core.presenca.cartao_da_conta). #}
+              {% cartao_presenca usuario as cartao %}
               <td data-label="Usuário">
                 <div class="usr-identity">
-                  <span class="usr-avatar">{{ usuario.username|slice:":2"|upper }}</span>
+                  <span class="usr-avatar lsa-avatar is-c{{ cartao.cor }}" aria-hidden="true">{{ cartao.iniciais }}</span>
                   <span>
-                    <span class="usr-name">{{ usuario.perfil.nome_completo|default:usuario.username }}</span>
+                    <span class="usr-name">{{ cartao.nome }}</span>
                     <span class="usr-username">@{{ usuario.username }}</span>
                   </span>
                 </div>
@@ -116,13 +121,7 @@
                 <span class="usr-contact-line"><svg><use href="#usr-i-phone"/></svg>{{ usuario.perfil.telefone|default:"Não informado" }}</span>
               </td>
               <td data-label="Perfil">
-                {% if usuario.is_superuser %}
-                  <span class="usr-chip is-super">Superadmin</span>
-                {% elif usuario.is_staff %}
-                  <span class="usr-chip is-staff">Staff</span>
-                {% else %}
-                  <span class="usr-chip is-client">Cliente</span>
-                {% endif %}
+                <span class="usr-chip {% if cartao.papel == 'admin' %}is-super{% elif cartao.papel == 'equipe' %}is-staff{% else %}is-client{% endif %}">{{ cartao.papel_rotulo }}</span>
               </td>
               <td data-label="Status">
                 <span class="usr-status {% if usuario.is_active %}is-on{% else %}is-off{% endif %}">

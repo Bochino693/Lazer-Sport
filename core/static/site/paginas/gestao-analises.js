@@ -1,20 +1,40 @@
 /* ======================================================================
-   ANÁLISES E FICHAS DAS TELAS DE GESTÃO (LEIA-ME-V10, seção 76)
+   ANÁLISES E FICHAS DAS TELAS DE GESTÃO (LEIA-ME-V10, seção 76 e o AJUSTE)
 
-   Dois pedaços, um arquivo:
+   Três pedaços, um arquivo:
      * o painel "Desempenho" do topo de cada tela ([data-lsa-painel]);
+     * a faixa "Agora" da tela Usuários ([data-lsa-agora]): quem está
+       online, quem passou nas últimas 24 h e os contadores que filtram a
+       lista -- alimentada pelo relógio do interno/ls-presenca.js;
      * o modal de detalhes ([data-lsa-ficha]) que abre ao tocar num objeto
        da lista ([data-detalhe-tipo][data-detalhe-id]) ou no atalho
        "Gráficos" que este arquivo põe em cada objeto.
 
+   O QUE O AJUSTE MUDOU NO PAINEL (o cliente: "não gostei muito desse
+   design ... mais criativo e mais robusto com estilo app e com as
+   informações coerentes"):
+     * SEM PAREDE DE CAIXAS VAZIAS. Cartão só para a métrica que tem
+       número; as que não tiveram nada no período nem no anterior viram UMA
+       linha ("Ainda sem registro neste período: ..."), com o motivo de
+       cada uma a um toque. O gráfico abre na primeira métrica que tem dado.
+     * NENHUM GRÁFICO PEDINDO DESCULPA. Quem conta pessoas distintas sai em
+       colunas (por dia, semana ou mês); em "Hoje", as contas ativas viram
+       a linha do tempo "Quem esteve ativo hoje" (do primeiro ao último
+       sinal de cada pessoa). Sem série e sem pessoas, o número em
+       destaque -- nunca uma área vazia com um aviso dentro.
+     * TEXTO QUE FECHA. A frase do período e a comparação vêm prontas do
+       servidor; o cartão diz "antes: 4" (ou "ontem: 4"), "novo", "igual" --
+       e nunca "estável · antes 0".
+
    GRÁFICOS DESENHADOS AQUI, EM SVG. O painel não usa biblioteca nem CDN:
    uma linha com área para a série, a do período anterior em cinza, colunas
-   por dia da semana e barras deitadas no ranking. Marcas finas (linha de
-   2px, coluna de no máximo 24px com a ponta arredondada), grade de 1px, e
-   a dica que acompanha o dedo ou o mouse -- e as setas do teclado.
+   (por dia da semana e para pessoas distintas) e barras deitadas no
+   ranking. Marcas finas (linha de 2px, coluna de no máximo 24px com a
+   ponta arredondada e 2px de respiro), grade de 1px, e a dica que segue o
+   dedo ou o mouse -- e as setas do teclado. Toda série tem a tabela.
 
    TEXTO DE FORA ENTRA COMO TEXTO. Nome de brinquedo, de cliente e de cupom
-   vem do banco: tudo vai por textContent, nunca por innerHTML.
+   vem do banco: tudo vai por textContent, nunca por HTML montado em texto.
 
    Pode ser carregado mais de uma vez (a navegação suave reaproveita a
    tela): a segunda carga só procura painéis e itens novos.
@@ -35,6 +55,8 @@
   var REAIS0 = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   var REAIS_COMPACTO = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
   var TITULO_UNIDADE = { hora: "por hora", dia: "por dia", semana: "por semana", mes: "por mês" };
+  var NOME_UNIDADE = { hora: "hora", dia: "dia", semana: "semana", mes: "mês" };
+  var CORES_DE_AVATAR = 5;
   var uid = 0;
 
   /* ------------------------------------------------------------------
@@ -59,6 +81,17 @@
     var i = el("i", "bi " + (nome || "bi-dot"));
     i.setAttribute("aria-hidden", "true");
     return i;
+  }
+
+  function plural(quantidade, um, varios) {
+    return quantidade === 1 ? um : varios;
+  }
+
+  /* As iniciais numa cor estável (a cor sai do número da conta, não da posição). */
+  function avatar(iniciais, cor, classe) {
+    var no = el("span", "lsa-avatar is-c" + ((Number(cor) || 0) % CORES_DE_AVATAR) + (classe ? " " + classe : ""), iniciais || "?");
+    no.setAttribute("aria-hidden", "true");
+    return no;
   }
 
   function lerPreferencia(chave, padrao) {
@@ -129,6 +162,10 @@
     return String(texto).length * 6.4 + 4;
   }
 
+  function temValor(valor) {
+    return valor !== null && valor !== undefined;
+  }
+
   /* ------------------------------------------------------------------
      a dica (tooltip) de cada gráfico
      ------------------------------------------------------------------ */
@@ -170,20 +207,20 @@
   /* ------------------------------------------------------------------
      linha + área: a série do período e a do período anterior
      ------------------------------------------------------------------ */
-  function desenharLinha(tela, rotulos, metrica, unidade) {
+  function desenharLinha(tela, rotulos, metrica, unidade, nomes) {
     tela.textContent = "";
     var largura = Math.max(260, tela.clientWidth || 600);
-    var altura = largura < 480 ? 196 : 236;
+    var altura = largura < 480 ? 204 : 252;
     var serie = metrica.serie || [];
     var anterior = metrica.serie_anterior || null;
     var n = serie.length;
     var inteiro = metrica.formato !== "dinheiro" && !metrica.razao;
-    var valores = serie.concat(anterior || []).filter(function (v) { return v !== null && v !== undefined; });
+    var valores = serie.concat(anterior || []).filter(temValor);
     var esc = escala(Math.max.apply(null, valores.concat([0])), inteiro);
     var ticks = [];
     for (var t = 0; t <= esc.topo + 1e-9; t += esc.passo) ticks.push(t);
     var margemEsq = Math.max.apply(null, ticks.map(function (v) { return medirTexto(formatar(v, metrica.formato, "eixo")); })) + 6;
-    var m = { esq: margemEsq, dir: 12, topo: 12, base: 26 };
+    var m = { esq: margemEsq, dir: 12, topo: 14, base: 26 };
     var lp = largura - m.esq - m.dir;
     var ap = altura - m.topo - m.base;
     var x = function (i) { return m.esq + (n <= 1 ? lp / 2 : (i * lp) / (n - 1)); };
@@ -194,7 +231,7 @@
     var svg = sv("svg", { width: largura, height: altura, viewBox: "0 0 " + largura + " " + altura, role: "img", tabindex: "0" });
     var defs = sv("defs");
     var degrade = sv("linearGradient", { id: idDegrade, x1: "0", x2: "0", y1: "0", y2: "1" });
-    [["0%", ".12"], ["100%", "0"]].forEach(function (par) {
+    [["0%", ".16"], ["100%", "0"]].forEach(function (par) {
       var parada = sv("stop", { offset: par[0] });
       parada.style.stopColor = "var(--lsa-serie)";
       parada.style.stopOpacity = par[1];
@@ -228,7 +265,7 @@
       var partes = [];
       var aberto = false;
       lista.forEach(function (v, i) {
-        if (v === null || v === undefined) { aberto = false; return; }
+        if (!temValor(v)) { aberto = false; return; }
         partes.push((aberto ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1));
         aberto = true;
       });
@@ -240,16 +277,15 @@
     }
 
     var ultimo = -1;
-    serie.forEach(function (v, i) { if (v !== null && v !== undefined) ultimo = i; });
-    var primeiro = serie.findIndex(function (v) { return v !== null && v !== undefined; });
+    serie.forEach(function (v, i) { if (temValor(v)) ultimo = i; });
+    var primeiro = serie.findIndex(temValor);
     if (ultimo >= 0 && serie.slice(primeiro, ultimo + 1).every(function (v) { return v !== null; })) {
       var area = caminho(serie) + " L" + x(ultimo).toFixed(1) + " " + y(0).toFixed(1) + " L" + x(primeiro).toFixed(1) + " " + y(0).toFixed(1) + " Z";
-      var preenchida = sv("path", { d: area, fill: "url(#" + idDegrade + ")", stroke: "none" });
-      svg.appendChild(preenchida);
+      svg.appendChild(sv("path", { d: area, fill: "url(#" + idDegrade + ")", stroke: "none" }));
     }
     svg.appendChild(sv("path", { d: caminho(serie), "class": "lsa-svg-serie" }));
     if (ultimo >= 0) {
-      svg.appendChild(sv("circle", { cx: x(ultimo), cy: y(serie[ultimo]), r: 4, "class": "lsa-svg-ponto" }));
+      svg.appendChild(sv("circle", { cx: x(ultimo), cy: y(serie[ultimo]), r: 4.5, "class": "lsa-svg-ponto" }));
     }
 
     /* a mira: acha o balde mais perto do dedo, não exige acertar a linha de 2px */
@@ -264,7 +300,7 @@
 
     var total = metrica.total;
     svg.setAttribute("aria-label", metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || "") + ": total " +
-      formatar(total, metrica.formato) + (metrica.anterior !== null && metrica.anterior !== undefined ? ", período anterior " + formatar(metrica.anterior, metrica.formato) : "") +
+      formatar(total, metrica.formato) + (temValor(metrica.anterior) ? ", " + nomes.anterior + " " + formatar(metrica.anterior, metrica.formato) : "") +
       ". Use as setas para ler cada ponto; a tabela abaixo traz todos os valores.");
     tela.appendChild(svg);
     var dica = new Dica(tela);
@@ -279,24 +315,24 @@
       mira.setAttribute("visibility", "visible");
       var linhas = [];
       var atual = serie[i];
-      if (atual !== null && atual !== undefined) {
+      if (temValor(atual)) {
         pontoAtual.setAttribute("cx", px);
         pontoAtual.setAttribute("cy", y(atual));
         pontoAtual.setAttribute("visibility", "visible");
-        linhas.push({ valor: formatar(atual, metrica.formato), rotulo: "este período" });
+        linhas.push({ valor: formatar(atual, metrica.formato), rotulo: nomes.atual });
       } else {
         pontoAtual.setAttribute("visibility", "hidden");
-        linhas.push({ valor: "—", rotulo: rotulos[i] && rotulos[i].futuro ? "ainda não chegou" : "este período" });
+        linhas.push({ valor: "—", rotulo: rotulos[i] && rotulos[i].futuro ? "ainda não chegou" : nomes.atual });
       }
-      if (anterior && anterior[i] !== null && anterior[i] !== undefined) {
+      if (anterior && temValor(anterior[i])) {
         pontoAnterior.setAttribute("cx", px);
         pontoAnterior.setAttribute("cy", y(anterior[i]));
         pontoAnterior.setAttribute("visibility", "visible");
-        linhas.push({ valor: formatar(anterior[i], metrica.formato), rotulo: "período anterior", anterior: true });
+        linhas.push({ valor: formatar(anterior[i], metrica.formato), rotulo: nomes.anterior, anterior: true });
       } else {
         pontoAnterior.setAttribute("visibility", "hidden");
       }
-      var referencia = atual !== null && atual !== undefined ? y(atual) : m.topo + ap / 2;
+      var referencia = temValor(atual) ? y(atual) : m.topo + ap / 2;
       dica.mostrar(rotulos[i] ? rotulos[i].longo : "", linhas, px, referencia);
     }
 
@@ -334,23 +370,31 @@
   }
 
   /* ------------------------------------------------------------------
-     colunas: o dia da semana
+     colunas: o dia da semana, e a série de quem conta pessoas distintas
+     (cada dia, semana ou mês é uma contagem à parte: não se liga uma à
+     outra com uma linha)
+
+     itens: [{curto, longo, valor}] -- valor null = balde que ainda não chegou
      ------------------------------------------------------------------ */
-  function desenharColunas(tela, nomes, valores, metrica) {
+  function desenharColunas(tela, itens, metrica, opcoes) {
+    opcoes = opcoes || {};
     tela.textContent = "";
+    var n = itens.length;
     var largura = Math.max(240, tela.clientWidth || 400);
-    var altura = 170;
-    var inteiro = metrica.formato !== "dinheiro";
+    var altura = opcoes.altura || 176;
+    var inteiro = metrica.formato !== "dinheiro" && !opcoes.media;
+    var valores = itens.map(function (item) { return temValor(item.valor) ? item.valor : 0; });
     var maior = Math.max.apply(null, valores.concat([0]));
     var esc = escala(maior, inteiro);
     var ticks = [];
     for (var t = 0; t <= esc.topo + 1e-9; t += esc.passo) ticks.push(t);
     var margemEsq = Math.max.apply(null, ticks.map(function (v) { return medirTexto(formatar(v, metrica.formato, "eixo")); })) + 6;
-    var m = { esq: margemEsq, dir: 6, topo: 18, base: 24 };
+    var m = { esq: margemEsq, dir: 6, topo: 20, base: 24 };
     var lp = largura - m.esq - m.dir;
     var ap = altura - m.topo - m.base;
-    var faixa = lp / valores.length;
-    var grossura = Math.min(24, Math.max(10, faixa * 0.58));
+    var faixa = lp / n;
+    /* no máximo 24px, e sempre 2px de respiro entre uma coluna e a vizinha */
+    var grossura = Math.max(2, Math.min(24, faixa * 0.6, faixa - 2));
     var y = function (v) { return m.topo + ap - (v / esc.topo) * ap; };
     var svg = sv("svg", { width: largura, height: altura, viewBox: "0 0 " + largura + " " + altura, role: "img", tabindex: "0" });
 
@@ -362,9 +406,12 @@
       svg.appendChild(rotulo);
     });
 
+    var cabem = Math.max(2, Math.floor(lp / (opcoes.larguraDoRotulo || 44)));
+    var passo = Math.max(1, Math.ceil(n / cabem));
     var barras = [];
     var melhor = valores.indexOf(maior);
-    valores.forEach(function (valor, i) {
+    itens.forEach(function (item, i) {
+      var valor = valores[i];
       var cx = m.esq + faixa * i + faixa / 2;
       var topo = y(valor);
       var base = y(0);
@@ -372,17 +419,25 @@
       var raio = Math.min(4, alturaBarra, grossura / 2);
       var esq = cx - grossura / 2;
       var dir = cx + grossura / 2;
-      var d = alturaBarra > 0
-        ? "M" + esq + " " + base + " L" + esq + " " + (topo + raio) + " Q" + esq + " " + topo + " " + (esq + raio) + " " + topo +
-          " L" + (dir - raio) + " " + topo + " Q" + dir + " " + topo + " " + dir + " " + (topo + raio) + " L" + dir + " " + base + " Z"
-        : "M" + esq + " " + (base - 1) + " L" + dir + " " + (base - 1);
-      var barra = sv("path", { d: d, "class": "lsa-svg-barra" });
-      if (alturaBarra <= 0) { barra.setAttribute("stroke", "currentColor"); barra.style.stroke = "var(--lsa-grade)"; }
+      var barra;
+      if (alturaBarra > 0) {
+        barra = sv("path", {
+          d: "M" + esq + " " + base + " L" + esq + " " + (topo + raio) + " Q" + esq + " " + topo + " " + (esq + raio) + " " + topo +
+            " L" + (dir - raio) + " " + topo + " Q" + dir + " " + topo + " " + dir + " " + (topo + raio) + " L" + dir + " " + base + " Z",
+          "class": "lsa-svg-barra"
+        });
+      } else {
+        /* zero é zero: um traço na base, e não uma coluna inventada */
+        barra = sv("path", { d: "M" + esq + " " + (base - 1) + " L" + dir + " " + (base - 1), "class": "lsa-svg-barra-zero" });
+      }
+      if (!temValor(item.valor)) barra.setAttribute("visibility", "hidden");
       svg.appendChild(barra);
       barras.push(barra);
-      var nome = sv("text", { x: cx, y: altura - 7, "text-anchor": "middle", "class": "lsa-svg-texto" });
-      nome.textContent = nomes[i].slice(0, 3);
-      svg.appendChild(nome);
+      if ((n - 1 - i) % passo === 0) {
+        var nome = sv("text", { x: cx, y: altura - 7, "text-anchor": "middle", "class": "lsa-svg-texto" });
+        nome.textContent = item.curto;
+        svg.appendChild(nome);
+      }
       if (i === melhor && maior > 0) {
         var valorTexto = sv("text", { x: cx, y: topo - 6, "text-anchor": "middle", "class": "lsa-svg-valor" });
         valorTexto.textContent = formatar(valor, metrica.formato, "curto");
@@ -393,17 +448,22 @@
     tela.appendChild(svg);
     var dica = new Dica(tela);
     var indice = -1;
+    var rotuloDaDica = opcoes.rotuloDaDica || metrica.rotulo.toLowerCase();
     function mostrar(i) {
       indice = i;
       barras.forEach(function (barra, j) { barra.classList.toggle("is-apagada", j !== i); });
       var cx = m.esq + faixa * i + faixa / 2;
-      dica.mostrar(nomes[i], [{ valor: formatar(valores[i], metrica.formato), rotulo: metrica.rotulo.toLowerCase() }], cx, y(valores[i]));
+      var valor = itens[i].valor;
+      dica.mostrar(itens[i].longo, [{
+        valor: temValor(valor) ? formatar(valor, metrica.formato) : "—",
+        rotulo: temValor(valor) ? rotuloDaDica : "ainda não chegou"
+      }], cx, y(valores[i]));
     }
     function esconder() {
       barras.forEach(function (barra) { barra.classList.remove("is-apagada"); });
       dica.esconder();
     }
-    valores.forEach(function (valor, i) {
+    itens.forEach(function (item, i) {
       var alvo = sv("rect", { x: m.esq + faixa * i, y: 0, width: faixa, height: altura, "class": "lsa-svg-alvo" });
       alvo.addEventListener("pointerenter", function () { mostrar(i); });
       alvo.addEventListener("pointerdown", function () { mostrar(i); });
@@ -413,32 +473,145 @@
     svg.addEventListener("keydown", function (evento) {
       if (evento.key === "ArrowRight" || evento.key === "ArrowLeft") {
         evento.preventDefault();
-        var proximo = indice < 0 ? 0 : indice + (evento.key === "ArrowRight" ? 1 : -1);
-        mostrar(Math.max(0, Math.min(valores.length - 1, proximo)));
+        var proximo = indice < 0 ? (melhor >= 0 ? melhor : 0) : indice + (evento.key === "ArrowRight" ? 1 : -1);
+        mostrar(Math.max(0, Math.min(n - 1, proximo)));
       } else if (evento.key === "Escape") {
         esconder();
       }
     });
     svg.addEventListener("blur", esconder);
-    svg.setAttribute("aria-label", metrica.rotulo + " por dia da semana. Melhor dia: " + nomes[melhor] + ", " + formatar(maior, metrica.formato) + ".");
+    svg.setAttribute("aria-label", (opcoes.titulo || metrica.rotulo) + ". " +
+      (maior > 0 ? "Maior valor: " + itens[melhor].longo + ", " + formatar(maior, metrica.formato) + "." : "Sem movimento.") +
+      " Use as setas para ler cada coluna.");
     return melhor;
+  }
+
+  /* ------------------------------------------------------------------
+     "Quem esteve ativo hoje": uma faixa por pessoa, do primeiro ao último
+     sinal do dia. É o que o banco guarda dos acessos (o dia, o primeiro e
+     o último sinal de cada conta) -- hora a hora não existe, e por isso
+     este desenho entra no lugar das colunas por hora.
+     ------------------------------------------------------------------ */
+  function desenharPresencas(tela, pessoas, agoraMinutos) {
+    tela.textContent = "";
+    var itens = (pessoas && pessoas.itens) || [];
+    var VISIVEIS = 8;
+    var comeco = Math.min.apply(null, itens.map(function (p) { return p.inicio; }));
+    var fim = Math.max.apply(null, itens.map(function (p) { return p.fim; }).concat(temValor(agoraMinutos) ? [agoraMinutos] : []));
+    /* o eixo começa na hora cheia antes do primeiro sinal e acaba na hora cheia depois do último */
+    comeco = Math.max(0, Math.floor(comeco / 60) * 60);
+    fim = Math.min(1440, Math.ceil((fim + 1) / 60) * 60);
+    if (fim - comeco < 360) {
+      comeco = Math.max(0, fim - 360);
+      fim = Math.min(1440, comeco + 360);
+    }
+    var horas = (fim - comeco) / 60;
+    var passo = horas <= 6 ? 1 : horas <= 12 ? 2 : horas <= 18 ? 3 : 4;
+    var pct = function (minutos) { return ((Math.min(fim, Math.max(comeco, minutos)) - comeco) / (fim - comeco)) * 100; };
+
+    var caixa = el("div", "lsa-dia");
+    if (temValor(agoraMinutos) && agoraMinutos >= comeco && agoraMinutos <= fim) {
+      caixa.style.setProperty("--lsa-dia-agora", pct(agoraMinutos) + "%");
+      caixa.classList.add("tem-agora");
+    }
+    var eixo = el("div", "lsa-dia-eixo");
+    eixo.setAttribute("aria-hidden", "true");
+    var regua = el("span", "lsa-dia-regua");
+    for (var h = comeco; h <= fim; h += passo * 60) {
+      var marca = el("span", "", (h / 60) + "h");
+      marca.style.left = pct(h) + "%";
+      regua.appendChild(marca);
+    }
+    eixo.appendChild(regua);
+    caixa.appendChild(eixo);
+
+    var lista = el("ul", "lsa-dia-linhas");
+    var dica = new Dica(tela);
+    itens.forEach(function (pessoa, i) {
+      var item = el("li", i >= VISIVEIS ? "is-extra" : "");
+      var linha = el("div", "lsa-dia-linha");
+      linha.dataset.detalheTipo = "usuario";
+      linha.dataset.detalheId = pessoa.id;
+      linha.dataset.detalheAtalho = "nao";
+      linha.setAttribute("role", "button");
+      linha.setAttribute("aria-label", pessoa.nome + ", " + pessoa.papel_rotulo + ": ativo das " + pessoa.de + " às " + pessoa.ate + ". Abrir a ficha");
+      linha.appendChild(avatar(pessoa.iniciais, pessoa.cor, "is-pequeno"));
+      var nome = el("span", "lsa-dia-nome", pessoa.nome);
+      linha.appendChild(nome);
+      var horario = el("span", "lsa-dia-horas", pessoa.de === pessoa.ate ? pessoa.de : pessoa.de + " – " + pessoa.ate);
+      linha.appendChild(horario);
+      var trilho = el("span", "lsa-dia-trilho");
+      trilho.setAttribute("aria-hidden", "true");
+      var faixa = el("span", "lsa-dia-faixa");
+      var esquerda = pct(pessoa.inicio);
+      faixa.style.left = esquerda + "%";
+      faixa.style.width = Math.max(0, pct(pessoa.fim) - esquerda) + "%";
+      trilho.appendChild(faixa);
+      linha.appendChild(trilho);
+      function mostrar() {
+        var c = tela.getBoundingClientRect();
+        var f = faixa.getBoundingClientRect();
+        dica.mostrar(pessoa.nome + " · " + pessoa.papel_rotulo, [
+          { valor: pessoa.de, rotulo: "primeiro sinal do dia" },
+          { valor: pessoa.ate, rotulo: "último sinal" }
+        ], f.left - c.left + f.width / 2, f.top - c.top);
+      }
+      linha.addEventListener("pointerenter", mostrar);
+      linha.addEventListener("focus", mostrar);
+      linha.addEventListener("pointerleave", function () { dica.esconder(); });
+      linha.addEventListener("blur", function () { dica.esconder(); });
+      item.appendChild(linha);
+      lista.appendChild(item);
+    });
+    caixa.appendChild(lista);
+    tela.appendChild(caixa);
+    tela.appendChild(dica.no);
+    prepararItens(tela);
+
+    var escondidas = itens.length - VISIVEIS;
+    var fora = Math.max(0, (pessoas.total || itens.length) - itens.length);
+    if (escondidas > 0) {
+      var mais = el("label", "lsa-mais-rotulo");
+      var marca2 = el("input", "lsa-oculto");
+      marca2.type = "checkbox";
+      var texto = el("span", "", "Mostrar as " + itens.length + " contas");
+      mais.appendChild(marca2);
+      mais.appendChild(icone("bi-chevron-down"));
+      mais.appendChild(texto);
+      marca2.addEventListener("change", function () {
+        caixa.classList.toggle("is-todas", marca2.checked);
+        texto.textContent = marca2.checked ? "Mostrar só as " + VISIVEIS + " mais recentes" : "Mostrar as " + itens.length + " contas";
+      });
+      tela.appendChild(mais);
+    }
+    if (fora > 0) {
+      tela.appendChild(el("p", "lsa-bloco-nota", "E mais " + NUM.format(fora) + " " + plural(fora, "conta", "contas") + ": a lista traz as " + itens.length + " vistas por último."));
+    }
   }
 
   /* a faísca (sparkline) de cada indicador: cinza, o ponto de agora no acento */
   function faisca(metrica) {
-    var serie = (metrica.serie || []).filter(function (v) { return v !== null && v !== undefined; });
+    var serie = (metrica.serie || []).filter(temValor);
     if (serie.length < 2) return null;
     var maior = Math.max.apply(null, serie.concat([0]));
     var menor = Math.min.apply(null, serie.concat([0]));
     var faixa = maior - menor || 1;
-    var svg = sv("svg", { "class": "lsa-faisca", viewBox: "0 0 100 26", preserveAspectRatio: "none", "aria-hidden": "true", focusable: "false" });
+    var altura = function (v) { return 23 - ((v - menor) / faixa) * 20; };
+    var caixa = el("span", "lsa-faisca-caixa");
+    caixa.setAttribute("aria-hidden", "true");
+    var svg = sv("svg", { "class": "lsa-faisca", viewBox: "0 0 100 26", preserveAspectRatio: "none", focusable: "false" });
     var pontos = serie.map(function (v, i) {
-      return ((i / (serie.length - 1)) * 100).toFixed(2) + "," + (23 - ((v - menor) / faixa) * 20).toFixed(2);
+      return ((i / (serie.length - 1)) * 100).toFixed(2) + "," + altura(v).toFixed(2);
     });
-    var linha = sv("polyline", { points: pontos.join(" "), fill: "none", "stroke-width": "1.5", "vector-effect": "non-scaling-stroke", "stroke-linejoin": "round" });
+    var linha = sv("polyline", { points: pontos.join(" "), fill: "none", "stroke-width": "1.5", "vector-effect": "non-scaling-stroke", "stroke-linejoin": "round", "stroke-linecap": "round" });
     linha.style.stroke = "var(--lsa-anterior)";
     svg.appendChild(linha);
-    return svg;
+    caixa.appendChild(svg);
+    /* o ponto é HTML: num SVG esticado ele viraria um ovo */
+    var ponto = el("span", "lsa-faisca-ponto");
+    ponto.style.top = (altura(serie[serie.length - 1]) / 26) * 100 + "%";
+    caixa.appendChild(ponto);
+    return caixa;
   }
 
   function classeDaVariacao(metrica) {
@@ -451,37 +624,65 @@
     return "";
   }
 
-  function variacao(metrica) {
-    var caixa = el("span", "lsa-variacao " + classeDaVariacao(metrica));
+  function diaMes(iso) {
+    return iso ? iso.split("-").reverse().slice(0, 2).join("/") : "";
+  }
+
+  /* A pílula da variação ("▲ 47,8%") e, ao lado, o número de antes ("antes: 23").
+     Devolve {pilula, antes}: o cartão põe cada um no seu lugar. */
+  function variacao(metrica, periodo) {
+    var pilula = el("span", "lsa-variacao " + classeDaVariacao(metrica));
+    var antes = el("span", "lsa-antes");
+    var nomeAnterior = (periodo && periodo.anterior_curto) || "antes";
     var falado;
-    if (metrica.sem_dados) {
-      caixa.appendChild(icone("bi-hourglass"));
-      caixa.appendChild(document.createTextNode("sem dados ainda"));
-      return caixa;
-    }
     if (metrica.direcao === "sem_base") {
-      caixa.appendChild(icone("bi-info-circle"));
-      caixa.appendChild(document.createTextNode("sem base anterior"));
-      if (metrica.desde) caixa.appendChild(el("small", "", "· desde " + metrica.desde.split("-").reverse().slice(0, 2).join("/")));
-      return caixa;
-    }
-    var anterior = formatar(metrica.anterior, metrica.formato, "curto");
-    if (metrica.direcao === "novo") {
-      caixa.appendChild(icone("bi-arrow-up-right"));
-      caixa.appendChild(document.createTextNode("novo"));
-      falado = "novo: não houve no período anterior";
-    } else if (metrica.direcao === "igual") {
-      caixa.appendChild(icone("bi-dash-lg"));
-      caixa.appendChild(document.createTextNode("estável"));
-      falado = "estável em relação ao período anterior";
+      pilula.appendChild(icone("bi-info-circle"));
+      pilula.appendChild(document.createTextNode("sem comparação"));
+      antes.textContent = metrica.desde ? "registrado desde " + diaMes(metrica.desde) : "";
+      falado = "sem comparação: o registro começou" + (metrica.desde ? " em " + diaMes(metrica.desde) : " há pouco");
+      pilula.title = "O registro começou" + (metrica.desde ? " em " + diaMes(metrica.desde) : " há pouco") + ": ainda não há período anterior inteiro para comparar.";
     } else {
-      var sobe = metrica.direcao === "sobe";
-      caixa.appendChild(icone(sobe ? "bi-arrow-up-right" : "bi-arrow-down-right"));
-      caixa.appendChild(document.createTextNode(NUM1.format(Math.abs(metrica.variacao)) + "%"));
-      falado = (sobe ? "subiu " : "caiu ") + NUM1.format(Math.abs(metrica.variacao)) + "% em relação ao período anterior";
+      var anterior = formatar(metrica.anterior, metrica.formato, "curto");
+      if (metrica.direcao === "novo") {
+        pilula.appendChild(icone("bi-caret-up-fill"));
+        pilula.appendChild(document.createTextNode("novo"));
+        falado = "novo: não houve nada no período anterior";
+        antes.textContent = nomeAnterior + ": nada";
+      } else if (metrica.direcao === "igual") {
+        pilula.appendChild(icone("bi-dash-lg"));
+        pilula.appendChild(document.createTextNode("igual"));
+        falado = "igual ao período anterior";
+        antes.textContent = nomeAnterior + ": " + anterior;
+      } else {
+        var sobe = metrica.direcao === "sobe";
+        pilula.appendChild(icone(sobe ? "bi-caret-up-fill" : "bi-caret-down-fill"));
+        pilula.appendChild(document.createTextNode(NUM1.format(Math.abs(metrica.variacao)) + "%"));
+        falado = (sobe ? "subiu " : "caiu ") + NUM1.format(Math.abs(metrica.variacao)) + "% em relação ao período anterior, que teve " + anterior;
+        antes.textContent = nomeAnterior + ": " + anterior;
+      }
     }
-    caixa.appendChild(el("small", "", "· antes " + anterior));
-    caixa.setAttribute("aria-label", falado + ", que teve " + anterior);
+    pilula.setAttribute("aria-label", falado);
+    return { pilula: pilula, antes: antes };
+  }
+
+  function nomesDasSeries(periodo) {
+    if (periodo && periodo.anterior_curto === "ontem") return { atual: "hoje", anterior: "ontem" };
+    if (periodo && periodo.anterior_curto === "dia anterior") return { atual: "este dia", anterior: "dia anterior" };
+    return { atual: "este período", anterior: "período anterior" };
+  }
+
+  /* o esqueleto: as caixas no lugar dos indicadores e do gráfico enquanto os números não chegam */
+  function esqueleto(texto) {
+    var caixa = el("div", "lsa-esqueleto");
+    caixa.setAttribute("role", "status");
+    caixa.appendChild(el("span", "lsa-oculto", texto || "Carregando os números…"));
+    var linha = el("div", "lsa-esqueleto-linha");
+    linha.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < 4; i += 1) linha.appendChild(el("span"));
+    caixa.appendChild(linha);
+    var bloco = el("div", "lsa-esqueleto-bloco");
+    bloco.setAttribute("aria-hidden", "true");
+    caixa.appendChild(bloco);
     return caixa;
   }
 
@@ -493,7 +694,6 @@
     this.opcoes = opcoes;
     this.corpo = raiz.querySelector("[data-lsa-corpo]");
     this.descricao = raiz.querySelector("[data-lsa-descricao]");
-    this.destaques = raiz.querySelector("[data-lsa-destaques]");
     this.periodos = raiz.querySelector("[data-lsa-periodos]");
     this.dias = raiz.querySelector("[data-lsa-dias]");
     this.de = raiz.querySelector("[data-lsa-de]");
@@ -526,7 +726,7 @@
         if (!nova || Math.abs(nova - largura) < 8) return;
         largura = nova;
         window.clearTimeout(espera);
-        espera = window.setTimeout(function () { eu.desenharGraficos(); }, 120);
+        espera = window.setTimeout(function () { eu.arrumarIndicadores(); eu.desenharGraficos(); }, 120);
       });
       this.observador.observe(this.corpo);
     }
@@ -536,7 +736,14 @@
     this.periodo = periodo;
     if (this.periodos) {
       var radio = this.periodos.querySelector('input[value="' + periodo + '"]');
-      if (radio) radio.checked = true;
+      if (radio) {
+        radio.checked = true;
+        /* no celular a régua de períodos rola de lado: o escolhido vem para a vista */
+        var rotulo = radio.closest("label");
+        if (rotulo && this.periodos.scrollWidth > this.periodos.clientWidth) {
+          this.periodos.scrollLeft = Math.max(0, rotulo.offsetLeft - (this.periodos.clientWidth - rotulo.offsetWidth) / 2);
+        }
+      }
     }
     if (this.dias) {
       this.dias.hidden = periodo !== "dias";
@@ -567,17 +774,12 @@
     if (this.periodo === "dias" && (!this.de.value || !this.ate.value)) return;
     if (this.pedido) this.pedido.abort();
     this.pedido = window.AbortController ? new window.AbortController() : null;
-    /* recarregar mantém o desenho anterior, apagado: sem pulo, sem esqueleto */
+    /* recarregar mantém o desenho anterior, apagado: sem pulo. O esqueleto é só da primeira vez. */
     if (this.dados) {
       this.corpo.classList.add("is-carregando");
     } else {
       this.corpo.textContent = "";
-      var estado = el("div", "lsa-estado");
-      var gira = el("span", "lsa-girando");
-      gira.setAttribute("aria-hidden", "true");
-      estado.appendChild(gira);
-      estado.appendChild(el("span", "", "Carregando os números…"));
-      this.corpo.appendChild(estado);
+      this.corpo.appendChild(esqueleto());
     }
     this.corpo.setAttribute("aria-busy", "true");
     buscar(this.url(), this.pedido && this.pedido.signal).then(function (dados) {
@@ -594,10 +796,15 @@
 
   Analise.prototype.erro = function (mensagem) {
     var eu = this;
+    this.dados = null;
     this.corpo.textContent = "";
-    var caixa = el("div", "lsa-estado is-erro");
-    caixa.appendChild(icone("bi-exclamation-triangle"));
-    caixa.appendChild(el("span", "", (mensagem || "Não foi possível carregar os números.") + " "));
+    var caixa = el("div", "lsa-aviso-grande is-erro");
+    caixa.setAttribute("role", "alert");
+    var selo = el("span", "lsa-aviso-icone");
+    selo.appendChild(icone("bi-wifi-off"));
+    caixa.appendChild(selo);
+    caixa.appendChild(el("strong", "", "Os números não chegaram"));
+    caixa.appendChild(el("p", "", (mensagem || "Não foi possível falar com o servidor.") + " O resto da tela continua funcionando."));
     var tentar = el("button", "lsa-tentar", "Tentar de novo");
     tentar.type = "button";
     tentar.addEventListener("click", function () { eu.carregar(); });
@@ -606,24 +813,41 @@
     if (this.descricao) this.descricao.textContent = "";
   };
 
+  Analise.prototype.escreverPeriodo = function (periodo) {
+    if (!this.descricao) return;
+    this.descricao.textContent = "";
+    this.descricao.appendChild(el("strong", "", periodo.titulo || periodo.descricao));
+    if (periodo.comparacao) this.descricao.appendChild(el("span", "", periodo.comparacao));
+  };
+
   Analise.prototype.desenhar = function () {
     var dados = this.dados;
     var eu = this;
-    if (this.descricao) this.descricao.textContent = dados.periodo.descricao;
-    this.desenharDestaques(dados.destaques || []);
+    this.escreverPeriodo(dados.periodo);
     var metricas = dados.metricas || [];
-    if (!this.metrica || !metricas.some(function (m) { return m.codigo === eu.metrica; })) {
-      var principal = metricas.find(function (m) { return m.codigo === dados.principal && !m.sem_dados; });
-      var primeiraComDados = metricas.find(function (m) { return !m.sem_dados; });
-      this.metrica = (principal || primeiraComDados || metricas[0] || {}).codigo;
+    var comDados = metricas.filter(function (m) { return !m.vazia; });
+    var vazias = metricas.filter(function (m) { return m.vazia; });
+    /* a métrica escolhida continua, se ainda tiver número; senão, a primeira que tem */
+    if (!this.metrica || !comDados.some(function (m) { return m.codigo === eu.metrica; })) {
+      var principal = comDados.find(function (m) { return m.codigo === dados.principal; });
+      this.metrica = (principal || comDados[0] || {}).codigo || null;
     }
 
     this.corpo.textContent = "";
-    var grade = el("div", "lsa-indicadores");
+    this.graficos = null;
+    this.abas = null;
+
+    if (!comDados.length) {
+      this.corpo.appendChild(this.semMovimento(dados, vazias));
+      this.desenharAvisos(dados);
+      return;
+    }
+
+    var grade = el("div", "lsa-indicadores" + (comDados.length < 3 ? " is-poucos" : ""));
     grade.setAttribute("role", "radiogroup");
-    grade.setAttribute("aria-label", "Escolha a métrica dos gráficos");
-    metricas.forEach(function (metrica) {
-      var rotulo = el("label", "lsa-indicador");
+    grade.setAttribute("aria-label", "Indicadores do período: escolha o que os gráficos mostram");
+    comDados.forEach(function (metrica) {
+      var rotulo = el("label", "lsa-indicador lsa-tom-" + (metrica.tom || "acento"));
       var radio = el("input");
       radio.type = "radio";
       radio.name = eu.nome;
@@ -631,190 +855,415 @@
       radio.checked = metrica.codigo === eu.metrica;
       if (metrica.ajuda) rotulo.title = metrica.ajuda;
       rotulo.appendChild(radio);
-      var topo = el("span", "lsa-indicador-rotulo");
-      topo.appendChild(icone(metrica.icone));
-      topo.appendChild(el("span", "", metrica.rotulo));
+      var partes = variacao(metrica, dados.periodo);
+      var topo = el("span", "lsa-indicador-topo");
+      var selo = el("span", "lsa-indicador-icone");
+      selo.appendChild(icone(metrica.icone));
+      topo.appendChild(selo);
+      topo.appendChild(partes.pilula);
       rotulo.appendChild(topo);
-      var valor = metrica.sem_dados
-        ? el("span", "lsa-indicador-valor is-vazio", "sem dados ainda")
-        : el("span", "lsa-indicador-valor", formatar(metrica.total, metrica.formato, "curto"));
-      rotulo.appendChild(valor);
-      if (!metrica.sem_dados) rotulo.appendChild(variacao(metrica));
-      var linha = !metrica.sem_dados && faisca(metrica);
-      if (linha) rotulo.appendChild(linha);
+      rotulo.appendChild(el("span", "lsa-indicador-rotulo", metrica.rotulo));
+      rotulo.appendChild(el("span", "lsa-indicador-valor", formatar(metrica.total, metrica.formato, "curto")));
+      rotulo.appendChild(partes.antes);
+      var linha = faisca(metrica);
+      rotulo.appendChild(linha || el("span", "lsa-faisca-caixa is-vazia"));
       grade.appendChild(rotulo);
     });
     grade.addEventListener("change", function (evento) {
       if (!evento.target.matches("input[type=radio]")) return;
-      eu.metrica = evento.target.value;
-      eu.desenharGraficos();
+      eu.escolherMetrica(evento.target.value);
     });
+    this.indicadores = grade;
     this.corpo.appendChild(grade);
+    this.arrumarIndicadores();
 
-    if (metricas.length > 4) {
-      var mais = el("label", "lsa-mais-rotulo");
-      var marca = el("input", "lsa-oculto");
-      marca.type = "checkbox";
-      var texto = el("span", "", "Mais métricas (+" + (metricas.length - 4) + ")");
-      mais.appendChild(marca);
-      mais.appendChild(icone("bi-chevron-down"));
-      mais.appendChild(texto);
-      marca.addEventListener("change", function () {
-        grade.classList.toggle("is-todos", marca.checked);
-        texto.textContent = marca.checked ? "Menos métricas" : "Mais métricas (+" + (metricas.length - 4) + ")";
-      });
-      this.corpo.appendChild(mais);
-    }
+    if (vazias.length) this.corpo.appendChild(this.linhaDasVazias(vazias));
 
     this.graficos = el("div", "lsa-graficos");
     this.corpo.appendChild(this.graficos);
     this.desenharGraficos();
+    this.desenharAvisos(dados);
+  };
 
-    if (dados.avisos && dados.avisos.length) {
-      var avisos = el("ul", "lsa-avisos");
-      dados.avisos.forEach(function (aviso) {
-        var item = el("li");
-        item.appendChild(icone("bi-info-circle"));
-        item.appendChild(el("span", "", aviso));
-        avisos.appendChild(item);
+  /* Nove cartões numa grade de seis colunas deixam 6 + 3 e um buraco. Aqui as
+     linhas saem equilibradas (5 + 4, 4 + 3, 4 + 4): o CSS reparte a largura
+     por `--lsa-por-linha`. No celular isto não vale: os cartões passam de lado. */
+  Analise.prototype.arrumarIndicadores = function () {
+    var grade = this.indicadores;
+    if (!grade || !document.contains(grade)) return;
+    var quantos = grade.children.length;
+    var cabem = Math.max(1, Math.floor((grade.clientWidth + 12) / (172 + 12)));
+    var linhas = Math.ceil(quantos / cabem);
+    grade.style.setProperty("--lsa-por-linha", Math.max(1, Math.ceil(quantos / linhas)));
+  };
+
+  /* A métrica do gráfico: os cartões e as abas do gráfico são dois caminhos para a mesma escolha. */
+  Analise.prototype.escolherMetrica = function (codigo) {
+    this.metrica = codigo;
+    if (this.indicadores) {
+      this.indicadores.querySelectorAll("input[type=radio]").forEach(function (radio) {
+        radio.checked = radio.value === codigo;
       });
-      this.corpo.appendChild(avisos);
     }
+    this.desenharGraficos();
   };
 
-  Analise.prototype.desenharDestaques = function (lista) {
-    if (!this.destaques) return;
-    this.destaques.textContent = "";
-    var eu = this;
-    lista.forEach(function (destaque) {
-      var item = el("span", "lsa-destaque" + (destaque.tom === "bom" ? " is-bom" : ""));
-      if (destaque.codigo === "online" && destaque.valor > 0) {
-        var ponto = el("span", "lsa-ponto-vivo");
-        ponto.setAttribute("aria-hidden", "true");
-        item.appendChild(ponto);
-      } else {
-        item.appendChild(icone(destaque.icone));
-      }
-      item.appendChild(el("strong", "", formatar(destaque.valor, "inteiro")));
-      item.appendChild(el("span", "", destaque.rotulo));
-      eu.destaques.appendChild(item);
+  /* UMA linha para tudo o que não teve número: sem parede de caixas vazias. */
+  Analise.prototype.linhaDasVazias = function (vazias) {
+    var detalhes = el("details", "lsa-vazias");
+    var resumo = el("summary");
+    resumo.appendChild(icone("bi-moon-stars"));
+    var frase = el("span", "lsa-vazias-frase");
+    frase.appendChild(document.createTextNode("Ainda sem registro neste período: "));
+    frase.appendChild(el("strong", "", vazias.map(function (m) { return m.rotulo; }).join(" · ")));
+    resumo.appendChild(frase);
+    var porque = el("span", "lsa-vazias-porque", "por quê?");
+    porque.appendChild(icone("bi-chevron-down"));
+    resumo.appendChild(porque);
+    detalhes.appendChild(resumo);
+    var lista = el("ul", "lsa-vazias-lista");
+    vazias.forEach(function (metrica) {
+      var item = el("li");
+      item.appendChild(icone(metrica.icone));
+      item.appendChild(el("strong", "", metrica.rotulo));
+      item.appendChild(el("span", "", metrica.motivo || "Sem movimento neste período."));
+      lista.appendChild(item);
     });
+    detalhes.appendChild(lista);
+    return detalhes;
   };
+
+  Analise.prototype.semMovimento = function (dados, vazias) {
+    var caixa = el("div", "lsa-aviso-grande");
+    var selo = el("span", "lsa-aviso-icone");
+    selo.appendChild(icone("bi-moon-stars"));
+    caixa.appendChild(selo);
+    caixa.appendChild(el("strong", "", "Sem movimento no período"));
+    caixa.appendChild(el("p", "", "Nenhum indicador teve registro neste período nem no anterior. Escolha um período maior para ver o histórico."));
+    if (vazias.length) {
+      var lista = el("ul", "lsa-vazias-lista");
+      vazias.forEach(function (metrica) {
+        var item = el("li");
+        item.appendChild(icone(metrica.icone));
+        item.appendChild(el("strong", "", metrica.rotulo));
+        item.appendChild(el("span", "", metrica.motivo || "Sem movimento neste período."));
+        lista.appendChild(item);
+      });
+      caixa.appendChild(lista);
+    }
+    return caixa;
+  };
+
+  Analise.prototype.desenharAvisos = function (dados) {
+    if (!dados.avisos || !dados.avisos.length) return;
+    var notas = el("details", "lsa-notas");
+    var resumo = el("summary");
+    resumo.appendChild(icone("bi-info-circle"));
+    resumo.appendChild(document.createTextNode("Como estes números são contados"));
+    notas.appendChild(resumo);
+    var lista = el("ul");
+    dados.avisos.forEach(function (aviso) { lista.appendChild(el("li", "", aviso)); });
+    notas.appendChild(lista);
+    this.corpo.appendChild(notas);
+  };
+
+  /* Três números que resumem a série, acima do gráfico: o total, a média por balde e o pico. */
+  Analise.prototype.resumoDaSerie = function (metrica, dados) {
+    var unidade = dados.periodo.unidade;
+    var itens = [{
+      rotulo: dados.periodo.anterior_curto === "ontem" ? "Hoje até agora" : "No período",
+      valor: formatar(metrica.total, metrica.formato, "curto")
+    }];
+    var serie = (metrica.serie || []);
+    var passados = serie.filter(temValor);
+    if (passados.length > 1) {
+      if (!metrica.razao) {
+        var soma = passados.reduce(function (a, b) { return a + b; }, 0);
+        itens.push({ rotulo: "Média por " + NOME_UNIDADE[unidade], valor: formatar(Math.round((soma / passados.length) * 10) / 10, metrica.formato, "curto") });
+      }
+      var maior = Math.max.apply(null, passados);
+      var onde = serie.indexOf(maior);
+      if (maior > 0 && onde >= 0 && dados.rotulos[onde]) {
+        var curto = dados.rotulos[onde].curto;
+        var quando = unidade === "hora" ? "às " + curto : unidade === "semana" ? "semana de " + curto : "em " + curto;
+        itens.push({ rotulo: "Pico", valor: formatar(maior, metrica.formato, "curto"), nota: quando });
+      }
+    }
+    var caixa = el("dl", "lsa-resumo");
+    itens.forEach(function (item) {
+      var parte = el("div");
+      parte.appendChild(el("dt", "", item.rotulo));
+      var valor = el("dd", "", item.valor);
+      if (item.nota) valor.appendChild(el("small", "", item.nota));
+      parte.appendChild(valor);
+      caixa.appendChild(parte);
+    });
+    return caixa;
+  };
+
+  /* Por dia da semana: a soma do servidor (métricas que se somam) ou, para
+     pessoas distintas em períodos por dia, a MÉDIA de cada dia da semana. */
+  function semanaDe(metrica, dados) {
+    if (metrica.semana) return { valores: metrica.semana, media: false };
+    if (!metrica.distinta || dados.periodo.unidade !== "dia" || !metrica.serie) return null;
+    var somas = [0, 0, 0, 0, 0, 0, 0];
+    var vezes = [0, 0, 0, 0, 0, 0, 0];
+    metrica.serie.forEach(function (valor, i) {
+      if (!temValor(valor) || !dados.rotulos[i]) return;
+      var partes = dados.rotulos[i].chave.slice(0, 10).split("-");
+      var dia = (new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2])).getDay() + 6) % 7;
+      somas[dia] += valor;
+      vezes[dia] += 1;
+    });
+    if (vezes.filter(function (v) { return v > 0; }).length < 7) return null;
+    return { valores: somas.map(function (soma, i) { return Math.round((soma / vezes[i]) * 10) / 10; }), media: true };
+  }
 
   Analise.prototype.desenharGraficos = function () {
     var dados = this.dados;
     var grade = this.graficos;
     if (!dados || !grade) return;
     var eu = this;
-    var metrica = (dados.metricas || []).find(function (m) { return m.codigo === eu.metrica; });
+    var comDados = (dados.metricas || []).filter(function (m) { return !m.vazia; });
+    var metrica = comDados.find(function (m) { return m.codigo === eu.metrica; });
     grade.textContent = "";
     if (!metrica) return;
     var unidade = dados.periodo.unidade;
-    var temSemana = !!(metrica.semana && !metrica.sem_dados);
-    var temRanking = !!this.opcoes.ranking && metrica.tem_ranking !== false;
-    grade.className = "lsa-graficos" + (temRanking ? "" : " sem-ranking") + (temSemana ? "" : " sem-semana");
+    var nomes = nomesDasSeries(dados.periodo);
+    var semana = semanaDe(metrica, dados);
+    var temLista = !!(this.opcoes.ranking && metrica.lista && metrica.lista.itens && metrica.lista.itens.length);
+    var temRanking = !!this.opcoes.ranking && (temLista || (metrica.tem_ranking !== false && (metrica.ranking || []).length > 0));
+    grade.className = "lsa-graficos" + (temRanking ? "" : " sem-ranking") + (semana ? "" : " sem-semana");
 
-    /* linha */
-    var blocoLinha = el("section", "lsa-bloco lsa-bloco-linha");
+    /* ---- o gráfico principal, com as abas de métrica ---- */
+    var bloco = el("section", "lsa-bloco lsa-bloco-linha");
+    if (comDados.length > 1) {
+      var abas = el("div", "lsa-metricas");
+      abas.setAttribute("role", "radiogroup");
+      abas.setAttribute("aria-label", "Métrica do gráfico");
+      comDados.forEach(function (m) {
+        var rotulo = el("label", "lsa-metrica");
+        var radio = el("input");
+        radio.type = "radio";
+        radio.name = eu.nome + "-aba";
+        radio.value = m.codigo;
+        radio.checked = m.codigo === metrica.codigo;
+        rotulo.appendChild(radio);
+        rotulo.appendChild(icone(m.icone));
+        rotulo.appendChild(document.createTextNode(m.rotulo));
+        abas.appendChild(rotulo);
+      });
+      abas.addEventListener("change", function (evento) {
+        if (!evento.target.matches("input[type=radio]")) return;
+        var foco = evento.target.value;
+        eu.escolherMetrica(foco);
+        /* o gráfico foi redesenhado: o foco volta para a aba escolhida */
+        var nova = eu.graficos && eu.graficos.querySelector('.lsa-metricas input[value="' + foco + '"]');
+        if (nova) nova.focus({ preventScroll: true });
+      });
+      bloco.appendChild(abas);
+    }
     var topo = el("div", "lsa-bloco-topo");
-    topo.appendChild(el("h3", "lsa-bloco-titulo", metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || "")));
-    var legenda = el("ul", "lsa-legenda");
-    [["este período", ""], ["período anterior", " is-anterior"]].forEach(function (par, i) {
-      if (i === 1 && !metrica.serie_anterior) return;
-      var item = el("li");
-      var chave = el("span", "lsa-chave" + par[1]);
-      chave.setAttribute("aria-hidden", "true");
-      item.appendChild(chave);
-      item.appendChild(document.createTextNode(par[0]));
-      legenda.appendChild(item);
-    });
-    topo.appendChild(legenda);
-    blocoLinha.appendChild(topo);
     var telaLinha = el("div", "lsa-tela");
-    blocoLinha.appendChild(telaLinha);
-    grade.appendChild(blocoLinha);
-    if (metrica.sem_dados) {
-      var vazio = el("div", "lsa-sem-serie");
-      vazio.appendChild(icone("bi-hourglass"));
-      vazio.appendChild(el("span", "", "Sem dados ainda para " + metrica.rotulo.toLowerCase() + "."));
-      telaLinha.appendChild(vazio);
+    var tabela = null;
+    if (metrica.pessoas && metrica.pessoas.itens && metrica.pessoas.itens.length) {
+      /* Hoje, contas ativas: quem são, do primeiro ao último sinal */
+      var hoje = dados.periodo.anterior_curto === "ontem";
+      topo.appendChild(el("h3", "lsa-bloco-titulo", hoje ? "Quem esteve ativo hoje" : "Quem esteve ativo no dia"));
+      var total = metrica.pessoas.total || metrica.pessoas.itens.length;
+      var agora = hoje && dados.gerado_em ? Number(dados.gerado_em.slice(11, 13)) * 60 + Number(dados.gerado_em.slice(14, 16)) : null;
+      var legendaDia = el("ul", "lsa-legenda");
+      [["is-faixa", "do primeiro ao último sinal"]].concat(agora === null ? [] : [["is-agora", "agora"]]).forEach(function (par) {
+        var item = el("li");
+        var chave = el("span", "lsa-chave " + par[0]);
+        chave.setAttribute("aria-hidden", "true");
+        item.appendChild(chave);
+        item.appendChild(document.createTextNode(par[1]));
+        legendaDia.appendChild(item);
+      });
+      topo.appendChild(legendaDia);
+      bloco.appendChild(topo);
+      bloco.appendChild(el("p", "lsa-bloco-sub lsa-bloco-conta", NUM.format(total) + " " + plural(total, "conta usou", "contas usaram") + " o site, o aplicativo ou o painel"));
+      bloco.appendChild(telaLinha);
+      grade.appendChild(bloco);
+      desenharPresencas(telaLinha, metrica.pessoas, agora);
+      tabela = this.tabelaDePessoas(metrica.pessoas);
     } else if (!metrica.serie) {
-      var semSerie = el("div", "lsa-sem-serie");
-      semSerie.appendChild(icone("bi-info-circle"));
-      semSerie.appendChild(el("span", "", "Esta métrica conta pessoas distintas: hora a hora não existe. Total do período: " + formatar(metrica.total, metrica.formato) + "."));
-      telaLinha.appendChild(semSerie);
+      /* sem série e sem pessoas: o número é o gráfico */
+      topo.appendChild(el("h3", "lsa-bloco-titulo", metrica.rotulo));
+      bloco.appendChild(topo);
+      var heroi = el("div", "lsa-heroi");
+      heroi.appendChild(el("strong", "", formatar(metrica.total, metrica.formato, "curto")));
+      heroi.appendChild(el("span", "", metrica.rotulo.toLowerCase() + " · " + String(dados.periodo.titulo || "").toLowerCase()));
+      var partes = variacao(metrica, dados.periodo);
+      var linhaHeroi = el("span", "lsa-heroi-linha");
+      linhaHeroi.appendChild(partes.pilula);
+      linhaHeroi.appendChild(partes.antes);
+      heroi.appendChild(linhaHeroi);
+      bloco.appendChild(heroi);
+      grade.appendChild(bloco);
     } else {
-      desenharLinha(telaLinha, dados.rotulos, metrica, unidade);
-      blocoLinha.appendChild(this.tabela(dados.rotulos, metrica));
-    }
-
-    /* colunas por dia da semana */
-    if (temSemana) {
-      var blocoSemana = el("section", "lsa-bloco lsa-bloco-semana");
-      var topoSemana = el("div", "lsa-bloco-topo");
-      topoSemana.appendChild(el("h3", "lsa-bloco-titulo", "Por dia da semana"));
-      var sub = el("p", "lsa-bloco-sub");
-      topoSemana.appendChild(sub);
-      blocoSemana.appendChild(topoSemana);
-      var telaSemana = el("div", "lsa-tela");
-      blocoSemana.appendChild(telaSemana);
-      grade.appendChild(blocoSemana);
-      var melhor = desenharColunas(telaSemana, dados.dias_da_semana, metrica.semana, metrica);
-      var maior = Math.max.apply(null, metrica.semana);
-      sub.textContent = maior > 0 ? "melhor dia: " + dados.dias_da_semana[melhor] : "nada neste período";
-    }
-
-    /* ranking */
-    if (temRanking) {
-      var blocoRanking = el("section", "lsa-bloco lsa-bloco-ranking");
-      var topoRanking = el("div", "lsa-bloco-topo");
-      topoRanking.appendChild(el("h3", "lsa-bloco-titulo", "Quem mais rendeu"));
-      topoRanking.appendChild(el("p", "lsa-bloco-sub", "em " + metrica.rotulo.toLowerCase()));
-      blocoRanking.appendChild(topoRanking);
-      var lista = metrica.ranking || [];
-      if (!lista.length) {
-        var nada = el("div", "lsa-sem-serie");
-        nada.appendChild(icone(metrica.sem_dados ? "bi-hourglass" : "bi-trophy"));
-        nada.appendChild(el("span", "", metrica.sem_dados ? "Sem dados ainda." : "Ninguém pontuou neste período."));
-        blocoRanking.appendChild(nada);
-      } else {
-        var topoValor = lista[0].valor || 1;
-        var ol = el("ol", "lsa-ranking");
-        lista.forEach(function (item, i) {
-          var li = el("li", "lsa-ranking-item");
-          li.appendChild(el("span", "lsa-ranking-pos", i + 1));
-          var nome = el("span", "lsa-ranking-nome");
-          var tipoItem = item.tipo || dados.tipo;
-          if (item.id !== null && item.id !== undefined && Ficha.temItem(tipoItem)) {
-            var link = el("a", "", item.nome);
-            link.href = "#";
-            link.title = "Abrir " + item.nome;
-            link.addEventListener("click", function (evento) {
-              evento.preventDefault();
-              Ficha.abrir(tipoItem, item.id, { aba: "graficos", periodo: eu.periodo, origem: link });
-            });
-            nome.appendChild(link);
-          } else {
-            nome.textContent = item.nome;
-          }
-          li.appendChild(nome);
-          li.appendChild(el("span", "lsa-ranking-valor", formatar(item.valor, metrica.formato, "curto")));
-          var trilho = el("span", "lsa-ranking-trilho");
-          trilho.setAttribute("aria-hidden", "true");
-          var barra = el("span", "lsa-ranking-barra");
-          barra.style.width = Math.max(2, (item.valor / topoValor) * 100) + "%";
-          trilho.appendChild(barra);
-          li.appendChild(trilho);
-          ol.appendChild(li);
+      topo.appendChild(el("h3", "lsa-bloco-titulo", metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || "")));
+      if (metrica.forma !== "colunas" && metrica.serie_anterior) {
+        var legenda = el("ul", "lsa-legenda");
+        [[nomes.atual, ""], [nomes.anterior, " is-anterior"]].forEach(function (par) {
+          var item = el("li");
+          var chave = el("span", "lsa-chave" + par[1]);
+          chave.setAttribute("aria-hidden", "true");
+          item.appendChild(chave);
+          item.appendChild(document.createTextNode(par[0]));
+          legenda.appendChild(item);
         });
-        blocoRanking.appendChild(ol);
+        topo.appendChild(legenda);
+      } else if (metrica.distinta) {
+        topo.appendChild(el("p", "lsa-bloco-sub", "pessoas diferentes em cada " + NOME_UNIDADE[unidade]));
       }
-      grade.appendChild(blocoRanking);
+      bloco.appendChild(topo);
+      bloco.appendChild(this.resumoDaSerie(metrica, dados));
+      bloco.appendChild(telaLinha);
+      grade.appendChild(bloco);
+      if (metrica.forma === "colunas") {
+        desenharColunas(telaLinha, dados.rotulos.map(function (rotulo, i) {
+          return { curto: rotulo.curto, longo: rotulo.longo, valor: rotulo.futuro ? null : metrica.serie[i] };
+        }), metrica, { altura: telaLinha.clientWidth < 480 ? 204 : 252, larguraDoRotulo: 58, titulo: metrica.rotulo + " " + (TITULO_UNIDADE[unidade] || "") });
+      } else {
+        desenharLinha(telaLinha, dados.rotulos, metrica, unidade, nomes);
+      }
+      tabela = this.tabela(dados.rotulos, metrica, nomes);
     }
+    if (tabela) bloco.appendChild(tabela);
+
+    /* ---- por dia da semana ---- */
+    if (semana) grade.appendChild(this.blocoDaSemana(semana, metrica, dados));
+
+    /* ---- o ranking (ou a lista que entra no lugar dele) ---- */
+    if (temRanking) grade.appendChild(temLista ? this.blocoDaLista(metrica.lista) : this.blocoDoRanking(metrica, dados));
+  };
+
+  /* Por dia da semana: sete barras deitadas, cada uma com o nome e o número
+     (cabe de pé num cartão estreito ao lado do gráfico, e deitado no celular). */
+  Analise.prototype.blocoDaSemana = function (semana, metrica, dados) {
+    var bloco = el("section", "lsa-bloco lsa-bloco-semana");
+    var topo = el("div", "lsa-bloco-topo");
+    topo.appendChild(el("h3", "lsa-bloco-titulo", "Por dia da semana"));
+    topo.appendChild(el("p", "lsa-bloco-sub", semana.media ? "média de cada dia" : "soma do período"));
+    bloco.appendChild(topo);
+    var valores = semana.valores;
+    var maior = Math.max.apply(null, valores);
+    var menor = Math.min.apply(null, valores);
+    var melhor = valores.indexOf(maior);
+    var lista = el("ol", "lsa-semana");
+    valores.forEach(function (valor, i) {
+      var nome = dados.dias_da_semana[i];
+      var item = el("li", "lsa-semana-dia" + (i === melhor && maior > 0 ? " is-melhor" : ""));
+      item.setAttribute("aria-label", nome + ": " + formatar(valor, metrica.formato));
+      var rotulo = el("span", "lsa-semana-nome", nome.slice(0, 3));
+      rotulo.title = nome;
+      rotulo.setAttribute("aria-hidden", "true");
+      item.appendChild(rotulo);
+      var trilho = el("span", "lsa-ranking-trilho");
+      trilho.setAttribute("aria-hidden", "true");
+      var barra = el("span", "lsa-ranking-barra");
+      barra.style.width = (maior > 0 ? Math.max(valor > 0 ? 2 : 0, (valor / maior) * 100) : 0) + "%";
+      if (!(valor > 0)) barra.style.minWidth = "0";
+      trilho.appendChild(barra);
+      item.appendChild(trilho);
+      var numero = el("span", "lsa-semana-valor", formatar(valor, metrica.formato, "curto"));
+      numero.setAttribute("aria-hidden", "true");
+      item.appendChild(numero);
+      lista.appendChild(item);
+    });
+    bloco.appendChild(lista);
+    if (maior > 0) {
+      var nota = el("p", "lsa-semana-nota");
+      nota.appendChild(document.createTextNode("Melhor dia: "));
+      nota.appendChild(el("strong", "", dados.dias_da_semana[melhor]));
+      if (menor < maior) {
+        nota.appendChild(document.createTextNode(" · mais parado: "));
+        nota.appendChild(el("strong", "", dados.dias_da_semana[valores.lastIndexOf(menor)]));
+      }
+      bloco.appendChild(nota);
+    }
+    return bloco;
+  };
+
+  function linkDaFicha(nome, tipo, id, opcoes) {
+    if (id === null || id === undefined || !Ficha.temItem(tipo)) return document.createTextNode(nome);
+    var link = el("a", "", nome);
+    link.href = "#";
+    link.title = "Abrir " + nome;
+    link.addEventListener("click", function (evento) {
+      evento.preventDefault();
+      opcoes = opcoes || {};
+      opcoes.origem = link;
+      Ficha.abrir(tipo, id, opcoes);
+    });
+    return link;
+  }
+
+  Analise.prototype.blocoDoRanking = function (metrica, dados) {
+    var eu = this;
+    var bloco = el("section", "lsa-bloco lsa-bloco-ranking");
+    var topo = el("div", "lsa-bloco-topo");
+    topo.appendChild(el("h3", "lsa-bloco-titulo", dados.ranking_titulo || "Quem mais rendeu"));
+    var unidade = metrica.ranking_unidade;
+    topo.appendChild(el("p", "lsa-bloco-sub", unidade ? "por " + unidade[1] : "em " + metrica.rotulo.toLowerCase()));
+    bloco.appendChild(topo);
+    var lista = metrica.ranking || [];
+    var topoValor = lista[0].valor || 1;
+    var ol = el("ol", "lsa-ranking");
+    lista.forEach(function (item, i) {
+      var li = el("li", "lsa-ranking-item" + (item.avatar ? " tem-avatar" : ""));
+      li.appendChild(el("span", "lsa-ranking-pos", i + 1));
+      if (item.avatar) li.appendChild(avatar(item.avatar.iniciais, item.avatar.cor, "is-pequeno" + (item.online ? " is-online" : "")));
+      var nome = el("span", "lsa-ranking-nome");
+      var titulo = el("span");
+      titulo.appendChild(linkDaFicha(item.nome, item.tipo || dados.tipo, item.id, { aba: "graficos", periodo: eu.periodo }));
+      nome.appendChild(titulo);
+      if (item.detalhe) nome.appendChild(el("small", item.online ? "is-online" : "", item.detalhe));
+      li.appendChild(nome);
+      var valor = unidade
+        ? NUM.format(item.valor) + " " + plural(item.valor, unidade[0], unidade[1]).split(" ")[0]
+        : formatar(item.valor, metrica.formato, "curto");
+      li.appendChild(el("span", "lsa-ranking-valor", valor));
+      var trilho = el("span", "lsa-ranking-trilho");
+      trilho.setAttribute("aria-hidden", "true");
+      var barra = el("span", "lsa-ranking-barra");
+      barra.style.width = Math.max(2, (item.valor / topoValor) * 100) + "%";
+      trilho.appendChild(barra);
+      li.appendChild(trilho);
+      ol.appendChild(li);
+    });
+    bloco.appendChild(ol);
+    return bloco;
+  };
+
+  /* A lista que entra no lugar do ranking (os cadastros mais recentes, por exemplo). */
+  Analise.prototype.blocoDaLista = function (lista) {
+    var bloco = el("section", "lsa-bloco lsa-bloco-ranking");
+    var topo = el("div", "lsa-bloco-topo");
+    topo.appendChild(el("h3", "lsa-bloco-titulo", lista.titulo));
+    if (lista.sub) topo.appendChild(el("p", "lsa-bloco-sub", lista.sub));
+    bloco.appendChild(topo);
+    var ul = el("ul", "lsa-recentes-lista");
+    lista.itens.forEach(function (item) {
+      var li = el("li");
+      if (item.avatar) li.appendChild(avatar(item.avatar.iniciais, item.avatar.cor, "is-pequeno"));
+      var nome = el("span", "lsa-ranking-nome");
+      var titulo = el("span");
+      titulo.appendChild(linkDaFicha(item.nome, item.tipo, item.id, {}));
+      nome.appendChild(titulo);
+      if (item.detalhe) nome.appendChild(el("small", "", item.detalhe));
+      li.appendChild(nome);
+      if (item.quando) li.appendChild(el("span", "lsa-recentes-quando", item.quando));
+      ul.appendChild(li);
+    });
+    bloco.appendChild(ul);
+    return bloco;
   };
 
   /* a tabela: o gêmeo acessível de todo gráfico */
-  Analise.prototype.tabela = function (rotulos, metrica) {
+  function caixaDaTabela(cabecalhos, linhas) {
     var detalhes = el("details", "lsa-tabela");
     var resumo = el("summary");
     resumo.appendChild(icone("bi-table"));
@@ -824,7 +1273,7 @@
     var tabela = el("table");
     var cabeca = el("thead");
     var linha = el("tr");
-    ["Quando", "Este período"].concat(metrica.serie_anterior ? ["Período anterior"] : []).forEach(function (texto) {
+    cabecalhos.forEach(function (texto) {
       var th = el("th", "", texto);
       th.scope = "col";
       linha.appendChild(th);
@@ -832,19 +1281,333 @@
     cabeca.appendChild(linha);
     tabela.appendChild(cabeca);
     var corpo = el("tbody");
-    rotulos.forEach(function (rotulo, i) {
-      if (rotulo.futuro) return;
+    linhas.forEach(function (celulas) {
       var tr = el("tr");
-      tr.appendChild(el("td", "", rotulo.longo));
-      tr.appendChild(el("td", "", formatar(metrica.serie[i], metrica.formato)));
-      if (metrica.serie_anterior) tr.appendChild(el("td", "", formatar(metrica.serie_anterior[i], metrica.formato)));
+      celulas.forEach(function (texto) { tr.appendChild(el("td", "", texto)); });
       corpo.appendChild(tr);
     });
     tabela.appendChild(corpo);
     rolagem.appendChild(tabela);
     detalhes.appendChild(rolagem);
     return detalhes;
+  }
+
+  Analise.prototype.tabela = function (rotulos, metrica, nomes) {
+    var cabecalhos = ["Quando", nomes.atual.charAt(0).toUpperCase() + nomes.atual.slice(1)];
+    if (metrica.serie_anterior) cabecalhos.push(nomes.anterior.charAt(0).toUpperCase() + nomes.anterior.slice(1));
+    var linhas = [];
+    rotulos.forEach(function (rotulo, i) {
+      if (rotulo.futuro) return;
+      var celulas = [rotulo.longo, formatar(metrica.serie[i], metrica.formato)];
+      if (metrica.serie_anterior) celulas.push(formatar(metrica.serie_anterior[i], metrica.formato));
+      linhas.push(celulas);
+    });
+    return caixaDaTabela(cabecalhos, linhas);
   };
+
+  Analise.prototype.tabelaDePessoas = function (pessoas) {
+    return caixaDaTabela(["Conta", "Papel", "Primeiro sinal", "Último sinal"], pessoas.itens.map(function (pessoa) {
+      return [pessoa.nome, pessoa.papel_rotulo, pessoa.de, pessoa.ate];
+    }));
+  };
+
+  /* ------------------------------------------------------------------
+     AGORA: quem está online (tela Usuários)
+
+     A faixa não pergunta nada ao servidor: assina o relógio do
+     interno/ls-presenca.js, que traz as contas online, as vistas nas
+     últimas 24 h e os contadores. Tocar numa pessoa abre a ficha dela;
+     tocar num contador filtra a lista de contas da tela, na hora.
+     ------------------------------------------------------------------ */
+  var FILTROS = [
+    { codigo: "", rotulo: "Todas", icone: "bi-people", numero: "total" },
+    { codigo: "online", rotulo: "Online", icone: "", numero: "online", um: "online agora", varios: "online agora" },
+    { codigo: "hoje", rotulo: "Ativos hoje", icone: "bi-sun", numero: "hoje", um: "ativa hoje", varios: "ativas hoje" },
+    { codigo: "semana", rotulo: "Em 7 dias", icone: "bi-calendar-week", numero: "semana", um: "ativa nos últimos 7 dias", varios: "ativas nos últimos 7 dias" },
+    { codigo: "mes", rotulo: "Em 30 dias", icone: "bi-calendar3", numero: "mes", um: "ativa nos últimos 30 dias", varios: "ativas nos últimos 30 dias" },
+    { codigo: "nunca", rotulo: "Nunca entraram", icone: "bi-person-dash", numero: "nunca", um: "que nunca entrou", varios: "que nunca entraram" }
+  ];
+  var ICONE_DE_ONDE = { painel: "bi-window-sidebar", site: "bi-globe2", app: "bi-phone" };
+  var MAXIMO_DE_CARTOES = 12;
+
+  function cartaoDaPessoa(pessoa, compacto) {
+    var cartao = el("div", "lsa-pessoa" + (compacto ? " is-compacta" : "") + (pessoa.voce ? " is-voce" : ""));
+    cartao.dataset.detalheTipo = "usuario";
+    cartao.dataset.detalheId = pessoa.id;
+    cartao.dataset.detalheAtalho = "nao";
+    cartao.setAttribute("role", "button");
+    var lugar = pessoa.onde_rotulo ? " no " + pessoa.onde_rotulo : "";
+    cartao.setAttribute("aria-label", pessoa.nome + (pessoa.voce ? " (você)" : "") + ", " + pessoa.papel_rotulo +
+      (pessoa.online ? ", online" + lugar + ", " + (pessoa.quando === "agora" ? "agora" : "último sinal " + pessoa.quando) : ", " + (pessoa.quando === "agora" ? "visto agora há pouco" : "visto " + pessoa.quando)) + ". Abrir a ficha");
+    cartao.appendChild(avatar(pessoa.iniciais, pessoa.cor, (compacto ? "is-pequeno" : "") + (pessoa.online ? " is-online" : "")));
+    var texto = el("span", "lsa-pessoa-texto");
+    var nome = el("span", "lsa-pessoa-nome");
+    nome.appendChild(el("span", "", pessoa.nome));
+    if (pessoa.voce) nome.appendChild(el("span", "lsa-voce", "Você"));
+    texto.appendChild(nome);
+    var linha = el("span", "lsa-pessoa-linha");
+    linha.appendChild(el("span", "lsa-papel is-" + pessoa.papel, pessoa.papel_rotulo));
+    if (compacto) {
+      linha.appendChild(document.createTextNode(pessoa.quando === "agora" ? "há instantes" : pessoa.quando));
+    } else {
+      if (pessoa.onde_rotulo) {
+        var lugarNo = el("span", "lsa-pessoa-onde");
+        lugarNo.appendChild(icone(ICONE_DE_ONDE[pessoa.onde] || "bi-geo"));
+        lugarNo.appendChild(document.createTextNode(pessoa.onde_rotulo));
+        linha.appendChild(lugarNo);
+      }
+      linha.appendChild(el("span", "lsa-pessoa-quando", pessoa.quando));
+    }
+    texto.appendChild(linha);
+    cartao.appendChild(texto);
+    return cartao;
+  }
+
+  function Agora(faixa) {
+    this.faixa = faixa;
+    this.titulo = faixa.querySelector("[data-lsa-agora-titulo]");
+    this.relogio = faixa.querySelector("[data-lsa-agora-relogio]");
+    this.corpo = faixa.querySelector("[data-lsa-agora-corpo]");
+    this.filtro = "";
+    this.assinatura = "";
+    this.dados = null;
+    var eu = this;
+    if (!window.LSPresenca) {
+      faixa.hidden = true;
+      return;
+    }
+    var pedido = /[#&]presenca=([a-z]+)/.exec(window.location.hash || "");
+    if (pedido && FILTROS.some(function (f) { return f.codigo === pedido[1]; })) this.filtro = pedido[1];
+    window.LSPresenca.assinar(function (dados, erro) { eu.receber(dados, erro); }, { contas: true, no: faixa });
+  }
+
+  Agora.prototype.receber = function (dados, erro) {
+    if (!dados) {
+      /* a pergunta falhou: fica o último retrato, com o aviso de que é antigo */
+      this.faixa.classList.add("is-sem-rede");
+      if (this.dados) {
+        this.relogio.textContent = "sem conexão · mostrando o retrato das " + this.dados.agora.slice(11, 16);
+      } else {
+        this.faixa.removeAttribute("aria-busy");
+        this.titulo.textContent = "Não deu para ver quem está online";
+        this.relogio.textContent = "a tela tenta de novo sozinha";
+        this.corpo.textContent = "";
+      }
+      return;
+    }
+    if (!dados.numeros) return;  /* resposta só da equipe (a pergunta das contas vem em seguida) */
+    this.faixa.classList.remove("is-sem-rede");
+    this.faixa.removeAttribute("aria-busy");
+    var primeira = !this.dados;
+    this.dados = dados;
+    var online = dados.numeros.online;
+    this.titulo.textContent = NUM.format(online) + " online agora";
+    this.relogio.textContent = "atualizado às " + dados.agora.slice(11, 16) + " · atualiza sozinho";
+    /* só redesenha quando algo mudou: quem está com o dedo num cartão não o perde a cada 45 s */
+    var assinatura = JSON.stringify([dados.online, dados.recentes, dados.numeros, dados.recentes_total]);
+    if (assinatura !== this.assinatura) {
+      this.assinatura = assinatura;
+      this.desenhar(dados);
+    }
+    atualizarLinhas(dados);
+    this.aplicarFiltro(false, primeira);
+  };
+
+  Agora.prototype.desenhar = function (dados) {
+    var eu = this;
+    var foco = document.activeElement && this.corpo.contains(document.activeElement) ? document.activeElement : null;
+    var focoId = foco && foco.dataset ? foco.dataset.detalheId : null;
+    var focoFiltro = foco && foco.matches && foco.matches("input[type=radio]") ? foco.value : null;
+    this.corpo.textContent = "";
+
+    var online = dados.online || [];
+    var cartoes = el("div", "lsa-pessoas");
+    cartoes.setAttribute("role", "list");
+    cartoes.setAttribute("aria-label", "Contas online agora");
+    online.slice(0, MAXIMO_DE_CARTOES).forEach(function (pessoa) {
+      var item = el("div", "lsa-pessoas-item");
+      item.setAttribute("role", "listitem");
+      item.appendChild(cartaoDaPessoa(pessoa, false));
+      cartoes.appendChild(item);
+    });
+    var resto = Math.max(online.length, dados.numeros.online) - Math.min(online.length, MAXIMO_DE_CARTOES);
+    if (resto > 0) {
+      var mais = el("label", "lsa-pessoa-mais");
+      mais.htmlFor = this.idDoFiltro("online");
+      mais.appendChild(el("strong", "", "+" + NUM.format(resto)));
+      mais.appendChild(el("span", "", "ver na lista"));
+      cartoes.appendChild(mais);
+    }
+    this.corpo.appendChild(cartoes);
+
+    var bloco = el("div", "lsa-vistos");
+    var titulo = el("h3", "lsa-vistos-titulo");
+    titulo.appendChild(icone("bi-clock-history"));
+    titulo.appendChild(document.createTextNode("Vistos por último"));
+    titulo.appendChild(el("small", "", "nas últimas " + (dados.recentes_horas || 24) + " h"));
+    bloco.appendChild(titulo);
+    var recentes = dados.recentes || [];
+    if (recentes.length) {
+      var lista = el("div", "lsa-pessoas is-compacta");
+      lista.setAttribute("role", "list");
+      lista.setAttribute("aria-label", "Contas vistas nas últimas horas");
+      recentes.forEach(function (pessoa) {
+        var item = el("div", "lsa-pessoas-item");
+        item.setAttribute("role", "listitem");
+        item.appendChild(cartaoDaPessoa(pessoa, true));
+        lista.appendChild(item);
+      });
+      var fora = (dados.recentes_total || recentes.length) - recentes.length;
+      if (fora > 0) lista.appendChild(el("span", "lsa-pessoa-resto", "e mais " + NUM.format(fora)));
+      bloco.appendChild(lista);
+    } else {
+      bloco.appendChild(el("p", "lsa-vistos-vazio", "Ninguém mais passou por aqui nas últimas " + (dados.recentes_horas || 24) + " horas."));
+    }
+    this.corpo.appendChild(bloco);
+
+    /* os contadores: rádios dentro de label (o mesmo desenho dos períodos), e não botões */
+    var filtros = el("fieldset", "lsa-filtros");
+    filtros.appendChild(el("legend", "", "Filtrar a lista de contas"));
+    FILTROS.forEach(function (filtro) {
+      var numero = dados.numeros[filtro.numero];
+      var rotulo = el("label", "lsa-filtro" + (filtro.codigo === "online" ? " is-vivo" : ""));
+      var radio = el("input");
+      radio.type = "radio";
+      radio.name = "lsa-filtro-presenca";
+      radio.value = filtro.codigo;
+      radio.id = eu.idDoFiltro(filtro.codigo);
+      radio.checked = filtro.codigo === eu.filtro;
+      rotulo.appendChild(radio);
+      if (filtro.codigo === "online") {
+        var ponto = el("span", "lsa-ponto-vivo");
+        ponto.setAttribute("aria-hidden", "true");
+        rotulo.appendChild(ponto);
+      } else {
+        rotulo.appendChild(icone(filtro.icone));
+      }
+      rotulo.appendChild(el("span", "", filtro.rotulo));
+      if (temValor(numero)) rotulo.appendChild(el("strong", "", NUM.format(numero)));
+      filtros.appendChild(rotulo);
+    });
+    filtros.addEventListener("change", function (evento) {
+      if (!evento.target.matches("input[type=radio]")) return;
+      eu.filtro = evento.target.value;
+      eu.aplicarFiltro(true, false);
+    });
+    this.corpo.appendChild(filtros);
+
+    prepararItens(this.corpo);
+    if (focoId) {
+      var mesmo = this.corpo.querySelector('[data-detalhe-id="' + focoId + '"]');
+      if (mesmo) mesmo.focus({ preventScroll: true });
+    } else if (focoFiltro !== null) {
+      var radioDeAntes = this.corpo.querySelector('input[name="lsa-filtro-presenca"][value="' + focoFiltro + '"]');
+      if (radioDeAntes) radioDeAntes.focus({ preventScroll: true });
+    }
+  };
+
+  Agora.prototype.idDoFiltro = function (codigo) {
+    return "lsaFiltroPresenca-" + (codigo || "todas");
+  };
+
+  /* O toque num contador filtra a lista de contas da tela, sem ir ao servidor:
+     cada linha traz em `data-presenca` os grupos em que a conta entra. */
+  Agora.prototype.aplicarFiltro = function (peloDedo, primeira) {
+    var aviso = document.querySelector("[data-lsa-filtro-aviso]");
+    if (!aviso) return;
+    var eu = this;
+    var filtro = FILTROS.find(function (f) { return f.codigo === eu.filtro; }) || FILTROS[0];
+    /* a lista veio cortada por uma busca: o contador vale para todas as contas, então a busca sai */
+    if (filtro.codigo && aviso.dataset.lsaFiltroCompleto === "0") {
+      if (peloDedo) window.location.assign(window.location.pathname + "#presenca=" + filtro.codigo);
+      return;
+    }
+    var linhas = document.querySelectorAll("[data-presenca][data-detalhe-id]");
+    var mostradas = 0;
+    linhas.forEach(function (linha) {
+      var dentro = !filtro.codigo || (" " + linha.dataset.presenca + " ").indexOf(" " + filtro.codigo + " ") !== -1;
+      linha.classList.toggle("lsa-fora-do-filtro", !dentro);
+      if (dentro) mostradas += 1;
+    });
+    aviso.textContent = "";
+    aviso.hidden = !filtro.codigo;
+    if (filtro.codigo) {
+      aviso.appendChild(icone("bi-funnel-fill"));
+      var frase = el("span", "lsa-filtro-aviso-texto");
+      if (mostradas) {
+        frase.appendChild(el("strong", "", NUM.format(mostradas) + " " + plural(mostradas, "conta", "contas")));
+        frase.appendChild(document.createTextNode(" " + plural(mostradas, filtro.um, filtro.varios)));
+      } else {
+        frase.appendChild(document.createTextNode("Nenhuma conta " + filtro.um + "."));
+      }
+      aviso.appendChild(frase);
+      var limpar = el("a", "lsa-filtro-limpar", "Mostrar todas");
+      limpar.href = "#";
+      limpar.addEventListener("click", function (evento) {
+        evento.preventDefault();
+        eu.filtro = "";
+        var todas = document.getElementById(eu.idDoFiltro(""));
+        if (todas) todas.checked = true;
+        eu.aplicarFiltro(false, false);
+        if (todas) todas.focus({ preventScroll: true });
+      });
+      aviso.appendChild(limpar);
+    }
+    if ((peloDedo || (primeira && filtro.codigo)) && filtro.codigo) {
+      var suave = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      aviso.scrollIntoView({ behavior: suave ? "smooth" : "auto", block: "start" });
+    }
+    if (window.history && window.history.replaceState && (peloDedo || window.location.hash.indexOf("presenca=") !== -1)) {
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + (filtro.codigo ? "#presenca=" + filtro.codigo : ""));
+    }
+  };
+
+  /* O selo de cada linha da lista acompanha a faixa: quem entrou no ar com a
+     tela aberta vira "Online agora"; quem saiu, "Visto há 6 min". */
+  function seloDaLinha(linha, online, texto) {
+    var selo = linha.querySelector("[data-lsa-selo]");
+    if (!selo) return;
+    selo.textContent = "";
+    selo.className = "lsa-presenca" + (online ? " is-online" : "");
+    if (online) {
+      var ponto = el("span", "lsa-ponto-vivo");
+      ponto.setAttribute("aria-hidden", "true");
+      selo.appendChild(ponto);
+      selo.title = "Deu sinal de vida nos últimos minutos";
+    } else {
+      selo.appendChild(icone("bi-clock-history"));
+      selo.title = "A última vez em que a conta usou o site, o aplicativo ou o painel";
+    }
+    selo.appendChild(document.createTextNode(texto));
+  }
+
+  function atualizarLinhas(dados) {
+    var online = {};
+    (dados.online || []).forEach(function (pessoa) { online[pessoa.id] = pessoa; });
+    var recentes = {};
+    (dados.recentes || []).forEach(function (pessoa) { recentes[pessoa.id] = pessoa; });
+    document.querySelectorAll("[data-presenca][data-detalhe-id]").forEach(function (linha) {
+      var grupos = (linha.dataset.presenca || "").split(" ").filter(Boolean);
+      var estava = grupos.indexOf("online") !== -1;
+      var esta = !!online[linha.dataset.detalheId];
+      if (esta === estava) return;
+      if (esta) {
+        grupos = ["online", "hoje", "semana", "mes"];
+        seloDaLinha(linha, true, "Online agora");
+      } else {
+        grupos = grupos.filter(function (g) { return g !== "online"; });
+        var pessoa = recentes[linha.dataset.detalheId];
+        seloDaLinha(linha, false, "Visto " + (pessoa && pessoa.quando !== "agora" ? pessoa.quando : "há pouco"));
+      }
+      linha.dataset.presenca = grupos.join(" ");
+    });
+  }
+
+  function montarAgora(faixa) {
+    if (faixa.dataset.lsaPronto) return;
+    faixa.dataset.lsaPronto = "1";
+    faixa.lsaAgora = new Agora(faixa);
+  }
 
   /* ------------------------------------------------------------------
      o painel do topo da tela
@@ -1322,10 +2085,13 @@
     Ficha.abrir(item.dataset.detalheTipo, item.dataset.detalheId, { aba: "resumo", origem: item });
   });
 
+
   function montar(raiz) {
-    (raiz || document).querySelectorAll("[data-lsa-painel]").forEach(montarPainel);
+    raiz = raiz || document;
+    raiz.querySelectorAll("[data-lsa-painel]").forEach(montarPainel);
+    raiz.querySelectorAll("[data-lsa-agora]").forEach(montarAgora);
     Ficha.preparar();
-    prepararItens(raiz || document);
+    prepararItens(raiz);
   }
 
   window.LSAnalises = { montar: montar, abrir: function (tipo, id, opcoes) { Ficha.abrir(tipo, id, opcoes); } };

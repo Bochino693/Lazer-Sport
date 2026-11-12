@@ -252,6 +252,7 @@
 <body class="ls-body {% block body_class %}{% endblock %}"
       data-avisos="{% url 'avisos_estado' %}"
       data-aparelho="{% url 'avisos_aparelho' %}"
+      data-presenca="{% url 'presenca_agora_json' %}"
       data-ls-economia="{% if economia_de_dados %}1{% else %}0{% endif %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
@@ -751,6 +752,32 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
           </div>
         </div>
 
+        {% comment %}
+          EQUIPE ONLINE: quem da casa está com o painel, o site ou o
+          aplicativo aberto agora. Até quatro avatares e "+N"; o toque abre
+          a lista com o nome, onde a pessoa está e desde quando. Só gente da
+          equipe aparece aqui -- nome de cliente fica na tela Usuários, que
+          é do superadministrador. Sai escondida e vazia: quem a enche (e a
+          atualiza sozinha, a cada 45 s) é o interno/ls-presenca.js, pelo
+          endereço de `data-presenca` do corpo. Nenhuma consulta a mais para
+          desenhar a página.
+        {% endcomment %}
+        <div class="ls-equipe" id="lsEquipe" hidden>
+          <button type="button" class="ls-equipe-botao" id="lsEquipeBotao"
+                  aria-haspopup="true" aria-expanded="false" aria-controls="lsEquipePainel"
+                  aria-label="Equipe online agora">
+            <span class="ls-equipe-pilha" id="lsEquipePilha" aria-hidden="true"></span>
+          </button>
+          <div class="ls-equipe-painel" id="lsEquipePainel" hidden>
+            <div class="ls-equipe-topo">
+              <span class="ls-equipe-pulso" aria-hidden="true"></span>
+              <strong id="lsEquipeTitulo">Equipe online agora</strong>
+            </div>
+            <ul class="ls-equipe-lista" id="lsEquipeLista"></ul>
+            <small class="ls-equipe-nota" id="lsEquipeNota"></small>
+          </div>
+        </div>
+
         <a class="ls-user-pill text-decoration-none" href="{% url 'minha_conta_inner' %}">
           <i class="bi bi-person-circle"></i>
           <span>{{ user.get_full_name|default:user.username }}</span>
@@ -809,6 +836,12 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   na troca de tela.
 {% endcomment %}
 <script src="{% estatico 'interno/ls-rascunhos.js' %}"></script>
+{% comment %}
+  Quem está online agora (core/presenca.py): UMA pergunta a cada 45 s, só
+  com a aba à vista, que alimenta a pilha de avatares da barra de cima e,
+  na tela Usuários, a faixa "Agora" (site/paginas/gestao-analises.js).
+{% endcomment %}
+<script src="{% estatico 'interno/ls-presenca.js' %}"></script>
 <script>
 (function () {
   const sidebar = document.getElementById("sidebarMenu");

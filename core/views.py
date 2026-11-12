@@ -5334,8 +5334,18 @@ class UserAdminView(AdminOnlyMixin, View):
         busca = request.GET.get("q", "").strip()
         tipo = request.GET.get("tipo", "todos")
         # `presenca`: o selo "Online agora / Visto há 2 h" de cada linha sai
-        # do mesmo SELECT (core/presenca.py), sem uma consulta por conta.
-        usuarios = User.objects.select_related("perfil", "presenca").order_by("-date_joined")
+        # do mesmo SELECT (core/presenca.py), sem uma consulta por conta. E
+        # `_tem_funcao` (a conta tem função de equipe no painel?) vai anotado
+        # na mesma consulta: a linha diz Admin, Equipe ou Cliente pela MESMA
+        # regra da faixa "Agora" e da ficha -- antes a lista olhava só o
+        # `is_staff`, e quem era da equipe por função saía como "Cliente".
+        from .presenca import tem_funcao_de_equipe
+
+        usuarios = (
+            User.objects.select_related("perfil", "presenca")
+            .annotate(_tem_funcao=tem_funcao_de_equipe())
+            .order_by("-date_joined")
+        )
         if busca:
             usuarios = usuarios.filter(
                 Q(username__icontains=busca)

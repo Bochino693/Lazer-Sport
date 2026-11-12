@@ -17,7 +17,7 @@ from core.views import (
     UserAdminView,
 )
 from core.views_gestao_produtos import EngajamentoAdminView, PecaAdminView
-from core.views_analises import AnalisesView, AtividadeView, DetalheView
+from core.views_analises import AnalisesView, AtividadeView, DetalheView, PresencaAgoraView
 
 from .permissoes import CRIACAO, GESTAO, VENDAS
 
@@ -174,6 +174,10 @@ urlpatterns = [
     path('analises/<str:tipo>/', AnalisesView.as_view(), name='analises_json'),
     path('detalhes/<str:tipo>/<int:pk>/', DetalheView.as_view(), name='detalhe_json'),
     path('detalhes/<str:tipo>/<int:pk>/atividade/', AtividadeView.as_view(), name='detalhe_atividade_json'),
+    # Quem está online agora (core/presenca.py): a equipe, para a barra de
+    # cima de todo o painel; com ?contas=1, as contas todas, com a permissão
+    # da tela Usuários.
+    path('presenca/agora/', PresencaAgoraView.as_view(), name='presenca_agora_json'),
     path('site/indicadores/', por_funcoes(DashboardAdminView, CRIACAO, GESTAO), name='dashboards'),
     path('site/estatisticas/', por_funcoes(EstatisticasGeraisView, CRIACAO, GESTAO), name='estatisticas_gerais'),
 

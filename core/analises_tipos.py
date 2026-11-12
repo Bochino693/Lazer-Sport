@@ -36,8 +36,9 @@ class Tipo:
     nomes: Callable | None = None
     somente_super: bool = False
     avisos: list = field(default_factory=list)
-    destaques: Callable | None = None
     tem_objeto: bool = True
+    #: o título do ranking ao lado do gráfico
+    ranking_titulo: str = "Quem mais rendeu"
 
 
 def _funcoes():
@@ -372,13 +373,17 @@ def _fontes_pedido(objeto_id):
 # ----------------------------------------------------------------------
 
 CADASTROS = Metrica("cadastros", "Cadastros novos", "bi-person-plus", ajuda="Contas criadas no período (site, aplicativo, Google, Apple e painel).", so_geral=True)
-ATIVOS = Metrica("ativos", "Contas ativas", "bi-activity", ajuda="Contas distintas que usaram o site, o aplicativo ou o painel.", so_geral=True)
+ATIVOS = Metrica(
+    "ativos", "Contas ativas", "bi-activity", so_geral=True,
+    ajuda="Contas distintas que usaram o site, o aplicativo ou o painel.",
+    ranking_unidade=("dia com acesso", "dias com acesso"),
+)
 PEDIDOS_CONTAS = Metrica("pedidos", "Pedidos pagos", "bi-bag-check", ajuda="Pedidos pagos feitos pelas contas.")
 GASTO = Metrica("gasto", "Gasto na loja", "bi-currency-dollar", "dinheiro", ajuda="Total final dos pedidos pagos.")
 FAVORITOS_CONTAS = Metrica("favoritos", "Curtidas e desejos", "bi-heart", ajuda="Curtidas e entradas na lista de desejos feitas com a conta logada.")
 DIAS_DE_ACESSO = Metrica("acessos", "Dias com acesso", "bi-calendar-check", ajuda="Dias em que a conta usou o site, o aplicativo ou o painel.", so_objeto=True)
 PONTOS = Metrica("pontos", "Pontos ganhos", "bi-stars", ajuda="Pontos do programa de fidelidade.", so_objeto=True)
-JOGADAS_CONTAS = Metrica("jogadas", "Jogadas", "bi-controller", ajuda="Cada Jogar no portal de jogos feito com a conta logada (core/jogadas.py).")
+JOGADAS_CONTAS = Metrica("jogadas", "Jogadas", "bi-controller", ajuda="Cada Jogar no portal de jogos feito com a conta logada.")
 
 
 # ----------------------------------------------------------------------
@@ -453,10 +458,16 @@ def _fontes_usuario(objeto_id):
             Fonte("jogadas", JogadaRegistrada.objects.filter(usuario_id=objeto_id), "quando", {"n": Count("id")}, {(None, "n"): "jogadas"}),
         ]
     return [
-        Fonte("cadastros", User.objects.all(), "date_joined", {"n": Count("id")}, {(None, "n"): "cadastros"}),
+        Fonte(
+            "cadastros", User.objects.all(), "date_joined", {"n": Count("id")}, {(None, "n"): "cadastros"},
+            lista=_cadastros_recentes,
+        ),
+        # A série conta PESSOAS distintas por dia; o ranking, os DIAS de cada
+        # pessoa; e em "Hoje" (o acesso só guarda o dia) vão as pessoas do dia.
         Fonte(
             "ativos", AcessoDiario.objects.all(), "dia", {"n": Count("usuario", distinct=True)},
             {(None, "n"): "ativos"}, aditiva=False, campo_e_data=True,
+            campo_objeto="usuario_id", agregados_ranking={"n": Count("id")}, pessoas=_pessoas_do_dia,
         ),
         Fonte(
             "pedidos", pedidos, "criacao", {"n": Count("id"), "gasto": Sum("total_final")},
@@ -470,27 +481,96 @@ def _fontes_usuario(objeto_id):
     ]
 
 
+#: Quantas pessoas a linha do tempo de "Hoje" traz (o total vai à parte).
+PESSOAS_DO_DIA = 40
+CADASTROS_RECENTES = 8
+
+
 def _nomes_usuario(ids):
+    """id -> nome, avatar e a última vez em que a conta foi vista (uma consulta)."""
     from django.contrib.auth.models import User
+
+    from .presenca import cartao_da_conta, situacao_da_conta, tem_funcao_de_equipe
 
     validos = [i for i in ids if isinstance(i, int)]
     nomes = {}
-    for pk, username, nome in User.objects.filter(pk__in=validos).values_list("pk", "username", "perfil__nome_completo"):
-        nomes[pk] = nome or username
+    contas = User.objects.filter(pk__in=validos).select_related("perfil", "presenca").annotate(
+        _tem_funcao=tem_funcao_de_equipe()
+    )
+    for conta in contas:
+        cartao = cartao_da_conta(conta)
+        estado = situacao_da_conta(conta)
+        nomes[conta.pk] = {
+            "id": conta.pk,
+            "nome": cartao["nome"],
+            "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"]},
+            "detalhe": estado["texto"],
+            "online": estado["online"],
+        }
     return nomes
 
 
-def _destaques_usuario():
-    from .presenca import resumo
+def _pessoas_do_dia(jan):
+    """Quem usou o site, o aplicativo ou o painel no dia da janela.
 
-    numeros = resumo()
-    return [
-        {"codigo": "online", "rotulo": "Online agora", "valor": numeros["online"], "icone": "bi-broadcast", "tom": "bom"},
-        {"codigo": "hoje", "rotulo": "Ativos hoje", "valor": numeros["hoje"], "icone": "bi-sun"},
-        {"codigo": "semana", "rotulo": "Ativos em 7 dias", "valor": numeros["semana"], "icone": "bi-calendar-week"},
-        {"codigo": "mes", "rotulo": "Ativos em 30 dias", "valor": numeros["mes"], "icone": "bi-calendar3"},
-        {"codigo": "nunca", "rotulo": "Nunca entraram", "valor": numeros["nunca"], "icone": "bi-person-dash"},
-    ]
+    Do último sinal para trás, com o primeiro e o último sinal de cada conta
+    (em minutos desde a meia-noite, para a linha do tempo do painel).
+    """
+    from django.utils import timezone
+
+    from .models import AcessoDiario
+    from .presenca import cartao_da_conta, papel_da_conta, tem_funcao_de_equipe
+
+    def minutos(momento):
+        local = timezone.localtime(momento)
+        return local.hour * 60 + local.minute
+
+    dia = timezone.localtime(jan.inicio).date()
+    acessos = AcessoDiario.objects.filter(dia=dia)
+    linhas = list(
+        acessos.select_related("usuario__perfil")
+        .annotate(_tem_funcao=tem_funcao_de_equipe("usuario_id"))
+        .order_by("-ultimo", "usuario_id")[:PESSOAS_DO_DIA]
+    )
+    itens = []
+    for linha in linhas:
+        cartao = cartao_da_conta(linha.usuario, papel_da_conta(linha.usuario, linha._tem_funcao))
+        cartao.update({
+            "de": f"{timezone.localtime(linha.primeiro):%H:%M}",
+            "ate": f"{timezone.localtime(linha.ultimo):%H:%M}",
+            "inicio": minutos(linha.primeiro),
+            "fim": max(minutos(linha.primeiro), minutos(linha.ultimo)),
+        })
+        itens.append(cartao)
+    total = len(itens) if len(itens) < PESSOAS_DO_DIA else acessos.count()
+    return {"total": total, "itens": itens}
+
+
+def _cadastros_recentes(jan):
+    """As contas criadas no período, da mais nova para trás (a lista ao lado do gráfico)."""
+    from django.contrib.auth.models import User
+    from django.utils import timezone
+
+    from .presenca import cartao_da_conta, tem_funcao_de_equipe
+
+    contas = (
+        User.objects.filter(jan.filtro("date_joined", so_atual=True))
+        .select_related("perfil")
+        .annotate(_tem_funcao=tem_funcao_de_equipe())
+        .order_by("-date_joined", "-pk")[:CADASTROS_RECENTES]
+    )
+    itens = []
+    for conta in contas:
+        cartao = cartao_da_conta(conta)
+        itens.append({
+            "id": conta.pk,
+            "tipo": "usuario",
+            "nome": cartao["nome"],
+            "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"]},
+            "detalhe": cartao["papel_rotulo"],
+            "quando": f"{timezone.localtime(conta.date_joined):%d/%m, %H:%M}",
+        })
+    return {"titulo": "Cadastros mais recentes", "sub": "as contas criadas no período", "itens": itens}
 
 
 def _nomes_item_pedido(chaves):
@@ -579,13 +659,17 @@ def _tipos():
         "jogo": Tipo(
             "jogo", "Jogos", "jogo", (), [JOGADAS, JOGADORES, VISITANTES, JOGADAS_EQUIPE], _fontes_jogo, JogoCadastrado,
             "jogadas", _nomes_jogo, somente_super=True,
-            avisos=["As jogadas antes da coleta com data (LEIA-ME 77) não entram: o período começa a contar a partir dela."],
+            avisos=["As jogadas de antes de o portal guardar a data de cada uma não entram: a contagem começa a partir daí."],
         ),
         "usuario": Tipo(
             "usuario", "Usuários", "usuário", (),
             [CADASTROS, ATIVOS, DIAS_DE_ACESSO, PEDIDOS_CONTAS, GASTO, FAVORITOS_CONTAS, JOGADAS_CONTAS, PONTOS],
-            _fontes_usuario, User, "cadastros", _nomes_usuario, somente_super=True, destaques=_destaques_usuario,
-            avisos=["“Ativas” conta quem deu sinal de vida desde a seção 76 do LEIA-ME; antes disso só existia o último login."],
+            _fontes_usuario, User, "cadastros", _nomes_usuario, somente_super=True,
+            ranking_titulo="Mais ativos",
+            avisos=[
+                "“Contas ativas” conta quem usou o site, o aplicativo ou o painel em cada dia. "
+                "Esse registro é recente: de antes dele só existe a data do último login.",
+            ],
         ),
     }
 

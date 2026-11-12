@@ -1,15 +1,27 @@
 /* ======================================================================
-   ANÁLISES E FICHAS DAS TELAS DE GESTÃO (LEIA-ME-V10, seção 76)
+   ANÁLISES E FICHAS DAS TELAS DE GESTÃO (LEIA-ME-V10, seção 76 e o AJUSTE)
 
-   O painel "Desempenho" do topo de cada tela e o modal de detalhes de cada
-   objeto (Resumo · Gráficos · Atividade). Desenhado à mão em SVG pelo
+   O painel "Desempenho" do topo de cada tela, a faixa "Agora" da tela
+   Usuários (quem está online) e o modal de detalhes de cada objeto
+   (Resumo · Gráficos · Atividade). Desenhado à mão em SVG pelo
    gestao-analises.js; aqui só a forma.
+
+   O DESENHO DO AJUSTE ("mais criativo e mais robusto com estilo app"):
+   peças de aplicativo -- a régua de períodos que gruda no topo enquanto a
+   tela rola, os cartões de indicador com o ícone num quadrado de cor, a
+   pílula da variação e a faísca, o gráfico num cartão só com as abas de
+   métrica, o esqueleto enquanto os números não chegam. No celular os
+   cartões passam de lado, um a um; no tablet e no PC viram grade.
 
    CORES SÓ POR PAPEL, NUNCA ESCRITAS AQUI. Tudo sai das variáveis de tema
    do painel (interno_modern.css), para os três temas -- sol, eclipse e
-   lua -- acertarem sozinhos. Nada de marrom: as variáveis "-linha",
-   "-claro" e "-texto" do acento ficam de fora (no tema claro são as
-   amarronzadas), e o acento entra por `--acento-rgb` com transparência.
+   lua -- acertarem sozinhos. Nada de marrom: as variáveis "-linha" e
+   "-claro" do acento ficam de fora (no tema claro são as amarronzadas), e
+   o laranja NUNCA entra transparente sobre o ameixa (vira marrom): onde
+   ele aparece, é cheio (o período escolhido, o "Você") ou é traço (a série
+   do gráfico, a borda do cartão escolhido). Os quadrados de ícone e os
+   avatares usam os tons frios do tema (magenta, violeta, azul, verde-água),
+   que tingem o ameixa sem sujar.
 
    O papel de cada cor nos gráficos:
      --lsa-serie     a série do período (o acento; no claro, o passo mais
@@ -17,6 +29,7 @@
      --lsa-anterior  o período anterior: o cinza do tema, mais apagado
      --lsa-grade     as linhas de grade: um passo fora da superfície
      --lsa-sobe/desce  a variação boa e a ruim, sempre com seta e texto
+   O verde é de estado (online, subiu); nunca é cor de série nem de avatar.
 
    NOMES DAS CLASSES. gestao_integrada.css pinta qualquer classe com
    "-card", "-panel", "-btn", "-button", "primary", "-chips", "-tabs"... com
@@ -33,7 +46,7 @@
    o componente só usa as `--lsa-t-*`, e não as do tema direto. */
 :root{
   --lsa-t-panel:var(--panel);--lsa-t-panel-2:var(--panel-2);--lsa-t-panel-3:var(--panel-3);
-  --lsa-t-bg-1:var(--bg-1);--lsa-t-bg-2:var(--bg-2);
+  --lsa-t-bg-1:var(--bg-1);--lsa-t-bg-2:var(--bg-2);--lsa-t-bg-rgb:var(--bg-rgb);
   --lsa-t-line:var(--line);--lsa-t-line-soft:var(--line-soft);--lsa-t-line-forte:var(--line-forte);
   --lsa-t-text:var(--text);--lsa-t-text-2:var(--text-2);--lsa-t-muted:var(--muted);--lsa-t-muted-rgb:var(--muted-rgb);
   --lsa-t-acento:var(--acento);--lsa-t-acento-2:var(--acento-2);--lsa-t-acento-rgb:var(--acento-rgb);--lsa-t-acento-tinta:var(--acento-tinta);
@@ -41,7 +54,12 @@
   --lsa-t-green:var(--green);--lsa-t-green-rgb:var(--green-rgb);--lsa-t-green-texto:var(--green-texto);
   --lsa-t-red-rgb:var(--red-rgb);--lsa-t-red-texto:var(--red-texto);
   --lsa-t-yellow-rgb:var(--yellow-rgb);--lsa-t-yellow-texto:var(--yellow-texto);
+  --lsa-t-magenta-rgb:var(--magenta-rgb);--lsa-t-magenta-texto:var(--magenta-texto);
+  --lsa-t-violet-rgb:var(--violet-rgb);--lsa-t-violet-texto:var(--violet-texto);
+  --lsa-t-info-rgb:var(--info-rgb);--lsa-t-info-texto:var(--info-texto);
+  --lsa-t-apoio-rgb:var(--apoio-rgb);--lsa-t-apoio-texto:var(--apoio-texto);
   --lsa-t-shadow:var(--shadow);--lsa-t-shadow-soft:var(--shadow-soft);
+  --lsa-t-topo:var(--topbar-h);
 }
 /* @@tokens@@ */
 
@@ -56,7 +74,7 @@
   --lsa-desce:var(--lsa-t-red-texto);
   --lsa-neutro:var(--lsa-t-muted);
   --lsa-superficie:var(--lsa-t-panel);
-  --lsa-raio:16px;
+  --lsa-raio:18px;
   font-family:inherit;
 }
 :root[data-tema="sol"] .lsa,
@@ -65,6 +83,14 @@
   /* no papel o cinza a 62% fica abaixo de 3:1; a 85% passa (validate_palette.js) */
   --lsa-anterior:rgba(var(--lsa-t-muted-rgb),.85);
 }
+
+/* Os tons dos quadrados de ícone e dos avatares: identidade, não medida. A cor
+   de cada um sai da ordem das métricas (ou do número da conta), nunca do valor. */
+.lsa-tom-magenta,.lsa-avatar.is-c0{--lsa-tom-rgb:var(--lsa-t-magenta-rgb);--lsa-tom-texto:var(--lsa-t-magenta-texto)}
+.lsa-tom-violet,.lsa-avatar.is-c1{--lsa-tom-rgb:var(--lsa-t-violet-rgb);--lsa-tom-texto:var(--lsa-t-violet-texto)}
+.lsa-tom-info,.lsa-avatar.is-c2{--lsa-tom-rgb:var(--lsa-t-info-rgb);--lsa-tom-texto:var(--lsa-t-info-texto)}
+.lsa-tom-apoio,.lsa-avatar.is-c3{--lsa-tom-rgb:var(--lsa-t-apoio-rgb);--lsa-tom-texto:var(--lsa-t-apoio-texto)}
+.lsa-tom-acento,.lsa-avatar.is-c4{--lsa-tom-rgb:var(--lsa-t-muted-rgb);--lsa-tom-texto:var(--lsa-t-text-2)}
 
 .lsa-oculto{
   position:absolute!important;width:1px!important;height:1px!important;
@@ -76,53 +102,196 @@
    O PAINEL "DESEMPENHO"
    ---------------------------------------------------------------------- */
 .lsa{
-  margin:0 0 20px;
-  padding:18px;
+  margin:0 0 22px;
+  padding:20px;
   border:1px solid var(--lsa-t-line);
-  border-radius:20px;
+  border-radius:26px;
   background:linear-gradient(180deg,var(--lsa-t-panel),var(--lsa-t-bg-1));
   color:var(--lsa-t-text-2);
-  box-shadow:0 12px 32px rgba(var(--lsa-t-sombra-rgb),calc(.18 * var(--lsa-t-sombra-forca)));
+  box-shadow:0 14px 36px rgba(var(--lsa-t-sombra-rgb),calc(.18 * var(--lsa-t-sombra-forca)));
   min-width:0;
   max-width:100%;
 }
 .lsa *,.lsa-ficha *{box-sizing:border-box}
 
-.lsa-topo{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 18px;margin-bottom:14px}
-.lsa-topo-texto{min-width:0;flex:1 1 260px}
-.lsa-olho{
-  display:inline-flex;align-items:center;gap:7px;
-  color:var(--lsa-t-text-2);font-size:.7rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase;
+.lsa-topo{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.lsa-emblema{
+  flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;
+  background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta);font-size:1.25rem;
+  box-shadow:0 8px 18px rgba(var(--lsa-t-sombra-rgb),calc(.28 * var(--lsa-t-sombra-forca)));
 }
-.lsa-olho i{color:var(--lsa-serie);font-size:.95rem}
-.lsa-titulo{margin:4px 0 2px!important;color:var(--lsa-t-text)!important;font-size:clamp(1.12rem,2.2vw,1.38rem);font-weight:900;letter-spacing:-.02em;line-height:1.2}
-.ls-content .lsa-descricao,.lsa-ficha .lsa-descricao{margin:0;color:var(--lsa-t-muted);font-size:.8rem;line-height:1.4}
+.lsa-topo-texto{min-width:0;flex:1 1 auto}
+.lsa-olho{display:block;color:var(--lsa-t-muted);font-size:.68rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.lsa-titulo{margin:2px 0 0!important;color:var(--lsa-t-text)!important;font-size:clamp(1.14rem,2.2vw,1.42rem);font-weight:900;letter-spacing:-.02em;line-height:1.2}
 
 /* o recolher: um checkbox de verdade, para não virar botão do gestao_integrada */
-.lsa-recolher{display:inline-flex;align-items:center;gap:6px;margin:0;color:var(--lsa-t-muted)!important;font-size:.78rem;font-weight:800!important;cursor:pointer;user-select:none}
-.lsa-recolher i{transition:transform .2s ease}
-.lsa[data-lsa-recolhido="1"] .lsa-recolher i{transform:rotate(-90deg)}
-.lsa[data-lsa-recolhido="1"] .lsa-corpo,
-.lsa[data-lsa-recolhido="1"] .lsa-periodos-linha{display:none}
-
-/* ---- os chips de período: rádio dentro de label, como em Promoções ---- */
-.lsa-periodos-linha{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 14px}
-.lsa-periodos{
-  display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:4px;border:1px solid var(--lsa-t-line-soft);
-  border-radius:14px;background:rgba(var(--lsa-t-verniz-rgb),.03);min-width:0;max-width:100%;
+.lsa-recolher{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;margin:0;
+  border:1px solid var(--lsa-t-line-soft);border-radius:999px;
+  color:var(--lsa-t-text-2)!important;font-size:.76rem;font-weight:800!important;cursor:pointer;user-select:none;
 }
+.lsa-recolher:hover{border-color:var(--lsa-t-line)}
+.lsa-recolher:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
+.lsa-recolher i{transition:transform .2s ease}
+.lsa[data-lsa-recolhido="1"] .lsa-recolher i{transform:rotate(180deg)}
+.lsa[data-lsa-recolhido="1"] .lsa-corpo,
+.lsa[data-lsa-recolhido="1"] .lsa-barra{display:none}
+.lsa[data-lsa-recolhido="1"] .lsa-topo{margin-bottom:0}
+.lsa[data-lsa-recolhido="1"] .lsa-agora{margin:16px 0 0}
+
+/* ----------------------------------------------------------------------
+   AGORA: quem está online (só na tela Usuários)
+   ---------------------------------------------------------------------- */
+.lsa-agora{
+  margin:0 0 16px;padding:16px;border:1px solid var(--lsa-t-line-soft);border-radius:22px;
+  background:linear-gradient(135deg,rgba(var(--lsa-t-green-rgb),.11),rgba(var(--lsa-t-green-rgb),0) 46%),var(--lsa-superficie);
+  min-width:0;
+}
+.lsa-agora-topo{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:12px}
+.lsa-agora-titulo{color:var(--lsa-t-text);font-size:1.06rem;font-weight:900;letter-spacing:-.01em}
+.lsa-agora-relogio{margin-left:auto;color:var(--lsa-t-muted);font-size:.72rem;font-weight:700}
+.lsa-agora.is-sem-rede .lsa-agora-relogio{color:var(--lsa-t-yellow-texto)}
+.lsa-agora.is-sem-rede .lsa-pulso{background:var(--lsa-t-muted)}
+.lsa-agora.is-sem-rede .lsa-pulso::after{display:none}
+
+/* o ponto que pulsa: verde é estado (online), sempre ao lado da palavra */
+.lsa-pulso,.lsa-ponto-vivo{position:relative;flex:0 0 auto;display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--lsa-t-green)}
+.lsa-pulso::after,.lsa-ponto-vivo::after{
+  content:"";position:absolute;inset:0;border-radius:50%;background:var(--lsa-t-green);opacity:.55;
+  animation:lsa-pulso 2s cubic-bezier(.2,.6,.3,1) infinite;
+}
+.lsa-ponto-vivo{width:8px;height:8px}
+@keyframes lsa-pulso{to{transform:scale(2.9);opacity:0}}
+
+/* o avatar: as iniciais num tom estável */
+.lsa-avatar{
+  position:relative;flex:0 0 auto;display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(var(--lsa-tom-rgb),.36),rgba(var(--lsa-tom-rgb),.16));
+  box-shadow:inset 0 0 0 1px rgba(var(--lsa-tom-rgb),.42);
+  color:var(--lsa-tom-texto);font-size:.74rem;font-weight:900;letter-spacing:.02em;line-height:1;text-transform:uppercase;
+}
+.lsa-avatar.is-pequeno{width:28px;height:28px;font-size:.62rem}
+/* o ponto verde no canto: online (na faixa, pela classe; na lista de contas, pelo `data-presenca` da linha) */
+.lsa-avatar.is-online::after,
+[data-presenca~="online"] .lsa-avatar::after{
+  content:"";position:absolute;right:-2px;bottom:-2px;width:12px;height:12px;border-radius:50%;
+  background:var(--lsa-t-green);border:2px solid var(--lsa-superficie,var(--lsa-t-panel));
+}
+.lsa-avatar.is-pequeno.is-online::after{width:10px;height:10px}
+
+.lsa-pessoas{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.lsa-pessoas-item{display:flex;min-width:0}
+.lsa-pessoa{
+  display:flex;align-items:center;gap:10px;min-width:0;min-height:56px;padding:8px 14px 8px 9px;
+  border:1px solid var(--lsa-t-line-soft);border-radius:18px;background:var(--lsa-t-panel-2);
+  color:var(--lsa-t-text-2);cursor:pointer;transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+.lsa-pessoa:hover{border-color:var(--lsa-t-line-forte);transform:translateY(-1px);box-shadow:var(--lsa-t-shadow-soft)}
+.lsa-pessoa:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
+.lsa-pessoa.is-voce{border-color:var(--lsa-t-line)}
+.lsa-pessoa-texto{display:grid;gap:3px;min-width:0}
+.lsa-pessoa-nome{display:flex;align-items:center;gap:6px;min-width:0;color:var(--lsa-t-text);font-size:.86rem;font-weight:800;line-height:1.2}
+.lsa-pessoa-nome>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lsa-voce{
+  flex:0 0 auto;padding:2px 7px;border-radius:999px;background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta);
+  font-size:.6rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;line-height:1.3;
+}
+.lsa-pessoa-linha{display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;color:var(--lsa-t-muted);font-size:.72rem;font-weight:700;line-height:1.3}
+.lsa-pessoa-onde{display:inline-flex;align-items:center;gap:4px;color:var(--lsa-t-text-2)}
+.lsa-pessoa-onde i{font-size:.78rem;color:var(--lsa-t-muted)}
+.lsa-pessoa-quando::before{content:"· "}
+.lsa-papel{
+  padding:1px 7px;border-radius:999px;font-size:.62rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;line-height:1.5;
+  background:rgba(var(--lsa-t-muted-rgb),.16);color:var(--lsa-t-text-2);
+}
+.lsa-papel.is-admin{background:rgba(var(--lsa-t-violet-rgb),.2);color:var(--lsa-t-violet-texto)}
+.lsa-papel.is-equipe{background:rgba(var(--lsa-t-info-rgb),.2);color:var(--lsa-t-info-texto)}
+.lsa-pessoa-mais{
+  display:grid;align-content:center;justify-items:center;gap:1px;min-height:56px;padding:6px 16px;margin:0;
+  border:1px dashed var(--lsa-t-line);border-radius:18px;color:var(--lsa-t-text-2)!important;font-size:.7rem;font-weight:700!important;cursor:pointer;
+}
+.lsa-pessoa-mais strong{color:var(--lsa-t-text);font-size:.98rem;font-weight:900}
+
+/* vistos por último: a mesma pessoa, menor e numa linha só */
+.lsa-vistos{margin-top:14px;padding-top:14px;border-top:1px solid var(--lsa-t-line-soft)}
+.lsa-vistos-titulo{display:flex;align-items:center;gap:7px;margin:0 0 10px!important;color:var(--lsa-t-text)!important;font-size:.82rem!important;font-weight:900}
+.lsa-vistos-titulo i{color:var(--lsa-t-muted)}
+.lsa-vistos-titulo small{color:var(--lsa-t-muted);font-size:.72rem;font-weight:700}
+.ls-content .lsa-vistos-vazio{margin:0;color:var(--lsa-t-muted);font-size:.8rem}
+.lsa-pessoa.is-compacta{min-height:44px;padding:5px 12px 5px 6px;border-radius:999px;background:transparent}
+.lsa-pessoa.is-compacta .lsa-pessoa-texto{display:flex;align-items:center;gap:8px}
+.lsa-pessoa.is-compacta .lsa-pessoa-nome{font-size:.8rem}
+.lsa-pessoa.is-compacta .lsa-pessoa-linha{flex-wrap:nowrap;white-space:nowrap}
+.lsa-pessoa.is-compacta .lsa-papel{display:none}
+.lsa-pessoa-resto{align-self:center;padding:0 6px;color:var(--lsa-t-muted);font-size:.76rem;font-weight:700}
+
+/* os contadores que filtram a lista: rádios dentro de label */
+.lsa-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;margin:14px 0 0;padding:14px 0 0;border:0;border-top:1px solid var(--lsa-t-line-soft)}
+.lsa-filtros legend{float:left;width:auto;margin:0 4px 0 0;padding:0;color:var(--lsa-t-muted);font-size:.72rem;font-weight:800;line-height:40px}
+.ls-content .lsa-filtro{
+  position:relative;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 12px;margin:0;
+  border:1px solid var(--lsa-t-line-soft);border-radius:12px;background:var(--lsa-t-panel-2);
+  color:var(--lsa-t-text-2);font-size:.78rem;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.lsa-filtro input{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;opacity:0;cursor:pointer}
+.lsa-filtro i{color:var(--lsa-t-muted);font-size:.9rem}
+.lsa-filtro strong{color:var(--lsa-t-text);font-size:.92rem;font-weight:900;font-variant-numeric:tabular-nums}
+.lsa-filtro:hover{border-color:var(--lsa-t-line-forte)}
+.lsa-filtro:has(input:checked){border-color:var(--lsa-t-acento);background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta)}
+.lsa-filtro:has(input:checked) strong,.lsa-filtro:has(input:checked) i{color:inherit}
+.lsa-filtro:has(input:checked) .lsa-ponto-vivo,.lsa-filtro:has(input:checked) .lsa-ponto-vivo::after{background:currentColor}
+.lsa-filtro:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
+
+/* o aviso do filtro, em cima da lista de contas, e as linhas que ficam de fora */
+.lsa-filtro-aviso{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px;padding:10px 14px;
+  border:1px solid var(--lsa-t-line);border-radius:14px;background:var(--lsa-t-panel-2);
+  color:var(--lsa-t-text-2);font-size:.84rem;scroll-margin-top:calc(var(--lsa-t-topo, 60px) + 16px);
+}
+.lsa-filtro-aviso[hidden]{display:none}
+.lsa-filtro-aviso>i{color:var(--lsa-t-acento)}
+.lsa-filtro-aviso strong{color:var(--lsa-t-text);font-weight:900}
+.lsa-filtro-limpar{margin-left:auto;color:var(--lsa-t-text)!important;font-size:.8rem;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.lsa-fora-do-filtro{display:none!important}
+
+/* o selo de presença de cada linha da lista: "Online agora" salta aos olhos */
+.lsa-presenca{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:var(--lsa-t-muted);font-size:.74rem;font-weight:700;white-space:nowrap}
+.lsa-presenca i{font-size:.8rem}
+.lsa-presenca.is-online{
+  gap:7px;padding:4px 11px 4px 9px;border-radius:999px;
+  background:rgba(var(--lsa-t-green-rgb),.16);box-shadow:inset 0 0 0 1px rgba(var(--lsa-t-green-rgb),.42);
+  color:var(--lsa-t-green-texto);font-weight:900;
+}
+
+/* ----------------------------------------------------------------------
+   A RÉGUA DE PERÍODOS: gruda no topo enquanto o painel rola
+   ---------------------------------------------------------------------- */
+.lsa-barra{
+  position:sticky;top:calc(var(--lsa-t-topo, 60px) + 8px);z-index:6;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;min-width:0;
+  margin:0 -8px 14px;padding:8px;border-radius:20px;
+  background:rgba(var(--lsa-t-bg-rgb),.9);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+}
+.lsa-ficha .lsa-barra{position:static;margin:0 0 12px;padding:0;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.lsa-periodos{
+  display:flex;flex-wrap:nowrap;gap:2px;min-width:0;max-width:100%;margin:0;padding:4px;border:0;border-radius:14px;
+  background:rgba(var(--lsa-t-muted-rgb),.14);
+  overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;scroll-snap-type:x proximity;
+}
+.lsa-periodos::-webkit-scrollbar{display:none}
 .lsa-periodos legend{float:none;width:auto;padding:0;margin:0;font-size:inherit}
 .ls-content .lsa-periodo,.lsa-ficha .lsa-periodo{
-  position:relative;display:inline-flex;align-items:center;justify-content:center;
-  min-height:38px;padding:0 13px;margin:0;border-radius:10px;
+  position:relative;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  min-height:38px;padding:0 14px;margin:0;border-radius:10px;scroll-snap-align:center;
   color:var(--lsa-t-text-2);font-size:.8rem;font-weight:800;line-height:1;cursor:pointer;
   transition:background .15s ease,color .15s ease;white-space:nowrap;
 }
 .lsa-periodo input{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;opacity:0;cursor:pointer}
-.lsa-periodo:hover{background:rgba(var(--lsa-t-verniz-rgb),.06)}
-/* aceso como o filtro de Promoções: acento cheio e tinta escura. Acento
-   transparente sobre o ameixa vira marrom -- e marrom é o que não se quer. */
-.lsa-periodo:has(input:checked){background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta)}
+.lsa-periodo:hover{background:rgba(var(--lsa-t-verniz-rgb),.07)}
+/* aceso como o filtro de Promoções: acento cheio e tinta escura */
+.lsa-periodo:has(input:checked){background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta);box-shadow:0 4px 12px rgba(var(--lsa-t-sombra-rgb),calc(.3 * var(--lsa-t-sombra-forca)))}
 .lsa-periodo:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
 .lsa-dias{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .lsa-dias[hidden]{display:none}
@@ -130,76 +299,179 @@
 .ls-content .lsa-dias input[type="date"],.lsa-ficha .lsa-dias input[type="date"]{
   min-height:38px!important;padding:4px 10px!important;border-radius:10px!important;font-size:.82rem!important;width:auto;max-width:150px;
 }
-
-/* ---- destaques ao vivo (Usuários: online agora, ativos...) ---- */
-.lsa-destaques{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
-.lsa-destaques:empty{display:none}
-.lsa-destaque{
-  display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 12px;
-  border:1px solid var(--lsa-t-line-soft);border-radius:12px;background:rgba(var(--lsa-t-verniz-rgb),.035);
-  color:var(--lsa-t-text-2);font-size:.8rem;font-weight:700;
+/* a frase do período: o que está na tela e contra o que se compara */
+.ls-content .lsa-descricao,.lsa-ficha .lsa-descricao{
+  flex:1 1 240px;display:flex;flex-wrap:wrap;gap:0 8px;min-width:0;margin:0;color:var(--lsa-t-muted);font-size:.78rem;line-height:1.45;
 }
-.lsa-destaque strong{color:var(--lsa-t-text);font-size:1.02rem;font-weight:900}
-.lsa-destaque i{color:var(--lsa-t-muted)}
-.lsa-destaque.is-bom i{color:var(--lsa-sobe)}
-.lsa-ponto-vivo{width:9px;height:9px;border-radius:50%;background:var(--lsa-t-green);box-shadow:0 0 0 3px rgba(var(--lsa-t-green-rgb),.22)}
+.lsa-descricao:empty{display:none}
+.lsa-descricao strong{color:var(--lsa-t-text);font-weight:800}
 
 /* ---- corpo ---- */
 .lsa-corpo{position:relative;min-width:0;transition:opacity .2s ease}
-.lsa-corpo.is-carregando{opacity:.55}
+.lsa-corpo.is-carregando{opacity:.5;pointer-events:none}
 .lsa-estado{display:flex;align-items:center;gap:10px;min-height:120px;justify-content:center;color:var(--lsa-t-muted);font-size:.86rem;text-align:center;padding:16px}
 .lsa-estado i{font-size:1.2rem}
 .lsa-estado.is-erro{color:var(--lsa-desce)}
 .lsa-girando{width:18px;height:18px;border-radius:50%;border:2px solid rgba(var(--lsa-t-muted-rgb),.35);border-top-color:var(--lsa-serie);animation:lsa-gira .8s linear infinite}
 @keyframes lsa-gira{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.lsa-girando{animation:none}.lsa-recolher i{transition:none}}
+
+/* o esqueleto: as caixas no lugar do que vem, com um brilho que passa */
+.lsa-esqueleto{display:grid;gap:12px}
+.lsa-esqueleto-linha{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.lsa-esqueleto-linha span{height:148px}
+.lsa-esqueleto-bloco{height:300px}
+.lsa-esqueleto-pessoas{display:flex;gap:8px}
+.lsa-esqueleto-pessoas span{flex:0 1 210px;height:56px}
+.lsa-esqueleto-linha span,.lsa-esqueleto-bloco,.lsa-esqueleto-pessoas span{
+  display:block;border-radius:var(--lsa-raio);
+  background:linear-gradient(100deg,rgba(var(--lsa-t-muted-rgb),.1) 30%,rgba(var(--lsa-t-muted-rgb),.2) 50%,rgba(var(--lsa-t-muted-rgb),.1) 70%);
+  background-size:300% 100%;animation:lsa-brilho 1.5s ease-in-out infinite;
+}
+@keyframes lsa-brilho{from{background-position:100% 0}to{background-position:0 0}}
+
+/* aviso grande: erro de carga e período sem movimento */
+.lsa-aviso-grande{
+  display:grid;justify-items:center;gap:6px;padding:30px 18px;text-align:center;
+  border:1px dashed var(--lsa-t-line);border-radius:var(--lsa-raio);background:var(--lsa-superficie);color:var(--lsa-t-text-2);
+}
+.lsa-aviso-icone{display:grid;place-items:center;width:52px;height:52px;margin-bottom:4px;border-radius:17px;background:rgba(var(--lsa-t-violet-rgb),.18);color:var(--lsa-t-violet-texto);font-size:1.4rem}
+.lsa-aviso-grande.is-erro .lsa-aviso-icone{background:rgba(var(--lsa-t-red-rgb),.16);color:var(--lsa-t-red-texto)}
+.lsa-aviso-grande>strong{color:var(--lsa-t-text);font-size:1.02rem;font-weight:900}
+.ls-content .lsa-aviso-grande>p,.lsa-ficha .lsa-aviso-grande>p{max-width:54ch;margin:0 0 6px;color:var(--lsa-t-muted);font-size:.84rem;line-height:1.5}
+.lsa-aviso-grande .lsa-vazias-lista{width:min(100%,560px);margin-top:8px;text-align:left}
+
+@media (prefers-reduced-motion:reduce){
+  .lsa-girando,.lsa-pulso::after,.lsa-ponto-vivo::after,
+  .lsa-esqueleto-linha span,.lsa-esqueleto-bloco,.lsa-esqueleto-pessoas span{animation:none}
+  .lsa-pulso::after,.lsa-ponto-vivo::after{display:none}
+  .lsa-recolher i,.lsa-pessoa,.lsa-indicador,.lsa-corpo{transition:none}
+  .lsa-pessoa:hover{transform:none}
+}
 
 /* ---- indicadores (stat tiles). Cada um é um label com rádio: escolhe a série do gráfico ---- */
-.lsa-indicadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin:0 0 14px;min-width:0}
+.lsa-indicadores{--lsa-por-linha:6;display:flex;flex-wrap:wrap;gap:12px;margin:0 0 12px;min-width:0}
 .ls-content .lsa-indicador,.lsa-ficha .lsa-indicador{
-  position:relative;display:flex;flex-direction:column;gap:4px;min-width:0;margin:0;padding:12px 12px 10px;
-  border:1px solid var(--lsa-t-line-soft);border-radius:14px;background:var(--lsa-superficie);
-  color:var(--lsa-t-text-2);font-weight:600;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;
+  /* as linhas saem equilibradas: o gestao-analises.js diz quantos cartões vão em cada uma */
+  flex:1 1 calc((100% - (var(--lsa-por-linha) - 1) * 12px) / var(--lsa-por-linha));
+  position:relative;display:grid;grid-template-rows:auto auto auto auto 1fr;gap:2px;min-width:0;min-height:158px;margin:0;padding:14px 14px 12px;
+  border:1px solid var(--lsa-t-line-soft);border-radius:var(--lsa-raio);background:var(--lsa-superficie);
+  color:var(--lsa-t-text-2);font-weight:600;cursor:pointer;
+  transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease;
 }
+.lsa-indicadores.is-poucos .lsa-indicador{max-width:320px}
 .lsa-indicador input{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;opacity:0;cursor:pointer}
-.lsa-indicador:hover{border-color:var(--lsa-t-line)}
-.lsa-indicador:has(input:checked){border-color:var(--lsa-serie);box-shadow:inset 0 0 0 1px var(--lsa-serie)}
+.lsa-indicador:hover{border-color:var(--lsa-t-line-forte);transform:translateY(-1px)}
+.lsa-indicador:has(input:checked){border-color:var(--lsa-serie);box-shadow:inset 0 0 0 1px var(--lsa-serie),0 10px 24px rgba(var(--lsa-t-sombra-rgb),calc(.22 * var(--lsa-t-sombra-forca)))}
 .lsa-indicador:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
-.lsa-indicador-rotulo{display:flex;align-items:center;gap:6px;min-width:0;color:var(--lsa-t-muted);font-size:.74rem;font-weight:800;line-height:1.25}
-.lsa-indicador-rotulo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lsa-indicador-rotulo i{flex:0 0 auto;font-size:.86rem}
-.lsa-indicador:has(input:checked) .lsa-indicador-rotulo i{color:var(--lsa-serie)}
-.lsa-indicador-valor{color:var(--lsa-t-text);font-size:clamp(1.15rem,2.4vw,1.45rem);font-weight:900;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
-.lsa-indicador-valor.is-vazio{color:var(--lsa-t-muted);font-size:.86rem;font-weight:800;letter-spacing:0;padding:5px 0 3px}
-.lsa-variacao{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:.72rem;font-weight:800;line-height:1.3;color:var(--lsa-neutro)}
-.lsa-variacao.is-bom{color:var(--lsa-sobe)}
-.lsa-variacao.is-ruim{color:var(--lsa-desce)}
-.lsa-variacao small{color:var(--lsa-t-muted);font-weight:600}
-.lsa-faisca{display:block;width:100%;height:26px;margin-top:2px;overflow:visible}
+.lsa-indicador-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.lsa-indicador-icone{
+  flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;
+  background:rgba(var(--lsa-tom-rgb),.2);color:var(--lsa-tom-texto);font-size:1.02rem;
+}
+.lsa-indicador:has(input:checked) .lsa-indicador-icone{background:var(--lsa-t-acento);color:var(--lsa-t-acento-tinta)}
+.lsa-indicador-rotulo{color:var(--lsa-t-muted);font-size:.76rem;font-weight:800;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lsa-indicador-valor{color:var(--lsa-t-text);font-size:clamp(1.3rem,2.3vw,1.62rem);font-weight:900;letter-spacing:-.025em;line-height:1.15;overflow-wrap:anywhere}
+.lsa-antes{min-height:1.05rem;color:var(--lsa-t-muted);font-size:.72rem;font-weight:700;line-height:1.4}
+/* a pílula da variação: seta + número; verde ou vermelho só quando subir ou cair quer dizer bom ou ruim */
+.lsa-variacao{
+  display:inline-flex;align-items:center;gap:3px;min-height:24px;padding:2px 9px 2px 7px;border-radius:999px;
+  background:rgba(var(--lsa-t-muted-rgb),.16);color:var(--lsa-t-text-2);font-size:.72rem;font-weight:900;line-height:1;white-space:nowrap;
+}
+.lsa-variacao i{font-size:.66rem}
+.lsa-variacao.is-bom{background:rgba(var(--lsa-t-green-rgb),.17);color:var(--lsa-sobe)}
+.lsa-variacao.is-ruim{background:rgba(var(--lsa-t-red-rgb),.17);color:var(--lsa-desce)}
+.lsa-faisca-caixa{position:relative;align-self:end;display:block;height:30px;margin:6px 5px 0 0}
+.lsa-faisca-caixa.is-vazia{visibility:hidden}
+.lsa .lsa-faisca,.lsa-ficha .lsa-faisca{display:block;width:100%!important;height:30px!important;overflow:visible}
+.lsa-faisca-ponto{position:absolute;right:-4px;width:8px;height:8px;margin-top:-2px;border-radius:50%;background:var(--lsa-serie);box-shadow:0 0 0 2px var(--lsa-superficie)}
 
-.lsa-mais{display:none}
-.ls-content .lsa-mais-rotulo,.lsa-ficha .lsa-mais-rotulo{display:none;margin:-4px 0 12px;color:var(--lsa-t-text-2);font-size:.8rem;font-weight:800;cursor:pointer}
+/* UMA linha para as métricas sem número: o motivo de cada uma, a um toque */
+.lsa-vazias{margin:0 0 12px;border:1px dashed var(--lsa-t-line);border-radius:14px;color:var(--lsa-t-muted);font-size:.8rem}
+.lsa-vazias summary{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;cursor:pointer;list-style:none}
+.lsa-vazias summary::-webkit-details-marker{display:none}
+.lsa-vazias summary:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px;border-radius:12px}
+.lsa-vazias-frase{flex:1 1 auto;min-width:0;line-height:1.45}
+.lsa-vazias-frase strong{color:var(--lsa-t-text-2);font-weight:800}
+.lsa-vazias-porque{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;color:var(--lsa-t-text-2);font-size:.74rem;font-weight:800;white-space:nowrap}
+.lsa-vazias-porque i{font-size:.66rem;transition:transform .2s ease}
+.lsa-vazias[open] .lsa-vazias-porque i{transform:rotate(180deg)}
+.lsa-vazias-lista{display:grid;gap:6px;margin:0;padding:2px 14px 12px;list-style:none}
+.lsa-vazias-lista li{display:grid;grid-template-columns:20px minmax(0,auto) minmax(0,1fr);gap:2px 8px;align-items:baseline;color:var(--lsa-t-muted);font-size:.78rem;line-height:1.45}
+.lsa-vazias-lista strong{color:var(--lsa-t-text-2);font-weight:800}
 
-/* ---- grade dos gráficos ---- */
-.lsa-graficos{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);grid-template-areas:"linha ranking" "semana ranking";gap:12px;min-width:0}
-.lsa-graficos.sem-ranking{grid-template-columns:minmax(0,1fr);grid-template-areas:"linha" "semana"}
-.lsa-graficos.sem-semana{grid-template-areas:"linha ranking" "linha ranking"}
+/* ---- grade dos gráficos ----
+   Quem decide a arrumação é a largura do PAINEL (e não a da janela): o
+   mesmo componente mora na tela, com o menu aberto ou fechado, e dentro do
+   modal. No largo, uma linha só: o gráfico, o dia da semana e o ranking, da
+   mesma altura. No médio, o gráfico em cima e os dois embaixo. No estreito,
+   um embaixo do outro. */
+.lsa-corpo{container-type:inline-size;container-name:lsa}
+.lsa-graficos{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"linha" "semana" "ranking";gap:12px;min-width:0}
+.lsa-graficos.sem-semana{grid-template-areas:"linha" "ranking"}
+.lsa-graficos.sem-ranking{grid-template-areas:"linha" "semana"}
 .lsa-graficos.sem-ranking.sem-semana{grid-template-areas:"linha"}
+@container lsa (min-width:620px){
+  .lsa-graficos{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"linha linha" "semana ranking"}
+  .lsa-graficos.sem-semana{grid-template-areas:"linha linha" "ranking ranking"}
+  .lsa-graficos.sem-ranking{grid-template-areas:"linha linha" "semana semana"}
+  .lsa-graficos.sem-ranking.sem-semana{grid-template-areas:"linha linha"}
+}
+@container lsa (min-width:820px){
+  .lsa-graficos.sem-semana{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);grid-template-areas:"linha ranking"}
+  .lsa-graficos.sem-ranking{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);grid-template-areas:"linha semana"}
+  .lsa-graficos.sem-ranking.sem-semana{grid-template-columns:minmax(0,1fr);grid-template-areas:"linha"}
+}
+@container lsa (min-width:1040px){
+  .lsa-graficos{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);grid-template-areas:"linha semana ranking"}
+}
 .lsa-bloco{
-  min-width:0;padding:14px;border:1px solid var(--lsa-t-line-soft);border-radius:var(--lsa-raio);
+  min-width:0;padding:16px;border:1px solid var(--lsa-t-line-soft);border-radius:var(--lsa-raio);
   background:var(--lsa-superficie);color:var(--lsa-t-text-2);
 }
 .lsa-bloco-linha{grid-area:linha}
 .lsa-bloco-semana{grid-area:semana}
 .lsa-bloco-ranking{grid-area:ranking}
-.lsa-bloco-topo{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin-bottom:8px}
-.lsa-bloco-titulo{margin:0!important;color:var(--lsa-t-text)!important;font-size:.92rem!important;font-weight:900;line-height:1.3}
+.lsa-bloco-topo{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin-bottom:10px}
+.lsa-bloco-titulo{margin:0!important;color:var(--lsa-t-text)!important;font-size:.98rem!important;font-weight:900;line-height:1.3}
 .ls-content .lsa-bloco-sub,.lsa-ficha .lsa-bloco-sub{margin:0;color:var(--lsa-t-muted);font-size:.74rem}
+.ls-content .lsa-bloco-nota,.lsa-ficha .lsa-bloco-nota{margin:8px 0 0;color:var(--lsa-t-muted);font-size:.74rem}
+
+/* as abas de métrica do gráfico: o mesmo rádio dos cartões, em pílula */
+.lsa-metricas{
+  display:flex;gap:6px;min-width:0;margin:-4px -4px 12px;padding:4px 30px 4px 4px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,black calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,black calc(100% - 34px),transparent);
+}
+.lsa-metricas::-webkit-scrollbar{display:none}
+.ls-content .lsa-metrica,.lsa-ficha .lsa-metrica{
+  position:relative;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;margin:0;
+  border:1px solid var(--lsa-t-line-soft);border-radius:999px;color:var(--lsa-t-muted);font-size:.76rem;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer;
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.lsa-metrica input{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;opacity:0;cursor:pointer}
+.lsa-metrica i{font-size:.84rem}
+.lsa-metrica:hover{border-color:var(--lsa-t-line-forte);color:var(--lsa-t-text-2)}
+.lsa-metrica:has(input:checked){border-color:var(--lsa-t-text);background:var(--lsa-t-text);color:var(--lsa-t-panel)}
+.lsa-metrica:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px}
+
+/* os três números da série: total, média, pico */
+.lsa-resumo{display:flex;flex-wrap:wrap;gap:8px 26px;margin:0 0 10px}
+.lsa-resumo>div{min-width:0}
+.lsa-resumo dt{color:var(--lsa-t-muted);font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.lsa-resumo dd{margin:1px 0 0;color:var(--lsa-t-text);font-size:1.12rem;font-weight:900;letter-spacing:-.01em;line-height:1.25}
+.lsa-resumo dd small{margin-left:6px;color:var(--lsa-t-muted);font-size:.72rem;font-weight:700;letter-spacing:0}
+
+/* sem série: o número é o gráfico */
+.lsa-heroi{display:grid;justify-items:start;gap:4px;padding:14px 4px 6px}
+.lsa-heroi>strong{color:var(--lsa-t-text);font-size:clamp(2.4rem,7vw,3.4rem);font-weight:900;letter-spacing:-.03em;line-height:1}
+.lsa-heroi>span{color:var(--lsa-t-muted);font-size:.84rem}
+.lsa-heroi-linha{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
 
 .lsa-legenda{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;padding:0;list-style:none;color:var(--lsa-t-text-2);font-size:.74rem;font-weight:700}
 .lsa-legenda li{display:inline-flex;align-items:center;gap:6px}
 .lsa-chave{display:inline-block;width:16px;height:0;border-top:2px solid var(--lsa-serie);border-radius:2px}
 .lsa-chave.is-anterior{border-top-color:var(--lsa-anterior)}
+.lsa-chave.is-faixa{height:8px;border:0;border-radius:999px;background:var(--lsa-serie)}
+.lsa-chave.is-agora{width:0;height:14px;border-top:0;border-left:2px solid var(--lsa-t-text-2);border-radius:0}
 
 .lsa-tela{position:relative;width:100%;min-width:0;touch-action:pan-y}
 /* Algumas telas desenham "todo svg" como ícone de 20px com traço herdado
@@ -207,7 +479,6 @@
    Aqui o svg é gráfico: medida e traço zerados, cada marca diz o seu. */
 .lsa svg,.lsa-ficha svg{fill:none;stroke:none;stroke-width:1}
 .lsa .lsa-tela svg,.lsa-ficha .lsa-tela svg{display:block;width:100%!important;height:auto!important;max-width:none;overflow:visible}
-.lsa .lsa-faisca,.lsa-ficha .lsa-faisca{width:100%!important;height:26px!important}
 .lsa-tela svg:focus{outline:none}
 .lsa-tela svg:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.7);outline-offset:4px;border-radius:6px}
 .lsa-svg-texto{fill:var(--lsa-t-muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -215,17 +486,17 @@
 .lsa-svg-base{stroke:var(--lsa-eixo);stroke-width:1;shape-rendering:crispEdges}
 .lsa-svg-serie{fill:none;stroke:var(--lsa-serie);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .lsa-svg-anterior{fill:none;stroke:var(--lsa-anterior);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
-.lsa-svg-area{fill:url(#lsaDegrade);stroke:none}
 .lsa-svg-ponto{fill:var(--lsa-serie);stroke:var(--lsa-superficie);stroke-width:2}
 .lsa-svg-ponto-anterior{fill:var(--lsa-anterior);stroke:var(--lsa-superficie);stroke-width:2}
 .lsa-svg-mira{stroke:var(--lsa-eixo);stroke-width:1}
 .lsa-svg-barra{fill:var(--lsa-serie);transition:opacity .12s ease}
-.lsa-svg-barra.is-apagada{opacity:.45}
+.lsa-svg-barra-zero{stroke:var(--lsa-eixo);stroke-width:2;stroke-linecap:round;transition:opacity .12s ease}
+.lsa-svg-barra.is-apagada,.lsa-svg-barra-zero.is-apagada{opacity:.42}
 .lsa-svg-alvo{fill:transparent;cursor:crosshair}
 .lsa-svg-valor{fill:var(--lsa-t-text);font-size:11px;font-weight:800}
 
 .lsa-dica{
-  position:absolute;z-index:5;top:0;left:0;min-width:150px;max-width:230px;padding:9px 11px;pointer-events:none;
+  position:absolute;z-index:5;top:0;left:0;min-width:150px;max-width:240px;padding:9px 11px;pointer-events:none;
   border:1px solid var(--lsa-t-line);border-radius:12px;background:var(--lsa-t-panel-2);color:var(--lsa-t-text-2);
   box-shadow:var(--lsa-t-shadow-soft);font-size:.76rem;line-height:1.35;opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
 }
@@ -235,29 +506,79 @@
 .lsa-dica-linha strong{color:var(--lsa-t-text);font-size:.86rem;font-weight:900}
 .lsa-dica-linha span{color:var(--lsa-t-muted)}
 
-.lsa-sem-serie{display:flex;align-items:center;justify-content:center;gap:8px;min-height:150px;color:var(--lsa-t-muted);font-size:.84rem;text-align:center;padding:12px}
+/* ---- "Quem esteve ativo hoje": uma faixa por pessoa, do primeiro ao último sinal ---- */
+.lsa-dia{display:grid;gap:2px;min-width:0}
+.lsa-dia-eixo,.lsa-dia-linha{display:grid;grid-template-columns:28px minmax(0,160px) minmax(0,1fr) 96px;gap:0 12px;align-items:center;padding:0 8px}
+.lsa-dia-regua{grid-column:3;position:relative;height:20px}
+.lsa-dia-regua span{position:absolute;top:2px;transform:translateX(-50%);color:var(--lsa-t-muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lsa-dia-regua span:first-child{transform:none}
+.lsa-dia-regua span:last-child{transform:translateX(-100%)}
+.lsa-dia-linhas{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.lsa-dia-linhas li.is-extra{display:none}
+.lsa-dia.is-todas .lsa-dia-linhas li.is-extra{display:block}
+.lsa-dia-linha{min-height:42px;border-radius:12px;cursor:pointer;transition:background .12s ease}
+.lsa-dia-linha>*{grid-row:1}
+.lsa-dia-linha:hover{background:rgba(var(--lsa-t-verniz-rgb),.05)}
+.lsa-dia-linha:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:-2px}
+.lsa-dia-nome{grid-column:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--lsa-t-text-2);font-size:.8rem;font-weight:700}
+.lsa-dia-horas{grid-column:4;color:var(--lsa-t-muted);font-size:.74rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.lsa-dia-trilho{grid-column:3;position:relative;height:10px;border-radius:999px;background:rgba(var(--lsa-t-muted-rgb),.15)}
+.lsa-dia-faixa{position:absolute;top:0;bottom:0;min-width:10px;max-width:100%;border-radius:999px;background:var(--lsa-serie)}
+.lsa-dia.tem-agora .lsa-dia-trilho::after{content:"";position:absolute;left:var(--lsa-dia-agora);top:-7px;bottom:-7px;width:2px;margin-left:-1px;border-radius:1px;background:var(--lsa-t-text-2);opacity:.55}
+
+/* "mostrar mais": checkbox dentro de label */
+.ls-content .lsa-mais-rotulo,.lsa-ficha .lsa-mais-rotulo{display:inline-flex;align-items:center;gap:6px;min-height:38px;margin:8px 0 0;color:var(--lsa-t-text-2);font-size:.78rem;font-weight:800;cursor:pointer}
+.lsa-mais-rotulo:has(input:focus-visible){outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px;border-radius:8px}
+.lsa-mais-rotulo:has(input:checked) i{transform:rotate(180deg)}
 
 /* ---- ranking: barras deitadas, uma cor só, maior primeiro ---- */
-.lsa-ranking{display:grid;gap:8px;margin:0;padding:0;list-style:none}
-.lsa-ranking-item{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:4px 8px;min-width:0}
+.lsa-ranking{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.lsa-ranking-item{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:4px 8px;min-width:0}
+.lsa-ranking-item.tem-avatar{grid-template-columns:20px 28px minmax(0,1fr) auto}
 .lsa-ranking-pos{color:var(--lsa-t-muted);font-size:.74rem;font-weight:900;text-align:right;font-variant-numeric:tabular-nums}
-.lsa-ranking-nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--lsa-t-text-2);font-size:.8rem;font-weight:700}
+.lsa-ranking-nome{display:grid;min-width:0;color:var(--lsa-t-text-2);font-size:.8rem;font-weight:700;line-height:1.3}
+.lsa-ranking-nome>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lsa-ranking-nome small{color:var(--lsa-t-muted);font-size:.7rem;font-weight:600}
+.lsa-ranking-nome small.is-online{color:var(--lsa-t-green-texto);font-weight:800}
 .lsa-ranking-nome a{color:inherit;text-decoration:none}
 .lsa-ranking-nome a:hover,.lsa-ranking-nome a:focus-visible{color:var(--lsa-t-text);text-decoration:underline;text-underline-offset:3px}
 .lsa-ranking-valor{color:var(--lsa-t-text);font-size:.8rem;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
-.lsa-ranking-trilho{grid-column:2 / 4;height:8px;border-radius:999px;background:rgba(var(--lsa-t-muted-rgb),.14);overflow:hidden}
+.lsa-ranking-trilho{grid-column:2 / -1;height:8px;border-radius:999px;background:rgba(var(--lsa-t-muted-rgb),.15);overflow:hidden}
+.lsa-ranking-item.tem-avatar .lsa-ranking-trilho{grid-column:3 / -1}
 .lsa-ranking-barra{display:block;height:100%;min-width:3px;border-radius:999px;background:var(--lsa-serie)}
 
-.lsa-tabela{margin-top:10px}
-.lsa-tabela summary{display:inline-flex;align-items:center;gap:6px;color:var(--lsa-t-text-2);font-size:.76rem;font-weight:800;cursor:pointer;list-style:none}
+/* por dia da semana: o nome, a barra e o número de cada dia */
+.lsa-semana{display:grid;gap:12px;margin:0;padding:2px 0 0;list-style:none}
+.lsa-semana-dia{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(34px,auto);align-items:center;gap:10px;min-width:0}
+.lsa-semana-dia .lsa-ranking-trilho{grid-column:auto;height:10px}
+.lsa-semana-nome{color:var(--lsa-t-muted);font-size:.76rem;font-weight:800}
+.lsa-semana-valor{color:var(--lsa-t-text-2);font-size:.8rem;font-weight:800;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.lsa-semana-dia.is-melhor .lsa-semana-nome,.lsa-semana-dia.is-melhor .lsa-semana-valor{color:var(--lsa-t-text);font-weight:900}
+.ls-content .lsa-semana-nota,.lsa-ficha .lsa-semana-nota{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--lsa-t-line-soft);color:var(--lsa-t-muted);font-size:.76rem;line-height:1.45}
+.lsa-semana-nota strong{color:var(--lsa-t-text-2);font-weight:800}
+
+/* a lista que entra no lugar do ranking (os cadastros mais recentes) */
+.lsa-recentes-lista{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.lsa-recentes-lista li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:44px;padding:4px 0}
+.lsa-recentes-lista li+li{border-top:1px solid var(--lsa-t-line-soft)}
+.lsa-recentes-quando{color:var(--lsa-t-muted);font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.lsa-tabela{margin-top:12px}
+.lsa-tabela summary{display:inline-flex;align-items:center;gap:6px;min-height:32px;color:var(--lsa-t-text-2);font-size:.76rem;font-weight:800;cursor:pointer;list-style:none}
 .lsa-tabela summary::-webkit-details-marker{display:none}
+.lsa-tabela summary:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px;border-radius:8px}
 .lsa-tabela-rolagem{max-height:260px;overflow:auto;margin-top:8px;border:1px solid var(--lsa-t-line-soft);border-radius:10px}
 .lsa-tabela table{width:100%;border-collapse:collapse;font-size:.76rem}
 .lsa-tabela th,.lsa-tabela td{padding:6px 9px!important;border-bottom:1px solid var(--lsa-t-line-soft);text-align:left;font-variant-numeric:tabular-nums}
 .lsa-tabela td+td,.lsa-tabela th+th{text-align:right}
 
-.lsa-avisos{display:grid;gap:4px;margin:12px 0 0;padding:0;list-style:none}
-.ls-content .lsa-avisos li,.lsa-ficha .lsa-avisos li{display:flex;gap:7px;color:var(--lsa-t-muted);font-size:.74rem;line-height:1.4}
+/* como os números são contados: fechado, a um toque */
+.lsa-notas{margin:12px 2px 0;color:var(--lsa-t-muted);font-size:.74rem}
+.lsa-notas summary{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-weight:800;cursor:pointer;list-style:none}
+.lsa-notas summary::-webkit-details-marker{display:none}
+.lsa-notas summary:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:2px;border-radius:8px}
+.lsa-notas ul{display:grid;gap:4px;margin:4px 0 0;padding:0 0 0 20px}
+.ls-content .lsa-notas li,.lsa-ficha .lsa-notas li{color:var(--lsa-t-muted);font-size:.74rem;line-height:1.45}
 
 /* Os botões do painel e do modal. Nas telas de gestão o gestao_integrada.css
    os redesenha com !important (e é o que se quer: o mesmo botão da tela);
@@ -267,7 +588,7 @@
   border:1px solid var(--lsa-t-line);border-radius:12px;background:rgba(var(--lsa-t-verniz-rgb),.045);color:var(--lsa-t-text-2);
   font:inherit;font-size:.82rem;font-weight:800;line-height:1;cursor:pointer;
 }
-.lsa button:hover,.lsa-ficha button:hover,button.lsa-atalho:hover{border-color:var(--lsa-t-line-forte);color:var(--lsa-t-text);background:rgba(var(--lsa-t-acento-rgb),.13)}
+.lsa button:hover,.lsa-ficha button:hover,button.lsa-atalho:hover{border-color:var(--lsa-t-line-forte);color:var(--lsa-t-text);background:rgba(var(--lsa-t-verniz-rgb),.09)}
 .lsa button:disabled,.lsa-ficha button:disabled{opacity:.55;cursor:wait}
 .lsa-voltar{min-height:30px!important;padding:0 10px!important;font-size:.74rem!important}
 
@@ -276,12 +597,6 @@
 .ls-content [data-detalhe-tipo]:focus-visible{outline:2px solid rgba(var(--lsa-t-acento-rgb),.75);outline-offset:3px}
 .ls-content .lsa-atalho{gap:6px}
 .lsa-atalho-solto{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-
-/* selo de presença (Usuários) */
-.lsa-presenca{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:var(--lsa-t-muted);font-size:.74rem;font-weight:700;white-space:nowrap}
-.lsa-presenca.is-online{color:var(--lsa-sobe, var(--lsa-t-green-texto))}
-.lsa-presenca .lsa-ponto-vivo{width:8px;height:8px}
-.lsa-presenca i{font-size:.8rem}
 
 /* ----------------------------------------------------------------------
    O MODAL DE DETALHES (um <dialog> só por tela)
@@ -362,28 +677,65 @@
 .lsa-evento-quando{grid-row:1;grid-column:3;color:var(--lsa-t-muted);font-size:.72rem;font-weight:700;white-space:nowrap}
 .lsa-mais-atividade{margin-top:12px;display:flex;justify-content:center}
 
+
 /* ----------------------------------------------------------------------
    TAMANHOS: celular 390, tablet 768/1024, PC 1366/1920
    ---------------------------------------------------------------------- */
-@media (max-width:1100px){
-  .lsa-graficos{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"linha linha" "semana ranking"}
-  .lsa-graficos.sem-semana{grid-template-areas:"linha linha" "ranking ranking"}
-  .lsa-graficos.sem-ranking{grid-template-columns:minmax(0,1fr);grid-template-areas:"linha" "semana"}
-}
 @media (max-width:720px){
-  .lsa{padding:14px 12px;border-radius:18px}
-  .lsa-graficos,
-  .lsa-graficos.sem-semana,
-  .lsa-graficos.sem-ranking{grid-template-columns:minmax(0,1fr);grid-template-areas:"linha" "semana" "ranking"}
-  .lsa-graficos.sem-semana{grid-template-areas:"linha" "ranking"}
-  .lsa-bloco{padding:12px 10px}
+  .lsa{padding:14px 12px;border-radius:22px}
+  .lsa-emblema{width:40px;height:40px;border-radius:13px;font-size:1.1rem}
+  .lsa-recolher{padding:0 10px}
+  .lsa-recolher span{display:none}
+  .lsa-bloco{padding:14px 12px}
   .lsa-secoes{columns:1}
-  /* os indicadores em 2 x 2; o resto, a um toque */
-  .lsa-indicadores{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .lsa-indicadores:not(.is-todos)>.lsa-indicador:nth-child(n+5){display:none}
-  .ls-content .lsa-mais-rotulo,.lsa-ficha .lsa-mais-rotulo{display:inline-flex;align-items:center;gap:6px}
+
+  /* a régua de períodos ocupa a linha e rola de lado; a frase vai embaixo */
+  .lsa-barra{margin:0 -6px 12px;padding:6px;border-radius:18px;gap:6px}
   .lsa-periodos{width:100%}
-  .ls-content .lsa-periodo,.lsa-ficha .lsa-periodo{flex:1 1 auto;padding:0 9px;min-height:40px}
+  .ls-content .lsa-periodo,.lsa-ficha .lsa-periodo{min-height:40px;padding:0 13px}
+  .ls-content .lsa-descricao,.lsa-ficha .lsa-descricao{flex-basis:100%;padding:0 4px;font-size:.74rem}
+
+  /* os indicadores passam de lado, um a um, encaixando */
+  .lsa-indicadores,.lsa-indicadores.is-poucos{
+    flex-wrap:nowrap;gap:10px;margin:0 -12px 12px;padding:2px 12px 4px;overflow-x:auto;overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;scroll-padding:0 12px;scrollbar-width:none;
+  }
+  .lsa-indicadores::-webkit-scrollbar{display:none}
+  .ls-content .lsa-indicador,.lsa-ficha .lsa-indicador{flex:0 0 47%;min-height:150px;padding:12px 12px 10px;scroll-snap-align:start}
+  .lsa-indicadores.is-poucos .lsa-indicador{flex:1 0 47%;max-width:none}
+  .lsa-ficha .lsa-indicadores{margin:0 0 12px;padding:2px 0 4px;scroll-padding:0}
+  .lsa-indicador:hover{transform:none}
+
+  /* a faixa "Agora": as pessoas também passam de lado */
+  .lsa-agora{padding:14px 12px;border-radius:20px}
+  .lsa-agora-relogio{flex-basis:100%;margin-left:20px}
+  .lsa-pessoas{flex-wrap:nowrap;margin:0 -12px;padding:2px 12px 4px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding:0 12px;scrollbar-width:none}
+  .lsa-pessoas::-webkit-scrollbar{display:none}
+  .lsa-pessoas-item,.lsa-pessoa-mais,.lsa-pessoa-resto{flex:0 0 auto;scroll-snap-align:start}
+  .lsa-pessoa{max-width:78vw}
+  .lsa-filtros{flex-wrap:nowrap;margin:14px -12px 0;padding:14px 12px 2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+  .lsa-filtros::-webkit-scrollbar{display:none}
+  .lsa-filtros legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ls-content .lsa-filtro{flex:0 0 auto;min-height:44px}
+  .lsa-filtro-limpar{margin-left:0}
+
+  /* a linha do tempo: o nome e o horário em cima, a faixa embaixo */
+  .lsa-dia-eixo,.lsa-dia-linha{grid-template-columns:28px minmax(0,1fr) auto;gap:2px 10px;padding:0 4px}
+  .lsa-dia-regua{grid-column:2 / 4}
+  .lsa-dia-linha{min-height:52px;padding-top:6px;padding-bottom:8px}
+  .lsa-dia-linha>.lsa-avatar{grid-row:1 / 3}
+  .lsa-dia-horas{grid-column:3}
+  .lsa-dia-trilho{grid-column:2 / 4;grid-row:2;height:8px}
+  .lsa-dia.tem-agora .lsa-dia-trilho::after{top:-4px;bottom:-4px}
+
+  .lsa-vazias summary{align-items:flex-start;flex-wrap:wrap}
+  .lsa-vazias-lista li{grid-template-columns:20px minmax(0,1fr)}
+  .lsa-vazias-lista li span{grid-column:2}
+  .lsa-resumo{gap:8px 20px}
+  .lsa-esqueleto-linha{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lsa-esqueleto-linha span:nth-child(n+3){display:none}
+  .lsa-esqueleto-bloco{height:240px}
+
   /* o modal ocupa a tela, abas no topo */
   .lsa-ficha{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border:0}
   .lsa-ficha-topo{padding:12px 14px 10px;grid-template-columns:auto minmax(0,1fr) auto}
@@ -395,16 +747,18 @@
   .lsa-campo dd{text-align:left}
 }
 @media (max-width:420px){
-  .lsa-indicador{padding:10px 9px 8px}
   .lsa-evento{grid-template-columns:30px minmax(0,1fr)}
   .lsa-evento-quando{grid-row:auto;grid-column:2}
 }
 
 @media (forced-colors:active){
   .lsa-svg-serie{stroke:CanvasText}
-  .lsa-svg-barra,.lsa-ranking-barra{fill:CanvasText;background:CanvasText}
-  .lsa-periodo:has(input:checked),.lsa-indicador:has(input:checked),.lsa-aba:has(input:checked){outline:2px solid Highlight}
+  .lsa-svg-barra,.lsa-ranking-barra,.lsa-dia-faixa{fill:CanvasText;background:CanvasText}
+  .lsa-periodo:has(input:checked),.lsa-indicador:has(input:checked),.lsa-aba:has(input:checked),
+  .lsa-metrica:has(input:checked),.lsa-filtro:has(input:checked){outline:2px solid Highlight}
+  .lsa-avatar,.lsa-presenca.is-online{border:1px solid CanvasText}
 }
 @media print{
-  .lsa-periodos-linha,.lsa-recolher,.lsa-mais-rotulo{display:none!important}
+  .lsa-periodos,.lsa-dias,.lsa-recolher,.lsa-mais-rotulo,.lsa-filtros,.lsa-metricas{display:none!important}
+  .lsa-barra{position:static}
 }
