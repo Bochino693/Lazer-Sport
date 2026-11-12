@@ -675,6 +675,26 @@ const CAPAS = {
     lugar: "showroom", lente: 40, giro: 26, altura: 6, ocupa: 0.82,
     lugarOp: { cenario: "vitrine", deslocar: -1.0, semente: 93 },
   },
+  // (seção 80: "todas as capas quadradas, no padrão") o Air Game Kids Astronautas, o adesivo padrão:
+  // o mesmo ângulo e o mesmo canto do Alienígenas, para os dois adesivos ficarem iguais no card que gira
+  "air-game-kids-astronautas": {
+    maquinas: async () => glb("air-game-kids-astronautas"),
+    lugar: "showroom", lente: 40, giro: 30, altura: 16, ocupa: 0.78,
+    lugarOp: { cenario: "plantas", deslocar: 0.6, semente: 95 },
+  },
+  // o Brinquedão Modelo 5 (o L pequeno de tubos cor de madeira), de 3/4 pela frente, no showroom
+  "brinquedao-modelo-5": {
+    maquinas: async () => glb("brinquedao-modelo-5"),
+    lugar: "showroom", lente: 40, giro: 34, altura: 10, ocupa: 0.88,
+    lugarOp: { cenario: "fliperama", deslocar: -0.8, semente: 97 },
+  },
+  // o Brinquedão Modelo 4 (o L de 19,6 m com o tobogã espiral e a Área Baby), inteiro, no showroom (o
+  // galpão, claro demais, deixava o brinquedo apagado: o contraste ficava abaixo do mínimo das capas)
+  "brinquedao-modelo-4": {
+    maquinas: async () => glb("brinquedao-modelo-4"),
+    lugar: "showroom", lente: 40, giro: 36, altura: 10, ocupa: 0.9, desce: 0.02,
+    lugarOp: { cenario: "vitrine", semente: 99 },
+  },
 };
 
 /* ---------------------------------------------------------------- as capas do catálogo

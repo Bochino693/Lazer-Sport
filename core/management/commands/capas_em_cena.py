@@ -14,7 +14,16 @@ casinhas) e a foto da categoria "Casinhas Cenográficas" (seção 78):
     python manage.py capas_em_cena --so "Basquete Kids"
     python manage.py capas_em_cena --vermelhas --desfazer (o recorte do cartaz volta)
 
-Normalmente nem é preciso: as migrações 0157 e 0180 fazem isso no deploy. A
+A capa QUADRADA de cada adesivo dos nossos 3D (seção 80: o Air Game Kids
+Astronautas e Alienígenas, o Basquete Home Quadrinhos, os Brinquedões Modelo 4
+e 5 e os outros 3D; core/capas_quadradas.py):
+
+    python manage.py capas_em_cena --quadradas --simular
+    python manage.py capas_em_cena --quadradas
+    python manage.py capas_em_cena --quadradas --so "Brinquedão Modelo 4" "Air Game Kids (Alienígenas)"
+    python manage.py capas_em_cena --quadradas --desfazer
+
+Normalmente nem é preciso: as migrações 0157, 0180 e 0186 fazem isso no deploy. A
 foto em cena vira a capa; a de antes continua na galeria (na Black Friday, o
 recorte do cartaz fica guardado, fora da galeria pública). Um produto cuja
 capa a equipe já trocou no painel fica como está. Rodar de novo não duplica.
@@ -22,8 +31,8 @@ capa a equipe já trocou no painel fica como está. Rodar de novo não duplica.
 
 from django.core.management.base import BaseCommand
 
-from core import capas_catalogo
-from core.models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo
+from core import capas_catalogo, capas_quadradas
+from core.models import Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, VarianteAdesivo
 
 
 class Command(BaseCommand):
@@ -35,8 +44,23 @@ class Command(BaseCommand):
         parser.add_argument("--desfazer", action="store_true", help="volta a capa de antes")
         parser.add_argument("--vermelhas", action="store_true",
                             help="as máquinas da Black Friday (o fundo vermelho e as panorâmicas) e a categoria das casinhas")
+        parser.add_argument("--quadradas", action="store_true",
+                            help="a capa quadrada de cada adesivo dos nossos 3D (o Air Game Kids, o Basquete Home, os Brinquedões)")
 
-    def handle(self, *args, simular=False, so=(), desfazer=False, vermelhas=False, **opcoes):
+    def handle(self, *args, simular=False, so=(), desfazer=False, vermelhas=False, quadradas=False, **opcoes):
+        if quadradas:
+            if so and not capas_quadradas.escolher(so):
+                self.stdout.write("Nenhum item com esse nome. Os da lista:")
+                for item in capas_quadradas.ITENS:
+                    self.stdout.write(f"  {capas_quadradas._rotulo(item)}")
+                return
+            capas_quadradas.rodar(Brinquedos, ImagemBrinquedo, VarianteAdesivo, so=so, simular=simular,
+                                  desfazer=desfazer, avisar=self.stdout.write)
+            if not simular:
+                from django.core.cache import cache
+
+                cache.clear()  # os cards (as fotos que giram por adesivo), a página e a home
+            return
         lista = capas_catalogo.VERMELHAS if vermelhas else None
         if so and not capas_catalogo.escolher(so, lista):
             self.stdout.write("Nenhum produto da lista com esse id ou nome. Os da lista:")

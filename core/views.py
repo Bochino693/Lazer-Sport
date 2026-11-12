@@ -3861,6 +3861,14 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         mensagem = f"Adesivo {nome} incluído no {brinquedo.nome_brinquedo}."
         if recortes:
             mensagem += f" {recortes} foto(s) sem fundo ficaram guardadas como recorte para artes (fora do site)."
+        frente = request.FILES.get("adesivo_perfil")
+        if frente:
+            # a frente é a capa do adesivo no card: quadrada (LEIA-ME 80); fora disso, só o aviso
+            from . import capas_quadradas
+
+            aviso_do_formato = capas_quadradas.aviso_de_formato(frente)
+            if aviso_do_formato:
+                mensagem += f" {aviso_do_formato}"
         return self._responder_adesivos(request, brinquedo, mensagem)
 
     def _adesivo_posicao(self, request):
@@ -3877,12 +3885,19 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         arquivo = request.FILES.get("foto")
         if tipo not in dict(self.POSICOES) or not arquivo:
             raise ErroDeFormulario("Adesivo: escolha a posição e a foto.")
+        aviso_do_formato = ""
+        if tipo == "perfil":
+            # a frente é a capa do adesivo no card: quadrada (LEIA-ME 80); fora disso, só o aviso
+            from . import capas_quadradas
+
+            aviso_do_formato = capas_quadradas.aviso_de_formato(arquivo)
         if self._gravar_posicao(brinquedo, variante, tipo, arquivo) == "recorte":
             return self._responder_adesivos(
                 request, brinquedo,
                 f"A foto não tem fundo: ficou guardada no adesivo {variante.nome} como recorte para artes (fora do "
                 f"site). Para a posição {dict(self.POSICOES)[tipo]}, mande uma foto com cenário.")
-        return self._responder_adesivos(request, brinquedo, f"{dict(self.POSICOES)[tipo]} do adesivo {variante.nome}: foto gravada.")
+        mensagem = f"{dict(self.POSICOES)[tipo]} do adesivo {variante.nome}: foto gravada."
+        return self._responder_adesivos(request, brinquedo, mensagem + (f" {aviso_do_formato}" if aviso_do_formato else ""))
 
     def _adesivo_tirar(self, request):
         """Tira um adesivo (as fotos dele saem junto). O padrão não sai: todo brinquedo tem um."""
@@ -4305,6 +4320,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         brancas = self._fotos_sem_fundo(arquivos)
 
         perfil_novo = arquivos.get("perfil")
+        # a capa do card é quadrada (LEIA-ME 80): a fora do formato só ganha o aviso (grava assim mesmo)
+        aviso_do_formato = ""
+        if perfil_novo:
+            from . import capas_quadradas
+
+            aviso_do_formato = capas_quadradas.aviso_de_formato(perfil_novo)
         if perfil_novo:
             brinquedo.imagem_brinquedo = perfil_novo
             brinquedo.capa_sem_fundo = ""  # a capa nova: a conferência começa de novo
@@ -4329,7 +4350,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 if criando else
                 f"Brinquedo '{brinquedo.nome_brinquedo}' atualizado "
                 "com sucesso."
-            ) + aviso_do_fundo,
+            ) + aviso_do_fundo + (f" {aviso_do_formato}" if aviso_do_formato else ""),
             brinquedo_id=brinquedo.pk,
         )
 

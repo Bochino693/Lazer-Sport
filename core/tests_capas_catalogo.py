@@ -166,7 +166,10 @@ class FotosDoCatalogoTests(TestCase):
             self.assertGreaterEqual(catalogo.count(f'...v("{cenario}"'), 5)  # variam: não fica igual em todos
         inicio = codigo.index("const CAPAS = {")
         capas = codigo[inicio:codigo.index("\n};\n", inicio)]
-        self.assertEqual(capas.count('lugar: "showroom"'), 7)  # o Espaço Esportivo, no galpão
+        # o Espaço Esportivo, no galpão; o Astronautas e os Brinquedões Modelo 4 e 5 ganharam a capa
+        # quadrada deles (seção 80)
+        self.assertEqual(capas.count('lugar: "showroom"'), 10)
+        self.assertEqual(capas.count('lugar: "galpao"'), 1)
         for peca in ("NeutralToneMapping", "principal", "preenchimento", "recorte", "anisotropy = 16"):
             self.assertIn(peca, codigo)
         lugares = (FERRAMENTA / "lugares.js").read_text(encoding="utf-8")

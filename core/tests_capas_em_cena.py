@@ -57,6 +57,14 @@ migracao_0155 = importlib.import_module("core.migrations.0155_imagens_em_alta")
 FERRAMENTA = Path(__file__).resolve().parent.parent / "ferramentas" / "categorias"
 #: Os produtos com a capa em cena (o Modelo 5 tem a do salão da fábrica).
 EM_CENA = tuple(chave for chave in migracao.CHAVES if chave != "brinquedao-modelo-5")
+#: As capas quadradas que vieram depois (LEIA-ME 80: "todas as capas no padrão"): o Air Game Kids
+#: Astronautas e os Brinquedões Modelo 4 e 5 (a capa deles era a imagem da fábrica). Sobem pela
+#: core/capas_quadradas.py (a 0186), e não pelo cadastro.
+CAPAS_DA_80 = {
+    "air-game-kids-astronautas": "Air Game Kids (Astronautas) (3D)",
+    "brinquedao-modelo-4": "Brinquedão Modelo 4 (3D)",
+    "brinquedao-modelo-5": "Brinquedão Modelo 5 (3D)",
+}
 
 
 def _disco(pasta):
@@ -125,10 +133,10 @@ class CapasTests(TestCase):
         # a lista de cada capa (o gerar.cjs grava): só o produto, o .glb nosso -- como nas
         # imagens da fábrica, sem outra máquina
         lista = json.loads((FERRAMENTA / "maquinas-das-capas.json").read_text(encoding="utf-8"))
-        self.assertEqual(set(lista), set(EM_CENA))
+        self.assertEqual(set(lista), set(EM_CENA) | set(CAPAS_DA_80))
         for chave, maquinas in lista.items():
             with self.subTest(chave):
-                self.assertEqual(maquinas, [CADASTROS[chave]["nome"] + " (3D)"])
+                self.assertEqual(maquinas, [CAPAS_DA_80.get(chave) or CADASTROS[chave]["nome"] + " (3D)"])
 
     def test_as_capas_nao_tem_gente_e_as_categorias_tem(self):
         # "nas categorias sim ponha as crianças, porém nas fotos individuais não coloque as crianças"
@@ -137,7 +145,7 @@ class CapasTests(TestCase):
         capas = codigo[inicio:codigo.index("\n};\n", inicio)]
         for gente in ("crianca(", "naFrente(", "vida:", "naTela:"):
             self.assertNotIn(gente, capas)
-        self.assertEqual(capas.count('lugar: "showroom"') + capas.count('lugar: "galpao"'), len(EM_CENA))
+        self.assertEqual(capas.count('lugar: "showroom"') + capas.count('lugar: "galpao"'), len(EM_CENA) + len(CAPAS_DA_80))
         inicio = codigo.index("const CENAS = {")
         cenas = codigo[inicio:codigo.index("\n};\n", inicio)]
         self.assertGreaterEqual(cenas.count("naFrente(") + cenas.count("crianca("), 14)

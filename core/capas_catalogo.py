@@ -125,8 +125,9 @@ FORA = {
     "Strike Kids": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
     "Air Game Kids Alienígenas": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
     "Basquete Home Quadrinhos": "a capa é a cena dos nossos 3D (core/cadastro_modelos.py)",
-    "Brinquedão Modelo 4": "a capa é a imagem da fábrica (a perspectiva)",
-    "Brinquedão Modelo 5": "a capa é a imagem da fábrica (o salão)",
+    # (seção 80: a capa quadrada deles é a do 3D, core/capas_quadradas.py; a da fábrica fica na galeria)
+    "Brinquedão Modelo 4": "a capa é a do 3D (capas_quadradas); a imagem da fábrica fica na galeria",
+    "Brinquedão Modelo 5": "a capa é a do 3D (capas_quadradas); a imagem da fábrica fica na galeria",
 }
 
 #: As máquinas da Black Friday (a seção 78): a capa era o recorte do cartaz, no fundo de neon vermelho

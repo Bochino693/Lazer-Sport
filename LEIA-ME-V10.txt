@@ -4043,3 +4043,78 @@ Dependência nova: rjsmin (requirements.txt).
    Código: core/static/site/paginas/home-quadro.js (prepararSemFim,
    prepararSetas, mostrarMiniatura) e home-quadro.css (.ls-vitrine-trilho,
    .ls-vitrine-miniaturas--sem-fim, .ls-vitrine-seta).
+
+80) TODAS AS CAPAS QUADRADAS: UMA CAPA EM CENA POR ADESIVO E OS BRINQUEDÕES DO 3D
+   Pedido, com os prints do catálogo: "de novo vc errou no dimensionamento de
+   algumas fotos, elas devem ser padrão. veja que não quero fotos cortadas
+   menores, deve seguir o mesmo padrão." Todo card de produto mostra a capa
+   QUADRADA (1600 x 1600) no showroom, com a máquina inteira enchendo o card:
+   sem faixas e sem zoom.
+   O QUE FUGIA (conferido no site no ar: a capa da API, o card do /brinquedos/
+   e os dados de adesivo da página de cada produto):
+     * os adesivos de fora do padrão: o Alienígenas (Air Game Kids) e o
+       Quadrinhos (Basquete Home) não tinham frente; a primeira foto deles (a
+       capa no seletor de adesivo e no card que gira por adesivo) era a vista
+       de 3/4 do 3D, 1600 x 1000. (A capa do Air Game Kids no card já era
+       quadrada: a capa em cena do Astronautas, da seção 64.)
+     * os Brinquedões Modelo 4 (1,56 x 1) e Modelo 5 (1,69 x 1): a capa era a
+       imagem da fábrica, e o card mostrava as faixas da seção 79.
+     * o Boliche Virtual (0,75, em pé): a foto de verdade no showroom (a
+       referência da seção 64). A máquina é mais alta do que a foto é larga:
+       nenhum recorte quadrado da foto a mostra inteira. NÃO FOI MEXIDO: fazer
+       uma capa quadrada exige recortar a máquina branca do canteiro branco (a
+       foto de que o cliente gostou) ou uma foto nova, quadrada, no showroom.
+       Fica para decidir.
+   A CONVENÇÃO (com a do card que gira por adesivo): a capa quadrada de um
+   adesivo é a foto DELE (`ImagemBrinquedo.variante`) na posição "perfil" (a
+   frente: a primeira da galeria do adesivo e a dele no seletor), marcada
+   `papel_na_capa = "cena"`. A do adesivo padrão é também a capa do produto
+   (`imagem_brinquedo`). Um adesivo, uma capa em cena.
+   AS FOTOS (ferramentas/categorias: cenas.js, CAPAS; gerar.cjs capas
+   --compor), em core/static/site/arena/modelos/<chave>/capa.webp, com o
+   acabamento das fotos de produto (a luz de estúdio, o "vivo"):
+     * o Astronautas (do .glb dele): o mesmo ângulo e o mesmo canto do
+       Alienígenas, para os dois adesivos ficarem iguais no card que gira. A
+       capa do Astronautas no ar continua a capa em cena do catálogo (a foto
+       de verdade da máquina no showroom): esta só entra se ele ficar sem;
+     * os Brinquedões Modelo 4 e 5 (dos .glb), inteiros, no showroom (o Modelo
+       4, um L de 19,6 m, ficou apagado no galpão claro: o contraste abaixo do
+       mínimo das capas; no showroom passa com folga). As imagens da fábrica
+       CONTINUAM NA GALERIA, na posição "em 3/4".
+     * o Alienígenas e o Quadrinhos: a capa do 3D que já existia.
+   NO AR (core/capas_quadradas.py, ITENS; o comando e a migração 0186, só no
+   Render):
+       python manage.py capas_em_cena --quadradas --simular
+       python manage.py capas_em_cena --quadradas
+       python manage.py capas_em_cena --quadradas --so "Air Game Kids (Alienígenas)"
+       python manage.py capas_em_cena --quadradas --desfazer
+     * o adesivo que já tem a capa em cena fica (a nossa, refeita, sobe de
+       novo: a assinatura no nome `capa-<chave>-<assinatura>`);
+     * a frente que já é a nossa capa quadrada (o cadastro dos nossos 3D:
+       Strike Kids, Trampolim, Espaço Esportivo, Brinquedões 2, 3 e Ninja) só
+       ganha o papel "cena";
+     * a frente que é a capa de antes conhecida (a imagem da fábrica dos
+       Modelos 4 e 5, inclusive a que a Black Friday subiu) passa para a
+       primeira posição livre do adesivo e a capa quadrada entra na frente;
+     * o adesivo sem frente (o Alienígenas e o Quadrinhos no ar) ganha a capa;
+     * outra foto na frente (a equipe trocou no painel): fica como está;
+     * o Azul (Basquete Home, sem 3D) e o Premium (Air Game Premium; o Air
+       Rock vira adesivo dele, pelo trabalho dos adesivos) só são conferidos:
+       a capa em cena deles é a do catálogo (seção 64);
+     * rodar de novo não muda nada; o --desfazer tira a capa que subiu, devolve
+       a de antes à frente e tira o papel posto. Se uma subida falhar, o
+       deploy segue e o aviso diz o comando. No fim, limpa o cache.
+   O PAINEL AVISA (não bloqueia): a foto da frente do produto, ou a frente de
+   um adesivo, que não é quase quadrada (mais de 1,15 : 1) grava e ganha o
+   aviso "A capa do card deve ser quadrada (1:1); esta é 1,6:1."
+   (capas_quadradas.aviso_de_formato).
+   Conferido no site local com os produtos como estão no ar (as fotos de
+   verdade, baixadas): os cards do /brinquedos/ antes (os Modelos 4 e 5 com as
+   faixas) e depois (todos quadrados, a máquina inteira), e a página do Air
+   Game Kids no Alienígenas e a do Basquete Home no Quadrinhos (a foto 1 de 3 é
+   a capa quadrada; o seletor de adesivo também).
+   Testes: core/tests_capas_quadradas.py (TODA capa que o repositório controla
+   é 1600 x 1600 -- as 39 do catálogo, as 7 da Black Friday, a de cada nosso
+   3D e a de cada adesivo --, a máquina inteira, um adesivo uma capa, a rotina,
+   a migração e o aviso do painel); core/tests_capas_catalogo.py e
+   core/tests_capas_em_cena.py (as capas novas nas cenas, sem gente, vivas).
