@@ -3511,6 +3511,132 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_brinquedos_adm_tela.py, core/tests_gestao_cores.py
    (cores proibidas, tela que não reescreve o painel, camada comum).
 
+76) ANÁLISES GRÁFICAS NO PAINEL: DESEMPENHO POR PERÍODO, FICHA DE CADA OBJETO E QUEM ESTÁ ONLINE
+   Pedidos: "inclua os gráficos para cada objeto, de acordo com seus dados,
+   ... com uma GUI moderna, pensando em tablet, celular ... baseado em
+   períodos de dias, semana, hoje, mês e até ano, 3 meses e semestre" e,
+   depois, "em usuário, saber se ele está online, qual foi a última vez que
+   logou ... poder clicar nele e ver os detalhes em um modal separado, isso
+   para outras coisas também".
+   O QUE CADA TELA GANHOU (um include + atributos no template; a lógica mora
+   em arquivos novos):
+     * no topo, o painel "Desempenho": chips de período (Hoje · Semana · Mês
+       · 3 meses · Semestre · Ano · Dias), cartões com o total e a variação
+       contra o período anterior (seta + % + "antes N", verde/vermelho), a
+       linha do período com a do anterior em cinza e a dica que segue o
+       dedo, colunas por dia da semana, o ranking "Quem mais rendeu" e a
+       tabela com todos os números. Recolhível; o período e o recolhido
+       ficam lembrados no aparelho. No celular os cartões ficam 2 x 2 ("Mais
+       métricas" mostra o resto);
+     * tocar no objeto da lista abre a FICHA (modal: Resumo · Gráficos ·
+       Atividade); o atalho "Gráficos" (posto pelo JS no lugar das ações do
+       cartão) abre a ficha já nos gráficos, no período escolhido na tela.
+       No celular a ficha ocupa a tela com as abas no topo. Item relacionado
+       (o brinquedo de uma promoção, o item de um pedido) abre a ficha dele,
+       com "Voltar".
+     Telas: Brinquedos, Promoções, Combos, Cupons, Eventos, Projetos, Peças,
+     Clientes no mapa, Usuários (contas), Jogos do portal e Pedidos da loja
+     (esta só ficha).
+   MÉTRICAS POR TIPO (só o que o banco tem; métrica sem nenhuma linha diz
+   "sem dados ainda", nunca zero inventado):
+     * brinquedo e peça: visitas, no carrinho, curtidas, lista de desejos,
+       em orçamentos, aprovados, valor aprovado, pedidos pagos, receita;
+     * combo e promoção: visitas, no carrinho, pedidos, receita;
+     * cupom: usos (pedidos pagos com o código), desconto concedido (neutro:
+       nem verde nem vermelho), receita com cupom, resgates por pontos;
+     * evento (não guarda data): visitas, curtidas, pedidos e receita DOS
+       BRINQUEDOS do evento; o ranking soma por evento;
+     * projeto: pedidos do "Monte seu projeto", fechados, projetos
+       cadastrados e montagens 3D (no objeto, só as montagens: a página do
+       projeto não tem contador de visita);
+     * cliente: clientes novos, orçamentos, aprovados, valor aprovado (o
+       valor fechado ou itens + frete − desconto), recusados;
+     * pedido (loja): feitos, pagos, receita, ticket médio, cancelados,
+       itens vendidos (ranking dos produtos);
+     * usuário: cadastros novos, contas ativas (pessoas DISTINTAS), pedidos
+       pagos, gasto, curtidas e desejos, jogadas no portal; na conta: dias
+       com acesso, pontos e jogadas;
+     * jogo (portal Lazer & Sport Games, só o superusuário): jogadas, pessoas
+       com conta e visitantes (DISTINTOS), jogadas da equipe; o ranking traz
+       os jogos da casa e os cadastrados. Vem da coleta com data da seção 77
+       (JogadaRegistrada): antes dela não há jogada com data.
+   O "QUANDO" QUE NÃO EXISTIA (migração core 0171_analises_e_presenca, depois
+   da 0170; SÓ ESQUEMA, três tabelas novas):
+     * InteracaoPorHora: os contadores antigos (BrinquedoClick e irmãos)
+       somam um número por produto desde sempre, sem data. A visita agora
+       também vai para a linha da HORA (brinquedo, combo, promoção,
+       categoria e, nova, a peça), e a ida ao carrinho idem (site e
+       aplicativo; a sincronização do app conta só o que foi acrescentado).
+       Uma linha por produto e hora, gravada pela mesma linha de fundo dos
+       cliques (core/cliques.py, `depois`): a página continua saindo do cache
+       sem esperar o banco. A comparação com um período anterior ao começo
+       do registro sai como "sem base anterior · desde dd/mm".
+     * PresencaUsuario (o último sinal de vida) e AcessoDiario (um por conta
+       e dia): o core.presenca.PresencaMiddleware anota toda requisição de
+       conta logada (site, painel, app), NO MÁXIMO UMA VEZ POR MINUTO por
+       conta (chave no cache; o resto não toca no banco) e pela linha de
+       fundo. Desligável: PRESENCA_DE_USUARIOS (desligado nos testes).
+   USUÁRIOS: cada linha ganhou o selo "Online agora" (sinal nos últimos
+   5 min, ponto verde) ou "Visto há 12 min / há 3 h / ontem às 14:32 / em
+   03/11 às 09:10", "Entrou ..." (só o último login, para quem não voltou
+   desde a presença) e "Nunca entrou". O topo mostra online agora, ativos
+   hoje / 7 dias / 30 dias e nunca entraram; "Cadastros novos" é o do
+   período. A lista carrega `presenca` no mesmo SELECT (select_related).
+   A FICHA DE CADA TIPO (GET /detalhes/<tipo>/<id>/, atividade paginada em
+   /detalhes/<tipo>/<id>/atividade/?pagina=N; 12 por página):
+     * usuário: nome, usuário, e-mail, telefone, perfil e funções, criada em,
+       último login, visto por último (e onde), origem do cadastro (site,
+       app, Google, Apple + cidade), pedidos e gasto, curtidas, desejos,
+       carrinho agora, pontos, dias com acesso, jogadas; atividade: pedidos,
+       curtidas, jogadas ("Jogou Strike Kids · jogo da casa"), dias de uso,
+       pontos, cadastro e login;
+     * brinquedo: preço, medidas, volume, voltagem, avaliação, datas,
+       descrição, categorias/tags, fotos, objeto 3D, adesivos (cada arte com
+       as suas fotos e o seu 3D, a estrutura da seção 72), promoções e
+       combos em que está, eventos, parceiros e os números de sempre;
+       atividade: pedidos, orçamentos (o nome do cliente só para quem é do
+       comercial), curtidas e visitas por hora;
+     * peça: preços de venda e fornecedor, margem, categorias, fotos;
+     * promoção: oferta, "de", desconto, validade, condições, brinquedos;
+     * combo: preço, soma de tabela, economia, brinquedos;
+     * cupom: regras (escopo, quem pode, usos, repete, expira), clientes do
+       cupom, usos, desconto concedido, carrinhos com ele agora, resgate;
+     * evento e projeto: descrição, fotos, brinquedos / produto da loja e
+       montagens 3D; cliente: contato, endereço, observações, orçamentos (em
+       aberto, aprovados com valor, recusados, taxa), O.S.; pedido: cliente,
+       valores, cupom, pagamento, entrega e itens; jogo: onde roda, categoria,
+       jogadas, pessoas, visitantes, equipe, última jogada, partidas do "Mais
+       jogados" e a atividade (quem jogou, por onde).
+   COMO O BANCO É CONSULTADO (core/analises.py, core/analises_tipos.py):
+   cada FONTE agrupa no banco, no fuso do site. As aditivas agregam por
+   hora (Hoje: TruncHour) ou por dia (TruncDay) e semanas e meses são a
+   soma desses dias -- a MESMA consulta dá a série, o período anterior
+   (recuado e posto no mesmo balde) e o dia da semana; as que contam
+   pessoas distintas agregam direto em TruncDay/TruncWeek/TruncMonth. O
+   anterior é a mesma janela recuada até o mesmo ponto ("hoje até 15h30"
+   contra "ontem até 15h30"). Hoje por hora; Semana e Mês por dia; 3 meses
+   e Semestre por semana (segunda a domingo); Ano por mês; "Dias" escolhe o
+   balde pelo tamanho. O resultado fica 2 minutos no cache. Brinquedos/Ano:
+   menos de 26 consultas a frio, ~2 com cache.
+   PERMISSÃO: GET /analises/<tipo>/ e as fichas pedem a função da tela
+   (Criação para catálogo; Criação/Gestão para cupons; Vendas/Gestão para
+   clientes; Financeiro/Gestão para pedidos; só o superusuário para
+   usuários e jogos). Fora do subdomínio interno não existem.
+   CORES: só variáveis de tema, lidas no :root (--lsa-t-*): a tela de
+   Brinquedos redefine --panel e --line em marrom para dentro de si, e o
+   painel herdaria. Série no acento (no claro, o passo mais fechado), o
+   anterior em cinza do tema, chip escolhido aceso como em Promoções.
+   Paleta conferida com o validate_palette (série x anterior: CVD e visão
+   normal passam nos três temas; o cinza tem tabela e dica de reserva).
+   DADOS DE EXEMPLO (só computador): `python manage.py semear_analises`
+   cria um ano de visitas, contas, acessos, curtidas, pedidos, orçamentos,
+   cupons, eventos, projetos e jogadas MARCADOS; `--apagar` apaga só eles.
+   Arquivos: core/analises.py, core/analises_tipos.py, core/detalhes.py,
+   core/presenca.py, core/interacoes.py, core/views_analises.py,
+   core/templatetags/analises.py, core/templates/gestao/includes/
+   analises.html, core/static/site/paginas/gestao-analises.{css,js}.
+   Testes: core/tests_analises.py.
+
 77) JOGOS: A COLETA DAS JOGADAS (QUEM, QUANDO, O QUÊ) E O PAINEL POR PERÍODO
    Pergunta: "joguei mais uma vez o Super Mario 64, veja se é porque sou
    admin ou realmente não está precisa a coleta de dados de jogos".

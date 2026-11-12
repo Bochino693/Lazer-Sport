@@ -39,4 +39,6 @@
 {% block scripts %}
   {{ block.super }}
   <script src="{% estatico 'interno/campanhas.js' %}" defer></script>
+  {# Desempenho e fichas (gestao/includes/analises.html): sem painel na tela, não faz nada. #}
+  <script src="{% estatico 'site/paginas/gestao-analises.js' %}" defer></script>
 {% endblock %}

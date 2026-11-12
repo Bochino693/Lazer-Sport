@@ -64,6 +64,7 @@
       <strong>{{ total_categorias }}</strong><span>Categorias</span>
     </div>
   </section>
+  {% include "gestao/includes/analises.html" with tipo="brinquedo" rotulo="os brinquedos" %}
 
   <section class="bq-barra" aria-label="Buscar e filtrar">
     <form class="bq-busca" method="get" role="search">
@@ -117,7 +118,7 @@
 
   <section class="bq-grade" aria-label="Brinquedos">
     {% for brinquedo in brinquedos %}
-      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-id="{{ brinquedo.id }}">
+      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-id="{{ brinquedo.id }}" data-detalhe-tipo="brinquedo" data-detalhe-id="{{ brinquedo.id }}">
         <div class="bq-foto">
           {% with capa=brinquedo.imagem_catalogo %}
             {% if capa %}

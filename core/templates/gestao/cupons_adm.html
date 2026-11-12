@@ -37,6 +37,8 @@
     </button>
   </section>
 
+  {% include "gestao/includes/analises.html" with tipo="cupom" rotulo="os cupons" %}
+
   <section class="cup-kpis" aria-label="Resumo dos cupons">
     <article class="cup-kpi">
       <span class="cup-kpi-icon"><svg><use href="#cup-i-ticket"/></svg></span>
@@ -68,6 +70,7 @@
       <article
         class="cup-card {% if not cupom.ativo %}is-off{% endif %}"
         data-cupom-id="{{ cupom.id }}"
+        data-detalhe-tipo="cupom" data-detalhe-id="{{ cupom.id }}"
         data-codigo="{{ cupom.codigo }}"
         data-desconto="{{ cupom.desconto_percentual|unlocalize }}"
         data-quantidade="{{ cupom.quantidade_uso }}"

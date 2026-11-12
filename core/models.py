@@ -3042,3 +3042,121 @@ class FotoDoEspaco(Prime):
             return self.imagem.url if self.imagem else ""
         except Exception:  # noqa: BLE001
             return ""
+
+
+# ======================================================================
+# ANÁLISES DO PAINEL: o que acontece com cada produto, hora a hora, e
+# quando cada conta foi vista por último.
+#
+# POR QUE TABELAS NOVAS. Os contadores de clique (BrinquedoClick e os
+# irmãos) guardam UM número por produto, somado desde sempre: dizem
+# quantas visitas houve, mas não quando. Sem o "quando" não existe gráfico
+# de semana, de mês ou de ano. A conta antiga continua como está (a vitrine
+# e o ranking a usam); estas linhas só acrescentam a hora.
+#
+# Ver core/interacoes.py, core/presenca.py e core/analises.py.
+# ======================================================================
+
+class InteracaoPorHora(models.Model):
+    """Quantas visitas (ou idas ao carrinho) um produto teve numa hora.
+
+    Uma linha por produto, por hora e por origem -- e não uma por visita:
+    a página do brinquedo é a mais aberta do site, e uma linha por visita
+    viraria um INSERT a cada clique. Somada por hora, a tabela cresce no
+    ritmo do catálogo (dezenas de linhas por hora), e "Hoje, hora a hora"
+    continua possível.
+    """
+
+    class Evento(models.TextChoices):
+        VISITA = "visita", "Visita à página"
+        CARRINHO = "carrinho", "Ida ao carrinho"
+
+    class Alvo(models.TextChoices):
+        BRINQUEDO = "brinquedo", "Brinquedo"
+        COMBO = "combo", "Combo"
+        PROMOCAO = "promocao", "Promoção"
+        CATEGORIA = "categoria", "Categoria"
+        PECA = "peca", "Peça de reposição"
+
+    class Origem(models.TextChoices):
+        SITE = "site", "Site"
+        APP = "app", "Aplicativo"
+        # Só o comando `semear_analises` grava esta: é o que deixa apagar
+        # os dados de exemplo sem tocar em nenhuma visita de verdade.
+        EXEMPLO = "exemplo", "Dados de exemplo"
+
+    evento = models.CharField(max_length=10, choices=Evento.choices)
+    alvo = models.CharField(max_length=12, choices=Alvo.choices)
+    objeto_id = models.PositiveIntegerField()
+    hora = models.DateTimeField(help_text="Início da hora (fuso do site).")
+    origem = models.CharField(max_length=8, choices=Origem.choices, default=Origem.SITE)
+    quantidade = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Interação por hora"
+        verbose_name_plural = "Interações por hora"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["evento", "alvo", "objeto_id", "hora", "origem"],
+                name="interacao_por_hora_unica",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["evento", "alvo", "hora"], name="interacao_hora_periodo"),
+        ]
+
+    def __str__(self):
+        return f"{self.get_evento_display()} · {self.alvo} {self.objeto_id} · {self.hora:%d/%m %H}h · {self.quantidade}"
+
+
+class PresencaUsuario(models.Model):
+    """A última vez que a conta deu sinal de vida (qualquer página, site ou painel).
+
+    `last_login` só muda quando a pessoa digita a senha: quem fica logado
+    por semanas aparece como "entrou há 20 dias" estando online agora.
+    Esta linha é atualizada pelo `core.presenca.PresencaMiddleware`, no
+    máximo uma vez por minuto por conta.
+    """
+
+    class Onde(models.TextChoices):
+        SITE = "site", "Site"
+        PAINEL = "painel", "Painel interno"
+        APP = "app", "Aplicativo"
+
+    usuario = models.OneToOneField(
+        User, on_delete=models.CASCADE, primary_key=True, related_name="presenca",
+    )
+    visto_em = models.DateTimeField(db_index=True)
+    onde = models.CharField(max_length=8, choices=Onde.choices, default=Onde.SITE)
+
+    class Meta:
+        verbose_name = "Presença da conta"
+        verbose_name_plural = "Presença das contas"
+
+    def __str__(self):
+        return f"{self.usuario_id} visto em {self.visto_em:%d/%m/%Y %H:%M}"
+
+
+class AcessoDiario(models.Model):
+    """Um dia em que a conta usou o site ou o painel (do primeiro ao último sinal).
+
+    É o que permite contar "ativos" por dia, semana e mês -- a presença
+    acima só guarda o último sinal, e um gráfico precisa do histórico.
+    """
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="acessos_diarios")
+    dia = models.DateField()
+    primeiro = models.DateTimeField()
+    ultimo = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "Acesso diário"
+        verbose_name_plural = "Acessos diários"
+        ordering = ("-dia",)
+        constraints = [
+            models.UniqueConstraint(fields=["usuario", "dia"], name="acesso_diario_unico"),
+        ]
+        indexes = [models.Index(fields=["dia"], name="acesso_diario_dia")]
+
+    def __str__(self):
+        return f"{self.usuario_id} em {self.dia:%d/%m/%Y}"

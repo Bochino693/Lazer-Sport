@@ -181,6 +181,9 @@ MIDDLEWARE = [
     "core.middleware.InternalResponseRecoveryMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # "Visto por último" de cada conta, no máximo uma gravação por minuto
+    # (core/presenca.py). Depois do Authentication: é ele que diz quem é.
+    "core.presenca.PresencaMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "core.middleware.TelefoneObrigatorioMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -416,6 +419,10 @@ AQUECER_HOST = os.getenv("AQUECER_HOST", "www.lazersport.com.br").strip()
 CLIQUES_EM_SEGUNDO_PLANO = os.getenv(
     "CLIQUES_EM_SEGUNDO_PLANO", "1" if (IS_RENDER or ENVIRONMENT == "production") else "0",
 ).strip().lower() in ("1", "true", "yes", "on")
+# O "visto por último" de cada conta (core/presenca.py): uma gravação por
+# minuto por conta, pela mesma linha de fundo dos cliques. Os testes o
+# desligam (settings_test) para a conta de consultas das outras telas não mudar.
+PRESENCA_DE_USUARIOS = os.getenv("PRESENCA_DE_USUARIOS", "1").strip().lower() in ("1", "true", "yes", "on")
 # Os números "ao vivo" (ranking dos jogos, partidas e anúncios do portal, painel
 # da home) vencem em um ou dois minutos; vencidos, o de antes continua servindo
 # enquanto o novo é montado por trás (core/renovar.py), em vez de o visitante
