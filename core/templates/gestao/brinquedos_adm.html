@@ -154,6 +154,7 @@
           </span>
           <span class="bq-selos bq-selos--fim" data-v="selos">
             {% if brinquedo.painel_3d %}<span class="bq-selo" title="Tem objeto 3D"><i class="bi bi-badge-3d" aria-hidden="true"></i></span>{% endif %}
+            {% if brinquedo.painel_adesivos > 1 %}<span class="bq-selo bq-selo--adesivos" title="O mesmo brinquedo com outra arte: as fotos e o 3D de cada adesivo"><i class="bi bi-stickies" aria-hidden="true"></i> {{ brinquedo.painel_adesivos }} adesivos</span>{% endif %}
             <span class="bq-selo" title="{{ brinquedo.painel_fotos }} de 3 fotos"><i class="bi bi-images" aria-hidden="true"></i> {{ brinquedo.painel_fotos }}/3</span>
           </span>
         </div>
@@ -372,6 +373,39 @@
                 </label>
                 <label class="bq-marcar" data-objeto3d-remover hidden><input name="remover_objeto_3d" type="checkbox"> Tirar o objeto 3D</label>
               </div>
+            </div>
+          </section>
+
+          {% comment %}
+            OS ADESIVOS (LEIA-ME 72): o mesmo brinquedo com outra arte -- um objeto
+            só, com as fotos e o 3D de cada adesivo (o padrão é o próprio
+            brinquedo: as fotos e o 3D acima). No site, o controle "Adesivo: A · B"
+            troca o 3D em toda área 3D e a galeria mostra as fotos das duas artes.
+            Os campos daqui não têm `name`: vão à parte (gestao-brinquedos_adm.js),
+            sem pesar no "Salvar" do cadastro.
+          {% endcomment %}
+          <section class="bq-secao" aria-labelledby="bqSecAdesivos" data-adesivos>
+            <h3 id="bqSecAdesivos"><i class="bi bi-stickies" aria-hidden="true"></i> Adesivos</h3>
+            <ul class="bq-adesivos" data-adesivos-lista></ul>
+            <p class="bq-dica" data-adesivos-vazio>Sem adesivos. É o mesmo brinquedo com outra arte (ex.: Astronautas · Alienígenas): um objeto só, com as fotos e o 3D de cada adesivo.</p>
+            <p class="bq-dica" data-adesivos-salvar hidden>Salve o brinquedo primeiro; depois inclua os adesivos dele.</p>
+            <div class="bq-adesivo-novo" data-adesivos-novo>
+              <input type="text" maxlength="60" data-adesivo-padrao placeholder="Nome da arte atual (ex.: Astronautas)" aria-label="Nome da arte atual do brinquedo">
+              <input type="text" maxlength="60" data-adesivo-nome placeholder="Nome do adesivo novo (ex.: Alienígenas)" aria-label="Nome do adesivo novo">
+              <div class="bq-vista-acoes">
+                <label class="bq-escolher">
+                  <i class="bi bi-badge-3d" aria-hidden="true"></i>
+                  <span data-adesivo-3d-rotulo>.glb do adesivo</span>
+                  <input type="file" accept=".glb,model/gltf-binary" data-adesivo-3d>
+                </label>
+                <label class="bq-escolher">
+                  <i class="bi bi-images" aria-hidden="true"></i>
+                  <span data-adesivo-fotos-rotulo>Fotos do adesivo</span>
+                  <input type="file" accept="image/*" multiple data-adesivo-fotos>
+                </label>
+                <button type="button" class="bq-primary" data-adesivo-incluir><i class="bi bi-plus-lg" aria-hidden="true"></i> Incluir adesivo</button>
+              </div>
+              <p class="bq-adesivo-msg" data-adesivo-msg role="status" aria-live="polite"></p>
             </div>
           </section>
         </div>

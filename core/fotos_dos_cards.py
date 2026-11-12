@@ -40,7 +40,7 @@ def mapa():
     try:
         fotos = (
             ImagemBrinquedo.objects.filter(brinquedo__ativo=True)
-            .only("id", "brinquedo_id", "imagem", "tipo", "ordem", "papel_na_capa")
+            .only("id", "brinquedo_id", "imagem", "tipo", "ordem", "papel_na_capa", "variante")
         )
         for foto in fotos:
             por_brinquedo[foto.brinquedo_id].append(foto)

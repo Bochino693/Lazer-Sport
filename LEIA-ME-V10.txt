@@ -3207,18 +3207,44 @@ Dependência nova: rjsmin (requirements.txt).
    tem medidas, copie as medidas do outro"; "EU QUERO OS DOIS OBJETOS 3D, NO
    MESMO BRINQUEDO"; "TUDO DEVE AFUNILAR PARA UM OBJETO SÓ, PODENDO
    VISUALIZAR, EM ÁREAS 3D E ETC, TAMBÉM DEVE SER POSSÍVEL MUDAR PARA VER
-   OS ADESIVOS".
-   COMO FICOU (core/variantes.py; core.models.VarianteAdesivo guarda o par):
+   OS ADESIVOS"; e, com os prints do painel: "POR ENQUANTO SÓ TEM DOIS
+   OBJETOS ... DEVE MUDAR A ESTRUTURA DOS OBJETOS, DEIXAR SOMENTE UM MAS COM
+   O OUTRO ADESIVO E SEU RESPECTIVO OBJETO 3D ... MUDE O VALOR PARA 6990,00
+   DO AIR GAME".
+   A ESTRUTURA (core.models.VarianteAdesivo, core/variantes.py): o produto é
+   UM `Brinquedos`. Cada ADESIVO é dele, com as fotos dele
+   (`ImagemBrinquedo.variante`: fotos do mesmo produto, marcadas com o
+   adesivo) e o 3D dele (`arquivo_3d`, o .glb enviado, ou
+   `arquivo_estatico_3d`, o do site; com o código, as cores e as medidas). O
+   adesivo padrão (os Astronautas, o Azul) usa as fotos e o 3D do próprio
+   produto. `id_antigo`: o id do produto à parte que o adesivo era -- o
+   endereço antigo (/brinquedo/54/, o do Quadrinhos) redireciona (301) para o
+   produto. NÃO HÁ MAIS SEGUNDO OBJETO: nem no painel, nem no site, na API,
+   na busca, no sitemap ou na Arena.
+   AS MIGRAÇÕES DA ESTRUTURA: 0168 (esquema: as fotos e o 3D do adesivo, o
+   id_antigo), 0169 (dados, em todo lugar, idempotente, uma transação por
+   par: o 3D e as fotos do produto à parte passam para o adesivo -- os mesmos
+   arquivos, nada sobe --, TODAS as referências a ele passam para o produto,
+   achadas pelas relações que apontam para Brinquedos e pelas chaves
+   genéricas: orçamentos e itens, carrinhos (o item fica com o adesivo),
+   pedidos, promoções e brinquedos extras, combos, eventos, cupons,
+   favoritos (o repetido vira um), listas de desejos, cliques, manutenções,
+   materiais, a composição; o produto à parte é APAGADO; o Air Game Kids fica
+   com R$ 6.990,00) e 0170 (esquema: sai o `origem`, o elo com o produto à
+   parte que existiu entre a 0161 e a 0169). O `cadastrar_modelo_3d` não
+   recria a outra arte como produto à parte.
+   O PAINEL (Gestão de Brinquedos): o cartão mostra "2 adesivos"; o cadastro
+   tem a seção "Adesivos": cada adesivo com o nome, o padrão, o 3D e as
+   fotos; "Incluir adesivo" (o nome, o .glb e as fotos) e "Tirar" (as fotos
+   saem junto; o padrão é o próprio brinquedo e não sai). O primeiro adesivo
+   de fora pede o nome da arte atual (vira o padrão).
+   COMO FICOU NO SITE:
      * UM PRODUTO, em todo lugar: uma página, um card (home, categorias,
        /brinquedos/, loja, busca), um item no carrinho e no orçamento, uma
        máquina na Arena. Sem as fichas "Adesivo:" que trocavam a página e
-       sem ?adesivo= no endereço. A ficha da outra arte (o Air Game Kids
-       Alienígenas, o Basquete Home Quadrinhos) fica DESATIVADA, sem apagar
-       nada (pedidos, orçamentos e favoritos continuam apontando para ela),
-       e o endereço dela redireciona (301) para o produto;
-     * A GALERIA tem as fotos das duas artes: as da ficha entram depois das
-       do produto (`ImagemBrinquedo.papel_na_capa = "outra_arte"`, até três),
-       apontando para os MESMOS arquivos do Cloudinary (nada subiu);
+       sem ?adesivo= no endereço;
+     * A GALERIA tem as fotos das duas artes: as do produto e, depois, até
+       três de cada adesivo;
      * OS DOIS 3D NO MESMO PRODUTO: em toda área 3D -- a página do produto,
        a Arena (na ficha da máquina) e o "Ver em 3D" da proposta -- o
        controle "Adesivo: Astronautas · Alienígenas" (site/arena/
@@ -3266,12 +3292,12 @@ Dependência nova: rjsmin (requirements.txt).
      a arte de verdade (que nenhuma foto mostra) -- com a folha de adesivos
      dos astronautas, ou fotos do tampo e das cabeceiras, refaça pelo
      caminho do Alienígenas. A 0166 liga o .glb ao Air Game Kids.
-   AS MIGRAÇÕES: 0160 (esquema) e 0161 (dados: juntar os pares e subir as
-   fotos mais vivas), 0165 (esquema: o papel "outra_arte") e 0166 (dados:
-   as fotos da outra arte na galeria, as medidas que faltam e o 3D dos
-   Astronautas; em todo lugar, pode rodar de novo). JUNTAR UM PAR NOVO: um
-   item em PARES (core/variantes.py) e uma migração de dados que chame
-   `variantes.migrar` e `variantes.unificar_todos`.
+   AS MIGRAÇÕES, NA ORDEM: 0160 (esquema) e 0161 (dados: juntar os pares,
+   ainda com o produto à parte desativado, e subir as fotos mais vivas),
+   0165 (esquema: o papel "outra_arte") e 0166 (dados: as fotos da outra
+   arte na galeria, as medidas que faltam e o 3D dos Astronautas), 0168,
+   0169 e 0170 (a estrutura, acima). UM PAR NOVO: pelo painel (a seção
+   "Adesivos" do cadastro).
    FICA PARA DEPOIS: o 3D do Basquete Home azul (a mesma conta do
    Astronautas, com a foto dele) e o controle dos adesivos na vitrine 3D da
    home e no "Monte seu espaço" (lá entra o 3D principal do produto).

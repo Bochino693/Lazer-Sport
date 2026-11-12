@@ -1822,3 +1822,95 @@ body:has(dialog.bq-janela[open]) {
         grid-template-columns: 92px minmax(0, 1fr);
     }
 }
+
+
+/* =========================================================
+   OS ADESIVOS (LEIA-ME 72): o selo do cartão e a seção do cadastro --
+   o mesmo brinquedo com outra arte, com as fotos e o 3D de cada um.
+   Só as variáveis do tema.
+========================================================= */
+.bq-selo--adesivos { background: rgba(var(--acento-rgb), .85); }
+
+.bq-adesivos {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.bq-adesivo {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg-1);
+    color: var(--text);
+}
+
+.bq-adesivo.is-padrao { border-color: var(--acento); }
+
+.bq-adesivo-topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.bq-adesivo-selo {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(var(--acento-rgb), .14);
+    color: var(--acento-claro);
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.bq-adesivo-3d {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.bq-adesivo-tirar {
+    margin-left: auto;
+    padding: 4px 10px;
+    border: 1px solid var(--line-forte);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--red-claro);
+    font: inherit;
+    font-size: .8rem;
+    cursor: pointer;
+}
+
+.bq-adesivo-tirar:hover { background: rgba(var(--red-rgb), .1); }
+
+.bq-adesivo-fotos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.bq-adesivo-fotos img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+}
+
+.bq-adesivo-novo {
+    display: grid;
+    gap: 8px;
+}
+
+.bq-adesivo-novo[hidden] { display: none; }
+
+.bq-adesivo-msg {
+    margin: 0;
+    min-height: 1.2em;
+    color: var(--text-2);
+    font-size: .82rem;
+}
+
+.gestao-integrada .ls-content [data-adesivos] [hidden] { display: none !important; }

@@ -531,6 +531,16 @@ class ImagemBrinquedo(Prime):
         verbose_name="Papel na capa em cena",
         help_text="Preenchido pelo comando capas_em_cena: a capa em cena e a capa de antes dela.",
     )
+    # a foto de um ADESIVO do produto (LEIA-ME 72: os Alienígenas do Air Game Kids); vazio, do produto
+    variante = models.ForeignKey(
+        "VarianteAdesivo",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="fotos",
+        verbose_name="Adesivo",
+        help_text="A foto de um adesivo do produto (a outra arte); vazio, a foto do próprio produto.",
+    )
 
     def __str__(self):
         tipo = self.get_tipo_display() if self.tipo else f"Foto {self.ordem}"
@@ -556,37 +566,49 @@ class ImagemBrinquedo(Prime):
 
 
 
+def _armazenamento_3d():
+    # chamado pelo campo (e não na hora do import): a escolha acompanha o
+    # settings de cada ambiente, inclusive o dos testes
+    from .objetos_3d import armazenamento
+
+    return armazenamento()
+
+
 def galeria_publica(fotos):
     """A galeria pública a partir das fotos do brinquedo (já na memória ou um queryset).
 
-    As tipadas e a "original" (as três primeiras, pela ordem) e, depois, até
-    três da outra arte do mesmo brinquedo (seção 72).
+    As do produto -- as tipadas e a "original", as três primeiras pela ordem
+    -- e, depois, até três de cada um dos outros adesivos (seção 72: as fotos
+    com `variante`, as dos Alienígenas no Air Game Kids).
     """
     fotos = sorted(fotos, key=lambda foto: (foto.ordem, foto.id))
     proprias = [
         foto for foto in fotos
-        if foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL
+        if not getattr(foto, "variante_id", None)
+        and (foto.tipo or getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_ORIGINAL)
     ][:3]
-    outra_arte = [
-        foto for foto in fotos
-        if not foto.tipo and getattr(foto, "papel_na_capa", "") == ImagemBrinquedo.PAPEL_OUTRA_ARTE
-    ][:3]
-    return proprias + outra_arte
+    dos_adesivos, por_adesivo = [], {}
+    for foto in fotos:
+        variante = getattr(foto, "variante_id", None)
+        if variante and por_adesivo.get(variante, 0) < 3:
+            por_adesivo[variante] = por_adesivo.get(variante, 0) + 1
+            dos_adesivos.append(foto)
+    return proprias + dos_adesivos
 
 
 class VarianteAdesivo(Prime):
-    """A outra arte de um produto: a ficha que foi juntada a ele (LEIA-ME, seção 72).
+    """Um ADESIVO do produto: a mesma máquina com outra arte (LEIA-ME, seção 72).
 
-    O cliente: "vc deve deixar apenas um objeto ... como no boliche". O
-    produto é UM objeto, com uma página, um 3D e uma galeria; a ficha da
-    outra arte (a `origem`: o Air Game Kids Alienígenas, o Basquete Home
-    Quadrinhos) fica DESATIVADA, sem apagar nada (pedidos, orçamentos e
-    favoritos continuam apontando para ela), e o endereço dela redireciona
-    para o produto. As fotos dela entram na galeria do produto, depois das
-    dele (`ImagemBrinquedo.PAPEL_OUTRA_ARTE`, os mesmos arquivos); sem 3D
-    próprio, o produto fica com o dela (core/variantes.py, `unificar`).
-    Este registro guarda o par (quem foi juntado a quem); o padrão é o
-    próprio produto (`origem` vazia). Não há mais escolha de adesivo.
+    O cliente: "DEVE MUDAR A ESTRUTURA DOS OBJETOS, DEIXAR SOMENTE UM MAS COM O
+    OUTRO ADESIVO E SEU RESPECTIVO OBJETO 3D". O produto é UM objeto (um
+    `Brinquedos`); cada adesivo é dele, com:
+      * as FOTOS dele: as `ImagemBrinquedo` do produto com `variante` = este;
+      * o 3D dele: o .glb enviado (`arquivo_3d`) ou o do site
+        (`arquivo_estatico_3d`), com o código, as cores e as medidas. O
+        adesivo padrão usa as fotos e o 3D do próprio produto.
+    `id_antigo`: o id do produto à parte que este adesivo era (o Air Game Kids
+    Alienígenas #54...), que foi juntado ao produto e apagado: o endereço
+    antigo redireciona para cá.
     """
 
     brinquedo = models.ForeignKey(
@@ -599,14 +621,27 @@ class VarianteAdesivo(Prime):
     slug = models.SlugField(max_length=60, verbose_name="No endereço", help_text="?adesivo=<este> abre a página neste adesivo.")
     ordem = models.PositiveSmallIntegerField(default=1, verbose_name="Ordem")
     padrao = models.BooleanField(default=False, verbose_name="Padrão", help_text="O adesivo que a página abre.")
-    origem = models.ForeignKey(
-        Brinquedos,
-        on_delete=models.PROTECT,
+    arquivo_3d = models.FileField(
+        upload_to="objetos_3d/",
+        storage=_armazenamento_3d,
+        blank=True,
+        verbose_name="Arquivo 3D (.glb)",
+    )
+    arquivo_estatico_3d = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Objeto 3D do site",
+        help_text="Caminho em static (ex.: site/arena/modelos/air-game-kids-alienigenas.glb), sem arquivo enviado.",
+    )
+    codigo_3d = models.SlugField(max_length=60, blank=True, verbose_name="Código na Arena")
+    cores_3d = models.JSONField(default=list, blank=True, verbose_name="Cores do 3D")
+    medidas_3d = models.JSONField(default=list, blank=True, verbose_name="Medidas do 3D")
+    id_antigo = models.PositiveIntegerField(
         null=True,
         blank=True,
-        related_name="variante_de",
-        verbose_name="Fotos e 3D de",
-        help_text="A ficha com as fotos e o objeto 3D deste adesivo; vazio, as do próprio produto.",
+        db_index=True,
+        verbose_name="Id antigo",
+        help_text="O id do produto à parte que este adesivo era (o endereço antigo redireciona para o produto).",
     )
 
     class Meta:
@@ -621,18 +656,18 @@ class VarianteAdesivo(Prime):
         return f"{self.brinquedo} — adesivo {self.nome}"
 
     @property
-    def ficha(self):
-        """O produto com as fotos e o 3D deste adesivo (a origem, ou o próprio produto)."""
-        return self.origem or self.brinquedo
+    def url_3d(self):
+        """O endereço do .glb deste adesivo (o enviado vence o do site); "" sem nenhum."""
+        if self.arquivo_3d:
+            try:
+                return self.arquivo_3d.url
+            except Exception:
+                return ""
+        if self.arquivo_estatico_3d:
+            from sistema_interno.templatetags.interno_extras import estatico
 
-
-
-def _armazenamento_3d():
-    # chamado pelo campo (e não na hora do import): a escolha acompanha o
-    # settings de cada ambiente, inclusive o dos testes
-    from .objetos_3d import armazenamento
-
-    return armazenamento()
+            return estatico(self.arquivo_estatico_3d)
+        return ""
 
 
 class ObjetoTresD(Prime):
