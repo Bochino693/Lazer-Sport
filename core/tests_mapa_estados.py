@@ -187,3 +187,19 @@ class MalhaDosEstadosTests(TestCase):
         self.assertIn("Paraguay", por_id["PY"]["properties"]["apelidos"])
         self.assertGreater(len(por_id), 150)
         self.assertLess(arquivo.stat().st_size, 250_000)
+
+    def test_nenhum_contorno_atravessa_a_linha_da_data(self):
+        # A Rússia e Fiji passam do 180° para o -180°: o anel que pula de um
+        # lado ao outro vira, no Leaflet, um traço que corta o mundo inteiro
+        # na horizontal (no mar da Bahia, na altura de Fiji, -16,5°). Os
+        # anéis vêm cortados na linha da data, cada pedaço do seu lado.
+        for nome in ("paises.json", "estados-br.json"):
+            geo = json.loads((self.DADOS / nome).read_text(encoding="utf-8"))
+            for feature in geo["features"]:
+                for poligono in feature["geometry"]["coordinates"]:
+                    for anel in poligono:
+                        with self.subTest(arquivo=nome, regiao=feature["id"]):
+                            self.assertEqual(anel[0], anel[-1])
+                            self.assertTrue(all(-180 <= x <= 180 for x, _ in anel))
+                            saltos = [(a, b) for a, b in zip(anel, anel[1:]) if abs(a[0] - b[0]) > 180]
+                            self.assertEqual(saltos, [])
