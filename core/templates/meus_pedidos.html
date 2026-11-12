@@ -282,6 +282,11 @@ document.addEventListener("DOMContentLoaded", function() {
         return achado;
     }
 
+    /* O erro vai pelo toast do site (ls-aviso.js), e não pela caixa do navegador. */
+    function avisarErro(texto) {
+        if (window.LSAviso) window.LSAviso.toast({ nivel: "erro", titulo: "Não deu para devolver", texto: texto });
+    }
+
     document.querySelectorAll("[data-devolver]").forEach((botao) => {
         botao.addEventListener("click", async () => {
             const rotulo = botao.innerHTML;
@@ -308,7 +313,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
 
                 if (!dados.ok) {
-                    alert(dados.msg || "Não foi possível devolver os itens.");
+                    avisarErro(dados.msg || "Não foi possível devolver os itens.");
                     botao.disabled = false;
                     botao.innerHTML = rotulo;
                     return;
@@ -316,7 +321,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 window.location.reload();
             } catch (erro) {
-                alert("Falha de conexão. Tente novamente.");
+                avisarErro("Falha de conexão. Tente novamente.");
                 botao.disabled = false;
                 botao.innerHTML = rotulo;
             }

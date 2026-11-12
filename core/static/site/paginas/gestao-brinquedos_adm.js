@@ -766,8 +766,14 @@
 
     let mudouAdesivos = false;
 
-    function tirarAdesivo(adesivo) {
-        if (!window.confirm(`Tirar o adesivo ${adesivo.nome}? As fotos dele saem junto.`)) return;
+    async function tirarAdesivo(adesivo) {
+        const sim = await LSAviso.confirmar({
+            titulo: `Tirar o adesivo ${adesivo.nome}?`,
+            texto: 'As fotos dele saem junto.',
+            confirmar: 'Tirar adesivo',
+            perigo: true,
+        });
+        if (!sim) return;
         pedirAdesivo({ action: 'adesivo_tirar', adesivo_id: adesivo.id });
     }
 
@@ -823,14 +829,27 @@
     $('cancelToy').addEventListener('click', fecharBrinquedo);
 
     // Esc com coisa digitada pergunta antes: era o jeito mais fácil de
-    // perder um cadastro inteiro.
-    toyDialog.addEventListener('cancel', (e) => {
+    // perder um cadastro inteiro. A pergunta é a folha de aplicativo
+    // (LSAviso), que não segura o Esc: a janela fica aberta enquanto ela
+    // pergunta, e fecha (como o Esc fecharia) só no "sim".
+    toyDialog.addEventListener('cancel', async (e) => {
         if (toyDialog.classList.contains('is-salvando')) {
             e.preventDefault();
             return;
         }
-        if (sujo && !window.confirm('Fechar sem salvar? O que foi digitado se perde.')) {
+        if (sujo) {
             e.preventDefault();
+            const sim = await LSAviso.confirmar({
+                titulo: 'Fechar sem salvar?',
+                texto: 'O que foi digitado se perde.',
+                confirmar: 'Fechar sem salvar',
+                cancelar: 'Continuar editando',
+                icone: 'alerta',
+                perigo: true,
+            });
+            if (!sim || toyDialog.classList.contains('is-salvando')) return;
+            TIPOS.forEach(descartarPrevia);
+            fechar(toyDialog);
             return;
         }
         TIPOS.forEach(descartarPrevia);

@@ -828,6 +828,12 @@
     let toastTimer;
 
     function mostrarToast(mensagem, erro = false) {
+        // O toast de aplicativo do site inteiro (o do base.html, ls-aviso.js);
+        // o desta página fica de reserva, se o script dos avisos não chegou.
+        if (typeof window.mostrarToast === 'function' && window.LSAviso) {
+            window.mostrarToast(mensagem, erro);
+            return;
+        }
         if (!toast || !toastTexto) return;
         clearTimeout(toastTimer);
         toastTexto.textContent = mensagem;

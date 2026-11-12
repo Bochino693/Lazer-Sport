@@ -97,6 +97,14 @@ function inicializarAbasManutencao() {
     });
 }
 
+/* O que falta no formulário: um toast de alerta (ls-aviso.js), e não a
+   caixa cinza do navegador. O envio já foi segurado por quem chama. */
+function avisarFormulario(titulo, texto) {
+    if (window.LSAviso) {
+        window.LSAviso.toast({ nivel: "alerta", titulo: titulo, texto: texto });
+    }
+}
+
 function inicializarFormularioManutencao() {
     const form = document.querySelector(".manutencao-form");
     if (!form) return;
@@ -109,7 +117,8 @@ function inicializarFormularioManutencao() {
     form.addEventListener("submit", event => {
         if (form.dataset.uploadProcessando === "1") {
             event.preventDefault();
-            window.alert(
+            avisarFormulario(
+                "Aguarde as fotos",
                 "Aguarde a otimização das fotos terminar antes de enviar."
             );
             return;
@@ -135,7 +144,8 @@ function inicializarFormularioManutencao() {
 
         if (!brinquedoInput?.value && !modoEquipamentoManual) {
             event.preventDefault();
-            window.alert(
+            avisarFormulario(
+                "Falta o equipamento",
                 "Selecione um equipamento ou escolha a opção “Não encontrei meu equipamento”."
             );
             botaoSelecionar?.focus();
@@ -147,7 +157,8 @@ function inicializarFormularioManutencao() {
             !descricaoLivre?.value.trim()
         ) {
             event.preventDefault();
-            window.alert(
+            avisarFormulario(
+                "Descreva o equipamento",
                 "Descreva o equipamento para que nossa equipe consiga identificá-lo."
             );
             descricaoLivre?.focus();
@@ -159,7 +170,8 @@ function inicializarFormularioManutencao() {
 
         if (painelEndereco?.hidden) {
             event.preventDefault();
-            window.alert(
+            avisarFormulario(
+                "Falta o endereço",
                 "Digite um CEP válido e aguarde a localização ou marque “Não tenho CEP” para preencher manualmente."
             );
             if (modoManual && !modoManual.checked) {

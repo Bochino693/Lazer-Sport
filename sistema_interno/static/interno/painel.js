@@ -1099,6 +1099,16 @@
      aparência. */
   Painel.aviso = function (mensagem, tipo, tema) {
     if (!mensagem) return;
+    /* O aviso comum é o toast de aplicativo (ls-aviso.js), o mesmo dos
+       recados do servidor. A tarja de baixo fica para a troca de tema --
+       que tem desenho próprio -- e de reserva, se o script não chegou. */
+    if (tipo !== "tema" && global.LSAviso) {
+      global.LSAviso.toast({
+        nivel: tipo === "erro" ? "erro" : (tipo === "ok" ? "sucesso" : "info"),
+        texto: String(mensagem)
+      });
+      return;
+    }
     var tarja = document.createElement("div");
     tarja.className = "ls-tarja" + (tipo ? " " + tipo : "");
     tarja.setAttribute("role", "status");

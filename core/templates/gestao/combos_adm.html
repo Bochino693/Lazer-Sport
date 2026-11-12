@@ -7,13 +7,7 @@
   <link rel="stylesheet" href="{% estatico 'site/paginas/gestao-combos_adm.css' %}">
 
 <main class="combo-page">
-    {% if messages %}
-        <div class="combo-message-list" aria-live="polite">
-            {% for message in messages %}
-                <div class="combo-message {{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-    {% endif %}
+    {# Os recados (messages) são os toasts do painel, no base_inner.html (core/ls_aviso.py). #}
 
     <section class="combo-hero">
         <div>
