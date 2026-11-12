@@ -687,6 +687,36 @@
                 });
                 item.append(outras);
             }
+            // os recortes para artes (sem fundo): guardados no adesivo, só aqui, para baixar
+            if ((adesivo.recortes || []).length) {
+                const recortes = document.createElement('details');
+                recortes.className = 'bq-adesivo-recortes';
+                const titulo = document.createElement('summary');
+                titulo.innerHTML = '<i class="bi bi-scissors" aria-hidden="true"></i> ';
+                titulo.append(document.createTextNode(
+                    `Recortes para artes (${adesivo.recortes.length}) · sem fundo, ficam fora do site`));
+                recortes.append(titulo);
+                const lista = document.createElement('div');
+                lista.className = 'bq-adesivo-recortes-lista';
+                adesivo.recortes.forEach((foto) => {
+                    const link = document.createElement('a');
+                    link.href = foto.url;
+                    link.download = foto.arquivo || '';
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.title = `Baixar ${foto.arquivo || 'o recorte'}`;
+                    const img = document.createElement('img');
+                    img.src = foto.url;
+                    img.alt = `${adesivo.nome}: recorte para artes`;
+                    img.loading = 'lazy';
+                    const baixar = document.createElement('span');
+                    baixar.innerHTML = '<i class="bi bi-download" aria-hidden="true"></i> Baixar';
+                    link.append(img, baixar);
+                    lista.append(link);
+                });
+                recortes.append(lista);
+                item.append(recortes);
+            }
             return item;
         }));
         const soPadrao = adesivos.length <= 1;

@@ -238,9 +238,10 @@ class ComandoTests(TestCase):
             self.assertIn("cena-pega-toupeira-", brinquedo.imagem_brinquedo.name)
             with open(Path(pasta) / fotos[0].imagem.name, "rb") as subiu:
                 self.assertEqual(subiu.read(), capas_catalogo.arquivo("pega-toupeira").read_bytes())
-            # o card e a página mostram a cena; a galeria pública mostra também a foto da equipe
+            # o card e a página mostram a cena; a foto de antes (fundo branco) fica guardada,
+            # fora do site (LEIA-ME 72: "de forma alguma use as fotos de fundo branco")
             self.assertEqual(brinquedo.imagem_catalogo.name, fotos[0].imagem.name)
-            self.assertEqual([f.papel_na_capa for f in brinquedo.imagens_ordenadas], ["cena", "original", ""])
+            self.assertEqual([f.papel_na_capa for f in brinquedo.imagens_ordenadas], ["cena", ""])
             # de novo: não duplica
             self.assertIn("já está com a capa em cena", self._rodar("--so", "13", pasta=pasta))
             self.assertEqual(brinquedo.imagens_brinquedo.count(), 3)

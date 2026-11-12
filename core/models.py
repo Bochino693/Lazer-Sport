@@ -335,14 +335,13 @@ class Brinquedos(Prime):
 
     @property
     def imagens_ordenadas(self):
-        """Galeria pública tipada, limitada a três imagens (mais as da outra arte).
+        """A galeria pública: as fotos das POSIÇÕES do adesivo padrão (LEIA-ME 72).
 
-        Entra também a foto que era a capa antes da capa em cena (a seção 64
-        do LEIA-ME: `papel_na_capa = "original"`, sem tipo, para o "perfil"
-        ficar com a cena): a foto da equipe continua na galeria, logo depois.
-        Depois delas, até três fotos da OUTRA ARTE do mesmo brinquedo
-        (`papel_na_capa = "outra_arte"`, seção 72: os Alienígenas no Air Game
-        Kids, os Quadrinhos no Basquete Home).
+        Uma foto por posição (a frente, em 3/4, os lados, o verso, de cima),
+        na ordem das posições: `galeria_publica`. A de fundo branco (a de
+        estúdio de antes da capa em cena, `papel_na_capa = "original"`) e o
+        recorte para artes ficam guardados, fora do site. As fotos dos outros
+        adesivos estão em `variantes.adesivos_da_pagina` (a página troca).
 
         Com a galeria já trazida (`prefetch_related("imagens_brinquedo")`,
         como a página do brinquedo faz), a conta é feita na memória: o
@@ -394,11 +393,14 @@ class Brinquedos(Prime):
                         key=lambda item: (item.ordem, item.id),
                     )
                     if getattr(foto, "imagem", None)
+                    and getattr(foto, "papel_na_capa", "") not in ImagemBrinquedo.PAPEIS_FORA_DO_SITE
                 ),
                 None,
             )
         else:
-            primeira = self.imagens_brinquedo.order_by("ordem", "id").first()
+            # (nunca a foto sem fundo: o recorte e a de fundo branco ficam fora do site)
+            primeira = (self.imagens_brinquedo.exclude(papel_na_capa__in=ImagemBrinquedo.PAPEIS_FORA_DO_SITE)
+                        .order_by("ordem", "id").first())
 
         if primeira and primeira.imagem:
             return primeira.imagem
@@ -492,12 +494,17 @@ class ImagemBrinquedo(Prime):
     TIPO_VERSO = "verso"
     TIPO_LADO_DIREITO = "lado_direito"
     TIPO_LADO_ESQUERDO = "lado_esquerdo"
+    # as posições a mais que saem do 3D de cada adesivo (LEIA-ME 72)
+    TIPO_TRES_QUARTOS = "tres_quartos"
+    TIPO_DE_CIMA = "de_cima"
 
     TIPO_CHOICES = (
         (TIPO_PERFIL, "Perfil / Frente"),
         (TIPO_VERSO, "Verso / Costas"),
         (TIPO_LADO_DIREITO, "Lado direito"),
         (TIPO_LADO_ESQUERDO, "Lado esquerdo"),
+        (TIPO_TRES_QUARTOS, "Em 3/4"),
+        (TIPO_DE_CIMA, "De cima"),
     )
 
     # A capa em cena dos produtos do catálogo (core/capas_catalogo.py, o comando
@@ -506,15 +513,23 @@ class ImagemBrinquedo(Prime):
     # `--desfazer` põe de volta. A OUTRA ARTE do mesmo brinquedo (LEIA-ME 72:
     # o Air Game Kids com os Alienígenas, o Basquete Home com os Quadrinhos):
     # as fotos da ficha que foi juntada a ele, na galeria depois das dele.
-    # Fora disso, vazio.
+    # O RECORTE PARA ARTES (LEIA-ME 72): a foto sem fundo (branco ou
+    # transparente) fica guardada no adesivo, para as artes, e só aparece no
+    # painel (para baixar): nunca na galeria, no card, no giro, no destaque ou
+    # nas miniaturas do 3D. A "original" (fundo branco, de estúdio) também não
+    # aparece mais no site. Nenhuma das duas é apagada. Fora disso, vazio.
     PAPEL_CENA = "cena"
     PAPEL_ORIGINAL = "original"
     PAPEL_OUTRA_ARTE = "outra_arte"
+    PAPEL_RECORTE = "recorte"
     PAPEL_CHOICES = (
         (PAPEL_CENA, "A capa em cena"),
         (PAPEL_ORIGINAL, "A capa de antes da cena"),
         (PAPEL_OUTRA_ARTE, "Outra arte do mesmo brinquedo"),
+        (PAPEL_RECORTE, "Recorte para artes (sem fundo: só no painel)"),
     )
+    #: Os papéis que ficam fora do site (guardados; o painel mostra para baixar).
+    PAPEIS_FORA_DO_SITE = (PAPEL_ORIGINAL, PAPEL_RECORTE)
 
     brinquedo = models.ForeignKey(
         Brinquedos,
@@ -553,7 +568,7 @@ class ImagemBrinquedo(Prime):
         blank=True,
         default="",
         verbose_name="Papel na capa em cena",
-        help_text="Preenchido pelo comando capas_em_cena: a capa em cena e a capa de antes dela.",
+        help_text="A capa em cena e a capa de antes dela (capas_em_cena); o recorte para artes (sem fundo, só no painel).",
     )
     # a foto de um ADESIVO do produto (LEIA-ME 72: os Alienígenas do Air Game Kids); vazio, do produto
     variante = models.ForeignKey(
@@ -569,6 +584,11 @@ class ImagemBrinquedo(Prime):
     def __str__(self):
         tipo = self.get_tipo_display() if self.tipo else f"Foto {self.ordem}"
         return f"{self.brinquedo} — {tipo}"
+
+    @property
+    def fora_do_site(self):
+        """A foto sem fundo (o recorte para artes) e a de fundo branco: guardadas, só no painel."""
+        return self.papel_na_capa in self.PAPEIS_FORA_DO_SITE
 
     def save(self, *args, **kwargs):
         # a foto nova sem adesivo é do adesivo padrão do brinquedo (LEIA-ME 72)
@@ -607,18 +627,20 @@ def _armazenamento_3d():
 
 
 #: A ordem das posições na galeria (a frente primeiro).
-ORDEM_DAS_POSICOES = {"perfil": 0, "lado_direito": 1, "lado_esquerdo": 2, "verso": 3}
-#: Quantas fotos a galeria de um adesivo mostra (as posições e as outras dele).
+ORDEM_DAS_POSICOES = {"perfil": 0, "tres_quartos": 1, "lado_direito": 2, "lado_esquerdo": 3, "verso": 4, "de_cima": 5}
+#: Quantas fotos a galeria de um adesivo mostra (uma por posição).
 FOTOS_POR_ADESIVO = 6
 
 
 def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
-    """As fotos de UM adesivo do brinquedo (LEIA-ME 72), na ordem: as posições e depois as outras.
+    """As fotos das POSIÇÕES de um adesivo do brinquedo (LEIA-ME 72), na ordem das posições.
 
-    `adesivo_id`: o adesivo; sem ele, o padrão (`padrao_id`, e a foto de antes,
-    sem adesivo, conta como dele). NUNCA a foto de fundo branco: a "original"
-    (a de estúdio de antes da capa em cena, `papel_na_capa = "original"`) fica
-    guardada no banco, mas não aparece. Funciona com as fotos já na memória.
+    `adesivo_id`: o adesivo; sem ele, o padrão (`padrao_id`; a foto ainda sem
+    adesivo conta como dele). Só as fotos com posição (`tipo`), como antes ("a
+    galeria pública tipada"): as outras ficam guardadas, no painel. NUNCA a
+    foto sem fundo: a de fundo branco (`papel_na_capa = "original"`, a de
+    estúdio de antes da capa em cena) e o recorte para artes (`"recorte"`)
+    ficam no banco, mas não aparecem. Funciona com as fotos já na memória.
     """
     if adesivo_id is None:
         def do_adesivo(foto):
@@ -628,12 +650,16 @@ def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
             return getattr(foto, "variante_id", None) == adesivo_id
     fotos = [
         foto for foto in fotos
-        if do_adesivo(foto) and getattr(foto, "imagem", None)
-        and getattr(foto, "papel_na_capa", "") != ImagemBrinquedo.PAPEL_ORIGINAL
+        if do_adesivo(foto) and foto.tipo and getattr(foto, "imagem", None)
+        and getattr(foto, "papel_na_capa", "") not in ImagemBrinquedo.PAPEIS_FORA_DO_SITE
     ]
-    fotos.sort(key=lambda foto: (0, ORDEM_DAS_POSICOES.get(foto.tipo, 9), foto.ordem, foto.id) if foto.tipo
-               else (1, 0, foto.ordem, foto.id))
-    return fotos[:FOTOS_POR_ADESIVO]
+    fotos.sort(key=lambda foto: (ORDEM_DAS_POSICOES.get(foto.tipo, 9), foto.ordem, foto.id))
+    vistas, saida = set(), []
+    for foto in fotos:  # uma por posição (a de antes da 0172 e a do adesivo, a primeira)
+        if foto.tipo not in vistas:
+            vistas.add(foto.tipo)
+            saida.append(foto)
+    return saida[:FOTOS_POR_ADESIVO]
 
 
 def adesivo_padrao_de(brinquedo):

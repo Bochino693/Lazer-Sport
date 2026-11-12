@@ -69,6 +69,8 @@ export async function iniciar(raiz) {
     semente: 1,
     // por área (trampolim, esportivo, baby): { porte: "auto" | "compacto" | "medio" | "grande", sem: [componentes tirados] }
     opcoes: {},
+    // o adesivo de cada máquina que tem mais de um (LEIA-ME 72): { id: slug }; sem, o padrão
+    adesivos: {},
   };
   if (inicial) {
     Object.assign(estado.espaco, inicial.espaco || {});
@@ -288,11 +290,23 @@ export async function iniciar(raiz) {
     const medida = `${metros(i.medidas[1])} × ${metros(i.medidas[2])} m · ${metros(i.medidas[0])} m de altura`;
     return `<li class="p3d-item${q ? " p3d-item--com" : ""}" data-item="${escapar(i.id)}" data-busca="${escapar((i.nome + " " + i.categorias.join(" ")).toLowerCase())}">
       <span class="p3d-item-foto">${i.capa ? `<img src="${escapar(i.capa)}" alt="" loading="lazy">` : `<i class="fa-solid fa-cube" aria-hidden="true"></i>`}</span>
-      <span class="p3d-item-texto"><b>${escapar(i.nome)}</b><small>${medida}</small>${i.modelo ? `<em class="p3d-selo">3D</em>` : ""}</span>
+      <span class="p3d-item-texto"><b>${escapar(i.nome)}</b><small>${medida}</small>${i.modelo ? `<em class="p3d-selo">3D</em>` : ""}${chipsDeAdesivo(i)}</span>
       <span class="p3d-qtd" role="group" aria-label="Quantidade de ${escapar(i.nome)}">
         <button type="button" data-menos aria-label="Menos">−</button><output>${q}</output><button type="button" data-mais-um aria-label="Mais">+</button>
       </span>
     </li>`;
+  }
+  /** O adesivo (LEIA-ME 72): "Adesivo: A · B" na máquina que tem mais de um; o escolhido vai no 3D e no pedido. */
+  function adesivoDe(item) {
+    const lista = (item && item.adesivos) || [];
+    if (lista.length < 2) return null;
+    return lista.find((a) => a.slug === estado.adesivos[item.id]) || lista[0];
+  }
+  function chipsDeAdesivo(i) {
+    const atual = adesivoDe(i);
+    if (!atual) return "";
+    return `<span class="p3d-adesivos" role="group" aria-label="Adesivo de ${escapar(i.nome)}">${i.adesivos.map((a) => `
+      <button type="button" class="p3d-chip p3d-chip--adesivo" data-adesivo="${escapar(a.slug)}" aria-pressed="${a.slug === atual.slug}">${escapar(a.nome)}</button>`).join("")}</span>`;
   }
   const listaGrandes = $("#p3dGrandes", raiz);
   const listaMaquinas = $("#p3dMaquinas", raiz);
@@ -303,6 +317,18 @@ export async function iniciar(raiz) {
     const li = e.target.closest("[data-item]");
     if (!li) return;
     const id = li.dataset.item;
+    const chip = e.target.closest("[data-adesivo]");
+    if (chip) {
+      // o adesivo: o 3D da máquina passa a ser o dele (o desenho usa o `modelo` do item)
+      const item = itensPorId.get(id);
+      const adesivo = item && (item.adesivos || []).find((a) => a.slug === chip.dataset.adesivo);
+      if (!adesivo) return;
+      estado.adesivos[id] = adesivo.slug;
+      item.modelo = adesivo.url;
+      li.querySelectorAll("[data-adesivo]").forEach((b) => b.setAttribute("aria-pressed", String(b === chip)));
+      mudou();
+      return;
+    }
     const passo = e.target.closest("[data-mais-um]") ? 1 : e.target.closest("[data-menos]") ? -1 : 0;
     if (!passo) return;
     estado.itens[id] = Math.max(0, Math.min(30, (estado.itens[id] || 0) + passo));
@@ -346,7 +372,12 @@ export async function iniciar(raiz) {
   }
   /** O nome da área com o porte que ela ficou ("Trampolim park (médio)"). */
   function nomeComPorte(i) {
-    if (!i.area || !(dados.areas[i.area.tipo] || {}).portes || !dados.areas[i.area.tipo].portes.length) return i.nome;
+    if (!i.area) {
+      // a máquina com adesivos: o escolhido vai no nome (a observação do pedido)
+      const adesivo = adesivoDe(itensPorId.get(String(i.ref || i.id || "")));
+      return adesivo ? `${i.nome} (adesivo ${adesivo.nome})` : i.nome;
+    }
+    if (!(dados.areas[i.area.tipo] || {}).portes || !dados.areas[i.area.tipo].portes.length) return i.nome;
     const op = opcaoDe(i.area.tipo);
     const porte = op.porte !== "auto" ? op.porte : (geradorMod.porteQueCabe(i.area.tipo, i.area.largura, i.area.profundidade) || {}).chave;
     const nome = nomePorte(i.area.tipo, porte);

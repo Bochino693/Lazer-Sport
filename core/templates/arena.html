@@ -393,11 +393,14 @@
     {% endcomment %}
     <div class="arena-fotos-grade" data-fotos-grade
          data-three="{% static 'vendor/three/three.module.min.js' %}"
-         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}">
+         data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+         data-adesivos3d="{% estatico 'site/arena/adesivos3d.js' %}">
         {% for brinquedo in brinquedos_arena %}
         <article class="arena-foto-cartao" data-fotos-cartao data-categorias="{{ brinquedo.categorias|join:'|' }}">
             {% if brinquedo.modelo %}
             <div class="arena-foto-midia arena-foto-midia--3d" data-vitrine3d data-modelo="{{ brinquedo.modelo }}">
+                {# os adesivos (LEIA-ME 72): o controle "Adesivo: A · B" troca o 3D no cartão (vitrine3d.js) #}
+                {% if brinquedo.adesivos3d|length > 1 %}{{ brinquedo.adesivos3d|json_script }}{% endif %}
                 <img src="{% if brinquedo.capa %}{{ brinquedo.capa }}{% else %}{% static 'images/sem-imagem.svg' %}{% endif %}" alt="{{ brinquedo.nome }}" class="ativa arena-foto-poster" loading="lazy" decoding="async" width="600" height="600">
                 <span class="arena-foto-selo3d" aria-hidden="true"><i class="fa-solid fa-cube"></i> 3D · arraste para girar</span>
             </div>

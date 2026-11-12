@@ -1021,6 +1021,8 @@ def dados_do_brinquedo(brinquedo, url_detalhe):
     for foto in sorted(brinquedo.imagens_brinquedo.all(), key=lambda f: (f.ordem, f.id)):
         if getattr(foto, "variante_id", None) not in (None, padrao):
             continue
+        if getattr(foto, "papel_na_capa", "") in ("original", "recorte"):
+            continue  # a foto sem fundo fica fora do site (o recorte para artes)
         if foto.tipo in TIPOS_DE_FOTO and foto.tipo not in fotos:
             fotos[foto.tipo] = reduzir_imagem(_url(foto.imagem))
     capa = fotos.get("perfil") or reduzir_imagem(_url(brinquedo.imagem_perfil))

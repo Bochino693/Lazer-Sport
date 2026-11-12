@@ -102,12 +102,16 @@ if (cartoes.length) {
     contra.position.set(-6, 4, -8);
     cena.add(contra);
 
-    const objeto = gltf.scene;
+    let objeto = gltf.scene;
     const caixa = new T.Box3().setFromObject(objeto);
     const tamanho = caixa.getSize(new T.Vector3());
-    objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
-    objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
-    objeto.position.y -= caixa.min.y;
+    const centralizar = (o) => {
+      const c = new T.Box3().setFromObject(o);
+      o.position.x -= (c.min.x + c.max.x) / 2;
+      o.position.z -= (c.min.z + c.max.z) / 2;
+      o.position.y -= c.min.y;
+    };
+    centralizar(objeto);
     cena.add(objeto);
     // os sombreadores já agora (em paralelo, onde a placa deixa): o primeiro quadro não engasga
     try { renderer.compileAsync(cena, new T.PerspectiveCamera(), cena).catch(() => {}); } catch (erro) { /* compila no primeiro quadro */ }
@@ -235,5 +239,33 @@ if (cartoes.length) {
     visor.passo(1);
     cartao.classList.add("arena-foto-midia--pronta");
     acordar();
+
+    // OS ADESIVOS (LEIA-ME 72): o produto com outra arte troca o 3D ali mesmo, no cartão
+    async function trocar(url) {
+      const novo = await carregador.loadAsync(url);
+      cena.remove(objeto);
+      objeto.traverse((o) => {
+        if (o.geometry) o.geometry.dispose();
+        for (const mat of [].concat(o.material || [])) {
+          for (const valor of Object.values(mat)) if (valor && valor.isTexture) valor.dispose();
+          mat.dispose();
+        }
+      });
+      objeto = novo.scene;
+      centralizar(objeto);
+      cena.add(objeto);
+      cartao.dataset.modelo = url;
+      visor.sujo = true;
+      acordar();
+    }
+    const dados = cartao.querySelector('script[type="application/json"]');
+    if (dados && grade.dataset.adesivos3d) {
+      import(grade.dataset.adesivos3d).then((modulo) => {
+        const modelos = modulo.lerModelos(dados.textContent);
+        if (modelos.length < 2) return;
+        const atual = Math.max(0, modelos.findIndex((mo) => mo.url === cartao.dataset.modelo));
+        cartao.append(modulo.chipsDeAdesivo({ modelos, atual, aoEscolher: (modelo) => trocar(modelo.url) }));
+      }).catch((erro) => console.error("Vitrine 3D: o controle dos adesivos não carregou", erro));
+    }
   }
 }

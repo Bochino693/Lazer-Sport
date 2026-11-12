@@ -198,10 +198,13 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
     troca a foto pelo objeto girando enquanto o brinquedo está na vez
     (site/paginas/home-vitrine3d.js). Nada do 3D é baixado antes disso.
     """
+    from . import variantes as variantes_de_adesivo
     from .formatos import dinheiro
 
     com_foto = [b for b in brinquedos if b.imagem_brinquedo]
     com_foto.sort(key=lambda b: (-getattr(b, "total_curtidas", 0), -(b.avaliacao or 0), b.nome_brinquedo))
+    # os adesivos (LEIA-ME 72): o controle "Adesivo: A · B" da vitrine troca o 3D (uma consulta para todos)
+    com_adesivos = variantes_de_adesivo.produtos_com_adesivos()
     vitrine = []
     for b in com_foto[:quantidade]:
         try:
@@ -220,6 +223,10 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
             "avaliacao": float(b.avaliacao or 0),
             "medidas": b.dimensoes_m or "",
             "modelo_3d": modelo_3d_da_vitrine(b),
+            "adesivos3d": [
+                {"nome": m["nome"], "slug": m["slug"], "url": m["url"]}
+                for m in variantes_de_adesivo.modelos_3d(b)
+            ] if b.pk in com_adesivos else [],
         })
     return vitrine
 
@@ -1218,7 +1225,9 @@ class BrinquedoInfoView(View):
         brinquedo = dados["contexto"]["brinquedo"]
         mensagem = list(dados["mensagem"])
         extra = {}
-        # O ADESIVO ESCOLHIDO (?adesivo=<slug>; sem ele, o padrão): as fotos das posições e o 3D dele
+        # O ADESIVO ESCOLHIDO (?adesivo=<slug>; sem ele, o padrão): as fotos das posições e o 3D dele.
+        # A troca na página é ali mesmo (brinquedo_info.html: a galeria e o 3D juntos, com a
+        # transição da foto); o endereço com o adesivo é o que se compartilha.
         adesivos_pagina = dados["contexto"].get("adesivos_pagina") or []
         if adesivos_pagina:
             pedido = request.GET.get("adesivo", "")
@@ -1228,6 +1237,18 @@ class BrinquedoInfoView(View):
                 extra["imagens_brinquedo"] = escolhido["fotos"] or dados["contexto"]["imagens_brinquedo"]
                 if escolhido["url_3d"]:
                     extra["objeto_3d"] = {"url": escolhido["url_3d"]}
+            endereco = request.build_absolute_uri(request.path)
+            troca = []
+            for item in adesivos_pagina:
+                texto = list(mensagem)
+                texto.insert(3, f"Adesivo: {item['nome']}")
+                pagina = f"{endereco}?adesivo={item['slug']}"
+                troca.append({
+                    **item["troca"],
+                    "whatsapp": "https://wa.me/5511960563135?text="
+                                f"{quote(chr(10).join([*texto, '', f'Página do produto: {pagina}']))}",
+                })
+            extra["adesivos_troca"] = troca
             mensagem.insert(3, f"Adesivo: {escolhido['nome']}")
 
         # O contador de cliques é por visita: um UPDATE, fora do cache.
@@ -3649,19 +3670,21 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         return redirect("brinquedos_admin")
 
     #: As posições de cada adesivo no cadastro (as mesmas da galeria: `ImagemBrinquedo.tipo`).
-    POSICOES = (("perfil", "Frente"), ("lado_direito", "Lado direito"), ("lado_esquerdo", "Lado esquerdo"), ("verso", "Verso"))
+    POSICOES = (("perfil", "Frente"), ("tres_quartos", "Em 3/4"), ("lado_direito", "Lado direito"),
+                ("lado_esquerdo", "Lado esquerdo"), ("verso", "Verso"), ("de_cima", "De cima"))
 
     @classmethod
     def _dados_dos_adesivos(cls, brinquedo):
         """Os adesivos do brinquedo para o cadastro (LEIA-ME 72): cada um com as posições e o 3D.
 
         O primeiro é o padrão (as fotos e o 3D que o card, a capa e a Arena
-        usam). A foto de fundo branco (a "original") não entra.
+        usam). As fotos sem fundo (o recorte para artes e a de fundo branco)
+        vêm à parte, em `recortes`: guardadas no adesivo, para baixar.
         """
         variantes = sorted((v for v in brinquedo.variantes_adesivo.all() if v.ativo),
                            key=lambda v: (not v.padrao, v.ordem, v.id))
-        fotos = sorted((f for f in brinquedo.imagens_brinquedo.all() if f.imagem and f.papel_na_capa != "original"),
-                       key=lambda f: (f.ordem, f.id))
+        todas = sorted((f for f in brinquedo.imagens_brinquedo.all() if f.imagem), key=lambda f: (f.ordem, f.id))
+        fotos = [f for f in todas if not f.fora_do_site]
         saida = []
         for variante in variantes:
             dele = [f for f in fotos if f.variante_id == variante.id
@@ -3682,6 +3705,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "arquivo_3d": arquivo_3d,
                 "posicoes": posicoes,
                 "outras": [{"id": f.id, "url": f.imagem.url} for f in dele if not f.tipo][:6],
+                # o recorte para artes (sem fundo): só aqui, para baixar; nunca no site
+                "recortes": [
+                    {"id": f.id, "url": f.imagem.url, "arquivo": (f.imagem.name or "").split("/")[-1]}
+                    for f in todas
+                    if f.fora_do_site and (f.variante_id == variante.id or (variante.padrao and f.variante_id is None))
+                ],
                 # (as fotos todas do adesivo: a lista dos cartões e os testes)
                 "fotos": [{"id": f.id, "url": f.imagem.url} for f in dele],
             })
@@ -3714,10 +3743,52 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             objeto.cores, objeto.medidas, objeto.ativo = lido["cores"], lido["medidas"], True
             objeto.save()
 
+    def _conferir_foto(self, brinquedo, variante, tipo, arquivo):
+        """A foto nova de uma posição: sem fundo vira recorte para artes; quase igual a outra do adesivo, não entra.
+
+        Devolve "recorte" (a foto fica guardada como recorte, fora do site) ou ""
+        (segue para a posição). As duas regras do cliente (LEIA-ME 72):
+        nada de foto sem fundo no site, nada de duas fotos quase iguais no
+        mesmo adesivo (core.conferir_fotos).
+        """
+        from . import conferir_fotos
+
+        try:
+            if conferir_fotos.sem_fundo(arquivo):
+                return "recorte"
+            nova = conferir_fotos.assinatura(arquivo)
+        except Exception:  # não é uma imagem que o Pillow abre: o campo de imagem confere
+            return ""
+        outras = ImagemBrinquedo.objects.filter(brinquedo=brinquedo, variante=variante).exclude(tipo=None).exclude(tipo=tipo)
+        for outra in outras:
+            try:
+                with outra.imagem.open("rb") as aberta:
+                    parecida = conferir_fotos.parecidas(nova, conferir_fotos.assinatura(aberta))
+            except Exception:  # a foto guardada não abriu (o armazenamento fora do ar): não trava o envio
+                continue
+            if parecida:
+                rotulo = dict(self.POSICOES).get(outra.tipo, outra.tipo)
+                raise ErroDeFormulario(
+                    f"Adesivo {variante.nome}: esta foto é quase igual à da posição {rotulo} (o mesmo ângulo). "
+                    "Mande uma foto de outra posição.")
+        return ""
+
+    def _gravar_recorte(self, brinquedo, variante, arquivo):
+        """A foto sem fundo: fica guardada no adesivo como recorte para artes (só no painel)."""
+        ordem = max(ImagemBrinquedo.objects.filter(brinquedo=brinquedo).values_list("ordem", flat=True), default=0) + 1
+        foto = ImagemBrinquedo(brinquedo=brinquedo, variante=variante, tipo=None, ordem=ordem,
+                               papel_na_capa=ImagemBrinquedo.PAPEL_RECORTE,
+                               texto_alternativo=f"{brinquedo.nome_brinquedo} ({variante.nome}): recorte para artes"[:180])
+        foto.imagem.save(arquivo.name, arquivo, save=True)
+        return foto
+
     def _gravar_posicao(self, brinquedo, variante, tipo, arquivo):
-        """A foto de uma posição do adesivo (troca a que havia)."""
+        """A foto de uma posição do adesivo (troca a que havia). A sem fundo vira recorte para artes."""
         if arquivo.size > self.MAX_TAMANHO_IMAGEM:
             raise ErroDeFormulario(f"Adesivo: a foto {arquivo.name} passa de 15 MB.")
+        if self._conferir_foto(brinquedo, variante, tipo, arquivo) == "recorte":
+            self._gravar_recorte(brinquedo, variante, arquivo)
+            return "recorte"
         ordem = {t: i for i, (t, _r) in enumerate(self.POSICOES, start=1)}[tipo]
         foto = ImagemBrinquedo.objects.filter(brinquedo=brinquedo, variante=variante, tipo=tipo).first()
         if foto is None and variante.padrao:
@@ -3730,6 +3801,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         if variante.padrao and tipo == "perfil":
             # a frente do padrão é a capa do brinquedo
             Brinquedos.objects.filter(pk=brinquedo.pk).update(imagem_brinquedo=foto.imagem.name)
+        return ""
 
     def _adesivo_incluir(self, request):
         """Um adesivo novo no brinquedo: o nome, o .glb dele e as fotos das posições (o mesmo objeto, outra arte)."""
@@ -3757,20 +3829,26 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         variante = VarianteAdesivo.objects.create(brinquedo=brinquedo, nome=nome, slug=slug, ordem=ordem, padrao=False)
         if arquivo:
             self._gravar_3d_do_adesivo(variante, arquivo, lido)
+        recortes = 0
         for tipo, _rotulo in self.POSICOES:
             foto = request.FILES.get(f"adesivo_{tipo}")
-            if foto:
-                self._gravar_posicao(brinquedo, variante, tipo, foto)
-        # as fotos sem posição (mandadas juntas) entram como as outras do adesivo
-        posicao = max(ImagemBrinquedo.objects.filter(brinquedo=brinquedo).values_list("ordem", flat=True), default=0)
+            if foto and self._gravar_posicao(brinquedo, variante, tipo, foto) == "recorte":
+                recortes += 1
+        # as fotos sem posição (mandadas juntas): a primeira posição livre de cada uma; sem fundo, o recorte
+        livres = [t for t, _r in self.POSICOES]
         for foto in request.FILES.getlist("adesivo_fotos"):
             if foto.size > self.MAX_TAMANHO_IMAGEM:
                 raise ErroDeFormulario(f"Adesivo: a foto {foto.name} passa de 15 MB.")
-            posicao += 1
-            imagem = ImagemBrinquedo(brinquedo=brinquedo, variante=variante, tipo=None, ordem=posicao,
-                                     texto_alternativo=f"{brinquedo.nome_brinquedo} com o adesivo {nome}"[:180])
-            imagem.imagem.save(foto.name, foto, save=True)
-        return self._responder_adesivos(request, brinquedo, f"Adesivo {nome} incluído no {brinquedo.nome_brinquedo}.")
+            tomadas = set(ImagemBrinquedo.objects.filter(variante=variante).exclude(tipo=None).values_list("tipo", flat=True))
+            tipo = next((t for t in livres if t not in tomadas), None)
+            if tipo is None:
+                raise ErroDeFormulario(f"Adesivo {nome}: as {len(self.POSICOES)} posições já têm foto.")
+            if self._gravar_posicao(brinquedo, variante, tipo, foto) == "recorte":
+                recortes += 1
+        mensagem = f"Adesivo {nome} incluído no {brinquedo.nome_brinquedo}."
+        if recortes:
+            mensagem += f" {recortes} foto(s) sem fundo ficaram guardadas como recorte para artes (fora do site)."
+        return self._responder_adesivos(request, brinquedo, mensagem)
 
     def _adesivo_posicao(self, request):
         """Inclui ou troca a foto de uma posição (ou o 3D) de um adesivo."""
@@ -3786,7 +3864,11 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         arquivo = request.FILES.get("foto")
         if tipo not in dict(self.POSICOES) or not arquivo:
             raise ErroDeFormulario("Adesivo: escolha a posição e a foto.")
-        self._gravar_posicao(brinquedo, variante, tipo, arquivo)
+        if self._gravar_posicao(brinquedo, variante, tipo, arquivo) == "recorte":
+            return self._responder_adesivos(
+                request, brinquedo,
+                f"A foto não tem fundo: ficou guardada no adesivo {variante.nome} como recorte para artes (fora do "
+                f"site). Para a posição {dict(self.POSICOES)[tipo]}, mande uma foto com cenário.")
         return self._responder_adesivos(request, brinquedo, f"{dict(self.POSICOES)[tipo]} do adesivo {variante.nome}: foto gravada.")
 
     def _adesivo_tirar(self, request):

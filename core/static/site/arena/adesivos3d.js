@@ -89,6 +89,11 @@ export function chipsDeAdesivo({ modelos, atual = 0, aoEscolher, onde = "sobre" 
   ["pointerdown", "pointermove", "wheel", "dblclick"].forEach((tipo) => {
     caixa.addEventListener(tipo, (e) => e.stopPropagation(), { passive: true });
   });
+  // quem trocou o adesivo por fora (o seletor da galeria da página) marca o botão aqui
+  caixa.marcar = (i) => {
+    escolhido = i;
+    botoes.forEach((b, k) => b.setAttribute("aria-pressed", k === i ? "true" : "false"));
+  };
   return caixa;
 }
 

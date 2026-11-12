@@ -101,7 +101,7 @@
       ser o mesmo para o navegador não baixar o three.js duas vezes.
     {% endcomment %}
     <div class="ls-quadro-vitrine" data-vitrine aria-roledescription="carrossel" aria-label="Brinquedos e promoções em destaque"
-         {% if vitrine_tem_3d %}data-three="{% static 'vendor/three/three.module.min.js' %}" data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"{% endif %}>
+         {% if vitrine_tem_3d %}data-three="{% static 'vendor/three/three.module.min.js' %}" data-gltf="{% static 'vendor/three/GLTFLoader.js' %}" data-adesivos3d="{% estatico 'site/arena/adesivos3d.js' %}"{% endif %}>
       {% if vitrine_quadro %}
       <div class="ls-vitrine-palco" data-vitrine-palco>
         <span class="ls-vitrine-halo" aria-hidden="true"></span>
@@ -121,6 +121,7 @@
             <span class="ls-vitrine-categoria">{{ item.categoria }}</span>
             <p class="ls-vitrine-nome">{{ item.nome }}</p>
             {% faixas item.nome %}
+            {% if item.adesivos3d|length > 1 %}<div class="ls-vitrine-adesivos" data-vitrine-adesivos hidden>{{ item.adesivos3d|json_script }}</div>{% endif %}
             <div class="ls-vitrine-meta">
               {% if item.avaliacao %}<span><i class="fa-solid fa-star" aria-hidden="true"></i> {{ item.avaliacao|floatformat:1 }}</span>{% endif %}
               {% if item.medidas %}<span><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> {{ item.medidas }}</span>{% endif %}

@@ -46,7 +46,7 @@ from django.urls import reverse
 from PIL import Image, ImageStat
 
 from . import categorias_capas
-from .cadastro_modelos import CADASTROS
+from .cadastro_modelos import CADASTROS, VARIANTES_DE_ADESIVO
 from .models import Brinquedos, ImagemBrinquedo, ObjetoTresD, PecasReposicao
 from .objetos_3d import ler_glb_do_site
 
@@ -86,7 +86,9 @@ class CapasTests(TestCase):
             with self.subTest(chave):
                 fotos = CADASTROS[chave]["fotos"]
                 antes = "foto.webp" if chave == "strike-kids" else "frente.webp"
-                self.assertEqual([tipo for arquivo, tipo, _ in fotos if arquivo == antes], [None])
+                # (LEIA-ME 72: nos adesivos, a frente de antes, em 3/4, é uma das posições do adesivo)
+                esperado = ["tres_quartos"] if chave in VARIANTES_DE_ADESIVO else [None]
+                self.assertEqual([tipo for arquivo, tipo, _ in fotos if arquivo == antes], esperado)
         fotos = CADASTROS["brinquedao-modelo-5"]["fotos"]
         self.assertEqual([tipo for arquivo, tipo, _ in fotos if arquivo == "perspectiva.webp"], [None])
 

@@ -242,6 +242,10 @@ def item_do_catalogo(dados):
         "medidas": medidas,
         "medidas_reais": bool(dados.get("medidas_reais")) or len(dados.get("medidas_modelo") or []) == 3,
         "modelo": dados.get("modelo") or "",
+        # os adesivos (LEIA-ME 72): o mesmo produto com outra arte; o escolhido vai no pedido
+        "adesivos": [
+            {"nome": m["nome"], "slug": m.get("slug", ""), "url": m["url"]} for m in dados.get("adesivos3d") or []
+        ] if len(dados.get("adesivos3d") or []) > 1 else [],
         "capa": dados.get("capa") or "",
         "categorias": list(dados.get("categorias") or []),
         "jogo": dados.get("jogo") or "",

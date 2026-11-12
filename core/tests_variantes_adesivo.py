@@ -384,10 +384,13 @@ class CadastroTests(TestCase):
                 self.assertTrue(novo.ativo)
                 # a descrição é a da arte nova (e não a da máquina de antes)
                 self.assertEqual(novo.descricao, CADASTROS[chave]["descricao"])
+                # as posições do cadastro (LEIA-ME 72: a frente em 3/4 e o tampo de cima também são posições)
                 self.assertEqual(
                     list(novo.imagens_brinquedo.order_by("ordem").values_list("tipo", flat=True)),
-                    ["perfil", None, "lado_esquerdo", "lado_direito", "verso", None],
+                    [tipo for _arquivo, tipo, _texto in CADASTROS[chave]["fotos"]],
                 )
+                self.assertEqual([tipo for _arquivo, tipo, _texto in CADASTROS[chave]["fotos"]][:5],
+                                 ["perfil", "tres_quartos", "lado_esquerdo", "lado_direito", "verso"])
                 # a capa (o card) é a cena da 0153; a frente de antes fica na galeria, sem tipo
                 self.assertIn(f"{chave}-capa", novo.imagem_brinquedo.name)
                 objeto = novo.objeto_3d

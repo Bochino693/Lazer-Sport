@@ -79,7 +79,45 @@ function ligar() {
     if (visor) visor.parar();
     slides.forEach((s) => s.classList.remove("ls-vitrine-slide--3d"));
     vitrine.classList.remove("ls-vitrine--com-3d");
+    vitrine.querySelectorAll("[data-vitrine-adesivos]").forEach((caixa) => { caixa.hidden = true; });
   }
+
+  // OS ADESIVOS (LEIA-ME 72): o produto com outra arte ganha o controle "Adesivo: A · B" na
+  // ficha do slide; escolher troca o 3D (o que está à mostra, ou o que vai entrar) e o link
+  // da foto e do "Ver" passa a abrir a página no adesivo escolhido
+  function montarAdesivos() {
+    if (!vitrine.dataset.adesivos3d) return;
+    const comAdesivos = slides.filter((s) => s.querySelector("[data-vitrine-adesivos]"));
+    if (!comAdesivos.length) return;
+    import(vitrine.dataset.adesivos3d).then((modulo) => {
+      comAdesivos.forEach((slide) => {
+        const caixa = slide.querySelector("[data-vitrine-adesivos]");
+        const dados = caixa.querySelector('script[type="application/json"]');
+        const lista = modulo.lerModelos(dados ? dados.textContent : "");
+        if (lista.length < 2 || desistiu) return;
+        const atual = Math.max(0, lista.findIndex((m) => m.url === slide.dataset.modelo3d));
+        caixa.append(modulo.chipsDeAdesivo({
+          modelos: lista,
+          atual,
+          onde: "ficha",
+          aoEscolher: async (modelo) => {
+            slide.dataset.modelo3d = modelo.url;
+            slide.querySelectorAll("a[href]").forEach((link) => {
+              const endereco = new URL(link.href, window.location.href);
+              endereco.searchParams.set("adesivo", modelo.slug || "");
+              link.href = endereco.pathname + endereco.search + endereco.hash;
+            });
+            if (mostrando === slide && visor) {
+              const lido = await carregarModelo(modelo.url);
+              if (mostrando === slide) visor.mostrar(lido, slide.querySelector(".ls-vitrine-foto"));
+            }
+          },
+        }));
+        caixa.hidden = false;
+      });
+    }).catch((erro) => console.warn("Vitrine 3D: o controle dos adesivos não carregou.", erro));
+  }
+  montarAdesivos();
 
   // O contexto WebGL do visor. Pedido com `failIfMajorPerformanceCaveat`:
   // sem WebGL 2, ou só com o desenho por software, vem null -- e fica a foto.

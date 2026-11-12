@@ -1800,7 +1800,7 @@ body:has(dialog.bq-janela[open]) {
 
 .bq-adesivo-posicoes {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px;
     margin-top: 10px;
 }
@@ -1856,6 +1856,47 @@ body:has(dialog.bq-janela[open]) {
     cursor: pointer;
 }
 
+.bq-adesivo-recortes {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.bq-adesivo-recortes summary {
+    cursor: pointer;
+    color: var(--text-2);
+}
+
+.bq-adesivo-recortes-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.bq-adesivo-recortes-lista a {
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+    width: 84px;
+    padding: 4px;
+    border: 1px solid var(--line-forte);
+    border-radius: 10px;
+    color: var(--acento-claro);
+    text-decoration: none;
+}
+
+/* o recorte sobre o xadrez: dá para ver que não tem fundo */
+.bq-adesivo-recortes-lista img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    border-radius: 6px;
+    background: repeating-conic-gradient(var(--line-forte) 0 25%, transparent 0 50%) 0 0 / 12px 12px;
+}
+
+.bq-adesivo-recortes-lista a:hover { border-color: var(--acento); }
+
 @media (max-width: 600px) {
-    .bq-adesivo-posicoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bq-adesivo-posicoes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

@@ -363,20 +363,34 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
       const atual = Math.max(0, modelos.findIndex((m) => m.url === visor.dataset.modelo));
       const campo = document.querySelector("[data-adesivo-escolhido]");
       if (window.getComputedStyle(visor).position === "static") visor.style.position = "relative";
-      visor.appendChild(modulo.chipsDeAdesivo({
+      const controle = modulo.chipsDeAdesivo({
         modelos,
         atual,
         aoEscolher: async (modelo) => {
-          // na página do produto, cada adesivo tem as fotos dele: a página vem no adesivo, com o 3D aberto
-          if (visor.hasAttribute("data-adesivos-navegar") && modelo.slug) {
-            window.location.href = `?adesivo=${encodeURIComponent(modelo.slug)}#ver-3d`;
-            return;
-          }
           await trocar(modelo.url);
           // o adesivo escolhido segue para o carrinho como observação
           if (campo) campo.value = modelo.nome;
+          // a página do produto troca as fotos da galeria junto (brinquedo_info.html)
+          document.dispatchEvent(new CustomEvent("ls:adesivo", {
+            detail: { slug: modelo.slug, nome: modelo.nome, url: modelo.url, origem: "3d" },
+          }));
         },
-      }));
+      });
+      visor.appendChild(controle);
+      // o seletor da galeria trocou o adesivo: o 3D troca junto (a câmera fica)
+      const ouvir = (evento) => {
+        if (solto) {
+          document.removeEventListener("ls:adesivo", ouvir);
+          return;
+        }
+        const detalhe = evento.detail || {};
+        if (detalhe.origem === "3d") return;
+        const indice = modelos.findIndex((m) => (detalhe.slug && m.slug === detalhe.slug) || (detalhe.url && m.url === detalhe.url));
+        if (indice < 0) return;
+        controle.marcar(indice);
+        trocar(modelos[indice].url);
+      };
+      document.addEventListener("ls:adesivo", ouvir);
     }).catch((erro) => console.error("Visor 3D: o controle dos adesivos não carregou", erro));
   }
 

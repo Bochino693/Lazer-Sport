@@ -2069,6 +2069,20 @@ class Arena {
     return this.cores3d;
   }
 
+  /** O pedido no WhatsApp da ficha: a máquina e, quando ela tem adesivos, o escolhido (vai como observação). */
+  pedirNoWhatsapp(m) {
+    const whatsapp = this.ficha && this.ficha.querySelector("[data-ficha-whatsapp]");
+    if (!whatsapp || !m) return;
+    const b = m.dados;
+    const modelos = b.adesivos3d || [];
+    const adesivo = modelos.length > 1
+      ? (m.adesivoEscolhido || (modelos.find((x) => x.url === m.modelo) || modelos[0]).nome)
+      : "";
+    const texto = `Olá! Vi o ${b.nome} na Arena 3D do site da Lazer & Sport e quero um orçamento.`
+      + (adesivo ? ` Adesivo: ${adesivo}.` : "");
+    whatsapp.href = whatsapp.href.split("?")[0] + "?text=" + encodeURIComponent(texto);
+  }
+
   /** O controle "Adesivo: A · B" na ficha (site/arena/adesivos3d.js), quando o produto tem mais de um 3D. */
   async mostrarAdesivos(m) {
     const caixa = this.ficha && this.ficha.querySelector("[data-ficha-adesivos]");
@@ -2091,6 +2105,7 @@ class Arena {
       onde: "ficha",
       aoEscolher: (modelo) => new Promise((pronto) => {
         m.trocarAdesivo(modelo);
+        this.pedirNoWhatsapp(m); // o adesivo escolhido vai no pedido
         // espera o objeto novo chegar (ou desistir) para soltar o botão
         const inicio = Date.now();
         const ver = () => (m.montada || !m.carregando || Date.now() - inicio > 20000 ? pronto() : setTimeout(ver, 150));
@@ -4316,9 +4331,7 @@ class Arena {
     const detalhe = f.querySelector("[data-ficha-detalhe]");
     detalhe.hidden = !b.url;
     if (b.url) detalhe.href = b.url;
-    const texto = `Olá! Vi o ${b.nome} na Arena 3D do site da Lazer & Sport e quero um orçamento.`;
-    const whatsapp = f.querySelector("[data-ficha-whatsapp]");
-    whatsapp.href = whatsapp.href.split("?")[0] + "?text=" + encodeURIComponent(texto);
+    this.pedirNoWhatsapp(m);
     // só as máquinas que SÃO um jogo da casa têm a prévia
     const jogar = f.querySelector("[data-ficha-jogar]");
     jogar.hidden = !b.jogo;

@@ -797,9 +797,11 @@ const VISTAS = {
     tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama", "plantas"],
     vistas: {
       frente: vista([2.3, 1.85, 2.9], [0, 0.55, 0]),
-      lado_esquerdo: vista([-3.3, 1.35, 1.1], [0, 0.55, 0]),
+      // a mesa é simétrica: o lado esquerdo do outro lado era o direito de novo, e o verso,
+      // a frente; agora o esquerdo é em 3/4, baixo, na altura das crianças, e o verso, a cabeceira
+      lado_esquerdo: vista([-1.9, 0.62, 2.0], [0, 0.45, 0]),
       lado_direito: vista([3.3, 1.35, -1.1], [0, 0.55, 0]),
-      verso: vista([-1.6, 1.7, -3.0], [0, 0.55, 0]),
+      verso: vista([0, 1.2, 3.3], [0, 0.5, 0]),
       tampo: { giro: 0, altura: 62 },
     },
   },
@@ -807,9 +809,11 @@ const VISTAS = {
     tamanho: [1600, 1000], cenario: ["logo", "plantas", "vitrine", "fliperama", "plantas"],
     vistas: {
       frente: vista([2.3, 1.85, 2.9], [0, 0.55, 0]),
-      lado_esquerdo: vista([-3.3, 1.35, 1.1], [0, 0.55, 0]),
+      // a mesa é simétrica: o lado esquerdo do outro lado era o direito de novo, e o verso,
+      // a frente; agora o esquerdo é em 3/4, baixo, na altura das crianças, e o verso, a cabeceira
+      lado_esquerdo: vista([-1.9, 0.62, 2.0], [0, 0.45, 0]),
       lado_direito: vista([3.3, 1.35, -1.1], [0, 0.55, 0]),
-      verso: vista([-1.6, 1.7, -3.0], [0, 0.55, 0]),
+      verso: vista([0, 1.2, 3.3], [0, 0.5, 0]),
       tampo: { giro: 0, altura: 62 },
     },
   },
@@ -818,9 +822,18 @@ const VISTAS = {
     vistas: {
       frente: vista([3.7, 2.5, 4.9], [0, 1.25, 0]),
       lado_esquerdo: vista([-6.0, 1.7, 1.6], [0, 1.3, 0]),
-      lado_direito: vista([6.0, 1.7, -1.6], [0, 1.3, 0]),
+      // o direito de longe era o esquerdo espelhado (a mesma arte dos dois lados): agora de perto e baixo, com o console
+      lado_direito: vista([3.0, 1.0, 2.6], [0, 1.0, 0.3]),
       verso: vista([-3.4, 2.4, -5.4], [0, 1.3, 0]),
       jogador: vista([0.4, 2.1, 6.2], [0, 1.3, -0.4]),
+    },
+  },
+  // o Brinquedão Modelo 2: os lados vinham da folha da fábrica, de fundo branco (o recorte para artes); estes são do 3D
+  "brinquedao-modelo-2": {
+    tamanho: [1600, 1000], cenario: ["plantas", "logo"],
+    vistas: {
+      lado_esquerdo_3d: { giro: -42, altura: 8 },
+      lado_direito_3d: { giro: 78, altura: 10 },
     },
   },
   "brinquedao-modelo-3": {

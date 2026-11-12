@@ -524,6 +524,9 @@
 }
 .p3d-chip[aria-pressed="true"] { border-color: transparent; color: #0b1220; background: var(--p3d-ciano); }
 .p3d-chip--area i { margin-right: 4px; }
+/* o adesivo da máquina (LEIA-ME 72): "Astronautas · Alienígenas" no cartão do item */
+.p3d-adesivos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.p3d-chip--adesivo { min-height: 26px; padding: 0 9px; font-size: 11.5px; }
 
 .p3d-modelos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .p3d-modelo, .p3d-pronto {

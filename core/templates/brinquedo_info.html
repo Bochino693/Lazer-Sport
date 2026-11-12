@@ -91,12 +91,12 @@
                         <button class="produto-ampliar" type="button" data-ls-galeria="galeria-produto" data-ls-galeria-indice="0" aria-haspopup="dialog" aria-label="Ampliar foto">
                             <i class="fa-solid fa-expand" aria-hidden="true"></i>
                         </button>
-                        {% if imagens_brinquedo|length > 1 %}
-                            <div class="produto-galeria-controles" aria-label="Navegar pelas fotos">
+                        {% if imagens_brinquedo|length > 1 or adesivos_pagina %}
+                            <div class="produto-galeria-controles" aria-label="Navegar pelas fotos"{% if imagens_brinquedo|length < 2 %} hidden{% endif %} data-galeria-controles>
                                 <button class="produto-galeria-seta" type="button" data-galeria-anterior aria-label="Foto anterior">‹</button>
                                 <button class="produto-galeria-seta" type="button" data-galeria-proxima aria-label="Próxima foto">›</button>
                             </div>
-                            <span class="produto-galeria-contador" id="produto-galeria-contador">1 / {{ imagens_brinquedo|length }}</span>
+                            <span class="produto-galeria-contador" id="produto-galeria-contador"{% if imagens_brinquedo|length < 2 %} hidden{% endif %}>1 / {{ imagens_brinquedo|length }}</span>
                         {% endif %}
                     {% elif brinquedo.imagem_brinquedo %}
                         <img
@@ -125,14 +125,14 @@
                         {% comment %}
                           OS ADESIVOS (LEIA-ME 72): o produto é um só, com o 3D de cada adesivo.
                           O controle "Adesivo: A · B" (site/arena/adesivos3d.js) aparece sobre o
-                          3D e troca o .glb ali mesmo, mantendo a câmera.
+                          3D e troca o .glb ali mesmo, mantendo a câmera; o seletor da galeria e
+                          o do 3D andam juntos (o evento `ls:adesivo`).
                         {% endcomment %}
                         {% if adesivos3d %}{{ adesivos3d|json_script:"adesivos3d-dados" }}{% endif %}
                         <div class="produto-visor3d" data-visor3d hidden
                              data-modelo="{{ objeto_3d.url }}"{% if adesivos3d %}
                              data-adesivos3d="adesivos3d-dados"
-                             data-adesivos3d-modulo="{% estatico 'site/arena/adesivos3d.js' %}"{% endif %}{% if adesivos_pagina %}
-                             data-adesivos-navegar{% endif %}
+                             data-adesivos3d-modulo="{% estatico 'site/arena/adesivos3d.js' %}"{% endif %}
                              data-three="{% static 'vendor/three/three.module.min.js' %}"
                              data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
                              data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
@@ -151,8 +151,8 @@
                     <div class="produto-cores3d" data-visor3d-cores role="group" aria-label="Cores do objeto 3D" hidden></div>
                 {% endif %}
 
-                {% if imagens_brinquedo|length > 1 %}
-                    <div class="produto-miniaturas" aria-label="Fotos de {{ brinquedo.nome_brinquedo }}">
+                {% if imagens_brinquedo|length > 1 or adesivos_pagina %}
+                    <div class="produto-miniaturas" aria-label="Fotos de {{ brinquedo.nome_brinquedo }}" data-galeria-miniaturas{% if imagens_brinquedo|length < 2 %} hidden{% endif %}>
                         {% for foto in imagens_brinquedo %}
                             <button
                                 class="produto-miniatura{% if forloop.first %} ativa{% endif %}"
@@ -166,6 +166,35 @@
                                 <img src="{{ foto.imagem|foto:240 }}" alt="" loading="lazy" width="78" height="78">
                             </button>
                         {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if adesivos_pagina %}
+                    {% comment %}
+                      OS ADESIVOS (LEIA-ME 72): o mesmo brinquedo com outra arte. Cada adesivo
+                      tem as fotos das posições e o 3D dele: escolher um troca, ali mesmo, as
+                      fotos da galeria (com a transição da foto da vitrine) e o 3D. O controle
+                      sobre o 3D faz o mesmo. Sem o script, o link abre a página no adesivo.
+                    {% endcomment %}
+                    {{ adesivos_troca|json_script:"adesivos-pagina-dados" }}
+                    <div class="produto-adesivos" data-adesivos-pagina role="group" aria-labelledby="produto-adesivos-titulo">
+                        <p class="produto-adesivos-titulo" id="produto-adesivos-titulo">
+                            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                            <span>Adesivo: <strong data-adesivo-nome>{{ adesivo.nome }}</strong></span>
+                            <small>{{ adesivos_pagina|length }} artes · as fotos e o 3D trocam juntos</small>
+                        </p>
+                        <div class="produto-adesivos-opcoes">
+                            {% for item in adesivos_pagina %}
+                                <a class="produto-adesivo{% if item.slug == adesivo.slug %} ativo{% endif %}"
+                                   href="?adesivo={{ item.slug }}"
+                                   data-adesivo-slug="{{ item.slug }}"
+                                   {% if item.slug == adesivo.slug %}aria-current="true"{% endif %}>
+                                    {% with capa=item.fotos.0 %}{% if capa %}<img src="{{ capa.imagem|foto:160 }}" alt="" width="64" height="64" loading="lazy">{% endif %}{% endwith %}
+                                    <span class="produto-adesivo-nome">{{ item.nome }}</span>
+                                    {% if item.padrao %}<small>padrão</small>{% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
                     </div>
                 {% endif %}
 
@@ -193,25 +222,6 @@
             <section class="produto-conteudo" id="produto-informacoes">
                 <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
                 <h1>{{ brinquedo.nome_brinquedo }}</h1>
-
-                {% if adesivos_pagina %}
-                    {% comment %}
-                      OS ADESIVOS (LEIA-ME 72): o mesmo brinquedo com outra arte. Cada adesivo
-                      tem as fotos das posições e o 3D dele: escolher um troca as fotos da
-                      galeria e o 3D juntos (o controle dentro do 3D faz o mesmo).
-                    {% endcomment %}
-                    <div class="produto-adesivos" role="group" aria-label="Escolha o adesivo">
-                        <span class="produto-adesivos-rotulo">Adesivo:</span>
-                        {% for item in adesivos_pagina %}
-                            <a class="produto-adesivo{% if item.slug == adesivo.slug %} ativo{% endif %}"
-                               href="?adesivo={{ item.slug }}#bread"
-                               {% if item.slug == adesivo.slug %}aria-current="true"{% endif %}>
-                                {% with capa=item.fotos.0 %}{% if capa %}<img src="{{ capa.imagem|foto:120 }}" alt="" width="34" height="34" loading="lazy">{% endif %}{% endwith %}
-                                <span>{{ item.nome }}</span>
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% endif %}
 
                 {% if brinquedo.avaliacao %}
                     <div class="produto-avaliacao">
@@ -377,14 +387,15 @@
 
                         <span class="produto-ajuda">
                             Precisa tirar uma dúvida antes da compra?
-                            <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer">Fale com um especialista</a>.
+                            <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer"{% if adesivos_pagina %} data-whatsapp-adesivo{% endif %}>Fale com um especialista</a>.
                         </span>
                     </form>
                 {% else %}
                     <div class="produto-form produto-acoes">
                         <a
                             class="produto-btn whatsapp"
-                            href="{{ whatsapp_url }}"
+                            href="{{ whatsapp_url }}"{% if adesivos_pagina %}
+                            data-whatsapp-adesivo{% endif %}
                             target="_blank"
                             rel="noopener noreferrer"
                         >
@@ -441,11 +452,11 @@
                     <img src="{{ brinquedo.imagem_brinquedo|foto:1600 }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async">
                 </figure>
             {% endfor %}
-            {% if imagens_brinquedo|length > 1 %}
-                <button type="button" class="ls-galeria-seta ls-galeria-seta--anterior" data-ls-galeria-anterior aria-label="Foto anterior">
+            {% if imagens_brinquedo|length > 1 or adesivos_pagina %}
+                <button type="button" class="ls-galeria-seta ls-galeria-seta--anterior" data-ls-galeria-anterior aria-label="Foto anterior"{% if imagens_brinquedo|length < 2 %} hidden{% endif %}>
                     <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="ls-galeria-seta ls-galeria-seta--proxima" data-ls-galeria-proxima aria-label="Próxima foto">
+                <button type="button" class="ls-galeria-seta ls-galeria-seta--proxima" data-ls-galeria-proxima aria-label="Próxima foto"{% if imagens_brinquedo|length < 2 %} hidden{% endif %}>
                     <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
                 </button>
             {% endif %}
@@ -453,8 +464,8 @@
 
         <div class="ls-galeria-rodape">
             <p class="ls-galeria-legenda" data-ls-galeria-legenda></p>
-            {% if imagens_brinquedo|length > 1 %}
-                <div class="ls-galeria-tira" aria-label="Escolher a foto">
+            {% if imagens_brinquedo|length > 1 or adesivos_pagina %}
+                <div class="ls-galeria-tira" aria-label="Escolher a foto"{% if imagens_brinquedo|length < 2 %} hidden{% endif %}>
                     {% for foto in imagens_brinquedo %}
                         <button type="button" data-ls-galeria-ir="{{ forloop.counter0 }}"
                                 aria-label="Foto {{ forloop.counter }} de {{ imagens_brinquedo|length }}"
@@ -522,7 +533,7 @@
     'use strict';
 
     const imagemPrincipal = document.getElementById('produto-imagem-principal');
-    const miniaturas = Array.from(document.querySelectorAll('[data-galeria-indice]'));
+    let miniaturas = Array.from(document.querySelectorAll('[data-galeria-indice]'));
     const contadorGaleria = document.getElementById('produto-galeria-contador');
     // quem abre a galeria em tela cheia (a foto e o botão de ampliar):
     // os dois abrem na foto que está na vitrine
@@ -609,9 +620,137 @@
         if (evento.detail && evento.detail.indice !== indiceGaleria) exibirFoto(evento.detail.indice);
     });
 
-    miniaturas.forEach((miniatura, indice) => {
-        miniatura.addEventListener('click', () => exibirFoto(indice));
+    // (pela caixa: as miniaturas mudam com o adesivo)
+    document.querySelector('[data-galeria-miniaturas]')?.addEventListener('click', (evento) => {
+        const miniatura = evento.target.closest('[data-galeria-indice]');
+        if (miniatura) exibirFoto(Number(miniatura.dataset.galeriaIndice));
     });
+    if (!document.querySelector('[data-galeria-miniaturas]')) {
+        miniaturas.forEach((miniatura, indice) => {
+            miniatura.addEventListener('click', () => exibirFoto(indice));
+        });
+    }
+
+    // OS ADESIVOS (LEIA-ME 72): escolher um adesivo troca, ali mesmo, as fotos da
+    // galeria (a primeira entra com a transição da vitrine), a galeria em tela
+    // cheia, o 3D (o visor ouve `ls:adesivo`), a observação do carrinho, o
+    // WhatsApp e o endereço (o que se compartilha). O controle sobre o 3D avisa
+    // a página pelo mesmo evento.
+    const seletorAdesivos = document.querySelector('[data-adesivos-pagina]');
+    {% if adesivos_pagina %}
+    const dadosAdesivos = (() => {
+        try { return JSON.parse(document.getElementById('adesivos-pagina-dados')?.textContent || '[]'); }
+        catch (erro) { return []; }
+    })();
+
+    function elemento(tag, propriedades) {
+        return Object.assign(document.createElement(tag), propriedades || {});
+    }
+
+    function montarGaleria(fotos) {
+        if (!fotos.length || !imagemPrincipal) return;
+        const total = fotos.length;
+        const lista = document.querySelector('[data-galeria-miniaturas]');
+        if (lista) {
+            lista.replaceChildren(...fotos.map((foto, indice) => {
+                const botao = elemento('button', { type: 'button', className: 'produto-miniatura' + (indice ? '' : ' ativa') });
+                botao.dataset.galeriaIndice = String(indice);
+                botao.dataset.galeriaSrc = foto.grande;
+                botao.dataset.galeriaAlt = foto.alt;
+                botao.setAttribute('aria-label', `Exibir foto ${indice + 1} de ${total}`);
+                botao.setAttribute('aria-current', indice ? 'false' : 'true');
+                botao.append(elemento('img', { src: foto.mini, alt: '', loading: 'lazy', width: 78, height: 78 }));
+                return botao;
+            }));
+            lista.hidden = total < 2;
+            lista.classList.remove('produto-miniaturas--nova');
+            void lista.offsetWidth;
+            lista.classList.add('produto-miniaturas--nova');
+            lista.scrollLeft = 0;
+            miniaturas = Array.from(lista.querySelectorAll('[data-galeria-indice]'));
+        }
+        document.querySelectorAll('[data-galeria-controles]').forEach((caixa) => { caixa.hidden = total < 2; });
+        if (contadorGaleria) {
+            contadorGaleria.hidden = total < 2;
+            contadorGaleria.textContent = `1 / ${total}`;
+        }
+        indiceGaleria = 0;
+        gatilhosAmpliar.forEach((gatilho) => { gatilho.dataset.lsGaleriaIndice = '0'; });
+        trocarFoto(fotos[0].grande, fotos[0].alt, 1);
+
+        // a galeria em tela cheia (ls-galeria.js lê os quadros na hora de abrir)
+        const janela = document.getElementById('galeria-produto');
+        const palco = janela && janela.querySelector('.ls-galeria-palco');
+        if (palco) {
+            palco.querySelectorAll('.ls-galeria-slide').forEach((quadro) => quadro.remove());
+            const antesDe = palco.querySelector('.ls-galeria-seta');
+            fotos.forEach((foto, indice) => {
+                const quadro = elemento('figure', { className: 'ls-galeria-slide', hidden: indice > 0 });
+                quadro.dataset.lsGaleriaFundo = '';
+                quadro.append(elemento('img', { src: foto.grande, alt: foto.alt, loading: 'lazy', decoding: 'async' }));
+                palco.insertBefore(quadro, antesDe);
+            });
+            janela.querySelectorAll('.ls-galeria-seta').forEach((seta) => { seta.hidden = total < 2; });
+            const contador = janela.querySelector('[data-ls-galeria-contador]');
+            if (contador) contador.textContent = `1 / ${total}`;
+            const tira = janela.querySelector('.ls-galeria-tira');
+            if (tira) {
+                tira.hidden = total < 2;
+                tira.replaceChildren(...fotos.map((foto, indice) => {
+                    const botao = elemento('button', { type: 'button' });
+                    botao.dataset.lsGaleriaIr = String(indice);
+                    botao.setAttribute('aria-label', `Foto ${indice + 1} de ${total}`);
+                    botao.setAttribute('aria-current', indice ? 'false' : 'true');
+                    botao.append(elemento('img', { src: foto.mini, alt: '', loading: 'lazy', decoding: 'async' }));
+                    return botao;
+                }));
+            }
+        }
+    }
+
+    function escolherAdesivo(slug, origem) {
+        const adesivo = dadosAdesivos.find((item) => item.slug === slug);
+        if (!adesivo || !seletorAdesivos) return false;
+        const atual = seletorAdesivos.querySelector('.produto-adesivo.ativo');
+        if (atual && atual.dataset.adesivoSlug === slug) return true;
+        seletorAdesivos.querySelectorAll('[data-adesivo-slug]').forEach((chip) => {
+            const ativo = chip.dataset.adesivoSlug === slug;
+            chip.classList.toggle('ativo', ativo);
+            if (ativo) chip.setAttribute('aria-current', 'true');
+            else chip.removeAttribute('aria-current');
+        });
+        const nome = seletorAdesivos.querySelector('[data-adesivo-nome]');
+        if (nome) nome.textContent = adesivo.nome;
+        montarGaleria(adesivo.fotos || []);
+        const visor = document.querySelector('[data-visor3d]');
+        if (visor && adesivo.url_3d) visor.dataset.modelo = adesivo.url_3d;
+        if (origem !== '3d') {
+            document.dispatchEvent(new CustomEvent('ls:adesivo', {
+                detail: { slug: adesivo.slug, nome: adesivo.nome, url: adesivo.url_3d, origem: 'pagina' },
+            }));
+        }
+        document.querySelectorAll('[data-adesivo-escolhido]').forEach((campo) => { campo.value = adesivo.nome; });
+        document.querySelectorAll('[data-whatsapp-adesivo]').forEach((link) => { link.href = adesivo.whatsapp; });
+        try {
+            const endereco = new URL(window.location.href);
+            endereco.searchParams.set('adesivo', adesivo.slug);
+            window.history.replaceState(window.history.state, '', endereco);
+        } catch (erro) { /* o endereço fica como estava */ }
+        return true;
+    }
+
+    if (seletorAdesivos && dadosAdesivos.length) {
+        seletorAdesivos.addEventListener('click', (evento) => {
+            const chip = evento.target.closest('[data-adesivo-slug]');
+            if (!chip || evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) return;
+            if (escolherAdesivo(chip.dataset.adesivoSlug, 'pagina')) evento.preventDefault();
+        });
+        document.addEventListener('ls:adesivo', (evento) => {
+            const detalhe = evento.detail || {};
+            if (detalhe.origem === '3d' && detalhe.slug) escolherAdesivo(detalhe.slug, '3d');
+        });
+    }
+    {% endif %}
     document.querySelector('[data-galeria-anterior]')?.addEventListener(
         'click',
         () => exibirFoto(indiceGaleria - 1, -1)
@@ -624,7 +763,7 @@
     // No celular, arrastar a foto de lado passa para a próxima (ou volta),
     // como nas lojas grandes; arrastar para cima ou para baixo rola a página.
     const caixaFoto = imagemPrincipal && imagemPrincipal.closest('.produto-imagem-box');
-    if (caixaFoto && miniaturas.length > 1) {
+    if (caixaFoto && (miniaturas.length > 1 || seletorAdesivos)) {
         let inicio = null;
         // o dedo que passou de foto não pode "clicar" na foto: o clique que o
         // navegador dispara logo depois abriria a galeria em tela cheia
@@ -638,7 +777,7 @@
             const dx = evento.clientX - inicio.x;
             const dy = evento.clientY - inicio.y;
             inicio = null;
-            if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+            if (miniaturas.length > 1 && Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3) {
                 exibirFoto(indiceGaleria + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
                 engolirClique = true;
                 setTimeout(() => { engolirClique = false; }, 0);
