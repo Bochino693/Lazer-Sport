@@ -193,8 +193,8 @@ def _fontes_cupom(objeto_id):
 
     pedidos = Pedido.objects.filter(status__in=PEDIDO_PAGO).exclude(cupom_codigo__isnull=True).exclude(cupom_codigo="")
     if objeto_id is not None:
-        codigo = Cupom.objects.filter(pk=objeto_id).values_list("codigo", flat=True).first() or "\u0000"
-        pedidos = pedidos.filter(cupom_codigo__iexact=codigo)
+        codigo = Cupom.objects.filter(pk=objeto_id).values_list("codigo", flat=True).first()
+        pedidos = pedidos.filter(cupom_codigo__iexact=codigo) if codigo else pedidos.none()
     fontes = [
         Fonte(
             "pedidos_com_cupom", pedidos, "criacao",
@@ -378,12 +378,60 @@ GASTO = Metrica("gasto", "Gasto na loja", "bi-currency-dollar", "dinheiro", ajud
 FAVORITOS_CONTAS = Metrica("favoritos", "Curtidas e desejos", "bi-heart", ajuda="Curtidas e entradas na lista de desejos feitas com a conta logada.")
 DIAS_DE_ACESSO = Metrica("acessos", "Dias com acesso", "bi-calendar-check", ajuda="Dias em que a conta usou o site, o aplicativo ou o painel.", so_objeto=True)
 PONTOS = Metrica("pontos", "Pontos ganhos", "bi-stars", ajuda="Pontos do programa de fidelidade.", so_objeto=True)
+JOGADAS_CONTAS = Metrica("jogadas", "Jogadas", "bi-controller", ajuda="Cada Jogar no portal de jogos feito com a conta logada (core/jogadas.py).")
+
+
+# ----------------------------------------------------------------------
+# jogo (portal Lazer & Sport Games): cada Jogar com data, JogadaRegistrada
+# ----------------------------------------------------------------------
+
+JOGADAS = Metrica("jogadas", "Jogadas", "bi-controller", ajuda="Cada Jogar (a mesma pessoa no mesmo jogo em até 3 min conta uma vez).")
+JOGADORES = Metrica("com_conta", "Pessoas com conta", "bi-person-check", ajuda="Contas distintas que jogaram no período.")
+VISITANTES = Metrica("visitantes", "Visitantes", "bi-incognito", ajuda="Visitantes sem conta distintos (um número da sessão, que não diz quem é).")
+JOGADAS_EQUIPE = Metrica("equipe", "Jogadas da equipe", "bi-shield-lock", subir_e_bom=None, ajuda="Jogadas de contas da equipe (staff), que também contam nas jogadas.")
+
+
+def _fontes_jogo(objeto_id):
+    from .models import JogadaRegistrada, JogoCadastrado
+
+    base = JogadaRegistrada.objects.all()
+    if objeto_id is not None:
+        slug = JogoCadastrado.objects.filter(pk=objeto_id).values_list("slug", flat=True).first()
+        base = base.filter(jogo=slug) if slug else base.none()
+    return [
+        Fonte(
+            "jogadas", base, "quando",
+            {"n": Count("id"), "equipe": Count("id", filter=Q(equipe=True))},
+            {(None, "n"): "jogadas", (None, "equipe"): "equipe"},
+            campo_objeto="jogo",
+        ),
+        Fonte(
+            "com_conta", base.filter(usuario__isnull=False), "quando",
+            {"n": Count("usuario", distinct=True)}, {(None, "n"): "com_conta"}, aditiva=False,
+        ),
+        Fonte(
+            "visitantes", base.filter(usuario__isnull=True).exclude(visitante=""), "quando",
+            {"n": Count("visitante", distinct=True)}, {(None, "n"): "visitantes"}, aditiva=False,
+        ),
+    ]
+
+
+def _nomes_jogo(slugs):
+    """slug -> nome e, para os cadastrados pelo painel, o id (a ficha abre deles)."""
+    from . import arena
+    from .models import JogoCadastrado
+
+    textos = [s for s in slugs if isinstance(s, str)]
+    nomes = {j["slug"]: {"id": None, "nome": j["titulo"]} for j in arena.JOGOS if j["slug"] in textos}
+    for pk, slug, nome in JogoCadastrado.objects.filter(slug__in=textos).values_list("pk", "slug", "nome"):
+        nomes[slug] = {"id": pk, "nome": nome}
+    return nomes
 
 
 def _fontes_usuario(objeto_id):
     from django.contrib.auth.models import User
 
-    from .models import AcessoDiario, Favorito, Pedido, PontoGanho
+    from .models import AcessoDiario, Favorito, JogadaRegistrada, Pedido, PontoGanho
 
     pedidos = Pedido.objects.filter(status__in=PEDIDO_PAGO, cliente__user__isnull=False)
     favoritos = Favorito.objects.filter(usuario__isnull=False)
@@ -402,6 +450,7 @@ def _fontes_usuario(objeto_id):
                 "pontos", PontoGanho.objects.filter(usuario_id=objeto_id, pontos__gt=0), "criacao",
                 {"n": Sum("pontos")}, {(None, "n"): "pontos"},
             ),
+            Fonte("jogadas", JogadaRegistrada.objects.filter(usuario_id=objeto_id), "quando", {"n": Count("id")}, {(None, "n"): "jogadas"}),
         ]
     return [
         Fonte("cadastros", User.objects.all(), "date_joined", {"n": Count("id")}, {(None, "n"): "cadastros"}),
@@ -414,6 +463,10 @@ def _fontes_usuario(objeto_id):
             {(None, "n"): "pedidos", (None, "gasto"): "gasto"}, campo_objeto="cliente__user_id",
         ),
         Fonte("favoritos", favoritos, "criacao", {"n": Count("id")}, {(None, "n"): "favoritos"}, campo_objeto="usuario_id"),
+        Fonte(
+            "jogadas", JogadaRegistrada.objects.filter(usuario__isnull=False), "quando", {"n": Count("id")},
+            {(None, "n"): "jogadas"}, campo_objeto="usuario_id",
+        ),
     ]
 
 
@@ -471,7 +524,7 @@ def _tipos():
 
     from sistema_interno.models import Cliente
 
-    from .models import Brinquedos, Combos, Cupom, Eventos, PecasReposicao, Pedido, Projetos, Promocoes
+    from .models import Brinquedos, Combos, Cupom, Eventos, JogoCadastrado, PecasReposicao, Pedido, Projetos, Promocoes
 
     CRIACAO, FINANCEIRO, GESTAO, VENDAS = _funcoes()
     produto = [VISITAS, CARRINHO, CURTIDAS, DESEJOS, ORCAMENTOS, APROVADOS, VALOR_APROVADO, PEDIDOS, RECEITA]
@@ -523,8 +576,14 @@ def _tipos():
             [PEDIDOS_CRIADOS, PEDIDOS_PAGOS, RECEITA_LOJA, TICKET, CANCELADOS, ITENS_VENDIDOS], _fontes_pedido, Pedido,
             "receita", _nomes_item_pedido, tem_objeto=False,
         ),
+        "jogo": Tipo(
+            "jogo", "Jogos", "jogo", (), [JOGADAS, JOGADORES, VISITANTES, JOGADAS_EQUIPE], _fontes_jogo, JogoCadastrado,
+            "jogadas", _nomes_jogo, somente_super=True,
+            avisos=["As jogadas antes da coleta com data (LEIA-ME 77) não entram: o período começa a contar a partir dela."],
+        ),
         "usuario": Tipo(
-            "usuario", "Usuários", "usuário", (), [CADASTROS, ATIVOS, DIAS_DE_ACESSO, PEDIDOS_CONTAS, GASTO, FAVORITOS_CONTAS, PONTOS],
+            "usuario", "Usuários", "usuário", (),
+            [CADASTROS, ATIVOS, DIAS_DE_ACESSO, PEDIDOS_CONTAS, GASTO, FAVORITOS_CONTAS, JOGADAS_CONTAS, PONTOS],
             _fontes_usuario, User, "cadastros", _nomes_usuario, somente_super=True, destaques=_destaques_usuario,
             avisos=["“Ativas” conta quem deu sinal de vida desde a seção 76 do LEIA-ME; antes disso só existia o último login."],
         ),

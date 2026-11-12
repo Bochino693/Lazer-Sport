@@ -102,3 +102,8 @@
   </div>
 </section>
 {% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% estatico 'site/paginas/gestao-analises.js' %}" defer></script>
+{% endblock %}

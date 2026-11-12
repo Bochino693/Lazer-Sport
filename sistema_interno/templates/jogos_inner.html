@@ -33,6 +33,8 @@
 </section>
 {% else %}
 
+{% include "gestao/includes/analises.html" with tipo="jogo" rotulo="os jogos" %}
+
 <section class="ls-metrics mb-3">
   <article class="ls-metric-card blue">
     <div class="ls-metric-head"><span class="ls-metric-label">Oficiais da casa</span><span class="ls-metric-icon"><i class="bi bi-stars"></i></span></div>
@@ -80,7 +82,7 @@
 <p class="ls-games-sub">Ligue e desligue no interruptor de cada jogo. Os botões <strong>Android (APK)</strong> e <strong>Windows (.exe)</strong> geram o aplicativo na hora e baixam; na setinha ao lado, a opção de guardar no site.</p>
 <div class="ls-games-grade ls-games-grade--painel">
   {% for jogo in jogos %}
-    <article class="ls-game ls-game--painel ls-game--cadastrado{% if not jogo.ativo %} is-desligado{% endif %}" style="--cor: {{ jogo.cor }}" data-jogo-card="{{ jogo.id }}" aria-labelledby="jogoNome{{ jogo.id }}">
+    <article class="ls-game ls-game--painel ls-game--cadastrado{% if not jogo.ativo %} is-desligado{% endif %}" style="--cor: {{ jogo.cor }}" data-jogo-card="{{ jogo.id }}" data-detalhe-tipo="jogo" data-detalhe-id="{{ jogo.id }}" aria-labelledby="jogoNome{{ jogo.id }}">
       <div class="ls-game-arte">
         {% if jogo.poster %}<img class="ls-game-imagem" src="{{ jogo.poster_url }}" alt="" loading="lazy">{% elif jogo.capa_url %}<img class="ls-game-fundo" src="{{ jogo.capa_url }}" alt="" loading="lazy" aria-hidden="true"><img class="ls-game-capa" src="{{ jogo.capa_url }}" alt="" loading="lazy">{% else %}<i class="bi bi-image ls-game-sem-arte" aria-hidden="true"></i>{% endif %}
         <span class="ls-game-estado is-{{ jogo.estado_ligado }} so-ligado">{% if jogo.estado_ligado == "no-ar" %}<span class="ls-game-ponto" aria-hidden="true"></span>{% elif jogo.estado_ligado == "particular" %}<i class="bi bi-lock-fill" aria-hidden="true"></i>{% elif jogo.estado_ligado == "so-pc" %}<i class="bi bi-pc-display" aria-hidden="true"></i>{% else %}<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>{% endif %}{{ jogo.estado_ligado_rotulo }}</span>
@@ -107,7 +109,7 @@
         {% if jogo.aviso_licenca %}<details class="ls-game-dica ls-game-dica--licenca"><summary><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Licença: só para uso particular</summary><p>{{ jogo.aviso_licenca }}</p></details>{% endif %}
       </div>
 
-      <div class="ls-game-botoes">
+      <div class="ls-game-botoes" data-detalhe-acoes>
         {% if jogo.aguardando_arquivos %}
           <button class="ls-game-btn ls-game-btn--primario" type="button" data-editar="{{ jogo.id }}" data-ir-arquivos="1"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i><span>Enviar os arquivos</span></button>
           <button class="ls-game-btn" type="button" data-editar="{{ jogo.id }}"><i class="bi bi-pencil" aria-hidden="true"></i><span>Editar</span></button>
@@ -354,6 +356,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% estatico 'site/paginas/gestao-analises.js' %}" defer></script>
 {% if not tabela_ausente %}
 <script src="{% estatico 'interno/emulador-envio.js' %}" data-emulador-envio="1"></script>
 <script>

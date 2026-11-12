@@ -25,7 +25,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
@@ -326,7 +326,7 @@ def detalhe_brinquedo(pk, usuario, pagina=1, so_atividade=False):
         ], texto=b.descricao),
         secao("Categorias e tags", "bi-tags", etiquetas=[c.nome_categoria for c in b.categorias_brinquedos.all()] + [f"#{t.nome_tags}" for t in b.tags.all()]),
         secao("Fotos", "bi-images", fotos=fotos[:12]),
-        secao("Adesivos", "bi-palette", etiquetas=[v.nome for v in b.variantes_adesivo.all() if v.ativo]),
+        secao("Adesivos", "bi-stickies", lista=_adesivos(b)),
         secao("Promoções com ele", "bi-tags-fill", lista=[
             {
                 "titulo": p.descricao,
@@ -358,6 +358,66 @@ def detalhe_brinquedo(pk, usuario, pagina=1, so_atividade=False):
         "links": [{"rotulo": "Abrir no site", "url": _link("brinquedo_detalhe", pk), "externo": True}],
         "atividade": _atividade_brinquedo(pk, comercial, pagina),
     }
+
+
+def _adesivos(brinquedo):
+    """Cada arte do brinquedo: as fotos e o 3D são dela (VarianteAdesivo, LEIA-ME 72)."""
+    fotos_por_variante = {}
+    for foto in brinquedo.imagens_brinquedo.all():
+        variante_id = getattr(foto, "variante_id", None)
+        if variante_id:
+            fotos_por_variante[variante_id] = fotos_por_variante.get(variante_id, 0) + 1
+    linhas = []
+    for variante in sorted(brinquedo.variantes_adesivo.all(), key=lambda v: (v.ordem, v.pk)):
+        if not variante.ativo:
+            continue
+        partes = [f"{fotos_por_variante.get(variante.pk, 0)} foto(s)"]
+        if getattr(variante, "arquivo_3d", None) or getattr(variante, "arquivo_estatico_3d", ""):
+            partes.append("3D próprio")
+        if getattr(variante, "padrao", False):
+            partes.append("abre a página")
+        linhas.append({"titulo": variante.nome, "texto": " · ".join(partes)})
+    return linhas
+
+
+def _nomes_dos_jogos(slugs):
+    """slug -> nome do jogo (os da casa e os cadastrados pelo painel), numa consulta."""
+    from . import arena
+    from .models import JogoCadastrado
+
+    nomes = {j["slug"]: j["titulo"] for j in arena.JOGOS if j["slug"] in slugs}
+    if slugs:
+        nomes.update(dict(JogoCadastrado.objects.filter(slug__in=list(slugs)).values_list("slug", "nome")))
+    return nomes
+
+
+ORIGEM_DA_JOGADA = {"pagina": "pela página do jogo", "emulador": "no emulador", "app": "pelo app do portal", "casa": "jogo da casa", "html": "jogo HTML5"}
+
+
+def _atividade_jogadas(usuario_id=None, slug=None):
+    """As jogadas com data (core/jogadas.py), da conta ou do jogo."""
+    from .models import JogadaRegistrada
+
+    def fonte(limite):
+        consulta = JogadaRegistrada.objects.select_related("usuario")
+        if usuario_id is not None:
+            consulta = consulta.filter(usuario_id=usuario_id)
+        if slug is not None:
+            consulta = consulta.filter(jogo=slug)
+        linhas = list(consulta.order_by("-quando", "-id")[:limite])
+        nomes = _nomes_dos_jogos({j.jogo for j in linhas}) if usuario_id is not None else {}
+        eventos = []
+        for jogada in linhas:
+            origem = ORIGEM_DA_JOGADA.get(jogada.origem, "")
+            if usuario_id is not None:
+                titulo = f"Jogou {nomes.get(jogada.jogo, jogada.jogo)}"
+            elif jogada.usuario_id:
+                titulo = f"{jogada.usuario.username} jogou" + (" (equipe)" if jogada.equipe else "")
+            else:
+                titulo = "Visitante sem conta jogou"
+            eventos.append(evento(jogada.quando, titulo, origem, "bi-controller", "bom" if jogada.usuario_id else "neutro"))
+        return eventos
+    return fonte
 
 
 def _atividade_brinquedo(pk, comercial, pagina):
@@ -871,6 +931,7 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
         CarteiraPontos,
         Favorito,
         ItemCarrinho,
+        JogadaRegistrada,
         Pedido,
         PontoGanho,
         RegistroCadastro,
@@ -910,7 +971,10 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
         return eventos
 
     def atividade(p):
-        return paginar_atividade([fonte_pedidos, _atividade_favoritos(None, usuario_id=pk), fonte_acessos, fonte_pontos, fonte_conta], p)
+        return paginar_atividade([
+            fonte_pedidos, _atividade_favoritos(None, usuario_id=pk), _atividade_jogadas(usuario_id=pk),
+            fonte_acessos, fonte_pontos, fonte_conta,
+        ], p)
 
     if so_atividade:
         return atividade(pagina)
@@ -934,6 +998,10 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
     carrinho = list(ItemCarrinho.objects.filter(carrinho__cliente__user_id=pk).prefetch_related("item")[:10])
     carteira = CarteiraPontos.objects.filter(usuario_id=pk).first()
     acessos_30 = AcessoDiario.objects.filter(usuario_id=pk, dia__gte=timezone.localdate() - dt.timedelta(days=29)).count()
+    jogadas = JogadaRegistrada.objects.filter(usuario_id=pk).aggregate(
+        total=Count("id"), jogos=Count("jogo", distinct=True),
+        mes=Count("id", filter=Q(quando__gte=timezone.now() - dt.timedelta(days=30))),
+    )
     funcoes = sorted(
         f.titulo for f in FUNCOES if f.grupo in nomes_das_funcoes(conta)
     ) if (conta.is_staff or conta.is_superuser or conta.groups.exists()) else []
@@ -952,6 +1020,7 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
         campo("Itens no carrinho agora", _numero(sum(i.quantidade for i in carrinho)), "bi-cart"),
         campo("Pontos (saldo)", _numero(carteira.saldo) if carteira else "0", "bi-stars"),
         campo("Dias com acesso (30 dias)", _numero(acessos_30), "bi-calendar-check"),
+        campo("Jogadas no portal", f"{_numero(jogadas['total'])} em {_numero(jogadas['jogos'])} jogo(s) · {_numero(jogadas['mes'])} em 30 dias", "bi-controller"),
     ]
     if perfil_texto != "Cliente":
         numeros.append(campo("Orçamentos como responsável", _numero(Orcamento.objects.filter(responsavel_id=pk).count()), "bi-file-earmark-text"))
@@ -995,6 +1064,68 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
     }
 
 
+def detalhe_jogo(pk, usuario, pagina=1, so_atividade=False):
+    from .models import JogadaRegistrada, JogoCadastrado, PartidasDoJogo
+
+    try:
+        jogo = JogoCadastrado.objects.get(pk=pk)
+    except JogoCadastrado.DoesNotExist:
+        raise NaoEncontrado
+
+    def atividade(p):
+        return paginar_atividade([_atividade_jogadas(slug=jogo.slug)], p)
+
+    if so_atividade:
+        return atividade(pagina)
+    agora = timezone.now()
+    numeros = JogadaRegistrada.objects.filter(jogo=jogo.slug).aggregate(
+        total=Count("id"),
+        com_conta=Count("usuario", distinct=True),
+        visitantes=Count("visitante", distinct=True, filter=Q(usuario__isnull=True) & ~Q(visitante="")),
+        equipe=Count("id", filter=Q(equipe=True)),
+        mes=Count("id", filter=Q(quando__gte=agora - dt.timedelta(days=30))),
+        ultima=Max("quando"),
+    )
+    partidas = PartidasDoJogo.objects.filter(slug=jogo.slug).values_list("partidas", flat=True).first() or 0
+    plataforma = " · ".join(p for p in (
+        getattr(jogo, "get_sistema_display", lambda: "")() if getattr(jogo, "sistema", "") else "",
+        "HTML5" if (jogo.endereco or jogo.arquivo_html) else "",
+        "Android (APK)" if jogo.apk else "",
+        "Windows" if (jogo.versao_pc or jogo.versao_pc_link) else "",
+    ) if p)
+    return {
+        "titulo": jogo.nome,
+        "subtitulo": f"/jogos/{jogo.slug}/",
+        "imagem": _url_imagem(jogo.capa) or _url_imagem(jogo.poster),
+        "icone": "bi-controller",
+        "selos": [
+            selo("No portal", "bom", "bi-broadcast") if jogo.ativo else selo("Desligado", "ruim", "bi-slash-circle"),
+            *([selo("Particular", "neutro", "bi-lock")] if getattr(jogo, "particular", False) else []),
+            *([selo("Destaque", "neutro", "bi-star")] if getattr(jogo, "destaque", False) else []),
+        ],
+        "secoes": [
+            secao("Ficha", "bi-card-text", campos=[
+                campo("Chamada", jogo.chamada, "bi-megaphone"),
+                campo("Roda em", plataforma or "—", "bi-joystick"),
+                campo("Categoria", jogo.get_categoria_display() if jogo.categoria else "—", "bi-tags"),
+                campo("Feito pela Lazer & Sport", "Sim" if getattr(jogo, "feito_pela_lazer", False) else "Não", "bi-house-heart"),
+                campo("Cadastrado em", quando(jogo.criacao), "bi-calendar-plus"),
+            ], texto=jogo.descricao),
+            secao("Números de sempre", "bi-123", campos=[
+                campo("Jogadas com data", _numero(numeros["total"]), "bi-controller"),
+                campo("Nos últimos 30 dias", _numero(numeros["mes"]), "bi-calendar3"),
+                campo("Pessoas com conta", _numero(numeros["com_conta"]), "bi-person-check"),
+                campo("Visitantes sem conta", _numero(numeros["visitantes"]), "bi-incognito"),
+                campo("Jogadas da equipe", _numero(numeros["equipe"]), "bi-shield-lock"),
+                campo("Última jogada", quando(numeros["ultima"]) if numeros["ultima"] else "—", "bi-clock-history"),
+                campo("Partidas no “Mais jogados”", _numero(partidas), "bi-trophy"),
+            ]),
+        ],
+        "links": [{"rotulo": "Abrir no portal", "url": f"/jogos/{jogo.slug}/", "externo": True}],
+        "atividade": atividade(pagina),
+    }
+
+
 def _comercial(usuario):
     from sistema_interno.permissoes import AMBULANTE, FINANCEIRO, GESTAO, VENDAS, tem_funcao
 
@@ -1012,6 +1143,7 @@ MONTADORES = {
     "cliente": detalhe_cliente,
     "pedido": detalhe_pedido,
     "usuario": detalhe_usuario,
+    "jogo": detalhe_jogo,
 }
 
 

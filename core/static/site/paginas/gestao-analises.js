@@ -902,7 +902,7 @@
     analise: null,
 
     temItem: function (tipo) {
-      return ["brinquedo", "peca", "promocao", "combo", "cupom", "evento", "projeto", "cliente", "pedido", "usuario"].indexOf(tipo) !== -1;
+      return ["brinquedo", "peca", "promocao", "combo", "cupom", "evento", "projeto", "cliente", "pedido", "usuario", "jogo"].indexOf(tipo) !== -1;
     },
 
     preparar: function () {
@@ -1131,9 +1131,15 @@
             a.target = "_blank";
             a.rel = "noopener";
             var img = el("img");
-            img.src = url;
             img.alt = "";
             img.loading = "lazy";
+            /* foto que não chega (armazenamento fora do ar) vira um ícone, não um quadrado quebrado */
+            img.addEventListener("error", function () {
+              a.textContent = "";
+              a.classList.add("is-sem-foto");
+              a.appendChild(icone("bi-image"));
+            });
+            img.src = url;
             a.appendChild(img);
             fotos.appendChild(a);
           });

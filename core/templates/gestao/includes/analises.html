@@ -13,6 +13,11 @@
   Os períodos são rádios dentro de label, e não <select> nem <button>: o
   gestao_integrada.css pinta todo botão da tela, e o celular abre o select
   como uma roleta que esconde as opções.
+
+  O SCRIPT NÃO MORA AQUI: script no conteúdo não roda de novo quando a
+  navegação suave troca a tela, e as telas pedem o JS no bloco de scripts.
+  Ele entra pelo `scripts` de gestao/base_adm.html (todas as telas de
+  gestão) e, fora dela, pelo bloco de scripts da tela (Pedidos, Jogos).
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/paginas/gestao-analises.css' %}">
 <section class="lsa" data-lsa-painel data-lsa-tipo="{{ tipo }}" data-lsa-url="{% url 'analises_json' tipo %}"
@@ -98,4 +103,3 @@
     <div class="lsa-ficha-parte" data-lsa-parte="atividade" hidden></div>
   </div>
 </dialog>
-<script src="{% estatico 'site/paginas/gestao-analises.js' %}" defer></script>

@@ -42,6 +42,8 @@ from .models import (
     Favorito,
     InteracaoPorHora,
     ItemPedido,
+    JogadaRegistrada,
+    JogoCadastrado,
     PecasReposicao,
     Pedido,
     PresencaUsuario,
@@ -279,6 +281,52 @@ class VariacaoTests(CatalogoDeTeste, TestCase):
         self.assertIsNone(ativos["serie_anterior"])
 
 
+class JogadasTests(CatalogoDeTeste, TestCase):
+    """O portal de jogos (JogadaRegistrada, LEIA-ME 77): jogadas, pessoas e o ranking por jogo."""
+
+    def setUp(self):
+        self.preparar_catalogo()
+        self.povoar(1)
+        self.cadastrado = JogoCadastrado.objects.get()
+        self.ana = User.objects.create_user("ana")
+        self.bia = User.objects.create_user("bia", is_staff=True)
+
+    def jogada(self, jogo, quando, usuario=None, visitante="", equipe=False, origem="pagina"):
+        JogadaRegistrada.objects.create(jogo=jogo, usuario=usuario, visitante=visitante, equipe=equipe, origem=origem, quando=quando)
+
+    def test_jogadas_pessoas_e_ranking(self):
+        ontem = local(2026, 11, 10, 20)
+        self.jogada("strike-kids", ontem, self.ana)
+        self.jogada("strike-kids", ontem, self.ana)
+        self.jogada("strike-kids", ontem, self.bia, equipe=True)
+        self.jogada(self.cadastrado.slug, ontem, visitante="v1")
+        self.jogada(self.cadastrado.slug, ontem, visitante="v2")
+        self.jogada("strike-kids", local(2026, 11, 1, 20), self.ana)  # semana anterior
+        dados = analises.calcular(tipo_por_codigo("jogo"), analises.janela("semana", agora=AGORA), usar_cache=False)
+        m = {x["codigo"]: x for x in dados["metricas"]}
+        self.assertEqual((m["jogadas"]["total"], m["jogadas"]["anterior"]), (5, 1))
+        self.assertEqual(m["com_conta"]["total"], 2)
+        self.assertEqual(m["visitantes"]["total"], 2)
+        self.assertEqual(m["equipe"]["total"], 1)
+        ranking = [(r["nome"], r["valor"], r["id"]) for r in m["jogadas"]["ranking"]]
+        self.assertEqual(ranking, [("Strike Kids", 3, None), (self.cadastrado.nome, 2, self.cadastrado.pk)])
+        so_um = analises.calcular(tipo_por_codigo("jogo"), analises.janela("semana", agora=AGORA), objeto_id=self.cadastrado.pk, usar_cache=False)
+        self.assertEqual({x["codigo"]: x["total"] for x in so_um["metricas"]}["jogadas"], 2)
+
+    def test_jogadas_da_conta_no_grafico_e_na_atividade(self):
+        User.objects.filter(pk=self.ana.pk).update(date_joined=timezone.now() - dt.timedelta(days=2))
+        self.jogada("strike-kids", timezone.now() - dt.timedelta(hours=1), self.ana, origem="casa")
+        conta = analises.calcular(tipo_por_codigo("usuario"), analises.janela("semana"), objeto_id=self.ana.pk, usar_cache=False)
+        self.assertEqual({x["codigo"]: x["total"] for x in conta["metricas"]}["jogadas"], 1)
+        chefe = User.objects.create_superuser("chefe", "c@exemplo.com", "x")
+        self.client.force_login(chefe)
+        ficha = self.client.get(f"/detalhes/usuario/{self.ana.pk}/", **INTERNO).json()
+        primeira = ficha["atividade"]["itens"][0]
+        self.assertEqual((primeira["titulo"], primeira["texto"]), ("Jogou Strike Kids", "jogo da casa"))
+        jogo = self.client.get(f"/detalhes/jogo/{self.cadastrado.pk}/", **INTERNO).json()
+        self.assertEqual(jogo["titulo"], self.cadastrado.nome)
+
+
 class EquipeMixin:
     def conta(self, nome, *funcoes, super_=False):
         if super_:
@@ -315,6 +363,7 @@ class EnderecoJsonTests(EquipeMixin, CatalogoDeTeste, TestCase):
             (vendas, "brinquedo", 403), (vendas, "cliente", 200), (vendas, "pedido", 403),
             (financeiro, "pedido", 200), (financeiro, "cupom", 403),
             (chefe, "usuario", 200), (chefe, "pedido", 200), (chefe, "cliente", 200),
+            (criacao, "jogo", 403), (chefe, "jogo", 200),
         ]
         for usuario, tipo, esperado in casos:
             with self.subTest(usuario=usuario.username, tipo=tipo):
@@ -334,6 +383,7 @@ class EnderecoJsonTests(EquipeMixin, CatalogoDeTeste, TestCase):
         objetos = {
             "brinquedo": self.brinquedo.pk, "combo": Combos.objects.first().pk, "promocao": Promocoes.objects.first().pk,
             "peca": PecasReposicao.objects.first().pk, "evento": Eventos.objects.first().pk, "projeto": Projetos.objects.first().pk,
+            "jogo": JogoCadastrado.objects.first().pk,
         }
         for codigo in tipos():
             for periodo in ("hoje", "semana", "mes", "trimestre", "semestre", "ano"):
@@ -402,6 +452,7 @@ class FichaTests(EquipeMixin, CatalogoDeTeste, TestCase):
             "cupom": Cupom.objects.first().pk, "evento": Eventos.objects.first().pk,
             "projeto": Projetos.objects.first().pk, "cliente": self.cliente.pk,
             "pedido": Pedido.objects.first().pk, "usuario": self.chefe.pk,
+            "jogo": JogoCadastrado.objects.first().pk,
         }
 
     def test_cada_tipo_tem_ficha_com_resumo_e_atividade(self):
@@ -632,6 +683,7 @@ class TelasTests(EquipeMixin, CatalogoDeTeste, TestCase):
         "/site/clientes-mapa/": "cliente",
         "/site/contas-clientes/": "usuario",
         "/pedidos/inner/?filtro=todos": "pedido",
+        "/site/jogos/": "jogo",
     }
 
     def setUp(self):

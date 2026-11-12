@@ -9,6 +9,7 @@ comando se recusa a rodar com DEBUG desligado (a não ser com --mesmo-assim).
 NADA DO QUE JÁ EXISTE É ALTERADO. Tudo o que nasce aqui leva uma marca que o
 --apagar procura, e é só isso que ele apaga:
   * visitas e idas ao carrinho: `InteracaoPorHora.origem = "exemplo"`;
+  * jogadas do portal de jogos: `JogadaRegistrada.origem = "exemplo"`;
   * curtidas: dispositivo começando com "exemplo-analises-";
   * contas: usuário começando com "exemplo_analises_" (leva junto perfil,
     presença, acessos, pedidos e pontos delas);
@@ -69,6 +70,7 @@ class Command(BaseCommand):
             Eventos,
             Favorito,
             InteracaoPorHora,
+            JogadaRegistrada,
             MontagemTresD,
             Pedido,
             PedidoProjeto3D,
@@ -78,6 +80,8 @@ class Command(BaseCommand):
 
         apagados = {
             "interações": InteracaoPorHora.objects.filter(origem="exemplo").delete()[0],
+            # antes das contas: a jogada fica com a conta vazia quando a conta some
+            "jogadas": JogadaRegistrada.objects.filter(origem="exemplo").delete()[0],
             "curtidas": Favorito.objects.filter(dispositivo__startswith=PREFIXO_APARELHO).delete()[0],
             "pedidos": Pedido.objects.filter(observacoes__startswith=MARCA).delete()[0],
             "orçamentos": Orcamento.objects.filter(observacoes__startswith=MARCA).delete()[0],
@@ -411,8 +415,26 @@ class Command(BaseCommand):
             )
             PedidoProjeto3D.objects.filter(pk=pedido3d.pk).update(criacao=momento(int(DIAS * sorte.random() ** 1.3)))
 
+        # ---- jogadas no portal de jogos (JogadaRegistrada, LEIA-ME 77) ----
+        from core import arena
+        from core.models import JogadaRegistrada, JogoCadastrado
+
+        slugs = [j["slug"] for j in arena.JOGOS] + list(JogoCadastrado.objects.values_list("slug", flat=True))
+        populares = [sorte.uniform(0.3, 3.0) for _ in slugs]
+        jogadas = []
+        for n in range(900):
+            dias_atras = int(DIAS * (sorte.random() ** 1.8))
+            quando = momento(dias_atras)
+            ja_existiam = [c for c in contas if c.date_joined <= quando]
+            conta = sorte.choice(ja_existiam) if (ja_existiam and sorte.random() < 0.45) else None
+            jogadas.append(JogadaRegistrada(
+                jogo=sorte.choices(slugs, weights=populares)[0], usuario=conta, equipe=False,
+                visitante="" if conta else f"ex{sorte.randint(1, 260):05d}", origem="exemplo", quando=quando,
+            ))
+        JogadaRegistrada.objects.bulk_create(jogadas, batch_size=1000)
+
         self.stdout.write(self.style.SUCCESS(
-            f"Semeado: {len(interacoes)} horas de interação, {len(contas)} contas, {len(acessos)} acessos, "
+            f"Semeado: {len(jogadas)} jogadas, {len(interacoes)} horas de interação, {len(contas)} contas, {len(acessos)} acessos, "
             f"{len(favoritos)} curtidas, {len(pedidos)} pedidos, {len(orcamentos)} orçamentos, "
             f"{len(clientes)} clientes, 3 cupons, 3 eventos, 2 projetos. Apague com --apagar."
         ))
