@@ -487,3 +487,68 @@ class UmTituloDePrimeiroNivelPorPaginaTests(TestCase):
                 len(re.findall(r"<h1[\s>]", corpo)), 1,
                 f"{rota} tem mais de um título de primeiro nível",
             )
+
+
+class CarrinhoComFotoTests(TestCase):
+    """O carrinho mostra a foto de cada produto -- sem consulta por linha.
+
+    A linha do carrinho aponta para o produto por um GenericForeignKey:
+    abrir um por um era uma consulta por linha, e os totais da tela
+    (produtos, total, a barra de seguir) reliam tudo a cada leitura. A
+    foto entrou junto com o desenho novo (LEIA-ME-V10, seção 86), e a
+    conta de consultas não pode crescer com o tamanho do carrinho.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        self.usuario = User.objects.create_user("cliente-foto", password="x")
+        perfil = self.usuario.perfil
+        perfil.telefone = "11999990000"
+        perfil.save()
+        self.client.force_login(self.usuario)
+
+    def por_no_carrinho(self, quantos):
+        from decimal import Decimal
+
+        from django.contrib.contenttypes.models import ContentType
+
+        from core.models import Brinquedos, Carrinho, ItemCarrinho
+
+        carrinho, _ = Carrinho.objects.get_or_create(cliente=self.usuario.perfil)
+        inicio = Brinquedos.objects.count()
+        for numero in range(inicio, inicio + quantos):
+            brinquedo = Brinquedos.objects.create(
+                nome_brinquedo=f"Air game {numero}", descricao="x",
+                imagem_brinquedo=f"imagens_brinquedos/air-{numero}.webp",
+                avaliacao=Decimal("4"), valor_brinquedo=Decimal("10"), voltz="220v",
+                exibir_na_loja=True,
+            )
+            ItemCarrinho.objects.create(
+                carrinho=carrinho, quantidade=1, object_id=brinquedo.pk,
+                content_type=ContentType.objects.get_for_model(brinquedo),
+            )
+
+    def consultas(self):
+        with CaptureQueriesContext(connection) as capturadas:
+            resposta = self.client.get("/carrinho/")
+        self.assertEqual(resposta.status_code, 200)
+        return len(capturadas), resposta.content.decode()
+
+    def test_cada_linha_tem_foto_e_as_consultas_nao_crescem(self):
+        self.por_no_carrinho(1)
+        self.consultas()  # aquece sessão e contexto
+        poucos, corpo = self.consultas()
+
+        self.assertIn('class="ck-item-foto"', corpo)
+        self.assertIn("air-0.webp", corpo)
+        self.assertNotIn("❌", corpo)
+
+        self.por_no_carrinho(6)
+        muitos, corpo = self.consultas()
+
+        self.assertEqual(corpo.count('class="ck-item"'), 7)
+        self.assertEqual(
+            muitos, poucos,
+            "o carrinho consulta o banco uma vez por produto",
+        )
