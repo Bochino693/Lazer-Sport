@@ -19,7 +19,8 @@ As artes vieram da equipe (LEIA-ME, seção 74). Daqui saem:
     a capa em cena do showroom como a foto do adesivo;
   * as 11 PROMOÇÕES, com o preço (ou sem preço, quando a oferta é um brinde
     ou "leve 4"), o preço "de" da arte, as condições (10x, PIX, à vista com
-    desconto), válidas até 13/11/2026 (no dia 14 somem sozinhas do site), a
+    desconto), válidas até 21/11/2026 (eram até 13/11; a 0191 estendeu -- no dia 22
+    somem sozinhas do site), a
     foto quadrada do card e a arte inteira (o cartaz) para a página e a
     divulgação.
 
@@ -44,7 +45,9 @@ from django.core.files import File
 from django.db import transaction
 
 PASTA = Path(__file__).resolve().parent / "static" / "site" / "black_friday"
-VALIDA_ATE = datetime.date(2026, 11, 13)
+VALIDA_ATE = datetime.date(2026, 11, 21)
+#: A validade de antes da extensão (a 0191 leva as promoções daqui para VALIDA_ATE).
+VALIDA_ATE_ANTES = datetime.date(2026, 11, 13)
 CATEGORIA_CASINHAS = "Casinhas Cenográficas"
 
 
@@ -503,6 +506,64 @@ def kit_sucesso_com_matrix(apps, schema_editor, avisar=print):
         promocao.brinquedos = brinquedos[0]
         promocao.save()
         promocao.brinquedos_extras.set(brinquedos[1:])
+
+
+def _promocoes_da_black_friday(Promocoes, dados):
+    """A promoção de uma arte: pelo nome (ou um nome antigo) ou pela foto da arte que ela carrega."""
+    from django.db.models import Q
+
+    nomes = [dados["descricao"], *dados.get("antes", [])]
+    foto = f"black-friday-2026-card-{dados['arte']:02d}-"
+    return Promocoes.objects.filter(Q(descricao__in=nomes) | Q(imagem_promocao__contains=foto))
+
+
+def estender_ate_21(apps, schema_editor, avisar=print):
+    """A migração 0191: a Black Friday vai até 21/11/2026 (era até 13/11).
+
+    "Ampliar as promoções até dia 21/11, alterando as imagens e a data certinho, pois vou
+    jogar o tráfego pago nelas." Só o que a extensão pede, e mais nada -- o cadastro
+    (`cadastrar_promocao`) reescreveria preço, condições e brinquedos a partir daqui, e o que
+    a equipe acertou no painel se perderia:
+      * em todo lugar: a validade passa a 21/11 (a promoção que já ia além fica como está;
+        a desligada no painel continua desligada);
+      * só no Render (o Cloudinary só está lá): as artes e os cards que mudaram (01, 02 e 03,
+        que traziam "válida até 13 de novembro" escrito) sobem no lugar dos antigos.
+    """
+    from django.conf import settings
+
+    Promocoes = apps.get_model("core", "Promocoes")
+    no_render = getattr(settings, "IS_RENDER", False)
+    for dados in PROMOCOES:
+        for promocao in _promocoes_da_black_friday(Promocoes, dados):
+            if promocao.valida_ate is None or promocao.valida_ate < VALIDA_ATE:
+                promocao.valida_ate = VALIDA_ATE
+                promocao.save(update_fields=["valida_ate"])
+            if not no_render:
+                continue
+            try:
+                for campo, arquivo in (("imagem_promocao", f"card-{dados['arte']:02d}.webp"),
+                                       ("arte_promocao", f"arte-{dados['arte']:02d}.webp")):
+                    atual = getattr(promocao, campo)
+                    novo = _nome_do_arquivo(arquivo)
+                    if atual and Path(novo).stem in (atual.name or ""):
+                        continue
+                    with open(PASTA / arquivo, "rb") as origem:
+                        getattr(promocao, campo).save(novo, File(origem), save=True)
+            except Exception as erro:  # noqa: BLE001 -- o deploy segue; a data já está certa
+                avisar(f"{dados['descricao']}: a arte nova não subiu agora ({erro!r}).")
+    try:  # a home, o catálogo e a página da promoção guardados em cache passam a mostrar o 21
+        from django.core.cache import cache
+
+        cache.clear()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def voltar_para_13(apps, schema_editor):
+    """A volta da 0191: as promoções que estão em 21/11 voltam a 13/11 (as artes ficam)."""
+    Promocoes = apps.get_model("core", "Promocoes")
+    for dados in PROMOCOES:
+        _promocoes_da_black_friday(Promocoes, dados).filter(valida_ate=VALIDA_ATE).update(valida_ate=VALIDA_ATE_ANTES)
 
 
 def subir_no_deploy(apps, schema_editor, avisar=print):

@@ -4939,3 +4939,29 @@ Dependência nova: rjsmin (requirements.txt).
      * o Automático reage em 3 s (eram 4) depois de 6 s de jogo (eram 8);
      * a escolha guardada passa para "ls-graficos-v3": todo mundo recomeça
        no Automático novo.
+
+84) BLACK FRIDAY ATÉ 21/11/2026 (a seção 74 dizia 13/11)
+   O PEDIDO: "ampliar as promoções até dia 21/11, alterando as imagens e a
+   data certinho, pois vou jogar o tráfego pago nelas".
+   A DATA: core/black_friday.VALIDA_ATE é 21/11/2026 (VALIDA_ATE_ANTES
+   guarda o 13/11). A migração 0191 (RunPython, só dados) leva a validade
+   das 11 promoções para 21/11 -- achadas pelo nome (ou um nome antigo) ou
+   pela foto da arte que carregam -- e NADA MAIS: o cadastro completo
+   (`cadastrar_promocao`) reescreveria preço, condições e brinquedos, e o
+   que a equipe acertou no painel se perderia. A promoção que já ia além
+   do dia 21 fica como está; a desligada continua desligada. A volta leva
+   as de 21/11 de novo a 13/11 (as artes ficam). No dia 22 elas somem do
+   site sozinhas (Promocoes.no_ar, a seção 74).
+   AS ARTES: só a 01, a 02 e a 03 (arte e card) traziam a data escrita
+   ("Promoção válida até 13 de novembro de 2026."); da 04 à 11 não há data
+   na imagem. O "13" virou "21" com os PRÓPRIOS algarismos da arte -- o "2"
+   do "2026" e o "1" do "13", recortados pelo formato de cada um (com o
+   brilho, sem pedaço do vizinho) --, então a letra, o tamanho, o itálico e
+   o brilho são os do cartaz; o fundo onde estava o "13" é refeito com o
+   fundo liso de cima e de baixo da linha (o inpaint puxava o cinza das
+   letras do lado). No Render, a 0191 sobe as seis imagens novas no lugar
+   das antigas (o nome do arquivo leva a assinatura do conteúdo: só a que
+   mudou sobe); se a subida falhar, o deploy segue e a data já está certa.
+   Testes: core/tests_black_friday.py (ExtensaoAte21Tests: a validade vai a
+   21 e o preço ajustado no painel fica; no Render só as três que mudaram
+   sobem; nas seis imagens só a faixa da linha da validade mudou).

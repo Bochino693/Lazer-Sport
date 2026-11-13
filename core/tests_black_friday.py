@@ -237,7 +237,7 @@ class CadastroTests(TestCase):
                          Brinquedos.objects.filter(categorias_brinquedos=casinhas).count(), 3)
         self.assertEqual(Promocoes.objects.count(), 11)
         self.assertTrue(all(p.imagem_promocao and p.arte_promocao for p in Promocoes.objects.all()))
-        self.assertTrue(all(p.valida_ate == datetime.date(2026, 11, 13) for p in Promocoes.objects.all()))
+        self.assertTrue(all(p.valida_ate == datetime.date(2026, 11, 21) for p in Promocoes.objects.all()))
 
         # o Air Rock é um ADESIVO do Air Game Premium (LEIA-ME 72, a 0190), e não um produto: a capa
         # em cena do showroom é a foto do adesivo, e a promoção aponta para o Air Game Premium
@@ -270,7 +270,7 @@ class CadastroTests(TestCase):
     def test_depois_da_validade_nao_cria_promocao(self):
         avisos = []
         black_friday.rodar(Brinquedos, CategoriasBrinquedos, ImagemBrinquedo, Promocoes,
-                           hoje=datetime.date(2026, 11, 14), avisar=avisos.append)
+                           hoje=datetime.date(2026, 11, 22), avisar=avisos.append)
         self.assertFalse(Promocoes.objects.exists())
         self.assertTrue(Brinquedos.objects.get(nome_brinquedo="Air Game Premium").variantes_adesivo.filter(slug="air-rock").exists())
         self.assertTrue(any("terminou" in a for a in avisos))
@@ -335,6 +335,83 @@ class CadastroTests(TestCase):
 
         black_friday.subir_no_deploy(apps, None)
         self.assertFalse(Promocoes.objects.exists())
+
+
+class ExtensaoAte21Tests(CadastroTests):
+    """A 0191: a Black Friday vai até 21/11 -- a validade, e no Render as artes 01-03 novas."""
+
+    def preparar(self):
+        self.rodar()
+        Promocoes.objects.update(valida_ate=datetime.date(2026, 11, 13))
+        # uma que a equipe já tinha levado além do dia 21 fica como está
+        longe = Promocoes.objects.order_by("id").first()
+        longe.valida_ate = datetime.date(2026, 12, 1)
+        longe.save(update_fields=["valida_ate"])
+        # uma ajustada no painel (preço) não perde o ajuste
+        ajustada = Promocoes.objects.exclude(pk=longe.pk).filter(preco_promocao__isnull=False).first()
+        ajustada.preco_promocao = Decimal("1234.00")
+        ajustada.save(update_fields=["preco_promocao"])
+        return longe, ajustada
+
+    def test_a_validade_vai_para_21_e_nada_mais_muda(self):
+        from django.apps import apps
+
+        longe, ajustada = self.preparar()
+        black_friday.estender_ate_21(apps, None, avisar=lambda *_: None)
+        self.assertEqual(Promocoes.objects.filter(valida_ate=datetime.date(2026, 11, 21)).count(), 10)
+        longe.refresh_from_db()
+        ajustada.refresh_from_db()
+        self.assertEqual(longe.valida_ate, datetime.date(2026, 12, 1))
+        self.assertEqual(ajustada.preco_promocao, Decimal("1234.00"))
+        # na volta, as do dia 21 voltam ao 13
+        black_friday.voltar_para_13(apps, None)
+        self.assertEqual(Promocoes.objects.filter(valida_ate=datetime.date(2026, 11, 13)).count(), 10)
+
+    def test_no_render_sobem_so_as_artes_que_mudaram(self):
+        from django.apps import apps
+
+        self.preparar()
+        antes = {p.pk: (p.imagem_promocao.name, p.arte_promocao.name) for p in Promocoes.objects.all()}
+        # as do 01 ao 03 estão com a foto antiga (a do "13 de novembro")
+        mudadas = []
+        for n in (1, 2, 3):
+            promocao = Promocoes.objects.get(imagem_promocao__contains=f"black-friday-2026-card-{n:02d}-")
+            promocao.imagem_promocao.name = f"promocoes/black-friday-2026-card-{n:02d}-antiga00.webp"
+            promocao.arte_promocao.name = f"promocoes/black-friday-2026-arte-{n:02d}-antiga00.webp"
+            promocao.save(update_fields=["imagem_promocao", "arte_promocao"])
+            mudadas.append(promocao.pk)
+        with override_settings(IS_RENDER=True):
+            black_friday.estender_ate_21(apps, None, avisar=lambda *_: None)
+        for promocao in Promocoes.objects.all():
+            if promocao.pk in mudadas:
+                self.assertNotIn("antiga00", promocao.imagem_promocao.name)
+                self.assertNotIn("antiga00", promocao.arte_promocao.name)
+            else:
+                self.assertEqual((promocao.imagem_promocao.name, promocao.arte_promocao.name), antes[promocao.pk])
+
+    def test_as_artes_01_a_03_dizem_21_de_novembro(self):
+        # o "13" virou "21" nos próprios algarismos da arte: a linha da validade mudou e o resto não
+        import subprocess
+
+        for n in (1, 2, 3):
+            for tipo in ("arte", "card"):
+                caminho = f"core/static/site/black_friday/{tipo}-{n:02d}.webp"
+                antiga = subprocess.run(["git", "show", f"dda6f6c:{caminho}"], capture_output=True).stdout
+                if not antiga:
+                    self.skipTest("sem o histórico do git")
+                import io
+
+                from PIL import ImageChops
+
+                velha = Image.open(io.BytesIO(antiga)).convert("L")
+                nova = Image.open(black_friday.PASTA / f"{tipo}-{n:02d}.webp").convert("L")
+                self.assertEqual(velha.size, nova.size)
+                mudou = ImageChops.difference(velha, nova).point(lambda v: 255 if v > 60 else 0).getbbox()
+                # só uma faixa estreita, no pé da arte (a linha da validade), mudou de verdade
+                self.assertIsNotNone(mudou, caminho)
+                _x0, y0, _x1, y1 = mudou
+                self.assertGreater(y0, velha.height * 0.8, caminho)
+                self.assertLess(y1 - y0, velha.height * 0.06, caminho)
 
 
 class ImagensTests(TestCase):

@@ -2,7 +2,7 @@
 
     python manage.py black_friday_2026             # cadastra (rodar de novo não duplica)
     python manage.py black_friday_2026 --simular   # só diz o que faria
-    python manage.py black_friday_2026 --forcar    # cria as promoções mesmo depois de 13/11/2026
+    python manage.py black_friday_2026 --forcar    # cria as promoções mesmo depois de 21/11/2026
 
 Normalmente nem é preciso: a migração 0163 faz isto no deploy do Render. O
 comando é para quando a subida das fotos falhou ali (ver core/black_friday.py).
