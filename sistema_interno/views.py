@@ -1472,12 +1472,24 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
 # Agora as telas leem a MESMA tabela que o selo conta. `tests_pedidos.py`
 # compara os dois números e reprova se voltarem a divergir.
 class VendasView(FinanceiroInternoRequiredMixin, View):
+    """As vendas: as do site (pedido finalizado) e as do painel.
+
+    A VENDA DE ORÇAMENTO. "Terminando o pagamento 100% deve registrar como
+    venda": o orçamento quitado ganha uma `core.Venda` (ver
+    `Orcamento.registrar_pagamento`), já confirmada -- o dinheiro foi
+    anotado por quem recebeu. Ela aparece aqui com o cliente e o número do
+    orçamento, e a etiqueta "Orçamento" separa as duas origens.
+    """
+
     POR_PAGINA = 30
 
     def get(self, request):
         consulta = (
             Venda.objects
-            .select_related("pedido", "pedido__cliente__user")
+            .select_related(
+                "pedido", "pedido__cliente__user",
+                "orcamento", "orcamento__cliente",
+            )
             .order_by("-criacao", "-id")
         )
         # Abre no que a bolinha conta, como em Pedidos: quem entra aqui

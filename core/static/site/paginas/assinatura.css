@@ -303,6 +303,8 @@ a{color:var(--ls-ciano)}
 .folha-pago{padding:10px 12px;border-radius:12px;background:#e9f8f0}
 .folha-pago dt,.folha-pago dd{color:var(--verde-papel)!important;font-weight:800}
 .folha-selo{display:inline-block;padding:2px 10px;border-radius:999px;background:#e9f8f0;color:var(--verde-papel);font-weight:800}
+/* Aprovado, com pagamento a fazer: o selo é de situação, não de "quitado". */
+.folha-selo.pendente{background:#eef2f8;color:var(--marca)}
 .folha-declaracao p{margin:0 0 8px;color:var(--tinta);text-align:justify;hyphens:auto}
 .folha-assinatura{margin-top:8px;padding:18px 0 8px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .folha-assinatura-traco{width:100%;max-width:360px;height:110px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1.5px solid var(--tinta)}

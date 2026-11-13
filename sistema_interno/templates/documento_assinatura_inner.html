@@ -10,11 +10,13 @@
 {% endblock %}
 
 {% comment %}
-  O DOCUMENTO PARA ASSINATURA DO ORÇAMENTO PAGO (LEIA-ME-V10, seção 81).
+  O DOCUMENTO PARA ASSINATURA DO ORÇAMENTO APROVADO (LEIA-ME-V10, seção 81).
 
   O pedido: "como já está pago, finalizado, vc deve pôr uma opção de gerar
   documento (...) para o cliente assinar no telefone dele em um link que
-  vai ser gerado a cada 5 minutos". A tela é o cartão do documento (ver
+  vai ser gerado a cada 5 minutos". Depois a ordem mudou: "após o orçamento
+  atingir aprovado, que você deve gerar a assinatura, a opção de pagamento
+  deve ser o último estágio". A tela é o cartão do documento (ver
   `documento_assinatura/cartao.html`), ao lado do resumo do que entra no
   papel. O cartão se vira sozinho: pede o link ao abrir, renova a cada 5
   minutos e pergunta a cada 10 segundos se o cliente já assinou.
@@ -22,13 +24,14 @@
 {% block content %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Orçamento #{{ orcamento.pk }}{% if orcamento.versao > 1 %} · v{{ orcamento.versao }}{% endif %} · {% if orcamento.quitado %}pago{% else %}{{ orcamento.get_status_pagamento_display|lower }}{% endif %}</span>
+    <span class="ls-page-kicker">Orçamento #{{ orcamento.pk }}{% if orcamento.versao > 1 %} · v{{ orcamento.versao }}{% endif %} · {{ orcamento.get_status_display|lower }} · {% if orcamento.quitado %}pago{% else %}{{ orcamento.get_status_pagamento_display|lower }}{% endif %}</span>
     <h1>Documento para assinatura</h1>
-    <p>{{ orcamento.destinatario }} · termo de compra e recibo, assinado no telefone do cliente.</p>
+    <p>{{ orcamento.destinatario }} · termo de compra do orçamento aprovado, assinado no telefone do cliente. O pagamento vem depois.</p>
   </div>
   <div class="ls-page-hero-actions">
-    <a href="{{ urls.lista }}?filtro=pagos" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Orçamentos pagos
+    {# De volta à janela do orçamento, onde a régua mostra o passo seguinte (o pagamento). #}
+    <a href="{{ urls.lista }}?q={{ orcamento.pk }}&amp;editar={{ orcamento.pk }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Voltar ao orçamento
     </a>
   </div>
 </section>

@@ -5578,7 +5578,9 @@ class RelatorioVendasView(LoginRequiredMixin, TemplateView):
             total=Sum('valor_pago')
         )['total'] or 0
 
-        context['vendas'] = vendas.select_related('pedido').order_by('-criacao')
+        # `orcamento`: a venda do orçamento pago 100% (a ponta mora no
+        # sistema_interno.Orcamento.venda) -- o relatório mostra o número dele.
+        context['vendas'] = vendas.select_related('pedido', 'orcamento').order_by('-criacao')
 
         context['formas_pagamento'] = [
             ('pix', 'PIX'),

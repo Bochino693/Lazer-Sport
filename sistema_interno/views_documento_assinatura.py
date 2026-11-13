@@ -1,4 +1,4 @@
-"""As telas do painel para o documento de assinatura do orçamento pago.
+"""As telas do painel para o documento de assinatura do orçamento aprovado.
 
 A regra de negócio mora em `documento_assinatura.py`; aqui fica só o que o
 painel mostra e o que ele pede:
@@ -58,17 +58,9 @@ def _sem_cache(resposta):
     return resposta
 
 
-def situacao_do_cartao(orcamento, documento) -> str:
-    """A cara do cartão, numa palavra -- a mesma na tela e no estado.
-
-    O cartão aberto compara a dele com a do servidor a cada 10 segundos; se
-    mudar (assinou, alguém gerou de novo, o pagamento mudou), troca.
-    """
-    if documento is None:
-        return "gerar" if orcamento.quitado else "bloqueado"
-    if not documento.assinado and not orcamento.quitado:
-        return "suspenso"
-    return documento.situacao
+#: A cara do cartão mora no serviço, porque a lista de orçamentos e a
+#: janela do orçamento dizem a mesma palavra (ver `views_gestao`).
+situacao_do_cartao = svc.situacao_do_cartao
 
 
 def _conversa_whatsapp(telefone, mensagem):
@@ -107,6 +99,10 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
             "orcamento": orcamento,
             "documento": documento,
             "situacao_cartao": situacao_do_cartao(orcamento, documento),
+            "motivo_suspensao": (
+                svc.motivo_da_suspensao(documento, orcamento)
+                if documento is not None and not documento.assinado else ""
+            ),
             "conteudo": conteudo,
             "urls": self.urls(orcamento),
             "validade_minutos": svc.VALIDADE_DO_LINK // 60,
@@ -181,12 +177,18 @@ class LinkDocumentoAssinaturaView(_BaseDocumento):
                 "situacao": documento.situacao if documento else "",
             }, status=409)
 
-        if not orcamento.quitado:
+        motivo = svc.motivo_da_suspensao(documento, orcamento)
+        if motivo:
             return JsonResponse({
                 "status": "erro",
                 "msg": (
-                    "O orçamento não está mais pago: o documento diz que está. "
-                    "Acerte o pagamento ou gere o documento de novo."
+                    "O orçamento não está mais pago, e este documento (do modelo "
+                    "antigo) diz que está. Acerte o pagamento ou gere o "
+                    "documento de novo."
+                    if motivo == "pagamento" else
+                    f"O orçamento não está mais aprovado (hoje: "
+                    f"{orcamento.get_status_display().lower()}): não há compra "
+                    "para o cliente assinar, e nenhum link sai."
                 ),
                 "situacao": "suspenso",
             }, status=409)

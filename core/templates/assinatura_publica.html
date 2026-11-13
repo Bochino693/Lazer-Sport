@@ -52,7 +52,8 @@
 {% if estado == "assinar" %}
   {# ============================================================ ASSINAR #}
   <section class="cartao boas-vindas entra">
-    <span class="kicker"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedido nº {{ doc.orcamento.numero }} · pago</span>
+    {# "pago" só quando o termo diz que estava pago (o modelo antigo era sempre). #}
+    <span class="kicker"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedido nº {{ doc.orcamento.numero }} · {% if doc.pagamento.situacao == "Pago" %}pago{% else %}aprovado{% endif %}</span>
     <h1>Olá{% if doc.cliente.nome %}, {{ doc.cliente.nome }}{% endif %}! Falta só assinar.</h1>
     <p>Confira o termo de compra abaixo e assine com o dedo. Este link vale por {{ validade_minutos }} minutos.</p>
     <ol class="passos" aria-label="Como assinar">
@@ -92,7 +93,7 @@
     <label class="concordo{% if erro_campo == 'concordo' %} com-erro{% endif %}" data-campo="concordo">
       <input type="checkbox" name="concordo" id="campoConcordo" value="1">
       <span class="concordo-caixa" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
-      <span>Li e concordo com o termo de compra e recibo acima.</span>
+      <span>Li e concordo com o {{ doc.titulo|default:"termo de compra"|lower }} acima.</span>
     </label>
 
     <div class="quadro{% if erro_campo == 'assinatura' %} com-erro{% endif %}" data-campo="assinatura">
@@ -180,7 +181,11 @@
     {% elif estado == "suspenso" %}
       <span class="icone-grande ambar"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
       <h1>Documento suspenso</h1>
-      <p>O pagamento deste pedido mudou depois que o documento saiu. Fale com o atendente antes de assinar.</p>
+      {% if motivo == "pagamento" %}
+        <p>O pagamento deste pedido mudou depois que o documento saiu. Fale com o atendente antes de assinar.</p>
+      {% else %}
+        <p>Este pedido mudou depois que o documento saiu e não está mais aprovado. Fale com o atendente antes de assinar.</p>
+      {% endif %}
     {% elif estado == "limite" %}
       <span class="icone-grande ambar"><i class="bi bi-stopwatch" aria-hidden="true"></i></span>
       <h1>Muitas tentativas seguidas</h1>

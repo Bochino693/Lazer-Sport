@@ -2,6 +2,7 @@ import secrets
 import uuid
 from datetime import timedelta
 from decimal import Decimal
+from typing import NamedTuple
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -1575,6 +1576,42 @@ def gerar_token_orcamento():
     )
 
 
+class MudancaDaVenda(NamedTuple):
+    """O que um pagamento fez com a venda do orçamento.
+
+    `acao` é "criada" (o pagamento chegou a 100%), "ajustada" (continua
+    100%, com outro valor recebido), "desfeita" (caiu abaixo de 100%) ou
+    vazia (nada mudou). `venda_id` é o número da venda envolvida.
+    """
+
+    acao: str
+    venda_id: int | None
+
+
+#: As formas de pagamento que a venda conhece (`core.Venda.forma_pagamento`)
+#: e as palavras que as denunciam no texto livre do orçamento.
+_FORMAS_DA_VENDA = (
+    ("pix", ("pix",)),
+    ("cartao", ("cartão", "cartao", "crédito", "credito", "débito", "debito")),
+    ("dinheiro", ("dinheiro", "espécie", "especie")),
+)
+
+
+def forma_da_venda(texto):
+    """A forma da venda a partir do "Forma de pagamento" do orçamento.
+
+    O orçamento guarda texto livre ("Pix", "50% no Pix e 50% no cartão").
+    Só sai uma forma quando o texto fala de UMA: com duas, escolher seria
+    inventar, e a venda fica sem forma (o relatório mostra "—").
+    """
+    texto = (texto or "").lower()
+    achadas = [
+        codigo for codigo, palavras in _FORMAS_DA_VENDA
+        if any(palavra in texto for palavra in palavras)
+    ]
+    return achadas[0] if len(achadas) == 1 else None
+
+
 class Orcamento(Prime):
     """Proposta comercial montada no painel interno."""
 
@@ -1723,6 +1760,23 @@ class Orcamento(Prime):
     )
     pago_em = models.DateTimeField(null=True, blank=True)
     observacao_pagamento = models.CharField(max_length=240, blank=True)
+    # O PAGAMENTO 100% VIRA VENDA.
+    #
+    # O pedido: "terminando o pagamento 100% deve registrar como venda".
+    # A venda é a mesma tabela das vendas do site (`core.Venda`), porque é
+    # dela que o Financeiro tira a receita e a tela de Vendas tira a lista:
+    # o dinheiro de orçamento nunca entrava nessa conta. A ponta fica AQUI,
+    # e não na venda, de propósito: assim o `core` não ganha dependência
+    # de migração no `sistema_interno`. É dado derivado -- quem cria e
+    # quem tira é `registrar_pagamento`, nunca uma tela.
+    venda = models.OneToOneField(
+        "core.Venda",
+        on_delete=models.SET_NULL,
+        related_name="orcamento",
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     # ---------------- página que o cliente abre ----------------
     token = models.CharField(
@@ -1908,6 +1962,11 @@ class Orcamento(Prime):
         junto com ela. Agora a regra inteira mora aqui, e a tela e o
         servidor perguntam à mesma propriedade -- era possível esconder o
         botão e ainda assim aceitar o POST.
+
+        A QUE O CLIENTE JÁ ASSINOU TAMBÉM. O termo de compra agora sai na
+        aprovação, antes do pagamento: substituir a proposta assinada
+        deixaria o contrato apontando para uma versão "substituída". É o
+        mesmo motivo da quitada -- o papel que vale não pode virar história.
         """
         return bool(
             self.pk
@@ -1916,7 +1975,28 @@ class Orcamento(Prime):
             and self.status != self.Status.SUBSTITUIDO
             and not hasattr(self, "orcamento_refeito")
             and not hasattr(self, "ordem_servico")
+            and not self.contrato_assinado
         )
+
+    @property
+    def contrato_assinado(self):
+        """O cliente já assinou o termo de compra deste orçamento?
+
+        A lista de orçamentos já busca o documento de cada linha numa
+        consulta só (`documento_assinatura`, posto pela view): quando ele
+        veio, a resposta sai dele, sem uma consulta por linha.
+        """
+        if not self.pk:
+            return False
+        if "documento_assinatura" in self.__dict__:
+            documento = self.__dict__["documento_assinatura"]
+            return bool(
+                documento is not None
+                and documento.situacao == DocumentoAssinatura.Situacao.ASSINADO
+            )
+        return self.documentos_assinatura.filter(
+            situacao=DocumentoAssinatura.Situacao.ASSINADO,
+        ).exists()
 
     @property
     def recusada(self):
@@ -2090,23 +2170,118 @@ class Orcamento(Prime):
         return bool(alterado)
 
     def registrar_pagamento(self, valor, observacao=""):
-        """Atualiza o recebido e deriva a situação sem aceitar saldo negativo."""
+        """Atualiza o recebido e deriva a situação sem aceitar saldo negativo.
+
+        É o último estágio do pedido (aprovado -> assinatura -> pagamento),
+        e o 100% registra a venda: ver `_acertar_venda`. Pagamento e venda
+        andam na mesma transação, com a linha do orçamento travada -- dois
+        cliques em "Atualizar pagamento" não criam duas vendas, e uma venda
+        sem o pagamento gravado (ou o contrário) não existe.
+
+        Devolve o que aconteceu com a venda (`MudancaDaVenda`), para quem
+        chamou contar na tela e no histórico.
+        """
         valor = max(Decimal(valor or 0), Decimal("0.00")).quantize(Decimal("0.01"))
-        self.valor_pago = valor
-        self.observacao_pagamento = (observacao or "").strip()[:240]
-        if valor <= 0:
-            self.status_pagamento = self.StatusPagamento.PENDENTE
-            self.pago_em = None
-        elif valor < self.total:
-            self.status_pagamento = self.StatusPagamento.PARCIAL
-            self.pago_em = None
-        else:
-            self.status_pagamento = self.StatusPagamento.PAGO
-            self.pago_em = self.pago_em or timezone.now()
-        self.save(update_fields=[
-            "valor_pago", "status_pagamento", "pago_em",
-            "observacao_pagamento", "atualizado",
-        ])
+        with transaction.atomic():
+            if self.pk:
+                # A venda de agora é a do banco, e não a da memória: outra
+                # aba pode ter quitado (ou desfeito) enquanto esta esperava.
+                self.venda_id = (
+                    type(self).objects.select_for_update()
+                    .values_list("venda_id", flat=True)
+                    .get(pk=self.pk)
+                )
+            self.valor_pago = valor
+            self.observacao_pagamento = (observacao or "").strip()[:240]
+            if valor <= 0:
+                self.status_pagamento = self.StatusPagamento.PENDENTE
+                self.pago_em = None
+            elif valor < self.total:
+                self.status_pagamento = self.StatusPagamento.PARCIAL
+                self.pago_em = None
+            else:
+                self.status_pagamento = self.StatusPagamento.PAGO
+                self.pago_em = self.pago_em or timezone.now()
+            mudanca, desfeita = self._acertar_venda()
+            self.save(update_fields=[
+                "valor_pago", "status_pagamento", "pago_em",
+                "observacao_pagamento", "venda", "atualizado",
+            ])
+            if desfeita is not None:
+                desfeita.delete()
+        return mudanca
+
+    def documento_da_venda(self):
+        """O CPF/CNPJ que a venda leva: o do cadastro, ou o de quem assinou.
+
+        Sem pontuação (a coluna da venda tem 16 posições, e o CNPJ
+        pontuado tem 18). Sem cadastro com documento, vale o que o cliente
+        digitou -- e o servidor conferiu -- ao assinar o termo de compra.
+        """
+        from .validacoes import chave_documento
+
+        if self.cliente_id and self.cliente:
+            chave = self.cliente.documento_chave or chave_documento(self.cliente.documento)
+            if chave:
+                return chave
+        if not self.pk:
+            return ""
+        assinado = (
+            self.documentos_assinatura
+            .filter(situacao=DocumentoAssinatura.Situacao.ASSINADO)
+            .exclude(assinante_documento="")
+            .values_list("assinante_documento", flat=True)
+            .first()
+        )
+        return chave_documento(assinado or "")
+
+    def _acertar_venda(self):
+        """Cria, ajusta ou desfaz a venda conforme o pagamento de agora.
+
+        PAGO (100%): uma venda, uma só -- se já existe, só acompanha o
+        valor recebido. Abaixo de 100% (uma correção, o estorno, o zero):
+        a venda deixa de existir, porque ela é o RETRATO do pagamento
+        completo e não um registro à parte; quem a apaga é quem chamou,
+        depois de o orçamento soltar a ponta (devolvida em `desfeita`).
+        """
+        from core.models import Venda
+
+        venda = self.venda if self.venda_id else None
+        if self.status_pagamento == self.StatusPagamento.PAGO:
+            recebido = (self.valor_pago or self.total).quantize(Decimal("0.01"))
+            if venda is None:
+                venda = Venda.objects.create(
+                    valor_pago=recebido,
+                    confirmado=True,
+                    cpf=self.documento_da_venda()[:16] or None,
+                    forma_pagamento=forma_da_venda(self.forma_pagamento),
+                )
+                self.venda = venda
+                return MudancaDaVenda("criada", venda.pk), None
+            if venda.valor_pago != recebido or not venda.confirmado:
+                venda.valor_pago = recebido
+                venda.confirmado = True
+                venda.save(update_fields=["valor_pago", "confirmado", "atualizado"])
+                return MudancaDaVenda("ajustada", venda.pk), None
+            return MudancaDaVenda("", venda.pk), None
+        if venda is not None:
+            self.venda = None
+            return MudancaDaVenda("desfeita", venda.pk), venda
+        return MudancaDaVenda("", None), None
+
+    def delete(self, *args, **kwargs):
+        """A venda que nasceu do pagamento sai junto com o orçamento.
+
+        Sem isto ela ficaria na receita sem origem nenhuma: um dinheiro
+        que o Financeiro conta e que nenhuma tela explica. Só o
+        superusuário chega a apagar um orçamento pago (ver `exclusoes`).
+        """
+        venda_id = self.venda_id
+        with transaction.atomic():
+            resultado = super().delete(*args, **kwargs)
+            if venda_id:
+                Venda.objects.filter(pk=venda_id).delete()
+        return resultado
 
     def registrar_resposta(self, aprovado, nome="", motivo=""):
         """Grava a decisão do cliente vinda da página pública."""

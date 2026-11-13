@@ -10,12 +10,18 @@
   da loja que ainda não foram confirmadas (`core.Venda`), e esta tela
   listava `CentralVendas`, tabela interna antiga e vazia. O número do
   menu e o conteúdo da tela nunca falavam da mesma coisa.
+
+  DUAS ORIGENS NA MESMA LISTA. A venda do site nasce do pedido
+  finalizado; a do painel, do orçamento pago 100% ("terminando o
+  pagamento 100% deve registrar como venda"). A de orçamento não tem
+  pedido: o cliente e o número vêm do orçamento, com o caminho de volta
+  para ele, e a etiqueta de origem diz de onde cada uma veio.
 {% endcomment %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Loja · financeiro</span>
     <h1>Vendas</h1>
-    <p>Cada venda nasce de um pedido finalizado. A bolinha do menu conta as que ainda esperam confirmação.</p>
+    <p>Cada venda nasce de um pedido finalizado no site ou de um orçamento pago 100% no painel. A bolinha do menu conta as que ainda esperam confirmação.</p>
   </div>
 </section>
 
@@ -42,29 +48,42 @@
   <div class="ls-data-header">
     <div>
       <h2>Registros de venda</h2>
-      <p>Pedido de origem, cliente, valor e forma de pagamento.</p>
+      <p>Origem (pedido do site ou orçamento), cliente, valor e forma de pagamento.</p>
     </div>
   </div>
   <div class="ls-data-body">
     <div class="table-responsive ls-commercial-table-wrap">
       <table class="ls-table ls-commercial-table ls-vendas-table">
         <thead>
-          <tr><th data-coluna="Nº">#</th><th data-coluna="Pedido">Pedido</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Valor" class="text-end">Valor</th><th data-coluna="Pagamento">Pagamento</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Data</th></tr>
+          <tr><th data-coluna="Nº">#</th><th data-coluna="Origem">Origem</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Valor" class="text-end">Valor</th><th data-coluna="Pagamento">Pagamento</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Data</th></tr>
         </thead>
         <tbody>
           {% for venda in vendas %}
-            <tr>
+            {% with orcamento=venda.orcamento_de_origem %}
+            <tr data-origem="{% if orcamento %}orcamento{% else %}site{% endif %}">
               <td data-rotulo="Nº"><strong>#{{ venda.id }}</strong></td>
-              <td data-rotulo="Pedido">{% if venda.pedido_id %}<strong>#{{ venda.pedido_id }}</strong>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-              <td data-rotulo="Cliente">{% firstof venda.pedido.cliente.user.get_full_name venda.pedido.cliente.user.username "Cliente do site" %}</td>
+              <td data-rotulo="Origem">
+                {% if orcamento %}
+                  <span class="ls-venda-origem orcamento"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Orçamento</span>
+                  <a class="d-block mt-1" href="{% url 'orcamentos_inner' %}?q={{ orcamento.pk }}&amp;editar={{ orcamento.pk }}"
+                     title="Abrir o orçamento que gerou esta venda">Orçamento nº {{ orcamento.numero_documento }}</a>
+                {% elif venda.pedido_id %}
+                  <span class="ls-venda-origem site"><i class="bi bi-globe2" aria-hidden="true"></i> Site</span>
+                  <strong class="d-block mt-1">Pedido #{{ venda.pedido_id }}</strong>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Cliente">{% if orcamento %}{{ orcamento.destinatario }}{% else %}{% firstof venda.pedido.cliente.user.get_full_name venda.pedido.cliente.user.username "Cliente do site" %}{% endif %}</td>
               <td data-rotulo="Valor" class="text-end"><strong>R$ {{ venda.valor_pago|moeda }}</strong></td>
-              <td data-rotulo="Pagamento">{{ venda.get_forma_pagamento_display|default:"—" }}</td>
+              <td data-rotulo="Pagamento">{% if venda.forma_pagamento %}{{ venda.get_forma_pagamento_display }}{% elif orcamento and orcamento.forma_pagamento %}{{ orcamento.forma_pagamento }}{% else %}—{% endif %}</td>
               <td data-rotulo="Situação">
                 {% if venda.confirmado %}<span class="ls-status success">Confirmada</span>
                 {% else %}<span class="ls-status warning">Aguardando confirmação</span>{% endif %}
               </td>
               <td data-rotulo="Data">{{ venda.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
             </tr>
+            {% endwith %}
           {% empty %}
             <tr><td colspan="7">
               <div class="ls-empty">

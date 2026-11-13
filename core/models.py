@@ -2307,8 +2307,33 @@ class Venda(Prime):
     confirmado = models.BooleanField(default=False)
     cpf = models.CharField(max_length=16, null=True)
 
+    # DUAS ORIGENS. A venda nasce do pedido do site (`pedido`) ou do
+    # orçamento do painel pago 100% (`orcamento`, a ponta que mora no
+    # `sistema_interno.Orcamento.venda` -- o `core` não depende dele).
+    @property
+    def orcamento_de_origem(self):
+        """O orçamento que gerou esta venda, ou None (venda do site)."""
+        if self.pedido_id:
+            return None
+        # Sem orçamento, o acesso reverso levanta DoesNotExist (que também
+        # é AttributeError): o `getattr` com padrão resolve os dois casos.
+        return getattr(self, "orcamento", None)
+
+    @property
+    def origem(self):
+        """"orcamento" ou "site" -- a etiqueta da tela de Vendas."""
+        return "orcamento" if self.orcamento_de_origem is not None else "site"
+
     def __str__(self):
-        return f"Venda do Pedido #{self.pedido.id}"
+        # Venda de orçamento não tem pedido: `self.pedido.id` estourava
+        # AttributeError em qualquer lugar que imprimisse a venda (admin,
+        # rastro de exclusão, log).
+        if self.pedido_id:
+            return f"Venda do Pedido #{self.pedido_id}"
+        orcamento = self.orcamento_de_origem
+        if orcamento is not None:
+            return f"Venda do orçamento nº {orcamento.numero_documento}"
+        return f"Venda #{self.pk}"
 
 
 class Manutencao(models.Model):

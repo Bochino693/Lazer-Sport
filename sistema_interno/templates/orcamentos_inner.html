@@ -55,6 +55,43 @@
         <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
         <div id="orcamentoContexto" class="ls-refazer-nota" hidden></div>
 
+        {% comment %}
+          A RÉGUA DO PEDIDO, NA ORDEM EM QUE ELE ANDA.
+
+          "Após o orçamento atingir aprovado, que você deve gerar a
+          assinatura, a opção de pagamento deve ser o último estágio,
+          terminando o pagamento 100% deve registrar como venda." São
+          quatro passos, e a régua diz em qual o pedido está: Aprovado ->
+          Assinatura -> Pagamento -> Venda. O passo de agora é o primeiro
+          que falta, aceso; os feitos ganham o visto. Tocar em Assinatura
+          ou Pagamento leva ao quadro dele, logo abaixo dos totais. O
+          script (`desenharEtapas`) monta tudo a partir do orçamento aberto.
+        {% endcomment %}
+        <nav class="ls-etapas" id="orcamentoEtapas" hidden aria-label="Etapas do pedido">
+          <ol>
+            <li class="ls-etapa" data-etapa="aprovado">
+              <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-patch-check"></i></span>
+              <span class="ls-etapa-texto"><strong>Aprovado</strong><small data-etapa-nota></small></span>
+            </li>
+            <li class="ls-etapa" data-etapa="assinatura">
+              <button type="button" class="ls-etapa-ir" data-etapa-ir="orcamentoDocumentoAssinatura">
+                <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-pen"></i></span>
+                <span class="ls-etapa-texto"><strong>Assinatura</strong><small data-etapa-nota></small></span>
+              </button>
+            </li>
+            <li class="ls-etapa" data-etapa="pagamento">
+              <button type="button" class="ls-etapa-ir" data-etapa-ir="orcamentoPagamentoResumo">
+                <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+                <span class="ls-etapa-texto"><strong>Pagamento</strong><small data-etapa-nota></small></span>
+              </button>
+            </li>
+            <li class="ls-etapa" data-etapa="venda">
+              <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-bag-check"></i></span>
+              <span class="ls-etapa-texto"><strong>Venda</strong><small data-etapa-nota></small></span>
+            </li>
+          </ol>
+        </nav>
+
         <div class="row g-3">
           <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-people-fill"></i><span><strong>Bloco Comercial</strong><small>Cliente, atendimento, validade, entrega e itens.</small></span></div></div>
           <div class="col-12 col-md-5">
@@ -285,17 +322,43 @@
         </div>
 
         {% comment %}
-          O PAGAMENTO TAMBÉM PRECISA ESTAR NO PRÓPRIO ORÇAMENTO.
+          DEPOIS DA APROVAÇÃO, NA ORDEM DA RÉGUA: PRIMEIRO A ASSINATURA.
+
+          O termo de compra sai assim que o orçamento é APROVADO (antes só
+          vinha com ele pago): itens, total e as condições de pagamento,
+          congelados para o cliente assinar no telefone. O quadro diz se
+          falta gerar, se espera a assinatura ou se já está assinado, e
+          leva à tela do documento (`views_documento_assinatura.py`).
+          Só para quem edita o bloco comercial, a mesma regra da lista.
+        {% endcomment %}
+        <section class="ls-orcamento-pagamento ls-orcamento-etapa" id="orcamentoDocumentoAssinatura" hidden
+                 aria-label="Documento para assinatura">
+          <div class="ls-orcamento-pagamento-titulo">
+            <span><b class="ls-etapa-numero" aria-hidden="true">2</b><i class="bi bi-pen" aria-hidden="true"></i> Documento para assinatura</span>
+            <strong id="orcamentoDocumentoSituacao">Falta gerar</strong>
+          </div>
+          <p class="form-text mt-0 mb-2" id="orcamentoDocumentoTexto">O orçamento está aprovado: gere o termo de compra para o cliente assinar no telefone.</p>
+          <a class="btn btn-success" id="orcamentoDocumentoLink" href="#">
+            <i class="bi bi-pen me-1" aria-hidden="true"></i>
+            <span id="orcamentoDocumentoBotao">Gerar documento para assinatura</span>
+          </a>
+        </section>
+
+        {% comment %}
+          O PAGAMENTO É O ÚLTIMO ESTÁGIO -- E O 100% VIRA VENDA.
 
           A ação já existia na lista, escondida dentro do menu de três
           pontos. Aqui a proposta aprovada mostra imediatamente quanto já
           entrou e quanto falta; o botão abre a mesma rotina financeira,
-          sem criar uma segunda fonte de valores.
+          sem criar uma segunda fonte de valores. Vem depois do termo: com
+          ele ainda sem assinatura, a janela pergunta antes de gravar (não
+          trava -- o cliente que paga no balcão antes de assinar existe).
+          Quitado, o quadro mostra a venda que o pagamento registrou.
         {% endcomment %}
-        <section class="ls-orcamento-pagamento" id="orcamentoPagamentoResumo" hidden
+        <section class="ls-orcamento-pagamento ls-orcamento-etapa" id="orcamentoPagamentoResumo" hidden
                  aria-label="Pagamento do orçamento" aria-live="polite">
           <div class="ls-orcamento-pagamento-titulo">
-            <span><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento da proposta</span>
+            <span><b class="ls-etapa-numero" aria-hidden="true">3</b><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento da proposta</span>
             <strong id="orcamentoPagamentoSituacao">Pendente</strong>
           </div>
           <div class="ls-orcamento-pagamento-valores">
@@ -303,31 +366,15 @@
             <div><span>Já recebido</span><strong id="orcamentoPagamentoRecebido">R$ 0,00</strong></div>
             <div><span>Falta receber</span><strong id="orcamentoPagamentoFalta">R$ 0,00</strong></div>
           </div>
+          <p class="ls-orcamento-venda" id="orcamentoPagamentoVenda" hidden>
+            <i class="bi bi-bag-check-fill" aria-hidden="true"></i>
+            <span id="orcamentoPagamentoVendaTexto">Pago 100%: registrado como venda.</span>
+            {% if permissoes_interno.financeiro %}<a href="{% url 'vendas_inner' %}?filtro=confirmadas" id="orcamentoPagamentoVendaLink">Ver em Vendas</a>{% endif %}
+          </p>
           <button type="button" class="btn btn-outline-success" id="abrirPagamentoOrcamento">
             <i class="bi bi-wallet2 me-1" aria-hidden="true"></i>
             <span id="abrirPagamentoOrcamentoTexto">Registrar pagamento</span>
           </button>
-        </section>
-
-        {% comment %}
-          PAGO, FINALIZADO: O DOCUMENTO PARA ASSINATURA, DAQUI MESMO.
-
-          O mesmo atalho do botão da lista, dentro da proposta paga: quem
-          abriu o orçamento para conferir vê na hora se o termo de compra
-          ainda falta, se espera a assinatura do cliente ou se já está
-          assinado. A tela do documento é `views_documento_assinatura.py`.
-        {% endcomment %}
-        <section class="ls-orcamento-pagamento quitado" id="orcamentoDocumentoAssinatura" hidden
-                 aria-label="Documento para assinatura">
-          <div class="ls-orcamento-pagamento-titulo">
-            <span><i class="bi bi-pen" aria-hidden="true"></i> Documento para assinatura</span>
-            <strong id="orcamentoDocumentoSituacao">Falta gerar</strong>
-          </div>
-          <p class="form-text mt-0 mb-2" id="orcamentoDocumentoTexto">O orçamento está pago: gere o termo de compra para o cliente assinar no telefone.</p>
-          <a class="btn btn-success" id="orcamentoDocumentoLink" href="#">
-            <i class="bi bi-pen me-1" aria-hidden="true"></i>
-            <span id="orcamentoDocumentoBotao">Gerar documento para assinatura</span>
-          </a>
         </section>
 
         <div class="mt-3">
@@ -1910,8 +1957,15 @@ LSTela.pronto(function () {
     atualizarPagamentoDoOrcamento();
   }
 
+  /* Os dois quadros de depois da aprovação, e a régua por cima deles. A
+     régua vem por último: ela olha quais quadros ficaram na tela. */
   function atualizarPagamentoDoOrcamento() {
     atualizarDocumentoDoOrcamento();
+    desenharQuadroDoPagamento();
+    desenharEtapas();
+  }
+
+  function desenharQuadroDoPagamento() {
     var painel = document.getElementById("orcamentoPagamentoResumo");
     if (!painel) return;
 
@@ -1935,14 +1989,24 @@ LSTela.pronto(function () {
       ? "Pago" : parcial ? "Parcial" : "Pendente";
     painel.classList.toggle("quitado", quitado);
 
+    /* O 100% virou venda: o quadro diz o número dela. */
+    var venda = document.getElementById("orcamentoPagamentoVenda");
+    venda.hidden = !orcamento.venda;
+    if (orcamento.venda) {
+      document.getElementById("orcamentoPagamentoVendaTexto").textContent =
+        "Pago 100%: registrado como venda #" + orcamento.venda + ".";
+    }
+
     var botao = document.getElementById("abrirPagamentoOrcamento");
     botao.hidden = !orcamento.pode_receber_pagamento;
     document.getElementById("abrirPagamentoOrcamentoTexto").textContent = parcial
       ? "Completar pagamento" : "Registrar pagamento";
   }
 
-  /* O atalho para o documento de assinatura, só na proposta PAGA e para
-     quem edita o bloco comercial (a mesma regra do botão da lista). */
+  /* O atalho para o documento de assinatura, a partir da APROVAÇÃO (antes
+     só vinha com a proposta paga) e para quem edita o bloco comercial (a
+     mesma regra do botão da lista). É o passo 2 da régua: vem antes do
+     pagamento. */
   function atualizarDocumentoDoOrcamento() {
     var painel = document.getElementById("orcamentoDocumentoAssinatura");
     if (!painel) return;
@@ -1950,15 +2014,104 @@ LSTela.pronto(function () {
     painel.hidden = !(podeEditarComercial && documento);
     if (painel.hidden) return;
     var textos = {
-      gerar: ["Falta gerar", "O orçamento está pago: gere o termo de compra para o cliente assinar no telefone.", "Gerar documento para assinatura"],
+      gerar: ["Falta gerar", "O orçamento está aprovado: gere o termo de compra para o cliente assinar no telefone. O pagamento vem depois.", "Gerar documento para assinatura"],
       aguardando: ["Aguardando", "O termo foi gerado e espera a assinatura do cliente (link de 5 minutos).", "Abrir o QR e o link"],
-      assinado: ["Assinado", "O cliente já assinou o termo de compra.", "Ver e baixar o PDF"]
+      assinado: ["Assinado", "O cliente já assinou o termo de compra. Falta só o pagamento, se ainda não entrou.", "Ver e baixar o PDF"],
+      suspenso: ["Suspenso", "O orçamento não está mais aprovado: o termo gerado não pode ser assinado.", "Abrir o documento"]
     }[documento.situacao] || ["", "", "Abrir o documento"];
     document.getElementById("orcamentoDocumentoSituacao").textContent = textos[0];
     document.getElementById("orcamentoDocumentoTexto").textContent = textos[1];
     document.getElementById("orcamentoDocumentoBotao").textContent = textos[2];
     document.getElementById("orcamentoDocumentoLink").href = documento.url;
+    painel.classList.toggle("quitado", documento.situacao === "assinado");
+    painel.classList.toggle("alerta", documento.situacao === "suspenso");
   }
+
+  /* ------------------------------------------------------------------
+     A RÉGUA: APROVADO -> ASSINATURA -> PAGAMENTO -> VENDA
+
+     Cada passo tem a sua situação ("feito", "atual", "alerta" ou nada,
+     que é "ainda não"), e o aceso é o PRIMEIRO que falta: o pagamento
+     registrado antes da assinatura (a tela deixa, perguntando) aparece
+     feito, e a régua continua apontando para a assinatura que faltou.
+     Proposta nova, recusada, expirada ou substituída não tem régua: não
+     há pedido andando.
+     ------------------------------------------------------------------ */
+  var SEM_REGUA = ["recusado", "expirado", "substituido"];
+  var ROTULO_DA_SITUACAO = {
+    rascunho: "Rascunho",
+    aguardando_resposta: "Aguardando o cliente",
+    em_negociacao: "Em negociação"
+  };
+
+  function desenharEtapas() {
+    var regua = document.getElementById("orcamentoEtapas");
+    if (!regua) return;
+    var orcamento = orcamentoEmEdicao;
+    regua.hidden = !(orcamento && orcamento.id && SEM_REGUA.indexOf(orcamento.status) === -1);
+    if (regua.hidden) return;
+
+    var aprovado = orcamento.status === "aprovado";
+    var documento = orcamento.documento_assinatura;
+    var situacaoDoc = documento ? documento.situacao : "";
+    var total = paraNumero(orcamento.total || "0");
+    var recebido = paraNumero(orcamento.valor_pago || "0");
+    var pago = orcamento.status_pagamento === "pago";
+
+    var etapas = {
+      aprovado: aprovado
+        ? ["feito", orcamento.aprovado_em ? "Em " + orcamento.aprovado_em : "Pelo cliente"]
+        : ["", ROTULO_DA_SITUACAO[orcamento.status] || "Falta aprovar"],
+      assinatura: !aprovado ? ["", "Depois da aprovação"]
+        : situacaoDoc === "assinado" ? ["feito", "Termo assinado"]
+        : situacaoDoc === "aguardando" ? ["", "Aguardando o cliente"]
+        : situacaoDoc === "suspenso" ? ["alerta", "Suspenso"]
+        : ["", "Gerar o termo"],
+      pagamento: !aprovado ? ["", "Último passo"]
+        : pago ? ["feito", "Pago 100%"]
+        : recebido > 0 ? ["", "Faltam " + moeda(Math.max(total - recebido, 0))]
+        : ["", "A receber"],
+      venda: orcamento.venda ? ["feito", "Venda #" + orcamento.venda] : ["", "Ao quitar 100%"]
+    };
+
+    var atualMarcado = false;
+    regua.querySelectorAll("[data-etapa]").forEach(function (item) {
+      var etapa = etapas[item.dataset.etapa];
+      var estado = etapa[0];
+      if (!atualMarcado && estado !== "feito") {
+        /* O primeiro que falta é o de agora (o suspenso também: é ali
+           que alguém precisa olhar). */
+        if (estado !== "alerta") estado = "atual";
+        atualMarcado = true;
+        item.setAttribute("aria-current", "step");
+      } else {
+        item.removeAttribute("aria-current");
+      }
+      item.className = "ls-etapa" + (estado ? " " + estado : "");
+      item.querySelector("[data-etapa-nota]").textContent = etapa[1];
+
+      /* Tocar no passo leva ao quadro dele -- quando o quadro está na
+         tela para quem abriu (o pagamento é do Financeiro, o termo do
+         Comercial). */
+      var ir = item.querySelector("[data-etapa-ir]");
+      if (ir) {
+        var alvo = document.getElementById(ir.dataset.etapaIr);
+        ir.disabled = !(alvo && !alvo.hidden);
+      }
+    });
+  }
+
+  document.getElementById("orcamentoEtapas")?.addEventListener("click", function (evento) {
+    var ir = evento.target.closest("[data-etapa-ir]");
+    if (!ir || ir.disabled) return;
+    var alvo = document.getElementById(ir.dataset.etapaIr);
+    if (!alvo || alvo.hidden) return;
+    var semMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    alvo.scrollIntoView({ behavior: semMovimento ? "auto" : "smooth", block: "center" });
+    alvo.classList.remove("ls-etapa-pisca");
+    void alvo.offsetWidth;
+    alvo.classList.add("ls-etapa-pisca");
+  });
 
   /* ------------------------------------------------------------------
      Abertura do modal
@@ -2093,10 +2246,19 @@ LSTela.pronto(function () {
      termina a acao aqui, ja com a primeira linha pronta, em vez de apenas
      despejar a pessoa numa lista e obrigar um segundo toque. */
   var parametrosIniciais = new URLSearchParams(window.location.search);
+  /* O pagamento gravado pela janela do orçamento troca a tela; a janela
+     volta, com os dados novos, para a régua mostrar o passo que andou
+     (a venda). Só se ele continua na lista desta tela -- quitado, ele sai
+     do filtro "A receber", e abrir pelo número desenharia uma proposta
+     em branco. */
+  var reabrirDepoisDoPagamento = window.LSReabrirOrcamento;
+  window.LSReabrirOrcamento = null;
   if (parametrosIniciais.get("editar")) {
     abrir(parametrosIniciais.get("editar"));
   } else if (botaoNovoOrcamento && parametrosIniciais.get("novo") === "1") {
     abrir(null);
+  } else if (reabrirDepoisDoPagamento && achar(reabrirDepoisDoPagamento)) {
+    abrir(reabrirDepoisDoPagamento);
   }
 
   Painel.aoClicar("[data-editar]", function (b) {
@@ -2251,14 +2413,19 @@ LSTela.pronto(function () {
      total o quadro inteiro vira verde antes mesmo de salvar.
      ------------------------------------------------------------------ */
   var pagamentoTotalAtual = 0;
+  /* A situação do termo de compra do orçamento desta janela ("gerar",
+     "aguardando", "assinado", "suspenso"). Sem ele assinado, gravar o
+     pagamento pede um "sim" antes -- ver o envio, logo abaixo. */
+  var pagamentoContrato = "";
 
-  function prepararPagamento(id, nome, total, pago) {
+  function prepararPagamento(id, nome, total, pago, contrato) {
     Painel.erro("pagamentoErro", "");
     Painel.valor("pagamentoId", id);
     Painel.valor("pagamentoValor", pago || "0");
     Painel.valor("pagamentoObservacao", "");
     document.getElementById("pagamentoNome").textContent = nome;
     pagamentoTotalAtual = paraNumero(total || "0");
+    pagamentoContrato = contrato || "";
     desenharQuadroDePagamento();
   }
 
@@ -2289,26 +2456,80 @@ LSTela.pronto(function () {
     });
   });
 
+  /* De onde a janela de pagamento abriu: da janela do orçamento (volta
+     para ela depois de gravar) ou da linha da lista (não volta). */
+  var pagamentoDaJanela = null;
+
   Painel.aoClicar("[data-pagamento]", function (botao) {
+      pagamentoDaJanela = null;
       prepararPagamento(
         botao.dataset.pagamento, botao.dataset.nome,
-        botao.dataset.total, botao.dataset.pago
+        botao.dataset.total, botao.dataset.pago, botao.dataset.contrato
       );
       Painel.abrir("modalPagamento");
+  });
+
+  document.getElementById("formPagamento")?.addEventListener("ls:gravado", function () {
+    if (pagamentoDaJanela) window.LSReabrirOrcamento = pagamentoDaJanela;
   });
 
   document.getElementById("abrirPagamentoOrcamento")?.addEventListener("click", function () {
     var orcamento = orcamentoEmEdicao;
     if (!orcamento || !orcamento.pode_receber_pagamento) return;
+    pagamentoDaJanela = orcamento.id;
     prepararPagamento(
       orcamento.id,
       "Orçamento ID " + orcamento.id + " — " + (orcamento.nome_cliente || "cliente"),
       orcamento.total,
-      orcamento.valor_pago
+      orcamento.valor_pago,
+      orcamento.documento_assinatura ? orcamento.documento_assinatura.situacao : ""
     );
     Painel.abrirFilho("modalPagamento", "modalOrcamento");
   });
-  Painel.ligar({ form: "formPagamento", erro: "pagamentoErro" });
+
+  /* O PAGAMENTO VEM DEPOIS DA ASSINATURA -- E A TELA PERGUNTA, NÃO TRAVA.
+
+     A ordem do pedido é aprovado -> termo assinado -> pagamento. Quem
+     registra dinheiro com o termo ainda sem assinatura recebe a folha de
+     aplicativo (LSAviso.confirmar), e no "sim" o mesmo envio segue. O
+     servidor exige só a aprovação: o cliente que paga no balcão antes de
+     assinar existe, e o dinheiro que entrou tem de ser anotado. Na
+     captura, antes do envio por fetch do Painel.ligar -- que só vê o envio
+     já aceito. "Nada ainda" (zero) não é pagamento, e não pergunta. No
+     próprio formulário, e não no documento: a tela é trocada pela
+     navegação do painel, e o ouvinte vai embora junto com ela. */
+  var pagamentoConfirmado = false;
+  document.getElementById("formPagamento")?.addEventListener("submit", function (evento) {
+    var form = evento.currentTarget;
+    if (pagamentoConfirmado) {
+      pagamentoConfirmado = false;
+      return;
+    }
+    var valor = paraNumero(document.getElementById("pagamentoValor").value || "0");
+    if (pagamentoContrato === "assinado" || valor <= 0 || !window.LSAviso) return;
+    evento.preventDefault();
+    evento.stopImmediatePropagation();
+    window.LSAviso.confirmar({
+      titulo: "Registrar o pagamento?",
+      texto: "O contrato ainda não foi assinado. Registrar o pagamento mesmo assim?",
+      confirmar: "Registrar mesmo assim",
+      cancelar: "Voltar",
+      icone: "alerta"
+    }).then(function (sim) {
+      if (!sim) return;
+      pagamentoConfirmado = true;
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+    });
+  }, true);
+
+  /* O recado do servidor, e não o "Salvo." de sempre: é ele que conta
+     que o pagamento de 100% virou venda (ou que a venda saiu). */
+  Painel.ligar({
+    form: "formPagamento",
+    erro: "pagamentoErro",
+    mensagemPronta: function (json) { return (json && json.msg) || "Pagamento atualizado."; }
+  });
 
   var formAvaliacao = document.getElementById("formAvaliacaoBloco");
   if (formAvaliacao) {

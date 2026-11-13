@@ -4206,7 +4206,7 @@ Dependência nova: rjsmin (requirements.txt).
    a migração e o aviso do painel); core/tests_capas_catalogo.py e
    core/tests_capas_em_cena.py (as capas novas nas cenas, sem gente, vivas).
 
-81) ORÇAMENTO PAGO: O DOCUMENTO PARA O CLIENTE ASSINAR NO TELEFONE (LINK DE 5 MINUTOS)
+81) ORÇAMENTO APROVADO: ASSINATURA NO TELEFONE (LINK DE 5 MINUTOS), O PAGAMENTO POR ÚLTIMO E A VENDA
    O pedido: "após o orçamento estar como pago, vc deve analisar o seguinte:
    como já está pago, finalizado, vc deve pôr uma opção de gerar documento,
    no qual vc gera um documento de assinatura digital para o cliente assinar
@@ -4214,24 +4214,50 @@ Dependência nova: rjsmin (requirements.txt).
    usuário assinar, com validações de tempo e tudo, sem muita burocracia e
    muita programação." E, como sempre: "eu falei que quero estilo app em
    tudo".
-   ONDE APARECE (só com o orçamento PAGO, e só para quem edita o orçamento
-   no bloco comercial -- Vendas, Ambulante nos dele, Gestão):
-     * na lista de Orçamentos, nas ações da linha: "Gerar documento para
-       assinatura", "Assinatura pendente" ou "Documento assinado";
-     * na janela do orçamento (Ver/Editar), o quadro "Documento para
-       assinatura" logo abaixo do pagamento, com o mesmo atalho;
-     * a tela do documento: /orcamentos/<id>/documento/ (painel).
+   A ORDEM MUDOU (o pedido seguinte): "após o orçamento atingir aprovado,
+   que você deve gerar a assinatura, a opção de pagamento deve ser o último
+   estágio, terminando o pagamento 100% deve registrar como venda." O pedido
+   anda assim: Rascunho -> Aguardando resposta / Em negociação -> APROVADO ->
+   termo de compra (gerar, mandar o link, o cliente assina no celular) ->
+   PAGAMENTO (parcial ou pago) -> 100% pago = VENDA. O termo deixou de ser o
+   recibo do orçamento pago: sai na aprovação, seja qual for o pagamento.
+   ONDE APARECE (a partir da APROVAÇÃO, e só para quem edita o orçamento no
+   bloco comercial -- Vendas, Ambulante nos dele, Gestão):
+     * na lista de Orçamentos, nas ações da linha, ANTES do botão do
+       pagamento: "Gerar documento para assinatura", "Assinatura pendente",
+       "Documento assinado" ou "Documento suspenso";
+     * na janela do orçamento (Ver/Editar): no alto, a RÉGUA do pedido, em
+       estilo de app -- Aprovado -> Assinatura -> Pagamento -> Venda --, com
+       o passo de agora aceso (o primeiro que falta), os feitos com o visto
+       e a nota de cada um ("Em 12/11/2026", "Aguardando o cliente", "Faltam
+       R$ 2.000,00", "Venda #12"); tocar em Assinatura ou Pagamento leva ao
+       quadro dele. Embaixo dos totais, na ordem: o quadro "2 Documento para
+       assinatura" (o atalho do cartão) e depois o "3 Pagamento da
+       proposta". Proposta recusada, expirada ou substituída não tem régua;
+     * a tela do documento: /orcamentos/<id>/documento/ (painel), com
+       "Voltar ao orçamento" (reabre a janela dele).
    GERAR. O botão abre uma folha que sobe de baixo ("Gerar o documento para
-   assinatura?"). O documento é o TERMO DE COMPRA E RECIBO montado do
-   orçamento: dados da empresa (os mesmos da proposta: razão social, CNPJ,
-   endereço e contato), dados do cliente, os itens com quantidade e valores,
-   frete, desconto ou ajuste, o total, o valor pago e a data do pagamento,
-   a forma de pagamento, a forma de envio e as observações (prazo,
-   produção, garantia), o número e a versão do orçamento, e a declaração.
-   Tudo isso é CONGELADO num retrato (JSON) com o SHA-256 dele: editar o
-   orçamento depois não muda o que o cliente assina. "Gerar de novo"
+   assinatura?"). Só com o orçamento APROVADO; nas outras situações o
+   servidor recusa dizendo qual é ("Hoje ele está como “Aguardando
+   resposta”: registre a aprovação do cliente primeiro"). O documento é o
+   TERMO DE COMPRA montado do orçamento: dados da empresa (os mesmos da
+   proposta: razão social, CNPJ, endereço e contato), dados do cliente, os
+   itens com quantidade e valores, frete, desconto ou ajuste, o total, as
+   CONDIÇÕES DE PAGAMENTO escritas no orçamento ("Pix", "50% na entrada e
+   50% na entrega"), o que já tinha sido recebido ATÉ A EMISSÃO (nada; R$ X
+   e quanto falta; ou o total, com a data), a forma de envio e as
+   observações (prazo, produção, garantia), o número e a versão do
+   orçamento, a data da aprovação e a declaração. Ele NÃO diz "pago" do que
+   não está pago: com o pagamento pendente a folha diz "Aprovado · pagamento
+   pendente" e "A pagar". Tudo isso é CONGELADO num retrato (JSON) com o
+   SHA-256 dele: editar o orçamento depois não muda o que o cliente assina.
+   O hash é calculado uma vez, ao gerar, e nunca comparado com o orçamento
+   vivo -- REGISTRAR O PAGAMENTO DEPOIS (de gerar ou de assinar) NÃO
+   SUSPENDE, NÃO REFAZ E NÃO "DESATUALIZA" o documento. "Gerar de novo"
    (quando o orçamento mudou) substitui o documento e mata todos os links
-   dele na hora; depois de assinado não há "gerar de novo".
+   dele na hora; depois de assinado não há "gerar de novo" -- e a proposta
+   com o termo assinado também não ganha "Nova proposta" (Refazer): o
+   contrato assinado tem de continuar apontando para ela.
    O LINK DE 5 MINUTOS. Não há tabela de links: o link é um
    TimestampSigner do Django, com sal próprio, sobre "id do documento +
    começo do hash". Ninguém fabrica um (HMAC com a SECRET_KEY), ele não
@@ -4239,34 +4265,47 @@ Dependência nova: rjsmin (requirements.txt).
    5 minutos -- conferido ao ABRIR e de novo ao ENVIAR a assinatura. A
    assinatura do link sai em letras e números (base 62) e o separador é o
    ponto: sem "_" nem "-", que o WhatsApp come (ver gerar_token_orcamento).
+   A mensagem do WhatsApp: "Seu pedido nº X foi *aprovado*. Obrigado! Agora
+   é só assinar o termo de compra, direto no seu celular. Assine aqui:" e o
+   link.
    O CARTÃO NO PAINEL: o QR grande, o anel do relógio (5:00 até zerar), o
    link com "Copiar", "Enviar no WhatsApp" (sempre com um link fresco, na
    conversa do número do cliente, com a mensagem pronta) e "Gerar novo
    link". Quando o anel zera, o cartão pede outro link sozinho (com a tela
    à vista: aba escondida não gera link que ninguém vai mostrar). A cada 10
    segundos ele pergunta se o cliente já assinou e, quando assina, vira
-   "Assinado por Fulano em dd/mm às hh:mm" com a assinatura, o IP, o hash e
-   "Baixar PDF" -- sem recarregar. O link NÃO vem no HTML da tela (a
-   navegação do painel guarda as telas; um QR guardado seria um link
-   vencido): o cartão o pede ao abrir. Cada link gerado conta no documento.
+   "Assinado por Fulano em dd/mm às hh:mm" com a assinatura, o IP, o hash,
+   o total da compra, o pagamento de agora e "Baixar PDF" -- sem
+   recarregar. O link NÃO vem no HTML da tela (a navegação do painel guarda
+   as telas; um QR guardado seria um link vencido): o cartão o pede ao
+   abrir. Cada link gerado conta no documento.
    A PÁGINA DO CLIENTE (/assinar/<link>/, no site, sem login), no tema
-   escuro do site, como app: a barra com o relógio do link em cima, o
-   documento em papel (CPF/CNPJ do cadastro mascarado), e o quadro de
-   assinar: nome completo, CPF ou CNPJ (com máscara), "Li e concordo" e a
-   assinatura com o dedo (eventos de ponteiro: dedo, caneta e mouse;
-   Desfazer e Limpar; o traço redesenha quando a tela gira). "Assinar
-   documento" abre a folha "Confirmar a assinatura?" com a imagem e os
-   dados; "Assinar agora" envia. Quando o relógio zera, o botão para e a
-   folha "O tempo do link acabou" sobe (nome e documento continuam
+   escuro do site, como app: a barra com o relógio do link em cima ("Pedido
+   nº X · aprovado"), o documento em papel (CPF/CNPJ do cadastro mascarado),
+   e o quadro de assinar: nome completo, CPF ou CNPJ (com máscara), "Li e
+   concordo" e a assinatura com o dedo (eventos de ponteiro: dedo, caneta e
+   mouse; Desfazer e Limpar; o traço redesenha quando a tela gira).
+   "Assinar documento" abre a folha "Confirmar a assinatura?" com a imagem
+   e os dados; "Assinar agora" envia. Quando o relógio zera, o botão para e
+   a folha "O tempo do link acabou" sobe (nome e documento continuam
    preenchidos no aparelho para o link novo).
      * link vencido: "Este link expirou -- peça um novo ao atendente", com
        o botão do WhatsApp da empresa ("Pedir um novo link");
      * link de um documento refeito: "Este link foi trocado";
-     * pagamento desfeito depois de gerar (estorno): "Documento suspenso"
-       (o painel também não gera link);
+     * orçamento que deixou de estar aprovado depois de gerar (recusado,
+       expirado, substituído): "Documento suspenso" (o painel também não
+       gera link nem gera de novo);
      * link cortado ou inventado: "Link inválido";
      * documento já assinado: o link leva ao comprovante ("Documento já
        assinado ... em dd/mm/aaaa") com "Baixar PDF" -- mesmo vencido.
+   OS DOCUMENTOS DA REGRA ANTIGA (gerados quando só o orçamento pago podia,
+   modelo "2026-11", o "Termo de compra e recibo") continuam abrindo,
+   assinando e saindo em PDF como eram, com o título e a declaração deles.
+   Como a declaração deles diz "o pagamento foi feito e está quitado", SÓ
+   eles ainda ficam suspensos se o pagamento for desfeito antes da
+   assinatura ("O pagamento deste pedido mudou"), com "Gerar de novo" no
+   cartão (que monta o termo de agora). O termo de agora é o modelo
+   "2026-11b" (documento_assinatura.VERSAO_DO_MODELO e MODELO_DO_RECIBO).
    AS VALIDAÇÕES NO SERVIDOR (no envio, de novo, mesmo com a tela certa):
    o link dentro dos 5 minutos (fora: nada é salvo, "O tempo do link acabou
    antes do envio"); nome com sobrenome; CPF/CNPJ válido pelos dígitos e,
@@ -4297,22 +4336,81 @@ Dependência nova: rjsmin (requirements.txt).
    com fuso, assinante, IP, navegador, os dois SHA-256 e os links gerados).
    No painel: /orcamentos/<id>/documento/via/ (?imprimir=1 abre a
    impressão sozinha); para o cliente: /assinado/<código>/.
+   O PAGAMENTO, O ÚLTIMO ESTÁGIO. Continua o mesmo quadro e a mesma janela
+   ("Valor total recebido até agora", os atalhos "Recebi tudo", "Metade",
+   "Nada ainda"), e o servidor continua exigindo só a APROVAÇÃO. Com o termo
+   ainda sem assinatura, gravar um valor abre a folha de app (LSAviso.
+   confirmar, nunca o confirm() do navegador): "O contrato ainda não foi
+   assinado. Registrar o pagamento mesmo assim?" -- "Registrar mesmo assim"
+   segue com o mesmo envio, "Voltar" não grava. Pergunta, e não trava: o
+   cliente que paga no balcão antes de assinar existe. "Nada ainda" (zero)
+   não pergunta. Vale na janela do orçamento e no botão da linha.
+   A VENDA (o 100%). Quando o pagamento chega a 100% (Pago), o orçamento
+   ganha UMA venda em core.Venda -- a mesma tabela das vendas do site, que é
+   de onde o Financeiro tira a receita (pelo mês da venda) e a tela de
+   Vendas tira a lista; o dinheiro de orçamento nunca entrava nessa conta.
+   A venda nasce CONFIRMADA (quem registrou recebeu), com o valor recebido,
+   o CPF/CNPJ do cliente sem pontuação (sem cadastro com documento, o de
+   quem assinou o termo) e a forma (Pix, cartão ou dinheiro) quando o texto
+   "Forma de pagamento" do orçamento fala de UMA só; com duas, fica sem
+   forma. Registrar de novo não duplica (a linha do orçamento é travada, e
+   uma aba velha não cria a segunda); outro valor ainda 100% só ajusta o
+   valor da venda. Se uma correção tira o pagamento dos 100% (parcial, zero
+   ou estorno), a venda SAI -- é dado derivado do pagamento --, e o
+   histórico do orçamento conta na linha do pagamento ("Pagamento parcial ·
+   a venda #12 saiu (o pagamento deixou de ser 100%)"; ao quitar: "Pago ·
+   registrado como venda #12"). O recado depois de gravar diz "Pagamento de
+   100% do orçamento #N: registrado como venda #12." (Painel.ligar aceita
+   `mensagemPronta` como função do JSON). O superusuário que exclui um
+   orçamento pago leva a venda junto (Orcamento.delete), e o rastro da
+   exclusão diz. A ligação mora no ORÇAMENTO (Orcamento.venda, um para um,
+   nulo, não editável): o core não depende de migração do sistema_interno.
+   ONDE A VENDA APARECE: a tela de Vendas (/vendas/inner/) com a etiqueta de
+   origem ("Orçamento" ou "Site"), "Orçamento nº 0012/2026" com o caminho
+   de volta para ele, o cliente do orçamento e, sem forma, o texto do
+   orçamento na coluna Pagamento; ela não entra na bolinha (já nasce
+   confirmada). Na lista de Orçamentos, o "Pago" da linha diz "venda #12".
+   Venda.__str__ sem pedido: "Venda do orçamento nº 0012/2026" (antes
+   estourava). O relatório antigo da gestão (gestao/relatoriov_adm.html)
+   mostra "Orçamento nº ..." no lugar do "#" sozinho; core/detalhes.py lê a
+   venda pelo pedido e não muda.
    Banco: sistema_interno.DocumentoAssinatura e duas escolhas novas em
    AtividadeOrcamento.tipo, na migração sistema_interno/0058_documento_de_
-   assinatura (só esquema; depende da 0057_orcamento_valor_final).
+   assinatura (só esquema; depende da 0057_orcamento_valor_final). A venda:
+   sistema_interno/0059_orcamento_venda (só esquema: Orcamento.venda;
+   depende da 0058) e sistema_interno/0060_vendas_dos_orcamentos_pagos (só
+   dados): cada orçamento que JÁ estava pago ganha a venda dele (o recebido,
+   ou o total se o recebido não foi anotado; confirmada; o CPF/CNPJ do
+   cliente) com a DATA DO PAGAMENTO (pago_em) -- a receita cai no mês em
+   que entrou, e não no mês do deploy. Rodar de novo não duplica; desfazer
+   apaga as vendas ligadas a orçamentos (as do site ficam).
    Código: sistema_interno/documento_assinatura.py (retrato, hash, link,
-   assinatura, freio), sistema_interno/views_documento_assinatura.py (o
-   painel), core/views_assinatura.py (o site), templates
-   documento_assinatura_inner.html, documento_assinatura/{cartao,resumo,
-   folha}.html, core/templates/assinatura_publica.html e assinatura_via.html,
-   static interno/documento-assinatura.{css,js} e
-   site/paginas/assinatura.{css,js}.
-   Testes: sistema_interno/tests_documento_assinatura.py (só pago; o retrato
-   e o hash congelados; o link valendo até 5 minutos e recusado depois,
-   inclusive no envio, sem gravar; link adulterado ou de outro sal; gerar de
-   novo mata os links velhos; CPF que não confere; cada campo recusado;
-   assinatura grande ou em branco; CSRF; o freio; assinar duas vezes; quem
-   pode; o histórico e o sino; o estado que troca o cartão; as vias).
+   suspensão, assinatura, freio), sistema_interno/views_documento_assinatura.py
+   (o painel), core/views_assinatura.py (o site), Orcamento.registrar_
+   pagamento / _acertar_venda / documento_da_venda e forma_da_venda
+   (sistema_interno/models.py), acao_pagamento (views_gestao.py), VendasView
+   (views.py), templates documento_assinatura_inner.html, documento_
+   assinatura/{cartao,resumo,folha}.html, orcamentos_inner.html (a régua,
+   os quadros e a pergunta), partes/orcamentos_lista.html, vendas_inner.html,
+   core/templates/assinatura_publica.html e assinatura_via.html, static
+   interno/documento-assinatura.{css,js}, interno/interno_modern.css (a
+   régua, .ls-etapa*, e .ls-venda-origem) e site/paginas/assinatura.{css,js}.
+   Testes: sistema_interno/tests_documento_assinatura.py (só aprovado, pago
+   ou não; o termo que não diz "pago"; o retrato e o hash congelados; o
+   pagamento depois de gerar ou de assinar que não mexe no documento; o
+   recusado que suspende; o termo antigo que continua valendo; o link
+   valendo até 5 minutos e recusado depois, inclusive no envio, sem gravar;
+   link adulterado ou de outro sal; gerar de novo mata os links velhos; CPF
+   que não confere; cada campo recusado; assinatura grande ou em branco;
+   CSRF; o freio; assinar duas vezes; quem pode; o botão antes do pagamento;
+   o assinado sem Refazer; o histórico e o sino; o estado que troca o
+   cartão; as vias) e sistema_interno/tests_venda_do_orcamento.py (uma venda
+   no 100%, sem duplicar, ajustada, desfeita abaixo de 100%, o recado e o
+   histórico, a régua na janela, __str__, a tela de Vendas, o relatório, o
+   Financeiro contando uma vez, a migração 0060 com a data do pagamento).
+   Conferido no Chromium (PC 1366 e celular 390, sol e lua): a régua em
+   cada passo, os dois quadros na ordem, a folha "O contrato ainda não foi
+   assinado", o recado da venda e a tela de Vendas.
 
 82) OS AVISOS COMO APLICATIVO: TOAST, FOLHA E O FIM DO alert()/confirm()
    Pedido, sobre a linha "A importação de “CONTRATO OPEN SPICE SUSHI LOUNGE

@@ -78,18 +78,28 @@
       {% if doc.valores.desconto != "0.00" %}<div><dt>Desconto</dt><dd>− {{ doc.valores.desconto|reais }}</dd></div>{% endif %}
       {% if doc.valores.acrescimo != "0.00" %}<div><dt>Ajuste do valor combinado</dt><dd>+ {{ doc.valores.acrescimo|reais }}</dd></div>{% endif %}
       <div class="folha-total"><dt>Total da compra</dt><dd>{{ doc.valores.total|reais }}</dd></div>
-      <div class="folha-pago">
-        <dt>Pago{% if doc.pagamento.pago_em %} em {{ doc.pagamento.pago_em }}{% endif %}</dt>
-        <dd>{{ doc.valores.pago|reais }}</dd>
-      </div>
+      {% comment %}
+        "Pago" só quando estava pago na emissão (o termo antigo, o recibo,
+        sempre estava). O de agora sai na aprovação: mostra o que já tinha
+        entrado e o que falta -- a verdade daquele instante.
+      {% endcomment %}
+      {% if doc.pagamento.situacao == "Pago" %}
+        <div class="folha-pago">
+          <dt>Pago{% if doc.pagamento.pago_em %} em {{ doc.pagamento.pago_em }}{% endif %}</dt>
+          <dd>{{ doc.valores.pago|reais }}</dd>
+        </div>
+      {% else %}
+        {% if doc.valores.pago != "0.00" %}<div><dt>Recebido até a emissão</dt><dd>{{ doc.valores.pago|reais }}</dd></div>{% endif %}
+        {% if doc.valores.saldo %}<div><dt>A pagar</dt><dd>{{ doc.valores.saldo|reais }}</dd></div>{% endif %}
+      {% endif %}
     </dl>
   </section>
 
   <section class="folha-bloco folha-condicoes">
     <h3>Pagamento e entrega</h3>
     <dl>
-      <div><dt>Situação</dt><dd><span class="folha-selo">✓ {{ doc.pagamento.situacao }}</span></dd></div>
-      {% if doc.pagamento.forma %}<div><dt>Forma de pagamento</dt><dd>{{ doc.pagamento.forma }}</dd></div>{% endif %}
+      <div><dt>Situação</dt><dd><span class="folha-selo{% if doc.pagamento.situacao != 'Pago' %} pendente{% endif %}">{% if doc.pagamento.situacao == "Pago" %}✓ {{ doc.pagamento.situacao }}{% else %}Aprovado · {{ doc.pagamento.situacao|lower }}{% endif %}</span></dd></div>
+      {% if doc.pagamento.forma %}<div><dt>Condições de pagamento</dt><dd>{{ doc.pagamento.forma }}</dd></div>{% endif %}
       {% if doc.pagamento.observacao %}<div><dt>Observação do pagamento</dt><dd>{{ doc.pagamento.observacao }}</dd></div>{% endif %}
       {% if doc.condicoes.forma_envio %}<div><dt>Forma de envio</dt><dd>{{ doc.condicoes.forma_envio }}</dd></div>{% endif %}
       {% if doc.condicoes.observacoes %}<div class="largo"><dt>Prazo, produção e garantia</dt><dd>{{ doc.condicoes.observacoes|linebreaksbr }}</dd></div>{% endif %}

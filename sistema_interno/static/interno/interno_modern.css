@@ -4408,6 +4408,106 @@ body.modal-open .ls-rascunhos{display:none!important}
   .ls-orcamento-pagamento .btn{width:100%}
 }
 
+/* O passo 2 (termo) e o 3 (pagamento) levam o número da régua no título:
+   a janela lê na ordem em que o pedido anda. */
+.ls-etapa-numero{
+  display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;
+  border-radius:50%;background:rgba(var(--acento-rgb),.16);color:var(--acento-claro);
+  font-size:.72rem;font-weight:900;vertical-align:1px;
+}
+.ls-orcamento-pagamento.quitado .ls-etapa-numero{background:rgba(var(--green-rgb),.16);color:var(--green-texto)}
+.ls-orcamento-pagamento.alerta{border-color:rgba(var(--yellow-rgb),.5)}
+.ls-orcamento-pagamento.alerta .ls-orcamento-pagamento-titulo>strong{color:var(--yellow-texto);background:rgba(var(--yellow-rgb),.14)}
+.ls-orcamento-venda{
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:-2px 0 12px;padding:10px 12px;
+  border:1px solid rgba(var(--green-rgb),.32);border-radius:11px;
+  background:rgba(var(--green-rgb),.1);color:var(--text);font-size:.86rem;font-weight:700;
+}
+.ls-orcamento-venda[hidden]{display:none!important}
+.ls-orcamento-venda i{color:var(--green-texto)}
+.ls-orcamento-venda a{margin-left:auto;color:var(--green-texto);font-weight:900}
+/* Tocar no passo da régua leva ao quadro e o acende por um instante. */
+.ls-etapa-pisca{animation:ls-etapa-pisca 1.1s ease-out}
+@keyframes ls-etapa-pisca{
+  0%{box-shadow:0 0 0 0 rgba(var(--acento-rgb),.55)}
+  100%{box-shadow:0 0 0 14px rgba(var(--acento-rgb),0)}
+}
+
+/* A ORIGEM DA VENDA, na tela de Vendas: o pedido do site ou o orçamento
+   pago 100% no painel. Duas cores que não brigam com a da situação
+   (verde = confirmada) ao lado. */
+.ls-venda-origem{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:.72rem;font-weight:900;line-height:1.2;white-space:nowrap;
+}
+.ls-venda-origem.orcamento{color:var(--acento-claro);border:1px solid rgba(var(--acento-rgb),.28);background:rgba(var(--acento-rgb),.11)}
+.ls-venda-origem.site{color:var(--info-texto);border:1px solid rgba(var(--info-rgb),.26);background:rgba(var(--info-rgb),.09)}
+.ls-venda-origem+a,.ls-venda-origem+strong{display:block;margin-top:5px;font-size:.84rem}
+
+/* A RÉGUA DO PEDIDO: Aprovado -> Assinatura -> Pagamento -> Venda.
+
+   Estilo de aplicativo: quatro bolinhas ligadas por um trilho, o passo
+   de agora aceso (anel tangerina), os feitos com o visto verde, o
+   suspenso em âmbar. Cabe inteira na largura do celular: o rótulo fica
+   embaixo da bolinha, e a nota (a data, quanto falta) quebra em duas
+   linhas em vez de empurrar a régua para fora. Só variáveis de tema: lua,
+   sol e eclipse saem certos. */
+.ls-etapas{
+  margin:0 0 18px;padding:14px 12px 12px;
+  border:1px solid var(--line);border-radius:18px;
+  background:linear-gradient(160deg,rgba(var(--acento-rgb),.07),rgba(var(--panel-rgb),.6));
+}
+.ls-etapas[hidden]{display:none!important}
+.ls-etapas ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;padding:0;list-style:none}
+.ls-etapa{position:relative;min-width:0;text-align:center}
+/* O trilho: do centro da bolinha anterior ao centro desta. */
+.ls-etapa+.ls-etapa::before{
+  content:"";position:absolute;top:17px;right:calc(50% + 21px);left:calc(-50% + 21px);
+  height:3px;border-radius:3px;background:var(--line);
+}
+.ls-etapa.feito+.ls-etapa::before{background:linear-gradient(90deg,var(--green),rgba(var(--green-rgb),.45))}
+.ls-etapa-ir{
+  display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;
+  text-align:inherit;cursor:pointer;border-radius:12px;
+}
+.ls-etapa-ir:disabled{cursor:default}
+.ls-etapa-ir:focus-visible{outline:2px solid var(--acento);outline-offset:3px}
+.ls-etapa-marca{
+  position:relative;z-index:1;display:grid;place-items:center;width:36px;height:36px;margin:0 auto 7px;
+  border:2px solid var(--line);border-radius:50%;background:var(--panel-2);color:var(--muted);
+  font-size:1rem;transition:background .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.ls-etapa-texto{display:block;min-width:0;padding:0 2px}
+.ls-etapa-texto strong{display:block;color:var(--text-2);font-size:.8rem;font-weight:900;line-height:1.15}
+.ls-etapa-texto small{
+  display:block;margin-top:3px;color:var(--muted);font-size:.68rem;font-weight:700;line-height:1.2;
+  overflow-wrap:anywhere;
+}
+.ls-etapa.feito .ls-etapa-marca{border-color:var(--green);background:var(--green);color:var(--green-tinta)}
+.ls-etapa.feito .ls-etapa-marca i::before{content:"\f633"} /* bi-check-lg: o visto no lugar do ícone */
+.ls-etapa.feito .ls-etapa-texto small{color:var(--green-texto)}
+.ls-etapa.atual .ls-etapa-marca{
+  border-color:var(--acento);background:var(--acento);color:var(--acento-tinta);
+  box-shadow:0 0 0 5px rgba(var(--acento-rgb),.2);
+}
+.ls-etapa.atual .ls-etapa-texto strong{color:var(--text)}
+.ls-etapa.atual .ls-etapa-texto small{color:var(--acento-claro)}
+.ls-etapa.alerta .ls-etapa-marca{border-color:var(--yellow);background:rgba(var(--yellow-rgb),.18);color:var(--yellow-texto)}
+.ls-etapa.alerta .ls-etapa-texto small{color:var(--yellow-texto)}
+.ls-etapa-ir:not(:disabled):hover .ls-etapa-marca{box-shadow:0 0 0 5px rgba(var(--acento-rgb),.14)}
+.ls-etapa.atual .ls-etapa-ir:not(:disabled):hover .ls-etapa-marca{box-shadow:0 0 0 7px rgba(var(--acento-rgb),.24)}
+@media(max-width:520px){
+  .ls-etapas{margin-bottom:14px;padding:12px 6px 10px;border-radius:16px}
+  .ls-etapa-marca{width:32px;height:32px;font-size:.9rem}
+  .ls-etapa+.ls-etapa::before{top:15px;right:calc(50% + 19px);left:calc(-50% + 19px)}
+  .ls-etapa-texto strong{font-size:.72rem}
+  .ls-etapa-texto small{font-size:.62rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .ls-etapa-marca{transition:none}
+  .ls-etapa-pisca{animation:none}
+}
+
 /* O RECADO DO FILTRO INSTANTÂNEO.
 
    Ele responde três coisas diferentes e precisa parecer três coisas

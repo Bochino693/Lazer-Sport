@@ -83,7 +83,7 @@ def contexto_da_folha(documento, *, painel=False):
     }
 
 
-def _tela_de_aviso(request, situacao, documento=None, *, status, mensagem=""):
+def _tela_de_aviso(request, situacao, documento=None, *, status, mensagem="", motivo=""):
     """Expirou, foi trocado ou não existe: uma tela de app, e não um erro."""
     numero = ""
     if documento is not None:
@@ -92,6 +92,9 @@ def _tela_de_aviso(request, situacao, documento=None, *, status, mensagem=""):
         "estado": situacao,
         "numero": numero,
         "mensagem_extra": mensagem,
+        # Por que o termo está suspenso: "aprovacao" ou "pagamento" (ver
+        # `documento_assinatura.motivo_da_suspensao`).
+        "motivo": motivo,
         **_contato_empresa(),
     }
     return _cabecalhos(render(request, "assinatura_publica.html", contexto, status=status))
@@ -124,6 +127,7 @@ def assinar_documento(request, token):
         return _tela_de_aviso(
             request, leitura.situacao, leitura.documento,
             status=STATUS_DA_SITUACAO[leitura.situacao],
+            motivo=leitura.motivo,
         )
 
     contexto = contexto_da_folha(leitura.documento)
@@ -164,7 +168,11 @@ def _enviar_assinatura(request, token):
             mensagens = {
                 "expirado": "O tempo do link acabou antes do envio. Nada foi salvo: peça um novo link ao atendente.",
                 "substituido": "Este link é de uma versão anterior do documento. Nada foi salvo: peça o link novo ao atendente.",
-                "suspenso": "Este documento está suspenso: o pagamento do orçamento mudou. Nada foi salvo; fale com o atendente.",
+                "suspenso": (
+                    "Este documento está suspenso: o pagamento do pedido mudou. Nada foi salvo; fale com o atendente."
+                    if leitura.motivo == "pagamento" else
+                    "Este documento está suspenso: o pedido mudou depois que ele saiu. Nada foi salvo; fale com o atendente."
+                ),
                 "invalido": "Link inválido. Nada foi salvo.",
             }
             return _resposta_de_envio(

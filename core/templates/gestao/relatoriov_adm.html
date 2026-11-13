@@ -184,8 +184,15 @@
   <div class="sales">
     {% for venda in vendas %}
       <div class="sale-row">
-        <div><span>Pedido</span><br>#{{ venda.pedido.id }}</div>
-        <div><span>CPF</span><br>{{ venda.cpf }}</div>
+        {# A venda do orçamento pago 100% não tem pedido: mostrava "#" sozinho. #}
+        {% if venda.pedido_id %}
+          <div><span>Pedido</span><br>#{{ venda.pedido_id }}</div>
+        {% elif venda.orcamento_de_origem %}
+          <div><span>Orçamento</span><br>nº {{ venda.orcamento_de_origem.numero_documento }}</div>
+        {% else %}
+          <div><span>Origem</span><br>—</div>
+        {% endif %}
+        <div><span>CPF</span><br>{{ venda.cpf|default:"—" }}</div>
         <div class="payment">{{ venda.get_forma_pagamento_display }}</div>
         <div><span>Valor</span><br>R$ {{ venda.valor_pago|moeda }}</div>
         <div><span>Data</span><br>{{ venda.criacao|date:"d/m/Y H:i" }}</div>

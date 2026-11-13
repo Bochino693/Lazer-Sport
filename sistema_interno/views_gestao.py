@@ -66,6 +66,7 @@ from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import etapas_padrao
 from . import fragmento
+from .documento_assinatura import situacao_do_cartao
 from .sincronia import revisao_modulo
 from . import financeiro as fin
 from core.objetos_3d import tabela_pronta
@@ -504,22 +505,27 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             if not orcamento.pode_excluir and request.user.is_superuser:
                 orcamento.pode_excluir = True
 
-        # O DOCUMENTO PARA ASSINATURA DAS PROPOSTAS PAGAS DESTA PÁGINA, numa
+        # O DOCUMENTO PARA ASSINATURA DE CADA PROPOSTA DESTA PÁGINA, numa
         # consulta só: o botão da linha diz se falta gerar, se o cliente
         # ainda vai assinar ou se já assinou. Ver `views_documento_assinatura`.
+        # Todas as linhas, e não só as aprovadas: a recusada depois do termo
+        # gerado mostra o termo suspenso, e a que tem termo assinado não
+        # oferece "Refazer" (`Orcamento.contrato_assinado` lê daqui).
         documentos = {}
-        pagas = [orcamento.pk for orcamento in orcamentos if orcamento.quitado]
-        if pagas:
+        if orcamentos:
             for documento in (
                 DocumentoAssinatura.objects
-                .filter(orcamento_id__in=pagas)
+                .filter(orcamento_id__in=[orcamento.pk for orcamento in orcamentos])
                 .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
-                .only("id", "orcamento_id", "situacao")
+                .only("id", "orcamento_id", "situacao", "conteudo")
                 .order_by("id")
             ):
                 documentos[documento.orcamento_id] = documento
         for orcamento in orcamentos:
             orcamento.documento_assinatura = documentos.get(orcamento.pk)
+            orcamento.situacao_documento = situacao_do_cartao(
+                orcamento, orcamento.documento_assinatura,
+            )
 
         # TROCAR O FILTRO NÃO PRECISA REMONTAR O FORMULÁRIO.
         #
@@ -686,20 +692,20 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "saldo_pagamento": f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
             "total": f"{orcamento.total:.2f}".replace(".", ","),
             "pode_receber_pagamento": orcamento.pode_receber_pagamento,
-            # O documento para assinatura (só existe com o orçamento pago):
-            # a janela do orçamento mostra o atalho para o cartão dele.
-            "documento_assinatura": (
-                {
-                    "url": reverse(
-                        "documento_assinatura_inner", args=[orcamento.pk],
-                        urlconf="sistema_interno.urls",
-                    ),
-                    "situacao": getattr(
-                        getattr(orcamento, "documento_assinatura", None), "situacao", "",
-                    ) or "gerar",
-                }
-                if orcamento.quitado else None
+            # AS ETAPAS DEPOIS DO "SIM": aprovado -> assinatura -> pagamento
+            # -> venda. A janela do orçamento desenha a régua com isto.
+            "aprovado_em": (
+                timezone.localtime(orcamento.respondido_em).strftime("%d/%m/%Y")
+                if orcamento.status == Orcamento.Status.APROVADO and orcamento.respondido_em
+                else ""
             ),
+            # O documento para assinatura sai na APROVAÇÃO, antes do
+            # pagamento: a janela mostra o atalho para o cartão dele. A
+            # situação é a do cartão ("gerar", "aguardando", "assinado",
+            # "suspenso"), a mesma palavra nas duas telas.
+            "documento_assinatura": OrcamentosInnerView.documento_da_janela(orcamento),
+            # O 100% pago virou venda (core.Venda): o número dela.
+            "venda": orcamento.venda_id or None,
             "origem": orcamento.origem,
             "origem_rotulo": orcamento.get_origem_display(),
             "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(
@@ -732,6 +738,33 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 }
                 for item in orcamento.itens.all()
             ],
+        }
+
+    @staticmethod
+    def documento_da_janela(orcamento):
+        """O atalho do termo de compra na janela do orçamento, ou None.
+
+        Existe a partir da aprovação (e continua na que deixou de ser
+        aprovada depois de o termo sair, para mostrar que ele está
+        suspenso). A lista já trouxe o documento de cada linha numa
+        consulta só; fora dela, ele é buscado aqui.
+        """
+        if "documento_assinatura" in orcamento.__dict__:
+            documento = orcamento.documento_assinatura
+        elif orcamento.status == Orcamento.Status.APROVADO:
+            from .documento_assinatura import documento_atual
+
+            documento = documento_atual(orcamento)
+        else:
+            documento = None
+        if orcamento.status != Orcamento.Status.APROVADO and documento is None:
+            return None
+        return {
+            "url": reverse(
+                "documento_assinatura_inner", args=[orcamento.pk],
+                urlconf="sistema_interno.urls",
+            ),
+            "situacao": situacao_do_cartao(orcamento, documento),
         }
 
     @staticmethod
@@ -1440,6 +1473,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "pagamento recebido precisa continuar apontando para ela. "
                 "Para o que vier depois, abra uma proposta nova."
             )
+        if orcamento.contrato_assinado:
+            return (
+                "O cliente já assinou o termo de compra desta proposta, e ela "
+                "não ganha outra versão: o contrato assinado precisa continuar "
+                "apontando para ela. Para o que vier depois, abra uma "
+                "proposta nova."
+            )
         if hasattr(orcamento, "ordem_servico"):
             return (
                 "Esta proposta já originou uma O.S. e não pode ganhar outra "
@@ -1458,6 +1498,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 request, "Somente Financeiro ou Gestão registra pagamentos.", status=403,
             )
         orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
+        # O PAGAMENTO É O ÚLTIMO ESTÁGIO: aprovado -> termo assinado ->
+        # pagamento. O servidor exige só a aprovação; o termo ainda sem
+        # assinatura é uma pergunta da tela ("registrar mesmo assim?"), e
+        # não uma trava -- o cliente que paga no balcão antes de assinar
+        # existe, e o dinheiro que entrou tem de ser anotado.
         if orcamento.status != Orcamento.Status.APROVADO:
             raise ErroDeFormulario(
                 "O pagamento só é registrado depois da aprovação definitiva."
@@ -1468,22 +1513,48 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             obrigatorio=True,
             limite=Decimal("9999999999.99"),
         )
-        orcamento.registrar_pagamento(
+        mudanca = orcamento.registrar_pagamento(
             valor, texto(request, "observacao_pagamento", limite=240),
         )
+        situacao = orcamento.get_status_pagamento_display()
+        resumo = situacao
+        recado = (
+            f"Pagamento do orçamento #{orcamento.pk} atualizado para "
+            f"{situacao.lower()}."
+        )
+        # A venda entra (e sai) no histórico do orçamento na mesma linha do
+        # pagamento: é o mesmo acontecimento, e o sino conta um só.
+        if mudanca.acao == "criada":
+            resumo = f"{situacao} · registrado como venda #{mudanca.venda_id}"
+            recado = (
+                f"Pagamento de 100% do orçamento #{orcamento.pk}: registrado "
+                f"como venda #{mudanca.venda_id}."
+            )
+        elif mudanca.acao == "desfeita":
+            resumo = (
+                f"{situacao} · a venda #{mudanca.venda_id} saiu "
+                "(o pagamento deixou de ser 100%)"
+            )
+            recado += (
+                f" A venda #{mudanca.venda_id} saiu das vendas: o pagamento "
+                "deixou de ser 100%."
+            )
+        elif mudanca.acao == "ajustada":
+            resumo = f"{situacao} · venda #{mudanca.venda_id} com o valor novo"
         registrar_atividade_orcamento(
             orcamento,
             request,
             AtividadeOrcamento.Tipo.PAGAMENTO,
-            resumo=orcamento.get_status_pagamento_display(),
+            resumo=resumo,
         )
         return self.sucesso(
             request,
-            f"Pagamento do orçamento #{orcamento.pk} atualizado para "
-            f"{orcamento.get_status_pagamento_display().lower()}.",
+            recado,
             status_pagamento=orcamento.status_pagamento,
             valor_pago=f"{orcamento.valor_pago:.2f}".replace(".", ","),
             saldo=f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
+            venda=orcamento.venda_id,
+            venda_acao=mudanca.acao,
         )
 
     def acao_gerar_ordem_servico(self, request):
@@ -1585,6 +1656,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         numero = orcamento.pk
         forcada = forcando(request.user, regra)
         itens = orcamento.itens.count()
+        # A venda do pagamento 100% sai junto (ver `Orcamento.delete`), e o
+        # rastro da exclusão precisa dizer isso: é receita que some.
+        venda_id = orcamento.venda_id
 
         arrastados = remover(
             orcamento,
@@ -1594,6 +1668,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             resumo=(
                 f"Situação: {orcamento.get_status_display()}. "
                 f"{itens} item(ns). Total: R$ {orcamento.total}."
+                + (f" Venda #{venda_id} (o pagamento 100%) removida junto." if venda_id else "")
             ),
             motivo=texto(request, "motivo_exclusao", limite=240),
             forcada=forcada,
@@ -1604,6 +1679,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             recado += " Não era um rascunho: a exclusão ficou registrada."
         if arrastados:
             recado += f" Levou junto: {', '.join(arrastados)}."
+        if venda_id:
+            recado += f" A venda #{venda_id} saiu das vendas."
         return self.sucesso(request, recado)
 
     # ------------------------------------------------ enviar ao cliente

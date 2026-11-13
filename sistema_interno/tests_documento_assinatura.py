@@ -1,14 +1,21 @@
-"""O documento para assinatura do orçamento pago (LEIA-ME-V10, seção 81).
+"""O documento para assinatura do orçamento aprovado (LEIA-ME-V10, seção 81).
 
 O pedido: "após o orçamento estar como pago (...) vc deve pôr uma opção de
 gerar documento, no qual vc gera um documento de assinatura digital para o
 cliente assinar no telefone dele em um link que vai ser gerado a cada 5
-minutos, para o usuário assinar, com validações de tempo e tudo".
+minutos, para o usuário assinar, com validações de tempo e tudo". E depois:
+"após o orçamento atingir aprovado, que você deve gerar a assinatura, a
+opção de pagamento deve ser o último estágio".
 
 O que estes testes protegem:
 
-  * só se gera com o orçamento PAGO, e o retrato congela: editar o
-    orçamento depois não muda o documento nem o hash dele;
+  * só se gera com o orçamento APROVADO (pago ou não), e o retrato
+    congela: editar o orçamento depois não muda o documento nem o hash
+    dele; o termo não diz "pago" do que não está pago;
+  * o pagamento registrado DEPOIS de gerar ou de assinar não suspende,
+    não refaz e não troca o documento; recusar (ou expirar) o orçamento
+    suspende o link; o termo antigo, que declara "quitado", ainda é
+    suspenso se o pagamento for desfeito;
   * o link vale 5 minutos (o relógio do `TimestampSigner` é o que se
     adianta aqui -- não há freezegun no projeto) e é recusado depois, na
     abertura e no envio; o envio fora da janela não grava nada;
@@ -136,23 +143,26 @@ class BaseDocumento(TestCase):
 
 
 # ======================================================================
-# GERAR: só pago, retrato congelado, gerar de novo
+# GERAR: só aprovado, retrato congelado, gerar de novo
 # ======================================================================
 class GerarDocumentoTests(BaseDocumento):
 
-    def test_so_gera_com_o_orcamento_pago(self):
-        pendente = self.criar_orcamento(pago=False)
+    def test_so_gera_com_o_orcamento_aprovado(self):
         self.client.force_login(self.vendedor)
-
-        resposta = self.client.post(f"/orcamentos/{pendente.pk}/documento/", {"action": "gerar"}, **AJAX)
-        self.assertEqual(resposta.status_code, 409)
-        self.assertIn("pago", resposta.json()["msg"])
-        self.assertFalse(DocumentoAssinatura.objects.filter(orcamento=pendente).exists())
-
-        # Pagamento parcial também não.
-        pendente.registrar_pagamento(Decimal("100.00"))
-        resposta = self.client.post(f"/orcamentos/{pendente.pk}/documento/", {"action": "gerar"}, **AJAX)
-        self.assertEqual(resposta.status_code, 409)
+        for status in (
+            Orcamento.Status.RASCUNHO, Orcamento.Status.AGUARDANDO_RESPOSTA,
+            Orcamento.Status.EM_NEGOCIACAO, Orcamento.Status.RECUSADO,
+            Orcamento.Status.EXPIRADO, Orcamento.Status.SUBSTITUIDO,
+        ):
+            with self.subTest(status=status):
+                fora = self.criar_orcamento(pago=False, status=status)
+                resposta = self.client.post(f"/orcamentos/{fora.pk}/documento/", {"action": "gerar"}, **AJAX)
+                self.assertEqual(resposta.status_code, 409)
+                self.assertIn("aprovado", resposta.json()["msg"])
+                self.assertIn(fora.get_status_display(), resposta.json()["msg"])
+                self.assertFalse(DocumentoAssinatura.objects.filter(orcamento=fora).exists())
+                with self.assertRaises(Exception):
+                    svc.gerar(fora, self.vendedor)
 
         resposta = self.client.post(f"/orcamentos/{self.orcamento.pk}/documento/", {"action": "gerar"}, **AJAX)
         self.assertEqual(resposta.status_code, 200)
@@ -163,11 +173,57 @@ class GerarDocumentoTests(BaseDocumento):
         self.assertEqual(documento.situacao, DocumentoAssinatura.Situacao.AGUARDANDO)
         self.assertEqual(documento.criado_por, self.vendedor)
 
+    def test_aprovado_sem_pagamento_gera_e_o_termo_nao_diz_pago(self):
+        """A assinatura vem ANTES do pagamento: aprovado basta."""
+        pendente = self.criar_orcamento(pago=False, respondido_em=timezone.now())
+        self.client.force_login(self.vendedor)
+        pagina = self.client.get(f"/orcamentos/{pendente.pk}/documento/", **INTERNO)
+        self.assertContains(pagina, "Gerar documento para assinatura")
+        self.assertContains(pagina, "O orçamento está aprovado")
+
+        resposta = self.client.post(f"/orcamentos/{pendente.pk}/documento/", {"action": "gerar"}, **AJAX)
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        conteudo = DocumentoAssinatura.objects.get(orcamento=pendente).conteudo
+        self.assertEqual(conteudo["titulo"], "Termo de compra")
+        self.assertEqual(conteudo["modelo"], svc.VERSAO_DO_MODELO)
+        self.assertEqual(conteudo["pagamento"]["situacao"], "Pagamento pendente")
+        self.assertFalse(conteudo["pagamento"]["quitado"])
+        self.assertEqual(conteudo["pagamento"]["forma"], "Pix")
+        self.assertEqual(conteudo["valores"]["pago"], "0.00")
+        self.assertEqual(conteudo["valores"]["saldo"], "3000.00")
+        self.assertTrue(conteudo["orcamento"]["aprovado_em"])
+        texto = " ".join(conteudo["declaracao"])
+        self.assertIn("aprovado em", texto)
+        self.assertIn("condições combinadas neste orçamento: Pix.", texto)
+        self.assertIn("nenhum valor foi recebido", texto)
+        for palavra in ("quitado", "foi feito", "pago:"):
+            self.assertNotIn(palavra, texto)
+
+        # A folha (a do cliente e a via) também não diz "Pago".
+        documento = DocumentoAssinatura.objects.get(orcamento=pendente)
+        folha = self.client.get(f"/assinar/{self.link(documento)}/").content.decode()
+        self.assertIn("Aprovado · pagamento pendente", folha)
+        self.assertIn("A pagar", folha)
+        self.assertNotIn("✓ Pago", folha)
+        self.assertIn("· aprovado</span>", folha)
+        self.assertIn("Li e concordo com o termo de compra acima.", folha)
+
+    def test_pagamento_parcial_entra_no_termo_como_o_que_ja_entrou(self):
+        parcial = self.criar_orcamento(pago=False)
+        parcial.registrar_pagamento(Decimal("1000.00"))
+        conteudo = self.gerar(parcial).conteudo
+        texto = " ".join(conteudo["declaracao"])
+        self.assertIn("foram recebidos R$ 1.000,00; restam R$ 2.000,00", texto)
+        self.assertNotIn("quitado", texto)
+        self.assertEqual(conteudo["valores"]["pago"], "1000.00")
+        self.assertEqual(conteudo["valores"]["saldo"], "2000.00")
+
     def test_o_retrato_congela_e_o_hash_e_o_do_json(self):
         documento = self.gerar()
         conteudo = documento.conteudo
 
-        self.assertEqual(conteudo["titulo"], "Termo de compra e recibo")
+        self.assertEqual(conteudo["titulo"], "Termo de compra")
+        self.assertTrue(any("o valor total já foi recebido (R$ 3.000,00" in p for p in conteudo["declaracao"]))
         self.assertEqual(conteudo["orcamento"]["numero"], self.orcamento.numero_documento)
         self.assertEqual(conteudo["orcamento"]["versao"], 1)
         self.assertEqual(conteudo["cliente"]["nome"], "Buffet Alegria")
@@ -324,6 +380,10 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         self.assertAlmostEqual(corpo["expira_em"] - corpo["agora"], 300_000, delta=2000)
         self.assertIn("wa.me/5511977776655", corpo["whatsapp"])
         self.assertIn("5 minutos", corpo["mensagem"])
+        # O termo sai na aprovação: a conversa diz "aprovado", não "pago".
+        self.assertIn(f"Seu pedido nº {self.orcamento.numero_documento} foi *aprovado*", corpo["mensagem"])
+        self.assertIn("Assine aqui", corpo["mensagem"])
+        self.assertNotIn("*pago*", corpo["mensagem"])
         self.assertEqual(corpo["numero"], 1)
 
         token = corpo["link"].rstrip("/").rsplit("/", 1)[1]
@@ -345,18 +405,107 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         self.assertEqual(resposta.status_code, 409)
         self.assertIn("assinado", resposta.json()["msg"])
 
-    def test_pagamento_desfeito_suspende_o_documento(self):
+    def test_o_pagamento_depois_de_gerar_nao_mexe_no_documento(self):
+        """O pagamento é o estágio seguinte: nem suspende, nem "desatualiza"."""
+        pendente = self.criar_orcamento(pago=False)
+        documento = self.gerar(pendente)
+        token = self.link(documento)
+        hash_antes = documento.hash_conteudo
+
+        for valor in ("1000.00", "3000.00", "0.00", "3000.00"):
+            with self.subTest(valor=valor):
+                pendente.registrar_pagamento(Decimal(valor))
+                self.assertEqual(svc.ler_link(token).situacao, "valido")
+                documento.refresh_from_db()
+                self.assertEqual(documento.hash_conteudo, hash_antes)
+                self.assertEqual(svc.situacao_do_cartao(pendente, documento), "aguardando")
+                self.assertEqual(svc.documento_atual(pendente), documento)
+        self.assertEqual(DocumentoAssinatura.objects.filter(orcamento=pendente).count(), 1)
+
+        # E assina com o pagamento já quitado depois de gerar.
+        self.assertEqual(self.assinar(token).status_code, 200)
+
+    def test_o_pagamento_depois_de_assinar_nao_invalida_a_assinatura(self):
+        pendente = self.criar_orcamento(pago=False)
+        documento = self.gerar(pendente)
+        token = self.link(documento)
+        self.assertEqual(self.assinar(token).status_code, 200)
+        documento.refresh_from_db()
+        assinado = (documento.hash_conteudo, documento.hash_assinado, documento.assinado_em)
+
+        pendente.registrar_pagamento(pendente.total)
+        pendente.registrar_pagamento(Decimal("0.00"))  # e até um estorno
+
+        documento.refresh_from_db()
+        self.assertTrue(documento.assinado)
+        self.assertEqual((documento.hash_conteudo, documento.hash_assinado, documento.assinado_em), assinado)
+        self.assertEqual(svc.ler_link(token).situacao, "assinado")
+        self.assertEqual(svc.situacao_do_cartao(pendente, documento), "assinado")
+        self.assertEqual(Client().get(f"/assinado/{documento.codigo_publico}/").status_code, 200)
+
+    def test_recusado_depois_de_gerar_suspende_o_link(self):
         documento = self.gerar()
         token = self.link(documento)
-        self.orcamento.registrar_pagamento(Decimal("0.00"))
+        self.orcamento.registrar_recusa("Desistiu", por="Cliente")
 
-        self.assertEqual(svc.ler_link(token).situacao, "suspenso")
-        self.assertEqual(self.client.get(f"/assinar/{token}/").status_code, 410)
-        self.assertEqual(self.assinar(token).status_code, 410)
+        leitura = svc.ler_link(token)
+        self.assertEqual((leitura.situacao, leitura.motivo), ("suspenso", "aprovacao"))
+        resposta = self.client.get(f"/assinar/{token}/")
+        self.assertEqual(resposta.status_code, 410)
+        self.assertContains(resposta, "não está mais aprovado", status_code=410)
+        resposta = self.assinar(token)
+        self.assertEqual(resposta.status_code, 410)
+        self.assertIn("o pedido mudou", resposta.json()["msg"])
+        documento.refresh_from_db()
+        self.assertFalse(documento.assinado)
+
         self.client.force_login(self.vendedor)
         resposta = self.client.post(f"/orcamentos/{self.orcamento.pk}/documento/link/", **AJAX)
         self.assertEqual(resposta.status_code, 409)
-        self.assertContains(self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO), "Documento suspenso")
+        self.assertIn("não está mais aprovado", resposta.json()["msg"])
+        pagina = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO)
+        self.assertContains(pagina, "Documento suspenso")
+        self.assertContains(pagina, "recusado")
+        # Nem gerar de novo: não há compra aprovada.
+        resposta = self.client.post(f"/orcamentos/{self.orcamento.pk}/documento/", {"action": "gerar"}, **AJAX)
+        self.assertEqual(resposta.status_code, 409)
+
+    def test_o_termo_antigo_do_orcamento_pago_continua_valendo(self):
+        """Os documentos gerados na regra antiga ("só com o orçamento pago").
+
+        Continuam abrindo e assinando. A declaração deles diz "quitado":
+        só ELES ainda ficam suspensos se o pagamento for desfeito.
+        """
+        documento = self.gerar()
+        # O retrato como a regra antiga gravava: outro modelo, outro título,
+        # sem as chaves novas.
+        conteudo = dict(documento.conteudo, modelo=svc.MODELO_DO_RECIBO, titulo="Termo de compra e recibo")
+        conteudo["pagamento"] = {k: v for k, v in conteudo["pagamento"].items() if k != "quitado"}
+        conteudo["valores"] = {k: v for k, v in conteudo["valores"].items() if k != "saldo"}
+        DocumentoAssinatura.objects.filter(pk=documento.pk).update(
+            conteudo=conteudo, hash_conteudo=svc.hash_do_retrato(conteudo),
+        )
+        documento.refresh_from_db()
+        token = self.link(documento)
+        self.assertEqual(svc.ler_link(token).situacao, "valido")
+        pagina = self.client.get(f"/assinar/{token}/")
+        self.assertContains(pagina, "Termo de compra e recibo")
+        self.assertContains(pagina, "· pago</span>")
+        self.assertContains(pagina, "✓ Pago")
+
+        self.orcamento.registrar_pagamento(Decimal("0.00"))
+        leitura = svc.ler_link(token)
+        self.assertEqual((leitura.situacao, leitura.motivo), ("suspenso", "pagamento"))
+        self.assertContains(self.client.get(f"/assinar/{token}/"), "O pagamento deste pedido mudou", status_code=410)
+        self.client.force_login(self.vendedor)
+        self.assertContains(
+            self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO),
+            "do modelo antigo",
+        )
+
+        self.orcamento.registrar_pagamento(self.orcamento.total)
+        self.assertEqual(svc.ler_link(token).situacao, "valido")
+        self.assertEqual(self.assinar(token).status_code, 200)
 
 
 # ======================================================================
@@ -373,7 +522,7 @@ class AssinaturaPublicaTests(BaseDocumento):
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta["Cache-Control"], "no-store")
         self.assertIn("noindex", resposta["X-Robots-Tag"])
-        self.assertContains(resposta, "Termo de compra e recibo")
+        self.assertContains(resposta, "Termo de compra")
         self.assertContains(resposta, "Cama elástica 3 m")
         self.assertContains(resposta, "R$ 3.000,00")
         self.assertContains(resposta, "csrfmiddlewaretoken")
@@ -564,13 +713,26 @@ class PermissoesDoDocumentoTests(BaseDocumento):
         self.assertEqual(resposta.status_code, 302)
         self.assertIn("login", resposta["Location"])
 
-    def test_o_botao_da_lista_so_aparece_no_orcamento_pago(self):
-        pendente = self.criar_orcamento(pago=False)
+    def test_o_botao_da_lista_aparece_no_orcamento_aprovado(self):
+        aprovado_sem_pagar = self.criar_orcamento(pago=False)
+        aguardando = self.criar_orcamento(pago=False, status=Orcamento.Status.AGUARDANDO_RESPOSTA)
         self.client.force_login(self.vendedor)
         html = self.client.get("/orcamentos/?filtro=todos", **INTERNO).content.decode()
         self.assertIn(f'href="/orcamentos/{self.orcamento.pk}/documento/"', html)
-        self.assertNotIn(f'href="/orcamentos/{pendente.pk}/documento/"', html)
+        # A assinatura vem antes do pagamento: aprovado basta.
+        self.assertIn(f'href="/orcamentos/{aprovado_sem_pagar.pk}/documento/"', html)
+        self.assertNotIn(f'href="/orcamentos/{aguardando.pk}/documento/"', html)
         self.assertIn("Gerar documento para assinatura", html)
+        # E vem ANTES do botão do pagamento, na ordem dos estágios (quem vê
+        # os dois é quem tem o comercial e o financeiro: a gestão).
+        self.client.force_login(User.objects.create_superuser("gestao-doc", "g@example.com", "x"))
+        completo = self.client.get("/orcamentos/?filtro=todos", **INTERNO).content.decode()
+        self.assertLess(
+            completo.index(f'href="/orcamentos/{aprovado_sem_pagar.pk}/documento/"'),
+            completo.index(f'data-pagamento="{aprovado_sem_pagar.pk}"'),
+        )
+        self.assertIn('data-contrato="gerar"', completo)
+        self.client.force_login(self.vendedor)
 
         documento = self.gerar()
         html = self.client.get("/orcamentos/", **INTERNO).content.decode()
@@ -580,13 +742,27 @@ class PermissoesDoDocumentoTests(BaseDocumento):
         self.assertIn('data-documento-assinatura="assinado"', html)
         self.assertIn("Documento assinado", html)
 
-        # E a janela do orçamento leva o atalho (só no pago).
+        # E a janela do orçamento leva o atalho (a partir da aprovação).
         dados = json.loads(re.search(
             r'<script id="orcamentosDados" type="application/json">(.*?)</script>', html, re.S,
         ).group(1))
         por_id = {d["id"]: d for d in dados}
         self.assertEqual(por_id[self.orcamento.pk]["documento_assinatura"]["situacao"], "assinado")
-        self.assertIsNone(por_id[pendente.pk]["documento_assinatura"])
+        self.assertEqual(por_id[aprovado_sem_pagar.pk]["documento_assinatura"]["situacao"], "gerar")
+        self.assertIsNone(por_id[aguardando.pk]["documento_assinatura"])
+
+    def test_com_o_contrato_assinado_a_proposta_nao_ganha_outra_versao(self):
+        """Refazer deixaria o termo assinado apontando para uma "substituída"."""
+        pendente = self.criar_orcamento(pago=False)
+        self.assertTrue(pendente.pode_refazer)
+        self.assinar(self.link(self.gerar(pendente)))
+        pendente = Orcamento.objects.get(pk=pendente.pk)
+        self.assertTrue(pendente.contrato_assinado)
+        self.assertFalse(pendente.pode_refazer)
+        self.client.force_login(self.vendedor)
+        resposta = self.client.post("/orcamentos/", {"action": "refazer", "id": pendente.pk}, **AJAX)
+        self.assertGreaterEqual(resposta.status_code, 400)
+        self.assertIn("já assinou o termo", resposta.json()["msg"])
 
     def test_financeiro_nao_ve_o_botao_da_lista(self):
         financeiro = self.usuario("financeiro2", "financeiro")

@@ -3,11 +3,16 @@
   O RESUMO AO LADO DO CARTÃO: o que entra (ou entrou) no documento. Com o
   documento gerado, é o RETRATO congelado; antes, o orçamento de agora.
   Viaja junto com o cartão no JSON do estado e do "Gerar".
+
+  O termo sai na aprovação, antes do pagamento: o resumo mostra as
+  condições de pagamento e o que já entrou ATÉ A EMISSÃO -- e só diz
+  "pago" do que foi pago. O termo antigo (o recibo do orçamento pago)
+  continua mostrando o "Pago em" dele.
 {% endcomment %}
 <aside class="ls-doc-resumo" id="docAssinaturaResumo" aria-label="O que entra no documento">
   <h2><i class="bi bi-receipt" aria-hidden="true"></i> O que entra no documento</h2>
   {% if documento %}
-    <p class="ls-doc-resumo-nota"><i class="bi bi-snow" aria-hidden="true"></i> Congelado em {{ conteudo.emitido_em_texto }}: editar o orçamento não muda o documento.</p>
+    <p class="ls-doc-resumo-nota"><i class="bi bi-snow" aria-hidden="true"></i> Congelado em {{ conteudo.emitido_em_texto }}: editar o orçamento ou registrar o pagamento não muda o documento.</p>
     <ul class="ls-doc-itens">
       {% for item in conteudo.itens %}
         <li><span><b>{{ item.quantidade }}×</b> {{ item.descricao }}</span><strong>{{ item.subtotal|reais }}</strong></li>
@@ -15,7 +20,12 @@
     </ul>
     <dl class="ls-doc-totais">
       <div><dt>Total</dt><dd>{{ conteudo.valores.total|reais }}</dd></div>
-      <div class="pago"><dt>Pago{% if conteudo.pagamento.pago_em %} em {{ conteudo.pagamento.pago_em }}{% endif %}</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>
+      {% if conteudo.pagamento.forma %}<div><dt>Condições de pagamento</dt><dd>{{ conteudo.pagamento.forma }}</dd></div>{% endif %}
+      {% if conteudo.pagamento.situacao == "Pago" %}
+        <div class="pago"><dt>Pago{% if conteudo.pagamento.pago_em %} em {{ conteudo.pagamento.pago_em }}{% endif %}</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>
+      {% elif conteudo.valores.pago != "0.00" %}
+        <div><dt>Recebido até a emissão</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>
+      {% endif %}
       {% if conteudo.condicoes.forma_envio %}<div><dt>Envio</dt><dd>{{ conteudo.condicoes.forma_envio }}</dd></div>{% endif %}
     </dl>
   {% else %}
@@ -29,7 +39,12 @@
     </ul>
     <dl class="ls-doc-totais">
       <div><dt>Total</dt><dd>{{ orcamento.total|reais }}</dd></div>
-      <div class="pago"><dt>Pago{% if orcamento.pago_em %} em {{ orcamento.pago_em|date:"d/m/Y" }}{% endif %}</dt><dd>{{ orcamento.valor_pago|reais }}</dd></div>
+      {% if orcamento.forma_pagamento %}<div><dt>Condições de pagamento</dt><dd>{{ orcamento.forma_pagamento }}</dd></div>{% endif %}
+      {% if orcamento.quitado %}
+        <div class="pago"><dt>Pago{% if orcamento.pago_em %} em {{ orcamento.pago_em|date:"d/m/Y" }}{% endif %}</dt><dd>{{ orcamento.valor_pago|reais }}</dd></div>
+      {% elif orcamento.valor_pago %}
+        <div><dt>Já recebido</dt><dd>{{ orcamento.valor_pago|reais }}</dd></div>
+      {% endif %}
       {% if orcamento.forma_envio %}<div><dt>Envio</dt><dd>{{ orcamento.forma_envio }}</dd></div>{% endif %}
     </dl>
   {% endif %}

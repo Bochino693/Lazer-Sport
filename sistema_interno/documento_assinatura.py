@@ -1,4 +1,4 @@
-"""O documento para assinatura do orçamento pago, e o link de 5 minutos.
+"""O documento para assinatura do orçamento aprovado, e o link de 5 minutos.
 
 O PEDIDO, nas palavras do cliente: "após o orçamento estar como pago, vc
 deve analisar o seguinte: como já está pago, finalizado, vc deve pôr uma
@@ -7,13 +7,23 @@ digital para o cliente assinar no telefone dele em um link que vai ser
 gerado a cada 5 minutos, para o usuário assinar, com validações de tempo e
 tudo, sem muita burocracia e muita programação."
 
+E DEPOIS A ORDEM MUDOU: "após o orçamento atingir aprovado, que você deve
+gerar a assinatura, a opção de pagamento deve ser o último estágio,
+terminando o pagamento 100% deve registrar como venda." O termo sai na
+APROVAÇÃO (aprovado -> assinatura -> pagamento -> venda) e é um termo de
+compra: itens, total, as condições de pagamento escritas no orçamento e o
+que já tinha entrado até a emissão. Ele não diz "pago" quando não está.
+
 COMO FICOU, EM QUATRO PEÇAS:
 
   1. O RETRATO (`retrato`). Na hora de gerar, o orçamento é copiado para um
-     JSON: empresa, cliente, itens, valores, pagamento, condições de
+     JSON: empresa, cliente, itens, valores, condições de pagamento e de
      entrega e a declaração. Esse JSON é o documento -- o orçamento pode
      ser editado depois que o papel não muda -- e o SHA-256 dele
-     (`hash_do_retrato`) é a impressão digital que vai na auditoria.
+     (`hash_do_retrato`) é a impressão digital que vai na auditoria. O
+     hash é calculado UMA vez, ao gerar, e nunca comparado com o orçamento
+     vivo: registrar o pagamento depois (o estágio seguinte) não refaz,
+     não suspende e não "desatualiza" o documento.
 
   2. O LINK (`emitir_link` / `ler_link`). É um `TimestampSigner` do Django
      com sal próprio, sobre "id do documento + começo do hash". Não há
@@ -91,7 +101,14 @@ JANELA_DAS_TENTATIVAS = 10 * 60
 
 #: Muda quando o TEXTO da declaração mudar: o retrato guarda a versão, e
 #: um documento antigo continua dizendo o que dizia.
-VERSAO_DO_MODELO = "2026-11"
+VERSAO_DO_MODELO = "2026-11b"
+
+#: O modelo de antes, o "termo de compra e recibo" do orçamento PAGO. A
+#: declaração dele diz "o pagamento foi feito e está quitado": se o
+#: pagamento for desfeito antes de o cliente assinar, essa frase deixa de
+#: ser verdade, e por isso só ESTE modelo ainda é suspenso pelo pagamento
+#: (ver `motivo_da_suspensao`). O de agora é suspenso só pela aprovação.
+MODELO_DO_RECIBO = "2026-11"
 
 
 # ======================================================================
@@ -143,29 +160,63 @@ def _empresa() -> dict:
     }
 
 
+def _recebido_ate_agora(orcamento) -> str:
+    """A frase do dinheiro que já entrou, verdadeira no instante de gerar.
+
+    O termo sai na aprovação, quase sempre antes do pagamento. Ele conta
+    o que já foi recebido ATÉ A EMISSÃO -- e só diz "recebido" do que foi.
+    O que entrar depois é o estágio seguinte (o pagamento), e não muda o
+    papel: a frase é sobre aquele instante.
+    """
+    total = Decimal(orcamento.total or 0)
+    recebido = Decimal(orcamento.valor_pago or 0)
+    if orcamento.quitado and recebido >= total:
+        pago_em = _data_br(orcamento.pago_em)
+        return (
+            "Até a emissão deste termo, o valor total já foi recebido "
+            f"(R$ {_moeda(recebido)}" + (f", em {pago_em}" if pago_em else "") + ")."
+        )
+    if recebido > 0:
+        return (
+            f"Até a emissão deste termo, foram recebidos R$ {_moeda(recebido)}; "
+            f"restam R$ {_moeda(orcamento.saldo_pagamento)}, a pagar nessas "
+            "condições."
+        )
+    return (
+        "Até a emissão deste termo, nenhum valor foi recebido: o total será "
+        "pago nessas condições."
+    )
+
+
 def _declaracao(orcamento, empresa) -> list[str]:
     """O texto que o cliente assina: curto, sem juridiquês, e verdadeiro.
 
-    Diz o que aconteceu (comprou, pagou, recebe nas condições do orçamento)
-    e o que fica registrado da assinatura. Não promete nada que a tela não
-    faça: o registro é exatamente o da auditoria do documento.
+    Diz o que aconteceu (comprou, aprovou o orçamento), como paga (as
+    condições escritas nele), quanto já entrou até a emissão e o que fica
+    registrado da assinatura. Não diz "pago" do que não está pago, e não
+    promete nada que a tela não faça: o registro é exatamente o da
+    auditoria do documento.
     """
-    pago_em = _data_br(orcamento.pago_em)
-    forma = (orcamento.forma_pagamento or "").strip()
-    pagamento = f"R$ {_moeda(orcamento.valor_pago)}"
-    if pago_em:
-        pagamento += f", recebido em {pago_em}"
-    if forma:
-        pagamento += f" ({forma})"
+    # Sem o ponto final de quem digitou: a frase já termina com o dela.
+    forma = (orcamento.forma_pagamento or "").strip().rstrip(".").strip()
     envio = (orcamento.forma_envio or "").strip()
+    aprovado_em = _data_br(orcamento.respondido_em)
     return [
         (
             f"Declaro que comprei de {empresa['nome']} (CNPJ {empresa['cnpj']}) "
             f"os itens descritos neste termo, referentes ao orçamento nº "
-            f"{orcamento.numero_documento} (versão {orcamento.versao}), pelo "
-            f"valor total de R$ {_moeda(orcamento.total)}."
+            f"{orcamento.numero_documento} (versão {orcamento.versao}), aprovado"
+            + (f" em {aprovado_em}" if aprovado_em else "")
+            + f", pelo valor total de R$ {_moeda(orcamento.total)}."
         ),
-        f"Declaro que o pagamento foi feito e está quitado: {pagamento}.",
+        (
+            (
+                f"O pagamento segue as condições combinadas neste orçamento: {forma}. "
+                if forma else
+                "O pagamento segue as condições combinadas neste orçamento. "
+            )
+            + _recebido_ate_agora(orcamento)
+        ),
         (
             "A produção, a entrega e a garantia seguem as condições escritas "
             "neste orçamento"
@@ -217,7 +268,9 @@ def retrato(orcamento) -> dict:
     agora = timezone.localtime()
     return {
         "modelo": VERSAO_DO_MODELO,
-        "titulo": "Termo de compra e recibo",
+        # Sem "e recibo": o termo sai antes do pagamento, e recibo é de
+        # dinheiro que entrou. Os documentos antigos guardam o título deles.
+        "titulo": "Termo de compra",
         "emitido_em": agora.isoformat(timespec="seconds"),
         "emitido_em_texto": agora.strftime("%d/%m/%Y às %H:%M"),
         "empresa": empresa,
@@ -233,6 +286,7 @@ def retrato(orcamento) -> dict:
             "numero": orcamento.numero_documento,
             "versao": orcamento.versao,
             "data": _data_br(orcamento.criacao),
+            "aprovado_em": _data_br(orcamento.respondido_em),
             "responsavel": responsavel or "Equipe Lazer & Sport",
         },
         "itens": itens,
@@ -242,11 +296,17 @@ def retrato(orcamento) -> dict:
             "desconto": _dinheiro(orcamento.desconto_aplicado),
             "acrescimo": _dinheiro(orcamento.acrescimo_aplicado),
             "total": _dinheiro(orcamento.total),
+            # O recebido ATÉ A EMISSÃO (o pagamento é o estágio seguinte):
+            # o retrato não acompanha o que entrar depois.
             "pago": _dinheiro(orcamento.valor_pago),
+            "saldo": _dinheiro(orcamento.saldo_pagamento),
         },
         "pagamento": {
             "situacao": orcamento.get_status_pagamento_display(),
+            "quitado": orcamento.quitado,
             "pago_em": _data_br(orcamento.pago_em),
+            # As condições escritas no orçamento ("Pix", "50% na entrada e
+            # 50% na entrega"): é o que o cliente concorda em pagar.
             "forma": (orcamento.forma_pagamento or "").strip(),
             "observacao": (orcamento.observacao_pagamento or "").strip(),
         },
@@ -312,9 +372,50 @@ def registrar_no_historico(orcamento, autor, tipo, resumo, *, autor_nome=""):
         return None
 
 
-def gerar(orcamento, usuario):
-    """Congela o orçamento num documento novo. Só para orçamento PAGO.
+def motivo_da_suspensao(documento, orcamento=None) -> str:
+    """Por que o documento que espera assinatura não pode ser assinado agora.
 
+    "" quando pode. "aprovacao": o orçamento deixou de estar aprovado
+    depois de o termo sair (recusado, expirado, substituído por outra
+    versão) -- não há mais a compra que o papel descreve. "pagamento": só
+    no termo do modelo antigo (`MODELO_DO_RECIBO`), que declara o
+    pagamento quitado, e o pagamento foi desfeito.
+
+    O PAGAMENTO NÃO SUSPENDE O TERMO DE AGORA. Ele é o estágio seguinte:
+    entrar dinheiro (ou corrigir o valor) depois de gerar ou de assinar não
+    mexe no documento, que conta o recebido até a emissão.
+    """
+    orcamento = orcamento or documento.orcamento
+    if orcamento.status != Orcamento.Status.APROVADO:
+        return "aprovacao"
+    if (
+        (documento.conteudo or {}).get("modelo") == MODELO_DO_RECIBO
+        and not orcamento.quitado
+    ):
+        return "pagamento"
+    return ""
+
+
+def situacao_do_cartao(orcamento, documento) -> str:
+    """A cara do cartão, numa palavra -- a mesma na tela, no estado e na lista.
+
+    "gerar" (aprovado, sem documento), "bloqueado" (ainda não aprovado),
+    "aguardando", "assinado", "suspenso" (ver `motivo_da_suspensao`). O
+    cartão aberto compara a dele com a do servidor a cada 10 segundos; se
+    mudar (assinou, alguém gerou de novo, a aprovação caiu), troca.
+    """
+    if documento is None:
+        return "gerar" if orcamento.status == Orcamento.Status.APROVADO else "bloqueado"
+    if not documento.assinado and motivo_da_suspensao(documento, orcamento):
+        return "suspenso"
+    return documento.situacao
+
+
+def gerar(orcamento, usuario):
+    """Congela o orçamento num documento novo. Só para orçamento APROVADO.
+
+    Seja qual for o pagamento: o termo vem antes dele (aprovado ->
+    assinatura -> pagamento), e o retrato conta o que já entrou até agora.
     O anterior que ainda esperava assinatura vira "substituído" na mesma
     transação, e com isso todos os links dele morrem (ver `ler_link`).
     Depois de assinado não há "gerar de novo": o assinado é o documento.
@@ -325,10 +426,15 @@ def gerar(orcamento, usuario):
         # Sem select_related: no PostgreSQL o FOR UPDATE não aceita o lado
         # anulável de um LEFT JOIN (o cliente é opcional no orçamento).
         orcamento = Orcamento.objects.select_for_update().get(pk=orcamento.pk)
-        if orcamento.status_pagamento != Orcamento.StatusPagamento.PAGO:
+        if orcamento.status != Orcamento.Status.APROVADO:
             raise ErroDeFormulario(
-                "O documento para assinatura só é gerado depois que o "
-                "orçamento está pago. Registre o pagamento primeiro."
+                "O documento para assinatura só é gerado com o orçamento "
+                f"aprovado. Hoje ele está como “{orcamento.get_status_display()}”"
+                + (
+                    ": registre a aprovação do cliente primeiro."
+                    if orcamento.status in Orcamento.EM_ABERTO else
+                    ", e não há compra para o cliente assinar."
+                )
             )
         if not orcamento.itens.exists():
             raise ErroDeFormulario("Este orçamento não tem itens para o documento.")
@@ -356,7 +462,7 @@ def gerar(orcamento, usuario):
             criado_por=usuario if getattr(usuario, "is_authenticated", False) else None,
         )
 
-    resumo = f"Termo de compra e recibo · integridade {documento.hash_conteudo[:12]}…"
+    resumo = f"Termo de compra · integridade {documento.hash_conteudo[:12]}…"
     if anteriores:
         resumo = (
             f"Documento refeito (o anterior saiu com {links_antes} "
@@ -430,13 +536,16 @@ class LeituraDoLink:
     """O que o link aberto pelo cliente quer dizer.
 
     `situacao` é uma de: "valido", "expirado", "substituido", "suspenso"
-    (o orçamento deixou de estar pago), "assinado" ou "invalido". `expira_em` é o instante (segundos desde 1970) em que
-    ele deixa de valer -- é dele que sai o relógio da página.
+    (o orçamento deixou de estar aprovado; `motivo` diz o porquê, ver
+    `motivo_da_suspensao`), "assinado" ou "invalido". `expira_em` é o
+    instante (segundos desde 1970) em que ele deixa de valer -- é dele que
+    sai o relógio da página.
     """
 
     situacao: str
     documento: DocumentoAssinatura | None = None
     expira_em: int = 0
+    motivo: str = ""
 
     @property
     def valido(self):
@@ -490,10 +599,13 @@ def ler_link(token, *, bloquear=False) -> LeituraDoLink:
         or documento.hash_conteudo[:PEDACO_DO_HASH] != pedaco
     ):
         return LeituraDoLink("substituido", documento, expira_em)
-    # O pagamento foi desfeito depois de o documento sair (estorno, valor
-    # corrigido): o papel diz "pago" e isso deixou de ser verdade.
-    if documento.orcamento.status_pagamento != Orcamento.StatusPagamento.PAGO:
-        return LeituraDoLink("suspenso", documento, expira_em)
+    # A compra que o papel descreve deixou de existir (o orçamento foi
+    # recusado, expirou ou virou outra versão) -- ou, no termo antigo que
+    # declara "quitado", o pagamento foi desfeito. Pagamento que entra
+    # depois NÃO suspende o termo de agora: ver `motivo_da_suspensao`.
+    motivo = motivo_da_suspensao(documento)
+    if motivo:
+        return LeituraDoLink("suspenso", documento, expira_em, motivo)
     if expirado:
         return LeituraDoLink("expirado", documento, expira_em)
     return LeituraDoLink("valido", documento, expira_em)
@@ -535,15 +647,20 @@ def qr_svg(texto: str) -> str:
 
 
 def mensagem_whatsapp(documento, link) -> str:
-    """O texto pronto da conversa, com o link de 5 minutos."""
+    """O texto pronto da conversa, com o link de 5 minutos.
+
+    "Aprovado", e não "pago": o termo sai na aprovação, antes do
+    pagamento -- e é verdade também para os termos antigos, que saíram de
+    orçamento aprovado e pago.
+    """
     conteudo = documento.conteudo or {}
     numero = (conteudo.get("orcamento") or {}).get("numero", "")
     nome = (conteudo.get("cliente") or {}).get("nome", "")
     return "\n".join([
         f"Olá, {nome}! 👋" if nome else "Olá! 👋",
         "",
-        f"Seu pedido nº {numero} está *pago*. Obrigado! ✅",
-        "Falta só assinar o termo de compra, direto no seu celular:",
+        f"Seu pedido nº {numero} foi *aprovado*. Obrigado! ✅",
+        "Agora é só assinar o termo de compra, direto no seu celular. Assine aqui:",
         link,
         "",
         "⏱️ O link vale por *5 minutos*. Se passar, é só pedir outro aqui.",

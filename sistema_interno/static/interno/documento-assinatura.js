@@ -247,7 +247,7 @@
     if (acao === "gerar") {
       abrirFolha({
         titulo: "Gerar o documento para assinatura?",
-        texto: "O termo de compra é montado com os itens, o total pago e as condições deste orçamento, e fica congelado: editar o orçamento depois não muda o que o cliente assina.",
+        texto: "O termo de compra é montado com os itens, o total e as condições de pagamento deste orçamento aprovado, e fica congelado: editar o orçamento — ou registrar o pagamento — depois não muda o que o cliente assina.",
         botao: "Gerar documento",
         acao: gerar,
       });

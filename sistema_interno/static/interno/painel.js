@@ -22,8 +22,15 @@
     cliquesDaTela.push(ouvir);
   };
 
+  /* A janela ABRINDO também conta. Na troca pai -> filho (`abrirFilho`), o
+     `hidden` do pai agenda esta limpeza e, no mesmo instante, o filho
+     começa a abrir -- mas o Bootstrap só põe a classe `show` depois do
+     fundo escurecer. A limpeza chegava antes, tirava o `modal-open` do
+     corpo, e no celular a barra de atalhos de baixo voltava por cima do
+     botão "Atualizar pagamento" da janela filha. `show` (e não `shown`)
+     é o estado que o ouvinte abaixo grava enquanto ela abre. */
   function haModalVisivel() {
-    return Boolean(document.querySelector(".modal.show"));
+    return Boolean(document.querySelector('.modal.show, .modal[data-ls-modal-estado="show"]'));
   }
 
   function limparEstadoDoCorpo() {
@@ -281,6 +288,17 @@
     function mostrarFilho() {
       filhoEl.addEventListener("hidden.bs.modal", function restaurarPai() {
         global.setTimeout(function () {
+          /* O filho que GRAVA (o pagamento da proposta) troca a tela ao
+             terminar (`Painel.ligar` marca `lsTrocaTela`): a janela pai
+             daqui é descartada com a tela velha, e a nova traz a dela.
+             Reabrir a velha estourava no Bootstrap no meio da animação
+             ("Cannot read properties of null (reading 'style')"). */
+          var trocaTela = filhoEl.dataset.lsTrocaTela === "1";
+          delete filhoEl.dataset.lsTrocaTela;
+          if (trocaTela || !paiEl.isConnected) {
+            liberarPai();
+            return;
+          }
           paiEl.addEventListener("shown.bs.modal", liberarPai, { once: true });
           pai.show();
           /* Rede de segurança: se `shown` não chegar -- CSS interrompido,
@@ -1259,14 +1277,25 @@
 
   /* Liga um formulario de modal ao envio por fetch.
    *
-   * opcoes: { form, erro, action, antes, depois, rotuloCarregando }
+   * opcoes: { form, erro, action, antes, depois, rotuloCarregando, mensagemPronta }
    * - antes: devolve string com um erro de validacao para barrar o envio
    * - depois: recebe o JSON; por padrão atualiza somente a tela
+   * - mensagemPronta: o texto do toast ("Salvo." sem ela) ou uma função
+   *   que o tira do JSON -- quando o recado do servidor é a notícia (o
+   *   pagamento de 100% que virou venda), e não um "Salvo." genérico.
    */
   Painel.ligar = function (opcoes) {
     var form = document.getElementById(opcoes.form);
     if (!form) {
       return;
+    }
+    var ultimaResposta = null;
+
+    function recadoPronto() {
+      var recado = typeof opcoes.mensagemPronta === "function"
+        ? opcoes.mensagemPronta(ultimaResposta)
+        : opcoes.mensagemPronta;
+      return recado || "Salvo.";
     }
 
     var botao = form.querySelector('[type="submit"]');
@@ -1322,6 +1351,7 @@
 
       Painel.enviar(form, opcoes.action ? { action: opcoes.action } : null)
         .then(function (json) {
+          ultimaResposta = json;
           /* GRAVOU: quem guardava um rascunho deste formulário pode
              esquecê-lo. O aviso sai daqui, e não de cada tela, porque
              toda gravação do painel passa por este ponto. */
@@ -1332,7 +1362,7 @@
             opcoes.depois(json);
             travar(false);
             Painel.pronto();
-            Painel.aviso(opcoes.mensagemPronta || "Salvo.", "ok");
+            Painel.aviso(recadoPronto(), "ok");
           } else {
             /* A gravação já terminou. Fecha a janela imediatamente para
                que o clique pareça concluído e atualiza só o conteúdo;
@@ -1340,11 +1370,15 @@
             var modal = form.closest(".modal");
             textoOcupado = "Atualizando a lista…";
             pintarOcupado("");
+            /* A janela fecha porque a tela vai ser trocada: se ela é filha
+               de outra (`abrirFilho`), a mãe não volta -- a tela nova traz
+               a dela, e a velha seria descartada no meio da abertura. */
+            if (modal) modal.dataset.lsTrocaTela = "1";
 
             function encerrar() {
               travar(false);
               Painel.pronto();
-              Painel.aviso(opcoes.mensagemPronta || "Salvo.", "ok");
+              Painel.aviso(recadoPronto(), "ok");
             }
 
             function atualizar() {
