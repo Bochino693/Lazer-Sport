@@ -350,6 +350,108 @@ class MercadoPagoCardTests(SimpleTestCase):
         )
 
 
+@override_settings(
+    MP_ACCESS_TOKEN="TEST-ACCESS-TOKEN",
+    ALLOWED_HOSTS=["testserver"],
+)
+class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
+    """Débito e crédito com confirmação do banco (3DS) e recusa explicada."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _pagar(self, resposta_mp, buscar_carrinho, buscar_reserva, sdk_class):
+        buscar_carrinho.return_value = carrinho_mock("150.00")
+        pedido = pedido_mock("150.00")
+        buscar_reserva.return_value = pedido
+        criar = sdk_class.return_value.payment.return_value.create
+        criar.return_value = {"status": 201, "response": resposta_mp}
+        request = self.factory.post(
+            "/processar_cartao/",
+            data=json.dumps({
+                # o formData do Payment Brick, como o navegador manda agora
+                "carrinho_id": 7,
+                "token": "card-token",
+                "payment_method_id": "debvisa",
+                "payment_type_id": "debit_card",
+                "installments": 1,
+                "payer": {
+                    "email": "comprador@example.com",
+                    "identification": {"type": "CPF", "number": "19119119100"},
+                },
+            }),
+            content_type="application/json",
+        )
+        request.user = usuario_mock()
+        response = processar_cartao(request)
+        return response, json.loads(response.content), criar
+
+    @patch("core.views.mercadopago.SDK")
+    @patch("core.views.Carrinho.objects.filter")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_pede_3ds_e_devolve_o_desafio_do_banco(
+        self, buscar_carrinho, buscar_reserva, _filtrar, sdk_class,
+    ):
+        response, body, criar = self._pagar(
+            {
+                "id": 555,
+                "status": "pending",
+                "status_detail": "pending_challenge",
+                "transaction_amount": 150.00,
+                "three_ds_info": {
+                    "external_resource_url": "https://acs.banco.example/desafio",
+                    "creq": "eyJjcmVxIjoiMSJ9",
+                },
+            },
+            buscar_carrinho, buscar_reserva, sdk_class,
+        )
+        enviado = criar.call_args[0][0]
+        self.assertEqual(enviado["three_d_secure_mode"], "optional")
+        self.assertEqual(enviado["payment_method_id"], "debvisa")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(body["pendente"])
+        self.assertEqual(
+            body["desafio_3ds"],
+            {
+                "external_resource_url": "https://acs.banco.example/desafio",
+                "creq": "eyJjcmVxIjoiMSJ9",
+            },
+        )
+        self.assertIn("banco", body["mensagem"])
+
+    @patch("core.views.checkout.expirar_reserva")
+    @patch("core.views.mercadopago.SDK")
+    @patch("core.views.Carrinho.objects.filter")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_recusa_diz_o_motivo_e_devolve_o_carrinho(
+        self, buscar_carrinho, buscar_reserva, _filtrar, sdk_class, expirar,
+    ):
+        response, body, _ = self._pagar(
+            {
+                "id": 556,
+                "status": "rejected",
+                "status_detail": "cc_rejected_bad_filled_security_code",
+                "transaction_amount": 150.00,
+            },
+            buscar_carrinho, buscar_reserva, sdk_class,
+        )
+        self.assertEqual(response.status_code, 402)
+        self.assertIn("código de segurança", body["mensagem"])
+        self.assertTrue(body["carrinho_restaurado"])
+        self.assertIsNone(body["desafio_3ds"])
+        expirar.assert_called_once()
+
+    def test_o_brick_de_cartao_le_formdata_e_mostra_a_tela_do_banco(self):
+        from pathlib import Path
+        html = (Path(__file__).parent / "templates" / "payment.html").read_text(encoding="utf-8")
+        self.assertIn("onSubmit: async ({selectedPaymentMethod, formData})", html)
+        self.assertIn('"statusScreen"', html)
+        self.assertIn("externalResourceURL: data.desafio_3ds.external_resource_url", html)
+        self.assertIn('debitCard: "all"', html)
+
+
 class CatalogImageMigrationTests(TestCase):
     def test_imagem_antiga_vira_foto_um_sem_duplicar(self):
         brinquedo = Brinquedos.objects.create(

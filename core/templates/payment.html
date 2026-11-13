@@ -125,6 +125,7 @@
                     Crédito em até {{ max_parcelas }}x para este pedido. Débito à vista.
                 </div>
                 <div id="paymentBrick_container"></div>
+                <div id="statusScreenBrick_container" class="status-brick" hidden></div>
             </section>
         </section>
 
@@ -211,6 +212,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const liveDetail = document.getElementById("payment-live-detail");
     let currentPedidoId = "{{ pedido_reservado.id|default:'' }}";
     let brickController = null;
+    let bricksBuilder = null;
+    let statusController = null;
+    let pixPrecisaRecarregar = false;
     let pollingTimer = null;
     let pollingActive = false;
     let checkingPayment = false;
@@ -478,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const mp = new MercadoPago(publicKey, {locale: "pt-BR"});
-        const bricksBuilder = mp.bricks();
+        bricksBuilder = mp.bricks();
 
         brickController = await bricksBuilder.create(
             "payment",
@@ -498,7 +502,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         maxInstallments: maxParcelas
                     },
                     visual: {
-                        style: {theme: "default"}
+                        // Formulário do Mercado Pago no tema escuro do site.
+                        style: {
+                            theme: "dark",
+                            customVariables: {
+                                baseColor: "#007BFF",
+                                formBackgroundColor: "transparent",
+                                borderRadiusMedium: "12px",
+                                borderRadiusLarge: "16px"
+                            }
+                        }
                     }
                 },
                 callbacks: {
@@ -507,7 +520,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         console.error(error);
                         showError("Não foi possível carregar o formulário de cartão.");
                     },
-                    onSubmit: async formData => {
+                    // O Payment Brick entrega { selectedPaymentMethod, formData }.
+                    // Antes o objeto inteiro ia para o servidor e o token do
+                    // cartão ficava dentro de "formData": o servidor não o
+                    // achava e todo cartão voltava "Preencha os dados".
+                    onSubmit: async ({selectedPaymentMethod, formData}) => {
                         clearError();
                         try {
                             const response = await fetch("{% url 'processar_cartao' %}", {
@@ -518,7 +535,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                     "X-Requested-With": "XMLHttpRequest"
                                 },
                                 body: JSON.stringify({
-                                    ...formData,
+                                    ...(formData || {}),
+                                    payment_type_id: selectedPaymentMethod || "",
                                     carrinho_id: carrinhoId
                                 })
                             });
@@ -526,12 +544,22 @@ document.addEventListener("DOMContentLoaded", () => {
                             rememberPedido(data.pedido_id);
                             if (data.aprovado) {
                                 finishCheckout(data);
+                            } else if (data.desafio_3ds) {
+                                await showBankChallenge(data);
+                                startPolling();
                             } else {
-                                showError(data.mensagem || "Pagamento em análise.");
+                                updateLiveStatus(
+                                    "checking",
+                                    "Pagamento em análise",
+                                    data.mensagem || "Avisaremos assim que for aprovado."
+                                );
                                 startPolling();
                             }
                             return data;
                         } catch (error) {
+                            // Recusado: o servidor devolve os itens ao
+                            // carrinho; o Pix da tela morreu junto.
+                            pixPrecisaRecarregar = true;
                             showError(error.message);
                             throw error;
                         }
@@ -539,6 +567,44 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         );
+    }
+
+    async function showBankChallenge(data) {
+        const container = document.getElementById("statusScreenBrick_container");
+        const formulario = document.getElementById("paymentBrick_container");
+        if (!bricksBuilder || !container) return;
+        updateLiveStatus(
+            "checking",
+            "Confirme no seu banco",
+            "O banco pediu uma confirmação. Siga as instruções na tela abaixo."
+        );
+        formulario.hidden = true;
+        container.hidden = false;
+        if (statusController) {
+            try { statusController.unmount(); } catch (e) {}
+        }
+        statusController = await bricksBuilder.create(
+            "statusScreen",
+            "statusScreenBrick_container",
+            {
+                initialization: {
+                    paymentId: String(data.payment_id),
+                    additionalInfo: {
+                        externalResourceURL: data.desafio_3ds.external_resource_url,
+                        creq: data.desafio_3ds.creq
+                    }
+                },
+                customization: {visual: {style: {theme: "dark"}}},
+                callbacks: {
+                    onReady: () => {},
+                    onError: error => {
+                        console.error(error);
+                        showError("Não foi possível abrir a confirmação do banco. Tente de novo.");
+                    }
+                }
+            }
+        );
+        container.scrollIntoView({behavior: "smooth", block: "center"});
     }
 
     document.querySelectorAll(".method-tab").forEach(button => {
@@ -549,7 +615,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const cardSelected = button.dataset.method === "card";
             document.getElementById("pix-panel").classList.toggle("active", !cardSelected);
             document.getElementById("card-panel").classList.toggle("active", cardSelected);
-            if (cardSelected) await createCardBrick();
+            if (cardSelected) {
+                await createCardBrick();
+            } else if (pixPrecisaRecarregar && !leavingCheckout) {
+                pixPrecisaRecarregar = false;
+                pixContent.style.display = "none";
+                pixLoading.style.display = "";
+                await loadPix();
+            }
         });
     });
 

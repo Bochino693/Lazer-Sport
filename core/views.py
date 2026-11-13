@@ -6330,6 +6330,58 @@ def _mp_error_message(payment):
     )
 
 
+# O que o cliente lê quando o cartão não passa. O Mercado Pago devolve só um
+# código (status_detail); sem tradução, a tela dizia "Pagamento recusado." e
+# a pessoa não sabia se era o código de segurança, o limite ou o banco.
+MOTIVOS_RECUSA_CARTAO = {
+    "cc_rejected_bad_filled_card_number": "Confira o número do cartão.",
+    "cc_rejected_bad_filled_date": "Confira a data de validade do cartão.",
+    "cc_rejected_bad_filled_security_code": "Confira o código de segurança (CVV) do cartão.",
+    "cc_rejected_bad_filled_other": "Confira os dados do cartão.",
+    "cc_rejected_insufficient_amount": "O cartão não tem limite ou saldo suficiente.",
+    "cc_rejected_call_for_authorize": "O banco pediu para você autorizar a compra. Ligue para o banco e tente de novo.",
+    "cc_rejected_card_disabled": "O cartão está bloqueado ou inativo. Fale com o banco ou use outro cartão.",
+    "cc_rejected_duplicated_payment": "Este pagamento já foi feito. Confira em Meus pedidos antes de tentar de novo.",
+    "cc_rejected_high_risk": "O pagamento foi recusado pela análise de segurança. Tente o Pix ou outro cartão.",
+    "cc_rejected_max_attempts": "Você atingiu o limite de tentativas. Use outro cartão ou o Pix.",
+    "cc_rejected_invalid_installments": "Este cartão não aceita esse número de parcelas.",
+    "cc_rejected_blacklist": "Não foi possível pagar com este cartão. Use outro cartão ou o Pix.",
+    "cc_rejected_card_type_not_allowed": "Este tipo de cartão não é aceito aqui. Use outro cartão ou o Pix.",
+    "cc_rejected_3ds_challenge": "A verificação do banco não foi concluída. Tente de novo.",
+    "cc_rejected_3ds_mandatory": "Este cartão exige a verificação do banco. Tente de novo.",
+    "cc_rejected_other_reason": "O banco recusou o pagamento. Use outro cartão ou o Pix.",
+    "cc_amount_rate_limit_exceeded": "O cartão passou do limite de valor permitido. Use outro cartão ou o Pix.",
+    "rejected_insufficient_data": "Faltaram dados do pagador. Confira CPF e e-mail.",
+    "rejected_by_bank": "O banco recusou o pagamento. Use outro cartão ou o Pix.",
+    "rejected_by_regulations": "O pagamento foi recusado por regras do banco. Use outro cartão ou o Pix.",
+}
+
+
+def _motivo_recusa_cartao(status_detail):
+    return MOTIVOS_RECUSA_CARTAO.get(
+        str(status_detail or ""),
+        "O pagamento não foi aprovado. Confira os dados ou use outro cartão ou o Pix.",
+    )
+
+
+def _desafio_3ds(payment):
+    """Dados para o banco pedir a confirmação do cliente (3DS), se pediu.
+
+    Débito e parte dos créditos passam pela confirmação do banco: o
+    Mercado Pago responde `pending` / `pending_challenge` e manda em
+    `three_ds_info` o endereço da tela do banco e o pedido de desafio
+    (creq). Quem desenha essa tela é o Status Screen Brick, no navegador.
+    """
+    if payment.get("status_detail") != "pending_challenge":
+        return None
+    info = payment.get("three_ds_info") or {}
+    endereco = info.get("external_resource_url")
+    creq = info.get("creq")
+    if not endereco or not creq:
+        return None
+    return {"external_resource_url": endereco, "creq": creq}
+
+
 def _mp_auth_error(status_code, payment):
     """Identifica rejeição da credencial sem depender de uma única tradução."""
     mensagem = " ".join(str(valor or "") for valor in (
@@ -7290,6 +7342,10 @@ def processar_cartao(request):
     if dados.get("issuer_id"):
         payment_data["issuer_id"] = dados["issuer_id"]
 
+    # 3DS 2.0: o banco decide se precisa confirmar (débito quase sempre
+    # pede). Sem isto, o cartão que exige a confirmação é recusado direto.
+    payment_data["three_d_secure_mode"] = "optional"
+
     # O token entra na chave: reenviar o mesmo cartão não cobra duas vezes,
     # e trocar de cartão gera uma cobrança nova.
     token_fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -7386,6 +7442,16 @@ def processar_cartao(request):
         # fica sem carrinho e com um pedido que nunca vai ser pago.
         checkout.expirar_reserva(reserva, f"cartão {status_pagamento}")
 
+    desafio = _desafio_3ds(payment) if pendente else None
+    if aprovado:
+        mensagem = "Pagamento aprovado."
+    elif desafio:
+        mensagem = "Confirme a compra na tela do seu banco."
+    elif pendente:
+        mensagem = "Pagamento em análise. Avisaremos assim que for aprovado."
+    else:
+        mensagem = _motivo_recusa_cartao(payment.get("status_detail"))
+
     return JsonResponse(
         {
             "sucesso": aprovado or pendente,
@@ -7395,15 +7461,10 @@ def processar_cartao(request):
             "pedido_id": pedido.id if pedido else reserva.id,
             "status": status_pagamento,
             "status_detail": payment.get("status_detail"),
+            "desafio_3ds": desafio,
             "carrinho_restaurado": not (aprovado or pendente),
             "redirect_url": _url_meus_pedidos() if aprovado else None,
-            "mensagem": (
-                "Pagamento aprovado."
-                if aprovado
-                else "Pagamento em análise."
-                if pendente
-                else "Pagamento recusado."
-            ),
+            "mensagem": mensagem,
         },
         status=200 if aprovado or pendente else 402,
     )
