@@ -20,6 +20,23 @@ Comandos disponíveis:
 - `python3 ferramentas/instagram/ig.py ocultar <comment_id>`
 - `python3 ferramentas/instagram/ig.py apagar-comentario <comment_id>`
 
+Criação de conteúdo (aprendizado contínuo):
+
+- Antes de criar qualquer publicação, rode
+  `python3 ferramentas/instagram/aprender.py` e leia
+  `ferramentas/instagram/aprendizado.md`. Ele mede o que rendeu mais curtidas e
+  comentários na conta e é regenerado a cada execução, então cada publicação
+  nova melhora o guia. Siga as "Regras para a próxima publicação" e a estrutura
+  dos melhores posts recentes, com produto e texto diferentes.
+- Para vídeo, monte um roteiro JSON e gere o Reel com
+  `python3 ferramentas/instagram/reel.py roteiro.json saida.mp4`
+  (modelo em `ferramentas/instagram/exemplos/strike_kids.json`). Use vídeos e
+  fotos reais enviados pelo usuário; fotos do site só como complemento.
+- Especificações de produto vêm do site (www.lazersport.com.br) ou do usuário.
+  Nunca invente medidas, preços ou recursos.
+- Mostre sempre o vídeo e a legenda ao usuário para aprovação antes de publicar.
+- Depois de publicar, proponha rodar `aprender.py` de novo após 7 dias.
+
 Regras:
 
 1. Leitura (perfil, posts, comentarios, insights) pode ser feita direto.

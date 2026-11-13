@@ -1,0 +1,19 @@
+{
+  "marca": "LAZER & SPORT  ·  FÁBRICA DE BRINQUEDOS",
+  "musica": "../../../core/static/site/arena/jogos/strike-kids/sons/musica.mp3",
+  "cenas": [
+    {"video": "strike_kids.mov", "inicio": 30.0, "duracao": 3.2, "etiqueta": "FABRICAÇÃO PRÓPRIA",
+     "titulo": "STRIKE KIDS", "texto": ["O boliche infantil da Lazer & Sport"], "tamanho": 128},
+    {"video": "strike_kids.mov", "inicio": 33.2, "duracao": 2.9, "etiqueta": "RANKING",
+     "titulo": "CÂMERA NO JOGO", "texto": ["Tira a foto do jogador", "para o ranking"], "tamanho": 96},
+    {"video": "strike_kids.mov", "inicio": 9.0, "duracao": 2.9, "etiqueta": "TECNOLOGIA",
+     "titulo": "5 SENSORES", "texto": ["De precisão: leem cada", "jogada da bola na pista"], "tamanho": 112},
+    {"video": "strike_kids.mov", "inicio": 24.0, "duracao": 2.9, "etiqueta": "VISUAL",
+     "titulo": "LED NAS LATERAIS", "texto": ["Cores e adesivagem", "ajustadas no seu pedido"], "tamanho": 92},
+    {"foto": "strike_kids_frente.jpg", "duracao": 3.0, "etiqueta": "MEDIDAS",
+     "titulo": "CABE NO SEU ESPAÇO", "texto": ["0,74 m de largura · 1,91 m de", "comprimento · 2,07 m de altura"], "tamanho": 84},
+    {"foto": "strike_kids_angulo.jpg", "duracao": 3.8, "final": true, "etiqueta": "DIRETO DA FÁBRICA",
+     "titulo": ["QUER O STRIKE KIDS", "NO SEU ESPAÇO?"], "texto": ["Comente STRIKE", "e peça o seu orçamento"],
+     "botao": "WhatsApp (11) 96056-3135"}
+  ]
+}
