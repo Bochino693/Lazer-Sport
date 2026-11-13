@@ -60,9 +60,11 @@
     </article>
   </section>
 
-  <section class="usr-panel">
+  {# `usrContas`: a âncora da lista. Os contadores da faixa "Agora" e o paginador levam "#usrContas", e a tela chega aqui, e não no topo. #}
+  <section class="usr-panel" id="usrContas" data-lsa-ancora>
     <div class="usr-toolbar">
-      <form class="usr-filter-form" method="get">
+      <form class="usr-filter-form" method="get" action="#usrContas">
+        {% if filtro_presenca %}<input type="hidden" name="presenca" value="{{ filtro_presenca }}">{% endif %}
         <div class="usr-search">
           <svg><use href="#usr-i-search"/></svg>
           <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome, usuário ou e-mail..." aria-label="Buscar usuários">
@@ -74,18 +76,31 @@
           <option value="inativos" {% if tipo == "inativos" %}selected{% endif %}>Inativos</option>
         </select>
         <button class="usr-filter-submit" type="submit">Filtrar</button>
-        {% if busca or tipo != "todos" %}
-          <a class="usr-clear-link" href="{% url 'clients' %}">Limpar filtros</a>
+        {% if busca or tipo != "todos" or filtro_presenca %}
+          <a class="usr-clear-link" href="{% url 'clients' %}#usrContas">Limpar filtros</a>
         {% endif %}
       </form>
     </div>
 
     {# Lista · Cards: a mesma tabela é a lista (padrão) e, pelo CSS, os cartões (ver interno_modern.css). #}
     <div class="usr-results-line ls-visao-barra">
-      <span>Exibindo <strong>{{ usuarios|length }}</strong> usuário{{ usuarios|length|pluralize }}
+      <span>{% if pagina.paginator.count %}Exibindo <strong>{{ pagina.start_index }}–{{ pagina.end_index }}</strong> de
+        <strong>{{ pagina.paginator.count }}</strong> usuário{{ pagina.paginator.count|pluralize }}{% else %}Nenhum usuário{% endif %}
       {% if busca %} para "<strong>{{ busca }}</strong>"{% endif %}</span>
       {% include "includes/lista_ou_cards.html" with alvo="usrLista" chave="usuarios" %}
     </div>
+
+    {# O contador tocado na faixa "Agora" (Online, Ativos hoje...) filtra a lista no servidor (?presenca=hoje): aqui, quem ficou e a saída. #}
+    {% if filtro_presenca %}
+    <div class="lsa-filtro-aviso" data-lsa-filtro-aviso="{{ filtro_presenca }}" role="status">
+      <i class="bi bi-funnel-fill" aria-hidden="true"></i>
+      <span class="lsa-filtro-aviso-texto">
+        {% if pagina.paginator.count %}<strong>{{ pagina.paginator.count }} conta{{ pagina.paginator.count|pluralize }}</strong> {{ filtro_presenca_frase }}{% if busca %} na busca{% endif %}
+        {% else %}Nenhuma conta {{ filtro_presenca_frase }}{% if busca %} na busca{% endif %}.{% endif %}
+      </span>
+      <a class="lsa-filtro-limpar" href="?{{ query_sem_presenca }}#usrContas">Mostrar todas</a>
+    </div>
+    {% endif %}
 
     <div class="usr-table-wrap ls-visao-alvo" id="usrLista" data-visao="lista">
       <table class="usr-table ls-visao-tabela">
@@ -101,12 +116,14 @@
         </thead>
         <tbody>
           {% for usuario in usuarios %}
-            <tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}">
+            <tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="{{ usuario.id }}" data-presenca="{% grupos_presenca usuario %}">
+              {# As iniciais, a cor e o papel são os mesmos da faixa "Agora" e da ficha (core.presenca.cartao_da_conta). #}
+              {% cartao_presenca usuario as cartao %}
               <td data-label="Usuário">
                 <div class="usr-identity">
-                  <span class="usr-avatar">{{ usuario.username|slice:":2"|upper }}</span>
+                  <span class="usr-avatar lsa-avatar is-c{{ cartao.cor }}" aria-hidden="true">{{ cartao.iniciais }}</span>
                   <span>
-                    <span class="usr-name">{{ usuario.perfil.nome_completo|default:usuario.username }}</span>
+                    <span class="usr-name">{{ cartao.nome }}</span>
                     <span class="usr-username">@{{ usuario.username }}</span>
                   </span>
                 </div>
@@ -116,13 +133,7 @@
                 <span class="usr-contact-line"><svg><use href="#usr-i-phone"/></svg>{{ usuario.perfil.telefone|default:"Não informado" }}</span>
               </td>
               <td data-label="Perfil">
-                {% if usuario.is_superuser %}
-                  <span class="usr-chip is-super">Superadmin</span>
-                {% elif usuario.is_staff %}
-                  <span class="usr-chip is-staff">Staff</span>
-                {% else %}
-                  <span class="usr-chip is-client">Cliente</span>
-                {% endif %}
+                <span class="usr-chip {% if cartao.papel == 'admin' %}is-super{% elif cartao.papel == 'equipe' %}is-staff{% else %}is-client{% endif %}">{{ cartao.papel_rotulo }}</span>
               </td>
               <td data-label="Status">
                 <span class="usr-status {% if usuario.is_active %}is-on{% else %}is-off{% endif %}">
@@ -206,6 +217,8 @@
         </tbody>
       </table>
     </div>
+
+    {% include "includes/paginacao_app.html" with pagina=pagina paginas=paginas query_sem_pagina=query_sem_pagina ancora="#usrContas" rotulo="Páginas da lista de contas" %}
   </section>
 </div>
 

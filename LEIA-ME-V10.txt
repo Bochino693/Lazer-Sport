@@ -3807,6 +3807,9 @@ Dependência nova: rjsmin (requirements.txt).
    depois, "em usuário, saber se ele está online, qual foi a última vez que
    logou ... poder clicar nele e ver os detalhes em um modal separado, isso
    para outras coisas também".
+   (O desenho do painel, o topo da tela Usuários e a ficha da conta foram
+   refeitos depois: ver "AJUSTE", no fim desta seção. O que segue descreve
+   a primeira versão; onde os dois divergem, vale o AJUSTE.)
    O QUE CADA TELA GANHOU (um include + atributos no template; a lógica mora
    em arquivos novos):
      * no topo, o painel "Desempenho": chips de período (Hoje · Semana · Mês
@@ -3925,6 +3928,174 @@ Dependência nova: rjsmin (requirements.txt).
    core/templatetags/analises.py, core/templates/gestao/includes/
    analises.html, core/static/site/paginas/gestao-analises.{css,js}.
    Testes: core/tests_analises.py.
+   AJUSTE: QUEM ESTÁ ONLINE, O PAINEL EM ESTILO APP, USUÁRIOS DE 18 EM 18
+   Pedidos, com o print do "Desempenho — Como estão as contas" (os chips "1
+   Online agora · 1 Ativos hoje ...", seis cartões em fila, quatro deles
+   só com "sem dados ainda", e o gráfico "Contas ativas por hora" vazio,
+   com a frase "hora a hora não existe"): "vc deve mostrar qual usuário
+   está logado e não gostei muito desse design, vc deve ser mais criativo e
+   mais robusto com estilo app e com as informações coerentes". Depois,
+   "faça a paginação a cada 18 usuários por página"; com o erro 500 da
+   ficha do usuário (corrigido em f9d9e46), "eu quero dados realmente
+   interessantes e que precisamos de fato, vc não pode me gerar uma coisa
+   gerando erros"; e "eu falei que quero estilo app em tudo".
+   1. QUEM, E NÃO SÓ QUANTOS (core/presenca.py, `agora_mesmo`).
+      * USUÁRIOS ganhou a faixa "Agora" no topo do painel: o ponto que
+        pulsa, "N online agora" e um cartão por pessoa -- o avatar (as
+        iniciais numa cor estável, que sai do número da conta), o nome, o
+        papel (Admin, Equipe ou Cliente), onde está (Painel, Site ou
+        Aplicativo: o `onde` da presença) e há quanto tempo. Quem está
+        olhando vem marcado "Você" e está SEMPRE entre os online (está com
+        o painel aberto, ainda que o sinal dele não tenha chegado ao
+        banco). Tocar num cartão abre a ficha da pessoa.
+      * "Vistos por último": quem passou nas últimas 24 h e não está
+        online, com a hora ("há 3 h", "ontem às 14:32").
+      * Os contadores (Todas, Online, Ativos hoje, Em 7 dias, Em 30 dias,
+        Nunca entraram) são LINKS que filtram a lista de contas: a mesma
+        tela com ?presenca=hoje (a busca e o perfil escolhidos continuam
+        valendo), filtrada no banco pela MESMA regra dos números
+        (`presenca.filtro_do_grupo`) -- a lista é paginada, e filtrar só a
+        página que veio deixaria gente de fora. Em cima da lista, "13
+        contas ativas hoje · Mostrar todas".
+      * O papel é um só em todo lugar (`presenca.papel_da_conta`, a regra
+        de "quem é da casa" do importador de orçamentos): superusuário é
+        Admin; staff ou função de equipe no painel é Equipe; o resto é
+        Cliente. A linha da lista, que olhava só o is_staff e chamava de
+        "Cliente" quem era da equipe pela função, passou a usar as mesmas
+        iniciais, a mesma cor e o mesmo papel da faixa e da ficha.
+      * NA BARRA DE CIMA DE TODO O PAINEL, ao lado da conta de quem está
+        usando: a pilha "equipe online" -- até quatro avatares (três no
+        tablet, dois no celular, um no celular estreito) e "+N"; o toque
+        abre a lista com o nome, o papel, onde a pessoa está, "hoje desde
+        08:12" (o primeiro sinal do dia) e há quanto tempo. SÓ A EQUIPE:
+        nome de cliente não sai do servidor para quem não abre a tela
+        Usuários. A pilha sai vazia e escondida do HTML (nenhuma consulta a
+        mais para desenhar a página). No tablet o espaço dela sai do botão
+        "Aparência" (só o astro, como no celular) e da linha "Operação
+        Lazer & Sport"; o nome da tela nunca passa de duas linhas.
+      * GET /presenca/agora/ (core/views_analises.py, só no painel): sem
+        parâmetro, a equipe online, para qualquer pessoa da equipe; com
+        ?contas=1, as contas todas, os vistos por último e os contadores,
+        com a permissão da tela Usuários (só o superadministrador; os
+        outros levam 403). No máximo três consultas além da sessão, não
+        importa o tamanho do histórico, e 10 s de cache. Quem pergunta é
+        UM relógio só (sistema_interno/static/interno/ls-presenca.js): de
+        45 em 45 s, só com a aba à vista (o dobro com a economia de dados
+        ligada), e na hora ao voltar para a aba; a faixa da tela Usuários
+        assina o mesmo relógio. O selo de cada linha da lista acompanha
+        ("Online agora" vira "Visto há 6 min" sem recarregar). A gravação
+        da presença continua a de sempre: no máximo uma por minuto e conta.
+   2. O PAINEL "DESEMPENHO" REFEITO, PARA TODAS AS TELAS QUE O INCLUEM (o
+      include e os data-detalhe-* não mudaram):
+      * SEM PAREDE DE CAIXAS VAZIAS. Cartão só para a métrica que tem
+        número. As que não tiveram nada no período NEM no anterior vão
+        marcadas `vazia`, com o `motivo` ("Nenhum registro até hoje.",
+        "Registrado desde 10/11/2026: nada neste período.", "Sem movimento
+        neste período nem no anterior."), e a tela as junta numa linha só
+        -- "Ainda sem registro neste período: Pedidos pagos · Gasto na
+        loja · Jogadas" -- com o motivo de cada uma a um toque. A queda de
+        verdade (zero agora, algo antes) continua com cartão. O gráfico
+        abre na `principal` da resposta: a do tipo, se tiver dado; senão a
+        primeira que tem. Período sem nada: o aviso "Sem movimento no
+        período".
+      * NENHUM GRÁFICO PEDINDO DESCULPA. Quem conta pessoas distintas sai
+        em COLUNAS (uma por dia, semana ou mês: os baldes não se somam nem
+        se ligam com uma linha); em "Hoje", hora a hora quando a fonte
+        guarda a hora (as jogadas). As contas ativas só guardam o dia (o
+        AcessoDiario, com o primeiro e o último sinal): em "Hoje" entra
+        "Quem esteve ativo hoje", uma faixa por pessoa do primeiro ao
+        último sinal, com o traço de "agora" -- e a tabela das mesmas
+        pessoas. Na ficha de uma conta, "O dia de hoje: entrou às 08:12; o
+        último sinal foi às 15:49". "Dias com acesso" também sai em
+        colunas (em cada dia, apareceu ou não). Sem série e sem pessoas, o
+        número em destaque -- nunca uma área vazia com um aviso dentro.
+      * AS PEÇAS: a régua de períodos gruda no topo enquanto o painel rola
+        (no celular rola de lado, com o escolhido à vista) e traz a frase
+        do período; cada indicador é um cartão com o ícone num quadrado de
+        cor, o rótulo, o número, a pílula da variação (▲ 47,8%, verde ou
+        vermelha só quando subir ou cair quer dizer bom ou ruim), "antes:
+        23" (ou "ontem: 4") e a faísca; as linhas de cartões saem
+        equilibradas (9 cartões = 5 + 4, e não 6 + 3 e um buraco) e no
+        celular os cartões passam de lado, encaixando; o gráfico mora num
+        cartão só, com as abas de métrica, o total, a média e o pico; "Por
+        dia da semana" virou sete barras deitadas com o número de cada dia
+        (a média, para pessoas distintas; sem "melhor dia" inventado em
+        empate); o ranking ("Quem mais rendeu"; em Usuários, "Mais ativos",
+        por dias com acesso, com o avatar e a última vez em que a conta
+        foi vista; em "Cadastros novos", a lista dos cadastros mais
+        recentes). A arrumação é da largura do PAINEL (@container): no
+        largo, gráfico, dia da semana e ranking numa linha; no médio, o
+        gráfico em cima e os dois embaixo; no estreito, um sob o outro.
+      * TEXTO QUE FECHA: a frase do período e a comparação vêm prontas do
+        servidor ("Últimos 30 dias (14/10 a 12/11) · comparado com os 30
+        dias anteriores (14/09 a 13/10)"; "Hoje, 12/11, até 15:30 ·
+        comparado com ontem até a mesma hora"); o cartão diz "novo",
+        "igual", "sem comparação · registrado desde 10/11"; os avisos e as
+        dicas perderam o jargão ("seção 76 do LEIA-ME", "core/jogadas.py").
+      * ESTILO APP NOS ESTADOS: o esqueleto (as caixas no lugar do que vem)
+        na primeira carga; trocar de período mantém o desenho anterior,
+        apagado; a carga que falha vira o aviso grande (ícone, título,
+        frase, "Tentar de novo"), e a ATUALIZAÇÃO que falha deixa na tela
+        os números de antes, volta o período para o deles e avisa por
+        TOAST (o LSAviso da seção 82: "Os números não atualizaram. Ficaram
+        na tela os de antes", com o botão "Tentar de novo"); a fonte que
+        falha no servidor (o `indisponivel` da correção do 500) vira uma
+        linha calma -- "Não deu para carregar agora: Gasto na loja. Os
+        outros números estão certos. Tentar de novo" -- e um toast, uma
+        vez por conjunto de métricas, nunca uma parede de erro; a faixa
+        "Agora" sem rede fica com o último retrato (ou com uma linha
+        calma) e avisa por toast UMA vez por queda, não a cada tentativa;
+        a ficha que não abre e a atividade vazia usam o mesmo aviso
+        grande. Os toasts são de "alerta" (somem sozinhos), e não de
+        "erro" (que fica até fechar): nada disso pede uma decisão. A rede
+        que cai vira frase nossa ("Sem conexão com o servidor."), e não o
+        "Failed to fetch" do navegador. Movimento reduzido respeitado (sem
+        pulso, sem brilho);
+        teclado e leitor de tela como antes (rádios, setas no gráfico, a
+        tabela de todos os números).
+      * CORES: as mesmas variáveis de tema, lidas no :root. O laranja não
+        entra mais transparente em fundo (sobre o ameixa vira marrom): é
+        cheio (o período escolhido, o "Você") ou é traço (a série, a borda
+        do cartão escolhido). Os quadrados de ícone e os avatares usam os
+        tons frios do tema (magenta, violeta, azul, verde-água); o verde é
+        só de estado (online, subiu). A cor do ícone sai da ordem das
+        métricas, e a do avatar do número da conta: nunca do valor.
+   3. USUÁRIOS DE 18 EM 18 (core/views.py, UserAdminView.POR_PAGINA): a
+      lista é paginada no servidor, com o paginador em estilo app
+      (sistema_interno/templates/includes/paginacao_app.html: "1–18 de
+      73", Anterior, as páginas em pílulas com reticências, Próxima; no
+      celular as setas ficam só com o ícone). A busca, o perfil e o
+      contador de presença viajam em todo link; a página que não existe
+      cai na última. Os links levam "#usrContas": a tela chega na lista, e
+      não no topo -- inclusive na navegação suave do painel, que começa
+      toda tela do topo e perde a âncora (o gestao-analises.js anota o
+      toque e mira a lista de novo depois de cada desenho, até a pessoa
+      mexer na tela). O papel de cada linha vai anotado na mesma consulta:
+      nenhuma consulta por conta. Lista · Cards e a ficha continuam como
+      eram.
+   4. A FICHA DA CONTA ABRE PELO QUE IMPORTA (core/detalhes.py): compra?
+      (pedidos pagos, total gasto, ticket médio, o último pedido, o que
+      aguarda pagamento e "O que comprou", com as unidades e o valor de
+      cada produto); está por perto? (visto por último e onde, o dia de
+      hoje -- "entrou às 09:12 · último sinal às 11:40" --, dias com
+      acesso em 30 dias, último login, criada em); o que quer? (curtidas,
+      lista de desejos e o que está parado no carrinho, com o valor);
+      joga? (jogadas e os jogos preferidos); e só então o cadastro. Seção
+      sem nada a dizer não aparece (quem nunca comprou ganha "Pedidos
+      pagos: nenhum ainda", e não uma caixa vazia). No topo, as iniciais
+      da conta e o selo "Comprou 13 vezes · R$ ...". Cada lista é uma
+      consulta com limite.
+   Sem migração: tudo sai do que as tabelas da 0171 já guardam.
+   Conferido no navegador (Chromium, 1366, 820 e 390, sol e lua): cada
+   tela com o painel em todos os períodos e em cada métrica, e a ficha de
+   cada tipo em cada aba, com os gráficos em todos os períodos -- uns 800
+   desenhos por passeio, nenhum erro no console e nenhum pedido falho.
+   Arquivos: os da seção e sistema_interno/static/interno/ls-presenca.js,
+   sistema_interno/templates/includes/paginacao_app.html, o fim de
+   sistema_interno/static/interno/interno_modern.css (a pilha da equipe e
+   o paginador) e sistema_interno/templates/base_inner.html.
+   Testes: core/tests_analises.py (QuemEstaOnlineTests,
+   PainelCoerenteTests, ListaDeUsuariosTests, FichaDaContaTests).
 
 77) JOGOS: A COLETA DAS JOGADAS (QUEM, QUANDO, O QUÊ) E O PAINEL POR PERÍODO
    Pergunta: "joguei mais uma vez o Super Mario 64, veja se é porque sou
