@@ -4036,14 +4036,21 @@ Dependência nova: rjsmin (requirements.txt).
         na primeira carga; trocar de período mantém o desenho anterior,
         apagado; a carga que falha vira o aviso grande (ícone, título,
         frase, "Tentar de novo"), e a ATUALIZAÇÃO que falha deixa na tela
-        os números de antes, volta o período para o deles e sobe o recado
-        do painel ("Não deu para atualizar os números agora. Ficaram os de
-        antes."); a fonte que falha no servidor (o `indisponivel` da
-        correção do 500) vira uma linha calma -- "Não deu para carregar
-        agora: Gasto na loja. Os outros números estão certos. Tentar de
-        novo" --, nunca uma parede de erro; a ficha que não abre, a
-        atividade vazia e a faixa "Agora" sem rede usam o mesmo aviso
-        grande. Movimento reduzido respeitado (sem pulso, sem brilho);
+        os números de antes, volta o período para o deles e avisa por
+        TOAST (o LSAviso da seção 82: "Os números não atualizaram. Ficaram
+        na tela os de antes", com o botão "Tentar de novo"); a fonte que
+        falha no servidor (o `indisponivel` da correção do 500) vira uma
+        linha calma -- "Não deu para carregar agora: Gasto na loja. Os
+        outros números estão certos. Tentar de novo" -- e um toast, uma
+        vez por conjunto de métricas, nunca uma parede de erro; a faixa
+        "Agora" sem rede fica com o último retrato (ou com uma linha
+        calma) e avisa por toast UMA vez por queda, não a cada tentativa;
+        a ficha que não abre e a atividade vazia usam o mesmo aviso
+        grande. Os toasts são de "alerta" (somem sozinhos), e não de
+        "erro" (que fica até fechar): nada disso pede uma decisão. A rede
+        que cai vira frase nossa ("Sem conexão com o servidor."), e não o
+        "Failed to fetch" do navegador. Movimento reduzido respeitado (sem
+        pulso, sem brilho);
         teclado e leitor de tela como antes (rádios, setas no gráfico, a
         tabela de todos os números).
       * CORES: as mesmas variáveis de tema, lidas no :root. O laranja não
@@ -4081,7 +4088,7 @@ Dependência nova: rjsmin (requirements.txt).
    Sem migração: tudo sai do que as tabelas da 0171 já guardam.
    Conferido no navegador (Chromium, 1366, 820 e 390, sol e lua): cada
    tela com o painel em todos os períodos e em cada métrica, e a ficha de
-   cada tipo em cada aba, com os gráficos em todos os períodos -- 816
+   cada tipo em cada aba, com os gráficos em todos os períodos -- uns 800
    desenhos por passeio, nenhum erro no console e nenhum pedido falho.
    Arquivos: os da seção e sistema_interno/static/interno/ls-presenca.js,
    sistema_interno/templates/includes/paginacao_app.html, o fim de

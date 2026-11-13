@@ -1184,6 +1184,14 @@ class PainelCoerenteTests(EquipeMixin, CatalogoDeTeste, TestCase):
                       "Sem movimento no período", "Ver os números em tabela", "lsa-esqueleto"):
             with self.subTest(frase=frase):
                 self.assertIn(frase, js)
+        # os recados são o toast de aplicativo (LSAviso): a atualização que falhou, a métrica que não
+        # carregou e a faixa "Agora" sem rede avisam sem tirar nada da tela -- e sem alert() nem confirm()
+        self.assertIn("window.LSAviso.toast({", js)
+        for titulo in ("Os números não atualizaram", "Alguns números não carregaram", "Sem conexão com o servidor"):
+            with self.subTest(titulo=titulo):
+                self.assertIn(titulo, js)
+        self.assertNotRegex(js, r"\b(alert|confirm)\(")
+        self.assertNotIn("Failed to fetch", js)
         # a tabela continua (o gêmeo acessível de todo gráfico), para a série e para as pessoas do dia
         self.assertIn("Analise.prototype.tabela = ", js)
         self.assertIn("Analise.prototype.tabelaDePessoas = ", js)

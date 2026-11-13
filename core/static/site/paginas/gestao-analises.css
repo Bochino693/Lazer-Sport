@@ -391,6 +391,8 @@
   border:1px solid rgba(var(--lsa-t-yellow-rgb),.45);border-radius:14px;color:var(--lsa-t-text-2);font-size:.8rem;
 }
 .lsa-fora-do-ar>i{color:var(--lsa-t-yellow-texto)}
+.lsa-fora-do-ar .lsa-vazias-frase{flex:1 1 200px}
+.lsa-agora .lsa-fora-do-ar{margin:0}
 .ls-content a.lsa-fora-do-ar-tentar,.lsa-ficha a.lsa-fora-do-ar-tentar{color:var(--lsa-t-text);font-size:.78rem;font-weight:800;text-decoration:underline;text-underline-offset:3px}
 
 /* UMA linha para as métricas sem número: o motivo de cada uma, a um toque */

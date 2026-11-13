@@ -136,7 +136,7 @@
       headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
       signal: sinal
     }).catch(function (erro) {
-      /* a rede caiu: a frase é nossa, e não o "Failed to fetch" do navegador */
+      /* a rede caiu: a frase é nossa, e não a mensagem em inglês do navegador */
       if (erro && erro.name === "AbortError") throw erro;
       throw new Error("Sem conexão com o servidor.");
     }).then(function (resposta) {
@@ -696,10 +696,24 @@
     return caixa;
   }
 
-  /* O recado que sobe e some (a "tarja" do painel): para o que não deu certo
-     mas não tirou nada da tela. Fora do painel, não há tarja: fica o silêncio. */
-  function recado(mensagem, tipo) {
-    if (window.Painel && window.Painel.aviso) window.Painel.aviso(mensagem, tipo || "");
+  /* O RECADO: o toast de aplicativo do painel (LSAviso, core/static/site/ls-aviso.js),
+     para o que não deu certo mas não tirou nada da tela -- a atualização que
+     falhou e deixou os números de antes, a métrica que não carregou, a faixa
+     "Agora" sem rede. É "alerta" (some sozinho em 7 s), e não "erro" (que fica
+     até alguém fechar): nada disto pede uma decisão. `acao` é o botão do toast
+     ({rotulo, aoClicar}). Sem o LSAviso (página antiga em cache), a tarja do
+     painel; sem ela, o silêncio -- o estado continua escrito na tela. */
+  function recado(opcoes) {
+    if (window.LSAviso && window.LSAviso.toast) {
+      window.LSAviso.toast({
+        nivel: opcoes.nivel || "alerta",
+        titulo: opcoes.titulo,
+        texto: opcoes.texto || "",
+        acao: opcoes.acao || null
+      });
+    } else if (window.Painel && window.Painel.aviso) {
+      window.Painel.aviso(opcoes.titulo + (opcoes.texto ? " " + opcoes.texto : ""), "erro");
+    }
   }
 
   /* o esqueleto: as caixas no lugar dos indicadores e do gráfico enquanto os números não chegam */
@@ -838,7 +852,11 @@
       if (radio) radio.checked = true;
       if (this.dias) this.dias.hidden = codigo !== "dias";
       if (this.opcoes.aoMudarPeriodo) this.opcoes.aoMudarPeriodo(codigo);
-      recado("Não deu para atualizar os números agora. Ficaram os de antes.", "erro");
+      recado({
+        titulo: "Os números não atualizaram",
+        texto: "Ficaram na tela os de antes. " + (mensagem || ""),
+        acao: { rotulo: "Tentar de novo", aoClicar: function () { eu.carregar(); } }
+      });
       return;
     }
     this.corpo.textContent = "";
@@ -882,6 +900,7 @@
     if (!comDados.length) {
       if (foraDoAr.length) this.corpo.appendChild(this.linhaDasIndisponiveis(foraDoAr));
       if (vazias.length || !foraDoAr.length) this.corpo.appendChild(this.semMovimento(dados, vazias));
+      this.avisarIndisponiveis(foraDoAr);
       this.desenharAvisos(dados);
       manterAncora();
       return;
@@ -923,6 +942,7 @@
 
     if (foraDoAr.length) this.corpo.appendChild(this.linhaDasIndisponiveis(foraDoAr));
     if (vazias.length) this.corpo.appendChild(this.linhaDasVazias(vazias));
+    this.avisarIndisponiveis(foraDoAr);
 
     this.graficos = el("div", "lsa-graficos");
     this.corpo.appendChild(this.graficos);
@@ -1000,6 +1020,21 @@
     });
     linha.appendChild(tentar);
     return linha;
+  };
+
+  /* E um toast, uma vez por conjunto de métricas que não vieram (trocar de
+     período com a mesma fonte fora do ar não repete o aviso; a linha fica). */
+  Analise.prototype.avisarIndisponiveis = function (metricas) {
+    var eu = this;
+    var assinatura = metricas.map(function (m) { return m.codigo; }).join(",");
+    if (assinatura === (this.foraDoArAvisado || "")) return;
+    this.foraDoArAvisado = assinatura;
+    if (!assinatura) return;
+    recado({
+      titulo: metricas.length === 1 ? "Um dos números não carregou" : "Alguns números não carregaram",
+      texto: metricas.map(function (m) { return m.rotulo; }).join(" · ") + ". Os outros estão certos.",
+      acao: { rotulo: "Tentar de novo", aoClicar: function () { eu.carregar(); } }
+    });
   };
 
   Analise.prototype.semMovimento = function (dados, vazias) {
@@ -1490,28 +1525,48 @@
 
   Agora.prototype.receber = function (dados, erro) {
     if (!dados) {
-      /* a pergunta falhou: fica o último retrato, com o aviso de que é antigo */
+      /* A pergunta falhou. Com um retrato anterior, ele fica (com a hora dele);
+         sem nenhum, uma linha calma no lugar das pessoas. Nos dois casos, UM
+         toast por queda -- a faixa tenta de novo sozinha a cada 45 s, e avisar
+         a cada tentativa seria barulho. */
       this.faixa.classList.add("is-sem-rede");
+      this.faixa.removeAttribute("aria-busy");
       if (this.dados) {
         this.relogio.textContent = "sem conexão · mostrando o retrato das " + this.dados.agora.slice(11, 16);
       } else {
-        this.faixa.removeAttribute("aria-busy");
         this.titulo.textContent = "Quem está online";
         this.relogio.textContent = "";
         this.corpo.textContent = "";
-        this.corpo.appendChild(avisoGrande({
-          icone: "bi-wifi-off",
-          titulo: "Não deu para ver quem está online",
-          texto: "A faixa tenta de novo sozinha em instantes; o resto da tela continua funcionando.",
-          acao: "Tentar agora",
-          aoTocar: function () { if (window.LSPresenca) window.LSPresenca.atualizar(); }
-        }));
+        var linha = el("div", "lsa-fora-do-ar");
+        linha.setAttribute("role", "status");
+        linha.appendChild(icone("bi-wifi-off"));
+        linha.appendChild(el("span", "lsa-vazias-frase", "Não deu para ver quem está online agora. A faixa tenta de novo sozinha."));
+        var tentar = el("a", "lsa-fora-do-ar-tentar", "Tentar agora");
+        tentar.href = "#";
+        tentar.addEventListener("click", function (evento) {
+          evento.preventDefault();
+          if (window.LSPresenca) window.LSPresenca.atualizar();
+        });
+        linha.appendChild(tentar);
+        this.corpo.appendChild(linha);
+      }
+      if (!this.semRedeAvisado) {
+        this.semRedeAvisado = true;
+        recado({
+          nivel: "info",
+          titulo: "Sem conexão com o servidor",
+          texto: this.dados
+            ? "A faixa \"Agora\" mostra o retrato das " + this.dados.agora.slice(11, 16) + " e tenta de novo sozinha."
+            : "A faixa \"Agora\" tenta de novo sozinha; o resto da tela continua funcionando."
+        });
       }
       return;
     }
     if (!dados.numeros) return;  /* resposta só da equipe (a pergunta das contas vem em seguida) */
     this.faixa.classList.remove("is-sem-rede");
     this.faixa.removeAttribute("aria-busy");
+    this.semRedeAvisado = false;
+    if (!this.dados) this.assinatura = "";  /* voltou depois de uma queda sem retrato: desenha de novo */
     this.dados = dados;
     var online = dados.numeros.online;
     this.titulo.textContent = NUM.format(online) + " online agora";
@@ -2110,7 +2165,7 @@
           }).catch(function (erro) {
             mais.disabled = false;
             mais.textContent = "Tentar de novo";
-            recado((erro && erro.message) || "Não deu para buscar mais atividade agora.", "erro");
+            recado({ titulo: "A atividade não carregou", texto: (erro && erro.message) || "Tente de novo em instantes." });
           });
         });
         caixa.appendChild(mais);
