@@ -497,7 +497,8 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     # não disseram; os outros palpites viram botões na conferência.
     achados = identificar.identificar(linhas, empresa=empresa, internos=internos, fora=fora,
                                       trechos_da_casa=trechos_da_casa)
-    alternativas = identificar.completar(lido["campos"], achados, internos=internos, empresa=empresa)
+    alternativas = identificar.completar(lido["campos"], achados, internos=internos, empresa=empresa,
+                                       contrato=bool(trechos_da_casa))
     catalogo = cat.carregar_catalogo()
     if not lido["itens"]:
         # Sem tabela nem linha de item: os brinquedos citados no texto.

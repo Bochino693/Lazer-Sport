@@ -2226,7 +2226,7 @@ VENDEDOR_DO_CONTRATO = (
 
 def docx_contrato(*, comprador="Kethellyn Souza Brandão", itens=(("1", "Cama elástica 3 m"), ("1", "Matrix")),
                   total="R$ 38.500,00 (trinta e oito mil e quinhentos reais)",
-                  data="São Paulo,11 de novembro de 2026", com_valor=False):
+                  data="São Paulo,11 de novembro de 2026", com_valor=False, linha_do_comprador=None):
     cabecalho = ["Quantidade", "Equipamento"] + (["Valor"] if com_valor else [])
     return montar_docx(
         par("INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE")
@@ -2234,7 +2234,7 @@ def docx_contrato(*, comprador="Kethellyn Souza Brandão", itens=(("1", "Cama el
         + tabela(cabecalho, *[list(item) for item in itens])
         + ("" if com_valor else par("                                           Valor "))
         + par(VENDEDOR_DO_CONTRATO)
-        + par(f"COMPRADOR {comprador}")
+        + par(linha_do_comprador or f"COMPRADOR {comprador}")
         + par("CPF ou CNPJ; 318.447.205-19")
         + par("Endereço completo; Rua das Acácias, 250, Centro, Ribeirão Preto/SP")
         + par("Email; comprador@exemplo.com.br")
@@ -2244,6 +2244,11 @@ def docx_contrato(*, comprador="Kethellyn Souza Brandão", itens=(("1", "Cama el
         + par("Condição de pagamento:")
         + par("5ª. . Cláusula As despesas com frete do equipamento,")
         + par("são por conta do COMPRADOR.")
+        # Os títulos de seção do modelo: "DA MULTA" logo depois de "...do
+        # COMPRADOR." já virou o nome do cliente.
+        + par("DA MULTA") + par("Cláusula 6ª. Multa de 30% do valor total.")
+        + par("DA INADIMPLENCIA") + par("Cláusula 7ª. Juros de 1% ao mês.")
+        + par("DO FORO") + par("Cláusula 8ª. Foro da Comarca de São Paulo.")
         + par(data)
         + par("__________________________") + par("Proprietário") + par("Otávio Brandão Lemos")
         + par("__________________________") + par("COMPRADOR") + par(comprador),
@@ -2287,6 +2292,40 @@ class ContratoDeCompraEVendaTests(_ComUsuario):
         self.assertEqual(envio["documento"], "318.447.205-19")
         self.assertEqual(envio["telefone"], "(16) 99123-4567")
         self.assertEqual(envio["email"], "comprador@exemplo.com.br")
+
+    def test_o_comprador_escrito_de_todo_jeito_e_os_titulos_nunca(self):
+        for linha, nome in (
+            ("COMPRADOR Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("COMPRADOR(A) Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("CONTRATANTE Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("Comprador Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("comprador: Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+        ):
+            with self.subTest(linha=linha):
+                envio = formulario.envio_inicial(self.proposta(
+                    docx_contrato(comprador="Kauyr Ribeiro Abdala", linha_do_comprador=linha)))
+                self.assertEqual(envio["nome"], nome)
+        # Só na assinatura (a linha do comprador não diz o nome): ainda é ele.
+        envio = formulario.envio_inicial(self.proposta(
+            docx_contrato(comprador="Kauyr Ribeiro Abdala", linha_do_comprador="COMPRADOR")))
+        self.assertEqual(envio["nome"], "Kauyr Ribeiro Abdala")
+
+    def test_titulo_de_secao_nunca_e_nome(self):
+        from .importacao_word import identificar
+
+        for titulo in ("DA MULTA", "DO OBJETO DO CONTRATO", "DAS OBRIGAÇÕES E GARANTIAS", "DA INADIMPLENCIA",
+                       "DA INADIMPLÊNCIA", "DO FORO", "DOS PRAZOS", "DA RESCISÃO", "DO PAGAMENTO", "DA ENTREGA"):
+            self.assertTrue(identificar.titulo_de_secao(titulo), titulo)
+        for nome in ("Kauyr Ribeiro Abdala", "Dalva Moreira", "Doralice Prado"):
+            self.assertFalse(identificar.titulo_de_secao(nome), nome)
+        # "Da", "Do", "De" nunca começam um nome.
+        self.assertFalse(identificar._vale_como_pessoa("Da Multa"))
+        self.assertFalse(identificar._nome_desconhecido_vale("Da Multa"))
+        self.assertFalse(identificar._nome_desconhecido_vale("Do Foro"))
+        self.assertTrue(identificar._nome_desconhecido_vale("Kauyr da Silva"))
+        proposta = self.proposta(docx_contrato(comprador="Kauyr Ribeiro Abdala"))
+        todos = [proposta["cliente"]["nome"]["valor"]] + [o["valor"] for o in proposta["cliente"]["nome"]["opcoes"]]
+        self.assertFalse(any(v.lower().startswith(("da ", "do ", "das ", "dos ")) for v in todos), todos)
 
     def test_quem_representa_a_fabrica_nunca_e_o_cliente(self):
         proposta = self.proposta()
