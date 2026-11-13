@@ -232,11 +232,14 @@
                 </div>
 
                 <div class="frete-tabs ck-segmento" role="group" aria-label="Forma de entrega">
-                    <button type="button" class="frete-tab ck-segmento-opcao active" data-tipo="frete" aria-pressed="true">
+                    {# Abre na forma de entrega já escolhida: antes abria sempre em
+                       "Frete", e quem tinha escolhido retirada pagava sem frete
+                       mesmo digitando um CEP. #}
+                    <button type="button" class="frete-tab ck-segmento-opcao{% if carrinho.tipo_envio != "retirada" %} active{% endif %}" data-tipo="frete" aria-pressed="{% if carrinho.tipo_envio == "retirada" %}false{% else %}true{% endif %}">
                         <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                         Frete
                     </button>
-                    <button type="button" class="frete-tab ck-segmento-opcao" data-tipo="retirada" aria-pressed="false">
+                    <button type="button" class="frete-tab ck-segmento-opcao{% if carrinho.tipo_envio == "retirada" %} active{% endif %}" data-tipo="retirada" aria-pressed="{% if carrinho.tipo_envio == "retirada" %}true{% else %}false{% endif %}">
                         <i class="fa-solid fa-store" aria-hidden="true"></i>
                         Retirar na loja
                     </button>
@@ -245,7 +248,7 @@
                 <div class="frete-conteudo">
 
                     <!-- FRETE -->
-                    <div class="frete-content" id="frete">
+                    <div class="frete-content" id="frete"{% if carrinho.tipo_envio == "retirada" %} hidden{% endif %}>
                         <div class="ck-campo">
                             <label class="ck-rotulo" for="cepInput">CEP de entrega</label>
                             <div class="ck-cep-linha">
@@ -298,7 +301,7 @@
                     </div>
 
                     <!-- RETIRADA -->
-                    <div class="frete-content" id="retirada" hidden>
+                    <div class="frete-content" id="retirada"{% if carrinho.tipo_envio != "retirada" %} hidden{% endif %}>
                         <div class="ck-loja">
                             <div class="ck-loja-topo">
                                 <span class="ck-card-icone ck-card-icone--verde" aria-hidden="true">
@@ -951,8 +954,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         enderecoDetalhes.hidden = false;
 
-                        document.getElementById('logradouro').value = data.logradouro || "";
-                        document.getElementById('bairro').value = data.bairro || "";
+                        // CEP geral da cidade vem sem rua e sem bairro: libera
+                        // os dois para digitar (presos, o Continuar nunca abria).
+                        const rua = document.getElementById('logradouro');
+                        const bairro = document.getElementById('bairro');
+                        rua.value = data.logradouro || "";
+                        bairro.value = data.bairro || "";
+                        rua.readOnly = Boolean(data.logradouro);
+                        bairro.readOnly = Boolean(data.bairro);
                         document.getElementById('cidade').value = data.localidade || "";
                         document.getElementById('estado').value = data.uf || "";
 
@@ -983,6 +992,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
+
+    // Rua e bairro digitados à mão (CEP geral da cidade): valida na hora e
+    // grava o endereço junto com o frete quando a pessoa sai do campo.
+    ['logradouro', 'bairro'].forEach(id => {
+        const campo = document.getElementById(id);
+        if (!campo) return;
+        campo.addEventListener('input', atualizarBotaoFinalizar);
+        campo.addEventListener('change', () => {
+            if (!campo.readOnly && cepInput.value.replace(/\D/g, '').length === 8) calcularFrete();
+        });
+    });
 
     numeroInput.addEventListener('input', () => {
 

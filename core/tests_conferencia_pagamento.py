@@ -123,6 +123,49 @@ class VoltarDepoisDePagarTests(TestCase):
         expirar.assert_called_once()
 
 
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class EntregaNoCarrinhoTests(TestCase):
+    """A forma de entrega escolhida é a que a tela mostra e a que se cobra."""
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user("caio", "caio@exemplo.com", "Senha#12345")
+        perfil = self.user.perfil
+        perfil.telefone = "(11)91234-5678"
+        perfil.save(update_fields=["telefone"])
+        self.carrinho = Carrinho.objects.create(cliente=perfil)
+        from django.contrib.contenttypes.models import ContentType
+        from .models import Brinquedos, ItemCarrinho
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Air Game", descricao="x", avaliacao=Decimal("5"),
+            valor_brinquedo=Decimal("100.00"),
+        )
+        ItemCarrinho.objects.create(
+            carrinho=self.carrinho,
+            content_type=ContentType.objects.get_for_model(Brinquedos),
+            object_id=brinquedo.pk, quantidade=1,
+        )
+        self.client.force_login(self.user)
+
+    def test_carrinho_abre_na_retirada_escolhida(self):
+        Carrinho.objects.filter(pk=self.carrinho.pk).update(tipo_envio="retirada")
+        html = self.client.get(reverse("carrinho")).content.decode()
+        self.assertIn('data-tipo="retirada" aria-pressed="true"', html)
+        self.assertIn('id="frete" hidden', html)
+
+    @patch("core.views.calcular_frete_por_cep", return_value=(35.5, 12.0))
+    def test_calcular_o_frete_marca_entrega_por_frete(self, _calc):
+        Carrinho.objects.filter(pk=self.carrinho.pk).update(tipo_envio="retirada")
+        resposta = self.client.post(
+            reverse("calcular_frete"),
+            data='{"cep": "02000000", "numero": "10"}',
+            content_type="application/json",
+        )
+        self.assertEqual(resposta.json()["status"], "ok")
+        self.carrinho.refresh_from_db()
+        self.assertEqual(self.carrinho.tipo_envio, "frete")
+
+
 class RespostaFalsa:
     def __init__(self, status, dados):
         self.status_code = status
