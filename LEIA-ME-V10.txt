@@ -4743,3 +4743,37 @@ Dependência nova: rjsmin (requirements.txt).
    gestão e no site, os ícones, o CSS só com variável de tema e com dono)
    e sistema_interno/tests_ls_aviso.py (o descarte de verdade, o endereço
    antigo, a exclusão e o erro por formulário comum, a folha do e-mail).
+
+83) JOGOS: UMA ESTANTE POR CONSOLE E O EMULADOR SEM TRANCOS
+   O PEDIDO: "não foi criada uma categoria de Game Boy automaticamente
+   para incluir os jogos... pensei que o sistema já fazia isso" e "quase
+   todos os jogos estão lentos... principalmente os de Game Boy".
+   A ESTANTE DO CONSOLE (core/portal_jogos.py, CONSOLES): a biblioteca
+   tinha uma estante por FAMÍLIA, e o Game Boy Advance ia para a fila
+   "Nintendo" misturado com N64 e Super Nintendo. Agora todo console com
+   jogo cadastrado ganha a estante dele e o atalho na lateral, sozinho
+   (Game Boy Advance, Nintendo 64, Super Nintendo, PlayStation, PSP, Mega
+   Drive...); console sem jogo não aparece. MAME e FinalBurn são a mesma
+   estante (Fliperama); Atari, PC Engine e Commodore juntam os modelos.
+   Código novo do emulador sem estante cai em "Outros consoles" (o teste
+   reprova se um console do SISTEMAS ficar sem estante). A família segue
+   valendo como filtro (?estante=nintendo traz tudo da Nintendo) e a ficha
+   do jogo diz "Mais de Game Boy Advance".
+   O MARCA-PASSO SÓ QUANDO AJUDA (jogo-emulador.js): ele roda quadros a
+   mais quando o navegador desenha menos de 60 por segundo (tela a 30 Hz).
+   Mas o quadro a mais também DESENHA a imagem inteira de novo. No
+   aparelho que já não dava conta, ele roubava o próximo desenho: medido
+   no Crash, 2 a 7 desenhos por segundo, aos trancos, contra 14 a 17 lisos
+   sem ele -- e o Automático não descia de degrau, porque contava os
+   quadros do jogo (inflados) e não os desenhos. Agora ele se vigia a cada
+   segundo: recuperou e o jogo seguiu abaixo de 54 por segundo por 2 s, ele
+   desliga; o jogo anda no ritmo dos desenhos e o Automático desce (menos
+   pixels, o núcleo pulando o desenho, o Leve). Com a tela num ritmo fixo
+   de 25 a 35 desenhos e o desenho leve (sinal de tela a 30 Hz), ele tenta
+   de novo -- duas vezes por partida, no máximo. MAX_EXTRAS passou de 3
+   para 2.
+   O PONTO GUARDADO A CADA 3 MINUTOS: tirar o estado do console (dezenas
+   de MB no N64 e no PSP) é um tranco; a cada minuto, era um por minuto.
+   Sair da aba, trocar de app e Voltar continuam guardando na hora.
+   Testes: core/tests_portal_jogos.py (EstantesPorConsoleTests) e o de PS1
+   em core/tests_jogos_emulador.py.
