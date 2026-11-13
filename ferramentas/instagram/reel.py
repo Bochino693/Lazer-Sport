@@ -6,14 +6,18 @@ Uso:
 
 Cada cena do roteiro tem uma fonte e um modelo de card:
 
-  fonte:   "video" (+ "inicio"), "foto" ou "quadros" (pasta de PNGs com fundo
-           transparente, ex.: giro 3D feito por girar3d.js)
+  fonte:   "video" (+ "inicio"), "foto" (+ "foco" 0..1 para o corte lateral),
+           "quadros" (pasta de PNGs com fundo transparente, ex.: giro 3D feito
+           por girar3d.js) ou "palco" (lista de recortes lado a lado, cada um
+           com "imagem" ou "quadros", "altura", "cx" e "base" em pixels)
   modelo:  "heroi"   titulo grande central com adesivo inclinado
            "card"    card inferior com icone ("lado": "esquerda" | "direita")
            "numero"  numero gigante com estrela + texto
            "medidas" linhas de cota desenhadas sobre a foto ("linhas")
            "final"   encerramento com logo e botao
   comuns:  "duracao", "etiqueta", "titulo", "texto", "icone", "cores"
+           "enquadre": "inteiro" mostra a foto ou o video inteiro numa janela
+           acima do card, sem cortar o brinquedo (use sempre em foto de produto)
 
 Icones: pino, camera, trofeu, radar, lampada, cubo, regua, conversa, estrela
 (ou um texto curto, ex.: "5"). Veja o modelo em exemplos/strike_kids.json.
@@ -521,15 +525,78 @@ def quadros_video(mov, inicio, dur):
     p.wait()
 
 
-def quadros_foto(path, dur):
+def enquadrar(img, c1, c2, t, fundo=None):
+    """Mostra a imagem INTEIRA numa janela acima do card, sobre o proprio fundo desfocado."""
+    if fundo is None:
+        sc = max(W / img.width, H / img.height)
+        f = img.resize((int(img.width * sc / 8) + 1, int(img.height * sc / 8) + 1), Image.BILINEAR)
+        f = ImageEnhance.Brightness(f.filter(ImageFilter.GaussianBlur(5))).enhance(0.5).resize(
+            (int(img.width * sc) + 1, int(img.height * sc) + 1), Image.BILINEAR)
+        l, tp = (f.width - W) // 2, (f.height - H) // 2
+        fundo = f.crop((l, tp, l + W, tp + H))
+    fr = fundo.copy()
+    x0, y0, x1, y1 = 60, 150, W - 60, 1100
+    s = min((x1 - x0) / img.width, (y1 - y0) / img.height) * (0.94 + 0.06 * mola(t / 0.45))
+    w, h = int(img.width * s), int(img.height * s)
+    jan = img.resize((w, h), Image.LANCZOS if img.width > w else Image.BICUBIC)
+    x, y = (W - w) // 2, y0 + (y1 - y0 - h) // 2
+    b = 10
+    som = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(som).rounded_rectangle([x - b, y - b + 16, x + w + b, y + h + b + 16], radius=44, fill=190)
+    fr.paste((0, 0, 0), (0, 0), som.filter(ImageFilter.GaussianBlur(22)))
+    borda = degrade((w + 2 * b, h + 2 * b), c1, c2).convert("RGBA")
+    mb = Image.new("L", borda.size, 0)
+    ImageDraw.Draw(mb).rounded_rectangle([0, 0, borda.width - 1, borda.height - 1], radius=44, fill=255)
+    fr.paste(borda, (x - b, y - b), mb)
+    mj = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mj).rounded_rectangle([0, 0, w - 1, h - 1], radius=36, fill=255)
+    fr.paste(jan, (x, y), mj)
+    return fr, fundo
+
+
+def quadros_foto(path, dur, foco=0.5, inteiro=False):
     im = Image.open(path).convert("RGB")
     im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(1.4)).enhance(1.1)
+    if inteiro:
+        for _ in range(int(round(dur * FPS))):
+            yield im
+        return
     sc = max(W / im.width, H / im.height)
     r = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
-    l, t = (r.width - W) // 2, (r.height - H) // 2
+    l, t = int((r.width - W) * foco), (r.height - H) // 2
     r = r.crop((l, t, l + W, t + H))
     for _ in range(int(round(dur * FPS))):
         yield r.copy()
+
+
+def quadros_palco(itens, dur, c1, c2, caminho):
+    """Varios recortes (PNG/WebP com fundo transparente ou pastas de giro 3D) lado a lado."""
+    prep = []
+    for it in itens:
+        if "quadros" in it:
+            prep.append((it, sorted(glob.glob(os.path.join(caminho(it["quadros"]), "*.png"))), None))
+        else:
+            im = Image.open(caminho(it["imagem"])).convert("RGBA")
+            prep.append((it, None, im.crop(im.getbbox())))
+    n = int(round(dur * FPS))
+    for k in range(n):
+        fr = fundo_3d(c1, c2, k / FPS)
+        for j, (it, arqs, fixo) in enumerate(prep):
+            if arqs:
+                m = Image.open(arqs[min(len(arqs) - 1, int(k * len(arqs) / n))]).convert("RGBA")
+                m = m.crop(m.getbbox())
+            else:
+                m = fixo
+            entra = mola((k / FPS - 0.12 * j) / 0.5)  # cada recorte "pula" para o lugar
+            s = it["altura"] / m.height
+            m = m.resize((max(1, int(m.width * s)), max(1, int(m.height * s))), Image.LANCZOS)
+            x = int(it["cx"] - m.width / 2)
+            y = int(it["base"] - m.height + (1 - min(1.0, entra)) * 500 - max(0.0, entra - 1) * 260)
+            ch = Image.new("L", (W, H), 0)
+            ImageDraw.Draw(ch).ellipse([x + 30, it["base"] - 34, x + m.width - 30, it["base"] + 34], fill=150)
+            fr.paste((0, 0, 0), (0, 0), ch.filter(ImageFilter.GaussianBlur(18)))
+            fr.paste(m, (x, y), m)
+        yield fr
 
 
 def quadros_3d(pasta, dur, c1, c2):
@@ -582,10 +649,12 @@ def main():
         c1, c2 = hexrgb(cores[0]), hexrgb(cores[1])
         if "video" in c:
             gen, real = quadros_video(caminho(c["video"]), c.get("inicio", 0), dur), True
+        elif "palco" in c:
+            gen, real = quadros_palco(c["palco"], dur, c1, c2, caminho), False
         elif "quadros" in c:
             gen, real = quadros_3d(caminho(c["quadros"]), dur, c1, c2), False
         else:
-            gen, real = quadros_foto(caminho(c["foto"]), dur), True
+            gen, real = quadros_foto(caminho(c["foto"]), dur, c.get("foco", 0.5), c.get("enquadre") == "inteiro"), True
         if mod == "heroi":
             ov = modelo_heroi(c, c1, c2)
         elif mod == "numero":
@@ -597,13 +666,20 @@ def main():
         else:
             ov = modelo_card(c, c1, c2)
         caixa = ov.getbbox()
+        inteiro = c.get("enquadre") == "inteiro"
+        fundo_fixo = None
         for k, fr in enumerate(gen):
             t = k / FPS
             fim = mod == "final"
+            if inteiro:
+                eh_foto = "foto" in c
+                fr, fundo = enquadrar(fr, c1, c2, t, fundo_fixo)
+                if eh_foto:
+                    fundo_fixo = fundo
             # movimento de camera: aproxima devagar, com um "soco" de zoom no corte
-            if mod != "medidas":
+            if mod != "medidas" and not inteiro:
                 fr = aproximar(fr, 1.0 + 0.07 * t / dur + 0.16 * (1 - suave(t / 0.22)))
-            if real and not fim:
+            if real and not fim and not inteiro:
                 fr = brilho_neon(fr)
                 fr = Image.composite(preto, fr, sombra)
             a = suave((t - 0.18) / 0.4)

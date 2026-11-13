@@ -28,7 +28,8 @@ Criação de conteúdo (aprendizado contínuo):
   comentários na conta e é regenerado a cada execução, então cada publicação
   nova melhora o guia. Siga as "Regras para a próxima publicação" e a estrutura
   dos melhores posts recentes, com produto e texto diferentes.
-- Para vídeo, monte um roteiro JSON e gere o Reel com
+- A edição de vídeo é do agente `editor-de-video`, que segue
+  `ferramentas/instagram/licoes_de_edicao.md`. Para vídeo, monte um roteiro JSON e gere o Reel com
   `python3 ferramentas/instagram/reel.py roteiro.json saida.mp4`
   (modelo em `ferramentas/instagram/exemplos/strike_kids.json`). Use vídeos e
   fotos reais enviados pelo usuário; fotos do site só como complemento.
