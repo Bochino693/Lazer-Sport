@@ -54,7 +54,8 @@ def sem_comentarios(css):
 def segunda_parte():
     """O bloco novo da folha: do cartão de perfil e da barra de ações."""
     css = CSS.read_text(encoding="utf-8")
-    titulo = css.index("LISTA OU CARDS, SEGUNDA PARTE")
+    # o título do bloco (a primeira parte só o cita, mais acima)
+    titulo = css.index("LISTA OU CARDS, SEGUNDA PARTE —")
     return sem_comentarios(css[css.rindex("/*", 0, titulo):])
 
 
@@ -453,11 +454,21 @@ class AsOutrasListasNaoMudamTests(Base):
             with self.subTest(rota=rota):
                 self.assertNotIn("data-visao-acoes", self.abrir(rota))
 
-    def test_orcamentos_e_os_marcam_as_tres_acoes_da_barra(self):
+    def test_orcamentos_e_os_marcam_as_acoes_da_barra(self):
         orcamentos = (MODELOS / "partes" / "orcamentos_lista.html").read_text(encoding="utf-8")
-        self.assertIn('target="_blank" rel="noopener" data-acao-cartao="Prévia"', orcamentos)
-        self.assertIn('data-editar="{{ orcamento.id }}" data-acao-cartao\n', orcamentos)
-        self.assertIn('data-acao-cartao="{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}"', orcamentos)
+        self.assertIn('target="_blank" rel="noopener" data-acao-cartao="Prévia" data-acao-ordem="1"', orcamentos)
+        self.assertIn('data-editar="{{ orcamento.id }}" data-acao-cartao data-acao-ordem="2"\n', orcamentos)
+        # no orçamento pago o documento para assinar vem à frente do "Enviar":
+        # a barra leva três, e é ele o próximo passo
+        self.assertIn(
+            "data-acao-cartao=\"{% if orcamento.documento_assinatura.situacao == 'assinado' %}Assinado"
+            "{% elif orcamento.documento_assinatura %}Assinatura{% else %}Documento{% endif %}\" data-acao-ordem=\"3\"",
+            orcamentos,
+        )
+        self.assertIn(
+            'data-acao-cartao="{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}" data-acao-ordem="4"',
+            orcamentos,
+        )
         ordens = (MODELOS / "partes" / "os_lista.html").read_text(encoding="utf-8")
         for marca in ('data-acao-cartao="Imprimir"', 'data-editar-os="{{ ordem.id }}" data-acao-cartao', 'data-acao-cartao="Enviar"'):
             self.assertIn(marca, ordens)

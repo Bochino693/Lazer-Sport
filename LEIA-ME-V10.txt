@@ -3803,69 +3803,56 @@ Dependência nova: rjsmin (requirements.txt).
    card, centralize o conteúdo e se houver logo no cliente, mostre a logo,
    tudo moderno e bem otimizado" e "nos cards, melhore as ações deixando
    estilo app, como um botão no card elegante e com bons ícones e texto".
-   O cartão que saía da tabela era a linha dobrada numa caixa: rótulo de
-   coluna em cima de cada célula, tudo à esquerda, e as ações num "⋮"
-   solto no pé. A LISTA não mudou em nada (conferido pixel a pixel no PC,
-   tablet e celular); o que é novo vale só no modo Cards, e só para o
-   contêiner que pede (`.ls-visao-alvo`):
-     * `data-visao-cartao="perfil"` (Clientes) -- o cartão centrado: no
-       topo a LOGO do cliente (Cliente.logo) num quadro de 84px, ou as
-       iniciais do nome sobre uma cor que é sempre a mesma para aquele
-       nome (crc32 do nome, 6 tons do tema; `hash()` mudaria a cada
-       reinício); o nome e o estabelecimento; os selos (Buffet parceiro /
-       Comercial / Residencial, "no mapa") e o CPF/CNPJ; o "Falta ...
-       COMPLETAR" numa pílula só; o contato como atalhos de tocar
-       (WhatsApp, Ligar, E-mail: círculos de 46px com o nome embaixo, e o
-       número e o e-mail escritos para quem só quer ler; sem WhatsApp no
-       telefone marcado "sem WhatsApp"; "Sem contato" e "Sem endereço"
-       em cinza); o endereço em duas linhas com Maps/Waze; e os números
-       em três quadradinhos (propostas, em aberto, fechadas) com o
-       "Aprovado R$" fechando a conta (verde só quando há valor). Os
-       números encostam no pé: cartões da mesma fileira ficam da mesma
-       altura. Grade: 1 coluna no celular, 2 no tablet, 3 ou 4 no PC
-       (nunca mais de 4). As células são as partes
-       (`data-v="rosto|elo|contato|local|numeros|total"`, o rosto é
-       `data-v="avatar"`); o que só existe no cartão leva
-       `data-visao-so="cards"`.
-     * A LOGO: a URL sai de sistema_interno/cartao_cliente.py pelo mesmo
-       redutor das fotos do site (core.fotos.reduzir_imagem): no
-       Cloudinary pede `c_limit,w_176,f_auto,q_auto` (o dobro dos 84px,
-       para tela 2x; uns 5 KB), nunca o arquivo enviado. Preguiçosa
-       (`loading="lazy"`), com largura e altura declaradas (o cartão não
-       pula) e sobre uma placa neutra igual nos três temas
-       (`--logo-placa`, cinza-lilás de meia luz): logo de tinta escura e
-       logo branca aparecem as duas. Na lista o rosto fica escondido e a
-       imagem nem é baixada. Se a imagem não carregar, ela sai e ficam
-       as iniciais, que estão por baixo.
-     * `data-visao-acoes="barra"` (Clientes, Orçamentos e O.S.) -- a
-       barra de ações no pé do cartão, de ponta a ponta: as ações mais
-       usadas com ícone e nome (Clientes: Histórico e Editar; Orçamentos:
-       Prévia, Editar e Enviar; O.S.: Imprimir, Editar e Enviar) e
-       "Mais", que abre o resto numa folha de ações -- no celular ela
-       sobe do pé da tela, por cima das abas, com o resto escurecido; no
-       PC é o balão ao lado do botão. Cada ação com ícone e nome, alvo de
-       46px (52 no celular); o que apaga fica por último, depois de uma
-       linha e em vermelho, e nunca vai para a barra. Pelo teclado: Tab
-       chega em cada botão, Enter em "Mais" abre com o foco na primeira
-       ação, setas/Home/End andam, Esc e Tab fecham e devolvem o foco.
-       Quem monta é ls-listas.js, a partir das ações que a linha já tem,
-       e só quando a lista entra em cards: a tela marca as principais
-       com `data-acao-cartao="Nome curto"` (ordem em `data-acao-ordem`;
-       sem marca, vão as duas primeiras que não apagam). Nada é clonado:
-       o botão da barra aciona a ação de verdade, e "Mais" é o próprio
-       "⋮" do painel com nome. Com quatro botões o ícone sobe para cima
-       do nome, na lista inteira. As outras telas com tabela que vira
-       cartões (Usuários, Clientes no mapa) ganham a barra com esse
-       atributo no contêiner; não foram tocadas.
-     * BEM OTIMIZADO: o cartão não custa consulta nenhuma (a tela de
-       Clientes faz as mesmas 11 com 1 ou com 30 clientes; a logo, as
-       iniciais e os atalhos são conta local); sem sombra larga nem
-       filtro no cartão (borda de 1px), só variável do tema; a página
-       cresce ~125 bytes comprimidos por cliente.
-   Conferido no navegador (PC 1366, tablet 820, celular 390; sol e lua):
-   cartões, folha do "Mais", teclado, busca na tela, lista sem cliente,
-   filtro de Orçamentos sem recarregar. Testes:
-   sistema_interno/tests_cartao_cliente.py e tests_js/cartao_acoes.cjs.
+   O cartão que saía da tabela era a linha dobrada numa caixa (rótulo de
+   coluna em cima de cada célula, tudo à esquerda, as ações num "⋮" solto
+   no pé). A LISTA não mudou; o que é novo vale só em Cards, e só para o
+   contêiner (`.ls-visao-alvo`) que pede:
+     * `data-visao-cartao="perfil"` (Clientes): o cartão centrado. No topo
+       a LOGO do cliente (Cliente.logo) num quadro de 84px, ou as iniciais
+       sobre uma cor que é sempre a mesma para aquele nome (crc32 do nome,
+       6 tons do tema); nome e estabelecimento; selos (Buffet parceiro /
+       Comercial / Residencial, "no mapa"); o "Falta ... Completar" numa
+       pílula; o contato como atalhos de tocar (WhatsApp, Ligar, E-mail,
+       círculos de 46px; sem WhatsApp no telefone marcado "sem WhatsApp")
+       com o número e o e-mail escritos embaixo; o endereço com Maps/Waze;
+       três quadradinhos (propostas, em aberto, fechadas) e o "Aprovado
+       R$" fechando a conta, encostados no pé (cartões da mesma fileira
+       ficam iguais). 1 coluna no celular, 2 no tablet, 3 ou 4 no PC. As
+       células são as partes (`data-v="rosto|elo|contato|local|numeros|
+       total"`); o que só existe no cartão leva `data-visao-so="cards"`.
+     * A LOGO sai de sistema_interno/cartao_cliente.py pelo redutor das
+       fotos do site (core.fotos.reduzir_imagem): no Cloudinary,
+       `c_limit,w_176,f_auto,q_auto` (o dobro de 84px, para tela 2x),
+       nunca o arquivo enviado. Preguiçosa, com largura e altura (o
+       cartão não pula), sobre uma placa neutra igual nos três temas
+       (`--logo-placa`): logo escura e logo branca aparecem as duas. Na
+       lista ela nem é baixada; se não carregar, ficam as iniciais.
+     * `data-visao-acoes="barra"` (Clientes, Orçamentos, O.S.): no pé do
+       cartão, as ações mais usadas com ícone e nome -- Clientes:
+       Histórico e Editar; Orçamentos: Prévia, Editar e Enviar (no pago,
+       o Documento para assinar no lugar do Enviar, em verde); O.S.:
+       Imprimir, Editar e Enviar -- e "Mais", que abre o resto numa folha
+       de ações: no celular ela sobe do pé da tela, por cima das abas; no
+       PC é o balão ao lado do botão. O que apaga fica por último, depois
+       de uma linha e em vermelho, e nunca vai para a barra. Alvos de 48px
+       (46 na folha, 52 no celular). Teclado: Tab em cada botão, Enter em
+       "Mais" abre com o foco na primeira ação, setas/Home/End andam, Esc
+       e Tab fecham e devolvem o foco. Quem monta é ls-listas.js, das
+       ações que a linha já tem e só quando a lista entra em cards: a tela
+       marca as principais com `data-acao-cartao="Nome curto"` (ordem em
+       `data-acao-ordem`; sem marca, vão as duas primeiras que não
+       apagam). Nada é clonado: o botão da barra aciona a ação de verdade,
+       e "Mais" é o próprio "⋮" com nome. Usuários e Clientes no mapa
+       ganham a barra com esse atributo; não foram tocados.
+     * BEM OTIMIZADO: nenhuma consulta a mais (Clientes faz as mesmas 11
+       com 1 ou com 12 clientes na página; o teste cobra 3 contra 15), sem
+       sombra larga nem filtro no cartão, só variável do tema, ~125 bytes
+       comprimidos a mais por cliente.
+   Conferido no navegador (1366, tablet 820, celular 390 e 320; sol, lua e
+   eclipse): cartões, folha do "Mais", teclado, busca na tela, lista sem
+   cliente, filtro de Orçamentos sem recarregar, lista igual pixel a
+   pixel. Testes: sistema_interno/tests_cartao_cliente.py e
+   tests_js/cartao_acoes.cjs.
 
 76) ANÁLISES GRÁFICAS NO PAINEL: DESEMPENHO POR PERÍODO, FICHA DE CADA OBJETO E QUEM ESTÁ ONLINE
    Pedidos: "inclua os gráficos para cada objeto, de acordo com seus dados,

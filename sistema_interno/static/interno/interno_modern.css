@@ -5804,6 +5804,8 @@ body.ls-body{
 /* a primeira é a que mais se usa: leva a cor de ação */
 .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--principal{color:var(--acento-texto)!important}
 .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--perigo{color:var(--red-texto)!important}
+/* o que conclui (o botão verde da lista: o documento do orçamento pago) */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--conclui{color:var(--green-texto)!important}
 .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger):focus-visible{
   outline:2px solid var(--acento)!important;outline-offset:-3px;
 }
@@ -5814,6 +5816,9 @@ body.ls-body{
 .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--perigo:active{
   color:var(--red-texto)!important;background:rgba(var(--red-rgb),.12)!important;
 }
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--conclui:active{
+  color:var(--green-texto)!important;background:rgba(var(--green-rgb),.14)!important;
+}
 /* só onde há ponteiro: no toque, o "hover" ficaria preso depois do dedo sair */
 @media (hover:hover){
   .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger):hover{
@@ -5821,6 +5826,9 @@ body.ls-body{
   }
   .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--perigo:hover{
     color:var(--red-texto)!important;background:rgba(var(--red-rgb),.09)!important;
+  }
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--conclui:hover{
+    color:var(--green-texto)!important;background:rgba(var(--green-rgb),.1)!important;
   }
 }
 /* lista em que algum cartão tem quatro botões: o ícone sobe para cima do

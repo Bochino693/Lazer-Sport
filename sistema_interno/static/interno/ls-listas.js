@@ -74,6 +74,7 @@
      ------------------------------------------------------------------ */
   var NA_BARRA = 3;
   var PERIGOSA = ".btn-outline-danger,[data-excluir],[data-excluir-os],[data-acao-perigosa]";
+  var CONCLUI = ".btn-success,.btn-outline-success";
 
   /* As ações de uma caixa (o menu flutuante, ou o grupo da célula quando a
      linha tem uma ação só): cada filho é a ação ou o <form> que a embrulha. */
@@ -118,8 +119,13 @@
     } else {
       botao.type = "button";
     }
-    botao.className = "ls-cartao-acao" +
-      (acao.matches(PERIGOSA) ? " ls-cartao-acao--perigo" : principal ? " ls-cartao-acao--principal" : "");
+    // A cor diz o papel: vermelho no que apaga, verde no que conclui (o
+    // botão verde da lista), a cor de ação na primeira da barra.
+    botao.className = "ls-cartao-acao" + (
+      acao.matches(PERIGOSA) ? " ls-cartao-acao--perigo"
+        : acao.matches(CONCLUI) ? " ls-cartao-acao--conclui"
+        : principal ? " ls-cartao-acao--principal" : ""
+    );
     var desenho = acao.querySelector('i[class*="bi-"]');
     var icone = document.createElement("i");
     icone.className = desenho ? desenho.className.replace(/\bm[se]-\d\b/g, "").trim() : "bi bi-arrow-right-circle";

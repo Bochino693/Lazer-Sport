@@ -48,7 +48,7 @@ const completa =
 const umaSo = '<button type="button" class="btn btn-outline-danger" data-excluir="8"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>';
 const semResto =
   '<button type="button" class="btn" data-editar="9" data-acao-cartao="Editar"><i class="bi bi-pencil"></i></button>' +
-  '<button type="button" class="btn" data-dossie="9" data-acao-cartao="Histórico"><i class="bi bi-clock-history"></i></button>';
+  '<button type="button" class="btn btn-success" data-dossie="9" data-acao-cartao="Histórico"><i class="bi bi-clock-history"></i></button>';
 const semMarca =
   '<button type="button" class="btn btn-outline-danger" data-excluir="3"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>' +
   '<button type="button" class="btn" data-ver="3"><i class="bi bi-eye"></i><span class="ls-action-label">Ver</span></button>' +
@@ -190,6 +190,9 @@ assert.equal(cliques[cliques.length - 1], 'excluir');
 const cheia = linhas[2].querySelector('td.ls-actions');
 assert.deepEqual(Array.from(cheia.querySelectorAll('.ls-cartao-acao')).map((b) => b.textContent), ['Editar', 'Histórico']);
 assert.equal(cheia.querySelector('.ls-action-fab').getAttribute('data-sem-resto'), '1');
+// a cor diz o papel: a primeira leva a cor de ação; o botão verde da lista continua verde
+assert.ok(cheia.querySelectorAll('.ls-cartao-acao')[0].classList.contains('ls-cartao-acao--principal'));
+assert.equal(cheia.querySelectorAll('.ls-cartao-acao')[1].className, 'ls-cartao-acao ls-cartao-acao--conclui');
 assert.equal(cheia.getAttribute('data-barra-itens'), '2');
 assert.equal(alvo.hasAttribute('data-barra-cheia'), false, 'três na barra cabem lado a lado');
 
