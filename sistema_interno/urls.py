@@ -47,6 +47,7 @@ from .views_funil import (
     EtiquetasImpressaoView,
     PrazoProducaoView,
 )
+from .views_transportadoras import TransportadorasInnerView
 from .views_documento_assinatura import (
     DocumentoAssinaturaInnerView,
     EstadoDocumentoAssinaturaView,
@@ -251,6 +252,14 @@ urlpatterns = [
         'producao/prazo/<str:tipo>/<int:pk>/',
         PrazoProducaoView.as_view(),
         name='prazo_producao',
+    ),
+
+    # Transportadoras recomendadas: o frete saiu do site e o cliente
+    # contrata. Ver `views_transportadoras.py`.
+    path(
+        'logistica/transportadoras/',
+        TransportadorasInnerView.as_view(),
+        name='transportadoras_inner',
     ),
 
     # ---------------- orçamentos ----------------

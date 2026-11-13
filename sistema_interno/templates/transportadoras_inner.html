@@ -1,0 +1,277 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}Transportadoras | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Transportadoras{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="transportadoras" href="{% estatico 'interno/transportadoras.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  QUEM LEVA PARA ESTE ESTADO? (views_transportadoras.py)
+
+  Os 27 botões no alto escolhem o destino; a lista mostra as nacionais,
+  depois as regionais daquele estado e, por fim, as de mudança. A busca
+  filtra na hora, sem ir ao servidor (transportadoras.js) -- e continua
+  sendo um formulário GET, para funcionar até sem JavaScript.
+{% endcomment %}
+<div class="tp" id="tpTela" data-uf="{{ uf }}">
+
+<section class="ls-page-hero tp-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Logística · frete por conta do cliente</span>
+    <h1>Transportadoras</h1>
+    <p>O site não entrega mais: o cliente retira na fábrica ou contrata o frete. Escolha o estado de destino e indique quem leva, com o contato a um toque.</p>
+  </div>
+  {% if pode_editar %}
+  <div class="ls-page-hero-actions">
+    <button type="button" class="btn btn-success" data-tp-novo>
+      <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nova transportadora
+    </button>
+  </div>
+  {% endif %}
+</section>
+
+<section class="tp-mapa" aria-labelledby="tpMapaTitulo">
+  <div class="tp-mapa-cabeca">
+    <h2 id="tpMapaTitulo"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> Para qual estado?</h2>
+    {% if uf %}
+      <a class="tp-limpar" href="{% url 'transportadoras_inner' %}{% if busca %}?q={{ busca|urlencode }}{% endif %}">
+        <i class="bi bi-x-lg" aria-hidden="true"></i> Todos os estados
+      </a>
+    {% endif %}
+  </div>
+  <nav class="tp-ufs" aria-label="Estado de destino">
+    {% for e in estados %}
+      <a class="tp-uf{% if e.sigla == uf %} is-ativa{% endif %}"
+         href="?uf={{ e.sigla }}{% if busca %}&amp;q={{ busca|urlencode }}{% endif %}"
+         data-uf="{{ e.sigla }}" data-regiao="{{ e.regiao }}"
+         title="{{ e.nome }}: {{ e.total }} transportadora{{ e.total|pluralize }}"
+         aria-label="{{ e.nome }}, {{ e.total }} transportadora{{ e.total|pluralize }}"
+         {% if e.sigla == uf %}aria-current="true"{% endif %}>
+        <strong>{{ e.sigla }}</strong><small>{{ e.total }}</small>
+      </a>
+    {% endfor %}
+  </nav>
+  <ul class="tp-legenda" aria-hidden="true">
+    {% for regiao in regioes %}<li data-regiao="{{ regiao }}">{{ regiao }}</li>{% endfor %}
+  </ul>
+</section>
+
+<section class="ls-data-panel tp-painel">
+  <div class="ls-data-header tp-barra">
+    <div>
+      <h2>{% if uf %}Para {{ uf_nome }} ({{ uf }}){% else %}Todas as transportadoras{% endif %}</h2>
+      <p>
+        <span id="tpContagem" data-total="{{ total }}">{{ total }} transportadora{{ total|pluralize }}</span>
+        · saindo de São Paulo/SP{% if not uf %} · toque num estado para ver só quem entrega lá{% endif %}
+      </p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="tpLista" chave="transportadoras" %}
+  </div>
+
+  <div class="tp-corpo">
+  <form class="tp-busca" method="get" role="search" action="{% url 'transportadoras_inner' %}">
+    {% if uf %}<input type="hidden" name="uf" value="{{ uf }}">{% endif %}
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" id="tpBusca" value="{{ busca }}" autocomplete="off"
+           placeholder="Buscar: nome, cidade, “frágil”, “aéreo”…" aria-label="Buscar transportadora">
+  </form>
+
+  <div class="tp-lista" id="tpLista" data-visao="lista">
+    {% for secao in secoes %}{% if secao.cartoes %}
+      <section class="tp-secao" data-tp-secao="{{ secao.tipo }}">
+        <header class="tp-secao-cabeca">
+          <h3>{{ secao.rotulo }}</h3>
+          <span>{{ secao.nota }}</span>
+        </header>
+        <div class="tp-itens">
+          {% for c in secao.cartoes %}{% include "partes/transportadora_cartao.html" %}{% endfor %}
+        </div>
+      </section>
+    {% endif %}{% endfor %}
+
+    <div class="ls-empty tp-vazio" id="tpVazio" {% if total %}hidden{% endif %}>
+      <i class="bi bi-truck" aria-hidden="true"></i>
+      <span data-tp-vazio-texto>
+        {% if busca %}Nenhuma transportadora com “{{ busca }}”{% if uf %} para {{ uf }}{% endif %}.
+        {% elif uf %}Nenhuma transportadora cadastrada para {{ uf_nome }} ainda.
+        {% else %}Nenhuma transportadora cadastrada ainda.{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <p class="tp-dica">
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    O WhatsApp e o e-mail já vão com a mensagem: <em>“{{ mensagem_cotacao }}”</em>
+    Complete a cidade, o peso e o volume antes de enviar.
+  </p>
+  </div>
+</section>
+
+{% if pode_editar and desativadas %}
+<section class="ls-data-panel tp-painel tp-desativadas">
+  <div class="ls-data-header">
+    <div>
+      <h2>Desativadas</h2>
+      <p>Fora das recomendações, guardadas com a fonte. Só a Gestão vê.</p>
+    </div>
+  </div>
+  <div class="tp-corpo tp-lista" data-visao="lista">
+    <div class="tp-itens">
+      {% for c in desativadas %}{% include "partes/transportadora_cartao.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+</div>
+
+{% if pode_editar %}
+<!-- ================= FOLHA: cadastrar / corrigir ================= -->
+<div class="modal fade" id="modalTransportadora" tabindex="-1" aria-hidden="true" aria-labelledby="tpFormTitulo">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formTransportadora" method="post" action="{% url 'transportadoras_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="salvar">
+      <input type="hidden" name="id" id="tpId">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Logística · transportadora</span>
+          <h5 class="modal-title" id="tpFormTitulo">Nova transportadora</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="tpErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="tpNome">Nome</label>
+            <input class="form-control" id="tpNome" name="nome" maxlength="120" required data-rotulo="nome"
+                   placeholder="Braspress Transportes Urgentes">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="tpFantasia">Nome curto (no cartão)</label>
+            <input class="form-control" id="tpFantasia" name="nome_fantasia" maxlength="80" placeholder="Braspress">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="tpTipo">Tipo</label>
+            <select class="form-select" id="tpTipo" name="tipo">
+              {% for valor, rotulo in tipos %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-8 col-md-4">
+            <label class="form-label" for="tpCidade">Cidade-sede</label>
+            <input class="form-control" id="tpCidade" name="cidade_sede" maxlength="80" placeholder="Guarulhos">
+          </div>
+          <div class="col-4 col-md-3">
+            <label class="form-label" for="tpUfSede">UF</label>
+            <select class="form-select" id="tpUfSede" name="uf_sede">
+              <option value="">—</option>
+              {% for sigla, rotulo in ufs_sede %}<option value="{{ sigla }}">{{ sigla }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <fieldset class="tp-form-estados">
+          <legend class="form-label">Estados que ela atende</legend>
+          <label class="form-check form-switch tp-todo-brasil">
+            <input class="form-check-input" type="checkbox" name="atende_todo_brasil" value="1" id="tpTodoBrasil">
+            <span class="form-check-label">Atende todo o Brasil (as 27 UFs)</span>
+          </label>
+          <div class="tp-form-regioes" id="tpRegioes">
+            {% for regiao, siglas in ufs_por_regiao %}
+              <div class="tp-form-regiao" data-regiao="{{ regiao }}">
+                <button type="button" class="tp-form-regiao-nome" data-tp-regiao="{{ regiao }}" title="Marcar ou desmarcar a região">{{ regiao }}</button>
+                <div class="tp-form-siglas">
+                  {% for sigla, nome in siglas %}
+                    <label class="tp-form-sigla" title="{{ nome }}">
+                      <input type="checkbox" name="estados" value="{{ sigla }}"><span>{{ sigla }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <p class="tp-form-aviso">
+          <i class="bi bi-shield-check" aria-hidden="true"></i>
+          Só entra contato conferido: preencha a <strong>fonte</strong> (a página onde o número
+          aparece, de preferência o site da própria empresa). Em dúvida, deixe em branco.
+        </p>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="tpTelefone">Telefone</label>
+            <input class="form-control" id="tpTelefone" name="telefone" inputmode="tel" maxlength="20"
+                   placeholder="(11) 2188-9000 ou 0800 775 3333">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="tpWhatsapp">WhatsApp</label>
+            <input class="form-control" id="tpWhatsapp" name="whatsapp" inputmode="tel" maxlength="20"
+                   placeholder="(11) 91366-2652">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="tpEmail">E-mail</label>
+            <input class="form-control" id="tpEmail" name="email" type="email" maxlength="254" placeholder="sac@empresa.com.br">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="tpInstagram">Instagram</label>
+            <div class="input-group">
+              <span class="input-group-text">@</span>
+              <input class="form-control" id="tpInstagram" name="instagram" maxlength="80" placeholder="perfil">
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="tpSite">Site</label>
+            <input class="form-control" id="tpSite" name="site" inputmode="url" maxlength="300" placeholder="https://www.empresa.com.br">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="tpObs">Observações</label>
+            <textarea class="form-control" id="tpObs" name="observacoes" rows="3" maxlength="2000"
+                      placeholder="Carga grande ou frágil, caminhão com plataforma, horário de coleta..."></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="tpFonte">Fonte (onde o contato foi conferido)</label>
+            <input class="form-control" id="tpFonte" name="fonte_url" inputmode="url" maxlength="500"
+                   placeholder="https://www.empresa.com.br/contato">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="tpFontesExtras">Outras fontes (uma por linha)</label>
+            <textarea class="form-control" id="tpFontesExtras" name="fontes_extras" rows="2" maxlength="3000"></textarea>
+          </div>
+          <div class="col-7 col-md-4">
+            <label class="form-label" for="tpVerificado">Conferido em</label>
+            <input class="form-control" id="tpVerificado" name="verificado_em" type="date">
+          </div>
+          <div class="col-5 col-md-3">
+            <label class="form-label" for="tpOrdem">Ordem</label>
+            <input class="form-control" id="tpOrdem" name="ordem" type="number" min="0" max="999" value="100">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Desativar e reativar: o POST sai deste formulário, depois da folha de confirmação. #}
+<form id="formTpEstado" method="post" action="{% url 'transportadoras_inner' %}" hidden>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="">
+  <input type="hidden" name="id" value="">
+</form>
+{{ dados_edicao|json_script:"tpDados" }}
+{% endif %}
+<span hidden id="tpHoje" data-hoje="{{ hoje }}"></span>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/transportadoras.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% comment %}
+  UMA TRANSPORTADORA: a linha da Lista e o cartão dos Cards são o mesmo
+  <article> (transportadoras.css desenha os dois modos).
+
+  Recebe `c` (views_transportadoras.cartao), `uf` e `pode_editar`. Cada
+  botão de contato só existe quando o campo existe: um "Ligar" que não
+  liga é pior do que nenhum botão.
+{% endcomment %}
+{% with t=c.obj %}
+<article class="tp-item tp-tipo-{{ t.tipo }}{% if not t.ativo %} is-desativada{% endif %}"
+         id="tp-{{ t.pk }}" data-tp-item data-busca="{{ c.busca }}">
+  <div class="tp-item-topo">
+    <span class="tp-selo" aria-hidden="true">{{ t.iniciais }}</span>
+    <div class="tp-item-nome">
+      <h4>{{ t.nome_exibicao }}</h4>
+      <p>
+        <span class="tp-tipo">{{ t.get_tipo_display }}</span>
+        {% if t.sede %}<span class="tp-sede"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ t.sede }}</span>{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="tp-atende" aria-label="Estados atendidos">
+    {% if t.atende_todo_brasil %}
+      <span class="tp-chip tp-chip-br"><i class="bi bi-globe-americas" aria-hidden="true"></i> Todo o Brasil</span>
+    {% else %}
+      {% for sigla in c.ufs %}<span class="tp-chip{% if sigla == uf %} is-destino{% endif %}">{{ sigla }}</span>{% endfor %}
+    {% endif %}
+  </div>
+
+  {% if t.observacoes %}<p class="tp-obs">{{ t.observacoes }}</p>{% endif %}
+
+  {% if t.tem_contato %}
+  <ul class="tp-contatos">
+    {% if t.telefone %}<li><i class="bi bi-telephone" aria-hidden="true"></i> {{ t.telefone_formatado }}</li>{% endif %}
+    {% if t.whatsapp %}<li><i class="bi bi-whatsapp" aria-hidden="true"></i> {{ t.whatsapp_formatado }}</li>{% endif %}
+    {% if t.email %}<li><i class="bi bi-envelope" aria-hidden="true"></i> {{ t.email }}</li>{% endif %}
+    {% if t.instagram %}<li><i class="bi bi-instagram" aria-hidden="true"></i> @{{ t.instagram }}</li>{% endif %}
+  </ul>
+  {% endif %}
+
+  <div class="tp-acoes" role="group" aria-label="Falar com {{ t.nome_exibicao }}">
+    {% if c.whatsapp %}
+      <a class="tp-acao tp-acao-whats" href="{{ c.whatsapp }}" target="_blank" rel="noopener" data-tp-acao="whatsapp"
+         title="Abrir o WhatsApp com a cotação já escrita">
+        <i class="bi bi-whatsapp" aria-hidden="true"></i><span>Chamar no WhatsApp</span>
+      </a>
+    {% endif %}
+    {% if c.telefone %}
+      <a class="tp-acao tp-acao-tel" href="{{ c.telefone }}" data-tp-acao="ligar" title="Ligar para {{ t.telefone_formatado|default:t.whatsapp_formatado }}">
+        <i class="bi bi-telephone-fill" aria-hidden="true"></i><span>Ligar</span>
+      </a>
+    {% endif %}
+    {% if c.email %}
+      <a class="tp-acao tp-acao-email" href="{{ c.email }}" data-tp-acao="email" title="E-mail com o pedido de cotação">
+        <i class="bi bi-envelope-fill" aria-hidden="true"></i><span>E-mail</span>
+      </a>
+    {% endif %}
+    {% if c.instagram %}
+      <a class="tp-acao tp-acao-insta" href="{{ c.instagram }}" target="_blank" rel="noopener" data-tp-acao="instagram" title="@{{ t.instagram }}">
+        <i class="bi bi-instagram" aria-hidden="true"></i><span>Instagram</span>
+      </a>
+    {% endif %}
+    {% if c.site %}
+      <a class="tp-acao tp-acao-site" href="{{ c.site }}" target="_blank" rel="noopener" data-tp-acao="site" title="{{ c.site }}">
+        <i class="bi bi-globe2" aria-hidden="true"></i><span>Site</span>
+      </a>
+    {% endif %}
+    {% if t.tem_contato or c.site %}
+      <button type="button" class="tp-acao tp-acao-copiar" data-tp-acao="copiar" data-tp-copiar="{{ c.copiar }}" title="Copiar o contato para colar na conversa">
+        <i class="bi bi-copy" aria-hidden="true"></i><span>Copiar contato</span>
+      </button>
+    {% endif %}
+  </div>
+
+  <footer class="tp-rodape">
+    {% if t.verificado_em %}
+      <span class="tp-conferido"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Conferido em {{ t.verificado_em|date:"d/m/Y" }}</span>
+    {% endif %}
+    {% if t.fonte_url %}
+      <a class="tp-fonte" href="{{ t.fonte_url }}" target="_blank" rel="noopener noreferrer" title="{{ t.fonte_url }}">
+        <i class="bi bi-link-45deg" aria-hidden="true"></i> fonte
+      </a>
+    {% endif %}
+    {% if pode_editar %}
+      <span class="tp-gestao">
+        <button type="button" class="tp-mini" data-tp-editar="{{ t.pk }}"><i class="bi bi-pencil-square" aria-hidden="true"></i> Editar</button>
+        {% if t.ativo %}
+          <button type="button" class="tp-mini tp-mini-perigo" data-tp-desativar="{{ t.pk }}" data-nome="{{ t.nome_exibicao }}"><i class="bi bi-eye-slash" aria-hidden="true"></i> Desativar</button>
+        {% else %}
+          <button type="button" class="tp-mini" data-tp-reativar="{{ t.pk }}" data-nome="{{ t.nome_exibicao }}"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reativar</button>
+        {% endif %}
+      </span>
+    {% endif %}
+  </footer>
+</article>
+{% endwith %}

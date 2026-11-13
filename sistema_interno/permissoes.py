@@ -176,6 +176,11 @@ def capacidades(user) -> dict[str, bool]:
         # Compatibilidade com pontos antigos que perguntam se existe alguma
         # operação acessível. As telas usam as capacidades específicas.
         "operacao": producao or acesso_financeiro or gestao,
+        # Transportadoras recomendadas (o frete saiu do site): quem vende
+        # indica, quem despacha combina a coleta, e Gestão mantém a lista
+        # -- é ela que responde por um número errado passado ao cliente.
+        "transportadoras": vendas or gestao or producao,
+        "transportadoras_editar": gestao,
         "site": criacao,
         "usuarios": superusuario,
         "avaliar_blocos_orcamento": superusuario,

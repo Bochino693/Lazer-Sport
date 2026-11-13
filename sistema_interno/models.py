@@ -4184,3 +4184,206 @@ class EmailIdentidade(models.Model):
 
     def __str__(self):
         return f"{self.email} ({self.get_escopo_display()})"
+
+
+# A regra pura (estados, telefone, links) mora em transportadoras.py; o
+# import fica aqui, junto do único modelo que a usa.
+from . import transportadoras  # noqa: E402
+
+
+class TransportadoraQuerySet(models.QuerySet):
+    def ativas(self):
+        return self.filter(ativo=True)
+
+    def atendem(self, uf):
+        """Quem entrega no estado: as nacionais e as que o têm na lista."""
+        sigla = transportadoras.uf_valida(uf)
+        if not sigla:
+            return self.none()
+        return self.filter(
+            models.Q(atende_todo_brasil=True)
+            | models.Q(estados_atendidos__regex=transportadoras.filtro_da_uf(sigla))
+        )
+
+
+class Transportadora(Prime):
+    """Quem leva a máquina até o cliente, agora que o frete saiu do site.
+
+    O cliente retira na fábrica ou contrata o frete. Esta tabela é a
+    lista que a equipe recomenda, estado por estado, com o contato pronto
+    para um toque (ver `transportadoras.py` e a tela de Logística).
+
+    O CONTATO SÓ ENTRA COM A FONTE. Um telefone errado aqui manda o
+    cliente para o número de outra empresa -- ou de um golpista que se
+    passa por transportadora. Por isso cada contato guarda de onde veio
+    (`fonte_url`) e quando foi conferido (`verificado_em`), e a tela
+    recusa telefone, WhatsApp, e-mail ou Instagram sem fonte. Campo em
+    branco é aceitável; campo inventado, não.
+
+    Telefone e WhatsApp são gravados SÓ COM DÍGITOS (há uma checagem no
+    banco): a formatação "(11) 2188-9000" é feita na tela, e o link do
+    WhatsApp sai dos dígitos sem depender de quem digitou.
+    """
+
+    class Tipo(models.TextChoices):
+        NACIONAL = "nacional", "Nacional"
+        REGIONAL = "regional", "Regional"
+        MUDANCAS = "mudancas", "Mudanças e cargas especiais"
+
+    #: A ordem das seções na tela: quem atende o Brasil todo primeiro.
+    ORDEM_DOS_TIPOS = {Tipo.NACIONAL: 0, Tipo.REGIONAL: 1, Tipo.MUDANCAS: 2}
+
+    nome = models.CharField(max_length=120, help_text="Razão social ou nome completo da marca.")
+    nome_fantasia = models.CharField(
+        max_length=80, blank=True,
+        help_text="O nome curto que aparece no cartão (ex.: Braspress).",
+    )
+    tipo = models.CharField(
+        max_length=12, choices=Tipo.choices, default=Tipo.REGIONAL, db_index=True,
+    )
+    atende_todo_brasil = models.BooleanField(
+        default=False,
+        help_text="Marcado, vale para os 27 estados e a lista abaixo é ignorada.",
+    )
+    estados_atendidos = models.CharField(
+        max_length=82, blank=True,
+        validators=[transportadoras.validar_lista_de_ufs],
+        help_text="Siglas separadas por vírgula, na ordem do mapa: BA,PE,SE.",
+    )
+    cidade_sede = models.CharField(max_length=80, blank=True)
+    uf_sede = models.CharField(max_length=2, blank=True, choices=transportadoras.UF_CHOICES)
+
+    telefone = models.CharField(
+        max_length=11, blank=True, validators=[transportadoras.validar_telefone],
+        help_text="Só dígitos: DDD + número, 0800/0300 ou número único (4003...).",
+    )
+    whatsapp = models.CharField(
+        max_length=11, blank=True, validators=[transportadoras.validar_whatsapp],
+        help_text="Só dígitos, com DDD e sem o 55.",
+    )
+    email = models.EmailField(blank=True)
+    site = models.URLField(max_length=300, blank=True)
+    instagram = models.CharField(
+        max_length=30, blank=True, validators=[transportadoras.validar_instagram],
+        help_text="Só o perfil, sem @ (ex.: patrustransportes).",
+    )
+
+    observacoes = models.TextField(
+        blank=True,
+        help_text="Para que ela serve: carga grande ou frágil, caminhão com plataforma, horários...",
+    )
+    fonte_url = models.URLField(
+        max_length=500, blank=True,
+        help_text="A página onde o contato foi conferido.",
+    )
+    fontes_extras = models.TextField(
+        blank=True,
+        help_text="Outras páginas consultadas, uma por linha (cobertura, Instagram...).",
+    )
+    verificado_em = models.DateField(null=True, blank=True)
+    ativo = models.BooleanField(default=True, db_index=True)
+    ordem = models.PositiveSmallIntegerField(
+        default=100, help_text="Menor aparece primeiro dentro do tipo.",
+    )
+
+    objects = TransportadoraQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Transportadora"
+        verbose_name_plural = "Transportadoras"
+        ordering = ("ordem", "nome")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(telefone__regex=r"^[0-9]*$"),
+                name="transportadora_telefone_so_digitos",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(whatsapp__regex=r"^[0-9]*$"),
+                name="transportadora_whatsapp_so_digitos",
+            ),
+            models.UniqueConstraint(
+                models.functions.Lower("nome"),
+                name="transportadora_nome_unico",
+                violation_error_message="Já existe uma transportadora com este nome.",
+            ),
+        ]
+
+    def __str__(self):
+        return self.nome_exibicao
+
+    # ------------------------------------------------------------ leitura
+    @property
+    def nome_exibicao(self):
+        return self.nome_fantasia or self.nome
+
+    @property
+    def iniciais(self):
+        return transportadoras.iniciais(self.nome_exibicao)
+
+    @property
+    def ufs(self):
+        """Os estados atendidos, já resolvendo o "Brasil inteiro"."""
+        if self.atende_todo_brasil:
+            return list(transportadoras.SIGLAS)
+        return transportadoras.ler_ufs(self.estados_atendidos)
+
+    def atende(self, uf):
+        return transportadoras.uf_valida(uf) in self.ufs
+
+    @property
+    def sede(self):
+        return "/".join(p for p in (self.cidade_sede, self.uf_sede) if p)
+
+    @property
+    def tem_contato(self):
+        return any((self.telefone, self.whatsapp, self.email, self.instagram))
+
+    @property
+    def telefone_formatado(self):
+        return transportadoras.formatar_telefone(self.telefone)
+
+    @property
+    def whatsapp_formatado(self):
+        return transportadoras.formatar_telefone(self.whatsapp)
+
+    @property
+    def link_telefone(self):
+        return transportadoras.link_telefone(self.telefone or self.whatsapp)
+
+    @property
+    def link_instagram(self):
+        return transportadoras.link_instagram(self.instagram)
+
+    def link_whatsapp(self, uf=""):
+        return transportadoras.link_whatsapp(
+            self.whatsapp, transportadoras.mensagem_cotacao(uf),
+        )
+
+    def link_email(self, uf=""):
+        return transportadoras.link_email(self.email, uf)
+
+    def texto_para_copiar(self):
+        """O contato inteiro em texto, para colar na conversa com o cliente."""
+        linhas = [self.nome_exibicao]
+        if self.nome_fantasia and self.nome != self.nome_fantasia:
+            linhas[0] += f" ({self.nome})"
+        if self.telefone:
+            linhas.append(f"Telefone: {self.telefone_formatado}")
+        if self.whatsapp:
+            linhas.append(f"WhatsApp: {self.whatsapp_formatado}")
+        if self.email:
+            linhas.append(f"E-mail: {self.email}")
+        if self.site:
+            linhas.append(f"Site: {self.site}")
+        if self.instagram:
+            linhas.append(f"Instagram: @{self.instagram}")
+        return "\n".join(linhas)
+
+    def save(self, *args, **kwargs):
+        # A mesma forma, venha do formulário, do shell ou da migração.
+        self.telefone = transportadoras.normalizar_telefone(self.telefone)
+        self.whatsapp = transportadoras.normalizar_telefone(self.whatsapp)
+        self.instagram = transportadoras.normalizar_instagram(self.instagram)
+        self.estados_atendidos = transportadoras.gravar_ufs(self.estados_atendidos)
+        self.uf_sede = transportadoras.uf_valida(self.uf_sede)
+        super().save(*args, **kwargs)

@@ -433,6 +433,21 @@
       </div>
       {% endif %}
 
+      {% if permissoes_interno.transportadoras %}
+      {% comment %}
+        LOGÍSTICA: o frete saiu do site e o cliente contrata a
+        transportadora. Vendas indica, Produção combina a coleta, Gestão
+        mantém a lista (views_transportadoras.py).
+      {% endcomment %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Logística</span>
+        <a data-titulo="Transportadoras" aria-label="Transportadoras" class="ls-nav-item {% if request.resolver_match.url_name == 'transportadoras_inner' %}active{% endif %}" href="{% url 'transportadoras_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-truck"></i></span>
+          <span>Transportadoras</span>
+        </a>
+      </div>
+      {% endif %}
+
       {% if permissoes_interno.site %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Site e aplicativo</span>

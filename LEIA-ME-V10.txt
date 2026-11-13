@@ -5286,3 +5286,81 @@ Dependência nova: rjsmin (requirements.txt).
    As transportadoras para o cliente combinar o envio ficam no painel
    (diretório por estado, com WhatsApp/telefone/site).
    Testes: core/tests_conferencia_pagamento.py, EntregaNoCarrinhoTests.
+
+91) LOGÍSTICA: AS TRANSPORTADORAS DE CADA ESTADO, CONFERIDAS, A UM TOQUE
+   O PEDIDO: "Crie objetos de frete, de todos os estados, confiáveis, com o
+   número e tudo para possível contato, e ponha na área interna a opção de
+   visualização, chamar no WhatsApp, se tiver Instagram, isso e aquilo." É a
+   outra metade da seção 90: o site não entrega mais, e a equipe precisa
+   responder "quem leva esta máquina até Recife?" sem sair do painel.
+   A TELA: Logística -> Transportadoras (/logistica/transportadoras/ no
+   interno). No alto, os 27 estados em botões com o número de transportadoras
+   de cada um (a cor do fio é a região, com a legenda escrita embaixo). Tocar
+   num estado lista quem entrega lá: primeiro as NACIONAIS, depois as
+   REGIONAIS daquele estado e por último MUDANÇAS E CARGAS ESPECIAIS. A busca
+   filtra na hora, sem acento e sem ligar para masculino/feminino ("aéreo"
+   acha "carga aérea"). Lista (o padrão) ou Cards, como toda lista do painel.
+   Cada transportadora mostra nome, tipo, sede, os estados (o de destino
+   aceso), as observações, os contatos e os botões -- cada um só aparece
+   quando o campo existe:
+     * Chamar no WhatsApp: wa.me/55<dígitos> com a mensagem pronta
+       "Olá! Somos da Lazer & Sport (fábrica de brinquedos em SP). Gostaria
+       de uma cotação de frete de São Paulo/SP para ___/PE de uma máquina de
+       aproximadamente ___ kg / ___ m³." (o estado sai da escolha na tela;
+       no computador o painel abre o WhatsApp Web, como nas outras telas);
+     * Ligar (tel:, com +55 quando há DDD; 0800 e 4003 como estão), E-mail
+       (com assunto e a mesma mensagem), Instagram, Site e Copiar contato
+       (nome, telefone, WhatsApp, e-mail, site e @ para colar na conversa;
+       sem área de transferência, o texto aparece num aviso para copiar à
+       mão);
+     * no pé, "Conferido em 13/11/2026" e o link da FONTE de onde o contato
+       saiu.
+   QUEM VÊ E QUEM MEXE: Vendas, Gestão e Produção abrem (capacidade
+   `transportadoras` em permissoes.py). Só a Gestão cadastra, corrige e
+   desativa (`transportadoras_editar`), numa folha do painel (sobe de baixo
+   no celular); desativar pergunta pela folha do LSAviso e não apaga -- a
+   transportadora vai para "Desativadas", com a fonte, e pode voltar.
+   O MODELO (sistema_interno.Transportadora): nome, nome curto, tipo
+   (nacional / regional / mudanças e cargas especiais), "atende todo o
+   Brasil", estados atendidos, cidade e UF da sede, telefone e WhatsApp SÓ
+   COM DÍGITOS (o banco recusa máscara; a tela formata: (11) 2188-9000,
+   0800 775 3333, 4003-3277), e-mail, site, Instagram (só o perfil),
+   observações, fonte, outras fontes, conferido em, ativo e ordem. A regra
+   pura (estados, telefone, links) mora em sistema_interno/transportadoras.py.
+   POR QUE OS ESTADOS SÃO TEXTO ("BA,PE,SE") E NÃO UMA TABELA: são 27 siglas
+   que não mudam; uma tabela de UFs traria uma migração só para criar 27
+   linhas fixas, uma junção em toda consulta e um formulário mais pesado. O
+   texto é validado (só sigla conhecida, sem repetir, na ordem do mapa) e a
+   busca no banco casa a sigla inteira ("PA" não acha o "AP" de "AM,AP").
+   "Todo o Brasil" é um campo próprio, e não 27 siglas marcadas à mão.
+   CONTATO SEM FONTE NÃO ENTRA: a folha recusa telefone, WhatsApp, e-mail ou
+   Instagram sem o link da página onde foram conferidos. Campo em branco é
+   aceitável; número errado manda o cliente para outra empresa.
+   A LISTA INICIAL (migração de dados 0064), 19 transportadoras conferidas em
+   13/11/2026 -- cada contato numa página pública, de preferência a da
+   própria empresa (o site de várias delas não abria daqui; os números vieram
+   do que a busca mostrou dessas páginas oficiais):
+     * nacionais: Braspress, Jamef, Jadlog, Azul Cargo, LATAM Cargo, GOLLOG,
+       FedEx, Total Express e Correios (só peça pequena);
+     * regionais: Pacífico Log (de Guarulhos para todo o Norte e Nordeste),
+       Patrus (Sudeste, BA, SE e CE), Rodonaves (SP, MG, ES, GO, DF e Sul),
+       Translovato/Grupo BBM (19 estados), Alfa (Sul, Sudeste e Centro-Oeste),
+       Expresso São Miguel (Sul e SP), Carvalima (Centro-Oeste e Norte) e
+       TBL Bertolini (rodofluvial: AM, PA, RO);
+     * mudanças e cargas especiais: Granero e Fink (embalam e carregam peça
+       grande ou frágil).
+   Todo estado fica com 12 a 16 transportadoras ativas. A Total Express é a
+   única com telefone conferido fora do site oficial (diretório de rastreio;
+   está escrito nas observações). O que não deu para confirmar ficou em
+   branco -- a coluna `nao_verificado` do CSV diz o quê em cada uma.
+   PARA REVISAR: ferramentas/transportadoras/transportadoras.csv tem a tabela
+   inteira, com o telefone formatado, a fonte principal, as outras fontes e o
+   que ficou em branco. Um teste confere que o CSV e a migração dizem a mesma
+   coisa.
+   MIGRAÇÕES: sistema_interno 0063_transportadora (só esquema) e 0064_
+   transportadoras_iniciais (só dados; rodar de novo não duplica nem
+   sobrescreve o que a equipe corrigiu; desfazer apaga só as 19).
+   Testes: sistema_interno/tests_transportadoras.py (telefone e links, a
+   lista cobrindo os 27 estados com pelo menos duas ativas e todo contato
+   com fonte, o CSV igual à migração, quem vê e quem grava, e a tela de um
+   estado com os botões certos).
