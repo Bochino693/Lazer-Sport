@@ -5881,10 +5881,14 @@ body.ls-body{
   background:rgba(var(--red-rgb),.11)!important;
 }
 /* NO CELULAR A FOLHA SOBE DO PÉ DA TELA, onde o polegar está, com o
-   resto escurecido atrás. O véu é do <body> e existe só enquanto a folha
-   está aberta: tocar nele fecha (é toque "fora do menu") e não aciona o
-   que está por baixo. Os dois passam por cima das abas do pé do painel
-   (z-index 1100), que com a folha aberta não levam a lugar nenhum. */
+   resto escurecido atrás. O véu (`.ls-folha-veu`, posto no <body> por
+   ls-listas.js) recebe o toque "fora": fecha a folha e não deixa o dedo
+   acionar o cartão de baixo -- por isso some devagar, ainda tocável por
+   um instante depois que a folha fecha. Os dois passam por cima das abas
+   do pé do painel (z-index 1100); com uma janela aberta o véu some, como
+   tudo o que é fixo acima dela. */
+.ls-folha-veu{display:none}
+body.modal-open .ls-folha-veu{display:none!important}
 @media (max-width:760px){
   .ls-action-fab-menu[data-folha="1"]{
     z-index:1120;left:0!important;right:0!important;top:auto!important;bottom:0!important;
@@ -5901,9 +5905,11 @@ body.ls-body{
   .ls-action-fab-menu[data-folha="1"] > a,.ls-action-fab-menu[data-folha="1"] > button{
     min-height:52px!important;padding:12px 14px!important;font-size:.95rem!important;
   }
-  body:has(> .ls-action-fab-menu[data-folha="1"].is-open)::after{
-    content:"";position:fixed;inset:0;z-index:1119;background:rgba(var(--sombra-rgb),.55);
+  .ls-folha-veu{
+    display:block;position:fixed;inset:0;z-index:1119;background:rgba(var(--sombra-rgb),.55);
+    opacity:0;visibility:hidden;transition:opacity .2s ease,visibility 0s linear .35s;
   }
+  .ls-folha-veu.is-open{opacity:1;visibility:visible;transition-delay:0s}
 }
 
 /* ---- 2. o cartão de perfil ---- */

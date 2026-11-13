@@ -286,11 +286,63 @@ class CartaoDoClienteTests(Base):
 
     def test_as_acoes_mais_usadas_vao_para_a_barra(self):
         buffet = linha_do(self.abrir(), self.buffet)
-        self.assertRegex(buffet, r'data-dossie="\d+"\s+data-nome="[^"]+"\s+data-acao-cartao="Histórico" data-acao-ordem="1"')
-        self.assertRegex(buffet, r'data-editar="\d+"[^>]*data-acao-cartao="Editar" data-acao-ordem="2"')
+        self.assertRegex(buffet, r'data-nova-proposta="\d+"\s+data-acao-cartao="Proposta" data-acao-ordem="1"')
+        self.assertRegex(buffet, r'data-dossie="\d+"\s+data-nome="[^"]+"\s+data-acao-cartao="Histórico" data-acao-ordem="2"')
+        self.assertRegex(buffet, r'data-editar="\d+"[^>]*data-acao-cartao="Editar" data-acao-ordem="3"')
         # excluir nunca vai para a barra: fica no "Mais"
         excluir = buffet[buffet.index("data-excluir="):]
         self.assertNotIn("data-acao-cartao", excluir[:excluir.index(">")])
+
+    def test_nova_proposta_sai_do_cliente(self):
+        """O link leva à janela de proposta com este cliente já escolhido."""
+        buffet = linha_do(self.abrir(), self.buffet)
+        self.assertIn(f'href="/orcamentos/?novo=1&amp;cliente={self.buffet.pk}"', buffet)
+        self.assertIn('aria-label="Nova proposta para Buffet Alegria Festas"', buffet)
+        self.assertIn('<i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>', buffet)
+
+        resposta = self.client.get(f"/orcamentos/?novo=1&cliente={self.buffet.pk}", **INTERNO)
+        self.assertEqual(resposta.status_code, 200)
+        ficha = resposta.context["cliente_inicial"]
+        self.assertEqual(ficha["valor"], str(self.buffet.pk))
+        self.assertEqual(ficha["rotulo"], "Buffet Alegria Festas")
+        self.assertEqual(ficha["email"], "contato@alegria.com.br")
+        html = resposta.content.decode()
+        self.assertIn('<script id="orcamentoClienteInicial" type="application/json">', html)
+        # e é a tela que o aplica, depois de abrir a proposta nova
+        self.assertIn('document.getElementById("orcamentoClienteInicial")', html)
+        self.assertIn("aplicarClienteNoOrcamento(clienteInicial, true);", html)
+
+    def test_proposta_nova_sem_cliente_ou_com_cliente_que_nao_existe_abre_como_sempre(self):
+        for rota in ("/orcamentos/", "/orcamentos/?novo=1", "/orcamentos/?novo=1&cliente=999999",
+                     "/orcamentos/?novo=1&cliente=abc", "/orcamentos/?novo=1&cliente="):
+            with self.subTest(rota=rota):
+                resposta = self.client.get(rota, **INTERNO)
+                self.assertEqual(resposta.status_code, 200)
+                self.assertIsNone(resposta.context["cliente_inicial"])
+                self.assertNotIn('id="orcamentoClienteInicial"', resposta.content.decode())
+
+    def test_vendedor_ve_proposta_historico_e_editar_e_nao_ve_excluir(self):
+        """Excluir cliente é da Gestão: para o vendedor a barra não tem "Mais"."""
+        from .permissoes import atribuir_funcoes
+
+        vendedor = User.objects.create_user("vendedor-cartoes", password="x", is_staff=True)
+        atribuir_funcoes(vendedor, ["vendas"])
+        self.client.force_login(vendedor)
+        linha = linha_do(self.abrir(), self.buffet)
+        for marca in ('data-acao-cartao="Proposta"', 'data-acao-cartao="Histórico"', 'data-acao-cartao="Editar"'):
+            self.assertIn(marca, linha)
+        self.assertNotIn("data-excluir=", linha)
+
+    def test_quem_so_ve_o_financeiro_da_proposta_nao_recebe_cliente_inicial(self):
+        """O Financeiro abre Orçamentos, mas quem cria proposta é o Comercial."""
+        from .permissoes import atribuir_funcoes
+
+        financeiro = User.objects.create_user("financeiro-cartoes", password="x", is_staff=True)
+        atribuir_funcoes(financeiro, ["financeiro"])
+        self.client.force_login(financeiro)
+        resposta = self.client.get(f"/orcamentos/?novo=1&cliente={self.buffet.pk}", **INTERNO)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertIsNone(resposta.context["cliente_inicial"])
 
     def test_a_lista_continua_com_o_que_tinha(self):
         """O cartão não tirou nada da linha: a lista mostra o mesmo de antes."""
@@ -510,8 +562,30 @@ class BarraDeAcoesTests(SimpleTestCase):
         self.assertIn("border-radius:22px 22px 0 0", celular)
         # acima das abas do pé do painel (z-index 1100), com o véu logo abaixo
         self.assertIn("z-index:1120", celular)
-        self.assertIn('body:has(> .ls-action-fab-menu[data-folha="1"].is-open)::after{', celular)
-        self.assertIn("z-index:1119", celular)
+        veu = re.search(r"\.ls-folha-veu\{([^}]*)\}", celular).group(1)
+        self.assertIn("position:fixed;inset:0;z-index:1119", veu)
+        # some devagar: o toque que fechou a folha ainda cai nele, e não no cartão de baixo
+        self.assertIn("visibility 0s linear .35s", veu)
+
+    def test_o_veu_e_um_elemento_e_some_com_janela_aberta(self):
+        """Fixo acima do modal: ou some com `body.modal-open`, ou não recebe toque."""
+        css = segunda_parte()
+        self.assertIn("body.modal-open .ls-folha-veu{display:none!important}", css)
+        self.assertIn(".ls-folha-veu{display:none}", css)
+        self.assertNotIn("body:has(", css)
+        js = JS.read_text(encoding="utf-8")
+        self.assertIn('veu.className = "ls-folha-veu";', js)
+        self.assertIn('vigia.observe(menu, { attributes: true, attributeFilter: ["class"] });', js)
+
+    def test_a_barra_nao_inventa_confirmacao(self):
+        """Quem pergunta é a própria ação (a janela de exclusão, o
+        `data-ls-confirmar` do ls-aviso.js): o botão da barra só a aciona.
+        E o link que pede confirmação não vira link de verdade na barra,
+        para o botão do meio não pular a pergunta."""
+        js = JS.read_text(encoding="utf-8")
+        self.assertNotIn("confirm(", js)
+        self.assertIn('!acao.hasAttribute("data-ls-confirmar")', js)
+        self.assertIn("!acao.matches(PERIGOSA) && acao.getAttribute(\"href\")", js)
 
     def test_a_folha_anda_pelo_teclado(self):
         js = JS.read_text(encoding="utf-8")

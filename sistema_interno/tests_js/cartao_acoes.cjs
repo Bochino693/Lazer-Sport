@@ -243,11 +243,58 @@ assert.deepEqual(Array.from(quatro.querySelectorAll('.ls-cartao-acao')).map((b) 
 assert.equal(quatro.querySelector('td').getAttribute('data-barra-itens'), '4');
 assert.equal(alvo.getAttribute('data-barra-cheia'), '1');
 
+/* ---- o link que pede confirmação (ls-aviso.js) não vira link de verdade ----
+   Como <a>, o botão do meio abriria o endereço sem passar pela pergunta. A
+   barra não inventa confirmação: aciona a ação, e quem pergunta é ela. */
+const comPergunta = d.createElement('tr');
+comPergunta.innerHTML = '<td data-rotulo="Ações" class="ls-actions"><div class="ls-row-actions">' +
+  '<a class="btn" href="/arquivar/1/" data-ls-confirmar="Arquivar este registro?" data-acao-cartao="Arquivar"><i class="bi bi-archive"></i></a>' +
+  '<a class="btn" href="/ver/1/" data-acao-cartao="Ver"><i class="bi bi-eye"></i></a></div></td>';
+alvo.querySelector('tbody').appendChild(comPergunta);
+let perguntas = 0;
+comPergunta.querySelector('[data-ls-confirmar]').addEventListener('click', function (evento) { perguntas += 1; evento.preventDefault(); });
+w.LSVisao.montar(alvo);
+const [arquivar, ver] = comPergunta.querySelectorAll('.ls-cartao-acao');
+assert.equal(arquivar.tagName, 'BUTTON');
+assert.equal(arquivar.hasAttribute('href'), false);
+assert.equal(ver.tagName, 'A');
+arquivar.click();
+assert.equal(perguntas, 1, 'o clique chega à ação de verdade, que é quem pergunta');
+
 /* ---- a logo que não carregou dá lugar às iniciais ---- */
 const logo = d.getElementById('logo');
 logo.dispatchEvent(new w.Event('error'));
 assert.equal(d.getElementById('logo'), null);
 assert.equal(d.querySelector('[data-v="avatar"]').textContent, 'BA');
 
-w.close();
-console.log('OK: barra só em cards, atalhos sem clone, Mais com folha, ação única, sem resto, sem marca, lista quieta, quatro botões e logo quebrada.');
+/* ---- o véu da folha: aparece com ela e some com ela (quem avisa é a classe do menu) ---- */
+const umInstante = () => new Promise((resolve) => setTimeout(resolve, 0));
+(async function () {
+  assert.equal(d.querySelector('.ls-folha-veu'), null, 'o véu só nasce quando uma folha abre');
+  gatilho.click();
+  await umInstante();
+  const veu = d.querySelector('body > .ls-folha-veu');
+  assert.ok(veu, 'folha aberta sem véu');
+  assert.ok(veu.classList.contains('is-open'));
+  assert.equal(veu.getAttribute('aria-hidden'), 'true');
+  fab._lsFechar(false);
+  await umInstante();
+  assert.equal(veu.classList.contains('is-open'), false);
+  // outra folha usa o mesmo véu
+  quatro.querySelector('.ls-action-fab-trigger').click();
+  await umInstante();
+  assert.equal(d.querySelectorAll('.ls-folha-veu').length, 1);
+  assert.ok(veu.classList.contains('is-open'));
+  // e na lista (menu sem roupa de folha) o véu não aparece
+  quatro.querySelector('.ls-action-fab')._lsFechar(false);
+  escolher('teste', 'lista');
+  gatilho.click();
+  await umInstante();
+  assert.equal(veu.classList.contains('is-open'), false);
+
+  w.close();
+  console.log('OK: barra só em cards, atalhos sem clone, Mais com folha e véu, ação única, sem resto, sem marca, lista quieta, quatro botões, link com pergunta e logo quebrada.');
+})().catch(function (erro) {
+  console.error(erro);
+  process.exit(1);
+});

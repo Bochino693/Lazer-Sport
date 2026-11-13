@@ -109,7 +109,12 @@
   }
 
   function atalho(acao, principal) {
-    var link = acao.tagName === "A" && acao.getAttribute("href");
+    /* Link que pede confirmação (`data-ls-confirmar`, ls-aviso.js) ou que
+       apaga vira BOTÃO: como link de verdade, o botão do meio abriria o
+       endereço sem passar pela pergunta. A pergunta é a da própria ação
+       -- a barra não inventa outra. */
+    var link = acao.tagName === "A" && !acao.hasAttribute("data-ls-confirmar") &&
+      !acao.matches(PERIGOSA) && acao.getAttribute("href");
     var botao = document.createElement(link ? "a" : "button");
     if (link) {
       // Link de verdade: o botão do meio e "abrir em outra aba" continuam valendo.
@@ -157,6 +162,36 @@
     return menu.getAttribute("data-folha") === "1";
   }
 
+  /* O VÉU DA FOLHA. No celular a folha sobe do pé da tela e o resto
+     escurece. O véu é um elemento de verdade no <body> (um só, para todas
+     as folhas), e não um enfeite: é ele que recebe o toque "fora", para o
+     dedo que fecha a folha não acionar o cartão que está por baixo. Por
+     isso ele some devagar (ver o CSS): o toque que fechou ainda cai nele.
+     A folha abre e fecha por vários caminhos do painel (o botão, Esc,
+     toque fora, janela que abre, troca de tela); quem avisa é a própria
+     classe `is-open` do menu, vigiada aqui. Com janela aberta o véu some
+     (`body.modal-open`), como tudo o que é fixo acima dela. */
+  var veu = null;
+  var vigia = null;
+
+  function vigiarFolha(menu) {
+    if (!window.MutationObserver) return;
+    if (!vigia) {
+      vigia = new window.MutationObserver(function () {
+        var aberta = document.querySelector('body > .ls-action-fab-menu[data-folha="1"].is-open');
+        if (aberta && !veu) {
+          veu = document.createElement("div");
+          veu.className = "ls-folha-veu";
+          veu.setAttribute("aria-hidden", "true");
+          document.body.appendChild(veu);
+          void veu.offsetWidth; // o primeiro aparecer também é em transição
+        }
+        if (veu) veu.classList.toggle("is-open", Boolean(aberta));
+      });
+    }
+    vigia.observe(menu, { attributes: true, attributeFilter: ["class"] });
+  }
+
   /* O "⋮" vira "Mais", e o menu dele ganha o que uma folha de ações tem:
      o nome do registro no topo, a linha antes do que apaga, o foco na
      primeira ação ao abrir e as setas só pelo que está à vista (o que já
@@ -194,6 +229,7 @@
       menu.appendChild(divisor);
     }
 
+    vigiarFolha(menu);
     gatilho.addEventListener("click", function () {
       if (!ehFolha(menu) || !fab.classList.contains("is-open")) return;
       window.requestAnimationFrame(function () {

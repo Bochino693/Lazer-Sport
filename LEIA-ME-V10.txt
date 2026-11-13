@@ -3829,30 +3829,42 @@ Dependência nova: rjsmin (requirements.txt).
        lista ela nem é baixada; se não carregar, ficam as iniciais.
      * `data-visao-acoes="barra"` (Clientes, Orçamentos, O.S.): no pé do
        cartão, as ações mais usadas com ícone e nome -- Clientes:
-       Histórico e Editar; Orçamentos: Prévia, Editar e Enviar (no pago,
-       o Documento para assinar no lugar do Enviar, em verde); O.S.:
-       Imprimir, Editar e Enviar -- e "Mais", que abre o resto numa folha
-       de ações: no celular ela sobe do pé da tela, por cima das abas; no
-       PC é o balão ao lado do botão. O que apaga fica por último, depois
-       de uma linha e em vermelho, e nunca vai para a barra. Alvos de 48px
-       (46 na folha, 52 no celular). Teclado: Tab em cada botão, Enter em
-       "Mais" abre com o foco na primeira ação, setas/Home/End andam, Esc
-       e Tab fecham e devolvem o foco. Quem monta é ls-listas.js, das
-       ações que a linha já tem e só quando a lista entra em cards: a tela
-       marca as principais com `data-acao-cartao="Nome curto"` (ordem em
-       `data-acao-ordem`; sem marca, vão as duas primeiras que não
-       apagam). Nada é clonado: o botão da barra aciona a ação de verdade,
-       e "Mais" é o próprio "⋮" com nome. Usuários e Clientes no mapa
-       ganham a barra com esse atributo; não foram tocados.
+       Proposta, Histórico e Editar; Orçamentos: Prévia, Editar e Enviar
+       (no pago, o Documento para assinar no lugar do Enviar, em verde);
+       O.S.: Imprimir, Editar e Enviar -- e "Mais", que abre o resto numa
+       folha de ações: no celular ela sobe do pé da tela, por cima das
+       abas, com um véu atrás (tocar nele fecha e não aciona o cartão de
+       baixo); no PC é o balão ao lado do botão. O que apaga fica por
+       último, depois de uma linha e em vermelho, e nunca vai para a
+       barra. Alvos de 48px (46 na folha, 52 no celular). Teclado: Tab em
+       cada botão, Enter em "Mais" abre com o foco na primeira ação,
+       setas/Home/End andam, Esc e Tab fecham e devolvem o foco. Quem
+       monta é ls-listas.js, das ações que a linha já tem e só quando a
+       lista entra em cards: a tela marca as principais com
+       `data-acao-cartao="Nome curto"` (ordem em `data-acao-ordem`; sem
+       marca, vão as duas primeiras que não apagam). Nada é clonado: o
+       botão da barra aciona a ação de verdade, e "Mais" é o próprio "⋮"
+       com nome. A BARRA NÃO INVENTA CONFIRMAÇÃO: quem pergunta é a
+       própria ação -- a janela de exclusão da tela, ou o
+       `data-ls-confirmar` da seção 82 -- e o link que pede confirmação
+       vira botão na barra, para o botão do meio não pular a pergunta.
+       Usuários e Clientes no mapa ganham a barra com o atributo; não
+       foram tocados.
+     * NOVA PROPOSTA, DO CLIENTE: ação nova da linha de Clientes (no "⋮"
+       da lista e primeira da barra do cartão). Leva a
+       /orcamentos/?novo=1&cliente=<id>, e a janela de proposta abre com
+       o cliente já escolhido, como se tivesse sido buscado no campo
+       (OrcamentosInnerView.cliente_inicial manda a ficha; só para quem
+       cria proposta).
      * BEM OTIMIZADO: nenhuma consulta a mais (Clientes faz as mesmas 11
        com 1 ou com 12 clientes na página; o teste cobra 3 contra 15), sem
        sombra larga nem filtro no cartão, só variável do tema, ~125 bytes
        comprimidos a mais por cliente.
    Conferido no navegador (1366, tablet 820, celular 390 e 320; sol, lua e
-   eclipse): cartões, folha do "Mais", teclado, busca na tela, lista sem
-   cliente, filtro de Orçamentos sem recarregar, lista igual pixel a
-   pixel. Testes: sistema_interno/tests_cartao_cliente.py e
-   tests_js/cartao_acoes.cjs.
+   eclipse): cartões, folha do "Mais" e véu, teclado, busca na tela, lista
+   sem cliente, filtro de Orçamentos sem recarregar, proposta nova com o
+   cliente escolhido, lista igual pixel a pixel. Testes:
+   sistema_interno/tests_cartao_cliente.py e tests_js/cartao_acoes.cjs.
 
 76) ANÁLISES GRÁFICAS NO PAINEL: DESEMPENHO POR PERÍODO, FICHA DE CADA OBJETO E QUEM ESTÁ ONLINE
    Pedidos: "inclua os gráficos para cada objeto, de acordo com seus dados,

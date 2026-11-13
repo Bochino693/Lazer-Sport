@@ -1166,6 +1166,9 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 {% url 'orcamentos_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir orçamento" exclusao_aviso="O rascunho e todos os itens serão apagados. Propostas enviadas, respondidas ou expiradas permanecem no histórico comercial." %}
 
+{# "Nova proposta" vinda da tela de Clientes (?novo=1&cliente=<id>): a ficha do cliente que a janela já traz escolhido. #}
+{% if cliente_inicial %}{{ cliente_inicial|json_script:"orcamentoClienteInicial" }}{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
@@ -2097,6 +2100,19 @@ LSTela.pronto(function () {
     abrir(parametrosIniciais.get("editar"));
   } else if (botaoNovoOrcamento && parametrosIniciais.get("novo") === "1") {
     abrir(null);
+    /* "Nova proposta" no cartão (ou no menu) de um cliente chega com
+       ?novo=1&cliente=<id>: a janela abre com ele já escolhido, e nome,
+       WhatsApp e e-mail vêm do cadastro -- como se a pessoa o tivesse
+       buscado no campo. Quem manda a ficha é o servidor (`cliente_inicial`). */
+    var fichaInicial = document.getElementById("orcamentoClienteInicial");
+    if (fichaInicial) {
+      try {
+        var clienteInicial = JSON.parse(fichaInicial.textContent);
+        buscaCliente.adicionarOpcao(clienteInicial, false);
+        buscaCliente.definirValor(clienteInicial.valor, false);
+        aplicarClienteNoOrcamento(clienteInicial, true);
+      } catch (erro) { /* ficha ilegível: a proposta abre sem cliente, como sempre abriu */ }
+    }
   }
 
   Painel.aoClicar("[data-editar]", function (b) {

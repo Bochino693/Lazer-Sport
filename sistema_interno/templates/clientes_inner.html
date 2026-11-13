@@ -324,7 +324,7 @@
                 <div class="ls-acoes ls-row-actions">
                   <button type="button" class="btn btn-sm btn-outline-secondary"
                           data-editar="{{ cliente.id }}" aria-label="Editar {{ cliente.nome_cliente }}"
-                          data-acao-cartao="Editar" data-acao-ordem="2"
+                          data-acao-cartao="Editar" data-acao-ordem="3"
                           title="Editar cliente">
                     <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
                   </button>
@@ -339,11 +339,29 @@
                   <button type="button" class="btn btn-sm btn-outline-primary"
                           data-dossie="{{ cliente.id }}"
                           data-nome="{{ cliente.nome_cliente }}"
-                          data-acao-cartao="Histórico" data-acao-ordem="1"
+                          data-acao-cartao="Histórico" data-acao-ordem="2"
                           aria-label="Ver histórico de {{ cliente.nome_cliente }}"
                           title="Orçamentos, O.S. e ofertas deste cliente">
                     <i class="bi bi-clock-history"></i><span class="ls-action-label">Histórico</span>
                   </button>
+                  {% comment %}
+                    NOVA PROPOSTA, DAQUI MESMO. É o que mais se faz com um
+                    cliente na tela, e pedia outra tela, o botão "Novo
+                    orçamento" e a busca do nome. O link leva à janela de
+                    proposta já com este cliente escolhido (?novo=1&cliente=,
+                    ver OrcamentosInnerView.cliente_inicial). Só para quem
+                    pode criar proposta. No cartão é a primeira da barra.
+                  {% endcomment %}
+                  {% if permissoes_interno.orcamentos_criar %}
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="{% url 'orcamentos_inner' %}?novo=1&amp;cliente={{ cliente.id }}"
+                     data-nova-proposta="{{ cliente.id }}"
+                     data-acao-cartao="Proposta" data-acao-ordem="1"
+                     aria-label="Nova proposta para {{ cliente.nome_cliente }}"
+                     title="Abrir uma proposta nova já com este cliente">
+                    <i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>
+                  </a>
+                  {% endif %}
                   {% if permissoes_interno.excluir_clientes or user.is_superuser %}
                   <button type="button" class="btn btn-sm btn-outline-danger"
                           data-excluir="{{ cliente.id }}" data-nome="{{ cliente.nome_cliente }}"
