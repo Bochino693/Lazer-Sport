@@ -428,7 +428,11 @@ class EmuladorNoSiteTests(TestCase):
     def test_no_portal_o_jogo_vai_para_os_consoles_e_o_filtro_playstation(self):
         portal = self.client.get(reverse("jogos"))
         estantes = {e["chave"]: [j["slug"] for j in e["jogos"]] for e in portal.context["estantes"]}
-        self.assertEqual(estantes["playstation"], ["disco-teste"])
+        # a estante é a do console (criada sozinha); a família continua como filtro
+        self.assertEqual(estantes["psx"], ["disco-teste"])
+        self.assertNotIn("playstation", estantes)
+        filtrada = self.client.get(reverse("jogos"), {"estante": "playstation"})
+        self.assertEqual([j["slug"] for j in filtrada.context["lista"]], ["disco-teste"])
         self.assertNotIn("disco-teste", estantes["nosso"])
         self.assertContains(portal, '<span class="bj-sigla">PS1</span>')
         # a ficha da biblioteca ensina os comandos do PS1, tecla por tecla

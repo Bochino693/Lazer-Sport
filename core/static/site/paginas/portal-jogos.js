@@ -29,7 +29,7 @@
   var CONTROLES = bib.controles || {};
   var DICAS = bib.dicas || {};
   var temaDe = {};
-  ESTANTES.forEach(function (e) { temaDe[e.chave] = e; });
+  (bib.temas || ESTANTES).forEach(function (e) { temaDe[e.chave] = e; });
   var porSlug = {};
   jogos.forEach(function (j) { porSlug[j.slug] = j; });
 
