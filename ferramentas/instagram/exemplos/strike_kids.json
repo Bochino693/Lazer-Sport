@@ -4,86 +4,157 @@
   "cenas": [
     {
       "video": "strike_kids.mov",
-      "inicio": 30.0,
-      "duracao": 3.2,
+      "inicio": 30.6,
+      "duracao": 2.6,
+      "modelo": "heroi",
+      "cores": [
+        "#FFE600",
+        "#FF8A00"
+      ],
       "etiqueta": "FABRICAÇÃO PRÓPRIA",
-      "titulo": "STRIKE KIDS",
+      "titulo": [
+        "STRIKE",
+        "KIDS"
+      ],
       "texto": [
         "O boliche infantil da Lazer & Sport"
-      ],
-      "icone": "pino",
-      "cores": [
-        "#FFD21A",
-        "#FF7A00"
       ]
     },
     {
       "video": "strike_kids.mov",
-      "inicio": 33.2,
-      "duracao": 2.9,
+      "inicio": 17.6,
+      "duracao": 2.4,
+      "modelo": "card",
+      "icone": "camera",
+      "cores": [
+        "#FF2E93",
+        "#B14CFF"
+      ],
       "etiqueta": "RANKING",
       "titulo": "CÂMERA NO JOGO",
       "texto": [
         "Tira a foto do jogador",
         "para o ranking"
-      ],
-      "icone": "camera",
-      "cores": [
-        "#FF2E93",
-        "#9B5CFF"
       ]
     },
     {
       "video": "strike_kids.mov",
-      "inicio": 9.0,
-      "duracao": 2.9,
-      "etiqueta": "TECNOLOGIA",
-      "titulo": "5 SENSORES",
-      "texto": [
-        "De precisão: leem cada",
-        "jogada da bola na pista"
-      ],
-      "icone": "cinco",
+      "inicio": 13.0,
+      "duracao": 2.4,
+      "modelo": "numero",
+      "numero": "5",
       "cores": [
         "#2BE35B",
-        "#19D3FF"
+        "#0AA3FF"
+      ],
+      "etiqueta": "TECNOLOGIA",
+      "titulo": [
+        "SENSORES",
+        "DE PRECISÃO"
+      ],
+      "texto": [
+        "Leem cada jogada",
+        "da bola na pista"
       ]
     },
     {
       "video": "strike_kids.mov",
-      "inicio": 24.0,
-      "duracao": 2.9,
+      "inicio": 8.0,
+      "duracao": 2.2,
+      "modelo": "card",
+      "lado": "direita",
+      "icone": "lampada",
+      "cores": [
+        "#19D3FF",
+        "#6C8CFF"
+      ],
       "etiqueta": "VISUAL",
       "titulo": "LED NAS LATERAIS",
       "texto": [
         "Cores e adesivagem",
         "ajustadas no seu pedido"
-      ],
-      "icone": "led",
+      ]
+    },
+    {
+      "quadros": "strike_kids_3d",
+      "duracao": 2.6,
+      "modelo": "card",
+      "icone": "cubo",
       "cores": [
-        "#19D3FF",
-        "#6C8CFF"
+        "#FFE600",
+        "#2BE35B"
+      ],
+      "etiqueta": "NO SITE",
+      "titulo": "VEJA EM 3D",
+      "texto": [
+        "Gire e aproxime o modelo",
+        "antes de pedir o orçamento"
       ]
     },
     {
       "foto": "strike_kids_frente.jpg",
       "duracao": 3.0,
-      "etiqueta": "MEDIDAS",
-      "titulo": "CABE NO SEU ESPAÇO",
-      "texto": [
-        "0,74 m de largura · 1,91 m de",
-        "comprimento · 2,07 m de altura"
-      ],
-      "icone": "regua",
+      "modelo": "medidas",
       "cores": [
-        "#FF7A00",
+        "#FF8A00",
         "#F0456A"
+      ],
+      "linhas": [
+        {
+          "de": [
+            250,
+            1766
+          ],
+          "ate": [
+            250,
+            40
+          ],
+          "rotulo": "2,07 m",
+          "pos": [
+            250,
+            760
+          ]
+        },
+        {
+          "de": [
+            400,
+            1560
+          ],
+          "ate": [
+            1010,
+            1560
+          ],
+          "rotulo": "0,74 m",
+          "pos": [
+            700,
+            1560
+          ]
+        },
+        {
+          "de": [
+            1035,
+            1500
+          ],
+          "ate": [
+            1000,
+            940
+          ],
+          "rotulo": "1,91 m",
+          "pos": [
+            900,
+            1180
+          ]
+        }
       ]
     },
     {
       "foto": "strike_kids_angulo.jpg",
-      "duracao": 3.8,
-      "final": true,
+      "duracao": 3.4,
+      "modelo": "final",
+      "cores": [
+        "#FFE600",
+        "#2BE35B"
+      ],
       "etiqueta": "DIRETO DA FÁBRICA",
       "titulo": [
         "QUER O STRIKE KIDS",
@@ -93,12 +164,7 @@
         "Comente STRIKE",
         "e peça o seu orçamento"
       ],
-      "botao": "WhatsApp (11) 96056-3135",
-      "icone": "conversa",
-      "cores": [
-        "#FFD21A",
-        "#2BE35B"
-      ]
+      "botao": "WhatsApp (11) 96056-3135"
     }
   ]
 }

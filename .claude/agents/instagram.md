@@ -34,8 +34,15 @@ Criação de conteúdo (aprendizado contínuo):
   fotos reais enviados pelo usuário; fotos do site só como complemento.
 - Especificações de produto vêm do site (www.lazersport.com.br) ou do usuário.
   Nunca invente medidas, preços ou recursos.
-- Cards do vídeo: sempre com ícone, cores vivas em degradê, moldura de LED e
-  o logo da empresa (`core/static/images/logoofi.png`). O `reel.py` já faz isso.
+- Edição do vídeo: cortes curtos (2 a 3 s) nos trechos mais nítidos, cores
+  fortes, flash e zoom a cada corte, e um modelo de card diferente por cena
+  (`heroi`, `card` à esquerda e à direita, `numero`, `medidas`, `final`), sempre
+  com ícone, degradê vivo, moldura de LED e o logo da empresa
+  (`core/static/images/logoofi.png`). O `reel.py` já faz tudo isso.
+- Quando o produto tiver modelo 3D no site
+  (`core/static/site/arena/modelos/*.glb`), gere o giro com
+  `node ferramentas/instagram/girar3d.js <modelo.glb> <pasta>` e use como cena
+  `"quadros"` chamando para ver em 3D no site.
 - Link do site: toda publicação leva o link do site (página do produto em
   www.lazersport.com.br quando existir). O usuário quer link clicável, não
   desenhado na arte nem no vídeo. Legenda de feed/Reel não tem link clicável,
