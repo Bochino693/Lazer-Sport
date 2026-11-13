@@ -1,39 +1,34 @@
 #!/usr/bin/env python3
-"""Gera um Reel vertical (1080x1920) com cards animados a partir de videos e fotos reais.
+"""Gera um Reel vertical (1080x1920) editado a partir de videos e fotos reais.
 
 Uso:
   python3 ferramentas/instagram/reel.py roteiro.json saida.mp4
 
-O roteiro e um JSON (modelo completo em exemplos/strike_kids.json):
-  {
-    "logo": "core/static/images/logoofi.png",
-    "site": "www.lazersport.com.br",
-    "musica": "core/static/site/arena/jogos/strike-kids/sons/musica.mp3",
-    "cenas": [
-      {"video": "entrada.mov", "inicio": 30.0, "duracao": 3.2,
-       "icone": "pino", "cores": ["#FFD21A", "#FF7A00"],
-       "etiqueta": "FABRICACAO PROPRIA", "titulo": "STRIKE KIDS",
-       "texto": ["O boliche infantil da Lazer & Sport"]},
-      {"foto": "angulo.jpg", "duracao": 3.8, "final": true,
-       "etiqueta": "DIRETO DA FABRICA", "titulo": ["QUER O STRIKE KIDS", "NO SEU ESPACO?"],
-       "texto": ["Comente STRIKE", "e peca o seu orcamento"],
-       "botao": "WhatsApp (11) 96056-3135"}
-    ]
-  }
+Cada cena do roteiro tem uma fonte e um modelo de card:
 
-Icones: pino, camera, cinco, led, regua, conversa, estrela (ou qualquer texto
-curto, ex.: "2x"). Cores: par de hexadecimais do degrade do card; se faltar,
-usa a paleta padrao em rodizio.
+  fonte:   "video" (+ "inicio"), "foto" ou "quadros" (pasta de PNGs com fundo
+           transparente, ex.: giro 3D feito por girar3d.js)
+  modelo:  "heroi"   titulo grande central com adesivo inclinado
+           "card"    card inferior com icone ("lado": "esquerda" | "direita")
+           "numero"  numero gigante com estrela + texto
+           "medidas" linhas de cota desenhadas sobre a foto ("linhas")
+           "final"   encerramento com logo e botao
+  comuns:  "duracao", "etiqueta", "titulo", "texto", "icone", "cores"
+
+Icones: pino, camera, trofeu, radar, lampada, cubo, regua, conversa, estrela
+(ou um texto curto, ex.: "5"). Veja o modelo em exemplos/strike_kids.json.
 
 Precisa de ffmpeg, Pillow e da fonte Inter instalados.
 """
+import glob
 import json
 import math
 import os
+import random
 import subprocess
 import sys
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 W, H, FPS = 1080, 1920, 30
 XB = "/usr/share/fonts/opentype/inter/Inter-ExtraBold.otf"
@@ -41,7 +36,7 @@ SB = "/usr/share/fonts/opentype/inter/Inter-SemiBold.otf"
 INK = (14, 16, 34)
 WHITE = (255, 255, 255)
 GRN = (37, 211, 102)
-# Vermelho e azul da marca + verde e amarelo do LED das maquinas.
+# Vermelho e azul da marca + verde, amarelo e roxo do LED das maquinas.
 LED = [(240, 69, 106), (255, 210, 26), (43, 227, 91), (25, 211, 255), (155, 92, 255)]
 PALETA = [("#FFD21A", "#FF7A00"), ("#FF2E93", "#9B5CFF"), ("#2BE35B", "#19D3FF"),
           ("#19D3FF", "#6C8CFF"), ("#FF7A00", "#F0456A")]
@@ -53,11 +48,11 @@ def hexrgb(h):
 
 
 def font(p, s):
-    return ImageFont.truetype(p, s)
+    return ImageFont.truetype(p, int(s))
 
 
-def medir(d, t, f):
-    b = d.textbbox((0, 0), t, font=f)
+def medir(d, t, f, stroke=0):
+    b = d.textbbox((0, 0), t, font=f, stroke_width=stroke)
     return b[2] - b[0], b[3] - b[1], b
 
 
@@ -84,8 +79,13 @@ def degrade(size, c1, c2, vertical=False):
     return faixa.resize((w, h))
 
 
-def texto_degrade(camada, pos, t, f, c1, c2):
-    w, h, b = medir(ImageDraw.Draw(camada), t, f)
+def texto_degrade(camada, pos, t, f, c1, c2, contorno=0):
+    """Texto preenchido com degrade e contorno escuro opcional; devolve a altura."""
+    d = ImageDraw.Draw(camada)
+    w, h, b = medir(d, t, f, contorno)
+    if contorno:
+        d.text((pos[0] - b[0], pos[1] - b[1]), t, font=f, fill=INK + (255,),
+               stroke_width=contorno, stroke_fill=INK + (255,))
     m = Image.new("L", (w + 8, h + 8), 0)
     ImageDraw.Draw(m).text((4 - b[0], 4 - b[1]), t, font=f, fill=255)
     cor = degrade(m.size, c1, c2).convert("RGBA")
@@ -94,14 +94,24 @@ def texto_degrade(camada, pos, t, f, c1, c2):
     return h
 
 
+def suave(x):
+    x = max(0.0, min(1.0, x))
+    return 1 - (1 - x) ** 3
+
+
+def mola(x):
+    """Entrada com leve estouro (passa de 1 e volta)."""
+    x = max(0.0, min(1.0, x))
+    return 1 + 2.2 * (x - 1) ** 3 + 1.2 * (x - 1) ** 2
+
+
 # ---------------------------------------------------------------- icones
 def icone(nome, tam, cor=WHITE, tinta=INK):
-    """Icone desenhado em 4x e reduzido, para ficar com borda lisa."""
     S = tam * 4
     im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    c = cor + (255,)
-    k = tinta + (255,)
+    c, k = cor + (255,), tinta + (255,)
+    e = int(S * .07)
 
     def P(x, y):
         return (x * S, y * S)
@@ -110,42 +120,45 @@ def icone(nome, tam, cor=WHITE, tinta=INK):
         d.ellipse([P(x0, y0), P(x1, y1)], fill=fill)
 
     if nome == "pino":
-        elipse(.36, .10, .56, .30, c)
-        d.polygon([P(.40, .26), P(.52, .26), P(.56, .46), P(.36, .46)], fill=c)
-        elipse(.27, .36, .65, .92, c)
-        d.rectangle([P(.385, .295), P(.535, .325)], fill=k)
-        d.rectangle([P(.375, .355), P(.545, .385)], fill=k)
-        elipse(.58, .62, .86, .90, c)
-        elipse(.56, .60, .88, .92, None)
-        d.ellipse([P(.58, .62), P(.86, .90)], outline=k, width=int(S * .02))
-        for x, y in ((.68, .70), (.75, .70), (.72, .77)):
+        elipse(.36, .08, .56, .28, c)
+        d.polygon([P(.40, .24), P(.52, .24), P(.56, .46), P(.36, .46)], fill=c)
+        elipse(.26, .36, .66, .94, c)
+        d.rectangle([P(.385, .285), P(.535, .315)], fill=k)
+        d.rectangle([P(.375, .345), P(.545, .375)], fill=k)
+        elipse(.58, .62, .90, .94, k)
+        elipse(.61, .65, .87, .91, c)
+        for x, y in ((.70, .73), (.77, .73), (.74, .80)):
             elipse(x - .02, y - .02, x + .02, y + .02, k)
     elif nome == "camera":
-        d.rounded_rectangle([P(.38, .22), P(.62, .36)], radius=S * .04, fill=c)
-        d.rounded_rectangle([P(.14, .30), P(.86, .78)], radius=S * .09, fill=c)
-        elipse(.35, .39, .65, .69, k)
-        elipse(.42, .46, .58, .62, c)
-        elipse(.72, .37, .79, .44, k)
-    elif nome == "led":
-        def brilho(cx, cy, r):
-            pts = []
-            for i in range(8):
-                a = math.pi / 4 * i - math.pi / 2
-                rr = r if i % 2 == 0 else r * .30
-                pts.append(P(cx + rr * math.cos(a), cy + rr * math.sin(a)))
-            d.polygon(pts, fill=c)
-        brilho(.44, .54, .34)
-        brilho(.76, .26, .16)
-        brilho(.78, .78, .10)
-    elif nome == "estrela":
-        pts = []
-        for i in range(10):
-            a = math.pi / 5 * i - math.pi / 2
-            rr = .40 if i % 2 == 0 else .17
-            pts.append(P(.5 + rr * math.cos(a), .52 + rr * math.sin(a)))
-        d.polygon(pts, fill=c)
+        d.rounded_rectangle([P(.38, .20), P(.62, .34)], radius=S * .04, fill=c)
+        d.rounded_rectangle([P(.12, .28), P(.88, .80)], radius=S * .10, fill=c)
+        elipse(.33, .37, .67, .71, k)
+        elipse(.41, .45, .59, .63, c)
+        elipse(.73, .36, .80, .43, k)
+    elif nome == "trofeu":
+        d.polygon([P(.28, .14), P(.72, .14), P(.66, .52), P(.34, .52)], fill=c)
+        elipse(.30, .34, .70, .64, c)
+        d.arc([P(.10, .16), P(.36, .46)], 90, 270, fill=c, width=e)
+        d.arc([P(.64, .16), P(.90, .46)], 270, 90, fill=c, width=e)
+        d.rectangle([P(.45, .60), P(.55, .76)], fill=c)
+        d.rounded_rectangle([P(.28, .74), P(.72, .88)], radius=S * .03, fill=c)
+    elif nome == "radar":
+        for r in (.40, .27):
+            d.arc([P(.5 - r, .56 - r), P(.5 + r, .56 + r)], 200, 340, fill=c, width=e)
+        elipse(.40, .46, .60, .66, c)
+        d.rectangle([P(.47, .62), P(.53, .88)], fill=c)
+    elif nome == "lampada":
+        elipse(.26, .12, .74, .60, c)
+        d.rounded_rectangle([P(.38, .54), P(.62, .74)], radius=S * .03, fill=c)
+        d.rounded_rectangle([P(.41, .78), P(.59, .86)], radius=S * .03, fill=c)
+        d.line([P(.44, .30), P(.50, .44), P(.56, .30)], fill=k, width=int(S * .045))
+    elif nome == "cubo":
+        topo = [P(.5, .10), P(.86, .30), P(.5, .50), P(.14, .30)]
+        esq = [P(.14, .36), P(.47, .55), P(.47, .92), P(.14, .72)]
+        dirt = [P(.86, .36), P(.53, .55), P(.53, .92), P(.86, .72)]
+        for p in (topo, esq, dirt):
+            d.polygon(p, fill=c)
     elif nome == "regua":
-        e = int(S * .07)
         d.line([P(.14, .5), P(.86, .5)], fill=c, width=e)
         for x, s in ((.14, 1), (.86, -1)):
             d.polygon([P(x - s * .04, .5), P(x + s * .14, .36), P(x + s * .14, .64)], fill=c)
@@ -156,38 +169,254 @@ def icone(nome, tam, cor=WHITE, tinta=INK):
         d.polygon([P(.26, .66), P(.24, .88), P(.46, .68)], fill=c)
         for x in (.33, .50, .67):
             elipse(x - .05, .39, x + .05, .49, k)
-    else:  # texto curto: "5", "2x"...
-        t = "5" if nome == "cinco" else str(nome)[:3]
-        f = font(XB, int(S * (.72 if len(t) == 1 else .46)))
+    elif nome == "estrela":
+        d.polygon(pontas(.5 * S, .52 * S, .42 * S, .18 * S, 5), fill=c)
+    else:
+        t = str(nome)[:3]
+        f = font(XB, S * (.72 if len(t) == 1 else .46))
         w, h, b = medir(d, t, f)
         d.text(((S - w) / 2 - b[0], (S - h) / 2 - b[1]), t, font=f, fill=c)
     return im.resize((tam, tam), Image.LANCZOS)
 
 
-def selo(nome, diam, c1, c2):
-    """Circulo em degrade com anel branco e o icone dentro."""
-    S = diam * 4
-    m = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(m).ellipse([0, 0, S - 1, S - 1], fill=255)
-    base = Image.new("RGBA", (S, S), WHITE + (255,))
+def pontas(cx, cy, r1, r2, n, giro=0.0):
+    pts = []
+    for i in range(2 * n):
+        a = math.pi / n * i - math.pi / 2 + giro
+        r = r1 if i % 2 == 0 else r2
+        pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def azulejo(nome, lado, c1, c2, giro=-8):
+    """Icone em quadrado arredondado (estilo app), com borda branca e inclinado."""
+    S = lado * 3
+    base = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(base)
+    d.rounded_rectangle([0, 0, S - 1, S - 1], radius=S * .28, fill=WHITE + (255,))
     miolo = degrade((S, S), c1, c2, vertical=True).convert("RGBA")
-    mm = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(mm).ellipse([S * .06, S * .06, S * .94, S * .94], fill=255)
-    base.paste(miolo, (0, 0), mm)
-    base.putalpha(m)
-    base = base.resize((diam, diam), Image.LANCZOS)
-    ic = icone(nome, int(diam * .66), cor=INK)
-    base.alpha_composite(ic, ((diam - ic.width) // 2, (diam - ic.height) // 2))
-    return base
+    m = Image.new("L", (S, S), 0)
+    ImageDraw.Draw(m).rounded_rectangle([S * .06, S * .06, S * .94, S * .94], radius=S * .23, fill=255)
+    base.paste(miolo, (0, 0), m)
+    ic = icone(nome, int(S * .66), cor=WHITE, tinta=c2)
+    base.alpha_composite(ic, ((S - ic.width) // 2, (S - ic.height) // 2))
+    base = base.resize((lado, lado), Image.LANCZOS)
+    return base.rotate(giro, expand=True, resample=Image.BICUBIC)
 
 
-# ---------------------------------------------------------------- camadas
+# ---------------------------------------------------------------- modelos de card
+def painel(ov, caixa, c1, c2, raio=48):
+    x0, y0, x1, y1 = caixa
+    borda = degrade((x1 - x0, y1 - y0), c1, c2).convert("RGBA")
+    mb = Image.new("L", borda.size, 0)
+    ImageDraw.Draw(mb).rounded_rectangle([0, 0, borda.width - 1, borda.height - 1], radius=raio, fill=255)
+    borda.putalpha(mb)
+    ov.alpha_composite(borda, (x0, y0))
+    miolo = degrade((x1 - x0 - 14, y1 - y0 - 14), (30, 16, 84), (10, 10, 34), vertical=True).convert("RGBA")
+    mm = Image.new("L", miolo.size, 0)
+    ImageDraw.Draw(mm).rounded_rectangle([0, 0, miolo.width - 1, miolo.height - 1], radius=raio - 7, fill=246)
+    miolo.putalpha(mm)
+    ov.alpha_composite(miolo, (x0 + 7, y0 + 7))
+
+
+def etiqueta(ov, xy, t, cor, tam=38, giro=0):
+    f = font(XB, tam)
+    w, h, b = medir(ImageDraw.Draw(ov), t, f)
+    tag = Image.new("RGBA", (w + 56, tam + 34), (0, 0, 0, 0))
+    d = ImageDraw.Draw(tag)
+    d.rounded_rectangle([0, 0, tag.width - 1, tag.height - 1], radius=tag.height // 2, fill=cor + (255,),
+                        outline=WHITE + (255,), width=4)
+    d.text((28 - b[0], (tag.height - h) // 2 - b[1]), t, font=f, fill=INK + (255,))
+    if giro:
+        tag = tag.rotate(giro, expand=True, resample=Image.BICUBIC)
+    ov.alpha_composite(tag, xy)
+    return tag.size
+
+
+def modelo_card(c, c1, c2):
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    direita = c.get("lado") == "direita"
+    x0, x1, pad, lado = 54, W - 54, 48, 176
+    larg = x1 - x0 - 2 * pad
+    tit, sub = lista(c["titulo"]), lista(c.get("texto", []))
+    ft = ajustar(d, tit, XB, c.get("tamanho", 110), larg)
+    fs = ajustar(d, sub, SB, 52, larg) if sub else None
+    alt_t = sum(medir(d, l, ft)[1] for l in tit) + 16 * (len(tit) - 1)
+    alt_s = sum(medir(d, l, fs)[1] for l in sub) + 14 * (len(sub) - 1) if sub else 0
+    y1 = 1600
+    y0 = y1 - (lado // 2 + 40 + alt_t + (26 + alt_s if sub else 0) + pad + 24)
+    painel(ov, (x0, y0, x1, y1), c1, c2)
+    az = azulejo(c.get("icone", "estrela"), lado, c1, c2, 8 if direita else -8)
+    ax = x1 - pad - az.width + 10 if direita else x0 + pad - 10
+    ov.alpha_composite(az, (ax, y0 - az.height // 2 - 6))
+    k = c.get("etiqueta", "")
+    if k:
+        kw = medir(d, k, font(XB, 38))[0] + 56
+        etiqueta(ov, (x0 + pad if direita else x1 - pad - kw, y0 - 36), k, c1)
+    y = y0 + lado // 2 + 40
+    for l in tit:
+        w = medir(d, l, ft)[0]
+        y += texto_degrade(ov, (x1 - pad - w if direita else x0 + pad, y), l, ft, c1, c2) + 16
+    y += 10
+    for l in sub:
+        w, h, b = medir(d, l, fs)
+        d.text(((x1 - pad - w if direita else x0 + pad) - b[0], y - b[1]), l, font=fs, fill=WHITE + (255,))
+        y += h + 14
+    ov.alpha_composite(degrade((larg, 8), c1, c2).convert("RGBA"), (x0 + pad, y1 - pad + 4))
+    return ov
+
+
+def modelo_heroi(c, c1, c2):
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    tit, sub = lista(c["titulo"]), lista(c.get("texto", []))
+    ft = ajustar(d, tit, XB, c.get("tamanho", 190), W - 150)
+    y = 1180
+    k = c.get("etiqueta", "")
+    if k:
+        tw, th = etiqueta(ov, (90, y - 30), k, c1, tam=44, giro=5)
+        y += th + 6
+    for l in tit:
+        w = medir(d, l, ft, 14)[0]
+        y += texto_degrade(ov, ((W - w) // 2 + 14, y), l, ft, c1, c2, contorno=14) + 34
+    if sub:
+        fs = ajustar(d, sub, SB, 50, W - 220)
+        alt = sum(medir(d, l, fs)[1] for l in sub) + 12 * (len(sub) - 1)
+        lw = max(medir(d, l, fs)[0] for l in sub)
+        d.rounded_rectangle([(W - lw) // 2 - 40, y, (W + lw) // 2 + 40, y + alt + 44], radius=40,
+                            fill=INK + (235,), outline=c1 + (255,), width=4)
+        yy = y + 22
+        for l in sub:
+            w, h, b = medir(d, l, fs)
+            d.text(((W - w) // 2 - b[0], yy - b[1]), l, font=fs, fill=WHITE + (255,))
+            yy += h + 12
+    return ov
+
+
+def modelo_numero(c, c1, c2):
+    """Camada fixa (texto); a estrela e o numero sao desenhados por quadro."""
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    tit, sub = lista(c["titulo"]), lista(c.get("texto", []))
+    x = 470
+    larg = W - 70 - x
+    ft = ajustar(d, tit, XB, 92, larg)
+    fs = ajustar(d, sub, SB, 46, larg) if sub else None
+    alt = sum(medir(d, l, ft)[1] + 14 for l in tit) + (sum(medir(d, l, fs)[1] + 12 for l in sub) if sub else 0)
+    y0 = 1420 - alt // 2 - 44
+    painel(ov, (x - 150, y0, W - 54, y0 + alt + 96), c1, c2)
+    y = y0 + 46
+    for l in tit:
+        y += texto_degrade(ov, (x, y), l, ft, c1, c2) + 14
+    y += 6
+    for l in sub:
+        w, h, b = medir(d, l, fs)
+        d.text((x - b[0], y - b[1]), l, font=fs, fill=WHITE + (255,))
+        y += h + 12
+    k = c.get("etiqueta", "")
+    if k:
+        etiqueta(ov, (x, y0 - 36), k, c1)
+    return ov
+
+
+def desenhar_numero(fr, c, c1, c2, t, a):
+    cx, cy, r = 250, 1420, 215
+    est = Image.new("RGBA", (2 * r + 40, 2 * r + 40), (0, 0, 0, 0))
+    d = ImageDraw.Draw(est)
+    d.polygon(pontas(r + 20, r + 20, r + 16, r * .80, 14, t * 0.9), fill=WHITE + (255,))
+    d.polygon(pontas(r + 20, r + 20, r, r * .76, 14, t * 0.9), fill=c1 + (255,))
+    d.ellipse([r + 20 - r * .66, r + 20 - r * .66, r + 20 + r * .66, r + 20 + r * .66], fill=c2 + (255,))
+    num = str(c.get("numero", "5"))
+    f = font(XB, 300 if len(num) == 1 else 190)
+    w, h, b = medir(d, num, f, 10)
+    d.text((r + 20 - w / 2 - b[0], r + 20 - h / 2 - b[1]), num, font=f, fill=WHITE + (255,),
+           stroke_width=10, stroke_fill=INK + (255,))
+    s = max(0.05, mola(a))
+    est = est.resize((int(est.width * s), int(est.height * s)), Image.BICUBIC)
+    fr.paste(est, (cx - est.width // 2, cy - est.height // 2), est)
+
+
+def desenhar_medidas(fr, c, c1, c2, t):
+    d = ImageDraw.Draw(fr, "RGBA")
+    f = font(XB, 54)
+    for i, ln in enumerate(c.get("linhas", [])):
+        a = suave((t - 0.25 - i * 0.35) / 0.5)
+        if a <= 0:
+            continue
+        cor = LED[(i + 1) % len(LED)]
+        (xa, ya), (xb, yb) = ln["de"], ln["ate"]
+        xm, ym = xa + (xb - xa) * a, ya + (yb - ya) * a
+        d.line([(xa, ya), (xm, ym)], fill=INK + (255,), width=18)
+        d.line([(xa, ya), (xm, ym)], fill=cor + (255,), width=10)
+        for (px, py) in ((xa, ya), (xm, ym)):
+            d.ellipse([px - 17, py - 17, px + 17, py + 17], fill=WHITE + (255,), outline=INK + (255,), width=5)
+        if a > 0.6:
+            w, h, b = medir(d, ln["rotulo"], f)
+            cx, cy = ln.get("pos", [(xa + xb) / 2, (ya + yb) / 2])
+            d.rounded_rectangle([cx - w / 2 - 30, cy - h / 2 - 22, cx + w / 2 + 30, cy + h / 2 + 22], radius=40,
+                                fill=cor + (255,), outline=WHITE + (255,), width=5)
+            d.text((cx - w / 2 - b[0], cy - h / 2 - b[1]), ln["rotulo"], font=f, fill=INK + (255,))
+
+
+def modelo_medidas(c, c1, c2):
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    if c.get("titulo"):
+        d = ImageDraw.Draw(ov)
+        t = lista(c["titulo"])[0]
+        f = ajustar(d, [t], XB, 64, W - 400)
+        w, h, b = medir(d, t, f)
+        x, y = W - 70 - w - 60, 240
+        d.rounded_rectangle([x, y, x + w + 60, y + h + 52], radius=44, fill=INK + (240,), outline=c1 + (255,), width=5)
+        texto_degrade(ov, (x + 30, y + 26), t, f, c1, c2)
+    return ov
+
+
+def modelo_final(c, c1, c2, caminho_logo):
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    y = 340
+    if caminho_logo:
+        lg = Image.open(caminho_logo).convert("RGBA")
+        lg = lg.resize((560, int(lg.height * 560 / lg.width)), Image.LANCZOS)
+        ov.alpha_composite(lg, ((W - 560) // 2, y))
+        y += lg.height + 64
+    k = c.get("etiqueta", "")
+    if k:
+        kw = medir(d, k, font(XB, 40))[0] + 56
+        _, th = etiqueta(ov, ((W - kw) // 2, y), k, c1, tam=40)
+        y += th + 40
+    tit = lista(c.get("titulo", []))
+    ft = ajustar(d, tit, XB, c.get("tamanho", 100), W - 150)
+    for l in tit:
+        w = medir(d, l, ft, 8)[0]
+        y += texto_degrade(ov, ((W - w) // 2 + 8, y), l, ft, c1, c2, contorno=8) + 26
+    y += 20
+    fs = font(SB, 54)
+    for l in lista(c.get("texto", [])):
+        w, h, b = medir(d, l, fs)
+        d.text(((W - w) // 2 - b[0], y - b[1]), l, font=fs, fill=WHITE + (255,))
+        y += h + 16
+    y += 44
+    t = c.get("botao")
+    if t:
+        fb = font(XB, 58)
+        w, h, b = medir(d, t, fb)
+        ic = icone("conversa", 84, cor=INK, tinta=GRN)
+        bw = w + ic.width + 24
+        d.rounded_rectangle([(W - bw) // 2 - 50, y, (W + bw) // 2 + 50, y + 132], radius=66, fill=GRN + (255,),
+                            outline=WHITE + (255,), width=5)
+        ov.alpha_composite(ic, ((W - bw) // 2, y + 24))
+        d.text(((W - bw) // 2 + ic.width + 24 - b[0], y + (132 - h) // 2 - b[1]), t, font=fb, fill=INK + (255,))
+    return ov
+
+
+# ---------------------------------------------------------------- efeitos globais
 def moldura():
-    """Moldura da tela com as cores do LED; devolve (faixa colorida, mascara)."""
     m = Image.new("L", (W, H), 0)
     d = ImageDraw.Draw(m)
-    d.rounded_rectangle([16, 16, W - 17, H - 17], radius=64, fill=255)
-    d.rounded_rectangle([28, 28, W - 29, H - 29], radius=52, fill=0)
+    d.rounded_rectangle([14, 14, W - 15, H - 15], radius=66, fill=255)
+    d.rounded_rectangle([30, 30, W - 31, H - 31], radius=50, fill=0)
     faixa = Image.new("RGB", (2 * W, 1))
     n = len(LED)
     for x in range(2 * W):
@@ -198,145 +427,92 @@ def moldura():
     return faixa.resize((2 * W, H)), m.filter(ImageFilter.GaussianBlur(0.8))
 
 
-def sombra_inferior():
+def sombra_fundo():
     s = Image.new("L", (1, H), 0)
     for y in range(H):
         a = 0
-        if y > 1150:
-            a = int(120 * min(1, (y - 1150) / 450))
-        if y < 460:
-            a = max(a, int(120 * (1 - y / 460)))
+        if y > 1100:
+            a = int(135 * min(1, (y - 1100) / 450))
+        if y < 420:
+            a = max(a, int(110 * (1 - y / 420)))
         s.putpixel((0, y), a)
     return s.resize((W, H))
 
 
-def camada_logo(caminho_logo, altura, y):
+def camada_logo(caminho_logo):
     ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if not caminho_logo:
         return ov
     lg = Image.open(caminho_logo).convert("RGBA")
-    lg = lg.resize((int(lg.width * altura / lg.height), altura), Image.LANCZOS)
-    x = (W - lg.width) // 2
+    lg = lg.resize((int(lg.width * 150 / lg.height), 150), Image.LANCZOS)
+    x, y = 64, 196
     som = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    som.paste((0, 0, 0, 150), (x, y + 10), lg.getchannel("A"))
-    ov.alpha_composite(som.filter(ImageFilter.GaussianBlur(14)))
+    som.paste((0, 0, 0, 170), (x, y + 8), lg.getchannel("A"))
+    ov.alpha_composite(som.filter(ImageFilter.GaussianBlur(12)))
     ov.alpha_composite(lg, (x, y))
     return ov
 
 
-def card(c, c1, c2):
-    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(ov)
-    x0, x1, pad, diam = 54, W - 54, 48, 168
-    larg = x1 - x0 - 2 * pad
-    tit = lista(c["titulo"])
-    sub = lista(c.get("texto", []))
-    ft = ajustar(d, tit, XB, c.get("tamanho", 112), larg)
-    fs = ajustar(d, sub, SB, 52, larg) if sub else None
-    fk = font(XB, 36)
-    alt_t = sum(medir(d, l, ft)[1] for l in tit) + 16 * (len(tit) - 1)
-    alt_s = sum(medir(d, l, fs)[1] for l in sub) + 14 * (len(sub) - 1) if sub else 0
-    total = diam // 2 + 34 + alt_t + (26 + alt_s if sub else 0) + pad + 22
-    y1 = 1600
-    y0 = y1 - total
-    # borda em degrade + painel escuro
-    borda = degrade((x1 - x0, y1 - y0), c1, c2).convert("RGBA")
-    mb = Image.new("L", borda.size, 0)
-    ImageDraw.Draw(mb).rounded_rectangle([0, 0, borda.width - 1, borda.height - 1], radius=48, fill=255)
-    borda.putalpha(mb)
-    ov.alpha_composite(borda, (x0, y0))
-    miolo = degrade((x1 - x0 - 12, y1 - y0 - 12), (18, 14, 58), (9, 10, 30), vertical=True).convert("RGBA")
-    mm = Image.new("L", miolo.size, 0)
-    ImageDraw.Draw(mm).rounded_rectangle([0, 0, miolo.width - 1, miolo.height - 1], radius=42, fill=245)
-    miolo.putalpha(mm)
-    ov.alpha_composite(miolo, (x0 + 6, y0 + 6))
-    # pontos de LED no canto
-    for i, cor in enumerate(LED[:4]):
-        cx = x1 - pad - 14 - i * 40
-        d.ellipse([cx - 11, y0 + 36, cx + 11, y0 + 58], fill=cor + (255,))
-    # selo com icone, metade para fora do card
-    ov.alpha_composite(selo(c.get("icone", "estrela"), diam, c1, c2), (x0 + pad - 8, y0 - diam // 2))
-    # etiqueta
-    k = c.get("etiqueta", "")
-    if k:
-        kw, _, kb = medir(d, k, fk)
-        kx = x0 + pad + diam + 12
-        d.rounded_rectangle([kx, y0 + 22, kx + kw + 44, y0 + 82], radius=30, fill=c1 + (255,))
-        d.text((kx + 22 - kb[0], y0 + 34 - kb[1] + 2), k, font=fk, fill=INK + (255,))
-    y = y0 + diam // 2 + 34
-    for l in tit:
-        y += texto_degrade(ov, (x0 + pad, y), l, ft, c1, c2) + 16
-    y += 10
-    for l in sub:
-        w, h, b = medir(d, l, fs)
-        d.text((x0 + pad - b[0], y - b[1]), l, font=fs, fill=WHITE + (255,))
-        y += h + 14
-    # linha de degrade no rodape do card
-    linha = degrade((larg, 8), c1, c2).convert("RGBA")
-    ov.alpha_composite(linha, (x0 + pad, y1 - pad + 6))
-    return ov
+def confete(fr, tempo, forca=1.0):
+    d = ImageDraw.Draw(fr, "RGBA")
+    rnd = random.Random(7)
+    for i in range(34):
+        x0, vel, tam, fase = rnd.random() * W, 60 + rnd.random() * 140, 7 + rnd.random() * 13, rnd.random() * 6.28
+        y = (H + 80) - ((tempo * vel + rnd.random() * H) % (H + 160))
+        x = x0 + 30 * math.sin(tempo * 1.7 + fase)
+        cor = LED[i % len(LED)]
+        al = int(230 * forca)
+        if i % 3 == 0:
+            d.polygon(pontas(x, y, tam * 1.5, tam * .45, 4, tempo * 2 + fase), fill=cor + (al,))
+        else:
+            d.ellipse([x - tam / 2, y - tam / 2, x + tam / 2, y + tam / 2], fill=cor + (al,))
 
 
-def card_final(c, c1, c2, caminho_logo, site):
-    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(ov)
-    y = 330
-    if caminho_logo:
-        lg = Image.open(caminho_logo).convert("RGBA")
-        lg = lg.resize((520, int(lg.height * 520 / lg.width)), Image.LANCZOS)
-        ov.alpha_composite(lg, ((W - 520) // 2, y))
-        y += lg.height + 60
-    fk = font(XB, 38)
-    k = c.get("etiqueta", "")
-    if k:
-        kw, _, kb = medir(d, k, fk)
-        d.rounded_rectangle([(W - kw) // 2 - 26, y, (W + kw) // 2 + 26, y + 66], radius=33, fill=c1 + (255,))
-        d.text(((W - kw) // 2 - kb[0], y + 15 - kb[1] + 2), k, font=fk, fill=INK + (255,))
-        y += 66 + 40
-    tit = lista(c.get("titulo", []))
-    ft = ajustar(d, tit, XB, c.get("tamanho", 96), W - 160)
-    for l in tit:
-        w, h, _ = medir(d, l, ft)
-        y += texto_degrade(ov, ((W - w) // 2, y), l, ft, c1, c2) + 20
-    y += 24
-    fs = font(SB, 52)
-    for l in lista(c.get("texto", [])):
-        w, h, b = medir(d, l, fs)
-        d.text(((W - w) // 2 - b[0], y - b[1]), l, font=fs, fill=WHITE + (255,))
-        y += h + 16
-    y += 44
-    fb = font(XB, 58)
-    t = c.get("botao")
-    if t:
-        w, h, b = medir(d, t, fb)
-        ic = icone("conversa", 84, cor=INK, tinta=GRN)
-        bw = w + ic.width + 24
-        d.rounded_rectangle([(W - bw) // 2 - 50, y, (W + bw) // 2 + 50, y + 128], radius=64, fill=GRN + (255,))
-        ov.alpha_composite(ic, ((W - bw) // 2, y + 22))
-        d.text(((W - bw) // 2 + ic.width + 24 - b[0], y + (128 - h) // 2 - b[1]), t, font=fb, fill=INK + (255,))
-        y += 128 + 30
-    if site:
-        fw = font(XB, 50)
-        w, h, b = medir(d, site, fw)
-        d.rounded_rectangle([(W - w) // 2 - 46, y, (W + w) // 2 + 46, y + 108], radius=54,
-                            fill=(255, 255, 255, 255), outline=LED[0] + (255,), width=6)
-        d.text(((W - w) // 2 - b[0], y + (108 - h) // 2 - b[1]), site, font=fw, fill=INK + (255,))
-    return ov
+def brilho_neon(fr, forca=0.34):
+    """Halo de luz: as areas claras 'vazam' cor, como LED em ambiente escuro."""
+    p = fr.resize((W // 6, H // 6), Image.BILINEAR).filter(ImageFilter.GaussianBlur(7))
+    p = ImageEnhance.Brightness(ImageEnhance.Color(p).enhance(1.6)).enhance(0.75).resize((W, H), Image.BILINEAR)
+    return Image.blend(fr, ImageChops.screen(fr, p), forca)
 
 
-# ---------------------------------------------------------------- quadros
-def suave(x):
-    x = max(0.0, min(1.0, x))
-    return 1 - (1 - x) ** 3
+def aproximar(fr, z):
+    if z <= 1.001:
+        return fr
+    w, h = int(W / z), int(H / z)
+    l, t = (W - w) // 2, (H - h) // 2
+    return fr.resize((W, H), Image.BILINEAR, box=(l, t, l + w, t + h))
+
+
+def fundo_3d(c1, c2, tempo):
+    base = degrade((W, H), (64, 22, 150), (10, 12, 48), vertical=True).convert("RGBA")
+    raios = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(raios)
+    cx, cy, R, n = W // 2, 760, 1700, 14
+    for i in range(n):
+        a0 = 2 * math.pi * i / n + tempo * 0.35
+        a1 = a0 + math.pi / n
+        cor = (c1 if i % 2 == 0 else c2) + (70,)
+        d.polygon([(cx, cy), (cx + R * math.cos(a0), cy + R * math.sin(a0)),
+                   (cx + R * math.cos(a1), cy + R * math.sin(a1))], fill=cor)
+    base.alpha_composite(raios)
+    luz = Image.new("L", (W // 8, H // 8), 0)
+    ImageDraw.Draw(luz).ellipse([10, 30, W // 8 - 10, H // 8 - 70], fill=150)
+    luz = luz.filter(ImageFilter.GaussianBlur(26)).resize((W, H))
+    base.paste(Image.new("RGBA", (W, H), WHITE + (255,)), (0, 0), luz.point(lambda v: v // 3))
+    return base.convert("RGB")
+
+
+# ---------------------------------------------------------------- fontes de quadros
+GRADE = ("scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,"
+         "unsharp=7:7:1.1:5:5:0.0,eq=contrast=1.14:saturation=1.5:brightness=0.015:gamma=1.04,"
+         "vibrance=intensity=0.4")
 
 
 def quadros_video(mov, inicio, dur):
-    p = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-ss", str(inicio), "-t", str(dur), "-i", mov, "-vf",
-         "scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,"
-         "unsharp=5:5:0.6,eq=contrast=1.06:saturation=1.18",
-         "-r", str(FPS), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
-    for _ in range(int(dur * FPS)):
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(inicio), "-t", str(dur + 0.2), "-i", mov, "-vf", GRADE,
+                          "-r", str(FPS), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE,
+                         stderr=subprocess.DEVNULL)
+    for _ in range(int(round(dur * FPS))):
         b = p.stdout.read(W * H * 3)
         if len(b) < W * H * 3:
             break
@@ -345,18 +521,35 @@ def quadros_video(mov, inicio, dur):
     p.wait()
 
 
-def quadros_foto(path, dur, z1):
-    im = ImageEnhance.Color(Image.open(path).convert("RGB")).enhance(1.12)
+def quadros_foto(path, dur):
+    im = Image.open(path).convert("RGB")
+    im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(1.4)).enhance(1.1)
     sc = max(W / im.width, H / im.height)
-    n = int(dur * FPS)
+    r = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
+    l, t = (r.width - W) // 2, (r.height - H) // 2
+    r = r.crop((l, t, l + W, t + H))
+    for _ in range(int(round(dur * FPS))):
+        yield r.copy()
+
+
+def quadros_3d(pasta, dur, c1, c2):
+    arqs = sorted(glob.glob(os.path.join(pasta, "*.png")))
+    n = int(round(dur * FPS))
     for k in range(n):
-        z = sc * (1.0 + (z1 - 1.0) * k / n)
-        w, h = int(im.width * z), int(im.height * z)
-        r = im.resize((w, h), Image.BILINEAR)
-        l, t = (w - W) // 2, (h - H) // 2
-        yield r.crop((l, t, l + W, t + H))
+        fr = fundo_3d(c1, c2, k / FPS)
+        m = Image.open(arqs[min(len(arqs) - 1, int(k * len(arqs) / n))]).convert("RGBA")
+        m = m.crop(m.getbbox())
+        s = min(860 / m.width, 830 / m.height)
+        m = m.resize((int(m.width * s), int(m.height * s)), Image.LANCZOS)
+        x, y = (W - m.width) // 2, 1130 - m.height
+        ch = Image.new("L", (W, H), 0)
+        ImageDraw.Draw(ch).ellipse([x + 40, 1095, x + m.width - 40, 1165], fill=150)
+        fr.paste((0, 0, 0), (0, 0), ch.filter(ImageFilter.GaussianBlur(18)))
+        fr.paste(m, (x, y), m)
+        yield fr
 
 
+# ---------------------------------------------------------------- montagem
 def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
@@ -368,44 +561,83 @@ def main():
             return None
         return p if os.path.isabs(p) or os.path.exists(p) else os.path.join(base, p)
 
-    logo, site = caminho(spec.get("logo")), spec.get("site", "")
+    logo = caminho(spec.get("logo"))
     faixa, masc_moldura = moldura()
-    sombra = sombra_inferior()
+    sombra = sombra_fundo()
     preto = Image.new("RGB", (W, H), (0, 0, 0))
-    logo_topo = camada_logo(logo, 170, 190)
+    branco = Image.new("RGB", (W, H), WHITE)
+    logo_topo = camada_logo(logo)
 
     out = sys.argv[2]
     mudo = out + ".mudo.mp4"
     ff = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
-         "-i", "-", "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p", mudo],
+         "-i", "-", "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", mudo],
         stdin=subprocess.PIPE)
     n = 0
     for i, c in enumerate(spec["cenas"]):
-        dur, fim = float(c["duracao"]), bool(c.get("final"))
+        dur = float(c["duracao"])
+        mod = c.get("modelo", "card")
         cores = c.get("cores") or PALETA[i % len(PALETA)]
         c1, c2 = hexrgb(cores[0]), hexrgb(cores[1])
         if "video" in c:
-            gen = quadros_video(caminho(c["video"]), c.get("inicio", 0), dur)
+            gen, real = quadros_video(caminho(c["video"]), c.get("inicio", 0), dur), True
+        elif "quadros" in c:
+            gen, real = quadros_3d(caminho(c["quadros"]), dur, c1, c2), False
         else:
-            gen = quadros_foto(caminho(c["foto"]), dur, 1.06 if fim else 1.10)
-        ov = card_final(c, c1, c2, logo, site) if fim else card(c, c1, c2)
+            gen, real = quadros_foto(caminho(c["foto"]), dur), True
+        if mod == "heroi":
+            ov = modelo_heroi(c, c1, c2)
+        elif mod == "numero":
+            ov = modelo_numero(c, c1, c2)
+        elif mod == "medidas":
+            ov = modelo_medidas(c, c1, c2)
+        elif mod == "final":
+            ov = modelo_final(c, c1, c2, logo)
+        else:
+            ov = modelo_card(c, c1, c2)
+        caixa = ov.getbbox()
         for k, fr in enumerate(gen):
             t = k / FPS
-            a = suave((t - 0.2) / 0.45)
-            if not fim:
-                a *= 1 - suave((t - (dur - 0.2)) / 0.2)
+            fim = mod == "final"
+            # movimento de camera: aproxima devagar, com um "soco" de zoom no corte
+            if mod != "medidas":
+                fr = aproximar(fr, 1.0 + 0.07 * t / dur + 0.16 * (1 - suave(t / 0.22)))
+            if real and not fim:
+                fr = brilho_neon(fr)
                 fr = Image.composite(preto, fr, sombra)
-            elif a > 0:
-                escuro = ImageEnhance.Brightness(fr.filter(ImageFilter.GaussianBlur(12))).enhance(0.30)
+            a = suave((t - 0.18) / 0.4)
+            if not fim:
+                a *= 1 - suave((t - (dur - 0.16)) / 0.16)
+            if fim and a > 0:
+                escuro = ImageEnhance.Brightness(fr.filter(ImageFilter.GaussianBlur(14))).enhance(0.32)
                 fr = Image.blend(fr, escuro, a)
-            if a > 0:
-                o = ov.copy()
-                o.putalpha(ov.getchannel("A").point(lambda v: int(v * a)))
-                fr.paste(o, (0, int((1 - a) * 70)), o)
+            if mod == "medidas":
+                desenhar_medidas(fr, c, c1, c2, t)
+            if a > 0 and caixa:
+                o = ov if a >= 0.999 else ov.copy()
+                if a < 0.999:
+                    o.putalpha(ov.getchannel("A").point(lambda v: int(v * a)))
+                if mod == "heroi":  # titulo "estoura" na tela
+                    s = max(0.05, mola((t - 0.18) / 0.45))
+                    rec = o.crop(caixa)
+                    rec = rec.resize((max(1, int(rec.width * s)), max(1, int(rec.height * s))), Image.BICUBIC)
+                    cx, cy = (caixa[0] + caixa[2]) // 2, (caixa[1] + caixa[3]) // 2
+                    fr.paste(rec, (cx - rec.width // 2, cy - rec.height // 2), rec)
+                else:
+                    des = int((1 - a) * 90)
+                    dx = des if c.get("lado") == "direita" else (-des if mod == "numero" else 0)
+                    dy = des if mod in ("card", "final") and not dx else 0
+                    fr.paste(o, (dx, dy), o)
+            if mod == "numero":
+                desenhar_numero(fr, c, c1, c2, t, (t - 0.1) / 0.5)
+            if mod in ("heroi", "final") or not real:
+                confete(fr, n / FPS, 1.0 if fim else 0.85)
             if not fim:
                 fr.paste(logo_topo, (0, 0), logo_topo)
-            desloc = int((n / FPS) * 360) % W  # as cores correm pela moldura
+            if k < 5 and n > 0:  # flash de corte
+                fr = Image.blend(fr, branco, 0.55 * (1 - k / 5))
+            desloc = int((n / FPS) * 420) % W
             fr.paste(faixa.crop((desloc, 0, desloc + W, H)), (0, 0), masc_moldura)
             ff.stdin.write(fr.tobytes())
             n += 1
@@ -416,7 +648,7 @@ def main():
     if mus:
         subprocess.check_call(
             ["ffmpeg", "-v", "error", "-y", "-i", mudo, "-stream_loop", "-1", "-i", mus, "-filter_complex",
-             f"[1:a]volume=0.8,afade=t=in:d=0.3,afade=t=out:st={seg - 1.2}:d=1.2[a]", "-map", "0:v", "-map", "[a]",
+             f"[1:a]volume=0.85,afade=t=in:d=0.2,afade=t=out:st={seg - 1.2}:d=1.2[a]", "-map", "0:v", "-map", "[a]",
              "-t", str(seg), "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "44100",
              "-movflags", "+faststart", out])
     else:
