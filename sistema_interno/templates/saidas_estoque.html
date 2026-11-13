@@ -143,7 +143,10 @@
               {% if superusuario %}
               <td class="text-end">
                 {% if m.id == m.ultimo_id_estoque %}
-                <form method="post" class="d-inline" onsubmit="return confirm('Excluir esta movimentação e restaurar o saldo anterior? Esta ação só funciona para o movimento mais recente deste item.');">
+                <form method="post" class="d-inline"
+                      data-ls-confirmar="O saldo volta ao que era antes dela. Só vale para o movimento mais recente deste item."
+                      data-ls-confirmar-titulo="Excluir esta movimentação?"
+                      data-ls-confirmar-botao="Excluir" data-ls-perigo>
                   {% csrf_token %}
                   <input type="hidden" name="action" value="delete_movimento">
                   <input type="hidden" name="movimento_id" value="{{ m.id }}">

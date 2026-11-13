@@ -190,6 +190,10 @@ class RespostaJSONMixin:
 
         if pede_json(request):
             return JsonResponse({"status": "erro", "msg": mensagem}, status=status)
+        # O envio comum (formulário sem fetch) volta para a lista com o
+        # motivo num toast -- antes voltava calado, e "não aconteceu nada"
+        # parecia "deu certo". Ver core/ls_aviso.py.
+        messages.error(request, mensagem)
         return redirect(self.rota_padrao)
 
     #: Chaves que a resposta usa para dizer se deu certo. Nenhum extra
@@ -222,6 +226,8 @@ class RespostaJSONMixin:
         invalidar_avisos(getattr(request, "user", None))
 
         if not pede_json(request):
+            # O mesmo recado do JSON, como toast na tela de volta.
+            messages.success(request, mensagem)
             return redirect(self.rota_padrao)
 
         corpo = {}
@@ -419,12 +425,15 @@ class MinhaContaView(InternoRequiredMixin, View):
             )
             return redirect("minha_conta_inner")
 
+        # Os dois erros de servidor são folha (`modal`, core/ls_aviso.py), e
+        # não toast: param o envio de propostas, e o texto é para ler com calma.
         if not smtp_configurado():
             messages.error(
                 request,
                 "O servidor de e-mail ainda não está configurado nesta "
                 "hospedagem: faltam EMAIL_HOST_USER e EMAIL_HOST_PASSWORD. "
                 "O passo a passo está em docs/CONFIGURAR_EMAIL.md.",
+                extra_tags="modal; titulo:E-mail não configurado; icone:email",
             )
             return redirect("minha_conta_inner")
 
@@ -448,6 +457,7 @@ class MinhaContaView(InternoRequiredMixin, View):
                 request,
                 f"O servidor de e-mail recusou o envio: {type(erro).__name__}: "
                 f"{erro}",
+                extra_tags="modal; titulo:O e-mail não saiu; icone:email",
             )
             return redirect("minha_conta_inner")
 

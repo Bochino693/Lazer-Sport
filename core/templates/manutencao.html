@@ -6,6 +6,14 @@
 {% block title %}Manutenção de brinquedos e fliperamas | Lazer & Sport{% endblock %}
 {% block meta_description %}Manutenção de brinquedos, fliperamas e boliches feita pela equipe da fábrica Lazer & Sport, em São Paulo, com as peças de reposição da própria fábrica.{% endblock %}
 
+{% comment %}
+  Os recados desta tela ficam onde sempre estiveram: o de sucesso dentro da
+  janela "Recebemos sua solicitação", os de erro junto do formulário. Por
+  isso o toast do base.html (core/ls_aviso.py) não entra aqui -- seria o
+  mesmo recado duas vezes.
+{% endcomment %}
+{% block avisos_do_app %}{% endblock %}
+
 {% block content %}
 
   <link rel="stylesheet" href="{% estatico 'site/paginas/manutencao.css' %}">
@@ -897,7 +905,10 @@
                     <form method="post"
                           action="{% url 'cancelar_manutencao' %}"
                           id="form-cancelar-manutencao"
-                          onsubmit="return confirm('Deseja realmente cancelar esta solicitação de manutenção?');">
+                          data-ls-confirmar="Deseja realmente cancelar esta solicitação de manutenção?"
+                          data-ls-confirmar-titulo="Cancelar a solicitação?"
+                          data-ls-confirmar-botao="Cancelar solicitação"
+                          data-ls-confirmar-cancelar="Voltar" data-ls-confirmar-icone="erro" data-ls-perigo>
                         {% csrf_token %}
                         <input type="hidden" name="manutencao_id" id="cancelar-id">
                         <button type="submit" class="btn-secundario btn-cancelar-detalhe">

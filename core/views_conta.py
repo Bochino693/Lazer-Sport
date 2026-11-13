@@ -215,6 +215,8 @@ class LoginUsuarioView(View):
             messages.error(
                 request,
                 "Usuário, e-mail ou senha incorretos.",
+                # o título do toast (core/ls_aviso.py)
+                extra_tags="titulo:Não foi possível entrar",
             )
             return render(
                 request,

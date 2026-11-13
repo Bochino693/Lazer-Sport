@@ -67,14 +67,10 @@
 
             var botao = evento.submitter;
 
-            /* Ações destrutivas (ex.: cancelar) pedem confirmação antes. */
-            if (botao && botao.hasAttribute("data-confirm")) {
-                var pergunta = botao.getAttribute("data-confirm");
-                if (!window.confirm(pergunta)) {
-                    evento.preventDefault();
-                    return;
-                }
-            }
+            /* Ações destrutivas (ex.: cancelar) pedem confirmação antes --
+               pelo `data-ls-confirmar` do botão, na folha de aplicativo
+               (ls-aviso.js). Ela segura o envio na captura e só o refaz
+               depois do "sim": quando o envio chega aqui, já foi aceito. */
 
             if (form.hasAttribute("data-status-form")) {
                 var escolhido = form.querySelector('input[name="status"]:checked');

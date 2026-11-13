@@ -256,8 +256,10 @@ LSTela.pronto(function(){
   document.getElementById("novaEtapa")?.addEventListener("click",()=>abrir(null));
   document.querySelectorAll("[data-editar-etapa]").forEach(btn=>btn.addEventListener("click",()=>abrir(porId[btn.dataset.editarEtapa])));
   if(form)Painel.ligar({form:"formEtapa",erro:"etapaErro"});
-  function executar(action,id,confirmacao,produto){
-    if(confirmacao&&!window.confirm(confirmacao))return;
+  /* `confirmacao` é a pergunta da folha de aplicativo (LSAviso.confirmar):
+     {titulo, texto, confirmar}. A ação só segue depois do "sim". */
+  async function executar(action,id,confirmacao,produto){
+    if(confirmacao&&!(await LSAviso.confirmar(Object.assign({perigo:true},confirmacao))))return;
     const acao=document.getElementById("formAcaoGuia");
     acao.elements.action.value=action;
     acao.elements.id.value=id||"";
@@ -270,7 +272,7 @@ LSTela.pronto(function(){
         }
         location.reload();
       })
-      .catch(err=>alert(err.message));
+      .catch(err=>LSAviso.toast({nivel:"erro",titulo:"Não deu certo",texto:err.message}));
   }
 
   /* ------------------------------------------------------------------
@@ -351,8 +353,8 @@ LSTela.pronto(function(){
       }
     });
   }
-  document.querySelectorAll("[data-excluir-etapa]").forEach(btn=>btn.addEventListener("click",()=>executar("delete",btn.dataset.excluirEtapa,"Remover a etapa “"+btn.dataset.nome+"”? Se ela já foi usada, será apenas desativada.")));
-  document.querySelectorAll("[data-excluir-imagem]").forEach(btn=>btn.addEventListener("click",()=>executar("delete_imagem",btn.dataset.excluirImagem,"Remover esta imagem do guia?")));
+  document.querySelectorAll("[data-excluir-etapa]").forEach(btn=>btn.addEventListener("click",()=>executar("delete",btn.dataset.excluirEtapa,{titulo:"Remover a etapa “"+btn.dataset.nome+"”?",texto:"Se ela já foi usada, será apenas desativada.",confirmar:"Remover"})));
+  document.querySelectorAll("[data-excluir-imagem]").forEach(btn=>btn.addEventListener("click",()=>executar("delete_imagem",btn.dataset.excluirImagem,{titulo:"Remover esta imagem do guia?",texto:"A foto sai do passo a passo desta etapa.",confirmar:"Remover"})));
 });
 </script>
 {% endblock %}

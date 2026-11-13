@@ -126,7 +126,11 @@
                 }
             } catch (erro) {
                 chave.checked = !queria;
-                window.alert('Não deu para mudar agora. Confira a conexão e tente de novo.');
+                LSAviso.toast({
+                    nivel: 'erro',
+                    titulo: 'Não deu para mudar agora',
+                    texto: 'Confira a conexão e tente de novo.',
+                });
             } finally {
                 rotulo.classList.remove('is-ocupada');
             }

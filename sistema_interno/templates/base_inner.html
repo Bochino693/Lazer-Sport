@@ -1,4 +1,4 @@
-{% load static interno_extras %}
+{% load static interno_extras ls_aviso %}
 <!DOCTYPE html>
 <html lang="pt-br" data-ls-navigation="document">
 <head>
@@ -160,6 +160,9 @@
       } catch (erro) {}
       document.documentElement.setAttribute("data-tema", escolhido);
       window.LSTema = { atual: escolhido, lista: TEMAS };
+      /* Com JavaScript os recados do servidor viram toast: o cartão deles
+         nasce escondido, sem aparecer e sumir (ls-aviso.css). */
+      document.documentElement.classList.add("ls-recados-js");
     })();
   </script>
 
@@ -240,6 +243,15 @@
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% estatico 'site/ls-page-loader.css' %}">
   <script src="{% estatico 'site/ls-page-loader.js' %}" defer></script>
+  {% comment %}
+    AVISOS DE APLICATIVO -- o mesmo arquivo do site (core/static/site/).
+    Os recados do servidor viram toast (ou folha), e o "tem certeza?" das
+    telas é a folha dele: `LSAviso.toast(...)`, `await LSAviso.confirmar(...)`
+    e `data-ls-confirmar` nos formulários. As cores saem do sol, da lua e
+    do eclipse. Ver core/ls_aviso.py.
+  {% endcomment %}
+  <link rel="stylesheet" href="{% estatico 'site/ls-aviso.css' %}">
+  <script src="{% estatico 'site/ls-aviso.js' %}" defer></script>
 </head>
 {% comment %}
   `data-ls-economia` é o freio de mão da banda, ligado na hospedagem por
@@ -759,20 +771,15 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
     </header>
 
     <main class="ls-content">
-      {% if request.GET.recuperado == "pagina" %}
-        <div class="alert alert-info mb-3" role="status">
-          O endereço acessado era antigo ou não existe mais. Você voltou com segurança para o painel.
-        </div>
-      {% endif %}
-      {% if messages %}
-        <div class="mb-3" aria-live="polite">
-          {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} mb-2">
-              {{ message }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
+      {% comment %}
+        OS RECADOS (`messages`) E O "VOCÊ VOLTOU PARA O PAINEL" viram toast
+        de aplicativo -- não mais a caixa do Bootstrap no alto da tela. Vêm
+        como dados (core/ls_aviso.py, partials/ls_avisos.html), dentro da
+        área de conteúdo para a navegação suave trazê-los junto. A view
+        escolhe toast ou folha pelo `extra_tags` ("modal", "titulo:...",
+        "acao:<url>|<rótulo>").
+      {% endcomment %}
+      {% avisos_do_app recuperado=request.GET.recuperado %}
       {% block content %}{% endblock %}
       {% block grafico %}{% endblock %}
     </main>

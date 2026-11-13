@@ -277,9 +277,10 @@
             if (!resposta.ok || !dados.sucesso) throw new Error(dados.erro || 'Não foi possível adicionar.');
             const badge = document.getElementById('badge-carrinho');
             if (badge) badge.textContent = dados.total_itens || 0;
-            window.alert('Peça adicionada ao carrinho.');
+            // o toast do carrinho do site inteiro (base.html, ls-aviso.js)
+            mostrarToast('Peça adicionada ao carrinho.');
         } catch (erro) {
-            window.alert(erro.message || 'Não foi possível adicionar a peça.');
+            mostrarToast(erro.message || 'Não foi possível adicionar a peça.', true);
         } finally {
             botao.disabled = false;
         }
