@@ -542,7 +542,7 @@ def _linhas_do_pdf(paginas: list[str]) -> list[dict]:
     Texto que se repete igual em todas as páginas é cabeçalho ou rodapé
     e entra uma vez só.
     """
-    from .deterministica import _mapear_cabecalho, campo_do_rotulo
+    from .deterministica import _coluna_do_cabecalho, _mapear_cabecalho, campo_do_rotulo
 
     repetidas = set()
     if len(paginas) >= 2:
@@ -610,7 +610,11 @@ def _linhas_do_pdf(paginas: list[str]) -> list[dict]:
                 dentro = colunas[coluna - 1][0] - 2 <= inicio and (
                     coluna == len(colunas) or fim <= colunas[coluna][0] + 2
                 )
-                if dentro and coluna in tabela["ultima"] and not re.search(r"R\$|\d+,\d{2}", texto):
+                # Um nome de coluna sozinho ("Valor", o terceiro cabeçalho
+                # que ficou boiando embaixo da tabela de duas colunas) não é
+                # continuação de célula nenhuma: a tabela acabou ali.
+                if dentro and coluna in tabela["ultima"] and not re.search(r"R\$|\d+,\d{2}", texto) \
+                        and not _coluna_do_cabecalho(texto):
                     # Continuação da célula de cima: "Cama elástica 3" /
                     # "m com rede de" / "proteção".
                     linhas[tabela["ultima"][coluna]]["texto"] += " " + texto
@@ -618,7 +622,14 @@ def _linhas_do_pdf(paginas: list[str]) -> list[dict]:
                 tabela = None
 
             celulas_cabecalho = {i + 1: {"texto": texto} for i, (_, _, texto) in enumerate(pedacos)}
-            if len(pedacos) >= 3 and _mapear_cabecalho(celulas_cabecalho):
+            # Duas colunas também é tabela de itens -- "Quantidade |
+            # Equipamento", o contrato de compra e venda --, desde que os
+            # dois pedaços sejam NOMES DE COLUNA. Assim "Nome   Marina"
+            # (a ficha) continua sendo par de rótulo e valor.
+            cabecalho_de_dois = len(pedacos) == 2 and all(
+                _coluna_do_cabecalho(texto) for _, _, texto in pedacos
+            )
+            if (len(pedacos) >= 3 or cabecalho_de_dois) and _mapear_cabecalho(celulas_cabecalho):
                 tabelas += 1
                 tabela = {"id": f"T{tabelas}", "colunas": [(a, b) for a, b, _ in pedacos],
                           "linha": 1, "ultima": {}}
@@ -678,6 +689,62 @@ def ler_pdf_local(conteudo: bytes, nome: str = "documento.pdf") -> list[dict]:
             "O PDF é longo demais para um orçamento. Importe só as páginas do orçamento."
         )
     return linhas
+
+
+# ======================================================================
+# A DATA DO ARQUIVO (quando foi criado e salvo)
+# ======================================================================
+_DATA_ISO = re.compile(r"(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?")
+_DATA_DO_PDF = re.compile(r"D:(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2}))?")
+
+
+def _data_valida(ano, mes, dia):
+    from datetime import date
+
+    try:
+        data = date(int(ano), int(mes), int(dia))
+    except ValueError:
+        return None
+    # 1990 para trás é data de modelo quebrado, não de documento.
+    return data if data.year >= 1990 else None
+
+
+def datas_do_arquivo(conteudo: bytes, formato: str) -> list[dict]:
+    """Quando o arquivo foi criado e salvo, pelo que ele mesmo diz.
+
+    É pista fraca: o modelo do contrato salvo de novo hoje diz "hoje" mesmo
+    para a venda de 2016. Por isso só serve como OPÇÃO na pergunta "De
+    quando é este documento?" (ver conferencia.data_do_documento) -- a data
+    escrita no texto vem antes. Devolve [{"data": "aaaa-mm-dd", "origem":
+    "criado" | "salvo"}], sem repetir a mesma data.
+    """
+    achadas = []
+    try:
+        if formato == "pdf":
+            from pypdf import PdfReader
+
+            metadados = PdfReader(BytesIO(conteudo)).metadata or {}
+            for chave, origem in (("/CreationDate", "criado"), ("/ModDate", "salvo")):
+                achado = _DATA_DO_PDF.match(str(metadados.get(chave) or ""))
+                if achado:
+                    achadas.append((_data_valida(*achado.group(1, 2, 3)), origem))
+        else:
+            with zipfile.ZipFile(BytesIO(conteudo)) as arquivo:
+                if "docProps/core.xml" in arquivo.namelist():
+                    texto = arquivo.read("docProps/core.xml")[:200_000].decode("utf-8", "ignore")
+                    for marca, origem in (("created", "criado"), ("modified", "salvo")):
+                        achado = re.search(r"<dcterms:" + marca + r"[^>]*>([^<]+)<", texto)
+                        data_iso = _DATA_ISO.match(achado.group(1).strip()) if achado else None
+                        if data_iso:
+                            achadas.append((_data_valida(*data_iso.group(1, 2, 3)), origem))
+    except Exception:  # noqa: BLE001 -- a data do arquivo é só pista; nunca derruba a leitura
+        return []
+    saida, vistas = [], set()
+    for data, origem in achadas:
+        if data and data not in vistas:
+            vistas.add(data)
+            saida.append({"data": data.isoformat(), "origem": origem})
+    return saida
 
 
 def mapa_de_linhas(linhas: list[dict]) -> dict[str, dict]:

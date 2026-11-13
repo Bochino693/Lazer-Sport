@@ -493,7 +493,7 @@ html.ls-imp-modal-aberto .ls-abas{display:none!important}
 .ls-imp-decisao-fechar:focus-visible,.ls-imp-caminho-revisar:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
 .ls-imp-decisao-lido{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:2px;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden}
 .ls-imp-decisao-lido li{
-  display:grid;grid-template-columns:20px 120px minmax(0,1fr) auto;gap:10px;align-items:center;
+  display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;
   padding:8px 12px;font-size:.88rem;background:var(--panel-2);
 }
 .ls-imp-decisao-lido li i{font-size:1rem}
@@ -501,7 +501,6 @@ html.ls-imp-modal-aberto .ls-abas{display:none!important}
 .ls-imp-decisao-lido li.falta i{color:var(--yellow-texto)}
 .ls-imp-decisao-lido li.falta.obrigatorio i{color:var(--red-texto)}
 .ls-imp-decisao-rotulo{font-weight:900;color:var(--text-2)}
-.ls-imp-decisao-valor{color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ls-imp-chip-falta{
   padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:950;white-space:nowrap;
   color:var(--yellow-texto);background:rgba(var(--yellow-rgb),.16);border:1px solid rgba(var(--yellow-rgb),.5);
@@ -533,6 +532,66 @@ li.obrigatorio .ls-imp-chip-falta{color:var(--red-texto);background:rgba(var(--r
 .ls-imp-caminho-revisar{align-self:center;border:0;background:none;padding:2px 6px;font-size:.84rem;font-weight:900;color:var(--acento-texto);cursor:pointer}
 .ls-imp-caminho-revisar:hover{text-decoration:underline}
 
+/* ============================================ AJUSTE 4: o modal em passos */
+.ls-imp-passos{list-style:none;margin:0 0 14px;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.ls-imp-passos li{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:999px;
+  font-size:.76rem;font-weight:900;color:var(--muted);background:var(--panel-2);border:1px solid var(--line-soft);
+}
+.ls-imp-passo-numero{
+  width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.7rem;
+  background:var(--line);color:var(--text-2);
+}
+.ls-imp-passos li.atual{color:var(--text);border-color:var(--acento)}
+.ls-imp-passos li.atual .ls-imp-passo-numero{background:var(--acento);color:var(--panel)}
+.ls-imp-passos li.feito .ls-imp-passo-numero{background:rgba(var(--green-rgb),.2);color:var(--green-texto)}
+.ls-imp-passo{display:grid;gap:10px}
+.ls-imp-passo[hidden]{display:none!important}
+.ls-imp-passo-titulo{margin:0;font-size:1.05rem;font-weight:950;color:var(--text)}
+.ls-imp-passo-titulo i{color:var(--acento-texto);margin-right:4px}
+.ls-imp-passo-titulo:focus{outline:none}
+.ls-imp-passo-texto{margin:0;font-size:.88rem;line-height:1.45;color:var(--text-2)}
+.ls-imp-datas{display:grid;gap:10px}
+.ls-imp-datas-opcoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.ls-imp-data-opcao{
+  display:grid;gap:2px;justify-items:start;min-height:64px;padding:12px 14px;border-radius:14px;cursor:pointer;
+  text-align:left;border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+}
+.ls-imp-data-opcao b{font-size:1.1rem;font-weight:950;font-variant-numeric:tabular-nums}
+.ls-imp-data-opcao span{font-size:.76rem;font-weight:800;color:var(--muted)}
+.ls-imp-data-opcao:hover{border-color:var(--acento)}
+.ls-imp-data-opcao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-imp-data-opcao.sugerida{border:2px solid var(--acento);background:rgba(var(--acento-rgb),.08)}
+.ls-imp-data-outra-rotulo{margin:0;font-size:.8rem;font-weight:900;color:var(--text-2)}
+.ls-imp-data-outra{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.ls-imp-data-outra .form-control,.ls-imp-data-outra .btn{min-height:48px}
+.ls-imp-lido-ok{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.ls-imp-lido-ok li{
+  display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 10px;border-radius:999px;
+  font-size:.82rem;font-weight:800;color:var(--text);background:rgba(var(--green-rgb),.1);
+  border:1px solid rgba(var(--green-rgb),.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ls-imp-lido-ok li i{color:var(--green-texto)}
+.ls-imp-decisao-lido:empty{display:none}
+.ls-imp-itens-lidos{list-style:none;margin:0;padding:0;display:grid;gap:2px;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden}
+.ls-imp-itens-lidos li{
+  display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:8px 12px;font-size:.88rem;background:var(--panel-2);
+}
+.ls-imp-itens-lidos li.ok i{color:var(--green-texto)}
+.ls-imp-itens-lidos li.falta i{color:var(--yellow-texto)}
+.ls-imp-item-lido-nome{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.ls-imp-passo-acoes{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px}
+.ls-imp-passo-seguir{margin-left:auto;min-height:48px;min-width:180px;font-weight:950}
+.ls-imp-passo-voltar{border:0;background:none;padding:6px 4px;font-size:.86rem;font-weight:900;color:var(--text-2);cursor:pointer}
+.ls-imp-passo-voltar:hover{color:var(--text)}
+.ls-imp-passo-voltar:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+/* A data na barra de cima da tela guiada. */
+.ls-imp-data-documento{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.ls-imp-data-documento .form-label{margin:0;font-weight:900;color:var(--text-2)}
+.ls-imp-data-documento .form-control{width:auto;min-width:170px}
+.ls-imp-data-documento .ls-imp-nota{flex:1 0 100%;margin:0}
+
 @media (max-width:760px){
   .ls-imp-decisao{place-items:end stretch;padding:0}
   .ls-imp-decisao-cartao{
@@ -543,10 +602,11 @@ li.obrigatorio .ls-imp-chip-falta{color:var(--red-texto);background:rgba(var(--r
   .ls-imp-folha-alca{display:flex;justify-content:center;padding:6px 0 10px;cursor:grab;touch-action:none}
   .ls-imp-folha-alca span{width:44px;height:5px;border-radius:999px;background:var(--line)}
   .ls-imp-decisao-caminhos{grid-template-columns:minmax(0,1fr)}
-  .ls-imp-decisao-lido li{grid-template-columns:18px 92px minmax(0,1fr);row-gap:2px}
-  .ls-imp-decisao-lido li .ls-imp-chip-falta,.ls-imp-decisao-lido li .ls-imp-tag{grid-column:2 / -1;justify-self:start}
   .ls-imp-dobra-topo{gap:4px 10px;padding:12px 14px}
   .ls-imp-caminho-barra .ls-panel-body{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-datas-opcoes{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-data-outra{grid-template-columns:minmax(0,1fr)}
+  .ls-imp-passo-seguir{min-width:0;flex:1 1 auto}
 }
 @media (prefers-reduced-motion:reduce){
   .ls-imp-decisao-fundo,.ls-imp-decisao-cartao,.ls-imp-dobra-seta,.ls-imp-sub-seta,.ls-imp-anel .feito{transition:none}

@@ -174,6 +174,16 @@ class Cliente(Prime):
     cnpj_estabelecimento = models.CharField("CNPJ do estabelecimento", max_length=14, blank=True, db_index=True)
 
     observacoes = models.TextField("Observações", blank=True)
+    # DESDE QUANDO É CLIENTE. O cadastro nasce hoje, mas o contrato de 2012
+    # importado hoje diz que a relação começou em 2012. A importação grava
+    # a data do documento aqui (ou uma mais antiga, de outro documento);
+    # vazio, vale a data do cadastro (`criacao`).
+    cliente_desde = models.DateField(
+        "Cliente desde",
+        null=True,
+        blank=True,
+        help_text="A data do documento mais antigo deste cliente (contrato, orçamento) importado no painel.",
+    )
 
     # ------------------------------------------------------------------
     # O QUE O SITE MOSTRA
@@ -1652,6 +1662,16 @@ class Orcamento(Prime):
             "Proposta nova nasce com 5 dias. Data anterior a hoje não é "
             "aceita: seria enviar ao cliente um documento já vencido."
         ),
+    )
+    # A DATA DO DOCUMENTO. `criacao` é quando a proposta entrou no painel;
+    # o contrato de 2016 importado hoje é de 2016. Preenchida só pela
+    # importação do Word/PDF (a pessoa confirma "De quando é este
+    # documento?"); vazia, a proposta nasceu no painel e vale `criacao`.
+    data_documento = models.DateField(
+        "Data do documento",
+        null=True,
+        blank=True,
+        help_text="Quando o documento importado (contrato, orçamento) foi feito.",
     )
     desconto = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     frete = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))

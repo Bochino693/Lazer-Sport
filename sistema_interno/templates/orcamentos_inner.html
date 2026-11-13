@@ -132,6 +132,9 @@
               <button type="button" class="ls-chip ls-chip-zerar" data-validade-limpar>Sem prazo</button>
             </div>
             <span class="form-text">Proposta nova já nasce com {{ validade_padrao_dias }} dias.</span>
+            <span class="form-text d-block" id="orcamentoDataDocumento" hidden>
+              <i class="bi bi-calendar-event" aria-hidden="true"></i> Documento importado de <strong></strong>
+            </span>
           </div>
 
         </div>
@@ -2009,6 +2012,8 @@ LSTela.pronto(function () {
       ? "Orçamento ID " + orcamento.id + " · versão " + orcamento.versao
       : "Novo orçamento";
     mostrarOrigem(orcamento);
+    var notaDoDocumento = document.getElementById("orcamentoDataDocumento");
+    if (notaDoDocumento) notaDoDocumento.hidden = !(orcamento && orcamento.data_documento);
 
     if (orcamento && orcamento.cliente_opcao) {
       buscaCliente.adicionarOpcao(orcamento.cliente_opcao, false);
@@ -2027,6 +2032,12 @@ LSTela.pronto(function () {
       Painel.valor("orcamentoStatus", orcamento.status);
       Painel.valor("orcamentoValidade", orcamento.validade);
       Painel.valor("orcamentoFrete", orcamento.frete);
+      /* A data do documento importado (o contrato de 2016 que entrou hoje). */
+      var dataDocumento = document.getElementById("orcamentoDataDocumento");
+      if (dataDocumento) {
+        dataDocumento.hidden = !orcamento.data_documento;
+        dataDocumento.querySelector("strong").textContent = orcamento.data_documento || "";
+      }
       trocarUnidade("valor", false);
       Painel.valor("orcamentoDesconto", orcamento.desconto);
       chaveValorFinal.checked = Boolean(orcamento.valor_final);
