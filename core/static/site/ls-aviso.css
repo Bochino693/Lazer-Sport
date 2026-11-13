@@ -14,8 +14,8 @@
 .ls-recado-folha,
 .ls-recados-servidor {
     --recado-fundo: var(--ls-fundo-3);
-    --recado-fundo-2: var(--ls-superficie-2);
-    --recado-borda: var(--ls-borda-forte);
+    --recado-fundo-2: var(--ls-superficie-azul);
+    --recado-borda: var(--ls-borda-azul);
     --recado-texto: var(--ls-texto);
     --recado-texto-suave: var(--ls-texto-suave);
     --recado-sucesso: var(--ls-verde-neon);

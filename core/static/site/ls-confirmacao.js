@@ -107,6 +107,7 @@
             '</div>' +
             '<div class="ls-confirma-acoes">' +
             '  <a class="ls-confirma-btn primario" href="' + confirmacao.redirect_url + '">' +
+            '    <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>' +
             '    Ver meus pedidos' +
             '  </a>' +
             '</div>' +
@@ -147,6 +148,9 @@
            um botão de fechar que cancela: ninguém é arrastado sem aviso. */
         var restam = SEGUNDOS_PARA_REDIRECIONAR;
         timer.hidden = false;
+        /* a linha do tempo dos toasts embaixo do aviso (ls-confirmacao.css) */
+        caixa.style.setProperty("--confirma-tempo", SEGUNDOS_PARA_REDIRECIONAR + "s");
+        caixa.classList.add("is-contando");
 
         function tique() {
             if (restam <= 0) {
@@ -166,6 +170,7 @@
             .addEventListener("click", function () {
                 window.clearInterval(contagem);
                 timer.hidden = true;
+                caixa.classList.remove("is-contando");
             });
     }
 

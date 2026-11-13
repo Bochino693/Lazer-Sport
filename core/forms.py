@@ -295,6 +295,19 @@ class ManutencaoForm(forms.ModelForm):
             "brinquedo": forms.HiddenInput(),
             "brinquedo_nao_listado": forms.HiddenInput(),
         }
+        # Os rótulos da tela (sem eles saíam do nome do campo, sem acento:
+        # "Descricao:", "Cep:", "Telefone contato:").
+        labels = {
+            "descricao": "Descrição do problema",
+            "telefone_contato": "Telefone para contato",
+            "cep": "CEP",
+            "endereco": "Endereço",
+            "numero": "Número",
+            "complemento": "Complemento",
+            "bairro": "Bairro",
+            "cidade": "Cidade",
+            "estado": "UF",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

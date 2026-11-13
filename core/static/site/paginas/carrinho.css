@@ -75,15 +75,15 @@
     column-gap: 16px;
     row-gap: 10px;
     padding: 12px;
-    border: 1px solid rgba(255, 255, 255, .07);
+    border: 1px solid rgba(127, 200, 255, .12);
     border-radius: 18px;
-    background: rgba(255, 255, 255, .035);
+    background: rgba(47, 139, 255, .06);
     transition: border-color .2s ease, background .2s ease, opacity .2s ease;
 }
 
 .ck-item:hover {
-    border-color: rgba(63, 208, 255, .26);
-    background: rgba(255, 255, 255, .05);
+    border-color: rgba(63, 208, 255, .36);
+    background: rgba(47, 139, 255, .1);
 }
 
 /* o carrinho está sendo refeito no servidor: a linha espera, apagada */
@@ -100,10 +100,10 @@
     width: 96px;
     height: 96px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, .08);
+    border: 1px solid rgba(127, 200, 255, .18);
     border-radius: 14px;
-    background: linear-gradient(145deg, #13254d, #0b1733);
-    color: #5f7598;
+    background: linear-gradient(145deg, #13306a, #0b1a3d);
+    color: #7fb2ff;
     font-size: 1.5rem;
 }
 
@@ -172,8 +172,8 @@
     margin: -4px -4px 0 0;
     border: 1px solid transparent;
     border-radius: 12px;
-    background: transparent;
-    color: #8ea3c4;
+    background: rgba(255, 71, 87, .08);
+    color: #ff8f9b;
     cursor: pointer;
     font-size: 1rem;
     transition: background .2s ease, color .2s ease, border-color .2s ease;
@@ -200,9 +200,10 @@
     display: inline-flex;
     align-items: center;
     padding: 3px;
-    border: 1px solid rgba(255, 255, 255, .13);
+    border: 1px solid rgba(63, 164, 255, .34);
     border-radius: 14px;
-    background: rgba(4, 10, 28, .62);
+    background: rgba(8, 22, 56, .8);
+    box-shadow: 0 0 18px rgba(47, 139, 255, .12);
 }
 
 .qtd-box button {
@@ -212,8 +213,8 @@
     height: 44px;
     border: 0;
     border-radius: 11px;
-    background: transparent;
-    color: #dbe7fb;
+    background: rgba(47, 139, 255, .14);
+    color: #8ccaff;
     cursor: pointer;
     transition: background .18s ease, color .18s ease;
 }
@@ -224,7 +225,8 @@
 }
 
 .qtd-box button:disabled {
-    color: #4d6185;
+    background: transparent;
+    color: #4f72a8;
     cursor: not-allowed;
 }
 
@@ -332,9 +334,9 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 12px;
     padding: 14px;
-    border: 1px solid rgba(255, 255, 255, .07);
+    border: 1px solid rgba(127, 200, 255, .12);
     border-radius: 16px;
-    background: rgba(255, 255, 255, .025);
+    background: rgba(47, 139, 255, .05);
 }
 
 .ck-campo--rua { grid-column: span 4; }
@@ -468,8 +470,8 @@
 
 .cupom-bloqueado {
     margin-bottom: 14px;
-    border: 1px dashed rgba(255, 255, 255, .14);
-    background: rgba(255, 255, 255, .025);
+    border: 1px dashed rgba(127, 200, 255, .26);
+    background: rgba(47, 139, 255, .06);
     color: var(--ck-suave);
 }
 
@@ -518,7 +520,7 @@
     width: 100%;
     min-height: 56px;
     padding: 0 20px;
-    border: 1px solid rgba(255, 255, 255, .14);
+    border: 1px solid rgba(106, 242, 176, .35);
     border-radius: 16px;
     background: linear-gradient(135deg, #0a8a4a, #066b37);
     box-shadow: 0 12px 28px rgba(6, 107, 55, .38), inset 0 1px 0 rgba(255, 255, 255, .14);
@@ -541,10 +543,10 @@
 
 /* Desligado de verdade, e com cara de desligado: nada de verde apagado. */
 .btn-finalizar[aria-disabled="true"] {
-    border-color: rgba(255, 255, 255, .1);
-    background: rgba(255, 255, 255, .07);
+    border-color: rgba(63, 164, 255, .3);
+    background: rgba(20, 60, 140, .45);
     box-shadow: none;
-    color: #8ea3c4;
+    color: #a9c8f0;
     cursor: not-allowed;
 }
 
@@ -765,7 +767,7 @@
 
     .ck-item-base {
         padding-top: 10px;
-        border-top: 1px solid rgba(255, 255, 255, .06);
+        border-top: 1px solid rgba(127, 200, 255, .12);
     }
 
     .btn-limpar {

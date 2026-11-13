@@ -157,7 +157,7 @@ html.ls-cr-travado {
 
 .ls-cr {
     --cr-fundo: #0c1c44;
-    --cr-fundo-2: rgba(255, 255, 255, .06);
+    --cr-fundo-2: rgba(47, 139, 255, .1);
     --cr-borda: var(--ls-borda-forte, rgba(255, 255, 255, .18));
     --cr-borda-suave: var(--ls-borda, rgba(255, 255, 255, .1));
     --cr-texto: var(--ls-texto, #eaf2ff);
@@ -293,8 +293,9 @@ html.ls-cr-travado {
     overflow: hidden;
     border: 1px solid var(--cr-borda-suave);
     border-radius: 20px;
-    /* o "palco" claro das fotos de produto: peça preta some no escuro */
-    background: radial-gradient(circle at 50% 40%, #ffffff, #e3ebf7);
+    /* o "palco" azul aceso das fotos de produto: peça preta some no
+       escuro chapado, e o branco destoava da folha (nada de branco no site) */
+    background: radial-gradient(circle at 50% 35%, #4a8cf0 0%, #1d56c0 55%, #0d2a66 100%);
     box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
 }
 
@@ -369,7 +370,7 @@ html.ls-cr-travado {
     padding: 14px 14px 14px 18px;
     border: 1px solid var(--cr-borda-suave);
     border-radius: 20px;
-    background: rgba(255, 255, 255, .035);
+    background: rgba(47, 139, 255, .07);
 }
 
 .ls-cr-qtd label {
@@ -404,7 +405,7 @@ html.ls-cr-travado {
     padding: 0;
     border: 0;
     border-radius: 14px;
-    background: rgba(255, 255, 255, .08);
+    background: rgba(47, 139, 255, .2);
     color: #fff;
     cursor: pointer;
     touch-action: manipulation;
@@ -419,7 +420,7 @@ html.ls-cr-travado {
     opacity: .35;
     cursor: not-allowed;
     transform: none;
-    background: rgba(255, 255, 255, .05);
+    background: rgba(47, 139, 255, .08);
 }
 
 .ls-cr-numero {
@@ -445,7 +446,7 @@ html.ls-cr-travado {
     margin: 0;
 }
 
-.ls-cr-numero:focus { outline: none; background: rgba(255, 255, 255, .06); }
+.ls-cr-numero:focus { outline: none; background: rgba(47, 139, 255, .14); }
 .ls-cr-numero:focus-visible { outline: 3px solid var(--cr-foco); outline-offset: 1px; }
 
 .ls-cr-numero.is-pulando { animation: ls-cr-numero .26s cubic-bezier(.3, 1.6, .5, 1); }
@@ -494,7 +495,7 @@ html.ls-cr-travado {
     padding: 12px 18px;
     border: 1px solid var(--cr-borda);
     border-radius: 16px;
-    background: rgba(255, 255, 255, .07);
+    background: rgba(47, 139, 255, .14);
     color: var(--cr-texto);
     font: inherit;
     font-size: .98rem;
@@ -508,7 +509,7 @@ html.ls-cr-travado {
 }
 
 .ls-cr-botao:hover {
-    background: rgba(255, 255, 255, .12);
+    background: rgba(47, 139, 255, .24);
     color: #fff;
 }
 
@@ -575,7 +576,7 @@ html.ls-cr-travado {
 .ls-cr-osso {
     display: block;
     border-radius: 10px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, .06) 25%, rgba(255, 255, 255, .14) 50%, rgba(255, 255, 255, .06) 75%);
+    background: linear-gradient(90deg, rgba(47, 139, 255, .1) 25%, rgba(63, 208, 255, .22) 50%, rgba(47, 139, 255, .1) 75%);
     background-size: 200% 100%;
     animation: ls-cr-osso 1.1s linear infinite;
 }
@@ -675,7 +676,7 @@ html.ls-cr-travado {
     padding: 10px 14px 10px 10px;
     border: 1px solid var(--cr-borda-suave);
     border-radius: 18px;
-    background: rgba(255, 255, 255, .035);
+    background: rgba(47, 139, 255, .07);
     text-align: left;
 }
 
@@ -837,7 +838,7 @@ html.ls-cr-travado {
     padding: 12px 16px;
     border: 1px solid var(--cr-borda-suave);
     border-radius: 18px;
-    background: rgba(255, 255, 255, .035);
+    background: rgba(47, 139, 255, .07);
     list-style: none;
     text-align: left;
 }
@@ -894,7 +895,7 @@ html.ls-cr-travado {
         height: 5px;
         margin: 0 auto 16px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, .22);
+        background: rgba(127, 200, 255, .35);
     }
 
     .ls-cr-fechar { top: 16px; right: 10px; }

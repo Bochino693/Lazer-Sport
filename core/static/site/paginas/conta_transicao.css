@@ -16,10 +16,11 @@
     place-items: center;
     overflow: hidden;
     position: relative;
+    /* o fundo do site (ls-tema.css) aparece por trás: antes havia uma
+       caixa de outro azul começando embaixo do topo */
     background:
         radial-gradient(circle at 82% 10%, rgba(230, 57, 70, 0.19), transparent 29%),
-        radial-gradient(circle at 12% 86%, rgba(0, 123, 255, 0.23), transparent 31%),
-        linear-gradient(145deg, #07111f 0%, #0d1b2e 42%, #053a79 100%);
+        radial-gradient(circle at 12% 86%, rgba(0, 123, 255, 0.23), transparent 31%);
 }
 
 .ls-transicao::before {
@@ -40,7 +41,7 @@
     z-index: 1;
     overflow: hidden;
     padding: clamp(30px, 6vw, 52px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(127, 200, 255, 0.22);
     border-radius: 34px;
     color: #fff;
     text-align: center;
@@ -60,10 +61,10 @@
     gap: 8px;
     padding: 8px 14px;
     margin-bottom: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(46, 229, 157, 0.45);
     border-radius: 999px;
-    color: rgba(255, 255, 255, 0.82);
-    background: rgba(255, 255, 255, 0.06);
+    color: #6af2b0;
+    background: rgba(46, 229, 157, 0.12);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -88,14 +89,14 @@
 
 .ls-transicao-icone::before {
     inset: 0;
-    border: 4px solid rgba(255, 255, 255, 0.12);
-    border-top-color: #fff;
+    border: 4px solid rgba(63, 164, 255, 0.18);
+    border-top-color: #3fd0ff;
     animation: lsTransicaoGirar 1.15s linear infinite;
 }
 
 .ls-transicao-icone::after {
     inset: 12px;
-    border: 4px solid rgba(255, 255, 255, 0.09);
+    border: 4px solid rgba(63, 164, 255, 0.12);
     border-right-color: var(--vermelho);
     animation: lsTransicaoGirarReverso 0.88s linear infinite;
 }
@@ -107,10 +108,10 @@
     display: grid;
     place-items: center;
     border-radius: 18px;
-    color: var(--azul);
-    background: #fff;
+    color: #fff;
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
     font-size: 1.3rem;
-    box-shadow: 0 0 34px rgba(255, 255, 255, 0.36);
+    box-shadow: 0 0 34px rgba(47, 139, 255, 0.55);
     animation: lsTransicaoPulso 1.5s ease-in-out infinite;
 }
 
@@ -132,7 +133,7 @@
 .ls-transicao-card > p {
     max-width: 450px;
     margin: 0 auto;
-    color: rgba(255, 255, 255, 0.72);
+    color: #cfe0fb;
     font-size: 0.98rem;
     line-height: 1.65;
 }
@@ -147,10 +148,10 @@
 .ls-transicao-passo {
     min-width: 0;
     padding: 13px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(127, 200, 255, 0.16);
     border-radius: 15px;
-    color: rgba(255, 255, 255, 0.52);
-    background: rgba(255, 255, 255, 0.035);
+    color: #8fb0e0;
+    background: rgba(47, 139, 255, 0.07);
     font-size: 0.7rem;
     font-weight: 700;
 }
@@ -173,7 +174,7 @@
     overflow: hidden;
     margin-bottom: 15px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.10);
+    background: rgba(127, 200, 255, 0.16);
 }
 
 .ls-transicao-progresso span {
@@ -186,7 +187,7 @@
 }
 
 .ls-transicao-contador {
-    color: rgba(255, 255, 255, 0.55);
+    color: #a9c4ec;
     font-size: 0.78rem;
 }
 

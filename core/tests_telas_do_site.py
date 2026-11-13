@@ -552,3 +552,89 @@ class CarrinhoComFotoTests(TestCase):
             muitos, poucos,
             "o carrinho consulta o banco uma vez por produto",
         )
+
+
+class MeusPedidosNoCheckoutTests(TestCase):
+    """Meus pedidos é a etapa 3 da compra, com o desenho do checkout.
+
+    Era a última tela do caminho da compra no desenho antigo (cartões
+    brancos, emoji no título, o mesmo total repetido). Agora usa o casco
+    do carrinho e do pagamento, mostra a foto de cada produto -- sem uma
+    consulta por linha -- e pergunta pela folha do site antes de cancelar
+    um pedido reservado.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        self.usuario = User.objects.create_user("cliente-pedidos", password="x")
+        perfil = self.usuario.perfil
+        perfil.telefone = "11999990000"
+        perfil.save()
+        self.client.force_login(self.usuario)
+
+    def pedido(self, status, itens):
+        from decimal import Decimal
+
+        from django.contrib.contenttypes.models import ContentType
+
+        from core.models import Brinquedos, ItemPedido, Pedido
+
+        pedido = Pedido.objects.create(
+            cliente=self.usuario.perfil, status=status, tipo_envio="frete",
+            total_bruto=Decimal("10") * itens, total_liquido=Decimal("10") * itens,
+            rua="Rua A", numero="1", cidade="São Paulo", cep="02340-000",
+        )
+        inicio = Brinquedos.objects.count()
+        for numero in range(inicio, inicio + itens):
+            brinquedo = Brinquedos.objects.create(
+                nome_brinquedo=f"Pac-Man {numero}", descricao="x",
+                imagem_brinquedo=f"imagens_brinquedos/pac-{numero}.webp",
+                avaliacao=Decimal("4"), valor_brinquedo=Decimal("10"), voltz="220v",
+            )
+            ItemPedido.objects.create(
+                pedido=pedido, content_type=ContentType.objects.get_for_model(brinquedo),
+                object_id=brinquedo.pk, nome_item=brinquedo.nome_brinquedo, tipo_item="brinquedo",
+                preco_unitario=Decimal("10"), quantidade=1, subtotal=Decimal("10"),
+            )
+        return pedido
+
+    def abrir(self):
+        with CaptureQueriesContext(connection) as capturadas:
+            resposta = self.client.get("/meus-pedidos/")
+        self.assertEqual(resposta.status_code, 200)
+        return len(capturadas), resposta.content.decode()
+
+    def test_o_casco_do_checkout_e_a_etapa_de_confirmacao(self):
+        self.pedido("pago", 1)
+        _, corpo = self.abrir()
+
+        self.assertIn("site/paginas/checkout.css", corpo)
+        self.assertIn('class="ck ck--pedidos" id="pedidos"', corpo)
+        self.assertRegex(corpo, r'class="ck-etapa is-atual" aria-current="step">\s*'
+                                r'<span class="ck-etapa-bola">3</span>\s*'
+                                r'<span class="ck-etapa-nome">Confirmação</span>')
+        self.assertNotIn("📦", corpo)
+        self.assertNotIn("breadcrumb-strong", corpo)
+
+    def test_cada_item_tem_foto_e_as_consultas_nao_crescem(self):
+        self.pedido("em_preparacao", 1)
+        self.abrir()  # aquece sessão e contexto
+        poucos, corpo = self.abrir()
+        self.assertIn("pac-0.webp", corpo)
+        self.assertIn('class="pd-item-foto"', corpo)
+
+        self.pedido("finalizado", 3)
+        self.pedido("saiu_entrega", 2)
+        muitos, corpo = self.abrir()
+
+        self.assertEqual(corpo.count('class="pd-item item-detalhe"'), 6)
+        self.assertEqual(muitos, poucos, "Meus pedidos consulta o banco uma vez por item")
+
+    def test_cancelar_o_reservado_pergunta_pela_folha_do_site(self):
+        pedido = self.pedido("aguardando_pagamento", 1)
+        _, corpo = self.abrir()
+
+        self.assertIn(f'data-devolver="{pedido.id}"', corpo)
+        self.assertIn("window.LSAviso.confirmar(opcoes)", corpo)
+        self.assertIn('titulo: "Cancelar este pedido?"', corpo)

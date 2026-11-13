@@ -2927,14 +2927,14 @@
         margin-top: -2px;
     }
 
+    /* O nome da aba fica à vista também no celular: só o "+" e a
+       prancheta não diziam o que era cada uma. */
     .tab-btn {
-        min-height: 45px;
-        padding: 9px;
-        font-size: .7rem;
-    }
-
-    .tab-btn > span:not(.tab-count) {
-        display: none;
+        gap: 7px;
+        min-height: 48px;
+        padding: 8px 6px;
+        font-size: .78rem;
+        line-height: 1.15;
     }
 
     .form-topbar,
@@ -3339,4 +3339,425 @@
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
     }
+}
+
+/* =========================================================
+   O FORMULÁRIO E O HISTÓRICO NO TEMA ESCURO DO SITE
+   ---------------------------------------------------------
+   O PEDIDO: "nada de modais e cards brancos, cores vivas e chamativas,
+   evite o cinza também". As janelas desta tela (escolher o brinquedo, os
+   detalhes, "Solicitação enviada") já eram escuras; o formulário de quem
+   entrou e a lista "Minhas solicitações" ainda eram cartões brancos e
+   cinza-claro. Agora tudo é o vidro escuro do checkout (checkout.css), com
+   campos escuros de texto claro (16 px: o iPhone não dá zoom) e as
+   situações em cores fortes: pendente amarelo, em andamento ciano,
+   concluída verde e cancelada vermelho.
+
+   Fica no fim do arquivo, depois do desenho claro: as mesmas classes, e
+   quem vem por último ganha. O `html.ls-escuro` na frente segue a regra do
+   ls-tema.css -- tirar a classe da tag <html> volta ao claro.
+========================================================= */
+html.ls-escuro .maintenance-page {
+    --mt-text: var(--ls-texto, #eaf2ff);
+    --mt-muted: var(--ls-texto-suave, #a9bcd9);
+    --mt-line: rgba(127, 200, 255, .12);
+    --mt-campo: rgba(4, 10, 28, .72);
+    --mt-claro: #8ccaff;
+    color: var(--mt-text);
+}
+
+/* ---------- abas ---------- */
+html.ls-escuro .manutencao-tabs {
+    border-color: rgba(127, 200, 255, .14);
+    background: rgba(8, 16, 38, .78);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .3);
+}
+
+html.ls-escuro .tab-btn { color: #a9c8f0; }
+
+html.ls-escuro .tab-btn:hover {
+    color: #fff;
+    background: rgba(47, 139, 255, .14);
+}
+
+html.ls-escuro .tab-btn.active {
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(20, 96, 214, .38);
+}
+
+html.ls-escuro .tab-count {
+    background: rgba(47, 139, 255, .2);
+    color: var(--mt-claro);
+}
+
+html.ls-escuro .tab-btn.active .tab-count {
+    background: rgba(255, 255, 255, .2);
+    color: #fff;
+}
+
+/* ---------- os cartões: o vidro escuro do checkout ---------- */
+html.ls-escuro .manutencao-form,
+html.ls-escuro .quick-guide,
+html.ls-escuro .historico-panel {
+    border: 1px solid rgba(127, 200, 255, .14);
+    background:
+        radial-gradient(120% 80% at 100% 0%, rgba(63, 164, 255, .08), transparent 60%),
+        linear-gradient(160deg, rgba(17, 32, 66, .96), rgba(8, 15, 34, .97));
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+html.ls-escuro .tabela-wrapper {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html.ls-escuro .form-topbar,
+html.ls-escuro .historico-header {
+    border-bottom-color: var(--mt-line);
+    background:
+        radial-gradient(circle at 92% 0, rgba(230, 57, 70, .16), transparent 34%),
+        radial-gradient(circle at 0 0, rgba(47, 139, 255, .14), transparent 40%);
+}
+
+html.ls-escuro .form-topbar h2,
+html.ls-escuro .historico-header h2 { color: #fff; }
+
+html.ls-escuro .form-time,
+html.ls-escuro .historico-summary {
+    border-color: rgba(63, 164, 255, .34);
+    background: rgba(47, 139, 255, .14);
+    color: #a9d6ff;
+}
+
+html.ls-escuro .errorlist {
+    border-color: rgba(255, 90, 106, .4);
+    background: rgba(255, 71, 87, .12);
+    color: #ffa3ad;
+}
+
+html.ls-escuro .form-section,
+html.ls-escuro .manutencao-form > .form-section:nth-of-type(even) {
+    border-bottom-color: var(--mt-line);
+    background: transparent;
+}
+
+html.ls-escuro .manutencao-form > .form-section:nth-of-type(even) {
+    background: radial-gradient(circle at 0 100%, rgba(230, 57, 70, .06), transparent 36%);
+}
+
+html.ls-escuro .step-index {
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 0 0 4px rgba(47, 139, 255, .14), 0 8px 18px rgba(20, 96, 214, .4);
+}
+
+html.ls-escuro .form-section-head h3 { color: #fff; }
+
+html.ls-escuro .form-section > .form-grid,
+html.ls-escuro .address-entry-card,
+html.ls-escuro .address-fields-panel {
+    border-color: rgba(127, 200, 255, .12);
+    background: rgba(4, 10, 28, .42);
+    box-shadow: none;
+}
+
+/* ---------- campos: escuros, de texto claro ---------- */
+html.ls-escuro .form-group label,
+html.ls-escuro .address-cep-wrap label { color: #c9d7ee; }
+
+html.ls-escuro .required-mark { color: #ff6b7a; }
+
+html.ls-escuro .form-group input,
+html.ls-escuro .form-group textarea,
+html.ls-escuro .form-group select {
+    border-color: rgba(127, 200, 255, .2);
+    background: var(--mt-campo);
+    color: #f2f7ff;
+    /* 16 px: abaixo disso o iPhone dá zoom na tela ao tocar no campo */
+    font-size: 1rem;
+}
+
+html.ls-escuro .form-group input::placeholder,
+html.ls-escuro .form-group textarea::placeholder {
+    color: #7f9cc9;
+    opacity: 1;
+}
+
+html.ls-escuro .form-group input:focus,
+html.ls-escuro .form-group textarea:focus,
+html.ls-escuro .form-group select:focus {
+    border-color: #3fa4ff;
+    background: rgba(4, 10, 28, .92);
+    box-shadow: 0 0 0 4px rgba(63, 164, 255, .18);
+}
+
+html.ls-escuro .maintenance-page .form-group input:focus-visible,
+html.ls-escuro .maintenance-page .form-group textarea:focus-visible { outline: none; }
+
+html.ls-escuro .form-group input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 40px #091330 inset;
+    -webkit-text-fill-color: #f2f7ff;
+}
+
+html.ls-escuro .field-help { color: #9fb6dc; }
+
+html.ls-escuro .campo-erro {
+    border-color: #ff5a6a !important;
+    background: rgba(255, 71, 87, .12) !important;
+}
+
+html.ls-escuro .campo-loading {
+    border-color: #3fa4ff !important;
+    background: rgba(47, 139, 255, .12) !important;
+}
+
+html.ls-escuro .campo-bloqueado {
+    background: rgba(47, 139, 255, .05) !important;
+    color: #9fb6dc !important;
+}
+
+/* ---------- o equipamento ---------- */
+html.ls-escuro .btn-selecionar-brinquedo,
+html.ls-escuro .upload-card {
+    border-color: rgba(63, 164, 255, .5);
+    background:
+        radial-gradient(circle at 92% 15%, rgba(230, 57, 70, .12), transparent 30%),
+        rgba(47, 139, 255, .08);
+    color: var(--mt-claro);
+}
+
+html.ls-escuro .btn-selecionar-brinquedo:hover,
+html.ls-escuro .upload-card:hover {
+    border-color: #3fa4ff;
+    background: rgba(47, 139, 255, .16);
+    box-shadow: 0 0 24px rgba(47, 139, 255, .2);
+}
+
+html.ls-escuro .select-toy-icon,
+html.ls-escuro .upload-icon,
+html.ls-escuro .address-entry-icon {
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 8px 18px rgba(20, 96, 214, .4);
+}
+
+html.ls-escuro .select-toy-copy strong,
+html.ls-escuro .upload-copy strong,
+html.ls-escuro .address-entry-copy strong,
+html.ls-escuro .address-fields-head strong,
+html.ls-escuro .no-cep-copy strong,
+html.ls-escuro .brinquedo-card span { color: #fff; }
+
+html.ls-escuro .brinquedo-card {
+    border-color: rgba(63, 164, 255, .35);
+    background: rgba(47, 139, 255, .12);
+}
+
+html.ls-escuro .brinquedo-card img {
+    background: linear-gradient(145deg, #13306a, #0b1a3d);
+    box-shadow: 0 7px 17px rgba(0, 0, 0, .3);
+}
+
+html.ls-escuro .remove-brinquedo {
+    background: rgba(255, 71, 87, .16);
+    color: #ff929d;
+}
+
+html.ls-escuro .remove-brinquedo:hover {
+    background: #e63946;
+    color: #fff;
+}
+
+/* ---------- o endereço ---------- */
+html.ls-escuro .address-cep-wrap {
+    border-color: rgba(127, 200, 255, .14);
+    background: rgba(8, 18, 44, .6);
+}
+
+html.ls-escuro .no-cep-option-surface {
+    border-color: rgba(127, 200, 255, .2);
+    background: rgba(8, 18, 44, .6);
+}
+
+html.ls-escuro .no-cep-option:hover .no-cep-option-surface {
+    border-color: rgba(63, 164, 255, .5);
+    box-shadow: 0 0 20px rgba(47, 139, 255, .14);
+}
+
+html.ls-escuro .no-cep-option > input:checked + .no-cep-option-surface {
+    border-color: #2f8bff;
+    background: rgba(47, 139, 255, .16);
+    box-shadow: 0 0 0 3px rgba(47, 139, 255, .2);
+}
+
+html.ls-escuro .no-cep-check {
+    border-color: rgba(127, 200, 255, .45);
+    background: transparent;
+}
+
+html.ls-escuro .no-cep-option > input:checked + .no-cep-option-surface .no-cep-check {
+    border-color: #2f8bff;
+    background: #2f8bff;
+    color: #fff;
+}
+
+html.ls-escuro .cep-loading,
+html.ls-escuro .cep-success { color: var(--mt-claro); }
+
+html.ls-escuro .cep-error { color: #ff929d; }
+
+html.ls-escuro .address-status {
+    border-color: rgba(63, 164, 255, .3);
+    background: rgba(47, 139, 255, .1);
+    color: #d4e9ff;
+}
+
+html.ls-escuro .address-status-icon {
+    background: rgba(47, 139, 255, .2);
+    color: var(--mt-claro);
+}
+
+html.ls-escuro .address-status > span:last-child > span { color: #a9c4ec; }
+
+html.ls-escuro .address-status.is-error {
+    border-color: rgba(255, 90, 106, .4);
+    background: rgba(255, 71, 87, .12);
+    color: #ffa3ad;
+}
+
+html.ls-escuro .address-status.is-error .address-status-icon {
+    background: rgba(255, 71, 87, .2);
+    color: #ff929d;
+}
+
+html.ls-escuro .address-status.is-manual {
+    border-color: rgba(255, 210, 63, .35);
+    background: rgba(255, 210, 63, .08);
+}
+
+html.ls-escuro .address-mode-badge {
+    background: rgba(47, 139, 255, .18);
+    color: var(--mt-claro) !important;
+}
+
+/* ---------- fotos e envio ---------- */
+html.ls-escuro .preview-item img { border-color: rgba(127, 200, 255, .2); }
+
+html.ls-escuro .preview-item button { border-color: #0c1c44; }
+
+html.ls-escuro .form-submit-panel { background: rgba(4, 10, 28, .5); }
+
+html.ls-escuro .submit-note { color: #a9c4ec; }
+
+html.ls-escuro .submit-note i { color: #6af2b0; }
+
+html.ls-escuro .btn-enviar {
+    min-height: 50px;
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 10px 24px rgba(20, 96, 214, .38);
+}
+
+/* ---------- o guia do lado ---------- */
+html.ls-escuro .quick-guide-head {
+    background:
+        radial-gradient(circle at 100% 0, rgba(230, 57, 70, .35), transparent 50%),
+        linear-gradient(135deg, #0b3a8c, #1460d6);
+}
+
+html.ls-escuro .quick-guide-item { border-bottom-color: var(--mt-line); }
+
+html.ls-escuro .quick-guide-item span:first-child {
+    background: rgba(47, 139, 255, .2);
+    color: var(--mt-claro);
+}
+
+html.ls-escuro .quick-guide-item strong { color: #fff; }
+
+html.ls-escuro .quick-guide-footer {
+    border-color: rgba(255, 210, 63, .32);
+    background: rgba(255, 210, 63, .08);
+    color: #ffe9a6;
+}
+
+/* ---------- minhas solicitações ---------- */
+html.ls-escuro .tabela-manutencoes thead { background: rgba(47, 139, 255, .08); }
+
+html.ls-escuro .tabela-manutencoes th { color: #9fb6dc; }
+
+html.ls-escuro .tabela-manutencoes th,
+html.ls-escuro .tabela-manutencoes td { border-color: var(--mt-line); }
+
+html.ls-escuro .tabela-manutencoes td { color: #cfe0fb; }
+
+html.ls-escuro .tabela-manutencoes tbody tr:hover { background: rgba(47, 139, 255, .06); }
+
+html.ls-escuro .solicitacao-icon,
+html.ls-escuro .empty-maintenance i {
+    background: rgba(47, 139, 255, .18);
+    color: var(--mt-claro);
+}
+
+html.ls-escuro .solicitacao-cell strong,
+html.ls-escuro .empty-maintenance strong { color: #fff; }
+
+html.ls-escuro .solicitacao-cell small { color: #9fb6dc; }
+
+html.ls-escuro .solicitacao-cell .equipamento-manual-label {
+    border-color: rgba(255, 210, 63, .35);
+    background: rgba(255, 210, 63, .1);
+    color: #ffe38a;
+}
+
+/* as situações em cor forte (na lista e na janela dos detalhes) */
+html.ls-escuro .status-P,
+html.ls-escuro #modal-detalhe .status-P {
+    border-color: rgba(255, 210, 63, .5);
+    background: rgba(255, 210, 63, .14);
+    color: #ffd23f;
+}
+
+html.ls-escuro .status-A,
+html.ls-escuro #modal-detalhe .status-A {
+    border-color: rgba(63, 208, 255, .5);
+    background: rgba(63, 208, 255, .14);
+    color: #3fd0ff;
+}
+
+html.ls-escuro .status-C,
+html.ls-escuro #modal-detalhe .status-C {
+    border-color: rgba(46, 229, 157, .5);
+    background: rgba(46, 229, 157, .14);
+    color: #2ee59d;
+}
+
+html.ls-escuro .status-X,
+html.ls-escuro #modal-detalhe .status-X {
+    border-color: rgba(255, 71, 87, .5);
+    background: rgba(255, 71, 87, .14);
+    color: #ff7a87;
+}
+
+html.ls-escuro .btn-detalhe {
+    min-height: 44px;
+    border-color: rgba(63, 164, 255, .4);
+    background: rgba(47, 139, 255, .14);
+    color: #d4e9ff;
+}
+
+html.ls-escuro .btn-detalhe:hover {
+    background: rgba(47, 139, 255, .26);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(47, 139, 255, .22);
+}
+
+@media (max-width: 760px) {
+    html.ls-escuro .tabela-manutencoes tr {
+        border-color: rgba(127, 200, 255, .14);
+        background: rgba(4, 10, 28, .45);
+        box-shadow: none;
+    }
+
+    html.ls-escuro .tabela-manutencoes td { border-bottom-color: var(--mt-line); }
+
+    html.ls-escuro .tabela-manutencoes td::before { color: #9fb6dc; }
 }

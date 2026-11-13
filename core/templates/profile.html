@@ -1,150 +1,205 @@
 {% extends 'base.html' %}
 {% load static interno_extras %}
 
-{% block title %}Meu Perfil{% endblock %}
+{% block title %}Meu perfil | Lazer & Sport{% endblock %}
 
 {% block content %}
 
+  {# o mesmo casco do carrinho, do pagamento e de Meus pedidos #}
+  <link rel="stylesheet" href="{% estatico 'site/paginas/checkout.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/paginas/profile.css' %}">
 
-<div id="perfil-page">
+<div class="ck ck--perfil" id="perfil-page">
 
-    <!-- ======= BREADCRUMB ======= -->
-    <div class="breadcrumb">
-        <a href="{% url 'home' %}">Home</a>
-        <span>›</span>
-        <strong>Meu Perfil</strong>
+    <div class="ck-cabeca pf-cabeca">
+        <div class="ck-cabeca-texto">
+            <nav class="ck-trilha breadcrumb" aria-label="Navegação">
+                <a href="{% url 'home' %}">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i>
+                    Início
+                </a>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">Meu perfil</span>
+            </nav>
+            <h1 class="ck-titulo">Meu perfil</h1>
+            <p class="ck-sub">Seus dados de contato para pedidos, entregas e manutenções.</p>
+        </div>
     </div>
 
-    <!-- ======= HERO ======= -->
-    <section class="perfil-hero">
-        <div class="perfil-hero-inner">
+    <div class="pf-grade perfil-wrapper" id="perfil-box">
 
-            <div class="perfil-avatar-wrap">
-                {% if user.perfil.avatar %}
-                    <img src="{{ user.perfil.avatar.url }}" alt="Avatar" id="perfil-avatar-preview">
-                {% else %}
-                    <div class="perfil-avatar-fallback" id="perfil-avatar-fallback">
-                        {{ user.first_name|first|default:user.username|first|upper }}
+        <!-- O CARTÃO DA CONTA: quem é, o resumo e os atalhos -->
+        <aside class="pf-lateral">
+            <section class="ck-card pf-identidade perfil-hero" aria-label="Sua conta">
+                <div class="pf-identidade-topo">
+                    <div class="perfil-avatar-wrap pf-avatar">
+                        {% if user.perfil.avatar %}
+                            <img src="{{ user.perfil.avatar.url }}" alt="Avatar" id="perfil-avatar-preview">
+                        {% else %}
+                            <div class="perfil-avatar-fallback" id="perfil-avatar-fallback">
+                                {{ user.first_name|first|default:user.username|first|upper }}
+                            </div>
+                            <img src="" alt="Avatar" id="perfil-avatar-preview" style="display:none;">
+                        {% endif %}
+
+                        {% if perfil_form.avatar %}
+                        <label for="id_avatar" class="perfil-avatar-edit" title="Alterar foto">
+                            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                            <span class="pf-oculto">Alterar foto</span>
+                        </label>
+                        {% endif %}
                     </div>
-                    <img src="" alt="Avatar" id="perfil-avatar-preview" style="display:none;">
-                {% endif %}
 
-                <label for="id_avatar" class="perfil-avatar-edit" title="Alterar foto">
-                    <i class="fa-solid fa-camera"></i>
-                </label>
-            </div>
-
-            <div class="perfil-hero-copy">
-                <span class="perfil-hero-tag">
-                    <i class="fa-solid fa-circle-check"></i> Cliente Lazer &amp; Sport
-                </span>
-                <h1>{{ user.first_name }} {{ user.last_name }}{% if not user.first_name %}{{ user.username }}{% endif %}</h1>
-                <p><i class="fa-solid fa-envelope"></i>{{ user.email|default:"E-mail não cadastrado" }}</p>
-            </div>
-
-        </div>
-    </section>
-
-    <!-- ======= CONTEÚDO ======= -->
-    <div class="perfil-wrapper" id="perfil-box">
-
-        <!-- CARD LATERAL -->
-        <aside class="perfil-side-card">
-            <h3><i class="fa-solid fa-id-card"></i> Resumo da conta</h3>
-
-            <div class="perfil-info-line">
-                <div class="perfil-info-icon"><i class="fa-solid fa-user"></i></div>
-                <div>
-                    <small>Usuário</small>
-                    <strong>{{ user.username }}</strong>
+                    <div class="pf-identidade-texto">
+                        <span class="perfil-hero-tag pf-selo">
+                            <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Cliente Lazer &amp; Sport
+                        </span>
+                        <h2 class="pf-nome">{{ user.first_name }} {{ user.last_name }}{% if not user.first_name %}{{ user.username }}{% endif %}</h2>
+                        <p class="pf-email">
+                            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                            {{ user.email|default:"E-mail não cadastrado" }}
+                        </p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="perfil-info-line">
-                <div class="perfil-info-icon"><i class="fa-solid fa-envelope"></i></div>
-                <div>
-                    <small>E-mail</small>
-                    <strong>{{ user.email|default:"Não informado" }}</strong>
-                </div>
-            </div>
+                <ul class="pf-resumo perfil-side-card">
+                    <li class="perfil-info-line">
+                        <span class="perfil-info-icon" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+                        <span>
+                            <small>Usuário</small>
+                            <strong>{{ user.username }}</strong>
+                        </span>
+                    </li>
+                    <li class="perfil-info-line">
+                        <span class="perfil-info-icon" aria-hidden="true"><i class="fa-solid fa-phone"></i></span>
+                        <span>
+                            <small>Telefone</small>
+                            <strong>{{ user.perfil.telefone|default:"Não informado" }}</strong>
+                        </span>
+                    </li>
+                    {% if user.perfil.nome_completo %}
+                    <li class="perfil-info-line">
+                        <span class="perfil-info-icon" aria-hidden="true"><i class="fa-solid fa-signature"></i></span>
+                        <span>
+                            <small>Nome completo</small>
+                            <strong>{{ user.perfil.nome_completo }}</strong>
+                        </span>
+                    </li>
+                    {% endif %}
+                </ul>
 
-            <div class="perfil-info-line">
-                <div class="perfil-info-icon"><i class="fa-solid fa-phone"></i></div>
-                <div>
-                    <small>Telefone</small>
-                    <strong>{{ user.perfil.telefone|default:"Não informado" }}</strong>
-                </div>
-            </div>
+                <p class="ck-seguro perfil-badge-conta">
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    <span>Seus dados são usados apenas para contato sobre pedidos e manutenções.</span>
+                </p>
+            </section>
 
-            {% if user.perfil.nome_completo %}
-            <div class="perfil-info-line">
-                <div class="perfil-info-icon"><i class="fa-solid fa-signature"></i></div>
-                <div>
-                    <small>Nome completo</small>
-                    <strong>{{ user.perfil.nome_completo }}</strong>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="perfil-badge-conta">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Seus dados são usados apenas para contato sobre pedidos e manutenções.</span>
-            </div>
+            <nav class="ck-card pf-atalhos" aria-label="Atalhos da conta">
+                <a href="{% url 'meus_pedidos' %}" class="pf-atalho pf-atalho--verde">
+                    <span class="pf-atalho-icone" aria-hidden="true"><i class="fa-solid fa-bag-shopping"></i></span>
+                    <span>Meus pedidos</span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+                <a href="{% url 'lista_desejos' %}" class="pf-atalho pf-atalho--amarelo">
+                    <span class="pf-atalho-icone" aria-hidden="true"><i class="fa-solid fa-star"></i></span>
+                    <span>Lista de desejos</span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+                <a href="{% url 'manutencoes' %}" class="pf-atalho pf-atalho--ciano">
+                    <span class="pf-atalho-icone" aria-hidden="true"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+                    <span>Manutenções</span>
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </a>
+            </nav>
         </aside>
 
-        <!-- CARD DO FORMULÁRIO -->
-        <section class="perfil-form-card">
+        <!-- O FORMULÁRIO -->
+        <section class="ck-card pf-form perfil-form-card" aria-labelledby="pf-form-titulo">
 
             {# Os recados (messages) viram toast no alto: ver o base.html e core/ls_aviso.py. #}
 
             <form method="POST" enctype="multipart/form-data" id="form-perfil">
                 {% csrf_token %}
 
-                <!-- input de avatar fica escondido; o clique vem do label no hero -->
+                <!-- input de avatar fica escondido; o clique vem do rótulo da foto -->
                 {{ perfil_form.avatar }}
 
-                <div class="perfil-section">
-                    <p class="form-section-title"><i class="fa-solid fa-user-pen"></i> Dados pessoais</p>
-                    <p class="form-section-sub">Como devemos te chamar e te identificar.</p>
-
-                    <div class="perfil-grid-2">
-                        <div class="form-group">
-                            <label for="id_first_name"><i class="fa-solid fa-user"></i> Nome</label>
-                            {{ user_form.first_name }}
-                        </div>
-
-                        <div class="form-group">
-                            <label for="id_last_name"><i class="fa-solid fa-user"></i> Sobrenome</label>
-                            {{ user_form.last_name }}
+                <div class="pf-secao perfil-section">
+                    <div class="ck-card-cabeca">
+                        <span class="ck-card-icone" aria-hidden="true">
+                            <i class="fa-solid fa-user-pen"></i>
+                        </span>
+                        <div>
+                            <h2 class="ck-card-titulo" id="pf-form-titulo">Dados pessoais</h2>
+                            <span class="ck-card-nota">Como devemos te chamar e te identificar.</span>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="id_nome_completo"><i class="fa-solid fa-signature"></i> Nome completo</label>
-                        {{ perfil_form.nome_completo }}
+                    <div class="pf-campos">
+                        <div class="ck-campo pf-campo">
+                            <label class="ck-rotulo" for="id_first_name">Nome</label>
+                            <div class="ck-entrada{% if user_form.first_name.errors %} is-erro{% endif %}">
+                                {{ user_form.first_name }}
+                                <i class="fa-solid fa-user" aria-hidden="true"></i>
+                            </div>
+                            {% for erro in user_form.first_name.errors %}<p class="ck-status is-erro"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}</p>{% endfor %}
+                        </div>
+
+                        <div class="ck-campo pf-campo">
+                            <label class="ck-rotulo" for="id_last_name">Sobrenome</label>
+                            <div class="ck-entrada{% if user_form.last_name.errors %} is-erro{% endif %}">
+                                {{ user_form.last_name }}
+                                <i class="fa-solid fa-user" aria-hidden="true"></i>
+                            </div>
+                            {% for erro in user_form.last_name.errors %}<p class="ck-status is-erro"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}</p>{% endfor %}
+                        </div>
+
+                        <div class="ck-campo pf-campo pf-campo--largo">
+                            <label class="ck-rotulo" for="id_nome_completo">Nome completo</label>
+                            <div class="ck-entrada{% if perfil_form.nome_completo.errors %} is-erro{% endif %}">
+                                {{ perfil_form.nome_completo }}
+                                <i class="fa-solid fa-signature" aria-hidden="true"></i>
+                            </div>
+                            {% for erro in perfil_form.nome_completo.errors %}<p class="ck-status is-erro"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}</p>{% endfor %}
+                        </div>
                     </div>
                 </div>
 
-                <div class="perfil-section">
-                    <p class="form-section-title"><i class="fa-solid fa-address-book"></i> Contato</p>
-                    <p class="form-section-sub">Usado para confirmar pedidos e falar sobre manutenções.</p>
-
-                    <div class="form-group">
-                        <label for="id_telefone"><i class="fa-solid fa-phone"></i> Telefone</label>
-                        {{ perfil_form.telefone }}
-                        <small class="form-help">Ex: (11)91234-5678</small>
+                <div class="pf-secao perfil-section">
+                    <div class="ck-card-cabeca">
+                        <span class="ck-card-icone ck-card-icone--verde" aria-hidden="true">
+                            <i class="fa-solid fa-address-book"></i>
+                        </span>
+                        <div>
+                            <h2 class="ck-card-titulo">Contato</h2>
+                            <span class="ck-card-nota">Usado para confirmar pedidos e falar sobre manutenções.</span>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="id_email"><i class="fa-solid fa-envelope"></i> Email</label>
-                        {{ user_form.email }}
+                    <div class="pf-campos">
+                        <div class="ck-campo pf-campo">
+                            <label class="ck-rotulo" for="id_telefone">Telefone <small>com DDD</small></label>
+                            <div class="ck-entrada{% if perfil_form.telefone.errors %} is-erro{% endif %}">
+                                {{ perfil_form.telefone }}
+                                <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                            </div>
+                            {% for erro in perfil_form.telefone.errors %}<p class="ck-status is-erro"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}</p>{% empty %}<p class="ck-status form-help"><i class="fa-solid fa-circle-info" aria-hidden="true"></i>Ex.: (11)91234-5678</p>{% endfor %}
+                        </div>
+
+                        <div class="ck-campo pf-campo">
+                            <label class="ck-rotulo" for="id_email">E-mail</label>
+                            <div class="ck-entrada{% if user_form.email.errors %} is-erro{% endif %}">
+                                {{ user_form.email }}
+                                <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                            </div>
+                            {% for erro in user_form.email.errors %}<p class="ck-status is-erro"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}</p>{% endfor %}
+                        </div>
                     </div>
                 </div>
 
-                <div class="perfil-actions">
-                    <button type="submit" class="btn-primary">
-                        <i class="fa-solid fa-floppy-disk"></i> Salvar alterações
+                <div class="pf-acoes perfil-actions">
+                    <button type="submit" class="ck-botao ck-botao--primario btn-primary">
+                        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Salvar alterações
                     </button>
                 </div>
             </form>

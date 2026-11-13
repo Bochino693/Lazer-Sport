@@ -1,218 +1,388 @@
 {% extends "base.html" %}
-{% load interno_extras %}
+{% load interno_extras fotos %}
+
+{% block title %}Meus pedidos | Lazer & Sport{% endblock %}
+
 {% block content %}
 
+  {# o casco do checkout (o mesmo do carrinho e do pagamento): esta é a etapa 3 #}
+  <link rel="stylesheet" href="{% estatico 'site/paginas/checkout.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/paginas/meus_pedidos.css' %}">
 
-<!-- 📍 Breadcrumb -->
-<div class="breadcrumb-strong">
-    <a href="{% url 'home' %}">Início</a>
-    <span>›</span>
-    <strong>Meus Pedidos</strong>
-</div>
+<div class="ck ck--pedidos" id="pedidos">
 
-<section class="pedidos-container" id="pedidos">
+    <div class="ck-cabeca">
+        <div class="ck-cabeca-texto">
+            <nav class="ck-trilha" aria-label="Navegação">
+                <a href="{% url 'home' %}">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i>
+                    Início
+                </a>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">Meus pedidos</span>
+            </nav>
 
-    <div class="pedidos-header">
-        <h1>📦 Meus Pedidos</h1>
-        <p>Acompanhe pagamentos, status e itens comprados</p>
+            <h1 class="ck-titulo">
+                Meus pedidos
+                {% if pedidos %}
+                    <span class="ck-contador">{{ pedidos|length }} pedido{{ pedidos|length|pluralize }}</span>
+                {% endif %}
+            </h1>
+            <p class="ck-sub">
+                {% if pedidos %}
+                    Acompanhe o pagamento, a preparação e a entrega de cada compra.
+                {% else %}
+                    As compras que você fizer na loja aparecem aqui, com o andamento de cada uma.
+                {% endif %}
+            </p>
+        </div>
+
+        <ol class="ck-etapas" aria-label="Etapas da compra">
+            <li class="ck-etapa is-feita">
+                <span class="ck-etapa-bola">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                </span>
+                <span class="ck-etapa-nome">Carrinho</span>
+            </li>
+            <li class="ck-etapa is-feita">
+                <span class="ck-etapa-bola">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                </span>
+                <span class="ck-etapa-nome">Pagamento</span>
+            </li>
+            <li class="ck-etapa is-atual" aria-current="step">
+                <span class="ck-etapa-bola">3</span>
+                <span class="ck-etapa-nome">Confirmação</span>
+            </li>
+        </ol>
     </div>
 
-    {% if pedido.carrinho_origem %}
-<div class="info-box">
-    <small>Tipo de envio</small><br>
-    <strong>
-        {% if pedido.carrinho_origem.tipo_envio == "frete" %}
-            🚚 Entrega
-        {% else %}
-            🏪 Retirada no local
-        {% endif %}
-    </strong>
-</div>
-{% endif %}
-
 {% if pedidos %}
+    <div class="pd-pagina">
+    <div class="pd-lista">
     {% for pedido in pedidos %}
-    <div class="pedido-card">
+    {% with itens=pedido.itens.all status=pedido.status %}
+    <article class="ck-card pd-pedido pd-pedido--{{ status }}" aria-labelledby="pd-titulo-{{ pedido.id }}">
 
-        <!-- Cabeçalho do pedido -->
-        <div class="pedido-header">
-            <div class="pedido-id">
-                Pedido #{{ pedido.id }} <br>
-                <small>{{ pedido.criacao|date:"d/m/Y H:i" }}</small>
+        {# CABEÇA: o número, a data e a situação #}
+        <div class="pd-topo">
+            <span class="pd-icone" aria-hidden="true">
+                {% if status == 'aguardando_pagamento' %}<i class="fa-solid fa-clock"></i>
+                {% elif status == 'pago' %}<i class="fa-solid fa-circle-check"></i>
+                {% elif status == 'em_preparacao' %}<i class="fa-solid fa-screwdriver-wrench"></i>
+                {% elif status == 'saiu_entrega' %}<i class="fa-solid fa-truck-fast"></i>
+                {% elif status == 'finalizado' %}<i class="fa-solid fa-box-open"></i>
+                {% else %}<i class="fa-solid fa-ban"></i>{% endif %}
+            </span>
+            <div class="pd-topo-texto">
+                <h2 class="ck-card-titulo" id="pd-titulo-{{ pedido.id }}">Pedido #{{ pedido.id }}</h2>
+                <span class="ck-card-nota">
+                    {{ pedido.criacao|date:"d/m/Y" }} às {{ pedido.criacao|date:"H:i" }}
+                    · {{ itens|length }} ite{{ itens|length|pluralize:"m,ns" }}
+                </span>
             </div>
+            <span class="pd-status pedido-status status-{{ status }}">
+                {{ pedido.get_status_display }}
+            </span>
         </div>
 
-        <!-- Badge de status -->
-        <div class="pedido-status status-{{ pedido.status }}">
-            {{ pedido.get_status_display }}
-        </div>
-
-        {% if pedido.status == 'aguardando_pagamento' %}
+        {% if status == 'aguardando_pagamento' %}
           {% comment %}
               O pedido nasce na hora em que o cliente inicia o pagamento. Se
               ele fechou a aba com o Pix aberto, e daqui que ele volta a
               pagar -- sem isso, a reserva viraria um beco sem saida.
           {% endcomment %}
-          <div class="pedido-pendente">
-              <p class="pedido-pendente-texto">
+          <div class="pd-aviso pd-aviso--pendente pedido-pendente">
+              <p class="pd-aviso-texto">
                   <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                  Este pedido está reservado e aguardando o pagamento.
+                  <span>
+                      <strong>Reservado, esperando o pagamento.</strong>
+                      Os produtos ficam guardados neste pedido até o pagamento ser concluído.
+                  </span>
               </p>
-              <div class="pedido-pendente-acoes">
+              <div class="pd-acoes pedido-pendente-acoes">
                   {% if pedido.carrinho_origem_id %}
-                    <a class="pedido-btn pagar"
+                    <a class="ck-botao ck-botao--primario"
                        href="{% url 'pagamento' pedido.carrinho_origem_id %}#content">
                         <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
                         Retomar pagamento
                     </a>
                   {% endif %}
                   <button type="button"
-                          class="pedido-btn devolver"
+                          class="ck-botao ck-botao--fantasma"
                           data-devolver="{{ pedido.id }}">
                       <i class="fa-solid fa-cart-arrow-down" aria-hidden="true"></i>
                       Cancelar e voltar ao carrinho
                   </button>
               </div>
           </div>
+        {% elif status == 'cancelado' %}
+          <p class="pd-aviso pd-aviso--cancelado">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              <span>Este pedido foi cancelado e não será cobrado.</span>
+          </p>
+        {% else %}
+          {# O ANDAMENTO: as etapas que já passaram ficam verdes #}
+          <ol class="pd-trilha" aria-label="Andamento do pedido">
+              <li class="pd-passo is-feito">
+                  <span class="pd-passo-bola"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+                  <span class="pd-passo-nome">Pago</span>
+              </li>
+              <li class="pd-passo{% if status == 'em_preparacao' %} is-atual{% elif status == 'saiu_entrega' or status == 'finalizado' %} is-feito{% endif %}"
+                  {% if status == 'em_preparacao' %}aria-current="step"{% endif %}>
+                  <span class="pd-passo-bola"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i></span>
+                  <span class="pd-passo-nome">Em preparação</span>
+              </li>
+              {% if pedido.tipo_envio != 'retirada' or status == 'saiu_entrega' %}
+              <li class="pd-passo{% if status == 'saiu_entrega' %} is-atual{% elif status == 'finalizado' %} is-feito{% endif %}"
+                  {% if status == 'saiu_entrega' %}aria-current="step"{% endif %}>
+                  <span class="pd-passo-bola"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i></span>
+                  <span class="pd-passo-nome">Saiu para entrega</span>
+              </li>
+              {% endif %}
+              <li class="pd-passo{% if status == 'finalizado' %} is-feito{% endif %}"
+                  {% if status == 'finalizado' %}aria-current="step"{% endif %}>
+                  <span class="pd-passo-bola"><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i></span>
+                  <span class="pd-passo-nome">Finalizado</span>
+              </li>
+          </ol>
         {% endif %}
 
-        <!-- Informações financeiras -->
-        <div class="pedido-info">
-            <div class="info-box">
-                <small>Total bruto</small><br>
-                <span class="money" data-valor="{{ pedido.total_bruto }}"></span>
-            </div>
-            <div class="info-box">
-                <small>Desconto</small><br>
-                <span class="money desconto" data-valor="{{ pedido.valor_desconto }}"></span>
-            </div>
-            <div class="info-box valor-total">
-                Total<br>
-                <span class="money total" data-valor="{{ pedido.total_liquido }}"></span>
-            </div>
-        </div>
-
-        <div class="pedido-footer">
-
-        <div class="footer-item">
-            <small>Total bruto</small>
-            <strong class="money" data-valor="{{ pedido.total_bruto }}"></strong>
-        </div>
-
-        <div class="footer-item desconto">
-            <small>Desconto</small>
-            <strong class="money desconto" data-valor="{{ pedido.valor_desconto }}"></strong>
-        </div>
-
-        <div class="footer-item">
-            <small>Frete</small>
-            <strong class="money" data-valor="{{ pedido.valor_frete }}"></strong>
-        </div>
-
-        <div class="footer-item total">
-            <small>Total final</small>
-            <strong class="money total" data-valor="{{ pedido.total_final }}"></strong>
-        </div>
-
-        {% if pedido.cupom_codigo %}
-        <div class="footer-item cupom">
-            <small>Cupom</small>
-            <strong>🎟️ {{ pedido.cupom_codigo }}</strong>
-        </div>
-        {% endif %}
-
-    </div>
-
-        {% if pedido.carrinho_origem and pedido.carrinho_origem.tipo_envio == "frete" and pedido.carrinho_origem.frete %}
-<div class="endereco-card modern-card">
-
-    <div class="endereco-header modern-header">
-        📍 Endereço de Entrega
-    </div>
-
-    <div class="endereco-body modern-body">
-
-        <div class="endereco-col modern-col">
-            <h4>Endereço</h4>
-            <p>
-                {{ pedido.carrinho_origem.frete.rua }},
-                {{ pedido.carrinho_origem.frete.numero }} <br>
-                {{ pedido.carrinho_origem.frete.bairro }}
-            </p>
-        </div>
-
-        <div class="endereco-col modern-col">
-            <h4>Cidade</h4>
-            <p>
-                {{ pedido.carrinho_origem.frete.cidade }} -
-                {{ pedido.carrinho_origem.frete.estado }} <br>
-                CEP: {{ pedido.carrinho_origem.frete.cep }}
-            </p>
-        </div>
-
-        <div class="entrega-metricas modern-metrics">
-
-            {% if pedido.carrinho_origem.frete.distancia_km %}
-            <div>
-                📏 Distância
-                <strong>{{ pedido.carrinho_origem.frete.distancia_km }} km</strong>
-            </div>
-            {% endif %}
-
-            {% if pedido.carrinho_origem.frete.tempo_estimado_min %}
-            <div>
-                ⏱ Tempo estimado
-                <strong>{{ pedido.carrinho_origem.frete.tempo_estimado_min }} min</strong>
-            </div>
-            {% endif %}
-
-            <div>
-                🚚 Frete
-                <strong class="money" data-valor="{{ pedido.valor_frete }}"></strong>
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-{% endif %}
-
-        <!-- Itens do pedido -->
-        <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>
-        <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
-            {% for item in pedido.itens.all %}
-            <div class="item-detalhe">
-                <div class="item-img">
-                    {% if item.imagem_brinquedo %}
-                        <img src="{{ item.imagem_brinquedo.url }}">
+        {# O RESUMO: as fotos dos produtos e o total #}
+        <div class="pd-resumo">
+            <ul class="pd-fotos" aria-label="Produtos do pedido">
+                {% for item in itens|slice:":4" %}
+                <li class="pd-foto" title="{{ item.nome_item }}">
+                    {% if item.miniatura %}
+                        <img src="{{ item.miniatura|foto:160 }}" alt="{{ item.nome_item }}" width="56" height="56" loading="lazy" decoding="async">
                     {% else %}
-                        <div class="img-placeholder">📦</div>
+                        <i class="fa-solid fa-image" aria-hidden="true"></i>
+                        <span class="pd-oculto">{{ item.nome_item }}</span>
                     {% endif %}
-                </div>
-                <div class="item-info">
-                    <strong>{{ item.nome_item }}</strong>
-                    <small>Quantidade: {{ item.quantidade }}</small>
-                    <small>Preço unitário: <span class="money" data-valor="{{ item.preco_unitario }}"></span></small>
-                </div>
-                <div class="item-subtotal money" data-valor="{{ item.subtotal|floatformat:2 }}"></div>
+                </li>
+                {% endfor %}
+                {% if itens|length > 4 %}
+                <li class="pd-foto pd-foto--mais">+{{ itens|length|add:"-4" }}</li>
+                {% endif %}
+            </ul>
+            <div class="pd-total">
+                <span>Total</span>
+                <strong class="money total" data-valor="{{ pedido.total_final }}">{{ pedido.total_final|reais }}</strong>
             </div>
-            {% endfor %}
         </div>
 
-    </div>
+        <button type="button"
+                class="pd-alternar toggle-itens"
+                aria-controls="itens-{{ pedido.id }}"
+                aria-expanded="false"
+                onclick="toggleItens({{ pedido.id }})">
+            <span class="pd-alternar-rotulo">Ver detalhes do pedido</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+
+        {# OS DETALHES: cada produto, a entrega e a conta #}
+        <div class="pd-detalhes itens-lista" id="itens-{{ pedido.id }}" hidden>
+
+            <ul class="pd-itens">
+                {% for item in itens %}
+                <li class="pd-item item-detalhe">
+                    {% if item.url_produto %}
+                    <a class="pd-item-foto" href="{{ item.url_produto }}" tabindex="-1" aria-hidden="true">
+                    {% else %}
+                    <span class="pd-item-foto" aria-hidden="true">
+                    {% endif %}
+                        {% if item.miniatura %}
+                            <img src="{{ item.miniatura|foto:200 }}" alt="" width="72" height="72" loading="lazy" decoding="async">
+                        {% else %}
+                            <i class="fa-solid fa-image"></i>
+                        {% endif %}
+                    {% if item.url_produto %}</a>{% else %}</span>{% endif %}
+
+                    <div class="pd-item-info">
+                        <span class="pd-item-tipo">{{ item.tipo_rotulo }}</span>
+                        <strong class="pd-item-nome">
+                            {% if item.url_produto %}
+                                <a href="{{ item.url_produto }}">{{ item.nome_item }}</a>
+                            {% else %}
+                                {{ item.nome_item }}
+                            {% endif %}
+                        </strong>
+                        <small>
+                            {{ item.quantidade }} × <span class="money" data-valor="{{ item.preco_unitario }}">{{ item.preco_unitario|reais }}</span>
+                        </small>
+                    </div>
+
+                    <strong class="pd-item-subtotal money" data-valor="{{ item.subtotal }}">{{ item.subtotal|reais }}</strong>
+                </li>
+                {% empty %}
+                <li class="pd-item pd-item--vazio">Os itens deste pedido não estão mais disponíveis.</li>
+                {% endfor %}
+            </ul>
+
+            <div class="pd-grade">
+                <section class="pd-bloco" aria-label="Entrega">
+                    {% if pedido.tipo_envio == "retirada" %}
+                        <h3 class="pd-bloco-titulo">
+                            <i class="fa-solid fa-store" aria-hidden="true"></i>
+                            Retirada na loja
+                        </h3>
+                        <p class="pd-bloco-texto">
+                            Você retira o pedido na Lazer &amp; Sport. A equipe avisa pelo telefone da sua conta quando estiver pronto.
+                        </p>
+                    {% else %}
+                        <h3 class="pd-bloco-titulo">
+                            <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+                            Entrega
+                        </h3>
+                        {% if pedido.rua or pedido.cep %}
+                            <p class="pd-bloco-texto">
+                                {{ pedido.rua|default:"" }}{% if pedido.numero %}, {{ pedido.numero }}{% endif %}
+                                {% if pedido.bairro %}<br>{{ pedido.bairro }}{% endif %}
+                                {% if pedido.cidade %}<br>{{ pedido.cidade }}{% if pedido.estado %}/{{ pedido.estado }}{% endif %}{% endif %}
+                                {% if pedido.cep %}<br>CEP {{ pedido.cep }}{% endif %}
+                            </p>
+                            {% if pedido.distancia_km or pedido.tempo_estimado_min %}
+                            <ul class="pd-metricas">
+                                {% if pedido.distancia_km %}<li><i class="fa-solid fa-route" aria-hidden="true"></i> {{ pedido.distancia_km }} km</li>{% endif %}
+                                {% if pedido.tempo_estimado_min %}<li><i class="fa-regular fa-clock" aria-hidden="true"></i> {{ pedido.tempo_estimado_min }} min</li>{% endif %}
+                            </ul>
+                            {% endif %}
+                        {% else %}
+                            {# pedido de antes do endereço ficar guardado no próprio pedido #}
+                            {% with frete=pedido.carrinho_origem.frete %}
+                            {% if frete and frete.rua %}
+                            <p class="pd-bloco-texto">
+                                {{ frete.rua }}{% if frete.numero %}, {{ frete.numero }}{% endif %}
+                                {% if frete.bairro %}<br>{{ frete.bairro }}{% endif %}
+                                {% if frete.cidade %}<br>{{ frete.cidade }}{% if frete.estado %}/{{ frete.estado }}{% endif %}{% endif %}
+                                {% if frete.cep %}<br>CEP {{ frete.cep }}{% endif %}
+                            </p>
+                            {% else %}
+                            <p class="pd-bloco-texto">O endereço é confirmado pela equipe antes do envio.</p>
+                            {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                    {% endif %}
+                </section>
+
+                <section class="pd-bloco pd-conta" aria-label="Valores">
+                    <h3 class="pd-bloco-titulo">
+                        <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                        Valores
+                    </h3>
+                    <div class="ck-linha">
+                        <span>Produtos</span>
+                        <span class="money" data-valor="{{ pedido.total_bruto }}">{{ pedido.total_bruto|reais }}</span>
+                    </div>
+                    {% if pedido.valor_desconto %}
+                    <div class="ck-linha ck-linha--desconto">
+                        <span>
+                            Desconto
+                            {% if pedido.cupom_codigo %}
+                            <span class="pd-cupom"><i class="fa-solid fa-ticket" aria-hidden="true"></i> {{ pedido.cupom_codigo }}</span>
+                            {% endif %}
+                        </span>
+                        <span>− <span class="money desconto" data-valor="{{ pedido.valor_desconto }}">{{ pedido.valor_desconto|reais }}</span></span>
+                    </div>
+                    {% endif %}
+                    <div class="ck-linha">
+                        <span>{% if pedido.tipo_envio == "retirada" %}Retirada{% else %}Frete{% endif %}</span>
+                        {% if pedido.valor_frete %}
+                            <span class="money" data-valor="{{ pedido.valor_frete }}">{{ pedido.valor_frete|reais }}</span>
+                        {% else %}
+                            <span>Grátis</span>
+                        {% endif %}
+                    </div>
+                    <div class="ck-linha ck-linha--total">
+                        <span>Total</span>
+                        <span class="money total" data-valor="{{ pedido.total_final }}">{{ pedido.total_final|reais }}</span>
+                    </div>
+                    {% if pedido.forma_pagamento and status != 'aguardando_pagamento' and status != 'cancelado' %}
+                    <p class="pd-pago-com">
+                        {% if pedido.forma_pagamento == 'pix' %}<i class="fa-brands fa-pix" aria-hidden="true"></i>{% else %}<i class="fa-solid fa-credit-card" aria-hidden="true"></i>{% endif %}
+                        Pago com {{ pedido.get_forma_pagamento_display }}
+                    </p>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+
+    </article>
+    {% endwith %}
     {% endfor %}
+    </div>
+
+    {# O QUADRO DO LADO (embaixo, no celular): os números e a ajuda #}
+    <aside class="pd-lateral" aria-label="Resumo dos pedidos">
+        <section class="ck-card pd-placar">
+            <div class="ck-card-cabeca">
+                <span class="ck-card-icone" aria-hidden="true">
+                    <i class="fa-solid fa-chart-simple"></i>
+                </span>
+                <div>
+                    <h2 class="ck-card-titulo">Suas compras</h2>
+                    <span class="ck-card-nota">O momento de cada pedido</span>
+                </div>
+            </div>
+            <ul class="pd-placar-lista">
+                <li class="pd-placar-item pd-placar-item--amarelo">
+                    <strong>{{ resumo_pedidos.aguardando }}</strong>
+                    <span>esperando pagamento</span>
+                </li>
+                <li class="pd-placar-item pd-placar-item--ciano">
+                    <strong>{{ resumo_pedidos.andamento }}</strong>
+                    <span>em andamento</span>
+                </li>
+                <li class="pd-placar-item pd-placar-item--verde">
+                    <strong>{{ resumo_pedidos.finalizados }}</strong>
+                    <span>finalizado{{ resumo_pedidos.finalizados|pluralize }}</span>
+                </li>
+            </ul>
+            <a href="{% url 'loja' %}#catalogo" class="ck-botao ck-botao--secundario pd-continuar">
+                <i class="fa-solid fa-store" aria-hidden="true"></i>
+                Continuar comprando
+            </a>
+        </section>
+
+        <a class="pd-ajuda"
+           href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Tenho%20uma%20d%C3%BAvida%20sobre%20o%20meu%20pedido."
+           target="_blank" rel="noopener">
+            <span class="pd-ajuda-icone" aria-hidden="true">
+                <i class="fa-brands fa-whatsapp"></i>
+            </span>
+            <span>
+                <strong>Dúvida sobre um pedido?</strong>
+                Fale com a gente no WhatsApp com o número do pedido em mãos.
+            </span>
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        </a>
+    </aside>
+    </div><!-- pd-pagina -->
 {% else %}
-    <p style="margin-top:40px; color:#777">
-        Você ainda não realizou nenhum pedido.
-    </p>
+    <section class="ck-card pd-vazio" aria-labelledby="pd-vazio-titulo">
+        <span class="pd-vazio-icone" aria-hidden="true">
+            <i class="fa-solid fa-bag-shopping"></i>
+        </span>
+        <h2 id="pd-vazio-titulo">Você ainda não fez nenhum pedido</h2>
+        <p>Escolha seus brinquedos na loja: o pedido aparece aqui assim que você for para o pagamento.</p>
+        <div class="pd-acoes pd-acoes--centro">
+            <a href="{% url 'loja' %}#catalogo" class="ck-botao ck-botao--primario">
+                <i class="fa-solid fa-store" aria-hidden="true"></i>
+                Ver a loja online
+            </a>
+            <a href="{% url 'carrinho' %}" class="ck-botao ck-botao--fantasma">
+                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                Abrir o carrinho
+            </a>
+        </div>
+    </section>
 {% endif %}
 
-</section>
+</div><!-- ck -->
 
 
 <script>
+/* Abre e fecha os detalhes de um pedido (o botão de cada cartão). */
 function toggleItens(id) {
     const el = document.getElementById(`itens-${id}`);
     if (!el) return;
@@ -220,15 +390,16 @@ function toggleItens(id) {
     const button = document.querySelector(
         `.toggle-itens[onclick="toggleItens(${id})"]`
     );
-    const opening = el.style.display === 'none';
+    const opening = el.hidden;
 
-    el.style.display = opening ? 'block' : 'none';
+    el.hidden = !opening;
     el.classList.toggle('is-open', opening);
 
     if (button) {
         button.classList.toggle('is-open', opening);
         button.setAttribute('aria-expanded', String(opening));
-        button.textContent = opening
+        const rotulo = button.querySelector('.pd-alternar-rotulo') || button;
+        rotulo.textContent = opening
             ? 'Ocultar detalhes do pedido'
             : 'Ver detalhes do pedido';
     }
@@ -252,22 +423,20 @@ function formatarBRL(valor) {
     }).format(num);
 }
 
-// Executa a formatação em todos os elementos com a classe .money
+// Os valores já vêm escritos do servidor; o script só confirma o formato.
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.money').forEach(el => {
         const valorOriginal = el.getAttribute('data-valor');
         el.textContent = formatarBRL(valorOriginal);
-    });
-
-    document.querySelectorAll('.toggle-itens').forEach(button => {
-        button.setAttribute('aria-expanded', 'false');
     });
 });
 
 /* Devolver um pedido reservado ao carrinho.
    O pedido nasce quando o cliente inicia o pagamento; se ele desistir, é
    por aqui que os itens voltam — sem isso os produtos ficariam presos num
-   pedido que nunca vai ser pago. */
+   pedido que nunca vai ser pago. A pergunta "tem certeza?" é a folha de
+   aplicativo do site (LSAviso, a mesma do carrinho); sem o script dela, a
+   ação segue como antes -- a caixa do navegador não volta. */
 (function () {
     const url = "{% url 'devolver_pedido_carrinho' %}";
 
@@ -282,6 +451,13 @@ document.addEventListener("DOMContentLoaded", function() {
         return achado;
     }
 
+    function confirmarNoApp(opcoes) {
+        if (window.LSAviso && typeof window.LSAviso.confirmar === "function") {
+            return window.LSAviso.confirmar(opcoes);
+        }
+        return Promise.resolve(true);
+    }
+
     /* O erro vai pelo toast do site (ls-aviso.js), e não pela caixa do navegador. */
     function avisarErro(texto) {
         if (window.LSAviso) window.LSAviso.toast({ nivel: "erro", titulo: "Não deu para devolver", texto: texto });
@@ -289,6 +465,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     document.querySelectorAll("[data-devolver]").forEach((botao) => {
         botao.addEventListener("click", async () => {
+            const pedidoId = botao.dataset.devolver;
+            const seguir = await confirmarNoApp({
+                titulo: "Cancelar este pedido?",
+                texto: `O pedido #${pedidoId} é cancelado e os produtos voltam para o seu carrinho. Um Pix já gerado para ele deixa de valer.`,
+                confirmar: "Cancelar pedido",
+                cancelar: "Voltar",
+                icone: "carrinho",
+                perigo: true
+            });
+            if (!seguir) return;
+
             const rotulo = botao.innerHTML;
             botao.disabled = true;
             botao.textContent = "Devolvendo…";
@@ -302,7 +489,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         "X-CSRFToken": cookie("csrftoken"),
                         "X-Requested-With": "XMLHttpRequest"
                     },
-                    body: JSON.stringify({ pedido_id: botao.dataset.devolver })
+                    body: JSON.stringify({ pedido_id: pedidoId })
                 });
 
                 const dados = await resposta.json().catch(() => ({}));

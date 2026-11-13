@@ -590,14 +590,14 @@
                                             data-status-code="{{ manutencao.status }}"
                                             data-descricao="{{ manutencao.descricao }}"
                                             data-data="{{ manutencao.criado_em|date:'d/m/Y H:i' }}"
-                                            data-telefone="{{ manutencao.telefone_contato }}"
-                                            data-cep="{{ manutencao.cep }}"
-                                            data-endereco="{{ manutencao.endereco }}"
-                                            data-numero="{{ manutencao.numero }}"
-                                            data-complemento="{{ manutencao.complemento }}"
-                                            data-bairro="{{ manutencao.bairro }}"
-                                            data-cidade="{{ manutencao.cidade }}"
-                                            data-estado="{{ manutencao.estado }}"
+                                            data-telefone="{{ manutencao.telefone_contato|default_if_none:'' }}"
+                                            data-cep="{{ manutencao.cep|default_if_none:'' }}"
+                                            data-endereco="{{ manutencao.endereco|default_if_none:'' }}"
+                                            data-numero="{{ manutencao.numero|default_if_none:'' }}"
+                                            data-complemento="{{ manutencao.complemento|default_if_none:'' }}"
+                                            data-bairro="{{ manutencao.bairro|default_if_none:'' }}"
+                                            data-cidade="{{ manutencao.cidade|default_if_none:'' }}"
+                                            data-estado="{{ manutencao.estado|default_if_none:'' }}"
                                             data-imagens='[
                                                 {% for img in manutencao.imagens.all %}
                                                     "{{ img.imagem.url }}"{% if not forloop.last %},{% endif %}

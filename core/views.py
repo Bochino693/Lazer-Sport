@@ -5971,38 +5971,80 @@ def _itens_do_carrinho_com_foto(carrinho):
         queryset=(
             ItemCarrinho.objects
             .select_related('content_type')
-            .prefetch_related(GenericPrefetch('item', [
-                Brinquedos._base_manager.all(),
-                Combos._base_manager.all(),
-                Promocoes._base_manager.select_related('brinquedos'),
-                PecasReposicao._base_manager.prefetch_related('imagem_peca_reposicao'),
-            ]))
+            .prefetch_related(GenericPrefetch('item', _produtos_com_foto()))
         ),
     ))
     itens = list(carrinho.itens.all())
 
     for linha in itens:
-        produto = linha.item
-        rotulo, rota = TIPOS_NO_CARRINHO.get(linha.content_type.model, ("Produto", None))
-        linha.tipo_rotulo = rotulo
-        linha.url_produto = reverse(rota, args=[linha.object_id]) if (rota and produto) else ""
-
-        miniatura = None
-        if isinstance(produto, Brinquedos):
-            miniatura = produto.imagem_brinquedo
-        elif isinstance(produto, Combos):
-            miniatura = produto.imagem_combo
-        elif isinstance(produto, Promocoes):
-            miniatura = produto.imagem_promocao or (
-                produto.brinquedos.imagem_brinquedo if produto.brinquedos_id else None
-            )
-        elif isinstance(produto, PecasReposicao):
-            foto_principal = produto.imagem_principal
-            miniatura = foto_principal.imagem if foto_principal else None
-        # o campo vai para o template, que o reduz com `|foto` (Cloudinary)
-        linha.miniatura = miniatura or ""
+        _anotar_foto_e_pagina(linha, linha.item)
 
     return itens
+
+
+def _produtos_com_foto():
+    """Os tipos que entram no carrinho, cada um com o que a foto precisa."""
+    return [
+        Brinquedos._base_manager.all(),
+        Combos._base_manager.all(),
+        Promocoes._base_manager.select_related('brinquedos'),
+        PecasReposicao._base_manager.prefetch_related('imagem_peca_reposicao'),
+    ]
+
+
+def _anotar_foto_e_pagina(linha, produto):
+    """Põe na linha (do carrinho ou do pedido) a miniatura, o tipo e a página.
+
+    A foto sai do mesmo lugar do cartão da loja: a imagem do brinquedo, a
+    do combo, a da promoção (ou a do brinquedo dela) e a primeira foto da
+    peça. Produto que saiu do catálogo fica sem foto e sem link.
+    """
+    modelo = linha.content_type.model if linha.content_type_id else ""
+    rotulo, rota = TIPOS_NO_CARRINHO.get(modelo, ("Produto", None))
+    linha.tipo_rotulo = rotulo
+    linha.url_produto = reverse(rota, args=[linha.object_id]) if (rota and produto) else ""
+
+    miniatura = None
+    if isinstance(produto, Brinquedos):
+        miniatura = produto.imagem_brinquedo
+    elif isinstance(produto, Combos):
+        miniatura = produto.imagem_combo
+    elif isinstance(produto, Promocoes):
+        miniatura = produto.imagem_promocao or (
+            produto.brinquedos.imagem_brinquedo if produto.brinquedos_id else None
+        )
+    elif isinstance(produto, PecasReposicao):
+        foto_principal = produto.imagem_principal
+        miniatura = foto_principal.imagem if foto_principal else None
+    # o campo vai para o template, que o reduz com `|foto` (Cloudinary)
+    linha.miniatura = miniatura or ""
+
+
+def _pedidos_com_foto(pedidos):
+    """Os pedidos do cliente com a foto de cada item (Meus pedidos).
+
+    É a terceira etapa da compra e mostra os mesmos produtos do carrinho,
+    então mostra a mesma foto. O item do pedido guarda só a referência
+    histórica do produto (`item_original`); abrir um por um custaria uma
+    consulta por linha. Aqui são as mesmas consultas do carrinho: uma por
+    tipo de produto, com 1 pedido ou com 50.
+    """
+    from django.contrib.contenttypes.prefetch import GenericPrefetch
+    from django.db.models import Prefetch
+
+    pedidos = list(pedidos.prefetch_related(Prefetch(
+        'itens',
+        queryset=(
+            ItemPedido.objects
+            .select_related('content_type')
+            .prefetch_related(GenericPrefetch('item_original', _produtos_com_foto()))
+            .order_by('id')
+        ),
+    )))
+    for pedido in pedidos:
+        for linha in pedido.itens.all():
+            _anotar_foto_e_pagina(linha, linha.item_original)
+    return pedidos
 
 
 @method_decorator(_sem_cache, name="dispatch")
@@ -7805,15 +7847,27 @@ class MeusPedidosView(LoginRequiredMixin, View):
             messages.success(request, f"Pagamento do pedido #{pago.id} confirmado!")
         conferencia_pagamento.marcar_pedidos_vistos(request)
 
-        pedidos = (
+        # com a foto de cada item, como no carrinho (sem consulta por linha)
+        pedidos = _pedidos_com_foto(
             Pedido.objects
             .filter(cliente=perfil)
-            .prefetch_related('itens')
+            .select_related('carrinho_origem__frete')
             .order_by('-criacao')
         )
 
+        # o quadro do lado: quantos pedidos em cada momento da compra
+        resumo = {'aguardando': 0, 'andamento': 0, 'finalizados': 0}
+        for pedido in pedidos:
+            if pedido.status == 'aguardando_pagamento':
+                resumo['aguardando'] += 1
+            elif pedido.status in ('pago', 'em_preparacao', 'saiu_entrega'):
+                resumo['andamento'] += 1
+            elif pedido.status == 'finalizado':
+                resumo['finalizados'] += 1
+
         return render(request, 'meus_pedidos.html', {
             'pedidos': pedidos,
+            'resumo_pedidos': resumo,
         })
 
 

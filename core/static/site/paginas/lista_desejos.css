@@ -59,3 +59,68 @@
 .desejos-vazio a{display:inline-block;padding:12px 20px;border-radius:999px;background:#004AAD;color:#fff;font-weight:700;font-size:.8rem;text-decoration:none}
 .desejos-aviso{margin-top:20px;padding:14px 16px;border:1px solid rgba(37,99,235,.2);border-radius:14px;background:rgba(37,99,235,.07);color:#1e3a8a;font-size:.78rem;line-height:1.6}
 .desejos-aviso a{color:#1d4ed8;font-weight:800}
+
+/* =========================================================
+   NO TEMA ESCURO, COM CORES VIVAS (as cores dos cartões estão no
+   ls-tema.css, "lista de desejos")
+========================================================= */
+
+/* O <header> de cada meta herdava o cabeçalho do site (ls-base.css pinta
+   todo `header` de azul, preso no alto, com 64 px no celular): cada meta
+   virava um bloco azul-chapado. Aqui ele volta a ser só a linha do título. */
+.desejos-meta header {
+    position: static;
+    z-index: auto;
+    min-height: 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+}
+
+.desejos-meta header span { color: #ffd23f; }
+.desejos-meta.concluida header span { color: #2ee59d; }
+
+.desejos-pontos-kicker { color: #ffb84d; }
+
+.desejos-pontos-app {
+    min-height: 48px;
+    border: 1px solid rgba(63, 164, 255, .45);
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 10px 24px rgba(20, 96, 214, .35);
+}
+
+.desejos-pontos-app small { color: #d4e9ff; }
+
+.desejos-barra { background: rgba(127, 200, 255, .14); }
+
+.desejos-barra span { background: linear-gradient(90deg, #ffd23f, #ff4757); }
+
+.desejos-kpi {
+    border-color: rgba(127, 200, 255, .25);
+    background: rgba(47, 139, 255, .16);
+}
+
+.desejo-links a,
+.desejos-vazio a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 8px 20px rgba(20, 96, 214, .32);
+}
+
+.desejo-links a.secundario {
+    border: 1px solid rgba(63, 164, 255, .38);
+    background: rgba(47, 139, 255, .14);
+    color: #d4e9ff;
+    box-shadow: none;
+}
+
+/* "Na lista" no botão compacto: com o texto, ele cresce (no catálogo o
+   compacto é só a estrela, e cabia em 40 px; aqui o texto vazava). */
+.desejo-corpo .ls-fav-acoes.compacto .ls-fav-botao {
+    width: auto !important;
+    padding: 0 14px !important;
+}

@@ -41,6 +41,7 @@ fa-cart-arrow-down
 fa-cart-plus
 fa-cart-shopping
 fa-champagne-glasses
+fa-chart-simple
 fa-check
 fa-check-circle
 fa-chevron-down
@@ -78,12 +79,12 @@ fa-envelope-circle-check
 fa-expand
 fa-eye
 fa-eye-slash
-fa-facebook
 fa-file-lines
 fa-filter
 fa-fingerprint
 fa-fire
 fa-flag
+fa-flag-checkered
 fa-floppy-disk
 fa-futbol
 fa-gamepad
@@ -111,7 +112,6 @@ fa-instagram
 fa-keyboard
 fa-layer-group
 fa-lightbulb
-fa-linkedin
 fa-list
 fa-list-check
 fa-list-ul
@@ -140,6 +140,7 @@ fa-plug-circle-check
 fa-plus
 fa-puzzle-piece
 fa-qrcode
+fa-receipt
 fa-right-to-bracket
 fa-rotate
 fa-rotate-left
@@ -161,7 +162,6 @@ fa-store-slash
 fa-table-cells-large
 fa-tag
 fa-tags
-fa-threads
 fa-ticket
 fa-timeline
 fa-tools

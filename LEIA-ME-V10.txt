@@ -5115,3 +5115,74 @@ Dependência nova: rjsmin (requirements.txt).
    valendo core/tests.py (as strings do Brick e do 3DS), core/
    tests_variantes_produto.py (o adesivo no carrinho) e core/
    tests_ls_aviso.py (nenhum alert()/confirm() do navegador).
+
+88) TUDO NO MESMO DESENHO: MEUS PEDIDOS, O AVISO DE PAGAMENTO E O QUE SOBROU CLARO
+   O PEDIDO: "atualize os modais de confirmação e tudo para ficar uniforme
+   ao site, depois que eu mudei muito eles não acompanharam" e "nada de
+   modais e cards brancos, cores vivas e chamativas, evite o cinza também".
+   A VARREDURA (Chromium, 390, 820 e 1366 px, cada janela aberta de
+   verdade): o que ainda destoava era Meus pedidos inteiro, o aviso de
+   "Pagamento aprovado", o formulário e a lista de Manutenções de quem
+   entrou, a tela Meu perfil (que ainda passava da largura no celular), o
+   cartão do "Falta só o telefone", as metas da Lista de desejos (blocos
+   azul-chapados), a tela de entrada/saída da conta, as páginas de erro
+   404/500 (na paleta marrom do /adm antigo) e o "Detalhes" azul-bebê das
+   ofertas da home. As janelas de Manutenções, a do "sob medida" do
+   brinquedo e as folhas de confirmação (LSAviso) já estavam no escuro.
+   MEUS PEDIDOS É A ETAPA 3 DA COMPRA: usa o casco do checkout
+   (checkout.css), com a trilha, "Meus pedidos" sem emoji e as etapas
+   Carrinho -> Pagamento -> Confirmação. Cada pedido é um cartão escuro com
+   a cor da situação no fio de cima, no ícone e no selo: aguardando
+   pagamento amarelo, pago verde, em preparação ciano, saiu para entrega
+   roxo (--ls-roxo-neon, novo no ls-tema.css), finalizado verde e cancelado
+   vermelho. O andamento aparece em bolinhas (Pago -> Em preparação -> Saiu
+   para entrega -> Finalizado; a retirada pula a entrega). Embaixo, as
+   FOTOS dos produtos e o total; "Ver detalhes do pedido" abre cada item
+   com foto, tipo e link, a entrega (o endereço guardado no próprio pedido,
+   e não o do carrinho, que muda a cada compra) e os valores com o cupom e
+   a forma de pagamento. No computador, um quadro ao lado com quantos
+   pedidos estão esperando pagamento, em andamento e finalizados, o
+   "Continuar comprando" e o WhatsApp. O pedido reservado tem "Retomar
+   pagamento" e "Cancelar e voltar ao carrinho" -- que agora pergunta pela
+   folha do site (LSAviso.confirmar), como o "Desistir" do carrinho.
+   A FOTO SEM CONSULTA POR LINHA: _pedidos_com_foto (core/views.py) faz com
+   os itens dos pedidos o mesmo que o carrinho faz (GenericPrefetch, uma
+   consulta por tipo de produto); a regra da foto virou uma função só,
+   _anotar_foto_e_pagina, usada pelos dois.
+   O AVISO "PAGAMENTO APROVADO" (ls-confirmacao.css): era um cartão de
+   gradiente verde escrito à mão. Agora é o vidro escuro dos toasts, com o
+   selo e o fio verdes, o botão azul cheio das folhas e, no checkout, a
+   linha do tempo que encolhe nos 4 s até ir para Meus pedidos; no celular
+   sobe de baixo como as folhas (com a alça), e não fica mais por cima da
+   barra de atalhos pela metade. Cores só do tema.
+   MANUTENÇÕES, MEU PERFIL E O RESTO:
+     * Manutenções: o formulário e "Minhas solicitações" no vidro escuro,
+       campos escuros de texto claro (16 px, sem zoom no iPhone), as abas
+       com o nome também no celular e as situações em cor forte (pendente
+       amarelo, em andamento ciano, concluída verde, cancelada vermelho).
+       Os rótulos ganharam acento ("Descrição do problema", "CEP", "Telefone
+       para contato") e os detalhes não mostram mais "None" no complemento.
+     * Meu perfil: refeito no casco do checkout -- o cartão da conta com a
+       foto, o resumo e atalhos coloridos (Meus pedidos, Lista de desejos,
+       Manutenções), e os campos com o erro de cada um embaixo (antes a
+       tela dizia "corrija os erros abaixo" e não mostrava erro nenhum). O
+       botão da câmera só aparece se o formulário tiver o campo da foto.
+     * Lista de desejos: o <header> de cada meta herdava o cabeçalho do site
+       (ls-base.css pinta todo `header`); voltou a ser só a linha do título.
+       O "Na lista" compacto não vaza mais do botão.
+     * Falta só o telefone, a tela de entrada/saída da conta e as páginas
+       404/500 no azul do site, com destaques vivos.
+   SEM CINZA NO CHECKOUT: checkout.css, carrinho.css, payment.css e a folha
+   do "Adicionar" (ls-carrinho-rapido.css) trocaram o branco translúcido
+   (que no marinho vira cinza) por tons de azul: bordas, campos, contador,
+   segmentos, linhas do resumo, o "Continuar" desligado e o esqueleto de
+   carregamento. A folha e os toasts (ls-aviso.css) usam os tokens novos
+   --ls-superficie-azul e --ls-borda-azul. O único branco que ficou é o
+   ladrilho do QR do Pix (a câmera do banco precisa) -- e o quadro da
+   assinatura e a folha do documento assinado, que são papel.
+   Emojis trocados por ícone: Meus pedidos inteiro e o ⏳ da proposta
+   vencida (orcamento_publico.html). O recorte do Font Awesome do site foi
+   gerado de novo (vendor/fontawesome-site/gerar.py).
+   Testes: core/tests_telas_do_site.py (MeusPedidosNoCheckoutTests: o
+   casco do checkout na etapa 3, a foto de cada item com as mesmas
+   consultas para 1 e para 6 itens, e a folha antes de cancelar).
