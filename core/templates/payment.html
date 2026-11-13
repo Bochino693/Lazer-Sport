@@ -124,6 +124,13 @@
                     <i class="fa-solid fa-layer-group"></i>
                     Crédito em até {{ max_parcelas }}x para este pedido. Débito à vista.
                 </div>
+                {% if not cartao_liberado %}
+                <div class="card-limit" id="cartao-minimo">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Pagamento com cartão a partir de R$ {{ cartao_minimo|moeda }}.
+                    Para este valor, use o Pix.
+                </div>
+                {% endif %}
                 <div id="paymentBrick_container"></div>
                 <div id="statusScreenBrick_container" class="status-brick" hidden></div>
             </section>
@@ -472,9 +479,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function motivoDoErro(error) {
+        if (!error) return "";
+        const causa = Array.isArray(error.cause)
+            ? error.cause.map(c => c.description || c.code || c).join(" · ")
+            : (error.cause || "");
+        return [error.message, causa].filter(Boolean).join(" — ");
+    }
+
     async function createCardBrick() {
         if (brickController) return;
         clearError();
+
+        if ({{ cartao_liberado|yesno:"false,true" }}) {
+            return;  // abaixo do mínimo do cartão: o aviso já está na tela
+        }
+        if (typeof MercadoPago === "undefined") {
+            showError("Não foi possível carregar o formulário do cartão. Verifique a conexão e recarregue a página.");
+            return;
+        }
 
         if (!publicKey) {
             showError("MP_PUBLIC_KEY não está configurada no ambiente.");
@@ -484,6 +507,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const mp = new MercadoPago(publicKey, {locale: "pt-BR"});
         bricksBuilder = mp.bricks();
 
+        try {
         brickController = await bricksBuilder.create(
             "payment",
             "paymentBrick_container",
@@ -507,7 +531,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             theme: "dark",
                             customVariables: {
                                 baseColor: "#007BFF",
-                                formBackgroundColor: "transparent",
                                 borderRadiusMedium: "12px",
                                 borderRadiusLarge: "16px"
                             }
@@ -517,8 +540,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 callbacks: {
                     onReady: () => clearError(),
                     onError: error => {
-                        console.error(error);
-                        showError("Não foi possível carregar o formulário de cartão.");
+                        console.error("Brick de cartão:", error);
+                        const motivo = motivoDoErro(error);
+                        showError(
+                            "Não foi possível carregar o formulário de cartão." +
+                            (motivo ? ` (${motivo})` : "")
+                        );
                     },
                     // O Payment Brick entrega { selectedPaymentMethod, formData }.
                     // Antes o objeto inteiro ia para o servidor e o token do
@@ -567,6 +594,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         );
+        } catch (error) {
+            console.error("Brick de cartão:", error);
+            brickController = null;
+            const motivo = motivoDoErro(error);
+            showError(
+                "Não foi possível abrir o formulário de cartão." +
+                (motivo ? ` (${motivo})` : "")
+            );
+        }
     }
 
     async function showBankChallenge(data) {
@@ -646,6 +682,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.addEventListener("focus", () => {
         checkPaymentStatus({silent: true});
+    });
+
+    // Voltar pelo botão do navegador (página restaurada da memória):
+    // confere na hora e volta a acompanhar o pagamento.
+    window.addEventListener("pageshow", event => {
+        if (!event.persisted || leavingCheckout) return;
+        pollingActive = false;
+        checkPaymentStatus({silent: true});
+        startPolling();
     });
 
     window.addEventListener("pagehide", () => {

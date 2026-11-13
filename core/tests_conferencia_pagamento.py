@@ -1,0 +1,154 @@
+"""Compra normal: pagar fora da tela e voltar depois.
+
+O cliente gera o Pix, sai, paga no app do banco e volta pelo carrinho, pela
+tela de pagamento ou por Meus pedidos. O sistema reconhece que aquela compra
+foi paga e leva para os pedidos, sem depender de a pessoa ter ficado na tela.
+"""
+
+from datetime import timedelta
+from decimal import Decimal
+from unittest.mock import patch
+
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.utils import timezone
+
+from . import conferencia_pagamento as conf
+from .models import Carrinho, Pedido
+
+
+def pagar(pedido, payment):
+    Pedido.objects.filter(pk=pedido.pk).update(status="pago")
+    pedido.refresh_from_db()
+    return pedido, True
+
+
+@override_settings(MP_ACCESS_TOKEN="APP_USR-teste", ALLOWED_HOSTS=["testserver"])
+class VoltarDepoisDePagarTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user("bia", "bia@exemplo.com", "Senha#12345")
+        self.perfil = self.user.perfil
+        self.perfil.telefone = "(11)91234-5678"
+        self.perfil.save(update_fields=["telefone"])
+        self.carrinho = Carrinho.objects.create(cliente=self.perfil)
+        self.client.force_login(self.user)
+
+    def reserva(self, status="aguardando_pagamento", mp="123"):
+        return Pedido.objects.create(
+            cliente=self.perfil,
+            carrinho_origem=self.carrinho,
+            status=status,
+            mp_payment_id=mp,
+            total_final=Decimal("10.00"),
+        )
+
+    def mp_responde(self, sdk, status):
+        sdk.return_value.payment.return_value.get.return_value = {
+            "status": 200,
+            "response": {"id": 123, "status": status},
+        }
+
+    @patch("core.conferencia_pagamento.checkout.confirmar_pagamento", side_effect=pagar)
+    @patch("core.conferencia_pagamento.mercadopago.SDK")
+    def test_carrinho_vazio_com_pix_pago_leva_para_os_pedidos(self, sdk, _confirmar):
+        pedido = self.reserva()
+        self.mp_responde(sdk, "approved")
+
+        resposta = self.client.get(reverse("carrinho"))
+
+        self.assertRedirects(resposta, reverse("meus_pedidos") + "#pedidos", fetch_redirect_response=False)
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, "pago")
+
+    @patch("core.conferencia_pagamento.mercadopago.SDK")
+    def test_pix_ainda_pendente_mostra_o_pagamento_em_andamento(self, sdk):
+        pedido = self.reserva()
+        self.mp_responde(sdk, "pending")
+
+        resposta = self.client.get(reverse("carrinho"))
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.context["pagamento_em_andamento"], pedido)
+        self.assertIn("no-store", resposta.headers.get("Cache-Control", ""))
+
+    def test_pago_pelo_webhook_com_a_pessoa_fora_leva_para_os_pedidos_uma_vez(self):
+        self.reserva(status="pago")
+
+        primeira = self.client.get(reverse("carrinho"))
+        self.assertRedirects(primeira, reverse("meus_pedidos") + "#pedidos", fetch_redirect_response=False)
+
+        # depois de ver os pedidos, o carrinho vazio volta a ser só carrinho
+        self.client.get(reverse("meus_pedidos"))
+        segunda = self.client.get(reverse("carrinho"))
+        self.assertEqual(segunda.status_code, 200)
+
+    def test_compra_antiga_nao_prende_o_carrinho(self):
+        pedido = self.reserva(status="pago")
+        Pedido.objects.filter(pk=pedido.pk).update(atualizado=timezone.now() - timedelta(hours=5))
+
+        resposta = self.client.get(reverse("carrinho"))
+
+        self.assertEqual(resposta.status_code, 200)
+
+    def test_voltar_para_a_tela_de_pagamento_ja_paga_vai_para_os_pedidos(self):
+        self.reserva(status="pago")
+
+        resposta = self.client.get(reverse("pagamento", args=[self.carrinho.id]))
+
+        self.assertRedirects(resposta, reverse("meus_pedidos") + "#pedidos", fetch_redirect_response=False)
+
+    @patch("core.conferencia_pagamento.checkout.confirmar_pagamento", side_effect=pagar)
+    @patch("core.conferencia_pagamento.mercadopago.SDK")
+    def test_meus_pedidos_acerta_o_pix_pago_fora_da_tela(self, sdk, _confirmar):
+        pedido = self.reserva()
+        self.mp_responde(sdk, "approved")
+
+        resposta = self.client.get(reverse("meus_pedidos"))
+
+        self.assertEqual(resposta.status_code, 200)
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, "pago")
+
+    @patch("core.conferencia_pagamento.checkout.expirar_reserva")
+    @patch("core.conferencia_pagamento.mercadopago.SDK")
+    def test_pix_vencido_devolve_os_itens(self, sdk, expirar):
+        self.reserva()
+        self.mp_responde(sdk, "cancelled")
+
+        self.client.get(reverse("carrinho"))
+
+        expirar.assert_called_once()
+
+
+class RespostaFalsa:
+    def __init__(self, status, dados):
+        self.status_code = status
+        self._dados = dados
+
+    def json(self):
+        return self._dados
+
+
+@override_settings(MP_ACCESS_TOKEN="APP_USR-teste")
+class MinimoDoCartaoTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_menor_valor_entre_credito_e_debito_ativos(self):
+        formas = [
+            {"id": "visa", "payment_type_id": "credit_card", "status": "active", "min_allowed_amount": 0.5},
+            {"id": "debvisa", "payment_type_id": "debit_card", "status": "active", "min_allowed_amount": 1},
+            {"id": "pix", "payment_type_id": "bank_transfer", "status": "active", "min_allowed_amount": 0.01},
+            {"id": "velho", "payment_type_id": "credit_card", "status": "deactive", "min_allowed_amount": 0.1},
+        ]
+        with patch.object(conf.requests, "get", return_value=RespostaFalsa(200, formas)) as get:
+            self.assertEqual(conf.minimo_do_cartao(), Decimal("0.5"))
+            self.assertEqual(conf.minimo_do_cartao(), Decimal("0.5"))
+        self.assertEqual(get.call_count, 1)
+
+    def test_sem_resposta_nao_bloqueia_o_cartao(self):
+        with patch.object(conf.requests, "get", side_effect=conf.requests.Timeout):
+            self.assertIsNone(conf.minimo_do_cartao())

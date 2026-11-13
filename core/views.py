@@ -1,5 +1,6 @@
 from django.db.models import Subquery, OuterRef
 from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache as _sem_cache
 from django.views.generic import View
 from django.contrib.auth.models import User
 
@@ -33,6 +34,7 @@ from django.templatetags.static import static
 
 # Ciclo carrinho -> pedido reservado -> pedido pago.
 from . import checkout
+from . import conferencia_pagamento
 from . import arena, mapa_estados, painel_publico
 from . import objetos_3d
 from .objetos_3d import objeto_do_brinquedo, prefetch_do_3d_dos_projetos, prefetch_do_objeto
@@ -5803,6 +5805,7 @@ def limpar_carrinho(request):
     return JsonResponse({'status': 'success'})
 
 
+@method_decorator(_sem_cache, name="dispatch")
 class CarrinhoView(LoginRequiredMixin, View):
     # A tela de entrar do site, e não a do allauth sem estilo.
     login_url = "login"
@@ -5824,6 +5827,27 @@ class CarrinhoView(LoginRequiredMixin, View):
             .select_related('content_type')
         )
 
+        # Voltou depois de pagar? Confere as reservas deste carrinho no
+        # Mercado Pago (rede de segurança do webhook). Carrinho vazio porque
+        # a compra foi paga leva direto para Meus pedidos, como em qualquer
+        # loja; com itens novos no carrinho, só avisa.
+        pagos_agora = conferencia_pagamento.conferir_reservas_do_cliente(
+            cliente, carrinho=carrinho,
+        )
+        carrinho_vazio = not itens.exists()
+        pago = pagos_agora[0] if pagos_agora else (
+            conferencia_pagamento.pago_recente_do_carrinho(carrinho, request)
+            if carrinho_vazio else None
+        )
+        if pago:
+            messages.success(
+                request,
+                f"Pagamento confirmado! O pedido #{pago.id} já está em Meus pedidos.",
+            )
+            if carrinho_vazio:
+                return redirect(reverse("meus_pedidos") + "#pedidos")
+        pagamento_em_andamento = conferencia_pagamento.reserva_em_andamento(carrinho)
+
         # garante objeto frete
         Frete.objects.get_or_create(carrinho=carrinho)
 
@@ -5841,7 +5865,8 @@ class CarrinhoView(LoginRequiredMixin, View):
             'itens': itens,
             'cupom_permitido': cupom_permitido,
             'valor_frete': carrinho.valor_frete,
-            'total_final': carrinho.total_final
+            'total_final': carrinho.total_final,
+            'pagamento_em_andamento': pagamento_em_andamento,
         }
 
         return render(request, 'carrinho.html', context)
@@ -6105,6 +6130,7 @@ def salvar_cpf_carrinho(request):
     return JsonResponse({"status": "ok"})
 
 
+@method_decorator(_sem_cache, name="dispatch")
 class PaymentView(LoginRequiredMixin, View):
     """Tela de checkout.
 
@@ -6156,6 +6182,10 @@ class PaymentView(LoginRequiredMixin, View):
 
                 if status_pagamento == "approved":
                     checkout.confirmar_pagamento(reserva, payment)
+                    messages.success(
+                        request,
+                        f"Pagamento confirmado! O pedido #{reserva.id} já está em Meus pedidos.",
+                    )
                     return redirect(destino_pedidos)
 
                 if status_pagamento in checkout.STATUS_MORTOS:
@@ -6192,7 +6222,18 @@ class PaymentView(LoginRequiredMixin, View):
                     )
                     .first()
                 )
+            # Voltou para a tela de pagamento de uma compra que já foi paga
+            # (pelo webhook, com a pessoa fora da tela): vai para os pedidos,
+            # e não para um carrinho vazio sem explicação.
+            pedido_acompanhado = (
+                pedido_acompanhado
+                or conferencia_pagamento.pago_recente_do_carrinho(carrinho, request)
+            )
             if pedido_acompanhado:
+                messages.success(
+                    request,
+                    f"Pagamento confirmado! O pedido #{pedido_acompanhado.id} já está em Meus pedidos.",
+                )
                 return redirect(destino_pedidos)
             return redirect("carrinho")
 
@@ -6232,6 +6273,10 @@ class PaymentView(LoginRequiredMixin, View):
             valor_frete = frete.valor if frete else Decimal("0.00")
             total_final = carrinho.total_final
 
+        # Abaixo do mínimo da conta o formulário de cartão fica vazio (não há
+        # bandeira que aceite o valor); a tela avisa e oferece o Pix.
+        cartao_minimo = conferencia_pagamento.minimo_do_cartao()
+
         context = {
             "carrinho": carrinho,
             "pedido_reservado": reserva,
@@ -6246,6 +6291,8 @@ class PaymentView(LoginRequiredMixin, View):
             "somente_pix": not request.user.is_authenticated,
             "mp_public_key": settings.MP_PUBLIC_KEY,
             "max_parcelas": 18 if total_final > Decimal("20000.00") else 12,
+            "cartao_minimo": cartao_minimo,
+            "cartao_liberado": cartao_minimo is None or total_final >= cartao_minimo,
         }
 
         return render(request, "payment.html", context)
@@ -7541,6 +7588,12 @@ class MeusPedidosView(LoginRequiredMixin, View):
         if not perfil:
             messages.error(request, "Perfil não encontrado.")
             return redirect('home')
+
+        # Pagou fora da tela? Acerta as reservas abertas antes de listar
+        # (rede de segurança do webhook do Mercado Pago).
+        for pago in conferencia_pagamento.conferir_reservas_do_cliente(perfil):
+            messages.success(request, f"Pagamento do pedido #{pago.id} confirmado!")
+        conferencia_pagamento.marcar_pedidos_vistos(request)
 
         pedidos = (
             Pedido.objects
