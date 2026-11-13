@@ -66,9 +66,13 @@ function adicionarProdutoCardAoCarrinho(event, tipo, produtoId, botao) {
         '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>' +
         '<span>Adicionando...</span>';
 
+    // Desistiu na folha de quantidade (ls-carrinho-rapido.js), ou deu erro:
+    // o botão volta na hora; o "Adicionado" é que fica um pouco à vista.
+    let adicionou = false;
     Promise.resolve(window.adicionarAoCarrinho(tipo, produtoId))
         .then((resultado) => {
             if (!resultado || !resultado.sucesso) return;
+            adicionou = true;
 
             botao.classList.remove('is-loading');
             botao.classList.add('is-added');
@@ -82,7 +86,7 @@ function adicionarProdutoCardAoCarrinho(event, tipo, produtoId, botao) {
                 botao.dataset.loading = 'false';
                 botao.classList.remove('is-loading', 'is-added');
                 botao.innerHTML = conteudoOriginal;
-            }, 1200);
+            }, adicionou ? 1200 : 0);
         });
 }
 

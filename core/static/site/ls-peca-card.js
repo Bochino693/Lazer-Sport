@@ -23,9 +23,12 @@
     botao.disabled = true;
     botao.classList.add("is-loading");
     botao.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Adicionando...</span>';
+    // Desistiu na folha de quantidade, ou deu erro: o botão volta na hora.
+    let adicionou = false;
     Promise.resolve(window.adicionarAoCarrinho("peca", pecaId))
       .then((resultado) => {
         if (!resultado || !resultado.sucesso) return;
+        adicionou = true;
         botao.classList.remove("is-loading");
         botao.classList.add("is-added");
         botao.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i><span>Adicionado</span>';
@@ -36,7 +39,7 @@
           botao.dataset.loading = "false";
           botao.classList.remove("is-loading", "is-added");
           botao.innerHTML = original;
-        }, 1200);
+        }, adicionou ? 1200 : 0);
       });
   };
 })();

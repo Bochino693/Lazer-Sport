@@ -220,7 +220,9 @@
                             {% endif %}
 
                             <div class="loja-card-acoes">
-                                {% if item.preco or item.tipo != 'promocao' %}
+                                {# só o que tem preço vai ao carrinho: o resto (promoção de brinde,
+                                   peça sob consulta) é conversa -- o servidor recusa o sem preço #}
+                                {% if item.preco %}
                                 <button
                                     type="button"
                                     class="loja-btn loja-btn-carrinho"
@@ -232,9 +234,9 @@
                                 </button>
                                 {% else %}
                                 <a href="{{ item.url }}" class="loja-btn loja-btn-carrinho"
-                                   aria-label="Quero a promoção {{ item.titulo }}">
+                                   aria-label="{% if item.tipo == 'promocao' %}Quero a promoção{% else %}Consultar o valor de{% endif %} {{ item.titulo }}">
                                     <i class="fa-solid fa-comments" aria-hidden="true"></i>
-                                    <span>Quero esta</span>
+                                    <span>{% if item.tipo == 'promocao' %}Quero esta{% else %}Consultar{% endif %}</span>
                                 </a>
                                 {% endif %}
 
@@ -283,9 +285,12 @@
                 '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>' +
                 '<span>Adicionando...</span>';
 
+            // Desistiu na folha de quantidade, ou deu erro: o botão volta na hora.
+            let adicionou = false;
             Promise.resolve(window.adicionarAoCarrinho(tipo, itemId))
                 .then(resultado => {
                     if (!resultado || !resultado.sucesso) return;
+                    adicionou = true;
                     botao.classList.add('is-added');
                     botao.innerHTML =
                         '<i class="fa-solid fa-check" aria-hidden="true"></i>' +
@@ -297,7 +302,7 @@
                         botao.dataset.loading = 'false';
                         botao.classList.remove('is-added');
                         botao.innerHTML = conteudoOriginal;
-                    }, 1200);
+                    }, adicionou ? 1200 : 0);
                 });
         }
 

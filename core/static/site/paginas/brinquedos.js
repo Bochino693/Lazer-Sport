@@ -141,7 +141,9 @@
             botao.classList.remove('is-loading');
             botao.classList.add('is-added');
             botao.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i><span>Adicionado</span>';
-            mostrarToastCatalogo('Brinquedo adicionado ao carrinho.');
+            // a folha do carrinho (ls-carrinho-rapido.js) já mostra o "pronto";
+            // o toast fica para quem está sem ela
+            if (!window.LSCarrinhoRapido) mostrarToastCatalogo('Brinquedo adicionado ao carrinho.');
 
             window.setTimeout(() => {
                 botao.classList.remove('is-added');

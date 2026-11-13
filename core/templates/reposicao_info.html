@@ -258,32 +258,14 @@
         });
     });
 
-    document.getElementById('adicionar-peca')?.addEventListener('click', async (evento) => {
-        const botao = evento.currentTarget;
-        const body = new URLSearchParams({ quantidade: quantidade.value || '1' });
-        botao.disabled = true;
-        try {
-            const resposta = await fetch("{% url 'adicionar_ao_carrinho' 'peca' peca.id %}", {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-                },
-                body: body.toString()
-            });
-            const dados = await resposta.json().catch(() => ({}));
-            if (!resposta.ok || !dados.sucesso) throw new Error(dados.erro || 'Não foi possível adicionar.');
-            const badge = document.getElementById('badge-carrinho');
-            if (badge) badge.textContent = dados.total_itens || 0;
-            // o toast do carrinho do site inteiro (base.html, ls-aviso.js)
-            mostrarToast('Peça adicionada ao carrinho.');
-        } catch (erro) {
-            mostrarToast(erro.message || 'Não foi possível adicionar a peça.', true);
-        } finally {
-            botao.disabled = false;
-        }
+    // O carrinho do site inteiro (`adicionarAoCarrinho`, do base.html): a
+    // quantidade escolhida aqui vai junto, a folha (ls-carrinho-rapido.js)
+    // pula a escolha e mostra o "pronto" com o selo do topo pulando -- ou o
+    // "entre na conta". Antes esta página tinha o próprio fetch, e o selo do
+    // carrinho não mudava.
+    document.getElementById('adicionar-peca')?.addEventListener('click', (evento) => {
+        if (window.LSCartLoading) window.LSCartLoading.setGatilho(evento.currentTarget);
+        adicionarAoCarrinho('peca', {{ peca.id }}, false, { quantidade: quantidade.value || '1' });
     });
 })();
 </script>
