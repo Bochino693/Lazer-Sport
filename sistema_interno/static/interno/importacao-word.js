@@ -1149,6 +1149,23 @@ LSTela.pronto(function () {
       });
     }
   }
+  /* O ESTABELECIMENTO NO MODAL: o campo do passo do cliente escreve no
+     campo do formulário (e o formulário, nele), para a pessoa confirmar ou
+     corrigir ali mesmo o nome que vai para o mapa do site. */
+  document.querySelectorAll("[data-espelho]").forEach(function (espelho) {
+    var alvo = document.getElementById(espelho.dataset.espelho);
+    if (!alvo) return;
+    espelho.addEventListener("input", function () {
+      alvo.value = espelho.value;
+      alvo.dispatchEvent(new Event("input", { bubbles: true }));
+      var caixa = espelho.closest(".ls-imp-estabelecimento");
+      if (caixa) caixa.classList.toggle("falta", !espelho.value.trim());
+    });
+    alvo.addEventListener("input", function () {
+      if (document.activeElement !== espelho) espelho.value = alvo.value;
+    });
+  });
+
   document.querySelectorAll("[data-abrir-decisao]").forEach(function (botao) {
     botao.addEventListener("click", abrirDecisao);
   });

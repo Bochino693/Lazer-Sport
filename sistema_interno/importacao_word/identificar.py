@@ -154,7 +154,18 @@ _EMPRESA_PELA_MARCA = re.compile(
 )
 _EMPRESA_PELO_SUFIXO = re.compile(
     rf"(?<![\w]){_PALAVRA_DE_EMPRESA}(?:[ \t]+(?:(?:d[aeo]s?|e|&|D[AEO]S?|E)[ \t]+)?{_PALAVRA_DE_EMPRESA}){{0,6}}"
-    r"[ \t]+(?:LTDA|Ltda|ME|EIRELI|Eireli|EPP|S\.?A\.?|S/A)\.?(?![\w])"
+    r"[ \t]+(?:LTDA|Ltda|ME|MEI|EIRELI|Eireli|EPP|S\.?A\.?|S/A)\.?(?![\w])"
+)
+#: "a empresa Open Spice Sushi Lounge", "Empresa: Doces Finos": o nome com
+#: inicial maiúscula logo depois da palavra "empresa".
+_EMPRESA_CHAMADA_ASSIM = re.compile(
+    rf"(?i:\b(?:a\s+)?empresa\s*[:,]?\s+)((?:{_PALAVRA_DE_EMPRESA})(?:[ \t]+(?:(?:d[aeo]s?|e|&)[ \t]+)?{_PALAVRA_DE_EMPRESA}){{0,6}})"
+)
+#: O nome logo antes do CNPJ: "Doces Finos Comércio de Alimentos, CNPJ
+#: 12.345.678/0001-90" / "Doces Finos – CNPJ: ...".
+_NOME_ANTES_DO_CNPJ = re.compile(
+    rf"((?:{_PALAVRA_DE_EMPRESA})(?:[ \t]+(?:(?:d[aeo]s?|e|&)[ \t]+)?{_PALAVRA_DE_EMPRESA}){{1,7}})"
+    r"\s*[,–—-]?\s*(?:inscrit[ao]\s+no\s+)?(?:CNPJ|C\.N\.P\.J\.?)\s*(?:/?MF)?\s*(?:sob\s+o\s+)?(?:n[º°o.]?\s*)?[:]?\s*$"
 )
 _LOGRADOURO = re.compile(
     rf"(?<![\w])(?:Rua|R\.|Avenida|Av\.?|Alameda|Al\.|Estrada|Estr\.|Rodovia|Rod\.|Travessa|Trav\.|Tv\.|"
@@ -439,6 +450,112 @@ def _limpar_pessoa(texto: str) -> str:
     return " ".join(saida)
 
 
+# ======================================================================
+# O ESTABELECIMENTO: o nome que vai para o mapa (e não o da pessoa)
+# ======================================================================
+#: Palavras que fazem um nome ser de negócio, e não de gente.
+_PALAVRAS_DE_NEGOCIO = {
+    "buffet", "buffets", "escola", "colegio", "condominio", "clube", "hotel", "pousada", "restaurante", "bar",
+    "lanchonete", "pizzaria", "hamburgueria", "churrascaria", "sushi", "lounge", "cafe", "cafeteria", "doces",
+    "confeitaria", "padaria", "mercado", "supermercado", "loja", "lojas", "parque", "espaco", "festa", "festas",
+    "eventos", "kids", "infantil", "playground", "shopping", "academia", "arena", "creche", "chacara", "sitio",
+    "fazenda", "igreja", "paroquia", "associacao", "instituto", "fundacao", "prefeitura", "secretaria",
+    "salao", "recreacao", "diversoes", "comercio", "industria", "servicos", "alimentos",
+    "distribuidora", "empreendimentos", "participacoes", "grupo", "studio", "estudio", "clinica", "hospital",
+    "centro", "casa", "mundo", "planeta", "reino", "castelo", "toca", "cantinho", "pub", "bistro", "cervejaria",
+}
+_SUFIXOS_DE_EMPRESA = {"ltda", "me", "mei", "eireli", "epp", "sa", "s a", "s/a"}
+#: Palavras do nome do ARQUIVO que dizem o que o documento é -- não quem é.
+_PALAVRAS_DE_DOCUMENTO = {
+    "contrato", "contratos", "orcamento", "orcamentos", "proposta", "propostas", "pedido", "pedidos", "compra",
+    "venda", "compra e venda", "instrumento", "particular", "termo", "termos", "aditivo", "copia", "final",
+    "assinado", "assinada", "revisado", "revisada", "versao", "rev", "novo", "nova", "atualizado", "ficha",
+    "cadastro", "cliente", "comercial", "equipamento", "equipamentos", "entretenimento", "locacao", "aluguel",
+    "de", "da", "do", "das", "dos", "e", "para", "com", "n", "no", "nº", "num", "numero", "doc", "documento",
+    "scan", "digitalizado", "pdf", "word", "docx", "editado", "modelo", "minuta", "ok", "def", "definitivo",
+    "tabela", "lista", "cotacao", "recibo", "nota", "fiscal", "nf", "via", "anexo", "carta", "email",
+    "e mail", "conversa", "whatsapp", "zap", "print", "foto", "imagem", "texto", "livre", "cabecalho", "rodape",
+}
+
+
+def parece_empresa(nome: str) -> bool:
+    """O nome é de negócio (sufixo LTDA/ME..., ou palavra de negócio)?"""
+    palavras = _normalizar(nome).split()
+    if not palavras:
+        return False
+    if palavras[-1] in _SUFIXOS_DE_EMPRESA or " ".join(palavras[-2:]) in _SUFIXOS_DE_EMPRESA:
+        return True
+    if any(p in _PALAVRAS_DE_NEGOCIO for p in palavras):
+        return True
+    return bool(_EMPRESA_PELA_MARCA.match(nome.strip()) or _EMPRESA_PELO_SUFIXO.search(nome))
+
+
+def _capitalizar_empresa(texto: str) -> str:
+    """"OPEN SPICE SUSHI LOUNGE LTDA" -> "Open Spice Sushi Lounge Ltda"; "S/A" e "ME" ficam."""
+    saida = []
+    for posicao, palavra in enumerate(texto.split()):
+        normal = _normalizar(palavra)
+        if normal in ("me", "mei", "epp", "sa") or palavra.upper() in ("S/A", "S.A.", "S.A"):
+            saida.append("S.A." if normal == "sa" else palavra.upper())
+        elif posicao and normal in ("de", "da", "do", "das", "dos", "e"):
+            saida.append(normal)
+        else:
+            saida.append(palavra[:1].upper() + palavra[1:].lower())
+    return " ".join(saida)
+
+
+def estabelecimento_do_arquivo(nome_arquivo: str, *, pessoas=(), empresa=None) -> str:
+    """O nome do negócio escrito no NOME DO ARQUIVO, quando há.
+
+    "CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx" -> "Open Spice Sushi Lounge
+    Ltda": o modelo de contrato da casa não escreve o nome do negócio no
+    texto, mas quem salva o arquivo escreve. Saem as palavras de documento
+    (contrato, orçamento, proposta, compra e venda, cópia, final, v2...), os
+    números e as datas e a extensão. O que sobra vale se tem cara de
+    negócio: sufixo de empresa, palavra de negócio, ou duas palavras ou
+    mais que NÃO são o nome da pessoa já achada nem um nome de gente
+    (primeiro nome da lista do IBGE). O nome da fábrica nunca.
+    """
+    base = re.sub(r"\.(docx?|pdf|odt|rtf)$", "", (nome_arquivo or "").strip(), flags=re.IGNORECASE)
+    base = re.sub(r"\d{1,4}[-./_]\d{1,2}[-./_]\d{1,4}", " ", base)   # datas
+    base = re.sub(r"\b[vV]\d+\b", " ", base)                          # v2, V3
+    base = re.sub(r"\bS\.\s?A\.?(?=\s|$)|\bS/A\b", " SA ", base)   # S.A. e S/A antes de partir nos pontos
+    palavras = []
+    for palavra in re.split(r"[\s_\-–—.,;:()\[\]{}#]+", base):
+        normal = _normalizar(palavra)
+        if not normal or normal in _PALAVRAS_DE_DOCUMENTO or re.fullmatch(r"[\d\s]+", normal):
+            continue
+        if re.fullmatch(r"n[º°o]?\s?\d+|\d+[a-z]?", normal):
+            continue
+        palavras.append(palavra)
+    # "de/da/do" que sobrou na ponta não é nome.
+    while palavras and _normalizar(palavras[0]) in _LIGACOES:
+        palavras.pop(0)
+    while palavras and _normalizar(palavras[-1]) in _LIGACOES:
+        palavras.pop()
+    if not palavras:
+        return ""
+    candidato = " ".join(palavras)
+    if empresa and det.linha_da_empresa(candidato, empresa):
+        return ""
+    if re.search(r"\blazer\b|\bsport\b", _normalizar(candidato)):
+        return ""
+    normal_palavras = set(_normalizar(candidato).split()) - set(_LIGACOES)
+    for pessoa in pessoas:
+        if pessoa and normal_palavras <= set(_normalizar(pessoa).split()):
+            return ""  # o nome da pessoa (o cliente), e não o do negócio
+    if len(normal_palavras) < 2:
+        return ""  # uma palavra solta ("buffet", "marina") não é o nome de ninguém
+    if not parece_empresa(candidato):
+        # Sem cara de negócio, só nome escrito como nome (iniciais
+        # maiúsculas, ou TUDO MAIÚSCULO) e que não seja de gente.
+        if not all(p[:1].isupper() for p in palavras if _normalizar(p) not in _LIGACOES):
+            return ""
+        if _vale_como_pessoa(candidato):
+            return ""
+    return _capitalizar_empresa(candidato)
+
+
 def _limpar_empresa(texto: str) -> str:
     texto = det.espacos(texto).strip(" -–—,;.:")
     # "Buffet Alegria Festas CNPJ" -> para antes de um rótulo de dado.
@@ -689,6 +806,14 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
             return bool(re.search(r"(?i)\b(cliente|contratante|a/c|s[íi]ndic|respons[áa]vel)\b", segmento["texto"]))
         return True
 
+    def timbre_do_cliente(segmento):
+        """O cabeçalho que não é o da fábrica: o timbre do próprio cliente
+        ("Buffet Sonho Mágico Ltda" no alto da carta dele). Só serve para o
+        nome da empresa."""
+        linha = segmento["linha"]
+        return (linha["parte"] == "cabecalho" and linha["id"] not in fora and linha["id"] not in da_empresa
+                and linha["id"] not in vizinhas)
+
     pessoas, empresas, enderecos = _Candidatos(), _Candidatos(), []
     documentos, telefones, emails = _Candidatos(), _Candidatos(), _Candidatos()
     ocupado: dict[str, list[tuple[int, int]]] = {}
@@ -698,6 +823,12 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
 
     for indice, segmento in enumerate(segmentos):
         if not usavel(segmento):
+            if timbre_do_cliente(segmento):
+                for padrao in (_EMPRESA_PELO_SUFIXO, _EMPRESA_PELA_MARCA):
+                    for achado in padrao.finditer(segmento["texto"]):
+                        nome = _limpar_empresa(achado.group(0))
+                        if len(nome) >= 5 and not det.linha_da_empresa(nome, empresa) and not eh_interno(nome, internos):
+                            empresas.acrescentar(nome, 2.5, segmento, "no timbre do documento", pista="empresa")
             continue
         texto = segmento["texto"]
         id_linha = segmento["linha"]["id"]
@@ -770,6 +901,29 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
                 if segmento["remetente"]:
                     pontos += 1.0
                 empresas.acrescentar(nome, pontos, segmento, motivo, pista=pista[0] if pista else None)
+
+        # "a empresa Open Spice", e o nome colado no CNPJ.
+        for achado in _EMPRESA_CHAMADA_ASSIM.finditer(texto):
+            if da_casa(achado.start(1)):
+                continue
+            nome = _limpar_empresa(achado.group(1))
+            if len(nome) >= 4 and not det.linha_da_empresa(nome, empresa) and not eh_interno(nome, internos):
+                empresas.acrescentar(nome, 4.0 + bonus_de_posicao(segmento), segmento,
+                                     "perto de “empresa”", pista="empresa")
+                vistos_empresa.append((achado.start(1), achado.end(1)))
+        for documento in det.documentos(texto):
+            if documento["tipo"] != "CNPJ" or da_casa(documento["inicio"]):
+                continue
+            achado = _NOME_ANTES_DO_CNPJ.search(texto[:documento["inicio"]])
+            if not achado:
+                continue
+            nome = _limpar_empresa(achado.group(1))
+            if len(nome) < 4 or det.linha_da_empresa(nome, empresa) or eh_interno(nome, internos):
+                continue
+            if _normalizar(nome) in ("razao social", "nome fantasia", "empresa", "inscrita"):
+                continue
+            empresas.acrescentar(nome, 3.0 + bonus_de_posicao(segmento), segmento,
+                                 "o nome ao lado do CNPJ", pista="empresa")
 
         # ------------------------------------------------- pessoas
         if segmento["remetente"] and _vale_como_pessoa(segmento["remetente"]) \

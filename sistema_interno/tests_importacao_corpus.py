@@ -78,6 +78,13 @@ def esperado_de(nome):
     return ESPERADO[dados["igual_a"]] if "igual_a" in dados else dados
 
 
+def arquivo_enviado(nome):
+    """O nome com que o arquivo chega na importação ("CONTRATO KAUYR DOCES
+    FINOS LTDA.docx"): o do corpus é só o endereço do teste."""
+    enviado = esperado_de(nome).get("arquivo_enviado")
+    return str(Path(enviado).with_suffix(Path(nome).suffix)) if enviado else nome
+
+
 def linhas_do_arquivo(nome):
     conteudo = (PASTA / nome).read_bytes()
     if nome.endswith(".pdf"):
@@ -190,7 +197,7 @@ class LeituraDoCorpusTests(_SemChave):
         for nome in DOCUMENTOS:
             esperado = esperado_de(nome)
             with self.subTest(documento=nome):
-                leitura = {"arquivo": nome, "formato": "pdf" if nome.endswith(".pdf") else "docx",
+                leitura = {"arquivo": arquivo_enviado(nome), "formato": "pdf" if nome.endswith(".pdf") else "docx",
                            "linhas": linhas_do_arquivo(nome), "ia": {"usada": False}, "escolhas": {}}
                 proposta = conferencia.montar_proposta(leitura, hoje=HOJE)
                 tela = campos_da_tela(proposta, formulario.envio_inicial(proposta))
@@ -268,7 +275,8 @@ class GravacaoDoCorpusTests(_SemChave):
         a pessoa faria: conferir o produto sugerido e marcar como avulsa a
         linha sem produto do catálogo."""
         conteudo = (PASTA / nome).read_bytes()
-        resposta = self.client.post("/orcamentos/importar/", {"arquivo": SimpleUploadedFile(nome, conteudo)}, **HOST)
+        resposta = self.client.post("/orcamentos/importar/",
+                                    {"arquivo": SimpleUploadedFile(arquivo_enviado(nome), conteudo)}, **HOST)
         self.assertEqual(resposta.status_code, 302, resposta.content[:300])
         url = resposta["Location"]
         tela = self.client.get(url, **HOST)
@@ -449,10 +457,12 @@ class GravacaoDoCorpusTests(_SemChave):
             ("Escola Infantil Pequenos Passos", "São Paulo"),
             ("Clube Recreativo Vila Nova", "São Paulo"),
             ("Condomínio Parque das Árvores", "São Paulo"),
-            # pessoas (Juliana Martins Rocha, Renata Moura Teixeira, Joana Prado
-            # Lins e o comprador do contrato de compra e venda): só a cidade
+            # o contrato de compra e venda: o nome do negócio veio do nome do
+            # arquivo; o da pessoa (o comprador) nunca aparece
+            ("Kauyr Doces Finos Ltda", "Ribeirão Preto"),
+            # pessoas sem estabelecimento (Juliana Martins Rocha, Renata Moura
+            # Teixeira, Joana Prado Lins): só a cidade
             ("Cliente em São Paulo", "São Paulo"),
-            ("Cliente em Ribeirão Preto", "Ribeirão Preto"),
         })
         for pessoa in ("Juliana Martins Rocha", "Kauyr Ribeiro Abdala", "Renata Moura Teixeira", "Joana Prado Lins"):
             self.assertNotContains(resposta, pessoa)

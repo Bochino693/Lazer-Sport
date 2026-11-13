@@ -2405,7 +2405,13 @@ class ContratoDeCompraEVendaTests(_ComUsuario):
         self.assertContains(tela, 'data-passo="itens" aria-labelledby="passoItensTitulo" hidden')
         self.assertContains(tela, 'data-ir-passo="itens"')
         decisao = tela.context["decisao"]
-        self.assertEqual([l["chave"] for l in decisao["linhas_falta"]], ["estabelecimento"])
+        # O estabelecimento tem lugar próprio (é o nome do mapa do site): sem
+        # ele no documento nem no nome do arquivo, o passo pede, em destaque.
+        self.assertEqual([l["chave"] for l in decisao["linhas_falta"]], [])
+        self.assertTrue(decisao["estabelecimento"]["falta"])
+        self.assertContains(tela, 'class="ls-imp-estabelecimento falta" id="decisaoEstabelecimento"')
+        self.assertContains(tela, "falta · opcional")
+        self.assertContains(tela, "É o nome que aparece no mapa do site (o nome da pessoa não aparece).")
         self.assertEqual([(i["nome"], i["faltas"]) for i in decisao["itens"]],
                          [("Cama elástica 3 m", []), ("Matrix", ["escolher o produto", "sem preço"])])
         self.assertContains(tela, "escolher o produto · sem preço")
@@ -2629,3 +2635,95 @@ class DataDoDocumentoTests(_ComUsuario):
         self.assertNotIn("condicoes.validade", {p["campo"] for p in validado["pendencias"]})
         validado = formulario.validar(proposta, dict(envio, data_documento="2016-03-14", validade="2016-03-01"))
         self.assertIn("condicoes.validade", {p["campo"] for p in validado["pendencias"]})
+
+
+class EstabelecimentoTests(_ComUsuario):
+    """"Na leitura, você deve também ler o nome do estabelecimento, evitando
+    expor os nomes dos clientes, entendeu? na maioria das vezes tem no doc"."""
+
+    def proposta(self, conteudo, arquivo="documento.docx"):
+        return conferencia.montar_proposta({"arquivo": arquivo, "linhas": linhas_de(conteudo), "ia": {"usada": False}})
+
+    def test_o_negocio_no_nome_do_arquivo(self):
+        from .importacao_word import identificar
+
+        empresa = conferencia.identidade_da_empresa()
+        for arquivo, esperado in (
+            ("CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx", "Open Spice Sushi Lounge Ltda"),
+            ("CONTRATO KAUYR DOCES FINOS LTDA.docx", "Kauyr Doces Finos Ltda"),
+            ("Orçamento nº 123 - Buffet Alegria (final) v2.docx", "Buffet Alegria"),
+            ("orcamento_buffet_alegria_11-11-2026.pdf", "Buffet Alegria"),
+            ("CONTRATO  COMPRA E VENDA ARENA KIDS EIRELI - assinado.pdf", "Arena Kids Eireli"),
+            ("Proposta Grupo Atlas S.A..pdf", "Grupo Atlas S.A."),
+            # Sem negócio nenhum: nada.
+            ("contrato assinado 2016.docx", ""),
+            ("proposta 2026-11-11.pdf", ""),
+            ("14-contrato-compra-venda.docx", ""),
+            ("07-contrato-buffet.docx", ""),
+            # A fábrica nunca.
+            ("Contrato Brinquedos Lazer & Sport.docx", ""),
+            ("CONTRATO LAZER E SPORT - cópia (2).docx", ""),
+            # O nome da pessoa (ou de gente) não é o do negócio.
+            ("CONTRATO NAHYM RIBEIRO ABAS.docx", ""),
+            ("Contrato Joana Prado.docx", ""),
+        ):
+            with self.subTest(arquivo=arquivo):
+                self.assertEqual(identificar.estabelecimento_do_arquivo(
+                    arquivo, pessoas=["Nahym Ribeiro Abas"], empresa=empresa), esperado)
+
+    def test_o_contrato_da_pessoa_ganha_o_estabelecimento_do_arquivo(self):
+        proposta = self.proposta(docx_contrato(comprador="Kauyr Ribeiro Abdala"),
+                                 arquivo="CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx")
+        cliente = proposta["cliente"]
+        self.assertEqual(cliente["nome"]["valor"], "Kauyr Ribeiro Abdala")
+        self.assertEqual(cliente["estabelecimento"]["valor"], "Open Spice Sushi Lounge Ltda")
+        self.assertEqual((cliente["estabelecimento"]["origem"], cliente["estabelecimento"]["confianca"]),
+                         ("arquivo", "media"))
+        self.assertEqual(formulario.envio_inicial(proposta)["estabelecimento"], "Open Spice Sushi Lounge Ltda")
+        # O nome da fábrica no arquivo, ou nada de negócio: o campo fica vazio.
+        for arquivo in ("CONTRATO LAZER & SPORT.docx", "contrato assinado 2016.docx"):
+            proposta = self.proposta(docx_contrato(comprador="Kauyr Ribeiro Abdala"), arquivo=arquivo)
+            self.assertEqual(proposta["cliente"]["estabelecimento"]["valor"], "", arquivo)
+
+    def test_a_tela_mostra_o_estabelecimento_e_de_onde_veio(self):
+        url = self.importar(docx_contrato(comprador="Kauyr Ribeiro Abdala"),
+                            nome="CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx")
+        tela = self.client.get(url, **HOST)
+        self.assertContains(tela, 'class="ls-imp-estabelecimento" id="decisaoEstabelecimento"')
+        self.assertContains(tela, 'value="Open Spice Sushi Lounge Ltda" placeholder=')
+        self.assertContains(tela, "do nome do arquivo")
+        self.assertContains(tela, 'data-espelho="campoEstabelecimento"')
+        # E é ele que vai para o cadastro.
+        _, envio = self.proposta_e_envio(url, modo="cliente")
+        resposta = self.client.post(url, formulario_de(envio, modo="cliente"), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        cliente = Cliente.objects.get(nome_cliente="Kauyr Ribeiro Abdala")
+        self.assertEqual(cliente.nome_estabelecimento, "Open Spice Sushi Lounge Ltda")
+
+    def test_o_negocio_escrito_no_documento(self):
+        def estabelecimento(*paragrafos, arquivo="documento.docx"):
+            return self.proposta(montar_docx("".join(par(p) for p in paragrafos)), arquivo)["cliente"]["estabelecimento"]["valor"]
+
+        # O cliente é a empresa (CNPJ, ou nome de negócio): é o estabelecimento.
+        self.assertEqual(estabelecimento("Cliente: Doces Finos Comércio de Alimentos",
+                                         "CNPJ: 11.222.333/0001-81", "Telefone: (11) 98765-4321"),
+                         "Doces Finos Comércio de Alimentos")
+        self.assertEqual(estabelecimento("Cliente: Buffet Alegria", "E-mail: contato@buffetalegria.com.br"),
+                         "Buffet Alegria")
+        # "a empresa X" e o nome colado no CNPJ, com a pessoa como cliente.
+        self.assertEqual(estabelecimento(
+            "Contratante: Marina Souza, CPF 529.982.247-25, representando a empresa Open Spice Sushi Lounge."),
+            "Open Spice Sushi Lounge")
+        self.assertEqual(estabelecimento(
+            "Contratante: Marina Souza, CPF 529.982.247-25.",
+            "Kauyr Doces Finos, CNPJ 11.222.333/0001-81, com sede em São Paulo."),
+            "Kauyr Doces Finos")
+        # A pessoa de CPF, sem negócio em lugar nenhum: o campo fica vazio (e
+        # o mapa não mostra o nome dela).
+        self.assertEqual(estabelecimento("Contratante: Marina Souza, CPF 529.982.247-25."), "")
+        # O texto vale mais que o arquivo; o do arquivo vira opção.
+        proposta = self.proposta(montar_docx(par("Cliente: Buffet Alegria")),
+                                 "CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx")
+        campo = proposta["cliente"]["estabelecimento"]
+        self.assertEqual(campo["valor"], "Buffet Alegria")
+        self.assertIn("Open Spice Sushi Lounge Ltda", [a["valor"] for a in campo["alternativas"]])

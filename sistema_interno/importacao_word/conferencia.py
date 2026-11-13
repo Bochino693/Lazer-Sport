@@ -460,6 +460,50 @@ def _de_equipamento(linhas: list[dict]) -> tuple[bool, set]:
     return documento, tabelas
 
 
+# ======================================================================
+# O ESTABELECIMENTO (o nome que o mapa do site mostra, e não o da pessoa)
+# ======================================================================
+def _completar_estabelecimento(cliente: dict, arquivo: str, empresa: dict):
+    """"Ler o nome do estabelecimento, evitando expor os nomes dos clientes".
+
+    O mapa do site mostra o estabelecimento, nunca o nome da pessoa. Sem
+    estabelecimento escrito com rótulo ou achado no texto:
+      * o cliente que é empresa (CNPJ, ou nome de negócio: "Buffet X",
+        "X Ltda") é o próprio estabelecimento;
+      * o NOME DO ARQUIVO ("CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx")
+        dá o negócio que o texto não escreve -- marcado "do nome do
+        arquivo", com confiança média, para a pessoa confirmar.
+    Achado no texto e diferente do arquivo, o do arquivo vira opção.
+    """
+    estabelecimento = cliente["estabelecimento"]
+    nome = cliente["nome"]["valor"]
+    do_arquivo = identificar.estabelecimento_do_arquivo(
+        arquivo, pessoas=[nome, cliente["contato"]["valor"]], empresa=empresa,
+    )
+    documento = det.somente_digitos(cliente["documento"]["valor"])
+    empresa_cliente = bool(nome) and (
+        identificar.parece_empresa(nome) or (len(documento) == 14 and not identificar._vale_como_pessoa(nome))
+    )
+    if not estabelecimento["valor"] and empresa_cliente:
+        estabelecimento.update({
+            "valor": nome, "exibir": nome, "original": cliente["nome"]["original"] or nome,
+            "origem": cliente["nome"]["origem"], "confianca": cliente["nome"]["confianca"],
+            "fonte": cliente["nome"]["fonte"],
+            "nota": "o cliente é a empresa: o nome dela é o do estabelecimento",
+        })
+    if estabelecimento["valor"]:
+        if do_arquivo and _normalizar_comparacao(do_arquivo) != _normalizar_comparacao(estabelecimento["valor"]):
+            estabelecimento.setdefault("alternativas", []).append(
+                {"valor": do_arquivo, "rotulo": do_arquivo, "motivo": "do nome do arquivo", "fonte": None})
+        return
+    if do_arquivo:
+        estabelecimento.update({
+            "valor": do_arquivo, "exibir": do_arquivo, "original": arquivo, "origem": "arquivo",
+            "confianca": "media", "fonte": None,
+            "nota": f"lido do nome do arquivo (“{arquivo}”): confira",
+        })
+
+
 def _linha_do_item(fonte_id: str) -> str:
     achado = re.match(r"^(.*T\d+L\d+)C\d+$", fonte_id or "")
     return achado.group(1) if achado else (fonte_id or "")
@@ -580,6 +624,7 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
             dict(a, rotulo=a["valor"]) for a in alternativas.get(chave_alt, [])
             if _normalizar_comparacao(a["valor"]) != valor_atual
         ][:4]
+    _completar_estabelecimento(cliente, leitura.get("arquivo", ""), empresa)
     cliente["enderecos_alternativos"] = [
         dict(a, rotulo=", ".join(p for p in (a["valor"]["rua"], a["valor"]["numero"], a["valor"]["bairro"],
                                              "/".join(x for x in (a["valor"]["cidade"], a["valor"]["uf"]) if x))

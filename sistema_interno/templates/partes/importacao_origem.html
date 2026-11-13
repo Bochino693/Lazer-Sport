@@ -15,6 +15,7 @@
   {% elif campo.origem == "tabelas" %}<span class="ls-imp-tag">{% if proposta.formato == "pdf_ia" %}releitura da transcrição{% elif proposta.formato == "pdf" %}lido no texto do PDF{% else %}lido no documento{% endif %}</span>
   {% elif campo.origem == "texto" %}<span class="ls-imp-tag">lido do texto</span>
   {% elif campo.origem == "cep" %}<span class="ls-imp-tag">pela consulta do CEP</span>
+  {% elif campo.origem == "arquivo" %}<span class="ls-imp-tag">do nome do arquivo</span>
   {% elif campo.origem == "catalogo" %}<span class="ls-imp-tag amarelo">preço do catálogo</span>
   {% elif campo.origem == "ia" %}<span class="ls-imp-tag">IA, conferida na fonte</span>
   {% elif campo.origem == "divergente" %}<span class="ls-imp-tag vermelho">leituras diferentes</span>{% endif %}

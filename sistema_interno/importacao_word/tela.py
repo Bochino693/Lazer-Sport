@@ -48,6 +48,7 @@ def _origem(campo: dict) -> str:
     return {
         "texto": "lido do texto", "tabelas": "do documento", "ambas": "do documento",
         "ia": "do documento", "cep": "pela consulta do CEP", "catalogo": "do catálogo",
+        "arquivo": "do nome do arquivo",
     }.get((campo or {}).get("origem", ""), "")
 
 
@@ -233,8 +234,11 @@ def decisao(proposta: dict, envio: dict, *, do_cliente: dict, do_orcamento: dict
         "data": data,
         "passos": [p for p in ("data", "cliente", "itens") if p != "data" or data.get("perguntar")],
         "linhas": linhas,
-        "linhas_ok": [l for l in linhas if not l["falta"]],
-        "linhas_falta": [l for l in linhas if l["falta"]],
+        # O estabelecimento tem lugar próprio no passo do cliente: é o nome
+        # que o mapa do site mostra (o da pessoa não aparece).
+        "estabelecimento": next(l for l in linhas if l["chave"] == "estabelecimento"),
+        "linhas_ok": [l for l in linhas if not l["falta"] and l["chave"] != "estabelecimento"],
+        "linhas_falta": [l for l in linhas if l["falta"] and l["chave"] != "estabelecimento"],
         "itens": itens,
         "itens_com_falta": sum(1 for i in itens if i["faltas"]),
         "ja_cadastrado": {

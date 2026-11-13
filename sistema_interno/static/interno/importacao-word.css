@@ -573,6 +573,15 @@ li.obrigatorio .ls-imp-chip-falta{color:var(--red-texto);background:rgba(var(--r
 }
 .ls-imp-lido-ok li i{color:var(--green-texto)}
 .ls-imp-decisao-lido:empty{display:none}
+.ls-imp-estabelecimento{
+  display:grid;gap:6px;padding:12px 14px;border-radius:14px;
+  border:1px solid var(--line);background:var(--panel-2);
+}
+.ls-imp-estabelecimento.falta{border:2px solid rgba(var(--yellow-rgb),.7);background:rgba(var(--yellow-rgb),.08)}
+.ls-imp-estabelecimento-rotulo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;font-size:.9rem;font-weight:950;color:var(--text)}
+.ls-imp-estabelecimento-rotulo i{color:var(--acento-texto)}
+.ls-imp-estabelecimento .form-control{min-height:46px;font-weight:800}
+.ls-imp-estabelecimento-dica{margin:0;font-size:.8rem;color:var(--text-2)}
 .ls-imp-itens-lidos{list-style:none;margin:0;padding:0;display:grid;gap:2px;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden}
 .ls-imp-itens-lidos li{
   display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;
