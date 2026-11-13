@@ -83,11 +83,11 @@
                 </button>
                 <button type="button" class="method-tab ck-segmento-opcao" data-method="card"
                         role="tab" aria-selected="false" aria-controls="card-panel"
-                        aria-label="Crédito ou débito">
+                        aria-label="Cartão de crédito">
                     <i class="fa-regular fa-credit-card" aria-hidden="true"></i>
                     {# no telefone estreito, o rótulo curto cabe numa linha #}
-                    <span class="ck-rotulo-largo">Crédito ou débito</span>
-                    <span class="ck-rotulo-curto">Crédito/débito</span>
+                    <span class="ck-rotulo-largo">Cartão de crédito</span>
+                    <span class="ck-rotulo-curto">Crédito</span>
                 </button>
             </div>
 
@@ -160,9 +160,9 @@
                 </div>
             </section>
 
-            <section id="card-panel" class="payment-panel" role="tabpanel" aria-label="Cartão de crédito ou débito">
+            <section id="card-panel" class="payment-panel" role="tabpanel" aria-label="Cartão de crédito">
                 <div class="panel-head">
-                    <h2 class="panel-title">Cartão de crédito ou débito</h2>
+                    <h2 class="panel-title">Cartão de crédito</h2>
                     <p class="panel-subtitle">
                         Os dados do cartão vão direto para o Mercado Pago, criptografados.
                     </p>
@@ -186,7 +186,7 @@
                 {% else %}
                 <ul class="card-limit ck-selos" aria-label="Condições do cartão">
                     <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Crédito em até {{ max_parcelas }}x</li>
-                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> Débito à vista</li>
+                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> À vista ou parcelado</li>
                     <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Confirmação do banco, se pedida</li>
                 </ul>
                 {% endif %}
@@ -770,8 +770,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     },
                     customization: {
                         paymentMethods: {
+                            // Só crédito: o débito saiu da loja (pedido do
+                            // dono). Pix e crédito são as duas formas.
                             creditCard: "all",
-                            debitCard: "all",
                             minInstallments: 1,
                             maxInstallments: maxParcelas
                         },

@@ -7528,6 +7528,20 @@ def processar_cartao(request):
             status=400,
         )
 
+    # A loja recebe por Pix e cartão de CRÉDITO. O formulário só oferece
+    # crédito; isto barra um débito mandado à mão.
+    if (
+        dados.get("payment_type_id") == "debit_card"
+        or str(payment_method_id).lower().startswith("deb")
+    ):
+        return JsonResponse(
+            {
+                "sucesso": False,
+                "mensagem": "Aceitamos Pix ou cartão de crédito. Use o crédito ou pague com Pix.",
+            },
+            status=400,
+        )
+
     # ------------------------------------------------------------- reserva
     if not reserva:
         try:

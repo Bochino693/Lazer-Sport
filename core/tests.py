@@ -355,7 +355,7 @@ class MercadoPagoCardTests(SimpleTestCase):
     ALLOWED_HOSTS=["testserver"],
 )
 class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
-    """Débito e crédito com confirmação do banco (3DS) e recusa explicada."""
+    """Crédito com confirmação do banco (3DS), recusa explicada e débito fora."""
 
     def setUp(self):
         self.factory = RequestFactory()
@@ -372,8 +372,8 @@ class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
                 # o formData do Payment Brick, como o navegador manda agora
                 "carrinho_id": 7,
                 "token": "card-token",
-                "payment_method_id": "debvisa",
-                "payment_type_id": "debit_card",
+                "payment_method_id": "visa",
+                "payment_type_id": "credit_card",
                 "installments": 1,
                 "payer": {
                     "email": "comprador@example.com",
@@ -408,7 +408,7 @@ class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
         )
         enviado = criar.call_args[0][0]
         self.assertEqual(enviado["three_d_secure_mode"], "optional")
-        self.assertEqual(enviado["payment_method_id"], "debvisa")
+        self.assertEqual(enviado["payment_method_id"], "visa")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(body["pendente"])
         self.assertEqual(
@@ -449,7 +449,29 @@ class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
         self.assertIn("onSubmit: async ({selectedPaymentMethod, formData})", html)
         self.assertIn('"statusScreen"', html)
         self.assertIn("externalResourceURL: data.desafio_3ds.external_resource_url", html)
-        self.assertIn('debitCard: "all"', html)
+        self.assertIn('creditCard: "all"', html)
+        self.assertNotIn('debitCard', html)
+
+    @patch("core.views.mercadopago.SDK")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_debito_e_recusado_no_servidor(self, buscar_carrinho, buscar_reserva, sdk_class):
+        buscar_carrinho.return_value = carrinho_mock("150.00")
+        buscar_reserva.return_value = pedido_mock("150.00")
+        request = self.factory.post(
+            "/processar_cartao/",
+            data=json.dumps({
+                "carrinho_id": 7, "token": "t", "payment_method_id": "debmaster",
+                "payment_type_id": "debit_card", "installments": 1,
+                "payer": {"email": "comprador@example.com"},
+            }),
+            content_type="application/json",
+        )
+        request.user = usuario_mock()
+        response = processar_cartao(request)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("crédito", json.loads(response.content)["mensagem"])
+        sdk_class.return_value.payment.return_value.create.assert_not_called()
 
 
 class CatalogImageMigrationTests(TestCase):
