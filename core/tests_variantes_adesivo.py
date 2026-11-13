@@ -5,7 +5,7 @@ O que estes testes protegem:
   * cada uma leva o SEU .glb para a Arena 3D e para a página do produto, pelo
     nome inteiro: o "Air Game Kids" e o "Basquete Home" de antes (nem o Air
     Game Hockey nem o Basquete Street) não pegam o objeto novo; o .glb tem as medidas que a folha de
-    adesivos dá na altura da máquina (0,90 × 0,83 × 1,51 m e 2,70 × 1,00 ×
+    adesivos dá na altura da máquina (0,90 × 0,86 × 1,51 m e 2,70 × 1,00 ×
     2,40 m) e é leve; as fotos existem;
   * cada adesivo é a peça recortada da folha da fábrica: toda peça do
     pecas.json tem o arquivo em adesivos/ (do tamanho que o recorte achou),
@@ -69,7 +69,7 @@ BASQUETE = "basquete-street-quadrinhos"
 HOCKEY_ANTES, NOME_ANTES = "air-game-hockey-espacial", "Air Game Hockey Espacial"
 #: id -> (nome, nome da máquina de antes, desenho, medidas do .glb: altura, largura, profundidade)
 VARIANTES = {
-    HOCKEY: ("Air Game Kids Alienígenas", "Air Game Kids", "hockey", [0.9, 0.83, 1.51]),
+    HOCKEY: ("Air Game Kids Alienígenas", "Air Game Kids", "hockey", [0.9, 0.86, 1.51]),
     BASQUETE: ("Basquete Home Quadrinhos", "Basquete Home", "basquete", [2.7, 1.0, 2.4]),
 }
 FERRAMENTAS = Path(settings.BASE_DIR) / "ferramentas" / "modelos3d"
@@ -189,7 +189,8 @@ class PecasDeVerdadeTests(TestCase):
         # inclinada: sobe uns 40 cm do console ao fundo da cesta (no chão, deitada, seria 0)
         self.assertGreater(altura, 0.3)
         self.assertLess(altura, 0.6)
-        self.assertAlmostEqual(largura, 0.96, delta=0.01)
+        # a pista entre as laterais de MDF de 25 mm (LEIA-ME V10, seção 92): 1,00 m - 2 x 26 mm
+        self.assertAlmostEqual(largura, 0.946, delta=0.01)
         self.assertGreater(comprimento, 2.0)
         materiais = {m["name"] for m in dados["materials"]}
         self.assertIn("chapa-de-parada", materiais)  # onde a bola para, ao alcance de quem joga
@@ -244,14 +245,14 @@ class ObjetoNaArenaTests(TestCase):
                 modelo = arena.modelo_da_maquina(nome)
                 self.assertEqual(list(modelo["medidas"]), medidas)
                 self.assertEqual(ler_glb_do_site(_glb(chave))["medidas"], medidas)
-                # a Arena baixa o objeto inteiro: abaixo de 800 KB, como os outros
-                self.assertLess(Path(finders.find(_glb(chave))).stat().st_size, 800 * 1024)
+                # a Arena baixa o objeto inteiro: em alta definição (os adesivos em 2048 px), até 4 MB
+                self.assertLess(Path(finders.find(_glb(chave))).stat().st_size, 4 * 1024 * 1024)
                 for _, arquivo in modelo["fotos"]:
                     self.assertTrue(finders.find(modelo["pasta"] + arquivo), arquivo)
                 for arquivo, _, _ in CADASTROS[chave]["fotos"]:
                     self.assertTrue((CADASTROS[chave]["pasta"] / arquivo).exists(), arquivo)
                 # as medidas do cadastro (quando não há a máquina de antes) são as do .glb; as
-                # do Air Game Kids são as do catálogo (0,86 m de largura, com a borda; o 3D tem 0,83 m)
+                # do Air Game Kids são as do catálogo (0,86 m de largura: o 3D também, com as laterais de MDF grosso)
                 for cadastro, do_glb in zip(CADASTROS[chave]["medidas"], medidas):
                     self.assertAlmostEqual(float(cadastro), do_glb, delta=0.035)
         self.assertEqual(CADASTROS[HOCKEY]["medidas"], ("0.90", "0.86", "1.50"))
@@ -350,7 +351,7 @@ class ObjetoNaArenaTests(TestCase):
     def test_e_uma_maquina_no_monte_seu_projeto(self):
         itens = {i["id"]: i for i in projeto3d.catalogo()["itens"]}
         hockey = itens[f"modelo-{HOCKEY}"]
-        self.assertEqual((hockey["tipo"], hockey["desenho"], hockey["medidas"]), ("maquina", "hockey", [0.9, 0.83, 1.51]))
+        self.assertEqual((hockey["tipo"], hockey["desenho"], hockey["medidas"]), ("maquina", "hockey", [0.9, 0.86, 1.51]))
         self.assertFalse(hockey["parede"])  # a mesa fica solta: joga-se nas duas cabeceiras
         basquete = itens[f"modelo-{BASQUETE}"]
         self.assertEqual((basquete["tipo"], basquete["desenho"], basquete["medidas"]), ("maquina", "basquete", [2.7, 1.0, 2.4]))
@@ -557,7 +558,7 @@ class Migracao0146Tests(TestCase):
         # o objeto 3D passa para o .glb e o código novos, com as medidas do .glb novo
         objeto = ObjetoTresD.objects.get(brinquedo=novo)
         self.assertEqual((objeto.codigo, objeto.arquivo_estatico), (HOCKEY, _glb(HOCKEY)))
-        self.assertEqual(objeto.medidas, [0.9, 0.83, 1.51])
+        self.assertEqual(objeto.medidas, [0.9, 0.86, 1.51])
         self.assertTrue(finders.find(objeto.arquivo_estatico))
         # o Air Game Hockey e o Air Game Kids ficam como estavam, sem 3D; ninguém novo
         self.assertEqual(Brinquedos.objects.count(), total)

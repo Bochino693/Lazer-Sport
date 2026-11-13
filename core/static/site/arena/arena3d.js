@@ -33,6 +33,14 @@
 
    A FICHA FICA FORA DO PALCO: ao lado no computador, embaixo no celular.
 
+   AS MÁQUINAS COM CARA DE FOTO DE CATÁLOGO (LEIA-ME V10, seção 92;
+   realismo3d.js): o tom neutro na cena inteira (a cor da arte como foi
+   impressa; o ACES desbotava), e cada objeto que chega ganha a luz de
+   ambiente de estúdio (a sala do RoomEnvironment, fraca e só nos materiais
+   dele: o parque fica com a luz que tem), as texturas nítidas (anisotrópico)
+   e, na qualidade baixa, as texturas grandes reduzidas para 1024 px. O tamanho é o de verdade (o
+   .glb é em metros): os adesivos de um produto têm a mesma medida.
+
    UM DE CADA POR VEZ (roda.js): o brinquedão, a área ninja, a área baby e
    a área esportiva têm cada um o seu lugar fixo na roda, do tamanho do
    maior modelo da categoria; os modelos da mesma categoria se revezam
@@ -1532,6 +1540,18 @@ class Maquina {
       // o arquivo inteiro fica guardado: as cores trocam os materiais dele
       this.gltf = gltf;
       this.arena.prepararMateriais(objeto);
+      // a luz de ambiente de estúdio e as texturas nítidas (na qualidade baixa, até 1024 px)
+      const realismo = this.dados.gerado ? null : await this.arena.realismo;
+      if (vez !== this.vez) {
+        descartarObjeto(objeto, this.arena);
+        return;
+      }
+      if (realismo) {
+        realismo.R.prepararObjeto(T, objeto, this.arena.renderer, {
+          // o parque já tem a luz dele (o céu, o sol, os refletores): a sala entra fraca, só para o reflexo no verniz
+          limite: this.arena.qualidade.nome === "baixa" ? 1024 : 0, envMap: realismo.ambiente, intensidade: 0.3,
+        });
+      }
       const caixa = new T.Box3().setFromObject(objeto);
       const tamanho = caixa.getSize(new T.Vector3());
       objeto.position.y -= caixa.min.y;
@@ -1829,10 +1849,16 @@ class Arena {
     this.renderer = new T.WebGLRenderer({ canvas: this.canvas, antialias: this.qualidade.antialias, powerPreference: "high-performance" });
     this.densidade = this.densidadeDoDegrau();
     this.renderer.setPixelRatio(this.densidade);
-    this.renderer.toneMapping = T.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    // o tom neutro (o das fotos de produto: realismo3d.js), um tico abaixo de 1: a cor da arte
+    // como foi impressa -- o ACES de antes (1,15) desbotava os amarelos e os laranjas das máquinas
+    this.renderer.toneMapping = T.NeutralToneMapping !== undefined ? T.NeutralToneMapping : T.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 0.95;
     this.renderer.outputColorSpace = T.SRGBColorSpace;
     this.anisotropia = Math.min(4, this.renderer.capabilities.getMaxAnisotropy());
+    // o realismo das máquinas (a luz de ambiente de estúdio e as texturas nítidas): só chega com o primeiro objeto
+    this.realismo = import(palco.dataset.realismo3d || new URL("realismo3d.js", import.meta.url).href)
+      .then((R) => R.ambiente(T, this.renderer, palco.dataset.three).then((ambiente) => ({ R, ambiente })))
+      .catch((erro) => { console.warn("Arena 3D: sem o realismo das máquinas", erro); return null; });
 
     this.cena = new T.Scene();
     // o fundo e a neblina na cor do horizonte do céu (montarCeu): o chão

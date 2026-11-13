@@ -1,6 +1,10 @@
 {
  "lateral-esquerda": {
-  "arquivo": "adesivos/lateral-esquerda.png",
+  "arquivo": "adesivos-hd/lateral-esquerda.webp",
+  "px_no_glb": [
+   2048,
+   1227
+  ],
   "mm": [
    1502,
    900
@@ -9,7 +13,11 @@
   "contorno": true
  },
  "lateral-direita": {
-  "arquivo": "adesivos/lateral-direita.png",
+  "arquivo": "adesivos-hd/lateral-direita.webp",
+  "px_no_glb": [
+   2048,
+   1227
+  ],
   "mm": [
    1502,
    900
@@ -18,7 +26,11 @@
   "contorno": true
  },
  "lateral-esquerda-2": {
-  "arquivo": "adesivos/lateral-esquerda-2.png",
+  "arquivo": "adesivos-hd/lateral-esquerda-2.webp",
+  "px_no_glb": [
+   1280,
+   638
+  ],
   "mm": [
    803,
    400
@@ -26,7 +38,11 @@
   "onde": "a cabeceira de trás (a do Jogador 02), vista de fora"
  },
  "lateral-direita-2": {
-  "arquivo": "adesivos/lateral-direita-2.png",
+  "arquivo": "adesivos-hd/lateral-direita-2.webp",
+  "px_no_glb": [
+   1280,
+   638
+  ],
   "mm": [
    803,
    400
@@ -34,7 +50,11 @@
   "onde": "a cabeceira da frente (a do Jogador 01), vista de fora"
  },
  "tampo": {
-  "arquivo": "adesivos/tampo.png",
+  "arquivo": "adesivos-hd/tampo.webp",
+  "px_no_glb": [
+   2048,
+   1173
+  ],
   "mm": [
    1402,
    803

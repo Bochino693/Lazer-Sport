@@ -1,6 +1,10 @@
 {
  "lateral-externa-esquerda": {
-  "arquivo": "adesivos/lateral-externa-esquerda.png",
+  "arquivo": "adesivos-hd/lateral-externa-esquerda.webp",
+  "px_no_glb": [
+   1942,
+   2048
+  ],
   "mm": [
    2294,
    2419
@@ -10,7 +14,11 @@
   "furos": 8
  },
  "lateral-interna-esquerda": {
-  "arquivo": "adesivos/lateral-interna-esquerda.png",
+  "arquivo": "adesivos-hd/lateral-interna-esquerda.webp",
+  "px_no_glb": [
+   2048,
+   1625
+  ],
   "mm": [
    2334,
    1852
@@ -19,7 +27,11 @@
   "contorno": true
  },
  "lateral-externa-direita": {
-  "arquivo": "adesivos/lateral-externa-direita.png",
+  "arquivo": "adesivos-hd/lateral-externa-direita.webp",
+  "px_no_glb": [
+   1942,
+   2048
+  ],
   "mm": [
    2294,
    2419
@@ -29,7 +41,11 @@
   "furos": 8
  },
  "lateral-interna-direita": {
-  "arquivo": "adesivos/lateral-interna-direita.png",
+  "arquivo": "adesivos-hd/lateral-interna-direita.webp",
+  "px_no_glb": [
+   2048,
+   1622
+  ],
   "mm": [
    2339,
    1852
@@ -38,23 +54,35 @@
   "contorno": true
  },
  "fundo-cesta": {
-  "arquivo": "adesivos/fundo-cesta.png",
+  "arquivo": "adesivos-hd/fundo-cesta.webp",
+  "px_no_glb": [
+   749,
+   1280
+  ],
   "mm": [
-   960,
-   1640
+   946,
+   1617
   ],
   "onde": "o painel do fundo, atrás da cesta, do teto até a rampa (o placar no alto)"
  },
  "teto-interno": {
-  "arquivo": "adesivos/teto-interno.png",
+  "arquivo": "adesivos-hd/teto-interno.webp",
+  "px_no_glb": [
+   768,
+   549
+  ],
   "mm": [
-   960,
-   686
+   946,
+   676
   ],
   "onde": "o teto da parte alta, visto de baixo (a frente no alto da imagem)"
  },
  "testeira-frente": {
-  "arquivo": "adesivos/testeira-frente.png",
+  "arquivo": "adesivos-hd/testeira-frente.webp",
+  "px_no_glb": [
+   768,
+   211
+  ],
   "mm": [
    1011,
    278
@@ -63,7 +91,11 @@
   "contorno": true
  },
  "testeira-fundo": {
-  "arquivo": "adesivos/testeira-fundo.png",
+  "arquivo": "adesivos-hd/testeira-fundo.webp",
+  "px_no_glb": [
+   512,
+   138
+  ],
   "mm": [
    1011,
    272
@@ -72,7 +104,11 @@
   "contorno": true
  },
  "testeira-teto": {
-  "arquivo": "adesivos/testeira-teto.png",
+  "arquivo": "adesivos-hd/testeira-teto.webp",
+  "px_no_glb": [
+   512,
+   456
+  ],
   "mm": [
    644,
    589
@@ -80,7 +116,11 @@
   "onde": "o alto da testeira, visto de cima (a frente embaixo da imagem)"
  },
  "testeira-superior-esquerda": {
-  "arquivo": "adesivos/testeira-superior-esquerda.png",
+  "arquivo": "adesivos-hd/testeira-superior-esquerda.webp",
+  "px_no_glb": [
+   512,
+   200
+  ],
   "mm": [
    589,
    222
@@ -88,7 +128,11 @@
   "onde": "o chanfro da esquerda da testeira (a frente à direita, o teto em cima)"
  },
  "testeira-superior-direita": {
-  "arquivo": "adesivos/testeira-superior-direita.png",
+  "arquivo": "adesivos-hd/testeira-superior-direita.webp",
+  "px_no_glb": [
+   512,
+   200
+  ],
   "mm": [
    589,
    222
@@ -96,7 +140,11 @@
   "onde": "o chanfro da direita da testeira (a frente à esquerda, o teto em cima)"
  },
  "testeira-lateral-esquerda": {
-  "arquivo": "adesivos/testeira-lateral-esquerda.png",
+  "arquivo": "adesivos-hd/testeira-lateral-esquerda.webp",
+  "px_no_glb": [
+   512,
+   122
+  ],
   "mm": [
    589,
    133
@@ -104,7 +152,11 @@
   "onde": "o lado reto da esquerda da testeira, visto de fora"
  },
  "testeira-lateral-direita": {
-  "arquivo": "adesivos/testeira-lateral-direita.png",
+  "arquivo": "adesivos-hd/testeira-lateral-direita.webp",
+  "px_no_glb": [
+   512,
+   122
+  ],
   "mm": [
    589,
    133
@@ -112,15 +164,23 @@
   "onde": "o lado reto da direita da testeira, visto de fora"
  },
  "prancha": {
-  "arquivo": "adesivos/prancha.png",
+  "arquivo": "adesivos-hd/prancha.webp",
+  "px_no_glb": [
+   894,
+   2048
+  ],
   "mm": [
-   960,
-   2198
+   946,
+   2166
   ],
   "onde": "a rampa que devolve a bola, vista de cima por quem joga (a cesta no alto da imagem); a ponta da frente passa embaixo da tampa do console"
  },
  "frente": {
-  "arquivo": "adesivos/frente.png",
+  "arquivo": "adesivos-hd/frente.webp",
+  "px_no_glb": [
+   829,
+   1024
+  ],
   "mm": [
    1000,
    1235

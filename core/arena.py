@@ -753,14 +753,14 @@ MODELOS_3D = (
         # (o nome de antes ainda liga: o que a 0145 ligou pelo nome segue ligado)
         "nomes": ("Air Game Kids Alienígenas", "Air Game Hockey Espacial"),
         "arquivo": "site/arena/modelos/air-game-kids-alienigenas.glb",
-        "medidas": (0.9, 0.83, 1.51),
+        "medidas": (0.9, 0.86, 1.51),
         "grupo": "maquinas",
         "pasta": "site/arena/modelos/air-game-kids-alienigenas/",
         "fotos": (
             ("perfil", "frente.webp"), ("lado_esquerdo", "lado_esquerdo.webp"),
             ("lado_direito", "lado_direito.webp"), ("verso", "verso.webp"),
         ),
-        "medidas_texto": "0,90 m × 0,83 m × 1,51 m",
+        "medidas_texto": "0,90 m × 0,86 m × 1,51 m",
         "categorias": ("Eletrônicos",),
         "descricao": (
             "Air Game Kids Alienígenas: a mesa de air hockey infantil do Air Game Kids com os adesivos dos "

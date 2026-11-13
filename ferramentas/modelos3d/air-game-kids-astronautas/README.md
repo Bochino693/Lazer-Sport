@@ -27,19 +27,14 @@ do outro lado e das cabeceiras, refaça pelo caminho do Alienígenas
 
     python3 desentortar.py      # lateral-desentortada.png (e previa-contorno.png)
     python3 texturas.py         # adesivos/*.png (e previa-pecas.png)
+    python3 ../ampliar_adesivos.py . --reduzir 0.5   # adesivos-hd/ (4x a resolução de origem, nítido)
+    node ../gerar_glb.cjs air-game-kids-alienigenas --arte astronautas --saida air-game-kids-astronautas.glb
 
-O móvel é o do Alienígenas: monte numa pasta de trabalho (`construir/`, fora
-do repositório) com o `montar.js`, o `gerar.cjs`, o `formas.json` e o
-`recortes.json` de `../air-game-kids-alienigenas/`; os `adesivos/*.png` daqui
-(e o `lateral-esquerda.png` copiado também como `lateral-direita.png`); o
-three.js de `core/static/vendor/three/` numa pasta `vendor/`, com o
-`index.html` do Alienígenas apontando o importmap para ela; `NOME =
-"air-game-kids-astronautas"` no `gerar.cjs` e `raiz.name` no `montar.js`.
-Depois `python3 -m http.server 8790` nessa pasta, `node gerar.cjs glb` e o
-`.glb` vai para `core/static/site/arena/modelos/`.
-
-0,83 x 0,90 x 1,51 m (as do Alienígenas), ~6,7 mil triângulos, ~680 KB (sem
-o `gltfpack`).
+O móvel é o do Alienígenas, o MESMO `montar.js` (`?arte=astronautas`: as artes
+desta pasta, a mesma geometria e a mesma medida: LEIA-ME V10, seção 92). As
+artes daqui já vinham ampliadas 2x com suavização: o `--reduzir 0.5` as volta
+à resolução de origem antes do Real-ESRGAN. 0,90 × 0,86 × 1,51 m, ~17 mil
+triângulos, ~1,9 MB.
 
 ## No site
 

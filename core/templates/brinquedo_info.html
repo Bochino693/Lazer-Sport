@@ -135,7 +135,8 @@
                              data-adesivos3d-modulo="{% estatico 'site/arena/adesivos3d.js' %}"{% endif %}
                              data-three="{% static 'vendor/three/three.module.min.js' %}"
                              data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
-                             data-cores3d="{% estatico 'site/arena/cores3d.js' %}">
+                             data-cores3d="{% estatico 'site/arena/cores3d.js' %}"
+                             data-realismo3d="{% estatico 'site/arena/realismo3d.js' %}">
                             <canvas data-visor3d-tela tabindex="0" aria-label="{{ brinquedo.nome_brinquedo }} em 3D: arraste para girar, role ou pince para aproximar"></canvas>
                             <p class="produto-visor3d-aviso" data-visor3d-aviso hidden></p>
                             <span class="produto-visor3d-dica" aria-hidden="true"><i class="fa-solid fa-hand-pointer"></i> Arraste para girar · pince ou role para aproximar</span>

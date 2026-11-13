@@ -15,7 +15,16 @@
    lista (`data-adesivos3d`: o id do JSON na página, ou o próprio JSON) e o
    controle "Adesivo: A · B" (site/arena/adesivos3d.js, `data-adesivos3d-
    modulo`) aparece sobre o 3D. Ele troca o .glb no mesmo lugar, com a
-   câmera onde estava; o outro modelo só baixa quando é pedido.
+   câmera onde estava; o outro modelo só baixa quando é pedido. Os adesivos
+   são a MESMA máquina: o enquadramento é o do primeiro 3D e fica (a troca
+   nunca "encolhe" nem "cresce" a máquina na tela).
+
+   A CARA DE FOTO DE CATÁLOGO (LEIA-ME V10, seção 92; site/arena/realismo3d.js):
+   a luz de ambiente de estúdio (RoomEnvironment + PMREM), o tom neutro (a cor
+   da arte como foi impressa), as texturas nítidas (anisotrópico), a sombra de
+   contato no pé da máquina e a densidade de pixels que se ajusta (até 2; cai
+   sozinha se os quadros ficam lentos). No aparelho fraco, as texturas descem
+   para 1024 px.
    ====================================================================== */
 
 const raiz = document.querySelector("[data-visor3d]");
@@ -64,72 +73,72 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
   visor.querySelectorAll("[data-adesivos3d-controle]").forEach((velho) => velho.remove());
   aviso.hidden = false;
   aviso.textContent = "Carregando o 3D…";
-  const [T, leitor, cores3d] = await Promise.all([
+  const realismoUrl = visor.dataset.realismo3d || new URL("realismo3d.js", import.meta.url).href;
+  const [T, leitor, cores3d, R] = await Promise.all([
     import(visor.dataset.three),
     import(visor.dataset.gltf),
     import(visor.dataset.cores3d),
+    import(realismoUrl),
   ]);
 
-  const renderer = new T.WebGLRenderer({ canvas: tela, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  renderer.outputColorSpace = T.SRGBColorSpace;
+  const renderer = new T.WebGLRenderer({ canvas: tela, antialias: true, alpha: true, powerPreference: "high-performance" });
+  const densidade = R.densidadeAdaptavel(renderer, 2);
+  R.configurarRenderer(T, renderer, 1.0);
   renderer.setClearColor(0x000000, 0);
+  const fraco = R.aparelhoFraco(renderer);
 
   const cena = new T.Scene();
-  cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
-  const sol = new T.DirectionalLight("#ffffff", 2.2);
-  sol.position.set(4, 9, 7);
+  // a luz: a sala de estúdio (reflexos no verniz e no cromo) e um sol de frente, alto, para o brilho
+  const luzAmbiente = R.ambiente(T, renderer, visor.dataset.three);
+  const sol = new T.DirectionalLight("#fff6ea", 1.35);
+  sol.position.set(3, 8, 6);
   cena.add(sol);
-  const contra = new T.DirectionalLight("#cfe0ff", 0.9);
+  const contra = new T.DirectionalLight("#9cc4ff", 0.6);
   contra.position.set(-6, 4, -8);
   cena.add(contra);
 
   const camera = new T.PerspectiveCamera(32, 1, 0.01, 100);
   const carregador = new leitor.GLTFLoader();
-  let gltf = await carregador.loadAsync(visor.dataset.modelo);
+  let [gltf] = await Promise.all([carregador.loadAsync(visor.dataset.modelo), luzAmbiente.then((t) => {
+    if (t) { cena.environment = t; cena.environmentIntensity = 1.0; }
+  })]);
   let objeto = null;
   let raio = 1;
   const alvo = new T.Vector3();
   let sombra = null;
+  let enquadrado = false;
 
-  // a máquina em pé no chão, com o centro no meio da tela (a câmera mira o meio dela)
+  // a máquina em pé no chão, com o centro no meio da tela (a câmera mira o meio dela).
+  // O enquadramento (o raio e o alvo) é o do PRIMEIRO 3D: o outro adesivo é a mesma
+  // máquina e aparece do mesmo tamanho na tela.
   function vestir(novo) {
     objeto = novo.scene;
+    R.prepararObjeto(T, objeto, renderer, { limite: fraco ? 1024 : 0 });
     const caixa = new T.Box3().setFromObject(objeto);
     const tamanho = caixa.getSize(new T.Vector3());
     objeto.position.x -= (caixa.min.x + caixa.max.x) / 2;
     objeto.position.z -= (caixa.min.z + caixa.max.z) / 2;
     objeto.position.y -= caixa.min.y;
     cena.add(objeto);
-    raio = tamanho.length() / 2;
-    alvo.set(0, tamanho.y / 2, 0);
-    camera.near = raio / 100;
-    camera.far = raio * 30;
-    camera.updateProjectionMatrix();
-    if (sombra) sombra.scale.set(tamanho.x * 1.5, tamanho.z * 1.5, 1);
+    if (!enquadrado) {
+      enquadrado = true;
+      raio = tamanho.length() / 2;
+      alvo.set(0, tamanho.y / 2, 0);
+      camera.near = raio / 100;
+      camera.far = raio * 30;
+      camera.updateProjectionMatrix();
+    }
+    if (sombra) {
+      cena.remove(sombra);
+      sombra.material.map.dispose();
+      sombra.material.dispose();
+      sombra.geometry.dispose();
+    }
+    sombra = R.sombraDeContato(T, tamanho.x, tamanho.z);
+    cena.add(sombra);
     return tamanho;
   }
-  const tamanho = vestir(gltf);
-
-  // a sombra macia embaixo (um disco com degradê: leve e sem luz de sombra)
-  const pintura = document.createElement("canvas");
-  pintura.width = pintura.height = 128;
-  const g = pintura.getContext("2d");
-  const degrade = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  degrade.addColorStop(0, "rgba(10,30,60,.42)");
-  degrade.addColorStop(1, "rgba(10,30,60,0)");
-  g.fillStyle = degrade;
-  g.fillRect(0, 0, 128, 128);
-  sombra = new T.Mesh(
-    new T.PlaneGeometry(1, 1),
-    new T.MeshBasicMaterial({ map: new T.CanvasTexture(pintura), transparent: true, depthWrite: false }),
-  );
-  sombra.rotation.x = -Math.PI / 2;
-  sombra.position.y = 0.002;
-  sombra.scale.set(tamanho.x * 1.5, tamanho.z * 1.5, 1);
-  cena.add(sombra);
+  vestir(gltf);
 
   // a câmera em volta: giro (de frente = 0), inclinação e distância
   const vista = { giro: 0.55, inclinacao: 0.22, perto: 1 };
@@ -172,6 +181,7 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
   function passo(agora) {
     if (solto || visor.hidden || !visivel || document.hidden) {
       rodando = false;
+      densidade.parou();
       return;
     }
     requestAnimationFrame(passo);
@@ -186,10 +196,15 @@ export async function iniciar(visor, tela, aviso, coresCaixa) {
     vista.inclinacao += (meta.inclinacao - vista.inclinacao) * k;
     vista.perto += (meta.perto - vista.perto) * k;
     if (Math.abs(vista.giro + vista.inclinacao + vista.perto - antes) > 1e-5) sujo = true;
-    if (!sujo) return;
+    if (!sujo) {
+      densidade.parou();
+      return;
+    }
     sujo = false;
     posicionar();
     renderer.render(cena, camera);
+    // os quadros lentos (a placa não dá conta da densidade): desce a densidade e redesenha
+    if (densidade.quadro(agora)) { medir(); sujo = true; }
   }
 
   function acordar() {
