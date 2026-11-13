@@ -220,8 +220,10 @@
                             {% endif %}
 
                             <div class="loja-card-acoes">
-                                {# só o que tem preço vai ao carrinho: o resto (promoção de brinde,
-                                   peça sob consulta) é conversa -- o servidor recusa o sem preço #}
+                                {% comment %}
+                                  só o que tem preço vai ao carrinho: o resto (promoção de brinde,
+                                  peça sob consulta) é conversa -- o servidor recusa o sem preço
+                                {% endcomment %}
                                 {% if item.preco %}
                                 <button
                                     type="button"

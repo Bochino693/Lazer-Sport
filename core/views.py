@@ -6163,6 +6163,11 @@ def calcular_frete(request):
     frete.distancia_km = distancia
 
     frete.save()
+    # Calcular o frete é escolher a entrega: sem isto, quem tinha marcado
+    # retirada antes e depois digitou o CEP pagava sem o frete.
+    if carrinho.tipo_envio != "frete":
+        carrinho.tipo_envio = "frete"
+        carrinho.save(update_fields=["tipo_envio"])
     _invalidar_pagamento_pendente(carrinho)
 
     return JsonResponse({

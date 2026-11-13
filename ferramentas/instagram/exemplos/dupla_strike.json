@@ -1,0 +1,194 @@
+{
+  "logo": "../../../core/static/images/logoofi.png",
+  "musica": "../../../core/static/site/arena/jogos/strike-kids/sons/musica.mp3",
+  "cenas": [
+    {
+      "palco": [
+        {
+          "imagem": "../../categorias/maquinas-alta/boliche-virtual.webp",
+          "altura": 680,
+          "cx": 345,
+          "base": 1090
+        },
+        {
+          "quadros": "strike_kids_3d",
+          "altura": 640,
+          "cx": 805,
+          "base": 1110
+        }
+      ],
+      "duracao": 3.0,
+      "modelo": "heroi",
+      "cores": [
+        "#FFE600",
+        "#FF8A00"
+      ],
+      "etiqueta": "DOIS BOLICHES, UMA FÁBRICA",
+      "titulo": [
+        "DUPLA",
+        "STRIKE"
+      ],
+      "texto": [
+        "Boliche Premium + Boliche Kids"
+      ]
+    },
+    {
+      "foto": "dragon_preto.jpg",
+      "duracao": 2.4,
+      "modelo": "card",
+      "icone": "pino",
+      "cores": [
+        "#FFD21A",
+        "#FF3D00"
+      ],
+      "etiqueta": "PARA TODAS AS IDADES",
+      "titulo": "BOLICHE PREMIUM",
+      "texto": [
+        "Dragon Bowling: arcade",
+        "para 1 ou 2 jogadores"
+      ],
+      "enquadre": "inteiro"
+    },
+    {
+      "foto": "dragon_rosa.jpg",
+      "duracao": 2.2,
+      "modelo": "numero",
+      "numero": "3",
+      "cores": [
+        "#FF2E93",
+        "#B14CFF"
+      ],
+      "etiqueta": "ACABAMENTO",
+      "titulo": [
+        "CORES"
+      ],
+      "texto": [
+        "Branco, preto ou rosa",
+        "e pista com LED"
+      ],
+      "enquadre": "inteiro"
+    },
+    {
+      "foto": "dragon_branco.jpg",
+      "duracao": 2.2,
+      "modelo": "card",
+      "lado": "direita",
+      "icone": "trofeu",
+      "cores": [
+        "#19D3FF",
+        "#6C8CFF"
+      ],
+      "etiqueta": "NO TELÃO",
+      "titulo": "RECORDE DA CASA",
+      "texto": [
+        "Placar e pinos na tela",
+        "a cada rodada"
+      ],
+      "enquadre": "inteiro"
+    },
+    {
+      "foto": "strike_kids_frente.jpg",
+      "enquadre": "inteiro",
+      "duracao": 2.4,
+      "modelo": "card",
+      "icone": "estrela",
+      "cores": [
+        "#2BE35B",
+        "#FFE600"
+      ],
+      "etiqueta": "PARA AS CRIANÇAS",
+      "titulo": "BOLICHE KIDS",
+      "texto": [
+        "Strike Kids: o boliche",
+        "infantil da Lazer & Sport"
+      ]
+    },
+    {
+      "video": "strike_kids.mov",
+      "inicio": 0.0,
+      "duracao": 2.2,
+      "modelo": "card",
+      "lado": "direita",
+      "icone": "camera",
+      "cores": [
+        "#FF2E93",
+        "#B14CFF"
+      ],
+      "etiqueta": "RANKING",
+      "titulo": "CÂMERA NO JOGO",
+      "texto": [
+        "Tira a foto do jogador",
+        "para o ranking"
+      ],
+      "enquadre": "inteiro"
+    },
+    {
+      "duracao": 2.2,
+      "modelo": "numero",
+      "numero": "5",
+      "cores": [
+        "#2BE35B",
+        "#0AA3FF"
+      ],
+      "etiqueta": "TECNOLOGIA",
+      "titulo": [
+        "SENSORES",
+        "DE PRECISÃO"
+      ],
+      "texto": [
+        "Leem cada jogada",
+        "da bola na pista"
+      ],
+      "foto": "strike_kids_angulo.jpg",
+      "enquadre": "inteiro"
+    },
+    {
+      "palco": [
+        {
+          "imagem": "../../categorias/maquinas-alta/boliche-virtual.webp",
+          "altura": 640,
+          "cx": 345,
+          "base": 1060
+        },
+        {
+          "quadros": "strike_kids_3d",
+          "altura": 590,
+          "cx": 805,
+          "base": 1080
+        }
+      ],
+      "duracao": 3.0,
+      "modelo": "card",
+      "icone": "regua",
+      "cores": [
+        "#FF8A00",
+        "#F0456A"
+      ],
+      "etiqueta": "LARGURA × COMPRIMENTO",
+      "titulo": "CABEM NO SEU ESPAÇO",
+      "texto": [
+        "Boliche Premium: 1,35 × 2,60 m",
+        "Boliche Kids: 0,74 × 1,91 m"
+      ]
+    },
+    {
+      "foto": "strike_kids_angulo.jpg",
+      "duracao": 3.6,
+      "modelo": "final",
+      "cores": [
+        "#FFE600",
+        "#2BE35B"
+      ],
+      "etiqueta": "DIRETO DA FÁBRICA",
+      "titulo": [
+        "LEVE A",
+        "DUPLA STRIKE"
+      ],
+      "texto": [
+        "Comente DUPLA",
+        "e peça o seu orçamento"
+      ],
+      "botao": "WhatsApp (11) 96056-3135"
+    }
+  ]
+}
