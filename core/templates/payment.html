@@ -6,6 +6,8 @@
 {% block content %}
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 
+  {# o casco do checkout (o mesmo do carrinho) e o que é só do pagamento #}
+  <link rel="stylesheet" href="{% estatico 'site/paginas/checkout.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/paginas/payment.css' %}">
 
 {% comment %}
@@ -18,70 +20,86 @@
   certo. A moldura desta tela é uma `div` -- o papel de conteúdo
   principal já está ocupado, e bem ocupado.
 {% endcomment %}
-<div class="checkout-shell" id="content">
-    <nav class="checkout-breadcrumb" aria-label="Navegação">
-        <a href="{% url 'home' %}">Início</a>
-        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-        <a href="{% url 'carrinho' %}">Carrinho</a>
-        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-        <span>Pagamento</span>
-    </nav>
+<div class="ck ck--pagamento checkout-shell" id="content">
 
-    <header class="checkout-head">
-        <div class="checkout-head-copy">
-            <span class="checkout-eyebrow">
-                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                Checkout protegido
-            </span>
-            <h1>Finalize sua compra com segurança</h1>
-            <p>
-                Escolha a melhor forma de pagamento. Seus dados são protegidos
-                e a confirmação do pedido é automática.
+    <div class="ck-cabeca">
+        <div class="ck-cabeca-texto">
+            <nav class="ck-trilha checkout-breadcrumb" aria-label="Navegação">
+                <a href="{% url 'home' %}">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i>
+                    Início
+                </a>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                <a href="{% url 'carrinho' %}">Carrinho</a>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">Pagamento</span>
+            </nav>
+
+            <h1 class="ck-titulo">
+                Pagamento
+                <span class="ck-contador ck-contador--seguro">
+                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                    Ambiente seguro
+                </span>
+            </h1>
+            <p class="ck-sub">
+                Pague com Pix ou cartão. A confirmação do pedido é automática.
             </p>
-
-            <div class="checkout-progress" aria-label="Etapas da compra">
-                <span class="checkout-step done">
-                    <span class="checkout-step-number">
-                        <i class="fa-solid fa-check" aria-hidden="true"></i>
-                    </span>
-                    Carrinho
-                </span>
-                <span class="checkout-step-line" aria-hidden="true"></span>
-                <span class="checkout-step active" aria-current="step">
-                    <span class="checkout-step-number">2</span>
-                    Pagamento
-                </span>
-                <span class="checkout-step-line" aria-hidden="true"></span>
-                <span class="checkout-step">
-                    <span class="checkout-step-number">3</span>
-                    Confirmação
-                </span>
-            </div>
         </div>
 
-        <div class="checkout-head-seal" aria-hidden="true">
-            <i class="fa-solid fa-lock"></i>
-        </div>
-    </header>
+        <ol class="ck-etapas" aria-label="Etapas da compra">
+            <li class="ck-etapa is-feita">
+                <span class="ck-etapa-bola">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                </span>
+                <span class="ck-etapa-nome">Carrinho</span>
+            </li>
+            <li class="ck-etapa is-atual" aria-current="step">
+                <span class="ck-etapa-bola">2</span>
+                <span class="ck-etapa-nome">Pagamento</span>
+            </li>
+            <li class="ck-etapa">
+                <span class="ck-etapa-bola">3</span>
+                <span class="ck-etapa-nome">Confirmação</span>
+            </li>
+        </ol>
+    </div>
 
     <div class="checkout-grid">
-        <section class="checkout-payment" aria-label="Forma de pagamento">
-            <div class="method-tabs" role="tablist">
-                <button type="button" class="method-tab active" data-method="pix">
-                    <i class="fa-brands fa-pix"></i> Pix
+        <section class="ck-card checkout-payment" aria-label="Forma de pagamento">
+
+            {# no celular o resumo vem depois: o valor fica à vista já aqui #}
+            <div class="ck-pagar-total">
+                <span>Total a pagar</span>
+                <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
+                    R$ {{ total_final|moeda }}
+                </strong>
+            </div>
+
+            <div class="method-tabs ck-segmento" role="tablist" aria-label="Forma de pagamento">
+                <button type="button" class="method-tab ck-segmento-opcao active" data-method="pix"
+                        role="tab" aria-selected="true" aria-controls="pix-panel">
+                    <i class="fa-brands fa-pix" aria-hidden="true"></i> Pix
                 </button>
-                <button type="button" class="method-tab" data-method="card">
-                    <i class="fa-regular fa-credit-card"></i> Crédito ou débito
+                <button type="button" class="method-tab ck-segmento-opcao" data-method="card"
+                        role="tab" aria-selected="false" aria-controls="card-panel"
+                        aria-label="Crédito ou débito">
+                    <i class="fa-regular fa-credit-card" aria-hidden="true"></i>
+                    {# no telefone estreito, o rótulo curto cabe numa linha #}
+                    <span class="ck-rotulo-largo">Crédito ou débito</span>
+                    <span class="ck-rotulo-curto">Crédito/débito</span>
                 </button>
             </div>
 
             <div id="payment-error" class="payment-error" role="alert"></div>
 
-            <section id="pix-panel" class="payment-panel active">
-                <h2 class="panel-title">Pagamento instantâneo</h2>
-                <p class="panel-subtitle">
-                    Escaneie o QR Code ou copie o código Pix. A confirmação é automática.
-                </p>
+            <section id="pix-panel" class="payment-panel active" role="tabpanel" aria-label="Pix">
+                <div class="panel-head">
+                    <h2 class="panel-title">Pague com Pix</h2>
+                    <p class="panel-subtitle">
+                        Aprovação em segundos, a qualquer hora. O pedido é confirmado aqui mesmo.
+                    </p>
+                </div>
 
                 <div id="payment-live-status"
                      class="payment-live-status checking"
@@ -97,74 +115,147 @@
                 </div>
 
                 <div id="pix-loading" class="pix-loading">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i>
-                    Gerando seu Pix com segurança...
+                    <span class="pix-loading-qr" aria-hidden="true"></span>
+                    <span class="pix-loading-texto">
+                        <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+                        Gerando seu Pix com segurança...
+                    </span>
                 </div>
 
                 <div id="pix-content" class="pix-content">
-                    <div id="pix-value" class="pix-value"></div>
-                    <div class="pix-qr-wrap">
-                        <img id="pix-qrcode" src="" alt="QR Code Pix">
-                    </div>
-                    <div class="pix-copy">
-                        <input id="pix-code" type="text" readonly aria-label="Pix copia e cola">
-                        <button type="button" id="copy-pix">
-                            <i class="fa-regular fa-copy"></i> Copiar Pix
-                        </button>
+                    <div class="pix-layout">
+                        <div class="pix-qr">
+                            <div class="pix-qr-wrap">
+                                <img id="pix-qrcode" src="" alt="QR Code Pix" width="232" height="232">
+                            </div>
+                            <span class="pix-qr-legenda">
+                                <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+                                Escaneie com o app do banco
+                            </span>
+                        </div>
+
+                        <div class="pix-valor-bloco">
+                            <span class="pix-rotulo">Valor do Pix</span>
+                            <div id="pix-value" class="pix-value"></div>
+                        </div>
+
+                        <div class="pix-copy-bloco">
+                            <label class="ck-rotulo" for="pix-code">Pix copia e cola</label>
+                            <div class="pix-copy">
+                                <div class="ck-entrada ck-entrada--sem-icone">
+                                    <input id="pix-code" type="text" readonly aria-label="Pix copia e cola">
+                                </div>
+                                <button type="button" id="copy-pix" class="ck-botao ck-botao--primario">
+                                    <i class="fa-regular fa-copy" aria-hidden="true"></i> Copiar código
+                                </button>
+                            </div>
+                        </div>
+
+                        <ol class="pix-passos">
+                            <li><span>Abra o app do seu banco e entre na área <strong>Pix</strong>.</span></li>
+                            <li><span>Escolha <strong>Pagar com QR Code</strong> ou <strong>Pix copia e cola</strong>.</span></li>
+                            <li><span>Confira o valor e confirme. Esta tela atualiza sozinha.</span></li>
+                        </ol>
                     </div>
                 </div>
             </section>
 
-            <section id="card-panel" class="payment-panel">
-                <h2 class="panel-title">Cartão de crédito ou débito</h2>
-                <p class="panel-subtitle">
-                    Os dados são protegidos e tokenizados diretamente pelo Mercado Pago.
-                </p>
-                <div class="card-limit">
-                    <i class="fa-solid fa-layer-group"></i>
-                    Crédito em até {{ max_parcelas }}x para este pedido. Débito à vista.
+            <section id="card-panel" class="payment-panel" role="tabpanel" aria-label="Cartão de crédito ou débito">
+                <div class="panel-head">
+                    <h2 class="panel-title">Cartão de crédito ou débito</h2>
+                    <p class="panel-subtitle">
+                        Os dados do cartão vão direto para o Mercado Pago, criptografados.
+                    </p>
                 </div>
-                {% if not cartao_liberado %}
-                <div class="card-limit" id="cartao-minimo">
-                    <i class="fa-solid fa-circle-info"></i>
-                    Pagamento com cartão a partir de R$ {{ cartao_minimo|moeda }}.
-                    Para este valor, use o Pix.
+
+                {% if cartao_liberado is False %}
+                {# Abaixo do mínimo do cartão o Brick não desenha nada: o caminho é o Pix. #}
+                <div class="card-minimo" role="note">
+                    <span class="ck-card-icone" aria-hidden="true">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </span>
+                    <div class="card-minimo-texto">
+                        <strong>Pagamento com cartão a partir de R$ {{ cartao_minimo|moeda }}.</strong>
+                        <span>Para este valor, use o Pix.</span>
+                    </div>
+                    <button type="button" class="ck-botao ck-botao--primario" data-ir-para-pix>
+                        <i class="fa-brands fa-pix" aria-hidden="true"></i>
+                        Pagar com Pix
+                    </button>
                 </div>
+                {% else %}
+                <ul class="card-limit ck-selos" aria-label="Condições do cartão">
+                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Crédito em até {{ max_parcelas }}x</li>
+                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> Débito à vista</li>
+                    <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Confirmação do banco, se pedida</li>
+                </ul>
                 {% endif %}
-                <div id="paymentBrick_container"></div>
+
+                <div class="card-brick-area"{% if cartao_liberado is False %} hidden{% endif %}>
+                    <div id="paymentBrick_container"></div>
+
+                    {# a espera do formulário: esqueleto, demora (15 s) e falha, com o "Tentar de novo" #}
+                    <div class="card-brick-espera" id="card-brick-espera" data-estado="carregando" aria-live="polite">
+                        <div class="card-brick-esqueleto" aria-hidden="true">
+                            <span></span><span></span><span class="curto"></span><span class="curto"></span><span class="botao"></span>
+                        </div>
+                        <div class="card-brick-aviso">
+                            <span class="card-brick-aviso-icone" aria-hidden="true">
+                                <i id="card-brick-aviso-icone" class="fa-solid fa-circle-notch fa-spin"></i>
+                            </span>
+                            <strong id="card-brick-aviso-titulo">Carregando o formulário seguro do Mercado Pago...</strong>
+                            <small id="card-brick-aviso-texto"></small>
+                            <button type="button" class="ck-botao ck-botao--secundario" id="card-tentar" hidden>
+                                <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                                Tentar de novo
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div id="statusScreenBrick_container" class="status-brick" hidden></div>
+
+                <p class="card-mp">
+                    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                    Processado pelo Mercado Pago. A Lazer &amp; Sport não vê o número do cartão.
+                </p>
             </section>
         </section>
 
-        <aside class="checkout-summary" aria-label="Resumo do pedido">
-            <div class="summary-total-card">
-                <small>Total a pagar</small>
-                <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
-                    R$ {{ total_final|moeda }}
-                </strong>
+        <aside class="ck-card checkout-summary" aria-labelledby="ck-resumo-titulo">
+            <div class="ck-card-cabeca">
+                <span class="ck-card-icone" aria-hidden="true">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </span>
+                <div>
+                    <h2 class="ck-card-titulo summary-title" id="ck-resumo-titulo">Resumo do pedido</h2>
+                    <span class="ck-card-nota">
+                        {% if pedido_reservado %}Pedido #{{ pedido_reservado.id }} · {% endif %}{{ total_itens }} produto{{ total_itens|pluralize }}
+                    </span>
+                </div>
             </div>
 
-            <h2 class="summary-title">Resumo do pedido</h2>
-            <div class="summary-items">
+            <ul class="summary-items">
                 {% for item in itens %}
-                <div class="summary-item">
-                    <span>{{ item.quantidade }}× {{ item.item }}</span>
+                <li class="summary-item">
+                    <span class="summary-qtd">{{ item.quantidade }}×</span>
+                    {# o item do pedido reservado tem o nome guardado; o do carrinho, o produto #}
+                    <span class="summary-nome">{% firstof item.nome_item item.nome_com_adesivo %}</span>
                     <strong class="money-brl" data-value="{{ item.subtotal|stringformat:'f' }}">
                         R$ {{ item.subtotal|moeda }}
                     </strong>
-                </div>
+                </li>
                 {% endfor %}
-            </div>
+            </ul>
 
             <div class="summary-lines">
-                <div class="summary-line">
+                <div class="ck-linha summary-line">
                     <span>Produtos</span>
                     <span class="money-brl" data-value="{{ total_bruto|stringformat:'f' }}">
                         R$ {{ total_bruto|moeda }}
                     </span>
                 </div>
                 {% if valor_desconto > 0 %}
-                <div class="summary-line discount">
+                <div class="ck-linha ck-linha--desconto summary-line discount">
                     <span>Desconto</span>
                     <span>
                         − <span class="money-brl" data-value="{{ valor_desconto|stringformat:'f' }}">
@@ -173,16 +264,22 @@
                     </span>
                 </div>
                 {% endif %}
-                <div class="summary-line">
-                    <span>Frete</span>
+                <div class="ck-linha summary-line">
+                    <span>{% if carrinho.tipo_envio == "retirada" %}Retirada na loja{% else %}Frete{% endif %}</span>
                     <span class="money-brl" data-value="{{ frete|stringformat:'f' }}">
                         R$ {{ frete|moeda }}
                     </span>
                 </div>
+                <div class="ck-linha ck-linha--total summary-total-card">
+                    <span>Total a pagar</span>
+                    <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
+                        R$ {{ total_final|moeda }}
+                    </strong>
+                </div>
             </div>
 
-            <div class="secure-note">
-                <i class="fa-solid fa-shield-halved"></i>
+            <div class="ck-seguro secure-note">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
                 <span>
                     A Lazer &amp; Sport não recebe nem armazena número ou código
                     de segurança do cartão.
@@ -192,13 +289,20 @@
     </div>
 </div>
 
-<div id="success-modal" class="checkout-modal" role="dialog" aria-modal="true">
+<div id="success-modal" class="checkout-modal" role="dialog" aria-modal="true" aria-labelledby="success-modal-titulo">
     <div class="checkout-modal-card">
-        <i class="fa-solid fa-circle-check"></i>
-        <h2>Pagamento aprovado!</h2>
+        <span class="checkout-modal-selo" aria-hidden="true">
+            <i class="fa-solid fa-check"></i>
+        </span>
+        <h2 id="success-modal-titulo">Pagamento aprovado!</h2>
         <p>Seu pedido foi confirmado com sucesso.</p>
+        <p class="checkout-modal-nota">
+            <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+            Levando você para os seus pedidos...
+        </p>
         <button type="button" onclick="window.location.href='{% url 'meus_pedidos' %}#pedidos'">
             Ver meus pedidos
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
         </button>
     </div>
 </div>
@@ -210,6 +314,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const maxParcelas = Number("{{ max_parcelas }}");
     const publicKey = "{{ mp_public_key|escapejs }}";
     const csrfToken = "{{ csrf_token }}";
+    // Abaixo do mínimo do cartão o Brick não desenha nada: a aba mostra o
+    // aviso e o caminho do Pix. Sem a informação do servidor, liberado.
+    const cartaoLiberado = {% if cartao_liberado is False %}false{% else %}true{% endif %};
 
     const errorBox = document.getElementById("payment-error");
     const pixLoading = document.getElementById("pix-loading");
@@ -217,6 +324,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const liveStatus = document.getElementById("payment-live-status");
     const liveTitle = document.getElementById("payment-live-title");
     const liveDetail = document.getElementById("payment-live-detail");
+    const esperaCartaoBox = document.getElementById("card-brick-espera");
+    const esperaCartaoIcone = document.getElementById("card-brick-aviso-icone");
+    const esperaCartaoTitulo = document.getElementById("card-brick-aviso-titulo");
+    const esperaCartaoTexto = document.getElementById("card-brick-aviso-texto");
+    const botaoTentarCartao = document.getElementById("card-tentar");
     let currentPedidoId = "{{ pedido_reservado.id|default:'' }}";
     let brickController = null;
     let bricksBuilder = null;
@@ -226,14 +338,36 @@ document.addEventListener("DOMContentLoaded", () => {
     let pollingActive = false;
     let checkingPayment = false;
     let leavingCheckout = false;
+    // O formulário do cartão: pronto (onReady), sendo criado, a espera de
+    // 15 s e a "geração" (um "Tentar de novo" invalida a criação anterior).
+    let cartaoPronto = false;
+    let criandoCartao = false;
+    let esperaCartaoTimer = null;
+    let geracaoCartao = 0;
+    let ultimoErroDoCartao = null;
 
-    function showError(message) {
-        errorBox.textContent = message || "Não foi possível processar o pagamento.";
+    function showError(message, detalhes = {}) {
+        errorBox.textContent = "";
+        const texto = document.createElement("span");
+        texto.className = "payment-error-texto";
+        texto.textContent = message || "Não foi possível processar o pagamento.";
+        errorBox.appendChild(texto);
+        // O código cru do Mercado Pago, pequeno: é o que o dono manda no
+        // print para a causa ser achada.
+        if (detalhes.codigo) {
+            const codigo = document.createElement("small");
+            codigo.className = "payment-error-codigo";
+            codigo.textContent = `Código: ${detalhes.codigo}`;
+            errorBox.appendChild(codigo);
+        }
+        // de onde veio o erro: o do cartão sai da frente quando se volta ao Pix
+        errorBox.dataset.origem = detalhes.origem || "";
         errorBox.style.display = "block";
     }
 
     function clearError() {
         errorBox.textContent = "";
+        errorBox.dataset.origem = "";
         errorBox.style.display = "none";
     }
 
@@ -479,130 +613,305 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ===== O FORMULÁRIO DO CARTÃO (Payment Brick do Mercado Pago) =====
+
+    // A espera em cima da área do formulário: "carregando" (esqueleto),
+    // "lento" (passou de 15 s), "falhou" (com o motivo na caixa de erro) e
+    // "pronto" (some). O "Tentar de novo" aparece na demora e na falha.
+    function estadoDoCartao(estado, titulo = "", texto = "") {
+        if (!esperaCartaoBox) return;
+        esperaCartaoBox.hidden = estado === "pronto";
+        esperaCartaoBox.dataset.estado = estado;
+        if (esperaCartaoIcone) {
+            esperaCartaoIcone.className = estado === "falhou"
+                ? "fa-solid fa-triangle-exclamation"
+                : "fa-solid fa-circle-notch fa-spin";
+        }
+        if (esperaCartaoTitulo) esperaCartaoTitulo.textContent = titulo;
+        if (esperaCartaoTexto) esperaCartaoTexto.textContent = texto;
+        if (botaoTentarCartao) botaoTentarCartao.hidden = !(estado === "lento" || estado === "falhou");
+    }
+
+    function pararEsperaDoCartao() {
+        if (esperaCartaoTimer) {
+            clearTimeout(esperaCartaoTimer);
+            esperaCartaoTimer = null;
+        }
+    }
+
+    function iniciarEsperaDoCartao() {
+        pararEsperaDoCartao();
+        esperaCartaoTimer = window.setTimeout(() => {
+            if (cartaoPronto) return;
+            estadoDoCartao(
+                "lento",
+                "O formulário está demorando para abrir.",
+                "Pode ser a conexão. Tente de novo ou pague com Pix."
+            );
+        }, 15000);
+    }
+
+    // As causas mais comuns em português; o código cru vai junto, pequeno.
+    const CAUSAS_DO_CARTAO = [
+        [/already_initialized/, "O formulário já estava aberto. Toque em Tentar de novo."],
+        [/container/, "O espaço do formulário não foi encontrado na página."],
+        [/amount/, "O Mercado Pago não aceitou o valor deste pedido para cartão."],
+        [/public_key|publickey|unauthorized|invalid_sdk_instance|forbidden/, "A chave pública do Mercado Pago foi recusada. Confira a MP_PUBLIC_KEY."],
+        [/payer|email/, "O Mercado Pago não aceitou o e-mail da conta. Confira o e-mail do seu perfil."],
+        [/no_payment_method_for_provided_bin|_bin\b/, "Cartão não reconhecido. Confira o número ou use outro cartão."],
+        [/installments/, "Não foi possível buscar as parcelas para este valor."],
+        [/card_token|secure_field/, "O Mercado Pago não aceitou os dados do cartão. Confira número, validade e código."],
+        [/payment_methods|identification_types|config_assets|failed to fetch|network|timeout/, "Não foi possível falar com o Mercado Pago agora. Confira a conexão."]
+    ];
+
+    // O motivo de verdade: `message`, ou `cause` (texto ou lista de
+    // {code, description}), como o Brick e o SDK entregam.
     function motivoDoErro(error) {
-        if (!error) return "";
-        const causa = Array.isArray(error.cause)
-            ? error.cause.map(c => c.description || c.code || c).join(" · ")
-            : (error.cause || "");
-        return [error.message, causa].filter(Boolean).join(" — ");
+        const codigos = [];
+        const descricoes = [];
+
+        if (typeof error === "string") {
+            descricoes.push(error);
+        } else if (error) {
+            const causa = error.cause;
+            if (Array.isArray(causa)) {
+                causa.forEach(item => {
+                    if (!item) return;
+                    if (typeof item === "string") {
+                        codigos.push(item);
+                        return;
+                    }
+                    if (item.code) codigos.push(String(item.code));
+                    if (item.description) descricoes.push(String(item.description));
+                });
+            } else if (typeof causa === "string") {
+                codigos.push(causa);
+            } else if (causa && typeof causa === "object") {
+                if (causa.code) codigos.push(String(causa.code));
+                if (causa.description) descricoes.push(String(causa.description));
+            }
+            if (error.message) descricoes.push(String(error.message));
+        }
+
+        const codigo = codigos.join(", ");
+        const tudo = `${codigo} ${descricoes.join(" ")}`.toLowerCase();
+        const traducao = CAUSAS_DO_CARTAO.find(([padrao]) => padrao.test(tudo));
+
+        return {
+            texto: traducao
+                ? traducao[1]
+                : (descricoes[0] || "Não foi possível carregar o formulário do cartão."),
+            codigo: codigo || (traducao ? (descricoes[0] || "") : "")
+        };
+    }
+
+    function falhaDoCartao(error, {critica = true} = {}) {
+        console.error("Mercado Pago (formulário do cartão):", error);
+        const motivo = motivoDoErro(error);
+        ultimoErroDoCartao = motivo;
+        showError(motivo.texto, {codigo: motivo.codigo, origem: "cartao"});
+        if (critica || !cartaoPronto) {
+            pararEsperaDoCartao();
+            estadoDoCartao(
+                "falhou",
+                "O formulário do cartão não abriu.",
+                "O motivo está acima. Você pode tentar de novo ou pagar com Pix."
+            );
+        }
     }
 
     async function createCardBrick() {
-        if (brickController) return;
+        if (!cartaoLiberado) return;
+        if (brickController || criandoCartao) return;
+        criandoCartao = true;
+        const geracao = ++geracaoCartao;
+        cartaoPronto = false;
+        ultimoErroDoCartao = null;
         clearError();
-
-        if ({{ cartao_liberado|yesno:"false,true" }}) {
-            return;  // abaixo do mínimo do cartão: o aviso já está na tela
-        }
-        if (typeof MercadoPago === "undefined") {
-            showError("Não foi possível carregar o formulário do cartão. Verifique a conexão e recarregue a página.");
-            return;
-        }
-
-        if (!publicKey) {
-            showError("MP_PUBLIC_KEY não está configurada no ambiente.");
-            return;
-        }
-
-        const mp = new MercadoPago(publicKey, {locale: "pt-BR"});
-        bricksBuilder = mp.bricks();
+        estadoDoCartao("carregando", "Carregando o formulário seguro do Mercado Pago...");
 
         try {
-        brickController = await bricksBuilder.create(
-            "payment",
-            "paymentBrick_container",
-            {
-                initialization: {
-                    amount: total,
-                    payer: {
-                        email: "{{ request.user.email|escapejs }}"
-                    }
-                },
-                customization: {
-                    paymentMethods: {
-                        creditCard: "all",
-                        debitCard: "all",
-                        minInstallments: 1,
-                        maxInstallments: maxParcelas
+            if (!publicKey) {
+                ultimoErroDoCartao = {texto: "MP_PUBLIC_KEY não está configurada no ambiente.", codigo: ""};
+                showError(ultimoErroDoCartao.texto, {origem: "cartao"});
+                estadoDoCartao("falhou", "O formulário do cartão não abriu.", "Falta a chave pública do Mercado Pago no servidor.");
+                return;
+            }
+
+            if (typeof MercadoPago === "undefined") {
+                // O script do Mercado Pago não chegou (bloqueador, rede).
+                console.error("Mercado Pago: o SDK (sdk.mercadopago.com/js/v2) não carregou.");
+                ultimoErroDoCartao = {
+                    texto: "Não foi possível carregar o formulário do cartão. Verifique a conexão e tente de novo.",
+                    codigo: "sdk_nao_carregou"
+                };
+                showError(ultimoErroDoCartao.texto, {codigo: ultimoErroDoCartao.codigo, origem: "cartao"});
+                estadoDoCartao(
+                    "falhou",
+                    "O formulário do cartão não abriu.",
+                    "O navegador não conseguiu baixar o formulário do Mercado Pago."
+                );
+                return;
+            }
+
+            iniciarEsperaDoCartao();
+            const mp = new MercadoPago(publicKey, {locale: "pt-BR"});
+            bricksBuilder = mp.bricks();
+
+            const controlador = await bricksBuilder.create(
+                "payment",
+                "paymentBrick_container",
+                {
+                    initialization: {
+                        amount: total,
+                        payer: {
+                            email: "{{ request.user.email|escapejs }}"
+                        }
                     },
-                    visual: {
-                        // Formulário do Mercado Pago no tema escuro do site.
-                        style: {
-                            theme: "dark",
-                            customVariables: {
-                                baseColor: "#007BFF",
-                                borderRadiusMedium: "12px",
-                                borderRadiusLarge: "16px"
+                    customization: {
+                        paymentMethods: {
+                            creditCard: "all",
+                            debitCard: "all",
+                            minInstallments: 1,
+                            maxInstallments: maxParcelas
+                        },
+                        visual: {
+                            // Formulário do Mercado Pago no tema escuro do site,
+                            // nas cores do checkout (checkout.css). Cores só em
+                            // #rrggbb: "transparent" ou rgba() podem fazer o
+                            // Brick recusar a configuração inteira.
+                            style: {
+                                theme: "dark",
+                                customVariables: {
+                                    baseColor: "#1a6fe0",
+                                    formBackgroundColor: "#0b1834",
+                                    inputBackgroundColor: "#060e22",
+                                    textPrimaryColor: "#eef4ff",
+                                    textSecondaryColor: "#a9bcd9",
+                                    outlinePrimaryColor: "#2b4472",
+                                    errorColor: "#ff5a6a",
+                                    successColor: "#34e08a",
+                                    buttonTextColor: "#ffffff",
+                                    borderRadiusSmall: "8px",
+                                    borderRadiusMedium: "12px",
+                                    borderRadiusLarge: "16px"
+                                }
                             }
                         }
-                    }
-                },
-                callbacks: {
-                    onReady: () => clearError(),
-                    onError: error => {
-                        console.error("Brick de cartão:", error);
-                        const motivo = motivoDoErro(error);
-                        showError(
-                            "Não foi possível carregar o formulário de cartão." +
-                            (motivo ? ` (${motivo})` : "")
-                        );
                     },
-                    // O Payment Brick entrega { selectedPaymentMethod, formData }.
-                    // Antes o objeto inteiro ia para o servidor e o token do
-                    // cartão ficava dentro de "formData": o servidor não o
-                    // achava e todo cartão voltava "Preencha os dados".
-                    onSubmit: async ({selectedPaymentMethod, formData}) => {
-                        clearError();
-                        try {
-                            const response = await fetch("{% url 'processar_cartao' %}", {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    "X-CSRFToken": csrfToken,
-                                    "X-Requested-With": "XMLHttpRequest"
-                                },
-                                body: JSON.stringify({
-                                    ...(formData || {}),
-                                    payment_type_id: selectedPaymentMethod || "",
-                                    carrinho_id: carrinhoId
-                                })
+                    callbacks: {
+                        onReady: () => {
+                            if (geracao !== geracaoCartao) return;
+                            cartaoPronto = true;
+                            pararEsperaDoCartao();
+                            estadoDoCartao("pronto");
+                            clearError();
+                        },
+                        onError: error => {
+                            if (geracao !== geracaoCartao) return;
+                            falhaDoCartao(error, {
+                                critica: !error || error.type !== "non_critical"
                             });
-                            const data = await readJson(response);
-                            rememberPedido(data.pedido_id);
-                            if (data.aprovado) {
-                                finishCheckout(data);
-                            } else if (data.desafio_3ds) {
-                                await showBankChallenge(data);
-                                startPolling();
-                            } else {
-                                updateLiveStatus(
-                                    "checking",
-                                    "Pagamento em análise",
-                                    data.mensagem || "Avisaremos assim que for aprovado."
-                                );
-                                startPolling();
+                        },
+                        // O Payment Brick entrega { selectedPaymentMethod, formData }.
+                        // Antes o objeto inteiro ia para o servidor e o token do
+                        // cartão ficava dentro de "formData": o servidor não o
+                        // achava e todo cartão voltava "Preencha os dados".
+                        onSubmit: async ({selectedPaymentMethod, formData}) => {
+                            clearError();
+                            try {
+                                const response = await fetch("{% url 'processar_cartao' %}", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "X-CSRFToken": csrfToken,
+                                        "X-Requested-With": "XMLHttpRequest"
+                                    },
+                                    body: JSON.stringify({
+                                        ...(formData || {}),
+                                        payment_type_id: selectedPaymentMethod || "",
+                                        carrinho_id: carrinhoId
+                                    })
+                                });
+                                const data = await readJson(response);
+                                rememberPedido(data.pedido_id);
+                                if (data.aprovado) {
+                                    finishCheckout(data);
+                                } else if (data.desafio_3ds) {
+                                    await showBankChallenge(data);
+                                    startPolling();
+                                } else {
+                                    updateLiveStatus(
+                                        "checking",
+                                        "Pagamento em análise",
+                                        data.mensagem || "Avisaremos assim que for aprovado."
+                                    );
+                                    startPolling();
+                                }
+                                return data;
+                            } catch (error) {
+                                // Recusado: o servidor devolve os itens ao
+                                // carrinho; o Pix da tela morreu junto.
+                                pixPrecisaRecarregar = true;
+                                showError(error.message);
+                                throw error;
                             }
-                            return data;
-                        } catch (error) {
-                            // Recusado: o servidor devolve os itens ao
-                            // carrinho; o Pix da tela morreu junto.
-                            pixPrecisaRecarregar = true;
-                            showError(error.message);
-                            throw error;
                         }
                     }
                 }
-            }
-        );
-        } catch (error) {
-            console.error("Brick de cartão:", error);
-            brickController = null;
-            const motivo = motivoDoErro(error);
-            showError(
-                "Não foi possível abrir o formulário de cartão." +
-                (motivo ? ` (${motivo})` : "")
             );
+
+            // Um "Tentar de novo" no meio do caminho: esta criação ficou velha.
+            if (geracao !== geracaoCartao) {
+                try { controlador.unmount(); } catch (e) {}
+                return;
+            }
+            brickController = controlador;
+        } catch (error) {
+            if (geracao === geracaoCartao) falhaDoCartao(error);
+        } finally {
+            if (geracao === geracaoCartao) criandoCartao = false;
         }
+    }
+
+    // "Tentar de novo": desmonta o formulário, busca o script do Mercado
+    // Pago de novo se ele não tinha chegado, e cria o Brick do zero.
+    function carregarSdkMercadoPago() {
+        if (typeof MercadoPago !== "undefined") return Promise.resolve(true);
+        return new Promise(resolve => {
+            const script = document.createElement("script");
+            let limite = null;
+            const fim = () => {
+                clearTimeout(limite);
+                resolve(typeof MercadoPago !== "undefined");
+            };
+            limite = window.setTimeout(fim, 15000);
+            script.src = "https://sdk.mercadopago.com/js/v2";
+            script.async = true;
+            script.onload = fim;
+            script.onerror = fim;
+            document.head.appendChild(script);
+        });
+    }
+
+    async function retryCardBrick() {
+        pararEsperaDoCartao();
+        if (brickController) {
+            try { brickController.unmount(); } catch (e) { console.error(e); }
+        }
+        brickController = null;
+        criandoCartao = false;
+        geracaoCartao += 1;
+        const container = document.getElementById("paymentBrick_container");
+        if (container) container.innerHTML = "";
+        clearError();
+        estadoDoCartao("carregando", "Carregando o formulário seguro do Mercado Pago...");
+        await carregarSdkMercadoPago();
+        await createCardBrick();
+    }
+
+    if (botaoTentarCartao) {
+        botaoTentarCartao.addEventListener("click", () => retryCardBrick());
     }
 
     async function showBankChallenge(data) {
@@ -647,10 +956,17 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener("click", async () => {
             document.querySelectorAll(".method-tab").forEach(tab => {
                 tab.classList.toggle("active", tab === button);
+                tab.setAttribute("aria-selected", tab === button ? "true" : "false");
             });
             const cardSelected = button.dataset.method === "card";
             document.getElementById("pix-panel").classList.toggle("active", !cardSelected);
             document.getElementById("card-panel").classList.toggle("active", cardSelected);
+            // O erro do cartão é do cartão: sai da frente no Pix e volta
+            // com a aba do cartão, enquanto o formulário não abrir.
+            if (!cardSelected && errorBox.dataset.origem === "cartao") clearError();
+            if (cardSelected && brickController && !cartaoPronto && ultimoErroDoCartao) {
+                showError(ultimoErroDoCartao.texto, {codigo: ultimoErroDoCartao.codigo, origem: "cartao"});
+            }
             if (cardSelected) {
                 await createCardBrick();
             } else if (pixPrecisaRecarregar && !leavingCheckout) {
@@ -662,12 +978,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // "Pagar com Pix" do aviso de valor mínimo do cartão: volta à aba do Pix.
+    document.querySelectorAll("[data-ir-para-pix]").forEach(botao => {
+        botao.addEventListener("click", () => {
+            const abaPix = document.querySelector('.method-tab[data-method="pix"]');
+            if (abaPix) abaPix.click();
+        });
+    });
+
     document.getElementById("copy-pix").addEventListener("click", async () => {
         const code = document.getElementById("pix-code").value;
         try {
             await navigator.clipboard.writeText(code);
             document.getElementById("copy-pix").innerHTML =
                 '<i class="fa-solid fa-check"></i> Copiado';
+            document.getElementById("copy-pix").classList.add("is-copiado");
         } catch {
             document.getElementById("pix-code").select();
             document.execCommand("copy");
@@ -684,18 +1009,22 @@ document.addEventListener("DOMContentLoaded", () => {
         checkPaymentStatus({silent: true});
     });
 
-    // Voltar pelo botão do navegador (página restaurada da memória):
-    // confere na hora e volta a acompanhar o pagamento.
-    window.addEventListener("pageshow", event => {
-        if (!event.persisted || leavingCheckout) return;
-        pollingActive = false;
-        checkPaymentStatus({silent: true});
-        startPolling();
-    });
-
+    // Sair da tela para o timer; a volta (inclusive pelo "Voltar", que traz
+    // a página congelada do cache do navegador) confere o pagamento na hora
+    // e religa a consulta -- quem já pagou vai direto para os pedidos.
     window.addEventListener("pagehide", () => {
         pollingActive = false;
         if (pollingTimer) clearTimeout(pollingTimer);
+        pollingTimer = null;
+    });
+
+    window.addEventListener("pageshow", e => {
+        if (e.persisted) {
+            leavingCheckout = false;
+            pollingActive = false;
+            checkPaymentStatus({silent: true});
+            startPolling();
+        }
     });
 
     (async () => {

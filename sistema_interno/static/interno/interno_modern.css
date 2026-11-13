@@ -5568,6 +5568,40 @@ body.ls-body{
    depois desta folha e com `!important` (gestao_integrada.css).
    ====================================================================== */
 
+/* Mercado Pago no Financeiro: produção (verde), teste (âmbar), erro (vermelho).
+   O texto fica nas cores do tema; a cor de estado vai na faixa, no ícone e
+   no selo, sempre com rótulo escrito ao lado. */
+.ls-mp-status{
+  --mp:#1F9D55;--mp-bg:rgba(31,157,85,.12);
+  position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+  padding:14px 16px 14px 20px;border:1px solid var(--line);border-radius:20px;overflow:hidden;
+  background:linear-gradient(180deg,var(--acento-fundo-2),var(--acento-fundo));box-shadow:var(--shadow-soft);
+}
+.ls-mp-status::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--mp)}
+.ls-mp-alerta{--mp:#D99A06;--mp-bg:rgba(217,154,6,.14)}
+.ls-mp-erro{--mp:#D93636;--mp-bg:rgba(217,54,54,.13)}
+.ls-mp-icone{
+  display:grid;place-items:center;width:46px;height:46px;border-radius:14px;
+  background:var(--mp-bg);color:var(--mp);font-size:1.35rem;
+}
+.ls-mp-rotulo{color:var(--muted);font-size:.68rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+.ls-mp-rotulo strong{color:var(--mp)}
+.ls-mp-texto h2{margin:2px 0 2px;font-size:1.05rem;font-weight:800;color:var(--text)}
+.ls-mp-texto p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.4}
+.ls-mp-texto .ls-mp-aviso{margin-top:6px;color:var(--text)}
+.ls-mp-aviso i{color:var(--mp)}
+.ls-mp-chaves{list-style:none;margin:0;padding:0;display:grid;gap:6px;min-width:0}
+.ls-mp-chaves li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.ls-mp-chaves code{color:var(--text);background:transparent;font-size:.74rem;padding:0}
+.ls-mp-tipo{padding:2px 9px;border-radius:999px;font-weight:800;font-size:.72rem;border:1px solid currentColor}
+.ls-mp-tipo-producao{color:#1F9D55}
+.ls-mp-tipo-teste{color:#C98A00}
+.ls-mp-tipo-vazia,.ls-mp-tipo-desconhecida{color:#D93636}
+@media (max-width:720px){
+  .ls-mp-status{grid-template-columns:auto 1fr}
+  .ls-mp-chaves{grid-column:1/-1}
+}
+
 /* ---- o seletor ---- */
 .ls-visao{
   display:inline-flex;flex:0 0 auto;align-items:center;gap:3px;padding:3px;
@@ -5981,39 +6015,6 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
   .ls-pager-pagina,.ls-pager-seta{transition:none}
 }
 
-/* Mercado Pago no Financeiro: produção (verde), teste (âmbar), erro (vermelho).
-   O texto fica nas cores do tema; a cor de estado vai na faixa, no ícone e
-   no selo, sempre com rótulo escrito ao lado. */
-.ls-mp-status{
-  --mp:#1F9D55;--mp-bg:rgba(31,157,85,.12);
-  position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
-  padding:14px 16px 14px 20px;border:1px solid var(--line);border-radius:20px;overflow:hidden;
-  background:linear-gradient(180deg,var(--acento-fundo-2),var(--acento-fundo));box-shadow:var(--shadow-soft);
-}
-.ls-mp-status::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--mp)}
-.ls-mp-alerta{--mp:#D99A06;--mp-bg:rgba(217,154,6,.14)}
-.ls-mp-erro{--mp:#D93636;--mp-bg:rgba(217,54,54,.13)}
-.ls-mp-icone{
-  display:grid;place-items:center;width:46px;height:46px;border-radius:14px;
-  background:var(--mp-bg);color:var(--mp);font-size:1.35rem;
-}
-.ls-mp-rotulo{color:var(--muted);font-size:.68rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
-.ls-mp-rotulo strong{color:var(--mp)}
-.ls-mp-texto h2{margin:2px 0 2px;font-size:1.05rem;font-weight:800;color:var(--text)}
-.ls-mp-texto p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.4}
-.ls-mp-texto .ls-mp-aviso{margin-top:6px;color:var(--text)}
-.ls-mp-aviso i{color:var(--mp)}
-.ls-mp-chaves{list-style:none;margin:0;padding:0;display:grid;gap:6px;min-width:0}
-.ls-mp-chaves li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
-.ls-mp-chaves code{color:var(--text);background:transparent;font-size:.74rem;padding:0}
-.ls-mp-tipo{padding:2px 9px;border-radius:999px;font-weight:800;font-size:.72rem;border:1px solid currentColor}
-.ls-mp-tipo-producao{color:#1F9D55}
-.ls-mp-tipo-teste{color:#C98A00}
-.ls-mp-tipo-vazia,.ls-mp-tipo-desconhecida{color:#D93636}
-@media (max-width:720px){
-  .ls-mp-status{grid-template-columns:auto 1fr}
-  .ls-mp-chaves{grid-column:1/-1}
-}
 
 /* ======================================================================
    LISTA OU CARDS, SEGUNDA PARTE — a barra de ações do cartão e o cartão

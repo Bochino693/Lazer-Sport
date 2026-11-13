@@ -1,330 +1,500 @@
 {% extends "base.html" %}
-{% load interno_extras %}
+{% load interno_extras fotos %}
 
 {% block title %}Carrinho de compras | Lazer & Sport{% endblock %}
 
 {% block content %}
 
+  {# o casco do checkout (o mesmo do pagamento) e o que é só do carrinho #}
+  <link rel="stylesheet" href="{% estatico 'site/paginas/checkout.css' %}">
   <link rel="stylesheet" href="{% estatico 'site/paginas/carrinho.css' %}">
 
-<div class="carrinho-container" id="car">
+<div class="ck ck--carrinho{% if not itens %} ck--vazio{% endif %}" id="car">
 
-    <nav class="breadcrumb-strong" id="bread">
-        <a href="{% url 'home' %}">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
+    <div class="ck-cabeca" id="carrinho">
+        <div class="ck-cabeca-texto">
+            <nav class="ck-trilha" id="bread" aria-label="Navegação">
+                <a href="{% url 'home' %}">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i>
+                    Início
+                </a>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">Carrinho</span>
+            </nav>
 
-        <i class="fa-solid fa-chevron-right sep"></i>
-
-        <strong>
-            <i class="fa-solid fa-cart-shopping"></i>
-            Carrinho
-        </strong>
-    </nav>
-
-    <header class="cart-hero" id="carrinho">
-        <div class="cart-hero-copy">
-            <span class="cart-hero-eyebrow">
-                <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
-                Seu pedido
-            </span>
-            <h1>Revise seu carrinho</h1>
-            <p>
-                Confira os produtos, ajuste as quantidades e escolha a entrega
-                antes de seguir para o pagamento seguro.
+            <h1 class="ck-titulo">
+                Meu carrinho
+                {% if itens %}
+                    <span class="ck-contador">{{ itens|length }} produto{{ itens|length|pluralize }}</span>
+                {% endif %}
+            </h1>
+            <p class="ck-sub">
+                {% if itens %}
+                    Confira os produtos, informe seus dados e escolha como receber.
+                    O pagamento é no passo seguinte.
+                {% elif pagamento_em_andamento %}
+                    Seus produtos estão reservados num pedido que espera o pagamento.
+                {% else %}
+                    Os produtos que você escolher aparecem aqui.
+                {% endif %}
             </p>
+        </div>
 
-            <div class="cart-progress" aria-label="Etapas da compra">
-                <span class="cart-progress-step active" aria-current="step">
-                    <span class="cart-progress-number">1</span>
-                    Carrinho
-                </span>
-                <span class="cart-progress-line" aria-hidden="true"></span>
-                <span class="cart-progress-step">
-                    <span class="cart-progress-number">2</span>
-                    Pagamento
-                </span>
-                <span class="cart-progress-line" aria-hidden="true"></span>
-                <span class="cart-progress-step">
-                    <span class="cart-progress-number">3</span>
-                    Confirmação
-                </span>
+        <ol class="ck-etapas" aria-label="Etapas da compra">
+            <li class="ck-etapa is-atual" aria-current="step">
+                <span class="ck-etapa-bola">1</span>
+                <span class="ck-etapa-nome">Carrinho</span>
+            </li>
+            <li class="ck-etapa">
+                <span class="ck-etapa-bola">2</span>
+                <span class="ck-etapa-nome">Pagamento</span>
+            </li>
+            <li class="ck-etapa">
+                <span class="ck-etapa-bola">3</span>
+                <span class="ck-etapa-nome">Confirmação</span>
+            </li>
+        </ol>
+    </div>
+
+    {% if pagamento_em_andamento %}
+    {% comment %}
+      PAGAMENTO EM ANDAMENTO. Ao abrir o pagamento, os itens saem do
+      carrinho e ficam reservados num pedido (core/checkout.py). Quem volta
+      para cá antes de pagar via um carrinho vazio e achava que tinha
+      perdido a compra: aqui ele vê o pedido, continua o pagamento ou
+      desiste e recebe os itens de volta.
+    {% endcomment %}
+    <section class="ck-card ck-andamento" aria-labelledby="ck-andamento-titulo" role="region">
+        <div class="ck-andamento-topo">
+            <span class="ck-andamento-icone" aria-hidden="true">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </span>
+            <div>
+                <h2 class="ck-andamento-titulo" id="ck-andamento-titulo">Você tem um pagamento em andamento</h2>
+                <p class="ck-andamento-sub">
+                    Pedido #{{ pagamento_em_andamento.id }} · R$ {{ pagamento_em_andamento.total_final|moeda }}
+                </p>
             </div>
         </div>
-
-        <div class="cart-hero-seal" aria-hidden="true">
-            <i class="fa-solid fa-cart-shopping"></i>
+        <p class="ck-andamento-texto">
+            Os produtos estão reservados neste pedido até o pagamento ser concluído.
+            Continue de onde parou ou desista para receber os itens de volta no carrinho.
+        </p>
+        <div class="ck-andamento-acoes">
+            <a class="ck-botao ck-botao--primario"
+               href="{% url 'pagamento' carrinho.id %}?pedido_id={{ pagamento_em_andamento.id }}">
+                Continuar pagamento
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+            <button type="button" class="ck-botao ck-botao--fantasma"
+                    onclick="devolverPedido({{ pagamento_em_andamento.id }}, this)">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                Desistir e devolver os itens ao carrinho
+            </button>
         </div>
-    </header>
+    </section>
+    {% endif %}
 
     {% if itens %}
 
-        <div class="cart-layout">
-          <section class="cart-main" aria-label="Produtos do carrinho">
-            <div class="cart-section-head">
-                <div>
-                    <span class="cart-kicker">Seu pedido</span>
-                    <h2>Produtos selecionados</h2>
-                </div>
-                <button class="btn-limpar" onclick="limparCarrinho()">
-                    <i class="fa-regular fa-trash-can"></i>
-                    Limpar
-                </button>
-            </div>
+    <div class="ck-grade">
+        <div class="ck-principal">
 
-        <div class="itens-scroll {% if itens|length <= 1 %}sem-scroll{% endif %}">
-
-            {% for item in itens %}
-            <div class="item-card">
-
-                <div class="item-nome">{{ item.item }}{% if item.adesivo %} <span class="item-adesivo">· adesivo {{ item.adesivo }}</span>{% endif %}</div>
-
-                <div class="item-linha">
-                    <span>Preço</span>
-                    <span class="money" data-value="{{ item.preco_unitario|stringformat:'f' }}">
-                        R$ {{ item.preco_unitario|moeda }}
+            <!-- PRODUTOS -->
+            <section class="ck-card ck-produtos" aria-labelledby="ck-produtos-titulo">
+                <div class="ck-card-cabeca">
+                    <span class="ck-card-icone" aria-hidden="true">
+                        <i class="fa-solid fa-bag-shopping"></i>
                     </span>
+                    <div>
+                        <h2 class="ck-card-titulo" id="ck-produtos-titulo">Produtos</h2>
+                        <span class="ck-card-nota">Ajuste as quantidades antes de seguir</span>
+                    </div>
+                    <button type="button" class="btn-limpar ck-card-acao" onclick="limparCarrinho()">
+                        <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+                        Limpar
+                    </button>
                 </div>
 
-                <div class="item-linha">
-                    <span>Quantidade</span>
+                <div class="ck-itens">
+                    {% for item in itens %}
+                    <article class="ck-item" data-item-id="{{ item.id }}" data-nome="{{ item.nome_com_adesivo }}">
 
-                    <div class="qtd-box">
-                        <button onclick="alterarQtd({{ item.id }}, -1)">−</button>
-                        <span>{{ item.quantidade }}</span>
-                        <button onclick="alterarQtd({{ item.id }}, 1)">+</button>
+                        {% if item.url_produto %}
+                        <a class="ck-item-foto" href="{{ item.url_produto }}" tabindex="-1" aria-hidden="true">
+                        {% else %}
+                        <span class="ck-item-foto" aria-hidden="true">
+                        {% endif %}
+                            {% if item.miniatura %}
+                                <img src="{{ item.miniatura|foto:240 }}" alt="" width="96" height="96" loading="lazy" decoding="async">
+                            {% else %}
+                                <i class="fa-solid fa-image"></i>
+                            {% endif %}
+                        {% if item.url_produto %}</a>{% else %}</span>{% endif %}
+
+                        <div class="ck-item-info">
+                            <span class="ck-item-tipo">{{ item.tipo_rotulo }}</span>
+                            <h3 class="ck-item-nome">
+                                {% if item.url_produto %}
+                                    <a href="{{ item.url_produto }}">{{ item.item }}</a>
+                                {% else %}
+                                    {{ item.item|default:"Produto indisponível" }}
+                                {% endif %}
+                            </h3>
+                            {% if item.adesivo %}
+                                <span class="ck-item-adesivo">
+                                    <i class="fa-solid fa-palette" aria-hidden="true"></i>
+                                    Adesivo {{ item.adesivo }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" class="btn-remover"
+                                onclick="removerItem({{ item.id }})"
+                                aria-label="Remover {{ item.nome_com_adesivo }} do carrinho"
+                                title="Remover do carrinho">
+                            <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+                        </button>
+
+                        <div class="ck-item-base">
+                            <div class="qtd-box" role="group" aria-label="Quantidade">
+                                {% comment %}
+                                  Com uma unidade, o "menos" para no 1: tirar o produto é a
+                                  lixeira do canto, que pergunta antes. O "menos" no 1 apagava
+                                  a linha sem aviso, num toque errado.
+                                {% endcomment %}
+                                <button type="button" onclick="alterarQtd({{ item.id }}, -1)" aria-label="Diminuir quantidade"{% if item.quantidade <= 1 %} disabled{% endif %}>
+                                    <span class="qtd-icone" aria-hidden="true"></span>
+                                </button>
+                                <span class="qtd-valor">{{ item.quantidade }}</span>
+                                <button type="button" onclick="alterarQtd({{ item.id }}, 1)" aria-label="Aumentar quantidade">
+                                    <span class="qtd-icone qtd-icone--mais" aria-hidden="true"></span>
+                                </button>
+                            </div>
+
+                            <div class="ck-item-precos">
+                                <strong class="money" data-value="{{ item.subtotal|stringformat:'f' }}">
+                                    R$ {{ item.subtotal|moeda }}
+                                </strong>
+                                {% if item.quantidade > 1 %}
+                                <small>
+                                    <span class="money" data-value="{{ item.preco_unitario|stringformat:'f' }}">R$ {{ item.preco_unitario|moeda }}</span>
+                                    cada
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- CPF OU CNPJ DO COMPRADOR -->
+            <section class="ck-card cpf-box" aria-labelledby="ck-dados-titulo">
+                <div class="ck-card-cabeca">
+                    <span class="ck-card-icone" aria-hidden="true">
+                        <i class="fa-solid fa-id-card"></i>
+                    </span>
+                    <div>
+                        <h2 class="ck-card-titulo" id="ck-dados-titulo">Identificação</h2>
+                        <span class="ck-card-nota">CPF para pessoa física, CNPJ para empresa</span>
                     </div>
                 </div>
 
-                <div class="item-linha item-subtotal">
-                    <span>Subtotal</span>
-                    <span class="money" data-value="{{ item.subtotal|stringformat:'f' }}">
-                        R$ {{ item.subtotal|moeda }}
+                <div class="ck-campo">
+                    <label class="ck-rotulo" for="cpfInput">CPF ou CNPJ</label>
+                    <div class="ck-entrada">
+                        <input
+                            type="text"
+                            id="cpfInput"
+                            value="{{ carrinho.cpf_cnpj|default:'' }}"
+                            placeholder="Somente os números"
+                            maxlength="18"
+                            inputmode="numeric"
+                            autocomplete="off"
+                        >
+                        <i class="fa-solid fa-id-card" aria-hidden="true"></i>
+                    </div>
+                    <small id="cpf-msg" class="ck-status" aria-live="polite"></small>
+                </div>
+            </section>
+
+            <!-- ENTREGA: FRETE OU RETIRADA -->
+            <section class="ck-card frete-box" aria-labelledby="ck-entrega-titulo">
+                <div class="ck-card-cabeca">
+                    <span class="ck-card-icone" aria-hidden="true">
+                        <i class="fa-solid fa-truck-fast"></i>
                     </span>
+                    <div>
+                        <h2 class="ck-card-titulo" id="ck-entrega-titulo">Entrega</h2>
+                        <span class="ck-card-nota">Receba no seu endereço ou retire na loja</span>
+                    </div>
                 </div>
 
-                <button class="btn-remover" onclick="removerItem({{ item.id }})">
-                    ❌ Remover
-                </button>
-
-            </div>
-            {% endfor %}
-
-        </div><!-- itens-scroll -->
-          </section>
-
-          <aside class="cart-checkout" aria-label="Dados e resumo do pedido">
-
-        <!-- CUPOM: liberado somente com brinquedo ou peça de reposição -->
-        {% if cupom_permitido %}
-        <div class="cupom-box {% if itens|length != 1 %}cupom-spaced{% endif %}">
-
-            <strong>🎟️ Cupom de desconto</strong>
-
-            {% if carrinho.cupom %}
-                <div class="cupom-aplicado">
-                    🎉 Você economizou
-                    <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
-                    com o cupom
-                    <strong>{{ carrinho.cupom.codigo }}</strong>
+                <div class="frete-tabs ck-segmento" role="group" aria-label="Forma de entrega">
+                    <button type="button" class="frete-tab ck-segmento-opcao active" data-tipo="frete" aria-pressed="true">
+                        <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+                        Frete
+                    </button>
+                    <button type="button" class="frete-tab ck-segmento-opcao" data-tipo="retirada" aria-pressed="false">
+                        <i class="fa-solid fa-store" aria-hidden="true"></i>
+                        Retirar na loja
+                    </button>
                 </div>
-            {% else %}
-                <div class="cupom-input">
-                    <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
-                    <button onclick="aplicarCupom()">Aplicar</button>
+
+                <div class="frete-conteudo">
+
+                    <!-- FRETE -->
+                    <div class="frete-content" id="frete">
+                        <div class="ck-campo">
+                            <label class="ck-rotulo" for="cepInput">CEP de entrega</label>
+                            <div class="ck-cep-linha">
+                                <div class="ck-entrada">
+                                    <input type="text" id="cepInput" placeholder="00000-000" maxlength="9"
+                                           inputmode="numeric" autocomplete="postal-code">
+                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                                </div>
+                                <a class="ck-link" href="https://buscacepinter.correios.com.br/app/endereco/index.php"
+                                   target="_blank" rel="noopener">
+                                    Não sei meu CEP
+                                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                            <small id="cep-msg" class="ck-status" aria-live="polite"></small>
+                        </div>
+
+                        <div id="endereco-detalhes" class="ck-endereco" hidden>
+                            <div class="ck-campo ck-campo--rua">
+                                <label class="ck-rotulo" for="logradouro">Rua</label>
+                                <div class="ck-entrada ck-entrada--sem-icone">
+                                    <input type="text" id="logradouro" placeholder="Rua" readonly>
+                                </div>
+                            </div>
+                            <div class="ck-campo ck-campo--numero">
+                                <label class="ck-rotulo" for="numero">Número</label>
+                                <div class="ck-entrada ck-entrada--sem-icone">
+                                    <input type="text" id="numero" placeholder="Nº" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="ck-campo ck-campo--bairro">
+                                <label class="ck-rotulo" for="bairro">Bairro</label>
+                                <div class="ck-entrada ck-entrada--sem-icone">
+                                    <input type="text" id="bairro" placeholder="Bairro" readonly>
+                                </div>
+                            </div>
+                            <div class="ck-campo ck-campo--cidade">
+                                <label class="ck-rotulo" for="cidade">Cidade</label>
+                                <div class="ck-entrada ck-entrada--sem-icone">
+                                    <input type="text" id="cidade" placeholder="Cidade" readonly>
+                                </div>
+                            </div>
+                            <div class="ck-campo ck-campo--uf">
+                                <label class="ck-rotulo" for="estado">UF</label>
+                                <div class="ck-entrada ck-entrada--sem-icone">
+                                    <input type="text" id="estado" placeholder="UF" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RETIRADA -->
+                    <div class="frete-content" id="retirada" hidden>
+                        <div class="ck-loja">
+                            <div class="ck-loja-topo">
+                                <span class="ck-card-icone ck-card-icone--verde" aria-hidden="true">
+                                    <i class="fa-solid fa-store"></i>
+                                </span>
+                                <div>
+                                    <strong>Retire na nossa loja física</strong>
+                                    <small>Sem custo de frete</small>
+                                </div>
+                            </div>
+                            <ul class="ck-loja-dados">
+                                <li>
+                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                                    Rua São Roque de Minas, 104 – Zona Norte - SP
+                                </li>
+                                <li>
+                                    <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                                    Das 08h às 18h, de segunda a sexta
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                                    <a href="tel:+5511960563135">+55 (11) 96056-3135</a>
+                                </li>
+                            </ul>
+                            <a class="ck-botao ck-botao--fantasma ck-loja-mapa"
+                               href="https://www.google.com/maps/search/?api=1&amp;query=Rua+S%C3%A3o+Roque+de+Minas%2C+104%2C+S%C3%A3o+Paulo+-+SP"
+                               target="_blank" rel="noopener">
+                                <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+                                Como chegar
+                            </a>
+                        </div>
+                    </div>
+
                 </div>
-                <small id="cupom-msg" style="color:red;"></small>
-            {% endif %}
+            </section>
+        </div><!-- ck-principal -->
 
-        </div><!-- cupom-box -->
-        {% else %}
-        <div class="cupom-bloqueado" role="status">
-            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            <div>
-                <strong>Cupom não disponível para estes itens</strong>
-                Combos e promoções já possuem preço especial. Adicione um
-                brinquedo ou uma peça de reposição para liberar o campo de cupom.
-            </div>
-        </div>
-        {% endif %}
+        <aside class="ck-lateral" aria-label="Resumo do pedido">
+            <section class="ck-card ck-resumo" aria-labelledby="ck-resumo-titulo">
+                <div class="ck-card-cabeca">
+                    <span class="ck-card-icone" aria-hidden="true">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                    </span>
+                    <h2 class="ck-card-titulo" id="ck-resumo-titulo">Resumo do pedido</h2>
+                </div>
 
+                <!-- CUPOM: liberado somente com brinquedo ou peça de reposição -->
+                {% if cupom_permitido %}
+                <div class="cupom-box">
+                    {% if carrinho.cupom %}
+                        <div class="cupom-aplicado" role="status">
+                            <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                            <div>
+                                <strong>Cupom {{ carrinho.cupom.codigo }} aplicado</strong>
+                                <small>Você economizou {{ carrinho.cupom.desconto_percentual|floatformat:"-2" }}% nos produtos</small>
+                            </div>
+                        </div>
+                    {% else %}
+                        <label class="ck-rotulo" for="cupomCodigo">Cupom de desconto</label>
+                        <div class="cupom-input">
+                            <div class="ck-entrada">
+                                <input type="text" id="cupomCodigo" placeholder="Digite o código"
+                                       autocomplete="off" autocapitalize="characters" spellcheck="false">
+                                <i class="fa-solid fa-ticket" aria-hidden="true"></i>
+                            </div>
+                            <button type="button" class="ck-botao ck-botao--secundario" onclick="aplicarCupom()">
+                                Aplicar
+                            </button>
+                        </div>
+                        <small id="cupom-msg" class="ck-status" aria-live="polite"></small>
+                    {% endif %}
+                </div><!-- cupom-box -->
+                {% else %}
+                <div class="cupom-bloqueado" role="note">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    <div>
+                        <strong>Cupom não disponível para estes itens</strong>
+                        Combos e promoções já possuem preço especial. Adicione um
+                        brinquedo ou uma peça de reposição para liberar o campo de cupom.
+                    </div>
+                </div>
+                {% endif %}
 
-      <!-- CPF ou CNPJ do comprador -->
-        <div class="cpf-box cupom-top">
-            <label for="cpfInput"><strong>📝 CPF ou CNPJ</strong></label>
-            <input
-                type="text"
-                id="cpfInput"
-                value="{{ carrinho.cpf_cnpj|default:'' }}"
-                placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                maxlength="18"
-            >
-            <small id="cpf-msg"></small>
-        </div>
+                {% with total_liquido=carrinho.total_liquido %}
+                <div class="resumo-box">
+                    {% if carrinho.cupom %}
+                    <div class="ck-linha">
+                        <span>Produtos</span>
+                        <span class="money" data-value="{{ carrinho.total_bruto|stringformat:'f' }}">
+                            R$ {{ carrinho.total_bruto|moeda }}
+                        </span>
+                    </div>
+                    <div class="ck-linha ck-linha--desconto">
+                        <span>Cupom {{ carrinho.cupom.codigo }}</span>
+                        <span>− <span class="money" data-value="{{ carrinho.valor_desconto|stringformat:'f' }}">R$ {{ carrinho.valor_desconto|moeda }}</span></span>
+                    </div>
+                    {% endif %}
 
+                    <div class="ck-linha resumo-linha">
+                        <span>{% if carrinho.cupom %}Produtos com desconto{% else %}Produtos{% endif %}</span>
+                        <span class="money" id="valor-produtos"
+                              data-value="{{ total_liquido|stringformat:'f' }}">
+                            R$ {{ total_liquido|moeda }}
+                        </span>
+                    </div>
 
+                    <div class="ck-linha resumo-linha" id="linha-frete" hidden>
+                        <span>Frete</span>
+                        <span class="money" id="valor-frete">R$ 0,00</span>
+                    </div>
 
-<!-- ===== TAB DE FRETE ===== -->
-<div class="frete-box">
-    <strong>🚚 Opção de entrega</strong>
+                    <div class="ck-linha ck-linha--total resumo-total">
+                        <span>Total do pedido</span>
+                        <span class="money" id="totalPedido"
+                              data-value="{{ total_liquido|stringformat:'f' }}">
+                            R$ {{ total_liquido|moeda }}
+                        </span>
+                    </div>
+                </div><!-- resumo-box -->
 
-    <div class="frete-tabs">
-        <button class="frete-tab active" data-tipo="frete">Frete</button>
-        <button class="frete-tab" data-tipo="retirada">Retirada na loja</button>
-    </div>
+                {% comment %}
+                  O BOTÃO DE SEGUIR MORA NO RESUMO. No computador ele é o fim
+                  do cartão do resumo; no celular o mesmo bloco vira a barra
+                  presa ao pé da tela (carrinho.css), com o total ao lado --
+                  um elemento só, e não dois com o mesmo id.
+                {% endcomment %}
+                <div class="checkout-dock" role="group" aria-label="Finalização do pedido">
+                    <div class="checkout-dock-inner">
+                        <div class="checkout-dock-total">
+                            <span class="checkout-dock-label">Total</span>
+                            <strong class="money" id="subtotalFixo"
+                                    data-value="{{ total_liquido|stringformat:'f' }}">
+                                R$ {{ total_liquido|moeda }}
+                            </strong>
+                        </div>
 
-    <div class="frete-conteudo">
+                        <a href="{% url 'pagamento' carrinho.id %}#content"
+                           class="btn-finalizar"
+                           id="btnFinalizar"
+                           aria-disabled="true">
+                            <span class="btn-finalizar-copy">Continuar<span class="btn-finalizar-extra"> para o pagamento</span></span>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                    <p class="checkout-dock-pendencia" id="ck-pendencia" aria-live="polite">
+                        Informe um CPF ou CNPJ válido para continuar.
+                    </p>
+                </div>
+                {% endwith %}
 
-        <!-- FRETE -->
-        <div class="frete-content" id="frete">
-            <label for="cepInput"><strong>📍 Informe seu CEP</strong></label>
-            <input type="text" id="cepInput" placeholder="00000-000" maxlength="9">
-            <small id="cep-msg"></small>
-            <div id="endereco-detalhes" style="display:none; margin-top: 16px;">
-            <label for="logradouro"><strong>🏠 Rua</strong></label>
-            <input type="text" id="logradouro" placeholder="Rua" readonly>
+                <ul class="ck-selos" aria-label="Formas de pagamento">
+                    <li><i class="fa-brands fa-pix" aria-hidden="true"></i> Pix</li>
+                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> Crédito ou débito</li>
+                    <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Mercado Pago</li>
+                </ul>
+            </section>
+        </aside>
+    </div><!-- ck-grade -->
 
-            <label for="bairro" style="margin-top:8px;"><strong>📍 Bairro</strong></label>
-            <input type="text" id="bairro" placeholder="Bairro" readonly>
+    {% elif not pagamento_em_andamento %}
 
-            <label for="cidade" style="margin-top:8px;"><strong>🏙 Cidade</strong></label>
-            <input type="text" id="cidade" placeholder="Cidade" readonly>
+    <section class="ck-card ck-vazio carrinho-vazio-box" aria-labelledby="ck-vazio-titulo">
+        <span class="ck-vazio-icone" aria-hidden="true">
+            <i class="fa-solid fa-cart-shopping"></i>
+        </span>
 
-            <label for="estado" style="margin-top:8px;"><strong>🗺 Estado</strong></label>
-            <input type="text" id="estado" placeholder="Estado" readonly>
+        <h2 id="ck-vazio-titulo">Seu carrinho está vazio</h2>
+        <p>
+            Que tal escolher alguns brinquedos incríveis
+            para alegrar o dia?
+        </p>
 
-            <label for="numero" style="margin-top:8px;"><strong>🏢 Número</strong></label>
-            <input type="text" id="numero" placeholder="Número">
-        </div>
-
-        </div>
-
-        <!-- RETIRADA -->
-        <div class="frete-content" id="retirada" style="display:none;">
-            <p>🏬 Retire seus produtos em nossa loja física:</p>
-            <ul>
-                <li>Rua São Roque de Minas, 104 – Zona Norte - SP</li>
-                <li>Horário: 08h às 18h (Seg-Sex)</li>
-                <li>Telefone:(Brasil)+55 (11) 96056-3135</li>
-            </ul>
-        </div>
-
-    </div>
-</div>
-
-
-<div class="resumo-box">
-
-        <div class="resumo-linha">
-                <span>Produtos</span>
-                <span class="money" id="valor-produtos"
-                      data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
-                    R$ {{ carrinho.total_liquido|moeda }}
-                </span>
-        </div>
-
-
-        <div class="resumo-linha" id="linha-frete" style="display:none;">
-            <span>Frete</span>
-            <span class="money" id="valor-frete">R$ 0,00</span>
-        </div>
-
-       <div class="resumo-linha resumo-total">
-            <span>Total do pedido</span>
-            <span class="money" id="totalPedido"
-                  data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
-                R$ {{ carrinho.total_liquido|moeda }}
-            </span>
-        </div>
-
-        </div><!-- resumo-box -->
-
-          </aside>
-        </div><!-- cart-layout -->
-
-
-    {% else %}
-
-        <div class="carrinho-vazio-box">
-            <div class="vazio-icon">🧸</div>
-
-            <h2>Seu carrinho está vazio</h2>
-            <p>
-                Que tal escolher alguns brinquedos incríveis
-                para alegrar o dia?
-            </p>
-
-            <a href="{% url 'brinquedos' %}" class="btn-explorar">
-                🎁 Explorar brinquedos
+        <div class="ck-vazio-acoes">
+            <a href="{% url 'brinquedos' %}#catalogo-brinquedos" class="ck-botao ck-botao--primario btn-explorar">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                Explorar brinquedos
+            </a>
+            <a href="{% url 'loja' %}#catalogo" class="ck-botao ck-botao--fantasma">
+                <i class="fa-solid fa-store" aria-hidden="true"></i>
+                Ver a loja online
             </a>
         </div>
 
+        <ul class="ck-selos ck-vazio-selos">
+            <li><i class="fa-solid fa-industry" aria-hidden="true"></i> Direto da fábrica</li>
+            <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Compra segura</li>
+            <li><i class="fa-brands fa-pix" aria-hidden="true"></i> Pix, crédito ou débito</li>
+        </ul>
+    </section>
+
     {% endif %}
 
+</div><!-- ck -->
 
 
-</div><!-- carrinho-container -->
-
-
-{% if itens %}
-<div class="checkout-dock" aria-label="Finalização do pedido">
-    <div class="checkout-dock-inner">
-        <div class="checkout-dock-total">
-            <span class="checkout-dock-icon" aria-hidden="true">
-                <i class="fa-solid fa-bag-shopping"></i>
-            </span>
-            <span class="checkout-dock-label">Total do pedido</span>
-            <strong class="money" id="subtotalFixo"
-                    data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
-                R$ {{ carrinho.total_liquido|moeda }}
-            </strong>
-        </div>
-
-        <a href="{% url 'pagamento' carrinho.id %}#content"
-           class="btn-finalizar"
-           id="btnFinalizar"
-           aria-disabled="true"
-           style="pointer-events: none; opacity: 0.6;">
-            <span class="btn-finalizar-copy">
-                <strong>Continuar para pagamento</strong>
-                <small>Ambiente seguro e dados protegidos</small>
-            </span>
-            <span class="btn-finalizar-arrow" aria-hidden="true">
-                <i class="fa-solid fa-arrow-right"></i>
-            </span>
-        </a>
-    </div>
-</div>
-{% endif %}
-
-
-<!-- ===== MODAL LIMPAR CARRINHO ===== -->
-<div class="modal-overlay" id="modalLimpar">
-    <div class="modal-box">
-
-        <div class="modal-icon">🗑️</div>
-
-        <h2>Limpar carrinho?</h2>
-        <p>
-            Todos os produtos serão removidos do seu carrinho.
-            <br>Essa ação não pode ser desfeita.
-        </p>
-
-        <div class="modal-actions">
-            <button class="btn-cancelar" onclick="fecharModalLimpar()">
-                Cancelar
-            </button>
-            <button class="btn-confirmar" onclick="confirmarLimparCarrinho()">
-                Sim, limpar
-            </button>
-        </div>
-
-    </div>
-</div>
-
-
-    <script>
+<script>
 document.addEventListener('DOMContentLoaded', () => {
 
     function numeroMonetario(valor) {
@@ -359,19 +529,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ✅ AGORA SIM
     formatarCarrinho();
 });
+
+// ===== AVISOS DA TELA =====
+
+// A pergunta "tem certeza?" na folha de aplicativo do site (LSAviso,
+// ls-aviso.js, carregado pelo base.html). Se o script não chegou, a ação
+// segue sem a pergunta, como era antes dela -- a caixa do navegador não
+// volta (core/tests_ls_aviso.py).
+function confirmarNoApp(opcoes) {
+    if (window.LSAviso && typeof window.LSAviso.confirmar === 'function') {
+        return window.LSAviso.confirmar(opcoes);
+    }
+    return Promise.resolve(true);
+}
+
+// A linha de estado embaixo de um campo: ícone + texto, na cor do
+// resultado. Estado vazio limpa a linha (e ela some).
+function mostrarStatus(el, estado, texto) {
+    if (!el) return;
+    const icones = {
+        ok: 'fa-solid fa-circle-check',
+        erro: 'fa-solid fa-circle-exclamation',
+        info: 'fa-solid fa-circle-info',
+        carregando: 'fa-solid fa-circle-notch fa-spin'
+    };
+
+    el.classList.remove('is-ok', 'is-erro', 'is-info');
+    el.textContent = '';
+    if (!estado || !texto) return;
+
+    el.classList.add(estado === 'ok' || estado === 'erro' ? `is-${estado}` : 'is-info');
+    const icone = document.createElement('i');
+    icone.className = icones[estado] || icones.info;
+    icone.setAttribute('aria-hidden', 'true');
+    const frase = document.createElement('span');
+    frase.textContent = texto;
+    el.append(icone, frase);
+}
 
 // ===== FUNÇÕES EXISTENTES =====
 function aplicarCupom() {
     const codigo = document.getElementById('cupomCodigo').value.trim();
     const msg = document.getElementById('cupom-msg');
 
-    msg.innerText = '';
+    mostrarStatus(msg, '', '');
 
     if (!codigo) {
-        msg.innerText = 'Digite um código de cupom';
+        mostrarStatus(msg, 'erro', 'Digite um código de cupom');
         return;
     }
 
@@ -386,42 +592,65 @@ function aplicarCupom() {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            msg.style.color = 'green';
-            msg.innerText = data.message;
+            mostrarStatus(msg, 'ok', data.message);
 
             setTimeout(() => location.reload(), 800);
         } else {
-            msg.style.color = 'red';
-            msg.innerText = data.message || 'Erro ao aplicar cupom';
+            mostrarStatus(msg, 'erro', data.message || 'Erro ao aplicar cupom');
         }
     })
     .catch(() => {
-        msg.style.color = 'red';
-        msg.innerText = 'Erro de conexão';
+        mostrarStatus(msg, 'erro', 'Erro de conexão');
     });
 }
 
+// A linha do produto fica apagada enquanto o carrinho é refeito.
+function marcarLinha(itemId) {
+    const linha = document.querySelector(`.ck-item[data-item-id="${itemId}"]`);
+    if (linha) linha.classList.add('is-atualizando');
+    return linha;
+}
+
 function removerItem(itemId) {
-    fetch("{% url 'remover_item_carrinho' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: `item_id=${itemId}`
-    })
-    .then(() => location.reload());
+    const linha = document.querySelector(`.ck-item[data-item-id="${itemId}"]`);
+    const nome = linha ? linha.dataset.nome : '';
+
+    confirmarNoApp({
+        titulo: 'Remover do carrinho?',
+        texto: nome ? `${nome} sai do seu carrinho.` : 'Este produto sai do seu carrinho.',
+        confirmar: 'Remover',
+        cancelar: 'Manter',
+        perigo: true
+    }).then(sim => {
+        if (!sim) return;
+        marcarLinha(itemId);
+
+        fetch("{% url 'remover_item_carrinho' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: `item_id=${itemId}`
+        })
+        .then(() => location.reload());
+    });
 }
 
 function limparCarrinho() {
-    document.getElementById('modalLimpar').style.display = 'flex';
-}
-
-function fecharModalLimpar() {
-    document.getElementById('modalLimpar').style.display = 'none';
+    confirmarNoApp({
+        titulo: 'Limpar carrinho?',
+        texto: 'Todos os produtos serão removidos do seu carrinho. Essa ação não pode ser desfeita.',
+        confirmar: 'Sim, limpar',
+        perigo: true
+    }).then(sim => {
+        if (sim) confirmarLimparCarrinho();
+    });
 }
 
 function confirmarLimparCarrinho() {
+    document.querySelectorAll('.ck-item').forEach(linha => linha.classList.add('is-atualizando'));
+
     fetch("{% url 'limpar_carrinho' %}", {
         method: "POST",
         headers: {
@@ -431,7 +660,49 @@ function confirmarLimparCarrinho() {
     .then(() => location.reload());
 }
 
+{% if pagamento_em_andamento %}
+{% url 'devolver_pedido_carrinho' as url_devolver_pedido %}
+// Desistir do pagamento em andamento: o pedido reservado devolve os itens
+// ao carrinho (o servidor cancela a cobrança aberta) e a tela recarrega.
+function devolverPedido(pedidoId, botao) {
+    confirmarNoApp({
+        titulo: 'Desistir deste pagamento?',
+        texto: `O pedido #${pedidoId} é cancelado e os produtos voltam para o seu carrinho. Um Pix já gerado para ele deixa de valer.`,
+        confirmar: 'Desistir e devolver',
+        cancelar: 'Voltar',
+        perigo: true
+    }).then(sim => {
+        if (!sim) return;
+        if (botao) botao.disabled = true;
+
+        fetch("{{ url_devolver_pedido }}", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({ pedido_id: pedidoId })
+        })
+        .then(() => location.reload())
+        .catch(() => {
+            if (botao) botao.disabled = false;
+            if (window.LSAviso) {
+                window.LSAviso.toast({
+                    nivel: 'erro',
+                    titulo: 'Não foi possível desistir agora',
+                    texto: 'Confira a conexão e tente de novo.'
+                });
+            }
+        });
+    });
+}
+{% endif %}
+
 function alterarQtd(itemId, delta) {
+    const linha = marcarLinha(itemId);
+
     fetch("{% url 'alterar_quantidade_item' %}", {
         method: "POST",
         headers: {
@@ -440,7 +711,10 @@ function alterarQtd(itemId, delta) {
         },
         body: JSON.stringify({ item_id: itemId, delta: delta })
     })
-    .then(() => location.reload());
+    .then(() => location.reload())
+    .catch(() => {
+        if (linha) linha.classList.remove('is-atualizando');
+    });
 }
 
 
@@ -448,8 +722,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cpfInput = document.getElementById('cpfInput');
     const btnFinalizar = document.getElementById('btnFinalizar');
     const cpfMsg = document.getElementById('cpf-msg');
+    const pendencia = document.getElementById('ck-pendencia');
 
     const cepInput = document.getElementById('cepInput');
+    const cepMsg = document.getElementById('cep-msg');
     const valorFreteSpan = document.getElementById('valor-frete');
     const linhaFrete = document.getElementById('linha-frete');
     const totalPedido = document.getElementById('totalPedido');
@@ -462,6 +738,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Carrinho vazio: não existem campos de checkout para inicializar.
     if (!cpfInput || !btnFinalizar || !cepInput || !numeroInput) return;
+
+    // Enter no campo do cupom aplica, como o botão.
+    const cupomCodigo = document.getElementById('cupomCodigo');
+    if (cupomCodigo) {
+        cupomCodigo.addEventListener('keydown', evento => {
+            if (evento.key === 'Enter') {
+                evento.preventDefault();
+                aplicarCupom();
+            }
+        });
+    }
 
     // ===== Formatação CPF/CNPJ =====
     function formatarCPFouCNPJ(valor) {
@@ -532,27 +819,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Formatação e validação do CPF/CNPJ =====
     cpfInput.addEventListener('input', () => {
 
-    cpfInput.value = formatarCPFouCNPJ(cpfInput.value);
+        cpfInput.value = formatarCPFouCNPJ(cpfInput.value);
 
-    const cpf = cpfInput.value.replace(/\D/g, '');
+        const cpf = cpfInput.value.replace(/\D/g, '');
 
-    if (cpf.length === 11 || cpf.length === 14) {
+        if (cpf.length === 11 || cpf.length === 14) {
 
-        fetch("{% url 'salvar_cpf_carrinho' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({
-                cpf: cpfInput.value
-            })
-        });
+            fetch("{% url 'salvar_cpf_carrinho' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({
+                    cpf: cpfInput.value
+                })
+            });
 
-    }
+        }
 
-    atualizarBotaoFinalizar();
-});
+        atualizarBotaoFinalizar();
+    });
 
     // ===== Formatação e validação do CEP =====
     function formatarCEP(cep) {
@@ -564,147 +851,204 @@ document.addEventListener('DOMContentLoaded', () => {
     function validarCEP(cep) {
         return /^\d{5}-?\d{3}$/.test(cep);
     }
-function calcularFrete() {
 
-    const cep = cepInput.value.replace(/\D/g, '');
+    function calcularFrete() {
 
-    if (cep.length !== 8) {
-        linhaFrete.style.display = "none";
-        return;
-    }
+        const cep = cepInput.value.replace(/\D/g, '');
 
-    fetch("{% url 'calcular_frete' %}", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
-        body: JSON.stringify({
-            cep: cep,
-            rua: document.getElementById("logradouro")?.value || "",
-            bairro: document.getElementById("bairro")?.value || "",
-            cidade: document.getElementById("cidade")?.value || "",
-            estado: document.getElementById("estado")?.value || "",
-            numero: document.getElementById("numero")?.value || ""
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-
-        if (data.status !== "ok") return;
-
-        const frete = parseFloat(data.frete);
-
-        const totalProdutos = parseFloat(
-            document.getElementById("valor-produtos")
-                .innerText
-                .replace("R$", "")
-                .replace(/\./g, "")
-                .replace(",", ".")
-        );
-
-        const total = totalProdutos + frete;
-
-        const totalFormatado =
-            "R$ " + total.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-
-        valorFreteSpan.innerText =
-            "R$ " + frete.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-
-        totalPedido.innerText = totalFormatado;
-
-        const subtotalFixo = document.getElementById("subtotalFixo");
-        if (subtotalFixo) {
-            subtotalFixo.innerText = totalFormatado;
+        if (cep.length !== 8) {
+            linhaFrete.hidden = true;
+            return;
         }
 
-        linhaFrete.style.display = "flex";
-
-        atualizarBotaoFinalizar();
-
-    })
-    .catch(() => {
-        console.log("Erro ao calcular frete");
-    });
-}
-
-
-cepInput.addEventListener('input', () => {
-
-    cepInput.value = formatarCEP(cepInput.value);
-
-    const cepLimpo = cepInput.value.replace(/\D/g, '');
-
-    if (cepLimpo.length === 8 && validarCEP(cepInput.value)) {
-
-        fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-            .then(res => res.json())
-            .then(data => {
-
-                if (!data.erro) {
-
-                    enderecoDetalhes.style.display = 'block';
-
-                    document.getElementById('logradouro').value = data.logradouro || "";
-                    document.getElementById('bairro').value = data.bairro || "";
-                    document.getElementById('cidade').value = data.localidade || "";
-                    document.getElementById('estado').value = data.uf || "";
-
-                    calcularFrete();
-
-                } else {
-                    enderecoDetalhes.style.display = 'none';
-                }
-
-                atualizarBotaoFinalizar();
+        fetch("{% url 'calcular_frete' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                cep: cep,
+                rua: document.getElementById("logradouro")?.value || "",
+                bairro: document.getElementById("bairro")?.value || "",
+                cidade: document.getElementById("cidade")?.value || "",
+                estado: document.getElementById("estado")?.value || "",
+                numero: document.getElementById("numero")?.value || ""
             })
-            .catch(() => {
-                enderecoDetalhes.style.display = 'none';
-            });
+        })
+        .then(r => r.json())
+        .then(data => {
 
-    } else {
+            if (data.status !== "ok") return;
 
-        enderecoDetalhes.style.display = 'none';
-        linhaFrete.style.display = "none";
+            const frete = parseFloat(data.frete);
+
+            const totalProdutos = parseFloat(
+                document.getElementById("valor-produtos")
+                    .innerText
+                    .replace("R$", "")
+                    .replace(/\./g, "")
+                    .replace(",", ".")
+            );
+
+            const total = totalProdutos + frete;
+
+            const totalFormatado =
+                "R$ " + total.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+            const freteFormatado =
+                "R$ " + frete.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+            valorFreteSpan.innerText = freteFormatado;
+
+            totalPedido.innerText = totalFormatado;
+
+            const subtotalFixo = document.getElementById("subtotalFixo");
+            if (subtotalFixo) {
+                subtotalFixo.innerText = totalFormatado;
+            }
+
+            linhaFrete.hidden = false;
+
+            mostrarStatus(
+                cepMsg,
+                'ok',
+                numeroInput.value.trim()
+                    ? `Frete para este endereço: ${freteFormatado}`
+                    : `Frete: ${freteFormatado}. Agora informe o número.`
+            );
+
+            atualizarBotaoFinalizar();
+
+        })
+        .catch(() => {
+            console.log("Erro ao calcular frete");
+        });
+    }
+
+
+    cepInput.addEventListener('input', () => {
+
+        cepInput.value = formatarCEP(cepInput.value);
+
+        const cepLimpo = cepInput.value.replace(/\D/g, '');
+
+        if (cepLimpo.length === 8 && validarCEP(cepInput.value)) {
+
+            mostrarStatus(cepMsg, 'carregando', 'Buscando o endereço...');
+
+            fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+                .then(res => res.json())
+                .then(data => {
+
+                    if (!data.erro) {
+
+                        enderecoDetalhes.hidden = false;
+
+                        document.getElementById('logradouro').value = data.logradouro || "";
+                        document.getElementById('bairro').value = data.bairro || "";
+                        document.getElementById('cidade').value = data.localidade || "";
+                        document.getElementById('estado').value = data.uf || "";
+
+                        mostrarStatus(cepMsg, 'ok', 'Endereço encontrado. Confira e informe o número.');
+
+                        calcularFrete();
+
+                    } else {
+                        enderecoDetalhes.hidden = true;
+                        mostrarStatus(cepMsg, 'erro', 'CEP não encontrado. Confira os números.');
+                    }
+
+                    atualizarBotaoFinalizar();
+                })
+                .catch(() => {
+                    enderecoDetalhes.hidden = true;
+                    mostrarStatus(cepMsg, 'erro', 'Não foi possível consultar o CEP agora. Tente de novo.');
+                });
+
+        } else {
+
+            enderecoDetalhes.hidden = true;
+            linhaFrete.hidden = true;
+            mostrarStatus(cepMsg, '', '');
+
+            atualizarBotaoFinalizar();
+        }
+
+    });
+
+
+    numeroInput.addEventListener('input', () => {
 
         atualizarBotaoFinalizar();
-    }
 
-});
+        const cepLimpo = cepInput.value.replace(/\D/g, '');
 
+        if (cepLimpo.length === 8) {
+            calcularFrete();
+        }
 
-numeroInput.addEventListener('input', () => {
-
-    atualizarBotaoFinalizar();
-
-    const cepLimpo = cepInput.value.replace(/\D/g, '');
-
-    if (cepLimpo.length === 8) {
-        calcularFrete();
-    }
-
-});
+    });
 
     // ===== Alternar abas Frete / Retirada =====
-        freteTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                freteTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                const tipo = tab.dataset.tipo;
-                freteContent.forEach(c => c.style.display = 'none');
-                document.getElementById(tipo).style.display = 'block';
-
-                if (tipo === 'frete') calcularFrete(); // <-- Chamada aqui
-                atualizarBotaoFinalizar();
+    // Eram dois tratadores no mesmo clique (um deles fora do escopo das
+    // funções de frete, e quebrava calado ao chamá-las). Um só, na mesma
+    // ordem: o painel, o total sem frete na retirada, o tipo de envio no
+    // servidor e, no frete, o cálculo de novo.
+    freteTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            freteTabs.forEach(t => {
+                const ativa = t === tab;
+                t.classList.toggle('active', ativa);
+                t.setAttribute('aria-pressed', ativa ? 'true' : 'false');
             });
+
+            const tipo = tab.dataset.tipo;
+            freteContent.forEach(c => { c.hidden = c.id !== tipo; });
+
+            if (tipo === 'retirada') {
+                // Zera frete no frontend
+                const valorProdutos = parseFloat(
+                    document.getElementById("valor-produtos")
+                        .innerText
+                        .replace("R$", "")
+                        .replace(/\./g, "")
+                        .replace(",", ".")
+                );
+
+                linhaFrete.hidden = true;
+                valorFreteSpan.innerText = 'R$ 0,00';
+                const totalFormatado =
+                    "R$ " + valorProdutos.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                totalPedido.innerText = totalFormatado;
+                const subtotalFixo = document.getElementById('subtotalFixo');
+                if (subtotalFixo) subtotalFixo.innerText = totalFormatado;
+            }
+
+            // Atualiza o tipo_envio no backend
+            fetch("{% url 'atualizar_tipo_envio' carrinho.id %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ tipo_envio: tipo })
+            });
+
+            // Recalcula frete se já tiver CEP
+            if (tipo === 'frete') calcularFrete();
+            atualizarBotaoFinalizar();
         });
+    });
 
     // ===== Habilitar botão somente quando válido =====
     function atualizarBotaoFinalizar() {
@@ -716,6 +1060,7 @@ numeroInput.addEventListener('input', () => {
 
         const freteSelecionado = document.querySelector('.frete-tab.active').dataset.tipo;
         let habilitar = false;
+        let falta = '';
 
         if (cpfValido) {
             if (freteSelecionado === 'frete') {
@@ -726,90 +1071,49 @@ numeroInput.addEventListener('input', () => {
                 const numero = document.getElementById('numero').value.trim();
 
                 if (logradouro && bairro && cidade && estado && numero) habilitar = true;
+                else if (cepInput.value.replace(/\D/g, '').length !== 8) falta = 'Informe o CEP de entrega para continuar.';
+                else if (!numero) falta = 'Informe o número do endereço para continuar.';
+                else falta = 'Confira o endereço de entrega para continuar.';
             } else {
                 habilitar = true; // Retirada só precisa do CPF/CNPJ válido
             }
+        } else {
+            falta = 'Informe um CPF ou CNPJ válido para continuar.';
         }
 
-        btnFinalizar.style.pointerEvents = habilitar ? 'auto' : 'none';
-        btnFinalizar.style.opacity = habilitar ? 1 : 0.6;
         btnFinalizar.setAttribute('aria-disabled', habilitar ? 'false' : 'true');
 
+        // o que ainda falta, embaixo do botão (no celular, em cima da barra)
+        if (pendencia) {
+            pendencia.textContent = falta;
+            pendencia.hidden = !falta;
+        }
+
+        const cpfEntrada = cpfInput.closest('.ck-entrada');
         if (cpfValor.length === 11 || cpfValor.length === 14) {
-            cpfMsg.innerText = cpfValido ? `✅ Válido (${cpfValor.length === 11 ? 'CPF' : 'CNPJ'})` : '❌ Inválido';
-            cpfMsg.style.color = cpfValido ? 'green' : 'red';
+            const documento = cpfValor.length === 11 ? 'CPF' : 'CNPJ';
+            mostrarStatus(
+                cpfMsg,
+                cpfValido ? 'ok' : 'erro',
+                cpfValido ? `${documento} válido` : `${documento} inválido. Confira os números.`
+            );
+            if (cpfEntrada) {
+                cpfEntrada.classList.toggle('is-ok', cpfValido);
+                cpfEntrada.classList.toggle('is-erro', !cpfValido);
+            }
         } else {
-            cpfMsg.innerText = '';
+            mostrarStatus(cpfMsg, '', '');
+            if (cpfEntrada) cpfEntrada.classList.remove('is-ok', 'is-erro');
         }
     }
-});
-document.querySelectorAll('.frete-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        // Remove classe active de todas
-        document.querySelectorAll('.frete-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
 
-        const tipo = tab.dataset.tipo;
-
-        const freteDiv = document.getElementById('frete');
-        const retiradaDiv = document.getElementById('retirada');
-
-        freteDiv.style.display = tipo === 'frete' ? 'block' : 'none';
-        retiradaDiv.style.display = tipo === 'retirada' ? 'block' : 'none';
-
-        const linhaFrete = document.getElementById('linha-frete');
-        const valorFrete = document.getElementById('valor-frete');
-        const totalPedido = document.getElementById('totalPedido');
-        const subtotalFixo = document.getElementById('subtotalFixo');
-
-        const valorProdutos = parseFloat(
-            document.getElementById("valor-produtos")
-                .innerText
-                .replace("R$", "")
-                .replace(/\./g, "")
-                .replace(",", ".")
-        );
-
-        if (tipo === 'retirada') {
-            // Zera frete no frontend
-            linhaFrete.style.display = 'none';
-            valorFrete.innerText = 'R$ 0,00';
-            const totalFormatado =
-                "R$ " + valorProdutos.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-            totalPedido.innerText = totalFormatado;
-            if (subtotalFixo) subtotalFixo.innerText = totalFormatado;
-
-            // Atualiza o tipo_envio no backend
-            fetch("{% url 'atualizar_tipo_envio' carrinho.id %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: JSON.stringify({ tipo_envio: 'retirada' })
-            });
-
-        } else {
-            // Tipo frete
-            fetch("{% url 'atualizar_tipo_envio' carrinho.id %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: JSON.stringify({ tipo_envio: 'frete' })
-            });
-
-            // Recalcula frete se já tiver CEP
-            const cep = document.getElementById('cepInput').value.replace(/\D/g, '');
-            if (cep.length === 8) calcularFrete();
-        }
-
-        atualizarBotaoFinalizar();
+    // Link desligado não leva a lugar nenhum -- nem pelo teclado.
+    btnFinalizar.addEventListener('click', evento => {
+        if (btnFinalizar.getAttribute('aria-disabled') === 'true') evento.preventDefault();
     });
+
+    // O CPF salvo numa visita anterior já chega validado na tela.
+    atualizarBotaoFinalizar();
 });
 
 </script>

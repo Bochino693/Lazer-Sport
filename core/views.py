@@ -5934,6 +5934,77 @@ def limpar_carrinho(request):
     return JsonResponse({'status': 'success'})
 
 
+#: Rótulo e página de cada tipo de produto que entra no carrinho (o
+#: `model` do ContentType).
+TIPOS_NO_CARRINHO = {
+    "brinquedos": ("Brinquedo", "brinquedo_detalhe"),
+    "combos": ("Combo", "combo"),
+    "promocoes": ("Promoção", "promocao"),
+    "pecasreposicao": ("Peça de reposição", "reposicao_detalhe"),
+}
+
+
+def _itens_do_carrinho_com_foto(carrinho):
+    """Os itens do carrinho com a miniatura, o tipo e a página de cada produto.
+
+    A FOTO SAI DO MESMO LUGAR DO CARTÃO DA LOJA (LojaView._montar): a
+    imagem do brinquedo, a do combo, a da promoção (ou a do brinquedo
+    dela) e a primeira foto da peça. E sai sem uma consulta por linha:
+    o `item` de cada linha é genérico (GenericForeignKey), e abrir um por
+    um custava uma consulta por produto -- mais as fotos da peça e o
+    brinquedo da promoção. Aqui são UMA consulta por tipo de produto,
+    com o brinquedo da promoção e as fotos da peça já juntos.
+
+    Os produtos vêm pelo `_base_manager`, como o GenericForeignKey faz
+    sozinho: um gerenciador que filtrasse (só os ativos, por exemplo)
+    deixaria a linha sem produto aqui e com produto no pagamento.
+    """
+    from django.contrib.contenttypes.prefetch import GenericPrefetch
+    from django.db.models import Prefetch, prefetch_related_objects
+
+    # No cache do próprio carrinho: os totais dele (`total_bruto`,
+    # `total_liquido`...) somam `carrinho.itens.all()`, e passam a fazer a
+    # conta na memória -- antes, cada total lido na tela relia os itens e
+    # abria o produto de cada linha outra vez.
+    prefetch_related_objects([carrinho], Prefetch(
+        'itens',
+        queryset=(
+            ItemCarrinho.objects
+            .select_related('content_type')
+            .prefetch_related(GenericPrefetch('item', [
+                Brinquedos._base_manager.all(),
+                Combos._base_manager.all(),
+                Promocoes._base_manager.select_related('brinquedos'),
+                PecasReposicao._base_manager.prefetch_related('imagem_peca_reposicao'),
+            ]))
+        ),
+    ))
+    itens = list(carrinho.itens.all())
+
+    for linha in itens:
+        produto = linha.item
+        rotulo, rota = TIPOS_NO_CARRINHO.get(linha.content_type.model, ("Produto", None))
+        linha.tipo_rotulo = rotulo
+        linha.url_produto = reverse(rota, args=[linha.object_id]) if (rota and produto) else ""
+
+        miniatura = None
+        if isinstance(produto, Brinquedos):
+            miniatura = produto.imagem_brinquedo
+        elif isinstance(produto, Combos):
+            miniatura = produto.imagem_combo
+        elif isinstance(produto, Promocoes):
+            miniatura = produto.imagem_promocao or (
+                produto.brinquedos.imagem_brinquedo if produto.brinquedos_id else None
+            )
+        elif isinstance(produto, PecasReposicao):
+            foto_principal = produto.imagem_principal
+            miniatura = foto_principal.imagem if foto_principal else None
+        # o campo vai para o template, que o reduz com `|foto` (Cloudinary)
+        linha.miniatura = miniatura or ""
+
+    return itens
+
+
 @method_decorator(_sem_cache, name="dispatch")
 class CarrinhoView(LoginRequiredMixin, View):
     # A tela de entrar do site, e não a do allauth sem estilo.
@@ -5950,20 +6021,16 @@ class CarrinhoView(LoginRequiredMixin, View):
             'cupom'
         ).get_or_create(cliente=cliente)
 
-        itens = (
-            ItemCarrinho.objects
-            .filter(carrinho=carrinho)
-            .select_related('content_type')
-        )
-
         # Voltou depois de pagar? Confere as reservas deste carrinho no
         # Mercado Pago (rede de segurança do webhook). Carrinho vazio porque
         # a compra foi paga leva direto para Meus pedidos, como em qualquer
-        # loja; com itens novos no carrinho, só avisa.
+        # loja; com itens novos no carrinho, só avisa. Vem ANTES de montar
+        # os itens: um Pix vencido devolve os itens ao carrinho aqui.
         pagos_agora = conferencia_pagamento.conferir_reservas_do_cliente(
             cliente, carrinho=carrinho,
         )
-        carrinho_vazio = not itens.exists()
+        itens = _itens_do_carrinho_com_foto(carrinho)
+        carrinho_vazio = not itens
         pago = pagos_agora[0] if pagos_agora else (
             conferencia_pagamento.pago_recente_do_carrinho(carrinho, request)
             if carrinho_vazio else None

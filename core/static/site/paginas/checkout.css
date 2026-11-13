@@ -1,0 +1,619 @@
+/* O CASCO DO CHECKOUT — carrinho e pagamento como uma tela só.
+ *
+ * O PEDIDO: "o carrinho não acompanhou o design e está feio e não
+ * uniforme com as melhorias do sistema, adapte ele aos layouts, a tela
+ * depois dele também e vamos deixar uniforme". O carrinho e o pagamento
+ * eram as duas últimas telas claras do site: caixas cinza-claro boiando
+ * no fundo escuro, emojis no lugar de ícone e um herói azul enorme que
+ * empurrava o produto para baixo da dobra no celular.
+ *
+ * O QUE MORA AQUI é o que as duas telas dividem, para elas não voltarem
+ * a divergir: o cabeçalho com a trilha e as três etapas (Carrinho →
+ * Pagamento → Confirmação), o cartão de vidro escuro, os campos, os
+ * botões, o seletor em segmentos, as linhas do resumo e a linha de
+ * estado com ícone. O que é de uma tela só fica no CSS dela
+ * (carrinho.css, payment.css).
+ *
+ * As cores vêm do tema escuro do site (ls-tema.css), com o valor do tema
+ * como reserva: a tela continua de pé se a folha do tema não chegar.
+ */
+
+.ck {
+    --ck-texto: var(--ls-texto, #eaf2ff);
+    --ck-suave: var(--ls-texto-suave, #a9bcd9);
+    --ck-fraco: #8195b6;
+    --ck-borda: rgba(255, 255, 255, .09);
+    --ck-borda-forte: rgba(255, 255, 255, .16);
+    --ck-azul: #2f8bff;
+    --ck-azul-texto: #8ccaff;
+    --ck-verde: #34e08a;
+    --ck-verde-texto: #6af2b0;
+    --ck-vermelho: #ff5a6a;
+    --ck-vermelho-texto: #ff929d;
+    --ck-amarelo: #ffd23f;
+    --ck-campo: rgba(4, 10, 28, .72);
+    --ck-raio: 22px;
+
+    position: relative;
+    max-width: 1180px;
+    margin: 6px auto 0;
+    color: var(--ck-texto);
+}
+
+/* `hidden` vence o display dos componentes (o painel do frete é grid,
+   a linha do resumo é flex): sem isto, esconder pelo atributo não
+   escondia nada. O que o Mercado Pago desenha dentro dos formulários
+   dele fica de fora: lá dentro, quem manda é o CSS do Brick. */
+.ck [hidden]:not(#paymentBrick_container *):not(#statusScreenBrick_container *) {
+    display: none !important;
+}
+
+/* =========================================================
+   CABEÇALHO: trilha, título e as três etapas
+========================================================= */
+.ck-cabeca {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 430px);
+    align-items: end;
+    gap: 18px 28px;
+    margin-bottom: 22px;
+}
+
+.ck-trilha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: #8ea3c4;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.ck-trilha a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #8ccaff;
+    text-decoration: none;
+}
+
+.ck-trilha a:hover { color: #fff; }
+
+.ck-trilha > i {
+    font-size: .58rem;
+    opacity: .55;
+}
+
+.ck-trilha [aria-current] { color: #dbe7fb; }
+
+.ck-titulo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.7rem, 3.2vw, 2.45rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -.035em;
+}
+
+.ck-contador {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 11px;
+    border: 1px solid rgba(63, 164, 255, .3);
+    border-radius: 999px;
+    background: rgba(47, 139, 255, .13);
+    color: #a9d6ff;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.ck-sub {
+    max-width: 560px;
+    margin: 8px 0 0;
+    color: var(--ck-suave);
+    font-size: .95rem;
+    line-height: 1.55;
+}
+
+/* As etapas: bolinha em cima, nome embaixo e o fio entre as bolinhas.
+   Em coluna, cabem as três com o nome inteiro até em 360 px. */
+.ck-etapas {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 14px 8px 12px;
+    border: 1px solid var(--ck-borda);
+    border-radius: 18px;
+    background: rgba(8, 16, 38, .72);
+    list-style: none;
+}
+
+.ck-etapa {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    color: var(--ck-fraco);
+    font-size: .74rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.ck-etapa + .ck-etapa::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: calc(-50% + 22px);
+    right: calc(50% + 22px);
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .12);
+}
+
+.ck-etapa.is-feita + .ck-etapa::before {
+    background: linear-gradient(90deg, var(--ck-verde), var(--ck-azul));
+}
+
+.ck-etapa-bola {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255, 255, 255, .16);
+    border-radius: 50%;
+    background: #0a1530;
+    color: var(--ck-fraco);
+    font-size: .8rem;
+    font-weight: 900;
+}
+
+.ck-etapa a {
+    display: contents;
+    color: inherit;
+    text-decoration: none;
+}
+
+.ck-etapa.is-feita { color: #a8f5c9; }
+
+.ck-etapa.is-feita .ck-etapa-bola {
+    border-color: var(--ck-verde);
+    background: var(--ck-verde);
+    color: #04301a;
+}
+
+.ck-etapa.is-atual { color: #fff; }
+
+.ck-etapa.is-atual .ck-etapa-bola {
+    border-color: #5aa8ff;
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(47, 139, 255, .18), 0 8px 18px rgba(31, 111, 255, .38);
+}
+
+/* =========================================================
+   CARTÃO
+========================================================= */
+.ck-card {
+    position: relative;
+    padding: 20px;
+    border: 1px solid rgba(127, 200, 255, .13);
+    border-radius: var(--ck-raio);
+    background:
+        radial-gradient(120% 80% at 100% 0%, rgba(63, 164, 255, .07), transparent 60%),
+        linear-gradient(160deg, rgba(17, 32, 66, .95), rgba(8, 15, 34, .97));
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+.ck-card-cabeca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ck-card-icone {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(63, 164, 255, .24);
+    border-radius: 12px;
+    background: rgba(47, 139, 255, .13);
+    color: var(--ck-azul-texto);
+    font-size: .98rem;
+}
+
+.ck-card-icone--verde {
+    border-color: rgba(52, 224, 138, .28);
+    background: rgba(52, 224, 138, .1);
+    color: var(--ck-verde-texto);
+}
+
+.ck-card-titulo {
+    min-width: 0;
+    margin: 0;
+    color: #fff;
+    font-size: 1.04rem;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+}
+
+.ck-card-nota {
+    display: block;
+    margin-top: 2px;
+    color: var(--ck-suave);
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.ck-card-acao { margin-left: auto; }
+
+/* =========================================================
+   CAMPOS — claros de ler no escuro (nada de branco no branco)
+========================================================= */
+.ck-campo {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    min-width: 0;
+}
+
+.ck-rotulo {
+    color: #c9d7ee;
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.ck-rotulo small {
+    margin-left: 4px;
+    color: var(--ck-fraco);
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.ck-entrada {
+    position: relative;
+    min-width: 0;
+}
+
+.ck-entrada > i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    color: #7f93b3;
+    font-size: .9rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    transition: color .2s ease;
+}
+
+.ck-entrada input {
+    width: 100%;
+    min-width: 0;
+    height: 50px;
+    padding: 0 14px 0 42px;
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 13px;
+    outline: none;
+    background: var(--ck-campo);
+    color: #f2f7ff;
+    /* 16 px: abaixo disso o iPhone dá zoom na tela ao tocar no campo */
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.ck-entrada--sem-icone input { padding-left: 14px; }
+
+.ck-entrada input::placeholder {
+    color: #6f84a6;
+    font-weight: 600;
+    opacity: 1;
+}
+
+.ck-entrada input:focus {
+    border-color: #3fa4ff;
+    background: rgba(4, 10, 28, .92);
+    box-shadow: 0 0 0 4px rgba(63, 164, 255, .18);
+}
+
+/* No campo, o anel azul acima já é o foco: o amarelo do site (para link e
+   botão) somava um segundo contorno em volta de quem digita. */
+.ck .ck-entrada input:focus-visible { outline: none; }
+
+.ck-entrada input:focus + i,
+.ck-entrada:focus-within > i { color: #8ccaff; }
+
+/* O que o CEP preencheu: lido, não digitado. Mais apagado que o campo
+   que pede resposta, mas com texto claro -- não parece "selecionado". */
+.ck-entrada input[readonly] {
+    border-color: rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, .035);
+    color: #d5e1f4;
+    cursor: default;
+}
+
+.ck-entrada input[readonly]:focus {
+    border-color: rgba(255, 255, 255, .16);
+    box-shadow: none;
+}
+
+.ck-entrada.is-ok input { border-color: rgba(52, 224, 138, .6); }
+.ck-entrada.is-ok > i { color: var(--ck-verde-texto); }
+.ck-entrada.is-erro input { border-color: rgba(255, 90, 106, .7); }
+.ck-entrada.is-erro > i { color: var(--ck-vermelho-texto); }
+
+/* o preenchimento automático do navegador pintava o campo de amarelo-claro */
+.ck-entrada input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 40px #091330 inset;
+    -webkit-text-fill-color: #f2f7ff;
+    caret-color: #f2f7ff;
+}
+
+/* A LINHA DE ESTADO: "CPF válido", "CEP não encontrado", "Cupom
+   aplicado". Pequena, com ícone e a cor do resultado; vazia, some. */
+.ck-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    color: var(--ck-suave);
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.ck-status:empty { display: none; }
+
+.ck-status i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    font-size: .82rem;
+}
+
+.ck-status.is-ok { color: var(--ck-verde-texto); }
+.ck-status.is-erro { color: var(--ck-vermelho-texto); }
+.ck-status.is-info { color: #a9d6ff; }
+
+/* =========================================================
+   BOTÕES
+========================================================= */
+.ck-botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .92rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform .2s ease, filter .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.ck-botao:hover { transform: translateY(-1px); }
+.ck-botao:active { transform: translateY(0) scale(.98); }
+
+.ck-botao--primario {
+    color: #fff;
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 10px 24px rgba(20, 96, 214, .32);
+}
+
+.ck-botao--primario:hover { color: #fff; filter: brightness(1.06); }
+
+.ck-botao--secundario {
+    border-color: rgba(63, 164, 255, .38);
+    color: #d4e9ff;
+    background: rgba(47, 139, 255, .14);
+}
+
+.ck-botao--secundario:hover { color: #fff; background: rgba(47, 139, 255, .24); }
+
+.ck-botao--fantasma {
+    border-color: rgba(255, 255, 255, .14);
+    color: #d6e4f7;
+    background: rgba(255, 255, 255, .04);
+}
+
+.ck-botao--fantasma:hover { color: #fff; border-color: rgba(63, 208, 255, .45); }
+
+/* =========================================================
+   SELETOR EM SEGMENTOS (Frete | Retirada, Pix | Cartão)
+========================================================= */
+.ck-segmento {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--ck-borda);
+    border-radius: 16px;
+    background: rgba(4, 10, 28, .62);
+}
+
+.ck-segmento-opcao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ck-suave);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .9rem;
+    font-weight: 800;
+    line-height: 1.15;
+    transition: background .22s ease, color .22s ease, box-shadow .22s ease;
+}
+
+.ck-segmento-opcao:hover { color: #fff; background: rgba(255, 255, 255, .05); }
+
+.ck-segmento-opcao.active {
+    color: #fff;
+    background: linear-gradient(135deg, #1460d6, #2a8bff);
+    box-shadow: 0 8px 20px rgba(20, 96, 214, .35);
+}
+
+.ck-segmento-opcao i { font-size: 1rem; }
+
+.ck-rotulo-curto { display: none; }
+
+@media (max-width: 440px) {
+    .ck-rotulo-largo { display: none; }
+    .ck-rotulo-curto { display: inline; }
+
+    .ck-segmento-opcao {
+        gap: 7px;
+        padding: 8px 6px;
+        font-size: .86rem;
+    }
+}
+
+/* =========================================================
+   LINHAS DO RESUMO
+========================================================= */
+.ck-linha {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    color: var(--ck-suave);
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.ck-linha > :last-child {
+    color: #e6eefb;
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.ck-linha--desconto > :last-child { color: var(--ck-verde-texto); }
+
+.ck-linha--total {
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(255, 255, 255, .14);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.ck-linha--total > :last-child {
+    color: var(--ck-verde);
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: -.03em;
+}
+
+/* =========================================================
+   SELOS DE CONFIANÇA E NOTA DE SEGURANÇA
+========================================================= */
+.ck-selos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ck-selos li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--ck-borda);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .04);
+    color: #c6d5ec;
+    font-size: .74rem;
+    font-weight: 800;
+}
+
+.ck-selos .fa-pix { color: #4fd1c5; }
+.ck-selos .fa-credit-card { color: #8ccaff; }
+.ck-selos .fa-shield-halved { color: var(--ck-verde-texto); }
+
+.ck-seguro {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(52, 224, 138, .17);
+    border-radius: 14px;
+    background: rgba(52, 224, 138, .06);
+    color: #bfeed5;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.ck-seguro i {
+    margin-top: 2px;
+    color: var(--ck-verde);
+}
+
+/* =========================================================
+   CELULAR
+========================================================= */
+@media (max-width: 959px) {
+    .ck-cabeca {
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .ck-etapas { width: 100%; }
+}
+
+@media (max-width: 560px) {
+    .ck-titulo { font-size: 1.7rem; }
+
+    .ck-sub { font-size: .9rem; }
+
+    .ck-card {
+        padding: 16px 14px;
+        border-radius: 20px;
+    }
+
+    .ck-card-cabeca { margin-bottom: 14px; }
+
+    .ck-etapas { padding: 12px 4px 10px; }
+
+    .ck-etapa { font-size: .7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ck-botao,
+    .ck-segmento-opcao,
+    .ck-entrada input { transition: none; }
+}

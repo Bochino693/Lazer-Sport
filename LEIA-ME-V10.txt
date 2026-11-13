@@ -5050,3 +5050,68 @@ Dependência nova: rjsmin (requirements.txt).
    botão, os arquivos e o repasse), core/views.py (previa_do_carrinho,
    _item_vendavel), reposicao_info.html e loja.html. Testes:
    core/tests_carrinho_rapido.py.
+
+87) CARRINHO E PAGAMENTO NO TEMA ESCURO: UM CHECKOUT SÓ
+   O PEDIDO: "veja como o carrinho não acompanhou o design e está feio e
+   não uniforme com as melhorias do sistema, adapte ele aos layouts, a tela
+   depois dele também e vamos deixar uniforme, para eu testar o cartão
+   corretamente, com o MP gerando o pix copia e cola, qrcode e opção
+   crédito e débito funcionando".
+   O QUE ERA: as duas últimas telas claras do site -- caixas cinza-claro
+   boiando no fundo escuro, emojis no lugar de ícone, o "Remover" como
+   link solto, texto cinza que parecia selecionado e um herói azul enorme
+   que empurrava os produtos para baixo da dobra no celular.
+   O CASCO COMUM: core/static/site/paginas/checkout.css, carregado pelas
+   duas telas -- cabeçalho com trilha, título e as três etapas (Carrinho
+   -> Pagamento -> Confirmação), o cartão de vidro escuro, os campos
+   (claros de ler, 16 px para o iPhone não dar zoom), botões, o seletor em
+   segmentos, as linhas do resumo e a linha de estado com ícone. O que é de
+   uma tela só fica em carrinho.css e payment.css (os dois reescritos).
+   O CARRINHO: cada produto com a FOTO (a mesma do cartão da loja), o tipo,
+   o adesivo e o link da página; contador de quantidade com alvo de 44 px
+   (o "menos" para no 1); "Remover" é a lixeira do canto e "Limpar" usa a
+   folha de aplicativo do site (LSAviso.confirmar) no lugar do modal
+   próprio. Identificação (CPF/CNPJ) e Entrega em cartões; Frete/Retirada
+   em segmentos; o endereço do CEP numa grade (rua e número, bairro, cidade
+   e UF); a retirada mostra a loja com o "Como chegar". CPF, CNPJ, CEP e
+   cupom respondem numa linha pequena com ícone ("CPF válido", "CEP não
+   encontrado", "Frete: R$ 180,00. Agora informe o número."). O resumo
+   fica à direita no computador; no celular o botão de seguir vira a barra
+   presa ao pé da tela, acima da barra de atalhos, com o total e o que
+   ainda falta ("Informe um CPF ou CNPJ válido para continuar.").
+   Carrinho vazio e "pagamento em andamento" (o pedido reservado, com
+   Continuar pagamento e Desistir) também redesenhados.
+   O COMPORTAMENTO É O MESMO: os mesmos ids, as mesmas URLs e as mesmas
+   funções (aplicarCupom, removerItem, alterarQtd, limparCarrinho,
+   calcularFrete, ViaCEP, atualizar_tipo_envio, a regra que libera o
+   Continuar). O que mudou por dentro: os dois tratadores do clique em
+   Frete/Retirada viraram um (o segundo chamava funções fora do escopo e
+   quebrava calado); mostrar e esconder é pelo atributo `hidden`, não por
+   `style`; o Continuar desligado não navega nem pelo teclado.
+   A FOTO SEM CONSULTA POR LINHA: CarrinhoView monta os itens com
+   GenericPrefetch (uma consulta por tipo de produto, com o brinquedo da
+   promoção e as fotos da peça juntos) e deixa a lista no cache do próprio
+   carrinho -- os totais da tela, que antes reliam os itens a cada leitura,
+   viram conta na memória (_itens_do_carrinho_com_foto).
+   O PAGAMENTO: Pix e Crédito ou débito em segmentos; o Pix com o QR num
+   ladrilho branco (a câmera do banco precisa do fundo claro), o valor, o
+   copia e cola com "Copiar código" -> "Copiado" e os três passos -- no
+   celular o copia e cola vem antes do QR (ninguém escaneia a própria
+   tela). O Payment Brick do Mercado Pago ganhou as cores do checkout (só
+   #rrggbb: o "transparent" de antes podia fazer o Brick recusar tudo), um
+   esqueleto até o onReady, o aviso de demora em 15 s, o motivo REAL do
+   erro (message/cause, traduzido, com o código cru pequeno para print) e o
+   "Tentar de novo" (desmonta, busca o SDK de novo se ele não chegou e
+   recria). Abaixo do mínimo do cartão (`cartao_liberado` falso) a aba não
+   monta o Brick: diz "Pagamento com cartão a partir de R$ X. Para este
+   valor, use o Pix." e leva ao Pix. Voltar à tela pelo "Voltar" (página
+   congelada do navegador) confere o pagamento na hora e religa a consulta.
+   A janela de "Pagamento aprovado" sobe de baixo no celular.
+   O resumo do pagamento mostra o nome dos itens também com o pedido
+   reservado (antes ficava em branco: o item do pedido guarda o nome em
+   `nome_item`).
+   Testes: core/tests_telas_do_site.py (CarrinhoComFotoTests: cada linha
+   com a foto, e as consultas iguais com 1 e com 7 produtos); seguem
+   valendo core/tests.py (as strings do Brick e do 3DS), core/
+   tests_variantes_produto.py (o adesivo no carrinho) e core/
+   tests_ls_aviso.py (nenhum alert()/confirm() do navegador).
