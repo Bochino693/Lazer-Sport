@@ -28,6 +28,33 @@
   </div>
 </section>
 
+{% with mp=mercado_pago %}
+<section class="ls-mp-status ls-mp-{{ mp.nivel }} mb-3" aria-label="Situação do Mercado Pago">
+  <div class="ls-mp-icone" aria-hidden="true">
+    {% if mp.nivel == "ok" %}<i class="bi bi-shield-check"></i>
+    {% elif mp.nivel == "alerta" %}<i class="bi bi-exclamation-triangle"></i>
+    {% else %}<i class="bi bi-x-octagon"></i>{% endif %}
+  </div>
+  <div class="ls-mp-texto">
+    <span class="ls-mp-rotulo">Mercado Pago · <strong>{{ mp.modo }}</strong></span>
+    <h2>{{ mp.titulo }}</h2>
+    <p>{{ mp.resumo }}{% if mp.conta_aceita and mp.nivel == "ok" %} Conta confirmada pelo Mercado Pago.{% endif %}</p>
+    {% for aviso in mp.avisos %}<p class="ls-mp-aviso"><i class="bi bi-info-circle"></i> {{ aviso }}</p>{% endfor %}
+  </div>
+  <ul class="ls-mp-chaves">
+    {% for chave in mp.chaves %}
+      <li>
+        <code>{{ chave.nome }}</code>
+        <span class="ls-mp-tipo ls-mp-tipo-{{ chave.tipo }}">
+          {% if chave.tipo == "producao" %}Produção{% elif chave.tipo == "teste" %}Teste{% elif chave.tipo == "vazia" %}Vazia{% else %}Formato desconhecido{% endif %}
+        </span>
+        {% if chave.final %}<small>termina em {{ chave.final }}</small>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endwith %}
+
 <section class="ls-metrics">
   <article class="ls-metric-card green">
     <div class="ls-metric-head">

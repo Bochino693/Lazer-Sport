@@ -69,6 +69,7 @@ from . import fragmento
 from .documento_assinatura import situacao_do_cartao
 from .sincronia import revisao_modulo
 from . import financeiro as fin
+from .mercado_pago_status import situacao_mercado_pago
 from core.objetos_3d import tabela_pronta
 from .models import (
     AtividadeOrcamento,
@@ -189,6 +190,7 @@ class FinanceiroInnerView(FinanceiroInternoRequiredMixin, View):
             "origens_comerciais": fin.orcamentos_por_origem(meses[0]),
             "inicio": meses[0],
             "fim": meses[-1],
+            "mercado_pago": situacao_mercado_pago(),
         }
         ctx.update(fin.indicadores(serie))
 

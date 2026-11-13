@@ -4965,3 +4965,25 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_black_friday.py (ExtensaoAte21Tests: a validade vai a
    21 e o preço ajustado no painel fica; no Render só as três que mudaram
    sobem; nas seis imagens só a faixa da linha da validade mudou).
+
+85) MERCADO PAGO: PRODUÇÃO OU TESTE, À VISTA NO FINANCEIRO
+   O PEDIDO: "nas minhas MP access token e public, é a de teste, funciona
+   bem e normal? não vou ter erros no futuro?" e, depois de trocar no
+   Render, "veja as environments e me diga".
+   A RESPOSTA CURTA: com credencial de TESTE o site parece funcionar, mas
+   nenhum dinheiro cai na conta e cliente de verdade não consegue pagar
+   (cartão real é recusado, o Pix gerado é de mentira). No Render as duas
+   variáveis precisam ser as "Credenciais de produção" do MESMO aplicativo
+   no painel do Mercado Pago (começam com APP_USR-).
+   A TELA: o Financeiro (só gestão/financeiro) abre com um cartão do
+   Mercado Pago -- verde PRODUÇÃO, âmbar TESTE ou vermelho quando falta
+   chave, o formato é estranho ou o Mercado Pago recusou o token. A chave
+   NUNCA aparece: só o tipo e os 4 últimos caracteres, para conferir com o
+   painel do Mercado Pago. O token é conferido em /users/me (3 s no máximo,
+   resultado guardado 10 min; falha guardada 1 min): conta marcada como
+   "test_user" conta como TESTE mesmo com chave APP_USR-; token recusado
+   (401) vira vermelho; API fora do ar só gera um aviso e a tela abre igual.
+   Avisa também token e chave pública de tipos diferentes e conta de fora
+   do Brasil (site_id diferente de MLB).
+   Código: sistema_interno/mercado_pago_status.py; testes em
+   sistema_interno/tests_mercado_pago_status.py.
