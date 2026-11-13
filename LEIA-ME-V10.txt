@@ -4987,3 +4987,66 @@ Dependência nova: rjsmin (requirements.txt).
    do Brasil (site_id diferente de MLB).
    Código: sistema_interno/mercado_pago_status.py; testes em
    sistema_interno/tests_mercado_pago_status.py.
+
+86) O CARRINHO À VISTA E A FOLHA DE QUANTIDADE NO "ADICIONAR"
+   O PEDIDO: "fora o carrinho deve ser visível, opção de quantidade, então
+   abra um modal para add quantidade e moderno aparecendo que há itens".
+   O BOTÃO NO TOPO: o carrinho ganhou um botão próprio no cabeçalho, ao
+   lado da conta, no computador e no celular, com o número de itens num
+   selo vermelho (`data-carrinho-total`, o mesmo que o
+   `atualizarBadgeCarrinho` já acompanhava; some no zero). Quando o número
+   sobe, o selo dá um pulo e o carrinho um balanço (sem animação para quem
+   pediu menos movimento no aparelho). O visitante sem conta também vê o
+   botão (leva ao login); a conta da equipe não vê, nem carrega a folha.
+   O carrinho do menu da conta e o do Menu ficam como estavam. A barra de
+   baixo do celular segue a regra de antes (a quarta casa é o carrinho
+   quando há algo nele, e os desejos quando não há), agora ao vivo: com o
+   primeiro item a casa vira "Carrinho" com o número, sem recarregar --
+   no celular o topo sai de vista ao rolar (o `overflow-x: hidden` de
+   html/body no ls-base.css desliga o `position: sticky` do topo abaixo
+   de 768 px; trocar por `overflow-x: clip` o deixaria preso no alto, mas
+   isso muda a tela do celular e ficou para decidir).
+   No celular, abaixo de 420 px, o nome da fábrica passa a ir em
+   duas linhas (FÁBRICA DE / BRINQUEDOS) para caber a marca, a conta, o
+   carrinho e o WhatsApp; abaixo de 370 px o lema sai.
+   A FOLHA: todo "Adicionar" do site (home, loja, combos, promoções,
+   catálogo, cartão da peça) abre uma folha de aplicativo -- sobe de baixo
+   no celular, cartão no meio no computador, no visual das folhas do
+   ls-aviso -- com a foto, o nome, o preço unitário, o − [n] + (1 a 99,
+   também dá para digitar) e o subtotal, e os botões "Adicionar ao
+   carrinho" e "Cancelar" ("Comprar agora", em vermelho, quando o botão
+   era o de comprar). Depois de adicionar, ela vira o "pronto": o visto
+   desenhado, quantas unidades entraram, "N itens no carrinho" com o total
+   em produtos (o mesmo "Produtos" da tela do carrinho), "Ver carrinho" e
+   "Continuar comprando". No "Comprar agora" o pronto diz "Abrindo o
+   carrinho…" e abre. Quem já tem a quantidade na página (a do brinquedo,
+   com quantidade e adesivo, e a da peça) pula a escolha e vai direto ao
+   pronto -- a página do brinquedo passou a mandar a quantidade, o adesivo
+   e o "Comprar agora", que o envio do base.html perdia. Sem conta, no
+   lugar do toast vermelho, a folha "Entre para comprar" com "Entrar" e
+   "Criar conta" (os dois com o ?next= da página).
+   ACESSIBILIDADE: <dialog> modal (role e aria-modal), o Tab dá a volta
+   dentro dela, Esc, toque no véu e arrastar para baixo (celular) fecham,
+   o foco volta ao botão que abriu, alvos de 44 px ou mais.
+   O SERVIDOR: GET /carrinho/previa/<tipo>/<id>/ devolve nome, foto (a do
+   card da loja) e preço unitário pela conta do carrinho
+   (ItemCarrinho.preco_unitario: promoção vale o preço dela, adesivo não
+   muda o preço), e se a pessoa entrou na conta. A regra do que pode ir ao
+   carrinho mora num lugar só (core/views._item_vendavel), usada pela
+   prévia e pelo adicionar: brinquedo ativo, da loja e com preço; promoção
+   no ar e com preço; combo ativo; peça da vitrine e com preço. Ficou mais
+   justa em dois casos: combo desligado e peça sem preço ou de manutenção
+   não entram mais (a de manutenção mostraria custo interno na prévia; a
+   sem preço entrava valendo R$ 0,00). Na Loja, só o que tem preço mostra
+   "Adicionar"; peça sem preço mostra "Consultar". O adicionar devolve
+   também total_carrinho, a quantidade e o item.
+   A Promise do `adicionarAoCarrinho` continua a mesma para quem chama:
+   resolve com a resposta do servidor depois de confirmar, ou com
+   {sucesso: false, cancelado: true} quando a pessoa desiste; o botão do
+   card volta na hora ao cancelar. A trava de clique duplo (LSCartLoading)
+   segue no envio. Sem a folha (equipe, ou o script não chegou), o caminho
+   direto de antes.
+   Código: core/static/site/ls-carrinho-rapido.css e .js, base.html (o
+   botão, os arquivos e o repasse), core/views.py (previa_do_carrinho,
+   _item_vendavel), reposicao_info.html e loja.html. Testes:
+   core/tests_carrinho_rapido.py.

@@ -1,0 +1,948 @@
+/* ======================================================================
+   O CARRINHO RÁPIDO (ls-carrinho-rapido.js)
+
+   O pedido: "fora o carrinho deve ser visível, opção de quantidade, então
+   abra um modal para add quantidade e moderno aparecendo que há itens".
+
+   DUAS PEÇAS:
+
+     * O BOTÃO DO CARRINHO NO TOPO, sempre à vista (computador e celular),
+       com o número de itens num selo que pula quando muda. Antes o
+       carrinho morava dentro do menu da conta (computador) e na barra de
+       baixo só quando já tinha algo (celular).
+     * A FOLHA DO "ADICIONAR": foto, nome e preço do produto, o − [n] + da
+       quantidade, o subtotal e o botão. Depois de adicionar, ela vira o
+       "pronto" (o visto desenhado, quantos itens e quanto dá o carrinho),
+       ou o "entre na conta" para quem não entrou. Folha que sobe de baixo
+       no celular, cartão no meio no computador -- a mesma linguagem das
+       folhas do ls-aviso.css.
+
+   As cores são as do tema escuro (ls-tema.css): azul da marca no botão
+   principal, vermelho no "Comprar agora", verde neon no "pronto".
+   ====================================================================== */
+
+/* ----------------------------------------------------------------------
+   O BOTÃO DO TOPO
+   ---------------------------------------------------------------------- */
+html.ls-escuro .ls-topo .ls-topo-carrinho {
+    position: relative;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(120, 170, 255, .32);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(63, 208, 255, .22), transparent 62%),
+        linear-gradient(145deg, rgba(31, 111, 255, .28), rgba(0, 74, 173, .2));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 6px 18px rgba(0, 60, 160, .22);
+    color: #fff;
+    font-size: 1.08rem;
+    text-decoration: none;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+html.ls-escuro .ls-topo .ls-topo-carrinho:hover {
+    border-color: rgba(120, 190, 255, .6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 8px 24px rgba(31, 111, 255, .38);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+html.ls-escuro .ls-topo .ls-topo-carrinho:active {
+    transform: scale(.95);
+}
+
+html.ls-escuro .ls-topo .ls-topo-carrinho > i {
+    /* o carrinho do Font Awesome é mais pesado à esquerda: meio pixel para o centro */
+    margin-left: -1px;
+    pointer-events: none;
+}
+
+/* Só para o leitor de tela: "Carrinho", e o número logo depois. */
+.ls-topo-carrinho-rotulo,
+.ls-cr-so-leitor {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+html.ls-escuro .ls-topo .ls-topo-carrinho-selo {
+    position: absolute;
+    top: -5px;
+    right: -6px;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff4757, #e63946);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 21px;
+    text-align: center;
+    box-shadow: 0 0 0 2.5px #050b1f, 0 4px 12px rgba(230, 57, 70, .55);
+    pointer-events: none;
+}
+
+html.ls-escuro .ls-topo .ls-topo-carrinho-selo.vazio { display: none; }
+
+/* O PULO DO SELO: o número mudou (ls-carrinho-rapido.js põe a classe).
+   Vale para todo selo do carrinho -- o do topo, o da barra de baixo, o do
+   Menu e o do menu da conta. */
+[data-carrinho-total].ls-cr-pulo {
+    animation: ls-cr-pulo .62s cubic-bezier(.3, 1.6, .5, 1);
+}
+
+@keyframes ls-cr-pulo {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.45); }
+    55% { transform: scale(.88); }
+    78% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+
+/* e o carrinho do topo dá um balanço junto */
+html.ls-escuro .ls-topo .ls-topo-carrinho.ls-cr-pulo > i {
+    animation: ls-cr-balanco .62s ease;
+}
+
+@keyframes ls-cr-balanco {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-14deg) translateY(-1px); }
+    50% { transform: rotate(10deg); }
+    75% { transform: rotate(-5deg); }
+}
+
+/* No celular o topo é apertado: o botão encolhe junto com os vizinhos. */
+@media (max-width: 768px) {
+    html.ls-escuro .ls-topo .ls-topo-carrinho {
+        width: 42px;
+        height: 42px;
+        font-size: 1.02rem;
+    }
+}
+
+/* QUATRO COISAS NA LINHA DO CELULAR: a marca, a conta, o carrinho e o
+   WhatsApp. Abaixo de 420 px não cabiam: o nome da fábrica passa a ir em
+   duas linhas (FÁBRICA DE / BRINQUEDOS) -- continua lá, como pede o
+   ls-tema.css -- e, no aparelho mais estreito, o lema sai. */
+@media (max-width: 420px) {
+    html.ls-escuro .ls-topo .ls-topo-acoes { gap: 6px; }
+    html.ls-escuro .ls-topo .ls-marca-nome {
+        width: min-content;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 370px) {
+    html.ls-escuro .ls-topo .ls-marca-lema { display: none; }
+}
+
+/* ----------------------------------------------------------------------
+   A FOLHA -- cartão no meio no computador
+   ---------------------------------------------------------------------- */
+html.ls-cr-travado {
+    overflow: hidden;
+}
+
+.ls-cr {
+    --cr-fundo: #0c1c44;
+    --cr-fundo-2: rgba(255, 255, 255, .06);
+    --cr-borda: var(--ls-borda-forte, rgba(255, 255, 255, .18));
+    --cr-borda-suave: var(--ls-borda, rgba(255, 255, 255, .1));
+    --cr-texto: var(--ls-texto, #eaf2ff);
+    --cr-suave: var(--ls-texto-suave, #a9bcd9);
+    --cr-verde: var(--ls-verde-neon, #2ee59d);
+    --cr-amarelo: #ffd700;
+    --cr-foco: var(--ls-amarelo-neon, #ffd23f);
+
+    width: min(440px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--cr-texto);
+    overflow: visible;
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.ls-cr::backdrop {
+    background: var(--ls-veu, rgba(2, 6, 20, .72));
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    animation: ls-cr-veu .24s ease;
+}
+
+/* Navegador sem <dialog> modal: o véu é uma sombra do tamanho da tela. */
+.ls-cr.sem-camada {
+    position: fixed;
+    inset: 0;
+    z-index: 15100;
+    box-shadow: 0 0 0 100vmax var(--ls-veu, rgba(2, 6, 20, .72));
+}
+
+.ls-cr-cartao {
+    position: relative;
+    max-height: inherit;
+    padding: 26px 24px 22px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--cr-borda);
+    border-radius: 28px;
+    background:
+        radial-gradient(420px 220px at 100% 0%, rgba(47, 139, 255, .2), transparent 70%),
+        radial-gradient(360px 200px at 0% 100%, rgba(230, 57, 70, .1), transparent 70%),
+        linear-gradient(180deg, #0f2253 0%, var(--cr-fundo) 55%, #0a1738 100%);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
+    transition: transform .32s cubic-bezier(.2, .9, .3, 1.08), opacity .18s ease;
+    animation: ls-cr-entra .34s cubic-bezier(.2, .9, .3, 1.12);
+}
+
+.ls-cr-cartao.is-arrastando { transition: none; }
+
+.ls-cr.is-saindo .ls-cr-cartao {
+    opacity: 0;
+    transform: scale(.96);
+}
+
+.ls-cr.is-saindo::backdrop {
+    opacity: 0;
+    transition: opacity .18s ease;
+}
+
+@keyframes ls-cr-entra {
+    from { opacity: 0; transform: translateY(12px) scale(.94); }
+}
+
+@keyframes ls-cr-sobe {
+    from { transform: translateY(100%); }
+}
+
+@keyframes ls-cr-veu {
+    from { opacity: 0; }
+}
+
+.ls-cr-alca { display: none; }
+
+.ls-cr-fechar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--cr-suave);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.ls-cr-fechar:hover { background: var(--cr-fundo-2); color: var(--cr-texto); }
+
+.ls-cr svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ls-cr-fechar svg { width: 20px; height: 20px; }
+
+/* O conteúdo de cada estado (escolher, pronto, entrar) entra deslizando. */
+.ls-cr-corpo {
+    display: grid;
+    gap: 18px;
+    animation: ls-cr-troca .3s cubic-bezier(.2, .9, .3, 1);
+}
+
+@keyframes ls-cr-troca {
+    from { opacity: 0; transform: translateY(8px); }
+}
+
+/* ---------- o produto ---------- */
+.ls-cr-produto {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    padding-right: 40px; /* o X */
+}
+
+.ls-cr-foto {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    overflow: hidden;
+    border: 1px solid var(--cr-borda-suave);
+    border-radius: 20px;
+    /* o "palco" claro das fotos de produto: peça preta some no escuro */
+    background: radial-gradient(circle at 50% 40%, #ffffff, #e3ebf7);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
+}
+
+.ls-cr-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ls-cr-foto--vazia {
+    display: grid;
+    place-items: center;
+    background: var(--cr-fundo-2);
+    color: var(--cr-suave);
+    font-size: 1.8rem;
+}
+
+.ls-cr-produto-texto {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.ls-cr-rotulo {
+    justify-self: start;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(47, 139, 255, .16);
+    color: #8fc0ff;
+    font-size: .66rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.ls-cr-rotulo--promocao { background: rgba(230, 57, 70, .18); color: #ff8a95; }
+.ls-cr-rotulo--combo { background: rgba(255, 215, 0, .14); color: #ffe066; }
+.ls-cr-rotulo--peca { background: rgba(63, 208, 255, .14); color: #7fdcff; }
+
+.ls-cr-nome {
+    margin: 0;
+    color: #fff;
+    font-size: 1.06rem;
+    font-weight: 850;
+    line-height: 1.28;
+    letter-spacing: -.01em;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ls-cr-unitario {
+    color: var(--cr-suave);
+    font-size: .84rem;
+    font-weight: 600;
+}
+
+.ls-cr-unitario b {
+    color: var(--cr-texto);
+    font-weight: 850;
+}
+
+/* ---------- a quantidade ---------- */
+.ls-cr-qtd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 14px 18px;
+    border: 1px solid var(--cr-borda-suave);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, .035);
+}
+
+.ls-cr-qtd label {
+    display: grid;
+    gap: 2px;
+    color: var(--cr-texto);
+    font-size: .92rem;
+    font-weight: 800;
+}
+
+.ls-cr-qtd label small {
+    color: var(--cr-suave);
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.ls-cr-stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--cr-borda);
+    border-radius: 18px;
+    background: rgba(2, 8, 28, .55);
+}
+
+.ls-cr-passo {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background .15s ease, transform .1s ease, opacity .15s ease;
+}
+
+.ls-cr-passo svg { width: 20px; height: 20px; stroke-width: 2.6; }
+.ls-cr-passo:hover { background: rgba(47, 139, 255, .3); }
+.ls-cr-passo:active { transform: scale(.92); }
+
+.ls-cr-passo:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+    transform: none;
+    background: rgba(255, 255, 255, .05);
+}
+
+.ls-cr-numero {
+    width: 58px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 1.45rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.ls-cr-numero::-webkit-outer-spin-button,
+.ls-cr-numero::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ls-cr-numero:focus { outline: none; background: rgba(255, 255, 255, .06); }
+.ls-cr-numero:focus-visible { outline: 3px solid var(--cr-foco); outline-offset: 1px; }
+
+.ls-cr-numero.is-pulando { animation: ls-cr-numero .26s cubic-bezier(.3, 1.6, .5, 1); }
+
+@keyframes ls-cr-numero {
+    from { transform: scale(.78); }
+}
+
+/* ---------- o subtotal ---------- */
+.ls-cr-subtotal {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 4px;
+}
+
+.ls-cr-subtotal span {
+    color: var(--cr-suave);
+    font-size: .88rem;
+    font-weight: 700;
+}
+
+.ls-cr-subtotal strong {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+}
+
+/* ---------- os botões ---------- */
+.ls-cr-botoes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ls-cr-botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 18px;
+    border: 1px solid var(--cr-borda);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .07);
+    color: var(--cr-texto);
+    font: inherit;
+    font-size: .98rem;
+    font-weight: 850;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: filter .15s ease, transform .1s ease, background .15s ease, box-shadow .2s ease;
+}
+
+.ls-cr-botao:hover {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.ls-cr-botao:active { transform: scale(.98); }
+
+.ls-cr-botao--primario {
+    border-color: transparent;
+    background: linear-gradient(135deg, #1f7bff 0%, #0a5ed8 50%, #004aad 100%);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(0, 92, 230, .4), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+.ls-cr-botao--primario:hover {
+    background: linear-gradient(135deg, #3a8cff 0%, #1468e0 50%, #0352b8 100%);
+    filter: none;
+    box-shadow: 0 14px 32px rgba(0, 92, 230, .5), inset 0 1px 0 rgba(255, 255, 255, .26);
+}
+
+.ls-cr-botao--comprar {
+    background: linear-gradient(135deg, #ff4f5e 0%, #e63946 50%, #bd171d 100%);
+    box-shadow: 0 12px 28px rgba(230, 57, 70, .38), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+.ls-cr-botao--comprar:hover {
+    background: linear-gradient(135deg, #ff6370 0%, #ee4552 50%, #c9222a 100%);
+    box-shadow: 0 14px 32px rgba(230, 57, 70, .48), inset 0 1px 0 rgba(255, 255, 255, .26);
+}
+
+.ls-cr-botao[disabled],
+.ls-cr-botao[aria-disabled="true"] {
+    cursor: wait;
+    opacity: .78;
+    transform: none;
+}
+
+.ls-cr-botao .fa-spinner { font-size: 1.05em; }
+
+.ls-cr-botao:focus-visible,
+.ls-cr-passo:focus-visible,
+.ls-cr-fechar:focus-visible,
+.ls-cr-link:focus-visible {
+    outline: 3px solid var(--cr-foco);
+    outline-offset: 2px;
+}
+
+.ls-cr-link {
+    justify-self: center;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--cr-suave);
+    font: inherit;
+    font-size: .9rem;
+    font-weight: 750;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ls-cr-link:hover { color: #fff; background: var(--cr-fundo-2); }
+
+/* ---------- carregando (enquanto a prévia chega) ---------- */
+.ls-cr-osso {
+    display: block;
+    border-radius: 10px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .06) 25%, rgba(255, 255, 255, .14) 50%, rgba(255, 255, 255, .06) 75%);
+    background-size: 200% 100%;
+    animation: ls-cr-osso 1.1s linear infinite;
+}
+
+.ls-cr-foto.ls-cr-osso { border-radius: 20px; }
+
+@keyframes ls-cr-osso {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+/* ---------- pronto ---------- */
+.ls-cr-corpo--pronto,
+.ls-cr-corpo--entrar {
+    justify-items: center;
+    text-align: center;
+    gap: 14px;
+    padding-top: 6px;
+}
+
+.ls-cr-visto {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    margin-bottom: 2px;
+    border-radius: 50%;
+    color: var(--cr-verde);
+    background: radial-gradient(circle, rgba(46, 229, 157, .2), rgba(46, 229, 157, .06) 70%);
+}
+
+.ls-cr-visto::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(46, 229, 157, .5);
+    opacity: 0;
+    animation: ls-cr-onda 1s ease-out .35s;
+}
+
+.ls-cr-visto svg {
+    width: 64px;
+    height: 64px;
+    stroke-width: 3;
+}
+
+.ls-cr-visto circle {
+    stroke-dasharray: 152;
+    stroke-dashoffset: 152;
+    animation: ls-cr-traco .5s cubic-bezier(.65, 0, .45, 1) forwards;
+}
+
+.ls-cr-visto path {
+    stroke-dasharray: 40;
+    stroke-dashoffset: 40;
+    animation: ls-cr-traco .32s cubic-bezier(.65, 0, .45, 1) .42s forwards;
+}
+
+@keyframes ls-cr-traco {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes ls-cr-onda {
+    0% { opacity: .9; transform: scale(.85); }
+    100% { opacity: 0; transform: scale(1.35); }
+}
+
+.ls-cr-titulo {
+    margin: 0;
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 900;
+    line-height: 1.25;
+    letter-spacing: -.015em;
+}
+
+.ls-cr-texto {
+    margin: -6px 0 0;
+    max-width: 34ch;
+    color: var(--cr-suave);
+    font-size: .92rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.ls-cr-texto b { color: var(--cr-texto); }
+
+/* o que entrou: a miniatura, o nome e a quantidade */
+.ls-cr-entrou {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 14px 10px 10px;
+    border: 1px solid var(--cr-borda-suave);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .035);
+    text-align: left;
+}
+
+.ls-cr-entrou .ls-cr-foto {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    box-shadow: none;
+}
+
+.ls-cr-entrou-texto {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ls-cr-entrou-texto strong {
+    overflow: hidden;
+    color: #fff;
+    font-size: .92rem;
+    font-weight: 800;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.ls-cr-entrou-texto span {
+    color: var(--cr-suave);
+    font-size: .8rem;
+    font-weight: 650;
+}
+
+/* quantos itens e quanto dá o carrinho */
+.ls-cr-resumo {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(46, 229, 157, .32);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(46, 229, 157, .12), rgba(63, 208, 255, .06));
+    text-align: left;
+}
+
+.ls-cr-resumo-icone {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: rgba(46, 229, 157, .16);
+    color: var(--cr-verde);
+    font-size: 1.05rem;
+}
+
+.ls-cr-resumo-icone b {
+    position: absolute;
+    top: -7px;
+    right: -8px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff4757, #e63946);
+    color: #fff;
+    font-size: .66rem;
+    font-weight: 900;
+    line-height: 20px;
+    text-align: center;
+    box-shadow: 0 0 0 2px #0c1c44;
+    animation: ls-cr-pulo .62s cubic-bezier(.3, 1.6, .5, 1) .5s both;
+}
+
+.ls-cr-resumo-texto {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.ls-cr-resumo-texto strong {
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 850;
+}
+
+.ls-cr-resumo-texto span {
+    color: var(--cr-suave);
+    font-size: .76rem;
+    font-weight: 650;
+}
+
+.ls-cr-resumo-total {
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ls-cr-corpo--pronto .ls-cr-botoes,
+.ls-cr-corpo--entrar .ls-cr-botoes {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.ls-cr-indo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 0;
+    color: var(--cr-suave);
+    font-size: .9rem;
+    font-weight: 750;
+}
+
+/* ---------- entre na conta ---------- */
+.ls-cr-cadeado {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(31, 111, 255, .3), rgba(0, 74, 173, .18));
+    border: 1px solid rgba(120, 170, 255, .32);
+    color: #fff;
+    font-size: 1.7rem;
+    box-shadow: 0 14px 34px rgba(0, 60, 160, .3);
+}
+
+.ls-cr-cadeado .ls-cr-foto {
+    width: 76px;
+    height: 76px;
+    border-radius: 24px;
+}
+
+.ls-cr-cadeado-selo {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 3px solid #0c1c44;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1f7bff, #004aad);
+    color: #fff;
+    font-size: .78rem;
+}
+
+.ls-cr-vantagens {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--cr-borda-suave);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .035);
+    list-style: none;
+    text-align: left;
+}
+
+.ls-cr-vantagens li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--cr-texto);
+    font-size: .86rem;
+    font-weight: 650;
+}
+
+.ls-cr-vantagens i {
+    width: 18px;
+    color: var(--cr-verde);
+    text-align: center;
+}
+
+/* ----------------------------------------------------------------------
+   CELULAR -- a folha sobe de baixo, com a alça
+   ---------------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .ls-cr {
+        width: 100%;
+        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px);
+        margin: auto 0 0;
+    }
+
+    .ls-cr.sem-camada { inset: auto 0 0 0; }
+
+    .ls-cr-cartao {
+        padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+        border-bottom: 0;
+        border-radius: 28px 28px 0 0;
+        /* o dedo arrasta a folha para baixo (ls-carrinho-rapido.js); se ela
+           não cabe na tela, `ls-cr-rola` devolve a rolagem */
+        touch-action: none;
+        animation-name: ls-cr-sobe;
+        animation-duration: .38s;
+        animation-timing-function: cubic-bezier(.2, .9, .25, 1);
+    }
+
+    .ls-cr-cartao.ls-cr-rola { touch-action: pan-y; }
+
+    .ls-cr.is-saindo .ls-cr-cartao {
+        opacity: 1;
+        transform: translateY(100%);
+    }
+
+    .ls-cr-alca {
+        display: block;
+        width: 44px;
+        height: 5px;
+        margin: 0 auto 16px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .22);
+    }
+
+    .ls-cr-fechar { top: 16px; right: 10px; }
+
+    .ls-cr-produto {
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .ls-cr-produto > .ls-cr-foto { width: 84px; height: 84px; border-radius: 18px; }
+
+    .ls-cr-qtd { padding: 12px 12px 12px 16px; }
+
+    .ls-cr-subtotal strong { font-size: 1.38rem; }
+}
+
+@media (max-width: 370px) {
+    .ls-cr-cartao { padding-inline: 14px; }
+    .ls-cr-resumo { gap: 10px; padding-inline: 12px; }
+    .ls-cr-resumo-texto strong { font-size: .88rem; }
+    .ls-cr-resumo-total { font-size: .98rem; }
+    .ls-cr-passo { width: 44px; height: 44px; }
+    .ls-cr-numero { width: 46px; font-size: 1.3rem; }
+    .ls-cr-qtd label small { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-cr-cartao,
+    .ls-cr::backdrop,
+    .ls-cr-corpo,
+    .ls-cr-osso,
+    .ls-cr-numero.is-pulando,
+    .ls-cr-resumo-icone b,
+    [data-carrinho-total].ls-cr-pulo,
+    html.ls-escuro .ls-topo .ls-topo-carrinho.ls-cr-pulo > i {
+        animation: none;
+    }
+
+    .ls-cr-cartao { transition: opacity .01s linear; }
+
+    .ls-cr.is-saindo .ls-cr-cartao { transform: none; opacity: 0; }
+
+    /* o visto aparece pronto, sem o traço sendo desenhado */
+    .ls-cr-visto circle,
+    .ls-cr-visto path {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+
+    .ls-cr-visto::before { display: none; }
+}

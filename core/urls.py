@@ -62,6 +62,7 @@ from .views import (
     ManutencaoView,
     PromocaoAdminView,
     adicionar_ao_carrinho,
+    previa_do_carrinho,
     CarrinhoView,
     aplicar_cupom,
     remover_item_carrinho,
@@ -235,6 +236,12 @@ urlpatterns = [
         "carrinho/adicionar/<str:tipo>/<int:object_id>/",
         adicionar_ao_carrinho,
         name="adicionar_ao_carrinho",
+    ),
+    # nome, foto e preço para a folha de quantidade (site/ls-carrinho-rapido.js)
+    path(
+        "carrinho/previa/<str:tipo>/<int:object_id>/",
+        previa_do_carrinho,
+        name="previa_do_carrinho",
     ),
     path(
         "carrinho/remover-item/",

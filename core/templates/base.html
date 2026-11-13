@@ -203,6 +203,19 @@
     é tirar a classe da tag <html>.
   {% endcomment %}
   <link rel="stylesheet" href="{% estatico 'site/ls-tema.css' %}">
+{% if not usuario_da_equipe %}
+  {% comment %}
+    O CARRINHO RÁPIDO: o botão do carrinho no topo (sempre à vista) e a
+    folha de quantidade que abre em todo "Adicionar" do site. Depois do
+    tema, para o botão vencer o desenho genérico do topo. A equipe não
+    compra na loja: nem botão nem folha.
+  {% endcomment %}
+  <link rel="stylesheet" href="{% estatico 'site/ls-carrinho-rapido.css' %}">
+  <script src="{% estatico 'site/ls-carrinho-rapido.js' %}" defer
+          data-url-carrinho="{% url 'carrinho' %}#carrinho"
+          data-url-login="{% url 'login' %}"
+          data-url-registrar="{% url 'registrar' %}"></script>
+{% endif %}
   <script src="{% estatico 'site/ls-topo.js' %}" defer></script>
   <script src="{% estatico 'site/ls-fotos.js' %}" defer></script>
   <script src="{% estatico 'site/ls-giro.js' %}" defer></script>
@@ -414,6 +427,21 @@
       </div>
     {% endif %}
   </div>
+
+      {% if not usuario_da_equipe %}
+        {% comment %}
+          O CARRINHO SEMPRE À VISTA, no computador e no celular, com o
+          número de itens (o selo some no zero e pula quando muda:
+          ls-carrinho-rapido.css). Quem não entrou também o vê: o carrinho
+          leva ao login. O número é o `data-carrinho-total` de sempre, que
+          o `atualizarBadgeCarrinho` acompanha a cada inclusão.
+        {% endcomment %}
+        <a class="ls-topo-carrinho" href="{% url 'carrinho' %}#carrinho" title="Carrinho">
+          <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+          <span class="ls-topo-carrinho-rotulo">Carrinho</span>
+          <b class="ls-topo-carrinho-selo{% if not carrinho_total_itens %} vazio{% endif %}" data-carrinho-total>{{ carrinho_total_itens|default:0 }}</b>
+        </a>
+      {% endif %}
 
       <a class="ls-topo-cta" href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20um%20or%C3%A7amento." target="_blank" rel="noopener">
         <i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>Orçamento</span>
@@ -1046,7 +1074,8 @@ window.addEventListener('resize', () => {
 
 /* ================== CARRINHO ================== */
 function atualizarBadgeCarrinho(total) {
-  // A barra de baixo do celular, os atalhos do Menu e o menu da conta.
+  // O botão do topo, a barra de baixo do celular, os atalhos do Menu e o
+  // menu da conta. O pulo do selo é do ls-carrinho-rapido.js.
   document.querySelectorAll('[data-carrinho-total]').forEach((selo) => {
     selo.textContent = Number(total) || 0;
     selo.classList.toggle('vazio', !(Number(total) > 0));
@@ -1210,9 +1239,18 @@ const LSCartLoading = (() => {
     event.preventDefault();
     event.stopPropagation();
     gatilhoPendente = event.submitter || form.querySelector('[type="submit"]');
+    // O formulário da página do brinquedo já tem a quantidade, o adesivo
+    // e o "Comprar agora" (destino=carrinho): vão junto, e a folha pula a
+    // escolha. Formulário sem quantidade abre a folha para escolher.
+    const campos = new FormData(form);
     adicionarAoCarrinho(
       correspondencia[1],
-      Number.parseInt(correspondencia[2], 10)
+      Number.parseInt(correspondencia[2], 10),
+      Boolean(event.submitter && event.submitter.value === 'carrinho'),
+      {
+        quantidade: campos.get('quantidade') || undefined,
+        adesivo: campos.get('adesivo') || ''
+      }
     );
   }, true);
 
@@ -1236,6 +1274,14 @@ window.LSCartLoading = LSCartLoading;
 function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
   if (LSCartLoading.ativo) {
     return Promise.resolve({ sucesso: false, bloqueado: true });
+  }
+
+  // A FOLHA DE QUANTIDADE (ls-carrinho-rapido.js): escolhe quantos, põe no
+  // carrinho e mostra o "pronto" (ou o "entre na conta"). A Promise é a
+  // mesma de sempre. Sem a folha (conta da equipe, ou o script não chegou),
+  // segue o caminho direto abaixo, com uma unidade.
+  if (window.LSCarrinhoRapido) {
+    return window.LSCarrinhoRapido.adicionar(tipo, id, irParaCarrinho, opcoes || {});
   }
 
   const token = LSCartLoading.iniciar(
@@ -1268,6 +1314,7 @@ function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
     ? quantidadeInformada
     : 1;
   const body = new URLSearchParams({ quantidade: String(quantidade) });
+  if (opcoes.adesivo) body.set('adesivo', String(opcoes.adesivo));
 
   return fetch(url, {
     method: 'POST',

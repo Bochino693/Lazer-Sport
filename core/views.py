@@ -5682,6 +5682,143 @@ def _remover_cupom_se_nao_permitido(carrinho):
     return False
 
 
+#: Os tipos que a URL do carrinho aceita (`/carrinho/adicionar/<tipo>/<id>/`).
+TIPOS_DO_CARRINHO = ('brinquedo', 'combo', 'promocao', 'peca')
+
+#: O nome do tipo na folha de quantidade (ls-carrinho-rapido.js).
+ROTULOS_DO_CARRINHO = {
+    'brinquedo': 'Brinquedo',
+    'combo': 'Combo',
+    'promocao': 'Promoção',
+    'peca': 'Peça de reposição',
+}
+
+
+def _item_vendavel(tipo, object_id):
+    """O produto que pode ir para o carrinho -- ou 404.
+
+    A REGRA MORA AQUI, E SÓ AQUI. O "adicionar" e a prévia da folha de
+    quantidade (`previa_do_carrinho`) fazem a mesma pergunta; com a regra
+    copiada nos dois, um dia a prévia mostraria o preço de algo que o
+    carrinho recusa (ou o contrário).
+
+    O botão só aparece para o que está à venda, mas a pergunta precisa
+    existir no servidor: uma requisição feita à mão não pode pôr no
+    carrinho um item só de orçamento.
+
+      * brinquedo: ativo, marcado para a loja e com preço;
+      * promoção: no ar, dentro da validade e com preço (a de brinde ou
+        condição é "Pedir orçamento", não vai para o carrinho);
+      * combo: ativo (o desligado sumiu da vitrine);
+      * peça: a da vitrine (`PecasReposicao.da_vitrine`) e com preço. Item
+        de manutenção nunca: o preço dele é custo interno, e a prévia o
+        mostraria como oferta. Peça sem preço é "sob consulta" -- no
+        carrinho ela entrava valendo R$ 0,00.
+
+    Tipo desconhecido devolve None (quem chama responde 400).
+    """
+    if tipo == 'brinquedo':
+        return get_object_or_404(
+            Brinquedos,
+            id=object_id,
+            ativo=True,
+            exibir_na_loja=True,
+            valor_brinquedo__isnull=False,
+            valor_brinquedo__gt=0,
+        )
+    if tipo == 'promocao':
+        return get_object_or_404(
+            Promocoes.objects.vigentes().select_related('brinquedos'),
+            id=object_id,
+            preco_promocao__isnull=False,
+            preco_promocao__gt=0,
+        )
+    if tipo == 'combo':
+        return get_object_or_404(Combos, id=object_id, ativo=True)
+    if tipo == 'peca':
+        return get_object_or_404(
+            PecasReposicao.da_vitrine().prefetch_related('imagem_peca_reposicao'),
+            id=object_id,
+            preco_venda__isnull=False,
+            preco_venda__gt=0,
+        )
+    return None
+
+
+def _foto_do_item(tipo, objeto):
+    """A foto do card do produto (a mesma URL e a mesma largura da Loja).
+
+    Mesma URL do card: na maioria das vezes o navegador já a tem, e a
+    folha abre com a foto na hora.
+    """
+    from .fotos import reduzir_imagem, url_da_imagem
+
+    if tipo == 'brinquedo':
+        imagem = objeto.imagem_brinquedo
+    elif tipo == 'combo':
+        imagem = objeto.imagem_combo
+    elif tipo == 'promocao':
+        imagem = objeto.imagem_promocao or (
+            objeto.brinquedos.imagem_brinquedo if objeto.brinquedos_id else None
+        )
+    else:
+        principal = objeto.imagem_principal
+        imagem = principal.imagem if principal else None
+    return reduzir_imagem(url_da_imagem(imagem), 720) if imagem else ""
+
+
+def _previa_do_item(tipo, objeto):
+    """Nome, foto e preço unitário do produto, como o carrinho cobraria.
+
+    O preço sai de `ItemCarrinho.preco_unitario` -- a mesma conta do
+    carrinho, do pedido e do pagamento (a promoção vale o preço dela; o
+    adesivo não muda o preço) --, num item que não é gravado.
+    """
+    from .formatos import dinheiro
+
+    preco = Decimal(ItemCarrinho(item=objeto).preco_unitario or 0).quantize(Decimal('0.01'))
+    return {
+        'tipo': tipo,
+        'id': objeto.pk,
+        'rotulo': ROTULOS_DO_CARRINHO[tipo],
+        'nome': str(objeto),
+        'foto': _foto_do_item(tipo, objeto),
+        'preco_unitario': f'{preco:.2f}',
+        'preco_unitario_formatado': dinheiro(preco, prefixo='R$'),
+    }
+
+
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET
+
+
+@require_GET
+@never_cache
+def previa_do_carrinho(request, tipo, object_id):
+    """O que a folha de quantidade mostra antes de pôr no carrinho.
+
+    Só o que a vitrine já mostra a qualquer visitante (nome, foto e
+    preço), mais se a pessoa entrou na conta: sem conta, a folha já abre
+    pedindo para entrar, em vez de deixar escolher a quantidade e só
+    então recusar. A conta da equipe nem chega aqui (o endereço é de
+    compra: `LojaSomenteDeClienteMiddleware`).
+    """
+    if tipo not in TIPOS_DO_CARRINHO:
+        return JsonResponse({'sucesso': False, 'erro': 'Tipo inválido'}, status=400)
+    try:
+        objeto = _item_vendavel(tipo, object_id)
+    except Http404:
+        return JsonResponse(
+            {'sucesso': False, 'erro': 'Este item não está à venda no momento.'},
+            status=404,
+        )
+    return JsonResponse({
+        'sucesso': True,
+        'logado': request.user.is_authenticated,
+        'item': _previa_do_item(tipo, objeto),
+    })
+
+
 @require_POST
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
@@ -5701,37 +5838,10 @@ def adicionar_ao_carrinho(request, tipo, object_id):
     cliente = request.user.perfil
     carrinho, _ = Carrinho.objects.get_or_create(cliente=cliente)
 
-    modelos = {
-        'brinquedo': Brinquedos,
-        'combo': Combos,
-        'promocao': Promocoes,
-        'peca': PecasReposicao,
-    }
-
-    model = modelos.get(tipo)
-    if not model:
+    if tipo not in TIPOS_DO_CARRINHO:
         return JsonResponse({'erro': 'Tipo inválido'}, status=400)
 
-    # O botão só é exibido para brinquedos marcados para venda, mas a
-    # validação também precisa existir no servidor para impedir que uma
-    # requisição manual adicione ao carrinho um item apenas para orçamento.
-    if tipo == 'brinquedo':
-        objeto = get_object_or_404(
-            Brinquedos,
-            id=object_id,
-            ativo=True,
-            exibir_na_loja=True,
-            valor_brinquedo__isnull=False,
-            valor_brinquedo__gt=0,
-        )
-    elif tipo == 'promocao':
-        # só a promoção que está no ar, dentro da validade e com preço (a de
-        # brinde/condição é "Pedir orçamento", não vai para o carrinho)
-        objeto = get_object_or_404(
-            Promocoes.objects.vigentes(), id=object_id, preco_promocao__isnull=False, preco_promocao__gt=0,
-        )
-    else:
-        objeto = get_object_or_404(model, id=object_id)
+    objeto = _item_vendavel(tipo, object_id)
     content_type = ContentType.objects.get_for_model(objeto)
 
     # o adesivo escolhido na página (só um dos adesivos do produto vale): a equipe sabe qual foi
@@ -5761,11 +5871,30 @@ def adicionar_ao_carrinho(request, tipo, object_id):
 
     _invalidar_pagamento_pendente(carrinho)
 
-    total_itens = carrinho.itens.aggregate(total=Sum('quantidade'))['total'] or 0
+    # O "pronto" da folha (ls-carrinho-rapido.js): quantos itens e quanto
+    # dá o carrinho agora -- o mesmo "Produtos" da tela do carrinho
+    # (com o cupom, sem o frete). Os itens vêm numa leva só.
+    from .formatos import dinheiro
+
+    carrinho = (
+        Carrinho.objects.select_related('cupom')
+        .prefetch_related('itens__item')
+        .get(pk=carrinho.pk)
+    )
+    total_itens = sum(linha.quantidade for linha in carrinho.itens.all())
+    total_carrinho = carrinho.total_liquido
+
+    previa = _previa_do_item(tipo, objeto)
+    if adesivo:
+        previa['adesivo'] = adesivo
 
     return JsonResponse({
         'sucesso': True,
-        'total_itens': total_itens
+        'total_itens': total_itens,
+        'quantidade': quantidade,
+        'total_carrinho': f'{total_carrinho:.2f}',
+        'total_carrinho_formatado': dinheiro(total_carrinho, prefixo='R$'),
+        'item': previa,
     })
 
 
