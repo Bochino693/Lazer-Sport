@@ -934,7 +934,7 @@ html.ls-escuro .ls-cartao {
     background: linear-gradient(160deg, rgba(20, 44, 96, .9) 0%, rgba(10, 26, 62, .95) 100%);
 }
 
-html.ls-escuro .ls-cartao-media { background: #f4f7ff; }
+html.ls-escuro .ls-cartao-media { background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%); }
 
 /* ======================================================================
    HOME — as seções que eram caixas brancas
@@ -1050,7 +1050,7 @@ html.ls-escuro:not(#_):not(#__) main .texto-vazio {
 }
 
 /* ======================================================================
-   CARTÃO DE PRODUTO — escuro, com a foto num estúdio claro
+   CARTÃO DE PRODUTO — escuro, com a foto num estúdio azul vivo (sem branco nem cinza)
    ====================================================================== */
 html.ls-escuro:not(#_):not(#__) .card-produto {
     border: 1px solid var(--ls-borda);
@@ -1067,7 +1067,7 @@ html.ls-escuro:not(#_):not(#__) .card-produto:hover {
 }
 
 html.ls-escuro:not(#_):not(#__) .card-produto .img-area {
-    background: radial-gradient(circle at 50% 40%, #ffffff, #e6eefc 70%, #cfdcf3);
+    background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%);
 }
 
 html.ls-escuro:not(#_):not(#__) .card-produto .produto-status {
@@ -1176,7 +1176,7 @@ html.ls-escuro:not(#_):not(#__) .card-mini .img-area {
     aspect-ratio: 1;
     padding: 12px;
     border-bottom: 0;
-    background: radial-gradient(circle at 50% 42%, #ffffff 0%, #eef3fc 58%, #dbe6f7 100%);
+    background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%);
 }
 
 html.ls-escuro:not(#_):not(#__) .card-mini .img-area.foto-cheia { padding: 0; background: #0b1532; }
@@ -1912,7 +1912,7 @@ html.ls-escuro:not(#_):not(#__) .loja-card:hover { border-color: rgba(63, 208, 2
 
 html.ls-escuro:not(#_):not(#__) .catalogo-card-media,
 html.ls-escuro:not(#_):not(#__) .loja-card-img {
-    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+    background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%);
 }
 
 /* Os cartões de promoção e de combo da home: a foto enche a caixa
@@ -2067,7 +2067,7 @@ html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-empty {
 html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product:hover { border-color: rgba(63, 208, 255, .45); }
 
 html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-visual {
-    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+    background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%);
 }
 
 html.ls-escuro:not(#_):not(#__) .arena-categoria .arena-product-footer {
@@ -2142,7 +2142,7 @@ html.ls-escuro:not(#_):not(#__) .desejo-corpo .sem-preco,
 html.ls-escuro:not(#_):not(#__) .desejos-vazio p { color: var(--ls-texto-suave); }
 
 html.ls-escuro:not(#_):not(#__) .desejo-corpo .preco { color: #5fe39a; }
-html.ls-escuro:not(#_):not(#__) .desejo-foto { background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%); }
+html.ls-escuro:not(#_):not(#__) .desejo-foto { background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%); }
 
 html.ls-escuro:not(#_):not(#__) .desejos-aviso {
     border-color: rgba(47, 139, 255, .3);
@@ -2199,7 +2199,7 @@ html.ls-escuro:not(#_):not(#__) .ls-empty {
 }
 
 html.ls-escuro:not(#_):not(#__) .ls-result:hover { border-color: rgba(63, 208, 255, .45); }
-html.ls-escuro:not(#_):not(#__) .ls-result-media { background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%); }
+html.ls-escuro:not(#_):not(#__) .ls-result-media { background: radial-gradient(circle at 50% 36%, #2f6bff 0%, #1740b8 38%, #0c2370 72%, #071443 100%); }
 html.ls-escuro:not(#_):not(#__) .ls-result h2 { color: #fff; }
 html.ls-escuro:not(#_):not(#__) .ls-result p { color: var(--ls-texto-suave); }
 html.ls-escuro:not(#_):not(#__) .ls-open { color: #7cc4ff; }
