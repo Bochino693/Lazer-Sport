@@ -5830,14 +5830,15 @@ def adicionar_ao_carrinho(request, tipo, object_id):
             {'sucesso': False, 'erro': 'Este item não está à venda no momento.'},
             status=404,
         )
-    except Exception:
+    except Exception as erro:
         logging.getLogger(__name__).exception("Carrinho: erro ao adicionar %s %s", tipo, object_id)
         return JsonResponse(
             {
                 'sucesso': False,
                 'erro': (
                     'Não conseguimos adicionar agora. Tente de novo em instantes '
-                    'ou fale com a gente no WhatsApp (11) 96056-3135.'
+                    'ou fale com a gente no WhatsApp (11) 96056-3135. '
+                    f'(código {type(erro).__name__})'
                 ),
             },
             status=500,
