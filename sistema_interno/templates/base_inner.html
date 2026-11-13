@@ -849,6 +849,14 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   na tela Usuários, a faixa "Agora" (site/paginas/gestao-analises.js).
 {% endcomment %}
 <script src="{% estatico 'interno/ls-presenca.js' %}"></script>
+{% comment %}
+  O funil (LEIA-ME-V10, seção 89): o campo do prazo de produção, a folha
+  de cópias das etiquetas por máquina e o andamento do pedido do site. Em
+  toda tela, como o ls-busca: Pedidos, Orçamentos, Vendas e Etiquetas usam
+  o mesmo arquivo, e ele escuta por delegação -- vale também na tela que
+  chega pela navegação suave.
+{% endcomment %}
+<script src="{% estatico 'interno/producao-etiquetas.js' %}"></script>
 <script>
 (function () {
   const sidebar = document.getElementById("sidebarMenu");

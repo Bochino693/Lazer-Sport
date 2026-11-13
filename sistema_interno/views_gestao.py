@@ -734,6 +734,10 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "documento_assinatura": OrcamentosInnerView.documento_da_janela(orcamento),
             # O 100% pago virou venda (core.Venda): o número dela.
             "venda": orcamento.venda_id or None,
+            # O TEMPO DE PRODUÇÃO E AS ETIQUETAS (LEIA-ME-V10, seção 89): o
+            # quadro "Produção" da janela, com o campo que grava sozinho e,
+            # na proposta aprovada, o botão das etiquetas por máquina.
+            "producao": OrcamentosInnerView.producao_da_janela(orcamento),
             "origem": orcamento.origem,
             "origem_rotulo": orcamento.get_origem_display(),
             "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(
@@ -772,6 +776,29 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 for item in orcamento.itens.all()
             ],
         }
+
+    @staticmethod
+    def producao_da_janela(orcamento):
+        """O prazo de produção e o caminho das etiquetas, ou None.
+
+        A proposta salva e viva tem o quadro (o prazo já sai na proposta
+        do cliente, "15 dias úteis após a aprovação"); a recusada, a
+        expirada e a substituída são história e não têm.
+        """
+        from .views_funil import dados_do_prazo, prazo_editavel
+
+        if not orcamento.pk or not prazo_editavel(orcamento):
+            return None
+        dados = dados_do_prazo(orcamento)
+        dados["editavel"] = True
+        dados["etiquetas"] = (
+            reverse(
+                "etiquetas_maquinas", args=["orcamento", orcamento.pk],
+                urlconf="sistema_interno.urls",
+            )
+            if orcamento.status == Orcamento.Status.APROVADO else ""
+        )
+        return dados
 
     @staticmethod
     def documento_da_janela(orcamento):
@@ -1339,8 +1366,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             )
         else:
             orcamento.status = status
+            # A aprovação registrada aqui é o começo do prazo de produção
+            # (a da página do cliente já tem o dia dela, `respondido_em`).
+            orcamento.marcar_inicio_da_producao()
             orcamento.save(update_fields=[
-                "status", "motivo_negociacao", "atualizado",
+                "status", "motivo_negociacao", "producao_inicio", "atualizado",
             ])
 
         registrar_atividade_orcamento(

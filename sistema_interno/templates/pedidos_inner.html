@@ -21,7 +21,7 @@
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Loja · acompanhamento</span>
     <h1>Pedidos da loja</h1>
-    <p>O que os clientes pediram pelo site. A bolinha do menu conta exatamente esta fila.</p>
+    <p>O que os clientes pediram pelo site. Pago, o pedido já é venda; toque na situação para andar com ele até finalizar. A bolinha do menu conta exatamente esta fila.</p>
   </div>
 </section>
 
@@ -57,7 +57,7 @@
         <thead>
           <tr>
             <th data-coluna="Nº">#</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Itens">Itens</th>
-            <th data-coluna="Total" class="text-end">Total</th><th data-coluna="Entrega">Entrega</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Feito em</th>
+            <th data-coluna="Total" class="text-end">Total</th><th data-coluna="Entrega">Entrega</th><th data-coluna="Situação">Situação</th><th data-coluna="Produção">Produção</th><th data-coluna="Data">Feito em</th>
           </tr>
         </thead>
         <tbody>
@@ -77,16 +77,59 @@
               {# `Pedido.save()` recalcula total_final (líquido + frete) a cada gravação. #}
               <td data-rotulo="Total" class="text-end"><strong>R$ {{ pedido.total_final|moeda }}</strong></td>
               <td data-rotulo="Entrega">{{ pedido.get_tipo_envio_display|default:"—" }}</td>
+              {% comment %}
+                O ANDAMENTO É A PRÓPRIA SITUAÇÃO, TOCÁVEL (seção 89).
+
+                Pago em diante, a etiqueta da situação vira o botão que abre
+                a folha dos passos (em preparação, saiu para entrega,
+                finalizado; voltar um; cancelar). Antes nenhuma tela do
+                painel mudava a situação do pedido do site -- só o admin do
+                Django --, e a fila de "em aberto" só crescia. Aguardando
+                pagamento e cancelado continuam etiqueta: o primeiro anda
+                sozinho com o pagamento, o segundo é o fim.
+              {% endcomment %}
               <td data-rotulo="Situação">
-                {% if pedido.status == "finalizado" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>
+                {% if pedido.opcoes_andamento != "[]" %}
+                  <button type="button"
+                          class="ls-andamento-botao{% if pedido.status == 'finalizado' %} success{% endif %}"
+                          data-andamento-url="{% url 'andamento_pedido' pedido.id %}"
+                          data-andamento-opcoes="{{ pedido.opcoes_andamento }}"
+                          data-andamento-titulo="Andamento do pedido #{{ pedido.id }}"
+                          data-andamento-rotulo="{{ pedido.get_status_display }}"
+                          aria-haspopup="dialog"
+                          title="Mudar o andamento do pedido">
+                    {{ pedido.get_status_display }}
+                  </button>
+                {% elif pedido.status == "finalizado" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>
                 {% elif pedido.status == "cancelado" %}<span class="ls-status danger">{{ pedido.get_status_display }}</span>
                 {% elif pedido.status == "aguardando_pagamento" %}<span class="ls-status warning">{{ pedido.get_status_display }}</span>
                 {% else %}<span class="ls-status info">{{ pedido.get_status_display }}</span>{% endif %}
+                {% if pedido.venda_da_linha %}
+                  <span class="ls-funil-venda d-flex mt-1"><i class="bi bi-bag-check-fill" aria-hidden="true"></i> Venda #{{ pedido.venda_da_linha.pk }}</span>
+                {% endif %}
+              </td>
+              {% comment %}
+                O TEMPO DE PRODUÇÃO E AS ETIQUETAS (seção 89): o prazo em dias
+                úteis grava sozinho ao sair do campo e mostra a previsão; as
+                etiquetas (uma por máquina, em folhas A4) são do pedido pago.
+              {% endcomment %}
+              <td data-rotulo="Produção">
+                <div class="ls-funil-celula">
+                  {% if pedido.status != "cancelado" %}{% campo_prazo pedido %}{% endif %}
+                  {% if pedido.pago %}
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            data-etiquetas-url="{% url 'etiquetas_maquinas' 'pedido' pedido.id %}"
+                            aria-haspopup="dialog"
+                            title="Imprimir as etiquetas das máquinas deste pedido">
+                      <i class="bi bi-upc-scan" aria-hidden="true"></i> Etiquetas
+                    </button>
+                  {% endif %}
+                </div>
               </td>
               <td data-rotulo="Data">{{ pedido.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="7">
+            <tr><td colspan="8">
               <div class="ls-empty">
                 <i class="bi bi-box2"></i>
                 {% if filtro_ativo == "abertos" %}

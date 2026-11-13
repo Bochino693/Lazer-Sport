@@ -1847,6 +1847,26 @@ class Orcamento(Prime):
         editable=False,
     )
 
+    # ---------------- o tempo de produção ----------------
+    # "O tempo de produção a gente deve poder informar em cada pedido ou
+    # orçamento." O mesmo par do pedido do site (core.Pedido): o prazo em
+    # DIAS ÚTEIS, que a equipe digita (no rascunho ele já sai na proposta,
+    # "15 dias úteis após a aprovação"), e o começo da contagem, que é o dia
+    # da APROVAÇÃO -- gravado sozinho quando ela é registrada no painel; a
+    # aprovação pela página do cliente já tem o dia dela (`respondido_em`).
+    prazo_producao_dias = models.PositiveSmallIntegerField(
+        "Prazo de produção (dias úteis)",
+        null=True,
+        blank=True,
+        help_text="Quantos dias úteis a fábrica leva depois da aprovação.",
+    )
+    producao_inicio = models.DateField(
+        "Começo da contagem da produção",
+        null=True,
+        blank=True,
+        help_text="O dia da aprovação. Preenchido sozinho.",
+    )
+
     # ---------------- página que o cliente abre ----------------
     token = models.CharField(
         max_length=64,
@@ -2011,6 +2031,75 @@ class Orcamento(Prime):
     @property
     def quitado(self):
         return self.status_pagamento == self.StatusPagamento.PAGO
+
+    # ---------------- o tempo de produção ----------------
+    @property
+    def inicio_da_producao(self):
+        """De quando os dias úteis contam: a aprovação.
+
+        O dia gravado quando a equipe registra a aprovação (ou informa o
+        prazo de uma proposta já aprovada); a aprovação pela página do
+        cliente tem o dia dela; a proposta aprovada antes desta versão e
+        já paga conta do pagamento. Sem aprovação, não há começo: o prazo
+        é uma promessa ("depois da aprovação"), e não uma data.
+        """
+        if self.status != self.Status.APROVADO:
+            return None
+        if self.producao_inicio:
+            return self.producao_inicio
+        for momento in (self.respondido_em, self.pago_em):
+            if momento:
+                return timezone.localtime(momento).date()
+        return None
+
+    @property
+    def previsao_producao(self):
+        from core.producao import somar_dias_uteis
+
+        return somar_dias_uteis(self.inicio_da_producao, self.prazo_producao_dias)
+
+    @property
+    def texto_producao(self):
+        """"Produção: 15 dias úteis — previsão 04/12", ou só o prazo."""
+        from core.producao import texto_da_producao
+
+        return texto_da_producao(self.prazo_producao_dias, self.previsao_producao)
+
+    @property
+    def prazo_para_o_cliente(self):
+        """O prazo como a proposta do cliente diz.
+
+        Antes da aprovação é uma promessa: "15 dias úteis após a
+        aprovação". Aprovada, vira data: "15 dias úteis — previsão
+        04/12/2026". Vazio quando a equipe não informou.
+        """
+        from core.producao import texto_dos_dias
+
+        if self.prazo_producao_dias is None:
+            return ""
+        dias = texto_dos_dias(self.prazo_producao_dias)
+        previsao = self.previsao_producao
+        if self.prazo_producao_dias == 0:
+            return "Pronta entrega"
+        if previsao is not None:
+            return f"{dias} — previsão {previsao:%d/%m/%Y}"
+        return f"{dias} após a aprovação"
+
+    def marcar_inicio_da_producao(self):
+        """Põe o começo (sem gravar) na proposta aprovada que ainda não tem.
+
+        Chamado na aprovação registrada no painel e quando o prazo é
+        informado numa proposta já aprovada. Não reescreve: o começo é um
+        fato, e o prazo corrigido depois conta do mesmo dia. Devolve se
+        mudou -- quem chamou grava `producao_inicio`.
+        """
+        if self.status != self.Status.APROVADO or self.producao_inicio:
+            return False
+        momento = self.respondido_em or self.pago_em
+        self.producao_inicio = (
+            timezone.localtime(momento).date() if momento else timezone.localdate()
+        )
+        return True
 
     @property
     def pode_refazer(self):

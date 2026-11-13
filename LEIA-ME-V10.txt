@@ -5186,3 +5186,79 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_telas_do_site.py (MeusPedidosNoCheckoutTests: o
    casco do checkout na etapa 3, a foto de cada item com as mesmas
    consultas para 1 e para 6 itens, e a folha antes de cancelar).
+
+89) UM FUNIL SÓ: PEDIDO E ORÇAMENTO VIRAM VENDA, O PRAZO DE PRODUÇÃO E AS ETIQUETAS POR MÁQUINA
+   O PEDIDO: "veja a interseção de orçamento e pedidos: pedidos vêm do
+   site, orçamento a gente faz aqui manual, os dois devem virar vendas após
+   a finalização. O tempo de produção a gente deve poder informar em cada
+   pedido ou orçamento. Também devemos imprimir a etiqueta, que já temos, a
+   partir de um orçamento ou pedido -- ponha nos dois e na venda --,
+   setando quantas cópias por máquina nós queremos, usando sempre as folhas
+   A4, para imprimir a quantidade que der e ir passando de folha."
+   O QUE ESTAVA ERRADO: o orçamento já virava venda no 100% pago (seção 81),
+   mas o pedido do site só virava venda em Pedido.finalizar() -- que nenhuma
+   tela chamava. A situação do pedido só mudava pelo admin do Django. O
+   dinheiro do site não entrava na receita do Financeiro.
+   PEDIDO PAGO É VENDA (core/models.py, Pedido.acertar_venda):
+     * a regra é uma só: o pedido TEM venda <=> a situação é pago, em
+       preparação, saiu para entrega ou finalizado. Aguardando pagamento e
+       cancelado não têm; cancelar um pedido pago TIRA a venda (como sai a
+       do orçamento que deixa de estar 100% pago). Uma venda por pedido,
+       nunca duas: a linha do pedido é travada (select_for_update) e o
+       um-para-um da Venda é a última trava;
+     * a venda leva o valor COBRADO (total_final), confirmada, a forma do
+       checkout (crédito e débito viram "cartão") e o CPF/CNPJ do carrinho.
+       O site deixou de cobrar frete (o pedido é retirado na fábrica e o
+       cliente combina o transporte): nada aqui supõe frete -- o pedido
+       antigo que cobrou frete vende o total com ele, o novo sem;
+     * quem acerta: um sinal no post_save do Pedido (core/signals.py), só
+       quando a SITUAÇÃO muda, depois do commit e "robust" -- o checkout
+       (confirmar_pagamento) não foi tocado e nunca falha por causa da
+       venda; o andamento do painel; e o finalizar(), que hoje só garante.
+   O ANDAMENTO NO PAINEL (Pedidos): a etiqueta da situação do pedido pago
+   virou um botão que abre a folha dos passos (em preparação, saiu para
+   entrega, finalizado, voltar um, cancelar -- este pergunta antes, pela
+   folha do LSAviso). A retirada pula o "saiu para entrega". Só Financeiro
+   e Gestão (cancelar mexe na receita). A linha diz "Venda #N".
+   A MIGRAÇÃO core/0194 (só dados; o esquema é a 0193): cada pedido que já
+   estava pago e não tinha venda ganha a dela COM A DATA DO PEDIDO -- a
+   receita é contada pelo mês da venda, e um pedido pago em agosto não pode
+   cair no mês do deploy. Rodar de novo não duplica; desfazer apaga só as
+   vendas que ela criou.
+   O TEMPO DE PRODUÇÃO (core/producao.py), em DIAS ÚTEIS: sábado, domingo
+   e os feriados nacionais (com a Sexta-feira Santa e o 20/11 desde 2024)
+   não contam; o dia do começo também não; zero é "pronta entrega". O
+   começo é o pagamento aprovado no pedido e a aprovação no orçamento
+   (gravado sozinho: producao_inicio). Campos novos: prazo_producao_dias e
+   producao_inicio no Pedido (core/0193) e no Orcamento
+   (sistema_interno/0062). Onde se informa: o campo na linha de Pedidos, o
+   quadro "Produção e etiquetas" na janela do orçamento e a fila da tela de
+   Etiquetas -- grava sozinho ao sair do campo, sem recarregar, e mostra a
+   previsão. Onde se lê: Meus pedidos ("Produção: 15 dias úteis — previsão
+   04/12", some no finalizado), a proposta do cliente ("15 dias úteis após
+   a aprovação"; aprovada, com a data), a lista de orçamentos, a ficha do
+   pedido e a coluna "Produção" de Vendas -- a venda LÊ o prazo da origem,
+   não guarda cópia.
+   AS ETIQUETAS POR MÁQUINA (views_funil.py, etiquetas_maquinas.py):
+     * o botão "Etiquetas" está no pedido pago, no orçamento aprovado e na
+       venda. Abre a folha de cópias: o tamanho (um quarto A6, 4 por folha;
+       meia folha A5, 2 por folha), cada máquina com o − [n] + de "quantas
+       cópias por máquina" e o total ao vivo ("15 etiquetas em 4 folhas
+       A4"). Imprimir abre a página das folhas numa aba nova;
+     * a etiqueta é a da tela de Etiquetas (preto no branco, "Frágil"), com
+       o quadro da máquina em destaque, "Unidade 2 de 3" e "Volume 2/5"; a
+       data é "Pronto em" (a previsão) ou "Emitida em" (sem prazo). No
+       pedido do site de hoje: "Retirada na fábrica · frete por conta do
+       cliente" (o endereço só sai quando o pedido guardou um);
+     * AS FOLHAS SÃO MONTADAS NO SERVIDOR: cada .ls-a4-folha tem 210 x 297
+       mm com 8 mm por dentro e já traz as etiquetas daquela página; @page
+       A4 sem margem e quebra de página entre elas (etiquetas-a4.css). 3
+       máquinas x 5 cópias em A6 = 4 folhas (4 + 4 + 4 + 3). Teto: 99
+       cópias por máquina e 600 etiquetas por impressão;
+     * quem imprime: Produção (pedido e orçamento), Financeiro e Gestão
+       (também a venda), e no orçamento quem já o enxerga (o Ambulante, os
+       dele). A fila "Na produção agora", no alto da tela de Etiquetas, é a
+       porta da Produção: pedidos pagos e propostas aprovadas, sem valores.
+   Testes: core/tests_producao.py (dias úteis, feriados, o campo) e
+   sistema_interno/tests_funil_vendas.py (o funil, a migração, o prazo, as
+   folhas A4, quem pode, as telas).

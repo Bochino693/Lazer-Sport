@@ -1472,7 +1472,12 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
 # Agora as telas leem a MESMA tabela que o selo conta. `tests_pedidos.py`
 # compara os dois números e reprova se voltarem a divergir.
 class VendasView(FinanceiroInternoRequiredMixin, View):
-    """As vendas: as do site (pedido finalizado) e as do painel.
+    """As vendas: as do site (pedido pago) e as do painel.
+
+    UM FUNIL SÓ (LEIA-ME-V10, seção 89). O pedido do site vira venda no
+    pagamento aprovado e o orçamento no 100% pago -- a mesma `core.Venda`,
+    uma por origem. A linha mostra o tempo de produção (lido da origem) e
+    imprime as etiquetas das máquinas.
 
     A VENDA DE ORÇAMENTO. "Terminando o pagamento 100% deve registrar como
     venda": o orçamento quitado ganha uma `core.Venda` (ver
@@ -1535,7 +1540,9 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
     def get(self, request):
         consulta = (
             Pedido.objects
-            .select_related("cliente__user")
+            # a venda vem junto: a linha diz "venda #12" sem uma consulta
+            # por pedido (LEIA-ME-V10, seção 89)
+            .select_related("cliente__user", "venda")
             .prefetch_related("itens")
             .order_by("-criacao", "-id")
         )
@@ -1550,9 +1557,24 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
         pagina = Paginator(consulta, self.POR_PAGINA).get_page(
             request.GET.get("page")
         )
+        # O ANDAMENTO DE CADA LINHA: os passos que a folha oferece a partir
+        # da situação de agora (views_funil). Já em JSON, no atributo do
+        # botão -- abrir a folha não pergunta nada ao servidor.
+        import json
+
+        from .views_funil import opcoes_de_andamento
+
+        pedidos = list(pagina.object_list)
+        for pedido in pedidos:
+            pedido.opcoes_andamento = json.dumps(
+                opcoes_de_andamento(pedido), ensure_ascii=False,
+            )
+            # O acesso reverso sem venda levanta DoesNotExist; o
+            # `select_related` já trouxe a resposta, e aqui ela vira None.
+            pedido.venda_da_linha = getattr(pedido, "venda", None)
         abertos = Pedido.objects.exclude(status__in=self.ENCERRADOS).count()
         return render(request, "pedidos_inner.html", {
-            "pedidos": pagina.object_list,
+            "pedidos": pedidos,
             "page_obj": pagina,
             "total_registros": pagina.paginator.count,
             "filtro_ativo": filtro,

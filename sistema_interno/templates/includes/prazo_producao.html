@@ -1,0 +1,23 @@
+{% comment %}
+  O PRAZO DE PRODUÇÃO NA LINHA (LEIA-ME-V10, seção 89).
+
+  `{% campo_prazo pedido %}` / `{% campo_prazo orcamento %}`. Um número de
+  dias úteis que grava sozinho ao sair do campo (ou no Enter), por fetch,
+  sem recarregar -- interno/producao-etiquetas.js escuta todo
+  `[data-prazo-url]`. A nota embaixo é a previsão ("Previsão 04/12/2026")
+  ou o que falta para ela existir ("15 dias úteis após o pagamento").
+  `div`, e não `form`: na janela do orçamento ele mora dentro do formulário
+  da proposta, e formulário dentro de formulário não existe.
+{% endcomment %}
+<div class="ls-prazo{% if compacto %} compacto{% endif %}" data-prazo-url="{{ prazo.url }}">
+  <label class="ls-prazo-rotulo" for="{{ id_campo }}"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Produção</label>
+  <span class="ls-prazo-campo">
+    <input id="{{ id_campo }}" type="number" inputmode="numeric" min="0" max="250" step="1"
+           value="{% if prazo.dias is not None %}{{ prazo.dias }}{% endif %}"
+           data-prazo-valor="{% if prazo.dias is not None %}{{ prazo.dias }}{% endif %}"
+           placeholder="—" aria-describedby="{{ id_campo }}-nota"
+           {% if not editavel %}disabled{% endif %}>
+    <span class="ls-prazo-unidade" aria-hidden="true">dias úteis</span>
+  </span>
+  <small class="ls-prazo-nota" id="{{ id_campo }}-nota" data-prazo-nota>{{ prazo.nota }}</small>
+</div>

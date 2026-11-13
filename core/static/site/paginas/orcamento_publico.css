@@ -283,6 +283,8 @@ body{
 .comercial-item span{display:block;color:var(--tinta-3);font-size:.69rem;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
 .comercial-item strong{display:block;color:var(--marca);font-size:.96rem;line-height:1.3;overflow-wrap:anywhere}
 .comercial-item.total strong{font-size:1.36rem;color:var(--vermelho)}
+/* Com o prazo de produção (LEIA-ME-V10, seção 89), quatro condições lado a lado. */
+.comercial-grid.com-prazo{grid-template-columns:1.05fr 1fr 1fr 1fr}
 
 /* ------------------------------------------------------------ aviso */
 .faixa{
@@ -427,7 +429,7 @@ body{
   .item-unitario::before{content:"Unit. ";font-size:.7rem;color:var(--tinta-3);margin-right:4px}
   .item-valor{grid-column:1/-1;justify-content:flex-end;background:#f6f8fc;border-top:1px solid var(--linha)!important}
   .item-valor::before{content:"Total ";font-size:.72rem;color:var(--tinta-3);margin-right:6px}
-  .comercial-grid{grid-template-columns:1fr}.comercial-item{padding:16px 17px}
+  .comercial-grid,.comercial-grid.com-prazo{grid-template-columns:1fr}.comercial-item{padding:16px 17px}
   .contact-human{grid-template-columns:40px minmax(0,1fr);padding:13px}.contact-human>i{width:40px;height:40px}.contact-actions{grid-column:1/-1}.contact-actions a{flex:1 1 auto;justify-content:center}
   .bank-grid{grid-template-columns:1fr}
   .documento-acoes{align-items:stretch}.documento-acoes button{width:100%}

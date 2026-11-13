@@ -1,0 +1,155 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark light">
+  <title>Etiquetas · {{ ficha.titulo }} | Lazer &amp; Sport</title>
+  {% comment %}
+    AS ETIQUETAS POR MÁQUINA, EM FOLHAS A4 (LEIA-ME-V10, seção 89).
+
+    Uma página só dela, fora da moldura do painel: abre numa aba nova a
+    partir da folha de cópias, e é a impressora que manda aqui. Na tela, a
+    barra de cima (o que vai sair, "Imprimir" e "Fechar") e as folhas de
+    papel no tamanho de verdade; na impressão, só as folhas -- uma por
+    página, com a quebra entre elas.
+
+    O tema da barra é o mesmo do painel (sol, lua ou eclipse), lido antes
+    do primeiro pixel como no base_inner.html. A FOLHA É PAPEL: branca nos
+    três temas, porque é assim que ela vai sair da impressora.
+  {% endcomment %}
+  <script>
+    (function () {
+      var TEMAS = ["lua", "sol", "eclipse"];
+      var escolhido = "lua";
+      try {
+        var guardado = localStorage.getItem("ls-tema");
+        if (TEMAS.indexOf(guardado) !== -1) escolhido = guardado;
+      } catch (erro) {}
+      document.documentElement.setAttribute("data-tema", escolhido);
+    })();
+  </script>
+  <link href="{% estatico 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
+  <link href="{% estatico 'interno/interno_modern.css' %}" rel="stylesheet">
+  <link href="{% estatico 'interno/etiquetas-a4.css' %}" rel="stylesheet">
+</head>
+<body class="ls-a4">
+
+<header class="ls-a4-barra nao-imprime">
+  <div class="ls-a4-barra-texto">
+    <span class="ls-a4-kicker"><i class="bi bi-upc-scan" aria-hidden="true"></i> Etiquetas por máquina</span>
+    <h1>{{ ficha.titulo }}</h1>
+    {% if not problema %}
+      <p>
+        <strong>{{ total }} etiqueta{{ total|pluralize }}</strong> em
+        <strong>{{ total_folhas }} folha{{ total_folhas|pluralize }} A4</strong>
+        · {% if tamanho == "a5" %}meia folha (A5){% else %}um quarto (A6){% endif %},
+        {{ por_folha }} por folha
+      </p>
+    {% endif %}
+  </div>
+  <div class="ls-a4-acoes">
+    {% if not problema %}
+      <button type="button" class="ls-a4-botao primario" id="imprimirA4">
+        <i class="bi bi-printer" aria-hidden="true"></i> Imprimir
+      </button>
+    {% endif %}
+    <button type="button" class="ls-a4-botao" id="fecharA4">
+      <i class="bi bi-x-lg" aria-hidden="true"></i> Fechar
+    </button>
+  </div>
+</header>
+
+{% if problema %}
+  <main class="ls-a4-problema" role="alert">
+    <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+    <h2>Nada para imprimir</h2>
+    <p>{{ problema }}</p>
+  </main>
+{% else %}
+  <main class="ls-a4-folhas" id="folhasA4">
+    {% for folha in folhas %}
+      <section class="ls-a4-folha ls-folha-etiquetas {{ tamanho }}"
+               aria-label="Folha {{ forloop.counter }} de {{ total_folhas }}"
+               data-folha="{{ forloop.counter }}">
+        {% for etiqueta in folha %}
+          <article class="ls-etiqueta">
+            <header class="ls-etiqueta-topo">
+              <img class="ls-etiqueta-logo" src="{% static 'images/logoofi.png' %}" alt="">
+              <div class="ls-etiqueta-empresa">
+                <strong>{{ empresa.nome }}</strong>
+                {% if empresa.endereco %}<small>{{ empresa.endereco }}</small>{% endif %}
+                <small>{{ empresa.telefone }}{% if empresa.cnpj %} · CNPJ {{ empresa.cnpj }}{% endif %}</small>
+              </div>
+              {% if etiqueta.volumes > 1 %}
+                <span class="ls-etiqueta-volume"><small>Volume</small><strong>{{ etiqueta.volume }}/{{ etiqueta.volumes }}</strong></span>
+              {% endif %}
+            </header>
+            <div class="ls-etiqueta-selos">
+              <span class="ls-etiqueta-selo principal"><i class="bi {{ aviso_principal.icone }}" aria-hidden="true"></i>{{ aviso_principal.rotulo }}</span>
+            </div>
+            <div class="ls-etiqueta-maquina">
+              <span>Máquina</span>
+              <strong>{{ etiqueta.maquina }}</strong>
+              {% if etiqueta.unidades > 1 %}<em>Unidade {{ etiqueta.unidade }} de {{ etiqueta.unidades }}</em>{% endif %}
+            </div>
+            <div class="ls-etiqueta-destino">
+              <span>Entregar a</span>
+              <strong>{{ etiqueta.nome|default:"—" }}</strong>
+              {% if etiqueta.endereco %}<p>{{ etiqueta.endereco }}</p>{% endif %}
+              {% if etiqueta.contato %}<p class="ls-etiqueta-contato"><i class="bi bi-telephone" aria-hidden="true"></i> {{ etiqueta.contato }}</p>{% endif %}
+              {% if etiqueta.envio %}<p class="ls-etiqueta-envio"><i class="bi bi-shop" aria-hidden="true"></i> {{ etiqueta.envio }}</p>{% endif %}
+            </div>
+            <footer class="ls-etiqueta-rodape">
+              <span><small>Referência</small>{{ etiqueta.referencia }}</span>
+              <span><small>{{ etiqueta.producao_rotulo }}</small>{{ etiqueta.producao_data|date:"d/m/Y" }}</span>
+              <span class="ls-etiqueta-origem"><small>Remetente</small>{{ empresa.nome }}{% if empresa.telefone %} · {{ empresa.telefone }}{% endif %}</span>
+            </footer>
+          </article>
+        {% endfor %}
+      </section>
+    {% endfor %}
+  </main>
+{% endif %}
+
+<script>
+(function () {
+  "use strict";
+
+  /* NA TELA, A FOLHA CABE NA LARGURA. O A4 tem 210 mm (uns 794 px); no
+     celular ele encolhe inteiro, para se ver a folha como vai sair -- e
+     não um pedaço dela com rolagem para o lado. Na impressão a escala
+     volta a 1 (etiquetas-a4.css). */
+  function ajustar() {
+    var largura = document.documentElement.clientWidth - 32;
+    var escala = Math.min(1, Math.max(0.3, largura / 794));
+    document.documentElement.style.setProperty("--escala-a4", escala.toFixed(3));
+  }
+  ajustar();
+  window.addEventListener("resize", ajustar);
+
+  var imprimir = document.getElementById("imprimirA4");
+  if (imprimir) imprimir.addEventListener("click", function () { window.print(); });
+
+  /* "Fechar" fecha a aba que a folha de cópias abriu; aberta por um link
+     direto, volta para o painel. */
+  document.getElementById("fecharA4").addEventListener("click", function () {
+    window.close();
+    window.setTimeout(function () {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = "/";
+    }, 150);
+  });
+
+  {% if imprimir_ja %}
+  /* Veio do "Imprimir" da folha de cópias: a impressão abre sozinha,
+     depois de o logotipo carregar (senão a primeira folha sai sem ele). */
+  window.addEventListener("load", function () {
+    window.setTimeout(function () { window.print(); }, 250);
+  });
+  {% endif %}
+})();
+</script>
+</body>
+</html>

@@ -11,8 +11,9 @@
   listava `CentralVendas`, tabela interna antiga e vazia. O número do
   menu e o conteúdo da tela nunca falavam da mesma coisa.
 
-  DUAS ORIGENS NA MESMA LISTA. A venda do site nasce do pedido
-  finalizado; a do painel, do orçamento pago 100% ("terminando o
+  DUAS ORIGENS NA MESMA LISTA. A venda do site nasce do pedido pago
+  (o pagamento aprovado; LEIA-ME-V10, seção 89 -- antes só nascia num
+  `finalizar()` que nenhuma tela chamava); a do painel, do orçamento pago 100% ("terminando o
   pagamento 100% deve registrar como venda"). A de orçamento não tem
   pedido: o cliente e o número vêm do orçamento, com o caminho de volta
   para ele, e a etiqueta de origem diz de onde cada uma veio.
@@ -21,7 +22,7 @@
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Loja · financeiro</span>
     <h1>Vendas</h1>
-    <p>Cada venda nasce de um pedido finalizado no site ou de um orçamento pago 100% no painel. A bolinha do menu conta as que ainda esperam confirmação.</p>
+    <p>Um funil só: cada venda nasce de um pedido pago no site ou de um orçamento pago 100% no painel — uma por pedido ou orçamento, nunca duas. A bolinha do menu conta as que ainda esperam confirmação.</p>
   </div>
 </section>
 
@@ -55,7 +56,7 @@
     <div class="table-responsive ls-commercial-table-wrap">
       <table class="ls-table ls-commercial-table ls-vendas-table">
         <thead>
-          <tr><th data-coluna="Nº">#</th><th data-coluna="Origem">Origem</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Valor" class="text-end">Valor</th><th data-coluna="Pagamento">Pagamento</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Data</th></tr>
+          <tr><th data-coluna="Nº">#</th><th data-coluna="Origem">Origem</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Valor" class="text-end">Valor</th><th data-coluna="Pagamento">Pagamento</th><th data-coluna="Produção">Produção</th><th data-coluna="Situação">Situação</th><th data-coluna="Data">Data</th></tr>
         </thead>
         <tbody>
           {% for venda in vendas %}
@@ -77,6 +78,22 @@
               <td data-rotulo="Cliente">{% if orcamento %}{{ orcamento.destinatario }}{% else %}{% firstof venda.pedido.cliente.user.get_full_name venda.pedido.cliente.user.username "Cliente do site" %}{% endif %}</td>
               <td data-rotulo="Valor" class="text-end"><strong>R$ {{ venda.valor_pago|moeda }}</strong></td>
               <td data-rotulo="Pagamento">{% if venda.forma_pagamento %}{{ venda.get_forma_pagamento_display }}{% elif orcamento and orcamento.forma_pagamento %}{{ orcamento.forma_pagamento }}{% else %}—{% endif %}</td>
+              {% comment %}
+                O TEMPO DE PRODUÇÃO VIAJA COM A VENDA (seção 89): lido do pedido
+                ou do orçamento de onde ela veio, onde a equipe o informa. E as
+                etiquetas das máquinas, as mesmas do pedido e do orçamento.
+              {% endcomment %}
+              <td data-rotulo="Produção">
+                {% if venda.texto_producao %}<span class="d-block">{{ venda.texto_producao|cut:"Produção: " }}</span>{% else %}<span class="text-muted d-block">Sem prazo</span>{% endif %}
+                {% if venda.origem_objeto %}
+                  <button type="button" class="btn btn-sm btn-outline-primary mt-1"
+                          data-etiquetas-url="{% url 'etiquetas_maquinas' 'venda' venda.id %}"
+                          aria-haspopup="dialog"
+                          title="Imprimir as etiquetas das máquinas desta venda">
+                    <i class="bi bi-upc-scan" aria-hidden="true"></i> Etiquetas
+                  </button>
+                {% endif %}
+              </td>
               <td data-rotulo="Situação">
                 {% if venda.confirmado %}<span class="ls-status success">Confirmada</span>
                 {% else %}<span class="ls-status warning">Aguardando confirmação</span>{% endif %}
@@ -85,7 +102,7 @@
             </tr>
             {% endwith %}
           {% empty %}
-            <tr><td colspan="7">
+            <tr><td colspan="8">
               <div class="ls-empty">
                 <i class="bi bi-receipt"></i>
                 {% if filtro_ativo == "a_confirmar" %}

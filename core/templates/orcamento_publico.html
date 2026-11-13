@@ -346,7 +346,13 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
     </section>
   {% endif %}
 
-  <section class="comercial-grid entra" style="--i:3" aria-label="Condições comerciais">
+  {% comment %}
+    O PRAZO DE PRODUÇÃO (LEIA-ME-V10, seção 89): quando a equipe informou,
+    entra como a quarta condição. Antes da aprovação é a promessa ("15 dias
+    úteis após a aprovação"); aprovada, a previsão com a data.
+  {% endcomment %}
+  {% with prazo=orcamento.prazo_para_o_cliente %}
+  <section class="comercial-grid entra{% if prazo %} com-prazo{% endif %}" style="--i:3" aria-label="Condições comerciais">
     <div class="comercial-item total">
       <span>Valor total</span>
       <strong>R$ {{ total|moeda }}</strong>
@@ -359,7 +365,14 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
       <span>Forma de envio</span>
       <strong>{{ orcamento.forma_envio|default:"A combinar" }}</strong>
     </div>
+    {% if prazo %}
+    <div class="comercial-item">
+      <span>Prazo de produção</span>
+      <strong>{{ prazo }}</strong>
+    </div>
+    {% endif %}
   </section>
+  {% endwith %}
 
   <section class="bloco entra" style="--i:3">
     <div class="bloco-titulo">

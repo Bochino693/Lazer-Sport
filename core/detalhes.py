@@ -905,6 +905,9 @@ def detalhe_pedido(pk, usuario, pagina=1, so_atividade=False):
                 campo("Endereço", endereco or "—", "bi-geo-alt"),
                 campo("Distância", f"{pedido.distancia_km} km" if pedido.distancia_km else "—", "bi-map"),
                 campo("Tempo estimado", f"{pedido.tempo_estimado_min} min" if pedido.tempo_estimado_min else "—", "bi-clock"),
+                # o tempo de produção e a venda do funil (LEIA-ME-V10, seção 89)
+                campo("Produção", pedido.texto_producao.replace("Produção: ", "") or "Sem prazo", "bi-hammer"),
+                campo("Venda", f"Venda #{venda.pk}" if venda else "—", "bi-bag-check"),
             ], texto=pedido.observacoes),
             secao("Itens", "bi-box2", lista=[
                 {

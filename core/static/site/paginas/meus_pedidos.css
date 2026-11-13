@@ -277,6 +277,28 @@
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--pd-cor) 18%, transparent), 0 0 20px color-mix(in srgb, var(--pd-cor) 45%, transparent);
 }
 
+/* O TEMPO DE PRODUÇÃO, logo abaixo do andamento: a frase da fábrica
+   ("Produção: 15 dias úteis — previsão 04/12"), na cor da situação. */
+.pd-producao {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--pd-cor) 30%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--pd-cor) 10%, rgba(4, 10, 28, .5));
+    color: #e8f1ff;
+    font-size: .88rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+.pd-producao i {
+    flex: 0 0 auto;
+    color: var(--pd-cor);
+}
+
 /* o último passo de um pedido finalizado é a bandeira verde */
 .pd-pedido--finalizado .pd-passo:last-child .pd-passo-bola {
     box-shadow: 0 0 0 5px rgba(46, 229, 157, .16), 0 0 20px rgba(46, 229, 157, .4);

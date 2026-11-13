@@ -69,6 +69,41 @@ def avisar_superusuarios_de_novo_pedido(sender, instance, created, **kwargs):
     transaction.on_commit(avisar)
 
 
+@receiver(post_save, sender=Pedido, dispatch_uid="core.pedido.acertar_venda")
+def acertar_venda_do_pedido(sender, instance, created, raw=False, update_fields=None, **kwargs):
+    """O pedido pago vira venda; o cancelado deixa de ser (LEIA-ME-V10, 89).
+
+    POR QUE UM SINAL. O pagamento aprovado é gravado pelo checkout
+    (`core.checkout.confirmar_pagamento`), e o checkout não é lugar de
+    regra de venda: o que importa lá é o dinheiro do cliente. O sinal
+    ouve a mudança de SITUAÇÃO do pedido, venha de onde vier -- checkout,
+    painel, admin --, e acerta a venda depois do commit:
+
+      * depois do commit, e não dentro: a confirmação do pagamento nunca
+        falha nem fica mais lenta por causa da venda;
+      * `robust`: se o acerto der erro, ele vai para o log e o resto
+        segue -- o painel e a migração acertam de novo, e acertar duas
+        vezes não duplica (`Pedido.acertar_venda`).
+
+    Só mudança de situação interessa: o `save` que grava "impresso" ou o
+    prazo de produção não chega a consultar nada.
+    """
+    if raw:
+        return
+    if update_fields is not None and "status" not in update_fields:
+        return
+    # O pedido nasce aguardando pagamento (a reserva do checkout): ainda
+    # não há venda a acertar, e o pedido novo não paga uma consulta a mais.
+    if created and instance.status not in Pedido.SITUACOES_PAGAS:
+        return
+    pedido_id = instance.pk
+
+    def acertar():
+        Pedido.acertar_venda_do_pedido(pedido_id)
+
+    transaction.on_commit(acertar, robust=True)
+
+
 def _invalidar_home(sender, **kwargs):
     # NA HORA e DEPOIS DO COMMIT, de propósito. Na hora: dentro da mesma
     # transação (o painel grava o brinquedo e as fotos em um bloco só), a

@@ -153,6 +153,10 @@
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}
+                {# O tempo de produção da proposta aprovada (seção 89): editado na janela. #}
+                {% if orcamento.status == 'aprovado' and orcamento.prazo_producao_dias is not None %}
+                  <span class="material-sub d-block mt-1"><i class="bi bi-hammer" aria-hidden="true"></i> {{ orcamento.texto_producao }}</span>
+                {% endif %}
               </td>
               {% comment %}
                 data-situacao: a célula que o painel repinta sozinho
@@ -319,6 +323,20 @@
                         data-contrato="{{ orcamento.situacao_documento|default:'gerar' }}"
                         title="Registrar o total recebido até agora">
                   <i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if orcamento.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span>
+                </button>
+                {% endif %}
+                {% comment %}
+                  AS ETIQUETAS POR MÁQUINA (LEIA-ME-V10, seção 89): a folha de
+                  cópias (quantas por máquina) e as folhas A4. Da proposta
+                  aprovada, como a origem "proposta" da tela de Etiquetas.
+                {% endcomment %}
+                {% if orcamento.status == 'aprovado' %}
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-etiquetas-url="{% url 'etiquetas_maquinas' 'orcamento' orcamento.id %}"
+                        aria-haspopup="dialog"
+                        aria-label="Imprimir as etiquetas do orçamento {{ orcamento.id }}"
+                        title="Imprimir as etiquetas das máquinas desta proposta">
+                  <i class="bi bi-upc-scan" aria-hidden="true"></i><span class="ls-action-label">Etiquetas</span>
                 </button>
                 {% endif %}
                 {% comment %}

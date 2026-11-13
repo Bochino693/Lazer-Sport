@@ -4755,6 +4755,210 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 .ls-etiqueta-tamanho small{color:var(--text-2);font-weight:650}
 .ls-etiquetas-form .form-text{color:var(--text-2)}
 
+/* ==========================================================
+   O FUNIL: PRAZO DE PRODUÇÃO, ETIQUETAS POR MÁQUINA E ANDAMENTO
+   ==========================================================
+   LEIA-ME-V10, seção 89. O script é interno/producao-etiquetas.js; a
+   página A4 tem a folha dela (interno/etiquetas-a4.css), porque é papel.
+
+   O CAMPO DO PRAZO mora na linha do pedido, na janela do orçamento e na
+   fila da produção: um número curto ("15"), "dias úteis" ao lado e a
+   previsão embaixo. Grava sozinho ao sair do campo; o contorno diz o que
+   está acontecendo (gravando, gravado, não gravou) sem tomar espaço. */
+.ls-prazo{
+  display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 8px;
+  min-width:0;
+}
+.ls-prazo-rotulo{
+  display:inline-flex;align-items:center;gap:5px;margin:0;
+  color:var(--text-2);font-size:.74rem;font-weight:850;white-space:nowrap;
+}
+.ls-prazo-rotulo i{color:var(--apoio-texto)}
+.ls-prazo-campo{
+  display:inline-flex;align-items:center;gap:6px;justify-self:start;
+  padding:3px 10px 3px 3px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel-2);transition:border-color .15s ease,box-shadow .15s ease;
+}
+.ls-prazo-campo input{
+  width:3.6rem;min-height:36px;padding:4px 6px;border:0;border-radius:9px;
+  background:var(--bg-1);color:var(--text);text-align:center;
+  font:inherit;font-size:.95rem;font-weight:900;font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.ls-prazo-campo input::-webkit-outer-spin-button,
+.ls-prazo-campo input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ls-prazo-campo input:focus{outline:2px solid var(--acento);outline-offset:1px}
+.ls-prazo-campo input:disabled{opacity:.6}
+.ls-prazo-unidade{color:var(--text-2);font-size:.74rem;font-weight:800;white-space:nowrap}
+.ls-prazo-nota{
+  grid-column:1/-1;color:var(--muted);font-size:.72rem;font-weight:750;line-height:1.3;
+}
+.ls-prazo.is-salvando .ls-prazo-campo{border-color:var(--acento-linha)}
+.ls-prazo.is-salvo .ls-prazo-campo{border-color:var(--green-linha);box-shadow:0 0 0 3px rgba(var(--green-rgb),.16)}
+.ls-prazo.is-erro .ls-prazo-campo{border-color:var(--red-linha);box-shadow:0 0 0 3px rgba(var(--red-rgb),.16)}
+.ls-prazo.compacto{grid-template-columns:auto auto 1fr}
+.ls-prazo.compacto .ls-prazo-nota{grid-column:auto}
+
+/* Na tabela o prazo e o andamento ficam numa coluna só, empilhados. */
+.ls-funil-celula{display:grid;gap:8px;min-width:190px}
+.ls-funil-venda{
+  display:inline-flex;align-items:center;gap:5px;
+  color:var(--green-texto);font-size:.74rem;font-weight:850;
+}
+
+/* O ANDAMENTO É UM BOTÃO COM A COR DA SITUAÇÃO, e não um select: tocar
+   abre a folha com os passos, na ordem em que o pedido anda. */
+.ls-andamento-botao{
+  display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:5px 11px;
+  border:1px solid rgba(var(--apoio-rgb),.3);border-radius:999px;
+  background:rgba(var(--apoio-rgb),.10);color:var(--apoio-claro);
+  font:inherit;font-size:.76rem;font-weight:900;cursor:pointer;white-space:nowrap;
+}
+.ls-andamento-botao::after{content:"›";font-size:1rem;line-height:1;opacity:.8}
+.ls-andamento-botao.success{border-color:rgba(var(--green-rgb),.3);background:rgba(var(--green-rgb),.10);color:var(--green-claro)}
+.ls-andamento-botao.warning{border-color:rgba(var(--acento-rgb),.3);background:rgba(var(--acento-rgb),.10);color:var(--acento-claro)}
+.ls-andamento-botao.danger{border-color:rgba(var(--red-rgb),.3);background:rgba(var(--red-rgb),.10);color:var(--red-claro);cursor:default}
+.ls-andamento-botao.danger::after{content:none}
+.ls-andamento-botao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-andamento-botao[aria-busy="true"],[data-etiquetas-url][aria-busy="true"]{opacity:.6;pointer-events:none}
+
+/* ---------------------------------------- as folhas (cópias e andamento)
+   O casco é o das folhas do ls-aviso; aqui só o que é delas: mais largas,
+   texto à esquerda e a lista que rola por dentro. */
+.ls-recado-folha.ls-folha-producao{width:min(560px,calc(100vw - 32px))}
+@media(max-width:640px){.ls-recado-folha.ls-folha-producao{width:100%}}
+.ls-folha-producao .ls-folha-producao-cartao{justify-items:stretch;gap:12px;text-align:left}
+.ls-folha-producao-topo{display:flex;align-items:center;gap:12px}
+.ls-folha-producao-icone{
+  flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border-radius:16px;
+  color:var(--acento-texto);background:var(--acento-fundo);font-size:1.35rem;
+}
+.ls-folha-producao-textos{min-width:0}
+.ls-folha-producao-textos .ls-recado-folha-titulo{text-align:left}
+.ls-folha-producao-sub{margin:2px 0 0;color:var(--text-2);font-size:.86rem;font-weight:700;overflow-wrap:anywhere}
+.ls-folha-producao-bloco{
+  padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);
+}
+.ls-folha-producao-aviso{
+  margin:0;padding:12px 14px;border:1px solid rgba(var(--yellow-rgb),.3);border-radius:14px;
+  background:rgba(var(--yellow-rgb),.09);color:var(--text);font-size:.88rem;line-height:1.45;
+}
+.ls-folha-producao-aviso i{color:var(--yellow-texto)}
+.ls-folha-producao-tamanhos{margin:0;padding:0;border:0;min-width:0}
+.ls-folha-producao-tamanhos legend{
+  float:none;width:auto;margin:0 0 6px;padding:0;
+  color:var(--text-2);font-size:.74rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+}
+.ls-folha-producao-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ls-folha-producao-opcao{
+  position:relative;display:flex;align-items:center;gap:9px;cursor:pointer;
+  padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);
+}
+.ls-folha-producao-opcao input{accent-color:var(--acento);flex:0 0 auto}
+.ls-folha-producao-opcao span{display:flex;flex-direction:column;min-width:0}
+.ls-folha-producao-opcao strong{color:var(--text);font-size:.84rem;font-weight:900}
+.ls-folha-producao-opcao small{color:var(--text-2);font-size:.72rem;font-weight:700}
+.ls-folha-producao-opcao:has(input:checked){
+  border-color:var(--acento);background:rgba(var(--acento-rgb),.12);
+  box-shadow:0 0 0 1px rgba(var(--acento-rgb),.3);
+}
+.ls-folha-producao-maquinas{
+  display:grid;gap:8px;margin:0;padding:0;list-style:none;
+  max-height:min(42dvh,360px);overflow:auto;
+}
+.ls-folha-producao-maquina{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nome passo" "soma passo";
+  align-items:center;gap:2px 10px;
+  padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);
+}
+.ls-folha-producao-maquina-nome{grid-area:nome;min-width:0}
+.ls-folha-producao-maquina-nome strong{display:block;color:var(--text);font-size:.9rem;font-weight:900;line-height:1.25;overflow-wrap:anywhere}
+.ls-folha-producao-maquina-nome small{color:var(--text-2);font-size:.72rem;font-weight:750}
+.ls-folha-producao-maquina-soma{grid-area:soma;color:var(--apoio-texto);font-size:.74rem;font-weight:850}
+.ls-folha-producao-maquina .ls-passo{grid-area:passo}
+.ls-folha-producao-vazia{color:var(--muted);font-size:.86rem}
+.ls-folha-producao-resumo{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:0;
+  padding:10px 12px;border-radius:14px;background:var(--acento-fundo);
+  color:var(--text);font-size:.9rem;
+}
+.ls-folha-producao-resumo i{color:var(--acento-texto)}
+.ls-folha-producao-resumo strong{color:var(--text);font-weight:900}
+.ls-folha-producao-resumo.is-alerta{background:rgba(var(--yellow-rgb),.12)}
+.ls-folha-producao .ls-recado-botao:disabled{opacity:.5;cursor:not-allowed}
+.ls-folha-producao .ls-recado-botao i{margin-right:4px}
+
+/* O − [n] + das cópias: alvos de 40 px, o número no meio. */
+.ls-passo{
+  display:inline-flex;align-items:center;gap:4px;padding:3px;
+  border:1px solid var(--line);border-radius:14px;background:var(--bg-1);
+}
+.ls-passo-botao{
+  width:40px;height:40px;display:grid;place-items:center;padding:0;
+  border:0;border-radius:11px;background:var(--panel-3);color:var(--text);cursor:pointer;
+}
+.ls-passo-botao:hover{background:var(--acento-fundo-2)}
+.ls-passo-botao:focus-visible,.ls-passo-valor:focus-visible{outline:2px solid var(--acento);outline-offset:1px}
+.ls-passo-valor{
+  width:3rem;height:40px;padding:0;border:0;background:transparent;color:var(--text);
+  text-align:center;font:inherit;font-size:1rem;font-weight:900;font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.ls-passo-valor::-webkit-outer-spin-button,
+.ls-passo-valor::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+@media(max-width:420px){
+  .ls-folha-producao-opcoes{grid-template-columns:1fr}
+  .ls-prazo.compacto{grid-template-columns:auto 1fr}
+  .ls-prazo.compacto .ls-prazo-nota{grid-column:1/-1}
+}
+
+.ls-folha-andamento-opcoes{display:grid;gap:8px}
+.ls-folha-andamento-opcao{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 14px;
+  border:1px solid var(--line);border-radius:16px;background:var(--panel-2);
+  color:var(--text);font:inherit;text-align:left;cursor:pointer;
+}
+.ls-folha-andamento-opcao>i{
+  flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;border-radius:12px;
+  color:var(--apoio-texto);background:rgba(var(--apoio-rgb),.12);font-size:1.1rem;
+}
+.ls-folha-andamento-opcao span{display:flex;flex-direction:column;min-width:0}
+.ls-folha-andamento-opcao strong{font-size:.92rem;font-weight:900}
+.ls-folha-andamento-opcao small{color:var(--text-2);font-size:.76rem;font-weight:700}
+.ls-folha-andamento-opcao:hover{border-color:var(--acento-linha);background:var(--acento-fundo)}
+.ls-folha-andamento-opcao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-folha-andamento-opcao.perigo>i{color:var(--red-texto);background:rgba(var(--red-rgb),.12)}
+.ls-folha-andamento-opcao.perigo strong{color:var(--red-texto)}
+
+/* --------------------------------- a fila da produção (tela Etiquetas)
+   Os pedidos pagos e as propostas aprovadas, em cartões: de onde vieram,
+   para quem, as máquinas, o prazo e o botão das etiquetas. É por aqui que
+   a Produção, que não abre Pedidos nem Orçamentos, informa o prazo e
+   imprime. */
+.ls-fila-producao{margin-bottom:18px}
+.ls-fila-producao-lista{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;
+  margin:0;padding:0;list-style:none;
+}
+.ls-fila-cartao{
+  display:grid;gap:10px;align-content:start;padding:14px;
+  border:1px solid var(--line);border-radius:16px;background:var(--panel-2);
+}
+.ls-fila-cartao[hidden]{display:none}
+.ls-fila-cartao-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ls-fila-cartao-topo>div{min-width:0}
+.ls-fila-cartao h3{margin:6px 0 0;color:var(--text);font-size:.98rem;font-weight:900;line-height:1.25;overflow-wrap:anywhere}
+.ls-fila-cartao-numero{color:var(--text-2);font-size:.76rem;font-weight:850}
+.ls-fila-cartao-maquinas{margin:0;color:var(--text-2);font-size:.8rem;line-height:1.45;overflow-wrap:anywhere}
+.ls-fila-cartao .btn{justify-self:start}
+.ls-fila-busca{max-width:420px}
+@media(max-width:520px){.ls-fila-producao-lista{grid-template-columns:1fr}}
+
+/* O QUADRO DA PRODUÇÃO na janela do orçamento: depois do pagamento. */
+.ls-orcamento-producao .ls-prazo{margin-bottom:10px}
+.ls-orcamento-producao-acoes{display:flex;flex-wrap:wrap;gap:8px}
+
 /* ======================================================================
    TARJA DE PROGRESSO E CONFIRMAÇÃO
 

@@ -1,0 +1,133 @@
+/* ======================================================================
+   AS ETIQUETAS POR MÁQUINA EM FOLHAS A4 (etiquetas_impressao.html)
+   LEIA-ME-V10, seção 89.
+
+   A ETIQUETA É A DA TELA DE ETIQUETAS: o `.ls-etiqueta` do
+   interno_modern.css (preto no branco, a moldura, a faixa do "Frágil"), no
+   tamanho compacto do A6 quando a folha leva quatro. Este arquivo só diz
+   ONDE cada uma cai no papel, mais o quadro da máquina.
+
+   A FOLHA É MONTADA PELO SERVIDOR (views_funil, etiquetas_maquinas): cada
+   `.ls-a4-folha` já traz as etiquetas daquela página, e aqui ela tem o
+   tamanho EXATO de um A4 (210 x 297 mm) com 8 mm de margem por dentro --
+   a página da impressora fica sem margem (@page margin 0) para a conta
+   fechar. Quatro por folha: 2 x 2 de 95 x 138,5 mm. Duas: 1 x 2.
+
+   Na tela a barra de cima segue o tema do painel (sol, lua, eclipse); o
+   papel é branco nos três, porque é assim que ele sai da impressora.
+   ====================================================================== */
+
+body.ls-a4{
+  margin:0;min-height:100vh;
+  background:var(--bg-0);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+
+/* ------------------------------------------------ a barra (só na tela) */
+.ls-a4-barra{
+  position:sticky;top:0;z-index:5;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:12px 16px;
+  background:var(--panel);border-bottom:1px solid var(--line);
+  box-shadow:var(--shadow-soft);
+}
+.ls-a4-barra-texto{min-width:0}
+.ls-a4-kicker{
+  display:inline-flex;align-items:center;gap:6px;
+  color:var(--acento-texto);font-size:.72rem;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.ls-a4-barra h1{margin:2px 0 0;color:var(--text);font-size:1.15rem;font-weight:900;line-height:1.25;overflow-wrap:anywhere}
+.ls-a4-barra p{margin:3px 0 0;color:var(--text-2);font-size:.84rem}
+.ls-a4-barra p strong{color:var(--text)}
+.ls-a4-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.ls-a4-botao{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:14px;
+  background:var(--panel-2);color:var(--text);
+  font:inherit;font-size:.9rem;font-weight:850;cursor:pointer;
+}
+.ls-a4-botao.primario{border-color:transparent;background:var(--acento);color:var(--acento-tinta)}
+.ls-a4-botao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+@media(max-width:520px){
+  .ls-a4-acoes{width:100%}
+  .ls-a4-botao{flex:1 1 0}
+}
+
+.ls-a4-problema{
+  max-width:520px;margin:48px auto;padding:24px;text-align:center;
+  border:1px solid var(--line);border-radius:22px;background:var(--panel);
+}
+.ls-a4-problema i{font-size:2rem;color:var(--yellow-texto)}
+.ls-a4-problema h2{margin:8px 0 4px;color:var(--text);font-size:1.1rem;font-weight:900}
+.ls-a4-problema p{margin:0;color:var(--text-2)}
+
+/* ------------------------------------------------------- as folhas */
+.ls-a4-folhas{
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  padding:20px 16px 48px;
+}
+.ls-a4 .ls-a4-folha{
+  box-sizing:border-box;flex:0 0 auto;
+  width:210mm;height:297mm;padding:8mm;margin:0;
+  display:grid;gap:4mm;
+  border:0;border-radius:0;background:#fff;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  zoom:var(--escala-a4,1);
+}
+.ls-a4 .ls-a4-folha.a6{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.ls-a4 .ls-a4-folha.a5{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+
+/* A etiqueta ocupa a casa inteira, e não cresce além dela: o endereço
+   longo encolhe em três linhas em vez de empurrar a etiqueta de baixo
+   para fora da folha. */
+.ls-a4 .ls-a4-folha .ls-etiqueta{
+  box-sizing:border-box;min-width:0;min-height:0;height:100%;overflow:hidden;
+}
+.ls-a4 .ls-a4-folha .ls-etiqueta-destino{min-height:0;overflow:hidden}
+.ls-a4 .ls-a4-folha .ls-etiqueta-destino p{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;
+}
+/* O envio (a retirada na fábrica, o frete do cliente): uma linha em negrito,
+   para quem separa as caixas não despachar o que o cliente vem buscar. */
+.ls-a4 .ls-etiqueta-envio{
+  margin-top:4px;color:#000;font-size:.74rem;font-weight:900;
+  -webkit-line-clamp:2!important;
+}
+
+/* O QUADRO DA MÁQUINA. É o que muda de uma etiqueta para a outra, e o que
+   quem separa as caixas no galpão procura: o nome grande, e a unidade
+   quando o pedido leva mais de uma. */
+.ls-etiqueta-maquina{
+  padding:8px 11px;color:#000;background:#fff;
+  border:3px solid #000;border-radius:4px;
+}
+.ls-etiqueta-maquina>span{
+  display:block;font-size:.66rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;color:#000;
+}
+.ls-etiqueta-maquina strong{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;
+  margin-top:2px;font-size:1.3rem;line-height:1.15;font-weight:900;color:#000;
+  overflow-wrap:anywhere;
+}
+.ls-etiqueta-maquina em{display:block;margin-top:3px;font-style:normal;font-size:.8rem;font-weight:800;color:#000}
+.ls-a4 .ls-a4-folha.a6 .ls-etiqueta-maquina{padding:6px 9px}
+.ls-a4 .ls-a4-folha.a6 .ls-etiqueta-maquina strong{font-size:1.08rem}
+.ls-a4 .ls-a4-folha.a6 .ls-etiqueta-maquina em{font-size:.7rem}
+
+/* ------------------------------------------------- na impressora */
+@media print{
+  @page{size:A4;margin:0}
+  html,body.ls-a4{background:#fff}
+  .ls-a4-barra,.nao-imprime{display:none!important}
+  .ls-a4-folhas{display:block;padding:0;gap:0}
+  .ls-a4 .ls-a4-folha{
+    zoom:1;box-shadow:none;
+    break-after:page;page-break-after:always;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  .ls-a4 .ls-a4-folha:last-child{break-after:auto;page-break-after:auto}
+  .ls-a4 .ls-etiqueta{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}

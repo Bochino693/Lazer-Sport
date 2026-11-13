@@ -1,5 +1,5 @@
 {% extends "base_inner.html" %}
-{% load static %}
+{% load static interno_extras %}
 {% block title %}Etiquetas de transporte | Lazer & Sport{% endblock %}
 {% block top_title %}Etiquetas de transporte{% endblock %}
 
@@ -19,6 +19,57 @@
     <i class="bi bi-printer" aria-hidden="true"></i> Imprimir
   </button>
 </section>
+
+{% comment %}
+  A FILA DA PRODUÇÃO: ETIQUETAS POR MÁQUINA E O PRAZO (LEIA-ME-V10, seção 89).
+
+  "Devemos imprimir a etiqueta, que já temos, a partir de um orçamento ou
+  pedido, setando quantas cópias por máquina nós queremos, usando sempre as
+  folhas A4." Cada pedido pago e cada proposta aprovada em cartão: de onde
+  veio, para quem, as máquinas, o prazo de produção (grava sozinho) e o
+  "Etiquetas", que abre a folha de cópias. A Produção chega ao funil por
+  aqui -- ela não abre Pedidos nem Orçamentos. Sem valores: é fila de
+  máquina, não de dinheiro. O editor de baixo continua para a etiqueta à
+  mão (a caixa avulsa, a troca em garantia).
+{% endcomment %}
+{% if fila_producao %}
+<section class="ls-data-panel ls-fila-producao nao-imprime" aria-labelledby="filaProducaoTitulo">
+  <div class="ls-data-header">
+    <div>
+      <h2 id="filaProducaoTitulo">Na produção agora</h2>
+      <p>Pedidos pagos do site e propostas aprovadas: o prazo de cada um e as etiquetas por máquina, em folhas A4.</p>
+    </div>
+    <input type="search" class="form-control ls-fila-busca" id="filaProducaoBusca"
+           placeholder="Filtrar por número, cliente ou máquina" aria-label="Filtrar a fila da produção" autocomplete="off">
+  </div>
+  <div class="ls-data-body">
+    <ul class="ls-fila-producao-lista" id="filaProducaoLista">
+      {% for linha in fila_producao %}
+        <li class="ls-fila-cartao" data-busca="{{ linha.numero|lower }} {{ linha.nome|lower }} {{ linha.maquinas|lower }}">
+          <div class="ls-fila-cartao-topo">
+            <div>
+              {% if linha.tipo == "pedido" %}
+                <span class="ls-venda-origem site"><i class="bi bi-globe2" aria-hidden="true"></i> Site</span>
+              {% else %}
+                <span class="ls-venda-origem orcamento"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Orçamento</span>
+              {% endif %}
+              <h3>{{ linha.nome }}</h3>
+              <span class="ls-fila-cartao-numero">{{ linha.numero }} · {{ linha.situacao }}</span>
+            </div>
+          </div>
+          {% if linha.maquinas %}<p class="ls-fila-cartao-maquinas">{{ linha.maquinas }}</p>{% endif %}
+          {% campo_prazo linha.objeto %}
+          <button type="button" class="btn btn-sm btn-outline-primary"
+                  data-etiquetas-url="{{ linha.etiquetas }}" aria-haspopup="dialog">
+            <i class="bi bi-upc-scan" aria-hidden="true"></i> Etiquetas por máquina
+          </button>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="ls-empty mt-2" id="filaProducaoVazia" hidden>Nada na fila com esse filtro.</p>
+  </div>
+</section>
+{% endif %}
 
 {{ opcoes_clientes|json_script:"opcoesClientesEtiqueta" }}
 {{ opcoes_propostas|json_script:"opcoesPropostasEtiqueta" }}
@@ -207,6 +258,22 @@
 <script>
 LSTela.pronto(function () {
   "use strict";
+
+  /* A fila da produção: o filtro procura no número, no cliente e nas
+     máquinas de cada cartão, sem ir ao servidor. */
+  var buscaFila = document.getElementById("filaProducaoBusca");
+  if (buscaFila) {
+    buscaFila.addEventListener("input", function () {
+      var termo = buscaFila.value.trim().toLowerCase();
+      var visiveis = 0;
+      document.querySelectorAll("#filaProducaoLista [data-busca]").forEach(function (cartao) {
+        var mostra = !termo || cartao.dataset.busca.indexOf(termo) !== -1;
+        cartao.hidden = !mostra;
+        if (mostra) visiveis += 1;
+      });
+      document.getElementById("filaProducaoVazia").hidden = visiveis > 0;
+    });
+  }
 
   var clientes = JSON.parse(
     document.getElementById("opcoesClientesEtiqueta").textContent || "[]"

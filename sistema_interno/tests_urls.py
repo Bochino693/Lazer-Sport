@@ -43,6 +43,8 @@ SO_POST = {
     "atualizar_etapa_producao": "avança etapa da ordem",
     "logout_inner": "encerra a sessão",
     "documento_assinatura_link": "gera um link de 5 minutos e conta no documento",
+    "prazo_producao": "grava o prazo de produção (tests_funil_vendas.py)",
+    "andamento_pedido": "muda a situação do pedido e acerta a venda",
 }
 EXIGEM_PARAMETRO = {
     "campanha_ofertas": "precisa do cliente escolhido",
@@ -60,6 +62,10 @@ SO_DE_UM_REGISTRO = {
     "analises_json": "o tipo de objeto precisa existir",
     "detalhe_json": "a ficha de um objeto cadastrado",
     "detalhe_atividade_json": "a atividade de um objeto cadastrado",
+    # as etiquetas por máquina: o tipo (pedido, orçamento, venda) e o número
+    # precisam existir (tests_funil_vendas.py imprime de verdade)
+    "etiquetas_maquinas": "um pedido, orçamento ou venda cadastrado",
+    "etiquetas_maquinas_imprimir": "um pedido, orçamento ou venda cadastrado",
 }
 
 

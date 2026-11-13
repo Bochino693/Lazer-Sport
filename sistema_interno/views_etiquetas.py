@@ -22,6 +22,7 @@ ninguém faz.
 from django.conf import settings
 from django.db.models import Prefetch
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.generic import View
 
 from core.email_utils import cnpj_empresa, nome_empresa
@@ -93,6 +94,91 @@ def etiqueta_do_orcamento(orcamento) -> dict:
     }
 
 
+#: Quantos de cada origem a fila da produção mostra (os mais recentes).
+FILA_POR_ORIGEM = 30
+
+
+def fila_da_producao(user) -> list[dict]:
+    """O que está na fábrica agora: pedidos pagos e propostas aprovadas.
+
+    É a porta da PRODUÇÃO para o funil (LEIA-ME-V10, seção 89): ela não
+    abre Pedidos (é do Financeiro) nem Orçamentos (é do Comercial), mas é
+    quem fabrica, informa o prazo e imprime as etiquetas de cada máquina.
+    Cada um vê só o que pode mexer -- as mesmas regras de `views_funil`:
+    pedido para Produção, Financeiro e Gestão; orçamento para a Produção e
+    para quem já enxerga aquele orçamento (o Ambulante, só os dele).
+
+    Sem valores: a fila é de máquina, não de dinheiro.
+    """
+    from django.urls import reverse
+
+    from core.models import Pedido
+
+    from .etiquetas_maquinas import ficha_do_pedido
+    from .permissoes import (
+        FINANCEIRO, GESTAO, PRODUCAO, capacidades, limitar_orcamentos, tem_funcao,
+    )
+
+    def maquinas(linhas):
+        return " · ".join(f"{quantidade}× {nome}" for nome, quantidade in linhas)
+
+    def caminho(tipo, pk):
+        return reverse(
+            "etiquetas_maquinas", args=[tipo, pk], urlconf="sistema_interno.urls",
+        )
+
+    fila = []
+    if tem_funcao(user, PRODUCAO, FINANCEIRO, GESTAO):
+        pedidos = (
+            Pedido.objects
+            .filter(status__in=("pago", "em_preparacao", "saiu_entrega"))
+            .select_related("cliente__user")
+            .prefetch_related("itens")
+            .order_by("-criacao", "-id")[:FILA_POR_ORIGEM]
+        )
+        for pedido in pedidos:
+            ficha = ficha_do_pedido(pedido)
+            fila.append({
+                "tipo": "pedido",
+                "objeto": pedido,
+                "numero": ficha["titulo"],
+                "nome": ficha["nome"],
+                "situacao": pedido.get_status_display(),
+                "maquinas": maquinas(
+                    (item.nome_item, item.quantidade) for item in pedido.itens.all()
+                ),
+                "quando": pedido.criacao,
+                "etiquetas": caminho("pedido", pedido.pk),
+            })
+    if tem_funcao(user, PRODUCAO) or capacidades(user)["orcamentos"]:
+        propostas = (
+            Orcamento.objects
+            .filter(status=Orcamento.Status.APROVADO)
+            .select_related("cliente")
+            .prefetch_related("itens")
+            .order_by("-atualizado", "-id")
+        )
+        if not tem_funcao(user, PRODUCAO):
+            propostas = limitar_orcamentos(user, propostas)
+        for orcamento in propostas[:FILA_POR_ORIGEM]:
+            fila.append({
+                "tipo": "orcamento",
+                "objeto": orcamento,
+                "numero": f"Orçamento nº {orcamento.numero_documento}",
+                "nome": orcamento.destinatario,
+                "situacao": (
+                    "Aprovado · pago" if orcamento.quitado else "Aprovado"
+                ),
+                "maquinas": maquinas(
+                    (item.descricao, item.quantidade) for item in orcamento.itens.all()
+                ),
+                "quando": orcamento.respondido_em or orcamento.atualizado,
+                "etiquetas": caminho("orcamento", orcamento.pk),
+            })
+    fila.sort(key=lambda linha: linha["quando"] or timezone.now(), reverse=True)
+    return fila
+
+
 class EtiquetasInnerView(InternoRequiredMixin, View):
     """Monta e imprime etiquetas de frágil; nada é salvo."""
 
@@ -157,4 +243,7 @@ class EtiquetasInnerView(InternoRequiredMixin, View):
             "opcoes_propostas": [
                 etiqueta_do_orcamento(o) for o in propostas
             ],
+            # A fila da produção: o prazo e as etiquetas por máquina de
+            # cada pedido pago e de cada proposta aprovada (seção 89).
+            "fila_producao": fila_da_producao(request.user),
         })

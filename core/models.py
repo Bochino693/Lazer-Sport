@@ -1945,7 +1945,7 @@ class ItemCarrinho(Prime):
         return f"{nome} — adesivo {self.adesivo}" if self.adesivo else nome
 
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 
 class Frete(Prime):
@@ -2013,29 +2013,202 @@ class Pedido(Prime):
 
     impresso = models.BooleanField(default=False, null=True, blank=True)
 
-    def finalizar(self, forma_pagamento=None):
-        """
-        Finaliza o pedido e cria a venda de forma segura.
-        """
-        if self.status == 'finalizado':
-            return self.venda if hasattr(self, 'venda') else None
+    # ------------------------------------------------------------------
+    # O FUNIL: PEDIDO PAGO É VENDA (LEIA-ME-V10, seção 89)
+    # ------------------------------------------------------------------
+    # "Pedidos vêm do site, orçamento a gente faz aqui manual, os dois devem
+    # virar vendas após a finalização." A venda é uma tabela só (`Venda`,
+    # abaixo), a mesma de onde o Financeiro tira a receita -- pelo MÊS DA
+    # VENDA. O orçamento vira venda quando o pagamento chega a 100%; o
+    # pedido do site é pago por inteiro no checkout, então o equivalente
+    # dele é o pagamento aprovado. Daí a regra:
+    #
+    #     o pedido TEM venda  <=>  a situação é uma destas.
+    #
+    # Pago, em preparação, saiu para entrega e finalizado: uma venda, uma
+    # só (o um-para-um da `Venda.pedido` garante). Aguardando pagamento e
+    # cancelado: nenhuma -- se a venda existia (um pedido pago cancelado
+    # depois, o estorno), ela SAI, como sai a do orçamento que deixa de
+    # estar 100% pago. É dado derivado do pagamento, não um registro à parte.
+    #
+    # Quem acerta é `acertar_venda`: o painel (o andamento do pedido), o
+    # `finalizar` e o sinal do pagamento aprovado (core/signals.py) -- o
+    # checkout não é tocado, e o pagamento nunca falha por causa da venda.
+    SITUACOES_PAGAS = ("pago", "em_preparacao", "saiu_entrega", "finalizado")
 
+    #: O caminho do pedido depois de pago, na ordem em que a fábrica anda.
+    #: A retirada pula o "saiu para entrega" (Meus pedidos também pula).
+    ANDAMENTO = ("pago", "em_preparacao", "saiu_entrega", "finalizado")
+
+    #: As formas do checkout traduzidas para as da venda (que não separa
+    #: crédito de débito: as duas são "cartão").
+    FORMA_DA_VENDA = {"pix": "pix", "credito": "cartao", "debito": "cartao"}
+
+    # ---------------- o tempo de produção ----------------
+    # "O tempo de produção a gente deve poder informar em cada pedido ou
+    # orçamento." Em DIAS ÚTEIS (core/producao.py), e a previsão sai
+    # sozinha a partir do começo: o dia em que o pagamento foi aprovado.
+    prazo_producao_dias = models.PositiveSmallIntegerField(
+        "Prazo de produção (dias úteis)",
+        null=True,
+        blank=True,
+        help_text="Quantos dias úteis a fábrica leva para deixar o pedido pronto.",
+    )
+    producao_inicio = models.DateField(
+        "Começo da contagem da produção",
+        null=True,
+        blank=True,
+        help_text="O dia do pagamento aprovado. Preenchido sozinho.",
+    )
+
+    @property
+    def pago(self):
+        return self.status in self.SITUACOES_PAGAS
+
+    @property
+    def inicio_da_producao(self):
+        """De quando os dias úteis contam: o pagamento aprovado.
+
+        O campo é gravado quando o pedido vira venda; o pedido pago de antes
+        desta versão (sem o campo) conta do dia em que foi feito -- a
+        reserva nasce no início do pagamento, minutos antes da aprovação.
+        """
+        if self.producao_inicio:
+            return self.producao_inicio
+        if self.pago and self.criacao:
+            return django_timezone.localtime(self.criacao).date()
+        return None
+
+    @property
+    def previsao_producao(self):
+        from .producao import somar_dias_uteis
+
+        return somar_dias_uteis(self.inicio_da_producao, self.prazo_producao_dias)
+
+    @property
+    def texto_producao(self):
+        """"Produção: 15 dias úteis — previsão 04/12" (Meus pedidos, painel)."""
+        from .producao import texto_da_producao
+
+        return texto_da_producao(self.prazo_producao_dias, self.previsao_producao)
+
+    @property
+    def documento_da_venda(self):
+        """O CPF/CNPJ que a venda leva, sem pontuação (cabe nas 16 da venda).
+
+        O pedido não guarda documento; o carrinho de origem guarda o que o
+        cliente digitou no checkout. É o melhor que existe -- e fica vazio
+        quando não há.
+        """
+        carrinho = self.carrinho_origem if self.carrinho_origem_id else None
+        texto = (getattr(carrinho, "cpf_cnpj", "") or "")
+        return "".join(letra for letra in texto if letra.isalnum()).upper()[:14]
+
+    def acertar_venda(self):
+        """Cria (uma só) ou tira a venda conforme a situação de AGORA.
+
+        Lê a situação do banco, com a linha do pedido travada: o webhook e a
+        consulta do pagamento chegam juntos, e duas abas do painel também --
+        nenhuma das duas cria a segunda venda (e o um-para-um da venda é a
+        última trava). Devolve ("criada" | "desfeita" | "", id da venda).
+        """
         with transaction.atomic():
-            # atualiza status
-            self.status = 'finalizado'
-            self.save(update_fields=['status'])
+            # Sem `select_related` aqui: no PostgreSQL o FOR UPDATE não
+            # aceita o lado nulo de um JOIN (o carrinho de origem é nulo).
+            atual = type(self).objects.select_for_update().get(pk=self.pk)
+            venda = Venda.objects.filter(pedido_id=atual.pk).first()
 
-            # cria venda se não existir
-            venda, created = Venda.objects.get_or_create(
-                pedido=self,
-                defaults={
-                    'valor_pago': self.total_liquido,
-                    'forma_pagamento': forma_pagamento,
-                    'confirmado': True
-                }
-            )
+            if atual.status in self.SITUACOES_PAGAS:
+                if atual.producao_inicio is None:
+                    # `update`, e não `save`: o sinal do pedido escuta o
+                    # `save`, e isto não é mudança de situação.
+                    hoje = django_timezone.localdate()
+                    type(self).objects.filter(pk=atual.pk).update(producao_inicio=hoje)
+                    self.producao_inicio = hoje
+                if venda is not None:
+                    return "", venda.pk
+                try:
+                    with transaction.atomic():
+                        venda = Venda.objects.create(
+                            pedido=atual,
+                            valor_pago=atual.total_final,
+                            forma_pagamento=self.FORMA_DA_VENDA.get(atual.forma_pagamento or ""),
+                            confirmado=True,
+                            cpf=atual.documento_da_venda or None,
+                        )
+                except IntegrityError:
+                    # A outra ponta chegou primeiro: a venda dela vale.
+                    return "", Venda.objects.get(pedido_id=atual.pk).pk
+                return "criada", venda.pk
 
-            return venda
+            if venda is not None:
+                venda_id = venda.pk
+                venda.delete()
+                return "desfeita", venda_id
+            return "", None
+
+    @classmethod
+    def acertar_venda_do_pedido(cls, pedido_id):
+        """O mesmo acerto pelo número (o sinal guarda só o número)."""
+        pedido = cls.objects.filter(pk=pedido_id).first()
+        if pedido is None:
+            return "", None
+        return pedido.acertar_venda()
+
+    def proximas_situacoes(self):
+        """Para onde o painel pode levar o pedido a partir de agora.
+
+        Aguardando pagamento: nada -- quem paga é o cliente, pelo checkout.
+        Cancelado: nada, é o fim. Pago em diante: qualquer passo do
+        andamento (para a frente ou de volta, a correção existe) e o
+        cancelamento. A retirada não tem "saiu para entrega".
+        """
+        if self.status not in self.SITUACOES_PAGAS:
+            return []
+        passos = [
+            passo for passo in self.ANDAMENTO
+            if not (passo == "saiu_entrega" and self.tipo_envio == "retirada")
+        ]
+        return [passo for passo in passos if passo != self.status] + ["cancelado"]
+
+    def mudar_situacao(self, nova):
+        """Leva o pedido a `nova` (o andamento do painel) e acerta a venda.
+
+        Devolve ("criada" | "desfeita" | "", id da venda). Levanta
+        ValueError com a frase da tela quando o passo não existe a partir
+        da situação de agora.
+        """
+        rotulos = dict(self.STATUS_CHOICES)
+        if nova not in rotulos:
+            raise ValueError("Situação desconhecida para o pedido.")
+        with transaction.atomic():
+            atual = type(self).objects.select_for_update().get(pk=self.pk)
+            if nova == atual.status:
+                return atual.acertar_venda()
+            if nova not in atual.proximas_situacoes():
+                if atual.status == "aguardando_pagamento":
+                    raise ValueError(
+                        "Este pedido ainda espera o pagamento do cliente. "
+                        "Ele anda sozinho quando o pagamento for aprovado."
+                    )
+                raise ValueError(
+                    f"O pedido está “{atual.get_status_display()}” e não pode "
+                    f"ir para “{rotulos[nova]}”."
+                )
+            atual.status = nova
+            atual.save(update_fields=["status", "atualizado"])
+            self.status = nova
+            return atual.acertar_venda()
+
+    def finalizar(self, forma_pagamento=None):
+        """Finaliza o pedido pago e devolve a venda dele (uma só).
+
+        A venda normalmente já existe -- nasce no pagamento aprovado -- e
+        aqui só é garantida. `forma_pagamento` fica pela compatibilidade:
+        a forma da venda sai do próprio pedido.
+        """
+        self.mudar_situacao("finalizado")
+        return Venda.objects.filter(pedido_id=self.pk).first()
 
     FORMA_PAGAMENTO_CHOICES = (
         ('pix', 'PIX'),
@@ -2331,6 +2504,33 @@ class Venda(Prime):
     def origem(self):
         """"orcamento" ou "site" -- a etiqueta da tela de Vendas."""
         return "orcamento" if self.orcamento_de_origem is not None else "site"
+
+    @property
+    def origem_objeto(self):
+        """O pedido ou o orçamento de onde a venda veio (ou None)."""
+        if self.pedido_id:
+            return self.pedido
+        return self.orcamento_de_origem
+
+    # O TEMPO DE PRODUÇÃO VIAJA COM A VENDA, MAS NÃO É COPIADO.
+    #
+    # Quem informa o prazo é a equipe, no pedido ou no orçamento; a venda
+    # lê de lá. Uma cópia aqui seria um segundo número para o mesmo prazo,
+    # e na primeira correção os dois divergiriam.
+    @property
+    def prazo_producao_dias(self):
+        origem = self.origem_objeto
+        return getattr(origem, "prazo_producao_dias", None)
+
+    @property
+    def previsao_producao(self):
+        origem = self.origem_objeto
+        return getattr(origem, "previsao_producao", None)
+
+    @property
+    def texto_producao(self):
+        origem = self.origem_objeto
+        return getattr(origem, "texto_producao", "") or ""
 
     def __str__(self):
         # Venda de orçamento não tem pedido: `self.pedido.id` estourava

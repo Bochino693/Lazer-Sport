@@ -41,6 +41,12 @@ from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_avisos_app import AvisosDoAplicativoView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_etiquetas import EtiquetasInnerView
+from .views_funil import (
+    AndamentoPedidoView,
+    EtiquetasDaOrigemView,
+    EtiquetasImpressaoView,
+    PrazoProducaoView,
+)
 from .views_documento_assinatura import (
     DocumentoAssinaturaInnerView,
     EstadoDocumentoAssinaturaView,
@@ -227,6 +233,25 @@ urlpatterns = [
     # Etiqueta é papel: a tela monta, manda para a impressora e acabou.
     # Nada é gravado. Ver `views_etiquetas.py`.
     path('etiquetas/', EtiquetasInnerView.as_view(), name='etiquetas_inner'),
+    # As etiquetas POR MÁQUINA de um pedido, orçamento ou venda: a ficha
+    # que a folha de cópias desenha (JSON) e as folhas A4 para imprimir.
+    # Também nada é gravado. Ver `views_funil.py` e LEIA-ME-V10, seção 89.
+    path(
+        'etiquetas/maquinas/<str:tipo>/<int:pk>/',
+        EtiquetasDaOrigemView.as_view(),
+        name='etiquetas_maquinas',
+    ),
+    path(
+        'etiquetas/maquinas/<str:tipo>/<int:pk>/imprimir/',
+        EtiquetasImpressaoView.as_view(),
+        name='etiquetas_maquinas_imprimir',
+    ),
+    # O prazo de produção (dias úteis) de um pedido ou orçamento.
+    path(
+        'producao/prazo/<str:tipo>/<int:pk>/',
+        PrazoProducaoView.as_view(),
+        name='prazo_producao',
+    ),
 
     # ---------------- orçamentos ----------------
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),
@@ -362,5 +387,12 @@ urlpatterns = [
     # ---------------- demais telas ----------------
     path('vendas/inner/', VendasView.as_view(), name='vendas_inner'),
     path('pedidos/inner/', PedidosView.as_view(), name='pedidos_inner'),
+    # O andamento do pedido do site (pago -> ... -> finalizado); a venda
+    # acompanha. Ver `views_funil.py`.
+    path(
+        'pedidos/<int:pk>/andamento/',
+        AndamentoPedidoView.as_view(),
+        name='andamento_pedido',
+    ),
     path('manutencoes/inner/', ManutencaoInnerView.as_view(), name='manutencao_inner'),
 ]

@@ -173,3 +173,24 @@ def estatico(caminho):
     endereco = static(caminho)
     versao = _impressao_digital(caminho)
     return f"{endereco}?v={versao}" if versao else endereco
+
+
+@register.inclusion_tag("includes/prazo_producao.html")
+def campo_prazo(objeto, compacto=False):
+    """O campo do prazo de produção de um pedido ou orçamento (seção 89).
+
+    O mesmo desenho que o producao-etiquetas.js monta na janela do
+    orçamento: o número de dias úteis, gravado sozinho ao sair do campo, e
+    a previsão embaixo. O número e a nota saem de `views_funil`, a mesma
+    conta da resposta do servidor depois de gravar.
+    """
+    from ..views_funil import dados_do_prazo, prazo_editavel
+
+    dados = dados_do_prazo(objeto)
+    tipo = "orcamento" if objeto.__class__.__name__ == "Orcamento" else "pedido"
+    return {
+        "prazo": dados,
+        "editavel": prazo_editavel(objeto),
+        "id_campo": f"prazo-{tipo}-{objeto.pk}",
+        "compacto": compacto,
+    }

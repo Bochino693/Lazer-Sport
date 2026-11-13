@@ -146,6 +146,19 @@
                   <span class="pd-passo-nome">Finalizado</span>
               </li>
           </ol>
+          {% comment %}
+              O TEMPO DE PRODUÇÃO (LEIA-ME-V10, seção 89): a fábrica informa
+              em dias úteis, e a previsão conta do pagamento aprovado --
+              "Produção: 15 dias úteis — previsão 04/12". Some quando o
+              pedido é finalizado (a máquina já chegou) e quando ninguém
+              informou o prazo (prazo que ninguém deu não é prazo zero).
+          {% endcomment %}
+          {% if pedido.prazo_producao_dias is not None and status != 'finalizado' %}
+          <p class="pd-producao">
+              <i class="fa-solid fa-industry" aria-hidden="true"></i>
+              <span>{{ pedido.texto_producao }}</span>
+          </p>
+          {% endif %}
         {% endif %}
 
         {# O RESUMO: as fotos dos produtos e o total #}

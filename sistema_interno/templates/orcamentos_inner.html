@@ -380,6 +380,33 @@
           </button>
         </section>
 
+        {% comment %}
+          O TEMPO DE PRODUÇÃO E AS ETIQUETAS (LEIA-ME-V10, seção 89).
+
+          "O tempo de produção a gente deve poder informar em cada pedido ou
+          orçamento." O campo grava sozinho ao sair dele (por fetch, sem
+          salvar a proposta inteira -- e por isso vale também depois de
+          enviada e de aprovada), em DIAS ÚTEIS; antes da aprovação a nota
+          diz "15 dias úteis após a aprovação" (é o que a proposta do cliente
+          mostra), depois dela, a previsão. Na proposta aprovada, as
+          etiquetas por máquina: a mesma folha de cópias de Pedidos e Vendas.
+          O producao-etiquetas.js monta o campo (`LSProducao.campoPrazo`).
+        {% endcomment %}
+        <section class="ls-orcamento-pagamento ls-orcamento-etapa ls-orcamento-producao" id="orcamentoProducao" hidden
+                 aria-label="Produção e etiquetas">
+          <div class="ls-orcamento-pagamento-titulo">
+            <span><i class="bi bi-hammer" aria-hidden="true"></i> Produção e etiquetas</span>
+            <strong id="orcamentoProducaoSituacao">Prazo</strong>
+          </div>
+          <div id="orcamentoProducaoCampo"></div>
+          <div class="ls-orcamento-producao-acoes">
+            <button type="button" class="btn btn-outline-primary" id="orcamentoProducaoEtiquetas" hidden
+                    aria-haspopup="dialog">
+              <i class="bi bi-upc-scan me-1" aria-hidden="true"></i> Imprimir etiquetas
+            </button>
+          </div>
+        </section>
+
         <div class="mt-3">
           <label class="form-label" for="orcamentoObs">Observações</label>
           <textarea class="form-control" id="orcamentoObs" name="observacoes" rows="2"
@@ -1968,8 +1995,52 @@ LSTela.pronto(function () {
   function atualizarPagamentoDoOrcamento() {
     atualizarDocumentoDoOrcamento();
     desenharQuadroDoPagamento();
+    desenharProducao();
     desenharEtapas();
   }
+
+  /* O TEMPO DE PRODUÇÃO E AS ETIQUETAS (seção 89). O campo é o do
+     producao-etiquetas.js e grava sozinho; aqui só se monta e se guarda o
+     que ele devolveu no orçamento em memória -- reabrir a janela mostra o
+     prazo novo sem recarregar a lista. */
+  function desenharProducao() {
+    var painel = document.getElementById("orcamentoProducao");
+    if (!painel) return;
+    var orcamento = orcamentoEmEdicao;
+    var producao = orcamento && orcamento.producao;
+    painel.hidden = !(producao && window.LSProducao);
+    var caixa = document.getElementById("orcamentoProducaoCampo");
+    if (painel.hidden) {
+      caixa.replaceChildren();
+      delete caixa.dataset.orcamento;
+      return;
+    }
+    /* A janela recalcula os totais a cada tecla nos itens; o campo do
+       prazo só é refeito quando muda o orçamento aberto -- senão quem
+       estivesse digitando nele perderia o foco. */
+    if (caixa.dataset.orcamento !== String(orcamento.id)) {
+      caixa.replaceChildren(window.LSProducao.campoPrazo(producao));
+      caixa.dataset.orcamento = String(orcamento.id);
+    }
+    document.getElementById("orcamentoProducaoSituacao").textContent =
+      producao.previsao ? "Pronto em " + producao.previsao.slice(0, 5)
+        : producao.dias == null ? "Sem prazo" : "Prazo";
+    var etiquetas = document.getElementById("orcamentoProducaoEtiquetas");
+    etiquetas.hidden = !producao.etiquetas;
+    if (producao.etiquetas) etiquetas.dataset.etiquetasUrl = producao.etiquetas;
+    else etiquetas.removeAttribute("data-etiquetas-url");
+  }
+
+  document.getElementById("orcamentoProducao")?.addEventListener("ls:prazo-salvo", function (evento) {
+    if (!orcamentoEmEdicao || !orcamentoEmEdicao.producao) return;
+    var novo = evento.detail || {};
+    ["dias", "previsao", "inicio", "nota", "texto"].forEach(function (chave) {
+      orcamentoEmEdicao.producao[chave] = novo[chave];
+    });
+    document.getElementById("orcamentoProducaoSituacao").textContent =
+      novo.previsao ? "Pronto em " + novo.previsao.slice(0, 5)
+        : novo.dias == null ? "Sem prazo" : "Prazo";
+  });
 
   function desenharQuadroDoPagamento() {
     var painel = document.getElementById("orcamentoPagamentoResumo");
