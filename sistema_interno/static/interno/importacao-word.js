@@ -475,6 +475,7 @@ LSTela.pronto(function () {
     var mapa = {
       "valores.frete": "campoFrete", "valores.desconto": "campoDesconto",
       "condicoes.validade": "campoValidade", "cliente.documento": "campoDocumento",
+      "documento.data": "campoDataDocumento",
       "cliente.telefone": "campoTelefone", "cliente.email": "campoEmail"
     };
     if (mapa[chave]) return document.getElementById(mapa[chave]);
@@ -612,6 +613,14 @@ LSTela.pronto(function () {
     var lista_ = [];
     function falta(alvo, rotulo, motivo) { lista_.push({ alvo: alvo, rotulo: rotulo, motivo: motivo }); }
 
+    /* A data do documento: o primeiro passo do modal. O orçamento guarda
+       essa data (e conta dela a validade); o cliente sozinho não a exige. */
+    var dataDocumento = valorDe("campoDataDocumento");
+    if (dataDocumento && dataDocumento > dados.hoje) {
+      falta("campoDataDocumento", "Data do documento", "a data do documento não pode ser depois de hoje");
+    } else if (!dataDocumento && caminho !== "cliente") {
+      falta("campoDataDocumento", "Data do documento", "diga de quando é o documento: a proposta guarda essa data");
+    }
     if (modoAtual === "existente") {
       if (!campoClienteId.value) falta("clienteBusca", "Cliente", "escolha o cliente cadastrado na busca (ou cadastre um novo)");
       else if (campoClienteId.value === dados.cliente.id && dados.cliente.confianca !== "alta"
@@ -694,7 +703,15 @@ LSTela.pronto(function () {
     var validade = valorDe("campoValidade");
     var notaValidade = document.getElementById("notaValidade");
     if (notaValidade) notaValidade.hidden = !!validade;
-    if (validade && validade < dados.hoje) falta("campoValidade", "Validade", "a validade não pode ser anterior a hoje");
+    /* Os dias da validade contam da data do documento quando ele é de
+       antes de hoje (o contrato de 2016 vale até 2016 + 5 dias). */
+    var dataDoc = valorDe("campoDataDocumento");
+    var baseValidade = dataDoc && dataDoc < dados.hoje ? dataDoc : dados.hoje;
+    if (validade && validade < baseValidade) {
+      falta("campoValidade", "Validade", baseValidade < dados.hoje
+        ? "a validade não pode ser anterior à data do documento"
+        : "a validade não pode ser anterior a hoje");
+    }
 
     form.querySelectorAll(".ls-imp-alerta.vermelho").forEach(function (alerta) {
       var resolvido = alertaResolvido(alerta, conta);
@@ -849,6 +866,7 @@ LSTela.pronto(function () {
     lista_.forEach(function (p) {
       var alvo = p.alvo ? document.getElementById(p.alvo) : null;
       var painel = painelDe(alvo);
+      if (alvo && !painel) return;
       var nome = painel ? painel.dataset.painel : "valores";
       faltas[nome] = (faltas[nome] || 0) + 1;
     });
@@ -1016,14 +1034,50 @@ LSTela.pronto(function () {
     )).filter(function (el) { return el.offsetParent !== null; });
   }
 
+  /* PASSOS. Um de cada vez, com botões grandes: a data (só quando o
+     documento não diz, ou diz uma data de agora), o cliente, e os itens com
+     os dois caminhos. Cada passo mostra o que está certo numa linha e o que
+     falta em destaque. */
+  var passos = decisao ? Array.prototype.slice.call(decisao.querySelectorAll("[data-passo]")) : [];
+
+  function irParaPasso(nome, comFoco) {
+    var alvo = null;
+    passos.forEach(function (passo) {
+      var este = passo.dataset.passo === nome;
+      passo.hidden = !este;
+      if (este) alvo = passo;
+    });
+    if (!alvo) return;
+    var chegou = false;
+    decisao.querySelectorAll("[data-marca-passo]").forEach(function (marca) {
+      var atual = marca.dataset.marcaPasso === nome;
+      if (atual) chegou = true;
+      marca.classList.toggle("atual", atual);
+      marca.classList.toggle("feito", !chegou);
+      if (atual) marca.setAttribute("aria-current", "step"); else marca.removeAttribute("aria-current");
+    });
+    if (comFoco) {
+      var foco = nome === "itens"
+        ? (alvo.querySelector(".recomendado .ls-imp-caminho-botao") || alvo.querySelector(".ls-imp-passo-titulo"))
+        : nome === "data"
+          ? (alvo.querySelector(".ls-imp-data-opcao.sugerida") || alvo.querySelector(".ls-imp-passo-titulo"))
+          : alvo.querySelector(".ls-imp-passo-seguir") || alvo.querySelector(".ls-imp-passo-titulo");
+      window.setTimeout(function () { if (foco) foco.focus(); }, reduzirMovimento ? 0 : 60);
+    }
+  }
+
+  function primeiroPasso() {
+    var visivel = passos.filter(function (passo) { return !passo.hidden; })[0];
+    return (visivel || passos[0] || { dataset: {} }).dataset.passo;
+  }
+
   function abrirDecisao() {
     if (!decisao) return;
     focoAntesDoModal = document.activeElement;
     decisao.hidden = false;
     document.documentElement.classList.add("ls-imp-modal-aberto");
     window.requestAnimationFrame(function () { decisao.classList.add("aberto"); });
-    var primeiro = cartaoDecisao.querySelector(".recomendado .ls-imp-caminho-botao") || focaveis()[0];
-    window.setTimeout(function () { (primeiro || cartaoDecisao).focus(); }, reduzirMovimento ? 0 : 60);
+    irParaPasso(primeiroPasso(), true);
   }
 
   function fecharDecisao(paraGuiada) {
@@ -1053,6 +1107,8 @@ LSTela.pronto(function () {
   if (decisao) {
     decisao.addEventListener("click", function (evento) {
       if (evento.target.closest("[data-fechar-decisao]")) { fecharDecisao(true); return; }
+      var passo = evento.target.closest("[data-ir-passo]");
+      if (passo) { irParaPasso(passo.dataset.irPasso, true); return; }
       var botao = evento.target.closest("[data-decidir]");
       if (!botao) return;
       if (chaveOrcamento) chaveOrcamento.checked = botao.dataset.decidir === "orcamento";

@@ -167,6 +167,13 @@
   --verniz-rgb:255,255,255;
   /* Branco de verdade, que não é véu nem tema: o forro do logotipo. */
   --verniz-solido:#FFFFFF;
+  /* A placa atrás da logo de um CLIENTE (cartão da tela de Clientes).
+     Também não muda com o tema, e não é branca de propósito: a logo
+     chega de fora, e tanto pode ser tinta escura sobre transparente
+     quanto letra branca feita para fundo escuro. No branco a segunda
+     some; no escuro, a primeira. Um cinza-lilás de meia luz mostra as
+     duas, e as coloridas continuam vivas. */
+  --logo-placa:#C2BECA;
 
   /* A cor que se LÊ. No escuro ela é a mesma de sempre: acento aceso
      sobre quase-preto já tem contraste de sobra. Ver o tema claro,
@@ -338,6 +345,7 @@
 
   --verniz-rgb:42,22,48;
   --verniz-solido:#FFFFFF;
+  --logo-placa:#C2BECA;
 
   --sombra-rgb:72,36,60;
   /* Sombra de papel é curta e fraca. A do escuro, transposta, deixa
@@ -478,6 +486,7 @@
 
   --verniz-rgb:255,255,255;
   --verniz-solido:#FFFFFF;
+  --logo-placa:#C2BECA;
 
   --sombra-rgb:14,6,26;
   --shadow:0 20px 52px rgba(14,6,26,.34);
@@ -5547,6 +5556,9 @@ body.ls-body{
      * Tela que só tinha tabela (Usuários, Clientes, Orçamentos, O.S.):
        no modo CARDS cada <tr> vira um cartão, numa grade; as células
        ganham o rótulo da coluna (`data-label` / `data-rotulo`) em cima.
+       A tela pode pedir mais que isso -- a barra de ações no pé do
+       cartão e o cartão de perfil, centrado e com o rosto em cima: ver
+       "LISTA OU CARDS, SEGUNDA PARTE", no fim desta folha.
 
    No celular a lista é de linhas compactas empilhadas (nada de tabela
    larga rolando de lado); os cards ficam um por linha, dois no tablet.
@@ -5820,4 +5832,525 @@ body.ls-body{
 @media (min-width:1200px) and (max-width:1599px){
   .ls-content .ls-orcamentos-table :is(th[data-coluna="Origem"],td[data-rotulo="Origem"]){display:none}
   .ls-content .ls-orcamentos-table td[data-rotulo="Cliente"] .ls-linha-apoio{display:block;margin-top:4px}
+}
+
+
+/* ======================================================================
+   EQUIPE ONLINE (a pilha de avatares da barra de cima)
+
+   "vc deve mostrar qual usuário está logado": ao lado da conta de quem
+   está usando, quem mais da casa está com o painel, o site ou o aplicativo
+   aberto agora. Até quatro avatares e "+N"; o toque abre a lista com o
+   nome, o papel, onde a pessoa está e desde quando. Quem enche (e atualiza
+   a cada 45 s) é o interno/ls-presenca.js; ver LEIA-ME-V10, seção 76.
+
+   O verde é o de sempre no painel: estado (online), ao lado da palavra.
+   Os avatares usam os tons frios do tema, transparentes: laranja
+   transparente sobre o ameixa vira marrom, e marrom é o que não se quer.
+   ====================================================================== */
+.ls-equipe{position:relative;flex:0 0 auto}
+.ls-equipe[hidden]{display:none}
+/* A pilha ocupa uns 110px da barra. No tablet isso espremia o título, e a
+   linha de baixo ("Operação Lazer & Sport") quebrava em três e empurrava o
+   nome da tela para fora da barra: ela fica numa linha só, com reticências. */
+.ls-topbar-copy span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* E no tablet (721 a 1100px) o espaço da pilha sai do botão "Aparência", que
+   fica só com o astro e a setinha (como já fica no celular; o nome do tema
+   continua no rótulo falado e no painel que ele abre). O nome da tela nunca
+   passa de duas linhas. */
+.ls-topbar-copy strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (min-width:721px) and (max-width:1100px){
+  .ls-tema-gatilho>.ls-tema-gatilho-texto{display:none}
+  /* o nome da tela em duas linhas mais a linha de baixo não cabem nos 60px da barra */
+  .ls-topbar-copy span{display:none}
+}
+.ls-equipe-botao{
+  display:inline-flex;align-items:center;min-height:46px;padding:0 10px 0 8px;cursor:pointer;
+  border:1px solid var(--line);border-radius:999px;background:rgba(var(--panel-rgb),.8);color:var(--text-2);font:inherit;
+  transition:border-color .16s ease,background .16s ease,transform .12s ease;
+}
+.ls-equipe-botao:hover{border-color:var(--line-forte)}
+.ls-equipe-botao:active{transform:scale(.97)}
+.ls-equipe-botao:focus-visible{outline:2px solid rgba(var(--acento-rgb),.75);outline-offset:2px}
+.ls-equipe-pilha{display:inline-flex;align-items:center;padding-left:6px}
+.ls-equipe-avatar{
+  --ls-eq-rgb:var(--muted-rgb);--ls-eq-texto:var(--text-2);
+  position:relative;flex:0 0 auto;display:inline-grid;place-items:center;width:30px;height:30px;margin-left:-6px;border-radius:50%;
+  /* o anel na cor da barra separa um avatar do vizinho (e não uma borda escura) */
+  border:2px solid var(--bg-1);
+  background:linear-gradient(135deg,rgba(var(--ls-eq-rgb),.42),rgba(var(--ls-eq-rgb),.22)),var(--panel-2);
+  color:var(--ls-eq-texto);font-size:.62rem;font-weight:900;letter-spacing:.02em;line-height:1;text-transform:uppercase;
+}
+.ls-equipe-avatar.is-c0{--ls-eq-rgb:var(--magenta-rgb);--ls-eq-texto:var(--magenta-texto)}
+.ls-equipe-avatar.is-c1{--ls-eq-rgb:var(--violet-rgb);--ls-eq-texto:var(--violet-texto)}
+.ls-equipe-avatar.is-c2{--ls-eq-rgb:var(--info-rgb);--ls-eq-texto:var(--info-texto)}
+.ls-equipe-avatar.is-c3{--ls-eq-rgb:var(--apoio-rgb);--ls-eq-texto:var(--apoio-texto)}
+.ls-equipe-mais{--ls-eq-rgb:var(--muted-rgb);--ls-eq-texto:var(--text);font-size:.6rem;letter-spacing:0}
+/* o ponto verde no canto da pilha: há gente online */
+.ls-equipe-pilha::after{
+  content:"";width:9px;height:9px;margin-left:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 3px rgba(var(--green-rgb),.22);
+}
+
+.ls-equipe-painel{
+  position:absolute;top:calc(100% + 12px);right:0;z-index:1200;width:min(94vw,340px);padding:8px;
+  border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));box-shadow:var(--shadow);
+  max-height:min(70vh,520px);overflow-y:auto;transform-origin:top right;
+  animation:ls-abre .18s cubic-bezier(.16,.84,.44,1);
+}
+.ls-equipe-painel[hidden]{display:none}
+.ls-equipe-topo{display:flex;align-items:center;gap:9px;padding:10px 12px 10px;color:var(--text);font-size:.86rem}
+.ls-equipe-topo strong{font-weight:900}
+.ls-equipe-pulso{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(var(--green-rgb),.22)}
+.ls-equipe-lista{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.ls-equipe-pessoa{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-md)}
+.ls-equipe-pessoa:hover{background:rgba(var(--verniz-rgb),.05)}
+.ls-equipe-avatar.is-grande{width:36px;height:36px;margin-left:0;border-color:transparent;font-size:.7rem}
+.ls-equipe-texto{display:grid;gap:2px;min-width:0}
+.ls-equipe-texto strong{display:flex;align-items:center;gap:6px;min-width:0;color:var(--text);font-size:.84rem;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.ls-equipe-texto small{color:var(--muted);font-size:.72rem;line-height:1.35}
+.ls-equipe-voce{
+  flex:0 0 auto;padding:2px 7px;border-radius:999px;background:var(--acento);color:var(--acento-tinta);
+  font-size:.58rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;line-height:1.3;
+}
+.ls-equipe-quando{color:var(--muted);font-size:.7rem;font-weight:700;white-space:nowrap}
+.ls-equipe-nota{display:block;padding:8px 12px 6px;color:var(--muted);font-size:.7rem;line-height:1.4}
+
+/* No celular a barra é do título e do sino: a pilha encolhe (quantos
+   avatares cabem quem decide é o ls-presenca.js, para o "+N" contar
+   certo) e a lista abre presa à tela. */
+@media (max-width:760px){
+  .ls-equipe-botao{min-height:44px;padding:0 8px 0 6px}
+  .ls-equipe-avatar{width:28px;height:28px}
+  .ls-equipe-pilha::after{margin-left:5px}
+  .ls-equipe-painel{position:fixed;top:calc(var(--topbar-h) + 14px);right:10px;left:10px;width:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .ls-equipe-painel{animation:none}
+}
+
+
+/* ======================================================================
+   O PAGINADOR EM ESTILO APP (includes/paginacao_app.html)
+
+   "1–18 de 73" de um lado; do outro, Anterior, as páginas em pílulas e
+   Próxima. A página atual é o acento cheio com a tinta escura (o mesmo
+   aceso dos filtros). No celular as setas ficam só com o ícone, com o alvo
+   de 44px, e as páginas rolam de lado se não couberem.
+   ====================================================================== */
+.ls-pager{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;
+  margin:0;padding:14px 16px;border-top:1px solid var(--line-soft);
+}
+.ls-pager-conta{margin:0;color:var(--muted);font-size:.82rem;font-variant-numeric:tabular-nums}
+.ls-pager-conta strong{color:var(--text);font-weight:900}
+.ls-pager-passos{display:flex;align-items:center;gap:6px;min-width:0;margin-left:auto}
+.ls-pager-paginas{display:flex;align-items:center;gap:4px;min-width:0;margin:0;padding:2px;list-style:none;overflow-x:auto;scrollbar-width:none}
+.ls-pager-paginas::-webkit-scrollbar{display:none}
+.ls-pager-paginas li{flex:0 0 auto}
+.ls-pager-pagina,.ls-pager-seta{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:40px;min-height:40px;padding:0 12px;
+  border:1px solid var(--line-soft);border-radius:12px;background:rgba(var(--verniz-rgb),.03);
+  color:var(--text-2)!important;font-size:.82rem;font-weight:800;line-height:1;text-decoration:none!important;font-variant-numeric:tabular-nums;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-pager-pagina{padding:0 6px}
+a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);color:var(--text)!important;background:rgba(var(--verniz-rgb),.07)}
+.ls-pager-pagina:focus-visible,.ls-pager-seta:focus-visible{outline:2px solid rgba(var(--acento-rgb),.75);outline-offset:2px}
+.ls-pager-pagina.is-atual{border-color:var(--acento);background:var(--acento);color:var(--acento-tinta)!important;cursor:default}
+.ls-pager-seta.is-parada{opacity:.42;cursor:default}
+.ls-pager-salto{min-width:18px;color:var(--muted);font-weight:800;text-align:center}
+@media (max-width:640px){
+  .ls-pager{padding:12px}
+  .ls-pager-conta{flex-basis:100%;text-align:center}
+  .ls-pager-passos{width:100%;margin-left:0;justify-content:space-between}
+  .ls-pager-seta{min-width:44px;min-height:44px;padding:0 10px}
+  .ls-pager-seta span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ls-pager-pagina{min-width:44px;min-height:44px}
+}
+@media (prefers-reduced-motion:reduce){
+  .ls-pager-pagina,.ls-pager-seta{transition:none}
+}
+
+/* ======================================================================
+   LISTA OU CARDS, SEGUNDA PARTE — a barra de ações do cartão e o cartão
+   que a tela desenha
+
+   A tabela que vira cartões (acima) empilha as células com o rótulo da
+   coluna em cima e deixa as ações num "⋮" solto no pé. Serve a qualquer
+   lista, e parece o que é: uma linha de tabela dobrada numa caixa. Duas
+   extensões, as duas pedidas pelo contêiner da lista (`.ls-visao-alvo`)
+   e sem efeito nenhum em quem não as pede:
+
+   1. `data-visao-acoes="barra"` — A BARRA DE AÇÕES ("nos cards, melhore
+      as ações deixando estilo app"). No pé do cartão, de ponta a ponta:
+      as ações mais usadas como botões com ícone e nome, e "Mais", que
+      abre o resto numa folha de ações (no celular ela sobe do pé da
+      tela; no PC é o balão de sempre). Quem monta é `ls-listas.js`, a
+      partir das ações que a linha já tem: a tela só marca as principais
+      com `data-acao-cartao="Nome curto"` (sem marca, vão as duas
+      primeiras que não apagam nada). A ação perigosa fica na folha,
+      separada e vermelha.
+
+   2. `data-visao-cartao="perfil"` — O CARTÃO DE PERFIL ("no modo card,
+      centralize o conteúdo e se houver logo no cliente, mostre a logo").
+      Sem rótulo de coluna e sem linha divisória: o rosto em cima (a logo
+      ou as iniciais, `data-v="avatar"`), o nome, os selos, e as células
+      como blocos centrados, na ordem do cartão e não da tabela. As
+      partes: `data-v="rosto|elo|contato|local|numeros|total"`. O que só
+      existe no cartão leva `data-visao-so="cards"`; a célula que não tem
+      o que dizer no cartão leva `data-visao-so="lista"`.
+
+   Continua valendo "um item, duas apresentações": o cartão é a mesma
+   <tr> da lista. Só variável do tema, e nada que repinte na rolagem:
+   borda de 1px no lugar de sombra larga, nenhum filtro.
+   ====================================================================== */
+
+/* ---- 1. a barra de ações ---- */
+.ls-cartao-acoes{display:none}
+.ls-folha-divisor,.ls-folha-nome{display:none}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-visao-tabela tbody td:is(.ls-actions,.ls-commercial-actions){
+  position:static!important;display:flex!important;align-items:stretch;gap:0;overflow:hidden;
+  width:auto!important;min-width:0!important;z-index:auto;
+  margin:auto calc(-1 * var(--cartao-borda,14px)) calc(-1 * var(--cartao-borda,14px))!important;
+  padding:0!important;border-top:1px solid var(--line)!important;
+  border-radius:0 0 var(--cartao-raio,17px) var(--cartao-raio,17px);
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acoes,.ls-row-actions){display:contents!important}
+/* a ação que já tem botão na barra não aparece duas vezes */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-row-actions[data-barra="1"] > :not(.ls-action-fab){display:none!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-action-fab{display:flex!important;flex:1 1 auto;min-width:0}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-action-fab[data-sem-resto]{display:none!important}
+/* a largura segue o nome: "Histórico" pede mais lugar que "Mais" */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger){
+  flex:1 1 auto;width:auto!important;height:auto!important;min-width:0!important;min-height:48px!important;
+  margin:0!important;padding:6px 8px!important;
+  display:inline-flex!important;align-items:center;justify-content:center;gap:7px;
+  border:0!important;border-left:1px solid var(--line-soft)!important;border-radius:0!important;
+  color:var(--text-2)!important;background:transparent!important;box-shadow:none!important;transform:none!important;
+  font-family:inherit;font-size:.8rem!important;font-weight:850!important;line-height:1.1!important;
+  text-decoration:none!important;white-space:nowrap;cursor:pointer;
+  transition:background .14s ease,color .14s ease;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acoes > .ls-cartao-acao:first-child{border-left:0!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger) i{
+  flex:0 0 auto;font-size:1rem;line-height:1;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger) span{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;
+}
+/* a primeira é a que mais se usa: leva a cor de ação */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--principal{color:var(--acento-texto)!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--perigo{color:var(--red-texto)!important}
+/* o que conclui (o botão verde da lista: o documento do orçamento aprovado) */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--conclui{color:var(--green-texto)!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger):focus-visible{
+  outline:2px solid var(--acento)!important;outline-offset:-3px;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-action-fab.is-open .ls-action-fab-trigger,
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger):active{
+  color:var(--acento-texto)!important;background:rgba(var(--acento-rgb),.14)!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--perigo:active{
+  color:var(--red-texto)!important;background:rgba(var(--red-rgb),.12)!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--conclui:active{
+  color:var(--green-texto)!important;background:rgba(var(--green-rgb),.14)!important;
+}
+/* só onde há ponteiro: no toque, o "hover" ficaria preso depois do dedo sair */
+@media (hover:hover){
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] :is(.ls-cartao-acao,.ls-action-fab-trigger):hover{
+    color:var(--acento-texto)!important;background:rgba(var(--acento-rgb),.09)!important;
+  }
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--perigo:hover{
+    color:var(--red-texto)!important;background:rgba(var(--red-rgb),.09)!important;
+  }
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"] .ls-cartao-acao--conclui:hover{
+    color:var(--green-texto)!important;background:rgba(var(--green-rgb),.1)!important;
+  }
+}
+/* lista em que algum cartão tem quatro botões: o ícone sobe para cima do
+   nome, em todos os cartões (uma fileira com barras diferentes parece defeito) */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-acoes="barra"][data-barra-cheia] :is(.ls-cartao-acao,.ls-action-fab-trigger){
+  flex-direction:column;gap:4px;min-height:54px!important;padding:7px 4px!important;font-size:.72rem!important;
+}
+
+/* ---- a folha de ações (o que "Mais" abre) ----
+   É o mesmo menu flutuante das tabelas (`.ls-action-fab-menu`, que mora
+   no <body>), noutra roupa enquanto a lista está em cards: uma ação por
+   linha, com ícone e nome, alvo de 46px; o que já está na barra não se
+   repete; a ação que apaga fica depois de uma linha, em vermelho. */
+.ls-action-fab-menu[data-folha="1"]{
+  grid-template-columns:1fr;width:min(280px,calc(100vw - 20px));padding:8px;gap:2px;border-radius:16px;
+  border-color:var(--line);background:var(--panel);
+}
+.ls-action-fab-menu[data-folha="1"].is-open{grid-template-columns:1fr}
+.ls-action-fab-menu[data-folha="1"] > [data-na-barra]{display:none!important}
+.ls-action-fab-menu[data-folha="1"] .ls-action-fab-head{
+  margin:0 0 4px;padding:6px 10px 9px;flex-direction:column;align-items:flex-start;gap:2px;
+  border-bottom:1px solid var(--line-soft);
+}
+.ls-action-fab-menu[data-folha="1"] .ls-action-fab-head span{color:var(--muted);font-size:.66rem;letter-spacing:.07em;text-transform:uppercase}
+.ls-action-fab-menu[data-folha="1"] .ls-folha-nome{
+  display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--text);font-size:.9rem;font-weight:900;
+}
+.ls-action-fab-menu[data-folha="1"] > .btn,.ls-action-fab-menu[data-folha="1"] > form > .btn,
+.ls-action-fab-menu[data-folha="1"] > a,.ls-action-fab-menu[data-folha="1"] > button{
+  min-height:46px!important;padding:9px 12px!important;gap:12px;border:0!important;border-radius:11px!important;
+  color:var(--text)!important;background:transparent!important;font-size:.86rem!important;font-weight:800!important;
+}
+.ls-action-fab-menu[data-folha="1"] i{width:22px;flex:0 0 22px;font-size:1.08rem;color:var(--acento-texto)}
+.ls-action-fab-menu[data-folha="1"] > .btn:hover,.ls-action-fab-menu[data-folha="1"] > form > .btn:hover,
+.ls-action-fab-menu[data-folha="1"] > a:hover,.ls-action-fab-menu[data-folha="1"] > button:hover,
+.ls-action-fab-menu[data-folha="1"] :is(a,button):focus-visible{
+  color:var(--text)!important;background:rgba(var(--acento-rgb),.11)!important;transform:none;
+}
+.ls-action-fab-menu[data-folha="1"] :is(a,button):focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
+/* o que apaga desce para o fim, depois da linha (a ordem é do CSS: na
+   lista o menu continua como a tela o escreveu) */
+.ls-action-fab-menu[data-folha="1"] .ls-folha-divisor{display:block;order:1;height:1px;margin:5px 8px;background:var(--line)}
+.ls-action-fab-menu[data-folha="1"] > .ls-folha-perigo{order:2}
+.ls-action-fab-menu[data-folha="1"] :is(.btn-outline-danger,[data-excluir],[data-excluir-os],[data-acao-perigosa]),
+.ls-action-fab-menu[data-folha="1"] :is(.btn-outline-danger,[data-excluir],[data-excluir-os],[data-acao-perigosa]) i{
+  color:var(--red-texto)!important;
+}
+.ls-action-fab-menu[data-folha="1"] :is(.btn-outline-danger,[data-excluir],[data-excluir-os],[data-acao-perigosa]):is(:hover,:focus-visible){
+  background:rgba(var(--red-rgb),.11)!important;
+}
+/* NO CELULAR A FOLHA SOBE DO PÉ DA TELA, onde o polegar está, com o
+   resto escurecido atrás. O véu (`.ls-folha-veu`, posto no <body> por
+   ls-listas.js) recebe o toque "fora": fecha a folha e não deixa o dedo
+   acionar o cartão de baixo -- por isso some devagar, ainda tocável por
+   um instante depois que a folha fecha. Os dois passam por cima das abas
+   do pé do painel (z-index 1100); com uma janela aberta o véu some, como
+   tudo o que é fixo acima dela. */
+.ls-folha-veu{display:none}
+body.modal-open .ls-folha-veu{display:none!important}
+@media (max-width:760px){
+  .ls-action-fab-menu[data-folha="1"]{
+    z-index:1120;left:0!important;right:0!important;top:auto!important;bottom:0!important;
+    width:100%!important;max-height:min(78vh,calc(var(--ls-vh) - 48px));
+    padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));gap:4px;
+    border-width:1px 0 0;border-radius:22px 22px 0 0;box-shadow:none;
+    transform:translateY(28px);transform-origin:bottom center;
+  }
+  .ls-action-fab-menu[data-folha="1"].is-open{transform:none}
+  .ls-action-fab-menu[data-folha="1"]::before{
+    content:"";justify-self:center;width:40px;height:4px;margin:2px 0 6px;border-radius:99px;background:var(--line-forte);
+  }
+  .ls-action-fab-menu[data-folha="1"] > .btn,.ls-action-fab-menu[data-folha="1"] > form > .btn,
+  .ls-action-fab-menu[data-folha="1"] > a,.ls-action-fab-menu[data-folha="1"] > button{
+    min-height:52px!important;padding:12px 14px!important;font-size:.95rem!important;
+  }
+  .ls-folha-veu{
+    display:block;position:fixed;inset:0;z-index:1119;background:rgba(var(--sombra-rgb),.55);
+    opacity:0;visibility:hidden;transition:opacity .2s ease,visibility 0s linear .35s;
+  }
+  .ls-folha-veu.is-open{opacity:1;visibility:visible;transition-delay:0s}
+}
+
+/* ---- 2. o cartão de perfil ---- */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody{
+  /* uma coluna no celular, duas no tablet, três ou quatro no PC -- e nunca
+     mais de quatro, por mais larga que seja a tela */
+  grid-template-columns:repeat(auto-fill,minmax(max(min(100%,248px),calc((100% - 48px) / 4)),1fr));
+  gap:16px;
+}
+/* no celular, um por linha -- como os cartões de todas as outras listas */
+@media (max-width:640px){
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody{grid-template-columns:minmax(0,1fr);gap:12px}
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody tr:not([hidden]){
+  --cartao-borda:16px;--cartao-raio:21px;
+  isolation:isolate;align-items:stretch;padding:18px 16px 16px!important;
+  border-radius:22px!important;background:var(--panel)!important;box-shadow:none!important;
+  text-align:center;
+}
+/* a faixa de cima, atrás do rosto */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody tr:not([hidden])::before{
+  content:"";position:absolute;z-index:-1;inset:0 0 auto;height:60px;
+  border-bottom:1px solid var(--line-soft);border-radius:21px 21px 0 0;background:var(--acento-fundo);
+}
+/* "nenhum cliente": um aviso de ponta a ponta, e não um cartão sem rosto */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody tr[data-lista-vazia]:not([hidden]){
+  grid-column:1/-1;padding:8px!important;border-style:dashed!important;background:transparent!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody tr[data-lista-vazia]::before{content:none}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody tr[data-lista-vazia] td{margin:0!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td{
+  display:block!important;margin:14px 0 0!important;padding:0!important;border:0!important;
+  text-align:center!important;font-size:.84rem;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td::before,
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td:not(:first-child)[data-rotulo]::before{
+  content:none!important;display:none!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-visao-so="lista"]{display:none!important}
+/* a ordem é a do cartão: quem é, por quem veio, como falar, onde fica, quanto fechou */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="rosto"]{order:1;margin-top:0!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="elo"]{order:2;margin-top:8px!important}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="contato"]{order:3}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="local"]{order:4}
+/* os números encostam no pé: cartões da mesma fileira com a mesma altura
+   terminam iguais, e a sobra fica entre o endereço e os números */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="numeros"]{
+  order:5;margin-top:auto!important;padding-top:14px!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="total"]{order:6}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td:is(.ls-actions,.ls-commercial-actions){order:7}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"][data-visao-acoes="barra"] .ls-visao-tabela tbody td:is(.ls-actions,.ls-commercial-actions){
+  margin-top:14px!important;
+}
+/* sem a barra, o "⋮" fica no canto de cima, como em qualquer ficha */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"]:not([data-visao-acoes="barra"]) .ls-visao-tabela tbody td:is(.ls-actions,.ls-commercial-actions){
+  position:absolute!important;top:10px;right:10px;width:auto!important;margin:0!important;
+}
+
+/* o rosto: a logo sobre a placa neutra, ou as iniciais na cor do nome */
+.ls-perfil-avatar{
+  --tom-rgb:var(--acento-rgb);--tom-texto:var(--acento-texto);
+  position:relative;display:grid;place-items:center;overflow:hidden;
+  width:84px;height:84px;margin:0 auto 10px;
+  border:3px solid var(--panel);border-radius:26px;outline:1px solid var(--line);
+  color:var(--tom-texto);
+  background:linear-gradient(rgba(var(--tom-rgb),.17),rgba(var(--tom-rgb),.17)),var(--panel);
+}
+.ls-perfil-avatar[data-tom="2"]{--tom-rgb:var(--magenta-rgb);--tom-texto:var(--magenta-texto)}
+.ls-perfil-avatar[data-tom="3"]{--tom-rgb:var(--apoio-rgb);--tom-texto:var(--apoio-texto)}
+.ls-perfil-avatar[data-tom="4"]{--tom-rgb:var(--green-rgb);--tom-texto:var(--green-texto)}
+.ls-perfil-avatar[data-tom="5"]{--tom-rgb:var(--violet-rgb);--tom-texto:var(--violet-texto)}
+.ls-perfil-avatar[data-tom="6"]{--tom-rgb:var(--info-rgb);--tom-texto:var(--info-texto)}
+.ls-perfil-iniciais{font-size:1.7rem;font-weight:900;letter-spacing:.02em;line-height:1}
+.ls-perfil-avatar img{
+  position:absolute;inset:0;display:block;box-sizing:border-box;
+  width:100%;height:100%;padding:8px;object-fit:contain;
+  background:var(--logo-placa);
+  /* imagem que ainda não chegou: nada do texto alternativo no quadro */
+  color:transparent;font-size:0;
+}
+
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .material-nome{
+  display:block;color:var(--text)!important;font-size:1.04rem!important;font-weight:900!important;
+  line-height:1.25;text-wrap:balance;overflow-wrap:anywhere;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .material-sub{
+  text-wrap:balance;overflow-wrap:anywhere;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="rosto"] .material-nome + .material-sub{margin-top:3px}
+
+/* os selos: na lista são uma frase; aqui, pílulas centradas */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-selos{
+  display:flex!important;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-top:9px;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-ponto{display:none}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-selos :is(.ls-perfil-selo,.ls-map-linked,.ls-status){
+  min-height:26px;padding:4px 10px!important;display:inline-flex;align-items:center;gap:5px;
+  border-radius:999px;font-size:.72rem!important;font-weight:900;line-height:1;white-space:nowrap;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-selo{
+  color:var(--text-2);border:1px solid var(--line);background:var(--bg-1);
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-selos .ls-map-linked{
+  color:var(--green-texto);border:1px solid var(--green-linha);background:var(--green-fundo);
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-doc{
+  flex:0 0 100%;color:var(--muted);font-size:.74rem;font-variant-numeric:tabular-nums;
+}
+/* o que falta: uma pílula só, centrada, com o "Completar" dentro */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-incomplete-chip{
+  width:fit-content;max-width:100%;margin:10px auto 0;padding:5px 6px 5px 11px;
+  flex-wrap:nowrap;align-items:center;border-radius:999px;text-align:left;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-incomplete-texto{flex:0 1 auto}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-incomplete-chip > i{margin-top:0}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-incomplete-cta{padding:5px 9px}
+
+/* por quem veio (ou quantos trouxe) */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="elo"]{
+  color:var(--muted);font-size:.78rem!important;font-weight:750;overflow-wrap:anywhere;
+}
+
+/* o contato: atalhos redondos de tocar, e o número e o e-mail para ler */
+.ls-perfil-atalhos{display:flex;justify-content:center;gap:8px}
+.ls-perfil-atalho{
+  --atalho-rgb:var(--acento-rgb);--atalho-texto:var(--acento-texto);
+  flex:0 1 76px;min-width:60px;min-height:48px;padding:2px;
+  display:inline-flex;flex-direction:column;align-items:center;gap:5px;border-radius:14px;
+  color:var(--text-2);font-size:.7rem;font-weight:850;line-height:1.1;text-decoration:none!important;
+}
+.ls-perfil-atalho.whatsapp{--atalho-rgb:var(--green-rgb);--atalho-texto:var(--green-texto)}
+.ls-perfil-atalho.ligar{--atalho-rgb:var(--info-rgb);--atalho-texto:var(--info-texto)}
+.ls-perfil-atalho i{
+  width:46px;height:46px;display:grid;place-items:center;
+  border:1px solid rgba(var(--atalho-rgb),.3);border-radius:50%;
+  color:var(--atalho-texto);background:rgba(var(--atalho-rgb),.1);font-size:1.15rem;line-height:1;
+  transition:background .14s ease,border-color .14s ease;
+}
+.ls-perfil-atalho:active i{background:rgba(var(--atalho-rgb),.26)}
+.ls-perfil-atalho:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+@media (hover:hover){
+  .ls-perfil-atalho:hover{color:var(--text)}
+  .ls-perfil-atalho:hover i{border-color:rgba(var(--atalho-rgb),.6);background:rgba(var(--atalho-rgb),.2)}
+}
+.ls-perfil-contato-texto{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:1px 12px;margin-top:9px;
+  color:var(--muted);font-size:.76rem;line-height:1.35;overflow-wrap:anywhere;
+}
+
+/* onde fica: duas linhas centradas e os botões de rota */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="local"] .ls-address-line{
+  max-width:none;color:var(--text)!important;font-size:.86rem!important;font-weight:850!important;text-wrap:balance;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="local"] .material-sub{margin-top:2px}
+/* bairro e cidade de um lado, CEP do outro: cada pedaço quebra inteiro */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-perfil-linha{display:flex!important;flex-wrap:wrap;justify-content:center;gap:0 10px}
+/* "Sem contato" e "Sem endereço" calam: quem avisa é a pílula do que falta */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td:is([data-v="contato"],[data-v="local"]) > .ls-status.warning{
+  min-height:28px;color:var(--muted)!important;border-color:var(--line)!important;background:var(--bg-1)!important;
+  font-size:.72rem!important;font-weight:850!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-route-actions{justify-content:center;margin-top:9px}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] :is(.ls-route-link,.ls-distance-chip){
+  min-height:34px;padding:6px 12px;border-radius:999px;font-size:.72rem!important;
+}
+/* no dedo, todo alvo do cartão tem 44px */
+@media (pointer:coarse){
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-route-link{min-height:44px;padding-inline:16px}
+  .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-incomplete-chip{min-height:44px}
+}
+
+/* os números em quadradinhos, e o valor aprovado fechando a conta */
+.ls-perfil-numeros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ls-perfil-numero{
+  min-width:0;padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  border:1px solid var(--line-soft);border-radius:14px;background:var(--bg-1);
+}
+.ls-content .ls-perfil-numero strong{
+  color:var(--text)!important;font-size:1.12rem!important;font-weight:900!important;line-height:1;font-variant-numeric:tabular-nums;
+}
+.ls-perfil-numero small{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--muted);font-size:.6rem;font-weight:900;letter-spacing:.05em;line-height:1.1;text-transform:uppercase;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="total"]{
+  display:flex!important;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:8px!important;padding:9px 12px!important;
+  border:1px solid var(--green-linha)!important;border-radius:14px;background:var(--green-fundo)!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="total"][data-rotulo]::before{
+  content:attr(data-rotulo)!important;display:block!important;margin:0;
+  color:var(--green-texto);font-size:.64rem;font-weight:900;letter-spacing:.06em;line-height:1.1;text-transform:uppercase;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="total"] .ls-money{
+  color:var(--green-texto)!important;font-size:.95rem;white-space:nowrap;
+}
+/* quem ainda não fechou nada: o mesmo lugar, sem o verde */
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="total"][data-zerado]{
+  border-color:var(--line-soft)!important;background:var(--bg-1)!important;
+}
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] .ls-visao-tabela tbody td[data-v="total"][data-zerado]::before,
+.ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="total"][data-zerado] .ls-money{
+  color:var(--muted)!important;
 }

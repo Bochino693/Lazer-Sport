@@ -3330,6 +3330,88 @@ Dependência nova: rjsmin (requirements.txt).
    (TelaGuiadaTests). Conferido no Chromium (PC 1440 e iPhone 13, claro e
    escuro) com os documentos 07, 10 e 11.
 
+   AJUSTE 4: O CONTRATO DE COMPRA E VENDA DA CASA E A DATA DO DOCUMENTO.
+   Pedido: "no caso do leitor de pdf e word, ele não consegue ler os
+   brinquedos muito bem ... tinha uma cama elástica, matrix e etc em um
+   doc, ele criou um objeto volume com o valor total, isso não deve
+   acontecer, os produtos geralmente ficam numa tabela bem simples de
+   identificar ... você deve puxar a informação da data e hora do
+   documento; se for menos que 3 dias do atual, você deve pedir pra quando
+   é a data, pq tem documento de 2016, 2012 para a gente pôr ... deixe
+   mais fácil para a moça". O contrato de verdade do cliente NUNCA entra no
+   repositório: o corpus tem documentos feitos à semelhança dele, com
+   comprador inventado.
+     * O COMPRADOR É O CLIENTE. "COMPRADOR Fulana" (e CONTRATANTE,
+       CLIENTE, LOCATÁRIO, ADQUIRENTE), com ou sem dois-pontos, vale mesmo
+       com primeiro nome fora da lista do IBGE. O lado da casa
+       (identificar.lado_da_casa): do VENDEDOR / CONTRATADA / LOCADORA /
+       "na qualidade de fornecedor" até o papel do cliente ("do outro
+       lado"), atravessando as linhas que o PDF quebra (a frase só acaba
+       no ponto que não é abreviação: "sob o n." continua), e a assinatura
+       "Proprietário" num contrato com VENDEDOR. Nesse trecho nada é do
+       cliente: quem representa a fábrica, o RG, o CNPJ, e o endereço
+       residencial dele (a rua e o CEP de casa dele não viram mais o
+       endereço do cliente). Rótulo com ponto e vírgula ("CPF ou CNPJ;
+       ...", "Endereço completo; Rua das Acácias, 250, Centro, Ribeirão
+       Preto/SP") é rótulo; o endereço só com vírgulas é separado em rua,
+       número, bairro, cidade e UF. "COMPRADOR Fulano" (um espaço, sem
+       pontuação; e COMPRADOR(A), CONTRATANTE, em qualquer caixa) dá o nome
+       mesmo logo depois do parágrafo do VENDEDOR, colado no timbre; o
+       mesmo nome embaixo de "COMPRADOR", na assinatura, confirma. Título
+       de seção ("DA MULTA", "DO FORO", "DAS OBRIGAÇÕES E GARANTIAS"...)
+       nunca é nome -- no contrato de verdade "DA MULTA" virou o cliente --,
+       e "Da", "Do", "De" nunca começam um nome.
+     * OS EQUIPAMENTOS. No PDF, a tabela de DUAS colunas ("Quantidade |
+       Equipamento") é tabela de itens quando os dois pedaços são nomes de
+       coluna; o "Valor" que boia sozinho embaixo dela não gruda no último
+       item. Equipamento sem preço no documento leva o preço do catálogo,
+       marcado; o que o catálogo não tem ("Matrix") fica com o nome do
+       documento, para a pessoa escolher o produto (nunca some). Na
+       tabela "Equipamento"/"Brinquedo", ou no contrato de equipamento de
+       entretenimento, o brinquedo ganha da peça de reposição ("Boliche
+       kids" é o Strike Kids Boliche, não a Bola de Boliche Kids): a peça
+       só ganha com o nome praticamente igual.
+     * O TOTAL É O TOTAL, NUNCA UM ITEM. "...no valor total R$ 38.500,00
+       (trinta e oito mil...)" -- na mesma linha ou quebrada pelo PDF
+       ("no valor" / "total R$ ...") -- é o total do documento. Com os
+       equipamentos sem preço, esse total vem escolhido como VALOR FINAL
+       (a pessoa pode trocar pela soma), sem alerta vermelho. Frase de
+       cláusula nunca vira item: fora da tabela (parágrafo, IA, citação),
+       a linha só entra se a descrição tem cara de produto, e, com tabela
+       de itens no documento, nunca com o valor igual ao total (alerta
+       amarelo "Linha que não virou item"). "As despesas com frete ... são
+       por conta do COMPRADOR" dá frete zero e "Frete por conta do
+       cliente".
+     * A DATA DO DOCUMENTO. Escrita: "Data: ...", a data de carta ("São
+       Paulo,11 de novembro de 2026", com ou sem espaço; "Guarulhos,
+       09/11/2026") e a de contrato ("aos 02 dias do mês de julho de
+       2012"). Do arquivo: criado/salvo (docProps/core.xml do Word, o
+       CreationDate/ModDate do PDF) -- só como OPÇÃO, nunca sozinha (o
+       modelo salvo de novo hoje diz "hoje"; o modelo criado em 2013 diz
+       2013). Sem data escrita, ou com ela a menos de três dias de hoje, o
+       modal PERGUNTA primeiro: "De quando é este documento?", com botões
+       grandes (cada data achada, dizendo de onde veio, e hoje) e "Outra
+       data". A resposta fica na sessão da importação. A data vai para
+       Orcamento.data_documento e para Cliente.cliente_desde (a mais
+       antiga que se conhece; migração 0059_importacao_data_documento,
+       só esquema), e a validade conta dela: o contrato de 2016 vale até
+       2016 + 5 dias (a validade de antes de hoje é aceita, mas nunca antes
+       da data do documento). O orçamento exige a data; só o cliente, não.
+       A lista de orçamentos mostra "Documento de dd/mm/aaaa", a janela do
+       orçamento também, e a lista de clientes "Cliente desde".
+     * MAIS FÁCIL PARA A MOÇA: o modal vai em passos -- Data (só quando
+       precisa), Cliente, Itens e caminho --, cada um com o que está certo
+       numa linha de ✓ e o que falta em destaque, botões grandes,
+       "Continuar" e "Voltar". A data também fica na barra de cima da tela
+       guiada, para trocar.
+   Corpus: 14 o contrato com três equipamentos sem preço (um fora do
+   catálogo), comprador de primeiro nome raro e a data de agora; 15 o PDF
+   do 14; 16 a tabela com "Valor" e a venda de 2016; 17 um equipamento só,
+   2012, a data escrita como em contrato. Testes: tests_importacao_word.py
+   (ContratoDeCompraEVendaTests, DataDoDocumentoTests) e
+   tests_importacao_corpus.py. Conferido no Chromium (PC 1440 e iPhone 13,
+   claro e escuro).
+
 72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
    Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um
    adesivo diferente"; "na verdade vc deve juntar o basquete home com o
@@ -3799,6 +3881,72 @@ Dependência nova: rjsmin (requirements.txt).
    de lado. O JS de Promoções foi para o bloco de scripts (no conteúdo
    ele morria depois do primeiro filtro, como o de Brinquedos).
    Testes: core/tests_lista_cards.py.
+   O CARTÃO DO CLIENTE E A BARRA DE AÇÕES DOS CARTÕES. Pedidos: "no modo
+   card, centralize o conteúdo e se houver logo no cliente, mostre a logo,
+   tudo moderno e bem otimizado" e "nos cards, melhore as ações deixando
+   estilo app, como um botão no card elegante e com bons ícones e texto".
+   O cartão que saía da tabela era a linha dobrada numa caixa (rótulo de
+   coluna em cima de cada célula, tudo à esquerda, as ações num "⋮" solto
+   no pé). A LISTA não mudou; o que é novo vale só em Cards, e só para o
+   contêiner (`.ls-visao-alvo`) que pede:
+     * `data-visao-cartao="perfil"` (Clientes): o cartão centrado. No topo
+       a LOGO do cliente (Cliente.logo) num quadro de 84px, ou as iniciais
+       sobre uma cor que é sempre a mesma para aquele nome (crc32 do nome,
+       6 tons do tema); nome e estabelecimento; selos (Buffet parceiro /
+       Comercial / Residencial, "no mapa"); o "Falta ... Completar" numa
+       pílula; o contato como atalhos de tocar (WhatsApp, Ligar, E-mail,
+       círculos de 46px; sem WhatsApp no telefone marcado "sem WhatsApp")
+       com o número e o e-mail escritos embaixo; o endereço com Maps/Waze;
+       três quadradinhos (propostas, em aberto, fechadas) e o "Aprovado
+       R$" fechando a conta, encostados no pé (cartões da mesma fileira
+       ficam iguais). 1 coluna no celular, 2 no tablet, 3 ou 4 no PC. As
+       células são as partes (`data-v="rosto|elo|contato|local|numeros|
+       total"`); o que só existe no cartão leva `data-visao-so="cards"`.
+     * A LOGO sai de sistema_interno/cartao_cliente.py pelo redutor das
+       fotos do site (core.fotos.reduzir_imagem): no Cloudinary,
+       `c_limit,w_176,f_auto,q_auto` (o dobro de 84px, para tela 2x),
+       nunca o arquivo enviado. Preguiçosa, com largura e altura (o
+       cartão não pula), sobre uma placa neutra igual nos três temas
+       (`--logo-placa`): logo escura e logo branca aparecem as duas. Na
+       lista ela nem é baixada; se não carregar, ficam as iniciais.
+     * `data-visao-acoes="barra"` (Clientes, Orçamentos, O.S.): no pé do
+       cartão, as ações mais usadas com ícone e nome -- Clientes:
+       Proposta, Histórico e Editar; Orçamentos: Prévia, Editar e Enviar
+       (no pago, o Documento para assinar no lugar do Enviar, em verde);
+       O.S.: Imprimir, Editar e Enviar -- e "Mais", que abre o resto numa
+       folha de ações: no celular ela sobe do pé da tela, por cima das
+       abas, com um véu atrás (tocar nele fecha e não aciona o cartão de
+       baixo); no PC é o balão ao lado do botão. O que apaga fica por
+       último, depois de uma linha e em vermelho, e nunca vai para a
+       barra. Alvos de 48px (46 na folha, 52 no celular). Teclado: Tab em
+       cada botão, Enter em "Mais" abre com o foco na primeira ação,
+       setas/Home/End andam, Esc e Tab fecham e devolvem o foco. Quem
+       monta é ls-listas.js, das ações que a linha já tem e só quando a
+       lista entra em cards: a tela marca as principais com
+       `data-acao-cartao="Nome curto"` (ordem em `data-acao-ordem`; sem
+       marca, vão as duas primeiras que não apagam). Nada é clonado: o
+       botão da barra aciona a ação de verdade, e "Mais" é o próprio "⋮"
+       com nome. A BARRA NÃO INVENTA CONFIRMAÇÃO: quem pergunta é a
+       própria ação -- a janela de exclusão da tela, ou o
+       `data-ls-confirmar` da seção 82 -- e o link que pede confirmação
+       vira botão na barra, para o botão do meio não pular a pergunta.
+       Usuários e Clientes no mapa ganham a barra com o atributo; não
+       foram tocados.
+     * NOVA PROPOSTA, DO CLIENTE: ação nova da linha de Clientes (no "⋮"
+       da lista e primeira da barra do cartão). Leva a
+       /orcamentos/?novo=1&cliente=<id>, e a janela de proposta abre com
+       o cliente já escolhido, como se tivesse sido buscado no campo
+       (OrcamentosInnerView.cliente_inicial manda a ficha; só para quem
+       cria proposta).
+     * BEM OTIMIZADO: nenhuma consulta a mais (Clientes faz as mesmas 11
+       com 1 ou com 12 clientes na página; o teste cobra 3 contra 15), sem
+       sombra larga nem filtro no cartão, só variável do tema, ~125 bytes
+       comprimidos a mais por cliente.
+   Conferido no navegador (1366, tablet 820, celular 390 e 320; sol, lua e
+   eclipse): cartões, folha do "Mais" e véu, teclado, busca na tela, lista
+   sem cliente, filtro de Orçamentos sem recarregar, proposta nova com o
+   cliente escolhido, lista igual pixel a pixel. Testes:
+   sistema_interno/tests_cartao_cliente.py e tests_js/cartao_acoes.cjs.
 
 76) ANÁLISES GRÁFICAS NO PAINEL: DESEMPENHO POR PERÍODO, FICHA DE CADA OBJETO E QUEM ESTÁ ONLINE
    Pedidos: "inclua os gráficos para cada objeto, de acordo com seus dados,
@@ -3807,6 +3955,9 @@ Dependência nova: rjsmin (requirements.txt).
    depois, "em usuário, saber se ele está online, qual foi a última vez que
    logou ... poder clicar nele e ver os detalhes em um modal separado, isso
    para outras coisas também".
+   (O desenho do painel, o topo da tela Usuários e a ficha da conta foram
+   refeitos depois: ver "AJUSTE", no fim desta seção. O que segue descreve
+   a primeira versão; onde os dois divergem, vale o AJUSTE.)
    O QUE CADA TELA GANHOU (um include + atributos no template; a lógica mora
    em arquivos novos):
      * no topo, o painel "Desempenho": chips de período (Hoje · Semana · Mês
@@ -3925,6 +4076,174 @@ Dependência nova: rjsmin (requirements.txt).
    core/templatetags/analises.py, core/templates/gestao/includes/
    analises.html, core/static/site/paginas/gestao-analises.{css,js}.
    Testes: core/tests_analises.py.
+   AJUSTE: QUEM ESTÁ ONLINE, O PAINEL EM ESTILO APP, USUÁRIOS DE 18 EM 18
+   Pedidos, com o print do "Desempenho — Como estão as contas" (os chips "1
+   Online agora · 1 Ativos hoje ...", seis cartões em fila, quatro deles
+   só com "sem dados ainda", e o gráfico "Contas ativas por hora" vazio,
+   com a frase "hora a hora não existe"): "vc deve mostrar qual usuário
+   está logado e não gostei muito desse design, vc deve ser mais criativo e
+   mais robusto com estilo app e com as informações coerentes". Depois,
+   "faça a paginação a cada 18 usuários por página"; com o erro 500 da
+   ficha do usuário (corrigido em f9d9e46), "eu quero dados realmente
+   interessantes e que precisamos de fato, vc não pode me gerar uma coisa
+   gerando erros"; e "eu falei que quero estilo app em tudo".
+   1. QUEM, E NÃO SÓ QUANTOS (core/presenca.py, `agora_mesmo`).
+      * USUÁRIOS ganhou a faixa "Agora" no topo do painel: o ponto que
+        pulsa, "N online agora" e um cartão por pessoa -- o avatar (as
+        iniciais numa cor estável, que sai do número da conta), o nome, o
+        papel (Admin, Equipe ou Cliente), onde está (Painel, Site ou
+        Aplicativo: o `onde` da presença) e há quanto tempo. Quem está
+        olhando vem marcado "Você" e está SEMPRE entre os online (está com
+        o painel aberto, ainda que o sinal dele não tenha chegado ao
+        banco). Tocar num cartão abre a ficha da pessoa.
+      * "Vistos por último": quem passou nas últimas 24 h e não está
+        online, com a hora ("há 3 h", "ontem às 14:32").
+      * Os contadores (Todas, Online, Ativos hoje, Em 7 dias, Em 30 dias,
+        Nunca entraram) são LINKS que filtram a lista de contas: a mesma
+        tela com ?presenca=hoje (a busca e o perfil escolhidos continuam
+        valendo), filtrada no banco pela MESMA regra dos números
+        (`presenca.filtro_do_grupo`) -- a lista é paginada, e filtrar só a
+        página que veio deixaria gente de fora. Em cima da lista, "13
+        contas ativas hoje · Mostrar todas".
+      * O papel é um só em todo lugar (`presenca.papel_da_conta`, a regra
+        de "quem é da casa" do importador de orçamentos): superusuário é
+        Admin; staff ou função de equipe no painel é Equipe; o resto é
+        Cliente. A linha da lista, que olhava só o is_staff e chamava de
+        "Cliente" quem era da equipe pela função, passou a usar as mesmas
+        iniciais, a mesma cor e o mesmo papel da faixa e da ficha.
+      * NA BARRA DE CIMA DE TODO O PAINEL, ao lado da conta de quem está
+        usando: a pilha "equipe online" -- até quatro avatares (três no
+        tablet, dois no celular, um no celular estreito) e "+N"; o toque
+        abre a lista com o nome, o papel, onde a pessoa está, "hoje desde
+        08:12" (o primeiro sinal do dia) e há quanto tempo. SÓ A EQUIPE:
+        nome de cliente não sai do servidor para quem não abre a tela
+        Usuários. A pilha sai vazia e escondida do HTML (nenhuma consulta a
+        mais para desenhar a página). No tablet o espaço dela sai do botão
+        "Aparência" (só o astro, como no celular) e da linha "Operação
+        Lazer & Sport"; o nome da tela nunca passa de duas linhas.
+      * GET /presenca/agora/ (core/views_analises.py, só no painel): sem
+        parâmetro, a equipe online, para qualquer pessoa da equipe; com
+        ?contas=1, as contas todas, os vistos por último e os contadores,
+        com a permissão da tela Usuários (só o superadministrador; os
+        outros levam 403). No máximo três consultas além da sessão, não
+        importa o tamanho do histórico, e 10 s de cache. Quem pergunta é
+        UM relógio só (sistema_interno/static/interno/ls-presenca.js): de
+        45 em 45 s, só com a aba à vista (o dobro com a economia de dados
+        ligada), e na hora ao voltar para a aba; a faixa da tela Usuários
+        assina o mesmo relógio. O selo de cada linha da lista acompanha
+        ("Online agora" vira "Visto há 6 min" sem recarregar). A gravação
+        da presença continua a de sempre: no máximo uma por minuto e conta.
+   2. O PAINEL "DESEMPENHO" REFEITO, PARA TODAS AS TELAS QUE O INCLUEM (o
+      include e os data-detalhe-* não mudaram):
+      * SEM PAREDE DE CAIXAS VAZIAS. Cartão só para a métrica que tem
+        número. As que não tiveram nada no período NEM no anterior vão
+        marcadas `vazia`, com o `motivo` ("Nenhum registro até hoje.",
+        "Registrado desde 10/11/2026: nada neste período.", "Sem movimento
+        neste período nem no anterior."), e a tela as junta numa linha só
+        -- "Ainda sem registro neste período: Pedidos pagos · Gasto na
+        loja · Jogadas" -- com o motivo de cada uma a um toque. A queda de
+        verdade (zero agora, algo antes) continua com cartão. O gráfico
+        abre na `principal` da resposta: a do tipo, se tiver dado; senão a
+        primeira que tem. Período sem nada: o aviso "Sem movimento no
+        período".
+      * NENHUM GRÁFICO PEDINDO DESCULPA. Quem conta pessoas distintas sai
+        em COLUNAS (uma por dia, semana ou mês: os baldes não se somam nem
+        se ligam com uma linha); em "Hoje", hora a hora quando a fonte
+        guarda a hora (as jogadas). As contas ativas só guardam o dia (o
+        AcessoDiario, com o primeiro e o último sinal): em "Hoje" entra
+        "Quem esteve ativo hoje", uma faixa por pessoa do primeiro ao
+        último sinal, com o traço de "agora" -- e a tabela das mesmas
+        pessoas. Na ficha de uma conta, "O dia de hoje: entrou às 08:12; o
+        último sinal foi às 15:49". "Dias com acesso" também sai em
+        colunas (em cada dia, apareceu ou não). Sem série e sem pessoas, o
+        número em destaque -- nunca uma área vazia com um aviso dentro.
+      * AS PEÇAS: a régua de períodos gruda no topo enquanto o painel rola
+        (no celular rola de lado, com o escolhido à vista) e traz a frase
+        do período; cada indicador é um cartão com o ícone num quadrado de
+        cor, o rótulo, o número, a pílula da variação (▲ 47,8%, verde ou
+        vermelha só quando subir ou cair quer dizer bom ou ruim), "antes:
+        23" (ou "ontem: 4") e a faísca; as linhas de cartões saem
+        equilibradas (9 cartões = 5 + 4, e não 6 + 3 e um buraco) e no
+        celular os cartões passam de lado, encaixando; o gráfico mora num
+        cartão só, com as abas de métrica, o total, a média e o pico; "Por
+        dia da semana" virou sete barras deitadas com o número de cada dia
+        (a média, para pessoas distintas; sem "melhor dia" inventado em
+        empate); o ranking ("Quem mais rendeu"; em Usuários, "Mais ativos",
+        por dias com acesso, com o avatar e a última vez em que a conta
+        foi vista; em "Cadastros novos", a lista dos cadastros mais
+        recentes). A arrumação é da largura do PAINEL (@container): no
+        largo, gráfico, dia da semana e ranking numa linha; no médio, o
+        gráfico em cima e os dois embaixo; no estreito, um sob o outro.
+      * TEXTO QUE FECHA: a frase do período e a comparação vêm prontas do
+        servidor ("Últimos 30 dias (14/10 a 12/11) · comparado com os 30
+        dias anteriores (14/09 a 13/10)"; "Hoje, 12/11, até 15:30 ·
+        comparado com ontem até a mesma hora"); o cartão diz "novo",
+        "igual", "sem comparação · registrado desde 10/11"; os avisos e as
+        dicas perderam o jargão ("seção 76 do LEIA-ME", "core/jogadas.py").
+      * ESTILO APP NOS ESTADOS: o esqueleto (as caixas no lugar do que vem)
+        na primeira carga; trocar de período mantém o desenho anterior,
+        apagado; a carga que falha vira o aviso grande (ícone, título,
+        frase, "Tentar de novo"), e a ATUALIZAÇÃO que falha deixa na tela
+        os números de antes, volta o período para o deles e avisa por
+        TOAST (o LSAviso da seção 82: "Os números não atualizaram. Ficaram
+        na tela os de antes", com o botão "Tentar de novo"); a fonte que
+        falha no servidor (o `indisponivel` da correção do 500) vira uma
+        linha calma -- "Não deu para carregar agora: Gasto na loja. Os
+        outros números estão certos. Tentar de novo" -- e um toast, uma
+        vez por conjunto de métricas, nunca uma parede de erro; a faixa
+        "Agora" sem rede fica com o último retrato (ou com uma linha
+        calma) e avisa por toast UMA vez por queda, não a cada tentativa;
+        a ficha que não abre e a atividade vazia usam o mesmo aviso
+        grande. Os toasts são de "alerta" (somem sozinhos), e não de
+        "erro" (que fica até fechar): nada disso pede uma decisão. A rede
+        que cai vira frase nossa ("Sem conexão com o servidor."), e não o
+        "Failed to fetch" do navegador. Movimento reduzido respeitado (sem
+        pulso, sem brilho);
+        teclado e leitor de tela como antes (rádios, setas no gráfico, a
+        tabela de todos os números).
+      * CORES: as mesmas variáveis de tema, lidas no :root. O laranja não
+        entra mais transparente em fundo (sobre o ameixa vira marrom): é
+        cheio (o período escolhido, o "Você") ou é traço (a série, a borda
+        do cartão escolhido). Os quadrados de ícone e os avatares usam os
+        tons frios do tema (magenta, violeta, azul, verde-água); o verde é
+        só de estado (online, subiu). A cor do ícone sai da ordem das
+        métricas, e a do avatar do número da conta: nunca do valor.
+   3. USUÁRIOS DE 18 EM 18 (core/views.py, UserAdminView.POR_PAGINA): a
+      lista é paginada no servidor, com o paginador em estilo app
+      (sistema_interno/templates/includes/paginacao_app.html: "1–18 de
+      73", Anterior, as páginas em pílulas com reticências, Próxima; no
+      celular as setas ficam só com o ícone). A busca, o perfil e o
+      contador de presença viajam em todo link; a página que não existe
+      cai na última. Os links levam "#usrContas": a tela chega na lista, e
+      não no topo -- inclusive na navegação suave do painel, que começa
+      toda tela do topo e perde a âncora (o gestao-analises.js anota o
+      toque e mira a lista de novo depois de cada desenho, até a pessoa
+      mexer na tela). O papel de cada linha vai anotado na mesma consulta:
+      nenhuma consulta por conta. Lista · Cards e a ficha continuam como
+      eram.
+   4. A FICHA DA CONTA ABRE PELO QUE IMPORTA (core/detalhes.py): compra?
+      (pedidos pagos, total gasto, ticket médio, o último pedido, o que
+      aguarda pagamento e "O que comprou", com as unidades e o valor de
+      cada produto); está por perto? (visto por último e onde, o dia de
+      hoje -- "entrou às 09:12 · último sinal às 11:40" --, dias com
+      acesso em 30 dias, último login, criada em); o que quer? (curtidas,
+      lista de desejos e o que está parado no carrinho, com o valor);
+      joga? (jogadas e os jogos preferidos); e só então o cadastro. Seção
+      sem nada a dizer não aparece (quem nunca comprou ganha "Pedidos
+      pagos: nenhum ainda", e não uma caixa vazia). No topo, as iniciais
+      da conta e o selo "Comprou 13 vezes · R$ ...". Cada lista é uma
+      consulta com limite.
+   Sem migração: tudo sai do que as tabelas da 0171 já guardam.
+   Conferido no navegador (Chromium, 1366, 820 e 390, sol e lua): cada
+   tela com o painel em todos os períodos e em cada métrica, e a ficha de
+   cada tipo em cada aba, com os gráficos em todos os períodos -- uns 800
+   desenhos por passeio, nenhum erro no console e nenhum pedido falho.
+   Arquivos: os da seção e sistema_interno/static/interno/ls-presenca.js,
+   sistema_interno/templates/includes/paginacao_app.html, o fim de
+   sistema_interno/static/interno/interno_modern.css (a pilha da equipe e
+   o paginador) e sistema_interno/templates/base_inner.html.
+   Testes: core/tests_analises.py (QuemEstaOnlineTests,
+   PainelCoerenteTests, ListaDeUsuariosTests, FichaDaContaTests).
 
 77) JOGOS: A COLETA DAS JOGADAS (QUEM, QUANDO, O QUÊ) E O PAINEL POR PERÍODO
    Pergunta: "joguei mais uma vez o Super Mario 64, veja se é porque sou
@@ -4225,7 +4544,9 @@ Dependência nova: rjsmin (requirements.txt).
    bloco comercial -- Vendas, Ambulante nos dele, Gestão):
      * na lista de Orçamentos, nas ações da linha, ANTES do botão do
        pagamento: "Gerar documento para assinatura", "Assinatura pendente",
-       "Documento assinado" ou "Documento suspenso";
+       "Documento assinado" ou "Documento suspenso" (no modo cards, na barra
+       de ações do pé do cartão: "Documento", "Assinatura", "Assinado" ou
+       "Suspenso", à frente do "Enviar");
      * na janela do orçamento (Ver/Editar): no alto, a RÉGUA do pedido, em
        estilo de app -- Aprovado -> Assinatura -> Pagamento -> Venda --, com
        o passo de agora aceso (o primeiro que falta), os feitos com o visto
@@ -4377,9 +4698,9 @@ Dependência nova: rjsmin (requirements.txt).
    Banco: sistema_interno.DocumentoAssinatura e duas escolhas novas em
    AtividadeOrcamento.tipo, na migração sistema_interno/0058_documento_de_
    assinatura (só esquema; depende da 0057_orcamento_valor_final). A venda:
-   sistema_interno/0059_orcamento_venda (só esquema: Orcamento.venda;
-   depende da 0058) e sistema_interno/0060_vendas_dos_orcamentos_pagos (só
-   dados): cada orçamento que JÁ estava pago ganha a venda dele (o recebido,
+   sistema_interno/0060_orcamento_venda (só esquema: Orcamento.venda;
+   depende da 0059_importacao_data_documento) e sistema_interno/0061_
+   vendas_dos_orcamentos_pagos (só dados): cada orçamento que JÁ estava pago ganha a venda dele (o recebido,
    ou o total se o recebido não foi anotado; confirmada; o CPF/CNPJ do
    cliente) com a DATA DO PAGAMENTO (pago_em) -- a receita cai no mês em
    que entrou, e não no mês do deploy. Rodar de novo não duplica; desfazer
@@ -4407,7 +4728,7 @@ Dependência nova: rjsmin (requirements.txt).
    cartão; as vias) e sistema_interno/tests_venda_do_orcamento.py (uma venda
    no 100%, sem duplicar, ajustada, desfeita abaixo de 100%, o recado e o
    histórico, a régua na janela, __str__, a tela de Vendas, o relatório, o
-   Financeiro contando uma vez, a migração 0060 com a data do pagamento).
+   Financeiro contando uma vez, a migração 0061 com a data do pagamento).
    Conferido no Chromium (PC 1366 e celular 390, sol e lua): a régua em
    cada passo, os dois quadros na ordem, a folha "O contrato ainda não foi
    assinado", o recado da venda e a tela de Vendas.
@@ -4528,3 +4849,37 @@ Dependência nova: rjsmin (requirements.txt).
    gestão e no site, os ícones, o CSS só com variável de tema e com dono)
    e sistema_interno/tests_ls_aviso.py (o descarte de verdade, o endereço
    antigo, a exclusão e o erro por formulário comum, a folha do e-mail).
+
+83) JOGOS: UMA ESTANTE POR CONSOLE E O EMULADOR SEM TRANCOS
+   O PEDIDO: "não foi criada uma categoria de Game Boy automaticamente
+   para incluir os jogos... pensei que o sistema já fazia isso" e "quase
+   todos os jogos estão lentos... principalmente os de Game Boy".
+   A ESTANTE DO CONSOLE (core/portal_jogos.py, CONSOLES): a biblioteca
+   tinha uma estante por FAMÍLIA, e o Game Boy Advance ia para a fila
+   "Nintendo" misturado com N64 e Super Nintendo. Agora todo console com
+   jogo cadastrado ganha a estante dele e o atalho na lateral, sozinho
+   (Game Boy Advance, Nintendo 64, Super Nintendo, PlayStation, PSP, Mega
+   Drive...); console sem jogo não aparece. MAME e FinalBurn são a mesma
+   estante (Fliperama); Atari, PC Engine e Commodore juntam os modelos.
+   Código novo do emulador sem estante cai em "Outros consoles" (o teste
+   reprova se um console do SISTEMAS ficar sem estante). A família segue
+   valendo como filtro (?estante=nintendo traz tudo da Nintendo) e a ficha
+   do jogo diz "Mais de Game Boy Advance".
+   O MARCA-PASSO SÓ QUANDO AJUDA (jogo-emulador.js): ele roda quadros a
+   mais quando o navegador desenha menos de 60 por segundo (tela a 30 Hz).
+   Mas o quadro a mais também DESENHA a imagem inteira de novo. No
+   aparelho que já não dava conta, ele roubava o próximo desenho: medido
+   no Crash, 2 a 7 desenhos por segundo, aos trancos, contra 14 a 17 lisos
+   sem ele -- e o Automático não descia de degrau, porque contava os
+   quadros do jogo (inflados) e não os desenhos. Agora ele se vigia a cada
+   segundo: recuperou e o jogo seguiu abaixo de 54 por segundo por 2 s, ele
+   desliga; o jogo anda no ritmo dos desenhos e o Automático desce (menos
+   pixels, o núcleo pulando o desenho, o Leve). Com a tela num ritmo fixo
+   de 25 a 35 desenhos e o desenho leve (sinal de tela a 30 Hz), ele tenta
+   de novo -- duas vezes por partida, no máximo. MAX_EXTRAS passou de 3
+   para 2.
+   O PONTO GUARDADO A CADA 3 MINUTOS: tirar o estado do console (dezenas
+   de MB no N64 e no PSP) é um tranco; a cada minuto, era um por minuto.
+   Sair da aba, trocar de app e Voltar continuam guardando na hora.
+   Testes: core/tests_portal_jogos.py (EstantesPorConsoleTests) e o de PS1
+   em core/tests_jogos_emulador.py.

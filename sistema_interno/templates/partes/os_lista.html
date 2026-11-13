@@ -72,7 +72,8 @@
     {% include "includes/lista_ou_cards.html" with alvo="ordensLista" chave="ordens-servico" %}
   </div>
   <div class="ls-data-body">
-    <div class="table-responsive ls-visao-alvo" id="ordensLista" data-visao="lista">
+    {# No cartão, as ações viram a barra do pé: Imprimir, Editar e Enviar com ícone e nome, e "Mais" (ls-listas.js). #}
+    <div class="table-responsive ls-visao-alvo" id="ordensLista" data-visao="lista" data-visao-acoes="barra">
       <table class="ls-table ls-commercial-table ls-os-tabela ls-visao-tabela">
         {% comment %}
           SEIS COLUNAS, NÃO NOVE. Com nove, cada uma ficava estreita demais: o navegador quebrava
@@ -84,7 +85,7 @@
         <thead><tr><th data-coluna="O.S.">O.S.</th><th data-coluna="Cliente / equipamento">Cliente / equipamento</th><th data-coluna="Situação">Situação</th><th data-coluna="Agenda / técnico">Agenda / técnico</th><th data-coluna="Total / pagamento" class="text-end">Total</th><th data-coluna="Ações" class="text-end">Ações</th></tr></thead>
         <tbody>
         {% for ordem in ordens %}
-          <tr data-registro="{{ ordem.id }}">
+          <tr data-registro="{{ ordem.id }}" data-visao-nome="{{ ordem.numero_documento }} · {{ ordem.destinatario }}">
             <td data-rotulo="O.S." class="ls-os-numero"><strong>{{ ordem.numero_documento }}</strong>{% if ordem.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ ordem.versao }} desta O.S.">v{{ ordem.versao }}</span>{% endif %}{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}{% if ordem.ordem_anterior_id %}<span class="material-sub d-block">refeita da {{ ordem.ordem_anterior.numero_documento }}</span>{% endif %}<span class="ls-os-tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger">{{ ordem.get_prioridade_display }}</span>{% endif %}</span></td>
             <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Identificação: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
             <td data-rotulo="Situação"><div class="ls-situacao-card ls-situacao-os"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' or ordem.status == 'substituida' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub">cliente ciente ✓</span>{% endif %}{% if ordem.arquivada and ordem.ordem_refeita %}<span class="material-sub">virou a {{ ordem.ordem_refeita.numero_documento }}</span>{% endif %}</div></td>
@@ -105,11 +106,11 @@
                 `pode_editar`, `pode_enviar`, `pode_refazer`,
                 `pode_receber_pagamento` -- e a tela pergunta lá.
               {% endcomment %}
-              <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
-              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" data-acao-cartao="Imprimir" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
+              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}" data-acao-cartao
                       aria-label="{% if ordem.pode_editar %}Editar{% else %}Consultar{% endif %} a O.S. {{ ordem.numero_documento }}"
                       title="{% if ordem.pode_editar %}Editar a O.S.{% else %}Consultar a versão congelada{% endif %}"><i class="bi {% if ordem.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if ordem.pode_editar %}Editar{% else %}Ver{% endif %}</span></button>
-              {% if ordem.pode_enviar %}<button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
+              {% if ordem.pode_enviar %}<button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-acao-cartao="Enviar" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
                       aria-label="Enviar a O.S. {{ ordem.numero_documento }}"
                       title="Gerar o link da O.S. para mandar ao cliente"><i class="bi bi-send" aria-hidden="true"></i><span class="ls-action-label">Enviar O.S.</span></button>{% endif %}
               {% comment %}

@@ -601,3 +601,80 @@ class LauncherAoVivoTests(BasePortal):
 
     def test_com_busca_o_pulso_sai_junto_com_o_destaque(self):
         self.assertContains(self.portal(q="boliche"), 'data-pg-pulso aria-label="Agora no Lazer &amp; Sport Games" hidden')
+
+
+class EstantesPorConsoleTests(BasePortal):
+    """ "Não foi criada uma categoria de Game Boy automaticamente": cada console que tem jogo
+    ganha a estante dele, sozinha; console sem jogo não aparece; a família vira só filtro."""
+
+    @staticmethod
+    def externo(slug, codigo, nome_do_sistema, **extra):
+        return {"slug": slug, "titulo": slug.replace("-", " ").title(), "url": f"/jogos/{slug}/", "emulador": True,
+                "codigo_sistema": codigo, "sistema": nome_do_sistema, **extra}
+
+    def montar(self, *externos, **filtros):
+        return portal_jogos.montar({"jogos": [], "externos": list(externos)}, **filtros)
+
+    def test_cada_console_com_jogo_ganha_a_sua_estante(self):
+        dados = self.montar(
+            self.externo("pokemon-firered", "gba", "Game Boy Advance"),
+            self.externo("super-mario-advance-4", "gba", "Game Boy Advance"),
+            self.externo("super-mario-64", "n64", "Nintendo 64"),
+            self.externo("crash-bandicoot", "psx", "PlayStation (PS1)"),
+            self.externo("metal-slug", "mame", "Fliperama (MAME 2003-Plus)"),
+        )
+        estantes = {e["chave"]: (e["nome"], [j["slug"] for j in e["jogos"]]) for e in dados["estantes"]}
+        self.assertEqual(estantes["gba"], ("Game Boy Advance", ["pokemon-firered", "super-mario-advance-4"]))
+        self.assertEqual(estantes["n64"], ("Nintendo 64", ["super-mario-64"]))
+        self.assertEqual(estantes["psx"][1], ["crash-bandicoot"])
+        self.assertEqual(estantes["arcade"], ("Fliperama", ["metal-slug"]))  # MAME e FinalBurn: a mesma estante
+        # sem a fila da família misturando tudo, e sem estante vazia
+        self.assertNotIn("nintendo", estantes)
+        self.assertNotIn("gb", estantes)
+        self.assertNotIn("snes", estantes)
+        # a ordem da página: da casa, PlayStation, Nintendo (N64 antes do GBA), Fliperama
+        ordem = [chave for chave in estantes if chave in ("psx", "n64", "gba", "arcade")]
+        self.assertEqual(ordem, ["psx", "n64", "gba", "arcade"])
+        # a ficha do jogo diz "Mais de Game Boy Advance"
+        cartao = next(c for c in dados["todos"] if c["slug"] == "pokemon-firered")
+        self.assertEqual(cartao["estante"], "gba")
+        self.assertEqual(cartao["tema"], portal_jogos.TEMA["gba"]["cor"])
+
+    def test_a_estante_do_console_e_a_familia_filtram(self):
+        jogos = (self.externo("pokemon-firered", "gba", "Game Boy Advance"),
+                 self.externo("super-mario-64", "n64", "Nintendo 64"),
+                 self.externo("crash-bandicoot", "psx", "PlayStation (PS1)"))
+        so_gba = self.montar(*jogos, estante="gba")
+        self.assertEqual([c["slug"] for c in so_gba["lista"]], ["pokemon-firered"])
+        self.assertEqual(so_gba["lista_titulo"], "Game Boy Advance")
+        da_nintendo = self.montar(*jogos, estante="nintendo", ordem="az")
+        self.assertEqual([c["slug"] for c in da_nintendo["lista"]], ["pokemon-firered", "super-mario-64"])
+
+    def test_console_sem_estante_propria_vai_para_outros_consoles(self):
+        dados = self.montar(self.externo("jogo-novo", "console-que-nao-existe", "Console Novo"))
+        estantes = {e["chave"]: [j["slug"] for j in e["jogos"]] for e in dados["estantes"]}
+        self.assertEqual(estantes["outros"], ["jogo-novo"])
+
+    def test_todo_console_do_emulador_tem_estante(self):
+        from .jogos_emulador import SISTEMAS
+        sem_estante = sorted(codigo for codigo in SISTEMAS if codigo not in portal_jogos.ESTANTE_DO_SISTEMA)
+        self.assertEqual(sem_estante, [])
+        # e os ícones existem no recorte do Font Awesome do site
+        from pathlib import Path
+        icones = set((Path(portal_jogos.__file__).resolve().parent / "static/vendor/fontawesome-site/icones.txt")
+                     .read_text().split())
+        self.assertLessEqual({t["icone"] for t in portal_jogos.TEMA.values()}, icones)
+
+    def test_a_pagina_mostra_o_atalho_da_estante_do_console(self):
+        original = portal_jogos.cartoes
+
+        def com_gba(dados):
+            return original({**dados, "externos": [*dados["externos"],
+                                                   self.externo("pokemon-firered", "gba", "Game Boy Advance")]})
+        with mock.patch("core.portal_jogos.cartoes", side_effect=com_gba):
+            resposta = self.portal()
+        self.assertContains(resposta, 'href="?estante=gba#biblioteca"')
+        self.assertContains(resposta, "Game Boy Advance")
+        bib = resposta.context["dados_da_biblioteca"]
+        self.assertIn("gba", [e["chave"] for e in bib["estantes"]])
+        self.assertIn("nintendo", [t["chave"] for t in bib["temas"]])

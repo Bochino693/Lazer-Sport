@@ -624,12 +624,38 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 (AvaliacaoBlocoOrcamento.Status.APROVADO, "Aprovar"),
                 (AvaliacaoBlocoOrcamento.Status.AJUSTES, "Solicitar ajustes"),
             ),
+            # "Nova proposta" no cartão de um cliente (?novo=1&cliente=<id>).
+            "cliente_inicial": (
+                None if so_a_lista or not acesso["orcamentos_criar"]
+                else self.cliente_inicial(request.GET.get("cliente"))
+            ),
         }
         ctx["revisao_lista"] = revisao_lista
         return fragmento.responder(
             request, "orcamentos_inner.html",
             "partes/orcamentos_lista.html", ctx,
         )
+
+    @staticmethod
+    def cliente_inicial(numero):
+        """A ficha do cliente que a proposta nova já traz escolhido.
+
+        É o mesmo formato que a busca de cliente da janela devolve
+        (`opcao_de_busca`): a tela trata o cliente que veio pelo endereço
+        como trataria o que a pessoa buscou no campo. Número que não é
+        número, ou cliente que não existe mais, não é erro: a proposta abre
+        sem cliente, como sempre abriu.
+        """
+        numero = (numero or "").strip()
+        if not numero.isdigit():
+            return None
+        cliente = (
+            Cliente.objects.select_related("parceiro")
+            .prefetch_related("enderecos")
+            .filter(pk=int(numero))
+            .first()
+        )
+        return svc_clientes.opcao_de_busca(cliente) if cliente else None
 
     @staticmethod
     def serializar(orcamento):
@@ -716,6 +742,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             ),
             "blocos_aprovados": getattr(orcamento, "blocos_aprovados", False),
             "validade": orcamento.validade.isoformat() if orcamento.validade else "",
+            # A data do documento importado (o contrato de 2016 que entrou
+            # hoje): a janela mostra embaixo da validade.
+            "data_documento": (
+                orcamento.data_documento.strftime("%d/%m/%Y") if orcamento.data_documento else ""
+            ),
             "desconto": f"{orcamento.desconto:.2f}".replace(".", ","),
             "frete": f"{orcamento.frete:.2f}".replace(".", ","),
             "valor_final": (

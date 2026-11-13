@@ -173,11 +173,39 @@ _NAO_E_NOME = {
     "domingo", "bom", "boa", "dia", "tarde", "noite", "obrigado", "obrigada", "ola", "oi", "sim",
     "nao", "pix", "boleto", "jardim", "vila", "parque", "centro", "sao", "santa", "santo",
     "equipe", "comercial", "departamento", "setor", "objeto", "local", "evento", "festa",
+    # Os títulos das cláusulas do contrato ("DA MULTA", "DO FORO").
+    "multa", "multas", "foro", "inadimplencia", "obrigacoes", "obrigacao", "garantia", "garantias",
+    "rescisao", "entrega", "prazo", "prazos", "clausulas", "condicoes", "disposicoes", "gerais", "finais",
+    "penalidades", "vigencia", "responsabilidade", "responsabilidades", "comprador", "compradora",
+    "vendedor", "vendedora", "testemunha", "testemunhas", "proprietario", "proprietaria", "frete",
+    "instalacao", "montagem", "assistencia", "tecnica", "partes", "despesas", "juros", "reajuste",
 } | {uf.lower() for uf in det.UFS}
+#: "DA MULTA", "DO OBJETO DO CONTRATO", "DAS OBRIGAÇÕES E GARANTIAS": o
+#: título de seção do contrato, sozinho na linha. Nunca é o nome de ninguém.
+_TITULO_DE_SECAO = re.compile(
+    r"^(?:cl[aá]usula\s+\S+\s*[-–—.:]?\s*)?(?:d[oa]s?|de)\s+"
+    r"(?:objeto|multas?|foro|inadimpl[eê]ncia|obriga[cç](?:[oõ]es|[aã]o)|garantias?|pagamentos?|prazos?|"
+    r"entregas?|rescis[aã]o|cl[aá]usulas?|contrato|valor(?:es)?|pre[cç]os?|condi[cç](?:[oõ]es|[aã]o)|"
+    r"disposi[cç][oõ]es|responsabilidades?|penalidades?|vig[eê]ncia|frete|instala[cç][aã]o|montagem|"
+    r"assist[eê]ncia|partes|despesas|reajuste|juros|tributos)\b",
+    re.IGNORECASE,
+)
+#: "da", "de", "do", "das", "dos" e "e" ligam nomes; nunca começam um.
+_LIGACOES = ("de", "da", "do", "das", "dos", "e")
+
+
+def titulo_de_secao(texto: str) -> bool:
+    """A linha é o título de uma seção do contrato ("DA MULTA", "DO FORO")?"""
+    limpo = (texto or "").strip(" .:;-–—")
+    if not limpo or len(limpo) > 70:
+        return False
+    letras = [c for c in limpo if c.isalpha()]
+    em_maiusculas = bool(letras) and sum(c.isupper() for c in letras) / len(letras) > 0.8
+    return bool(_TITULO_DE_SECAO.match(limpo)) and (em_maiusculas or len(limpo.split()) <= 5)
 
 #: (padrão no fim do texto ANTES do candidato, para qual campo, pontos)
 _PISTAS = [
-    (r"(?:contratante|locatari[oa]|cliente|comprador[a]?|solicitante|destinatari[oa]|"
+    (r"(?:contratante|locatari(?:[oa]|o\s*\(a\))|cliente|comprador(?:a|\s*\(a\))?|adquirente|solicitante|destinatari[oa]|"
      r"nome\s+completo|nome\s+do\s+cliente|proposta\s+para|orcamento\s+para|"
      r"meu\s+nome\s+e|me\s+chamo|aqui\s+e\s+[oa]|sou\s+[oa]|em\s+nome\s+de)", "cliente", 5.0),
     (r"(?:razao\s+social|nome\s+fantasia|empresa|estabelecimento|instituicao)", "empresa", 5.0),
@@ -235,6 +263,117 @@ def _segmentos(linhas: list[dict]) -> list[dict]:
             texto = achado.group(4)
         saida.append({"linha": linha, "texto": texto, "remetente": remetente, "posicao": posicao})
     return saida
+
+
+# ======================================================================
+# O LADO DA CASA NUM CONTRATO
+# ======================================================================
+#: Quem vende, aluga ou é contratado: a Lazer & Sport. Em maiúsculas
+#: ("o VENDEDOR vende ao COMPRADOR"), com dois-pontos ("Contratada:") ou
+#: na frase de apresentação das partes ("na qualidade de fornecedor").
+_PAPEL_DA_CASA = re.compile(
+    r"\b(?:VENDEDOR[A]?|CONTRATAD[AO]|LOCADOR[A]?|FORNECEDOR[A]?|PRESTADOR[A]?)\b"
+    r"|\b(?:Vendedor[a]?|Contratad[ao]|Locador[a]?|Fornecedor[a]?|Prestador[a]?)\s*:"
+    r"|(?i:\bna\s+qualidade\s+de\s+(?:vendedor|contratad|locador|fornecedor|prestador))"
+)
+#: Quem compra, aluga ou contrata: o cliente.
+_PAPEL_DO_CLIENTE = re.compile(
+    r"\b(?:COMPRADOR[A]?|CONTRATANTE|LOCAT[AÁ]RI[OA]|ADQUIRENTE|CLIENTE)\b"
+    r"|\b(?:Comprador[a]?|Contratante|Locat[aá]ri[oa]|Adquirente|Cliente)\s*:"
+    r"|(?i:\bna\s+qualidade\s+de\s+(?:comprador|contratante|locat|adquirente|cliente)|\bdo\s+outro\s+lado\b)"
+)
+#: A linha de assinatura que é SÓ o papel: "Proprietário", "VENDEDOR".
+_ASSINATURA_DA_CASA = re.compile(r"(?i)^(?:s[óo]ci[oa][\s-]*)?propriet[áa]ri[oa]\s*:?$")
+_LINHA_DE_ASSINATURA = re.compile(r"^[_\-–—.\s]{6,}$")
+#: Quantas linhas uma frase da casa atravessa, no máximo, sem fechar.
+_LINHAS_DA_FRASE = 8
+
+
+def _fim_de_frase(texto: str) -> bool:
+    """A linha termina a frase? "...inscrita no CNPJ sob o n." não termina."""
+    final = texto.rstrip()
+    if not final.endswith((".", "!", "?")):
+        return False
+    ultima = re.search(r"(\S+)\.$", final)
+    # "n.", "nº.", "Av.", "Ltda." e companhia: abreviação, a frase continua.
+    return not (ultima and (len(ultima.group(1)) <= 4 or _ABREVIACOES.search(final)))
+
+
+def lado_da_casa(linhas: list[dict]) -> dict[str, list[tuple[int, int]]]:
+    """Os trechos de cada linha que falam da Lazer & Sport no contrato.
+
+    "VENDEDOR: Brinquedos Lazer & Sport ..., neste ato representado por
+    Fulano ..., residente e domiciliado na Rua X, 411 ...; e, do
+    outro lado, na qualidade de comprador, ...": tudo entre o papel da casa
+    e o papel do cliente é da casa -- o nome de quem representa a fábrica,
+    o RG e o endereço residencial dele. Nada disso pode virar o cliente.
+
+    No PDF a frase vem quebrada em várias linhas; o trecho continua na
+    linha de baixo enquanto a frase não termina (linha sem ponto final), por
+    no máximo oito linhas. Na assinatura, o papel sozinho na linha
+    ("VENDEDOR", e "Proprietário" quando o documento é um contrato com
+    VENDEDOR) leva as linhas de baixo até o traço da próxima assinatura.
+
+    Devolve {id da linha: [(início, fim), ...]}.
+    """
+    corpo = [l for l in linhas if l["parte"] in ("corpo", "caixa")]
+    contrato = any(_PAPEL_DA_CASA.search(l["texto"]) for l in corpo)
+    trechos: dict[str, list[tuple[int, int]]] = {}
+    restam = 0  # quantas linhas de baixo o trecho aberto ainda pode levar
+    for linha in corpo:
+        texto = linha["texto"]
+        limpo = texto.strip()
+        if _LINHA_DE_ASSINATURA.match(limpo):
+            restam = 0
+            continue
+        eventos = [(a.start(), "casa") for a in _PAPEL_DA_CASA.finditer(texto)]
+        eventos += [(a.start(), "cliente") for a in _PAPEL_DO_CLIENTE.finditer(texto)]
+        assinatura = len(limpo) <= 25 and (
+            (contrato and _ASSINATURA_DA_CASA.match(limpo)) or bool(re.fullmatch(r"[A-ZÀ-Ý ]+:?", limpo)
+                                                                    and _PAPEL_DA_CASA.fullmatch(limpo.rstrip(":")))
+        )
+        if contrato and _ASSINATURA_DA_CASA.match(limpo):
+            eventos.append((0, "casa"))
+        eventos.sort()
+        inicio = 0 if restam else None
+        for posicao, papel in eventos:
+            if papel == "casa" and inicio is None:
+                inicio = posicao
+            elif papel == "cliente" and inicio is not None:
+                if posicao > inicio:
+                    trechos.setdefault(linha["id"], []).append((inicio, posicao))
+                inicio = None
+        if inicio is None:
+            restam = 0
+            continue
+        trechos.setdefault(linha["id"], []).append((inicio, len(texto)))
+        if assinatura:
+            # "VENDEDOR" / "Proprietário" sozinho: o nome vem logo abaixo.
+            restam = 2
+        elif restam:
+            restam = restam - 1 if not _fim_de_frase(texto) else 0
+        else:
+            # A frase quebrada pelo PDF continua na linha de baixo; a linha
+            # curta ("Vendedor: Carlos") não leva nada consigo.
+            restam = _LINHAS_DA_FRASE if (len(limpo) >= 60 and not _fim_de_frase(texto)) else 0
+    return trechos
+
+
+def no_lado_da_casa(trechos: dict, id_linha: str, inicio: int, fim: int | None = None) -> bool:
+    """O pedaço [início, fim) da linha cai num trecho da casa?"""
+    fim = inicio + 1 if fim is None else fim
+    return any(a <= inicio < b or a < fim <= b for a, b in trechos.get(id_linha, ()))
+
+
+def linhas_inteiras_da_casa(linhas: list[dict], trechos: dict) -> set:
+    """As linhas que são SÓ da casa (o trecho cobre o texto todo)."""
+    inteiras = set()
+    for linha in linhas:
+        texto = linha["texto"]
+        for a, b in trechos.get(linha["id"], ()):
+            if not texto[:a].strip() and not texto[b:].strip(" .,;:"):
+                inteiras.add(linha["id"])
+    return inteiras
 
 
 # ======================================================================
@@ -309,7 +448,52 @@ def _limpar_empresa(texto: str) -> str:
 
 def _vale_como_pessoa(nome: str) -> bool:
     partes = _normalizar(nome).split()
-    return bool(partes) and partes[0] in primeiros_nomes()
+    return bool(partes) and partes[0] not in _LIGACOES and partes[0] in primeiros_nomes()
+
+
+#: O papel escrito colado no nome, sem dois-pontos: "COMPRADOR Renata
+#: Moura Teixeira", "CONTRATANTE JOSÉ...". Sai da frente do nome e vira a
+#: pista.
+_PAPEIS_NA_FRENTE = {
+    "comprador", "compradora", "contratante", "cliente", "locatario", "locataria", "adquirente",
+    "solicitante", "destinatario", "destinataria",
+}
+#: Com o papel do cliente escrito logo antes, o nome vale mesmo que o
+#: primeiro nome não esteja na lista do IBGE ("COMPRADOR Kethellyn ...").
+_PISTAS_DE_PAPEL = re.compile(
+    r"(?:contratante|locatari(?:[oa]|o\s*\(a\))|cliente|comprador(?:a|\s*\(a\))?|adquirente)\s*[:,.\-–—;]?\s*$"
+)
+
+
+def _tirar_papel_da_frente(texto: str, inicio: int) -> tuple[str, int]:
+    """("COMPRADOR Renata Moura", 10) -> ("Renata Moura", 20)."""
+    deslocamento = 0
+    for palavra in re.finditer(r"\S+", texto):
+        if _normalizar(re.sub(r"\(a\)$", "", palavra.group(0), flags=re.I)) in _PAPEIS_NA_FRENTE:
+            deslocamento = palavra.end()
+            continue
+        break
+    resto = texto[deslocamento:]
+    espacos_na_frente = len(resto) - len(resto.lstrip())
+    return resto.strip(), inicio + deslocamento + espacos_na_frente
+
+
+def _nome_desconhecido_vale(nome: str) -> bool:
+    """Nome inteiro com cara de nome, ainda que o primeiro não esteja na lista."""
+    partes = nome.split()
+    if len(partes) < 2 or len(partes) > 7:
+        return False
+    if _normalizar(partes[0]) in _LIGACOES or _normalizar(partes[-1]) in _LIGACOES:
+        return False
+    if sum(1 for parte in partes if _normalizar(parte) not in _LIGACOES) < 2:
+        return False  # "Da Multa": uma palavra só de nome não basta
+    for parte in partes:
+        normal = _normalizar(parte)
+        if normal in ("de", "da", "do", "das", "dos", "e"):
+            continue
+        if normal in _NAO_E_NOME or len(normal) < 2 or not normal.isalpha():
+            return False
+    return True
 
 
 class _Candidatos:
@@ -340,6 +524,11 @@ class _Candidatos:
         lista = []
         for item in self.por_chave.values():
             total = item["pontos"] + 0.75 * min(item["vezes"] - 1, 4)
+            if item["vezes"] >= 2 and "cliente" in item["pistas"]:
+                # O mesmo nome com o papel do cliente duas vezes -- na
+                # apresentação das partes e na assinatura, embaixo de
+                # "COMPRADOR" --: confirmação forte.
+                total += 1.5
             lista.append(dict(item, total=round(total, 2)))
         return sorted(lista, key=lambda c: (-c["total"], c["posicao"]))
 
@@ -466,7 +655,8 @@ def _endereco_da_empresa(partes: dict, empresa: dict) -> bool:
 # ======================================================================
 # A LEITURA
 # ======================================================================
-def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=frozenset()) -> dict:
+def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=frozenset(),
+                trechos_da_casa=None) -> dict:
     """Os candidatos de cada dado do cliente, já ordenados pelos pontos.
 
     Devolve {"pessoas", "empresas", "enderecos", "documentos", "telefones",
@@ -474,6 +664,7 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
     "valor" é o dicionário das partes).
     """
     segmentos = _segmentos(linhas)
+    da_casa_no_contrato = lado_da_casa(linhas) if trechos_da_casa is None else trechos_da_casa
     da_empresa = {l["id"] for l in linhas if det.linha_da_empresa(l["texto"], empresa)}
     marcantes = {l["id"] for l in linhas if det.linha_da_empresa(l["texto"], empresa, pelo_endereco=False)}
     vizinhas = set()
@@ -491,7 +682,9 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
         if linha["id"] in vizinhas:
             # O endereço colado no timbre é da casa; com "Cliente:" na
             # própria linha, é do cliente.
-            return bool(re.match(r"(?i)\s*(cliente|contratante|nome|a/c|respons)", segmento["texto"]))
+            return bool(re.match(
+                r"(?i)\s*(cliente|contratante|comprador|locat[aá]ri|adquirente|nome|a/c|respons)", segmento["texto"],
+            ))
         if linha["parte"] in ("cabecalho", "rodape"):
             return bool(re.search(r"(?i)\b(cliente|contratante|a/c|s[íi]ndic|respons[áa]vel)\b", segmento["texto"]))
         return True
@@ -508,6 +701,14 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
             continue
         texto = segmento["texto"]
         id_linha = segmento["linha"]["id"]
+        # O texto do segmento é o fim da linha (na conversa, sem o remetente):
+        # o deslocamento leva a posição do segmento para a da linha.
+        recuo = len(segmento["linha"]["texto"]) - len(texto) if segmento["remetente"] else 0
+
+        def da_casa(inicio, fim=None):
+            return no_lado_da_casa(da_casa_no_contrato, id_linha, inicio + recuo,
+                                   None if fim is None else fim + recuo)
+
         anterior = segmentos[indice - 1]["texto"] if indice else ""
         # Pista sozinha na linha de cima: "À", "Contratante:", "Prezados,"
         pista_de_cima = None
@@ -518,6 +719,8 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
 
         # ------------------------------------------------- endereços
         for achado in _LOGRADOURO.finditer(texto):
+            if da_casa(achado.start()):
+                continue  # o endereço de quem assina pela casa ("residente na Rua...")
             trecho = _trecho_do_endereco(texto, achado.start())
             # Dois jeitos de escrever (com traço ou com vírgula): vale a
             # leitura que separa mais partes.
@@ -547,7 +750,7 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
         vistos_empresa = []
         for padrao in (_EMPRESA_PELO_SUFIXO, _EMPRESA_PELA_MARCA):
             for achado in padrao.finditer(texto):
-                if dentro_de_endereco(achado.start(), achado.end()):
+                if dentro_de_endereco(achado.start(), achado.end()) or da_casa(achado.start()):
                     continue
                 if any(a <= achado.start() < b for a, b in vistos_empresa):
                     continue
@@ -573,22 +776,39 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
                 and not eh_interno(segmento["remetente"], internos):
             pessoas.acrescentar(det.capitalizar(segmento["remetente"]), 3.0, segmento, "quem escreve na conversa",
                                 pista="cliente")
+        titulo = titulo_de_secao(texto)
         for achado in _NOME.finditer(texto):
-            if dentro_de_endereco(achado.start(), achado.end()):
+            if titulo:
+                break  # "DA MULTA", "DO FORO": título de cláusula, nunca nome
+            bruto, inicio_nome = _tirar_papel_da_frente(achado.group(0), achado.start())
+            if not bruto:
                 continue
-            if any(a <= achado.start() < b for a, b in vistos_empresa):
+            if dentro_de_endereco(inicio_nome, achado.end()) or da_casa(inicio_nome, achado.end()):
                 continue
-            nome = det.capitalizar(_limpar_pessoa(achado.group(0)))
-            if not nome or not _vale_como_pessoa(nome) or eh_interno(nome, internos):
+            if any(a <= inicio_nome < b for a, b in vistos_empresa):
                 continue
+            nome = det.capitalizar(_limpar_pessoa(bruto))
+            if not nome or eh_interno(nome, internos):
+                continue
+            antes = texto[:inicio_nome]
+            de_cima = pista_de_cima if inicio_nome < 3 else None
+            if not _vale_como_pessoa(nome):
+                # Primeiro nome fora da lista: vale só com o papel do cliente
+                # escrito logo antes ("COMPRADOR Kethellyn Souza") ou na
+                # linha de cima ("COMPRADOR" / o nome, na assinatura).
+                papel = _PISTAS_DE_PAPEL.search(det.sem_acento(antes)[-30:]) or (
+                    de_cima and inicio_nome < 3 and _PISTAS_DE_PAPEL.search(det.sem_acento(anterior.strip()))
+                )
+                if not papel or not _nome_desconhecido_vale(nome):
+                    continue
             partes = nome.split()
-            pista = _pista(texto[:achado.start()]) or (pista_de_cima if achado.start() < 3 else None)
+            pista = _pista(antes) or de_cima
             pontos = 1.0 + bonus_de_posicao(segmento) + (1.0 if dados_na_linha else 0.0)
             motivo = "nome de pessoa no documento"
             if pista:
                 pontos += pista[1]
                 if pista[0] != "fora":
-                    motivo = "perto de “" + (texto[:achado.start()].strip(" :,-")[-30:] or anterior.strip()[-30:]) + "”"
+                    motivo = "perto de “" + (antes.strip(" :,-")[-30:] or anterior.strip()[-30:]) + "”"
             if len(partes) == 1:
                 # Um nome só ("Prezada Ana") só vale com pista forte.
                 if not pista or pista[1] < 4:
@@ -599,17 +819,21 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
         # ---------------------------------- documento, telefone, e-mail
         sem = det.sem_acento(texto)
         for achado in det.documentos(texto):
+            if da_casa(achado["inicio"]):
+                continue
             pontos = 2.0 + (2.0 if achado["valido"] else -3.0)
             documentos.acrescentar(achado["chave"], pontos, segmento, f"{achado['tipo']} no documento",
                                    chave=achado["chave"])
         for achado in det.telefones(texto):
+            if da_casa(achado["inicio"]):
+                continue
             pontos = 1.5 + (1.0 if re.search(r"tel|cel|fone|whats|zap|contato|numero", sem) else 0.0)
             telefones.acrescentar(achado["digitos"], pontos, segmento, "telefone no documento",
                                   chave=achado["digitos"])
             if det._WHATSAPP.search(sem):
                 telefones.por_chave[achado["digitos"]]["whatsapp"] = True
         for achado in det.emails(texto):
-            if achado["email"] in internos.get("emails", ()):
+            if achado["email"] in internos.get("emails", ()) or da_casa(achado["inicio"]):
                 continue
             emails.acrescentar(achado["email"], 2.0, segmento, "e-mail no documento", chave=achado["email"])
         if segmento["remetente"]:
@@ -639,7 +863,7 @@ def _campo(valor, candidato, motivo=""):
             "motivo": motivo or candidato.get("motivo", ""), "identificado": True}
 
 
-def completar(campos: dict, achados: dict, *, internos: dict, empresa: dict) -> dict:
+def completar(campos: dict, achados: dict, *, internos: dict, empresa: dict, contrato: bool = False) -> dict:
     """Preenche, nos campos da leitura por regra, o que ela não achou.
 
     O rótulo escrito ("Cliente: ...") vale mais que qualquer palpite -- a
@@ -656,6 +880,11 @@ def completar(campos: dict, achados: dict, *, internos: dict, empresa: dict) -> 
 
     for nome_campo in ("cliente", "contato", "estabelecimento"):
         sem_os_da_casa(nome_campo)
+    # No contrato de compra e venda, "Comprador: Fulana" é o CLIENTE (fora
+    # dele, o rótulo "Comprador" é a pessoa que compra pela empresa).
+    rotulo_do_contato = det.sem_acento(((campos.get("contato") or {}).get("fonte") or {}).get("texto", ""))
+    if contrato and "cliente" not in campos and re.match(r"\s*compr(?:ador|adora)\b", rotulo_do_contato):
+        campos["cliente"] = campos.pop("contato")
     email = (campos.get("email") or {}).get("valor")
     if email and email in internos.get("emails", ()):
         campos.pop("email")

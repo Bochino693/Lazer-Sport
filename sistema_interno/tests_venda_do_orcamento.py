@@ -17,7 +17,7 @@ O que estes testes protegem:
     orçamento com o cliente, o número e o caminho de volta; o relatório
     da gestão não mostra "#None";
   * o Financeiro conta a receita uma vez só, no mês do pagamento;
-  * a migração 0060 preenche os orçamentos que já estavam pagos, com a
+  * a migração 0061 preenche os orçamentos que já estavam pagos, com a
     data do pagamento, sem duplicar ao rodar de novo, e desfaz;
   * a janela do orçamento leva a régua (Aprovado -> Assinatura ->
     Pagamento -> Venda) e o que ela precisa.
@@ -360,12 +360,12 @@ class VendaNasTelasTests(BaseVenda):
 
 
 # ======================================================================
-# A MIGRAÇÃO 0060: OS ORÇAMENTOS QUE JÁ ESTAVAM PAGOS
+# A MIGRAÇÃO 0061: OS ORÇAMENTOS QUE JÁ ESTAVAM PAGOS
 # ======================================================================
 class MigracaoDasVendasTests(BaseVenda):
 
     def migracao(self):
-        return import_module("sistema_interno.migrations.0060_vendas_dos_orcamentos_pagos")
+        return import_module("sistema_interno.migrations.0061_vendas_dos_orcamentos_pagos")
 
     def rodar(self, funcao="preencher"):
         getattr(self.migracao(), funcao)(apps, SimpleNamespace(connection=connection))
@@ -419,10 +419,10 @@ class MigracaoDasVendasTests(BaseVenda):
         self.assertFalse(Orcamento.objects.filter(venda__isnull=False).exists())
 
     def test_e_so_dados(self):
-        """O esquema é a 0059; misturar os dois estoura no PostgreSQL."""
+        """O esquema é a 0060; misturar os dois estoura no PostgreSQL."""
         operacoes = self.migracao().Migration.operations
         self.assertEqual([type(op).__name__ for op in operacoes], ["RunPython"])
         self.assertTrue(operacoes[0].reversible)
-        esquema = import_module("sistema_interno.migrations.0059_orcamento_venda").Migration
+        esquema = import_module("sistema_interno.migrations.0060_orcamento_venda").Migration
         self.assertEqual([type(op).__name__ for op in esquema.operations], ["AddField"])
-        self.assertIn(("sistema_interno", "0058_documento_de_assinatura"), esquema.dependencies)
+        self.assertIn(("sistema_interno", "0059_importacao_data_documento"), esquema.dependencies)

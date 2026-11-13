@@ -209,10 +209,22 @@
      do emulador (a função "MainLoop_runner"); o resto da página segue normal. Quem
      confere se o quadro rodou de fato é o contador do próprio RetroArch: em tela de
      120 Hz ele mesmo pula metade das chamadas, e isso não conta como quadro. */
+  /* SÓ QUANDO AJUDA. O quadro recuperado não sai de graça: ele roda o jogo E desenha a
+     imagem inteira de novo (os filtros, na placa de vídeo). Na tela a 30 Hz isso sobra -- o
+     aparelho está folgado e só a tela é lenta. No aparelho que já não dava conta (a placa de
+     vídeo no limite, o PlayStation pesado no processador), o quadro a mais roubava o tempo
+     do próximo desenho: medido aqui, o Crash ia de 18 quadros por segundo, lisos, para 15 --
+     mostrando só 6 por segundo na tela, aos trancos. "Quase todos os jogos estão lentos" era
+     isso. Agora o marca-passo se vigia: recuperou e o jogo continuou abaixo da velocidade,
+     ele desliga sozinho (e o Automático desce um degrau: menos pixels, o núcleo pulando o
+     desenho, o Leve -- que aliviam de verdade). Desligado, o jogo anda no ritmo dos
+     desenhos, sem trancos. Com sinal de tela lenta e aparelho folgado, ele tenta de novo
+     (duas vezes por partida, no máximo). */
   var QUADRO_MS = 1000 / 60;
-  var MAX_EXTRAS = 3;             // no máximo 4 quadros por desenho: nunca vira uma bola de neve
+  var MAX_EXTRAS = 2;             // no máximo 3 quadros por desenho (tela a 20 Hz): nunca vira uma bola de neve
   var rafDoNavegador = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
-  var ritmo = { devido: 0, agora: 0, noDesenho: false, extras: 0, recuperados: 0, trabalho: 0 };
+  var ritmo = { devido: 0, agora: 0, noDesenho: false, extras: 0, recuperados: 0, trabalho: 0, desenhos: 0 };
+  var marcaPasso = { ligado: true, tentativas: 0, desligadoEm: 0, ruins: 0, ultimoRecuperado: 0, ultimosDesenhos: 0 };
   function quadrosDoJogo() {
     var emu = window.EJS_emulator;
     try { return emu && emu.gameManager ? emu.gameManager.getFrameNum() : -1; } catch (e) { return -1; }
@@ -232,15 +244,17 @@
     window.requestAnimationFrame = function (cb) {
       if (!cb || cb.name !== "MainLoop_runner") return rafDoNavegador(cb);
       // dentro do mesmo desenho, e o jogo ainda atrás do relógio: mais um quadro, já
-      if (ritmo.noDesenho && ritmo.extras < MAX_EXTRAS && ritmo.agora - ritmo.devido >= 0) {
+      if (marcaPasso.ligado && ritmo.noDesenho && ritmo.extras < MAX_EXTRAS && ritmo.agora - ritmo.devido >= 0) {
         ritmo.extras++;
         ritmo.recuperados++;
         rodarQuadro(cb, ritmo.agora);
         return 0;
       }
       return rafDoNavegador(function (t) {
-        // primeira vez, ou voltando de uma pausa longa (aba escondida): sem correr atrás
-        if (!ritmo.devido || t - ritmo.devido > 250 || ritmo.devido - t > 100) ritmo.devido = t;
+        // primeira vez, voltando de uma pausa longa (aba escondida) ou com o marca-passo
+        // desligado: sem correr atrás
+        if (!marcaPasso.ligado || !ritmo.devido || t - ritmo.devido > 250 || ritmo.devido - t > 100) ritmo.devido = t;
+        ritmo.desenhos++;
         ritmo.agora = t;
         ritmo.extras = 0;
         ritmo.noDesenho = true;
@@ -508,8 +522,34 @@
     if (amostrasQps.length < 2) return;
     var a = amostrasQps[0], z = amostrasQps[amostrasQps.length - 1];
     qpsAgora = Math.round((z[1] - a[1]) * 1000 / Math.max(1, z[0] - a[0]));
+    vigiarMarcaPasso();
     if (menuImagem && !menuImagem.hidden) desenharMenuImagem();
   }, 1000);
+  // a cada segundo, com o jogo rodando: o marca-passo está ajudando?
+  function vigiarMarcaPasso() {
+    var recuperados = ritmo.recuperados - marcaPasso.ultimoRecuperado;
+    var desenhos = ritmo.desenhos - marcaPasso.ultimosDesenhos;
+    marcaPasso.ultimoRecuperado = ritmo.recuperados;
+    marcaPasso.ultimosDesenhos = ritmo.desenhos;
+    if (Date.now() - jogandoDesde < 6000 || qpsAgora === null) { marcaPasso.ruins = 0; return; }
+    if (marcaPasso.ligado) {
+      // recuperou quadros e mesmo assim o jogo ficou abaixo da velocidade: está atrapalhando
+      marcaPasso.ruins = (recuperados >= 3 && qpsAgora < 54) ? marcaPasso.ruins + 1 : 0;
+      if (marcaPasso.ruins >= 2) {
+        marcaPasso.ligado = false;
+        marcaPasso.ruins = 0;
+        marcaPasso.desligadoEm = Date.now();
+      }
+      return;
+    }
+    // desligado: tela num ritmo fixo e baixo (25 a 35 desenhos) com o desenho leve parece a
+    // tela a 30 Hz -- aí vale tentar de novo (no máximo duas vezes, uma a cada 25 s)
+    if (marcaPasso.tentativas < 2 && Date.now() - marcaPasso.desligadoEm > 25000
+        && desenhos >= 25 && desenhos <= 35 && ritmo.trabalho < 6) {
+      marcaPasso.tentativas++;
+      marcaPasso.ligado = true;
+    }
+  }
   setInterval(function () {
     if (!jogando || escolhaGraficos !== "auto" || document.hidden) return;
     var emu = window.EJS_emulator;
@@ -1389,7 +1429,10 @@
   window.LSJogoSalvar = function () { return salvarAgora(); };
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") salvarAgora(); });
   window.addEventListener("pagehide", function () { salvarAgora(); });
-  setInterval(function () { if (document.visibilityState === "visible") salvarAgora(); }, 60000);
+  // e a cada 3 minutos jogando: tirar o estado do console é um tranco (o do N64 e o do PSP têm
+  // dezenas de MB); a cada minuto, era um engasgo por minuto. Sair da aba, trocar de app e
+  // Voltar continuam guardando na hora.
+  setInterval(function () { if (document.visibilityState === "visible") salvarAgora(); }, 180000);
 
   /* ---------------------------------------------------------------- começar */
   var comecando = false;

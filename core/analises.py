@@ -21,10 +21,25 @@ somada dia a dia -- quem veio segunda e terça é um ativo na semana, não
 dois --, então agrupa direto na unidade do período (TruncWeek/TruncMonth).
 
 SEM NÚMERO INVENTADO. Métrica sem nenhuma linha no banco vai como
-`sem_dados`; o painel escreve "sem dados ainda", e não zero. As visitas e as
-idas ao carrinho só são registradas por hora desde a seção 76 do LEIA-ME: a
-cobertura vai junto (`desde`), e a comparação com um período anterior que o
-registro não cobre sai como "sem base".
+`sem_dados`, e não como zero. As visitas e as idas ao carrinho só são
+registradas por hora desde a seção 76 do LEIA-ME: a cobertura vai junto
+(`desde`), e a comparação com um período anterior que o registro não cobre
+sai como "sem base".
+
+SEM PAREDE DE CAIXAS VAZIAS (o AJUSTE da seção 76). A métrica que não teve
+nada no período NEM no anterior vai marcada `vazia`, com o `motivo` em
+português de gente ("nenhum registro até hoje", "registrado desde 10/11:
+nada neste período", "sem movimento neste período nem no anterior"): a tela
+desenha cartão só para as que têm número e junta as vazias numa linha. A
+`principal` da resposta é a primeira métrica que TEM dado -- o gráfico não
+abre numa métrica vazia.
+
+GRÁFICO QUE EXISTE. Quem conta pessoas distintas diz a `forma` "colunas"
+(uma coluna por dia, semana ou mês: os baldes não se somam) e, em "Hoje",
+sai hora a hora quando a fonte guarda a hora (as jogadas); a que só guarda
+o dia (os acessos) manda as PESSOAS do dia, com o primeiro e o último sinal
+de cada uma (`pessoas`), e a tela desenha a linha do tempo de quem esteve
+ativo. Nenhuma resposta pede um gráfico que não dá para desenhar.
 
 O resultado de cada pergunta fica DOIS MINUTOS no cache: o painel pede de
 novo a cada troca de período, e a mesma tela aberta em três tablets não
@@ -89,6 +104,11 @@ PERIODO_PADRAO = "mes"
 MAXIMO_DIAS = 731
 CACHE_SEGUNDOS = 120
 RANKING_TAMANHO = 8
+#: A cor do quadradinho do ícone de cada indicador: sai da ORDEM em que o
+#: tipo declara as métricas (a mesma no painel e na ficha), nunca do valor.
+#: Verde e vermelho ficam de fora (são da variação), e o laranja também: é
+#: a cor da série e da escolha.
+TONS = ("magenta", "violet", "info", "apoio")
 
 MESES = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
 DIAS_DA_SEMANA = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
@@ -210,23 +230,59 @@ class Janela:
             atual = passo(atual)
         return baldes
 
-    def descricao(self):
-        def curta(valor):
-            local = timezone.localtime(valor)
-            return f"{local:%d/%m/%Y}"
+    def _intervalo(self, inicio, fim):
+        """"14/10 a 12/11", com o ano quando ele muda no caminho ou não é o de hoje."""
+        inicio = timezone.localtime(inicio)
+        fim = timezone.localtime(fim)
+        com_ano = inicio.year != fim.year or fim.year != timezone.localtime(self.agora).year
+        formato = "%d/%m/%Y" if com_ano else "%d/%m"
+        if inicio.date() == fim.date():
+            return fim.strftime(formato)
+        return f"{inicio.strftime(formato)} a {fim.strftime(formato)}"
 
+    @property
+    def ao_vivo(self):
+        return self.fim >= self.agora - dt.timedelta(seconds=1)
+
+    def textos(self):
+        """{"titulo", "comparacao", "anterior_curto"}: a frase do período, sem jargão.
+
+        "Hoje, 12/11, até 15:30" + "comparado com ontem até a mesma hora";
+        "Últimos 30 dias (14/10 a 12/11)" + "comparado com os 30 dias
+        anteriores (14/09 a 13/10)". `anterior_curto` é como cada cartão
+        chama o período anterior ("ontem: 4", "antes: 4").
+        """
+        micro = dt.timedelta(microseconds=1)
+        atual = self._intervalo(self.inicio, self.fim - micro)
+        anterior = self._intervalo(self.anterior_inicio, self.anterior_fim - micro)
         if self.unidade == "hora" and self.dias == 1:
             dia = timezone.localtime(self.inicio)
-            anterior = timezone.localtime(self.anterior_inicio)
-            ate = timezone.localtime(self.fim)
-            if self.fim >= self.agora - dt.timedelta(seconds=1):
-                return f"{dia:%d/%m} até {ate:%H:%M}, contra {anterior:%d/%m} até a mesma hora"
-            return f"{dia:%d/%m/%Y}, contra {anterior:%d/%m/%Y}"
-        fim_anterior = self.anterior_fim - dt.timedelta(microseconds=1)
-        return (
-            f"{curta(self.inicio)} a {self.ultimo_dia:%d/%m/%Y}, contra "
-            f"{curta(self.anterior_inicio)} a {curta(fim_anterior)}"
-        )
+            if self.ao_vivo and dia.date() == timezone.localtime(self.agora).date():
+                ate = timezone.localtime(self.fim)
+                return {
+                    "titulo": f"Hoje, {dia:%d/%m}, até {ate:%H:%M}",
+                    "comparacao": "comparado com ontem até a mesma hora",
+                    "anterior_curto": "ontem",
+                }
+            return {
+                "titulo": f"Dia {atual}",
+                "comparacao": f"comparado com o dia anterior ({anterior})",
+                "anterior_curto": "dia anterior",
+            }
+        dias = f"{self.dias} dias"
+        if self.codigo == "dias":
+            titulo = f"De {atual} ({dias})"
+        else:
+            titulo = f"Últimos {dias} ({atual})"
+        return {
+            "titulo": titulo,
+            "comparacao": f"comparado com os {dias} anteriores ({anterior})",
+            "anterior_curto": "antes",
+        }
+
+    def descricao(self):
+        textos = self.textos()
+        return f"{textos['titulo']} · {textos['comparacao']}"
 
 
 def _data(valor):
@@ -307,6 +363,14 @@ class Metrica:
     so_objeto: bool = False
     #: métrica calculada: (numerador, denominador) -- ex. ticket médio
     razao: tuple[str, str] | None = None
+    #: como o ranking escreve o valor ("12 dias"): (singular, plural)
+    ranking_unidade: tuple[str, str] | None = None
+    #: "colunas" para o que é contado balde a balde e não se liga com uma
+    #: linha (os dias com acesso: em cada dia, apareceu ou não apareceu)
+    forma: str = ""
+    #: o título do gráfico por unidade, quando "<rótulo> por dia" soa torto
+    #: ({"dia": "Em que dias apareceu"})
+    titulos: dict | None = None
 
 
 @dataclass(eq=False)
@@ -333,6 +397,15 @@ class Fonte:
     agrupar_ranking: Callable | None = None
     #: quando o objeto do ranking é uma expressão (ex.: "tipo:id" da linha de pedido)
     expressao_objeto: object = None
+    #: o ranking conta outra coisa que a série (as contas ativas contam
+    #: PESSOAS por dia; o ranking delas, os DIAS de cada pessoa)
+    agregados_ranking: dict | None = None
+    #: Hoje, numa fonte de pessoas distintas que só guarda o dia: quem são
+    #: (janela -> {"total", "itens"}), para a linha do tempo do dia
+    pessoas: Callable | None = None
+    #: uma lista no lugar do ranking (janela -> {"titulo", "sub", "itens"}):
+    #: os cadastros mais recentes, por exemplo
+    lista: Callable | None = None
 
 
 @dataclass
@@ -355,6 +428,9 @@ class _Acumulado:
     fontes: list = field(default_factory=list)
     desde: dt.datetime | None = None
     comparavel: bool = True
+    distinta: bool = False
+    pessoas: dict | None = None
+    lista: dict | None = None
 
     def __post_init__(self):
         self.serie = [0] * self.n
@@ -409,11 +485,13 @@ def _acumular_aditiva(fonte, jan, acc, indice):
     so_o_dia = fonte.campo_e_data and jan.unidade == "hora"
     kind = "hour" if (jan.unidade == "hora" and not so_o_dia) else "day"
     if so_o_dia:
+        pessoas = fonte.pessoas(jan) if (fonte.pessoas and jan.dias == 1) else None
         for codigo in set(fonte.metricas.values()):
             if codigo in acc:
                 acc[codigo].sem_serie = True
                 acc[codigo].motivo_sem_serie = "por_dia"
                 acc[codigo].anterior = None
+                acc[codigo].pessoas = pessoas
     valores = [fonte.separar_por] if fonte.separar_por else []
     linhas = (
         fonte.consulta.filter(jan.filtro(fonte.campo_data, campo_e_data=fonte.campo_e_data))
@@ -469,10 +547,16 @@ def _acumular_distinta(fonte, jan, acc, indice):
         alvo.total_anterior += totais["anterior"] or 0
         alvo.tem_linhas = alvo.tem_linhas or bool(totais["atual"] or totais["anterior"])
         alvo.anterior = None  # a série anterior de distintos não é somável: só o total compara
-        kind = {"dia": "day", "semana": "week", "mes": "month"}.get(jan.unidade)
-        if kind is None or (jan.unidade == "hora"):
+        alvo.distinta = True
+        alvo.semana = None
+        kind = {"hora": "hour", "dia": "day", "semana": "week", "mes": "month"}.get(jan.unidade)
+        if kind is None or (jan.unidade == "hora" and fonte.campo_e_data):
+            # A fonte só guarda o DIA (os acessos): hora a hora não há o que
+            # contar. Em vez de um gráfico vazio, vão as pessoas do dia.
             alvo.sem_serie = True
             alvo.motivo_sem_serie = alvo.motivo_sem_serie or "distintas"
+            if fonte.pessoas and jan.dias == 1 and (totais["atual"] or 0):
+                alvo.pessoas = fonte.pessoas(jan)
             continue
         linhas = (
             fonte.consulta.filter(atual)
@@ -485,20 +569,24 @@ def _acumular_distinta(fonte, jan, acc, indice):
             posicao = indice.get(balde_de(_local_ingenuo(linha["_t"]), jan.unidade))
             if posicao is not None:
                 alvo.serie[posicao] += linha["v"] or 0
-        alvo.semana = None
 
 
 def _acumular_ranking(fonte, jan, acc):
     if not fonte.campo_objeto:
         return
+    if fonte.agregados_ranking and jan.dias <= 1:
+        # "dias com acesso" num dia só daria 1 para todo mundo: sem ranking
+        # (em Hoje a tela já mostra as pessoas do dia, uma a uma)
+        return
     campos = [fonte.campo_objeto] + ([fonte.separar_por] if fonte.separar_por else [])
     consulta = fonte.consulta.filter(jan.filtro(fonte.campo_data, so_atual=True, campo_e_data=fonte.campo_e_data))
     if fonte.expressao_objeto is not None:
         consulta = consulta.annotate(**{fonte.campo_objeto: fonte.expressao_objeto})
+    agregados = fonte.agregados_ranking or fonte.agregados
     linhas = (
         consulta
         .values(*campos)
-        .annotate(**fonte.agregados)
+        .annotate(**agregados)
         .order_by()
     )
     for linha in linhas:
@@ -507,7 +595,7 @@ def _acumular_ranking(fonte, jan, acc):
             continue
         separador = linha.get(fonte.separar_por) if fonte.separar_por else None
         destinos = fonte.agrupar_ranking(objeto) if fonte.agrupar_ranking else [objeto]
-        for apelido in fonte.agregados:
+        for apelido in agregados:
             codigo = fonte.metricas.get((separador, apelido))
             if codigo not in acc:
                 continue
@@ -542,7 +630,7 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
     chave = None
     if usar_cache:
         chave = (
-            f"lsa:v1:{tipo.codigo}:{objeto_id or '-'}:{jan.codigo}:"
+            f"lsa:v2:{tipo.codigo}:{objeto_id or '-'}:{jan.codigo}:"
             f"{jan.de or ''}:{jan.ate or ''}:{timezone.localtime(jan.inicio):%Y%m%d}"
         )
         guardado = cache.get(chave)
@@ -578,6 +666,10 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
                     _acumular_distinta(fonte, jan, acc, indice)
                 if objeto_id is None:
                     _acumular_ranking(fonte, jan, acc)
+                    if fonte.lista:
+                        for (_separador, _apelido), codigo in fonte.metricas.items():
+                            if codigo in acc and acc[codigo].lista is None:
+                                acc[codigo].lista = fonte.lista(jan)
         except Exception:  # noqa: BLE001 -- o painel segue com o que deu certo
             log.exception(
                 "analises: a fonte %s falhou (tipo=%s objeto=%s periodo=%s)",
@@ -625,11 +717,27 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
     ids = set()
     for alvo in acc.values():
         ids.update(alvo.ranking)
-    nomes = tipo.nomes(ids) if (ids and tipo.nomes) else {}
+    nomes = {}
+    if ids and tipo.nomes:
+        # o nome de quem está no ranking é enfeite: se a consulta dele falhar, o
+        # ranking sai com "#12" no lugar do nome, e o painel continua inteiro
+        try:
+            with _ponto_de_retorno():
+                nomes = tipo.nomes(ids)
+        except Exception:  # noqa: BLE001 -- o erro vai para o log; os números seguem
+            log.exception("analises: os nomes do ranking falharam (tipo=%s periodo=%s)", tipo.codigo, jan.codigo)
+            houve_falha = True
 
+    tons = {m.codigo: TONS[posicao % len(TONS)] for posicao, m in enumerate(tipo.metricas)}
     resultado_metricas = []
     for metrica in metricas:
-        resultado_metricas.append(_serializar(metrica, acc, baldes, agora_local, jan, nomes))
+        serializada = _serializar(metrica, acc, baldes, agora_local, jan, nomes)
+        serializada["tom"] = tons.get(metrica.codigo, TONS[0])
+        resultado_metricas.append(serializada)
+    # a métrica que o gráfico abre: a principal do tipo, se tiver dado; senão a primeira que tem
+    com_dados = [m["codigo"] for m in resultado_metricas if not m["vazia"]]
+    principal = tipo.principal if tipo.principal in com_dados else (com_dados[0] if com_dados else tipo.principal)
+    textos = jan.textos()
 
     rotulos = []
     inicio_janela = _local_ingenuo(jan.inicio)
@@ -655,20 +763,35 @@ def calcular(tipo, jan, objeto_id=None, usar_cache=True):
             "anterior_inicio": timezone.localtime(jan.anterior_inicio).isoformat(),
             "anterior_fim": timezone.localtime(jan.anterior_fim).isoformat(),
             "descricao": jan.descricao(),
+            "titulo": textos["titulo"],
+            "comparacao": textos["comparacao"],
+            "anterior_curto": textos["anterior_curto"],
+            "dias": jan.dias,
             "de": jan.de.isoformat() if jan.de else None,
             "ate": jan.ate.isoformat() if jan.ate else None,
         },
         "rotulos": rotulos,
         "dias_da_semana": list(DIAS_DA_SEMANA_LONGOS),
         "metricas": resultado_metricas,
-        "principal": tipo.principal,
+        "principal": principal,
+        "ranking_titulo": tipo.ranking_titulo,
         "avisos": list(tipo.avisos),
-        "destaques": tipo.destaques() if (tipo.destaques and objeto_id is None) else [],
         "gerado_em": timezone.localtime(jan.agora).isoformat(),
     }
     if chave and not houve_falha:
         cache.set(chave, resposta, CACHE_SEGUNDOS)
     return resposta
+
+
+def _motivo(sem_dados, desde, indisponivel=False):
+    """Por que a métrica não tem número neste período, dito sem jargão."""
+    if indisponivel:
+        return "Não deu para carregar agora; o erro foi registrado. Os outros números estão certos."
+    if sem_dados:
+        return "Nenhum registro até hoje."
+    if desde:
+        return f"Registrado desde {timezone.localtime(desde):%d/%m/%Y}: nada neste período."
+    return "Sem movimento neste período nem no anterior."
 
 
 def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
@@ -685,6 +808,9 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
         if numerador.anterior is not None and denominador.anterior is not None:
             serie_anterior = [_dividir(numerador.anterior[i], denominador.anterior[i]) for i in range(len(baldes))]
         variacao, direcao = _variacao(total or 0, anterior or 0)
+        indisponivel = numerador.indisponivel or denominador.indisponivel
+        sem_dados = not (numerador.tem_linhas and denominador.tem_linhas) or indisponivel
+        vazia = sem_dados or not (total or anterior)
         return {
             "codigo": metrica.codigo,
             "rotulo": metrica.rotulo,
@@ -692,7 +818,16 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
             "formato": metrica.formato,
             "ajuda": metrica.ajuda,
             "subir_e_bom": metrica.subir_e_bom,
-            "sem_dados": not (numerador.tem_linhas and denominador.tem_linhas),
+            "sem_dados": sem_dados,
+            "indisponivel": indisponivel,
+            "vazia": vazia,
+            "motivo": _motivo(sem_dados, None, indisponivel) if vazia else "",
+            "forma": "linha",
+            "titulos": None,
+            "distinta": False,
+            "pessoas": None,
+            "lista": None,
+            "ranking_unidade": None,
             "comparavel": numerador.comparavel and denominador.comparavel,
             "desde": None,
             "total": _json_numero(total, metrica.formato),
@@ -712,12 +847,19 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
     ranking = []
     for objeto, valor in sorted(alvo.ranking.items(), key=lambda par: (-float(par[1]), str(par[0])))[:RANKING_TAMANHO]:
         nome = nomes.get(objeto, {}) if isinstance(nomes.get(objeto), dict) else {"nome": nomes.get(objeto)}
-        ranking.append({
+        item = {
             "id": nome.get("id", objeto),
             "nome": nome.get("nome") or f"#{objeto}",
             "tipo": nome.get("tipo"),
             "valor": _json_numero(valor, metrica.formato),
-        })
+        }
+        # o ranking de pessoas (Usuários) leva o avatar e a última vez em que a conta foi vista
+        for extra in ("avatar", "detalhe", "online"):
+            if nome.get(extra) is not None:
+                item[extra] = nome[extra]
+        ranking.append(item)
+    sem_dados = not alvo.tem_linhas or alvo.indisponivel
+    vazia = sem_dados or not (alvo.total or alvo.total_anterior)
     return {
         "codigo": metrica.codigo,
         "rotulo": metrica.rotulo,
@@ -725,8 +867,17 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
         "formato": metrica.formato,
         "ajuda": metrica.ajuda,
         "subir_e_bom": metrica.subir_e_bom,
-        "sem_dados": not alvo.tem_linhas or alvo.indisponivel,
+        "sem_dados": sem_dados,
         "indisponivel": alvo.indisponivel,
+        "vazia": vazia,
+        "motivo": _motivo(sem_dados, alvo.desde, alvo.indisponivel) if vazia else "",
+        # pessoas distintas não se somam de um balde para o outro: colunas, e não uma linha contínua
+        "forma": metrica.forma or ("colunas" if alvo.distinta else "linha"),
+        "titulos": metrica.titulos,
+        "distinta": alvo.distinta,
+        "pessoas": alvo.pessoas,
+        "lista": alvo.lista,
+        "ranking_unidade": list(metrica.ranking_unidade) if metrica.ranking_unidade else None,
         "comparavel": alvo.comparavel,
         "desde": timezone.localtime(alvo.desde).date().isoformat() if alvo.desde else None,
         "total": _json_numero(alvo.total, metrica.formato),
@@ -744,7 +895,9 @@ def _serializar(metrica, acc, baldes, agora_local, jan, nomes):
             _json_numero(v, metrica.formato) for v in alvo.semana
         ],
         "ranking": ranking,
-        "tem_ranking": any(fonte.campo_objeto for fonte, _ in alvo.fontes),
+        "tem_ranking": bool(ranking) or any(
+            fonte.campo_objeto and not fonte.agregados_ranking for fonte, _ in alvo.fontes
+        ),
     }
 
 

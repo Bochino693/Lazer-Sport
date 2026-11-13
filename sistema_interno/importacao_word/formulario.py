@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import copy
 import re
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -65,7 +65,7 @@ from ..utils import ErroDeFormulario
 from ..validacoes import documento_valido, telefone_valido, tipo_documento
 from . import catalogo as cat
 from . import deterministica as det
-from .conferencia import NIVEL_VERMELHO, recalcular_alertas
+from .conferencia import NIVEL_VERMELHO, base_da_validade, recalcular_alertas
 
 LIMITE_DINHEIRO = Decimal("9999999999.99")
 JUSTIFICATIVA_MINIMA = 10
@@ -139,6 +139,7 @@ def ler_envio(post) -> dict:
         "frete": campo("frete", 30),
         "desconto": campo("desconto", 30),
         "validade": campo("validade", 20),
+        "data_documento": campo("data_documento", 20),
         "forma_pagamento": campo("forma_pagamento", 300),
         "forma_envio": campo("forma_envio", 300),
         "prazo": campo("prazo", 300),
@@ -306,6 +307,10 @@ def envio_inicial(proposta) -> dict:
         "frete": proposta["valores"]["frete"]["valor"],
         "desconto": proposta["valores"]["desconto"]["valor"],
         "validade": proposta["condicoes"]["validade"]["valor"],
+        # A data do documento: a escrita nele, ou a que a pessoa respondeu
+        # no começo ("De quando é este documento?"). A data do ARQUIVO não
+        # entra sozinha: é só opção na pergunta.
+        "data_documento": (proposta.get("data") or {}).get("valor", ""),
         "forma_pagamento": proposta["condicoes"]["forma_pagamento"]["valor"],
         "forma_envio": proposta["condicoes"]["forma_envio"]["valor"],
         "prazo": proposta["condicoes"]["prazo"]["valor"],
@@ -349,6 +354,26 @@ def validar(proposta, envio, *, hoje=None) -> dict:
     }
     so_cliente = limpo["modo_importacao"] == "cliente"
     vinculo = proposta["cliente"]["vinculo"]
+
+    # ------------------------------------------------ data do documento
+    # Vale para os dois caminhos (o cliente guarda "cliente desde"); só o
+    # orçamento EXIGE a data -- o documento de 2016 não pode virar uma
+    # proposta de hoje.
+    texto_data = envio.get("data_documento") or ""
+    data_documento = _data(texto_data)
+    if texto_data and data_documento is None:
+        _pendencia(pendencias, "documento.data", "Data do documento", "data inválida")
+    elif data_documento and data_documento > hoje:
+        _pendencia(pendencias, "documento.data", "Data do documento",
+                   "a data do documento não pode ser depois de hoje")
+        data_documento = None
+    elif data_documento and data_documento.year < 1990:
+        _pendencia(pendencias, "documento.data", "Data do documento", "confira o ano")
+        data_documento = None
+    elif not data_documento and not so_cliente:
+        _pendencia(pendencias, "documento.data", "Data do documento",
+                   "diga de quando é o documento: a proposta guarda essa data")
+    limpo["data_documento"] = data_documento
 
     # ------------------------------------------------------- cliente
     modo = envio["cliente_modo"] if envio["cliente_modo"] in ("existente", "novo") else "novo"
@@ -576,15 +601,20 @@ def validar(proposta, envio, *, hoje=None) -> dict:
 
     # ------------------------------------------------------ condições
     validade = _data(envio["validade"])
+    # Os dias da validade contam da data do documento quando ele é de antes
+    # de hoje: o contrato de 2016 importado hoje vale até 2016 + 5 dias (é
+    # o registro do que foi proposto). Sem data, contam de hoje.
+    base = base_da_validade(hoje, limpo["data_documento"])
     if not envio["validade"]:
         # Igual ao formulário normal: proposta nova sem prazo nasce com o
         # padrão do painel. A tela já mostra esse padrão no campo.
-        validade = Orcamento.validade_padrao()
+        validade = base + timedelta(days=Orcamento.DIAS_DE_VALIDADE_PADRAO)
     elif validade is None:
         _pendencia(pendencias, "condicoes.validade", "Validade", "data inválida")
-    elif validade < hoje:
+    elif validade < base:
         _pendencia(pendencias, "condicoes.validade", "Validade",
-                   "a validade não pode ser anterior a hoje: a proposta sairia vencida")
+                   "a validade não pode ser anterior à data do documento" if base < hoje
+                   else "a validade não pode ser anterior a hoje: a proposta sairia vencida")
     limpo["validade"] = validade
     for nome_campo, rotulo in (("forma_pagamento", "Forma de pagamento"), ("forma_envio", "Forma de envio")):
         texto = det.espacos(envio[nome_campo])
@@ -867,6 +897,14 @@ def criar(request, proposta, validado, *, arquivo: str) -> dict:
         }
         completados = [nome for nome, valor in depois.items() if valor and valor != antes.get(nome)]
 
+    # Cliente desde: a data do documento, quando é a mais antiga que se
+    # conhece deste cliente (o contrato de 2012 vale mais que o cadastro de
+    # hoje). Nunca troca uma data mais antiga por uma mais nova.
+    data_documento = limpo.get("data_documento")
+    if data_documento and (cliente.cliente_desde is None or data_documento < cliente.cliente_desde):
+        cliente.cliente_desde = data_documento
+        cliente.save(update_fields=["cliente_desde", "atualizado"])
+
     resultado = {"cliente": cliente, "cliente_novo": existente is None, "completados": completados,
                  "mapa_pedido": bool(limpo.get("publicar_no_mapa")),
                  "orcamento": None}
@@ -887,6 +925,7 @@ def criar(request, proposta, validado, *, arquivo: str) -> dict:
         status=Orcamento.Status.RASCUNHO,
         origem=origem_padrao_orcamento(usuario),
         validade=limpo["validade"],
+        data_documento=limpo.get("data_documento"),
         frete=limpo["frete"],
         desconto=limpo["desconto"],
         valor_final=limpo.get("valor_final"),

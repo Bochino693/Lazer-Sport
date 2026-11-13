@@ -7,7 +7,7 @@
 # Financeiro é contada pelo mês da venda, e um orçamento quitado em agosto
 # não pode aparecer como receita de novembro.
 #
-# Separada da 0059 (o esquema) de propósito: gravar linha com chave
+# Separada da 0060 (o esquema) de propósito: gravar linha com chave
 # estrangeira no mesmo arquivo que um ALTER TABLE estoura no PostgreSQL
 # com "pending trigger events" -- ver tests_migracoes.py.
 #
@@ -121,7 +121,7 @@ def desfazer(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sistema_interno", "0059_orcamento_venda"),
+        ("sistema_interno", "0060_orcamento_venda"),
     ]
 
     operations = [

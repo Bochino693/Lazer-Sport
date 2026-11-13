@@ -822,6 +822,13 @@ def formulario_de(envio, **mudancas):
                   "frete", "desconto", "validade", "forma_pagamento", "forma_envio", "prazo", "observacoes",
                   "total_escolha"):
         dados[chave] = envio.get(chave) or ""
+    # A data do documento: a do envio (escrita no documento), ou a resposta
+    # da pessoa ao primeiro passo do modal -- aqui, "hoje". Um teste que
+    # quer a data em branco passa data_documento="".
+    if "data_documento" in mudancas:
+        dados["data_documento"] = mudancas["data_documento"]
+    else:
+        dados["data_documento"] = envio.get("data_documento") or timezone.localdate().isoformat()
     if envio.get("cliente_confirmado"):
         dados["cliente_confirmado"] = "1"
     if envio.get("publicar_no_mapa"):
@@ -977,8 +984,10 @@ class EnvioDoArquivoTests(_ComUsuario):
         url = self.importar(docx_com_tabela())
         token = url.rstrip("/").split("/")[-1]
         guardado = self.client.session["importacoes_orcamento_word"][token]
+        # "datas_arquivo": só as datas de criado/salvo do arquivo (a opção
+        # na pergunta "De quando é este documento?"), nada do conteúdo.
         self.assertEqual(set(guardado), {"arquivo", "formato", "linhas", "ia", "escolhas", "para", "cep_consultado",
-                                         "criado_em", "autor"})
+                                         "datas_arquivo", "criado_em", "autor"})
         self.assertNotIn("PK", json.dumps(guardado))
 
     def test_token_inventado_volta_para_o_envio(self):
@@ -1042,7 +1051,10 @@ class CriacaoTests(_ComUsuario):
         orcamento = Orcamento.objects.get()
         # (11) 98765-4321: celular de nove dígitos, então WhatsApp.
         self.assertEqual(orcamento.cliente.canal_telefone, Cliente.CanalTelefone.WHATSAPP)
-        self.assertEqual(orcamento.validade, Orcamento.validade_padrao())
+        # Sem validade escrita: os 5 dias do padrão contam da data do
+        # documento ("Data:" de dois dias atrás), e não de hoje.
+        self.assertEqual(orcamento.data_documento, timezone.localdate() - timedelta(days=2))
+        self.assertEqual(orcamento.validade, timezone.localdate() - timedelta(days=2) + timedelta(days=5))
         self.assertEqual(orcamento.forma_envio, "")
 
     def test_item_sem_produto_nem_linha_avulsa_bloqueia(self):
@@ -2195,3 +2207,425 @@ class FolhaDaTelaTests(SimpleTestCase):
         definidas = set(re.findall(r"(--[a-z0-9-]+)\s*:", (base / "interno_modern.css").read_text(encoding="utf-8")))
         usadas = set(re.findall(r"var\(\s*(--[a-z0-9-]+)\s*\)", sem_comentarios))
         self.assertEqual(sorted(usadas - definidas), [])
+
+
+# ======================================================================
+# AJUSTE 4: o contrato de compra e venda e a data do documento
+# ======================================================================
+#: Feito à semelhança do contrato da casa -- nunca o de um cliente de
+#: verdade. O comprador tem o primeiro nome fora da lista do IBGE.
+VENDEDOR_DO_CONTRATO = (
+    "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma da Lei, comparecem aqui, as partes, "
+    "de um lado, na qualidade de fornecedor, aqui doravante denominado simplesmente VENDEDOR: Brinquedos "
+    "Lazer & Sport, devidamente inscrita no CNPJ sob o n. 54.486.908/0001-86, neste ato representado por "
+    "Otávio Brandão Lemos, portador da cédula de identidade RG: 27.418.905-3, residente e domiciliado na "
+    "Travessa dos Ipês Roxos, n. 77, Vila Aurora, CEP: 02998-010, São Paulo, Capital; e, do outro lado, na "
+    "qualidade de comprador, aqui doravante denominado simplesmente "
+)
+
+
+def docx_contrato(*, comprador="Kethellyn Souza Brandão", itens=(("1", "Cama elástica 3 m"), ("1", "Matrix")),
+                  total="R$ 38.500,00 (trinta e oito mil e quinhentos reais)",
+                  data="São Paulo,11 de novembro de 2026", com_valor=False, linha_do_comprador=None):
+    cabecalho = ["Quantidade", "Equipamento"] + (["Valor"] if com_valor else [])
+    return montar_docx(
+        par("INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE")
+        + par("EQUIPAMENTO DE ENTRETENIMENTO")
+        + tabela(cabecalho, *[list(item) for item in itens])
+        + ("" if com_valor else par("                                           Valor "))
+        + par(VENDEDOR_DO_CONTRATO)
+        + par(linha_do_comprador or f"COMPRADOR {comprador}")
+        + par("CPF ou CNPJ; 318.447.205-19")
+        + par("Endereço completo; Rua das Acácias, 250, Centro, Ribeirão Preto/SP")
+        + par("Email; comprador@exemplo.com.br")
+        + par("Telefone; 16 99123-4567")
+        + par("Cláusula 2ª – Pelo presente instrumento e na melhor forma do direito, o VENDEDOR vende ao "
+              f"COMPRADOR o equipamento objeto deste contrato, descrito na Cláusula 1ª, no valor total {total}")
+        + par("Condição de pagamento:")
+        + par("5ª. . Cláusula As despesas com frete do equipamento,")
+        + par("são por conta do COMPRADOR.")
+        # Os títulos de seção do modelo: "DA MULTA" logo depois de "...do
+        # COMPRADOR." já virou o nome do cliente.
+        + par("DA MULTA") + par("Cláusula 6ª. Multa de 30% do valor total.")
+        + par("DA INADIMPLENCIA") + par("Cláusula 7ª. Juros de 1% ao mês.")
+        + par("DO FORO") + par("Cláusula 8ª. Foro da Comarca de São Paulo.")
+        + par(data)
+        + par("__________________________") + par("Proprietário") + par("Otávio Brandão Lemos")
+        + par("__________________________") + par("COMPRADOR") + par(comprador),
+        cabecalho=par("Brinquedos Lazer & Sport"),
+        rodape=par("Rua São Roque de Minas; 104, Jardim Pery, São Paulo - SP, CNPJ: 54.486.908 / 0001-86"),
+    )
+
+
+def com_datas_do_arquivo(conteudo, *, criado="", salvo=""):
+    """O mesmo .docx com o docProps/core.xml (quando foi criado e salvo)."""
+    entrada = zipfile.ZipFile(io.BytesIO(conteudo))
+    saida = io.BytesIO()
+    with zipfile.ZipFile(saida, "w", zipfile.ZIP_DEFLATED) as arquivo:
+        for nome in entrada.namelist():
+            arquivo.writestr(nome, entrada.read(nome))
+        partes = []
+        if criado:
+            partes.append(f'<dcterms:created xsi:type="dcterms:W3CDTF">{criado}</dcterms:created>')
+        if salvo:
+            partes.append(f'<dcterms:modified xsi:type="dcterms:W3CDTF">{salvo}</dcterms:modified>')
+        arquivo.writestr("docProps/core.xml", (
+            '<?xml version="1.0" encoding="UTF-8"?><cp:coreProperties '
+            'xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+            'xmlns:dcterms="http://purl.org/dc/terms/" '
+            'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' + "".join(partes) + "</cp:coreProperties>"
+        ))
+    return saida.getvalue()
+
+
+@override_settings(EMPRESA_CNPJ="54.486.908/0001-86")
+class ContratoDeCompraEVendaTests(_ComUsuario):
+    """"Tinha uma cama elástica, matrix e etc em um doc, ele criou um objeto
+    volume com o valor total, isso não deve acontecer"."""
+
+    def proposta(self, conteudo=None, **parametros):
+        return proposta_de(conteudo or docx_contrato(**parametros))
+
+    def test_o_comprador_e_o_cliente_mesmo_com_primeiro_nome_fora_da_lista(self):
+        envio = formulario.envio_inicial(self.proposta())
+        self.assertEqual(envio["nome"], "Kethellyn Souza Brandão")
+        self.assertEqual(envio["documento"], "318.447.205-19")
+        self.assertEqual(envio["telefone"], "(16) 99123-4567")
+        self.assertEqual(envio["email"], "comprador@exemplo.com.br")
+
+    def test_o_comprador_escrito_de_todo_jeito_e_os_titulos_nunca(self):
+        for linha, nome in (
+            ("COMPRADOR Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("COMPRADOR(A) Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("CONTRATANTE Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("Comprador Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+            ("comprador: Kauyr Ribeiro Abdala", "Kauyr Ribeiro Abdala"),
+        ):
+            with self.subTest(linha=linha):
+                envio = formulario.envio_inicial(self.proposta(
+                    docx_contrato(comprador="Kauyr Ribeiro Abdala", linha_do_comprador=linha)))
+                self.assertEqual(envio["nome"], nome)
+        # Só na assinatura (a linha do comprador não diz o nome): ainda é ele.
+        envio = formulario.envio_inicial(self.proposta(
+            docx_contrato(comprador="Kauyr Ribeiro Abdala", linha_do_comprador="COMPRADOR")))
+        self.assertEqual(envio["nome"], "Kauyr Ribeiro Abdala")
+
+    def test_titulo_de_secao_nunca_e_nome(self):
+        from .importacao_word import identificar
+
+        for titulo in ("DA MULTA", "DO OBJETO DO CONTRATO", "DAS OBRIGAÇÕES E GARANTIAS", "DA INADIMPLENCIA",
+                       "DA INADIMPLÊNCIA", "DO FORO", "DOS PRAZOS", "DA RESCISÃO", "DO PAGAMENTO", "DA ENTREGA"):
+            self.assertTrue(identificar.titulo_de_secao(titulo), titulo)
+        for nome in ("Kauyr Ribeiro Abdala", "Dalva Moreira", "Doralice Prado"):
+            self.assertFalse(identificar.titulo_de_secao(nome), nome)
+        # "Da", "Do", "De" nunca começam um nome.
+        self.assertFalse(identificar._vale_como_pessoa("Da Multa"))
+        self.assertFalse(identificar._nome_desconhecido_vale("Da Multa"))
+        self.assertFalse(identificar._nome_desconhecido_vale("Do Foro"))
+        self.assertTrue(identificar._nome_desconhecido_vale("Kauyr da Silva"))
+        proposta = self.proposta(docx_contrato(comprador="Kauyr Ribeiro Abdala"))
+        todos = [proposta["cliente"]["nome"]["valor"]] + [o["valor"] for o in proposta["cliente"]["nome"]["opcoes"]]
+        self.assertFalse(any(v.lower().startswith(("da ", "do ", "das ", "dos ")) for v in todos), todos)
+
+    def test_quem_representa_a_fabrica_nunca_e_o_cliente(self):
+        proposta = self.proposta()
+        envio = formulario.envio_inicial(proposta)
+        cliente = " | ".join(str(envio[c]) for c in (
+            "nome", "estabelecimento", "contato", "documento", "telefone", "cep", "endereco", "numero",
+            "bairro", "cidade",
+        ))
+        for marca in ("Otávio", "Ipês Roxos", "Aurora", "02998-010", "Brandão Lemos"):
+            self.assertNotIn(marca, cliente)
+        # Nem como "outra leitura" do nome.
+        outras = [o["valor"] for o in proposta["cliente"]["nome"]["opcoes"]]
+        self.assertFalse(any("Otávio" in valor for valor in outras), outras)
+        # O endereço é o do comprador, escrito com ponto e vírgula no rótulo.
+        self.assertEqual((envio["endereco"], envio["numero"], envio["bairro"], envio["cidade"], envio["estado"]),
+                         ("Rua das Acácias", "250", "Centro", "Ribeirão Preto", "SP"))
+
+    def test_o_lado_da_casa_atravessa_as_linhas_quebradas_do_pdf(self):
+        from .importacao_word import identificar
+
+        linhas = [
+            {"id": "P1", "texto": "comparecem aqui, as partes, de um lado, na qualidade de fornecedor,", "parte": "corpo",
+             "tabela": "", "linha": 0, "coluna": 0},
+            {"id": "P2", "texto": "VENDEDOR: Brinquedos Lazer & Sport, inscrita no CNPJ sob o n.", "parte": "corpo",
+             "tabela": "", "linha": 0, "coluna": 0},
+            {"id": "P3", "texto": "neste ato representado por Otávio Brandão Lemos, residente na Travessa dos Ipês Roxos, 77,",
+             "parte": "corpo", "tabela": "", "linha": 0, "coluna": 0},
+            {"id": "P4", "texto": "CEP: 02998-010, São Paulo; e, do outro lado, na qualidade de comprador,",
+             "parte": "corpo", "tabela": "", "linha": 0, "coluna": 0},
+            {"id": "P5", "texto": "COMPRADOR Kethellyn Souza Brandão", "parte": "corpo", "tabela": "",
+             "linha": 0, "coluna": 0},
+        ]
+        trechos = identificar.lado_da_casa(linhas)
+        self.assertEqual(trechos["P2"], [(0, len(linhas[1]["texto"]))])  # "n." não fecha a frase
+        self.assertEqual(trechos["P3"], [(0, len(linhas[2]["texto"]))])
+        self.assertTrue(identificar.no_lado_da_casa(trechos, "P4", 0))
+        self.assertFalse(identificar.no_lado_da_casa(trechos, "P4", linhas[3]["texto"].index("na qualidade")))
+        self.assertNotIn("P5", trechos)
+
+    def test_os_equipamentos_da_tabela_viram_itens_e_o_desconhecido_fica_para_escolher(self):
+        proposta = self.proposta(itens=(("1", "Cama elástica 3 m"), ("1", "Matrix"), ("2", "Air Game Kids")))
+        itens = proposta["itens"]
+        self.assertEqual([i["original"] for i in itens], ["Cama elástica 3 m", "Matrix", "Air Game Kids"])
+        self.assertEqual([i["quantidade"]["valor"] for i in itens], ["1", "1", "2"])
+        # Sem valor na tabela: o preço do catálogo, marcado; o "Matrix", que o
+        # catálogo não tem, fica com o nome do documento para a pessoa escolher.
+        self.assertEqual(itens[0]["valor_unitario"]["valor"], "280,00")
+        self.assertEqual(itens[0]["valor_unitario"]["origem"], "catalogo")
+        self.assertIsNone(itens[1]["produto"]["escolhido"])
+        self.assertEqual(itens[1]["descricao"]["valor"], "Matrix")
+        self.assertIn("produto:i2", alertas_por_id(proposta))
+
+    def test_o_total_da_clausula_e_o_total_e_nunca_um_item(self):
+        proposta = self.proposta()
+        self.assertEqual(proposta["valores"]["total"]["valor"], "38.500,00")
+        # Os equipamentos vieram sem preço: o total do contrato é o valor fechado.
+        self.assertEqual(proposta["valores"]["valor_final"]["valor"], "38.500,00")
+        self.assertTrue(proposta["valor_final"]["explicito"])
+        self.assertNotIn("soma_total", alertas_por_id(proposta))
+        # Nenhuma linha do documento virou item com o total.
+        valores = {i["valor_unitario"]["valor"] for i in proposta["itens"]} | {
+            i["total_linha"]["valor"] for i in proposta["itens"]}
+        self.assertNotIn("38.500,00", valores)
+        self.assertEqual(len(proposta["itens"]), 2)
+        # E o frete por conta do comprador, na cláusula, é zero no total.
+        self.assertEqual(proposta["valores"]["frete"]["valor"], "0,00")
+        self.assertEqual(proposta["condicoes"]["forma_envio"]["valor"], "Frete por conta do cliente")
+
+    def test_o_modal_vai_em_passos_cliente_e_itens_com_o_que_falta(self):
+        url = self.importar(docx_contrato(data="São Paulo,14 de março de 2016",
+                                          itens=(("1", "Cama elástica 3 m"), ("1", "Matrix"))))
+        tela = self.client.get(url, **HOST)
+        # Data escrita e antiga: não pergunta; o modal começa no cliente.
+        self.assertNotContains(tela, 'data-passo="data"')
+        self.assertContains(tela, 'data-marca-passo="cliente"')
+        self.assertContains(tela, 'data-passo="cliente"')
+        self.assertContains(tela, 'data-passo="itens" aria-labelledby="passoItensTitulo" hidden')
+        self.assertContains(tela, 'data-ir-passo="itens"')
+        decisao = tela.context["decisao"]
+        self.assertEqual([l["chave"] for l in decisao["linhas_falta"]], ["estabelecimento"])
+        self.assertEqual([(i["nome"], i["faltas"]) for i in decisao["itens"]],
+                         [("Cama elástica 3 m", []), ("Matrix", ["escolher o produto", "sem preço"])])
+        self.assertContains(tela, "escolher o produto · sem preço")
+        # A data fica na barra de cima, para trocar.
+        self.assertContains(tela, 'id="campoDataDocumento" name="data_documento"')
+        self.assertContains(tela, "escrito no documento")
+
+    def test_tabela_com_valor_nao_vira_valor_final(self):
+        proposta = self.proposta(itens=(("1", "Cama elástica 3 m", "R$ 280,00"), ("1", "Matrix", "R$ 12.900,00")),
+                                 total="R$ 13.180,00", com_valor=True)
+        self.assertEqual([i["valor_unitario"]["valor"] for i in proposta["itens"]], ["280,00", "12.900,00"])
+        self.assertEqual(proposta["valores"]["total"]["valor"], "13.180,00")
+        self.assertEqual(proposta["valores"]["valor_final"]["valor"], "")
+        self.assertEqual([a for a in proposta["alertas"] if a["nivel"] == conferencia.NIVEL_VERMELHO], [])
+
+    def test_frase_de_total_nunca_e_item_nem_pela_leitura_de_paragrafo(self):
+        linha = {"id": "P9", "texto": "COMPRADOR o equipamento objeto deste contrato, descrito na Cláusula 1ª, "
+                                      "no valor total R$ 38.500,00", "parte": "corpo", "tabela": "",
+                 "linha": 0, "coluna": 0}
+        self.assertEqual(det.itens_em_paragrafos([linha]), [])
+        self.assertFalse(det.parece_produto("COMPRADOR o equipamento objeto deste contrato, no valor total"))
+        self.assertTrue(det.parece_produto("Cama elástica 3 m com rede"))
+        self.assertEqual(det.total_em_frase([linha])["valor"], Decimal("38500.00"))
+        # Quebrada pelo PDF: "...no valor" / "total R$ 38.500,00 (...)".
+        quebrada = [dict(linha, texto="ao COMPRADOR o equipamento, descrito na Cláusula 1ª, no valor"),
+                    dict(linha, id="P10", texto="total R$ 38.500,00 (trinta e oito mil e quinhentos reais)")]
+        lido = det.total_em_frase(quebrada)
+        self.assertEqual((lido["valor"], lido["fonte"]["id"]), (Decimal("38500.00"), "P10"))
+        # "Pula-pula no valor de R$ 300,00", fora de contrato, é preço de item.
+        self.assertIsNone(det.total_em_frase([dict(linha, texto="Pula-pula no valor de R$ 300,00")]))
+
+    def test_linha_que_nao_e_item_nao_entra_por_caminho_nenhum(self):
+        def bruto(contexto, descricao, valor):
+            dinheiro = (Decimal(valor), {"id": "P1", "texto": ""}, valor) if valor else None
+            return {"contexto": contexto, "descricao": ((descricao, {"id": "P1"}, descricao), None),
+                    "valor_unitario": (dinheiro, None), "total_linha": (None, None)}
+
+        alertas = []
+        lista = [
+            bruto("tabela", "Cama elástica 3 m", "280.00"),
+            bruto("ia", "Matrix", "38500.00"),  # o total do documento, fora da tabela
+            bruto("paragrafo", "o equipamento objeto deste contrato, no valor total", "38500.00"),
+            bruto("mencao", "Air Game Kids", ""),
+        ]
+        ficam = conferencia._sem_linhas_que_nao_sao_item(lista, alertas, total_doc=Decimal("38500.00"))
+        self.assertEqual([conferencia._texto_do_bruto(b) for b in ficam], ["Cama elástica 3 m", "Air Game Kids"])
+        self.assertEqual([a["tipo"] for a in alertas], ["nao_e_item", "nao_e_item"])
+
+    def test_no_contrato_de_equipamento_o_brinquedo_ganha_da_peca(self):
+        produtos = [
+            {"id": "b:1", "nome": "Strike Kids Boliche", "grupo": "Brinquedos", "preco": Decimal("15000"), "ordem": 0},
+            {"id": "r:1", "nome": "Bola de Boliche Kids", "grupo": "Peças de reposição", "preco": Decimal("39.90"),
+             "ordem": 2},
+        ]
+        for produto in produtos:
+            produto["chave"] = catalogo._normalizar(produto["nome"])
+        self.assertEqual(catalogo.casar_item("Boliche kids", produtos)["escolhido"], "r:1")
+        self.assertEqual(catalogo.casar_item("Boliche kids", produtos, preferir_brinquedos=True)["escolhido"], "b:1")
+        # A peça só ganha com o nome igual ao do catálogo.
+        self.assertEqual(
+            catalogo.casar_item("Bola de boliche kids", produtos, preferir_brinquedos=True)["escolhido"], "r:1",
+        )
+
+    def test_a_tabela_de_duas_colunas_do_pdf_e_tabela_de_itens(self):
+        pagina = "\n".join([
+            "INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE",
+            "",
+            "Quantidade                                               Equipamento",
+            "",
+            "1                                                        Cama elástica 3 m",
+            "",
+            "2                                                        Air Game Kids",
+            "",
+            "                                                         Valor",
+            "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma da Lei,",
+            "Nome          Marina Souza",
+        ])
+        linhas = leitor._linhas_do_pdf([pagina])
+        celulas = {(l["linha"], l["coluna"]): l["texto"] for l in linhas if l["tabela"] == "T1"}
+        self.assertEqual(celulas, {(1, 1): "Quantidade", (1, 2): "Equipamento", (2, 1): "1",
+                                   (2, 2): "Cama elástica 3 m", (3, 1): "2", (3, 2): "Air Game Kids"})
+        # "Valor" sozinho embaixo não grudou no último item; a ficha de duas
+        # colunas continua sendo rótulo e valor.
+        self.assertIn("Valor", [l["texto"] for l in linhas if not l["tabela"]])
+        self.assertEqual([l["texto"] for l in linhas if l["tabela"] == "T2"], ["Nome", "Marina Souza"])
+
+
+class DataDoDocumentoTests(_ComUsuario):
+    """"Puxar a informação da data e hora do documento; se for menos que 3
+    dias do atual, você deve pedir pra quando é a data, pq tem documento de
+    2016, 2012 para a gente pôr"."""
+
+    def test_as_datas_escritas_que_dizem_quando_o_documento_foi_feito(self):
+        def linha(texto):
+            return {"id": "P1", "texto": texto, "parte": "corpo", "tabela": "", "linha": 0, "coluna": 0}
+
+        for texto, data in (
+            ("São Paulo,11 de novembro de 2026", "2026-11-11"),
+            ("São Paulo, 14 de março de 2016.", "2016-03-14"),
+            ("Guarulhos,09/11/2026", "2026-11-09"),
+            ("Firmado em São Paulo, aos 02 dias do mês de julho de 2012.", "2012-07-02"),
+            ("Data: 05/04/2016", "2016-04-05"),
+        ):
+            with self.subTest(texto=texto):
+                self.assertEqual([d["data"].isoformat() for d in det.datas_escritas([linha(texto)])], [data])
+        # A data do evento ou da validade não é a do documento.
+        self.assertEqual(det.datas_escritas([linha("Entrega até 20/11/2026")]), [])
+
+    def test_as_datas_do_arquivo_word_e_pdf(self):
+        conteudo = com_datas_do_arquivo(docx_contrato(), criado="2013-12-23T23:15:00Z", salvo="2026-11-12T12:56:00Z")
+        self.assertEqual(leitor.datas_do_arquivo(conteudo, "docx"),
+                         [{"data": "2013-12-23", "origem": "criado"}, {"data": "2026-11-12", "origem": "salvo"}])
+        from pypdf import PdfReader, PdfWriter
+
+        escritor = PdfWriter()
+        for pagina in PdfReader(io.BytesIO(montar_pdf())).pages:
+            escritor.add_page(pagina)
+        escritor.add_metadata({"/CreationDate": "D:20160314101500-03'00'", "/ModDate": "D:20261112125600Z"})
+        pdf = io.BytesIO()
+        escritor.write(pdf)
+        self.assertEqual(leitor.datas_do_arquivo(pdf.getvalue(), "pdf"),
+                         [{"data": "2016-03-14", "origem": "criado"}, {"data": "2026-11-12", "origem": "salvo"}])
+        self.assertEqual(leitor.datas_do_arquivo(b"lixo", "pdf"), [])
+
+    def data(self, texto_da_data, *, datas_arquivo=(), escolhida=""):
+        leitura = {"arquivo": "c.docx", "linhas": linhas_de(docx_contrato(data=texto_da_data)),
+                   "ia": {"usada": False}, "datas_arquivo": list(datas_arquivo), "data_escolhida": escolhida}
+        return conferencia.montar_proposta(leitura)["data"]
+
+    def test_quando_perguntar(self):
+        hoje = timezone.localdate()
+        antiga = self.data("São Paulo,14 de março de 2016")
+        self.assertEqual((antiga["valor"], antiga["perguntar"]), ("2016-03-14", False))
+        # De agora (menos de três dias): pergunta, com a data escrita sugerida.
+        recente = self.data(f"São Paulo, {_data_br(-1)}")
+        self.assertEqual((recente["valor"], recente["perguntar"]),
+                         ((hoje - timedelta(days=1)).isoformat(), True))
+        self.assertIn("é de agora", recente["motivo"])
+        # Sem data escrita: pergunta, e a data do ARQUIVO é só opção -- nunca
+        # entra sozinha (o modelo salvo de novo hoje diz "hoje").
+        sem = self.data("Assinado pelas partes.", datas_arquivo=[{"data": "2013-12-23", "origem": "criado"}])
+        self.assertEqual((sem["valor"], sem["perguntar"]), ("", True))
+        self.assertEqual([(o["valor"], o["origem"]) for o in sem["opcoes"]],
+                         [("2013-12-23", "arquivo criado"), (hoje.isoformat(), "hoje")])
+        # Respondida, vale a resposta e não pergunta mais.
+        respondida = self.data("Assinado pelas partes.", escolhida="2012-07-02")
+        self.assertEqual((respondida["valor"], respondida["perguntar"], respondida["escolhida"]),
+                         ("2012-07-02", False, True))
+
+    def test_o_modal_pergunta_primeiro_e_a_resposta_fica_na_sessao(self):
+        url = self.importar(com_datas_do_arquivo(docx_contrato(data="Assinado pelas partes."),
+                                                 salvo=timezone.now().strftime("%Y-%m-%dT%H:%M:%SZ")))
+        tela = self.client.get(url, **HOST)
+        self.assertContains(tela, 'data-passo="data"')
+        self.assertContains(tela, "De quando é este documento?")
+        self.assertContains(tela, 'name="data_opcao"')
+        self.assertContains(tela, "arquivo salvo")
+        self.assertContains(tela, 'id="dataOutra" name="data_outra"')
+        # A data no futuro (ou inválida) não entra: o toast diz o que fazer.
+        resposta = self.client.post(url, {"action": "data", "data_outra": "2999-01-01"}, **HOST)
+        self.assertRedirects(resposta, url, fetch_redirect_response=False)
+        self.assertEqual(self.client.get(url, **HOST).context["proposta"]["data"]["valor"], "")
+        # Um toque: fica guardada, a tela volta no passo do cliente.
+        resposta = self.client.post(url, {"action": "data", "data_opcao": "2012-07-02"}, **HOST)
+        self.assertRedirects(resposta, url, fetch_redirect_response=False)
+        tela = self.client.get(url, **HOST)
+        self.assertNotContains(tela, 'data-passo="data"')
+        self.assertContains(tela, 'data-passo="cliente"')
+        self.assertEqual(tela.context["envio"]["data_documento"], "2012-07-02")
+        self.assertContains(tela, 'id="campoDataDocumento" name="data_documento"\n                   value="2012-07-02"')
+
+    def test_o_orcamento_e_o_cliente_guardam_a_data_e_a_validade_conta_dela(self):
+        url = self.importar(docx_contrato(data="São Paulo,14 de março de 2016"))
+        proposta, envio = self.proposta_e_envio(url)
+        self.assertEqual(envio["data_documento"], "2016-03-14")
+        for item in envio["itens"]:
+            item["conferido"] = True
+            if not item["produto"]:
+                item["avulsa"] = True
+                item["valor_unitario"] = "12.900,00"
+        resposta = self.client.post(url, formulario_de(envio), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.data_documento.isoformat(), "2016-03-14")
+        # Os 5 dias do padrão contam da data do documento: o contrato de 2016
+        # não vira uma proposta de hoje.
+        self.assertEqual(orcamento.validade.isoformat(), "2016-03-19")
+        self.assertEqual(orcamento.cliente.cliente_desde.isoformat(), "2016-03-14")
+        self.assertEqual(orcamento.valor_final, Decimal("38500.00"))
+        # A lista mostra a data do documento; a ficha do cliente, desde quando.
+        lista = self.client.get("/orcamentos/", **HOST)
+        self.assertContains(lista, "Documento de 14/03/2016")
+        clientes = self.client.get("/clientes/", **HOST)
+        self.assertContains(clientes, "Cliente desde 14/03/2016")
+
+    def test_documento_mais_antigo_puxa_o_cliente_desde_para_tras(self):
+        cliente = Cliente.objects.create(nome_cliente="Kethellyn Souza Brandão", documento="318.447.205-19",
+                                         cliente_desde=timezone.localdate())
+        url = self.importar(docx_contrato(data="Firmado aos 02 dias do mês de julho de 2012."))
+        _, envio = self.proposta_e_envio(url, modo="cliente")
+        self.assertEqual(envio["cliente_modo"], "existente")
+        resposta = self.client.post(url, formulario_de(envio, modo="cliente", cliente_confirmado=True), **HOST)
+        self.assertEqual(resposta.status_code, 302, resposta.context and resposta.context["validado"]["pendencias"])
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.cliente_desde.isoformat(), "2012-07-02")
+
+    def test_o_servidor_confere_a_data(self):
+        url = self.importar(docx_contrato(data="Assinado pelas partes."))
+        proposta, envio = self.proposta_e_envio(url)
+        # Sem data, o orçamento não sai; só o cliente, sai.
+        validado = formulario.validar(proposta, dict(envio, data_documento=""))
+        self.assertIn("documento.data", {p["campo"] for p in validado["pendencias"]})
+        validado = formulario.validar(proposta, dict(envio, modo="cliente", data_documento=""))
+        self.assertNotIn("documento.data", {p["campo"] for p in validado["pendencias"]})
+        futura = (timezone.localdate() + timedelta(days=3)).isoformat()
+        validado = formulario.validar(proposta, dict(envio, data_documento=futura))
+        self.assertIn("documento.data", {p["campo"] for p in validado["pendencias"]})
+        # Documento antigo: validade de antes de hoje vale (é o registro), mas
+        # não antes da data do documento.
+        validado = formulario.validar(proposta, dict(envio, data_documento="2016-03-14", validade="2016-03-20"))
+        self.assertNotIn("condicoes.validade", {p["campo"] for p in validado["pendencias"]})
+        validado = formulario.validar(proposta, dict(envio, data_documento="2016-03-14", validade="2016-03-01"))
+        self.assertIn("condicoes.validade", {p["campo"] for p in validado["pendencias"]})

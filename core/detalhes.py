@@ -936,7 +936,7 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
         PontoGanho,
         RegistroCadastro,
     )
-    from .presenca import situacao_da_conta
+    from .presenca import cartao_da_conta, situacao_da_conta
 
     try:
         conta = User.objects.select_related("perfil", "presenca").get(pk=pk)
@@ -979,6 +979,26 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
     if so_atividade:
         return atividade(pagina)
 
+    # ------------------------------------------------------------------
+    # O RESUMO DE UMA PESSOA: O QUE AJUDA A DECIDIR
+    #
+    # O cliente, depois do erro 500 da ficha: "eu quero dados realmente
+    # interessantes e que precisamos de fato". A ficha de uma conta abre pelo
+    # que o dono quer saber de uma pessoa, nesta ordem:
+    #   1. É COMPRADORA? pedidos pagos, total gasto, ticket médio, o último
+    #      pedido e o que ela comprou;
+    #   2. ESTÁ POR PERTO? vista por último (e onde), o dia de hoje (entrou
+    #      às 09:12, último sinal às 11:40), dias com acesso em 30 dias;
+    #   3. O QUE ELA QUER? o que curtiu, o que pôs na lista de desejos e o
+    #      que está parado no carrinho agora;
+    #   4. JOGA? as jogadas no portal e os jogos de que mais gosta;
+    #   5. e só então o cadastro (contato, perfil, origem, pontos).
+    # Seção sem nada a dizer não aparece. Cada lista é uma consulta com
+    # limite: a ficha de quem tem dois mil pedidos custa o mesmo que a de
+    # quem tem dois.
+    # ------------------------------------------------------------------
+    from .models import ItemPedido
+
     perfil = getattr(conta, "perfil", None)
     estado = situacao_da_conta(conta)
     try:
@@ -992,16 +1012,39 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
         abertos=Count("id", filter=Q(status="aguardando_pagamento")),
         gasto=Sum("total_final", filter=Q(status__in=PEDIDO_PAGO)),
     )
+    ultimo_pedido = (
+        Pedido.objects.filter(cliente__user_id=pk, status__in=PEDIDO_PAGO).order_by("-criacao", "-id").first()
+        if pedidos["pagos"] else None
+    )
+    comprados = list(
+        ItemPedido.objects.filter(pedido__cliente__user_id=pk, pedido__status__in=PEDIDO_PAGO)
+        .values("nome_item", "tipo_item", "object_id")
+        .annotate(unidades=Sum("quantidade"), valor=Sum("subtotal"))
+        .order_by("-unidades", "-valor", "nome_item")[:6]
+    ) if pedidos["pagos"] else []
     favoritos = Favorito.objects.filter(usuario_id=pk).aggregate(
         curtidas=Count("id", filter=Q(tipo="curtida")), desejos=Count("id", filter=Q(tipo="desejo")),
     )
+    quer = list(
+        Favorito.objects.filter(usuario_id=pk).select_related("brinquedo", "peca").order_by("-criacao", "-id")[:8]
+    ) if (favoritos["curtidas"] or favoritos["desejos"]) else []
     carrinho = list(ItemCarrinho.objects.filter(carrinho__cliente__user_id=pk).prefetch_related("item")[:10])
     carteira = CarteiraPontos.objects.filter(usuario_id=pk).first()
-    acessos_30 = AcessoDiario.objects.filter(usuario_id=pk, dia__gte=timezone.localdate() - dt.timedelta(days=29)).count()
+    hoje = timezone.localdate()
+    acessos = list(
+        AcessoDiario.objects.filter(usuario_id=pk, dia__gte=hoje - dt.timedelta(days=29))
+        .order_by("-dia").values_list("dia", "primeiro", "ultimo")
+    )
+    acesso_de_hoje = next((linha for linha in acessos if linha[0] == hoje), None)
     jogadas = JogadaRegistrada.objects.filter(usuario_id=pk).aggregate(
         total=Count("id"), jogos=Count("jogo", distinct=True),
         mes=Count("id", filter=Q(quando__gte=timezone.now() - dt.timedelta(days=30))),
     )
+    mais_jogados = list(
+        JogadaRegistrada.objects.filter(usuario_id=pk).values("jogo")
+        .annotate(n=Count("id"), ultima=Max("quando")).order_by("-n", "-ultima")[:5]
+    ) if jogadas["total"] else []
+    nomes_dos_jogos = _nomes_dos_jogos({linha["jogo"] for linha in mais_jogados}) if mais_jogados else {}
     funcoes = sorted(
         f.titulo for f in FUNCOES if f.grupo in nomes_das_funcoes(conta)
     ) if (conta.is_staff or conta.is_superuser or conta.groups.exists()) else []
@@ -1012,53 +1055,147 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
     else:
         perfil_texto = "Cliente"
 
-    numeros = [
-        campo("Pedidos pagos", f"{_numero(pedidos['pagos'])} · {reais(pedidos['gasto'])}", "bi-bag-check"),
-        campo("Pedidos aguardando pagamento", _numero(pedidos["abertos"]), "bi-hourglass-split"),
+    def plural(quantidade, um, varios):
+        return f"{_numero(quantidade)} {um if quantidade == 1 else varios}"
+
+    # 1. é compradora?
+    pagos = pedidos["pagos"] or 0
+    gasto = pedidos["gasto"] or 0
+    if pagos:
+        compras = [
+            campo("Pedidos pagos", _numero(pagos), "bi-bag-check", "bom"),
+            campo("Total gasto", reais(gasto), "bi-cash-coin"),
+            campo("Ticket médio", reais(gasto / pagos), "bi-receipt"),
+            campo(
+                "Último pedido pago",
+                f"nº {ultimo_pedido.pk} · {timezone.localtime(ultimo_pedido.criacao):%d/%m/%Y} · {reais(ultimo_pedido.total_final)}",
+                "bi-clock-history",
+            ),
+        ]
+    else:
+        compras = [campo("Pedidos pagos", "Nenhum ainda", "bi-bag")]
+    if pedidos["abertos"]:
+        compras.append(campo("Aguardando pagamento", plural(pedidos["abertos"], "pedido", "pedidos"), "bi-hourglass-split"))
+    tipos_de_ficha = {"brinquedo": "brinquedo", "combo": "combo", "promocao": "promocao", "pecas": "peca"}
+    o_que_comprou = [
+        {
+            "titulo": linha["nome_item"],
+            "texto": f"{plural(linha['unidades'] or 0, 'unidade', 'unidades')} · {reais(linha['valor'])}",
+            "detalhe": (
+                {"tipo": tipos_de_ficha[linha["tipo_item"]], "id": linha["object_id"]}
+                if linha["tipo_item"] in tipos_de_ficha and linha["object_id"] else None
+            ),
+        }
+        for linha in comprados
+    ]
+
+    # 2. está por perto?
+    if acesso_de_hoje:
+        primeiro, ultimo = timezone.localtime(acesso_de_hoje[1]), timezone.localtime(acesso_de_hoje[2])
+        if ultimo - primeiro > dt.timedelta(minutes=1):
+            dia_de_hoje = f"entrou às {primeiro:%H:%M} · último sinal às {ultimo:%H:%M}"
+        else:
+            dia_de_hoje = f"um sinal só, às {primeiro:%H:%M}"
+    else:
+        dia_de_hoje = "ainda não apareceu"
+    visto = estado["texto"] + (f" · {onde.lower()}" if onde and not estado["online"] else (f" · no {onde.lower()}" if onde else ""))
+    presenca_da_conta = [
+        campo("Visto por último", visto, "bi-broadcast", "bom" if estado["online"] else None),
+        campo("Hoje", dia_de_hoje, "bi-sun"),
+        campo("Dias com acesso (30 dias)", f"{len(acessos)} de 30", "bi-calendar-check"),
+        campo("Último login com senha", quando(conta.last_login) if conta.last_login else "nunca", "bi-box-arrow-in-right"),
+        campo("Criada em", quando(conta.date_joined), "bi-calendar-plus"),
+    ]
+
+    # 3. o que ela quer?
+    no_carrinho = sum(item.quantidade for item in carrinho)
+    valor_do_carrinho = sum((item.preco_unitario or 0) * item.quantidade for item in carrinho)
+    desejos = [
         campo("Curtidas", _numero(favoritos["curtidas"]), "bi-heart"),
         campo("Lista de desejos", _numero(favoritos["desejos"]), "bi-bookmark-heart"),
-        campo("Itens no carrinho agora", _numero(sum(i.quantidade for i in carrinho)), "bi-cart"),
-        campo("Pontos (saldo)", _numero(carteira.saldo) if carteira else "0", "bi-stars"),
-        campo("Dias com acesso (30 dias)", _numero(acessos_30), "bi-calendar-check"),
-        campo("Jogadas no portal", f"{_numero(jogadas['total'])} em {_numero(jogadas['jogos'])} jogo(s) · {_numero(jogadas['mes'])} em 30 dias", "bi-controller"),
+        campo(
+            "No carrinho agora",
+            f"{plural(no_carrinho, 'item', 'itens')} · {reais(valor_do_carrinho)}" if no_carrinho else "vazio",
+            "bi-cart", "bom" if no_carrinho else None,
+        ),
+    ] if (favoritos["curtidas"] or favoritos["desejos"] or no_carrinho) else []
+    curtiu = [
+        {
+            "titulo": fav.nome_produto,
+            "texto": ("Curtiu" if fav.tipo == "curtida" else "Lista de desejos") + f" · {timezone.localtime(fav.criacao):%d/%m/%Y}",
+            "detalhe": (
+                {"tipo": "brinquedo", "id": fav.brinquedo_id} if fav.brinquedo_id
+                else ({"tipo": "peca", "id": fav.peca_id} if fav.peca_id else None)
+            ),
+        }
+        for fav in quer
     ]
-    if perfil_texto != "Cliente":
-        numeros.append(campo("Orçamentos como responsável", _numero(Orcamento.objects.filter(responsavel_id=pk).count()), "bi-file-earmark-text"))
 
+    # 4. joga?
+    jogos = [
+        campo("Jogadas no portal", _numero(jogadas["total"]), "bi-controller"),
+        campo("Nos últimos 30 dias", _numero(jogadas["mes"]), "bi-calendar3"),
+        campo("Jogos diferentes", _numero(jogadas["jogos"]), "bi-grid"),
+    ] if jogadas["total"] else []
+    preferidos = [
+        {
+            "titulo": nomes_dos_jogos.get(linha["jogo"], linha["jogo"]),
+            "texto": f"{plural(linha['n'], 'jogada', 'jogadas')} · a última em {timezone.localtime(linha['ultima']):%d/%m/%Y}",
+        }
+        for linha in mais_jogados
+    ]
+
+    # 5. o cadastro
     origem = None
     if registro:
         origem = registro.get_origem_display() + (f" · {registro.regiao}" if registro.regiao else "")
+    cadastro = [
+        campo("Nome", perfil.nome_completo if perfil else None, "bi-person"),
+        campo("Usuário", conta.username, "bi-at"),
+        campo("E-mail", conta.email, "bi-envelope"),
+        campo("Telefone", perfil.telefone if perfil else None, "bi-telephone"),
+        campo("Perfil", perfil_texto, "bi-shield-lock"),
+        campo("Origem do cadastro", origem, "bi-signpost-split"),
+        campo("Pontos (saldo)", _numero(carteira.saldo) if carteira else "0", "bi-stars"),
+    ]
+    if perfil_texto != "Cliente":
+        cadastro.append(campo("Orçamentos como responsável", _numero(Orcamento.objects.filter(responsavel_id=pk).count()), "bi-file-earmark-text"))
+
+    # "Compras" e "Presença" abrem a ficha, lado a lado: compra? está por perto?
+    secoes = [
+        secao("Compras na loja", "bi-bag-check", campos=compras),
+        secao("Presença", "bi-broadcast", campos=presenca_da_conta),
+        secao("O que comprou", "bi-box-seam", lista=o_que_comprou),
+        secao("O que quer", "bi-heart", campos=desejos),
+        secao("Curtiu e pôs na lista de desejos", "bi-bookmark-heart", lista=curtiu),
+        secao("Carrinho agora", "bi-cart", lista=[
+            {"titulo": item.nome_com_adesivo, "texto": f"{item.quantidade} × {reais(item.preco_unitario)}"}
+            for item in carrinho
+        ]),
+        secao("Jogos", "bi-controller", campos=jogos, lista=preferidos),
+        secao("Conta", "bi-person-badge", campos=cadastro),
+        secao("Funções na equipe", "bi-diagram-3", etiquetas=funcoes),
+    ]
+    cartao = cartao_da_conta(conta, "admin" if conta.is_superuser else ("equipe" if perfil_texto == "Equipe" else "cliente"))
+    selos = [
+        selo(estado["texto"], "bom" if estado["online"] else "neutro", "bi-broadcast" if estado["online"] else "bi-clock-history"),
+        selo(perfil_texto, "neutro", "bi-shield-lock" if perfil_texto != "Cliente" else "bi-person"),
+    ]
+    if pagos:
+        selos.append(selo(f"Comprou {pagos} {'vez' if pagos == 1 else 'vezes'} · {reais(gasto)}", "bom", "bi-bag-check"))
+    selos.append(selo("Conta ativa", "bom", "bi-check-circle") if conta.is_active else selo("Conta inativa", "ruim", "bi-slash-circle"))
 
     return {
         "titulo": (perfil.nome_completo if perfil and perfil.nome_completo else None) or conta.username,
         "subtitulo": f"@{conta.username}",
         "imagem": None,
         "icone": "bi-person-circle",
+        # as iniciais na cor da conta: as mesmas da faixa "Agora" e da lista
+        "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"]},
         "presenca": estado,
-        "selos": [
-            selo(estado["texto"], "bom" if estado["online"] else "neutro", "bi-broadcast" if estado["online"] else "bi-clock-history"),
-            selo(perfil_texto, "neutro", "bi-shield-lock" if perfil_texto != "Cliente" else "bi-person"),
-            selo("Conta ativa", "bom", "bi-check-circle") if conta.is_active else selo("Conta inativa", "ruim", "bi-slash-circle"),
-        ],
-        "secoes": [
-            secao("Conta", "bi-person-badge", campos=[
-                campo("Nome", perfil.nome_completo if perfil else None, "bi-person"),
-                campo("Usuário", conta.username, "bi-at"),
-                campo("E-mail", conta.email, "bi-envelope"),
-                campo("Telefone", perfil.telefone if perfil else None, "bi-telephone"),
-                campo("Perfil", perfil_texto, "bi-shield-lock"),
-                campo("Criada em", quando(conta.date_joined), "bi-calendar-plus"),
-                campo("Último login com senha", quando(conta.last_login) if conta.last_login else "nunca", "bi-box-arrow-in-right"),
-                campo("Visto por último", estado["texto"] + (f" · {onde.lower()}" if onde and not estado["online"] else (f" · no {onde.lower()}" if onde else "")), "bi-broadcast", "bom" if estado["online"] else None),
-                campo("Origem do cadastro", origem, "bi-signpost-split"),
-            ]),
-            secao("Funções na equipe", "bi-diagram-3", etiquetas=funcoes),
-            secao("Números de sempre", "bi-123", campos=numeros),
-            secao("Carrinho agora", "bi-cart", lista=[
-                {"titulo": item.nome_com_adesivo, "texto": f"{item.quantidade} × {reais(item.preco_unitario)}"}
-                for item in carrinho
-            ]),
-        ],
+        "selos": selos,
+        # seção sem nada a dizer (a conta que nunca comprou, que não joga) não aparece
+        "secoes": [bloco for bloco in secoes if len(bloco) > 2],
         "links": [],
         "atividade": atividade(pagina),
     }

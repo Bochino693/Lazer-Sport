@@ -148,7 +148,21 @@
   </div>
 
   <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="clientesLista" data-visao="lista" tabindex="0" role="region" aria-label="Lista de clientes">
+    {% comment %}
+      O CARTÃO DO CLIENTE É UM CARTÃO DE PERFIL ("no modo card, centralize
+      o conteúdo e se houver logo no cliente, mostre a logo").
+
+      `data-visao-cartao="perfil"` pede à folha comum o cartão centrado:
+      a logo (ou as iniciais) em cima, o nome, os selos, o contato como
+      atalhos de tocar, o endereço e os números em quadradinhos.
+      `data-visao-acoes="barra"` troca o "⋮" sozinho pela barra de ações no
+      pé do cartão ("nos cards, melhore as ações deixando estilo app"): as
+      ações marcadas com `data-acao-cartao` viram botões com ícone e nome,
+      e "Mais" abre o resto. A LISTA não muda: o que é só do cartão leva
+      `data-visao-so="cards"`, e a linha continua sendo a mesma <tr> --
+      a busca, o "Completar" e as ações valem nos dois modos.
+    {% endcomment %}
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="clientesLista" data-visao="lista" data-visao-cartao="perfil" data-visao-acoes="barra" tabindex="0" role="region" aria-label="Lista de clientes">
       <table class="ls-table ls-commercial-table ls-clientes-table ls-visao-tabela">
         <colgroup>
           <col class="ls-col-cliente"><col class="ls-col-contato">
@@ -170,22 +184,46 @@
         <tbody>
           {% for ficha in fichas %}
             {% with cliente=ficha.obj %}
-            <tr data-registro="{{ cliente.id }}">
-              <td data-rotulo="Cliente">
+            <tr data-registro="{{ cliente.id }}" data-visao-nome="{{ cliente.nome_cliente }}">
+              <td data-rotulo="Cliente" data-v="rosto">
+                {% comment %}
+                  O ROSTO DO CARTÃO: a logo do cliente, quando ele tem; senão
+                  as iniciais sobre uma cor que é sempre a mesma para aquele
+                  nome (`data-tom`). Só existe no modo Cards.
+
+                  A logo vem REDUZIDA (176 px para um quadro de 84: o dobro,
+                  para a tela 2x do celular) pelo mesmo caminho das fotos do
+                  site -- nunca o arquivo original --, preguiçosa e com
+                  largura e altura declaradas: o cartão não pula quando ela
+                  chega. Fica sobre uma placa neutra (`--logo-placa`), a
+                  mesma nos três temas: logo escura e logo clara aparecem.
+                  As iniciais ficam por baixo: se a imagem não carregar, o
+                  cartão não fica com um quadro quebrado (ls-listas.js).
+                {% endcomment %}
+                <span class="ls-perfil-avatar" data-v="avatar" data-visao-so="cards" data-tom="{{ ficha.avatar.tom }}">
+                  <span class="ls-perfil-iniciais" aria-hidden="true">{{ ficha.avatar.iniciais }}</span>
+                  {% if ficha.logo %}<img src="{{ ficha.logo }}" alt="Logo de {{ cliente.nome_publico }}" width="84" height="84" loading="lazy" decoding="async">{% endif %}
+                </span>
                 <span class="material-nome">{{ cliente.nome_cliente }}</span>{% if cliente.nome_estabelecimento %}<span class="material-sub d-block">{{ cliente.nome_estabelecimento }}{% if cliente.cnpj_estabelecimento %} · {{ cliente.cnpj_estabelecimento }}{% endif %}</span>{% endif %}
-                <span class="material-sub d-block">
+                {# Na lista é uma frase ("Comercial · no mapa · CNPJ"); no cartão, selos centrados (os "·" somem). #}
+                <span class="material-sub d-block ls-perfil-selos">
                   {% if cliente.eh_buffet %}
                     <span class="ls-status info">Buffet parceiro</span>
+                    {% if cliente.no_mapa %}<span class="ls-map-linked" data-visao-so="cards"><i class="bi bi-geo-alt-fill"></i> no mapa</span>{% endif %}
                   {% else %}
-                    {{ cliente.get_tipo_display }}
+                    <span class="ls-perfil-selo">{{ cliente.get_tipo_display }}</span>
                     {% if cliente.no_mapa %}
-                      · <span class="ls-map-linked"><i class="bi bi-geo-alt-fill"></i> no mapa</span>
+                      <span class="ls-perfil-ponto">· </span><span class="ls-map-linked"><i class="bi bi-geo-alt-fill"></i> no mapa</span>
                     {% elif cliente.publicar_no_mapa %}
-                      · <span class="ls-status warning">no mapa, sem local</span>
+                      <span class="ls-perfil-ponto">· </span><span class="ls-status warning">no mapa, sem local</span>
                     {% endif %}
                   {% endif %}
-                  {% if cliente.documento %} · {{ cliente.documento }}{% endif %}
+                  {% if cliente.documento %}<span class="ls-perfil-ponto"> · </span><span class="ls-perfil-doc">{{ cliente.documento }}</span>{% endif %}
                 </span>
+                {% if cliente.cliente_desde %}
+                  {# Do documento mais antigo importado (o contrato de 2012 que entrou hoje). #}
+                  <span class="material-sub d-block"><i class="bi bi-calendar-event" aria-hidden="true"></i> Cliente desde {{ cliente.cliente_desde|date:"d/m/Y" }}</span>
+                {% endif %}
                 {% comment %}
                   O AVISO PASSOU A SER O CAMINHO.
 
@@ -209,22 +247,37 @@
                 {% endif %}
               </td>
 
-              <td data-rotulo="Contato">
+              <td data-rotulo="Contato" data-v="contato">
                 {% if cliente.telefone %}
-                  <a class="ls-link" href="https://wa.me/55{{ cliente.telefone|cut:" "|cut:"("|cut:")"|cut:"-" }}"
+                  <a class="ls-link" data-visao-so="lista" href="https://wa.me/55{{ cliente.telefone|cut:" "|cut:"("|cut:")"|cut:"-" }}"
                      target="_blank" rel="noopener">
                     <i class="bi bi-whatsapp me-1"></i>{{ cliente.telefone }}
                   </a>
                 {% endif %}
                 {% if cliente.email %}
-                  <span class="material-sub d-block">{{ cliente.email }}</span>
+                  <span class="material-sub d-block" data-visao-so="lista">{{ cliente.email }}</span>
                 {% endif %}
                 {% if not cliente.telefone and not cliente.email %}
                   <span class="ls-status warning">Sem contato</span>
+                {% else %}
+                  {% comment %}
+                    NO CARTÃO O CONTATO É DE TOCAR: WhatsApp, ligar e e-mail
+                    como atalhos redondos (alvo de 48 px), e o número e o
+                    e-mail escritos embaixo, para quem só quer ler. O
+                    WhatsApp não aparece no telefone marcado "sem WhatsApp".
+                  {% endcomment %}
+                  <div class="ls-perfil-contato" data-visao-so="cards">
+                    <div class="ls-perfil-atalhos">
+                      {% if ficha.atalhos.whatsapp %}<a class="ls-perfil-atalho whatsapp" href="{{ ficha.atalhos.whatsapp }}" target="_blank" rel="noopener" aria-label="Chamar {{ cliente.nome_cliente }} no WhatsApp"><i class="bi bi-whatsapp" aria-hidden="true"></i><span>WhatsApp</span></a>{% endif %}
+                      {% if ficha.atalhos.ligar %}<a class="ls-perfil-atalho ligar" href="{{ ficha.atalhos.ligar }}" aria-label="Ligar para {{ cliente.nome_cliente }}"><i class="bi bi-telephone-fill" aria-hidden="true"></i><span>Ligar</span></a>{% endif %}
+                      {% if ficha.atalhos.email %}<a class="ls-perfil-atalho email" href="{{ ficha.atalhos.email }}" aria-label="Escrever um e-mail para {{ cliente.nome_cliente }}"><i class="bi bi-envelope-fill" aria-hidden="true"></i><span>E-mail</span></a>{% endif %}
+                    </div>
+                    <span class="ls-perfil-contato-texto">{% if cliente.telefone %}<span>{{ cliente.telefone }}</span>{% endif %}{% if cliente.email %}<span>{{ cliente.email }}</span>{% endif %}</span>
+                  </div>
                 {% endif %}
               </td>
 
-              <td data-rotulo="Vínculo">
+              <td data-rotulo="Vínculo" data-v="elo"{% if not cliente.eh_buffet and not cliente.parceiro %} data-visao-so="lista"{% endif %}>
                 {% if cliente.eh_buffet %}
                   {{ cliente.clientes_do_buffet }} cliente{{ cliente.clientes_do_buffet|pluralize }} pelo parceiro
                   {% if cliente.estabelecimento %}
@@ -237,11 +290,12 @@
                 {% endif %}
               </td>
 
-              <td data-rotulo="Onde fica">
+              <td data-rotulo="Onde fica" data-v="local">
                 {% if ficha.endereco %}
                   <strong class="ls-address-line">{{ ficha.endereco.endereco }}{% if ficha.endereco.numero %}, {{ ficha.endereco.numero }}{% endif %}</strong>
-                  <span class="material-sub d-block">
-                    {% if ficha.endereco.bairro %}{{ ficha.endereco.bairro }} · {% endif %}{{ ficha.endereco.cidade }}{% if ficha.endereco.estado %}/{{ ficha.endereco.estado }}{% endif %}{% if ficha.endereco.cep %} · CEP {{ ficha.endereco.cep }}{% endif %}
+                  {# Dois pedaços: no cartão o CEP desce inteiro para a linha de baixo, sem um "·" sobrando na ponta. #}
+                  <span class="material-sub d-block ls-perfil-linha">
+                    <span>{% if ficha.endereco.bairro %}{{ ficha.endereco.bairro }} · {% endif %}{{ ficha.endereco.cidade }}{% if ficha.endereco.estado %}/{{ ficha.endereco.estado }}{% endif %}</span>{% if ficha.endereco.cep %}<span class="ls-perfil-ponto"> · </span><span>CEP {{ ficha.endereco.cep }}</span>{% endif %}
                   </span>
                   <span class="ls-route-actions">
                     {% if ficha.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ficha.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}
@@ -253,14 +307,20 @@
                 {% endif %}
               </td>
 
-              <td data-rotulo="Propostas" class="text-end">
-                {{ ficha.orcamentos }}
+              <td data-rotulo="Propostas" data-v="numeros" class="text-end">
+                <span data-visao-so="lista">{{ ficha.orcamentos }}
                 <span class="material-sub d-block">
                   {{ ficha.abertos }} em aberto · {{ ficha.aprovados }} fechada{{ ficha.aprovados|pluralize }}
+                </span></span>
+                {# No cartão, os três números em quadradinhos; o valor aprovado fecha a conta logo abaixo. #}
+                <span class="ls-perfil-numeros" data-visao-so="cards">
+                  <span class="ls-perfil-numero"><strong>{{ ficha.orcamentos }}</strong><small>Proposta{{ ficha.orcamentos|pluralize }}</small></span>
+                  <span class="ls-perfil-numero"><strong>{{ ficha.abertos }}</strong><small>Em aberto</small></span>
+                  <span class="ls-perfil-numero"><strong>{{ ficha.aprovados }}</strong><small>Fechada{{ ficha.aprovados|pluralize }}</small></span>
                 </span>
               </td>
 
-              <td data-rotulo="Aprovado" class="text-end">
+              <td data-rotulo="Aprovado" data-v="total" class="text-end"{% if not ficha.total_aprovado %} data-zerado{% endif %}>
                 <span class="ls-money">R$ {{ ficha.total_aprovado|moeda }}</span>
               </td>
 
@@ -268,6 +328,7 @@
                 <div class="ls-acoes ls-row-actions">
                   <button type="button" class="btn btn-sm btn-outline-secondary"
                           data-editar="{{ cliente.id }}" aria-label="Editar {{ cliente.nome_cliente }}"
+                          data-acao-cartao="Editar" data-acao-ordem="3"
                           title="Editar cliente">
                     <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
                   </button>
@@ -282,10 +343,29 @@
                   <button type="button" class="btn btn-sm btn-outline-primary"
                           data-dossie="{{ cliente.id }}"
                           data-nome="{{ cliente.nome_cliente }}"
+                          data-acao-cartao="Histórico" data-acao-ordem="2"
                           aria-label="Ver histórico de {{ cliente.nome_cliente }}"
                           title="Orçamentos, O.S. e ofertas deste cliente">
                     <i class="bi bi-clock-history"></i><span class="ls-action-label">Histórico</span>
                   </button>
+                  {% comment %}
+                    NOVA PROPOSTA, DAQUI MESMO. É o que mais se faz com um
+                    cliente na tela, e pedia outra tela, o botão "Novo
+                    orçamento" e a busca do nome. O link leva à janela de
+                    proposta já com este cliente escolhido (?novo=1&cliente=,
+                    ver OrcamentosInnerView.cliente_inicial). Só para quem
+                    pode criar proposta. No cartão é a primeira da barra.
+                  {% endcomment %}
+                  {% if permissoes_interno.orcamentos_criar %}
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="{% url 'orcamentos_inner' %}?novo=1&amp;cliente={{ cliente.id }}"
+                     data-nova-proposta="{{ cliente.id }}"
+                     data-acao-cartao="Proposta" data-acao-ordem="1"
+                     aria-label="Nova proposta para {{ cliente.nome_cliente }}"
+                     title="Abrir uma proposta nova já com este cliente">
+                    <i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>
+                  </a>
+                  {% endif %}
                   {% if permissoes_interno.excluir_clientes or user.is_superuser %}
                   <button type="button" class="btn btn-sm btn-outline-danger"
                           data-excluir="{{ cliente.id }}" data-nome="{{ cliente.nome_cliente }}"

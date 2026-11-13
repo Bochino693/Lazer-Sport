@@ -4,7 +4,7 @@
 # SÓ ESQUEMA: a ponta `Orcamento.venda` (um para um com core.Venda, nula).
 # Mora no orçamento, e não na venda, para o `core` não depender de
 # migração do `sistema_interno`. O preenchimento dos orçamentos que já
-# estavam pagos é a 0060, num arquivo só dela -- ver tests_migracoes.py.
+# estavam pagos é a 0061, num arquivo só dela -- ver tests_migracoes.py.
 
 import django.db.models.deletion
 from django.db import migrations, models
@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
     # estado com a última do sistema_interno.
     dependencies = [
         ("core", "0111_pecasreposicao_uso"),
-        ("sistema_interno", "0058_documento_de_assinatura"),
+        ("sistema_interno", "0059_importacao_data_documento"),
     ]
 
     operations = [

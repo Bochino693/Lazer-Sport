@@ -3,11 +3,18 @@
     GET /analises/<tipo>/?periodo=mes[&id=7][&de=2026-01-01&ate=2026-01-31]
     GET /detalhes/<tipo>/<id>/
     GET /detalhes/<tipo>/<id>/atividade/?pagina=2
+    GET /presenca/agora/[?contas=1]
 
 Só no subdomínio interno, só para a equipe, e cada tipo com a MESMA
 permissão da tela em que aparece (core/analises_tipos.py). Quem não abre a
 tela de cupons recebe 403 aqui também -- o endereço JSON não é uma porta
 dos fundos para os números de uma tela que a pessoa não vê.
+
+/presenca/agora/ é o "quem está online" (core/presenca.py): sem parâmetro,
+só a EQUIPE online, para qualquer pessoa da equipe (a pilha de avatares da
+barra de cima); com `contas=1`, todas as contas -- e aí a permissão é a da
+tela Usuários (só o superadministrador). Nome de cliente não sai para quem
+não abre aquela tela.
 """
 
 from __future__ import annotations
@@ -17,7 +24,7 @@ import logging
 from django.http import JsonResponse
 from django.views import View
 
-from . import analises, detalhes
+from . import analises, detalhes, presenca
 from .analises_tipos import tipo as tipo_por_codigo
 
 
@@ -37,15 +44,24 @@ def _erro(mensagem, status):
 class _JsonDaEquipe(View):
     http_method_names = ["get"]
 
-    def autorizar(self, request, codigo):
-        from sistema_interno.permissoes import faz_parte_da_equipe, tem_funcao
+    def autorizar_equipe(self, request):
+        """None quando a conta é da equipe e está no painel; senão, a resposta de erro."""
+        from sistema_interno.permissoes import faz_parte_da_equipe
 
         if not getattr(request, "is_interno", False):
-            return None, _erro("Endereço do painel interno.", 404)
+            return _erro("Endereço do painel interno.", 404)
         if not request.user.is_authenticated:
-            return None, _erro("Entre no painel para ver os números.", 401)
+            return _erro("Entre no painel para ver os números.", 401)
         if not faz_parte_da_equipe(request.user):
-            return None, _erro("Conta sem acesso ao painel.", 403)
+            return _erro("Conta sem acesso ao painel.", 403)
+        return None
+
+    def autorizar(self, request, codigo):
+        from sistema_interno.permissoes import tem_funcao
+
+        erro = self.autorizar_equipe(request)
+        if erro:
+            return None, erro
         tipo = tipo_por_codigo(codigo)
         if tipo is None:
             return None, _erro("Tipo desconhecido.", 404)
@@ -123,3 +139,23 @@ class DetalheView(_JsonDaEquipe):
 
 class AtividadeView(DetalheView):
     so_atividade = True
+
+
+class PresencaAgoraView(_JsonDaEquipe):
+    """Quem está online agora. A tela pergunta de novo sozinha (a cada ~45 s)."""
+
+    def get(self, request):
+        contas = request.GET.get("contas") == "1"
+        if contas:
+            # as contas todas (clientes inclusive): a permissão da tela Usuários
+            _tipo, erro = self.autorizar(request, "usuario")
+        else:
+            erro = self.autorizar_equipe(request)
+        if erro:
+            return erro
+        try:
+            dados = presenca.agora_mesmo(eu=request.user, contas=contas)
+        except Exception:  # noqa: BLE001 -- a última rede: a faixa fica com o último retrato e tenta de novo
+            log.exception("presenca: falhou ao montar quem está online (contas=%s)", contas)
+            return _erro(FALHA_INESPERADA, 500)
+        return self.responder(dados)

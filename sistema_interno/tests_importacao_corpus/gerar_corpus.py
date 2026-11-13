@@ -330,4 +330,110 @@ paragrafos(
 )
 d.save(PASTA / "13-conversa-whatsapp.docx")
 
+# ======================================================================
+# 14 a 17: o contrato de compra e venda da casa (AJUSTE 4, LEIA-ME 71).
+# Feitos à semelhança do modelo de verdade -- NUNCA o contrato de um
+# cliente, que é dado particular: comprador e documentos são inventados.
+# A estrutura é a do modelo: o cabeçalho "Brinquedos Lazer & Sport", o
+# rodapé com o endereço e o CNPJ da fábrica, a tabela "Quantidade |
+# Equipamento" (às vezes com "Valor"), o "Valor" que boia sozinho embaixo
+# da tabela de duas colunas, o parágrafo do VENDEDOR com o representante
+# da fábrica e o endereço residencial dele, os rótulos com ponto e vírgula
+# ("CPF ou CNPJ; ..."), o total na cláusula 2ª, a data de carta sem espaço
+# depois da vírgula e as assinaturas (Proprietário / COMPRADOR).
+# O 15 é o PDF do 14: soffice --headless --convert-to pdf, como o 06.
+# ======================================================================
+VENDEDOR = (
+    "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma da Lei, comparecem aqui, as partes, "
+    "de um lado, na qualidade de fornecedor, aqui doravante denominado simplesmente VENDEDOR: Brinquedos "
+    "Lazer & Sport, razão social Fábrica de Brinquedos Lazer & Sport Oficial – LTDA, devidamente inscrita no "
+    "CNPJ sob o n. 54.486.908/0001-86, com sede na Rua São Roque de Minas, n. 104, Jardim Peri, São Paulo, "
+    "Capital, neste ato representado por Otávio Brandão Lemos, portador da cédula de identidade RG: "
+    "27.418.905-3, residente e domiciliado na Travessa dos Ipês Roxos, n. 77, Vila Aurora, CEP: 02998-010, São "
+    "Paulo, Capital; e, do outro lado, na qualidade de comprador, aqui doravante denominado simplesmente "
+)
+
+
+def contrato(nome, comprador, cpf, endereco, email, telefone, itens, valor_total, data, com_valor=False):
+    d = novo(cabecalho=("Brinquedos Lazer & Sport",), rodape=(
+        "Rua São Roque de Minas; 104, Jardim Pery, São Paulo - SP, CEP: 02679-110 1 "
+        "Fone: (11) 96056-3135  / CNPJ: 54.486.908 / 0001-86",
+    ))
+    paragrafos(d, "INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE", "EQUIPAMENTO DE ENTRETENIMENTO")
+    tabela(d, [("Quantidade", "Equipamento") + (("Valor",) if com_valor else ())] + itens)
+    if not com_valor:
+        paragrafos(d, "                                           Valor ")
+    paragrafos(
+        d,
+        VENDEDOR,
+        f"COMPRADOR {comprador}",
+        f"CPF ou CNPJ; {cpf}",
+        f"Endereço completo; {endereco}",
+        f"Email; {email}",
+        f"Telefone; {telefone}",
+        "DO OBJETO DO CONTRATO",
+        "Cláusula 1ª. O presente instrumento tem como objeto equipamento de entretenimento, conforme "
+        "características da imagem abaixo, sendo o VENDEDOR o único proprietário do referido equipamento, vejamos: ",
+        " Cláusula 2ª – Pelo presente instrumento e na melhor forma do direito, o VENDEDOR vende ao COMPRADOR o "
+        "equipamento objeto deste contrato, descrito na Cláusula 1ª, no valor total " + valor_total,
+        "que deverá ser pago da seguinte forma:",
+        "Condição de pagamento:",
+        "Conforme negociação entre as partes, o pagamento será realizado da seguinte forma: 50% de entrada e o "
+        "restante na entrega.",
+        "DAS OBRIGAÇÕES E GARANTIAS",
+        "Cláusula 3ª. O VENDEDOR obriga-se a entregar, o equipamento descrito na Cláusula 1ª, na data  45 dias "
+        "úteis atos a confirmação do pagamento.",
+        "Cláusula 4ª. O equipamento tem garantia de 90 dias contra defeito de fabricação.",
+        "5ª. . Cláusula As despesas com frete do equipamento,",
+        "são por conta do COMPRADOR.",
+        # Os títulos de seção do modelo, cada um sozinho na linha: "DA
+        # MULTA" logo depois de "...do COMPRADOR." já virou o nome do
+        # cliente ("Da Multa"). Nunca é nome.
+        "DA MULTA",
+        "Cláusula 6ª. A desistência depois da produção implica multa de 30% do valor total.",
+        "DA INADIMPLENCIA",
+        "Cláusula 7ª. O atraso no pagamento acarreta juros de 1% ao mês.",
+        "DO FORO",
+        "Cláusula 8ª. Fica eleito o foro da Comarca de São Paulo.",
+        "Por estarem assim justos e contratados, firmam o presente instrumento em duas vias de igual teor na "
+        "presença de duas testemunhas.",
+        data,
+        "__________________________", "Proprietário", "Otávio Brandão Lemos",
+        "__________________________", "COMPRADOR", comprador,
+        "__________________________", "TESTEMUNHA",
+    )
+    d.save(PASTA / nome)
+
+
+# ---------------------------------------------------------------- 14
+# O comprador com o primeiro nome fora da lista do IBGE, escrito como no
+# modelo: "COMPRADOR Fulano" (um espaço, sem dois-pontos), e logo depois do
+# parágrafo do VENDEDOR; três equipamentos sem preço (um fora do
+# catálogo); o total só na cláusula; a data de hoje.
+contrato(
+    "14-contrato-compra-venda.docx", "Kauyr Ribeiro Abdala", "318.447.205-19",
+    "Rua das Acácias, 250, Centro, Ribeirão Preto/SP", "kauyr.abdala@exemplo.com.br", "16 99123-4567",
+    [("1", "Cama elástica 3 m"), ("1", "Matrix"), ("2", "Air Game Kids")],
+    "R$ 38.500,00 (trinta e oito mil e quinhentos reais)", "São Paulo,11 de novembro de 2026",
+)
+# ---------------------------------------------------------------- 16
+# A tabela com "Valor"; a venda de 2016.
+contrato(
+    "16-contrato-com-valores-2016.docx", "Renata Moura Teixeira", "527.193.648-19",
+    "Av. Brasil, 1500, apto 12, Jardim América, São Paulo/SP", "renata.teixeira@exemplo.com.br",
+    "(11) 98123-4455",
+    [("1", "Cama elástica 3 m", "R$ 2.800,00"), ("1", "Matrix", "R$ 12.900,00")],
+    "R$ 15.700,00", "São Paulo,14 de março de 2016", com_valor=True,
+)
+# ---------------------------------------------------------------- 17
+# Um equipamento só, a venda de 2012, a data escrita como em contrato.
+contrato(
+    "17-contrato-antigo-2012.docx", "Joana Prado Lins", "640.281.935-24",
+    "Rua Voluntários da Pátria, 2200, Santana, São Paulo/SP", "joana.lins@exemplo.com.br",
+    "(11) 3456-0099",
+    [("1", "Cama elástica 4 m")],
+    "R$ 3.500,00 (três mil e quinhentos reais)",
+    "Firmado em São Paulo, aos 02 dias do mês de julho de 2012.",
+)
+
 print("ok")

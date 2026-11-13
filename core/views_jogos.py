@@ -573,7 +573,10 @@ class PortalJogosView(View):
         ]
         # o que o JavaScript precisa para montar as estantes e as coleções sem o servidor
         contexto["dados_da_biblioteca"] = {
-            "estantes": [dict(portal_jogos.TEMA[chave]) for chave, *_ in portal_jogos.ESTANTES],
+            # as estantes na ordem da página (uma por console; a vazia o JavaScript pula) e, para os
+            # títulos dos filtros (?estante=nintendo), o tema de toda estante e família
+            "estantes": [dict(portal_jogos.TEMA[chave]) for chave in portal_jogos.ordem_das_estantes()],
+            "temas": [dict(tema) for tema in portal_jogos.TEMA.values()],
             "colecoes": [{k: v for k, v in c.items() if k != "total"} for c in contexto["colecoes"]],
             "porEstante": portal_jogos.POR_ESTANTE,
             "novidadeDias": portal_jogos.NOVIDADE_DIAS,

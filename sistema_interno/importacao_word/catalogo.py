@@ -215,8 +215,22 @@ def carregar_catalogo() -> list[dict]:
     return produtos
 
 
-def casar_item(descricao: str, catalogo: list[dict], *, quantos: int = 4) -> dict:
-    """O melhor produto para a linha, a confiança, e os candidatos."""
+#: No contrato de equipamento, a peça de reposição só ganha do brinquedo
+#: com o nome praticamente igual; abaixo disso, ela pesa assim.
+PESO_DA_PECA_NO_EQUIPAMENTO = 0.8
+_GRUPOS_DE_PECA = ("Peças de reposição", "Itens de manutenção")
+
+
+def casar_item(descricao: str, catalogo: list[dict], *, quantos: int = 4,
+               preferir_brinquedos: bool = False) -> dict:
+    """O melhor produto para a linha, a confiança, e os candidatos.
+
+    `preferir_brinquedos`: a linha está numa tabela de "Equipamento" /
+    "Brinquedo", ou o documento é um contrato de equipamento de
+    entretenimento. Aí "Boliche kids" é o brinquedo (Strike Kids Boliche),
+    e não a peça "Bola de Boliche Kids": a peça só ganha com o nome
+    praticamente igual ao do catálogo.
+    """
     texto = (descricao or "").strip()
     if not texto or not catalogo:
         return {"escolhido": None, "confianca": "baixa", "pontos": 0.0,
@@ -232,6 +246,9 @@ def casar_item(descricao: str, catalogo: list[dict], *, quantos: int = 4) -> dic
     pontuados = []
     for produto in catalogo:
         pontos, motivo = pontuar(texto, produto["nome"])
+        if preferir_brinquedos and produto["grupo"] in _GRUPOS_DE_PECA and pontos < LIMITE_ALTO:
+            pontos = round(pontos * PESO_DA_PECA_NO_EQUIPAMENTO, 3)
+            motivo = "peça de reposição; o documento fala de equipamento"
         if pontos >= 0.3:
             pontuados.append((pontos, motivo, produto))
     pontuados.sort(key=lambda trio: (-trio[0], trio[2]["ordem"], trio[2]["nome"]))

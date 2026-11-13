@@ -169,6 +169,9 @@
               <button type="button" class="ls-chip ls-chip-zerar" data-validade-limpar>Sem prazo</button>
             </div>
             <span class="form-text">Proposta nova já nasce com {{ validade_padrao_dias }} dias.</span>
+            <span class="form-text d-block" id="orcamentoDataDocumento" hidden>
+              <i class="bi bi-calendar-event" aria-hidden="true"></i> Documento importado de <strong></strong>
+            </span>
           </div>
 
         </div>
@@ -1213,6 +1216,9 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 {% url 'orcamentos_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir orçamento" exclusao_aviso="O rascunho e todos os itens serão apagados. Propostas enviadas, respondidas ou expiradas permanecem no histórico comercial." %}
 
+{# "Nova proposta" vinda da tela de Clientes (?novo=1&cliente=<id>): a ficha do cliente que a janela já traz escolhido. #}
+{% if cliente_inicial %}{{ cliente_inicial|json_script:"orcamentoClienteInicial" }}{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
@@ -2159,6 +2165,8 @@ LSTela.pronto(function () {
       ? "Orçamento ID " + orcamento.id + " · versão " + orcamento.versao
       : "Novo orçamento";
     mostrarOrigem(orcamento);
+    var notaDoDocumento = document.getElementById("orcamentoDataDocumento");
+    if (notaDoDocumento) notaDoDocumento.hidden = !(orcamento && orcamento.data_documento);
 
     if (orcamento && orcamento.cliente_opcao) {
       buscaCliente.adicionarOpcao(orcamento.cliente_opcao, false);
@@ -2177,6 +2185,12 @@ LSTela.pronto(function () {
       Painel.valor("orcamentoStatus", orcamento.status);
       Painel.valor("orcamentoValidade", orcamento.validade);
       Painel.valor("orcamentoFrete", orcamento.frete);
+      /* A data do documento importado (o contrato de 2016 que entrou hoje). */
+      var dataDocumento = document.getElementById("orcamentoDataDocumento");
+      if (dataDocumento) {
+        dataDocumento.hidden = !orcamento.data_documento;
+        dataDocumento.querySelector("strong").textContent = orcamento.data_documento || "";
+      }
       trocarUnidade("valor", false);
       Painel.valor("orcamentoDesconto", orcamento.desconto);
       chaveValorFinal.checked = Boolean(orcamento.valor_final);
@@ -2257,6 +2271,19 @@ LSTela.pronto(function () {
     abrir(parametrosIniciais.get("editar"));
   } else if (botaoNovoOrcamento && parametrosIniciais.get("novo") === "1") {
     abrir(null);
+    /* "Nova proposta" no cartão (ou no menu) de um cliente chega com
+       ?novo=1&cliente=<id>: a janela abre com ele já escolhido, e nome,
+       WhatsApp e e-mail vêm do cadastro -- como se a pessoa o tivesse
+       buscado no campo. Quem manda a ficha é o servidor (`cliente_inicial`). */
+    var fichaInicial = document.getElementById("orcamentoClienteInicial");
+    if (fichaInicial) {
+      try {
+        var clienteInicial = JSON.parse(fichaInicial.textContent);
+        buscaCliente.adicionarOpcao(clienteInicial, false);
+        buscaCliente.definirValor(clienteInicial.valor, false);
+        aplicarClienteNoOrcamento(clienteInicial, true);
+      } catch (erro) { /* ficha ilegível: a proposta abre sem cliente, como sempre abriu */ }
+    }
   } else if (reabrirDepoisDoPagamento && achar(reabrirDepoisDoPagamento)) {
     abrir(reabrirDepoisDoPagamento);
   }

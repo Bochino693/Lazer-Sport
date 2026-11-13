@@ -363,6 +363,103 @@ def fundir(chave, rotulo, tipo, lido_det, lido_ia, *, ia_usada, alertas, referen
     return campo
 
 
+# ======================================================================
+# DE QUANDO É O DOCUMENTO
+# ======================================================================
+#: Data com menos que isto de idade é suspeita: o modelo do contrato salvo
+#: de novo hoje traz "hoje" até na venda de 2016. Aí a tela PERGUNTA.
+DIAS_PARA_PERGUNTAR_A_DATA = 3
+_ORIGEM_DA_DATA = {"criado": "arquivo criado", "salvo": "arquivo salvo"}
+
+
+def _data_iso(texto):
+    try:
+        return date.fromisoformat(str(texto)) if texto else None
+    except ValueError:
+        return None
+
+
+def data_do_documento(leitura: dict, lido: dict, hoje: date) -> dict:
+    """A data do documento, as opções para a pessoa, e se é preciso perguntar.
+
+    Ordem: a que a pessoa já respondeu (fica na sessão); a ESCRITA no texto
+    ("São Paulo, 11 de novembro de 2026"). A data do ARQUIVO (criado,
+    salvo) nunca entra sozinha -- o contrato de 2016 salvo de novo hoje diz
+    "hoje", e o modelo criado em 2013 diz 2013 para a venda deste ano --:
+    ela só aparece como opção na pergunta. Pergunta quando não há data
+    escrita, ou quando ela tem menos de três dias (documento de 2012 e de
+    2016 entram no painel).
+    """
+    escritas = lido.get("datas_escritas") or []
+    do_arquivo = [d for d in (leitura.get("datas_arquivo") or []) if _data_iso(d.get("data"))]
+    opcoes, vistas = [], set()
+    for achada in escritas:
+        iso = achada["data"].isoformat()
+        if iso not in vistas:
+            vistas.add(iso)
+            opcoes.append({"valor": iso, "rotulo": f"{achada['data']:%d/%m/%Y}",
+                           "origem": "escrito no documento", "texto": achada["texto"],
+                           "fonte": achada["fonte"]})
+    for achada in sorted(do_arquivo, key=lambda d: d.get("origem") != "salvo"):
+        if achada["data"] not in vistas:
+            vistas.add(achada["data"])
+            data = _data_iso(achada["data"])
+            opcoes.append({"valor": achada["data"], "rotulo": f"{data:%d/%m/%Y}",
+                           "origem": _ORIGEM_DA_DATA.get(achada.get("origem"), "arquivo"),
+                           "texto": "", "fonte": None})
+    escolhida = _data_iso(leitura.get("data_escolhida"))
+    escrita = opcoes[0] if escritas else None
+    valor = escolhida or _data_iso(escrita["valor"] if escrita else None)
+    recente = valor is not None and (hoje - valor).days < DIAS_PARA_PERGUNTAR_A_DATA
+    if escolhida:
+        origem, motivo = "confirmada na conferência", ""
+    elif escrita is None:
+        origem = ""
+        motivo = ("Não encontrei a data escrita no documento; a do arquivo pode ser de quando ele foi "
+                  "salvo de novo." if opcoes else "Não encontrei a data no documento.")
+    else:
+        origem = escrita["origem"]
+        motivo = (
+            f"A data escrita no documento ({escrita['rotulo']}) é de agora. Confirme: documento "
+            "antigo refeito no modelo fica com a data de hoje." if recente else ""
+        )
+    hoje_iso = hoje.isoformat()
+    if hoje_iso not in vistas:
+        opcoes.append({"valor": hoje_iso, "rotulo": f"{hoje:%d/%m/%Y}", "origem": "hoje",
+                       "texto": "", "fonte": None})
+    return {
+        "valor": valor.isoformat() if valor else "",
+        "rotulo": f"{valor:%d/%m/%Y}" if valor else "",
+        "origem": origem,
+        "escolhida": bool(escolhida),
+        "perguntar": not escolhida and (valor is None or recente),
+        "motivo": motivo,
+        "opcoes": opcoes,
+    }
+
+
+#: O documento é de equipamento (e não de peças): a tabela diz
+#: "Equipamento"/"Brinquedo", ou o título fala de equipamento de diversão.
+_DOCUMENTO_DE_EQUIPAMENTO = re.compile(
+    r"\bequipamentos?\s+de\s+(?:entretenimento|diversao|lazer|recreacao)\b|"
+    r"\bcompra\s+e\s+venda\s+de\s+(?:equipamento|brinquedo)"
+)
+_CABECALHO_DE_EQUIPAMENTO = {"equipamento", "equipamentos", "brinquedo", "brinquedos"}
+
+
+def _de_equipamento(linhas: list[dict]) -> tuple[bool, set]:
+    """(o documento todo é de equipamento?, as tabelas de equipamento)."""
+    tabelas = {
+        l["tabela"] for l in linhas
+        if l["tabela"] and l["linha"] <= 3 and _plano(l["texto"]) in _CABECALHO_DE_EQUIPAMENTO
+    }
+    documento = any(
+        _DOCUMENTO_DE_EQUIPAMENTO.search(det.sem_acento(l["texto"]))
+        for l in linhas if l["parte"] in ("corpo", "caixa")
+    )
+    return documento, tabelas
+
+
 def _linha_do_item(fonte_id: str) -> str:
     achado = re.match(r"^(.*T\d+L\d+)C\d+$", fonte_id or "")
     return achado.group(1) if achado else (fonte_id or "")
@@ -389,11 +486,19 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
     # a fala do vendedor numa conversa saem antes de qualquer leitura.
     internos = identificar.pessoas_internas()
     fora = identificar.linhas_de_fora(linhas, empresa=empresa, internos=internos)
-    lido = det.ler(linhas, hoje=hoje, empresa=empresa, fora=fora)
+    # Num contrato, o trecho do VENDEDOR / CONTRATADA (quem representa a
+    # fábrica, o RG e o endereço residencial dele) nunca é o cliente.
+    trechos_da_casa = identificar.lado_da_casa(linhas)
+    fora = set(fora) | identificar.linhas_inteiras_da_casa(linhas, trechos_da_casa)
+    data_fixada = _data_iso(leitura.get("data_escolhida"))
+    lido = det.ler(linhas, hoje=hoje, empresa=empresa, fora=fora, data_fixada=data_fixada,
+                   trechos_da_casa=trechos_da_casa)
     # O texto livre (contrato, carta, conversa) completa o que os rótulos
     # não disseram; os outros palpites viram botões na conferência.
-    achados = identificar.identificar(linhas, empresa=empresa, internos=internos, fora=fora)
-    alternativas = identificar.completar(lido["campos"], achados, internos=internos, empresa=empresa)
+    achados = identificar.identificar(linhas, empresa=empresa, internos=internos, fora=fora,
+                                      trechos_da_casa=trechos_da_casa)
+    alternativas = identificar.completar(lido["campos"], achados, internos=internos, empresa=empresa,
+                                       contrato=bool(trechos_da_casa))
     catalogo = cat.carregar_catalogo()
     if not lido["itens"]:
         # Sem tabela nem linha de item: os brinquedos citados no texto.
@@ -574,7 +679,8 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
 
     # ----------------------------------------------------------- itens
     itens = _montar_itens(lido, dados_ia, conferente, alertas, ia_usada=ia_usada,
-                          catalogo=catalogo, linhas=linhas, escolhas=leitura.get("escolhas") or {})
+                          catalogo=catalogo, linhas=linhas, escolhas=leitura.get("escolhas") or {},
+                          total_doc=(campos_det.get("total") or {}).get("valor"))
 
     # ---------------------------------------------------------- valores
     valores = {
@@ -600,6 +706,20 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
             })
 
     _tratar_percentual(valores, campos_det, percentuais.get("valores.desconto"))
+    # O contrato que diz só o total ("no valor total R$ 38.500,00") e lista
+    # os equipamentos sem preço: aquele total É o valor fechado. Ele vem
+    # escolhido como valor final (a pessoa pode trocar pela soma); os
+    # preços das linhas, quando há, são os do catálogo, só de referência.
+    sem_preco_no_documento = bool(itens) and all(
+        item["valor_unitario"]["origem"] in ("", "catalogo") and not item["total_linha"]["valor"]
+        for item in itens
+    )
+    if ((campos_det.get("total") or {}).get("motivo") == det.MOTIVO_TOTAL_DO_CONTRATO
+            and sem_preco_no_documento and valores["total"]["valor"] and not valores["valor_final"]["valor"]):
+        valores["valor_final"] = dict(
+            valores["total"], chave="valores.valor_final", rotulo="Valor final negociado", referencia=True,
+            nota="o contrato traz só o valor total, sem o preço de cada item: ele é o valor fechado",
+        )
     frete = valores["frete"]
     if not frete["valor"] and not frete["opcoes"]:
         # A conta do próprio documento decide: se itens − desconto já dão o
@@ -635,7 +755,7 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         "prazo": campo("condicoes.prazo", "Prazo de entrega", "texto", "prazo", "prazo_entrega"),
         "observacoes": campo("condicoes.observacoes", "Observações", "texto", "observacoes", "observacoes"),
     }
-    _sugerir_validade(condicoes["validade"], hoje)
+    _sugerir_validade(condicoes["validade"], hoje, data_documento=lido["data_documento"])
     existentes_pagamento = _mais_usados("forma_pagamento")
     existentes_envio = _mais_usados("forma_envio")
     for nome, existentes, normalizar in (
@@ -675,6 +795,7 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
         })
 
     formato = leitura.get("formato") or "docx"
+    data = data_do_documento(leitura, lido, hoje)
     proposta = {
         "arquivo": leitura.get("arquivo", ""),
         "formato": formato,
@@ -691,7 +812,8 @@ def montar_proposta(leitura: dict, *, hoje: date | None = None) -> dict:
             "pagamento": _opcoes(existentes_pagamento, det.OPCOES_DE_PAGAMENTO),
             "envio": _opcoes(existentes_envio, det.OPCOES_DE_ENVIO),
         },
-        "data_documento": lido["data_documento"].isoformat() if lido["data_documento"] else "",
+        "data_documento": data["valor"],
+        "data": data,
     }
     _valores_nao_usados(proposta, linhas, alertas)
     if formato == "pdf_ia":
@@ -764,8 +886,18 @@ def _opcoes(existentes, padrao) -> list[str]:
     return saida
 
 
-def _sugerir_validade(validade: dict, hoje: date):
+def base_da_validade(hoje: date, data_documento: date | None) -> date:
+    """De quando contam os dias da validade: do documento, se ele é de antes.
+
+    O documento de 2016 importado hoje vale até 2016 + 5 dias -- é o
+    registro do que foi proposto naquela época, e não uma proposta nova.
+    """
+    return min(data_documento, hoje) if data_documento else hoje
+
+
+def _sugerir_validade(validade: dict, hoje: date, *, data_documento: date | None = None):
     """A validade do painel é sugestão a confirmar, nunca preenchida escondida."""
+    hoje = base_da_validade(hoje, data_documento)
     padrao = hoje + timedelta(days=Orcamento.DIAS_DE_VALIDADE_PADRAO)
     sugestao_padrao = {
         "valor": padrao.isoformat(),
@@ -824,8 +956,62 @@ def _tratar_percentual(valores, campos_det, percentual_ia):
     )
 
 
-def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, linhas, escolhas):
+def _valor_do_bruto(bruto, nome):
+    """O valor (Decimal) de um campo do item cru, da tabela ou da IA."""
+    for lido in bruto.get(nome) or ():
+        if lido and lido[0] not in (None, ""):
+            valor = lido[0][0] if isinstance(lido[0], tuple) else lido[0]
+            try:
+                return Decimal(str(valor))
+            except ArithmeticError:
+                return None
+    return None
+
+
+def _texto_do_bruto(bruto):
+    for lido in bruto.get("descricao") or ():
+        if lido and lido[0]:
+            return str(lido[0][0] if isinstance(lido[0], tuple) else lido[0])
+    return ""
+
+
+def _sem_linhas_que_nao_sao_item(lista, alertas, *, total_doc):
+    """Tira a linha que não é produto: a frase do contrato, o total.
+
+    "...descrito na Cláusula 1ª, no valor total R$ 38.500,00" virava uma
+    linha avulsa com o total do contrato. Fora da tabela (parágrafo, IA,
+    citação), a linha só fica se a descrição tem cara de produto -- e, com
+    uma tabela de itens no documento, nunca se o valor dela é o total.
+    """
+    com_tabela = any(bruto["contexto"] == "tabela" for bruto in lista)
+    total = _decimal(det.moeda(total_doc)) if total_doc not in (None, "") else None
+    ficam = []
+    for bruto in lista:
+        if bruto["contexto"] == "tabela":
+            ficam.append(bruto)
+            continue
+        descricao = _texto_do_bruto(bruto)
+        valores = {_valor_do_bruto(bruto, "valor_unitario"), _valor_do_bruto(bruto, "total_linha")} - {None}
+        e_o_total = com_tabela and total is not None and total in valores
+        if det.parece_produto(descricao) and not e_o_total:
+            ficam.append(bruto)
+            continue
+        alertas.append({
+            "id": f"nao_e_item:{len(alertas)}", "nivel": NIVEL_AMARELO, "tipo": "nao_e_item",
+            "campo": "", "titulo": "Linha que não virou item",
+            "detalhe": (
+                f"“{descricao[:90]}” é " + ("o total do documento" if e_o_total else "frase do contrato")
+                + ", e não um produto: não entrou como item."
+            ),
+            "fonte": None,
+        })
+    return ficam
+
+
+def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, linhas, escolhas,
+                  total_doc=None):
     ordem = {linha["id"]: posicao for posicao, linha in enumerate(linhas)}
+    documento_de_equipamento, tabelas_de_equipamento = _de_equipamento(linhas)
     # Chave por item, e não por linha: uma frase cita vários brinquedos
     # ("duas camas elásticas, um Air Game Kids e o Strike Kids").
     itens_det = {}
@@ -891,6 +1077,7 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
             "so_tabelas": ia_usada,
         })
     lista.sort(key=lambda item: item["ordem"])
+    lista = _sem_linhas_que_nao_sao_item(lista, alertas, total_doc=total_doc)
 
     itens = []
     for posicao, bruto in enumerate(lista, start=1):
@@ -944,7 +1131,11 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
         _sugerir_valores_da_linha(item)
 
         original = item["descricao"]["original"] or item["descricao"]["valor"]
-        casamento = cat.casar_item(original, catalogo)
+        tabela_do_item = re.match(r"^(?:CAB-|ROD-|CX-)?(T\d+)L", bruto["linha_fonte"] or "")
+        preferir_brinquedos = documento_de_equipamento or bool(
+            tabela_do_item and tabela_do_item.group(1) in tabelas_de_equipamento
+        )
+        casamento = cat.casar_item(original, catalogo, preferir_brinquedos=preferir_brinquedos)
         if bruto.get("produto_citado"):
             # O nome inteiro do catálogo está no texto ("um Air Game Kids").
             casamento = dict(cat.casar_item(item["descricao"]["valor"], catalogo),
@@ -983,13 +1174,15 @@ def _montar_itens(lido, dados_ia, conferente, alertas, *, ia_usada, catalogo, li
                            "ou marque como linha avulsa.",
                 "fonte": item["descricao"]["fonte"],
             })
-        if bruto["contexto"] == "mencao":
+        if bruto["contexto"] == "mencao" and not item["quantidade"]["valor"]:
             # Brinquedo citado no texto ("um Air Game Kids"): sem quantidade
-            # escrita é um; sem valor escrito, o preço do catálogo -- os
-            # dois marcados, para a pessoa conferir.
-            if not item["quantidade"]["valor"]:
-                item["quantidade"].update(valor="1", exibir="1", origem="texto", confianca="media",
-                                          nota="o documento não diz a quantidade: um")
+            # escrita é um.
+            item["quantidade"].update(valor="1", exibir="1", origem="texto", confianca="media",
+                                      nota="o documento não diz a quantidade: um")
+        if bruto["contexto"] in ("mencao", "tabela"):
+            # Sem valor escrito (a citação no texto, ou a tabela "Quantidade
+            # | Equipamento" do contrato), o preço do catálogo -- marcado
+            # assim, para a pessoa conferir.
             if not item["valor_unitario"]["valor"] and not item["total_linha"]["valor"] and item["produto"]["escolhido"]:
                 preco = cat.preco_do_produto(cat.produto_por_chave(item["produto"]["escolhido"]))
                 if preco is not None:
@@ -1163,7 +1356,14 @@ def recalcular_alertas(proposta, valores_atuais=None):
             ),
             "fonte": proposta["valores"]["subtotal"]["fonte"],
         })
-    if total_word is not None and resultado["total"] != total_word:
+    # O contrato que diz só o total (sem o preço de cada item) já tem esse
+    # total como valor final: aí a soma das linhas não "bate" por definição
+    # -- os preços são os do catálogo, de referência --, e não há o que
+    # acender em vermelho.
+    final_e_o_total = total_word is not None and _decimal(
+        (proposta["valores"].get("valor_final") or {}).get("valor")
+    ) == total_word
+    if total_word is not None and resultado["total"] != total_word and not final_e_o_total:
         alertas.append({
             "id": "soma_total", "nivel": NIVEL_VERMELHO, "tipo": "soma_total", "verificavel": True,
             "campo": "valores.total", "titulo": "O total calculado não bate com o total do documento",
