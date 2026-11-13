@@ -5262,3 +5262,27 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_producao.py (dias úteis, feriados, o campo) e
    sistema_interno/tests_funil_vendas.py (o funil, a migração, o prazo, as
    folhas A4, quem pode, as telas).
+
+90) SEM FRETE PELO SITE: SÓ RETIRADA NA FÁBRICA, O TRANSPORTE É DO CLIENTE
+   O PEDIDO: "a função de frete deve sair do site, devemos deixar somente a
+   retirada na loja com a explicação de frete por conta do cliente."
+   O QUE MUDOU:
+     * o carrinho não tem mais a escolha Retirada/Frete nem CEP: o bloco
+       Entrega mostra a retirada na fábrica (endereço, horário, telefone,
+       "Como chegar") e o recado "Mora longe? Enviamos para todo o Brasil --
+       o frete é por conta do cliente, combinado com a transportadora" com o
+       atalho do WhatsApp. Fica escondido um único .frete-tab.active
+       [data-tipo=retirada] para o JS antigo continuar achando a escolha;
+     * a tela de pagamento mostra "Entrega: Retirada na fábrica" e a mesma
+       nota (.ck-frete-nota); nenhum valor de frete entra no total;
+     * o servidor garante, não só a tela: CarrinhoView e PaymentView forçam
+       tipo_envio="retirada"; atualizar_tipo_envio recusa "frete" (400);
+       calcular_frete responde 410 ("O envio pelo site está desativado...")
+       -- o corpo antigo ficou como _calcular_frete_antigo, sem rota; e
+       checkout.reservar_pedido grava retirada ANTES da assinatura do
+       pedido, então uma reserva nunca cobra frete;
+     * pedidos antigos que cobraram frete continuam com ele (a venda leva o
+       total cobrado, seção 89).
+   As transportadoras para o cliente combinar o envio ficam no painel
+   (diretório por estado, com WhatsApp/telefone/site).
+   Testes: core/tests_conferencia_pagamento.py, EntregaNoCarrinhoTests.
