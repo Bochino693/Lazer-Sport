@@ -5823,6 +5823,28 @@ def previa_do_carrinho(request, tipo, object_id):
 
 @require_POST
 def adicionar_ao_carrinho(request, tipo, object_id):
+    try:
+        return _adicionar_ao_carrinho(request, tipo, object_id)
+    except Http404:
+        return JsonResponse(
+            {'sucesso': False, 'erro': 'Este item não está à venda no momento.'},
+            status=404,
+        )
+    except Exception:
+        logging.getLogger(__name__).exception("Carrinho: erro ao adicionar %s %s", tipo, object_id)
+        return JsonResponse(
+            {
+                'sucesso': False,
+                'erro': (
+                    'Não conseguimos adicionar agora. Tente de novo em instantes '
+                    'ou fale com a gente no WhatsApp (11) 96056-3135.'
+                ),
+            },
+            status=500,
+        )
+
+
+def _adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
         return JsonResponse({'erro': 'Você precisa fazer login'}, status=403)
 
@@ -5838,7 +5860,7 @@ def adicionar_ao_carrinho(request, tipo, object_id):
         quantidade = 1
 
     cliente = request.user.perfil
-    carrinho, _ = Carrinho.objects.get_or_create(cliente=cliente)
+    carrinho = checkout.carrinho_do_cliente(cliente)
 
     if tipo not in TIPOS_DO_CARRINHO:
         return JsonResponse({'erro': 'Tipo inválido'}, status=400)
@@ -5867,9 +5889,14 @@ def adicionar_ao_carrinho(request, tipo, object_id):
         item.save(update_fields=["quantidade"])
 
     # o "quando" da ida ao carrinho, para os gráficos do painel (core/interacoes.py)
-    from .interacoes import ida_ao_carrinho
+    # Daqui para baixo é acessório: o item JÁ ESTÁ no carrinho. Nada aqui
+    # pode virar "Não foi possível adicionar" para quem está comprando.
+    try:
+        from .interacoes import ida_ao_carrinho
 
-    ida_ao_carrinho(tipo, objeto.id, quantidade)
+        ida_ao_carrinho(tipo, objeto.id, quantidade)
+    except Exception:
+        logging.getLogger(__name__).exception("Carrinho: falha ao registrar a ida ao carrinho (%s %s)", tipo, objeto.id)
 
     _invalidar_pagamento_pendente(carrinho)
 
@@ -5886,7 +5913,11 @@ def adicionar_ao_carrinho(request, tipo, object_id):
     total_itens = sum(linha.quantidade for linha in carrinho.itens.all())
     total_carrinho = carrinho.total_liquido
 
-    previa = _previa_do_item(tipo, objeto)
+    try:
+        previa = _previa_do_item(tipo, objeto)
+    except Exception:
+        logging.getLogger(__name__).exception("Carrinho: falha ao montar a prévia (%s %s)", tipo, objeto.id)
+        previa = {'tipo': tipo, 'id': objeto.pk, 'nome': str(objeto)}
     if adesivo:
         previa['adesivo'] = adesivo
 
@@ -5903,6 +5934,41 @@ def adicionar_ao_carrinho(request, tipo, object_id):
 from django.views.decorators.http import require_POST
 
 
+def _resumo_carrinho(carrinho):
+    """O carrinho como a tela precisa dele, para atualizar sem recarregar.
+
+    Cada ação do carrinho (quantidade, remover, limpar, cupom) devolve isto:
+    a tela troca os números no lugar, sem buscar a página de novo.
+    """
+    carrinho = (
+        Carrinho.objects.select_related("cupom").get(pk=carrinho.pk)
+    )
+    itens = list(carrinho.itens.select_related("content_type"))
+    cupom = carrinho.cupom
+    dinheiro = lambda valor: f"{(valor or Decimal('0')):.2f}"
+    return {
+        "vazio": not itens,
+        "total_itens": sum(item.quantidade for item in itens),
+        "produtos": len(itens),
+        "itens": {
+            str(item.id): {
+                "quantidade": item.quantidade,
+                "preco_unitario": dinheiro(item.preco_unitario),
+                "subtotal": dinheiro(item.subtotal),
+            }
+            for item in itens
+        },
+        "total_bruto": dinheiro(carrinho.total_bruto),
+        "valor_desconto": dinheiro(carrinho.valor_desconto),
+        "total_liquido": dinheiro(carrinho.total_liquido),
+        "cupom": (
+            {"codigo": cupom.codigo, "percentual": f"{cupom.desconto_percentual:g}"}
+            if cupom else None
+        ),
+        "cupom_permitido": _carrinho_permite_cupom(carrinho),
+    }
+
+
 @login_required
 @require_POST
 def remover_item_carrinho(request):
@@ -5917,7 +5983,7 @@ def remover_item_carrinho(request):
         item.delete()
         _remover_cupom_se_nao_permitido(carrinho)
         _invalidar_pagamento_pendente(carrinho)
-        return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'success', 'carrinho': _resumo_carrinho(carrinho)})
     except ItemCarrinho.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Item não encontrado'}, status=404)
 
@@ -5925,13 +5991,13 @@ def remover_item_carrinho(request):
 @login_required
 @require_POST
 def limpar_carrinho(request):
-    carrinho = Carrinho.objects.get(cliente=request.user.perfil)
+    carrinho = checkout.carrinho_do_cliente(request.user.perfil)
     carrinho.itens.all().delete()
     carrinho.cupom = None
     carrinho.mp_payment_id = None
     carrinho.save(update_fields=["cupom", "mp_payment_id"])
 
-    return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'success', 'carrinho': _resumo_carrinho(carrinho)})
 
 
 #: Rótulo e página de cada tipo de produto que entra no carrinho (o
@@ -6059,9 +6125,7 @@ class CarrinhoView(LoginRequiredMixin, View):
 
         cliente = request.user.perfil
 
-        carrinho, _ = Carrinho.objects.select_related(
-            'cupom'
-        ).get_or_create(cliente=cliente)
+        carrinho = checkout.carrinho_do_cliente(cliente)
 
         # Voltou depois de pagar? Confere as reservas deste carrinho no
         # Mercado Pago (rede de segurança do webhook). Carrinho vazio porque
@@ -6137,7 +6201,7 @@ def calcular_frete(request):
         return JsonResponse({"status": "erro"})
 
     try:
-        carrinho = Carrinho.objects.get(cliente=request.user.perfil)
+        carrinho = checkout.carrinho_do_cliente(request.user.perfil)
     except Carrinho.DoesNotExist:
         return JsonResponse({"status": "erro"})
 
@@ -6219,7 +6283,7 @@ def alterar_quantidade_item(request):
 
     _invalidar_pagamento_pendente(carrinho)
 
-    return JsonResponse({"status": "ok"})
+    return JsonResponse({"status": "ok", "carrinho": _resumo_carrinho(carrinho)})
 
 
 from django.views.decorators.http import require_POST
@@ -6254,7 +6318,7 @@ def aplicar_cupom(request):
             'message': 'Perfil do cliente não encontrado'
         }, status=400)
 
-    carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
+    carrinho = checkout.carrinho_do_cliente(request.user.perfil)
 
     if not carrinho:
         return JsonResponse({
@@ -6347,8 +6411,9 @@ def aplicar_cupom(request):
 
     return JsonResponse({
         'status': 'success',
-        'title': 'Cupom aplicado 🎉',
-        'message': f'Você economizou {cupom.desconto_percentual}% com o cupom {cupom.codigo}'
+        'title': 'Cupom aplicado',
+        'message': f'Você economizou {cupom.desconto_percentual:g}% com o cupom {cupom.codigo}',
+        'carrinho': _resumo_carrinho(carrinho),
     })
 
 
@@ -6362,7 +6427,7 @@ def salvar_cpf_carrinho(request):
     except:
         return JsonResponse({"status": "erro"})
 
-    carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
+    carrinho = checkout.carrinho_do_cliente(request.user.perfil)
 
     if not carrinho:
         return JsonResponse({"status": "erro"})

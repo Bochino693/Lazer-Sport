@@ -24,9 +24,7 @@
 
             <h1 class="ck-titulo">
                 Meu carrinho
-                {% if itens %}
-                    <span class="ck-contador">{{ itens|length }} produto{{ itens|length|pluralize }}</span>
-                {% endif %}
+                <span class="ck-contador" id="ck-contador"{% if not itens %} hidden{% endif %}>{{ itens|length }} produto{{ itens|length|pluralize }}</span>
             </h1>
             <p class="ck-sub">
                 {% if itens %}
@@ -97,7 +95,7 @@
 
     {% if itens %}
 
-    <div class="ck-grade">
+    <div class="ck-grade" id="ck-grade">
         <div class="ck-principal">
 
             <!-- PRODUTOS -->
@@ -118,7 +116,7 @@
 
                 <div class="ck-itens">
                     {% for item in itens %}
-                    <article class="ck-item" data-item-id="{{ item.id }}" data-nome="{{ item.nome_com_adesivo }}">
+                    <article class="ck-item" data-item-id="{{ item.id }}" data-nome="{{ item.nome_com_adesivo }}" data-preco="{{ item.preco_unitario|stringformat:'f' }}">
 
                         {% if item.url_produto %}
                         <a class="ck-item-foto" href="{{ item.url_produto }}" tabindex="-1" aria-hidden="true">
@@ -350,18 +348,18 @@
                     <h2 class="ck-card-titulo" id="ck-resumo-titulo">Resumo do pedido</h2>
                 </div>
 
-                <!-- CUPOM: liberado somente com brinquedo ou peça de reposição -->
-                {% if cupom_permitido %}
-                <div class="cupom-box">
-                    {% if carrinho.cupom %}
-                        <div class="cupom-aplicado" role="status">
+                <!-- CUPOM: liberado somente com brinquedo ou peça de reposição.
+                     Os estados ficam todos na página e a tela troca qual aparece
+                     (carrinho sem recarregar). -->
+                <div class="cupom-box" id="cupom-box"{% if not cupom_permitido %} hidden{% endif %}>
+                        <div class="cupom-aplicado" id="cupom-aplicado" role="status"{% if not carrinho.cupom %} hidden{% endif %}>
                             <i class="fa-solid fa-tag" aria-hidden="true"></i>
                             <div>
-                                <strong>Cupom {{ carrinho.cupom.codigo }} aplicado</strong>
-                                <small>Você economizou {{ carrinho.cupom.desconto_percentual|floatformat:"-2" }}% nos produtos</small>
+                                <strong>Cupom <span data-cupom-codigo>{{ carrinho.cupom.codigo }}</span> aplicado</strong>
+                                <small>Você economizou <span data-cupom-percentual>{{ carrinho.cupom.desconto_percentual|floatformat:"-2" }}</span>% nos produtos</small>
                             </div>
                         </div>
-                    {% else %}
+                    <div id="cupom-form"{% if carrinho.cupom %} hidden{% endif %}>
                         <label class="ck-rotulo" for="cupomCodigo">Cupom de desconto</label>
                         <div class="cupom-input">
                             <div class="ck-entrada">
@@ -374,10 +372,9 @@
                             </button>
                         </div>
                         <small id="cupom-msg" class="ck-status" aria-live="polite"></small>
-                    {% endif %}
+                    </div>
                 </div><!-- cupom-box -->
-                {% else %}
-                <div class="cupom-bloqueado" role="note">
+                <div class="cupom-bloqueado" id="cupom-bloqueado" role="note"{% if cupom_permitido %} hidden{% endif %}>
                     <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                     <div>
                         <strong>Cupom não disponível para estes itens</strong>
@@ -385,25 +382,22 @@
                         brinquedo ou uma peça de reposição para liberar o campo de cupom.
                     </div>
                 </div>
-                {% endif %}
 
                 {% with total_liquido=carrinho.total_liquido %}
                 <div class="resumo-box">
-                    {% if carrinho.cupom %}
-                    <div class="ck-linha">
+                    <div class="ck-linha" id="linha-bruto"{% if not carrinho.cupom %} hidden{% endif %}>
                         <span>Produtos</span>
-                        <span class="money" data-value="{{ carrinho.total_bruto|stringformat:'f' }}">
+                        <span class="money" id="valor-bruto" data-value="{{ carrinho.total_bruto|stringformat:'f' }}">
                             R$ {{ carrinho.total_bruto|moeda }}
                         </span>
                     </div>
-                    <div class="ck-linha ck-linha--desconto">
-                        <span>Cupom {{ carrinho.cupom.codigo }}</span>
-                        <span>− <span class="money" data-value="{{ carrinho.valor_desconto|stringformat:'f' }}">R$ {{ carrinho.valor_desconto|moeda }}</span></span>
+                    <div class="ck-linha ck-linha--desconto" id="linha-desconto"{% if not carrinho.cupom %} hidden{% endif %}>
+                        <span>Cupom <span data-cupom-codigo>{{ carrinho.cupom.codigo }}</span></span>
+                        <span>− <span class="money" id="valor-desconto" data-value="{{ carrinho.valor_desconto|stringformat:'f' }}">R$ {{ carrinho.valor_desconto|moeda }}</span></span>
                     </div>
-                    {% endif %}
 
                     <div class="ck-linha resumo-linha">
-                        <span>{% if carrinho.cupom %}Produtos com desconto{% else %}Produtos{% endif %}</span>
+                        <span id="rotulo-produtos">{% if carrinho.cupom %}Produtos com desconto{% else %}Produtos{% endif %}</span>
                         <span class="money" id="valor-produtos"
                               data-value="{{ total_liquido|stringformat:'f' }}">
                             R$ {{ total_liquido|moeda }}
@@ -469,9 +463,10 @@
         </aside>
     </div><!-- ck-grade -->
 
-    {% elif not pagamento_em_andamento %}
+    {% endif %}
 
-    <section class="ck-card ck-vazio carrinho-vazio-box" aria-labelledby="ck-vazio-titulo">
+    {% if not pagamento_em_andamento %}
+    <section class="ck-card ck-vazio carrinho-vazio-box" id="ck-vazio" aria-labelledby="ck-vazio-titulo"{% if itens %} hidden{% endif %}>
         <span class="ck-vazio-icone" aria-hidden="true">
             <i class="fa-solid fa-cart-shopping"></i>
         </span>
@@ -580,46 +575,148 @@ function mostrarStatus(el, estado, texto) {
     el.append(icone, frase);
 }
 
-// ===== FUNÇÕES EXISTENTES =====
-function aplicarCupom() {
-    const codigo = document.getElementById('cupomCodigo').value.trim();
-    const msg = document.getElementById('cupom-msg');
+// ===== CARRINHO SEM RECARREGAR =====
+// Toda ação (quantidade, remover, limpar, cupom) muda a tela NA HORA e
+// manda o pedido ao servidor em segundo plano; a resposta traz o carrinho
+// conferido (carrinho.resumo no servidor) e os números são acertados no
+// lugar. Nada de location.reload(): a página não pisca e não perde o que
+// já foi digitado (CPF, CEP, número).
+const LS_BRL = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const LS_CSRF = "{{ csrf_token }}";
 
-    mostrarStatus(msg, '', '');
-
-    if (!codigo) {
-        mostrarStatus(msg, 'erro', 'Digite um código de cupom');
-        return;
-    }
-
-    fetch("{% url 'aplicar_cupom' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ codigo })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            mostrarStatus(msg, 'ok', data.message);
-
-            setTimeout(() => location.reload(), 800);
-        } else {
-            mostrarStatus(msg, 'erro', data.message || 'Erro ao aplicar cupom');
-        }
-    })
-    .catch(() => {
-        mostrarStatus(msg, 'erro', 'Erro de conexão');
-    });
+function lsTexto(el, valor) { if (el) { el.textContent = LS_BRL(valor); el.dataset.value = Number(valor || 0).toFixed(2); } }
+function lsAvisoErro(titulo, texto) {
+    if (window.LSAviso) window.LSAviso.toast({ nivel: 'erro', titulo, texto });
 }
 
-// A linha do produto fica apagada enquanto o carrinho é refeito.
-function marcarLinha(itemId) {
-    const linha = document.querySelector(`.ck-item[data-item-id="${itemId}"]`);
-    if (linha) linha.classList.add('is-atualizando');
-    return linha;
+async function lsPost(url, corpo, json = true) {
+    const resposta = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: Object.assign(
+            { 'X-CSRFToken': LS_CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+            json ? { 'Content-Type': 'application/json' } : { 'Content-Type': 'application/x-www-form-urlencoded' }
+        ),
+        body: corpo
+    });
+    const dados = await resposta.json().catch(() => ({}));
+    if (!resposta.ok || dados.status === 'error') {
+        throw new Error(dados.message || dados.erro || 'Não foi possível atualizar o carrinho.');
+    }
+    return dados;
+}
+
+// O total da tela = produtos (do servidor) + frete (o que a tela já calculou).
+function lsRecalcularTotal() {
+    const produtos = Number(document.getElementById('valor-produtos')?.dataset.value || 0);
+    const linhaFrete = document.getElementById('linha-frete');
+    const freteAtivo = document.querySelector('.frete-tab.active')?.dataset.tipo === 'frete';
+    let frete = 0;
+    if (linhaFrete && !linhaFrete.hidden && freteAtivo) {
+        frete = parseFloat(String(document.getElementById('valor-frete')?.innerText || '0')
+            .replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    lsTexto(document.getElementById('totalPedido'), produtos + frete);
+    lsTexto(document.getElementById('subtotalFixo'), produtos + frete);
+}
+
+function lsTirarLinha(linha) {
+    if (!linha || linha.classList.contains('is-saindo')) return;
+    linha.style.maxHeight = linha.scrollHeight + 'px';
+    requestAnimationFrame(() => linha.classList.add('is-saindo'));
+    setTimeout(() => linha.remove(), 380);
+}
+
+function lsLinhaPrecos(linha, quantidade, subtotal, preco) {
+    const valor = linha.querySelector('.qtd-valor');
+    if (valor) valor.textContent = quantidade;
+    const menos = linha.querySelector('.qtd-box button');
+    if (menos) menos.disabled = quantidade <= 1;
+    const caixa = linha.querySelector('.ck-item-precos');
+    if (!caixa) return;
+    lsTexto(caixa.querySelector('strong.money'), subtotal);
+    let cada = caixa.querySelector('small');
+    if (quantidade > 1) {
+        if (!cada) {
+            cada = document.createElement('small');
+            cada.innerHTML = '<span class="money"></span> cada';
+            caixa.appendChild(cada);
+        }
+        lsTexto(cada.querySelector('.money'), preco);
+    } else if (cada) {
+        cada.remove();
+    }
+}
+
+function lsAplicarResumo(r) {
+    if (!r) return;
+    document.querySelectorAll('.ck-item').forEach(linha => {
+        const dados = r.itens[linha.dataset.itemId];
+        if (!dados) { lsTirarLinha(linha); return; }
+        linha.dataset.preco = dados.preco_unitario;
+        lsLinhaPrecos(linha, dados.quantidade, dados.subtotal, dados.preco_unitario);
+        linha.classList.remove('is-atualizando', 'is-sincronizando');
+    });
+
+    const contador = document.getElementById('ck-contador');
+    if (contador) {
+        contador.textContent = `${r.produtos} produto${r.produtos === 1 ? '' : 's'}`;
+        contador.hidden = r.vazio;
+    }
+
+    const cupom = r.cupom;
+    const mostrar = (id, sim) => { const el = document.getElementById(id); if (el) el.hidden = !sim; };
+    mostrar('cupom-box', r.cupom_permitido);
+    mostrar('cupom-bloqueado', !r.cupom_permitido);
+    mostrar('cupom-aplicado', !!cupom);
+    mostrar('cupom-form', !cupom);
+    mostrar('linha-bruto', !!cupom);
+    mostrar('linha-desconto', !!cupom);
+    document.querySelectorAll('[data-cupom-codigo]').forEach(el => { el.textContent = cupom ? cupom.codigo : ''; });
+    document.querySelectorAll('[data-cupom-percentual]').forEach(el => { el.textContent = cupom ? cupom.percentual : ''; });
+    const rotulo = document.getElementById('rotulo-produtos');
+    if (rotulo) rotulo.textContent = cupom ? 'Produtos com desconto' : 'Produtos';
+    lsTexto(document.getElementById('valor-bruto'), r.total_bruto);
+    lsTexto(document.getElementById('valor-desconto'), r.valor_desconto);
+    lsTexto(document.getElementById('valor-produtos'), r.total_liquido);
+    lsRecalcularTotal();
+
+    if (typeof window.atualizarBadgeCarrinho === 'function') window.atualizarBadgeCarrinho(r.total_itens);
+
+    if (r.vazio) {
+        setTimeout(() => {
+            const grade = document.getElementById('ck-grade');
+            const vazio = document.getElementById('ck-vazio');
+            if (grade) grade.hidden = true;
+            if (vazio) vazio.hidden = false;
+            document.getElementById('car')?.classList.add('ck--vazio');
+            const sub = document.querySelector('.ck-sub');
+            if (sub) sub.textContent = 'Os produtos que você escolher aparecem aqui.';
+        }, 360);
+    }
+    document.dispatchEvent(new CustomEvent('carrinho:atualizado', { detail: r }));
+}
+
+function aplicarCupom() {
+    const campo = document.getElementById('cupomCodigo');
+    const codigo = campo.value.trim();
+    const msg = document.getElementById('cupom-msg');
+    mostrarStatus(msg, '', '');
+    if (!codigo) { mostrarStatus(msg, 'erro', 'Digite um código de cupom'); return; }
+
+    mostrarStatus(msg, 'carregando', 'Conferindo o cupom...');
+    lsPost("{% url 'aplicar_cupom' %}", JSON.stringify({ codigo }))
+        .then(dados => {
+            if (dados.status === 'success') {
+                mostrarStatus(msg, '', '');
+                campo.value = '';
+                lsAplicarResumo(dados.carrinho);
+                if (window.LSAviso) window.LSAviso.toast({ nivel: 'sucesso', titulo: dados.title || 'Cupom aplicado', texto: dados.message });
+            } else {
+                mostrarStatus(msg, 'erro', dados.message || 'Não foi possível aplicar o cupom.');
+            }
+        })
+        .catch(erro => mostrarStatus(msg, 'erro', erro.message || 'Erro de conexão'));
 }
 
 function removerItem(itemId) {
@@ -633,18 +730,17 @@ function removerItem(itemId) {
         cancelar: 'Manter',
         perigo: true
     }).then(sim => {
-        if (!sim) return;
-        marcarLinha(itemId);
-
-        fetch("{% url 'remover_item_carrinho' %}", {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: `item_id=${itemId}`
-        })
-        .then(() => location.reload());
+        if (!sim || !linha) return;
+        // Some na hora; se o servidor recusar, volta.
+        linha.classList.add('is-atualizando');
+        linha.hidden = true;
+        lsPost("{% url 'remover_item_carrinho' %}", `item_id=${encodeURIComponent(itemId)}`, false)
+            .then(dados => { linha.hidden = false; lsTirarLinha(linha); lsAplicarResumo(dados.carrinho); })
+            .catch(erro => {
+                linha.hidden = false;
+                linha.classList.remove('is-atualizando');
+                lsAvisoErro('Não foi possível remover', erro.message);
+            });
     });
 }
 
@@ -660,15 +756,14 @@ function limparCarrinho() {
 }
 
 function confirmarLimparCarrinho() {
-    document.querySelectorAll('.ck-item').forEach(linha => linha.classList.add('is-atualizando'));
-
-    fetch("{% url 'limpar_carrinho' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
-        }
-    })
-    .then(() => location.reload());
+    const linhas = document.querySelectorAll('.ck-item');
+    linhas.forEach(linha => linha.classList.add('is-atualizando'));
+    lsPost("{% url 'limpar_carrinho' %}", '', false)
+        .then(dados => lsAplicarResumo(dados.carrinho))
+        .catch(erro => {
+            linhas.forEach(linha => linha.classList.remove('is-atualizando'));
+            lsAvisoErro('Não foi possível limpar o carrinho', erro.message);
+        });
 }
 
 {% if pagamento_em_andamento %}
@@ -711,21 +806,52 @@ function devolverPedido(pedidoId, botao) {
 }
 {% endif %}
 
-function alterarQtd(itemId, delta) {
-    const linha = marcarLinha(itemId);
+// Quantidade: o número muda na hora; os cliques seguidos se juntam num
+// pedido só por item (fila), e a resposta do servidor acerta os totais.
+const LS_FILA_QTD = {};
 
-    fetch("{% url 'alterar_quantidade_item' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ item_id: itemId, delta: delta })
-    })
-    .then(() => location.reload())
-    .catch(() => {
-        if (linha) linha.classList.remove('is-atualizando');
-    });
+function alterarQtd(itemId, delta) {
+    const linha = document.querySelector(`.ck-item[data-item-id="${itemId}"]`);
+    if (!linha) return;
+    const atual = parseInt(linha.querySelector('.qtd-valor')?.textContent, 10) || 1;
+    const nova = atual + delta;
+    if (nova < 1 || nova > 99) return;
+
+    const preco = Number(linha.dataset.preco || 0);
+    lsLinhaPrecos(linha, nova, preco * nova, preco);
+    linha.classList.add('is-sincronizando');
+
+    const fila = LS_FILA_QTD[itemId] || (LS_FILA_QTD[itemId] = { pendente: 0, emVoo: false, confirmada: atual });
+    fila.pendente += delta;
+    lsEnviarQtd(itemId);
+}
+
+function lsEnviarQtd(itemId) {
+    const fila = LS_FILA_QTD[itemId];
+    if (!fila || fila.emVoo || !fila.pendente) return;
+    const delta = fila.pendente;
+    fila.pendente = 0;
+    fila.emVoo = true;
+
+    lsPost("{% url 'alterar_quantidade_item' %}", JSON.stringify({ item_id: itemId, delta }))
+        .then(dados => {
+            fila.emVoo = false;
+            const item = dados.carrinho && dados.carrinho.itens[String(itemId)];
+            if (item) fila.confirmada = item.quantidade;
+            if (fila.pendente) { lsEnviarQtd(itemId); return; }
+            lsAplicarResumo(dados.carrinho);
+        })
+        .catch(erro => {
+            fila.emVoo = false;
+            fila.pendente = 0;
+            const linha = document.querySelector(`.ck-item[data-item-id="${itemId}"]`);
+            if (linha) {
+                const preco = Number(linha.dataset.preco || 0);
+                lsLinhaPrecos(linha, fila.confirmada, preco * fila.confirmada, preco);
+                linha.classList.remove('is-sincronizando');
+            }
+            lsAvisoErro('Não foi possível mudar a quantidade', erro.message);
+        });
 }
 
 

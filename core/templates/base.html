@@ -1336,8 +1336,7 @@ function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
   .then(data => {
     if (!data.sucesso) {
       const mensagem = data.erro || 'Não foi possível adicionar este item.';
-      LSCartLoading.erro(token, mensagem);
-      mostrarToast(mensagem, true);
+      LSCartLoading.erro(token, mensagem);   // já mostra o aviso (um só)
       return data;
     }
 
@@ -1355,8 +1354,7 @@ function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
   })
   .catch(error => {
     const mensagem = error?.message || 'Erro de conexão. Tente novamente.';
-    LSCartLoading.erro(token, mensagem);
-    mostrarToast(mensagem, true);
+    LSCartLoading.erro(token, mensagem);   // já mostra o aviso (um só)
     return { sucesso: false, erro: mensagem };
   });
 }

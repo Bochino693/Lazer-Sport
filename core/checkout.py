@@ -156,6 +156,55 @@ def assinatura_do_pedido(pedido):
 
 
 # ======================================================================
+# O CARRINHO DO CLIENTE -- UM SÓ
+# ======================================================================
+def carrinho_do_cliente(perfil):
+    """O carrinho do cliente: sempre o mesmo, e nunca dois.
+
+    Carrinho.cliente é uma ForeignKey e o get_or_create não tem trava no
+    banco: dois cliques ao mesmo tempo (site e aplicativo, duas abas)
+    criavam um segundo carrinho. Daí em diante tudo o que fazia
+    `get_or_create(cliente=...)` ou `get(cliente=...)` -- adicionar,
+    limpar, frete, a tela do carrinho -- quebrava com erro 500
+    ("Não foi possível adicionar este item"), e o cupom e o CPF iam para
+    um carrinho diferente do que a tela mostrava.
+
+    Aqui o carrinho é o mais antigo (o mesmo que o selo do topo já usava),
+    e os outros são juntados nele: os itens passam para ele (o mesmo
+    produto com o mesmo adesivo soma a quantidade), as reservas apontam
+    para ele e os carrinhos a mais somem.
+    """
+    with transaction.atomic():
+        carrinhos = list(
+            Carrinho.objects.select_for_update().filter(cliente=perfil).order_by("id")
+        )
+        if not carrinhos:
+            return Carrinho.objects.create(cliente=perfil)
+
+        principal, sobras = carrinhos[0], carrinhos[1:]
+        for extra in sobras:
+            for item in extra.itens.all():
+                igual = principal.itens.filter(
+                    content_type_id=item.content_type_id,
+                    object_id=item.object_id,
+                    adesivo=item.adesivo,
+                ).first()
+                if igual:
+                    igual.quantidade += item.quantidade
+                    igual.save(update_fields=["quantidade"])
+                    item.delete()
+                else:
+                    item.carrinho = principal
+                    item.save(update_fields=["carrinho"])
+            Pedido.objects.filter(carrinho_origem=extra).update(carrinho_origem=principal)
+            if not principal.cupom_id and extra.cupom_id:
+                principal.cupom_id = extra.cupom_id
+                principal.save(update_fields=["cupom"])
+            extra.delete()
+        return principal
+
+
+# ======================================================================
 # RESERVA
 # ======================================================================
 def pedido_reservado_do_carrinho(carrinho):

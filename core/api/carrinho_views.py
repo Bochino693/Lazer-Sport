@@ -112,7 +112,7 @@ class SincronizarCarrinhoAPI(APIView):
         dados = entrada.validated_data
 
         with transaction.atomic():
-            carrinho, _ = Carrinho.objects.get_or_create(cliente=perfil)
+            carrinho = checkout.carrinho_do_cliente(perfil)
             carrinho = Carrinho.objects.select_for_update().get(pk=carrinho.pk)
 
             # Uma reserva aberta representa o carrinho de antes. Trocar o

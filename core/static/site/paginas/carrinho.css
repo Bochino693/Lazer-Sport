@@ -815,3 +815,31 @@
     .btn-finalizar,
     .btn-finalizar i { transition: none; }
 }
+
+/* Carrinho sem recarregar: o item que sai encolhe e some; o que está
+   sincronizando com o servidor só esmaece o preço (o número já mudou). */
+.ck-item {
+    transition: max-height .34s ease, opacity .28s ease, transform .28s ease,
+                margin .34s ease, padding .34s ease;
+}
+.ck-item.is-saindo {
+    max-height: 0 !important;
+    opacity: 0;
+    transform: translateX(28px);
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.ck-item.is-sincronizando .ck-item-precos strong {
+    opacity: .65;
+    transition: opacity .2s ease;
+}
+.ck-item .qtd-valor {
+    transition: transform .15s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+    .ck-item, .ck-item .qtd-valor { transition: none; }
+}

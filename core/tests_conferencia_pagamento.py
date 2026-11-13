@@ -219,3 +219,112 @@ class ParcelamentoSemJurosTests(TestCase):
         self.assertEqual((parcelas, valor), (3, Decimal("2330.00")))
         parcelas, valor = parcelas_do_pagamento({"transaction_amount": 100})
         self.assertEqual((parcelas, valor), (1, Decimal("100.00")))
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class CarrinhoSemRecarregarTests(TestCase):
+    """Cada ação do carrinho devolve o carrinho conferido para a tela."""
+
+    def setUp(self):
+        from django.contrib.contenttypes.models import ContentType
+        from .models import Brinquedos, ItemCarrinho
+        self.user = User.objects.create_user("lia", "lia@exemplo.com", "Senha#12345")
+        perfil = self.user.perfil
+        perfil.telefone = "(11)91234-5678"
+        perfil.save(update_fields=["telefone"])
+        self.carrinho = Carrinho.objects.create(cliente=perfil)
+        tipo = ContentType.objects.get_for_model(Brinquedos)
+        a = Brinquedos.objects.create(nome_brinquedo="Air Game", descricao="x", avaliacao=Decimal("5"), valor_brinquedo=Decimal("1000.00"))
+        b = Brinquedos.objects.create(nome_brinquedo="Pebolim", descricao="x", avaliacao=Decimal("5"), valor_brinquedo=Decimal("250.00"))
+        self.item_a = ItemCarrinho.objects.create(carrinho=self.carrinho, content_type=tipo, object_id=a.pk, quantidade=1)
+        self.item_b = ItemCarrinho.objects.create(carrinho=self.carrinho, content_type=tipo, object_id=b.pk, quantidade=2)
+        self.client.force_login(self.user)
+
+    def test_quantidade_devolve_os_totais(self):
+        r = self.client.post(reverse("alterar_quantidade_item"),
+                             data='{"item_id": %d, "delta": 2}' % self.item_a.pk,
+                             content_type="application/json").json()
+        c = r["carrinho"]
+        self.assertEqual(c["itens"][str(self.item_a.pk)]["quantidade"], 3)
+        self.assertEqual(c["itens"][str(self.item_a.pk)]["subtotal"], "3000.00")
+        self.assertEqual(c["total_liquido"], "3500.00")
+        self.assertEqual(c["total_itens"], 5)
+        self.assertFalse(c["vazio"])
+
+    def test_remover_e_limpar_devolvem_o_carrinho(self):
+        r = self.client.post(reverse("remover_item_carrinho"), {"item_id": self.item_b.pk}).json()
+        self.assertNotIn(str(self.item_b.pk), r["carrinho"]["itens"])
+        self.assertEqual(r["carrinho"]["total_liquido"], "1000.00")
+        r = self.client.post(reverse("limpar_carrinho")).json()
+        self.assertTrue(r["carrinho"]["vazio"])
+        self.assertEqual(r["carrinho"]["total_itens"], 0)
+
+    def test_tela_nao_recarrega_nas_acoes(self):
+        html = self.client.get(reverse("carrinho")).content.decode()
+        trecho = html[html.index("CARRINHO SEM RECARREGAR"):html.index("function lsEnviarQtd")]
+        self.assertNotIn("location.reload()", trecho.replace("Nada de location.reload()", ""))
+        self.assertIn('id="ck-vazio"', html)
+        self.assertIn('id="cupom-aplicado"', html)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class UmCarrinhoSoTests(TestCase):
+    """Cliente com dois carrinhos (corrida antiga) não pode ficar sem comprar."""
+
+    def setUp(self):
+        from django.contrib.contenttypes.models import ContentType
+        from .models import Brinquedos, ItemCarrinho, Promocoes
+        self.user = User.objects.create_user("rui", "rui@exemplo.com", "Senha#12345")
+        self.perfil = self.user.perfil
+        self.perfil.telefone = "(11)91234-5678"
+        self.perfil.save(update_fields=["telefone"])
+        self.tipo = ContentType.objects.get_for_model(Brinquedos)
+        self.brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Air Game Kids", descricao="x", avaliacao=Decimal("5"),
+            valor_brinquedo=Decimal("6990.00"), exibir_na_loja=True,
+        )
+        self.primeiro = Carrinho.objects.create(cliente=self.perfil)
+        self.segundo = Carrinho.objects.create(cliente=self.perfil)
+        ItemCarrinho.objects.create(carrinho=self.primeiro, content_type=self.tipo, object_id=self.brinquedo.pk, quantidade=1)
+        ItemCarrinho.objects.create(carrinho=self.segundo, content_type=self.tipo, object_id=self.brinquedo.pk, quantidade=2)
+        self.client.force_login(self.user)
+
+    def test_adicionar_com_dois_carrinhos_funciona_e_junta(self):
+        r = self.client.post(
+            reverse("adicionar_ao_carrinho", args=["brinquedo", self.brinquedo.pk]),
+            {"quantidade": "1"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        self.assertTrue(r.json()["sucesso"])
+        self.assertEqual(Carrinho.objects.filter(cliente=self.perfil).count(), 1)
+        item = Carrinho.objects.get(cliente=self.perfil).itens.get()
+        self.assertEqual(item.quantidade, 4)
+
+    def test_tela_do_carrinho_com_dois_carrinhos_abre(self):
+        self.assertEqual(self.client.get(reverse("carrinho")).status_code, 200)
+        self.assertEqual(Carrinho.objects.filter(cliente=self.perfil).count(), 1)
+
+    def test_promocao_com_quantidade_vai_para_o_carrinho(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import Promocoes
+        promo = Promocoes.objects.create(
+            descricao="Black Friday: teste", preco_promocao=Decimal("4990.00"),
+            brinquedos=self.brinquedo, ativo=True,
+            valida_ate=timezone.localdate() + timedelta(days=5),
+        )
+        r = self.client.post(
+            reverse("adicionar_ao_carrinho", args=["promocao", promo.pk]),
+            {"quantidade": "3"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        self.assertEqual(r.json()["quantidade"], 3)
+
+    def test_erro_inesperado_volta_em_json_com_recado(self):
+        with patch("core.views.checkout.carrinho_do_cliente", side_effect=RuntimeError("x")):
+            r = self.client.post(
+                reverse("adicionar_ao_carrinho", args=["brinquedo", self.brinquedo.pk]),
+                {"quantidade": "1"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+        self.assertEqual(r.status_code, 500)
+        self.assertIn("WhatsApp", r.json()["erro"])
