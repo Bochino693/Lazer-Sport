@@ -451,7 +451,7 @@ class GravacaoDoCorpusTests(_SemChave):
             ("Juliana Martins Rocha", "São Paulo"),
             # O contrato de compra e venda (AJUSTE 4): o comprador, nunca o
             # representante da fábrica.
-            ("Dhiovana Lorrayne Quintiliano", "Ribeirão Preto"),
+            ("Kauyr Ribeiro Abdala", "Ribeirão Preto"),
             ("Renata Moura Teixeira", "São Paulo"),
             ("Joana Prado Lins", "São Paulo"),
         })

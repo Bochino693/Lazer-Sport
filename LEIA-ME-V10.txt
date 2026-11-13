@@ -3354,7 +3354,13 @@ Dependência nova: rjsmin (requirements.txt).
        endereço do cliente). Rótulo com ponto e vírgula ("CPF ou CNPJ;
        ...", "Endereço completo; Rua das Acácias, 250, Centro, Ribeirão
        Preto/SP") é rótulo; o endereço só com vírgulas é separado em rua,
-       número, bairro, cidade e UF.
+       número, bairro, cidade e UF. "COMPRADOR Fulano" (um espaço, sem
+       pontuação; e COMPRADOR(A), CONTRATANTE, em qualquer caixa) dá o nome
+       mesmo logo depois do parágrafo do VENDEDOR, colado no timbre; o
+       mesmo nome embaixo de "COMPRADOR", na assinatura, confirma. Título
+       de seção ("DA MULTA", "DO FORO", "DAS OBRIGAÇÕES E GARANTIAS"...)
+       nunca é nome -- no contrato de verdade "DA MULTA" virou o cliente --,
+       e "Da", "Do", "De" nunca começam um nome.
      * OS EQUIPAMENTOS. No PDF, a tabela de DUAS colunas ("Quantidade |
        Equipamento") é tabela de itens quando os dois pedaços são nomes de
        coluna; o "Valor" que boia sozinho embaixo dela não gruda no último

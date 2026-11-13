@@ -380,10 +380,21 @@ def contrato(nome, comprador, cpf, endereco, email, telefone, itens, valor_total
         "Condição de pagamento:",
         "Conforme negociação entre as partes, o pagamento será realizado da seguinte forma: 50% de entrada e o "
         "restante na entrega.",
+        "DAS OBRIGAÇÕES E GARANTIAS",
         "Cláusula 3ª. O VENDEDOR obriga-se a entregar, o equipamento descrito na Cláusula 1ª, na data  45 dias "
         "úteis atos a confirmação do pagamento.",
+        "Cláusula 4ª. O equipamento tem garantia de 90 dias contra defeito de fabricação.",
         "5ª. . Cláusula As despesas com frete do equipamento,",
         "são por conta do COMPRADOR.",
+        # Os títulos de seção do modelo, cada um sozinho na linha: "DA
+        # MULTA" logo depois de "...do COMPRADOR." já virou o nome do
+        # cliente ("Da Multa"). Nunca é nome.
+        "DA MULTA",
+        "Cláusula 6ª. A desistência depois da produção implica multa de 30% do valor total.",
+        "DA INADIMPLENCIA",
+        "Cláusula 7ª. O atraso no pagamento acarreta juros de 1% ao mês.",
+        "DO FORO",
+        "Cláusula 8ª. Fica eleito o foro da Comarca de São Paulo.",
         "Por estarem assim justos e contratados, firmam o presente instrumento em duas vias de igual teor na "
         "presença de duas testemunhas.",
         data,
@@ -395,11 +406,13 @@ def contrato(nome, comprador, cpf, endereco, email, telefone, itens, valor_total
 
 
 # ---------------------------------------------------------------- 14
-# O comprador com o primeiro nome fora da lista do IBGE; três equipamentos
-# sem preço (um fora do catálogo); o total só na cláusula; a data de hoje.
+# O comprador com o primeiro nome fora da lista do IBGE, escrito como no
+# modelo: "COMPRADOR Fulano" (um espaço, sem dois-pontos), e logo depois do
+# parágrafo do VENDEDOR; três equipamentos sem preço (um fora do
+# catálogo); o total só na cláusula; a data de hoje.
 contrato(
-    "14-contrato-compra-venda.docx", "Dhiovana Lorrayne Quintiliano", "318.447.205-19",
-    "Rua das Acácias, 250, Centro, Ribeirão Preto/SP", "dhiovana.q@exemplo.com.br", "16 99123-4567",
+    "14-contrato-compra-venda.docx", "Kauyr Ribeiro Abdala", "318.447.205-19",
+    "Rua das Acácias, 250, Centro, Ribeirão Preto/SP", "kauyr.abdala@exemplo.com.br", "16 99123-4567",
     [("1", "Cama elástica 3 m"), ("1", "Matrix"), ("2", "Air Game Kids")],
     "R$ 38.500,00 (trinta e oito mil e quinhentos reais)", "São Paulo,11 de novembro de 2026",
 )

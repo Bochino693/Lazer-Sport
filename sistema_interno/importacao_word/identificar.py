@@ -173,11 +173,39 @@ _NAO_E_NOME = {
     "domingo", "bom", "boa", "dia", "tarde", "noite", "obrigado", "obrigada", "ola", "oi", "sim",
     "nao", "pix", "boleto", "jardim", "vila", "parque", "centro", "sao", "santa", "santo",
     "equipe", "comercial", "departamento", "setor", "objeto", "local", "evento", "festa",
+    # Os títulos das cláusulas do contrato ("DA MULTA", "DO FORO").
+    "multa", "multas", "foro", "inadimplencia", "obrigacoes", "obrigacao", "garantia", "garantias",
+    "rescisao", "entrega", "prazo", "prazos", "clausulas", "condicoes", "disposicoes", "gerais", "finais",
+    "penalidades", "vigencia", "responsabilidade", "responsabilidades", "comprador", "compradora",
+    "vendedor", "vendedora", "testemunha", "testemunhas", "proprietario", "proprietaria", "frete",
+    "instalacao", "montagem", "assistencia", "tecnica", "partes", "despesas", "juros", "reajuste",
 } | {uf.lower() for uf in det.UFS}
+#: "DA MULTA", "DO OBJETO DO CONTRATO", "DAS OBRIGAÇÕES E GARANTIAS": o
+#: título de seção do contrato, sozinho na linha. Nunca é o nome de ninguém.
+_TITULO_DE_SECAO = re.compile(
+    r"^(?:cl[aá]usula\s+\S+\s*[-–—.:]?\s*)?(?:d[oa]s?|de)\s+"
+    r"(?:objeto|multas?|foro|inadimpl[eê]ncia|obriga[cç](?:[oõ]es|[aã]o)|garantias?|pagamentos?|prazos?|"
+    r"entregas?|rescis[aã]o|cl[aá]usulas?|contrato|valor(?:es)?|pre[cç]os?|condi[cç](?:[oõ]es|[aã]o)|"
+    r"disposi[cç][oõ]es|responsabilidades?|penalidades?|vig[eê]ncia|frete|instala[cç][aã]o|montagem|"
+    r"assist[eê]ncia|partes|despesas|reajuste|juros|tributos)\b",
+    re.IGNORECASE,
+)
+#: "da", "de", "do", "das", "dos" e "e" ligam nomes; nunca começam um.
+_LIGACOES = ("de", "da", "do", "das", "dos", "e")
+
+
+def titulo_de_secao(texto: str) -> bool:
+    """A linha é o título de uma seção do contrato ("DA MULTA", "DO FORO")?"""
+    limpo = (texto or "").strip(" .:;-–—")
+    if not limpo or len(limpo) > 70:
+        return False
+    letras = [c for c in limpo if c.isalpha()]
+    em_maiusculas = bool(letras) and sum(c.isupper() for c in letras) / len(letras) > 0.8
+    return bool(_TITULO_DE_SECAO.match(limpo)) and (em_maiusculas or len(limpo.split()) <= 5)
 
 #: (padrão no fim do texto ANTES do candidato, para qual campo, pontos)
 _PISTAS = [
-    (r"(?:contratante|locatari[oa]|cliente|comprador[a]?|adquirente|solicitante|destinatari[oa]|"
+    (r"(?:contratante|locatari(?:[oa]|o\s*\(a\))|cliente|comprador(?:a|\s*\(a\))?|adquirente|solicitante|destinatari[oa]|"
      r"nome\s+completo|nome\s+do\s+cliente|proposta\s+para|orcamento\s+para|"
      r"meu\s+nome\s+e|me\s+chamo|aqui\s+e\s+[oa]|sou\s+[oa]|em\s+nome\s+de)", "cliente", 5.0),
     (r"(?:razao\s+social|nome\s+fantasia|empresa|estabelecimento|instituicao)", "empresa", 5.0),
@@ -420,7 +448,7 @@ def _limpar_empresa(texto: str) -> str:
 
 def _vale_como_pessoa(nome: str) -> bool:
     partes = _normalizar(nome).split()
-    return bool(partes) and partes[0] in primeiros_nomes()
+    return bool(partes) and partes[0] not in _LIGACOES and partes[0] in primeiros_nomes()
 
 
 #: O papel escrito colado no nome, sem dois-pontos: "COMPRADOR Renata
@@ -433,7 +461,7 @@ _PAPEIS_NA_FRENTE = {
 #: Com o papel do cliente escrito logo antes, o nome vale mesmo que o
 #: primeiro nome não esteja na lista do IBGE ("COMPRADOR Kethellyn ...").
 _PISTAS_DE_PAPEL = re.compile(
-    r"(?:contratante|locatari[oa]|cliente|comprador[a]?|adquirente)\s*[:,.\-–—;]?\s*$"
+    r"(?:contratante|locatari(?:[oa]|o\s*\(a\))|cliente|comprador(?:a|\s*\(a\))?|adquirente)\s*[:,.\-–—;]?\s*$"
 )
 
 
@@ -441,7 +469,7 @@ def _tirar_papel_da_frente(texto: str, inicio: int) -> tuple[str, int]:
     """("COMPRADOR Renata Moura", 10) -> ("Renata Moura", 20)."""
     deslocamento = 0
     for palavra in re.finditer(r"\S+", texto):
-        if _normalizar(palavra.group(0)) in _PAPEIS_NA_FRENTE:
+        if _normalizar(re.sub(r"\(a\)$", "", palavra.group(0), flags=re.I)) in _PAPEIS_NA_FRENTE:
             deslocamento = palavra.end()
             continue
         break
@@ -455,6 +483,10 @@ def _nome_desconhecido_vale(nome: str) -> bool:
     partes = nome.split()
     if len(partes) < 2 or len(partes) > 7:
         return False
+    if _normalizar(partes[0]) in _LIGACOES or _normalizar(partes[-1]) in _LIGACOES:
+        return False
+    if sum(1 for parte in partes if _normalizar(parte) not in _LIGACOES) < 2:
+        return False  # "Da Multa": uma palavra só de nome não basta
     for parte in partes:
         normal = _normalizar(parte)
         if normal in ("de", "da", "do", "das", "dos", "e"):
@@ -492,6 +524,11 @@ class _Candidatos:
         lista = []
         for item in self.por_chave.values():
             total = item["pontos"] + 0.75 * min(item["vezes"] - 1, 4)
+            if item["vezes"] >= 2 and "cliente" in item["pistas"]:
+                # O mesmo nome com o papel do cliente duas vezes -- na
+                # apresentação das partes e na assinatura, embaixo de
+                # "COMPRADOR" --: confirmação forte.
+                total += 1.5
             lista.append(dict(item, total=round(total, 2)))
         return sorted(lista, key=lambda c: (-c["total"], c["posicao"]))
 
@@ -645,7 +682,9 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
         if linha["id"] in vizinhas:
             # O endereço colado no timbre é da casa; com "Cliente:" na
             # própria linha, é do cliente.
-            return bool(re.match(r"(?i)\s*(cliente|contratante|nome|a/c|respons)", segmento["texto"]))
+            return bool(re.match(
+                r"(?i)\s*(cliente|contratante|comprador|locat[aá]ri|adquirente|nome|a/c|respons)", segmento["texto"],
+            ))
         if linha["parte"] in ("cabecalho", "rodape"):
             return bool(re.search(r"(?i)\b(cliente|contratante|a/c|s[íi]ndic|respons[áa]vel)\b", segmento["texto"]))
         return True
@@ -737,7 +776,10 @@ def identificar(linhas: list[dict], *, empresa: dict, internos: dict, fora=froze
                 and not eh_interno(segmento["remetente"], internos):
             pessoas.acrescentar(det.capitalizar(segmento["remetente"]), 3.0, segmento, "quem escreve na conversa",
                                 pista="cliente")
+        titulo = titulo_de_secao(texto)
         for achado in _NOME.finditer(texto):
+            if titulo:
+                break  # "DA MULTA", "DO FORO": título de cláusula, nunca nome
             bruto, inicio_nome = _tirar_papel_da_frente(achado.group(0), achado.start())
             if not bruto:
                 continue
@@ -821,7 +863,7 @@ def _campo(valor, candidato, motivo=""):
             "motivo": motivo or candidato.get("motivo", ""), "identificado": True}
 
 
-def completar(campos: dict, achados: dict, *, internos: dict, empresa: dict) -> dict:
+def completar(campos: dict, achados: dict, *, internos: dict, empresa: dict, contrato: bool = False) -> dict:
     """Preenche, nos campos da leitura por regra, o que ela não achou.
 
     O rótulo escrito ("Cliente: ...") vale mais que qualquer palpite -- a
@@ -838,6 +880,11 @@ def completar(campos: dict, achados: dict, *, internos: dict, empresa: dict) -> 
 
     for nome_campo in ("cliente", "contato", "estabelecimento"):
         sem_os_da_casa(nome_campo)
+    # No contrato de compra e venda, "Comprador: Fulana" é o CLIENTE (fora
+    # dele, o rótulo "Comprador" é a pessoa que compra pela empresa).
+    rotulo_do_contato = det.sem_acento(((campos.get("contato") or {}).get("fonte") or {}).get("texto", ""))
+    if contrato and "cliente" not in campos and re.match(r"\s*compr(?:ador|adora)\b", rotulo_do_contato):
+        campos["cliente"] = campos.pop("contato")
     email = (campos.get("email") or {}).get("valor")
     if email and email in internos.get("emails", ()):
         campos.pop("email")
