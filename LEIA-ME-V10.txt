@@ -4682,7 +4682,13 @@ Dependência nova: rjsmin (requirements.txt).
    a venda #12 saiu (o pagamento deixou de ser 100%)"; ao quitar: "Pago ·
    registrado como venda #12"). O recado depois de gravar diz "Pagamento de
    100% do orçamento #N: registrado como venda #12." (Painel.ligar aceita
-   `mensagemPronta` como função do JSON). O superusuário que exclui um
+   `mensagemPronta` como função do JSON), e a janela do orçamento volta
+   com os dados novos (a régua já na venda). Dois acertos no painel.js
+   vieram junto: a janela filha ABRINDO conta como janela aberta (o
+   `modal-open` caía e, no celular, a barra de atalhos de baixo cobria o
+   "Atualizar pagamento"), e a janela mãe não reabre quando a filha fecha
+   para trocar a tela (o Bootstrap estourava "reading 'style'"). O
+   superusuário que exclui um
    orçamento pago leva a venda junto (Orcamento.delete), e o rastro da
    exclusão diz. A ligação mora no ORÇAMENTO (Orcamento.venda, um para um,
    nulo, não editável): o core não depende de migração do sistema_interno.

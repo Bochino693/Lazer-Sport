@@ -3773,11 +3773,13 @@ body.modal-open .ls-rascunhos{display:none!important}
   .ls-pedidos-table th:nth-child(5){width:11%;text-align:left}
   .ls-pedidos-table th:nth-child(6){width:12%}
   .ls-pedidos-table th:nth-child(7){width:12%}
-  .ls-vendas-table th:nth-child(2){width:8%;text-align:left}
-  .ls-vendas-table th:nth-child(3){width:26%;text-align:left}
-  .ls-vendas-table th:nth-child(4){width:16%}
-  .ls-vendas-table th:nth-child(5){width:15%}
-  .ls-vendas-table th:nth-child(6){width:15%}
+  /* A segunda coluna é a ORIGEM (o selo "Orçamento"/"Site" e o número),
+     e não mais só o "#" do pedido: precisa de espaço para o selo. */
+  .ls-vendas-table th:nth-child(2){width:18%;text-align:left}
+  .ls-vendas-table th:nth-child(3){width:20%;text-align:left}
+  .ls-vendas-table th:nth-child(4){width:14%}
+  .ls-vendas-table th:nth-child(5){width:14%}
+  .ls-vendas-table th:nth-child(6){width:14%}
   .ls-vendas-table th:nth-child(7){width:14%}
   .ls-pedidos-table th:last-child,.ls-pedidos-table td:last-child,
   .ls-vendas-table th:last-child,.ls-vendas-table td:last-child{position:static;box-shadow:none}
@@ -5811,6 +5813,12 @@ body.ls-body{
   .ls-content .ls-os-tabela th[data-coluna]{width:auto}
   .ls-content .ls-os-tabela th[data-coluna="Cliente / equipamento"]{width:30%}
   .ls-content .ls-os-tabela :is(th[data-coluna="O.S."],th[data-coluna="Ações"]){width:1%}
+  /* VENDAS: o mesmo conserto. O "Nº" de 1% numa tabela de larguras
+     fixas ficava com 13px e o número passava por cima da origem. */
+  .ls-content .ls-vendas-table{table-layout:auto!important}
+  .ls-content .ls-vendas-table th[data-coluna]{width:auto}
+  .ls-content .ls-vendas-table th[data-coluna="Cliente"]{width:26%}
+  .ls-content .ls-vendas-table th[data-coluna="Nº"]{width:1%}
 }
 
 /* CLIENTES: a tabela continua fixa (e-mail comprido não redefine a
