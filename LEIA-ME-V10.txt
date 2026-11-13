@@ -4889,3 +4889,22 @@ Dependência nova: rjsmin (requirements.txt).
    Sair da aba, trocar de app e Voltar continuam guardando na hora.
    Testes: core/tests_portal_jogos.py (EstantesPorConsoleTests) e o de PS1
    em core/tests_jogos_emulador.py.
+   AJUSTE (o padrão do emulador original): "faça uma cópia idêntica de
+   cada emulador corretamente para os jogos rodarem lisos". Medido no site
+   no ar (Chromium, tela de 1280 x 720): o núcleo do Game Boy Advance roda
+   742 quadros por segundo de folga e o do PlayStation 169 (precisam de 60)
+   -- o peso era a IMAGEM. Com o HD (SABR no 2D; bicúbico em duas passadas
+   no 3D) o GBA ia a 18 quadros por segundo e o PS1 a 12; com o filtro de
+   uma passada (ls-nitido), 60 e 50. Agora:
+     * o Automático começa no "padrao": ls-nitido, uma passada, como o
+       emulador original, em TODO console (celular e computador), com
+       1,8 milhão de pixels no computador e 1,2 no celular (nunca abaixo
+       de 480 linhas, 720 no 3D); o degrau do meio é o mesmo filtro com
+       menos pixels (trocar de filtro no meio do jogo recompila: um tranco);
+     * o HD continua no menu Imagem ("o mais pesado, para placa de vídeo
+       boa");
+     * o N64 e o PSP voltam à resolução interna do núcleo original (o site
+       subia para 960 x 720 e 960 x 544: duas vezes e meia os pixels);
+     * o Automático reage em 3 s (eram 4) depois de 6 s de jogo (eram 8);
+     * a escolha guardada passa para "ls-graficos-v3": todo mundo recomeça
+       no Automático novo.

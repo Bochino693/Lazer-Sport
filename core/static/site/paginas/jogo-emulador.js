@@ -365,7 +365,7 @@
     var agora = menuImagem.querySelector("[data-pl-graficos-agora]");
     if (agora) {
       var partes = [];
-      if (escolhaGraficos === "auto") partes.push(({ hd: "HD", medio: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) + (pulandoQuadros ? ", pulando quadros" : ""));
+      if (escolhaGraficos === "auto") partes.push(({ padrao: "Nítido", medio: "Nítido", hd: "HD", leve: "Leve" }[nivelAtual] || nivelAtual) + (pulandoQuadros ? ", pulando quadros" : ""));
       // o jogo roda 50 ou 60 quadros por segundo: abaixo disso, o aparelho não está dando conta
       if (qpsAgora !== null) partes.push(qpsAgora + " quadros/s");
       agora.textContent = partes.length ? "agora: " + partes.join(" · ") : "";
@@ -390,7 +390,7 @@
       } else if (graficos) {
         escolhaGraficos = graficos.dataset.plGraficos;
         try { localStorage.setItem(CHAVE_GRAFICOS, escolhaGraficos); } catch (x) { /* só não guarda */ }
-        aplicarGraficos(escolhaGraficos === "auto" ? "hd" : escolhaGraficos);
+        aplicarGraficos(escolhaGraficos === "auto" ? "padrao" : escolhaGraficos);
       }
     });
     document.addEventListener("click", function (e) {
@@ -418,23 +418,35 @@
   var GRAFICOS = {
     // no computador, o HD da arte 2D é o SABR (contornos lisos e nítidos), que faz a conta na
     // tela toda: até 2,4 milhões de pixels (um Full HD) ele é leve até para placa de vídeo simples
+    /* O PADRÃO É O DO EMULADOR ORIGINAL: UMA PASSADA SÓ. "Faça uma cópia idêntica de cada
+       emulador para os jogos rodarem lisos." Medido no Game Boy Advance e no PlayStation: o
+       núcleo roda 742 e 169 quadros por segundo de folga (precisa de 60) -- quem travava era a
+       imagem. O HD (o SABR na arte 2D, o bicúbico em duas passadas no 3D) faz dezenas de
+       leituras por pixel na tela inteira: com ele o GBA caía de 50 para 18 quadros por
+       segundo e o PS1 de 55 para 12. O emulador original desenha a imagem numa passada; o
+       ls-nitido também (uma leitura por pixel, os pixels do console todos do mesmo tamanho).
+       Agora ele é o padrão de TODO console, no celular e no computador, e o HD fica no menu
+       Imagem para quem tem placa de vídeo boa e quer. */
+    padrao: { filtro: NITIDO, pixels: celular ? 1.2e6 : 1.8e6 },
     hd: { filtro: filtroHD, pixels: celular ? 1.6e6 : 2.4e6 },
     nitido: { filtro: NITIDO, pixels: celular ? 2.6e6 : 4.2e6 },
     tv: { filtro: "crt-easymode.glslp", pixels: celular ? 1.6e6 : 3.7e6 },
     leve: { filtro: NITIDO, pixels: celular ? 0.42e6 : 0.9e6 },
-    // o degrau do meio do Automático (fora do menu): o mesmo filtro do HD, com menos pixels
-    medio: { filtro: filtroHD, pixels: celular ? 0.9e6 : 1.4e6 },
+    // o degrau do meio do Automático (fora do menu): o mesmo filtro, com menos pixels -- sem
+    // trocar de filtro no meio do jogo (trocar recompila o filtro: um tranco a cada troca)
+    medio: { filtro: NITIDO, pixels: celular ? 0.75e6 : 1.15e6 },
   };
   // NENHUMA LINHA SOME: as aberturas e os vídeos do PlayStation (e as telas de 480 linhas do
   // Saturn e do N64) têm o dobro de linhas do jogo; com a tela desenhada abaixo disso, linhas
   // inteiras eram puladas. A tela nunca fica abaixo desta altura (em pixels do aparelho).
   var ALTURA_MINIMA = TRES_D ? 720 : 480;
   // v2: os filtros mudaram (nada mais sai "no grosso"); todo mundo recomeça no Automático
-  var CHAVE_GRAFICOS = "ls-graficos-v2";
+  // v3: o padrão virou o filtro de uma passada; todo mundo recomeça no Automático
+  var CHAVE_GRAFICOS = "ls-graficos-v3";
   var escolhaGraficos = "auto";
   try { escolhaGraficos = localStorage.getItem(CHAVE_GRAFICOS) || "auto"; } catch (e) { escolhaGraficos = "auto"; }
   if (escolhaGraficos !== "auto" && !GRAFICOS[escolhaGraficos]) escolhaGraficos = "auto";
-  var nivelAtual = escolhaGraficos === "auto" ? "hd" : escolhaGraficos;
+  var nivelAtual = escolhaGraficos === "auto" ? "padrao" : escolhaGraficos;
   var dprReal = window.devicePixelRatio || 1;
   function dprLimitado() {
     var largura = window.innerWidth || 1, altura = window.innerHeight || 1;
@@ -495,7 +507,7 @@
      (Leve -> pulo de quadros desligado -> HD com menos pixels -> HD). Se subir e pesar de novo
      logo em seguida, ele fica no degrau de baixo de vez (sem ficar subindo e descendo). */
   var vigiaDoPeso = { segundosPesados: 0, segundosFolgados: 0, ultimoRecuperado: 0, subiuEm: 0, travado: false };
-  var DEGRAUS = ["hd", "medio", "pulando", "leve"];
+  var DEGRAUS = ["padrao", "medio", "pulando", "leve"];
   function degrauAtual() { return nivelAtual === "leve" ? 3 : pulandoQuadros ? 2 : nivelAtual === "medio" ? 1 : 0; }
   function irAoDegrau(n, emu) {
     var querPular = n >= 2;
@@ -503,7 +515,7 @@
       try { emu.gameManager.setVariable(PULAR_QUADROS[0], querPular ? PULAR_QUADROS[1] : (PULAR_QUADROS[2] || "disabled")); } catch (e) { /* segue */ }
     }
     pulandoQuadros = querPular && !!PULAR_QUADROS;
-    var nivel = n >= 3 ? "leve" : n >= 1 ? "medio" : "hd";
+    var nivel = n >= 3 ? "leve" : n >= 1 ? "medio" : "padrao";
     if (nivel !== nivelAtual) aplicarGraficos(nivel, n >= 3 ? "Gráficos no modo Leve: o jogo roda liso neste aparelho. (Imagem, no alto, troca.)" : "");
     else desenharMenuImagem();
   }
@@ -557,7 +569,7 @@
     var recuperados = ritmo.recuperados - vigiaDoPeso.ultimoRecuperado;
     vigiaDoPeso.ultimoRecuperado = ritmo.recuperados;
     // os primeiros segundos não contam (abertura, núcleo ligando, jogo salvo carregando)
-    if (Date.now() - jogandoDesde < 8000) { vigiaDoPeso.segundosPesados = 0; vigiaDoPeso.segundosFolgados = 0; return; }
+    if (Date.now() - jogandoDesde < 6000) { vigiaDoPeso.segundosPesados = 0; vigiaDoPeso.segundosFolgados = 0; return; }
     // muitos quadros recuperados E quadro pesado: é o aparelho (não só a tela a 30 Hz)
     // -- ou o jogo rodando abaixo de 45 quadros/s (os consoles rodam a 50 ou 60). Aí o peso
     // pode nem estar no quadro: é a placa de vídeo que não dá conta de pintar a tela grande
@@ -569,7 +581,7 @@
     vigiaDoPeso.segundosPesados = pesado ? vigiaDoPeso.segundosPesados + 1 : Math.max(0, vigiaDoPeso.segundosPesados - 1);
     vigiaDoPeso.segundosFolgados = folgado ? vigiaDoPeso.segundosFolgados + 1 : 0;
     var degrau = degrauAtual();
-    if (vigiaDoPeso.segundosPesados >= 4 && degrau < 3) {
+    if (vigiaDoPeso.segundosPesados >= 3 && degrau < 3) {
       vigiaDoPeso.segundosPesados = 0;
       // subiu há pouco e já pesou: o degrau de baixo é o deste aparelho (fica nele)
       if (vigiaDoPeso.subiuEm && Date.now() - vigiaDoPeso.subiuEm < 30000) vigiaDoPeso.travado = true;

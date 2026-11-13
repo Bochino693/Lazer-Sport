@@ -1563,7 +1563,8 @@ EMULATORJS_VERSAO = "4.2.3"
 #: e cache no mundo todo. Se ele falhar, o próprio emulador ainda tenta o CDN dele.
 NUCLEO_NO_NPM = "https://cdn.jsdelivr.net/npm/@emulatorjs/core-{nucleo}@" + EMULATORJS_VERSAO + "/"
 
-#: O filtro de imagem de cada console. O RetroArch do emulador estica a imagem "no grosso"
+#: O filtro do HD de cada console (o padrão de todos é o ls-nitido, de uma passada; ver
+#: GRAFICOS em jogo-emulador.js). O RetroArch do emulador estica a imagem "no grosso"
 #: (vizinho mais próximo): numa tela que não é múltiplo exato do jogo, cada pixel sai de um
 #: tamanho -- serrilhado, e parecendo que faltam pixels. Por isso nada vai sem filtro:
 #:   sabr      (2D no computador)  contornos arredondados e nítidos, na tela toda;
@@ -1576,11 +1577,11 @@ FILTRO_3D = "ls-suave"
 FILTRO_2D_CELULAR = "ls-nitido"
 CONSOLES_3D = {"psx", "n64", "psp", "segaSaturn", "nds", "3do", "pcfx", "jaguar",
                "dos", "amiga", "c64", "c128", "vic20", "plus4", "pet"}
-#: Mais resolução por dentro (no computador; o celular fica no padrão, que pesa menos).
-RESOLUCAO_NO_COMPUTADOR = {
-    "n64": {"mupen64plus-43screensize": "960x720"},
-    "psp": {"ppsspp_internal_resolution": "960x544"},
-}
+#: Mais resolução por dentro do núcleo: NENHUMA. O N64 já ia em 960 x 720 e o PSP em 960 x 544
+#: no computador -- duas vezes e meia os pixels que o núcleo desenha (e copia de volta para a
+#: memória do console) a cada quadro. "Uma cópia idêntica de cada emulador para os jogos
+#: rodarem lisos": a resolução de dentro é a do núcleo original (640 x 480 e 480 x 272).
+RESOLUCAO_NO_COMPUTADOR = {}
 
 
 def opcoes_no_computador(codigo):

@@ -790,12 +790,14 @@ class NucleoEQualidadeTests(SimpleTestCase):
         self.assertEqual(emu.opcoes_no_computador("snes")["shader"], "sabr")
         self.assertEqual(emu.opcoes_do_emulador("psx")["shader"], "ls-suave")
         self.assertNotIn("shader", emu.opcoes_no_computador("psx"))
-        self.assertEqual(emu.opcoes_no_computador("psp")["ppsspp_internal_resolution"], "960x544")
+        # a resolução de dentro é a do núcleo original (mais que isso travava o jogo)
+        self.assertNotIn("ppsspp_internal_resolution", emu.opcoes_no_computador("psp"))
+        self.assertNotIn("mupen64plus-43screensize", emu.opcoes_no_computador("n64"))
         self.assertEqual(emu.opcoes_do_emulador("psx")["pcsx_rearmed_dithering"], "disabled")
         # no Master System o emulador escolheria o smsplus por conta própria
         self.assertEqual(emu.opcoes_do_emulador("segaMS")["retroarch_core"], "genesis_plus_gx")
         self.assertNotIn("retroarch_core", emu.opcoes_do_emulador("n64"))
-        self.assertEqual(emu.RESOLUCAO_NO_COMPUTADOR["psp"]["ppsspp_internal_resolution"], "960x544")
+        self.assertEqual(emu.RESOLUCAO_NO_COMPUTADOR, {})
 
     def test_o_portugues_do_emulador_tem_todos_os_textos(self):
         import re
