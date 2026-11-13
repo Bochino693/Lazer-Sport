@@ -6,8 +6,8 @@
       "palco": [
         {
           "imagem": "../../categorias/maquinas-alta/boliche-virtual.webp",
-          "altura": 760,
-          "cx": 335,
+          "altura": 680,
+          "cx": 345,
           "base": 1090
         },
         {
@@ -34,7 +34,6 @@
     },
     {
       "foto": "dragon_preto.jpg",
-      "foco": 0.95,
       "duracao": 2.4,
       "modelo": "card",
       "icone": "pino",
@@ -47,11 +46,11 @@
       "texto": [
         "Dragon Bowling: arcade",
         "para 1 ou 2 jogadores"
-      ]
+      ],
+      "enquadre": "inteiro"
     },
     {
       "foto": "dragon_rosa.jpg",
-      "foco": 0.95,
       "duracao": 2.2,
       "modelo": "numero",
       "numero": "3",
@@ -66,11 +65,11 @@
       "texto": [
         "Branco, preto ou rosa",
         "e pista com LED"
-      ]
+      ],
+      "enquadre": "inteiro"
     },
     {
       "foto": "dragon_branco.jpg",
-      "foco": 0.95,
       "duracao": 2.2,
       "modelo": "card",
       "lado": "direita",
@@ -84,11 +83,12 @@
       "texto": [
         "Placar e pinos na tela",
         "a cada rodada"
-      ]
+      ],
+      "enquadre": "inteiro"
     },
     {
-      "video": "strike_kids.mov",
-      "inicio": 30.6,
+      "foto": "strike_kids_frente.jpg",
+      "enquadre": "inteiro",
       "duracao": 2.4,
       "modelo": "card",
       "icone": "estrela",
@@ -105,7 +105,7 @@
     },
     {
       "video": "strike_kids.mov",
-      "inicio": 17.6,
+      "inicio": 0.0,
       "duracao": 2.2,
       "modelo": "card",
       "lado": "direita",
@@ -119,11 +119,10 @@
       "texto": [
         "Tira a foto do jogador",
         "para o ranking"
-      ]
+      ],
+      "enquadre": "inteiro"
     },
     {
-      "video": "strike_kids.mov",
-      "inicio": 13.0,
       "duracao": 2.2,
       "modelo": "numero",
       "numero": "5",
@@ -139,14 +138,16 @@
       "texto": [
         "Leem cada jogada",
         "da bola na pista"
-      ]
+      ],
+      "foto": "strike_kids_angulo.jpg",
+      "enquadre": "inteiro"
     },
     {
       "palco": [
         {
           "imagem": "../../categorias/maquinas-alta/boliche-virtual.webp",
-          "altura": 700,
-          "cx": 335,
+          "altura": 640,
+          "cx": 345,
           "base": 1060
         },
         {

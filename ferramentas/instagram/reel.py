@@ -16,6 +16,8 @@ Cada cena do roteiro tem uma fonte e um modelo de card:
            "medidas" linhas de cota desenhadas sobre a foto ("linhas")
            "final"   encerramento com logo e botao
   comuns:  "duracao", "etiqueta", "titulo", "texto", "icone", "cores"
+           "enquadre": "inteiro" mostra a foto ou o video inteiro numa janela
+           acima do card, sem cortar o brinquedo (use sempre em foto de produto)
 
 Icones: pino, camera, trofeu, radar, lampada, cubo, regua, conversa, estrela
 (ou um texto curto, ex.: "5"). Veja o modelo em exemplos/strike_kids.json.
@@ -523,9 +525,42 @@ def quadros_video(mov, inicio, dur):
     p.wait()
 
 
-def quadros_foto(path, dur, foco=0.5):
+def enquadrar(img, c1, c2, t, fundo=None):
+    """Mostra a imagem INTEIRA numa janela acima do card, sobre o proprio fundo desfocado."""
+    if fundo is None:
+        sc = max(W / img.width, H / img.height)
+        f = img.resize((int(img.width * sc / 8) + 1, int(img.height * sc / 8) + 1), Image.BILINEAR)
+        f = ImageEnhance.Brightness(f.filter(ImageFilter.GaussianBlur(5))).enhance(0.5).resize(
+            (int(img.width * sc) + 1, int(img.height * sc) + 1), Image.BILINEAR)
+        l, tp = (f.width - W) // 2, (f.height - H) // 2
+        fundo = f.crop((l, tp, l + W, tp + H))
+    fr = fundo.copy()
+    x0, y0, x1, y1 = 60, 150, W - 60, 1100
+    s = min((x1 - x0) / img.width, (y1 - y0) / img.height) * (0.94 + 0.06 * mola(t / 0.45))
+    w, h = int(img.width * s), int(img.height * s)
+    jan = img.resize((w, h), Image.LANCZOS if img.width > w else Image.BICUBIC)
+    x, y = (W - w) // 2, y0 + (y1 - y0 - h) // 2
+    b = 10
+    som = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(som).rounded_rectangle([x - b, y - b + 16, x + w + b, y + h + b + 16], radius=44, fill=190)
+    fr.paste((0, 0, 0), (0, 0), som.filter(ImageFilter.GaussianBlur(22)))
+    borda = degrade((w + 2 * b, h + 2 * b), c1, c2).convert("RGBA")
+    mb = Image.new("L", borda.size, 0)
+    ImageDraw.Draw(mb).rounded_rectangle([0, 0, borda.width - 1, borda.height - 1], radius=44, fill=255)
+    fr.paste(borda, (x - b, y - b), mb)
+    mj = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mj).rounded_rectangle([0, 0, w - 1, h - 1], radius=36, fill=255)
+    fr.paste(jan, (x, y), mj)
+    return fr, fundo
+
+
+def quadros_foto(path, dur, foco=0.5, inteiro=False):
     im = Image.open(path).convert("RGB")
     im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(1.4)).enhance(1.1)
+    if inteiro:
+        for _ in range(int(round(dur * FPS))):
+            yield im
+        return
     sc = max(W / im.width, H / im.height)
     r = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
     l, t = int((r.width - W) * foco), (r.height - H) // 2
@@ -619,7 +654,7 @@ def main():
         elif "quadros" in c:
             gen, real = quadros_3d(caminho(c["quadros"]), dur, c1, c2), False
         else:
-            gen, real = quadros_foto(caminho(c["foto"]), dur, c.get("foco", 0.5)), True
+            gen, real = quadros_foto(caminho(c["foto"]), dur, c.get("foco", 0.5), c.get("enquadre") == "inteiro"), True
         if mod == "heroi":
             ov = modelo_heroi(c, c1, c2)
         elif mod == "numero":
@@ -631,13 +666,20 @@ def main():
         else:
             ov = modelo_card(c, c1, c2)
         caixa = ov.getbbox()
+        inteiro = c.get("enquadre") == "inteiro"
+        fundo_fixo = None
         for k, fr in enumerate(gen):
             t = k / FPS
             fim = mod == "final"
+            if inteiro:
+                eh_foto = "foto" in c
+                fr, fundo = enquadrar(fr, c1, c2, t, fundo_fixo)
+                if eh_foto:
+                    fundo_fixo = fundo
             # movimento de camera: aproxima devagar, com um "soco" de zoom no corte
-            if mod != "medidas":
+            if mod != "medidas" and not inteiro:
                 fr = aproximar(fr, 1.0 + 0.07 * t / dur + 0.16 * (1 - suave(t / 0.22)))
-            if real and not fim:
+            if real and not fim and not inteiro:
                 fr = brilho_neon(fr)
                 fr = Image.composite(preto, fr, sombra)
             a = suave((t - 0.18) / 0.4)
