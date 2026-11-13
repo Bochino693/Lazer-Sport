@@ -37,6 +37,16 @@ agente `instagram`, e só com autorização do usuário.
   ícone, novo efeito), acrescente ao `reel.py` em vez de improvisar fora dele,
   para o recurso ficar disponível nas próximas edições.
 
+## Comercial de passo a passo (como comprar no site)
+
+- Grave as telas com `node ferramentas/instagram/gravar_compra.js` e monte com
+  `python3 ferramentas/instagram/tutorial.py roteiro.json saida.mp4`. Modelos:
+  `ferramentas/instagram/exemplos/black_friday_*.json` (ganchos `preco`,
+  `pergunta` e `vitrine`).
+- Nunca crie conta, pedido ou cobrança no site no ar para gravar: as telas de
+  carrinho e pagamento vêm de uma cópia local com cliente de demonstração.
+- Entregue sempre 3 versões com ganchos diferentes, sem locução, legendadas.
+
 ## Antes de entregar
 
 - Extraia um quadro de cada cena e olhe um por um: brinquedo inteiro, texto

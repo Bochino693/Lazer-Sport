@@ -39,3 +39,15 @@ que receber uma correção. Não apague lições; se uma mudar, reescreva a linh
   o vídeo e a legenda.
 - 2026-11-13 — O link do site tem que ser clicável (bio e direct), não desenhado
   no vídeo nem na arte.
+
+## Abertura e formato
+- 2026-11-13 — Os primeiros 3 segundos têm que prender: abrir com gancho forte
+  (preço de/por, pergunta direta ou vitrine de ofertas em cortes rápidos), nunca
+  com tela parada ou logo.
+- 2026-11-13 — Para cada comercial, entregar 3 versões com ganchos diferentes
+  para o dono comparar e escolher qual postar.
+- 2026-11-13 — Sem voz robotizada: só trilha e legenda. Legenda clara e
+  informativa, com os números reais (preço, parcelas, prazo da oferta).
+- 2026-11-13 — Passo a passo de compra: usar as telas reais do site como estão
+  hoje, dentro de um celular, com o toque animado em cada botão
+  (`tutorial.py` + `gravar_compra.js`).
