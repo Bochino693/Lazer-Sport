@@ -232,9 +232,11 @@
                 </div>
 
                 <div class="frete-tabs ck-segmento" role="group" aria-label="Forma de entrega">
-                    {# Abre na forma de entrega já escolhida: antes abria sempre em
-                       "Frete", e quem tinha escolhido retirada pagava sem frete
-                       mesmo digitando um CEP. #}
+                    {% comment %}
+                      Abre na forma de entrega já escolhida: antes abria sempre em
+                      "Frete", e quem tinha escolhido retirada pagava sem frete
+                      mesmo digitando um CEP.
+                    {% endcomment %}
                     <button type="button" class="frete-tab ck-segmento-opcao{% if carrinho.tipo_envio != "retirada" %} active{% endif %}" data-tipo="frete" aria-pressed="{% if carrinho.tipo_envio == "retirada" %}false{% else %}true{% endif %}">
                         <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                         Frete

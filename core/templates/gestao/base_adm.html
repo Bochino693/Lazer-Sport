@@ -1,11 +1,11 @@
 {% extends "base_inner.html" %}
 {% load static interno_extras %}
 
-{#
+{% comment %}
   Camada de compatibilidade dos CRUDs do antigo /adm. O conteúdo maduro
   continua existindo, mas o segundo painel deixou de existir: menu, topo,
   sessão, responsividade e identidade agora vêm todos de base_inner.html.
-#}
+{% endcomment %}
 {% block body_class %}gestao-integrada{% endblock %}
 {% block title %}Gestão do site | Lazer &amp; Sport{% endblock %}
 {% block top_title %}{% block page_heading %}Gestão do site e aplicativo{% endblock %}{% endblock %}
