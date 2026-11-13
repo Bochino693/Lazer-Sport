@@ -616,6 +616,19 @@
         {% endfor %}
       </ul>
       {% endif %}
+      {# O ESTABELECIMENTO, em destaque: é o nome que o mapa do site mostra. #}
+      <div class="ls-imp-estabelecimento{% if decisao.estabelecimento.falta %} falta{% endif %}" id="decisaoEstabelecimento">
+        <label class="ls-imp-estabelecimento-rotulo" for="decisaoEstabelecimentoCampo">
+          <i class="bi bi-shop" aria-hidden="true"></i> Estabelecimento
+          {% if decisao.estabelecimento.falta %}<span class="ls-imp-chip-falta">falta · opcional</span>
+          {% elif decisao.estabelecimento.origem %}<span class="ls-imp-tag">{{ decisao.estabelecimento.origem }}</span>{% endif %}
+        </label>
+        <input type="text" class="form-control" id="decisaoEstabelecimentoCampo" maxlength="150" autocomplete="off"
+               value="{{ decisao.estabelecimento.valor }}" placeholder="Ex.: Buffet Alegria, Escola Pequeno Príncipe"
+               data-espelho="campoEstabelecimento" aria-describedby="decisaoEstabelecimentoDica">
+        <p class="ls-imp-estabelecimento-dica" id="decisaoEstabelecimentoDica">É o nome que aparece no mapa do site (o nome da pessoa não aparece).</p>
+      </div>
+      {% if decisao.linhas_falta %}
       <ul class="ls-imp-decisao-lido" id="decisaoLido" aria-label="O que falta do cliente">
         {% for linha in decisao.linhas_falta %}
         <li class="falta{% if linha.obrigatorio %} obrigatorio{% endif %}" data-linha="{{ linha.chave }}">
@@ -625,6 +638,7 @@
         </li>
         {% endfor %}
       </ul>
+      {% endif %}
       {% if decisao.ja_cadastrado %}
       <p class="ls-imp-decisao-aviso cadastrado" id="decisaoJaCadastrado">
         <i class="bi bi-person-check-fill" aria-hidden="true"></i>

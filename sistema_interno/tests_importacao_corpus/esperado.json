@@ -1,11 +1,11 @@
 {
-  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11. Do 07 em diante (AJUSTE 2): 'pergunta' são os brinquedos que a tela pergunta se viram orçamento (null quando não há); 'frete_na_tela' é o frete que a pessoa escolhe quando o documento não diz; 'orcamento_anterior' é o orçamento que já existia (o teste o cria antes) e 'repetido' diz que a tela tem de avisar e pedir 'Criar mesmo assim'. Do 14 em diante (AJUSTE 4): o contrato de compra e venda da casa, com comprador inventado. 'valor_na_tela' é o preço que a pessoa digita na linha que o documento traz sem valor e o catálogo não tem; 'data_documento' (em 'salvo') é a data que fica no orçamento e no 'cliente desde'. A validade padrão (5 dias) conta da data do documento quando ele é de antes de hoje.",
+  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11. Do 07 em diante (AJUSTE 2): 'pergunta' são os brinquedos que a tela pergunta se viram orçamento (null quando não há); 'frete_na_tela' é o frete que a pessoa escolhe quando o documento não diz; 'orcamento_anterior' é o orçamento que já existia (o teste o cria antes) e 'repetido' diz que a tela tem de avisar e pedir 'Criar mesmo assim'. Do 14 em diante (AJUSTE 4): o contrato de compra e venda da casa, com comprador inventado. 'valor_na_tela' é o preço que a pessoa digita na linha que o documento traz sem valor e o catálogo não tem; 'data_documento' (em 'salvo') é a data que fica no orçamento e no 'cliente desde'. A validade padrão (5 dias) conta da data do documento quando ele é de antes de hoje. AJUSTE 5: 'estabelecimento' é o nome que o mapa do site mostra -- o da empresa quando o cliente é empresa, ou o do NOME DO ARQUIVO; 'arquivo_enviado' é o nome com que o arquivo chega na importação (o do corpus é só o endereço do teste).",
   "01-tabela-buffet-alegria.docx": {
     "modo": "orcamento",
     "cliente_existente": true,
     "cliente": {
       "nome": "Buffet Alegria",
-      "estabelecimento": "",
+      "estabelecimento": "Buffet Alegria",
       "documento": "11.444.777/0001-61",
       "telefone": "(11) 98765-4321",
       "whatsapp": "sim",
@@ -69,7 +69,7 @@
     "cliente_existente": false,
     "cliente": {
       "nome": "Escola Pequeno Príncipe",
-      "estabelecimento": "",
+      "estabelecimento": "Escola Pequeno Príncipe",
       "documento": "11.222.333/0001-81",
       "telefone": "(11) 98877-6655",
       "whatsapp": "sim",
@@ -133,7 +133,7 @@
     "cliente_existente": false,
     "cliente": {
       "nome": "Condomínio Jardim das Flores",
-      "estabelecimento": "",
+      "estabelecimento": "Condomínio Jardim das Flores",
       "documento": "33.000.167/0001-01",
       "telefone": "(11) 3333-4444",
       "whatsapp": "nao",
@@ -271,7 +271,7 @@
     "cliente_existente": false,
     "cliente": {
       "nome": "Buffet Sonho Mágico Ltda",
-      "estabelecimento": "",
+      "estabelecimento": "Buffet Sonho Mágico Ltda",
       "documento": "45.678.901/0001-75",
       "telefone": "(11) 99123-4567",
       "whatsapp": "sim",
@@ -353,7 +353,7 @@
     "cliente_existente": false,
     "cliente": {
       "nome": "Escola Infantil Pequenos Passos",
-      "estabelecimento": "",
+      "estabelecimento": "Escola Infantil Pequenos Passos",
       "documento": "98.765.432/0001-98",
       "telefone": "(11) 98456-1234",
       "whatsapp": "sim",
@@ -468,7 +468,7 @@
     "cliente_existente": true,
     "cliente": {
       "nome": "Condomínio Parque das Árvores",
-      "estabelecimento": "",
+      "estabelecimento": "Condomínio Parque das Árvores",
       "documento": "",
       "telefone": "(11) 3456-7890",
       "whatsapp": "nao",
@@ -492,7 +492,7 @@
     "cliente_existente": true,
     "cliente": {
       "nome": "Buffet Alegria",
-      "estabelecimento": "",
+      "estabelecimento": "Buffet Alegria",
       "documento": "",
       "telefone": "",
       "whatsapp": "",
@@ -623,7 +623,7 @@
       "Air Game Kids"
     ],
     "cliente": {
-      "estabelecimento": "",
+      "estabelecimento": "Kauyr Doces Finos Ltda",
       "contato": "",
       "nome": "Kauyr Ribeiro Abdala",
       "documento": "318.447.205-19",
@@ -679,7 +679,8 @@
       "observacoes": "",
       "validade": "2026-11-16",
       "data_documento": "2026-11-11"
-    }
+    },
+    "arquivo_enviado": "CONTRATO KAUYR DOCES FINOS LTDA.docx"
   },
   "15-pdf-contrato-compra-venda.pdf": {
     "igual_a": "14-contrato-compra-venda.docx"

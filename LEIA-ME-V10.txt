@@ -3412,6 +3412,37 @@ Dependência nova: rjsmin (requirements.txt).
    tests_importacao_corpus.py. Conferido no Chromium (PC 1440 e iPhone 13,
    claro e escuro).
 
+   AJUSTE 5: O ESTABELECIMENTO, PARA NÃO EXPOR O NOME DO CLIENTE. Pedido: "na
+   leitura, você deve também ler o nome do estabelecimento, evitando expor
+   os nomes dos clientes, entendeu? na maioria das vezes tem no doc". O
+   mapa do site mostra o estabelecimento (Cliente.nome_estabelecimento),
+   nunca o nome da pessoa; a importação passa a preenchê-lo sempre que o
+   documento diz o negócio:
+     * no texto: os rótulos de sempre (Estabelecimento, Empresa, Razão
+       social, Nome fantasia), "Buffet/Escola/Condomínio...", o nome com
+       LTDA/ME/MEI/EIRELI/EPP/S.A., "a empresa X", o nome colado no CNPJ
+       ("Doces Finos, CNPJ ...") e o timbre do PRÓPRIO cliente no
+       cabeçalho (nunca o da fábrica); o cliente que é empresa (CNPJ, ou
+       nome de negócio) é o próprio estabelecimento;
+     * no NOME DO ARQUIVO (identificar.estabelecimento_do_arquivo): o
+       modelo da casa não escreve o negócio no texto, mas quem salva
+       escreve -- "CONTRATO OPEN SPICE SUSHI LOUNGE LTDA.docx" vira "Open
+       Spice Sushi Lounge Ltda". Saem as palavras de documento (contrato,
+       orçamento, proposta, compra e venda, cópia, final, assinado, v2...),
+       números, datas e a extensão; o resto vale com sufixo de empresa,
+       palavra de negócio, ou duas palavras com inicial maiúscula que não
+       são o nome da pessoa (nem nome de gente). A fábrica nunca. Vem
+       marcado "do nome do arquivo", confiança média; achado também no
+       texto, o do arquivo vira "outra leitura".
+     * no modal, o passo do cliente mostra o Estabelecimento em destaque,
+       num campo para confirmar ou corrigir ali mesmo, com "É o nome que
+       aparece no mapa do site (o nome da pessoa não aparece)"; sem ele,
+       pede (opcional, destacado).
+   Corpus: o 14 chega como "CONTRATO KAUYR DOCES FINOS LTDA.docx"
+   ('arquivo_enviado' no esperado.json); os clientes que são empresa (01,
+   02, 03, 07, 09, 11, 12) ganham o estabelecimento. Testes:
+   EstabelecimentoTests.
+
 72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
    Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um
    adesivo diferente"; "na verdade vc deve juntar o basquete home com o
