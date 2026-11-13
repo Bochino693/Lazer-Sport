@@ -163,7 +163,10 @@
 
 /* ---- o visor 3D (o objeto do cadastro, por cima das fotos) ---- */
 .produto-visor3d {
-    background: radial-gradient(120% 90% at 50% 30%, #ffffff 0%, #eef3fa 62%, #dfe7f2 100%);
+    /* o azul-marinho vivo do site (o vidro escuro, abaixo, é o mesmo): nada de branco atrás do 3D */
+    background:
+        radial-gradient(circle at 50% 34%, rgba(63, 170, 255, .32), transparent 46%),
+        linear-gradient(160deg, #12376b 0%, #0a1f42 52%, #060f24 100%);
     inset: 0;
     position: absolute;
     z-index: 4;

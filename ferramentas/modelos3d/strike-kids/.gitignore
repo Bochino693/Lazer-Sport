@@ -1,0 +1,4 @@
+# o .glb antes do gltfpack, as vistas de conferência e as prévias: só o que refaz o objeto vai para o repositório
+*.glb
+v-*.jpg
+previa-*.png

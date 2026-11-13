@@ -52,9 +52,10 @@ compridas que o tampo, a cabeceira é 7 px mais larga que ele): é uma escala
 só. O `montar.js` põe a mesa na altura do Air Game Kids, **0,90 m** com a fita
 de LED (`ALT` = 0,894 m: o alto das laterais, na corcova do meio; ~3,04 mm por
 px da folha), e o resto sai da folha: **1,51 m de comprimento** (o 1,50 m do
-Air Game Kids, com a fita) e **0,83 m de largura** (o catálogo diz 0,86 m:
-conta a borda), o tampo de 1,40 m × 0,80 m e o campo a 0,75 m do chão (as
-laterais sobem 7 a 15 cm acima dele).
+Air Game Kids, com a fita), o tampo de 1,40 m × 0,80 m e o campo a 0,75 m do
+chão (as laterais sobem 7 a 15 cm acima dele). A largura: **0,86 m**, a do
+catálogo, com as laterais de MDF grosso (~28 mm, com a borda arredondada; na
+folha elas davam só 11 mm e a mesa ficava com 0,83 m, magra).
 As cabeceiras ficam entre as laterais, na largura do tampo (as laterais passam
 3 cm de cada ponta). Na folha, cada cabeceira vem com um retângulo **azul
 liso** embaixo da arte: essa tábua **não existe na mesa**. O recorte a tira
@@ -69,32 +70,58 @@ beira de fora da moldura, sem cobrir o "Jogador") com a boca do gol, a borda
 preta dos lados, a fita de LED, o placar, os dois rebatedores e o disco (do
 tamanho da mesa infantil), a caixa de ar e o soprador embaixo do tampo.
 
-~6,7 mil triângulos; ~565 KB depois do `gltfpack` (os cinco adesivos em JPEG,
-~410 KB, ampliados com suavização a ~1024 px: a folha tem só ~500 px por peça;
-a placa das laterais com o contorno simplificado em 2 mm, embaixo do adesivo).
+~17 mil triângulos; ~2,1 MB depois do `gltfpack` (os cinco adesivos em JPEG, em
+alta definição: abaixo).
+
+**Os dois adesivos do Air Game Kids saem do MESMO `montar.js`** (o mesmo móvel,
+a mesma medida: só a arte muda): `?arte=astronautas` usa as artes de
+`../air-game-kids-astronautas/adesivos(-hd)/` (as duas laterais com a mesma
+arte) e grava o `air-game-kids-astronautas.glb`.
+
+## Em alta definição (LEIA-ME V10, seção 91)
+
+O que as três máquinas de adesivo dividem está em `../comum3d.js`; o `.glb` sai
+do `../gerar_glb.cjs` (com o three.js do site, `core/static/vendor/three`):
+
+- **os adesivos em alta definição**: cada peça recortada da folha é ampliada 4x
+  com nitidez pelo Real-ESRGAN (o modelo de arte desenhada,
+  `../ampliar_adesivos.py`: `adesivos-hd/<peça>.webp`, guardadas no
+  repositório) e vai para o `.glb` em JPEG de qualidade 0,9, em sRGB, com
+  **2048 px no lado maior** nas peças grandes (as pequenas da testeira em 512 a
+  1024). Nada da arte é redesenhado: é a mesma imagem, com as bordas nítidas;
+- **os materiais da máquina de verdade** (PBR do glTF): o adesivo é vinil
+  laminado brilhante (`KHR_materials_clearcoat`), o MDF preto acetinado, o metal
+  cromado, e o que acende (o neon, o placar, os LEDs) com `emissiveStrength`;
+- **as bordas arredondadas**: a chapa de MDF com o raio na quina (o adesivo do
+  tamanho da face plana, a borda preta aparece em volta);
+- **os nomes dos materiais e das malhas são os de antes** (o `gltfpack -kn -km`
+  guarda os dois): quem importa o `.glb` no Blender acha cada peça pelo nome
+  (`adesivo-<peça>`, `mdf-preto`, `neon-roxo`...).
+
+    python3 ../ampliar_adesivos.py .        # adesivos-hd/ (precisa do modelo ONNX: veja o script)
+    node ../gerar_glb.cjs <esta pasta>      # o .glb no static, as vistas v-*.jpg aqui
+
+O `gerar_glb.cjs` não refaz as fotos do cadastro (as `.webp` da pasta do modelo
+no static): elas são feitas à parte. `core/tests_glb_alta_definicao.py` confere
+o tamanho (o do banco, a 2%), os 2048 px, o verniz, as luzes e os nomes.
+
 
 ## Trocar a folha (ou refazer)
 
     python3 recortar_adesivos.py --previa   # as caixas achadas e os contornos: previa-recortes.png
     python3 recortar_adesivos.py            # adesivos/<peça>.png e o formas.json
-    npm install three@0.169.0 playwright gltfpack
-    python3 -m http.server 8790 --bind 127.0.0.1     # nesta pasta, com o node_modules
-    node gerar.cjs glb fotos                          # vistas v-*.jpg, pecas.json, fotos e o .glb
-    npx gltfpack -i air-game-kids-alienigenas.glb -o ../../../core/static/site/arena/modelos/air-game-kids-alienigenas.glb -kn -km -ke
-    python manage.py test core.tests_variantes_adesivo   # (na raiz) o .glb abaixo de 800 KB
+    python3 ../ampliar_adesivos.py .        # adesivos-hd/<peça>.webp (4x, nítido)
+    node ../gerar_glb.cjs air-game-kids-alienigenas
+    node ../gerar_glb.cjs air-game-kids-alienigenas --arte astronautas --saida air-game-kids-astronautas.glb
+    python manage.py test core.tests_glb_alta_definicao core.tests_variantes_adesivo   # (na raiz)
 
 Folha nova: salve-a como `folha-adesivos.webp` (ou mude `"folha"` no
-`recortes.json`) e acerte as caixas aproximadas das peças. Com a porta 8790
-ocupada: `python3 -m http.server 8791 ...` e `PORTA=8791 node gerar.cjs ...`.
-O `fotos` grava as `foto-*.jpg` (a vista inteira, para conferir) e as `.webp`
-do cadastro já recortadas no objeto, em 16:10 (a frente de 3/4, os dois lados,
-a outra cabeceira e o tampo de cima), na pasta do modelo no static. Depois de
-subir, no servidor: `python manage.py cadastrar_variantes_adesivo --so
-air-game-kids-alienigenas --fotos` (a galeria do cadastro, no Cloudinary, com
-as fotos novas). O `node_modules`, o `.glb` sem o `gltfpack`, as vistas e a
-prévia não vão para o repositório (`.gitignore` desta pasta). O recorte só
-precisa do Pillow; o código que as duas máquinas dividem está em
-`../adesivos_comum.py`.
+`recortes.json`) e acerte as caixas aproximadas das peças. O `gerar_glb.cjs`
+precisa do `playwright` e do `gltfpack` (`npm install playwright gltfpack`, ou o
+`NODE_PATH` apontando para eles). As fotos do cadastro não saem mais daqui. O
+`.glb` sem o `gltfpack`, as vistas e a prévia não vão para o repositório
+(`.gitignore` desta pasta). O recorte só precisa do Pillow; o código que as
+duas máquinas dividem está em `../adesivos_comum.py`.
 
 ## Ligar no site
 

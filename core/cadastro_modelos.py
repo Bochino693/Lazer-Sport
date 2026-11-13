@@ -339,8 +339,8 @@ CADASTROS = {
             "\n"
             "Ideal para buffets infantis, brinquedotecas, parques, shoppings, hotéis, condomínios e áreas kids."
         ),
-        # as do Air Game Kids do catálogo (o 3D, feito da folha na altura de 0,90 m,
-        # tem 0,83 x 1,51 m: os 0,86 m contam a borda)
+        # as do Air Game Kids do catálogo (o 3D, feito da folha na altura de 0,90 m, com
+        # as laterais de MDF grosso, tem 0,86 x 1,51 m: LEIA-ME V10, seção 91)
         "medidas": ("0.90", "0.86", "1.50"),
         "fotos": (
             ("capa.webp", "perfil", "Air Game Kids Alienígenas num buffet infantil, com crianças jogando (ilustração)"),

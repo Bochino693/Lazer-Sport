@@ -5286,3 +5286,104 @@ Dependência nova: rjsmin (requirements.txt).
    As transportadoras para o cliente combinar o envio ficam no painel
    (diretório por estado, com WhatsApp/telefone/site).
    Testes: core/tests_conferencia_pagamento.py, EntregaNoCarrinhoTests.
+
+91) OS 3D DAS MÁQUINAS EM ALTA DEFINIÇÃO E NO TAMANHO DE VERDADE (BASQUETE HOME, STRIKE KIDS, AIR GAME KIDS)
+   O chefe do cliente: "as máquinas em 3D não estão boas -- principalmente o
+   Basquete Home, o Boliche Kids e o Air Game Kids Alienígenas: apagadas, sem
+   vida e sem definição. Como no McDonald's: você olha a foto e dá vontade de
+   comer, porque tem vida e nitidez"; "olha o Basquete Home normal e o preto:
+   a máquina diminuiu"; e, com duas fotos do Strike Kids de verdade: "até os
+   brinquedos estão estranhos, muito magros e mal definidos, com pontas
+   sobrepostas no caso do boliche... olha como tem vida, o adesivo não parece
+   artificial".
+   O TAMANHO DE VERDADE: cada .glb está em metros, nas medidas do produto no
+   banco (Brinquedos.altura_m x largura_m x profundidade_m), contando o que
+   sobressai (o neon, o botão):
+     * Basquete Home (o 3D do adesivo Quadrinhos): 2,70 x 1,00 x 2,40 m (as
+       da 0166) -- era e continua; agora as laterais são de MDF de 25 mm (a
+       pista fica com 0,946 m);
+     * Air Game Kids (Astronautas e Alienígenas, o MESMO móvel): 0,90 x 0,86
+       x 1,51 m -- era 0,83 m de largura (as laterais finas de 11 mm da
+       folha); com as laterais de MDF grosso (~28 mm), os 0,86 m do cadastro;
+     * Strike Kids: 2,07 x 0,74 x 1,91 m (o cadastro).
+     "A MÁQUINA DIMINUIU": nos três visores o enquadramento é o do PRIMEIRO
+     3D e fica na troca de adesivo (visor3d.js: antes cada .glb era
+     enquadrado de novo pela caixa dele; a vitrine e a Arena já usavam o
+     tamanho real). Os adesivos de um produto têm a mesma geometria e a
+     mesma medida (o teste confere). O Basquete Home azul não tem 3D (só o
+     Quadrinhos): a comparação com a foto do azul é das FOTOS -- elas são
+     refeitas à parte (o Blender), não aqui.
+   A DEFINIÇÃO (ferramentas/modelos3d/comum3d.js, o que as três dividem):
+     * os adesivos ampliados 4x com nitidez: ferramentas/modelos3d/
+       ampliar_adesivos.py passa cada peça recortada da folha pelo
+       Real-ESRGAN (o modelo de arte desenhada, RealESRGAN_x4plus_anime_6B, em
+       ONNX; BSD-3; não vai para o repositório) e grava adesivos-hd/<peça>.webp
+       (guardadas). No .glb, JPEG de qualidade 0,9, sRGB, com mipmaps:
+       2048 px no lado maior nas peças grandes (as laterais, a pista, o
+       tampo, a tela do jogo), 512 a 1536 nas pequenas. A arte é a mesma
+       (nada redesenhado), só com as bordas nítidas da impressão de verdade;
+     * os materiais de verdade (PBR do glTF): o adesivo é vinil laminado
+       brilhante (KHR_materials_clearcoat), o MDF preto acetinado, o cromo
+       metal, e o neon, os LEDs, o placar e a tela acesos
+       (KHR_materials_emissive_strength);
+     * as bordas arredondadas: a chapa de MDF com o raio na quina
+       (placaArredondada) e o adesivo do tamanho da face plana -- a borda
+       preta aparece em volta, sem cara de papelão;
+     * os nomes dos materiais e das malhas ficam os de antes (o Basquete e o
+       Air Game: adesivo-<peça>, mdf-preto, neon-roxo...; o Strike Kids: os
+       nomes das malhas do .glb da fábrica, iguais nos materiais -- a lista
+       está no README dele): quem importa no Blender acha cada peça pelo nome.
+   O STRIKE KIDS REFEITO (ferramentas/modelos3d/strike-kids/, novo: até aqui
+   era o .glb pronto da fábrica, sem código): as artes de verdade tiradas do
+   .glb da fábrica (extrair_do_glb.py: as PNG e o contorno de cada peça), e a
+   máquina das fotos -- as laterais de 25 mm na curva única da coluna até a
+   pista, a coluna com o monitor em pé aceso (o jogo), a moldura preta e a
+   caixinha branca da câmera, a testeira de nuvem presa NA FRENTE do alto da
+   coluna (nada se cruza: era a "ponta sobreposta"), o neon flex vermelho
+   (na testeira, pela linha que a arte marca; nas laterais, em volta do
+   logotipo) e o azul na frente (contornos_neon.py: o contorno do logotipo
+   na arte, com o OpenCV), a fita de LED de pontos coloridos por toda a
+   borda de cima das laterais, a pista de madeira brilhante com o recorte do
+   bolsão e as duas bolas de gomos dentro dele (antes elas ficavam embaixo da
+   pista), o botão vermelho e o acabamento com as lâmpadas por dentro. As
+   cores do site (cores3d.js) continuam: a tela, a pista, as bolas, o bolsão e
+   os LEDs nunca se tingem.
+   OS VISORES (site/arena/realismo3d.js, novo; visor3d.js, vitrine3d.js,
+   arena3d.js):
+     * a luz de ambiente de estúdio: o RoomEnvironment (vendor/three/
+       RoomEnvironment.js, do three.js r169) filtrado pelo PMREMGenerator, uma
+       vez por renderer -- o verniz e o cromo refletem uma sala de verdade;
+     * o tom NEUTRO (THREE.NeutralToneMapping, o "Khronos PBR Neutral",
+       feito para foto de produto), exposição 1,0, saída sRGB: a cor da arte
+       como foi impressa, sem o desbotado e o desvio de cor do ACES. Na
+       Arena também (exposição 0,95: o parque continua o mesmo, mais vivo);
+       lá a luz de ambiente entra fraca (0,3) e só nos materiais das
+       máquinas -- o parque tem a luz dele;
+     * texturas nítidas: o filtro anisotrópico (até 8x) em todas;
+     * a sombra de contato no pé da máquina (um plano com o retângulo
+       esfumado, sem luz de sombra: leve no celular);
+     * a densidade de pixels até 2 no aparelho bom, e ela desce sozinha (em
+       passos de 0,25, até 1) se os quadros passam de ~30 ms; no aparelho
+       fraco (até 2 GB, até 2 núcleos ou a placa que não aceita textura de
+       4096) as texturas descem para 1024 px (e na qualidade "baixa" da
+       Arena também);
+     * o fundo atrás do 3D: o azul-marinho vivo do site também nos cartões da
+       vitrine da Arena (era o estúdio branco-acinzentado) e no visor.
+   COMO REFAZER: ferramentas/modelos3d/gerar_glb.cjs (um só para as três:
+   o three.js do site, o Chromium do playwright, o gltfpack; não refaz as
+   fotos do cadastro):
+       python3 ferramentas/modelos3d/ampliar_adesivos.py <pasta>
+       node ferramentas/modelos3d/gerar_glb.cjs basquete-street-quadrinhos
+       node ferramentas/modelos3d/gerar_glb.cjs air-game-kids-alienigenas
+       node ferramentas/modelos3d/gerar_glb.cjs air-game-kids-alienigenas --arte astronautas --saida air-game-kids-astronautas.glb
+       node ferramentas/modelos3d/gerar_glb.cjs strike-kids
+   Os .glb ficam com o mesmo nome e o mesmo caminho: NADA muda no banco (sem
+   migração). Pesos: Basquete 2,7 MB (era 0,74), Strike Kids 2,7 MB (era
+   0,52), Air Game Alienígenas 2,1 MB e Astronautas 1,9 MB (eram 0,55 e
+   0,66) -- todos abaixo de 4 MB.
+   Testes: core/tests_glb_alta_definicao.py (cada .glb no tamanho do produto
+   no banco, a 2%, lido do JSON de dentro e do min/max das posições; os
+   adesivos de um produto do mesmo tamanho e o mesmo móvel; os 2048 px em
+   sRGB; o verniz e as luzes; os mipmaps; os nomes de sempre; os visores com
+   a luz de ambiente, o tom neutro, a sombra e o enquadramento do primeiro
+   3D; o fundo azul) e core/tests_variantes_adesivo.py (as medidas novas).

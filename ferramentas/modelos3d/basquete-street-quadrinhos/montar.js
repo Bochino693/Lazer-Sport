@@ -33,12 +33,21 @@
 // teto têm a mesma largura (182 px = 1,00 m) e a lateral de fora mais a
 // testeira (e os pés) dão os 2,70 m.
 //
+// EM ALTA DEFINIÇÃO (LEIA-ME V10, seção 91; o que as três máquinas de adesivo
+// dividem está em ../comum3d.js): os adesivos ampliados 4x com nitidez
+// (adesivos-hd/, ../ampliar_adesivos.py), em vinil laminado brilhante (o verniz:
+// KHR_materials_clearcoat); as laterais em MDF de 25 mm com a borda arredondada
+// (o adesivo do tamanho da face plana); o preto acetinado, o metal cromado, o
+// neon e o placar acesos (emissiveStrength). Os nomes dos materiais (e das
+// malhas) são os de antes: quem importa no Blender acha cada peça pelo nome.
+//
 // Coordenadas: as do three.js, em milímetros: x na largura (da esquerda para a
 // direita de quem joga), y para cima, z no comprimento (a frente, o jogador,
 // em +z). No fim tudo vira metros, centralizado e no chão.
 import * as THREE from "three";
-import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
-import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { GLTFExporter } from "/vendor/three/GLTFExporter.js";
+import { mergeGeometries, mergeVertices } from "/vendor/three/BufferGeometryUtils.js";
+import * as C from "../comum3d.js";
 
 const PI = Math.PI;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -95,9 +104,11 @@ const D = 2400; // a profundidade (as costas da estrutura até a frente do conso
 const ZB = -D / 2; // as costas
 const ZF = D / 2; // a frente (o adesivo da Frente)
 const ESP = 18; // a chapa (MDF)
+const ESP_LAT = 25; // as laterais: MDF de 25 mm (a máquina firme, sem cara de papelão)
+const RAIO_LAT = 3; // a borda arredondada das laterais (pequena: os gomos da bola vazada são finos)
 const PELE = 1; // o adesivo fica 1 mm fora da madeira
-const XM = XF - PELE - ESP; // 481: a face de dentro das laterais
-const XI = XM - PELE; // 480: o adesivo de dentro (a pista tem 960 mm)
+const XM = XF - PELE - ESP_LAT; // 474: a face de dentro das laterais
+const XI = XM - PELE; // 473: o adesivo de dentro (a pista tem 946 mm)
 const PISTA = 2 * XI;
 const TUBO = 40; // o tubo preto da estrutura de trás (40 x 40)
 const Z_COSTAS = ZB + TUBO; // a chapa das costas, na frente dos tubos
@@ -182,20 +193,23 @@ const ARO = { y: TETO - 0.27 * FUNDO.altura, raio: 150 };
 const START = { u0: 0.79, u1: 0.97, v0: 0.044, v1: 0.1 };
 // a porta do moedeiro: na face de pé, à esquerda do POW! (onde a arte é só faixa colorida)
 const PORTA = { x0: -XF + 30, x1: -XF + 230, y0: PE + 110, y1: PE + 490 };
-// a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px; a folha tem ~1/2)
+// a resolução máxima de cada adesivo dentro do .glb (o lado maior, em px): a peça
+// HD inteira (4x a folha) até 2048 px; as pequenas da testeira, até 512
 const RESOLUCAO = {
-  "lateral-externa-esquerda": 1024, "lateral-externa-direita": 1024, "lateral-interna-esquerda": 768, "lateral-interna-direita": 768,
-  prancha: 896, "fundo-cesta": 768, "teto-interno": 512, frente: 768, "testeira-frente": 768, "testeira-fundo": 256,
-  "testeira-teto": 384, "testeira-superior-esquerda": 384, "testeira-superior-direita": 384,
-  "testeira-lateral-esquerda": 384, "testeira-lateral-direita": 384,
+  "lateral-externa-esquerda": 2048, "lateral-externa-direita": 2048, "lateral-interna-esquerda": 2048, "lateral-interna-direita": 2048,
+  prancha: 2048, "fundo-cesta": 1280, "teto-interno": 768, frente: 1024, "testeira-frente": 768, "testeira-fundo": 512,
+  "testeira-teto": 512, "testeira-superior-esquerda": 512, "testeira-superior-direita": 512,
+  "testeira-lateral-esquerda": 512, "testeira-lateral-direita": 512,
 };
-const QUALIDADE_JPEG = 0.8;
 
 // ---------- materiais e o acúmulo de peças por material ----------
 const pecas = new Map(); // nome -> { material, geometrias: [] }
 function material(nome, opcoes) {
+  // `opcoes` é o material pronto (os do comum3d.js) ou as opções de um MeshStandardMaterial
   if (!pecas.has(nome)) {
-    pecas.set(nome, { material: new THREE.MeshStandardMaterial({ name: nome, roughness: 0.6, metalness: 0, ...opcoes }), geometrias: [] });
+    const m = opcoes && opcoes.isMaterial ? opcoes : new THREE.MeshStandardMaterial({ name: nome, roughness: 0.6, metalness: 0, ...opcoes });
+    m.name = nome;
+    pecas.set(nome, { material: m, geometrias: [] });
   }
   return nome;
 }
@@ -249,20 +263,20 @@ const texPlacar = tela(256, 128, (g, w, h) => {
 texPlacar.wrapS = texPlacar.wrapT = THREE.ClampToEdgeWrapping;
 
 const M = {
-  preto: material("mdf-preto", { color: "#2b2c30", roughness: 0.55 }), // o preto dos adesivos (#333)
-  estrutura: material("estrutura-tubo-preto", { color: "#17181b", roughness: 0.45, metalness: 0.55 }),
-  pes: material("pes-niveladores", { color: "#111214", roughness: 0.8 }),
-  parada: material("chapa-de-parada", { color: "#a7aeb6", roughness: 0.35, metalness: 0.75 }),
-  aro: material("aro", { color: "#ef4b1f", roughness: 0.4, metalness: 0.45 }),
-  suporte: material("suporte-da-cesta", { color: "#c9ced6", roughness: 0.35, metalness: 0.6 }),
+  preto: material("mdf-preto", C.acetinado("mdf-preto", "#2b2c30")), // o preto dos adesivos (#333), acetinado
+  estrutura: material("estrutura-tubo-preto", { color: "#17181b", roughness: 0.35, metalness: 0.7 }),
+  pes: material("pes-niveladores", { color: "#111214", roughness: 0.7 }),
+  parada: material("chapa-de-parada", C.cromo("chapa-de-parada", "#b8bfc8", { roughness: 0.22 })),
+  aro: material("aro", new THREE.MeshPhysicalMaterial({ color: "#ff4a12", roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08 })),
+  suporte: material("suporte-da-cesta", C.cromo("suporte-da-cesta")),
   redeCesta: material("rede-da-cesta", { color: "#ffffff", map: texRede, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8 }),
-  bolas: material("bolas", { map: texBola, roughness: 0.75 }),
-  neon: material("neon-roxo", { color: "#a764ff", emissive: "#8a2be2", emissiveIntensity: 1.3, roughness: 0.3 }),
-  placar: material("placar", { color: "#ffffff", map: texPlacar, emissive: "#ffffff", emissiveMap: texPlacar, emissiveIntensity: 0.9, roughness: 0.3 }),
-  moldura: material("moldura-do-placar", { color: "#101113", roughness: 0.5, metalness: 0.3 }),
-  porta: material("porta-do-moedeiro", { color: "#16171a", roughness: 0.5, metalness: 0.4 }),
-  moedeiro: material("moedeiro", { color: "#c7ccd3", roughness: 0.25, metalness: 0.85 }),
-  start: material("botao-start", { color: "#ffd21f", emissive: "#ffb800", emissiveIntensity: 0.8, roughness: 0.3 }),
+  bolas: material("bolas", new THREE.MeshPhysicalMaterial({ map: texBola, roughness: 0.55, clearcoat: 0.35, clearcoatRoughness: 0.4 })),
+  neon: material("neon-roxo", C.aceso("neon-roxo", "#9a45ff", 2.6)),
+  placar: material("placar", { color: "#000000", map: texPlacar, emissive: "#ffffff", emissiveMap: texPlacar, emissiveIntensity: 1.6, roughness: 0.2 }),
+  moldura: material("moldura-do-placar", C.acetinado("moldura-do-placar", "#101113", { roughness: 0.25, clearcoat: 0.8 })),
+  porta: material("porta-do-moedeiro", { color: "#16171a", roughness: 0.4, metalness: 0.5 }),
+  moedeiro: material("moedeiro", C.cromo("moedeiro")),
+  start: material("botao-start", new THREE.MeshPhysicalMaterial({ color: "#ffd21f", emissive: "#ffb800", emissiveIntensity: 1.4, roughness: 0.25, clearcoat: 1 })),
 };
 
 // ---------- os adesivos: a imagem da peça, inteira, na sua face ----------
@@ -280,35 +294,17 @@ function imagem(arquivo) {
 // RESOLUCAO (a folha tem pouca resolução) e com a proporção dela; `mm` é o
 // retângulo da imagem no 3D (avisa se a proporção não bate)
 async function adesivo(peca, mm, onde, { brilho = 0 } = {}) {
-  const arquivo = `adesivos/${peca}.png`;
+  const [w, h] = FORMAS[peca].px;
+  const { textura: t, w: tw, h: th, hd } = await C.arte("", peca, { lado: RESOLUCAO[peca] || 512, px: [w, h], avisos });
   PECAS[peca] = {
-    arquivo, mm: mm.map((v) => Math.round(v)), onde,
+    arquivo: hd ? `adesivos-hd/${peca}.webp` : `adesivos/${peca}.png`, px_no_glb: [tw, th], mm: mm.map((v) => Math.round(v)), onde,
     ...(FORMAS[peca].contorno ? { contorno: true } : {}), ...(FORMAS[peca].furos ? { furos: FORMAS[peca].furos.length } : {}),
   };
-  const [w, h] = FORMAS[peca].px;
-  const escala = (RESOLUCAO[peca] || 512) / Math.max(w, h);
-  const c = document.createElement("canvas");
-  c.width = Math.round(w * escala);
-  c.height = Math.round(h * escala);
-  const g = c.getContext("2d");
-  try {
-    const i = await imagem(`${arquivo}?v=${Date.now()}`);
-    g.imageSmoothingQuality = "high";
-    g.drawImage(i, 0, 0, c.width, c.height);
-  } catch {
-    g.fillStyle = "#8a93a3";
-    g.fillRect(0, 0, c.width, c.height);
-    avisos.push(`${arquivo} não existe: a peça ficou cinza`);
-  }
   const proporcao = w / h / (mm[0] / mm[1]);
   if (Math.abs(proporcao - 1) > 0.03) avisos.push(`${peca}: a face tem outra proporção que a peça (${(100 * (proporcao - 1)).toFixed(1)}%)`);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  t.userData.mimeType = "image/jpeg"; // no .glb, em JPEG (como os adesivos do Strike Kids)
   // a testeira é acesa (o letreiro com a luz por trás)
   const luz = brilho ? { emissive: "#ffffff", emissiveMap: t, emissiveIntensity: brilho } : {};
-  return material(`adesivo-${peca}`, { map: t, roughness: 0.5, ...luz });
+  return material(`adesivo-${peca}`, C.vinil(`adesivo-${peca}`, t, luz));
 }
 
 // ---------- peças básicas (em mm) ----------
@@ -396,12 +392,12 @@ for (const s of [-1, 1]) {
     return [...simplificar(f.slice(0, longe + 1), 4).slice(0, -1), ...simplificar([...f.slice(longe), f[0]], 4).slice(0, -1)];
   };
   // os furos (os gomos vazados, abertos: sem grade): o contorno dos pixels
-  // suavizado (Chaikin, duas vezes) e enxugado, o MESMO no adesivo de fora, na
+  // suavizado (Chaikin, três vezes) e enxugado, o MESMO no adesivo de fora, na
   // chapa e no L de dentro, para a borda do furo sair limpa; a parede do furo,
   // na espessura da chapa, é a chapa preta (o preto do adesivo)
   const suavizar = (f) => {
     let q = f;
-    for (let k = 0; k < 2; k++) {
+    for (let k = 0; k < 3; k++) {
       q = q.flatMap((p, i) => {
         const r = q[(i + 1) % q.length];
         return [[0.75 * p[0] + 0.25 * r[0], 0.75 * p[1] + 0.25 * r[1]], [0.25 * p[0] + 0.75 * r[0], 0.25 * p[1] + 0.75 * r[1]]];
@@ -412,10 +408,12 @@ for (const s of [-1, 1]) {
     return [...simplificar(q.slice(0, longe + 1), 1.5).slice(0, -1), ...simplificar([...q.slice(longe), q[0]], 1.5).slice(0, -1)];
   };
   const furos = ext.furos.map(suavizar);
-  placa(M.preto, fechado(ptsChapa), fora, ESP, furos);
+  // a chapa de 25 mm com a borda arredondada (nos furos também); o adesivo, do
+  // tamanho da face plana (o contorno e os furos afastados do raio da borda)
+  por(M.preto, C.placaArredondada(fechado(ptsChapa), ESP_LAT, RAIO_LAT, furos), fora.matriz());
   const mExt = await adesivo(`lateral-externa-${lado}`, [ext.ret[2] - ext.ret[0], ext.ret[3] - ext.ret[1]],
     `o lado de fora da ${lado}, com o contorno da folha e a bola vazada (vista de fora)`);
-  colar(mExt, ext.pontos, fora, ext.ret, 0, 1, furos);
+  colar(mExt, C.recuar(fechado(ext.pontos.map((p) => p.slice())), RAIO_LAT + 0.5), fora, ext.ret, 0, 1, furos.map((f) => C.recuar(f, -(RAIO_LAT + 0.5))));
   // de dentro (de quem está na pista): na esquerda, a frente fica à esquerda da imagem
   const dentro = s < 0
     ? base(V(-XI, PISO_L, ZF - PELE - ESP), V(0, 0, -1), V(0, 1, 0))
@@ -462,7 +460,9 @@ for (const s of [-1, 1]) {
   const ptsInt = [[as[0], 0], [as[as.length - 1], 0], ...topo];
   const mInt = await adesivo(`lateral-interna-${lado}`, [int.ret[2] - int.ret[0], int.ret[3] - int.ret[1]],
     `o lado de dentro da ${lado}, em L, vista da pista (até onde a chapa vai; a bola vazada atravessa)`);
-  colar(mInt, ptsInt, dentro, int.ret, 0, 1, furosInt);
+  // (do tamanho da face plana de dentro: o raio da borda da chapa fica de fora)
+  colar(mInt, C.recuar(C.limpar(ptsInt), RAIO_LAT + 0.5), dentro, int.ret, 0, 1,
+    furosInt.map((f) => C.recuar(f, -(RAIO_LAT + 0.5))));
   // o neon da borda: pelo contorno de cima da lateral, da quina da frente do console até as costas da testeira
   {
     const p = ext.pontos;
@@ -482,7 +482,7 @@ for (const s of [-1, 1]) {
       let na = qb - pb, nb = -(qa - pa);
       if (area < 0) { na = -na; nb = -nb; }
       const L = Math.hypot(na, nb) || 1;
-      return fora.ponto(a + (na / L) * (r + 1), b + (nb / L) * (r + 1), -PELE - ESP / 2);
+      return fora.ponto(a + (na / L) * (r + 1), b + (nb / L) * (r + 1), -PELE - ESP_LAT / 2);
     });
     tubo(M.neon, pts3, r);
   }
@@ -663,31 +663,7 @@ for (const s of [-1, 1]) {
 /* ======================================================================
    MONTAGEM FINAL: metros, junta por material, centraliza e assenta no chão
    ====================================================================== */
-const cena = new THREE.Scene();
-const raiz = new THREE.Group();
-raiz.name = "basquete-street-quadrinhos";
-cena.add(raiz);
-const mm = new THREE.Matrix4().makeScale(0.001, 0.001, 0.001);
-for (const [nome, { material: mat, geometrias }] of pecas) {
-  if (!geometrias.length) continue;
-  const prontas = geometrias.map((g) => {
-    const h = g.index ? g.toNonIndexed() : g;
-    if (!h.attributes.uv) h.setAttribute("uv", new THREE.Float32BufferAttribute(new Float32Array(h.attributes.position.count * 2), 2));
-    if (!h.attributes.normal) h.computeVertexNormals();
-    for (const k of Object.keys(h.attributes)) if (!["position", "normal", "uv"].includes(k)) h.deleteAttribute(k);
-    h.clearGroups();
-    return h;
-  });
-  let g = mergeGeometries(prontas, false);
-  g.applyMatrix4(mm);
-  g = mergeVertices(g, 1e-6);
-  const malhaFinal = new THREE.Mesh(g, mat);
-  malhaFinal.name = nome;
-  raiz.add(malhaFinal);
-}
-const caixaTotal = new THREE.Box3().setFromObject(raiz);
-const centro = caixaTotal.getCenter(new THREE.Vector3());
-raiz.children.forEach((m) => m.geometry.translate(-centro.x, -caixaTotal.min.y, -centro.z));
+const raiz = C.montarFinal(pecas, "basquete-street-quadrinhos", { mergeGeometries, mergeVertices });
 const final = new THREE.Box3().setFromObject(raiz);
 window.medidas = final.getSize(new THREE.Vector3()).toArray().map((v) => Math.round(v * 1000) / 1000);
 window.triangulos = raiz.children.reduce((s, m) => s + (m.geometry.index ? m.geometry.index.count / 3 : m.geometry.attributes.position.count / 3), 0);
@@ -703,96 +679,16 @@ window.escala = {
   aro: Math.round(ARO.y), furos: Object.fromEntries(Object.entries(EXT).map(([k, e]) => [k, e.furos.length])),
 };
 
-// ---------- vistas para conferir e as fotos do cadastro ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setSize(1600, 1000);
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-document.body.append(renderer.domElement);
-cena.add(new THREE.HemisphereLight("#ffffff", "#8b95a5", 1.8));
-const sol = new THREE.DirectionalLight("#ffffff", 2.0);
-sol.position.set(4, 9, 6);
-sol.castShadow = true;
-sol.shadow.mapSize.set(2048, 2048);
-Object.assign(sol.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 30 });
-sol.shadow.bias = -0.0004;
-cena.add(sol);
-// as redes não fazem sombra cheia
-raiz.traverse((o) => { if (o.isMesh) { o.castShadow = !o.name.startsWith("rede"); o.receiveShadow = true; } });
-// o chão só das vistas (não vai para o .glb): recebe a sombra
-const chao = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.2 }));
-chao.rotation.x = -PI / 2;
-chao.receiveShadow = true;
-cena.add(chao);
-const piso = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: "#3d4a5c", roughness: 1 }));
-piso.rotation.x = -PI / 2;
-piso.position.y = -0.002;
-cena.add(piso);
-const camera = new THREE.PerspectiveCamera(34, 1600 / 1000, 0.05, 100);
-window.ver = (x, y, z, alvo = [0, 1.3, 0], fundo = "#0b1a3a", fov = 34, sombra = true) => {
-  cena.background = new THREE.Color(fundo);
-  piso.visible = fundo === "#0b1a3a"; // no fundo claro das fotos, só a sombra
-  chao.visible = sombra;
-  camera.fov = fov;
-  camera.updateProjectionMatrix();
-  camera.position.set(x, y, z);
-  camera.lookAt(...alvo);
-  renderer.render(cena, camera);
-  return renderer.domElement.toDataURL("image/jpeg", 0.9);
+// ---------- as vistas de conferência (gerar_glb.cjs: v-*.jpg) e a exportação ----------
+C.vistas(raiz);
+window.vistasDeConferencia = {
+  frente34: [[3.6, 2.6, 4.6], [0, 1.25, 0], 34],
+  esquerda: [[-6.2, 1.5, 0.1], [0, 1.3, 0], 34],
+  direita: [[6.2, 1.5, -0.1], [0, 1.3, 0], 34],
+  frente: [[0, 1.6, 6.4], [0, 1.3, 0], 34],
+  costas: [[-3.0, 2.4, -5.2], [0, 1.3, 0], 34],
+  jogador: [[0, 1.55, 2.25], [0, 1.6, -1.0], 55],
+  bola: [[-2.0, 1.9, 0.4], [-0.5, 1.7, -0.5], 34],
 };
-// a foto do cadastro: a última vista recortada no objeto (com uma margem),
-// em 16:10, 1600 x 1000, em .webp (como as dos outros objetos)
-window.recortar = (margem = 0.05, qualidade = 0.86) => {
-  const src = renderer.domElement;
-  const W = src.width, H = src.height;
-  const c = document.createElement("canvas");
-  c.width = W;
-  c.height = H;
-  const g = c.getContext("2d");
-  g.drawImage(src, 0, 0);
-  const px = g.getImageData(0, 0, W, H).data;
-  const [fr, fg, fb] = [px[0], px[1], px[2]]; // o fundo: a cor do canto
-  let x0 = W, y0 = H, x1 = 0, y1 = 0;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      if (Math.abs(px[i] - fr) + Math.abs(px[i + 1] - fg) + Math.abs(px[i + 2] - fb) > 18) {
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-      }
-    }
-  }
-  let w = (x1 - x0) * (1 + 2 * margem), h = (y1 - y0) * (1 + 2 * margem);
-  if (w / h > 1.6) h = w / 1.6; else w = h * 1.6;
-  w = Math.min(w, W); h = Math.min(h, H);
-  const cx = Math.min(Math.max((x0 + x1) / 2, w / 2), W - w / 2), cy = Math.min(Math.max((y0 + y1) / 2, h / 2), H - h / 2);
-  const saida = document.createElement("canvas");
-  saida.width = 1600;
-  saida.height = 1000;
-  const s = saida.getContext("2d");
-  s.fillStyle = `rgb(${fr},${fg},${fb})`;
-  s.fillRect(0, 0, 1600, 1000);
-  s.drawImage(src, cx - w / 2, cy - h / 2, w, h, 0, 0, 1600, 1000);
-  return saida.toDataURL("image/webp", qualidade);
-};
-window.exportar = async () => {
-  // os adesivos vão em JPEG: o exportador usa o toBlob do canvas, sem dizer a
-  // qualidade (a do Chromium é 0,92); aqui ela fica na QUALIDADE_JPEG. As
-  // texturas desenhadas aqui (as redes, a bola, o placar) seguem em PNG.
-  const toBlob = HTMLCanvasElement.prototype.toBlob;
-  HTMLCanvasElement.prototype.toBlob = function (feito, tipo, qualidade) {
-    return toBlob.call(this, feito, tipo, tipo === "image/jpeg" ? QUALIDADE_JPEG : qualidade);
-  };
-  try {
-    const glb = await new GLTFExporter().parseAsync(raiz, { binary: true });
-    const bytes = new Uint8Array(glb);
-    let s = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-    return btoa(s);
-  } finally {
-    HTMLCanvasElement.prototype.toBlob = toBlob;
-  }
-};
+window.exportar = () => C.exportar(raiz, GLTFExporter);
 window.pronto = true;

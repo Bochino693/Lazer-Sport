@@ -19,6 +19,12 @@
    - UM laço de quadros para todos: ele só roda com algum cartão 3D à vista
      e a aba aberta, e para sozinho quando nenhum está; cada cartão é
      desenhado no máximo 30 vezes por segundo, e só quando algo muda.
+
+   A CARA DE FOTO DE CATÁLOGO (LEIA-ME V10, seção 91; site/arena/realismo3d.js):
+   a luz de ambiente de estúdio, o tom neutro (a cor da arte como foi
+   impressa), as texturas nítidas e a sombra de contato no pé da máquina, no
+   fundo azul-marinho do site. O outro adesivo entra no mesmo enquadramento
+   (a mesma máquina, do mesmo tamanho no cartão).
    ====================================================================== */
 
 const grade = document.querySelector("[data-fotos-grade]");
@@ -32,14 +38,14 @@ if (cartoes.length) {
   /** O three.js, o leitor e O renderer da vitrine (um só, fora da página). */
   const carregarMotor = () => {
     if (!motor) {
-      motor = Promise.all([import(grade.dataset.three), import(grade.dataset.gltf)]).then(([T, leitor]) => {
+      const realismo = grade.dataset.realismo3d || new URL("realismo3d.js", import.meta.url).href;
+      motor = Promise.all([import(grade.dataset.three), import(grade.dataset.gltf), import(realismo)]).then(async ([T, leitor, R]) => {
         const renderer = new T.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
-        renderer.toneMapping = T.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.05;
-        renderer.outputColorSpace = T.SRGBColorSpace;
+        R.configurarRenderer(T, renderer, 1.0);
         renderer.setClearColor(0x000000, 0);
         renderer.setPixelRatio(1); // a densidade vai no tamanho de cada cartão (abaixo)
-        return { T, carregador: new leitor.GLTFLoader(), renderer, tamanho: [0, 0] };
+        const ambiente = await R.ambiente(T, renderer, grade.dataset.three);
+        return { T, R, carregador: new leitor.GLTFLoader(), renderer, tamanho: [0, 0], ambiente, fraco: R.aparelhoFraco(renderer) };
       });
     }
     return motor;
@@ -93,16 +99,19 @@ if (cartoes.length) {
     cartao.append(tela);
     const pincel = tela.getContext("2d");
 
+    const { R } = m;
     const cena = new T.Scene();
-    cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
-    const sol = new T.DirectionalLight("#ffffff", 2.2);
-    sol.position.set(4, 9, 7);
+    if (m.ambiente) { cena.environment = m.ambiente; cena.environmentIntensity = 1.0; }
+    else cena.add(new T.HemisphereLight("#ffffff", "#9aa8bd", 1.6));
+    const sol = new T.DirectionalLight("#fff6ea", 1.35);
+    sol.position.set(3, 8, 6);
     cena.add(sol);
-    const contra = new T.DirectionalLight("#cfe0ff", 0.9);
+    const contra = new T.DirectionalLight("#9cc4ff", 0.6);
     contra.position.set(-6, 4, -8);
     cena.add(contra);
 
     let objeto = gltf.scene;
+    R.prepararObjeto(T, objeto, renderer, { limite: m.fraco ? 1024 : 0 });
     const caixa = new T.Box3().setFromObject(objeto);
     const tamanho = caixa.getSize(new T.Vector3());
     const centralizar = (o) => {
@@ -113,6 +122,8 @@ if (cartoes.length) {
     };
     centralizar(objeto);
     cena.add(objeto);
+    let sombra = R.sombraDeContato(T, tamanho.x, tamanho.z);
+    cena.add(sombra);
     // os sombreadores já agora (em paralelo, onde a placa deixa): o primeiro quadro não engasga
     try { renderer.compileAsync(cena, new T.PerspectiveCamera(), cena).catch(() => {}); } catch (erro) { /* compila no primeiro quadro */ }
 
@@ -139,7 +150,7 @@ if (cartoes.length) {
     function medir() {
       const r = tela.getBoundingClientRect();
       if (!r.width || !r.height) return;
-      const densidade = Math.min(window.devicePixelRatio || 1, 1.5);
+      const densidade = Math.min(window.devicePixelRatio || 1, m.fraco ? 1.25 : 2);
       tela.width = Math.round(r.width * densidade);
       tela.height = Math.round(r.height * densidade);
       camera.aspect = r.width / r.height;
@@ -252,8 +263,16 @@ if (cartoes.length) {
         }
       });
       objeto = novo.scene;
+      R.prepararObjeto(T, objeto, renderer, { limite: m.fraco ? 1024 : 0 });
       centralizar(objeto);
       cena.add(objeto);
+      const t = new T.Box3().setFromObject(objeto).getSize(new T.Vector3());
+      cena.remove(sombra);
+      sombra.material.map.dispose();
+      sombra.material.dispose();
+      sombra.geometry.dispose();
+      sombra = R.sombraDeContato(T, t.x, t.z);
+      cena.add(sombra);
       cartao.dataset.modelo = url;
       visor.sujo = true;
       acordar();

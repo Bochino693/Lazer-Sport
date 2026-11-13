@@ -52,6 +52,7 @@ function ligar(dialogo) {
     visor.dataset.three = dialogo.dataset.three;
     visor.dataset.gltf = dialogo.dataset.gltf;
     visor.dataset.cores3d = dialogo.dataset.cores3d;
+    if (dialogo.dataset.realismo3d) visor.dataset.realismo3d = dialogo.dataset.realismo3d;
     // os adesivos do item (LEIA-ME 72): o controle "Adesivo: A · B" troca o 3D aqui mesmo
     if (botao.dataset.adesivos3d) {
       visor.dataset.adesivos3d = botao.dataset.adesivos3d;

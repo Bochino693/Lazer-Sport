@@ -129,6 +129,7 @@
                  data-roda="{% estatico 'site/arena/roda.js' %}"
                  data-caminhos="{% estatico 'site/arena/caminhos.js' %}"
                  data-cores3d="{% estatico 'site/arena/cores3d.js' %}"
+                 data-realismo3d="{% estatico 'site/arena/realismo3d.js' %}"
                  data-adesivos3d="{% estatico 'site/arena/adesivos3d.js' %}">
                 <div class="arena-aviso" data-arena-aviso role="status" aria-live="polite">
                     <span class="arena-aviso-anel" aria-hidden="true"></span>
@@ -394,6 +395,7 @@
     <div class="arena-fotos-grade" data-fotos-grade
          data-three="{% static 'vendor/three/three.module.min.js' %}"
          data-gltf="{% static 'vendor/three/GLTFLoader.js' %}"
+         data-realismo3d="{% estatico 'site/arena/realismo3d.js' %}"
          data-adesivos3d="{% estatico 'site/arena/adesivos3d.js' %}">
         {% for brinquedo in brinquedos_arena %}
         <article class="arena-foto-cartao" data-fotos-cartao data-categorias="{{ brinquedo.categorias|join:'|' }}">

@@ -109,30 +109,53 @@ Start, a porta do moedeiro (na face de pé, à esquerda do POW!), o neon roxo
 a luz do pé), a estrutura de tubo das costas e
 os seis pés niveladores. Tudo dentro de 1,00 × 2,70 × 2,40 m.
 
-~12,8 mil triângulos; ~760 KB depois do `gltfpack` (os 15 adesivos em JPEG,
-ampliados com suavização: a folha tem ~400 px nas peças grandes; as chapas
-com o contorno simplificado em 4 mm, embaixo do adesivo, que fica com o de
-verdade).
+~30 mil triângulos; ~2,7 MB depois do `gltfpack` (os 15 adesivos em JPEG, em
+alta definição: abaixo). As laterais são de **MDF de 25 mm** com a borda
+arredondada (raio de 3 mm: os gomos da bola vazada são finos; os furos também
+têm a borda redonda), e a pista fica com 0,946 m entre elas.
+
+## Em alta definição (LEIA-ME V10, seção 91)
+
+O que as três máquinas de adesivo dividem está em `../comum3d.js`; o `.glb` sai
+do `../gerar_glb.cjs` (com o three.js do site, `core/static/vendor/three`):
+
+- **os adesivos em alta definição**: cada peça recortada da folha é ampliada 4x
+  com nitidez pelo Real-ESRGAN (o modelo de arte desenhada,
+  `../ampliar_adesivos.py`: `adesivos-hd/<peça>.webp`, guardadas no
+  repositório) e vai para o `.glb` em JPEG de qualidade 0,9, em sRGB, com
+  **2048 px no lado maior** nas peças grandes (as pequenas da testeira em 512 a
+  1024). Nada da arte é redesenhado: é a mesma imagem, com as bordas nítidas;
+- **os materiais da máquina de verdade** (PBR do glTF): o adesivo é vinil
+  laminado brilhante (`KHR_materials_clearcoat`), o MDF preto acetinado, o metal
+  cromado, e o que acende (o neon, o placar, os LEDs) com `emissiveStrength`;
+- **as bordas arredondadas**: a chapa de MDF com o raio na quina (o adesivo do
+  tamanho da face plana, a borda preta aparece em volta);
+- **os nomes dos materiais e das malhas são os de antes** (o `gltfpack -kn -km`
+  guarda os dois): quem importa o `.glb` no Blender acha cada peça pelo nome
+  (`adesivo-<peça>`, `mdf-preto`, `neon-roxo`...).
+
+    python3 ../ampliar_adesivos.py .        # adesivos-hd/ (precisa do modelo ONNX: veja o script)
+    node ../gerar_glb.cjs <esta pasta>      # o .glb no static, as vistas v-*.jpg aqui
+
+O `gerar_glb.cjs` não refaz as fotos do cadastro (as `.webp` da pasta do modelo
+no static): elas são feitas à parte. `core/tests_glb_alta_definicao.py` confere
+o tamanho (o do banco, a 2%), os 2048 px, o verniz, as luzes e os nomes.
+
 
 ## Trocar a folha (ou refazer)
 
     python3 recortar_adesivos.py --previa   # as caixas, os contornos (verde) e os furos (azul): previa-recortes.png
     python3 recortar_adesivos.py            # adesivos/<peça>.png e o formas.json
-    npm install three@0.169.0 playwright gltfpack
-    python3 -m http.server 8790 --bind 127.0.0.1     # nesta pasta, com o node_modules
-    node gerar.cjs glb fotos                          # vistas v-*.jpg, pecas.json, fotos e o .glb
-    npx gltfpack -i basquete-street-quadrinhos.glb -o ../../../core/static/site/arena/modelos/basquete-street-quadrinhos.glb -kn -km -ke
-    python manage.py test core.tests_variantes_adesivo   # (na raiz) o .glb abaixo de 800 KB
+    python3 ../ampliar_adesivos.py .        # adesivos-hd/<peça>.webp (4x, nítido)
+    node ../gerar_glb.cjs basquete-street-quadrinhos   # o .glb no static (com o gltfpack), pecas.json e as vistas v-*.jpg
+    python manage.py test core.tests_glb_alta_definicao core.tests_variantes_adesivo   # (na raiz)
 
 Folha nova: salve-a como `folha-adesivos.webp` (ou mude `"folha"` no
 `recortes.json`), acerte as caixas aproximadas e a caixa dos `furos` (em
-frações da peça). Com a porta 8790 ocupada: `python3 -m http.server 8791 ...`
-e `PORTA=8791 node gerar.cjs ...`. O `fotos` grava as `foto-*.jpg` (para
-conferir) e as `.webp` do cadastro já recortadas no objeto, em 16:10 (a
-frente de 3/4, os dois lados, as costas e a vista de quem joga), na pasta do
-modelo no static. Depois de subir, no servidor: `python manage.py
-cadastrar_variantes_adesivo --so basquete-street-quadrinhos --fotos`. O
-`node_modules`, o `.glb` sem o `gltfpack`, as vistas e a prévia não vão para o
+frações da peça). O `gerar_glb.cjs` precisa do `playwright` e do `gltfpack`
+(`npm install playwright gltfpack`, ou o `NODE_PATH` apontando para eles). As
+fotos do cadastro (`.../basquete-street-quadrinhos/*.webp` no static) não saem
+mais daqui. O `.glb` sem o `gltfpack`, as vistas e a prévia não vão para o
 repositório (`.gitignore` desta pasta). O recorte só precisa do Pillow; o
 código que as duas máquinas dividem está em `../adesivos_comum.py`.
 

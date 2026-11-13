@@ -1293,10 +1293,14 @@ html.arena-tela-cheia body { overflow: hidden; }
 
 /* o cartão com objeto 3D: o objeto no lugar das fotos (vitrine3d.js) */
 .arena-foto-midia--3d { cursor: grab; }
-/* o palco claro de estúdio, como o das fotos recortadas (a foto do 3D tem
-   fundo, e o ls-fotos.js a marcaria como "foto cheia", de fundo escuro) */
+/* o palco do 3D: o azul-marinho vivo do site, com a luz no meio (como o visor
+   da página do produto: LEIA-ME V10, seção 91). Nada de cinza nem de branco
+   atrás da máquina: o verniz dos adesivos e as cores brilham no escuro. */
+.arena-foto-midia--3d,
 html.ls-escuro:not(#_):not(#__) .arena-foto-midia--3d {
-    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e9eef7 70%, #d5deec 100%);
+    background:
+        radial-gradient(circle at 50% 36%, rgba(63, 170, 255, .34), transparent 52%),
+        linear-gradient(160deg, #12376b 0%, #0a1f42 55%, #060f24 100%);
 }
 .arena-foto-midia--3d:active { cursor: grabbing; }
 .arena-foto-3d {
