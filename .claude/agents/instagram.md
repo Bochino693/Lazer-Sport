@@ -34,6 +34,15 @@ Criação de conteúdo (aprendizado contínuo):
   fotos reais enviados pelo usuário; fotos do site só como complemento.
 - Especificações de produto vêm do site (www.lazersport.com.br) ou do usuário.
   Nunca invente medidas, preços ou recursos.
+- Cards do vídeo: sempre com ícone, cores vivas em degradê, moldura de LED e
+  o logo da empresa (`core/static/images/logoofi.png`). O `reel.py` já faz isso.
+- Link do site: toda publicação leva o link do site (página do produto em
+  www.lazersport.com.br quando existir). O usuário quer link clicável, não
+  desenhado na arte nem no vídeo. Legenda de feed/Reel não tem link clicável,
+  então: escreva o endereço na legenda com "link na bio", avise o usuário para
+  apontar o link da bio para essa página, e responda a quem comentar com o
+  link (por direct, onde o link é clicável, quando o token tiver a permissão
+  de mensagens). Só publique depois da autorização explícita do usuário.
 - Mostre sempre o vídeo e a legenda ao usuário para aprovação antes de publicar.
 - Depois de publicar, proponha rodar `aprender.py` de novo após 7 dias.
 
