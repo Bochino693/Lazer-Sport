@@ -195,3 +195,27 @@ class MinimoDoCartaoTests(TestCase):
     def test_sem_resposta_nao_bloqueia_o_cartao(self):
         with patch.object(conf.requests, "get", side_effect=conf.requests.Timeout):
             self.assertIsNone(conf.minimo_do_cartao())
+
+
+class ParcelamentoSemJurosTests(TestCase):
+    """Uma parcela a cada R$ 1.000, até 6x; abaixo de R$ 2.000, à vista."""
+
+    def test_regra_das_parcelas(self):
+        from .checkout import parcelas_maximas
+        casos = {
+            "0.01": 1, "999.99": 1, "1000.00": 1, "1999.99": 1, "2000.00": 2,
+            "3500.00": 3, "4999.99": 4, "5000.00": 5, "5999.99": 5,
+            "6000.00": 6, "6990.00": 6, "45000.00": 6,
+        }
+        for total, esperado in casos.items():
+            self.assertEqual(parcelas_maximas(Decimal(total)), esperado, total)
+
+    def test_pedido_guarda_as_parcelas_do_cartao(self):
+        from .checkout import parcelas_do_pagamento
+        parcelas, valor = parcelas_do_pagamento({
+            "installments": 3, "transaction_amount": 6990,
+            "transaction_details": {"installment_amount": 2330},
+        })
+        self.assertEqual((parcelas, valor), (3, Decimal("2330.00")))
+        parcelas, valor = parcelas_do_pagamento({"transaction_amount": 100})
+        self.assertEqual((parcelas, valor), (1, Decimal("100.00")))

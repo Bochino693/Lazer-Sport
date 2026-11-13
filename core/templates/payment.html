@@ -185,8 +185,12 @@
                 </div>
                 {% else %}
                 <ul class="card-limit ck-selos" aria-label="Condições do cartão">
-                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Crédito em até {{ max_parcelas }}x</li>
-                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> À vista ou parcelado</li>
+                    {% if max_parcelas > 1 %}
+                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Em até {{ max_parcelas }}x de R$ {{ valor_parcela_maxima|moeda }} sem juros</li>
+                    {% else %}
+                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> À vista no cartão</li>
+                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> Parcelamento sem juros a partir de R$ 2.000</li>
+                    {% endif %}
                     <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Confirmação do banco, se pedida</li>
                 </ul>
                 {% endif %}

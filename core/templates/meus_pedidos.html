@@ -300,7 +300,7 @@
                     {% if pedido.forma_pagamento and status != 'aguardando_pagamento' and status != 'cancelado' %}
                     <p class="pd-pago-com">
                         {% if pedido.forma_pagamento == 'pix' %}<i class="fa-brands fa-pix" aria-hidden="true"></i>{% else %}<i class="fa-solid fa-credit-card" aria-hidden="true"></i>{% endif %}
-                        Pago com {{ pedido.get_forma_pagamento_display }}
+                        Pago com {{ pedido.get_forma_pagamento_display }}{% if pedido.forma_pagamento == 'credito' and pedido.parcelas > 1 %} em {{ pedido.parcelas }}x{% if pedido.valor_parcela %} de {{ pedido.valor_parcela|reais }}{% endif %} sem juros{% endif %}
                     </p>
                     {% endif %}
                 </section>

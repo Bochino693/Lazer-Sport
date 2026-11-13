@@ -619,3 +619,18 @@
     .ck-segmento-opcao,
     .ck-entrada input { transition: none; }
 }
+
+/* Parcelamento sem juros no resumo do carrinho (uma parcela a cada R$ 1.000, até 6x). */
+.ck-parcelamento {
+    margin: 8px 0 0;
+    padding: 9px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(46, 230, 140, .35);
+    background: linear-gradient(135deg, rgba(46, 230, 140, .14), rgba(47, 139, 255, .12));
+    color: #c9ffe4;
+    font-size: .82rem;
+    line-height: 1.35;
+}
+.ck-parcelamento:empty { display: none; }
+.ck-parcelamento i { color: #2ee68c; margin-right: 4px; }
+.ck-parcelamento strong { color: #ffffff; }

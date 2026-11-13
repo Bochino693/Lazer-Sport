@@ -310,6 +310,39 @@ def referencia_do_pedido(pedido):
     return f"pedido:{pedido.id}"
 
 
+# PARCELAMENTO NO CARTÃO DE CRÉDITO, SEM JUROS: uma parcela a cada R$ 1.000
+# do pedido, até 6. R$ 6.000 ou mais -> até 6x; R$ 5.000 -> 5x; ... ;
+# abaixo de R$ 2.000 -> à vista. O "sem juros" é o vendedor que assume: tem
+# de estar ligado na conta do Mercado Pago (Seu negócio > Custos >
+# Parcelamento), até 6x. A regra vale na tela e no servidor.
+PARCELAS_NO_MAXIMO = 6
+VALOR_POR_PARCELA = Decimal("1000.00")
+
+
+def parcelas_maximas(total):
+    total = valor_monetario(total) or Decimal("0.00")
+    return max(1, min(PARCELAS_NO_MAXIMO, int(total // VALOR_POR_PARCELA)))
+
+
+def valor_da_parcela(total, parcelas):
+    total = valor_monetario(total) or Decimal("0.00")
+    parcelas = max(1, int(parcelas or 1))
+    return (total / parcelas).quantize(Decimal("0.01"))
+
+
+def parcelas_do_pagamento(payment):
+    """(parcelas, valor de cada uma) que o Mercado Pago cobrou."""
+    try:
+        parcelas = max(1, int(payment.get("installments") or 1))
+    except (TypeError, ValueError):
+        parcelas = 1
+    detalhes = payment.get("transaction_details") or {}
+    valor = valor_monetario(detalhes.get("installment_amount"))
+    if valor is None:
+        valor = valor_da_parcela(payment.get("transaction_amount"), parcelas)
+    return parcelas, valor
+
+
 def forma_pagamento_mp(payment):
     tipo = payment.get("payment_type_id")
     if tipo == "credit_card":
@@ -351,11 +384,17 @@ def confirmar_pagamento(pedido, payment):
         travado.forma_pagamento = forma_pagamento_mp(payment)
         travado.mp_payment_id = payment_id
         travado.mp_status = "approved"
+        if travado.forma_pagamento == "credito":
+            travado.parcelas, travado.valor_parcela = parcelas_do_pagamento(payment)
+        else:
+            travado.parcelas, travado.valor_parcela = 1, travado.total_final
         travado.save(update_fields=[
             "status",
             "forma_pagamento",
             "mp_payment_id",
             "mp_status",
+            "parcelas",
+            "valor_parcela",
             "atualizado",
         ])
 

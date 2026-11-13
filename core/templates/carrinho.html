@@ -422,6 +422,12 @@
                             R$ {{ total_liquido|moeda }}
                         </span>
                     </div>
+                    {% comment %}
+                      Parcelamento no crédito sem juros: uma parcela a cada
+                      R$ 1.000, até 6x (checkout.parcelas_maximas). O texto
+                      acompanha o total quando o frete muda.
+                    {% endcomment %}
+                    <p class="ck-parcelamento" id="parcelamentoCarrinho" aria-live="polite"></p>
                 </div><!-- resumo-box -->
 
                 {% comment %}
@@ -734,6 +740,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const valorFreteSpan = document.getElementById('valor-frete');
     const linhaFrete = document.getElementById('linha-frete');
     const totalPedido = document.getElementById('totalPedido');
+
+    // Mesma regra do servidor (checkout.parcelas_maximas).
+    function atualizarParcelamento() {
+        const alvo = document.getElementById('parcelamentoCarrinho');
+        if (!alvo || !totalPedido) return;
+        const total = parseFloat(String(totalPedido.innerText)
+            .replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+        const parcelas = Math.max(1, Math.min(6, Math.floor(total / 1000)));
+        const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        alvo.innerHTML = parcelas > 1
+            ? `<i class="fa-solid fa-credit-card" aria-hidden="true"></i> ou em até <strong>${parcelas}x de ${fmt(total / parcelas)}</strong> sem juros no cartão`
+            : `<i class="fa-brands fa-pix" aria-hidden="true"></i> Pix ou cartão à vista · parcelamento sem juros a partir de R$ 2.000`;
+    }
+    atualizarParcelamento();
+    new MutationObserver(atualizarParcelamento).observe(totalPedido, { childList: true, characterData: true, subtree: true });
 
     const enderecoDetalhes = document.getElementById('endereco-detalhes');
     const numeroInput = document.getElementById('numero');

@@ -2106,6 +2106,14 @@ class Pedido(Prime):
     )
     mp_status = models.CharField(max_length=50, null=True, blank=True)
 
+    # Como o cliente pagou: no cartão de crédito, em quantas parcelas (sem
+    # juros, até 6x: checkout.parcelas_maximas) e de quanto cada uma.
+    parcelas = models.PositiveSmallIntegerField("Parcelas", default=1)
+    valor_parcela = models.DecimalField(
+        "Valor de cada parcela", max_digits=10, decimal_places=2,
+        null=True, blank=True,
+    )
+
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 

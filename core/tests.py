@@ -265,7 +265,7 @@ class MercadoPagoCardTests(SimpleTestCase):
 
     @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
-    def test_abaixo_de_20_mil_rejeita_mais_de_12_parcelas(
+    def test_mais_de_6_parcelas_e_recusado(
         self,
         buscar_carrinho,
         buscar_reserva,
@@ -289,14 +289,14 @@ class MercadoPagoCardTests(SimpleTestCase):
         body = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("12 parcelas", body["mensagem"])
+        self.assertIn("até 6x sem juros", body["mensagem"])
 
     @patch("core.views.mercadopago.SDK")
     @patch("core.views.checkout.confirmar_pagamento")
     @patch("core.views.Carrinho.objects.filter")
     @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
-    def test_acima_de_20_mil_aceita_18_parcelas(
+    def test_acima_de_6_mil_aceita_6_parcelas(
         self,
         buscar_carrinho,
         buscar_reserva,
@@ -325,7 +325,7 @@ class MercadoPagoCardTests(SimpleTestCase):
                 "token": "card-token",
                 "payment_method_id": "visa",
                 "issuer_id": "123",
-                "installments": 18,
+                "installments": 6,
                 "payer": {
                     "email": "comprador@example.com",
                     "identification": {

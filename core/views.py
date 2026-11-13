@@ -6533,7 +6533,10 @@ class PaymentView(LoginRequiredMixin, View):
             "total_itens": len(itens) if isinstance(itens, list) else itens.count(),
             "somente_pix": not request.user.is_authenticated,
             "mp_public_key": settings.MP_PUBLIC_KEY,
-            "max_parcelas": 18 if total_final > Decimal("20000.00") else 12,
+            "max_parcelas": checkout.parcelas_maximas(total_final),
+            "valor_parcela_maxima": checkout.valor_da_parcela(
+                total_final, checkout.parcelas_maximas(total_final),
+            ),
             "cartao_minimo": cartao_minimo,
             "cartao_liberado": cartao_minimo is None or total_final >= cartao_minimo,
         }
@@ -7610,12 +7613,16 @@ def processar_cartao(request):
 
     total_final = _valor_monetario(reserva.total_final)
 
-    max_parcelas = 18 if total_final > Decimal("20000.00") else 12
+    max_parcelas = checkout.parcelas_maximas(total_final)
     if parcelas < 1 or parcelas > max_parcelas:
         return JsonResponse(
             {
                 "sucesso": False,
-                "mensagem": f"Escolha entre 1 e {max_parcelas} parcelas.",
+                "mensagem": (
+                    f"Este pedido pode ser pago em até {max_parcelas}x sem juros."
+                    if max_parcelas > 1
+                    else "Este pedido é pago à vista no cartão."
+                ),
             },
             status=400,
         )
