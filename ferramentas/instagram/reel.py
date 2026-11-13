@@ -6,8 +6,10 @@ Uso:
 
 Cada cena do roteiro tem uma fonte e um modelo de card:
 
-  fonte:   "video" (+ "inicio"), "foto" ou "quadros" (pasta de PNGs com fundo
-           transparente, ex.: giro 3D feito por girar3d.js)
+  fonte:   "video" (+ "inicio"), "foto" (+ "foco" 0..1 para o corte lateral),
+           "quadros" (pasta de PNGs com fundo transparente, ex.: giro 3D feito
+           por girar3d.js) ou "palco" (lista de recortes lado a lado, cada um
+           com "imagem" ou "quadros", "altura", "cx" e "base" em pixels)
   modelo:  "heroi"   titulo grande central com adesivo inclinado
            "card"    card inferior com icone ("lado": "esquerda" | "direita")
            "numero"  numero gigante com estrela + texto
@@ -521,15 +523,45 @@ def quadros_video(mov, inicio, dur):
     p.wait()
 
 
-def quadros_foto(path, dur):
+def quadros_foto(path, dur, foco=0.5):
     im = Image.open(path).convert("RGB")
     im = ImageEnhance.Contrast(ImageEnhance.Color(im).enhance(1.4)).enhance(1.1)
     sc = max(W / im.width, H / im.height)
     r = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
-    l, t = (r.width - W) // 2, (r.height - H) // 2
+    l, t = int((r.width - W) * foco), (r.height - H) // 2
     r = r.crop((l, t, l + W, t + H))
     for _ in range(int(round(dur * FPS))):
         yield r.copy()
+
+
+def quadros_palco(itens, dur, c1, c2, caminho):
+    """Varios recortes (PNG/WebP com fundo transparente ou pastas de giro 3D) lado a lado."""
+    prep = []
+    for it in itens:
+        if "quadros" in it:
+            prep.append((it, sorted(glob.glob(os.path.join(caminho(it["quadros"]), "*.png"))), None))
+        else:
+            im = Image.open(caminho(it["imagem"])).convert("RGBA")
+            prep.append((it, None, im.crop(im.getbbox())))
+    n = int(round(dur * FPS))
+    for k in range(n):
+        fr = fundo_3d(c1, c2, k / FPS)
+        for j, (it, arqs, fixo) in enumerate(prep):
+            if arqs:
+                m = Image.open(arqs[min(len(arqs) - 1, int(k * len(arqs) / n))]).convert("RGBA")
+                m = m.crop(m.getbbox())
+            else:
+                m = fixo
+            entra = mola((k / FPS - 0.12 * j) / 0.5)  # cada recorte "pula" para o lugar
+            s = it["altura"] / m.height
+            m = m.resize((max(1, int(m.width * s)), max(1, int(m.height * s))), Image.LANCZOS)
+            x = int(it["cx"] - m.width / 2)
+            y = int(it["base"] - m.height + (1 - min(1.0, entra)) * 500 - max(0.0, entra - 1) * 260)
+            ch = Image.new("L", (W, H), 0)
+            ImageDraw.Draw(ch).ellipse([x + 30, it["base"] - 34, x + m.width - 30, it["base"] + 34], fill=150)
+            fr.paste((0, 0, 0), (0, 0), ch.filter(ImageFilter.GaussianBlur(18)))
+            fr.paste(m, (x, y), m)
+        yield fr
 
 
 def quadros_3d(pasta, dur, c1, c2):
@@ -582,10 +614,12 @@ def main():
         c1, c2 = hexrgb(cores[0]), hexrgb(cores[1])
         if "video" in c:
             gen, real = quadros_video(caminho(c["video"]), c.get("inicio", 0), dur), True
+        elif "palco" in c:
+            gen, real = quadros_palco(c["palco"], dur, c1, c2, caminho), False
         elif "quadros" in c:
             gen, real = quadros_3d(caminho(c["quadros"]), dur, c1, c2), False
         else:
-            gen, real = quadros_foto(caminho(c["foto"]), dur), True
+            gen, real = quadros_foto(caminho(c["foto"]), dur, c.get("foco", 0.5)), True
         if mod == "heroi":
             ov = modelo_heroi(c, c1, c2)
         elif mod == "numero":
