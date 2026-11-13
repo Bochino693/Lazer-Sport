@@ -1,0 +1,125 @@
+{
+ "gravacao": "grav",
+ "logo": "../../../core/static/images/logoofi.png",
+ "passos": [
+  {
+   "trecho": "1_vitrine",
+   "passo": 1,
+   "legenda": [
+    "Abra o site pelo *link da bio*",
+    "e toque na oferta *Black Friday*"
+   ]
+  },
+  {
+   "trecho": "2_promocao",
+   "passo": 2,
+   "legenda": [
+    "De R$ 6.990 por *R$ 4.990 no Pix*",
+    "Toque em *Comprar agora*"
+   ]
+  },
+  {
+   "trecho": "3_entrar",
+   "passo": 3,
+   "legenda": [
+    "*Entre na sua conta*",
+    "ou crie uma na hora"
+   ]
+  },
+  {
+   "trecho": "4_quantidade",
+   "passo": 4,
+   "legenda": [
+    "Escolha a *quantidade*",
+    "e confirme a compra"
+   ]
+  },
+  {
+   "trecho": "5_carrinho",
+   "passo": 5,
+   "legenda": [
+    "Informe o *CPF* e escolha",
+    "*frete* ou *retirada na loja*"
+   ]
+  },
+  {
+   "trecho": "6_pix",
+   "passo": 6,
+   "legenda": [
+    "Pague com *Pix*:",
+    "aprovação em segundos"
+   ]
+  },
+  {
+   "trecho": "7_credito",
+   "passo": 6,
+   "sem_numero": true,
+   "legenda": [
+    "Ou no *cartão de crédito*",
+    "em 10x de R$ 599,90"
+   ]
+  }
+ ],
+ "final": {
+  "arte": "artes/a10.jpg",
+  "duracao": 3.4,
+  "etiqueta": "BLACK FRIDAY · ATÉ 21/11",
+  "titulo": [
+   "COMPRE",
+   "PELO SITE"
+  ],
+  "texto": [
+   "Pix ou cartão de crédito",
+   "Link na bio"
+  ],
+  "botao": "WhatsApp (11) 96056-3135"
+ },
+ "musica": "../../../core/static/site/arena/jogos/super-boxing/sons/musica.mp3",
+ "cores": [
+  "#FF2E93",
+  "#FFE600"
+ ],
+ "led": [
+  "#FF2E93",
+  "#FFE600",
+  "#FFFFFF",
+  "#B14CFF"
+ ],
+ "velocidade": 1.55,
+ "gancho": {
+  "tipo": "vitrine",
+  "titulo": "BLACK FRIDAY",
+  "faixa": "OFERTAS ATÉ 21/11",
+  "chamada": [
+   "VEJA COMO",
+   "GARANTIR",
+   "A SUA"
+  ],
+  "ofertas": [
+   {
+    "arte": "artes/a10.jpg",
+    "selo": "-29%"
+   },
+   {
+    "arte": "artes/a9.jpg",
+    "selo": "-13%"
+   },
+   {
+    "arte": "artes/a8.jpg",
+    "selo": "-14%"
+   },
+   {
+    "arte": "artes/a6.jpg",
+    "selo": "-13%"
+   },
+   {
+    "arte": "artes/a4.jpg",
+    "selo": "-10%"
+   },
+   {
+    "arte": "artes/a5.jpg",
+    "selo": "-7%"
+   }
+  ]
+ }
+}
