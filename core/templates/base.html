@@ -829,9 +829,9 @@
 
           <div class="ls-clientes-logos">
               {% for cliente in clientes_rodape %}
-                <div class="ls-cliente-logo" title="{{ cliente.nome_cliente }}">
+                <div class="ls-cliente-logo" title="{{ cliente.nome_no_site|default:'Cliente Lazer & Sport' }}">
                     <img src="{{ cliente.logo|foto:240 }}"
-                         alt="Logo {{ cliente.nome_cliente }}"
+                         alt="Logo {{ cliente.nome_no_site|default:'de cliente da Lazer & Sport' }}"
                          loading="lazy" decoding="async">
                 </div>
               {% endfor %}

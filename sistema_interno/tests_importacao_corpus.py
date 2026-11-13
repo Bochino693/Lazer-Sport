@@ -436,7 +436,8 @@ class GravacaoDoCorpusTests(_SemChave):
         resposta = self.client.get("/")
         self.assertEqual(resposta.status_code, 200)
         no_mapa = {(p["nome"], p["cidade"]) for p in resposta.context["clientes_mapa"]}
-        # O nome do alfinete é o do estabelecimento, quando há (nome_publico).
+        # O nome do alfinete é o do estabelecimento (ou o nome de empresa); o de
+        # PESSOA nunca vai ao site: no lugar dele, a cidade (Cliente.nome_no_site).
         self.assertEqual(no_mapa, {
             ("Buffet Alegria", "Guarulhos"),
             ("Escola Pequeno Príncipe", "São Paulo"),
@@ -448,12 +449,12 @@ class GravacaoDoCorpusTests(_SemChave):
             ("Escola Infantil Pequenos Passos", "São Paulo"),
             ("Clube Recreativo Vila Nova", "São Paulo"),
             ("Condomínio Parque das Árvores", "São Paulo"),
-            ("Juliana Martins Rocha", "São Paulo"),
-            # O contrato de compra e venda (AJUSTE 4): o comprador, nunca o
-            # representante da fábrica.
-            ("Kauyr Ribeiro Abdala", "Ribeirão Preto"),
-            ("Renata Moura Teixeira", "São Paulo"),
-            ("Joana Prado Lins", "São Paulo"),
+            # pessoas (Juliana Martins Rocha, Renata Moura Teixeira, Joana Prado
+            # Lins e o comprador do contrato de compra e venda): só a cidade
+            ("Cliente em São Paulo", "São Paulo"),
+            ("Cliente em Ribeirão Preto", "Ribeirão Preto"),
         })
+        for pessoa in ("Juliana Martins Rocha", "Kauyr Ribeiro Abdala", "Renata Moura Teixeira", "Joana Prado Lins"):
+            self.assertNotContains(resposta, pessoa)
         # E nada da Lazer & Sport virou alfinete de cliente.
         self.assertFalse(any("Lazer" in nome for nome, _ in no_mapa))

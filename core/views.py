@@ -473,6 +473,7 @@ class HomeView(View):
             .only(
                 "cidade", "estado", "pais", "latitude", "longitude",
                 "cliente__nome_cliente", "cliente__nome_estabelecimento", "cliente__site_cliente",
+                "cliente__documento",
             )
         )
 
@@ -500,7 +501,9 @@ class HomeView(View):
         clientes_mapa = [
             {
                 "tipo": "cliente",
-                "nome": e.cliente.nome_publico or "Cliente Lazer & Sport",
+                # só nome de casa (o estabelecimento); nome de pessoa nunca vai ao
+                # site -- no lugar dele, a cidade (ver Cliente.nome_no_site)
+                "nome": e.cliente.nome_no_site or (f"Cliente em {e.cidade}" if e.cidade else "Cliente Lazer & Sport"),
                 "logo": logo_da_casa,
                 "cidade": e.cidade or "",
                 "estado": e.estado or "",

@@ -48,6 +48,31 @@ class Gerente(Prime):
         verbose_name_plural = "Gerentes"
 
 
+#: Palavras que fazem um nome ser de casa, não de pessoa (o mapa público só mostra estes).
+_PALAVRAS_DE_EMPRESA = frozenset("""
+ltda ltda. me eireli epp mei sa s/a s.a. cia companhia comercio comércio industria indústria
+buffet bufê escola colegio colégio creche faculdade universidade instituto condominio condomínio
+residencial clube parque espaco espaço festa festas eventos evento salao salão restaurante lanchonete
+bar pub lounge sushi pizzaria hamburgueria cafe café padaria hotel pousada resort shopping mall
+arena academia ginasio ginásio igreja paroquia paróquia prefeitura secretaria associacao associação
+fundacao fundação loja lojas mercado supermercado brinquedos brinquedoteca kids play playground
+diversoes diversões entretenimento center centro club games boliche camping chacara chácara sitio sítio
+fazenda hostel motel ong grupo rede franquia studio estudio estúdio
+""".split())
+
+
+def parece_nome_de_empresa(nome: str) -> bool:
+    """O nome tem uma palavra de casa (Buffet, Escola, Ltda, Sushi...)?"""
+    import unicodedata
+
+    palavras = [p.strip(".,;:()-–—") for p in (nome or "").lower().split()]
+    sem_acento = [
+        "".join(c for c in unicodedata.normalize("NFD", p) if unicodedata.category(c) != "Mn")
+        for p in palavras
+    ]
+    return any(p in _PALAVRAS_DE_EMPRESA for p in palavras + sem_acento)
+
+
 class Cliente(Prime):
     """Quem compra, aluga ou recebe manutenção da Lazer & Sport.
 
@@ -230,6 +255,30 @@ class Cliente(Prime):
         Sem estabelecimento cadastrado, o nome do cliente é o que há.
         """
         return (self.nome_estabelecimento or "").strip() or (self.nome_cliente or "").strip()
+
+    @property
+    def nome_no_site(self) -> str:
+        """O nome que pode aparecer para QUALQUER pessoa (mapa, rodapé); "" quando não há.
+
+        NOME DE PESSOA NÃO VAI PARA O SITE. O alfinete de um contrato
+        importado mostrou, no mapa público, o nome da compradora -- uma
+        pessoa física, com CPF. O pedido: "evitando expor os nomes dos
+        clientes". Aqui só sai o que é nome de casa:
+          * o estabelecimento cadastrado;
+          * o nome do cadastro quando ele é de empresa: documento com 14
+            dígitos (CNPJ) ou um nome que se lê como de empresa (Buffet,
+            Escola, Ltda...; ver `parece_nome_de_empresa`).
+        O resto (o nome da pessoa) fica só no painel. Quem chama põe um
+        rótulo genérico no lugar ("Cliente em <cidade>").
+        """
+        estabelecimento = (self.nome_estabelecimento or "").strip()
+        if estabelecimento:
+            return estabelecimento
+        nome = (self.nome_cliente or "").strip()
+        digitos = "".join(c for c in (self.documento or "") if c.isdigit())
+        if nome and (len(digitos) == 14 or parece_nome_de_empresa(nome)):
+            return nome
+        return ""
 
     @property
     def contato_curto(self) -> str:

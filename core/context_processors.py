@@ -127,7 +127,7 @@ def clientes_rodape(request):
                 .filter(ativo=True)
                 .exclude(logo__isnull=True)
                 .exclude(logo="")
-                .only("id", "nome_cliente", "logo", "criacao")
+                .only("id", "nome_cliente", "nome_estabelecimento", "documento", "logo", "criacao")
                 .order_by("-criacao", "-id")[:6]
             )
             cache.set(CHAVE_CLIENTES_RODAPE, dados, TTL_GLOBAL)

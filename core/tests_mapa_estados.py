@@ -203,3 +203,50 @@ class MalhaDosEstadosTests(TestCase):
                             self.assertTrue(all(-180 <= x <= 180 for x, _ in anel))
                             saltos = [(a, b) for a, b in zip(anel, anel[1:]) if abs(a[0] - b[0]) > 180]
                             self.assertEqual(saltos, [])
+
+
+class NomeNoMapaTests(TestCase):
+    """ "Evitando expor os nomes dos clientes": no site só aparece nome de casa."""
+
+    def cliente(self, **dados):
+        from sistema_interno.models import Cliente, EnderecoCliente
+
+        cliente = Cliente.objects.create(publicar_no_mapa=True, **dados)
+        EnderecoCliente.objects.create(cliente=cliente, endereco="Praça Central", numero="10", cidade="Barra do Corda",
+                                       estado="MA", latitude="-5.5", longitude="-45.25")
+        return cliente
+
+    def nomes_no_mapa(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        return {p["nome"] for p in self.client.get("/").context["clientes_mapa"]}
+
+    def test_pessoa_fisica_nao_aparece_pelo_nome(self):
+        self.cliente(nome_cliente="Maria Aparecida Souza", documento="123.456.789-09")
+        nomes = self.nomes_no_mapa()
+        self.assertNotIn("Maria Aparecida Souza", nomes)
+        self.assertIn("Cliente em Barra do Corda", nomes)
+        self.assertNotContains(self.client.get("/"), "Maria Aparecida Souza")
+
+    def test_o_estabelecimento_aparece_no_lugar_da_pessoa(self):
+        self.cliente(nome_cliente="Maria Aparecida Souza", documento="123.456.789-09",
+                     nome_estabelecimento="Open Sushi Lounge")
+        nomes = self.nomes_no_mapa()
+        self.assertIn("Open Sushi Lounge", nomes)
+        self.assertNotIn("Maria Aparecida Souza", nomes)
+
+    def test_nome_de_empresa_aparece(self):
+        self.cliente(nome_cliente="Doces Finos Comércio", documento="11.222.333/0001-81")
+        self.cliente(nome_cliente="Buffet Alegria")  # sem documento, mas nome de casa
+        nomes = self.nomes_no_mapa()
+        self.assertIn("Doces Finos Comércio", nomes)
+        self.assertIn("Buffet Alegria", nomes)
+
+    def test_regra_do_nome_de_empresa(self):
+        from sistema_interno.models import parece_nome_de_empresa
+
+        for nome in ("Escola Pequeno Príncipe", "OPEN SPICE SUSHI LOUNGE LTDA", "Condomínio Jardins", "Bufê da Ana"):
+            self.assertTrue(parece_nome_de_empresa(nome), nome)
+        for nome in ("Nahym Ribeiro Abas", "Maria Aparecida Souza", "Carlos Eduardo"):
+            self.assertFalse(parece_nome_de_empresa(nome), nome)
