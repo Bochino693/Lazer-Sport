@@ -3330,6 +3330,82 @@ Dependência nova: rjsmin (requirements.txt).
    (TelaGuiadaTests). Conferido no Chromium (PC 1440 e iPhone 13, claro e
    escuro) com os documentos 07, 10 e 11.
 
+   AJUSTE 4: O CONTRATO DE COMPRA E VENDA DA CASA E A DATA DO DOCUMENTO.
+   Pedido: "no caso do leitor de pdf e word, ele não consegue ler os
+   brinquedos muito bem ... tinha uma cama elástica, matrix e etc em um
+   doc, ele criou um objeto volume com o valor total, isso não deve
+   acontecer, os produtos geralmente ficam numa tabela bem simples de
+   identificar ... você deve puxar a informação da data e hora do
+   documento; se for menos que 3 dias do atual, você deve pedir pra quando
+   é a data, pq tem documento de 2016, 2012 para a gente pôr ... deixe
+   mais fácil para a moça". O contrato de verdade do cliente NUNCA entra no
+   repositório: o corpus tem documentos feitos à semelhança dele, com
+   comprador inventado.
+     * O COMPRADOR É O CLIENTE. "COMPRADOR Fulana" (e CONTRATANTE,
+       CLIENTE, LOCATÁRIO, ADQUIRENTE), com ou sem dois-pontos, vale mesmo
+       com primeiro nome fora da lista do IBGE. O lado da casa
+       (identificar.lado_da_casa): do VENDEDOR / CONTRATADA / LOCADORA /
+       "na qualidade de fornecedor" até o papel do cliente ("do outro
+       lado"), atravessando as linhas que o PDF quebra (a frase só acaba
+       no ponto que não é abreviação: "sob o n." continua), e a assinatura
+       "Proprietário" num contrato com VENDEDOR. Nesse trecho nada é do
+       cliente: quem representa a fábrica, o RG, o CNPJ, e o endereço
+       residencial dele (a rua e o CEP de casa dele não viram mais o
+       endereço do cliente). Rótulo com ponto e vírgula ("CPF ou CNPJ;
+       ...", "Endereço completo; Rua das Acácias, 250, Centro, Ribeirão
+       Preto/SP") é rótulo; o endereço só com vírgulas é separado em rua,
+       número, bairro, cidade e UF.
+     * OS EQUIPAMENTOS. No PDF, a tabela de DUAS colunas ("Quantidade |
+       Equipamento") é tabela de itens quando os dois pedaços são nomes de
+       coluna; o "Valor" que boia sozinho embaixo dela não gruda no último
+       item. Equipamento sem preço no documento leva o preço do catálogo,
+       marcado; o que o catálogo não tem ("Matrix") fica com o nome do
+       documento, para a pessoa escolher o produto (nunca some). Na
+       tabela "Equipamento"/"Brinquedo", ou no contrato de equipamento de
+       entretenimento, o brinquedo ganha da peça de reposição ("Boliche
+       kids" é o Strike Kids Boliche, não a Bola de Boliche Kids): a peça
+       só ganha com o nome praticamente igual.
+     * O TOTAL É O TOTAL, NUNCA UM ITEM. "...no valor total R$ 38.500,00
+       (trinta e oito mil...)" -- na mesma linha ou quebrada pelo PDF
+       ("no valor" / "total R$ ...") -- é o total do documento. Com os
+       equipamentos sem preço, esse total vem escolhido como VALOR FINAL
+       (a pessoa pode trocar pela soma), sem alerta vermelho. Frase de
+       cláusula nunca vira item: fora da tabela (parágrafo, IA, citação),
+       a linha só entra se a descrição tem cara de produto, e, com tabela
+       de itens no documento, nunca com o valor igual ao total (alerta
+       amarelo "Linha que não virou item"). "As despesas com frete ... são
+       por conta do COMPRADOR" dá frete zero e "Frete por conta do
+       cliente".
+     * A DATA DO DOCUMENTO. Escrita: "Data: ...", a data de carta ("São
+       Paulo,11 de novembro de 2026", com ou sem espaço; "Guarulhos,
+       09/11/2026") e a de contrato ("aos 02 dias do mês de julho de
+       2012"). Do arquivo: criado/salvo (docProps/core.xml do Word, o
+       CreationDate/ModDate do PDF) -- só como OPÇÃO, nunca sozinha (o
+       modelo salvo de novo hoje diz "hoje"; o modelo criado em 2013 diz
+       2013). Sem data escrita, ou com ela a menos de três dias de hoje, o
+       modal PERGUNTA primeiro: "De quando é este documento?", com botões
+       grandes (cada data achada, dizendo de onde veio, e hoje) e "Outra
+       data". A resposta fica na sessão da importação. A data vai para
+       Orcamento.data_documento e para Cliente.cliente_desde (a mais
+       antiga que se conhece; migração 0059_importacao_data_documento,
+       só esquema), e a validade conta dela: o contrato de 2016 vale até
+       2016 + 5 dias (a validade de antes de hoje é aceita, mas nunca antes
+       da data do documento). O orçamento exige a data; só o cliente, não.
+       A lista de orçamentos mostra "Documento de dd/mm/aaaa", a janela do
+       orçamento também, e a lista de clientes "Cliente desde".
+     * MAIS FÁCIL PARA A MOÇA: o modal vai em passos -- Data (só quando
+       precisa), Cliente, Itens e caminho --, cada um com o que está certo
+       numa linha de ✓ e o que falta em destaque, botões grandes,
+       "Continuar" e "Voltar". A data também fica na barra de cima da tela
+       guiada, para trocar.
+   Corpus: 14 o contrato com três equipamentos sem preço (um fora do
+   catálogo), comprador de primeiro nome raro e a data de agora; 15 o PDF
+   do 14; 16 a tabela com "Valor" e a venda de 2016; 17 um equipamento só,
+   2012, a data escrita como em contrato. Testes: tests_importacao_word.py
+   (ContratoDeCompraEVendaTests, DataDoDocumentoTests) e
+   tests_importacao_corpus.py. Conferido no Chromium (PC 1440 e iPhone 13,
+   claro e escuro).
+
 72) OS ADESIVOS: UM OBJETO SÓ, COM OS DOIS 3D (E AS FOTOS MAIS VIVAS, COM OS FUROS DE VERDADE)
    Pedidos, na ordem: "os dois devem se tornar o mesmo objeto, como um
    adesivo diferente"; "na verdade vc deve juntar o basquete home com o

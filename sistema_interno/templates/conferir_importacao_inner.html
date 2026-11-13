@@ -78,6 +78,19 @@
               {% endif %}
             </span>
           </label>
+          {# A data do documento: o primeiro passo do modal, e aqui para trocar. #}
+          <div class="ls-imp-data-documento" id="caixaDataDocumento">
+            <label class="form-label" for="campoDataDocumento">
+              <i class="bi bi-calendar-event" aria-hidden="true"></i> Data do documento
+              <span class="ls-imp-obrig" data-so-orcamento aria-hidden="true"{% if envio.modo == "cliente" %} hidden{% endif %}>*</span>
+            </label>
+            <input type="date" class="form-control" id="campoDataDocumento" name="data_documento"
+                   value="{{ envio.data_documento }}" min="1990-01-01" max="{{ hoje|date:'Y-m-d' }}">
+            {% if proposta.data.valor and envio.data_documento == proposta.data.valor and proposta.data.origem %}
+            <span class="ls-imp-tag">{{ proposta.data.origem }}</span>
+            {% endif %}
+            <p class="ls-imp-nota">Entra no orçamento e na conta da validade{% if not proposta.data.escolhida and proposta.data.perguntar %}; confira: {{ proposta.data.motivo|lower }}{% endif %}</p>
+          </div>
         </div>
       </section>
 
@@ -544,7 +557,7 @@
 {% endcomment %}
 <div class="ls-imp-decisao" id="decisaoImportacao" hidden{% if decidir %} data-abrir="1"{% endif %}>
   <div class="ls-imp-decisao-fundo" data-fechar-decisao></div>
-  <div class="ls-imp-decisao-cartao" role="dialog" aria-modal="true" aria-labelledby="decisaoTitulo" aria-describedby="decisaoLido" tabindex="-1">
+  <div class="ls-imp-decisao-cartao" role="dialog" aria-modal="true" aria-labelledby="decisaoTitulo" tabindex="-1">
     <div class="ls-imp-folha-alca" id="decisaoAlca" aria-hidden="true"><span></span></div>
     <header class="ls-imp-decisao-topo">
       <div>
@@ -556,74 +569,146 @@
       </button>
     </header>
 
-    <ul class="ls-imp-decisao-lido" id="decisaoLido" aria-label="O que foi lido do documento">
-      {% for linha in decisao.linhas %}
-      <li class="{% if linha.falta %}falta{% if linha.obrigatorio %} obrigatorio{% endif %}{% else %}ok{% endif %}" data-linha="{{ linha.chave }}">
-        <i class="bi {% if linha.falta %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i>
-        <span class="ls-imp-decisao-rotulo">{{ linha.rotulo }}</span>
-        <span class="ls-imp-decisao-valor">{% if linha.falta %}—{% else %}{{ linha.valor }}{% endif %}</span>
-        {% if linha.falta %}<span class="ls-imp-chip-falta">falta{% if linha.obrigatorio %} · obrigatório{% endif %}</span>
-        {% elif linha.origem %}<span class="ls-imp-tag">{{ linha.origem }}</span>{% endif %}
-      </li>
+    {# Os passos: a data (só quando é preciso perguntar), o cliente, os itens e o caminho. #}
+    <ol class="ls-imp-passos" id="decisaoPassos" aria-label="Passos">
+      {% for passo in decisao.passos %}
+      <li data-marca-passo="{{ passo }}"><span class="ls-imp-passo-numero">{{ forloop.counter }}</span>
+        {% if passo == "data" %}Data{% elif passo == "cliente" %}Cliente{% else %}Itens e caminho{% endif %}</li>
       {% endfor %}
-    </ul>
+    </ol>
 
-    {% if decisao.ja_cadastrado %}
-    <p class="ls-imp-decisao-aviso cadastrado" id="decisaoJaCadastrado">
-      <i class="bi bi-person-check-fill" aria-hidden="true"></i>
-      <span>Já cadastrado: <strong>{{ decisao.ja_cadastrado.nome }}</strong> (#{{ decisao.ja_cadastrado.id }}){% if decisao.ja_cadastrado.motivo %} — {{ decisao.ja_cadastrado.motivo }}{% endif %}. Só o que faltar no cadastro é completado.</span>
-    </p>
+    {% if decisao.data.perguntar %}
+    <section class="ls-imp-passo" data-passo="data" aria-labelledby="passoDataTitulo">
+      <h3 class="ls-imp-passo-titulo" id="passoDataTitulo" tabindex="-1"><i class="bi bi-calendar-event" aria-hidden="true"></i> De quando é este documento?</h3>
+      <p class="ls-imp-passo-texto">{{ decisao.data.motivo }} A data entra no orçamento e na validade{% if not decisao.data.opcoes %}; escreva-a abaixo{% endif %}.</p>
+      <form method="post" class="ls-imp-datas" id="formularioData">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="data">
+        {% if decisao.data.opcoes %}
+        <div class="ls-imp-datas-opcoes" role="group" aria-label="Datas encontradas">
+          {% for opcao in decisao.data.opcoes %}
+          <button type="submit" name="data_opcao" value="{{ opcao.valor }}" formnovalidate
+                  class="ls-imp-data-opcao{% if opcao.valor == decisao.data.valor %} sugerida{% endif %}">
+            <b>{{ opcao.rotulo }}</b>
+            <span>{% if opcao.origem == "hoje" %}hoje{% else %}{{ opcao.origem }}{% endif %}</span>
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <label class="ls-imp-data-outra-rotulo" for="dataOutra">Outra data</label>
+        <div class="ls-imp-data-outra">
+          <input type="date" class="form-control" id="dataOutra" name="data_outra" min="1990-01-01" max="{{ hoje|date:'Y-m-d' }}" required>
+          <button type="submit" class="btn btn-primary">Usar esta data</button>
+        </div>
+      </form>
+    </section>
     {% endif %}
-    {% if decisao.repetido %}
-    <p class="ls-imp-decisao-aviso repetido" id="decisaoRepetido">
-      <i class="bi bi-files" aria-hidden="true"></i>
-      <span>Já existe o orçamento #{{ decisao.repetido.pk }} com os mesmos itens ({{ decisao.repetido.data }}).
-        <a href="{% url 'orcamentos_inner' %}?editar={{ decisao.repetido.pk }}" target="_blank" rel="noopener">Abrir o existente</a></span>
-    </p>
-    {% endif %}
 
-    <div class="ls-imp-decisao-caminhos">
-      <section class="ls-imp-caminho-cartao{% if decisao.orcamento.recomendado %} recomendado{% endif %}" data-caminho="orcamento" aria-labelledby="caminhoOrcamentoTitulo">
-        {% if decisao.orcamento.recomendado %}<span class="ls-imp-selo-recomendado">Recomendado</span>{% endif %}
-        <h3 id="caminhoOrcamentoTitulo"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Cadastrar cliente e criar orçamento</h3>
-        <p class="ls-imp-caminho-texto" id="textoPergunta">
-          {% if decisao.orcamento.brinquedos %}Encontrei {{ decisao.orcamento.brinquedos|length }} brinquedo{{ decisao.orcamento.brinquedos|length|pluralize }} no documento ({{ decisao.orcamento.brinquedos|join:", " }}){% if decisao.orcamento.fora_do_catalogo %} e mais {{ decisao.orcamento.fora_do_catalogo }} ite{{ decisao.orcamento.fora_do_catalogo|pluralize:"m,ns" }} fora do catálogo{% endif %}. Deseja criar um orçamento a partir do documento?
-          {% elif decisao.orcamento.itens %}Encontrei {{ decisao.orcamento.itens }} ite{{ decisao.orcamento.itens|pluralize:"m,ns" }} no documento. Deseja criar um orçamento a partir do documento?
-          {% else %}O documento não traz itens: o orçamento é montado na tela.{% endif %}
-        </p>
-        {% if decisao.orcamento.itens %}
-        <p class="ls-imp-caminho-numeros"><b>{{ decisao.orcamento.itens }} ite{{ decisao.orcamento.itens|pluralize:"m,ns" }}</b>{% if decisao.orcamento.total %} · <b>R$ {{ decisao.orcamento.total }}</b>{% endif %}</p>
-        {% endif %}
-        {% if decisao.orcamento.pronto %}
-        <button type="button" class="btn btn-success ls-imp-caminho-botao" data-decidir="orcamento" data-acao="criar" id="criarAgoraOrcamento">
-          <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i> Criar agora
-        </button>
-        <button type="button" class="ls-imp-caminho-revisar" data-decidir="orcamento" data-acao="revisar">Revisar antes</button>
-        {% else %}
-        <p class="ls-imp-caminho-faltam"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Falta: {{ decisao.orcamento.faltam|join:" · " }}{% if decisao.orcamento.quantas_faltam > decisao.orcamento.faltam|length %} e mais{% endif %}</p>
-        <button type="button" class="btn btn-primary ls-imp-caminho-botao" data-decidir="orcamento" data-acao="revisar" id="revisarOrcamento">
-          Completar o que falta <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
-        </button>
-        {% endif %}
-      </section>
+    <section class="ls-imp-passo" data-passo="cliente" aria-labelledby="passoClienteTitulo"{% if decisao.data.perguntar %} hidden{% endif %}>
+      <h3 class="ls-imp-passo-titulo" id="passoClienteTitulo" tabindex="-1"><i class="bi bi-person-vcard" aria-hidden="true"></i> O cliente</h3>
+      {% if decisao.linhas_ok %}
+      <ul class="ls-imp-lido-ok" aria-label="Lido do documento">
+        {% for linha in decisao.linhas_ok %}
+        <li class="ok" data-linha="{{ linha.chave }}" title="{{ linha.rotulo }}{% if linha.origem %} — {{ linha.origem }}{% endif %}">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <span class="visually-hidden">{{ linha.rotulo }}: </span>{{ linha.valor }}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <ul class="ls-imp-decisao-lido" id="decisaoLido" aria-label="O que falta do cliente">
+        {% for linha in decisao.linhas_falta %}
+        <li class="falta{% if linha.obrigatorio %} obrigatorio{% endif %}" data-linha="{{ linha.chave }}">
+          <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+          <span class="ls-imp-decisao-rotulo">{{ linha.rotulo }}</span>
+          <span class="ls-imp-chip-falta">falta{% if linha.obrigatorio %} · obrigatório{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if decisao.ja_cadastrado %}
+      <p class="ls-imp-decisao-aviso cadastrado" id="decisaoJaCadastrado">
+        <i class="bi bi-person-check-fill" aria-hidden="true"></i>
+        <span>Já cadastrado: <strong>{{ decisao.ja_cadastrado.nome }}</strong> (#{{ decisao.ja_cadastrado.id }}){% if decisao.ja_cadastrado.motivo %} — {{ decisao.ja_cadastrado.motivo }}{% endif %}. Só o que faltar no cadastro é completado.</span>
+      </p>
+      {% endif %}
 
-      <section class="ls-imp-caminho-cartao{% if decisao.cliente.recomendado %} recomendado{% endif %}" data-caminho="cliente" aria-labelledby="caminhoClienteTitulo">
-        {% if decisao.cliente.recomendado %}<span class="ls-imp-selo-recomendado">Recomendado</span>{% endif %}
-        <h3 id="caminhoClienteTitulo"><i class="bi bi-person-plus" aria-hidden="true"></i> Só cadastrar o cliente</h3>
-        <p class="ls-imp-caminho-texto">{% if decisao.ja_cadastrado %}O cadastro que já existe é completado com o documento{% else %}O cliente é cadastrado com os dados lidos{% endif %}{% if envio.publicar_no_mapa %} e entra no mapa do site{% endif %}. Nenhum orçamento é criado.</p>
-        {% if decisao.cliente.pronto %}
-        <button type="button" class="btn {% if decisao.cliente.recomendado %}btn-success{% else %}btn-outline-success{% endif %} ls-imp-caminho-botao" data-decidir="cliente" data-acao="criar" id="criarAgoraCliente">
-          <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i> Criar agora
+      <div class="ls-imp-passo-acoes">
+        {% if decisao.data.perguntar %}<button type="button" class="ls-imp-passo-voltar" data-ir-passo="data"><i class="bi bi-arrow-left-short" aria-hidden="true"></i> Voltar</button>{% endif %}
+        <button type="button" class="btn btn-primary ls-imp-passo-seguir" data-ir-passo="itens" id="seguirParaItens">
+          Continuar <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
         </button>
-        <button type="button" class="ls-imp-caminho-revisar" data-decidir="cliente" data-acao="revisar">Revisar antes</button>
-        {% else %}
-        <p class="ls-imp-caminho-faltam"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Falta: {{ decisao.cliente.faltam|join:" · " }}</p>
-        <button type="button" class="btn btn-primary ls-imp-caminho-botao" data-decidir="cliente" data-acao="revisar" id="revisarCliente">
-          Completar o que falta <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
-        </button>
-        {% endif %}
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <section class="ls-imp-passo" data-passo="itens" aria-labelledby="passoItensTitulo" hidden>
+      <h3 class="ls-imp-passo-titulo" id="passoItensTitulo" tabindex="-1"><i class="bi bi-box-seam" aria-hidden="true"></i> {% if decisao.itens %}Os itens do documento{% else %}O que fazer?{% endif %}</h3>
+      {% if decisao.itens %}
+      <ul class="ls-imp-itens-lidos" aria-label="Itens lidos">
+        {% for item in decisao.itens %}
+        <li class="{% if item.faltas %}falta{% else %}ok{% endif %}">
+          <i class="bi {% if item.faltas %}bi-exclamation-circle-fill{% else %}bi-check-circle-fill{% endif %}" aria-hidden="true"></i>
+          <span class="ls-imp-item-lido-nome"><b>{{ item.quantidade }} ×</b> {{ item.nome }}</span>
+          {% if item.faltas %}<span class="ls-imp-chip-falta">{{ item.faltas|join:" · " }}</span>
+          {% elif item.preco %}<span class="ls-imp-tag">R$ {{ item.preco }}{% if item.do_catalogo %} · catálogo{% endif %}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if decisao.repetido %}
+      <p class="ls-imp-decisao-aviso repetido" id="decisaoRepetido">
+        <i class="bi bi-files" aria-hidden="true"></i>
+        <span>Já existe o orçamento #{{ decisao.repetido.pk }} com os mesmos itens ({{ decisao.repetido.data }}).
+          <a href="{% url 'orcamentos_inner' %}?editar={{ decisao.repetido.pk }}" target="_blank" rel="noopener">Abrir o existente</a></span>
+      </p>
+      {% endif %}
+
+      <div class="ls-imp-decisao-caminhos">
+        <section class="ls-imp-caminho-cartao{% if decisao.orcamento.recomendado %} recomendado{% endif %}" data-caminho="orcamento" aria-labelledby="caminhoOrcamentoTitulo">
+          {% if decisao.orcamento.recomendado %}<span class="ls-imp-selo-recomendado">Recomendado</span>{% endif %}
+          <h3 id="caminhoOrcamentoTitulo"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Cadastrar cliente e criar orçamento</h3>
+          <p class="ls-imp-caminho-texto" id="textoPergunta">
+            {% if decisao.orcamento.brinquedos %}Encontrei {{ decisao.orcamento.brinquedos|length }} brinquedo{{ decisao.orcamento.brinquedos|length|pluralize }} no documento ({{ decisao.orcamento.brinquedos|join:", " }}){% if decisao.orcamento.fora_do_catalogo %} e mais {{ decisao.orcamento.fora_do_catalogo }} ite{{ decisao.orcamento.fora_do_catalogo|pluralize:"m,ns" }} fora do catálogo{% endif %}. Deseja criar um orçamento a partir do documento?
+            {% elif decisao.orcamento.itens %}Encontrei {{ decisao.orcamento.itens }} ite{{ decisao.orcamento.itens|pluralize:"m,ns" }} no documento. Deseja criar um orçamento a partir do documento?
+            {% else %}O documento não traz itens: o orçamento é montado na tela.{% endif %}
+          </p>
+          {% if decisao.orcamento.itens %}
+          <p class="ls-imp-caminho-numeros"><b>{{ decisao.orcamento.itens }} ite{{ decisao.orcamento.itens|pluralize:"m,ns" }}</b>{% if decisao.orcamento.total %} · <b>R$ {{ decisao.orcamento.total }}</b>{% endif %}</p>
+          {% endif %}
+          {% if decisao.orcamento.pronto %}
+          <button type="button" class="btn btn-success ls-imp-caminho-botao" data-decidir="orcamento" data-acao="criar" id="criarAgoraOrcamento">
+            <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i> Criar agora
+          </button>
+          <button type="button" class="ls-imp-caminho-revisar" data-decidir="orcamento" data-acao="revisar">Revisar antes</button>
+          {% else %}
+          <p class="ls-imp-caminho-faltam"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Falta: {{ decisao.orcamento.faltam|join:" · " }}{% if decisao.orcamento.quantas_faltam > decisao.orcamento.faltam|length %} e mais{% endif %}</p>
+          <button type="button" class="btn btn-primary ls-imp-caminho-botao" data-decidir="orcamento" data-acao="revisar" id="revisarOrcamento">
+            Completar o que falta <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+          </button>
+          {% endif %}
+        </section>
+
+        <section class="ls-imp-caminho-cartao{% if decisao.cliente.recomendado %} recomendado{% endif %}" data-caminho="cliente" aria-labelledby="caminhoClienteTitulo">
+          {% if decisao.cliente.recomendado %}<span class="ls-imp-selo-recomendado">Recomendado</span>{% endif %}
+          <h3 id="caminhoClienteTitulo"><i class="bi bi-person-plus" aria-hidden="true"></i> Só cadastrar o cliente</h3>
+          <p class="ls-imp-caminho-texto">{% if decisao.ja_cadastrado %}O cadastro que já existe é completado com o documento{% else %}O cliente é cadastrado com os dados lidos{% endif %}{% if envio.publicar_no_mapa %} e entra no mapa do site{% endif %}. Nenhum orçamento é criado.</p>
+          {% if decisao.cliente.pronto %}
+          <button type="button" class="btn {% if decisao.cliente.recomendado %}btn-success{% else %}btn-outline-success{% endif %} ls-imp-caminho-botao" data-decidir="cliente" data-acao="criar" id="criarAgoraCliente">
+            <i class="bi bi-lightning-charge-fill me-1" aria-hidden="true"></i> Criar agora
+          </button>
+          <button type="button" class="ls-imp-caminho-revisar" data-decidir="cliente" data-acao="revisar">Revisar antes</button>
+          {% else %}
+          <p class="ls-imp-caminho-faltam"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Falta: {{ decisao.cliente.faltam|join:" · " }}</p>
+          <button type="button" class="btn btn-primary ls-imp-caminho-botao" data-decidir="cliente" data-acao="revisar" id="revisarCliente">
+            Completar o que falta <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+          </button>
+          {% endif %}
+        </section>
+      </div>
+
+      <div class="ls-imp-passo-acoes">
+        <button type="button" class="ls-imp-passo-voltar" data-ir-passo="cliente"><i class="bi bi-arrow-left-short" aria-hidden="true"></i> Voltar</button>
+      </div>
+    </section>
   </div>
 </div>
 

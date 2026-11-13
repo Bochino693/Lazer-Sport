@@ -710,6 +710,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             ),
             "blocos_aprovados": getattr(orcamento, "blocos_aprovados", False),
             "validade": orcamento.validade.isoformat() if orcamento.validade else "",
+            # A data do documento importado (o contrato de 2016 que entrou
+            # hoje): a janela mostra embaixo da validade.
+            "data_documento": (
+                orcamento.data_documento.strftime("%d/%m/%Y") if orcamento.data_documento else ""
+            ),
             "desconto": f"{orcamento.desconto:.2f}".replace(".", ","),
             "frete": f"{orcamento.frete:.2f}".replace(".", ","),
             "valor_final": (

@@ -573,8 +573,14 @@ def campo_do_rotulo(rotulo: str) -> str:
 
 
 def _par_rotulo_valor(texto: str):
-    """"Rótulo: valor" -> (campo, valor, posição do valor). Ou None."""
-    achado = re.match(r"^\s*([^:\n]{1,42}?)\s*[:：]\s*(.+)$", texto)
+    """"Rótulo: valor" -> (campo, valor, posição do valor). Ou None.
+
+    O ponto e vírgula também separa ("CPF ou CNPJ; 123.456.789-09",
+    "Endereço completo; Rua..."): é como o modelo de contrato da casa
+    escreve. Vale só quando o que vem antes é um rótulo conhecido -- o
+    resto do texto com ";" segue sendo texto.
+    """
+    achado = re.match(r"^\s*([^:;\n]{1,42}?)\s*[:：;]\s*(.+)$", texto)
     if not achado:
         return None
     campo = campo_do_rotulo(achado.group(1))
@@ -830,6 +836,79 @@ def _campo_do_resumo(rotulo: str) -> str:
 
 
 # ======================================================================
+# O VALOR TOTAL NA FRASE DO CONTRATO
+# ======================================================================
+#: "no valor total R$ 38.500,00 (trinta e oito mil...)", "pelo valor de R$
+#: 3.500,00", "pela quantia de R$ ...". O rótulo no meio da frase não serve
+#: para `_segmentos_de_dinheiro` (lá ele só vale no começo da linha), e o
+#: valor pode ficar na linha de baixo quando o PDF quebra a frase.
+_EXPRESSAO_DE_VALOR = (
+    r"\b(?:n[oa]|pel[oa]|o|a|de|com)\s+(?P<qual>valor\s+(?:total|global)|preco\s+total|valor|"
+    r"quantia|importancia)\s+(?:de\s+|em\s+)?"
+)
+_VALOR_EM_FRASE = re.compile(_EXPRESSAO_DE_VALOR + r"(?:r\s*\$\s*)?$")
+_VALOR_EM_FRASE_MEIO = re.compile(_EXPRESSAO_DE_VALOR + r"(?=r\s*\$|\d)")
+#: "no valor de R$ 300" sozinho pode ser o preço de UM item numa frase
+#: ("Pula-pula no valor de R$ 300,00"). Só é o total do documento com
+#: "total"/"global"/"quantia" -- ou numa frase de contrato.
+_FRASE_DE_CONTRATO = re.compile(
+    r"\b(vende|vendido|compra|contrat\w*|clausula|instrumento|comprador\w*|vendedor\w*|"
+    r"pagar[aá]?|pagamento|objeto)\b"
+)
+
+
+def _expressao_de_total(sem: str, achado) -> bool:
+    if achado.group("qual") != "valor":
+        return True
+    return bool(_FRASE_DE_CONTRATO.search(sem[:achado.start()]))
+
+
+def frase_de_total(texto: str) -> bool:
+    """A linha diz o total em frase ("...no valor total R$ 38.500,00")?"""
+    sem = sem_acento(texto)
+    for padrao in (_VALOR_EM_FRASE_MEIO, _VALOR_EM_FRASE):
+        achado = padrao.search(sem.rstrip(" :") if padrao is _VALOR_EM_FRASE else sem)
+        if achado and _expressao_de_total(sem, achado):
+            return True
+    return False
+
+
+MOTIVO_TOTAL_DO_CONTRATO = "valor total escrito no contrato"
+
+
+def total_em_frase(corpo: list[dict]) -> dict | None:
+    """O total do contrato escrito em frase, com a linha de onde saiu.
+
+    Só a PRIMEIRA ocorrência conta, e só em parágrafo (tabela tem leitura
+    própria). O valor vem logo depois da expressão -- na mesma linha ou na
+    de baixo, quando o PDF quebra a frase ("...no valor total R$" /
+    "38.500,00 (trinta e oito mil...)", ou "...no valor" / "total R$
+    38.500,00"). A fonte é a linha onde o NÚMERO está.
+    """
+    for posicao, linha in enumerate(corpo):
+        if linha["tabela"]:
+            continue
+        texto = linha["texto"]
+        seguinte = corpo[posicao + 1] if posicao + 1 < len(corpo) else None
+        junto = texto
+        if seguinte is not None and not seguinte["tabela"]:
+            junto = texto + " " + seguinte["texto"]
+        sem = sem_acento(junto)
+        for achado in _VALOR_EM_FRASE_MEIO.finditer(sem):
+            if achado.start() >= len(texto) or not _expressao_de_total(sem, achado):
+                continue
+            valor = next((v for v in valores_em_reais(junto[achado.end():], coluna_de_dinheiro=True)
+                          if v["valor"] is not None and v["inicio"] < 6), None)
+            if not valor:
+                continue
+            onde = achado.end() + valor["inicio"]
+            fonte = linha if onde < len(texto) else seguinte
+            return _campo(valor["valor"], fonte, texto_original=valor["texto"],
+                          motivo=MOTIVO_TOTAL_DO_CONTRATO)
+    return None
+
+
+# ======================================================================
 # ITENS EM PARÁGRAFO (só quando a IA não está disponível)
 # ======================================================================
 _ITEM_EM_PARAGRAFO = re.compile(
@@ -837,6 +916,30 @@ _ITEM_EM_PARAGRAFO = re.compile(
     r"(?:(?P<qtd>\d{1,4})\s*(?:x|un\.?|unid\.?|unidades?|pcs?\.?|pecas?|diarias?)\s+(?:de\s+)?)?"
     r"(?P<desc>[^\d\s].*?)"
 )
+
+
+#: Palavras que mostram que a linha é cláusula, fecho ou conta -- nunca
+#: nome de produto. "...descrito na Cláusula 1ª, no valor total R$ 38.500"
+#: é o preço do contrato inteiro, e virava uma linha avulsa com o total.
+_NAO_E_PRODUTO = re.compile(
+    r"\b(clausula|contrat\w*|instrumento|comprador\w*|vendedor\w*|locatari\w*|locador\w*|"
+    r"valor\s+total|total|subtotal|pagamento|parcelas?|quantia|importancia|objeto\s+deste|"
+    r"vende|vendido|reais|testemunhas?|firmam|as\s+partes)\b"
+)
+
+
+def parece_produto(descricao: str) -> bool:
+    """A descrição tem cara de nome de produto -- curta, sem frase de contrato?
+
+    "Cama elástica 3 m com rede" sim; "COMPRADOR o equipamento objeto deste
+    contrato, descrito na Cláusula 1ª, no valor total" não.
+    """
+    texto = espacos(descricao or "").strip(" -–—:.,;")
+    if len(_normalizar(texto)) < 3 or len(texto) > 80:
+        return False
+    if len(texto.split()) > 10:
+        return False
+    return not _NAO_E_PRODUTO.search(sem_acento(texto))
 
 
 def itens_em_paragrafos(linhas: list[dict]) -> list[dict]:
@@ -858,6 +961,8 @@ def itens_em_paragrafos(linhas: list[dict]) -> list[dict]:
             continue
         if re.search(r"\b(pagamento|parcela|entrada|sinal|validade|prazo|pix|boleto|cpf|cnpj)\b", sem):
             continue
+        if frase_de_total(texto):
+            continue  # "no valor total de R$ ..." é o total, nunca um item
         valores = [v for v in valores_em_reais(texto) if v["valor"] is not None]
         if not valores or len(valores) > 2:
             continue
@@ -868,7 +973,7 @@ def itens_em_paragrafos(linhas: list[dict]) -> list[dict]:
         inicio_desc = achado.start("desc")
         descricao = descricao_bruta[inicio_desc:].strip(" -–—:.…=")
         descricao = re.sub(r"[.…_]{3,}$", "", descricao).strip(" -–—:")
-        if len(_normalizar(descricao)) < 3:
+        if len(_normalizar(descricao)) < 3 or not parece_produto(descricao):
             continue
         quantidade = int(achado.group("qtd")) if achado.group("qtd") else None
         unitario = total = None
@@ -1032,6 +1137,12 @@ _DATA_DE_CARTA = re.compile(
     r"^[a-z .'-]{3,40},\s*(?:(\d{1,2})\s+de\s+(" + "|".join(MESES) + r")\s+de\s+(\d{4})"
     r"|(\d{1,2})/(\d{1,2})/(\d{4}))\.?$"
 )
+#: "aos 11 dias do mês de novembro de 2026" e "aos 11 de novembro de 2026":
+#: o jeito de contrato de datar, no meio da frase de fecho.
+_DATA_DE_CONTRATO = re.compile(
+    r"\baos?\s+(\d{1,2})\s+(?:\([^)]*\)\s+)?(?:dias?\s+do\s+mes\s+de|de)\s+(" + "|".join(MESES) +
+    r")\s+(?:do\s+ano\s+)?de\s+(\d{4})"
+)
 #: Rótulos que dizem "daqui para baixo é o cliente" -- num cabeçalho ou
 #: rodapé, só a parte que tem um destes é lida como dado do cliente.
 _CAMPOS_DE_CLIENTE = ("cliente", "contato", "estabelecimento")
@@ -1099,7 +1210,59 @@ def limpar_nome(texto: str) -> str:
     return capitalizar(nome.strip(" -–—,;/|·•.:"))
 
 
-def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> dict:
+def datas_escritas(linhas: list[dict], pares=None) -> list[dict]:
+    """As datas que dizem QUANDO o documento foi feito, na ordem de confiança.
+
+    Três jeitos, e só eles (a data do evento, da validade ou da entrega
+    não é a data do documento):
+      * o rótulo: "Data: 11/11/2026", "Emissão: 11 de novembro de 2026";
+      * a data de carta, numa linha só: "São Paulo, 11 de novembro de 2026",
+        "São Paulo,11 de novembro de 2026" (sem espaço), "Guarulhos,
+        09/11/2026";
+      * a data de contrato no meio da frase: "aos 11 dias do mês de novembro
+        de 2026".
+    Devolve [{"data", "texto", "linha", "como"}], sem repetir a data.
+    """
+    corpo = [l for l in linhas if l["parte"] in ("corpo", "caixa")]
+    if pares is None:
+        pares = [(par[0], par[1], linha) for linha in corpo for par in [_par_rotulo_valor(linha["texto"])] if par]
+    achadas = []
+    for campo, valor, linha in pares:
+        if campo == "data":
+            for achado in datas(valor)[:1]:
+                achadas.append({"data": achado["data"], "texto": achado["texto"], "linha": linha,
+                                "como": "rotulo"})
+    for linha in corpo:
+        sem = sem_acento(linha["texto"]).strip()
+        achado = _DATA_DE_CARTA.match(sem)
+        if achado:
+            try:
+                if achado.group(1):
+                    data = date(int(achado.group(3)), MESES[achado.group(2)], int(achado.group(1)))
+                else:
+                    data = date(int(achado.group(6)), int(achado.group(5)), int(achado.group(4)))
+            except ValueError:
+                data = None
+            if data:
+                achadas.append({"data": data, "texto": linha["texto"].strip(), "linha": linha, "como": "carta"})
+            continue
+        for achado in _DATA_DE_CONTRATO.finditer(sem):
+            try:
+                data = date(int(achado.group(3)), MESES[achado.group(2)], int(achado.group(1)))
+            except ValueError:
+                continue
+            achadas.append({"data": data, "texto": linha["texto"][achado.start():achado.end()],
+                            "linha": linha, "como": "contrato"})
+    saida, vistas = [], set()
+    for achada in achadas:
+        if achada["data"] not in vistas:
+            vistas.add(achada["data"])
+            saida.append(achada)
+    return saida
+
+
+def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset(), data_fixada=None,
+        trechos_da_casa=None) -> dict:
     """Tudo o que as regras conseguem tirar do documento.
 
     `empresa` traz CNPJ, telefones, e-mails e endereços da Lazer & Sport:
@@ -1192,31 +1355,27 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> d
         return achados
 
     pares = pares_de(corpo)
-    pares_do_cliente = [par for par in pares_de(do_cliente) if par[0] in _CAMPOS_DO_CADASTRO]
+    # O rótulo dentro do trecho do VENDEDOR ("..., residente na Rua X, 411,
+    # Bairro," / "CEP: 01234-000, São Paulo; e, do outro
+    # lado...") é o endereço de quem representa a fábrica: nunca do cliente.
+    trechos_da_casa = trechos_da_casa or {}
+    pares_do_cliente = [
+        par for par in pares_de(do_cliente)
+        if par[0] in _CAMPOS_DO_CADASTRO
+        and not any(a == 0 for a, _ in trechos_da_casa.get(par[2]["id"], ()))
+    ]
 
+    # A data do documento: a escrita nele (rótulo, carta, contrato). A que
+    # a pessoa confirmou na conferência ("De quando é este documento?")
+    # passa na frente -- é dela que contam os "15 dias" da validade.
+    escritas = datas_escritas(linhas, pares)
     data_documento = None
-    for campo, valor, linha in pares:
-        if campo == "data":
-            achadas = datas(valor)
-            if achadas and data_documento is None:
-                data_documento = achadas[0]["data"]
-                guardar("data_documento", _campo(data_documento, linha, texto_original=achadas[0]["texto"]))
-    if data_documento is None:
-        # "São Paulo, 5 de novembro de 2026." ou "Guarulhos, 09/11/2026." --
-        # a data de carta, sem rótulo.
-        for linha in corpo:
-            achado = _DATA_DE_CARTA.match(sem_acento(linha["texto"]).strip())
-            if not achado:
-                continue
-            try:
-                if achado.group(1):
-                    data_documento = date(int(achado.group(3)), MESES[achado.group(2)], int(achado.group(1)))
-                else:
-                    data_documento = date(int(achado.group(6)), int(achado.group(5)), int(achado.group(4)))
-            except ValueError:
-                continue
-            guardar("data_documento", _campo(data_documento, linha, texto_original=linha["texto"]))
-            break
+    if escritas:
+        data_documento = escritas[0]["data"]
+        guardar("data_documento", _campo(data_documento, escritas[0]["linha"],
+                                         texto_original=escritas[0]["texto"]))
+    if data_fixada:
+        data_documento = data_fixada
 
     # ----------------------------------------------- dados do cliente
     for campo, valor, linha in pares_do_cliente:
@@ -1278,7 +1437,17 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> d
     # O endereço numa linha só vira as partes do cadastro. A parte
     # escrita com rótulo próprio ("CEP: ...", "Bairro: ...") vale mais.
     if "endereco" in campos:
-        partes = ler_endereco(campos["endereco"]["valor"])
+        texto_endereco = campos["endereco"]["valor"]
+        leituras = [ler_endereco(texto_endereco)]
+        if "," in texto_endereco:
+            # "Rua das Acácias, 250, Centro, Ribeirão Preto/SP": só vírgulas,
+            # sem traço. A leitura em frase (identificar.py) separa melhor;
+            # vale a que separar mais partes.
+            from .identificar import ler_endereco_livre
+
+            leituras.append(ler_endereco_livre(texto_endereco))
+        partes = max(leituras, key=lambda p: (bool(p["rua"]), sum(
+            bool(p[c]) for c in ("numero", "bairro", "cidade", "uf", "cep"))))
         linha = {"id": campos["endereco"]["fonte"]["id"], "texto": campos["endereco"]["fonte"]["texto"]}
         for nome_parte, campo in _PARTES_DO_ENDERECO:
             if partes[nome_parte]:
@@ -1352,10 +1521,16 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> d
     # "total" ali é o da LINHA, e não o do orçamento. Lido como total do
     # documento, ele brigava com o "Total: R$ 8.534,00" de verdade.
     linhas_de_item = {item["linha_fonte"] for item in itens_em_paragrafos(linhas)}
+    # O total na frase do contrato ("...no valor total R$ 38.500,00"), lido
+    # inteiro antes: a linha de baixo do PDF que começa por "total R$ ..."
+    # é a mesma frase, e não um rótulo de total à parte.
+    em_frase = total_em_frase(corpo)
     for linha in corpo:
         if linha["tabela"]:
             continue  # tabela de itens tem leitura própria, logo abaixo
         if linha["id"] in linhas_de_item:
+            continue
+        if em_frase and linha["id"] == em_frase["fonte"]["id"]:
             continue
         for campo, trecho, _, pedaco in _segmentos_de_dinheiro(linha["texto"]):
             if (linha["id"], campo) in ja_lidas or any(
@@ -1379,15 +1554,44 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> d
                 dinheiro["frete"].append(_campo(Decimal("0.00"), linha, texto_original=pedaco.strip(),
                                                 motivo="frete sem custo escrito no documento"))
 
+    # ------------------ "As despesas com frete ... são por conta do COMPRADOR"
+    if not dinheiro["frete"]:
+        for posicao, linha in enumerate(corpo):
+            if linha["tabela"] or not re.search(r"\bfretes?\b", sem_acento(linha["texto"])):
+                continue
+            trecho = linha["texto"] + " " + (corpo[posicao + 1]["texto"] if posicao + 1 < len(corpo) else "")
+            if FRETE_DO_CLIENTE.search(sem_acento(trecho)):
+                dinheiro["frete"].append(_campo(
+                    Decimal("0.00"), linha, texto_original=espacos(trecho),
+                    motivo="frete por conta do cliente: não entra no total",
+                ))
+                guardar("forma_envio", _campo("Frete por conta do cliente", linha, texto_original=espacos(trecho)))
+                break
+
+    # ------------------------------- o total escrito na frase do contrato
+    # "...vende ao COMPRADOR o equipamento ... no valor total R$ 38.500,00".
+    # Só quando nada mais disse o total: rótulo e tabela valem mais.
+    if em_frase and not dinheiro["total"] and not dinheiro["valor_final"]:
+        dinheiro["total"].append(em_frase)
+
     # ---------------------------------------- documento, telefone, e-mail
     documentos_achados, telefones_achados, emails_achados = [], [], []
+
+    def da_casa(linha, achado):
+        # No contrato, o CNPJ, o RG e o telefone de quem assina pela casa
+        # ("VENDEDOR: ..., representado por ...") não são do cliente.
+        return any(a <= achado["inicio"] < b for a, b in trechos_da_casa.get(linha["id"], ()))
+
     for linha in do_cliente:
         for achado in documentos(linha["texto"]):
-            documentos_achados.append((achado, linha))
+            if not da_casa(linha, achado):
+                documentos_achados.append((achado, linha))
         for achado in telefones(linha["texto"]):
-            telefones_achados.append((achado, linha))
+            if not da_casa(linha, achado):
+                telefones_achados.append((achado, linha))
         for achado in emails(linha["texto"]):
-            emails_achados.append((achado, linha))
+            if not da_casa(linha, achado):
+                emails_achados.append((achado, linha))
 
     if documentos_achados:
         achado, linha = documentos_achados[0]
@@ -1444,4 +1648,8 @@ def ler(linhas: list[dict], *, hoje: date, empresa: dict, fora=frozenset()) -> d
         "recusas": recusas,
         "alertas": alertas,
         "data_documento": data_documento,
+        "datas_escritas": [
+            {"data": d["data"], "texto": d["texto"], "fonte": fonte(d["linha"]), "como": d["como"]}
+            for d in escritas
+        ],
     }

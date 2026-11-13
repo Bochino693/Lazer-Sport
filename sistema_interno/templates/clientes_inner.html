@@ -186,6 +186,10 @@
                   {% endif %}
                   {% if cliente.documento %} · {{ cliente.documento }}{% endif %}
                 </span>
+                {% if cliente.cliente_desde %}
+                  {# Do documento mais antigo importado (o contrato de 2012 que entrou hoje). #}
+                  <span class="material-sub d-block"><i class="bi bi-calendar-event" aria-hidden="true"></i> Cliente desde {{ cliente.cliente_desde|date:"d/m/Y" }}</span>
+                {% endif %}
                 {% comment %}
                   O AVISO PASSOU A SER O CAMINHO.
 

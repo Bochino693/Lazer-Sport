@@ -1,5 +1,5 @@
 {
-  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11. Do 07 em diante (AJUSTE 2): 'pergunta' são os brinquedos que a tela pergunta se viram orçamento (null quando não há); 'frete_na_tela' é o frete que a pessoa escolhe quando o documento não diz; 'orcamento_anterior' é o orçamento que já existia (o teste o cria antes) e 'repetido' diz que a tela tem de avisar e pedir 'Criar mesmo assim'.",
+  "_como_ler": "Valores escritos à mão a partir de cada documento, no formato em que a tela de conferência mostra (dinheiro '1.234,56', data ISO). 'produto' é o nome do item do catálogo que o teste cria; null é linha avulsa. 'salvo' é o que tem de estar no banco depois de 'Criar'. Hoje, para a validade, é 2026-11-11. Do 07 em diante (AJUSTE 2): 'pergunta' são os brinquedos que a tela pergunta se viram orçamento (null quando não há); 'frete_na_tela' é o frete que a pessoa escolhe quando o documento não diz; 'orcamento_anterior' é o orçamento que já existia (o teste o cria antes) e 'repetido' diz que a tela tem de avisar e pedir 'Criar mesmo assim'. Do 14 em diante (AJUSTE 4): o contrato de compra e venda da casa, com comprador inventado. 'valor_na_tela' é o preço que a pessoa digita na linha que o documento traz sem valor e o catálogo não tem; 'data_documento' (em 'salvo') é a data que fica no orçamento e no 'cliente desde'. A validade padrão (5 dias) conta da data do documento quando ele é de antes de hoje.",
   "01-tabela-buffet-alegria.docx": {
     "modo": "orcamento",
     "cliente_existente": true,
@@ -321,7 +321,7 @@
       "desconto": "0.00",
       "valor_final": null,
       "observacoes": "",
-      "validade": "2026-11-16"
+      "validade": "2026-11-15"
     }
   },
   "08-email-assinatura-interna.docx": {
@@ -613,6 +613,182 @@
       "valor_final": null,
       "observacoes": "",
       "validade": "2026-11-16"
+    }
+  },
+  "14-contrato-compra-venda.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "pergunta": [
+      "Cama elástica 3 m",
+      "Air Game Kids"
+    ],
+    "cliente": {
+      "estabelecimento": "",
+      "contato": "",
+      "nome": "Dhiovana Lorrayne Quintiliano",
+      "documento": "318.447.205-19",
+      "telefone": "(16) 99123-4567",
+      "whatsapp": "sim",
+      "email": "dhiovana.q@exemplo.com.br"
+    },
+    "endereco": {
+      "cep": "",
+      "rua": "Rua das Acácias",
+      "numero": "250",
+      "complemento": "",
+      "bairro": "Centro",
+      "cidade": "Ribeirão Preto",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Cama elástica 3 m",
+        "original": "Cama elástica 3 m",
+        "produto": "Cama elástica 3 m",
+        "quantidade": "1",
+        "valor_unitario": "2.800,00"
+      },
+      {
+        "descricao": "Matrix",
+        "original": "Matrix",
+        "produto": null,
+        "quantidade": "1",
+        "valor_unitario": "",
+        "valor_na_tela": "12.900,00"
+      },
+      {
+        "descricao": "Air Game Kids",
+        "original": "Air Game Kids",
+        "produto": "Air Game Kids",
+        "quantidade": "2",
+        "valor_unitario": "18.000,00"
+      }
+    ],
+    "frete": "0,00",
+    "desconto": "",
+    "valor_final": "38.500,00",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "Frete por conta do cliente",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "38500.00",
+      "desconto": "0.00",
+      "valor_final": "38500.00",
+      "observacoes": "",
+      "validade": "2026-11-16",
+      "data_documento": "2026-11-11"
+    }
+  },
+  "15-pdf-contrato-compra-venda.pdf": {
+    "igual_a": "14-contrato-compra-venda.docx"
+  },
+  "16-contrato-com-valores-2016.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "pergunta": [
+      "Cama elástica 3 m"
+    ],
+    "cliente": {
+      "estabelecimento": "",
+      "contato": "",
+      "nome": "Renata Moura Teixeira",
+      "documento": "527.193.648-19",
+      "telefone": "(11) 98123-4455",
+      "whatsapp": "sim",
+      "email": "renata.teixeira@exemplo.com.br"
+    },
+    "endereco": {
+      "cep": "",
+      "rua": "Av. Brasil",
+      "numero": "1500",
+      "complemento": "apto 12",
+      "bairro": "Jardim América",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Cama elástica 3 m",
+        "original": "Cama elástica 3 m",
+        "produto": "Cama elástica 3 m",
+        "quantidade": "1",
+        "valor_unitario": "2.800,00"
+      },
+      {
+        "descricao": "Matrix",
+        "original": "Matrix",
+        "produto": null,
+        "quantidade": "1",
+        "valor_unitario": "12.900,00"
+      }
+    ],
+    "frete": "0,00",
+    "desconto": "",
+    "valor_final": "",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "Frete por conta do cliente",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "15700.00",
+      "desconto": "0.00",
+      "valor_final": null,
+      "observacoes": "",
+      "validade": "2016-03-19",
+      "data_documento": "2016-03-14"
+    }
+  },
+  "17-contrato-antigo-2012.docx": {
+    "modo": "orcamento",
+    "cliente_existente": false,
+    "pergunta": [
+      "Cama elástica 4 m"
+    ],
+    "cliente": {
+      "estabelecimento": "",
+      "contato": "",
+      "nome": "Joana Prado Lins",
+      "documento": "640.281.935-24",
+      "telefone": "(11) 3456-0099",
+      "whatsapp": "nao",
+      "email": "joana.lins@exemplo.com.br"
+    },
+    "endereco": {
+      "cep": "",
+      "rua": "Rua Voluntários da Pátria",
+      "numero": "2200",
+      "complemento": "",
+      "bairro": "Santana",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    },
+    "itens": [
+      {
+        "descricao": "Cama elástica 4 m",
+        "original": "Cama elástica 4 m",
+        "produto": "Cama elástica 4 m",
+        "quantidade": "1",
+        "valor_unitario": "3.500,00"
+      }
+    ],
+    "frete": "0,00",
+    "desconto": "",
+    "valor_final": "3.500,00",
+    "validade": "",
+    "forma_pagamento": "",
+    "forma_envio": "Frete por conta do cliente",
+    "prazo": "",
+    "observacoes": "",
+    "salvo": {
+      "total": "3500.00",
+      "desconto": "0.00",
+      "valor_final": "3500.00",
+      "observacoes": "",
+      "validade": "2012-07-07",
+      "data_documento": "2012-07-02"
     }
   }
 }

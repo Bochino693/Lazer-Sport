@@ -118,6 +118,12 @@
                 <span class="material-sub d-block mt-1">
                   {{ quantidade_itens }} {% if quantidade_itens == 1 %}item{% else %}itens{% endif %}
                 </span>
+                {% if orcamento.data_documento %}
+                  {# O documento importado tem a data dele (o contrato de 2016 entrou hoje). #}
+                  <span class="material-sub d-block" title="Data do documento importado">
+                    <i class="bi bi-calendar-event" aria-hidden="true"></i> Documento de {{ orcamento.data_documento|date:"d/m/Y" }}
+                  </span>
+                {% endif %}
                 {% endwith %}
               </td>
               {% comment %}

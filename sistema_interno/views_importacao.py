@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import logging
 
+from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -121,6 +122,9 @@ class ImportarOrcamentoWordView(_SoQuemCriaProposta, View):
                 leitura = self.ler_pdf(nome, conteudo)
             else:
                 leitura = self.ler_docx(nome, conteudo)
+            # Quando o arquivo foi criado e salvo: só OPÇÃO na pergunta "De
+            # quando é este documento?" (ver conferencia.data_do_documento).
+            leitura["datas_arquivo"] = leitor.datas_do_arquivo(conteudo, formato)
         except leitor.ArquivoRecusado as exc:
             return self.recusar(request, str(exc))
         finally:
@@ -288,6 +292,9 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         if leitura is None:
             return redirect("importar_orcamento_word")
 
+        if request.POST.get("action") == "data":
+            return self.responder_data(request, token, leitura)
+
         if request.POST.get("action") == "descartar":
             sessao.descartar(request, token)
             # O toast de aplicativo (core/ls_aviso.py), e não mais a caixa
@@ -348,6 +355,29 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
         sessao.guardar_conclusao(request, orcamento.pk, resumo)
         return redirect("importacao_concluida", pk=orcamento.pk)
 
+    def responder_data(self, request, token, leitura):
+        """O primeiro passo do modal: "De quando é este documento?".
+
+        A resposta fica na sessão da importação -- recarregar a tela não
+        pergunta de novo -- e a leitura é refeita com ela: os "15 dias" da
+        validade passam a contar dessa data. A tela volta aberta no passo
+        seguinte do modal.
+        """
+        # Um toque numa das datas achadas ("data_opcao"), ou a data escrita
+        # à mão ("data_outra").
+        texto = (request.POST.get("data_opcao") or request.POST.get("data_outra") or "").strip()[:20]
+        data = conferencia._data_iso(texto)
+        hoje = timezone.localdate()
+        if data is None or data > hoje or data.year < 1990:
+            avisar(
+                request,
+                "Escolha uma das datas ou escreva a data do documento (de 1990 até hoje).",
+                nivel=messages.ERROR, titulo="Data do documento", icone="alerta",
+            )
+        else:
+            sessao.atualizar(request, token, data_escolhida=data.isoformat())
+        return redirect("conferir_importacao_word", token=token)
+
     def desenhar(self, request, token, leitura, proposta, envio, *, validado=None, status=200, erro="",
                  decidir=False):
         validado = validado or formulario.validar(proposta, envio)
@@ -405,7 +435,9 @@ class ConferirImportacaoView(_SoQuemCriaProposta, View):
             "erro": erro,
             "linhas": leitura["linhas"],
             "hoje": timezone.localdate(),
-            "validade_padrao": Orcamento.validade_padrao(),
+            "validade_padrao": conferencia.base_da_validade(
+                timezone.localdate(), conferencia._data_iso(envio.get("data_documento")),
+            ) + timedelta(days=Orcamento.DIAS_DE_VALIDADE_PADRAO),
             "oferta_orcamento": oferta,
             "pergunta_orcamento": pergunta,
             # A decisão (o modal que abre logo depois da leitura) e os

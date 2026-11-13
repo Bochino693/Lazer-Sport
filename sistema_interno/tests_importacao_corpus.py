@@ -64,6 +64,7 @@ PONTOS = {
     "São Paulo": (Decimal("-23.5505"), Decimal("-46.6333")),
     "Santo André": (Decimal("-23.6639"), Decimal("-46.5383")),
     "Rio de Janeiro": (Decimal("-22.9068"), Decimal("-43.1729")),
+    "Ribeirão Preto": (Decimal("-21.1775"), Decimal("-47.8103")),
 }
 
 
@@ -213,6 +214,8 @@ class LeituraDoCorpusTests(_SemChave):
                 self.assertEqual(len(tela["itens"]), len(esperado["itens"]), f"{nome}: quantos itens")
                 for posicao, (lido, certo) in enumerate(zip(tela["itens"], esperado["itens"]), start=1):
                     for campo, valor in certo.items():
+                        if campo == "valor_na_tela":
+                            continue  # o que a pessoa digita, não o que a tela abre
                         self.assertEqual(lido[campo], valor, f"{nome}: item {posicao}.{campo}")
                 # Documento certo não acende vermelho: alerta vermelho é
                 # conta que não bate ou valor em dúvida, e nenhum destes tem.
@@ -225,7 +228,10 @@ class LeituraDoCorpusTests(_SemChave):
 
     def test_nada_da_lazer_e_sport_vai_para_o_cliente(self):
         da_empresa = ("54.486.908/0001-86", "54486908000186", "(11) 96056-3135", "contato@lazersport.com",
-                      "Av. Industrial", "07220-000", "Cumbica", "Lazer & Sport")
+                      "Av. Industrial", "07220-000", "Cumbica", "Lazer & Sport",
+                      # O contrato de compra e venda (14 a 17): quem assina pela
+                      # fábrica, o RG e o endereço residencial dele.
+                      "Otávio", "Ipês Roxos", "Vila Aurora", "02998-010", "27.418.905", "São Roque")
         for nome in DOCUMENTOS:
             with self.subTest(documento=nome):
                 leitura = {"arquivo": nome, "linhas": linhas_do_arquivo(nome), "ia": {"usada": False}}
@@ -273,6 +279,10 @@ class GravacaoDoCorpusTests(_SemChave):
         for chave, valor in envio.items():
             if isinstance(valor, str) and chave not in ("itens", "justificativas"):
                 dados[chave] = valor
+        if not dados.get("data_documento"):
+            # O documento não diz a data: a pessoa responde o primeiro passo
+            # do modal ("De quando é este documento?") -- aqui, hoje.
+            dados["data_documento"] = HOJE.isoformat()
         # O que a pessoa liga: o orçamento, quando o documento é um orçamento.
         # "Aparecer no mapa" já vem ligado.
         dados["modo"] = esperado_de(nome)["modo"]
@@ -284,12 +294,13 @@ class GravacaoDoCorpusTests(_SemChave):
         if certo["modo"] == "orcamento" and not dados.get("frete") and certo.get("frete_na_tela"):
             # O documento não fala de frete: a pessoa escolhe "Sem frete".
             dados["frete"] = certo["frete_na_tela"]
-        for item in envio["itens"]:
+        for item, item_certo in zip(envio["itens"], certo["itens"]):
             prefixo = f"item-{item['uid']}-"
             dados[prefixo + "descricao"] = item["descricao"]
             dados[prefixo + "produto"] = item["produto"]
             dados[prefixo + "quantidade"] = item["quantidade"]
-            dados[prefixo + "valor_unitario"] = item["valor_unitario"]
+            # A linha sem preço no documento e fora do catálogo: a pessoa digita.
+            dados[prefixo + "valor_unitario"] = item["valor_unitario"] or item_certo.get("valor_na_tela", "")
             dados[prefixo + "conferido"] = "1"
             if not item["produto"]:
                 dados[prefixo + "avulsa"] = "1"
@@ -376,6 +387,12 @@ class GravacaoDoCorpusTests(_SemChave):
                 self.assertEqual(orcamento.frete, Decimal(frete.replace(".", "").replace(",", ".")))
                 self.assertEqual(orcamento.validade.isoformat(), salvo.get("validade") or esperado["validade"],
                                  f"{nome}: validade")
+                if salvo.get("data_documento"):
+                    # A data do documento fica no orçamento e no "cliente desde".
+                    self.assertEqual(orcamento.data_documento.isoformat(), salvo["data_documento"],
+                                     f"{nome}: data do documento")
+                    self.assertEqual(orcamento.cliente.cliente_desde.isoformat(), salvo["data_documento"],
+                                     f"{nome}: cliente desde")
                 self.assertEqual(orcamento.forma_pagamento, esperado["forma_pagamento"], f"{nome}: pagamento")
                 self.assertEqual(orcamento.forma_envio, esperado["forma_envio"], f"{nome}: envio")
                 self.assertEqual(orcamento.observacoes, salvo["observacoes"], f"{nome}: observações")
@@ -391,7 +408,7 @@ class GravacaoDoCorpusTests(_SemChave):
                     self.assertEqual(item.quantidade, int(certo["quantidade"]))
                     self.assertEqual(
                         item.valor_unitario,
-                        Decimal(certo["valor_unitario"].replace(".", "").replace(",", ".")),
+                        Decimal((certo["valor_unitario"] or certo.get("valor_na_tela", "")).replace(".", "").replace(",", ".")),
                     )
 
     def test_o_pdf_cria_o_mesmo_que_o_word(self):
@@ -432,6 +449,11 @@ class GravacaoDoCorpusTests(_SemChave):
             ("Clube Recreativo Vila Nova", "São Paulo"),
             ("Condomínio Parque das Árvores", "São Paulo"),
             ("Juliana Martins Rocha", "São Paulo"),
+            # O contrato de compra e venda (AJUSTE 4): o comprador, nunca o
+            # representante da fábrica.
+            ("Dhiovana Lorrayne Quintiliano", "Ribeirão Preto"),
+            ("Renata Moura Teixeira", "São Paulo"),
+            ("Joana Prado Lins", "São Paulo"),
         })
         # E nada da Lazer & Sport virou alfinete de cliente.
         self.assertFalse(any("Lazer" in nome for nome, _ in no_mapa))
