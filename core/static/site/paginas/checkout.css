@@ -634,3 +634,24 @@
 .ck-parcelamento:empty { display: none; }
 .ck-parcelamento i { color: #2ee68c; margin-right: 4px; }
 .ck-parcelamento strong { color: #ffffff; }
+
+/* Sem frete no site: retirada na fábrica e o frete combinado pelo cliente. */
+.ck-frete-cliente {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(63, 208, 255, .35);
+    background: linear-gradient(135deg, rgba(47, 139, 255, .18), rgba(138, 92, 255, .14));
+}
+.ck-frete-cliente strong { display: block; color: #ffffff; margin-bottom: 4px; }
+.ck-frete-cliente p { margin: 0 0 8px; color: #cfe0ff; font-size: .9rem; line-height: 1.45; }
+.ck-frete-cliente .ck-link { color: #4dff9d; font-weight: 700; }
+.ck-frete-nota {
+    margin: 6px 0 0;
+    font-size: .8rem;
+    color: #cfe0ff;
+    line-height: 1.4;
+}
+.ck-frete-nota i { color: #3fd0ff; margin-right: 4px; }

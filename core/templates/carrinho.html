@@ -217,99 +217,37 @@
                 </div>
             </section>
 
-            <!-- ENTREGA: FRETE OU RETIRADA -->
+            {% comment %}
+              ENTREGA: SÓ RETIRADA NA FÁBRICA. O envio pelo site foi desligado
+              (pedido do dono): o cliente retira, ou contrata o frete da
+              transportadora que preferir. A equipe indica transportadoras de
+              confiança do estado dele (painel: Logística > Transportadoras).
+            {% endcomment %}
             <section class="ck-card frete-box" aria-labelledby="ck-entrega-titulo">
                 <div class="ck-card-cabeca">
-                    <span class="ck-card-icone" aria-hidden="true">
-                        <i class="fa-solid fa-truck-fast"></i>
+                    <span class="ck-card-icone ck-card-icone--verde" aria-hidden="true">
+                        <i class="fa-solid fa-store"></i>
                     </span>
                     <div>
-                        <h2 class="ck-card-titulo" id="ck-entrega-titulo">Entrega</h2>
-                        <span class="ck-card-nota">Receba no seu endereço ou retire na loja</span>
+                        <h2 class="ck-card-titulo" id="ck-entrega-titulo">Retirada na fábrica</h2>
+                        <span class="ck-card-nota">Sem frete no site: você retira ou envia com a transportadora que preferir</span>
                     </div>
                 </div>
 
-                <div class="frete-tabs ck-segmento" role="group" aria-label="Forma de entrega">
-                    {% comment %}
-                      Abre na forma de entrega já escolhida: antes abria sempre em
-                      "Frete", e quem tinha escolhido retirada pagava sem frete
-                      mesmo digitando um CEP.
-                    {% endcomment %}
-                    <button type="button" class="frete-tab ck-segmento-opcao{% if carrinho.tipo_envio != "retirada" %} active{% endif %}" data-tipo="frete" aria-pressed="{% if carrinho.tipo_envio == "retirada" %}false{% else %}true{% endif %}">
-                        <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
-                        Frete
-                    </button>
-                    <button type="button" class="frete-tab ck-segmento-opcao{% if carrinho.tipo_envio == "retirada" %} active{% endif %}" data-tipo="retirada" aria-pressed="{% if carrinho.tipo_envio == "retirada" %}true{% else %}false{% endif %}">
-                        <i class="fa-solid fa-store" aria-hidden="true"></i>
-                        Retirar na loja
-                    </button>
+                <div class="frete-tabs" hidden>
+                    <button type="button" class="frete-tab active" data-tipo="retirada" aria-pressed="true">Retirada</button>
                 </div>
 
                 <div class="frete-conteudo">
-
-                    <!-- FRETE -->
-                    <div class="frete-content" id="frete"{% if carrinho.tipo_envio == "retirada" %} hidden{% endif %}>
-                        <div class="ck-campo">
-                            <label class="ck-rotulo" for="cepInput">CEP de entrega</label>
-                            <div class="ck-cep-linha">
-                                <div class="ck-entrada">
-                                    <input type="text" id="cepInput" placeholder="00000-000" maxlength="9"
-                                           inputmode="numeric" autocomplete="postal-code">
-                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
-                                </div>
-                                <a class="ck-link" href="https://buscacepinter.correios.com.br/app/endereco/index.php"
-                                   target="_blank" rel="noopener">
-                                    Não sei meu CEP
-                                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                                </a>
-                            </div>
-                            <small id="cep-msg" class="ck-status" aria-live="polite"></small>
-                        </div>
-
-                        <div id="endereco-detalhes" class="ck-endereco" hidden>
-                            <div class="ck-campo ck-campo--rua">
-                                <label class="ck-rotulo" for="logradouro">Rua</label>
-                                <div class="ck-entrada ck-entrada--sem-icone">
-                                    <input type="text" id="logradouro" placeholder="Rua" readonly>
-                                </div>
-                            </div>
-                            <div class="ck-campo ck-campo--numero">
-                                <label class="ck-rotulo" for="numero">Número</label>
-                                <div class="ck-entrada ck-entrada--sem-icone">
-                                    <input type="text" id="numero" placeholder="Nº" autocomplete="off">
-                                </div>
-                            </div>
-                            <div class="ck-campo ck-campo--bairro">
-                                <label class="ck-rotulo" for="bairro">Bairro</label>
-                                <div class="ck-entrada ck-entrada--sem-icone">
-                                    <input type="text" id="bairro" placeholder="Bairro" readonly>
-                                </div>
-                            </div>
-                            <div class="ck-campo ck-campo--cidade">
-                                <label class="ck-rotulo" for="cidade">Cidade</label>
-                                <div class="ck-entrada ck-entrada--sem-icone">
-                                    <input type="text" id="cidade" placeholder="Cidade" readonly>
-                                </div>
-                            </div>
-                            <div class="ck-campo ck-campo--uf">
-                                <label class="ck-rotulo" for="estado">UF</label>
-                                <div class="ck-entrada ck-entrada--sem-icone">
-                                    <input type="text" id="estado" placeholder="UF" readonly>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RETIRADA -->
-                    <div class="frete-content" id="retirada"{% if carrinho.tipo_envio != "retirada" %} hidden{% endif %}>
+                    <div class="frete-content" id="retirada">
                         <div class="ck-loja">
                             <div class="ck-loja-topo">
                                 <span class="ck-card-icone ck-card-icone--verde" aria-hidden="true">
-                                    <i class="fa-solid fa-store"></i>
+                                    <i class="fa-solid fa-industry"></i>
                                 </span>
                                 <div>
-                                    <strong>Retire na nossa loja física</strong>
-                                    <small>Sem custo de frete</small>
+                                    <strong>Retire direto na fábrica</strong>
+                                    <small>A máquina sai embalada e testada</small>
                                 </div>
                             </div>
                             <ul class="ck-loja-dados">
@@ -333,8 +271,27 @@
                                 Como chegar
                             </a>
                         </div>
-                    </div>
 
+                        <div class="ck-frete-cliente" role="note">
+                            <span class="ck-card-icone" aria-hidden="true">
+                                <i class="fa-solid fa-truck-fast"></i>
+                            </span>
+                            <div>
+                                <strong>Mora longe? Enviamos para todo o Brasil</strong>
+                                <p>
+                                    O frete é por conta do cliente e é combinado à parte com a
+                                    transportadora. Depois da compra, nossa equipe indica
+                                    transportadoras de confiança para a sua cidade e ajuda a
+                                    preparar a máquina para o envio.
+                                </p>
+                                <a class="ck-link" href="https://wa.me/5511960563135?text={{ 'Olá! Comprei no site e quero cotar o frete para a minha cidade.'|urlencode }}"
+                                   target="_blank" rel="noopener">
+                                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                                    Falar sobre o frete no WhatsApp
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div><!-- ck-principal -->
@@ -889,7 +846,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const freteContent = document.querySelectorAll('.frete-content');
 
     // Carrinho vazio: não existem campos de checkout para inicializar.
-    if (!cpfInput || !btnFinalizar || !cepInput || !numeroInput) return;
+    // Sem frete no site, a tela não tem mais CEP/endereço: só o CPF/CNPJ
+    // decide o Continuar.
+    if (!cpfInput || !btnFinalizar) return;
 
     // Enter no campo do cupom aplica, como o botão.
     const cupomCodigo = document.getElementById('cupomCodigo');
@@ -1085,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    cepInput.addEventListener('input', () => {
+    if (cepInput) cepInput.addEventListener('input', () => {
 
         cepInput.value = formatarCEP(cepInput.value);
 
@@ -1153,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    numeroInput.addEventListener('input', () => {
+    if (numeroInput) numeroInput.addEventListener('input', () => {
 
         atualizarBotaoFinalizar();
 

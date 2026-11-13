@@ -255,6 +255,14 @@ def reservar_pedido(carrinho, usuario=None):
         )
         reserva.devolver_ao_carrinho()
 
+    # ENVIO PELO SITE DESLIGADO: toda compra é retirada na fábrica, e o
+    # frete é contratado pelo cliente (a equipe indica transportadoras de
+    # confiança do estado dele). Vale para o site e para o aplicativo: um
+    # carrinho antigo marcado "frete" não cobra frete nenhum.
+    if travado.tipo_envio != "retirada":
+        travado.tipo_envio = "retirada"
+        travado.save(update_fields=["tipo_envio"])
+
     assinatura = assinatura_do_carrinho(travado)
     total = valor_monetario(travado.total_final)
 

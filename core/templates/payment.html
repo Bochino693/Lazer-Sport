@@ -269,11 +269,13 @@
                 </div>
                 {% endif %}
                 <div class="ck-linha summary-line">
-                    <span>{% if carrinho.tipo_envio == "retirada" %}Retirada na loja{% else %}Frete{% endif %}</span>
-                    <span class="money-brl" data-value="{{ frete|stringformat:'f' }}">
-                        R$ {{ frete|moeda }}
-                    </span>
+                    <span>Entrega</span>
+                    <span>Retirada na fábrica</span>
                 </div>
+                <p class="ck-frete-nota">
+                    <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+                    Frete por conta do cliente: indicamos transportadoras de confiança para a sua cidade.
+                </p>
                 <div class="ck-linha ck-linha--total summary-total-card">
                     <span>Total a pagar</span>
                     <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">

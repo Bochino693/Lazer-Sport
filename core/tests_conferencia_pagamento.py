@@ -147,23 +147,30 @@ class EntregaNoCarrinhoTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def test_carrinho_abre_na_retirada_escolhida(self):
-        Carrinho.objects.filter(pk=self.carrinho.pk).update(tipo_envio="retirada")
+    def test_carrinho_e_sempre_retirada_na_fabrica(self):
+        Carrinho.objects.filter(pk=self.carrinho.pk).update(tipo_envio="frete")
         html = self.client.get(reverse("carrinho")).content.decode()
-        self.assertIn('data-tipo="retirada" aria-pressed="true"', html)
-        self.assertIn('id="frete" hidden', html)
-
-    @patch("core.views.calcular_frete_por_cep", return_value=(35.5, 12.0))
-    def test_calcular_o_frete_marca_entrega_por_frete(self, _calc):
-        Carrinho.objects.filter(pk=self.carrinho.pk).update(tipo_envio="retirada")
-        resposta = self.client.post(
-            reverse("calcular_frete"),
-            data='{"cep": "02000000", "numero": "10"}',
-            content_type="application/json",
-        )
-        self.assertEqual(resposta.json()["status"], "ok")
+        self.assertIn("Retirada na fábrica", html)
+        self.assertIn("frete é por conta do cliente", html)
+        self.assertNotIn('id="cepInput"', html)
         self.carrinho.refresh_from_db()
-        self.assertEqual(self.carrinho.tipo_envio, "frete")
+        self.assertEqual(self.carrinho.tipo_envio, "retirada")
+
+    def test_frete_pelo_site_desligado(self):
+        r = self.client.post(reverse("calcular_frete"), data='{"cep": "02000000"}',
+                             content_type="application/json")
+        self.assertEqual(r.status_code, 410)
+        r = self.client.post(reverse("atualizar_tipo_envio", args=[self.carrinho.id]),
+                             data='{"tipo_envio": "frete"}', content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_reserva_nunca_cobra_frete(self):
+        from .checkout import reservar_pedido
+        Carrinho.objects.filter(pk=self.carrinho.pk).update(tipo_envio="frete")
+        self.carrinho.refresh_from_db()
+        pedido, _ = reservar_pedido(self.carrinho, usuario=self.user)
+        self.assertEqual(pedido.tipo_envio, "retirada")
+        self.assertEqual(pedido.valor_frete or Decimal("0"), Decimal("0"))
 
 
 class RespostaFalsa:

@@ -6150,8 +6150,10 @@ class CarrinhoView(LoginRequiredMixin, View):
                 return redirect(reverse("meus_pedidos") + "#pedidos")
         pagamento_em_andamento = conferencia_pagamento.reserva_em_andamento(carrinho)
 
-        # garante objeto frete
-        Frete.objects.get_or_create(carrinho=carrinho)
+        # Envio pelo site desligado: o carrinho é sempre retirada na fábrica.
+        if carrinho.tipo_envio != "retirada":
+            carrinho.tipo_envio = "retirada"
+            carrinho.save(update_fields=["tipo_envio"])
 
         cupom_permitido = _carrinho_permite_cupom(carrinho)
 
@@ -6182,6 +6184,19 @@ from .utils import calcular_frete_por_cep
 
 @csrf_exempt
 def calcular_frete(request):
+    # Envio pelo site desligado (retirada na fábrica; frete por conta do
+    # cliente). O endereço continua existindo para quem chamar, mas não há
+    # mais cálculo nem cobrança de frete.
+    return JsonResponse(
+        {
+            "status": "erro",
+            "message": "O envio pelo site está desativado: a compra é retirada na fábrica e o frete é por conta do cliente.",
+        },
+        status=410,
+    )
+
+
+def _calcular_frete_antigo(request):
     if request.method != "POST":
         return JsonResponse({"status": "erro"})
 
@@ -6548,6 +6563,12 @@ class PaymentView(LoginRequiredMixin, View):
         # ==========================
         # 🔹 CRIAR OU ATUALIZAR FRETE
         # ==========================
+        # Envio pelo site desligado: retirada na fábrica (o mesmo que a
+        # reserva faz), para o total da tela bater com o do Pix/cartão.
+        if carrinho.tipo_envio != "retirada" and not reserva:
+            carrinho.tipo_envio = "retirada"
+            carrinho.save(update_fields=["tipo_envio"])
+
         if carrinho.tipo_envio == "frete":
             frete, _ = Frete.objects.get_or_create(
                 carrinho=carrinho,
@@ -8010,6 +8031,14 @@ def atualizar_tipo_envio(request, carrinho_id):
         )
 
     tipo = data.get("tipo_envio")
+    if tipo == "frete":
+        return JsonResponse(
+            {
+                "status": "erro",
+                "message": "O envio pelo site está desativado: a compra é retirada na fábrica e o frete é por conta do cliente.",
+            },
+            status=400,
+        )
     if tipo not in dict(Carrinho.TIPO_ENVIO):
         return JsonResponse(
             {"status": "erro", "message": "Tipo inválido."},
