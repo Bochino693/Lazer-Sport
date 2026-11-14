@@ -1,0 +1,150 @@
+{
+ "logo": "../../../core/static/images/logoofi.png",
+ "musica": "../../../core/static/site/arena/jogos/super-boxing/sons/musica.mp3",
+ "ritmo": 2.5,
+ "cenas": [
+  {
+   "video": "strike_kids.mov",
+   "inicio": 0.0,
+   "fala": "Já pensou em transformar um espaço parado"
+  },
+  {
+   "foto": "img/brinquedao-3.jpg",
+   "movimento": "pan",
+   "fala": "em um espaço de diversão?",
+   "pip": [
+    {
+     "foto": "img/kid-play.jpg",
+     "x": 270,
+     "y": 470,
+     "largura": 360,
+     "em": 0.5
+    },
+    {
+     "foto": "img/carrossel.jpg",
+     "x": 800,
+     "y": 620,
+     "largura": 330,
+     "em": 0.9
+    }
+   ]
+  },
+  {
+   "foto": "img/dragon_branco.jpg",
+   "movimento": "pan",
+   "fala": "A Lazer_&_Sport é fábrica de brinquedos"
+  },
+  {
+   "video": "strike_kids.mov",
+   "inicio": 13.0,
+   "fala": "em São_Paulo, desde 1996."
+  },
+  {
+   "foto": "img/dragon_rosa.jpg",
+   "movimento": "pan",
+   "fala": "Boliche,",
+   "duracao": 0.85
+  },
+  {
+   "foto": "img/air-game-premium.jpg",
+   "movimento": "pan",
+   "fala": "air_game,",
+   "duracao": 0.85
+  },
+  {
+   "foto": "img/basquete-street.jpg",
+   "movimento": "pan",
+   "fala": "basquete,",
+   "duracao": 0.85
+  },
+  {
+   "foto": "img/pinball-40.jpg",
+   "movimento": "pan",
+   "fala": "fliperama,",
+   "duracao": 0.85
+  },
+  {
+   "foto": "img/porsche.jpg",
+   "movimento": "pan",
+   "fala": "simuladores",
+   "duracao": 0.85
+  },
+  {
+   "foto": "img/brinquedao-1.jpg",
+   "movimento": "pan",
+   "fala": "e brinquedões.",
+   "duracao": 1.1
+  },
+  {
+   "palco": [
+    {
+     "imagem": "../../../ferramentas/categorias/maquinas-alta/basquete-duplo.webp",
+     "altura": 560,
+     "cx": 250,
+     "base": 1080
+    },
+    {
+     "imagem": "../../../ferramentas/categorias/maquinas-alta/simulador-mario-kart.webp",
+     "altura": 520,
+     "cx": 560,
+     "base": 1120
+    },
+    {
+     "imagem": "../../../ferramentas/categorias/maquinas-alta/pac-man.webp",
+     "altura": 420,
+     "cx": 850,
+     "base": 1090
+    }
+   ],
+   "fala": "Para shopping, buffet, quiosque e parque."
+  },
+  {
+   "quadros": "3d_air-game-kids-astronautas",
+   "fala": "Você escolhe as máquinas"
+  },
+  {
+   "quadros": "strike_kids_3d",
+   "fala": "e a gente projeta o seu espaço em 3D."
+  },
+  {
+   "foto": "img/espaco-esportivo.jpg",
+   "movimento": "pan",
+   "fala": "Entregamos em todo o Brasil,"
+  },
+  {
+   "video": "strike_kids.mov",
+   "inicio": 24.0,
+   "fala": "com peças e manutenção direto da fábrica.",
+   "pip": [
+    {
+     "foto": "img/nervo-teste.jpg",
+     "x": 250,
+     "y": 500,
+     "largura": 320,
+     "em": 0.7
+    }
+   ]
+  },
+  {
+   "foto": "../../../ferramentas/artes_do_topo/cenas/dragon-bowling-estreito.webp",
+   "movimento": "pan",
+   "fala": "Dá para testar os jogos"
+  },
+  {
+   "foto": "../../../ferramentas/artes_do_topo/cenas/strike-kids-estreito.webp",
+   "movimento": "pan",
+   "fala": "no site antes de comprar."
+  },
+  {
+   "foto": "img/dragon_preto.jpg",
+   "movimento": "pan",
+   "fala": "Vamos montar o seu espaço?",
+   "duracao": 2.6
+  }
+ ],
+ "final": {
+  "duracao": 4.2,
+  "botao": "WhatsApp (11) 96056-3135",
+  "texto": "Link na bio"
+ }
+}

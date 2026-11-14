@@ -47,6 +47,16 @@ agente `instagram`, e só com autorização do usuário.
   carrinho e pagamento vêm de uma cópia local com cliente de demonstração.
 - Entregue sempre 3 versões com ganchos diferentes, sem locução, legendadas.
 
+## Comercial estilo apresentação (institucional)
+
+- Monte com `python3 ferramentas/instagram/comercial.py roteiro.json saida.mp4`
+  (modelo: `ferramentas/instagram/exemplos/institucional.json`): cenas das
+  máquinas em tela cheia, legenda amarela palavra por palavra, logo no canto e
+  logo animado no final.
+- As fotos de showroom vêm da galeria de cada brinquedo no site (imagens
+  `cena-*` no Cloudinary). Fotos novas enviadas pelo usuário entram como cenas
+  ou como fotos pequenas por cima (`pip`).
+
 ## Antes de entregar
 
 - Extraia um quadro de cada cena e olhe um por um: brinquedo inteiro, texto
