@@ -194,18 +194,139 @@ for (const lado of ["esquerda", "direita"]) {
     pontos.forEach((g) => por(M.led, g));
     fita.forEach((g) => por(M.ledFita, g));
   }
-  // por dentro: a faixa do acabamento, da base da coluna até a frente, acima da pista
+  // POR DENTRO É TUDO ADESIVO (como na máquina de verdade: "não é assim, é tudo
+  // adesivo com os LEDs"): a face de dentro inteira, da coluna da tela até a frente,
+  // leva os raios com as nuvens, e a faixa do acabamento (o arco com as lâmpadas)
+  // vai NO MESMO vinil, no lugar de antes -- uma camada só, nada piscando.
   {
-    const L = Z_FRENTE_DENTRO - PAINEL.z0;
-    const [AW, AH] = FORMAS[`acabamento-${lado}`].px;
-    const H = (L * AH) / AW;
-    // (como no .glb da fábrica: na esquerda a arte anda das costas para a frente; na direita, ao contrário)
+    // a face de dentro olhada de dentro: a' = COMP - a (a' = 0 na frente, na
+    // esquerda; nas costas, na direita), a normal para o meio da máquina
     const bi = s < 0
-      ? base(V(-XI + 0.5, PISTA_Y, Z_FRENTE_DENTRO), V(0, 0, -1), V(0, 1, 0))
-      : base(V(XI - 0.5, PISTA_Y, PAINEL.z0), V(0, 0, 1), V(0, 1, 0));
-    const ma = await vinil(s < 0 ? "acab_esq" : "acab_dir", `acabamento-${lado}`);
-    por(ma, C.adesivoPlano(retangulo(0, 0, L, H), [L, 0, 0, H]), bi.matriz());
+      ? base(V(-XI + 0.3, 0, ZF), V(0, 0, -1), V(0, 1, 0))
+      : base(V(XI - 0.3, 0, ZT), V(0, 0, 1), V(0, 1, 0));
+    const zDe = s < 0 ? (a2) => ZF - a2 : (a2) => ZT + a2; // a' -> z
+    const aDe = s < 0 ? (z) => ZF - z : (z) => z - ZT; // z -> a'
+    const dentro = C.recuar(pts, RAIO + 0.5).map(([a, y]) => [COMP - a, y]).reverse();
+    const textura = await artePorDentro(lado, dentro, zDe, aDe);
+    const mi = material(s < 0 ? "lateral_esquerda_dentro" : "lateral_direita_dentro", (n) => C.vinil(n, textura));
+    por(mi, C.adesivoPlano(dentro, [0, 0, COMP, HL]), bi.matriz());
   }
+}
+
+/* Os raios da arte (verde, verde-claro, amarelo, laranja e creme) saindo de
+   (cx, cy), com o brilho no centro e o fundo mais fechado longe dele. */
+function desenharRaios(g, W, H, cx, cy, N) {
+  const cores = ["#0d8a2f", "#3cbf3f", "#a7d82a", "#ffe11a", "#ff9a1f", "#fff2b0", "#16a238", "#ffd21a", "#ff7b14", "#86cf2c"];
+  const R = 2 * Math.hypot(W, H);
+  for (let i = 0; i < N; i++) {
+    const t0 = (i / N) * 2 * PI;
+    const t1 = ((i + 1) / N) * 2 * PI + 0.004;
+    g.beginPath();
+    g.moveTo(cx, cy);
+    g.lineTo(cx + R * Math.cos(t0), cy + R * Math.sin(t0));
+    g.lineTo(cx + R * Math.cos(t1), cy + R * Math.sin(t1));
+    g.closePath();
+    g.fillStyle = cores[i % cores.length];
+    g.fill();
+  }
+  let rad = g.createRadialGradient(cx, cy, 0, cx, cy, W * 0.55);
+  rad.addColorStop(0, "rgba(255,250,215,0.55)");
+  rad.addColorStop(0.35, "rgba(255,245,200,0.12)");
+  rad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = rad;
+  g.fillRect(0, 0, W, H);
+  rad = g.createRadialGradient(cx, cy, W * 0.35, cx, cy, W * 1.25);
+  rad.addColorStop(0, "rgba(0,40,10,0)");
+  rad.addColorStop(1, "rgba(0,40,10,0.28)");
+  g.fillStyle = rad;
+  g.fillRect(0, 0, W, H);
+}
+
+/* O vinil de dentro das laterais (um canvas na proporção da lateral): os raios
+   verdes, amarelos e laranja da arte saindo da base da coluna, as nuvens no alto,
+   a faixa do acabamento acima da pista (a arte da fábrica, como estava) e, abaixo
+   da pista, o escuro do bolsão. x = a' (mm), y do chão para cima. */
+async function artePorDentro(lado, contorno, zDe, aDe) {
+  const W = 2048;
+  const Hc = Math.round((W * HL) / COMP);
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = Hc;
+  const g = c.getContext("2d");
+  const px = (a2) => (a2 / COMP) * W;
+  const py = (y) => (1 - y / HL) * Hc;
+
+  // os raios: do pé da coluna (por dentro, logo abaixo da pista) para fora
+  desenharRaios(g, W, Hc, px(aDe(PAINEL.z0)), py(PISTA_Y - 60), 30);
+
+  // as nuvens, como na arte: no alto da coluna e na ponta da frente, rente à borda de cima
+  const topoEm = (a2) => {
+    // a altura da borda de cima do contorno em a' (a maior y dos cruzamentos)
+    let melhor = 0;
+    for (let k = 0; k < contorno.length; k++) {
+      const [x0, y0] = contorno[k];
+      const [x1, y1] = contorno[(k + 1) % contorno.length];
+      if ((x0 - a2) * (x1 - a2) > 0 || x0 === x1) continue;
+      melhor = Math.max(melhor, y0 + ((a2 - x0) * (y1 - y0)) / (x1 - x0));
+    }
+    return melhor;
+  };
+  function nuvem(a2, y, escala) {
+    const bolas = [[0, 0, 1], [0.9, 0.15, 0.8], [-0.85, 0.2, 0.75], [0.45, -0.45, 0.72], [-0.4, -0.4, 0.66], [1.55, 0.35, 0.55], [-1.5, 0.4, 0.5]];
+    const x0 = px(a2);
+    const y0 = py(y);
+    const r0 = escala * W * 0.045;
+    // a sombra azulada embaixo e o branco por cima
+    for (const [dx, dy, r] of bolas) {
+      g.beginPath();
+      g.arc(x0 + dx * r0, y0 + dy * r0 + r0 * 0.18, r * r0, 0, 2 * PI);
+      g.fillStyle = "#cfe3ee";
+      g.fill();
+    }
+    for (const [dx, dy, r] of bolas) {
+      g.beginPath();
+      g.arc(x0 + dx * r0, y0 + dy * r0, r * r0 * 0.94, 0, 2 * PI);
+      g.fillStyle = "#ffffff";
+      g.fill();
+    }
+  }
+  const aColuna = aDe(PAINEL.z0 - 160);
+  nuvem(aColuna, topoEm(aColuna) - 120, 1.25);
+  const aCostas = aDe(ZT + 120);
+  nuvem(aCostas, topoEm(aCostas) - 260, 0.9);
+  const aMeio = aDe(PAINEL.z0 + 0.42 * (Z_FRENTE_DENTRO - PAINEL.z0));
+  nuvem(aMeio, topoEm(aMeio) - 70, 0.7);
+  const aFrente = aDe(Z_FRENTE_DENTRO - 150);
+  nuvem(aFrente, topoEm(aFrente) - 70, 0.75);
+
+  // a faixa do acabamento, da base da coluna até a frente, acima da pista (a arte
+  // da fábrica, no lugar de antes: nas duas laterais a ponta esquerda da arte
+  // fica do lado da frente da máquina, olhando de dentro)
+  {
+    const { textura } = await C.arte("", `acabamento-${lado}`, { lado: 2048, avisos });
+    const fonte = textura.image;
+    const L = Z_FRENTE_DENTRO - PAINEL.z0;
+    const H = (L * fonte.height) / fonte.width;
+    const xa = px(Math.min(aDe(PAINEL.z0), aDe(Z_FRENTE_DENTRO)));
+    const xb = px(Math.max(aDe(PAINEL.z0), aDe(Z_FRENTE_DENTRO)));
+    const ya = py(PISTA_Y + H);
+    const yb = py(PISTA_Y);
+    g.save();
+    g.translate(xb, ya);
+    g.scale(-1, 1);
+    g.imageSmoothingQuality = "high";
+    g.drawImage(fonte, 0, 0, xb - xa, yb - ya);
+    g.restore();
+  }
+  // abaixo da pista: o escuro do bolsão (só aparece dentro dele)
+  g.fillStyle = "#1d2027";
+  g.fillRect(0, py(PISTA_Y), W, Hc - py(PISTA_Y));
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 16;
+  t.userData.mimeType = "image/jpeg";
+  return t;
 }
 
 /* ======================================================================
@@ -336,6 +457,22 @@ for (const lado of ["esquerda", "direita"]) {
   por(M.lente, lente, giro.clone().setPosition(cam));
   // a placa embaixo do painel (o fim da pista), o teto e as costas, entre as laterais
   caixa(M.mdf, -XP, XP, PISTA_Y - ESP_L - PELE, PAINEL.y0, PAINEL.z0 - ESP, PAINEL.z0);
+  // ...e a frente dela, acima da pista, também é adesivo: os raios saindo do pé da
+  // tela (na máquina de verdade nada ali é madeira preta)
+  {
+    const L = 2 * XP;
+    const H = PAINEL.y0 - PISTA_Y;
+    const c = document.createElement("canvas");
+    c.width = 1024;
+    c.height = Math.round((1024 * H) / L);
+    desenharRaios(c.getContext("2d"), c.width, c.height, c.width / 2, c.height * 1.15, 26);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 16;
+    t.userData.mimeType = "image/jpeg";
+    const b = base(V(-XP, PISTA_Y, PAINEL.z0 + PELE), V(1, 0, 0), V(0, 1, 0));
+    por(material("placa_tela_arte", (n) => C.vinil(n, t)), C.adesivoPlano(retangulo(0, 0, L, H), [0, 0, L, H]), b.matriz());
+  }
   const yTeto = PAINEL.topo.y + 2;
   caixa(M.mdf, -XP, XP, yTeto, yTeto + ESP, ZT + ESP, PAINEL.topo.z + 3);
   caixa(M.mdf, -XP, XP, Y_FRENTE, yTeto, ZT, ZT + ESP);

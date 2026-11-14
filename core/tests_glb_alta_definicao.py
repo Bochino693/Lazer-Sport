@@ -64,7 +64,7 @@ NOMES = {
         "adesivo-lateral-esquerda-2", "adesivo-lateral-direita-2", "adesivo-tampo",
     },
     "strike-kids.glb": {
-        "estrutura_mdf", "lateral_esquerda_arte", "lateral_direita_arte", "acab_esq", "acab_dir", "pista", "frente_arte",
+        "estrutura_mdf", "lateral_esquerda_arte", "lateral_direita_arte", "lateral_esquerda_dentro", "lateral_direita_dentro", "pista", "frente_arte",
         "painel_tela", "testeira_arte", "monitor", "moldura_monitor", "camera_sensor", "lente", "bolsao", "bola_0", "bola_1",
         "botao_aro", "botao_vermelho", "neon_vermelho", "neon_azul", "led_pontos", "led_fita",
     },

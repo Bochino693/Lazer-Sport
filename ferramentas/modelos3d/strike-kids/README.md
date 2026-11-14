@@ -59,7 +59,7 @@ As malhas e os materiais têm o MESMO nome (o `gltfpack -kn -km` guarda os dois)
 |---|---|
 | `estrutura_mdf` | as chapas pretas acetinadas (as laterais, a frente, a testeira, o painel, a laje da pista, o teto, as costas e os suportes) |
 | `lateral_esquerda_arte`, `lateral_direita_arte` | os adesivos de fora das laterais |
-| `acab_esq`, `acab_dir` | a faixa do acabamento por dentro das laterais |
+| `lateral_esquerda_dentro`, `lateral_direita_dentro` | o vinil de dentro das laterais, inteiro: os raios com as nuvens, da coluna à frente, com a faixa do acabamento (o arco com as lâmpadas) acima da pista e o escuro do bolsão abaixo dela |
 | `pista` | o adesivo da pista (a madeira com as setas) |
 | `painel_tela` | o adesivo do painel da coluna (com o buraco do monitor) |
 | `testeira_arte` | o adesivo da testeira |
