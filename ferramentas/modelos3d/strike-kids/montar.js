@@ -73,6 +73,7 @@ const X_BOLSAO = -XP + U_BOLSAO * 2 * XP; // ~96
 const Y_BEIRA = Y_FRENTE + (V_BAIXO_F - V_BOLSAO) * FH * S_F; // ~114: a beira do bolsão
 const Z_BOLSAO = 545; // o fundo do bolsão
 const Y_PISO_BOLSAO = 40;
+const MADEIRA_BOLSAO = [201, 138, 62]; // #c98a3e: o piso e as paredes do bolsão (e o vinil de dentro abaixo da pista)
 const R_BOLA = 85;
 // a coluna: o painel da tela, inclinado como a frente das laterais (13,8°), e a placa embaixo dele
 const INCL = Math.atan2(228, 930);
@@ -225,39 +226,14 @@ for (const lado of ["esquerda", "direita"]) {
   }
 }
 
-/* Os raios da arte (verde, verde-claro, amarelo, laranja e creme) saindo de
-   (cx, cy), com o brilho no centro e o fundo mais fechado longe dele. */
-function desenharRaios(g, W, H, cx, cy, N) {
-  const cores = ["#0d8a2f", "#3cbf3f", "#a7d82a", "#ffe11a", "#ff9a1f", "#fff2b0", "#16a238", "#ffd21a", "#ff7b14", "#86cf2c"];
-  const R = 2 * Math.hypot(W, H);
-  for (let i = 0; i < N; i++) {
-    const t0 = (i / N) * 2 * PI;
-    const t1 = ((i + 1) / N) * 2 * PI + 0.004;
-    g.beginPath();
-    g.moveTo(cx, cy);
-    g.lineTo(cx + R * Math.cos(t0), cy + R * Math.sin(t0));
-    g.lineTo(cx + R * Math.cos(t1), cy + R * Math.sin(t1));
-    g.closePath();
-    g.fillStyle = cores[i % cores.length];
-    g.fill();
-  }
-  let rad = g.createRadialGradient(cx, cy, 0, cx, cy, W * 0.55);
-  rad.addColorStop(0, "rgba(255,250,215,0.55)");
-  rad.addColorStop(0.35, "rgba(255,245,200,0.12)");
-  rad.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = rad;
-  g.fillRect(0, 0, W, H);
-  rad = g.createRadialGradient(cx, cy, W * 0.35, cx, cy, W * 1.25);
-  rad.addColorStop(0, "rgba(0,40,10,0)");
-  rad.addColorStop(1, "rgba(0,40,10,0.28)");
-  g.fillStyle = rad;
-  g.fillRect(0, 0, W, H);
-}
-
-/* O vinil de dentro das laterais (um canvas na proporção da lateral): os raios
-   verdes, amarelos e laranja da arte saindo da base da coluna, as nuvens no alto,
-   a faixa do acabamento acima da pista (a arte da fábrica, como estava) e, abaixo
-   da pista, o escuro do bolsão. x = a' (mm), y do chão para cima. */
+/* O vinil de dentro das laterais: SÓ A ARTE DA FÁBRICA. Na máquina de verdade
+   (as fotos do cliente) a faixa do acabamento -- o arco com as lâmpadas e os
+   raios -- cobre a parede de dentro inteira acima da pista, da base da coluna
+   até a frente. Aqui ela é uma peça só, esticada de forma contínua: em cada
+   ponto do comprimento, da pista até a borda de cima daquele ponto (sem
+   emenda, sem nada desenhado à mão). Atrás da base da coluna (escondido pelo
+   painel; só uma tira aparece) a arte continua espelhada; abaixo da pista (só
+   se vê dentro do bolsão), a madeira do bolsão. x = a' (mm), y do chão para cima. */
 async function artePorDentro(lado, contorno, zDe, aDe) {
   const W = 2048;
   const Hc = Math.round((W * HL) / COMP);
@@ -265,15 +241,13 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
   c.width = W;
   c.height = Hc;
   const g = c.getContext("2d");
-  const px = (a2) => (a2 / COMP) * W;
-  const py = (y) => (1 - y / HL) * Hc;
-
-  // os raios: do pé da coluna (por dentro, logo abaixo da pista) para fora
-  desenharRaios(g, W, Hc, px(aDe(PAINEL.z0)), py(PISTA_Y - 60), 30);
-
-  // as nuvens, como na arte: no alto da coluna e na ponta da frente, rente à borda de cima
+  const { textura } = await C.arte("", `acabamento-${lado}`, { lado: 2048, avisos });
+  const fonte = textura.image;
+  const fw = fonte.width;
+  const fh = fonte.height;
+  const fd = fonte.getContext("2d").getImageData(0, 0, fw, fh).data;
+  // a borda de cima do contorno em cada coluna (a maior y dos cruzamentos)
   const topoEm = (a2) => {
-    // a altura da borda de cima do contorno em a' (a maior y dos cruzamentos)
     let melhor = 0;
     for (let k = 0; k < contorno.length; k++) {
       const [x0, y0] = contorno[k];
@@ -283,53 +257,40 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
     }
     return melhor;
   };
-  function nuvem(a2, y, escala) {
-    const bolas = [[0, 0, 1], [0.9, 0.15, 0.8], [-0.85, 0.2, 0.75], [0.45, -0.45, 0.72], [-0.4, -0.4, 0.66], [1.55, 0.35, 0.55], [-1.5, 0.4, 0.5]];
-    const x0 = px(a2);
-    const y0 = py(y);
-    const r0 = escala * W * 0.045;
-    // a sombra azulada embaixo e o branco por cima
-    for (const [dx, dy, r] of bolas) {
-      g.beginPath();
-      g.arc(x0 + dx * r0, y0 + dy * r0 + r0 * 0.18, r * r0, 0, 2 * PI);
-      g.fillStyle = "#cfe3ee";
-      g.fill();
-    }
-    for (const [dx, dy, r] of bolas) {
-      g.beginPath();
-      g.arc(x0 + dx * r0, y0 + dy * r0, r * r0 * 0.94, 0, 2 * PI);
-      g.fillStyle = "#ffffff";
-      g.fill();
+  const topo = new Float32Array(W);
+  for (let x = 0; x < W; x++) topo[x] = topoEm(((x + 0.5) / W) * COMP);
+  // a arte, como estava: a ponta esquerda dela do lado da frente da máquina
+  const L = Z_FRENTE_DENTRO - PAINEL.z0;
+  const saida = g.createImageData(W, Hc);
+  const o = saida.data;
+  for (let linha = 0; linha < Hc; linha++) {
+    const y = (1 - (linha + 0.5) / Hc) * HL;
+    for (let x = 0; x < W; x++) {
+      const i = (linha * W + x) * 4;
+      o[i + 3] = 255;
+      if (y < PISTA_Y) {
+        o[i] = MADEIRA_BOLSAO[0]; o[i + 1] = MADEIRA_BOLSAO[1]; o[i + 2] = MADEIRA_BOLSAO[2];
+        continue;
+      }
+      let u = (Z_FRENTE_DENTRO - zDe(((x + 0.5) / W) * COMP)) / L;
+      if (u > 1) u = 2 - u; // atrás da base da coluna: espelhada (contínua)
+      if (u < 0) u = -u;
+      u = limite(u, 0, 1);
+      const v = limite((y - PISTA_Y) / Math.max(60, topo[x] - PISTA_Y), 0, 1);
+      // o pixel da arte (bilinear): v = 1 na borda de cima
+      const fx = u * (fw - 1);
+      const fy = (1 - v) * (fh - 1);
+      const x0 = Math.floor(fx), y0 = Math.floor(fy);
+      const x1 = Math.min(fw - 1, x0 + 1), y1 = Math.min(fh - 1, y0 + 1);
+      const tx = fx - x0, ty = fy - y0;
+      for (let k = 0; k < 3; k++) {
+        const a = fd[(y0 * fw + x0) * 4 + k], b = fd[(y0 * fw + x1) * 4 + k];
+        const cc = fd[(y1 * fw + x0) * 4 + k], d = fd[(y1 * fw + x1) * 4 + k];
+        o[i + k] = (a * (1 - tx) + b * tx) * (1 - ty) + (cc * (1 - tx) + d * tx) * ty;
+      }
     }
   }
-  const aColuna = aDe(PAINEL.z0 - 160);
-  nuvem(aColuna, topoEm(aColuna) - 120, 1.25);
-  const aCostas = aDe(ZT + 120);
-  nuvem(aCostas, topoEm(aCostas) - 260, 0.9);
-  const aMeio = aDe(PAINEL.z0 + 0.42 * (Z_FRENTE_DENTRO - PAINEL.z0));
-  nuvem(aMeio, topoEm(aMeio) - 70, 0.7);
-  const aFrente = aDe(Z_FRENTE_DENTRO - 150);
-  nuvem(aFrente, topoEm(aFrente) - 70, 0.75);
-
-  // a faixa do acabamento, da base da coluna até a frente, acima da pista (a arte
-  // da fábrica, no lugar de antes: nas duas laterais a ponta esquerda da arte
-  // fica do lado da frente da máquina, olhando de dentro)
-  {
-    const { textura } = await C.arte("", `acabamento-${lado}`, { lado: 2048, avisos });
-    const fonte = textura.image;
-    const L = Z_FRENTE_DENTRO - PAINEL.z0;
-    const H = (L * fonte.height) / fonte.width;
-    const xa = px(Math.min(aDe(PAINEL.z0), aDe(Z_FRENTE_DENTRO)));
-    const xb = px(Math.max(aDe(PAINEL.z0), aDe(Z_FRENTE_DENTRO)));
-    const ya = py(PISTA_Y + H);
-    const yb = py(PISTA_Y);
-    g.save();
-    g.translate(xb, ya);
-    g.scale(-1, 1);
-    g.imageSmoothingQuality = "high";
-    g.drawImage(fonte, 0, 0, xb - xa, yb - ya);
-    g.restore();
-  }
+  g.putImageData(saida, 0, 0);
 
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -356,20 +317,9 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
   // o bolsão
   const yTopo = PISTA_Y - ESP_L - PELE;
   caixa(M.bolsaoPiso, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, Y_PISO_BOLSAO, Z_BOLSAO, Z_FRENTE_DENTRO);
-  {
-    // as paredes de dentro do bolsão também são adesivo (os raios), não caixa preta
-    const c = document.createElement("canvas");
-    c.width = 1024;
-    c.height = 512;
-    desenharRaios(c.getContext("2d"), 1024, 512, 512, 560, 22);
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 16;
-    t.userData.mimeType = "image/jpeg";
-    const mp = material("bolsao_parede", (n) => C.vinil(n, t));
-    caixa(mp, X_BOLSAO - ESP, X_BOLSAO, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_FRENTE_DENTRO);
-    caixa(mp, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_BOLSAO);
-  }
+  // as paredes de dentro do bolsão: a madeira, como o piso e a pista
+  caixa(M.bolsaoPiso, X_BOLSAO - ESP, X_BOLSAO, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_FRENTE_DENTRO);
+  caixa(M.bolsaoPiso, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_BOLSAO);
   {
     // O BURACO BEM DEFINIDO: um perfil amarelo arredondado (o protetor de borda) em
     // volta da boca do bolsão -- a beira da frente, a parede do recorte e a borda da pista
@@ -385,7 +335,19 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
     por(M.bolsaoBorda, C.tuboNeon(caminho, rb, false));
     // e a beira de cima da frente (a ponta da pista), da lateral esquerda até o buraco
     const yl = PISTA_Y - PELE - 9;
-    por(M.bolsaoBorda, C.tuboNeon([V(-XP, yl, zf), V((-XP + xb) / 2, yl, zf), V(xb - 12, yl, zf)], rb, false));
+    por(M.bolsaoBorda, C.tuboNeon([V(-XP, yl, zf), V((-XP + xb) / 2, yl, zf), V(xb, yl, zf)], rb, false));
+    // a junta no canto do buraco: uma esfera do mesmo perfil (nada de quina preta aparecendo)
+    // as juntas: uma esfera do mesmo perfil em cada canto (a curva fechada do tubo não
+    // aparece por dentro, nada de pontinho escuro)
+    for (const [x, y, z, k] of [
+      [xb, (yl + yp) / 2, zf - 6, 1.06], [xb + 6, Y_BEIRA + 6, zf, 1.06], [xb, yp, zf - 10, 1.06], [xb + 6, yp, Z_BOLSAO + 6, 1.06],
+      // os dois cantos da boca na frente (a quina arredondada da madeira fica embaixo)
+      [xb + 2, Y_BEIRA + 2, zf + 4, 1.22], [xb + 2, yl - 4, zf + 4, 1.22],
+    ]) {
+      const junta = new THREE.SphereGeometry(rb * k, 24, 16);
+      junta.translate(x, y, z);
+      por(M.bolsaoBorda, junta);
+    }
   }
   // as bolas de borracha (de gomos, como as de futebol): uma vermelha e preta, a outra colorida
   const gomos = (fundo, cores) => {
@@ -495,15 +457,20 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
   por(M.lente, lente, giro.clone().setPosition(cam));
   // a placa embaixo do painel (o fim da pista), o teto e as costas, entre as laterais
   caixa(M.mdf, -XP, XP, PISTA_Y - ESP_L - PELE, PAINEL.y0, PAINEL.z0 - ESP, PAINEL.z0);
-  // ...e a frente dela, acima da pista, também é adesivo: os raios saindo do pé da
-  // tela (na máquina de verdade nada ali é madeira preta)
+  // ...e a frente dela, acima da pista, também é adesivo: na foto da máquina, os
+  // raios da arte com a nuvem (na máquina de verdade nada ali é madeira preta)
   {
     const L = 2 * XP;
     const H = PAINEL.y0 - PISTA_Y;
+    // um recorte da faixa da fábrica (os raios com a nuvem, sem o arco), na proporção da placa
+    const { textura: faixa } = await C.arte("", "acabamento-direita", { lado: 2048, avisos });
+    const fonte = faixa.image;
     const c = document.createElement("canvas");
     c.width = 1024;
     c.height = Math.round((1024 * H) / L);
-    desenharRaios(c.getContext("2d"), c.width, c.height, c.width / 2, c.height * 1.15, 26);
+    const larg = Math.round((fonte.height * L) / H);
+    const x0 = Math.round(fonte.width * 0.537);
+    c.getContext("2d").drawImage(fonte, x0, 0, Math.min(larg, fonte.width - x0), fonte.height, 0, 0, c.width, c.height);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 16;

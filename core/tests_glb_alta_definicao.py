@@ -65,7 +65,7 @@ NOMES = {
     },
     "strike-kids.glb": {
         "estrutura_mdf", "lateral_esquerda_arte", "lateral_direita_arte", "lateral_esquerda_dentro", "lateral_direita_dentro", "pista", "frente_arte",
-        "painel_tela", "testeira_arte", "monitor", "moldura_monitor", "camera_sensor", "lente", "bolsao_piso", "bolsao_parede", "bolsao_borda", "placa_tela_arte", "bola_0", "bola_1",
+        "painel_tela", "testeira_arte", "monitor", "moldura_monitor", "camera_sensor", "lente", "bolsao_piso", "bolsao_borda", "placa_tela_arte", "bola_0", "bola_1",
         "botao_aro", "botao_vermelho", "neon_vermelho", "neon_azul", "led_pontos", "led_fita",
     },
 }

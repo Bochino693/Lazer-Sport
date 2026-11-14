@@ -59,15 +59,15 @@ As malhas e os materiais têm o MESMO nome (o `gltfpack -kn -km` guarda os dois)
 |---|---|
 | `estrutura_mdf` | as chapas pretas acetinadas (as laterais, a frente, a testeira, o painel, a laje da pista, o teto, as costas e os suportes) |
 | `lateral_esquerda_arte`, `lateral_direita_arte` | os adesivos de fora das laterais |
-| `lateral_esquerda_dentro`, `lateral_direita_dentro` | o vinil de dentro das laterais, inteiro: os raios com as nuvens, da coluna à frente, com a faixa do acabamento (o arco com as lâmpadas) acima da pista e o escuro do bolsão abaixo dela |
+| `lateral_esquerda_dentro`, `lateral_direita_dentro` | o vinil de dentro das laterais: só a faixa da fábrica (o arco com as lâmpadas e os raios), uma peça só esticada de forma contínua da pista até a borda de cima, da base da coluna à frente (como na máquina); abaixo da pista, a madeira do bolsão |
 | `pista` | o adesivo da pista (a madeira com as setas) |
 | `painel_tela` | o adesivo do painel da coluna (com o buraco do monitor) |
 | `testeira_arte` | o adesivo da testeira |
 | `frente_arte` | o adesivo da frente |
 | `monitor` | a tela acesa (o jogo, `emissiveTexture`) |
 | `moldura_monitor`, `camera_sensor`, `lente` | a moldura do monitor, a caixinha da câmera e a lente |
-| `bolsao_piso`, `bolsao_parede`, `bolsao_borda`, `bola_0`, `bola_1` | o bolsão das bolas: o piso de madeira clara, as paredes adesivadas (os raios), o perfil amarelo arredondado em volta do buraco (a boca bem definida), e as duas bolas |
-| `placa_tela_arte` | o adesivo de raios na placa embaixo da tela |
+| `bolsao_piso`, `bolsao_borda`, `bola_0`, `bola_1` | o bolsão das bolas: o piso e as paredes de madeira clara (como a pista), o perfil amarelo arredondado em volta do buraco e na beira de cima da frente (a boca bem definida), e as duas bolas |
+| `placa_tela_arte` | a placa embaixo da tela: um recorte da faixa da fábrica (os raios com a nuvem), como na foto da máquina |
 | `botao_aro`, `botao_vermelho` | o botão da frente |
 | `neon_vermelho`, `neon_azul` | o neon flex |
 | `led_pontos`, `led_fita` | a fita de LED: os pontos bem acesos (a cada 22 mm) e o perfil leitoso aceso em arco-íris por cima da borda inteira (nada de tira preta), da quina da frente no chão até o alto das costas |
