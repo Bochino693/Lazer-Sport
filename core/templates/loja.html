@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static avisos %}
+{% load precos %}
 {% load fotos giro %}
 
 {% block title %}Loja | Lazer & Sport Brinquedos{% endblock %}
@@ -186,22 +187,9 @@
 
                             <div class="loja-card-precos">
                                 {% if item.preco %}
-                                    <span class="loja-card-preco-label">
-                                        {% if item.preco_original %}Preço promocional{% else %}Preço do produto{% endif %}
-                                    </span>
-                                    <div class="loja-card-preco-linha">
-                                        {% if item.preco_original and item.preco_original > item.preco %}
-                                            <span class="loja-card-preco-original">
-                                                R$ {{ item.preco_original|moeda }}
-                                            </span>
-                                        {% endif %}
-                                        <strong class="loja-card-preco">
-                                            R$ {{ item.preco|moeda }}
-                                        </strong>
-                                    </div>
-                                    <span class="loja-card-condicao">
-                                        {{ item.condicao|default:"Consulte condições de pagamento e entrega" }}
-                                    </span>
+                                    {# o Pix em destaque, o cartão (+12%) em até 10x embaixo (seção 98) #}
+                                    {% preco_pix_cartao item.preco de=item.preco_original %}
+                                    {% if item.condicao %}<span class="loja-card-condicao">{{ item.condicao }}</span>{% endif %}
                                 {% elif item.condicao %}
                                     <span class="loja-card-preco-label">Condição especial</span>
                                     <strong class="loja-card-sem-preco">{{ item.condicao }}</strong>

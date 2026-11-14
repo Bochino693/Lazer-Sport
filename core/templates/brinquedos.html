@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static interno_extras avisos %}
+{% load precos %}
 {% load fotos %}
 {% load favoritos_extras %}
 {% load giro %}
@@ -529,9 +530,7 @@
                         <footer class="catalogo-card-footer">
                             {% if brinquedo.exibir_na_loja and brinquedo.valor_brinquedo > 0 %}
                                 <div class="catalogo-price">
-                                    <span>Preço para compra</span>
-                                    <strong class="catalogo-money" data-value="{{ brinquedo.valor_brinquedo }}"></strong>
-                                    <small>Valor unitário do brinquedo</small>
+                                    {% preco_pix_cartao brinquedo.valor_brinquedo compacto=True %}
                                 </div>
 
                                 <div class="catalogo-actions">

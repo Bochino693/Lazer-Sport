@@ -170,7 +170,7 @@ PRODUTOS = [
     },
 ]
 
-DEZ_X = "Em até 6x sem juros"
+DEZ_X = "Em até 10x sem juros"
 
 # Na ordem em que aparecem no site (a primeira é a mais nova, a do topo).
 PROMOCOES = [
@@ -263,7 +263,7 @@ PROMOCOES = [
         "descricao": "Black Friday: na compra de 3 cenográficos, leve 4",
         "brinquedos": ["Cozinha Infantil", "Oficina de Engenharia", "Salão de Beleza"],
         "preco": None,
-        "condicoes": ["Na compra de 3 cenográficos, leve 4!", "Parcelamos em até 6x sem juros"],
+        "condicoes": ["Na compra de 3 cenográficos, leve 4!", "Parcelamos em até 10x sem juros"],
     },
     {
         "arte": 5,

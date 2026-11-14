@@ -333,7 +333,11 @@ def pagamento_confere_com_pedido(payment, pedido):
     """A cobrança é exatamente deste pedido, pelo valor exato dele."""
     payment_id = str(payment.get("id") or "")
     valor_pago = valor_monetario(payment.get("transaction_amount"))
-    valor_esperado = valor_monetario(pedido.total_final)
+    # no cartão de crédito o cliente paga o total + 12% (valor_no_cartao)
+    if payment.get("payment_type_id") == "credit_card":
+        valor_esperado = valor_no_cartao(pedido.total_final)
+    else:
+        valor_esperado = valor_monetario(pedido.total_final)
     referencia = str(payment.get("external_reference") or "")
     metadata = payment.get("metadata") or {}
     assinatura_mp = metadata.get("cart_fingerprint")
@@ -367,18 +371,29 @@ def referencia_do_pedido(pedido):
     return f"pedido:{pedido.id}"
 
 
-# PARCELAMENTO NO CARTÃO DE CRÉDITO, SEM JUROS: uma parcela a cada R$ 1.000
-# do pedido, até 6. R$ 6.000 ou mais -> até 6x; R$ 5.000 -> 5x; ... ;
-# abaixo de R$ 2.000 -> à vista. O "sem juros" é o vendedor que assume: tem
-# de estar ligado na conta do Mercado Pago (Seu negócio > Custos >
-# Parcelamento), até 6x. A regra vale na tela e no servidor.
-PARCELAS_NO_MAXIMO = 6
-VALOR_POR_PARCELA = Decimal("1000.00")
+# O PREÇO DO SITE (LEIA-ME seção 98). O dono: "no Pix é o valor do objeto e
+# no crédito, em até 10x, o valor deve ser 12% a mais, para todos os
+# brinquedos e peças". Pix (e qualquer forma à vista): o preço cadastrado. Cartão
+# de crédito: o total + 12%, em até 10x sem juros (o "sem juros" é o vendedor
+# que assume: o "Parcelado vendedor" do Mercado Pago tem de estar em até 10x, sem
+# valor mínimo por parcela). A única trava é a parcela mínima do Mercado Pago
+# (R$ 5,00): uma peça de R$ 30 no cartão vai em até 6x. A regra vale na tela,
+# no servidor e na conferência do pagamento.
+ACRESCIMO_CARTAO = Decimal("0.12")
+PARCELAS_NO_MAXIMO = 10
+PARCELA_MINIMA = Decimal("5.00")
 
 
-def parcelas_maximas(total):
+def valor_no_cartao(total):
+    """O total no cartão de crédito: o preço + 12% (duas casas)."""
     total = valor_monetario(total) or Decimal("0.00")
-    return max(1, min(PARCELAS_NO_MAXIMO, int(total // VALOR_POR_PARCELA)))
+    return valor_monetario(total * (1 + ACRESCIMO_CARTAO))
+
+
+def parcelas_maximas(total_no_cartao):
+    """Até 10x, com cada parcela de pelo menos R$ 5,00 (o mínimo do Mercado Pago)."""
+    total = valor_monetario(total_no_cartao) or Decimal("0.00")
+    return max(1, min(PARCELAS_NO_MAXIMO, int(total // PARCELA_MINIMA)))
 
 
 def valor_da_parcela(total, parcelas):
@@ -441,10 +456,11 @@ def confirmar_pagamento(pedido, payment):
         travado.forma_pagamento = forma_pagamento_mp(payment)
         travado.mp_payment_id = payment_id
         travado.mp_status = "approved"
+        travado.valor_cobrado = valor_monetario(payment.get("transaction_amount"))
         if travado.forma_pagamento == "credito":
             travado.parcelas, travado.valor_parcela = parcelas_do_pagamento(payment)
         else:
-            travado.parcelas, travado.valor_parcela = 1, travado.total_final
+            travado.parcelas, travado.valor_parcela = 1, travado.valor_cobrado
         travado.save(update_fields=[
             "status",
             "forma_pagamento",
@@ -452,6 +468,7 @@ def confirmar_pagamento(pedido, payment):
             "mp_status",
             "parcelas",
             "valor_parcela",
+            "valor_cobrado",
             "atualizado",
         ])
 

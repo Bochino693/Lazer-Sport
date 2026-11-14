@@ -222,6 +222,7 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
             "categoria": categorias[0] if categorias else "Brinquedo",
             # Preço só de quem está à venda na loja; o resto é orçamento.
             "preco": f"R$ {dinheiro(b.valor_brinquedo)}" if b.disponivel_na_loja else "",
+            "valor": b.valor_brinquedo if b.disponivel_na_loja else None,
             "avaliacao": float(b.avaliacao or 0),
             "medidas": b.dimensoes_m or "",
             "modelo_3d": modelo_3d_da_vitrine(b),
@@ -270,8 +271,10 @@ def slides_das_promocoes(promocoes, quantidade=6):
             "selo": f"-{pct}%" if pct else "Oferta",
             "preco": f"R$ {dinheiro(promocao.preco_promocao)}" if promocao.preco_promocao else "",
             "preco_de": f"R$ {dinheiro(tabela)}" if tabela and pct else "",
+            "valor": promocao.preco_promocao or None,
+            "valor_de": tabela if tabela and pct else None,
             # a promoção sem preço (brinde, leve 4 pague 3): a condição no lugar
-            "condicao": condicoes[0] if condicoes else "",
+            "condicao": (promocao.condicoes_extras or [""])[0],
             "brinquedos": " + ".join(nomes),
             "avaliacao": 0,
             "medidas": "",
@@ -1199,6 +1202,7 @@ class BrinquedoInfoView(View):
                 "categorias_produto": categorias,
                 "disponivel_loja": disponivel_loja,
                 "preco_formatado": preco_formatado,
+                "preco_valor": valor if disponivel_loja else None,
                 "preco_schema": preco_schema,
                 "imagens_brinquedo": imagens_brinquedo,
                 "permite_sob_medida": permite_sob_medida,
@@ -2119,7 +2123,7 @@ class LojaView(View):
                 'preco': promo.preco_promocao,
                 # com vários brinquedos, o "de" é a soma do conjunto
                 'preco_original': promo.preco_tabela,
-                'condicao': (promo.lista_condicoes or [""])[0],
+                'condicao': (promo.condicoes_extras or [""])[0],
                 'url': reverse('promocao', args=[promo.id]),
             })
 
@@ -6172,6 +6176,7 @@ class CarrinhoView(LoginRequiredMixin, View):
             'valor_frete': carrinho.valor_frete,
             'total_final': carrinho.total_final,
             'pagamento_em_andamento': pagamento_em_andamento,
+            'acrescimo_cartao': str(checkout.ACRESCIMO_CARTAO),
         }
 
         return render(request, 'carrinho.html', context)
@@ -6620,12 +6625,16 @@ class PaymentView(LoginRequiredMixin, View):
             "total_itens": len(itens) if isinstance(itens, list) else itens.count(),
             "somente_pix": not request.user.is_authenticated,
             "mp_public_key": settings.MP_PUBLIC_KEY,
-            "max_parcelas": checkout.parcelas_maximas(total_final),
+            # Pix: o preço; cartão de crédito: + 12%, em até 10x sem juros (seção 98)
+            "total_cartao": checkout.valor_no_cartao(total_final),
+            "acrescimo_cartao_pct": int(checkout.ACRESCIMO_CARTAO * 100),
+            "max_parcelas": checkout.parcelas_maximas(checkout.valor_no_cartao(total_final)),
             "valor_parcela_maxima": checkout.valor_da_parcela(
-                total_final, checkout.parcelas_maximas(total_final),
+                checkout.valor_no_cartao(total_final),
+                checkout.parcelas_maximas(checkout.valor_no_cartao(total_final)),
             ),
             "cartao_minimo": cartao_minimo,
-            "cartao_liberado": cartao_minimo is None or total_final >= cartao_minimo,
+            "cartao_liberado": cartao_minimo is None or checkout.valor_no_cartao(total_final) >= cartao_minimo,
         }
 
         return render(request, "payment.html", context)
@@ -7699,8 +7708,10 @@ def processar_cartao(request):
             )
 
     total_final = _valor_monetario(reserva.total_final)
+    # no cartão de crédito: o total + 12%, em até 10x sem juros (seção 98)
+    total_cartao = checkout.valor_no_cartao(total_final)
 
-    max_parcelas = checkout.parcelas_maximas(total_final)
+    max_parcelas = checkout.parcelas_maximas(total_cartao)
     if parcelas < 1 or parcelas > max_parcelas:
         return JsonResponse(
             {
@@ -7717,7 +7728,7 @@ def processar_cartao(request):
     identification = payer.get("identification") or {}
 
     payment_data = {
-        "transaction_amount": float(total_final),
+        "transaction_amount": float(total_cartao),
         "token": token,
         "description": f"Lazer & Sport - Pedido #{reserva.id}",
         "installments": parcelas,
@@ -7793,11 +7804,11 @@ def processar_cartao(request):
         )
 
     valor_retornado = _valor_monetario(payment.get("transaction_amount"))
-    if valor_retornado != total_final:
+    if valor_retornado != total_cartao:
         payment_logger.critical(
             "Cartão com divergência de valor: pedido=%s esperado=%s retornado=%s",
             reserva.id,
-            total_final,
+            total_cartao,
             valor_retornado,
         )
         return JsonResponse(

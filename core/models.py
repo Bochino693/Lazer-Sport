@@ -1581,8 +1581,8 @@ class Promocoes(Prime):
 
     @property
     def lista_condicoes(self):
-        # Nunca mais parcelas do que o cartão aceita (até 6x; core/parcelas_texto.py),
-        # mesmo que alguém digite "10x" no painel.
+        # O parcelamento sempre na regra do site (até 10x no cartão, +12%;
+        # core/parcelas_texto.py), mesmo que alguém digite outra coisa no painel.
         from .parcelas_texto import condicao_em_6x
 
         return [
@@ -1590,6 +1590,16 @@ class Promocoes(Prime):
             for linha in (self.condicoes or "").splitlines()
             if linha.strip(" -•\t")
         ]
+
+    @property
+    def condicoes_extras(self):
+        """As condições que o bloco de preço não diz (brinde, prazo, "leve 4"...):
+        o parcelamento e o "à vista no Pix" já estão no preço do card (seção 98)."""
+        from .parcelas_texto import e_linha_do_pagamento
+
+        if not self.preco_promocao:
+            return self.lista_condicoes
+        return [linha for linha in self.lista_condicoes if not e_linha_do_pagamento(linha)]
 
     @property
     def todos_brinquedos(self):
@@ -2139,7 +2149,7 @@ class Pedido(Prime):
                     with transaction.atomic():
                         venda = Venda.objects.create(
                             pedido=atual,
-                            valor_pago=atual.total_final,
+                            valor_pago=atual.total_cobrado,
                             forma_pagamento=self.FORMA_DA_VENDA.get(atual.forma_pagamento or ""),
                             confirmado=True,
                             cpf=atual.documento_da_venda or None,
@@ -2288,15 +2298,27 @@ class Pedido(Prime):
     mp_status = models.CharField(max_length=50, null=True, blank=True)
 
     # Como o cliente pagou: no cartão de crédito, em quantas parcelas (sem
-    # juros, até 6x: checkout.parcelas_maximas) e de quanto cada uma.
+    # juros, até 10x: checkout.parcelas_maximas) e de quanto cada uma.
     parcelas = models.PositiveSmallIntegerField("Parcelas", default=1)
     valor_parcela = models.DecimalField(
         "Valor de cada parcela", max_digits=10, decimal_places=2,
         null=True, blank=True,
     )
+    # O que o cliente pagou de fato (LEIA-ME seção 98): no Pix, o total; no
+    # cartão de crédito, o total + 12% (checkout.valor_no_cartao). O total_final
+    # continua sendo o preço (o Pix): é ele que a reserva assina e que o save()
+    # recalcula. Vazio = ainda não pago.
+    valor_cobrado = models.DecimalField(
+        "Valor cobrado", max_digits=10, decimal_places=2, null=True, blank=True,
+    )
 
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    @property
+    def total_cobrado(self):
+        """O que o cliente pagou (o cartão com os 12%), ou o total do pedido."""
+        return self.valor_cobrado if self.valor_cobrado is not None else self.total_final
 
     # O pagamento pode ser confirmado pelo webhook com o cliente já fora do
     # site. Estes dois campos guardam o que ainda falta entregar a ele:

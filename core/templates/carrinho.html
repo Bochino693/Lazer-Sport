@@ -367,16 +367,16 @@
                     </div>
 
                     <div class="ck-linha ck-linha--total resumo-total">
-                        <span>Total do pedido</span>
+                        <span>Total no Pix</span>
                         <span class="money" id="totalPedido"
                               data-value="{{ total_liquido|stringformat:'f' }}">
                             R$ {{ total_liquido|moeda }}
                         </span>
                     </div>
                     {% comment %}
-                      Parcelamento no crédito sem juros: uma parcela a cada
-                      R$ 1.000, até 6x (checkout.parcelas_maximas). O texto
-                      acompanha o total quando o frete muda.
+                      O cartão de crédito (LEIA-ME seção 98): o total + 12%, em
+                      até 10x sem juros (checkout.valor_no_cartao e
+                      checkout.parcelas_maximas). O texto acompanha o total.
                     {% endcomment %}
                     <p class="ck-parcelamento" id="parcelamentoCarrinho" aria-live="polite"></p>
                 </div><!-- resumo-box -->
@@ -831,17 +831,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const linhaFrete = document.getElementById('linha-frete');
     const totalPedido = document.getElementById('totalPedido');
 
-    // Mesma regra do servidor (checkout.parcelas_maximas).
+    // A mesma regra do servidor (checkout.valor_no_cartao e checkout.parcelas_maximas):
+    // no cartão, o total + 12%, em até 10x sem juros (parcela mínima de R$ 5).
+    const ACRESCIMO_CARTAO = {{ acrescimo_cartao|default:"0.12" }};
     function atualizarParcelamento() {
         const alvo = document.getElementById('parcelamentoCarrinho');
         if (!alvo || !totalPedido) return;
         const total = parseFloat(String(totalPedido.innerText)
             .replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-        const parcelas = Math.max(1, Math.min(6, Math.floor(total / 1000)));
+        const cartao = Math.round(total * (1 + ACRESCIMO_CARTAO) * 100) / 100;
+        const parcelas = Math.max(1, Math.min(10, Math.floor(cartao / 5)));
         const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        alvo.innerHTML = parcelas > 1
-            ? `<i class="fa-solid fa-credit-card" aria-hidden="true"></i> ou em até <strong>${parcelas}x de ${fmt(total / parcelas)}</strong> sem juros no cartão`
-            : `<i class="fa-brands fa-pix" aria-hidden="true"></i> Pix ou cartão à vista · parcelamento sem juros a partir de R$ 2.000`;
+        alvo.innerHTML = total <= 0 ? '' : parcelas > 1
+            ? `<i class="fa-solid fa-credit-card" aria-hidden="true"></i> ou <strong>${fmt(cartao)}</strong> no cartão, em até <strong>${parcelas}x de ${fmt(Math.floor(cartao / parcelas * 100) / 100)}</strong> sem juros`
+            : `<i class="fa-solid fa-credit-card" aria-hidden="true"></i> ou <strong>${fmt(cartao)}</strong> à vista no cartão`;
     }
     atualizarParcelamento();
     new MutationObserver(atualizarParcelamento).observe(totalPedido, { childList: true, characterData: true, subtree: true });

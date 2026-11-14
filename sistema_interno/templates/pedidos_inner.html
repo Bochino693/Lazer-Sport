@@ -75,7 +75,7 @@
                 {% if pedido.itens.all|length > 3 %}<span class="ls-sub">e mais {{ pedido.itens.all|length|add:"-3" }}</span>{% endif %}
               </td>
               {# `Pedido.save()` recalcula total_final (líquido + frete) a cada gravação. #}
-              <td data-rotulo="Total" class="text-end"><strong>R$ {{ pedido.total_final|moeda }}</strong></td>
+              <td data-rotulo="Total" class="text-end"><strong>R$ {{ pedido.total_cobrado|moeda }}</strong></td>
               <td data-rotulo="Entrega">{{ pedido.get_tipo_envio_display|default:"—" }}</td>
               {% comment %}
                 O ANDAMENTO É A PRÓPRIA SITUAÇÃO, TOCÁVEL (seção 89).

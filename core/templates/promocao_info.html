@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load interno_extras static %}
+{% load precos %}
 {% load fotos %}
 
 {% block title %}{{ promocao.descricao }} | Promoção Lazer & Sport{% endblock %}
@@ -124,22 +125,12 @@
 
             <div class="promo-precos">
                 {% if promocao.preco_promocao %}
-                {% if promocao.preco_tabela and promocao.preco_tabela > promocao.preco_promocao %}
-                <div class="promo-price-row">
-                    <span>Preço normal{% if promocao.brinquedos_extras.all %} (o conjunto){% endif %}</span>
-                    <span class="preco-normal money">R$ {{ promocao.preco_tabela|moeda }}</span>
-                </div>
+                {% if promocao.brinquedos_extras.all %}{% preco_pix_cartao promocao.preco_promocao de=promocao.preco_tabela rotulo="Preço promocional (o conjunto)" %}{% else %}{% preco_pix_cartao promocao.preco_promocao de=promocao.preco_tabela rotulo="Preço promocional" %}{% endif %}
                 {% endif %}
 
-                <div class="promo-price-row">
-                    <span>Preço promocional{% if promocao.brinquedos_extras.all %} (o conjunto){% endif %}</span>
-                    <strong class="preco-promo money">R$ {{ promocao.preco_promocao|moeda }}</strong>
-                </div>
-                {% endif %}
-
-                {% if promocao.lista_condicoes %}
+                {% if promocao.condicoes_extras %}
                 <ul class="promo-condicoes">
-                    {% for condicao in promocao.lista_condicoes %}
+                    {% for condicao in promocao.condicoes_extras %}
                     <li><i class="fa-solid fa-circle-check" aria-hidden="true"></i> {{ condicao }}</li>
                     {% endfor %}
                 </ul>

@@ -97,7 +97,7 @@ def montar_email_confirmacao(pedido):
         "pedido": pedido,
         "itens": linhas,
         "total_liquido": _moeda(pedido.total_liquido),
-        "total_final": _moeda(pedido.total_final),
+        "total_final": _moeda(pedido.total_cobrado),
         "valor_frete": _moeda(pedido.valor_frete),
         "valor_desconto": _moeda(pedido.valor_desconto),
         "primeiro_nome": _nome_do_pedido(pedido),

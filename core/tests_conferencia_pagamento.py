@@ -209,10 +209,10 @@ class ParcelamentoSemJurosTests(TestCase):
 
     def test_regra_das_parcelas(self):
         from .checkout import parcelas_maximas
+        # o total NO CARTÃO (com os 12%): até 10x, parcela mínima de R$ 5 (seção 98)
         casos = {
-            "0.01": 1, "999.99": 1, "1000.00": 1, "1999.99": 1, "2000.00": 2,
-            "3500.00": 3, "4999.99": 4, "5000.00": 5, "5999.99": 5,
-            "6000.00": 6, "6990.00": 6, "45000.00": 6,
+            "0.01": 1, "4.99": 1, "9.99": 1, "10.00": 2, "30.00": 6,
+            "49.99": 9, "50.00": 10, "999.99": 10, "6990.00": 10, "45000.00": 10,
         }
         for total, esperado in casos.items():
             self.assertEqual(parcelas_maximas(Decimal(total)), esperado, total)
@@ -335,3 +335,41 @@ class UmCarrinhoSoTests(TestCase):
             )
         self.assertEqual(r.status_code, 500)
         self.assertIn("WhatsApp", r.json()["erro"])
+
+
+class CartaoComDozePorCentoTests(TestCase):
+    """LEIA-ME seção 98: o Pix paga o preço; o cartão de crédito, o preço + 12%."""
+
+    def _pagamento(self, pedido, tipo, valor):
+        from . import checkout
+        return {
+            "id": "777", "status": "approved", "payment_type_id": tipo, "transaction_amount": float(valor),
+            "external_reference": checkout.referencia_do_pedido(pedido),
+            "metadata": {"cart_fingerprint": "f"}, "installments": 10,
+            "transaction_details": {"installment_amount": float(valor) / 10},
+        }
+
+    def test_confere_o_cartao_com_os_12_e_o_pix_pelo_preco(self):
+        from types import SimpleNamespace
+        from . import checkout
+        pedido = SimpleNamespace(id=5, total_final=Decimal("100.00"), mp_payment_id=None, mp_fingerprint="f")
+        confere = checkout.pagamento_confere_com_pedido
+        self.assertTrue(confere(self._pagamento(pedido, "credit_card", "112.00"), pedido))
+        self.assertFalse(confere(self._pagamento(pedido, "credit_card", "100.00"), pedido))
+        self.assertTrue(confere(self._pagamento(pedido, "bank_transfer", "100.00"), pedido))
+        self.assertFalse(confere(self._pagamento(pedido, "bank_transfer", "112.00"), pedido))
+
+    def test_o_pedido_guarda_o_que_o_cliente_pagou(self):
+        from unittest import mock
+        from . import checkout
+        user = User.objects.create_user("cris", "cris@exemplo.com", "Senha#12345")
+        perfil = user.perfil
+        pedido = Pedido.objects.create(cliente=perfil, status="aguardando_pagamento", total_bruto=Decimal("4990"))
+        Pedido.objects.filter(pk=pedido.pk).update(mp_fingerprint="f")
+        pedido.refresh_from_db()
+        with mock.patch("core.notificacoes.enviar_confirmacao_de_compra"), self.captureOnCommitCallbacks(execute=True):
+            checkout.confirmar_pagamento(pedido, self._pagamento(pedido, "credit_card", checkout.valor_no_cartao(pedido.total_final)))
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.valor_cobrado, checkout.valor_no_cartao(pedido.total_final))
+        self.assertEqual(pedido.total_cobrado, pedido.valor_cobrado)
+        self.assertEqual(pedido.parcelas, 10)

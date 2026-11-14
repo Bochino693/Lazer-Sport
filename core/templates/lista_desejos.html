@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static %}
+{% load precos %}
 {% load fotos %}
 
 {% block title %}Lista de desejos | Lazer & Sport{% endblock %}
@@ -93,7 +94,7 @@
             <div class="desejo-corpo">
               <h3>{{ b.nome_brinquedo }}</h3>
               {% if b.disponivel_na_loja %}
-                <span class="preco">R$ {{ b.valor_brinquedo|moeda }}</span>
+                {% preco_pix_cartao b.valor_brinquedo compacto=True %}
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}
@@ -125,7 +126,7 @@
             <div class="desejo-corpo">
               <h3>{{ p.nome }}</h3>
               {% if p.preco_venda %}
-                <span class="preco">R$ {{ p.preco_venda|moeda }}</span>
+                {% preco_pix_cartao p.preco_venda compacto=True %}
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}

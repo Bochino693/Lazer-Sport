@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras avisos %}
+{% load precos %}
 {% load fotos %}
 
 {% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
@@ -240,10 +241,9 @@
 
                 {% if disponivel_loja %}
                     <div class="produto-compra">
-                        <span class="produto-preco-legenda">Preço do produto</span>
-                        <strong class="produto-preco">{{ preco_formatado }}</strong>
+                        {% preco_pix_cartao preco_valor rotulo="Preço do produto" %}
                         <span class="produto-preco-nota">
-                            Valor unitário. Frete e forma de entrega são definidos no carrinho.
+                            Valor unitário. Retirada na fábrica; o frete é por conta do cliente.
                         </span>
                     </div>
                 {% else %}

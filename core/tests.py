@@ -265,7 +265,7 @@ class MercadoPagoCardTests(SimpleTestCase):
 
     @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
-    def test_mais_de_6_parcelas_e_recusado(
+    def test_mais_de_10_parcelas_e_recusado(
         self,
         buscar_carrinho,
         buscar_reserva,
@@ -278,7 +278,7 @@ class MercadoPagoCardTests(SimpleTestCase):
                 "carrinho_id": 7,
                 "token": "token",
                 "payment_method_id": "visa",
-                "installments": 13,
+                "installments": 11,
                 "payer": {"email": "comprador@example.com"},
             }),
             content_type="application/json",
@@ -289,14 +289,14 @@ class MercadoPagoCardTests(SimpleTestCase):
         body = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("até 6x sem juros", body["mensagem"])
+        self.assertIn("até 10x sem juros", body["mensagem"])
 
     @patch("core.views.mercadopago.SDK")
     @patch("core.views.checkout.confirmar_pagamento")
     @patch("core.views.Carrinho.objects.filter")
     @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
-    def test_acima_de_6_mil_aceita_6_parcelas(
+    def test_cartao_cobra_12_porcento_em_ate_10x(
         self,
         buscar_carrinho,
         buscar_reserva,
@@ -315,7 +315,8 @@ class MercadoPagoCardTests(SimpleTestCase):
                 "id": 987654,
                 "status": "approved",
                 "status_detail": "accredited",
-                "transaction_amount": 20000.01,
+                # no cartão: o total + 12% (LEIA-ME seção 98)
+                "transaction_amount": 22400.01,
             },
         }
         request = self.factory.post(
@@ -325,7 +326,7 @@ class MercadoPagoCardTests(SimpleTestCase):
                 "token": "card-token",
                 "payment_method_id": "visa",
                 "issuer_id": "123",
-                "installments": 6,
+                "installments": 10,
                 "payer": {
                     "email": "comprador@example.com",
                     "identification": {
@@ -345,6 +346,9 @@ class MercadoPagoCardTests(SimpleTestCase):
         self.assertTrue(body["aprovado"])
         self.assertEqual(body["pedido_id"], 31)
         self.assertEqual(pedido.mp_payment_id, "987654")
+        enviado = sdk_class.return_value.payment.return_value.create.call_args[0][0]
+        self.assertEqual(enviado["transaction_amount"], 22400.01)
+        self.assertEqual(enviado["installments"], 10)
         filtrar_carrinhos.return_value.update.assert_called_once_with(
             mp_payment_id="987654"
         )
@@ -398,7 +402,7 @@ class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
                 "id": 555,
                 "status": "pending",
                 "status_detail": "pending_challenge",
-                "transaction_amount": 150.00,
+                "transaction_amount": 168.00,  # 150 + 12% no cartão
                 "three_ds_info": {
                     "external_resource_url": "https://acs.banco.example/desafio",
                     "creq": "eyJjcmVxIjoiMSJ9",
@@ -433,7 +437,7 @@ class MercadoPagoCartaoDebito3DSTests(SimpleTestCase):
                 "id": 556,
                 "status": "rejected",
                 "status_detail": "cc_rejected_bad_filled_security_code",
-                "transaction_amount": 150.00,
+                "transaction_amount": 168.00,  # 150 + 12% no cartão
             },
             buscar_carrinho, buscar_reserva, sdk_class,
         )

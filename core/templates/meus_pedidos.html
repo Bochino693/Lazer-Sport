@@ -180,7 +180,7 @@
             </ul>
             <div class="pd-total">
                 <span>Total</span>
-                <strong class="money total" data-valor="{{ pedido.total_final }}">{{ pedido.total_final|reais }}</strong>
+                <strong class="money total" data-valor="{{ pedido.total_cobrado }}">{{ pedido.total_cobrado|reais }}</strong>
             </div>
         </div>
 
@@ -308,7 +308,7 @@
                     </div>
                     <div class="ck-linha ck-linha--total">
                         <span>Total</span>
-                        <span class="money total" data-valor="{{ pedido.total_final }}">{{ pedido.total_final|reais }}</span>
+                        <span class="money total" data-valor="{{ pedido.total_cobrado }}">{{ pedido.total_cobrado|reais }}</span>
                     </div>
                     {% if pedido.forma_pagamento and status != 'aguardando_pagamento' and status != 'cancelado' %}
                     <p class="pd-pago-com">

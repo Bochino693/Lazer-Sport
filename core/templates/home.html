@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load interno_extras static avisos %}
+{% load precos %}
 {% load giro %}
 {% load fotos fichas %}
 {% load humanize %}
@@ -128,7 +129,7 @@
               {% if item.brinquedos %}<span class="ls-vitrine-itens"><i class="fa-solid fa-tags" aria-hidden="true"></i> {{ item.brinquedos }}</span>{% endif %}
             </div>
             <div class="ls-vitrine-rodape">
-              <strong class="ls-vitrine-preco">{% if item.preco_de %}<s class="ls-vitrine-preco-de">{{ item.preco_de }}</s> {% endif %}{% if item.preco %}{{ item.preco }}{% elif item.condicao %}{{ item.condicao }}{% else %}Sob consulta{% endif %}</strong>
+              {% if item.valor %}<div class="ls-vitrine-preco">{% preco_pix_cartao item.valor de=item.valor_de compacto=True %}</div>{% else %}<strong class="ls-vitrine-preco">{% if item.condicao %}{{ item.condicao }}{% else %}Sob consulta{% endif %}</strong>{% endif %}
               <a href="{{ item.url }}" class="ls-vitrine-ver" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">Ver <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
             </div>
           </div>
@@ -743,25 +744,9 @@
 
              <!-- PREÇOS PROMO -->
             <div class="preco-box oferta-precos">
-                {# Sem o preço do brinquedo, o "De:" saía como "R$ 0,00"; e o "De" igual ao "Por" não é desconto. #}
-                {% if promo.preco_tabela and promo.preco_promocao and promo.preco_tabela > promo.preco_promocao %}
-                <p class="preco-original">
-                    De:
-                    <span class="money"
-                          data-valor="{{ promo.preco_tabela }}">
-                    </span>
-                </p>
-                {% endif %}
-
-                {% if promo.preco_promocao %}
-                <p class="preco-promocao">
-                    Por:
-                    <strong class="money"
-                            data-valor="{{ promo.preco_promocao }}">
-                    </strong>
-                </p>
-                {% endif %}
-                {% with condicoes=promo.lista_condicoes %}{% if condicoes %}
+                {# o Pix em destaque, o cartão (+12%) em até 10x embaixo (seção 98) #}
+                {% if promo.preco_promocao %}{% preco_pix_cartao promo.preco_promocao de=promo.preco_tabela %}{% endif %}
+                {% with condicoes=promo.condicoes_extras %}{% if condicoes %}
                 <p class="oferta-card-condicao">{{ condicoes.0 }}</p>
                 {% endif %}{% endwith %}
             </div>
@@ -1014,20 +999,8 @@
               sai mais barato que os itens avulsos.
             {% endcomment %}
             <div class="oferta-precos combo-precos{% if combo.economia > 0 %} com-economia{% endif %}">
-              {# Brinquedo sob consulta não tem preço: a soma saía "R$ 0,00". #}
-              {% if combo.total_original > 0 %}
-              <p class="combo-total">
-                <span class="combo-precos-rotulo">Valor dos brinquedos</span>
-                <span class="total-riscado money"
-                      data-valor="{{ combo.total_original }}"></span>
-              </p>
-              {% endif %}
-
-              <p class="combo-preco">
-                <span class="combo-precos-rotulo">Preço do combo</span>
-                <strong class="preco-promo money"
-                        data-valor="{{ combo.valor_combo }}"></strong>
-              </p>
+              {# o Pix em destaque, o cartão (+12%) em até 10x embaixo (seção 98) #}
+              {% preco_pix_cartao combo.valor_combo de=combo.total_original rotulo="Preço do combo" %}
 
               {% if combo.economia > 0 %}
                 <p class="combo-economia">

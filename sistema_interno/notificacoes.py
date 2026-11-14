@@ -271,7 +271,7 @@ def _avisar_novo_pedido_agora(pedido_id):
                 "urgente": True,
             },
         )
-        total = pedido.total_final if pedido.total_final is not None else pedido.total_liquido
+        total = pedido.total_cobrado if pedido.total_cobrado is not None else pedido.total_liquido
         linhas = ["Um novo pedido entrou na operação."]
         if total is not None:
             linhas.append(f"Valor informado: R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))

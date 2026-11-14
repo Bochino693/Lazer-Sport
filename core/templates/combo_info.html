@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load interno_extras static %}
+{% load precos %}
 {% load fotos %}
 
 {% block title %}{{ combo.descricao|truncatechars:60 }} | Combo Lazer & Sport{% endblock %}
@@ -85,15 +86,7 @@
 
             <!-- PREÇOS -->
             <div class="combo-precos">
-                <p>
-                    Valor individual dos brinquedos
-                    <span class="total-riscado money">R$ {{ combo.total_original|moeda }}</span>
-                </p>
-
-                <p class="combo-price-main">
-                    Preço especial do combo
-                    <span class="preco-promo money">R$ {{ combo.valor_combo|moeda }}</span>
-                </p>
+                {% preco_pix_cartao combo.valor_combo de=combo.total_original rotulo="Preço especial do combo" %}
 
                 <div class="combo-saving">
                     <i class="fa-solid fa-piggy-bank" aria-hidden="true"></i>

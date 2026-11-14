@@ -203,7 +203,8 @@ class PedidoViraVendaTests(BaseFunil):
         pedido.refresh_from_db()
         pagamento = {
             "id": 9911, "status": "approved", "payment_type_id": "credit_card",
-            "transaction_amount": float(pedido.total_final),
+            # no cartão de crédito o cliente paga o total + 12% (LEIA-ME seção 98)
+            "transaction_amount": float(checkout.valor_no_cartao(pedido.total_final)),
             "external_reference": checkout.referencia_do_pedido(pedido),
             "metadata": {"cart_fingerprint": "assinatura-x"},
             "installments": 1,
@@ -217,7 +218,8 @@ class PedidoViraVendaTests(BaseFunil):
 
         venda = Venda.objects.get(pedido=pedido)
         self.assertTrue(venda.confirmado)
-        self.assertEqual(venda.valor_pago, pedido.total_final)
+        # a venda leva o que o cliente pagou de fato: o cartão, com os 12%
+        self.assertEqual(venda.valor_pago, checkout.valor_no_cartao(pedido.total_final))
         self.assertEqual(venda.forma_pagamento, "cartao")
 
     def test_gravar_outro_campo_nao_pergunta_pela_venda(self):

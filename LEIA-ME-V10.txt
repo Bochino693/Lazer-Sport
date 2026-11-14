@@ -5734,3 +5734,87 @@ Dependência nova: rjsmin (requirements.txt).
    fábrica. Os Astronautas não têm a folha de adesivos (as cabeceiras saem da
    foto do catálogo, borradas). O Basquete Home azul segue sem 3D.
    Testes: core/tests_fotos_estudio.py.
+
+97) STRIKE KIDS: POR DENTRO, A ARTE DA FÁBRICA; O LED FORTE; O BURACO DAS BOLAS DEFINIDO
+   O PEDIDO, em três voltas: "olha a área preta acima da máquina, não é assim,
+   é tudo adesivo com os LEDs"; "utilizou muito do preto, o LED poderia ser
+   forte, e o buraco da caída bem definido"; "você deve completar
+   corretamente o adesivo, você remendou".
+   O QUE ESTAVA ERRADO: o 3D (seção 92) só tinha a faixa do acabamento (o arco
+   com as lâmpadas), baixa, por dentro das laterais; o resto da face de dentro
+   e a placa embaixo da tela eram MDF preto; a fita de LED era uma tira preta
+   com pontinhos; o bolsão, uma caixa escura sem borda. A primeira correção
+   (raios desenhados à mão em volta da faixa) deixou emenda -- o "remendo".
+   COMO FICOU (ferramentas/modelos3d/strike-kids/montar.js):
+     * artePorDentro(): a face de dentro de cada lateral leva SÓ a faixa da
+       fábrica (acabamento-esquerda/direita), uma peça só, esticada de forma
+       contínua: em cada ponto do comprimento, da pista até a borda de cima
+       daquele ponto, da base da coluna à frente -- como nas fotos da máquina.
+       Atrás da base da coluna (escondido pelo painel) a arte continua
+       espelhada; abaixo da pista (só se vê no bolsão), a madeira do bolsão.
+       Nada desenhado à mão;
+     * a placa embaixo da tela: um recorte da mesma faixa (os raios com a
+       nuvem, sem o arco), como na foto;
+     * a fita de LED: pontos maiores e mais juntos (22 mm), bem acesos, num
+       perfil leitoso aceso em arco-íris por cima da borda inteira das
+       laterais (nada de tira preta; comum3d.pontosDeLed agora dá UV à fita),
+       descendo pela quina da frente até 5 cm do chão (o ponto não passa do
+       piso: senão o modelo "subia" 8 mm ao assentar no chão);
+     * o bolsão: piso e paredes de madeira clara (como a pista), um perfil
+       amarelo arredondado em volta da boca (a beira da frente, a parede do
+       recorte e a borda da pista) e na beira de cima da frente, com juntas
+       arredondadas nos cantos;
+     * os materiais: lateral_*_dentro, placa_tela_arte, bolsao_piso,
+       bolsao_borda (acab_esq/acab_dir e bolsao saíram). Medidas iguais
+       (0,74 x 2,069 x 1,91 m).
+   AS FOTOS: as de estúdio do Strike Kids (ferramentas/fotos3d) refeitas com
+   o 3D novo; a migração core/0200 (só dados, só no Render) sobe as que
+   mudaram, pelos caminhos da 0196 e da 0197. As das categorias Eletrônicos e
+   Boliche Virtual (ferramentas/fotos-categorias) vêm na core/0201, pelo mesmo
+   caminho (o render delas leva ~50 min). Os recortes de cor
+   (cor_*.webp, só no painel, recortes para artes) saíram do modelo novo,
+   pintados pelo mesmo cores3d.js do site (o modelo antigo, magro, saiu).
+
+98) O PREÇO DO SITE: PIX PELO PREÇO; CARTÃO + 12% EM ATÉ 10x SEM JUROS
+   O PEDIDO: "todo site deve cobrir 10x sem juros; os brinquedos pagos no Pix
+   é um valor do objeto e no crédito em até 10x o valor deve ser 12% a mais,
+   para todos os brinquedos e peças; apresentar o valor fixo sempre como valor
+   promocional nos cards para impressionar os clientes e deixar nítida a
+   diferença". Troca a regra das seções 90 e 94 (uma parcela a cada R$ 1.000,
+   até 6x).
+   A REGRA, UMA SÓ (core/checkout.py): ACRESCIMO_CARTAO = 12%,
+   PARCELAS_NO_MAXIMO = 10, PARCELA_MINIMA = R$ 5,00 (o mínimo do Mercado
+   Pago). valor_no_cartao(total) = total + 12%; parcelas_maximas(total no
+   cartão) = até 10, com cada parcela de pelo menos R$ 5 (uma peça de R$ 39,90
+   sai R$ 44,69 em até 8x). Vale na tela, no servidor e na conferência:
+     * processar_cartao cobra valor_no_cartao(total) e recusa mais parcelas do
+       que a regra; o Brick abre com esse valor e maxInstallments;
+     * pagamento_confere_com_pedido: no cartão de crédito espera o total + 12%;
+       no Pix, o total exato;
+     * Pedido.valor_cobrado (core/0198, esquema): o que o cliente pagou de
+       fato; Pedido.total_cobrado (ele, ou o total_final). O total_final
+       continua o preço (é o que a reserva assina e o save() recalcula). A
+       venda, o e-mail de confirmação, Meus pedidos e o painel usam o cobrado.
+   O PREÇO NOS CARDS (core/templatetags/precos.py, partials/preco_pix_cartao.html,
+   o CSS .ls-preco em ls-tema.css): {% preco_pix_cartao valor de=preco_normal %}
+   -- riscado em cima o preço do cartão (ou o "de" da promoção/combo, quando
+   houver), o Pix grande em verde com o selo "no Pix" e o desconto (-11%), e
+   embaixo, em amarelo, "ou em até 10x de R$ X sem juros no cartão" (com o
+   total do cartão quando o riscado é o "de"). Em: a vitrine do topo, as
+   ofertas e combos da home, a loja, o catálogo/categorias, a página do
+   produto, do combo, da promoção, a página e o card das peças e a lista de
+   desejos. O carrinho e o pagamento mostram os dois totais (Pix e cartão).
+   AS CONDIÇÕES DAS PROMOÇÕES (core/parcelas_texto.py): toda frase de parcelas,
+   de qualquer regra antiga, vira "Em até 10x de R$ X sem juros no cartão"
+   (na tela e no banco, pela core/0199); os cards e a página da promoção
+   mostram só as condições EXTRAS (Promocoes.condicoes_extras: brinde, prazo,
+   "leve 4") -- o parcelamento e o "à vista" já estão no bloco de preço. A
+   frase "À vista com 7% de desconto" (da promoção de R$ 31.970) saiu da tela
+   por isso: no Pix o site cobra o preço da promoção, sem os 7%.
+   O MERCADO PAGO (a conta, não o código): Seu negócio > Custos > Taxas e
+   parcelas > Checkout > Parcelado vendedor em "Até 10x", SEM valor mínimo por
+   parcela -- senão o Mercado Pago recusa o 10x nas compras menores. A taxa do
+   10x sai da margem; se os 12% não cobrirem, muda-se ACRESCIMO_CARTAO.
+   Testes: core/tests_promocoes_6x.py (a regra, os textos, o bloco de preço),
+   core/tests_conferencia_pagamento.py (a conferência e o valor cobrado),
+   core/tests.py (o cartão cobra os 12% em até 10x) e os da Black Friday.

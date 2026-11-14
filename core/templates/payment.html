@@ -70,10 +70,13 @@
 
             {# no celular o resumo vem depois: o valor fica à vista já aqui #}
             <div class="ck-pagar-total">
-                <span>Total a pagar</span>
+                <span>No Pix</span>
                 <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
                     R$ {{ total_final|moeda }}
                 </strong>
+                <small class="ck-pagar-cartao">
+                    ou R$ {{ total_cartao|moeda }} no cartão de crédito{% if max_parcelas > 1 %}, em até {{ max_parcelas }}x de R$ {{ valor_parcela_maxima|moeda }} sem juros{% endif %}
+                </small>
             </div>
 
             <div class="method-tabs ck-segmento" role="tablist" aria-label="Forma de pagamento">
@@ -185,12 +188,13 @@
                 </div>
                 {% else %}
                 <ul class="card-limit ck-selos" aria-label="Condições do cartão">
+                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> R$ {{ total_cartao|moeda }} no cartão</li>
                     {% if max_parcelas > 1 %}
                     <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Em até {{ max_parcelas }}x de R$ {{ valor_parcela_maxima|moeda }} sem juros</li>
                     {% else %}
                     <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> À vista no cartão</li>
-                    <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> Parcelamento sem juros a partir de R$ 2.000</li>
                     {% endif %}
+                    <li><i class="fa-brands fa-pix" aria-hidden="true"></i> No Pix sai R$ {{ total_final|moeda }}</li>
                     <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Confirmação do banco, se pedida</li>
                 </ul>
                 {% endif %}
@@ -277,10 +281,14 @@
                     Frete por conta do cliente: indicamos transportadoras de confiança para a sua cidade.
                 </p>
                 <div class="ck-linha ck-linha--total summary-total-card">
-                    <span>Total a pagar</span>
+                    <span>No Pix</span>
                     <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
                         R$ {{ total_final|moeda }}
                     </strong>
+                </div>
+                <div class="ck-linha summary-line ck-linha--cartao">
+                    <span>No cartão{% if max_parcelas > 1 %} (até {{ max_parcelas }}x sem juros){% endif %}</span>
+                    <span>R$ {{ total_cartao|moeda }}</span>
                 </div>
             </div>
 
@@ -317,6 +325,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     const carrinhoId = "{{ carrinho.id }}";
     const total = Number("{{ total_final|stringformat:'f' }}");
+    // no cartão de crédito: o total + 12% (core/checkout.valor_no_cartao, seção 98)
+    const totalCartao = Number("{{ total_cartao|stringformat:'f' }}");
     const maxParcelas = Number("{{ max_parcelas }}");
     const publicKey = "{{ mp_public_key|escapejs }}";
     const csrfToken = "{{ csrf_token }}";
@@ -769,7 +779,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 "paymentBrick_container",
                 {
                     initialization: {
-                        amount: total,
+                        amount: totalCartao,
                         payer: {
                             email: "{{ request.user.email|escapejs }}"
                         }

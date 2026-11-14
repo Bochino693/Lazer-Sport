@@ -2969,3 +2969,19 @@ html img.card-giro-saindo.card-giro-saindo {
     html img.card-giro-camada.card-giro-camada, .card-giro-sumindo, html img.card-giro-saindo.card-giro-saindo,
     .card-giro-adesivo { transition: none; }
 }
+
+/* ===== O PREÇO DO SITE (LEIA-ME seção 98): o Pix em destaque, como preço
+   promocional; o cartão (+12%) riscado em cima e em até 10x sem juros embaixo.
+   core/templatetags/precos.py + partials/preco_pix_cartao.html ===== */
+.ls-preco { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ls-preco-rotulo { color: #9fb6ff; font-size: .7rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.ls-preco-de { color: #b9c4f2; font-size: .82rem; font-weight: 700; }
+.ls-preco-de s { text-decoration-thickness: 2px; text-decoration-color: rgba(255, 92, 122, .85); }
+.ls-preco-de-onde { font-size: .72rem; opacity: .85; }
+.ls-preco-pix { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.ls-preco-pix strong { color: #34e08a; font-size: 1.55rem; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; white-space: nowrap; text-shadow: 0 0 18px rgba(52, 224, 138, .25); }
+.ls-preco-selo { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: linear-gradient(135deg, #12b886, #34e08a); color: #04291a; font-size: .72rem; font-weight: 900; letter-spacing: .02em; white-space: nowrap; }
+.ls-preco-off { padding: 3px 8px; border-radius: 999px; background: linear-gradient(135deg, #ff3d6e, #ff8a3d); color: #fff; font-size: .72rem; font-weight: 900; white-space: nowrap; }
+.ls-preco-cartao { color: #ffd86b; font-size: .82rem; font-weight: 800; line-height: 1.3; }
+.ls-preco--compacto .ls-preco-pix strong { font-size: 1.25rem; }
+.ls-preco--compacto .ls-preco-de, .ls-preco--compacto .ls-preco-cartao { font-size: .74rem; }

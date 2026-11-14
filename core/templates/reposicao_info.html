@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static interno_extras %}
+{% load precos %}
 {% load fotos %}
 
 {% block title %}{{ peca.nome }} | Peça de Reposição - Lazer & Sport{% endblock %}
@@ -105,9 +106,8 @@
                 </div>
 
                 <div class="peca-preco-box">
-                    <span class="peca-preco-label">Preço unitário</span>
-                    <strong class="peca-preco js-preco" data-valor="{{ peca.preco_venda|default:'0'|floatformat:2 }}">R$ 0,00</strong>
-                    <span class="peca-preco-nota">Frete e prazo são calculados conforme o endereço de entrega.</span>
+                    {% preco_pix_cartao peca.preco_venda rotulo="Preço unitário" %}
+                    <span class="peca-preco-nota">Retirada na fábrica; o frete é por conta do cliente.</span>
                 </div>
 
                 <section class="peca-secao" data-scroll-reveal>

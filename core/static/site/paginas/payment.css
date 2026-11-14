@@ -742,3 +742,14 @@
     .checkout-modal-card,
     .checkout-modal-selo { animation: none; }
 }
+
+/* Pix e cartão lado a lado (LEIA-ME seção 98): o Pix é o preço; o cartão, + 12% em até 10x */
+.ck-pagar-total { flex-wrap: wrap; }
+.ck-pagar-cartao {
+    flex-basis: 100%;
+    color: #ffd86b;
+    font-size: .8rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+.ck-linha--cartao span:last-child { color: #ffd86b; font-weight: 800; }

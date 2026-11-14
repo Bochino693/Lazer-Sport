@@ -1,4 +1,5 @@
 {% load static fotos interno_extras %}
+{% load precos %}
 {% comment %}
   O CARTÃO DA PEÇA DE REPOSIÇÃO -- o mesmo na home e na página de peças.
 
@@ -54,8 +55,7 @@
     <div class="pc-rodape">
       <div class="pc-preco">
         {% if peca.preco_venda %}
-          <small>Preço da peça</small>
-          <strong class="money" data-valor="{{ peca.preco_venda }}">R$ {{ peca.preco_venda|moeda }}</strong>
+          {% preco_pix_cartao peca.preco_venda compacto=True %}
         {% else %}
           <small>Valor</small>
           <strong class="pc-consulta">Sob consulta</strong>
