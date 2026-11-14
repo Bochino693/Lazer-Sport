@@ -51,3 +51,16 @@ que receber uma correção. Não apague lições; se uma mudar, reescreva a linh
 - 2026-11-13 — Passo a passo de compra: usar as telas reais do site como estão
   hoje, dentro de um celular, com o toque animado em cada botão
   (`tutorial.py` + `gravar_compra.js`).
+
+## Comercial estilo apresentação
+- 2026-11-14 — Referência aprovada pelo dono: apresentador no showroom, legenda
+  amarela em itálico entrando uma palavra por vez, logo redondo fixo no canto,
+  fotos pequenas entrando por cima da cena e logo animado no final
+  (`comercial.py`, modelo em `exemplos/institucional.json`).
+- 2026-11-14 — As fotos de showroom do site (`cena-*` na galeria de cada
+  brinquedo) são o melhor material para esse formato quando não há gravação.
+- 2026-11-14 — Não há gravação do patrão falando. Não criar fala nem imagem
+  dele por IA; se chegar uma gravação real, usá-la como cena principal e
+  legendar exatamente o que ele diz.
+- 2026-11-14 — Entregar o vídeo sempre como arquivo MP4 direto na conversa,
+  pronto para baixar.
