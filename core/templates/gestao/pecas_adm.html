@@ -141,6 +141,10 @@
       </div>
 
       <div class="campo">
+        {% include "gestao/includes/sem_juros.html" with padrao=6 rotulo_id="pecaSemJurosRotulo" %}
+      </div>
+
+      <div class="campo">
         <label>Categorias</label>
         <div class="categoria-tools"><input type="search" id="buscarCategoriaPeca" placeholder="Filtrar categorias" aria-label="Filtrar categorias"><span id="categoriasPecaContador">0 selecionadas</span><button type="button" id="limparCategoriasPeca">Limpar</button></div>
         <div class="categorias-box" id="categoriasBox">

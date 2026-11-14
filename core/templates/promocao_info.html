@@ -125,7 +125,7 @@
 
             <div class="promo-precos">
                 {% if promocao.preco_promocao %}
-                {% if promocao.brinquedos_extras.all %}{% preco_pix_cartao promocao.preco_promocao de=promocao.preco_tabela rotulo="Preço promocional (o conjunto)" %}{% else %}{% preco_pix_cartao promocao.preco_promocao de=promocao.preco_tabela rotulo="Preço promocional" %}{% endif %}
+                {% if promocao.brinquedos_extras.all %}{% preco_pix_cartao promocao.preco_promocao de=promocao.preco_tabela rotulo="Preço promocional (o conjunto)" sem_juros=promocao.sem_juros_no_cartao %}{% else %}{% preco_pix_cartao promocao.preco_promocao de=promocao.preco_tabela rotulo="Preço promocional" sem_juros=promocao.sem_juros_no_cartao %}{% endif %}
                 {% endif %}
 
                 {% if promocao.condicoes_extras %}

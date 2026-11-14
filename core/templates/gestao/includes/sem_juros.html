@@ -1,0 +1,14 @@
+{% comment %}
+  "Parcelas sem juros no cartão" (LEIA-ME seção 99): chips de rádio, como o
+  resto do painel (nada de <select>). Vazio = o padrão do site ({{ padrao }}x);
+  de 1x a 10x, o deste objeto. Acima das vezes escolhidas, o cartão cobra juros.
+  Uso: {% include "gestao/includes/sem_juros.html" with padrao=6 rotulo_id="toySemJurosRotulo" %}
+{% endcomment %}<div class="sj-campo">
+  <span class="sj-rotulo" id="{{ rotulo_id }}"><i class="bi bi-credit-card-2-front" aria-hidden="true"></i> Parcelas sem juros no cartão</span>
+  <div class="sj-chips" role="radiogroup" aria-labelledby="{{ rotulo_id }}" data-sem-juros-chips>
+    <label class="sj-chip sj-chip--padrao"><input type="radio" name="parcelas_sem_juros" value="" checked><span>Padrão · {{ padrao }}x</span></label>
+    {% for n in "123456789"|make_list %}<label class="sj-chip"><input type="radio" name="parcelas_sem_juros" value="{{ n }}"><span>{{ n }}x</span></label>{% endfor %}
+    <label class="sj-chip"><input type="radio" name="parcelas_sem_juros" value="10"><span>10x</span></label>
+  </div>
+  <p class="sj-ajuda">No Pix, o preço. No cartão, o preço + 12%: sem juros até aqui e, acima, com juros (até 10x).</p>
+</div>

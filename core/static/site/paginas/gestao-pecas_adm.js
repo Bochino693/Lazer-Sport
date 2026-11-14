@@ -68,6 +68,7 @@
       document.getElementById("pecaDescricao").value = peca.descricao_peca || "";
       document.getElementById("pecaVenda").value = peca.preco_venda || "";
       document.getElementById("pecaFornecedor").value = peca.preco_fornecedor || "";
+      marcarSemJuros(form, peca.parcelas_sem_juros);
       document.getElementById("pecaAtivo").checked = !!peca.ativo;
 
       var ids = peca.categorias_ids || [];
@@ -200,3 +201,11 @@
     dispararAcaoRapida("delete", pecaExcluir.id, { confirmacao: fraseExcluir });
   });
 })();
+
+// As vezes sem juros (LEIA-ME seção 99): os chips de rádio do cadastro.
+function marcarSemJuros(raiz, valor) {
+    var alvo = String(valor || "");
+    var chips = (raiz || document).querySelectorAll('input[name="parcelas_sem_juros"]');
+    chips.forEach(function (chip) { chip.checked = chip.value === alvo; });
+    if (![].some.call(chips, function (chip) { return chip.checked; }) && chips[0]) chips[0].checked = true;
+}

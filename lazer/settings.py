@@ -746,6 +746,12 @@ def _credencial_mp(nome, remover_bearer=False):
 MP_ACCESS_TOKEN = _credencial_mp("MP_ACCESS_TOKEN", remover_bearer=True)
 MP_PUBLIC_KEY = _credencial_mp("MP_PUBLIC_KEY")
 
+# Os juros do cartão acima das vezes sem juros de cada objeto (LEIA-ME seção 99,
+# core/parcelas_texto.py), em % ao mês, tabela Price. Quem cobra é o site: no
+# Mercado Pago o parcelamento fica todo "sem juros" (o vendedor assume) até 10x.
+# Para mudar sem mexer no código: a variável JUROS_CARTAO_AO_MES no Render.
+JUROS_CARTAO_AO_MES = os.getenv("JUROS_CARTAO_AO_MES", "2.99")
+
 # ============================================================
 # E-MAIL (SMTP) -- usado pra avisar o cliente quando o status de
 # uma manutenção muda. Sem essas variáveis configuradas no ambiente

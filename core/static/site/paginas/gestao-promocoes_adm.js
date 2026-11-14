@@ -503,6 +503,7 @@
             const precoDe = Number(cartao.dataset.precoDe);
             campo.precoDe.value = precoDe > 0 ? semMoeda(precoDe) : '';
             campo.validade.value = cartao.dataset.validade || '';
+            marcarSemJuros(form, cartao.dataset.semJuros);
             campo.condicoes.value = cartao.dataset.condicoes || '';
             arteAtual = cartao.dataset.arte || '';
             imagemAtual = cartao.dataset.imagem || '';
@@ -581,3 +582,11 @@
         });
     });
 })();
+
+// As vezes sem juros (LEIA-ME seção 99): os chips de rádio do cadastro.
+function marcarSemJuros(raiz, valor) {
+    var alvo = String(valor || "");
+    var chips = (raiz || document).querySelectorAll('input[name="parcelas_sem_juros"]');
+    chips.forEach(function (chip) { chip.checked = chip.value === alvo; });
+    if (![].some.call(chips, function (chip) { return chip.checked; }) && chips[0]) chips[0].checked = true;
+}

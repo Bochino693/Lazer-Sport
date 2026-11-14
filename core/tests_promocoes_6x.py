@@ -1,8 +1,9 @@
-"""O preço do site (LEIA-ME seção 98): Pix pelo preço, cartão + 12% em até 10x sem juros.
+"""O preço do site (LEIA-ME seções 98 e 99): Pix pelo preço, cartão + 12%.
 
-O nome do arquivo ficou da seção 94 ("tudo em 6x"); a regra agora é a do dono:
-"todo site deve cobrir 10x sem juros; no Pix, o valor do objeto; no crédito, em
-até 10x, 12% a mais, para todos os brinquedos e peças".
+O nome do arquivo ficou da seção 94 ("tudo em 6x"). A regra agora: no Pix, o
+valor do objeto; no crédito, 12% a mais, em até 10x; SEM JUROS até as vezes de
+cada objeto (promoções 10x, brinquedos, peças e combos 6x, ou o que o painel
+disser) e, acima, com juros (tabela Price, 2,99% ao mês).
 """
 
 from decimal import Decimal
@@ -13,7 +14,8 @@ from django.test import SimpleTestCase, TestCase
 from . import checkout
 from .parcelas_texto import (
     ACRESCIMO_CARTAO, PARCELA_MINIMA, PARCELAS_NO_MAXIMO, condicao_em_6x, condicoes_em_6x,
-    e_linha_do_pagamento, maximo_de_parcelas, no_cartao,
+    e_linha_do_pagamento, ler_sem_juros, maximo_de_parcelas, no_cartao, resumo_do_cartao,
+    sem_juros_do_objeto,
 )
 
 
@@ -25,7 +27,8 @@ class RegraDoCartaoTests(SimpleTestCase):
         for valor in ("4.40", "39.90", "999", "4990", "31970"):
             v = Decimal(valor)
             self.assertEqual(no_cartao(v), checkout.valor_no_cartao(v), valor)
-            self.assertEqual(maximo_de_parcelas(v), checkout.parcelas_maximas(checkout.valor_no_cartao(v)), valor)
+            # a promoção (10x sem juros): até 10x, parcela mínima de R$ 5
+            self.assertEqual(maximo_de_parcelas(v, 10), checkout.parcelas_maximas(checkout.valor_no_cartao(v)), valor)
 
     def test_cartao_e_12_por_cento_a_mais(self):
         self.assertEqual(checkout.valor_no_cartao(Decimal("4990")), Decimal("5588.80"))
@@ -36,6 +39,45 @@ class RegraDoCartaoTests(SimpleTestCase):
         self.assertEqual(checkout.parcelas_maximas(Decimal("5588.80")), 10)
         self.assertEqual(checkout.parcelas_maximas(Decimal("44.69")), 8)
         self.assertEqual(checkout.parcelas_maximas(Decimal("4.99")), 1)
+
+
+class VezesSemJurosPorObjetoTests(SimpleTestCase):
+    def test_o_padrao_promocao_10x_o_resto_6x(self):
+        from types import SimpleNamespace
+        promo = SimpleNamespace(_meta=SimpleNamespace(model_name="promocoes"), parcelas_sem_juros=None)
+        brinquedo = SimpleNamespace(_meta=SimpleNamespace(model_name="brinquedos"), parcelas_sem_juros=None)
+        peca = SimpleNamespace(_meta=SimpleNamespace(model_name="pecasreposicao"), parcelas_sem_juros=None)
+        self.assertEqual(sem_juros_do_objeto(promo), 10)
+        self.assertEqual(sem_juros_do_objeto(brinquedo), 6)
+        self.assertEqual(sem_juros_do_objeto(peca), 6)
+        # o painel manda: uma promoção em 3x, um brinquedo em 10x
+        promo.parcelas_sem_juros = 3
+        brinquedo.parcelas_sem_juros = 10
+        self.assertEqual(sem_juros_do_objeto(promo), 3)
+        self.assertEqual(sem_juros_do_objeto(brinquedo), 10)
+
+    def test_o_campo_do_painel(self):
+        self.assertIsNone(ler_sem_juros(""))
+        self.assertIsNone(ler_sem_juros("padrão"))
+        self.assertEqual(ler_sem_juros("8"), 8)
+        self.assertEqual(ler_sem_juros("8x"), 8)
+        for ruim in ("0", "11", "dez"):
+            with self.assertRaises(ValueError):
+                ler_sem_juros(ruim)
+
+    def test_brinquedo_6x_sem_juros_e_10x_com_juros(self):
+        r = resumo_do_cartao(Decimal("4990"), 6)
+        self.assertEqual((r["cartao"], r["vezes"], r["parcela"]), (Decimal("5588.80"), 6, Decimal("931.47")))
+        self.assertEqual((r["vezes_com_juros"], r["parcela_com_juros"], r["total_com_juros"]),
+                         (10, Decimal("654.84"), Decimal("6548.44")))
+        r = resumo_do_cartao(Decimal("4990"), 10)
+        self.assertEqual((r["vezes"], r["parcela"], r["vezes_com_juros"]), (10, Decimal("558.88"), 0))
+
+    def test_a_taxa_vem_do_settings(self):
+        from django.test import override_settings
+        with override_settings(JUROS_CARTAO_AO_MES="0"):
+            r = resumo_do_cartao(Decimal("4990"), 6)
+            self.assertEqual(r["total_com_juros"], None)  # sem taxa, sem juros
 
 
 class TextoDasParcelasTests(SimpleTestCase):
@@ -73,12 +115,18 @@ class BlocoDePrecoTests(SimpleTestCase):
         self.assertIn("R$ 4.990,00", html)  # o Pix
         self.assertIn("no Pix", html)
         self.assertIn("-11%", html)
-        self.assertIn("em até 10x de R$ 558,88 sem juros", html)
+        # o brinquedo: 6x sem juros e, fora do card compacto, até 10x com juros
+        self.assertIn("em até 6x de R$ 931,47 sem juros", html)
+        self.assertIn("ou em até 10x de R$ 654,84 com juros", html)
+        compacto = self.render("{% preco_pix_cartao v compacto=True %}", v=Decimal("4990"))
+        self.assertIn("em até 6x de R$ 931,47 sem juros", compacto)
+        self.assertNotIn("com juros", compacto)
 
     def test_promocao_mostra_o_de_e_o_total_no_cartao(self):
-        html = self.render("{% preco_pix_cartao v de=d %}", v=Decimal("18900"), d=Decimal("21000"))
+        html = self.render("{% preco_pix_cartao v de=d sem_juros=10 %}", v=Decimal("18900"), d=Decimal("21000"))
         self.assertIn("<s>R$ 21.000,00</s>", html)
         self.assertIn("ou R$ 21.168,00 em até 10x de R$ 2.116,80 sem juros", html)
+        self.assertNotIn("com juros", html)
         self.assertIn("-10%", html)
 
     def test_sem_preco_nao_mostra_nada(self):

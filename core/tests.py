@@ -45,13 +45,17 @@ def carrinho_mock(total="100.00", payment_id=None):
     return carrinho
 
 
-def pedido_mock(total="100.00", payment_id=None, pedido_id=31):
+def pedido_mock(total="100.00", payment_id=None, pedido_id=31, sem_juros=6):
     pedido = MagicMock()
     pedido.id = pedido_id
     pedido.total_final = Decimal(total)
     pedido.mp_fingerprint = "fingerprint-do-pedido"
     pedido.mp_payment_id = payment_id
     pedido.status = "aguardando_pagamento"
+    # um item só, com as vezes sem juros dele (LEIA-ME seção 99)
+    pedido.itens.all.return_value = [
+        SimpleNamespace(subtotal=Decimal(total), sem_juros_no_cartao=sem_juros),
+    ]
     return pedido
 
 
@@ -289,7 +293,7 @@ class MercadoPagoCardTests(SimpleTestCase):
         body = json.loads(response.content)
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("até 10x sem juros", body["mensagem"])
+        self.assertIn("até 10x no cartão", body["mensagem"])
 
     @patch("core.views.mercadopago.SDK")
     @patch("core.views.checkout.confirmar_pagamento")
@@ -305,7 +309,8 @@ class MercadoPagoCardTests(SimpleTestCase):
         sdk_class,
     ):
         carrinho = carrinho_mock("20000.01")
-        pedido = pedido_mock("20000.01")
+        # uma promoção: 10x sem juros (LEIA-ME seção 99)
+        pedido = pedido_mock("20000.01", sem_juros=10)
         buscar_carrinho.return_value = carrinho
         buscar_reserva.return_value = pedido
         confirmar_pagamento.return_value = (pedido, True)
@@ -352,6 +357,49 @@ class MercadoPagoCardTests(SimpleTestCase):
         filtrar_carrinhos.return_value.update.assert_called_once_with(
             mp_payment_id="987654"
         )
+
+    @patch("core.views.mercadopago.SDK")
+    @patch("core.views.checkout.confirmar_pagamento")
+    @patch("core.views.Carrinho.objects.filter")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_brinquedo_normal_acima_de_6x_paga_juros(
+        self,
+        buscar_carrinho,
+        buscar_reserva,
+        filtrar_carrinhos,
+        confirmar_pagamento,
+        sdk_class,
+    ):
+        """LEIA-ME seção 99: até 6x sem juros; em 10x, a tabela Price a 2,99% ao mês."""
+        buscar_carrinho.return_value = carrinho_mock("20000.01")
+        criar = sdk_class.return_value.payment.return_value.create
+        for vezes, total in ((6, 22400.01), (10, 26246.25)):
+            pedido = pedido_mock("20000.01")  # brinquedo: o padrão, 6x
+            buscar_reserva.return_value = pedido
+            confirmar_pagamento.return_value = (pedido, True)
+            criar.reset_mock()
+            criar.return_value = {
+                "status": 201,
+                "response": {"id": 987654, "status": "approved", "status_detail": "accredited",
+                             "transaction_amount": total},
+            }
+            request = self.factory.post(
+                "/processar_cartao/",
+                data=json.dumps({
+                    "carrinho_id": 7, "token": f"card-token-{vezes}", "payment_method_id": "visa",
+                    "installments": vezes,
+                    "payer": {"email": "comprador@example.com",
+                              "identification": {"type": "CPF", "number": "19119119100"}},
+                }),
+                content_type="application/json",
+            )
+            request.user = usuario_mock()
+            response = processar_cartao(request)
+            self.assertEqual(response.status_code, 200, response.content[:300])
+            enviado = criar.call_args[0][0]
+            self.assertEqual(enviado["transaction_amount"], total)
+            self.assertEqual(enviado["installments"], vezes)
 
 
 @override_settings(

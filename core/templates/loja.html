@@ -188,7 +188,7 @@
                             <div class="loja-card-precos">
                                 {% if item.preco %}
                                     {# o Pix em destaque, o cartão (+12%) em até 10x embaixo (seção 98) #}
-                                    {% preco_pix_cartao item.preco de=item.preco_original %}
+                                    {% preco_pix_cartao item.preco de=item.preco_original sem_juros=item.sem_juros %}
                                     {% if item.condicao %}<span class="loja-card-condicao">{{ item.condicao }}</span>{% endif %}
                                 {% elif item.condicao %}
                                     <span class="loja-card-preco-label">Condição especial</span>

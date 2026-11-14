@@ -75,7 +75,7 @@
                     R$ {{ total_final|moeda }}
                 </strong>
                 <small class="ck-pagar-cartao">
-                    ou R$ {{ total_cartao|moeda }} no cartão de crédito{% if max_parcelas > 1 %}, em até {{ max_parcelas }}x de R$ {{ valor_parcela_maxima|moeda }} sem juros{% endif %}
+                    ou R$ {{ total_cartao|moeda }} no cartão de crédito{% if sem_juros_ate > 1 %}, em até {{ sem_juros_ate }}x de R$ {{ valor_parcela_sem_juros|moeda }} sem juros{% endif %}{% if com_juros %} (ou até {{ max_parcelas }}x com juros){% endif %}
                 </small>
             </div>
 
@@ -189,14 +189,40 @@
                 {% else %}
                 <ul class="card-limit ck-selos" aria-label="Condições do cartão">
                     <li><i class="fa-regular fa-credit-card" aria-hidden="true"></i> R$ {{ total_cartao|moeda }} no cartão</li>
-                    {% if max_parcelas > 1 %}
-                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Em até {{ max_parcelas }}x de R$ {{ valor_parcela_maxima|moeda }} sem juros</li>
+                    {% if sem_juros_ate > 1 %}
+                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Em até {{ sem_juros_ate }}x de R$ {{ valor_parcela_sem_juros|moeda }} sem juros</li>
+                    {% if com_juros %}<li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Até {{ max_parcelas }}x com juros</li>{% endif %}
+                    {% elif com_juros %}
+                    <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Até {{ max_parcelas }}x com juros</li>
                     {% else %}
                     <li><i class="fa-solid fa-layer-group" aria-hidden="true"></i> À vista no cartão</li>
                     {% endif %}
                     <li><i class="fa-brands fa-pix" aria-hidden="true"></i> No Pix sai R$ {{ total_final|moeda }}</li>
                     <li><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Confirmação do banco, se pedida</li>
                 </ul>
+                {% endif %}
+
+                {% if cartao_liberado is not False and opcoes_cartao|length > 1 %}
+                {# Em quantas vezes (LEIA-ME seção 99): sem juros até as vezes de cada item, com juros acima. #}
+                <div class="ck-parcelas" data-ck-parcelas>
+                    <div class="ck-parcelas-topo">
+                        <strong><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Em quantas vezes?</strong>
+                        <small>Sem juros até {{ sem_juros_ate }}x{% if com_juros %} · de {{ sem_juros_ate|add:1 }}x a {{ max_parcelas }}x com juros de {{ juros_ao_mes_pct }}% ao mês{% endif %}</small>
+                    </div>
+                    <div class="ck-parcelas-grade" role="radiogroup" aria-label="Em quantas vezes no cartão">
+                        {% for o in opcoes_cartao %}
+                        <button type="button" role="radio"
+                                class="ck-parcela {% if o.sem_juros %}ck-parcela--livre{% else %}ck-parcela--juros{% endif %}{% if o.parcelas == sem_juros_ate %} is-ativa{% endif %}"
+                                aria-checked="{% if o.parcelas == sem_juros_ate %}true{% else %}false{% endif %}"
+                                data-parcelas="{{ o.parcelas }}">
+                            <span class="ck-parcela-vezes">{{ o.parcelas }}x</span>
+                            <strong>R$ {{ o.parcela|moeda }}</strong>
+                            <span class="ck-parcela-selo">{% if o.sem_juros %}sem juros{% else %}com juros{% endif %}</span>
+                            <small>total R$ {{ o.total|moeda }}</small>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
                 {% endif %}
 
                 <div class="card-brick-area"{% if cartao_liberado is False %} hidden{% endif %}>
@@ -287,7 +313,7 @@
                     </strong>
                 </div>
                 <div class="ck-linha summary-line ck-linha--cartao">
-                    <span>No cartão{% if max_parcelas > 1 %} (até {{ max_parcelas }}x sem juros){% endif %}</span>
+                    <span>No cartão{% if sem_juros_ate > 1 %} (até {{ sem_juros_ate }}x sem juros){% endif %}</span>
                     <span>R$ {{ total_cartao|moeda }}</span>
                 </div>
             </div>
@@ -321,13 +347,19 @@
     </div>
 </div>
 
+{{ opcoes_cartao_json|json_script:"opcoes-cartao" }}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const carrinhoId = "{{ carrinho.id }}";
     const total = Number("{{ total_final|stringformat:'f' }}");
-    // no cartão de crédito: o total + 12% (core/checkout.valor_no_cartao, seção 98)
-    const totalCartao = Number("{{ total_cartao|stringformat:'f' }}");
-    const maxParcelas = Number("{{ max_parcelas }}");
+    // no cartão de crédito: o total + 12%, sem juros até as vezes de cada item e
+    // com juros acima (core/checkout.opcoes_do_pedido, seções 98 e 99). O
+    // formulário do Mercado Pago abre com o total e as vezes escolhidos aqui.
+    const opcoesCartao = JSON.parse(document.getElementById("opcoes-cartao").textContent || "[]");
+    let parcelasEscolhidas = Number("{{ sem_juros_ate }}") || 1;
+    const opcaoDoCartao = () =>
+        opcoesCartao.find(o => o.n === parcelasEscolhidas) || opcoesCartao[0] ||
+        {n: 1, total: "{{ total_cartao|stringformat:'f' }}"};
     const publicKey = "{{ mp_public_key|escapejs }}";
     const csrfToken = "{{ csrf_token }}";
     // Abaixo do mínimo do cartão o Brick não desenha nada: a aba mostra o
@@ -779,7 +811,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 "paymentBrick_container",
                 {
                     initialization: {
-                        amount: totalCartao,
+                        amount: Number(opcaoDoCartao().total),
                         payer: {
                             email: "{{ request.user.email|escapejs }}"
                         }
@@ -789,8 +821,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             // Só crédito: o débito saiu da loja (pedido do
                             // dono). Pix e crédito são as duas formas.
                             creditCard: "all",
-                            minInstallments: 1,
-                            maxInstallments: maxParcelas
+                            // as vezes escolhidas acima: o total do Brick é o delas
+                            minInstallments: opcaoDoCartao().n,
+                            maxInstallments: opcaoDoCartao().n
                         },
                         visual: {
                             // Formulário do Mercado Pago no tema escuro do site,
@@ -930,6 +963,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (botaoTentarCartao) {
         botaoTentarCartao.addEventListener("click", () => retryCardBrick());
     }
+
+    // A escolha das vezes: o Brick reabre com o total e as vezes novos (o
+    // cartão digitado não fica: o Mercado Pago não troca o valor de um
+    // formulário aberto).
+    document.querySelectorAll("[data-ck-parcelas] .ck-parcela").forEach(botao => {
+        botao.addEventListener("click", () => {
+            const n = Number(botao.dataset.parcelas);
+            if (!n || n === parcelasEscolhidas) return;
+            parcelasEscolhidas = n;
+            document.querySelectorAll("[data-ck-parcelas] .ck-parcela").forEach(b => {
+                const ativa = b === botao;
+                b.classList.toggle("is-ativa", ativa);
+                b.setAttribute("aria-checked", ativa ? "true" : "false");
+            });
+            if (brickController || criandoCartao) retryCardBrick();
+        });
+    });
 
     async function showBankChallenge(data) {
         const container = document.getElementById("statusScreenBrick_container");

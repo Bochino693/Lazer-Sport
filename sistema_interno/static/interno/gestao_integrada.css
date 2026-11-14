@@ -648,3 +648,31 @@
      ao lado do ícone, "TOTAL CADASTRADO" quebrava no meio da palavra. */
   .gestao-integrada .ls-content [class$="-kpi-icon"]{width:34px!important;height:34px!important;flex:0 0 auto}
 }
+
+/* "Parcelas sem juros no cartão" (LEIA-ME seção 99, gestao/includes/sem_juros.html):
+   chips de rádio nos cadastros de promoções, brinquedos, peças e combos. As
+   cores são as do tema (verde = as vezes do objeto; acento = o padrão). */
+.gestao-integrada .ls-content .sj-campo{display:grid;gap:8px;margin:12px 0 4px;min-width:0}
+.gestao-integrada .ls-content .sj-rotulo{font-weight:850;font-size:.92rem;display:flex;align-items:center;gap:6px}
+.gestao-integrada .ls-content .sj-rotulo i{color:var(--green)}
+.gestao-integrada .ls-content .sj-chips{gap:6px}
+.gestao-integrada .ls-content .sj-chip{position:relative;cursor:pointer;margin:0}
+.gestao-integrada .ls-content .sj-chip input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.gestao-integrada .ls-content .sj-chip span{
+  display:inline-flex;align-items:center;justify-content:center;min-width:46px;min-height:38px;
+  padding:6px 12px;border-radius:999px;font-weight:850;font-size:.86rem;text-transform:none;letter-spacing:normal;
+  background:rgba(var(--green-rgb),.12);border:1.5px solid var(--green-linha);color:inherit;
+  transition:background .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+.gestao-integrada .ls-content .sj-chip--padrao span{background:rgba(var(--acento-rgb),.14);border-color:var(--acento-linha)}
+.gestao-integrada .ls-content .sj-chip:hover span{transform:translateY(-1px)}
+.gestao-integrada .ls-content .sj-chip input:focus-visible+span{outline:3px solid var(--acento-claro);outline-offset:2px}
+.gestao-integrada .ls-content .sj-chip input:checked+span{
+  background:linear-gradient(135deg,var(--green-2),var(--green));border-color:var(--green);color:var(--green-tinta);
+  box-shadow:0 6px 16px rgba(var(--green-rgb),.35);
+}
+.gestao-integrada .ls-content .sj-chip--padrao input:checked+span{
+  background:linear-gradient(135deg,var(--acento),var(--acento-2));border-color:var(--acento);color:var(--acento-tinta);
+  box-shadow:0 6px 16px rgba(var(--acento-rgb),.35);
+}
+.gestao-integrada .ls-content .sj-ajuda{margin:0;font-size:.8rem;color:var(--muted)}

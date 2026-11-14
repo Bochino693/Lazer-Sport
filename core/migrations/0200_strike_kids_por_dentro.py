@@ -7,7 +7,7 @@ deve completar corretamente o adesivo, você remendou". O 3D
 arte da fábrica por dentro, contínua, o LED forte e o buraco do bolsão
 definido; as fotos de estúdio do Strike Kids, que mostravam o MDF preto,
 foram refeitas com ele (as das categorias Eletrônicos e Boliche Virtual vêm
-na 0201).
+na 0202).
 
 SÓ DADOS e SÓ NO RENDER, pelos mesmos caminhos da 0196 e da 0197: só a foto
 cujo arquivo mudou sobe (o nome leva a assinatura), a foto que a equipe pôs no

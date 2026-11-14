@@ -106,7 +106,7 @@
                 </div>
 
                 <div class="peca-preco-box">
-                    {% preco_pix_cartao peca.preco_venda rotulo="Preço unitário" %}
+                    {% preco_pix_cartao peca.preco_venda rotulo="Preço unitário" sem_juros=peca.sem_juros_no_cartao %}
                     <span class="peca-preco-nota">Retirada na fábrica; o frete é por conta do cliente.</span>
                 </div>
 

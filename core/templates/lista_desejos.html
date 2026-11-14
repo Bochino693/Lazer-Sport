@@ -94,7 +94,7 @@
             <div class="desejo-corpo">
               <h3>{{ b.nome_brinquedo }}</h3>
               {% if b.disponivel_na_loja %}
-                {% preco_pix_cartao b.valor_brinquedo compacto=True %}
+                {% preco_pix_cartao b.valor_brinquedo compacto=True sem_juros=b.sem_juros_no_cartao %}
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}
@@ -126,7 +126,7 @@
             <div class="desejo-corpo">
               <h3>{{ p.nome }}</h3>
               {% if p.preco_venda %}
-                {% preco_pix_cartao p.preco_venda compacto=True %}
+                {% preco_pix_cartao p.preco_venda compacto=True sem_juros=p.sem_juros_no_cartao %}
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}

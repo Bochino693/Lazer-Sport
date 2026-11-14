@@ -93,6 +93,7 @@
                 data-arte="{% if promo.arte_promocao %}{{ promo.arte_promocao.url }}{% endif %}"
                 data-preco-de="{{ promo.preco_de|default_if_none:''|unlocalize }}"
                 data-validade="{{ promo.valida_ate|date:'Y-m-d' }}"
+                data-sem-juros="{{ promo.parcelas_sem_juros|default_if_none:'' }}"
                 data-condicoes="{{ promo.condicoes }}"
                 data-busca="{{ promo.descricao|lower }} {{ promo.brinquedos.nome_brinquedo|lower }}{% for extra in promo.brinquedos_extras.all %} {{ extra.nome_brinquedo|lower }}{% endfor %}"
             >
@@ -250,6 +251,8 @@
                         <input id="prValidade" class="pr-data" name="valida_ate" type="date" data-pr-validade>
                     </div>
                 </div>
+
+                {% include "gestao/includes/sem_juros.html" with padrao=10 rotulo_id="prSemJurosRotulo" %}
 
                 <label class="pr-rotulo" for="prCondicoes">Condições <small>uma por linha</small></label>
                 <textarea id="prCondicoes" class="pr-condicoes" name="condicoes" rows="3" maxlength="1500"

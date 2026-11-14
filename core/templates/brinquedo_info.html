@@ -241,7 +241,7 @@
 
                 {% if disponivel_loja %}
                     <div class="produto-compra">
-                        {% preco_pix_cartao preco_valor rotulo="Preço do produto" %}
+                        {% preco_pix_cartao preco_valor rotulo="Preço do produto" sem_juros=preco_sem_juros %}
                         <span class="produto-preco-nota">
                             Valor unitário. Retirada na fábrica; o frete é por conta do cliente.
                         </span>

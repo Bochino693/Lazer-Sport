@@ -530,7 +530,7 @@
                         <footer class="catalogo-card-footer">
                             {% if brinquedo.exibir_na_loja and brinquedo.valor_brinquedo > 0 %}
                                 <div class="catalogo-price">
-                                    {% preco_pix_cartao brinquedo.valor_brinquedo compacto=True %}
+                                    {% preco_pix_cartao brinquedo.valor_brinquedo compacto=True sem_juros=brinquedo.sem_juros_no_cartao %}
                                 </div>
 
                                 <div class="catalogo-actions">

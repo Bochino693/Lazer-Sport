@@ -753,3 +753,67 @@
     line-height: 1.35;
 }
 .ck-linha--cartao span:last-child { color: #ffd86b; font-weight: 800; }
+
+/* Em quantas vezes (LEIA-ME seção 99): sem juros em verde, com juros em âmbar */
+.ck-parcelas {
+    margin: 14px 0 16px;
+    padding: 14px;
+    border-radius: 18px;
+    background: linear-gradient(140deg, #13265a 0%, #0e1d47 55%, #1b1250 100%);
+    border: 1px solid #2b4472;
+}
+.ck-parcelas-topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin-bottom: 10px;
+}
+.ck-parcelas-topo strong { color: #eef4ff; font-size: 1rem; font-weight: 900; }
+.ck-parcelas-topo strong i { color: #6fb6ff; margin-right: 4px; }
+.ck-parcelas-topo small { color: #a9bcd9; font-size: .78rem; font-weight: 700; }
+.ck-parcelas-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 8px;
+}
+.ck-parcela {
+    display: grid;
+    gap: 2px;
+    justify-items: start;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 2px solid transparent;
+    background: #0b1834;
+    color: #eef4ff;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.ck-parcela:hover { transform: translateY(-1px); }
+.ck-parcela:focus-visible { outline: 3px solid #6fb6ff; outline-offset: 2px; }
+.ck-parcela-vezes { font-size: .78rem; font-weight: 900; color: #a9bcd9; }
+.ck-parcela strong { font-size: 1.05rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ck-parcela small { font-size: .7rem; color: #a9bcd9; font-variant-numeric: tabular-nums; }
+.ck-parcela-selo {
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.ck-parcela--livre { border-color: rgba(52, 224, 138, .35); }
+.ck-parcela--livre .ck-parcela-selo { background: #34e08a; color: #05301a; }
+.ck-parcela--juros { border-color: rgba(255, 181, 71, .35); }
+.ck-parcela--juros .ck-parcela-selo { background: #ffb547; color: #3a2200; }
+.ck-parcela.is-ativa {
+    border-color: #6fb6ff;
+    background: linear-gradient(150deg, #1a6fe0 0%, #3b2fd0 100%);
+    box-shadow: 0 8px 22px rgba(26, 111, 224, .45);
+}
+.ck-parcela.is-ativa .ck-parcela-vezes,
+.ck-parcela.is-ativa small { color: #e3eeff; }
+@media (max-width: 520px) {
+    .ck-parcelas-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -5770,7 +5770,7 @@ Dependência nova: rjsmin (requirements.txt).
    AS FOTOS: as de estúdio do Strike Kids (ferramentas/fotos3d) refeitas com
    o 3D novo; a migração core/0200 (só dados, só no Render) sobe as que
    mudaram, pelos caminhos da 0196 e da 0197. As das categorias Eletrônicos e
-   Boliche Virtual (ferramentas/fotos-categorias) vêm na core/0201, pelo mesmo
+   Boliche Virtual (ferramentas/fotos-categorias) vêm na core/0202, pelo mesmo
    caminho (o render delas leva ~50 min). Os recortes de cor
    (cor_*.webp, só no painel, recortes para artes) saíram do modelo novo,
    pintados pelo mesmo cores3d.js do site (o modelo antigo, magro, saiu).
@@ -5818,3 +5818,50 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_promocoes_6x.py (a regra, os textos, o bloco de preço),
    core/tests_conferencia_pagamento.py (a conferência e o valor cobrado),
    core/tests.py (o cartão cobra os 12% em até 10x) e os da Black Friday.
+
+99) PARCELAS SEM JUROS POR OBJETO: PROMOÇÕES 10x, BRINQUEDOS 6x, ACIMA COM JUROS
+   O PEDIDO: "com as promoções, mantenha a opção de 10x sem juros; com os
+   brinquedos normais, até 6x sem juros para o cliente, acima disso com juros,
+   podendo manipular isso pelo objeto para as demais promoções; me diga o que
+   fazer no Mercado Pago para deixar esse sistema variável".
+   A REGRA (core/parcelas_texto.py -- a conta é uma só, para a tela, o servidor
+   e a conferência do pagamento):
+     * Pix: o preço. Cartão: o preço + 12% (seção 98), em até 10x;
+     * SEM JUROS até as vezes do objeto: o campo `parcelas_sem_juros` (1 a 10)
+       de Brinquedos, PecasReposicao, Combos e Promocoes (core/0201, esquema).
+       Vazio = o padrão: PROMOÇÕES 10x; brinquedos, peças e combos 6x
+       (sem_juros_do_objeto; a propriedade .sem_juros_no_cartao de cada um);
+     * ACIMA, com juros: tabela Price sobre o valor do cartão, à taxa
+       settings.JUROS_CARTAO_AO_MES (% ao mês; padrão 2,99; a variável de
+       ambiente JUROS_CARTAO_AO_MES no Render muda sem mexer no código; 0
+       desliga os juros);
+     * parcela mínima de R$ 5,00 (o Mercado Pago).
+   O PEDIDO MISTO: cada item paga os juros dele. ItemPedido.parcelas_sem_juros
+   guarda as vezes do objeto na hora da reserva (vazio nos pedidos antigos =
+   o padrão do tipo). checkout.opcoes_do_pedido dá [{parcelas, total, parcela,
+   sem_juros}] de 1x a 10x: o total de cada vez é a soma das partes (o cupom e
+   o frete se espalham pelo peso do subtotal). Uma promoção (10x) + uma peça
+   (6x): 6x sem juros, 7x a 10x com os juros só da parte da peça.
+   O PAGAMENTO: a aba do cartão tem "Em quantas vezes?" (os botões de 1x a 10x,
+   verde "sem juros", âmbar "com juros", com a parcela e o total); o Brick
+   abre com o total das vezes escolhidas e min = max = essas vezes; trocar
+   reabre o Brick. processar_cartao aceita só as vezes possíveis e cobra o
+   total delas; pagamento_confere_com_pedido confere pelo `installments` do
+   pagamento. Meus pedidos diz "sem juros" ou "com juros" (Pedido.pago_sem_juros).
+   NA TELA: o bloco de preço (precos.py) mostra "em até Nx sem juros" com as
+   vezes do objeto e, fora dos cards compactos, "ou em até 10x de R$ X com
+   juros"; o carrinho, a menor das vezes dos itens e "ou até 10x com juros";
+   as condições das promoções escrevem as vezes da promoção.
+   O PAINEL: "Parcelas sem juros no cartão" (Padrão / 1x a 10x) nos cadastros
+   de promoções, brinquedos, peças e combos.
+   O MERCADO PAGO (a conta): o parcelamento sem juros da conta é UM número para
+   tudo -- não dá para variar por produto lá. Por isso quem varia é o site: na
+   conta, Seu negócio > Custos > Taxas e parcelas > Parcelamento sem juros
+   (vendedor assume) em ATÉ 10x, sem valor mínimo por parcela. O site manda
+   o total já com os juros dele quando passa das vezes do objeto. Se a conta
+   ficar em menos vezes (ex.: 6x), o Mercado Pago soma os juros DELE ao
+   cliente acima disso, por cima dos do site -- e a promoção deixa de ser 10x
+   sem juros.
+   Testes: core/tests_promocoes_6x.py (a regra por objeto, o campo do painel, o
+   bloco de preço), core/tests_conferencia_pagamento.py (juros acima das vezes,
+   o pedido misto) e core/tests.py (brinquedo 10x com juros, promoção 10x sem).

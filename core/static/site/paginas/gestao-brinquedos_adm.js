@@ -574,6 +574,7 @@
             marcar('categorias_brinquedos', []);
             marcar('tags', []);
         }
+        marcarSemJuros(toyDialog, brinquedo ? brinquedo.parcelas_sem_juros : '');
         marcarVoltagem(brinquedo ? brinquedo.voltz : '', Boolean(brinquedo));
 
         zerarFotos(brinquedo);
@@ -1098,3 +1099,11 @@
         });
     });
 })();
+
+// As vezes sem juros (LEIA-ME seção 99): os chips de rádio do cadastro.
+function marcarSemJuros(raiz, valor) {
+    var alvo = String(valor || "");
+    var chips = (raiz || document).querySelectorAll('input[name="parcelas_sem_juros"]');
+    chips.forEach(function (chip) { chip.checked = chip.value === alvo; });
+    if (![].some.call(chips, function (chip) { return chip.checked; }) && chips[0]) chips[0].checked = true;
+}

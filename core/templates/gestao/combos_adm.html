@@ -98,6 +98,7 @@
                 data-detalhe-tipo="combo" data-detalhe-id="{{ combo.id }}"
                 data-description="{{ combo.descricao|escape }}"
                 data-price="{{ combo.valor_combo|unlocalize }}"
+                data-sem-juros="{{ combo.parcelas_sem_juros|default_if_none:'' }}"
                 data-toys="{% for brinquedo in combo.brinquedos.all %}{{ brinquedo.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
                 data-active="{{ combo.ativo|yesno:'true,false' }}"
                 data-image="{% if combo.imagem_combo %}{{ combo.imagem_combo.url }}{% endif %}"
@@ -244,6 +245,10 @@
                             required
                         >
                         <small>Exemplo: R$ 10.990,00</small>
+                    </div>
+
+                    <div class="combo-field">
+                        {% include "gestao/includes/sem_juros.html" with padrao=6 rotulo_id="comboSemJurosRotulo" %}
                     </div>
 
                     <div class="combo-field">

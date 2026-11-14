@@ -432,6 +432,8 @@
             </div>
             <p class="bq-ajuda" data-bq-preco-ajuda aria-live="polite">Em reais: 6990 vira R$ 6.990,00. Em branco, o site mostra “Sob consulta”.</p>
 
+            {% include "gestao/includes/sem_juros.html" with padrao=6 rotulo_id="toySemJurosRotulo" %}
+
             <label class="bq-chave">
               <input id="toyStore" name="exibir_na_loja" type="checkbox">
               <span class="bq-chave-trilho" aria-hidden="true"></span>

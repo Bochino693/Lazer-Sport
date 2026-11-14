@@ -129,7 +129,7 @@
               {% if item.brinquedos %}<span class="ls-vitrine-itens"><i class="fa-solid fa-tags" aria-hidden="true"></i> {{ item.brinquedos }}</span>{% endif %}
             </div>
             <div class="ls-vitrine-rodape">
-              {% if item.valor %}<div class="ls-vitrine-preco">{% preco_pix_cartao item.valor de=item.valor_de compacto=True %}</div>{% else %}<strong class="ls-vitrine-preco">{% if item.condicao %}{{ item.condicao }}{% else %}Sob consulta{% endif %}</strong>{% endif %}
+              {% if item.valor %}<div class="ls-vitrine-preco">{% preco_pix_cartao item.valor de=item.valor_de compacto=True sem_juros=item.sem_juros %}</div>{% else %}<strong class="ls-vitrine-preco">{% if item.condicao %}{{ item.condicao }}{% else %}Sob consulta{% endif %}</strong>{% endif %}
               <a href="{{ item.url }}" class="ls-vitrine-ver" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">Ver <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
             </div>
           </div>
@@ -745,7 +745,7 @@
              <!-- PREÇOS PROMO -->
             <div class="preco-box oferta-precos">
                 {# o Pix em destaque, o cartão (+12%) em até 10x embaixo (seção 98) #}
-                {% if promo.preco_promocao %}{% preco_pix_cartao promo.preco_promocao de=promo.preco_tabela %}{% endif %}
+                {% if promo.preco_promocao %}{% preco_pix_cartao promo.preco_promocao de=promo.preco_tabela sem_juros=promo.sem_juros_no_cartao %}{% endif %}
                 {% with condicoes=promo.condicoes_extras %}{% if condicoes %}
                 <p class="oferta-card-condicao">{{ condicoes.0 }}</p>
                 {% endif %}{% endwith %}
@@ -1000,7 +1000,7 @@
             {% endcomment %}
             <div class="oferta-precos combo-precos{% if combo.economia > 0 %} com-economia{% endif %}">
               {# o Pix em destaque, o cartão (+12%) em até 10x embaixo (seção 98) #}
-              {% preco_pix_cartao combo.valor_combo de=combo.total_original rotulo="Preço do combo" %}
+              {% preco_pix_cartao combo.valor_combo de=combo.total_original rotulo="Preço do combo" sem_juros=combo.sem_juros_no_cartao %}
 
               {% if combo.economia > 0 %}
                 <p class="combo-economia">

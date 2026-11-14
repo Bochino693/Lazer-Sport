@@ -149,6 +149,7 @@ class PecaAdminView(AdminOnlyMixin, View):
                 "descricao_peca": peca.descricao_peca or "",
                 "preco_venda": _decimal_br(peca.preco_venda),
                 "preco_fornecedor": _decimal_br(peca.preco_fornecedor),
+                "parcelas_sem_juros": peca.parcelas_sem_juros or "",
                 "ganho_potencial": _decimal_br(peca.ganho_potencial),
                 "ativo": peca.ativo,
                 "curtidas": peca.curtidas,
@@ -279,6 +280,13 @@ class PecaAdminView(AdminOnlyMixin, View):
         peca.descricao_peca = descricao
         peca.preco_venda = preco_venda
         peca.preco_fornecedor = preco_fornecedor
+        # as vezes sem juros desta peça (seção 99): vazio, o padrão (6x)
+        from .parcelas_texto import ler_sem_juros
+
+        try:
+            peca.parcelas_sem_juros = ler_sem_juros(request.POST.get("parcelas_sem_juros"))
+        except ValueError as erro:
+            raise ErroDeFormulario(str(erro))
         peca.ativo = request.POST.get("ativo") in ("1", "true", "on")
         peca.save()
 

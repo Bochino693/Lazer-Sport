@@ -2983,5 +2983,6 @@ html img.card-giro-saindo.card-giro-saindo {
 .ls-preco-selo { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: linear-gradient(135deg, #12b886, #34e08a); color: #04291a; font-size: .72rem; font-weight: 900; letter-spacing: .02em; white-space: nowrap; }
 .ls-preco-off { padding: 3px 8px; border-radius: 999px; background: linear-gradient(135deg, #ff3d6e, #ff8a3d); color: #fff; font-size: .72rem; font-weight: 900; white-space: nowrap; }
 .ls-preco-cartao { color: #ffd86b; font-size: .82rem; font-weight: 800; line-height: 1.3; }
+.ls-preco-juros { color: #ffb547; font-size: .76rem; font-weight: 700; line-height: 1.3; opacity: .95; }
 .ls-preco--compacto .ls-preco-pix strong { font-size: 1.25rem; }
 .ls-preco--compacto .ls-preco-de, .ls-preco--compacto .ls-preco-cartao { font-size: .74rem; }

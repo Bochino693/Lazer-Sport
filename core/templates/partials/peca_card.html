@@ -55,7 +55,7 @@
     <div class="pc-rodape">
       <div class="pc-preco">
         {% if peca.preco_venda %}
-          {% preco_pix_cartao peca.preco_venda compacto=True %}
+          {% preco_pix_cartao peca.preco_venda compacto=True sem_juros=peca.sem_juros_no_cartao %}
         {% else %}
           <small>Valor</small>
           <strong class="pc-consulta">Sob consulta</strong>

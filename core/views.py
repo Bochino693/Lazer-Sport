@@ -33,6 +33,7 @@ from sistema_interno.utils import ErroDeFormulario as ErroDeCadastroCliente
 from django.templatetags.static import static
 
 # Ciclo carrinho -> pedido reservado -> pedido pago.
+from . import parcelas_texto
 from . import checkout
 from . import conferencia_pagamento
 from . import arena, mapa_estados, painel_publico
@@ -223,6 +224,7 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
             # Preço só de quem está à venda na loja; o resto é orçamento.
             "preco": f"R$ {dinheiro(b.valor_brinquedo)}" if b.disponivel_na_loja else "",
             "valor": b.valor_brinquedo if b.disponivel_na_loja else None,
+            "sem_juros": b.sem_juros_no_cartao,
             "avaliacao": float(b.avaliacao or 0),
             "medidas": b.dimensoes_m or "",
             "modelo_3d": modelo_3d_da_vitrine(b),
@@ -273,6 +275,7 @@ def slides_das_promocoes(promocoes, quantidade=6):
             "preco_de": f"R$ {dinheiro(tabela)}" if tabela and pct else "",
             "valor": promocao.preco_promocao or None,
             "valor_de": tabela if tabela and pct else None,
+            "sem_juros": promocao.sem_juros_no_cartao,
             # a promoção sem preço (brinde, leve 4 pague 3): a condição no lugar
             "condicao": (promocao.condicoes_extras or [""])[0],
             "brinquedos": " + ".join(nomes),
@@ -329,6 +332,9 @@ class HomeView(View):
                 "descricao",
                 "avaliacao",
                 "valor_brinquedo",
+                # as vezes sem juros do card (LEIA-ME seção 99): fora do `only`,
+                # uma consulta por brinquedo
+                "parcelas_sem_juros",
                 "voltz",
                 "altura_m",
                 "largura_m",
@@ -1203,6 +1209,7 @@ class BrinquedoInfoView(View):
                 "disponivel_loja": disponivel_loja,
                 "preco_formatado": preco_formatado,
                 "preco_valor": valor if disponivel_loja else None,
+                "preco_sem_juros": brinquedo.sem_juros_no_cartao,
                 "preco_schema": preco_schema,
                 "imagens_brinquedo": imagens_brinquedo,
                 "permite_sob_medida": permite_sob_medida,
@@ -2087,6 +2094,7 @@ class LojaView(View):
                 'titulo': brinquedo.nome_brinquedo,
                 'imagem': url_da_imagem(brinquedo.imagem_brinquedo) or None,
                 'preco': brinquedo.valor_brinquedo,
+                'sem_juros': brinquedo.sem_juros_no_cartao,
                 'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
             })
 
@@ -2100,6 +2108,7 @@ class LojaView(View):
                 'titulo': combo.descricao,
                 'imagem': url_da_imagem(combo.imagem_combo) or None,
                 'preco': combo.valor_combo,
+                'sem_juros': combo.sem_juros_no_cartao,
                 'url': reverse('combo', args=[combo.id]),
             })
 
@@ -2121,6 +2130,7 @@ class LojaView(View):
                     or None
                 ),
                 'preco': promo.preco_promocao,
+                'sem_juros': promo.sem_juros_no_cartao,
                 # com vários brinquedos, o "de" é a soma do conjunto
                 'preco_original': promo.preco_tabela,
                 'condicao': (promo.condicoes_extras or [""])[0],
@@ -2140,6 +2150,7 @@ class LojaView(View):
                 'titulo': peca.nome,
                 'imagem': (url_da_imagem(imagem_obj.imagem) or None) if imagem_obj else None,
                 'preco': peca.preco_venda,
+                'sem_juros': peca.sem_juros_no_cartao,
                 'url': reverse('reposicao_detalhe', args=[peca.id]),
             })
 
@@ -2812,9 +2823,19 @@ class PromocaoAdminView(AdminOnlyMixin, View):
                 messages.error(request, "A data de validade não está certa.")
                 return redirect("promocoes_admin")
 
+        # as vezes sem juros desta promoção (seção 99): vazio, o padrão (10x)
+        from .parcelas_texto import ler_sem_juros
+
+        try:
+            sem_juros = ler_sem_juros(request.POST.get("parcelas_sem_juros"))
+        except ValueError as erro:
+            messages.error(request, str(erro))
+            return redirect("promocoes_admin")
+
         promocao.descricao = descricao
         promocao.preco_promocao = preco
         promocao.preco_de = preco_de
+        promocao.parcelas_sem_juros = sem_juros
         promocao.condicoes = condicoes
         promocao.valida_ate = valida_ate
         promocao.brinquedos = brinquedo
@@ -3517,6 +3538,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "adesivos": adesivos,
                 "nome_brinquedo": brinquedo.nome_brinquedo or "",
                 "descricao": brinquedo.descricao or "",
+                "parcelas_sem_juros": brinquedo.parcelas_sem_juros or "",
                 "valor_brinquedo": (
                     formatar_decimal_br(
                         brinquedo.valor_brinquedo,
@@ -4313,9 +4335,18 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 f"Voltagem: use no máximo {limite_voltz} caracteres."
             )
 
+        # as vezes sem juros deste brinquedo (seção 99): vazio, o padrão (6x)
+        from .parcelas_texto import ler_sem_juros
+
+        try:
+            sem_juros = ler_sem_juros(request.POST.get("parcelas_sem_juros"))
+        except ValueError as erro:
+            raise ErroDeFormulario(str(erro))
+
         brinquedo.nome_brinquedo = nome
         brinquedo.descricao = descricao
         brinquedo.valor_brinquedo = preco
+        brinquedo.parcelas_sem_juros = sem_juros
         brinquedo.avaliacao = avaliacao if avaliacao is not None else Decimal("0")
         brinquedo.voltz = voltz
         brinquedo.altura_m = altura
@@ -6177,6 +6208,12 @@ class CarrinhoView(LoginRequiredMixin, View):
             'total_final': carrinho.total_final,
             'pagamento_em_andamento': pagamento_em_andamento,
             'acrescimo_cartao': str(checkout.ACRESCIMO_CARTAO),
+            # até quantas vezes o carrinho inteiro sai sem juros (seção 99): a menor
+            # das vezes dos itens; acima, com juros, até 10x
+            'sem_juros_carrinho': min(
+                (parcelas_texto.sem_juros_do_objeto(i.item) for i in carrinho.itens.all()),
+                default=checkout.SEM_JUROS_PADRAO,
+            ),
         }
 
         return render(request, 'carrinho.html', context)
@@ -6625,17 +6662,29 @@ class PaymentView(LoginRequiredMixin, View):
             "total_itens": len(itens) if isinstance(itens, list) else itens.count(),
             "somente_pix": not request.user.is_authenticated,
             "mp_public_key": settings.MP_PUBLIC_KEY,
-            # Pix: o preço; cartão de crédito: + 12%, em até 10x sem juros (seção 98)
+            # Pix: o preço; cartão de crédito: + 12%, sem juros até as vezes de
+            # cada item e com juros acima (seções 98 e 99)
             "total_cartao": checkout.valor_no_cartao(total_final),
             "acrescimo_cartao_pct": int(checkout.ACRESCIMO_CARTAO * 100),
-            "max_parcelas": checkout.parcelas_maximas(checkout.valor_no_cartao(total_final)),
-            "valor_parcela_maxima": checkout.valor_da_parcela(
-                checkout.valor_no_cartao(total_final),
-                checkout.parcelas_maximas(checkout.valor_no_cartao(total_final)),
-            ),
             "cartao_minimo": cartao_minimo,
             "cartao_liberado": cartao_minimo is None or checkout.valor_no_cartao(total_final) >= cartao_minimo,
         }
+        opcoes = checkout.opcoes_do_pedido(reserva) if reserva else checkout.opcoes_do_carrinho(carrinho)
+        sem_juros = checkout.sem_juros_ate(opcoes)
+        livre = checkout.opcao_escolhida(opcoes, sem_juros) or {"parcela": context["total_cartao"]}
+        context.update({
+            "opcoes_cartao": opcoes,
+            "opcoes_cartao_json": [
+                {"n": o["parcelas"], "total": f"{o['total']:.2f}", "parcela": f"{o['parcela']:.2f}",
+                 "semJuros": o["sem_juros"]}
+                for o in opcoes
+            ],
+            "sem_juros_ate": sem_juros,
+            "valor_parcela_sem_juros": livre["parcela"],
+            "max_parcelas": opcoes[-1]["parcelas"] if opcoes else 1,
+            "com_juros": bool(opcoes) and not opcoes[-1]["sem_juros"],
+            "juros_ao_mes_pct": (checkout._parcelas.juros_ao_mes() * 100).quantize(Decimal("0.01")),
+        })
 
         return render(request, "payment.html", context)
 
@@ -7708,22 +7757,24 @@ def processar_cartao(request):
             )
 
     total_final = _valor_monetario(reserva.total_final)
-    # no cartão de crédito: o total + 12%, em até 10x sem juros (seção 98)
-    total_cartao = checkout.valor_no_cartao(total_final)
-
-    max_parcelas = checkout.parcelas_maximas(total_cartao)
-    if parcelas < 1 or parcelas > max_parcelas:
+    # no cartão de crédito: o total + 12%, sem juros até as vezes de cada item e
+    # com juros acima (seções 98 e 99): o total depende das parcelas escolhidas
+    opcoes = checkout.opcoes_do_pedido(reserva)
+    escolhida = checkout.opcao_escolhida(opcoes, parcelas)
+    if escolhida is None:
+        max_parcelas = opcoes[-1]["parcelas"] if opcoes else 1
         return JsonResponse(
             {
                 "sucesso": False,
                 "mensagem": (
-                    f"Este pedido pode ser pago em até {max_parcelas}x sem juros."
+                    f"Este pedido pode ser pago em até {max_parcelas}x no cartão."
                     if max_parcelas > 1
                     else "Este pedido é pago à vista no cartão."
                 ),
             },
             status=400,
         )
+    total_cartao = escolhida["total"]
 
     identification = payer.get("identification") or {}
 
@@ -7762,7 +7813,7 @@ def processar_cartao(request):
         uuid.NAMESPACE_URL,
         (
             f"lazersport:card:pedido:{reserva.id}:{reserva.mp_fingerprint}:"
-            f"{total_final}:{token_fingerprint}"
+            f"{total_final}:{parcelas}x:{token_fingerprint}"
         ),
     )
 
@@ -8394,9 +8445,19 @@ class ComboAdminView(AdminOnlyMixin, View):
             )
             return redirect("combos_admin")
 
+        # as vezes sem juros deste combo (seção 99): vazio, o padrão (6x)
+        from .parcelas_texto import ler_sem_juros
+
+        try:
+            sem_juros = ler_sem_juros(request.POST.get("parcelas_sem_juros"))
+        except ValueError as erro:
+            messages.error(request, str(erro))
+            return redirect("combos_admin")
+
         combo.descricao = descricao
         combo.valor_combo = valor_combo
         combo.ativo = ativo
+        combo.parcelas_sem_juros = sem_juros
 
         if imagem:
             combo.imagem_combo = imagem

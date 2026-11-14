@@ -1,7 +1,8 @@
 {% load interno_extras %}{% comment %}
-  O preço do site (LEIA-ME seção 98, core/templatetags/precos.py): o riscado (o
-  cartão, ou o "de" da promoção), o PIX em destaque como preço promocional, com
-  o selo e o desconto, e o cartão em até 10x sem juros embaixo.
+  O preço do site (LEIA-ME seções 98 e 99, core/templatetags/precos.py): o riscado
+  (o cartão, ou o "de" da promoção), o PIX em destaque como preço promocional, com
+  o selo e o desconto, o cartão em até Nx sem juros (as vezes do objeto) e, fora
+  dos cards compactos, até quantas vezes com juros.
 {% endcomment %}{% if p %}<div class="ls-preco{% if compacto %} ls-preco--compacto{% endif %}">
   {% if rotulo %}<span class="ls-preco-rotulo">{{ rotulo }}</span>{% endif %}
   <span class="ls-preco-de"><s>R$ {{ p.riscado|moeda }}</s>{% if p.riscado_e_cartao %} <span class="ls-preco-de-onde">no cartão</span>{% endif %}</span>
@@ -11,4 +12,5 @@
     {% if p.desconto %}<span class="ls-preco-off">-{{ p.desconto }}%</span>{% endif %}
   </span>
   <span class="ls-preco-cartao">ou {% if not p.riscado_e_cartao %}R$ {{ p.cartao|moeda }} {% endif %}{% if p.vezes > 1 %}em até {{ p.vezes }}x de R$ {{ p.parcela|moeda }} sem juros{% else %}à vista{% endif %} no cartão</span>
+  {% if p.vezes_com_juros and not compacto %}<span class="ls-preco-juros">ou em até {{ p.vezes_com_juros }}x de R$ {{ p.parcela_com_juros|moeda }} com juros</span>{% endif %}
 </div>{% endif %}

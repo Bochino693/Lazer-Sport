@@ -340,24 +340,52 @@ class UmCarrinhoSoTests(TestCase):
 class CartaoComDozePorCentoTests(TestCase):
     """LEIA-ME seção 98: o Pix paga o preço; o cartão de crédito, o preço + 12%."""
 
-    def _pagamento(self, pedido, tipo, valor):
+    def _pagamento(self, pedido, tipo, valor, vezes=10):
         from . import checkout
         return {
             "id": "777", "status": "approved", "payment_type_id": tipo, "transaction_amount": float(valor),
             "external_reference": checkout.referencia_do_pedido(pedido),
-            "metadata": {"cart_fingerprint": "f"}, "installments": 10,
-            "transaction_details": {"installment_amount": float(valor) / 10},
+            "metadata": {"cart_fingerprint": "f"}, "installments": vezes,
+            "transaction_details": {"installment_amount": float(valor) / vezes},
         }
 
-    def test_confere_o_cartao_com_os_12_e_o_pix_pelo_preco(self):
+    def _pedido(self, *itens):
         from types import SimpleNamespace
+        linhas = [SimpleNamespace(subtotal=Decimal(v), sem_juros_no_cartao=s) for v, s in itens]
+        total = sum((linha.subtotal for linha in linhas), Decimal("0.00"))
+        return SimpleNamespace(id=5, total_final=total, mp_payment_id=None, mp_fingerprint="f",
+                               itens=SimpleNamespace(all=lambda: linhas))
+
+    def test_confere_o_cartao_com_os_12_e_o_pix_pelo_preco(self):
         from . import checkout
-        pedido = SimpleNamespace(id=5, total_final=Decimal("100.00"), mp_payment_id=None, mp_fingerprint="f")
+        pedido = self._pedido(("100.00", 10))  # uma promoção: 10x sem juros
         confere = checkout.pagamento_confere_com_pedido
         self.assertTrue(confere(self._pagamento(pedido, "credit_card", "112.00"), pedido))
         self.assertFalse(confere(self._pagamento(pedido, "credit_card", "100.00"), pedido))
         self.assertTrue(confere(self._pagamento(pedido, "bank_transfer", "100.00"), pedido))
         self.assertFalse(confere(self._pagamento(pedido, "bank_transfer", "112.00"), pedido))
+
+    def test_acima_das_vezes_sem_juros_o_cartao_confere_com_os_juros(self):
+        """LEIA-ME seção 99: um brinquedo (6x) em 7x e em 10x paga juros; em 6x, não."""
+        from . import checkout
+        pedido = self._pedido(("100.00", 6))
+        confere = checkout.pagamento_confere_com_pedido
+        self.assertTrue(confere(self._pagamento(pedido, "credit_card", "112.00", vezes=6), pedido))
+        self.assertTrue(confere(self._pagamento(pedido, "credit_card", "125.79", vezes=7), pedido))
+        self.assertTrue(confere(self._pagamento(pedido, "credit_card", "131.23", vezes=10), pedido))
+        self.assertFalse(confere(self._pagamento(pedido, "credit_card", "112.00", vezes=10), pedido))
+
+    def test_pedido_misto_cada_item_com_a_sua_regra(self):
+        """A promoção (10x) não paga juros em 7x; a peça (6x) do mesmo pedido paga."""
+        from . import checkout
+        pedido = self._pedido(("1000.00", 10), ("500.00", 6))
+        opcoes = {o["parcelas"]: o for o in checkout.opcoes_do_pedido(pedido)}
+        self.assertTrue(opcoes[6]["sem_juros"])
+        self.assertEqual(opcoes[6]["total"], Decimal("1680.00"))
+        self.assertFalse(opcoes[7]["sem_juros"])
+        self.assertEqual(opcoes[7]["total"], Decimal("1748.95"))
+        self.assertEqual(opcoes[10]["total"], Decimal("1776.16"))
+        self.assertEqual(checkout.sem_juros_ate(list(opcoes.values())), 6)
 
     def test_o_pedido_guarda_o_que_o_cliente_pagou(self):
         from unittest import mock

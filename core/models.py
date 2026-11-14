@@ -49,7 +49,7 @@ class EnderecoEmpresa(Prime):
 
 import re
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
@@ -222,6 +222,19 @@ class Brinquedos(Prime):
         null=True,
         blank=True,
     )
+    # Até quantas vezes SEM JUROS no cartão (LEIA-ME seção 99). Vazio: o padrão
+    # do site (6x). Acima disso, com juros (core/parcelas_texto.py).
+    parcelas_sem_juros = models.PositiveSmallIntegerField(
+        "Parcelas sem juros no cartão", null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Vazio: o padrão do site (6x). Acima disso, com juros.",
+    )
+
+    @property
+    def sem_juros_no_cartao(self):
+        from .parcelas_texto import sem_juros_do_objeto
+
+        return sem_juros_do_objeto(self)
     avaliacao = models.DecimalField(
         decimal_places=2,
         max_digits=6,
@@ -1352,6 +1365,19 @@ class PecasReposicao(Prime):
     )
     preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
+    # Até quantas vezes SEM JUROS no cartão (LEIA-ME seção 99). Vazio: o padrão
+    # do site (6x). Acima disso, com juros (core/parcelas_texto.py).
+    parcelas_sem_juros = models.PositiveSmallIntegerField(
+        "Parcelas sem juros no cartão", null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Vazio: o padrão do site (6x). Acima disso, com juros.",
+    )
+
+    @property
+    def sem_juros_no_cartao(self):
+        from .parcelas_texto import sem_juros_do_objeto
+
+        return sem_juros_do_objeto(self)
     descricao_peca = models.CharField(max_length=999)
     # O mesmo ajuste de curtidas dos brinquedos (ver Brinquedos.ajuste_curtidas).
     ajuste_curtidas = models.IntegerField(
@@ -1505,6 +1531,19 @@ class Combos(Prime):
         related_name='combos'
     )
     valor_combo = models.DecimalField(decimal_places=2, max_digits=10)
+    # Até quantas vezes SEM JUROS no cartão (LEIA-ME seção 99). Vazio: o padrão
+    # do site (6x). Acima disso, com juros (core/parcelas_texto.py).
+    parcelas_sem_juros = models.PositiveSmallIntegerField(
+        "Parcelas sem juros no cartão", null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Vazio: o padrão do site (6x). Acima disso, com juros.",
+    )
+
+    @property
+    def sem_juros_no_cartao(self):
+        from .parcelas_texto import sem_juros_do_objeto
+
+        return sem_juros_do_objeto(self)
 
     def __str__(self):
         return self.descricao
@@ -1563,6 +1602,19 @@ class Promocoes(Prime):
     # O último dia da promoção (inclusive). Depois dele ela some do site
     # sozinha; vazia, vale até ser desligada.
     valida_ate = models.DateField(null=True, blank=True, verbose_name="Válida até")
+    # Até quantas vezes SEM JUROS no cartão (LEIA-ME seção 99). Vazio: o padrão
+    # do site (promoções em 10x). Acima disso, com juros (core/parcelas_texto.py).
+    parcelas_sem_juros = models.PositiveSmallIntegerField(
+        "Parcelas sem juros no cartão", null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Vazio: o padrão do site (promoções em 10x). Acima disso, com juros.",
+    )
+
+    @property
+    def sem_juros_no_cartao(self):
+        from .parcelas_texto import sem_juros_do_objeto
+
+        return sem_juros_do_objeto(self)
 
     objects = PromocoesQuerySet.as_manager()
 
@@ -1581,12 +1633,13 @@ class Promocoes(Prime):
 
     @property
     def lista_condicoes(self):
-        # O parcelamento sempre na regra do site (até 10x no cartão, +12%;
-        # core/parcelas_texto.py), mesmo que alguém digite outra coisa no painel.
+        # O parcelamento sempre na regra do site (o cartão + 12%, sem juros até
+        # as vezes desta promoção; core/parcelas_texto.py), mesmo que alguém
+        # digite outra coisa no painel.
         from .parcelas_texto import condicao_em_6x
 
         return [
-            condicao_em_6x(linha.strip(" -•\t"), self.preco_promocao)
+            condicao_em_6x(linha.strip(" -•\t"), self.preco_promocao, self.sem_juros_no_cartao)
             for linha in (self.condicoes or "").splitlines()
             if linha.strip(" -•\t")
         ]
@@ -2316,6 +2369,12 @@ class Pedido(Prime):
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     @property
+    def pago_sem_juros(self):
+        """As vezes pagas no cartão couberam nas sem juros de todos os itens (seção 99)."""
+        vezes = self.parcelas or 1
+        return all(vezes <= item.sem_juros_no_cartao for item in self.itens.all())
+
+    @property
     def total_cobrado(self):
         """O que o cliente pagou (o cartão com os 12%), ou o total do pedido."""
         return self.valor_cobrado if self.valor_cobrado is not None else self.total_final
@@ -2490,6 +2549,16 @@ class ItemPedido(Prime):
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     quantidade = models.PositiveIntegerField()
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    # As vezes sem juros do objeto no momento do pedido (LEIA-ME seção 99): o
+    # cartão cobra os juros deste item só acima delas. Vazio (pedidos antigos):
+    # o padrão do tipo (promoção 10x, o resto 6x).
+    parcelas_sem_juros = models.PositiveSmallIntegerField("Parcelas sem juros", null=True, blank=True)
+
+    @property
+    def sem_juros_no_cartao(self):
+        from .parcelas_texto import normalizar_sem_juros, padrao_do_tipo
+
+        return normalizar_sem_juros(self.parcelas_sem_juros, padrao_do_tipo(self.tipo_item))
 
     def __str__(self):
         return f"{self.nome_item} (x{self.quantidade})"

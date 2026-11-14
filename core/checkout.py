@@ -29,6 +29,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.db import transaction
 from django.utils import timezone
 
+from . import parcelas_texto as _parcelas
 from .models import Carrinho, ItemPedido, Pedido
 
 logger = logging.getLogger("core.payment")
@@ -303,6 +304,8 @@ def reservar_pedido(carrinho, usuario=None):
             preco_unitario=valor_monetario(item.preco_unitario) or Decimal("0.00"),
             quantidade=item.quantidade,
             subtotal=valor_monetario(item.subtotal) or Decimal("0.00"),
+            # as vezes sem juros do objeto agora (seção 99): o cartão deste pedido segue esta
+            parcelas_sem_juros=_parcelas.sem_juros_do_objeto(item.item),
         )
         for item in travado.itens.select_related("content_type")
     ])
@@ -333,9 +336,14 @@ def pagamento_confere_com_pedido(payment, pedido):
     """A cobrança é exatamente deste pedido, pelo valor exato dele."""
     payment_id = str(payment.get("id") or "")
     valor_pago = valor_monetario(payment.get("transaction_amount"))
-    # no cartão de crédito o cliente paga o total + 12% (valor_no_cartao)
+    # no cartão de crédito: o total + 12%, com os juros das vezes acima das sem juros
+    # de cada item (total_no_cartao_do_pedido, seção 99)
     if payment.get("payment_type_id") == "credit_card":
-        valor_esperado = valor_no_cartao(pedido.total_final)
+        try:
+            vezes = max(1, int(payment.get("installments") or 1))
+        except (TypeError, ValueError):
+            vezes = 1
+        valor_esperado = total_no_cartao_do_pedido(pedido, vezes)
     else:
         valor_esperado = valor_monetario(pedido.total_final)
     referencia = str(payment.get("external_reference") or "")
@@ -371,21 +379,23 @@ def referencia_do_pedido(pedido):
     return f"pedido:{pedido.id}"
 
 
-# O PREÇO DO SITE (LEIA-ME seção 98). O dono: "no Pix é o valor do objeto e
-# no crédito, em até 10x, o valor deve ser 12% a mais, para todos os
-# brinquedos e peças". Pix (e qualquer forma à vista): o preço cadastrado. Cartão
-# de crédito: o total + 12%, em até 10x sem juros (o "sem juros" é o vendedor
-# que assume: o "Parcelado vendedor" do Mercado Pago tem de estar em até 10x, sem
-# valor mínimo por parcela). A única trava é a parcela mínima do Mercado Pago
-# (R$ 5,00): uma peça de R$ 30 no cartão vai em até 6x. A regra vale na tela,
-# no servidor e na conferência do pagamento.
-ACRESCIMO_CARTAO = Decimal("0.12")
-PARCELAS_NO_MAXIMO = 10
-PARCELA_MINIMA = Decimal("5.00")
+# O PREÇO DO SITE (LEIA-ME seções 98 e 99; a conta mora em core/parcelas_texto.py).
+# Pix (e qualquer forma à vista): o preço cadastrado. Cartão de crédito: o
+# total + 12%, em até 10x; SEM JUROS até as vezes de cada objeto (promoções
+# 10x, brinquedos, peças e combos 6x, ou o que o painel disser no objeto) e,
+# acima, com os juros da tabela Price -- cobrados pelo site, item a item. No
+# Mercado Pago o parcelamento fica todo "sem juros" (o vendedor assume) até 10x,
+# sem valor mínimo por parcela: o site manda o total certo de cada número de
+# vezes. A regra vale na tela, no servidor e na conferência do pagamento.
+ACRESCIMO_CARTAO = _parcelas.ACRESCIMO_CARTAO
+PARCELAS_NO_MAXIMO = _parcelas.PARCELAS_NO_MAXIMO
+PARCELA_MINIMA = _parcelas.PARCELA_MINIMA
+SEM_JUROS_PADRAO = _parcelas.SEM_JUROS_PADRAO
+SEM_JUROS_PROMOCAO = _parcelas.SEM_JUROS_PROMOCAO
 
 
 def valor_no_cartao(total):
-    """O total no cartão de crédito: o preço + 12% (duas casas)."""
+    """O total no cartão SEM juros: o preço + 12% (duas casas)."""
     total = valor_monetario(total) or Decimal("0.00")
     return valor_monetario(total * (1 + ACRESCIMO_CARTAO))
 
@@ -394,6 +404,62 @@ def parcelas_maximas(total_no_cartao):
     """Até 10x, com cada parcela de pelo menos R$ 5,00 (o mínimo do Mercado Pago)."""
     total = valor_monetario(total_no_cartao) or Decimal("0.00")
     return max(1, min(PARCELAS_NO_MAXIMO, int(total // PARCELA_MINIMA)))
+
+
+def _partes(linhas, total):
+    """A parte do `total` de cada linha [(subtotal, vezes sem juros)], pelo peso do subtotal.
+
+    O cupom e o frete se espalham pelas linhas na mesma proporção.
+    """
+    total = valor_monetario(total) or Decimal("0.00")
+    linhas = [(valor_monetario(s) or Decimal("0.00"), v) for s, v in linhas]
+    soma = sum((s for s, _ in linhas), Decimal("0.00"))
+    if not linhas or soma <= 0:
+        return [(total, SEM_JUROS_PADRAO)]
+    return [(total * s / soma, v) for s, v in linhas if s > 0]
+
+
+def partes_do_pedido(pedido):
+    return _partes(
+        [(item.subtotal, item.sem_juros_no_cartao) for item in pedido.itens.all()],
+        pedido.total_final,
+    )
+
+
+def partes_do_carrinho(carrinho):
+    return _partes(
+        [(item.subtotal, _parcelas.sem_juros_do_objeto(item.item)) for item in carrinho.itens.all()],
+        carrinho.total_final,
+    )
+
+
+def opcoes_do_pedido(pedido):
+    """[{parcelas, total, parcela, sem_juros}, ...] do pedido, de 1x até 10x."""
+    return _parcelas.opcoes_de_parcelas(partes_do_pedido(pedido))
+
+
+def opcoes_do_carrinho(carrinho):
+    return _parcelas.opcoes_de_parcelas(partes_do_carrinho(carrinho))
+
+
+def total_no_cartao_do_pedido(pedido, parcelas):
+    """O que o cartão cobra do pedido em `parcelas` vezes (com os juros de quem passa das vezes dele)."""
+    return _parcelas.total_no_cartao(partes_do_pedido(pedido), parcelas)
+
+
+def opcao_escolhida(opcoes, parcelas):
+    """A opção do número de parcelas pedido, ou None se ele não é possível."""
+    try:
+        parcelas = int(parcelas)
+    except (TypeError, ValueError):
+        return None
+    return next((o for o in opcoes if o["parcelas"] == parcelas), None)
+
+
+def sem_juros_ate(opcoes):
+    """Até quantas vezes sai sem juros (a última opção sem juros)."""
+    livres = [o["parcelas"] for o in opcoes if o["sem_juros"]]
+    return livres[-1] if livres else 1
 
 
 def valor_da_parcela(total, parcelas):
