@@ -177,13 +177,13 @@ CADASTROS = {
         # principal de 3/4; os lados e as costas (os tipos que a Arena usa);
         # mais ângulos; e a adesivagem nas outras cores que o site oferece
         "fotos": (
-            ("capa.webp", "perfil", "Strike Kids numa game zone, com os pinos no chão e uma criança comemorando (ilustração)"),
+            ("capa.webp", "perfil", "Strike Kids no estúdio, de 3/4: a tela, a pista e a arte dos pinos"),
             ("foto.webp", None, "Strike Kids, o boliche infantil, com a tela, a pista e a arte dos pinos"),
             ("lado_direito.webp", "lado_direito", "Strike Kids pelo lado direito, com a arte dos pinos"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Strike Kids pelo lado esquerdo, com a arte dos pinos"),
             ("verso.webp", "verso", "Strike Kids visto por trás"),
             ("frente.webp", None, "Strike Kids visto de frente: a pista, as bolas e a tela do jogo"),
-            ("tres_quartos_esquerda.webp", None, "Strike Kids de 3/4, pelo lado esquerdo"),
+            ("tres_quartos_esquerda.webp", None, "Strike Kids de 3/4, pelo lado esquerdo, com as luzes acesas"),
             ("de_cima.webp", None, "Strike Kids visto de cima, com a pista inteira"),
             ("cor_azul.webp", None, "Strike Kids com a adesivagem em tons de azul"),
             ("cor_roxo.webp", None, "Strike Kids com a adesivagem em tons de roxo"),
@@ -343,7 +343,7 @@ CADASTROS = {
         # as laterais de MDF grosso, tem 0,86 x 1,51 m: LEIA-ME V10, seção 92)
         "medidas": ("0.90", "0.86", "1.50"),
         "fotos": (
-            ("capa.webp", "perfil", "Air Game Kids Alienígenas num buffet infantil, com crianças jogando (ilustração)"),
+            ("capa.webp", "perfil", "Air Game Kids Alienígenas no estúdio, de 3/4"),
             ("frente.webp", "tres_quartos", "Air Game Kids Alienígenas: a mesa de air hockey com os alienígenas e o logotipo HOCKEY KIDS"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Air Game Kids Alienígenas pelo lado esquerdo, em 3/4, na altura das crianças"),
             ("lado_direito.webp", "lado_direito", "Air Game Kids Alienígenas pelo lado direito: os alienígenas astronautas no chão lunar"),
@@ -379,7 +379,7 @@ CADASTROS = {
         ),
         "medidas": ("2.70", "1.00", "2.40"),
         "fotos": (
-            ("capa.webp", "perfil", "Basquete Home Quadrinhos no showroom da Lazer & Sport"),
+            ("capa.webp", "perfil", "Basquete Home Quadrinhos no estúdio, de 3/4"),
             ("frente.webp", "tres_quartos", "Basquete Home Quadrinhos: o console com o POW!, a pista e a testeira BASKETBALL"),
             ("lado_esquerdo.webp", "lado_esquerdo", "Basquete Home Quadrinhos pelo lado esquerdo: a bola grande e as crianças jogando"),
             ("lado_direito.webp", "lado_direito", "Basquete Home Quadrinhos pelo lado direito"),

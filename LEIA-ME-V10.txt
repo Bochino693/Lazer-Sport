@@ -5631,3 +5631,106 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_categorias_capas.py (FotosNoSalaoTests; FotosTests: a
    Área Baby também em 1600 x 1200), core/tests_maquinas_vermelhas.py (a
    foto das casinhas: a cena nova, sem crianças).
+
+96) AS FOTOS DE ESTÚDIO: BASQUETE HOME, AIR GAME KIDS E STRIKE KIDS COM VIDA
+   O PEDIDO (o chefe, pelo dono): os 3D e as fotos tiradas deles do Basquete
+   Home, do Boliche Kids (o Strike Kids) e do Air Game Kids Alienígenas não
+   estão bons. "Como o McDonald's: você olha a foto do lanche e quer comer,
+   porque tem vida e nitidez. As nossas estão apagadas, sem vida; os fundos
+   parecem muito falsos, não uma foto de câmera 4K." E: "olha o Basquete
+   Home normal e o preto: a máquina encolheu." Depois, com as fotos de
+   verdade do Strike Kids: o vinil brilhante, a fita de LED acesa nas
+   bordas, a tela clara, a pista de madeira brilhando.
+   O QUE ESTAVA ERRADO: as fotos eram do three.js num Chromium sem placa de
+   vídeo (a luz chapada do software) coladas no "showroom" de mentira (a
+   parede de pixel art, as plantas, o piso de ladrilho); cada foto tinha o
+   seu enquadramento -- o Basquete Home azul (a foto da fábrica no
+   showroom) enchia o card e o preto (o 3D) ficava menor.
+   O ESTÚDIO (ferramentas/fotos3d/, o Blender 5.0 como módulo do Python,
+   Cycles na CPU, OpenImageDenoise e amostragem adaptativa):
+     * estudio.py: o fundo infinito (o chão que sobe em curva até a parede,
+       sem canto) em azul marinho com o brilho azul royal atrás da máquina;
+       o chão envernizado (o reflexo macio e a sombra de contato); o softbox
+       grande (a principal, do lado da face grande da máquina), o rebatedor,
+       o softbox de teto e as duas luzes de recorte da marca (azul #007BFF à
+       esquerda, vermelho #E63946 à direita); a câmera de 60 mm equivalente,
+       f/9; o brilho do LED (o Glare "Bloom" no compositor). Os materiais
+       saem dos nomes do .glb: o adesivo vira vinil laminado brilhante
+       (aspereza 0,27, verniz 0,5), a estrutura preta pintura eletrostática
+       acetinada, o metal metal, a borracha fosca, o acrílico deixa passar a
+       luz, e o LED, o neon, o placar e a tela ACENDEM (iluminam a máquina e o
+       chão). As fotos são dos .glb em alta da seção 92 (as artes ampliadas
+       4x, até 2048 px: entram como estão; a textura pequena, abaixo de 1024
+       px, o estúdio amplia 2x com o Lanczos); a arte de
+       ferramentas/modelos3d/<máquina>/adesivos-hd/ entra no lugar quando for
+       maior que a do .glb. A cor: o Khronos PBR Neutral, o mesmo tom dos
+       visores (o AgX "Punchy" deixava o verde, o amarelo e o laranja do
+       Strike Kids leitosos), com a curva em S e a vibração no acabamento.
+     * produtos.py: as medidas do cadastro (a escala é uma só, pela altura:
+       Basquete Home 2,70 x 1,00 x 2,40 m -- as do banco, que vieram do
+       Basquete Street; uma estimativa antiga da cena dizia ~2,10 m de altura,
+       e o banco vale até a medida de verdade chegar --; Air Game Kids 0,90 x
+       0,86 x 1,50 m; Strike Kids 2,07 x 0,74 x 1,91 m) e as tomadas. UM ENQUADRAMENTO POR
+       MÁQUINA: a câmera de cada tomada sai do adesivo de referência (a
+       máquina inteira, ~7,5% de folga no lado que limita) e vale para todos
+       os adesivos dela -- a mesma câmera, a mesma lente, a mesma distância.
+       O Basquete Home azul ainda não tem 3D nem a folha de adesivos: a foto
+       da fábrica entra no MESMO quadro e no MESMO tamanho do Quadrinhos (um
+       cartão em pé no chão dá a sombra e o reflexo; a foto entra por cima,
+       com as cores dela).
+     * renderizar.py: o render em 2x a foto do site (o padrão: 3200 px na
+       capa) ou, como nestas, com --fator 2.4: o 4K (3840 px na capa e nas
+       vistas de 1600; 2592 nas de 1080 do Strike Kids), até 12 amostras
+       adaptativas e o OpenImageDenoise (~2 a 7 min por foto; os mestres
+       ficam fora do repositório), e as fotos do site nos nomes e tamanhos
+       de sempre (acabamento.py: a vinheta, a curva, a redução com Lanczos,
+       o realce; o .webp na qualidade 90, descendo só o necessário para a
+       capa caber em 250 KB e a vista em 200 KB); com --site, anota a caixa
+       da máquina em ferramentas/categorias/areas-dos-produtos.json; com
+       --acabar, refaz só o acabamento a partir dos mestres. folhas.py monta
+       o antes e o depois.
+   AS FOTOS:
+     * Basquete Home Quadrinhos (arena/modelos/basquete-street-quadrinhos/):
+       a capa (3/4 pela direita, do alto), a frente em 3/4, os dois lados, o
+       verso e o detalhe de quem joga (jogador.webp: a cesta, o BOOM!, o
+       placar aceso e as bolas), que agora vai na posição "de cima";
+     * Basquete Home azul: a capa do catálogo (capas_catalogo/basquete-home.webp);
+     * Air Game Kids, os dois adesivos (air-game-kids-astronautas/ e
+       air-game-kids-alienigenas/): a capa, a frente em 3/4, os lados, a
+       cabeceira e o tampo (de pé: visto do lado de lá); a capa do produto
+       (capas_catalogo/air-game-kids.webp) é a capa do 3D dos Astronautas;
+     * Strike Kids (strike-kids/): a capa (3/4 na altura dos olhos), o 3/4
+       pelo lado esquerdo com o estúdio apagado (os LEDs, a tela e o neon
+       acesos: tres_quartos_esquerda.webp, agora na posição "em 3/4"), a
+       frente reta, os lados (de pontos diferentes: a arte é a mesma
+       espelhada, e o site recusa a vista que é o espelho da outra), o
+       verso, o de cima (agora na posição "de cima") e o recorte sem fundo
+       (foto.webp, para as artes). As cores do Strike Kids (cor_*.webp, o
+       recorte para as artes) ficaram como estavam.
+     * Só nos mestres (para as artes e o Instagram): a capa de cada máquina
+       com o estúdio apagado (capa_noite).
+   NO SITE (core/fotos_estudio.py; a migração de dados 0197_fotos_de_estudio,
+   só no Render, e o comando `python manage.py fotos_de_estudio [--simular]
+   [--so "Strike Kids"] [--desfazer]`): em cada adesivo, a posição com a
+   NOSSA foto de antes (o nome que o cadastro, as capas em cena, as capas
+   quadradas ou as posições do 3D deram) -- ou vazia -- ganha a foto de
+   estúdio, que sobe como estudio-<pasta>-<vista>-<assinatura> (só a que
+   mudou sobe; rodar de novo não sobe nada). A de antes fica guardada no
+   adesivo, sem posição (fora da galeria); a capa do adesivo padrão vira a
+   capa do produto; a foto que a equipe pôs no painel fica; o cache é limpo.
+   A volta tira as de estúdio e põe as de antes nas posições.
+   REFAZER (quando o .glb melhorar, é um comando só):
+       python3.11 -m venv ~/blender-venv
+       ~/blender-venv/bin/pip install bpy==5.0.1 numpy Pillow
+       ~/blender-venv/bin/python ferramentas/fotos3d/renderizar.py --mestres /tmp/fotos3d --site --fator 2.4
+       python3 ferramentas/fotos3d/folhas.py --antes HEAD --saida /tmp/fotos3d/folhas
+   e, no servidor, `python manage.py fotos_de_estudio` (ou uma migração de
+   dados nova chamando core.fotos_estudio.no_deploy).
+   O QUE AINDA DEPENDE DA FÁBRICA: a arte original é pequena (a folha inteira
+   tem ~1600 px: ~400 px por peça grande; a seção 92 ampliou 4x); com os
+   arquivos originais (vetor/PDF) a impressão fica nítida de verdade. O
+   Strike Kids tem 0,74 m de largura no cadastro e no .glb (nas fotos de
+   verdade a máquina parece mais larga, ~0,90-1,00 m): falta a medida da
+   fábrica. Os Astronautas não têm a folha de adesivos (as cabeceiras saem da
+   foto do catálogo, borradas). O Basquete Home azul segue sem 3D.
+   Testes: core/tests_fotos_estudio.py.
