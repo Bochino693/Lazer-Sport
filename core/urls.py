@@ -23,6 +23,7 @@ from .views_ordem_servico import ordem_servico_publica
 from .views_assinatura import assinar_documento, documento_assinado
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
 from .views_redirects import redirecionar_interno
+from .views_seguranca import token_csrf
 from .sitemaps import (
     PaginasEstaticasSitemap,
     BrinquedosSitemap,
@@ -226,6 +227,8 @@ urlpatterns = [
         salvar_cpf_carrinho,
         name="salvar_cpf_carrinho",
     ),
+    # token novo para o JS repetir um pedido que o CSRF recusou (views_seguranca.py)
+    path("seguranca/token/", token_csrf, name="token_csrf"),
     path("carrinho/", CarrinhoView.as_view(), name="carrinho"),
     path(
         "carrinho/alterar-quantidade/",

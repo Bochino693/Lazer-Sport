@@ -79,7 +79,8 @@ class ModeloTests(Base):
                               condicoes="Em até 10x sem juros\n\n - À vista no PIX ")
         self.assertEqual(promocao.preco_tabela, Decimal("22990"))
         self.assertEqual(promocao.desconto_percentual, 13)
-        self.assertEqual(promocao.lista_condicoes, ["Em até 10x sem juros", "À vista no PIX"])
+        # "tudo em 6x": o texto segue o cartão (uma parcela a cada R$ 1.000, até 6x)
+        self.assertEqual(promocao.lista_condicoes, ["Em até 6x sem juros de R$ 3.331,67", "À vista no PIX"])
 
 
 class SiteTests(Base):
@@ -101,7 +102,8 @@ class SiteTests(Base):
         pagina = self.client.get(reverse("promocao", args=[promocao.pk]))
         self.assertContains(pagina, "Pedir orçamento")
         self.assertContains(pagina, "wa.me/")
-        self.assertContains(pagina, "Parcelamos em até 10x")
+        self.assertContains(pagina, "Parcelamos em até 6x")
+        self.assertNotContains(pagina, "10x")
         self.assertNotContains(pagina, "adicionarAoCarrinho('promocao'")
 
     def test_pagina_mostra_a_arte_a_validade_e_o_de(self):
@@ -112,7 +114,8 @@ class SiteTests(Base):
         self.assertContains(pagina, f"Válida até {AMANHA:%d/%m/%Y}")
         self.assertContains(pagina, "22.990,00")
         self.assertContains(pagina, "19.990,00")
-        self.assertContains(pagina, "Em até 10x sem juros")
+        self.assertContains(pagina, "Em até 6x sem juros de R$ 3.331,67")
+        self.assertNotContains(pagina, "10x")
         self.assertContains(pagina, "adicionarAoCarrinho('promocao'")
 
     def test_pagina_da_vencida_avisa_e_nao_vende(self):
@@ -149,7 +152,8 @@ class SiteTests(Base):
         self.assertNotIn("Vencida", nomes)
 
         conteudo = conteudo_do_objeto(CampanhaDivulgacao.Tipo.PROMOCAO, valendo.pk)
-        self.assertIn("Em até 10x sem juros.", conteudo.mensagem)
+        self.assertIn("Em até 4x sem juros de R$ 1.247,50.", conteudo.mensagem)  # R$ 4.990: até 4x
+        self.assertNotIn("10x", conteudo.mensagem)
         self.assertIn(f"Válida até {AMANHA:%d/%m/%Y}", conteudo.mensagem)
         with self.assertRaises(ErroCampanha):
             conteudo_do_objeto(CampanhaDivulgacao.Tipo.PROMOCAO, vencida.pk)

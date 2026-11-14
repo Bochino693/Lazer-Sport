@@ -115,7 +115,10 @@
         return n + " " + (n === 1 ? um : varios);
     }
 
+    /* O token da página (window.LSCsrf, no <head> do base.html), que é
+       sempre o que o servidor lê; o cookie só se a página não o trouxe. */
     function csrf() {
+        if (window.LSCsrf) return window.LSCsrf.token();
         var achado = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
         if (achado) return decodeURIComponent(achado[1]);
         var meta = document.querySelector('meta[name="csrf-token"]');
@@ -129,6 +132,31 @@
             return resposta.json().catch(function () { return {}; }).then(function (corpo) {
                 return { ok: resposta.ok, status: resposta.status, corpo: corpo || {} };
             });
+        });
+    }
+
+    /* POST com uma segunda chance: se o servidor recusar o token (403 do
+       CSRF -- em HTML no site antigo, {codigo: "csrf"} hoje), pega um token
+       novo e manda de novo, uma vez. O cliente não vê nada. */
+    function postar(url, corpo) {
+        function uma() {
+            return pedir(url, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "X-CSRFToken": csrf(),
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+                },
+                body: corpo
+            });
+        }
+        return uma().then(function (r) {
+            var lsc = window.LSCsrf;
+            if (lsc && lsc.recusou(r.status, r.corpo)) {
+                return lsc.renovar().then(uma, function () { return r; });
+            }
+            return r;
         });
     }
 
@@ -709,16 +737,10 @@
         var dados = new URLSearchParams({ quantidade: String(quantidade) });
         if (opcoes.adesivo) dados.set("adesivo", String(opcoes.adesivo));
 
-        return pedir("/carrinho/adicionar/" + encodeURIComponent(tipo) + "/" + encodeURIComponent(id) + "/", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-                "X-CSRFToken": csrf(),
-                "X-Requested-With": "XMLHttpRequest",
-                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-            },
-            body: dados.toString()
-        }).then(function (r) {
+        return postar(
+            "/carrinho/adicionar/" + encodeURIComponent(tipo) + "/" + encodeURIComponent(id) + "/",
+            dados.toString()
+        ).then(function (r) {
             var resposta = r.corpo;
             if (r.ok && resposta.sucesso) {
                 carrinhoNaBarra(resposta.total_itens);
@@ -737,7 +759,7 @@
 
             var mensagem = resposta.erro || (r.status === 404
                 ? "Este item não está à venda no momento."
-                : "Não foi possível adicionar este item.");
+                : "Não foi possível adicionar este item (código " + r.status + "). Atualize a página e tente de novo.");
             if (r.status === 403 && /login/i.test(mensagem)) {
                 if (carregando) carregando.erro(token, "");   /* sem toast: a folha explica */
                 trancada = false;

@@ -70,7 +70,7 @@
             credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "X-CSRFToken": cookie("csrftoken") || "",
+                "X-CSRFToken": (window.LSCsrf && window.LSCsrf.token()) || cookie("csrftoken") || "",
                 "X-Requested-With": "XMLHttpRequest"
             },
             body: JSON.stringify({ pedido_id: pedidoId })

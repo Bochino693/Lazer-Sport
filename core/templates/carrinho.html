@@ -547,16 +547,23 @@ function lsAvisoErro(titulo, texto) {
 }
 
 async function lsPost(url, corpo, json = true) {
-    const resposta = await fetch(url, {
+    const umaVez = () => fetch(url, {
         method: 'POST',
         credentials: 'same-origin',
         headers: Object.assign(
-            { 'X-CSRFToken': LS_CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+            { 'X-CSRFToken': window.LSCsrf ? window.LSCsrf.token() : LS_CSRF, 'X-Requested-With': 'XMLHttpRequest' },
             json ? { 'Content-Type': 'application/json' } : { 'Content-Type': 'application/x-www-form-urlencoded' }
         ),
         body: corpo
     });
-    const dados = await resposta.json().catch(() => ({}));
+    let resposta = await umaVez();
+    let dados = await resposta.json().catch(() => ({}));
+    // Token recusado (CSRF): um novo e mais uma tentativa (core/views_seguranca.py).
+    if (window.LSCsrf && window.LSCsrf.recusou(resposta.status, dados)) {
+        await window.LSCsrf.renovar().catch(() => null);
+        resposta = await umaVez();
+        dados = await resposta.json().catch(() => ({}));
+    }
     if (!resposta.ok || dados.status === 'error') {
         throw new Error(dados.message || dados.erro || 'Não foi possível atualizar o carrinho.');
     }

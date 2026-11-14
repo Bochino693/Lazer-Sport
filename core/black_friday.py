@@ -170,7 +170,7 @@ PRODUTOS = [
     },
 ]
 
-DEZ_X = "Em até 10x sem juros"
+DEZ_X = "Em até 6x sem juros"
 
 # Na ordem em que aparecem no site (a primeira é a mais nova, a do topo).
 PROMOCOES = [
@@ -263,7 +263,7 @@ PROMOCOES = [
         "descricao": "Black Friday: na compra de 3 cenográficos, leve 4",
         "brinquedos": ["Cozinha Infantil", "Oficina de Engenharia", "Salão de Beleza"],
         "preco": None,
-        "condicoes": ["Na compra de 3 cenográficos, leve 4!", "Parcelamos em até 10x sem juros"],
+        "condicoes": ["Na compra de 3 cenográficos, leve 4!", "Parcelamos em até 6x sem juros"],
     },
     {
         "arte": 5,
@@ -433,7 +433,9 @@ def cadastrar_promocao(dados, Brinquedos, Promocoes, simular=False, avisar=print
     promocao.brinquedos = brinquedos[0]
     promocao.preco_promocao = Decimal(dados["preco"]) if dados.get("preco") else None
     promocao.preco_de = Decimal(dados["preco_de"]) if dados.get("preco_de") else None
-    promocao.condicoes = "\n".join(dados["condicoes"])
+    from .parcelas_texto import condicoes_em_6x  # "tudo em 6x" (migração 0195)
+
+    promocao.condicoes = condicoes_em_6x("\n".join(dados["condicoes"]), dados.get("preco"))
     promocao.valida_ate = VALIDA_ATE
     if nova:
         promocao.ativo = True

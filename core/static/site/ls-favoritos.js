@@ -13,6 +13,7 @@
   var ENDPOINT = "/favoritos/alternar/";
 
   function csrf() {
+    if (window.LSCsrf) return window.LSCsrf.token();
     var meta = document.querySelector('meta[name="csrf-token"]');
     if (meta && meta.content) return meta.content;
 

@@ -71,6 +71,7 @@
   }
 
   function csrf() {
+    if (window.LSCsrf) return window.LSCsrf.token();
     var campo = document.querySelector("[name=csrfmiddlewaretoken]");
     if (campo) return campo.value;
     var achado = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);

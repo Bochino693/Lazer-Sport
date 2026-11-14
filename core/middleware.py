@@ -272,6 +272,8 @@ class TelefoneObrigatorioMiddleware:
         # HTML no meio de um `fetch` e a inscrição falha calada.
         "/aplicativo/",
         "/app-sw.js",
+        # O token novo do CSRF (views_seguranca.py): é JSON pedido pelo fetch.
+        "/seguranca/token/",
     )
 
     def __init__(self, get_response):

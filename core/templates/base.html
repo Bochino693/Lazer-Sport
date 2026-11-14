@@ -89,6 +89,48 @@
   <!-- Token do CSRF para o JS que salva curtida e lista de desejos.
        Citar {{ csrf_token }} aqui também garante o cookie na resposta. -->
   <meta name="csrf-token" content="{{ csrf_token }}">
+  {% comment %}
+    O TOKEN DO CSRF PARA TODO O JS (core/views_seguranca.py). O navegador
+    de quem já visitava o site guardava DOIS cookies csrftoken (o antigo,
+    só de www, e o atual, de .lazersport.com.br): o JS lia o velho, o
+    Django lê o atual, e nada entrava no carrinho. Aqui o velho é apagado
+    e window.LSCsrf entrega o token impresso nesta página (sempre o que o
+    Django lê). Se mesmo assim o servidor recusar, LSCsrf.renovar() pega um
+    novo em /seguranca/token/ e quem chamou tenta de novo, uma vez.
+  {% endcomment %}
+  <script>
+  (function (w, d) {
+    try {
+      var cookies = d.cookie.match(/(?:^|;\s*)csrftoken=/g);
+      if (cookies && cookies.length > 1) d.cookie = "csrftoken=; Max-Age=0; path=/";
+    } catch (e) {}
+    var meta = d.querySelector('meta[name="csrf-token"]');
+    var atual = meta ? meta.getAttribute("content") || "" : "";
+    function doCookie() {
+      var achado = d.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+      return achado ? decodeURIComponent(achado[1]) : "";
+    }
+    w.LSCsrf = {
+      token: function () { return atual || doCookie(); },
+      recusou: function (status, corpo) {
+        return status === 403 && (!corpo || corpo.codigo === "csrf" || !corpo.erro);
+      },
+      renovar: function () {
+        return fetch("/seguranca/token/", {
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }
+        }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) {
+          if (j && j.token) {
+            atual = j.token;
+            if (meta) meta.setAttribute("content", atual);
+          }
+          return atual;
+        });
+      }
+    };
+  })(window, document);
+  </script>
 
   {% comment %}
     TROCA DE TELA NA HORA. Quando o dedo encosta num link (ou o mouse
@@ -1316,20 +1358,29 @@ function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
   const body = new URLSearchParams({ quantidade: String(quantidade) });
   if (opcoes.adesivo) body.set('adesivo', String(opcoes.adesivo));
 
-  return fetch(url, {
+  // O token da página (window.LSCsrf); recusado pelo CSRF, pega um novo e
+  // manda de novo, uma vez (core/views_seguranca.py).
+  const enviarUmaVez = () => fetch(url, {
     method: 'POST',
     credentials: 'same-origin',
     headers: {
-      'X-CSRFToken': getCookie('csrftoken'),
+      'X-CSRFToken': window.LSCsrf ? window.LSCsrf.token() : getCookie('csrftoken'),
       'X-Requested-With': 'XMLHttpRequest',
       'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
     },
     body: body.toString()
-  })
-  .then(async res => {
-    const data = await res.json().catch(() => ({}));
+  }).then(async res => ({ res, data: await res.json().catch(() => ({})) }));
+
+  return enviarUmaVez()
+  .then(r => (window.LSCsrf && window.LSCsrf.recusou(r.res.status, r.data))
+    ? window.LSCsrf.renovar().then(enviarUmaVez, () => r)
+    : r)
+  .then(({ res, data }) => {
     if (!res.ok) {
-      throw new Error(data.erro || 'O servidor não confirmou a inclusão.');
+      throw new Error(data.erro || `O servidor não confirmou a inclusão (código ${res.status}). Atualize a página e tente de novo.`);
+    }
+    if (!data.sucesso && !data.erro) {
+      data.erro = `Não foi possível adicionar este item (código ${res.status}). Atualize a página e tente de novo.`;
     }
     return data;
   })

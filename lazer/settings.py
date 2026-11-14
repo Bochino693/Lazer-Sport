@@ -710,6 +710,8 @@ APP_DEEP_LINK = os.getenv("APP_DEEP_LINK", "lazersport://auth").strip()
 SESSION_COOKIE_SECURE = ENVIRONMENT == "production"
 CSRF_COOKIE_SECURE = ENVIRONMENT == "production"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Recusa de CSRF em JSON para o fetch (core/views_seguranca.py).
+CSRF_FAILURE_VIEW = "core.views_seguranca.falha_csrf"
 
 # Opcional. Configure COOKIE_DOMAIN=.lazersport.com.br somente quando estiver
 # usando o domínio próprio. Não configure durante testes em *.vercel.app.

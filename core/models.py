@@ -1581,7 +1581,15 @@ class Promocoes(Prime):
 
     @property
     def lista_condicoes(self):
-        return [linha.strip(" -•\t") for linha in (self.condicoes or "").splitlines() if linha.strip(" -•\t")]
+        # Nunca mais parcelas do que o cartão aceita (até 6x; core/parcelas_texto.py),
+        # mesmo que alguém digite "10x" no painel.
+        from .parcelas_texto import condicao_em_6x
+
+        return [
+            condicao_em_6x(linha.strip(" -•\t"), self.preco_promocao)
+            for linha in (self.condicoes or "").splitlines()
+            if linha.strip(" -•\t")
+        ]
 
     @property
     def todos_brinquedos(self):

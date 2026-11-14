@@ -5464,3 +5464,52 @@ Dependência nova: rjsmin (requirements.txt).
    sRGB; o verniz e as luzes; os mipmaps; os nomes de sempre; os visores com
    a luz de ambiente, o tom neutro, a sombra e o enquadramento do primeiro
    3D; o fundo azul) e core/tests_variantes_adesivo.py (as medidas novas).
+
+93) BLACK FRIDAY: LOGADO, NADA ENTRAVA NO CARRINHO -- O TOKEN DO CSRF
+   O PEDIDO: "ainda com erro, é uma vergonha na Black Friday não poder
+   adicionar os produtos ao carrinho" ("Não foi possível adicionar este
+   item", em qualquer item, só com a conta logada).
+   A CAUSA: o navegador de quem já visitava o site guardava DOIS cookies
+   csrftoken -- o antigo, só de www.lazersport.com.br, e o atual, de
+   .lazersport.com.br (COOKIE_DOMAIN). O JS (ls-carrinho-rapido.js e o
+   adicionarAoCarrinho do base.html) lia o primeiro, o velho; o Django lê o
+   último. O token não batia, o servidor respondia a página 403 do Django
+   em HTML e a folha, que espera JSON, só sabia o texto genérico. Sem login
+   funcionava, e a tela do carrinho também (ela usa o token impresso na
+   página) -- por isso o erro parecia "só no adicionar".
+   O CONSERTO (core/views_seguranca.py):
+     * o <head> do base.html apaga o cookie velho quando há dois e cria
+       window.LSCsrf: token() = o token impresso na página (sempre o que o
+       Django lê), renovar() = um token novo de /seguranca/token/,
+       recusou(status, corpo) = foi o CSRF que recusou;
+     * a folha do carrinho, o caminho direto do base.html e o lsPost do
+       carrinho usam LSCsrf.token() e, se o CSRF recusar, pegam um token novo
+       e mandam de novo, UMA vez -- o cliente não vê nada;
+     * CSRF_FAILURE_VIEW = falha_csrf: para o fetch, 403 em JSON
+       {codigo: "csrf", erro: "Esta página ficou desatualizada..."}; para
+       formulário comum, a página padrão. O log "CSRF recusado" diz o motivo,
+       quantos cookies csrftoken vieram e se estava logado;
+     * o recado genérico que sobrou agora traz o código HTTP.
+   Testes: core/tests_csrf_carrinho.py (CSRF LIGADO como no ar: dois
+   cookies, o velho primeiro -> o token velho é recusado em JSON, o da página
+   entra). Conferido no navegador: dois cookies ao abrir, um depois; a
+   promoção entra no carrinho.
+
+94) BLACK FRIDAY "TUDO EM 6x": O TEXTO NUNCA PROMETE MAIS QUE O CARTÃO
+   O PEDIDO: as promoções diziam "Em até 10x sem juros", o checkout aceita
+   até 6x (uma parcela a cada R$ 1.000, seção 90 e o "Parcelado vendedor"
+   do Mercado Pago). O dono: "tudo em 6x".
+   core/parcelas_texto.py: condicao_em_6x(linha, preço) reescreve a linha
+   que promete mais parcelas do que o preço deixa, com o número certo e o
+   valor da parcela ("Em até 6x sem juros de R$ 5.328,33"; "Ou em até 4x de
+   R$ 1.247,50 sem juros no cartão"; sem preço: "Parcelamos em até 6x sem
+   juros no cartão (uma parcela a cada R$ 1.000)"). O resto fica.
+     * vale na tela: Promocoes.lista_condicoes passa por ela -- mesmo que
+       alguém digite "10x" no painel, o site e a divulgação mostram o certo;
+     * vale no banco: a migração core/0195 (só dados) acerta o que estava
+       gravado; vale no cadastro (black_friday.cadastrar_promocao);
+     * abaixo de R$ 6.000 não dá 6x: a do Air Game Kids a R$ 4.990 fica em
+       até 4x (o Mercado Pago recusaria a 5ª e a 6ª parcela).
+   AS ARTES: o que está escrito DENTRO das imagens das artes não muda por
+   aqui -- se alguma arte trouxer "10x", ela precisa de uma versão nova.
+   Testes: core/tests_promocoes_6x.py e core/tests_black_friday.py.
