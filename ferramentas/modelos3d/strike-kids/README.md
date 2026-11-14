@@ -66,10 +66,11 @@ As malhas e os materiais têm o MESMO nome (o `gltfpack -kn -km` guarda os dois)
 | `frente_arte` | o adesivo da frente |
 | `monitor` | a tela acesa (o jogo, `emissiveTexture`) |
 | `moldura_monitor`, `camera_sensor`, `lente` | a moldura do monitor, a caixinha da câmera e a lente |
-| `bolsao`, `bola_0`, `bola_1` | o bolsão das bolas e as duas bolas |
+| `bolsao_piso`, `bolsao_parede`, `bolsao_borda`, `bola_0`, `bola_1` | o bolsão das bolas: o piso de madeira clara, as paredes adesivadas (os raios), o perfil amarelo arredondado em volta do buraco (a boca bem definida), e as duas bolas |
+| `placa_tela_arte` | o adesivo de raios na placa embaixo da tela |
 | `botao_aro`, `botao_vermelho` | o botão da frente |
 | `neon_vermelho`, `neon_azul` | o neon flex |
-| `led_pontos`, `led_fita` | a fita de LED (os pontos acesos e a tira preta) |
+| `led_pontos`, `led_fita` | a fita de LED: os pontos bem acesos (a cada 22 mm) e o perfil leitoso aceso em arco-íris por cima da borda inteira (nada de tira preta), da quina da frente no chão até o alto das costas |
 
 Os nomes que começam com `monitor`, `pista`, `bola`, `bolsao` e `led` nunca se
 tingem nas cores do site (`core/static/site/arena/cores3d.js`, `SEM_TINGIR`).

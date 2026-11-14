@@ -240,8 +240,12 @@ export function pontosDeLed(caminho, normal, { passo = 33, r = 4.5, largura = 10
   }
   // a fita (a tira preta embaixo dos pontos): um quadrilátero por trecho
   const pos = [];
+  const uvs = [];
   for (let k = 0; k < n; k++) {
     const t0 = k / n, t1 = (k + 1) / n;
+    const u0 = ((t0 * ciclos) % 1) * 0.98 + 0.01;
+    const u1 = Math.max(u0, ((t1 * ciclos) % 1) * 0.98 + 0.01);
+    uvs.push(u0, 0.5, u1, 0.5, u0, 0.5, u0, 0.5, u1, 0.5, u1, 0.5);
     const [p0, p1] = [curva.getPointAt(t0), curva.getPointAt(t1)];
     const [n0, n1] = [normal(p0, curva.getTangentAt(t0)).normalize(), normal(p1, curva.getTangentAt(t1)).normalize()];
     const [l0, l1] = [new THREE.Vector3().crossVectors(curva.getTangentAt(t0), n0).normalize(), new THREE.Vector3().crossVectors(curva.getTangentAt(t1), n1).normalize()];
@@ -251,6 +255,7 @@ export function pontosDeLed(caminho, normal, { passo = 33, r = 4.5, largura = 10
   }
   const gf = new THREE.BufferGeometry();
   gf.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  gf.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   gf.computeVertexNormals();
   fita.push(gf);
   return { pontos, fita };

@@ -118,7 +118,6 @@ const retangulo = (a0, b0, a1, b1) => [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
 
 const M = {
   mdf: material("estrutura_mdf", (n) => C.acetinado(n, "#15161a")),
-  bolsao: material("bolsao", (n) => C.acetinado(n, "#1d2027", { roughness: 0.6, clearcoat: 0.1 })),
   moldura: material("moldura_monitor", (n) => C.acetinado(n, "#09090b", { roughness: 0.22, clearcoat: 0.9, clearcoatRoughness: 0.05 })),
   camera: material("camera_sensor", (n) => C.acetinado(n, "#f4f6f9", { roughness: 0.35, clearcoat: 0.6 })),
   lente: material("lente", (n) => C.acetinado(n, "#050608", { roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.02 })),
@@ -129,11 +128,20 @@ const M = {
   // o neon flex: o silicone leitoso aceso (a cor dele mesmo de dia, e o brilho)
   neonVermelho: material("neon_vermelho", (n) => C.aceso(n, "#ff0a24", 1.8, { color: "#ff1a2e", roughness: 0.6 })),
   neonAzul: material("neon_azul", (n) => C.aceso(n, "#0a5cff", 2.2, { color: "#1f6bff", roughness: 0.6 })),
-  ledFita: material("led_fita", (n) => C.acetinado(n, "#101114", { roughness: 0.5, clearcoat: 0 })),
+  // o perfil leitoso da fita: aceso em arco-íris (a borda brilha inteira, nada de tira preta)
+  ledFita: material("led_fita", (n) => {
+    const t = C.texturaArcoIris();
+    return new THREE.MeshStandardMaterial({ name: n, color: "#ffffff", map: t, emissive: "#ffffff", emissiveMap: t, emissiveIntensity: 1.1, roughness: 0.55, side: THREE.DoubleSide });
+  }),
   led: material("led_pontos", (n) => {
     const t = C.texturaArcoIris();
-    return new THREE.MeshStandardMaterial({ name: n, color: "#ffffff", map: t, emissive: "#ffffff", emissiveMap: t, emissiveIntensity: 1.5, roughness: 0.5 });
+    return new THREE.MeshStandardMaterial({ name: n, color: "#ffffff", map: t, emissive: "#ffffff", emissiveMap: t, emissiveIntensity: 3.2, roughness: 0.4 });
   }),
+  // o bolsão: o piso claro de madeira e o perfil amarelo em volta do buraco (bem definido)
+  bolsaoPiso: material("bolsao_piso", (n) => C.acetinado(n, "#c98a3e", { roughness: 0.45, clearcoat: 0.4 })),
+  bolsaoBorda: material("bolsao_borda", (n) => new THREE.MeshPhysicalMaterial({
+    name: n, color: "#ffc61a", roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05, emissive: "#ffb300", emissiveIntensity: 0.35,
+  })),
 };
 
 // o lado maior de cada arte dentro do .glb (px): a HD inteira (4x a arte da fábrica), até 2048
@@ -171,7 +179,11 @@ for (const lado of ["esquerda", "direita"]) {
   // no meio da espessura da chapa, com os pontos virados para fora do contorno
   {
     const costas = s < 0 ? (u) => u < 0.03 : (u) => u > 0.97;
-    let i0 = f.contorno.findIndex(([u, v]) => v < 0.7 && !costas(u));
+    // começa no pé da quina da frente (as fotos: o LED desce até o chão) e sobe
+    let i0 = f.contorno.findIndex(([u, v]) => v > 0.95 && (s < 0 ? u > 0.5 : u < 0.5));
+    if (i0 < 0) i0 = f.contorno.findIndex(([u, v]) => v < 0.7 && !costas(u));
+    // ...a uns 5 cm do chão (o ponto de LED não pode passar do piso)
+    while (f.contorno[i0][1] > 0.97) i0 = (i0 + 1) % f.contorno.length;
     const trecho = [];
     for (let k = i0; trecho.length < f.contorno.length; k = (k + 1) % f.contorno.length) {
       trecho.push(contorno[k]);
@@ -190,7 +202,7 @@ for (const lado of ["esquerda", "direita"]) {
     // o sentido do contorno no plano da face: para fora é tangente x N (anti-horário) ou o contrário
     const area = pts.reduce((acc, [a, y], k) => acc + a * pts[(k + 1) % pts.length][1] - pts[(k + 1) % pts.length][0] * y, 0);
     const sinal = area > 0 ? 1 : -1;
-    const { pontos, fita } = C.pontosDeLed(caminho, (p, t) => t.clone().cross(b.N).multiplyScalar(sinal), { passo: 33, r: 5.5, largura: 10 });
+    const { pontos, fita } = C.pontosDeLed(caminho, (p, t) => t.clone().cross(b.N).multiplyScalar(sinal), { passo: 22, r: 7, largura: ESP_L + 4 });
     pontos.forEach((g) => por(M.led, g));
     fita.forEach((g) => por(M.ledFita, g));
   }
@@ -318,9 +330,6 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
     g.drawImage(fonte, 0, 0, xb - xa, yb - ya);
     g.restore();
   }
-  // abaixo da pista: o escuro do bolsão (só aparece dentro dele)
-  g.fillStyle = "#1d2027";
-  g.fillRect(0, py(PISTA_Y), W, Hc - py(PISTA_Y));
 
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -346,9 +355,38 @@ async function artePorDentro(lado, contorno, zDe, aDe) {
   por(m, C.adesivoPlano(pts, [0, 0, 2 * XP, L]), b.matriz());
   // o bolsão
   const yTopo = PISTA_Y - ESP_L - PELE;
-  caixa(M.bolsao, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, Y_PISO_BOLSAO, Z_BOLSAO, Z_FRENTE_DENTRO);
-  caixa(M.bolsao, X_BOLSAO - ESP, X_BOLSAO, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_FRENTE_DENTRO);
-  caixa(M.bolsao, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_BOLSAO);
+  caixa(M.bolsaoPiso, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, Y_PISO_BOLSAO, Z_BOLSAO, Z_FRENTE_DENTRO);
+  {
+    // as paredes de dentro do bolsão também são adesivo (os raios), não caixa preta
+    const c = document.createElement("canvas");
+    c.width = 1024;
+    c.height = 512;
+    desenharRaios(c.getContext("2d"), 1024, 512, 512, 560, 22);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 16;
+    t.userData.mimeType = "image/jpeg";
+    const mp = material("bolsao_parede", (n) => C.vinil(n, t));
+    caixa(mp, X_BOLSAO - ESP, X_BOLSAO, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_FRENTE_DENTRO);
+    caixa(mp, X_BOLSAO, XP, Y_PISO_BOLSAO - ESP, yTopo, Z_BOLSAO - ESP, Z_BOLSAO);
+  }
+  {
+    // O BURACO BEM DEFINIDO: um perfil amarelo arredondado (o protetor de borda) em
+    // volta da boca do bolsão -- a beira da frente, a parede do recorte e a borda da pista
+    const rb = ESP_L / 2 + 2.5;
+    const zf = ZF - PELE - ESP_L / 2; // o meio da espessura da frente
+    const yp = PISTA_Y - PELE - ESP_L / 2; // o meio da espessura da laje da pista
+    const xb = X_BOLSAO - 2;
+    const caminho = [
+      V(XP, Y_BEIRA, zf), V(xb + 40, Y_BEIRA, zf), V(xb + 8, Y_BEIRA + 8, zf), V(xb, Y_BEIRA + 40, zf),
+      V(xb, yp - 30, zf), V(xb, yp, zf - 30), V(xb, yp, Z_BOLSAO + 40), V(xb + 8, yp, Z_BOLSAO + 8),
+      V(xb + 40, yp, Z_BOLSAO), V(XP, yp, Z_BOLSAO),
+    ];
+    por(M.bolsaoBorda, C.tuboNeon(caminho, rb, false));
+    // e a beira de cima da frente (a ponta da pista), da lateral esquerda até o buraco
+    const yl = PISTA_Y - PELE - 9;
+    por(M.bolsaoBorda, C.tuboNeon([V(-XP, yl, zf), V((-XP + xb) / 2, yl, zf), V(xb - 12, yl, zf)], rb, false));
+  }
   // as bolas de borracha (de gomos, como as de futebol): uma vermelha e preta, a outra colorida
   const gomos = (fundo, cores) => {
     const c = document.createElement("canvas");
