@@ -5513,3 +5513,121 @@ Dependência nova: rjsmin (requirements.txt).
    AS ARTES: o que está escrito DENTRO das imagens das artes não muda por
    aqui -- se alguma arte trouxer "10x", ela precisa de uma versão nova.
    Testes: core/tests_promocoes_6x.py e core/tests_black_friday.py.
+
+95) AS FOTOS DAS CATEGORIAS NO SALÃO, SÓ COM AS MÁQUINAS (BLENDER: NADA FLUTUANDO, NINGUÉM INVENTADO)
+   O pedido do dono: "fotos realistas só das máquinas no ambiente, sem
+   crianças artificiais" e "deve ficar bem posicionado, olha as categorias
+   que feia, tem brinquedos flutuando... não está certo". E a régua do chefe
+   dele: viva e nítida como a foto de um lanche de propaganda, nada com cara
+   de falso, como tirada por uma câmera 4K, sem parede branca nem chão
+   cinza, cores vivas e saturadas.
+   As 18 fotos de core/static/site/categorias/ (as 17 categorias e o card
+   "Peças e acessórios" da home) foram refeitas do zero no BLENDER (o motor
+   Cycles, o render físico: a luz que bate, rebate e reflete de verdade), no
+   lugar das cenas do three.js (ferramentas/categorias/, seções 55 e 58: as
+   crianças de boneco e as fotos das máquinas soltas acima do chão). Mesmos
+   nomes, 1600 x 1200 (o 4:3 do card; a Área Baby, que era 1200 x 900,
+   também), até ~245 KB.
+   O SALÃO (ferramentas/fotos-categorias/cena.py, `ambiente`): uma área de
+   diversão de shopping, moderna, fotografada na altura dos olhos com lente
+   natural (35-38 mm; 60 mm nas peças) e a profundidade de campo leve:
+     * o piso de resina polida numa cor viva (azul fundo, roxo, violeta), com
+       o verniz que reflete as máquinas e o neon (a rugosidade varia um tanto,
+       como no polido de verdade);
+     * a parede do fundo azul-marinho com as linhas de LED/neon nas cores da
+       marca (#007BFF, #E63946, #FFD700, magenta, ciano): são malhas que
+       EMITEM luz -- o piso, a parede e as máquinas recebem a cor delas; e os
+       LEDs escondidos na sanca e no rodapé que lavam a parede (o degradê de
+       luz, a parede nunca fica preta nem chapada);
+     * o teto com as luminárias embutidas (o disco aceso e o foco que desce) e
+       os perfis de LED correndo para o fundo;
+     * numa abertura da parede, o shopping lá longe: as luzes viram bokeh;
+     * o clima de cada categoria: o neon do fliperama (os arcos magenta e
+       ciano), as diagonais de esporte (Esportivos, Competitivos, Trampolins,
+       Área Ninja), as ondas e as cores quentes dos pequenos (Kids, Casinhas,
+       Área Baby, Espaço Kids Play), as luzinhas de festa (Famosos,
+       Mecânicos). NENHUMA PESSOA.
+   AS MÁQUINAS, SÓ AS DE VERDADE DA CATEGORIA (a lista de cada foto vai para
+   ferramentas/categorias/maquinas-das-fotos.json, que o teste confere contra
+   as categorias do site no ar):
+     * o .glb NOSSO (core/static/site/arena/modelos/, só lido): os adesivos
+       ganham o vinil brilhante (rugosidade 0,25 e o verniz), os LEDs e as
+       telas acendem, o plástico fica acetinado;
+     * a FOTO DO CATÁLOGO recortada (ferramentas/categorias/maquinas-alta/)
+       num plano de pé de frente para a câmera. A borda de baixo da caixa do
+       alfa (MEDIDA no recorte, não chutada) fica EXATAMENTE no chão; a altura
+       é a do cadastro (maquinas.json). O ângulo em que a foto foi tirada é
+       MEDIDO na própria foto: o canto da base que encosta no chão (o pixel
+       mais baixo) diz de que lado e o quanto a máquina está virada (o lado
+       vem de cena.FOTOS, conferido no olho). Atrás do plano vai a
+       CAIXA-SOMBRA: uma caixa do tamanho da máquina (largura, fundo e altura
+       de verdade), invisível para a câmera, que recebe a própria foto
+       PROJETADA DA CÂMERA -- é ela que faz a sombra no chão, o escurecido do
+       contato e o reflexo no piso. Com isso a base da foto encosta no chão
+       como uma máquina de verdade: sem vão embaixo, sem nada atravessado (o
+       gerar.py avisa as plantas que se cruzam).
+     * as peças de reposição (o card da home): as fotos do catálogo
+       (ferramentas/categorias/reposicao/) de pé no balcão de acrílico azul,
+       no tamanho de verdade, com a sombra e o reflexo no tampo.
+   O QUE CADA FOTO MOSTRA (3D = o nosso .glb; o resto, a foto do catálogo):
+     Fliperama              Multi Jogos Retro, Pinball 40, Pinball 32, Homem Aranha
+     Eletrônicos            Basquete Home Quadrinhos (3D), Sonic Dash, Mundo Zumbi, Strike Kids (3D)
+     Competitivos           Basquete Street, Air Game Premium, Basquete Home Quadrinhos (3D), Mundo Zumbi
+     Esportivos             Basquete Street, Basquete Home, Basquete Home Quadrinhos (3D), Show de Bola
+     Famosos                Flappy Bird, Sonic Dash, Basquete Home Quadrinhos (3D), Pantera Cor de Rosa Kids, Homem Aranha
+     Kids                   Air Game Kids Alienígenas (3D), Minions Kids, Sonic Kids, Homem Aranha Kids, Basquete Kids
+     Simuladores            Porsche Simulador, Top Racer, Lazer Shot, Simulador Mario Kart
+     Mecânicos              Carrossel Sorvetinho na frente; Mini Roda Sorvete e Labamba atrás (do alto: as fotos são de cima)
+     Jogos de Mesa          Pac Man e Air Game Kids Alienígenas (3D) na frente; Air Game Premium e Pebolim
+                            Eletrônico atrás (do alto, como as fotos das mesas)
+     Boliche Virtual        Boliche Virtual e dois Strike Kids (3D)
+     Brinquedão             Brinquedão Modelo 2 e Modelo 5 (3D)
+     Área Ninja             Brinquedão Ninja (3D)
+     Espaço Esportivo Kids  Espaço Esportivo Modelo 1 (3D), do alto do galpão (39 x 23 m: só assim se lê inteiro)
+     Espaço Kids Play       Brinquedão Modelo 5 e Air Game Kids Alienígenas (3D), Sonic Kids, Minions Kids
+     Trampolins             duas unidades do Trampolim de Enterrada (3D): a das camas e a da piscina de espuma
+     Casinhas Cenográficas  Cozinha Infantil, Oficina de Engenharia, Salão de Beleza
+     Área Baby              a categoria não tem produto: o cantinho baby do Brinquedão
+                            Modelo 4 (3D), com a placa "Área Baby" (fica fora da lista)
+     Peças e acessórios     os bonecos do pebolim, a maneta e o disco do air game e as duas vistas da
+                            caixinha de som (os rolos de cabo flexível e o cabo HDMI ficaram de fora: a
+                            foto dos rolos é de cima, deitada, e o recorte do HDMI guarda o fundo cinza)
+   O RENDER (cena.configurar): Cycles na CPU, a amostragem adaptativa (até
+   40 amostras por pixel; 64 no Fliperama) e o OpenImageDenoise com o albedo
+   e as normais, 3 threads, a cor no "Khronos PBR Neutral" (a foto do produto
+   sai com a cor que ela tem; a luz forte não estoura no branco). Numa CPU de
+   4 núcleos dividida com outros trabalhos, cada foto de 1600 x 1200 levou de
+   5 a 7 minutos (311 a 414 s; o Fliperama, com 64 amostras, 587 s); a prévia
+   (--previa, 640 x 480), uns 30 s.
+   O ACABAMENTO (compor.py): o brilho leve das luzes, a cor viva (vibrance),
+   a clareza, a nitidez fina e a vinheta leve; nas cenas mais escuras
+   (Competitivos, Trampolins, Simuladores, Área Ninja, Espaço Esportivo) um
+   tanto de luz nos meios-tons (compor.ACABAMENTO). O WebP desce a qualidade
+   até caber em ~245 KB. O teste confere que nenhuma é escura, branca ou cinza
+   (luz média, saturação, borda que não é fundo liso).
+   A SUBIDA: a migração 0196_fotos_das_categorias_no_salao (depois da 0195;
+   só dados), SÓ NO RENDER (o Cloudinary só está lá): sobe as fotos das
+   categorias que mudaram -- o nome leva a assinatura do arquivo, a igual não
+   sobe de novo -- e limpa o cache (core/categorias_capas.py,
+   subir_fotos_e_limpar_o_cache). O card "Peças e acessórios" é estático:
+   vem com o site. Se a subida falhar, o deploy segue; no servidor:
+       python manage.py atualizar_capas_categorias
+   REFAZER (o Blender como módulo do Python, só para estas fotos; precisa do
+   Python 3.11):
+       python3.11 -m venv venv && venv/bin/pip install bpy==5.0.1 pillow
+       venv/bin/python ferramentas/fotos-categorias/gerar.py --arranjo     (só as medidas: colisões, bordas, ângulos)
+       venv/bin/python ferramentas/fotos-categorias/gerar.py --previa [chaves]
+       venv/bin/python ferramentas/fotos-categorias/gerar.py [chaves]      (render/<chave>.png, 1600 x 1200)
+       venv/bin/python ferramentas/fotos-categorias/compor.py [chaves]     (o .webp no site)
+       venv/bin/python ferramentas/fotos-categorias/folha.py <pasta>       (antes/depois e o zoom nas bases)
+       python manage.py test core.tests_categorias_capas
+   O gerar.cjs de ferramentas/categorias/ continua para as capas dos produtos
+   (seções 60, 64, 78); para as fotos das categorias, NÃO rode mais ele (as
+   crianças voltariam): a cena de cada categoria está em
+   ferramentas/fotos-categorias/cenas.py (a máquina, a fila, a câmera, o salão).
+   Código: ferramentas/fotos-categorias/ (cena.py, cenas.py, gerar.py,
+   compor.py, folha.py), core/categorias_capas.py
+   (subir_fotos_e_limpar_o_cache), core/migrations/0196_fotos_das_categorias_no_salao.py.
+   Testes: core/tests_categorias_capas.py (FotosNoSalaoTests; FotosTests: a
+   Área Baby também em 1600 x 1200), core/tests_maquinas_vermelhas.py (a
+   foto das casinhas: a cena nova, sem crianças).

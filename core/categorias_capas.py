@@ -239,6 +239,30 @@ def subir_fotos_no_deploy(apps, schema_editor, avisar=print):
         return None
 
 
+def subir_fotos_e_limpar_o_cache(apps, schema_editor, avisar=print):
+    """A 0196: as fotos das categorias refeitas no salão (ferramentas/fotos-categorias/, Blender).
+
+    Só no Render (o Cloudinary só está lá): sobe só as fotos que mudaram -- o nome
+    leva a assinatura do arquivo (`nome_no_cadastro`), então a foto igual não sobe de
+    novo e a nova ganha outro nome (o CDN não serve a velha) -- e limpa o cache (a
+    home e a busca guardadas passam a mostrar as novas; o card "Peças e acessórios",
+    que é estático, também). Se a subida falhar, o deploy segue e o aviso diz o
+    comando. Fora do Render não faz nada.
+    """
+    from django.conf import settings
+
+    if not getattr(settings, "IS_RENDER", False):
+        return None
+    resultado = subir_fotos_no_deploy(apps, schema_editor, avisar=avisar)
+    try:
+        from django.core.cache import cache
+
+        cache.clear()
+    except Exception:  # noqa: BLE001 -- o deploy segue
+        pass
+    return resultado
+
+
 def migrar(apps, schema_editor, avisar=print):
     """A 0147: os nomes e as áreas em todo lugar (só o banco); as fotos, só no Render.
 

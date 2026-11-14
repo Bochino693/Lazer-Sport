@@ -49,6 +49,7 @@ from .views import CategoriasInfoView
 migracao = importlib.import_module("core.migrations.0147_categorias_capas_e_nomes")
 migracao_lugares = importlib.import_module("core.migrations.0149_categorias_nos_lugares")
 migracao_reais = importlib.import_module("core.migrations.0152_categorias_maquinas_reais")
+migracao_salao = importlib.import_module("core.migrations.0196_fotos_das_categorias_no_salao")
 
 FERRAMENTA = Path(__file__).resolve().parent.parent / "ferramentas" / "categorias"
 
@@ -328,8 +329,8 @@ class FotosTests(TestCase):
         for arquivo in arquivos:
             with self.subTest(arquivo.name), Image.open(arquivo) as foto:
                 self.assertEqual(foto.format, "WEBP")
-                # em alta (a 0155); a Área Baby, sem produto no catálogo, fica como estava
-                self.assertEqual(foto.size, (1200, 900) if arquivo.stem == "area-baby" else (1600, 1200))
+                # em alta (a 0155); desde a 0196 (o salão no Blender), a Área Baby também
+                self.assertEqual(foto.size, (1600, 1200))
                 # o card baixa a foto inteira: até ~250 KB
                 self.assertLessEqual(arquivo.stat().st_size, 250 * 1024)
 
@@ -548,3 +549,69 @@ class MaquinasReaisTests(TestCase):
             for inventada in ("P.gabinete(", "P.simulador(", "P.pinball(", "P.pebolim(", "P.carrossel(", "P.rodaGigante(", "P.mesaArcade(", "P.golLed("):
                 with self.subTest(arquivo=arquivo, peca=inventada):
                     self.assertNotIn(inventada, codigo)
+
+
+@override_settings(IS_RENDER=False)
+class FotosNoSalaoTests(TestCase):
+    """A 0196 (seção 95): as fotos refeitas no Blender, só as máquinas no salão, e a subida."""
+
+    ESTUDIO = Path(__file__).resolve().parent.parent / "ferramentas" / "fotos-categorias"
+
+    def setUp(self):
+        cache.clear()
+        self.kids = CategoriasBrinquedos.objects.create(nome_categoria="Kids", imagem_categoria="categorias/kids_antiga")
+        # a do Fliperama já está com a foto de hoje (a mesma assinatura): não sobe de novo
+        self.fliper = CategoriasBrinquedos.objects.create(
+            nome_categoria="Fliperama", imagem_categoria=f"categorias/{categorias_capas.nome_no_cadastro('fliperama')}_abc123",
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_so_dados_depois_da_0195(self):
+        self.assertEqual(migracao_salao.Migration.dependencies, [("core", "0195_promocoes_em_6x")])
+        operacoes = migracao_salao.Migration.operations
+        self.assertEqual(len(operacoes), 1)
+        self.assertEqual(type(operacoes[0]).__name__, "RunPython")
+
+    def test_fora_do_render_nao_faz_nada(self):
+        cache.set("home", "a de antes")
+        self.assertIsNone(categorias_capas.subir_fotos_e_limpar_o_cache(apps_reais, None, avisar=_mudo))
+        migracao_salao.subir(apps_reais, None)
+        self.kids.refresh_from_db()
+        self.assertEqual(self.kids.imagem_categoria.name, "categorias/kids_antiga")
+        self.assertEqual(cache.get("home"), "a de antes")
+
+    def test_no_render_sobe_so_o_que_mudou_e_limpa_o_cache(self):
+        cache.set("home", "a de antes")
+        with tempfile.TemporaryDirectory() as pasta, _disco(pasta), override_settings(IS_RENDER=True):
+            resultado = categorias_capas.subir_fotos_e_limpar_o_cache(apps_reais, None, avisar=_mudo)
+        self.assertEqual(resultado["trocadas"], ["Kids"])
+        self.assertEqual(resultado["iguais"], ["Fliperama"])
+        self.kids.refresh_from_db()
+        self.fliper.refresh_from_db()
+        # o nome leva a assinatura do arquivo novo (o CDN não serve a foto velha)
+        self.assertIn(categorias_capas.nome_no_cadastro("kids"), self.kids.imagem_categoria.name)
+        self.assertTrue(self.fliper.imagem_categoria.name.endswith("_abc123"))
+        self.assertIsNone(cache.get("home"))
+
+    def test_no_render_a_subida_que_falha_nao_derruba_o_deploy(self):
+        avisos = []
+        with override_settings(IS_RENDER=True), mock.patch.object(categorias_capas, "atualizar_capas", side_effect=OSError("sem rede")):
+            self.assertIsNone(categorias_capas.subir_fotos_e_limpar_o_cache(apps_reais, None, avisar=avisos.append))
+        self.assertIn("atualizar_capas_categorias", avisos[-1])
+        self.kids.refresh_from_db()
+        self.assertEqual(self.kids.imagem_categoria.name, "categorias/kids_antiga")
+
+    def test_cada_foto_tem_a_cena_dela_sem_ninguem(self):
+        # o estúdio do Blender tem uma cena para cada foto do site; nenhuma pessoa (as crianças
+        # desenhadas das fotos de antes, ferramentas/categorias/pessoas.js, não entram)
+        cenas = (self.ESTUDIO / "cenas.py").read_text(encoding="utf-8")
+        for chave in [c for c, _ in categorias_capas.CAPAS] + ["pecas-e-acessorios"]:
+            with self.subTest(chave):
+                self.assertIn(f'"{chave}"', cenas)
+        for arquivo in ("cena.py", "cenas.py", "gerar.py"):
+            codigo = (self.ESTUDIO / arquivo).read_text(encoding="utf-8")
+            with self.subTest(arquivo):
+                self.assertNotIn("pessoas.js", codigo)
+                self.assertNotIn("crianca(", codigo)

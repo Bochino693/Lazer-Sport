@@ -1,0 +1,3 @@
+# os renders e os recortes preparados (refeitos pelo gerar.py): só o .webp final vai para o site
+render/
+__pycache__/

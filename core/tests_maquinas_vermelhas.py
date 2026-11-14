@@ -168,22 +168,24 @@ class FotosTests(TestCase):
         with Image.open(arquivo) as foto:
             self.assertEqual(foto.size, (1600, 1200))  # o 4:3 do card de categoria
         self.assertLessEqual(arquivo.stat().st_size, 250 * 1024)
-        # (a faixa vermelha do arco-íris pintado na parede da brinquedoteca conta um pouco: ~14%; a de
-        # antes, o neon do cartaz, 76%) e o lugar é claro, e não o fundo escuro do cartaz
+        # a borda não é o neon vermelho do cartaz (o de antes, 76%) e o lugar é aceso, e não o
+        # fundo escuro do cartaz
         self.assertLess(vermelho_na_borda(arquivo), 0.25)
         self.assertGreater(vermelho_na_borda(capas_catalogo.FOTO_DE_ANTES_DA_CATEGORIA), 0.5)
-        with Image.open(arquivo) as foto:
-            self.assertGreater(sum(foto.convert("L").resize((40, 30)).getdata()) / 1200, 120)
-        # as três casinhas de verdade (os recortes delas), num lugar com crianças
+        with Image.open(arquivo) as foto, Image.open(capas_catalogo.FOTO_DE_ANTES_DA_CATEGORIA) as antes:
+            luz = sum(foto.convert("L").resize((40, 30)).getdata()) / 1200
+            self.assertGreater(luz, 75)
+            self.assertGreater(luz, sum(antes.convert("L").resize((40, 30)).getdata()) / 1200)
+        # as três casinhas de verdade (os recortes delas) no salão -- desde a 0196 (seção 95), sem
+        # crianças: a cena é a do Blender (ferramentas/fotos-categorias/cenas.py), só com as casinhas
         fotos = json.loads((FERRAMENTA / "maquinas-das-fotos.json").read_text(encoding="utf-8"))
         self.assertEqual(sorted(fotos["casinhas-cenograficas"]), ["Cozinha Infantil", "Oficina de Engenharia", "Salão de Beleza"])
-        cenas = (FERRAMENTA / "cenas.js").read_text(encoding="utf-8")
+        cenas = (RAIZ / "ferramentas" / "fotos-categorias" / "cenas.py").read_text(encoding="utf-8")
         bloco = cenas[cenas.index('"casinhas-cenograficas": {'):]
-        bloco = bloco[:bloco.index("\n  },")]
-        self.assertIn('lugar: "brinquedoteca"', bloco)
-        # as crianças na frente (naFrente: pelo lugar na tela, inteiras na foto)
-        self.assertIn("naTela: naFrente([[", bloco)
-        self.assertGreaterEqual(bloco.split("naTela: naFrente(")[1].split("\n")[0].count('"'), 6)
+        bloco = bloco[:bloco.index("\n    },")]
+        for chave in ("cozinha-infantil", "oficina-de-engenharia", "salao-de-beleza"):
+            self.assertIn(f'"{chave}"', bloco)
+        self.assertNotIn("crianca", bloco)
 
 
 def _disco(pasta):
