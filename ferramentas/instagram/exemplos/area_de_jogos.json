@@ -1,0 +1,113 @@
+{
+ "gravacao": "grav3",
+ "logo": "../../../core/static/images/logoofi.png",
+ "musica": "../../../core/static/site/arena/jogos/strike-kids/sons/musica.mp3",
+ "cores": [
+  "#FF2E93",
+  "#FFE600"
+ ],
+ "led": [
+  "#FF2E93",
+  "#FFE600",
+  "#19D3FF",
+  "#2BE35B",
+  "#B14CFF"
+ ],
+ "velocidade": 0.9,
+ "gancho": {
+  "tipo": "pergunta",
+  "pergunta": [
+   "JÁ JOGOU",
+   "NO SITE DA",
+   "LAZER & SPORT?"
+  ],
+  "resposta": "37 JOGOS",
+  "complemento": "PARA JOGAR AGORA",
+  "batida": 0.3
+ },
+ "takes": {
+  "chip": "FEITOS PELA LAZER & SPORT",
+  "itens": [
+   {
+    "quadros": "jg/filme_strike-kids",
+    "inicio": 58,
+    "fim": 170,
+    "duracao": 3.0,
+    "nome": "Strike Kids",
+    "detalhe": "Boliche infantil de 5 sensores"
+   },
+   {
+    "quadros": "jg/filme_dragon-bowling",
+    "inicio": 59,
+    "fim": 232,
+    "duracao": 2.8,
+    "nome": "Dragon Bowling",
+    "detalhe": "Boliche virtual de arcade"
+   },
+   {
+    "quadros": "jg/filme_super-boxing",
+    "inicio": 6,
+    "fim": 76,
+    "duracao": 2.0,
+    "claro": 20,
+    "nome": "Super Boxing",
+    "detalhe": "Fight! Never give up!"
+   }
+  ]
+ },
+ "passos": [
+  {
+   "trecho": "a_portal",
+   "chip": "LAZER & SPORT GAMES",
+   "legenda": [
+    "Tudo no site, *sem instalar nada*:",
+    "no celular ou no computador"
+   ]
+  },
+  {
+   "trecho": "b_classicos",
+   "chip": "OS CLÁSSICOS",
+   "legenda": [
+    "*PlayStation*, *Nintendo 64*,",
+    "*Super Nintendo* e mais"
+   ]
+  },
+  {
+   "trecho": "c_regra",
+   "chip": "COMO FUNCIONA",
+   "legenda": [
+    "*2 partidas grátis* sem cadastro.",
+    "Depois, crie a *conta grátis*"
+   ]
+  },
+  {
+   "trecho": "d_ranking",
+   "chip": "RANKING",
+   "legenda": [
+    "Cada recorde entra no *ranking*.",
+    "No geral, cada jogo vale *1.000 pontos*"
+   ]
+  },
+  {
+   "trecho": "e_maquina",
+   "chip": "GOSTOU DO JOGO?",
+   "legenda": [
+    "Toque em *Quero essa máquina*",
+    "e leve para o seu espaço"
+   ]
+  }
+ ],
+ "final": {
+  "duracao": 4.0,
+  "etiqueta": "LAZER & SPORT GAMES",
+  "titulo": [
+   "JOGUE",
+   "AGORA"
+  ],
+  "texto": [
+   "Conta grátis em 1 clique",
+   "Link na bio"
+  ],
+  "botao": "WhatsApp (11) 96056-3135"
+ }
+}

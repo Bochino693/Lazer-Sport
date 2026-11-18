@@ -13,7 +13,7 @@ const D = path.join(__dirname, 'jg', 'filme_' + slug);
 (async () => {
   fs.rmSync(D, { recursive: true, force: true });
   fs.mkdirSync(D, { recursive: true });
-  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+  const b = await chromium.launch({ args: ['--window-size=' + VW + ',' + VH, '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   const c = await b.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, locale: 'pt-BR' });
   await c.addCookies([{ name: 'sessionid', value: fs.readFileSync(path.join(__dirname, 'sessao.txt'), 'utf8').trim(), domain: '127.0.0.1', path: '/' }]);
   const p = await c.newPage();
@@ -37,6 +37,8 @@ const D = path.join(__dirname, 'jg', 'filme_' + slug);
   console.log(slug, 'tela do jogo', cv.map(Math.round).join(','), 'janela', VW + 'x' + VH, 'jogar', jogar.map(Math.round).join(','));
   await p.mouse.click(jogar[0], jogar[1]);
   const cdp = await c.newCDPSession(p);
+  const rolagem = await p.evaluate(() => [window.scrollX, window.scrollY]);   // a foto direta usa coordenadas da pagina
+  clip.x += rolagem[0]; clip.y += rolagem[1];
   let rnd = parseInt(process.argv[5] || '11', 10);
   const r = () => { rnd = (rnd * 16807) % 2147483647; return rnd / 2147483647; };
   const N = Math.round(SEG * 30);
@@ -58,7 +60,7 @@ const D = path.join(__dirname, 'jg', 'filme_' + slug);
       if (gesto) g.k++;
     }
     await p.clock.runFor(33);
-    const foto = await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 86, clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: 1 }, optimizeForSpeed: true });
+    const foto = await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 86, clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: 1 }, captureBeyondViewport: true, fromSurface: true });
     fs.writeFileSync(path.join(D, String(f).padStart(4, '0') + '.jpg'), Buffer.from(foto.data, 'base64'));
   }
   fs.writeFileSync(path.join(D, 'info.json'), JSON.stringify({ slug, quadros: N, largura: Math.round(clip.width), altura: Math.round(clip.height) }));

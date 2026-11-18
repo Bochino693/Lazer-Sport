@@ -413,7 +413,10 @@ def secao_takes(sec, c1, c2, caminho, logo_im):
         fotos = sorted(glob.glob(os.path.join(caminho(it["quadros"]), "*.jpg")))
         ini = int(it.get("inicio", 0))
         n = int(it.get("duracao", 2.4) * FPS)
-        fotos = fotos[ini:ini + n]
+        fotos = fotos[ini:int(it.get("fim", len(fotos)))]
+        # descarta quadros pretos (troca de cena do jogo ou falha da captura) e fica com os n primeiros
+        from PIL import ImageStat
+        fotos = [f for f in fotos if ImageStat.Stat(Image.open(f).convert("L").resize((40, 70))).mean[0] > it.get("claro", 35)][:n]
         ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(ov)
         x0, y0, x1, y1 = 60, 1380, W - 60, 1612
