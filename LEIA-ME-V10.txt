@@ -6405,3 +6405,170 @@ Dependência nova: rjsmin (requirements.txt).
    depois de pagar) e o painel (a folha do andamento da retirada, a folha
    do envio vazia, com o aviso, preenchida e salva de verdade, a folha de
    corrigir o rastreio, no tema lua e no sol); sem rolagem horizontal.
+
+107) O CONTRATO DE COMPRA E VENDA (O DOCUMENTO QUE O CLIENTE ASSINA NO CELULAR)
+   O PEDIDO: "veja que no contrato final de assinatura, devem ter essas
+   cláusulas, fotos do item também e melhor aproveitamento das folhas,
+   entendeu? veja as cláusulas, ponha um contrato de assinatura bom e
+   visível, como o de orçamento."
+   O QUE MUDOU: o documento da seção 81 (aprovado -> assinatura ->
+   pagamento -> venda) deixou de ser o "termo de compra" de uma declaração
+   e virou o CONTRATO da empresa -- "INSTRUMENTO PARTICULAR DE COMPRA E
+   VENDA DE EQUIPAMENTO DE ENTRETENIMENTO" --, com o texto legal do
+   contrato que o dono já usa (só erros de digitação corrigidos; nenhuma
+   cláusula reescrita). O link de 5 minutos, a assinatura com o dedo, o
+   CPF/CNPJ conferido, a trilha de auditoria, o hash, o "gerar de novo",
+   a suspensão e o PDF continuam exatamente como na seção 81.
+   O CONTRATO, NA ORDEM DO PAPEL:
+     * cabeçalho compacto: a faixa azul-branca-vermelha da proposta, o
+       logo, nome fantasia, razão social, CNPJ e telefone; à direita
+       "Contrato nº" (o número do orçamento), o código LS-... e a emissão;
+     * o título e o QUADRO "Quantidade | Equipamento" com cada item do
+       orçamento e, no pé, "Valor" (o total, já com o valor final
+       combinado quando há);
+     * o PREÂMBULO, com o VENDEDOR por inteiro no texto (nome fantasia,
+       razão social, CNPJ, sede, o representante com RG e endereço) e as
+       PARTES EM DUAS COLUNAS: VENDEDOR | COMPRADOR (nome, CPF ou CNPJ,
+       endereço completo, e-mail e telefone -- do cadastro do cliente e do
+       contato do orçamento); depois "As partes acima identificadas...";
+     * as ONZE CLÁUSULAS em cinco seções (Do objeto do contrato; Das
+       obrigações e garantias; Da multa; Da inadimplência; Do foro), com
+       os parágrafos da 4ª e da 6ª:
+         - 1ª: "conforme características da imagem abaixo... vejamos:" e
+           as FOTOS de cada item -- a foto do catálogo (a do ADESIVO
+           escolhido quando o produto tem vários: o adesivo é achado pelo
+           nome dele na descrição da linha, "Air Game Kids Alienígenas";
+           sem nenhum no nome, o padrão), várias por linha, com a legenda
+           (nome, adesivo, quantidade). Item sem foto (linha escrita à mão,
+           produto sem capa) ganha um quadro discreto com o nome; foto que
+           não abre na hora vira o mesmo quadro (assinatura.js) -- nunca
+           uma imagem quebrada;
+         - 2ª: o valor total em número e POR EXTENSO ("R$ 70.500,50
+           (setenta mil e quinhentos reais e cinquenta centavos)") e a
+           "Condição de pagamento: Conforme negociação entre as partes, o
+           pagamento será realizado da seguinte forma: " + a forma de
+           pagamento escrita no orçamento;
+         - 3ª: o prazo de entrega em dias úteis, em número e por extenso
+           ("45 (quarenta e cinco) dias úteis após a confirmação do
+           pagamento") -- ver O PRAZO abaixo;
+         - 4ª a 11ª: o texto da empresa (garantia de 06 meses, frete por
+           conta do comprador, multa de 10%, artigo 49 do CDC, 20% de
+           honorários, inadimplência, rescisão, foro da Comarca de São
+           Paulo);
+     * o FECHO ("Por estarem assim justos e contratados...") com a cidade
+       e a data por extenso ("São Paulo, 18 de novembro de 2026" -- a data
+       de emissão, que está no retrato; o dia 1 sai "1º");
+     * as ASSINATURAS, num bloco só: VENDEDOR (Proprietário) com o nome do
+       representante, COMPRADOR (a assinatura feita no celular entra
+       aqui, com "Assinado eletronicamente em dd/mm/aaaa às hh:mm") e DUAS
+       TESTEMUNHAS (linha, "Nome:" e "CPF:");
+     * a trilha de auditoria de sempre ("Registro da assinatura
+       eletrônica": documento, contrato, data e hora com fuso, assinante,
+       IP, navegador, os dois SHA-256 e os links gerados), num rodapé
+       discreto, só depois de assinado.
+   TUDO NO RETRATO. O texto das cláusulas, já com os dados da venda, vai
+   para o JSON do documento (e para o hash): o que foi assinado não muda se
+   o arquivo do contrato mudar amanhã, nem se o dono trocar os dados do
+   vendedor depois. As fotos entram no retrato pelo endereço (o do
+   Cloudinary, no tamanho de 900 px).
+   AS FOLHAS (o "Salvar em PDF", que continua sendo a impressão do
+   aparelho): A4 com margens de 16 mm (alto), 17 mm (lados) e 18 mm (pé);
+   cláusulas justificadas a 10,2 pt, com hifenização em português; as
+   partes em duas colunas; título de seção que nunca fica sozinho no pé da
+   folha (break-after) e o texto da Cláusula 1ª preso à primeira linha de
+   fotos; as fotos em molduras de 36 mm, três por linha (duas maiores
+   quando são dois itens, uma de 46 mm quando é um), que não se partem; o
+   fecho e as quatro assinaturas inteiros na mesma folha; e no pé de CADA
+   folha, pelas caixas de margem do @page, o código ("Contrato nº
+   0012/2026 · LS-7K3QX9 · integridade 3f2a9c1b0e") e "Página X de Y"
+   (documento_assinatura/impressao.html; o texto passa por um filtro que
+   só deixa letras, números e pontuação de documento). Um contrato de
+   dois itens com foto sai em 3 folhas cheias (a 1ª com o quadro, as
+   partes e as fotos; a 2ª com as cláusulas 2ª a 10ª; a 3ª com a 11ª, as
+   assinaturas e a trilha).
+   A PÁGINA DO CLIENTE (/assinar/<link>/), "bom e visível, como o de
+   orçamento": a mesma tela de app da seção 81 (tema escuro do site, o
+   relógio do link), com o contrato INTEIRO em papel claro, na identidade
+   da proposta, legível no celular (uma coluna, letra de 15 px, texto à
+   esquerda; fotos duas por linha; vendedor e comprador numa linha cada e
+   as testemunhas lado a lado) e no computador (justificado, partes lado a
+   lado, três fotos por linha). O cartão de boas-vindas diz "Leia o
+   contrato... e assine com o dedo no fim da página" e tem "Ir direto para
+   a assinatura"; o quadro de assinar vem DEPOIS do contrato, com "Li e
+   concordo com todas as cláusulas deste contrato de compra e venda". Sem
+   rolagem horizontal, sem alert()/confirm(), sem Font Awesome fora do
+   recorte (a página usa os ícones bi que já usava).
+   OS DADOS DO CONTRATO (o vendedor). Os da EMPRESA (nome fantasia
+   "Brinquedos Lazer & Sport", razão social, CNPJ e sede) são públicos e
+   nascem preenchidos; os do REPRESENTANTE (nome, RG, endereço
+   residencial) são pessoais e NÃO estão no código nem em migração: o dono
+   preenche no painel, em interno > Comercial > "Dados do contrato"
+   (/orcamentos/dados-do-contrato/, só Gestão e superusuário). A tela tem
+   a empresa, o representante, a cidade do fecho e, ao lado, o preâmbulo
+   "como sai no contrato", que muda enquanto se digita; o CNPJ é
+   conferido pelos dígitos. ENQUANTO FALTAR ALGO: a tela avisa ("O
+   contrato ainda não sai para assinatura. Falta preencher: ..."), o
+   cartão do documento lista o que falta e trava o "Gerar documento" (com
+   "Preencher os dados do contrato" para a Gestão e "Peça à Gestão para
+   preencher" para Vendas) e o servidor recusa o gerar ("O contrato ainda
+   não pode ser enviado para assinatura. Faltam os dados do vendedor..."),
+   sem criar documento. O orçamento sem FORMA DE PAGAMENTO também não gera
+   (é a condição da Cláusula 2ª) e o cartão diz isso. Mudar os dados vale
+   para os contratos gerados depois; o já gerado guarda os da época.
+   O PRAZO (Cláusula 3ª), UM LUGAR SÓ: contrato.prazo_de_entrega_do_
+   orcamento(orcamento). Hoje é o prazo de produção do orçamento
+   (Orcamento.prazo_producao_dias, seção 89); sem prazo, 45 dias úteis
+   (PRAZO_DE_ENTREGA_PADRAO, o do contrato da empresa) -- só como último
+   recurso, nunca escrito no texto. Se a regra mudar (por tipo de item,
+   por volume), é ESTA função que muda. O resumo ao lado do cartão mostra
+   "Entrega (Cláusula 3ª): 45 dias úteis (padrão)".
+   OS DOCUMENTOS DE ANTES. Os termos gerados antes do contrato (modelos
+   "2026-11", o recibo, e "2026-11b", o termo de compra) continuam
+   abrindo, assinando e saindo em PDF com a folha deles
+   (documento_assinatura/folha_termo.html); documento_assinatura/
+   folha.html escolhe pelo tipo do retrato. O contrato é o modelo
+   "2026-11c" (VERSAO_DO_MODELO). O WhatsApp diz "assinar o contrato de
+   compra e venda" (ou "o termo de compra", nos antigos) e o histórico do
+   orçamento "Contrato de compra e venda · integridade ..." e "Contrato de
+   compra e venda assinado no celular".
+   Banco: sistema_interno/0068_dados_do_contrato (só esquema: a tabela
+   DadosContrato) e 0069_dados_do_contrato_iniciais (só dados: a linha
+   única com os dados públicos da empresa e o representante VAZIO; rodar
+   de novo não duplica; desfazer não apaga nada).
+       python manage.py migrate sistema_interno
+   Código: sistema_interno/contrato.py (o texto das cláusulas e do
+   preâmbulo, o extenso, o prazo, as fotos e o adesivo, as pendências),
+   documento_assinatura.py (o retrato vira o contrato; o gerar recusa sem
+   os dados), views_dados_contrato.py (a tela), DadosContrato
+   (models.py), templatetags/contrato_extras.py (o negrito das partes e o
+   texto seguro do rodapé), templates documento_assinatura/{contrato,
+   folha,folha_termo,impressao,cartao,resumo}.html, dados_contrato_
+   inner.html, base_inner.html (o item do menu), core/views_assinatura.py
+   (o código do rodapé), core/templates/assinatura_publica.html e
+   assinatura_via.html, site/paginas/assinatura.{css,js} (".contrato",
+   ".ct-*" e a impressão), interno/dados-contrato.{css,js} e
+   interno/documento-assinatura.css (a lista do que falta).
+   Testes: sistema_interno/tests_contrato.py (o extenso de números,
+   dinheiro e datas; o prazo de um lugar só, com 45 só sem prazo; a
+   migração com o representante vazio; o gerar recusado sem os dados e sem
+   a forma de pagamento, no serviço, no POST e no cartão; o contrato já
+   gerado que não depende dos dados de hoje; a tela só da Gestão, o CNPJ
+   conferido, o que falta, sem <select> e sem cor escrita à mão; um item
+   com foto; vários itens com e sem foto, sem imagem quebrada; o adesivo
+   escolhido com a foto dele; o preâmbulo com vendedor e comprador; as
+   onze cláusulas com o texto da empresa; o valor por extenso e a condição
+   na 2ª; o valor final combinado; o prazo na 3ª; o fecho com cidade e
+   data; a página do cliente com o contrato inteiro e a assinatura no fim;
+   a via impressa com as 11 cláusulas, as fotos, as assinaturas, a trilha
+   e o rodapé "Página X de Y" com o código; o termo antigo com a folha
+   dele) e, ajustados para o contrato, sistema_interno/tests_documento_
+   assinatura.py, tests_venda_do_orcamento.py e core/tests_codigo_do_
+   orcamento.py (os dados do vendedor preenchidos, sintéticos, antes de
+   gerar).
+   Conferido no Chromium (dados inventados): o PDF de um contrato de 2
+   itens com foto assinado no celular (3 folhas A4) e a prévia de 4 itens
+   (um sem foto), convertidos em PNG; a página de assinatura no PC 1366 e
+   no celular 390, a assinatura de verdade no quadro e a confirmação; e o
+   painel (a tela dos dados vazia e preenchida pela própria tela, o cartão
+   travado sem os dados e sem a forma de pagamento, o gerar pela folha, o
+   cartão assinado); sem rolagem horizontal e sem alert/confirm.

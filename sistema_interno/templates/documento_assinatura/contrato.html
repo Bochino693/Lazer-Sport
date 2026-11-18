@@ -140,7 +140,7 @@
         <span>{{ doc.vendedor.nome_fantasia }}</span>
       </div>
       <div class="ct-assina ct-assina-comprador">
-        <span class="ct-assina-linha" aria-hidden="true">
+        <span class="ct-assina-linha"{% if not assinatura_img %} aria-hidden="true"{% endif %}>
           {% if assinatura_img %}<img src="{{ assinatura_img }}" alt="Assinatura de {{ documento.assinante_nome }}">{% endif %}
         </span>
         <strong>COMPRADOR</strong>
