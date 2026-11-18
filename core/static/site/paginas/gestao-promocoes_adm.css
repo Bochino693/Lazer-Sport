@@ -1121,7 +1121,10 @@
 }
 
 #prLista {
-    --lv-colunas: 56px minmax(200px, 2fr) minmax(0, 1fr) 170px 140px 72px 258px;
+    /* a coluna das ações mede o que ela mostra na lista: os botões e o
+       ícone de "Gráficos" (antes, sem ele, os botões passavam por cima
+       da coluna ao lado) */
+    --lv-colunas: 56px minmax(180px, 2fr) minmax(0, 1fr) 170px 120px 72px 272px;
     --lv-areas: "foto titulo info valor estado selos acoes";
     --lv-colunas-tab: 56px minmax(0, 1fr) auto auto;
     --lv-areas-tab: "foto titulo valor acoes" "foto info estado selos";

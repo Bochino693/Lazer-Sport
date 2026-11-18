@@ -57,7 +57,7 @@
         <thead>
           <tr>
             <th data-coluna="Nº">#</th><th data-coluna="Cliente">Cliente</th><th data-coluna="Itens">Itens</th>
-            <th data-coluna="Total" class="text-end">Total</th><th data-coluna="Entrega">Entrega</th><th data-coluna="Situação">Situação</th><th data-coluna="Produção">Produção</th><th data-coluna="Data">Feito em</th>
+            <th data-coluna="Total" class="text-end">Total</th><th data-coluna="Entrega">Entrega</th><th data-coluna="Situação">Situação</th><th data-coluna="Produção">Produção</th><th data-coluna="Feito em">Feito em</th>
           </tr>
         </thead>
         <tbody>
@@ -121,12 +121,21 @@
                             data-etiquetas-url="{% url 'etiquetas_maquinas' 'pedido' pedido.id %}"
                             aria-haspopup="dialog"
                             title="Imprimir as etiquetas das máquinas deste pedido">
-                      <i class="bi bi-upc-scan" aria-hidden="true"></i> Etiquetas
+                      <i class="bi bi-upc-scan" aria-hidden="true"></i> <span class="ls-etiquetas-rotulo">Etiquetas</span>
                     </button>
                   {% endif %}
                 </div>
               </td>
-              <td data-rotulo="Data">{{ pedido.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
+              {% comment %}
+                A DATA EM DUAS LINHAS, CADA UMA INTEIRA: o dia em cima, a hora
+                embaixo. Escrita de uma vez ("18/11/2026 08:49"), numa coluna
+                estreita ela quebrava um caractere por linha.
+              {% endcomment %}
+              <td data-rotulo="Feito em">
+                {% if pedido.criacao %}
+                  <time class="ls-quando" datetime="{{ pedido.criacao|date:'c' }}"><span class="ls-quando-dia">{{ pedido.criacao|date:"d/m/Y" }}</span> <span class="ls-quando-hora">{{ pedido.criacao|date:"H:i" }}</span></time>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
             </tr>
           {% empty %}
             <tr><td colspan="8">

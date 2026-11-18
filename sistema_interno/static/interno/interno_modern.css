@@ -5956,8 +5956,12 @@ body.ls-body{
 .ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:last-child > *{justify-content:flex-start!important}
 .ls-content .ls-visao-alvo[data-visao="lista"] .ls-visao-tabela [data-v="extra"]{display:none!important}
 
-/* ---- tablet: a lista perde as colunas de apoio ---- */
-@media (max-width:1100px){
+/* ---- tablet: a lista perde as colunas de apoio ----
+   Vale até 1279px, e não só até 1100: entre os dois (o PC de 1200, o de
+   1280 com o menu) a linha de uma fileira só não cabia -- as ações saíam
+   pela direita do contêiner, cortadas, ou espremiam a coluna de apoio
+   até quebrar cada palavra. */
+@media (max-width:1279px){
   .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item]{
     grid-template-columns:var(--lv-colunas-tab,56px minmax(0,1fr) auto auto)!important;
     grid-template-areas:var(--lv-areas-tab,"foto titulo valor acoes" "foto info estado selos")!important;
@@ -6217,6 +6221,192 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
 }
 @media (prefers-reduced-motion:reduce){
   .ls-pager-pagina,.ls-pager-seta{transition:none}
+}
+
+
+/* ======================================================================
+   PEDIDOS DA LOJA — A LISTA ORGANIZADA, DO PC AO CELULAR
+
+   O print do dono, no PC de 1366: "Feito em" com um caractere por linha
+   (uma coluna vertical de dígitos), o "#174" por cima do nome do cliente
+   ("Thiago" virava "hiago"), o campo do prazo e o botão "Etiquetas"
+   vazando da coluna Produção, a tabela mais larga que o painel e cada
+   linha com 360px de altura.
+
+   A CAUSA. A tabela de pedidos tinha larguras fixas (`table-layout:fixed`)
+   em porcentagem para SETE colunas -- e ela tem oito. Somadas, as sete
+   davam 100%, e a oitava (a data) ficava com o que sobrava: nada, uns
+   24px. Por cima disso, a regra comum das tabelas do PC deu ao "Nº" 1% --
+   que numa tabela fixa são 12px, e o número passava por cima do cliente.
+   A Produção (o campo, "dias úteis", a nota e o botão empilhados) pedia
+   190px numa coluna de 145.
+
+   O CONSERTO, POR FAIXA:
+     * PC (1200px ou mais): a tabela mede as colunas pelo conteúdo, como
+       já faziam Vendas, Orçamentos e O.S. As estreitas (número, total,
+       entrega, situação, data) ficam do tamanho do que mostram, sem
+       quebrar; cliente e itens dividem o resto. A data vem em duas linhas
+       inteiras (dia em cima, hora embaixo). A Produção vira uma linha só:
+       o campo com "dias úteis" e, ao lado, o botão das etiquetas; a
+       previsão embaixo. Até 1599px o botão fica só com o ícone (o nome
+       continua na dica e no leitor de tela); a partir de 1600, com nome.
+     * Tablet (721 a 1199px): a ficha de sempre, mas em grade de quatro
+       colunas com lugar certo para cada coisa -- número, data, entrega e
+       total na primeira linha; cliente e itens na segunda; situação e
+       produção na terceira. Antes eram duas colunas na ordem do HTML, com
+       metades vazias, e a ficha media 530px.
+     * Celular: duas colunas, sem nada vazando -- os itens quebram dentro
+       da etiqueta e o prazo cabe na largura.
+   O "Produção" de dentro do campo some à vista (continua sendo o nome do
+   campo para o leitor de tela): a coluna, a ficha e o cartão já dizem.
+   Só a LISTA muda; os Cards são o desenho comum (ver "LISTA OU CARDS").
+   ====================================================================== */
+.ls-pedidos-table .ls-prazo-rotulo,
+.ls-content .ls-visao-alvo .ls-pedidos-table .ls-etiquetas-rotulo-oculto{
+  position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;
+  overflow:hidden!important;clip:rect(0 0 0 0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;
+}
+/* a data: o dia e a hora, cada um inteiro */
+.ls-quando{display:inline-flex;flex-direction:column;gap:1px;line-height:1.25;font-variant-numeric:tabular-nums}
+.ls-quando-dia{color:var(--text-2);font-weight:800;white-space:nowrap}
+.ls-quando-hora{color:var(--muted);font-size:.78em;font-weight:750;white-space:nowrap}
+/* a produção: o campo e as etiquetas lado a lado, a previsão embaixo */
+.ls-pedidos-table .ls-funil-celula{
+  display:grid;grid-template-columns:auto auto;justify-content:start;align-items:center;
+  gap:5px 8px;min-width:0;
+}
+.ls-pedidos-table .ls-funil-celula > .ls-prazo{display:contents}
+.ls-pedidos-table .ls-funil-celula .ls-prazo-campo{grid-column:1;grid-row:1}
+.ls-pedidos-table .ls-funil-celula [data-etiquetas-url]{grid-column:2;grid-row:1}
+.ls-pedidos-table .ls-funil-celula .ls-prazo-nota{grid-column:1/-1;grid-row:2;min-width:0}
+/* pedido sem prazo (cancelado): o botão, se houver, fica sozinho */
+.ls-pedidos-table .ls-funil-celula:not(:has(.ls-prazo)) [data-etiquetas-url]{grid-column:1}
+.ls-pedidos-table .ls-prazo-campo{padding:2px 9px 2px 2px;border-radius:11px}
+.ls-pedidos-table .ls-prazo-campo input{width:3rem;min-height:32px}
+.ls-content .ls-pedidos-table .ls-funil-celula [data-etiquetas-url]{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  width:auto!important;min-width:max-content!important;min-height:36px!important;margin:0!important;
+  padding:0 11px!important;border-radius:11px!important;white-space:nowrap;font-size:.76rem!important;
+}
+.ls-pedidos-table .ls-funil-venda{white-space:nowrap}
+/* os itens: a etiqueta quebra por dentro, nunca passa da coluna */
+.ls-pedidos-table .ls-chip-lista{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.3;text-align:left}
+.ls-content .ls-pedidos-table td[data-rotulo="Cliente"] strong{
+  display:block;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;
+}
+
+/* A última coluna é a data, não as ações: sem a faixa fixa e escurecida
+   que as outras tabelas dão ao botão de ações (nem na ficha do tablet). */
+.ls-content .ls-pedidos-table tbody td:last-child{background:transparent!important}
+.ls-content .ls-pedidos-table tbody tr:hover td:last-child{background:rgba(var(--acento-rgb),.055)!important}
+.ls-content .ls-pedidos-table thead th:last-child{background:var(--acento-fundo)!important}
+/* ---- PC: a tabela pelo conteúdo ---- */
+@media (min-width:1200px){
+  .ls-content .ls-pedidos-table{table-layout:auto!important;min-width:0!important;width:100%!important}
+  .ls-content .ls-pedidos-table th[data-coluna]{width:auto}
+  .ls-content .ls-pedidos-table :is(thead th,tbody td){padding-inline:10px!important}
+  .ls-content .ls-pedidos-table tbody td{padding-block:12px!important;vertical-align:middle!important}
+  .ls-content .ls-pedidos-table :is(th,td):first-child{padding-left:16px!important}
+  .ls-content .ls-pedidos-table :is(th,td):last-child{padding-right:16px!important}
+  /* as estreitas: do tamanho do que mostram, sem quebrar */
+  .ls-content .ls-pedidos-table :is(th,td):is([data-coluna="Nº"],[data-rotulo="Nº"],[data-coluna="Total"],[data-rotulo="Total"],
+    [data-coluna="Entrega"],[data-rotulo="Entrega"],[data-coluna="Situação"],[data-rotulo="Situação"],
+    [data-coluna="Feito em"],[data-rotulo="Feito em"]){width:1%;white-space:nowrap!important;overflow-wrap:normal!important}
+  .ls-content .ls-pedidos-table :is(th[data-coluna="Cliente"],td[data-rotulo="Cliente"]){width:30%;min-width:170px}
+  .ls-content .ls-pedidos-table :is(th[data-coluna="Itens"],td[data-rotulo="Itens"]){width:30%;min-width:160px}
+  .ls-content .ls-pedidos-table :is(th[data-coluna="Produção"],td[data-rotulo="Produção"]){width:1%;min-width:150px}
+  .ls-content .ls-pedidos-table td[data-rotulo="Produção"]{white-space:normal!important}
+  /* até 1599px o botão das etiquetas é só o ícone, com o nome na dica */
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table .ls-funil-celula [data-etiquetas-url]{width:38px!important;padding:0!important}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table .ls-etiquetas-rotulo{
+    position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;
+  }
+}
+/* o PC estreito (1200 a 1365, ou o de 1366 com o menu aberto): menos
+   respiro entre as colunas, e cliente e itens aceitam ficar mais estreitos
+   (o nome e as etiquetas quebram linha) -- a tabela não passa do painel. */
+@media (min-width:1200px) and (max-width:1365px){
+  .ls-content .ls-pedidos-table :is(thead th,tbody td){padding-inline:8px!important}
+  .ls-content .ls-pedidos-table :is(th[data-coluna="Cliente"],td[data-rotulo="Cliente"]){min-width:140px}
+  .ls-content .ls-pedidos-table :is(th[data-coluna="Itens"],td[data-rotulo="Itens"]){min-width:130px}
+}
+@media (min-width:1600px){
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table .ls-funil-celula [data-etiquetas-url]{width:auto!important;padding:0 11px!important}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table .ls-etiquetas-rotulo{
+    position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto;clip-path:none;
+  }
+}
+
+/* ---- tablet e celular: a ficha com lugar certo para cada coisa ---- */
+@media (max-width:1199px){
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody tr:not(:has(td[colspan])){
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    grid-template-areas:
+      "num quando entrega total"
+      "cliente cliente itens itens"
+      "situacao situacao producao producao";
+    gap:0 16px;padding:12px 16px;
+  }
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Nº"]{grid-area:num}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Feito em"]{grid-area:quando}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Entrega"]{grid-area:entrega}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Total"]{grid-area:total}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Cliente"]{grid-area:cliente;padding-right:2px!important}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Itens"]{grid-area:itens}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Situação"]{grid-area:situacao}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Produção"]{grid-area:producao}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td{padding:9px 2px!important;min-width:0!important}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td:is([data-rotulo="Situação"],[data-rotulo="Produção"]){border-bottom:0!important}
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Total"] strong{white-space:nowrap}
+}
+@media (max-width:720px){
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody tr:not(:has(td[colspan])){
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-areas:
+      "num quando"
+      "cliente cliente"
+      "itens itens"
+      "total entrega"
+      "situacao situacao"
+      "producao producao";
+    gap:0 12px;padding:10px 14px;
+  }
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-pedidos-table tbody td[data-rotulo="Situação"]{border-bottom:1px solid var(--line-soft)!important}
+}
+
+/* ======================================================================
+   LISTA OU CARDS: AS AÇÕES CABEM NA LINHA (as listas que saem de cartões)
+
+   "Reveja os outros e faça tudo fluir bem." Nas listas que saem de
+   cartões (Brinquedos, Promoções, Combos, Cupons, Peças, Projetos,
+   Eventos) a coluna de ações tinha largura fixa, medida antes de cada
+   item ganhar o atalho "Gráficos" (gestao-analises.js) -- e, em algumas,
+   o "Divulgar aos clientes". Os botões não cabiam e, alinhados à direita
+   numa caixa que não quebra linha, transbordavam PARA A ESQUERDA, por
+   cima da situação, do preço e dos selos. No celular, o mesmo: a regra
+   que manda as ações quebrarem linha perdia para a do PC (o `:not([hidden])`
+   dela pesa mais), e a fileira saía pela borda esquerda do item.
+
+     * Na LISTA o atalho "Gráficos" é só o ícone (o nome fica na dica e no
+       leitor de tela). Nos Cards ele continua escrito.
+     * As colunas de ações de cada tela foram medidas de novo, já com ele
+       (ver o `--lv-colunas` de cada folha).
+     * Se ainda assim faltar espaço, as ações QUEBRAM LINHA dentro da sua
+       coluna -- a linha cresce, mas nada passa por cima de nada.
+   ====================================================================== */
+.ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item] [data-v="acoes"]:not([hidden]){flex-wrap:wrap!important;row-gap:6px!important}
+.ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item] button.lsa-atalho,
+.ls-content .ls-visao-alvo[data-visao="lista"] .clients-table button.lsa-atalho{
+  gap:0!important;min-width:40px;padding:0 12px!important;font-size:0!important;
+}
+.ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item] button.lsa-atalho i,
+.ls-content .ls-visao-alvo[data-visao="lista"] .clients-table button.lsa-atalho i{font-size:.95rem}
+/* a foto que não carregou: nada do texto alternativo espremido no quadrado */
+.ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"] img{color:transparent;font-size:0}
+@media (max-width:640px){
+  .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item] [data-v="acoes"]:not([hidden]){
+    justify-content:flex-start!important;max-width:100%;
+  }
 }
 
 

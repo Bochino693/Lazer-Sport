@@ -78,7 +78,10 @@
 }
 
 #pecasLista {
-    --lv-colunas: 56px minmax(180px, 1.4fr) minmax(0, 1.2fr) 250px 300px;
+    /* a coluna das ações mede o que ela mostra na lista: os botões e o
+       ícone de "Gráficos" (antes, sem ele, os botões passavam por cima
+       da coluna ao lado) */
+    --lv-colunas: 56px minmax(170px, 1.4fr) minmax(0, 1.2fr) 220px 330px;
     --lv-areas: "foto titulo info valor acoes";
     --lv-colunas-tab: 56px minmax(0, 1fr) auto;
     --lv-areas-tab: "foto titulo valor" "foto info info" "acoes acoes acoes";
