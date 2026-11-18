@@ -306,7 +306,7 @@
                 <h3>Ranking geral</h3>
                 <ol class="pg-ranking-lista">
                     {% for linha in ranking_portal.geral %}
-                    <li{% if linha.posicao <= 3 %} class="pg-podio pg-podio--{{ linha.posicao }}"{% endif %}><b>{{ linha.posicao }}º</b><span>{{ linha.nome }}</span><strong>{{ linha.pontos }}</strong></li>
+                    <li{% if linha.posicao <= 3 %} class="pg-podio pg-podio--{{ linha.posicao }}"{% endif %}><b>{{ linha.posicao }}º</b><span class="pg-ranking-quem"><span class="pg-ranking-nome">{{ linha.nome }}</span><small class="pg-ranking-info">{{ linha.jogos }} jogo{{ linha.jogos|pluralize }}{% if linha.ultimo %} · última partida {{ linha.ultimo }}{% endif %}</small></span><strong>{{ linha.pontos|intcomma }}</strong></li>
                     {% empty %}
                     <li class="pg-ranking-vazio">O ranking começa com a primeira partida de um cadastrado. Seja o primeiro!</li>
                     {% endfor %}
@@ -316,7 +316,7 @@
                 <h3>Campeões de cada jogo</h3>
                 <ul class="pg-campeoes">
                     {% for c in ranking_portal.campeoes %}
-                    <li style="--cor: {{ c.cor }}"><a href="{{ c.url }}"><span>{{ c.jogo }}</span><strong><i class="fa-solid fa-crown" aria-hidden="true"></i> {{ c.nome }}</strong><small>{{ c.pontos }} pts</small></a></li>
+                    <li style="--cor: {{ c.cor }}"><a href="{{ c.url }}"><span>{{ c.jogo }}</span><strong><i class="fa-solid fa-crown" aria-hidden="true"></i> {{ c.nome }}</strong><small>{{ c.pontos|intcomma }} pts{% if c.quando %} · em {{ c.quando }}{% endif %}</small></a></li>
                     {% empty %}
                     <li class="pg-ranking-vazio">Nenhum recorde ainda: o primeiro a jogar vira campeão.</li>
                     {% endfor %}

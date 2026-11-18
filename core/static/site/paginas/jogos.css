@@ -622,6 +622,9 @@
 .sim-ranking-lista li:nth-child(3) b { color: #e39b5b; }
 
 .sim-ranking-lista .sim-ranking-vazio { display: block; color: #9fb3d1; font-size: .85rem; line-height: 1.45; }
+/* o nome inteiro e, embaixo, a data do recorde (ou os jogos e a última partida) */
+.sim-ranking-lista .sim-ranking-quem { min-width: 0; line-height: 1.25; }
+.sim-ranking-lista .sim-ranking-info { color: #9fb3d1; font-size: .72rem; font-weight: 500; }
 
 .sim-ranking-nota { margin: 10px 0 0; color: #8aa0c4; font-size: .76rem; line-height: 1.45; }
 .sim-ranking-eu { margin: 10px 0 0; color: #dbe7ff; font-size: .85rem; font-weight: 700; line-height: 1.45; }

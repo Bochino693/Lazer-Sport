@@ -19,6 +19,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from . import ranking
 from .models import ClientePerfil, RecordeJogo
@@ -114,13 +115,30 @@ class RecordeERankingTests(TestCase):
         self.assertEqual([linha["pontos"] for linha in jogo], [9000, 4500])
 
     def test_nome_publico_nunca_e_o_email(self):
-        self.assertEqual(ranking.nome_publico(self.ana), "Ana L.")
+        # o dono: "no ranking, mostre mais do nome" -- nome e último sobrenome
+        self.assertEqual(ranking.nome_publico(self.ana), "Ana Lima")
         sem_nome = User.objects.create_user("carla.dias@exemplo.com", "carla.dias@exemplo.com", "x")
         self.assertNotIn("@", ranking.nome_publico(sem_nome))
+        longo = User.objects.create_user("lucas", "lucas@exemplo.com", "x", first_name="LUCAS MIGUEL",
+                                         last_name="DA SILVA BATISTA")
+        self.assertEqual(ranking.nome_publico(longo), "Lucas Batista")
+
+    def test_ranking_mostra_a_data_do_recorde_e_a_ultima_partida(self):
+        RecordeJogo.objects.create(usuario=self.ana, jogo="hit-music", pontos=9000, partidas=1)
+        RecordeJogo.objects.create(usuario=self.ana, jogo="lazer-shot", pontos=120, partidas=1)
+        hoje = timezone.localtime().strftime("%d/%m/%Y")
+        self.assertEqual(ranking.ranking_do_jogo("hit-music")[0]["quando"], hoje)
+        geral = ranking.ranking_geral()[0]
+        self.assertEqual((geral["jogos"], geral["ultimo"]), (2, hoje))
+        self.assertEqual(ranking.campeoes()["lazer-shot"]["quando"], hoje)
+        portal = self.client.get(reverse("jogos"))
+        self.assertContains(portal, "Ana Lima")
+        self.assertContains(portal, f"última partida {hoje}")
+        self.assertContains(portal, f"em {hoje}")
 
     def test_pagina_mostra_o_ranking_do_jogo(self):
         RecordeJogo.objects.create(usuario=self.ana, jogo="lazer-shot", pontos=1520, partidas=2)
         pagina = self.client.get(reverse("jogo", args=["lazer-shot"]))
         self.assertContains(pagina, "data-sim-ranking")
-        self.assertContains(pagina, "Ana L.")
+        self.assertContains(pagina, "Ana Lima")
         self.assertNotContains(pagina, "ana@exemplo.com")

@@ -14,7 +14,9 @@ Regras que o resto do site pode confiar:
   recorde (metade do recorde = 500). Somando todos os jogos, quem joga
   bem tudo sobe -- e os jogos de placar alto (o Hit Music conta em
   centésimos de %) não engolem os de placar baixo (boliche, até 300);
-* o ranking aparece com o primeiro nome e a inicial do sobrenome;
+* o ranking aparece com o primeiro nome e o último sobrenome ("Thiago
+  Bochino") -- o dono pediu "mostre mais do nome" no lugar da inicial -- e
+  com a data do recorde (e, no geral, quantos jogos e a última partida);
 * sem a tabela no banco (deploy antes do `migrate`), nada quebra: o
   ranking sai vazio e a partida do cadastrado não é gravada.
 """
@@ -47,8 +49,8 @@ SESSAO_SALVOS = "jogos_salvos"
 
 # A chave do geral guarda também o campeão de cada jogo (v2): os dois saem
 # da mesma leitura da tabela de recordes (ver `_apurar_geral`).
-CHAVE_CACHE_GERAL = "ranking_jogos:geral:v2"
-CHAVE_CACHE_JOGO = "ranking_jogos:jogo:{}"
+CHAVE_CACHE_GERAL = "ranking_jogos:geral:v3"
+CHAVE_CACHE_JOGO = "ranking_jogos:jogo:v2:{}"
 CACHE_SEGUNDOS = 60
 TAMANHO = 10
 
@@ -69,17 +71,39 @@ def _validar(jogo, pontos):
     return jogo, pontos
 
 
+def _palavra(texto, limite):
+    texto = texto[:limite]
+    return texto[:1].upper() + texto[1:].lower()
+
+
 def nome_publico(usuario) -> str:
-    """Primeiro nome e inicial do sobrenome; nunca o e-mail inteiro."""
+    """Primeiro nome e último sobrenome ("Lucas Batista"); nunca o e-mail inteiro.
+
+    O nome do meio fica de fora (o nome cabe na linha do ranking); sem nome
+    no cadastro, o começo do login, sem o "@...".
+    """
     perfil = getattr(usuario, "perfil", None)
     completo = (getattr(perfil, "nome_completo", "") or "").strip() if perfil else ""
     partes = (completo or usuario.get_full_name() or "").split()
     if not partes:
         partes = [(usuario.username or "Jogador").split("@")[0]]
-    nome = partes[0][:16].capitalize()
+    nome = _palavra(partes[0], 16)
     if len(partes) > 1:
-        nome += f" {partes[-1][0].upper()}."
+        nome += " " + _palavra(partes[-1], 18)
     return nome
+
+
+def _data(quando) -> str:
+    """A data do recorde, no fuso do site ("18/11/2026"); "" sem data."""
+    if not quando:
+        return ""
+    from django.utils import timezone
+
+    try:
+        quando = timezone.localtime(quando)
+    except (ValueError, TypeError):
+        pass
+    return quando.strftime("%d/%m/%Y")
 
 
 # ------------------------------------------------------------------
@@ -216,7 +240,8 @@ def ranking_do_jogo(jogo, tamanho=TAMANHO) -> list[dict]:
             .order_by("-pontos", "atualizado_em")[:quantos]
         )
         return [
-            {"posicao": i, "nome": nome_publico(r.usuario), "pontos": r.pontos, "usuario": r.usuario_id}
+            {"posicao": i, "nome": nome_publico(r.usuario), "pontos": r.pontos, "usuario": r.usuario_id,
+             "quando": _data(r.atualizado_em)}
             for i, r in enumerate(recordes, start=1)
         ]
 
@@ -255,9 +280,12 @@ def _montar_geral() -> dict:
             primeiro[jogo] = (pontos, quando, usuario_id)
     soma = {}
     jogos = {}
-    for usuario_id, jogo, pontos, _ in linhas:
+    ultimo = {}
+    for usuario_id, jogo, pontos, quando in linhas:
         soma[usuario_id] = soma.get(usuario_id, 0) + round(PONTOS_POR_JOGO * pontos / maior[jogo])
         jogos[usuario_id] = jogos.get(usuario_id, 0) + 1
+        if quando and (usuario_id not in ultimo or quando > ultimo[usuario_id]):
+            ultimo[usuario_id] = quando
     ordem = sorted(soma, key=lambda u: (-soma[u], -jogos[u], u))
     nomes = {}
     com_nome = set(ordem[:TAMANHO]) | {usuario_id for _, _, usuario_id in primeiro.values()}
@@ -267,12 +295,14 @@ def _montar_geral() -> dict:
         for usuario in _linhas(User.objects.filter(pk__in=com_nome).select_related("perfil")):
             nomes[usuario.pk] = nome_publico(usuario)
     tabela = [
-        {"posicao": i, "usuario": u, "nome": nomes.get(u, ""), "pontos": soma[u], "jogos": jogos[u]}
+        {"posicao": i, "usuario": u, "nome": nomes.get(u, ""), "pontos": soma[u], "jogos": jogos[u],
+         "ultimo": _data(ultimo.get(u))}
         for i, u in enumerate(ordem, start=1)
     ]
     campeoes = {
-        jogo: {"posicao": 1, "nome": nomes.get(usuario_id, ""), "pontos": pontos, "usuario": usuario_id}
-        for jogo, (pontos, _, usuario_id) in primeiro.items()
+        jogo: {"posicao": 1, "nome": nomes.get(usuario_id, ""), "pontos": pontos, "usuario": usuario_id,
+               "quando": _data(quando)}
+        for jogo, (pontos, quando, usuario_id) in primeiro.items()
     }
     return {"tabela": tabela, "campeoes": campeoes}
 

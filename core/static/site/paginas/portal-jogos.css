@@ -359,6 +359,10 @@ body.ls-launcher { overflow-x: clip; }
                        border-radius: 12px; background: rgba(255, 255, 255, .035); }
 .pg-ranking-lista b { color: var(--pg-suave); }
 .pg-ranking-lista strong { font-variant-numeric: tabular-nums; }
+/* o nome inteiro (nome e sobrenome) e, embaixo, quantos jogos e a última partida */
+.pg-ranking-quem { display: grid; min-width: 0; padding: 6px 0; }
+.pg-ranking-nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-ranking-info { color: var(--pg-suave); font-size: .74rem; line-height: 1.3; }
 .pg-podio--1 { background: linear-gradient(90deg, rgba(255, 210, 63, .22), transparent) !important; }
 .pg-podio--1 b { color: var(--pg-amarelo) !important; }
 .pg-podio--2 b { color: #dbe4f3 !important; }

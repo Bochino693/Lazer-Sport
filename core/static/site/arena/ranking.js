@@ -70,6 +70,17 @@ if (raiz && dadosDoJogador) {
       posicao.textContent = `${linha.posicao}º`;
       const nome = document.createElement("span");
       nome.textContent = linha.nome;
+      // embaixo do nome: a data do recorde (ranking do jogo) ou os jogos e a
+      // última partida (ranking geral) -- core/ranking.py
+      const info = linha.quando ? `recorde em ${linha.quando}`
+        : (linha.jogos ? `${linha.jogos} jogo${linha.jogos > 1 ? "s" : ""}${linha.ultimo ? ` · última partida ${linha.ultimo}` : ""}` : "");
+      if (info) {
+        nome.className = "sim-ranking-quem";
+        const detalhe = document.createElement("small");
+        detalhe.className = "sim-ranking-info";
+        detalhe.textContent = info;
+        nome.append(document.createElement("br"), detalhe);
+      }
       const pontos = document.createElement("strong");
       pontos.textContent = numero(linha.pontos);
       item.append(posicao, nome, pontos);

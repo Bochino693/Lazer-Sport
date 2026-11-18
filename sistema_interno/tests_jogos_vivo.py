@@ -52,7 +52,7 @@ class AoVivoTests(TestCase):
         self.assertEqual(dados["jogando"][0]["nome"], "Strike Kids")
         self.assertEqual(dados["partidas_total"], 51)
         self.assertEqual(dados["mais_jogados"][0]["n"], 51)
-        self.assertEqual(dados["ranking"][0]["nome"], "Ana L.")
+        self.assertEqual(dados["ranking"][0]["nome"], "Ana Lima")
         self.assertNotIn("usuario", dados["ranking"][0])  # nada de id de quem joga
         self.assertEqual(dados["campeoes"][0]["pontos"], 450)
         self.assertGreaterEqual(dados["contas"]["hoje"], 2)
