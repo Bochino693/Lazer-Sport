@@ -1,0 +1,171 @@
+{
+ "gravacao": "grav2",
+ "logo": "../../../core/static/images/logoofi.png",
+ "musica": "../../../core/static/site/arena/jogos/super-boxing/sons/musica.mp3",
+ "cores": [
+  "#FF2D2D",
+  "#FFD21A"
+ ],
+ "led": [
+  "#FF2D2D",
+  "#FFD21A",
+  "#FFFFFF",
+  "#FF7A00"
+ ],
+ "velocidade": 0.88,
+ "gancho": {
+  "tipo": "pergunta",
+  "pergunta": [
+   "BLACK",
+   "FRIDAY",
+   "LAZER & SPORT"
+  ],
+  "resposta": "-29%",
+  "complemento": "SÓ ATÉ 21/11",
+  "batida": 0.32
+ },
+ "ofertas": {
+  "duracao": 2.9,
+  "prazo": "ATÉ 21/11",
+  "itens": [
+   {
+    "arte": "artes/a10.jpg",
+    "nome": "Air Game Kids",
+    "de": "De R$ 6.990",
+    "por": "R$ 4.990",
+    "selo": "-29%"
+   },
+   {
+    "arte": "artes/a8.jpg",
+    "nome": "Kit Sucesso e Inovação",
+    "detalhe": "Air Game + Matrix + Boliche Kids",
+    "de": "De R$ 27.990",
+    "por": "R$ 23.990",
+    "selo": "-14%"
+   },
+   {
+    "arte": "artes/a9.jpg",
+    "nome": "Kit Black Friday",
+    "detalhe": "Boliche Kids + Air Game Kids + Basquete Kids",
+    "de": "De R$ 22.990",
+    "por": "R$ 19.990",
+    "selo": "-13%"
+   },
+   {
+    "arte": "artes/a6.jpg",
+    "nome": "Air Rock",
+    "de": "De R$ 14.990",
+    "por": "R$ 12.990",
+    "selo": "-13%"
+   },
+   {
+    "arte": "artes/a4.jpg",
+    "nome": "Nervo Teste",
+    "de": "De R$ 8.900",
+    "por": "R$ 7.990",
+    "selo": "-10%"
+   },
+   {
+    "arte": "artes/a5.jpg",
+    "nome": "Boliche Dragon Bowling",
+    "de": "De R$ 13.990",
+    "por": "R$ 12.990",
+    "selo": "-7%"
+   },
+   {
+    "arte": "artes/a1.jpg",
+    "nome": "Kid Play",
+    "detalhe": "Brinquedão para o seu espaço kids",
+    "destaque": "+ kit de mesinha grátis",
+    "selo": "BRINDE"
+   },
+   {
+    "arte": "artes/a2.jpg",
+    "nome": "Brinquedos cenográficos",
+    "detalhe": "Cozinha, salão de beleza, oficina...",
+    "destaque": "Compre 3, leve 4",
+    "selo": "LEVE 4"
+   }
+  ]
+ },
+ "ponte": {
+  "linhas": [
+   "CADASTRO",
+   "COM 1 CLIQUE"
+  ],
+  "texto": "Entre com a sua conta Google",
+  "selo": "1",
+  "duracao": 2.6
+ },
+ "passos": [
+  {
+   "trecho": "1_inicio",
+   "passo": 1,
+   "legenda": [
+    "Abra o site pelo *link da bio*",
+    "e toque no *ícone de perfil*"
+   ]
+  },
+  {
+   "trecho": "2_google",
+   "passo": 2,
+   "legenda": [
+    "Toque em *Continuar com Google*:",
+    "*1 clique* e a conta está criada"
+   ]
+  },
+  {
+   "trecho": "3_promocao",
+   "passo": 3,
+   "legenda": [
+    "Escolha a oferta",
+    "e toque em *Comprar agora*"
+   ]
+  },
+  {
+   "trecho": "4_quantidade",
+   "passo": 4,
+   "legenda": [
+    "Confirme a *quantidade*"
+   ]
+  },
+  {
+   "trecho": "5_carrinho",
+   "passo": 5,
+   "legenda": [
+    "Informe o *CPF*",
+    "e confira o total"
+   ]
+  },
+  {
+   "trecho": "6_pix",
+   "passo": 6,
+   "legenda": [
+    "Pague com *Pix*:",
+    "aprovação em segundos"
+   ]
+  },
+  {
+   "trecho": "7_credito",
+   "passo": 6,
+   "legenda": [
+    "Ou no cartão em até",
+    "*10x sem juros*"
+   ]
+  }
+ ],
+ "final": {
+  "arte": "artes/a10.jpg",
+  "duracao": 4.4,
+  "etiqueta": "BLACK FRIDAY · SÓ ATÉ 21/11",
+  "titulo": [
+   "CADASTRE-SE",
+   "EM 1 CLIQUE"
+  ],
+  "texto": [
+   "Pix ou até 10x sem juros no cartão",
+   "Link na bio"
+  ],
+  "botao": "WhatsApp (11) 96056-3135"
+ }
+}
