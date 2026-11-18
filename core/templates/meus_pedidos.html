@@ -96,7 +96,7 @@
                 {% if status == 'aguardando_pagamento' %}<i class="fa-solid fa-clock"></i>
                 {% elif status == 'pago' %}<i class="fa-solid fa-circle-check"></i>
                 {% elif status == 'em_preparacao' %}<i class="fa-solid fa-screwdriver-wrench"></i>
-                {% elif status == 'saiu_entrega' %}<i class="fa-solid fa-truck-fast"></i>
+                {% elif status == 'saiu_entrega' %}<i class="fa-solid {% if pedido.tipo_envio == 'retirada' %}fa-store{% else %}fa-truck-fast{% endif %}"></i>
                 {% elif status == 'finalizado' %}<i class="fa-solid fa-box-open"></i>
                 {% else %}<i class="fa-solid fa-ban"></i>{% endif %}
             </span>
@@ -108,9 +108,12 @@
                 </span>
             </div>
             <span class="pd-status pedido-status status-{{ status }}">
-                {{ pedido.get_status_display }}
+                {{ pedido.andamento.situacao_texto|default:pedido.get_status_display }}
             </span>
         </div>
+
+        {# AS FASES ATÉ A ENTREGA (seção 106), em todas as situações, e o rastreio #}
+        {% include "partials/pedido_fases.html" %}
 
         {% if status == 'aguardando_pagamento' %}
           {% comment %}
@@ -156,41 +159,23 @@
         {% elif status == 'cancelado' %}
           <p class="pd-aviso pd-aviso--cancelado">
               <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              {% if pedido.pago_em %}
+              <span>Este pedido foi cancelado depois do pagamento. A equipe faz a devolução do valor; qualquer dúvida, fale com a gente no WhatsApp.</span>
+              {% else %}
               <span>Este pedido foi cancelado e não será cobrado.</span>
-          </p>
-        {% else %}
-          {# O ANDAMENTO: as etapas que já passaram ficam verdes #}
-          <ol class="pd-trilha" aria-label="Andamento do pedido">
-              <li class="pd-passo is-feito">
-                  <span class="pd-passo-bola"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
-                  <span class="pd-passo-nome">Pago</span>
-              </li>
-              <li class="pd-passo{% if status == 'em_preparacao' %} is-atual{% elif status == 'saiu_entrega' or status == 'finalizado' %} is-feito{% endif %}"
-                  {% if status == 'em_preparacao' %}aria-current="step"{% endif %}>
-                  <span class="pd-passo-bola"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i></span>
-                  <span class="pd-passo-nome">Em preparação</span>
-              </li>
-              {% if pedido.tipo_envio != 'retirada' or status == 'saiu_entrega' %}
-              <li class="pd-passo{% if status == 'saiu_entrega' %} is-atual{% elif status == 'finalizado' %} is-feito{% endif %}"
-                  {% if status == 'saiu_entrega' %}aria-current="step"{% endif %}>
-                  <span class="pd-passo-bola"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i></span>
-                  <span class="pd-passo-nome">Saiu para entrega</span>
-              </li>
               {% endif %}
-              <li class="pd-passo{% if status == 'finalizado' %} is-feito{% endif %}"
-                  {% if status == 'finalizado' %}aria-current="step"{% endif %}>
-                  <span class="pd-passo-bola"><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i></span>
-                  <span class="pd-passo-nome">Finalizado</span>
-              </li>
-          </ol>
+          </p>
+        {% elif status == 'pago' or status == 'em_preparacao' %}
           {% comment %}
               O TEMPO DE PRODUÇÃO (LEIA-ME-V10, seção 89): a fábrica informa
               em dias úteis, e a previsão conta do pagamento aprovado --
-              "Produção: 15 dias úteis — previsão 04/12". Some quando o
-              pedido é finalizado (a máquina já chegou) e quando ninguém
-              informou o prazo (prazo que ninguém deu não é prazo zero).
+              "Produção: 15 dias úteis — previsão 04/12". É o quadro da fase
+              de agora enquanto a máquina está na fábrica (seção 106): saiu
+              ou ficou pronta, a fase Produção já diz "Pronta em dd/mm". Não
+              aparece quando ninguém informou o prazo (prazo que ninguém deu
+              não é prazo zero).
           {% endcomment %}
-          {% if pedido.prazo_producao_dias is not None and status != 'finalizado' %}
+          {% if pedido.prazo_producao_dias is not None %}
           <p class="pd-producao">
               <i class="fa-solid fa-industry" aria-hidden="true"></i>
               <span>{{ pedido.texto_producao }}</span>
@@ -531,11 +516,13 @@ document.addEventListener("DOMContentLoaded", function() {
         botao.addEventListener("click", async () => {
             const valor = botao.dataset.copiar || "";
             const nome = botao.dataset.copiarNome || "A chave";
+            /* o código de rastreio (seção 106) traz o recado dele; a chave do Pix usa o do banco */
+            const recado = botao.dataset.copiarRecado || `${nome} do Pix (${valor}) está pronta para colar no app do banco.`;
             try {
                 await navigator.clipboard.writeText(valor);
                 botao.classList.add("is-copiado");
                 setTimeout(() => botao.classList.remove("is-copiado"), 1600);
-                avisar("sucesso", "Copiado", `${nome} do Pix (${valor}) está pronta para colar no app do banco.`);
+                avisar("sucesso", "Copiado", recado);
             } catch (erro) {
                 avisar("alerta", "Não deu para copiar", `Copie à mão: ${valor}`);
             }

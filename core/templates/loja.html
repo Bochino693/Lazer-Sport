@@ -173,8 +173,8 @@
 
                             <p class="loja-card-descricao">
                                 {% if item.tipo == 'kit' %}
-                                    {% if item.resumo %}{{ item.resumo }}. {% endif %}A parte eletrônica completa,
-                                    sem a máquina: pronta para instalar.
+                                    A parte eletrônica completa, sem a máquina, pronta para instalar.
+                                    {{ item.resumo }}
                                 {% elif item.tipo == 'peca' %}
                                     Peça de reposição para manter seu equipamento funcionando
                                     com o suporte especializado da Lazer &amp; Sport.

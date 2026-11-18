@@ -1,0 +1,96 @@
+{% comment %}
+  AS FASES DE UM PEDIDO DA LOJA (LEIA-ME-V10, seção 106).
+
+  "Em todos os pedidos devemos ter esse faseamento, para o cliente
+  conseguir ver tudo certinho até a entrega." O mesmo desenho dos cartões
+  de orçamento (oc-fases): Pedido feito, Pagamento, Produção, Envio (ou
+  Retirada) e Entregue (ou Retirado), cada fase com o dia dela
+  (`core.fases_pedido.acompanhamento_do_pedido`). Embaixo, o quadro da fase
+  de agora quando ela tem o que mostrar: o rastreio do envio (a
+  transportadora, o código para copiar e o "Rastrear") ou o endereço da
+  fábrica do pedido pronto para retirada.
+
+  Recebe `pedido` (com `pedido.andamento` já montado pela view).
+{% endcomment %}
+{% with a=pedido.andamento %}
+<ol class="oc-fases pd-fases{% if a.parou %} is-parou{% endif %}" aria-label="Fases do pedido #{{ pedido.id }}">
+    {% for fase in a.fases %}
+    <li class="oc-fase is-{{ fase.estado }}" data-fase="{{ fase.chave }}"{% if fase.estado == 'atual' %} aria-current="step"{% endif %}>
+        <span class="oc-fase-bola" aria-hidden="true">
+            {% if fase.estado == 'feita' %}<i class="fa-solid fa-check"></i>
+            {% elif fase.estado == 'parada' %}<i class="fa-solid fa-xmark"></i>
+            {% else %}<i class="fa-solid {{ fase.icone }}"></i>{% endif %}
+        </span>
+        <span class="oc-fase-texto">
+            <strong class="oc-fase-nome">{{ fase.nome }}</strong>
+            {% if fase.nota %}<small class="oc-fase-nota">{{ fase.nota }}</small>{% endif %}
+            <span class="pd-oculto">{% if fase.estado == 'feita' %}(feito){% elif fase.estado == 'atual' %}(fase de agora){% elif fase.estado == 'parada' %}(parou aqui){% else %}(ainda não){% endif %}</span>
+        </span>
+    </li>
+    {% endfor %}
+</ol>
+
+{% if a.envio %}
+{# O RASTREIO: quem leva, o código (um toque copia) e o "Rastrear" #}
+<section class="pd-envio" aria-label="Rastreio do pedido #{{ pedido.id }}">
+    <div class="pd-envio-topo">
+        <span class="pd-envio-icone" aria-hidden="true">
+            <i class="fa-solid {% if a.envio.propria %}fa-truck{% else %}fa-truck-fast{% endif %}"></i>
+        </span>
+        <div class="pd-envio-texto">
+            <strong>{{ a.envio.transportadora|default:"Transportadora" }}</strong>
+            <small>
+                {% if pedido.status == 'finalizado' %}Entregue{% else %}A caminho{% endif %}{% if a.envio.quando %} · saiu em {{ a.envio.quando }}{% endif %}
+            </small>
+        </div>
+    </div>
+    {% if a.envio.codigo or a.envio.link %}
+    <div class="pd-envio-acoes">
+        {% if a.envio.codigo %}
+        <button type="button" class="pd-envio-codigo" data-copiar="{{ a.envio.codigo }}"
+                data-copiar-recado="O código de rastreio ({{ a.envio.codigo }}) está pronto para colar no site da transportadora.">
+            <span>Código de rastreio</span>
+            <strong>{{ a.envio.codigo }}</strong>
+            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+        </button>
+        {% endif %}
+        {% if a.envio.link %}
+        <a class="ck-botao ck-botao--primario pd-envio-rastrear" href="{{ a.envio.link }}" target="_blank" rel="noopener noreferrer">
+            <i class="fa-solid fa-route" aria-hidden="true"></i>
+            Rastrear
+            <i class="fa-solid fa-arrow-up-right-from-square pd-envio-fora" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% elif a.retirada_pronta %}
+{% comment %}
+  PRONTO PARA RETIRADA: o endereço, o horário e o telefone da fábrica -- os
+  mesmos do bloco de retirada do carrinho (carrinho.html), que o cliente
+  viu na hora da compra.
+{% endcomment %}
+<section class="pd-envio pd-envio--retirada" aria-label="Retirada do pedido #{{ pedido.id }}">
+    <div class="pd-envio-topo">
+        <span class="pd-envio-icone" aria-hidden="true"><i class="fa-solid fa-store"></i></span>
+        <div class="pd-envio-texto">
+            <strong>Pronto para retirada{% if pedido.enviado_em %} desde {{ pedido.enviado_em|date:"d/m" }}{% endif %}</strong>
+            <small>Retire na fábrica com o número do pedido: #{{ pedido.id }}</small>
+        </div>
+    </div>
+    <ul class="pd-envio-dados">
+        <li><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Rua São Roque de Minas, 104 – Zona Norte - SP</li>
+        <li><i class="fa-solid fa-clock" aria-hidden="true"></i> Das 08h às 18h, de segunda a sexta</li>
+        <li><i class="fa-solid fa-phone" aria-hidden="true"></i> <a href="tel:+5511960563135">+55 (11) 96056-3135</a></li>
+    </ul>
+    <div class="pd-envio-acoes">
+        <a class="ck-botao ck-botao--secundario pd-envio-rastrear"
+           href="https://www.google.com/maps/search/?api=1&amp;query=Rua+S%C3%A3o+Roque+de+Minas%2C+104%2C+S%C3%A3o+Paulo+-+SP"
+           target="_blank" rel="noopener">
+            <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+            Como chegar
+        </a>
+    </div>
+</section>
+{% endif %}
+{% endwith %}

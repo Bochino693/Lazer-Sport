@@ -62,7 +62,7 @@
           {% if peca.capa %}<img src="{{ peca.capa }}" alt="{{ peca.nome }}" loading="lazy">{% else %}Sem foto cadastrada{% endif %}
         </div>
         <div class="peca-corpo" data-v="corpo">
-          <h3 data-v="titulo">{% if peca.eh_kit %}<span class="peca-selo-kit" title="Kit eletrônico: aparece em /kits/"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit</span> {% endif %}{{ peca.nome }}</h3>
+          <h3 data-v="titulo">{% if peca.eh_kit %}<span class="peca-selo-kit" title="Kit eletrônico: aparece em /kits/"><i class="bi bi-cpu" aria-hidden="true"></i> Kit</span> {% endif %}{{ peca.nome }}</h3>
           <p data-v="extra">{{ peca.descricao_peca|truncatechars:110 }}</p>
           {% if peca.categorias_nomes or peca.eh_kit %}
             <div class="peca-tags" data-v="info">
@@ -70,13 +70,14 @@
               {% for nome in peca.categorias_nomes %}<span class="peca-tag">{{ nome }}</span>{% endfor %}
             </div>
           {% endif %}
+          {# os valores já vêm escritos em reais (`_decimal_br`): o `|moeda` relia "29,90" como zero #}
           <div class="peca-linha" data-v="valor">
-            <span>Venda <strong>{% if peca.preco_venda %}R$ {{ peca.preco_venda|moeda }}{% else %}—{% endif %}</strong></span>
+            <span>Venda <strong>{% if peca.preco_venda %}R$ {{ peca.preco_venda }}{% else %}—{% endif %}</strong></span>
             <span class="peca-status {% if peca.ativo %}on{% else %}off{% endif %}">{% if peca.ativo %}No site{% else %}Fora do site{% endif %}</span>
           </div>
           <div class="peca-linha" data-v="extra">
-            <span>Fornecedor {% if peca.preco_fornecedor %}R$ {{ peca.preco_fornecedor|moeda }}{% else %}—{% endif %}</span>
-            <span>Ganho {% if peca.ganho_potencial %}R$ {{ peca.ganho_potencial|moeda }}{% else %}—{% endif %}</span>
+            <span>Fornecedor {% if peca.preco_fornecedor %}R$ {{ peca.preco_fornecedor }}{% else %}—{% endif %}</span>
+            <span>Ganho {% if peca.ganho_potencial %}R$ {{ peca.ganho_potencial }}{% else %}—{% endif %}</span>
           </div>
           <div class="peca-linha" data-v="extra">
             <span>{{ peca.curtidas }} curtida{{ peca.curtidas|pluralize }}</span>
@@ -174,7 +175,7 @@
           <input type="checkbox" name="eh_kit" id="pecaEhKit" value="1">
           <span class="kit-chave-trilho" aria-hidden="true"></span>
           <span class="kit-chave-texto">
-            <b><i class="fa-solid fa-microchip" aria-hidden="true"></i> É um kit eletrônico</b>
+            <b><i class="bi bi-cpu" aria-hidden="true"></i> É um kit eletrônico</b>
             <small>Os componentes de uma máquina, sem a máquina. Aparece em /kits/ (não na lista de peças) e na página da máquina.</small>
           </span>
         </label>
@@ -195,14 +196,14 @@
           <div class="campo">
             <label id="kitItensRotulo">O que vem no kit</label>
             <ol class="kit-linhas" id="kitItens" aria-labelledby="kitItensRotulo"></ol>
-            <button type="button" class="kit-novo-item" id="kitAdicionarItem"><i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar item</button>
+            <button type="button" class="kit-novo-item" id="kitAdicionarItem"><i class="bi bi-plus-lg" aria-hidden="true"></i> Adicionar item</button>
             <p class="kit-ajuda">Um item por linha, na ordem em que o cliente lê: nome (TV Box), detalhe opcional (com o jogo Strike Kids) e quantidade. Se o item também é vendido sozinho (o Cabo HDMI), ligue-o à peça: a página do kit leva até ela.</p>
           </div>
 
           <div class="kit-escolha-peca" id="kitEscolhaPeca" hidden>
             <div class="kit-escolha-topo">
               <strong id="kitEscolhaTitulo">Ligar a uma peça avulsa</strong>
-              <button type="button" class="kit-escolha-fechar" id="kitEscolhaFechar" aria-label="Fechar a escolha da peça">×</button>
+              <button type="button" class="kit-escolha-fechar" id="kitEscolhaFechar" aria-label="Fechar a escolha da peça"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
             </div>
             <input type="search" id="kitEscolhaBusca" placeholder="Buscar peça" aria-label="Buscar peça" autocomplete="off">
             <div class="kit-escolha-lista" id="kitEscolhaLista" role="listbox" aria-label="Peças avulsas"></div>

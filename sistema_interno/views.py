@@ -1562,7 +1562,7 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
         # botão -- abrir a folha não pergunta nada ao servidor.
         import json
 
-        from .views_funil import opcoes_de_andamento
+        from .views_funil import opcoes_de_andamento, transportadoras_para_envio
 
         pedidos = list(pagina.object_list)
         for pedido in pedidos:
@@ -1575,6 +1575,13 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
         abertos = Pedido.objects.exclude(status__in=self.ENCERRADOS).count()
         return render(request, "pedidos_inner.html", {
             "pedidos": pedidos,
+            # os chips da folha do envio (seção 106): só a página que tem
+            # um pedido com frete a caminho, ou a caminho de sair, precisa
+            "transportadoras_envio": (
+                transportadoras_para_envio()
+                if any(not p.retirada and p.status in Pedido.SITUACOES_PAGAS for p in pedidos)
+                else []
+            ),
             "page_obj": pagina,
             "total_registros": pagina.paginator.count,
             "filtro_ativo": filtro,

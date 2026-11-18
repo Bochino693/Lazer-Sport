@@ -45,6 +45,7 @@ SO_POST = {
     "documento_assinatura_link": "gera um link de 5 minutos e conta no documento",
     "prazo_producao": "grava o prazo de produção (tests_funil_vendas.py)",
     "andamento_pedido": "muda a situação do pedido e acerta a venda",
+    "envio_pedido": "grava a transportadora e o rastreio (core/tests_fases_do_pedido.py)",
 }
 EXIGEM_PARAMETRO = {
     "campanha_ofertas": "precisa do cliente escolhido",

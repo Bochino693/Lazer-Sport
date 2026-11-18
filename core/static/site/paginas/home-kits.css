@@ -140,3 +140,10 @@ html.ls-escuro:not(#_):not(#__) .ls-kits-faixa-sub {
     .ls-kits-faixa-todos { width: 100%; }
     .ls-kits-faixa-caixa { border-radius: 24px; }
 }
+
+/* celular: dois cards por linha cabem com o botão "Orçamento" inteiro */
+@media (max-width: 560px) {
+    .ls-kits-faixa-caixa { padding: 20px 10px 12px; }
+    .ls-kits-faixa-caixa::after { display: none; } /* o chip de fundo cobriria o título */
+    .ls-kits-faixa-topo { padding: 0 6px; }
+}

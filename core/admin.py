@@ -25,6 +25,7 @@ from .models import (
     PecasReposicao,
     ImagemPeca,
     CategoriaPeca,
+    ComponenteKit,
     Frete,
     ObjetoTresD,
     JogoCadastrado,
@@ -183,6 +184,16 @@ class CategoriaPecaAdmin(admin.ModelAdmin):
     ordering = ("nome_categoria_peca",)
 
 
+class ComponenteKitInline(admin.TabularInline):
+    """O que vem no kit eletrônico (LEIA-ME seção 105). O painel (Peças) edita o mesmo."""
+
+    model = ComponenteKit
+    fk_name = "kit"
+    extra = 0
+    fields = ("ordem", "nome", "detalhe", "quantidade", "peca")
+    autocomplete_fields = ("peca",)
+
+
 @admin.register(PecasReposicao)
 class PecasReposicaoAdmin(admin.ModelAdmin):
     list_display = (
@@ -207,12 +218,13 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         # Item de manutenção não vai à vitrine nem estando ativo, então
         # "ativo" sozinho não responde mais "o que o site mostra?".
         "uso",
+        "eh_kit",
         "categoria_peca",
     )
 
     filter_horizontal = ("categoria_peca",)
 
-    inlines = [ImagemPecaInline]
+    inlines = [ImagemPecaInline, ComponenteKitInline]
 
     fieldsets = (
         ("Status", {
@@ -230,6 +242,15 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
                 "descricao_peca",
                 "categoria_peca",
             )
+        }),
+
+        ("Kit eletrônico", {
+            "fields": ("eh_kit", "maquina"),
+            "description": (
+                "A parte eletrônica de uma máquina, sem a máquina: vai para "
+                "/kits/ (fora da lista de peças) e a página da máquina chama "
+                "para ele. Os itens ficam na lista \"Itens do kit\" abaixo."
+            ),
         }),
 
         ("Valores", {

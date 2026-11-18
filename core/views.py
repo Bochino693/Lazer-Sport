@@ -8271,6 +8271,15 @@ class MeusPedidosView(LoginRequiredMixin, View):
             .order_by('-criacao')
         )
 
+        # AS FASES DE CADA PEDIDO (LEIA-ME-V10, seção 106). O dono: "em
+        # todos os pedidos devemos ter esse faseamento, para o cliente
+        # conseguir ver tudo certinho até a entrega." Saem dos campos do
+        # próprio pedido -- nenhuma consulta a mais por pedido.
+        from .fases_pedido import acompanhamento_do_pedido
+
+        for pedido in pedidos:
+            pedido.andamento = acompanhamento_do_pedido(pedido)
+
         # o quadro do lado: quantos pedidos em cada momento da compra
         resumo = {'aguardando': 0, 'andamento': 0, 'finalizados': 0}
         for pedido in pedidos:

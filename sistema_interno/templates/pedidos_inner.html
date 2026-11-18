@@ -95,10 +95,13 @@
                           data-andamento-url="{% url 'andamento_pedido' pedido.id %}"
                           data-andamento-opcoes="{{ pedido.opcoes_andamento }}"
                           data-andamento-titulo="Andamento do pedido #{{ pedido.id }}"
-                          data-andamento-rotulo="{{ pedido.get_status_display }}"
+                          data-andamento-rotulo="{{ pedido.situacao_texto }}"
+                          data-envio-transportadora="{{ pedido.transportadora_envio }}"
+                          data-envio-codigo="{{ pedido.codigo_rastreio }}"
+                          data-envio-link="{{ pedido.link_rastreio }}"
                           aria-haspopup="dialog"
                           title="Mudar o andamento do pedido">
-                    {{ pedido.get_status_display }}
+                    {{ pedido.situacao_texto }}
                   </button>
                 {% elif pedido.status == "finalizado" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>
                 {% elif pedido.status == "cancelado" %}<span class="ls-status danger">{{ pedido.get_status_display }}</span>
@@ -106,6 +109,29 @@
                 {% else %}<span class="ls-status info">{{ pedido.get_status_display }}</span>{% endif %}
                 {% if pedido.venda_da_linha %}
                   <span class="ls-funil-venda d-flex mt-1"><i class="bi bi-bag-check-fill" aria-hidden="true"></i> Venda #{{ pedido.venda_da_linha.pk }}</span>
+                {% endif %}
+                {% comment %}
+                  O RASTREIO (seção 106): o pedido com frete que já saiu mostra
+                  quem leva e o código -- o mesmo que o cliente lê em Meus
+                  pedidos --, e o toque abre a folha para completar ou corrigir
+                  (a transportadora que só dá o código no dia seguinte).
+                {% endcomment %}
+                {% if pedido.tipo_envio != "retirada" and pedido.status == "saiu_entrega" or pedido.tipo_envio != "retirada" and pedido.status == "finalizado" %}
+                  <button type="button"
+                          class="ls-envio-botao{% if not pedido.codigo_rastreio %} pendente{% endif %}"
+                          data-envio-url="{% url 'envio_pedido' pedido.id %}"
+                          data-envio-titulo="Envio do pedido #{{ pedido.id }}"
+                          data-envio-transportadora="{{ pedido.transportadora_envio }}"
+                          data-envio-codigo="{{ pedido.codigo_rastreio }}"
+                          data-envio-link="{{ pedido.link_rastreio }}"
+                          aria-haspopup="dialog"
+                          title="Transportadora e código de rastreio">
+                    <i class="bi bi-truck" aria-hidden="true"></i>
+                    <span class="ls-envio-botao-texto">
+                      <b class="ls-envio-botao-nome">{% if pedido.transportadora_envio %}{{ pedido.transportadora_envio }}{% else %}Informar envio{% endif %}</b>
+                      <small>{% if pedido.codigo_rastreio %}{{ pedido.codigo_rastreio }}{% else %}sem código de rastreio{% endif %}</small>
+                    </span>
+                  </button>
                 {% endif %}
               </td>
               {% comment %}
@@ -155,6 +181,8 @@
     {% include "includes/paginacao.html" with pagina=page_obj %}
   </div>
 </section>
+{# as transportadoras ativas: os chips da folha do envio (producao-etiquetas.js) #}
+{% if transportadoras_envio %}{{ transportadoras_envio|json_script:"lsTransportadorasEnvio" }}{% endif %}
 {% endblock %}
 
 {% block scripts %}

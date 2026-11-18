@@ -6124,3 +6124,260 @@ Dependência nova: rjsmin (requirements.txt).
    cartões em cada fase, o "Assinar o termo" levando à assinatura, a página
    do cliente com o código (e o PDF numa folha), a prévia e a tela do
    documento no painel; sem rolagem horizontal em Meus pedidos.
+
+105) O KIT ELETRÔNICO: A PARTE ELÉTRICA DA MÁQUINA, SEM A MÁQUINA
+   O PEDIDO: "no site, precisamos agora também do chamado kit, ele deve ter
+   espaço entre os demais produtos, o kit seria o seguinte, os componentes
+   eletrônicos sem a máquina para troca ou semi instalação, por exemplo,
+   strike kids, uma tv box, 5 sensores de precisão, a câmera e etc, para o
+   cara instalar toda parte elétrica na máquina caso ele só tenha a máquina,
+   no lazer shot, a arma, a tv box".
+   A ARTE QUE VEIO DE EXEMPLO NÃO É NOSSA: o dono mandou uma imagem "KIT
+   BOLICHE VIRTUAL" de outro site e depois: "vc nao deve usar essa imagem,
+   vc deve criar uma para o strike kids e dragon bowling, com as artes do
+   jogo, essa image é de outro site." Ela saiu do repositório (nunca foi ao
+   ar) e o jogo dela ("Boliche dos Bichinhos") saiu dos textos: o Boliche
+   Virtual é o DRAGON BOWLING. Nunca usar arte de terceiros nos produtos.
+   O KIT É UMA PEÇA MARCADA, e não um sexto tipo no carrinho: a peça já passa
+   pelo carrinho, Pix/cartão/boleto, parcelas sem juros, pedido, etiquetas e
+   painel. PecasReposicao ganhou `eh_kit` (com índice) e `maquina` (FK
+   opcional para Brinquedos, related_name "kits_eletronicos", SET_NULL); o
+   modelo novo ComponenteKit é o que vem no kit: nome, detalhe (uma linha a
+   mais, ex.: "Com o jogo Strike Kids"), quantidade (1 a 99), ordem e `peca`
+   (FK opcional para a peça vendida sozinha, ex.: o Cabo HDMI -- a página do
+   kit leva a ela). `da_vitrine()` continua com o kit dentro (é ela que diz o
+   que o carrinho, a lista de desejos e o aplicativo aceitam); quem lista
+   PEÇAS pede `pecas_avulsas_da_vitrine()` e quem lista KITS,
+   `kits_da_vitrine()` (já com a máquina, as fotos e os itens).
+   ONDE APARECE:
+     * /kits/ (KitsView, core/views_kits.py, templates kits.html e
+       site/paginas/kits.css): o topo "Monte sua própria máquina" (a parte
+       eletrônica completa, para montar a sua, trocar a eletrônica ou
+       instalar na que você já tem), os três passos e os cards;
+     * /kits/<id>/ (KitDetalheView): a página da peça (reposicao_info.html)
+       com `eh_kit` -- o caminho "Kits eletrônicos", o selo amarelo, "O que
+       vem no kit" (ícone pelo nome do item, core/kits.py ICONES, e a
+       quantidade), "Para a máquina X" (com o link da máquina) e "Sobre este
+       kit". /pecas/<id do kit>/ leva a /kits/<id>/ (301), e /kits/<id de
+       peça>/ leva à peça. O carrinho e Meus pedidos mostram "Kit eletrônico"
+       com o link do kit;
+     * NÃO aparece em /pecas-reposicao/, na seção de peças da home, no
+       sitemap das peças nem no número "peças de reposição na loja";
+     * a home: a faixa "Kits eletrônicos -- monte sua própria máquina" entre
+       a assistência técnica e as peças, só com kit na vitrine (até 4 cards;
+       site/paginas/home-kits.css, carregado só então);
+     * a loja (/loja/): o filtro "Kits eletrônicos", logo depois das
+       Máquinas; o card diz "Para <máquina>" e a lista curta; o "Adicionar"
+       manda o kit como 'peca' (`item.carrinho`);
+     * a página da máquina: logo abaixo do preço, "Já tem a máquina? Kit
+       eletrônico completo", que leva ao kit dela (todo kit da vitrine com
+       `maquina` = a máquina);
+     * o menu (Peças e serviços, no computador e no celular) e a sugestão da
+       busca: "Kits eletrônicos" -- só enquanto há kit na vitrine (`ha_kits`,
+       no context processor eventos_globais, com cache que o sinal limpa ao
+       salvar uma peça); a busca do site acha o kit pelo nome, pela máquina e
+       pelos itens ("tv box"); o sitemap tem /kits/ (se houver kit) e cada
+       kit (KitsSitemap).
+   O CARD: o mesmo da peça (partials/peca_card.html + ls-peca-card.css), com
+   o selo "Kit" (com a palavra também no celular), os chips "Kit eletrônico"
+   e "Para <máquina>" e a lista curta ("7 itens: TV Box, Barra com 5
+   sensores, Câmera…", `resumo_do_kit`). KIT SEM FOTO mostra a foto da
+   máquina com a faixa "KIT ELETRÔNICO" (no card e na página, onde diz
+   também "a máquina não acompanha"): nunca quadro vazio.
+   SEM PREÇO (os kits nascem assim; o dono põe o preço no painel): "Sob
+   consulta" e "Pedir orçamento" no WhatsApp, como os brinquedos fora da
+   loja; nunca R$ 0,00, nenhum botão de carrinho, e o carrinho recusa
+   (`_item_vendavel`, 404). A página da PEÇA sem preço também passou a dizer
+   "Valor sob consulta" (antes mostrava o botão do carrinho, que falhava) e o
+   JSON-LD sem preço não leva mais `"offers"` com "price": "0".
+   OS KITS INICIAIS (migração 0208, core/kits.py KITS_INICIAIS):
+     * Kit Boliche Virtual: Placa Zero Delay, TV Box (com o jogo Dragon
+       Bowling), Chicote, Cabo HDMI, Fonte, Webcam, Barra com 5 sensores;
+     * Kit Strike Kids: TV Box (com o jogo Strike Kids), Barra com 5
+       sensores de precisão, Câmera (foto do jogador para o ranking), Placa
+       Zero Delay, Chicote, Cabo HDMI, Fonte;
+     * Kit Lazer Shot: Arma personalizada (pistola de luz feita para a
+       máquina), TV Box (com o jogo Lazer Shot), Câmera, Placa Zero Delay,
+       Chicote, Cabo HDMI, Fonte.
+   Ligados à máquina do catálogo pelo nome INTEIRO, sem acento nem caixa
+   ("Strike Kids" não pega o "Strike Kids Boliche"); sem a máquina, o kit
+   nasce sem ela. O item "Cabo HDMI" liga à peça "Cabo HDMI" quando ela
+   existe. IDEMPOTENTE: o kit é procurado pelo nome antes; o que já existe
+   não é tocado. Num banco sem máquina nenhuma (o dos testes, um novo) nada
+   é criado -- a mesma regra das áreas (seção das categorias).
+   AS FOTOS: artes NOSSAS, 1200 x 1200, feitas só com as artes dos jogos
+   (logo, cena e personagens de core/static/site/arena/capas/) e os itens do
+   kit: core/static/site/kits/kit-boliche-virtual.webp (Dragon Bowling),
+   kit-strike-kids.webp (Strike Kids, com Bob e Mia) e kit-lazer-shot.webp.
+   Para refazer (mudou um item, um jogo):
+       NODE_PATH=<node_modules com playwright> node ferramentas/kits/gerar.js <pasta>
+       python -I ferramentas/kits/para_webp.py <pasta>
+   (ferramentas/kits/artes.html é a arte: os itens de cada kit estão lá.)
+   Sobem para o Cloudinary SÓ NO RENDER, como capa de cada kit (só se o kit
+   ainda não tem foto), com nome curto ("pecas_reposicao/kit-strike-kids-<assinatura>",
+   conferido contra os 100 caracteres da coluna), num ponto de salvamento
+   próprio (no PostgreSQL um erro aborta a migração inteira) e com
+   `recorte_de` já marcado: a arte tem fundo de verdade (escuro) e o recorte
+   automático das peças (seção 102) devolve None para ela -- conferido no
+   teste. Se a foto não subir, o deploy segue e o aviso diz o comando:
+       python manage.py kits_eletronicos            (cria os kits que faltam)
+       python manage.py kits_eletronicos --foto     (e sobe as artes)
+   O PAINEL (Peças, interno.: core/views_gestao_produtos.py, gestao/
+   pecas_adm.html, site/paginas/gestao-pecas_adm.js/.css): no cadastro da
+   peça, a chave "É um kit eletrônico" abre o editor do kit -- a máquina em
+   chips de rádio com busca (nunca <select>; a máquina escolhida fica à vista
+   ao abrir) e as linhas do que vem no kit (nome, detalhe, quantidade com
+   − e +, "Ligar a uma peça avulsa" com a busca das peças, subir/descer/
+   remover, "Adicionar item"). As linhas vão juntas em `componentes_json`;
+   linha em branco não vira item; kit sem item, quantidade fora de 1 a 99,
+   peça ou máquina que não existe voltam com a frase. Desligada a chave, a
+   lista nem vai (os itens ficam guardados) e a máquina sai. Preço, fotos e
+   parcelas sem juros são os campos da peça. Na lista e nos cards, o selo
+   "Kit", "Para <máquina>" e "N itens"; o número "Kits eletrônicos" no topo e
+   o filtro "Kits eletrônicos" na situação. Só variáveis do tema (sol e lua),
+   ícones do Bootstrap Icons do painel. Também no /system/ (inline "Itens do
+   kit"). DOIS DEFEITOS ANTIGOS DESTA TELA, acertados no caminho: o salvar
+   fazia `fetch(form.action)` e o formulário tem um campo chamado "action"
+   (o "save") -- o pedido ia para "/site/pecas/[object HTMLInputElement]" e
+   dava 404 (agora `getAttribute("action")`); e a lista mostrava "R$ 0,00"
+   em toda peça com preço (o `|moeda` relia o "29,90" já formatado).
+   Ícones novos no recorte do Font Awesome do site (gerar.py): fa-microchip,
+   fa-network-wired e fa-plug.
+   Banco: core/0207_kit_eletronico (só esquema) e 0208_kits_iniciais (só
+   dados).
+       python manage.py migrate core
+   Testes: core/tests_kits.py (o kit fora das peças e dentro de /kits/, da
+   home, da loja e da busca; a página com os itens, os ícones, a peça avulsa
+   e a máquina; os redirecionamentos; sem preço: "Sob consulta", nada de
+   R$ 0,00 e o carrinho recusando; com preço: carrinho e boleto como peça; a
+   migração idempotente, pelo nome inteiro, sem foto fora do Render, a foto
+   com nome curto e a arte que o recorte deixa como está; o painel salvando
+   a máquina e os itens, os erros e o editor sem <select>; o sitemap e o
+   menu).
+   Conferido no Chromium (PC 1366 e celular 390): /kits/, os kits com as
+   artes (e o kit sem foto com a foto da máquina e a faixa),
+   a faixa da home, o chamado nas páginas do Boliche Virtual e do Lazer
+   Shot, a loja filtrada nos kits, os menus e o painel de Peças com um kit
+   aberto (lua e sol), salvando de verdade; sem rolagem horizontal.
+
+106) AS FASES DE TODOS OS PEDIDOS DA LOJA, ATÉ A ENTREGA, COM O RASTREIO
+   O PEDIDO: depois de ver a linha do tempo dos orçamentos em Meus pedidos
+   (seção 104), o dono: "em todos os pedidos devemos ter esse faseamento,
+   para o cliente conseguir ver tudo certinho até a entrega."
+   AS DATAS (Pedido.pago_em, preparacao_em, enviado_em, entregue_em,
+   cancelado_em): o pedido só guardava a situação de agora; agora guarda o
+   DIA de cada fase. Quem grava é o `Pedido.save()`, sozinho, quando a
+   situação muda -- venha do webhook do Mercado Pago, da conferência do
+   pagamento, do painel, da devolução ao carrinho ou do admin --, e o
+   `save(update_fields=[..."status"...])` leva as datas na mesma gravação
+   (ninguém precisa listá-las). A situação anterior vem do próprio
+   carregamento do pedido (`from_db`): gravar o pedido SEM mudar a situação
+   não faz consulta nenhuma a mais (só o pedido lido com `.only()` sem a
+   situação, e com ela trocada, pergunta ao banco uma vez). As regras:
+     * a fase em que o pedido entra ganha a data de agora (se ainda não
+       tinha: voltar a "pago" por correção não muda o dia do pagamento);
+     * a fase pulada (de "pago" direto para "saiu para entrega") ganha a
+       mesma data: o cliente nunca vê fase "feita" sem dia;
+     * a volta de correção apaga a data das fases da frente;
+     * cancelar grava o dia e não apaga nada (a linha do tempo para onde
+       estava); sair do cancelado (só pelo admin) apaga o dia do
+       cancelamento.
+   O ENVIO (transportadora_envio, codigo_rastreio, link_rastreio): o nome da
+   transportadora é TEXTO, não chave para sistema_interno.Transportadora --
+   o `core` não depende do `sistema_interno`, e o pedido entregue continua
+   dizendo quem levou mesmo que a transportadora saia da lista.
+   A RETIRADA GANHOU UMA FASE: "Pronto para retirada". Na retirada, o
+   "saiu_entrega" é a máquina pronta esperando o cliente na fábrica
+   (Pedido.situacao_texto; `proximas_situacoes` deixou de pular esse passo
+   na retirada). Hoje TODA compra do site é retirada (seção 90), então é
+   essa fase que o cliente mais vê; a transportadora só é pedida no pedido
+   com frete (os antigos).
+   MEUS PEDIDOS: todo pedido, em qualquer situação, tem a linha do tempo dos
+   cartões de orçamento (oc-fases, mesmas bolas e cores: feita verde com o
+   visto, a de agora acesa na cor do cartão, a parada vermelha, as futuras
+   apagadas; em pé no celular), em cinco fases (core/fases_pedido.py,
+   `acompanhamento_do_pedido`; partials/pedido_fases.html):
+     1. Pedido feito -- "18/11 às 10:11";
+     2. Pagamento -- esperando: "Aguardando Pix", "Boleto vence em 21/11"
+        (ou "venceu"), "Cartão em análise", "Esperando o pagamento"; pago:
+        "Pago em 18/11 · Pix" / "· cartão 3x" / "· débito" / "· boleto";
+     3. Produção -- "Começou em 18/11 · previsão 26/11" (o prazo em dias
+        úteis da seção 89), "Pronta entrega", "Em preparação desde 19/11",
+        "Na fila da fábrica" (pago sem prazo); pronta: "Pronta em 20/11";
+        antes do pagamento, com prazo: "15 dias úteis após o pagamento";
+     4. Envio -- "Saiu em 20/11 · Braspress · código BRP123"; na retirada a
+        fase se chama "Retirada": "Pronto para retirada em 20/11" (antes
+        disso, "Na fábrica, em São Paulo");
+     5. Entregue / Retirado -- "Entregue em 22/11" / "Retirado em 22/11".
+   O cancelado para em vermelho na fase em que estava (sem pagamento: no
+   Pagamento; pago: na Produção; depois de sair: no Entregue), com
+   "Cancelado em dd/mm"; o aviso do cancelado pago diz que a equipe faz a
+   devolução do valor. O chip do cartão fala como o cliente: "Pronto para
+   retirada", "Entregue", "Retirado".
+   Embaixo da linha do tempo, o QUADRO DA FASE DE AGORA: o de "aguardando
+   pagamento" continua como era (Abrir o boleto, Retomar pagamento,
+   Cancelar e voltar ao carrinho); pago e em preparação mostram o tempo de
+   produção ("Produção: 15 dias úteis — previsão 08/12"); saiu/entregue com
+   frete mostra o RASTREIO (a transportadora, "A caminho · saiu em 20/11",
+   o código que copia num toque -- o recado do toast é do rastreio, não do
+   Pix -- e o botão "Rastrear" quando há link, numa aba nova); pronto para
+   retirada mostra a FÁBRICA (o mesmo endereço, horário e telefone do
+   bloco de retirada do carrinho, e "Como chegar"). A trilha antiga
+   (pd-trilha/pd-passo, só depois de pago) saiu, com o CSS dela. Tudo sai
+   dos campos do pedido: a página não faz uma consulta a mais por pedido, e
+   cada cliente só vê os pedidos dele.
+   O PAINEL (Pedidos da loja, interno.): o "Saiu para entrega" do pedido com
+   frete abre a folha do ENVIO antes de gravar: as transportadoras ATIVAS da
+   Logística em chips (rádios dentro de <label>, nunca <select>; as
+   nacionais primeiro, como na tela de Logística), "Entrega própria" na
+   frente e "Outra" no fim (abre o campo do nome), o código de rastreio e o
+   link (opcional -- vira o "Rastrear"; o site da transportadora escolhida
+   aparece como dica no campo, nada é gravado sozinho). A transportadora é
+   obrigatória; o código pode vir depois; o link precisa ser http(s) ("www."
+   ganha o https://; "javascript:" é recusado). Tudo grava JUNTO com a
+   situação (Pedido.mudar_situacao(nova, envio=...); a regra da leitura é
+   core.fases_pedido.ler_envio). Na linha do pedido que já saiu, o botão do
+   rastreio (a transportadora e o código, ou "Informar envio · sem código de
+   rastreio" tracejado em amarelo) abre a mesma folha para completar ou
+   corrigir: POST /pedidos/<id>/envio/ (EnvioPedidoView), só pedido com
+   frete que saiu ou foi entregue, só Financeiro e Gestão (os mesmos do
+   andamento). Na retirada, o andamento oferece "Pronto para retirada" ("A
+   máquina está pronta: o cliente já pode buscar na fábrica"), sem folha de
+   transportadora. Só variáveis do tema (sol, lua, eclipse); sem alert/
+   confirm (o cancelar continua pela folha do LSAviso). Uma folha que abre
+   outra (o andamento abre a do envio) deixa a página travada e o foco na
+   folha nova. A FICHA do pedido (o toque na linha, core/detalhes.py) ganhou
+   a transportadora e o código na seção Entrega, as fases com dia na
+   atividade ("Pagamento aprovado", "Saiu para entrega · Braspress ·
+   BRP123", "Entregue"...) e o "Pronto para retirada" no selo.
+   AVISO AO CLIENTE: o site NÃO manda e-mail quando a situação do pedido
+   muda (só a confirmação da compra e o boleto, core/notificacoes.py) --
+   por isso nenhum e-mail de "saiu para entrega" foi criado; o rastreio
+   aparece em Meus pedidos.
+   Banco: core/0209_pedido_fases_e_rastreio (só esquema, escrita à mão) e
+   core/0210_datas_das_fases_dos_pedidos (só dados): os pedidos de antes
+   ganham o que dá para saber -- pago_em dos pagos (e do cancelado que tinha
+   sido pago: Mercado Pago aprovou ou a produção começou) pelo dia do
+   pagamento aprovado (`producao_inicio`; mesmo dia do pedido = a hora do
+   pedido; dia depois = meio-dia daquele dia); enviado_em de quem está em
+   "saiu", entregue_em dos finalizados e cancelado_em dos cancelados pela
+   última gravação (`atualizado`). "Em preparação desde" fica vazio nos de
+   antes (inventar o dia seria mentir). Rodar de novo não muda nada.
+       python manage.py migrate core
+   Testes: core/tests_fases_do_pedido.py (as datas em cada passo, pelo
+   checkout de verdade, pulando fase, voltando, cancelando, pelo `save()`
+   inteiro do admin, sem consulta a mais; as fases de cada situação, da
+   retirada e do cancelado; os ícones no recorte do site; Meus pedidos com a
+   linha do tempo em todos, o rastreio só para o dono, a fábrica na
+   retirada e as consultas que não crescem; o painel pedindo a
+   transportadora, recusando link ruim, a retirada sem transportadora, o
+   rastreio completado depois e quem pode; a tela com os chips e sem
+   <select>; a migração 0210) e, ajustados, dois de
+   sistema_interno/tests_funil_vendas.py (a retirada agora passa pelo
+   "Pronto para retirada").
+   Conferido no Chromium (PC 1366 e celular 390): um cartão de cada
+   situação (Pix, boleto, pago com prazo, em preparação, saiu com e sem
+   código, pronto para retirada, entregue, retirado, cancelado antes e
+   depois de pagar) e o painel (a folha do andamento da retirada, a folha
+   do envio vazia, com o aviso, preenchida e salva de verdade, a folha de
+   corrigir o rastreio, no tema lua e no sol); sem rolagem horizontal.

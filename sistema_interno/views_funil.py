@@ -212,17 +212,67 @@ ROTULO_DO_PASSO = {
     "cancelado": ("Cancelado", "bi-x-circle"),
 }
 
+#: Na retirada, o "saiu para entrega" é o "Pronto para retirada" (seção
+#: 106): a fase com dia que o cliente acompanha em Meus pedidos.
+PASSO_DA_RETIRADA = {
+    "saiu_entrega": ("Pronto para retirada", "bi-shop",
+                     "A máquina está pronta: o cliente já pode buscar na fábrica."),
+    "finalizado": ("Finalizado", "bi-flag-fill", "O cliente retirou. Fecha o pedido."),
+}
+
 
 def opcoes_de_andamento(pedido) -> list[dict]:
-    """Os passos que a folha do painel oferece, na ordem do andamento."""
-    return [
-        {
-            "valor": passo,
-            "rotulo": ROTULO_DO_PASSO[passo][0],
-            "icone": ROTULO_DO_PASSO[passo][1],
-        }
-        for passo in pedido.proximas_situacoes()
-    ]
+    """Os passos que a folha do painel oferece, na ordem do andamento.
+
+    O "Saiu para entrega" do pedido com frete leva `pede_envio`: antes de
+    gravar, a folha pergunta a transportadora e o código de rastreio
+    (seção 106). Na retirada ele vira "Pronto para retirada", sem
+    transportadora.
+    """
+    opcoes = []
+    for passo in pedido.proximas_situacoes():
+        rotulo, icone = ROTULO_DO_PASSO[passo]
+        opcao = {"valor": passo, "rotulo": rotulo, "icone": icone}
+        if pedido.retirada and passo in PASSO_DA_RETIRADA:
+            opcao["rotulo"], opcao["icone"], opcao["dica"] = PASSO_DA_RETIRADA[passo]
+        elif passo == "saiu_entrega":
+            opcao["pede_envio"] = True
+        opcoes.append(opcao)
+    return opcoes
+
+
+def dados_do_envio(pedido) -> dict:
+    """O envio como a folha do painel e a linha da tabela mostram."""
+    return {
+        "transportadora": pedido.transportadora_envio,
+        "codigo": pedido.codigo_rastreio,
+        "link": pedido.link_rastreio,
+        "enviado_em": (
+            f"{timezone.localtime(pedido.enviado_em):%d/%m/%Y}" if pedido.enviado_em else ""
+        ),
+    }
+
+
+def transportadoras_para_envio() -> list[dict]:
+    """As transportadoras ativas, para os chips da folha do envio.
+
+    Na ordem da tela de Logística: as nacionais primeiro, depois as
+    regionais e as de mudança. O nome que vai para o pedido é o curto
+    (`nome_exibicao`), o mesmo que a equipe lê no cartão dela.
+    """
+    from .models import Transportadora
+
+    ativas = sorted(
+        Transportadora.objects.ativas().only("nome", "nome_fantasia", "tipo", "site", "ordem"),
+        key=lambda t: (Transportadora.ORDEM_DOS_TIPOS.get(t.tipo, 9), t.ordem, t.nome_exibicao.lower()),
+    )
+    return [{"nome": t.nome_exibicao, "site": t.site} for t in ativas]
+
+
+def _ler_envio_da_tela(request):
+    from core.fases_pedido import ler_envio
+
+    return ler_envio(request.POST)
 
 
 class AndamentoPedidoView(InternoRequiredMixin, View):
@@ -235,13 +285,25 @@ class AndamentoPedidoView(InternoRequiredMixin, View):
         if pedido is None:
             raise Http404
         nova = (request.POST.get("status") or "").strip()
+        # SAIU PARA ENTREGA, COM QUEM E COM QUAL CÓDIGO (seção 106): a
+        # transportadora vai junto com a situação, na mesma gravação. Na
+        # retirada não há transportadora ("Pronto para retirada").
+        envio = None
+        if nova == "saiu_entrega" and not pedido.retirada and nova != pedido.status:
+            try:
+                envio = _ler_envio_da_tela(request)
+            except ValueError as erro:
+                return _erro(str(erro))
         try:
-            acao, venda_id = pedido.mudar_situacao(nova)
+            acao, venda_id = pedido.mudar_situacao(nova, envio=envio)
         except ValueError as erro:
             return _erro(str(erro))
         pedido.refresh_from_db()
 
-        frase = f"Pedido #{pedido.pk}: {pedido.get_status_display().lower()}."
+        frase = f"Pedido #{pedido.pk}: {pedido.situacao_texto.lower()}."
+        if envio:
+            frase += f" {pedido.transportadora_envio}"
+            frase += f" · código {pedido.codigo_rastreio}." if pedido.codigo_rastreio else "."
         if acao == "criada":
             frase += f" Registrado como venda #{venda_id}."
         elif acao == "desfeita":
@@ -250,10 +312,46 @@ class AndamentoPedidoView(InternoRequiredMixin, View):
             "status": "sucesso",
             "msg": frase,
             "situacao": pedido.status,
-            "rotulo": pedido.get_status_display(),
+            "rotulo": pedido.situacao_texto,
             "venda": venda_id if pedido.pago else None,
             "venda_acao": acao,
             "opcoes": opcoes_de_andamento(pedido),
+            "envio": dados_do_envio(pedido),
+        })
+
+
+class EnvioPedidoView(InternoRequiredMixin, View):
+    """Corrige ou completa o envio do pedido que já saiu (seção 106).
+
+    "E depois, num lugar para editar": a transportadora só dá o código no
+    dia seguinte, o link chega pelo WhatsApp... A situação não muda; só o
+    que o cliente lê no quadro do rastreio.
+    """
+
+    funcoes_necessarias = ANDAMENTO_DO_PEDIDO
+
+    def post(self, request, pk):
+        pedido = Pedido.objects.filter(pk=pk).first()
+        if pedido is None:
+            raise Http404
+        if pedido.retirada:
+            return _erro("Pedido de retirada não tem transportadora: o cliente busca na fábrica.")
+        if pedido.status not in ("saiu_entrega", "finalizado"):
+            return _erro("O rastreio entra quando o pedido sai para entrega.")
+        try:
+            envio = _ler_envio_da_tela(request)
+        except ValueError as erro:
+            return _erro(str(erro))
+        for campo, valor in envio.items():
+            setattr(pedido, campo, valor)
+        # `save` com a lista: a situação não muda, o sinal da venda nem olha.
+        pedido.save(update_fields=[*envio, "atualizado"])
+        frase = f"Pedido #{pedido.pk}: {pedido.transportadora_envio}"
+        frase += f" · código {pedido.codigo_rastreio}." if pedido.codigo_rastreio else "."
+        return JsonResponse({
+            "status": "sucesso",
+            "msg": frase,
+            "envio": dados_do_envio(pedido),
         })
 
 

@@ -181,7 +181,6 @@ class PecaAdminView(AdminOnlyMixin, View):
                     }
                     for item in peca.componentes_kit.all()
                 ],
-                "url_site": peca.url_publica,
             })
 
         todas = PecasReposicao.objects.all()

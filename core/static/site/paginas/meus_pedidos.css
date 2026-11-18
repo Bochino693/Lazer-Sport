@@ -9,8 +9,9 @@
  * mesma cabeça com as três etapas (aqui, a Confirmação), o mesmo cartão
  * de vidro escuro, os mesmos botões e as linhas do resumo. O que mora
  * aqui é só o que é desta tela: a situação de cada pedido com a sua cor,
- * o andamento (pago → preparação → entrega → finalizado), as fotos dos
- * produtos e os detalhes que abrem no botão.
+ * as fases até a entrega (feito → pagamento → produção → envio →
+ * entregue, seção 106), as fotos dos produtos e os detalhes que abrem no
+ * botão.
  *
  * As cores saem do tema escuro do site (ls-tema.css), com o valor do
  * tema como reserva.
@@ -203,80 +204,10 @@
 }
 
 /* =========================================================
-   O ANDAMENTO: pago → preparação → entrega → finalizado
+   O ANDAMENTO: a linha do tempo de cada pedido (seção 106) usa o desenho
+   das fases do orçamento (oc-fases, mais abaixo); aqui fica o tempo de
+   produção, o quadro da fase "Produção".
 ========================================================= */
-.pd-trilha {
-    display: grid;
-    grid-auto-columns: minmax(0, 1fr);
-    grid-auto-flow: column;
-    margin: 18px 0 0;
-    padding: 14px 6px 12px;
-    border: 1px solid rgba(127, 200, 255, .12);
-    border-radius: 16px;
-    background: rgba(4, 10, 28, .5);
-    list-style: none;
-}
-
-.pd-passo {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 7px;
-    min-width: 0;
-    color: #8fa9d6;
-    font-size: .72rem;
-    font-weight: 800;
-    line-height: 1.25;
-    text-align: center;
-}
-
-.pd-passo + .pd-passo::before {
-    content: "";
-    position: absolute;
-    top: 16px;
-    left: calc(-50% + 22px);
-    right: calc(50% + 22px);
-    height: 3px;
-    border-radius: 3px;
-    background: rgba(127, 200, 255, .16);
-}
-
-.pd-passo.is-feito + .pd-passo::before {
-    background: linear-gradient(90deg, var(--pd-verde), var(--pd-ciano));
-}
-
-.pd-passo-bola {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border: 2px solid rgba(127, 200, 255, .22);
-    border-radius: 50%;
-    background: #0a1736;
-    color: #8fa9d6;
-    font-size: .8rem;
-}
-
-.pd-passo.is-feito { color: #a8f5c9; }
-
-.pd-passo.is-feito .pd-passo-bola {
-    border-color: var(--pd-verde);
-    background: var(--pd-verde);
-    color: #04301a;
-}
-
-.pd-passo.is-atual { color: #fff; }
-
-.pd-passo.is-atual .pd-passo-bola {
-    border-color: var(--pd-cor);
-    background: color-mix(in srgb, var(--pd-cor) 26%, #0a1736);
-    color: var(--pd-cor);
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--pd-cor) 18%, transparent), 0 0 20px color-mix(in srgb, var(--pd-cor) 45%, transparent);
-}
-
 /* O TEMPO DE PRODUÇÃO, logo abaixo do andamento: a frase da fábrica
    ("Produção: 15 dias úteis — previsão 04/12"), na cor da situação. */
 .pd-producao {
@@ -297,11 +228,6 @@
 .pd-producao i {
     flex: 0 0 auto;
     color: var(--pd-cor);
-}
-
-/* o último passo de um pedido finalizado é a bandeira verde */
-.pd-pedido--finalizado .pd-passo:last-child .pd-passo-bola {
-    box-shadow: 0 0 0 5px rgba(46, 229, 157, .16), 0 0 20px rgba(46, 229, 157, .4);
 }
 
 /* =========================================================
@@ -1315,6 +1241,188 @@
 .pd-vazio-pagina .oc-vincular { grid-template-columns: minmax(0, 1fr); }
 
 /* =========================================================
+   AS FASES DE CADA PEDIDO (seção 106)
+   "Em todos os pedidos devemos ter esse faseamento, para o cliente
+   conseguir ver tudo certinho até a entrega." O desenho é o das fases do
+   orçamento (oc-fases); o pedido tem cinco: feito, pagamento, produção,
+   envio (ou retirada) e entregue. No celular elas ficam em pé, como no
+   orçamento (o bloco de 720 px abaixo).
+========================================================= */
+.pd-fases { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+/* o último passo do pedido entregue é a bandeira verde, acesa */
+.pd-pedido--finalizado .pd-fases .oc-fase:last-child .oc-fase-bola {
+    box-shadow: 0 0 0 5px rgba(46, 229, 157, .16), 0 0 20px rgba(46, 229, 157, .4);
+}
+
+/* O QUADRO DO ENVIO: a transportadora, o código (um toque copia) e o
+   "Rastrear"; o mesmo quadro mostra a fábrica do pedido pronto para
+   retirada. Na cor da situação, como o resto do cartão. */
+.pd-envio {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--pd-cor) 40%, transparent);
+    border-radius: 16px;
+    background:
+        radial-gradient(110% 130% at 0% 0%, color-mix(in srgb, var(--pd-cor) 18%, transparent), transparent 62%),
+        rgba(4, 10, 28, .55);
+}
+
+.pd-envio-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.pd-envio-icone {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--pd-cor), color-mix(in srgb, var(--pd-cor) 45%, var(--pd-azul)));
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--pd-cor) 32%, transparent);
+    color: #071226;
+    font-size: 1.1rem;
+}
+
+.pd-envio-texto {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.pd-envio-texto strong {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.pd-envio-texto small {
+    color: var(--pd-cor);
+    font-size: .8rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.pd-envio-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
+}
+
+/* o código de rastreio: o mesmo botão das chaves do Pix, na cor do cartão */
+.pd-envio-codigo {
+    display: grid;
+    flex: 1 1 220px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 10px;
+    min-width: 0;
+    min-height: 54px;
+    padding: 8px 14px;
+    border: 1px solid color-mix(in srgb, var(--pd-cor) 40%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--pd-cor) 12%, transparent);
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color .2s ease, background .2s ease;
+}
+
+.pd-envio-codigo:hover {
+    border-color: color-mix(in srgb, var(--pd-cor) 75%, transparent);
+    background: color-mix(in srgb, var(--pd-cor) 20%, transparent);
+}
+
+.pd-envio-codigo:focus-visible {
+    outline: 2px solid var(--pd-cor);
+    outline-offset: 2px;
+}
+
+.pd-envio-codigo span {
+    grid-column: 1;
+    color: color-mix(in srgb, var(--pd-cor) 55%, #ffffff);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.pd-envio-codigo strong {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pd-envio-codigo i {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    color: var(--pd-cor);
+}
+
+.pd-envio-codigo.is-copiado {
+    border-color: var(--pd-verde);
+    background: rgba(46, 229, 157, .16);
+}
+
+.pd-envio-rastrear {
+    flex: 0 1 auto;
+    min-height: 54px;
+}
+
+.pd-envio-fora {
+    font-size: .74em;
+    opacity: .85;
+}
+
+/* a retirada: o endereço, o horário e o telefone da fábrica */
+.pd-envio-dados {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    color: #d6e4fb;
+    font-size: .9rem;
+    font-weight: 650;
+    line-height: 1.4;
+    list-style: none;
+}
+
+.pd-envio-dados li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.pd-envio-dados i {
+    flex: 0 0 16px;
+    color: var(--pd-cor);
+    text-align: center;
+}
+
+.pd-envio-dados a {
+    color: #fff;
+    font-weight: 850;
+    text-decoration: none;
+}
+
+.pd-envio-dados a:hover { text-decoration: underline; }
+
+/* =========================================================
    CELULAR
 ========================================================= */
 @media (max-width: 959px) {
@@ -1333,7 +1441,8 @@
     /* AS FASES EM COLUNA: seis passos lado a lado não cabem num celular
        com a nota de cada um; em pé, cada fase é uma linha, com a bola à
        esquerda e o fio descendo até a próxima -- como o rastreio de um app. */
-    .oc-fases {
+    .oc-fases,
+    .pd-fases {
         grid-template-columns: minmax(0, 1fr);
         padding: 14px 14px 12px;
     }
@@ -1413,19 +1522,13 @@
 
     .pd-status { margin-left: 54px; }
 
-    .pd-trilha { padding: 12px 2px 10px; }
-
-    .pd-passo { font-size: .66rem; }
-
-    .pd-passo-bola {
-        width: 30px;
-        height: 30px;
-        font-size: .72rem;
-    }
-
-    .pd-passo + .pd-passo::before { top: 14px; }
-
     .pd-acoes { flex-direction: column; }
+
+    .pd-envio-acoes { flex-direction: column; }
+
+    .pd-envio-codigo { flex-basis: auto; }
+
+    .pd-envio-rastrear { width: 100%; }
 
     .pd-acoes .ck-botao { width: 100%; }
 

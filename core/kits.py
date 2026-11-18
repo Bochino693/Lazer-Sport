@@ -95,12 +95,12 @@ KITS_INICIAIS = (
         "Boliche Virtual",
         "kit-boliche-virtual",
         "A parte eletrônica completa do Boliche Virtual, sem a máquina: placa Zero Delay, "
-        "TV Box com o jogo Boliche dos Bichinhos, chicote, cabo HDMI, fonte, webcam e a barra "
+        "TV Box com o jogo Dragon Bowling, chicote, cabo HDMI, fonte, webcam e a barra "
         "com 5 sensores. Para montar a sua própria máquina, trocar a eletrônica de uma que "
         "parou ou instalar tudo na máquina que você já tem. Kit completo e pronto para instalar.",
         (
             ("Placa Zero Delay", "", 1),
-            ("TV Box", "Com o jogo Boliche dos Bichinhos", 1),
+            ("TV Box", "Com o jogo Dragon Bowling", 1),
             ("Chicote", "", 1),
             ("Cabo HDMI", "", 1),
             ("Fonte", "", 1),
@@ -111,7 +111,7 @@ KITS_INICIAIS = (
     (
         "Kit Strike Kids",
         "Strike Kids",
-        "",
+        "kit-strike-kids",
         "A parte eletrônica completa do Strike Kids, sem a máquina: TV Box com o jogo Strike "
         "Kids, a barra com 5 sensores de precisão, a câmera que tira a foto do jogador para o "
         "ranking, placa Zero Delay, chicote, cabo HDMI e fonte. Para montar a sua própria "
@@ -130,7 +130,7 @@ KITS_INICIAIS = (
     (
         "Kit Lazer Shot",
         "Lazer Shot",
-        "",
+        "kit-lazer-shot",
         "A parte eletrônica completa do Lazer Shot, sem a máquina: a arma personalizada "
         "(a pistola de luz feita para a máquina), TV Box com o jogo Lazer Shot, a câmera que "
         "tira a foto do jogador para o ranking, placa Zero Delay, chicote, cabo HDMI e fonte. "
@@ -283,13 +283,22 @@ def semear(apps, schema_editor=None, avisar=print):
 
     O Cloudinary só está configurado no Render: no computador e nos testes
     nada sobe (o kit sem foto mostra a foto da máquina, com o selo).
+
+    Num banco SEM máquina nenhuma -- o dos testes, um novo -- não há kit a
+    criar (a mesma regra das áreas, core/categorias_capas.py): o kit é a
+    eletrônica de uma máquina do catálogo. No banco do site, com o catálogo,
+    os três nascem (o da máquina que não existir, sem máquina). Para criar
+    depois: python manage.py kits_eletronicos.
     """
     from django.conf import settings
 
     PecasReposicao = apps.get_model("core", "PecasReposicao")
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    if not Brinquedos.objects.exists():
+        return {"criados": [], "existentes": [], "catalogo_vazio": True}
     resultado = criar_kits_iniciais(
         PecasReposicao,
-        apps.get_model("core", "Brinquedos"),
+        Brinquedos,
         apps.get_model("core", "ComponenteKit"),
         avisar=avisar,
     )

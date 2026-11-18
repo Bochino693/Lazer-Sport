@@ -866,9 +866,24 @@ def detalhe_pedido(pk, usuario, pagina=1, so_atividade=False):
                 f"{reais(venda.valor_pago)} · {venda.get_forma_pagamento_display() or '—'}", "bi-cash-coin",
                 "bom" if venda.confirmado else "atencao",
             ))
+        # as fases com dia (LEIA-ME-V10, seção 106): o mesmo que o cliente vê
+        retirada = pedido.tipo_envio == "retirada"
+        for campo_data, titulo, icone, tom in (
+            ("pago_em", "Pagamento aprovado", "bi-check2-circle", "bom"),
+            ("preparacao_em", "Em preparação", "bi-tools", "bom"),
+            ("enviado_em", "Pronto para retirada" if retirada else "Saiu para entrega", "bi-truck", "bom"),
+            ("entregue_em", "Retirado" if retirada else "Entregue", "bi-flag-fill", "bom"),
+            ("cancelado_em", "Cancelado", "bi-x-circle", "ruim"),
+        ):
+            momento = getattr(pedido, campo_data)
+            if momento:
+                texto = ""
+                if campo_data == "enviado_em" and pedido.transportadora_envio:
+                    texto = " · ".join(p for p in (pedido.transportadora_envio, pedido.codigo_rastreio) if p)
+                eventos.append(evento(momento, titulo, texto, icone, tom))
         if pedido.atualizado and pedido.criacao and pedido.atualizado - pedido.criacao > dt.timedelta(minutes=1):
-            rotulo, tom, icone = _status_pedido(pedido.status)
-            eventos.append(evento(pedido.atualizado, "Última atualização", rotulo, icone, tom))
+            _, tom, icone = _status_pedido(pedido.status)
+            eventos.append(evento(pedido.atualizado, "Última atualização", pedido.situacao_texto, icone, tom))
         return eventos
 
     def atividade(p):
@@ -877,6 +892,7 @@ def detalhe_pedido(pk, usuario, pagina=1, so_atividade=False):
     if so_atividade:
         return atividade(pagina)
     rotulo, tom, icone = _status_pedido(pedido.status)
+    rotulo = pedido.situacao_texto  # na retirada, "Pronto para retirada" (seção 106)
     cliente = pedido.cliente
     conta = cliente.user if (cliente and cliente.user_id) else None
     endereco = ", ".join(p for p in (pedido.rua, pedido.numero, pedido.bairro, pedido.cidade, pedido.estado, pedido.cep) if p)
@@ -905,6 +921,9 @@ def detalhe_pedido(pk, usuario, pagina=1, so_atividade=False):
                 campo("Endereço", endereco or "—", "bi-geo-alt"),
                 campo("Distância", f"{pedido.distancia_km} km" if pedido.distancia_km else "—", "bi-map"),
                 campo("Tempo estimado", f"{pedido.tempo_estimado_min} min" if pedido.tempo_estimado_min else "—", "bi-clock"),
+                # quem leva e o rastreio que o cliente lê (seção 106)
+                campo("Transportadora", pedido.transportadora_envio, "bi-truck"),
+                campo("Código de rastreio", pedido.codigo_rastreio, "bi-upc"),
                 # o tempo de produção e a venda do funil (LEIA-ME-V10, seção 89)
                 campo("Produção", pedido.texto_producao.replace("Produção: ", "") or "Sem prazo", "bi-hammer"),
                 campo("Venda", f"Venda #{venda.pk}" if venda else "—", "bi-bag-check"),

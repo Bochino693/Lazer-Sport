@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                     models.CharField(
                         blank=True,
                         default="",
-                        help_text="Uma linha a mais na página do kit, ex.: com o jogo Boliche dos Bichinhos.",
+                        help_text="Uma linha a mais na página do kit, ex.: com o jogo Dragon Bowling.",
                         max_length=120,
                         verbose_name="Detalhe",
                     ),

@@ -43,6 +43,7 @@ from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_etiquetas import EtiquetasInnerView
 from .views_funil import (
     AndamentoPedidoView,
+    EnvioPedidoView,
     EtiquetasDaOrigemView,
     EtiquetasImpressaoView,
     PrazoProducaoView,
@@ -402,6 +403,12 @@ urlpatterns = [
         'pedidos/<int:pk>/andamento/',
         AndamentoPedidoView.as_view(),
         name='andamento_pedido',
+    ),
+    # A transportadora e o rastreio do pedido que já saiu (seção 106).
+    path(
+        'pedidos/<int:pk>/envio/',
+        EnvioPedidoView.as_view(),
+        name='envio_pedido',
     ),
     path('manutencoes/inner/', ManutencaoInnerView.as_view(), name='manutencao_inner'),
 ]

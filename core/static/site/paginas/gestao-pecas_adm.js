@@ -135,14 +135,14 @@
               '<input class="kit-linha-qtd" type="number" min="1" max="99" inputmode="numeric" aria-label="Quantidade">' +
               '<button type="button" data-kit-mais aria-label="Mais um">+</button>' +
             '</div>' +
-            '<button type="button" class="kit-liga-peca" data-kit-peca><i class="fa-solid fa-link" aria-hidden="true"></i><span></span></button>' +
+            '<button type="button" class="kit-liga-peca" data-kit-peca><i class="bi bi-link-45deg" aria-hidden="true"></i><span></span></button>' +
             '<button type="button" class="kit-solta-peca" data-kit-desligar aria-label="Soltar a peça avulsa" hidden>×</button>' +
           '</div>' +
         '</div>' +
         '<div class="kit-linha-ordem">' +
-          '<button type="button" data-kit-subir aria-label="Subir o item"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>' +
-          '<button type="button" data-kit-descer aria-label="Descer o item"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>' +
-          '<button type="button" class="kit-linha-remover" data-kit-remover aria-label="Remover o item"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>' +
+          '<button type="button" data-kit-subir aria-label="Subir o item"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>' +
+          '<button type="button" data-kit-descer aria-label="Descer o item"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>' +
+          '<button type="button" class="kit-linha-remover" data-kit-remover aria-label="Remover o item"><i class="bi bi-trash3" aria-hidden="true"></i></button>' +
         '</div>';
       linha.querySelector(".kit-linha-nome").value = texto(item.nome);
       linha.querySelector(".kit-linha-detalhe").value = texto(item.detalhe);
@@ -262,6 +262,16 @@
         ((peca && peca.componentes) || []).forEach(function (item) { novaLinha(item, false); });
         atualizarEscolhida();
         mostrarCorpo();
+        // a máquina do kit fica à vista na caixa dos chips (que rola sozinha)
+        var marcada = caixaMaquinas.querySelector('input[name="maquina"]:checked');
+        if (marcada && marcada.value) {
+          window.requestAnimationFrame(function () {
+            var chip = marcada.parentNode;
+            caixaMaquinas.scrollTop = Math.max(0, chip.offsetTop - caixaMaquinas.offsetTop - 8);
+          });
+        } else {
+          caixaMaquinas.scrollTop = 0;
+        }
       },
       preparar: function () {
         var itens = [].map.call(linhas.children, function (linha) {
@@ -402,7 +412,10 @@
     kit.preparar();
     modal.querySelector(".pecas-card").classList.add("is-loading");
 
-    fetch(form.action, {
+    // getAttribute, e não `form.action`: o formulário tem um campo chamado
+    // "action" (o hidden "save"), e `form.action` devolvia esse campo -- o
+    // salvar ia para "/site/pecas/[object HTMLInputElement]" e dava 404
+    fetch(form.getAttribute("action"), {
       method: "POST",
       body: new FormData(form),
       credentials: "same-origin",

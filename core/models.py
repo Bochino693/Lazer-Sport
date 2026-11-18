@@ -1470,10 +1470,18 @@ class PecasReposicao(Prime):
 
     @property
     def url_publica(self):
-        """A página do produto: o kit tem a dele (/kits/<id>/), a peça a sua (/pecas/<id>/)."""
+        """A página do produto: o kit tem a dele (/kits/<id>/), a peça a sua (/pecas/<id>/).
+
+        Sempre pelas rotas do site público (o painel, no host interno, tem as dele).
+        """
+        from django.conf import settings
         from django.urls import reverse
 
-        return reverse("kit_detalhe" if self.eh_kit else "reposicao_detalhe", args=[self.pk])
+        return reverse(
+            "kit_detalhe" if self.eh_kit else "reposicao_detalhe",
+            args=[self.pk],
+            urlconf=settings.ROOT_URLCONF,
+        )
 
     @property
     def foto_do_card(self):
@@ -1651,7 +1659,7 @@ class ComponenteKit(models.Model):
         max_length=120,
         blank=True,
         default="",
-        help_text="Uma linha a mais na página do kit, ex.: com o jogo Boliche dos Bichinhos.",
+        help_text="Uma linha a mais na página do kit, ex.: com o jogo Dragon Bowling.",
     )
     quantidade = models.PositiveSmallIntegerField(
         default=1,
@@ -2224,6 +2232,11 @@ class Frete(Prime):
         return f"Frete carrinho #{self.carrinho.id} - R$ {self.valor}"
 
 
+#: A situação que o pedido tinha no banco ainda não foi lida (o campo veio
+#: adiado num `.only()`/`.defer()`): o `save()` pergunta ao banco, uma vez.
+_SITUACAO_DESCONHECIDA = object()
+
+
 class Pedido(Prime):
     STATUS_CHOICES = (
         ('aguardando_pagamento', 'Aguardando pagamento'),
@@ -2270,8 +2283,112 @@ class Pedido(Prime):
     SITUACOES_PAGAS = ("pago", "em_preparacao", "saiu_entrega", "finalizado")
 
     #: O caminho do pedido depois de pago, na ordem em que a fábrica anda.
-    #: A retirada pula o "saiu para entrega" (Meus pedidos também pula).
+    #: Na retirada, "saiu_entrega" é o "Pronto para retirada" (seção 106):
+    #: a máquina pronta, esperando o cliente na fábrica.
     ANDAMENTO = ("pago", "em_preparacao", "saiu_entrega", "finalizado")
+
+    # ---------------- as fases, com data (LEIA-ME-V10, seção 106) ----------------
+    # "Em todos os pedidos devemos ter esse faseamento, para o cliente
+    # conseguir ver tudo certinho até a entrega." A linha do tempo de Meus
+    # pedidos precisa do DIA de cada fase ("Pago em 12/11", "Saiu em 18/11"),
+    # e o pedido só guardava a situação de agora. Cada data é gravada
+    # sozinha pelo `save()` quando a situação muda -- venha a mudança do
+    # webhook do Mercado Pago, da conferência do pagamento, do painel ou do
+    # admin --, sem ninguém precisar lembrar.
+    DATA_DA_SITUACAO = {
+        "pago": "pago_em",
+        "em_preparacao": "preparacao_em",
+        "saiu_entrega": "enviado_em",
+        "finalizado": "entregue_em",
+        "cancelado": "cancelado_em",
+    }
+
+    pago_em = models.DateTimeField("Pago em", null=True, blank=True)
+    preparacao_em = models.DateTimeField("Em preparação desde", null=True, blank=True)
+    enviado_em = models.DateTimeField(
+        "Saiu para entrega (ou pronto para retirada) em", null=True, blank=True,
+    )
+    entregue_em = models.DateTimeField("Entregue (ou retirado) em", null=True, blank=True)
+    cancelado_em = models.DateTimeField("Cancelado em", null=True, blank=True)
+
+    # O ENVIO: quem leva e como o cliente acompanha. O nome da
+    # transportadora é TEXTO, e não uma chave para `Transportadora`: o
+    # `core` não depende do `sistema_interno`, e o pedido entregue continua
+    # dizendo quem levou mesmo que a transportadora saia da lista depois.
+    transportadora_envio = models.CharField(
+        "Transportadora", max_length=120, blank=True, default="",
+        help_text="Quem leva o pedido (ou “Entrega própria”).",
+    )
+    codigo_rastreio = models.CharField("Código de rastreio", max_length=60, blank=True, default="")
+    link_rastreio = models.URLField("Link de rastreio", max_length=500, blank=True, default="")
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Guarda a situação lida do banco: é com ela que o `save()` compara.
+
+        Sem isto, saber se a situação mudou custaria uma consulta a cada
+        gravação -- e o pedido é gravado à toa o tempo todo (impresso,
+        prazo, e-mail enviado).
+        """
+        instancia = super().from_db(db, field_names, values)
+        instancia._situacao_gravada = instancia.__dict__.get("status", _SITUACAO_DESCONHECIDA)
+        return instancia
+
+    def refresh_from_db(self, using=None, fields=None, from_queryset=None):
+        super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+        if fields is None or "status" in fields:
+            self._situacao_gravada = self.__dict__.get("status", _SITUACAO_DESCONHECIDA)
+
+    def _datas_da_mudanca(self, anterior, agora=None):
+        """Acerta as datas das fases para a situação de agora. Devolve os campos mexidos.
+
+        * a fase em que o pedido ENTRA ganha a data de agora (se ainda não
+          tinha: voltar a "pago" por correção não muda o dia do pagamento);
+        * as fases de antes que ficaram sem data -- o pedido que pulou de
+          "pago" direto para "saiu para entrega" -- ganham a mesma data: o
+          cliente nunca vê uma fase "feita" sem dia;
+        * as fases DEPOIS da de agora perdem a data (a volta de correção:
+          o "saiu para entrega" por engano não fica como se tivesse saído);
+        * sair do "cancelado" (só pelo admin) apaga a data do cancelamento.
+          Cancelar não apaga nada: a linha do tempo para onde parou.
+        """
+        agora = agora or django_timezone.now()
+        mexidos = []
+
+        def gravar(campo, valor):
+            if getattr(self, campo) != valor:
+                setattr(self, campo, valor)
+                mexidos.append(campo)
+
+        if self.status == "cancelado":
+            if self.cancelado_em is None:
+                gravar("cancelado_em", agora)
+            return mexidos
+
+        if anterior == "cancelado":
+            gravar("cancelado_em", None)
+
+        posicao = self.ANDAMENTO.index(self.status) if self.status in self.ANDAMENTO else -1
+        for indice, passo in enumerate(self.ANDAMENTO):
+            campo = self.DATA_DA_SITUACAO[passo]
+            if indice <= posicao:
+                if getattr(self, campo) is None:
+                    gravar(campo, agora)
+            else:
+                gravar(campo, None)
+        return mexidos
+
+    @property
+    def retirada(self):
+        return self.tipo_envio == "retirada"
+
+    @property
+    def situacao_texto(self):
+        """A situação como a equipe e o cliente leem: na retirada, o "saiu
+        para entrega" é "Pronto para retirada"."""
+        if self.status == "saiu_entrega" and self.retirada:
+            return "Pronto para retirada"
+        return self.get_status_display()
 
     #: As formas do checkout traduzidas para as da venda (que não separa
     #: crédito de débito: as duas são "cartão").
@@ -2394,29 +2511,35 @@ class Pedido(Prime):
         Aguardando pagamento: nada -- quem paga é o cliente, pelo checkout.
         Cancelado: nada, é o fim. Pago em diante: qualquer passo do
         andamento (para a frente ou de volta, a correção existe) e o
-        cancelamento. A retirada não tem "saiu para entrega".
+        cancelamento. Na retirada, o "saiu para entrega" é o "Pronto para
+        retirada" (seção 106): a fase com dia que o cliente acompanha.
         """
         if self.status not in self.SITUACOES_PAGAS:
             return []
-        passos = [
-            passo for passo in self.ANDAMENTO
-            if not (passo == "saiu_entrega" and self.tipo_envio == "retirada")
-        ]
-        return [passo for passo in passos if passo != self.status] + ["cancelado"]
+        return [passo for passo in self.ANDAMENTO if passo != self.status] + ["cancelado"]
 
-    def mudar_situacao(self, nova):
+    def mudar_situacao(self, nova, envio=None):
         """Leva o pedido a `nova` (o andamento do painel) e acerta a venda.
 
         Devolve ("criada" | "desfeita" | "", id da venda). Levanta
         ValueError com a frase da tela quando o passo não existe a partir
-        da situação de agora.
+        da situação de agora. `envio` ({transportadora_envio, codigo_rastreio,
+        link_rastreio}, já conferido por `core.fases_pedido.ler_envio`) é
+        gravado JUNTO com a situação: o cliente nunca vê "Saiu para entrega"
+        sem saber por qual transportadora (seção 106).
         """
         rotulos = dict(self.STATUS_CHOICES)
         if nova not in rotulos:
             raise ValueError("Situação desconhecida para o pedido.")
+        envio = dict(envio or {})
         with transaction.atomic():
             atual = type(self).objects.select_for_update().get(pk=self.pk)
+            for campo, valor in envio.items():
+                setattr(atual, campo, valor)
+                setattr(self, campo, valor)
             if nova == atual.status:
+                if envio:
+                    atual.save(update_fields=[*envio, "atualizado"])
                 return atual.acertar_venda()
             if nova not in atual.proximas_situacoes():
                 if atual.status == "aguardando_pagamento":
@@ -2429,8 +2552,12 @@ class Pedido(Prime):
                     f"ir para “{rotulos[nova]}”."
                 )
             atual.status = nova
-            atual.save(update_fields=["status", "atualizado"])
+            # as datas das fases entram sozinhas no `save()` (seção 106)
+            atual.save(update_fields=["status", *envio, "atualizado"])
             self.status = nova
+            for campo in self.DATA_DA_SITUACAO.values():
+                setattr(self, campo, getattr(atual, campo))
+            self._situacao_gravada = nova
             return atual.acertar_venda()
 
     def finalizar(self, forma_pagamento=None):
@@ -2645,7 +2772,42 @@ class Pedido(Prime):
                 Decimal(self.valor_frete or 0)
         )
 
+        # AS DATAS DAS FASES (seção 106): só quando a situação vai junto na
+        # gravação e mudou de verdade. O `save(update_fields=[...])` de quem
+        # muda a situação (o checkout, o painel, a devolução ao carrinho)
+        # leva as datas na mesma gravação, sem ninguém precisar listá-las.
+        update_fields = kwargs.get("update_fields")
+        if update_fields is None or "status" in update_fields:
+            mexidos = self._acertar_datas_das_fases()
+            if mexidos and update_fields is not None:
+                kwargs["update_fields"] = list(dict.fromkeys([*update_fields, *mexidos]))
+
         super().save(*args, **kwargs)
+
+        if (update_fields is None or "status" in update_fields) and "status" in self.__dict__:
+            self._situacao_gravada = self.status
+
+    def _acertar_datas_das_fases(self):
+        """Compara com a situação que estava no banco e grava as datas.
+
+        A situação anterior vem do `from_db` (zero consulta). Só o pedido
+        lido sem a situação (`.only()`) e que teve a situação trocada
+        pergunta ao banco -- uma vez.
+        """
+        if "status" not in self.__dict__:
+            return []  # adiada e não tocada: não mudou
+        if self._state.adding:
+            anterior = None
+        else:
+            anterior = getattr(self, "_situacao_gravada", _SITUACAO_DESCONHECIDA)
+            if anterior is _SITUACAO_DESCONHECIDA:
+                anterior = (
+                    type(self)._base_manager.filter(pk=self.pk)
+                    .values_list("status", flat=True).first()
+                )
+        if anterior == self.status:
+            return []
+        return self._datas_da_mudanca(anterior)
 
     @classmethod
     def criar_do_carrinho(cls, carrinho):

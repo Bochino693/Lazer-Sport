@@ -4941,6 +4941,69 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 .ls-folha-andamento-opcao.perigo>i{color:var(--red-texto);background:rgba(var(--red-rgb),.12)}
 .ls-folha-andamento-opcao.perigo strong{color:var(--red-texto)}
 
+/* ------------------------------------ o envio do pedido (seção 106)
+   "Para o cliente conseguir ver tudo certinho até a entrega": quem leva
+   e o código de rastreio. A transportadora é um chip (rádio dentro de
+   <label>, nunca lista suspensa); "Entrega própria" na frente, "Outra" no
+   fim abre o campo do nome. Na linha da tabela, o botão do rastreio. */
+.ls-envio-botao{
+  display:flex;align-items:center;gap:8px;max-width:100%;margin-top:6px;padding:6px 10px;
+  border:1px solid rgba(var(--violet-rgb),.32);border-radius:12px;
+  background:rgba(var(--violet-rgb),.10);color:var(--violet-claro);
+  font:inherit;text-align:left;cursor:pointer;
+}
+.ls-envio-botao>i{flex:0 0 auto;font-size:1rem}
+.ls-envio-botao-texto{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.ls-envio-botao-nome{color:var(--text);font-size:.78rem;font-weight:900;overflow-wrap:anywhere}
+.ls-envio-botao-texto small{color:var(--violet-texto);font-size:.7rem;font-weight:800;letter-spacing:.03em;overflow-wrap:anywhere}
+.ls-envio-botao.pendente{border-style:dashed;border-color:rgba(var(--yellow-rgb),.45);background:rgba(var(--yellow-rgb),.08);color:var(--yellow-texto)}
+.ls-envio-botao.pendente .ls-envio-botao-texto small{color:var(--yellow-texto)}
+.ls-envio-botao:hover{border-color:var(--acento-linha);background:var(--acento-fundo)}
+.ls-envio-botao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-envio-botao[aria-busy="true"]{opacity:.6;pointer-events:none}
+
+.ls-folha-envio-grupo{margin:0;padding:0;border:0;min-width:0}
+.ls-folha-envio-grupo legend{
+  float:none;width:auto;margin:0 0 8px;padding:0;
+  color:var(--text-2);font-size:.74rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+}
+.ls-folha-envio-chips{
+  display:flex;flex-wrap:wrap;gap:7px;max-height:min(34dvh,260px);overflow:auto;
+  padding:2px;overscroll-behavior:contain;
+}
+.ls-folha-envio-chip{
+  position:relative;display:inline-flex;align-items:center;min-height:38px;padding:6px 13px;
+  border:1px solid var(--line);border-radius:999px;background:var(--panel-2);
+  color:var(--text);font-size:.82rem;font-weight:850;line-height:1.15;cursor:pointer;
+  transition:border-color .15s ease,background .15s ease;
+}
+.ls-folha-envio-chip input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.ls-folha-envio-chip:hover{border-color:var(--acento-linha);background:var(--acento-fundo)}
+.ls-folha-envio-chip:has(input:focus-visible){outline:2px solid var(--acento);outline-offset:2px}
+.ls-folha-envio-chip:has(input:checked){
+  border-color:var(--acento);background:rgba(var(--acento-rgb),.2);color:var(--acento-claro);
+  box-shadow:0 0 0 1px rgba(var(--acento-rgb),.35),0 6px 18px rgba(var(--acento-rgb),.18);
+}
+.ls-folha-envio-chip:has(input:checked)::before{content:"\2713";margin-right:6px;font-weight:900}
+.ls-folha-envio-chip.propria{border-color:rgba(var(--green-rgb),.35);color:var(--green-claro)}
+.ls-folha-envio-chip.propria:has(input:checked){border-color:var(--green);background:rgba(var(--green-rgb),.18);color:var(--green-claro);box-shadow:0 0 0 1px rgba(var(--green-rgb),.35)}
+.ls-folha-envio-chip.outra{border-style:dashed}
+.ls-folha-envio-campos{display:grid;gap:10px}
+.ls-folha-envio-campo{display:grid;gap:4px;margin:0;min-width:0}
+.ls-folha-envio-campo>span{color:var(--text-2);font-size:.74rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.ls-folha-envio-campo input{
+  width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;
+  background:var(--bg-1);color:var(--text);font:inherit;font-size:.95rem;font-weight:750;
+}
+.ls-folha-envio-campo input:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba(var(--acento-rgb),.2)}
+.ls-folha-envio-campo small{color:var(--text-2);font-size:.74rem;font-weight:700}
+.ls-folha-envio-campo.is-opcional>span::after{content:" (opcional)";text-transform:none;letter-spacing:0;font-weight:750}
+.ls-folha-envio-outra{margin-top:10px}
+.ls-folha-envio-outra[hidden]{display:none}
+.ls-folha-envio-erro{border-color:rgba(var(--red-rgb),.35);background:rgba(var(--red-rgb),.1)}
+.ls-folha-envio-erro i{color:var(--red-texto)}
+.ls-folha-envio-erro[hidden]{display:none}
+
 /* --------------------------------- a fila da produção (tela Etiquetas)
    Os pedidos pagos e as propostas aprovadas, em cartões: de onde vieram,
    para quem, as máquinas, o prazo e o botão das etiquetas. É por aqui que

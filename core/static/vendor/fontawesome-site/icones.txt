@@ -123,8 +123,10 @@ fa-magnifying-glass
 fa-map
 fa-map-location-dot
 fa-map-marked-alt
+fa-microchip
 fa-mobile-screen
 fa-mobile-screen-button
+fa-network-wired
 fa-palette
 fa-paper-plane
 fa-pause
@@ -136,6 +138,7 @@ fa-phone
 fa-piggy-bank
 fa-pix
 fa-play
+fa-plug
 fa-plug-circle-check
 fa-plus
 fa-puzzle-piece

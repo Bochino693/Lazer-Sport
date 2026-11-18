@@ -209,6 +209,9 @@
       window.setTimeout(function () {
         try { if (janela.open) janela.close(); } catch (erro) { /* nada */ }
         janela.remove();
+        /* Uma folha que abre outra (o andamento abre a do envio): a página
+           continua travada e o foco fica na folha nova. */
+        if (document.querySelector(".ls-recado-folha.ls-folha-producao")) return;
         document.documentElement.classList.remove("ls-recado-travado");
         if (anterior && anterior.isConnected && typeof anterior.focus === "function") {
           try { anterior.focus({ preventScroll: true }); } catch (erro) { /* nada */ }
@@ -496,7 +499,7 @@
         item.appendChild(icone(opcao.icone));
         var textos = criar("span");
         textos.appendChild(criar("strong", "", opcao.rotulo));
-        textos.appendChild(criar("small", "", DICA_DO_PASSO[opcao.valor] || ""));
+        textos.appendChild(criar("small", "", opcao.dica || DICA_DO_PASSO[opcao.valor] || ""));
         item.appendChild(textos);
         item.addEventListener("click", function () {
           fechar();
@@ -519,6 +522,21 @@
     });
 
     function escolher(opcao) {
+      /* "Saiu para entrega" do pedido com frete: antes de gravar, quem
+         leva e o código de rastreio (seção 106) -- os dois vão juntos com
+         a situação, e o cliente já vê o rastreio em Meus pedidos. */
+      if (opcao.pede_envio) {
+        folhaDoEnvio({
+          titulo: "Saiu para entrega",
+          subtitulo: titulo.replace("Andamento do pedido", "Pedido"),
+          url: url,
+          campos: { status: opcao.valor },
+          confirmar: "Marcar saiu para entrega",
+          atual: botao.dataset,
+          botao: botao
+        });
+        return;
+      }
       var pergunta = Promise.resolve(true);
       if (opcao.valor === "cancelado" && window.LSAviso) {
         pergunta = window.LSAviso.confirmar({
@@ -546,17 +564,210 @@
     }
   }
 
+  /* ==================================================================
+     4. O ENVIO DO PEDIDO: TRANSPORTADORA E RASTREIO (seção 106)
+     "Em todos os pedidos devemos ter esse faseamento, para o cliente
+     conseguir ver tudo certinho até a entrega." A equipe escolhe quem
+     leva -- chips das transportadoras ativas da Logística, mais "Entrega
+     própria" e "Outra" (nunca uma lista suspensa) -- e digita o código e,
+     se tiver, o link. Abre no "Saiu para entrega" e no botão do rastreio
+     da linha (para completar depois).
+     ================================================================== */
+  var ENTREGA_PROPRIA = "Entrega própria";
+  var OUTRA = "__outra__";
+
+  function transportadorasDaTela() {
+    var bloco = document.getElementById("lsTransportadorasEnvio");
+    if (!bloco) return [];
+    try { return JSON.parse(bloco.textContent || "[]") || []; } catch (erro) { return []; }
+  }
+
+  function folhaDoEnvio(opcoes) {
+    var lista = transportadorasDaTela();
+    var atual = opcoes.atual || {};
+    var antes = String(atual.envioTransportadora || "").trim();
+
+    abrirFolha("ls-folha-envio", function (cartao, fechar, id) {
+      cabecalho(cartao, id, "bi-truck", opcoes.titulo, opcoes.subtitulo || "");
+
+      /* QUEM LEVA: um chip por transportadora (rádios dentro de <label>) */
+      var grupo = criar("fieldset", "ls-folha-envio-grupo");
+      grupo.appendChild(criar("legend", "", "Transportadora"));
+      var chips = criar("div", "ls-folha-envio-chips");
+      var radios = [];
+      function chip(valor, rotulo, site, classe) {
+        var rotuloEl = criar("label", "ls-folha-envio-chip" + (classe ? " " + classe : ""));
+        var radio = criar("input");
+        radio.type = "radio";
+        radio.name = id + "Transportadora";
+        radio.value = valor;
+        radio.dataset.site = site || "";
+        rotuloEl.appendChild(radio);
+        rotuloEl.appendChild(criar("span", "", rotulo));
+        chips.appendChild(rotuloEl);
+        radios.push(radio);
+        return radio;
+      }
+      chip(ENTREGA_PROPRIA, ENTREGA_PROPRIA, "", "propria");
+      lista.forEach(function (transportadora) { chip(transportadora.nome, transportadora.nome, transportadora.site); });
+      var outra = chip(OUTRA, "Outra", "", "outra");
+      grupo.appendChild(chips);
+
+      var outraCaixa = criar("label", "ls-folha-envio-campo ls-folha-envio-outra");
+      outraCaixa.appendChild(criar("span", "", "Nome da transportadora"));
+      var outraNome = criar("input");
+      outraNome.type = "text";
+      outraNome.maxLength = 120;
+      outraNome.autocomplete = "off";
+      outraNome.placeholder = "Ex.: Transportes Silva";
+      outraCaixa.appendChild(outraNome);
+      outraCaixa.hidden = true;
+      grupo.appendChild(outraCaixa);
+      cartao.appendChild(grupo);
+
+      /* O CÓDIGO E O LINK */
+      var campos = criar("div", "ls-folha-envio-campos");
+      var codigoCaixa = criar("label", "ls-folha-envio-campo");
+      codigoCaixa.appendChild(criar("span", "", "Código de rastreio"));
+      var codigo = criar("input");
+      codigo.type = "text";
+      codigo.maxLength = 60;
+      codigo.autocomplete = "off";
+      codigo.setAttribute("autocapitalize", "characters");
+      codigo.spellcheck = false;
+      codigo.placeholder = "Ex.: AB123456789BR";
+      codigo.value = atual.envioCodigo || "";
+      codigoCaixa.appendChild(codigo);
+      codigoCaixa.appendChild(criar("small", "", "Sem o código ainda? Dá para pôr depois, no botão do rastreio da linha."));
+      var linkCaixa = criar("label", "ls-folha-envio-campo");
+      linkCaixa.appendChild(criar("span", "", "Link de rastreio (opcional)"));
+      var link = criar("input");
+      link.type = "url";
+      link.inputMode = "url";
+      link.maxLength = 500;
+      link.autocomplete = "off";
+      link.spellcheck = false;
+      link.placeholder = "https://";
+      link.value = atual.envioLink || "";
+      linkCaixa.appendChild(link);
+      linkCaixa.appendChild(criar("small", "", "Vira o botão “Rastrear” na tela do cliente."));
+      campos.appendChild(codigoCaixa);
+      campos.appendChild(linkCaixa);
+      cartao.appendChild(campos);
+
+      var erro = criar("p", "ls-folha-producao-aviso ls-folha-envio-erro");
+      erro.setAttribute("role", "alert");
+      erro.hidden = true;
+      cartao.appendChild(erro);
+
+      var botoes = criar("div", "ls-recado-folha-botoes");
+      var voltar = criar("button", "ls-recado-botao", "Voltar");
+      voltar.type = "button";
+      voltar.addEventListener("click", fechar);
+      var salvar = criar("button", "ls-recado-botao ls-recado-botao--primario");
+      salvar.type = "submit";
+      salvar.appendChild(icone("bi-truck"));
+      salvar.appendChild(document.createTextNode(" " + (opcoes.confirmar || "Salvar")));
+      botoes.appendChild(voltar);
+      botoes.appendChild(salvar);
+      cartao.appendChild(botoes);
+
+      /* O que já estava gravado volta marcado (a correção começa dele). */
+      var marcado = null;
+      if (antes) {
+        radios.forEach(function (radio) {
+          if (!marcado && radio.value !== OUTRA && radio.value.toLowerCase() === antes.toLowerCase()) marcado = radio;
+        });
+        if (!marcado) {
+          marcado = outra;
+          outraNome.value = antes;
+        }
+        marcado.checked = true;
+      }
+
+      function escolhida() {
+        return radios.filter(function (radio) { return radio.checked; })[0] || null;
+      }
+
+      function acertar() {
+        var radio = escolhida();
+        outraCaixa.hidden = !(radio && radio === outra);
+        /* o site da transportadora vira a dica do link (nada é gravado sozinho) */
+        link.placeholder = radio && radio.dataset.site ? radio.dataset.site : "https://";
+        codigoCaixa.classList.toggle("is-opcional", !!radio && radio.value === ENTREGA_PROPRIA);
+      }
+      chips.addEventListener("change", function () {
+        acertar();
+        erro.hidden = true;
+        var radio = escolhida();
+        if (radio === outra) outraNome.focus();
+      });
+      acertar();
+
+      function mostrarErro(texto) {
+        erro.textContent = "";
+        erro.appendChild(icone("bi-exclamation-triangle"));
+        erro.appendChild(document.createTextNode(" " + texto));
+        erro.hidden = false;
+      }
+
+      cartao.addEventListener("submit", function () {
+        var radio = escolhida();
+        var nome = radio ? (radio === outra ? outraNome.value.trim() : radio.value) : "";
+        if (!nome) {
+          mostrarErro(radio === outra ? "Escreva o nome da transportadora." : "Escolha quem leva o pedido.");
+          (radio === outra ? outraNome : (radios[0] || salvar)).focus();
+          return;
+        }
+        var dados = {};
+        Object.keys(opcoes.campos || {}).forEach(function (chave) { dados[chave] = opcoes.campos[chave]; });
+        dados.transportadora = nome;
+        dados.codigo_rastreio = codigo.value.trim();
+        dados.link_rastreio = link.value.trim();
+        salvar.disabled = true;
+        salvar.setAttribute("aria-busy", "true");
+        if (opcoes.botao) opcoes.botao.setAttribute("aria-busy", "true");
+        postar(opcoes.url, dados).then(function (corpo) {
+          fechar();
+          avisar("sucesso", corpo.rotulo || "Envio salvo", corpo.msg);
+          if (typeof window.LSAtualizarTela === "function") window.LSAtualizarTela();
+          else window.location.reload();
+        }).catch(function (falha) {
+          mostrarErro(falha.message);
+          salvar.disabled = false;
+        }).finally(function () {
+          salvar.removeAttribute("aria-busy");
+          if (opcoes.botao) opcoes.botao.removeAttribute("aria-busy");
+        });
+      });
+
+      return marcado || radios[0] || voltar;
+    });
+  }
+
   /* ------------------------------------------------- os cliques */
   document.addEventListener("click", function (evento) {
-    var alvo = evento.target.closest && evento.target.closest("[data-etiquetas-url], [data-andamento-url]");
+    var alvo = evento.target.closest && evento.target.closest("[data-etiquetas-url], [data-andamento-url], [data-envio-url]");
     if (!alvo || alvo.disabled) return;
     var etiquetas = alvo.dataset.etiquetasUrl;
     var andamento = alvo.dataset.andamentoUrl;
-    if (!etiquetas && !andamento) return;
+    var envio = alvo.dataset.envioUrl;
+    if (!etiquetas && !andamento && !envio) return;
     evento.preventDefault();
     evento.stopPropagation();
     if (etiquetas) abrirEtiquetas(etiquetas, alvo);
-    else folhaDeAndamento(alvo);
+    else if (andamento) folhaDeAndamento(alvo);
+    else {
+      folhaDoEnvio({
+        titulo: "Rastreio do envio",
+        subtitulo: (alvo.dataset.envioTitulo || "").replace("Envio do pedido", "Pedido"),
+        url: envio,
+        campos: {},
+        confirmar: "Salvar rastreio",
+        atual: alvo.dataset,
+        botao: alvo
+      });
+    }
   });
 
   window.LSProducao = {

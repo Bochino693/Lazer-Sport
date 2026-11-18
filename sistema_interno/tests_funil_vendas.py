@@ -183,16 +183,20 @@ class PedidoViraVendaTests(BaseFunil):
             pedido.mudar_situacao("em_preparacao")
         self.assertFalse(Venda.objects.exists())
 
-    def test_a_retirada_nao_tem_saiu_para_entrega(self):
+    def test_a_retirada_passa_pelo_pronto_para_retirada(self):
+        # Seção 106: na retirada o "saiu_entrega" é o "Pronto para
+        # retirada" -- a fase com dia que o cliente acompanha em Meus
+        # pedidos (antes a retirada pulava esse passo).
+        retirada = self.pedido()
         self.assertEqual(
-            self.pedido().proximas_situacoes(),
-            ["em_preparacao", "finalizado", "cancelado"],
-        )
-        # O pedido antigo, com frete, ainda passa pelo "saiu para entrega".
-        self.assertEqual(
-            self.pedido(antigo_com_frete=True).proximas_situacoes(),
+            retirada.proximas_situacoes(),
             ["em_preparacao", "saiu_entrega", "finalizado", "cancelado"],
         )
+        retirada.status = "saiu_entrega"
+        self.assertEqual(retirada.situacao_texto, "Pronto para retirada")
+        # O pedido antigo, com frete, continua "saiu para entrega".
+        frete = self.pedido(antigo_com_frete=True, status="saiu_entrega")
+        self.assertEqual(frete.situacao_texto, "Saiu para entrega")
 
     def test_o_pagamento_aprovado_pelo_checkout_cria_a_venda_depois_do_commit(self):
         """O checkout não muda; o sinal do pedido acerta a venda no commit."""
@@ -706,11 +710,15 @@ class AndamentoETelasTests(BaseFunil):
         opcoes = re.search(
             rf'data-andamento-url="/pedidos/{pedido.pk}/andamento/"\s+data-andamento-opcoes="([^"]+)"', html,
         ).group(1).replace("&quot;", '"')
-        # Retirada na fábrica: sem "saiu para entrega".
+        # Retirada na fábrica: o "saiu para entrega" é o "Pronto para
+        # retirada", sem transportadora (seção 106).
+        opcoes = json.loads(opcoes)
         self.assertEqual(
-            [opcao["valor"] for opcao in json.loads(opcoes)],
-            ["em_preparacao", "finalizado", "cancelado"],
+            [opcao["valor"] for opcao in opcoes],
+            ["em_preparacao", "saiu_entrega", "finalizado", "cancelado"],
         )
+        self.assertEqual(opcoes[1]["rotulo"], "Pronto para retirada")
+        self.assertNotIn("pede_envio", opcoes[1])
 
     def test_a_janela_do_orcamento_leva_o_prazo_e_as_etiquetas(self):
         from .views_gestao import OrcamentosInnerView
