@@ -103,7 +103,7 @@
             <input type="hidden" name="codigo" value="{{ o.codigo }}">
             <button type="submit" class="ck-botao ck-botao--primario oc-botao-assinar">
                 <i class="fa-solid fa-signature" aria-hidden="true"></i>
-                <span>Assinar o termo</span>
+                <span>Assinar o contrato</span>
             </button>
         </form>
         {% endif %}
@@ -118,7 +118,7 @@
         <a class="ck-botao ck-botao--secundario"
            href="{% url 'documento_assinado_publico' cartao.termo_assinado.codigo_publico %}" target="_blank" rel="noopener">
             <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
-            Ver termo assinado
+            Ver contrato assinado
         </a>
         {% endif %}
         {% if cartao.whatsapp %}
@@ -131,7 +131,7 @@
     {% if cartao.pode_assinar %}
     <p class="oc-dica">
         <i class="fa-solid fa-clock" aria-hidden="true"></i>
-        O link da assinatura vale 5 minutos. Se o tempo acabar, toque de novo em “Assinar o termo”.
+        O link da assinatura vale 5 minutos. Se o tempo acabar, toque de novo em “Assinar o contrato”.
     </p>
     {% endif %}
     {# O PIX: o mesmo da proposta, enquanto falta pagar (pagamento online fica para depois) #}

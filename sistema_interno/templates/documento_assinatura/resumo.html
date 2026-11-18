@@ -28,7 +28,7 @@
       {% endif %}
       {% if conteudo.condicoes.forma_envio %}<div><dt>Envio</dt><dd>{{ conteudo.condicoes.forma_envio }}</dd></div>{% endif %}
       {% if conteudo.tipo == "contrato" %}
-        <div><dt>Entrega (Cláusula 3ª)</dt><dd>{{ conteudo.prazo.numero }} {{ conteudo.prazo.unidade }}</dd></div>
+        <div><dt>Entrega (Cláusula 3ª)</dt><dd>{% if conteudo.prazo.dias == 0 %}Pronta entrega{% else %}{{ conteudo.prazo.numero }} {{ conteudo.prazo.unidade }}{% endif %}</dd></div>
         <div><dt>Vendedor</dt><dd>{{ conteudo.vendedor.representante_nome }}</dd></div>
       {% endif %}
     </dl>

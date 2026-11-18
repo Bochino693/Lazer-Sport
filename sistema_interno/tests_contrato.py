@@ -622,3 +622,14 @@ class ContratoTests(BaseDocumento):
         documento.refresh_from_db()
         self.assertTrue(documento.assinado)
         self.assertTrue(self.orcamento.atividades.filter(resumo__startswith="Termo de compra assinado").exists())
+
+
+class PrazoZeroTests(SimpleTestCase):
+    """0 dia não vira "00 (zero) dias úteis": é pronta entrega."""
+
+    def test_clausula_terceira_com_prazo_zero(self):
+        prazo = contrato._prazo(Orcamento(prazo_producao_dias=0))
+        secoes = contrato.secoes(valor_total="1,00", valor_extenso="um real", condicao="Pix", prazo=prazo)
+        texto = " ".join(c["texto"] for s in secoes for c in s["clausulas"])
+        self.assertIn("imediatamente após a confirmação do pagamento (pronta entrega)", texto)
+        self.assertNotIn("(zero) dias", texto)

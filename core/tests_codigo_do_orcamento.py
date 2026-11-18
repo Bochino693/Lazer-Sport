@@ -529,7 +529,7 @@ class FasesTests(Base):
         pagina = self.client.get("/meus-pedidos/").content.decode()
         self.assertIn('class="oc-fase is-feita"', pagina)
         self.assertIn('class="oc-fase is-atual" aria-current="step"', pagina)
-        self.assertIn("Assinar o termo", pagina)
+        self.assertIn("Assinar o contrato", pagina)
         self.assertIn("Pagamento por Pix", pagina)
         self.assertIn("fa-signature", pagina)
 

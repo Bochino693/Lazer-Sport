@@ -449,7 +449,7 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
 
     proposta = Fase("proposta", "Proposta")
     aprovacao = Fase("aprovacao", "Aprovação")
-    termo = Fase("termo", "Termo assinado")
+    termo = Fase("termo", "Contrato assinado")
     pagamento = Fase("pagamento", "Pagamento")
     producao = Fase("producao", "Produção")
     # "Entregue", o mesmo nome da última fase do pedido do site: os dois

@@ -331,8 +331,13 @@ def secoes(*, valor_total, valor_extenso, condicao, prazo) -> list[dict]:
                 _clausula(
                     3,
                     "O VENDEDOR obriga-se a entregar o equipamento descrito na "
-                    f"Cláusula 1ª no prazo de {prazo['numero']} ({prazo['extenso']}) "
-                    f"{prazo['unidade']} após a confirmação do pagamento.",
+                    + (
+                        # 0 dia = pronta entrega: "no prazo de 00 (zero) dias úteis" não se escreve
+                        "Cláusula 1ª imediatamente após a confirmação do pagamento (pronta entrega)."
+                        if not prazo.get("dias")
+                        else f"Cláusula 1ª no prazo de {prazo['numero']} ({prazo['extenso']}) "
+                        f"{prazo['unidade']} após a confirmação do pagamento."
+                    ),
                 ),
                 _clausula(
                     4,
