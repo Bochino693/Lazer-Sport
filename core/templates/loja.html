@@ -81,6 +81,14 @@
                     <span class="contagem">{{ contagem_por_tipo.brinquedo }}</span>
                 </button>
                 {% endif %}
+                {% if contagem_por_tipo.kit %}
+                {# o kit eletrônico (LEIA-ME seção 105): a parte elétrica da máquina, sem a máquina #}
+                <button type="button" class="loja-filtro-btn" data-tipo="kit">
+                    <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                    Kits eletrônicos
+                    <span class="contagem">{{ contagem_por_tipo.kit }}</span>
+                </button>
+                {% endif %}
                 {% if contagem_por_tipo.combo %}
                 <button type="button" class="loja-filtro-btn" data-tipo="combo">
                     <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
@@ -113,7 +121,9 @@
                            aria-label="Ver detalhes de {{ item.titulo }}">
                             <div class="loja-card-img">
                                 <span class="loja-card-tipo {{ item.tipo }}">
-                                    {% if item.tipo == 'peca' %}
+                                    {% if item.tipo == 'kit' %}
+                                        <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                                    {% elif item.tipo == 'peca' %}
                                         <i class="fa-solid fa-gears" aria-hidden="true"></i>
                                     {% elif item.tipo == 'promocao' %}
                                         <i class="fa-solid fa-tag" aria-hidden="true"></i>
@@ -138,7 +148,10 @@
 
                         <div class="loja-card-corpo">
                             <span class="loja-card-kicker">
-                                {% if item.tipo == 'peca' %}
+                                {% if item.tipo == 'kit' %}
+                                    <i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i>
+                                    {% if item.maquina %}Para {{ item.maquina }}{% else %}Pronto para instalar{% endif %}
+                                {% elif item.tipo == 'peca' %}
                                     <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
                                     Reposição original
                                 {% elif item.tipo == 'promocao' %}
@@ -159,7 +172,10 @@
                             {% if item.tipo == 'brinquedo' %}{% faixas item.titulo %}{% endif %}
 
                             <p class="loja-card-descricao">
-                                {% if item.tipo == 'peca' %}
+                                {% if item.tipo == 'kit' %}
+                                    {% if item.resumo %}{{ item.resumo }}. {% endif %}A parte eletrônica completa,
+                                    sem a máquina: pronta para instalar.
+                                {% elif item.tipo == 'peca' %}
                                     Peça de reposição para manter seu equipamento funcionando
                                     com o suporte especializado da Lazer &amp; Sport.
                                 {% elif item.tipo == 'promocao' %}
@@ -210,13 +226,14 @@
                             <div class="loja-card-acoes">
                                 {% comment %}
                                   só o que tem preço vai ao carrinho: o resto (promoção de brinde,
-                                  peça sob consulta) é conversa -- o servidor recusa o sem preço
+                                  peça ou kit sob consulta) é conversa -- o servidor recusa o sem
+                                  preço. O kit vai ao carrinho como a peça que ele é (`carrinho`).
                                 {% endcomment %}
                                 {% if item.preco %}
                                 <button
                                     type="button"
                                     class="loja-btn loja-btn-carrinho"
-                                    onclick="adicionarItemLoja(event, '{{ item.tipo }}', {{ item.id }}, this)"
+                                    onclick="adicionarItemLoja(event, '{{ item.carrinho|default:item.tipo }}', {{ item.id }}, this)"
                                     aria-label="Adicionar {{ item.titulo }} ao carrinho"
                                 >
                                     <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>

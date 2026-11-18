@@ -865,6 +865,50 @@
 <div class="espacador"></div>
 
 
+<!-- ======= KITS ELETRÔNICOS ======= -->
+{% comment %}
+  KITS ELETRÔNICOS (LEIA-ME seção 105): a parte eletrônica de uma máquina,
+  sem a máquina -- "para o cara instalar toda parte elétrica na máquina caso
+  ele só tenha a máquina", nas palavras do dono. A faixa só existe com kit na
+  vitrine; os cards são os da peça (partials/peca_card.html, com o selo "Kit").
+{% endcomment %}
+{% if kits_home %}
+<link rel="stylesheet" href="{% estatico 'site/paginas/home-kits.css' %}">
+<section id="kits-section" class="ls-kits-faixa" aria-labelledby="kits-titulo">
+  <div class="ls-kits-faixa-caixa">
+    <div class="ls-kits-faixa-topo">
+      <div class="ls-kits-faixa-texto">
+        <span class="ls-kits-faixa-olho">
+          <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+          Kit eletrônico
+        </span>
+        <h2 class="ls-kits-faixa-titulo" id="kits-titulo">Kits eletrônicos <span>monte sua própria máquina</span></h2>
+        <p class="ls-kits-faixa-sub">
+          A parte eletrônica completa, sem a máquina: TV Box com o jogo, sensores, câmera, placa,
+          cabos e fonte. Para montar a sua, trocar a eletrônica ou recuperar a máquina que parou.
+          Pronto para instalar.
+        </p>
+      </div>
+      <a href="{% url 'kits' %}#breadcrumb" class="ls-kits-faixa-todos">
+        Ver todos os kits
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+
+    <div class="pc-grade ls-kits-faixa-grade">
+      {% for kit in kits_home|slice:":4" %}
+      <article class="ls-kits-faixa-item">
+        {% include "partials/peca_card.html" with peca=kit %}
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<div class="espacador"></div>
+{% endif %}
+
+
 {% if pecas_todas %}
 <section id="pecas-section" class="destaques">
     <div class="ls-section-intro">

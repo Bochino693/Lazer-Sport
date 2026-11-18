@@ -256,6 +256,26 @@
                     </div>
                 {% endif %}
 
+                {% comment %}
+                  "Já tem a máquina? Kit eletrônico completo" (LEIA-ME seção 105): o kit
+                  eletrônico DESTA máquina -- a parte elétrica sem a máquina, para quem só
+                  tem a máquina (as palavras do dono). Leva à página do kit.
+                {% endcomment %}
+                {% for kit in kits_da_maquina %}
+                    <a class="produto-kit" href="{{ kit.url }}#breadcrumb">
+                        <span class="produto-kit-icone"><i class="fa-solid fa-microchip" aria-hidden="true"></i></span>
+                        <span class="produto-kit-texto">
+                            <small>Já tem a máquina?</small>
+                            <strong>Kit eletrônico completo</strong>
+                            <span>{{ kit.nome }}{% if kit.resumo %} · {{ kit.resumo }}{% endif %}</span>
+                        </span>
+                        <span class="produto-kit-acao">
+                            <b>{% if kit.preco %}R$ {{ kit.preco|moeda }} <small>no Pix</small>{% else %}Sob consulta{% endif %}</b>
+                            <span>Ver o kit <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                        </span>
+                    </a>
+                {% endfor %}
+
                 <section class="produto-secao" data-scroll-reveal>
                     <h2><i class="fas fa-align-left" aria-hidden="true"></i>Descrição</h2>
                     <p class="produto-descricao">{{ brinquedo.descricao|linebreaksbr }}</p>

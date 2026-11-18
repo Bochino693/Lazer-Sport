@@ -95,7 +95,13 @@ class PecaAdminView(AdminOnlyMixin, View):
 
         pecas = (
             PecasReposicao.objects
-            .prefetch_related("categoria_peca", "imagem_peca_reposicao")
+            .select_related("maquina")
+            .prefetch_related(
+                "categoria_peca",
+                "imagem_peca_reposicao",
+                # o que vem no kit eletrônico (LEIA-ME seção 105), na ordem
+                "componentes_kit",
+            )
             .annotate(
                 curtidas=Count(
                     "favoritos",
@@ -127,6 +133,8 @@ class PecaAdminView(AdminOnlyMixin, View):
             pecas = pecas.filter(imagem_peca_reposicao__isnull=True)
         elif situacao == "sem_preco":
             pecas = pecas.filter(preco_venda__isnull=True)
+        elif situacao == "kits":
+            pecas = pecas.filter(eh_kit=True)
 
         pagina = Paginator(pecas, 18).get_page(request.GET.get("page"))
 
@@ -160,6 +168,20 @@ class PecaAdminView(AdminOnlyMixin, View):
                 "categorias_nomes": [
                     c.nome_categoria_peca for c in peca.categoria_peca.all()
                 ],
+                # o kit eletrônico (LEIA-ME seção 105): a máquina e os itens
+                "eh_kit": peca.eh_kit,
+                "maquina_id": peca.maquina_id or "",
+                "maquina_nome": peca.maquina.nome_brinquedo if peca.maquina_id and peca.maquina else "",
+                "componentes": [
+                    {
+                        "nome": item.nome,
+                        "detalhe": item.detalhe,
+                        "quantidade": item.quantidade,
+                        "peca": item.peca_id or "",
+                    }
+                    for item in peca.componentes_kit.all()
+                ],
+                "url_site": peca.url_publica,
             })
 
         todas = PecasReposicao.objects.all()
@@ -180,6 +202,22 @@ class PecaAdminView(AdminOnlyMixin, View):
                 imagem_peca_reposicao__isnull=True,
             ).distinct().count(),
             "total_sem_preco": todas.filter(preco_venda__isnull=True).count(),
+            "total_kits": todas.filter(eh_kit=True).count(),
+            # a escolha da máquina do kit (chips de rádio com busca) e a peça
+            # avulsa que um item do kit pode ser (o Cabo HDMI)
+            # (a máquina fora do site que já é de um kit continua na lista:
+            # abrir e salvar o kit não pode soltá-lo dela)
+            "maquinas_kit": list(
+                Brinquedos.objects.filter(Q(ativo=True) | Q(kits_eletronicos__isnull=False))
+                .distinct()
+                .order_by("nome_brinquedo")
+                .values("id", "nome_brinquedo", "ativo")
+            ),
+            "pecas_avulsas": list(
+                PecasReposicao.objects.filter(eh_kit=False, uso=PecasReposicao.Uso.LOJA)
+                .order_by("nome")
+                .values("id", "nome", "ativo")
+            ),
         }
 
         response = render(request, self.template_name, contexto)
@@ -288,6 +326,11 @@ class PecaAdminView(AdminOnlyMixin, View):
         except ValueError as erro:
             raise ErroDeFormulario(str(erro))
         peca.ativo = request.POST.get("ativo") in ("1", "true", "on")
+        # o kit eletrônico (LEIA-ME seção 105): a marca e a máquina; os itens
+        # vêm depois do save (a peça nova ainda não tem id)
+        peca.eh_kit = request.POST.get("eh_kit") in ("1", "true", "on")
+        peca.maquina = self._maquina_do_kit(request) if peca.eh_kit else None
+        componentes = self._ler_componentes(request, peca)
         peca.save()
 
         categorias = request.POST.getlist("categorias")
@@ -296,6 +339,9 @@ class PecaAdminView(AdminOnlyMixin, View):
                 id__in=[c for c in categorias if str(c).isdigit()],
             )
         )
+
+        if componentes is not None:
+            self._gravar_componentes(peca, componentes)
 
         self._guardar_imagens(request, peca)
 

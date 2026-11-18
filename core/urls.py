@@ -9,6 +9,7 @@ from .views_favoritos import (
     meus_favoritos,
 )
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
+from .views_kits import KitDetalheView, KitsView
 from .views_app_avisos import service_worker_do_site
 from .escudo_jogos import ArmadilhaView, PasseDoJogoView
 from .views_app_jogos import manifesto_dos_jogos, service_worker_dos_jogos
@@ -30,6 +31,7 @@ from .sitemaps import (
     BrinquedosSitemap,
     CategoriasSitemap,
     JogosSitemap,
+    KitsSitemap,
     PecasSitemap,
     TemasSitemap,
 )
@@ -129,6 +131,7 @@ sitemaps = {
     "estaticas": PaginasEstaticasSitemap,
     "temas": TemasSitemap,
     "pecas": PecasSitemap,
+    "kits": KitsSitemap,
     "brinquedos": BrinquedosSitemap,
     "categorias": CategoriasSitemap,
     "jogos": JogosSitemap,
@@ -262,6 +265,9 @@ urlpatterns = [
         ReposicaoDetalheView.as_view(),
         name="reposicao_detalhe",
     ),
+    # o kit eletrônico: a parte elétrica da máquina, sem a máquina (LEIA-ME 105)
+    path("kits/", KitsView.as_view(), name="kits"),
+    path("kits/<int:pk>/", KitDetalheView.as_view(), name="kit_detalhe"),
     path(
         "carrinho/aplicar-cupom/",
         aplicar_cupom,

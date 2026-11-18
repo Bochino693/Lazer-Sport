@@ -8,23 +8,34 @@
   cartão é do tema escuro do site. A foto com fundo próprio ocupa o palco
   inteiro (ls-fotos.js marca `foto-cheia`).
 
+  O KIT ELETRÔNICO (LEIA-ME seção 105) usa o mesmo cartão: o selo "Kit"
+  no lugar do "Original de fábrica", a máquina dele nos chips e a lista
+  curta do que vem dentro ("7 itens: TV Box, ..."). Sem foto própria, o
+  palco mostra a máquina com a faixa "KIT ELETRÔNICO" (nunca quadro vazio).
+  O link leva à página do kit (/kits/<id>/); o carrinho é o da peça.
+
   Recebe:
     peca        a peça (com `imagem_peca_reposicao` e `categoria_peca`
-                trazidos por prefetch);
+                trazidos por prefetch; o kit também com `maquina` e
+                `componentes_kit` -- `PecasReposicao.kits_da_vitrine`);
     favoritos   (opcional) o dicionário do cartão com `desejado` e
                 `curtidas`: mostra a curtida e a lista de desejos;
     objeto_3d   (opcional) o objeto 3D da peça: o selo "3D" na foto.
 {% endcomment %}
-<div class="pc-card{% if not peca.preco_venda %} pc-card--consulta{% endif %}">
-  <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pc-media" aria-label="Ver detalhes de {{ peca.nome }}">
-    {% with img=peca.imagem_principal %}
-      {% if img and img.imagem %}
-        <img class="pc-foto" src="{{ img.imagem|foto:720 }}" alt="{{ peca.nome }}" loading="lazy" decoding="async" width="720" height="720">
-      {% else %}
-        <img class="pc-foto pc-foto--vazia" src="{% static 'images/sem-imagem.svg' %}" alt="Imagem indisponível para {{ peca.nome }}" loading="lazy" decoding="async">
-      {% endif %}
-    {% endwith %}
-    <span class="pc-selo" title="Peça original de fábrica"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> <span class="pc-longo">Original de fábrica</span></span>
+{% with link=peca.url_publica img=peca.foto_do_card %}
+<div class="pc-card{% if not peca.preco_venda %} pc-card--consulta{% endif %}{% if peca.eh_kit %} pc-card--kit{% endif %}">
+  <a href="{{ link }}#breadcrumb" class="pc-media" aria-label="Ver detalhes de {{ peca.nome }}">
+    {% if img %}
+      <img class="pc-foto" src="{{ img|foto:720 }}" alt="{% if peca.foto_e_da_maquina %}{{ peca.maquina.nome_brinquedo }}: a máquina do {{ peca.nome }}{% else %}{{ peca.nome }}{% endif %}" loading="lazy" decoding="async" width="720" height="720">
+    {% else %}
+      <img class="pc-foto pc-foto--vazia" src="{% static 'images/sem-imagem.svg' %}" alt="Imagem indisponível para {{ peca.nome }}" loading="lazy" decoding="async">
+    {% endif %}
+    {% if peca.eh_kit %}
+      <span class="pc-selo pc-selo--kit" title="Kit eletrônico: a parte elétrica da máquina, pronta para instalar"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit</span>
+      {% if peca.foto_e_da_maquina %}<span class="pc-faixa-kit" aria-hidden="true"><i class="fa-solid fa-microchip"></i> Kit eletrônico</span>{% endif %}
+    {% else %}
+      <span class="pc-selo" title="Peça original de fábrica"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> <span class="pc-longo">Original de fábrica</span></span>
+    {% endif %}
     {% if objeto_3d %}
       <span class="pc-3d" title="Esta peça tem objeto 3D"><i class="fa-solid fa-cube" aria-hidden="true"></i> 3D</span>
     {% endif %}
@@ -39,18 +50,27 @@
 
   <div class="pc-corpo">
     <div class="pc-categorias">
-      {% for cat in peca.categoria_peca.all %}
-        <span class="pc-categoria">{{ cat.nome_categoria_peca }}</span>
-      {% empty %}
-        <span class="pc-categoria">Peça de reposição</span>
-      {% endfor %}
+      {% if peca.eh_kit %}
+        <span class="pc-categoria pc-categoria--kit">Kit eletrônico</span>
+        {% if peca.maquina %}<span class="pc-categoria">Para {{ peca.maquina.nome_brinquedo }}</span>{% endif %}
+      {% else %}
+        {% for cat in peca.categoria_peca.all %}
+          <span class="pc-categoria">{{ cat.nome_categoria_peca }}</span>
+        {% empty %}
+          <span class="pc-categoria">Peça de reposição</span>
+        {% endfor %}
+      {% endif %}
     </div>
 
     <h3 class="pc-nome">
-      <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb">{{ peca.nome }}</a>
+      <a href="{{ link }}#breadcrumb">{{ peca.nome }}</a>
     </h3>
 
-    <p class="pc-desc">{{ peca.descricao_peca|truncatewords:18 }}</p>
+    {% if peca.eh_kit and peca.resumo_do_kit %}
+      <p class="pc-itens"><i class="fa-solid fa-list-check" aria-hidden="true"></i> {{ peca.resumo_do_kit }}</p>
+    {% else %}
+      <p class="pc-desc">{{ peca.descricao_peca|truncatewords:18 }}</p>
+    {% endif %}
 
     <div class="pc-rodape">
       <div class="pc-preco">
@@ -73,16 +93,17 @@
         </button>
       {% else %}
         <a class="pc-botao pc-zap"
-           href="https://wa.me/5511960563135?text={{ 'Olá! Quero saber da peça '|urlencode }}{{ peca.nome|urlencode }}"
+           href="https://wa.me/5511960563135?text={% if peca.eh_kit %}{{ 'Olá! Quero um orçamento do '|urlencode }}{% else %}{{ 'Olá! Quero saber da peça '|urlencode }}{% endif %}{{ peca.nome|urlencode }}"
            target="_blank" rel="noopener">
           <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-          <span class="pc-longo">Consultar com a fábrica</span><span class="pc-curto">Consultar</span>
+          <span class="pc-longo">{% if peca.eh_kit %}Pedir orçamento{% else %}Consultar com a fábrica{% endif %}</span><span class="pc-curto">{% if peca.eh_kit %}Orçamento{% else %}Consultar{% endif %}</span>
         </a>
       {% endif %}
-      <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pc-botao pc-detalhes"
+      <a href="{{ link }}#breadcrumb" class="pc-botao pc-detalhes"
          title="Ver detalhes" aria-label="Ver detalhes de {{ peca.nome }}">
         <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
       </a>
     </div>
   </div>
 </div>
+{% endwith %}

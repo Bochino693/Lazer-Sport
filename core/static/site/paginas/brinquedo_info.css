@@ -1700,3 +1700,82 @@
 @media (prefers-reduced-motion: reduce) {
     .produto-imagem-box img.produto-troca-camada, #produto-imagem-principal { transition: none; }
 }
+
+/* ======================================================================
+   "JÁ TEM A MÁQUINA? KIT ELETRÔNICO COMPLETO" (LEIA-ME seção 105)
+
+   Logo abaixo do preço: quem já tem a máquina (ou uma parada) vê que pode
+   levar só a parte eletrônica. Um cartão só, clicável inteiro, nas cores do
+   selo "Kit" do site (amarelo e vermelho), para não se confundir com o preço.
+   ====================================================================== */
+.produto-kit {
+    display: grid;
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+    padding: 14px 16px 14px 14px;
+    border: 1px solid rgba(255, 210, 63, .45);
+    border-radius: 20px;
+    color: #fff;
+    background:
+        radial-gradient(circle at 100% 0, rgba(255, 210, 63, .2), transparent 46%),
+        linear-gradient(135deg, #2a1a52, #10183b 70%);
+    box-shadow: 0 16px 34px rgba(20, 10, 60, .35), inset 0 1px 0 rgba(255, 255, 255, .1);
+    text-decoration: none;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.produto-kit:hover {
+    color: #fff;
+    border-color: #ffd23f;
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(255, 159, 28, .22);
+}
+.produto-kit-icone {
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+    display: grid;
+    place-items: center;
+    color: #1b1300;
+    background: linear-gradient(135deg, #ffd23f, #ff9f1c);
+    box-shadow: 0 8px 18px rgba(255, 159, 28, .35);
+    font-size: 1.3rem;
+}
+.produto-kit-texto { min-width: 0; display: grid; gap: 2px; }
+.produto-kit-texto small {
+    color: #ffd23f;
+    font-size: .7rem;
+    font-weight: 900;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.produto-kit-texto strong { font-size: 1.05rem; line-height: 1.2; }
+.produto-kit-texto > span { color: #c9d6f0; font-size: .8rem; line-height: 1.4; overflow-wrap: anywhere; }
+.produto-kit-acao { display: grid; justify-items: end; gap: 6px; text-align: right; }
+.produto-kit-acao b { color: #fff; font-size: .95rem; white-space: nowrap; }
+.produto-kit-acao b small { color: #c9d6f0; font-size: .7rem; font-weight: 700; }
+.produto-kit-acao > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 11px;
+    color: #fff;
+    background: linear-gradient(135deg, #e63946, #ff6b3d);
+    font-size: .76rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .produto-kit { grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 13px; }
+    .produto-kit-icone { width: 44px; height: 44px; border-radius: 13px; font-size: 1.1rem; }
+    .produto-kit-acao {
+        grid-column: 1 / -1;
+        grid-template-columns: auto auto;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+}

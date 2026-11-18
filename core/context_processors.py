@@ -54,6 +54,7 @@ CHAVE_CATEGORIAS = "ctx:categorias_header:v1"
 CHAVE_ESTABELECIMENTOS = "ctx:estabelecimentos_globais:v1"
 CHAVE_CLIENTES_RODAPE = "ctx:clientes_rodape:v1"
 CHAVE_HA_EVENTOS = "ctx:ha_eventos:v1"
+CHAVE_HA_KITS = "ctx:ha_kits:v1"
 
 _CATEGORIAS_OCULTAS = (
     "competitivos",
@@ -72,6 +73,7 @@ def limpar_cache_global():
         CHAVE_ESTABELECIMENTOS,
         CHAVE_CLIENTES_RODAPE,
         CHAVE_HA_EVENTOS,
+        CHAVE_HA_KITS,
     ])
 
 
@@ -112,8 +114,20 @@ def ha_eventos():
     return dados
 
 
+def ha_kits():
+    """Há kit eletrônico na vitrine? Sem nenhum, "Kits eletrônicos" sai do menu (LEIA-ME seção 105)."""
+    dados = cache.get(CHAVE_HA_KITS)
+    if dados is None:
+        from .models import PecasReposicao
+
+        dados = PecasReposicao.da_vitrine().filter(eh_kit=True).exists()
+        cache.set(CHAVE_HA_KITS, dados, TTL_GLOBAL)
+    return dados
+
+
 def eventos_globais(request):
-    return {"ha_eventos": _Preguicoso(ha_eventos)}
+    # o kit segue a mesma regra dos eventos: página vazia não fica no menu
+    return {"ha_eventos": _Preguicoso(ha_eventos), "ha_kits": _Preguicoso(ha_kits)}
 
 
 class _Preguicoso:

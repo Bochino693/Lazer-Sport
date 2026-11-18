@@ -1395,6 +1395,31 @@ class PecasReposicao(Prime):
         editable=False
     )
 
+    # O KIT ELETRÔNICO (LEIA-ME seção 105). O dono: "precisamos agora também
+    # do chamado kit [...] os componentes eletrônicos sem a máquina para troca
+    # ou semi instalação [...] para o cara instalar toda parte elétrica na
+    # máquina caso ele só tenha a máquina". O kit é vendido exatamente como a
+    # peça já é -- carrinho, Pix/cartão/boleto, parcelas sem juros, pedido,
+    # etiqueta e painel já funcionam para ela --, então ele é uma peça MARCADA,
+    # e não um sexto tipo de item no carrinho. O que ele tem de diferente: a
+    # vitrine própria (/kits/, fora da lista de peças), a máquina a que se
+    # destina e a lista do que vem dentro (`ComponenteKit`).
+    eh_kit = models.BooleanField(
+        "É um kit eletrônico",
+        default=False,
+        db_index=True,
+        help_text="Os componentes eletrônicos de uma máquina, sem a máquina: aparece em /kits/, não na lista de peças.",
+    )
+    maquina = models.ForeignKey(
+        "Brinquedos",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="kits_eletronicos",
+        verbose_name="Máquina do kit",
+        help_text="A máquina em que o kit é instalado (a página dela chama para o kit).",
+    )
+
     class Meta:
         verbose_name = "Peça de Reposição"
         verbose_name_plural = "Peças de Reposição"
@@ -1416,6 +1441,67 @@ class PecasReposicao(Prime):
         cadastrado para ser vendido a ninguém.
         """
         return cls.objects.filter(ativo=True, uso=cls.Uso.LOJA)
+
+    # O kit continua DENTRO de `da_vitrine`: é ela que diz o que o carrinho,
+    # a lista de desejos e o aplicativo aceitam, e o kit é vendido como peça.
+    # Quem lista PEÇAS (a página de peças, a seção da home) pede as avulsas;
+    # quem lista KITS (/kits/, a faixa da home, a loja) pede os kits.
+
+    @classmethod
+    def pecas_avulsas_da_vitrine(cls):
+        """As peças da vitrine que não são kit: a lista de /pecas-reposicao/."""
+        return cls.da_vitrine().filter(eh_kit=False)
+
+    @classmethod
+    def kits_da_vitrine(cls):
+        """Os kits eletrônicos que o site mostra (/kits/), com a máquina e os itens já juntos."""
+        return (
+            cls.da_vitrine()
+            .filter(eh_kit=True)
+            .select_related("maquina")
+            .prefetch_related(
+                "imagem_peca_reposicao",
+                "categoria_peca",
+                # o item ligado a uma peça avulsa (o Cabo HDMI) já vem com ela
+                models.Prefetch("componentes_kit", queryset=ComponenteKit.objects.select_related("peca")),
+            )
+            .order_by("nome", "id")
+        )
+
+    @property
+    def url_publica(self):
+        """A página do produto: o kit tem a dele (/kits/<id>/), a peça a sua (/pecas/<id>/)."""
+        from django.urls import reverse
+
+        return reverse("kit_detalhe" if self.eh_kit else "reposicao_detalhe", args=[self.pk])
+
+    @property
+    def foto_do_card(self):
+        """A foto da vitrine: a do cadastro ou, no kit sem foto, a da máquina dele.
+
+        O kit nunca fica com o quadro vazio: sem foto própria ele mostra a
+        máquina em que é instalado, com o selo "KIT ELETRÔNICO" por cima
+        (partials/peca_card.html). Devolve o arquivo (ImageField) ou None.
+        """
+        principal = self.imagem_principal
+        if principal and principal.imagem:
+            return principal.imagem
+        if self.eh_kit and self.maquina_id and self.maquina and self.maquina.imagem_brinquedo:
+            return self.maquina.imagem_brinquedo
+        return None
+
+    @property
+    def foto_e_da_maquina(self):
+        """O kit está mostrando a foto da máquina (não tem foto própria)?"""
+        principal = self.imagem_principal
+        return bool(self.eh_kit and not (principal and principal.imagem) and self.foto_do_card)
+
+    @property
+    def resumo_do_kit(self):
+        """A lista curta do card: "7 itens: TV Box, Barra com 5 sensores, Câmera…"."""
+        from .kits import resumo_dos_itens
+
+        return resumo_dos_itens(self.componentes_kit.all()) if self.eh_kit else ""
 
     @property
     def de_manutencao(self):
@@ -1538,6 +1624,64 @@ class ImagemPeca(Prime):
                 raise ValidationError(
                     "Cada peça pode ter no máximo 8 imagens."
                 )
+
+
+class ComponenteKit(models.Model):
+    """Um item que VEM NO KIT ELETRÔNICO: a TV Box, a barra com 5 sensores, a câmera...
+
+    POR QUE EXISTE (LEIA-ME seção 105). O dono descreveu o kit pelo que vem
+    dentro: "strike kids, uma tv box, 5 sensores de precisão, a câmera e etc
+    [...] no lazer shot, a arma, a tv box". É essa lista que o cliente lê
+    antes de comprar ("O que vem no kit", com ícone e quantidade) e que o
+    card resume ("7 itens: TV Box, ..."). Texto livre, e não uma peça
+    obrigatória: a placa Zero Delay e o chicote não são vendidos sozinhos.
+    Quando o item TAMBÉM é vendido avulso (o Cabo HDMI), `peca` liga à peça
+    e a página do kit leva o cliente a ela.
+    """
+
+    kit = models.ForeignKey(
+        PecasReposicao,
+        on_delete=models.CASCADE,
+        related_name="componentes_kit",
+        verbose_name="Kit",
+    )
+    nome = models.CharField("Item", max_length=80)
+    detalhe = models.CharField(
+        "Detalhe",
+        max_length=120,
+        blank=True,
+        default="",
+        help_text="Uma linha a mais na página do kit, ex.: com o jogo Boliche dos Bichinhos.",
+    )
+    quantidade = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(99)],
+    )
+    ordem = models.PositiveSmallIntegerField(default=0, db_index=True)
+    peca = models.ForeignKey(
+        PecasReposicao,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="em_kits",
+        verbose_name="Peça vendida avulsa",
+        help_text="Opcional: a peça da vitrine que é este item (o cliente pode abri-la).",
+    )
+
+    class Meta:
+        verbose_name = "Item do kit eletrônico"
+        verbose_name_plural = "Itens do kit eletrônico"
+        ordering = ["ordem", "id"]
+
+    def __str__(self):
+        return f"{self.kit} · {self.quantidade}× {self.nome}"
+
+    @property
+    def icone(self):
+        """O ícone do item na página do kit (pelo nome: TV Box, sensor, câmera...)."""
+        from .kits import icone_do_componente
+
+        return icone_do_componente(self.nome)
 
 
 class Combos(Prime):

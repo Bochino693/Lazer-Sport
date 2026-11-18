@@ -440,6 +440,12 @@
 .loja-card-tipo.brinquedo {
     background: linear-gradient(135deg, rgba(0, 74, 173, .96), rgba(8, 120, 249, .96));
 }
+/* o kit eletrônico (LEIA-ME seção 105): o amarelo do selo "Kit" do site */
+.loja-card-tipo.kit {
+    border-color: rgba(255, 210, 63, .6);
+    background: linear-gradient(135deg, #ffd23f, #ff9f1c);
+    color: #1b1300;
+}
 
 .loja-card-corpo {
     display: flex;

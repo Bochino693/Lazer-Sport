@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load interno_extras static %}
+{% load fotos %}
+
+{% block title %}Kits eletrônicos | Lazer &amp; Sport{% endblock %}
+
+{% block meta_description %}Kits eletrônicos Lazer &amp; Sport: a parte eletrônica completa do Boliche Virtual, do Strike Kids e do Lazer Shot (TV Box com o jogo, sensores, câmera, placa, cabos e fonte), pronta para instalar na sua máquina.{% endblock %}
+{% block canonical_path %}/kits/{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  OS KITS ELETRÔNICOS (LEIA-ME seção 105). O dono: o kit "deve ter espaço
+  entre os demais produtos" -- são os componentes eletrônicos sem a máquina,
+  "para o cara instalar toda parte elétrica na máquina caso ele só tenha a
+  máquina". Esta é a vitrine deles: o mesmo casco da página de peças
+  (ls-pagina.css) e o mesmo cartão (partials/peca_card.html, com o selo
+  "Kit" e a lista curta do que vem dentro). Os kits não aparecem em
+  /pecas-reposicao/.
+{% endcomment %}
+<link rel="stylesheet" href="{% estatico 'site/ls-pagina.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/kits.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/ls-peca-card.css' %}">
+<script src="{% estatico 'site/ls-peca-card.js' %}" defer></script>
+
+<div class="ls-pagina kits-pagina">
+
+<section class="ls-pagina-hero" id="header">
+    <div class="ls-pagina-hero-inner">
+
+        <nav class="ls-pagina-trilha" aria-label="Navegação estrutural" id="breadcrumb">
+            <a href="{% url 'home' %}">Home</a>
+            <span>›</span>
+            <strong>Kits eletrônicos</strong>
+        </nav>
+
+        <span class="ls-pagina-selo kits-selo">
+            <i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit eletrônico
+        </span>
+
+        <h1 class="ls-pagina-titulo">
+            Monte sua própria <span>máquina</span>
+        </h1>
+
+        <p class="ls-pagina-sub">
+            A parte eletrônica completa da máquina, sem a máquina: TV Box com o jogo, sensores,
+            câmera, placa, cabos e fonte. Para montar a sua, trocar a eletrônica de uma que parou
+            ou instalar tudo na máquina que você já tem. Kit completo e pronto para instalar.
+        </p>
+
+        <div class="ls-pagina-stats">
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                <span><b>{{ cartoes_kits|length }}</b> kit{{ cartoes_kits|length|pluralize }} na vitrine</span>
+            </div>
+            {% if total_maquinas %}
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Para <b>{{ total_maquinas }}</b> máquina{{ total_maquinas|pluralize }} da fábrica</span>
+            </div>
+            {% endif %}
+            <div class="ls-pagina-stat">
+                <i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i>
+                <span>Pronto para instalar</span>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<svg class="ls-pagina-onda" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
+
+<section class="ls-pagina-secao" id="kits">
+
+    {# os três passos: o que o cliente faz com o kit (o pedido do dono, em uma linha cada) #}
+    <ol class="kits-passos" aria-label="Como funciona o kit">
+        <li>
+            <span class="kits-passo-icone"><i class="fa-solid fa-gamepad" aria-hidden="true"></i></span>
+            <span><b>Escolha o kit da sua máquina</b><small>Boliche, Strike Kids, Lazer Shot...</small></span>
+        </li>
+        <li>
+            <span class="kits-passo-icone"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
+            <span><b>Receba a parte eletrônica completa</b><small>Tudo o que a máquina precisa para funcionar</small></span>
+        </li>
+        <li>
+            <span class="kits-passo-icone"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i></span>
+            <span><b>Instale e coloque para rodar</b><small>Na máquina nova ou na que estava parada</small></span>
+        </li>
+    </ol>
+
+{% if cartoes_kits %}
+<div class="pc-grade kits-grade">
+    {% for cartao in cartoes_kits %}
+    <article class="kits-item" data-scroll-reveal>
+        {% include "partials/peca_card.html" with peca=cartao.obj favoritos=cartao %}
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="ls-vazio">
+    <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+    <h2>Nenhum kit na vitrine agora</h2>
+    <p>
+        Os kits eletrônicos estão em atualização. Fale com a gente pelo WhatsApp e diga qual é a
+        sua máquina: montamos a parte eletrônica completa para ela.
+    </p>
+    <a class="ls-botao" href="https://wa.me/5511960563135?text={{ 'Olá! Quero um kit eletrônico para a minha máquina.'|urlencode }}"
+       target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar com um vendedor
+    </a>
+</div>
+{% endif %}
+
+    <p class="kits-rodape">
+        Procurando uma peça só (o cabo, a fonte, o sensor)?
+        <a href="{% url 'pecas_reposicao' %}#breadcrumb">Veja as peças de reposição <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+    </p>
+
+</section>
+</div>
+
+{% endblock %}

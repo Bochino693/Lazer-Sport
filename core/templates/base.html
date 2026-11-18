@@ -154,7 +154,7 @@
       "source": "document",
       "where": {"and": [
         {"href_matches": ["/", "/loja/", "/brinquedos/", "/brinquedo/*", "/combo/*", "/promocao/*",
-                          "/pecas-reposicao/", "/pecas/*", "/manutencoes/", "/arena/", "/jogos/", "/jogos/:jogo/",
+                          "/pecas-reposicao/", "/pecas/*", "/kits/", "/kits/*", "/manutencoes/", "/arena/", "/jogos/", "/jogos/:jogo/",
                           "/eventos/", "/projetos/", "/categoria/*", "/estabelecimentos/", "/estabelecimentos/*"]},
         {"not": {"href_matches": ["/jogos/partida/", "/jogos/ranking/*"]}},
         {"not": {"selector_matches": "[data-no-prefetch], [download], [target=_blank]"}}
@@ -333,6 +333,8 @@
         </button>
         <div class="ls-topo-painel" id="topo-servicos">
           <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open" aria-hidden="true"></i><span><b>Catálogo de Peças</b><small>Reposição para o seu brinquedo</small></span></a>
+          {# o kit eletrônico: a parte elétrica da máquina, sem a máquina (LEIA-ME 105) #}
+          {% if ha_kits %}<a href="{% url 'kits' %}#breadcrumb"><i class="fa-solid fa-microchip" aria-hidden="true"></i><span><b>Kits eletrônicos</b><small>Monte sua própria máquina</small></span></a>{% endif %}
           <a href="{% url 'manutencoes' %}#nova"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i><span><b>Solicitar Manutenção</b><small>Técnico da fábrica no seu espaço</small></span></a>
           <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span><b>Projetos Sob Medida</b><small>Do desenho à montagem</small></span></a>
           <a href="{% url 'arena' %}#monte-seu-espaco"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span><b>Monte seu espaço em 3D</b><small>Diga o tamanho, a gente arruma tudo</small></span></a>
@@ -563,6 +565,7 @@
       <a href="{% url 'loja' %}#catalogo"><i class="fa-solid fa-store nav-icon" aria-hidden="true"></i>Loja Online</a>
       <span class="ls-mobile-nav-grupo">Peças e serviços</span>
       <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open nav-icon" aria-hidden="true"></i>Catálogo de Peças</a>
+      {% if ha_kits %}<a href="{% url 'kits' %}#breadcrumb"><i class="fa-solid fa-microchip nav-icon" aria-hidden="true"></i>Kits eletrônicos</a>{% endif %}
       <a href="{% url 'manutencoes' %}#nova"><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>Solicitar Manutenção</a>
       <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb nav-icon" aria-hidden="true"></i>Projetos Sob Medida</a>
       <a href="{% url 'arena' %}#monte-seu-espaco"><i class="fa-solid fa-wand-magic-sparkles nav-icon" aria-hidden="true"></i>Monte seu espaço em 3D</a>
@@ -600,6 +603,7 @@
           <a href="{% url 'estabelecimento_brinquedo' est.id %}#brinquedos" class="suggestion-tag">Para {{ est.nome_estabelecimento }}</a>
         {% endfor %}
         <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="suggestion-tag">Peças de reposição</a>
+        {% if ha_kits %}<a href="{% url 'kits' %}#breadcrumb" class="suggestion-tag">Kits eletrônicos</a>{% endif %}
         {% for slug, rotulo in temas_de_busca %}
           <a href="{% url 'pagina_tema' slug %}" class="suggestion-tag">{{ rotulo }}</a>
         {% endfor %}
