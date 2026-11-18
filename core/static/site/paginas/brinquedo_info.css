@@ -1798,6 +1798,10 @@
     background: rgba(255, 210, 63, .1);
 }
 .produto-marca.produto-marca--kit::before { display: none; }
+/* no celular, a marca do kit cabe numa linha só: o "monte sua própria máquina" sai */
+@media (max-width: 600px) {
+    .produto-marca--kit .produto-marca-mais { display: none; }
+}
 
 /* ---- O que vem no kit ---- */
 .kit-itens {
