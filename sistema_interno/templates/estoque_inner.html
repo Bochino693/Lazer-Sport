@@ -32,6 +32,11 @@
     <a href="{% url 'movimentacoes_inner' %}" class="btn btn-outline-secondary">
       <i class="bi bi-clock-history me-1"></i> Histórico
     </a>
+    {% if permissoes_interno.entrada_nota_ver %}
+    <a href="{% url 'notas_entrada' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-receipt-cutoff me-1"></i> Notas de entrada
+    </a>
+    {% endif %}
     <button type="button" class="btn btn-success" id="novoItem">
       <i class="bi bi-plus-lg me-1"></i> Novo item
     </button>
@@ -253,12 +258,13 @@
           </div>
 
           <div class="col-6 col-md-4">
-            <label class="form-label" for="itemPreco">Preço inicial / custo médio *</label>
+            <label class="form-label" for="itemPreco">Preço inicial / custo médio</label>
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="itemPreco" name="preco_fornecedor"
-                     data-rotulo="valor pago" inputmode="decimal" placeholder="1.250,00" required data-mascara="moeda">
+                     data-rotulo="valor pago" inputmode="decimal" placeholder="1.250,00" data-mascara="moeda">
             </div>
+            <div class="form-text">Obrigatório quando entra quantidade (pode ser zero). Mesmo material no mesmo local: a compra é somada ao saldo.</div>
           </div>
 
           <div class="col-6 col-md-4">

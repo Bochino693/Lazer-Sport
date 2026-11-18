@@ -21,6 +21,11 @@
     </p>
   </div>
   <div class="ls-page-hero-actions">
+    {% if permissoes_interno.entrada_nota %}
+    <a class="btn btn-success" href="{% url 'notas_entrada' %}">
+      <i class="bi bi-receipt-cutoff me-1" aria-hidden="true"></i> Entrada de nota
+    </a>
+    {% endif %}
     {% for opcao in janelas %}
       <a class="btn {% if opcao == janela %}btn-primary{% else %}btn-outline-secondary{% endif %}"
          href="?meses={{ opcao }}">{{ opcao }} meses</a>

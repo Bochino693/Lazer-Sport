@@ -76,6 +76,9 @@ SO_DE_UM_REGISTRO = {
     # precisam existir (tests_funil_vendas.py imprime de verdade)
     "etiquetas_maquinas": "um pedido, orçamento ou venda cadastrado",
     "etiquetas_maquinas_imprimir": "um pedido, orçamento ou venda cadastrado",
+    # a nota fiscal de entrada e o arquivo dela (tests_nota_entrada.py abre de verdade)
+    "nota_entrada": "uma nota fiscal de entrada lida",
+    "nota_entrada_arquivo": "o arquivo de uma nota guardada",
     # RH: a ficha, o documento, o comprovante, o espelho e o termo de um
     # colaborador que precisa existir (rh/tests_*.py abrem de verdade); o
     # link do termo é um token de 5 minutos.

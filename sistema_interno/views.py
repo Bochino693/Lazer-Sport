@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value
+from django.db.models import Count, DecimalField, F, OuterRef, ProtectedError, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -73,6 +73,16 @@ VALOR_EM_ESTOQUE = Coalesce(
         output_field=DecimalField(max_digits=14, decimal_places=2),
     ),
     ZERO,
+)
+
+
+# O que cada compra somou ao estoque: o total gravado no movimento (exato,
+# mesmo com o unitário arredondado em 2 casas -- a nota de parafuso a
+# R$ 0,034) e, no histórico antigo sem ele, quantidade x unitário.
+VALOR_DA_COMPRA = Coalesce(
+    F("variacao_valor"),
+    F("quantidade") * F("valor_unitario"),
+    output_field=DecimalField(max_digits=22, decimal_places=2),
 )
 
 
@@ -277,6 +287,18 @@ class RespostaJSONMixin:
             return self.erro(request, str(exc))
         except ValueError as exc:
             return self.erro(request, str(exc))
+        except ProtectedError as exc:
+            # ProtectedError É um IntegrityError: sem esta linha, excluir um
+            # material usado numa ficha técnica respondia "Já existe um
+            # registro com esses dados. Confira o nome e o local" -- a
+            # mensagem de cadastro duplicado, para uma exclusão.
+            dependentes = sorted({str(obj) for obj in exc.protected_objects})[:3]
+            return self.erro(
+                request,
+                "Não dá para excluir: outro registro depende deste"
+                + (f" ({', '.join(dependentes)})" if dependentes else "")
+                + ". Desative em vez de excluir.",
+            )
         except IntegrityError:
             return self.erro(
                 request,
@@ -818,6 +840,14 @@ class CadastrosDeEstoqueMixin:
                 "Zere os locais de guarda ou desative o material."
             )
 
+        fichas = list(material.fichas.select_related("produto")[:3])
+        if fichas:
+            produtos = ", ".join(sorted({str(ficha.produto) for ficha in fichas}))
+            raise ErroDeFormulario(
+                f"Este material está na ficha técnica de {produtos}. Tire-o da ficha "
+                "ou desative o material."
+            )
+
         nome = material.nome_material
         material.delete()
         return self.sucesso(request, f"Material '{nome}' excluído.")
@@ -844,10 +874,18 @@ class CadastrosDeEstoqueMixin:
             get_object_or_404(Fornecedor, pk=fornecedor_id)
             if fornecedor_id else Fornecedor()
         )
-        fornecedor.nome = texto(
+        fornecedor.nome = " ".join(texto(
             request, "nome",
             obrigatorio=True, rotulo="o nome do fornecedor", limite=120,
-        )
+        ).split())
+        repetido = Fornecedor.objects.filter(nome__iexact=fornecedor.nome)
+        if fornecedor.pk:
+            repetido = repetido.exclude(pk=fornecedor.pk)
+        if repetido.exists():
+            raise ErroDeFormulario(
+                f"Já existe um fornecedor chamado “{fornecedor.nome}”. Escolha-o na lista "
+                "(ou diferencie o nome, por exemplo com a cidade)."
+            )
         fornecedor.telefone = texto(request, "telefone", limite=20)
         fornecedor.email = texto(request, "email", limite=150)
         fornecedor.cnpj = texto(request, "cnpj", limite=20)
@@ -966,18 +1004,40 @@ class EstoqueInnerView(
         if estoque.pk and str(estoque.material_id) != material_id:
             raise ErroDeFormulario("Não é possível trocar o material de um saldo existente. Cadastre outro local de estoque.")
         estoque.material = get_object_or_404(Material, pk=material_id)
-        estoque.descricao_local = texto(
+        estoque.descricao_local = " ".join(texto(
             request, "descricao_local",
             obrigatorio=True, rotulo="o local de guarda", limite=90,
-        )
+        ).split())
+        # O preço só é obrigatório quando entra quantidade: um local novo
+        # ainda vazio (o material vai chegar) nascia travado pedindo "valor
+        # pago" de uma compra que não existe -- e a pessoa digitava 0.
         preco_informado = decimal_br(
             request.POST.get("preco_fornecedor"),
             "Valor pago por unidade",
-            obrigatorio=True,
             limite=Decimal("9999999999.99"),
         )
+
+        # O MESMO MATERIAL NO MESMO LOCAL É UM SALDO SÓ ("soma se houver
+        # juntos"). Antes, cadastrar de novo a lona no Galpão A -- o jeito
+        # natural de lançar a segunda compra -- esbarrava no banco e voltava
+        # "Já existe um registro com esses dados", sem dizer qual nem o que
+        # fazer. Agora a compra é SOMADA ao saldo que já estava lá.
+        mesmo_lugar = EstoqueMaterial.objects.select_for_update().filter(
+            material=estoque.material, descricao_local__iexact=estoque.descricao_local,
+        )
+        if estoque.pk:
+            mesmo_lugar = mesmo_lugar.exclude(pk=estoque.pk)
+        mesmo_lugar = mesmo_lugar.first()
+        if mesmo_lugar and estoque.pk:
+            raise ErroDeFormulario(
+                f"{estoque.material} já tem um saldo em “{mesmo_lugar.descricao_local}”. "
+                "Use outro nome de local, ou movimente aquele saldo."
+            )
+        if mesmo_lugar:
+            return self._somar_ao_saldo(request, mesmo_lugar, preco_informado)
+
         if not estoque.pk:
-            estoque.preco_fornecedor = preco_informado
+            estoque.preco_fornecedor = preco_informado or Decimal("0.00")
         estoque.estoque_minimo = inteiro(
             request.POST.get("estoque_minimo"), "Quantidade mínima",
         ) or 0
@@ -998,6 +1058,8 @@ class EstoqueInnerView(
             quantidade_inicial = inteiro(
                 request.POST.get("quantidade"), "Quantidade", minimo=0,
             ) or 0
+            if quantidade_inicial and preco_informado is None:
+                raise ErroDeFormulario("Informe o valor pago por unidade (pode ser zero).")
             estoque.quantidade = 0
             estoque.saldo_valor = Decimal("0.00")
 
@@ -1018,6 +1080,34 @@ class EstoqueInnerView(
             request,
             f"{estoque.material} salvo em {estoque.descricao_local}.",
             id=estoque.pk,
+        )
+
+    def _somar_ao_saldo(self, request, estoque, preco):
+        """O cadastro repetido (mesmo material, mesmo local) vira ENTRADA."""
+        quantidade = inteiro(request.POST.get("quantidade"), "Quantidade", minimo=0) or 0
+        if not quantidade:
+            raise ErroDeFormulario(
+                f"{estoque.material} já está cadastrado em “{estoque.descricao_local}”. Para "
+                "somar uma compra, informe a quantidade (ou use Movimentar → Entrada)."
+            )
+        if preco is None:
+            raise ErroDeFormulario("Informe o valor pago por unidade (pode ser zero).")
+        fornecedor_id = (request.POST.get("fornecedor") or "").strip()
+        movimento = MovimentoEstoque.registrar(
+            estoque, MovimentoEstoque.Tipo.ENTRADA, quantidade,
+            valor_unitario=preco,
+            fornecedor=get_object_or_404(Fornecedor, pk=fornecedor_id) if fornecedor_id.isdigit() else None,
+            data_compra=data(request.POST.get("comprado_em"), "Data da compra") or timezone.localdate(),
+            documento=texto(request, "nota_fiscal", limite=60),
+            motivo="Compra somada ao saldo que já estava neste local",
+            responsavel=request.user,
+        )
+        return self.sucesso(
+            request,
+            f"{estoque.material} já estava em {estoque.descricao_local}: {quantidade} somado(s) "
+            f"ao saldo, que agora é {movimento.quantidade_resultante}.",
+            id=estoque.pk,
+            saldo=movimento.quantidade_resultante,
         )
 
     def acao_movimento(self, request):
@@ -1337,7 +1427,7 @@ class MovimentacoesInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, Vie
             registros=Count("pk"),
             entradas=Count("pk", filter=Q(tipo="entrada")),
             saidas=Count("pk", filter=Q(tipo="saida")),
-            comprado=Sum(F("quantidade") * F("valor_unitario"), filter=Q(tipo="entrada"), output_field=DecimalField(max_digits=22, decimal_places=2)),
+            comprado=Sum(VALOR_DA_COMPRA, filter=Q(tipo="entrada"), output_field=DecimalField(max_digits=22, decimal_places=2)),
             consumido=Sum("variacao_valor", filter=Q(tipo="saida")),
             ajustes=Sum("variacao_valor", filter=Q(tipo="ajuste")),
             sem_custo=Count("pk", filter=Q(tipo__in=["saida", "ajuste"], variacao_valor__isnull=True)),
@@ -1427,7 +1517,7 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
         por_fornecedor = (
             MovimentoEstoque.objects.filter(tipo=MovimentoEstoque.Tipo.ENTRADA)
             .values("fornecedor_nome")
-            .annotate(valor=Sum(F("quantidade") * F("valor_unitario"), output_field=DecimalField(max_digits=22, decimal_places=2)), itens=Count("id"))
+            .annotate(valor=Sum(VALOR_DA_COMPRA, output_field=DecimalField(max_digits=22, decimal_places=2)), itens=Count("id"))
             .order_by("-valor")[:8]
         )
 

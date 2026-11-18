@@ -40,6 +40,7 @@ from .models import (
     CategoriaDespesa, DespesasMensais, FinanceiroMensal,
     ExecucaoEtapaProducao, Fornecedor, GuiaEtapaProducao,
     HistoricoProducao, ImagemGuiaProducao, MovimentoEstoque,
+    ItemNotaEntrada, NotaEntrada,
     Orcamento, OrdemProducao, OrdemServico, ProdutoInterno,
 )
 
@@ -168,6 +169,39 @@ class MovimentoEstoqueAdmin(admin.ModelAdmin):
     # A quantidade do estoque so muda por MovimentoEstoque.registrar();
     # editar o historico aqui deixaria saldo e rastro divergentes.
     readonly_fields = ('quantidade_resultante',)
+
+
+class ItemNotaEntradaInline(admin.TabularInline):
+    model = ItemNotaEntrada
+    extra = 0
+    can_delete = False
+    fields = ('ordem', 'linhas_nota', 'codigo', 'descricao', 'quantidade_nota', 'unidade_nota',
+              'valor_total', 'material', 'ligacao', 'quantidade', 'unidade', 'local', 'movimento')
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(NotaEntrada)
+class NotaEntradaAdmin(admin.ModelAdmin):
+    """Só consulta: a nota é lançada pela tela (seção 115), que cria o
+    fornecedor, os materiais, a entrada no estoque e a compra juntos."""
+
+    list_display = ('numero', 'serie', 'fornecedor_nome', 'valor_total', 'data_entrada', 'situacao', 'lancada_por')
+    list_filter = ('situacao', 'formato', 'data_entrada')
+    search_fields = ('numero', 'chave_acesso', 'fornecedor_nome', 'fornecedor_cnpj')
+    inlines = [ItemNotaEntradaInline]
+    exclude = ('arquivo',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 @admin.register(CentralPedidos)
 class CentralPedidosAdmin(admin.ModelAdmin):

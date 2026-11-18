@@ -20,6 +20,8 @@ from core.models import (
 )
 from core.utils import buscar_coordenadas_por_cidade, geocodificar_endereco
 
+from .notas_entrada.armazenamento import armazenamento_das_notas, caminho_da_nota
+
 
 class Prime(models.Model):
     criacao = models.DateTimeField(auto_now_add=True, null=True)
@@ -788,6 +790,16 @@ class MovimentoEstoque(Prime):
     variacao_valor = models.DecimalField(max_digits=22, decimal_places=2, null=True, blank=True, editable=False)
     saldo_valor_resultante = models.DecimalField(max_digits=22, decimal_places=2, null=True, blank=True, editable=False)
     custo_estimado = models.BooleanField(default=False, editable=False)
+    # A entrada que veio de uma nota fiscal lançada (seção 115): o histórico
+    # de movimentações leva até a nota, com o arquivo e quem lançou.
+    nota_entrada = models.ForeignKey(
+        "NotaEntrada",
+        on_delete=models.SET_NULL,
+        related_name="movimentos",
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     @property
     def valor_total(self):
@@ -795,6 +807,10 @@ class MovimentoEstoque(Prime):
             if self.variacao_valor is None:
                 return None  # O histórico antigo não registrava o custo efetivo da baixa.
             return -self.variacao_valor if self.tipo == self.Tipo.SAIDA else self.variacao_valor
+        if self.variacao_valor is not None:
+            # O que a compra somou ao saldo: o total exato da nota, mesmo
+            # quando o unitário (2 casas) foi arredondado -- ver `registrar`.
+            return self.variacao_valor
         if self.valor_unitario is None:
             return None
         return (self.valor_unitario * self.quantidade).quantize(Decimal("0.01"))
@@ -809,6 +825,12 @@ class MovimentoEstoque(Prime):
         """
         if tipo not in cls.Tipo.values:
             raise ValueError("Tipo de movimento inválido.")
+        # O TOTAL PAGO, quando a entrada vem de uma nota (seção 115). O
+        # unitário do movimento tem 2 casas: parafuso de R$ 0,034 virava
+        # R$ 0,03, e 500 deles somavam R$ 15,00 ao estoque por uma compra
+        # de R$ 17,00. Com o total, o saldo recebe o valor exato da nota e
+        # o unitário fica só como referência.
+        total_pago = extras.pop("valor_total", None)
         if Decimal(str(quantidade)) != int(quantidade):
             raise ValueError("Informe uma quantidade inteira.")
         quantidade = int(quantidade)
@@ -847,6 +869,8 @@ class MovimentoEstoque(Prime):
         estimado = travado.custo_estimado
         if tipo == cls.Tipo.ENTRADA:
             valor = extras.get("valor_unitario")
+            if valor is None and total_pago is not None:
+                valor = Decimal(str(total_pago)) / quantidade
             if valor is None:
                 raise ValueError("Informe o preço unitário desta compra, inclusive se for zero.")
             valor = Decimal(str(valor))
@@ -855,6 +879,11 @@ class MovimentoEstoque(Prime):
             valor = valor.quantize(Decimal("0.01"))
             extras["valor_unitario"] = valor
             variacao = (valor * quantidade).quantize(Decimal("0.01"))
+            if total_pago is not None:
+                total_pago = Decimal(str(total_pago))
+                if not total_pago.is_finite() or total_pago < 0:
+                    raise ValueError("Valor total da compra inválido.")
+                variacao = total_pago.quantize(Decimal("0.01"))
             fornecedor = extras.get("fornecedor")
             extras["fornecedor_nome"] = fornecedor.nome if fornecedor else ""
         else:
@@ -873,7 +902,21 @@ class MovimentoEstoque(Prime):
         travado.saldo_valor = saldo_anterior + variacao
         travado.preco_fornecedor = (travado.saldo_valor / resultante).quantize(Decimal("0.01")) if resultante else Decimal("0.00")
         travado.custo_estimado = estimado if resultante else False
-        travado.save(update_fields=["quantidade", "saldo_valor", "preco_fornecedor", "custo_estimado", "atualizado"])
+        campos = ["quantidade", "saldo_valor", "preco_fornecedor", "custo_estimado", "atualizado"]
+        if tipo == cls.Tipo.ENTRADA:
+            # A ÚLTIMA COMPRA aparece na lista do estoque (fornecedor, NF e
+            # data, debaixo do local). Antes só o cadastro do local gravava
+            # isso: depois da segunda compra a lista mostrava a nota e o
+            # fornecedor da primeira, como se nada tivesse entrado.
+            if extras.get("fornecedor"):
+                travado.fornecedor = extras["fornecedor"]
+                campos.append("fornecedor")
+            if str(extras.get("documento") or "").strip():
+                travado.nota_fiscal = str(extras["documento"]).strip()[:60]
+                campos.append("nota_fiscal")
+            travado.comprado_em = extras.get("data_compra") or timezone.localdate()
+            campos.append("comprado_em")
+        travado.save(update_fields=campos)
         extras.update(variacao_valor=variacao, saldo_valor_resultante=travado.saldo_valor, custo_estimado=estimado)
 
         return cls.objects.create(
@@ -994,6 +1037,190 @@ class FinanceiroMensal(Prime):
     class Meta:
         verbose_name = "Financeiro Mensal"
         verbose_name_plural = "Financeiros Mensais"
+
+
+# ======================================================================
+# ENTRADA DE NOTA FISCAL (LEIA-ME-V10, seção 115)
+# ======================================================================
+class NotaEntrada(Prime):
+    """A nota fiscal de compra, do arquivo ao estoque.
+
+    Nasce EM CONFERÊNCIA quando o PDF (DANFE) ou o XML é lido -- os itens já
+    ligados aos materiais, os repetidos somados -- e vira LANÇADA quando
+    alguém confirma: aí o fornecedor e os materiais que faltavam são
+    criados, cada item entra no estoque por `MovimentoEstoque.registrar`
+    e a compra vai para o Financeiro. Ver `notas_entrada/lancamento.py`.
+
+    A MESMA NOTA NÃO ENTRA DUAS VEZES: a chave de acesso (ou, sem ela,
+    CNPJ + número + série) é única entre as lançadas -- no banco, e não só
+    na tela, para valer também com dois cliques ao mesmo tempo.
+    """
+
+    class Situacao(models.TextChoices):
+        CONFERENCIA = "conferencia", "Em conferência"
+        LANCADA = "lancada", "Lançada no estoque"
+
+    class Formato(models.TextChoices):
+        PDF = "pdf", "PDF (DANFE)"
+        XML = "xml", "XML da NF-e"
+
+    situacao = models.CharField(
+        max_length=12, choices=Situacao.choices, default=Situacao.CONFERENCIA, db_index=True,
+    )
+    formato = models.CharField(max_length=4, choices=Formato.choices)
+    # O arquivo NÃO tem endereço público: cofre privado (o mesmo do RH) e
+    # entrega só pela view, conferindo a permissão.
+    arquivo = models.FileField(
+        upload_to=caminho_da_nota,
+        storage=armazenamento_das_notas,
+        max_length=100,
+        blank=True,
+    )
+    nome_arquivo = models.CharField(max_length=150, blank=True)
+    tamanho_arquivo = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+
+    fornecedor = models.ForeignKey(
+        Fornecedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="notas_entrada",
+    )
+    fornecedor_nome = models.CharField("fornecedor (como na nota)", max_length=120, blank=True)
+    fornecedor_cnpj = models.CharField("CNPJ / CPF do emitente", max_length=14, blank=True, db_index=True)
+    numero = models.CharField("número", max_length=9, blank=True)
+    serie = models.CharField("série", max_length=3, blank=True)
+    emissao = models.DateField("emissão", null=True, blank=True)
+    chave_acesso = models.CharField("chave de acesso", max_length=44, blank=True, db_index=True)
+    valor_produtos = models.DecimalField("total dos produtos", max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    valor_total = models.DecimalField("total da nota", max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    data_entrada = models.DateField("data de entrada", default=timezone.localdate)
+    avisos = models.JSONField(default=list, blank=True)
+    observacoes = models.TextField(blank=True)
+
+    enviada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    lancada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="notas_entrada_lancadas",
+    )
+    lancada_em = models.DateTimeField(null=True, blank=True)
+    # A compra no Financeiro (ComprasMensais é o que a tela Financeiro soma
+    # como "compras de material", mês a mês).
+    compra = models.OneToOneField(
+        ComprasMensais, on_delete=models.SET_NULL, null=True, blank=True, related_name="nota_entrada",
+    )
+
+    class Meta:
+        verbose_name = "Nota fiscal de entrada"
+        verbose_name_plural = "Notas fiscais de entrada"
+        ordering = ("-criacao", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chave_acesso"],
+                condition=models.Q(situacao="lancada") & ~models.Q(chave_acesso=""),
+                name="nota_entrada_chave_unica",
+            ),
+            models.UniqueConstraint(
+                fields=["fornecedor_cnpj", "numero", "serie"],
+                condition=models.Q(situacao="lancada") & ~models.Q(fornecedor_cnpj="") & ~models.Q(numero=""),
+                name="nota_entrada_numero_unico",
+            ),
+        ]
+
+    def __str__(self):
+        return f"NF-e {self.numero_e_serie} · {self.fornecedor_nome or 'fornecedor não lido'}"
+
+    @property
+    def numero_e_serie(self):
+        if not self.numero:
+            return "sem número"
+        return f"{self.numero}/{self.serie}" if self.serie else self.numero
+
+    @property
+    def documento(self):
+        """O texto do campo "Nota / pedido" das movimentações (60 caracteres)."""
+        return f"NF-e {self.numero_e_serie}"[:60]
+
+    @property
+    def chave_formatada(self):
+        chave = self.chave_acesso or ""
+        return " ".join(chave[i:i + 4] for i in range(0, len(chave), 4))
+
+    @property
+    def cnpj_formatado(self):
+        doc = self.fornecedor_cnpj or ""
+        if len(doc) == 14:
+            return f"{doc[:2]}.{doc[2:5]}.{doc[5:8]}/{doc[8:12]}-{doc[12:]}"
+        if len(doc) == 11:
+            return f"{doc[:3]}.{doc[3:6]}.{doc[6:9]}-{doc[9:]}"
+        return doc
+
+    @property
+    def lancada(self):
+        return self.situacao == self.Situacao.LANCADA
+
+
+class ItemNotaEntrada(Prime):
+    """Uma linha da conferência: o que a nota diz e o que entra no estoque.
+
+    Itens repetidos na nota (o mesmo produto em duas linhas) já chegam
+    SOMADOS numa linha só; `linhas_nota` guarda quais linhas da nota foram
+    juntadas ("2, 3, 20"). O lado da nota (código, descrição, unidade,
+    quantidade, valores) não muda; o lado do estoque (material, unidade,
+    quantidade inteira, local) é o que a pessoa confere e ajusta.
+    """
+
+    class Ligacao(models.TextChoices):
+        CODIGO = "codigo", "Pelo código do fornecedor"
+        NOME = "nome", "Pelo nome"
+        PARECIDO = "parecido", "Nome parecido"
+        MANUAL = "manual", "Escolhido na conferência"
+        NOVO = "novo", "Material novo"
+        FORA = "fora", "Não entra no estoque"
+
+    nota = models.ForeignKey(NotaEntrada, on_delete=models.CASCADE, related_name="itens")
+    ordem = models.PositiveIntegerField(default=0)
+    linhas_nota = models.CharField(max_length=200, blank=True)
+    codigo = models.CharField("código do fornecedor", max_length=60, blank=True, db_index=True)
+    descricao = models.CharField(max_length=250)
+    complemento = models.CharField(max_length=250, blank=True)
+    ncm = models.CharField("NCM", max_length=8, blank=True)
+    unidade_nota = models.CharField(max_length=6, blank=True)
+    quantidade_nota = models.DecimalField(max_digits=15, decimal_places=4, default=Decimal("0"))
+    valor_unitario_nota = models.DecimalField(max_digits=16, decimal_places=4, default=Decimal("0"))
+    valor_total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+
+    material = models.ForeignKey(
+        Material, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens_nota_entrada",
+    )
+    ligacao = models.CharField(max_length=10, choices=Ligacao.choices, default=Ligacao.NOVO)
+    semelhanca = models.PositiveSmallIntegerField(default=0)
+    nome_material = models.CharField("nome do material novo", max_length=90, blank=True)
+    unidade = models.CharField(max_length=5, choices=Material.Unidade.choices, default=Material.Unidade.UNIDADE)
+    quantidade = models.PositiveIntegerField("quantidade no estoque", default=0)
+    local = models.CharField("local de guarda", max_length=90, blank=True)
+    aviso = models.CharField(max_length=200, blank=True)
+    movimento = models.ForeignKey(
+        MovimentoEstoque, on_delete=models.SET_NULL, null=True, blank=True, related_name="itens_nota",
+    )
+
+    class Meta:
+        verbose_name = "Item da nota de entrada"
+        verbose_name_plural = "Itens das notas de entrada"
+        ordering = ("nota", "ordem", "id")
+
+    def __str__(self):
+        return f"{self.descricao} ({self.nota})"
+
+    @property
+    def linhas_somadas(self):
+        return [parte for parte in self.linhas_nota.split(",") if parte.strip()]
+
+    @property
+    def custo_por_unidade(self):
+        if not self.quantidade:
+            return None
+        # 4 casas: o parafuso de R$ 0,034 não vira R$ 0,03 na conferência.
+        return (self.valor_total / self.quantidade).quantize(Decimal("0.0001"))
 
 
 # ======================================================================

@@ -7542,3 +7542,169 @@ Dependência nova: rjsmin (requirements.txt).
    EM ABERTO (decisão do dono): Vendas e Vendedor ambulante continuam
    separados (o ambulante só vê os próprios orçamentos). Se forem a mesma
    coisa na prática, basta dar as duas funções à pessoa.
+
+115) ENTRADA DE NOTA FISCAL NO ESTOQUE (PDF OU XML), PELO FINANCEIRO
+   O PEDIDO: "na entrada, devemos lançar uma nota com os materiais, auto
+   criando se não existir e registrando o estoque, dia de entrada e soma se
+   houver juntos. o financeiro dá entrada pela função, então veja os pontos
+   do sistema que não são fluidos e faça funcionar 100%". E depois: "vai vir
+   PDF ou XML".
+   ONDE: painel (interno.) > "Entrada de nota" (/estoque/notas/, rota
+   `notas_entrada`). Atalhos: o botão "Entrada de nota" no Financeiro e
+   "Notas de entrada" no Estoque; no histórico de movimentações, cada
+   entrada que veio de nota tem "Ver a nota".
+   QUEM (sistema_interno/permissoes.py, no padrão das outras chaves):
+     entrada_nota (Financeiro e Gestão; o superusuário tem todas): sobe o
+       arquivo, confere e lança;
+     entrada_nota_ver (os mesmos + Engenharia de produção, dona do estoque):
+       vê as notas LANÇADAS, com o arquivo; não vê as em conferência, não
+       lança. Vendas, Ambulante e Criação não abrem (vão para o início deles).
+   1. SUBIR O ARQUIVO: o PDF do DANFE ou o XML da NF-e (até 10 MB; o tipo é
+      conferido pelo CONTEÚDO e a extensão tem de bater). Se houver os dois,
+      o XML é melhor (é o documento fiscal). PDF com script é recusado; PDF
+      que é foto pede o XML.
+      LEITURA (sistema_interno/notas_entrada/leitura.py, sem Django):
+        * XML: biblioteca padrão (xml.etree), namespace da NF-e
+          (http://www.portalfiscal.inf.br/nfe): emit (xNome, CNPJ/CPF), ide
+          (nNF, serie, dhEmi), a chave (infNFe/@Id ou protNFe/infProt/chNFe,
+          com dígito verificador), det/prod (cProd, xProd, NCM, uCom, qCom,
+          vUnCom, vProd, infAdProd) e total/ICMSTot (vProd, vNF). XML com
+          DOCTYPE ou ENTITY é recusado ANTES do parser (sem entidade externa,
+          sem bomba de expansão); BOM no começo é aceito.
+        * PDF: o texto de cada página pelo pypdf (o mesmo do importador de
+          orçamento), em modo layout, lido por regra no leiaute padrão do
+          DANFE: canhoto ("RECEBEMOS DE ... OS PRODUTOS"), quadro do
+          emitente, CHAVE DE ACESSO, DATA DA EMISSÃO, VALOR TOTAL DOS
+          PRODUTOS/DA NOTA (o valor da coluna do rótulo) e o quadro "DADOS
+          DOS PRODUTOS / SERVIÇOS" de todas as folhas: CÓDIGO, DESCRIÇÃO,
+          NCM, CST, CFOP, UNID, QUANT, V.UNIT, V.TOTAL. A linha de baixo de
+          um item é o complemento (lote, referência) -- ou a descrição que
+          não coube, quando ela encosta no NCM. Item quebrado em duas linhas
+          (código e descrição numa, números na outra) é juntado. Gerador com
+          outra ordem de colunas cai na regra de reserva: a trinca em que
+          quantidade x unitário = total.
+        * A CHAVE É A ÂNCORA: com ela, CNPJ, série e número saem da chave
+          (número impresso diferente vira aviso). Sem chave, vale o número
+          impresso e o primeiro CNPJ válido antes do destinatário.
+        * As contas são refeitas: item cuja quantidade x unitário não dá o
+          total, e soma dos itens diferente do total dos produtos, viram
+          aviso na conferência.
+      CONFERIDO COM A NOTA DE EXEMPLO DO DONO (PDF e XML da mesma NF-e, só
+      lidos, fora do repositório): as duas portas deram os mesmos 25 itens,
+      o mesmo cabeçalho (fornecedor, CNPJ, número, série, emissão, chave) e
+      o mesmo total, com a soma dos itens fechando com o total dos produtos;
+      6 linhas eram repetições (19 produtos distintos).
+   2. CONFERIR ("estilo app"; /estoque/notas/<id>/): o fornecedor (já
+      cadastrado pelo CNPJ, escrito de qualquer jeito, ou "novo, será
+      cadastrado"), número, série, emissão, chave e total; a DATA DE ENTRADA
+      (vem com hoje; não aceita data futura); e um cartão por linha:
+        * O QUE A NOTA DIZ: código, descrição, NCM, complemento, quantidade,
+          unidade, unitário e total;
+        * A LIGAÇÃO COM O MATERIAL (notas_entrada/ligacao.py), da mais segura
+          para a mais fraca: (1) pelo CÓDIGO DO FORNECEDOR -- a nota anterior
+          do mesmo CNPJ com o mesmo código, já lançada: a segunda nota do
+          fornecedor chega ligada; (2) pelo NOME SEM ACENTO (caixa,
+          pontuação e vírgula/ponto decimal não contam), no cadastro e nas
+          notas anteriores; (3) PARECIDO (80% ou mais) e SÓ com as mesmas
+          medidas -- "3,5 x 25" e "3,5 x 40" nunca se ligam --, marcado
+          "confira"; (4) senão, MATERIAL NOVO, que será criado. "Trocar" abre
+          a busca (no aparelho, sem ir ao servidor), "Criar material novo"
+          (com o nome editável, até 90 letras) ou "Não entra no estoque"
+          (serviço, frete, uso na hora: vai só para a compra).
+        * O QUE ENTRA NO ESTOQUE: quantidade inteira, unidade (chips; sem
+          lista suspensa) e local de guarda (sugestões dos locais que já
+          existem; o padrão é onde o material já está, ou o local mais usado,
+          ou "Almoxarifado"). CENTO, DÚZIA e MILHEIRO viram unidades (5 CE =
+          500 un); pacote, cartela, jogo entram como estão, com aviso; fração
+          (2,5 kg) é arredondada com aviso. Material que já tem saldo não
+          troca de unidade (a tela pede para converter a quantidade); sem
+          saldo, troca.
+        * REPETIDOS SOMADOS: as linhas do mesmo produto (código, descrição e
+          unidade) -- ou ligadas com certeza ao mesmo material -- já chegam
+          numa linha só ("linhas 1, 3 da nota, somadas"); e, no lançamento,
+          duas linhas que a pessoa deixou com o mesmo material e o mesmo
+          local viram UMA entrada (a tela avisa antes).
+      "Salvar e continuar depois" guarda a conferência; se o lançamento
+      recusar algo, a tela volta com tudo como a pessoa deixou. "Descartar
+      esta leitura" apaga a nota em conferência e o arquivo.
+   3. LANÇAR (notas_entrada/lancamento.py; tudo ou nada, depois do
+      LSAviso.confirmar com o resumo):
+        * o FORNECEDOR: o cadastrado com o CNPJ; senão o de mesmo nome sem
+          CNPJ (que ganha o CNPJ); senão é criado (mesmo nome com outro CNPJ
+          -- outra filial -- leva o CNPJ no nome, porque o nome é único);
+        * os MATERIAIS novos (um por nome; se um ativo com o mesmo nome já
+          existir, é ele);
+        * a ENTRADA NO ESTOQUE pelo caminho de sempre,
+          MovimentoEstoque.registrar (a trava de linha, o custo médio): uma
+          por material + local, com data da compra = data de entrada,
+          documento "NF-e <número>/<série>", motivo com as linhas da nota,
+          fornecedor, quem lançou e o elo com a nota (MovimentoEstoque.
+          nota_entrada). O local que não existia é criado; o que existia
+          SOMA. O saldo recebe o TOTAL EXATO pago (ver o último ponto abaixo);
+        * a COMPRA NO FINANCEIRO: ComprasMensais ("NF-e 4321/1 · Fornecedor",
+          valor = total da nota, com frete/IPI) + ItensCompra por material
+          (e as linhas fora do estoque, sem material), no MÊS DA DATA DE
+          ENTRADA. Por que compra e não despesa: a tela Financeiro já soma
+          as duas como "saídas" (DespesasMensais = aluguel, luz...;
+          ComprasMensais = compras de material, item a item); lançar também
+          uma despesa contaria o mesmo dinheiro duas vezes. Não há "contas a
+          pagar" no sistema (nem vencimento): a nota de exemplo foi paga no
+          cartão; se o dono quiser o vencimento das duplicatas (cobr/dup do
+          XML), é a próxima etapa.
+      A MESMA NOTA NÃO ENTRA DUAS VEZES: pela chave de acesso -- seja qual
+      for o formato, PDF ou XML -- ou, sem chave, por CNPJ + número + série;
+      na subida (antes de qualquer conferência, "já foi lançada em ... por
+      ...") e no banco (índices únicos parciais entre as LANÇADAS:
+      nota_entrada_chave_unica e nota_entrada_numero_unico, para dois cliques
+      ao mesmo tempo). A mesma nota ainda EM CONFERÊNCIA é substituída pela
+      leitura nova (o XML depois do PDF, por exemplo).
+   O ARQUIVO: fica guardado com a nota no MESMO cofre dos documentos do RH
+   (notas_entrada/armazenamento.py, reaproveitando rh/armazenamento.py):
+   Cloudinary autenticado em produção; local em `privado/notas/` (ou
+   NOTAS_ARQUIVOS_PRIVADOS_DIR), fora do MEDIA e no .gitignore. Nome
+   aleatório (sem fornecedor nem número), sem URL pública: só sai por
+   /estoque/notas/<id>/arquivo/, conferindo a permissão, com no-store,
+   nosniff e sandbox (o PDF abre na tela; o XML baixa).
+   MODELOS (migração sistema_interno 0079, só esquema): NotaEntrada
+   (situação, formato, arquivo, fornecedor + nome/CNPJ como na nota, número,
+   série, emissão, chave, totais, data de entrada, avisos, quem enviou,
+   quem lançou e quando, a compra) e ItemNotaEntrada (o lado da nota e o
+   lado do estoque de cada linha, as linhas somadas, a ligação e a
+   entrada). No /system/, só consulta.
+   OS PONTOS DO ESTOQUE QUE NÃO ERAM FLUIDOS (e o que mudou):
+     * cadastrar de novo o MESMO material no MESMO local (o jeito natural de
+       lançar a segunda compra) voltava "Já existe um registro com esses
+       dados" -- agora a compra é SOMADA ao saldo daquele local (como
+       entrada, com preço, nota e data), e "Galpão A" e "galpão a " são o
+       mesmo local; renomear um local para um que o material já tem explica
+       o porquê;
+     * local novo ainda vazio (o material vai chegar) exigia "valor pago":
+       o preço só é obrigatório quando entra quantidade;
+     * excluir um material usado em FICHA TÉCNICA respondia "Já existe um
+       registro com esses dados. Confira o nome e o local" (o ProtectedError
+       do Django é um IntegrityError e caía na mensagem de duplicado): agora
+       diz qual produto usa o material; qualquer exclusão protegida dá a
+       mensagem certa;
+     * fornecedor com nome repetido caía na mesma mensagem genérica: agora
+       diz que o fornecedor já existe;
+     * a lista do estoque mostrava a NF, o fornecedor e a data da PRIMEIRA
+       compra do local para sempre: toda entrada (registrar) atualiza a
+       "última compra" do local;
+     * o custo do estoque perdia centavos em material barato (unitário de 2
+       casas: 500 parafusos a R$ 0,034 somavam R$ 15,00 por uma compra de
+       R$ 17,00): MovimentoEstoque.registrar aceita `valor_total` na entrada
+       e o saldo recebe o valor exato; os totais "comprado" das
+       movimentações e do painel do estoque usam o valor gravado.
+   O TESTE QUE SEGURA ISTO: sistema_interno/tests_nota_entrada.py -- o
+   leitor sobre um DANFE SINTÉTICO em texto (e um PDF montado com ele) e o
+   XML sintético da mesma nota (os dois iguais), DOCTYPE/ENTITY recusados,
+   a ligação e a soma dos repetidos, o lançamento completo pelas telas
+   (fornecedor e materiais criados, movimentos, compra no mês da entrada),
+   a nota duplicada recusada (chave e CNPJ+número+série), as permissões
+   (Financeiro e Gestão lançam, Produção vê, Vendas não abre) e os pontos
+   do estoque acima. A MATRIZ da auditoria das funções ganhou
+   "notas_entrada".
+   EM ABERTO: o item no menu lateral (rota `notas_entrada`, ícone
+   bi-receipt-cutoff, chave `entrada_nota_ver`) entra junto com o menu novo;
+   contas a pagar (vencimentos) se o dono quiser; DANFE que é foto continua
+   pedindo o XML (sem leitura por imagem).
