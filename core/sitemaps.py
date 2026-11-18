@@ -39,14 +39,14 @@ class PaginasEstaticasSitemap(SitemapDoSite):
     changefreq = "weekly"
 
     def items(self):
-        from .context_processors import ha_eventos, ha_kits
+        from .context_processors import ha_eventos
 
-        paginas = ["home", "brinquedos", "loja", "eventos", "projetos", "pecas_reposicao", "kits", "estabelecimentos",
-                   "arena", "jogos"]
-        # a página de eventos vazia ("Nenhum evento publicado ainda") não vai para o Google;
-        # nem a dos kits sem kit nenhum (LEIA-ME seção 105)
-        vazias = {"eventos": ha_eventos, "kits": ha_kits}
-        return [p for p in paginas if p not in vazias or vazias[p]()]
+        # (os kits eletrônicos são produtos, LEIA-ME 107: entram com os
+        # brinquedos e pela categoria deles; /kits/ é só um endereço antigo)
+        paginas = ["home", "brinquedos", "loja", "eventos", "projetos", "pecas_reposicao", "estabelecimentos", "arena",
+                   "jogos"]
+        # a página de eventos vazia ("Nenhum evento publicado ainda") não vai para o Google
+        return [p for p in paginas if p != "eventos" or ha_eventos()]
 
     def location(self, item):
         return reverse(item)
@@ -110,13 +110,13 @@ class CategoriasSitemap(SitemapDoSite):
 
 
 class PecasSitemap(SitemapDoSite):
-    """As peças de reposição que a vitrine mostra (item de manutenção e kit ficam de fora)."""
+    """As peças de reposição que a vitrine mostra (item de manutenção fica de fora)."""
 
     priority = 0.5
     changefreq = "weekly"
 
     def items(self):
-        return PecasReposicao.pecas_avulsas_da_vitrine().only("id", "atualizado").order_by("id")
+        return PecasReposicao.da_vitrine().only("id", "atualizado").order_by("id")
 
     def location(self, obj):
         return reverse("reposicao_detalhe", args=[obj.id])
@@ -124,18 +124,3 @@ class PecasSitemap(SitemapDoSite):
     def lastmod(self, obj):
         return obj.atualizado
 
-
-class KitsSitemap(SitemapDoSite):
-    """Cada kit eletrônico tem a sua página, /kits/<id>/ (LEIA-ME seção 105)."""
-
-    priority = 0.6
-    changefreq = "weekly"
-
-    def items(self):
-        return PecasReposicao.da_vitrine().filter(eh_kit=True).only("id", "atualizado").order_by("id")
-
-    def location(self, obj):
-        return reverse("kit_detalhe", args=[obj.id])
-
-    def lastmod(self, obj):
-        return obj.atualizado

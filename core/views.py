@@ -37,6 +37,7 @@ from . import parcelas_texto
 from . import checkout
 from . import conferencia_pagamento
 from . import arena, mapa_estados, painel_publico
+from . import kits as kits_eletronicos
 from . import objetos_3d
 from .objetos_3d import objeto_do_brinquedo, prefetch_do_3d_dos_projetos, prefetch_do_objeto
 from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
@@ -204,7 +205,8 @@ def vitrine_do_quadro(brinquedos, quantidade=8):
     from . import variantes as variantes_de_adesivo
     from .formatos import dinheiro
 
-    com_foto = [b for b in brinquedos if b.imagem_brinquedo]
+    # o kit eletrônico (LEIA-ME 107) fica na grade, não no quadro das máquinas em 3D
+    com_foto = [b for b in brinquedos if b.imagem_brinquedo and not getattr(b, "eh_kit", False)]
     com_foto.sort(key=lambda b: (-getattr(b, "total_curtidas", 0), -(b.avaliacao or 0), b.nome_brinquedo))
     # os adesivos (LEIA-ME 72): o controle "Adesivo: A · B" da vitrine troca o 3D (uma consulta para todos)
     com_adesivos = variantes_de_adesivo.produtos_com_adesivos()
@@ -345,6 +347,9 @@ class HomeView(View):
                 # buscava o campo sozinho: 61 consultas a mais para montar a
                 # home, uma por brinquedo (LEIA-ME-V10, seção 63).
                 "ajuste_curtidas",
+                # o kit eletrônico é um produto, nesta mesma grade (LEIA-ME
+                # seção 107): o selo "Kit" e a linha "7 itens: ..." do card
+                "eh_kit",
             )
             .prefetch_related(
                 "categorias_brinquedos",
@@ -364,6 +369,8 @@ class HomeView(View):
         totais_curtidas = servico_favoritos.contagem_curtidas(brinquedos_todos)
         for brinquedo in brinquedos_todos:
             brinquedo.total_curtidas = totais_curtidas.get(brinquedo.pk, 0)
+        # os itens dos kits da grade, numa consulta só (nenhuma sem kit)
+        kits_eletronicos.preparar_cards(brinquedos_todos)
 
         categorias_brinquedos = list(
             CategoriasBrinquedos.objects
@@ -451,17 +458,14 @@ class HomeView(View):
         # Todas as peças ativas. Mesma lógica do brinquedos_todos: a
         # paginação de 9 por página já é feita no JS
         # (inicializarPecasClientSide), então manda a lista completa.
-        # O kit eletrônico tem a faixa dele ("Kits eletrônicos -- monte sua
-        # própria máquina", LEIA-ME seção 105) e não se repete entre as peças.
         pecas_todas = list(
-            PecasReposicao.pecas_avulsas_da_vitrine()
+            PecasReposicao.da_vitrine()
             .prefetch_related(
                 "imagem_peca_reposicao",
                 "categoria_peca",
             )
             .order_by("nome")
         )
-        kits_home = list(PecasReposicao.kits_da_vitrine())
 
         # O filtro das peças só oferece a categoria que tem peça na vitrine:
         # o botão de uma categoria vazia abria uma grade em branco. (Sai das
@@ -613,7 +617,6 @@ class HomeView(View):
             "categorias_peca": categorias_peca,
             "pecas_todas": pecas_todas,
             "pecas_count": len(pecas_todas),
-            "kits_home": kits_home,
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,
@@ -732,10 +735,9 @@ class ReposicaoView(View):
         # Era `.all()`: peça desativada aparecia para o visitante junto
         # com as vendáveis, e a criada às pressas dentro de um orçamento
         # entrava aqui no mesmo instante. Agora a regra é a de
-        # `da_vitrine` -- ativa, e da loja. O kit eletrônico fica de fora:
-        # ele tem a vitrine dele, /kits/ (LEIA-ME seção 105).
+        # `da_vitrine` -- ativa, e da loja.
         pecas = list(
-            PecasReposicao.pecas_avulsas_da_vitrine()
+            PecasReposicao.da_vitrine()
             .prefetch_related("imagem_peca_reposicao", "categoria_peca")
             .order_by("nome")
         )
@@ -796,12 +798,18 @@ class ReposicaoDetalheView(View):
         }
 
     def get(self, request, pk):
-        dados = get_cached_catalog_page("peca", (pk,), lambda: self._montar(pk))
+        try:
+            dados = get_cached_catalog_page("peca", (pk,), lambda: self._montar(pk))
+        except Http404:
+            # o kit eletrônico era uma peça (LEIA-ME 105) e virou produto (seção
+            # 107): o endereço da peça-kit (links, pedidos antigos) leva a ele
+            from .views_kits import produto_do_kit_antigo
+
+            produto = produto_do_kit_antigo(pk)
+            if produto is None:
+                raise
+            return redirect("brinquedo_detalhe", id=produto.pk, permanent=True)
         peca = dados["peca"]
-        # o kit eletrônico tem a página dele (/kits/<id>/): o link antigo, o
-        # do carrinho e o da lista de desejos chegam lá (LEIA-ME seção 105)
-        if peca.eh_kit:
-            return redirect("kit_detalhe", pk=peca.pk, permanent=True)
 
         # A peça nunca teve contador de clique; a visita vai só para o
         # gráfico do painel, pela linha de fundo (core/interacoes.py).
@@ -1120,6 +1128,10 @@ class BrinquedoInfoView(View):
         registro_3d = objeto_do_brinquedo(brinquedo, so_ativo=False)
         if registro_3d is not None:
             objeto_3d = registro_3d if (registro_3d.ativo and registro_3d.url) else None
+        elif brinquedo.eh_kit:
+            # o kit eletrônico não é a máquina: o 3D dela (ligado pelo nome --
+            # "Kit Strike Kids" tem "Strike Kids" dentro) não é dele (LEIA-ME 107)
+            objeto_3d = None
         else:
             from sistema_interno.templatetags.interno_extras import estatico
 
@@ -1156,11 +1168,18 @@ class BrinquedoInfoView(View):
                 .replace(".", ",")
             )
 
+        # o kit eletrônico (LEIA-ME 107): a máquina a que ele se destina
+        maquina_kit = None
+        if brinquedo.eh_kit and brinquedo.maquina_id:
+            maquina_kit = Brinquedos.objects.filter(pk=brinquedo.maquina_id, ativo=True).first()
+
         mensagem = [
             "Olá! Gostaria de solicitar um orçamento.",
             "",
-            f"Brinquedo: {brinquedo.nome_brinquedo}",
+            f"{'Kit eletrônico' if brinquedo.eh_kit else 'Brinquedo'}: {brinquedo.nome_brinquedo}",
         ]
+        if maquina_kit is not None:
+            mensagem.append(f"Para a máquina: {maquina_kit.nome_brinquedo}")
         if brinquedo.voltz:
             mensagem.append(f"Voltagem: {brinquedo.voltz}")
 
@@ -1208,18 +1227,22 @@ class BrinquedoInfoView(View):
             variantes_de_adesivo.adesivos_da_pagina(brinquedo)
             if brinquedo.variantes_adesivo.filter(padrao=False, ativo=True).exists() else []
         )
-        # "Já tem a máquina? Kit eletrônico completo" (LEIA-ME seção 105): o
-        # kit desta máquina, para quem só tem a máquina e quer a parte elétrica
-        kits_da_maquina = [
+        # "Já tem a máquina? Kit eletrônico completo" (LEIA-ME seções 105 e
+        # 107): o kit desta máquina -- um produto também --, para quem só tem
+        # a máquina e quer a parte elétrica. Preço só do que está à venda.
+        kits_da_maquina = [] if brinquedo.eh_kit else [
             {
-                "nome": kit.nome,
-                "url": kit.url_publica,
+                "nome": kit.nome_brinquedo,
+                "url": reverse("brinquedo_detalhe", args=[kit.pk]),
                 "resumo": kit.resumo_do_kit,
-                "preco": kit.preco_venda,
+                "preco": kit.valor_brinquedo if kit.disponivel_na_loja else None,
                 "sem_juros": kit.sem_juros_no_cartao,
             }
-            for kit in PecasReposicao.kits_da_vitrine().filter(maquina=brinquedo)
+            for kit in Brinquedos.kits_da_vitrine().filter(maquina=brinquedo)
         ]
+        # a página do KIT: o que vem nele (com a foto ou o ícone de cada item) e a máquina
+        itens_do_kit = kits_eletronicos.itens_da_pagina(brinquedo) if brinquedo.eh_kit else []
+        categoria_kits = kits_eletronicos.categoria_dos_kits() if brinquedo.eh_kit else None
 
         return {
             "contexto": {
@@ -1238,6 +1261,9 @@ class BrinquedoInfoView(View):
                 "adesivos3d": adesivos3d,
                 "adesivos_pagina": adesivos_pagina,
                 "kits_da_maquina": kits_da_maquina,
+                "itens_do_kit": itens_do_kit,
+                "maquina_kit": maquina_kit,
+                "categoria_kits": categoria_kits,
             },
             # As linhas da mensagem do WhatsApp, sem a última (o endereço
             # da página, que depende do host da requisição).
@@ -1433,6 +1459,25 @@ class CategoriasInfoView(View):
             ),
             "zap": "Olá! Quero um orçamento de kid play para o meu espaço.",
         }),
+        # os kits eletrônicos (LEIA-ME 107): antes de "eletronic", que também casaria
+        (("kits eletronicos", "kit eletronico"), {
+            "icone": "fa-microchip",
+            "descricao": (
+                "A parte eletrônica completa de cada máquina, sem a máquina: "
+                "TV Box com o jogo, sensores, câmera, placa, cabos e fonte. "
+                "Para montar a sua, trocar a eletrônica ou recuperar a máquina "
+                "que parou."
+            ),
+            "beneficios": (
+                ("fa-plug-circle-check", "Pronto para instalar",
+                 "Tudo o que a máquina precisa para ligar e jogar."),
+                ("fa-list-check", "Itens da fábrica",
+                 "Os mesmos componentes das máquinas que saem daqui."),
+                ("fa-screwdriver-wrench", "Assistência própria",
+                 "Ajuda para instalar e peças de reposição da fábrica."),
+            ),
+            "zap": "Olá! Quero um orçamento de kit eletrônico para a minha máquina.",
+        }),
         (("eletronic", "fliperama"), {
             "icone": "fa-gamepad",
             "descricao": (
@@ -1517,6 +1562,10 @@ class CategoriasInfoView(View):
         )
 
         ativos = categoria.brinquedos.filter(ativo=True)
+        # À VENDA é o que está na loja COM PREÇO (`Brinquedos.disponivel_na_loja`,
+        # a regra do card e da página): o kit eletrônico vai à loja sem preço,
+        # "sob consulta", até o dono pôr o valor (LEIA-ME 107).
+        na_loja = Q(exibir_na_loja=True, valor_brinquedo__gt=0)
 
         # Os números do topo e das fichas de filtro são da categoria
         # INTEIRA, e não da página: "À venda (3)" continua dizendo três
@@ -1524,16 +1573,16 @@ class CategoriasInfoView(View):
         # (eram dois COUNT, e o paginador fazia um terceiro igual a um deles).
         totais = ativos.aggregate(
             total=Count("id"),
-            loja=Count("id", filter=Q(exibir_na_loja=True)),
+            loja=Count("id", filter=na_loja),
         )
         total_categoria = totais["total"] or 0
         total_loja = totais["loja"] or 0
 
         if disponibilidade == "loja":
-            ativos = ativos.filter(exibir_na_loja=True)
+            ativos = ativos.filter(na_loja)
             total_da_lista = total_loja
         elif disponibilidade == "consulta":
-            ativos = ativos.filter(exibir_na_loja=False)
+            ativos = ativos.exclude(na_loja)
             total_da_lista = total_categoria - total_loja
         else:
             total_da_lista = total_categoria
@@ -1568,6 +1617,8 @@ class CategoriasInfoView(View):
         totais = servico_favoritos.contagem_curtidas(page_obj.object_list)
         for item in page_obj.object_list:
             item.total_curtidas = totais.get(item.pk, 0)
+        # o kit eletrônico (LEIA-ME 107): a linha "7 itens: ..." do card
+        kits_eletronicos.preparar_cards(page_obj.object_list)
 
         return {
             "categoria": categoria,
@@ -2062,6 +2113,8 @@ class BrinquedosView(View):
         )
         for item in page_obj.object_list:
             item.total_curtidas = totais_curtidas.get(item.pk, 0)
+        # o kit eletrônico (LEIA-ME 107): a linha "7 itens: ..." do card
+        kits_eletronicos.preparar_cards(page_obj.object_list)
 
         return {
             "pagina": dados_da_pagina(page_obj),
@@ -2103,22 +2156,31 @@ class LojaView(View):
 
         itens = []
 
-        # As máquinas vêm na frente; depois combos, promoções e peças.
-        brinquedos_na_loja = list(
+        # As máquinas vêm na frente; depois combos, promoções e peças. O kit
+        # eletrônico é um produto (LEIA-ME seção 107): vem com as máquinas,
+        # no mesmo cartão, com o selo "Kit eletrônico" e a lista curta.
+        brinquedos_na_loja = kits_eletronicos.preparar_cards(list(
             Brinquedos.objects
             .filter(ativo=True, exibir_na_loja=True)
-        )
+            .select_related('maquina')
+        ))
         for brinquedo in brinquedos_na_loja:
-            itens.append({
+            item = {
                 'id': brinquedo.id,
                 'tipo': 'brinquedo',
-                'tipo_label': 'Brinquedo',
+                'tipo_label': 'Kit eletrônico' if brinquedo.eh_kit else 'Brinquedo',
                 'titulo': brinquedo.nome_brinquedo,
                 'imagem': url_da_imagem(brinquedo.imagem_brinquedo) or None,
-                'preco': brinquedo.valor_brinquedo,
+                # só o que está à venda tem preço (o kit sem preço é "sob consulta")
+                'preco': brinquedo.valor_brinquedo if brinquedo.disponivel_na_loja else None,
                 'sem_juros': brinquedo.sem_juros_no_cartao,
                 'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
-            })
+            }
+            if brinquedo.eh_kit:
+                item['kit'] = True
+                item['resumo'] = brinquedo.resumo_do_kit
+                item['maquina'] = brinquedo.maquina.nome_brinquedo if brinquedo.maquina_id else ''
+            itens.append(item)
 
         # O cartão do combo não lista os brinquedos dele: sem prefetch.
         combos = Combos.objects.filter(ativo=True)
@@ -2161,35 +2223,20 @@ class LojaView(View):
 
         pecas = list(
             PecasReposicao.da_vitrine()
-            .select_related('maquina')
-            .prefetch_related('imagem_peca_reposicao', 'componentes_kit')
+            .prefetch_related('imagem_peca_reposicao')
         )
         for peca in pecas:
-            # o kit eletrônico entra na loja como a peça que ele é (vai ao
-            # carrinho como 'peca'), com o filtro e o selo dele -- e, sem foto
-            # própria, a foto da máquina (LEIA-ME seção 105)
-            foto = peca.foto_do_card
-            item = {
+            imagem_obj = peca.imagem_principal
+            itens.append({
                 'id': peca.id,
-                'tipo': 'kit' if peca.eh_kit else 'peca',
-                'carrinho': 'peca',
-                'tipo_label': 'Kit eletrônico' if peca.eh_kit else 'Peça de Reposição',
+                'tipo': 'peca',
+                'tipo_label': 'Peça de Reposição',
                 'titulo': peca.nome,
-                'imagem': (url_da_imagem(foto) or None) if foto else None,
+                'imagem': (url_da_imagem(imagem_obj.imagem) or None) if imagem_obj else None,
                 'preco': peca.preco_venda,
                 'sem_juros': peca.sem_juros_no_cartao,
-                'url': peca.url_publica,
-            }
-            if peca.eh_kit:
-                item['resumo'] = peca.resumo_do_kit
-                item['maquina'] = peca.maquina.nome_brinquedo if peca.maquina_id and peca.maquina else ''
-            itens.append(item)
-        # os kits logo depois das máquinas: quem tem a máquina procura a eletrônica dela
-        kits_na_loja = [i for i in itens if i['tipo'] == 'kit']
-        if kits_na_loja:
-            resto = [i for i in itens if i['tipo'] != 'kit']
-            antes = sum(1 for i in resto if i['tipo'] == 'brinquedo')
-            itens = resto[:antes] + kits_na_loja + resto[antes:]
+                'url': reverse('reposicao_detalhe', args=[peca.id]),
+            })
 
         # As curtidas dos cards, uma consulta por tipo, sobre os objetos
         # que já vieram -- antes cada tipo era lido de novo só para isso.
@@ -2198,14 +2245,11 @@ class LojaView(View):
             'peca': servico_favoritos.contagem_curtidas(pecas),
         }
         for item in itens:
-            # o kit é uma peça nas curtidas e na lista de desejos
-            produto = 'peca' if item['tipo'] == 'kit' else item['tipo']
-            if produto in totais:
-                item['fav_produto'] = produto
-                item['fav_curtidas'] = totais[produto].get(item['id'], 0)
+            if item['tipo'] in totais:
+                item['fav_produto'] = item['tipo']
+                item['fav_curtidas'] = totais[item['tipo']].get(item['id'], 0)
 
         contagem_por_tipo = {
-            'kit': sum(1 for i in itens if i['tipo'] == 'kit'),
             'peca': sum(1 for i in itens if i['tipo'] == 'peca'),
             'promocao': sum(1 for i in itens if i['tipo'] == 'promocao'),
             'combo': sum(1 for i in itens if i['tipo'] == 'combo'),
@@ -2232,10 +2276,8 @@ class LojaView(View):
         itens = []
         for item in dados['itens']:
             item = dict(item)
-            # `fav_produto`: o kit guarda como peça (é o que ele é)
-            produto = item.get('fav_produto', item['tipo'])
-            if produto in self.TIPOS_COM_FAVORITO:
-                item['fav_desejado'] = item['id'] in desejados[produto]
+            if item['tipo'] in self.TIPOS_COM_FAVORITO:
+                item['fav_desejado'] = item['id'] in desejados[item['tipo']]
             itens.append(item)
 
         context = {
@@ -3459,6 +3501,10 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         filtro_capa = request.GET.get("capa", "todas")
         if filtro_capa not in ("com", "sem"):
             filtro_capa = "todas"
+        # o kit eletrônico é um produto desta mesma tela (LEIA-ME 107): o chip "Kits"
+        filtro_tipo = request.GET.get("tipo", "todos")
+        if filtro_tipo not in ("maquinas", "kits"):
+            filtro_tipo = "todos"
         busca = request.GET.get("q", "").strip()
 
         # "Com capa" é a mesma conta do número do topo: o arquivo da capa
@@ -3473,8 +3519,11 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 "imagens_brinquedo",
                 # os adesivos (LEIA-ME 72): o mesmo brinquedo com outra arte, com as fotos e o 3D de cada um
                 "variantes_adesivo",
+                # o que vem no kit eletrônico (LEIA-ME 107), na ordem
+                "componentes_kit",
                 *prefetch_do_objeto(),
             )
+            .select_related("maquina")
             .order_by("nome_brinquedo", "id")
         )
 
@@ -3492,6 +3541,11 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             brinquedos = brinquedos.exclude(sem_capa)
         elif filtro_capa == "sem":
             brinquedos = brinquedos.filter(sem_capa)
+
+        if filtro_tipo == "kits":
+            brinquedos = brinquedos.filter(eh_kit=True)
+        elif filtro_tipo == "maquinas":
+            brinquedos = brinquedos.filter(eh_kit=False)
 
         if busca:
             # O cartão mostra o número (#12): buscar por ele também acha.
@@ -3512,7 +3566,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         )
         tags = TagsBrinquedos.objects.order_by("nome_tags", "id")
 
-        estado = {"q": busca, "categoria": categoria, "loja": loja, "capa": filtro_capa}
+        estado = {"q": busca, "categoria": categoria, "loja": loja, "capa": filtro_capa, "tipo": filtro_tipo}
         padroes = {"", "todas", "todos"}
 
         def endereco(**trocas):
@@ -3619,12 +3673,25 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     cat.id for cat in brinquedo.categorias_brinquedos.all()
                 ],
                 "tags_ids": [tag.id for tag in brinquedo.tags.all()],
+                # o kit eletrônico (LEIA-ME 107): a máquina e o que vem nele
+                "eh_kit": brinquedo.eh_kit,
+                "maquina_id": brinquedo.maquina_id or "",
+                "componentes": [
+                    {
+                        "nome": item.nome,
+                        "detalhe": item.detalhe,
+                        "quantidade": item.quantidade,
+                        "peca": item.peca_id or "",
+                    }
+                    for item in brinquedo.componentes_kit.all()
+                ],
             })
 
         numeros = Brinquedos.objects.aggregate(
             total=Count("id"),
             loja=Count("id", filter=Q(exibir_na_loja=True)),
             sem_capa=Count("id", filter=sem_capa),
+            kits=Count("id", filter=Q(eh_kit=True)),
         )
         total = numeros["total"]
         total_com_imagem = total - numeros["sem_capa"]
@@ -3669,6 +3736,29 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 ("com", "Com capa", total_com_imagem),
                 ("sem", "Sem capa", numeros["sem_capa"]),
             ]),
+            "filtros_tipo": opcoes("tipo", [
+                ("todos", "Todos", total),
+                ("maquinas", "Máquinas", total - numeros["kits"]),
+                ("kits", "Kits eletrônicos", numeros["kits"]),
+            ]),
+            "tipo_ativo": filtro_tipo,
+            "total_kits": numeros["kits"],
+            # o editor do kit: a máquina (chips de rádio com busca, nunca
+            # <select>) e a peça avulsa que um item pode ser (o Cabo HDMI). A
+            # máquina fora do site que já é de um kit continua na lista: abrir
+            # e salvar o kit não pode soltá-lo dela.
+            "maquinas_kit": list(
+                Brinquedos.objects.filter(eh_kit=False)
+                .filter(Q(ativo=True) | Q(kits_eletronicos__isnull=False))
+                .distinct()
+                .order_by("nome_brinquedo", "id")
+                .values("id", "nome_brinquedo", "ativo")
+            ),
+            "pecas_avulsas": list(
+                PecasReposicao.objects.filter(uso=PecasReposicao.Uso.LOJA)
+                .order_by("nome", "id")
+                .values("id", "nome", "ativo")
+            ),
             "filtros_categoria": opcoes("categoria", [
                 ("todas", "Todas", total),
                 *[
@@ -3678,7 +3768,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             ]),
             "ha_filtro": bool(busca) or any(
                 estado[chave] not in padroes
-                for chave in ("categoria", "loja", "capa")
+                for chave in ("categoria", "loja", "capa", "tipo")
             ),
             "limpar_filtros_url": request.path,
             "query_sem_pagina": urlencode(pares_sem_pagina),
@@ -4031,6 +4121,103 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 ),
                 status=500,
             )
+
+    # ------------------------------------------------------------------
+    # O KIT ELETRÔNICO (LEIA-ME seção 107)
+    #
+    # O kit é um produto desta tela: a chave "É um kit eletrônico" abre o
+    # editor -- a máquina em chips de rádio com busca e as linhas do que vem
+    # no kit (nome, detalhe, quantidade, a peça avulsa), que vão juntas no
+    # campo `componentes_json`, na ordem da tela.
+    # ------------------------------------------------------------------
+    MAX_COMPONENTES_KIT = 40
+
+    @staticmethod
+    def _maquina_do_kit(request, brinquedo):
+        """A máquina escolhida nos chips (vazio: kit sem máquina). Nunca outro kit, nem ele mesmo."""
+        valor = (request.POST.get("maquina") or "").strip()
+        if not valor:
+            return None
+        if not valor.isdigit():
+            raise ErroDeFormulario("Máquina do kit inválida.")
+        maquina = Brinquedos.objects.filter(pk=int(valor), eh_kit=False).first()
+        if maquina is None or (brinquedo.pk and maquina.pk == brinquedo.pk):
+            raise ErroDeFormulario("A máquina escolhida para o kit não existe mais. Escolha outra.")
+        return maquina
+
+    def _ler_componentes(self, request):
+        """Os itens do kit que vieram do editor, já conferidos; None se o editor não mandou nada.
+
+        Quem não manda o campo (a chave desligada, um formulário antigo) não
+        apaga os itens que o kit já tem: ficam guardados.
+        """
+        import json
+
+        if "componentes_json" not in request.POST:
+            return None
+        incompleta = "A lista do que vem no kit chegou incompleta. Tente de novo."
+        try:
+            linhas = json.loads(request.POST.get("componentes_json") or "[]")
+        except (TypeError, ValueError):
+            raise ErroDeFormulario(incompleta)
+        if not isinstance(linhas, list):
+            raise ErroDeFormulario(incompleta)
+
+        itens = []
+        for posicao, linha in enumerate(linhas, start=1):
+            if not isinstance(linha, dict):
+                raise ErroDeFormulario(incompleta)
+            nome = str(linha.get("nome") or "").strip()
+            detalhe = str(linha.get("detalhe") or "").strip()
+            if not nome:
+                # linha em branco (adicionada e não preenchida) não vira item
+                if not detalhe:
+                    continue
+                raise ErroDeFormulario(f"Item {posicao} do kit: escreva o nome do item.")
+            if len(nome) > 80:
+                raise ErroDeFormulario(f"Item {posicao} do kit: o nome passa de 80 caracteres.")
+            if len(detalhe) > 120:
+                raise ErroDeFormulario(f"Item {posicao} do kit: o detalhe passa de 120 caracteres.")
+            try:
+                quantidade = int(str(linha.get("quantidade") or "1").strip())
+            except ValueError:
+                raise ErroDeFormulario(f"Item {posicao} do kit: quantidade inválida.")
+            if not 1 <= quantidade <= 99:
+                raise ErroDeFormulario(f"Item {posicao} do kit: a quantidade vai de 1 a 99.")
+            peca_id = str(linha.get("peca") or "").strip()
+            avulsa = None
+            if peca_id:
+                if not peca_id.isdigit():
+                    raise ErroDeFormulario(f"Item {posicao} do kit: peça avulsa inválida.")
+                avulsa = PecasReposicao.objects.filter(pk=int(peca_id)).first()
+                if avulsa is None:
+                    raise ErroDeFormulario(
+                        f"Item {posicao} do kit: a peça avulsa escolhida não existe mais. Escolha outra.")
+            itens.append({"nome": nome, "detalhe": detalhe, "quantidade": quantidade, "peca": avulsa})
+
+        if len(itens) > self.MAX_COMPONENTES_KIT:
+            raise ErroDeFormulario(f"O kit pode ter no máximo {self.MAX_COMPONENTES_KIT} itens.")
+        if request.POST.get("eh_kit") in ("1", "true", "on") and not itens:
+            raise ErroDeFormulario("Diga o que vem no kit: inclua pelo menos um item.")
+        return itens
+
+    @staticmethod
+    def _gravar_componentes(brinquedo, itens):
+        """Troca a lista do kit pela da tela: a ordem é a das linhas."""
+        from .models import ComponenteKit
+
+        brinquedo.componentes_kit.all().delete()
+        ComponenteKit.objects.bulk_create([
+            ComponenteKit(
+                kit=brinquedo,
+                nome=item["nome"],
+                detalhe=item["detalhe"],
+                quantidade=item["quantidade"],
+                ordem=ordem,
+                peca=item["peca"],
+            )
+            for ordem, item in enumerate(itens, start=1)
+        ])
 
     def _excluir(self, request):
         brinquedo = get_object_or_404(
@@ -4398,6 +4585,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             request.POST.get("exibir_na_loja") == "on"
         )
 
+        # O KIT ELETRÔNICO (LEIA-ME 107): a marca e a máquina; os itens vêm
+        # depois do save (o produto novo ainda não tem id)
+        brinquedo.eh_kit = request.POST.get("eh_kit") in ("1", "true", "on")
+        brinquedo.maquina = self._maquina_do_kit(request, brinquedo) if brinquedo.eh_kit else None
+        componentes = self._ler_componentes(request)
+
         # a foto sem fundo (branca ou transparente) vira recorte para artes sozinha (LEIA-ME 72)
         brancas = self._fotos_sem_fundo(arquivos)
 
@@ -4423,6 +4616,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             request.POST.getlist("categorias_brinquedos")
         )
         brinquedo.tags.set(request.POST.getlist("tags"))
+        if componentes is not None:
+            self._gravar_componentes(brinquedo, componentes)
 
         return self._responder_sucesso(
             request,
@@ -5848,8 +6043,8 @@ def _foto_do_item(tipo, objeto):
             objeto.brinquedos.imagem_brinquedo if objeto.brinquedos_id else None
         )
     else:
-        # a peça (e o kit sem foto própria, que mostra a máquina dele)
-        imagem = objeto.foto_do_card
+        principal = objeto.imagem_principal
+        imagem = principal.imagem if principal else None
     return reduzir_imagem(url_da_imagem(imagem), 720) if imagem else ""
 
 
@@ -5866,7 +6061,8 @@ def _previa_do_item(tipo, objeto):
     return {
         'tipo': tipo,
         'id': objeto.pk,
-        # o kit eletrônico vai ao carrinho como peça, mas a folha diz o que ele é
+        # o kit eletrônico vai ao carrinho como o produto que ele é (LEIA-ME
+        # 107), mas a folha diz o que ele é
         'rotulo': 'Kit eletrônico' if getattr(objeto, 'eh_kit', False) else ROTULOS_DO_CARRINHO[tipo],
         'nome': str(objeto),
         'foto': _foto_do_item(tipo, objeto),
@@ -6140,8 +6336,7 @@ def _produtos_com_foto():
         Brinquedos._base_manager.all(),
         Combos._base_manager.all(),
         Promocoes._base_manager.select_related('brinquedos'),
-        # a máquina do kit: a foto dele, quando o kit não tem a sua
-        PecasReposicao._base_manager.select_related('maquina').prefetch_related('imagem_peca_reposicao'),
+        PecasReposicao._base_manager.prefetch_related('imagem_peca_reposicao'),
     ]
 
 
@@ -6154,9 +6349,9 @@ def _anotar_foto_e_pagina(linha, produto):
     """
     modelo = linha.content_type.model if linha.content_type_id else ""
     rotulo, rota = TIPOS_NO_CARRINHO.get(modelo, ("Produto", None))
-    # o kit eletrônico é uma peça com a página dele (LEIA-ME seção 105)
-    if isinstance(produto, PecasReposicao) and produto.eh_kit:
-        rotulo, rota = "Kit eletrônico", "kit_detalhe"
+    # o kit eletrônico é um produto (LEIA-ME seção 107): a página é a dele, o rótulo diz o que é
+    if isinstance(produto, Brinquedos) and produto.eh_kit:
+        rotulo = "Kit eletrônico"
     linha.tipo_rotulo = rotulo
     linha.url_produto = reverse(rota, args=[linha.object_id]) if (rota and produto) else ""
 
@@ -6170,8 +6365,8 @@ def _anotar_foto_e_pagina(linha, produto):
             produto.brinquedos.imagem_brinquedo if produto.brinquedos_id else None
         )
     elif isinstance(produto, PecasReposicao):
-        # a foto da peça; o kit sem foto própria mostra a da máquina dele
-        miniatura = produto.foto_do_card
+        foto_principal = produto.imagem_principal
+        miniatura = foto_principal.imagem if foto_principal else None
     # o campo vai para o template, que o reduz com `|foto` (Cloudinary)
     linha.miniatura = miniatura or ""
 
@@ -8884,43 +9079,44 @@ class SearchView(View):
             brinquedos = (
                 Brinquedos.objects
                 .filter(ativo=True)
-                .prefetch_related("categorias_brinquedos", "tags")
+                .select_related("maquina")
+                .prefetch_related("categorias_brinquedos", "tags", "componentes_kit")
             )
 
             for brinquedo in brinquedos:
+                # o kit eletrônico (um produto, LEIA-ME 107) é achado também
+                # pela máquina e pelos itens ("tv box", "sensores")
+                extras = []
+                if brinquedo.eh_kit:
+                    extras = ["kit eletronico", "kit"]
+                    if brinquedo.maquina_id:
+                        extras.append(brinquedo.maquina.nome_brinquedo)
+                    extras.extend(item.nome for item in brinquedo.componentes_kit.all())
                 adicionar_resultado(
-                    "Brinquedo",
+                    "Kit eletrônico" if brinquedo.eh_kit else "Brinquedo",
                     brinquedo.nome_brinquedo,
                     brinquedo.descricao,
                     reverse("brinquedo_detalhe", args=[brinquedo.id]),
                     brinquedo.imagem_brinquedo,
                     *(categoria.nome_categoria for categoria in brinquedo.categorias_brinquedos.all()),
                     *(tag.nome_tags for tag in brinquedo.tags.all()),
+                    *extras,
                 )
 
             pecas = (
                 PecasReposicao.da_vitrine()
-                .select_related("maquina")
-                .prefetch_related("categoria_peca", "imagem_peca_reposicao", "componentes_kit")
+                .prefetch_related("categoria_peca", "imagem_peca_reposicao")
             )
 
             for peca in pecas:
-                # o kit eletrônico aparece como kit: pela máquina e pelos
-                # itens também ("tv box", "sensores"), com a página dele
-                extras = []
-                if peca.eh_kit:
-                    extras = ["kit eletronico", "kit"]
-                    if peca.maquina_id and peca.maquina:
-                        extras.append(peca.maquina.nome_brinquedo)
-                    extras.extend(item.nome for item in peca.componentes_kit.all())
+                imagem_principal = peca.imagem_principal
                 adicionar_resultado(
-                    "Kit eletrônico" if peca.eh_kit else "Peça de reposição",
+                    "Peça de reposição",
                     peca.nome,
                     peca.descricao_peca,
-                    peca.url_publica,
-                    peca.foto_do_card,
+                    reverse("reposicao_detalhe", args=[peca.id]),
+                    imagem_principal.imagem if imagem_principal else None,
                     *(categoria.nome_categoria_peca for categoria in peca.categoria_peca.all()),
-                    *extras,
                 )
 
             combos = Combos.objects.filter(ativo=True).prefetch_related("brinquedos")

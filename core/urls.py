@@ -31,7 +31,6 @@ from .sitemaps import (
     BrinquedosSitemap,
     CategoriasSitemap,
     JogosSitemap,
-    KitsSitemap,
     PecasSitemap,
     TemasSitemap,
 )
@@ -131,7 +130,6 @@ sitemaps = {
     "estaticas": PaginasEstaticasSitemap,
     "temas": TemasSitemap,
     "pecas": PecasSitemap,
-    "kits": KitsSitemap,
     "brinquedos": BrinquedosSitemap,
     "categorias": CategoriasSitemap,
     "jogos": JogosSitemap,
@@ -265,7 +263,9 @@ urlpatterns = [
         ReposicaoDetalheView.as_view(),
         name="reposicao_detalhe",
     ),
-    # o kit eletrônico: a parte elétrica da máquina, sem a máquina (LEIA-ME 105)
+    # os endereços antigos do kit eletrônico (LEIA-ME 105): o kit agora é um
+    # produto, junto com as máquinas (seção 107) -- /kits/ leva à categoria
+    # "Kits eletrônicos" e /kits/<número>/ ao produto (301)
     path("kits/", KitsView.as_view(), name="kits"),
     path("kits/<int:pk>/", KitDetalheView.as_view(), name="kit_detalhe"),
     path(

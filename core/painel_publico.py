@@ -51,8 +51,7 @@ def _catalogo():
     return {
         "brinquedos": resumo["total"],
         "categorias": CategoriasBrinquedos.objects.filter(ativo=True).count(),
-        # "peças de reposição na loja": o kit eletrônico tem a vitrine dele (/kits/)
-        "pecas": PecasReposicao.pecas_avulsas_da_vitrine().count(),
+        "pecas": PecasReposicao.da_vitrine().count(),
         "eventos": Eventos.objects.count(),
         "projetos": Projetos.objects.count(),
         "avaliacao": round(float(media), 1) if media else None,

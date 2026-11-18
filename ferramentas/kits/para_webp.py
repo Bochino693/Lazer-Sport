@@ -20,7 +20,10 @@ def main(origem, destino):
         png = origem / f"{chave}.png"
         webp = destino / f"{chave}.webp"
         with Image.open(png) as imagem:
-            imagem.convert("RGB").save(webp, "WEBP", quality=88, method=6)
+            imagem = imagem.convert("RGB")
+            if imagem.size != (1200, 1200):  # renderizada em 2x: reduz com bordas lisas
+                imagem = imagem.resize((1200, 1200), Image.LANCZOS)
+            imagem.save(webp, "WEBP", quality=88, method=6)
         print(webp, webp.stat().st_size // 1024, "KB")
 
 

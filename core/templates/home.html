@@ -402,14 +402,16 @@
                  data-nome="{{ brinquedo.nome_brinquedo|lower }}"
                  data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
                  data-preco="{{ brinquedo.valor_brinquedo|default:0 }}">
-          <div class="card-produto card-mini{% if brinquedo.exibir_na_loja %} is-sale{% endif %}">
+          <div class="card-produto card-mini{% if brinquedo.disponivel_na_loja %} is-sale{% endif %}{% if brinquedo.eh_kit %} card-mini--kit{% endif %}">
 
             <div class="img-area">
-              {% if brinquedo.exibir_na_loja %}
+              {# "À venda" só com preço: o kit da loja sem preço é "Sob consulta" (LEIA-ME 107) #}
+              {% if brinquedo.disponivel_na_loja %}
                 <span class="produto-status is-sale" title="Disponível para compra">À venda</span>
               {% else %}
                 <span class="produto-status" title="Projeto sob consulta">Sob consulta</span>
               {% endif %}
+              {% if brinquedo.eh_kit %}{% include "partials/kit_no_card.html" with produto=brinquedo parte="selo" %}{% endif %}
 
               <button type="button"
                       class="card-mini-desejo"
@@ -444,7 +446,7 @@
               <h3 class="card-mini-nome">
                 <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="produto-title-link">{{ brinquedo.nome_brinquedo }}</a>
               </h3>
-              {% faixas brinquedo.nome_brinquedo %}
+              {% if brinquedo.eh_kit %}{% include "partials/kit_no_card.html" with produto=brinquedo parte="itens" %}{% else %}{% faixas brinquedo.nome_brinquedo %}{% endif %}
 
               <div class="card-mini-meta">
                 <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}"
@@ -863,50 +865,6 @@
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
-
-
-<!-- ======= KITS ELETRÔNICOS ======= -->
-{% comment %}
-  KITS ELETRÔNICOS (LEIA-ME seção 105): a parte eletrônica de uma máquina,
-  sem a máquina -- "para o cara instalar toda parte elétrica na máquina caso
-  ele só tenha a máquina", nas palavras do dono. A faixa só existe com kit na
-  vitrine; os cards são os da peça (partials/peca_card.html, com o selo "Kit").
-{% endcomment %}
-{% if kits_home %}
-<link rel="stylesheet" href="{% estatico 'site/paginas/home-kits.css' %}">
-<section id="kits-section" class="ls-kits-faixa" aria-labelledby="kits-titulo">
-  <div class="ls-kits-faixa-caixa">
-    <div class="ls-kits-faixa-topo">
-      <div class="ls-kits-faixa-texto">
-        <span class="ls-kits-faixa-olho">
-          <i class="fa-solid fa-microchip" aria-hidden="true"></i>
-          Kit eletrônico
-        </span>
-        <h2 class="ls-kits-faixa-titulo" id="kits-titulo">Kits eletrônicos <span>monte sua própria máquina</span></h2>
-        <p class="ls-kits-faixa-sub">
-          A parte eletrônica completa, sem a máquina: TV Box com o jogo, sensores, câmera, placa,
-          cabos e fonte. Para montar a sua, trocar a eletrônica ou recuperar a máquina que parou.
-          Pronto para instalar.
-        </p>
-      </div>
-      <a href="{% url 'kits' %}#breadcrumb" class="ls-kits-faixa-todos">
-        Ver todos os kits
-        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-      </a>
-    </div>
-
-    <div class="pc-grade ls-kits-faixa-grade">
-      {% for kit in kits_home|slice:":4" %}
-      <article class="ls-kits-faixa-item">
-        {% include "partials/peca_card.html" with peca=kit %}
-      </article>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<div class="espacador"></div>
-{% endif %}
 
 
 {% if pecas_todas %}

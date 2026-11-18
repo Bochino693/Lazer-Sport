@@ -185,7 +185,7 @@ class CategoriaPecaAdmin(admin.ModelAdmin):
 
 
 class ComponenteKitInline(admin.TabularInline):
-    """O que vem no kit eletrônico (LEIA-ME seção 105). O painel (Peças) edita o mesmo."""
+    """O que vem no kit eletrônico (LEIA-ME seções 105 e 107). O painel (Brinquedos) edita o mesmo."""
 
     model = ComponenteKit
     fk_name = "kit"
@@ -218,13 +218,12 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         # Item de manutenção não vai à vitrine nem estando ativo, então
         # "ativo" sozinho não responde mais "o que o site mostra?".
         "uso",
-        "eh_kit",
         "categoria_peca",
     )
 
     filter_horizontal = ("categoria_peca",)
 
-    inlines = [ImagemPecaInline, ComponenteKitInline]
+    inlines = [ImagemPecaInline]
 
     fieldsets = (
         ("Status", {
@@ -242,15 +241,6 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
                 "descricao_peca",
                 "categoria_peca",
             )
-        }),
-
-        ("Kit eletrônico", {
-            "fields": ("eh_kit", "maquina"),
-            "description": (
-                "A parte eletrônica de uma máquina, sem a máquina: vai para "
-                "/kits/ (fora da lista de peças) e a página da máquina chama "
-                "para ele. Os itens ficam na lista \"Itens do kit\" abaixo."
-            ),
         }),
 
         ("Valores", {
@@ -684,19 +674,20 @@ class JogoCadastradoAdmin(admin.ModelAdmin):
 
 @admin.register(Brinquedos)
 class BrinquedosAdmin(admin.ModelAdmin):
-    list_display = ('nome_brinquedo', 'avaliacao', 'voltz', 'exibir_na_loja', 'ativo', 'criacao')
+    list_display = ('nome_brinquedo', 'avaliacao', 'voltz', 'exibir_na_loja', 'eh_kit', 'ativo', 'criacao')
     search_fields = ('nome_brinquedo', 'descricao', 'estabelecimento__nome_estabelecimento')
-    list_filter = ('ativo', 'exibir_na_loja', 'estabelecimentos', 'categorias_brinquedos', 'tags')
+    # o kit eletrônico é um produto (LEIA-ME 107): o filtro e, embaixo, "Itens do kit"
+    list_filter = ('ativo', 'exibir_na_loja', 'eh_kit', 'estabelecimentos', 'categorias_brinquedos', 'tags')
     readonly_fields = ('criacao', 'atualizado')
     filter_horizontal = ('categorias_brinquedos', 'tags', 'estabelecimentos')
     ordering = ('-criacao',)
-    inlines = [ImagemBrinquedoInline, ObjetoTresDInline]
+    inlines = [ImagemBrinquedoInline, ObjetoTresDInline, ComponenteKitInline]
 
     def get_inlines(self, request, obj):
         # antes da migração dos objetos 3D, o cadastro abre sem o bloco do 3D
         from .objetos_3d import tabela_pronta
 
-        return self.inlines if tabela_pronta() else [ImagemBrinquedoInline]
+        return self.inlines if tabela_pronta() else [ImagemBrinquedoInline, ComponenteKitInline]
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)

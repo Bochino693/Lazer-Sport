@@ -435,7 +435,7 @@
 
             <div class="catalogo-grid">
                 {% for brinquedo in brinquedos %}
-                    <article class="catalogo-card {% if brinquedo.exibir_na_loja and brinquedo.valor_brinquedo > 0 %}is-store{% else %}is-quote{% endif %}" data-scroll-reveal>
+                    <article class="catalogo-card {% if brinquedo.exibir_na_loja and brinquedo.valor_brinquedo > 0 %}is-store{% else %}is-quote{% endif %}{% if brinquedo.eh_kit %} catalogo-card--kit{% endif %}" data-scroll-reveal>
                         <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
                            class="catalogo-card-media"
                            aria-label="Ver detalhes de {{ brinquedo.nome_brinquedo }}">
@@ -447,9 +447,10 @@
                             {% else %}
                                 <span class="catalogo-status quote">
                                     <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
-                                    Projeto sob consulta
+                                    {% if brinquedo.eh_kit %}Kit sob consulta{% else %}Projeto sob consulta{% endif %}
                                 </span>
                             {% endif %}
+                            {% if brinquedo.eh_kit %}{% include "partials/kit_no_card.html" with produto=brinquedo parte="selo" %}{% endif %}
 
                             {% if brinquedo.imagem_brinquedo %}
                                 <img
@@ -481,7 +482,7 @@
                             <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="catalogo-card-title">
                                 <h3>{{ brinquedo.nome_brinquedo }}</h3>
                             </a>
-                            {% faixas brinquedo.nome_brinquedo %}
+                            {% if brinquedo.eh_kit %}{% include "partials/kit_no_card.html" with produto=brinquedo parte="itens" %}{% else %}{% faixas brinquedo.nome_brinquedo %}{% endif %}
 
                             <div class="catalogo-rating-row">
                                 <div class="catalogo-stars" data-rating="{{ brinquedo.avaliacao|default:0 }}" aria-hidden="true"></div>
@@ -506,6 +507,12 @@
                                     <div class="catalogo-spec">
                                         <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                                         <span>{{ brinquedo.dimensoes_m }}</span>
+                                    </div>
+                                {% elif brinquedo.eh_kit %}
+                                    {# o kit é a parte elétrica: no lugar das medidas, a máquina dele #}
+                                    <div class="catalogo-spec">
+                                        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                                        <span>{% if brinquedo.maquina_id %}Para a máquina {{ brinquedo.maquina.nome_brinquedo }}{% else %}A parte eletrônica, sem a máquina{% endif %}</span>
                                     </div>
                                 {% else %}
                                     <div class="catalogo-spec">
@@ -551,14 +558,20 @@
                                 </div>
                             {% else %}
                                 <div class="catalogo-quote-panel">
+                                    {% if brinquedo.eh_kit %}
+                                    <span>Kit eletrônico</span>
+                                    <strong>Valor sob consulta</strong>
+                                    <small>Diga qual é a sua máquina</small>
+                                    {% else %}
                                     <span>Solução personalizada</span>
                                     <strong>Solicite um orçamento</strong>
                                     <small>Projeto dimensionado para o seu espaço</small>
+                                    {% endif %}
                                 </div>
 
                                 <div class="catalogo-actions">
                                     <a
-                                        href="https://wa.me/5511960563135?text=Olá!%20Gostaria%20de%20um%20orçamento%20para%20o%20brinquedo%20{{ brinquedo.nome_brinquedo|urlencode }}"
+                                        href="https://wa.me/5511960563135?text=Olá!%20Gostaria%20de%20um%20orçamento%20{% if brinquedo.eh_kit %}do%20{% else %}para%20o%20brinquedo%20{% endif %}{{ brinquedo.nome_brinquedo|urlencode }}"
                                         target="_blank"
                                         rel="noopener"
                                         class="catalogo-action quote"

@@ -190,14 +190,15 @@
                 <div class="grid-cards grid-cards--mini cat-grid">
                     {% for item in page_obj %}
                         <article class="card-link" data-id="{{ item.id }}">
-                            <div class="card-produto card-mini{% if item.exibir_na_loja %} is-sale{% endif %}">
+                            <div class="card-produto card-mini{% if item.disponivel_na_loja %} is-sale{% endif %}{% if item.eh_kit %} card-mini--kit{% endif %}">
 
                                 <div class="img-area">
-                                    {% if item.exibir_na_loja %}
+                                    {% if item.disponivel_na_loja %}
                                         <span class="produto-status is-sale" title="Disponível para compra">À venda</span>
                                     {% else %}
                                         <span class="produto-status" title="Projeto sob consulta">Sob consulta</span>
                                     {% endif %}
+                                    {% if item.eh_kit %}{% include "partials/kit_no_card.html" with produto=item parte="selo" %}{% endif %}
 
                                     <button type="button"
                                             class="card-mini-desejo"
@@ -229,7 +230,7 @@
                                     <h3 class="card-mini-nome">
                                         <a href="{% url 'brinquedo_detalhe' item.id %}#bread" class="produto-title-link">{{ item.nome_brinquedo }}</a>
                                     </h3>
-                                    {% faixas item.nome_brinquedo %}
+                                    {% if item.eh_kit %}{% include "partials/kit_no_card.html" with produto=item parte="itens" %}{% else %}{% faixas item.nome_brinquedo %}{% endif %}
 
                                     <div class="card-mini-meta">
                                         <div class="avaliacao" data-rating="{{ item.avaliacao|default:0|unlocalize }}"

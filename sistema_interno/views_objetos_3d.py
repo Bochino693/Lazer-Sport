@@ -138,8 +138,10 @@ class Objetos3DInnerView(RespostaJSONMixin, SuperusuarioInternoRequiredMixin, Vi
             return render(request, self.template_name, {"tabela_ausente": True, "linhas": []})
 
         site = endereco_do_site(request).rstrip("/")
+        # (o kit eletrônico não é máquina: sem 3D, e o nome "Kit Strike Kids"
+        # sugeriria o 3D do Strike Kids -- LEIA-ME 107)
         brinquedos = list(
-            Brinquedos.objects.filter(ativo=True)
+            Brinquedos.objects.filter(ativo=True, eh_kit=False)
             .prefetch_related("objeto_3d", "categorias_brinquedos")
             .order_by("nome_brinquedo")
         )

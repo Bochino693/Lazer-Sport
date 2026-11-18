@@ -30,7 +30,9 @@ def _brinquedos_do_tema(palavras, limite=8):
     for palavra in palavras:
         filtro |= Q(nome_brinquedo__icontains=palavra) | Q(descricao__icontains=palavra)
     achados = []
-    for b in Brinquedos.objects.filter(ativo=True).filter(filtro).order_by("-avaliacao", "nome_brinquedo")[:limite]:
+    # só máquinas: a página do tema ("máquina de boliche") não é a do kit eletrônico (LEIA-ME 107)
+    for b in (Brinquedos.objects.filter(ativo=True, eh_kit=False).filter(filtro)
+              .order_by("-avaliacao", "nome_brinquedo")[:limite]):
         try:
             foto = reduzir_imagem(b.imagem_brinquedo.url, 480) if b.imagem_brinquedo else ""
         except Exception:

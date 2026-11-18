@@ -24,10 +24,15 @@ WHATSAPP = "5511960563135"
 
 
 def brinquedos_da_arena():
-    """Os brinquedos ativos com tudo o que a arena desenha, em cinco consultas."""
+    """Os brinquedos ativos com tudo o que a arena desenha, em cinco consultas.
+
+    O kit eletrônico (LEIA-ME 107) é um produto, mas não é uma máquina: a
+    parte elétrica não entra na roda 3D nem no "Monte seu espaço" (pelo nome,
+    "Kit Strike Kids" pegaria o 3D do Strike Kids).
+    """
     return (
         Brinquedos.objects
-        .filter(ativo=True)
+        .filter(ativo=True, eh_kit=False)
         .only(
             "id", "nome_brinquedo", "imagem_brinquedo", "descricao",
             "valor_brinquedo", "exibir_na_loja", "avaliacao", "voltz",

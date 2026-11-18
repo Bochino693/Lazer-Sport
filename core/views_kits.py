@@ -1,128 +1,50 @@
-"""As páginas do kit eletrônico: /kits/ e /kits/<id>/ (LEIA-ME seção 105).
+"""Os endereços antigos dos kits eletrônicos: /kits/ e /kits/<id>/ (LEIA-ME seções 105 e 107).
 
-O dono: o kit "deve ter espaço entre os demais produtos". O espaço é uma
-vitrine própria -- a lista dos kits, com um topo que explica o que é um kit
-(a parte eletrônica completa para montar ou recuperar a máquina, pronta para
-instalar) -- e a página de cada kit, que é a página da peça
-(reposicao_info.html) com o que só o kit tem: "O que vem no kit" e "Para a
-máquina X". Os kits NÃO aparecem na lista de peças (/pecas-reposicao/).
+O kit era uma peça com vitrine própria (/kits/) e página própria
+(/kits/<id da peça>/). O dono: "vc criou outra sub section e nem sei se outro
+objeto, mas eles devem estar junto com os produtos". Agora o kit é um produto
+(Brinquedos com `eh_kit`), nas mesmas grades das máquinas, e a categoria
+"Kits eletrônicos" junta todos. Os endereços antigos (links, Google, o menu
+de quem estava com a página aberta) continuam valendo, para sempre (301):
 
-Como as outras telas do catálogo, o que é igual para todo visitante sai do
-cache do catálogo (core/home_cache.py) -- a versão muda quando a equipe salva
-um kit ou um item dele (core/signals.py) -- e o que é DESTE visitante (o que
-ele curtiu ou guardou) é resolvido a cada requisição.
+  * /kits/          -> a página da categoria "Kits eletrônicos" (sem ela, o
+                       catálogo de brinquedos);
+  * /kits/<número>/ -> a página do produto que a peça-kit virou (o número da
+                       peça ficou em `Brinquedos.id_kit_antigo`); o número
+                       de uma peça avulsa leva à peça, como antes.
 """
 
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import Http404
+from django.shortcuts import redirect
 from django.views import View
 
-from . import favoritos as servico_favoritos
 from . import kits
-from .home_cache import get_cached_catalog_page
-from .models import PecasReposicao
+from .models import Brinquedos, PecasReposicao
 
 
-def _url_da_peca_avulsa(componente):
-    """A página da peça vendida sozinha (o Cabo HDMI), só se ela está na vitrine."""
-    peca = componente.peca
-    if peca is None or peca.eh_kit or not peca.ativo or peca.uso != PecasReposicao.Uso.LOJA:
-        return ""
-    return peca.url_publica
+def produto_do_kit_antigo(numero):
+    """O produto que a peça-kit `numero` virou, ou None."""
+    return Brinquedos.objects.filter(eh_kit=True, id_kit_antigo=numero).order_by("id").only("id").first()
 
 
 class KitsView(View):
-    """/kits/: a vitrine dos kits eletrônicos."""
-
-    @staticmethod
-    def _montar():
-        kits = list(PecasReposicao.kits_da_vitrine())
-        return {
-            "kits": kits,
-            "curtidas": servico_favoritos.contagem_curtidas(kits),
-        }
+    """/kits/: a vitrine que não existe mais leva à categoria dos kits."""
 
     def get(self, request):
-        from .views import _marcas_do_visitante
-
-        dados = get_cached_catalog_page("kits", (), self._montar)
-        totais = dados["curtidas"]
-        # o kit é uma peça também nas curtidas e na lista de desejos
-        marcas = _marcas_do_visitante(request, "peca")
-
-        cartoes = [
-            {
-                "obj": kit,
-                "curtido": kit.pk in marcas["curtida"],
-                "desejado": kit.pk in marcas["desejo"],
-                "curtidas": totais.get(kit.pk, 0),
-            }
-            for kit in dados["kits"]
-        ]
-        maquinas = {kit.maquina.nome_brinquedo for kit in dados["kits"] if kit.maquina_id and kit.maquina}
-        resposta = render(request, "kits.html", {
-            "cartoes_kits": cartoes,
-            "total_maquinas": len(maquinas),
-        })
-        return servico_favoritos.aplicar_cookie(request, resposta)
+        categoria = kits.categoria_dos_kits()
+        if categoria is not None:
+            return redirect("categoria_detalhe", pk=categoria.pk, permanent=True)
+        return redirect("brinquedos", permanent=True)
 
 
 class KitDetalheView(View):
-    """/kits/<id>/: a página do kit (a da peça, com os itens e a máquina)."""
-
-    @staticmethod
-    def _montar(pk):
-        kit = get_object_or_404(PecasReposicao.kits_da_vitrine(), pk=pk)
-        componentes = [
-            {
-                "nome": item.nome,
-                "detalhe": item.detalhe,
-                "quantidade": item.quantidade,
-                "icone": item.icone,
-                "foto": kits.foto_do_componente(item),
-                "url_peca": _url_da_peca_avulsa(item),
-            }
-            for item in kit.componentes_kit.select_related("peca").prefetch_related("peca__imagem_peca_reposicao")
-        ]
-        maquina = kit.maquina if (kit.maquina_id and kit.maquina and kit.maquina.ativo) else None
-        imagens = list(kit.imagens_ordenadas)
-        return {
-            "peca": kit,
-            "imagens_peca": imagens,
-            "categorias_peca": list(kit.categoria_peca.all()),
-            "componentes": componentes,
-            "maquina_kit": maquina,
-            # sem foto própria, a vitrine mostra a máquina com o selo "KIT ELETRÔNICO"
-            "foto_da_maquina": kit.foto_do_card if (not imagens and kit.foto_e_da_maquina) else None,
-            "curtidas": servico_favoritos.contagem_curtidas([kit]).get(kit.pk, 0),
-        }
+    """/kits/<número>/: a página do kit agora é a do produto."""
 
     def get(self, request, pk):
-        from django.http import Http404
-
-        from . import cliques
-        from .interacoes import VISITA, inicio_da_hora, somar
-        from .views import _estado_do_visitante
-
-        try:
-            dados = get_cached_catalog_page("kit", (pk,), lambda: KitDetalheView._montar(pk))
-        except Http404:
-            # o endereço de kit com o número de uma peça avulsa leva à peça
-            if PecasReposicao.pecas_avulsas_da_vitrine().filter(pk=pk).exists():
-                return redirect("reposicao_detalhe", pk=pk, permanent=True)
-            raise
-        kit = dados["peca"]
-
-        # a visita vai para o gráfico do painel, como a da peça
-        cliques.depois(somar, VISITA, "peca", kit.pk, 1, inicio_da_hora())
-
-        resposta = render(request, "reposicao_info.html", {
-            "peca": kit,
-            "eh_kit": True,
-            "imagens_peca": dados["imagens_peca"],
-            "categorias_peca": dados["categorias_peca"],
-            "componentes": dados["componentes"],
-            "maquina_kit": dados["maquina_kit"],
-            "foto_da_maquina": dados["foto_da_maquina"],
-            "favorito": _estado_do_visitante(request, kit, dados["curtidas"]),
-        })
-        return servico_favoritos.aplicar_cookie(request, resposta)
+        produto = produto_do_kit_antigo(pk)
+        if produto is not None:
+            return redirect("brinquedo_detalhe", id=produto.pk, permanent=True)
+        # o endereço de kit com o número de uma peça avulsa leva à peça (como antes)
+        if PecasReposicao.da_vitrine().filter(pk=pk).exists():
+            return redirect("reposicao_detalhe", pk=pk, permanent=True)
+        raise Http404("Kit não encontrado.")

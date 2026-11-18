@@ -95,12 +95,9 @@ class PecaAdminView(AdminOnlyMixin, View):
 
         pecas = (
             PecasReposicao.objects
-            .select_related("maquina")
             .prefetch_related(
                 "categoria_peca",
                 "imagem_peca_reposicao",
-                # o que vem no kit eletrônico (LEIA-ME seção 105), na ordem
-                "componentes_kit",
             )
             .annotate(
                 curtidas=Count(
@@ -133,8 +130,6 @@ class PecaAdminView(AdminOnlyMixin, View):
             pecas = pecas.filter(imagem_peca_reposicao__isnull=True)
         elif situacao == "sem_preco":
             pecas = pecas.filter(preco_venda__isnull=True)
-        elif situacao == "kits":
-            pecas = pecas.filter(eh_kit=True)
 
         pagina = Paginator(pecas, 18).get_page(request.GET.get("page"))
 
@@ -168,19 +163,6 @@ class PecaAdminView(AdminOnlyMixin, View):
                 "categorias_nomes": [
                     c.nome_categoria_peca for c in peca.categoria_peca.all()
                 ],
-                # o kit eletrônico (LEIA-ME seção 105): a máquina e os itens
-                "eh_kit": peca.eh_kit,
-                "maquina_id": peca.maquina_id or "",
-                "maquina_nome": peca.maquina.nome_brinquedo if peca.maquina_id and peca.maquina else "",
-                "componentes": [
-                    {
-                        "nome": item.nome,
-                        "detalhe": item.detalhe,
-                        "quantidade": item.quantidade,
-                        "peca": item.peca_id or "",
-                    }
-                    for item in peca.componentes_kit.all()
-                ],
             })
 
         todas = PecasReposicao.objects.all()
@@ -201,22 +183,6 @@ class PecaAdminView(AdminOnlyMixin, View):
                 imagem_peca_reposicao__isnull=True,
             ).distinct().count(),
             "total_sem_preco": todas.filter(preco_venda__isnull=True).count(),
-            "total_kits": todas.filter(eh_kit=True).count(),
-            # a escolha da máquina do kit (chips de rádio com busca) e a peça
-            # avulsa que um item do kit pode ser (o Cabo HDMI)
-            # (a máquina fora do site que já é de um kit continua na lista:
-            # abrir e salvar o kit não pode soltá-lo dela)
-            "maquinas_kit": list(
-                Brinquedos.objects.filter(Q(ativo=True) | Q(kits_eletronicos__isnull=False))
-                .distinct()
-                .order_by("nome_brinquedo")
-                .values("id", "nome_brinquedo", "ativo")
-            ),
-            "pecas_avulsas": list(
-                PecasReposicao.objects.filter(eh_kit=False, uso=PecasReposicao.Uso.LOJA)
-                .order_by("nome")
-                .values("id", "nome", "ativo")
-            ),
         }
 
         response = render(request, self.template_name, contexto)
@@ -325,11 +291,6 @@ class PecaAdminView(AdminOnlyMixin, View):
         except ValueError as erro:
             raise ErroDeFormulario(str(erro))
         peca.ativo = request.POST.get("ativo") in ("1", "true", "on")
-        # o kit eletrônico (LEIA-ME seção 105): a marca e a máquina; os itens
-        # vêm depois do save (a peça nova ainda não tem id)
-        peca.eh_kit = request.POST.get("eh_kit") in ("1", "true", "on")
-        peca.maquina = self._maquina_do_kit(request) if peca.eh_kit else None
-        componentes = self._ler_componentes(request, peca)
         peca.save()
 
         categorias = request.POST.getlist("categorias")
@@ -339,9 +300,6 @@ class PecaAdminView(AdminOnlyMixin, View):
             )
         )
 
-        if componentes is not None:
-            self._gravar_componentes(peca, componentes)
-
         self._guardar_imagens(request, peca)
 
         return self._sucesso(
@@ -349,97 +307,6 @@ class PecaAdminView(AdminOnlyMixin, View):
             f"Peça '{peca.nome}' salva com sucesso.",
             peca.id,
         )
-
-    # ------------------------------------------------------------------
-    # O kit eletrônico (LEIA-ME seção 105)
-    # ------------------------------------------------------------------
-    MAX_COMPONENTES_KIT = 40
-
-    @staticmethod
-    def _maquina_do_kit(request):
-        """A máquina escolhida nos chips (vazio: kit sem máquina)."""
-        valor = (request.POST.get("maquina") or "").strip()
-        if not valor:
-            return None
-        if not valor.isdigit():
-            raise ErroDeFormulario("Máquina do kit inválida.")
-        maquina = Brinquedos.objects.filter(pk=int(valor)).first()
-        if maquina is None:
-            raise ErroDeFormulario("A máquina escolhida para o kit não existe mais. Escolha outra.")
-        return maquina
-
-    def _ler_componentes(self, request, peca):
-        """Os itens do kit que vieram do editor, já conferidos; None se o editor não mandou nada.
-
-        O editor manda a lista inteira num campo só (`componentes_json`: nome,
-        detalhe, quantidade e a peça avulsa de cada linha, na ordem da tela).
-        Quem não manda o campo (um formulário antigo, o atalho de publicar)
-        não apaga os itens que o kit já tem.
-        """
-        import json
-
-        if "componentes_json" not in request.POST:
-            return None
-        try:
-            linhas = json.loads(request.POST.get("componentes_json") or "[]")
-        except (TypeError, ValueError):
-            raise ErroDeFormulario("A lista do que vem no kit chegou incompleta. Tente de novo.")
-        if not isinstance(linhas, list):
-            raise ErroDeFormulario("A lista do que vem no kit chegou incompleta. Tente de novo.")
-
-        itens = []
-        for posicao, linha in enumerate(linhas, start=1):
-            if not isinstance(linha, dict):
-                raise ErroDeFormulario("A lista do que vem no kit chegou incompleta. Tente de novo.")
-            nome = str(linha.get("nome") or "").strip()
-            detalhe = str(linha.get("detalhe") or "").strip()
-            if not nome:
-                # linha em branco (adicionada e não preenchida) não vira item
-                if not detalhe:
-                    continue
-                raise ErroDeFormulario(f"Item {posicao} do kit: escreva o nome do item.")
-            if len(nome) > 80:
-                raise ErroDeFormulario(f"Item {posicao} do kit: o nome passa de 80 caracteres.")
-            if len(detalhe) > 120:
-                raise ErroDeFormulario(f"Item {posicao} do kit: o detalhe passa de 120 caracteres.")
-            try:
-                quantidade = int(str(linha.get("quantidade") or "1").strip())
-            except ValueError:
-                raise ErroDeFormulario(f"Item {posicao} do kit: quantidade inválida.")
-            if not 1 <= quantidade <= 99:
-                raise ErroDeFormulario(f"Item {posicao} do kit: a quantidade vai de 1 a 99.")
-            peca_id = str(linha.get("peca") or "").strip()
-            avulsa = None
-            if peca_id:
-                if not peca_id.isdigit():
-                    raise ErroDeFormulario(f"Item {posicao} do kit: peça avulsa inválida.")
-                avulsa = PecasReposicao.objects.filter(pk=int(peca_id), eh_kit=False).first()
-                if avulsa is None or (peca.pk and avulsa.pk == peca.pk):
-                    raise ErroDeFormulario(
-                        f"Item {posicao} do kit: a peça avulsa escolhida não existe mais. Escolha outra.")
-            itens.append({"nome": nome, "detalhe": detalhe, "quantidade": quantidade, "peca": avulsa})
-
-        if len(itens) > self.MAX_COMPONENTES_KIT:
-            raise ErroDeFormulario(f"O kit pode ter no máximo {self.MAX_COMPONENTES_KIT} itens.")
-        if request.POST.get("eh_kit") in ("1", "true", "on") and not itens:
-            raise ErroDeFormulario("Diga o que vem no kit: inclua pelo menos um item.")
-        return itens
-
-    @staticmethod
-    def _gravar_componentes(peca, itens):
-        """Troca a lista do kit pela da tela: a ordem é a das linhas."""
-        from .models import ComponenteKit
-
-        peca.componentes_kit.all().delete()
-        for ordem, item in enumerate(itens, start=1):
-            ComponenteKit.objects.create(
-                kit=peca,
-                nome=item["nome"],
-                detalhe=item["detalhe"],
-                quantidade=item["quantidade"],
-                ordem=ordem,
-                peca=item["peca"],
-            )
 
     def _guardar_imagens(self, request, peca):
         arquivos = request.FILES.getlist("imagens")

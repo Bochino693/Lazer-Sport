@@ -1,30 +1,31 @@
-"""O KIT ELETRÔNICO: a parte elétrica de uma máquina, sem a máquina (LEIA-ME seção 105).
+"""O KIT ELETRÔNICO: a parte elétrica de uma máquina, sem a máquina (LEIA-ME seções 105 e 107).
 
 O PEDIDO, nas palavras do dono: "no site, precisamos agora também do chamado
 kit, ele deve ter espaço entre os demais produtos, o kit seria o seguinte, os
 componentes eletrônicos sem a máquina para troca ou semi instalação, por
 exemplo, strike kids, uma tv box, 5 sensores de precisão, a câmera e etc, para
 o cara instalar toda parte elétrica na máquina caso ele só tenha a máquina, no
-lazer shot, a arma, a tv box". E a arte de exemplo: "KIT BOLICHE VIRTUAL --
-Monte sua própria máquina! Kit completo e pronto para instalar".
+lazer shot, a arma, a tv box".
 
-O KIT É UMA PEÇA MARCADA (`PecasReposicao.eh_kit`), e não um tipo novo no
-carrinho: a peça já passa pelo carrinho, pelo Pix/cartão/boleto, pelas
-parcelas sem juros, pelo pedido, pelas etiquetas e pelo painel. O que é só do
-kit mora aqui:
+O KIT É UM PRODUTO (seção 107). Ele nasceu como uma peça marcada, com vitrine
+própria; o dono: "vc criou outra sub section e nem sei se outro objeto, mas
+eles devem estar junto com os produtos". Agora é um `Brinquedos` com
+`eh_kit` -- o mesmo objeto das máquinas, nas mesmas grades (home, /brinquedos/,
+loja, categorias, busca), com a mesma página, o mesmo carrinho e a mesma tela
+do painel. A categoria "Kits eletrônicos" junta todos. O que é só do kit mora
+aqui:
 
-  * o ícone de cada item na página do kit (`icone_do_componente`);
-  * a lista curta do card ("7 itens: TV Box, ...", `resumo_dos_itens`);
-  * os três kits iniciais (`KITS_INICIAIS`) e quem os cria -- a migração
-    0208 e o comando `python manage.py kits_eletronicos`;
-  * a foto do Kit Boliche Virtual (a arte do dono, em
-    core/static/site/kits/), que sobe para o Cloudinary SÓ NO RENDER.
+  * o ícone e a foto de cada item na página (`icone_do_componente`,
+    `foto_do_componente`) e a lista curta do card ("7 itens: TV Box, ...",
+    `resumo_dos_itens`);
+  * a categoria dos kits (`categoria_dos_kits`, `url_dos_kits`);
+  * os três kits iniciais (`KITS_INICIAIS`) e o comando que cria os que
+    faltam: `python manage.py kits_eletronicos` (a arte sobe só com --foto).
 
-SEM PREÇO. Os kits nascem sem preço: o dono põe o preço no painel (Peças).
-Até lá o site mostra "Sob consulta" e o botão do WhatsApp, como os
-brinquedos fora da loja; o carrinho recusa o kit sem preço
-(`views._item_vendavel`).
+SEM PREÇO o kit é "Sob consulta", como as máquinas fora da loja: o carrinho só
+aceita o produto da loja com preço (`views._item_vendavel`).
 """
+
 
 from __future__ import annotations
 
@@ -193,8 +194,12 @@ KITS_INICIAIS = (
     ),
 )
 
+
 #: O item que é também uma peça vendida avulsa (pelo nome da peça).
 PECAS_AVULSAS = {"cabo hdmi": "cabo hdmi"}
+
+#: A categoria que junta os kits (criada pela migração 0212; o menu e /kits/ levam a ela).
+NOME_DA_CATEGORIA = "Kits eletrônicos"
 
 
 def _pelo_nome(objetos, campo, nome):
@@ -203,64 +208,137 @@ def _pelo_nome(objetos, campo, nome):
     return next((o for o in objetos if _normalizar(getattr(o, campo)) == alvo), None)
 
 
-def maquina_do_kit(Brinquedos, nome):
-    """A máquina do catálogo com este nome (a ativa primeiro), ou None.
+# ----------------------------------------------------------------------
+# A CATEGORIA, A PÁGINA E OS CARDS
+# ----------------------------------------------------------------------
 
-    Pelo nome INTEIRO: "Strike Kids" não pode pegar o "Strike Kids Boliche".
+def categoria_dos_kits(so_ativa=True):
+    """A categoria "Kits eletrônicos" (pelo nome, sem acento nem caixa), ou None."""
+    from .models import CategoriasBrinquedos
+
+    categorias = CategoriasBrinquedos.objects.order_by("id").only("id", "nome_categoria", "ativo")
+    if so_ativa:
+        categorias = categorias.filter(ativo=True)
+    return _pelo_nome(list(categorias), "nome_categoria", NOME_DA_CATEGORIA)
+
+
+def url_dos_kits():
+    """A página da categoria dos kits, ou "" (sem a categoria, ou sem kit no ar)."""
+    from django.conf import settings
+    from django.urls import reverse
+
+    from .models import Brinquedos
+
+    categoria = categoria_dos_kits()
+    if categoria is None or not Brinquedos.objects.filter(ativo=True, eh_kit=True).exists():
+        return ""
+    return reverse("categoria_detalhe", args=[categoria.pk], urlconf=settings.ROOT_URLCONF)
+
+
+def preparar_cards(brinquedos):
+    """Traz os itens e a máquina dos KITS da lista (a linha "7 itens: ..." e o "Para a máquina X").
+
+    Só os kits: a lista sem kit nenhum não paga consulta nenhuma. Devolve a lista.
     """
-    candidatos = list(Brinquedos.objects.order_by("-ativo", "id").only("id", "nome_brinquedo", "ativo"))
-    return _pelo_nome(candidatos, "nome_brinquedo", nome)
+    from django.db.models import prefetch_related_objects
+
+    kits = [b for b in brinquedos if getattr(b, "eh_kit", False)]
+    if kits:
+        prefetch_related_objects(kits, "componentes_kit", "maquina")
+    return brinquedos
 
 
-def peca_avulsa(PecasReposicao, nome_do_item):
-    """A peça da vitrine que é este item (o Cabo HDMI), se ela existir; senão None."""
-    alvo = PECAS_AVULSAS.get(_normalizar(nome_do_item))
-    if not alvo:
-        return None
-    pecas = list(
-        PecasReposicao.objects.filter(eh_kit=False).order_by("-ativo", "id").only("id", "nome", "ativo")
-    )
-    return _pelo_nome(pecas, "nome", alvo)
+def url_da_peca_avulsa(item):
+    """A página da peça vendida sozinha (o Cabo HDMI), só se ela está na vitrine; senão ""."""
+    from django.conf import settings
+    from django.urls import reverse
+
+    from .models import PecasReposicao
+
+    peca = item.peca if item.peca_id else None
+    if peca is None or not peca.ativo or peca.uso != PecasReposicao.Uso.LOJA:
+        return ""
+    return reverse("reposicao_detalhe", args=[peca.pk], urlconf=settings.ROOT_URLCONF)
 
 
-def criar_kits_iniciais(PecasReposicao, Brinquedos, ComponenteKit, avisar=print):
-    """Cria os kits que ainda não existem. Devolve {"criados": [nomes], "existentes": [nomes]}.
+def itens_da_pagina(kit):
+    """O que vem no kit, para a página: nome, detalhe, quantidade, ícone, foto e a peça avulsa."""
+    return [
+        {
+            "nome": item.nome,
+            "detalhe": item.detalhe,
+            "quantidade": item.quantidade,
+            "icone": item.icone,
+            "foto": foto_do_componente(item),
+            "url_peca": url_da_peca_avulsa(item),
+        }
+        for item in kit.componentes_kit.select_related("peca").prefetch_related("peca__imagem_peca_reposicao")
+    ]
 
-    IDEMPOTENTE: o kit é procurado pelo nome antes (sem acento nem caixa); o
-    que já existe não é tocado -- o dono pode ter mudado o nome dos itens, a
-    máquina ou o preço no painel. Recebe os modelos para servir à migração
-    (modelos históricos) e ao comando.
+
+# ----------------------------------------------------------------------
+# OS KITS INICIAIS (o comando `kits_eletronicos`)
+# ----------------------------------------------------------------------
+
+def criar_kits_iniciais(avisar=print):
+    """Cria, como produtos, os kits iniciais que faltam. Devolve {"criados": [...], "existentes": [...]}.
+
+    IDEMPOTENTE: o kit é procurado pelo nome entre os produtos antes; o que
+    já existe não é tocado (o dono pode ter mudado o nome dos itens, a
+    máquina ou o preço no painel). A máquina é ligada pelo nome INTEIRO
+    ("Strike Kids" não pega o "Strike Kids Boliche"); dela vêm a voltagem, a
+    nota e as categorias, e o kit entra também em "Kits eletrônicos" (criada
+    se falta). Sem preço: "Sob consulta". Num banco sem máquina nenhuma não
+    há kit a criar.
     """
+    from django.db import transaction
+
+    from .categorias_capas import criar_sem_foto
+    from .models import Brinquedos, CategoriasBrinquedos, ComponenteKit, PecasReposicao
+
     resultado = {"criados": [], "existentes": []}
-    existentes = list(PecasReposicao.objects.only("id", "nome"))
+    produtos = list(Brinquedos.objects.order_by("-ativo", "id").only("id", "nome_brinquedo", "ativo", "eh_kit"))
+    maquinas = [b for b in produtos if not b.eh_kit]
+    if not maquinas:
+        return resultado
+    avulsas = list(PecasReposicao.objects.order_by("-ativo", "id").only("id", "nome", "ativo"))
+    categoria = categoria_dos_kits(so_ativa=False)
     for nome, nome_maquina, _chave, descricao, itens in KITS_INICIAIS:
-        if _pelo_nome(existentes, "nome", nome) is not None:
+        if _pelo_nome(produtos, "nome_brinquedo", nome) is not None:
             resultado["existentes"].append(nome)
             continue
-        maquina = maquina_do_kit(Brinquedos, nome_maquina)
-        kit = PecasReposicao.objects.create(
-            nome=nome,
-            descricao_peca=descricao,
-            uso="loja",
-            ativo=True,
-            eh_kit=True,
-            maquina=maquina,
-            # sem preço: o dono põe no painel; até lá, "Sob consulta"
-            preco_venda=None,
-            preco_fornecedor=None,
-        )
-        for ordem, (item, detalhe, quantidade) in enumerate(itens, start=1):
-            ComponenteKit.objects.create(
-                kit=kit, nome=item, detalhe=detalhe, quantidade=quantidade, ordem=ordem,
-                peca=peca_avulsa(PecasReposicao, item),
+        with transaction.atomic():
+            if categoria is None:
+                categoria = criar_sem_foto(CategoriasBrinquedos, NOME_DA_CATEGORIA)
+            maquina = _pelo_nome(maquinas, "nome_brinquedo", nome_maquina)
+            if maquina is not None:
+                maquina = Brinquedos.objects.get(pk=maquina.pk)
+            kit = Brinquedos.objects.create(
+                nome_brinquedo=nome,
+                descricao=descricao,
+                valor_brinquedo=None,  # o dono põe no painel; até lá, "Sob consulta"
+                avaliacao=maquina.avaliacao if maquina is not None else 5,
+                voltz=(maquina.voltz if maquina is not None else "") or "",
+                exibir_na_loja=True,
+                eh_kit=True,
+                maquina=maquina,
             )
+            kit.categorias_brinquedos.add(categoria)
+            if maquina is not None:
+                kit.categorias_brinquedos.add(*maquina.categorias_brinquedos.all())
+            for ordem, (item, detalhe, quantidade) in enumerate(itens, start=1):
+                alvo = PECAS_AVULSAS.get(_normalizar(item))
+                ComponenteKit.objects.create(
+                    kit=kit, nome=item, detalhe=detalhe, quantidade=quantidade, ordem=ordem,
+                    peca=_pelo_nome(avulsas, "nome", alvo) if alvo else None,
+                )
         resultado["criados"].append(nome)
         avisar(f"{nome}: criado" + (f" (máquina {maquina.nome_brinquedo})" if maquina else " (sem máquina no catálogo)"))
     return resultado
 
 
 # ----------------------------------------------------------------------
-# A FOTO DO KIT
+# A FOTO DO KIT (só com --foto: sobe para o Cloudinary)
 # ----------------------------------------------------------------------
 
 def arquivo_da_foto(chave):
@@ -272,82 +350,55 @@ def assinatura(caminho):
     return hashlib.sha1(Path(caminho).read_bytes()).hexdigest()[:10]
 
 
-def subir_fotos(PecasReposicao, ImagemPeca, avisar=print):
-    """Sobe a foto de capa dos kits que têm arte no repositório e ainda não têm foto.
+def subir_fotos(avisar=print):
+    """Sobe a arte do repositório como capa do kit inicial que ainda NÃO tem foto.
 
-    Só o kit SEM foto ganha a arte: a foto que a equipe pôs no painel fica.
-    Cada foto no seu ponto de salvamento (no PostgreSQL um erro de banco
-    aborta a transação inteira da migração). A arte do kit tem fundo de
-    verdade (escuro): o recorte automático das peças (core/recorte_peca.py)
-    não tem o que tirar dela, e `recorte_de` já nasce marcado para ele nem
-    baixar a foto de novo. Devolve {"subidas": [...], "ja_tinham": [...], "falhas": [...]}.
+    A foto que a equipe pôs no painel fica. Cada kit no seu ponto de
+    salvamento; o nome do arquivo é curto e conferido contra os 100
+    caracteres da coluna. A capa vira a frente da galeria
+    (`sincronizar_imagem_legada_com_galeria`), marcada "com fundo" (a arte
+    tem fundo de verdade). Devolve {"subidas": [...], "ja_tinham": [...], "falhas": [...]}.
     """
     from django.core.files import File
     from django.db import transaction
 
+    from .models import Brinquedos, ImagemBrinquedo
+
     resultado = {"subidas": [], "ja_tinham": [], "falhas": []}
-    kits = list(PecasReposicao.objects.filter(eh_kit=True).only("id", "nome"))
+    kits = list(Brinquedos.objects.filter(eh_kit=True).order_by("id"))
     for nome, _maquina, chave, _descricao, _itens in KITS_INICIAIS:
         if not chave or not arquivo_da_foto(chave).exists():
             continue
-        kit = _pelo_nome(kits, "nome", nome)
+        kit = _pelo_nome(kits, "nome_brinquedo", nome)
         if kit is None:
             continue
-        if ImagemPeca.objects.filter(peca_reposicao_id=kit.pk).exists():
+        if kit.imagem_brinquedo:
             resultado["ja_tinham"].append(nome)
             continue
         try:
             with transaction.atomic(), open(arquivo_da_foto(chave), "rb") as origem:
-                foto = ImagemPeca(peca_reposicao_id=kit.pk, posicao="frente", ordem=1)
-                foto.imagem.save(f"{chave}-{assinatura(arquivo_da_foto(chave))}.webp", File(origem), save=False)
-                guardado = foto.imagem.name or ""
+                kit.imagem_brinquedo.save(f"{chave}-{assinatura(arquivo_da_foto(chave))}.webp", File(origem),
+                                          save=False)
+                guardado = kit.imagem_brinquedo.name or ""
                 if len(guardado) > LIMITE_DO_NOME:
                     raise ValueError(f"nome do arquivo com mais de {LIMITE_DO_NOME} caracteres: {guardado!r}")
-                foto.recorte_de = guardado
-                foto.save()
+                Brinquedos.objects.filter(pk=kit.pk).update(imagem_brinquedo=guardado)
+                frente = kit.sincronizar_imagem_legada_com_galeria()
+                if frente is not None:
+                    ImagemBrinquedo.objects.filter(pk=frente.pk).update(fundo="com")
             resultado["subidas"].append(nome)
             avisar(f"{nome}: foto de capa ({guardado})")
-        except Exception as erro:  # noqa: BLE001 -- o deploy segue; o comando refaz
+        except Exception as erro:  # noqa: BLE001 -- os outros seguem
             resultado["falhas"].append(nome)
-            avisar(f"{nome}: a foto não subiu agora ({erro!r}). Rode: python manage.py kits_eletronicos --foto")
+            avisar(f"{nome}: a foto não subiu agora ({erro!r}). Rode de novo: python manage.py kits_eletronicos --foto")
     return resultado
 
 
 def limpar_cache():
-    """A home, /kits/, a loja e as páginas das máquinas guardadas passam a mostrar os kits."""
+    """A home, as categorias, a loja e as páginas guardadas passam a mostrar os kits."""
     try:
         from django.core.cache import cache
 
         cache.clear()
-    except Exception:  # noqa: BLE001 -- o deploy segue
+    except Exception:  # noqa: BLE001 -- o comando segue
         pass
-
-
-def semear(apps, schema_editor=None, avisar=print):
-    """A migração 0208: cria os kits que faltam; a foto sobe SÓ NO RENDER.
-
-    O Cloudinary só está configurado no Render: no computador e nos testes
-    nada sobe (o kit sem foto mostra a foto da máquina, com o selo).
-
-    Num banco SEM máquina nenhuma -- o dos testes, um novo -- não há kit a
-    criar (a mesma regra das áreas, core/categorias_capas.py): o kit é a
-    eletrônica de uma máquina do catálogo. No banco do site, com o catálogo,
-    os três nascem (o da máquina que não existir, sem máquina). Para criar
-    depois: python manage.py kits_eletronicos.
-    """
-    from django.conf import settings
-
-    PecasReposicao = apps.get_model("core", "PecasReposicao")
-    Brinquedos = apps.get_model("core", "Brinquedos")
-    if not Brinquedos.objects.exists():
-        return {"criados": [], "existentes": [], "catalogo_vazio": True}
-    resultado = criar_kits_iniciais(
-        PecasReposicao,
-        Brinquedos,
-        apps.get_model("core", "ComponenteKit"),
-        avisar=avisar,
-    )
-    if getattr(settings, "IS_RENDER", False):
-        resultado["fotos"] = subir_fotos(PecasReposicao, apps.get_model("core", "ImagemPeca"), avisar=avisar)
-    limpar_cache()
-    return resultado

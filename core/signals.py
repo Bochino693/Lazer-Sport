@@ -156,8 +156,8 @@ _MODELOS_DA_HOME = (
     ComponenteBrinquedo,
     # os adesivos do produto (a página e os cards)
     VarianteAdesivo,
-    # o que vem no kit eletrônico: a página do kit, o card ("7 itens: ...") e
-    # a faixa da home (LEIA-ME seção 105)
+    # o que vem no kit eletrônico: a página do kit e o card ("7 itens: ...")
+    # (LEIA-ME seções 105 e 107)
     ComponenteKit,
 )
 
@@ -206,9 +206,9 @@ def _invalidar_contexto_global(sender, **kwargs):
 # prontos.
 from sistema_interno.models import Cliente as _ClienteDoPainel  # noqa: E402
 
-# A peça entra pelo kit eletrônico: "Kits eletrônicos" só fica no menu do
-# topo enquanto há kit na vitrine (`ha_kits`, LEIA-ME seção 105).
-for _modelo in (CategoriasBrinquedos, Estabelecimentos, _ClienteDoPainel, Eventos, PecasReposicao):
+# O brinquedo entra pelo kit eletrônico: o atalho "Kits eletrônicos" do menu só
+# existe enquanto há kit no ar (`url_kits`, LEIA-ME seção 107).
+for _modelo in (CategoriasBrinquedos, Estabelecimentos, _ClienteDoPainel, Eventos, Brinquedos):
     _identificador = _modelo._meta.label_lower
     post_save.connect(
         _invalidar_contexto_global,

@@ -1,0 +1,14 @@
+{% comment %}
+  O KIT ELETRÔNICO NO CARD DE PRODUTO (LEIA-ME seção 107). O kit é um produto,
+  no MESMO card das máquinas (home, categorias, /brinquedos/): só ganha o selo
+  "Kit" no canto de cima da foto (a arte do kit deixa o topo livre para ele) e,
+  embaixo do nome, a lista curta do que vem nele ("7 itens: TV Box, ...") no
+  lugar dos recursos da máquina. O selo tem "-selo" na classe: o nome do
+  adesivo que gira no card (ls-giro.js) se afasta dele.
+
+  Recebe:
+    produto   o brinquedo com `eh_kit` (os itens trazidos por
+              `kits.preparar_cards`, para não consultar por card);
+    parte     "selo" (na foto) ou "itens" (a linha do texto).
+{% endcomment %}
+{% if parte == "selo" %}<span class="ls-kit-selo" title="Kit eletrônico: a parte elétrica da máquina, sem a máquina"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit</span>{% else %}{% with resumo=produto.resumo_do_kit %}{% if resumo %}<p class="ls-kit-itens"><i class="fa-solid fa-list-check" aria-hidden="true"></i> <span>{{ resumo }}</span></p>{% endif %}{% endwith %}{% endif %}

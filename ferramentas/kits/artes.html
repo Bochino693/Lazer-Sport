@@ -1,28 +1,33 @@
 <!doctype html>
 <!--
-  As artes de capa dos kits eletrônicos (LEIA-ME-V10, seção 105).
+  As artes de capa dos kits eletrônicos (LEIA-ME-V10, seções 105 e 107).
 
-  Feitas SÓ com as artes dos nossos jogos (logo, cena e personagens de
-  core/static/site/arena/) e os itens do kit. O dono: "vc nao deve usar essa
-  imagem, vc deve criar uma para o strike kids e dragon bowling, com as artes
-  do jogo, essa image é de outro site." Nada de arte de terceiros aqui.
+  O dono: "os itens que vao junto devem estar na tela [...] era so deixar a
+  nossa cara, para os nosso jogos [...] com uma telinha no fundo, simbolizando
+  o jogo e eles puseram ate a tv box". Então: uma cena 3D, como foto de
+  produto -- a TV ao fundo rodando o NOSSO jogo, a TV Box na frente com o
+  ícone do jogo, e cada item do kit (placa Zero Delay, chicote, cabo HDMI,
+  fonte, webcam/câmera, barra com 5 sensores, arma) modelado e etiquetado.
+  Nada de arte de terceiros: só as artes dos nossos jogos
+  (core/static/site/arena/capas/) e modelos feitos aqui.
 
-  Uso: node ferramentas/kits/gerar.js  (abre esta página com ?kit=<chave>,
-  fotografa 1200x1200 e grava core/static/site/kits/<chave>.webp).
+  O TOPO FICA LIVRE: no card do site moram ali o selo "KIT" e os botões de
+  curtir e favoritar (no celular até ~22% da altura, 264 px aqui).
+
+  Uso: node ferramentas/kits/gerar.js <pasta>  (serve o repositório por HTTP,
+  abre esta página com ?kit=<chave> e fotografa 1200 x 1200).
 -->
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <title>Arte do kit</title>
-<link rel="stylesheet" href="../../core/static/vendor/fontawesome/css/all.min.css">
 <style>
-@font-face { font-family: "Poppins"; font-weight: 600; src: url("../../core/static/vendor/fontes/poppins-latin-600-normal.woff2"); }
-@font-face { font-family: "Poppins"; font-weight: 700; src: url("../../core/static/vendor/fontes/poppins-latin-700-normal.woff2"); }
-@font-face { font-family: "Poppins"; font-weight: 800; src: url("../../core/static/vendor/fontes/poppins-latin-800-normal.woff2"); }
-@font-face { font-family: "Fredoka"; font-weight: 700; src: url("../../core/static/site/arena/jogos/strike-kids/fredoka_700.ttf"); }
+@font-face { font-family: "Poppins"; font-weight: 600; src: url("/core/static/vendor/fontes/poppins-latin-600-normal.woff2"); }
+@font-face { font-family: "Poppins"; font-weight: 700; src: url("/core/static/vendor/fontes/poppins-latin-700-normal.woff2"); }
+@font-face { font-family: "Poppins"; font-weight: 800; src: url("/core/static/vendor/fontes/poppins-latin-800-normal.woff2"); }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 1200px; height: 1200px; background: #050b1c; overflow: hidden; }
+html, body { width: 1200px; height: 1200px; background: #040a1a; overflow: hidden; }
 
 .arte {
   position: relative;
@@ -31,202 +36,108 @@ html, body { width: 1200px; height: 1200px; background: #050b1c; overflow: hidde
   overflow: hidden;
   font-family: "Poppins", sans-serif;
   color: #fff;
-  background: #050b1c;
+  background: #040a1a;
 }
 
-/* a cena do jogo, cheia, atrás de tudo */
+/* a cena do jogo, bem escura, como parede do estúdio */
 .fundo {
   position: absolute;
   inset: 0;
-  background-position: center top;
   background-size: cover;
-  transform: scale(1.04);
-  filter: saturate(1.15);
+  background-position: center;
+  filter: blur(6px) saturate(1.3) brightness(.32);
+  transform: scale(1.06);
 }
 
-/* véu: a cena aparece em cima e escurece embaixo, onde ficam os itens */
 .veu {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 30%, transparent 0 34%, rgba(5, 11, 28, .35) 62%),
-    linear-gradient(180deg, rgba(5, 11, 28, .25) 0%, rgba(5, 11, 28, .05) 22%, rgba(5, 11, 28, .55) 48%, rgba(5, 11, 28, .94) 64%, #050b1c 100%);
+    radial-gradient(ellipse 70% 45% at 50% 62%, var(--cor-brilho), transparent 70%),
+    linear-gradient(180deg, rgba(4, 10, 26, .35) 0%, rgba(4, 10, 26, .15) 25%, rgba(4, 10, 26, .55) 70%, rgba(4, 10, 26, .96) 100%);
 }
 
-/* brilho na cor do jogo */
-.brilho {
+#palco {
   position: absolute;
-  left: 50%;
-  top: 424px;
-  width: 900px;
-  height: 520px;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(closest-side, var(--cor-brilho), transparent);
-  opacity: .55;
-  filter: blur(10px);
+  left: 0;
+  top: 384px;
+  width: 1200px;
+  height: 720px;
 }
-
-.topo {
-  position: absolute;
-  top: 44px;
-  left: 52px;
-  right: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.selo {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 26px 14px 20px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ffd23f, #ffb000);
-  color: #1b1300;
-  font-weight: 800;
-  font-size: 26px;
-  letter-spacing: .08em;
-  box-shadow: 0 12px 30px rgba(255, 184, 0, .35);
-}
-
-.selo i { font-size: 28px; }
-
-.marca {
-  display: grid;
-  place-items: center;
-  width: 196px;
-  height: 130px;
-  padding: 12px 16px;
-  border-radius: 26px;
-  background: #fff;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .45);
-}
-
-.marca img { max-width: 100%; max-height: 100%; }
-
-/* O TOPO FICA LIVRE: no card do site moram ali o selo "KIT" e os botões de
-   curtir e favoritar -- no celular eles ocupam até ~22% da altura (264 px
-   aqui). Nada da arte pode ficar por baixo deles: o herói começa em ~284. */
-
-/* o herói: o logo/ícone do jogo */
-.heroi {
-  position: absolute;
-  left: 50%;
-  top: 424px;
-  transform: translate(-50%, -50%);
-  display: grid;
-  place-items: center;
-}
-
-.heroi img { display: block; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .6)); }
-
-.heroi--icone img {
-  width: 280px;
-  height: 280px;
-  border-radius: 60px;
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, .9), 0 0 80px var(--cor-brilho), 0 30px 60px rgba(0, 0, 0, .55);
-}
-
-.heroi--logo img { width: 640px; }
-
-/* personagens do jogo dos dois lados do logo */
-.personagem {
-  position: absolute;
-  top: 300px;
-  width: 300px;
-  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .55));
-}
-
-.personagem--esq { left: 26px; transform: rotate(-6deg); }
-.personagem--dir { right: 26px; transform: rotate(6deg); }
 
 .titulo {
   position: absolute;
-  top: 586px;
+  z-index: 2;
+  top: 268px;
   left: 0;
   right: 0;
   text-align: center;
+  line-height: 1;
 }
 
 .titulo h1 {
   font-weight: 800;
-  font-size: 92px;
-  line-height: 1;
+  font-size: 80px;
   letter-spacing: -.01em;
-  text-shadow: 0 8px 30px rgba(0, 0, 0, .65);
+  text-shadow: 0 6px 26px rgba(0, 0, 0, .7);
 }
 
-.titulo h1 span { color: var(--cor-destaque); }
+.titulo h1 span {
+  background: linear-gradient(180deg, var(--cor-destaque), var(--cor-destaque-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, .5));
+}
 
 .titulo p {
-  margin-top: 16px;
+  margin-top: 10px;
   font-weight: 600;
-  font-size: 34px;
-  color: #dbe7ff;
+  font-size: 29px;
+  color: #e3ecff;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, .8);
 }
 
 .titulo p b { color: var(--cor-destaque); font-weight: 800; }
 
-/* os itens do kit */
-.itens {
+/* as etiquetas dos itens: como as de produto, presas a cada peça */
+.etiqueta {
   position: absolute;
-  left: 52px;
-  right: 52px;
-  top: 790px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  list-style: none;
-}
-
-.itens li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 128px;
-  padding: 14px 10px;
-  border: 2px solid rgba(255, 255, 255, .14);
-  border-radius: 24px;
-  background: linear-gradient(160deg, rgba(34, 64, 128, .72), rgba(12, 24, 56, .88));
-  text-align: center;
-  font-weight: 700;
-  font-size: 23px;
-  line-height: 1.15;
-}
-
-.itens li i {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  background: var(--cor-icone, #2f8bff);
-  color: #fff;
-  font-size: 28px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
-}
-
-.itens li:nth-child(8n+1) i { --cor-icone: linear-gradient(135deg, #2f8bff, #1d56c0); }
-.itens li:nth-child(8n+2) i { --cor-icone: linear-gradient(135deg, #ff5a6e, #d81b3c); }
-.itens li:nth-child(8n+3) i { --cor-icone: linear-gradient(135deg, #22c55e, #0f8a43); }
-.itens li:nth-child(8n+4) i { --cor-icone: linear-gradient(135deg, #ffb000, #f07800); }
-.itens li:nth-child(8n+5) i { --cor-icone: linear-gradient(135deg, #a855f7, #6d28d9); }
-.itens li:nth-child(8n+6) i { --cor-icone: linear-gradient(135deg, #14c8d8, #0e7c9a); }
-.itens li:nth-child(8n+7) i { --cor-icone: linear-gradient(135deg, #ff7a3d, #e63946); }
-
-/* o último cartão: o fecho "pronto para instalar" */
-.itens li.fecho {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--cor-destaque), var(--cor-destaque-2));
-  color: #1b1300;
-  font-size: 22px;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  padding: 7px 15px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .96);
+  color: #0b1530;
   font-weight: 800;
+  font-size: 19px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .45), 0 0 0 3px var(--cor-etiqueta);
 }
 
-.itens li.fecho i { background: rgba(0, 0, 0, .18); box-shadow: none; }
+.chamada {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 112px;
+  text-align: center;
+}
+
+.chamada strong {
+  display: inline-block;
+  padding: 12px 34px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--cor-destaque), var(--cor-destaque-2));
+  color: #160f00;
+  font-weight: 800;
+  font-size: 40px;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .45);
+}
 
 .faixa {
   position: absolute;
@@ -237,89 +148,84 @@ html, body { width: 1200px; height: 1200px; background: #050b1c; overflow: hidde
   padding: 0 40px 0 22px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   gap: 26px;
   background: linear-gradient(90deg, #e63946, #ff6b3d 50%, #e63946);
   font-weight: 800;
-  font-size: 27px;
-  letter-spacing: .06em;
+  font-size: 31px;
+  letter-spacing: .05em;
   text-transform: uppercase;
 }
 
-.faixa i { font-size: 26px; margin-right: 10px; }
 .faixa-texto { flex: 1; text-align: center; }
-.faixa .marca { width: 118px; height: 74px; padding: 8px 10px; border-radius: 18px; box-shadow: 0 8px 20px rgba(0, 0, 0, .35); }
+
+.marca {
+  display: grid;
+  place-items: center;
+  width: 118px;
+  height: 74px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
+}
+
+.marca img { max-width: 100%; max-height: 100%; }
 </style>
 </head>
 <body>
 <div class="arte" id="arte">
   <div class="fundo" id="fundo"></div>
   <div class="veu"></div>
-  <div class="brilho"></div>
-  <div id="personagens"></div>
-  <div class="heroi" id="heroi"></div>
   <div class="titulo">
     <h1 id="titulo"></h1>
     <p id="sub"></p>
   </div>
-  <ul class="itens" id="itens"></ul>
+  <canvas id="palco" width="1200" height="680"></canvas>
+  <div id="etiquetas"></div>
   <div class="faixa">
-    <span class="marca"><img src="../../core/static/images/logo-site.webp" alt=""></span>
-    <span class="faixa-texto"><i class="fa-solid fa-microchip"></i> Kit eletrônico · a eletrônica completa da máquina</span>
+    <span class="marca"><img src="/core/static/images/logo-site.webp" alt=""></span>
+    <span class="faixa-texto">Kit completo e pronto para instalar</span>
   </div>
 </div>
-<script>
-const A = "../../core/static/site/arena/";
+<script type="importmap">
+{ "imports": { "three": "/core/static/vendor/three/three.module.min.js" } }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "/core/static/vendor/three/RoomEnvironment.js";
+
+const A = "/core/static/site/arena/capas/";
 const KITS = {
   "kit-boliche-virtual": {
-    fundo: A + "capas/topo/dragon-bowling-estreito.webp",
-    heroi: { tipo: "icone", src: A + "capas/dragon-bowling.webp" },
     titulo: 'Kit <span>Boliche Virtual</span>',
     sub: 'com o jogo <b>Dragon Bowling</b>',
-    destaque: "#ffc93c", destaque2: "#ff9a1f", brilho: "rgba(255, 150, 30, .9)",
-    itens: [
-      ["fa-tv", "TV Box com o jogo"],
-      ["fa-wave-square", "Barra com 5 sensores"],
-      ["fa-video", "Webcam"],
-      ["fa-microchip", "Placa Zero Delay"],
-      ["fa-network-wired", "Chicote"],
-      ["fa-ethernet", "Cabo HDMI"],
-      ["fa-plug", "Fonte"],
-    ],
+    tela: A + "topo/dragon-bowling.webp",
+    selo: A + "dragon-bowling.webp",
+    destaque: "#ffd23f", destaque2: "#ff9a1f", brilho: "rgba(255, 140, 30, .38)", luz: 0xff9a2a,
+    itens: ["tvbox", "placa", "chicote", "hdmi", "fonte", "webcam", "barra"],
+    nomes: { webcam: "Webcam", barra: "Barra com 5 sensores" },
   },
   "kit-strike-kids": {
-    fundo: A + "capas/topo/strike-kids-estreito.webp",
-    heroi: { tipo: "logo", src: A + "capas/strike-kids-logo.webp" },
     titulo: 'Kit <span>Strike Kids</span>',
-    sub: 'com o jogo <b>Strike Kids</b> e os amigos Bob e Mia',
-    destaque: "#ffe14a", destaque2: "#7ddc3a", brilho: "rgba(120, 230, 70, .85)",
-    itens: [
-      ["fa-tv", "TV Box com o jogo"],
-      ["fa-wave-square", "Barra com 5 sensores"],
-      ["fa-camera", "Câmera do ranking"],
-      ["fa-microchip", "Placa Zero Delay"],
-      ["fa-network-wired", "Chicote"],
-      ["fa-ethernet", "Cabo HDMI"],
-      ["fa-plug", "Fonte"],
-    ],
+    sub: 'com o jogo <b>Strike Kids</b>',
+    tela: A + "topo/strike-kids.webp",
+    selo: A + "strike-kids-logo.webp",
+    destaque: "#ffe14a", destaque2: "#7ddc3a", brilho: "rgba(110, 220, 70, .34)", luz: 0x7ddc3a,
+    itens: ["tvbox", "placa", "chicote", "hdmi", "fonte", "webcam", "barra"],
+    nomes: { webcam: "Câmera", barra: "5 sensores de precisão" },
   },
   "kit-lazer-shot": {
-    fundo: A + "capas/topo/lazer-shot-estreito.webp",
-    heroi: { tipo: "icone", src: A + "capas/lazer-shot.webp" },
     titulo: 'Kit <span>Lazer Shot</span>',
     sub: 'com o jogo <b>Lazer Shot</b> e a arma personalizada',
-    destaque: "#ff5a6e", destaque2: "#ffb000", brilho: "rgba(255, 40, 60, .85)",
-    itens: [
-      ["fa-crosshairs", "Arma personalizada"],
-      ["fa-tv", "TV Box com o jogo"],
-      ["fa-camera", "Câmera do ranking"],
-      ["fa-microchip", "Placa Zero Delay"],
-      ["fa-network-wired", "Chicote"],
-      ["fa-ethernet", "Cabo HDMI"],
-      ["fa-plug", "Fonte"],
-    ],
+    tela: A + "topo/lazer-shot.webp",
+    selo: A + "lazer-shot.webp",
+    destaque: "#ff6b7d", destaque2: "#ffb000", brilho: "rgba(255, 40, 60, .36)", luz: 0xff3048,
+    itens: ["tvbox", "placa", "chicote", "hdmi", "fonte", "webcam", "arma"],
+    nomes: { webcam: "Câmera" },
   },
 };
+const NOMES = { tvbox: "TV Box com o jogo", placa: "Placa Zero Delay", chicote: "Chicote", hdmi: "Cabo HDMI", fonte: "Fonte", webcam: "Webcam", barra: "Barra com 5 sensores", arma: "Arma personalizada" };
+const CORES_ETIQUETA = { tvbox: "#2f8bff", placa: "#22c55e", chicote: "#a855f7", hdmi: "#14c8d8", fonte: "#ff7a3d", webcam: "#ff5a6e", barra: "#ffb000", arma: "#ff3048" };
 
 const chave = new URLSearchParams(location.search).get("kit") || "kit-boliche-virtual";
 const kit = KITS[chave];
@@ -327,20 +233,379 @@ const arte = document.getElementById("arte");
 arte.style.setProperty("--cor-destaque", kit.destaque);
 arte.style.setProperty("--cor-destaque-2", kit.destaque2);
 arte.style.setProperty("--cor-brilho", kit.brilho);
-document.getElementById("fundo").style.backgroundImage = `url("${kit.fundo}")`;
-const heroi = document.getElementById("heroi");
-heroi.classList.add(`heroi--${kit.heroi.tipo}`);
-heroi.innerHTML = `<img src="${kit.heroi.src}" alt="">`;
+document.getElementById("fundo").style.backgroundImage = `url("${kit.tela}")`;
 document.getElementById("titulo").innerHTML = kit.titulo;
 document.getElementById("sub").innerHTML = kit.sub;
-document.getElementById("itens").innerHTML =
-  kit.itens.map(([icone, nome]) => `<li><i class="fa-solid ${icone}"></i>${nome}</li>`).join("") +
-  '<li class="fecho"><i class="fa-solid fa-circle-check"></i>Pronto para instalar</li>';
-window.PRONTO = Promise.all([
-  document.fonts.ready,
-  ...[...document.images].map((img) => img.decode().catch(() => {})),
-  new Promise((ok) => { const i = new Image(); i.onload = i.onerror = ok; i.src = kit.fundo; }),
-]);
+
+// ---------------------------------------------------------------- o palco
+const canvas = document.getElementById("palco");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(1200, 720, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const cena = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+cena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+cena.environmentIntensity = 0.55;
+
+const camera = new THREE.PerspectiveCamera(30, 1200 / 720, 0.1, 100);
+camera.position.set(0, 4.5, 9.3);
+camera.lookAt(0, 0.55, 0);
+camera.updateMatrixWorld();
+
+const luzChave = new THREE.DirectionalLight(0xffffff, 2.4);
+luzChave.position.set(-4, 8, 6);
+luzChave.castShadow = true;
+luzChave.shadow.mapSize.set(2048, 2048);
+luzChave.shadow.camera.left = -8; luzChave.shadow.camera.right = 8;
+luzChave.shadow.camera.top = 8; luzChave.shadow.camera.bottom = -8;
+luzChave.shadow.radius = 6;
+luzChave.shadow.bias = -0.0004;
+cena.add(luzChave);
+const contra = new THREE.PointLight(kit.luz, 40, 14, 1.6);
+contra.position.set(0, 2.5, -3.5);
+cena.add(contra);
+const lateral = new THREE.PointLight(0x5aa8ff, 18, 12, 1.6);
+lateral.position.set(5, 2, 2);
+cena.add(lateral);
+cena.add(new THREE.AmbientLight(0x8aa6d8, 0.25));
+
+// o chão: um palco redondo que some nas bordas (a parede é o fundo da página)
+function texturaRadial(cor0, cor1) {
+  const c = document.createElement("canvas"); c.width = c.height = 512;
+  const g = c.getContext("2d");
+  const r = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+  r.addColorStop(0, cor0); r.addColorStop(0.45, cor1); r.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 512, 512);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const chao = new THREE.Mesh(
+  new THREE.CircleGeometry(11, 72),
+  new THREE.MeshStandardMaterial({ color: 0x0c1838, roughness: 0.42, metalness: 0.2, transparent: true, alphaMap: texturaRadial("#fff", "#bbb") }),
+);
+chao.rotation.x = -Math.PI / 2;
+chao.receiveShadow = true;
+cena.add(chao);
+
+// ---------------------------------------------------------------- ajudantes
+const carregador = new THREE.TextureLoader();
+function textura(url) {
+  return new Promise((ok) => carregador.load(url, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; ok(t); }, undefined, () => ok(null)));
+}
+
+/** Caixa de cantos redondos: retângulo arredondado extrudado com chanfro. */
+function caixa(w, h, d, r = 0.06, b = 0.03) {
+  const s = new THREE.Shape();
+  const x = w / 2 - b, z = d / 2 - b, rr = Math.max(0.001, Math.min(r, x, z));
+  s.moveTo(-x + rr, -z);
+  s.lineTo(x - rr, -z); s.absarc(x - rr, -z + rr, rr, -Math.PI / 2, 0, false);
+  s.lineTo(x, z - rr); s.absarc(x - rr, z - rr, rr, 0, Math.PI / 2, false);
+  s.lineTo(-x + rr, z); s.absarc(-x + rr, z - rr, rr, Math.PI / 2, Math.PI, false);
+  s.lineTo(-x, -z + rr); s.absarc(-x + rr, -z + rr, rr, Math.PI, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, h - 2 * b), bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 4, curveSegments: 10 });
+  g.translate(0, 0, -(h - 2 * b) / 2);
+  g.rotateX(-Math.PI / 2);
+  g.computeVertexNormals();
+  return g;
+}
+const sombra = (m) => { m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return m; };
+const plastico = (cor, rough = 0.38) => new THREE.MeshPhysicalMaterial({ color: cor, roughness: rough, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.25 });
+const metal = (cor, rough = 0.28) => new THREE.MeshStandardMaterial({ color: cor, roughness: rough, metalness: 1 });
+const borracha = (cor = 0x0d0f14) => new THREE.MeshStandardMaterial({ color: cor, roughness: 0.55, metalness: 0 });
+function cabo(pontos, raio, material, segmentos = 160) {
+  const curva = new THREE.CatmullRomCurve3(pontos.map((p) => new THREE.Vector3(...p)));
+  return new THREE.Mesh(new THREE.TubeGeometry(curva, segmentos, raio, 12, false), material);
+}
+function canvasTextura(w, h, desenhar) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  desenhar(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+/** Um plano com textura deitado sobre a peça (o tampo impresso). */
+function tampo(tex, w, d, y, rough = 0.45) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: tex, roughness: rough, transparent: true }));
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = y;
+  return m;
+}
+
+// ---------------------------------------------------------------- os itens
+async function tvAoFundo() {
+  const g = new THREE.Group();
+  const moldura = new THREE.Mesh(caixa(5.2, 3.05, 0.16, 0.05, 0.03), plastico(0x07080c, 0.3));
+  moldura.position.y = -1.525;
+  const emPe = new THREE.Group(); emPe.add(moldura); emPe.position.y = 1.525;
+  g.add(emPe);
+  const t = await textura(kit.tela);
+  if (t) {
+    const proporcao = 16 / 9, img = t.image.width / t.image.height;
+    t.repeat.set(proporcao / img, 1); t.offset.set((1 - proporcao / img) / 2, 0);
+  }
+  const tela = new THREE.Mesh(new THREE.PlaneGeometry(4.98, 2.8), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
+  tela.position.z = 0.085;
+  g.add(tela);
+  const pe = new THREE.Mesh(caixa(0.5, 0.9, 0.12, 0.04, 0.02), metal(0x1b1f29, 0.4));
+  pe.position.set(0, -1.85, -0.06);
+  g.add(pe);
+  const base = new THREE.Mesh(caixa(1.8, 0.07, 0.8, 0.12, 0.02), metal(0x1b1f29, 0.4));
+  base.position.set(0, -2.28, 0.1);
+  g.add(base);
+  g.position.set(0, 2.32, -3.6);
+  return sombra(g);
+}
+
+async function tvBox() {
+  const g = new THREE.Group();
+  const corpo = new THREE.Mesh(caixa(1.9, 0.38, 1.9, 0.32, 0.07), plastico(0x101217, 0.3));
+  corpo.position.y = 0.19;
+  g.add(corpo);
+  const t = await textura(kit.selo);
+  if (t) {
+    const asp = t.image.width / t.image.height;
+    const w = asp >= 1 ? 1.3 : 1.3 * asp, d = asp >= 1 ? 1.3 / asp : 1.3;
+    g.add(tampo(t, w, d, 0.386, 0.35));
+  }
+  const frente = canvasTextura(512, 64, (c, w, h) => {
+    c.fillStyle = "#101217"; c.fillRect(0, 0, w, h);
+    c.fillStyle = "#c9d6f0"; c.font = "700 30px Poppins, sans-serif"; c.textAlign = "center"; c.fillText("4K  ULTRA HD", w / 2, 42);
+  });
+  const placaFrente = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.125), new THREE.MeshStandardMaterial({ map: frente, roughness: 0.5 }));
+  placaFrente.position.set(0, 0.2, 0.952);
+  g.add(placaFrente);
+  const led = new THREE.Mesh(new THREE.CircleGeometry(0.03, 16), new THREE.MeshBasicMaterial({ color: 0x3aa0ff }));
+  led.position.set(0.72, 0.2, 0.953);
+  g.add(led);
+  // o controle remoto ao lado
+  const controle = new THREE.Group();
+  controle.add(new THREE.Mesh(caixa(0.32, 0.1, 1.15, 0.14, 0.04), plastico(0x15171d, 0.35)));
+  for (let i = 0; i < 6; i++) {
+    const botao = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 16), plastico(i === 0 ? 0xe63946 : 0x3a3f4b, 0.4));
+    botao.position.set(i % 2 ? 0.07 : -0.07, 0.06, -0.38 + Math.floor(i / 2) * 0.22);
+    controle.add(botao);
+  }
+  controle.position.set(1.4, 0.05, 0.2);
+  controle.rotation.y = -0.35;
+  g.add(controle);
+  return sombra(g);
+}
+
+function placaZeroDelay() {
+  const g = new THREE.Group();
+  const placa = new THREE.Mesh(caixa(1.25, 0.05, 0.95, 0.04, 0.008), new THREE.MeshStandardMaterial({ color: 0x0b6b34, roughness: 0.45 }));
+  g.add(placa);
+  const pcb = canvasTextura(512, 384, (c, w, h) => {
+    c.fillStyle = "#0b6b34"; c.fillRect(0, 0, w, h);
+    c.strokeStyle = "rgba(255, 214, 120, .55)"; c.lineWidth = 4;
+    for (let i = 0; i < 14; i++) { c.beginPath(); c.moveTo(40 + i * 30, 300); c.lineTo(40 + i * 30, 220); c.lineTo(160 + i * 14, 170); c.stroke(); }
+    c.fillStyle = "#e9c46a";
+    for (let i = 0; i < 12; i++) { c.fillRect(30 + i * 38, 330, 22, 22); }
+    c.fillStyle = "#ffffff"; c.font = "700 34px Poppins, sans-serif"; c.fillText("ZERO DELAY", 230, 70); c.font = "600 22px Poppins"; c.fillText("USB ENCODER", 270, 104);
+  });
+  g.add(tampo(pcb, 1.2, 0.9, 0.027));
+  const chip = new THREE.Mesh(caixa(0.3, 0.06, 0.3, 0.01, 0.005), plastico(0x111111, 0.5));
+  chip.position.set(-0.32, 0.05, -0.18);
+  g.add(chip);
+  for (let i = 0; i < 6; i++) {
+    const conector = new THREE.Mesh(caixa(0.16, 0.1, 0.1, 0.01, 0.005), plastico(0xf3f3f0, 0.5));
+    conector.position.set(-0.45 + i * 0.18, 0.07, 0.38);
+    g.add(conector);
+  }
+  const usb = new THREE.Mesh(caixa(0.2, 0.1, 0.22, 0.01, 0.005), metal(0xc8ccd4, 0.25));
+  usb.position.set(0.52, 0.07, -0.25);
+  g.add(usb);
+  g.add(cabo([[0.62, 0.07, -0.25], [1.0, 0.05, -0.4], [1.2, 0.04, -0.1], [1.05, 0.04, 0.35]], 0.035, borracha()));
+  return sombra(g);
+}
+
+function chicote() {
+  const g = new THREE.Group();
+  const cores = [0xe63946, 0x1a1a1a, 0xffd23f, 0x2f8bff, 0x22c55e, 0xf5f5f5, 0xff7a3d, 0xa855f7];
+  cores.forEach((cor, i) => {
+    const d = (i - 3.5) * 0.045;
+    g.add(cabo([[-0.8, 0.04, -0.5 + d], [-0.2, 0.05 + i * 0.006, -0.62 + d], [0.5, 0.06, -0.2 + d * 1.5], [0.35, 0.05, 0.35 + d], [-0.35, 0.04, 0.42 + d * 1.3], [-0.85, 0.04, 0.15 + d]], 0.03, new THREE.MeshStandardMaterial({ color: cor, roughness: 0.42, envMapIntensity: 0.35 }), 140));
+  });
+  for (let i = 0; i < 2; i++) {
+    const con = new THREE.Mesh(caixa(0.18, 0.14, 0.42, 0.02, 0.01), plastico(0xf3f3f0, 0.5));
+    con.position.set(-0.92, 0.07, i ? 0.15 : -0.5);
+    g.add(con);
+  }
+  return sombra(g);
+}
+
+function caboHdmi() {
+  const g = new THREE.Group();
+  const pontos = [[-0.9, 0.04, 0.55]];
+  for (let i = 0; i <= 64; i++) {
+    const a = i / 64 * Math.PI * 2 * 2.2, r = 0.55 - i * 0.0018;
+    pontos.push([Math.cos(a) * r, 0.04 + i * 0.0009, Math.sin(a) * r * 0.75]);
+  }
+  pontos.push([0.95, 0.04, -0.35]);
+  g.add(cabo(pontos, 0.035, borracha(0x0b0c10), 400));
+  for (const [x, z, ry] of [[-1.02, 0.6, 0.5], [1.07, -0.42, -0.4]]) {
+    const plug = new THREE.Group();
+    plug.add(new THREE.Mesh(caixa(0.22, 0.1, 0.26, 0.03, 0.015), borracha(0x15161b)));
+    const ponta = new THREE.Mesh(caixa(0.16, 0.05, 0.12, 0.005, 0.004), metal(0xd9dde4, 0.2));
+    ponta.position.z = 0.19;
+    plug.add(ponta);
+    plug.position.set(x, 0.05, z);
+    plug.rotation.y = ry;
+    g.add(plug);
+  }
+  return sombra(g);
+}
+
+function fonte() {
+  const g = new THREE.Group();
+  const corpo = new THREE.Mesh(caixa(0.8, 0.42, 1.15, 0.12, 0.05), plastico(0x14161c, 0.42));
+  corpo.position.y = 0.21;
+  g.add(corpo);
+  const etiqueta = canvasTextura(256, 256, (c, w, h) => {
+    c.fillStyle = "#14161c"; c.fillRect(0, 0, w, h);
+    c.fillStyle = "#9aa6bd"; c.font = "700 30px Poppins"; c.fillText("12V", 30, 80); c.font = "600 20px Poppins"; c.fillText("DC OUTPUT", 30, 120); c.fillText("100-240V~", 30, 150);
+  });
+  g.add(tampo(etiqueta, 0.5, 0.5, 0.425, 0.6));
+  g.add(cabo([[0, 0.12, 0.6], [0.15, 0.04, 1.0], [0.6, 0.04, 1.05], [0.85, 0.04, 0.7]], 0.03, borracha()));
+  const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 16), metal(0xc8ccd4, 0.3));
+  p2.rotation.z = Math.PI / 2; p2.position.set(0.95, 0.05, 0.68);
+  g.add(p2);
+  g.add(cabo([[0, 0.12, -0.6], [-0.2, 0.04, -0.95], [-0.6, 0.04, -1.0]], 0.035, borracha()));
+  return sombra(g);
+}
+
+function webcam() {
+  const g = new THREE.Group();
+  const corpo = new THREE.Mesh(caixa(0.95, 0.36, 0.38, 0.17, 0.08), plastico(0x111318, 0.3));
+  corpo.rotation.x = Math.PI / 2;
+  corpo.position.y = 0.5;
+  g.add(corpo);
+  const aro = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 16, 40), metal(0xb9c0cc, 0.25));
+  aro.position.set(0, 0.5, 0.2);
+  g.add(aro);
+  const lente = new THREE.Mesh(new THREE.CircleGeometry(0.12, 40), new THREE.MeshPhysicalMaterial({ color: 0x05070c, roughness: 0.02, metalness: 0.3, clearcoat: 1, iridescence: 0.6 }));
+  lente.position.set(0, 0.5, 0.205);
+  g.add(lente);
+  const reflexo = new THREE.Mesh(new THREE.CircleGeometry(0.035, 20), new THREE.MeshBasicMaterial({ color: 0x6fb6ff, transparent: true, opacity: 0.55 }));
+  reflexo.position.set(-0.04, 0.54, 0.21);
+  g.add(reflexo);
+  const ledw = new THREE.Mesh(new THREE.CircleGeometry(0.02, 12), new THREE.MeshBasicMaterial({ color: 0x40ff8a }));
+  ledw.position.set(0.32, 0.5, 0.2);
+  g.add(ledw);
+  const haste = new THREE.Mesh(caixa(0.16, 0.32, 0.12, 0.03, 0.02), plastico(0x111318, 0.4));
+  haste.position.set(0, 0.2, -0.02);
+  g.add(haste);
+  const pe = new THREE.Mesh(caixa(0.5, 0.06, 0.5, 0.1, 0.02), plastico(0x111318, 0.4));
+  pe.position.set(0, 0.03, 0);
+  g.add(pe);
+  g.add(cabo([[0, 0.5, -0.2], [0, 0.4, -0.5], [0.2, 0.04, -0.8], [0.7, 0.04, -0.7]], 0.025, borracha()));
+  return sombra(g);
+}
+
+function barraSensores() {
+  const g = new THREE.Group();
+  const barra = new THREE.Mesh(caixa(3.4, 0.12, 0.3, 0.03, 0.02), metal(0xb9c0cc, 0.32));
+  barra.position.y = 0.06;
+  g.add(barra);
+  for (let i = 0; i < 5; i++) {
+    const x = -1.36 + i * 0.68;
+    const placa = new THREE.Mesh(caixa(0.4, 0.04, 0.26, 0.02, 0.008), new THREE.MeshStandardMaterial({ color: 0x1d4fd0, roughness: 0.45 }));
+    placa.position.set(x, 0.14, 0);
+    g.add(placa);
+    for (const dx of [-0.08, 0.08]) {
+      const sensor = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 20), new THREE.MeshPhysicalMaterial({ color: dx < 0 ? 0x0a0a0a : 0xdfe8ff, roughness: 0.1, clearcoat: 1 }));
+      sensor.position.set(x + dx, 0.2, 0.02);
+      g.add(sensor);
+    }
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff3048 }));
+    led.position.set(x + 0.15, 0.17, -0.08);
+    g.add(led);
+  }
+  g.add(cabo([[1.72, 0.08, 0], [2.0, 0.04, 0.1], [2.15, 0.04, 0.45]], 0.028, borracha()));
+  return sombra(g);
+}
+
+function arma() {
+  const g = new THREE.Group();
+  const s = new THREE.Shape();
+  // a silhueta da pistola de luz (de lado)
+  s.moveTo(-1.0, 0.25);
+  s.lineTo(0.75, 0.25); s.quadraticCurveTo(0.95, 0.25, 0.95, 0.05);
+  s.lineTo(0.95, -0.12); s.quadraticCurveTo(0.95, -0.25, 0.75, -0.25);
+  s.lineTo(-0.15, -0.25);
+  s.lineTo(-0.35, -0.95); s.quadraticCurveTo(-0.42, -1.12, -0.62, -1.1);
+  s.lineTo(-0.88, -1.06); s.quadraticCurveTo(-1.02, -1.02, -0.98, -0.85);
+  s.lineTo(-0.8, -0.25);
+  s.lineTo(-1.0, -0.2); s.quadraticCurveTo(-1.12, -0.1, -1.0, 0.25);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.22, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.06, bevelSegments: 5, curveSegments: 14 });
+  geo.translate(0, 0, -0.11);
+  g.add(new THREE.Mesh(geo, plastico(0x16181f, 0.35)));
+  const faixa = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.4), plastico(0xe63946, 0.3));
+  faixa.position.set(-0.05, 0.08, 0.0);
+  g.add(faixa);
+  const cano = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.2, 24), metal(0xb9c0cc, 0.25));
+  cano.rotation.z = Math.PI / 2; cano.position.set(1.02, 0.0, 0);
+  g.add(cano);
+  const lenteArma = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24), new THREE.MeshBasicMaterial({ color: 0xff3048 }));
+  lenteArma.rotation.y = Math.PI / 2; lenteArma.position.set(1.125, 0, 0);
+  g.add(lenteArma);
+  const gatilho = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 12, 24, Math.PI), plastico(0x16181f, 0.35));
+  gatilho.rotation.z = Math.PI; gatilho.position.set(-0.05, -0.27, 0);
+  g.add(gatilho);
+  g.add(cabo([[-0.62, -1.1, 0], [-0.7, -1.3, 0.2], [-0.4, -1.42, 0.6]], 0.03, borracha()));
+  // deitada de lado sobre a mesa
+  const deitada = new THREE.Group();
+  g.rotation.x = -Math.PI / 2;
+  g.position.y = 0.2;
+  deitada.add(g);
+  deitada.scale.setScalar(0.9);
+  return sombra(deitada);
+}
+
+// ---------------------------------------------------------------- a mesa
+// onde cada item fica (x, z, rotação) e onde a etiqueta mira (x, y, z)
+const LUGARES = {
+  tvbox:   { pos: [0, 0, 0.75], rot: 0.28, mira: [-0.15, 1.15, 0.45] },
+  placa:   { pos: [-3.05, 0, 0.7], rot: 0.35, mira: [-3.05, 0.25, 0.7] },
+  chicote: { pos: [-2.75, 0, -1.05], rot: -0.2, mira: [-2.75, 0.3, -1.25] },
+  hdmi:    { pos: [2.65, 0, -1.15], rot: 0.2, mira: [2.65, 0.25, -1.3] },
+  fonte:   { pos: [3.25, 0, 0.75], rot: -0.5, mira: [3.25, 0.6, 0.75] },
+  webcam:  { pos: [-1.55, 0, -1.55], rot: 0.35, mira: [-1.55, 0.95, -1.55] },
+  barra:   { pos: [0.05, 0, 2.45], rot: -0.03, mira: [-0.6, -0.55, 3.0] },
+  arma:    { pos: [-0.05, 0, 2.45], rot: 0.0, mira: [-0.6, -0.55, 3.1] },
+};
+const FABRICAS = { placa: placaZeroDelay, chicote, hdmi: caboHdmi, fonte, webcam, barra: barraSensores, arma };
+const ESCALA = { placa: 1.35, chicote: 1.3, hdmi: 1.15, fonte: 1.2, webcam: 1.45, barra: 1.0, arma: 1.15, tvbox: 1.05 };
+
+async function montar() {
+  cena.add(await tvAoFundo());
+  const etiquetas = document.getElementById("etiquetas");
+  for (const item of kit.itens) {
+    const lugar = LUGARES[item];
+    const objeto = item === "tvbox" ? await tvBox() : FABRICAS[item]();
+    const grupo = new THREE.Group();
+    grupo.add(objeto);
+    grupo.position.set(...lugar.pos);
+    grupo.rotation.y = lugar.rot;
+    grupo.scale.setScalar(ESCALA[item] || 1);
+    cena.add(grupo);
+    const p = new THREE.Vector3(...lugar.mira).project(camera);
+    const x = (p.x + 1) / 2 * 1200, y = 384 + (1 - p.y) / 2 * 720;
+    const el = document.createElement("span");
+    el.className = "etiqueta";
+    el.textContent = (kit.nomes && kit.nomes[item]) || NOMES[item];
+    el.style.left = `${x}px`;
+    el.style.top = `${y - 34}px`;
+    el.style.setProperty("--cor-etiqueta", CORES_ETIQUETA[item]);
+    etiquetas.appendChild(el);
+  }
+  renderer.render(cena, camera);
+}
+
+window.PRONTO = Promise.all([document.fonts.ready, montar()]).then(() => new Promise((ok) => requestAnimationFrame(() => ok(true))));
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 {% load precos %}
 {% load fotos %}
 
-{% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
+{% block title %}{{ brinquedo.nome_brinquedo }} | {% if brinquedo.eh_kit %}Kit eletrônico - {% endif %}Lazer & Sport Brinquedos{% endblock %}
 
 {% block meta_description %}{{ brinquedo.nome_brinquedo }}: {{ brinquedo.descricao|striptags|truncatechars:140 }}{% endblock %}
 {% block og_type %}product{% endblock %}
@@ -55,10 +55,17 @@
                 <span>Início</span>
             </a>
             <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+            {% if brinquedo.eh_kit and categoria_kits %}
+            <a href="{% url 'categoria_detalhe' categoria_kits.pk %}">
+                <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                <span>{{ categoria_kits.nome_categoria }}</span>
+            </a>
+            {% else %}
             <a href="{% url 'brinquedos' %}">
                 <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
                 <span>Brinquedos</span>
             </a>
+            {% endif %}
             <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
             <span class="ls-breadcrumb-current" aria-current="page" title="{{ brinquedo.nome_brinquedo }}">
                 <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
@@ -221,7 +228,11 @@
             </section>
 
             <section class="produto-conteudo" id="produto-informacoes">
-                <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
+                {% if brinquedo.eh_kit %}
+                    <p class="produto-marca produto-marca--kit"><span class="ls-kit-selo"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit</span> Kit eletrônico Lazer &amp; Sport · monte sua própria máquina</p>
+                {% else %}
+                    <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
+                {% endif %}
                 <h1>{{ brinquedo.nome_brinquedo }}</h1>
 
                 {% if brinquedo.avaliacao %}
@@ -236,8 +247,8 @@
                     </div>
                 {% endif %}
 
-                {# os recursos da máquina, com a explicação de cada um #}
-                {% faixas brinquedo.nome_brinquedo "lista" %}
+                {# os recursos da máquina, com a explicação de cada um (o kit diz o que vem nele, logo abaixo) #}
+                {% if not brinquedo.eh_kit %}{% faixas brinquedo.nome_brinquedo "lista" %}{% endif %}
 
                 {% if disponivel_loja %}
                     <div class="produto-compra">
@@ -250,19 +261,65 @@
                     <div class="produto-compra consulta">
                         <strong class="produto-consulta-titulo">Valor sob consulta</strong>
                         <span class="produto-consulta-texto">
+                            {% if brinquedo.eh_kit %}
+                            O valor do kit sai no orçamento: fale com a fábrica pelo WhatsApp e diga qual é a sua máquina.
+                            {% else %}
                             Este modelo faz parte do nosso catálogo, mas não é vendido diretamente pelo site.
                             Solicite uma proposta personalizada pelo WhatsApp.
+                            {% endif %}
                         </span>
                     </div>
                 {% endif %}
 
+                {% if brinquedo.eh_kit %}
+                    {% comment %}
+                      O KIT ELETRÔNICO (LEIA-ME seções 105 e 107): a parte elétrica da
+                      máquina, sem a máquina. "O que vem no kit" -- cada item com a
+                      foto (a da peça ligada a ele, a da biblioteca dos kits) ou o
+                      ícone, o detalhe e a quantidade; o item vendido também sozinho
+                      leva à peça -- e "Para a máquina X", com o link da máquina.
+                    {% endcomment %}
+                    {% if itens_do_kit %}
+                    <section class="produto-secao produto-kit-itens" data-scroll-reveal aria-labelledby="kit-itens-titulo">
+                        <h2 id="kit-itens-titulo"><i class="fas fa-box-open" aria-hidden="true"></i>O que vem no kit</h2>
+                        <ul class="kit-itens">
+                            {% for item in itens_do_kit %}
+                            <li class="kit-item{% if item.foto %} kit-item--foto{% endif %}">
+                                {% if item.foto %}<span class="kit-item-foto"><img src="{{ item.foto }}" alt="{{ item.nome }}" loading="lazy" decoding="async"></span>{% else %}<span class="kit-item-icone"><i class="fa-solid {{ item.icone }}" aria-hidden="true"></i></span>{% endif %}
+                                <span class="kit-item-texto">
+                                    {% if item.url_peca %}<a href="{{ item.url_peca }}#breadcrumb"><strong>{{ item.nome }}</strong></a>{% else %}<strong>{{ item.nome }}</strong>{% endif %}
+                                    {% if item.detalhe %}<small>{{ item.detalhe }}</small>{% endif %}
+                                    {% if item.url_peca %}<small class="kit-item-avulsa">Também vendido sozinho</small>{% endif %}
+                                </span>
+                                <span class="kit-item-qtd" title="Quantidade">{{ item.quantidade }}×</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </section>
+                    {% endif %}
+
+                    {% if maquina_kit %}
+                    <section class="produto-secao produto-kit-maquina" data-scroll-reveal aria-labelledby="kit-maquina-titulo">
+                        <h2 id="kit-maquina-titulo"><i class="fas fa-gamepad" aria-hidden="true"></i>Para a máquina {{ maquina_kit.nome_brinquedo }}</h2>
+                        <a class="kit-maquina" href="{% url 'brinquedo_detalhe' maquina_kit.id %}#bread">
+                            <span class="kit-maquina-foto">{% if maquina_kit.imagem_brinquedo %}<img src="{{ maquina_kit.imagem_brinquedo|foto:240 }}" alt="" loading="lazy" decoding="async" width="72" height="72">{% else %}<i class="fas fa-gamepad" aria-hidden="true"></i>{% endif %}</span>
+                            <span class="kit-maquina-texto">
+                                <strong>{{ maquina_kit.nome_brinquedo }}</strong>
+                                <small>A parte eletrônica completa para montar a máquina ou recuperar a que você já tem. A máquina não acompanha o kit: veja as fotos e as medidas dela.</small>
+                            </span>
+                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </section>
+                    {% endif %}
+                {% endif %}
+
                 {% comment %}
-                  "Já tem a máquina? Kit eletrônico completo" (LEIA-ME seção 105): o kit
-                  eletrônico DESTA máquina -- a parte elétrica sem a máquina, para quem só
-                  tem a máquina (as palavras do dono). Leva à página do kit.
+                  "Já tem a máquina? Kit eletrônico completo" (LEIA-ME seções 105 e 107): o
+                  kit eletrônico DESTA máquina -- a parte elétrica sem a máquina, para quem só
+                  tem a máquina (as palavras do dono). Leva à página do kit, que é um produto.
                 {% endcomment %}
                 {% for kit in kits_da_maquina %}
-                    <a class="produto-kit" href="{{ kit.url }}#breadcrumb">
+                    <a class="produto-kit" href="{{ kit.url }}#bread">
                         <span class="produto-kit-icone"><i class="fa-solid fa-microchip" aria-hidden="true"></i></span>
                         <span class="produto-kit-texto">
                             <small>Já tem a máquina?</small>
@@ -277,7 +334,7 @@
                 {% endfor %}
 
                 <section class="produto-secao" data-scroll-reveal>
-                    <h2><i class="fas fa-align-left" aria-hidden="true"></i>Descrição</h2>
+                    <h2><i class="fas fa-align-left" aria-hidden="true"></i>{% if brinquedo.eh_kit %}Sobre este kit{% else %}Descrição{% endif %}</h2>
                     <p class="produto-descricao">{{ brinquedo.descricao|linebreaksbr }}</p>
                 </section>
 

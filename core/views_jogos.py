@@ -100,11 +100,15 @@ def jogos_cadastrados(particulares=False, slug=None):
 
 
 def maquinas_dos_jogos():
-    """Para cada jogo, a máquina do catálogo que é ele (pelo nome)."""
+    """Para cada jogo, a máquina do catálogo que é ele (pelo nome).
+
+    Só máquinas: o "Kit Strike Kids" (LEIA-ME 107) tem o nome do jogo dentro,
+    mas é a parte elétrica, não a máquina do jogo.
+    """
     maquinas = {}
     brinquedos = (
         Brinquedos.objects
-        .filter(ativo=True)
+        .filter(ativo=True, eh_kit=False)
         .only("id", "nome_brinquedo")
         .order_by("nome_brinquedo")
     )
