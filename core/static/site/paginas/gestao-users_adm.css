@@ -780,3 +780,50 @@
 .usr-table-wrap[data-visao="lista"] .usr-actions { flex-wrap: nowrap; }
 .usr-table-wrap[data-visao="lista"] .usr-actions .lsa-atalho { font-size: 0; gap: 0; padding-inline: 10px; }
 .usr-table-wrap[data-visao="lista"] .usr-actions .lsa-atalho i { font-size: .95rem; }
+
+/* Lista no PC pequeno e no tablet (o painel lateral come a largura): nada de
+   coluna de ações cortada nem tabela rolando de lado.
+   - de 761 a 1280 px: sai a coluna Cadastro (a data está na ficha);
+   - de 761 a 1100 px: cada conta vira uma linha em duas faixas -- quem é e o
+     contato em cima, o perfil e o status embaixo, as ações à direita. */
+@media (min-width: 761px) and (max-width: 1280px) {
+  .usr-table-wrap[data-visao="lista"] .usr-table th:nth-child(5),
+  .usr-table-wrap[data-visao="lista"] .usr-table td:nth-child(5) { display: none; }
+  .usr-table-wrap[data-visao="lista"] .usr-identity { min-width: 0; }
+  .usr-table-wrap[data-visao="lista"] .usr-name { max-width: 200px; }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .usr-table-wrap[data-visao="lista"] .usr-table,
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody { display: block; width: 100%; min-width: 0; }
+  .usr-table-wrap[data-visao="lista"] .usr-table thead { display: none; }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "quem contato acoes"
+      "papel status acoes";
+    align-items: center;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft, rgba(255, 255, 255, .08));
+  }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td { display: block; min-width: 0; padding: 0; border: 0; }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td::before { content: none; }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td:nth-child(1) { grid-area: quem; }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td:nth-child(2) { grid-area: contato; overflow-wrap: anywhere; }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td:nth-child(3) { grid-area: papel; padding-left: 52px; }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td:nth-child(4) {
+    grid-area: status;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .usr-table-wrap[data-visao="lista"] .usr-table tbody td:nth-child(6) { grid-area: acoes; }
+  .usr-table-wrap[data-visao="lista"] .usr-actions {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: end;
+    gap: 6px;
+  }
+}

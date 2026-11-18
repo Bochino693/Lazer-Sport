@@ -497,7 +497,7 @@
     /* a coluna das ações mede o que ela mostra na lista: os botões e o
        ícone de "Gráficos" (antes, sem ele, os botões passavam por cima
        da coluna ao lado) */
-    --lv-colunas: minmax(150px, 1.2fr) minmax(0, 1.4fr) 110px 90px 312px;
+    --lv-colunas: minmax(150px, 1.2fr) minmax(0, 1.4fr) 110px 90px 340px;
     --lv-areas: "titulo info valor estado acoes";
     --lv-colunas-tab: minmax(0, 1fr) auto auto;
     --lv-areas-tab: "titulo valor estado" "info info info" "acoes acoes acoes";

@@ -5956,8 +5956,8 @@ body.ls-body{
 .ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody td:last-child > *{justify-content:flex-start!important}
 .ls-content .ls-visao-alvo[data-visao="lista"] .ls-visao-tabela [data-v="extra"]{display:none!important}
 
-/* ---- tablet: a lista perde as colunas de apoio ----
-   Vale até 1279px, e não só até 1100: entre os dois (o PC de 1200, o de
+/* ---- tablet: a lista perde as colunas de apoio ---- */
+/* Vale até 1279px, e não só até 1100: entre os dois (o PC de 1200, o de
    1280 com o menu) a linha de uma fileira só não cabia -- as ações saíam
    pela direita do contêiner, cortadas, ou espremiam a coluna de apoio
    até quebrar cada palavra. */
@@ -6261,8 +6261,7 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
    campo para o leitor de tela): a coluna, a ficha e o cartão já dizem.
    Só a LISTA muda; os Cards são o desenho comum (ver "LISTA OU CARDS").
    ====================================================================== */
-.ls-pedidos-table .ls-prazo-rotulo,
-.ls-content .ls-visao-alvo .ls-pedidos-table .ls-etiquetas-rotulo-oculto{
+.ls-pedidos-table .ls-prazo-rotulo{
   position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;
   overflow:hidden!important;clip:rect(0 0 0 0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;
 }
@@ -6300,6 +6299,10 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
 .ls-content .ls-pedidos-table tbody td:last-child{background:transparent!important}
 .ls-content .ls-pedidos-table tbody tr:hover td:last-child{background:rgba(var(--acento-rgb),.055)!important}
 .ls-content .ls-pedidos-table thead th:last-child{background:var(--acento-fundo)!important}
+/* Nos Cards a última célula costuma ser a das ações, e por isso vai sem
+   rótulo; aqui ela é a data, e "Feito em" volta para cima dela. */
+.ls-content .ls-visao-alvo[data-visao="cards"] .ls-pedidos-table tbody td[data-rotulo="Feito em"]::before{display:block!important}
+
 /* ---- PC: a tabela pelo conteúdo ---- */
 @media (min-width:1200px){
   .ls-content .ls-pedidos-table{table-layout:auto!important;min-width:0!important;width:100%!important}
@@ -6401,7 +6404,10 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
 }
 .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item] button.lsa-atalho i,
 .ls-content .ls-visao-alvo[data-visao="lista"] .clients-table button.lsa-atalho i{font-size:.95rem}
-/* a foto que não carregou: nada do texto alternativo espremido no quadrado */
+/* a foto que não carregou: nada do texto alternativo espremido no quadrado
+   (a regra antiga, `img[data-v="foto"]`, perdia para a do quadrado, que
+   leva `:not([hidden])` e pesa mais) */
+.ls-content .ls-visao-alvo[data-visao="lista"] img[data-v="foto"]:not([hidden]),
 .ls-content .ls-visao-alvo[data-visao="lista"] [data-v="foto"] img{color:transparent;font-size:0}
 @media (max-width:640px){
   .ls-content .ls-visao-alvo[data-visao="lista"] > [data-visao-item] [data-v="acoes"]:not([hidden]){

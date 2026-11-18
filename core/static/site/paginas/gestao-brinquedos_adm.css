@@ -321,7 +321,7 @@
     /* a coluna dos selos cabe o "2 adesivos" (frente dos adesivos) */
     /* e a das ações, os três botões mais o ícone de "Gráficos" (com 176px
        eles passavam por cima dos selos) */
-    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 112px 124px 226px;
+    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 112px 124px 232px;
     --lv-areas: "foto titulo info valor estado selos acoes";
     /* tablet: duas linhas por brinquedo */
     --lv-colunas-tab: 56px minmax(0, 1fr) auto auto;

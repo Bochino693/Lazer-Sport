@@ -709,7 +709,7 @@
     /* a coluna das ações mede o que ela mostra na lista: os botões e o
        ícone de "Gráficos" (antes, sem ele, os botões passavam por cima
        da coluna ao lado) */
-    --lv-colunas: 56px minmax(200px, 2fr) minmax(0, 1.5fr) 110px 232px;
+    --lv-colunas: 56px minmax(200px, 2fr) minmax(0, 1.5fr) 110px 240px;
     --lv-areas: "foto titulo info selos acoes";
     --lv-colunas-tab: 56px minmax(0, 1fr) auto;
     --lv-areas-tab: "foto titulo acoes" "foto info selos";
