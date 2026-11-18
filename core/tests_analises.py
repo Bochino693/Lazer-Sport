@@ -1106,7 +1106,7 @@ class PainelCoerenteTests(EquipeMixin, CatalogoDeTeste, TestCase):
         primeiro, segundo = semana["ranking"]
         self.assertEqual((primeiro["nome"], primeiro["valor"]), ("ana", 3))  # dias com acesso de cada conta
         self.assertEqual((segundo["nome"], segundo["valor"]), ("bia", 1))
-        self.assertEqual(primeiro["avatar"], {"iniciais": "AN", "cor": self.ana.pk % presenca.CORES_DE_AVATAR})
+        self.assertEqual(primeiro["avatar"], {"iniciais": "AN", "cor": self.ana.pk % presenca.CORES_DE_AVATAR, "foto": ""})
         self.assertTrue(primeiro["detalhe"].startswith(("Visto", "Entrou", "Nunca", "Online")))
         self.assertEqual(self.metrica(self.calcular("brinquedo", "semana"), "curtidas")["forma"], "linha")
 
@@ -1395,7 +1395,7 @@ class FichaDaContaTests(EquipeMixin, CatalogoDeTeste, TestCase):
         self.assertEqual((quer["Lista de desejos"], quer["No carrinho agora"]), ("1", "vazio"))
         self.assertEqual(secoes["Curtiu e pôs na lista de desejos"]["lista"][0]["titulo"], self.brinquedo.nome_brinquedo)
         self.assertIn(f"Comprou 2 vezes · {reais(800)}", [s["texto"] for s in ficha["selos"]])
-        self.assertEqual(ficha["avatar"], {"iniciais": "ES", "cor": self.compradora.pk % presenca.CORES_DE_AVATAR})
+        self.assertEqual(ficha["avatar"], {"iniciais": "ES", "cor": self.compradora.pk % presenca.CORES_DE_AVATAR, "foto": ""})
 
     def test_quem_nunca_comprou_nao_ganha_caixa_vazia(self):
         visita = User.objects.create_user("visita")
