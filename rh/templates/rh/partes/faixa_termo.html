@@ -1,0 +1,57 @@
+{% if mostrar %}
+{% comment %}
+  A FAIXA DO TERMO DE EXCLUSIVIDADE (rh/templatetags/rh_extras.py).
+  O estilo vem junto, em variáveis do tema (sol, lua e eclipse): ela aparece
+  em qualquer tela do painel, inclusive nas que não carregam o CSS do RH, e
+  some com a tela quando a navegação suave troca o conteúdo. Fica no fluxo
+  da página (não flutua): não cobre nada.
+{% endcomment %}
+<style>
+  .rh-faixa{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin:0 0 16px;padding:14px 16px 14px 18px;
+    position:relative;overflow:hidden;border:1px solid var(--red-linha);border-radius:18px;
+    background:linear-gradient(110deg,var(--red-fundo-2),var(--red-fundo) 55%,var(--acento-fundo));
+    box-shadow:0 10px 30px rgba(var(--sombra-rgb),calc(.2 * var(--sombra-forca)))}
+  .rh-faixa::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:linear-gradient(180deg,var(--red),var(--acento))}
+  .rh-faixa--proprio{border-color:var(--acento-linha);background:linear-gradient(110deg,var(--acento-fundo-2),var(--acento-fundo))}
+  .rh-faixa--proprio::before{background:var(--acento)}
+  .rh-faixa-icone{flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;
+    background:rgba(var(--red-rgb),.16);color:var(--red-texto);font-size:1.45rem}
+  .rh-faixa--proprio .rh-faixa-icone{background:rgba(var(--acento-rgb),.18);color:var(--acento-texto)}
+  .rh-faixa-texto{flex:1 1 260px;min-width:0}
+  .rh-faixa-texto small{display:block;color:var(--red-texto);font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+  .rh-faixa--proprio .rh-faixa-texto small{color:var(--acento-texto)}
+  .rh-faixa-texto strong{display:block;color:var(--text);font-size:1.02rem;line-height:1.3}
+  .rh-faixa-texto span{display:block;color:var(--muted);font-size:.84rem;line-height:1.4;margin-top:2px}
+  .rh-faixa-acoes{display:flex;flex-wrap:wrap;gap:8px}
+  .rh-faixa-botao{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px;border-radius:12px;
+    font-weight:850;font-size:.88rem;text-decoration:none;white-space:nowrap;border:1px solid transparent}
+  .rh-faixa-botao--principal{background:linear-gradient(180deg,var(--red-brilho),var(--red));color:var(--red-tinta)}
+  .rh-faixa--proprio .rh-faixa-botao--principal{background:linear-gradient(180deg,var(--acento-brilho),var(--acento));color:var(--acento-tinta)}
+  .rh-faixa-botao--leve{border-color:var(--line);color:var(--text);background:rgba(var(--verniz-rgb),.04)}
+  .rh-faixa-botao:hover{filter:brightness(1.06)}
+  .rh-faixa-botao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  @media (max-width:640px){.rh-faixa{padding:12px 12px 12px 16px}.rh-faixa-acoes,.rh-faixa-botao{width:100%}.rh-faixa-botao{justify-content:center}}
+</style>
+<section class="rh-faixa{% if tipo == 'proprio' %} rh-faixa--proprio{% endif %}" role="alert" aria-live="polite" data-rh-faixa="{{ tipo }}">
+  <span class="rh-faixa-icone" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span>
+  <div class="rh-faixa-texto">
+    {% if tipo == "gestao" %}
+      <small>Termo de exclusividade</small>
+      <strong>{{ quantos }} colaborador{{ quantos|pluralize:"es" }} sem o termo de exclusividade assinado</strong>
+      <span>Enquanto não assinarem, nada impede que trabalhem para o ramo de fora. Envie para assinatura: leva um minuto, no celular.</span>
+    {% else %}
+      <small>Pendente para você</small>
+      <strong>Assine o termo de exclusividade</strong>
+      <span>É rápido, no próprio celular ou no computador. O ponto continua funcionando normalmente.</span>
+    {% endif %}
+  </div>
+  <div class="rh-faixa-acoes">
+    {% if tipo == "gestao" %}
+      <a class="rh-faixa-botao rh-faixa-botao--principal" href="{{ url }}"><i class="bi bi-pen-fill" aria-hidden="true"></i> Resolver</a>
+      {% if proprio %}<a class="rh-faixa-botao rh-faixa-botao--leve" href="{% url 'rh_meu_termo' %}"><i class="bi bi-person-check" aria-hidden="true"></i> Assinar o meu</a>{% endif %}
+    {% else %}
+      <a class="rh-faixa-botao rh-faixa-botao--principal" href="{{ url }}"><i class="bi bi-pen-fill" aria-hidden="true"></i> Assinar agora</a>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

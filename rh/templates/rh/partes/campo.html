@@ -1,0 +1,7 @@
+{# Um campo do formulário: rótulo, entrada, ajuda e o erro do servidor (largura em `largura`: 2, 3, 6, 8 ou 12). #}
+<div class="rh-campo{% if largura %} rh-campo--{{ largura }}{% endif %}{% if campo.errors %} tem-erro{% endif %}">
+  <label for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+  {{ campo }}
+  {% if ajuda %}<small class="rh-ajuda">{{ ajuda }}</small>{% elif campo.help_text %}<small class="rh-ajuda">{{ campo.help_text }}</small>{% endif %}
+  {% for erro in campo.errors %}<small class="rh-erro" role="alert">{{ erro }}</small>{% endfor %}
+</div>

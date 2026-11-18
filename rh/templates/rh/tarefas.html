@@ -1,0 +1,121 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}{% if gere %}Tarefas{% else %}Minhas tarefas{% endif %}{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">{% if gere %}Tarefas da equipe · avulsas e da produção{% else %}Minhas tarefas · avulsas e da produção{% endif %}</span>
+    <h1>{% if gere %}Tarefas{% else %}Minhas tarefas{% endif %}</h1>
+    <p>{% if gere %}Distribua o trabalho: a etapa sugere quem é do setor (e quem tem a especialidade) e está menos ocupado. As tarefas que a produção cria chegam aqui sozinhas.{% else %}Tudo que é seu: o que a Gestão passou e o que veio da produção. Mude a situação conforme anda.{% endif %}</p>
+  </div>
+</section>
+
+{% if gere and form %}
+<details class="rh-painel" {% if form.errors %}open{% endif %}>
+  <summary class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nova tarefa</summary>
+  <form class="rh-form" method="post" action="{% url 'rh_tarefas' %}" data-rh-nova-tarefa data-sugerir="{% url 'rh_tarefa_sugerir' %}">
+    {% csrf_token %}
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.titulo largura=8 %}
+      {% include "rh/partes/campo.html" with campo=form.prazo %}
+      {% include "rh/partes/campo.html" with campo=form.descricao largura=12 %}
+      {% include "rh/partes/chips.html" with campo=form.prioridade largura=6 %}
+      {% include "rh/partes/campo.html" with campo=form.etapa largura=6 ajuda="Uma das 7 etapas da produção, ou outra. A etapa sugere o responsável." %}
+      {% include "rh/partes/chips.html" with campo=form.setor %}
+      <div class="rh-campo rh-campo--12">
+        <span class="rh-rotulo" id="rhRotuloResp">Responsável</span>
+        <div class="rh-filtros">
+          <div class="rh-busca"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" placeholder="Filtrar pelo nome" aria-label="Filtrar responsáveis" data-rh-filtrar-chips="#rhResponsaveis" autocomplete="off"></div>
+          <button class="btn btn-outline-secondary" type="button" data-rh-sugerir><i class="bi bi-magic me-1" aria-hidden="true"></i> Sugerir pela etapa</button>
+        </div>
+        <div class="rh-chips rh-pessoas-chips" id="rhResponsaveis" role="radiogroup" aria-labelledby="rhRotuloResp">
+          <label class="rh-chip"><input type="radio" name="colaborador" value="" checked><span>Ninguém ainda</span></label>
+          {% for p in pessoas %}<label class="rh-chip" data-nome="{{ p.nome|lower }}" data-id="{{ p.pk }}"><input type="radio" name="colaborador" value="{{ p.pk }}"><span>{{ p.nome }}</span><small>{{ p.get_setor_display }}</small></label>{% endfor %}
+        </div>
+        <small class="rh-ajuda" data-rh-sugestao-nota></small>
+      </div>
+    </div>
+    <datalist id="rhEtapas">{% for etapa in etapas %}<option value="{{ etapa }}"></option>{% endfor %}</datalist>
+    <div><button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Criar tarefa</button></div>
+  </form>
+</details>
+{% endif %}
+
+<section class="ls-data-panel rh-painel">
+  <div class="ls-data-header">
+    <div>
+      <h2>{{ tarefas|length }} tarefa{{ tarefas|length|pluralize }}</h2>
+      <p class="rh-nota">Prazo vencido em vermelho. As da produção trazem a etapa e o item.</p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="rhTarefas" chave="rh-tarefas" %}
+  </div>
+  <nav class="rh-chips" aria-label="Filtro">
+    {% for valor, rotulo in filtros %}<a class="rh-chip{% if filtro == valor %} is-ativo{% endif %}" href="?filtro={{ valor }}{% if pessoa %}&amp;pessoa={{ pessoa }}{% endif %}{% if setor %}&amp;setor={{ setor }}{% endif %}">{{ rotulo }}</a>{% endfor %}
+  </nav>
+  {% if gere %}
+  <nav class="rh-chips" aria-label="Setor">
+    <a class="rh-chip{% if not setor %} is-ativo{% endif %}" href="?filtro={{ filtro }}">Todos os setores</a>
+    {% for valor, rotulo in setores %}<a class="rh-chip{% if setor == valor %} is-ativo{% endif %}" href="?filtro={{ filtro }}&amp;setor={{ valor }}">{{ rotulo }}</a>{% endfor %}
+    <a class="rh-chip{% if pessoa == 'sem' %} is-ativo{% endif %}" href="?filtro={{ filtro }}&amp;pessoa=sem">Sem responsável</a>
+  </nav>
+  {% endif %}
+
+  <div class="rh-itens ls-visao-alvo" id="rhTarefas" data-visao="lista">
+    <div class="ls-visao-cabeca" aria-hidden="true">
+      <span data-col="foto"></span><span data-col="titulo">Tarefa</span><span data-col="info">Responsável</span>
+      <span data-col="valor">Prazo</span><span data-col="selos">Situação</span><span data-col="acoes">Ações</span>
+    </div>
+    {% for t in tarefas %}
+      <article class="rh-item" data-visao-item data-registro="{{ t.pk }}">
+        <span data-v="foto"><span class="rh-icone-item{% if t.situacao == 'feita' %} rh-icone-item--feita{% elif t.da_producao %} rh-icone-item--producao{% endif %}" aria-hidden="true"><i class="bi {% if t.situacao == 'feita' %}bi-check2-all{% elif t.da_producao %}bi-hammer{% else %}bi-check2-square{% endif %}"></i></span></span>
+        <div data-v="titulo">
+          <strong>{{ t.titulo }}</strong>
+          <small>{% if t.origem_rotulo %}{% if t.origem_url %}<a href="{{ t.origem_url }}">{{ t.origem_rotulo }}</a>{% else %}{{ t.origem_rotulo }}{% endif %}{% elif t.descricao %}{{ t.descricao|truncatechars:90 }}{% else %}Tarefa avulsa{% endif %}</small>
+        </div>
+        <div data-v="info">
+          <span>{% if t.colaborador %}{{ t.colaborador.nome }}{% else %}<em>Sem responsável</em>{% endif %}</span>
+          <span>{% if t.etapa %}Etapa: {{ t.etapa }}{% elif t.setor %}{{ t.get_setor_display }}{% endif %}</span>
+        </div>
+        <div data-v="valor" class="{% if t.atrasada %}rh-tarefa-prazo--atrasada{% endif %}">{% if t.prazo %}{{ t.prazo|date:"d/m/Y" }}{% else %}—{% endif %}<small>{% if t.atrasada %}atrasada{% else %}prazo{% endif %}</small></div>
+        <div data-v="selos">
+          {% if t.prioridade == "urgente" %}<span class="rh-selo rh-selo--perigo">Urgente</span>{% elif t.prioridade == "alta" %}<span class="rh-selo rh-selo--alerta">Alta</span>{% elif t.prioridade == "baixa" %}<span class="rh-selo">Baixa</span>{% endif %}
+          {% if t.situacao == "feita" %}<span class="rh-selo rh-selo--ok">Feita</span>{% elif t.situacao == "fazendo" %}<span class="rh-selo rh-selo--info">Fazendo</span>{% else %}<span class="rh-selo">A fazer</span>{% endif %}
+          {% if t.da_producao %}<span class="rh-selo rh-selo--violeta">Produção</span>{% endif %}
+        </div>
+        <div data-v="acoes">
+          <form method="post" action="{% url 'rh_tarefa_situacao' t.pk %}" class="rh-situacao" aria-label="Situação">
+            {% csrf_token %}
+            <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
+            {% for valor, rotulo in estados %}<button type="submit" name="situacao" value="{{ valor }}" aria-pressed="{% if t.situacao == valor %}true{% else %}false{% endif %}">{{ rotulo }}</button>{% endfor %}
+          </form>
+          {% if gere %}
+          <form method="post" action="{% url 'rh_tarefa_editar' t.pk %}" class="rh-inline"
+                data-ls-confirmar="“{{ t.titulo }}” sai da lista de {% if t.colaborador %}{{ t.colaborador.primeiro_nome }}{% else %}tarefas{% endif %}."
+                data-ls-confirmar-titulo="Excluir tarefa" data-ls-confirmar-botao="Excluir" data-ls-perigo>
+            {% csrf_token %}<input type="hidden" name="action" value="excluir">
+            <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Excluir"><i class="bi bi-trash" aria-hidden="true"></i></button>
+          </form>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <div class="ls-empty"><i class="bi bi-check2-square" aria-hidden="true"></i> <span>{% if filtro == "abertas" %}Nenhuma tarefa aberta.{% else %}Nada com esse filtro.{% endif %}</span></div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if ordens %}
+<section class="rh-painel" aria-labelledby="rhOrdens">
+  <header><h2 id="rhOrdens"><i class="bi bi-hammer" aria-hidden="true"></i> Ordens de produção em que você monta</h2></header>
+  <ul class="rh-linhas">
+    {% for o in ordens %}
+      <li>
+        <span class="rh-linha-principal"><strong>{{ o.produto }} · {{ o.quantidade }} un.</strong><small>Ordem #{{ o.pk }} · {{ o.get_status_display }}</small></span>
+        {% if acesso_rh.producao %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'producao_ordem_detalhe' o.pk %}">Abrir</a>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

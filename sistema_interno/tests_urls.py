@@ -46,6 +46,15 @@ SO_POST = {
     "prazo_producao": "grava o prazo de produção (tests_funil_vendas.py)",
     "andamento_pedido": "muda a situação do pedido e acerta a venda",
     "envio_pedido": "grava a transportadora e o rastreio (core/tests_fases_do_pedido.py)",
+    # RH (rh/tests_*.py exercitam cada uma de verdade)
+    "rh_documento_enviar": "guarda um documento do colaborador",
+    "rh_documento_remover": "remove um documento, nunca por link",
+    "rh_ponto_marcar": "bate o ponto",
+    "rh_ajuste_pedir": "pede um ajuste de ponto",
+    "rh_ajuste_decidir": "aprova ou recusa um ajuste",
+    "rh_tarefa_situacao": "muda a situação de uma tarefa",
+    "rh_tarefa_editar": "salva ou exclui uma tarefa",
+    "rh_termo_todos": "envia o termo para todos assinarem",
 }
 EXIGEM_PARAMETRO = {
     "campanha_ofertas": "precisa do cliente escolhido",
@@ -67,6 +76,19 @@ SO_DE_UM_REGISTRO = {
     # precisam existir (tests_funil_vendas.py imprime de verdade)
     "etiquetas_maquinas": "um pedido, orçamento ou venda cadastrado",
     "etiquetas_maquinas_imprimir": "um pedido, orçamento ou venda cadastrado",
+    # RH: a ficha, o documento, o comprovante, o espelho e o termo de um
+    # colaborador que precisa existir (rh/tests_*.py abrem de verdade); o
+    # link do termo é um token de 5 minutos.
+    "rh_ficha": "a ficha de um colaborador cadastrado",
+    "rh_colaborador_editar": "a ficha de um colaborador cadastrado",
+    "rh_ficha_imprimir": "a ficha de um colaborador cadastrado",
+    "rh_documento_arquivo": "um documento guardado",
+    "rh_comprovante": "uma marcação de ponto",
+    "rh_espelho": "o espelho de um colaborador cadastrado",
+    "rh_espelho_imprimir": "o espelho de um colaborador cadastrado",
+    "rh_termo": "o termo de um colaborador cadastrado",
+    "rh_termo_via": "um termo gerado",
+    "rh_termo_publico": "token de 5 minutos inventado",
 }
 
 

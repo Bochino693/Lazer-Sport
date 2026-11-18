@@ -1,0 +1,129 @@
+/* ======================================================================
+   AS FOLHAS DO RH — ficha, espelho de ponto, comprovante e termo — e a
+   página do link do termo (que abre sem login, no celular).
+
+   Folha é PAPEL: tinta escura sobre branco, porque vai para a impressora
+   ("Salvar em PDF" é a impressão do navegador, o caminho de todas as
+   folhas do painel). As cores ficam no :root, como a folha de etiquetas;
+   o resto usa só as variáveis. A barra de cima (Voltar · Salvar em PDF)
+   não sai no papel.
+   ====================================================================== */
+:root{
+  --papel:#ffffff;
+  --mesa:#eef0f4;
+  --tinta-folha:#14121a;
+  --tinta-suave:#55525e;
+  --linha-folha:#cfd2da;
+  --linha-forte-folha:#8d909a;
+  --marca:#c2410c;
+  --marca-fundo:#fff1e8;
+  --ok-folha:#166534;
+  --ok-fundo:#e8f6ec;
+  --erro-folha:#b42318;
+  --erro-fundo:#fdecea;
+  --barra:#14121a;
+  --barra-texto:#ffffff;
+  --botao:#16a34a;
+  --botao-texto:#ffffff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--mesa);color:var(--tinta-folha);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{min-height:100vh}
+img,svg,canvas{max-width:100%}
+
+.rh-barra{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--barra);color:var(--barra-texto)}
+.rh-barra a{color:var(--barra-texto);text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.rh-barra-titulo{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.rh-barra-titulo strong{font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh-barra-titulo small{opacity:.75;font-size:.76rem}
+.rh-barra button{border:0;border-radius:10px;padding:10px 14px;background:var(--botao);color:var(--botao-texto);font-weight:800;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+
+.rh-folha{width:210mm;max-width:calc(100% - 24px);margin:18px auto 40px;padding:16mm 15mm;background:var(--papel);
+  box-shadow:0 10px 40px rgba(0,0,0,.12);border-radius:6px;font-size:10.5pt;line-height:1.45}
+.rh-folha header.rh-folha-cabeca{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid var(--tinta-folha);padding-bottom:8px;margin-bottom:12px}
+.rh-folha h1{margin:0;font-size:15pt}
+.rh-folha h2{margin:14px 0 6px;font-size:10pt;text-transform:uppercase;letter-spacing:.06em;color:var(--tinta-suave);border-bottom:1px solid var(--linha-folha);padding-bottom:3px}
+.rh-folha .rh-empresa{text-align:right;font-size:9pt;color:var(--tinta-suave)}
+.rh-folha dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 14px;margin:0}
+.rh-folha dl div{min-width:0}
+.rh-folha dl div.largo{grid-column:1/-1}
+.rh-folha dt{font-size:7.5pt;text-transform:uppercase;letter-spacing:.05em;color:var(--tinta-suave)}
+.rh-folha dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.rh-folha table{width:100%;border-collapse:collapse;font-size:8.6pt}
+.rh-folha th,.rh-folha td{border:1px solid var(--linha-folha);padding:3px 5px;text-align:left;vertical-align:top}
+.rh-folha th{background:var(--mesa);font-size:7.5pt;text-transform:uppercase}
+.rh-folha td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rh-folha tr.folga td{color:var(--tinta-suave)}
+.rh-folha .ajuste{text-decoration:underline dotted}
+.rh-folha .fora{text-decoration:line-through;color:var(--tinta-suave)}
+.rh-folha .nota{font-size:8pt;color:var(--tinta-suave)}
+.rh-folha .totais{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0}
+.rh-folha .totais div{border:1px solid var(--linha-folha);border-radius:4px;padding:4px 6px}
+.rh-folha .totais strong{display:block;font-size:11pt}
+.rh-folha .totais span{font-size:7.5pt;color:var(--tinta-suave);text-transform:uppercase}
+.rh-folha .assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px}
+.rh-folha .assinaturas--junto{margin-top:4px}
+.rh-folha .assinaturas div{border-top:1px solid var(--tinta-folha);padding-top:4px;font-size:8.5pt;text-align:center}
+.rh-folha .check{list-style:none;padding:0;margin:0;columns:2;font-size:9pt}
+.rh-folha .check li{break-inside:avoid;margin:0 0 3px}
+.rh-folha .ok{color:var(--ok-folha);font-weight:700}
+.rh-folha .falta{color:var(--erro-folha);font-weight:700}
+.rh-folha .aviso{margin:10px 0;padding:6px 8px;border:1px dashed var(--marca);background:var(--marca-fundo);font-size:8.5pt}
+.rh-folha .termo-texto ol{padding-left:18px}
+.rh-folha .termo-texto li{margin-bottom:6px}
+.rh-folha .assinatura-img{max-height:90px;display:block;margin:8px 0 2px}
+.rh-folha .codigo{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13pt;letter-spacing:.08em;font-weight:800}
+.rh-folha .hash{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:7.5pt;overflow-wrap:anywhere;color:var(--tinta-suave)}
+
+@media (max-width:720px){
+  .rh-folha{padding:16px;font-size:10pt}
+  .rh-folha dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rh-folha .totais{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rh-folha .check{columns:1}
+  .rh-folha .tabela-rola{overflow-x:auto}
+}
+@page{size:A4;margin:10mm}
+@media print{
+  html,body{background:var(--papel)}
+  .nao-imprime{display:none!important}
+  .rh-folha{width:auto;max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0}
+  .rh-folha tr{break-inside:avoid}
+}
+
+/* ---------------- a página do link (assinar no celular, sem login) ---------------- */
+.rh-pub{max-width:640px;margin:0 auto;padding:16px 16px 40px}
+.rh-pub-cartao{background:var(--papel);border-radius:18px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.08);margin-bottom:14px}
+.rh-pub h1{font-size:1.2rem;margin:0 0 4px}
+.rh-pub p{margin:0 0 10px;color:var(--tinta-suave)}
+.rh-pub .rh-termo-texto{line-height:1.6;font-size:.98rem;color:var(--tinta-folha)}
+.rh-pub .rh-termo-texto p{color:var(--tinta-folha)}
+.rh-pub .rh-termo-texto h2{font-size:1rem;text-align:center;margin:0 0 10px}
+.rh-pub .rh-termo-texto ol{padding-left:20px}
+.rh-pub .rh-modelo{display:flex;gap:8px;padding:10px 12px;border:1px dashed var(--marca);border-radius:12px;background:var(--marca-fundo);font-size:.84rem;color:var(--tinta-folha);margin-bottom:12px}
+.rh-pub .rh-relogio-link{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--marca-fundo);color:var(--marca);font-weight:800;font-variant-numeric:tabular-nums}
+.rh-pub .rh-relogio-link.acabou{background:var(--erro-fundo);color:var(--erro-folha)}
+.rh-pub .rh-form{display:flex;flex-direction:column;gap:12px}
+.rh-pub .rh-campos{display:flex;flex-direction:column;gap:12px}
+.rh-pub .rh-campo{display:flex;flex-direction:column;gap:4px}
+.rh-pub label,.rh-pub .rh-rotulo{font-weight:700;font-size:.86rem}
+.rh-pub input[type="text"],.rh-pub input:not([type]),.rh-pub input[inputmode]{font:inherit;padding:12px;border:1px solid var(--linha-forte-folha);border-radius:12px;background:var(--papel);color:var(--tinta-folha)}
+.rh-pub .rh-ajuda{color:var(--tinta-suave);font-size:.78rem}
+.rh-pub .tem-erro input{border-color:var(--erro-folha)}
+.rh-pub .rh-erros{padding:10px 12px;border-radius:12px;background:var(--erro-fundo);color:var(--erro-folha);font-weight:700}
+.rh-pub .rh-erros[hidden]{display:none}
+.rh-pub .rh-quadro{position:relative;border:2px dashed var(--linha-forte-folha);border-radius:14px;background:var(--papel);touch-action:none}
+.rh-pub .rh-quadro canvas{display:block;width:100%;height:200px;border-radius:12px}
+.rh-pub .rh-quadro-dica{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--tinta-suave);pointer-events:none}
+.rh-pub .rh-quadro.tem-traco .rh-quadro-dica{display:none}
+.rh-pub .rh-quadro-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.rh-pub .rh-quadro-acoes button{border:1px solid var(--linha-forte-folha);background:var(--papel);color:var(--tinta-folha);border-radius:10px;padding:8px 12px;font:inherit;font-size:.84rem}
+.rh-pub .rh-consentimento{display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:.88rem}
+.rh-pub .rh-consentimento input{margin-top:4px;width:18px;height:18px}
+.rh-pub button[type="submit"]{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--botao);color:var(--botao-texto);font:inherit;font-weight:800;font-size:1.05rem}
+.rh-pub button[type="submit"]:disabled{opacity:.6}
+.rh-pub .estado{text-align:center;padding:30px 18px}
+.rh-pub .estado i{font-size:2.6rem;display:block;margin-bottom:8px}
+.rh-pub .estado.ok i{color:var(--ok-folha)}
+.rh-pub .estado.erro i{color:var(--erro-folha)}
+.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important}

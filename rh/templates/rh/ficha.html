@@ -1,0 +1,223 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}{{ c.nome }}{% endblock %}
+
+{% block rh_conteudo %}
+{% comment %}
+  A FICHA, pelas partes que quem olha pode ver (rh/acesso.py,
+  `partes_da_ficha`): a Gestão vê tudo; o Financeiro, o que precisa para
+  pagar; a própria pessoa, a ficha básica e os próprios documentos -- nunca
+  o salário de ninguém pela ficha dos outros, porque a dos outros nem abre.
+{% endcomment %}
+<section class="rh-painel">
+  <div class="rh-ficha-topo">
+    <span class="rh-avatar rh-avatar--g" aria-hidden="true">{{ c.nome|iniciais }}</span>
+    <div class="rh-ficha-nome">
+      <h1>{{ c.nome }}</h1>
+      <p>{{ c.cargo }} · {{ c.get_setor_display }}</p>
+      <div class="rh-chips">
+        <span class="rh-selo">{{ c.get_vinculo_display }}</span>
+        {% if c.situacao == "ativo" %}<span class="rh-selo rh-selo--ok">Ativo</span>
+        {% elif c.situacao == "desligado" %}<span class="rh-selo">Desligado em {{ c.data_desligamento|date:"d/m/Y" }}</span>
+        {% else %}<span class="rh-selo rh-selo--info">{{ c.get_situacao_display }}</span>{% endif %}
+        <span class="rh-selo">Desde {{ c.data_admissao|date:"d/m/Y" }}</span>
+        {% if tarefas_abertas %}<span class="rh-selo rh-selo--violeta">{{ tarefas_abertas }} tarefa{{ tarefas_abertas|pluralize }} aberta{{ tarefas_abertas|pluralize }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="rh-doc-acoes">
+      {% if gere %}<a class="btn btn-success" href="{% url 'rh_colaborador_editar' c.pk %}"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i> Editar</a>{% endif %}
+      <a class="btn btn-outline-secondary" href="{% url 'rh_ficha_imprimir' c.pk %}" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Ficha em PDF</a>
+      <a class="btn btn-outline-secondary" href="{% url 'rh_espelho' c.pk %}"><i class="bi bi-calendar3 me-1" aria-hidden="true"></i> Espelho de ponto</a>
+    </div>
+  </div>
+</section>
+
+{% if "termo" in partes and c.situacao != "desligado" %}
+  {% if termo_situacao == "assinado" %}
+  <section class="rh-destaque rh-destaque--ok" aria-labelledby="rhTermoFicha">
+    <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+    <div>
+      <h2 id="rhTermoFicha">Termo de exclusividade assinado</h2>
+      <p>Em {{ termo_assinado.assinado_em|date:"d/m/Y \à\s H:i" }} · {{ termo_assinado.get_canal_display|lower }} · versão {{ termo_assinado.versao }}.</p>
+    </div>
+    <div class="rh-destaque-acoes">
+      {% if termo_assinado.documento_id %}<a class="btn btn-outline-secondary" href="{% url 'rh_documento_arquivo' termo_assinado.documento_id %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF assinado</a>{% endif %}
+      <a class="btn btn-outline-secondary" href="{% url 'rh_termo_via' termo_assinado.pk %}" data-no-soft-nav="true"><i class="bi bi-eye me-1" aria-hidden="true"></i> Ver</a>
+    </div>
+  </section>
+  {% else %}
+  <section class="rh-destaque" aria-labelledby="rhTermoFicha">
+    <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-exclamation"></i></span>
+    <div>
+      <h2 id="rhTermoFicha">Termo de exclusividade: {{ rotulos_termo|get_item:termo_situacao|default:termo_situacao }}</h2>
+      <p>{% if proprio %}Leia e assine: é o compromisso de não trabalhar para o ramo de fora enquanto durar o vínculo e de guardar as informações da casa.{% else %}Sem a assinatura, nada compromete {{ c.primeiro_nome }} a não trabalhar para o ramo de fora nem a guardar os projetos da casa.{% endif %}</p>
+    </div>
+    <div class="rh-destaque-acoes">
+      {% if proprio %}<a class="btn btn-danger" href="{% url 'rh_meu_termo' %}"><i class="bi bi-pen-fill me-1" aria-hidden="true"></i> Assinar agora</a>{% endif %}
+      {% if gere %}
+        {% if termo_situacao == "pendente" %}
+          <form method="post" action="{% url 'rh_termo' c.pk %}" class="rh-inline">
+            {% csrf_token %}<input type="hidden" name="action" value="gerar">
+            <button class="btn btn-danger" type="submit"><i class="bi bi-send-fill me-1" aria-hidden="true"></i> Enviar para assinatura</button>
+          </form>
+        {% else %}
+          <a class="btn btn-outline-primary" href="{% url 'rh_termo' c.pk %}"><i class="bi bi-qr-code me-1" aria-hidden="true"></i> QR e link para assinar</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+{% endif %}
+
+{% if conta_sem_funcao and gere %}
+  <p class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> A conta <strong>{{ c.usuario.username }}</strong> não tem a função “{{ c.get_setor_display }}” no painel. Ajuste em Administração › Equipe e acessos, se ela também for trabalhar nas telas do setor.</p>
+{% endif %}
+
+<div class="rh-grade">
+  <section class="rh-painel" aria-labelledby="rhDadosPessoais">
+    <header><h2 id="rhDadosPessoais"><i class="bi bi-person-vcard" aria-hidden="true"></i> Identificação</h2></header>
+    <dl class="rh-dados">
+      <div><dt>CPF</dt><dd class="rh-sensivel">{{ c.cpf_formatado }}</dd></div>
+      {% if "pessoal" in partes %}
+        <div><dt>RG</dt><dd>{{ c.rg }}{% if c.rg_orgao %} · {{ c.rg_orgao }}{% endif %}</dd></div>
+        <div><dt>Nascimento</dt><dd>{{ c.data_nascimento|date:"d/m/Y" }} ({{ c.idade }} anos)</dd></div>
+        <div><dt>PIS/NIS</dt><dd class="rh-sensivel">{{ c.pis_formatado|default:"—" }}</dd></div>
+        <div><dt>CTPS</dt><dd>{% if c.ctps_numero %}{{ c.ctps_numero }}{% if c.ctps_serie %} · série {{ c.ctps_serie }}{% endif %}{% if c.ctps_uf %} · {{ c.ctps_uf }}{% endif %}{% else %}Digital (número = CPF){% endif %}</dd></div>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="rh-painel" aria-labelledby="rhTrabalho">
+    <header><h2 id="rhTrabalho"><i class="bi bi-briefcase" aria-hidden="true"></i> Trabalho</h2></header>
+    <dl class="rh-dados">
+      <div><dt>Cargo</dt><dd>{{ c.cargo }}</dd></div>
+      <div><dt>Setor</dt><dd>{{ c.get_setor_display }}</dd></div>
+      {% if c.especialidades %}<div><dt>Especialidades</dt><dd>{{ c.especialidades_rotulos|join:", " }}</dd></div>{% endif %}
+      <div><dt>Vínculo</dt><dd>{{ c.get_vinculo_display }}</dd></div>
+      <div><dt>Admissão</dt><dd>{{ c.data_admissao|date:"d/m/Y" }}</dd></div>
+      {% if "jornada" in partes %}<div><dt>Jornada</dt><dd>{{ c.jornada_texto }}</dd></div>{% endif %}
+      {% if "conta" in partes %}
+        <div><dt>Conta do painel</dt><dd>{% if c.usuario %}{{ c.usuario.username }}{% else %}Sem conta (assina e bate o ponto pelo link){% endif %}</dd></div>
+        <div><dt>Nome na produção</dt><dd>{% if c.colaborador_producao %}{{ c.colaborador_producao.nome }}{% else %}—{% endif %}</dd></div>
+      {% endif %}
+    </dl>
+  </section>
+
+  {% if "endereco" in partes or "contato" in partes %}
+  <section class="rh-painel" aria-labelledby="rhContato">
+    <header><h2 id="rhContato"><i class="bi bi-house-door" aria-hidden="true"></i> Endereço e contato</h2></header>
+    <dl class="rh-dados">
+      <div><dt>Endereço</dt><dd>{{ c.endereco_linha }}</dd></div>
+      <div><dt>Telefone</dt><dd>{{ c.telefone_formatado }}</dd></div>
+      <div><dt>E-mail</dt><dd>{{ c.email|default:"—" }}</dd></div>
+      <div><dt>Emergência</dt><dd>{{ c.emergencia_nome }}{% if c.emergencia_parentesco %} ({{ c.emergencia_parentesco }}){% endif %} · {{ c.emergencia_telefone_formatado }}</dd></div>
+    </dl>
+  </section>
+  {% endif %}
+
+  {% if "pagamento" in partes %}
+  <section class="rh-painel" aria-labelledby="rhPagamento">
+    <header><h2 id="rhPagamento"><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento</h2><span class="rh-selo rh-selo--alerta"><i class="bi bi-lock" aria-hidden="true"></i> Gestão e Financeiro</span></header>
+    <dl class="rh-dados">
+      <div><dt>Salário</dt><dd class="rh-sensivel">{% if c.salario is not None %}R$ {{ c.salario|floatformat:"2g" }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Banco</dt><dd>{{ c.banco|default:"—" }}</dd></div>
+      <div><dt>Agência e conta</dt><dd>{% if c.conta %}{{ c.agencia }} · {{ c.conta }}{% if c.tipo_conta %} ({{ c.get_tipo_conta_display|lower }}){% endif %}{% else %}—{% endif %}</dd></div>
+      <div><dt>Pix</dt><dd>{% if c.pix_chave %}{{ c.get_pix_tipo_display }}: {{ c.pix_chave_formatada }}{% else %}—{% endif %}</dd></div>
+    </dl>
+  </section>
+  {% endif %}
+</div>
+
+{% if "documentos" in partes %}
+<section class="rh-painel" id="documentos" aria-labelledby="rhDocs">
+  <header>
+    <h2 id="rhDocs"><i class="bi bi-folder2-open" aria-hidden="true"></i> Documentos</h2>
+    <span class="rh-selo rh-selo--info"><i class="bi bi-shield-lock" aria-hidden="true"></i> Arquivos sem endereço público · cada abertura fica registrada</span>
+  </header>
+  <h3>O que a pasta precisa ter ({{ c.get_vinculo_display }})</h3>
+  <ul class="rh-check">
+    {% for linha in checklist %}
+      <li class="is-{{ linha.estado }}">
+        <i class="bi {% if linha.estado == 'ok' %}bi-check-circle-fill{% elif linha.estado == 'falta' %}bi-x-circle-fill{% elif linha.estado == 'vencido' %}bi-calendar2-x-fill{% else %}bi-exclamation-circle-fill{% endif %}" aria-hidden="true"></i>
+        <span>
+          <strong>{{ linha.rotulo }}</strong>
+          <small>
+            {% if linha.estado == "falta" %}Falta
+            {% elif linha.estado == "vencido" %}Venceu em {{ linha.documento.validade|date:"d/m/Y" }}
+            {% elif linha.estado == "vence" %}Vence em {{ linha.documento.validade|date:"d/m/Y" }}
+            {% elif linha.estado == "antigo" %}Comprovante com mais de 90 dias: peça um atualizado
+            {% else %}Entregue{% if linha.documento.validade %} · vale até {{ linha.documento.validade|date:"d/m/Y" }}{% endif %}{% endif %}
+          </small>
+        </span>
+      </li>
+    {% empty %}
+      <li><span><small>Sem lista de obrigatórios para este vínculo.</small></span></li>
+    {% endfor %}
+  </ul>
+
+  <h3>Na pasta</h3>
+  <ul class="rh-docs">
+    {% for d in documentos %}
+      <li class="rh-doc">
+        <span class="rh-doc-icone" aria-hidden="true"><i class="bi {% if d.eh_pdf %}bi-file-earmark-pdf{% else %}bi-file-earmark-image{% endif %}"></i></span>
+        <span class="rh-doc-texto">
+          <strong>{{ d.rotulo }}</strong>
+          <small>{{ d.tamanho_texto }} · enviado em {{ d.enviado_em|date:"d/m/Y" }}{% if d.enviado_por %} por {{ d.enviado_por.get_full_name|default:d.enviado_por.username }}{% endif %}{% if d.validade %} · {% if d.vencido %}venceu{% else %}vale até{% endif %} {{ d.validade|date:"d/m/Y" }}{% endif %}</small>
+        </span>
+        <span class="rh-doc-acoes">
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_documento_arquivo' d.pk %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-eye" aria-hidden="true"></i> Abrir</a>
+          {% if gere and d.tipo != "termo" %}
+          <form method="post" action="{% url 'rh_documento_remover' d.pk %}" class="rh-inline"
+                data-ls-confirmar="O arquivo sai do armazenamento. Fica na trilha quem removeu e quando."
+                data-ls-confirmar-titulo="Remover {{ d.rotulo }}" data-ls-confirmar-botao="Remover" data-ls-perigo>
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash" aria-hidden="true"></i> Remover</button>
+          </form>
+          {% endif %}
+        </span>
+      </li>
+    {% empty %}
+      <li class="rh-vazio"><i class="bi bi-folder" aria-hidden="true"></i> Nenhum documento na pasta ainda.</li>
+    {% endfor %}
+  </ul>
+
+  {% if form_documento %}
+  <form class="rh-envio rh-form" method="post" action="{% url 'rh_documento_enviar' c.pk %}" enctype="multipart/form-data" data-rh-envio>
+    {% csrf_token %}
+    <div class="rh-campos">
+      {% include "rh/partes/chips.html" with campo=form_documento.tipo %}
+      {% include "rh/partes/campo.html" with campo=form_documento.arquivo largura=6 ajuda="PDF, JPG, PNG ou WEBP, até 10 MB. O conteúdo é conferido, não só o nome." %}
+      {% include "rh/partes/campo.html" with campo=form_documento.descricao largura=6 ajuda="Obrigatória em “Outro documento”." %}
+      {% include "rh/partes/campo.html" with campo=form_documento.emissao largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form_documento.validade largura=3 ajuda="Obrigatória no ASO e na declaração de matrícula." %}
+      <div class="rh-campo rh-campo--6">
+        <span class="rh-rotulo">&nbsp;</span>
+        <button class="btn btn-success" type="submit"><i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i> Guardar na pasta</button>
+      </div>
+    </div>
+    <p class="rh-arquivo-nota"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> O arquivo vai para o armazenamento privado: não tem link público, só abre por aqui, para quem pode, e cada abertura é anotada.</p>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if "observacoes" in partes and c.observacoes %}
+<section class="rh-painel">
+  <header><h2><i class="bi bi-sticky" aria-hidden="true"></i> Observações (só a Gestão vê)</h2></header>
+  <p class="rh-nota">{{ c.observacoes|linebreaksbr }}</p>
+</section>
+{% endif %}
+
+{% if "auditoria" in partes %}
+<section class="rh-painel" aria-labelledby="rhTrilha">
+  <header><h2 id="rhTrilha"><i class="bi bi-journal-check" aria-hidden="true"></i> Trilha: quem abriu e mexeu</h2></header>
+  <ul class="rh-trilha">
+    {% for r in registros %}
+      <li><time datetime="{{ r.momento|date:'c' }}">{{ r.momento|date:"d/m/Y H:i" }}</time> <strong>{{ r.usuario_nome }}</strong> {{ r.get_acao_display|lower }}{% if r.descricao %} · {{ r.descricao }}{% endif %}{% if r.ip %} · IP {{ r.ip }}{% endif %}</li>
+    {% empty %}
+      <li>Nada registrado ainda.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

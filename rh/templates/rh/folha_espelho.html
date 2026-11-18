@@ -1,0 +1,54 @@
+{% extends "rh/folha_base.html" %}
+{% load rh_extras %}
+{% block titulo %}Espelho de ponto · {{ c.nome }} · {{ mes_texto }}{% endblock %}
+{% block barra %}Espelho de ponto{% endblock %}
+{% block barra_sub %}{{ c.nome }} · {{ mes_texto }}{% endblock %}
+
+{% block folha %}
+<header class="rh-folha-cabeca">
+  <div>
+    <h1>Espelho de ponto · {{ mes_texto }}</h1>
+    <div>{{ c.nome }} · CPF {{ c.cpf_formatado }}{% if c.pis %} · PIS {{ c.pis_formatado }}{% endif %}</div>
+    <div class="nota">{{ c.cargo }} · {{ c.get_vinculo_display }} · admissão {{ c.data_admissao|date:"d/m/Y" }} · jornada {{ c.jornada_texto }}</div>
+  </div>
+  <div class="rh-empresa">{{ empresa.nome }}<br>CNPJ {{ empresa.cnpj }}<br>Gerado em {{ gerado_em|date:"d/m/Y H:i" }}</div>
+</header>
+
+<div class="totais">
+  <div><strong>{{ t.trabalhado }}</strong><span>trabalhadas</span></div>
+  <div><strong>{{ t.esperado }}</strong><span>previstas</span></div>
+  <div><strong>{{ t.extra }}</strong><span>extras 50%</span></div>
+  <div><strong>{{ t.extra_100 }}</strong><span>extras 100%</span></div>
+  <div><strong>{{ t.debito }}</strong><span>a compensar</span></div>
+  <div><strong>{{ t.atrasos }} · {{ t.atraso_min }}</strong><span>atrasos</span></div>
+  <div><strong>{{ t.faltas }}</strong><span>faltas</span></div>
+  <div><strong>{{ t.saldo }}</strong><span>saldo do mês</span></div>
+</div>
+
+<div class="tabela-rola">
+<table>
+  <thead><tr><th>Dia</th><th>Marcações</th><th>Trab.</th><th>Interv.</th><th>Atraso</th><th>Extra</th><th>Débito</th><th>Ocorrência</th></tr></thead>
+  <tbody>
+    {% for d in e.dias %}
+      <tr class="{% if not d.dia_util and not d.trabalhado %}folga{% endif %}">
+        <td>{{ d.data|date:"d/m" }} {{ d.semana }}</td>
+        <td>{% for ev in d.eventos %}<span class="{% if ev.origem == 'ajuste' %}ajuste{% endif %}{% if ev.desconsiderada %} fora{% endif %}">{{ ev.hora|time:"H:i" }}{% if ev.origem == 'ajuste' %}*{% endif %}{% if ev.pendente %}?{% endif %}</span>{% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}</td>
+        <td class="num">{% if d.trabalhado %}{{ d.trabalhado|hm }}{% endif %}</td>
+        <td class="num">{% if d.intervalo %}{{ d.intervalo|hm }}{% endif %}</td>
+        <td class="num">{% if d.atraso %}{{ d.atraso|hm }}{% endif %}</td>
+        <td class="num">{% if d.extra_100 %}{{ d.extra_100|hm }} (100%){% elif d.extra %}{{ d.extra|hm }}{% endif %}</td>
+        <td class="num">{% if d.debito %}{{ d.debito|hm }}{% endif %}</td>
+        <td>{% if d.feriado %}{{ d.feriado }} {% endif %}{% if d.abono %}Abono: {{ d.abono.get_motivo_abono_display }} {% endif %}{% if d.falta %}Falta {% endif %}{% if d.incompleto %}Marcação faltando {% endif %}{% if d.intervalo_curto %}Intervalo &lt; 1h{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="nota">* incluída por ajuste aprovado · riscada: desconsiderada por ajuste aprovado · ? ajuste pendente (fora da conta). Tolerância de 5 min por marcação e 10 por dia (CLT, art. 58, § 1º). Cadeia de marcações: {% if e.integro %}íntegra (hash SHA-256 encadeado conferido){% else %}COM PROBLEMA — {{ e.integridade|join:" " }}{% endif %}.</p>
+
+<div class="assinaturas">
+  <div>{{ c.nome }}<br>Colaborador — confere e concorda com o espelho</div>
+  <div>{{ empresa.nome }}<br>Responsável</div>
+</div>
+<p class="nota">Controle interno de frequência, registrado pelo painel com a hora do servidor. Não substitui um REP certificado (Portaria MTP 671/2021) quando a lei o exigir para o porte da empresa.</p>
+{% endblock %}

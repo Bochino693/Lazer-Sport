@@ -193,6 +193,17 @@ def capacidades(user) -> dict[str, bool]:
         # da empresa): quem responde pela identidade jurídica no papel.
         "dados_contrato": gestao,
         "site": criacao,
+        # RECURSOS HUMANOS (app `rh`), com as MESMAS funções: não há grupo
+        # "RH" à parte. Gestão (e o superusuário, que tem todas) vê e
+        # edita todas as fichas, documentos, ajustes de ponto e tarefas.
+        # Financeiro vê o que precisa para pagar -- salário, banco e Pix,
+        # e o espelho de ponto -- sem editar a ficha. Qualquer integrante
+        # da equipe (Produção, Criação, Vendas, Ambulante...) vê só o
+        # próprio: o ponto, as tarefas e a ficha básica.
+        "rh": gestao,
+        "rh_pagamento": acesso_financeiro,
+        "rh_equipe": gestao or funcao_financeiro,
+        "rh_proprio": bool(nomes_das_funcoes(user)),
         "usuarios": superusuario,
         "avaliar_blocos_orcamento": superusuario,
         "avaliar_setores": superusuario,

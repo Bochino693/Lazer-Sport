@@ -1,4 +1,4 @@
-{% load static interno_extras ls_aviso %}
+{% load static interno_extras ls_aviso rh_extras %}
 <!DOCTYPE html>
 <html lang="pt-br" data-ls-navigation="document">
 <head>
@@ -508,6 +508,21 @@
       </div>
       {% endif %}
 
+      {% if permissoes_interno.rh_proprio %}
+      {% comment %}
+        RECURSOS HUMANOS: UMA entrada só, com abas lá dentro (app `rh`).
+        Gestão e Financeiro chegam à equipe; o resto, ao próprio ponto, às
+        próprias tarefas e à própria ficha. Ver rh/acesso.py.
+      {% endcomment %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Pessoas</span>
+        <a data-titulo="{% if permissoes_interno.rh_equipe %}RH · Equipe{% else %}Meu ponto e tarefas{% endif %}" aria-label="{% if permissoes_interno.rh_equipe %}RH · Equipe{% else %}Meu ponto e tarefas{% endif %}" class="ls-nav-item {% if request.resolver_match.url_name|slice:':3' == 'rh_' %}active{% endif %}" href="{% url 'rh_inicio' %}">
+          <span class="ls-nav-icon"><i class="bi bi-person-badge-fill"></i></span>
+          <span>{% if permissoes_interno.rh_equipe %}RH · Equipe{% else %}Meu ponto e tarefas{% endif %}</span>
+        </a>
+      </div>
+      {% endif %}
+
       {% comment %}
         A LOJA É DE TODA A EQUIPE, NÃO SÓ DE QUEM A EDITA.
 
@@ -840,6 +855,8 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
         "acao:<url>|<rótulo>").
       {% endcomment %}
       {% avisos_do_app recuperado=request.GET.recuperado %}
+      {# O termo de exclusividade sem assinatura: faixa em toda tela (rh/templatetags/rh_extras.py). #}
+      {% faixa_do_termo %}
       {% block content %}{% endblock %}
       {% block grafico %}{% endblock %}
     </main>

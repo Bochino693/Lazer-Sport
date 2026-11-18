@@ -1,0 +1,26 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}{% block titulo_rh %}Recursos humanos{% endblock %} | Lazer &amp; Sport{% endblock %}
+{% block top_title %}{% if acesso_rh.rh_equipe %}RH · Equipe{% else %}Meu ponto e tarefas{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="rh" href="{% estatico 'rh/rh.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="rh-tela" id="rhTela" data-aba="{{ aba_rh }}">
+  <nav class="rh-abas" aria-label="Recursos humanos">
+    {% for chave, rotulo, icone, url in abas_rh %}
+      <a class="rh-aba{% if chave == aba_rh %} is-ativa{% endif %}" href="{{ url }}"{% if chave == aba_rh %} aria-current="page"{% endif %}>
+        <i class="bi {{ icone }}" aria-hidden="true"></i><span>{{ rotulo }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+  {% block rh_conteudo %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'rh/rh.js' %}"></script>
+{% block rh_scripts %}{% endblock %}
+{% endblock %}

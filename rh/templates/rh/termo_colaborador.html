@@ -1,0 +1,65 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}Termo · {{ c.nome }}{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Termo de exclusividade e confidencialidade · versão {{ versao }}</span>
+    <h1>{{ c.nome }}</h1>
+    <p>Situação: <strong>{{ rotulos|get_item:situacao }}</strong>. {% if c.usuario_id %}Tem conta no painel: a faixa “Assine o termo” aparece em todas as telas dele.{% else %}Sem conta no painel: mostre o QR (ou mande o link pelo WhatsApp) para assinar no celular.{% endif %}</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-outline-secondary" href="{% url 'rh_ficha' c.pk %}"><i class="bi bi-person-vcard me-1" aria-hidden="true"></i> Ficha</a>
+  </div>
+</section>
+
+<p class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ aviso_modelo }}</p>
+
+{% if situacao == "pendente" %}
+  <section class="rh-destaque">
+    <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-exclamation"></i></span>
+    <div><h2>Ainda não enviado</h2><p>Enviar congela o texto com os dados da ficha de hoje (nome, CPF, cargo, admissão) e o código de integridade dele.</p></div>
+    <div class="rh-destaque-acoes">
+      <form method="post" class="rh-inline">{% csrf_token %}<input type="hidden" name="action" value="gerar">
+        <button class="btn btn-danger" type="submit"><i class="bi bi-send-fill me-1" aria-hidden="true"></i> Enviar para assinatura</button>
+      </form>
+    </div>
+  </section>
+{% elif situacao == "enviado" %}
+  <section class="rh-painel" aria-labelledby="rhQrTitulo" data-rh-termo-qr data-acao="{% url 'rh_termo' c.pk %}">
+    <header><h2 id="rhQrTitulo"><i class="bi bi-qr-code" aria-hidden="true"></i> Assinar pelo celular</h2><span class="rh-selo rh-selo--alerta">link de {{ validade_minutos }} minutos, renovado sozinho</span></header>
+    <div class="rh-qr">
+      <div class="rh-qr-imagem" data-rh-qr aria-live="polite"><span class="rh-nota">Gerando o link…</span></div>
+      <div class="rh-tela">
+        <p class="rh-nota">Peça para {{ c.primeiro_nome }} apontar a câmera do celular para o código. A página abre sem login, mostra só este termo e pede o CPF da ficha.</p>
+        <p>Vale por mais <span class="rh-qr-relogio" data-rh-relogio-link>—</span> · link nº <span data-rh-numero-link>—</span></p>
+        <p class="rh-qr-link" data-rh-link-texto></p>
+        <div class="rh-doc-acoes">
+          <a class="btn btn-success" href="#" target="_blank" rel="noopener" data-rh-whatsapp data-no-soft-nav="true"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Mandar no WhatsApp</a>
+          <button class="btn btn-outline-secondary" type="button" data-rh-copiar-link><i class="bi bi-clipboard me-1" aria-hidden="true"></i> Copiar link</button>
+          <button class="btn btn-outline-secondary" type="button" data-rh-novo-link><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i> Link novo</button>
+        </div>
+      </div>
+    </div>
+    {% csrf_token %}
+  </section>
+  {% with doc=termo.conteudo %}{% include "rh/partes/termo_texto.html" %}{% endwith %}
+  <p class="rh-nota">Gerado em {{ termo.gerado_em|date:"d/m/Y H:i" }}{% if termo.gerado_por %} por {{ termo.gerado_por.get_full_name|default:termo.gerado_por.username }}{% else %} (aberto pelo próprio colaborador){% endif %} · integridade {{ termo.hash_conteudo|slice:":16" }}… · <a href="{% url 'rh_termo_via' termo.pk %}" data-no-soft-nav="true">ver em folha</a></p>
+{% endif %}
+
+{% if assinados %}
+<section class="rh-painel" aria-labelledby="rhAssinados">
+  <header><h2 id="rhAssinados"><i class="bi bi-shield-check" aria-hidden="true"></i> Termos assinados</h2></header>
+  <ul class="rh-linhas">
+    {% for t in assinados %}
+      <li>
+        <span class="rh-linha-principal"><strong>Versão {{ t.versao }}{% if t.versao != versao %} (texto antigo){% endif %}</strong><small>Assinado em {{ t.assinado_em|date:"d/m/Y H:i" }} · {{ t.get_canal_display }} · IP {{ t.assinatura_ip|default:"—" }} · integridade {{ t.hash_assinado|slice:":16" }}…</small></span>
+        {% if t.documento_id %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_documento_arquivo' t.documento_id %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF</a>{% endif %}
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_termo_via' t.pk %}" data-no-soft-nav="true">Ver</a>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

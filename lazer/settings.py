@@ -154,6 +154,9 @@ INSTALLED_APPS = [
     # As regras de conta (e-mail único, freio do login, senha forte, o
     # registro de segurança): contas/__init__.py.
     "contas",
+    # Recursos humanos: colaboradores, documentos (armazenamento privado),
+    # ponto, tarefas e o termo de exclusividade. Ver rh/ e LEIA-ME-V10.
+    "rh",
 
     # Terceiros
     "rest_framework",

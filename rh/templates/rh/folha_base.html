@@ -1,0 +1,28 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+{% comment %}
+  As folhas do RH saem pela impressão do navegador ("Salvar em PDF"), o
+  mesmo caminho da proposta, da O.S. e do termo de compra: o projeto não
+  tem biblioteca de PDF. A barra de cima não vai para o papel.
+{% endcomment %}
+<title>{% block titulo %}Folha{% endblock %} | Lazer &amp; Sport</title>
+{% include "partials/icones_da_aba.html" with sem_app=True %}
+<link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% estatico 'rh/rh-folha.css' %}">
+</head>
+<body>
+<header class="rh-barra nao-imprime">
+  {% if voltar_url %}<a href="{{ voltar_url }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Voltar</a>{% endif %}
+  <span class="rh-barra-titulo"><strong>{% block barra %}Folha{% endblock %}</strong><small>{% block barra_sub %}{% endblock %}</small></span>
+  <button type="button" data-rh-imprimir data-imprimir-ao-abrir="{% if imprimir_ao_abrir %}1{% endif %}"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Salvar em PDF</button>
+</header>
+<main class="rh-folha">
+{% block folha %}{% endblock %}
+</main>
+<script src="{% estatico 'rh/rh-folha.js' %}" defer></script>
+</body>
+</html>

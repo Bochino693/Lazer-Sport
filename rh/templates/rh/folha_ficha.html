@@ -1,0 +1,80 @@
+{% extends "rh/folha_base.html" %}
+{% block titulo %}Ficha · {{ c.nome }}{% endblock %}
+{% block barra %}Ficha do colaborador{% endblock %}
+{% block barra_sub %}{{ c.nome }}{% endblock %}
+
+{% block folha %}
+<header class="rh-folha-cabeca">
+  <div>
+    <h1>Ficha do colaborador</h1>
+    <div>{{ c.nome }} · {{ c.cargo }}</div>
+  </div>
+  <div class="rh-empresa">{{ empresa.nome }}<br>CNPJ {{ empresa.cnpj }}<br>Gerada em {{ gerado_em|date:"d/m/Y H:i" }} por {{ gerado_por }}</div>
+</header>
+
+<h2>Identificação</h2>
+<dl>
+  <div><dt>Nome</dt><dd>{{ c.nome }}</dd></div>
+  <div><dt>CPF</dt><dd>{{ c.cpf_formatado }}</dd></div>
+  {% if "pessoal" in partes %}
+    <div><dt>RG</dt><dd>{{ c.rg }}{% if c.rg_orgao %} · {{ c.rg_orgao }}{% endif %}</dd></div>
+    <div><dt>Nascimento</dt><dd>{{ c.data_nascimento|date:"d/m/Y" }} ({{ c.idade }} anos)</dd></div>
+    <div><dt>PIS/NIS</dt><dd>{{ c.pis_formatado|default:"—" }}</dd></div>
+    <div><dt>CTPS</dt><dd>{% if c.ctps_numero %}{{ c.ctps_numero }}{% if c.ctps_serie %} · série {{ c.ctps_serie }}{% endif %}{% if c.ctps_uf %} · {{ c.ctps_uf }}{% endif %}{% else %}Digital{% endif %}</dd></div>
+  {% endif %}
+</dl>
+
+{% if "endereco" in partes %}
+<h2>Endereço e contato</h2>
+<dl>
+  <div class="largo"><dt>Endereço</dt><dd>{{ c.endereco_linha }}</dd></div>
+  <div><dt>Telefone</dt><dd>{{ c.telefone_formatado }}</dd></div>
+  <div><dt>E-mail</dt><dd>{{ c.email|default:"—" }}</dd></div>
+  <div><dt>Emergência</dt><dd>{{ c.emergencia_nome }}{% if c.emergencia_parentesco %} ({{ c.emergencia_parentesco }}){% endif %} · {{ c.emergencia_telefone_formatado }}</dd></div>
+</dl>
+{% endif %}
+
+<h2>Trabalho</h2>
+<dl>
+  <div><dt>Cargo</dt><dd>{{ c.cargo }}</dd></div>
+  <div><dt>Setor</dt><dd>{{ c.get_setor_display }}</dd></div>
+  <div><dt>Vínculo</dt><dd>{{ c.get_vinculo_display }}</dd></div>
+  <div><dt>Admissão</dt><dd>{{ c.data_admissao|date:"d/m/Y" }}</dd></div>
+  <div><dt>Situação</dt><dd>{{ c.get_situacao_display }}{% if c.data_desligamento %} em {{ c.data_desligamento|date:"d/m/Y" }}{% endif %}</dd></div>
+  {% if "jornada" in partes %}<div><dt>Jornada</dt><dd>{{ c.jornada_texto }}</dd></div>{% endif %}
+  {% if c.especialidades %}<div><dt>Especialidades</dt><dd>{{ c.especialidades_rotulos|join:", " }}</dd></div>{% endif %}
+  {% if "termo" in partes %}<div><dt>Termo de exclusividade</dt><dd>{% if termo_assinado %}Assinado em {{ termo_assinado.assinado_em|date:"d/m/Y" }} (versão {{ termo_assinado.versao }}){% if termo_situacao != "assinado" %} · versão nova pendente{% endif %}{% else %}Pendente{% endif %}</dd></div>{% endif %}
+</dl>
+
+{% if "pagamento" in partes %}
+<h2>Pagamento (Gestão e Financeiro)</h2>
+<dl>
+  <div><dt>Salário</dt><dd>{% if c.salario is not None %}R$ {{ c.salario|floatformat:"2g" }}{% else %}—{% endif %}</dd></div>
+  <div><dt>Banco</dt><dd>{{ c.banco|default:"—" }}</dd></div>
+  <div><dt>Agência e conta</dt><dd>{% if c.conta %}{{ c.agencia }} · {{ c.conta }}{% else %}—{% endif %}</dd></div>
+  <div><dt>Pix</dt><dd>{% if c.pix_chave %}{{ c.get_pix_tipo_display }}: {{ c.pix_chave_formatada }}{% else %}—{% endif %}</dd></div>
+</dl>
+{% endif %}
+
+{% if "documentos" in partes %}
+<h2>Documentos obrigatórios ({{ c.get_vinculo_display }})</h2>
+<ul class="check">
+  {% for linha in checklist %}
+    <li><span class="{% if linha.estado == 'ok' or linha.estado == 'vence' or linha.estado == 'antigo' %}ok{% else %}falta{% endif %}">{% if linha.estado == "ok" or linha.estado == "vence" or linha.estado == "antigo" %}✓{% else %}✗{% endif %}</span> {{ linha.rotulo }}{% if linha.documento.validade %} — validade {{ linha.documento.validade|date:"d/m/Y" }}{% endif %}{% if linha.estado == "falta" %} — falta{% elif linha.estado == "vencido" %} — vencido{% endif %}</li>
+  {% endfor %}
+</ul>
+<h2>Na pasta</h2>
+<table>
+  <thead><tr><th>Documento</th><th>Enviado</th><th>Emissão</th><th>Validade</th><th>Tamanho</th></tr></thead>
+  <tbody>
+    {% for d in documentos %}
+      <tr><td>{{ d.rotulo }}</td><td>{{ d.enviado_em|date:"d/m/Y" }}</td><td>{{ d.emissao|date:"d/m/Y"|default:"—" }}</td><td>{{ d.validade|date:"d/m/Y"|default:"—" }}</td><td class="num">{{ d.tamanho_texto }}</td></tr>
+    {% empty %}
+      <tr><td colspan="5">Nenhum documento na pasta.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<p class="nota">Documento interno com dados pessoais (LGPD): guarde em local restrito. A geração desta ficha ficou registrada na trilha de auditoria.</p>
+{% endblock %}

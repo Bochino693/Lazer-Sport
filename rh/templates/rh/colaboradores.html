@@ -1,0 +1,126 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}Colaboradores{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Recursos humanos · {% if gere %}fichas completas{% else %}dados para pagamento{% endif %}</span>
+    <h1>Colaboradores</h1>
+    <p>{% if gere %}A ficha de cada pessoa, os documentos que faltam e o termo de exclusividade.{% else %}Salário, banco e Pix de cada pessoa, só para leitura. A ficha completa é da Gestão.{% endif %}</p>
+  </div>
+  {% if gere %}
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-success" href="{% url 'rh_colaborador_novo' %}"><i class="bi bi-person-plus-fill me-1" aria-hidden="true"></i> Novo colaborador</a>
+  </div>
+  {% endif %}
+</section>
+
+{% if gere and contagem.termo_pendentes %}
+<section class="rh-destaque" aria-labelledby="rhTermoLista">
+  <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-exclamation"></i></span>
+  <div>
+    <h2 id="rhTermoLista">{{ contagem.termo_pendentes }} sem o termo de exclusividade assinado</h2>
+    <p>Envie para cada um (botão no cartão) ou para todos de uma vez. Quem tem conta assina no próprio painel; quem não tem, pelo QR ou pelo link no WhatsApp.</p>
+  </div>
+  <div class="rh-destaque-acoes">
+    {% if not so_termo %}<a class="btn btn-outline-secondary" href="?termo=pendente"><i class="bi bi-funnel me-1" aria-hidden="true"></i> Só os pendentes</a>{% endif %}
+    <form method="post" action="{% url 'rh_termo_todos' %}" class="rh-inline"
+          data-ls-confirmar="O termo é congelado com os dados de cada ficha e passa a esperar a assinatura de cada um."
+          data-ls-confirmar-titulo="Enviar para todos" data-ls-confirmar-botao="Enviar para todos">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit"><i class="bi bi-send-fill me-1" aria-hidden="true"></i> Enviar para todos</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<section class="ls-data-panel rh-painel">
+  <div class="ls-data-header">
+    <div>
+      <h2>{{ total }} colaborador{{ total|pluralize:"es" }}{% if so_termo %} sem o termo assinado{% endif %}{% if so_docs %} com documento faltando{% endif %}</h2>
+      <p class="rh-nota">{% if busca %}Busca: “{{ busca }}” · {% endif %}toque no nome para abrir a ficha</p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="rhColaboradores" chave="rh-colaboradores" %}
+  </div>
+
+  <div class="rh-filtros">
+    <form class="rh-busca" method="get" role="search">
+      {% if situacao != "ativos" %}<input type="hidden" name="situacao" value="{{ situacao }}">{% endif %}
+      {% if setor %}<input type="hidden" name="setor" value="{{ setor }}">{% endif %}
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input class="form-control" type="search" name="q" value="{{ busca }}" placeholder="Nome, cargo ou CPF" aria-label="Buscar colaborador" autocomplete="off">
+    </form>
+    <nav class="rh-chips" aria-label="Situação">
+      {% for valor, rotulo in filtros_situacao %}
+        <a class="rh-chip{% if situacao == valor and not so_termo and not so_docs %} is-ativo{% endif %}" href="?situacao={{ valor }}{% if setor %}&amp;setor={{ setor }}{% endif %}">{{ rotulo }}</a>
+      {% endfor %}
+      {% if gere %}
+        <a class="rh-chip{% if so_termo %} is-ativo{% endif %}" href="?termo=pendente"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> Sem termo</a>
+        <a class="rh-chip{% if so_docs %} is-ativo{% endif %}" href="?docs=pendente"><i class="bi bi-folder-x" aria-hidden="true"></i> Documento faltando</a>
+      {% endif %}
+    </nav>
+  </div>
+  <nav class="rh-chips" aria-label="Setor">
+    <a class="rh-chip{% if not setor %} is-ativo{% endif %}" href="?situacao={{ situacao }}">Todos os setores</a>
+    {% for valor, rotulo in setores %}
+      <a class="rh-chip{% if setor == valor %} is-ativo{% endif %}" href="?situacao={{ situacao }}&amp;setor={{ valor }}">{{ rotulo }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="rh-itens ls-visao-alvo" id="rhColaboradores" data-visao="lista">
+    <div class="ls-visao-cabeca" aria-hidden="true">
+      <span data-col="foto"></span>
+      <span data-col="titulo">Colaborador</span>
+      <span data-col="info">Setor e vínculo</span>
+      <span data-col="valor">{% if pagamento %}Salário{% else %}Admissão{% endif %}</span>
+      <span data-col="selos">Situação</span>
+      <span data-col="acoes">Ações</span>
+    </div>
+    {% for l in linhas %}{% with c=l.c %}
+      <article class="rh-item" data-visao-item data-registro="{{ c.pk }}">
+        <span data-v="foto"><span class="rh-avatar" aria-hidden="true">{{ c.nome|iniciais }}</span></span>
+        <div data-v="titulo">
+          <a href="{% url 'rh_ficha' c.pk %}"><strong>{{ c.nome }}</strong><small>{{ c.cargo }}</small></a>
+        </div>
+        <div data-v="info">
+          <span>{{ c.get_setor_display }} · {{ c.get_vinculo_display }}</span>
+          <span>{% if pagamento %}{% if c.pix_chave %}Pix ({{ c.get_pix_tipo_display }}): {{ c.pix_chave_formatada }}{% elif c.banco %}{{ c.banco }} · ag. {{ c.agencia }} · {{ c.conta }}{% else %}Sem dados de pagamento{% endif %}{% else %}CPF {{ c.cpf_mascarado }}{% endif %}</span>
+        </div>
+        <div data-v="valor">
+          {% if pagamento %}{% if c.salario is not None %}R$ {{ c.salario|floatformat:"2g" }}{% else %}—{% endif %}<small>salário</small>
+          {% else %}{{ c.data_admissao|date:"d/m/Y" }}<small>admissão</small>{% endif %}
+        </div>
+        <div data-v="selos">
+          {% if c.situacao == "ativo" %}<span class="rh-selo rh-selo--ok">Ativo</span>
+          {% elif c.situacao == "desligado" %}<span class="rh-selo">Desligado {{ c.data_desligamento|date:"d/m/Y" }}</span>
+          {% else %}<span class="rh-selo rh-selo--info">{{ c.get_situacao_display }}</span>{% endif %}
+          {% if c.situacao != "desligado" %}
+            {% if l.termo == "assinado" %}<span class="rh-selo rh-selo--ok"><i class="bi bi-shield-check" aria-hidden="true"></i> Termo</span>
+            {% elif l.termo == "enviado" %}<span class="rh-selo rh-selo--alerta"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Termo enviado</span>
+            {% else %}<span class="rh-selo rh-selo--perigo"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> Sem termo</span>{% endif %}
+          {% endif %}
+          {% if l.falta %}<span class="rh-selo rh-selo--perigo" title="{% for f in l.falta %}{{ f.rotulo }}{% if not forloop.last %}, {% endif %}{% endfor %}"><i class="bi bi-folder-x" aria-hidden="true"></i> {{ l.falta|length }} doc{{ l.falta|length|pluralize }}</span>{% endif %}
+        </div>
+        <div data-v="acoes">
+          {% if not gere or c.situacao == "desligado" or l.termo == "assinado" %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_ficha' c.pk %}"><i class="bi bi-person-vcard" aria-hidden="true"></i> Ficha</a>{% endif %}
+          {% if gere and c.situacao != "desligado" and l.termo != "assinado" %}
+            {% if l.termo == "pendente" %}
+              <form method="post" action="{% url 'rh_termo' c.pk %}" class="rh-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="gerar">
+                <input type="hidden" name="voltar" value="{% url 'rh_termo' c.pk %}">
+                <button class="btn btn-sm btn-danger" type="submit"><i class="bi bi-send" aria-hidden="true"></i> Enviar para assinatura</button>
+              </form>
+            {% else %}
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'rh_termo' c.pk %}"><i class="bi bi-qr-code" aria-hidden="true"></i> QR / link</a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </article>
+    {% endwith %}{% empty %}
+      <div class="ls-empty"><i class="bi bi-people" aria-hidden="true"></i> <span>{% if busca or so_termo or so_docs or setor %}Ninguém com esses filtros.{% else %}Nenhum colaborador cadastrado ainda.{% endif %}</span></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

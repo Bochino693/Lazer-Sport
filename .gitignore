@@ -7,3 +7,6 @@ ferramentas/carga/resultados/
 
 # a casca de Linux do .exe (só para testar aqui; a do Windows vai no repositório)
 ferramentas/exe/jogo-linux
+
+# Documentos dos colaboradores em desenvolvimento (rh/armazenamento.py): dado pessoal, nunca no git
+privado/

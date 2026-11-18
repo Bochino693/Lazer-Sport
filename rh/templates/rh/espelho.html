@@ -1,0 +1,76 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}Espelho de ponto · {{ c.nome }}{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Espelho de ponto</span>
+    <h1>{{ c.nome }}</h1>
+    <p>Jornada {{ c.jornada_texto }}. Cada dia com as marcações (as de ajuste aparecem tracejadas; as desconsideradas, riscadas) e a conta pela jornada da ficha. Tolerância de 5 minutos por marcação e 10 por dia (CLT, art. 58).</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-success" href="{% url 'rh_espelho_imprimir' c.pk %}?mes={{ mes }}" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF para assinar</a>
+  </div>
+</section>
+
+<section class="rh-painel">
+  <header>
+    <nav class="rh-mes" aria-label="Mês">
+      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ anterior }}" aria-label="Mês anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+      <strong>{{ mes_texto|capfirst }}</strong>
+      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ seguinte }}" aria-label="Mês seguinte"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    </nav>
+    {% if e.integro %}<span class="rh-selo rh-selo--ok"><i class="bi bi-link-45deg" aria-hidden="true"></i> Cadeia de marcações íntegra</span>
+    {% else %}<span class="rh-selo rh-selo--perigo" title="{{ e.integridade|join:' ' }}"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> Cadeia com problema ({{ e.integridade|length }})</span>{% endif %}
+  </header>
+  <div class="rh-totais">
+    <div class="rh-total"><strong>{{ t.trabalhado }}</strong><span>trabalhadas</span></div>
+    <div class="rh-total"><strong>{{ t.esperado }}</strong><span>previstas</span></div>
+    <div class="rh-total rh-total--extra"><strong>{{ t.extra }}</strong><span>extras (50%)</span></div>
+    <div class="rh-total rh-total--extra"><strong>{{ t.extra_100 }}</strong><span>dom./feriado</span></div>
+    <div class="rh-total rh-total--debito"><strong>{{ t.debito }}</strong><span>a compensar</span></div>
+    <div class="rh-total"><strong>{{ t.atrasos }}</strong><span>atrasos · {{ t.atraso_min }}</span></div>
+    <div class="rh-total"><strong>{{ t.faltas }}</strong><span>faltas</span></div>
+    <div class="rh-total"><strong>{{ t.saldo }}</strong><span>saldo do mês</span></div>
+  </div>
+  {% if t.pendentes %}<p class="rh-nota"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ t.pendentes }} ajuste{{ t.pendentes|pluralize }} esperando decisão (pontilhados): só entram na conta depois de aprovados.</p>{% endif %}
+</section>
+
+<section class="rh-painel">
+  <table class="rh-tabela-espelho">
+    <thead>
+      <tr><th>Dia</th><th>Marcações</th><th>Trabalhado</th><th>Intervalo</th><th>Atraso</th><th>Extra</th><th>Débito</th><th>Ocorrência</th></tr>
+    </thead>
+    <tbody>
+      {% for d in e.dias %}
+        <tr class="{% if not d.dia_util and not d.trabalhado %}is-folga{% endif %}{% if d.falta %} is-falta{% endif %}{% if d.em_andamento %} is-hoje{% endif %}">
+          <td class="rh-dia" data-rotulo="Dia"><strong>{{ d.data|date:"d/m" }}</strong> {{ d.semana }}</td>
+          <td data-rotulo="Marcações"{% if not d.eventos %} class="rh-sem-valor"{% endif %}>
+            <span class="rh-marcas">
+              {% for ev in d.eventos %}
+                <span class="rh-marca{% if ev.origem == 'ajuste' %} rh-marca--ajuste{% endif %}{% if ev.pendente %} rh-marca--pendente{% endif %}{% if ev.desconsiderada %} rh-marca--fora{% endif %}" title="{{ ev.rotulo }}{% if ev.origem == 'ajuste' %} · incluída por ajuste{% endif %}{% if ev.desconsiderada %} · desconsiderada por ajuste{% endif %}{% if ev.pendente %} · ajuste pendente{% endif %}">{{ ev.hora|time:"H:i" }}</span>
+              {% empty %}<span class="rh-nota">—</span>{% endfor %}
+            </span>
+          </td>
+          <td class="rh-num{% if not d.trabalhado %} rh-sem-valor{% endif %}" data-rotulo="Trabalhado">{% if d.trabalhado %}{{ d.trabalhado|hm }}{% else %}—{% endif %}</td>
+          <td class="rh-num{% if not d.intervalo %} rh-sem-valor{% endif %}" data-rotulo="Intervalo">{% if d.intervalo %}{{ d.intervalo|hm }}{% else %}—{% endif %}</td>
+          <td class="rh-num{% if not d.atraso %} rh-sem-valor{% endif %}" data-rotulo="Atraso">{% if d.atraso %}{{ d.atraso|hm }}{% else %}—{% endif %}</td>
+          <td class="rh-num{% if not d.extra and not d.extra_100 %} rh-sem-valor{% endif %}" data-rotulo="Extra">{% if d.extra_100 %}{{ d.extra_100|hm }} (100%){% elif d.extra %}{{ d.extra|hm }}{% else %}—{% endif %}</td>
+          <td class="rh-num{% if not d.debito %} rh-sem-valor{% endif %}" data-rotulo="Débito">{% if d.debito %}{{ d.debito|hm }}{% else %}—{% endif %}</td>
+          <td data-rotulo="Ocorrência"{% if not d.feriado and not d.abono and not d.falta and not d.incompleto and not d.intervalo_curto and not d.em_andamento and not d.fora_do_contrato %} class="rh-sem-valor"{% endif %}>
+            {% if d.feriado %}<span class="rh-selo rh-selo--info">{{ d.feriado }}</span>{% endif %}
+            {% if d.abono %}<span class="rh-selo rh-selo--info">Abono · {{ d.abono.get_motivo_abono_display }}</span>{% endif %}
+            {% if d.falta %}<span class="rh-selo rh-selo--perigo">Falta</span>{% endif %}
+            {% if d.incompleto %}<span class="rh-selo rh-selo--alerta">Marcação faltando</span>{% endif %}
+            {% if d.intervalo_curto %}<span class="rh-selo rh-selo--alerta">Intervalo &lt; 1h</span>{% endif %}
+            {% if d.em_andamento %}<span class="rh-selo rh-selo--ok">Em andamento</span>{% endif %}
+            {% if d.fora_do_contrato %}<span class="rh-nota">fora do contrato</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if proprio %}<p class="rh-nota">Algo errado? <a href="{% url 'rh_ponto' %}">Peça um ajuste</a> com a justificativa: a marcação original continua visível ao lado da correção.</p>{% endif %}
+</section>
+{% endblock %}

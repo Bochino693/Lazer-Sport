@@ -1,0 +1,7 @@
+{# O texto CONGELADO do termo (o retrato gravado na hora de gerar): é ele que se assina. #}
+<article class="rh-termo-texto">
+  <h2>{{ doc.titulo }}</h2>
+  <p>{{ doc.texto.abertura }}</p>
+  <ol>{% for item in doc.texto.itens %}<li>{{ item }}</li>{% endfor %}</ol>
+  <p>{{ doc.texto.local_data }}</p>
+</article>

@@ -7297,3 +7297,173 @@ Dependência nova: rjsmin (requirements.txt).
    cada filtro, Lista e Cards, a fila, as prontas, as regras, Pedidos,
    Orçamentos e Meus pedidos com a fila e as etapas; sem rolagem
    horizontal e sem erro de JS.
+
+113) RECURSOS HUMANOS: COLABORADORES, DOCUMENTOS, PONTO, TAREFAS E O TERMO DE EXCLUSIVIDADE
+   O PEDIDO: "crie mais uma função de recursos humanos, onde teremos o
+   cadastro dos colaboradores, com seus dados, como histórico em pdf se
+   houver e a ficha completa de dados, para o cadastro, como comp de
+   residência, com as validações e etc, para associar à produção e tarefas
+   e manter o controle, controle de frequência que seria o ponto, entre
+   outras, otimize as funcionalidades para não povoar muito, mantendo o
+   admin podendo ver todas". E depois: "nos funcionários, devemos pôr uma
+   situação de contrato, onde o funcionário deve assinar que não pode
+   trabalhar com coisas relacionadas a lazer e sport enquanto contratado
+   para outras empresas, com o aviso de falta de assinatura virando um
+   grande tópico no sistema."
+   ONDE: app novo `rh/` (migrações só nele). Painel (interno.) > menu
+   "Pessoas" > UMA entrada: "RH · Equipe" (Gestão e Financeiro) ou "Meu
+   ponto e tarefas" (o resto da equipe), com abas lá dentro:
+     Gestão:     Início · Colaboradores · Ponto · Tarefas · Documentos a vencer
+                 (e "Meu ponto", se a conta dela também tem ficha)
+     Financeiro: Colaboradores (salário, banco e Pix, só leitura) · Ponto
+     Os demais:  Meu ponto · Minhas tarefas · Minha ficha
+   QUEM VÊ O QUÊ -- com as MESMAS funções do painel (não há grupo "RH"),
+   em sistema_interno/permissoes.py, no padrão das outras capacidades:
+     rh (Gestão; o superusuário tem todas): vê e edita todas as fichas,
+       abre documentos, decide ajustes de ponto, distribui tarefas, manda o
+       termo de exclusividade;
+     rh_pagamento (Financeiro e Gestão): salário, banco/Pix e o espelho de
+       ponto, sem editar a ficha e sem abrir documento;
+     rh_equipe (Gestão e Financeiro): a lista da equipe;
+     rh_proprio (todo integrante: Produção, Criação, Vendas, Ambulante...):
+       só o PRÓPRIO -- ponto, tarefas e ficha básica (sem salário).
+   A ficha, o documento, o comprovante e o espelho de outra pessoa dão 404
+   (também por URL digitada); a tentativa de abrir documento alheio fica
+   registrada na trilha. A conferência por objeto está em rh/acesso.py.
+   1. COLABORADORES (rh.models.Colaborador): nome, CPF (dígitos, único),
+      RG/órgão, nascimento, PIS/NIS (dígito, único; obrigatório em CLT e
+      temporário), CTPS (número/série/UF; na digital o número é o CPF),
+      endereço com CEP (8 números) e UF, telefone, e-mail, contato de
+      emergência (outro telefone), cargo, SETOR (= a função do painel:
+      Engenharia de produção -- que inclui estoque e matéria-prima --,
+      Criação, Vendas, Ambulante, Financeiro, Gestão; há teste que confere
+      os códigos) e as ESPECIALIDADES dentro da produção (estoque, corte de
+      MDF, montagem, adesivo, eletrônica, finalização, teste de qualidade,
+      embalagem), admissão, vínculo (CLT, PJ, temporário, estágio),
+      situação (ativo, afastado, férias, desligado + data), JORNADA
+      (entrada, saída, intervalo, dias da semana), salário, banco/agência/
+      conta/tipo, Pix (tipo + chave conferida pelo tipo), observações e a
+      conta do painel (opcional, pelo login de uma conta da equipe).
+      Validações no modelo (valem para tela, admin e script): admissão até
+      hoje; nascimento coerente, idade mínima 18 (CLT/PJ/temporário) ou 16
+      (estágio) na admissão; desligamento só com a situação Desligado, não
+      antes da admissão nem no futuro; jornada com saída depois da entrada,
+      até 10 h líquidas, intervalo de 30 min ou mais acima de 6 h. A ficha
+      de produção ganha o nome na lista da montagem (as ordens de produção
+      escolhem por ela) e sai dela no desligamento.
+   2. DOCUMENTOS (rh.models.DocumentoColaborador): RG/CNH, CPF, comprovante
+      de residência, CTPS, certidão, ASO (validade obrigatória), contrato,
+      declaração de matrícula (estágio), histórico/currículo, outro. PDF,
+      JPG, PNG ou WEBP até 10 MB, conferidos pelo CONTEÚDO (assinatura do
+      formato, pypdf/Pillow, extensão que tem de bater; PDF com script,
+      anexo ou ação automática, ou com senha, é recusado). A ficha mostra o
+      CHECKLIST do vínculo (o que falta, vencido, vence em 30 dias, e o
+      comprovante de residência com mais de 90 dias). "Documentos a vencer":
+      o último enviado de cada tipo é o que vale (o ASO renovado substitui
+      o vencido).
+      ONDE FICAM E COMO SÃO PROTEGIDOS (rh/armazenamento.py): NUNCA em
+      endereço público -- `url()` levanta erro. Produção: Cloudinary com
+      type="authenticated" e resource_type="raw" (sem entrega pública; o
+      servidor lê com URL assinada de 60 s que nunca chega ao navegador).
+      Desenvolvimento/testes: pasta local FORA do MEDIA (`privado/rh/` na
+      raiz, no .gitignore, ou RH_ARQUIVOS_PRIVADOS_DIR). RH_ARMAZENAMENTO
+      ("cloudinary"/"local") força um dos dois. O nome do arquivo é
+      aleatório (sem nome nem CPF). O arquivo só sai por
+      /rh/documentos/<id>/arquivo/, que confere a permissão, entrega com
+      no-store, nosniff e sandbox, e grava na TRILHA (rh.models.RegistroRH)
+      quem abriu, quando, IP e navegador. Enviar, remover, gerar a ficha em
+      PDF e o espelho, alterar a ficha e decidir ajuste também ficam na
+      trilha (a ficha mostra as 25 últimas). Remover apaga o arquivo depois
+      do commit.
+      FICHA EM PDF: /rh/colaboradores/<id>/imprimir/ -- a folha A4 com
+      "Salvar em PDF" (a impressão do navegador, o mesmo caminho das outras
+      folhas do painel), só com as partes que quem gera pode ver.
+   3. PONTO -- CONTROLE INTERNO. ATENÇÃO: é o controle de frequência da
+      empresa, pelo painel. NÃO SUBSTITUI um REP certificado (Portaria MTP
+      671/2021) quando a lei exigir para o porte da empresa (CLT, art. 74,
+      § 2º); se for o caso, contrate um REP-P/REP-C e use este só como apoio.
+      Regras: a pessoa com conta bate o ponto em "Meu ponto" (celular ou
+      PC); a HORA É DO SERVIDOR (o aparelho não manda hora); IP e navegador
+      gravados; localização só se a pessoa marcar a caixinha (lembrada no
+      aparelho; sem resposta do GPS em 8 s, vai sem). Ordem: entrada ->
+      saída para intervalo -> volta -> saída (dois toques em menos de 1 min
+      viram um; quem não está "ativo" não bate). Cada marcação tem NSR
+      (1, 2, 3... por pessoa) e um hash SHA-256 preso ao da anterior; o
+      comprovante (/rh/ponto/comprovante/<id>/) traz o código (começo do
+      hash), a hora, o IP e o hash inteiro. A MARCAÇÃO NÃO SE EDITA NEM SE
+      APAGA: o modelo recusa save/delete/update/delete em massa, o admin é
+      só leitura e um gatilho no banco (migração rh/0002, PostgreSQL e
+      SQLite) recusa UPDATE/DELETE até pelo SQL. O espelho confere a cadeia
+      ("Cadeia íntegra" ou onde quebrou).
+      AJUSTE (rh.models.AjustePonto), à parte, com justificativa (10 letras
+      ou mais): incluir marcação esquecida, desconsiderar marcação errada ou
+      abonar o dia (atestado, férias, folga, feriado local). O colaborador
+      pede; a Gestão aprova ou recusa (recusar pede o motivo); ninguém
+      decide o próprio (o superusuário pode). A Gestão também lança abono
+      direto (já aprovado). Os dois aparecem no espelho: a marcação original
+      riscada e a incluída tracejada; pendente pontilhado e fora da conta.
+      Decidido, não muda.
+      ESPELHO (/rh/ponto/espelho/<id>/?mes=AAAA-MM e o PDF para assinar):
+      pela jornada da ficha -- trabalhado, intervalo, atraso (tolerância de
+      5 min), extra 50% e 100% (domingo/feriado), débito, falta (dia de
+      jornada sem marcação), "marcação faltando", intervalo < 1 h; tolerância
+      de 10 min por dia (CLT, art. 58, § 1º). Feriados nacionais contados
+      sozinhos (com a Sexta-feira Santa); estadual/municipal entra como
+      abono. O dia vai da meia-noite à meia-noite: jornada que atravessa a
+      meia-noite não é tratada.
+   4. TAREFAS (rh.models.Tarefa): título, descrição, prazo, prioridade,
+      a fazer -> fazendo -> feita, responsável, setor, etapa. "Minhas
+      tarefas" mostra as avulsas, as que vieram da produção e as ordens de
+      produção abertas em que a pessoa é quem monta.
+      LIGAÇÃO COM A PRODUÇÃO (rh/tarefas.py) -- sem depender do código dela:
+        from rh.tarefas import atribuir, sugerir_responsaveis, concluir
+        sugerir_responsaveis("Adesivo")  # setor + especialidade, menos ocupados antes
+        atribuir(colaborador_ou_None, objeto, etapa="Adesivo", prazo=..., rotulo=..., url=...)
+        concluir(objeto, etapa="Adesivo")
+      A tarefa aponta para QUALQUER objeto (chave genérica: ContentType +
+      id inteiro); uma coisa + etapa tem no máximo uma tarefa (atribuir de
+      novo troca o responsável). Sinais rh.tarefas.tarefa_atribuida e
+      tarefa_mudou (para a produção marcar a etapa quando a pessoa conclui
+      pelo celular). Na tela, "Sugerir pela etapa" marca os sugeridos.
+   5. TERMO DE EXCLUSIVIDADE E CONFIDENCIALIDADE (rh/termo.py). O TEXTO É UM
+      MODELO PARA REVISÃO DO ADVOGADO DA EMPRESA (a tela também diz). Os
+      dados vêm da ficha (nome, CPF, cargo, admissão, vínculo) e da empresa
+      (razão social e CNPJ dos documentos -- EMPRESA_RAZAO_SOCIAL/
+      EMPRESA_CNPJ --, a cidade do endereço da fábrica). PJ e temporário:
+      "prestador(a) de serviços" e "rescisão do contrato de prestação de
+      serviços" no lugar da CLT; estágio: "estagiário(a)" e o desligamento
+      do estágio (Lei 11.788/2008). Reaproveita o fluxo do termo de compra
+      (sistema_interno/documento_assinatura.py): o texto CONGELADO em JSON
+      com o SHA-256, o link de 5 minutos (o mesmo assinador, sal próprio)
+      com o QR que se renova, a conferência do traço e o freio por IP.
+      Situação: pendente -> enviado -> assinado (com data). Quem tem conta
+      assina no próprio painel (/rh/termo/); quem não tem, pelo QR/link
+      (/rh/termo/assinar/<token>/, sem login, só aquele termo, CPF da ficha
+      obrigatório). Assinado: grava data/hora, IP, aparelho, hash, canal, e
+      o PDF assinado (gerado no servidor, rh/pdf_simples.py, sem biblioteca
+      nova) entra na pasta de documentos do colaborador, protegido como os
+      outros; não se assina de novo nem se altera. NOVA VERSÃO: mudar o
+      texto = subir rh.termo.VERSAO_DO_TERMO (hoje "2026-11"); todo mundo
+      volta a "pendente".
+      O "GRANDE TÓPICO": faixa no alto de TODAS as telas do painel -- para a
+      Gestão, "N colaboradores sem o termo de exclusividade assinado" +
+      "Resolver" (a lista filtrada, com "Enviar para assinatura" em cada um
+      e "Enviar para todos"); para o próprio colaborador, "Assine o termo de
+      exclusividade" + o botão (o ponto continua funcionando). E o cartão
+      grande no Início do RH. Some sozinha quando todos assinam.
+   Telas: sem <select> (chips de rádio; UF, banco e conta por campo com
+   sugestões), Lista e Cards em Colaboradores e Tarefas, CSS só com as
+   variáveis do tema (rh/static/rh/rh.css; a faixa traz o seu), sem
+   alert/confirm (folha do LSAviso). Folhas A4: rh/static/rh/rh-folha.css.
+   Banco: rh/0001_inicial (esquema) e rh/0002_marcacao_imutavel_no_banco
+   (o gatilho; só DDL).
+       python manage.py migrate rh
+   Em produção, nada a configurar além do Cloudinary que já existe (os
+   documentos vão como "authenticated"). Opcional: RH_ARMAZENAMENTO.
+   Testes: rh/tests_validacoes.py, tests_permissoes.py (cada função
+   entrando nas telas), tests_ponto.py, tests_tarefas.py, tests_termo.py e
+   tests_telas.py -- só dados sintéticos (rh/apoio_testes.py).
+   FICOU DE FORA: feriados estaduais/municipais automáticos (entram como
+   abono), jornada que atravessa a meia-noite, banco de horas/compensação
+   e folha de pagamento, avisos do RH no sino (a faixa e o painel do RH
+   cobrem), e o REP certificado.
