@@ -2061,3 +2061,269 @@ body:has(dialog.bq-janela[open]) {
 @media (max-width: 600px) {
     .bq-adesivo-posicoes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+
+/* =========================================================
+   O KIT ELETRÔNICO (LEIA-ME seção 107): o kit é um produto desta tela.
+   Na lista, o selo "Kit" e a linha "Para <máquina> · N itens"; no cadastro,
+   a chave "É um kit eletrônico" abre o editor -- a máquina em chips de rádio
+   com busca e as linhas do que vem no kit (nome, detalhe, quantidade, a peça
+   avulsa), que se adicionam, removem e trocam de lugar. Veio da tela de
+   Peças (seção 105). Só variáveis do tema (lua, sol e eclipse): nada de cor
+   fixa, nada de caixa branca ou cinza -- as superfícies são tons das cores
+   vivas do painel. Os botões ganham da camada comum (gestao_integrada.css,
+   que pinta todo botão com !important) pelo seletor mais comprido.
+========================================================= */
+.bq-selo--kit {
+    color: var(--acento-tinta);
+    background: linear-gradient(135deg, var(--yellow), var(--acento));
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.bq-kit-resumo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+    color: var(--yellow-claro);
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.bq-kit-resumo span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- a caixa do kit no cadastro ---- */
+.gestao-integrada .ls-content .bq-secao.bq-kit {
+    padding: 14px;
+    border: 1px solid rgba(var(--violet-rgb), .42);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(var(--yellow-rgb), .14), transparent 48%),
+        linear-gradient(145deg, rgba(var(--violet-rgb), .14), rgba(var(--info-rgb), .07));
+}
+
+.gestao-integrada .ls-content .bq-secao.bq-kit:has([data-kit-chave]:checked) {
+    border-color: rgba(var(--yellow-rgb), .6);
+    box-shadow: 0 12px 28px rgba(var(--yellow-rgb), .12);
+}
+
+.bq-kit .bq-chave { margin-top: 2px; }
+.bq-kit .bq-chave input:checked + .bq-chave-trilho { background: linear-gradient(135deg, var(--yellow), var(--acento)); }
+
+.bq-kit-corpo { display: grid; }
+.bq-kit-corpo[hidden] { display: none; }
+
+.bq-kit-escolhida {
+    flex: 0 1 auto;
+    max-width: 45%;
+    padding: 6px 11px;
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(var(--muted-rgb), .14);
+    font-size: .76rem;
+    font-weight: 850;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bq-kit-escolhida.is-on { color: var(--violet-claro); background: rgba(var(--violet-rgb), .18); }
+
+.bq-kit-maquinas { max-height: 178px; }
+.bq-kit-maquinas .bq-opcao[hidden] { display: none; }
+.bq-kit-maquinas .bq-opcao--nenhuma { border-style: dashed; }
+
+/* ---- as linhas do que vem no kit ---- */
+.bq-kit-linhas {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 10px;
+    padding: 0;
+    list-style: none;
+}
+
+.bq-kit-linha {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+    padding: 11px;
+    border: 1px solid rgba(var(--info-rgb), .32);
+    border-left: 4px solid var(--info);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(var(--info-rgb), .14), rgba(var(--info-rgb), .05));
+}
+
+.bq-kit-linha:nth-child(4n+2) { border-color: rgba(var(--magenta-rgb), .32); border-left-color: var(--magenta); background: linear-gradient(145deg, rgba(var(--magenta-rgb), .13), rgba(var(--magenta-rgb), .04)); }
+.bq-kit-linha:nth-child(4n+3) { border-color: rgba(var(--green-rgb), .32); border-left-color: var(--green); background: linear-gradient(145deg, rgba(var(--green-rgb), .13), rgba(var(--green-rgb), .04)); }
+.bq-kit-linha:nth-child(4n+4) { border-color: rgba(var(--yellow-rgb), .36); border-left-color: var(--yellow); background: linear-gradient(145deg, rgba(var(--yellow-rgb), .14), rgba(var(--yellow-rgb), .04)); }
+
+.bq-kit-num {
+    width: 32px;
+    height: 32px;
+    margin-top: 6px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    color: var(--text);
+    background: rgba(var(--info-rgb), .3);
+    font-size: .82rem;
+    font-weight: 900;
+}
+
+.bq-kit-linha:nth-child(4n+2) .bq-kit-num { background: rgba(var(--magenta-rgb), .3); }
+.bq-kit-linha:nth-child(4n+3) .bq-kit-num { background: rgba(var(--green-rgb), .3); }
+.bq-kit-linha:nth-child(4n+4) .bq-kit-num { background: rgba(var(--yellow-rgb), .34); }
+
+.bq-kit-campos { min-width: 0; display: grid; gap: 8px; }
+.gestao-integrada .ls-content .bq-janela .bq-kit-campos .bq-kit-nome { font-weight: 800; }
+
+.bq-kit-baixo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.bq-kit-qtd {
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid var(--line-forte);
+    border-radius: 11px;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-qtd button {
+    min-width: 38px;
+    min-height: 40px;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    color: var(--text) !important;
+    background: rgba(var(--violet-rgb), .2) !important;
+    font-size: 1.05rem;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-qtd button:hover { background: rgba(var(--violet-rgb), .38) !important; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-qtd input {
+    width: 54px !important;
+    min-height: 40px;
+    padding: 0 4px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    text-align: center;
+    font-weight: 900;
+    -moz-appearance: textfield;
+}
+
+.bq-kit-qtd input::-webkit-outer-spin-button,
+.bq-kit-qtd input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-liga {
+    min-height: 40px;
+    max-width: 100%;
+    padding: 0 12px !important;
+    border-style: dashed !important;
+    border-color: rgba(var(--info-rgb), .5) !important;
+    color: var(--info-claro) !important;
+    background: rgba(var(--info-rgb), .08) !important;
+    font-size: .78rem;
+}
+
+.bq-kit-liga span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-liga.is-on {
+    border-style: solid !important;
+    border-color: rgba(var(--green-rgb), .55) !important;
+    color: var(--green-claro) !important;
+    background: rgba(var(--green-rgb), .14) !important;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-solta {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 1rem;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-solta[hidden] { display: none; }
+
+.bq-kit-ordem { display: grid; gap: 6px; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-ordem button {
+    min-width: 40px;
+    min-height: 36px;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    font-size: .82rem;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-ordem button:disabled { opacity: .35; cursor: default; }
+.gestao-integrada .ls-content .bq-janela .bq-kit-ordem .bq-kit-tirar { color: var(--red-claro) !important; }
+.gestao-integrada .ls-content .bq-janela .bq-kit-ordem .bq-kit-tirar:hover { background: rgba(var(--red-rgb), .12) !important; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-novo {
+    justify-self: start;
+    min-height: 44px;
+    padding: 0 18px !important;
+    border: 1px dashed rgba(var(--yellow-rgb), .7) !important;
+    color: var(--yellow-claro) !important;
+    background: rgba(var(--yellow-rgb), .12) !important;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-novo:hover {
+    color: var(--acento-tinta) !important;
+    background: linear-gradient(135deg, var(--yellow), var(--acento)) !important;
+}
+
+/* ---- a escolha da peça avulsa de um item ---- */
+.bq-kit-escolha {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid rgba(var(--green-rgb), .45);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(var(--green-rgb), .14), rgba(var(--info-rgb), .08));
+}
+
+.bq-kit-escolha[hidden] { display: none; }
+
+.bq-kit-escolha-topo { display: flex; align-items: center; gap: 10px; }
+.bq-kit-escolha-topo strong { flex: 1; min-width: 0; color: var(--text); font-size: .88rem; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-escolha-fechar { min-width: 40px; min-height: 40px; padding: 0 !important; }
+
+.bq-kit-escolha-lista { display: flex; flex-wrap: wrap; gap: 7px; max-height: 200px; overflow: auto; }
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-escolha-opcao {
+    min-height: 38px;
+    padding: 0 13px !important;
+    border-radius: 999px !important;
+    border-color: rgba(var(--green-rgb), .35) !important;
+    color: var(--text-2) !important;
+    background: rgba(var(--green-rgb), .1) !important;
+    font-size: .8rem;
+    font-weight: 750;
+}
+
+.gestao-integrada .ls-content .bq-janela .bq-kit-escolha-opcao.is-on,
+.gestao-integrada .ls-content .bq-janela .bq-kit-escolha-opcao:hover {
+    border-color: var(--green) !important;
+    color: var(--text) !important;
+    background: rgba(var(--green-rgb), .3) !important;
+}
+
+.bq-kit-escolha-vazia { color: var(--muted); font-size: .8rem; }
+
+@media (max-width: 600px) {
+    .gestao-integrada .ls-content .bq-secao.bq-kit { padding: 12px; }
+    .bq-kit-linha { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; }
+    .bq-kit-num { display: none; }
+    .bq-kit-ordem { grid-auto-flow: column; justify-content: end; }
+    .gestao-integrada .ls-content .bq-janela .bq-kit-ordem button { min-width: 44px; min-height: 40px; }
+    .bq-kit-escolhida { max-width: 40%; }
+}

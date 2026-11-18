@@ -12,7 +12,7 @@
     <div>
       <small>Catálogo e site</small>
       <h2>Peças de reposição</h2>
-      <p>Cadastre, publique e retire peças do ar sem passar pelo Django. O preço de venda sai automático do preço do fornecedor (+12%) quando você deixa em branco, e o ganho potencial é recalculado a cada salvamento. O kit eletrônico (a parte elétrica de uma máquina, sem a máquina) também é cadastrado aqui: marque "É um kit eletrônico" na peça.</p>
+      <p>Cadastre, publique e retire peças do ar sem passar pelo Django. O preço de venda sai automático do preço do fornecedor (+12%) quando você deixa em branco, e o ganho potencial é recalculado a cada salvamento.</p>
     </div>
     <button type="button" class="btn-nova pecas-primary" data-nova-peca>+ Nova peça</button>
   </section>
@@ -24,7 +24,6 @@
     <div class="pkpi"><strong>{{ total_ativas }}</strong><span>Publicadas no site</span></div>
     <div class="pkpi"><strong>{{ total_sem_foto }}</strong><span>Sem nenhuma foto</span></div>
     <div class="pkpi"><strong>{{ total_sem_preco }}</strong><span>Sem preço de venda</span></div>
-    <div class="pkpi pkpi--kit"><strong>{{ total_kits }}</strong><span>Kits eletrônicos</span></div>
   </section>
 
   <form method="get" class="pecas-filtro">
@@ -41,7 +40,6 @@
       <option value="inativas" {% if filtro_situacao == "inativas" %}selected{% endif %}>Fora do site</option>
       <option value="sem_foto" {% if filtro_situacao == "sem_foto" %}selected{% endif %}>Sem foto</option>
       <option value="sem_preco" {% if filtro_situacao == "sem_preco" %}selected{% endif %}>Sem preço</option>
-      <option value="kits" {% if filtro_situacao == "kits" %}selected{% endif %}>Kits eletrônicos</option>
     </select>
     <button type="submit">Filtrar</button>
   </form>
@@ -62,11 +60,10 @@
           {% if peca.capa %}<img src="{{ peca.capa }}" alt="{{ peca.nome }}" loading="lazy">{% else %}Sem foto cadastrada{% endif %}
         </div>
         <div class="peca-corpo" data-v="corpo">
-          <h3 data-v="titulo">{% if peca.eh_kit %}<span class="peca-selo-kit" title="Kit eletrônico: aparece em /kits/"><i class="bi bi-cpu" aria-hidden="true"></i> Kit</span> {% endif %}{{ peca.nome }}</h3>
+          <h3 data-v="titulo">{{ peca.nome }}</h3>
           <p data-v="extra">{{ peca.descricao_peca|truncatechars:110 }}</p>
-          {% if peca.categorias_nomes or peca.eh_kit %}
+          {% if peca.categorias_nomes %}
             <div class="peca-tags" data-v="info">
-              {% if peca.eh_kit %}<span class="peca-tag peca-tag--kit">{% if peca.maquina_nome %}Para {{ peca.maquina_nome }}{% else %}Sem máquina{% endif %}</span><span class="peca-tag peca-tag--kit">{{ peca.componentes|length }} ite{{ peca.componentes|length|pluralize:"m,ns" }}</span>{% endif %}
               {% for nome in peca.categorias_nomes %}<span class="peca-tag">{{ nome }}</span>{% endfor %}
             </div>
           {% endif %}
@@ -106,8 +103,6 @@
   HTML gigante em atributo e sem uma segunda ida ao servidor.
 {% endcomment %}
 {{ pecas|json_script:"pecas-dados" }}
-{# as peças que um item do kit pode ser (o Cabo HDMI vendido sozinho): a escolha do editor do kit #}
-{{ pecas_avulsas|json_script:"pecas-avulsas-dados" }}
 
 <!-- MODAL -->
 <div class="pecas-modal" id="modalPeca" role="dialog" aria-modal="true" aria-labelledby="tituloModalPeca">
@@ -159,57 +154,6 @@
           {% empty %}
             <span style="color:var(--muted);font-size:.72rem">Nenhuma categoria de peça cadastrada ainda.</span>
           {% endfor %}
-        </div>
-      </div>
-
-      {% comment %}
-        O KIT ELETRÔNICO (LEIA-ME seção 105): a peça marcada como kit vai para
-        /kits/ (fora da lista de peças), ligada à máquina dela, com a lista do
-        que vem dentro. Preço, fotos e parcelas são os campos da peça, acima e
-        abaixo. A máquina é escolhida em chips de rádio com busca (nunca
-        <select>); os itens são linhas que se adicionam, removem e reordenam, e
-        vão juntas no campo `componentes_json` (gestao-pecas_adm.js).
-      {% endcomment %}
-      <div class="kit-editor" id="kitEditor">
-        <label class="kit-chave" for="pecaEhKit">
-          <input type="checkbox" name="eh_kit" id="pecaEhKit" value="1">
-          <span class="kit-chave-trilho" aria-hidden="true"></span>
-          <span class="kit-chave-texto">
-            <b><i class="bi bi-cpu" aria-hidden="true"></i> É um kit eletrônico</b>
-            <small>Os componentes de uma máquina, sem a máquina. Aparece em /kits/ (não na lista de peças) e na página da máquina.</small>
-          </span>
-        </label>
-
-        <div class="kit-corpo" id="kitCorpo" hidden>
-          <div class="campo">
-            <label for="buscarMaquinaKit">Máquina do kit</label>
-            <div class="kit-ferramentas">
-              <input type="search" id="buscarMaquinaKit" placeholder="Buscar máquina" aria-label="Buscar máquina" autocomplete="off">
-              <span class="kit-escolhida" id="maquinaKitEscolhida">Sem máquina</span>
-            </div>
-            <div class="kit-maquinas" id="kitMaquinas" role="radiogroup" aria-label="Máquina do kit">
-              <label class="kit-chip kit-chip--nenhuma"><input type="radio" name="maquina" value="" checked><span>Sem máquina</span></label>
-              {% for maquina in maquinas_kit %}<label class="kit-chip"><input type="radio" name="maquina" value="{{ maquina.id }}"><span>{{ maquina.nome_brinquedo }}{% if not maquina.ativo %} · fora do site{% endif %}</span></label>{% endfor %}
-            </div>
-          </div>
-
-          <div class="campo">
-            <label id="kitItensRotulo">O que vem no kit</label>
-            <ol class="kit-linhas" id="kitItens" aria-labelledby="kitItensRotulo"></ol>
-            <button type="button" class="kit-novo-item" id="kitAdicionarItem"><i class="bi bi-plus-lg" aria-hidden="true"></i> Adicionar item</button>
-            <p class="kit-ajuda">Um item por linha, na ordem em que o cliente lê: nome (TV Box), detalhe opcional (com o jogo Strike Kids) e quantidade. Se o item também é vendido sozinho (o Cabo HDMI), ligue-o à peça: a página do kit leva até ela.</p>
-          </div>
-
-          <div class="kit-escolha-peca" id="kitEscolhaPeca" hidden>
-            <div class="kit-escolha-topo">
-              <strong id="kitEscolhaTitulo">Ligar a uma peça avulsa</strong>
-              <button type="button" class="kit-escolha-fechar" id="kitEscolhaFechar" aria-label="Fechar a escolha da peça"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-            </div>
-            <input type="search" id="kitEscolhaBusca" placeholder="Buscar peça" aria-label="Buscar peça" autocomplete="off">
-            <div class="kit-escolha-lista" id="kitEscolhaLista" role="listbox" aria-label="Peças avulsas"></div>
-          </div>
-
-          <input type="hidden" name="componentes_json" id="kitComponentesJson" value="[]" disabled>
         </div>
       </div>
 

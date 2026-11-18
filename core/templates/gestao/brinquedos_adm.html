@@ -30,6 +30,12 @@
 
   Os campos enviados (name=) e os ids do formulário são os mesmos de antes,
   e a view só ganhou os filtros novos. Testes: core/tests_brinquedos_adm_tela.py.
+
+  O KIT ELETRÔNICO É UM PRODUTO DESTA TELA (LEIA-ME seção 107): a chave "É um
+  kit eletrônico" no cadastro abre o editor do kit (a máquina em chips de
+  rádio com busca, nunca <select>, e as linhas do que vem no kit); na lista,
+  o selo "Kit", a máquina e o número de itens; o chip "Kits eletrônicos" no
+  filtro "Tipo". Testes: core/tests_kits.py.
 {% endcomment %}
 <link rel="stylesheet" href="{% estatico 'site/paginas/gestao-brinquedos_adm.css' %}">
 
@@ -74,6 +80,7 @@
       {% if categoria_ativa != "todas" %}<input type="hidden" name="categoria" value="{{ categoria_ativa }}">{% endif %}
       {% if loja_ativa != "todos" %}<input type="hidden" name="loja" value="{{ loja_ativa }}">{% endif %}
       {% if capa_ativa != "todas" %}<input type="hidden" name="capa" value="{{ capa_ativa }}">{% endif %}
+      {% if tipo_ativo != "todos" %}<input type="hidden" name="tipo" value="{{ tipo_ativo }}">{% endif %}
       <button type="submit" class="bq-busca-ir" aria-label="Buscar"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
     </form>
 
@@ -82,6 +89,14 @@
         <span class="bq-grupo-nome">Loja</span>
         <div class="bq-opcoes-filtro">
           {% for opcao in filtros_loja %}
+            <a class="bq-chip{% if opcao.ativo %} is-on{% endif %}" href="{{ opcao.url }}"{% if opcao.ativo %} aria-current="true"{% endif %}><span>{{ opcao.rotulo }}</span> <b>{{ opcao.total }}</b></a>
+          {% endfor %}
+        </div>
+      </nav>
+      <nav class="bq-grupo" aria-label="Máquinas ou kits eletrônicos" data-bq-filtro-tipo>
+        <span class="bq-grupo-nome">Tipo</span>
+        <div class="bq-opcoes-filtro">
+          {% for opcao in filtros_tipo %}
             <a class="bq-chip{% if opcao.ativo %} is-on{% endif %}" href="{{ opcao.url }}"{% if opcao.ativo %} aria-current="true"{% endif %}><span>{{ opcao.rotulo }}</span> <b>{{ opcao.total }}</b></a>
           {% endfor %}
         </div>
@@ -131,7 +146,7 @@
       <span data-col="valor">Preço</span><span data-col="estado">Loja</span><span data-col="selos">Selos</span><span data-col="acoes">Ações</span>
     </div>
     {% for brinquedo in brinquedos %}
-      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}" data-bq-item data-visao-item data-id="{{ brinquedo.id }}" data-detalhe-tipo="brinquedo" data-detalhe-id="{{ brinquedo.id }}">
+      <article class="bq-item{% if not brinquedo.exibir_na_loja %} is-fora{% endif %}{% if brinquedo.eh_kit %} is-kit{% endif %}" data-bq-item data-visao-item data-id="{{ brinquedo.id }}" data-detalhe-tipo="brinquedo" data-detalhe-id="{{ brinquedo.id }}">
         <div class="bq-foto" data-v="midia">
           {% with capa=brinquedo.imagem_catalogo %}
             {% if capa %}
@@ -154,6 +169,7 @@
             {% endif %}
           </span>
           <span class="bq-selos bq-selos--fim" data-v="selos">
+            {% if brinquedo.eh_kit %}<span class="bq-selo bq-selo--kit" title="Kit eletrônico: a parte elétrica de uma máquina, sem a máquina"><i class="bi bi-cpu" aria-hidden="true"></i> Kit</span>{% endif %}
             {% if brinquedo.painel_3d %}<span class="bq-selo" title="Tem objeto 3D"><i class="bi bi-badge-3d" aria-hidden="true"></i></span>{% endif %}
             {% if brinquedo.painel_sem_fundo %}<span class="bq-selo bq-selo--alerta" title="Nenhuma foto com fundo: o site mostra a que tem. Mande uma foto com cenário (as sem fundo ficam como recorte para artes)."><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Precisa de foto com fundo</span>{% endif %}
             {% if brinquedo.painel_adesivos > 1 %}<span class="bq-selo bq-selo--adesivos" title="O mesmo brinquedo com outra arte: as fotos e o 3D de cada adesivo"><i class="bi bi-stickies" aria-hidden="true"></i> {{ brinquedo.painel_adesivos }} adesivos</span>{% endif %}
@@ -183,6 +199,12 @@
             <i class="bi {% if brinquedo.dimensoes_m %}bi-rulers{% else %}bi-exclamation-triangle-fill{% endif %}" aria-hidden="true"></i>
             <span>{{ brinquedo.dimensoes_m|default:"Sem medidas — a proposta sai sem o tamanho" }}</span>
           </p>
+            {% if brinquedo.eh_kit %}
+            <p class="bq-kit-resumo">
+              <i class="bi bi-cpu" aria-hidden="true"></i>
+              <span>{% if brinquedo.maquina_id %}Para {{ brinquedo.maquina.nome_brinquedo }}{% else %}Sem máquina{% endif %} · {{ brinquedo.componentes_kit.all|length }} ite{{ brinquedo.componentes_kit.all|length|pluralize:"m,ns" }}</span>
+            </p>
+            {% endif %}
             <ul class="bq-cats-item" aria-label="Categorias">
               {% for cat in brinquedo.categorias_brinquedos.all %}<li>{{ cat.nome_categoria }}</li>{% empty %}<li class="is-vazia">Sem categoria</li>{% endfor %}
             </ul>
@@ -423,6 +445,54 @@
             <p class="bq-ajuda bq-ajuda--direita"><span data-bq-desc-conta>0</span>/999</p>
           </section>
 
+          {% comment %}
+            O KIT ELETRÔNICO (LEIA-ME seção 107): a parte elétrica de uma máquina, sem a
+            máquina -- um produto como as máquinas (o preço, as fotos, as categorias e a
+            loja são os campos de todo produto). A chave abre o editor: a máquina em
+            chips de rádio com busca (nunca <select>) e as linhas do que vem no kit, que
+            se adicionam, removem e trocam de lugar e vão juntas no campo
+            `componentes_json` (gestao-brinquedos_adm.js). Desligada, a lista nem vai: os
+            itens ficam guardados e a máquina sai.
+          {% endcomment %}
+          <section class="bq-secao bq-kit" aria-labelledby="bqSecKit" data-kit>
+            <h3 id="bqSecKit"><i class="bi bi-cpu" aria-hidden="true"></i> Kit eletrônico</h3>
+            <label class="bq-chave bq-kit-chave" for="toyKit">
+              <input id="toyKit" name="eh_kit" type="checkbox" value="1" data-kit-chave>
+              <span class="bq-chave-trilho" aria-hidden="true"></span>
+              <span class="bq-chave-texto">É um kit eletrônico</span>
+            </label>
+            <p class="bq-ajuda">A parte eletrônica de uma máquina, sem a máquina. No site, o card ganha o selo “Kit” e a página, “O que vem no kit”; a página da máquina chama para ele.</p>
+
+            <div class="bq-kit-corpo" data-kit-corpo hidden>
+              <span class="bq-rotulo" id="bqKitMaquinaRotulo">Máquina do kit</span>
+              <div class="bq-filtro-opcoes">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" placeholder="Buscar máquina" aria-label="Buscar máquina" autocomplete="off" data-kit-busca>
+                <span class="bq-kit-escolhida" data-kit-escolhida>Sem máquina</span>
+              </div>
+              <div class="bq-escolhas bq-escolhas--lista bq-kit-maquinas" role="radiogroup" aria-labelledby="bqKitMaquinaRotulo" data-kit-maquinas>
+                <label class="bq-opcao bq-opcao--nenhuma"><input type="radio" name="maquina" value="" checked><span>Sem máquina</span></label>
+                {% for maquina in maquinas_kit %}<label class="bq-opcao"><input type="radio" name="maquina" value="{{ maquina.id }}"><span>{{ maquina.nome_brinquedo }}{% if not maquina.ativo %} · fora do site{% endif %}</span></label>{% endfor %}
+              </div>
+
+              <span class="bq-rotulo" id="bqKitItensRotulo">O que vem no kit</span>
+              <ol class="bq-kit-linhas" aria-labelledby="bqKitItensRotulo" data-kit-linhas></ol>
+              <button type="button" class="bq-kit-novo" data-kit-novo><i class="bi bi-plus-lg" aria-hidden="true"></i> Adicionar item</button>
+              <p class="bq-ajuda">Um item por linha, na ordem em que o cliente lê: nome (TV Box), detalhe opcional (com o jogo Strike Kids) e quantidade. Se o item também é vendido sozinho (o Cabo HDMI), ligue-o à peça: a página do kit mostra a foto dela e leva até ela.</p>
+
+              <div class="bq-kit-escolha" data-kit-escolha hidden>
+                <div class="bq-kit-escolha-topo">
+                  <strong data-kit-escolha-titulo>Ligar a uma peça avulsa</strong>
+                  <button type="button" class="bq-kit-escolha-fechar" data-kit-escolha-fechar aria-label="Fechar a escolha da peça"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                </div>
+                <input type="search" placeholder="Buscar peça" aria-label="Buscar peça" autocomplete="off" data-kit-escolha-busca>
+                <div class="bq-kit-escolha-lista" role="listbox" aria-label="Peças avulsas" data-kit-escolha-lista></div>
+              </div>
+
+              <input type="hidden" name="componentes_json" value="[]" disabled data-kit-json>
+            </div>
+          </section>
+
           <section class="bq-secao" aria-labelledby="bqSecPreco">
             <h3 id="bqSecPreco"><i class="bi bi-cash-coin" aria-hidden="true"></i> Preço e loja</h3>
             <label class="bq-rotulo" for="toyPrice">Preço</label>
@@ -596,6 +666,8 @@
 </dialog>
 
 {{ brinquedos_dados|json_script:"toysAdminData" }}
+{# as peças que um item do kit pode ser (o Cabo HDMI vendido sozinho): a escolha do editor do kit #}
+{{ pecas_avulsas|json_script:"toysAdminPecas" }}
 {% endblock %}
 
 {% block scripts %}

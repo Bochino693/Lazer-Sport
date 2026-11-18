@@ -580,6 +580,7 @@
         zerarFotos(brinquedo);
         mostrarObjeto3d(brinquedo);
         pintarAdesivos(brinquedo);
+        kit.abrir(brinquedo);
         pintarPreco();
         pintarDescricao();
         form.querySelector('.bq-janela-corpo').scrollTop = 0;
@@ -812,6 +813,255 @@
         });
     }
 
+    /* ------------------------------------------------------------------
+       O KIT ELETRÔNICO (LEIA-ME seção 107)
+
+       O kit é um produto desta tela. A chave "É um kit eletrônico" abre o
+       editor: a máquina em chips de rádio com busca (nunca <select>) e as
+       linhas do que vem no kit -- nome, detalhe, quantidade e, se o item
+       também é vendido sozinho, a peça avulsa. As linhas se adicionam,
+       removem e trocam de lugar; no salvar, vão todas no campo
+       `componentes_json`. Sem a chave, o campo nem vai: os itens que o kit
+       já tinha ficam guardados (e a máquina sai). Veio da tela de Peças
+       (seção 105), do tempo em que o kit era uma peça.
+       ------------------------------------------------------------------ */
+    const kit = (function () {
+        const secao = form.querySelector('[data-kit]');
+        if (!secao) return { abrir() {}, preparar() {} };
+        const chave = secao.querySelector('[data-kit-chave]');
+        const corpo = secao.querySelector('[data-kit-corpo]');
+        const linhas = secao.querySelector('[data-kit-linhas]');
+        const campoJson = secao.querySelector('[data-kit-json]');
+        const busca = secao.querySelector('[data-kit-busca]');
+        const escolhida = secao.querySelector('[data-kit-escolhida]');
+        const maquinas = secao.querySelector('[data-kit-maquinas]');
+        const escolha = secao.querySelector('[data-kit-escolha]');
+        const escolhaLista = secao.querySelector('[data-kit-escolha-lista]');
+        const escolhaBusca = secao.querySelector('[data-kit-escolha-busca]');
+        const escolhaTitulo = secao.querySelector('[data-kit-escolha-titulo]');
+        let linhaEscolhendo = null;
+        let avulsas = [];
+        try {
+            avulsas = JSON.parse(document.getElementById('toysAdminPecas')?.textContent || '[]') || [];
+        } catch (falha) {
+            avulsas = [];
+        }
+
+        const minusculo = (texto) => String(texto || '').toLocaleLowerCase('pt-BR').trim();
+        const nomeDaPeca = (id) => (avulsas.find((p) => String(p.id) === String(id)) || {}).nome || '';
+
+        function mostrarCorpo() {
+            corpo.hidden = !chave.checked;
+            campoJson.disabled = !chave.checked;
+            if (chave.checked && !linhas.children.length) novaLinha({}, true);
+        }
+
+        function atualizarEscolhida() {
+            const marcada = maquinas.querySelector('input[name="maquina"]:checked');
+            escolhida.textContent = marcada ? marcada.parentNode.textContent.trim() : 'Sem máquina';
+            escolhida.classList.toggle('is-on', Boolean(marcada && marcada.value));
+        }
+
+        function numerar() {
+            [...linhas.children].forEach((linha, indice) => {
+                linha.querySelector('.bq-kit-num').textContent = String(indice + 1);
+                linha.querySelector('[data-kit-subir]').disabled = indice === 0;
+                linha.querySelector('[data-kit-descer]').disabled = indice === linhas.children.length - 1;
+            });
+        }
+
+        function marcarPeca(linha, id) {
+            linha.dataset.peca = id ? String(id) : '';
+            const botao = linha.querySelector('[data-kit-peca]');
+            const nome = id ? nomeDaPeca(id) : '';
+            botao.classList.toggle('is-on', Boolean(id));
+            botao.querySelector('span').textContent = id ? 'Peça avulsa: ' + (nome || '#' + id) : 'Ligar a uma peça avulsa';
+            linha.querySelector('[data-kit-soltar]').hidden = !id;
+        }
+
+        function novaLinha(item, focar) {
+            const linha = document.createElement('li');
+            linha.className = 'bq-kit-linha';
+            linha.innerHTML =
+                '<span class="bq-kit-num" aria-hidden="true"></span>' +
+                '<div class="bq-kit-campos">' +
+                    '<input class="bq-kit-nome" maxlength="80" placeholder="Item (ex.: TV Box)" aria-label="Nome do item">' +
+                    '<input class="bq-kit-detalhe" maxlength="120" placeholder="Detalhe, opcional (ex.: com o jogo Strike Kids)" aria-label="Detalhe do item">' +
+                    '<div class="bq-kit-baixo">' +
+                        '<div class="bq-kit-qtd" role="group" aria-label="Quantidade">' +
+                            '<button type="button" data-kit-menos aria-label="Menos um">−</button>' +
+                            '<input class="bq-kit-quantos" type="number" min="1" max="99" inputmode="numeric" aria-label="Quantidade">' +
+                            '<button type="button" data-kit-mais aria-label="Mais um">+</button>' +
+                        '</div>' +
+                        '<button type="button" class="bq-kit-liga" data-kit-peca><i class="bi bi-link-45deg" aria-hidden="true"></i><span></span></button>' +
+                        '<button type="button" class="bq-kit-solta" data-kit-soltar aria-label="Soltar a peça avulsa" hidden><i class="bi bi-x-lg" aria-hidden="true"></i></button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="bq-kit-ordem">' +
+                    '<button type="button" data-kit-subir aria-label="Subir o item"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>' +
+                    '<button type="button" data-kit-descer aria-label="Descer o item"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>' +
+                    '<button type="button" class="bq-kit-tirar" data-kit-remover aria-label="Remover o item"><i class="bi bi-trash3" aria-hidden="true"></i></button>' +
+                '</div>';
+            linha.querySelector('.bq-kit-nome').value = item.nome || '';
+            linha.querySelector('.bq-kit-detalhe').value = item.detalhe || '';
+            linha.querySelector('.bq-kit-quantos').value = String(item.quantidade || 1);
+            linhas.appendChild(linha);
+            marcarPeca(linha, item.peca || '');
+            numerar();
+            if (focar) linha.querySelector('.bq-kit-nome').focus();
+            return linha;
+        }
+
+        function fecharEscolha() {
+            escolha.hidden = true;
+            linhaEscolhendo = null;
+        }
+
+        function desenharEscolha() {
+            const termo = minusculo(escolhaBusca.value);
+            const atual = linhaEscolhendo ? linhaEscolhendo.dataset.peca : '';
+            escolhaLista.innerHTML = '';
+            const achadas = avulsas.filter((p) => !termo || minusculo(p.nome).includes(termo));
+            if (!achadas.length) {
+                const vazia = document.createElement('span');
+                vazia.className = 'bq-kit-escolha-vazia';
+                vazia.textContent = 'Nenhuma peça com esse nome.';
+                escolhaLista.appendChild(vazia);
+                return;
+            }
+            achadas.slice(0, 60).forEach((p) => {
+                const opcao = document.createElement('button');
+                opcao.type = 'button';
+                opcao.className = 'bq-kit-escolha-opcao' + (String(p.id) === atual ? ' is-on' : '');
+                opcao.setAttribute('role', 'option');
+                opcao.setAttribute('aria-selected', String(String(p.id) === atual));
+                opcao.dataset.kitEscolher = String(p.id);
+                opcao.textContent = p.nome + (p.ativo ? '' : ' · fora do site');
+                escolhaLista.appendChild(opcao);
+            });
+        }
+
+        function abrirEscolha(linha) {
+            linhaEscolhendo = linha;
+            const nome = linha.querySelector('.bq-kit-nome').value.trim();
+            escolhaTitulo.textContent = nome ? 'Ligar “' + nome + '” a uma peça avulsa' : 'Ligar a uma peça avulsa';
+            escolhaBusca.value = nome;
+            desenharEscolha();
+            if (!escolhaLista.querySelector('[data-kit-escolher]')) {
+                escolhaBusca.value = '';
+                desenharEscolha();
+            }
+            escolha.hidden = false;
+            escolha.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            escolhaBusca.focus();
+        }
+
+        chave.addEventListener('change', mostrarCorpo);
+        maquinas.addEventListener('change', atualizarEscolhida);
+        busca.addEventListener('input', () => {
+            const termo = minusculo(busca.value);
+            maquinas.querySelectorAll('.bq-opcao').forEach((chip) => {
+                const marcado = chip.querySelector('input').checked;
+                chip.hidden = Boolean(termo) && !marcado && !minusculo(chip.textContent).includes(termo);
+            });
+        });
+        secao.querySelector('[data-kit-novo]').addEventListener('click', () => {
+            novaLinha({}, true);
+            sujo = true;
+        });
+        escolhaBusca.addEventListener('input', desenharEscolha);
+        // o Esc na escolha da peça fecha só ela (e não o cadastro inteiro)
+        escolha.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            e.stopPropagation();
+            const linha = linhaEscolhendo;
+            fecharEscolha();
+            if (linha) linha.querySelector('[data-kit-peca]').focus();
+        });
+        secao.querySelector('[data-kit-escolha-fechar]').addEventListener('click', fecharEscolha);
+        escolhaLista.addEventListener('click', (e) => {
+            const opcao = e.target.closest('[data-kit-escolher]');
+            if (!opcao || !linhaEscolhendo) return;
+            const linha = linhaEscolhendo;
+            marcarPeca(linha, opcao.dataset.kitEscolher);
+            fecharEscolha();
+            sujo = true;
+            linha.querySelector('[data-kit-peca]').focus();
+        });
+
+        linhas.addEventListener('click', (e) => {
+            const alvo = e.target;
+            const linha = alvo.closest('.bq-kit-linha');
+            if (!linha) return;
+            const qtd = linha.querySelector('.bq-kit-quantos');
+            if (alvo.closest('[data-kit-menos]') || alvo.closest('[data-kit-mais]')) {
+                const passo = alvo.closest('[data-kit-mais]') ? 1 : -1;
+                qtd.value = String(Math.max(1, Math.min(99, (parseInt(qtd.value, 10) || 1) + passo)));
+            } else if (alvo.closest('[data-kit-subir]') && linha.previousElementSibling) {
+                linhas.insertBefore(linha, linha.previousElementSibling);
+                numerar();
+                linha.querySelector('[data-kit-subir]').focus();
+            } else if (alvo.closest('[data-kit-descer]') && linha.nextElementSibling) {
+                linhas.insertBefore(linha.nextElementSibling, linha);
+                numerar();
+                linha.querySelector('[data-kit-descer]').focus();
+            } else if (alvo.closest('[data-kit-remover]')) {
+                if (linhaEscolhendo === linha) fecharEscolha();
+                linha.remove();
+                numerar();
+            } else if (alvo.closest('[data-kit-soltar]')) {
+                marcarPeca(linha, '');
+            } else if (alvo.closest('[data-kit-peca]')) {
+                abrirEscolha(linha);
+                return;
+            } else {
+                return;
+            }
+            sujo = true;
+        });
+
+        return {
+            abrir(brinquedo) {
+                linhas.innerHTML = '';
+                fecharEscolha();
+                busca.value = '';
+                maquinas.querySelectorAll('.bq-opcao').forEach((chip) => { chip.hidden = false; });
+                chave.checked = Boolean(brinquedo && brinquedo.eh_kit);
+                const alvo = String((brinquedo && brinquedo.maquina_id) || '');
+                let achou = false;
+                maquinas.querySelectorAll('input[name="maquina"]').forEach((radio) => {
+                    // o próprio produto não é máquina dele mesmo
+                    const proprio = Boolean(brinquedo) && radio.value === String(brinquedo.id);
+                    radio.closest('.bq-opcao').hidden = proprio;
+                    radio.checked = radio.value === alvo;
+                    if (radio.checked) achou = true;
+                });
+                if (!achou) maquinas.querySelector('input[name="maquina"][value=""]').checked = true;
+                ((brinquedo && brinquedo.componentes) || []).forEach((item) => novaLinha(item, false));
+                atualizarEscolhida();
+                mostrarCorpo();
+                // a máquina do kit fica à vista na caixa dos chips (que rola sozinha)
+                const marcada = maquinas.querySelector('input[name="maquina"]:checked');
+                window.requestAnimationFrame(() => {
+                    maquinas.scrollTop = marcada && marcada.value
+                        ? Math.max(0, marcada.parentNode.offsetTop - maquinas.offsetTop - 8)
+                        : 0;
+                });
+            },
+            preparar() {
+                const itens = [...linhas.children].map((linha) => ({
+                    nome: linha.querySelector('.bq-kit-nome').value.trim(),
+                    detalhe: linha.querySelector('.bq-kit-detalhe').value.trim(),
+                    quantidade: linha.querySelector('.bq-kit-quantos').value || '1',
+                    peca: linha.dataset.peca || '',
+                }));
+                campoJson.value = JSON.stringify(itens);
+                campoJson.disabled = !chave.checked;
+            },
+        };
+    })();
+
     function fecharBrinquedo() {
         TIPOS.forEach(descartarPrevia);
         fechar(toyDialog);
@@ -958,6 +1208,9 @@
         // e Enter sem sair do campo, não pode virar dezoito reais.
         const numero = numeroDoCampo(preco.value);
         if (preco.value.trim() && numero !== null) preco.value = reais(numero);
+
+        // os itens do kit vão juntos, num campo só (na ordem da tela)
+        kit.preparar();
 
         travar(true);
         try {

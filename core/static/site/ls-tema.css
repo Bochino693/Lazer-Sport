@@ -2986,3 +2986,85 @@ html img.card-giro-saindo.card-giro-saindo {
 .ls-preco-juros { color: #ffb547; font-size: .76rem; font-weight: 700; line-height: 1.3; opacity: .95; }
 .ls-preco--compacto .ls-preco-pix strong { font-size: 1.25rem; }
 .ls-preco--compacto .ls-preco-de, .ls-preco--compacto .ls-preco-cartao { font-size: .74rem; }
+
+/* ======================================================================
+   O KIT ELETRÔNICO NOS CARDS DE PRODUTO (LEIA-ME seção 107)
+
+   O kit é um produto, no MESMO card das máquinas (home, categorias,
+   /brinquedos/): o selo "Kit" discreto no canto de cima da foto -- o canto
+   livre (o "À venda / Sob consulta" mora embaixo, a estrela da lista de
+   desejos no outro canto; a arte do kit deixa o topo livre para os dois) --
+   e, embaixo do nome, a lista curta do que vem nele ("7 itens: TV Box, ...")
+   no lugar dos recursos da máquina. partials/kit_no_card.html.
+   ====================================================================== */
+.ls-kit-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px 4px 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ffd23f, #ff9f1c);
+    color: #2a1a00;
+    font-size: .66rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 6px 14px rgba(255, 159, 28, .32);
+}
+
+.ls-kit-selo i { font-size: .7rem; }
+
+/* na foto do card: o canto de cima à esquerda (a estrela fica no da direita) */
+html.ls-escuro:not(#_):not(#__) .card-mini .img-area .ls-kit-selo,
+.catalogo-card-media .ls-kit-selo {
+    position: absolute;
+    z-index: 4;
+    top: 10px;
+    left: 10px;
+    pointer-events: none;
+}
+
+/* no /brinquedos/ o estado ("Disponível na loja") mora em cima à esquerda: o selo vai à direita */
+.catalogo-card-media .ls-kit-selo { left: auto; right: 14px; top: 14px; }
+
+/* a lista curta do que vem no kit: uma linha a mais embaixo do nome */
+.ls-kit-itens {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    color: #cfe0ff;
+    font-size: .76rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.ls-kit-itens i { flex: none; margin-top: 2px; color: #ffd23f; font-size: .72rem; }
+
+.ls-kit-itens span {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* no card da home e das categorias, a linha ocupa o lugar dos recursos (a terceira linha da grade) */
+.card-mini-info .ls-kit-itens { grid-area: kititens; }
+
+.card-mini-info:has(.ls-kit-itens) {
+    grid-template-areas:
+        "nome nome"
+        "nota curtidas"
+        "kititens kititens";
+}
+
+.catalogo-card-body .ls-kit-itens { margin: 2px 0 10px; color: #b9cbe6; }
+
+@media (max-width: 560px) {
+    html.ls-escuro:not(#_):not(#__) .card-mini .img-area .ls-kit-selo { top: 7px; left: 7px; padding: 3px 7px 3px 6px; font-size: .58rem; }
+    .ls-kit-itens { font-size: .68rem; }
+}

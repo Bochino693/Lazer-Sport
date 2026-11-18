@@ -641,53 +641,18 @@
 }
 
 /* ======================================================================
-   O KIT ELETRÔNICO NESTA PÁGINA (LEIA-ME seção 105) e o "sob consulta".
+   A PEÇA SEM PREÇO: "Sob consulta".
 
-   O kit usa a página da peça (reposicao_info.html com `eh_kit`): o selo
-   amarelo "Kit eletrônico" no lugar do "Disponível", a vitrine com a foto da
-   máquina e a faixa do kit quando o kit não tem foto própria, "O que vem no
-   kit" (cada item com o ícone e a quantidade) e "Para a máquina X". Sem
-   preço -- peça ou kit --, a caixa do preço diz "Valor sob consulta" e o
-   WhatsApp ocupa o lugar do carrinho (nunca R$ 0,00).
+   A caixa do preço diz "Valor sob consulta" e o WhatsApp ocupa o lugar do
+   carrinho (nunca R$ 0,00). (O kit eletrônico, que usava esta página, virou
+   produto e tem a página das máquinas: LEIA-ME 107.)
    ====================================================================== */
-.peca-selo.peca-selo--kit {
-    border-color: rgba(255, 210, 63, .7);
-    color: #1b1300;
-    background: linear-gradient(135deg, #ffd23f, #ff9f1c);
-    box-shadow: 0 10px 24px rgba(255, 159, 28, .32);
-}
-.peca-selo.peca-selo--kit::before { display: none; }
 .peca-selo.peca-selo--consulta {
     border-color: rgba(255, 210, 63, .5);
     color: #ffe08a;
     background: rgba(40, 28, 0, .78);
 }
 .peca-selo.peca-selo--consulta::before { background: #ffd23f; box-shadow: 0 0 0 4px rgba(255, 210, 63, .22); }
-
-/* a máquina ocupa a vitrine (é foto de showroom, com fundo) */
-.peca-imagem.peca-imagem--maquina { padding: 0; }
-.peca-imagem.peca-imagem--maquina > img { object-fit: cover; cursor: default; filter: none; }
-.peca-imagem.peca-imagem--maquina::before { display: none; }
-.peca-faixa-kit {
-    position: absolute;
-    z-index: 3;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 6px 10px;
-    padding: 13px 14px;
-    background: linear-gradient(90deg, rgba(230, 57, 70, .95), rgba(255, 122, 69, .95));
-    color: #fff;
-    font-size: .9rem;
-    font-weight: 900;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-}
-.peca-faixa-kit small { font-size: .66rem; font-weight: 750; letter-spacing: .06em; opacity: .92; text-transform: none; }
 
 .peca-preco-box.peca-preco-box--consulta {
     border-color: rgba(255, 210, 63, .45);
@@ -708,124 +673,6 @@
 
 /* sem preço o WhatsApp é a ação principal, na linha inteira */
 .peca-acoes.peca-acoes--consulta .peca-btn.whatsapp { grid-column: 1 / -1; }
-
-/* ---- O que vem no kit ---- */
-.kit-itens {
-    display: grid;
-    gap: 9px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-.kit-item {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 11px;
-    min-height: 64px;
-    padding: 10px 12px;
-    border: 1px solid rgba(103, 179, 255, .28);
-    border-radius: 15px;
-    background: linear-gradient(145deg, rgba(8, 120, 249, .2), rgba(8, 120, 249, .07));
-}
-.kit-item:nth-child(4n+2) { border-color: rgba(238, 85, 100, .3); background: linear-gradient(145deg, rgba(230, 57, 70, .2), rgba(230, 57, 70, .06)); }
-.kit-item:nth-child(4n+3) { border-color: rgba(32, 190, 154, .3); background: linear-gradient(145deg, rgba(13, 151, 120, .22), rgba(13, 151, 120, .07)); }
-.kit-item:nth-child(4n+4) { border-color: rgba(242, 173, 25, .32); background: linear-gradient(145deg, rgba(242, 173, 25, .2), rgba(242, 173, 25, .06)); }
-.kit-item-icone {
-    width: 42px;
-    height: 42px;
-    border-radius: 13px;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: linear-gradient(135deg, #0878f9, #0054bb);
-    box-shadow: 0 8px 18px rgba(0, 40, 110, .3);
-    font-size: 1.05rem;
-}
-.kit-item:nth-child(4n+2) .kit-item-icone { background: linear-gradient(135deg, #e63946, #b91e30); }
-.kit-item:nth-child(4n+3) .kit-item-icone { background: linear-gradient(135deg, #12b886, #087f5b); }
-.kit-item:nth-child(4n+4) .kit-item-icone { background: linear-gradient(135deg, #f2ad19, #d77b00); }
-/* item com foto: a foto do produto no palco azul das peças (ls-peca-card.css) */
-.kit-item--foto { grid-template-columns: 64px minmax(0, 1fr) auto; min-height: 84px; }
-.kit-item-foto {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    background: radial-gradient(circle at 50% 35%, #4a8cf0 0%, #1d56c0 55%, #0d2a66 100%);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 8px 18px rgba(0, 40, 110, .3);
-}
-.kit-item-foto img {
-    width: 86%;
-    height: 86%;
-    object-fit: contain;
-    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .45));
-}
-.kit-item-texto { min-width: 0; display: grid; gap: 2px; }
-.kit-item-texto strong { color: #fff; font-size: .92rem; line-height: 1.25; overflow-wrap: anywhere; }
-.kit-item-texto a { color: inherit; text-decoration: none; }
-.kit-item-texto a strong { text-decoration: underline; text-decoration-color: rgba(117, 198, 255, .6); text-underline-offset: 3px; }
-.kit-item-texto a:hover strong { color: #9fe6ff; }
-.kit-item-texto small { color: #b9cbe0; font-size: .74rem; line-height: 1.35; }
-.kit-item-texto small.kit-item-avulsa { color: #8df5bd; font-weight: 750; }
-.kit-item-qtd {
-    min-width: 40px;
-    padding: 6px 9px;
-    border-radius: 999px;
-    color: #071426;
-    background: linear-gradient(180deg, #ffe36b, #ffc928);
-    font-size: .82rem;
-    font-weight: 900;
-    text-align: center;
-}
-
-/* ---- Para a máquina X ---- */
-.kit-maquina {
-    display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 14px 12px 12px;
-    border: 1px solid rgba(117, 198, 255, .35);
-    border-radius: 17px;
-    color: #fff;
-    background: linear-gradient(135deg, rgba(8, 120, 249, .28), rgba(230, 57, 70, .16));
-    text-decoration: none;
-    transition: transform .2s ease, border-color .2s ease;
-}
-.kit-maquina:hover { transform: translateY(-2px); border-color: #4eb5ff; }
-.kit-maquina-foto {
-    width: 72px;
-    height: 72px;
-    overflow: hidden;
-    border-radius: 13px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(160deg, #12376b, #060f24);
-    color: #75c6ff;
-    font-size: 1.4rem;
-}
-.kit-maquina-foto img { width: 100%; height: 100%; object-fit: cover; }
-.kit-maquina-texto { min-width: 0; display: grid; gap: 4px; }
-.kit-maquina-texto strong { font-size: 1rem; }
-.kit-maquina-texto small { color: #c9def3; font-size: .78rem; line-height: 1.4; }
-.kit-maquina > i { color: #ffd23f; }
-
-@media (max-width: 1100px) {
-    .kit-itens { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-    .kit-item { grid-template-columns: 38px minmax(0, 1fr) auto; min-height: 58px; padding: 9px 10px; }
-    .kit-item--foto { grid-template-columns: 56px minmax(0, 1fr) auto; min-height: 74px; }
-    .kit-item-foto { width: 56px; height: 56px; border-radius: 14px; }
-    .kit-item-icone { width: 38px; height: 38px; border-radius: 11px; font-size: .95rem; }
-    .kit-maquina { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 11px; }
-    .kit-maquina-foto { width: 56px; height: 56px; }
-    .peca-faixa-kit { padding: 10px 10px; font-size: .74rem; letter-spacing: .1em; }
-}
 
 /* PC: a coluna da foto não estica até o fim da ficha (era um painel vazio
    do tamanho da coluna de informações) e acompanha a rolagem. */

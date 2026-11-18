@@ -51,243 +51,6 @@
     catalogo = {};
   }
 
-  /* ------------------------------------------------------------------
-   * O KIT ELETRÔNICO (LEIA-ME seção 105)
-   *
-   * A chave "É um kit eletrônico" abre o editor: a máquina em chips de
-   * rádio com busca (nunca <select>) e as linhas do que vem no kit --
-   * nome, detalhe, quantidade e, se o item também é vendido sozinho, a
-   * peça avulsa. As linhas se adicionam, removem e trocam de lugar; no
-   * salvar, vão todas no campo `componentes_json`. Sem a chave, o campo
-   * nem vai: os itens que o kit já tinha ficam guardados.
-   * ------------------------------------------------------------------ */
-  var kit = (function () {
-    var chave = document.getElementById("pecaEhKit");
-    var corpo = document.getElementById("kitCorpo");
-    var linhas = document.getElementById("kitItens");
-    var campoJson = document.getElementById("kitComponentesJson");
-    var busca = document.getElementById("buscarMaquinaKit");
-    var escolhida = document.getElementById("maquinaKitEscolhida");
-    var caixaMaquinas = document.getElementById("kitMaquinas");
-    var escolha = document.getElementById("kitEscolhaPeca");
-    var escolhaLista = document.getElementById("kitEscolhaLista");
-    var escolhaBusca = document.getElementById("kitEscolhaBusca");
-    var escolhaTitulo = document.getElementById("kitEscolhaTitulo");
-    var pecaAberta = null;
-    var linhaEscolhendo = null;
-    var avulsas = [];
-    try {
-      avulsas = JSON.parse(document.getElementById("pecas-avulsas-dados").textContent) || [];
-    } catch (erro) {
-      avulsas = [];
-    }
-
-    function nomeDaPeca(id) {
-      var achada = avulsas.filter(function (p) { return String(p.id) === String(id); })[0];
-      return achada ? achada.nome : "";
-    }
-
-    function texto(valor) {
-      return String(valor == null ? "" : valor);
-    }
-
-    function mostrarCorpo() {
-      corpo.hidden = !chave.checked;
-      campoJson.disabled = !chave.checked;
-      if (chave.checked && !linhas.children.length) novaLinha({}, true);
-    }
-
-    function atualizarEscolhida() {
-      var marcada = caixaMaquinas.querySelector('input[name="maquina"]:checked');
-      var rotulo = marcada ? marcada.parentNode.textContent.trim() : "Sem máquina";
-      escolhida.textContent = rotulo;
-      escolhida.classList.toggle("on", !!(marcada && marcada.value));
-    }
-
-    function numerar() {
-      [].forEach.call(linhas.children, function (linha, indice) {
-        linha.querySelector(".kit-linha-num").textContent = String(indice + 1);
-        linha.querySelector("[data-kit-subir]").disabled = indice === 0;
-        linha.querySelector("[data-kit-descer]").disabled = indice === linhas.children.length - 1;
-      });
-    }
-
-    function marcarPeca(linha, id) {
-      linha.dataset.peca = id ? String(id) : "";
-      var botao = linha.querySelector("[data-kit-peca]");
-      var nome = id ? nomeDaPeca(id) : "";
-      botao.classList.toggle("on", !!id);
-      botao.querySelector("span").textContent = id ? ("Peça avulsa: " + (nome || "#" + id)) : "Ligar a uma peça avulsa";
-      linha.querySelector("[data-kit-desligar]").hidden = !id;
-    }
-
-    function novaLinha(item, focar) {
-      var linha = document.createElement("li");
-      linha.className = "kit-linha";
-      linha.innerHTML =
-        '<span class="kit-linha-num" aria-hidden="true"></span>' +
-        '<div class="kit-linha-campos">' +
-          '<input class="kit-linha-nome" maxlength="80" placeholder="Item (ex.: TV Box)" aria-label="Nome do item">' +
-          '<input class="kit-linha-detalhe" maxlength="120" placeholder="Detalhe, opcional (ex.: com o jogo Strike Kids)" aria-label="Detalhe do item">' +
-          '<div class="kit-linha-baixo">' +
-            '<div class="kit-qtd" role="group" aria-label="Quantidade">' +
-              '<button type="button" data-kit-menos aria-label="Menos um">−</button>' +
-              '<input class="kit-linha-qtd" type="number" min="1" max="99" inputmode="numeric" aria-label="Quantidade">' +
-              '<button type="button" data-kit-mais aria-label="Mais um">+</button>' +
-            '</div>' +
-            '<button type="button" class="kit-liga-peca" data-kit-peca><i class="bi bi-link-45deg" aria-hidden="true"></i><span></span></button>' +
-            '<button type="button" class="kit-solta-peca" data-kit-desligar aria-label="Soltar a peça avulsa" hidden>×</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="kit-linha-ordem">' +
-          '<button type="button" data-kit-subir aria-label="Subir o item"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>' +
-          '<button type="button" data-kit-descer aria-label="Descer o item"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>' +
-          '<button type="button" class="kit-linha-remover" data-kit-remover aria-label="Remover o item"><i class="bi bi-trash3" aria-hidden="true"></i></button>' +
-        '</div>';
-      linha.querySelector(".kit-linha-nome").value = texto(item.nome);
-      linha.querySelector(".kit-linha-detalhe").value = texto(item.detalhe);
-      linha.querySelector(".kit-linha-qtd").value = texto(item.quantidade || 1);
-      linhas.appendChild(linha);
-      marcarPeca(linha, item.peca || "");
-      numerar();
-      if (focar) linha.querySelector(".kit-linha-nome").focus();
-      return linha;
-    }
-
-    function fecharEscolha() {
-      escolha.hidden = true;
-      linhaEscolhendo = null;
-    }
-
-    function desenharEscolha() {
-      var termo = escolhaBusca.value.toLocaleLowerCase("pt-BR").trim();
-      var atual = linhaEscolhendo ? linhaEscolhendo.dataset.peca : "";
-      var proprio = pecaAberta ? String(pecaAberta.id) : "";
-      escolhaLista.innerHTML = "";
-      var achadas = avulsas.filter(function (p) {
-        return String(p.id) !== proprio && (!termo || p.nome.toLocaleLowerCase("pt-BR").indexOf(termo) >= 0);
-      });
-      if (!achadas.length) {
-        escolhaLista.innerHTML = '<span class="kit-escolha-vazia">Nenhuma peça com esse nome.</span>';
-        return;
-      }
-      achadas.slice(0, 60).forEach(function (p) {
-        var opcao = document.createElement("button");
-        opcao.type = "button";
-        opcao.className = "kit-escolha-opcao" + (String(p.id) === atual ? " on" : "");
-        opcao.setAttribute("role", "option");
-        opcao.setAttribute("aria-selected", String(String(p.id) === atual));
-        opcao.dataset.kitEscolher = String(p.id);
-        opcao.textContent = p.nome + (p.ativo ? "" : " · fora do site");
-        escolhaLista.appendChild(opcao);
-      });
-    }
-
-    function abrirEscolha(linha) {
-      linhaEscolhendo = linha;
-      var nome = linha.querySelector(".kit-linha-nome").value.trim();
-      escolhaTitulo.textContent = nome ? ("Ligar “" + nome + "” a uma peça avulsa") : "Ligar a uma peça avulsa";
-      escolhaBusca.value = nome;
-      desenharEscolha();
-      if (!escolhaLista.querySelector("[data-kit-escolher]")) {
-        escolhaBusca.value = "";
-        desenharEscolha();
-      }
-      escolha.hidden = false;
-      escolha.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      escolhaBusca.focus();
-    }
-
-    chave.addEventListener("change", mostrarCorpo);
-    caixaMaquinas.addEventListener("change", atualizarEscolhida);
-    busca.addEventListener("input", function () {
-      var termo = busca.value.toLocaleLowerCase("pt-BR").trim();
-      caixaMaquinas.querySelectorAll(".kit-chip").forEach(function (chip) {
-        var marcado = chip.querySelector("input").checked;
-        chip.hidden = !!termo && !marcado && chip.textContent.toLocaleLowerCase("pt-BR").indexOf(termo) < 0;
-      });
-    });
-    document.getElementById("kitAdicionarItem").addEventListener("click", function () { novaLinha({}, true); });
-    escolhaBusca.addEventListener("input", desenharEscolha);
-    document.getElementById("kitEscolhaFechar").addEventListener("click", fecharEscolha);
-    escolhaLista.addEventListener("click", function (evento) {
-      var opcao = evento.target.closest("[data-kit-escolher]");
-      if (!opcao || !linhaEscolhendo) return;
-      marcarPeca(linhaEscolhendo, opcao.dataset.kitEscolher);
-      fecharEscolha();
-    });
-
-    linhas.addEventListener("click", function (evento) {
-      var alvo = evento.target;
-      var linha = alvo.closest(".kit-linha");
-      if (!linha) return;
-      var qtd = linha.querySelector(".kit-linha-qtd");
-      if (alvo.closest("[data-kit-menos]") || alvo.closest("[data-kit-mais]")) {
-        var passo = alvo.closest("[data-kit-mais]") ? 1 : -1;
-        qtd.value = String(Math.max(1, Math.min(99, (parseInt(qtd.value, 10) || 1) + passo)));
-      } else if (alvo.closest("[data-kit-subir]") && linha.previousElementSibling) {
-        linhas.insertBefore(linha, linha.previousElementSibling);
-        numerar();
-        linha.querySelector("[data-kit-subir]").focus();
-      } else if (alvo.closest("[data-kit-descer]") && linha.nextElementSibling) {
-        linhas.insertBefore(linha.nextElementSibling, linha);
-        numerar();
-        linha.querySelector("[data-kit-descer]").focus();
-      } else if (alvo.closest("[data-kit-remover]")) {
-        if (linhaEscolhendo === linha) fecharEscolha();
-        linha.remove();
-        numerar();
-      } else if (alvo.closest("[data-kit-desligar]")) {
-        marcarPeca(linha, "");
-      } else if (alvo.closest("[data-kit-peca]")) {
-        abrirEscolha(linha);
-      }
-    });
-
-    return {
-      abrir: function (peca) {
-        pecaAberta = peca;
-        linhas.innerHTML = "";
-        fecharEscolha();
-        busca.value = "";
-        caixaMaquinas.querySelectorAll(".kit-chip").forEach(function (chip) { chip.hidden = false; });
-        chave.checked = !!(peca && peca.eh_kit);
-        var alvo = String((peca && peca.maquina_id) || "");
-        var achou = false;
-        caixaMaquinas.querySelectorAll('input[name="maquina"]').forEach(function (radio) {
-          radio.checked = radio.value === alvo;
-          if (radio.checked) achou = true;
-        });
-        if (!achou) caixaMaquinas.querySelector('input[name="maquina"][value=""]').checked = true;
-        ((peca && peca.componentes) || []).forEach(function (item) { novaLinha(item, false); });
-        atualizarEscolhida();
-        mostrarCorpo();
-        // a máquina do kit fica à vista na caixa dos chips (que rola sozinha)
-        var marcada = caixaMaquinas.querySelector('input[name="maquina"]:checked');
-        if (marcada && marcada.value) {
-          window.requestAnimationFrame(function () {
-            var chip = marcada.parentNode;
-            caixaMaquinas.scrollTop = Math.max(0, chip.offsetTop - caixaMaquinas.offsetTop - 8);
-          });
-        } else {
-          caixaMaquinas.scrollTop = 0;
-        }
-      },
-      preparar: function () {
-        var itens = [].map.call(linhas.children, function (linha) {
-          return {
-            nome: linha.querySelector(".kit-linha-nome").value.trim(),
-            detalhe: linha.querySelector(".kit-linha-detalhe").value.trim(),
-            quantidade: linha.querySelector(".kit-linha-qtd").value || "1",
-            peca: linha.dataset.peca || ""
-          };
-        });
-        campoJson.value = JSON.stringify(itens);
-        campoJson.disabled = !chave.checked;
-      }
-    };
-  })();
-
   function dadosDoCard(botao) {
     var card = botao.closest("[data-peca-id]");
     return card ? catalogo[card.dataset.pecaId] : null;
@@ -318,7 +81,6 @@
       document.getElementById("pecaAtivo").checked = true;
       desenharGaleria([]);
     }
-    kit.abrir(peca);
 
     document.getElementById("buscarCategoriaPeca").value = "";
     document.querySelectorAll("#categoriasBox label").forEach(function (opcao) { opcao.hidden = false; });
@@ -399,8 +161,6 @@
 
   document.addEventListener("keydown", function (evento) {
     if (evento.key !== "Escape") return;
-    var escolhaPeca = document.getElementById("kitEscolhaPeca");
-    if (escolhaPeca && !escolhaPeca.hidden) { escolhaPeca.hidden = true; return; }
     if (modalExcluir.classList.contains("open")) modalExcluir.classList.remove("open");
     else fechar();
   });
@@ -408,8 +168,6 @@
   form.addEventListener("submit", function (evento) {
     evento.preventDefault();
     aviso.classList.remove("on");
-    // os itens do kit vão juntos, num campo só (na ordem da tela)
-    kit.preparar();
     modal.querySelector(".pecas-card").classList.add("is-loading");
 
     // getAttribute, e não `form.action`: o formulário tem um campo chamado

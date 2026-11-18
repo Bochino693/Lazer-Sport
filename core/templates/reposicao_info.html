@@ -3,19 +3,16 @@
 {% load precos %}
 {% load fotos %}
 
-{% block title %}{{ peca.nome }} | {% if eh_kit %}Kit eletrônico{% else %}Peça de Reposição{% endif %} - Lazer & Sport{% endblock %}
+{% block title %}{{ peca.nome }} | Peça de Reposição - Lazer & Sport{% endblock %}
 {% block meta_description %}{{ peca.nome }}: {{ peca.descricao_peca|truncatechars:140 }}{% endblock %}
 {% block main_class %} content-section--full{% endblock %}
 
 {% block content %}
 {% comment %}
-  A PÁGINA DA PEÇA E A DO KIT ELETRÔNICO (LEIA-ME seção 105). O kit é uma peça
-  marcada e usa esta mesma página (core/views_kits.py manda `eh_kit`): o
-  caminho volta para "Kits eletrônicos", e entram "O que vem no kit" (cada
-  item com ícone e quantidade) e "Para a máquina X" (o link da máquina). Sem
-  foto própria, a vitrine mostra a máquina com o selo "KIT ELETRÔNICO".
-  SEM PREÇO (peça ou kit): "Valor sob consulta" e o WhatsApp no lugar do
-  carrinho -- nunca R$ 0,00, e o carrinho recusaria (`_item_vendavel`).
+  A PÁGINA DA PEÇA. SEM PREÇO: "Valor sob consulta" e o WhatsApp no lugar do
+  carrinho -- nunca R$ 0,00, e o carrinho recusaria (`_item_vendavel`). (O kit
+  eletrônico usou esta página enquanto era uma peça marcada; hoje ele é um
+  produto e tem a página das máquinas, brinquedo_info.html: LEIA-ME 107.)
 {% endcomment %}
 <script type="application/ld+json">
 {
@@ -49,17 +46,10 @@
                 <span>Início</span>
             </a>
             <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
-            {% if eh_kit %}
-            <a href="{% url 'kits' %}">
-                <i class="fa-solid fa-microchip" aria-hidden="true"></i>
-                <span>Kits eletrônicos</span>
-            </a>
-            {% else %}
             <a href="{% url 'pecas_reposicao' %}">
                 <i class="fa-solid fa-gears" aria-hidden="true"></i>
                 <span>Peças de reposição</span>
             </a>
-            {% endif %}
             <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
             <span class="ls-breadcrumb-current" aria-current="page" title="{{ peca.nome }}">
                 <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
@@ -68,15 +58,13 @@
         </nav>
 
         <article class="peca-shell">
-            <section class="peca-visual" aria-label="{% if eh_kit %}Galeria do kit{% else %}Galeria da peça{% endif %}">
-                {% if eh_kit %}
-                    <span class="peca-selo peca-selo--kit"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit eletrônico</span>
-                {% elif peca.preco_venda %}
+            <section class="peca-visual" aria-label="Galeria da peça">
+                {% if peca.preco_venda %}
                     <span class="peca-selo">Disponível</span>
                 {% else %}
                     <span class="peca-selo peca-selo--consulta">Sob consulta</span>
                 {% endif %}
-                <div class="peca-imagem{% if foto_da_maquina %} peca-imagem--maquina{% endif %}">
+                <div class="peca-imagem">
                     {% if imagens_peca %}
                         {% with principal=imagens_peca.0 %}
                             {# clicar na foto abre a galeria em tela cheia, na foto que está na vitrine #}
@@ -92,10 +80,6 @@
                             </div>
                             <span class="peca-contador" id="peca-contador">1 / {{ imagens_peca|length }}</span>
                         {% endif %}
-                    {% elif foto_da_maquina %}
-                        {# o kit sem foto própria: a máquina em que ele é instalado, com a faixa do kit #}
-                        <img id="peca-imagem-principal" src="{{ foto_da_maquina|foto:1400 }}" alt="{{ maquina_kit.nome_brinquedo|default:'A máquina' }}: a máquina do {{ peca.nome }}" width="760" height="760" fetchpriority="high">
-                        <span class="peca-faixa-kit"><i class="fa-solid fa-microchip" aria-hidden="true"></i> Kit eletrônico <small>a máquina não acompanha</small></span>
                     {% else %}
                         <div class="peca-sem-imagem"><i class="fas fa-image" aria-hidden="true"></i>Imagem em atualização</div>
                     {% endif %}
@@ -112,11 +96,7 @@
                 {% endif %}
 
                 <div class="peca-beneficios" aria-label="Diferenciais">
-                    {% if eh_kit %}
-                    <div class="peca-beneficio"><i class="fas fa-tools" aria-hidden="true"></i><span><strong>Pronto para instalar</strong><small>A parte elétrica completa</small></span></div>
-                    {% else %}
                     <div class="peca-beneficio"><i class="fas fa-tools" aria-hidden="true"></i><span><strong>Suporte especializado</strong><small>Ajuda para identificar a peça</small></span></div>
-                    {% endif %}
                     <div class="peca-beneficio"><i class="fas fa-truck" aria-hidden="true"></i><span><strong>Envio nacional</strong><small>Atendimento em todo o Brasil</small></span></div>
                     <div class="peca-beneficio"><i class="fas fa-industry" aria-hidden="true"></i><span><strong>Direto da fábrica</strong><small>Procedência Lazer &amp; Sport</small></span></div>
                 </div>
@@ -128,63 +108,27 @@
             </section>
 
             <section class="peca-info" id="peca-informacoes">
-                <p class="peca-eyebrow">{% if eh_kit %}Kit eletrônico Lazer &amp; Sport · monte sua própria máquina{% else %}Peça de reposição Lazer &amp; Sport{% endif %}</p>
+                <p class="peca-eyebrow">Peça de reposição Lazer &amp; Sport</p>
                 <h1>{{ peca.nome }}</h1>
                 <div class="peca-meta">
                     <span class="peca-chip">Código LS-P{{ peca.id|stringformat:'05d' }}</span>
-                    {% if eh_kit %}<span class="peca-chip">{{ componentes|length }} ite{{ componentes|length|pluralize:"m,ns" }}</span>{% if maquina_kit %}<span class="peca-chip">Para {{ maquina_kit.nome_brinquedo }}</span>{% endif %}{% endif %}
                     {% for categoria in categorias_peca %}<span class="peca-chip">{{ categoria.nome_categoria_peca }}</span>{% endfor %}
                 </div>
 
                 {% if peca.preco_venda %}
                 <div class="peca-preco-box">
-                    {% preco_pix_cartao peca.preco_venda rotulo=eh_kit|yesno:"Preço do kit,Preço unitário" sem_juros=peca.sem_juros_no_cartao %}
+                    {% preco_pix_cartao peca.preco_venda rotulo="Preço unitário" sem_juros=peca.sem_juros_no_cartao %}
                     <span class="peca-preco-nota">Retirada na fábrica; o frete é por conta do cliente.</span>
                 </div>
                 {% else %}
                 <div class="peca-preco-box peca-preco-box--consulta">
                     <strong class="peca-consulta-titulo">Valor sob consulta</strong>
-                    <span class="peca-preco-nota">{% if eh_kit %}O valor do kit sai no orçamento: fale com a fábrica pelo WhatsApp e diga qual é a sua máquina.{% else %}Fale com a fábrica pelo WhatsApp: a equipe confirma a peça certa e o valor.{% endif %}</span>
+                    <span class="peca-preco-nota">Fale com a fábrica pelo WhatsApp: a equipe confirma a peça certa e o valor.</span>
                 </div>
                 {% endif %}
 
-                {% if eh_kit %}
-                {% if componentes %}
-                <section class="peca-secao peca-kit-itens" data-scroll-reveal aria-labelledby="kit-itens-titulo">
-                    <h2 id="kit-itens-titulo"><i class="fas fa-box-open" aria-hidden="true"></i>O que vem no kit</h2>
-                    <ul class="kit-itens">
-                        {% for item in componentes %}
-                        <li class="kit-item{% if item.foto %} kit-item--foto{% endif %}">
-                            {% if item.foto %}<span class="kit-item-foto"><img src="{{ item.foto }}" alt="{{ item.nome }}" loading="lazy" decoding="async"></span>{% else %}<span class="kit-item-icone"><i class="fa-solid {{ item.icone }}" aria-hidden="true"></i></span>{% endif %}
-                            <span class="kit-item-texto">
-                                {% if item.url_peca %}<a href="{{ item.url_peca }}#breadcrumb"><strong>{{ item.nome }}</strong></a>{% else %}<strong>{{ item.nome }}</strong>{% endif %}
-                                {% if item.detalhe %}<small>{{ item.detalhe }}</small>{% endif %}
-                                {% if item.url_peca %}<small class="kit-item-avulsa">Também vendido sozinho</small>{% endif %}
-                            </span>
-                            <span class="kit-item-qtd" title="Quantidade">{{ item.quantidade }}×</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </section>
-                {% endif %}
-
-                {% if maquina_kit %}
-                <section class="peca-secao peca-kit-maquina" data-scroll-reveal aria-labelledby="kit-maquina-titulo">
-                    <h2 id="kit-maquina-titulo"><i class="fas fa-gamepad" aria-hidden="true"></i>Para a máquina {{ maquina_kit.nome_brinquedo }}</h2>
-                    <a class="kit-maquina" href="{% url 'brinquedo_detalhe' maquina_kit.id %}#bread">
-                        <span class="kit-maquina-foto">{% if maquina_kit.imagem_brinquedo %}<img src="{{ maquina_kit.imagem_brinquedo|foto:240 }}" alt="" loading="lazy" decoding="async" width="72" height="72">{% else %}<i class="fas fa-gamepad" aria-hidden="true"></i>{% endif %}</span>
-                        <span class="kit-maquina-texto">
-                            <strong>{{ maquina_kit.nome_brinquedo }}</strong>
-                            <small>A parte eletrônica completa para montar a máquina ou recuperar a que você já tem. Veja a máquina, as fotos e as medidas.</small>
-                        </span>
-                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                    </a>
-                </section>
-                {% endif %}
-                {% endif %}
-
                 <section class="peca-secao" data-scroll-reveal>
-                    <h2><i class="fas fa-align-left" aria-hidden="true"></i>{% if eh_kit %}Sobre este kit{% else %}Sobre esta peça{% endif %}</h2>
+                    <h2><i class="fas fa-align-left" aria-hidden="true"></i>Sobre esta peça</h2>
                     <p class="peca-descricao">{{ peca.descricao_peca|linebreaksbr }}</p>
                 </section>
 
@@ -192,13 +136,9 @@
                     <h2><i class="fas fa-circle-info" aria-hidden="true"></i>Detalhes do produto</h2>
                     <div class="peca-detalhes">
                         <div class="peca-detalhe"><i class="fas fa-box" aria-hidden="true"></i><div><span>Condição</span><strong>Produto novo</strong></div></div>
-                        <div class="peca-detalhe"><i class="fas fa-circle-check" aria-hidden="true"></i><div><span>Disponibilidade</span><strong>{% if not peca.preco_venda %}Sob consulta{% elif eh_kit %}Pronto para pedido{% else %}Pronta para pedido{% endif %}</strong></div></div>
+                        <div class="peca-detalhe"><i class="fas fa-circle-check" aria-hidden="true"></i><div><span>Disponibilidade</span><strong>{% if peca.preco_venda %}Pronta para pedido{% else %}Sob consulta{% endif %}</strong></div></div>
                         <div class="peca-detalhe"><i class="fas fa-barcode" aria-hidden="true"></i><div><span>Referência</span><strong>LS-P{{ peca.id|stringformat:'05d' }}</strong></div></div>
-                        {% if eh_kit %}
-                        <div class="peca-detalhe"><i class="fas fa-box-open" aria-hidden="true"></i><div><span>No kit</span><strong>{{ componentes|length }} ite{{ componentes|length|pluralize:"m,ns" }}</strong></div></div>
-                        {% else %}
                         <div class="peca-detalhe"><i class="fas fa-images" aria-hidden="true"></i><div><span>Galeria</span><strong>{{ imagens_peca|length }} foto{{ imagens_peca|length|pluralize }}</strong></div></div>
-                        {% endif %}
                     </div>
                 </section>
 
@@ -227,15 +167,11 @@
                     <div class="peca-acoes{% if not peca.preco_venda %} peca-acoes--consulta{% endif %}">
                         {% if peca.preco_venda %}
                         <button type="button" class="peca-btn carrinho" id="adicionar-peca"><i class="fas fa-cart-plus" aria-hidden="true"></i>Adicionar ao carrinho</button>
-                        <a class="peca-btn whatsapp" href="https://wa.me/5511960563135?text={% if eh_kit %}{{ 'Olá! Tenho interesse neste kit: '|urlencode }}{% else %}{{ 'Olá! Tenho interesse nesta peça: '|urlencode }}{% endif %}{{ peca.nome|urlencode }}%0A{{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>Falar com especialista</a>
+                        <a class="peca-btn whatsapp" href="https://wa.me/5511960563135?text={{ 'Olá! Tenho interesse nesta peça: '|urlencode }}{{ peca.nome|urlencode }}%0A{{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>Falar com especialista</a>
                         {% else %}
-                        <a class="peca-btn whatsapp" href="https://wa.me/5511960563135?text={% if eh_kit %}{{ 'Olá! Quero um orçamento do '|urlencode }}{% else %}{{ 'Olá! Quero o valor desta peça: '|urlencode }}{% endif %}{{ peca.nome|urlencode }}%0A{{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>{% if eh_kit %}Pedir orçamento no WhatsApp{% else %}Consultar o valor no WhatsApp{% endif %}</a>
+                        <a class="peca-btn whatsapp" href="https://wa.me/5511960563135?text={{ 'Olá! Quero o valor desta peça: '|urlencode }}{{ peca.nome|urlencode }}%0A{{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>Consultar o valor no WhatsApp</a>
                         {% endif %}
-                        {% if eh_kit %}
-                        <a class="peca-btn voltar" href="{% url 'kits' %}"><i class="fas fa-arrow-left" aria-hidden="true"></i>Ver os outros kits</a>
-                        {% else %}
                         <a class="peca-btn voltar" href="{% url 'pecas_reposicao' %}"><i class="fas fa-arrow-left" aria-hidden="true"></i>Continuar no catálogo</a>
-                        {% endif %}
                     </div>
                 </div>
             </section>
@@ -350,7 +286,6 @@
     // pula a escolha e mostra o "pronto" com o selo do topo pulando -- ou o
     // "entre na conta". Antes esta página tinha o próprio fetch, e o selo do
     // carrinho não mudava.
-    // o kit eletrônico vai ao carrinho como a peça que ele é
     document.getElementById('adicionar-peca')?.addEventListener('click', (evento) => {
         if (window.LSCartLoading) window.LSCartLoading.setGatilho(evento.currentTarget);
         adicionarAoCarrinho('peca', {{ peca.id }}, false, { quantidade: (quantidade && quantidade.value) || '1' });
