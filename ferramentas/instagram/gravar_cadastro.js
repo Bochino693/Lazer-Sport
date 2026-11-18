@@ -183,6 +183,21 @@ async function aquecer(p) {
   });
   await p.waitForTimeout(300);
   await s.parado(p, 1.7);
+  s = seg('8_boleto');
+  const tb = await centroTexto(p, 'main button', 'Boleto');
+  console.log('aba Boleto em', tb);
+  if (tb) {
+    await s.parado(p, 0.3);
+    s.toque(tb[0], tb[1]);
+    await s.parado(p, 0.3);
+    await p.mouse.click(tb[0], tb[1]);
+    await p.waitForTimeout(2500);
+    await limpar();
+    await s.parado(p, 1.0);
+    const yb2 = await p.evaluate(() => { const e = document.querySelector('#boleto-panel'); return e ? e.getBoundingClientRect().top + window.scrollY : null; });
+    if (yb2) { await s.rolar(p, yb2 - 200, 0.9); }
+    await s.parado(p, 1.2);
+  }
   await c.close();
   await b.close();
   fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify(meta, null, 1));

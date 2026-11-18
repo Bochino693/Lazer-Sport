@@ -12,20 +12,19 @@
   "#FFFFFF",
   "#FF7A00"
  ],
- "velocidade": 0.88,
+ "velocidade": 0.95,
  "gancho": {
-  "tipo": "pergunta",
-  "pergunta": [
-   "BLACK",
-   "FRIDAY",
-   "LAZER & SPORT"
-  ],
-  "resposta": "-29%",
-  "complemento": "SÓ ATÉ 21/11",
-  "batida": 0.32
+  "tipo": "preco",
+  "arte": "artes/a10.jpg",
+  "titulo": "BLACK FRIDAY",
+  "selo": "-29%",
+  "de": "DE R$ 6.990",
+  "por": "R$ 4.990",
+  "chamada": "8 ofertas · só até 21/11",
+  "duracao": 3.3
  },
  "ofertas": {
-  "duracao": 2.9,
+  "duracao": 2.7,
   "prazo": "ATÉ 21/11",
   "itens": [
    {
@@ -149,21 +148,29 @@
    "trecho": "7_credito",
    "passo": 6,
    "legenda": [
-    "Ou no cartão em até",
+    "No cartão em até",
     "*10x sem juros*"
+   ]
+  },
+  {
+   "trecho": "8_boleto",
+   "passo": 6,
+   "legenda": [
+    "Novo: *boleto* pelo preço do Pix,",
+    "vence em 3 dias"
    ]
   }
  ],
  "final": {
   "arte": "artes/a10.jpg",
-  "duracao": 4.4,
+  "duracao": 4.0,
   "etiqueta": "BLACK FRIDAY · SÓ ATÉ 21/11",
   "titulo": [
    "CADASTRE-SE",
    "EM 1 CLIQUE"
   ],
   "texto": [
-   "Pix ou até 10x sem juros no cartão",
+   "Pix, cartão em 10x sem juros ou boleto",
    "Link na bio"
   ],
   "botao": "WhatsApp (11) 96056-3135"

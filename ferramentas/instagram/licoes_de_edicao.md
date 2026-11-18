@@ -73,3 +73,18 @@ que receber uma correção. Não apague lições; se uma mudar, reescreva a linh
   o passo a passo do cadastro e da compra (`exemplos/black_friday_1min.json`).
 - 2026-11-18 — O cadastro rápido do site é o botão "Continuar com Google";
   mostrar o toque nele, sem clicar de verdade na gravação.
+- 2026-11-18 — Vídeo de oferta tem que ser intuitivo e chamativo: abrir com o
+  preço de/por da melhor oferta, não com texto genérico.
+- 2026-11-18 — O checkout tem três formas de pagar e as três aparecem no vídeo:
+  Pix, cartão em até 10x sem juros e boleto (preço do Pix, vence em 3 dias).
+
+## Área de jogos
+- 2026-11-18 — Mostrar os jogos próprios E os clássicos (o dono informou que
+  tem licença de todos os jogos da biblioteca).
+- 2026-11-18 — Regras a citar: 2 partidas grátis sem cadastro; conta grátis
+  para jogar à vontade; cada recorde entra no ranking; no geral, cada jogo
+  vale até 1.000 pontos.
+- 2026-11-18 — Os jogos só rodam lentos no navegador automático: filmar quadro
+  a quadro com `filmar_jogo.js` (um jogo por vez; em paralelo fica inviável).
+- 2026-11-18 — Os vídeos não têm narração. Voz só com gravação real ou serviço
+  de voz natural contratado pelo dono; nunca voz robotizada.
