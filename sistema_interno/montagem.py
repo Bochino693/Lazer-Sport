@@ -789,6 +789,58 @@ def _depois_de_mudar(producao, *, entraram=(), agora=None):
     for objeto in origens.values():
         if objeto is not None:
             acertar_origem(objeto, agora=agora)
+            sincronizar_tarefas(objeto)
+
+
+def sincronizar_tarefas(producao):
+    """A etapa da vez de cada máquina vira TAREFA no RH (LEIA-ME 113).
+
+    O dono: "associar à produção e tarefas e manter o controle". A próxima
+    etapa de cada unidade em produção vai para quem é do setor e tem a
+    especialidade dela, o menos ocupado antes (`rh.tarefas.sugerir_responsaveis`);
+    a etapa feita conclui a tarefa dela. Cada um vê em "Minhas tarefas".
+    Sem colaborador ativo no RH, nada é criado (sem tarefa órfã); e o RH
+    nunca derruba a produção: qualquer erro aqui só vai para o log.
+    """
+    try:
+        from rh import tarefas as tarefas_do_rh
+        from rh.models import Colaborador as ColaboradorRH, Situacao as SituacaoRH
+    except Exception:  # noqa: BLE001 -- o RH é opcional para a produção
+        return
+    try:
+        if not ColaboradorRH.objects.filter(situacao=SituacaoRH.ATIVO).exists():
+            return
+        from django.urls import reverse
+
+        from .models import UnidadeMontagem
+
+        S = UnidadeMontagem.Situacao
+        try:
+            endereco = reverse("lista_montagem")
+        except Exception:  # noqa: BLE001
+            endereco = ""
+        for unidade in producao.unidades.all():
+            etapas = etapas_da(unidade.trilha)
+            feitas = unidade.etapas_em or {}
+            for chave, rotulo, _icone in etapas:
+                if chave in feitas:
+                    tarefas_do_rh.concluir(unidade, etapa=rotulo)
+            if unidade.situacao != S.PRODUCAO:
+                continue
+            proxima = next(((chave, rotulo) for chave, rotulo, _ in etapas if chave not in feitas), None)
+            if proxima is None:
+                continue
+            chave, rotulo = proxima
+            if tarefas_do_rh.tarefas_do_objeto(unidade).filter(etapa=rotulo).exists():
+                continue
+            nome = unidade.nome + (f" ({unidade.variante})" if unidade.variante else "")
+            tarefas_do_rh.atribuir(
+                None, unidade, etapa=rotulo, prazo=_data((unidade.previstas or {}).get(chave)),
+                titulo=f"{rotulo} · {nome} · unidade {unidade.numero} de {unidade.de}"[:160],
+                url=endereco,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Tarefas do RH da produção %s", getattr(producao, "pk", None))
 
 
 def acertar_origem(producao, agora=None):

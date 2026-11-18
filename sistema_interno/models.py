@@ -4769,7 +4769,7 @@ class Transportadora(Prime):
 
 PALAVRAS_DE_PROJETO_PADRAO = (
     "brinquedão, brinquedões, trampolim, trampolins, cama elástica, escalada, "
-    "ninja, espaço esportivo, quadra, playground, parque, casinha, cenográfica"
+    "ninja, espaço esportivo, quadra, playground, casinha, cenográfica"
 )
 
 

@@ -7128,9 +7128,13 @@ Dependência nova: rjsmin (requirements.txt).
        etapas -- Fabricação, Finalização, Teste de qualidade --, 30 dias
        úteis cada (ou o prazo que a EQUIPE digitou no orçamento), UM POR VEZ;
        é brinquedão a categoria marcada nas regras OU uma das palavras no
-       nome do brinquedo ou da categoria;
+       nome do brinquedo ou da categoria. "Parque" NÃO é palavra de
+       brinquedão: pegava a categoria "Para Parques" (um público) e o
+       Simulador Top Racer saía com 30 dias (0074/0075 tiram a palavra, a
+       categoria marcada só por ela e devolvem à fila das máquinas quem
+       esperava como brinquedão);
      * PEÇA DE REPOSIÇÃO: 3 dias úteis, Separação e Embalagem, sem fila;
-     * KIT ELETRÔNICO (PecasReposicao.eh_kit): é peça (3 dias, sem fila,
+     * KIT ELETRÔNICO (Brinquedos.eh_kit, seção 107): é peça (3 dias, sem fila,
        não disputa a vaga das máquinas), mas sai com Separação, Eletrônica,
        Teste de qualidade e Embalagem -- é a parte elétrica da máquina, e
        vai testada. (O cadastro do kit é de outra frente; a lista só lê.)
@@ -7256,9 +7260,9 @@ Dependência nova: rjsmin (requirements.txt).
                             máquinas dos orçamentos de que são responsáveis
                             (o andamento e a previsão do que venderam).
      Criação e site não entra (volta para a tela dela).
-   Banco: sistema_interno/0068_lista_de_montagem (só esquema:
+   Banco: sistema_interno/0072_lista_de_montagem (só esquema:
    ConfiguracaoProducao, ProducaoOrigem, UnidadeMontagem; depende só da
-   core 0111 -- nenhuma migração nova no core) e 0069_regras_da_producao
+   core 0111 -- nenhuma migração nova no core) e 0073_regras_da_producao
    (só dados: a linha das regras com os padrões e as categorias de
    brinquedão marcadas pelas palavras; rodar de novo não muda nada). Os
    pedidos pagos e orçamentos aprovados de antes entram ao abrir a lista
@@ -7425,6 +7429,12 @@ Dependência nova: rjsmin (requirements.txt).
       novo troca o responsável). Sinais rh.tarefas.tarefa_atribuida e
       tarefa_mudou (para a produção marcar a etapa quando a pessoa conclui
       pelo celular). Na tela, "Sugerir pela etapa" marca os sugeridos.
+      A LISTA DE MONTAGEM JÁ USA ISSO (seção 112): cada máquina em produção
+      tem a etapa da vez como tarefa de quem é do setor e da especialidade
+      (montagem.sincronizar_tarefas, a cada mudança da lista); a etapa
+      feita no painel conclui a tarefa; e a tarefa concluída no RH (pelo
+      celular) anda a máquina -- só para a frente (signals_montagem.
+      tarefa_do_rh_mudou). Sem colaborador ativo no RH, nada é criado.
    5. TERMO DE EXCLUSIVIDADE E CONFIDENCIALIDADE (rh/termo.py). O TEXTO É UM
       MODELO PARA REVISÃO DO ADVOGADO DA EMPRESA (a tela também diz). Os
       dados vêm da ficha (nome, CPF, cargo, admissão, vínculo) e da empresa

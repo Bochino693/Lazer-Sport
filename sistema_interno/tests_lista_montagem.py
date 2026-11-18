@@ -652,3 +652,102 @@ class MigracaoTests(TestCase):
         config = ConfiguracaoProducao.objects.get()
         self.assertEqual(set(config.categorias_projeto.values_list("pk", flat=True)), {brinquedoes.pk, ninja.pk})
         self.assertEqual((config.capacidade_maquinas, config.fila_min_dias, config.fila_max_dias), (3, 15, 30))
+
+
+class TarefasDoRHTests(Base):
+    """A etapa da vez vira tarefa no RH para quem é do setor (LEIA-ME 113)."""
+
+    def test_sem_colaborador_no_rh_nenhuma_tarefa(self):
+        from rh.models import Tarefa
+
+        self.pedido([(self.agk, 1, None)])
+        self.assertFalse(Tarefa.objects.exists())
+
+    def test_a_etapa_da_vez_vira_tarefa_e_a_feita_conclui(self):
+        from rh.apoio_testes import criar_colaborador
+        from rh.models import Tarefa
+
+        pessoa = criar_colaborador(1)
+        pedido = self.pedido([(self.agk, 1, None)])
+        unidade = self.unidades(pedido)[0]
+        corte = Tarefa.objects.get(etapa="Corte de MDF")
+        self.assertEqual(corte.colaborador, pessoa)
+        self.assertIn("Air Game Kids", corte.titulo)
+        self.assertIsNotNone(corte.prazo)
+
+        montagem.concluir_ate(unidade, "corte")
+        corte.refresh_from_db()
+        self.assertEqual(corte.situacao, Tarefa.Estado.FEITA)
+        self.assertTrue(Tarefa.objects.filter(etapa="Montagem", colaborador=pessoa).exists())
+        # uma tarefa por etapa: refazer a conta não duplica
+        montagem.sincronizar_tarefas(unidade.producao)
+        self.assertEqual(Tarefa.objects.filter(etapa="Montagem").count(), 1)
+
+    def test_concluir_pelo_rh_anda_a_maquina_so_para_a_frente(self):
+        from rh import tarefas
+        from rh.apoio_testes import criar_colaborador
+        from rh.models import Tarefa
+
+        criar_colaborador(1)
+        pedido = self.pedido([(self.agk, 1, None)])
+        unidade = self.unidades(pedido)[0]
+        corte = Tarefa.objects.get(etapa="Corte de MDF")
+        tarefas.mudar_situacao(corte, Tarefa.Estado.FEITA)
+        unidade.refresh_from_db()
+        self.assertEqual((unidade.etapa, set(unidade.etapas_em)), ("corte", {"corte"}))
+        montagem_ = Tarefa.objects.get(etapa="Montagem")
+        self.assertEqual(montagem_.situacao, Tarefa.Estado.A_FAZER)
+
+        # a fábrica foi adiante pelo painel; concluir a tarefa velha não volta nada
+        montagem.concluir_ate(unidade, "adesivo")
+        montagem_.refresh_from_db()
+        self.assertEqual(montagem_.situacao, Tarefa.Estado.FEITA)
+        tarefas.mudar_situacao(montagem_, Tarefa.Estado.A_FAZER)
+        tarefas.mudar_situacao(montagem_, Tarefa.Estado.FEITA)
+        unidade.refresh_from_db()
+        self.assertEqual(unidade.etapa, "adesivo")
+        self.assertEqual(Tarefa.objects.get(etapa="Eletrônica").situacao, Tarefa.Estado.A_FAZER)
+
+
+class ParqueNaoEBrinquedaoTests(Base):
+    """"Para Parques" é público, não tipo: o simulador é máquina (0075)."""
+
+    def _categoria(self, nome):
+        return CategoriasBrinquedos.objects.create(nome_categoria=nome, imagem_categoria=f"c/{nome}.png")
+
+    def test_o_padrao_nao_tem_mais_parque(self):
+        regras = montagem.Regras.agora()
+        self.assertNotIn("parque", regras.palavras_projeto)
+        simulador = brinquedo("Simulador de Corrida Top Racer", (1.6, 1.0, 2.0), self._categoria("Para Parques"))
+        self.assertFalse(regras.e_projeto(simulador))
+        self.assertEqual(montagem.prazo_do_produto(simulador).dias_max, 5)  # 3,2 m³
+
+    def test_a_migracao_limpa_a_regra_a_categoria_e_a_fila(self):
+        import importlib
+
+        from django.apps import apps
+
+        from sistema_interno.models import UnidadeMontagem
+
+        migracao = importlib.import_module("sistema_interno.migrations.0075_parque_nao_e_brinquedao")
+        para_parques = self._categoria("Para Parques")
+        trampolim_park = self._categoria("Trampolim Park")
+        self.config.palavras_projeto = "brinquedão, trampolim, parque, casinha"
+        self.config.save()
+        self.config.categorias_projeto.set([para_parques, trampolim_park])
+        simulador = brinquedo("Simulador de Corrida Top Racer", (1.0, 1.0, 1.0), para_parques)
+        selva = brinquedo("Brinquedão Selva", (3.0, 4.0, 5.0), para_parques)
+        origem = self.pedido([(simulador, 1, None), (selva, 1, None)])
+        unidades = {u.brinquedo_id: u for u in self.unidades(origem)}
+        UnidadeMontagem.objects.filter(pk=unidades[simulador.pk].pk).update(
+            trilha="projeto", situacao="fila", dias=30)
+
+        migracao.acertar(apps, None)
+        migracao.acertar(apps, None)  # de novo: nada muda
+
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.palavras_projeto, "brinquedão, trampolim, casinha")
+        self.assertEqual(set(self.config.categorias_projeto.all()), {trampolim_park})
+        corrigida = UnidadeMontagem.objects.get(pk=unidades[simulador.pk].pk)
+        self.assertEqual((corrigida.trilha, corrigida.dias), ("maquina", self.config.dias_ate_limite))
+        self.assertEqual(UnidadeMontagem.objects.get(pk=unidades[selva.pk].pk).trilha, "projeto")
