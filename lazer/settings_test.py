@@ -93,3 +93,7 @@ PRESENCA_DE_USUARIOS = os.getenv("PRESENCA_DE_USUARIOS", "0").strip().lower() in
 RENOVAR_EM_SEGUNDO_PLANO = False
 FILA_DE_EMAILS_NO_SITE = False  # nos testes, a fila anda só quando o teste chama (sistema_interno/fila_de_emails.py)
 RECORTE_PECAS_AUTOMATICO = False  # nos testes, o recorte só roda quando o teste chama (core/recorte_peca.py)
+# o freio de senhas erradas (contas/freio.py) conta no cache, que é um só para a
+# suíte inteira: desligado, um teste não tranca o login do seguinte. Os testes
+# dele (contas/tests_freio.py) o ligam.
+LOGIN_FREIO_ATIVO = False

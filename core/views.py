@@ -1080,8 +1080,19 @@ class ClientePerfilView(LoginRequiredMixin, View):
         perfil_form = PerfilForm(request.POST, instance=perfil)
 
         if user_form.is_valid() and perfil_form.is_valid():
-            user_form.save()
-            perfil_form.save()
+            from contas.emails import sincronizar_enderecos
+
+            with transaction.atomic():
+                user_form.save()
+                perfil_form.save()
+                if "email" in user_form.changed_data:
+                    # O endereço novo vira o principal do allauth (não
+                    # confirmado); os não confirmados do e-mail antigo saem.
+                    sincronizar_enderecos(request.user)
+            if "email" in user_form.changed_data and request.user.email:
+                from .views_conta import enviar_confirmacao_de_email
+
+                enviar_confirmacao_de_email(request, request.user)
             messages.success(request, "Perfil atualizado com sucesso!")
             return redirect('perfil')
 
@@ -5621,7 +5632,6 @@ class UserAdminView(AdminOnlyMixin, View):
             return redirect("clients")
 
         username = request.POST.get("username", "").strip()
-        email = request.POST.get("email", "").strip().lower()
         nome = request.POST.get("nome_completo", "").strip()
         telefone = request.POST.get("telefone", "").strip()
         senha = request.POST.get("password", "")
@@ -5633,18 +5643,31 @@ class UserAdminView(AdminOnlyMixin, View):
         if User.objects.filter(username__iexact=username).exclude(pk=getattr(usuario, "pk", None)).exists():
             messages.error(request, "Esse nome de usuário já está em uso.")
             return redirect("clients")
-        if email and User.objects.filter(email__iexact=email).exclude(pk=getattr(usuario, "pk", None)).exists():
-            messages.error(request, "Esse e-mail já está em uso.")
-            return redirect("clients")
-        from core.identidade_email import validar_email_de_usuario
+        # O e-mail pela regra das contas (contas/emails.py): normalizado e
+        # livre em TODAS as contas -- principal e endereços do allauth, sem
+        # diferença de maiúsculas ou variante. Quem grava é a equipe.
+        from contas.emails import EmailIndisponivel, mensagem_de, validar_email_de_conta
         try:
-            validar_email_de_usuario(email, usuario_id=getattr(usuario, "pk", None))
-        except ErroDeCadastroCliente as exc:
-            messages.error(request, str(exc))
+            email = validar_email_de_conta(
+                request.POST.get("email", ""), usuario=usuario, pela_equipe=True,
+            )
+        except EmailIndisponivel as exc:
+            messages.error(
+                request,
+                "Esse e-mail já está em uso em outra conta." if exc.code == "em_uso" else mensagem_de(exc),
+            )
             return redirect("clients")
         if not usuario and not senha:
             messages.error(request, "Informe uma senha para o novo usuário.")
             return redirect("clients")
+        if senha:
+            from contas.senhas import validar_senha
+
+            futura = usuario or User(username=username, email=email)
+            erros_senha = validar_senha(senha, futura)
+            if erros_senha:
+                messages.error(request, "Senha fraca: " + " ".join(erros_senha))
+                return redirect("clients")
         if usuario and usuario.is_superuser and not is_staff:
             messages.error(request, "Não é possível remover a permissão do superusuário.")
             return redirect("clients")
@@ -5658,6 +5681,9 @@ class UserAdminView(AdminOnlyMixin, View):
         if senha:
             usuario.set_password(senha)
         usuario.save()
+        from contas.emails import sincronizar_enderecos
+
+        sincronizar_enderecos(usuario)
         perfil, _ = ClientePerfil.objects.get_or_create(user=usuario)
         perfil.nome_completo = nome or None
         perfil.telefone = telefone or None

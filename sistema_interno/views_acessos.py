@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import date
 
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -100,7 +98,6 @@ class UsuariosEquipeInnerView(
             request, "username", obrigatorio=True,
             rotulo="o usuário", limite=150,
         )
-        email = texto(request, "email", limite=254).lower()
         senha = request.POST.get("password") or ""
         codigos = request.POST.getlist("funcoes")
 
@@ -108,27 +105,38 @@ class UsuariosEquipeInnerView(
             raise ErroDeFormulario(
                 "Escolha ao menos uma função. É ela que define o que a pessoa pode ver."
             )
-        if email:
-            try:
-                validate_email(email)
-            except ValidationError as exc:
-                raise ErroDeFormulario("Informe um e-mail válido.") from exc
+        # O e-mail pela regra das contas (contas/emails.py): normalizado e
+        # livre em TODAS as contas -- inclusive nos endereços do allauth, que
+        # esta tela não olhava. Quem grava é a equipe: os endereços da
+        # empresa valem aqui.
+        from contas.emails import (
+            EmailIndisponivel,
+            mensagem_de,
+            sincronizar_enderecos,
+            validar_email_de_conta,
+        )
+        try:
+            email = validar_email_de_conta(
+                texto(request, "email", limite=254), usuario=usuario, pela_equipe=True,
+            )
+        except EmailIndisponivel as exc:
+            raise ErroDeFormulario(
+                "Esse e-mail já está em uso." if exc.code == "em_uso" else mensagem_de(exc)
+            ) from exc
 
         repetido = User.objects.filter(username__iexact=username)
-        email_repetido = User.objects.none()
-        if email:
-            email_repetido = User.objects.filter(email__iexact=email)
         if usuario:
             repetido = repetido.exclude(pk=usuario.pk)
-            email_repetido = email_repetido.exclude(pk=usuario.pk)
         if repetido.exists():
             raise ErroDeFormulario("Esse nome de usuário já está em uso.")
-        if email_repetido.exists():
-            raise ErroDeFormulario("Esse e-mail já está em uso.")
-        if usuario is None and len(senha) < 8:
-            raise ErroDeFormulario("A senha inicial precisa ter pelo menos 8 caracteres.")
-        if senha and len(senha) < 8:
-            raise ErroDeFormulario("A nova senha precisa ter pelo menos 8 caracteres.")
+        if usuario is None and not senha:
+            raise ErroDeFormulario("Informe a senha inicial.")
+        if senha:
+            from contas.senhas import validar_senha
+
+            erros = validar_senha(senha, usuario or User(username=username, email=email))
+            if erros:
+                raise ErroDeFormulario("Senha fraca: " + " ".join(erros))
 
         usuario = usuario or User()
         usuario.username = username
@@ -139,6 +147,7 @@ class UsuariosEquipeInnerView(
         if senha:
             usuario.set_password(senha)
         usuario.save()
+        sincronizar_enderecos(usuario)
         escolhidas = atribuir_funcoes(usuario, codigos)
 
         return self.sucesso(

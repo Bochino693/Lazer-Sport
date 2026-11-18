@@ -66,7 +66,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 class MigracoesTests(SimpleTestCase):
 
     def _migracoes(self):
-        for app in ("core", "sistema_interno"):
+        for app in ("core", "sistema_interno", "contas"):
             pasta = RAIZ / app / "migrations"
             for arquivo in sorted(pasta.glob("0*.py")):
                 yield app, arquivo

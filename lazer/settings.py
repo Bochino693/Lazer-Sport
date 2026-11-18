@@ -71,10 +71,18 @@ CSRF_TRUSTED_ORIGINS = [
     "https://lazersport.com",
     "https://www.lazersport.com",
     "https://interno.lazersport.com",
-    "https://*.vercel.app",
-    "https://*.onrender.com",
     "http://interno.localhost:8000",
 ]
+# Sem "https://*.vercel.app" nem "https://*.onrender.com": o curinga confiava
+# em QUALQUER site hospedado lá. Entra só o endereço deste serviço, que a
+# própria hospedagem informa (Render: RENDER_EXTERNAL_HOSTNAME; Vercel:
+# VERCEL_URL e afins, logo abaixo). Outro endereço: DJANGO_CSRF_TRUSTED_ORIGINS.
+for _nome_host in ("RENDER_EXTERNAL_HOSTNAME", "VERCEL_BRANCH_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
+    _host_da_hospedagem = os.getenv(_nome_host, "").strip().rstrip("/")
+    if _host_da_hospedagem:
+        _origem_da_hospedagem = f"https://{_host_da_hospedagem.split('://')[-1]}"
+        if _origem_da_hospedagem not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origem_da_hospedagem)
 
 VERCEL_URL = os.getenv("VERCEL_URL", "").strip()
 if VERCEL_URL:
@@ -143,6 +151,9 @@ INSTALLED_APPS = [
     "core",
     "sistema_interno",
     "cloud_jogos",
+    # As regras de conta (e-mail único, freio do login, senha forte, o
+    # registro de segurança): contas/__init__.py.
+    "contas",
 
     # Terceiros
     "rest_framework",
@@ -307,12 +318,19 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
 # AUTENTICAÇÃO
 # ============================================================
 AUTHENTICATION_BACKENDS = [
+    # O PRIMEIRO, de propósito: ele não autentica ninguém, só barra a conta
+    # (ou o IP) pausada pelo freio de senhas erradas -- em qualquer porta
+    # que chame authenticate(). Ver contas/freio.py.
+    "contas.backends.FreioDeLoginBackend",
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-ACCOUNT_ADAPTER = "core.adapters.AccountAdapter"
-SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
+# As regras de e-mail do allauth (cadastro, Google, Apple, "Meus e-mails")
+# moram no app `contas`: contas/adapters.py e contas/forms.py.
+ACCOUNT_ADAPTER = "contas.adapters.AccountAdapter"
+SOCIALACCOUNT_ADAPTER = "contas.adapters.SocialAccountAdapter"
+ACCOUNT_FORMS = {"add_email": "contas.forms.AdicionarEmailForm"}
 
 # Sintaxe do allauth 65 (substitui ACCOUNT_EMAIL_REQUIRED,
 # ACCOUNT_USERNAME_REQUIRED e ACCOUNT_AUTHENTICATION_METHOD).
@@ -385,12 +403,30 @@ if _APPLE_CLIENT_ID and _APPLE_KEY_ID and _APPLE_TEAM_ID and _APPLE_PRIVATE_KEY:
         "EMAIL_AUTHENTICATION": True,
     }
 
+# Valem para conta nova e para TROCA de senha (cadastro do site e do app,
+# painel, /system/, allauth). Quem já tem conta continua entrando com a
+# senha de hoje. Ver contas/senhas.py.
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "contas.senhas.SenhaPrevisivelValidator"},
+    {"NAME": "contas.senhas.VariedadeValidator"},
 ]
+
+# O FREIO DO LOGIN (contas/freio.py): senhas erradas demais numa conta, ou
+# num IP, pausam o acesso por um tempo -- no site, no painel, no /system/,
+# no aplicativo e no /accounts/ do allauth. Cada pausa vira uma ocorrência
+# na tela "Segurança das contas" do painel.
+LOGIN_FREIO_ATIVO = os.getenv("LOGIN_FREIO_ATIVO", "1").strip().lower() in ("1", "true", "yes", "on", "sim")
+LOGIN_FREIO_POR_CONTA = int(os.getenv("LOGIN_FREIO_POR_CONTA", "5") or 5)
+LOGIN_FREIO_POR_IP = int(os.getenv("LOGIN_FREIO_POR_IP", "20") or 20)
+LOGIN_FREIO_JANELA_MIN = int(os.getenv("LOGIN_FREIO_JANELA_MIN", "15") or 15)
+LOGIN_FREIO_BLOQUEIO_MIN = int(os.getenv("LOGIN_FREIO_BLOQUEIO_MIN", "15") or 15)
 
 
 # ============================================================
@@ -711,6 +747,36 @@ APP_DEEP_LINK = os.getenv("APP_DEEP_LINK", "lazersport://auth").strip()
 SESSION_COOKIE_SECURE = ENVIRONMENT == "production"
 CSRF_COOKIE_SECURE = ENVIRONMENT == "production"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Os cabeçalhos de segurança, escritos por extenso (LEIA-ME-V10, "Contas e
+# segurança"). A maioria já era o padrão do Django; aqui ficam à vista, para
+# ninguém desligar sem perceber.
+#
+# * O cookie da sessão não é lido por JavaScript (o do CSRF continua
+#   legível: o fetch do painel e do carrinho o manda no cabeçalho).
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+# * O navegador não "adivinha" o tipo de um arquivo (um upload com cara de
+#   HTML não vira página), e o endereço completo não vaza para outro site.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+# * Ninguém põe o site num quadro (clickjacking). As páginas dos jogos, que
+#   o próprio site abre em quadro, liberam só a mesma origem
+#   (`xframe_options_sameorigin` em core/views_jogos.py); os arquivos dos
+#   jogos vêm pelo WhiteNoise, antes deste cabeçalho.
+X_FRAME_OPTIONS = "DENY"
+# * HSTS moderado: 30 dias, só no ar, SEM subdomínios e SEM preload -- o
+#   navegador passa a ir direto ao https, e um engano de certificado ainda
+#   tem volta em um mês. Subir o prazo (ou ligar subdomínios) é decisão
+#   de quem garante o https de todos os subdomínios: SECURE_HSTS_SECONDS e
+#   SECURE_HSTS_INCLUDE_SUBDOMAINS no ambiente.
+SECURE_HSTS_SECONDS = (
+    int(os.getenv("SECURE_HSTS_SECONDS", "2592000") or 0)
+    if ENVIRONMENT == "production" else 0
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "").strip().lower() in ("1", "true", "yes", "on")
+SECURE_HSTS_PRELOAD = False
 # Recusa de CSRF em JSON para o fetch (core/views_seguranca.py).
 CSRF_FAILURE_VIEW = "core.views_seguranca.falha_csrf"
 

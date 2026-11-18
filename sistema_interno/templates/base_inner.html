@@ -308,6 +308,10 @@
           <span class="ls-nav-icon"><i class="bi bi-activity"></i></span>
           <span>Indicadores</span>
         </a>
+        <a data-titulo="Segurança das contas" aria-label="Segurança das contas" class="ls-nav-item {% if request.resolver_match.url_name == 'seguranca_contas' %}active{% endif %}" href="{% url 'seguranca_contas' %}">
+          <span class="ls-nav-icon"><i class="bi bi-shield-check"></i></span>
+          <span>Segurança das contas</span>
+        </a>
       </div>
       {% endif %}
 

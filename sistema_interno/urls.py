@@ -18,6 +18,7 @@ from core.views import (
 )
 from core.views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from core.views_analises import AnalisesView, AtividadeView, DetalheView, PresencaAgoraView
+from contas.views import SegurancaContasView
 
 from .permissoes import CRIACAO, GESTAO, VENDAS
 
@@ -388,6 +389,9 @@ urlpatterns = [
     path('logout/inner/', LogoutInnerView.as_view(), name='logout_inner'),
     path('minha-conta/', MinhaContaView.as_view(), name='minha_conta_inner'),
     path('equipe/', UsuariosEquipeInnerView.as_view(), name='usuarios_equipe'),
+    # O que as regras de conta barraram (e-mail repetido, login pausado,
+    # login social recusado), para a Gestão revisar. Ver contas/views.py.
+    path('seguranca/contas/', SegurancaContasView.as_view(), name='seguranca_contas'),
     path(
         'equipe/avaliacoes/',
         AvaliacaoSetoresInnerView.as_view(),

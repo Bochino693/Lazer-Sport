@@ -136,6 +136,10 @@ class RequestTimingMiddleware:
         # e-mail entre si -- o que a mensagem precisa explicar é a
         # duplicidade dentro do mesmo cadastro, que é o que foi barrado.
         falha = str(exception) if isinstance(exception, IntegrityError) else ""
+        # Os índices únicos de e-mail das contas (contas/0003) e a guarda do
+        # pre_save (contas/guarda.py) dizem o mesmo que o gatilho de conta.
+        if "contas_auth_user_email_unico" in falha or "contas_emailaddress_email_unico" in falha:
+            falha = "ls_email_duplicado_usuario"
         if "ls_email_duplicado" in falha:
             if "ls_email_duplicado_cliente" in falha:
                 mensagem = (
