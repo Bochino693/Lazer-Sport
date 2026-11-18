@@ -27,6 +27,16 @@
     <span class="ls-page-kicker">Orçamento #{{ orcamento.pk }}{% if orcamento.versao > 1 %} · v{{ orcamento.versao }}{% endif %} · {{ orcamento.get_status_display|lower }} · {% if orcamento.quitado %}pago{% else %}{{ orcamento.get_status_pagamento_display|lower }}{% endif %}</span>
     <h1>Documento para assinatura</h1>
     <p>{{ orcamento.destinatario }} · termo de compra do orçamento aprovado, assinado no telefone do cliente. O pagamento vem depois.</p>
+    {# O código e a conta do site (LEIA-ME-V10, seção 104): vinculado, o cliente também pede o link da assinatura em Meus pedidos. #}
+    <p class="ls-doc-codigo">
+      <i class="bi bi-ticket-perforated me-1" aria-hidden="true"></i>
+      Código <strong>{{ orcamento.codigo }}</strong>
+      {% if orcamento.conta_id %}
+        · vinculado à conta <strong>@{{ orcamento.conta.get_username }}</strong>: o cliente também assina por Meus pedidos, no site.
+      {% else %}
+        · ainda sem conta do site vinculada.
+      {% endif %}
+    </p>
   </div>
   <div class="ls-page-hero-actions">
     {# De volta à janela do orçamento, onde a régua mostra o passo seguinte (o pagamento). #}

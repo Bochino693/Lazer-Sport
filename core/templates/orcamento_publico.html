@@ -57,6 +57,19 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
         </a>
       {% endif %}
       <span>Prévia interna · nenhum cliente pode responder por esta tela</span>
+      {% comment %}
+        A CONTA DO SITE (LEIA-ME-V10, seção 104): de quem acompanha esta
+        proposta em Meus pedidos. Só aqui, na barra da prévia -- ela não
+        sai na impressão e não existe na página do cliente.
+      {% endcomment %}
+      <span class="previa-conta">
+        <i class="bi bi-person-check" aria-hidden="true"></i>
+        {% if orcamento.conta_id %}
+          Código {{ orcamento.codigo }} · vinculado à conta @{{ orcamento.conta.get_username }}{% if orcamento.vinculado_em %} em {{ orcamento.vinculado_em|date:"d/m/Y \à\s H:i" }}{% endif %}
+        {% else %}
+          Código {{ orcamento.codigo }} · ainda sem conta do site vinculada
+        {% endif %}
+      </span>
     </div>
   {% endif %}
 
@@ -81,6 +94,7 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
         <div class="meta-linha"><dt><i class="bi bi-clock-history"></i>Atualização</dt><dd>{{ orcamento.atualizado|date:"d/m/Y \à\s H:i" }}</dd></div>
         <div class="meta-linha"><dt><i class="bi bi-file-earmark-text"></i>Nº do orçamento</dt><dd>{{ orcamento.numero_documento }}</dd></div>
         <div class="meta-linha"><dt><i class="bi bi-layers"></i>Versão</dt><dd>{{ orcamento.versao }}</dd></div>
+        <div class="meta-linha meta-codigo"><dt><i class="bi bi-ticket-perforated"></i>Código</dt><dd>{{ orcamento.codigo }}</dd></div>
         <div class="meta-linha"><dt><i class="bi bi-person-badge"></i>Responsável</dt><dd>{{ responsavel_nome }}</dd></div>
         {% if telefone_empresa %}
           {% comment %}
@@ -195,6 +209,30 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
         <strong>A validade desta proposta terminou em {{ orcamento.validade|date:"d/m/Y" }}.</strong>
         Os valores abaixo estão aqui para consulta. Fale com a gente e enviamos uma
         proposta atualizada — normalmente no mesmo dia.
+      </span>
+    </div>
+  {% endif %}
+
+  {% comment %}
+    O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104). O dono: "o cliente fez
+    o orçamento conosco pelo telefone, aí faz o cadastro, mas como saber
+    que aquele orçamento vai virar um pedido do site? através do código".
+    Sai na tela e no PDF: com ele, o cliente acompanha as fases em Meus
+    pedidos sem precisar ligar. Proposta já vinculada não diz a qual conta
+    (esta página abre para quem tem o link).
+  {% endcomment %}
+  {% if orcamento.codigo %}
+    <div class="faixa codigo entra" style="--i:1">
+      <span class="faixa-icone"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+      <span>
+        <strong>Código do orçamento: <span class="codigo-valor">{{ orcamento.codigo }}</span></strong>
+        {% if orcamento.conta_id and not previsualizacao %}
+          Este orçamento já está ligado a uma conta do site: acompanhe tudo em
+          <a href="https://www.lazersport.com.br/meus-pedidos/">Meus pedidos</a>, em lazersport.com.br.
+        {% else %}
+          Crie sua conta em <a href="https://www.lazersport.com.br/registrar/">lazersport.com.br</a> e informe este código em
+          <strong class="codigo-onde">Meus pedidos</strong> para acompanhar tudo pela internet.
+        {% endif %}
       </span>
     </div>
   {% endif %}

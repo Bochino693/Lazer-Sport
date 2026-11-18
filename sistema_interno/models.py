@@ -1635,6 +1635,38 @@ def gerar_token_orcamento():
     )
 
 
+# O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104).
+#
+# O pedido do dono: "quando tiver em meus pedidos, vai ter código do
+# pedido, para o caso do seguinte: o cliente fez o orçamento conosco pelo
+# telefone, aí faz o cadastro, mas como saber que aquele orçamento vai
+# virar um pedido do site? através do código, fazendo assim o
+# acompanhamento e mudança de fases pela internet sem necessidade de
+# contato."
+#
+# O token acima é a chave do LINK (ninguém digita 32 letras). O código é a
+# chave que se DITA: pelo telefone, num papel, numa mensagem. Por isso o
+# alfabeto tira o que se confunde lendo ou falando -- o 0 e o O, o 1, o I
+# e o L --, e por isso ele é curto: "LS-" e seis sinais.
+ALFABETO_DO_CODIGO = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+TAMANHO_DO_CODIGO = 6
+PREFIXO_DO_CODIGO = "LS-"
+
+
+def gerar_codigo_orcamento():
+    """"LS-7K3QX9": 31 sinais em 6 casas, ~887 milhões de combinações.
+
+    Não é segredo do tamanho do token, e não precisa ser: quem digita um
+    código em Meus pedidos está logado e passa por um freio de tentativas
+    (`sistema_interno.codigo_orcamento`). Chutar 8 vezes por hora numa
+    caixa de 887 milhões, com alguns milhares de orçamentos dentro, é
+    loteria -- e a equipe é avisada de cada vínculo.
+    """
+    return PREFIXO_DO_CODIGO + "".join(
+        secrets.choice(ALFABETO_DO_CODIGO) for _ in range(TAMANHO_DO_CODIGO)
+    )
+
+
 class MudancaDaVenda(NamedTuple):
     """O que um pagamento fez com a venda do orçamento.
 
@@ -1888,6 +1920,69 @@ class Orcamento(Prime):
         blank=True,
         help_text="O que o cliente escreveu ao recusar, quando escreveu.",
     )
+
+    # ---------------- o código e a conta do site ----------------
+    # "como saber que aquele orçamento vai virar um pedido do site? através
+    # do código" (LEIA-ME-V10, seção 104). O código sai na proposta, no
+    # e-mail e no WhatsApp; o cliente cria a conta, digita o código em Meus
+    # pedidos e a proposta passa a ser acompanhada por ele, ali, fase por
+    # fase. Cada versão tem o seu código; a versão nova herda a CONTA da
+    # anterior (ver `save`), e o código de uma versão antiga leva à mais
+    # nova (ver `codigo_orcamento.versao_mais_nova`).
+    codigo = models.CharField(
+        "Código do orçamento",
+        max_length=12,
+        unique=True,
+        default=gerar_codigo_orcamento,
+        editable=False,
+        help_text="O que o cliente digita em Meus pedidos, no site.",
+    )
+    conta = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="orcamentos_da_conta",
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="A conta do site que acompanha este orçamento em Meus pedidos.",
+    )
+    vinculado_em = models.DateTimeField(
+        "Vinculado à conta em",
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
+    def save(self, *args, **kwargs):
+        """Na criação: o código livre e a conta que vem da versão anterior.
+
+        O CÓDIGO REPETIDO. O sorteio quase nunca repete (um em centenas
+        de milhões por orçamento), mas a coluna é única e um erro de
+        integridade no meio de "Salvar" seria pior do que uma consulta a
+        mais: na criação, se o sorteado já existe, sorteia de novo.
+
+        A CONTA ATRAVESSA AS VERSÕES. O cliente que já acompanha a
+        proposta em Meus pedidos não pode perdê-la porque a equipe fez a
+        versão 2 (refazer, negociação): a nova nasce na mesma conta, com a
+        mesma data de vínculo -- por qualquer caminho que a crie.
+        """
+        if self._state.adding:
+            tentativas = 0
+            while (
+                not self.codigo
+                or type(self).objects.filter(codigo=self.codigo).exists()
+            ) and tentativas < 20:
+                self.codigo = gerar_codigo_orcamento()
+                tentativas += 1
+            if self.orcamento_anterior_id and self.conta_id is None:
+                anterior = (
+                    type(self).objects.filter(pk=self.orcamento_anterior_id)
+                    .values("conta_id", "vinculado_em").first()
+                )
+                if anterior and anterior["conta_id"]:
+                    self.conta_id = anterior["conta_id"]
+                    self.vinculado_em = anterior["vinculado_em"]
+        super().save(*args, **kwargs)
 
     @property
     def destinatario(self):
@@ -2795,6 +2890,9 @@ class AtividadeOrcamento(Prime):
         # gerado pela equipe e assinado pelo cliente, no telefone dele.
         DOCUMENTO = "documento", "gerou o documento para assinatura de"
         ASSINATURA = "assinatura", "assinou o documento de"
+        # O cliente digitou o código em Meus pedidos (LEIA-ME-V10, seção
+        # 104): dali em diante ele acompanha as fases pelo site.
+        VINCULADO = "vinculado", "vinculou à conta do site"
 
     orcamento = models.ForeignKey(
         Orcamento,

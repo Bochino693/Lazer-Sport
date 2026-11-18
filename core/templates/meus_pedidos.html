@@ -29,7 +29,11 @@
                 {% endif %}
             </h1>
             <p class="ck-sub">
-                {% if pedidos %}
+                {% if pedidos and orcamentos %}
+                    Acompanhe cada orçamento e cada compra: resposta, assinatura, pagamento e entrega.
+                {% elif orcamentos %}
+                    Acompanhe cada fase dos seus orçamentos, sem precisar ligar.
+                {% elif pedidos %}
                     Acompanhe o pagamento, a preparação e a entrega de cada compra.
                 {% else %}
                     As compras que você fizer na loja aparecem aqui, com o andamento de cada uma.
@@ -57,9 +61,31 @@
         </ol>
     </div>
 
-{% if pedidos %}
+{% if pedidos or orcamentos %}
     <div class="pd-pagina">
     <div class="pd-lista">
+
+    {# O CÓDIGO DO ORÇAMENTO DO TELEFONE (LEIA-ME-V10, seção 104) #}
+    {% include "partials/orcamento_vincular.html" %}
+
+    {% if orcamentos %}
+    <h2 class="pd-secao" id="orcamentos">
+        <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+        Seus orçamentos
+        <span class="ck-contador">{{ orcamentos|length }}</span>
+    </h2>
+    {% for cartao in orcamentos %}
+        {% include "partials/orcamento_cartao.html" %}
+    {% endfor %}
+    {% endif %}
+
+    {% if pedidos and orcamentos %}
+    <h2 class="pd-secao">
+        <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+        Compras na loja
+        <span class="ck-contador">{{ pedidos|length }}</span>
+    </h2>
+    {% endif %}
     {% for pedido in pedidos %}
     {% with itens=pedido.itens.all status=pedido.status %}
     <article class="ck-card pd-pedido pd-pedido--{{ status }}" aria-labelledby="pd-titulo-{{ pedido.id }}">
@@ -361,6 +387,12 @@
                     <strong>{{ resumo_pedidos.finalizados }}</strong>
                     <span>finalizado{{ resumo_pedidos.finalizados|pluralize }}</span>
                 </li>
+                {% if orcamentos %}
+                <li class="pd-placar-item pd-placar-item--roxo">
+                    <strong>{{ orcamentos_em_andamento }}</strong>
+                    <span>orçamento{{ orcamentos_em_andamento|pluralize }} em andamento</span>
+                </li>
+                {% endif %}
             </ul>
             <a href="{% url 'loja' %}#catalogo" class="ck-botao ck-botao--secundario pd-continuar">
                 <i class="fa-solid fa-store" aria-hidden="true"></i>
@@ -383,6 +415,9 @@
     </aside>
     </div><!-- pd-pagina -->
 {% else %}
+    <div class="pd-vazio-pagina">
+    {# Sem compra nenhuma ainda: quem veio do orçamento por telefone começa por aqui #}
+    {% include "partials/orcamento_vincular.html" %}
     <section class="ck-card pd-vazio" aria-labelledby="pd-vazio-titulo">
         <span class="pd-vazio-icone" aria-hidden="true">
             <i class="fa-solid fa-bag-shopping"></i>
@@ -400,6 +435,7 @@
             </a>
         </div>
     </section>
+    </div>
 {% endif %}
 
 </div><!-- ck -->
@@ -454,6 +490,58 @@ document.addEventListener("DOMContentLoaded", function() {
         el.textContent = formatarBRL(valorOriginal);
     });
 });
+
+/* O CÓDIGO DO ORÇAMENTO E O PIX (LEIA-ME-V10, seção 104).
+   O campo escreve em maiúsculas enquanto a pessoa digita (o código é
+   "LS-7K3QX9"; o servidor aceita de qualquer jeito, mas ver igual ao
+   papel ajuda a conferir). Os dois formulários (vincular e assinar)
+   travam no primeiro toque -- o segundo geraria outro link à toa. As
+   chaves do Pix copiam num toque, com o recado no toast do site. */
+(function () {
+    const campo = document.getElementById("oc-codigo");
+    if (campo) {
+        campo.addEventListener("input", () => {
+            const inicio = campo.selectionStart;
+            campo.value = campo.value.toUpperCase();
+            try { campo.setSelectionRange(inicio, inicio); } catch (erro) { /* campo sem cursor */ }
+        });
+    }
+
+    document.querySelectorAll("[data-oc-vincular], [data-oc-assinar]").forEach((form) => {
+        form.addEventListener("submit", (evento) => {
+            if (form.dataset.enviando === "1") {
+                evento.preventDefault();
+                return;
+            }
+            form.dataset.enviando = "1";
+            const botao = form.querySelector("button[type=submit]");
+            if (botao) {
+                botao.setAttribute("aria-busy", "true");
+                const rotulo = botao.querySelector("span");
+                if (rotulo) rotulo.textContent = form.hasAttribute("data-oc-assinar") ? "Abrindo a assinatura…" : "Procurando…";
+            }
+        });
+    });
+
+    function avisar(nivel, titulo, texto) {
+        if (window.LSAviso) window.LSAviso.toast({ nivel: nivel, titulo: titulo, texto: texto });
+    }
+
+    document.querySelectorAll("[data-copiar]").forEach((botao) => {
+        botao.addEventListener("click", async () => {
+            const valor = botao.dataset.copiar || "";
+            const nome = botao.dataset.copiarNome || "A chave";
+            try {
+                await navigator.clipboard.writeText(valor);
+                botao.classList.add("is-copiado");
+                setTimeout(() => botao.classList.remove("is-copiado"), 1600);
+                avisar("sucesso", "Copiado", `${nome} do Pix (${valor}) está pronta para colar no app do banco.`);
+            } catch (erro) {
+                avisar("alerta", "Não deu para copiar", `Copie à mão: ${valor}`);
+            }
+        });
+    });
+})();
 
 /* Devolver um pedido reservado ao carrinho.
    O pedido nasce quando o cliente inicia o pagamento; se ele desistir, é

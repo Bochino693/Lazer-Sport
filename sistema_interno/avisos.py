@@ -424,6 +424,8 @@ def _atividades_orcamento(user):
         AtividadeOrcamento.Tipo.ENVIADO: "preparou o envio do orçamento",
         AtividadeOrcamento.Tipo.DOCUMENTO: "gerou o documento para assinatura do orçamento",
         AtividadeOrcamento.Tipo.ASSINATURA: "assinou o documento do orçamento",
+        # LEIA-ME-V10, seção 104: o código digitado em Meus pedidos.
+        AtividadeOrcamento.Tipo.VINCULADO: "vinculou à conta do site o orçamento",
     }.get(ultima.tipo, "alterou o orçamento")
     detalhe = (
         f"{ultima.autor_nome} {acao} "

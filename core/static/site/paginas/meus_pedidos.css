@@ -767,6 +767,554 @@
 }
 
 /* =========================================================
+   O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104)
+
+   O pedido do dono: "o cliente fez o orçamento conosco pelo telefone,
+   aí faz o cadastro, mas como saber que aquele orçamento vai virar um
+   pedido do site? através do código, fazendo assim o acompanhamento e
+   mudança de fases pela internet sem necessidade de contato".
+
+   Três peças, no mesmo vidro escuro dos pedidos: o quadro "Tem um
+   código de orçamento?" (o bilhete amarelo), o título de cada grupo
+   e o cartão de cada orçamento, com as seis fases -- em linha no
+   computador e no tablet, em coluna no celular, como um app.
+========================================================= */
+#codigo-orcamento,
+#orcamentos,
+.oc-cartao { scroll-margin-top: 96px; }
+
+/* o título dos dois grupos (orçamentos e compras na loja) */
+.pd-secao {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 -2px;
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 850;
+    letter-spacing: -.01em;
+}
+
+.pd-secao > i {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(180, 140, 255, .4);
+    border-radius: 10px;
+    background: rgba(180, 140, 255, .16);
+    color: var(--pd-roxo);
+    font-size: .85rem;
+}
+
+/* ----- o quadro "Tem um código de orçamento?" ----- */
+.oc-vincular {
+    --oc-cor: var(--pd-amarelo);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 380px);
+    align-items: center;
+    gap: 14px 22px;
+    border-color: color-mix(in srgb, var(--oc-cor) 34%, transparent);
+    background:
+        radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--oc-cor) 14%, transparent), transparent 60%),
+        radial-gradient(80% 120% at 100% 100%, rgba(63, 208, 255, .1), transparent 60%),
+        linear-gradient(160deg, rgba(17, 32, 66, .96), rgba(8, 15, 34, .97));
+}
+
+.oc-vincular-texto {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+}
+
+.oc-vincular-icone {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, var(--oc-cor), #ff9f43);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--oc-cor) 30%, transparent);
+    color: #3a2400;
+    font-size: 1.2rem;
+    transform: rotate(-8deg);
+}
+
+.oc-vincular .ck-card-titulo { font-size: 1.1rem; }
+
+.oc-vincular-ajuda {
+    margin: 5px 0 0;
+    color: #cfe0fb;
+    font-size: .88rem;
+    line-height: 1.5;
+}
+
+.oc-vincular-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    min-width: 0;
+    margin: 0;
+}
+
+.oc-vincular-campo { gap: 0; }
+
+.oc-vincular .ck-entrada input {
+    border-color: color-mix(in srgb, var(--oc-cor) 40%, transparent);
+    font-size: 1.05rem;
+    font-weight: 850;
+    letter-spacing: .12em;
+}
+
+.oc-vincular .ck-entrada input::placeholder { letter-spacing: .12em; }
+
+.oc-vincular .ck-entrada input:focus {
+    border-color: var(--oc-cor);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--oc-cor) 20%, transparent);
+}
+
+.oc-vincular .ck-entrada:focus-within > i { color: var(--oc-cor); }
+
+.oc-vincular-botao { min-height: 50px; }
+
+.oc-vincular-botao[aria-busy="true"] {
+    opacity: .75;
+    cursor: progress;
+}
+
+.oc-vincular-dica {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 0;
+    color: #a9c6ee;
+    font-size: .78rem;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.oc-vincular-dica i {
+    margin-top: 2px;
+    color: var(--oc-cor);
+}
+
+/* ----- o cartão de cada orçamento: a cor da situação, como nos pedidos ----- */
+.oc-cartao--azul { --pd-cor: var(--pd-azul); }
+.oc-cartao--amarelo { --pd-cor: var(--pd-amarelo); }
+.oc-cartao--ciano { --pd-cor: var(--pd-ciano); }
+.oc-cartao--verde { --pd-cor: var(--pd-verde); }
+.oc-cartao--roxo { --pd-cor: var(--pd-roxo); }
+.oc-cartao--vermelho { --pd-cor: var(--pd-vermelho); }
+
+/* o cartão que acabou de ser vinculado (o endereço vem com #orc-LS-...) */
+.oc-cartao:target {
+    box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--pd-cor) 70%, transparent),
+        0 24px 60px rgba(0, 0, 0, .32),
+        0 0 46px color-mix(in srgb, var(--pd-cor) 22%, transparent);
+}
+
+.oc-titulo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+}
+
+/* O CÓDIGO, do jeito que está no papel: letras largas, na cor do cartão */
+.oc-codigo {
+    display: inline-flex;
+    padding: 3px 9px;
+    border: 1px solid color-mix(in srgb, var(--pd-cor) 50%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--pd-cor) 16%, transparent);
+    color: var(--pd-cor);
+    font-size: .92rem;
+    font-weight: 900;
+    letter-spacing: .1em;
+    white-space: nowrap;
+}
+
+.oc-aviso { margin-top: 14px; }
+
+/* ----- AS FASES ----- */
+.oc-fases {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin: 18px 0 0;
+    padding: 14px 4px 12px;
+    border: 1px solid rgba(127, 200, 255, .12);
+    border-radius: 16px;
+    background: rgba(4, 10, 28, .5);
+    list-style: none;
+}
+
+.oc-fase {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 0 3px;
+    color: #8fa9d6;
+    text-align: center;
+}
+
+.oc-fase + .oc-fase::before {
+    content: "";
+    position: absolute;
+    top: 16px;
+    left: calc(-50% + 22px);
+    right: calc(50% + 22px);
+    height: 3px;
+    border-radius: 3px;
+    background: rgba(127, 200, 255, .16);
+}
+
+.oc-fase.is-feita + .oc-fase::before {
+    background: linear-gradient(90deg, var(--pd-verde), var(--pd-ciano));
+}
+
+.oc-fase-bola {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 2px solid rgba(127, 200, 255, .22);
+    border-radius: 50%;
+    background: #0a1736;
+    color: #8fa9d6;
+    font-size: .8rem;
+}
+
+.oc-fase-texto {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.oc-fase-nome {
+    font-size: .74rem;
+    font-weight: 850;
+    line-height: 1.25;
+}
+
+.oc-fase-nota {
+    color: #9fb6dc;
+    font-size: .68rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.oc-fase.is-feita { color: #a8f5c9; }
+
+.oc-fase.is-feita .oc-fase-bola {
+    border-color: var(--pd-verde);
+    background: var(--pd-verde);
+    color: #04301a;
+}
+
+.oc-fase.is-atual { color: #fff; }
+
+.oc-fase.is-atual .oc-fase-bola {
+    border-color: var(--pd-cor);
+    background: color-mix(in srgb, var(--pd-cor) 26%, #0a1736);
+    color: var(--pd-cor);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--pd-cor) 18%, transparent), 0 0 20px color-mix(in srgb, var(--pd-cor) 45%, transparent);
+}
+
+.oc-fase.is-atual .oc-fase-nota { color: var(--pd-cor); }
+
+.oc-fase.is-parada { color: #ffb3bb; }
+
+.oc-fase.is-parada .oc-fase-bola {
+    border-color: var(--pd-vermelho);
+    background: color-mix(in srgb, var(--pd-vermelho) 24%, #0a1736);
+    color: #ffd0d5;
+}
+
+.oc-fase.is-parada .oc-fase-nota { color: #ff9aa5; }
+
+/* a corrente que parou (recusada, expirada): o que vinha depois apaga */
+.oc-fases.is-parou .oc-fase.is-futura { opacity: .45; }
+
+/* ----- os itens e o valor final ----- */
+.oc-resumo {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.oc-itens {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.oc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid rgba(127, 200, 255, .12);
+    border-radius: 12px;
+    background: rgba(47, 139, 255, .07);
+}
+
+.oc-item-nome {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: #eaf2ff;
+    font-size: .9rem;
+    font-weight: 750;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.oc-item-qtd {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(63, 208, 255, .14);
+    color: var(--pd-ciano);
+    font-size: .78rem;
+    font-weight: 900;
+}
+
+.oc-item--vazio {
+    color: var(--ck-suave);
+    font-size: .86rem;
+}
+
+.oc-total small {
+    max-width: 240px;
+    color: #a9c6ee;
+    font-size: .76rem;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: right;
+}
+
+.oc-preparando {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px dashed color-mix(in srgb, var(--pd-cor) 45%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--pd-cor) 8%, transparent);
+    color: #d6e4fb;
+    font-size: .88rem;
+    line-height: 1.5;
+}
+
+.oc-preparando i {
+    margin-top: 3px;
+    color: var(--pd-cor);
+}
+
+/* ----- o Pix (o mesmo da proposta), enquanto falta pagar ----- */
+.oc-pix {
+    --oc-pix: #32bcad;
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--oc-pix) 40%, transparent);
+    border-radius: 16px;
+    background:
+        radial-gradient(100% 120% at 0% 0%, color-mix(in srgb, var(--oc-pix) 16%, transparent), transparent 60%),
+        rgba(4, 10, 28, .55);
+}
+
+.oc-pix-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.oc-pix-icone {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3fe0cf, #1f9e8f);
+    color: #022b26;
+    font-size: 1.15rem;
+}
+
+.oc-pix-titulo {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.oc-pix-titulo strong {
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 850;
+}
+
+.oc-pix-titulo small {
+    color: #bdeee8;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.oc-pix-titulo b { color: #fff; }
+
+.oc-barra {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(127, 200, 255, .14);
+}
+
+.oc-barra span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--oc-pix), var(--pd-verde));
+    box-shadow: 0 0 12px color-mix(in srgb, var(--oc-pix) 50%, transparent);
+}
+
+.oc-pix-chaves {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.oc-chave {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 10px;
+    min-height: 54px;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--oc-pix) 34%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--oc-pix) 10%, transparent);
+    color: #e6fffb;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color .2s ease, background .2s ease;
+}
+
+.oc-chave:hover {
+    border-color: color-mix(in srgb, var(--oc-pix) 70%, transparent);
+    background: color-mix(in srgb, var(--oc-pix) 18%, transparent);
+}
+
+.oc-chave span {
+    grid-column: 1;
+    color: #9fe7dd;
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.oc-chave strong {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: #fff;
+    font-size: .92rem;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.oc-chave i {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    color: var(--oc-pix);
+}
+
+.oc-chave.is-copiado {
+    border-color: var(--pd-verde);
+    background: rgba(46, 229, 157, .16);
+}
+
+.oc-pix-nota {
+    margin: 0;
+    color: #b8d4f5;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+/* ----- as ações ----- */
+.oc-acoes { margin-top: 16px; }
+
+.oc-form {
+    display: contents;
+}
+
+.oc-botao-assinar[aria-busy="true"] {
+    opacity: .75;
+    cursor: progress;
+}
+
+.oc-botao-whats {
+    border-color: rgba(37, 211, 102, .4);
+    background: rgba(37, 211, 102, .1);
+    color: #c4f5d6;
+}
+
+.oc-botao-whats:hover {
+    border-color: rgba(37, 211, 102, .7);
+    color: #fff;
+}
+
+.oc-dica {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+    color: #a9c6ee;
+    font-size: .78rem;
+    font-weight: 650;
+}
+
+.oc-dica i { color: var(--pd-cor); }
+
+.pd-placar-item--roxo { --pd-cor: var(--pd-roxo); }
+
+/* sem pedido nenhum: o código e o "ainda não fez pedido" na mesma coluna */
+.pd-vazio-pagina {
+    display: grid;
+    gap: 16px;
+    max-width: 640px;
+    margin: 8px auto 0;
+}
+
+.pd-vazio-pagina .pd-vazio { margin: 0; }
+
+.pd-vazio-pagina .oc-vincular { grid-template-columns: minmax(0, 1fr); }
+
+/* =========================================================
    CELULAR
 ========================================================= */
 @media (max-width: 959px) {
@@ -775,8 +1323,77 @@
     .pd-lateral { position: static; }
 }
 
+@media (max-width: 960px) {
+    .oc-vincular { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 720px) {
     .pd-grade { grid-template-columns: minmax(0, 1fr); }
+
+    /* AS FASES EM COLUNA: seis passos lado a lado não cabem num celular
+       com a nota de cada um; em pé, cada fase é uma linha, com a bola à
+       esquerda e o fio descendo até a próxima -- como o rastreio de um app. */
+    .oc-fases {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 14px 14px 12px;
+    }
+
+    .oc-fase {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 0 0 14px;
+        text-align: left;
+    }
+
+    .oc-fase:last-child { padding-bottom: 0; }
+
+    .oc-fase + .oc-fase::before { content: none; }
+
+    .oc-fase:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 36px;
+        bottom: 0;
+        left: 15.5px;
+        width: 3px;
+        border-radius: 3px;
+        background: rgba(127, 200, 255, .16);
+    }
+
+    .oc-fase.is-feita:not(:last-child)::after {
+        background: linear-gradient(180deg, var(--pd-verde), var(--pd-ciano));
+    }
+
+    .oc-fase-texto { padding-top: 2px; }
+
+    .oc-fase-nome { font-size: .86rem; }
+
+    .oc-fase-nota { font-size: .78rem; }
+
+    .oc-resumo {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .oc-total {
+        grid-template-columns: auto auto;
+        align-items: center;
+        justify-content: space-between;
+        justify-items: start;
+        padding: 10px 14px;
+        border: 1px solid rgba(52, 224, 138, .22);
+        border-radius: 14px;
+        background: rgba(52, 224, 138, .07);
+    }
+
+    .oc-total strong { justify-self: end; }
+
+    .oc-total small {
+        grid-column: 1 / -1;
+        max-width: none;
+        text-align: left;
+    }
 }
 
 @media (max-width: 560px) {
@@ -811,6 +1428,18 @@
     .pd-acoes { flex-direction: column; }
 
     .pd-acoes .ck-botao { width: 100%; }
+
+    .oc-vincular-form { grid-template-columns: minmax(0, 1fr); }
+
+    .oc-vincular-botao { width: 100%; }
+
+    .oc-vincular-icone {
+        width: 42px;
+        height: 42px;
+        font-size: 1.05rem;
+    }
+
+    .oc-pix-chaves { grid-template-columns: minmax(0, 1fr); }
 
     .pd-foto {
         width: 48px;

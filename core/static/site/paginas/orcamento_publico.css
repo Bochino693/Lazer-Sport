@@ -296,6 +296,17 @@ body{
 .faixa.vermelha{background:var(--vermelho-claro);border:1px solid #F8C9D4;color:#9F1239}
 .faixa.ambar{background:var(--ambar-claro);border:1px solid #F5DFAE;color:var(--ambar)}
 .faixa strong{display:block;margin-bottom:2px}
+/* O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104): "crie sua conta e
+   informe este código em Meus pedidos". Na cor da marca, com o código
+   em letras largas, como se dita pelo telefone. */
+.faixa.codigo{background:var(--marca-clara);border:1px solid #c9cff5;color:var(--marca)}
+.faixa.codigo .faixa-icone{color:var(--vermelho)}
+.faixa.codigo a{color:var(--marca);font-weight:800}
+.faixa.codigo strong.codigo-onde{display:inline;margin:0}
+.codigo-valor{display:inline-block;padding:1px 8px;border-radius:7px;background:#fff;border:1px solid #c9cff5;letter-spacing:.12em;font-weight:900;white-space:nowrap}
+.meta-codigo dd{font-weight:850;letter-spacing:.1em}
+.previa-conta{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-basis:100%;color:#c7d2fe;font-weight:700}
+.previa-bar:has(.previa-conta){border-radius:18px}
 
 /* ------------------------------------------------------------ ações */
 .decisao{

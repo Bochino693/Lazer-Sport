@@ -1,0 +1,45 @@
+{% comment %}
+  "TEM UM CÓDIGO DE ORÇAMENTO?" (LEIA-ME-V10, seção 104).
+
+  O pedido do dono: "o cliente fez o orçamento conosco pelo telefone, aí
+  faz o cadastro, mas como saber que aquele orçamento vai virar um pedido
+  do site? através do código". O código ("LS-7K3QX9") sai na proposta, no
+  e-mail e no WhatsApp; digitado aqui, a proposta passa a aparecer nesta
+  tela com as fases dela. POST com o CSRF; as respostas (vinculado, não
+  encontrado, de outra conta, muitas tentativas) voltam como toast.
+{% endcomment %}
+<section class="ck-card oc-vincular{% if compacto %} oc-vincular--compacto{% endif %}" id="codigo-orcamento" aria-labelledby="oc-vincular-titulo">
+    <div class="oc-vincular-texto">
+        <span class="oc-vincular-icone" aria-hidden="true">
+            <i class="fa-solid fa-ticket"></i>
+        </span>
+        <div>
+            <h2 class="ck-card-titulo" id="oc-vincular-titulo">Tem um código de orçamento?</h2>
+            <p class="oc-vincular-ajuda">
+                Fez o orçamento com a gente por telefone? Digite o código da proposta e acompanhe
+                tudo por aqui: resposta, assinatura, pagamento e produção.
+            </p>
+        </div>
+    </div>
+    <form class="oc-vincular-form" method="post" action="{% url 'vincular_orcamento' %}" data-oc-vincular>
+        {% csrf_token %}
+        <label class="ck-campo oc-vincular-campo" for="oc-codigo">
+            <span class="pd-oculto">Código do orçamento</span>
+            <span class="ck-entrada">
+                <input type="text" id="oc-codigo" name="codigo" value="{{ codigo_digitado|default:'' }}"
+                       placeholder="LS-7K3QX9" maxlength="20" required
+                       autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                       aria-describedby="oc-codigo-dica">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            </span>
+        </label>
+        <button type="submit" class="ck-botao ck-botao--primario oc-vincular-botao">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            <span>Vincular</span>
+        </button>
+        <p class="oc-vincular-dica" id="oc-codigo-dica">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            Ele está na proposta (e-mail, WhatsApp ou PDF): LS e seis letras e números.
+        </p>
+    </form>
+</section>

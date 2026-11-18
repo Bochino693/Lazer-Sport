@@ -212,6 +212,27 @@ def avisar_documento_assinado(documento):
     )
 
 
+def avisar_orcamento_vinculado(orcamento):
+    """O cliente digitou o código do orçamento em Meus pedidos, no site.
+
+    O pedido (LEIA-ME-V10, seção 104): o orçamento do telefone passa a ser
+    acompanhado pela conta do site, "sem necessidade de contato". A equipe
+    fica sabendo na hora -- é ela quem reconhece (ou não) aquela conta.
+    Mesma regra dos outros avisos: o número no título, o nome do cliente e
+    a conta do outro lado do login. Não vibra: é novidade, não urgência.
+    """
+    return _entregar(
+        _quem_cuida_de_orcamento(orcamento),
+        {
+            "titulo": f"Orçamento #{orcamento.pk}: cliente vinculou no site",
+            "corpo": "Ele agora acompanha as fases em Meus pedidos. Veja a conta no histórico.",
+            "url": "/orcamentos/",
+            "marca": _marca(f"orcamento-vinculado:{orcamento.pk}"),
+            "urgente": False,
+        },
+    )
+
+
 def avisar_ciencia_ordem_servico(ordem):
     """Cliente confirmou o recebimento de uma O.S. concluída."""
     pessoas = {}

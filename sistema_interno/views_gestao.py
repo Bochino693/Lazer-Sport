@@ -334,7 +334,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         """
         base = list(
             consulta.values_list("pk", "nome_cliente", "cliente__nome_cliente",
-                                 "contato", "observacoes")
+                                 "contato", "observacoes", "codigo")
         )
         # Os itens vêm numa consulta só, e não uma por proposta.
         itens = defaultdict(list)
@@ -343,10 +343,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         ).values_list("orcamento_id", "descricao"):
             itens[orcamento_id].append(descricao)
 
+        # O código (LEIA-ME-V10, seção 104) entra na busca: o cliente que
+        # liga com "LS-7K3QX9" na mão é achado por ele.
         return montar_indice(
-            (pk, [str(pk), nome, nome_cadastro, contato, observacoes]
+            (pk, [str(pk), nome, nome_cadastro, contato, observacoes, codigo or ""]
                  + itens.get(pk, []))
-            for pk, nome, nome_cadastro, contato, observacoes in base
+            for pk, nome, nome_cadastro, contato, observacoes, codigo in base
         )
 
     def get(self, request):
@@ -360,6 +362,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             .select_related(
                 "cliente", "cliente__parceiro", "responsavel",
                 "orcamento_anterior", "orcamento_refeito", "ordem_servico",
+                # a conta do site que acompanha a proposta (seção 104)
+                "conta",
             )
             .prefetch_related(
                 "cliente__enderecos",
@@ -389,6 +393,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 | Q(contato__icontains=busca)
                 | Q(observacoes__icontains=busca)
                 | Q(itens__descricao__icontains=busca)
+                | Q(codigo__icontains=busca)
             )
             if busca.isdigit():
                 filtro |= Q(pk=int(busca))
@@ -677,6 +682,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "status": orcamento.status,
             "pode_editar": orcamento.pode_editar_formulario,
             "versao": orcamento.versao,
+            # O CÓDIGO E A CONTA DO SITE (LEIA-ME-V10, seção 104): o que o
+            # cliente digita em Meus pedidos e, depois de digitado, a conta
+            # que acompanha a proposta por lá ("vinculado à conta @fulano").
+            "codigo": orcamento.codigo,
+            "conta": (
+                f"@{orcamento.conta.get_username()}"
+                if orcamento.conta_id and orcamento.conta else ""
+            ),
+            "vinculado_em": (
+                timezone.localtime(orcamento.vinculado_em).strftime("%d/%m/%Y %H:%M")
+                if orcamento.vinculado_em else ""
+            ),
             "orcamento_anterior": orcamento.orcamento_anterior_id or "",
             # AS VERSÕES ANTERIORES VIAJAM COM A PROPOSTA, E NÃO NA LISTA.
             #
@@ -1910,6 +1927,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     "Abra o endereço abaixo para conferir itens, fotos e condições "
                     "e registrar sua aprovação ou pedido de ajustes:\n"
                     f"{link}\n\n"
+                    # O código (LEIA-ME-V10, seção 104): o acompanhamento
+                    # pelo site, em Meus pedidos, sem precisar ligar.
+                    f"Código do orçamento: {orcamento.codigo}\n"
+                    "Crie sua conta em lazersport.com.br e informe este código em "
+                    "Meus pedidos para acompanhar tudo pela internet.\n\n"
                     "Se precisar, basta responder a este e-mail.\n\n"
                     f"{nome_empresa()}\nCNPJ {cnpj_empresa()}"
                 )
@@ -2166,6 +2188,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             em_3d = itens_em_3d(orcamento)
         except Exception:  # a mensagem sai de qualquer jeito
             em_3d = 0
+
+        # O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104). O dono: "o
+        # cliente fez o orçamento conosco pelo telefone, aí faz o cadastro,
+        # mas como saber que aquele orçamento vai virar um pedido do site?
+        # através do código". Em negrito e sem "_", que o WhatsApp come.
+        if orcamento.codigo:
+            linhas.extend([
+                "",
+                f"Código do orçamento: *{orcamento.codigo}*",
+                "Crie sua conta em lazersport.com.br e informe este código em "
+                "*Meus pedidos* para acompanhar tudo pela internet.",
+            ])
 
         linhas.extend([
             "",

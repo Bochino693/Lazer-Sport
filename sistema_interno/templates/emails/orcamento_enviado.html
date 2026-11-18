@@ -61,6 +61,24 @@
                 </tr>
               </table>
 
+              {% comment %}
+                O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104): "o cliente fez o
+                orçamento conosco pelo telefone, aí faz o cadastro, mas como saber
+                que aquele orçamento vai virar um pedido do site? através do
+                código". Com ele, o cliente acompanha as fases em Meus pedidos.
+              {% endcomment %}
+              {% if orcamento.codigo %}
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;border:1px solid #c9cff5;border-radius:16px;background:#eef0ff;">
+                <tr>
+                  <td style="padding:16px 18px 6px;color:#071d68;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;">Código do orçamento</td>
+                  <td align="right" style="padding:16px 18px 6px;"><span style="display:inline-block;padding:6px 12px;border-radius:10px;background:#ffffff;border:1px solid #c9cff5;color:#071d68;font-size:18px;font-weight:800;letter-spacing:2px;white-space:nowrap;">{{ orcamento.codigo }}</span></td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding:6px 18px 16px;color:#334155;font-size:13px;line-height:1.55;">Crie sua conta em <a href="https://www.lazersport.com.br/registrar/" style="color:#071d68;font-weight:700;">lazersport.com.br</a> e informe este código em <strong>Meus pedidos</strong> para acompanhar tudo pela internet: resposta, assinatura, pagamento e produção.</td>
+                </tr>
+              </table>
+              {% endif %}
+
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;border:1px solid #dfe6f1;border-radius:16px;background:#f8faff;">
                 <tr>
                   <td colspan="2" style="padding:15px 18px 8px;color:#071d68;font-size:14px;font-weight:800;">Dados bancários da empresa</td>

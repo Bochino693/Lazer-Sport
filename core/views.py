@@ -8234,9 +8234,48 @@ class MeusPedidosView(LoginRequiredMixin, View):
             elif pedido.status == 'finalizado':
                 resumo['finalizados'] += 1
 
+        # OS ORÇAMENTOS DO TELEFONE (LEIA-ME-V10, seção 104). O dono: "o
+        # cliente fez o orçamento conosco pelo telefone, aí faz o cadastro
+        # (...) através do código, fazendo assim o acompanhamento e mudança
+        # de fases pela internet sem necessidade de contato". Só os da conta
+        # de quem está logado, só a versão mais nova de cada negociação, e
+        # numa conta fixa de consultas (ver `orcamentos_da_conta`).
+        from core.email_utils import dados_bancarios_empresa
+        from sistema_interno import codigo_orcamento as svc_codigo
+
+        from .views_codigo_orcamento import (
+            CHAVE_DO_DIGITADO,
+            ICONES_DAS_FASES,
+            conversa_com_a_equipe,
+        )
+
+        orcamentos = [
+            svc_codigo.acompanhamento(orcamento)
+            for orcamento in svc_codigo.orcamentos_da_conta(request.user)
+        ]
+        for cartao in orcamentos:
+            cartao.whatsapp = conversa_com_a_equipe(
+                f"Olá! Tenho uma dúvida sobre o orçamento {cartao.orcamento.codigo}."
+            )
+            for fase in cartao.fases:
+                fase.icone = ICONES_DAS_FASES.get(fase.chave, "fa-circle-info")
+        # o código que voltou de um erro (para corrigir uma letra), ou o do
+        # link da proposta ("?codigo=LS-..."), já no campo
+        codigo_digitado = (
+            request.session.pop(CHAVE_DO_DIGITADO, "")
+            or svc_codigo.normalizar(request.GET.get('codigo'))
+        )
+
         return render(request, 'meus_pedidos.html', {
             'pedidos': pedidos,
             'resumo_pedidos': resumo,
+            'orcamentos': orcamentos,
+            'orcamentos_em_andamento': sum(
+                1 for cartao in orcamentos
+                if cartao.situacao not in ('recusado', 'expirado', 'substituido', 'concluido')
+            ),
+            'codigo_digitado': codigo_digitado,
+            'dados_bancarios': dados_bancarios_empresa() if any(c.mostra_pix for c in orcamentos) else None,
         })
 
 

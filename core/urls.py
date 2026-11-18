@@ -21,6 +21,7 @@ from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
 from .views_assinatura import assinar_documento, documento_assinado
+from .views_codigo_orcamento import AssinarTermoView, VincularOrcamentoView
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
 from .views_redirects import redirecionar_interno
 from .views_seguranca import token_csrf
@@ -358,6 +359,19 @@ urlpatterns = [
         name="verificar_pagamento",
     ),
     path("meus-pedidos/", MeusPedidosView.as_view(), name="meus_pedidos"),
+    # O código do orçamento do telefone e o termo assinado pelo próprio
+    # cliente (LEIA-ME-V10, seção 104). Só POST, sem id na URL: o código
+    # vai no formulário e a conta é a da sessão.
+    path(
+        "meus-pedidos/orcamento/vincular/",
+        VincularOrcamentoView.as_view(),
+        name="vincular_orcamento",
+    ),
+    path(
+        "meus-pedidos/orcamento/assinar/",
+        AssinarTermoView.as_view(),
+        name="assinar_termo_orcamento",
+    ),
     path("pedido/pix/criar/", criar_pedido_pix, name="criar_pedido_pix"),
     path("pesquisa/", SearchView.as_view(), name="search"),
     path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),

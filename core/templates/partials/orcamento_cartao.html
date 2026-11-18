@@ -1,0 +1,167 @@
+{% load interno_extras %}
+{% comment %}
+  O CARTÃO DE UM ORÇAMENTO VINCULADO (LEIA-ME-V10, seção 104).
+
+  "fazendo assim o acompanhamento e mudança de fases pela internet sem
+  necessidade de contato": o código, a versão, os itens, o valor final, a
+  situação e a linha do tempo -- Proposta, Aprovação, Termo assinado,
+  Pagamento, Produção, Concluído --, cada fase pelo fato dela
+  (`sistema_interno.codigo_orcamento.acompanhamento`). E o que o cliente
+  faz sozinho: responder a proposta, assinar o termo (o link de 5 minutos
+  sai na hora), abrir o termo assinado e pagar pelo Pix.
+{% endcomment %}
+{% with o=cartao.orcamento %}
+<article class="ck-card pd-pedido oc-cartao oc-cartao--{{ cartao.cor }}" id="orc-{{ o.codigo }}"
+         data-situacao="{{ cartao.situacao }}" aria-labelledby="oc-titulo-{{ o.codigo }}">
+
+    <div class="pd-topo">
+        <span class="pd-icone" aria-hidden="true">
+            {% if cartao.situacao == 'preparando' %}<i class="fa-solid fa-pen-ruler"></i>
+            {% elif cartao.situacao == 'resposta' %}<i class="fa-solid fa-clock"></i>
+            {% elif cartao.situacao == 'ajustes' %}<i class="fa-solid fa-pen-to-square"></i>
+            {% elif cartao.situacao == 'assinar' %}<i class="fa-solid fa-signature"></i>
+            {% elif cartao.situacao == 'aprovado' or cartao.situacao == 'pagamento' %}<i class="fa-solid fa-coins"></i>
+            {% elif cartao.situacao == 'producao' %}<i class="fa-solid fa-industry"></i>
+            {% elif cartao.situacao == 'concluido' %}<i class="fa-solid fa-flag-checkered"></i>
+            {% else %}<i class="fa-solid fa-ban"></i>{% endif %}
+        </span>
+        <div class="pd-topo-texto">
+            <h3 class="ck-card-titulo oc-titulo" id="oc-titulo-{{ o.codigo }}">
+                Orçamento <span class="oc-codigo">{{ o.codigo }}</span>
+            </h3>
+            <span class="ck-card-nota">
+                Versão {{ o.versao }}
+                {% if o.status == 'aprovado' %}
+                    {% if o.respondido_em %}· aprovado em {{ o.respondido_em|date:"d/m/Y" }}{% endif %}
+                {% elif o.validade and cartao.pode_responder %}
+                    · válida até {{ o.validade|date:"d/m/Y" }}
+                {% endif %}
+                {% if cartao.itens %}· {{ cartao.itens|length }} ite{{ cartao.itens|length|pluralize:"m,ns" }}{% endif %}
+            </span>
+        </div>
+        <span class="pd-status">{{ cartao.situacao_texto }}</span>
+    </div>
+
+    {% if cartao.aviso %}
+    <p class="pd-aviso pd-aviso--cancelado oc-aviso">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <span>{{ cartao.aviso }}</span>
+    </p>
+    {% endif %}
+
+    {# AS FASES: a feita fica verde com o visto, a de agora acesa, a parada vermelha #}
+    <ol class="oc-fases{% if cartao.situacao == 'recusado' or cartao.situacao == 'expirado' or cartao.situacao == 'substituido' %} is-parou{% endif %}" aria-label="Fases do orçamento">
+        {% for fase in cartao.fases %}
+        <li class="oc-fase is-{{ fase.estado }}"{% if fase.estado == 'atual' %} aria-current="step"{% endif %}>
+            <span class="oc-fase-bola" aria-hidden="true">
+                {% if fase.estado == 'feita' %}<i class="fa-solid fa-check"></i>
+                {% elif fase.estado == 'parada' %}<i class="fa-solid fa-xmark"></i>
+                {% else %}<i class="fa-solid {{ fase.icone }}"></i>{% endif %}
+            </span>
+            <span class="oc-fase-texto">
+                <strong class="oc-fase-nome">{{ fase.nome }}</strong>
+                {% if fase.nota %}<small class="oc-fase-nota">{{ fase.nota }}</small>{% endif %}
+                <span class="pd-oculto">{% if fase.estado == 'feita' %}(feito){% elif fase.estado == 'atual' %}(fase de agora){% elif fase.estado == 'parada' %}(parou aqui){% else %}(ainda não){% endif %}</span>
+            </span>
+        </li>
+        {% endfor %}
+    </ol>
+
+    {# O RESUMO: cada item com a quantidade, e o valor final #}
+    <div class="oc-resumo">
+        {% if cartao.publicado %}
+        <ul class="oc-itens" aria-label="Itens do orçamento">
+            {% for item in cartao.itens %}
+            <li class="oc-item">
+                <span class="oc-item-nome">{{ item.descricao }}</span>
+                <span class="oc-item-qtd">× {{ item.quantidade }}</span>
+            </li>
+            {% empty %}
+            <li class="oc-item oc-item--vazio">Os itens aparecem na proposta.</li>
+            {% endfor %}
+        </ul>
+        <div class="pd-total oc-total">
+            <span>Valor final</span>
+            <strong>{{ o.total|reais }}</strong>
+            {% if o.forma_pagamento %}<small>{{ o.forma_pagamento }}</small>{% endif %}
+        </div>
+        {% else %}
+        <p class="oc-preparando">
+            <i class="fa-solid fa-pen-ruler" aria-hidden="true"></i>
+            A equipe está montando esta proposta. Os itens e o valor aparecem aqui assim que ela for enviada a você.
+        </p>
+        {% endif %}
+    </div>
+
+    {# O QUE O CLIENTE FAZ SOZINHO #}
+    <div class="pd-acoes oc-acoes">
+        {% if cartao.pode_assinar %}
+        <form method="post" action="{% url 'assinar_termo_orcamento' %}" class="oc-form" data-oc-assinar>
+            {% csrf_token %}
+            <input type="hidden" name="codigo" value="{{ o.codigo }}">
+            <button type="submit" class="ck-botao ck-botao--primario oc-botao-assinar">
+                <i class="fa-solid fa-signature" aria-hidden="true"></i>
+                <span>Assinar o termo</span>
+            </button>
+        </form>
+        {% endif %}
+        {% if cartao.publicado %}
+        <a class="ck-botao {% if cartao.pode_responder %}ck-botao--primario{% else %}ck-botao--secundario{% endif %}"
+           href="{{ o.caminho_publico }}" target="_blank" rel="noopener">
+            <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+            {% if cartao.pode_responder %}Ver e responder a proposta{% else %}Ver a proposta{% endif %}
+        </a>
+        {% endif %}
+        {% if cartao.termo_assinado %}
+        <a class="ck-botao ck-botao--secundario"
+           href="{% url 'documento_assinado_publico' cartao.termo_assinado.codigo_publico %}" target="_blank" rel="noopener">
+            <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+            Ver termo assinado
+        </a>
+        {% endif %}
+        {% if cartao.whatsapp %}
+        <a class="ck-botao ck-botao--fantasma oc-botao-whats" href="{{ cartao.whatsapp }}" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            Falar com a equipe
+        </a>
+        {% endif %}
+    </div>
+    {% if cartao.pode_assinar %}
+    <p class="oc-dica">
+        <i class="fa-solid fa-clock" aria-hidden="true"></i>
+        O link da assinatura vale 5 minutos. Se o tempo acabar, toque de novo em “Assinar o termo”.
+    </p>
+    {% endif %}
+    {# O PIX: o mesmo da proposta, enquanto falta pagar (pagamento online fica para depois) #}
+    {% if cartao.mostra_pix and dados_bancarios %}
+    <section class="oc-pix" aria-label="Pagamento por Pix">
+        <div class="oc-pix-topo">
+            <span class="oc-pix-icone" aria-hidden="true"><i class="fa-brands fa-pix"></i></span>
+            <div class="oc-pix-titulo">
+                <strong>Pagamento por Pix</strong>
+                <small>Falta pagar <b>{{ cartao.saldo|reais }}</b>{% if cartao.percentual_pago %} · {{ cartao.percentual_pago }}% já pago{% endif %}</small>
+            </div>
+        </div>
+        {% if cartao.percentual_pago %}
+        <div class="oc-barra" role="progressbar" aria-label="Quanto já foi pago" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ cartao.percentual_pago }}">
+            <span style="width: {{ cartao.percentual_pago }}%"></span>
+        </div>
+        {% endif %}
+        <div class="oc-pix-chaves">
+            <button type="button" class="oc-chave" data-copiar="{{ dados_bancarios.pix_cnpj }}" data-copiar-nome="A chave CNPJ">
+                <span>Chave CNPJ</span>
+                <strong>{{ dados_bancarios.pix_cnpj }}</strong>
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="oc-chave" data-copiar="{{ dados_bancarios.pix_celular }}" data-copiar-nome="A chave celular">
+                <span>Chave celular</span>
+                <strong>{{ dados_bancarios.pix_celular }}</strong>
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+            </button>
+        </div>
+        <p class="oc-pix-nota">Pix · Banco C6, em nome da Lazer &amp; Sport. A equipe confere o valor recebido e esta fase passa para “Pago”.</p>
+    </section>
+    {% endif %}
+
+</article>
+{% endwith %}
