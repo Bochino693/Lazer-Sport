@@ -1023,9 +1023,9 @@ def avisar(producao, *, forcar=False, hoje_=None):
     """Manda o e-mail dos fatos novos -- no máximo um por dia por origem.
 
     O primeiro fato do dia sai na hora; os outros do mesmo dia esperam e
-    saem JUNTOS no próximo envio (o próximo fato, a lista aberta noutro
-    dia, ou o comando `avisar_producao`). O "pronta" nunca espera: é o
-    aviso que o cliente mais quer.
+    saem JUNTOS no próximo envio (o próximo fato num outro dia, ou a lista
+    aberta noutro dia -- `avisar_pendentes`). O "pronta" nunca espera: é
+    o aviso que o cliente mais quer.
     """
     avisos = _avisos(producao)
     pendentes = [c for c in avisos["pendentes"] if c not in avisos["enviados"]]
