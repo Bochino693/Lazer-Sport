@@ -71,7 +71,7 @@
           <div><dt>Razão social</dt><dd>{{ doc.vendedor.razao_social }}</dd></div>
           <div><dt>CNPJ</dt><dd>{{ doc.vendedor.cnpj }}</dd></div>
           <div><dt>Sede</dt><dd>{{ doc.vendedor.endereco_sede }}</dd></div>
-          <div><dt>Representante</dt><dd>{{ doc.vendedor.representante_nome }} · RG {{ doc.vendedor.representante_rg }}</dd></div>
+          <div><dt>Representante</dt><dd>{{ doc.vendedor.representante_nome|default:"Representante legal" }}{% if doc.vendedor.representante_rg %} · RG {{ doc.vendedor.representante_rg }}{% endif %}</dd></div>
         </dl>
       </div>
       <div class="ct-parte comprador">
@@ -136,7 +136,7 @@
       <div class="ct-assina">
         <span class="ct-assina-linha" aria-hidden="true"></span>
         <strong>VENDEDOR <small>(Proprietário)</small></strong>
-        <span>{{ doc.vendedor.representante_nome }}</span>
+        <span>{{ doc.vendedor.representante_nome|default:"Representante legal" }}</span>
         <span>{{ doc.vendedor.nome_fantasia }}</span>
       </div>
       <div class="ct-assina ct-assina-comprador">

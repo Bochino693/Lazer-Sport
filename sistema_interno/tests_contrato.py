@@ -180,49 +180,55 @@ class BloqueioTests(BaseDocumento):
         dados.save()
         self.gestor = self.usuario("gestora", "gestao")
 
-    def test_sem_o_representante_o_contrato_nao_sai(self):
-        with self.assertRaises(ErroDeFormulario) as recusa:
-            svc.gerar(self.orcamento, self.vendedor)
-        self.assertIn("nome do representante, RG do representante, endereço do representante", str(recusa.exception))
-        self.assertIn("Dados do contrato", str(recusa.exception))
+    def test_sem_o_representante_o_contrato_sai_com_representante_legal(self):
+        """O dono: "a assinatura está travando... nem precisa travar"."""
+        documento = svc.gerar(self.orcamento, self.vendedor)
+        abertura = documento.conteudo["preambulo"]["abertura"]
+        self.assertIn("neste ato representada por seu representante legal", abertura)
+        self.assertNotIn("RG ,", abertura)
+        self.assertNotIn("residente e domiciliado na ;", abertura)
 
-        self.client.force_login(self.vendedor)
-        resposta = self.client.post(f"/orcamentos/{self.orcamento.pk}/documento/", {"action": "gerar"}, **AJAX)
-        self.assertEqual(resposta.status_code, 409)
-        self.assertIn("O contrato ainda não pode ser enviado para assinatura", resposta.json()["msg"])
-        self.assertFalse(DocumentoAssinatura.objects.exists())
-
-    def test_o_cartao_avisa_e_trava_o_gerar(self):
+    def test_o_cartao_avisa_sem_travar_o_gerar(self):
         self.client.force_login(self.vendedor)
         pagina = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO).content.decode()
-        self.assertIn('data-pendencia="dados"', pagina)
-        self.assertIn("Faltam os dados do vendedor no contrato", pagina)
-        self.assertIn("Peça à Gestão para preencher.", pagina)
-        self.assertNotIn('data-doc-acao="gerar"', pagina)
-        self.assertIn('aria-disabled="true"', pagina)
+        self.assertIn('data-observacao="dados"', pagina)
+        self.assertIn('data-doc-acao="gerar"', pagina)
+        self.assertNotIn('aria-disabled="true"', pagina)
+        self.assertNotIn("Preencher agora", pagina)  # vendedor não edita os dados
 
-        # A Gestão ganha o caminho para preencher.
         self.client.force_login(self.gestor)
         pagina = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO).content.decode()
         self.assertIn('href="/orcamentos/dados-do-contrato/"', pagina)
-        self.assertIn("Preencher os dados do contrato", pagina)
+        self.assertIn("Preencher agora", pagina)
 
-    def test_sem_forma_de_pagamento_tambem_nao_sai(self):
+    def test_sem_forma_de_pagamento_a_condicao_vem_do_texto_ou_do_pagamento(self):
         from .tests_documento_assinatura import preencher_dados_do_contrato
 
         preencher_dados_do_contrato()
-        sem_forma = self.criar_orcamento(forma_pagamento="")
-        with self.assertRaises(ErroDeFormulario) as recusa:
-            svc.gerar(sem_forma, self.vendedor)
-        self.assertIn("Cláusula 2ª", str(recusa.exception))
+        pelo_texto = self.criar_orcamento(
+            forma_pagamento="", observacoes="Montagem inclusa.\nPagamento: 50% de entrada e 50% na entrega.",
+        )
+        self.assertEqual(contrato.condicao_de_pagamento(pelo_texto), ("50% de entrada e 50% na entrega", "texto"))
+        documento = svc.gerar(pelo_texto, self.vendedor)
+        self.assertEqual(documento.conteudo["condicao_pagamento"], "50% de entrada e 50% na entrega")
+
+        sem_nada = self.criar_orcamento(forma_pagamento="", observacoes="Entrada do salão pela lateral.")
+        Orcamento.objects.filter(pk=sem_nada.pk).update(valor_pago=0, pago_em=None)
+        sem_nada.refresh_from_db()
+        condicao, origem = contrato.condicao_de_pagamento(sem_nada)
+        self.assertEqual(origem, "padrao")
+        self.assertTrue(condicao)
         self.client.force_login(self.vendedor)
-        pagina = self.client.get(f"/orcamentos/{sem_forma.pk}/documento/", **INTERNO).content.decode()
-        self.assertIn('data-pendencia="forma"', pagina)
-        self.assertNotIn('data-pendencia="dados"', pagina)
-        # Preenchido o que faltava, o botão volta.
-        pagina = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO).content.decode()
+        pagina = self.client.get(f"/orcamentos/{sem_nada.pk}/documento/", **INTERNO).content.decode()
+        self.assertIn('data-observacao="forma"', pagina)
         self.assertIn('data-doc-acao="gerar"', pagina)
-        self.assertNotIn("data-pendencia", pagina)
+
+        quitado = self.criar_orcamento(forma_pagamento="")
+        Orcamento.objects.filter(pk=quitado.pk).update(valor_pago=quitado.total)
+        quitado.refresh_from_db()
+        condicao, origem = contrato.condicao_de_pagamento(quitado)
+        self.assertEqual(origem, "pagamento")
+        self.assertIn("quitado", condicao)
 
     def test_o_documento_ja_gerado_nao_depende_dos_dados_de_hoje(self):
         """Gerado com os dados, o contrato é o retrato: esvaziar depois não o trava."""

@@ -415,20 +415,12 @@ def gerar(orcamento, usuario):
             )
         if not orcamento.itens.exists():
             raise ErroDeFormulario("Este orçamento não tem itens para o documento.")
-        # O CONTRATO NÃO SAI PELA METADE. Sem os dados do vendedor (o
-        # representante, preenchido pelo dono em "Dados do contrato") ou
-        # sem a forma de pagamento (a condição da Cláusula 2ª), o papel
-        # teria lacunas -- e o que é gerado fica congelado e assinado.
-        from . import contrato
+        # NADA TRAVA O CONTRATO (o dono: "a assinatura está travando... nem
+        # precisa travar"): a condição de pagamento é lida do orçamento e o
+        # representante em branco vira "seu representante legal" (contrato.py).
         from .models import DadosContrato
 
         dados = DadosContrato.atual()
-        faltam = contrato.pendencias(orcamento, dados)
-        if faltam:
-            raise ErroDeFormulario(
-                "O contrato ainda não pode ser enviado para assinatura. "
-                + " ".join(p["texto"] for p in faltam)
-            )
 
         anteriores = list(
             DocumentoAssinatura.objects.select_for_update()

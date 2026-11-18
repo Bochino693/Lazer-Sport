@@ -459,12 +459,13 @@ class FasesTests(Base):
         self.assertEqual(cartao.situacao, "preparando")
         self.assertEqual(cartao.itens, [])
 
-    def test_aprovado_sem_termo_espera_a_equipe(self):
+    def test_aprovado_sem_termo_o_cliente_ja_pode_assinar(self):
+        """O dono: "nem precisa travar a assinatura para os clientes"."""
         cartao, estados, notas = self.estados(self.aprovado())
         self.assertEqual(estados["aprovacao"], "feita")
         self.assertEqual(estados["termo"], "atual")
-        self.assertEqual(notas["termo"], "A equipe está preparando o termo")
-        self.assertFalse(cartao.pode_assinar)
+        self.assertEqual(notas["termo"], "Pronto para você assinar")
+        self.assertTrue(cartao.pode_assinar)
         self.assertTrue(cartao.mostra_pix)
 
     def test_aprovado_com_termo_pede_a_assinatura(self):
@@ -577,9 +578,11 @@ class AssinarTests(Base):
         self.assertEqual(self.documento.links_gerados, 0)
 
     def test_sem_termo_assinado_ou_suspenso_nao_gera_link(self):
+        # aprovado sem contrato gerado: o contrato nasce no toque e o link sai
         sem_termo = self.ligar(self.orcamento(status=Orcamento.Status.APROVADO, respondido_em=timezone.now()))
         resposta = self.client.post(ASSINAR, {"codigo": sem_termo.codigo})
-        self.assertIn("ainda não está pronto", " ".join(self.recados(resposta)))
+        self.assertTrue(resposta["Location"].startswith("/assinar/"), resposta["Location"])
+        self.assertTrue(DocumentoAssinatura.objects.filter(orcamento=sem_termo).exists())
 
         DocumentoAssinatura.objects.filter(pk=self.documento.pk).update(situacao=DocumentoAssinatura.Situacao.ASSINADO, assinado_em=timezone.now())
         resposta = self.client.post(ASSINAR, {"codigo": self.orcamento_aprovado.codigo})

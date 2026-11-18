@@ -30,6 +30,7 @@ em `documento_assinatura.py`, e a cara do papel nos templates
 from __future__ import annotations
 
 import logging
+import re
 import unicodedata
 from decimal import Decimal
 
@@ -462,18 +463,31 @@ def preambulo(vendedor: dict) -> dict:
     Entre as duas vem o quadro do COMPRADOR (nome, CPF ou CNPJ, endereço
     completo, e-mail e telefone), como no contrato da empresa.
     """
+    # O REPRESENTANTE AINDA EM BRANCO NÃO TRAVA O CONTRATO (o dono: "nem
+    # precisa travar a assinatura"): sem o nome, "seu representante legal";
+    # o RG e a residência entram só quando preenchidos.
+    nome = vendedor.get("representante_nome") or ""
+    representante = nome or "seu representante legal"
+    if nome and vendedor.get("representante_rg"):
+        representante += f", portador da cédula de identidade RG {vendedor['representante_rg']}"
+    if nome and vendedor.get("representante_endereco"):
+        representante += f", residente e domiciliado na {vendedor['representante_endereco']}"
+    empresa = vendedor.get("nome_fantasia") or vendedor.get("razao_social") or "a empresa vendedora"
+    partes = [empresa]
+    if vendedor.get("razao_social") and vendedor.get("razao_social") != empresa:
+        partes.append(f"razão social {vendedor['razao_social']}")
+    if vendedor.get("cnpj"):
+        partes.append(f"devidamente inscrita no CNPJ sob o n. {vendedor['cnpj']}")
+    if vendedor.get("endereco_sede"):
+        partes.append(f"com sede na {vendedor['endereco_sede']}")
     return {
         "abertura": (
             "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma "
             "da Lei, comparecem aqui as partes: de um lado, na qualidade de "
             "fornecedor, doravante denominado simplesmente VENDEDOR: "
-            f"{vendedor['nome_fantasia']}, razão social {vendedor['razao_social']}, "
-            f"devidamente inscrita no CNPJ sob o n. {vendedor['cnpj']}, com sede na "
-            f"{vendedor['endereco_sede']}, neste ato representada por "
-            f"{vendedor['representante_nome']}, portador da cédula de identidade "
-            f"RG {vendedor['representante_rg']}, residente e domiciliado na "
-            f"{vendedor['representante_endereco']}; e, do outro lado, na qualidade "
-            "de comprador, doravante denominado simplesmente COMPRADOR:"
+            + ", ".join(partes)
+            + f", neste ato representada por {representante}; e, do outro lado, na "
+            "qualidade de comprador, doravante denominado simplesmente COMPRADOR:"
         ),
         "fechamento": (
             "As partes acima identificadas têm, entre si, justo e acertado o "
@@ -503,34 +517,110 @@ def dados_do_vendedor(dados) -> dict:
 
 
 def pendencias(orcamento, dados=None) -> list[dict]:
-    """O que impede o contrato de sair agora: [{"chave", "texto"}], [] se nada.
+    """O que IMPEDE o contrato de sair: nada.
 
-    "dados": os dados do vendedor (o representante) ainda vazios na tela
-    "Dados do contrato"; "forma": o orçamento sem forma de pagamento, que
-    é a condição escrita na Cláusula 2ª.
+    "A assinatura está travando... nem precisa travar a assinatura para os
+    clientes." A forma de pagamento é lida do orçamento
+    (`condicao_de_pagamento`) e o representante em branco vira "seu
+    representante legal" (`preambulo`). O que convém completar aparece em
+    `observacoes`, sem travar o botão.
     """
+    return []
+
+
+def observacoes(orcamento, dados=None) -> list[dict]:
+    """O que convém saber antes de gerar (nada disso trava): [{"chave", "texto"}]."""
     from .models import DadosContrato
 
     dados = dados or DadosContrato.atual()
     saida = []
+    condicao, origem = condicao_de_pagamento(orcamento)
+    if origem != "escrita":
+        saida.append({
+            "chave": "forma",
+            "texto": f"Condição de pagamento (Cláusula 2ª) {ORIGEM_DA_CONDICAO[origem]}: “{condicao}”.",
+        })
     if dados.faltando:
         saida.append({
             "chave": "dados",
             "texto": (
-                "Faltam os dados do vendedor no contrato ("
+                "Os dados do representante ainda estão em branco ("
                 + ", ".join(dados.faltando)
-                + "). Preencha em “Dados do contrato”, no painel."
-            ),
-        })
-    if not (orcamento.forma_pagamento or "").strip():
-        saida.append({
-            "chave": "forma",
-            "texto": (
-                "Escreva a forma de pagamento no orçamento (ex.: “50% na entrada "
-                "e 50% na entrega”): ela é a condição da Cláusula 2ª."
+                + "): o contrato sai com “seu representante legal”."
             ),
         })
     return saida
+
+
+ORIGEM_DA_CONDICAO = {
+    "escrita": "escrita no orçamento",
+    "texto": "lida do texto do orçamento",
+    "pagamento": "tirada do pagamento registrado",
+    "padrao": "no padrão, porque o orçamento não diz",
+}
+
+#: O que indica um trecho que fala de PAGAMENTO no texto livre do orçamento.
+#: "Entrada" e "na entrega" sozinhos são ambíguos ("entrada do salão"): só
+#: contam com um número na mesma linha ("50% de entrada", "R$ 2.000 na entrega").
+_PISTAS_DE_PAGAMENTO = re.compile(
+    r"(?<!\w)(pix|boleto|cart[aã]o|cr[eé]dito|d[eé]bito|transfer[eê]ncia|dep[oó]sito|"
+    r"parcelas?|parcelad[oa]|\d+\s*x|\d+\s*vezes|[aà] vista|quitad[oa]|pagamento|pagto|"
+    r"\d+\s*%|r\$)(?!\w)",
+    re.IGNORECASE,
+)
+_PISTAS_COM_NUMERO = re.compile(r"(?<!\w)(entrada|sinal|na entrega|na retirada|na instala[cç][aã]o)(?!\w)", re.IGNORECASE)
+_ROTULO_DE_PAGAMENTO = re.compile(
+    r"^\s*(forma|condi[cç][aãoõ]+(es)?)?\s*(de\s+)?(pagamento|pagto)\s*[:\-–]\s*",
+    re.IGNORECASE,
+)
+
+
+def _condicao_no_texto(texto) -> str:
+    """O trecho do texto livre que diz como se paga ("50% de entrada e 50% na entrega")."""
+    for linha in re.split(r"[\r\n;]+|(?<=[.!?])\s+", texto or ""):
+        linha = " ".join(linha.split()).strip(" -–•*")
+        if len(linha) < 3:
+            continue
+        if not (_PISTAS_DE_PAGAMENTO.search(linha) or (_PISTAS_COM_NUMERO.search(linha) and re.search(r"\d", linha))):
+            continue
+        limpa = _ROTULO_DE_PAGAMENTO.sub("", linha).strip(" .:-–")
+        if limpa:
+            return limpa[:220]
+    return ""
+
+
+def condicao_de_pagamento(orcamento) -> tuple[str, str]:
+    """A condição da Cláusula 2ª e de onde ela veio. NUNCA vazia.
+
+    1. o que a equipe escreveu em "Forma de pagamento";
+    2. o trecho de pagamento do texto do orçamento (observação do
+       pagamento, observações, negociação) -- "50% de entrada e 50% na
+       entrega", "Pix", "10x no cartão";
+    3. o pagamento registrado: quitado ("à vista, quitado em 18/11/2026")
+       ou com entrada (a entrada paga e o saldo até a entrega);
+    4. o padrão: à vista, na confirmação do pedido.
+    """
+    from core.formatos import dinheiro
+
+    escrita = " ".join((orcamento.forma_pagamento or "").split())
+    if escrita:
+        return escrita, "escrita"
+    for campo in ("observacao_pagamento", "observacoes", "motivo_negociacao"):
+        achada = _condicao_no_texto(getattr(orcamento, campo, ""))
+        if achada:
+            return achada, "texto"
+    total = Decimal(orcamento.total or 0)
+    pago = Decimal(getattr(orcamento, "valor_pago", None) or 0)
+    quando = getattr(orcamento, "pago_em", None)
+    em = f" em {quando:%d/%m/%Y}" if quando else ""
+    if total > 0 and pago >= total:
+        return f"à vista, em parcela única, quitado{em}", "pagamento"
+    if pago > 0:
+        return (
+            f"entrada de {dinheiro(pago)} paga{em} e o saldo de {dinheiro(total - pago)} "
+            "até a entrega do equipamento"
+        ), "pagamento"
+    return "à vista, na confirmação do pedido", "padrao"
 
 
 def itens_do_contrato(orcamento) -> list[dict]:
@@ -565,7 +655,7 @@ def partes_do_contrato(orcamento, dados, *, quando) -> dict:
 
     vendedor = dados_do_vendedor(dados)
     total = orcamento.total
-    condicao = " ".join((orcamento.forma_pagamento or "").split())
+    condicao, _origem = condicao_de_pagamento(orcamento)
     prazo = _prazo(orcamento)
     return {
         "tipo": TIPO,

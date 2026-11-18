@@ -99,13 +99,14 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
         # O que impede o CONTRATO de sair (os dados do vendedor, a forma de
         # pagamento): o cartão de "Gerar" mostra a lista e trava o botão; o
         # servidor recusa do mesmo jeito (`documento_assinatura.gerar`).
-        pendencias = (
-            contrato.pendencias(orcamento)
+        observacoes = (
+            contrato.observacoes(orcamento)
             if documento is None and orcamento.status == Orcamento.Status.APROVADO
             else []
         )
         return {
-            "pendencias": pendencias,
+            "pendencias": [],
+            "observacoes_contrato": observacoes,
             # A Cláusula 3ª de um contrato gerado agora (o lugar único do prazo).
             "prazo_entrega": contrato.prazo_de_entrega_do_orcamento(orcamento),
             "pode_dados_contrato": capacidades(request.user)["dados_contrato"],

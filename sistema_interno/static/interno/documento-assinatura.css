@@ -53,6 +53,8 @@
 .ls-doc-pendencias i{color:var(--yellow-texto);margin-top:2px}
 .ls-doc-pendencias a{display:inline-block;margin-left:4px;font-weight:800;color:var(--acento-texto)}
 .ls-doc-pendencias em{font-style:normal;font-weight:700;color:var(--text)}
+/* observação, não trava: o ícone de informação no tom do acento */
+.ls-doc-observacoes i{color:var(--acento-texto)}
 
 /* ------------------------------------------------------------ o topo */
 .ls-doc-topo{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}

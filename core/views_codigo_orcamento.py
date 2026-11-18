@@ -225,13 +225,23 @@ class AssinarTermoView(LoginRequiredMixin, View):
         documento = cartao.documento
         if not cartao.pode_assinar:
             if cartao.termo_assinado is not None:
-                texto = "O termo deste orçamento já está assinado. Você pode abrir a cópia no cartão."
-            elif documento is None or orcamento.status != orcamento.Status.APROVADO:
-                texto = "O termo de compra ainda não está pronto para assinar. Ele aparece aqui assim que a equipe o liberar."
+                texto = "O contrato deste orçamento já está assinado. Você pode abrir a cópia no cartão."
+            elif orcamento.status != orcamento.Status.APROVADO:
+                texto = "O contrato sai assim que o orçamento for aprovado."
             else:
-                texto = "O termo deste orçamento está suspenso. Fale com a equipe para liberar de novo."
+                texto = "O contrato deste orçamento está suspenso. Fale com a equipe para liberar de novo."
             avisar(request, texto, nivel=messages.WARNING, titulo="Assinatura indisponível")
             return _de_volta(ancora)
+        if documento is None:
+            # A equipe ainda não gerou: o contrato nasce agora, do orçamento
+            # aprovado (o mesmo `gerar` do painel; nada trava -- contrato.py).
+            try:
+                documento = svc_doc.gerar(orcamento, request.user)
+            except Exception as erro:  # noqa: BLE001 -- o cliente recebe uma frase, o log o resto
+                log.warning("Orçamento %s: contrato não gerado pelo cliente: %s", orcamento.pk, erro)
+                avisar(request, "Não deu para preparar o contrato agora. Tente de novo em instantes.",
+                       nivel=messages.ERROR, titulo="Assinatura indisponível")
+                return _de_volta(ancora)
 
         token, _expira = svc_doc.emitir_link(documento)
         log.info(

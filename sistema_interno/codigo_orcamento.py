@@ -497,7 +497,7 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
         termo.nota = f"Em {_dia(documento.assinado_em)}"
     elif aprovado:
         if documento is None:
-            termo.nota = "A equipe está preparando o termo"
+            termo.nota = "Pronto para você assinar"  # o contrato nasce no toque
         elif suspenso:
             termo.nota = "Suspenso: fale com a equipe"
         else:
@@ -570,8 +570,10 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
         situacao, texto, cor = "resposta", "Esperando sua resposta", "amarelo"
     elif concluido:
         situacao, texto, cor = "concluido", "Entregue", "verde"
-    elif not assinado and documento is not None and not suspenso:
-        situacao, texto, cor = "assinar", "Falta assinar o termo", "amarelo"
+    elif not assinado and not suspenso and aprovado:
+        # aprovado e sem assinatura: o cliente assina (o contrato nasce no
+        # toque, se a equipe ainda não o gerou -- ver AssinarTermoView)
+        situacao, texto, cor = "assinar", "Falta assinar o contrato", "amarelo"
     elif vista is not None and vista.pronta:
         situacao, texto, cor = "producao", "Pronta para a entrega", "verde"
     elif orcamento.quitado:
@@ -597,7 +599,9 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
         cor=cor,
         fases=fases,
         documento=documento,
-        pode_assinar=bool(aprovado and documento and documento.aguardando and not suspenso),
+        # O CLIENTE NÃO FICA ESPERANDO A EQUIPE: aprovado e sem assinatura,
+        # ele assina -- com o contrato que já existe ou com um gerado no toque.
+        pode_assinar=bool(aprovado and not assinado and not suspenso and (documento is None or documento.aguardando)),
         termo_assinado=documento if assinado else None,
         pode_responder=(
             status == Status.AGUARDANDO_RESPOSTA and not orcamento.vencido

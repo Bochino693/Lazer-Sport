@@ -44,33 +44,26 @@
       link que vale {{ validade_minutos }} minutos e se renova sozinho aqui. O pagamento vem
       depois, como último passo.
     </p>
-    {% if pendencias %}
+    {% if observacoes_contrato %}
       {% comment %}
-        O CONTRATO NÃO SAI PELA METADE: sem os dados do vendedor (o
-        representante, em "Dados do contrato") ou sem a forma de pagamento
-        no orçamento, o botão fica travado e a lista diz o que fazer. O
-        servidor recusa do mesmo jeito (`documento_assinatura.gerar`).
+        NADA TRAVA O BOTÃO (o dono: "a assinatura está travando... nem
+        precisa travar"). Aqui só se avisa de onde veio a condição de
+        pagamento da Cláusula 2ª e se o representante ainda está em branco.
       {% endcomment %}
-      <ul class="ls-doc-pendencias" role="alert">
-        {% for pendencia in pendencias %}
-          <li data-pendencia="{{ pendencia.chave }}">
-            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-            <span>{{ pendencia.texto }}
-              {% if pendencia.chave == "dados" %}
-                {% if pode_dados_contrato %}<a href="{{ url_dados_contrato }}">Preencher os dados do contrato</a>{% else %}<em>Peça à Gestão para preencher.</em>{% endif %}
-              {% endif %}
+      <ul class="ls-doc-pendencias ls-doc-observacoes" role="note">
+        {% for nota in observacoes_contrato %}
+          <li data-observacao="{{ nota.chave }}">
+            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+            <span>{{ nota.texto }}
+              {% if nota.chave == "dados" and pode_dados_contrato %}<a href="{{ url_dados_contrato }}">Preencher agora</a>{% endif %}
             </span>
           </li>
         {% endfor %}
       </ul>
-      <button type="button" class="btn btn-success btn-lg ls-doc-gerar" disabled aria-disabled="true">
-        <i class="bi bi-lock me-1" aria-hidden="true"></i> Gerar documento
-      </button>
-    {% else %}
-      <button type="button" class="btn btn-success btn-lg ls-doc-gerar" data-doc-acao="gerar">
-        <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> Gerar documento
-      </button>
     {% endif %}
+    <button type="button" class="btn btn-success btn-lg ls-doc-gerar" data-doc-acao="gerar">
+      <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> Gerar documento
+    </button>
   </div>
 
 {% elif documento.assinado %}
