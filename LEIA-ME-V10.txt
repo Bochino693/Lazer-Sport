@@ -6630,7 +6630,10 @@ Dependência nova: rjsmin (requirements.txt).
    lado); tema sol, lua e eclipse só com as variáveis do tema
    (interno/lista-montagem.css); lista-montagem.js por delegação, sem
    alert/confirm. A lista se acerta sozinha ao abrir (montagem.
-   sincronizar_tudo: o que devia estar e não está, e o contrário).
+   sincronizar_tudo: o que devia estar e não está, e o contrário). Na
+   tela de Pedidos da loja, a célula Produção de cada pedido mostra a fila
+   ou a etapa de agora ("Na fila de produção — posição 2 — previsão ...",
+   "Em produção · Adesivo"), com o elo para a lista.
    QUEM (permissoes.capacidades, as mesmas no menu e na view):
      lista_montagem         vê a tela (Engenharia de produção, Gestão,
                             Financeiro, Vendas, Ambulante; o superusuário);
