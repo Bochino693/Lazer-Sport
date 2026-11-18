@@ -17,6 +17,8 @@ duracao de cada foto e a posicao dos toques). O roteiro escolhe a abertura
     "velocidade": 1.25,                      acelera a gravacao
     "numeros": false,                        numero gigante no inicio de cada passo
     "gancho": {"tipo": "preco" | "pergunta" | "vitrine", ...},
+    "ofertas": {"duracao": 3.0, "prazo": "ATE 21/11", "itens": [{"arte", "nome", "detalhe", "de", "por", "selo"}]},
+    "ponte": {"linhas": ["CADASTRO", "COM 1 CLIQUE"], "texto": "...", "selo": "1"},
     "passos": [{"trecho": "1_vitrine", "passo": 1,
                 "legenda": ["Abra o site pelo link da bio", "e toque na oferta *Black Friday*"]}],
     "final": {"arte": "a10.jpg", "etiqueta": "...", "titulo": [...], "texto": [...], "botao": "..."}
@@ -308,6 +310,99 @@ def gancho_vitrine(g, c1, c2, caminho):
         yield fr
 
 
+# ---------------------------------------------------------------- vitrine de ofertas e ponte
+def secao_ofertas(sec, c1, c2, caminho):
+    """Uma oferta por vez: arte inteira, nome, de/por e selo, com contador e prazo no topo."""
+    itens = sec["itens"]
+    n = int(sec.get("duracao", 3.0) * FPS)
+    branco = Image.new("RGB", (W, H), WHITE)
+    for i, it in enumerate(itens):
+        arte = Image.open(caminho(it["arte"])).convert("RGB")
+        bg = fundo(c1, c2, arte)
+        esc = min(860 / arte.width, 900 / arte.height)
+        larg = int(arte.width * esc)
+        for k in range(n):
+            t = k / FPS
+            fr = bg.copy()
+            s = max(0.05, r.mola(t / 0.4))
+            cart = cartao_arte(arte, max(10, int(larg * s)), (-2.5, 2.5)[i % 2])
+            fr.paste(cart, ((W - cart.width) // 2, 690 - cart.height // 2), cart)
+            ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(ov)
+            # topo: contador e prazo
+            cont = f"OFERTA {i + 1} DE {len(itens)}"
+            r.etiqueta(ov, (60, 150), cont, WHITE, tam=38)
+            if sec.get("prazo"):
+                w = r.medir(d, sec["prazo"], r.font(r.XB, 38))[0] + 56
+                r.etiqueta(ov, (W - 60 - w, 150), sec["prazo"], c2, tam=38)
+            # painel de baixo: nome, complemento, de/por
+            x0, y0, x1, y1 = 60, 1190, W - 60, 1610
+            r.painel(ov, (x0, y0, x1, y1), c1, c2, raio=48)
+            fn = r.ajustar(d, [it["nome"]], r.XB, 84, x1 - x0 - 100)
+            w, h, b = r.medir(d, it["nome"], fn)
+            y = y0 + 44
+            d.text((x0 + 50 - b[0], y - b[1]), it["nome"], font=fn, fill=WHITE + (255,))
+            y += h + 20
+            if it.get("detalhe"):
+                fd = r.ajustar(d, [it["detalhe"]], r.SB, 44, x1 - x0 - 100)
+                w, h, b = r.medir(d, it["detalhe"], fd)
+                d.text((x0 + 50 - b[0], y - b[1]), it["detalhe"], font=fd, fill=(215, 220, 235, 255))
+                y += h + 26
+            if it.get("por"):
+                a = r.suave((t - 0.55) / 0.3)
+                if it.get("de"):
+                    fde = r.font(r.SB, 50)
+                    w, h, b = r.medir(d, it["de"], fde)
+                    d.text((x0 + 50 - b[0], y + 6 - b[1]), it["de"], font=fde, fill=(180, 184, 205, int(255 * a)))
+                    d.line([(x0 + 44, y + 6 + h / 2 + 2), (x0 + 56 + w, y + 6 + h / 2 + 2)], fill=c1 + (int(255 * a),), width=6)
+                    y += h + 30
+                if a > 0:
+                    fp = r.ajustar(d, [it["por"]], r.XB, 150, x1 - x0 - 330)
+                    alt = r.texto_degrade(ov, (x0 + 50, y), it["por"], fp, c2, c1)
+                    wp = r.medir(d, it["por"], fp)[0]
+                    fx = r.font(r.XB, 50)
+                    tx = it.get("forma", "no Pix")
+                    w, h, b = r.medir(d, tx, fx)
+                    d.rounded_rectangle([x0 + 50 + wp + 28, y + alt - h - 34, x0 + 50 + wp + 28 + w + 44, y + alt + 6],
+                                        radius=30, fill=c2 + (255,))
+                    d.text((x0 + 50 + wp + 50 - b[0], y + alt - h - 14 - b[1]), tx, font=fx, fill=INK + (255,))
+            elif it.get("destaque"):
+                fp = r.ajustar(d, [it["destaque"]], r.XB, 96, x1 - x0 - 100)
+                r.texto_degrade(ov, (x0 + 50, y + 10), it["destaque"], fp, c2, c1)
+            fr.paste(ov, (0, 0), ov)
+            if it.get("selo") and t > 0.3:
+                selo_desconto(fr, it["selo"], 880, 330, 128, c1, c2, t * 1.3, escala=max(0.05, r.mola((t - 0.3) / 0.35)))
+            r.confete(fr, (i * n + k) / FPS, 0.6)
+            if k < 4:
+                fr = Image.blend(fr, branco, 0.55 * (1 - k / 4))
+            yield fr
+
+
+def ponte(pt, c1, c2):
+    """Cartela de passagem entre as ofertas e o passo a passo."""
+    bg = fundo(c1, c2)
+    linhas = pt["linhas"]
+    n = int(pt.get("duracao", 2.6) * FPS)
+    for k in range(n):
+        t = k / FPS
+        fr = bg.copy()
+        titulo_central(fr, [(l, i == len(linhas) - 1) for i, l in enumerate(linhas)], 600, 170, c1, c2,
+                       escala=max(0.05, r.mola(t / 0.4)))
+        if pt.get("selo") and t > 0.35:
+            selo_desconto(fr, pt["selo"], W // 2, 400, 150, c1, c2, t * 1.2, escala=max(0.05, r.mola((t - 0.35) / 0.4)))
+        if pt.get("texto") and t > 0.7:
+            a = r.suave((t - 0.7) / 0.3)
+            d = ImageDraw.Draw(fr, "RGBA")
+            f = r.ajustar(d, [pt["texto"]], r.SB, 56, W - 220)
+            w, h, b = r.medir(d, pt["texto"], f)
+            d.rounded_rectangle([(W - w) // 2 - 46, 1180, (W + w) // 2 + 46, 1180 + h + 56], radius=52, fill=WHITE + (int(255 * a),))
+            d.text(((W - w) // 2 - b[0], 1208 - b[1]), pt["texto"], font=f, fill=INK + (int(255 * a),))
+        r.confete(fr, t, 0.8)
+        if k < 4:
+            fr = Image.blend(fr, Image.new("RGB", (W, H), WHITE), 0.6 * (1 - k / 4))
+        yield fr
+
+
 GANCHOS = {"preco": gancho_preco, "pergunta": gancho_pergunta, "vitrine": gancho_vitrine}
 
 
@@ -358,6 +453,13 @@ def main():
     g = spec.get("gancho")
     if g:
         for fr in GANCHOS[g["tipo"]](g, c1, c2, caminho):
+            emitir(fr)
+
+    if spec.get("ofertas"):
+        for fr in secao_ofertas(spec["ofertas"], c1, c2, caminho):
+            emitir(fr)
+    if spec.get("ponte"):
+        for fr in ponte(spec["ponte"], c1, c2):
             emitir(fr)
 
     primeiro = True

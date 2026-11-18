@@ -64,3 +64,12 @@ que receber uma correção. Não apague lições; se uma mudar, reescreva a linh
   legendar exatamente o que ele diz.
 - 2026-11-14 — Entregar o vídeo sempre como arquivo MP4 direto na conversa,
   pronto para baixar.
+
+## Black Friday e ofertas
+- 2026-11-18 — Antes de citar preço, parcela ou prazo, reler a página da
+  promoção no dia: os valores do cartão mudaram de uma semana para a outra.
+- 2026-11-18 — Vídeo de oferta de 1 minuto: gancho, vitrine com todas as
+  ofertas (arte inteira, de/por no Pix, selo de desconto, prazo no topo), depois
+  o passo a passo do cadastro e da compra (`exemplos/black_friday_1min.json`).
+- 2026-11-18 — O cadastro rápido do site é o botão "Continuar com Google";
+  mostrar o toque nele, sem clicar de verdade na gravação.
