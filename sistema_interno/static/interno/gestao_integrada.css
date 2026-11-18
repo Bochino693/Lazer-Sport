@@ -676,3 +676,95 @@
   box-shadow:0 6px 16px rgba(var(--acento-rgb),.35);
 }
 .gestao-integrada .ls-content .sj-ajuda{margin:0;font-size:.8rem;color:var(--muted)}
+
+/* ----------------------------------------------------------------------
+   SEGURANÇA DAS CONTAS (contas/templates/contas/seguranca_contas.html)
+   As ocorrências que as regras de conta barraram. Só variáveis do tema:
+   vermelho para o que espera revisão, verde para o resolvido, o acento
+   nos chips escolhidos. Os números e o quadro da lista já ganham a
+   superfície comum pelas regras "-kpi" e "-panel" lá de cima.
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content .sc-tela{display:grid;gap:16px;min-width:0}
+.gestao-integrada .ls-content .sc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.gestao-integrada .ls-content .sc-kpi{
+  display:flex!important;align-items:center;gap:12px;padding:14px 16px!important;min-width:0;
+  border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,var(--panel),var(--bg-1));
+}
+.gestao-integrada .ls-content .sc-kpi>i{font-size:1.4rem;color:var(--acento);flex:0 0 auto}
+.gestao-integrada .ls-content .sc-kpi.is-alerta>i{color:var(--red)}
+.gestao-integrada .ls-content .sc-kpi span{display:grid;min-width:0}
+.gestao-integrada .ls-content .sc-kpi strong{font-size:1.5rem;line-height:1.1;color:var(--text)}
+.gestao-integrada .ls-content .sc-kpi small{font-size:.8rem;color:var(--muted)}
+.gestao-integrada .ls-content .sc-panel{padding:16px!important;display:grid;gap:14px;min-width:0}
+.gestao-integrada .ls-content .sc-filtros{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.gestao-integrada .ls-content .sc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.gestao-integrada .ls-content .sc-chip{position:relative;cursor:pointer;margin:0}
+.gestao-integrada .ls-content .sc-chip input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.gestao-integrada .ls-content .sc-chip span{
+  display:inline-flex;align-items:center;min-height:36px;padding:6px 12px;border-radius:999px;
+  font-weight:800;font-size:.84rem;background:var(--panel-2);border:1.5px solid var(--line);color:var(--text-2);
+  transition:background .15s ease,border-color .15s ease;
+}
+.gestao-integrada .ls-content .sc-chip input:focus-visible+span{outline:3px solid var(--acento-claro);outline-offset:2px}
+.gestao-integrada .ls-content .sc-chip input:checked+span{
+  background:linear-gradient(135deg,var(--acento),var(--acento-2));border-color:var(--acento);color:var(--acento-tinta);
+}
+.gestao-integrada .ls-content .sc-lista{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.gestao-integrada .ls-content .sc-item{
+  display:grid;gap:10px;padding:14px 16px;border-radius:16px;min-width:0;
+  background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--red);color:var(--text-2);
+}
+.gestao-integrada .ls-content .sc-item--login_bloqueado{border-left-color:var(--yellow)}
+.gestao-integrada .ls-content .sc-item--social_recusado{border-left-color:var(--violet)}
+.gestao-integrada .ls-content .sc-item.is-resolvida{border-left-color:var(--green);opacity:.86}
+.gestao-integrada .ls-content .sc-item-topo{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.gestao-integrada .ls-content .sc-tipo{display:inline-flex;align-items:center;gap:6px;font-weight:850;color:var(--text)}
+.gestao-integrada .ls-content .sc-situacao{
+  font-size:.76rem;font-weight:850;padding:3px 10px;border-radius:999px;
+  background:var(--green-fundo);color:var(--green-texto);border:1px solid var(--green-linha);
+}
+.gestao-integrada .ls-content .sc-situacao.is-pendente{background:var(--red-fundo);color:var(--red-texto);border-color:var(--red-linha)}
+.gestao-integrada .ls-content .sc-quando{margin-left:auto;font-size:.8rem;color:var(--muted)}
+.gestao-integrada .ls-content .sc-dados{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 16px;margin:0}
+.gestao-integrada .ls-content .sc-dados dt{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.gestao-integrada .ls-content .sc-dados dd{margin:0;color:var(--text);overflow-wrap:anywhere}
+.gestao-integrada .ls-content .sc-dados small{color:var(--muted)}
+.gestao-integrada .ls-content .sc-email{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem}
+.gestao-integrada .ls-content .sc-motivo{margin:0;font-size:.88rem;color:var(--text-2)}
+.gestao-integrada .ls-content .sc-acoes{display:flex;flex-wrap:wrap;gap:8px}
+.gestao-integrada .ls-content .sc-acoes form{margin:0}
+/* As cores dos botões são as da camada comum (BOTÕES, lá em cima): verde
+   conclui (Reativar, Liberar), "danger" vermelho (Manter bloqueada),
+   "secondary" discreto (Ciente) e o âmbar do filtro. Aqui, só a forma. */
+.gestao-integrada .ls-content .sc-botao{min-height:40px;padding:8px 14px}
+/* Os de envio (`type=submit`) nasceriam todos verdes pela regra de "o que
+   conclui", que pesa mais que a do "danger": aqui o papel volta a valer. */
+.gestao-integrada .ls-content button.sc-botao-danger[type="submit"]{
+  border-color:rgba(var(--red-rgb),.34)!important;color:var(--red-claro)!important;
+  background:rgba(var(--red-rgb),.09)!important;box-shadow:none!important;
+}
+.gestao-integrada .ls-content button.sc-botao-danger[type="submit"]:hover{
+  color:var(--red-tinta)!important;background:var(--red)!important;border-color:var(--red)!important;
+}
+.gestao-integrada .ls-content button.sc-botao-secondary[type="submit"]{
+  border-color:var(--line)!important;color:var(--text-2)!important;
+  background:rgba(var(--verniz-rgb),.045)!important;box-shadow:none!important;
+}
+.gestao-integrada .ls-content button.sc-botao-secondary[type="submit"]:hover{
+  border-color:var(--line-forte)!important;color:var(--text)!important;
+  background:rgba(var(--acento-rgb),.13)!important;
+}
+.gestao-integrada .ls-content .sc-resolvida{margin:0;font-size:.86rem;color:var(--green-texto)}
+.gestao-integrada .ls-content .sc-paginas{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.gestao-integrada .ls-content .sc-chip-link{font-weight:800;color:var(--acento-texto);text-decoration:none}
+.gestao-integrada .ls-content .sc-regras{padding:14px 16px;border-radius:16px;border:1px dashed var(--line);color:var(--text-2)}
+.gestao-integrada .ls-content .sc-regras h2{font-size:1rem;margin:0 0 8px;display:flex;gap:6px;align-items:center}
+.gestao-integrada .ls-content .sc-regras ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:.88rem}
+@media (max-width:900px){
+  .gestao-integrada .ls-content .sc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .gestao-integrada .ls-content .sc-quando{margin-left:0;width:100%}
+  .gestao-integrada .ls-content .sc-acoes>form{flex:1 1 140px}
+  .gestao-integrada .ls-content .sc-botao{width:100%}
+}

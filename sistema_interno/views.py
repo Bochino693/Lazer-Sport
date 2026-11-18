@@ -297,11 +297,22 @@ class LoginInternoView(View):
         return render(request, self.template_name)
 
     def post(self, request):
-        user = authenticate(
+        # Usuário ou e-mail, com o freio de senhas erradas (contas/freio.py):
+        # a mesma pausa do site, do /system/ e do aplicativo.
+        from contas.freio import autenticar
+
+        tentativa = autenticar(
             request,
-            username=request.POST.get("login"),
-            password=request.POST.get("password"),
+            request.POST.get("login"),
+            request.POST.get("password"),
+            origem="painel",
         )
+        user = tentativa.usuario
+
+        if tentativa.bloqueada:
+            return render(request, self.template_name, {
+                "error": tentativa.mensagem,
+            }, status=429)
 
         if not user:
             return render(request, self.template_name, {
@@ -352,26 +363,25 @@ class MinhaContaView(InternoRequiredMixin, View):
         if not primeiro_nome:
             messages.error(request, "Informe seu nome.")
             return render(request, self.template_name, status=400)
+        # O e-mail pela regra das contas (contas/emails.py): normalizado,
+        # livre em todas as outras contas e nos endereços do allauth.
+        from contas.emails import EmailIndisponivel, mensagem_de, sincronizar_enderecos, validar_email_de_conta
         try:
-            validate_email(email)
-        except ValidationError:
-            messages.error(request, "Informe um e-mail válido.")
-            return render(request, self.template_name, status=400)
-        if User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists():
-            messages.error(request, "Este e-mail já está sendo usado por outra conta.")
+            email = validar_email_de_conta(email, usuario=user, pela_equipe=True, obrigatorio=True)
+        except EmailIndisponivel as exc:
+            messages.error(
+                request,
+                "Este e-mail já está sendo usado por outra conta." if exc.code == "em_uso" else mensagem_de(exc),
+            )
             return render(request, self.template_name, status=400)
 
-        from core.identidade_email import validar_email_de_usuario
-        try:
-            validar_email_de_usuario(email, usuario_id=user.pk)
-        except ErroDeFormulario as exc:
-            messages.error(request, str(exc))
-            return render(request, self.template_name, status=400)
-
+        email_mudou = email != (user.email or "")
         user.first_name = primeiro_nome
         user.last_name = sobrenome
         user.email = email
         user.save(update_fields=["first_name", "last_name", "email"])
+        if email_mudou:
+            sincronizar_enderecos(user)
 
         try:
             gerente = user.gerente
@@ -389,8 +399,14 @@ class MinhaContaView(InternoRequiredMixin, View):
             if not user.check_password(senha_atual):
                 messages.error(request, "A senha atual está incorreta; os demais dados foram salvos.")
                 return redirect("minha_conta_inner")
-            if len(senha_nova) < 8:
-                messages.error(request, "A nova senha precisa ter pelo menos 8 caracteres.")
+            from contas.senhas import validar_senha
+
+            erros_senha = validar_senha(senha_nova, user)
+            if erros_senha:
+                messages.error(
+                    request,
+                    "A nova senha não foi aceita: " + " ".join(erros_senha) + " Os demais dados foram salvos.",
+                )
                 return redirect("minha_conta_inner")
             if senha_nova != senha_confirmacao:
                 messages.error(request, "A confirmação da nova senha não confere.")

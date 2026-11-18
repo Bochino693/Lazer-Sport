@@ -14,7 +14,7 @@ As demais telas permanecem em core/views.py.
 from __future__ import annotations
 
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
@@ -194,29 +194,22 @@ class LoginUsuarioView(View):
         login_digitado = (request.POST.get("username") or "").strip()
         senha = request.POST.get("password") or ""
 
-        username = login_digitado
+        # Usuário ou e-mail (o e-mail normalizado acha a conta única dele),
+        # com o freio de senhas erradas: contas/freio.py.
+        from contas.freio import autenticar
 
-        if "@" in login_digitado:
-            usuario_email = (
-                User.objects
-                .filter(email__iexact=login_digitado)
-                .order_by("id")
-                .first()
-            )
-            username = usuario_email.username if usuario_email else ""
-
-        usuario = authenticate(
-            request,
-            username=username,
-            password=senha,
-        )
+        tentativa = autenticar(request, login_digitado, senha, origem="site")
+        usuario = tentativa.usuario
 
         if usuario is None:
             messages.error(
                 request,
-                "Usuário, e-mail ou senha incorretos.",
+                tentativa.mensagem or "Usuário, e-mail ou senha incorretos.",
                 # o título do toast (core/ls_aviso.py)
-                extra_tags="titulo:Não foi possível entrar",
+                extra_tags=(
+                    "titulo:Acesso pausado por segurança" if tentativa.bloqueada
+                    else "titulo:Não foi possível entrar"
+                ),
             )
             return render(
                 request,
@@ -228,6 +221,7 @@ class LoginUsuarioView(View):
                         request.POST.get("next"),
                     ),
                 },
+                status=429 if tentativa.bloqueada else 200,
             )
 
         login(

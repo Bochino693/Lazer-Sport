@@ -15,7 +15,6 @@
 # O DEFAULT_PERMISSION_CLASSES do projeto é AllowAny -- se você criar
 # uma view nova e esquecer de declarar, ela nasce aberta pro mundo.
 
-from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import serializers, status
@@ -48,19 +47,45 @@ class RegistroSerializer(serializers.Serializer):
     senha = serializers.CharField(min_length=8, write_only=True)
 
     def validate_email(self, valor):
-        valor = valor.strip().lower()
-        if User.objects.filter(email__iexact=valor).exists():
-            raise serializers.ValidationError(
-                "Já existe uma conta com este e-mail."
-            )
-        return valor
+        # A regra das contas (contas/emails.py): normalizado, livre em todas
+        # as contas (principal e endereços do allauth) e nunca da empresa.
+        from contas.emails import EmailIndisponivel, validar_email_de_conta
+
+        try:
+            return validar_email_de_conta(valor, obrigatorio=True)
+        except EmailIndisponivel as erro:
+            if erro.code == "em_uso":
+                raise serializers.ValidationError(
+                    "Já existe uma conta com este e-mail."
+                ) from erro
+            raise serializers.ValidationError(erro.messages) from erro
+
+    def validate(self, dados):
+        from contas.senhas import validar_senha
+
+        futura = User(
+            username=dados.get("email", ""),
+            email=dados.get("email", ""),
+            first_name=(dados.get("nome_completo") or "").split(" ")[0][:30],
+        )
+        erros = validar_senha(dados.get("senha"), futura)
+        if erros:
+            raise serializers.ValidationError({"senha": erros})
+        return dados
 
     @transaction.atomic
     def create(self, dados):
         # O username vira o próprio e-mail: um campo a menos pro
-        # cliente digitar, e o allauth já aceita login por e-mail.
+        # cliente digitar, e o allauth já aceita login por e-mail. Se esse
+        # usuário já existe (uma conta que trocou de e-mail continua com o
+        # antigo como usuário), ganha um sufixo.
+        from contas.adapters import username_livre
+
+        username = dados["email"]
+        if User.objects.filter(username__iexact=username).exists():
+            username = username_livre(dados["email"])
         user = User.objects.create_user(
-            username=dados["email"],
+            username=username,
             email=dados["email"],
             password=dados["senha"],
         )
@@ -129,22 +154,18 @@ class LoginAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = authenticate(request, username=login, password=senha)
+        # Usuário ou e-mail, uma tentativa só, com o freio de senhas
+        # erradas (contas/freio.py): pausado, o app recebe 429 e a hora.
+        from contas.freio import autenticar
 
-        # Se falhou e parece e-mail, tenta achar o username correspondente.
-        if user is None and "@" in login:
-            achado = (
-                User.objects
-                .filter(email__iexact=login)
-                .only("username")
-                .first()
+        tentativa = autenticar(request._request, login, senha, origem="api")
+        if tentativa.bloqueada:
+            return Response(
+                {"detail": tentativa.mensagem, "tente_em_segundos": tentativa.bloqueio},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={"Retry-After": str(tentativa.bloqueio)},
             )
-            if achado:
-                user = authenticate(
-                    request,
-                    username=achado.username,
-                    password=senha,
-                )
+        user = tentativa.usuario
 
         if user is None:
             # Mensagem genérica de propósito: não confirma se o

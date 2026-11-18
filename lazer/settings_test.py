@@ -97,3 +97,7 @@ CAMPANHA_EMAIL_PAUSA = 0
 CAMPANHA_EMAIL_PAUSA_LOTE = 0
 CAMPANHA_EMAILS_POR_DIA = 0
 RECORTE_PECAS_AUTOMATICO = False  # nos testes, o recorte só roda quando o teste chama (core/recorte_peca.py)
+# o freio de senhas erradas (contas/freio.py) conta no cache, que é um só para a
+# suíte inteira: desligado, um teste não tranca o login do seguinte. Os testes
+# dele (contas/tests_freio.py) o ligam.
+LOGIN_FREIO_ATIVO = False

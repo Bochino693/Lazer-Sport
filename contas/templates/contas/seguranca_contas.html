@@ -1,0 +1,172 @@
+{% extends "gestao/base_adm.html" %}
+{% block title %}Segurança das contas | Lazer &amp; Sport{% endblock %}
+{% block page_heading %}Segurança das contas{% endblock %}
+
+{% block content %}
+{% comment %}
+  SEGURANÇA DAS CONTAS (contas/views.py). O que as regras de conta barraram:
+  as contas bloqueadas por e-mail repetido (a migração contas/0002), os
+  logins pausados por senha errada demais (contas/freio.py) e os logins
+  sociais recusados (contas/adapters.py). Cada ação pergunta antes pela
+  folha do LSAviso (data-ls-confirmar chama window.LSAviso.confirmar); os
+  filtros são chips de rádio (nada de caixa de seleção). As cores são do tema
+  (gestao_integrada.css, bloco "SEGURANÇA DAS CONTAS").
+{% endcomment %}
+<div class="sc-tela">
+
+<section class="ls-page-hero sc-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Contas · e-mail único · freio do login</span>
+    <h1>Segurança das contas</h1>
+    <p>Cada e-mail pertence a uma conta só. Aqui ficam as contas que foram bloqueadas por repetir o e-mail de outra, os logins pausados por senha errada e os logins pelo Google/Apple recusados. Revise e decida: nada some da lista, só muda de situação.</p>
+  </div>
+</section>
+
+<section class="sc-kpis" aria-label="Resumo das ocorrências">
+  <article class="sc-kpi{% if numeros.pendentes %} is-alerta{% endif %}">
+    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+    <span><strong>{{ numeros.pendentes }}</strong><small>esperando revisão</small></span>
+  </article>
+  <article class="sc-kpi">
+    <i class="bi bi-envelope-x" aria-hidden="true"></i>
+    <span><strong>{{ numeros.repetidos }}</strong><small>conta{{ numeros.repetidos|pluralize }} bloqueada{{ numeros.repetidos|pluralize }} por e-mail repetido</small></span>
+  </article>
+  <article class="sc-kpi">
+    <i class="bi bi-lock" aria-hidden="true"></i>
+    <span><strong>{{ numeros.logins }}</strong><small>login{{ numeros.logins|pluralize }} pausado{{ numeros.logins|pluralize }} em 7 dias</small></span>
+  </article>
+  <article class="sc-kpi">
+    <i class="bi bi-google" aria-hidden="true"></i>
+    <span><strong>{{ numeros.sociais }}</strong><small>login{{ numeros.sociais|pluralize }} socia{{ numeros.sociais|pluralize:"l,is" }} recusado{{ numeros.sociais|pluralize }} em 7 dias</small></span>
+  </article>
+</section>
+
+<section class="sc-panel" id="scLista" data-lsa-ancora>
+  <form class="sc-filtros" method="get" action="{% url 'seguranca_contas' %}#scLista">
+    <div class="sc-chips" role="radiogroup" aria-label="Situação">
+      {% for valor, rotulo in filtros_situacao %}<label class="sc-chip"><input type="radio" name="situacao" value="{{ valor }}"{% if valor == situacao %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
+    </div>
+    <div class="sc-chips" role="radiogroup" aria-label="Tipo de ocorrência">
+      {% for valor, rotulo in filtros_tipo %}<label class="sc-chip sc-chip--tipo"><input type="radio" name="tipo" value="{{ valor }}"{% if valor == tipo %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
+    </div>
+    <button type="submit" class="sc-filtrar"><i class="bi bi-funnel" aria-hidden="true"></i> Filtrar</button>
+  </form>
+
+  {% if ocorrencias %}
+  <ol class="sc-lista">
+    {% for o in ocorrencias %}
+    <li class="sc-item sc-item--{{ o.tipo }}{% if not o.pendente %} is-resolvida{% endif %}">
+      <div class="sc-item-topo">
+        <span class="sc-tipo">
+          {% if o.tipo == "email_repetido" %}<i class="bi bi-envelope-x" aria-hidden="true"></i>{% elif o.tipo == "login_bloqueado" %}<i class="bi bi-lock" aria-hidden="true"></i>{% else %}<i class="bi bi-person-x" aria-hidden="true"></i>{% endif %}
+          {{ o.get_tipo_display }}
+        </span>
+        <span class="sc-situacao{% if o.pendente %} is-pendente{% endif %}">{{ o.get_situacao_display }}</span>
+        <time class="sc-quando" datetime="{{ o.criado_em|date:'c' }}">{{ o.criado_em|date:"d/m/Y H:i" }}</time>
+      </div>
+
+      <dl class="sc-dados">
+        <div>
+          <dt>Conta</dt>
+          <dd>{% if o.usuario %}{{ o.usuario.get_full_name|default:o.usuario.username }} <small>@{{ o.usuario.username }}{% if not o.usuario.is_active %} · inativa{% endif %}</small>{% elif o.username %}@{{ o.username }} <small>(apagada)</small>{% else %}<small>nenhuma conta com este login</small>{% endif %}</dd>
+        </div>
+        {% if o.email_original %}
+        <div>
+          <dt>E-mail que a conta tinha</dt>
+          <dd class="sc-email">{{ o.email_original }}</dd>
+        </div>
+        {% endif %}
+        {% if o.conta_mantida %}
+        <div>
+          <dt>Ficou com o e-mail</dt>
+          <dd>{{ o.conta_mantida.get_full_name|default:o.conta_mantida.username }} <small>@{{ o.conta_mantida.username }}</small></dd>
+        </div>
+        {% endif %}
+        {% if o.login_tentado %}
+        <div>
+          <dt>{% if o.tipo == "social_recusado" %}E-mail do provedor{% else %}Login digitado{% endif %}</dt>
+          <dd class="sc-email">{{ o.login_tentado }}</dd>
+        </div>
+        {% endif %}
+        {% if o.ip or o.origem %}
+        <div>
+          <dt>De onde</dt>
+          <dd>{% if o.ip %}{{ o.ip }}{% if o.origem %} <small>· {{ o.origem_rotulo }}</small>{% endif %}{% else %}{{ o.origem_rotulo }}{% endif %}</dd>
+        </div>
+        {% endif %}
+      </dl>
+
+      {% if o.motivo %}<p class="sc-motivo">{{ o.motivo }}</p>{% endif %}
+
+      {% if o.pendente %}
+      <div class="sc-acoes">
+        {% if o.tipo == "email_repetido" %}
+          <form method="post" action="{% url 'seguranca_contas' %}"
+                data-ls-confirmar="A conta @{{ o.usuario.username|default:o.username }} volta a entrar, mas SEM e-mail: cadastre um endereço novo para ela em Contas de clientes. Reative só se tiver certeza de que a conta é legítima."
+                data-ls-confirmar-titulo="Reativar a conta?" data-ls-confirmar-botao="Reativar" data-ls-confirmar-icone="pessoa">
+            {% csrf_token %}<input type="hidden" name="action" value="reativar"><input type="hidden" name="id" value="{{ o.pk }}">
+            <button type="submit" class="sc-botao"{% if not o.usuario %} disabled{% endif %}><i class="bi bi-unlock" aria-hidden="true"></i> Reativar</button>
+          </form>
+          <form method="post" action="{% url 'seguranca_contas' %}"
+                data-ls-confirmar="A conta continua inativa e sem o e-mail. A ocorrência vai para Resolvidas."
+                data-ls-confirmar-titulo="Manter bloqueada?" data-ls-confirmar-botao="Manter bloqueada" data-ls-perigo>
+            {% csrf_token %}<input type="hidden" name="action" value="manter"><input type="hidden" name="id" value="{{ o.pk }}">
+            <button type="submit" class="sc-botao sc-botao-danger"><i class="bi bi-shield-lock" aria-hidden="true"></i> Manter bloqueada</button>
+          </form>
+        {% elif o.tipo == "login_bloqueado" %}
+          <form method="post" action="{% url 'seguranca_contas' %}"
+                data-ls-confirmar="A pausa acaba agora e a pessoa pode tentar a senha de novo. Libere só se souber quem estava tentando."
+                data-ls-confirmar-titulo="Liberar o login?" data-ls-confirmar-botao="Liberar agora">
+            {% csrf_token %}<input type="hidden" name="action" value="liberar"><input type="hidden" name="id" value="{{ o.pk }}">
+            <button type="submit" class="sc-botao"><i class="bi bi-unlock" aria-hidden="true"></i> Liberar agora</button>
+          </form>
+          <form method="post" action="{% url 'seguranca_contas' %}"
+                data-ls-confirmar="A pausa continua até vencer sozinha. A ocorrência vai para Resolvidas."
+                data-ls-confirmar-titulo="Marcar como revisada?" data-ls-confirmar-botao="Ciente">
+            {% csrf_token %}<input type="hidden" name="action" value="ciente"><input type="hidden" name="id" value="{{ o.pk }}">
+            <button type="submit" class="sc-botao sc-botao-secondary"><i class="bi bi-check2" aria-hidden="true"></i> Ciente</button>
+          </form>
+        {% else %}
+          <form method="post" action="{% url 'seguranca_contas' %}"
+                data-ls-confirmar="Nada muda na conta: a ocorrência só vai para Resolvidas."
+                data-ls-confirmar-titulo="Marcar como revisada?" data-ls-confirmar-botao="Ciente">
+            {% csrf_token %}<input type="hidden" name="action" value="ciente"><input type="hidden" name="id" value="{{ o.pk }}">
+            <button type="submit" class="sc-botao sc-botao-secondary"><i class="bi bi-check2" aria-hidden="true"></i> Ciente</button>
+          </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="sc-resolvida"><i class="bi bi-check2-circle" aria-hidden="true"></i> {{ o.get_situacao_display }}{% if o.resolvido_por %} por {{ o.resolvido_por.get_full_name|default:o.resolvido_por.username }}{% endif %}{% if o.resolvido_em %} em {{ o.resolvido_em|date:"d/m/Y H:i" }}{% endif %}.</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  {% if pagina.has_other_pages %}
+  <nav class="sc-paginas" aria-label="Páginas">
+    {% if pagina.has_previous %}<a class="sc-chip-link" href="?{{ query_sem_pagina }}{% if query_sem_pagina %}&amp;{% endif %}page={{ pagina.previous_page_number }}#scLista"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</a>{% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}<a class="sc-chip-link" href="?{{ query_sem_pagina }}{% if query_sem_pagina %}&amp;{% endif %}page={{ pagina.next_page_number }}#scLista">Próxima <i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% endif %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="ls-empty sc-vazio">
+    <i class="bi bi-shield-check" aria-hidden="true"></i>
+    <span>{% if situacao == "pendentes" %}Nada esperando revisão.{% else %}Nenhuma ocorrência neste filtro.{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+
+<section class="sc-regras" aria-label="As regras em vigor">
+  <h2><i class="bi bi-info-circle" aria-hidden="true"></i> As regras em vigor</h2>
+  <ul>
+    <li><strong>Um e-mail, uma conta.</strong> Maiúsculas, espaços e variantes de letra não fazem um e-mail diferente. Vale no cadastro do site e do aplicativo, no Google/Apple, no perfil, no painel e no /system/ -- e o banco recusa a repetição.</li>
+    <li><strong>Endereços da Lazer &amp; Sport</strong> só em conta criada pela equipe.</li>
+    <li><strong>Google/Apple</strong> só entram numa conta que já existe quando o provedor garante que o e-mail é da pessoa; uma segunda conta com o mesmo e-mail nunca é criada.</li>
+    <li><strong>Senha errada:</strong> {% if freio.ativo %}{{ freio.conta }} erros na mesma conta, ou {{ freio.ip }} no mesmo IP, em {{ freio.janela }} minutos, pausam o acesso por {{ freio.bloqueio }} minutos.{% else %}o freio está desligado (LOGIN_FREIO_ATIVO).{% endif %}</li>
+  </ul>
+</section>
+
+</div>
+{% endblock %}

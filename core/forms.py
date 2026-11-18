@@ -50,13 +50,21 @@ def normalizar_telefone(valor):
 # ============================================================
 
 class UserForm(forms.ModelForm):
+    """Nome e e-mail da própria conta (/perfil/).
+
+    O e-mail passa pela regra das contas (contas/emails.py): livre em todas
+    as outras contas, sem diferença de maiúsculas ou variante, e nunca um
+    endereço da empresa. Quem salva acerta os endereços do allauth junto
+    (`contas.emails.sincronizar_enderecos`, ver ClientePerfilView).
+    """
+
     def clean_email(self):
-        from .identidade_email import validar_email_de_usuario
-        from sistema_interno.utils import ErroDeFormulario
-        try:
-            return validar_email_de_usuario(self.cleaned_data.get("email"), usuario_id=self.instance.pk)
-        except ErroDeFormulario as exc:
-            raise forms.ValidationError(str(exc)) from exc
+        from contas.emails import validar_email_de_conta
+
+        return validar_email_de_conta(
+            self.cleaned_data.get("email"),
+            usuario=self.instance if self.instance.pk else None,
+        )
 
     class Meta:
         model = User
@@ -128,20 +136,21 @@ class CadastroForm(forms.Form):
         return username
 
     def clean_email(self):
-        email = self.cleaned_data["email"].strip().lower()
+        # A regra das contas (contas/emails.py): normalizado, livre em todas
+        # as contas (principal e endereços do allauth) e nunca um endereço da
+        # própria empresa.
+        from contas.emails import EmailIndisponivel, validar_email_de_conta
 
-        if User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError(
-                "Já existe uma conta com esse e-mail. "
-                "Faça login ou entre com Google."
-            )
-
-        from .identidade_email import validar_email_de_usuario
-        from sistema_interno.utils import ErroDeFormulario
         try:
-            return validar_email_de_usuario(email)
-        except ErroDeFormulario as exc:
-            raise forms.ValidationError(str(exc)) from exc
+            return validar_email_de_conta(self.cleaned_data["email"], obrigatorio=True)
+        except EmailIndisponivel as erro:
+            if erro.code == "em_uso":
+                raise forms.ValidationError(
+                    "Já existe uma conta com esse e-mail. "
+                    "Faça login ou entre com Google.",
+                    code="em_uso",
+                ) from erro
+            raise
 
     def clean_telefone(self):
         telefone = normalizar_telefone(self.cleaned_data.get("telefone"))
@@ -166,8 +175,19 @@ class CadastroForm(forms.Form):
         if senha and senha2 and senha != senha2:
             self.add_error("password2", "As senhas não conferem.")
 
-        if senha and len(senha) < 8:
-            self.add_error("password", "Use pelo menos 8 caracteres.")
+        if senha:
+            # Os validadores de senha do settings (contas/senhas.py), contra
+            # o que a conta VAI ter: usuário, nome e e-mail.
+            from contas.senhas import validar_senha
+
+            futura = User(
+                username=dados.get("username") or "",
+                email=dados.get("email") or "",
+                first_name=dados.get("first_name") or "",
+                last_name=dados.get("last_name") or "",
+            )
+            for erro in validar_senha(senha, futura):
+                self.add_error("password", erro)
 
         # Só com a requisição (a view a passa): o teste do formulário puro
         # e o painel não passam pelo desafio.
@@ -205,23 +225,13 @@ class CadastroForm(forms.Form):
         perfil.nome_completo = f"{user.first_name} {user.last_name}".strip()
         perfil.save(update_fields=["telefone", "nome_completo"])
 
-        # Registra o e-mail na tabela do allauth. Sem isso, quem se
-        # cadastra aqui e depois clica em "Entrar com Google" viraria
-        # um segundo usuário com o mesmo e-mail (o Django não impõe
-        # unicidade em User.email).
-        try:
-            from allauth.account.models import EmailAddress
+        # Registra o e-mail na tabela do allauth (não confirmado, principal).
+        # Sem isso, quem se cadastra aqui e depois clica em "Entrar com
+        # Google" não seria achado pelo e-mail. A unicidade em si é das
+        # regras de conta (contas/emails.py) e do índice do banco.
+        from contas.emails import sincronizar_enderecos
 
-            EmailAddress.objects.get_or_create(
-                user=user,
-                email=user.email,
-                defaults={"verified": False, "primary": True},
-            )
-        except Exception:
-            # allauth ausente ou tabela não migrada: o cadastro não
-            # pode quebrar por causa disso.
-            pass
-
+        sincronizar_enderecos(user)
         return user
 
 

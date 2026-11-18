@@ -6851,3 +6851,168 @@ Dependência nova: rjsmin (requirements.txt).
    painel (a tela dos dados vazia e preenchida pela própria tela, o cartão
    travado sem os dados e sem a forma de pagamento, o gerar pela folha, o
    cartão assinado); sem rolagem horizontal e sem alert/confirm.
+
+110) CONTAS E SEGURANÇA: UM E-MAIL, UMA CONTA; O FREIO DO LOGIN; A TELA DE OCORRÊNCIAS
+   O PEDIDO, nas palavras do dono: "vc permitiu um usuário ter o mesmo email
+   de uma conta comercial, isso se enquadra em hacking, e falta validações e
+   proteções, modularize bem este lance de usuários [...] crie esse site uma
+   rocha sólida, não algo vulnerável."
+   O INCIDENTE (pelo código): cada caminho que grava e-mail decidia sozinho
+   se o endereço estava livre, e cada um de um jeito. As portas abertas:
+     * o Google/Apple do allauth procura a conta pelo e-mail com igualdade
+       EXATA no User.email (`filter_users_by_email`): a conta da equipe
+       gravada com maiúsculas ("Vendas@...", como o /system/ e o
+       createsuperuser guardam, sem endereço do allauth) não era achada, e
+       o cadastro automático (SOCIALACCOUNT_AUTO_SIGNUP) criava a SEGUNDA
+       conta -- nenhuma conferência da casa rodava nesse caminho;
+     * "Meus e-mails" do allauth (/accounts/email/) acrescentava a uma conta
+       o e-mail de OUTRA (com a proteção contra enumeração ligada, o padrão,
+       ele não recusa: só manda a confirmação), e não passava pelo
+       `validate_unique_email` do adapter;
+     * Equipe e acessos e a API do aplicativo conferiam só o User.email,
+       sem os endereços do allauth; o perfil trocava o e-mail sem levar os
+       endereços do allauth (o antigo continuava valendo para entrar);
+     * ninguém conferia variante: letras de largura total ("ｖｅｎｄａｓ@"),
+       espaço invisível no domínio, o ponto final ("...com.br.") -- chegam à
+       MESMA caixa de correio e passavam como outro endereço, inclusive pelos
+       gatilhos do banco (sistema_interno/0047), que comparam só
+       lower(trim(email)).
+   O APP NOVO `contas` (INSTALLED_APPS) concentra as regras; cada caminho
+   chama daqui:
+     * contas/emails.py -- `normalizar_email` (NFKC, sem espaço nem caractere
+       invisível, minúsculas, sem o ponto final do domínio: é o que se grava
+       e o que se compara); `validar_email_de_conta` (livre em TODAS as
+       contas, como principal e como endereço do allauth; e os endereços da
+       empresa -- os do settings e os domínios lazersport.com.br/.com, que
+       CONTAS_EMAILS_RESERVADOS e CONTAS_DOMINIOS_RESERVADOS sobrescrevem --
+       só em conta da equipe ou criada pela equipe); `sincronizar_enderecos`
+       / `trocar_email` (o principal do allauth acompanha o User.email; os
+       não confirmados do e-mail antigo saem).
+     * contas/guarda.py -- a última trava: o pre_save do User e do
+       EmailAddress grava o e-mail normalizado e RECUSA (EmailEmUso, um
+       IntegrityError) o endereço de outra conta, venha de onde vier (admin,
+       shell, allauth, código futuro). Só consulta quando o e-mail muda.
+     * contas/adapters.py -- os adapters do allauth (core/adapters.py só
+       reexporta): `clean_email` normaliza; `validate_unique_email` usa a
+       regra; no LOGIN SOCIAL, o e-mail do Google/Apple só liga a pessoa a
+       uma conta que já existe quando o PROVEDOR GARANTE o endereço
+       (email_verified) -- sem a garantia, a entrada é recusada com
+       explicação e NUNCA nasce uma segunda conta. Com a garantia, liga só à
+       conta daquele e-mail (havendo uma só) e o endereço fica confirmado;
+       numa conta de cliente cujo e-mail nunca foi confirmado, a senha local
+       é desativada (quem cadastrou o e-mail de outra pessoa com uma senha
+       não entra mais -- é o que o allauth já fazia quando achava a conta);
+       conta da equipe mantém a senha (o painel entra com ela). Endereço da
+       empresa não cria conta pelo Google.
+     * contas/forms.py -- "Meus e-mails" do allauth (ACCOUNT_FORMS
+       add_email), o login do /system/ e o cadastro de usuário do /system/
+       pela regra (contas/admin.py troca o UserAdmin).
+     * Os caminhos ligados: /registrar/ (core/forms.py CadastroForm), /perfil/
+       (UserForm + ClientePerfilView, que manda a confirmação para o endereço
+       novo), Usuários do painel (core/views.py UserAdminView), Equipe e
+       acessos (sistema_interno/views_acessos.py), Minha conta
+       (sistema_interno/views.py), a API (/api/v1/auth/registro/, que agora
+       também troca o usuário repetido por um livre), o allauth e o /system/.
+       core/identidade_email.py continua com o nome de sempre e chama o app.
+     * O cadastro COMERCIAL de cliente (sistema_interno.Cliente) segue outra
+       gaveta: o mesmo endereço pode estar numa conta e num cliente (a mesma
+       pessoa nos dois papéis), e nenhum caminho junta os dois pelo e-mail
+       (o código do orçamento liga proposta a conta pelo CÓDIGO, nunca pelo
+       e-mail; o importador do Word cria cliente, não conta). Se "conta
+       comercial" quiser dizer o cadastro de cliente, proibir também isso é
+       decisão do dono: hoje é permitido de propósito (sistema_interno/0047).
+   AS MIGRAÇÕES (só no app contas; dado e esquema separados):
+     * contas/0001_ocorrencia_seguranca -- só esquema: a tabela
+       OcorrenciaSeguranca (tipo, situação, conta, conta que ficou com o
+       e-mail, e-mail que a conta tinha, login digitado, IP, origem, motivo,
+       quando, quem resolveu e quando).
+     * contas/0002_contas_com_email_repetido -- só dados, `atomic = False`,
+       cada conta na sua transação. Para cada endereço em mais de uma conta
+       (principal ou do allauth; sem diferença de caixa, espaços ou
+       variante), fica a canônica: superusuário, depois staff, depois conta
+       com função de equipe ("Equipe · ..."), depois cliente; entre iguais, a
+       que CONFIRMOU o endereço no allauth; depois a mais antiga (e o menor
+       id). As outras: is_active=False (sessão e token do aplicativo param),
+       e-mail principal esvaziado (se era ele o repetido), endereços do
+       allauth daquele e-mail apagados e uma ocorrência "E-mail repetido"
+       PENDENTE com o e-mail que tinham. Depois, todo e-mail que sobrou é
+       regravado normalizado (e dois endereços do allauth da mesma conta que
+       viram o mesmo são juntados). Rodar de novo não muda nada; não há
+       volta automática (a ocorrência guarda o e-mail original).
+     * contas/0003_email_unico_no_banco -- só o índice: UNIQUE em
+       lower(email) no auth_user (só e-mail preenchido: várias contas sem
+       e-mail continuam valendo) e no account_emailaddress. Volta: DROP
+       INDEX. Vale no PostgreSQL e no SQLite.
+       python manage.py migrate contas
+     * Se a 0003 falhar com "could not create unique index" (uma conta
+       repetida apareceu entre uma e outra): `python manage.py
+       contas_repetidas` mostra (e-mail mascarado) e `--aplicar` resolve pela
+       mesma regra; depois, migrate de novo.
+   O FREIO DO LOGIN (contas/freio.py, contas/backends.py): 5 senhas erradas
+   na mesma conta (usuário ou e-mail, tanto faz), ou 20 no mesmo IP público,
+   em 15 minutos, pausam o acesso por 15 minutos -- no /login/ do site, no
+   painel (interno.), no /system/, no aplicativo (429 com Retry-After) e no
+   /accounts/login/ do allauth. A mensagem diz até que horas ("Muitas
+   tentativas... pausado por 15 minutos (até 14:32)"); login que não existe
+   é pausado do mesmo jeito (a resposta não revela se a conta existe). O
+   acerto zera a contagem da conta (não a do IP). IP privado não conta pelo
+   IP. O `FreioDeLoginBackend` é o PRIMEIRO da AUTHENTICATION_BACKENDS: não
+   autentica ninguém, só barra quem está pausado em qualquer authenticate()
+   (sem pausa no ar, não faz consulta nenhuma). Cada pausa que começa vira
+   ocorrência "Login bloqueado". A contagem mora no cache (LocMemCache, por
+   worker: com WEB_WORKERS>1 sem Redis, o limite vale por worker).
+   Variáveis: LOGIN_FREIO_ATIVO, LOGIN_FREIO_POR_CONTA, LOGIN_FREIO_POR_IP,
+   LOGIN_FREIO_JANELA_MIN, LOGIN_FREIO_BLOQUEIO_MIN. O IP é o do freio de
+   cadastros (core/registro_cadastro.py): atrás de proxy, confira
+   IP_REAL_CABECALHO. Nos testes o freio fica desligado (settings_test), e
+   os testes dele o ligam.
+   A SENHA (contas/senhas.py; AUTH_PASSWORD_VALIDATORS): conta nova e TROCA
+   de senha -- cadastro do site e do app, Usuários, Equipe e acessos, Minha
+   conta, /system/, allauth -- pedem 10 caracteres ou mais, nada parecido
+   com o usuário/nome/e-mail, nada das listas comuns, não só números, nada
+   previsível em português ou com o nome da casa ("senha123", "mudar123",
+   "lazersport2026"...) e nada de sequência de teclado ou sem variedade.
+   Quem já tem conta continua entrando com a senha de hoje.
+   OS CABEÇALHOS (lazer/settings.py, por extenso): SESSION_COOKIE_HTTPONLY,
+   SameSite=Lax nos cookies, SECURE_CONTENT_TYPE_NOSNIFF,
+   SECURE_REFERRER_POLICY="same-origin", X_FRAME_OPTIONS="DENY" (as páginas
+   dos jogos, que o site abre em quadro, já liberam só a mesma origem em
+   core/views_jogos.py; os arquivos dos jogos vêm pelo WhiteNoise, antes do
+   cabeçalho), HSTS moderado no ar (30 dias, sem subdomínios e sem preload;
+   SECURE_HSTS_SECONDS e SECURE_HSTS_INCLUDE_SUBDOMAINS no ambiente).
+   CSRF_TRUSTED_ORIGINS perdeu os curingas "https://*.vercel.app" e
+   "https://*.onrender.com" (confiavam em qualquer site hospedado lá): entra
+   o endereço do serviço que a hospedagem informa (RENDER_EXTERNAL_HOSTNAME,
+   VERCEL_URL, VERCEL_BRANCH_URL, VERCEL_PROJECT_PRODUCTION_URL) e o que
+   estiver em DJANGO_CSRF_TRUSTED_ORIGINS. O índice único que estoura num
+   salvamento simultâneo vira a mesma mensagem do gatilho (core/middleware.py).
+   A TELA (interno., menu Painel > "Segurança das contas", /seguranca/contas/,
+   Gestão e superusuário): os números do topo (esperando revisão, contas
+   bloqueadas por e-mail repetido, logins pausados e logins sociais
+   recusados em 7 dias), os filtros em chips de rádio (situação e tipo) e a
+   lista. Em cada ocorrência pendente: E-MAIL REPETIDO -> "Reativar" (a
+   conta volta a entrar, SEM e-mail: cadastre um endereço novo em Contas de
+   clientes) ou "Manter bloqueada"; LOGIN BLOQUEADO -> "Liberar agora" ou
+   "Ciente"; LOGIN SOCIAL RECUSADO -> "Ciente". Toda ação pergunta pela folha
+   do LSAviso (data-ls-confirmar, que chama window.LSAviso.confirmar) e grava
+   quem resolveu e quando; nada some da lista ("Resolvidas"). Estilo no fim
+   de gestao_integrada.css, só variáveis do tema. O /system/ mostra as
+   ocorrências só para leitura.
+   Testes: contas/tests_emails.py (normalização, regra, guarda, endereços do
+   allauth, os índices do banco), contas/tests_caminhos.py (o mesmo e-mail
+   com outra caixa ou variante recusado no /registrar/, no perfil, nos
+   Usuários, na Equipe e acessos, na Minha conta, na API, no "Meus e-mails"
+   e no cadastro do allauth, no /system/ e no Google: o verificado liga à
+   conta certa sem criar outra; o não verificado é recusado; o cliente não
+   confirmado perde a senha; a conta da equipe a mantém; endereço da empresa
+   não cria conta), contas/tests_migracao.py (a 0002 com equipe x cliente,
+   função de equipe, confirmado x antigo, variantes, endereço extra,
+   normalização, rodar de novo; e o `migrate contas 0001 -> 0003` de
+   verdade, com o índice e a volta), contas/tests_freio.py (conta, e-mail da
+   mesma conta, login inexistente, IP público e privado, painel, /system/,
+   app, authenticate direto, liberar, acerto, desligado),
+   contas/tests_painel.py (quem entra, reativar, manter, liberar, filtros,
+   sem caixa de seleção/alert/confirm/cor fixa) e contas/tests_senhas.py
+   (fracas, boas, conta antiga entra, cabeçalhos, HSTS de produção num
+   processo à parte). sistema_interno/tests_migracoes.py cobra também o app
+   contas.
