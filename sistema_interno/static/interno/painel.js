@@ -124,8 +124,21 @@
      de tela é obrigatório, e chamar de novo o que é de aba duplicaria
      relógio e ouvinte a cada clique no menu.
      ==================================================================== */
+  /* O MENU POR FUNÇÃO (seção 114): a mesma tela pode estar em duas
+     funções (Orçamentos em Vendas e no Financeiro). Abre UM grupo só: o
+     último em que a pessoa tocou, se a tela de agora está nele; senão o
+     primeiro que a tem; e quem tem uma função só já a encontra aberta. */
+  var CHAVE_GRUPO = 'ls-menu-grupo';
+  function grupoLembrado() {
+    try { return global.sessionStorage.getItem(CHAVE_GRUPO) || ''; } catch (erro) { return ''; }
+  }
+  function lembrarGrupo(nome) {
+    try { global.sessionStorage.setItem(CHAVE_GRUPO, nome); } catch (erro) { /* sem memória, sem atalho */ }
+  }
+
   Painel.organizarSecoesMenu = function () {
     var secoes = document.querySelectorAll('.ls-nav > .ls-nav-section');
+    var novas = [];
     secoes.forEach(function (secao, indice) {
       if (secao.dataset.acordeao === '1') return;
       var titulo = secao.querySelector('.ls-nav-caption');
@@ -134,7 +147,8 @@
       var botao = document.createElement('button');
       botao.type = 'button';
       botao.className = 'ls-nav-caption ls-nav-section-toggle';
-      botao.textContent = titulo.textContent;
+      /* o ícone da função vem junto (o texto sozinho perdia o desenho) */
+      botao.innerHTML = titulo.innerHTML;
       var links = document.createElement('div');
       links.className = 'ls-nav-links';
       links.id = 'ls-nav-grupo-' + indice;
@@ -144,21 +158,48 @@
         if (filho !== botao) links.appendChild(filho);
       });
       secao.appendChild(links);
+      var nome = secao.dataset.funcao || botao.textContent.trim();
       function mudar(aberto) {
         links.hidden = !aberto;
         botao.setAttribute('aria-expanded', String(aberto));
       }
-      mudar(Boolean(links.querySelector('.active')));
+      secao._lsMudar = mudar;
+      novas.push(secao);
+      mudar(false);
       botao.addEventListener('click', function () {
         var abrir = links.hidden;
+        /* recolhida: o ícone da função abre a gaveta já com a função aberta */
+        var lateral = secao.closest('.ls-sidebar');
+        var trilho = document.getElementById('railToggle');
+        if (secao.dataset.funcao && lateral && trilho && !lateral.classList.contains('expandida') &&
+            global.matchMedia && global.matchMedia('(min-width: 761px)').matches) {
+          trilho.click();
+          abrir = true;
+        }
         secoes.forEach(function (outra) {
           var grupo = outra.querySelector('.ls-nav-links');
           var controle = outra.querySelector('.ls-nav-section-toggle');
           if (grupo && controle) { grupo.hidden = true; controle.setAttribute('aria-expanded', 'false'); }
         });
         mudar(abrir);
+        if (abrir) lembrarGrupo(nome);
+      });
+      links.addEventListener('click', function (evento) {
+        if (evento.target.closest('.ls-nav-item')) lembrarGrupo(nome);
       });
     });
+    if (!novas.length) return;
+    var lembrado = grupoLembrado();
+    var comTela = novas.filter(function (secao) { return secao.querySelector('.ls-nav-links .active'); });
+    var escolhido = comTela.filter(function (secao) {
+      return (secao.dataset.funcao || '') === lembrado ||
+        secao.querySelector('.ls-nav-section-toggle').textContent.trim() === lembrado;
+    })[0] || comTela[0];
+    if (!escolhido) {
+      var funcoes = novas.filter(function (secao) { return secao.dataset.funcao; });
+      if (funcoes.length === 1) escolhido = funcoes[0];
+    }
+    if (escolhido) escolhido._lsMudar(true);
   };
 
   Painel.montarTela = function (raiz) {

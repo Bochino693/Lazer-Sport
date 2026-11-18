@@ -84,8 +84,20 @@ class ResilienciaPainelTests(SimpleTestCase):
         self.assertEqual(resposta["X-LS-Retryable"], "0")
 
     def test_contador_pedidos_visivel_inclusive_zero_sem_bloquear_renderizacao(self):
-        base = (Path(__file__).parent / "templates/base_inner.html").read_text()
-        self.assertIn('data-selo="count_pedidos" data-mostrar-zero="1" title="Pedidos em aberto">…</span>', base)
+        # o menu é desenhado por função (menu.py + partes/menu_funcoes.html, seção 114)
+        from django.template.loader import render_to_string
+
+        from sistema_interno.menu import capacidades_da_funcao, menu_do_usuario
+
+        from django.test import override_settings
+
+        acesso = capacidades_da_funcao("financeiro")
+        with override_settings(ROOT_URLCONF="sistema_interno.urls"):
+            html = render_to_string("partes/menu_funcoes.html", {
+                "menu_funcoes": menu_do_usuario(acesso), "permissoes_interno": acesso,
+                "request": self.factory.get("/"),
+            })
+        self.assertIn('data-selo="count_pedidos" data-mostrar-zero="1" title="Pedidos em aberto">…</span>', html)
 
     def test_middleware_converte_falha_do_proxy_sem_mascarar_site_publico(self):
         middleware = InternalResponseRecoveryMiddleware(

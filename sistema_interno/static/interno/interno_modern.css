@@ -5620,6 +5620,93 @@ body.ls-body{
 @media(min-width:761px){
   .ls-sidebar:not(.expandida) .ls-nav-links[hidden]{display:block!important}
 }
+
+/* ======================================================================
+   O MENU POR FUNÇÃO E OS ATALHOS DO TOPO (LEIA-ME-V10, seção 114)
+   A função abre e, dentro dela, os blocos (subtítulo pequeno) com as
+   telas. No topo, um botão por função abre o mesmo mapa num painel.
+   Só variáveis do tema: claro, eclipse e escuro saem certos.
+   ====================================================================== */
+.ls-nav-section-toggle>i{margin-right:8px;font-size:.98rem;color:var(--acento-texto);vertical-align:-1px}
+.ls-nav-bloco{
+  display:var(--ls-rotulo);margin:10px 12px 2px;font-size:.61rem;font-weight:900;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted);opacity:.85;
+}
+.ls-nav-links>.ls-nav-bloco:first-child,.ls-nav-item--pessoas+.ls-nav-bloco{margin-top:6px}
+.ls-nav-section--funcao .ls-nav-links .ls-nav-item{min-height:40px;margin:1px 0}
+.ls-nav-item--pessoas .ls-nav-icon{color:var(--acento-texto);background:rgba(var(--acento-rgb),.10)}
+/* RECOLHIDA (trilho de ícones): a função vira um ícone, e só a função
+   aberta mostra as telas dela -- sem a mesma tela repetida 4 vezes. */
+@media(min-width:761px){
+  .ls-sidebar:not(.expandida) .ls-nav-section--funcao .ls-nav-links[hidden]{display:none!important}
+  .ls-sidebar:not(.expandida) .ls-nav-section--funcao .ls-nav-section-toggle{
+    display:grid!important;place-items:center;width:48px;height:44px;min-height:0;margin:4px auto;padding:0;
+    font-size:0;border-radius:12px;
+  }
+  .ls-sidebar:not(.expandida) .ls-nav-section--funcao .ls-nav-section-toggle::after{content:none}
+  .ls-sidebar:not(.expandida) .ls-nav-section--funcao .ls-nav-section-toggle>i{margin:0;font-size:1.15rem}
+  .ls-sidebar:not(.expandida) .ls-nav-section--funcao .ls-nav-section-toggle[aria-expanded="true"]{
+    background:rgba(var(--acento-rgb),.16);box-shadow:inset 0 0 0 1px rgba(var(--acento-rgb),.4);
+  }
+}
+
+.ls-atalhos{display:flex;align-items:center;gap:6px;margin:0 10px;min-width:0;flex:0 1 auto}
+.ls-atalho{position:relative}
+.ls-atalho-botao{
+  display:flex;align-items:center;gap:7px;height:40px;padding:0 11px;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel-soft);
+  color:var(--text-2);font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;white-space:nowrap;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.ls-atalho-botao>i{font-size:1rem;color:var(--acento-texto)}
+.ls-atalho-botao:hover,.ls-atalho-botao[aria-expanded="true"]{
+  color:var(--text);border-color:rgba(var(--acento-rgb),.45);background:rgba(var(--acento-rgb),.12);
+}
+.ls-atalho-botao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-atalho-painel{
+  position:absolute;left:0;top:calc(100% + 10px);z-index:1100;
+  width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 110px);overflow:auto;
+  padding:16px;border:1px solid var(--line-forte);border-radius:18px;background:var(--panel);color:var(--text);
+  box-shadow:0 18px 48px rgba(var(--sombra-rgb),calc(.4 * var(--sombra-forca)));
+}
+.ls-atalho-painel[hidden]{display:none}
+.ls-atalho-topo{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ls-atalho-topo strong{font-size:.95rem}
+.ls-atalho-marca{
+  width:34px;height:34px;display:grid;place-items:center;border-radius:10px;
+  color:var(--acento-texto);background:rgba(var(--acento-rgb),.12);font-size:1.05rem;
+}
+.ls-atalho-acoes{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.ls-atalho-acoes a{
+  display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 12px;border-radius:999px;
+  border:1px solid rgba(var(--acento-rgb),.35);background:rgba(var(--acento-rgb),.10);
+  color:var(--text);font-size:.78rem;font-weight:800;text-decoration:none;
+}
+.ls-atalho-acoes a:hover{background:rgba(var(--acento-rgb),.2)}
+.ls-atalho-blocos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.ls-atalho-bloco>span{
+  display:block;margin:0 0 4px 10px;font-size:.61rem;font-weight:900;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);
+}
+.ls-atalho-bloco a{
+  display:flex;align-items:center;gap:9px;min-height:38px;padding:6px 10px;border-radius:10px;
+  color:var(--text-2);font-size:.84rem;font-weight:700;text-decoration:none;
+}
+.ls-atalho-bloco a>i{width:18px;text-align:center;color:var(--muted)}
+.ls-atalho-bloco a:hover{background:rgba(var(--acento-rgb),.12);color:var(--text)}
+.ls-atalho-bloco a:hover>i{color:var(--acento-texto)}
+/* com muitas funções (o dono), só os ícones até a tela ficar larga */
+@media(max-width:1499px){
+  .ls-atalhos:not(.ls-atalhos--poucos) .ls-atalho-botao>span{display:none}
+  .ls-atalhos:not(.ls-atalhos--poucos) .ls-atalho-botao{width:40px;padding:0;justify-content:center}
+}
+@media(max-width:1100px){.ls-atalho-blocos{grid-template-columns:1fr}}
+/* os cartões de Equipe e acessos filtram pela função */
+a.ls-metric-link{color:inherit;text-decoration:none;cursor:pointer}
+a.ls-metric-link:hover{border-color:rgba(var(--acento-rgb),.4)}
+a.ls-metric-link.is-ativo{border-color:rgba(var(--acento-rgb),.75);box-shadow:0 0 0 2px rgba(var(--acento-rgb),.25)}
+/* no celular quem faz isso são as abas de baixo */
+@media(max-width:760px){.ls-atalhos{display:none}}
 .ls-action-fab-menu{width:min(248px,calc(100vw - 20px));padding:6px;border-radius:12px;gap:2px;grid-template-columns:1fr}
 .ls-action-fab-menu.is-open{grid-template-columns:1fr}
 .ls-action-fab-head{padding:7px 9px;margin-bottom:3px}

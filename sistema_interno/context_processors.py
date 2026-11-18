@@ -213,6 +213,16 @@ def fab_counts(request):
     }
     contexto["eh_gestor_interno"] = acesso["gestao"]
     contexto["permissoes_interno"] = acesso
+    # o menu lateral e os atalhos do topo, por função (seção 114)
+    from .menu import menu_do_usuario
+
+    contexto["menu_funcoes"] = SimpleLazyObject(lambda: menu_do_usuario(acesso))
+    if acesso.get("usuarios"):
+        # o menu "Pessoas" dividido por função (só o superusuário; a conta
+        # só acontece se o menu for desenhado)
+        from .permissoes import resumo_de_usuarios
+
+        contexto["usuarios_por_funcao"] = SimpleLazyObject(resumo_de_usuarios)
     # O freio de mão da banda, lido pelo JavaScript do painel a partir do
     # corpo da página. Ver `ECONOMIA_DE_DADOS` em settings.
     contexto["economia_de_dados"] = getattr(settings, "ECONOMIA_DE_DADOS", True)

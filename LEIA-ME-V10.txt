@@ -7542,3 +7542,49 @@ Dependência nova: rjsmin (requirements.txt).
    EM ABERTO (decisão do dono): Vendas e Vendedor ambulante continuam
    separados (o ambulante só vê os próprios orçamentos). Se forem a mesma
    coisa na prática, basta dar as duas funções à pessoa.
+
+   O MENU POR FUNÇÃO E OS ATALHOS DO TOPO (pedido seguinte do dono): "quero
+   as opções baseadas nas funções, elas devem vir antes dos blocos...
+   engenharia de produção -> abriu -> estoque e demais funções" e "pode por
+   atalhos no header também... refine o espaço e praticidade".
+     * O menu lateral abre pela FUNÇÃO; dentro dela vêm os blocos dela
+       (subtítulo pequeno) e as telas de cada bloco. O mapa mora em
+       sistema_interno/menu.py (BLOCOS, BLOCOS_DA_FUNCAO, ACOES_DA_FUNCAO)
+       e o desenho em partes/menu_funcoes.html. Uma tela entra numa função
+       só se AQUELA função a abre (permissoes.capacidades feita como se a
+       pessoa só tivesse a função) -- é a mesma conta da view.
+     * Para o superusuário, cada função começa por "Pessoas da função (N)":
+       Equipe e acessos filtrada pela função (?funcao=vendas), com os
+       cartões que também filtram e "Nova pessoa" já marcando a função.
+     * Abre um grupo só: o último tocado (se a tela de agora está nele),
+       senão o primeiro que tem a tela; quem tem uma função só já a vê
+       aberta. Recolhida (trilho), a função vira um ícone e só a aberta
+       mostra as telas; tocar no ícone abre a gaveta na função.
+     * No topo, um botão por função (partes/atalhos_topo.html +
+       static/interno/ls-atalhos.js): o painel tem as ações de um toque
+       (Novo orçamento, Abrir O.S., Movimentar estoque, Cadastrar cliente)
+       e todas as telas da função pelos blocos. Com 3 funções ou mais, só
+       o ícone até 1500 px; no celular somem (as abas de baixo fazem isso).
+     * Teste: tests_auditoria_funcoes (toda tela oferecida abre) e
+       tests_resiliencia (os contadores no menu novo).
+
+   A ASSINATURA SEM TRAVA (seção 109; o dono: "a assinatura está travando...
+   que é isso de não identificar pelo texto, nem precisa travar a
+   assinatura para os clientes"):
+     * contrato.condicao_de_pagamento lê a condição da Cláusula 2ª, nesta
+       ordem: o campo "Forma de pagamento"; o trecho de pagamento do texto
+       do orçamento ("50% de entrada e 50% na entrega", "Pix", "10x no
+       cartão" -- "entrada" sozinha não conta, "entrada do salão"); o
+       pagamento registrado ("à vista, em parcela única, quitado em
+       18/11/2026" ou a entrada paga e o saldo até a entrega); o padrão
+       ("à vista, na confirmação do pedido").
+     * O representante em branco vira "seu representante legal".
+     * contrato.pendencias não trava mais nada; contrato.observacoes só
+       informa no cartão (de onde veio a condição, representante vazio).
+     * O cliente não espera a equipe: aprovado e sem contrato, o "Assinar
+       o contrato" de Meus pedidos gera o contrato na hora e abre a
+       assinatura (as conferências de nome, CPF e "Li e concordo" seguem).
+
+   OS PEDIDOS DE TESTE (#88 a #97, contas thiago2 e lazer.sport2) saem do
+   banco pela sistema_interno/0078 (só no Render; id E conta têm de bater),
+   com a venda registrada, a linha da lista de montagem e as tarefas do RH.

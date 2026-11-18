@@ -1,0 +1,36 @@
+{% comment %}
+  ATALHOS NO TOPO (LEIA-ME-V10, seção 114): um botão por função da pessoa;
+  o toque abre as ações de um toque e todas as telas da função, pelos
+  blocos dela -- sem descer o menu lateral. No celular quem faz isso são
+  as abas de baixo, então aqui some (CSS). Comportamento: ls-atalhos.js.
+{% endcomment %}
+{% if menu_funcoes %}
+<nav class="ls-atalhos{% if menu_funcoes|length <= 2 %} ls-atalhos--poucos{% endif %}" id="lsAtalhos" aria-label="Atalhos por função">
+  {% for grupo in menu_funcoes %}
+  <div class="ls-atalho">
+    <button type="button" class="ls-atalho-botao" aria-expanded="false" aria-controls="lsAtalho-{{ grupo.codigo }}" title="{{ grupo.titulo }}">
+      <i class="bi {{ grupo.icone }}" aria-hidden="true"></i><span>{{ grupo.curto }}</span>
+    </button>
+    <div class="ls-atalho-painel" id="lsAtalho-{{ grupo.codigo }}" hidden>
+      <div class="ls-atalho-topo">
+        <span class="ls-atalho-marca"><i class="bi {{ grupo.icone }}" aria-hidden="true"></i></span>
+        <strong>{{ grupo.titulo }}</strong>
+      </div>
+      {% if grupo.acoes %}
+      <div class="ls-atalho-acoes">
+        {% for acao in grupo.acoes %}<a href="{% url acao.rota %}{{ acao.sufixo }}"><i class="bi {{ acao.icone }}" aria-hidden="true"></i>{{ acao.titulo }}</a>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="ls-atalho-blocos">
+        {% for nome, itens in grupo.blocos %}
+        <div class="ls-atalho-bloco">
+          <span>{{ nome }}</span>
+          {% for item in itens %}<a href="{% url item.rota %}"><i class="bi {{ item.icone }}" aria-hidden="true"></i>{{ item.titulo }}</a>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</nav>
+{% endif %}

@@ -6,26 +6,34 @@
 {% block content %}
 <div class="ls-page-head">
   <div>
+    {% if funcao_ativa %}
+    <span class="ls-eyebrow">PESSOAS DA FUNÇÃO</span>
+    <h1><i class="bi {{ funcao_ativa.icone }} me-2" aria-hidden="true"></i>{{ funcao_ativa.titulo }}</h1>
+    <p>{{ funcao_ativa.descricao }} <a href="{% url 'usuarios_equipe' %}">Ver toda a equipe</a></p>
+    {% else %}
     <span class="ls-eyebrow">SEGURANÇA E RESPONSABILIDADE</span>
     <h1>Uma conta, as funções certas</h1>
     <p>As funções se somam. Ninguém precisa de outra conta para trabalhar em duas áreas.</p>
+    {% endif %}
   </div>
-  <button class="btn btn-success" id="novoUsuario" type="button">
-    <i class="bi bi-person-plus me-1"></i> Nova pessoa da equipe
+  <button class="btn btn-success" id="novoUsuario" type="button" data-funcao="{{ funcao_ativa.codigo|default:'' }}">
+    <i class="bi bi-person-plus me-1"></i> Nova pessoa{% if funcao_ativa %} em {{ funcao_ativa.titulo }}{% else %} da equipe{% endif %}
   </button>
 </div>
 
 <section class="ls-metrics mb-3">
-  <article class="ls-metric-card green">
-    <div class="ls-metric-head"><span class="ls-metric-label">Equipe ativa</span><span class="ls-metric-icon"><i class="bi bi-people"></i></span></div>
-    <strong class="ls-metric-value">{{ total_ativos }}</strong>
-    <span class="ls-metric-note">Contas que podem entrar no sistema</span>
-  </article>
-  {% for funcao in funcoes %}
-  <article class="ls-metric-card {% cycle 'amber' 'violet' 'green' 'amber' %}">
+  {# cada cartão filtra a lista pela função (a mesma subdivisão do menu, seção 114) #}
+  <a class="ls-metric-card green ls-metric-link{% if not funcao_ativa %} is-ativo{% endif %}" href="{% url 'usuarios_equipe' %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">Toda a equipe</span><span class="ls-metric-icon"><i class="bi bi-people"></i></span></div>
+    <strong class="ls-metric-value">{{ total_equipe }}</strong>
+    <span class="ls-metric-note">Contas ativas que entram no sistema</span>
+  </a>
+  {% for funcao in funcoes_com_total %}
+  <a class="ls-metric-card {% cycle 'amber' 'violet' 'green' 'amber' %} ls-metric-link{% if funcao_ativa.codigo == funcao.codigo %} is-ativo{% endif %}" href="{% url 'usuarios_equipe' %}?funcao={{ funcao.codigo }}">
     <div class="ls-metric-head"><span class="ls-metric-label">{{ funcao.titulo }}</span><span class="ls-metric-icon"><i class="bi {{ funcao.icone }}"></i></span></div>
-    <span class="ls-metric-note">{{ funcao.descricao }}</span>
-  </article>
+    <strong class="ls-metric-value">{{ funcao.total }}</strong>
+    <span class="ls-metric-note">pessoa{{ funcao.total|pluralize }} ativa{{ funcao.total|pluralize }}</span>
+  </a>
   {% endfor %}
 </section>
 
@@ -34,6 +42,7 @@
     <div class="col-12 col-md">
       <label class="form-label" for="buscaEquipe">Buscar pessoa</label>
       <input class="form-control" id="buscaEquipe" name="q" value="{{ busca }}" placeholder="Nome, usuário ou e-mail">
+      {% if funcao_ativa %}<input type="hidden" name="funcao" value="{{ funcao_ativa.codigo }}">{% endif %}
     </div>
     <div class="col-12 col-md-auto">
       <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Buscar</button>
@@ -131,7 +140,10 @@ LSTela.pronto(function () {
     document.getElementById("usuarioAtivo").checked = usuario ? usuario.ativo : true;
     document.getElementById("usuarioTitulo").textContent = usuario ? "Editar acesso" : "Nova pessoa";
     document.getElementById("senhaAjuda").textContent = usuario ? "(deixe vazio para manter)" : "(obrigatória no primeiro acesso)";
-    form.querySelectorAll('[name="funcoes"]').forEach(function (campo) { campo.checked = !!(usuario && usuario.funcoes.includes(campo.value)); });
+    var daTela = document.getElementById("novoUsuario").dataset.funcao || "";
+    form.querySelectorAll('[name="funcoes"]').forEach(function (campo) {
+      campo.checked = usuario ? usuario.funcoes.includes(campo.value) : campo.value === daTela;
+    });
     Painel.abrir("modalUsuario");
   }
   document.getElementById("novoUsuario").addEventListener("click", function () { abrir(null); });

@@ -12,9 +12,12 @@ from django.views.generic import View
 
 from .permissoes import (
     FUNCOES,
+    FUNCOES_POR_CODIGO,
     NOMES_DOS_GRUPOS,
     atribuir_funcoes,
+    esquecer_resumo_de_usuarios,
     nomes_das_funcoes,
+    resumo_de_usuarios,
 )
 from .models import AvaliacaoSetor
 from .utils import ErroDeFormulario, texto
@@ -50,12 +53,21 @@ class UsuariosEquipeInnerView(
                 | Q(last_name__icontains=busca)
                 | Q(email__icontains=busca)
             )
+        # A SUBDIVISÃO DO MENU "Pessoas": ?funcao=vendas mostra só quem é de
+        # Vendas (a pessoa com duas funções aparece nas duas).
+        funcao_ativa = FUNCOES_POR_CODIGO.get((request.GET.get("funcao") or "").strip())
+        if funcao_ativa is not None:
+            usuarios = usuarios.filter(groups__name=funcao_ativa.grupo)
 
         linhas = [self._serializar(usuario) for usuario in usuarios]
+        resumo = resumo_de_usuarios()
         return render(request, self.template_name, {
             "linhas": linhas,
             "usuarios_dados": linhas,
             "funcoes": FUNCOES,
+            "funcoes_com_total": resumo["funcoes"],
+            "total_equipe": resumo["equipe"],
+            "funcao_ativa": funcao_ativa,
             "busca": busca,
             "total_ativos": sum(1 for linha in linhas if linha["ativo"]),
         })
@@ -149,6 +161,7 @@ class UsuariosEquipeInnerView(
         usuario.save()
         sincronizar_enderecos(usuario)
         escolhidas = atribuir_funcoes(usuario, codigos)
+        esquecer_resumo_de_usuarios()  # o número de "Pessoas da função" no menu
 
         return self.sucesso(
             request,
@@ -163,6 +176,7 @@ class UsuariosEquipeInnerView(
             raise ErroDeFormulario("Essa conta é protegida e não pode ser desativada aqui.")
         usuario.is_active = not usuario.is_active
         usuario.save(update_fields=["is_active"])
+        esquecer_resumo_de_usuarios()
         return self.sucesso(
             request,
             f"{usuario.get_full_name() or usuario.username} "

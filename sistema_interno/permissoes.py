@@ -181,6 +181,9 @@ def capacidades(user) -> dict[str, bool]:
         "ordens_servico": producao or acesso_financeiro or gestao,
         "ordens_servico_editar": producao or gestao,
         "ordens_servico_pagamento": acesso_financeiro,
+        # Etiquetas de transporte: lista os clientes com endereço -- quem
+        # despacha a caixa (seção 114; views_etiquetas confere o mesmo).
+        "etiquetas": producao or acesso_financeiro,
         # Compatibilidade com pontos antigos que perguntam se existe alguma
         # operação acessível. As telas usam as capacidades específicas.
         "operacao": producao or acesso_financeiro or gestao,
@@ -276,3 +279,59 @@ def atribuir_funcoes(user, codigos) -> list[Funcao]:
         user.is_staff = novo_staff
         user.save(update_fields=["is_staff"])
     return escolhidas
+
+
+# ----------------------------------------------------------------------
+# OS USUÁRIOS POR FUNÇÃO (o menu "Pessoas" do superusuário, seção 114)
+# ----------------------------------------------------------------------
+CHAVE_RESUMO_DE_USUARIOS = "menu:usuarios_por_funcao"
+
+
+def resumo_de_usuarios() -> dict:
+    """Quantas contas ATIVAS há em cada função, na equipe e entre os clientes.
+
+    Três consultas, guardadas por um minuto (a tela de acessos esquece o
+    resumo ao salvar). Só o superusuário vê -- o menu pergunta antes.
+    """
+    from django.core.cache import cache
+
+    def contar():
+        from django.contrib.auth.models import Group, User
+        from django.db.models import Count, Q
+
+        por_grupo = dict(
+            Group.objects.filter(name__in=NOMES_DOS_GRUPOS)
+            .annotate(total=Count("user", filter=Q(user__is_active=True), distinct=True))
+            .values_list("name", "total")
+        )
+        equipe = (
+            User.objects.filter(is_active=True)
+            .filter(Q(is_superuser=True) | Q(is_staff=True) | Q(groups__name__in=NOMES_DOS_GRUPOS))
+            .distinct().count()
+        )
+        clientes = (
+            User.objects.filter(is_active=True, is_superuser=False, is_staff=False)
+            .exclude(groups__name__in=NOMES_DOS_GRUPOS).count()
+        )
+        return {
+            "equipe": equipe,
+            "clientes": clientes,
+            "funcoes": [
+                {"codigo": f.codigo, "titulo": f.titulo, "icone": f.icone, "total": por_grupo.get(f.grupo, 0)}
+                for f in FUNCOES
+            ],
+        }
+
+    try:
+        return cache.get_or_set(CHAVE_RESUMO_DE_USUARIOS, contar, 60)
+    except Exception:  # noqa: BLE001 -- sem cache, conta na hora
+        return contar()
+
+
+def esquecer_resumo_de_usuarios():
+    from django.core.cache import cache
+
+    try:
+        cache.delete(CHAVE_RESUMO_DE_USUARIOS)
+    except Exception:  # noqa: BLE001
+        pass

@@ -823,3 +823,44 @@ class EspacoEsportivoKidsTests(Base):
         # e a vaga de brinquedão ficou para o Brinquedão Selva
         self.assertEqual(depois["Brinquedão Selva"].situacao, S.PRODUCAO)
         self.assertEqual(montagem.reclassificar(), [])  # de novo: nada muda
+
+
+class PedidosDeTesteTests(Base):
+    """0078: só os pedidos #88–#97 das contas de teste, com o que pende deles."""
+
+    def test_apaga_so_os_de_teste_com_venda_lista_e_tarefas(self):
+        import importlib
+
+        from django.apps import apps
+        from django.contrib.auth import get_user_model
+
+        from core.models import Venda
+        from rh.apoio_testes import criar_colaborador
+        from rh.models import Tarefa
+        from sistema_interno.models import ProducaoOrigem, UnidadeMontagem
+
+        migracao = importlib.import_module("sistema_interno.migrations.0078_apagar_pedidos_de_teste")
+        criar_colaborador(1)
+        teste = get_user_model().objects.create_user("thiago2", "t2@exemplo.test", "x")
+        pago = self.pedido([(self.agk, 1, None)], dono=teste)
+        cancelado = self.pedido([(self.agk, 1, None)], dono=teste, status="cancelado")
+        de_verdade = self.pedido([(self.agk, 1, None)])  # outra conta: fica
+        ids = (pago.pk, cancelado.pk, de_verdade.pk)
+        self.assertTrue(UnidadeMontagem.objects.filter(producao__pedido=pago).exists())
+        self.assertTrue(Tarefa.objects.exists())
+        if not Venda.objects.filter(pedido=pago).exists():
+            Venda.objects.create(pedido=pago)
+
+        migracao.apagar(apps, ids=ids)  # fora do Render: nada
+        self.assertTrue(Pedido.objects.filter(pk=pago.pk).exists())
+
+        migracao.apagar(apps, forcar=True, avisar=lambda texto: None, ids=ids)
+        self.assertFalse(Pedido.objects.filter(pk__in=(pago.pk, cancelado.pk)).exists())
+        self.assertFalse(Venda.objects.filter(pedido_id=pago.pk).exists())
+        self.assertFalse(ProducaoOrigem.objects.filter(pedido_id=pago.pk).exists())
+        self.assertTrue(Pedido.objects.filter(pk=de_verdade.pk).exists())
+        restantes = set(Tarefa.objects.values_list("object_id", flat=True))
+        self.assertTrue(restantes)  # as do pedido de verdade ficam
+        self.assertTrue(restantes <= set(UnidadeMontagem.objects.values_list("pk", flat=True)))
+        migracao.apagar(apps, forcar=True, avisar=lambda texto: None, ids=ids)  # de novo: nada
+        self.assertEqual(migracao.IDS, tuple(range(88, 98)))
